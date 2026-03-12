@@ -68,10 +68,10 @@ captureConnectionMessages = async function (test) {
 
   conn._stream.send = function (...args) {
     send.apply(this, args);
-    messages.push(CBOR.parse(args[0]));
+    messages.push(EJSON.parse(args[0]));
   }
 
-  conn._stream.on('message', message => messages.push(CBOR.parse(message)));
+  conn._stream.on('message', message => messages.push(EJSON.parse(message)));
 
   function cleanup() {
     conn._stream.send = send

@@ -1,4 +1,4 @@
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 import { Decimal } from 'decimal.js';
 
 Decimal.prototype.typeName = function() {
@@ -13,7 +13,7 @@ Decimal.prototype.clone = function () {
   return Decimal(this.toString());
 };
 
-CBOR.addType('Decimal', function (str) {
+EJSON.addType('Decimal', function (str) {
   return Decimal(str);
 });
 

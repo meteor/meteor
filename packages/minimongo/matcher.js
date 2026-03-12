@@ -4,7 +4,7 @@ import {
   hasOwn,
   nothingMatcher,
 } from './common.js';
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 
 const Decimal = Package['mongo-decimal']?.Decimal || class DecimalStub {}
 
@@ -94,7 +94,7 @@ export default class Matcher {
       this._selector = {_id: selector};
       this._recordPathUsed('_id');
 
-      return doc => ({result: CBOR.equals(doc._id, selector)});
+      return doc => ({result: EJSON.equals(doc._id, selector)});
     }
 
     // protect against dangerous selectors.  falsey and {_id: falsey} are both
@@ -107,12 +107,12 @@ export default class Matcher {
 
     // Top level can't be an array or true or binary.
     if (Array.isArray(selector) ||
-        CBOR.isBinary(selector) ||
+        EJSON.isBinary(selector) ||
         typeof selector === 'boolean') {
       throw new Error(`Invalid selector: ${selector}`);
     }
 
-    this._selector = CBOR.clone(selector);
+    this._selector = EJSON.clone(selector);
 
     return compileDocumentSelector(selector, this, {isRoot: true});
   }
@@ -165,7 +165,7 @@ LocalCollection._f = {
       return 9;
     }
 
-    if (CBOR.isBinary(v)) {
+    if (EJSON.isBinary(v)) {
       return 5;
     }
 
@@ -191,7 +191,7 @@ LocalCollection._f = {
 
   // deep equality test: use for literal document and array matches
   _equal(a, b) {
-    return CBOR.equals(a, b, {keyOrderSensitive: true});
+    return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
   // maps a type code to a value that can be used to sort values of different

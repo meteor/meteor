@@ -31,7 +31,7 @@ var cspsEqual = function (csp1, csp2) {
     return toObject(keys, values);
   };
 
-  return CBOR.equals(cspToObj(csp1), cspToObj(csp2));
+  return EJSON.equals(cspToObj(csp1), cspToObj(csp2));
 };
 
 // It's important to call _reset() at the beginning of these tests; otherwise

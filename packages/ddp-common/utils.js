@@ -1,7 +1,9 @@
 "use strict";
 
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 import { Base64 } from 'meteor/base64';
+
+const cborx = require('cbor-x');
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 export const slice = Array.prototype.slice;
@@ -77,7 +79,7 @@ DDPCommon.SerializerRegistry.register('json', {
 DDPCommon.SerializerRegistry.register('cbor', {
   serialize(msg, options) {
     try {
-      const encoded = CBOR.encode(msg);
+      const encoded = cborx.encode(msg);
       if (options && options.supportsBinary) {
         return encoded; // Uint8Array for native WebSocket
       }
@@ -92,12 +94,12 @@ DDPCommon.SerializerRegistry.register('cbor', {
       if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
         const binaryData = data instanceof ArrayBuffer
           ? new Uint8Array(data) : data;
-        return CBOR.decode(binaryData);
+        return cborx.decode(binaryData);
       }
       if (typeof data === 'string') {
         // Base64-encoded CBOR for text-only transports
         const binaryData = Base64.decode(data);
-        return CBOR.decode(binaryData);
+        return cborx.decode(binaryData);
       }
     } catch (e) {
       Meteor._debug("Discarding message with invalid CBOR", e);
@@ -136,7 +138,7 @@ function wireToAbstract(msg) {
 
   ['fields', 'params', 'result'].forEach(field => {
     if (hasOwn.call(msg, field)) {
-      msg[field] = CBOR._adjustTypesFromJSONValue(msg[field]);
+      msg[field] = EJSON._adjustTypesFromJSONValue(msg[field]);
     }
   });
 
@@ -144,7 +146,7 @@ function wireToAbstract(msg) {
 }
 
 function abstractToWire(msg) {
-  const copy = CBOR.clone(msg);
+  const copy = EJSON.clone(msg);
 
   // swizzle 'changed' messages from 'fields undefined' rep to 'fields
   // and cleared' rep
@@ -172,7 +174,7 @@ function abstractToWire(msg) {
   // adjust types to basic
   ['fields', 'params', 'result'].forEach(field => {
     if (hasOwn.call(copy, field)) {
-      copy[field] = CBOR._adjustTypesToJSONValue(copy[field]);
+      copy[field] = EJSON._adjustTypesToJSONValue(copy[field]);
     }
   });
 
@@ -202,10 +204,3 @@ DDPCommon.stringifyDDP = function (msg, options) {
   return serializer.serialize(copy, options);
 };
 
-// Deprecated: Use version negotiation instead.
-DDPCommon._useBinaryCBOR = function() {
-  if (typeof process !== 'undefined' && process.env && process.env.METEOR_DDP_CBOR_BINARY === '1') {
-    return true;
-  }
-  return false;
-};

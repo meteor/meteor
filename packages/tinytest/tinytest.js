@@ -146,7 +146,7 @@ export class TestCaseResults {
         this.equal(actual[i], expected[i]);
       }
     } else {
-      matched = CBOR.equals(expected, actual);
+      matched = EJSON.equals(expected, actual);
     }
 
     if (matched === !!not) {

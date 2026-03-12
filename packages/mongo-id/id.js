@@ -1,4 +1,4 @@
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 import { Random } from 'meteor/random';
 
 const MongoID = {};
@@ -55,7 +55,7 @@ MongoID.ObjectID = class ObjectID {
 
 }
 
-CBOR.addType('oid', str => new MongoID.ObjectID(str));
+EJSON.addType('oid', str => new MongoID.ObjectID(str));
 
 MongoID.idStringify = (id) => {
   if (id instanceof MongoID.ObjectID) {

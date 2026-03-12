@@ -37,7 +37,7 @@
  * (all fields are optional)
  */
 
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 
 interface OplogEntry {
   $v: number;
@@ -108,7 +108,7 @@ function flattenObjectInto(
     typeof source !== 'object' ||
     source === null ||
     source instanceof Mongo.ObjectID ||
-    CBOR._isCustomType(source)
+    EJSON._isCustomType(source)
   ) {
     target[prefix] = source;
     return;

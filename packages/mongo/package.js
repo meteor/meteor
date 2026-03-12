@@ -33,7 +33,7 @@ Package.onUse(function (api) {
 
   api.use([
     "random",
-    "harry97:cbor@1.2.1",
+    "ejson",
     "minimongo",
     "ddp",
     "tracker",
@@ -118,7 +118,7 @@ Package.onTest(function (api) {
   api.use([
     "tinytest",
     "test-helpers",
-    "harry97:cbor@1.2.1",
+    "ejson",
     "random",
     "ddp",
     "base64",

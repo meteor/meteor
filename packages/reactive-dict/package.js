@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['tracker', 'harry97:cbor@1.2.1', 'ecmascript']);
+  api.use(['tracker', 'ejson', 'ecmascript']);
   // If we are loading mongo-livedata, let you store ObjectIDs in it.
   api.use(['mongo', 'reload'], { weak: true });
   api.mainModule('migration.js');

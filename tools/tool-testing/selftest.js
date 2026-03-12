@@ -31,8 +31,8 @@ export const fail = parseStackMarkTop(function (reason) {
 // being the expected value
 export const expectEqual = parseStackMarkTop(async function (actual, expected) {
   try {
-    const cbor = await loadIsopackage("harry97:cbor");
-    if (!cbor.CBOR.equals(actual, expected)) {
+    const ejson = await loadIsopackage("ejson");
+    if (!ejson.EJSON.equals(actual, expected)) {
       throw new TestFailure("not-equal", {
         expected,
         actual,
@@ -42,7 +42,7 @@ export const expectEqual = parseStackMarkTop(async function (actual, expected) {
     if (e.reason === 'not-equal') {
       throw e;
     };
-    throw new TestFailure("Can't load harry97:cbor isopackage" , {
+    throw new TestFailure("Can't load ejson isopackage" , {
       error: e.message,
       stack: e.stack,
     });

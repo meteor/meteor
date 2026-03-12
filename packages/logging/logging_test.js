@@ -37,19 +37,19 @@ Tinytest.add("logging - log", function (test) {
     let intercepted = Log._intercepted();
     test.equal(intercepted.length, 3);
 
-    const obj1 = CBOR.parse(intercepted[0]);
+    const obj1 = EJSON.parse(intercepted[0]);
     test.equal(obj1.message, "message");
     test.equal(obj1.level, level);
     test.instanceOf(obj1.time, Date);
 
-    const obj2 = CBOR.parse(intercepted[1]);
+    const obj2 = EJSON.parse(intercepted[1]);
     test.isFalse(obj2.message);
     test.equal(obj2.property1, "foo");
     test.equal(obj2.property2, "bar");
     test.equal(obj2.level, level);
     test.instanceOf(obj2.time, Date);
 
-    const obj3 = CBOR.parse(intercepted[2]);
+    const obj3 = EJSON.parse(intercepted[2]);
     test.equal(obj3.message, "mixed");
     test.equal(obj3.property1, "foo");
     test.equal(obj3.property2, "bar");
@@ -88,7 +88,7 @@ Tinytest.add("logging - log", function (test) {
       const expected = testcase[1];
       const testName = testcase[2];
       const recieved = intercepted[index];
-      const obj = CBOR.parse(recieved);
+      const obj = EJSON.parse(recieved);
 
       // IE8 and old Safari don't support this date format. Skip it.
       if (
@@ -162,7 +162,7 @@ Tinytest.add("logging - parse", function (test) {
   test.equal(Log.parse("message"), null);
   test.equal(Log.parse('{"foo": "bar"}'), null);
   const time = new Date();
-  test.equal(Log.parse(`{"foo": "bar", "time": ${CBOR.stringify(time)}}`), {
+  test.equal(Log.parse(`{"foo": "bar", "time": ${EJSON.stringify(time)}}`), {
     foo: "bar",
     time,
   });

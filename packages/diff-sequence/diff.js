@@ -28,7 +28,7 @@ DiffSequence.diffQueryChanges = function (ordered, oldResults, newResults,
 DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
                                                        observer, options) {
   options = options || {};
-  var projectionFn = options.projectionFn || CBOR.clone;
+  var projectionFn = options.projectionFn || EJSON.clone;
 
   if (observer.movedBefore) {
     throw new Error("_diffQueryUnordered called with a movedBefore observer!");
@@ -37,7 +37,7 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
   newResults.forEach(function (newDoc, id) {
     var oldDoc = oldResults.get(id);
     if (oldDoc) {
-      if (observer.changed && !CBOR.equals(oldDoc, newDoc)) {
+      if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
         var projectedNew = projectionFn(newDoc);
         var projectedOld = projectionFn(oldDoc);
         var changedFields =
@@ -64,7 +64,7 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
 DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
                                                      observer, options) {
   options = options || {};
-  var projectionFn = options.projectionFn || CBOR.clone;
+  var projectionFn = options.projectionFn || EJSON.clone;
 
   var new_presence_of_id = {};
   new_results.forEach(function (doc) {
@@ -267,7 +267,7 @@ DiffSequence.makeChangedFields = function (newDoc, oldDoc) {
       fields[key] = value;
     },
     both: function (key, leftValue, rightValue) {
-      if (!CBOR.equals(leftValue, rightValue))
+      if (!EJSON.equals(leftValue, rightValue))
         fields[key] = rightValue;
     }
   });

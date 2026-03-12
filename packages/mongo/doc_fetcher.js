@@ -44,7 +44,7 @@ export class DocFetcher {
         // objects that are intertwingled with each other. Clone before
         // popping the future, so that if clone throws, the error gets passed
         // to the next callback.
-        callbacks.pop()(null, CBOR.clone(doc));
+        callbacks.pop()(null, EJSON.clone(doc));
       }
     } catch (e) {
       while (callbacks.length > 0) {

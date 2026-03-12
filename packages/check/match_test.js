@@ -181,8 +181,8 @@ Tinytest.add('check - check', test => {
   fails(/foo/, String);
   matches(new Date, Date);
   fails(new Date, Number);
-  matches(CBOR.newBinary(42), Match.Where(CBOR.isBinary));
-  fails([], Match.Where(CBOR.isBinary));
+  matches(EJSON.newBinary(42), Match.Where(EJSON.isBinary));
+  fails([], Match.Where(EJSON.isBinary));
 
   matches(42, Match.Where(x => x % 2 === 0));
   fails(43, Match.Where(x => x % 2 === 0));
@@ -462,8 +462,8 @@ Tinytest.add('check - check throw all errors', test => {
   fails(/foo/, String);
   matches(new Date, Date);
   fails(new Date, Number);
-  matches(CBOR.newBinary(42), Match.Where(CBOR.isBinary));
-  fails([], Match.Where(CBOR.isBinary));
+  matches(EJSON.newBinary(42), Match.Where(EJSON.isBinary));
+  fails([], Match.Where(EJSON.isBinary));
 
   matches(42, Match.Where(x => x % 2 === 0));
   fails(43, Match.Where(x => x % 2 === 0));

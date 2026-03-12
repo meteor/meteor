@@ -36,7 +36,7 @@ Object.assign(StubStream.prototype, {
     const self = this;
 
     if (typeof data === 'object') {
-      data = CBOR.stringify(data);
+      data = EJSON.stringify(data);
     }
 
     for (const cb of self.callbacks['message']) {

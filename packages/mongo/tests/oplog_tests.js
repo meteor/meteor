@@ -133,7 +133,7 @@ process.env.MONGO_OPLOG_URL &&
             }
           },
           changed(id, fields) {
-            if (CBOR.equals(id, blueDog5Id) && fields.name === 'spot') {
+            if (EJSON.equals(id, blueDog5Id) && fields.name === 'spot') {
               gotSpot = true;
               resolver();
             }

@@ -10,7 +10,7 @@ Npm.depends({
 Package.onUse(function (api) {
   api.use([
     'ecmascript',
-    'harry97:cbor',
+    'ejson',
     'random',
     'ddp',
     'mongo',

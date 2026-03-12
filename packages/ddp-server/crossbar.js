@@ -46,7 +46,7 @@ Object.assign(DDPServer._Crossbar.prototype, {
     var id = self.nextId++;
 
     var collection = self._collectionForMessage(trigger);
-    var record = {trigger: CBOR.clone(trigger), callback: callback};
+    var record = {trigger: EJSON.clone(trigger), callback: callback};
     if (! (collection in self.listenersByCollection)) {
       self.listenersByCollection[collection] = {};
       self.listenersByCollectionCount[collection] = 0;
@@ -151,7 +151,7 @@ Object.assign(DDPServer._Crossbar.prototype, {
     }
 
     return Object.keys(trigger).every(function (key) {
-      return !(key in notification) || CBOR.equals(trigger[key], notification[key]);
+      return !(key in notification) || EJSON.equals(trigger[key], notification[key]);
      });
   }
 });

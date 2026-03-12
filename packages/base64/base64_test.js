@@ -25,8 +25,8 @@ Tinytest.add("base64 - testing the test", test => {
 });
 
 Tinytest.add("base64 - empty", test => {
-  test.equal(Base64.encode(CBOR.newBinary(0)), "");
-  test.equal(Base64.decode(""), CBOR.newBinary(0));
+  test.equal(Base64.encode(EJSON.newBinary(0)), "");
+  test.equal(Base64.decode(""), EJSON.newBinary(0));
 });
 
 
@@ -51,7 +51,7 @@ Tinytest.add("base64 - non-text examples", test => {
   ];
   tests.forEach(t => {
     test.equal(Base64.encode(t.array), t.b64);
-    const expectedAsBinary = CBOR.newBinary(t.array.length);
+    const expectedAsBinary = EJSON.newBinary(t.array.length);
     t.array.forEach((val, i) => expectedAsBinary[i] = val);
     test.equal(Base64.decode(t.b64), expectedAsBinary);
   });

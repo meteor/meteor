@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 <<<<<<< cbor
 import { Meteor } from 'meteor/meteor';
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 =======
 import { Meteor } from 'meteor/meteor'
 import { check, Match } from 'meteor/check';
@@ -1618,7 +1618,7 @@ export class AccountsServer extends AccountsCommon {
 // object, but don't clone the connection.
 //
 const cloneAttemptWithConnection = (connection, attempt) => {
-  const clonedAttempt = CBOR.clone(attempt);
+  const clonedAttempt = EJSON.clone(attempt);
   clonedAttempt.connection = connection;
   return clonedAttempt;
 };

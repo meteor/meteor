@@ -6,7 +6,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.use('ecmascript');
-  api.use('harry97:cbor@1.2.1');
+  api.use('ejson');
   api.mainModule('diff.js');
   api.export('DiffSequence');
 });
@@ -14,7 +14,7 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use([
     'tinytest',
-    'harry97:cbor@1.2.1'
+    'ejson'
   ]);
 
   api.use('diff-sequence');

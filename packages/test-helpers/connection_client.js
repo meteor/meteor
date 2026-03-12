@@ -8,13 +8,13 @@ captureConnectionMessagesClient = async function () {
   conn._stream.send = function (...args) {
     // Messages are not really sent when the socket is not connected, duh
     if (conn._stream.currentStatus.connected) {
-      messages.push(CBOR.parse(args[0]));
+      messages.push(EJSON.parse(args[0]));
     }
     send.apply(this, args);
   }
 
   conn._stream.on('message', message => {
-    return messages.push(CBOR.parse(message));
+    return messages.push(EJSON.parse(message));
   });
 
   function cleanup() {

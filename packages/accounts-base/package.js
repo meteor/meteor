@@ -10,7 +10,7 @@ Package.onUse((api) => {
   api.use("tracker", "client");
   api.use("check", "server");
   api.use("random", ["client", "server"]);
-  api.use("harry97:cbor@1.2.1", "server");
+  api.use("ejson", "server");
   api.use("callback-hook", ["client", "server"]);
   api.use("reactive-var", "client");
   api.use("url", ["client", "server"]);

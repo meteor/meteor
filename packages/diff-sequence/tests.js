@@ -5,7 +5,7 @@ Tinytest.add("diff-sequence - diff changes ordering", function (test) {
   var testMutation = function (a, b) {
     var aa = makeDocs(a);
     var bb = makeDocs(b);
-    var aaCopy = CBOR.clone(aa);
+    var aaCopy = EJSON.clone(aa);
     DiffSequence.diffQueryOrderedChanges(aa, bb, {
 
       addedBefore: function (id, doc, before) {
@@ -83,7 +83,7 @@ Tinytest.add("diff-sequence - diff", function (test) {
     });
     var find = function (arr, id) {
       for (var i = 0; i < arr.length; i++) {
-        if (CBOR.equals(arr[i]._id, id))
+        if (EJSON.equals(arr[i]._id, id))
           return i;
       }
       return -1;
@@ -109,7 +109,7 @@ Tinytest.add("diff-sequence - diff", function (test) {
       changed: function(id, fields) {
         var at_idx = find (results, id);
         var oldDoc = results[at_idx];
-        var doc = CBOR.clone(oldDoc);
+        var doc = EJSON.clone(oldDoc);
         DiffSequence.applyChanges(doc, fields);
         test.isFalse(at_idx < 0 || at_idx >= results.length);
         test.equal(doc._id, oldDoc._id);

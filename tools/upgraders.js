@@ -162,7 +162,7 @@ var upgradersByName = {
         'logging',
         'reload',
         'random',
-        'harry97:cbor',
+        'ejson',
         'spacebars',
         'check',
       ]);

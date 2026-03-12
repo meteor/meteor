@@ -1,5 +1,5 @@
 import LocalCollection from './local_collection.js';
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -689,7 +689,7 @@ export function equalityElementMatcher(elementSelector) {
 
   // Special-case: null and undefined are equal (if you got undefined in there
   // somewhere, or if you got it due to some branch being non-existent in the
-  // weird special case), even though they aren't with CBOR.equals.
+  // weird special case), even though they aren't with EJSON.equals.
   // undefined or null
   if (elementSelector == null) {
     return value => value == null;
@@ -741,7 +741,7 @@ function getOperandBitmask(operand, selector) {
 
   // bindata bitmask
   // You can also use an arbitrarily large BinData instance as a bitmask.
-  if (CBOR.isBinary(operand)) {
+  if (EJSON.isBinary(operand)) {
     return new Uint8Array(operand.buffer);
   }
 
@@ -798,7 +798,7 @@ function getValueBitmask(value, length) {
   }
 
   // bindata
-  if (CBOR.isBinary(value)) {
+  if (EJSON.isBinary(value)) {
     return new Uint8Array(value.buffer);
   }
 

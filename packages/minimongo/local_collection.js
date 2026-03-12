@@ -8,7 +8,7 @@ import {
   populateDocumentWithQueryFields,
   projectionDetails,
 } from './common.js';
-import { CBOR } from 'meteor/harry97:cbor';
+import { EJSON } from 'meteor/ejson';
 
 import { getAsyncMethodName } from './constants';
 
@@ -129,7 +129,7 @@ export default class LocalCollection {
   // XXX possibly enforce that 'undefined' does not appear (we assume
   // this in our handling of null and $exists)
   insert(doc, callback) {
-    doc = CBOR.clone(doc);
+    doc = EJSON.clone(doc);
     const id = this.prepareInsert(doc);
     const queriesToRecompute = [];
 
@@ -172,7 +172,7 @@ export default class LocalCollection {
     return id;
   }
   async insertAsync(doc, callback) {
-    doc = CBOR.clone(doc);
+    doc = EJSON.clone(doc);
     const id = this.prepareInsert(doc);
     const queriesToRecompute = [];
 
@@ -229,7 +229,7 @@ export default class LocalCollection {
     // Take a snapshot of the query results for each query.
     Object.keys(this.queries).forEach(qid => {
       const query = this.queries[qid];
-      query.resultsSnapshot = CBOR.clone(query.results);
+      query.resultsSnapshot = EJSON.clone(query.results);
     });
   }
 
@@ -302,7 +302,7 @@ export default class LocalCollection {
     // Easy special case: if we're not calling observeChanges callbacks and
     // we're not saving originals and we got asked to remove everything, then
     // just empty everything directly.
-    if (this.paused && !this._savedOriginals && CBOR.equals(selector, {})) {
+    if (this.paused && !this._savedOriginals && EJSON.equals(selector, {})) {
       return this.clearResultQueries(callback);
     }
 
@@ -343,7 +343,7 @@ export default class LocalCollection {
     // Easy special case: if we're not calling observeChanges callbacks and
     // we're not saving originals and we got asked to remove everything, then
     // just empty everything directly.
-    if (this.paused && !this._savedOriginals && CBOR.equals(selector, {})) {
+    if (this.paused && !this._savedOriginals && EJSON.equals(selector, {})) {
       return this.clearResultQueries(callback);
     }
 
@@ -496,8 +496,8 @@ export default class LocalCollection {
 
           const docToMemoize = (
             idsMatched &&
-            !idsMatched.some(id => CBOR.equals(id, doc._id))
-          ) ? doc : CBOR.clone(doc);
+            !idsMatched.some(id => EJSON.equals(id, doc._id))
+          ) ? doc : EJSON.clone(doc);
 
           docMap.set(doc._id, docToMemoize);
 
@@ -779,7 +779,7 @@ export default class LocalCollection {
 
     const matched_before = this._getMatchedDocAndModify(doc, mod, arrayIndices);
 
-    const old_doc = CBOR.clone(doc);
+    const old_doc = EJSON.clone(doc);
     LocalCollection._modify(doc, mod, {arrayIndices});
 
     const recomputeQids = {};
@@ -825,7 +825,7 @@ export default class LocalCollection {
 
     const matched_before = this._getMatchedDocAndModify(doc, mod, arrayIndices);
 
-    const old_doc = CBOR.clone(doc);
+    const old_doc = EJSON.clone(doc);
     LocalCollection._modify(doc, mod, {arrayIndices});
 
     const recomputeQids = {};
@@ -923,7 +923,7 @@ export default class LocalCollection {
       return;
     }
 
-    this._savedOriginals.set(id, CBOR.clone(doc));
+    this._savedOriginals.set(id, EJSON.clone(doc));
   }
 }
 
@@ -971,12 +971,12 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
           doc._id = id;
 
           if (callbacks.addedBefore) {
-            callbacks.addedBefore.call(this, id, CBOR.clone(fields), before);
+            callbacks.addedBefore.call(this, id, EJSON.clone(fields), before);
           }
 
           // This line triggers if we provide added with movedBefore.
           if (callbacks.added) {
-            callbacks.added.call(this, id, CBOR.clone(fields));
+            callbacks.added.call(this, id, EJSON.clone(fields));
           }
 
           // XXX could `before` be a falsy ID?  Technically
@@ -1000,7 +1000,7 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
           const doc = { ...fields };
 
           if (callbacks.added) {
-            callbacks.added.call(this, id, CBOR.clone(fields));
+            callbacks.added.call(this, id, EJSON.clone(fields));
           }
 
           doc._id = id;
@@ -1020,7 +1020,7 @@ LocalCollection._CachingChangeObserver = class _CachingChangeObserver {
       }
 
       if (callbacks.changed) {
-        callbacks.changed.call(this, id, CBOR.clone(fields));
+        callbacks.changed.call(this, id, EJSON.clone(fields));
       }
 
       DiffSequence.applyChanges(doc, fields);
@@ -1079,7 +1079,7 @@ LocalCollection.wrapTransform = transform => {
     }
 
     if (hasOwn.call(transformed, '_id')) {
-      if (!CBOR.equals(transformed._id, id)) {
+      if (!EJSON.equals(transformed._id, id)) {
         throw new Error('transformed document can\'t have different _id');
       }
     } else {
@@ -1171,7 +1171,7 @@ LocalCollection._compileProjection = fields => {
       return doc.map(subdoc => transform(subdoc, ruleTree));
     }
 
-    const result = details.including ? {} : CBOR.clone(doc);
+    const result = details.including ? {} : EJSON.clone(doc);
 
     Object.keys(ruleTree).forEach(key => {
       if (doc == null || !hasOwn.call(doc, key)) {
@@ -1187,7 +1187,7 @@ LocalCollection._compileProjection = fields => {
         }
       } else if (details.including) {
         // Otherwise we don't even touch this subfield
-        result[key] = CBOR.clone(doc[key]);
+        result[key] = EJSON.clone(doc[key]);
       } else {
         delete result[key];
       }
@@ -1327,7 +1327,7 @@ LocalCollection._idsMatchedBySelector = selector => {
 };
 
 LocalCollection._insertInResultsSync = (query, doc) => {
-  const fields = CBOR.clone(doc);
+  const fields = EJSON.clone(doc);
 
   delete fields._id;
 
@@ -1360,7 +1360,7 @@ LocalCollection._insertInResultsSync = (query, doc) => {
 };
 
 LocalCollection._insertInResultsAsync = async (query, doc) => {
-  const fields = CBOR.clone(doc);
+  const fields = EJSON.clone(doc);
 
   delete fields._id;
 
@@ -1426,7 +1426,7 @@ LocalCollection._isModificationMod = mod => {
   return isModify;
 };
 
-// XXX maybe this should be CBOR.isObject, though EJSON doesn't know about
+// XXX maybe this should be EJSON.isObject, though EJSON doesn't know about
 // RegExp
 // XXX note that _type(undefined) === 3!!!!
 LocalCollection._isPlainObject = x => {
@@ -1451,10 +1451,10 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
   }
 
   // Make sure the caller can't mutate our data structures.
-  modifier = CBOR.clone(modifier);
+  modifier = EJSON.clone(modifier);
 
   const isModifier = isOperatorObject(modifier);
-  const newDoc = isModifier ? CBOR.clone(doc) : modifier;
+  const newDoc = isModifier ? EJSON.clone(doc) : modifier;
 
   if (isModifier) {
     // apply modifiers to the doc.
@@ -1494,7 +1494,7 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
       });
     });
 
-    if (doc._id && !CBOR.equals(doc._id, newDoc._id)) {
+    if (doc._id && !EJSON.equals(doc._id, newDoc._id)) {
       throw MinimongoError(
         `After applying the update to the document {_id: "${doc._id}", ...},` +
         ' the (immutable) field \'_id\' was found to have been altered to ' +
@@ -1502,7 +1502,7 @@ LocalCollection._modify = (doc, modifier, options = {}) => {
       );
     }
   } else {
-    if (doc._id && modifier._id && !CBOR.equals(doc._id, modifier._id)) {
+    if (doc._id && modifier._id && !EJSON.equals(doc._id, modifier._id)) {
       throw MinimongoError(
         `The _id field cannot be changed from {_id: "${doc._id}"} to ` +
         `{_id: "${modifier._id}"}`
@@ -1569,12 +1569,12 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
           return;
         }
 
-        let doc = CBOR.clone(this.docs.get(id));
+        let doc = EJSON.clone(this.docs.get(id));
         if (!doc) {
           throw new Error(`Unknown id for changed: ${id}`);
         }
 
-        const oldDoc = transform(CBOR.clone(doc));
+        const oldDoc = transform(EJSON.clone(doc));
 
         DiffSequence.applyChanges(doc, fields);
 
@@ -1607,7 +1607,7 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
         }
 
         observeCallbacks.movedTo(
-            transform(CBOR.clone(this.docs.get(id))),
+            transform(EJSON.clone(this.docs.get(id))),
             from,
             to,
             before || null
@@ -1618,7 +1618,7 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
           return;
         }
 
-        // technically maybe there should be an CBOR.clone here, but it's about
+        // technically maybe there should be an EJSON.clone here, but it's about
         // to be removed from this.docs!
         const doc = transform(this.docs.get(id));
 
@@ -1639,13 +1639,13 @@ LocalCollection._observeFromObserveChanges = (cursor, observeCallbacks) => {
       changed(id, fields) {
         if (observeCallbacks.changed) {
           const oldDoc = this.docs.get(id);
-          const doc = CBOR.clone(oldDoc);
+          const doc = EJSON.clone(oldDoc);
 
           DiffSequence.applyChanges(doc, fields);
 
           observeCallbacks.changed(
               transform(doc),
-              transform(CBOR.clone(oldDoc))
+              transform(EJSON.clone(oldDoc))
           );
         }
       },
@@ -1755,7 +1755,7 @@ LocalCollection._selectorIsIdPerhapsAsObject = selector =>
 ;
 
 LocalCollection._updateInResultsSync = (query, doc, old_doc) => {
-  if (!CBOR.equals(doc._id, old_doc._id)) {
+  if (!EJSON.equals(doc._id, old_doc._id)) {
     throw new Error('Can\'t change a doc\'s _id while updating');
   }
 
@@ -1806,7 +1806,7 @@ LocalCollection._updateInResultsSync = (query, doc, old_doc) => {
 };
 
 LocalCollection._updateInResultsAsync = async (query, doc, old_doc) => {
-  if (!CBOR.equals(doc._id, old_doc._id)) {
+  if (!EJSON.equals(doc._id, old_doc._id)) {
     throw new Error('Can\'t change a doc\'s _id while updating');
   }
 

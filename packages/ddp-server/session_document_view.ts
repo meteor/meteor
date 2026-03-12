@@ -56,7 +56,7 @@ export class SessionDocumentView {
       changeCollector[key] = undefined;
     } else if (
       removedValue !== undefined &&
-      !CBOR.equals(removedValue, precedenceList[0].value)
+      !EJSON.equals(removedValue, precedenceList[0].value)
     ) {
       changeCollector[key] = precedenceList[0].value;
     }
@@ -73,7 +73,7 @@ export class SessionDocumentView {
     if (key === "_id") return;
 
     // Don't share state with the data passed in by the user.
-    value = CBOR.clone(value);
+    value = EJSON.clone(value);
 
     if (!this.dataByKey.has(key)) {
       this.dataByKey.set(key, [
@@ -93,7 +93,7 @@ export class SessionDocumentView {
     }
 
     if (elt) {
-      if (elt === precedenceList[0] && !CBOR.equals(value, elt.value)) {
+      if (elt === precedenceList[0] && !EJSON.equals(value, elt.value)) {
         // this subscription is changing the value of this field.
         changeCollector[key] = value;
       }

@@ -114,7 +114,7 @@ export const ReplicationMethods = {
             var modifier = {};
             keys.forEach(key => {
               const value = msg.fields[key];
-              if (CBOR.equals(doc[key], value)) {
+              if (EJSON.equals(doc[key], value)) {
                 return;
               }
               if (typeof value === 'undefined') {
@@ -195,7 +195,7 @@ export const ReplicationMethods = {
             var modifier = {};
             keys.forEach(key => {
               const value = msg.fields[key];
-              if (CBOR.equals(doc[key], value)) {
+              if (EJSON.equals(doc[key], value)) {
                 return;
               }
               if (typeof value === 'undefined') {
