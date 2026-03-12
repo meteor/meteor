@@ -5,10 +5,9 @@ import {
 
 import { StreamClientCommon } from "./common.js";
 
-// Statically importing SockJS here will prevent native WebSocket usage
-// below (in favor of SockJS), but will ensure maximum compatibility for
-// clients stuck in unusual networking environments.
-import SockJS from "./sockjs-1.6.1-min-.js";
+// SockJS is loaded dynamically (via import()) only when DISABLE_SOCKJS is not
+// set. This avoids bundling the 57 KB SockJS library when it's not needed.
+// When DISABLE_SOCKJS=1, only native WebSocket is used.
 
 export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
@@ -154,23 +153,24 @@ export class ClientStream extends StreamClientCommon {
     return protocolsWhitelist;
   }
 
-  _launchConnection() {
+  async _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
-    var options = {
-      transports: this._sockjsProtocolsWhitelist(),
-      ...this.options._sockjsOptions
-    };
-
-    const hasSockJS = typeof SockJS === "function";
     const disableSockJS = __meteor_runtime_config__.DISABLE_SOCKJS;
 
-    this.socket = hasSockJS && !disableSockJS
+    if (disableSockJS) {
+      this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
+    } else {
+      const { default: SockJS } = await import("./sockjs-1.6.1-min-.js");
+      const options = {
+        transports: this._sockjsProtocolsWhitelist(),
+        ...this.options._sockjsOptions
+      };
       // Convert raw URL to SockJS URL each time we open a connection, so
       // that we can connect to random hostnames and get around browser
       // per-host connection limits.
-      ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
-      : new WebSocket(toWebsocketUrl(this.rawUrl));
+      this.socket = new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
+    }
 
     this.socket.onopen = data => {
       this.lastError = null;
