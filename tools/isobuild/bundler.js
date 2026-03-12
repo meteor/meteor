@@ -2187,6 +2187,8 @@ class JsImage {
     if (!this._sourceDir) return null;
     const crypto = require('crypto');
     const hash = crypto.createHash('sha1');
+    // Salt: bump when CJS module generation logic changes
+    hash.update('v2\0');
     // Include param signature in hash so changes invalidate cache
     hash.update(paramKeys.join(','));
     hash.update('\0\0');
@@ -2216,7 +2218,12 @@ class JsImage {
     for (let i = 0; i < this.jsToLoad.length; i++) {
       if (i > 0) chunks.push(',\n');
       const item = this.jsToLoad[i];
-      const source = item.source.toString('utf8');
+      // Strip inline source map comments — the CJS module is an internal
+      // cache artifact, and multiple items' sourceMappingURL comments in a
+      // single file confuses source-map-support, causing it to crash when
+      // formatting error stack traces.
+      const source = item.source.toString('utf8')
+        .replace(/\n\/\/# source(?:Mapping)?URL=[^\n]+/g, '\n');
       chunks.push(`  // [${i}] ${item.targetPath}\n`);
       chunks.push(`  function(${sig}){\n`);
       chunks.push(source);
@@ -2377,7 +2384,13 @@ class JsImage {
           const values = ENV_KEYS.map(k => env[k]);
           cjsFunctions[i].apply(null, values);
         } catch (e) {
-          buildmessage.exception(e);
+          try {
+            buildmessage.exception(e);
+          } catch (_) {
+            // source-map-support can crash when parsing source maps
+            // embedded in CJS modules. Fall back to plain error message.
+            buildmessage.error(e.message || String(e));
+          }
           // Recover by skipping the rest of the load (matches vm.Script behavior)
           failed = true;
           return;
