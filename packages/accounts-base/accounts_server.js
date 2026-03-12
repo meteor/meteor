@@ -1,11 +1,7 @@
 import crypto from 'crypto';
-<<<<<<< cbor
 import { Meteor } from 'meteor/meteor';
 import { EJSON } from 'meteor/ejson';
-=======
-import { Meteor } from 'meteor/meteor'
 import { check, Match } from 'meteor/check';
->>>>>>> devel
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
