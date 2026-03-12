@@ -1,9 +1,6 @@
 "use strict";
 
 import { EJSON } from 'meteor/ejson';
-import { Base64 } from 'meteor/base64';
-
-const cborx = require('cbor-x');
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 export const slice = Array.prototype.slice;
@@ -75,50 +72,15 @@ DDPCommon.SerializerRegistry.register('json', {
   }
 });
 
-// CBOR serializer
-DDPCommon.SerializerRegistry.register('cbor', {
-  serialize(msg, options) {
-    try {
-      const encoded = cborx.encode(msg);
-      if (options && options.supportsBinary) {
-        return encoded; // Uint8Array for native WebSocket
-      }
-      return Base64.encode(encoded); // Base64 string for SockJS
-    } catch (e) {
-      Meteor._debug('CBOR encoding failed, falling back to JSON:', e);
-      return JSON.stringify(msg);
-    }
-  },
-  deserialize(data) {
-    try {
-      if (data instanceof ArrayBuffer || data instanceof Uint8Array) {
-        const binaryData = data instanceof ArrayBuffer
-          ? new Uint8Array(data) : data;
-        return cborx.decode(binaryData);
-      }
-      if (typeof data === 'string') {
-        // Base64-encoded CBOR for text-only transports
-        const binaryData = Base64.decode(data);
-        return cborx.decode(binaryData);
-      }
-    } catch (e) {
-      Meteor._debug("Discarding message with invalid CBOR", e);
-      return null;
-    }
-    return null;
-  }
-});
-
 // Maps DDP version strings to serializer names.
+// Additional serializers (e.g., CBOR, BSON) can be registered via
+// DDPCommon.SerializerRegistry.register() and mapped to new version strings.
 DDPCommon.SERIALIZER_FOR_VERSION = {
   '1': 'json',
-  '1.cbor': 'cbor',
   'pre2': 'json',
   'pre1': 'json',
 };
 
-// Order = client preference. '1' first preserves backward compatibility.
-// NOTE: '1.cbor' is intentionally excluded until full infrastructure is in place.
 DDPCommon.SUPPORTED_DDP_VERSIONS = ['1', 'pre2', 'pre1'];
 
 // DDP protocol transforms: wire format ↔ abstract DDP format.

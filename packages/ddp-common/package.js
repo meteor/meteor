@@ -4,13 +4,9 @@ Package.describe({
   documentation: null,
 });
 
-Npm.depends({
-  'cbor-x': '1.5.5'
-});
-
 Package.onUse(function (api) {
   api.use(
-    ["check", "random", "ecmascript", "ejson", "tracker", "retry", "base64"],
+    ["check", "random", "ecmascript", "ejson", "tracker", "retry"],
     ["client", "server"]
   );
 
