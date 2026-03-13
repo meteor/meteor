@@ -1322,7 +1322,7 @@ class Target {
               f.setAssets(unibuildAssets);
             }
 
-            Object.values(unibuild.nodeModulesDirectories).forEach((nmd) => {
+            Object.values(unibuild.nodeModulesDirectories || {}).forEach((nmd) => {
               addNodeModulesDirToObject(nmd, this.nodeModulesDirectories);
               addNodeModulesDirToObject(nmd, f.nodeModulesDirectories);
             });

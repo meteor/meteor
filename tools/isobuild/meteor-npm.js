@@ -1113,7 +1113,7 @@ var canonicalVersion = function (depObj) {
 // they can be diffed. This only returns top-level dependencies.
 var treeToDependencies = function (tree) {
   return Object.fromEntries(
-    Object.entries(tree.dependencies).map(function ([name, properties]) {
+    Object.entries(tree.dependencies || {}).map(function ([name, properties]) {
       return [name, canonicalVersion(properties)];
     }));
 };
@@ -1262,7 +1262,7 @@ function minimizeDependencyTree(tree) {
   }
 
   var newTopLevelDependencies = {};
-  Object.entries(tree.dependencies).forEach(function ([name, module]) {
+  Object.entries(tree.dependencies || {}).forEach(function ([name, module]) {
     newTopLevelDependencies[name] = minimizeModule(module);
   });
   return {dependencies: newTopLevelDependencies};
