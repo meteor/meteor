@@ -5,9 +5,11 @@ import {
 
 import { StreamClientCommon } from "./common.js";
 
-// SockJS is loaded dynamically (via import()) only when DISABLE_SOCKJS is not
-// set. This avoids bundling the 57 KB SockJS library when it's not needed.
-// When DISABLE_SOCKJS=1, only native WebSocket is used.
+// SockJS is imported statically to avoid the startup latency introduced by
+// dynamic import() in _launchConnection(). When DISABLE_SOCKJS=1, SockJS
+// remains bundled in the client, but the connection uses the native
+// WebSocket path directly with no import-time delay.
+import SockJS from "./sockjs-1.6.1-min-.js";
 
 export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
@@ -153,15 +155,12 @@ export class ClientStream extends StreamClientCommon {
     return protocolsWhitelist;
   }
 
-  async _launchConnection() {
+  _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
-    const disableSockJS = __meteor_runtime_config__.DISABLE_SOCKJS;
-
-    if (disableSockJS) {
+    if (__meteor_runtime_config__.DISABLE_SOCKJS) {
       this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
     } else {
-      const { default: SockJS } = await import("./sockjs-1.6.1-min-.js");
       const options = {
         transports: this._sockjsProtocolsWhitelist(),
         ...this.options._sockjsOptions
