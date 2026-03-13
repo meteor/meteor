@@ -193,32 +193,27 @@ compiler.compile = Profile(function (packageSource, options) {
     isobuildFeatures
   });
 
-  // Compile all architectures in parallel (they produce independent unibuilds)
-  const archsToCompile = packageSource.architectures.filter(architecture => {
-    if (architecture.arch === 'web.cordova' && !includeCordovaUnibuild) return false;
+  for (const architecture of packageSource.architectures) {
+    if (architecture.arch === 'web.cordova' && !includeCordovaUnibuild) {
+      continue;
+    }
     if (global.includedWebArchs != null &&
-        ![...global.includedWebArchs, 'os'].includes(architecture.arch)) return false;
-    return true;
-  });
+        ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
-  const archResults = await Promise.all(
-    archsToCompile.map(architecture =>
-      files.withCache(async () => {
-        return await compileUnibuild({
-          isopack: isopk,
-          sourceArch: architecture,
-          isopackCache: isopackCache,
-          nodeModulesPath: nodeModulesPath,
-          devNodeModulesPath: devNodeModulesPath,
-        });
-      })
-    )
-  );
+    // TODO -> Maybe this withCache will bring some problems in other commands.
+    await files.withCache(async () => {
+      var unibuildResult = await compileUnibuild({
+        isopack: isopk,
+        sourceArch: architecture,
+        isopackCache: isopackCache,
+        nodeModulesPath: nodeModulesPath,
+        devNodeModulesPath: devNodeModulesPath,
+      });
 
-  archResults.forEach(result => {
-    Object.assign(pluginProviderPackageNames,
-        result.pluginProviderPackageNames);
-  });
+      Object.assign(pluginProviderPackageNames,
+          unibuildResult.pluginProviderPackageNames);
+    });
+  }
 
   if (options.includePluginProviderPackageMap) {
     isopk.setPluginProviderPackageMap(
@@ -244,47 +239,25 @@ compiler.lint = Profile(function (packageSource, options) {
   const warnings = new buildmessage._MessageSet();
   let linted = false;
 
-  const archsToLint = packageSource.architectures.filter(architecture => {
-    if (!options.includeCordovaUnibuild && architecture.arch === 'web.cordova') return false;
-    if (global.includedWebArchs != null &&
-        ![...global.includedWebArchs, 'os'].includes(architecture.arch)) return false;
-    return true;
-  });
-
-  // Pre-initialize all plugin packages before parallel linting.
-  // ensurePluginsInitialized loads Reify modules which cannot be
-  // evaluated concurrently on the same isopack.
-  const allPluginPackages = new Set();
-  for (const architecture of archsToLint) {
-    const pkgs = await getActivePluginPackages(options.isopack, {
-      isopackCache: options.isopackCache,
-      uses: architecture.uses
-    });
-    for (const pkg of Object.values(pkgs)) {
-      allPluginPackages.add(pkg);
+  for (const architecture of packageSource.architectures) {
+    // skip Cordova if not required
+    if (!options.includeCordovaUnibuild
+        && architecture.arch === 'web.cordova') {
+      continue;
     }
-  }
-  for (const pkg of allPluginPackages) {
-    await pkg.ensurePluginsInitialized();
-  }
+    if (global.includedWebArchs != null &&
+        ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
-  // Now lint all architectures in parallel (plugins already initialized)
-  const lintResults = await Promise.all(
-    archsToLint.map(architecture =>
-      lintUnibuild({
-        isopack: options.isopack,
-        isopackCache: options.isopackCache,
-        sourceArch: architecture
-      })
-    )
-  );
-
-  lintResults.forEach(unibuildWarnings => {
+    const unibuildWarnings = await lintUnibuild({
+      isopack: options.isopack,
+      isopackCache: options.isopackCache,
+      sourceArch: architecture
+    });
     if (unibuildWarnings) {
       linted = true;
       warnings.merge(unibuildWarnings);
     }
-  });
+  }
 
   return {warnings, linted};
 });
