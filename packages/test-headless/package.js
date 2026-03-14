@@ -6,6 +6,11 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
-  api.use(['tinytest', 'ejson'], 'server');
-  api.addFiles(['server.js'], 'server');
+  api.use(['tinytest', 'ejson'], ['client', 'server']);
+  api.use('random', 'client');
+
+  api.addFiles('server.js', 'server');
+  api.addFiles('client.js', 'client');
+
+  api.export('runTests', 'client');
 });
