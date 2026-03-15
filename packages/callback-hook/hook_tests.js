@@ -1,55 +1,61 @@
-Tinytest.add("callback-hook - binds to registrar's env by default", function (test) {
-  const hook = new Hook();
-  const envVar = new Meteor.EnvironmentVariable;
-  envVar.withValue("registrar's value", function() {
-    hook.register(function() {
-      test.equal(envVar.get(), "registrar's value");
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import { Meteor } from 'meteor/meteor';
+
+describe('callback-hook', () => {
+  it("binds to registrar's env by default", () => {
+    const hook = new Hook();
+    const envVar = new Meteor.EnvironmentVariable;
+    envVar.withValue("registrar's value", () => {
+      hook.register(() => {
+        assert.strictEqual(envVar.get(), "registrar's value");
+      });
+    });
+    envVar.withValue("invoker's value", () => {
+      hook.forEach((callback) => {
+        callback();
+      });
     });
   });
-  envVar.withValue("invoker's value", function() {
-    hook.forEach(function(callback) {
+
+  it("uses invoker's env with {bindEnvironment: false}", () => {
+    const hook = new Hook({ bindEnvironment: false });
+    const envVar = new Meteor.EnvironmentVariable;
+    envVar.withValue("registrar's value", () => {
+      hook.register(() => {
+        assert.strictEqual(envVar.get(), "invoker's value");
+      });
+    });
+    envVar.withValue("invoker's value", () => {
+      hook.each((callback) => {
+        callback();
+      });
+    });
+  });
+
+  it("exceptions unhandled with {bindEnvironment: false}", () => {
+    const hook = new Hook({ bindEnvironment: false });
+    hook.register(() => {
+      throw new Error("Test error");
+    });
+    hook.forEach((callback) => {
+      assert.throws(callback, { message: /Test error/ });
+    });
+  });
+
+  it("exceptionHandler used with {bindEnvironment: false}", () => {
+    const exToThrow = new Error("Test error");
+    let thrownEx = null;
+    const hook = new Hook({
+      bindEnvironment: false,
+      exceptionHandler: (ex) => { thrownEx = ex; }
+    });
+    hook.register(() => {
+      throw exToThrow;
+    });
+    hook.each((callback) => {
       callback();
     });
+    assert.strictEqual(exToThrow, thrownEx);
   });
-});
-
-Tinytest.add("callback-hook - uses invoker's env with {bindEnvironment: false}", function (test) {
-  const hook = new Hook({ bindEnvironment: false });
-  const envVar = new Meteor.EnvironmentVariable;
-  envVar.withValue("registrar's value", function() {
-    hook.register(function() {
-      test.equal(envVar.get(), "invoker's value");
-    });
-  });
-  envVar.withValue("invoker's value", function() {
-    hook.each(function(callback) {
-      callback();
-    });
-  });
-});
-
-Tinytest.add("callback-hook - exceptions unhandled with {bindEnvironment: false}", function (test) {
-  const hook = new Hook({ bindEnvironment: false });
-  hook.register(function() {
-    throw new Error("Test error");
-  });
-  hook.forEach(function(callback) {
-    test.throws(callback, "Test error");
-  });
-});
-
-Tinytest.add("callback-hook - exceptionHandler used with {bindEnvironment: false}", function (test) {
-  const exToThrow = new Error("Test error");
-  let thrownEx = null;
-  const hook = new Hook({
-    bindEnvironment: false,
-    exceptionHandler: function (ex) { thrownEx = ex; }
-  });
-  hook.register(function() {
-    throw exToThrow;
-  });
-  hook.each(function(callback) {
-    callback();
-  });
-  test.equal(exToThrow, thrownEx);
 });

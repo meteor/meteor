@@ -1,7 +1,11 @@
-Tinytest.add('minimongo - modifier affects selector', test => {
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+
+describe('minimongo - server', () => {
+it('modifier affects selector', () => {
   function testSelectorPaths(sel, paths, desc) {
     const matcher = new Minimongo.Matcher(sel);
-    test.equal(matcher._getPaths(), paths, desc);
+    assert.deepStrictEqual(matcher._getPaths(), paths, desc);
   }
 
   testSelectorPaths({
@@ -60,7 +64,7 @@ Tinytest.add('minimongo - modifier affects selector', test => {
 
   function testSelectorAffectedByModifier(sel, mod, yes, desc) {
     const matcher = new Minimongo.Matcher(sel);
-    test.equal(matcher.affectedByModifier(mod), yes, desc);
+    assert.strictEqual(matcher.affectedByModifier(mod), yes, desc);
   }
 
   function affected(sel, mod, desc) {
@@ -96,10 +100,10 @@ Tinytest.add('minimongo - modifier affects selector', test => {
   affected({foo: {$elemMatch: {bar: 5}}}, {$set: {'foo.4.bar': 5}}, '$elemMatch');
 });
 
-Tinytest.add('minimongo - selector and projection combination', test => {
+it('selector and projection combination', () => {
   function testSelProjectionComb(sel, proj, expected, desc) {
     const matcher = new Minimongo.Matcher(sel);
-    test.equal(matcher.combineIntoProjection(proj), expected, desc);
+    assert.deepStrictEqual(matcher.combineIntoProjection(proj), expected, desc);
   }
 
   // Test with inclusive projection
@@ -333,10 +337,10 @@ Tinytest.add('minimongo - selector and projection combination', test => {
   }, {}, '$where in the selector - excl');
 });
 
-Tinytest.add('minimongo - sorter and projection combination', test => {
+it('sorter and projection combination', () => {
   function testSorterProjectionComb(sortSpec, proj, expected, desc) {
     const sorter = new Minimongo.Sorter(sortSpec);
-    test.equal(sorter.combineIntoProjection(proj), expected, desc);
+    assert.deepStrictEqual(sorter.combineIntoProjection(proj), expected, desc);
   }
 
   // Test with inclusive projection
@@ -376,12 +380,11 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
   //  * gives up on a combination of $gt/$gte/$lt/$lte and $ne/$nin
   //  * doesn't support $eq properly
 
-  let test = null; // set this global in the beginning of every test
   // T - should return true
   // F - should return false
   const oneTest = (sel, mod, expected, desc) => {
     const matcher = new Minimongo.Matcher(sel);
-    test.equal(matcher.canBecomeTrueByModifier(mod), expected, desc);
+    assert.deepStrictEqual(matcher.canBecomeTrueByModifier(mod), expected, desc);
   };
   function T(sel, mod, desc) {
     oneTest(sel, mod, true, desc);
@@ -390,9 +393,7 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     oneTest(sel, mod, false, desc);
   }
 
-  Tinytest.add('minimongo - can selector become true by modifier - literals (structured tests)', t => {
-    test = t;
-
+  it('can selector become true by modifier - literals (structured tests)', () => {
     const selector = {
       'a.b.c': 2,
       'foo.bar': {
@@ -430,8 +431,7 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     F(selector, {$set: { 'empty.field.a': 3 }});
   });
 
-  Tinytest.add('minimongo - can selector become true by modifier - literals (adhoc tests)', t => {
-    test = t;
+  it('can selector become true by modifier - literals (adhoc tests)', () => {
     T({x: 1}, {$set: {x: 1}}, 'simple set scalar');
     T({x: 'a'}, {$set: {x: 'a'}}, 'simple set scalar');
     T({x: false}, {$set: {x: false}}, 'simple set scalar');
@@ -445,9 +445,7 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     F({'foo.bar.baz': 1}, {$unset: {'foo.bar.bar': 1}}, 'simple unset of the interesting path prefix');
   });
 
-  Tinytest.add('minimongo - can selector become true by modifier - regexps', t => {
-    test = t;
-
+  it('can selector become true by modifier - regexps', () => {
     // Regexp
     T({ 'foo.bar': /^[0-9]+$/i }, { $set: {'foo.bar': '01233'} }, 'set of regexp');
     // XXX this test should be False, should be fixed within improved implementation
@@ -457,8 +455,7 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     T({ 'foo.bar': /^[0-9]+$/i, x: 1 }, { $set: { x: 1 } }, "don't touch regexp");
   });
 
-  Tinytest.add('minimongo - can selector become true by modifier - undefined/null', t => {
-    test = t;
+  it('can selector become true by modifier - undefined/null', () => {
     // Nulls / Undefined
     T({ 'foo.bar': null }, {$set: {'foo.bar': null}}, 'set of null looking for null');
     T({ 'foo.bar': null }, {$set: {'foo.bar': undefined}}, 'set of undefined looking for null');
@@ -472,8 +469,7 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     T({ 'foo.bar': null }, { $set: { foo: {baz: 1} } }, 'set the parent');
   });
 
-  Tinytest.add('minimongo - can selector become true by modifier - literals with arrays', t => {
-    test = t;
+  it('can selector become true by modifier - literals with arrays', () => {
     // These tests are incomplete and in theory they all should return true as we
     // don't support any case with numeric fields yet.
     T({'a.1.b': 1, x: 1}, {$unset: {'a.1.b': 1}, $set: {x: 1}}, "unset of array element's field with exactly the same index as selector");
@@ -488,16 +484,14 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     T({'a.b': 1}, {$unset: {'a.1.b': 1}}, "unset of array element's field");
   });
 
-  Tinytest.add('minimongo - can selector become true by modifier - set an object literal whose fields are selected', t => {
-    test = t;
+  it('can selector become true by modifier - set an object literal whose fields are selected', () => {
     T({ 'a.b.c': 1 }, { $set: { 'a.b': { c: 1 } } }, 'a simple scalar selector and simple set');
     F({ 'a.b.c': 1 }, { $set: { 'a.b': { c: 2 } } }, 'a simple scalar selector and simple set to false');
     F({ 'a.b.c': 1 }, { $set: { 'a.b': { d: 1 } } }, 'a simple scalar selector and simple set a wrong literal');
     F({ 'a.b.c': 1 }, { $set: { 'a.b': 222 } }, 'a simple scalar selector and simple set a wrong type');
   });
 
-  Tinytest.add('minimongo - can selector become true by modifier - $-scalar selectors and simple tests', t => {
-    test = t;
+  it('can selector become true by modifier - $-scalar selectors and simple tests', () => {
     T({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { c: 4 } } }, 'nested $lt');
     F({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { c: 5 } } }, 'nested $lt');
     F({ 'a.b.c': { $lt: 5 } }, { $set: { 'a.b': { c: 6 } } }, 'nested $lt');
@@ -549,8 +543,7 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     F({ 'a.b': { $gt: 5, $lt: 7}, x: 1 }, { $set: { x: 1 }, $unset: { 'a.b.c': 1 } }, 'unset sub-field of $gt,$lt operator (scalar expected)');
   });
 
-  Tinytest.add('minimongo - can selector become true by modifier - $-nonscalar selectors and simple tests', t => {
-    test = t;
+  it('can selector become true by modifier - $-nonscalar selectors and simple tests', () => {
     T({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 5 } }, 'set of $eq');
     // XXX this test should be F, but it is not implemented yet
     T({ a: { $eq: { x: 5 } } }, { $set: { 'a.x': 4 } }, 'set of $eq');
@@ -567,3 +560,4 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     T({ a: { $ne: { a: 2 } } }, { $set: { a: { a: 2 } } }, '$ne object');
   });
 }))();
+}); // end describe

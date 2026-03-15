@@ -10,7 +10,6 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use('tinytest');
-  api.use('geojson-utils');
-  api.addFiles(['geojson-utils.tests.js'], 'client');
+  api.use(['geojson-utils', 'ecmascript']);
+  api.addFiles('geojson-utils.tests.js', 'server');
 });

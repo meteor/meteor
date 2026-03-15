@@ -16,7 +16,7 @@ Package.onUse(api => {
 });
 
 Package.onTest(api => {
-  api.use(['check', 'tinytest', 'ejson', 'ecmascript'], ['client', 'server']);
+  api.use(['check', 'ejson', 'ecmascript']);
 
-  api.addFiles('match_test.js', ['client', 'server']);
+  api.addFiles('match_test.js', 'server');
 });

@@ -11,7 +11,7 @@ Package.onUse(function onUse(api) {
 });
 
 Package.onTest(function onTest(api) {
-  api.use(['ecmascript', 'tinytest', 'mongo']);
+  api.use(['ecmascript', 'mongo']);
   api.use('ejson');
-  api.mainModule('ejson_tests.js');
+  api.addFiles('ejson_tests.js', 'server');
 });

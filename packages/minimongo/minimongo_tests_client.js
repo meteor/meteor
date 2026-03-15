@@ -1,3 +1,5 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
 import {hasOwn} from './common';
 
 // Hack to make LocalCollection generate ObjectIDs by default.
@@ -6,15 +8,12 @@ LocalCollection._useOID = true;
 // assert that f is a strcmp-style comparison function that puts
 // 'values' in the provided order
 
-const assert_ordering = (test, f, values) => {
+const assert_ordering = (f, values) => {
   for (let i = 0; i < values.length; i++) {
     let x = f(values[i], values[i]);
     if (x !== 0) {
       // XXX super janky
-      test.fail({type: 'minimongo-ordering',
-        message: "value doesn't order as equal to itself",
-        value: JSON.stringify(values[i]),
-        should_be_zero_but_got: JSON.stringify(x)});
+      assert.fail("value doesn't order as equal to itself: " + JSON.stringify(values[i]) + " got " + JSON.stringify(x));
     }
     if (i + 1 < values.length) {
       const less = values[i];
@@ -22,20 +21,12 @@ const assert_ordering = (test, f, values) => {
       x = f(less, more);
       if (!(x < 0)) {
         // XXX super janky
-        test.fail({type: 'minimongo-ordering',
-          message: 'ordering test failed',
-          first: JSON.stringify(less),
-          second: JSON.stringify(more),
-          should_be_negative_but_got: JSON.stringify(x)});
+        assert.fail('ordering test failed: ' + JSON.stringify(less) + ' vs ' + JSON.stringify(more) + ' should be negative but got ' + JSON.stringify(x));
       }
       x = f(more, less);
       if (!(x > 0)) {
         // XXX super janky
-        test.fail({type: 'minimongo-ordering',
-          message: 'ordering test failed',
-          first: JSON.stringify(less),
-          second: JSON.stringify(more),
-          should_be_positive_but_got: JSON.stringify(x)});
+        assert.fail('ordering test failed: ' + JSON.stringify(less) + ' vs ' + JSON.stringify(more) + ' should be positive but got ' + JSON.stringify(x));
       }
     }
   }
@@ -65,8 +56,10 @@ const log_callbacks = operations => ({
   },
 });
 
+describe('minimongo', () => {
+
 // XXX test shared structure in all MM entrypoints
-Tinytest.addAsync('minimongo - basics', async test => {
+it('basics', async () => {
   const c = new LocalCollection();
   let fluffyKitten_id;
   let count;
@@ -76,122 +69,122 @@ Tinytest.addAsync('minimongo - basics', async test => {
   await c.insert({type: 'cryptographer', name: 'alice'});
   await c.insert({type: 'cryptographer', name: 'bob'});
   await c.insert({type: 'cryptographer', name: 'cara'});
-  test.equal(c.find().count(), 5);
-  test.equal(c.find({type: 'kitten'}).count(), 2);
-  test.equal(c.find({type: 'cryptographer'}).count(), 3);
-  test.length(c.find({type: 'kitten'}).fetch(), 2);
-  test.length(c.find({type: 'cryptographer'}).fetch(), 3);
-  test.equal(fluffyKitten_id, c.findOne({type: 'kitten', name: 'fluffy'})._id);
+  assert.strictEqual(c.find().count(), 5);
+  assert.strictEqual(c.find({type: 'kitten'}).count(), 2);
+  assert.strictEqual(c.find({type: 'cryptographer'}).count(), 3);
+  assert.strictEqual(c.find({type: 'kitten'}).fetch().length, 2);
+  assert.strictEqual(c.find({type: 'cryptographer'}).fetch().length, 3);
+  assert.ok(EJSON.equals(fluffyKitten_id, c.findOne({type: 'kitten', name: 'fluffy'})._id));
 
   await c.removeAsync({name: 'cara'});
-  test.equal(c.find().count(), 4);
-  test.equal(c.find({type: 'kitten'}).count(), 2);
-  test.equal(c.find({type: 'cryptographer'}).count(), 2);
-  test.length(c.find({type: 'kitten'}).fetch(), 2);
-  test.length(c.find({type: 'cryptographer'}).fetch(), 2);
+  assert.strictEqual(c.find().count(), 4);
+  assert.strictEqual(c.find({type: 'kitten'}).count(), 2);
+  assert.strictEqual(c.find({type: 'cryptographer'}).count(), 2);
+  assert.strictEqual(c.find({type: 'kitten'}).fetch().length, 2);
+  assert.strictEqual(c.find({type: 'cryptographer'}).fetch().length, 2);
 
   count = await c.update({name: 'snookums'}, {$set: {type: 'cryptographer'}});
-  test.equal(count, 1);
-  test.equal(c.find().count(), 4);
-  test.equal(c.find({type: 'kitten'}).count(), 1);
-  test.equal(c.find({type: 'cryptographer'}).count(), 3);
-  test.length(c.find({type: 'kitten'}).fetch(), 1);
-  test.length(c.find({type: 'cryptographer'}).fetch(), 3);
+  assert.strictEqual(count, 1);
+  assert.strictEqual(c.find().count(), 4);
+  assert.strictEqual(c.find({type: 'kitten'}).count(), 1);
+  assert.strictEqual(c.find({type: 'cryptographer'}).count(), 3);
+  assert.strictEqual(c.find({type: 'kitten'}).fetch().length, 1);
+  assert.strictEqual(c.find({type: 'cryptographer'}).fetch().length, 3);
 
   await c.removeAsync(null);
   await c.removeAsync(false);
   await c.removeAsync(undefined);
-  test.equal(c.find().count(), 4);
+  assert.strictEqual(c.find().count(), 4);
 
   await c.removeAsync({_id: null});
   await c.removeAsync({_id: false});
   await c.removeAsync({_id: undefined});
   count = await c.removeAsync();
-  test.equal(count, 0);
-  test.equal(c.find().count(), 4);
+  assert.strictEqual(count, 0);
+  assert.strictEqual(c.find().count(), 4);
 
   count = await c.removeAsync({});
-  test.equal(count, 4);
-  test.equal(c.find().count(), 0);
+  assert.strictEqual(count, 4);
+  assert.strictEqual(c.find().count(), 0);
 
   await c.insert({_id: 1, name: 'strawberry', tags: ['fruit', 'red', 'squishy']});
   await c.insert({_id: 2, name: 'apple', tags: ['fruit', 'red', 'hard']});
   await c.insert({_id: 3, name: 'rose', tags: ['flower', 'red', 'squishy']});
 
-  test.equal(c.find({tags: 'flower'}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}).count(), 2);
-  test.equal(c.find({tags: 'red'}).count(), 3);
-  test.length(c.find({tags: 'flower'}).fetch(), 1);
-  test.length(c.find({tags: 'fruit'}).fetch(), 2);
-  test.length(c.find({tags: 'red'}).fetch(), 3);
+  assert.strictEqual(c.find({tags: 'flower'}).count(), 1);
+  assert.strictEqual(c.find({tags: 'fruit'}).count(), 2);
+  assert.strictEqual(c.find({tags: 'red'}).count(), 3);
+  assert.strictEqual(c.find({tags: 'flower'}).fetch().length, 1);
+  assert.strictEqual(c.find({tags: 'fruit'}).fetch().length, 2);
+  assert.strictEqual(c.find({tags: 'red'}).fetch().length, 3);
 
-  test.equal((await c.findOneAsync(1)).name, 'strawberry');
-  test.equal((await c.findOneAsync(2)).name, 'apple');
-  test.equal((await c.findOneAsync(3)).name, 'rose');
-  test.equal(await c.findOneAsync(4), undefined);
-  test.equal(await c.findOneAsync('abc'), undefined);
-  test.equal(await c.findOneAsync(undefined), undefined);
+  assert.strictEqual((await c.findOneAsync(1)).name, 'strawberry');
+  assert.strictEqual((await c.findOneAsync(2)).name, 'apple');
+  assert.strictEqual((await c.findOneAsync(3)).name, 'rose');
+  assert.strictEqual(await c.findOneAsync(4), undefined);
+  assert.strictEqual(await c.findOneAsync('abc'), undefined);
+  assert.strictEqual(await c.findOneAsync(undefined), undefined);
 
-  test.equal(c.find(1).count(), 1);
-  test.equal(c.find(4).count(), 0);
-  test.equal(c.find('abc').count(), 0);
-  test.equal(c.find(undefined).count(), 0);
-  test.equal(c.find().count(), 3);
-  test.equal(c.find(1, {skip: 1}).count(false), 0);
-  test.equal(c.find(1, {skip: 1}).count(), 0);
-  test.equal(c.find({_id: 1}, {skip: 1}).count(false), 0);
-  test.equal(c.find({_id: 1}, {skip: 1}).count(), 0);
-  test.equal(c.find({_id: undefined}).count(), 0);
-  test.equal(c.find({_id: false}).count(), 0);
-  test.equal(c.find({_id: null}).count(), 0);
-  test.equal(c.find({_id: ''}).count(), 0);
-  test.equal(c.find({_id: 0}).count(), 0);
-  test.equal(c.find({}, {skip: 1}).count(false), 2);
-  test.equal(c.find({}, {skip: 1}).count(), 2);
-  test.equal(c.find({}, {skip: 2}).count(), 1);
-  test.equal(c.find({}, {limit: 2}).count(false), 2);
-  test.equal(c.find({}, {limit: 2}).count(), 2);
-  test.equal(c.find({}, {limit: 1}).count(), 1);
-  test.equal(c.find({}, {skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({}, {skip: 1, limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(), 1);
-  test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
-  test.equal(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
-  test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
-  test.equal(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(false), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 2}).count(), 1);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(false), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(), 2);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
-  test.equal(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
+  assert.strictEqual(c.find(1).count(), 1);
+  assert.strictEqual(c.find(4).count(), 0);
+  assert.strictEqual(c.find('abc').count(), 0);
+  assert.strictEqual(c.find(undefined).count(), 0);
+  assert.strictEqual(c.find().count(), 3);
+  assert.deepStrictEqual(c.find(1, {skip: 1}).count(false), 0);
+  assert.deepStrictEqual(c.find(1, {skip: 1}).count(), 0);
+  assert.deepStrictEqual(c.find({_id: 1}, {skip: 1}).count(false), 0);
+  assert.deepStrictEqual(c.find({_id: 1}, {skip: 1}).count(), 0);
+  assert.strictEqual(c.find({_id: undefined}).count(), 0);
+  assert.strictEqual(c.find({_id: false}).count(), 0);
+  assert.strictEqual(c.find({_id: null}).count(), 0);
+  assert.strictEqual(c.find({_id: ''}).count(), 0);
+  assert.strictEqual(c.find({_id: 0}).count(), 0);
+  assert.deepStrictEqual(c.find({}, {skip: 1}).count(false), 2);
+  assert.deepStrictEqual(c.find({}, {skip: 1}).count(), 2);
+  assert.deepStrictEqual(c.find({}, {skip: 2}).count(), 1);
+  assert.deepStrictEqual(c.find({}, {limit: 2}).count(false), 2);
+  assert.deepStrictEqual(c.find({}, {limit: 2}).count(), 2);
+  assert.deepStrictEqual(c.find({}, {limit: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({}, {skip: 1, limit: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({}, {skip: 1, limit: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {skip: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {skip: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {limit: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {limit: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {skip: 1, limit: 1}).count(), 1);
+  assert.deepStrictEqual(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
+  assert.deepStrictEqual(c.find(1, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
+  assert.deepStrictEqual(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(false), 0);
+  assert.deepStrictEqual(c.find({_id: 1}, {sort: ['_id', 'desc'], skip: 1}).count(), 0);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(false), 2);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], skip: 1}).count(), 2);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], skip: 2}).count(), 1);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(false), 2);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], limit: 2}).count(), 2);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], limit: 1}).count(), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(false), 1);
+  assert.deepStrictEqual(c.find({tags: 'fruit'}, {sort: ['_id', 'desc'], skip: 1, limit: 1}).count(), 1);
 
   // Regression test for #455.
   await c.insert({foo: {bar: 'baz'}});
-  test.equal(c.find({foo: {bam: 'baz'}}).count(), 0);
-  test.equal(c.find({foo: {bar: 'baz'}}).count(), 1);
+  assert.strictEqual(c.find({foo: {bam: 'baz'}}).count(), 0);
+  assert.strictEqual(c.find({foo: {bar: 'baz'}}).count(), 1);
 
   // Regression test for #5301
   await c.removeAsync({});
   await c.insert({a: 'a', b: 'b'});
   const noop = () => null;
-  test.equal(c.find({a: noop}).count(), 1);
-  test.equal(c.find({a: 'a', b: noop}).count(), 1);
-  test.equal(c.find({c: noop}).count(), 1);
-  test.equal(c.find({a: noop, c: 'c'}).count(), 0);
+  assert.strictEqual(c.find({a: noop}).count(), 1);
+  assert.deepStrictEqual(c.find({a: 'a', b: noop}).count(), 1);
+  assert.strictEqual(c.find({c: noop}).count(), 1);
+  assert.deepStrictEqual(c.find({a: noop, c: 'c'}).count(), 0);
 
   // Regression test for #4260
   // Only insert enumerable, own properties from the object
@@ -206,110 +199,110 @@ Tinytest.addAsync('minimongo - basics', async test => {
   const before = new Thing();
   await c.insert(before);
   const after = await c.findOneAsync();
-  test.equal(after.a, 1);
-  test.equal(after.b, undefined);
-  test.equal(after.c, undefined);
-  test.equal(after.d, undefined);
+  assert.strictEqual(after.a, 1);
+  assert.strictEqual(after.b, undefined);
+  assert.strictEqual(after.c, undefined);
+  assert.strictEqual(after.d, undefined);
 });
 
 
-Tinytest.addAsync('minimongo - upsert', async test => {
+it('upsert', async () => {
   const c = new LocalCollection();
 
   await c.upsertAsync({ name: 'doc' }, { name: 'doc' });
   
-  test.equal(c.find({}).count(), 1);
+  assert.strictEqual(c.find({}).count(), 1);
 
   await c.removeAsync({});
 
   c.upsert({ name: 'doc' }, { name: 'doc' });
-  test.equal(c.find({}).count(), 1);
+  assert.strictEqual(c.find({}).count(), 1);
 });
 
 
-Tinytest.add('minimongo - error - no options', test => {
+it('error - no options', () => {
   try {
     throw MinimongoError('Not fun to have errors');
   } catch (e) {
-    test.equal(e.message, 'Not fun to have errors');
+    assert.strictEqual(e.message, 'Not fun to have errors');
   }
 });
 
-Tinytest.add('minimongo - error - with field', test => {
+it('error - with field', () => {
   try {
     throw MinimongoError('Cats are no fun', { field: 'mice' });
   } catch (e) {
-    test.equal(e.message, "Cats are no fun for field 'mice'");
+    assert.strictEqual(e.message, "Cats are no fun for field 'mice'");
   }
 });
 
-Tinytest.add('minimongo - cursors', test => {
+it('cursors', () => {
   const c = new LocalCollection();
   let res;
 
   for (let i = 0; i < 20; i++) {c.insert({i});}
 
   const q = c.find();
-  test.equal(q.count(), 20);
+  assert.strictEqual(q.count(), 20);
 
   // fetch
   res = q.fetch();
-  test.length(res, 20);
+  assert.strictEqual(res.length, 20);
   for (let i = 0; i < 20; i++) {
-    test.equal(res[i].i, i);
+    assert.deepStrictEqual(res[i].i, i);
   }
   // call it again, it still works
-  test.length(q.fetch(), 20);
+  assert.strictEqual(q.fetch().length, 20);
 
   // forEach
   let count = 0;
   const context = {};
   q.forEach(function(obj, i, cursor) {
-    test.equal(obj.i, count++);
-    test.equal(obj.i, i);
-    test.isTrue(context === this);
-    test.isTrue(cursor === q);
+    assert.deepStrictEqual(obj.i, count++);
+    assert.deepStrictEqual(obj.i, i);
+    assert.ok(context === this);
+    assert.ok(cursor === q);
   }, context);
-  test.equal(count, 20);
+  assert.strictEqual(count, 20);
   // call it again, it still works
-  test.length(q.fetch(), 20);
+  assert.strictEqual(q.fetch().length, 20);
 
   // iterator
   count = 0;
   for (let obj of q) {
-    test.equal(obj.i, count++);
+    assert.deepStrictEqual(obj.i, count++);
   };
-  test.equal(count, 20);
+  assert.strictEqual(count, 20);
   // call it again, it still works
-  test.length(q.fetch(), 20);
+  assert.strictEqual(q.fetch().length, 20);
   // test spread operator
-  test.equal([...q], q.fetch());
+  assert.deepStrictEqual([...q], q.fetch());
 
   // map
   res = q.map(function(obj, i, cursor) {
-    test.equal(obj.i, i);
-    test.isTrue(context === this);
-    test.isTrue(cursor === q);
+    assert.deepStrictEqual(obj.i, i);
+    assert.ok(context === this);
+    assert.ok(cursor === q);
     return obj.i * 2;
   }, context);
-  test.length(res, 20);
-  for (let i = 0; i < 20; i++) {test.equal(res[i], i * 2);}
+  assert.strictEqual(res.length, 20);
+  for (let i = 0; i < 20; i++) {assert.deepStrictEqual(res[i], i * 2);}
   // call it again, it still works
-  test.length(q.fetch(), 20);
+  assert.strictEqual(q.fetch().length, 20);
 
   // findOne (and no rewind first)
-  test.equal(c.findOne({i: 0}).i, 0);
-  test.equal(c.findOne({i: 1}).i, 1);
+  assert.strictEqual(c.findOne({i: 0}).i, 0);
+  assert.strictEqual(c.findOne({i: 1}).i, 1);
   const id = c.findOne({i: 2})._id;
-  test.equal(c.findOne(id).i, 2);
+  assert.strictEqual(c.findOne(id).i, 2);
 });
 
-Tinytest.add('minimongo - transform', test => {
+it('transform', () => {
   const c = new LocalCollection;
   c.insert({});
   // transform functions must return objects
   const invalidTransform = doc => doc._id;
-  test.throws(() => {
+  assert.throws(() => {
     c.findOne({}, {transform: invalidTransform});
   });
 
@@ -319,63 +312,63 @@ Tinytest.add('minimongo - transform', test => {
     delete docWithoutId._id;
     return docWithoutId;
   };
-  test.equal(c.findOne({}, {transform: transformWithoutId})._id,
+  assert.deepStrictEqual(c.findOne({}, {transform: transformWithoutId})._id,
     c.findOne()._id);
 });
 
-Tinytest.add('minimongo - misc', test => {
+it('misc', () => {
   // deepcopy
   let a = {a: [1, 2, 3], b: 'x', c: true, d: {x: 12, y: [12]},
     f: null, g: new Date()};
   let b = EJSON.clone(a);
-  test.equal(a, b);
-  test.isTrue(LocalCollection._f._equal(a, b));
+  assert.deepStrictEqual(a, b);
+  assert.ok(LocalCollection._f._equal(a, b));
   a.a.push(4);
-  test.length(b.a, 3);
+  assert.strictEqual(b.a.length, 3);
   a.c = false;
-  test.isTrue(b.c);
+  assert.ok(b.c);
   b.d.z = 15;
   a.d.z = 14;
-  test.equal(b.d.z, 15);
+  assert.strictEqual(b.d.z, 15);
   a.d.y.push(88);
-  test.length(b.d.y, 1);
-  test.equal(a.g, b.g);
+  assert.strictEqual(b.d.y.length, 1);
+  assert.deepStrictEqual(a.g, b.g);
   b.g.setDate(b.g.getDate() + 1);
-  test.notEqual(a.g, b.g);
+  assert.notDeepStrictEqual(a.g, b.g);
 
   a = {x() {}};
   b = EJSON.clone(a);
   a.x.a = 14;
-  test.equal(b.x.a, 14); // just to document current behavior
+  assert.strictEqual(b.x.a, 14); // just to document current behavior
 });
 
-Tinytest.add('minimongo - lookup', test => {
+it('lookup', () => {
   const lookupA = MinimongoTest.makeLookupFunction('a');
-  test.equal(lookupA({}), [{value: undefined}]);
-  test.equal(lookupA({a: 1}), [{value: 1}]);
-  test.equal(lookupA({a: [1]}), [{value: [1]}]);
+  assert.deepStrictEqual(lookupA({}), [{value: undefined}]);
+  assert.deepStrictEqual(lookupA({a: 1}), [{value: 1}]);
+  assert.deepStrictEqual(lookupA({a: [1]}), [{value: [1]}]);
 
   const lookupAX = MinimongoTest.makeLookupFunction('a.x');
-  test.equal(lookupAX({a: {x: 1}}), [{value: 1}]);
-  test.equal(lookupAX({a: {x: [1]}}), [{value: [1]}]);
-  test.equal(lookupAX({a: 5}), [{value: undefined}]);
-  test.equal(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
+  assert.deepStrictEqual(lookupAX({a: {x: 1}}), [{value: 1}]);
+  assert.deepStrictEqual(lookupAX({a: {x: [1]}}), [{value: [1]}]);
+  assert.deepStrictEqual(lookupAX({a: 5}), [{value: undefined}]);
+  assert.deepStrictEqual(lookupAX({a: [{x: 1}, {x: [2]}, {y: 3}]}),
     [{value: 1, arrayIndices: [0]},
       {value: [2], arrayIndices: [1]},
       {value: undefined, arrayIndices: [2]}]);
 
   const lookupA0X = MinimongoTest.makeLookupFunction('a.0.x');
-  test.equal(lookupA0X({a: [{x: 1}]}), [
+  assert.deepStrictEqual(lookupA0X({a: [{x: 1}]}), [
     // From interpreting '0' as "0th array element".
     {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
     // object {x:1} for a field named 0".
     {value: undefined, arrayIndices: [0]}]);
-  test.equal(lookupA0X({a: [{x: [1]}]}), [
+  assert.deepStrictEqual(lookupA0X({a: [{x: [1]}]}), [
     {value: [1], arrayIndices: [0, 'x']},
     {value: undefined, arrayIndices: [0]}]);
-  test.equal(lookupA0X({a: 5}), [{value: undefined}]);
-  test.equal(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [
+  assert.deepStrictEqual(lookupA0X({a: 5}), [{value: undefined}]);
+  assert.deepStrictEqual(lookupA0X({a: [{x: 1}, {x: [2]}, {y: 3}]}), [
     // From interpreting '0' as "0th array element".
     {value: 1, arrayIndices: [0, 'x']},
     // From interpreting '0' as "after branching in the array, look in the
@@ -385,7 +378,7 @@ Tinytest.add('minimongo - lookup', test => {
     {value: undefined, arrayIndices: [2]},
   ]);
 
-  test.equal(
+  assert.deepStrictEqual(
     MinimongoTest.makeLookupFunction('w.x.0.z')({
       w: [{x: [{z: 5}]}]}), [
       // From interpreting '0' as "0th array element".
@@ -396,16 +389,13 @@ Tinytest.add('minimongo - lookup', test => {
     ]);
 });
 
-Tinytest.add('minimongo - selector_compiler', test => {
+it('selector_compiler', () => {
   const matches = (shouldMatch, selector, doc) => {
     const doesMatch = new Minimongo.Matcher(selector).documentMatches(doc).result;
     if (doesMatch != shouldMatch) {
       // XXX super janky
-      test.fail({message: `minimongo match failure: document ${shouldMatch ? "should match, but doesn't" :
-        "shouldn't match, but does"}`,
-      selector: JSON.stringify(selector),
-      document: JSON.stringify(doc),
-      });
+      assert.fail(`minimongo match failure: document ${shouldMatch ? "should match, but doesn't" :
+        "shouldn't match, but does"} selector=${JSON.stringify(selector)} document=${JSON.stringify(doc)}`);
     }
   };
 
@@ -565,7 +555,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // Members of $all other than regexps are *equality matches*, not document
   // matches.
   nomatch({a: {$all: [{b: 3}]}}, {a: [{b: 3, k: 4}]});
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$all: [{$gt: 4}]}}, {});
   });
 
@@ -607,7 +597,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
     {bar: 1},
     [],
   ].forEach(badMod => {
-    test.throws(() => {
+    assert.throws(() => {
       match({a: {$mod: badMod}}, {a: 11});
     });
   });
@@ -803,10 +793,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
   function matchCount(query, count) {
     const matches = c.find(query).count();
     if (matches !== count) {
-      test.fail({message: `minimongo match count failure: matched ${matches} times, but should match ${count} times`,
-        query: JSON.stringify(query),
-        count: JSON.stringify(count),
-      });
+      assert.fail(`minimongo match count failure: matched ${matches} times, but should match ${count} times query=${JSON.stringify(query)}`);
     }
   }
 
@@ -966,7 +953,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
     '1',
     [0, -1],
   ].forEach(badValue => {
-    test.throws(() => {
+    assert.throws(() => {
       match({a: {$bitsAllSet: badValue}}, {a: 42});
     });
   });
@@ -1036,16 +1023,16 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({'a.0': {$type: 1}}, {a: [[0]]});
 
   // invalid types should throw errors
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$type: 'foo'}}, {a: 1});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$type: -2}}, {a: 1});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$type: 0}}, {a: 1});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$type: 20}}, {a: 1});
   });
 
@@ -1090,7 +1077,7 @@ Tinytest.add('minimongo - selector_compiler', test => {
   match({a: {$regex: reusedRegexp}}, {a: 'Shorts'});
   match({a: {$regex: reusedRegexp}}, {a: 'Shorts'});
 
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$options: 'i'}}, {a: 12});
   });
 
@@ -1108,10 +1095,10 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({a: /t/}, {a: true});
   match({a: /m/i}, {a: ['x', 'xM']});
 
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$regex: /a/, $options: 'x'}}, {a: 'cat'});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$regex: /a/, $options: 's'}}, {a: 'cat'});
   });
 
@@ -1203,13 +1190,13 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({'a.b': {$in: [1, 2, 3]}}, {a: {b: [4]}});
 
   // $or
-  test.throws(() => {
+  assert.throws(() => {
     match({$or: []}, {});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({$or: [5]}, {});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({$or: []}, {a: 1});
   });
   match({$or: [{a: 1}]}, {a: 1});
@@ -1293,13 +1280,13 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // this is possibly an open-ended task, so we stop here ...
 
   // $nor
-  test.throws(() => {
+  assert.throws(() => {
     match({$nor: []}, {});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({$nor: [5]}, {});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({$nor: []}, {a: 1});
   });
   nomatch({$nor: [{a: 1}]}, {a: 1});
@@ -1374,13 +1361,13 @@ Tinytest.add('minimongo - selector_compiler', test => {
 
   // $and
 
-  test.throws(() => {
+  assert.throws(() => {
     match({$and: []}, {});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({$and: [5]}, {});
   });
-  test.throws(() => {
+  assert.throws(() => {
     match({$and: []}, {a: 1});
   });
   match({$and: [{a: 1}]}, {a: 1});
@@ -1555,12 +1542,12 @@ Tinytest.add('minimongo - selector_compiler', test => {
   nomatch({a: {$elemMatch: {x: 1, $or: [{a: 1}, {b: 1}]}}},
     {a: [{x: 1}, {b: 1}]});
 
-  test.throws(() => {
+  assert.throws(() => {
     match({a: {$elemMatch: {$gte: 1, $or: [{a: 1}, {b: 1}]}}},
       {a: [{x: 1, b: 1}]});
   });
 
-  test.throws(() => {
+  assert.throws(() => {
     match({x: {$elemMatch: {$and: [{$gt: 5, $lt: 9}]}}}, {x: [8]});
   });
 
@@ -1572,11 +1559,11 @@ Tinytest.add('minimongo - selector_compiler', test => {
   // - non-scalar arguments to $gt, $lt, etc
 });
 
-Tinytest.add('minimongo - projection_compiler', test => {
+it('projection_compiler', () => {
   const testProjection = (projection, tests) => {
     const projection_f = LocalCollection._compileProjection(projection);
     const equalNonStrict = (a, b, desc) => {
-      test.isTrue(EJSON.equals(a, b), desc);
+      assert.ok(EJSON.equals(a, b), desc);
     };
 
     tests.forEach(testCase => {
@@ -1585,9 +1572,9 @@ Tinytest.add('minimongo - projection_compiler', test => {
   };
 
   const testCompileProjectionThrows = (projection, expectedError) => {
-    test.throws(() => {
+    assert.throws(() => {
       LocalCollection._compileProjection(projection);
-    }, expectedError);
+    }, { message: new RegExp(expectedError.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) });
   };
 
   testProjection({ foo: 1, bar: 1 }, [
@@ -1703,7 +1690,7 @@ Tinytest.add('minimongo - projection_compiler', test => {
   testCompileProjectionThrows('some string', 'fields option must be an object');
 });
 
-Tinytest.add('minimongo - fetch with fields', test => {
+it('fetch with fields', () => {
   const c = new LocalCollection();
   Array.from({length: 30}, (x, i) => {
     c.insert({
@@ -1723,7 +1710,7 @@ Tinytest.add('minimongo - fetch with fields', test => {
     'anything.foo': 1,
   } }).fetch();
 
-  test.isTrue(fetchResults.every(x => x &&
+  assert.ok(fetchResults.every(x => x &&
          x.something &&
          x.anything &&
          x.anything.foo &&
@@ -1739,7 +1726,7 @@ Tinytest.add('minimongo - fetch with fields', test => {
     fields: { nothing: 0 },
   }).fetch();
 
-  test.isTrue(fetchResults.every(x => x &&
+  assert.ok(fetchResults.every(x => x &&
          x.something &&
          x.anything &&
          x.anything.foo === 'bar' &&
@@ -1748,7 +1735,7 @@ Tinytest.add('minimongo - fetch with fields', test => {
          x.i &&
          x.i >= 5));
 
-  test.isTrue(fetchResults.length === 25);
+  assert.ok(fetchResults.length === 25);
 
   // Test that we can sort, based on field excluded from the projection, use
   // skip and limit as well!
@@ -1765,29 +1752,29 @@ Tinytest.add('minimongo - fetch with fields', test => {
     },
   }).fetch();
 
-  test.isTrue(fetchResults.every(x => x &&
+  assert.ok(fetchResults.every(x => x &&
          x.something &&
          x.i >= 10 && x.i < 20));
 
   fetchResults.forEach((x, i, arr) => {
     if (!i) return;
-    test.isTrue(x.i === arr[i - 1].i + 1);
+    assert.ok(x.i === arr[i - 1].i + 1);
   });
 
   // Temporary unsupported operators
   // queries are taken from MongoDB docs examples
-  test.throws(() => {
+  assert.throws(() => {
     c.find({}, { fields: { 'grades.$': 1 } });
   });
-  test.throws(() => {
+  assert.throws(() => {
     c.find({}, { fields: { grades: { $elemMatch: { mean: 70 } } } });
   });
-  test.throws(() => {
+  assert.throws(() => {
     c.find({}, { fields: { grades: { $slice: [20, 10] } } });
   });
 });
 
-Tinytest.add('minimongo - fetch with projection, subarrays', test => {
+it('fetch with projection, subarrays', () => {
   // Apparently projection of type 'foo.bar.x' for
   // { foo: [ { bar: { x: 42 } }, { bar: { x: 3 } } ] }
   // should return exactly this object. More precisely, arrays are considered as
@@ -1814,7 +1801,7 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
   });
 
   const equalNonStrict = (a, b, desc) => {
-    test.isTrue(EJSON.equals(a, b), desc);
+    assert.ok(EJSON.equals(a, b), desc);
   };
 
   const testForProjection = (projection, expected) => {
@@ -1843,7 +1830,7 @@ Tinytest.add('minimongo - fetch with projection, subarrays', test => {
     {a: [ [ { c: 2 }, { c: 4 } ], { c: 5 }, [ { c: 9 } ] ] });
 });
 
-Tinytest.add('minimongo - fetch with projection, deep copy', test => {
+it('fetch with projection, deep copy', () => {
   // Compiled fields projection defines the contract: returned document doesn't
   // retain anything from the passed argument.
   const doc = {
@@ -1863,18 +1850,18 @@ Tinytest.add('minimongo - fetch with projection, deep copy', test => {
   let filteredDoc = projectionFn(doc);
   doc.a.x++;
   doc.b.y.z--;
-  test.equal(filteredDoc.a.x, 42, 'projection returning deep copy - including');
-  test.equal(filteredDoc.b.y.z, 33, 'projection returning deep copy - including');
+  assert.deepStrictEqual(filteredDoc.a.x, 42, 'projection returning deep copy - including');
+  assert.deepStrictEqual(filteredDoc.b.y.z, 33, 'projection returning deep copy - including');
 
   fields = { c: 0 };
   projectionFn = LocalCollection._compileProjection(fields);
   filteredDoc = projectionFn(doc);
 
   doc.a.x = 5;
-  test.equal(filteredDoc.a.x, 43, 'projection returning deep copy - excluding');
+  assert.deepStrictEqual(filteredDoc.a.x, 43, 'projection returning deep copy - excluding');
 });
 
-Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
+it('observe ordered with projection', async () => {
   // These tests are copy-paste from "minimongo -observe ordered",
   // slightly modified to test projection
   const operations = [];
@@ -1883,99 +1870,103 @@ Tinytest.addAsync('minimongo - observe ordered with projection', async test => {
 
   const c = new LocalCollection();
   handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(cbs);
-  test.isTrue(handle.collection === c);
+  assert.ok(handle.collection === c);
 
   await c.insertAsync({_id: 'foo', a: 1, b: 2});
-  test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, 0, null]);
   await c.updateAsync({a: 1}, {$set: {a: 2, b: 1}});
-  test.equal(operations.shift(), ['changed', {a: 2}, 0, {a: 1}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 2}, 0, {a: 1}]);
   await c.insertAsync({_id: 'bar', a: 10, c: 33});
-  test.equal(operations.shift(), ['added', {a: 10}, 1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 10}, 1, null]);
   await c.updateAsync({}, {$inc: {a: 1}}, {multi: true});
   await c.updateAsync({}, {$inc: {c: 1}}, {multi: true});
-  test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 2}]);
-  test.equal(operations.shift(), ['changed', {a: 11}, 1, {a: 10}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 3}, 0, {a: 2}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 11}, 1, {a: 10}]);
   await c.updateAsync({a: 11}, {a: 1, b: 44});
-  test.equal(operations.shift(), ['changed', {a: 1}, 1, {a: 11}]);
-  test.equal(operations.shift(), ['moved', {a: 1}, 1, 0, 'foo']);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 1}, 1, {a: 11}]);
+  assert.deepStrictEqual(operations.shift(), ['moved', {a: 1}, 1, 0, 'foo']);
   await c.removeAsync({a: 2});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.removeAsync({a: 3});
-  test.equal(operations.shift(), ['removed', 'foo', 1, {a: 3}]);
+  assert.deepStrictEqual(operations.shift(), ['removed', 'foo', 1, {a: 3}]);
 
   // test stop
   handle.stop();
   const idA2 = Random.id();
   await c.insertAsync({_id: idA2, a: 2});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
 
   const cursor = c.find({}, {fields: {a: 1, _id: 0}});
-   test.throws(() => {
+   assert.throws(() => {
      cursor.observeChanges({ added() {} });
    });
-   test.throws(() => {
+   assert.throws(() => {
      cursor.observe({ added() {} });
    });
 
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}, fields: { a: 1 } }).observe(cbs);
-  test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
-  test.equal(operations.shift(), ['added', {a: 1}, 1, null]);
+  await handle.isReadyPromise;
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 2}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, 1, null]);
   handle.stop();
 
   // test _suppress_initial
   handle = c.find({}, {sort: {a: -1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_suppress_initial: true}));
-  test.equal(operations.shift(), undefined);
+  await handle.isReadyPromise;
+  assert.strictEqual(operations.shift(), undefined);
   await c.insertAsync({a: 100, b: { foo: 'bar' }});
-  test.equal(operations.shift(), ['added', {a: 100}, 0, idA2]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 100}, 0, idA2]);
   handle.stop();
 
   // test skip and limit.
   await c.removeAsync({});
   handle = c.find({}, {sort: {a: 1}, skip: 1, limit: 2, fields: { blacklisted: 0 }}).observe(cbs);
-  test.equal(operations.shift(), undefined);
+  await handle.isReadyPromise;
+  assert.strictEqual(operations.shift(), undefined);
   await c.insertAsync({a: 1, blacklisted: 1324});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.insertAsync({_id: 'foo', a: 2, blacklisted: ['something']});
-  test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 2}, 0, null]);
   await c.insertAsync({a: 3, blacklisted: { 2: 3 }});
-  test.equal(operations.shift(), ['added', {a: 3}, 1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 3}, 1, null]);
   await c.insertAsync({a: 4, blacklisted: 6});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.updateAsync({a: 1}, {a: 0, blacklisted: 4444});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.updateAsync({a: 0}, {a: 5, blacklisted: 11111});
-  test.equal(operations.shift(), ['removed', 'foo', 0, {a: 2}]);
-  test.equal(operations.shift(), ['added', {a: 4}, 1, null]);
+  assert.deepStrictEqual(operations.shift(), ['removed', 'foo', 0, {a: 2}]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 4}, 1, null]);
   await c.updateAsync({a: 3}, {a: 3.5, blacklisted: 333.4444});
-  test.equal(operations.shift(), ['changed', {a: 3.5}, 0, {a: 3}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 3.5}, 0, {a: 3}]);
   handle.stop();
 
   // test _no_indices
 
   await c.removeAsync({});
   handle = c.find({}, {sort: {a: 1}, fields: { a: 1 }}).observe(Object.assign(cbs, {_no_indices: true}));
+  await handle.isReadyPromise;
   await c.insertAsync({_id: 'foo', a: 1, zoo: 'crazy'});
-  test.equal(operations.shift(), ['added', {a: 1}, -1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, -1, null]);
   await c.updateAsync({a: 1}, {$set: {a: 2, foobar: 'player'}});
-  test.equal(operations.shift(), ['changed', {a: 2}, -1, {a: 1}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 2}, -1, {a: 1}]);
   await c.insertAsync({a: 10, b: 123.45});
-  test.equal(operations.shift(), ['added', {a: 10}, -1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 10}, -1, null]);
   await c.updateAsync({}, {$inc: {a: 1, b: 2}}, {multi: true});
-  test.equal(operations.shift(), ['changed', {a: 3}, -1, {a: 2}]);
-  test.equal(operations.shift(), ['changed', {a: 11}, -1, {a: 10}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 3}, -1, {a: 2}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 11}, -1, {a: 10}]);
   await c.updateAsync({a: 11, b: 125.45}, {a: 1, b: 444});
-  test.equal(operations.shift(), ['changed', {a: 1}, -1, {a: 11}]);
-  test.equal(operations.shift(), ['moved', {a: 1}, -1, -1, 'foo']);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 1}, -1, {a: 11}]);
+  assert.deepStrictEqual(operations.shift(), ['moved', {a: 1}, -1, -1, 'foo']);
   await c.removeAsync({a: 2});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.removeAsync({a: 3});
-  test.equal(operations.shift(), ['removed', 'foo', -1, {a: 3}]);
+  assert.deepStrictEqual(operations.shift(), ['removed', 'foo', -1, {a: 3}]);
   handle.stop();
 });
 
 
-Tinytest.add('minimongo - ordering', test => {
+it('ordering', () => {
   const shortBinary = EJSON.newBinary(1);
   shortBinary[0] = 128;
   const longBinary1 = EJSON.newBinary(2);
@@ -1987,7 +1978,7 @@ Tinytest.add('minimongo - ordering', test => {
   const date2 = new Date(date1.getTime() + 1000);
 
   // value ordering
-  assert_ordering(test, LocalCollection._f._cmp, [
+  assert_ordering(LocalCollection._f._cmp, [
     null,
     1, 2.2, 3,
     '03', '1', '11', '2', 'a', 'aaa',
@@ -2005,7 +1996,7 @@ Tinytest.add('minimongo - ordering', test => {
   const verify = (sorts, docs) => {
     (Array.isArray(sorts) ? sorts : [sorts]).forEach(sort => {
       const sorter = new Minimongo.Sorter(sort);
-      assert_ordering(test, sorter.getComparator(), docs);
+      assert_ordering(sorter.getComparator(), docs);
     });
   };
 
@@ -2031,22 +2022,22 @@ Tinytest.add('minimongo - ordering', test => {
     [['a', 'asc'], ['b', 'asc']]],
   [{c: 1}, {a: 1, b: 2}, {a: 1, b: 3}, {a: 2, b: 0}]);
 
-  test.throws(() => {
+  assert.throws(() => {
     new Minimongo.Sorter('a');
   });
 
-  test.throws(() => {
+  assert.throws(() => {
     new Minimongo.Sorter(123);
   });
 
   // We don't support $natural:1 (since we don't actually have Mongo's on-disk
   // ordering available!)
-  test.throws(() => {
+  assert.throws(() => {
     new Minimongo.Sorter({$natural: 1});
   });
 
   // No sort spec implies everything equal.
-  test.equal(new Minimongo.Sorter({}).getComparator()({a: 1}, {a: 2}), 0);
+  assert.deepStrictEqual(new Minimongo.Sorter({}).getComparator()({a: 1}, {a: 2}), 0);
 
   // All sorts of array edge cases!
   // Increasing sort sorts by the smallest element it finds; 1 < 2.
@@ -2139,17 +2130,17 @@ Tinytest.add('minimongo - ordering', test => {
   ]);
 });
 
-Tinytest.add('minimongo - sort', test => {
+it('sort', () => {
   const c = new LocalCollection();
   for (let i = 0; i < 50; i++) {
     for (let j = 0; j < 2; j++) {c.insert({a: i, b: j, _id: `${i}_${j}`});}
   }
 
-  test.equal(c.find(null, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
-  test.equal(c.find(undefined, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
-  test.equal(c.find(false, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+  assert.deepStrictEqual(c.find(null, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+  assert.deepStrictEqual(c.find(undefined, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
+  assert.deepStrictEqual(c.find(false, {sort: {b: -1, a: 1}, limit: 5}).fetch(), []);
 
-  test.equal(
+  assert.deepStrictEqual(
     c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, limit: 5}).fetch(), [
       {a: 11, b: 1, _id: '11_1'},
       {a: 12, b: 1, _id: '12_1'},
@@ -2157,7 +2148,7 @@ Tinytest.add('minimongo - sort', test => {
       {a: 14, b: 1, _id: '14_1'},
       {a: 15, b: 1, _id: '15_1'}]);
 
-  test.equal(
+  assert.deepStrictEqual(
     c.find({a: {$gt: 10}}, {sort: {b: -1, a: 1}, skip: 3, limit: 5}).fetch(), [
       {a: 14, b: 1, _id: '14_1'},
       {a: 15, b: 1, _id: '15_1'},
@@ -2165,7 +2156,7 @@ Tinytest.add('minimongo - sort', test => {
       {a: 17, b: 1, _id: '17_1'},
       {a: 18, b: 1, _id: '18_1'}]);
 
-  test.equal(
+  assert.deepStrictEqual(
     c.find({a: {$gte: 20}}, {sort: {a: 1, b: -1}, skip: 50, limit: 5}).fetch(), [
       {a: 45, b: 1, _id: '45_1'},
       {a: 45, b: 0, _id: '45_0'},
@@ -2174,40 +2165,40 @@ Tinytest.add('minimongo - sort', test => {
       {a: 47, b: 1, _id: '47_1'}]);
 });
 
-Tinytest.add('minimongo - subkey sort', test => {
+it('subkey sort', () => {
   const c = new LocalCollection();
 
   // normal case
   c.insert({a: {b: 2}});
   c.insert({a: {b: 1}});
   c.insert({a: {b: 3}});
-  test.equal(
+  assert.deepStrictEqual(
     c.find({}, {sort: {'a.b': -1}}).fetch().map(doc => doc.a),
     [{b: 3}, {b: 2}, {b: 1}]);
 
   // isn't an object
   c.insert({a: 1});
-  test.equal(
+  assert.deepStrictEqual(
     c.find({}, {sort: {'a.b': 1}}).fetch().map(doc => doc.a),
     [1, {b: 1}, {b: 2}, {b: 3}]);
 
   // complex object
   c.insert({a: {b: {c: 1}}});
-  test.equal(
+  assert.deepStrictEqual(
     c.find({}, {sort: {'a.b': -1}}).fetch().map(doc => doc.a),
     [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1]);
 
   // no such top level prop
   c.insert({c: 1});
-  test.equal(
+  assert.deepStrictEqual(
     c.find({}, {sort: {'a.b': -1}}).fetch().map(doc => doc.a),
     [{b: {c: 1}}, {b: 3}, {b: 2}, {b: 1}, 1, undefined]);
 
   // no such mid level prop. just test that it doesn't throw.
-  test.equal(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
+  assert.deepStrictEqual(c.find({}, {sort: {'a.nope.c': -1}}).count(), 6);
 });
 
-Tinytest.add('minimongo - array sort', test => {
+it('array sort', () => {
   const c = new LocalCollection();
 
   // "up" and "down" are the indices that the docs should have when sorted
@@ -2233,7 +2224,7 @@ Tinytest.add('minimongo - array sort', test => {
     c.find().forEach(doc => {
       if (hasOwn.call(doc, field)) {fieldValues.push(doc[field]);}
     });
-    test.equal(cursor.fetch().map(doc => doc[field]),
+    assert.deepStrictEqual(cursor.fetch().map(doc => doc[field]),
       Array.from({length: Math.max(...fieldValues) + 1}, (x, i) => i));
   };
 
@@ -2243,7 +2234,7 @@ Tinytest.add('minimongo - array sort', test => {
     'selected');
 });
 
-Tinytest.add('minimongo - nested array sort', test => {
+it('nested array sort', () => {
   const c = new LocalCollection();
 
   // the short fields represent the order it should be when sorting for those keys
@@ -2267,7 +2258,7 @@ Tinytest.add('minimongo - nested array sort', test => {
         fieldValues.push(doc[field]);
       }
     });
-    test.equal(cursor.fetch().map(doc => doc[field]),
+    assert.deepStrictEqual(cursor.fetch().map(doc => doc[field]),
       Array.from({ length: Math.max(...fieldValues) + 1 }, (x, i) => i));
   };
 
@@ -2280,7 +2271,7 @@ Tinytest.add('minimongo - nested array sort', test => {
 
 });
 
-Tinytest.add('minimongo - sort keys', test => {
+it('sort keys', () => {
   const keyListToObject = keyList => {
     const obj = {};
     keyList.forEach(key => {
@@ -2298,12 +2289,12 @@ Tinytest.add('minimongo - sort keys', test => {
       actualKeyList.push(key);
     });
     const actualKeys = keyListToObject(actualKeyList);
-    test.equal(actualKeys, expectedKeys);
+    assert.deepStrictEqual(actualKeys, expectedKeys);
   };
 
   const testParallelError = (sortSpec, doc) => {
     const sorter = new Minimongo.Sorter(sortSpec);
-    test.throws(() => {
+    assert.throws(() => {
       sorter._generateKeysFromDoc(doc, () => {});
     }, /parallel arrays/);
   };
@@ -2351,7 +2342,7 @@ Tinytest.add('minimongo - sort keys', test => {
       {x: 2, y: [4, 5]}]});
 });
 
-Tinytest.add('minimongo - sort function', test => {
+it('sort function', () => {
   const c = new LocalCollection();
 
   c.insert({a: 1});
@@ -2364,12 +2355,12 @@ Tinytest.add('minimongo - sort function', test => {
 
   const sortFunction = (doc1, doc2) => doc2.a - doc1.a;
 
-  test.equal(c.find({}, {sort: sortFunction}).fetch(), c.find({}).fetch().sort(sortFunction));
-  test.notEqual(c.find({}).fetch(), c.find({}).fetch().sort(sortFunction));
-  test.equal(c.find({}, {sort: {a: -1}}).fetch(), c.find({}).fetch().sort(sortFunction));
+  assert.deepStrictEqual(c.find({}, {sort: sortFunction}).fetch(), c.find({}).fetch().sort(sortFunction));
+  assert.notDeepStrictEqual(c.find({}).fetch(), c.find({}).fetch().sort(sortFunction));
+  assert.deepStrictEqual(c.find({}, {sort: {a: -1}}).fetch(), c.find({}).fetch().sort(sortFunction));
 });
 
-Tinytest.add('minimongo - binary search', test => {
+it('binary search', () => {
   const forwardCmp = (a, b) => a - b;
 
   const backwardCmp = (a, b) => -1 * forwardCmp(a, b);
@@ -2377,9 +2368,7 @@ Tinytest.add('minimongo - binary search', test => {
   const checkSearch = (cmp, array, value, expected, message) => {
     const actual = LocalCollection._binarySearch(cmp, array, value);
     if (expected != actual) {
-      test.fail({type: 'minimongo-binary-search',
-        message: `${message} : Expected index ${expected} but had ${actual}`,
-      });
+      assert.fail(`${message} : Expected index ${expected} but had ${actual}`);
     }
   };
 
@@ -2421,7 +2410,7 @@ Tinytest.add('minimongo - binary search', test => {
   checkSearchBackward([2, 2, 2, 2, 2, 2, 2], 3, 0, 'Backward: Highly degenerate array, upper');
 });
 
-Tinytest.addAsync('minimongo - modify', async test => {
+it('modify', async () => {
   const modifyWithQuery = async (doc, query, mod, expected) => {
     const coll = new LocalCollection;
     await coll.insertAsync(doc);
@@ -2436,7 +2425,7 @@ Tinytest.addAsync('minimongo - modify', async test => {
     if (typeof expected === 'function') {
       expected(actual, EJSON.stringify({input: doc, mod}));
     } else {
-      test.equal(actual, expected, EJSON.stringify({input: doc, mod}));
+      assert.deepStrictEqual(actual, expected, EJSON.stringify({input: doc, mod}));
     }
   };
   const modify = async (doc, mod, expected) => {
@@ -2445,7 +2434,7 @@ Tinytest.addAsync('minimongo - modify', async test => {
   const exceptionWithQuery = async (doc, query, mod) => {
     const coll = new LocalCollection;
     await coll.insertAsync(doc);
-    await test.throwsAsync(async () => {
+    await assert.rejects(async () => {
       await coll.updateAsync(query, mod);
     });
   };
@@ -2461,12 +2450,12 @@ Tinytest.addAsync('minimongo - modify', async test => {
     const actual = await coll.findOneAsync();
 
     if (expected._id) {
-      test.equal(result.insertedId, expected._id);
+      assert.ok(EJSON.equals(result.insertedId, expected._id));
     } else {
       delete actual._id;
     }
 
-    test.equal(actual, expected);
+    assert.ok(EJSON.equals(actual, expected));
   };
 
   const upsertUpdate = async (initialDoc, query, mod, expected) => {
@@ -2481,12 +2470,12 @@ Tinytest.addAsync('minimongo - modify', async test => {
       delete actual._id;
     }
 
-    test.equal(actual, expected);
+    assert.ok(EJSON.equals(actual, expected));
   };
 
   const upsertException = async (query, mod) => {
     const coll = new LocalCollection;
-    await test.throwsAsync(async () => {
+    await assert.rejects(async () => {
       await coll.upsertAsync(query, mod);
     });
   };
@@ -2656,8 +2645,8 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await exception({}, {$inc: {_id: 1}});
 
   // $currentDate
-  await modify({}, {$currentDate: {a: true}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
-  await modify({}, {$currentDate: {a: {$type: 'date'}}}, (result, msg) => { test.instanceOf(result.a, Date, msg); });
+  await modify({}, {$currentDate: {a: true}}, (result, msg) => { assert.ok(result.a instanceof Date, msg); });
+  await modify({}, {$currentDate: {a: {$type: 'date'}}}, (result, msg) => { assert.ok(result.a instanceof Date, msg); });
   await exception({}, {$currentDate: {a: false}});
   await exception({}, {$currentDate: {a: {}}});
   await exception({}, {$currentDate: {a: {$type: 'timestamp'}}});
@@ -3117,42 +3106,43 @@ Tinytest.addAsync('minimongo - modify', async test => {
 
 // XXX test update() (selecting docs, multi, upsert..)
 
-Tinytest.addAsync('minimongo - observe ordered', async test => {
+it('observe ordered', async () => {
   const operations = [];
   const cbs = log_callbacks(operations);
   let handle;
 
   const c = new LocalCollection();
   handle = c.find({}, {sort: {a: 1}}).observe(cbs);
-  test.isTrue(handle.collection === c);
+  assert.ok(handle.collection === c);
 
   await c.insertAsync({_id: 'foo', a: 1});
-  test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, 0, null]);
   await c.updateAsync({a: 1}, {$set: {a: 2}});
-  test.equal(operations.shift(), ['changed', {a: 2}, 0, {a: 1}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 2}, 0, {a: 1}]);
   await c.insertAsync({a: 10});
-  test.equal(operations.shift(), ['added', {a: 10}, 1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 10}, 1, null]);
   await c.updateAsync({}, {$inc: {a: 1}}, {multi: true});
-  test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 2}]);
-  test.equal(operations.shift(), ['changed', {a: 11}, 1, {a: 10}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 3}, 0, {a: 2}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 11}, 1, {a: 10}]);
   await c.updateAsync({a: 11}, {a: 1});
-  test.equal(operations.shift(), ['changed', {a: 1}, 1, {a: 11}]);
-  test.equal(operations.shift(), ['moved', {a: 1}, 1, 0, 'foo']);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 1}, 1, {a: 11}]);
+  assert.deepStrictEqual(operations.shift(), ['moved', {a: 1}, 1, 0, 'foo']);
   await c.removeAsync({a: 2});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.removeAsync({a: 3});
-  test.equal(operations.shift(), ['removed', 'foo', 1, {a: 3}]);
+  assert.deepStrictEqual(operations.shift(), ['removed', 'foo', 1, {a: 3}]);
 
   // test stop
   handle.stop();
   const idA2 = Random.id();
   await c.insertAsync({_id: idA2, a: 2});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
 
   // test initial inserts (and backwards sort)
   handle = c.find({}, {sort: {a: -1}}).observe(cbs);
-  test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
-  test.equal(operations.shift(), ['added', {a: 1}, 1, null]);
+  await handle.isReadyPromise;
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 2}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, 1, null]);
   handle.stop();
 
   // test _suppress_initial
@@ -3164,30 +3154,32 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
       cbs
     )
   );
-  test.equal(operations.shift(), undefined);
+  await handle.isReadyPromise;
+  assert.strictEqual(operations.shift(), undefined);
   await c.insertAsync({a: 100});
-  test.equal(operations.shift(), ['added', {a: 100}, 0, idA2]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 100}, 0, idA2]);
   handle.stop();
 
   // test skip and limit.
   await c.removeAsync({});
   handle = c.find({}, { sort: { a: 1 }, skip: 1, limit: 2 }).observe(cbs);
-  test.equal(operations.shift(), undefined);
+  await handle.isReadyPromise;
+  assert.strictEqual(operations.shift(), undefined);
   await c.insertAsync({a: 1});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.insertAsync({_id: 'foo', a: 2});
-  test.equal(operations.shift(), ['added', {a: 2}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 2}, 0, null]);
   await c.insertAsync({a: 3});
-  test.equal(operations.shift(), ['added', {a: 3}, 1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 3}, 1, null]);
   await c.insertAsync({a: 4});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.updateAsync({a: 1}, {a: 0});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.updateAsync({a: 0}, {a: 5});
-  test.equal(operations.shift(), ['removed', 'foo', 0, {a: 2}]);
-  test.equal(operations.shift(), ['added', {a: 4}, 1, null]);
+  assert.deepStrictEqual(operations.shift(), ['removed', 'foo', 0, {a: 2}]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 4}, 1, null]);
   await c.updateAsync({a: 3}, {a: 3.5});
-  test.equal(operations.shift(), ['changed', {a: 3.5}, 0, {a: 3}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 3.5}, 0, {a: 3}]);
   handle.stop();
 
   // test observe limit with pre-existing docs
@@ -3196,40 +3188,42 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
   await c.insertAsync({_id: 'two', a: 2});
   await c.insertAsync({a: 3});
   handle = c.find({}, { sort: { a: 1 }, limit: 2 }).observe(cbs);
-  test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
-  test.equal(operations.shift(), ['added', {a: 2}, 1, null]);
-  test.equal(operations.shift(), undefined);
+  await handle.isReadyPromise;
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 2}, 1, null]);
+  assert.strictEqual(operations.shift(), undefined);
   await c.removeAsync({a: 2});
-  test.equal(operations.shift(), ['removed', 'two', 1, {a: 2}]);
-  test.equal(operations.shift(), ['added', {a: 3}, 1, null]);
-  test.equal(operations.shift(), undefined);
+  assert.deepStrictEqual(operations.shift(), ['removed', 'two', 1, {a: 2}]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 3}, 1, null]);
+  assert.strictEqual(operations.shift(), undefined);
   handle.stop();
 
   // test _no_indices
 
   await c.removeAsync({});
   handle = c.find({}, {sort: {a: 1}}).observe(Object.assign(cbs, {_no_indices: true}));
+  await handle.isReadyPromise;
   await c.insertAsync({_id: 'foo', a: 1});
-  test.equal(operations.shift(), ['added', {a: 1}, -1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, -1, null]);
   await c.updateAsync({a: 1}, {$set: {a: 2}});
-  test.equal(operations.shift(), ['changed', {a: 2}, -1, {a: 1}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 2}, -1, {a: 1}]);
   await c.insertAsync({a: 10});
-  test.equal(operations.shift(), ['added', {a: 10}, -1, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 10}, -1, null]);
   await c.updateAsync({}, {$inc: {a: 1}}, {multi: true});
-  test.equal(operations.shift(), ['changed', {a: 3}, -1, {a: 2}]);
-  test.equal(operations.shift(), ['changed', {a: 11}, -1, {a: 10}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 3}, -1, {a: 2}]);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 11}, -1, {a: 10}]);
   await c.updateAsync({a: 11}, {a: 1});
-  test.equal(operations.shift(), ['changed', {a: 1}, -1, {a: 11}]);
-  test.equal(operations.shift(), ['moved', {a: 1}, -1, -1, 'foo']);
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 1}, -1, {a: 11}]);
+  assert.deepStrictEqual(operations.shift(), ['moved', {a: 1}, -1, -1, 'foo']);
   await c.removeAsync({a: 2});
-  test.equal(operations.shift(), undefined);
+  assert.strictEqual(operations.shift(), undefined);
   await c.removeAsync({a: 3});
-  test.equal(operations.shift(), ['removed', 'foo', -1, {a: 3}]);
+  assert.deepStrictEqual(operations.shift(), ['removed', 'foo', -1, {a: 3}]);
   handle.stop();
 });
 
 [true, false].forEach((ordered) => {
-  Tinytest.addAsync(`minimongo - observe ordered: ${ordered}`, async (test) => {
+  it(`observe ordered: ${ordered}`, async () => {
     const c = new LocalCollection();
 
     let ev = "";
@@ -3244,7 +3238,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
       return ret;
     };
     const expect = (x) => {
-      test.equal(ev, x);
+      assert.deepStrictEqual(ev, x);
       ev = "";
     };
 
@@ -3268,6 +3262,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
     // (because the callbacks don't look at indices and there's no 'moved'
     // callback).
     let handle = c.find({ tags: "flower" }).observe(makecb("a"));
+    await handle.isReadyPromise;
     expect("aa3_");
     await c.updateAsync(
       { name: "rose" },
@@ -3281,7 +3276,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
     expect("aa3_");
     await c.updateAsync({ name: "rose" }, { $set: { food: false } });
     expect("ca3_");
-    c.remove({});
+    await c.removeAsync({});
     expect("ra3_");
     await c.insertAsync({ _id: 4, name: "daisy", tags: ["flower"] });
     expect("aa4_");
@@ -3292,6 +3287,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
 
     // Test that observing a lookup by ID works.
     handle = c.find(4).observe(makecb("b"));
+    await handle.isReadyPromise;
     expect("ab4_");
     await c.updateAsync(4, { $set: { eek: 5 } });
     expect("cb4_");
@@ -3311,7 +3307,7 @@ Tinytest.addAsync('minimongo - observe ordered', async test => {
 });
 
 
-Tinytest.add('minimongo - saveOriginals', test => {
+it('saveOriginals', () => {
   // set up some data
   const c = new LocalCollection();
 
@@ -3330,56 +3326,56 @@ Tinytest.add('minimongo - saveOriginals', test => {
   c.update('bar', {$set: {k: 7}});  // update same doc twice
 
   // Verify returned count is correct
-  test.equal(count, 2);
+  assert.strictEqual(count, 2);
 
   // Verify the originals.
   let originals = c.retrieveOriginals();
   const affected = ['bar', 'baz', 'quux', 'whoa', 'hooray'];
-  test.equal(originals.size(), affected.length);
+  assert.deepStrictEqual(originals.size(), affected.length);
   affected.forEach(id => {
-    test.isTrue(originals.has(id));
+    assert.ok(originals.has(id));
   });
-  test.equal(originals.get('bar'), {_id: 'bar', x: 'updateme'});
-  test.equal(originals.get('baz'), {_id: 'baz', x: 'updateme'});
-  test.equal(originals.get('quux'), {_id: 'quux', y: 'removeme'});
-  test.equal(originals.get('whoa'), {_id: 'whoa', y: 'removeme'});
-  test.equal(originals.get('hooray'), undefined);
+  assert.deepStrictEqual(originals.get('bar'), {_id: 'bar', x: 'updateme'});
+  assert.deepStrictEqual(originals.get('baz'), {_id: 'baz', x: 'updateme'});
+  assert.deepStrictEqual(originals.get('quux'), {_id: 'quux', y: 'removeme'});
+  assert.deepStrictEqual(originals.get('whoa'), {_id: 'whoa', y: 'removeme'});
+  assert.strictEqual(originals.get('hooray'), undefined);
 
   // Verify that changes actually occured.
-  test.equal(c.find().count(), 4);
-  test.equal(c.findOne('foo'), {_id: 'foo', x: 'untouched'});
-  test.equal(c.findOne('bar'), {_id: 'bar', x: 'updateme', z: 5, k: 7});
-  test.equal(c.findOne('baz'), {_id: 'baz', x: 'updateme', z: 5});
-  test.equal(c.findOne('hooray'), {_id: 'hooray', z: 'insertme'});
+  assert.strictEqual(c.find().count(), 4);
+  assert.deepStrictEqual(c.findOne('foo'), {_id: 'foo', x: 'untouched'});
+  assert.deepStrictEqual(c.findOne('bar'), {_id: 'bar', x: 'updateme', z: 5, k: 7});
+  assert.deepStrictEqual(c.findOne('baz'), {_id: 'baz', x: 'updateme', z: 5});
+  assert.deepStrictEqual(c.findOne('hooray'), {_id: 'hooray', z: 'insertme'});
 
   // The next call doesn't get the same originals again.
   c.saveOriginals();
   originals = c.retrieveOriginals();
-  test.isTrue(originals);
-  test.isTrue(originals.empty());
+  assert.ok(originals);
+  assert.ok(originals.empty());
 
   // Insert and remove a document during the period.
   c.saveOriginals();
   c.insert({_id: 'temp', q: 8});
   c.remove('temp');
   originals = c.retrieveOriginals();
-  test.equal(originals.size(), 1);
-  test.isTrue(originals.has('temp'));
-  test.equal(originals.get('temp'), undefined);
+  assert.deepStrictEqual(originals.size(), 1);
+  assert.ok(originals.has('temp'));
+  assert.strictEqual(originals.get('temp'), undefined);
 });
 
-Tinytest.add('minimongo - saveOriginals errors', test => {
+it('saveOriginals errors', () => {
   const c = new LocalCollection();
   // Can't call retrieve before save.
-  test.throws(() => { c.retrieveOriginals(); });
+  assert.throws(() => { c.retrieveOriginals(); });
   c.saveOriginals();
   // Can't call save twice.
-  test.throws(() => { c.saveOriginals(); });
+  assert.throws(() => { c.saveOriginals(); });
 });
 
-Tinytest.add('minimongo - objectid transformation', test => {
+it('objectid transformation', () => {
   const testId = item => {
-    test.equal(item, MongoID.idParse(MongoID.idStringify(item)));
+    assert.ok(EJSON.equals(item, MongoID.idParse(MongoID.idStringify(item))));
   };
   const randomOid = new MongoID.ObjectID();
   testId(randomOid);
@@ -3389,20 +3385,20 @@ Tinytest.add('minimongo - objectid transformation', test => {
   testId(new MongoID.ObjectID());
   testId('--a string');
 
-  test.equal('ffffffffffff', MongoID.idParse(MongoID.idStringify('ffffffffffff')));
+  assert.strictEqual('ffffffffffff', MongoID.idParse(MongoID.idStringify('ffffffffffff')));
 });
 
 
-Tinytest.add('minimongo - objectid', test => {
+it('objectid', () => {
   const randomOid = new MongoID.ObjectID();
   const anotherRandomOid = new MongoID.ObjectID();
-  test.notEqual(randomOid, anotherRandomOid);
-  test.throws(() => { new MongoID.ObjectID('qqqqqqqqqqqqqqqqqqqqqqqq');});
-  test.throws(() => { new MongoID.ObjectID('ABCDEF'); });
-  test.equal(randomOid, new MongoID.ObjectID(randomOid.valueOf()));
+  assert.ok(!EJSON.equals(randomOid, anotherRandomOid));
+  assert.throws(() => { new MongoID.ObjectID('qqqqqqqqqqqqqqqqqqqqqqqq');});
+  assert.throws(() => { new MongoID.ObjectID('ABCDEF'); });
+  assert.ok(EJSON.equals(randomOid, new MongoID.ObjectID(randomOid.valueOf())));
 });
 
-Tinytest.addAsync('minimongo - pause', async test => {
+it('pause', async () => {
   const operations = [];
   const cbs = log_callbacks(operations);
 
@@ -3411,17 +3407,17 @@ Tinytest.addAsync('minimongo - pause', async test => {
 
   // remove and add cancel out.
   await c.insertAsync({_id: 1, a: 1});
-  test.equal(operations.shift(), ['added', {a: 1}, 0, null]);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: 1}, 0, null]);
 
   c.pauseObservers();
 
   await c.removeAsync({_id: 1});
-  test.length(operations, 0);
+  assert.strictEqual(operations.length, 0);
   await c.insertAsync({_id: 1, a: 1});
-  test.length(operations, 0);
+  assert.strictEqual(operations.length, 0);
 
-  c.resumeObserversClient();
-  test.length(operations, 0);
+  await c.resumeObserversServer();
+  assert.strictEqual(operations.length, 0);
 
 
   // two modifications become one
@@ -3430,26 +3426,26 @@ Tinytest.addAsync('minimongo - pause', async test => {
   await c.updateAsync({_id: 1}, {a: 2});
   await c.updateAsync({_id: 1}, {a: 3});
 
-  c.resumeObserversClient();
-  test.equal(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
-  test.length(operations, 0);
+  await c.resumeObserversServer();
+  assert.deepStrictEqual(operations.shift(), ['changed', {a: 3}, 0, {a: 1}]);
+  assert.strictEqual(operations.length, 0);
 
   // test special case for remove({})
   c.pauseObservers();
-  test.equal(await c.removeAsync({}), 1);
-  test.length(operations, 0);
-  c.resumeObserversClient();
-  test.equal(operations.shift(), ['removed', 1, 0, {a: 3}]);
-  test.length(operations, 0);
+  assert.deepStrictEqual(await c.removeAsync({}), 1);
+  assert.strictEqual(operations.length, 0);
+  await c.resumeObserversServer();
+  assert.deepStrictEqual(operations.shift(), ['removed', 1, 0, {a: 3}]);
+  assert.strictEqual(operations.length, 0);
 
   h.stop();
 });
 
-Tinytest.add('minimongo - ids matched by selector', test => {
+it('ids matched by selector', () => {
   const check = (selector, ids) => {
     const idsFromSelector = LocalCollection._idsMatchedBySelector(selector);
     // XXX normalize order, in a way that also works for ObjectIDs?
-    test.equal(idsFromSelector, ids);
+    assert.deepStrictEqual(idsFromSelector, ids);
   };
   check('foo', ['foo']);
   check({_id: 'foo'}, ['foo']);
@@ -3469,7 +3465,7 @@ Tinytest.add('minimongo - ids matched by selector', test => {
 // TODO:
 // work on this test
   false &&
-    Tinytest.addAsync("minimongo - reactive stop", async (test) => {
+    it("reactive stop", async () => {
       const coll = new LocalCollection();
       await coll.insertAsync({ _id: "A" });
       await coll.insertAsync({ _id: "B" });
@@ -3502,29 +3498,29 @@ Tinytest.add('minimongo - ids matched by selector', test => {
         });
       });
 
-      test.equal(x, "ABC");
-      test.equal(y, "ABC");
+      assert.strictEqual(x, "ABC");
+      assert.strictEqual(y, "ABC");
 
       sortOrder.set(-1);
-      test.equal(x, "ABC");
-      test.equal(y, "ABC");
+      assert.strictEqual(x, "ABC");
+      assert.strictEqual(y, "ABC");
       Tracker.flush();
-      test.equal(x, "CBA");
-      test.equal(y, "CBA");
+      assert.strictEqual(x, "CBA");
+      assert.strictEqual(y, "CBA");
 
       await coll.insertAsync({ _id: "D" });
       await coll.insertAsync({ _id: "E" });
-      test.equal(x, "EDCBA");
-      test.equal(y, "EDCBA");
+      assert.strictEqual(x, "EDCBA");
+      assert.strictEqual(y, "EDCBA");
 
       c.stop();
       // stopping kills the observes immediately
       await coll.insertAsync({ _id: "F" });
-      test.equal(x, "EDCBA");
-      test.equal(y, "EDCBA");
+      assert.strictEqual(x, "EDCBA");
+      assert.strictEqual(y, "EDCBA");
     });
 
-  Tinytest.add("minimongo - immediate invalidate", (test) => {
+  it("immediate invalidate", () => {
     const coll = new LocalCollection();
     coll.insert({ _id: "A" });
 
@@ -3544,7 +3540,7 @@ Tinytest.add('minimongo - ids matched by selector', test => {
     c.stop();
   });
 
-  Tinytest.add("minimongo - count on cursor with limit", (test) => {
+  it("count on cursor with limit", async () => {
     const coll = new LocalCollection();
     let count, unlimitedCount;
 
@@ -3561,28 +3557,28 @@ Tinytest.add('minimongo - ids matched by selector', test => {
       count = cursor.count();
     });
 
-    test.equal(count, 3);
+    assert.strictEqual(count, 3);
 
-    coll.remove("A"); // still 3 in the collection
+    await coll.removeAsync("A"); // still 3 in the collection
     Tracker.flush();
-    test.equal(count, 3);
+    assert.strictEqual(count, 3);
 
-    coll.remove("B"); // expect count now 2
+    await coll.removeAsync("B"); // expect count now 2
     Tracker.flush();
-    test.equal(count, 2);
+    assert.strictEqual(count, 2);
 
-    coll.insert({ _id: "A" }); // now 3 again
+    await coll.insertAsync({ _id: "A" }); // now 3 again
     Tracker.flush();
-    test.equal(count, 3);
+    assert.strictEqual(count, 3);
 
-    coll.insert({ _id: "B" }); // now 4 entries, but count should be 3 still
+    await coll.insertAsync({ _id: "B" }); // now 4 entries, but count should be 3 still
     Tracker.flush();
-    test.equal(count, 3);
+    assert.strictEqual(count, 3);
 
     c.stop();
   });
 
-Tinytest.add('minimongo - reactive count with cached cursor', test => {
+it('reactive count with cached cursor', async () => {
   const coll = new LocalCollection;
   const cursor = coll.find({});
   let firstAutorunCount, secondAutorunCount;
@@ -3592,27 +3588,27 @@ Tinytest.add('minimongo - reactive count with cached cursor', test => {
   Tracker.autorun(() => {
     secondAutorunCount = coll.find({}).count();
   });
-  test.equal(firstAutorunCount, 0);
-  test.equal(secondAutorunCount, 0);
-  coll.insert({i: 1});
-  coll.insert({i: 2});
-  coll.insert({i: 3});
+  assert.strictEqual(firstAutorunCount, 0);
+  assert.strictEqual(secondAutorunCount, 0);
+  await coll.insertAsync({i: 1});
+  await coll.insertAsync({i: 2});
+  await coll.insertAsync({i: 3});
   Tracker.flush();
-  test.equal(firstAutorunCount, 3);
-  test.equal(secondAutorunCount, 3);
+  assert.strictEqual(firstAutorunCount, 3);
+  assert.strictEqual(secondAutorunCount, 3);
 });
 
-Tinytest.addAsync('minimongo - $near operator tests', async test => {
+it('$near operator tests', async () => {
   let coll = new LocalCollection();
   await coll.insertAsync({ rest: { loc: [2, 3] } });
   await coll.insertAsync({ rest: { loc: [-3, 3] } });
   await coll.insertAsync({ rest: { loc: [5, 5] } });
 
-  test.equal(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
-  test.equal(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
+  assert.deepStrictEqual(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 30 } }).count(), 3);
+  assert.deepStrictEqual(await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 4 } }).count(), 1);
   const points = await coll.find({ 'rest.loc': { $near: [0, 0], $maxDistance: 6 } }).fetchAsync();
   points.forEach((point, i, points) => {
-    test.isTrue(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
+    assert.ok(!i || distance([0, 0], point.rest.loc) >= distance([0, 0], points[i - 1].rest.loc));
   });
 
   function distance(a, b) {
@@ -3639,21 +3635,21 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
     $geometry: { type: 'Point',
       coordinates: [-122.4154282, 37.7746115] },
     $maxDistance: 15 } } }).fetchAsync();
-  test.length(close15, 1);
-  test.equal(close15[0].descript, 'GRAND THEFT OF PROPERTY');
+  assert.strictEqual(close15.length, 1);
+  assert.strictEqual(close15[0].descript, 'GRAND THEFT OF PROPERTY');
 
   const close20 = await coll.find({ location: { $near: {
     $geometry: { type: 'Point',
       coordinates: [-122.4154282, 37.7746115] },
     $maxDistance: 20 } } }).fetchAsync();
-  test.length(close20, 4);
-  test.equal(close20[0].descript, 'GRAND THEFT OF PROPERTY');
-  test.equal(close20[1].descript, 'PETTY THEFT FROM LOCKED AUTO');
-  test.equal(close20[2].descript, 'POSSESSION OF BURGLARY TOOLS');
-  test.equal(close20[3].descript, 'POSS OF PROHIBITED WEAPON');
+  assert.strictEqual(close20.length, 4);
+  assert.strictEqual(close20[0].descript, 'GRAND THEFT OF PROPERTY');
+  assert.strictEqual(close20[1].descript, 'PETTY THEFT FROM LOCKED AUTO');
+  assert.strictEqual(close20[2].descript, 'POSSESSION OF BURGLARY TOOLS');
+  assert.strictEqual(close20[3].descript, 'POSS OF PROHIBITED WEAPON');
 
   // Any combinations of $near with $or/$and/$nor/$not should throw an error
-  test.throws(() => {
+  assert.throws(() => {
     coll.find({ location: {
       $not: {
         $near: {
@@ -3662,25 +3658,25 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
             coordinates: [-122.4154282, 37.7746115],
           }, $maxDistance: 20 } } } });
   });
-  test.throws(() => {
+  assert.throws(() => {
     coll.find({
       $and: [ { location: { $near: { $geometry: { type: 'Point', coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
         { x: 0 }],
     });
   });
-  test.throws(() => {
+  assert.throws(() => {
     coll.find({
       $or: [ { location: { $near: { $geometry: { type: 'Point', coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 20 }}},
         { x: 0 }],
     });
   });
-  test.throws(() => {
+  assert.throws(() => {
     coll.find({
       $nor: [ { location: { $near: { $geometry: { type: 'Point', coordinates: [-122.4154282, 37.7746115] }, $maxDistance: 1 }}},
         { x: 0 }],
     });
   });
-  test.throws(() => {
+  assert.throws(() => {
     coll.find({
       $and: [{
         $and: [{
@@ -3713,7 +3709,7 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
     k: 9,
     a: {b: [5, 5]}});
   const testNear = async (near, md, expected) => {
-    test.equal(
+    assert.deepStrictEqual(
       (await coll.find({'a.b': {$near: near, $maxDistance: md}}).fetchAsync()).map(doc => doc._id),
       expected);
   };
@@ -3726,7 +3722,7 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
 
   // issue #3599
   // Ensure that distance is not used as a tie-breaker for sort.
-  test.equal(
+  assert.deepStrictEqual(
     (
       await coll
         .find({ 'a.b': { $near: [1, 1] } }, { sort: { k: 1 } })
@@ -3734,7 +3730,7 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
     ).map(doc => doc._id),
     ['x', 'y']
   );
-  test.equal(
+  assert.deepStrictEqual(
     (
       await coll
         .find({ 'a.b': { $near: [5, 5] } }, { sort: { k: 1 } })
@@ -3746,22 +3742,23 @@ Tinytest.addAsync('minimongo - $near operator tests', async test => {
   const operations = [];
   const cbs = log_callbacks(operations);
   const handle = coll.find({'a.b': {$near: [7, 7]}}).observe(cbs);
+  await handle.isReadyPromise;
 
-  test.length(operations, 2);
-  test.equal(operations.shift(), ['added', {k: 9, a: {b: [5, 5]}}, 0, null]);
-  test.equal(operations.shift(),
+  assert.strictEqual(operations.length, 2);
+  assert.deepStrictEqual(operations.shift(), ['added', {k: 9, a: {b: [5, 5]}}, 0, null]);
+  assert.deepStrictEqual(operations.shift(),
     ['added', {k: 9, a: [{b: [[100, 100], [1, 1]]}, {b: [150, 150]}]},
       1, null]);
   // This needs to be inserted in the MIDDLE of the two existing ones.
   await coll.insertAsync({a: {b: [3, 3]}});
-  test.length(operations, 1);
-  test.equal(operations.shift(), ['added', {a: {b: [3, 3]}}, 1, 'x']);
+  assert.strictEqual(operations.length, 1);
+  assert.deepStrictEqual(operations.shift(), ['added', {a: {b: [3, 3]}}, 1, 'x']);
 
   handle.stop();
 });
 
 // issue #2077
-Tinytest.add('minimongo - $near and $geometry for legacy coordinates', test => {
+it('$near and $geometry for legacy coordinates', () => {
   const coll = new LocalCollection();
 
   coll.insert({
@@ -3783,49 +3780,49 @@ Tinytest.add('minimongo - $near and $geometry for legacy coordinates', test => {
     },
   });
 
-  test.equal(coll.find({ loc: { $near: [0, 0], $maxDistance: 4 } }).count(), 2);
-  test.equal(coll.find({ loc: { $near: {$geometry: {type: 'Point', coordinates: [0, 0]}}} }).count(), 4);
-  test.equal(coll.find({ loc: { $near: {$geometry: {type: 'Point', coordinates: [0, 0]}, $maxDistance: 200000}}}).count(), 2);
+  assert.deepStrictEqual(coll.find({ loc: { $near: [0, 0], $maxDistance: 4 } }).count(), 2);
+  assert.deepStrictEqual(coll.find({ loc: { $near: {$geometry: {type: 'Point', coordinates: [0, 0]}}} }).count(), 4);
+  assert.deepStrictEqual(coll.find({ loc: { $near: {$geometry: {type: 'Point', coordinates: [0, 0]}, $maxDistance: 200000}}}).count(), 2);
 });
 
 // Regression test for #4377. Previously, "replace" updates didn't clone the
 // argument.
-Tinytest.add('minimongo - update should clone', test => {
+it('update should clone', () => {
   const x = [];
   const coll = new LocalCollection;
   const id = coll.insert({});
   coll.update(id, {x});
   x.push(1);
-  test.equal(coll.findOne(id), {_id: id, x: []});
+  assert.deepStrictEqual(coll.findOne(id), {_id: id, x: []});
 });
 
 // See #2275.
-Tinytest.addAsync("minimongo - fetch in observe", (test, done) => {
+it("fetch in observe", (_, done) => {
   const coll = new LocalCollection();
   let callbackInvoked = false;
   const observe = coll.find().observeChanges({
     added(id, fields) {
       callbackInvoked = true;
-      test.equal(fields, { foo: 1 });
+      assert.deepStrictEqual(fields, { foo: 1 });
       const doc = coll.findOne({ foo: 1 });
-      test.isTrue(doc);
-      test.equal(doc.foo, 1);
+      assert.ok(doc);
+      assert.strictEqual(doc.foo, 1);
     },
   });
-  test.isFalse(callbackInvoked, "callback not invoked yet");
+  assert.ok(!callbackInvoked, "callback not invoked yet");
   Tracker.autorun(async (computation) => {
     if (computation.firstRun) {
       await coll.insertAsync({ foo: 1 });
 
       // callback is only invoked after the coll insertion, it does not happen
       // in this loop, otherwise the test would fail
-      test.isTrue(callbackInvoked, "callback invoked");
+      assert.ok(callbackInvoked, "callback invoked");
       done()
     }
   });
 });
 
-Tinytest.add("minimongo - simple reactivity", (test) => {
+it("simple reactivity", async () => {
   const coll = new LocalCollection();
   let runs = 0;
 
@@ -3834,17 +3831,15 @@ Tinytest.add("minimongo - simple reactivity", (test) => {
     coll.find().fetch()
   });
 
-  coll.insert({ _id: "test" });
+  await coll.insertAsync({ _id: "test" });
   Tracker.flush();
   // runs should now be 2
-  test.equal(runs, 2);
+  assert.strictEqual(runs, 2);
 });
 
 
 // See #2254
-Tinytest.addAsync(
-  "minimongo - fine-grained reactivity of observe with fields projection",
-  async (test) => {
+it("fine-grained reactivity of observe with fields projection", async () => {
     const X = new LocalCollection();
     const id = "asdf";
     await X.insertAsync({ _id: id, foo: { bar: 123 } });
@@ -3856,15 +3851,15 @@ Tinytest.addAsync(
       },
     });
 
-    test.isFalse(callbackInvoked);
+    assert.ok(!callbackInvoked);
     await X.updateAsync(id, { $set: { "foo.baz": 456 } });
-    test.isFalse(callbackInvoked);
+    assert.ok(!callbackInvoked);
 
     obs.stop();
   }
 );
 
-Tinytest.add('minimongo - fine-grained reactivity of query with fields projection', test => {
+it('fine-grained reactivity of query with fields projection', async () => {
   const X = new LocalCollection;
   const id = 'asdf';
   X.insert({_id: id, foo: {bar: 123}});
@@ -3874,13 +3869,13 @@ Tinytest.add('minimongo - fine-grained reactivity of query with fields projectio
     callbackInvoked = true;
     return X.findOne(id, { fields: { 'foo.bar': 1 } });
   });
-  test.isTrue(callbackInvoked);
+  assert.ok(callbackInvoked);
   callbackInvoked = false;
-  X.update(id, {$set: {'foo.baz': 456}});
-  test.isFalse(callbackInvoked);
-  X.update(id, {$set: {'foo.bar': 124}});
+  await X.updateAsync(id, {$set: {'foo.baz': 456}});
+  assert.ok(!callbackInvoked);
+  await X.updateAsync(id, {$set: {'foo.bar': 124}});
   Tracker.flush();
-  test.isTrue(callbackInvoked);
+  assert.ok(callbackInvoked);
 
   computation.stop();
 });
@@ -3888,7 +3883,7 @@ Tinytest.add('minimongo - fine-grained reactivity of query with fields projectio
 // Tests that the logic in `LocalCollection.prototype.update`
 // correctly deals with count() on a cursor with skip or limit (since
 // then the result set is an IdMap, not an array)
-Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
+it('reactive skip/limit count while updating', async () => {
   const X = new LocalCollection;
   let count = -1;
 
@@ -3896,24 +3891,24 @@ Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
     count = X.find({}, {skip: 1, limit: 1}).count();
   });
 
-  test.equal(count, 0);
+  assert.strictEqual(count, 0);
 
-  X.insert({});
+  await X.insertAsync({});
   Tracker.flush({_throwFirstError: true});
-  test.equal(count, 0);
+  assert.strictEqual(count, 0);
 
-  X.insert({});
+  await X.insertAsync({});
   Tracker.flush({_throwFirstError: true});
-  test.equal(count, 1);
+  assert.strictEqual(count, 1);
 
-  X.update({}, {$set: {foo: 1}});
+  await X.updateAsync({}, {$set: {foo: 1}});
   Tracker.flush({_throwFirstError: true});
-  test.equal(count, 1);
+  assert.strictEqual(count, 1);
 
   // Make sure a second update also works
-  X.update({}, {$set: {foo: 2}});
+  await X.updateAsync({}, {$set: {foo: 2}});
   Tracker.flush({_throwFirstError: true});
-  test.equal(count, 1);
+  assert.strictEqual(count, 1);
 
   c.stop();
 });
@@ -3921,7 +3916,7 @@ Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
 // Makes sure inserts cannot be performed using field names that have
 // Mongo restricted characters in them ('.', '$', '\0'):
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-Tinytest.add('minimongo - cannot insert using invalid field names', test => {
+it('cannot insert using invalid field names', () => {
   const collection = new LocalCollection();
 
   // Quick test to make sure non-dot field inserts are working
@@ -3932,42 +3927,42 @@ Tinytest.add('minimongo - cannot insert using invalid field names', test => {
 
   // Verify top level dot-field inserts are prohibited
   ['a.b', '.b', 'a.', 'a.b.c'].forEach((field) => {
-    test.throws(() => {
+    assert.throws(() => {
       collection.insert({ [field]: 'c' });
-    }, `Key ${field} must not contain '.'`);
+    }, /must not contain/);
   });
 
   // Verify nested dot-field inserts are prohibited
-  test.throws(() => {
+  assert.throws(() => {
     collection.insert({ a: { b: { 'c.d': 'e' } } });
-  }, "Key c.d must not contain '.'");
+  }, /must not contain/);
 
   // Verify field names starting with $ are prohibited
-  test.throws(() => {
+  assert.throws(() => {
     collection.insert({ $a: 'b' });
-  }, "Key $a must not start with '$'");
+  }, /must not start with/);
 
   // Verify nested field names starting with $ are prohibited
-  test.throws(() => {
+  assert.throws(() => {
     collection.insert({ a: { b: { $c: 'd' } } });
-  }, "Key $c must not start with '$'");
+  }, /must not start with/);
 
   // Verify top level fields with null characters are prohibited
   ['\0a', 'a\0', 'a\0b', '\u0000a', 'a\u0000', 'a\u0000b'].forEach((field) => {
-    test.throws(() => {
+    assert.throws(() => {
       collection.insert({ [field]: 'c' });
-    }, `Key ${field} must not contain null bytes`);
+    }, /must not contain null bytes/);
   });
 
   // Verify nested field names with null characters are prohibited
-  test.throws(() => {
+  assert.throws(() => {
     collection.insert({ a: { b: { '\0c': 'd' } } });
-  }, 'Key \0c must not contain null bytes');
+  }, /must not contain null bytes/);
 });
 
 // Makes sure $set's cannot be performed using null bytes
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-Tinytest.add('minimongo - cannot $set with null bytes', test => {
+it('cannot $set with null bytes', () => {
   const collection = new LocalCollection();
 
   // Quick test to make sure non-null byte $set's are working
@@ -3975,14 +3970,14 @@ Tinytest.add('minimongo - cannot $set with null bytes', test => {
   collection.update({ _id: id }, { $set: { e: 'f' } });
 
   // Verify $set's with null bytes throw an exception
-  test.throws(() => {
+  assert.throws(() => {
     collection.update({ _id: id }, { $set: { '\0a': 'b' } });
-  }, 'Key \0a must not contain null bytes');
+  }, /must not contain null bytes/);
 });
 
 // Makes sure $rename's cannot be performed using null bytes
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
-Tinytest.add('minimongo - cannot $rename with null bytes', test => {
+it('cannot $rename with null bytes', () => {
   const collection = new LocalCollection();
 
   // Quick test to make sure non-null byte $rename's are working
@@ -3992,12 +3987,12 @@ Tinytest.add('minimongo - cannot $rename with null bytes', test => {
   // Verify $rename's with null bytes throw an exception
   collection.remove({});
   id = collection.insert({ a: 'b', c: 'd' });
-  test.throws(() => {
+  assert.throws(() => {
     collection.update({ _id: id }, { $rename: { a: '\0a', c: 'c\0' } });
-  }, "The 'to' field for $rename cannot contain an embedded null byte");
+  }, /cannot contain an embedded null byte/);
 });
 
-Tinytest.addAsync('minimongo - asyncIterator', async (test) => {
+it('asyncIterator', async () => {
   const collection = new LocalCollection();
 
   collection.insert({ _id: 'a' });
@@ -4007,58 +4002,59 @@ Tinytest.addAsync('minimongo - asyncIterator', async (test) => {
   for await (const item of collection.find()) {
     itemIds.push(item._id);
   }
-  test.equal(itemIds.length, 2);
-  test.equal(itemIds, ['a', 'b']);
+  assert.strictEqual(itemIds.length, 2);
+  assert.deepStrictEqual(itemIds, ['a', 'b']);
 });
 
-Tinytest.add('minimongo - operation result fields (sync)', test => {
+it('operation result fields (sync)', () => {
   const c = new LocalCollection();
 
   // Test insert
   const insertedId = c.insert({name: 'doc1'});
-  test.isTrue(insertedId !== undefined, 'insert should return an ID');
+  assert.ok(insertedId !== undefined, 'insert should return an ID');
 
   // Test update
   const updateResult = c.update({name: 'doc1'}, {$set: {value: 1}});
-  test.equal(updateResult, 1, 'update should return affected count');
+  assert.strictEqual(updateResult, 1, 'update should return affected count');
 
   // Test upsert (update case)
   const upsertUpdateResult = c.upsert({name: 'doc1'}, {$set: {value: 2}});
-  test.equal(upsertUpdateResult.numberAffected, 1);
-  test.isFalse(upsertUpdateResult.hasOwnProperty('insertedId'));
+  assert.strictEqual(upsertUpdateResult.numberAffected, 1);
+  assert.ok(!upsertUpdateResult.hasOwnProperty('insertedId'));
 
   // Test upsert (insert case)
   const upsertInsertResult = c.upsert({name: 'doc2'}, {$set: {value: 3}});
-  test.equal(upsertInsertResult.numberAffected, 1);
-  test.isTrue(upsertInsertResult.hasOwnProperty('insertedId'));
+  assert.strictEqual(upsertInsertResult.numberAffected, 1);
+  assert.ok(upsertInsertResult.hasOwnProperty('insertedId'));
 
   // Test remove
   const removeResult = c.remove({name: 'doc1'});
-  test.equal(removeResult, 1, 'remove should return removed count');
+  assert.strictEqual(removeResult, 1, 'remove should return removed count');
 });
 
-Tinytest.addAsync('minimongo - operation result fields (async)', async test => {
+it('operation result fields (async)', async () => {
   const c = new LocalCollection();
 
   // Test insert
   const insertedId = await c.insertAsync({name: 'doc1'});
-  test.isTrue(insertedId !== undefined, 'insert should return an ID');
+  assert.ok(insertedId !== undefined, 'insert should return an ID');
 
   // Test update
   const updateResult = await c.updateAsync({name: 'doc1'}, {$set: {value: 1}});
-  test.equal(updateResult, 1, 'update should return affected count');
+  assert.strictEqual(updateResult, 1, 'update should return affected count');
 
   // Test upsert (update case)
   const upsertUpdateResult = await c.upsertAsync({name: 'doc1'}, {$set: {value: 2}});
-  test.equal(upsertUpdateResult.numberAffected, 1);
-  test.isFalse(upsertUpdateResult.hasOwnProperty('insertedId'));
+  assert.strictEqual(upsertUpdateResult.numberAffected, 1);
+  assert.ok(!upsertUpdateResult.hasOwnProperty('insertedId'));
 
   // Test upsert (insert case)
   const upsertInsertResult = await c.upsertAsync({name: 'doc2'}, {$set: {value: 3}});
-  test.equal(upsertInsertResult.numberAffected, 1);
-  test.isTrue(upsertInsertResult.hasOwnProperty('insertedId'));
+  assert.strictEqual(upsertInsertResult.numberAffected, 1);
+  assert.ok(upsertInsertResult.hasOwnProperty('insertedId'));
 
   // Test remove
   const removeResult = await c.removeAsync({name: 'doc1'});
-  test.equal(removeResult, 1, 'remove should return removed count');
+  assert.strictEqual(removeResult, 1, 'remove should return removed count');
+});
 });

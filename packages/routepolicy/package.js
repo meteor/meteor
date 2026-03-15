@@ -13,6 +13,6 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['routepolicy', 'tinytest', 'ecmascript']);
-  api.mainModule('routepolicy_tests.js', 'server');
+  api.use(['routepolicy', 'ecmascript']);
+  api.addFiles('routepolicy_tests.js', 'server');
 });

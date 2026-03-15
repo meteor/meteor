@@ -42,11 +42,10 @@ Package.onTest((api) => {
     "random",
     "reactive-var",
     "test-helpers",
-    "tinytest",
     "tracker",
   ]);
 
-  api.addFiles("minimongo_tests.js");
-  api.addFiles("minimongo_tests_client.js", "client");
+  api.addFiles("minimongo_tests.js", "server");
+  api.addFiles("minimongo_tests_client.js", "server");
   api.addFiles("minimongo_tests_server.js", "server");
 });
