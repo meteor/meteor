@@ -315,7 +315,9 @@ Object.assign(Session.prototype, {
     }
 
     if (self.socket) {
-      self.socket.close();
+      if (!self.socket.isClosed) {
+        self.socket.close();
+      }
       self.socket._meteorSession = null;
       self.socket = null;
     }
