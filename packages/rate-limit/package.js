@@ -1,6 +1,6 @@
 Package.describe({
   name: 'rate-limit',
-  version: '1.1.2',
+  version: '1.2.0-beta350.7',
   // Brief, one-line summary of the package.
   summary: 'An algorithm for rate limiting anything',
   // URL to the Git repository containing the source code for this package.
@@ -10,14 +10,14 @@ Package.describe({
   documentation: 'README.md',
 });
 
-Package.onUse(function(api) {
+Package.onUse(function (api) {
   api.use('random');
   api.use('ecmascript');
   api.mainModule('rate-limit.js');
   api.export('RateLimiter');
 });
 
-Package.onTest(function(api) {
+Package.onTest(function (api) {
   api.use('test-helpers', ['client', 'server']);
   api.use('ecmascript');
   api.use('random');

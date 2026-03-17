@@ -19,8 +19,7 @@ const ASSETS_FOLDER = 'assets';
 const APP_FOLDER = 'app';
 
 const oplogCollectionWarnings = [];
-// Oplog continues to be the default when we do not have a specific preference; we expect to change it in the future before an oplog deprecation.
-const availableDrivers = ['oplog', 'polling', 'changeStreams']
+const availableDrivers = ['changeStreams', 'oplog', 'polling']
 const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : availableDrivers;
 
 const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
