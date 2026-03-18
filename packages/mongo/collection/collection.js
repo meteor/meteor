@@ -76,6 +76,7 @@ Mongo.Collection = function Collection(name, options) {
   setupHookRegistrationMethods(this);
   setupHookOptions(this);
   setupDirectMethods(this);
+  setupHookAwareAsyncMutationMethodHandlers(this, name, options);
 
   // Apply collection extensions
   CollectionExtensions._applyExtensions(this, name, options);
@@ -407,3 +408,125 @@ Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
 Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
+
+const originalValidatedInsertAsync =
+  AllowDeny.CollectionPrototype._validatedInsertAsync;
+const originalValidatedUpdateAsync =
+  AllowDeny.CollectionPrototype._validatedUpdateAsync;
+const originalValidatedRemoveAsync =
+  AllowDeny.CollectionPrototype._validatedRemoveAsync;
+
+function createValidatedMutationProxy(collection, overrides) {
+  const proxyCollection = Object.create(collection._collection);
+  Object.assign(proxyCollection, overrides);
+
+  const proxy = Object.create(collection);
+  proxy._collection = proxyCollection;
+  return proxy;
+}
+
+function rethrowMongoMutationError(error) {
+  if (
+    error?.name === 'MongoError' ||
+    error?.name === 'BulkWriteError' ||
+    error?.name === 'MongoBulkWriteError' ||
+    error?.name === 'MinimongoError'
+  ) {
+    throw new Meteor.Error(409, error.toString());
+  }
+
+  throw error;
+}
+
+function throwIfSelectorIsNotId(selector, methodName) {
+  if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+    throw new Meteor.Error(
+      403,
+      'Not permitted. Untrusted code may only ' + methodName + ' documents by ID.'
+    );
+  }
+}
+
+function setupHookAwareAsyncMutationMethodHandlers(collection, name, options) {
+  if (
+    !Meteor.isServer ||
+    !name ||
+    options.defineMutationMethods === false ||
+    options._suppressSameNameError === true ||
+    collection._connection !== Meteor.server
+  ) {
+    return;
+  }
+
+  const methodHandlers = collection._connection.method_handlers;
+  if (!methodHandlers) {
+    return;
+  }
+
+  ['insertAsync', 'updateAsync', 'removeAsync'].forEach((method) => {
+    const methodName = collection._prefix + method;
+    const originalHandler = methodHandlers[methodName];
+
+    if (typeof originalHandler !== 'function') {
+      return;
+    }
+
+    methodHandlers[methodName] = function (...args) {
+      if (collection._restricted || !collection._isInsecure()) {
+        return originalHandler.apply(this, args);
+      }
+
+      check(args, [Match.Any]);
+
+      try {
+        if (method === 'insertAsync') {
+          if (!Object.prototype.hasOwnProperty.call(args[0], '_id')) {
+            args[0]._id = collection._makeNewID();
+          }
+
+          return collection.insertAsync(args[0]);
+        }
+
+        throwIfSelectorIsNotId(args[0], method);
+
+        if (method === 'updateAsync') {
+          return collection.updateAsync(args[0], args[1], args[2]);
+        }
+
+        return collection.removeAsync(args[0]);
+      } catch (error) {
+        rethrowMongoMutationError(error);
+      }
+    };
+  });
+}
+
+Object.assign(Mongo.Collection.prototype, {
+  _validatedInsertAsync(userId, doc, generatedId) {
+    return originalValidatedInsertAsync.apply(
+      createValidatedMutationProxy(this, {
+        insertAsync: (nextDoc) => this.insertAsync(nextDoc),
+      }),
+      [userId, doc, generatedId]
+    );
+  },
+
+  _validatedUpdateAsync(userId, selector, mutator, options) {
+    return originalValidatedUpdateAsync.apply(
+      createValidatedMutationProxy(this, {
+        updateAsync: (nextSelector, nextMutator, nextOptions) =>
+          this.updateAsync(nextSelector, nextMutator, nextOptions),
+      }),
+      [userId, selector, mutator, options]
+    );
+  },
+
+  _validatedRemoveAsync(userId, selector) {
+    return originalValidatedRemoveAsync.apply(
+      createValidatedMutationProxy(this, {
+        removeAsync: (nextSelector) => this.removeAsync(nextSelector),
+      }),
+      [userId, selector]
+    );
+  },
+});
