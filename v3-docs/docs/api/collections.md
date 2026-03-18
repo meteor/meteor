@@ -663,11 +663,139 @@ it checks the collection's `allow` rules. Meteor allows the write only
 if no `deny` rules return `true` and at least one `allow` rule returns
 `true`.
 
+After Meteor has accepted the write, it executes the mutation through the
+collection's own `insertAsync`, `updateAsync`, or `removeAsync` method on the
+server. This means collection-level customizations, such as
+[`Mongo.Collection` extensions](#collection-extensions) or overridden mutator
+methods in a collection subclass, are preserved for client-originated writes.
+
 <ApiBox name="Mongo.Collection#rawCollection" instanceName="Collection"/>
 
 The methods (like `update` or `insert`) you call on the resulting _raw_ collection return promises and can be used outside of a Fiber.
 
+`rawCollection()` talks directly to the MongoDB driver. It bypasses
+collection-level behavior added through `Mongo.Collection` mutator overrides or
+Collection Extensions. Use it when you explicitly want direct driver access.
+
 <ApiBox name="Mongo.Collection#rawDatabase" instanceName="Collection"/>
+
+## Collection Hooks
+
+Meteor exports `CollectionHooks` from `meteor/mongo`, and every
+`Mongo.Collection` instance includes hook registration helpers and direct
+bypass helpers.
+
+```js
+import { Mongo, CollectionHooks } from 'meteor/mongo';
+
+const Posts = new Mongo.Collection('posts');
+
+Posts.before.insert((userId, doc) => {
+  doc.createdAt = new Date();
+});
+
+Posts.after.update(function (userId, doc, fields, modifier, options) {
+  console.log('updated document', doc._id);
+  console.log('previous value', this.previous);
+});
+```
+
+Supported hook registration methods:
+
+- `collection.before.insert(fn, options)`
+- `collection.after.insert(fn, options)`
+- `collection.before.update(fn, options)`
+- `collection.after.update(fn, options)`
+- `collection.before.remove(fn, options)`
+- `collection.after.remove(fn, options)`
+- `collection.before.find(fn, options)`
+- `collection.after.find(fn, options)`
+- `collection.before.findOne(fn, options)`
+- `collection.after.findOne(fn, options)`
+- `collection.before.upsert(fn, options)`
+
+Each registration returns a controller with:
+
+- `remove()` to unregister the hook
+- `replace(fn, options)` to swap the hook in place
+
+### Hook callback signatures
+
+- `before.insert(userId, doc)`
+- `after.insert(userId, doc)`
+- `before.update(userId, doc, fields, modifier, options)`
+- `after.update(userId, doc, fields, modifier, options)`
+- `before.remove(userId, doc)`
+- `after.remove(userId, doc)`
+- `before.find(userId, selector, options)`
+- `after.find(userId, selector, options, cursor)`
+- `before.findOne(userId, selector, options)`
+- `after.findOne(userId, selector, options, doc)`
+- `before.upsert(userId, selector, modifier, options)`
+
+Notes:
+
+- Returning `false` from a `before.*` hook aborts that operation.
+- `before.find` hooks must be synchronous.
+- `after.find` hooks run when async cursor methods such as `fetchAsync()` or `countAsync()` are consumed.
+- There is no `after.upsert`. Upserts fire `after.insert` when they insert and `after.update` when they update.
+
+### Hook context
+
+Inside hook callbacks, `this` may expose extra information:
+
+- `this.transform(doc)` returns the collection transform for a document.
+- `after.insert` exposes `this._id`.
+- `after.update` exposes `this.previous` and `this.affected`.
+- `after.find` runs with `this` bound to the cursor.
+
+`userId` behavior depends on context:
+
+- On server method/publication writes, it reflects the current DDP invocation.
+- On the client for local collections, it falls back to `Meteor.userId()`.
+- On the server outside a DDP context, it is `undefined`.
+
+### Hook options and defaults
+
+Hook options control document fetching for update hooks:
+
+- `fetch: ['fieldA', 'fieldB']` requests specific fields.
+- `fetchFields: { fieldA: 1 }` provides a projection object.
+- `fetchPrevious: false` disables `this.previous` for `after.update`.
+
+Global defaults are available on `CollectionHooks.defaults`:
+
+```js
+CollectionHooks.defaults.after.update = { fetchPrevious: false };
+```
+
+Defaults can be set per timing and per method through:
+
+- `CollectionHooks.defaults.before`
+- `CollectionHooks.defaults.after`
+- `CollectionHooks.defaults.all`
+
+### Bypassing hooks
+
+Every collection also includes direct helpers that bypass hooks:
+
+- `collection.direct.insertAsync(...)`
+- `collection.direct.updateAsync(...)`
+- `collection.direct.removeAsync(...)`
+- `collection.direct.upsertAsync(...)`
+- `collection.direct.findOneAsync(...)`
+
+Sync counterparts are available where the sync API exists.
+
+You can also bypass hooks for a block of work:
+
+```js
+CollectionHooks.directOp(() => Posts.updateAsync(postId, { $set: { flagged: true } }));
+```
+
+`CollectionHooks.hookedOp(fn)` forces hook-aware execution again, and
+`CollectionHooks.isWithinPublish()` reports whether the current hook is running
+inside a publication.
 
 ## Collection Extensions
 
