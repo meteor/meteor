@@ -123,6 +123,7 @@ Package.onTest(function (api) {
     "random",
     "ddp",
     "base64",
+    "jquery",
     "typescript",
   ]);
   api.use(["accounts-base", "accounts-password"]);

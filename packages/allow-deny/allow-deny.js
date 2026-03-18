@@ -196,28 +196,10 @@ CollectionPrototype._defineMutationMethods = function(options) {
             return self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null) args[0]._id = generatedId;
-            // In insecure mode we use the server _collection methods, and these sync methods
-            // do not exist in the server anymore, so we have this mapper to call the async methods
-            // instead.
-            const syncMethodsMapper = {
-              insert: "insertAsync",
-              update: "updateAsync",
-              remove: "removeAsync",
-            };
-
-
             // In insecure mode, allow any mutation (with a simple selector).
-            // XXX This is kind of bogus.  Instead of blindly passing whatever
-            //     we get from the network to this function, we should actually
-            //     know the correct arguments for the function and pass just
-            //     them.  For example, if you have an extraneous extra null
-            //     argument and this is Mongo on the server, the .wrapAsync'd
-            //     functions like update will get confused and pass the
-            //     "fut.resolver()" in the wrong slot, where _update will never
-            //     invoke it. Bam, broken DDP connection.  Probably should just
-            //     take this whole method and write it three times, invoking
-            //     helpers for the common code.
-            return self._collection[syncMethodsMapper[method] || method].apply(self._collection, args);
+            // Route through collection methods so extensions and hooks behave
+            // the same as direct server-side collection writes.
+            return self[method].apply(self, args);
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.
@@ -312,7 +294,7 @@ CollectionPrototype._validatedInsertAsync = async function(userId, doc,
   if (generatedId !== null)
     doc._id = generatedId;
 
-  return self._collection.insertAsync.call(self._collection, doc);
+  return self.insertAsync(doc);
 };
 
 // Simulate a mongo `update` operation while validating that the access
@@ -414,8 +396,7 @@ CollectionPrototype._validatedUpdateAsync = async function(
   // avoid races, but since selector is guaranteed to already just be an ID, we
   // don't have to any more.
 
-  return self._collection.updateAsync.call(
-    self._collection, selector, mutator, options);
+  return self.updateAsync(selector, mutator, options);
 };
 
 // Only allow these operations in validated updates. Specifically
@@ -467,7 +448,7 @@ CollectionPrototype._validatedRemoveAsync = async function(userId, selector) {
   // Mongo to avoid races, but since selector is guaranteed to already just be
   // an ID, we don't have to any more.
 
-  return self._collection.removeAsync.call(self._collection, selector);
+  return self.removeAsync(selector);
 };
 
 CollectionPrototype._callMutatorMethodAsync = function _callMutatorMethodAsync(name, args, options = {}) {

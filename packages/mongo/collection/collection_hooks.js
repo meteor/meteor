@@ -18,10 +18,19 @@ function isEmpty(a) {
 // On the client outside any DDP context, falls back to Meteor.userId() so that hooks
 // on local collections still see the logged-in user's ID.
 export function getHookUserId() {
+  if (Meteor.isClient) {
+    const clientUserId = Meteor.userId();
+    if (clientUserId != null) return clientUserId;
+  }
+
   const methodInvocation = DDP._CurrentMethodInvocation?.get();
-  if (methodInvocation) return methodInvocation.userId ?? null;
+  if (methodInvocation) {
+    return methodInvocation.userId ?? null;
+  }
   const pubInvocation = DDP._CurrentPublicationInvocation?.get();
-  if (pubInvocation) return pubInvocation.userId ?? null;
+  if (pubInvocation) {
+    return pubInvocation.userId ?? null;
+  }
   if (Meteor.isClient) return Meteor.userId();
   return undefined;
 }
