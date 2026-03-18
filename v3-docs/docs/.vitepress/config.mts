@@ -677,7 +677,27 @@ export default defineConfig({
   vite: {
     plugins: [
       llmstxt({
-        title: "Meteor.js 3 Docs",
+        title: "Meteor.js 3 Documentation",
+        domain: "https://docs.meteor.com",
+        description: "Full-stack JavaScript platform for modern web and mobile applications.",
+        details: `
+Meteor is a full-stack JavaScript platform for developing web and mobile applications.
+
+Key capabilities:
+- Real-time data synchronization with publications and subscriptions
+- Built-in accounts and authentication system
+- Frontend agnostic (React, Vue, Solid, Blaze, Svelte)
+- Zero-config build system with modern tooling (SWC, Rspack)
+- One-command deployment to Galaxy Cloud
+- TypeScript support with full type inference
+
+Current version: Meteor ${metadata.currentVersion}.
+
+## Structured API Data
+
+For complete API documentation in machine-readable format, see:
+- [api-reference.json](/api-reference.json) - Full API reference with all functions, parameters, and types
+        `.trim(),
       }),
     ],
   },
