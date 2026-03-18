@@ -41,7 +41,7 @@ export class ChangeStreamObserveDriver {
     if (projection) {
       const baseProjectionFn = LocalCollection._compileProjection(projection);
       this._projectionFn = (doc) => {
-        const projected = baseProjectionFn(doc);
+        const projected = baseProjectionFn(replaceTypes(doc, replaceMongoAtomWithMeteor));
         if (projected && typeof projected === 'object') {
           const { _id, ...fields } = projected;
           return fields;
@@ -50,7 +50,7 @@ export class ChangeStreamObserveDriver {
       };
     } else {
       this._projectionFn = (doc) => {
-        const { _id, ...fields } = doc;
+        const { _id, ...fields } = replaceTypes(doc, replaceMongoAtomWithMeteor);
         return fields;
       };
     }
