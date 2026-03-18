@@ -93,7 +93,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'Full Library Skeleton /',
+    'Full Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'full',
       port: 3204,
@@ -116,8 +116,9 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.js',
       },
       bodyStyles: {
-        'font-family':
-          'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+        'font-family': process.platform === 'darwin'
+          ? 'Inter, -apple-system, "system-ui", "Segoe UI", Roboto, sans-serif'
+          : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         padding: '10px',
       },
     }),
@@ -150,7 +151,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'Tailwind Library Skeleton /',
+    'Tailwind Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'tailwind',
       port: 3208,

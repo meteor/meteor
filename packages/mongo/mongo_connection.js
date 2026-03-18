@@ -12,12 +12,24 @@ import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
+import { ChangeStreamObserveDriver } from './changestream_observe_driver';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
 const APP_FOLDER = 'app';
 
 const oplogCollectionWarnings = [];
+const availableDrivers = ['changeStreams', 'oplog', 'polling']
+const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : availableDrivers;
+
+const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
+if (Array.isArray(reactivitySetting)) {
+  for (const method of reactivitySetting) {
+    if (!availableDrivers.includes(method)) {  
+      throw new Error(`Invalid Mongo reactivity method in settings: ${method}`);
+    }
+  }
+}
 
 export const MongoConnection = function (url, options) {
   var self = this;
@@ -33,7 +45,6 @@ export const MongoConnection = function (url, options) {
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
   }, userOptions);
-
 
 
   // Internally the oplog connections specify their own maxPoolSize
@@ -89,7 +100,6 @@ export const MongoConnection = function (url, options) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
-
 };
 
 MongoConnection.prototype._close = async function() {
@@ -801,22 +811,96 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
-Object.assign(MongoConnection.prototype, {
-  _observeChanges: async function (
+const driverClasses = {
+  changeStreams: ChangeStreamObserveDriver,
+  oplog: OplogObserveDriver,
+  polling: PollingObserveDriver,
+};
+
+function _getConfiguredReactivityOrder () {
+  const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
+  const isArraySetting = Array.isArray(reactivitySetting);
+  const isStringSetting = typeof reactivitySetting === 'string';
+  const hasCustomDriverOrder = isArraySetting || isStringSetting;
+
+  if (reactivitySetting && !hasCustomDriverOrder) {
+    throw new Error('Meteor.settings.packages.mongo.reactivity must be a string or an array of observer drivers');
+  }
+
+  let configuredOrder = DEFAULT_REACTIVITY_ORDER;
+  if (hasCustomDriverOrder) {
+    if (isStringSetting) {
+      configuredOrder = [reactivitySetting];
+    } else {
+      configuredOrder = [];
+      for (const name of reactivitySetting) {
+        if (!configuredOrder.includes(name)) {
+          configuredOrder.push(name);
+        }
+      }
+    }
+  }
+
+  const invalidDriverNames = configuredOrder.filter(name => !driverClasses[name]);
+  if (invalidDriverNames.length) {
+    throw new Error(`Invalid Mongo reactivity driver(s): ${invalidDriverNames.join(', ')}`);
+  }
+
+  if (hasCustomDriverOrder && configuredOrder.length === 0) {
+    throw new Error('Meteor.settings.packages.mongo.reactivity must specify at least one observer driver');
+  }
+
+  return configuredOrder;
+};
+
+MongoConnection.prototype._selectReactivityDriver = async function (configuredOrder, driverChecks) {
+  const availabilityErrors = [];
+  let driverClass;
+  let matcher;
+  let sorter;
+
+  for (const driverName of configuredOrder) {
+    const checker = driverChecks[driverName];
+
+    if (!checker) {
+      availabilityErrors.push(`Unknown driver "${driverName}"`);
+      continue;
+    }
+
+    const result = await checker();
+
+    if (result.available) {
+      matcher = result.matcher;
+      sorter = result.sorter;
+      driverClass = driverClasses[driverName];
+      break;
+    }
+
+    if (result.reason) {
+      availabilityErrors.push(`${driverName}: ${result.reason}`);
+    }
+  }
+
+  return {
+    driverClass,
+    matcher,
+    sorter,
+  };
+};
+
+MongoConnection.prototype._observeChanges = async function (
     cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
-    var self = this;
     const collectionName = cursorDescription.collectionName;
 
     if (cursorDescription.options.tailable) {
-      return self._observeChangesTailable(cursorDescription, ordered, callbacks);
+      return this._observeChangesTailable(cursorDescription, ordered, callbacks);
     }
 
     // You may not filter out _id when observing changes, because the id is a core
     // part of the observeChanges API.
     const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
-    if (fieldsOptions &&
-      (fieldsOptions._id === 0 ||
-        fieldsOptions._id === false)) {
+    if (fieldsOptions?._id === 0 ||
+        fieldsOptions?._id === false) {
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
@@ -829,15 +913,15 @@ Object.assign(MongoConnection.prototype, {
     // Find a matching ObserveMultiplexer, or create a new one. This next block is
     // guaranteed to not yield (and it doesn't call anything that can observe a
     // new query), so no other calls to this function can interleave with it.
-    if (observeKey in self._observeMultiplexers) {
-      multiplexer = self._observeMultiplexers[observeKey];
+    if (observeKey in this._observeMultiplexers) {
+      multiplexer = this._observeMultiplexers[observeKey];
     } else {
       firstHandle = true;
       // Create a new ObserveMultiplexer.
       multiplexer = new ObserveMultiplexer({
         ordered: ordered,
-        onStop: function () {
-          delete self._observeMultiplexers[observeKey];
+        onStop: () => {
+          delete this._observeMultiplexers[observeKey];
           return observeDriver.stop();
         }
       });
@@ -848,88 +932,190 @@ Object.assign(MongoConnection.prototype, {
       nonMutatingCallbacks,
     );
 
-    const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+    const oplogOptions = (this._oplogHandle && this._oplogHandle._oplogOptions) || {};
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
-
       var matcher, sorter;
-      var canUseOplog = [
-        function () {
-          // At a bare minimum, using the oplog requires us to have an oplog, to
-          // want unordered callbacks, and to not want a callback on the polls
-          // that won't happen.
-          return self._oplogHandle && !ordered &&
-            !callbacks._testOnlyPollCallback;
-        },
-        function () {
-          // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
-          // if not, we have to fallback to long polling
-          if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
-            if (!oplogCollectionWarnings.includes(collectionName)) {
-              console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
-              oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+      const configuredOrder = _getConfiguredReactivityOrder();
+
+      const driverChecks = {
+        changeStreams: async () => {
+          let localMatcher;
+          const reasons = [];
+
+          if (this._supportsChangeStreams === undefined) {
+            const serverReasons = [];
+
+            try {
+              // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
+              const admin = this.db.admin();
+              const serverInfo = await admin.serverInfo();
+              const isMasterPromise = admin.command({ isMaster: 1 });
+              const versionString = serverInfo.version || 'unknown';
+              const versionParts = versionString.split('.').map(Number);
+              const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
+              const minor = Number.isFinite(versionParts[1]) ? versionParts[1] : 0;
+
+              // Check MongoDB version (3.6+)
+              const hasMinVersion = major > 3 || (major === 3 && minor >= 6);
+
+              if (!hasMinVersion) {
+                serverReasons.push(`Change Streams require MongoDB 3.6+ (current ${versionString})`);
+              } else {
+                // Check if we're running on a replica set or sharded cluster
+                const isMaster = await isMasterPromise;
+                const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
+                const isSharded = isMaster.msg === 'isdbgrid';
+
+                if (!(isReplicaSet || isSharded)) {
+                  serverReasons.push('Change Streams require a replica set or sharded cluster');
+                }
+              }
+            } catch (error) {
+              Meteor._debug("Error checking Change Stream support:", error);
+              serverReasons.push(`Error checking Change Stream support: ${error.message}`);
             }
-            return false;
+
+            this._changeStreamServerReasons = serverReasons;
+            this._supportsChangeStreams = serverReasons.length === 0;
           }
-          if (includeCollections?.length && !includeCollections.includes(collectionName)) {
-            if (!oplogCollectionWarnings.includes(collectionName)) {
-              console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
-              oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+
+          if (!this._supportsChangeStreams) {
+            if (this._changeStreamServerReasons?.length) {
+              reasons.push(...this._changeStreamServerReasons);
+            } else {
+              reasons.push('Change Streams not supported by MongoDB deployment');
             }
-            return false;
           }
-          return true;
-        },
-        function () {
-          // We need to be able to compile the selector. Fall back to polling for
-          // some newfangled $selector that minimongo doesn't support yet.
+
+          if (ordered) {
+            reasons.push('Change Streams only supports unordered observeChanges');
+          }
+
+          if (callbacks._testOnlyPollCallback) {
+            reasons.push('Change Streams cannot be used with _testOnlyPollCallback');
+          }
+
+          if (reasons.length) {
+            return {
+              available: false,
+              reason: reasons.join('; '),
+            };
+          }
+
           try {
-            matcher = new Minimongo.Matcher(
+            localMatcher = new Minimongo.Matcher(
               cursorDescription.selector,
               undefined,
               cursorDescription.options.collation
             );
-            return true;
           } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
             if (Meteor.isClient && e instanceof MiniMongoQueryError) {
               throw e;
             }
-            return false;
-          }
-        },
-        function () {
-          // ... and the selector itself needs to support oplog.
-          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-        },
-        function () {
-          // And we need to be able to compile the sort, if any.  eg, can't be
-          // {$natural: 1}.
-          if (!cursorDescription.options.sort)
-            return true;
-          try {
-            sorter = new Minimongo.Sorter(
-              cursorDescription.options.sort,
-              cursorDescription.options.collation
-            );
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            return false;
-          }
-        }
-      ].every(f => f());  // invoke each function and check if all return true
 
-      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+            return {
+              available: false,
+              reason: `Selector not supported for Change Streams: ${e.message}`,
+            };
+          }
+
+          return {
+            available: true,
+            matcher: localMatcher,
+          };
+        },
+        oplog: () => {
+          const reasons = [];
+          let localMatcher;
+          let localSorter;
+
+          if (!(this._oplogHandle && !ordered && !callbacks._testOnlyPollCallback)) {
+            reasons.push('Oplog tailing not available for this cursor');
+          }
+
+          if (!reasons.length) {
+            if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
+              if (!oplogCollectionWarnings.includes(collectionName)) {
+                Meteor._debug(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+                oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+              }
+              reasons.push('Collection is excluded from oplog tailing');
+            } else if (includeCollections?.length && !includeCollections.includes(collectionName)) {
+              if (!oplogCollectionWarnings.includes(collectionName)) {
+                Meteor._debug(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+                oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+              }
+              reasons.push('Collection is not included in oplog tailing');
+            }
+          }
+
+          if (!reasons.length) {
+            try {
+              localMatcher = new Minimongo.Matcher(
+                cursorDescription.selector,
+                undefined,
+                cursorDescription.options.collation
+              );
+            } catch (e) {
+              // XXX make all compilation errors MinimongoError or something
+              //     so that this doesn't ignore unrelated exceptions
+              if (Meteor.isClient && e instanceof MiniMongoQueryError) {
+                throw e;
+              }
+              reasons.push(`Selector not supported for oplog: ${e.message}`);
+            }
+          }
+
+          if (!reasons.length && !OplogObserveDriver.cursorSupported(cursorDescription, localMatcher)) {
+            reasons.push('Cursor not supported by oplog');
+          }
+
+          if (!reasons.length && cursorDescription.options.sort) {
+            try {
+              localSorter = new Minimongo.Sorter(
+                cursorDescription.options.sort,
+                cursorDescription.options.collation
+              );
+            } catch (e) {
+              // XXX make all compilation errors MinimongoError or something
+              //     so that this doesn't ignore unrelated exceptions
+              reasons.push('Sort not supported by oplog');
+            }
+          }
+
+          return {
+            available: reasons.length === 0,
+            matcher: localMatcher,
+            sorter: localSorter,
+            reason: reasons.join('; ')
+          };
+        },
+        polling: () => ({ available: true }),
+      };
+
+      let {
+        driverClass,
+        matcher: selectedMatcher,
+        sorter: selectedSorter,
+      } = await this._selectReactivityDriver(configuredOrder, driverChecks);
+
+      // Fallback to polling if no driver is available
+      if (!driverClass) {
+        Meteor._debug('No reactivity driver available for cursor, falling back to polling');
+        driverClass = PollingObserveDriver;
+      }
+
+      matcher = selectedMatcher;
+      sorter = selectedSorter;
+
       observeDriver = new driverClass({
-        cursorDescription: cursorDescription,
-        mongoHandle: self,
-        multiplexer: multiplexer,
-        ordered: ordered,
-        matcher: matcher,  // ignored by polling
-        sorter: sorter,  // ignored by polling
+        cursorDescription,
+        mongoHandle: this,
+        multiplexer,
+        ordered,
+        matcher,  // ignored by polling
+        sorter,  // ignored by polling
         _testOnlyPollCallback: callbacks._testOnlyPollCallback
       });
 
@@ -940,11 +1126,9 @@ Object.assign(MongoConnection.prototype, {
       // This field is only set for use in tests.
       multiplexer._observeDriver = observeDriver;
     }
-    self._observeMultiplexers[observeKey] = multiplexer;
+    this._observeMultiplexers[observeKey] = multiplexer;
     // Blocks until the initial adds have been sent.
     await multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
     return observeHandle;
-  },
-
-});
+  }

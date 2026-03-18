@@ -136,25 +136,34 @@ export default class Cursor {
    *                        `callback`.
    */
   forEach(callback, thisArg) {
-    if (this.reactive) {
-      this._depend({
-        addedBefore: true,
-        removed: true,
-        changed: true,
-        movedBefore: true,
-      });
+    let i = 0;
+
+    for (const doc of this) {
+      callback.call(thisArg, doc, i++, this);
     }
+  }
 
-    this._getRawObjects({ ordered: true }).forEach((element, i) => {
-      // This doubles as a clone operation.
-      element = this._projectionFn(element);
+  /**
+   * @summary Call `callback` once for each matching document, sequentially and
+   *          synchronously.
+   * @locus Anywhere
+   * @method  forEachAsync
+   * @instance
+   * @memberOf Mongo.Cursor
+   * @param {IterationCallback} callback Function to call. It will be called
+   *                                     with three arguments: the document, a
+   *                                     0-based index, and <em>cursor</em>
+   *                                     itself.
+   * @param {Any} [thisArg] An object which will be the value of `this` inside
+   *                        `callback`.
+   * @returns {Promise}
+   */
+  async forEachAsync(callback, thisArg) {
+    let i = 0;
 
-      if (this._transform) {
-        element = this._transform(element);
-      }
-
-      callback.call(thisArg, element, i, this);
-    });
+    for await (const doc of this) {
+      await callback.call(thisArg, doc, i++, this);
+    }
   }
 
   getTransform() {
@@ -162,7 +171,7 @@ export default class Cursor {
   }
 
   /**
-   * @summary Map callback over all matching documents.  Returns an Array.
+   * @summary Map callback over all matching documents. Returns an Array.
    * @locus Anywhere
    * @method map
    * @instance
@@ -179,6 +188,30 @@ export default class Cursor {
 
     this.forEach((doc, i) => {
       result.push(callback.call(thisArg, doc, i, this));
+    });
+
+    return result;
+  }
+
+  /**
+   * @summary Map callback over all matching documents. Returns a Promise<Array>.
+   * @locus Anywhere
+   * @method mapAsync
+   * @instance
+   * @memberOf Mongo.Cursor
+   * @param {IterationCallback} callback Function to call. It will be called
+   *                                     with three arguments: the document, a
+   *                                     0-based index, and <em>cursor</em>
+   *                                     itself.
+   * @param {Any} [thisArg] An object which will be the value of `this` inside
+   *                        `callback`.
+   * @returns {Promise<Array>}
+   */
+  async mapAsync(callback, thisArg) {
+    const result = [];
+
+    await this.forEachAsync(async (doc, i) => {
+      result.push(await callback.call(thisArg, doc, i, this));
     });
 
     return result;
@@ -564,6 +597,11 @@ export default class Cursor {
 // Implements async version of cursor methods to keep collections isomorphic
 ASYNC_CURSOR_METHODS.forEach(method => {
   const asyncName = getAsyncMethodName(method);
+
+  if (Cursor.prototype[asyncName]) {
+    return;
+  }
+
   Cursor.prototype[asyncName] = function(...args) {
     try {
       return Promise.resolve(this[method].apply(this, args));

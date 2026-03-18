@@ -5,9 +5,10 @@ import {
 
 import { StreamClientCommon } from "./common.js";
 
-// Statically importing SockJS here will prevent native WebSocket usage
-// below (in favor of SockJS), but will ensure maximum compatibility for
-// clients stuck in unusual networking environments.
+// SockJS is imported statically to avoid the startup latency introduced by
+// dynamic import() in _launchConnection(). When DISABLE_SOCKJS=1, SockJS
+// remains bundled in the client, but the connection uses the native
+// WebSocket path directly with no import-time delay.
 import SockJS from "./sockjs-1.6.1-min-.js";
 
 export class ClientStream extends StreamClientCommon {
@@ -157,20 +158,18 @@ export class ClientStream extends StreamClientCommon {
   _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
-    var options = {
-      transports: this._sockjsProtocolsWhitelist(),
-      ...this.options._sockjsOptions
-    };
-
-    const hasSockJS = typeof SockJS === "function";
-    const disableSockJS = __meteor_runtime_config__.DISABLE_SOCKJS;
-
-    this.socket = hasSockJS && !disableSockJS
+    if (__meteor_runtime_config__.DISABLE_SOCKJS) {
+      this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
+    } else {
+      const options = {
+        transports: this._sockjsProtocolsWhitelist(),
+        ...this.options._sockjsOptions
+      };
       // Convert raw URL to SockJS URL each time we open a connection, so
       // that we can connect to random hostnames and get around browser
       // per-host connection limits.
-      ? new SockJS(toSockjsUrl(this.rawUrl), undefined, options)
-      : new WebSocket(toWebsocketUrl(this.rawUrl));
+      this.socket = new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
+    }
 
     this.socket.onopen = data => {
       this.lastError = null;
