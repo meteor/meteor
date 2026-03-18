@@ -98,8 +98,6 @@ async function getEnv(options) {
     env.NPM_CONFIG_UNSAFE_PERM = env.METEOR_ALLOW_SUPERUSER;
   }
 
-  env.NPM_CONFIG_NODEDIR = devBundleDir;
-
   const PATH = env.PATH || env.Path;
 
   if (PATH) {
