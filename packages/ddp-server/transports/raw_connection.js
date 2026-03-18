@@ -5,8 +5,8 @@ import { EventEmitter } from 'events';
  * interface as a SockJS connection, as expected by _onConnection
  * and livedata_server.js.
  *
- * Used by the faye and ws transports. The uws transport implements
- * its own socket interface directly.
+ * Used by non-SockJS transports that provide a standard WebSocket
+ * object. The uws transport implements its own socket interface directly.
  */
 export class RawWebSocketConnection extends EventEmitter {
   constructor(ws, req, rawSocket, messageAdapter) {
