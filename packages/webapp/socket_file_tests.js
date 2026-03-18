@@ -174,8 +174,6 @@ testAsyncMulti(
     async (test) => {
       const isLinux = platform() === 'linux';
       const isTravis = Boolean(process.env.TRAVIS);
-      const groupToUse =
-        (isTravis && 'travis') || (isMacOS() ? 'staff' : 'root');
 
       if (isLinux && !isTravis) {
         /*
