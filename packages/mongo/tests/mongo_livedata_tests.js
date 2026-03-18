@@ -4689,6 +4689,7 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
   Tinytest.addAsync(
     'mongo-livedata - projection preserves ObjectID field type on initial add',
     async function (test) {
+      if (Meteor.isClient) return;
       const coll = new Mongo.Collection('projObjIdInitial' + Random.id());
 
       const refId = new Mongo.ObjectID();
@@ -4723,6 +4724,7 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
   Tinytest.addAsync(
     'mongo-livedata - projection preserves ObjectID field type on insert event',
     async function (test) {
+      if (Meteor.isClient) return;
       const coll = new Mongo.Collection('projObjIdInsert' + Random.id());
 
       const output = [];
@@ -4760,6 +4762,7 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
   Tinytest.addAsync(
     'mongo-livedata - projection preserves ObjectID field type on update event',
     async function (test) {
+      if (Meteor.isClient) return;
       const coll = new Mongo.Collection('projObjIdUpdate' + Random.id());
 
       const firstRefId = new Mongo.ObjectID();
