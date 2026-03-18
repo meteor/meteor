@@ -250,10 +250,11 @@ This technique has a few disadvantages:
 2. Sometimes a single piece of functionality can be spread over multiple mutators.
 3. It can be a challenge to write a hook in a completely general way (that covers every possible selector and modifier), and it may not be necessary for your application (because perhaps you only ever call that mutator in one way).
 
-When writes arrive from the client through Meteor's collection API, the server
-still executes the accepted mutation through the collection's mutator method.
-That means this subclassing technique also applies to client-originated writes
-that pass `allow`/`deny` checks or run in `insecure` mode.
+When async writes arrive from the client through Meteor's collection API, the
+server still executes the accepted mutation through the collection's mutator
+method. That means this subclassing technique also applies to async
+client-originated writes that pass `allow`/`deny` checks or run in `insecure`
+mode.
 
 If you instead call [`rawCollection()`](/api/collections#Mongo-Collection-rawCollection),
 you are using the MongoDB driver directly and bypassing these collection-level

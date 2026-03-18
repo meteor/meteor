@@ -416,13 +416,20 @@ const originalValidatedUpdateAsync =
 const originalValidatedRemoveAsync =
   AllowDeny.CollectionPrototype._validatedRemoveAsync;
 
-function createValidatedMutationProxy(collection, overrides) {
+function createHookAwareValidatedCollectionProxy(collection, overrides) {
   const proxyCollection = Object.create(collection._collection);
   Object.assign(proxyCollection, overrides);
 
   const proxy = Object.create(collection);
   proxy._collection = proxyCollection;
   return proxy;
+}
+
+function runValidatedMutationWithHooks(collection, originalMethod, overrides, args) {
+  return originalMethod.apply(
+    createHookAwareValidatedCollectionProxy(collection, overrides),
+    args
+  );
 }
 
 function rethrowMongoMutationError(error) {
@@ -452,7 +459,6 @@ function setupHookAwareAsyncMutationMethodHandlers(collection, name, options) {
     !Meteor.isServer ||
     !name ||
     options.defineMutationMethods === false ||
-    options._suppressSameNameError === true ||
     collection._connection !== Meteor.server
   ) {
     return;
@@ -472,7 +478,9 @@ function setupHookAwareAsyncMutationMethodHandlers(collection, name, options) {
     }
 
     methodHandlers[methodName] = function (...args) {
-      if (collection._restricted || !collection._isInsecure()) {
+      const activeCollection = Mongo.getCollection(name) || collection;
+
+      if (activeCollection._restricted || !activeCollection._isInsecure()) {
         return originalHandler.apply(this, args);
       }
 
@@ -481,19 +489,19 @@ function setupHookAwareAsyncMutationMethodHandlers(collection, name, options) {
       try {
         if (method === 'insertAsync') {
           if (!Object.prototype.hasOwnProperty.call(args[0], '_id')) {
-            args[0]._id = collection._makeNewID();
+            args[0]._id = activeCollection._makeNewID();
           }
 
-          return collection.insertAsync(args[0]);
+          return activeCollection.insertAsync(args[0]);
         }
 
         throwIfSelectorIsNotId(args[0], method);
 
         if (method === 'updateAsync') {
-          return collection.updateAsync(args[0], args[1], args[2]);
+          return activeCollection.updateAsync(args[0], args[1], args[2]);
         }
 
-        return collection.removeAsync(args[0]);
+        return activeCollection.removeAsync(args[0]);
       } catch (error) {
         rethrowMongoMutationError(error);
       }
@@ -503,29 +511,35 @@ function setupHookAwareAsyncMutationMethodHandlers(collection, name, options) {
 
 Object.assign(Mongo.Collection.prototype, {
   _validatedInsertAsync(userId, doc, generatedId) {
-    return originalValidatedInsertAsync.apply(
-      createValidatedMutationProxy(this, {
+    return runValidatedMutationWithHooks(
+      this,
+      originalValidatedInsertAsync,
+      {
         insertAsync: (nextDoc) => this.insertAsync(nextDoc),
-      }),
+      },
       [userId, doc, generatedId]
     );
   },
 
   _validatedUpdateAsync(userId, selector, mutator, options) {
-    return originalValidatedUpdateAsync.apply(
-      createValidatedMutationProxy(this, {
+    return runValidatedMutationWithHooks(
+      this,
+      originalValidatedUpdateAsync,
+      {
         updateAsync: (nextSelector, nextMutator, nextOptions) =>
           this.updateAsync(nextSelector, nextMutator, nextOptions),
-      }),
+      },
       [userId, selector, mutator, options]
     );
   },
 
   _validatedRemoveAsync(userId, selector) {
-    return originalValidatedRemoveAsync.apply(
-      createValidatedMutationProxy(this, {
+    return runValidatedMutationWithHooks(
+      this,
+      originalValidatedRemoveAsync,
+      {
         removeAsync: (nextSelector) => this.removeAsync(nextSelector),
-      }),
+      },
       [userId, selector]
     );
   },

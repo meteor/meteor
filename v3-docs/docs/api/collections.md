@@ -663,11 +663,12 @@ it checks the collection's `allow` rules. Meteor allows the write only
 if no `deny` rules return `true` and at least one `allow` rule returns
 `true`.
 
-After Meteor has accepted the write, it executes the mutation through the
-collection's own `insertAsync`, `updateAsync`, or `removeAsync` method on the
-server. This means collection-level customizations, such as
+After Meteor has accepted an async client write, it executes the mutation
+through the collection's own `insertAsync`, `updateAsync`, or `removeAsync`
+method on the server. This means collection-level customizations, such as
 [`Mongo.Collection` extensions](#collection-extensions) or overridden mutator
-methods in a collection subclass, are preserved for client-originated writes.
+methods in a collection subclass, are preserved for async client-originated
+writes.
 
 <ApiBox name="Mongo.Collection#rawCollection" instanceName="Collection"/>
 
