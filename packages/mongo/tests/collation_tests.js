@@ -428,17 +428,18 @@ if (Meteor.isServer) {
       var c = new Mongo.Collection('collation_oplog_' + Random.id());
       var collation = { locale: 'en', strength: 2 };
 
-      // Collation queries should be supported by oplog (since Minimongo
-      // now supports collation natively)
+      // Collation queries should be supported by a reactive driver
+      // (oplog or change streams), not fall back to polling.
       var handle = await c.find(
         { name: 'test' },
         { collation: collation }
       ).observeChanges({ added: function () {} });
 
       if (oplogEnabled) {
+        var driver = handle._multiplexer._observeDriver;
         test.isTrue(
-          handle._multiplexer._observeDriver._usesOplog,
-          'Collation queries should use oplog'
+          driver._usesOplog || driver._usesChangeStreams,
+          'Collation queries should use oplog or change streams, not polling'
         );
       }
 
