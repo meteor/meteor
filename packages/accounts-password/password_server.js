@@ -290,7 +290,7 @@ Accounts._checkPasswordAsync = checkPasswordAsync;
 
 
 const passwordValidator = Match.OneOf(
-  Match.Where(str => Match.test(str, String) && str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256), {
+  Match.Where(str => Match.test(str, String) && str.length <= (Meteor.settings?.packages?.accounts?.passwordMaxLength || 256)), {
     digest: Match.Where(str => Match.test(str, String) && str.length === 64),
     algorithm: Match.OneOf('sha-256')
   }
