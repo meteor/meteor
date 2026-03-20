@@ -163,10 +163,6 @@ export default defineConfig({
             text: "Roadmap",
             link: "/about/roadmap",
           },
-              {
-                text: "Contributing",
-                link: "/about/contributing",
-              }
         ],
         collapsed: true,
       },
@@ -198,10 +194,6 @@ export default defineConfig({
           {
             text: "Cordova",
             link: "/about/cordova",
-          },
-          {
-            text: "Build System",
-            link: "/about/build-tool",
           },
         ],
         collapsed: true,
@@ -418,14 +410,6 @@ export default defineConfig({
             ]
           },
           {
-            text: "Using npm packages",
-            link: "/packages/4.using-npm-packages",
-          },
-          {
-            text: "Writing npm packages",
-            link: "/packages/5.writing-npm-packages",
-          },
-          {
             text: "Using Atmosphere packages",
             link: "/packages/6.using-atmosphere-packages",
           },
@@ -436,6 +420,14 @@ export default defineConfig({
           {
             link: "/packages/packages-listing",
             text: "Maintained Packages",
+          },
+          {
+            text: "Using npm packages",
+            link: "/packages/4.using-npm-packages",
+          },
+          {
+            text: "Writing npm packages",
+            link: "/packages/5.writing-npm-packages",
           },
           {
             link: "/community-packages/index",
@@ -529,6 +521,10 @@ export default defineConfig({
           {
             link: "/tutorials/application-structure/index",
             text: "Application structure",
+          },
+          {
+            text: "Build System",
+            link: "/about/build-tool",
           },
           {
             text: "Core Concepts",
@@ -631,6 +627,20 @@ export default defineConfig({
         ],
         collapsed: true,
       },
+      {
+        text: "Community",
+        items: [
+          {
+            text: "Contributing",
+            link: "/community/contributing",
+          },
+          {
+            text: "Contributors",
+            link: "/community/contributors",
+          },
+        ],
+        collapsed: true,
+      },
     ],
 
     socialLinks: [
@@ -667,7 +677,27 @@ export default defineConfig({
   vite: {
     plugins: [
       llmstxt({
-        title: "Meteor.js 3 Docs",
+        title: "Meteor.js 3 Documentation",
+        domain: "https://docs.meteor.com",
+        description: "Full-stack JavaScript platform for modern web and mobile applications.",
+        details: `
+Meteor is a full-stack JavaScript platform for developing web and mobile applications.
+
+Key capabilities:
+- Real-time data synchronization with publications and subscriptions
+- Built-in accounts and authentication system
+- Frontend agnostic (React, Vue, Solid, Blaze, Svelte)
+- Zero-config build system with modern tooling (SWC, Rspack)
+- One-command deployment to Galaxy Cloud
+- TypeScript support with full type inference
+
+Current version: Meteor ${metadata.currentVersion}.
+
+## Structured API Data
+
+For complete API documentation in machine-readable format, see:
+- [api-reference.json](/api-reference.json) - Full API reference with all functions, parameters, and types
+        `.trim(),
       }),
     ],
   },

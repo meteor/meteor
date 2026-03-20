@@ -152,6 +152,8 @@ meteor add coffeescript
 
 All code written in CoffeeScript compiles to JavaScript under the hood, and is completely compatible with any code in other packages that is written in JS or ES2015.
 
+> **Recommended (3.4+)**: If you're using CoffeeScript, consider using it with the [Rspack bundler](/about/modern-build-stack/rspack-bundler-integration#coffeescript) instead of the Atmosphere build plugin. Rspack handles CoffeeScript via `coffee-loader` and `swc-loader`, providing faster builds and better integration with the modern build stack. You can quickly scaffold a new project with `meteor create --coffeescript`.
+
 ### TypeScript
 
 [TypeScript](https://www.typescriptlang.org/) is modern JavaScript with optional types and more. Adding types will make your code more readable and less prone to runtime errors.
@@ -231,6 +233,8 @@ If you're building your app's UI with React, currently the most popular way to w
 
 ## CSS processing
 
+> **Using Rspack (3.4+)?** When using the Rspack bundler, CSS is handled by Rspack's built-in loaders instead of Meteor's Atmosphere build plugins. This gives you standard bundler conventions, proper CSS HMR, and access to tools like Tailwind and PostCSS without extra Meteor packages. See the [Rspack CSS guide](/about/modern-build-stack/rspack-bundler-integration#css) for details.
+
 All your CSS style files will be processed using Meteor's default file load order rules along with any import statements and concatenated into a single stylesheet, `merged-stylesheets.css`. In a production build this file is also minified. By default this single stylesheet is injected at the beginning of the HTML `<head />` section of your application.
 
 However, this can potentially be an issue for some applications that use a third party UI framework, such as Bootstrap, which is loaded from a CDN. This could cause Bootstrap's CSS to come after your CSS and override your user-defined styles.
@@ -305,9 +309,13 @@ import 'npm-package-name/stylesheets/styles.css';
 
 The best Sass build plugin for Meteor is [`leonardoventurini:scss`](https://atmospherejs.com/leonardoventurini/scss). An alternative to the previous recommended [`fourseven:scss`](https://atmospherejs.com/fourseven/scss) package.
 
+With Rspack (3.4+), you can replace the Atmosphere package with `sass-embedded` and `sass-loader` configured in your `rspack.config.js`. See the [Rspack CSS guide](/about/modern-build-stack/rspack-bundler-integration#css) for setup instructions.
+
 ### Less
 
 Less is maintained as a [Meteor core package called `less`](/packages/less).
+
+With Rspack (3.4+), you can replace the Atmosphere package with `less` and `less-loader` configured in your `rspack.config.js`. See the [Rspack CSS guide](/about/modern-build-stack/rspack-bundler-integration#css) for setup instructions.
 
 ### Stylus
 

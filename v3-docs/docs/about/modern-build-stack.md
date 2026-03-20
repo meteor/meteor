@@ -55,6 +55,8 @@ On first run, the package installs the required Rspack setup at the project leve
 
 ## Learn more
 
+📄 [Build System guide](/about/build-tool) — In-depth guide covering Meteor's build tool, JavaScript transpilation, CSS processing, HMR, and build plugins.
+
 📹 [Modern Build Stack in Meteor 3: Empower Your Meteor Apps with Faster, Feature-Rich Bundling](https://www.youtube.com/watch?v=LqU1eDbnG4I)
 
 Presented by [@nachocodoner](https://github.com/nachocodoner) at [Meteor Impact](https://impact.meteorjs.community/), this video covers the motivation behind this new era of Meteor bundler optimizations and modernization with Rspack integration, what initially drove us there, what we have achieved, and how you can adopt it today. It was recorded while Meteor 3.4 was in beta, but the content is still accurate. The only difference is that you can now upgrade directly to the official Meteor 3.4 release.
