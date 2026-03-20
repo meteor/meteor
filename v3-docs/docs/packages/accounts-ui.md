@@ -28,7 +28,7 @@ when the URLs are loaded.
 
 ## Customizing the UI
 
-If you want to control the look and feel of your accounts system a little more, we recommend reading the [useraccounts](http://guide.meteor.com/accounts.html#useraccounts) section of the Meteor Guide.
+If you want to control the look and feel of your accounts system a little more, we recommend reading the [useraccounts](/tutorials/accounts/accounts#useraccounts) section of the Meteor Guide.
 
 ### CSS Variables
 

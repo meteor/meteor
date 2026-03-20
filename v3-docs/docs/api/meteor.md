@@ -88,7 +88,10 @@ Using this pattern can get some performance gains on the defined environments as
 this can increase the speed of startup.
 
 <ApiBox name="Meteor.deferDev" hasCustomExample />
-This helper function allows you to defer the execution of a function only in development environments.
+
+**Introduced in Meteor 3.4** ([PR#14006](https://github.com/meteor/meteor/pull/14006))
+
+This helper function allows you to defer the execution of a function only in development environments, significantly improving server startup times in development by deferring non-critical setup code.
 
 ::: code-group
 
@@ -283,7 +286,7 @@ to each method call on the client, and checking on the server whether a call
 with this ID has already been made. Alternatively, you can use
 [`Meteor.apply`](#Meteor-apply) with the noRetry option set to true.
 
-Read more about methods and how to use them in the [Methods](http://guide.meteor.com/methods.html) article in the Meteor Guide.
+Read more about methods and how to use them in the [Methods](/tutorials/methods/methods) article in the Meteor Guide.
 
 <ApiBox name="Meteor.isAsyncCall" hasCustomExample/>
 
@@ -730,7 +733,7 @@ will still work.
 :::
 
 Read more about publications and how to use them in the
-[Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
+[Data Loading](/tutorials/data-loading/data-loading) article in the Meteor Guide.
 
 <ApiBox name="Subscription#userId" />
 
@@ -990,16 +993,19 @@ contains the following fields:
   security risk for this transport. For details and alternatives, see
   the [SockJS documentation](https://github.com/sockjs/sockjs-node#authorisation).
 
-> Currently when a client reconnects to the server (such as after
-> temporarily losing its Internet connection), it will get a new
-> connection each time. The `onConnection` callbacks will be called
-> again, and the new connection will have a new connection `id`.
+## Reconnection
 
-> In the future, when client reconnection is fully implemented,
-> reconnecting from the client will reconnect to the same connection on
-> the server: the `onConnection` callback won't be called for that
-> connection again, and the connection will still have the same
-> connection `id`.
+Meteor 3.5+ supports [DDP session resumption](https://github.com/meteor/meteor/pull/14051), allowing clients to automatically resume their previous connection after a temporary network disconnect. When a client reconnects within the grace period, the `onConnection` callback is not called again and the connection retains its original `id`.
+
+This behavior is controlled by the following server options:
+
+### Meteor.server.options.disconnectGracePeriod
+
+Defines how long (in milliseconds) we should maintain a session for after a non-graceful disconnect before destroying it. Sessions that reconnect within this time will be resumed with minimal performance impact. Defaults to `15000`.
+
+### Meteor.server.options.maxMessageQueueLength
+
+Determines how many messages we should queue during a non-graceful disconnect before we destroy the session, to help prevent memory leaks. Defaults to `100`.
 
 <ApiBox name="DDP.connect"  hasCustomExample/>
 

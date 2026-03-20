@@ -7,7 +7,6 @@ import {
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
 
-const hasOwn = Object.prototype.hasOwnProperty;
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -83,6 +82,25 @@ export class AccountsServer extends AccountsCommon {
       return Meteor._isPromise(value) ? await value : value;
     };
 
+    /**
+     * @summary Object containing functions that generate URLs for account-related emails.
+     * Override these to customize URLs in emails sent by
+     * [`Accounts.sendResetPasswordEmail`](#Accounts-sendResetPasswordEmail),
+     * [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail), and
+     * [`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail).
+     *
+     * By default, URLs use hash fragments (e.g., `#/reset-password/:token`) for security:
+     * hash fragments are not sent to the server in HTTP requests, preventing tokens from
+     * appearing in server logs or referrer headers.
+     * @locus Server
+     * @memberof Accounts
+     * @name urls
+     * @type {Object}
+     * @property {Function} resetPassword - `(token, extraParams) => string` - Generates password reset URL.
+     * @property {Function} verifyEmail - `(token, extraParams) => string` - Generates email verification URL.
+     * @property {Function} enrollAccount - `(token, extraParams) => string` - Generates account enrollment URL.
+     * @property {Function} loginToken - `(selector, token, extraParams) => string` - Generates login token URL.
+     */
     this.urls = {
       resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
       verifyEmail: (token, extraParams) => this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
@@ -93,6 +111,16 @@ export class AccountsServer extends AccountsCommon {
 
     this.addDefaultRateLimit();
 
+    /**
+     * @summary Builds a URL for account-related emails by combining the app's
+     * root URL with a path and optional extra parameters.
+     * @locus Server
+     * @memberof Accounts
+     * @name buildEmailUrl
+     * @param {String} path - The path to append to the root URL (e.g., `#/reset-password/TOKEN`).
+     * @param {Object} [extraParams={}] - Additional query parameters to include in the URL.
+     * @returns {String} The complete URL.
+     */
     this.buildEmailUrl = (path, extraParams = {}) => {
       const url = new URL(Meteor.absoluteUrl(path));
       const params = Object.entries(extraParams);
@@ -772,7 +800,7 @@ export class AccountsServer extends AccountsCommon {
 
         if (Package["oauth-encryption"]) {
           const { OAuthEncryption } = Package["oauth-encryption"]
-          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+          if (Object.hasOwn(options, 'secret') && OAuthEncryption.keyIsLoaded())
             options.secret = OAuthEncryption.seal(options.secret);
         }
 
@@ -875,10 +903,8 @@ export class AccountsServer extends AccountsCommon {
   //   - forLoggedInUser {Array} Array of fields published to the logged-in user
   //   - forOtherUsers {Array} Array of fields published to users that aren't logged in
   addAutopublishFields(opts) {
-    this._autopublishFields.loggedInUser.push.apply(
-      this._autopublishFields.loggedInUser, opts.forLoggedInUser);
-    this._autopublishFields.otherUsers.push.apply(
-      this._autopublishFields.otherUsers, opts.forOtherUsers);
+    this._autopublishFields.loggedInUser.push(...(opts.forLoggedInUser || []));
+    this._autopublishFields.otherUsers.push(...(opts.forOtherUsers || []));
   };
 
   // Replaces the fields to be automatically
@@ -979,7 +1005,7 @@ export class AccountsServer extends AccountsCommon {
   // the observe that we started when we associated the connection with
   // this token.
   _removeTokenFromConnection(connectionId) {
-    if (hasOwn.call(this._userObservesForConnections, connectionId)) {
+    if (Object.hasOwn(this._userObservesForConnections, connectionId)) {
       const observe = this._userObservesForConnections[connectionId];
       if (typeof observe === 'number') {
         // We're in the process of setting up an observe for this connection. We
@@ -1185,13 +1211,13 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // @override from accounts_common.js
-  config(options) {
+  config(...args) {
     // Call the overridden implementation of the method.
-    const superResult = AccountsCommon.prototype.config.apply(this, arguments);
+    const superResult = AccountsCommon.prototype.config.apply(this, args);
 
     // If the user set loginExpirationInDays to null, then we need to clear the
     // timer that periodically expires tokens.
-    if (hasOwn.call(this._options, 'loginExpirationInDays') &&
+    if (Object.hasOwn(this._options, 'loginExpirationInDays') &&
       this._options.loginExpirationInDays === null &&
       this.expireTokenInterval) {
       Meteor.clearInterval(this.expireTokenInterval);
@@ -1348,7 +1374,7 @@ export class AccountsServer extends AccountsCommon {
         "Can't use updateOrCreateUserFromExternalService with internal service "
         + serviceName);
     }
-    if (!hasOwn.call(serviceData, 'id')) {
+    if (!Object.hasOwn(serviceData, 'id')) {
       throw new Error(
         `Service data for service ${serviceName} must include id`);
     }
@@ -1498,7 +1524,7 @@ export class AccountsServer extends AccountsCommon {
   ) {
     // Some tests need the ability to add users with the same case insensitive
     // value, hence the _skipCaseInsensitiveChecksForTest check
-    const skipCheck = Object.prototype.hasOwnProperty.call(
+    const skipCheck = Object.hasOwn(
       this._skipCaseInsensitiveChecksForTest,
       fieldValue
     );
