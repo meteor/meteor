@@ -7,7 +7,6 @@ Package.describe({
 Npm.depends({
   "faye-websocket": "0.11.4",
   "permessage-deflate2": "0.1.8",
-  "cbor-x": "1.6.0",
   sockjs: "0.3.24",
   "lodash.once": "4.1.1",
   "lodash.isempty": "4.4.0",

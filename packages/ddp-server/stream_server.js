@@ -105,70 +105,14 @@ class RawWebSocketConnection extends EventEmitter {
   }
 }
 
-// ---------------------------------------------------------------------------
-// Serializer resolution
-// ---------------------------------------------------------------------------
-
-function resolveSerializer() {
-  var name = process.env.DDP_SERIALIZER || 'ejson';
-
-  if (name === 'ejson') {
-    return DDPCommon.createEJSONSerializer();
-  }
-
-  if (name === 'cbor') {
-    var { Encoder, Decoder } = Npm.require('cbor-x');
-    var encoder = new Encoder({ mapsAsObjects: true, useRecords: false });
-    var decoder = new Decoder({ mapsAsObjects: true, useRecords: false });
-
-    return {
-      name: 'cbor',
-      wireFormat: 'binary',
-
-      serialize(wireMsg) {
-        return encoder.encode(wireMsg);
-      },
-
-      deserialize(raw) {
-        var msg = decoder.decode(
-          raw instanceof Uint8Array ? raw : Buffer.from(raw)
-        );
-        if (msg === null || typeof msg !== 'object') {
-          throw new Error('DDP message is not an object');
-        }
-        return msg;
-      },
-    };
-  }
-
-  throw new Error(
-    'Unknown DDP serializer: "' + name + '". Valid: ejson, cbor'
-  );
-}
-
 StreamServer = function () {
   var self = this;
   self.registration_callbacks = [];
   self.open_sockets = [];
 
-  // Resolve and install serializer
-  var serializer = resolveSerializer();
-  DDPCommon.setSerializer(serializer);
-
   if (disableSockJS) {
-    // Binary serializers require raw WebSocket (not SockJS)
-    if (serializer.wireFormat === 'binary') {
-      console.log('DDP serializer: ' + serializer.name + ' (binary, raw WebSocket)');
-    }
     self._setupRawWebSocket();
   } else {
-    if (serializer.wireFormat === 'binary') {
-      throw new Error(
-        'DDP serializer "' + serializer.name + '" requires binary frames. ' +
-        'SockJS only supports text frames. Set DISABLE_SOCKJS=1 to use ' +
-        'raw WebSocket, or switch back to the "ejson" serializer.'
-      );
-    }
     self._setupSockJS();
   }
 };
