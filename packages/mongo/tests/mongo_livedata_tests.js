@@ -4670,4 +4670,137 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
   if (Meteor.isClient) {
     onComplete();
   }
+
+
+
+  // ============================================================================
+  // BUG REGRESSION: ObjectID fields with projection
+  // When a cursor uses a projection and a document field contains a MongoDB
+  // ObjectID, the field was being received as a binary blob instead of a
+  // Mongo.ObjectID instance. Root cause: LocalCollection._compileProjection
+  // uses EJSON.clone() on each projected value. EJSON does not know about
+  // MongoDB.ObjectId (a BSON type), so it serialises it to { id: Uint8Array },
+  // which is then not recognised by replaceMongoAtomWithMeteor.
+  // These tests cover all three paths (initial add, insert event, update event)
+  // and run regardless of the active reactivity driver (oplog, changestream, etc).
+  // ============================================================================
+
+  Tinytest.addAsync(
+    'mongo-livedata - projection preserves ObjectID field type on initial add',
+    async function (test) {
+      if (Meteor.isClient) return;
+      const coll = new Mongo.Collection('projObjIdInitial' + Random.id());
+
+      const refId = new Mongo.ObjectID();
+      await coll.insertAsync({ name: 'test', refId });
+
+      const output = [];
+      const handle = await coll.find({}, { fields: { refId: 1 } }).observeChanges({
+        added: function (id, fields) {
+          output.push(fields);
+        },
+      });
+
+      // observeChanges sends initial adds synchronously before returning
+      test.equal(output.length, 1, 'Should receive the initial added callback');
+
+      const receivedRefId = output[0].refId;
+
+      test.isTrue(
+        receivedRefId instanceof Mongo.ObjectID,
+        `refId should be Mongo.ObjectID but got: ${JSON.stringify(receivedRefId)}`
+      );
+      test.equal(
+        receivedRefId.toHexString(),
+        refId.toHexString(),
+        'ObjectID hex value should be preserved'
+      );
+
+      handle.stop();
+    }
+  );
+
+  Tinytest.addAsync(
+    'mongo-livedata - projection preserves ObjectID field type on insert event',
+    async function (test) {
+      if (Meteor.isClient) return;
+      const coll = new Mongo.Collection('projObjIdInsert' + Random.id());
+
+      const output = [];
+      const handle = await coll.find({}, { fields: { refId: 1 } }).observeChanges({
+        added: function (id, fields) {
+          output.push(fields);
+        },
+      });
+
+      const refId = new Mongo.ObjectID();
+      // runInFence guarantees the observer is notified before we check results
+      await runInFence(async function () {
+        await coll.insertAsync({ name: 'test', refId });
+      });
+
+      test.equal(output.length, 1, 'Should receive the added callback');
+
+      const receivedRefId = output[0].refId;
+
+      test.isTrue(
+        receivedRefId instanceof Mongo.ObjectID,
+        `refId should be Mongo.ObjectID but got: ${JSON.stringify(receivedRefId)}`
+      );
+      test.equal(
+        receivedRefId.toHexString(),
+        refId.toHexString(),
+        'ObjectID hex value should be preserved'
+      );
+
+      handle.stop();
+    }
+  );
+
+
+  Tinytest.addAsync(
+    'mongo-livedata - projection preserves ObjectID field type on update event',
+    async function (test) {
+      if (Meteor.isClient) return;
+      const coll = new Mongo.Collection('projObjIdUpdate' + Random.id());
+
+      const firstRefId = new Mongo.ObjectID();
+      const docId = await coll.insertAsync({ name: 'test', refId: firstRefId });
+
+      const added = [];
+      const changed = [];
+      const handle = await coll.find({}, { fields: { refId: 1 } }).observeChanges({
+        added: function (id, fields) {
+          added.push(fields);
+        },
+        changed: function (id, fields) {
+          changed.push(fields);
+        },
+      });
+
+      // Initial add is synchronous
+      test.equal(added.length, 1, 'Should receive the initial added callback');
+
+      const newRefId = new Mongo.ObjectID();
+      await runInFence(async function () {
+        await coll.updateAsync(docId, { $set: { refId: newRefId } });
+      });
+
+      test.equal(changed.length, 1, 'Should receive the changed callback');
+
+      const receivedRefId = changed[0].refId;
+
+      test.isTrue(
+        receivedRefId instanceof Mongo.ObjectID,
+        `Updated refId should be Mongo.ObjectID but got: ${JSON.stringify(receivedRefId)}`
+      );
+      test.equal(
+        receivedRefId.toHexString(),
+        newRefId.toHexString(),
+        'Updated ObjectID hex value should be preserved'
+      );
+
+      handle.stop();
+    }
+  );
 });

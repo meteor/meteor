@@ -2,7 +2,7 @@ import {
   isFunction,
   isObject,
   keysOf,
-  lengthOf,
+  lengthOfWithLimit,
   hasOwn,
   convertMapToObject,
   isArguments,
@@ -98,7 +98,7 @@ EJSON.addType = (name, factory) => {
 const builtinConverters = [
   { // Date
     matchJSONValue(obj) {
-      return hasOwn(obj, '$date') && lengthOf(obj) === 1;
+      return hasOwn(obj, '$date') && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       return obj instanceof Date;
@@ -114,7 +114,7 @@ const builtinConverters = [
     matchJSONValue(obj) {
       return hasOwn(obj, '$regexp')
         && hasOwn(obj, '$flags')
-        && lengthOf(obj) === 2;
+        && lengthOfWithLimit(obj, 2) === 2;
     },
     matchObject(obj) {
       return obj instanceof RegExp;
@@ -140,7 +140,7 @@ const builtinConverters = [
   { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
     matchJSONValue(obj) {
-      return hasOwn(obj, '$InfNaN') && lengthOf(obj) === 1;
+      return hasOwn(obj, '$InfNaN') && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject: isInfOrNaN,
     toJSONValue(obj) {
@@ -160,7 +160,7 @@ const builtinConverters = [
   },
   { // Binary
     matchJSONValue(obj) {
-      return hasOwn(obj, '$binary') && lengthOf(obj) === 1;
+      return hasOwn(obj, '$binary') && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       return typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array
@@ -175,12 +175,12 @@ const builtinConverters = [
   },
   { // Escaping one level
     matchJSONValue(obj) {
-      return hasOwn(obj, '$escape') && lengthOf(obj) === 1;
+      return hasOwn(obj, '$escape') && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       let match = false;
       if (obj) {
-        const keyCount = lengthOf(obj);
+        const keyCount = lengthOfWithLimit(obj, 2);
         if (keyCount === 1 || keyCount === 2) {
           match =
             builtinConverters.some(converter => converter.matchJSONValue(obj));
@@ -206,7 +206,7 @@ const builtinConverters = [
   { // Custom
     matchJSONValue(obj) {
       return hasOwn(obj, '$type')
-        && hasOwn(obj, '$value') && lengthOf(obj) === 2;
+        && hasOwn(obj, '$value') && lengthOfWithLimit(obj, 2) === 2;
     },
     matchObject(obj) {
       return EJSON._isCustomType(obj);
@@ -611,6 +611,9 @@ EJSON.equals = (a, b, options) => {
   let ret;
   const aKeys = keysOf(a);
   const bKeys = keysOf(b);
+  if (aKeys.length !== bKeys.length) {
+    return false;
+  }
   if (keyOrderSensitive) {
     i = 0;
     ret = aKeys.every(key => {
