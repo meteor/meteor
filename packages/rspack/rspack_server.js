@@ -28,7 +28,11 @@ const RSPACK_ASSETS_REGEX = new RegExp(
   `^\/${rspackAssetsContext}\/(.+)$`,
 );
 
-if (global?.Package?.['tools-core'] != null && Meteor.isDevelopment) {
+const shouldEnableDevHMRProxy =
+  global?.Package?.["tools-core"] != null &&
+  Meteor.isDevelopment &&
+  !process.env.RSPACK_NATIVE;
+if (shouldEnableDevHMRProxy) {
   const { shuffleString } = require('meteor/tools-core/lib/string');
   const { createProxyMiddleware } = require('http-proxy-middleware');
 

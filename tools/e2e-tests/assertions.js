@@ -102,7 +102,7 @@ export async function assertFileExist(tempDir, filePath, options = {}) {
         return checkFile();
       }
       // If we've exceeded the timeout, fail the test
-      expect(fileExists).toBe(true);
+      throw new Error(`Expected file to exist but it was not found: ${fullPath}`);
       return false;
     }
 

@@ -13,7 +13,7 @@
     "meteor-node-stubs": "^1.2.12"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^0.0.28",
+    "@meteorjs/rspack": "^1.1.0-beta.31",
     "@rspack/cli": "^1.4.8",
     "@rspack/core": "^1.4.8",
     "playwright": "1.58.0",

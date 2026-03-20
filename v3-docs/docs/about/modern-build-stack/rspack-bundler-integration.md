@@ -157,7 +157,8 @@ You can use flags to control the final configuration based on the environment. T
 | `compileWithRspack` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Rspack                         |
 | `setCache`          | function | Enables or disables cache. Accepts true (persistent, default), false, or 'memory'                                                 |
 | `splitVendorChunk`  | function | Splits vendor libraries so they are automatically served from a separate chunk                                                    |
-| `extendSwcConfig`   | function | Extends the [SWC loader configuration](https://rspack.rs/guide/features/builtin-swc-loader#options) to apply only to the app code |
+| `extendSwcConfig`   | function | Smart-merges custom options into Meteor's default [SWC loader configuration](https://rspack.rs/guide/features/builtin-swc-loader#options), applying only to app code |
+| `replaceSwcConfig`  | function | Replaces Meteor's default [SWC loader configuration](https://rspack.rs/guide/features/builtin-swc-loader#options) entirely with the provided options, applying only to app code |
 | `extendConfig`      | function | Extends the config by applying merged object configs                                                                                 |
 | `enablePortableBuild` | function | Omits `Meteor.isDevelopment` and `Meteor.isProduction` from the bundle, making it portable across environments                     |
 
@@ -628,26 +629,61 @@ module.exports = defineConfig(Meteor => ({
 
 This is a quick configuration for split chunks all within `node_modules` as a `vendor` chunk, if you need more control you can use the [official Rspack split chunks integration guide](https://rspack.rs/guide/optimization/code-splitting#splitchunksplugin).
 
-### Extending SWC config
+### Customizing SWC config
 
 Rspack uses the SWC configuration to transpile your app code. By default, it inherits any settings from the `.swcrc` file, which also [impacts how Meteor transpiles core and package code](meteor-bundler-optimizations.md#custom-swcrc).
 
-If you want a configuration to apply only to your app code, you can extend the SWC setup using the `Meteor.extendSwcConfig` helper:
+If you want a configuration to apply only to your app code (not Meteor packages), two helpers are available:
+
+#### `Meteor.extendSwcConfig` - smart merge (recommended)
+
+Merges your custom options on top of Meteor's defaults using a deep merge strategy (the same used by `Meteor.extendConfig`). Only the properties you specify are overridden; everything else (parser settings, React refresh, external helpers, etc) is preserved.
 
 ```js
 const { defineConfig } = require('@meteorjs/rspack');
 
 module.exports = defineConfig(Meteor => ({
-  // Extend SWC config
+  // Add decorator support while keeping all Meteor defaults
   ...Meteor.extendSwcConfig({
     jsc: {
       parser: {
-        syntax: 'typescript',
+        decorators: true,
       },
     },
   }),
 }));
 ```
+
+#### `Meteor.replaceSwcConfig` - full replacement
+
+Discards Meteor's defaults entirely and uses the provided config as-is. Use this when you need complete control over SWC and the smart merge doesn't fit your use case.
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  // Full SWC config — no Meteor defaults applied
+  ...Meteor.replaceSwcConfig({
+    jsc: {
+      parser: {
+        syntax: 'typescript',
+        tsx: true,
+        decorators: true,
+      },
+      target: 'es2020',
+      transform: {
+        react: {
+          runtime: 'automatic',
+        },
+      },
+    },
+  }),
+}));
+```
+
+:::warning
+When using `replaceSwcConfig`, you are responsible for providing all necessary SWC options. Features like React refresh, external helpers and parser defaults that Meteor configures (`Meteor.swcConfigOptions`) will not be applied unless you include them yourself.
+:::
 
 ### Interop for Default Imports
 

@@ -177,6 +177,11 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
     // Configure Meteor settings for Rspack
     configureMeteorForRspack();
 
+    // Set native mode flag so the server module can skip dev proxy setup
+    if (isMeteorAppNative()) {
+      process.env.RSPACK_NATIVE = 'true';
+    }
+
     // Calculate and set the devServerPort at boot
     if (!process.env.RSPACK_DEVSERVER_PORT) {
       process.env.RSPACK_DEVSERVER_PORT = calculateDevServerPort();

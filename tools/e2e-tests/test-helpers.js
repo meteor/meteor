@@ -35,6 +35,12 @@ const isCI = process.env.GITHUB_ACTIONS === "true";
 // Link local npm-packages/meteor-rspack so tests run against the latest dev version.
 // Set NPM_LINK_RSPACK=false to disable.
 const npmLinkLocalRspack = process.env.NPM_LINK_RSPACK !== 'false';
+if (!npmLinkLocalRspack) {
+  console.warn(
+    '\x1b[33m⚠ NPM_LINK_RSPACK=false — tests will install @meteorjs/rspack from npm.\n' +
+    '  If CI fails, ensure the latest @meteorjs/rspack version has been published.\x1b[0m'
+  );
+}
 
 const WAIT_ON = isCI ? 2000 : 500;
 

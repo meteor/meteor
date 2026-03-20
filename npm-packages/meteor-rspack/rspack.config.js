@@ -19,6 +19,7 @@ const {
   setCache,
   splitVendorChunk,
   extendSwcConfig,
+  replaceSwcConfig,
   makeWebNodeBuiltinsAlias,
   disablePlugins,
   outputMeteorRspack,
@@ -59,6 +60,8 @@ function createCacheStrategy(
   const hasSwcrcConfig = fs.existsSync(swcrcPath);
   const swcJsPath = path.join(process.cwd(), 'swc.config.js');
   const hasSwcJsConfig = fs.existsSync(swcJsPath);
+  const swcTsPath = path.join(process.cwd(), 'swc.config.ts');
+  const hasSwcTsConfig = fs.existsSync(swcTsPath);
   const postcssConfigPath = path.join(process.cwd(), 'postcss.config.js');
   const hasPostcssConfig = fs.existsSync(postcssConfigPath);
   const packageLockPath = path.join(process.cwd(), 'package-lock.json');
@@ -75,6 +78,7 @@ function createCacheStrategy(
     ...(hasBabelJsConfig ? [babelJsConfig] : []),
     ...(hasSwcrcConfig ? [swcrcPath] : []),
     ...(hasSwcJsConfig ? [swcJsPath] : []),
+    ...(hasSwcTsConfig ? [swcTsPath] : []),
     ...(hasPostcssConfig ? [postcssConfigPath] : []),
     ...(hasPackageLock ? [packageLockPath] : []),
     ...(hasYarnLock ? [yarnLockPath] : []),
@@ -325,7 +329,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     setCache(!!enabled, enabled === "memory" ? undefined : cacheStrategy);
   Meteor.splitVendorChunk = () => splitVendorChunk();
   Meteor.extendSwcConfig = (customSwcConfig) =>
-    extendSwcConfig(customSwcConfig);
+    extendSwcConfig(
+      mergeSplitOverlap(Meteor.swcConfigOptions, customSwcConfig)
+    );
+  Meteor.replaceSwcConfig = (customSwcConfig) =>
+    replaceSwcConfig(customSwcConfig);
   Meteor.extendConfig = (...configs) => mergeSplitOverlap(...configs);
   Meteor.disablePlugins = (matchers) =>
     prepareMeteorRspackConfig({
@@ -817,9 +825,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   delete config["meteor.enablePortableBuild"];
 
-  // if (Meteor.isDebug || Meteor.isVerbose) {
+  if (Meteor.isDebug || Meteor.isVerbose) {
   console.log("Config:", inspect(config, { depth: null, colors: true }));
-  // }
+  }
 
   // Check if lazyCompilation is enabled and warn the user
   if (

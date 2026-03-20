@@ -7,7 +7,7 @@ import path from 'path';
 
 export const DEFAULT_RSPACK_VERSION = '1.7.1';
 
-export const DEFAULT_METEOR_RSPACK_VERSION = '1.1.0-beta.30';
+export const DEFAULT_METEOR_RSPACK_VERSION = '1.1.0-beta.31';
 
 export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
 

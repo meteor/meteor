@@ -85,16 +85,19 @@ Full Blaze app (with `imports/` structure for tests).
 
 ### typescript
 
-TypeScript with SCSS, type checking, and `.ts` rspack config.
+TypeScript with SCSS, type checking, `.ts` rspack config, and `.ts` SWC config.
 
 | What is covered | Phase |
 |----------------|-------|
 | TypeScript rspack config (`rspack.config.ts`) | All |
+| TypeScript SWC config (`swc.config.ts`) with automatic JSX runtime | All |
+| `@swc/core` type-only import for SWC config typings | All |
 | Custom build dir (`build`) | All |
 | Custom asset/chunk context dirs (`assets`, `chunks`) | All |
 | SCSS styles support (`white-space: break-spaces`) | Run, Prod |
 | TypeScript + TSX environment detection | Run, Prod, Test, Build |
 | Portable build (Meteor.isDevelopment/isProduction not defined) | Run, Prod, Build |
+| `Meteor.extendSwcConfig` with path aliases (`@ui/*`, `@api/*`) | All |
 | `TsCheckerRspackPlugin` type checking (no errors) | Run |
 | `.meteor/local/types` directory generated | Run |
 | Separate client/server test files | Test |
@@ -232,11 +235,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `@apollo/server/express4` | ESM subpath export (middleware from deep path) |
 | `graphql` | Peer dependency, dual CJS/ESM package |
 
-### typescript (`apps/typescript/rspack.config.ts`)
+### typescript (`apps/typescript/rspack.config.ts`, `apps/typescript/swc.config.ts`)
 
 | Package | Reason |
 |---------|--------|
 | `node:module` (`createRequire`) | Node.js built-in in a `.ts` config file — tests CJS interop via `createRequire(import.meta.url)` in an ESM context |
+| `@swc/core` | Type-only import (`import type { Config }`) — provides typings for `swc.config.ts`, stripped at compile time |
 
 ---
 
@@ -250,6 +254,7 @@ Where each feature is tested across apps and skeletons.
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
+| Custom SWC config (.ts) | typescript | |
 | Config override file | react-router, monorepo | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
@@ -272,6 +277,7 @@ Where each feature is tested across apps and skeletons.
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |
+| `Meteor.extendSwcConfig` (path aliases) | typescript | |
 | `meteor reset` cleanup | all apps | all skeletons |
 | Skeleton creation | | all 14 skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
