@@ -395,23 +395,28 @@ if (Meteor.isServer) {
 
       // Update Alice's other field — should trigger changed
       await c.updateAsync('x', { $set: { age: 30 } });
-      // Give the observer a moment to fire
-      await new Promise(resolve => setTimeout(resolve, 200));
-      test.equal(changedDocs.length, 1);
+      await waitUntil(
+        () => changedDocs.length === 1,
+        { description: 'observer received changed callback after update' }
+      );
       test.equal(changedDocs[0].id, 'x');
       test.equal(changedDocs[0].fields.age, 30);
 
       // Insert another doc that matches via collation
       await c.insertAsync({ _id: 'z', name: 'ALICE' });
-      await new Promise(resolve => setTimeout(resolve, 200));
-      test.equal(addedDocs.length, 2);
+      await waitUntil(
+        () => addedDocs.length === 2,
+        { description: 'observer received added callback for ALICE insert' }
+      );
       test.equal(addedDocs[1].id, 'z');
       test.equal(addedDocs[1].fields.name, 'ALICE');
 
       // Remove original Alice — should trigger removed
       await c.removeAsync('x');
-      await new Promise(resolve => setTimeout(resolve, 200));
-      test.equal(removedIds.length, 1);
+      await waitUntil(
+        () => removedIds.length === 1,
+        { description: 'observer received removed callback after removing original Alice' }
+      );
       test.equal(removedIds[0], 'x');
 
       handle.stop();
