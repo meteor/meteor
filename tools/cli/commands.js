@@ -1865,6 +1865,15 @@ main.registerCommand({
                  "MONGO_URL will NOT be reset.");
   }
 
+  // Always clean the default .meteor/local directory to prevent regressions.
+  // When METEOR_LOCAL_DIR is set, also clean the custom local directory.
+  const defaultLocalRelative = files.pathJoin('.meteor', 'local');
+  const customLocalRelative = process.env.METEOR_LOCAL_DIR || null;
+  const localDirs = [defaultLocalRelative];
+  if (customLocalRelative && customLocalRelative !== defaultLocalRelative) {
+    localDirs.push(customLocalRelative);
+  }
+
   const resetMeteorNpmCachePromise = options['skip-cache'] ? Promise.resolve() : files.rm_recursive_async(
     files.pathJoin(options.appDir, "node_modules", ".cache", "meteor")
   );
@@ -1879,19 +1888,23 @@ main.registerCommand({
     // XXX detect the case where Meteor is running the app, but
     // MONGO_URL was set, so we don't see a Mongo process
     var findMongoPort = require('../runners/run-mongo.js').findMongoPort;
-    var isRunning = !! await findMongoPort(files.pathJoin(options.appDir, ".meteor", "local", "db"));
-    if (isRunning) {
-      Console.error("reset: Meteor is running.");
-      Console.error();
-      Console.error(
-        "This command does not work while Meteor is running your application.",
-        "Exit the running Meteor development server.");
-      return 1;
+    // Check all local dirs for a running Mongo instance
+    for (const localRelative of localDirs) {
+      const localDir = files.pathResolve(options.appDir, localRelative);
+      var isRunning = !! await findMongoPort(files.pathJoin(localDir, "db"));
+      if (isRunning) {
+        Console.error("reset: Meteor is running.");
+        Console.error();
+        Console.error(
+          "This command does not work while Meteor is running your application.",
+          "Exit the running Meteor development server.");
+        return 1;
+      }
     }
 
     await Promise.all([
-      files.rm_recursive_async(
-        files.pathJoin(options.appDir, ".meteor", "local")
+      ...localDirs.map((rel) =>
+        files.rm_recursive_async(files.pathResolve(options.appDir, rel))
       ),
       resetMeteorNpmCachePromise,
       ...resetRspackPromises,
@@ -1901,11 +1914,19 @@ main.registerCommand({
     return;
   }
 
-  var allExceptDb = files.getPathsInDir(files.pathJoin('.meteor', 'local'), {
-    cwd: options.appDir,
-    maxDepth: 1,
-  }).filter(function (path) {
-    return !path.includes('.meteor/local/db');
+  // Collect all paths inside each local dir except db
+  var allExceptDb = localDirs.flatMap((rel) => {
+    try {
+      return files.getPathsInDir(rel, {
+        cwd: options.appDir,
+        maxDepth: 1,
+      }).filter(function (p) {
+        return !p.includes('/db');
+      });
+    } catch (e) {
+      // Directory may not exist (e.g. default dir when only custom is used)
+      return [];
+    }
   });
 
   var allRemovePromises = [

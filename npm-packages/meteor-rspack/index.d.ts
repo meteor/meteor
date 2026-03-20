@@ -57,10 +57,21 @@ type MeteorEnv = Record<string, any> & {
    */
   splitVendorChunk: () => Record<string, object>;
   /**
-   * Extend Rspack SWC loader config.
+   * Extend the SWC loader config by smart-merging custom options on top of
+   * Meteor's defaults.  Only the properties you specify are overridden;
+   * everything else is preserved.
+   * @param swcConfig - SWC loader options to merge with defaults
    * @returns A config object with SWC loader config
    */
   extendSwcConfig: (swcConfig: SwcLoaderOptions) => Record<string, object>;
+  /**
+   * Replace the SWC loader config entirely, discarding Meteor's defaults.
+   * Use this when you need full control over SWC options and don't want any
+   * automatic merging with Meteor's built-in configuration.
+   * @param swcConfig - Complete SWC loader options (replaces defaults)
+   * @returns A config object with SWC loader config
+   */
+  replaceSwcConfig: (swcConfig: SwcLoaderOptions) => Record<string, object>;
   /**
    * Extend Rspack configs.
    * @returns A config object with merged configs
@@ -75,6 +86,12 @@ type MeteorEnv = Record<string, any> & {
   disablePlugins: (
     matchers: string | RegExp | ((plugin: any, index: number) => boolean) | Array<string | RegExp | ((plugin: any, index: number) => boolean)>
   ) => Record<string, any>;
+  /**
+   * Omit `Meteor.isDevelopment` and `Meteor.isProduction` from the DefinePlugin so
+   * the bundle is not tied to a specific Meteor environment (portable / isomorphic builds).
+   * @returns A config fragment with `meteor.enablePortableBuild: true`
+   */
+  enablePortableBuild: () => Record<string, any>;
 }
 
 export type ConfigFactory = (

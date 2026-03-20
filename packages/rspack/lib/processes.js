@@ -3,8 +3,8 @@
  * @description Functions for managing Rspack processes
  */
 
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 const {
   spawnProcess,
@@ -15,7 +15,9 @@ const {
 const {
   logError,
   logInfo,
-} = require('meteor/tools-core/lib/log');
+  logRaw,
+  getRunLog,
+} = require("meteor/tools-core/lib/log");
 
 const {
   getMeteorAppDir,
@@ -33,6 +35,7 @@ const {
   isMeteorAppConfigModernVerbose,
   isMeteorBundleVisualizerProject,
   getMeteorAppPort,
+  inheritMeteorToolNodeFlags,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -57,6 +60,15 @@ const {
   getBuildFilePath,
   getBuildFileContent,
 } = require('./build-context');
+
+import {
+  logCompilationOutput,
+  logHmrServerStarted,
+  parseMeteorRspackOutput,
+  shouldLogVerbose,
+  stripRspackLabel,
+} from "./logging";
+import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
 
 /**
  * Calculates the devServerPort based on process.env.PORT
@@ -221,29 +233,52 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
   const isBlazeHotEnabled = isMeteorBlazeHotProject();
   const isBundleVisualizerEnabled = isMeteorBundleVisualizerProject();
 
+  const isProfile = isMeteorAppProfile();
+
   const swcExternalHelpers = checkNpmDependencyExists('@swc/helpers');
 
   const configPath = getConfigFilePath();
   const projectConfigPath = getCustomConfigFilePath();
 
   const pairs = [
-    ['isDevelopment', isMeteorAppDevelopment()],
-    ['isProduction', isMeteorAppProduction()],
-    ['isDebug', isMeteorAppDebug()],
-    ['isVerbose', isMeteorAppConfigModernVerbose()],
-    ['isTest', isTest],
-    ...(isTestLike ? [['isTestLike', isTestLike || isTest]] : []),
-    ...(isTestLike && isTestFullApp &&  [['isTestFullApp', isTestFullApp]] || []),
-    ...(isTestLike && isTestModule &&  [['isTestModule', isTestModule]] || []),
-    ...(isTestLike && isTestEager &&  [['isTestEager', isTestEager]] || []),
-    ['isRun', isMeteorAppRun()],
-    ['isBuild', isMeteorAppBuild()],
-    ['isNative', isMeteorAppNative()],
-    ['isClient', isClient],
-    ['isServer', isServer],
-    ['entryPath', getBuildFilePath({ ...module, ...env, ...side, isTestModule, role: FILE_ROLE.entry }) ],
-    ['outputPath', getBuildFilePath({ ...module, ...env, ...side, isTestModule, role: FILE_ROLE.output }) ],
-    ['outputFilename',
+    ["isDevelopment", isMeteorAppDevelopment()],
+    ["isProduction", isMeteorAppProduction()],
+    ["isDebug", isMeteorAppDebug()],
+    ["isVerbose", isMeteorAppConfigModernVerbose()],
+    ...((isProfile && [["isProfile", isMeteorAppProfile()]]) || []),
+    ["isTest", isTest],
+    ...(isTestLike ? [["isTestLike", isTestLike || isTest]] : []),
+    ...((isTestLike && isTestFullApp && [["isTestFullApp", isTestFullApp]]) ||
+      []),
+    ...((isTestLike && isTestModule && [["isTestModule", isTestModule]]) || []),
+    ...((isTestLike && isTestEager && [["isTestEager", isTestEager]]) || []),
+    ["isRun", isMeteorAppRun()],
+    ["isBuild", isMeteorAppBuild()],
+    ["isNative", isMeteorAppNative()],
+    ["isClient", isClient],
+    ["isServer", isServer],
+    [
+      "entryPath",
+      getBuildFilePath({
+        ...module,
+        ...env,
+        ...side,
+        isTestModule,
+        role: FILE_ROLE.entry,
+      }),
+    ],
+    [
+      "outputPath",
+      getBuildFilePath({
+        ...module,
+        ...env,
+        ...side,
+        isTestModule,
+        role: FILE_ROLE.output,
+      }),
+    ],
+    [
+      "outputFilename",
       getBuildFilePath({
         ...env,
         ...side,
@@ -252,41 +287,49 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
         onlyFilename: true,
       }),
     ],
-    ['runPath', getBuildFilePath({ ...module, ...env, ...side, ...commandRole }) ],
-    ['buildContext', RSPACK_BUILD_CONTEXT],
-    ['chunksContext', RSPACK_CHUNKS_CONTEXT],
-    ['assetsContext', RSPACK_ASSETS_CONTEXT],
-    ['devServerPort', process.env.RSPACK_DEVSERVER_PORT],
-    ['projectConfigPath', projectConfigPath],
-    ['configPath', configPath],
+    [
+      "runPath",
+      getBuildFilePath({ ...module, ...env, ...side, ...commandRole }),
+    ],
+    ["buildContext", RSPACK_BUILD_CONTEXT],
+    ["chunksContext", RSPACK_CHUNKS_CONTEXT],
+    ["assetsContext", RSPACK_ASSETS_CONTEXT],
+    ["devServerPort", process.env.RSPACK_DEVSERVER_PORT],
+    ["projectConfigPath", projectConfigPath],
+    ["configPath", configPath],
     ...((isTest &&
       initialEntrypoints.testClient &&
       initialEntrypoints.testServer && [
-        ['testClientEntry', initialEntrypoints.testClient],
-        ['testServerEntry', initialEntrypoints.testServer],
+        ["testClientEntry", initialEntrypoints.testClient],
+        ["testServerEntry", initialEntrypoints.testServer],
       ]) ||
       (isTest &&
         initialEntrypoints.testModule && [
-          ['testEntry', initialEntrypoints.testModule],
-      ]) || [
-        ['mainClientEntry', initialEntrypoints.mainClient],
-        ['mainClientHtmlEntry', initialEntrypoints.mainClientHtml],
-        ['mainServerEntry', initialEntrypoints.mainServer],
-    ]),
-    ...(swcExternalHelpers &&  [['swcExternalHelpers', swcExternalHelpers]] || []),
-    ...(isReactEnabled &&  [['isReactEnabled', isReactEnabled]] || []),
-    ...(isBlazeEnabled &&  [['isBlazeEnabled', isBlazeEnabled]] || []),
-    ...(isBlazeHotEnabled &&  [['isBlazeHotEnabled', isBlazeHotEnabled]] || []),
-    ...(isTypescriptEnabled &&  [['isTypescriptEnabled', isTypescriptEnabled]] || []),
-    ...(isAngularEnabled &&  [['isAngularEnabled', isAngularEnabled]] || []),
-    ...(isTsxEnabled &&  [['isTsxEnabled', isTsxEnabled]] || []),
-    ...(isJsxEnabled &&  [['isJsxEnabled', isJsxEnabled]] || []),
-    ...(isBundleVisualizerEnabled &&  [
-      ['isBundleVisualizerEnabled', isBundleVisualizerEnabled],
-      ['rsdoctorClientPort', process.env.RSDOCTOR_CLIENT_PORT],
-      ['rsdoctorServerPort', process.env.RSDOCTOR_SERVER_PORT],
-    ] || []),
-
+          ["testEntry", initialEntrypoints.testModule],
+        ]) || [
+        ["mainClientEntry", initialEntrypoints.mainClient],
+        ["mainClientHtmlEntry", initialEntrypoints.mainClientHtml],
+        ["mainServerEntry", initialEntrypoints.mainServer],
+      ]),
+    ...((swcExternalHelpers && [["swcExternalHelpers", swcExternalHelpers]]) ||
+      []),
+    ...((isReactEnabled && [["isReactEnabled", isReactEnabled]]) || []),
+    ...((isBlazeEnabled && [["isBlazeEnabled", isBlazeEnabled]]) || []),
+    ...((isBlazeHotEnabled && [["isBlazeHotEnabled", isBlazeHotEnabled]]) ||
+      []),
+    ...((isTypescriptEnabled && [
+      ["isTypescriptEnabled", isTypescriptEnabled],
+    ]) ||
+      []),
+    ...((isAngularEnabled && [["isAngularEnabled", isAngularEnabled]]) || []),
+    ...((isTsxEnabled && [["isTsxEnabled", isTsxEnabled]]) || []),
+    ...((isJsxEnabled && [["isJsxEnabled", isJsxEnabled]]) || []),
+    ...((isBundleVisualizerEnabled && [
+      ["isBundleVisualizerEnabled", isBundleVisualizerEnabled],
+      ["rsdoctorClientPort", process.env.RSDOCTOR_CLIENT_PORT],
+      ["rsdoctorServerPort", process.env.RSDOCTOR_SERVER_PORT],
+    ]) ||
+      []),
   ].filter(Boolean);
 
   // Create environment variables object with bannerOutput
@@ -327,37 +370,76 @@ export function startRspackClientServe(options = {}) {
     command,
     args, {
       cwd: appDir,
-      env: { ...process.env, ...envs },
+      env: inheritMeteorToolNodeFlags({ ...process.env, ...envs }),
       onStdout: (data) => {
-        logInfo(`[Rspack Client] ${data}`);
-        if (onCompile && data.trim().includes("compiled")) {
-          onCompile(data);
+        const { cleanedData, config } = parseMeteorRspackOutput(data);
+        if (config && !!config?.devServerUrl) {
+          logHmrServerStarted(config);
+        }
+        if (onCompile && config && (config?.compilationCount || 0) > 0) {
+          onCompile(cleanedData, config);
+
+          if (
+            config?.name?.includes("client") &&
+            !config?.hasErrors &&
+            config?.isRebuild
+          ) {
+            getRunLog()?.logClientRestart();
+          }
+        }
+        if (!cleanedData) return;
+        if (shouldLogVerbose()) {
+          logInfo(`[Rspack Client] ${cleanedData}`);
+        } else {
+          logCompilationOutput(cleanedData, 'client', config?.statsOverrided);
         }
       },
       onStderr: (data) => {
+        const { cleanedData } = parseMeteorRspackOutput(data);
+        if (!cleanedData) return;
         // Check if this is an EADDRINUSE error in development mode (which we want to completely ignore)
-        if (isMeteorAppDevelopment() && data.includes('EADDRINUSE')) {
-          logError(`[Rspack Client Error] ${data}`);
+        if (isMeteorAppDevelopment() && cleanedData.includes('EADDRINUSE')) {
+          if (shouldLogVerbose()) {
+            logError(`[Rspack Client Error] ${cleanedData}`);
+          } else {
+            logError(stripRspackLabel(cleanedData));
+          }
           return;
         }
         // Check if this is actually an informational message (like webpack-dev-server messages)
-        if (data.includes('Loopback:') || data.includes('Project is running at:')) {
-          logInfo(`[Rspack Client] ${data}`);
+        if (cleanedData.includes('Loopback:') || cleanedData.includes('Project is running at:')) {
+          if (shouldLogVerbose()) {
+            logInfo(`[Rspack Client] ${cleanedData}`);
+          } else {
+            logRaw(stripRspackLabel(cleanedData));
+          }
         } else {
           // Check if this is the "npm error could not determine executable to run" error
-          if (data.includes('npm error could not determine executable to run')) {
+          if (cleanedData.includes('npm error could not determine executable to run')) {
             const errorMsg = '[Rspack Client Error] Try running "meteor npm install" to ensure rspack is available';
-            logError(errorMsg);
+            if (shouldLogVerbose()) {
+              logError(errorMsg);
+            } else {
+              logError('Try running "meteor npm install" to ensure rspack is available');
+            }
             throw new Error(errorMsg);
           }
-          logError(`[Rspack Client Error] ${data}`);
+          if (shouldLogVerbose()) {
+            logError(`[Rspack Client Error] ${cleanedData}`);
+          } else {
+            logError(stripRspackLabel(cleanedData));
+          }
         }
       },
       onError: (err) => {
         const errorMsg = `Rspack Error: ${err.message}`;
-        logError(errorMsg);
+        if (shouldLogVerbose()) {
+          logError(errorMsg);
+        } else {
+          logError(err.message);
+        }
         throw new Error(errorMsg);
-      }
+      },
     });
 
   // Store the new process in global state
@@ -390,30 +472,54 @@ export function startRspackServerWatch(options = {}) {
     command,
     args, {
     cwd: appDir,
-    env: { ...process.env, ...envs },
+    env: inheritMeteorToolNodeFlags({ ...process.env, ...envs }),
     onStdout: (data) => {
-      logInfo(`[Rspack Server] ${data}`);
-      if (onCompile && data.trim().includes("compiled")) {
-        onCompile(data);
+      const { cleanedData, config } = parseMeteorRspackOutput(data);
+      if (onCompile && config && (config?.compilationCount || 0) > 0) {
+        onCompile(cleanedData, config);
+      }
+      if (!cleanedData) return;
+      if (shouldLogVerbose()) {
+        logInfo(`[Rspack Server] ${cleanedData}`);
+      } else {
+        logCompilationOutput(cleanedData, 'server', config?.statsOverrided);
       }
     },
     onStderr: (data) => {
+      const { cleanedData } = parseMeteorRspackOutput(data);
+      if (!cleanedData) return;
       // Check if this is actually an informational message (like webpack-dev-server messages)
-      if (data.includes('Project is running at:')) {
-        logInfo(`[Rspack Server] ${data}`);
+      if (cleanedData.includes('Project is running at:')) {
+        if (shouldLogVerbose()) {
+          logInfo(`[Rspack Server] ${cleanedData}`);
+        } else {
+          logRaw(stripRspackLabel(cleanedData));
+        }
       } else {
         // Check if this is the "npm error could not determine executable to run" error
-        if (data.includes('npm error could not determine executable to run')) {
+        if (cleanedData.includes('npm error could not determine executable to run')) {
           const errorMsg = '[Rspack Server Error] Try running "meteor npm install" to ensure rspack is available';
-          logError(errorMsg);
+          if (shouldLogVerbose()) {
+            logError(errorMsg);
+          } else {
+            logError('Try running "meteor npm install" to ensure rspack is available');
+          }
           throw new Error(errorMsg);
         }
-        logError(`[Rspack Server Error] ${data}`);
+        if (shouldLogVerbose()) {
+          logError(`[Rspack Server Error] ${cleanedData}`);
+        } else {
+          logError(stripRspackLabel(cleanedData));
+        }
       }
     },
     onError: (err) => {
       const errorMsg = `Rspack Error: ${err.message}`;
-      logError(errorMsg);
+      if (shouldLogVerbose()) {
+        logError(errorMsg);
+      } else {
+        logError(err.message);
+      }
       throw new Error(errorMsg);
     }
   });
@@ -457,25 +563,45 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
       args,
       {
       cwd: appDir,
-      env: { ...process.env, ...envs },
+      env: inheritMeteorToolNodeFlags({ ...process.env, ...envs }),
       onStdout: (data) => {
-        logInfo(`[Rspack ${label} ${endpoint}] ${data}`);
-        if (onCompile && data.trim().includes("compiled")) {
-          onCompile(data);
+        const { cleanedData, config } = parseMeteorRspackOutput(data);
+        if (onCompile && config && (config?.compilationCount || 0) > 0) {
+          onCompile(cleanedData, config);
+        }
+        if (!cleanedData) return;
+        if (shouldLogVerbose()) {
+          logInfo(`[Rspack ${label} ${endpoint}] ${cleanedData}`);
+        } else {
+          logCompilationOutput(cleanedData, endpoint.toLowerCase(), config?.statsOverrided);
         }
       },
       onStderr: (data) => {
+        const { cleanedData } = parseMeteorRspackOutput(data);
+        if (!cleanedData) return;
         // Check if this is actually an informational message (like webpack-dev-server messages)
-        if (data.includes('Project is running at:')) {
-          logInfo(`[Rspack ${label} ${endpoint}] ${data}`);
+        if (cleanedData.includes('Project is running at:')) {
+          if (shouldLogVerbose()) {
+            logInfo(`[Rspack ${label} ${endpoint}] ${cleanedData}`);
+          } else {
+            logRaw(stripRspackLabel(cleanedData));
+          }
         } else {
           // Check if this is the "npm error could not determine executable to run" error
-          if (data.includes('npm error could not determine executable to run')) {
+          if (cleanedData.includes('npm error could not determine executable to run')) {
             const errorMsg = `[Rspack ${label} Error ${endpoint}] Try running "meteor npm install" to ensure rspack is available`;
-            logError(errorMsg);
+            if (shouldLogVerbose()) {
+              logError(errorMsg);
+            } else {
+              logError(`Try running "meteor npm install" to ensure rspack is available`);
+            }
             throw new Error(errorMsg);
           }
-          logError(`[Rspack ${label} Error ${endpoint}] ${data}`);
+          if (shouldLogVerbose()) {
+            logError(`[Rspack ${label} Error ${endpoint}] ${cleanedData}`);
+          } else {
+            logError(stripRspackLabel(cleanedData));
+          }
         }
       },
       onExit: (code) => {
@@ -483,12 +609,20 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
           resolve();
         } else {
           const error = new Error(`Rspack ${label} failed in ${endpoint} with exit code ${code}`);
-          logError(error.message);
+          if (shouldLogVerbose()) {
+            logError(error.message);
+          } else {
+            logError(`Rspack ${label} failed with exit code ${code}`);
+          }
           reject(error);
         }
       },
       onError: (err) => {
-        logError(`Rspack ${label} ${endpoint} error: ${err.message}`);
+        if (shouldLogVerbose()) {
+          logError(`Rspack ${label} ${endpoint} error: ${err.message}`);
+        } else {
+          logError(err.message);
+        }
         reject(err);
       }
     });

@@ -198,7 +198,7 @@ Greetings.findOne({ name: 'John' }); // 🧾 Data is available (Optimistic-UI)
 
 Read more about server and stub promises on calling methods, [please refer to the docs](./meteor.md#Meteor-callAsync).
 
-Read more about collections and how to use them in the [Collections](http://guide.meteor.com/collections.html) article in the Meteor Guide.
+Read more about collections and how to use them in the [Collections](/tutorials/collections/collections) article in the Meteor Guide.
 
 
 <ApiBox name="Mongo.Collection#find" instanceName="Collection"/>
@@ -508,7 +508,7 @@ While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
 once they are ready to remove `insecure` mode from their app. See
-[the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
+[the Meteor Guide on security](/tutorials/security/security#allow-deny)
 for more details.
 :::
 
@@ -649,7 +649,7 @@ While `allow` and `deny` make it easy to get started building an app, it's
 harder than it seems to write secure `allow` and `deny` rules. We recommend
 that developers avoid `allow` and `deny`, and switch directly to custom methods
 once they are ready to remove `insecure` mode from their app. See
-[the Meteor Guide on security](https://guide.meteor.com/security.html#allow-deny)
+[the Meteor Guide on security](/tutorials/security/security#allow-deny)
 for more details.
 :::
 
@@ -671,7 +671,11 @@ The methods (like `update` or `insert`) you call on the resulting _raw_ collecti
 
 ## Collection Extensions
 
-Meteor provides a powerful Collection Extensions API that allows you to extend the functionality of all collection instances. These static methods on `Mongo.Collection` let you add constructor extensions, prototype methods, and static methods to customize collection behavior. These very same APIs are exported under `CollectionExtensions` for backwards compatibility with [lai:collection-extensions](https://github.com/Meteor-Community-Packages/meteor-collection-extensions). 
+**Integrated into core in Meteor 3.4** ([PR#13830](https://github.com/meteor/meteor/pull/13830))
+
+Meteor provides a powerful Collection Extensions API that allows you to extend the functionality of all collection instances. These static methods on `Mongo.Collection` let you add constructor extensions, prototype methods, and static methods to customize collection behavior.
+
+These APIs were previously available through the community package [lai:collection-extensions](https://github.com/Meteor-Community-Packages/meteor-collection-extensions) and are now integrated directly into Meteor core. The same APIs are exported under `CollectionExtensions` for backwards compatibility. 
 
 <ApiBox name="Mongo.Collection.addExtension" />
 
@@ -744,13 +748,13 @@ Get all registered static methods. Returns a Map of method names to functions. U
 
 ### Legacy Aliases
 
-<ApiBox name="Mongo.Collection.addPrototype" />
+### Mongo.Collection.addPrototype
 
-Backwards compatibility alias for `addPrototypeMethod`. **Deprecated** - use `addPrototypeMethod` instead.
+> **Deprecated** — backwards compatibility alias for [`addPrototypeMethod`](#Mongo-Collection-addPrototypeMethod). Use `addPrototypeMethod` instead.
 
-<ApiBox name="Mongo.Collection.removePrototype" />
+### Mongo.Collection.removePrototype
 
-Backwards compatibility alias for `removePrototypeMethod`. **Deprecated** - use `removePrototypeMethod` instead.
+> **Deprecated** — backwards compatibility alias for [`removePrototypeMethod`](#Mongo-Collection-removePrototypeMethod). Use `removePrototypeMethod` instead.
 
 
 ## Cursors {#mongo_cursor}

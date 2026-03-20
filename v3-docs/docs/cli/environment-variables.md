@@ -95,6 +95,20 @@ This way each command only processes the files it actually needs, reducing build
 `METEOR_IGNORE` is automatically set when using the [Rspack bundler integration](../about/modern-build-stack/rspack-bundler-integration.md). Since Rspack handles the client and server app bundling, Meteor's bundler should only worry about what it strictly needs for the Meteor-Rspack integration. By using `METEOR_IGNORE` to exclude folders and dependencies that Rspack already manages or that are irrelevant to Meteor's side of the build, you ensure the most speed is gained from the Rspack delegation.
 :::
 
+## METEOR_LOCAL_DIR
+(_development_)
+
+This environment variable allows you to change the location of the `.meteor/local` directory, which Meteor uses to store its build cache and other local state. This is useful for running multiple instances of the same app with different local states or for redirecting the local directory to a different drive or path.
+
+When using the [Rspack bundler integration](../about/modern-build-stack/rspack-bundler-integration.md), `METEOR_LOCAL_DIR` also influences the Rspack build context. It extracts the name of the folder represented in the path and appends it as a suffix to the following Rspack constants:
+- `RSPACK_BUILD_CONTEXT`
+- `RSPACK_CHUNKS_CONTEXT`
+- `RSPACK_ASSETS_CONTEXT`
+
+For example, if `METEOR_LOCAL_DIR` is set to `/path/to/.meteor/local-custom`, Rspack will use `_build-local-custom`, `build-chunks-local-custom`, and `build-assets-local-custom` as its context directories, ensuring that build artifacts remain isolated for that specific local environment.
+
+For more information, see the [Running Multiple Instances](../about/modern-build-stack/rspack-bundler-integration.md#running-multiple-instances) section in the Rspack documentation.
+
 ## METEOR_PROFILE
 (_development_)
 
@@ -146,8 +160,21 @@ Used to generate URLs to your application by, among others, the accounts package
 ## TOOL_NODE_FLAGS
 (_development, production_)
 
-Used to pass flags/variables to Node inside Meteor build. For example you can use this to pass a link to icu data: `TOOL_NODE_FLAGS="--icu-data-dir=node_modules/full-icu"`
+Used to pass Node.js flags that Meteor will inherit and spread to other tool processes like Rspack. For example, to increase memory limits for all tools: `TOOL_NODE_FLAGS="--max-old-space-size=4096"`
+
+By default, these flags are automatically spread to `NODE_OPTIONS` so that tools like Rspack inherit them. This behavior can be controlled using [`TOOL_NODE_FLAGS_INHERIT`](#tool-node-flags-spread).
+
 For full list of available flags see the [Node documentation](https://nodejs.org/dist/latest-v12.x/docs/api/cli.html).
+
+## TOOL_NODE_FLAGS_INHERIT
+(_development, production_)
+
+Controls whether `TOOL_NODE_FLAGS` are prepended to `NODE_OPTIONS`. Enabled by default.
+
+```bash
+# Disable inheritance - Rspack won't inherit the heap limit
+TOOL_NODE_FLAGS_INHERIT=0 TOOL_NODE_FLAGS="--max-old-space-size=4096" meteor run
+```
 
 ## UNIX_SOCKET_GROUP
 (_production_)

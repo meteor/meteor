@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Authorization package for Meteor",
-  version: "1.0.1",
+  version: "1.0.2",
   name: "roles",
   documentation: null,
 });

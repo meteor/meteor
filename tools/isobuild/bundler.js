@@ -3133,6 +3133,7 @@ Node.js ${process.version}. To run the application:
   $ export MONGO_URL='mongodb://user:password@host:port/databasename'
   $ export ROOT_URL='http://example.com'
   $ export MAIL_URL='smtp://user:password@mailhost:port/'
+  $ export METEOR_SETTINGS='{"public":{"key":"value"}}'
   $ node main.js
 
 Use the PORT environment variable to set the port where the

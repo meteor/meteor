@@ -75,14 +75,11 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
     let regularDepsStrings = [];
 
     // Display a header for the installation process
-    logProgress(`┌─────────────────────────────────────────────────`);
-    logProgress(`│ ${packageName} Dependencies Installation`);
-    logProgress(`└─────────────────────────────────────────────────`);
+    logProgress(`=> 📦 ${packageName} Dependencies`);
 
     // Show what dependencies will be installed
-    logInfo(`The following ${packageName} dependencies need to be installed:`);
     dependencyStrings.forEach(dep => {
-      logInfo(`  • ${dep}`);
+      logInfo(`   • ${dep}`);
     });
 
     // Check if this is a Yarn project
@@ -95,7 +92,7 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
 
       // Log progress for dev dependencies
       logProgress(
-        `🔧 Installing ${devDepsToInstall.length} dev dependenc${
+        `=> 🔧 Installing ${devDepsToInstall.length} dev dependenc${
           devDepsToInstall.length === 1 ? "y" : "ies"
         }...`
       );
@@ -114,7 +111,7 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
 
       // Log progress for regular dependencies
       logProgress(
-        `🔧 Installing ${regularDepsToInstall.length} dependenc${
+        `=> 🔧 Installing ${regularDepsToInstall.length} dependenc${
           regularDepsToInstall.length === 1 ? "y" : "ies"
         }...`
       );
@@ -131,22 +128,20 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
     if (!success) {
       const isYarnProj = process.env.YARN_ENABLED === 'true';
 
-      logError(`\n┌─────────────────────────────────────────────────`);
-      logError(`│ ❌ ${packageName} Installation Failed`);
-      logError(`└─────────────────────────────────────────────────`);
+      logError(`=> ❌ Failed to install ${packageName}`);
 
       if (!devDepsSuccess && devDepsStrings.length > 0) {
         const devInstallCommand = isYarnProj 
           ? `yarn add --dev ${devDepsStrings.join(' ').trim()}`
           : `meteor npm install -D ${devDepsStrings.join(' ').trim()}`;
-        logError(`For dev dependencies, run: ${devInstallCommand}`);
+        logError(`   For dev dependencies, run: ${devInstallCommand}`);
       }
 
       if (!regularDepsSuccess && regularDepsStrings.length > 0) {
         const regularInstallCommand = isYarnProj 
           ? `yarn add ${regularDepsStrings.join(' ').trim()}`
           : `meteor npm install ${regularDepsStrings.join(' ').trim()}`;
-        logError(`For regular dependencies, run: ${regularInstallCommand}`);
+        logError(`   For regular dependencies, run: ${regularInstallCommand}`);
       }
 
       const allFailedDeps = [];
@@ -158,20 +153,14 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       );
     }
 
-    logSuccess(`✅ ${packageName} dependencies installed`);
+    logSuccess(`=> ✅ Installed ${packageName} dependencies`);
 
     if (isMeteorAppUpdate()) {
       const isYarnProj = process.env.YARN_ENABLED === 'true';
       const installCommand = isYarnProj ? 'yarn install' : 'npm install';
 
-      logInfo(`\n┌───────────────────────────────────────────────────────────────────────┐`);
-      logInfo(`│ 🔔 IMPORTANT: Project Stability Reminder                              │`);
-      logInfo(`├───────────────────────────────────────────────────────────────────────┤`);
-      logInfo(`│ After the Meteor update finishes, please run \`${installCommand}\` in your    │`);
-      logInfo(`│ project directory.                                                    │`);
-      logInfo(`│                                                                       │`);
-      logInfo(`│ This helps keep your dependencies correct and your project stable.    │`);
-      logInfo(`└───────────────────────────────────────────────────────────────────────┘`);
+      logInfo(`=> 🔔 Remember: Run \`${installCommand}\` after the Meteor update finishes.`);
+      logInfo(`   This helps keep your dependencies correct and your project stable.`);
     }
   }
 
