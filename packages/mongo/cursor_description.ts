@@ -1,11 +1,27 @@
+/**
+ * MongoDB collation options for locale-aware string comparison.
+ *
+ * All options are supported server-side via the MongoDB driver.
+ * Client-side (Minimongo) support uses `Intl.Collator` and is limited to:
+ * `locale`, `strength` (1–3), `caseLevel`, `numericOrdering`, and `caseFirst`.
+ *
+ * Options marked **server-only** are silently ignored by Minimongo.
+ */
 interface CollationOptions {
   locale: string;
   caseLevel?: boolean;
   caseFirst?: 'upper' | 'lower' | 'off';
+  /**
+   * Comparison level. Minimongo supports 1–3 only.
+   * Strengths 4 and 5 are **server-only** (no `Intl.Collator` equivalent).
+   */
   strength?: 1 | 2 | 3 | 4 | 5;
   numericOrdering?: boolean;
+  /** **Server-only.** Ignored by Minimongo. */
   alternate?: 'non-ignorable' | 'shifted';
+  /** **Server-only.** Ignored by Minimongo. */
   maxVariable?: 'punct' | 'space';
+  /** **Server-only.** Ignored by Minimongo. */
   backwards?: boolean;
 }
 

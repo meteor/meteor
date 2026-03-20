@@ -217,6 +217,12 @@ Collation is supported on both client (Minimongo, via `Intl.Collator`) and serve
 and is compatible with oplog-tailing. For example, `{collation: {locale: 'en', strength: 2}}`
 enables case-insensitive matching.
 
+The following collation options are supported on both client and server:
+`locale`, `strength` (1–3), `caseLevel`, `numericOrdering`, and `caseFirst`.
+The options `alternate`, `maxVariable`, `backwards`, and `strength` values 4–5
+are **server-only** — they are passed to MongoDB but silently ignored by Minimongo,
+which has no `Intl.Collator` equivalent for them.
+
 {% apibox "Mongo.Collection#findOne" %}
 
 Equivalent to [`find`](#find)`(selector, options).`[`fetch`](#fetch)`()[0]` with
