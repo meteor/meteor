@@ -22,4 +22,4 @@ static-html             # Define static page content in .html files
 react-meteor-data       # React higher-order component for reactively tracking Meteor data
 zodern:types            # Pull in type declarations from other Meteor packages
 
-rspack
+rspack                  # Integrate Rspack into Meteor for client and server app bundling

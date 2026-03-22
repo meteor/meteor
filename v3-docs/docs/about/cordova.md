@@ -9,7 +9,7 @@ Meteor allows developers to build mobile applications using web technologies lik
 
 Cordova apps run in a web view, which is like a browser without the UI. Different browser engines have varying implementations and support for web standards. This means the web view your app uses can greatly affect its performance and available features. (For details on supported features across browsers and versions, check caniuse.com.)
 
-There is a [Meteor Cordova guide](https://guide.meteor.com/cordova) available that offers advanced configuration details for Meteor Cordova projects. Feel free to refer to it while we update the information in the new documentation.
+There is a [Meteor Cordova guide](/about/cordova) available that offers advanced configuration details for Meteor Cordova projects. Feel free to refer to it while we update the information in the new documentation.
 
 This section will summarize the steps needed to set up your environment for Meteor Cordova development, manage development, and generate native artifacts for store uploads.
 
@@ -218,7 +218,7 @@ For development, enable HCP by starting the application server with the `--mobil
 - On a real device, both the device and server must be on the same network
   - Run: `meteor run android --mobile-server XXX.XXX.XXX.XXX`, replacing the IP with your local development address (e.g. 192.168.1.4).
 
-For production, HCP is enabled automatically when you provide the `--server` option to the [`meteor build` command](../cli/index.md#meteor-build-meteorbuild). For more details on how HCP works with apps already published to production, see [Hot Code Push on mobile](https://guide.meteor.com/cordova.html#hot-code-push).
+For production, HCP is enabled automatically when you provide the `--server` option to the [`meteor build` command](../cli/index.md#meteor-build-meteorbuild). For more details on how HCP works with apps already published to production, see [Hot Code Push on mobile](/troubleshooting/hot-code-push).
 
 ### Open IDE
 
@@ -280,7 +280,7 @@ After building your Cordova project with Meteor, you can use **Android Studio** 
 6. In the **Organizer** window, click **Distribute App** and follow the prompts to configure signing and export the IPA file.
 7. Upload the IPA file to the App Store or distribute via TestFlight.
 
-# Legacy device support
+## Legacy device support
 
 Meteor distinguishes between legacy and modern browsers - see the [modern browsers package](../packages/modern-browsers). Web apps include different code bundles for each, but Cordova apps only have a single code bundle. From Meteor 3.3.2 onwards, the default code bundle changed from legacy to modern.
 

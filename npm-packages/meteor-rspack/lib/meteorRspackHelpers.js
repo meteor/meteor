@@ -132,10 +132,14 @@ function splitVendorChunk() {
 }
 
 /**
- * Extend SWC loader config
- * Usage: extendSwcConfig()
+ * Extend SWC loader config by smart-merging custom options on top of Meteor's
+ * defaults (via `mergeSplitOverlap`).  Only the properties you specify are
+ * overridden; everything else is preserved.
  *
- * @returns {Record<string, object>} `{ meteorRspackConfigX: { optimization: { ... } } }`
+ * Usage: Meteor.extendSwcConfig({ jsc: { parser: { decorators: true } } })
+ *
+ * @param {object} swcConfig - SWC loader options to merge with defaults
+ * @returns {Record<string, object>} config fragment for spreading into rspack config
  */
 function extendSwcConfig(swcConfig) {
   return prepareMeteorRspackConfig({
@@ -152,11 +156,109 @@ function extendSwcConfig(swcConfig) {
   });
 }
 
+/**
+ * Replace the SWC loader config entirely, discarding Meteor's defaults.
+ * Use this when you need full control over SWC options and don't want any
+ * automatic merging with Meteor's built-in configuration.
+ *
+ * Usage: Meteor.replaceSwcConfig({ jsc: { parser: { syntax: 'typescript' }, target: 'es2020' } })
+ *
+ * @param {object} swcConfig - Complete SWC loader options (replaces defaults)
+ * @returns {Record<string, object>} config fragment for spreading into rspack config
+ */
+function replaceSwcConfig(swcConfig) {
+  return prepareMeteorRspackConfig({
+    module: {
+      rules: [
+        {
+          test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
+          exclude: /node_modules|\.meteor\/local/,
+          loader: 'builtin:swc-loader',
+          options: swcConfig,
+        },
+      ],
+    },
+  });
+}
+
+/**
+ * Signal that `Meteor.isDevelopment` and `Meteor.isProduction` should be omitted
+ * from DefinePlugin, making the bundle portable across Meteor environments.
+ * Usage: return Meteor.enablePortableBuild() in your rspack.config.js
+ *
+ * @returns {Record<string, object>} config fragment with `meteor.enablePortableBuild: true`
+ */
+function enablePortableBuild() {
+  return prepareMeteorRspackConfig({
+    "meteor.enablePortableBuild": true,
+  });
+}
+
+/**
+ * Remove plugins from a Rspack config by name, RegExp, predicate, or array of them.
+ * When using a function predicate, it receives both the plugin and its index in the plugins array.
+ *
+ * @param {object} config Rspack config object
+ * @param {string | RegExp | ((plugin: any, index: number) => boolean) | Array<string|RegExp|Function>} matchers
+ * @returns {object} The modified config object
+ */
+function disablePlugins(config, matchers) {
+  if (!config || typeof config !== "object") {
+    throw new TypeError("disablePlugins: `config` must be an object");
+  }
+
+  const plugins = Array.isArray(config.plugins) ? config.plugins : [];
+  const kept = [];
+
+  const list = Array.isArray(matchers) ? matchers : [matchers];
+
+  const getPluginName = (p) => {
+    if (!p) return "";
+    return (
+      (p.constructor && typeof p.constructor.name === "string" && p.constructor.name) ||
+      (typeof p.name === "string" && p.name) ||
+      (typeof p.pluginName === "string" && p.pluginName) ||
+      (typeof p.__pluginName === "string" && p.__pluginName) ||
+      ""
+    );
+  };
+
+  const predicates = list.map((m) => {
+    if (typeof m === "function") return m;
+    if (m instanceof RegExp) {
+      return (p) => m.test(getPluginName(p));
+    }
+    if (typeof m === "string") {
+      return (p) => getPluginName(p) === m;
+    }
+    throw new TypeError(
+      "disablePlugins: matchers must be string, RegExp, function, or array of them"
+    );
+  });
+
+  config.plugins = plugins.filter((p, index) => {
+    const matches = predicates.some(fn => fn(p, index));
+    return !matches;
+  });
+
+  return config;
+}
+
+function outputMeteorRspack(data) {
+  const jsonString = JSON.stringify(data);
+  const output = `[Meteor-Rspack]${jsonString}[/Meteor-Rspack]`;
+  console.log(output);
+}
+
 module.exports = {
   compileWithMeteor,
   compileWithRspack,
   setCache,
   splitVendorChunk,
   extendSwcConfig,
+  replaceSwcConfig,
   makeWebNodeBuiltinsAlias,
+  disablePlugins,
+  outputMeteorRspack,
+  enablePortableBuild,
 };

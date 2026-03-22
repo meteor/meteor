@@ -1,0 +1,95 @@
+name: E2E Tests
+
+on:
+  pull_request:
+    paths:
+      - 'meteor'
+      - 'tools/e2e-tests/**'
+      - 'packages/rspack/**'
+      - 'packages/tools-core/**'
+      - 'packages/babel-compiler/**'
+      - 'packages/meteor-tool/**'
+      - 'npm-packages/meteor-rspack/**'
+      - 'tools/static-assets/skel-**'
+      - '.github/workflows/e2e-tests.yml'
+
+concurrency:
+  group: meteor-rspack-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TOOL_NODE_FLAGS: "--max_old_space_size=12288"
+  NODE_OPTIONS: "--max_old_space_size=12288"
+
+jobs:
+  test:
+    name: ${{ matrix.category }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        category:
+          - Angular
+          - Babel
+          - Blaze
+          - Coffeescript
+          - Monorepo
+          - Other
+          - React
+          - R.Router
+          - Solid
+          - Svelte
+          - Typescript
+          - Vue
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            node_modules
+            tools/e2e-tests/node_modules
+            packages/**/.npm
+            .meteor
+            dev_bundle
+            .babel-cache
+            ~/.cache/ms-playwright
+
+          key: ${{ runner.os }}-meteor-${{ hashFiles('**/package-lock.json', 'meteor') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Install deps
+        run: npm install
+
+      - name: Install test deps
+        run: npm run install:e2e
+
+      - name: Set NPM_LINK_RSPACK=false for release branches
+        run: |
+          echo "Current branch: ${{ github.head_ref || github.ref_name }}"
+          if [[ "${{ github.head_ref || github.ref_name }}" == release-* ]]; then
+            echo "NPM_LINK_RSPACK=false" >> $GITHUB_ENV
+            echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm — make sure the latest version is published or tests may fail."
+          fi
+
+      - name: Prepare Meteor
+        run: ./meteor --get-ready
+
+      - name: Run tests for ${{ matrix.category }}
+        uses: nick-fields/retry@v3
+        with:
+          max_attempts: 3
+          retry_on: error
+          timeout_minutes: 15
+          retry_wait_seconds: 90
+          command: npm run test:e2e -- -t="${{ matrix.category }}"
