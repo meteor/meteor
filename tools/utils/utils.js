@@ -1,8 +1,6 @@
 var _ = require('underscore');
 var semver = require('semver');
 var os = require('os');
-var url = require('url');
-
 var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
@@ -38,13 +36,13 @@ exports.parseUrl = function (str, defaults) {
     str = "http://" + str;
   }
 
-  var parsed = url.parse(str);
+  var parsed = new URL(str);
 
   // for consistency remove colon at the end of protocol
-  parsed.protocol = parsed.protocol.replace(/\:$/, '');
+  var parsedProtocol = parsed.protocol.replace(/\:$/, '');
 
   var ret = {
-    protocol: hasScheme ? parsed.protocol : defaultProtocol,
+    protocol: hasScheme ? parsedProtocol : defaultProtocol,
     hostname: parsed.hostname || defaultHostname,
     port: parsed.port || defaultPort
   };
@@ -57,12 +55,12 @@ exports.parseUrl = function (str, defaults) {
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
 // the return value of parseUrl.
 exports.formatUrl = function (options) {
-  // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
-  // this a valid URL
-  if (!options.pathname)
-    options.pathname = "/";
-
-  return url.format(options);
+  const u = new URL('http://placeholder');
+  u.protocol = options.protocol + ':';
+  u.hostname = options.hostname;
+  if (options.port) u.port = options.port;
+  u.pathname = options.pathname || '/';
+  return u.toString();
 };
 
 exports.ipAddress = function () {
