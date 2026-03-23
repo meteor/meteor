@@ -965,7 +965,7 @@ function makeInequality(cmpValueComparator) {
 //
 // See the test 'minimongo - lookup' for some examples of what lookup functions
 // return.
-export function makeLookupFunction(key, options = {}) {
+function _makeLookupFunction(key, options = {}) {
   const parts = key.split('.');
   const firstPart = parts.length ? parts[0] : '';
   const lookupRest = (
@@ -1074,6 +1074,13 @@ export function makeLookupFunction(key, options = {}) {
     return result;
   };
 }
+
+export const makeLookupFunction = memoize(
+  _makeLookupFunction,
+  // Key covers all behaviorally distinct option shapes. Currently only
+  // options.forSort changes behavior; extend this keyFn if new options are added.
+  (key, options = {}) => options.forSort ? `1:${key}` : `0:${key}`
+);
 
 // Object exported only for unit testing.
 // Use it to export private functions to test in Tinytest.

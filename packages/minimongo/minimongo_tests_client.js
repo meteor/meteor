@@ -4092,3 +4092,17 @@ Tinytest.add('minimongo - memoize - custom keyFn is used', test => {
   memoized('a', { flag: true });
   test.equal(callCount, 2); // separate cache entry for flag variant
 });
+
+Tinytest.add('minimongo - makeLookupFunction - same path returns same function reference', test => {
+  const fn1 = MinimongoTest.makeLookupFunction('a.b.c');
+  const fn2 = MinimongoTest.makeLookupFunction('a.b.c');
+  test.isTrue(fn1 === fn2, 'expected same function reference for same path');
+});
+
+Tinytest.add('minimongo - makeLookupFunction - forSort variant is cached separately', test => {
+  const fn1 = MinimongoTest.makeLookupFunction('a.b');
+  const fn2 = MinimongoTest.makeLookupFunction('a.b', { forSort: true });
+  const fn3 = MinimongoTest.makeLookupFunction('a.b', { forSort: true });
+  test.isFalse(fn1 === fn2, 'expected different references for default vs forSort');
+  test.isTrue(fn2 === fn3, 'expected same reference for repeated forSort call');
+});
