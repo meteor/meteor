@@ -1,4 +1,5 @@
 import LocalCollection from './local_collection.js';
+import { memoize } from './utils.js';
 
 export const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -1076,7 +1077,7 @@ export function makeLookupFunction(key, options = {}) {
 
 // Object exported only for unit testing.
 // Use it to export private functions to test in Tinytest.
-MinimongoTest = {makeLookupFunction};
+MinimongoTest = { makeLookupFunction, memoize };
 MinimongoError = (message, options = {}) => {
   if (typeof message === 'string' && options.field) {
     message += ` for field '${options.field}'`;

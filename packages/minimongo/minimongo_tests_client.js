@@ -4062,3 +4062,33 @@ Tinytest.addAsync('minimongo - operation result fields (async)', async test => {
   const removeResult = await c.removeAsync({name: 'doc1'});
   test.equal(removeResult, 1, 'remove should return removed count');
 });
+
+Tinytest.add('minimongo - memoize - returns cached result on repeated calls', test => {
+  let callCount = 0;
+  const fn = x => { callCount++; return x * 2; };
+  const memoized = MinimongoTest.memoize(fn);
+
+  test.equal(memoized(3), 6);
+  test.equal(memoized(3), 6);
+  test.equal(callCount, 1); // fn called only once
+});
+
+Tinytest.add('minimongo - memoize - different keys produce different results', test => {
+  const memoized = MinimongoTest.memoize(x => x * 2);
+  test.equal(memoized(2), 4);
+  test.equal(memoized(5), 10);
+});
+
+Tinytest.add('minimongo - memoize - custom keyFn is used', test => {
+  let callCount = 0;
+  const fn = (key, opts = {}) => { callCount++; return key + (opts.flag ? ':flag' : ''); };
+  const memoized = MinimongoTest.memoize(fn, (key, opts = {}) => opts.flag ? key + '\0flag' : key);
+
+  memoized('a');
+  memoized('a');
+  test.equal(callCount, 1);
+
+  memoized('a', { flag: true });
+  memoized('a', { flag: true });
+  test.equal(callCount, 2); // separate cache entry for flag variant
+});
