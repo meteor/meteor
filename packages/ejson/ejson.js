@@ -291,27 +291,17 @@ EJSON._adjustTypesToJSONValue = adjustTypesToJSONValue;
 // Only allocates new objects/arrays along paths that actually change,
 // returning the original reference when nothing needs conversion.
 const toJSONValueDeep = value => {
-  if (value === null || value === undefined) {
+  // Short-circuit for primitives that toJSONValueHelper can never match.
+  if (value === null || value === undefined
+      || typeof value === 'boolean'
+      || typeof value === 'string'
+      || (typeof value === 'number' && !isInfOrNaN(value))) {
     return value;
   }
 
-  // Atom-level conversion (Date, Binary, custom types, etc.)
-  const replaced = toJSONValueHelper(value);
-  if (replaced !== undefined) {
-    return replaced;
-  }
-
-  // Primitives that aren't Inf/NaN pass through unchanged.
-  if (typeof value !== 'object') {
-    // Inf/NaN are the only non-object values that need conversion,
-    // and toJSONValueHelper already handled them.
-    return value;
-  }
-
-  const isArray = Array.isArray(value);
-  let result = null; // stays null until first change detected
-
-  if (isArray) {
+  // Arrays can't be EJSON atoms, so process them directly.
+  if (Array.isArray(value)) {
+    let result = null;
     for (let i = 0; i < value.length; i++) {
       const child = value[i];
       const converted = toJSONValueDeep(child);
@@ -322,24 +312,33 @@ const toJSONValueDeep = value => {
         result.push(child);
       }
     }
-  } else {
-    const keys = keysOf(value);
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const child = value[key];
-      const converted = toJSONValueDeep(child);
-      if (converted !== child) {
-        if (result === null) {
-          result = {};
-          // backfill preceding keys
-          for (let j = 0; j < i; j++) {
-            result[keys[j]] = value[keys[j]];
-          }
+    return result ?? value;
+  }
+
+  // Atom-level conversion (Date, Binary, NaN/Inf, custom types, etc.)
+  const replaced = toJSONValueHelper(value);
+  if (replaced !== undefined) {
+    return replaced;
+  }
+
+  // Plain object: copy-on-write
+  const keys = keysOf(value);
+  let result = null;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const child = value[key];
+    const converted = toJSONValueDeep(child);
+    if (converted !== child) {
+      if (result === null) {
+        result = {};
+        // backfill preceding keys
+        for (let j = 0; j < i; j++) {
+          result[keys[j]] = value[keys[j]];
         }
-        result[key] = converted;
-      } else if (result !== null) {
-        result[key] = child;
       }
+      result[key] = converted;
+    } else if (result !== null) {
+      result[key] = child;
     }
   }
 
@@ -417,16 +416,9 @@ const fromJSONValueDeep = value => {
     return value;
   }
 
-  // Check if this value itself is a JSON-encoded EJSON type (e.g. {$date: ...})
-  const replaced = fromJSONValueHelper(value);
-  if (replaced !== value) {
-    return replaced;
-  }
-
-  const isArray = Array.isArray(value);
-  let result = null;
-
-  if (isArray) {
+  // Arrays can't be EJSON-encoded types, so process them directly.
+  if (Array.isArray(value)) {
+    let result = null;
     for (let i = 0; i < value.length; i++) {
       const child = value[i];
       const converted = fromJSONValueDeep(child);
@@ -437,23 +429,31 @@ const fromJSONValueDeep = value => {
         result.push(child);
       }
     }
-  } else {
-    const keys = keysOf(value);
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const child = value[key];
-      const converted = fromJSONValueDeep(child);
-      if (converted !== child) {
-        if (result === null) {
-          result = {};
-          for (let j = 0; j < i; j++) {
-            result[keys[j]] = value[keys[j]];
-          }
+    return result ?? value;
+  }
+
+  // Check if this value itself is a JSON-encoded EJSON type (e.g. {$date: ...})
+  const replaced = fromJSONValueHelper(value);
+  if (replaced !== value) {
+    return replaced;
+  }
+
+  const keys = keysOf(value);
+  let result = null;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const child = value[key];
+    const converted = fromJSONValueDeep(child);
+    if (converted !== child) {
+      if (result === null) {
+        result = {};
+        for (let j = 0; j < i; j++) {
+          result[keys[j]] = value[keys[j]];
         }
-        result[key] = converted;
-      } else if (result !== null) {
-        result[key] = child;
       }
+      result[key] = converted;
+    } else if (result !== null) {
+      result[key] = child;
     }
   }
 

@@ -121,9 +121,7 @@ Tinytest.add('ejson - toJSONValue converts nested Dates', test => {
   const d = new Date('2024-01-01');
   const obj = {name: 'test', createdAt: d, meta: {updatedAt: d}};
   const result = EJSON.toJSONValue(obj);
-  test.equal(result.name, 'test');
-  test.equal(result.createdAt, {$date: d.getTime()});
-  test.equal(result.meta, {updatedAt: {$date: d.getTime()}});
+  test.equal(result, {name: 'test', createdAt: {$date: d.getTime()}, meta: {updatedAt: {$date: d.getTime()}}});
 });
 
 Tinytest.add('ejson - toJSONValue handles arrays', test => {
@@ -136,10 +134,7 @@ Tinytest.add('ejson - toJSONValue handles arrays', test => {
   const d = new Date();
   const arrWithDate = ['a', d, 'b'];
   const result2 = EJSON.toJSONValue(arrWithDate);
-  test.equal(result2[0], 'a');
-  test.equal(result2[1], {$date: d.getTime()});
-  test.equal(result2[2], 'b');
-  test.length(result2, 3);
+  test.equal(result2, ['a', {$date: d.getTime()}, 'b']);
 
   // Empty array
   test.equal(EJSON.toJSONValue([]), []);
@@ -148,17 +143,11 @@ Tinytest.add('ejson - toJSONValue handles arrays', test => {
 Tinytest.add('ejson - toJSONValue handles NaN/Infinity inside objects and arrays', test => {
   const obj = {a: 1, b: NaN, c: Infinity, d: -Infinity, e: 'normal'};
   const result = EJSON.toJSONValue(obj);
-  test.equal(result.a, 1);
-  test.equal(result.b, {$InfNaN: 0});
-  test.equal(result.c, {$InfNaN: 1});
-  test.equal(result.d, {$InfNaN: -1});
-  test.equal(result.e, 'normal');
+  test.equal(result, {a: 1, b: {$InfNaN: 0}, c: {$InfNaN: 1}, d: {$InfNaN: -1}, e: 'normal'});
 
   const arr = [NaN, 42, Infinity];
   const result2 = EJSON.toJSONValue(arr);
-  test.equal(result2[0], {$InfNaN: 0});
-  test.equal(result2[1], 42);
-  test.equal(result2[2], {$InfNaN: 1});
+  test.equal(result2, [{$InfNaN: 0}, 42, {$InfNaN: 1}]);
 });
 
 Tinytest.add('ejson - toJSONValue escapes $-prefixed keys that look like EJSON types', test => {
