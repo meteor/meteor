@@ -701,6 +701,7 @@ MongoConnection.prototype._createAsynchronousCursor = function(
     skip: cursorOptions.skip,
     projection: cursorOptions.fields || cursorOptions.projection,
     readPreference: cursorOptions.readPreference,
+    collation: cursorOptions.collation,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -1003,7 +1004,11 @@ MongoConnection.prototype._observeChanges = async function (
           }
 
           try {
-            localMatcher = new Minimongo.Matcher(cursorDescription.selector);
+            localMatcher = new Minimongo.Matcher(
+              cursorDescription.selector,
+              undefined,
+              cursorDescription.options.collation
+            );
           } catch (e) {
             if (Meteor.isClient && e instanceof MiniMongoQueryError) {
               throw e;
@@ -1047,7 +1052,11 @@ MongoConnection.prototype._observeChanges = async function (
 
           if (!reasons.length) {
             try {
-              localMatcher = new Minimongo.Matcher(cursorDescription.selector);
+              localMatcher = new Minimongo.Matcher(
+                cursorDescription.selector,
+                undefined,
+                cursorDescription.options.collation
+              );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
               //     so that this doesn't ignore unrelated exceptions
@@ -1064,7 +1073,10 @@ MongoConnection.prototype._observeChanges = async function (
 
           if (!reasons.length && cursorDescription.options.sort) {
             try {
-              localSorter = new Minimongo.Sorter(cursorDescription.options.sort);
+              localSorter = new Minimongo.Sorter(
+                cursorDescription.options.sort,
+                cursorDescription.options.collation
+              );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
               //     so that this doesn't ignore unrelated exceptions

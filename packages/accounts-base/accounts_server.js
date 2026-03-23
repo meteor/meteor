@@ -8,6 +8,116 @@ import {
 import { URL } from 'meteor/url';
 
 
+// Default collation for case-insensitive lookups.
+// Configurable via Meteor.settings.packages['accounts-base']['ci-collation']
+const DEFAULT_CI_COLLATION = { locale: 'en', strength: 2 };
+
+const VALID_COLLATION_KEYS = new Set([
+  'locale', 'strength', 'caseLevel', 'caseFirst', 'numericOrdering',
+  'alternate', 'maxVariable', 'backwards', 'normalization',
+]);
+
+const validateCICollation = (obj) => {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    throw new Meteor.Error(
+      'invalid-ci-collation',
+      'accounts-base ci-collation must be a plain object'
+    );
+  }
+  const invalid = Object.keys(obj).filter(k => !VALID_COLLATION_KEYS.has(k));
+  if (invalid.length) {
+    throw new Meteor.Error(
+      'invalid-ci-collation',
+      `Invalid ci-collation key(s): ${invalid.join(', ')}. ` +
+      `Valid keys: ${[...VALID_COLLATION_KEYS].join(', ')}`
+    );
+  }
+  if (obj.locale !== undefined && typeof obj.locale !== 'string') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation locale must be a string');
+  }
+  if (obj.strength !== undefined) {
+    if (!Number.isInteger(obj.strength) || obj.strength < 1 || obj.strength > 5) {
+      throw new Meteor.Error('invalid-ci-collation', 'ci-collation strength must be an integer 1-5');
+    }
+  }
+  if (obj.caseLevel !== undefined && typeof obj.caseLevel !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseLevel must be a boolean');
+  }
+  if (obj.caseFirst !== undefined && !['upper', 'lower', 'off'].includes(obj.caseFirst)) {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseFirst must be "upper", "lower", or "off"');
+  }
+  if (obj.numericOrdering !== undefined && typeof obj.numericOrdering !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation numericOrdering must be a boolean');
+  }
+  if (obj.alternate !== undefined && !['non-ignorable', 'shifted'].includes(obj.alternate)) {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation alternate must be "non-ignorable" or "shifted"');
+  }
+  if (obj.maxVariable !== undefined && !['punct', 'space'].includes(obj.maxVariable)) {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation maxVariable must be "punct" or "space"');
+  }
+  if (obj.backwards !== undefined && typeof obj.backwards !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation backwards must be a boolean');
+  }
+  if (obj.normalization !== undefined && typeof obj.normalization !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation normalization must be a boolean');
+  }
+};
+
+// Default collation for case-insensitive lookups.
+// Configurable via Meteor.settings.packages['accounts-base']['ci-collation']
+const DEFAULT_CI_COLLATION = { locale: 'en', strength: 2 };
+
+const VALID_COLLATION_KEYS = new Set([
+  'locale', 'strength', 'caseLevel', 'caseFirst', 'numericOrdering',
+  'alternate', 'maxVariable', 'backwards', 'normalization',
+]);
+
+const validateCICollation = (obj) => {
+  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
+    throw new Meteor.Error(
+      'invalid-ci-collation',
+      'accounts-base ci-collation must be a plain object'
+    );
+  }
+  const invalid = Object.keys(obj).filter(k => !VALID_COLLATION_KEYS.has(k));
+  if (invalid.length) {
+    throw new Meteor.Error(
+      'invalid-ci-collation',
+      `Invalid ci-collation key(s): ${invalid.join(', ')}. ` +
+      `Valid keys: ${[...VALID_COLLATION_KEYS].join(', ')}`
+    );
+  }
+  if (obj.locale !== undefined && typeof obj.locale !== 'string') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation locale must be a string');
+  }
+  if (obj.strength !== undefined) {
+    if (!Number.isInteger(obj.strength) || obj.strength < 1 || obj.strength > 5) {
+      throw new Meteor.Error('invalid-ci-collation', 'ci-collation strength must be an integer 1-5');
+    }
+  }
+  if (obj.caseLevel !== undefined && typeof obj.caseLevel !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseLevel must be a boolean');
+  }
+  if (obj.caseFirst !== undefined && !['upper', 'lower', 'off'].includes(obj.caseFirst)) {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseFirst must be "upper", "lower", or "off"');
+  }
+  if (obj.numericOrdering !== undefined && typeof obj.numericOrdering !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation numericOrdering must be a boolean');
+  }
+  if (obj.alternate !== undefined && !['non-ignorable', 'shifted'].includes(obj.alternate)) {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation alternate must be "non-ignorable" or "shifted"');
+  }
+  if (obj.maxVariable !== undefined && !['punct', 'space'].includes(obj.maxVariable)) {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation maxVariable must be "punct" or "space"');
+  }
+  if (obj.backwards !== undefined && typeof obj.backwards !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation backwards must be a boolean');
+  }
+  if (obj.normalization !== undefined && typeof obj.normalization !== 'boolean') {
+    throw new Meteor.Error('invalid-ci-collation', 'ci-collation normalization must be a boolean');
+  }
+};
+
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
@@ -21,7 +131,19 @@ export class AccountsServer extends AccountsCommon {
   // times than the `AccountsClient` constructor, because a single server
   // can provide only one set of methods.
   constructor(server, options) {
+    // Validate ci-collation before super() to avoid creating a duplicate
+    // 'users' collection when the options are invalid.
+    const settingsCollation = options?.['ci-collation'];
+    if (options && 'ci-collation' in options) {
+      validateCICollation(settingsCollation);
+    }
+
     super(options || {});
+
+    this._ciCollation = {
+      ...DEFAULT_CI_COLLATION,
+      ...settingsCollation,
+    };
 
     this._server = server || Meteor.server;
     // Set up the server's methods, as if by calling Meteor.methods.
@@ -153,7 +275,7 @@ export class AccountsServer extends AccountsCommon {
   }
 
   async init() {
-    await setupUsersCollection(this.users);
+    await setupUsersCollection(this.users, this._ciCollation);
   }
 
   ///
@@ -299,29 +421,13 @@ export class AccountsServer extends AccountsCommon {
     });
   };
 
-  // Generates a MongoDB selector that can be used to perform a fast case
-  // insensitive lookup for the given fieldName and string. Since MongoDB does
-  // not support case insensitive indexes, and case insensitive regex queries
-  // are slow, we construct a set of prefix selectors for all permutations of
-  // the first 4 characters ourselves. We first attempt to matching against
-  // these, and because 'prefix expression' regex queries do use indexes (see
-  // http://docs.mongodb.org/v2.6/reference/operator/query/regex/#index-use),
-  // this has been found to greatly improve performance (from 1200ms to 5ms in a
-  // test with 1.000.000 users).
-  _selectorForFastCaseInsensitiveLookup = (fieldName, string) => {
-    // Performance seems to improve up to 4 prefix characters
-    const prefix = string.substring(0, Math.min(string.length, 4));
-    const orClause = generateCasePermutationsForString(prefix).map(
-        prefixPermutation => {
-          const selector = {};
-          selector[fieldName] =
-              new RegExp(`^${Meteor._escapeRegExp(prefixPermutation)}`);
-          return selector;
-        });
-    const caseInsensitiveClause = {};
-    caseInsensitiveClause[fieldName] =
-        new RegExp(`^${Meteor._escapeRegExp(string)}$`, 'i')
-    return {$and: [{$or: orClause}, caseInsensitiveClause]};
+  _findWithCaseInsensitiveCollation = (fieldName, fieldValue, options = {}) => {
+    const selector = {};
+    selector[fieldName] = fieldValue;
+    return Meteor.users.find(selector, {
+      ...options,
+      collation: this._ciCollation,
+    });
   }
 
   _findUserByQuery = async (query, options) => {
@@ -348,8 +454,9 @@ export class AccountsServer extends AccountsCommon {
       user = await Meteor.users.findOneAsync(selector, options);
       // If user is not found, try a case insensitive lookup
       if (!user) {
-        selector = this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue);
-        const candidateUsers = await Meteor.users.find(selector, { ...options, limit: 2 }).fetchAsync();
+        const candidateUsers = await this._findWithCaseInsensitiveCollation(
+          fieldName, fieldValue, { ...options, limit: 2 }
+        ).fetchAsync();
         // No match if multiple candidates are found
         if (candidateUsers.length === 1) {
           user = candidateUsers[0];
@@ -1530,16 +1637,9 @@ export class AccountsServer extends AccountsCommon {
     );
 
     if (fieldValue && !skipCheck) {
-      const matchedUsers = await Meteor.users
-        .find(
-          this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
-          {
-            fields: { _id: 1 },
-            // we only need a maximum of 2 users for the logic below to work
-            limit: 2,
-          }
-        )
-        .fetchAsync();
+      const matchedUsers = await this._findWithCaseInsensitiveCollation(
+        fieldName, fieldValue, { fields: { _id: 1 }, limit: 2 }
+      ).fetchAsync();
 
       if (
         matchedUsers.length > 0 &&
@@ -1845,7 +1945,7 @@ function defaultValidateNewUserHook(user) {
   }
 }
 
-const setupUsersCollection = async users => {
+const setupUsersCollection = async (users, ciCollation) => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
@@ -1873,6 +1973,15 @@ const setupUsersCollection = async users => {
   /// DEFAULT INDEXES ON USERS
   await users.createIndexAsync('username', { unique: true, sparse: true });
   await users.createIndexAsync('emails.address', { unique: true, sparse: true });
+  // Case-insensitive collation indexes for fast lookups without regex permutations.
+  // Not unique — uniqueness is enforced by the regular indexes above (exact case)
+  // plus application-level checks in _checkForCaseInsensitiveDuplicates.
+  await users.createIndexAsync('username', {
+    sparse: true, collation: ciCollation, name: 'username_ci'
+  });
+  await users.createIndexAsync('emails.address', {
+    sparse: true, collation: ciCollation, name: 'emails.address_ci'
+  });
   await users.createIndexAsync('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
   await users.createIndexAsync('services.resume.loginTokens.token',
@@ -1887,23 +1996,3 @@ const setupUsersCollection = async users => {
   await users.createIndexAsync('services.password.reset.when', { sparse: true });
   await users.createIndexAsync('services.password.enroll.when', { sparse: true });
 };
-
-
-// Generates permutations of all case variations of a given string.
-const generateCasePermutationsForString = string => {
-  let permutations = [''];
-  for (let i = 0; i < string.length; i++) {
-    const ch = string.charAt(i);
-    permutations = [].concat(...(permutations.map(prefix => {
-      const lowerCaseChar = ch.toLowerCase();
-      const upperCaseChar = ch.toUpperCase();
-      // Don't add unnecessary permutations when ch is not a letter
-      if (lowerCaseChar === upperCaseChar) {
-        return [prefix + ch];
-      } else {
-        return [prefix + lowerCaseChar, prefix + upperCaseChar];
-      }
-    })));
-  }
-  return permutations;
-}

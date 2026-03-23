@@ -9,16 +9,17 @@ export default class Cursor {
   constructor(collection, selector, options = {}) {
     this.collection = collection;
     this.sorter = null;
-    this.matcher = new Minimongo.Matcher(selector);
+    this.matcher = new Minimongo.Matcher(selector, undefined, options.collation);
 
-    if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+    if (LocalCollection._selectorIsIdPerhapsAsObject(selector) &&
+        !options.collation) {
       // stash for fast _id and { _id }
       this._selectorId = hasOwn.call(selector, '_id') ? selector._id : selector;
     } else {
       this._selectorId = undefined;
 
       if (this.matcher.hasGeoQuery() || options.sort) {
-        this.sorter = new Minimongo.Sorter(options.sort || []);
+        this.sorter = new Minimongo.Sorter(options.sort || [], options.collation);
       }
     }
 
