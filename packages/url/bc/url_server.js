@@ -1,7 +1,7 @@
 var common = require("./url_common.js");
 
 exports._constructUrl = function (urlString, query, params) {
-  var url_parts = new URL(urlString);
+  var url_parts = new globalThis.URL(urlString);
   return common.buildUrl(
     url_parts.protocol + "//" + url_parts.host + url_parts.pathname,
     url_parts.search,
