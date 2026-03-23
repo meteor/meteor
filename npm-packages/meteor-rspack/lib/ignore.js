@@ -117,7 +117,7 @@ function createIgnoreRegex(globPatterns) {
 
     // For absolute paths, we don't want to force the pattern to match from the beginning
     // but we still want to ensure it matches to the end of the path segment
-    regexPattern = '(?:^|/)' + regexPattern + '$';
+    regexPattern = '(?:^|/)' + regexPattern;
 
     return regexPattern;
   }).filter(pattern => pattern !== null);

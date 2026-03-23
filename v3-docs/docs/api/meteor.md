@@ -88,7 +88,10 @@ Using this pattern can get some performance gains on the defined environments as
 this can increase the speed of startup.
 
 <ApiBox name="Meteor.deferDev" hasCustomExample />
-This helper function allows you to defer the execution of a function only in development environments.
+
+**Introduced in Meteor 3.4** ([PR#14006](https://github.com/meteor/meteor/pull/14006))
+
+This helper function allows you to defer the execution of a function only in development environments, significantly improving server startup times in development by deferring non-critical setup code.
 
 ::: code-group
 
@@ -283,7 +286,7 @@ to each method call on the client, and checking on the server whether a call
 with this ID has already been made. Alternatively, you can use
 [`Meteor.apply`](#Meteor-apply) with the noRetry option set to true.
 
-Read more about methods and how to use them in the [Methods](http://guide.meteor.com/methods.html) article in the Meteor Guide.
+Read more about methods and how to use them in the [Methods](/tutorials/methods/methods) article in the Meteor Guide.
 
 <ApiBox name="Meteor.isAsyncCall" hasCustomExample/>
 
@@ -730,7 +733,7 @@ will still work.
 :::
 
 Read more about publications and how to use them in the
-[Data Loading](http://guide.meteor.com/data-loading.html) article in the Meteor Guide.
+[Data Loading](/tutorials/data-loading/data-loading) article in the Meteor Guide.
 
 <ApiBox name="Subscription#userId" />
 

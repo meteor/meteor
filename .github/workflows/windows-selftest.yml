@@ -64,6 +64,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-meteor-
 
+      - name: Reset submodules (force refetch)
+        shell: pwsh
+        run: |
+          git submodule deinit -f --all
+          if (Test-Path ".git/modules") { Remove-Item -Recurse -Force ".git/modules" }
+
       - name: Install dependencies
         shell: pwsh
         run: |

@@ -8,9 +8,16 @@ Full-stack JavaScript platform for modern web and mobile applications.
 ./meteor run                                 # Run from source
 ./meteor create my-app                       # Create app
 ./meteor self-test                           # CLI tests
-./meteor test-packages ./packages/<name>     # Package tests
-npm run test:modern                          # E2E tests (Jest + Playwright)
+./meteor test-packages ./packages/<name>     # Package tests (browser UI at localhost:3000)
+./packages/test-in-console/run.sh "<name>"   # Package tests (terminal output via Puppeteer)
+npm run test:unit                            # Unit tests (Jest)
+npm run test:e2e                             # E2E tests (Jest + Playwright)
 ```
+
+> **Note:** `./meteor test-packages` starts a web server and waits for a browser —
+> it produces no terminal output. For automated/headless runs, use
+> `./packages/test-in-console/run.sh "<package>"` instead, which runs the same tests
+> via Puppeteer and prints pass/fail results to stdout.
 
 ## Structure
 
@@ -41,6 +48,7 @@ Load these for detailed context on specific topics:
 | [testing](.github/skills/testing/SKILL.md) | Writing tests, debugging failures, test infrastructure |
 | [packages](.github/skills/packages/SKILL.md) | Finding packages by feature, understanding dependencies |
 | [modern-tools](.github/skills/modern-tools/SKILL.md) | tools-core utilities, rspack, modern integrations |
+| [e2e-coverage](.github/skills/e2e-coverage/SKILL.md) | Updating the E2E test coverage report when apps/skeletons change |
 | [ai-context](.github/skills/ai-context/SKILL.md) | Creating, updating, or maintaining AI documentation files |
 
 ## Package Domains
