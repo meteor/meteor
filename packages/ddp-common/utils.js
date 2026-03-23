@@ -91,40 +91,38 @@ DDPCommon.stringifyDDP = function (msg) {
   // Uses EJSON.toJSONValue (copy-on-write) per field — only allocates new
   // objects for subtrees that actually contain EJSON types (Date, Binary, etc.).
   const wire = {};
+  let cleared = null;
+  const wireFields = {};
+  let hasAnyField = false;
 
   for (const key in msg) {
-    if (key === 'fields' || key === 'params' || key === 'result') {
-      continue;
+    if (!hasOwn.call(msg, key)) continue;
+    switch (key) {
+      case 'fields':
+        for (const fieldKey in msg.fields) {
+          if (!hasOwn.call(msg.fields, fieldKey)) continue;
+          const value = msg.fields[fieldKey];
+          if (value === undefined) {
+            (cleared ??= []).push(fieldKey);
+          } else {
+            wireFields[fieldKey] = EJSON.toJSONValue(value);
+            hasAnyField = true;
+          }
+        }
+        break;
+      case 'params':
+        wire.params = EJSON.toJSONValue(msg.params);
+        break;
+      case 'result':
+        wire.result = EJSON.toJSONValue(msg.result);
+        break;
+      default:
+        wire[key] = msg[key];
     }
-    wire[key] = msg[key];
   }
 
-  if (msg.fields !== undefined) {
-    let cleared = null;
-    const wireFields = {};
-    let hasAnyField = false;
-
-    for (const key in msg.fields) {
-      const value = msg.fields[key];
-      if (value === undefined) {
-        (cleared ??= []).push(key);
-      } else {
-        wireFields[key] = EJSON.toJSONValue(value);
-        hasAnyField = true;
-      }
-    }
-
-    if (hasAnyField) wire.fields = wireFields;
-    if (cleared !== null) wire.cleared = cleared;
-  }
-
-  if (msg.params !== undefined) {
-    wire.params = EJSON.toJSONValue(msg.params);
-  }
-
-  if (msg.result !== undefined) {
-    wire.result = EJSON.toJSONValue(msg.result);
-  }
+  if (hasAnyField) wire.fields = wireFields;
+  if (cleared !== null) wire.cleared = cleared;
 
   return JSON.stringify(wire);
 };
