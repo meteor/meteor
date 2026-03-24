@@ -40,9 +40,8 @@ export class RawWebSocketConnection extends EventEmitter {
       }
     };
 
-    // messageAdapter extracts the string data from the message event.
-    // faye-websocket: (event) => event.data
-    // ws:             (data, isBinary) => isBinary ? null : (typeof data === 'string' ? data : data.toString())
+    // messageAdapter extracts the string data from the transport's message event.
+    // Each transport has a different message event signature.
     ws.on('message', (...args) => {
       var str = messageAdapter(...args);
       if (str != null) this.emit('data', str);
