@@ -31,6 +31,11 @@ exports.parseUrl = function (str, defaults) {
       protocol: defaultProtocol };
   }
 
+  // Capture any IPv6 address in brackets before new URL() normalizes it
+  // (e.g. "0000:...0001" gets compressed to "::1" by the WHATWG parser).
+  var ipv6Match = str.match(/\[([^\]]+)\]/);
+  var rawIPv6 = ipv6Match ? ipv6Match[1] : null;
+
   var hasScheme = exports.hasScheme(str);
   if (! hasScheme) {
     str = "http://" + str;
@@ -41,9 +46,16 @@ exports.parseUrl = function (str, defaults) {
   // for consistency remove colon at the end of protocol
   var parsedProtocol = parsed.protocol.replace(/\:$/, '');
 
+  // WHATWG URL wraps IPv6 in brackets and normalizes the address; use the
+  // raw value extracted above to preserve the original formatting.
+  var hostname = parsed.hostname || defaultHostname;
+  if (hostname && hostname.startsWith('[') && hostname.endsWith(']')) {
+    hostname = rawIPv6 || hostname.slice(1, -1);
+  }
+
   var ret = {
     protocol: hasScheme ? parsedProtocol : defaultProtocol,
-    hostname: parsed.hostname || defaultHostname,
+    hostname: hostname,
     port: parsed.port || defaultPort
   };
   if (parsed.pathname !== '/' && parsed.pathname) {
