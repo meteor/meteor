@@ -7,7 +7,7 @@ const streamToString = require("stream-to-string");
 import { isModern } from "meteor/modern-browsers";
 
 const additionalScript = "(function () { var foo = 1; })";
-WebAppInternals.addStaticJs(additionalScript);
+await WebAppInternals.addStaticJs(additionalScript);
 const hash = crypto.createHash('sha1');
 hash.update(additionalScript);
 const additionalScriptPathname = hash.digest('hex') + ".js";
