@@ -286,22 +286,18 @@ Meteor.startup(function() {
 // quickly, so that we can shut down relatively promptly but cleanly, without
 // cutting off anyone's response.
 WebApp._timeoutAdjustmentRequestCallback = function(req, res) {
-  // this is really just req.socket.setTimeout(LONG_SOCKET_TIMEOUT);
   req.setTimeout(LONG_SOCKET_TIMEOUT);
-  // Insert our new finish listener to run BEFORE the existing one which removes
-  // the response from the socket.
-  var finishListeners = res.listeners('finish');
-  // XXX Apparently in Node 0.12 this event was called 'prefinish'.
-  // https://github.com/joyent/node/commit/7c9b6070
-  // But it has switched back to 'finish' in Node v4:
-  // https://github.com/nodejs/node/pull/1411
-  res.removeAllListeners('finish');
-  res.on('finish', function() {
-    res.setTimeout(SHORT_SOCKET_TIMEOUT);
-  });
-  Object.values(finishListeners).forEach(function(l) {
-    res.on('finish', l);
-  });
+
+  // Guard: only register the finish listener once per response.
+  if (!res._meteorTimeoutAdjusted) {
+    res._meteorTimeoutAdjusted = true;
+    // Reset to short timeout after response completes.
+    // prependOnceListener ensures this runs before other finish handlers
+    // (e.g., socket cleanup) and auto-removes after firing.
+    res.prependOnceListener('finish', () => {
+      res.setTimeout(SHORT_SOCKET_TIMEOUT);
+    });
+  }
 };
 
 // Will be updated by main before we listen.
