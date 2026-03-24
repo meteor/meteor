@@ -7,7 +7,7 @@ jobs:
   test-packages:
     strategy:
       fail-fast: false
-    runs-on: ubuntu-22.04
+    runs-on: oss-vm01
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
