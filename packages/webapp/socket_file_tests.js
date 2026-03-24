@@ -85,6 +85,15 @@ Tinytest.add('socket file - remove socket file on exit', test => {
   });
 });
 
+Tinytest.add('socket file - no duplicate handlers on repeated registration', test => {
+  const testEventEmitter = new EventEmitter();
+  registerSocketFileCleanup(testSocketFile, testEventEmitter);
+  registerSocketFileCleanup(testSocketFile, testEventEmitter);
+  ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
+    test.equal(testEventEmitter.listenerCount(signal), 1);
+  });
+});
+
 function prepareServer() {
   removeTestSocketFile();
   removeExistingSocketFile(testSocketFile);
