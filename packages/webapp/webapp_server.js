@@ -464,27 +464,21 @@ async function getBoilerplateAsync(request, arch, response) {
   );
 
   let madeChanges = false;
-  let promise = Promise.resolve();
 
-  Object.keys(boilerplateDataCallbacks).forEach(key => {
-    promise = promise
-      .then(() => {
-        const callback = boilerplateDataCallbacks[key];
-        return callback(request, data, arch, response);
-      })
-      .then(result => {
-        // Callbacks should return false if they did not make any changes.
-        if (result !== false) {
-          madeChanges = true;
-        }
-      });
-  });
+  for (const key of Object.keys(boilerplateDataCallbacks)) {
+    const callback = boilerplateDataCallbacks[key];
+    const result = await callback(request, data, arch, response);
+    // Callbacks should return false if they did not make any changes.
+    if (result !== false) {
+      madeChanges = true;
+    }
+  }
 
-  return promise.then(() => ({
+  return {
     stream: boilerplate.toHTMLStream(data),
     statusCode: data.statusCode,
     headers: data.headers,
-  }));
+  };
 }
 
 /**
