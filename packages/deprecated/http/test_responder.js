@@ -28,17 +28,27 @@ var respond = function(req, res) {
     var password = req.url.slice(7);
     // realm is displayed in dialog box if one pops up, avoid confusion
     var realm = TEST_RESPONDER_ROUTE+"/login";
-    var validate = function(user, pass) {
-      return user === username && pass === password;
-    };
-    var connect = WebAppInternals.NpmModules.connect.module;
-    var checker = connect.basicAuth(validate, realm);
+
+    // Inline basic auth check (replaces connect.basicAuth)
+    var authHeader = req.headers.authorization;
     var success = false;
-    checker(req, res, function() {
-      success = true;
-    });
-    if (! success)
+    if (authHeader && authHeader.slice(0, 6) === 'Basic ') {
+      var credentials = Buffer.from(authHeader.slice(6), 'base64').toString();
+      var sep = credentials.indexOf(':');
+      if (sep !== -1) {
+        var user = credentials.slice(0, sep);
+        var pass = credentials.slice(sep + 1);
+        if (user === username && pass === password) {
+          success = true;
+        }
+      }
+    }
+    if (! success) {
+      res.statusCode = 401;
+      res.setHeader('WWW-Authenticate', 'Basic realm="' + realm + '"');
+      res.end('Unauthorized');
       return;
+    }
   } else if (req.url === "/headers") {
     res.statusCode = 201;
     res.setHeader("A-Silly-Header", "Tis a");
@@ -76,8 +86,7 @@ var respond = function(req, res) {
 };
 
 var run_responder = function() {
-  WebApp.connectHandlers.stack.unshift(
-    { route: TEST_RESPONDER_ROUTE, handle: respond });
+  WebApp.connectHandlers.use(TEST_RESPONDER_ROUTE, respond);
 };
 
 run_responder();

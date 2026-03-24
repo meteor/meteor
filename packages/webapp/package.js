@@ -1,12 +1,11 @@
 Package.describe({
   summary: 'Serves a Meteor app over HTTP',
-  version: '1.13.8',
+  version: '1.14.0',
 });
 
 Npm.depends({
-  'basic-auth-connect': '1.0.0',
   'cookie-parser': '1.4.6',
-  connect: '3.7.0',
+  express: '4.21.2',
   compression: '1.7.4',
   errorhandler: '1.5.1',
   parseurl: '1.3.3',
@@ -15,7 +14,7 @@ Npm.depends({
   qs: '6.11.2',
   useragent: '2.3.0',
   '@vlasky/whomst': '0.1.7',
-  '@types/connect': '3.4.38',
+  '@types/express': '4.17.21',
 });
 
 Npm.strip({

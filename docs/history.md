@@ -9,6 +9,37 @@
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
 
+## v2.17.0
+
+### Highlights
+
+* Replaced `connect` with `express` as the HTTP server engine in the `webapp` package. This aligns Meteor 2.x with Meteor 3.x, easing future migration and making community packages like `communitypackages:picker` unnecessary.
+* New APIs: `WebApp.handlers`, `WebApp.rawHandlers`, `WebApp.expressApp`, and `WebApp.express` are now available, matching the Meteor 3.x API surface.
+
+#### Migration Steps
+
+* `WebApp.connectHandlers` and `WebApp.rawConnectHandlers` continue to work as aliases. No immediate changes are required for existing code.
+* For new code, prefer `WebApp.handlers` and `WebApp.rawHandlers` to align with Meteor 3.x.
+* Community packages that access `WebApp.connectHandlers.stack` directly (e.g., `communitypackages:picker`) will no longer work. Replace them with express routing via `WebApp.handlers` or `WebApp.express.Router()`.
+* `WebAppInternals.NpmModules.connect` is no longer available. Use `WebAppInternals.NpmModules.express` instead.
+
+## Breaking Changes
+
+* `WebApp.connectHandlers.stack` (a connect internal) is no longer accessible. Use `WebApp.handlers.use()` instead.
+* `WebAppInternals.NpmModules.connect` has been replaced with `WebAppInternals.NpmModules.express`.
+* `connect.basicAuth` is no longer available via `WebAppInternals.NpmModules`.
+
+## Meteor Version Release
+
+* `webapp@1.14.0`
+  - Replaced `connect` with `express` 4.x as the HTTP server engine
+  - Added `WebApp.handlers` and `WebApp.rawHandlers` (recommended API, matching Meteor 3.x)
+  - Added `WebApp.expressApp` for direct access to the express application
+  - Added `WebApp.express` for direct access to the express module (e.g., `WebApp.express.Router()`)
+  - Added `WebApp._suppressExpressErrors()` as the new name for `suppressConnectErrors()`
+  - `WebApp.connectHandlers`, `WebApp.rawConnectHandlers`, and `WebApp.connectApp` are kept as backwards-compatible aliases
+  - Updated TypeScript definitions to use express types
+
 
 ## v2.16.0, 2024-05-14
 
