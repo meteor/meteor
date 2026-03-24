@@ -337,3 +337,117 @@ Tinytest.add("webapp - npm modules", function (test) {
   test.matches(WebAppInternals.NpmModules.express.version, /^4\.(\d+)\.(\d+)/);
   test.equal(typeof(WebAppInternals.NpmModules.express.module), 'function');
 });
+
+// Test that WebApp.handlers.use() works (new 3.x-compatible API)
+Tinytest.add("webapp - WebApp.handlers.use works", function (test) {
+  test.isTrue(typeof WebApp.handlers.use === 'function');
+
+  const resp = HTTP.get(
+    url.resolve(Meteor.absoluteUrl(), '/_express_handlers_test')
+  );
+  test.equal(resp.statusCode, 200);
+  test.equal(resp.content, 'handlers-ok');
+});
+
+// Test that WebApp.connectHandlers still works (backwards compat)
+Tinytest.add("webapp - WebApp.connectHandlers backwards compat", function (test) {
+  test.isTrue(typeof WebApp.connectHandlers.use === 'function');
+  // connectHandlers and handlers should be the same object
+  test.equal(WebApp.connectHandlers, WebApp.handlers);
+
+  const resp = HTTP.get(
+    url.resolve(Meteor.absoluteUrl(), '/_express_connect_compat_test')
+  );
+  test.equal(resp.statusCode, 200);
+  test.equal(resp.content, 'connect-compat-ok');
+});
+
+// Test that WebApp.express is available and functional
+Tinytest.add("webapp - WebApp.express module available", function (test) {
+  test.isTrue(typeof WebApp.express === 'function');
+  // Should be able to create a Router
+  test.isTrue(typeof WebApp.express.Router === 'function');
+  const router = WebApp.express.Router();
+  test.isTrue(typeof router.get === 'function');
+  test.isTrue(typeof router.post === 'function');
+  test.isTrue(typeof router.use === 'function');
+});
+
+// Test that WebApp.expressApp exists and is the main app
+Tinytest.add("webapp - WebApp.expressApp available", function (test) {
+  test.isTrue(WebApp.expressApp !== undefined);
+  // connectApp should be the same object
+  test.equal(WebApp.expressApp, WebApp.connectApp);
+});
+
+// Test that WebApp.rawHandlers works
+Tinytest.add("webapp - WebApp.rawHandlers available", function (test) {
+  test.isTrue(typeof WebApp.rawHandlers.use === 'function');
+  // rawConnectHandlers should be the same object
+  test.equal(WebApp.rawHandlers, WebApp.rawConnectHandlers);
+});
+
+// Test _suppressExpressErrors alias
+Tinytest.add("webapp - _suppressExpressErrors available", function (test) {
+  test.isTrue(typeof WebApp._suppressExpressErrors === 'function');
+  test.isTrue(typeof WebApp.suppressConnectErrors === 'function');
+});
+
+// Test express.Router integration
+Tinytest.add("webapp - express.Router works with handlers", function (test) {
+  const resp = HTTP.get(
+    url.resolve(Meteor.absoluteUrl(), '/_express_router_test/hello')
+  );
+  test.equal(resp.statusCode, 200);
+  test.equal(resp.content, 'router-hello');
+});
+
+// Test express query parsing
+Tinytest.add("webapp - express query parsing", function (test) {
+  const resp = HTTP.get(
+    url.resolve(Meteor.absoluteUrl(), '/_express_query_test?foo=bar&baz=123')
+  );
+  test.equal(resp.statusCode, 200);
+  const data = JSON.parse(resp.content);
+  test.equal(data.foo, 'bar');
+  test.equal(data.baz, '123');
+});
+
+// Test DDP connection works (WebSocket/long-polling over the express server)
+Tinytest.addAsync("webapp - DDP connection works", async function (test) {
+  // If we can call a method, DDP is working over the express HTTP server
+  const result = await new Promise((resolve, reject) => {
+    Meteor.call('__express_test_echo', 'ping', (err, res) => {
+      if (err) reject(err);
+      else resolve(res);
+    });
+  });
+  test.equal(result, 'ping');
+});
+
+// Register test handlers and method before tests run
+WebApp.handlers.use('/_express_handlers_test', function (req, res) {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('handlers-ok');
+});
+
+WebApp.connectHandlers.use('/_express_connect_compat_test', function (req, res) {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('connect-compat-ok');
+});
+
+const testRouter = WebApp.express.Router();
+testRouter.get('/hello', function (req, res) {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('router-hello');
+});
+WebApp.handlers.use('/_express_router_test', testRouter);
+
+WebApp.handlers.use('/_express_query_test', function (req, res) {
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify(req.query));
+});
+
+Meteor.methods({
+  '__express_test_echo': function (val) { return val; }
+});
