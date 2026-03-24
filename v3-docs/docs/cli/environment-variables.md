@@ -39,7 +39,7 @@ DDP_TRANSPORT=uws meteor run
 DDP_TRANSPORT=sockjs meteor run
 ```
 
-When using `uws`, the client automatically uses native WebSocket instead of the SockJS client library, which removes ~57 KB from the client bundle.
+When using `uws`, the client automatically uses native WebSocket instead of the SockJS client protocol.
 
 ::: warning
 The `uws` transport uses raw WebSocket without HTTP polling fallback. Clients behind proxies that block WebSocket connections will not be able to connect. Make sure your deployment environment supports WebSocket before switching.
