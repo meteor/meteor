@@ -1306,7 +1306,7 @@ export default class ImportScanner {
     const dataString = info.dataString;
 
     let ext = dotExt.slice(1);
-    if (!(ext in DefaultHandlers.prototype)) {
+    if (!Object.hasOwn(DefaultHandlers.prototype, ext)) {
       if (canBeParsedAsPlainJS(dataString, info.hash)) {
         ext = "js";
       } else {

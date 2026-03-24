@@ -136,20 +136,20 @@ export class CompilerPluginProcessor {
     // plugin id -> {sourceProcessor, resourceSlots}
     var sourceProcessorsWithSlots = {};
 
-    // Create all batches first, then init them in parallel
-    const sourceBatches = self.unibuilds.map(unibuild => {
+    const sourceBatches = [];
+    for (const unibuild of self.unibuilds) {
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
           && self.isopackCache.getSourceRoot(name, arch)
           || self.sourceRoot;
-      return new PackageSourceBatch(unibuild, self, {
+      const batch = new PackageSourceBatch(unibuild, self, {
         sourceRoot,
         linkerCacheDir: self.linkerCacheDir,
         scannerCacheDir: self.scannerCacheDir,
       });
-    });
-
-    await Promise.all(sourceBatches.map(batch => batch.init()));
+      await batch.init();
+      sourceBatches.push(batch);
+    }
 
     // If we failed to match sources with processors, we're done.
     if (buildmessage.jobHasMessages()) {

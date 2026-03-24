@@ -1903,7 +1903,7 @@ class ClientTarget extends Target {
           const cordovaDependencies = Object.assign(
             Object.create(null),
             Object.fromEntries(
-              Object.entries(this.cordovaDependencies).filter(
+              Object.entries(this.cordovaDependencies || {}).filter(
                 ([key]) => !pluginsExcludedFromCompatibilityHash.includes(key)
               )
             )
