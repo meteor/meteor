@@ -198,3 +198,116 @@ Tinytest.add(
     }
   },
 );
+
+Tinytest.add('geojson-utils - numberToRadius', function (test) {
+  test.equal(gju.numberToRadius(180), Math.PI);
+  test.equal(gju.numberToRadius(0), 0);
+  test.equal(gju.numberToRadius(90), Math.PI / 2);
+});
+
+Tinytest.add('geojson-utils - numberToDegree', function (test) {
+  test.equal(gju.numberToDegree(Math.PI), 180);
+  test.equal(gju.numberToDegree(0), 0);
+  test.equal(gju.numberToDegree(Math.PI / 2), 90);
+});
+
+Tinytest.add('geojson-utils - pointInBoundingBox', function (test) {
+  var bounds = [
+    [0, 0],
+    [10, 10],
+  ];
+  var inside = { type: 'Point', coordinates: [5, 5] };
+  var outside = { type: 'Point', coordinates: [15, 15] };
+  var onEdge = { type: 'Point', coordinates: [0, 0] };
+
+  test.isTrue(gju.pointInBoundingBox(inside, bounds));
+  test.isFalse(gju.pointInBoundingBox(outside, bounds));
+  test.isTrue(gju.pointInBoundingBox(onEdge, bounds));
+});
+
+Tinytest.add('geojson-utils - geometryWithinRadius', function (test) {
+  var center = { type: 'Point', coordinates: [0, 0] };
+
+  // Point within radius
+  var nearPoint = { type: 'Point', coordinates: [0.001, 0.001] };
+  test.isTrue(gju.geometryWithinRadius(nearPoint, center, 1000000));
+
+  // Point outside radius
+  var farPoint = { type: 'Point', coordinates: [90, 90] };
+  test.isFalse(gju.geometryWithinRadius(farPoint, center, 100));
+
+  // LineString within radius
+  var nearLine = {
+    type: 'LineString',
+    coordinates: [
+      [0.001, 0.001],
+      [0.002, 0.002],
+    ],
+  };
+  test.isTrue(gju.geometryWithinRadius(nearLine, center, 1000000));
+
+  // Polygon within radius
+  var nearPoly = {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [0.001, 0.001],
+        [0.002, 0.001],
+        [0.002, 0.002],
+        [0.001, 0.002],
+      ],
+    ],
+  };
+  test.isTrue(gju.geometryWithinRadius(nearPoly, center, 1000000));
+});
+
+Tinytest.add('geojson-utils - area', function (test) {
+  // Unit square (in degrees) - area should be non-zero
+  var square = {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [0, 0],
+        [1, 0],
+        [1, 1],
+        [0, 1],
+      ],
+    ],
+  };
+  var a = gju.area(square);
+  test.isTrue(a !== 0, 'Area of a square should not be zero');
+  // The signed area of this CCW polygon should be positive or negative
+  // depending on winding; just check it's ±1
+  test.equal(Math.abs(a), 1);
+});
+
+Tinytest.add('geojson-utils - polygon centroid', function (test) {
+  var square = {
+    type: 'Polygon',
+    coordinates: [
+      [
+        [0, 0],
+        [10, 0],
+        [10, 10],
+        [0, 10],
+      ],
+    ],
+  };
+  var c = gju.centroid(square);
+  test.equal(c.type, 'Point');
+  // Centroid of a symmetric square should be at its center
+  test.equal(c.coordinates[0], 5);
+  test.equal(c.coordinates[1], 5);
+});
+
+Tinytest.add('geojson-utils - destinationPoint', function (test) {
+  var start = { type: 'Point', coordinates: [0, 0] };
+  var dest = gju.destinationPoint(start, 0, 1000);
+  test.equal(dest.type, 'Point');
+  test.equal(dest.coordinates.length, 2);
+  // Moving north (bearing 0) from [0,0] should increase latitude
+  test.isTrue(
+    dest.coordinates[0] > 0,
+    'Latitude should increase when moving north',
+  );
+});
