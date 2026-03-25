@@ -18,9 +18,12 @@
     "@types/node": "^18.16.18",
     "@types/sockjs": "^0.3.36",
     "@types/sockjs-client": "^1.5.4",
+    "oxfmt": "^0.42.0",
     "typescript": "^5.4.5"
   },
   "scripts": {
+    "fmt": "oxfmt --ignore-path .fmtignore .",
+    "fmt:check": "oxfmt --ignore-path .fmtignore --check .",
     "install:unit": "cd tools/unit-tests && npm install",
     "test:unit": "cd tools/unit-tests && npm test",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",

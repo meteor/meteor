@@ -18,4 +18,4 @@ jobs:
           node-version: 22.x
       - run: npm ci
       - name: Check formatting with oxfmt
-        run: npx oxfmt --check .
+        run: npx oxfmt --ignore-path .fmtignore --check .
