@@ -16,10 +16,13 @@
     "@babel/eslint-parser": "^7.21.3",
     "@babel/eslint-plugin": "^7.19.1",
     "@babel/preset-react": "^7.18.6",
+    "@types/express": "^5.0.6",
     "@types/lodash.isempty": "^4.4.9",
     "@types/node": "^18.16.18",
+    "@types/nodemailer": "^7.0.11",
     "@types/sockjs": "^0.3.36",
     "@types/sockjs-client": "^1.5.4",
+    "@types/underscore": "^1.13.0",
     "@typescript-eslint/eslint-plugin": "^5.56.0",
     "@typescript-eslint/parser": "^5.56.0",
     "eslint": "^8.36.0",
@@ -31,6 +34,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "mongodb": "^6.16.0",
     "prettier": "^2.8.8",
     "typescript": "^5.4.5"
   },
@@ -39,7 +43,8 @@
     "test:unit": "cd tools/unit-tests && npm test",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "install:e2e": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
-    "test:e2e": "cd tools/modern-tests && npm test -- "
+    "test:e2e": "cd tools/modern-tests && npm test -- ",
+    "test:types": "node scripts/test-types.mjs"
   },
   "jshintConfig": {
     "esversion": 11

@@ -5,6 +5,7 @@
 // Minimum TypeScript Version: 4.1
 
 import { Mongo } from "meteor/mongo";
+import { Meteor, Subscription } from "meteor/meteor";
 
 /**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
