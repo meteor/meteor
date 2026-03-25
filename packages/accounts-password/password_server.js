@@ -1,8 +1,11 @@
 import { hash as bcryptHash, compare as bcryptCompare } from 'bcrypt';
 import { Accounts } from "meteor/accounts-base";
 
+var Future = Npm.require('fibers/future');
+
 // Utility for grabbing user
 const getUserById = (id, options) => Meteor.users.findOne(id, Accounts._addDefaultFieldSelector(options));
+const getUserByIdAsync = (id, options) => Meteor.users.findOneAsync(id, Accounts._addDefaultFieldSelector(options));
 
 // User records have a 'services.password.bcrypt' field on them to hold
 // their hashed passwords.
@@ -342,7 +345,7 @@ Accounts.setPasswordAsync = async (userId, newPlaintextPassword, options) => {
     update.$unset['services.resume.loginTokens'] = 1;
   }
 
-  Meteor.users.update({_id: user._id}, update);
+  await Meteor.users.updateAsync({_id: user._id}, update);
 };
 
 /**
@@ -817,7 +820,7 @@ Meteor.methods({verifyEmail: async function (...args) {
  * be marked as verified. Defaults to false.
  * @importFromPackage accounts-base
  */
-Accounts.addEmail = (userId, newEmail, verified) => {
+Accounts.addEmailAsync = async (userId, newEmail, verified) => {
   check(userId, NonEmptyString);
   check(newEmail, NonEmptyString);
   check(verified, Match.Optional(Boolean));
@@ -826,7 +829,8 @@ Accounts.addEmail = (userId, newEmail, verified) => {
     verified = false;
   }
 
-  const user = getUserById(userId, {fields: {emails: 1}});
+  const user = await getUserByIdAsync(userId, {fields: {emails: 1}});
+
   if (!user)
     throw new Meteor.Error(403, "User not found");
 
@@ -841,24 +845,6 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   const caseInsensitiveRegExp =
     new RegExp(`^${Meteor._escapeRegExp(newEmail)}$`, 'i');
 
-  const didUpdateOwnEmail = (user.emails || []).reduce(
-    (prev, email) => {
-      if (caseInsensitiveRegExp.test(email.address)) {
-        Meteor.users.update({
-          _id: user._id,
-          'emails.address': email.address
-        }, {$set: {
-          'emails.$.address': newEmail,
-          'emails.$.verified': verified
-        }});
-        return true;
-      } else {
-        return prev;
-      }
-    },
-    false
-  );
-
   // In the other updates below, we have to do another call to
   // checkForCaseInsensitiveDuplicates to make sure that no conflicting values
   // were added to the database in the meantime. We don't have to do this for
@@ -866,15 +852,30 @@ Accounts.addEmail = (userId, newEmail, verified) => {
   // same as before, but only different because of capitalization. Read the
   // big comment above to understand why.
 
+  let didUpdateOwnEmail = false
+
+  for (const email of (user.emails || [])) {
+    if (caseInsensitiveRegExp.test(email.address)) {
+      await Meteor.users.updateAsync({
+        _id: user._id,
+        'emails.address': email.address
+      }, {$set: {
+        'emails.$.address': newEmail,
+        'emails.$.verified': verified
+      }});
+      didUpdateOwnEmail = true
+    }
+  }
+
   if (didUpdateOwnEmail) {
-    return;
+    return
   }
 
   // Perform a case insensitive check for duplicates before update
   Accounts._checkForCaseInsensitiveDuplicates('emails.address',
     'Email', newEmail, user._id);
 
-  Meteor.users.update({
+  await Meteor.users.updateAsync({
     _id: user._id
   }, {
     $addToSet: {
@@ -892,10 +893,26 @@ Accounts.addEmail = (userId, newEmail, verified) => {
       'Email', newEmail, user._id);
   } catch (ex) {
     // Undo update if the check fails
-    Meteor.users.update({_id: user._id},
+    await Meteor.users.updateAsync({_id: user._id},
       {$pull: {emails: {address: newEmail}}});
     throw ex;
   }
+}
+
+/**
+ * @summary Add an email address for a user. Use this instead of directly
+ * updating the database. The operation will fail if there is a different user
+ * with an email only differing in case. If the specified user has an existing
+ * email only differing in case however, we replace it.
+ * @locus Server
+ * @param {String} userId The ID of the user to update.
+ * @param {String} newEmail A new email address for the user.
+ * @param {Boolean} [verified] Optional - whether the new email address should
+ * be marked as verified. Defaults to false.
+ * @importFromPackage accounts-base
+ */
+Accounts.addEmail = function (...args) {
+  return Future.fromPromise(this.addEmailAsync(...args)).wait();
 }
 
 /**
