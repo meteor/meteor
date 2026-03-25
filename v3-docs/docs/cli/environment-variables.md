@@ -21,6 +21,32 @@ Setting `DDP_DEFAULT_CONNECTION_URL` when running a meteor server (development: 
 
 Setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`)  will define the DDP server for `cordova` builds.
 
+## DDP_TRANSPORT
+(_development, production_)
+
+Select the WebSocket transport backend for DDP connections. Available transports:
+
+| Value | Description |
+|---|---|
+| `sockjs` | (default) SockJS with HTTP polling fallback. Maximum compatibility. |
+| `uws` | [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/) — raw WebSocket, no polling fallback. Lower latency and higher throughput. |
+
+```bash
+# Use uWebSockets.js
+DDP_TRANSPORT=uws meteor run
+
+# Explicitly use SockJS (default)
+DDP_TRANSPORT=sockjs meteor run
+```
+
+When using `uws`, the client automatically uses native WebSocket instead of the SockJS client protocol.
+
+::: warning
+The `uws` transport uses raw WebSocket without HTTP polling fallback. Clients behind proxies that block WebSocket connections will not be able to connect. Make sure your deployment environment supports WebSocket before switching.
+:::
+
+See also: [`DISABLE_SOCKJS`](#disable-sockjs).
+
 ## DISABLE_WEBSOCKETS
 (_development, production_)
 
@@ -29,7 +55,11 @@ In the event that your own deployment platform does not support WebSockets, or y
 ## DISABLE_SOCKJS
 (_development, production_)
 
-Set `DISABLE_SOCKJS=1` if you want to use the native WebSocket implementation instead of SockJS on the client side, for example, if you want to use a custom WebSocket implementation (e.g. [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)) on the server side.
+Set `DISABLE_SOCKJS=1` to use raw WebSocket instead of SockJS. This is equivalent to `DDP_TRANSPORT=uws` and is kept for backward compatibility.
+
+::: tip
+Prefer using [`DDP_TRANSPORT=uws`](#ddp-transport) instead of `DISABLE_SOCKJS=1`. The `DDP_TRANSPORT` variable is more explicit and supports additional transports in the future.
+:::
 
 ## DO_NOT_TRACK
 (_development, production_)
