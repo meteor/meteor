@@ -51,6 +51,10 @@ export class AccountsClient extends AccountsCommon {
     this.initStorageLocation(options);
   }
 
+  _onUsersCollectionChanged() {
+    Meteor.users = this.users;
+  }
+
   ///
   /// CURRENT USER
   ///

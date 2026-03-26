@@ -297,10 +297,20 @@ export class AccountsCommon {
       }
     }
 
-    if (options.collection && options.collection !== this.users._name && options.collection !== this.users) {
-      this.users = this._initializeCollection(options);
+    if (options.collection) {
+      const isNewCollection =
+        (options.collection instanceof Mongo.Collection)
+          ? options.collection !== this.users
+          : options.collection !== this.users._name;
+      if (isNewCollection) {
+        this.users = this._initializeCollection(options);
+        this._onUsersCollectionChanged();
+      }
     }
   }
+
+  // Called when this.users is replaced via config(). Override in subclasses.
+  _onUsersCollectionChanged() {}
 
   /**
    * @summary Register a callback to be called after a login attempt succeeds.
