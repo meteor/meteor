@@ -63,61 +63,6 @@ const validateCICollation = (obj) => {
   }
 };
 
-// Default collation for case-insensitive lookups.
-// Configurable via Meteor.settings.packages['accounts-base']['ci-collation']
-const DEFAULT_CI_COLLATION = { locale: 'en', strength: 2 };
-
-const VALID_COLLATION_KEYS = new Set([
-  'locale', 'strength', 'caseLevel', 'caseFirst', 'numericOrdering',
-  'alternate', 'maxVariable', 'backwards', 'normalization',
-]);
-
-const validateCICollation = (obj) => {
-  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
-    throw new Meteor.Error(
-      'invalid-ci-collation',
-      'accounts-base ci-collation must be a plain object'
-    );
-  }
-  const invalid = Object.keys(obj).filter(k => !VALID_COLLATION_KEYS.has(k));
-  if (invalid.length) {
-    throw new Meteor.Error(
-      'invalid-ci-collation',
-      `Invalid ci-collation key(s): ${invalid.join(', ')}. ` +
-      `Valid keys: ${[...VALID_COLLATION_KEYS].join(', ')}`
-    );
-  }
-  if (obj.locale !== undefined && typeof obj.locale !== 'string') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation locale must be a string');
-  }
-  if (obj.strength !== undefined) {
-    if (!Number.isInteger(obj.strength) || obj.strength < 1 || obj.strength > 5) {
-      throw new Meteor.Error('invalid-ci-collation', 'ci-collation strength must be an integer 1-5');
-    }
-  }
-  if (obj.caseLevel !== undefined && typeof obj.caseLevel !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseLevel must be a boolean');
-  }
-  if (obj.caseFirst !== undefined && !['upper', 'lower', 'off'].includes(obj.caseFirst)) {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseFirst must be "upper", "lower", or "off"');
-  }
-  if (obj.numericOrdering !== undefined && typeof obj.numericOrdering !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation numericOrdering must be a boolean');
-  }
-  if (obj.alternate !== undefined && !['non-ignorable', 'shifted'].includes(obj.alternate)) {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation alternate must be "non-ignorable" or "shifted"');
-  }
-  if (obj.maxVariable !== undefined && !['punct', 'space'].includes(obj.maxVariable)) {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation maxVariable must be "punct" or "space"');
-  }
-  if (obj.backwards !== undefined && typeof obj.backwards !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation backwards must be a boolean');
-  }
-  if (obj.normalization !== undefined && typeof obj.normalization !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation normalization must be a boolean');
-  }
-};
-
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
  * @locus Server
