@@ -7,7 +7,7 @@ jobs:
   test-packages:
     strategy:
       fail-fast: false
-    runs-on: oss-vm01
+    runs-on: self-hosted
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
