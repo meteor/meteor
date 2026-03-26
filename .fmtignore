@@ -1,7 +1,7 @@
-# Ignorar tudo por padrão
-# oxfmt usa .prettierignore automaticamente
+# Ignore everything by default
+# oxfmt uses .prettierignore automatically
 
-# Raiz e diretórios top-level
+# Root and top-level directories
 *.yml
 *.md
 *.json
@@ -21,12 +21,12 @@ node_modules/
 .circleci/
 .github/
 
-# Ignorar node_modules/npm dentro de packages
+# Ignore node_modules/npm inside packages
 packages/**/node_modules/
 packages/**/.npm/
 
-# Todos os pacotes ignorados por padrão
-# Apenas os listados abaixo são formatados
+# All packages ignored by default
+# Only those listed below are formatted
 packages/accounts-*/
 packages/allow-deny/
 packages/autoupdate/
