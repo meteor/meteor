@@ -1112,6 +1112,9 @@ var canonicalVersion = function (depObj) {
 // the structure of npmDependencies (e.g. {gcd: '0.0.0'}), so that
 // they can be diffed. This only returns top-level dependencies.
 var treeToDependencies = function (tree) {
+  if (!tree || !tree.dependencies) {
+    return {};
+  }
   return Object.fromEntries(
     Object.entries(tree.dependencies).map(function ([name, properties]) {
       return [name, canonicalVersion(properties)];
@@ -1261,6 +1264,9 @@ function minimizeDependencyTree(tree) {
     return minimized;
   }
 
+  if (!tree || !tree.dependencies) {
+    return { dependencies: {} };
+  }
   var newTopLevelDependencies = {};
   Object.entries(tree.dependencies).forEach(function ([name, module]) {
     newTopLevelDependencies[name] = minimizeModule(module);
