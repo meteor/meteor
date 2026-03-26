@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "faye-websocket": "0.11.4",
+  "uWebSockets.js": "git+https://github.com/unetworking/uWebSockets.js#v20.58.0",
   "permessage-deflate2": "0.1.8",
   sockjs: "0.3.24",
   "lodash.once": "4.1.1",
@@ -51,6 +51,10 @@ Package.onUse(function (api) {
   api.use("callback-hook", "server");
   api.export("DDPServer", "server");
 
+  api.addFiles("transports/raw_connection.js", "server");
+  api.addFiles("transports/sockjs.js", "server");
+  api.addFiles("transports/uws.js", "server");
+  api.addFiles("transports/index.js", "server");
   api.addFiles("stream_server.js", "server");
 
   api.addFiles("livedata_server.js", "server");

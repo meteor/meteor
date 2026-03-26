@@ -4,7 +4,8 @@
 
 const http = Npm.require('http');
 
-const disableSockJS = !!process.env.DISABLE_SOCKJS;
+const disableSockJS = !!process.env.DISABLE_SOCKJS ||
+  (process.env.DDP_TRANSPORT && process.env.DDP_TRANSPORT !== 'sockjs');
 
 // Helper: make an HTTP GET request to the given URL, return { statusCode, headers, body }
 function httpGet(url) {
