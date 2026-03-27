@@ -43,9 +43,13 @@ exports.parseUrl = function (str, defaults) {
   // re-appends it on assignment, so we strip it into a local variable.
   var parsedProtocol = parsed.protocol.replace(/\:$/, '');
 
+  // new URL() wraps IPv6 addresses in brackets (e.g. [::]),
+  // while the previous url.parse() returned them without brackets.
+  var parsedHostname = parsed.hostname.replace(/^\[|\]$/g, '');
+
   var ret = {
     protocol: hasScheme ? parsedProtocol : defaultProtocol,
-    hostname: parsed.hostname || defaultHostname,
+    hostname: parsedHostname || defaultHostname,
     port: parsed.port || defaultPort
   };
   if (parsed.pathname !== '/' && parsed.pathname) {
