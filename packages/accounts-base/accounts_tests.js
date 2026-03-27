@@ -775,60 +775,59 @@ if (Meteor.isServer) {
     });
   });
 
-  // === Reproduction tests for #12610 ===
-  // These tests demonstrate the bugs with Accounts.config({ collection })
+  // Tests for #12610: Accounts.config({ collection }) should update
+  // Meteor.users and recreate indexes on the new collection.
 
-  Tinytest.addAsync('accounts - config - collection - custom name updates Meteor.users - repro #12610', async test => {
+  Tinytest.addAsync('accounts - config - collection - custom name updates Meteor.users', async test => {
     const origCollection = Accounts.users;
 
-    Accounts.config({ collection: `utilisateurs_${Random.id()}` });
+    Accounts.config({ collection: `custom_users_${Random.id()}` });
 
-    // BUG 2: Meteor.users is NOT updated after config()
     test.equal(Meteor.users, Accounts.users,
       'Meteor.users should match Accounts.users after config()');
 
-    // Cleanup
     Accounts.config({ collection: origCollection });
   });
 
-  Tinytest.addAsync('accounts - config - collection - different instance replaces collection - repro #12610', async test => {
+  Tinytest.addAsync('accounts - config - collection - different instance replaces collection', async test => {
     const origCollection = Accounts.users;
-
-    // Create a different Mongo.Collection instance (simulating a remote collection)
     const remoteUsers = new Mongo.Collection(`users_remote_${Random.id()}`);
 
     Accounts.config({ collection: remoteUsers });
 
-    // BUG 1+2: Accounts.users should be remoteUsers, Meteor.users should be updated
     test.equal(Accounts.users, remoteUsers,
       'Accounts.users should be the custom collection');
     test.equal(Meteor.users, remoteUsers,
       'Meteor.users should be updated to custom collection');
 
-    // Cleanup
     Accounts.config({ collection: origCollection });
   });
 
-  Tinytest.addAsync('accounts - config - collection - indexes created on custom collection - repro #12610', async test => {
+  Tinytest.addAsync('accounts - config - collection - indexes created on custom collection', async test => {
     const origCollection = Accounts.users;
-    const customCollection = new Mongo.Collection(`utilisateurs_idx_${Random.id()}`);
+    const customCollection = new Mongo.Collection(`custom_idx_${Random.id()}`);
 
     Accounts.config({ collection: customCollection });
 
     // Allow time for async index creation
     await new Promise(resolve => Meteor.setTimeout(resolve, 2000));
 
-    // BUG 3: indexes are NOT created on the new collection
     const rawCollection = Accounts.users.rawCollection();
     const indexes = await rawCollection.indexes();
     const indexKeys = indexes.map(idx => Object.keys(idx.key).join(','));
 
+    // accounts-base indexes
     test.isTrue(indexKeys.includes('username'),
       'Custom collection should have username index');
     test.isTrue(indexKeys.includes('emails.address'),
       'Custom collection should have emails.address index');
 
-    // Cleanup
+    // accounts-password indexes (via onUsersCollectionChanged)
+    test.isTrue(indexKeys.includes('services.password.reset.token'),
+      'Custom collection should have password reset token index');
+    test.isTrue(indexKeys.includes('services.email.verificationTokens.token'),
+      'Custom collection should have email verification token index');
+
     Accounts.config({ collection: origCollection });
   });
 
