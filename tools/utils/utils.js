@@ -1,7 +1,6 @@
 var _ = require('underscore');
 var semver = require('semver');
 var os = require('os');
-var url = require('url');
 
 var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
@@ -12,10 +11,9 @@ var utils = exports;
 
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
-// <port>. We're not simply using 'url.parse' because we want '3000' to
+// <port>. We're not simply using 'new URL' because we want '3000' to
 // parse as {host: undefined, protocol: undefined, port: '3000'}, whereas
-// 'url.parse' would give us {protocol:' 3000', host: undefined, port:
-// undefined} or something like that.
+// 'new URL' would throw or give us an unexpected result.
 //
 // 'defaults' is an optional object with 'hostname', 'port', and 'protocol' keys.
 exports.parseUrl = function (str, defaults) {
@@ -38,7 +36,7 @@ exports.parseUrl = function (str, defaults) {
     str = "http://" + str;
   }
 
-  var parsed = url.parse(str);
+  var parsed = new URL(str);
 
   // for consistency remove colon at the end of protocol
   parsed.protocol = parsed.protocol.replace(/\:$/, '');
@@ -62,7 +60,8 @@ exports.formatUrl = function (options) {
   if (!options.pathname)
     options.pathname = "/";
 
-  return url.format(options);
+  var portStr = options.port ? ':' + options.port : '';
+  return options.protocol + '://' + options.hostname + portStr + options.pathname;
 };
 
 exports.ipAddress = function () {

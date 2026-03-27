@@ -1,27 +1,21 @@
-import url from 'url';
 import { OAuth1Binding } from './oauth1_binding';
 
 OAuth._queryParamsWithAuthTokenUrl = (authUrl, oauthBinding, params = {}, whitelistedQueryParams = []) => {
-  const redirectUrlObj = url.parse(authUrl, true);
+  const redirectUrl = new URL(authUrl);
 
-  Object.assign(
-    redirectUrlObj.query,
-    whitelistedQueryParams.reduce((prev, param) =>
-      params.query[param] ? { ...prev, param: params.query[param] } : prev,
-      {}
-    ),
-    {
-      oauth_token: oauthBinding.requestToken,
-    }
+  const extraParams = whitelistedQueryParams.reduce((prev, param) =>
+    params.query[param] ? { ...prev, param: params.query[param] } : prev,
+    {}
   );
 
-  // Clear the `search` so it is rebuilt by Node's `url` from the `query` above.
-  // Using previous versions of the Node `url` module, this was just set to ""
-  // However, Node 6 docs seem to indicate that this should be `undefined`.
-  delete redirectUrlObj.search;
+  Object.entries(extraParams).forEach(([key, value]) => {
+    redirectUrl.searchParams.set(key, value);
+  });
+
+  redirectUrl.searchParams.set('oauth_token', oauthBinding.requestToken);
 
   // Reconstruct the URL back with provided query parameters merged with oauth_token
-  return url.format(redirectUrlObj);
+  return redirectUrl.toString();
 };
 
 // connect middleware
