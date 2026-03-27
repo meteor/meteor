@@ -20,6 +20,10 @@ jobs:
       NODE_ENV: CI
 
     steps:
+      - name: Clean previous babel-cache (Permission fix)
+        run: sudo rm -rf .babel-cache
+        continue-on-error: true
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
