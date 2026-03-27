@@ -52,6 +52,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y g++-12
+          # libasound2 was renamed to libasound2t64 in Ubuntu 24.04
+          sudo apt-get install -y libasound2t64 2>/dev/null || sudo apt-get install -y libasound2
 
       - name: Install Puppeteer browser with system dependencies
         run: npx puppeteer@23.6.0 browsers install chrome --with-deps
