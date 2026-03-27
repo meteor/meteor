@@ -105,6 +105,24 @@ Tinytest.add('passwordless - Valid token with email', test => {
   test.isFalse(!!result.error);
 });
 
+Tinytest.add('passwordless - Valid token with mixed-case email (#12412)', test => {
+  const createdAt = new Date('July 17, 2022 13:00:00');
+  const currentDate = new Date('July 17, 2022 13:05:00');
+
+  const { user } = getData({ createdAt });
+
+  // Selector email has different case than stored email
+  const result = checkToken({
+    user,
+    sequence: USER_TOKEN,
+    selector: { email: user.email.toUpperCase() },
+    currentDate,
+  });
+
+  test.isFalse(!!result.error);
+  test.equal(result.verifiedEmail, user.email);
+});
+
 Tinytest.add('passwordless - Valid token without email', test => {
   const createdAt = new Date('July 17, 2022 13:00:00');
   const currentDate = new Date('July 17, 2022 13:05:00');
