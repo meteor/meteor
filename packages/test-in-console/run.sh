@@ -21,6 +21,9 @@ EXEC_PID=$!
 trap "pkill -TERM -P $EXEC_PID; exit 1" SIGINT
 
 sed '/test-in-console listening$/q' <&3
+# Drain remaining meteor output to prevent pipe buffer from filling,
+# which would block Meteor's synchronous stdout writes and freeze the HTTP server.
+cat <&3 >/dev/null &
 
 node --trace-warnings "$METEOR_HOME/packages/test-in-console/puppeteer_runner.js"
 
