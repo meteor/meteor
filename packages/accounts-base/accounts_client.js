@@ -53,6 +53,7 @@ export class AccountsClient extends AccountsCommon {
 
   _onUsersCollectionChanged() {
     Meteor.users = this.users;
+    super._onUsersCollectionChanged();
   }
 
   ///

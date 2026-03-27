@@ -235,15 +235,16 @@ Accounts.sendLoginTokenEmail = async ({ userId, sequence, email, extra = {} }) =
   return { email, user, token: sequence, url, options };
 };
 
-const setupUsersCollection = () => {
-  Meteor.users.createIndexAsync('services.passwordless.tokens.token', {
+const createPasswordlessIndexes = async (users) => {
+  await users.createIndexAsync('services.passwordless.tokens.token', {
     unique: true,
     sparse: true,
   });
-  Meteor.users.createIndexAsync('services.passwordless.token', {
+  await users.createIndexAsync('services.passwordless.token', {
     unique: true,
     sparse: true,
   });
 };
 
-Meteor.startup(() => setupUsersCollection());
+Meteor.startup(() => createPasswordlessIndexes(Meteor.users));
+Accounts.onUsersCollectionChanged(users => createPasswordlessIndexes(users).then());

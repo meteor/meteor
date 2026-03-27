@@ -1302,9 +1302,14 @@ Accounts.createUser = Accounts.createUserAsync;
 ///
 /// PASSWORD-SPECIFIC INDEXES ON USERS
 ///
-await Meteor.users.createIndexAsync('services.email.verificationTokens.token',
-  { unique: true, sparse: true });
-await Meteor.users.createIndexAsync('services.password.reset.token',
-  { unique: true, sparse: true });
-await Meteor.users.createIndexAsync('services.password.enroll.token',
-  { unique: true, sparse: true });
+const createPasswordIndexes = async (users) => {
+  await users.createIndexAsync('services.email.verificationTokens.token',
+    { unique: true, sparse: true });
+  await users.createIndexAsync('services.password.reset.token',
+    { unique: true, sparse: true });
+  await users.createIndexAsync('services.password.enroll.token',
+    { unique: true, sparse: true });
+};
+
+await createPasswordIndexes(Meteor.users);
+Accounts.onUsersCollectionChanged(users => createPasswordIndexes(users).then());

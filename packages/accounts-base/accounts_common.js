@@ -52,6 +52,11 @@ export class AccountsCommon {
     // and accounts-ui-unstyled.
     this._options = options || {};
 
+    // Callbacks registered by sub-packages (accounts-password, accounts-oauth,
+    // etc.) to re-run their setup (e.g. index creation) when the users
+    // collection is replaced via Accounts.config({ collection }).
+    this._usersCollectionChangeCallbacks = [];
+
     // Note that setting this.connection = null causes this.users to be a
     // LocalCollection, which is not what we want.
     this.connection = undefined;
@@ -309,8 +314,24 @@ export class AccountsCommon {
     }
   }
 
+  /**
+   * @summary Register a callback to be called when the users collection is
+   * replaced via `Accounts.config({ collection })`. This is used by
+   * sub-packages (accounts-password, accounts-oauth, accounts-passwordless)
+   * to recreate their indexes on the new collection.
+   * @locus Server
+   * @param {Function} callback Called with the new users collection.
+   */
+  onUsersCollectionChanged(callback) {
+    this._usersCollectionChangeCallbacks.push(callback);
+  }
+
   // Called when this.users is replaced via config(). Override in subclasses.
-  _onUsersCollectionChanged() {}
+  _onUsersCollectionChanged() {
+    for (const callback of this._usersCollectionChangeCallbacks) {
+      callback(this.users);
+    }
+  }
 
   /**
    * @summary Register a callback to be called after a login attempt succeeds.
