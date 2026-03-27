@@ -518,13 +518,12 @@ export class PackageAPI {
   versionsFrom(releases) {
     var self = this;
 
-    // When running from a checkout (e.g., in tests or during isopacket
-    // building), catalog.official may not be initialized yet, so we can't
-    // validate release versions referenced in versionsFrom(). Skip the
-    // validation entirely in checkout mode.
+    // When running from a checkout (e.g., in CI or during isopacket building),
+    // catalog.official may not be initialized yet, so we can't validate release
+    // versions referenced in versionsFrom(). Skip validation in checkout mode.
     const files = require('../fs/files.ts');
     if (files.inCheckout()) {
-      // Silently skip versionsFrom validation when running from checkout
+      Console.debug('versionsFrom: skipping validation in checkout mode');
       return;
     }
 

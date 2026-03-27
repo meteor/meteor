@@ -852,7 +852,7 @@ Object.assign(RemoteCatalog.prototype, {
   // Returns the default release version on the DEFAULT_TRACK, or for a
   // given release track.
   getDefaultReleaseVersion: async function (track) {
-    Console.debug("getDefaultReleaseVersion", track);
+    Console.debug('getDefaultReleaseVersion', track);
     var self = this;
     var versionRecord = await self.getDefaultReleaseVersionRecord(track);
     if (! versionRecord)
@@ -865,7 +865,7 @@ Object.assign(RemoteCatalog.prototype, {
   getDefaultReleaseVersionRecord: async function (track) {
     var self = this;
 
-    Console.debug("getDefaultReleaseVersionRecord", track);
+    Console.debug('getDefaultReleaseVersionRecord', track);
 
     if (!track)
       track = exports.DEFAULT_TRACK;

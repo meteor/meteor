@@ -4,10 +4,13 @@ name: Build and Test
 on:
   push:
     branches:
-      - '**'
+      - devel
+      - master
+      - release-*
   pull_request:
     branches:
-      - '**'
+      - devel
+      - master
 
 # Shared environment variables for every job
 env:
@@ -385,30 +388,13 @@ jobs:
     name: 📚 Docs JSDoc Tests
     runs-on: ubuntu-latest
 
-    env:
-      CHECKOUT_METEOR_DOCS: ./test_docs
-
     steps:
       - name: Checkout current repo
         uses: actions/checkout@v4
 
-      - name: Clone meteor/docs
-        run: |
-          mkdir -p "$CHECKOUT_METEOR_DOCS"
-          if [ -n "$GITHUB_HEAD_REF" ]; then
-            PR_NUMBER=${{ github.event.pull_request.number }}
-            PR_BRANCH=$GITHUB_HEAD_REF
-            git clone https://github.com/meteor/meteor.git "$CHECKOUT_METEOR_DOCS"
-            cd "$CHECKOUT_METEOR_DOCS"
-            git fetch origin pull/$PR_NUMBER/head:$PR_BRANCH
-          else
-            BRANCH_NAME=${GITHUB_REF#refs/heads/}
-            git clone --branch "$BRANCH_NAME" https://github.com/meteor/meteor.git "$CHECKOUT_METEOR_DOCS"
-          fi
-
       - name: Generate & test docs
         run: |
-          cd "$CHECKOUT_METEOR_DOCS/docs"
+          cd docs
           npm install
           npm test
 
@@ -447,8 +433,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ./tmp/test-groups
-          key: v1-test-groups-${{ github.ref_name }}-${{ github.run_id }}
-          restore-keys: v1-test-groups-${{ github.ref_name }}-
+          key: v4-test-groups-${{ github.ref_name }}-${{ github.run_id }}
+          restore-keys: v4-test-groups-${{ github.ref_name }}-
 
       - name: Cache dev_bundle
         uses: actions/cache@v4
@@ -461,7 +447,18 @@ jobs:
         with:
           path: |
             packages/meteor/.npm/package/node_modules
-            # ... same as above
+            packages/modules-runtime/.npm/package/node_modules
+            packages/modules/.npm/package/node_modules
+            packages/ecmascript-runtime-server/.npm/package/node_modules
+            packages/promise/.npm/package/node_modules
+            packages/babel-compiler/.npm/package/node_modules
+            packages/babel-runtime/.npm/package/node_modules
+            packages/http/.npm/package/node_modules
+            packages/socket-stream-client/.npm/package/node_modules
+            packages/ddp-client/.npm/package/node_modules
+            packages/npm-mongo/.npm/package/node_modules
+            packages/package-version-parser/.npm/package/node_modules
+            packages/boilerplate-generator/.npm/package/node_modules
           key: package-npm-deps-cache-group1-v3-${{ hashFiles('shrinkwraps.txt') }}
 
       - name: Cache npm deps (group2)
@@ -469,13 +466,34 @@ jobs:
         with:
           path: |
             packages/xmlbuilder/.npm/package/node_modules
-            # ... same as above
-          key: package-npm-deps-cache-group2-v5-${{ hashFiles('shrinkwraps.txt') }}
+            packages/logging/.npm/package/node_modules
+            packages/webapp/.npm/package/node_modules
+            packages/ddp-server/.npm/package/node_modules
+            packages/mongo/.npm/package/node_modules
+            packages/npm-bcrypt/.npm/package/node_modules
+            packages/email/.npm/package/node_modules
+            packages/caching-compiler/.npm/package/node_modules
+            packages/less/.npm/plugin/compileLessBatch/node_modules
+            packages/non-core/blaze/packages/spacebars-compiler/.npm/package/node_modules
+            packages/boilerplate-generator-tests/.npm/package/node_modules
+            packages/non-core/bundle-visualizer/.npm/package/node_modules
+            packages/d3-hierarchy/.npm/package/node_modules
+            packages/non-core/coffeescript-compiler/.npm/package/node_modules
+            packages/server-render/.npm/package/node_modules
+            packages/es5-shim/.npm/package/node_modules
+            packages/force-ssl-common/.npm/package/node_modules
+            packages/jshint/.npm/plugin/lintJshint/node_modules
+            packages/minifier-css/.npm/package/node_modules
+            packages/minifier-js/.npm/package/node_modules
+            packages/standard-minifier-css/.npm/plugin/minifyStdCSS/node_modules
+            packages/inter-process-messaging/.npm/package/node_modules
+            packages/fetch/.npm/package/node_modules
+            packages/non-core/mongo-decimal/.npm/package/node_modules
+          key: package-npm-deps-cache-group2-v6-${{ hashFiles('shrinkwraps.txt') }}
 
       - name: Cache other deps
         uses: actions/cache@v4
         with:
           path: |
             .babel-cache
-            .meteor
           key: v7-other-deps-cache-${{ github.ref_name }}-${{ hashFiles('meteor/**') }}-${{ github.sha }}
