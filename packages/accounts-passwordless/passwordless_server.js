@@ -247,4 +247,8 @@ const createPasswordlessIndexes = async (users) => {
 };
 
 Meteor.startup(() => createPasswordlessIndexes(Meteor.users));
-Accounts.onUsersCollectionChanged(users => createPasswordlessIndexes(users).then());
+Accounts.onUsersCollectionChanged(users => {
+  createPasswordlessIndexes(users).catch(err => {
+    console.error('Failed to create passwordless indexes:', err);
+  });
+});

@@ -303,10 +303,16 @@ export class AccountsCommon {
     }
 
     if (options.collection) {
-      const isNewCollection =
-        (options.collection instanceof Mongo.Collection)
-          ? options.collection !== this.users
-          : options.collection !== this.users._name;
+      let isNewCollection;
+      if (options.collection instanceof Mongo.Collection) {
+        // Instance passed: swap if it's a different object
+        isNewCollection = options.collection !== this.users;
+      } else {
+        // String passed: swap if the name differs, or if the current
+        // collection was set via an instance (round-trip back to default)
+        isNewCollection = options.collection !== this.users._name
+          || this._options.collection instanceof Mongo.Collection;
+      }
       if (isNewCollection) {
         this.users = this._initializeCollection(options);
         this._onUsersCollectionChanged();

@@ -1312,4 +1312,8 @@ const createPasswordIndexes = async (users) => {
 };
 
 await createPasswordIndexes(Meteor.users);
-Accounts.onUsersCollectionChanged(users => createPasswordIndexes(users).then());
+Accounts.onUsersCollectionChanged(users => {
+  createPasswordIndexes(users).catch(err => {
+    console.error('Failed to create password indexes:', err);
+  });
+});

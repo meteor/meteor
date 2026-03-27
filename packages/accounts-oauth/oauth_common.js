@@ -24,9 +24,13 @@ Accounts.oauth.registerService = name => {
 // Recreate OAuth service indexes when the users collection changes.
 if (Meteor.server) {
   Accounts.onUsersCollectionChanged(users => {
-    for (const name of Object.keys(services)) {
-      users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true});
-    }
+    Promise.all(
+      Object.keys(services).map(name =>
+        users.createIndexAsync(`services.${name}.id`, {unique: true, sparse: true})
+      )
+    ).catch(err => {
+      console.error('Failed to create OAuth service indexes:', err);
+    });
   });
 }
 

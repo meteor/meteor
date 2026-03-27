@@ -1232,7 +1232,9 @@ export class AccountsServer extends AccountsCommon {
 
   _onUsersCollectionChanged() {
     Meteor.users = this.users;
-    setupUsersCollection(this.users).then();
+    setupUsersCollection(this.users).catch(err => {
+      console.error('Failed to setup users collection:', err);
+    });
     super._onUsersCollectionChanged();
   }
 
