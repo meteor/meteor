@@ -136,9 +136,9 @@ if (Meteor.isServer) {
         const hash = user?.services?.password?.argon2;
         return Accounts._getArgon2Params(hash);
     }
-    const hashPasswordWithSha = function (password) {
+    const hashPasswordWithSha = async function (password) {
         return {
-            digest: SHA256(password),
+            digest: await SHA256(password),
             algorithm: "sha-256"
         };
     }
@@ -149,7 +149,7 @@ if (Meteor.isServer) {
             // Verify that a argon2 hash generated for a new account uses the
             // default params.
             let username = Random.id();
-            this.password = hashPasswordWithSha("abc123");
+            this.password = await hashPasswordWithSha("abc123");
             this.userId1 = await Accounts.createUserAsync({ username, password: this.password });
             this.user1 = await Meteor.users.findOneAsync(this.userId1);
             let argon2Params = getUserHashArgon2Params(this.user1);

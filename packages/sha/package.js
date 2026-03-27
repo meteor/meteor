@@ -5,6 +5,8 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  api.use('ecmascript');
   api.export('SHA256');
-  api.addFiles('sha256.js');
+  api.mainModule('sha256-server.js', 'server');
+  api.mainModule('sha256-client.js', 'client');
 });

@@ -1,19 +1,15 @@
-/// METEOR WRAPPER
-//
-SHA256 = (function () {
-
-
 /**
-*
-*  Secure Hash Algorithm (SHA256)
-*  http://www.webtoolkit.info/javascript-sha256.html
-*  http://anmar.eu.org/projects/jssha2/
-*
-*  Original code by Angel Marin, Paul Johnston.
-*
-**/
+ * Secure Hash Algorithm (SHA256)
+ * http://www.webtoolkit.info/javascript-sha256.html
+ * http://anmar.eu.org/projects/jssha2/
+ *
+ * Original code by Angel Marin, Paul Johnston.
+ *
+ * Vendored from packages/sha/sha256.js for backward compatibility.
+ * This is the legacy pure-JS implementation kept for the deprecated SRP package.
+ */
 
-function SHA256(s){
+function _SHA256(s){
 
 	var chrsz   = 8;
 	var hexcase = 0;
@@ -44,14 +40,8 @@ function SHA256(s){
 		m[((l + 64 >> 9) << 4) + 15] = l;
 
 		for ( var i = 0; i<m.length; i+=16 ) {
-			a = HASH[0];
-			b = HASH[1];
-			c = HASH[2];
-			d = HASH[3];
-			e = HASH[4];
-			f = HASH[5];
-			g = HASH[6];
-			h = HASH[7];
+			a = HASH[0]; b = HASH[1]; c = HASH[2]; d = HASH[3];
+			e = HASH[4]; f = HASH[5]; g = HASH[6]; h = HASH[7];
 
 			for ( var j = 0; j<64; j++) {
 				if (j < 16) W[j] = m[j + i];
@@ -60,24 +50,14 @@ function SHA256(s){
 				T1 = safe_add(safe_add(safe_add(safe_add(h, Sigma1256(e)), Ch(e, f, g)), K[j]), W[j]);
 				T2 = safe_add(Sigma0256(a), Maj(a, b, c));
 
-				h = g;
-				g = f;
-				f = e;
-				e = safe_add(d, T1);
-				d = c;
-				c = b;
-				b = a;
-				a = safe_add(T1, T2);
+				h = g; g = f; f = e; e = safe_add(d, T1);
+				d = c; c = b; b = a; a = safe_add(T1, T2);
 			}
 
-			HASH[0] = safe_add(a, HASH[0]);
-			HASH[1] = safe_add(b, HASH[1]);
-			HASH[2] = safe_add(c, HASH[2]);
-			HASH[3] = safe_add(d, HASH[3]);
-			HASH[4] = safe_add(e, HASH[4]);
-			HASH[5] = safe_add(f, HASH[5]);
-			HASH[6] = safe_add(g, HASH[6]);
-			HASH[7] = safe_add(h, HASH[7]);
+			HASH[0] = safe_add(a, HASH[0]); HASH[1] = safe_add(b, HASH[1]);
+			HASH[2] = safe_add(c, HASH[2]); HASH[3] = safe_add(d, HASH[3]);
+			HASH[4] = safe_add(e, HASH[4]); HASH[5] = safe_add(f, HASH[5]);
+			HASH[6] = safe_add(g, HASH[6]); HASH[7] = safe_add(h, HASH[7]);
 		}
 		return HASH;
 	}
@@ -92,19 +72,9 @@ function SHA256(s){
 	}
 
 	function Utf8Encode(string) {
-		// METEOR change:
-		// The webtoolkit.info version of this code added this
-		// Utf8Encode function (which does seem necessary for dealing
-		// with arbitrary Unicode), but the following line seems
-		// problematic:
-		//
-		// string = string.replace(/\r\n/g,"\n");
 		var utftext = "";
-
 		for (var n = 0; n < string.length; n++) {
-
 			var c = string.charCodeAt(n);
-
 			if (c < 128) {
 				utftext += String.fromCharCode(c);
 			}
@@ -117,9 +87,7 @@ function SHA256(s){
 				utftext += String.fromCharCode(((c >> 6) & 63) | 128);
 				utftext += String.fromCharCode((c & 63) | 128);
 			}
-
 		}
-
 		return utftext;
 	}
 
@@ -135,9 +103,6 @@ function SHA256(s){
 
 	s = Utf8Encode(s);
 	return binb2hex(core_sha256(str2binb(s), s.length * chrsz));
-
 }
 
-/// METEOR WRAPPER
-return SHA256;
-})();
+export { _SHA256 as SHA256 };

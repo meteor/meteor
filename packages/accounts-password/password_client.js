@@ -7,15 +7,16 @@ const reportError = (error, callback) => {
    }
 };
 
-const internalLoginWithPassword = ({ selector, password, code, callback }) => {
+const internalLoginWithPassword = async ({ selector, password, code, callback }) => {
   if (typeof selector === 'string')
     if (!selector.includes('@')) selector = { username: selector };
     else selector = { email: selector };
+  const hashedPassword = await Accounts._hashPassword(password);
   Accounts.callLoginMethod({
     methodArguments: [
       {
         user: selector,
-        password: Accounts._hashPassword(password),
+        password: hashedPassword,
         code,
       },
     ],
@@ -57,8 +58,8 @@ Meteor.loginWithPassword = (selector, password, callback) => {
   return internalLoginWithPassword({ selector, password, callback });
 };
 
-Accounts._hashPassword = password => ({
-  digest: SHA256(password),
+Accounts._hashPassword = async (password) => ({
+  digest: await SHA256(password),
   algorithm: "sha-256"
 });
 
@@ -102,7 +103,7 @@ Meteor.loginWithPasswordAnd2faCode = (selector, password, code, callback) => {
  * @param {Function} [callback] Client only, optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.createUser = (options, callback) => {
+Accounts.createUser = async (options, callback) => {
   options = { ...options }; // we'll be modifying options
 
   if (typeof options.password !== 'string')
@@ -112,7 +113,7 @@ Accounts.createUser = (options, callback) => {
   }
 
   // Replace password with the hashed password.
-  options.password = Accounts._hashPassword(options.password);
+  options.password = await Accounts._hashPassword(options.password);
 
   Accounts.callLoginMethod({
     methodName: 'createUser',
@@ -160,7 +161,7 @@ Accounts.createUserAsync = (options) => {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.changePassword = (oldPassword, newPassword, callback) => {
+Accounts.changePassword = async (oldPassword, newPassword, callback) => {
   if (!Meteor.user()) {
     return reportError(new Error("Must be logged in to change password."), callback);
   }
@@ -173,10 +174,12 @@ Accounts.changePassword = (oldPassword, newPassword, callback) => {
     return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
   }
 
+  const oldHash = oldPassword ? await Accounts._hashPassword(oldPassword) : null;
+  const newHash = await Accounts._hashPassword(newPassword);
+
   Accounts.connection.apply(
     'changePassword',
-    [oldPassword ? Accounts._hashPassword(oldPassword) : null,
-     Accounts._hashPassword(newPassword)],
+    [oldHash, newHash],
     (error, result) => {
     if (error || !result) {
         // A normal error, not an error telling us to upgrade to bcrypt
@@ -231,7 +234,7 @@ Accounts.forgotPassword = (options, callback) => {
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage accounts-base
  */
-Accounts.resetPassword = (token, newPassword, callback) => {
+Accounts.resetPassword = async (token, newPassword, callback) => {
   if (!(typeof token === "string" || token instanceof String)) {
     return reportError(new Meteor.Error(400, "Token must be a string"), callback);
   }
@@ -244,9 +247,10 @@ Accounts.resetPassword = (token, newPassword, callback) => {
     return reportError(new Meteor.Error(400, "Password may not be empty"), callback);
   }
 
+  const hashedPassword = await Accounts._hashPassword(newPassword);
   Accounts.callLoginMethod({
     methodName: 'resetPassword',
-    methodArguments: [token, Accounts._hashPassword(newPassword)],
+    methodArguments: [token, hashedPassword],
     userCallback: callback});
 };
 

@@ -15,7 +15,6 @@ Package.onUse(function (api) {
     'ecmascript',
     'random',
     'check',
-    'sha'
   ], ['client', 'server']);
   api.export('SRP');
   api.mainModule('srp.js');
