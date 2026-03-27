@@ -361,6 +361,7 @@ jobs:
           fi
 
       - name: 📑 Upload test results
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
@@ -368,6 +369,7 @@ jobs:
           path: ./tmp/results
 
       - name: 📂 Upload core dumps
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
@@ -375,6 +377,7 @@ jobs:
           path: /tmp/core_dumps
 
       - name: 📊 Upload memory log
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           include-hidden-files: true
@@ -404,6 +407,7 @@ jobs:
   clean-up:
     name: 🧹 Clean Up
     needs: [meteor-tests]
+    if: always()
     runs-on: ubuntu-latest
 
     steps:
@@ -416,6 +420,14 @@ jobs:
       - name: Extract workspace
         run: |
           tar -xzf meteor.tar.gz
+
+      - name: Download JUnit results from test jobs
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          pattern: results-group-*
+          path: ./tmp/results
+          merge-multiple: true
 
       - name: Create Test Groups Dir
         run: |
