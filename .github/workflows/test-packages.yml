@@ -24,9 +24,9 @@ jobs:
       NODE_ENV: CI
 
     steps:
-      - name: Clean previous babel-cache (Permission fix)
-        run: sudo rm -rf .babel-cache
-        continue-on-error: true
+      - name: Fix workspace permissions
+        run: sudo chown -R "$(id -un):$(id -gn)" "$GITHUB_WORKSPACE" || true
+        working-directory: /tmp
 
       - name: Checkout repository
         uses: actions/checkout@v6
