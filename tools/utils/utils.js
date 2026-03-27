@@ -39,10 +39,12 @@ exports.parseUrl = function (str, defaults) {
   var parsed = new URL(str);
 
   // for consistency remove colon at the end of protocol
-  parsed.protocol = parsed.protocol.replace(/\:$/, '');
+  // Note: new URL().protocol always includes the trailing colon and
+  // re-appends it on assignment, so we strip it into a local variable.
+  var parsedProtocol = parsed.protocol.replace(/\:$/, '');
 
   var ret = {
-    protocol: hasScheme ? parsed.protocol : defaultProtocol,
+    protocol: hasScheme ? parsedProtocol : defaultProtocol,
     hostname: parsed.hostname || defaultHostname,
     port: parsed.port || defaultPort
   };
