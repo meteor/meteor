@@ -92,8 +92,7 @@ DDPCommon.stringifyDDP = function (msg) {
   // objects for subtrees that actually contain EJSON types (Date, Binary, etc.).
   const wire = {};
   let cleared = null;
-  const wireFields = {};
-  let hasAnyField = false;
+  let wireFields = null;
 
   for (const key in msg) {
     if (!hasOwn.call(msg, key)) continue;
@@ -105,8 +104,7 @@ DDPCommon.stringifyDDP = function (msg) {
           if (value === undefined) {
             (cleared ??= []).push(fieldKey);
           } else {
-            wireFields[fieldKey] = EJSON.toJSONValue(value);
-            hasAnyField = true;
+            (wireFields ??= {})[fieldKey] = EJSON.toJSONValue(value);
           }
         }
         break;
@@ -121,7 +119,7 @@ DDPCommon.stringifyDDP = function (msg) {
     }
   }
 
-  if (hasAnyField) wire.fields = wireFields;
+  if (wireFields !== null) wire.fields = wireFields;
   if (cleared !== null) wire.cleared = cleared;
 
   return JSON.stringify(wire);
