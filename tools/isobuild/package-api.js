@@ -523,7 +523,7 @@ export class PackageAPI {
     // versions referenced in versionsFrom(). Skip validation in checkout mode.
     const files = require('../fs/files.ts');
     if (files.inCheckout()) {
-      Console.debug('versionsFrom: skipping validation in checkout mode');
+      // Skip silently; catalog.official is not available in checkout mode
       return;
     }
 
