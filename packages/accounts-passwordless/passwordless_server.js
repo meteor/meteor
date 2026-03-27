@@ -106,7 +106,13 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
+  requestLoginTokenForUser: async (args) => {
+    check(args, {
+      selector: Accounts._userQueryValidator,
+      userData: Match.Optional(Object),
+      options: Match.Optional(Object),
+    });
+    const { selector, userData, options = {} } = args;
     let user = await Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
