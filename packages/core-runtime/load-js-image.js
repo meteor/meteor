@@ -20,16 +20,20 @@ const processNext = () => {
     return;
   }
 
-  const next = pending[pendingIndex++];
+  const { name, runImage } = pending[pendingIndex++];
   isProcessing = true;
 
-  const config = next.runImage();
+  // runImage must be called as a standalone function (not a method) so that
+  // `this` inside the linked package code is the global object (sloppy mode).
+  // Package code like meteor/global.js does `global = this` and propagates
+  // `this` via .call(this) to each file wrapper.
+  const config = runImage();
   runEagerModules(config, (mainModuleExports) => {
     const exports = config.export ? config.export() : {};
     if (config.mainModulePath) {
-      Package._define(next.name, mainModuleExports, exports);
+      Package._define(name, mainModuleExports, exports);
     } else {
-      Package._define(next.name, exports);
+      Package._define(name, exports);
     }
 
     isProcessing = false;
