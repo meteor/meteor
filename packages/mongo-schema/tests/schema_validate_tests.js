@@ -1,6 +1,6 @@
 // packages/mongo-schema/tests/schema_validate_tests.js
 import { Tinytest } from 'meteor/tinytest';
-import { MongoSchema, ValidationError } from 'meteor/mongo-schema';
+import { MongoSchema } from 'meteor/mongo-schema';
 
 Tinytest.add('validate - valid document passes', function (test) {
   const schema = new MongoSchema({ name: String, age: Number });

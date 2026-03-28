@@ -2,7 +2,7 @@
 import { Tinytest } from 'meteor/tinytest';
 import { Mongo } from 'meteor/mongo';
 import { Random } from 'meteor/random';
-import { MongoSchema, ValidationError } from 'meteor/mongo-schema';
+import { MongoSchema } from 'meteor/mongo-schema';
 
 Tinytest.add('integration - attachSchema adds schema', function (test) {
   const col = new Mongo.Collection(Random.id());
