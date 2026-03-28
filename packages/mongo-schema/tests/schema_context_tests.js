@@ -1,0 +1,64 @@
+// packages/mongo-schema/tests/schema_context_tests.js
+import { Tinytest } from 'meteor/tinytest';
+import { MongoSchema } from 'meteor/mongo-schema';
+
+Tinytest.add('context - newContext returns context', function (test) {
+  const schema = new MongoSchema({ name: String });
+  const ctx = schema.newContext();
+  test.isTrue(ctx !== undefined);
+  test.equal(typeof ctx.validate, 'function');
+});
+
+Tinytest.add('context - validate returns boolean', function (test) {
+  const schema = new MongoSchema({ name: String });
+  const ctx = schema.newContext();
+  test.isTrue(ctx.validate({ name: 'Alice' }));
+  test.isFalse(ctx.validate({}));
+});
+
+Tinytest.add('context - isValid reflects last validation', function (test) {
+  const schema = new MongoSchema({ name: String });
+  const ctx = schema.newContext();
+  ctx.validate({ name: 'Alice' });
+  test.isTrue(ctx.isValid());
+  ctx.validate({});
+  test.isFalse(ctx.isValid());
+});
+
+Tinytest.add('context - validationErrors returns error array', function (test) {
+  const schema = new MongoSchema({ name: String, age: Number });
+  const ctx = schema.newContext();
+  ctx.validate({});
+  const errors = ctx.validationErrors();
+  test.equal(errors.length, 2);
+});
+
+Tinytest.add('context - keyIsInvalid checks specific field', function (test) {
+  const schema = new MongoSchema({ name: String, age: { type: Number, optional: true } });
+  const ctx = schema.newContext();
+  ctx.validate({});
+  test.isTrue(ctx.keyIsInvalid('name'));
+  test.isFalse(ctx.keyIsInvalid('age'));
+});
+
+Tinytest.add('context - keyErrorMessage returns message', function (test) {
+  const schema = new MongoSchema({ name: String });
+  const ctx = schema.newContext();
+  ctx.validate({});
+  const msg = ctx.keyErrorMessage('name');
+  test.isTrue(msg.length > 0);
+});
+
+Tinytest.add('context - namedContext returns same instance', function (test) {
+  const schema = new MongoSchema({ name: String });
+  const ctx1 = schema.namedContext('form');
+  const ctx2 = schema.namedContext('form');
+  test.equal(ctx1, ctx2);
+});
+
+Tinytest.add('context - namedContext different names are different', function (test) {
+  const schema = new MongoSchema({ name: String });
+  const ctx1 = schema.namedContext('form1');
+  const ctx2 = schema.namedContext('form2');
+  test.notEqual(ctx1, ctx2);
+});
