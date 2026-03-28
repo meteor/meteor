@@ -27,12 +27,12 @@ export function collectErrors(ir, doc, options = {}) {
 
   // Run instance validators
   if (options._schema) {
-    const schema = options._schema;
-    const SchemaClass = schema.constructor;
-    const globalValidators = SchemaClass._globalValidators || [];
-    const globalDocValidators = SchemaClass._globalDocValidators || [];
+    const validators = options._validators || [];
+    const docValidators = options._docValidators || [];
+    const globalValidators = options._globalValidators || [];
+    const globalDocValidators = options._globalDocValidators || [];
 
-    for (const validator of [...schema._validators, ...globalValidators]) {
+    for (const validator of [...validators, ...globalValidators]) {
       for (const [key, desc] of ir) {
         if (key.includes('.')) continue;
         const context = {
@@ -52,7 +52,7 @@ export function collectErrors(ir, doc, options = {}) {
         }
       }
     }
-    for (const docValidator of [...schema._docValidators, ...globalDocValidators]) {
+    for (const docValidator of [...docValidators, ...globalDocValidators]) {
       const docErrors = docValidator(doc);
       if (Array.isArray(docErrors)) errors.push(...docErrors);
     }
@@ -141,10 +141,10 @@ function validateConstraints(key, desc, value, errors, options) {
 
   // denyInsert / denyUpdate
   if (desc.denyInsert && options.isInsert && value !== undefined) {
-    errors.push({ name: key, type: 'denyInsert', value, message: `${label} cannot be set during insert` });
+    errors.push({ name: key, type: ErrorTypes.DENY_INSERT, value, message: `${label} cannot be set during insert` });
   }
   if (desc.denyUpdate && options.isUpdate) {
-    errors.push({ name: key, type: 'denyUpdate', value, message: `${label} cannot be set during update` });
+    errors.push({ name: key, type: ErrorTypes.DENY_UPDATE, value, message: `${label} cannot be set during update` });
   }
 
   // allowedValues

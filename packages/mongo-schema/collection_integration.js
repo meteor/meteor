@@ -1,7 +1,5 @@
 // packages/mongo-schema/collection_integration.js
 import { MongoSchema } from './schema.js';
-import { clean } from './schema_clean.js';
-import { validate } from './schema_validate.js';
 
 export function setupCollectionIntegration() {
   if (typeof Package === 'undefined' || !Package.mongo) return;
@@ -54,11 +52,11 @@ function buildCleanOptions(operationOpts, operationType) {
 
   return {
     mutate: true,
-    filter: operationOpts.filter !== undefined ? operationOpts.filter : undefined,
-    autoConvert: operationOpts.autoConvert !== undefined ? operationOpts.autoConvert : undefined,
-    removeEmptyStrings: operationOpts.removeEmptyStrings !== undefined ? operationOpts.removeEmptyStrings : undefined,
-    trimStrings: operationOpts.trimStrings !== undefined ? operationOpts.trimStrings : undefined,
-    getAutoValues: operationOpts.getAutoValues !== undefined ? operationOpts.getAutoValues : undefined,
+    filter: operationOpts.filter,
+    autoConvert: operationOpts.autoConvert,
+    removeEmptyStrings: operationOpts.removeEmptyStrings,
+    trimStrings: operationOpts.trimStrings,
+    getAutoValues: operationOpts.getAutoValues,
     isModifier: operationType !== 'insert',
     isUpsert: operationType === 'upsert',
     extendAutoValueContext: ctx,
@@ -148,7 +146,7 @@ async function applyDatabaseEnforcement(collection, options) {
   // Use raw MongoDB driver to check/apply
   Meteor.startup(async () => {
     try {
-      const db = collection._driver.mongo.db || MongoInternals.defaultRemoteCollectionDriver().mongo.db;
+      const db = collection.rawDatabase();
 
       // Check schema versions collection
       const versionsCol = db.collection('_meteor_schema_versions');

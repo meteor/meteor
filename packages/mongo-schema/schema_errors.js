@@ -18,6 +18,8 @@ export const ErrorTypes = {
   EXPECTED_TYPE: 'expectedType',
   FAILED_REGULAR_EXPRESSION: 'regEx',
   KEY_NOT_IN_SCHEMA: 'keyNotInSchema',
+  DENY_INSERT: 'denyInsert',
+  DENY_UPDATE: 'denyUpdate',
 };
 
 /**

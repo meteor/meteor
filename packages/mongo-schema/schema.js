@@ -83,7 +83,14 @@ export class MongoSchema {
   }
 
   validate(doc, options = {}) {
-    validateDoc(this._ir, doc, { ...options, _schema: this });
+    validateDoc(this._ir, doc, {
+      ...options,
+      _schema: this,
+      _validators: this._validators,
+      _docValidators: this._docValidators,
+      _globalValidators: MongoSchema._globalValidators,
+      _globalDocValidators: MongoSchema._globalDocValidators,
+    });
   }
 
   newContext() {

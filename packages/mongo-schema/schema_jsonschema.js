@@ -58,7 +58,7 @@ function compileField(ir, key, desc) {
 
   // Constraints
   if (typeof desc.min === 'number' && typeName !== 'array') {
-    if (desc.resolvedType.name === 'string') {
+    if (typeName === 'string') {
       result.minLength = desc.min;
     } else {
       result.minimum = desc.min;
@@ -66,7 +66,7 @@ function compileField(ir, key, desc) {
     }
   }
   if (typeof desc.max === 'number' && typeName !== 'array') {
-    if (desc.resolvedType.name === 'string') {
+    if (typeName === 'string') {
       result.maxLength = desc.max;
     } else {
       result.maximum = desc.max;

@@ -107,16 +107,19 @@ function addField(ir, key, def, requiredByDefault, humanizeAutoLabels) {
 }
 
 function buildChildren(ir) {
+  // Build a parent-to-children map in O(N) instead of O(N^2)
+  const childrenMap = new Map();
+  for (const key of ir.keys()) {
+    const dotIdx = key.lastIndexOf('.');
+    if (dotIdx === -1) continue;
+    const parentKey = key.substring(0, dotIdx);
+    if (!childrenMap.has(parentKey)) childrenMap.set(parentKey, []);
+    childrenMap.get(parentKey).push(key);
+  }
+
   for (const [key, desc] of ir) {
     if (desc.resolvedType.name === 'object' || desc.resolvedType.name === 'schema') {
-      const children = [];
-      const prefix = key + '.';
-      for (const otherKey of ir.keys()) {
-        if (otherKey.startsWith(prefix) && !otherKey.slice(prefix.length).includes('.')) {
-          children.push(otherKey);
-        }
-      }
-      desc.children = children;
+      desc.children = childrenMap.get(key) || [];
     }
     if (desc.resolvedType.name === 'array') {
       const itemKey = key + '.$';
