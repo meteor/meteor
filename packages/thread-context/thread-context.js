@@ -20,15 +20,21 @@ export { createMethodProxy } from './proxies/method-proxy.js';
 export { BridgeClient } from './bridge-client.js';
 export { hydrateContext } from './worker.js';
 
+let _settingsSnapshot = null;
+
 export function createThreadContext(options = {}) {
   const host = new BridgeHost(options);
 
+  if (!_settingsSnapshot) {
+    _settingsSnapshot = EJSON.clone(Meteor.settings);
+  }
+
   return {
     port: host.transferPort,
-    settings: EJSON.clone(Meteor.settings),
-    userId: options.userId ?? null,
-    connectionId: options.connectionId ?? null,
-    callTimeout: options.callTimeout ?? 60000,
+    settings: _settingsSnapshot,
+    userId: host.context.userId,
+    connectionId: host.context.connectionId,
+    callTimeout: host.callTimeout,
     destroy: () => host.destroy(),
   };
 }

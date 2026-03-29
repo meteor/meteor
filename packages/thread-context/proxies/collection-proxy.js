@@ -18,14 +18,14 @@ function createCursorProxy(client, collectionName, selector, options) {
     },
 
     async forEachAsync(callback) {
-      const docs = await bridgeCursorOp('forEachAsync');
+      const docs = await bridgeCursorOp('fetchAsync');
       for (const doc of docs) {
         await callback(doc);
       }
     },
 
     async mapAsync(callback) {
-      const docs = await bridgeCursorOp('mapAsync');
+      const docs = await bridgeCursorOp('fetchAsync');
       const results = [];
       for (const doc of docs) {
         results.push(await callback(doc));

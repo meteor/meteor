@@ -1,4 +1,3 @@
-import { randomUUID } from 'crypto';
 import {
   BridgeError,
   BridgeTimeoutError,
@@ -6,6 +5,8 @@ import {
   deserializeError,
 } from './errors.js';
 import { PROTOCOL_VERSION } from './protocol.js';
+
+let _seq = 0;
 
 export class BridgeClient {
   constructor(port, { callTimeout = 60000 } = {}) {
@@ -21,7 +22,7 @@ export class BridgeClient {
 
   call(msg) {
     return new Promise((resolve, reject) => {
-      const id = randomUUID();
+      const id = String(++_seq);
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new BridgeTimeoutError(
@@ -33,7 +34,9 @@ export class BridgeClient {
       this.pending.set(id, { resolve, reject, timer });
 
       try {
-        this.port.postMessage({ v: PROTOCOL_VERSION, id, ...msg });
+        msg.v = PROTOCOL_VERSION;
+        msg.id = id;
+        this.port.postMessage(msg);
       } catch (err) {
         clearTimeout(timer);
         this.pending.delete(id);

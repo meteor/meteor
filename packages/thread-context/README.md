@@ -80,7 +80,7 @@ Creates a bridge host and returns a transfer-ready context object.
 **Returns:** `{ port, settings, userId, connectionId, callTimeout, destroy }`
 
 - `port` — `MessagePort` to transfer into the worker via `workerData` + `transferList`
-- `settings` — Deep clone of `Meteor.settings` (pass via `workerData`)
+- `settings` — Snapshot of `Meteor.settings` (cloned once, shared across contexts; pass via `workerData`)
 - `destroy()` — Closes the bridge and cleans up. Call on worker exit.
 
 ### `hydrateContext(port, options?)`

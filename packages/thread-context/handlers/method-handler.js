@@ -1,10 +1,8 @@
-import { BridgeContextError } from '../errors.js';
-import { createConnectionProxy } from './connection-proxy.js';
+import { createBridgeInvocation } from './invocation.js';
 
 export class MethodHandler {
   constructor(context) {
-    this.userId = context.userId;
-    this.connectionId = context.connectionId;
+    this.invocation = createBridgeInvocation(context);
   }
 
   async handle(msg) {
@@ -15,21 +13,8 @@ export class MethodHandler {
       throw new Meteor.Error(404, `Method '${methodName}' not found`);
     }
 
-    const invocation = new DDPCommon.MethodInvocation({
-      name: methodName,
-      isSimulation: false,
-      userId: this.userId,
-      setUserId: () => {
-        throw new BridgeContextError('setUserId cannot be called from worker thread');
-      },
-      connection: this.connectionId
-        ? createConnectionProxy(this.connectionId)
-        : null,
-      unblock: () => {},
-    });
-
-    return await DDP._CurrentMethodInvocation.withValue(invocation, async () => {
-      return await handler.apply(invocation, methodArgs);
+    return await DDP._CurrentMethodInvocation.withValue(this.invocation, async () => {
+      return await handler.apply(this.invocation, methodArgs);
     });
   }
 }

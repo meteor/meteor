@@ -72,7 +72,7 @@ export class BridgeHost {
     } catch {
       try {
         this.port.postMessage({ v: PROTOCOL_VERSION, id, error: {
-          type: 'BridgeSerializationError',
+          type: BridgeSerializationError.name,
           message: 'Bridge error could not be serialized',
           stack: '',
         }});
