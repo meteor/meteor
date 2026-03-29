@@ -128,7 +128,7 @@ function compileField(ir, key, desc) {
   }
 
   // Nested object
-  if (typeName === 'object' && desc.children && desc.children.length > 0 && !desc.blackbox) {
+  if ((typeName === 'object' || typeName === 'schema') && desc.children && desc.children.length > 0 && !desc.blackbox) {
     const childRequired = [];
     const childProperties = {};
     for (const childKey of desc.children) {

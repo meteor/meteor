@@ -522,7 +522,7 @@ function applyDefaultValues(ir, doc, prefix) {
 
   // Recurse into nested objects
   for (const [key, desc] of ir) {
-    if (desc.resolvedType && desc.resolvedType.name === 'object' && desc.children) {
+    if (desc.resolvedType && (desc.resolvedType.name === 'object' || desc.resolvedType.name === 'schema') && desc.children) {
       const localKey = prefix ? key.slice(prefix.length + 1) : key;
       if (!localKey.includes('.') && doc[localKey] && typeof doc[localKey] === 'object') {
         applyDefaultValues(ir, doc[localKey], key);
@@ -631,7 +631,7 @@ function applyAutoValues(ir, doc, options, prefix, rootDoc) {
 
   // Recurse into nested objects
   for (const [key, desc] of ir) {
-    if (desc.resolvedType && desc.resolvedType.name === 'object' && desc.children) {
+    if (desc.resolvedType && (desc.resolvedType.name === 'object' || desc.resolvedType.name === 'schema') && desc.children) {
       const localKey = prefix ? key.slice(prefix.length + 1) : key;
       if (!localKey.includes('.') && doc[localKey] && typeof doc[localKey] === 'object') {
         applyAutoValues(ir, doc[localKey], options, key, rootDoc);

@@ -198,7 +198,7 @@ function validateField(ir, key, desc, rootDoc, value, errors, options) {
   }
 
   // Recurse into nested objects
-  if (desc.resolvedType.name === 'object' && desc.children && !desc.blackbox) {
+  if ((desc.resolvedType.name === 'object' || desc.resolvedType.name === 'schema') && desc.children && !desc.blackbox) {
     for (const childKey of desc.children) {
       const childDesc = ir.get(childKey);
       const childLocalKey = childKey.slice(key.length + 1);
