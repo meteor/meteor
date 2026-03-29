@@ -166,4 +166,63 @@ Tinytest.addAsync('thread-context - CollectionHandler - unknown operation', asyn
   });
 });
 
+Tinytest.addAsync('thread-context - CollectionHandler - find.countAsync on empty collection', async function (test) {
+  const { CollectionHandler } = require('meteor/thread-context');
+  await TestCollection.removeAsync({});
+
+  const handler = new CollectionHandler({ userId: null, connectionId: null });
+  const count = await handler.handle({
+    collectionName: testCollName,
+    op: 'find.countAsync',
+    args: [{}],
+  });
+
+  test.equal(count, 0);
+});
+
+Tinytest.addAsync('thread-context - CollectionHandler - aggregate returns empty array for no matches', async function (test) {
+  const { CollectionHandler } = require('meteor/thread-context');
+  await TestCollection.removeAsync({});
+
+  const handler = new CollectionHandler({ userId: null, connectionId: null });
+  const result = await handler.handle({
+    collectionName: testCollName,
+    op: 'aggregate',
+    args: [[{ $match: { nonexistent_field: 'nope' } }]],
+  });
+
+  test.isTrue(Array.isArray(result));
+  test.equal(result.length, 0);
+});
+
+Tinytest.addAsync('thread-context - CollectionHandler - findOneAsync returns undefined for no match', async function (test) {
+  const { CollectionHandler } = require('meteor/thread-context');
+  await TestCollection.removeAsync({});
+
+  const handler = new CollectionHandler({ userId: null, connectionId: null });
+  const result = await handler.handle({
+    collectionName: testCollName,
+    op: 'findOneAsync',
+    args: [{ _id: 'does-not-exist' }],
+  });
+
+  test.equal(result, undefined);
+});
+
+Tinytest.addAsync('thread-context - CollectionHandler - works with connectionId', async function (test) {
+  const { CollectionHandler } = require('meteor/thread-context');
+  await TestCollection.removeAsync({});
+  await TestCollection.insertAsync({ _id: 'conn1', val: 'withConn' });
+
+  // This exercises the connectionProxy branch in invocation.js
+  const handler = new CollectionHandler({ userId: 'u1', connectionId: 'conn-test-123' });
+  const result = await handler.handle({
+    collectionName: testCollName,
+    op: 'findOneAsync',
+    args: [{ _id: 'conn1' }],
+  });
+
+  test.equal(result.val, 'withConn');
+});
+
 } // end Meteor.isServer

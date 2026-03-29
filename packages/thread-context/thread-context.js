@@ -25,6 +25,8 @@ export { createCollectionProxy } from './proxies/collection-proxy.js';
 export { createMethodProxy } from './proxies/method-proxy.js';
 export { BridgeClient } from './bridge-client.js';
 export { hydrateContext } from './worker.js';
+export { createConnectionProxy } from './handlers/connection-proxy.js';
+export { createBridgeInvocation } from './handlers/invocation.js';
 
 /**
  * @typedef {Object} ThreadContext

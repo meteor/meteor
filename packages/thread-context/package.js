@@ -32,5 +32,7 @@ Package.onTest(function (api) {
   api.addFiles('tests/collection-handler-test.js', 'server');
   api.addFiles('tests/method-handler-test.js', 'server');
   api.addFiles('tests/cursor-proxy-test.js', 'server');
+  api.addFiles('tests/connection-proxy-test.js', 'server');
+  api.addFiles('tests/hydrate-test.js', 'server');
   api.addFiles('tests/shutdown-test.js', 'server');
 });

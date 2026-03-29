@@ -90,3 +90,41 @@ Tinytest.add('thread-context - errors - deserialize unknown type', function (tes
   test.instanceOf(deserialized, BridgeError);
   test.equal(deserialized.message, 'unknown');
 });
+
+Tinytest.add('thread-context - errors - stack is preserved across round-trip', function (test) {
+  const original = new BridgeTimeoutError('timeout stack test');
+  const serialized = serializeError(original);
+  test.isTrue(typeof serialized.stack === 'string');
+  test.isTrue(serialized.stack.length > 0);
+
+  const deserialized = deserializeError(serialized);
+  test.equal(deserialized.stack, original.stack);
+});
+
+Tinytest.add('thread-context - errors - Meteor.Error stack is preserved across round-trip', function (test) {
+  const original = new Meteor.Error(500, 'Server error');
+  const serialized = serializeError(original);
+  test.isTrue(typeof serialized.stack === 'string');
+
+  const deserialized = deserializeError(serialized);
+  test.equal(deserialized.stack, serialized.stack);
+});
+
+Tinytest.add('thread-context - errors - serialize/deserialize all BridgeError subtypes', function (test) {
+  const subtypes = [
+    [BridgeAccessError, 'BridgeAccessError'],
+    [BridgeSerializationError, 'BridgeSerializationError'],
+    [BridgeContextError, 'BridgeContextError'],
+  ];
+
+  for (const [ErrorClass, expectedType] of subtypes) {
+    const original = new ErrorClass(`test ${expectedType}`);
+    const serialized = serializeError(original);
+    test.equal(serialized.type, expectedType);
+
+    const deserialized = deserializeError(serialized);
+    test.instanceOf(deserialized, ErrorClass);
+    test.instanceOf(deserialized, BridgeError);
+    test.equal(deserialized.message, `test ${expectedType}`);
+  }
+});

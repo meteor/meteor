@@ -129,4 +129,61 @@ Tinytest.add('thread-context - CollectionProxy - non-string property returns und
   test.equal(Collections[Symbol.iterator], undefined);
 });
 
+Tinytest.add('thread-context - CollectionProxy - inner proxy is cached per collection name', function (test) {
+  const { createCollectionProxy } = require('meteor/thread-context');
+  const mockClient = { call: () => Promise.resolve(null) };
+  const Collections = createCollectionProxy(mockClient);
+
+  const first = Collections.MyCollection;
+  const second = Collections.MyCollection;
+  test.equal(first, second); // same Proxy reference
+});
+
+Tinytest.addAsync('thread-context - CursorProxy - forEachAsync executes callbacks sequentially', async function (test) {
+  const { createCollectionProxy } = require('meteor/thread-context');
+
+  const mockClient = {
+    call: () => Promise.resolve([{ _id: '1' }, { _id: '2' }, { _id: '3' }])
+  };
+
+  const Collections = createCollectionProxy(mockClient);
+  const order = [];
+  await Collections.TestCol.find({}).forEachAsync(async (doc) => {
+    // Simulate async work — each callback should complete before the next starts
+    await new Promise(resolve => setTimeout(resolve, 5));
+    order.push(doc._id);
+  });
+
+  test.equal(order, ['1', '2', '3']);
+});
+
+Tinytest.addAsync('thread-context - CursorProxy - mapAsync executes callbacks sequentially', async function (test) {
+  const { createCollectionProxy } = require('meteor/thread-context');
+
+  const mockClient = {
+    call: () => Promise.resolve([{ _id: '1', v: 10 }, { _id: '2', v: 20 }])
+  };
+
+  const Collections = createCollectionProxy(mockClient);
+  const order = [];
+  const results = await Collections.TestCol.find({}).mapAsync(async (doc) => {
+    await new Promise(resolve => setTimeout(resolve, 5));
+    order.push(doc._id);
+    return doc.v * 3;
+  });
+
+  test.equal(order, ['1', '2']);
+  test.equal(results, [30, 60]);
+});
+
+Tinytest.add('thread-context - CollectionProxy - unknown op returns undefined', function (test) {
+  const { createCollectionProxy } = require('meteor/thread-context');
+  const mockClient = { call: () => Promise.resolve(null) };
+  const Collections = createCollectionProxy(mockClient);
+
+  test.equal(Collections.TestCol.notAMethod, undefined);
+  test.equal(Collections.TestCol.find, typeof 'function');
+  test.equal(Collections.TestCol.randomProp, undefined);
+});
+
 } // end Meteor.isServer
