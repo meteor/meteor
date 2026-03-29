@@ -82,4 +82,19 @@ Tinytest.addAsync('thread-context - MethodHandler - setUserId throws BridgeConte
   }
 });
 
+Tinytest.addAsync('thread-context - MethodHandler - concurrent calls get independent invocations', async function (test) {
+  const { MethodHandler } = require('meteor/thread-context');
+  const handler = new MethodHandler({ userId: 'concurrent-user', connectionId: null });
+
+  const [r1, r2] = await Promise.all([
+    handler.handle({ methodName: 'threadContext.test.echo', methodArgs: ['first'] }),
+    handler.handle({ methodName: 'threadContext.test.echo', methodArgs: ['second'] }),
+  ]);
+
+  test.equal(r1.echo, 'first');
+  test.equal(r1.userId, 'concurrent-user');
+  test.equal(r2.echo, 'second');
+  test.equal(r2.userId, 'concurrent-user');
+});
+
 } // end Meteor.isServer

@@ -15,8 +15,7 @@ export class MethodHandler {
    * @param {{ userId: string|null, connectionId: string|null }} context
    */
   constructor(context) {
-    /** @type {DDPCommon.MethodInvocation} */
-    this.invocation = createBridgeInvocation(context);
+    this.context = context;
   }
 
   /**
@@ -33,8 +32,9 @@ export class MethodHandler {
       throw new Meteor.Error(404, `Method '${methodName}' not found`);
     }
 
-    return await DDP._CurrentMethodInvocation.withValue(this.invocation, async () => {
-      return await handler.apply(this.invocation, methodArgs);
+    const invocation = createBridgeInvocation(this.context);
+    return await DDP._CurrentMethodInvocation.withValue(invocation, async () => {
+      return await handler.apply(invocation, methodArgs);
     });
   }
 }

@@ -49,6 +49,16 @@ import { MeteorError } from './errors.js';
  * const docs = await Collections.MyCol.find({ active: true }).fetchAsync();
  * await Meteor.callAsync('processResults', docs);
  */
+function deepFreeze(obj) {
+  Object.freeze(obj);
+  for (const value of Object.values(obj)) {
+    if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+      deepFreeze(value);
+    }
+  }
+  return obj;
+}
+
 export function hydrateContext(port, options = {}) {
   const client = new BridgeClient(port, {
     callTimeout: options.callTimeout ?? 60000,
@@ -59,7 +69,7 @@ export function hydrateContext(port, options = {}) {
 
   const Meteor = {
     callAsync: methodProxy.callAsync,
-    settings: Object.freeze(options.settings || {}),
+    settings: deepFreeze(options.settings || {}),
     userId: options.userId ?? null,
     isServer: true,
     isSimulation: false,

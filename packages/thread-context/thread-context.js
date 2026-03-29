@@ -10,7 +10,6 @@ import { BridgeHost } from './bridge-host.js';
 export {
   BridgeError,
   BridgeTimeoutError,
-  BridgeAccessError,
   BridgeSerializationError,
   BridgeContextError,
   MeteorError,
@@ -59,6 +58,15 @@ let _settingsSnapshot = null;
  * });
  * worker.on('exit', () => ctx.destroy());
  */
+/**
+ * Resets the cached settings snapshot, forcing the next
+ * `createThreadContext()` to re-clone `Meteor.settings`.
+ * Useful for testing and hot-reload scenarios.
+ */
+export function resetSettingsSnapshot() {
+  _settingsSnapshot = null;
+}
+
 export function createThreadContext(options = {}) {
   const host = new BridgeHost(options);
 

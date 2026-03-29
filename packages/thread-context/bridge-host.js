@@ -66,6 +66,9 @@ export class BridgeHost {
     this.registerHandler(MSG_TYPE.METHOD, new MethodHandler(this.context));
 
     this.port.on('message', Meteor.bindEnvironment((msg) => this._dispatch(msg)));
+    this.port.on('error', () => {
+      if (!this.destroyed) this.destroy();
+    });
 
     registerBridge(this);
   }
@@ -87,6 +90,15 @@ export class BridgeHost {
    */
   async _dispatch(msg) {
     if (this.destroyed) return;
+
+    if (msg.v !== PROTOCOL_VERSION) {
+      this._postError(msg.id, new BridgeError(
+        `Protocol version mismatch: expected ${PROTOCOL_VERSION}, got ${msg.v}`
+      ));
+      return;
+    }
+
+    if (!msg.id) return;
 
     try {
       if (this.onMessage) {

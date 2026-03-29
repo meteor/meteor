@@ -1,7 +1,6 @@
 import {
   BridgeError,
   BridgeTimeoutError,
-  BridgeAccessError,
   BridgeSerializationError,
   BridgeContextError,
   MeteorError,
@@ -17,7 +16,6 @@ Tinytest.add('thread-context - errors - hierarchy', function (test) {
   test.equal(err.message, 'test');
 
   test.instanceOf(new BridgeTimeoutError('t'), BridgeError);
-  test.instanceOf(new BridgeAccessError('t'), BridgeError);
   test.instanceOf(new BridgeSerializationError('t'), BridgeError);
   test.instanceOf(new BridgeContextError('t'), BridgeError);
 });
@@ -112,7 +110,6 @@ Tinytest.add('thread-context - errors - Meteor.Error stack is preserved across r
 
 Tinytest.add('thread-context - errors - serialize/deserialize all BridgeError subtypes', function (test) {
   const subtypes = [
-    [BridgeAccessError, 'BridgeAccessError'],
     [BridgeSerializationError, 'BridgeSerializationError'],
     [BridgeContextError, 'BridgeContextError'],
   ];

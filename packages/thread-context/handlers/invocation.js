@@ -15,9 +15,8 @@ function throwSetUserId() {
 function noop() {}
 
 /**
- * Creates a reusable `DDPCommon.MethodInvocation` for a bridge context.
- * Both `CollectionHandler` and `MethodHandler` cache this on their instance
- * so it is allocated once per bridge, not per call.
+ * Creates a `DDPCommon.MethodInvocation` for a bridge context.
+ * Called once per `handle()` dispatch to ensure fresh per-call state.
  *
  * @param {{ userId: string|null, connectionId: string|null }} context
  * @returns {DDPCommon.MethodInvocation}

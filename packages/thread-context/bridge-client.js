@@ -35,6 +35,7 @@ export class BridgeClient {
 
     this.port.on('message', (msg) => this._onResponse(msg));
     this.port.on('close', () => this._onPortClose());
+    this.port.on('error', () => this._onPortClose());
 
     // Prevent the port from keeping the worker event loop alive
     this.port.unref();
@@ -85,6 +86,8 @@ export class BridgeClient {
    * @private
    */
   _onResponse(msg) {
+    if (msg.v !== PROTOCOL_VERSION) return;
+
     const entry = this.pending.get(msg.id);
     if (!entry) return;
 

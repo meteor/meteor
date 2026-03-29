@@ -1,5 +1,6 @@
 import {
   createThreadContext,
+  resetSettingsSnapshot,
   hydrateContext,
   BridgeClient,
   createCollectionProxy,
@@ -47,6 +48,21 @@ Tinytest.add('thread-context - hydrateContext - Meteor.settings is frozen', func
   // Mutation should be silently ignored (strict mode would throw)
   try { M.settings.newProp = 'x'; } catch { /* strict mode */ }
   test.equal(M.settings.newProp, undefined);
+
+  ctx.destroy();
+});
+
+Tinytest.add('thread-context - hydrateContext - Meteor.settings is deeply frozen', function (test) {
+  const ctx = createThreadContext();
+  const settings = { public: { nested: { deep: 'val' } } };
+  const { Meteor: M } = hydrateContext(ctx.port, { settings });
+
+  test.isTrue(Object.isFrozen(M.settings));
+  test.isTrue(Object.isFrozen(M.settings.public));
+  test.isTrue(Object.isFrozen(M.settings.public.nested));
+
+  try { M.settings.public.newProp = 'mutated'; } catch { /* strict mode */ }
+  test.equal(M.settings.public.newProp, undefined);
 
   ctx.destroy();
 });
@@ -264,6 +280,20 @@ Tinytest.addAsync('thread-context - bridge - connectionId is forwarded without e
   test.equal(result.userId, 'connUser');
 
   ctx.destroy();
+});
+
+Tinytest.add('thread-context - resetSettingsSnapshot - forces re-clone', function (test) {
+  const ctx1 = createThreadContext();
+  const settings1 = ctx1.settings;
+  ctx1.destroy();
+
+  resetSettingsSnapshot();
+
+  const ctx2 = createThreadContext();
+  const settings2 = ctx2.settings;
+  ctx2.destroy();
+
+  test.isTrue(settings1 !== settings2);
 });
 
 } // end Meteor.isServer

@@ -19,8 +19,7 @@ export class CollectionHandler {
    * @param {{ userId: string|null, connectionId: string|null }} context
    */
   constructor(context) {
-    /** @type {DDPCommon.MethodInvocation} */
-    this.invocation = createBridgeInvocation(context);
+    this.context = context;
   }
 
   /**
@@ -35,7 +34,8 @@ export class CollectionHandler {
       throw new BridgeError(`Collection '${msg.collectionName}' not found`);
     }
 
-    return await DDP._CurrentMethodInvocation.withValue(this.invocation, () => this._execute(msg, collection));
+    const invocation = createBridgeInvocation(this.context);
+    return await DDP._CurrentMethodInvocation.withValue(invocation, () => this._execute(msg, collection));
   }
 
   /**

@@ -7,7 +7,6 @@ export class BridgeError extends Error {
 }
 
 export class BridgeTimeoutError extends BridgeError {}
-export class BridgeAccessError extends BridgeError {}
 export class BridgeSerializationError extends BridgeError {}
 export class BridgeContextError extends BridgeError {}
 
@@ -70,6 +69,49 @@ interface BridgeMessage {
 
 export function createThreadContext(options?: ThreadContextOptions): ThreadContext;
 
+// --- Bridge Infrastructure ---
+
+export class BridgeHost {
+  constructor(options?: ThreadContextOptions);
+  port: MessagePort;
+  transferPort: MessagePort;
+  context: { userId: string | null; connectionId: string | null };
+  callTimeout: number;
+  destroyed: boolean;
+  registerHandler(type: string, handler: { handle(msg: BridgeMessage): Promise<any> }): void;
+  destroy(): void;
+}
+
+export class BridgeClient {
+  constructor(port: MessagePort, options?: { callTimeout?: number });
+  port: MessagePort;
+  call(msg: { type: string; [key: string]: any }): Promise<any>;
+}
+
+// --- Handlers ---
+
+export class CollectionHandler {
+  constructor(context: { userId: string | null; connectionId: string | null });
+  handle(msg: BridgeMessage): Promise<any>;
+}
+
+export class MethodHandler {
+  constructor(context: { userId: string | null; connectionId: string | null });
+  handle(msg: BridgeMessage): Promise<any>;
+}
+
+// --- Proxy Factories ---
+
+export function createCollectionProxy(client: BridgeClient): CollectionsProxy;
+export function createMethodProxy(client: BridgeClient): {
+  callAsync(methodName: string, ...args: any[]): Promise<any>;
+};
+export function createConnectionProxy(connectionId: string): { readonly id: string };
+export function createBridgeInvocation(context: {
+  userId: string | null;
+  connectionId: string | null;
+}): any;
+
 // --- Worker-Side ---
 
 interface HydrateOptions {
@@ -122,3 +164,4 @@ export function hydrateContext(port: MessagePort, options?: HydrateOptions): Hyd
 
 export function getActiveBridgeCount(): number;
 export function destroyAllBridges(): void;
+export function resetSettingsSnapshot(): void;

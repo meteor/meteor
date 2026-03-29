@@ -164,7 +164,6 @@ Errors thrown on the main thread are serialized and re-thrown in the worker with
 |-------------|------------|
 | `BridgeError` | General bridge failure |
 | `BridgeTimeoutError` | Call exceeds `callTimeout` |
-| `BridgeAccessError` | Collection or method blocked |
 | `BridgeSerializationError` | Non-cloneable value in arguments or result |
 | `BridgeContextError` | Forbidden operation (`setUserId`, `connection.*` access) |
 

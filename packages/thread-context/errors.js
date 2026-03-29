@@ -26,17 +26,6 @@ class BridgeTimeoutError extends BridgeError {
 }
 
 /**
- * Thrown when a collection or method is blocked by an allowlist.
- * @extends BridgeError
- */
-class BridgeAccessError extends BridgeError {
-  constructor(message) {
-    super(message);
-    this.name = 'BridgeAccessError';
-  }
-}
-
-/**
  * Thrown when a value cannot be serialized across the thread boundary
  * via structured clone (e.g. functions, Symbols, circular references).
  * @extends BridgeError
@@ -94,7 +83,6 @@ class MeteorError extends Error {
 /** @type {Record<string, typeof BridgeError>} */
 const BRIDGE_ERROR_CLASSES = {
   BridgeTimeoutError,
-  BridgeAccessError,
   BridgeSerializationError,
   BridgeContextError,
   BridgeError,
@@ -159,7 +147,6 @@ function deserializeError(obj) {
 export {
   BridgeError,
   BridgeTimeoutError,
-  BridgeAccessError,
   BridgeSerializationError,
   BridgeContextError,
   MeteorError,

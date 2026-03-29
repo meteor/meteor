@@ -182,7 +182,7 @@ Tinytest.add('thread-context - CollectionProxy - unknown op returns undefined', 
   const Collections = createCollectionProxy(mockClient);
 
   test.equal(Collections.TestCol.notAMethod, undefined);
-  test.equal(Collections.TestCol.find, typeof 'function');
+  test.equal(typeof Collections.TestCol.find, 'function');
   test.equal(Collections.TestCol.randomProp, undefined);
 });
 
