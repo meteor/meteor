@@ -63,6 +63,7 @@ Tinytest.add('migration - validate throws ValidationError', function (test) {
   const schema = new MongoSchema({ name: String });
   try {
     schema.validate({});
+    test.fail('Expected ValidationError to be thrown');
   } catch (e) {
     test.instanceOf(e, ValidationError);
     test.equal(e.error, 'validation-error');

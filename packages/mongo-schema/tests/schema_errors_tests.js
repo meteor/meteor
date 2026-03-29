@@ -20,6 +20,12 @@ Tinytest.add('errors - ErrorTypes constants exist', function (test) {
   test.equal(MongoSchema.ErrorTypes.VALUE_NOT_ALLOWED, 'notAllowed');
   test.equal(MongoSchema.ErrorTypes.FAILED_REGULAR_EXPRESSION, 'regEx');
   test.equal(MongoSchema.ErrorTypes.KEY_NOT_IN_SCHEMA, 'keyNotInSchema');
+  test.equal(MongoSchema.ErrorTypes.DENY_INSERT, 'denyInsert');
+  test.equal(MongoSchema.ErrorTypes.DENY_UPDATE, 'denyUpdate');
+});
+
+Tinytest.add('errors - ErrorTypes is frozen', function (test) {
+  test.isTrue(Object.isFrozen(MongoSchema.ErrorTypes));
 });
 
 Tinytest.add('errors - ValidationError is constructable', function (test) {

@@ -1,6 +1,54 @@
 // packages/mongo-schema/schema_validate.js
-import { ErrorTypes, ValidationError } from './schema_errors.js';
 
+/**
+ * @module mongo-schema/schema_validate
+ * @summary Validation engine for MongoSchema. Validates plain documents and
+ * MongoDB update modifiers against the schema IR, collecting structured error
+ * details. Supports required checks, type checks, constraints (min/max,
+ * allowedValues, regEx, minCount/maxCount), custom validators, and
+ * schema-level/global doc validators.
+ */
+
+import { ErrorTypes, ValidationError } from './schema_errors.js';
+import { getNestedValue } from './schema_clean.js';
+
+/**
+ * @typedef {Object} ValidateOptions
+ * @property {boolean} [modifier=false] - Treat the document as a MongoDB update modifier.
+ * @property {string[]} [keys] - If provided, only validate these specific field paths.
+ * @property {string[]} [ignore] - Error types to exclude from the result (e.g.,
+ *   `[MongoSchema.ErrorTypes.REQUIRED]` to skip required-field errors).
+ * @property {boolean} [isInsert] - Set to `true` when validating an insert (enables `denyInsert` checks).
+ * @property {boolean} [isUpdate] - Set to `true` when validating an update (enables `denyUpdate` checks).
+ * @property {boolean} [upsert] - Set to `true` for upsert operations.
+ * @property {Object} [extendedCustomContext] - Extra properties merged into the `this`
+ *   context of `custom` validator functions.
+ */
+
+/**
+ * Validate a document against the schema IR. Throws a {@link ValidationError}
+ * if any fields fail validation.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - The document or modifier to validate.
+ * @param {ValidateOptions} [options={}] - Validation options.
+ * @throws {import('./schema_errors.js').ValidationError} If one or more fields fail validation.
+ *
+ * @example
+ * const schema = new MongoSchema({
+ *   name: { type: String },
+ *   age: { type: Number, min: 0 },
+ * });
+ *
+ * // Throws ValidationError: "Name is required"
+ * schema.validate({ age: 25 });
+ *
+ * // Throws ValidationError: "Age must be at least 0"
+ * schema.validate({ name: 'Alice', age: -1 });
+ *
+ * // Passes
+ * schema.validate({ name: 'Alice', age: 25 });
+ */
 export function validate(ir, doc, options = {}) {
   const errors = collectErrors(ir, doc, options);
   if (errors.length > 0) {
@@ -8,6 +56,23 @@ export function validate(ir, doc, options = {}) {
   }
 }
 
+/**
+ * Collect validation errors without throwing. Used internally by
+ * {@link validate} and {@link ValidationContext#validate}.
+ *
+ * Runs the following checks in order:
+ * 1. Per-field: required, type, constraints, custom validators
+ * 2. Schema-level instance validators (`addValidator`)
+ * 3. Schema-level instance doc validators (`addDocValidator`)
+ * 4. Global validators (`MongoSchema.addValidator`)
+ * 5. Global doc validators (`MongoSchema.addDocValidator`)
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - The document or modifier to validate.
+ * @param {ValidateOptions} [options={}] - Validation options.
+ * @returns {import('./schema_errors.js').ValidationErrorDetail[]} Array of error details
+ *   (empty if valid).
+ */
 export function collectErrors(ir, doc, options = {}) {
   if (options.modifier) {
     return collectModifierErrors(ir, doc, options);
@@ -42,9 +107,13 @@ export function collectErrors(ir, doc, options = {}) {
           isSet: doc[key] !== undefined,
           operator: null,
           definition: desc,
-          field(name) { return { isSet: doc[name] !== undefined, value: doc[name], operator: null }; },
+          isInsert: !!options.isInsert,
+          isUpdate: !!options.isUpdate,
+          isUpsert: !!(options.isUpsert || options.upsert),
+          field(name) { const val = getNestedValue(doc, name); return { isSet: val !== undefined, value: val, operator: null }; },
           siblingField(name) { return this.field(name); },
           parentField() { return { isSet: true, value: doc, operator: null }; },
+          ...(options.extendedCustomContext || {}),
         };
         const result = validator.call(context);
         if (typeof result === 'string') {
@@ -65,6 +134,17 @@ export function collectErrors(ir, doc, options = {}) {
   return errors;
 }
 
+/**
+ * Validate a single field, recursing into nested objects and array items.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {string} key - Dot-delimited field path.
+ * @param {import('./schema_definition.js').FieldDescriptor} desc - Field descriptor.
+ * @param {Object} rootDoc - The root document (for cross-field lookups in custom validators).
+ * @param {*} value - The field's current value.
+ * @param {import('./schema_errors.js').ValidationErrorDetail[]} errors - Accumulator for errors.
+ * @param {ValidateOptions} options - Validation options.
+ */
 function validateField(ir, key, desc, rootDoc, value, errors, options) {
   const isPresent = value !== undefined && value !== null;
 
@@ -136,6 +216,17 @@ function validateField(ir, key, desc, rootDoc, value, errors, options) {
   }
 }
 
+/**
+ * Validate value constraints: `denyInsert`/`denyUpdate`, `allowedValues`,
+ * numeric min/max, string min/max (length), date min/max, `regEx`, and
+ * array `minCount`/`maxCount`.
+ *
+ * @param {string} key - Field path.
+ * @param {import('./schema_definition.js').FieldDescriptor} desc - Field descriptor.
+ * @param {*} value - The field value.
+ * @param {import('./schema_errors.js').ValidationErrorDetail[]} errors - Error accumulator.
+ * @param {ValidateOptions} options - Validation options.
+ */
 function validateConstraints(key, desc, value, errors, options) {
   const label = desc.label || key;
 
@@ -209,6 +300,36 @@ function validateConstraints(key, desc, value, errors, options) {
   }
 }
 
+/**
+ * @typedef {Object} CustomValidatorContext
+ * @property {string} key - The full dot-path key of the field.
+ * @property {string} genericKey - Key with numeric indices replaced by `$`.
+ * @property {*} value - Current field value.
+ * @property {boolean} isSet - Whether the field has a value.
+ * @property {string|null} operator - Always `null` for plain documents.
+ * @property {import('./schema_definition.js').FieldDescriptor} definition - The field's descriptor.
+ * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} field -
+ *   Look up another field by full path.
+ * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} siblingField -
+ *   Look up a sibling field by local name.
+ * @property {() => { isSet: boolean, value: *, operator: string|null }} parentField -
+ *   Access the parent object.
+ */
+
+/**
+ * Run a field's `custom` validator function and push any resulting error.
+ *
+ * The validator receives a {@link CustomValidatorContext} as `this` and should
+ * return a string error type to fail, or `undefined` to pass.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {string} key - Field path.
+ * @param {import('./schema_definition.js').FieldDescriptor} desc - Field descriptor.
+ * @param {Object} rootDoc - Root document for cross-field lookups.
+ * @param {*} value - Field value.
+ * @param {import('./schema_errors.js').ValidationErrorDetail[]} errors - Error accumulator.
+ * @param {ValidateOptions} options - Validation options.
+ */
 function runCustomValidator(ir, key, desc, rootDoc, value, errors, options) {
   const context = {
     key,
@@ -218,7 +339,8 @@ function runCustomValidator(ir, key, desc, rootDoc, value, errors, options) {
     operator: null,
     definition: desc,
     field(name) {
-      return { isSet: rootDoc[name] !== undefined, value: rootDoc[name], operator: null };
+      const val = getNestedValue(rootDoc, name);
+      return { isSet: val !== undefined, value: val, operator: null };
     },
     siblingField(name) { return this.field(name); },
     parentField() { return { isSet: true, value: rootDoc, operator: null }; },
@@ -231,10 +353,28 @@ function runCustomValidator(ir, key, desc, rootDoc, value, errors, options) {
   }
 }
 
+/**
+ * Collect validation errors for a MongoDB update modifier. Validates fields
+ * within `$set`, `$setOnInsert`, `$inc`, `$push`, and `$addToSet` operators.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} modifier - MongoDB update modifier.
+ * @param {ValidateOptions} options - Validation options.
+ * @returns {import('./schema_errors.js').ValidationErrorDetail[]} Array of error details.
+ */
 function collectModifierErrors(ir, modifier, options) {
   const errors = [];
   const keysToValidate = options.keys ? new Set(options.keys) : null;
   const ignoreTypes = options.ignore ? new Set(options.ignore) : null;
+
+  // Build a merged view of all operator payloads for cross-field lookups
+  const mergedFields = {};
+  for (const op of ['$set', '$setOnInsert', '$unset', '$inc', '$push', '$addToSet']) {
+    if (!modifier[op]) continue;
+    for (const [k, v] of Object.entries(modifier[op])) {
+      if (mergedFields[k] === undefined) mergedFields[k] = v;
+    }
+  }
 
   // Validate fields within each operator
   const typeCheckOps = ['$set', '$setOnInsert'];
@@ -244,7 +384,7 @@ function collectModifierErrors(ir, modifier, options) {
       if (keysToValidate && !keysToValidate.has(key)) continue;
       const desc = ir.get(key);
       if (!desc) continue;
-      validateField(ir, key, desc, modifier[op], value, errors, options);
+      validateField(ir, key, desc, mergedFields, value, errors, options);
     }
   }
 
@@ -270,10 +410,64 @@ function collectModifierErrors(ir, modifier, options) {
       const itemKey = `${key}.$`;
       const itemDesc = ir.get(itemKey);
       if (!itemDesc) continue;
-      const pushValue = value && value.$each ? null : value;
-      if (pushValue !== null && pushValue !== undefined) {
-        validateField(ir, itemKey, itemDesc, modifier[op], pushValue, errors, options);
+      if (value && value.$each) {
+        // Validate each element in the $each array
+        if (Array.isArray(value.$each)) {
+          for (const eachItem of value.$each) {
+            if (eachItem !== null && eachItem !== undefined) {
+              validateField(ir, itemKey, itemDesc, mergedFields, eachItem, errors, options);
+            }
+          }
+        }
+      } else if (value !== null && value !== undefined) {
+        validateField(ir, itemKey, itemDesc, mergedFields, value, errors, options);
       }
+    }
+  }
+
+  // Run instance + global validators (mirrors the non-modifier path in collectErrors)
+  if (options._schema) {
+    const validators = options._validators || [];
+    const docValidators = options._docValidators || [];
+    const globalValidators = options._globalValidators || [];
+    const globalDocValidators = options._globalDocValidators || [];
+
+    for (const validator of [...validators, ...globalValidators]) {
+      for (const [key, value] of Object.entries(mergedFields)) {
+        const desc = ir.get(key);
+        if (!desc) continue;
+        const context = {
+          key,
+          genericKey: key,
+          value,
+          isSet: value !== undefined,
+          operator: null,
+          definition: desc,
+          isInsert: !!options.isInsert,
+          isUpdate: !!options.isUpdate,
+          isUpsert: !!(options.isUpsert || options.upsert),
+          field(name) {
+            return { isSet: mergedFields[name] !== undefined, value: mergedFields[name], operator: null };
+          },
+          siblingField(name) { return this.field(name); },
+          parentField() { return { isSet: true, value: modifier, operator: null }; },
+          ...(options.extendedCustomContext || {}),
+        };
+        const result = validator.call(context);
+        if (typeof result === 'string') {
+          errors.push({
+            name: key,
+            type: result,
+            value,
+            message: `${desc.label || key} failed validation: ${result}`,
+          });
+        }
+      }
+    }
+
+    for (const docValidator of [...docValidators, ...globalDocValidators]) {
+      const docErrors = docValidator(mergedFields);
+      if (Array.isArray(docErrors)) errors.push(...docErrors);
     }
   }
 

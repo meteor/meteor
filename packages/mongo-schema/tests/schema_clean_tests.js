@@ -205,6 +205,35 @@ Tinytest.add('clean - autoValue unset removes field', function (test) {
   test.equal(result.secret, undefined);
 });
 
+Tinytest.add('clean - removeEmptyStrings recurses into nested objects', function (test) {
+  const schema = new MongoSchema({
+    address: { type: Object },
+    'address.city': { type: String, optional: true },
+    'address.zip': { type: String, optional: true },
+    name: String,
+  });
+  const result = schema.clean({
+    name: 'Alice',
+    address: { city: '', zip: '12345' },
+  });
+  test.equal(result.address.city, undefined);
+  test.equal(result.address.zip, '12345');
+});
+
+Tinytest.add('clean - removeEmptyStrings recurses deeply', function (test) {
+  const schema = new MongoSchema({
+    level1: { type: Object },
+    'level1.level2': { type: Object },
+    'level1.level2.value': { type: String, optional: true },
+    'level1.level2.other': { type: String, optional: true },
+  });
+  const result = schema.clean({
+    level1: { level2: { value: '', other: 'kept' } },
+  });
+  test.equal(result.level1.level2.value, undefined);
+  test.equal(result.level1.level2.other, 'kept');
+});
+
 Tinytest.add('clean - modifier mode cleans $set fields', function (test) {
   const schema = new MongoSchema({ name: String, age: Number });
   const result = schema.clean(

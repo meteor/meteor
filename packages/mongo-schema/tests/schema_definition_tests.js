@@ -152,6 +152,25 @@ Tinytest.add('composition - extend latter wins on conflict', function (test) {
   test.equal(merged._ir.get('name').max, 100);
 });
 
+Tinytest.add('composition - extend merges options from other schema', function (test) {
+  const s1 = new MongoSchema({ name: String }, { requiredByDefault: true });
+  const s2 = new MongoSchema({ age: Number }, {
+    requiredByDefault: false,
+    clean: { trimStrings: false },
+  });
+  const merged = s1.extend(s2);
+  test.equal(merged._options.requiredByDefault, false);
+  test.equal(merged._options.clean.trimStrings, false);
+  test.equal(merged._options.clean.filter, true);
+});
+
+Tinytest.add('composition - extend options latter wins', function (test) {
+  const s1 = new MongoSchema({ name: String }, { humanizeAutoLabels: false });
+  const s2 = new MongoSchema({ age: Number }, { humanizeAutoLabels: true });
+  const merged = s1.extend(s2);
+  test.equal(merged._options.humanizeAutoLabels, true);
+});
+
 Tinytest.add('composition - pick creates subset', function (test) {
   const schema = new MongoSchema({ name: String, age: Number, email: String });
   const picked = schema.pick('name', 'email');
@@ -197,6 +216,35 @@ Tinytest.add('composition - getObjectSchema extracts subschema', function (test)
 });
 
 // --- Task 16 tests: accessor methods ---
+
+Tinytest.add('schema - get() works with shorthand bare constructor', function (test) {
+  const schema = new MongoSchema({ name: String });
+  test.equal(schema.get('name', 'type'), String);
+});
+
+Tinytest.add('schema - schema(key) normalizes shorthand bare constructor', function (test) {
+  const schema = new MongoSchema({ name: String });
+  const def = schema.schema('name');
+  test.equal(def.type, String);
+});
+
+Tinytest.add('schema - get() works with RegExp shorthand', function (test) {
+  const schema = new MongoSchema({ phone: /^\d{10}$/ });
+  test.equal(schema.get('phone', 'type'), String);
+  test.instanceOf(schema.get('phone', 'regEx'), RegExp);
+});
+
+Tinytest.add('schema - schema(key) normalizes array shorthand', function (test) {
+  const schema = new MongoSchema({ tags: [String] });
+  const def = schema.schema('tags');
+  test.equal(def.type, Array);
+});
+
+Tinytest.add('schema - get() with full form unchanged', function (test) {
+  const schema = new MongoSchema({ age: { type: Number, min: 0 } });
+  test.equal(schema.get('age', 'type'), Number);
+  test.equal(schema.get('age', 'min'), 0);
+});
 
 Tinytest.add('schema - schema() returns raw definition', function (test) {
   const def = { name: { type: String } };

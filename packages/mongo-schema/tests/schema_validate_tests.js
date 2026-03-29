@@ -274,6 +274,81 @@ Tinytest.add('validate - denyInsert rejects field on insert', function (test) {
   }
 });
 
+Tinytest.add('validate - custom validator field() resolves nested paths', function (test) {
+  const schema = new MongoSchema({
+    address: { type: Object },
+    'address.city': String,
+    'address.zip': {
+      type: String,
+      optional: true,
+      custom() {
+        const city = this.field('address.city');
+        if (city.isSet && city.value === 'NYC' && (!this.isSet || this.value !== '10001')) {
+          return 'nycRequires10001';
+        }
+      },
+    },
+  });
+  schema.validate({ address: { city: 'NYC', zip: '10001' } });
+  test.ok();
+  try {
+    schema.validate({ address: { city: 'NYC', zip: '99999' } });
+    test.fail('Should have thrown');
+  } catch (e) {
+    test.equal(e.details[0].type, 'nycRequires10001');
+  }
+});
+
+Tinytest.add('validate - instance validator field() resolves nested paths', function (test) {
+  const schema = new MongoSchema({
+    address: { type: Object },
+    'address.city': String,
+    'address.state': { type: String, optional: true },
+  });
+  schema.addValidator(function () {
+    if (this.key === 'address') {
+      const city = this.field('address.city');
+      if (city.isSet && city.value === 'NYC') {
+        const state = this.field('address.state');
+        if (!state.isSet || state.value !== 'NY') {
+          return 'nycMustBeNY';
+        }
+      }
+    }
+  });
+  schema.validate({ address: { city: 'NYC', state: 'NY' } });
+  test.ok();
+  try {
+    schema.validate({ address: { city: 'NYC', state: 'CA' } });
+    test.fail('Should have thrown');
+  } catch (e) {
+    test.equal(e.details[0].type, 'nycMustBeNY');
+  }
+});
+
+Tinytest.add('validate - instance validator receives operation context', function (test) {
+  const schema = new MongoSchema({ name: String, role: { type: String, optional: true } });
+  let capturedContext = null;
+  schema.addValidator(function () {
+    if (this.key === 'name') {
+      capturedContext = {
+        isInsert: this.isInsert,
+        isUpdate: this.isUpdate,
+        isUpsert: this.isUpsert,
+        hasCustomProp: this.myCustomProp,
+      };
+    }
+  });
+  schema.validate({ name: 'Alice' }, {
+    isInsert: true,
+    extendedCustomContext: { myCustomProp: 'hello' },
+  });
+  test.equal(capturedContext.isInsert, true);
+  test.equal(capturedContext.isUpdate, false);
+  test.equal(capturedContext.isUpsert, false);
+  test.equal(capturedContext.hasCustomProp, 'hello');
+});
+
 Tinytest.add('validate - denyUpdate rejects field on update', function (test) {
   const schema = new MongoSchema({
     name: String,
@@ -287,5 +362,55 @@ Tinytest.add('validate - denyUpdate rejects field on update', function (test) {
     test.fail('Should have thrown');
   } catch (e) {
     test.isTrue(e.details.some(d => d.name === 'createdAt'));
+  }
+});
+
+Tinytest.add('validate - modifier mode runs instance validators', function (test) {
+  const schema = new MongoSchema({
+    status: { type: String, allowedValues: ['active', 'inactive'], optional: true },
+    reason: { type: String, optional: true },
+  });
+  schema.addValidator(function () {
+    if (this.key === 'status') {
+      const reason = this.field('reason');
+      if (this.value === 'inactive' && !reason.isSet) {
+        return 'reasonRequired';
+      }
+    }
+  });
+  schema.validate(
+    { $set: { status: 'inactive', reason: 'left' } },
+    { modifier: true }
+  );
+  test.ok();
+  try {
+    schema.validate(
+      { $set: { status: 'inactive' } },
+      { modifier: true }
+    );
+    test.fail('Should have thrown');
+  } catch (e) {
+    test.isTrue(e.details.some(d => d.type === 'reasonRequired'));
+  }
+});
+
+Tinytest.add('validate - modifier mode runs doc validators', function (test) {
+  const schema = new MongoSchema({
+    min: { type: Number, optional: true },
+    max: { type: Number, optional: true },
+  });
+  schema.addDocValidator(function (doc) {
+    if (doc.min !== undefined && doc.max !== undefined && doc.min > doc.max) {
+      return [{ name: 'min', type: 'minExceedsMax', value: doc.min, message: 'Min exceeds max' }];
+    }
+    return [];
+  });
+  schema.validate({ $set: { min: 1, max: 10 } }, { modifier: true });
+  test.ok();
+  try {
+    schema.validate({ $set: { min: 20, max: 10 } }, { modifier: true });
+    test.fail('Should have thrown');
+  } catch (e) {
+    test.isTrue(e.details.some(d => d.type === 'minExceedsMax'));
   }
 });

@@ -1,6 +1,59 @@
 // packages/mongo-schema/schema_clean.js
+
+/**
+ * @module mongo-schema/schema_clean
+ * @summary Document cleaning pipeline. Transforms raw documents (or MongoDB
+ * update modifiers) to conform to a schema by filtering unknown keys,
+ * auto-converting types, trimming strings, removing empty strings, and
+ * applying default/auto values.
+ */
+
 import { EJSON } from 'meteor/ejson';
 
+/**
+ * @typedef {Object} CleanOptions
+ * @property {boolean} [mutate=false] - If `true`, mutates the input document in place.
+ *   If `false`, a deep clone is created first via `EJSON.clone`.
+ * @property {boolean} [filter=true] - Remove keys not defined in the schema.
+ * @property {boolean} [autoConvert=true] - Attempt automatic type conversion (e.g.,
+ *   `"42"` → `42` for number fields, `"true"` → `true` for booleans).
+ * @property {boolean} [removeEmptyStrings=true] - Delete fields whose value is `""`.
+ * @property {boolean} [removeNullsFromArrays=false] - Filter out `null` entries from arrays.
+ * @property {boolean} [trimStrings=true] - Trim leading/trailing whitespace from all string
+ *   fields (unless the field's `trim` option is `false`).
+ * @property {boolean} [getAutoValues=true] - Apply `defaultValue` and `autoValue` functions.
+ * @property {boolean} [isModifier=false] - Treat the document as a MongoDB update modifier
+ *   (e.g., `{ $set: { ... } }`). Cleaning is applied within each operator.
+ * @property {boolean} [isUpsert=false] - Indicates an upsert context for auto-value functions.
+ * @property {Object} [extendAutoValueContext] - Extra properties merged into the `this` context
+ *   of `autoValue` functions (e.g., `{ userId, isFromTrustedCode }`).
+ */
+
+/**
+ * Clean a document or modifier according to the schema IR and options.
+ *
+ * The cleaning pipeline runs in this order:
+ * 1. **filter** — remove keys not in the schema
+ * 2. **autoConvert** — coerce values to their declared types
+ * 3. **removeEmptyStrings** — delete `""` values
+ * 4. **removeNullsFromArrays** — strip `null` from array entries
+ * 5. **trimStrings** — trim whitespace from strings
+ * 6. **getAutoValues** — apply `defaultValue` then `autoValue` functions
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - The document or modifier to clean.
+ * @param {CleanOptions} options - Cleaning options (merged with schema-level defaults).
+ * @returns {Object} The cleaned document (a new object unless `mutate` is `true`).
+ *
+ * @example
+ * const schema = new MongoSchema({
+ *   name: { type: String, defaultValue: 'Anonymous' },
+ *   age: Number,
+ * });
+ *
+ * schema.clean({ name: '  Alice  ', age: '30', extra: true });
+ * // => { name: 'Alice', age: 30 }
+ */
 export function clean(ir, doc, options) {
   if (options.isModifier) {
     return cleanModifier(ir, doc, options);
@@ -21,7 +74,7 @@ export function clean(ir, doc, options) {
   }
 
   if (options.removeNullsFromArrays) {
-    removeNullsFromArrays(ir, result);
+    result = removeNullsFromArrays(ir, result);
   }
 
   if (options.trimStrings) {
@@ -38,9 +91,18 @@ export function clean(ir, doc, options) {
 
 // ---- Modifier mode ----
 
+/**
+ * Clean a MongoDB update modifier by applying the cleaning pipeline to each
+ * operator's field set (`$set`, `$setOnInsert`, `$inc`, `$push`, `$addToSet`).
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} modifier - MongoDB update modifier (e.g., `{ $set: { name: 'Bob' } }`).
+ * @param {CleanOptions} options - Cleaning options.
+ * @returns {Object} The cleaned modifier.
+ */
 function cleanModifier(ir, modifier, options) {
   let result = options.mutate ? modifier : EJSON.clone(modifier);
-  const operatorFields = ['$set', '$setOnInsert', '$inc', '$push', '$addToSet'];
+  const operatorFields = ['$set', '$setOnInsert', '$unset', '$inc', '$push', '$addToSet'];
 
   for (const op of operatorFields) {
     if (!result[op]) continue;
@@ -65,6 +127,14 @@ function cleanModifier(ir, modifier, options) {
   return result;
 }
 
+/**
+ * Remove keys from a flat field map that are not present in the schema IR.
+ * Used for modifier operators where fields are flat dot-paths.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} fields - Flat key-value map from a modifier operator.
+ * @returns {Object} Filtered copy containing only known keys.
+ */
 function filterUnknownKeysFlat(ir, fields) {
   const filtered = {};
   for (const [key, value] of Object.entries(fields)) {
@@ -73,6 +143,13 @@ function filterUnknownKeysFlat(ir, fields) {
   return filtered;
 }
 
+/**
+ * Auto-convert types for flat modifier fields.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} fields - Flat key-value map from a modifier operator.
+ * @returns {Object} The same object with values converted in place.
+ */
 function autoConvertTypesFlat(ir, fields) {
   for (const [key, value] of Object.entries(fields)) {
     if (value === undefined || value === null) continue;
@@ -83,6 +160,13 @@ function autoConvertTypesFlat(ir, fields) {
   return fields;
 }
 
+/**
+ * Trim string values in flat modifier fields (unless the field has `trim: false`).
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} fields - Flat key-value map from a modifier operator.
+ * @returns {Object} The same object with strings trimmed in place.
+ */
 function trimStringsFlat(ir, fields) {
   for (const [key, value] of Object.entries(fields)) {
     if (typeof value === 'string') {
@@ -95,6 +179,21 @@ function trimStringsFlat(ir, fields) {
   return fields;
 }
 
+/**
+ * Apply `autoValue` functions to modifier fields. For each field with an `autoValue`,
+ * builds a context object exposing `key`, `value`, `isSet`, `operator`, `field()`,
+ * `siblingField()`, `parentField()`, and `unset()`.
+ *
+ * The `autoValue` function may:
+ * - Return a value → sets it via `$set` (or applies an operator object like `{ $inc: 1 }`)
+ * - Call `this.unset()` → removes the field from `$set`/`$setOnInsert` and adds `$unset`
+ * - Return `undefined` → no change
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} modifier - The MongoDB update modifier.
+ * @param {CleanOptions} options - Cleaning options (may include `extendAutoValueContext`).
+ * @returns {Object} The modifier with auto-values applied.
+ */
 function applyAutoValuesModifier(ir, modifier, options) {
   const extCtx = options.extendAutoValueContext || {};
 
@@ -124,7 +223,7 @@ function applyAutoValuesModifier(ir, modifier, options) {
       obj: modifier,
       isModifier: true,
       field(name) {
-        for (const op of ['$set', '$setOnInsert', '$unset', '$inc']) {
+        for (const op of ['$set', '$setOnInsert', '$unset', '$inc', '$push', '$addToSet']) {
           if (modifier[op] && modifier[op][name] !== undefined) {
             return { isSet: true, value: modifier[op][name], operator: op };
           }
@@ -164,6 +263,12 @@ function applyAutoValuesModifier(ir, modifier, options) {
 
 // ---- Plain doc helpers ----
 
+/**
+ * Recursively remove `null` entries from all arrays in the document.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - Document to process (mutated in place).
+ */
 function removeNullsFromArrays(ir, doc) {
   for (const [key, value] of Object.entries(doc)) {
     if (Array.isArray(value)) {
@@ -173,8 +278,17 @@ function removeNullsFromArrays(ir, doc) {
       removeNullsFromArrays(ir, value);
     }
   }
+  return doc;
 }
 
+/**
+ * Remove top-level keys not defined in the schema (always keeps `_id`).
+ * Recurses into nested objects using {@link filterNestedObject}.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - Document to filter.
+ * @returns {Object} A new object containing only known keys.
+ */
 function filterUnknownKeys(ir, doc) {
   const filtered = {};
   for (const [key, value] of Object.entries(doc)) {
@@ -192,6 +306,14 @@ function filterUnknownKeys(ir, doc) {
   return filtered;
 }
 
+/**
+ * Recursively filter unknown keys within a nested object.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {string} parentKey - Dot-path of the parent field.
+ * @param {Object} obj - Nested object to filter.
+ * @returns {Object} A new object containing only known child keys.
+ */
 function filterNestedObject(ir, parentKey, obj) {
   const filtered = {};
   for (const [key, value] of Object.entries(obj)) {
@@ -208,6 +330,14 @@ function filterNestedObject(ir, parentKey, obj) {
   return filtered;
 }
 
+/**
+ * Trim whitespace from all string values in a document, including nested objects
+ * and array items. Respects `trim: false` on individual fields.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - Document to process (mutated in place).
+ * @returns {Object} The same document with strings trimmed.
+ */
 function trimStrings(ir, doc) {
   for (const [key, value] of Object.entries(doc)) {
     if (typeof value === 'string') {
@@ -226,6 +356,11 @@ function trimStrings(ir, doc) {
   return doc;
 }
 
+/**
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir
+ * @param {string} parentKey
+ * @param {Object} obj
+ */
 function trimNestedStrings(ir, parentKey, obj) {
   for (const [key, value] of Object.entries(obj)) {
     const fullKey = `${parentKey}.${key}`;
@@ -241,6 +376,11 @@ function trimNestedStrings(ir, parentKey, obj) {
   }
 }
 
+/**
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir
+ * @param {string} parentKey
+ * @param {Array} arr
+ */
 function trimArrayStrings(ir, parentKey, arr) {
   const itemKey = `${parentKey}.$`;
   const desc = ir.get(itemKey);
@@ -254,26 +394,80 @@ function trimArrayStrings(ir, parentKey, arr) {
   }
 }
 
+/**
+ * Remove fields with empty string values (`""`) from the document.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - Document to process (mutated in place).
+ * @returns {Object} The same document with empty strings removed.
+ */
 function removeEmptyStrings(ir, doc) {
   for (const [key, value] of Object.entries(doc)) {
     if (typeof value === 'string' && value === '') {
       delete doc[key];
+    } else if (typeof value === 'object' && value !== null && !Array.isArray(value) && !(value instanceof Date)) {
+      removeEmptyStrings(ir, value);
     }
   }
   return doc;
 }
 
-function autoConvertTypes(ir, doc) {
+/**
+ * Auto-convert top-level field values to their declared types where a safe
+ * conversion exists (e.g., string→number, number→string, string→boolean,
+ * string→date).
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - Document to process (mutated in place).
+ * @returns {Object} The same document with converted values.
+ */
+function autoConvertTypes(ir, doc, prefix) {
+  if (prefix === undefined) prefix = '';
   for (const [key, value] of Object.entries(doc)) {
     if (value === undefined || value === null) continue;
-    const desc = ir.get(key);
+    const fullKey = prefix ? `${prefix}.${key}` : key;
+    const desc = ir.get(fullKey);
     if (!desc) continue;
     const typeName = desc.resolvedType.name;
     doc[key] = convertValue(value, typeName);
+
+    // Recurse into nested objects
+    if (typeof doc[key] === 'object' && doc[key] !== null && !Array.isArray(doc[key]) && !(doc[key] instanceof Date) && desc.children) {
+      autoConvertTypes(ir, doc[key], fullKey);
+    }
+
+    // Recurse into arrays
+    if (Array.isArray(doc[key]) && desc.itemKey) {
+      const itemDesc = ir.get(desc.itemKey);
+      if (itemDesc) {
+        for (let i = 0; i < doc[key].length; i++) {
+          const item = doc[key][i];
+          if (item === undefined || item === null) continue;
+          doc[key][i] = convertValue(item, itemDesc.resolvedType.name);
+          if (typeof doc[key][i] === 'object' && doc[key][i] !== null && !Array.isArray(doc[key][i]) && !(doc[key][i] instanceof Date) && itemDesc.children) {
+            autoConvertTypes(ir, doc[key][i], desc.itemKey);
+          }
+        }
+      }
+    }
   }
   return doc;
 }
 
+/**
+ * Attempt to convert a single value to the target type.
+ *
+ * | Target | Input | Conversion |
+ * |--------|-------|------------|
+ * | `number`/`integer` | string | `Number(value)` if non-empty and not NaN |
+ * | `string` | number | `String(value)` |
+ * | `boolean` | string | `'true'` → `true`, `'false'` → `false` |
+ * | `date` | string | `new Date(value)` if valid |
+ *
+ * @param {*} value - The value to convert.
+ * @param {string} typeName - Target type name from the resolved type descriptor.
+ * @returns {*} The converted value, or the original if no conversion applies.
+ */
 function convertValue(value, typeName) {
   if (typeName === 'number' || typeName === 'integer') {
     if (typeof value === 'string') {
@@ -298,8 +492,12 @@ function convertValue(value, typeName) {
 }
 
 /**
- * Apply defaultValues recursively. `prefix` tracks the current dot-path
- * into `doc` so nested fields like 'address.country' resolve correctly.
+ * Apply `defaultValue`s recursively. `prefix` tracks the current dot-path
+ * into `doc` so nested fields like `'address.country'` resolve correctly.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - Document to apply defaults to (mutated in place).
+ * @param {string} prefix - Current dot-path prefix (empty string for top level).
  */
 function applyDefaultValues(ir, doc, prefix) {
   for (const [key, desc] of ir) {
@@ -334,7 +532,32 @@ function applyDefaultValues(ir, doc, prefix) {
 }
 
 /**
- * Apply autoValues recursively. Handles nested fields by walking into objects.
+ * @typedef {Object} AutoValueContext
+ * @property {string} key - The full dot-path key of the field being processed.
+ * @property {string} genericKey - The key with numeric indices replaced by `$`
+ *   (e.g., `'items.0.name'` → `'items.$.name'`).
+ * @property {*} value - The current value of the field (`undefined` if unset).
+ * @property {boolean} isSet - Whether the field has a value.
+ * @property {string|null} operator - The MongoDB operator (e.g., `'$set'`) or `null` for plain docs.
+ * @property {Object} obj - The root document or modifier being cleaned.
+ * @property {boolean} [isModifier] - `true` when cleaning a modifier.
+ * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} field -
+ *   Look up another field by its full dot-path key.
+ * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} siblingField -
+ *   Look up a sibling field by its local key name.
+ * @property {() => { isSet: boolean, value: *, operator: string|null }} parentField -
+ *   Access the parent object.
+ * @property {() => void} unset - Call to remove this field from the document.
+ */
+
+/**
+ * Apply `autoValue` functions recursively. Handles nested fields by walking into objects.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} doc - Document to apply auto-values to (mutated in place).
+ * @param {CleanOptions} options - Cleaning options.
+ * @param {string} prefix - Current dot-path prefix.
+ * @param {Object} [rootDoc] - The top-level document (used for cross-field lookups).
  */
 function applyAutoValues(ir, doc, options, prefix, rootDoc) {
   const extCtx = options.extendAutoValueContext || {};
@@ -417,7 +640,14 @@ function applyAutoValues(ir, doc, options, prefix, rootDoc) {
   }
 }
 
-function getNestedValue(obj, path) {
+/**
+ * Retrieve a deeply nested value from an object using a dot-delimited path.
+ *
+ * @param {Object} obj - Root object to traverse.
+ * @param {string} path - Dot-delimited path (e.g., `'address.city'`).
+ * @returns {*} The value at the path, or `undefined` if any segment is missing.
+ */
+export function getNestedValue(obj, path) {
   const parts = path.split('.');
   let current = obj;
   for (const part of parts) {

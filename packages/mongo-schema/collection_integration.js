@@ -1,12 +1,65 @@
 // packages/mongo-schema/collection_integration.js
+
+/**
+ * @module mongo-schema/collection_integration
+ * @summary Integrates MongoSchema with `Mongo.Collection` by adding
+ * `attachSchema()`, `schema()`, and `schemaEnforcedOnDatabase()` methods.
+ * When a schema is attached, `insertAsync`, `updateAsync`, and `upsertAsync`
+ * are wrapped to automatically clean and validate documents.
+ */
+
 import { MongoSchema } from './schema.js';
 
+/**
+ * Set up the collection integration by patching `Mongo.Collection.prototype`.
+ * Called once at module load time. No-ops if the `mongo` package is not loaded.
+ *
+ * Adds the following methods to `Mongo.Collection.prototype`:
+ *
+ * - **`attachSchema(schema, options)`** — Attach a `MongoSchema` to this collection.
+ * - **`schema()`** — Return the attached `MongoSchema` instance, or `null`.
+ * - **`schemaEnforcedOnDatabase()`** — Return `true` if `$jsonSchema` enforcement is active.
+ */
 export function setupCollectionIntegration() {
   if (typeof Package === 'undefined' || !Package.mongo) return;
 
   const Mongo = Package.mongo.Mongo;
 
-  // Register attachSchema and schema methods
+  /**
+   * Attach a schema to this collection. Subsequent `insertAsync`, `updateAsync`,
+   * and `upsertAsync` calls will automatically clean and validate documents.
+   *
+   * If a schema is already attached and `options.replace` is not `true`, the new
+   * schema is merged with the existing one via `MongoSchema#extend()`.
+   *
+   * @method Mongo.Collection#attachSchema
+   * @param {MongoSchema} schema - The schema to attach.
+   * @param {Object} [options={}] - Attachment options.
+   * @param {boolean} [options.replace=false] - Replace the existing schema entirely
+   *   instead of merging.
+   * @param {boolean} [options.enforceOnDatabase=false] - Apply the schema as a MongoDB
+   *   `$jsonSchema` validator via `collMod` (server only). Requires a running MongoDB
+   *   server with `collMod` support.
+   * @param {string} [options.validationLevel='moderate'] - MongoDB validation level
+   *   (`'off'`, `'strict'`, or `'moderate'`). Only used with `enforceOnDatabase`.
+   * @param {string} [options.validationAction='error'] - MongoDB validation action
+   *   (`'error'` or `'warn'`). Only used with `enforceOnDatabase`.
+   * @throws {Error} If `schema` is not a `MongoSchema` instance.
+   *
+   * @example
+   * const Players = new Mongo.Collection('players');
+   *
+   * Players.attachSchema(new MongoSchema({
+   *   name: { type: String, min: 1 },
+   *   score: { type: Number, defaultValue: 0 },
+   * }));
+   *
+   * // With database-level enforcement:
+   * Players.attachSchema(schema, {
+   *   enforceOnDatabase: true,
+   *   validationLevel: 'strict',
+   * });
+   */
   Mongo.Collection.prototype.attachSchema = function (schema, options = {}) {
     if (!(schema instanceof MongoSchema)) {
       throw new Error('attachSchema requires a MongoSchema instance');
@@ -32,15 +85,35 @@ export function setupCollectionIntegration() {
     }
   };
 
+  /**
+   * Return the currently attached schema, or `null` if none is attached.
+   *
+   * @method Mongo.Collection#schema
+   * @returns {MongoSchema|null}
+   */
   Mongo.Collection.prototype.schema = function () {
     return this._schema || null;
   };
 
+  /**
+   * Check whether this collection has database-level `$jsonSchema` enforcement active.
+   *
+   * @method Mongo.Collection#schemaEnforcedOnDatabase
+   * @returns {boolean}
+   */
   Mongo.Collection.prototype.schemaEnforcedOnDatabase = function () {
     return !!(this._schemaOptions && this._schemaOptions.enforceOnDatabase);
   };
 }
 
+/**
+ * Build clean options for the schema cleaning pipeline based on the operation
+ * type and any user-provided overrides.
+ *
+ * @param {Object} operationOpts - Options passed to the mutation method.
+ * @param {'insert'|'update'|'upsert'} operationType - The type of mutation.
+ * @returns {import('./schema_clean.js').CleanOptions} Options for `MongoSchema#clean()`.
+ */
 function buildCleanOptions(operationOpts, operationType) {
   const ctx = {
     isInsert: operationType === 'insert',
@@ -63,6 +136,17 @@ function buildCleanOptions(operationOpts, operationType) {
   };
 }
 
+/**
+ * Determine whether schema processing should be bypassed for this operation.
+ * Bypass occurs when no schema is attached, or when `options.bypassSchema`
+ * is `true` **and** the code is running in a trusted server context.
+ *
+ * @param {Mongo.Collection} collection - The collection instance.
+ * @param {Object} opts - Mutation options.
+ * @param {boolean} [opts.bypassSchema] - If `true` and on the server, skip
+ *   schema cleaning and validation.
+ * @returns {boolean} `true` to skip schema processing.
+ */
 function shouldBypass(collection, opts) {
   if (!collection._schema) return true;
   if (opts.bypassSchema) {
@@ -73,6 +157,19 @@ function shouldBypass(collection, opts) {
   return false;
 }
 
+/**
+ * Wrap `insertAsync`, `updateAsync`, and `upsertAsync` on a collection to
+ * automatically clean and validate documents before passing them to the
+ * original methods.
+ *
+ * Each wrapped method:
+ * 1. Checks `shouldBypass()` — if `true`, delegates directly to the original.
+ * 2. Cleans the document/modifier via `schema.clean()`.
+ * 3. Validates via `schema.validate()` (unless `options.validate === false`).
+ * 4. Calls the original method with the cleaned document.
+ *
+ * @param {Mongo.Collection} collection - The collection to wrap.
+ */
 function wrapMutationMethods(collection) {
   // --- insertAsync ---
   const originalInsertAsync = collection.insertAsync.bind(collection);
@@ -84,7 +181,7 @@ function wrapMutationMethods(collection) {
     const cleaned = schema.clean(doc, cleanOpts);
 
     if (options.validate !== false) {
-      schema.validate(cleaned);
+      schema.validate(cleaned, { isInsert: true });
     }
 
     return originalInsertAsync(cleaned, options);
@@ -101,7 +198,7 @@ function wrapMutationMethods(collection) {
     const cleaned = schema.clean(modifier, cleanOpts);
 
     if (options.validate !== false) {
-      schema.validate(cleaned, { modifier: true });
+      schema.validate(cleaned, { modifier: true, isUpdate: true });
     }
 
     return originalUpdateAsync(selector, cleaned, ...rest);
@@ -117,7 +214,7 @@ function wrapMutationMethods(collection) {
     const cleaned = schema.clean(modifier, cleanOpts);
 
     if (options.validate !== false) {
-      schema.validate(cleaned, { modifier: true, upsert: true });
+      schema.validate(cleaned, { modifier: true, isUpsert: true, upsert: true });
     }
 
     return originalUpsertAsync(selector, cleaned, options);
@@ -127,9 +224,28 @@ function wrapMutationMethods(collection) {
   // Left unwrapped intentionally
 }
 
-async function applyDatabaseEnforcement(collection, options) {
+/**
+ * Apply database-level `$jsonSchema` enforcement by running a `collMod` command.
+ * Uses a `_meteor_schema_versions` collection to track schema hashes and avoid
+ * redundant `collMod` calls when the schema hasn't changed.
+ *
+ * Schedules async work inside `Meteor.startup()` so the database is available.
+ * The function itself is synchronous; the actual `collMod` runs in the startup callback.
+ *
+ * @param {Mongo.Collection} collection - The collection to enforce.
+ * @param {Object} options - Enforcement options from `attachSchema`.
+ * @param {string} [options.validationLevel='moderate'] - MongoDB validation level.
+ * @param {string} [options.validationAction='error'] - MongoDB validation action.
+ */
+function applyDatabaseEnforcement(collection, options) {
   // Server-only, deferred to after startup
   if (typeof Meteor === 'undefined' || !Meteor.isServer) return;
+
+  const collectionName = collection._name;
+  if (!collectionName) {
+    console.warn('MongoSchema: Cannot apply database enforcement for anonymous collection (no _name). Skipping.');
+    return;
+  }
 
   const schema = collection._schema;
   const jsonSchema = schema.toJsonSchema();
@@ -138,8 +254,6 @@ async function applyDatabaseEnforcement(collection, options) {
   // Compute hash
   const { createHash } = require('crypto');
   const hash = createHash('sha256').update(jsonStr).digest('hex');
-
-  const collectionName = collection._name;
   const validationLevel = options.validationLevel || 'moderate';
   const validationAction = options.validationAction || 'error';
 

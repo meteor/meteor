@@ -1,5 +1,73 @@
 // packages/mongo-schema/schema_jsonschema.js
 
+/**
+ * @module mongo-schema/schema_jsonschema
+ * @summary Compiles a schema IR into a MongoDB `$jsonSchema` document suitable
+ * for use with `db.createCollection()` or `collMod` validator rules. The output
+ * uses BSON types and MongoDB-specific extensions (e.g., `bsonType` instead of `type`).
+ */
+
+/**
+ * @typedef {Object} JsonSchema
+ * @property {string} bsonType - Always `'object'` at the root level.
+ * @property {string[]} [required] - Names of required top-level properties.
+ * @property {Object<string, JsonSchemaField>} [properties] - Per-field schema definitions.
+ */
+
+/**
+ * @typedef {Object} JsonSchemaField
+ * @property {string|string[]} [bsonType] - The BSON type(s) for this field.
+ * @property {JsonSchemaField[]} [oneOf] - For union types, an array of type alternatives.
+ * @property {string[]} [required] - Required child properties (for nested objects).
+ * @property {Object<string, JsonSchemaField>} [properties] - Child property schemas (for nested objects).
+ * @property {JsonSchemaField} [items] - Item schema (for arrays).
+ * @property {number} [minimum] - Minimum numeric value.
+ * @property {number} [maximum] - Maximum numeric value.
+ * @property {boolean} [exclusiveMinimum] - Whether `minimum` is exclusive.
+ * @property {boolean} [exclusiveMaximum] - Whether `maximum` is exclusive.
+ * @property {number} [minLength] - Minimum string length.
+ * @property {number} [maxLength] - Maximum string length.
+ * @property {Array} [enum] - Allowed values whitelist.
+ * @property {string} [pattern] - Regular expression pattern for strings.
+ * @property {number} [minItems] - Minimum array length.
+ * @property {number} [maxItems] - Maximum array length.
+ */
+
+/**
+ * Compile a schema IR into a MongoDB `$jsonSchema` validator document.
+ *
+ * Only top-level fields are emitted at the root; nested fields are compiled
+ * recursively into `properties` of their parent object. Fields typed as
+ * `MongoSchema.Any` or custom constructors (with `bsonType: null`) are excluded.
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - The schema IR.
+ * @returns {JsonSchema} A MongoDB `$jsonSchema`-compatible object.
+ *
+ * @example
+ * const schema = new MongoSchema({
+ *   name: { type: String, min: 1 },
+ *   age: { type: MongoSchema.Integer, min: 0, max: 150 },
+ *   tags: [String],
+ * });
+ *
+ * const jsonSchema = schema.toJsonSchema();
+ * // {
+ * //   bsonType: 'object',
+ * //   required: ['name', 'age', 'tags'],
+ * //   properties: {
+ * //     name: { bsonType: 'string', minLength: 1 },
+ * //     age: { bsonType: ['int', 'long'], minimum: 0, maximum: 150 },
+ * //     tags: { bsonType: 'array', items: { bsonType: 'string' } }
+ * //   }
+ * // }
+ *
+ * // Apply to a MongoDB collection:
+ * await db.command({
+ *   collMod: 'users',
+ *   validator: { $jsonSchema: jsonSchema },
+ *   validationLevel: 'moderate',
+ * });
+ */
 export function compileToJsonSchema(ir) {
   const required = [];
   const properties = {};
@@ -18,16 +86,39 @@ export function compileToJsonSchema(ir) {
   return schema;
 }
 
+/**
+ * Compile a single field descriptor into a `$jsonSchema` field definition.
+ * Recursively processes children (for objects) and items (for arrays).
+ *
+ * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {string} key - The dot-path key of the field being compiled.
+ * @param {import('./schema_definition.js').FieldDescriptor} desc - The field's descriptor.
+ * @returns {JsonSchemaField} The compiled JSON Schema field definition.
+ */
 function compileField(ir, key, desc) {
   const result = {};
   const typeName = desc.resolvedType.name;
 
   // Handle oneOf
   if (typeName === 'oneOf') {
-    result.oneOf = desc.resolvedType.resolvedTypes.map(rt => {
-      if (rt.bsonType) return { bsonType: rt.bsonType };
-      return {};
-    });
+    const oneOfEntries = [];
+    for (const rt of desc.resolvedType.resolvedTypes) {
+      if (rt.bsonType) {
+        oneOfEntries.push({ bsonType: rt.bsonType });
+      } else {
+        // Types without bsonType (Any, custom constructors) produce an unconstrained
+        // entry — effectively making the entire oneOf permissive. Warn in development.
+        if (typeof Meteor !== 'undefined' && Meteor.isDevelopment) {
+          console.warn(
+            `MongoSchema: oneOf includes type "${rt.name}" which has no bsonType and ` +
+            `cannot be represented in $jsonSchema. The compiled oneOf constraint for ` +
+            `field "${key}" will include an unconstrained entry.`
+          );
+        }
+        oneOfEntries.push({});
+      }
+    }
+    result.oneOf = oneOfEntries;
     return result;
   }
 
@@ -78,6 +169,13 @@ function compileField(ir, key, desc) {
     // MongoDB $jsonSchema only supports a single pattern. Use first if array.
     const re = Array.isArray(desc.regEx) ? desc.regEx[0] : desc.regEx;
     if (re instanceof RegExp) {
+      if (re.flags !== '' && typeof Meteor !== 'undefined' && Meteor.isDevelopment) {
+        console.warn(
+          `MongoSchema: RegExp for field "${key}" has flags "${re.flags}" ` +
+          `but MongoDB $jsonSchema "pattern" does not support regex flags. ` +
+          `Flags will be ignored for pattern: ${re.source}`
+        );
+      }
       result.pattern = re.source;
     }
   }

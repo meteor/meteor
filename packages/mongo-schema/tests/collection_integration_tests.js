@@ -100,7 +100,19 @@ Tinytest.addAsync('integration - validate false skips validation', async functio
   test.isTrue(typeof id === 'string');
 });
 
-Tinytest.addAsync('integration - bypassSchema skips everything', async function (test) {
+Tinytest.addAsync('integration - bypassSchema skips everything on server', async function (test) {
+  if (!Meteor.isServer) {
+    // bypassSchema is only honored in trusted server-side code
+    const col = new Mongo.Collection(Random.id());
+    col.attachSchema(new MongoSchema({ name: String }));
+    try {
+      await col.insertAsync({ anything: 'goes' }, { bypassSchema: true });
+      test.fail('Expected validation error on client with bypassSchema');
+    } catch (e) {
+      test.equal(e.error, 'validation-error');
+    }
+    return;
+  }
   const col = new Mongo.Collection(Random.id());
   col.attachSchema(new MongoSchema({ name: String }));
   const id = await col.insertAsync({ anything: 'goes' }, { bypassSchema: true });

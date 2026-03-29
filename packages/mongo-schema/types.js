@@ -1,9 +1,60 @@
 // packages/mongo-schema/types.js
 
-// Sentinel markers
+/**
+ * @module mongo-schema/types
+ * @summary Core type system for MongoSchema. Provides built-in type markers,
+ * union types via `oneOf`, and a resolver that maps field definitions to
+ * runtime type descriptors used by validation, cleaning, and JSON Schema compilation.
+ */
+
+/**
+ * @typedef {Object} TypeDescriptor
+ * @property {string} name - Human-readable type name (e.g., `'string'`, `'number'`, `'oneOf'`, `'schema'`).
+ * @property {(value: *) => boolean} check - Returns `true` if `value` matches this type.
+ * @property {string|string[]|null} [bsonType] - BSON type(s) for `$jsonSchema` compilation.
+ *   `null` means the type is excluded from database-level schemas (e.g., `Any`, custom constructors).
+ * @property {TypeDescriptor[]} [resolvedTypes] - Present only for `oneOf` unions; the resolved
+ *   descriptors of each constituent type.
+ * @property {MongoSchema} [schema] - Present only when a `MongoSchema` instance is used as a
+ *   sub-schema type for nested object validation.
+ */
+
+/**
+ * Sentinel marker representing an integer type (no fractional part).
+ * Use as `MongoSchema.Integer` in field definitions.
+ *
+ * @example
+ * const schema = new MongoSchema({ age: MongoSchema.Integer });
+ *
+ * @type {{ _type: 'MongoSchema.Integer' }}
+ */
 const IntegerMarker = { _type: 'MongoSchema.Integer' };
+
+/**
+ * Sentinel marker representing any type — always passes validation.
+ * Fields typed as `Any` are excluded from `$jsonSchema` compilation.
+ * Use as `MongoSchema.Any` in field definitions.
+ *
+ * @example
+ * const schema = new MongoSchema({ metadata: MongoSchema.Any });
+ *
+ * @type {{ _type: 'MongoSchema.Any' }}
+ */
 const AnyMarker = { _type: 'MongoSchema.Any' };
 
+/**
+ * Creates a union type that accepts any of the provided types.
+ * During validation, a value passes if it satisfies **at least one** of the constituent types.
+ *
+ * @param {...(Function|Object)} typeDefs - Two or more type definitions (e.g., `String`, `Number`,
+ *   `MongoSchema.Integer`, or a `MongoSchema` instance).
+ * @returns {{ _isOneOf: true, types: Array }} A union marker consumed by {@link resolveType}.
+ *
+ * @example
+ * const schema = new MongoSchema({
+ *   value: { type: MongoSchema.oneOf(String, Number) }
+ * });
+ */
 function oneOf(...typeDefs) {
   return {
     _isOneOf: true,
@@ -11,7 +62,28 @@ function oneOf(...typeDefs) {
   };
 }
 
-// Type descriptors returned by resolveType
+/**
+ * Check whether a value is a plain object (object literal or `Object.create(null/Object.prototype)`).
+ * Returns `false` for instances of built-in classes like `RegExp`, `Error`, `Map`, `Set`, etc.
+ *
+ * @param {*} v - Value to check.
+ * @returns {boolean} `true` if `v` is a plain object.
+ */
+function isPlainObject(v) {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return false;
+  const proto = Object.getPrototypeOf(v);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Maps built-in JavaScript constructors and sentinel markers to their
+ * {@link TypeDescriptor}s. Used internally by {@link resolveType}.
+ *
+ * Registered types: `String`, `Number`, `Boolean`, `Date`, `Object`, `Array`,
+ * `IntegerMarker`, `AnyMarker`.
+ *
+ * @type {Map<Function|Object, TypeDescriptor>}
+ */
 const TYPE_MAP = new Map();
 
 TYPE_MAP.set(String, {
@@ -40,7 +112,7 @@ TYPE_MAP.set(Date, {
 
 TYPE_MAP.set(Object, {
   name: 'object',
-  check: (v) => v !== null && typeof v === 'object' && !Array.isArray(v) && !(v instanceof Date),
+  check: isPlainObject,
   bsonType: 'object',
 });
 
@@ -62,6 +134,27 @@ TYPE_MAP.set(AnyMarker, {
   bsonType: null, // Not compiled to $jsonSchema
 });
 
+/**
+ * Resolves a user-provided type definition into a {@link TypeDescriptor}.
+ *
+ * Supports:
+ * - **Built-in constructors**: `String`, `Number`, `Boolean`, `Date`, `Object`, `Array`
+ * - **Sentinel markers**: `MongoSchema.Integer`, `MongoSchema.Any`
+ * - **Union types**: objects created by {@link oneOf}
+ * - **Sub-schemas**: `MongoSchema` instances used as nested object types
+ * - **Custom constructors**: any function — validated via `instanceof`
+ *
+ * @param {Function|Object} typeDef - A type definition from a schema field's `type` property.
+ * @returns {TypeDescriptor} The resolved descriptor with `name`, `check`, and optionally `bsonType`.
+ * @throws {Error} If `typeDef` is not a recognized type.
+ *
+ * @example
+ * resolveType(String);
+ * // => { name: 'string', check: [Function], bsonType: 'string' }
+ *
+ * resolveType(MongoSchema.Integer);
+ * // => { name: 'integer', check: [Function], bsonType: ['int', 'long'] }
+ */
 function resolveType(typeDef) {
   // Check direct map
   if (TYPE_MAP.has(typeDef)) {
@@ -82,7 +175,7 @@ function resolveType(typeDef) {
   if (typeDef && typeDef._isMongoSchema) {
     return {
       name: 'schema',
-      check: (v) => v !== null && typeof v === 'object' && !Array.isArray(v),
+      check: isPlainObject,
       schema: typeDef,
     };
   }
@@ -99,4 +192,4 @@ function resolveType(typeDef) {
   throw new Error(`MongoSchema: Unknown type: ${typeDef}`);
 }
 
-export { IntegerMarker, AnyMarker, oneOf, resolveType, TYPE_MAP };
+export { IntegerMarker, AnyMarker, oneOf, resolveType, TYPE_MAP, isPlainObject };
