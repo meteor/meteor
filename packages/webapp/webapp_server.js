@@ -17,7 +17,6 @@ import {
   removeExistingSocketFile,
   registerSocketFileCleanup,
 } from './socket_file.js';
-import cluster from 'cluster';
 import { execSync } from 'child_process';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
@@ -1424,10 +1423,15 @@ async function runWebAppServer() {
     let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
-      if (cluster.isWorker) {
-        const workerName = cluster.worker.process.env.name || cluster.worker.id;
-        unixSocketPath += '.' + workerName + '.sock';
-      }
+      // Lazy-load cluster only when needed (UNIX_SOCKET_PATH with workers).
+      // Avoids loading the module in the common case where it is unused.
+      try {
+        const cluster = require('cluster');
+        if (cluster.isWorker) {
+          const workerName = cluster.worker.process.env.name || cluster.worker.id;
+          unixSocketPath += '.' + workerName + '.sock';
+        }
+      } catch (e) {}
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
       startHttpServer({ path: unixSocketPath });
