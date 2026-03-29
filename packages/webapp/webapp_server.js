@@ -1425,13 +1425,16 @@ async function runWebAppServer() {
     if (unixSocketPath) {
       // Lazy-load cluster only when needed (UNIX_SOCKET_PATH with workers).
       // Avoids loading the module in the common case where it is unused.
+      let cluster;
       try {
-        const cluster = require('cluster');
-        if (cluster.isWorker) {
-          const workerName = cluster.worker.process.env.name || cluster.worker.id;
-          unixSocketPath += '.' + workerName + '.sock';
-        }
-      } catch (e) {}
+        cluster = require('cluster');
+      } catch (e) {
+        // cluster module unavailable in this runtime; continue without worker suffix.
+      }
+      if (cluster?.isWorker && cluster.worker) {
+        const workerName = cluster.worker.process.env.name || cluster.worker.id;
+        unixSocketPath += '.' + workerName + '.sock';
+      }
       // Start the HTTP server using a socket file.
       removeExistingSocketFile(unixSocketPath);
       startHttpServer({ path: unixSocketPath });
