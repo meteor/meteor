@@ -1,5 +1,22 @@
+/**
+ * @module thread-context/handlers/connection-proxy
+ * @summary Creates a restricted ES6 Proxy that stands in for the DDP
+ * `connection` object inside bridge MethodInvocations, exposing only `.id`.
+ */
+
 import { BridgeContextError } from '../errors.js';
 
+/**
+ * Creates an ES6 Proxy that exposes only `connection.id` and throws
+ * `BridgeContextError` for any other meaningful property access.
+ *
+ * JS runtime introspection properties (Symbols, `then`, `toJSON`, etc.)
+ * return `undefined` to avoid breaking `JSON.stringify`, `util.inspect`,
+ * Promise coercion, and similar built-in patterns.
+ *
+ * @param {string} connectionId - The DDP connection ID to expose.
+ * @returns {Proxy} A proxy with only `.id` readable.
+ */
 export function createConnectionProxy(connectionId) {
   return new Proxy({ id: connectionId }, {
     get(target, prop) {
