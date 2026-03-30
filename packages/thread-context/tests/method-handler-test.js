@@ -7,8 +7,8 @@ Meteor.methods({
   'threadContext.test.throws'() {
     throw new Meteor.Error(403, 'Forbidden', 'test details');
   },
-  'threadContext.test.setUserId'() {
-    this.setUserId('hacker');
+  async 'threadContext.test.setUserId'() {
+    await this.setUserId('hacker');
   },
 });
 
