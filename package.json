@@ -39,7 +39,8 @@
     "test:unit": "cd tools/unit-tests && npm test",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "install:e2e": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
-    "test:e2e": "cd tools/modern-tests && npm test -- "
+    "test:e2e": "cd tools/modern-tests && npm test -- ",
+    "checkout:pr": "node scripts/checkout-pr.js"
   },
   "jshintConfig": {
     "esversion": 11
