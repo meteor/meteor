@@ -331,6 +331,8 @@ function validateConstraints(key, desc, value, errors, options) {
  * @param {ValidateOptions} options - Validation options.
  */
 function runCustomValidator(ir, key, desc, rootDoc, value, errors, options) {
+  const parentPath = key.includes('.') ? key.slice(0, key.lastIndexOf('.')) : '';
+
   const context = {
     key,
     genericKey: key.replace(/\.\d+\./g, '.$.').replace(/\.\d+$/, '.$'),
@@ -342,8 +344,16 @@ function runCustomValidator(ir, key, desc, rootDoc, value, errors, options) {
       const val = getNestedValue(rootDoc, name);
       return { isSet: val !== undefined, value: val, operator: null };
     },
-    siblingField(name) { return this.field(name); },
-    parentField() { return { isSet: true, value: rootDoc, operator: null }; },
+    siblingField(name) {
+      const siblingPath = parentPath ? `${parentPath}.${name}` : name;
+      const val = getNestedValue(rootDoc, siblingPath);
+      return { isSet: val !== undefined, value: val, operator: null };
+    },
+    parentField() {
+      if (!parentPath) return { isSet: true, value: rootDoc, operator: null };
+      const val = getNestedValue(rootDoc, parentPath);
+      return { isSet: val !== undefined, value: val, operator: null };
+    },
     ...(options.extendedCustomContext || {}),
   };
 
@@ -449,7 +459,9 @@ function collectModifierErrors(ir, modifier, options) {
           field(name) {
             return { isSet: mergedFields[name] !== undefined, value: mergedFields[name], operator: null };
           },
-          siblingField(name) { return this.field(name); },
+          siblingField(name) {
+            return { isSet: mergedFields[name] !== undefined, value: mergedFields[name], operator: null };
+          },
           parentField() { return { isSet: true, value: modifier, operator: null }; },
           ...(options.extendedCustomContext || {}),
         };
