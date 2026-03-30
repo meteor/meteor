@@ -172,23 +172,25 @@ Tinytest.add('thread-context - createThreadContext - settings snapshot is shared
 // ---------------------------------------------------------------------------
 
 Tinytest.addAsync('thread-context - BridgeClient - timeout rejects with BridgeTimeoutError', async function (test) {
-  const ctx = createThreadContext();
+  const { MessageChannel } = require('worker_threads');
+  const ch = new MessageChannel();
 
-  // Very short timeout — the host will never respond because we destroy immediately
-  const client = new BridgeClient(ctx.port, { callTimeout: 1 });
+  // No host listening on port1 — the message goes nowhere,
+  // so the timeout is the only way the promise can settle.
+  const client = new BridgeClient(ch.port2, { callTimeout: 50 });
   const methodProxy = createMethodProxy(client);
 
-  // Don't destroy — let the timeout fire naturally
   try {
     await methodProxy.callAsync('threadContext.nonexistent.method.for.timeout');
     test.fail('Expected BridgeTimeoutError');
   } catch (err) {
     test.instanceOf(err, BridgeTimeoutError);
     test.isTrue(err.message.includes('timed out'));
-    test.isTrue(err.message.includes('1ms'));
+    test.isTrue(err.message.includes('50ms'));
   }
 
-  ctx.destroy();
+  ch.port1.close();
+  ch.port2.close();
 });
 
 // ---------------------------------------------------------------------------
