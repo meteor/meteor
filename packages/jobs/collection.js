@@ -60,7 +60,7 @@ function ensureIndexes() {
 
   // Retention cleanup — find completed jobs older than retention period
   jobs.createIndex(
-    { completedAt: 1 },
+    { status: 1, completedAt: 1 },
     { background: true }
   );
 

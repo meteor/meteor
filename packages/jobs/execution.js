@@ -18,7 +18,7 @@ import { FatalError } from './errors.js';
 import { isLeader, setOnLeaderAcquired, setOnLeaderLost } from './leader.js';
 import { startCronScheduler, stopCronScheduler } from './cron.js';
 import { emit } from './events.js';
-import { RESET_CLAIM_FIELDS } from './helpers.js';
+import { RESET_CLAIM_FIELDS, unwrapDriverResult } from './helpers.js';
 
 // ---------------------------------------------------------------------------
 // Worker pool (lazy, singleton — weak dependency on worker-pool package)
@@ -73,9 +73,9 @@ function getWorkerPool() {
 
 /**
  * Map of currently-running job IDs to their runtime handles.
- * Used for heartbeat cleanup and abort-on-shutdown.
+ * Used for abort-on-shutdown and per-type concurrency tracking.
  *
- * @type {Map<string, { heartbeatHandle: ReturnType<typeof setInterval>, abortController: AbortController, timeoutHandle: ReturnType<typeof setTimeout> }>}
+ * @type {Map<string, { name: string, abortController: AbortController, timeoutHandle: ReturnType<typeof setTimeout> }>}
  * @private
  */
 const _runningJobs = new Map();
@@ -86,8 +86,11 @@ let _observer = null;
 /** @type {ReturnType<typeof setInterval>|null} Polling fallback interval. */
 let _pollInterval = null;
 
-/** @type {ReturnType<typeof setInterval>|null} Pending→ready promotion interval (leader only). */
-let _promotionInterval = null;
+/** @type {ReturnType<typeof setTimeout>|null} Pending→ready promotion timeout (leader only). */
+let _promotionTimeout = null;
+
+/** @type {ReturnType<typeof setInterval>|null} Global batched heartbeat interval. */
+let _heartbeatInterval = null;
 
 /** @type {ReturnType<typeof setInterval>|null} Stalled job detection interval (leader only). */
 let _stalledInterval = null;
@@ -98,6 +101,12 @@ let _retentionInterval = null;
 /** @type {boolean} Whether the engine is currently running. */
 let _engineRunning = false;
 
+/** @type {Function|null} Deregistration handle for onLeaderAcquired callback. */
+let _deregAcquired = null;
+
+/** @type {Function|null} Deregistration handle for onLeaderLost callback. */
+let _deregLost = null;
+
 /**
  * Set of job IDs for which a claim attempt is already in-flight.
  * Prevents duplicate claim attempts for the same job from the observer.
@@ -105,6 +114,30 @@ let _engineRunning = false;
  * @private
  */
 const _claimInFlight = new Set();
+
+/**
+ * In-memory count of running jobs per type on this instance.
+ * Incremented after successful claim, decremented on cleanup.
+ * Used as a fast pre-check before the cluster-wide countDocuments query.
+ * @type {Map<string, number>}
+ * @private
+ */
+const _runningByType = new Map();
+
+/** @private */
+function _incrementTypeCount(name) {
+  _runningByType.set(name, (_runningByType.get(name) || 0) + 1);
+}
+
+/** @private */
+function _decrementTypeCount(name) {
+  const count = (_runningByType.get(name) || 1) - 1;
+  if (count <= 0) {
+    _runningByType.delete(name);
+  } else {
+    _runningByType.set(name, count);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Concurrency checks
@@ -128,9 +161,17 @@ async function canAcceptJob(jobName) {
     return false;
   }
 
-  // Per-type concurrency: cluster-wide via MongoDB
+  // Per-type concurrency: fast local check, then cluster-wide via MongoDB
   const definition = getJobDefinition(jobName);
   if (definition && definition.concurrency !== Infinity) {
+    // Fast path: if this instance alone is already at the per-type limit,
+    // skip the DB query entirely.
+    const localTypeCount = _runningByType.get(jobName) || 0;
+    if (localTypeCount >= definition.concurrency) {
+      return false;
+    }
+
+    // Slow path: cluster-wide check (other instances may be running this type)
     const typeRunning = await JobsCollection.rawCollection().countDocuments({
       name: jobName,
       status: 'running',
@@ -203,10 +244,30 @@ export async function claimAndExecute(jobId, jobName) {
   }
 
   // Handle both driver result shapes: `{ value: doc }` or doc directly
-  const claimed = result && (result.value != null ? result.value : result);
+  const claimed = unwrapDriverResult(result);
   if (!claimed || claimed.status !== 'running') return;
 
-  // We successfully claimed this job — execute it.
+  // Post-claim concurrency guard: between canAcceptJob() and the atomic
+  // claim, other async claims may have also passed the check.  If we've
+  // now exceeded global concurrency, release the claim back to 'ready'
+  // so the job can be picked up when a slot opens.
+  if (_runningJobs.size >= config.concurrency) {
+    try {
+      await JobsCollection.rawCollection().findOneAndUpdate(
+        { _id: jobId, status: 'running', runId },
+        {
+          $set: { status: 'ready', ...RESET_CLAIM_FIELDS },
+          $inc: { attempts: -1 },
+        }
+      );
+    } catch (err) {
+      console.error('[Jobs] Error releasing over-capacity claim', jobId, err);
+    }
+    return;
+  }
+
+  // We successfully claimed this job — track per-type count and execute.
+  _incrementTypeCount(claimed.name);
   await executeJob(claimed);
 }
 
@@ -243,24 +304,12 @@ async function executeJob(jobDoc) {
     abortController.abort();
   }, timeout);
 
-  // --- Heartbeat -----------------------------------------------------------
-
-  const heartbeatHandle = setInterval(async () => {
-    try {
-      await JobsCollection.updateAsync(jobDoc._id, {
-        $set: { heartbeatAt: new Date() },
-      });
-    } catch (err) {
-      // Non-fatal: log and continue — the stale-heartbeat detector will
-      // eventually re-queue the job if heartbeats truly stop.
-      console.error('[Jobs] Heartbeat update failed for', jobDoc._id, err);
-    }
-  }, config.heartbeatInterval);
-
   // --- Track the running job -----------------------------------------------
+  // Heartbeats are handled by the global batched heartbeat timer (_batchHeartbeat)
+  // instead of per-job intervals, reducing N writes to 1 per heartbeat cycle.
 
   _runningJobs.set(jobDoc._id, {
-    heartbeatHandle,
+    name: jobDoc.name,
     abortController,
     timeoutHandle,
   });
@@ -341,9 +390,30 @@ async function executeJob(jobDoc) {
 function _cleanup(jobId) {
   const handle = _runningJobs.get(jobId);
   if (handle) {
-    clearInterval(handle.heartbeatHandle);
     clearTimeout(handle.timeoutHandle);
+    _decrementTypeCount(handle.name);
     _runningJobs.delete(jobId);
+  }
+}
+
+/**
+ * Send a single batched heartbeat for all running jobs on this instance.
+ * Replaces per-job heartbeat intervals with one `updateMany`, reducing
+ * N writes per cycle to 1 regardless of concurrency.
+ * @private
+ */
+async function _batchHeartbeat() {
+  if (_runningJobs.size === 0) return;
+  const jobIds = [..._runningJobs.keys()];
+  try {
+    await JobsCollection.rawCollection().updateMany(
+      { _id: { $in: jobIds }, status: 'running' },
+      { $set: { heartbeatAt: new Date() } }
+    );
+  } catch (err) {
+    // Non-fatal: the stale-heartbeat detector will eventually re-queue
+    // jobs if heartbeats truly stop.
+    console.error('[Jobs] Batched heartbeat update failed:', err);
   }
 }
 
@@ -403,7 +473,7 @@ function buildLastError(error) {
     stack: error.stack || null,
     timestamp: new Date(),
     code: error.code || null,
-    isTimeout: error && error.name === 'AbortError',
+    isTimeout: !!(error && (error.name === 'AbortError' || error.code === 'STALLED')),
   };
 }
 
@@ -419,13 +489,20 @@ function buildLastError(error) {
  * 2. attempts < maxAttempts → schedule a retry with backoff delay.
  * 3. attempts >= maxAttempts → mark as terminal failure (retries exhausted).
  *
- * @param {string} jobId  The job document _id.
- * @param {Error}  error  The error that caused the failure.
+ * @param {string} jobId       The job document _id.
+ * @param {Error}  error       The error that caused the failure.
+ * @param {Object} [existingJob]  If the caller already has the full job
+ *   document, pass it to skip the extra DB fetch.
  * @returns {Promise<void>}
  * @private
  */
-async function handleFailure(jobId, error) {
-  const job = await JobsCollection.findOneAsync(jobId);
+async function handleFailure(jobId, error, existingJob) {
+  const job = existingJob || await JobsCollection.findOneAsync(jobId, {
+    fields: {
+      name: 1, data: 1, status: 1, attempts: 1, maxAttempts: 1,
+      scheduledAt: 1, source: 1, dedupKey: 1, runId: 1, createdAt: 1,
+    },
+  });
   if (!job) return;
 
   const definition = getJobDefinition(job.name);
@@ -508,7 +585,7 @@ async function markCompleted(jobId, returnValue) {
       },
       { returnDocument: 'after' }
     );
-    job = result && (result.value != null ? result.value : result);
+    job = unwrapDriverResult(result);
   } catch (err) {
     console.error('[Jobs] Error marking job completed', jobId, err);
   }
@@ -534,8 +611,9 @@ async function markCompleted(jobId, returnValue) {
  * @private
  */
 async function markTerminalFailed(jobId, error) {
+  let job;
   try {
-    await JobsCollection.rawCollection().findOneAndUpdate(
+    const result = await JobsCollection.rawCollection().findOneAndUpdate(
       { _id: jobId, status: 'running' },
       {
         $set: {
@@ -544,20 +622,16 @@ async function markTerminalFailed(jobId, error) {
           lastError: buildLastError(error),
         },
         $unset: { dedupKey: 1 },
-      }
+      },
+      { returnDocument: 'after' }
     );
+    job = unwrapDriverResult(result);
   } catch (err) {
     console.error('[Jobs] Error marking job failed', jobId, err);
   }
 
-  // Emit 'failed' lifecycle event
-  try {
-    const job = await JobsCollection.findOneAsync(jobId);
-    if (job) {
-      emit('failed', job).catch(() => {});
-    }
-  } catch (_) {
-    // Non-critical
+  if (job) {
+    emit('failed', job).catch(() => {});
   }
 }
 
@@ -567,12 +641,12 @@ async function markTerminalFailed(jobId, error) {
 
 /**
  * Scan for stalled jobs (running but heartbeat has exceeded the threshold)
- * and either reset them for retry or mark them as failed.
+ * and route them through the standard failure/retry path.
  *
  * A job is considered stalled when `heartbeatAt < (now - stalledThreshold)`.
  *
- * - If `attempts < maxAttempts` → reset to 'ready' (will be picked up again).
- * - If `attempts >= maxAttempts` → mark as 'failed' with a STALLED error.
+ * - If `attempts < maxAttempts` → scheduled for retry with proper backoff.
+ * - If `attempts >= maxAttempts` → marked as terminally failed.
  *
  * Only the leader instance runs this scan.
  *
@@ -583,54 +657,36 @@ async function detectStalledJobs() {
   const config = getConfig();
   const threshold = new Date(Date.now() - config.stalledThreshold);
 
-  let stalledJobs;
+  let cursor;
   try {
-    stalledJobs = await JobsCollection.rawCollection().find({
+    cursor = JobsCollection.rawCollection().find({
       status: 'running',
       heartbeatAt: { $lt: threshold },
-    }).toArray();
+    });
   } catch (err) {
     console.error('[Jobs] Error querying stalled jobs:', err);
     return;
   }
 
-  for (const job of stalledJobs) {
-    try {
-      const stalledError = new Error('Job stalled — heartbeat timeout exceeded');
-      stalledError.code = 'STALLED';
-      stalledError.name = 'AbortError';
+  // Stream results instead of loading all stalled jobs into memory at once.
+  try {
+    for await (const job of cursor) {
+      try {
+        const stalledError = new Error('Job stalled — heartbeat timeout exceeded');
+        stalledError.code = 'STALLED';
 
-      if (job.attempts >= job.maxAttempts) {
-        // Exhausted retries → mark failed
-        await JobsCollection.rawCollection().findOneAndUpdate(
-          { _id: job._id, status: 'running' },
-          {
-            $set: {
-              status: 'failed',
-              failedAt: new Date(),
-              lastError: buildLastError(stalledError),
-            },
-            $unset: { dedupKey: 1 },
-          }
-        );
-      } else {
-        // Can retry → reset to ready
-        await JobsCollection.rawCollection().findOneAndUpdate(
-          { _id: job._id, status: 'running' },
-          {
-            $set: {
-              status: 'ready',
-              lastError: buildLastError(stalledError),
-              ...RESET_CLAIM_FIELDS,
-            },
-          }
-        );
+        // Route through the standard failure/retry path so that retryable
+        // stalled jobs get proper backoff instead of being immediately
+        // re-queued as 'ready' (which can cause a hot retry loop).
+        await handleFailure(job._id, stalledError, job);
+        // Emit 'stalled' lifecycle event
+        emit('stalled', job).catch(() => {});
+      } catch (err) {
+        console.error('[Jobs] Error handling stalled job', job._id, err);
       }
-      // Emit 'stalled' lifecycle event
-      emit('stalled', job).catch(() => {});
-    } catch (err) {
-      console.error('[Jobs] Error handling stalled job', job._id, err);
     }
+  } catch (err) {
+    console.error('[Jobs] Error iterating stalled jobs cursor:', err);
   }
 }
 
@@ -682,17 +738,21 @@ async function cleanupRetention() {
   if (!period || period <= 0) return;
 
   const cutoff = new Date(Date.now() - period);
+  const raw = JobsCollection.rawCollection();
 
-  try {
-    await JobsCollection.rawCollection().deleteMany({
-      $or: [
-        { status: 'completed', completedAt: { $lt: cutoff } },
-        { status: 'failed', failedAt: { $lt: cutoff } },
-        { status: 'cancelled', cancelledAt: { $lt: cutoff } },
-      ],
-    });
-  } catch (err) {
-    console.error('[Jobs] Error cleaning up old jobs:', err);
+  // Three parallel deletes, each hitting its own compound index
+  // ({status:1, completedAt:1}, {status:1, failedAt:1}, {status:1, cancelledAt:1})
+  // instead of a single $or that may not use all indexes efficiently.
+  const results = await Promise.allSettled([
+    raw.deleteMany({ status: 'completed', completedAt: { $lt: cutoff } }),
+    raw.deleteMany({ status: 'failed', failedAt: { $lt: cutoff } }),
+    raw.deleteMany({ status: 'cancelled', cancelledAt: { $lt: cutoff } }),
+  ]);
+
+  for (const result of results) {
+    if (result.status === 'rejected') {
+      console.error('[Jobs] Error cleaning up old jobs:', result.reason);
+    }
   }
 }
 
@@ -725,8 +785,12 @@ function _stopRetentionCleanup() {
 // Pending → Ready promotion (leader only)
 // ---------------------------------------------------------------------------
 
+/** Maximum fallback interval for promotion polling (5 seconds). */
+const PROMOTION_MAX_INTERVAL = 5000;
+
 /**
- * Promote all pending jobs whose `scheduledAt` has arrived to 'ready'.
+ * Promote all pending jobs whose `scheduledAt` has arrived to 'ready',
+ * then schedule the next promotion run based on the soonest pending job.
  *
  * Only the leader instance runs this scan.
  *
@@ -742,16 +806,45 @@ async function promotePendingJobs() {
   } catch (err) {
     console.error('[Jobs] Error promoting pending jobs:', err);
   }
+
+  // Schedule the next run based on the soonest pending job.
+  _scheduleNextPromotion();
+}
+
+/**
+ * Query for the soonest pending job and set a timeout to promote it.
+ * Falls back to PROMOTION_MAX_INTERVAL if no pending jobs exist.
+ * @private
+ */
+async function _scheduleNextPromotion() {
+  if (!_engineRunning) return;
+
+  let delay = PROMOTION_MAX_INTERVAL;
+  try {
+    const soonest = await JobsCollection.rawCollection().findOne(
+      { status: 'pending' },
+      { sort: { scheduledAt: 1 }, projection: { scheduledAt: 1 } }
+    );
+    if (soonest && soonest.scheduledAt) {
+      const msUntil = soonest.scheduledAt.getTime() - Date.now();
+      // Add 50ms buffer to avoid firing slightly too early
+      delay = Math.max(50, Math.min(msUntil + 50, PROMOTION_MAX_INTERVAL));
+    }
+  } catch (err) {
+    console.error('[Jobs] Error querying soonest pending job:', err);
+  }
+
+  _promotionTimeout = setTimeout(promotePendingJobs, delay);
 }
 
 /**
  * Start the pending→ready promotion loop.
+ * Runs once immediately, then schedules targeted follow-ups.
  * @private
  */
 function _startPromotion() {
   _stopPromotion();
-  _promotionInterval = setInterval(promotePendingJobs, 1000);
-  // Run once immediately so we don't wait a full second on leader acquisition.
+  // Run once immediately, which will schedule the next run.
   promotePendingJobs();
 }
 
@@ -760,9 +853,9 @@ function _startPromotion() {
  * @private
  */
 function _stopPromotion() {
-  if (_promotionInterval != null) {
-    clearInterval(_promotionInterval);
-    _promotionInterval = null;
+  if (_promotionTimeout != null) {
+    clearTimeout(_promotionTimeout);
+    _promotionTimeout = null;
   }
 }
 
@@ -787,6 +880,7 @@ function _startObserver() {
   ).observe({
     added(job) {
       // `observe.added` is synchronous — we must not await here.
+      if (!_engineRunning) return;
       // Guard against duplicate in-flight claims for the same job.
       if (_claimInFlight.has(job._id)) return;
       // Guard against exceeding global concurrency during initial observer burst.
@@ -834,13 +928,17 @@ function _startPolling() {
   _pollInterval = setInterval(async () => {
     if (!_engineRunning) return;
 
+    // Skip the DB query entirely if already at global capacity.
+    const available = getConfig().concurrency - _runningJobs.size - _claimInFlight.size;
+    if (available <= 0) return;
+
     try {
       const readyJobs = await JobsCollection.find(
         { status: 'ready' },
         {
           fields: { _id: 1, name: 1 },
           sort: { scheduledAt: 1 },
-          limit: config.concurrency,
+          limit: available,
         }
       ).fetchAsync();
 
@@ -901,6 +999,9 @@ export function startExecutionEngine() {
 
   _engineRunning = true;
 
+  // Start the global batched heartbeat timer.
+  _heartbeatInterval = setInterval(_batchHeartbeat, config.heartbeatInterval);
+
   // Start the reactive observer (oplog-driven pickup).
   _startObserver();
 
@@ -909,14 +1010,14 @@ export function startExecutionEngine() {
 
   // Wire leader callbacks for pending→ready promotion, cron scheduling,
   // stalled detection, and retention cleanup.
-  setOnLeaderAcquired(() => {
+  _deregAcquired = setOnLeaderAcquired(() => {
     _startPromotion();
     startCronScheduler();
     _startStalledDetection();
     _startRetentionCleanup();
   });
 
-  setOnLeaderLost(() => {
+  _deregLost = setOnLeaderLost(() => {
     _stopPromotion();
     stopCronScheduler();
     _stopStalledDetection();
@@ -956,6 +1057,16 @@ export async function stopExecutionEngine() {
   _stopStalledDetection();
   _stopRetentionCleanup();
 
+  // Stop the global batched heartbeat.
+  if (_heartbeatInterval != null) {
+    clearInterval(_heartbeatInterval);
+    _heartbeatInterval = null;
+  }
+
+  // Deregister leader callbacks to prevent accumulation on restart.
+  if (_deregAcquired) { _deregAcquired(); _deregAcquired = null; }
+  if (_deregLost) { _deregLost(); _deregLost = null; }
+
   const config = getConfig();
   const deadline = Date.now() + config.shutdownTimeout;
 
@@ -968,7 +1079,6 @@ export async function stopExecutionEngine() {
   // can be picked up by another instance.
   for (const [jobId, handle] of _runningJobs) {
     handle.abortController.abort();
-    clearInterval(handle.heartbeatHandle);
     clearTimeout(handle.timeoutHandle);
 
     // Return to queue
@@ -987,6 +1097,7 @@ export async function stopExecutionEngine() {
     }
   }
   _runningJobs.clear();
+  _runningByType.clear();
 
   _claimInFlight.clear();
 

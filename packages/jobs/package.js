@@ -48,5 +48,15 @@ Package.onTest(function (api) {
     'tests/publication-test.js',
     'tests/api-test.js',
     'tests/cron-test.js',
+    'tests/config-validation-test.js',
+    'tests/enqueue-scheduling-test.js',
+    'tests/dedup-replace-test.js',
+    'tests/retry-backoff-test.js',
+    'tests/run-and-wait-test.js',
+    'tests/cancel-comprehensive-test.js',
+    'tests/failure-tracking-test.js',
+    'tests/events-comprehensive-test.js',
+    'tests/leader-callbacks-test.js',
+    'tests/job-document-test.js',
   ], 'server');
 });

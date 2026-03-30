@@ -15,39 +15,51 @@
 import { JobsLocksCollection } from './collection.js';
 import { getConfig } from './config.js';
 import { emit } from './events.js';
+import { unwrapDriverResult } from './helpers.js';
 
 // ---------------------------------------------------------------------------
 // Event callbacks — set by other modules to react to leadership changes.
 // ---------------------------------------------------------------------------
 
 /**
- * Called when this instance becomes the leader.
- * Other modules can overwrite this to hook in behaviour (e.g. starting cron).
- * @type {Function}
+ * Callbacks invoked when this instance becomes the leader.
+ * Multiple modules can register callbacks (e.g. execution engine, cron).
+ * @type {Function[]}
+ * @private
  */
-export let onLeaderAcquired = () => {};
+const _onLeaderAcquiredCallbacks = [];
 
 /**
- * Called when this instance loses the leadership.
- * Other modules can overwrite this to hook in behaviour (e.g. stopping cron).
- * @type {Function}
+ * Callbacks invoked when this instance loses the leadership.
+ * @type {Function[]}
+ * @private
  */
-export let onLeaderLost = () => {};
+const _onLeaderLostCallbacks = [];
 
 /**
- * Allow external modules to set the onLeaderAcquired callback.
+ * Register a callback to be invoked when this instance becomes leader.
  * @param {Function} fn
+ * @returns {Function} A deregistration function — call it to remove the callback.
  */
 export function setOnLeaderAcquired(fn) {
-  onLeaderAcquired = fn;
+  _onLeaderAcquiredCallbacks.push(fn);
+  return () => {
+    const idx = _onLeaderAcquiredCallbacks.indexOf(fn);
+    if (idx !== -1) _onLeaderAcquiredCallbacks.splice(idx, 1);
+  };
 }
 
 /**
- * Allow external modules to set the onLeaderLost callback.
+ * Register a callback to be invoked when this instance loses leadership.
  * @param {Function} fn
+ * @returns {Function} A deregistration function — call it to remove the callback.
  */
 export function setOnLeaderLost(fn) {
-  onLeaderLost = fn;
+  _onLeaderLostCallbacks.push(fn);
+  return () => {
+    const idx = _onLeaderLostCallbacks.indexOf(fn);
+    if (idx !== -1) _onLeaderLostCallbacks.splice(idx, 1);
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -80,13 +92,28 @@ let _running = false;
  * When this instance already holds the lock (`instanceId` matches), the same
  * query acts as a renewal (extends `expiresAt`, updates `heartbeatAt`).
  *
+ * @param {boolean} [renewal=false]  If `true`, this is a renewal — skip
+ *   writing `acquiredAt` so it reflects the original acquisition time.
  * @returns {Promise<boolean>} `true` if the lock is now held by this instance.
  * @private
  */
-async function _tryAcquire() {
+async function _tryAcquire(renewal = false) {
   const now = new Date();
   const config = getConfig();
   const expiresAt = new Date(now.getTime() + config.leaderTimeout);
+
+  const $set = {
+    instanceId: config.instanceId,
+    expiresAt,
+    heartbeatAt: now,
+  };
+
+  // On fresh acquisition (or takeover of an expired lock), record the
+  // acquisition time.  On renewal, leave it alone so it reflects when
+  // this instance originally became leader.
+  if (!renewal) {
+    $set.acquiredAt = now;
+  }
 
   try {
     const result = await JobsLocksCollection.rawCollection().findOneAndUpdate(
@@ -97,21 +124,14 @@ async function _tryAcquire() {
           { expiresAt: { $lt: now } },       // Expired — available
         ],
       },
-      {
-        $set: {
-          instanceId: config.instanceId,
-          expiresAt,
-          heartbeatAt: now,
-          acquiredAt: now,
-        },
-      },
+      { $set },
       { upsert: true, returnDocument: 'after' },
     );
 
     // findOneAndUpdate returns the document (or wraps it in `.value`
     // depending on driver version).  A successful acquisition/renewal
     // returns the document whose `instanceId` matches ours.
-    const doc = result && (result.value != null ? result.value : result);
+    const doc = unwrapDriverResult(result);
     return !!(doc && doc.instanceId === config.instanceId);
   } catch (err) {
     // Duplicate key on upsert race — another instance won.
@@ -163,7 +183,7 @@ function _startRenewal() {
   _stopRenewal();
   const config = getConfig();
   _renewalInterval = setInterval(async () => {
-    const acquired = await _tryAcquire();
+    const acquired = await _tryAcquire(/* renewal */ true);
     if (!acquired) {
       // Renewal failed — another instance took over.  Self-demote.
       _demote();
@@ -231,10 +251,12 @@ function _promote() {
 
   emit('leader.acquired').catch(() => {});
 
-  try {
-    onLeaderAcquired();
-  } catch (err) {
-    console.error('[Jobs] onLeaderAcquired callback error:', err);
+  for (const fn of _onLeaderAcquiredCallbacks) {
+    try {
+      fn();
+    } catch (err) {
+      console.error('[Jobs] onLeaderAcquired callback error:', err);
+    }
   }
 }
 
@@ -249,10 +271,12 @@ function _demote() {
 
   emit('leader.lost').catch(() => {});
 
-  try {
-    onLeaderLost();
-  } catch (err) {
-    console.error('[Jobs] onLeaderLost callback error:', err);
+  for (const fn of _onLeaderLostCallbacks) {
+    try {
+      fn();
+    } catch (err) {
+      console.error('[Jobs] onLeaderLost callback error:', err);
+    }
   }
 
   // Resume follower acquisition loop.
@@ -268,11 +292,14 @@ let _signalHandlersInstalled = false;
 
 /**
  * Handle SIGTERM/SIGINT — release the lock so a new leader can be elected
- * quickly.
+ * quickly.  Since Node.js signal handlers are synchronous, we give the
+ * async release a short grace window before allowing the process to exit.
  * @private
  */
-async function _onShutdownSignal() {
-  await stopLeaderElection();
+function _onShutdownSignal() {
+  stopLeaderElection().catch(err => {
+    console.error('[Jobs] Error releasing leader lock on shutdown:', err);
+  });
 }
 
 /**

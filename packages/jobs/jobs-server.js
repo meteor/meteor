@@ -284,16 +284,17 @@ export const Jobs = {
    * @param {Function} fn
    */
   _setOnLeaderAcquired(fn) {
-    setOnLeaderAcquired(fn);
+    return setOnLeaderAcquired(fn);
   },
 
   /**
    * Set the callback invoked when this instance loses leadership.
    *
    * @param {Function} fn
+   * @returns {Function} A deregistration function.
    */
   _setOnLeaderLost(fn) {
-    setOnLeaderLost(fn);
+    return setOnLeaderLost(fn);
   },
 
   // --- Execution engine ---------------------------------------------------

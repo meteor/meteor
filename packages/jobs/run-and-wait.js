@@ -36,12 +36,15 @@ export async function runAndWait(name, data, options = {}) {
 
   return new Promise((resolve, reject) => {
     let settled = false;
+    let handle = null;
 
     function settle(fn, value) {
       if (settled) return;
       settled = true;
       try { clearTimeout(timeout); } catch (_) {}
-      try { handle.stop(); } catch (_) {}
+      if (handle) {
+        try { handle.stop(); } catch (_) {}
+      }
       fn(value);
     }
 
@@ -66,7 +69,7 @@ export async function runAndWait(name, data, options = {}) {
       );
     }, options.waitTimeout || DEFAULT_WAIT_TIMEOUT);
 
-    const handle = JobsCollection.find(
+    handle = JobsCollection.find(
       { _id: jobId },
       { fields: { status: 1, result: 1, lastError: 1 } }
     ).observe({

@@ -49,26 +49,47 @@ export function on(event, callback) {
 }
 
 /**
- * Emit a lifecycle event, invoking all registered callbacks.
+ * Emit a lifecycle event, invoking all registered callbacks concurrently.
  *
  * Errors thrown by individual callbacks are caught and logged so that
- * a misbehaving listener never breaks the core job flow.
+ * a misbehaving listener never breaks the core job flow.  Callbacks run
+ * in parallel via `Promise.allSettled` so a slow listener does not block
+ * the others.
  *
  * @param {string} event  The event name.
  * @param {...*}   args   Arguments forwarded to every registered callback.
  * @returns {Promise<void>}
  */
 export async function emit(event, ...args) {
-  if (!hooks[event]) return;
+  const hook = hooks[event];
+  if (!hook) return;
+
   try {
-    await hooks[event].forEachAsync(async (cb) => {
-      try {
-        await cb(...args);
-      } catch (err) {
-        console.error(`[Jobs] Error in "${event}" event handler:`, err);
-      }
+    // Collect all currently-registered callbacks (synchronous iteration).
+    const callbacks = [];
+    hook.forEach((cb) => {
+      callbacks.push(cb);
       return true; // continue iteration
     });
+
+    if (callbacks.length === 0) return;
+
+    // Run all callbacks concurrently.
+    const results = await Promise.allSettled(
+      callbacks.map(cb => {
+        try {
+          return Promise.resolve(cb(...args));
+        } catch (syncErr) {
+          return Promise.reject(syncErr);
+        }
+      })
+    );
+
+    for (const result of results) {
+      if (result.status === 'rejected') {
+        console.error(`[Jobs] Error in "${event}" event handler:`, result.reason);
+      }
+    }
   } catch (err) {
     console.error(`[Jobs] Error emitting "${event}" event:`, err);
   }
