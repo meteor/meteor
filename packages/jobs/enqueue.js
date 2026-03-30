@@ -8,7 +8,7 @@ import { JobsCollection } from './collection.js';
 import { getJobDefinition } from './registration.js';
 import { DuplicateError } from './errors.js';
 import { emit } from './events.js';
-import { ACTIVE_STATUSES, deriveDedupKey, baseJobFields } from './helpers.js';
+import { ACTIVE_STATUSES, deriveDedupKey, baseJobFields, unwrapDriverResult } from './helpers.js';
 import { abortLocalJob, getRunningJobIds } from './execution.js';
 
 /**
@@ -194,21 +194,10 @@ export async function enqueueJob(name, data = {}, options = {}) {
   }
 
   // --- Dedup path ---
-
-  // First, check for an existing active job with this dedup key.
-  const existing = await JobsCollection.findOneAsync({
-    dedupKey,
-    status: { $in: ACTIVE_STATUSES },
-  });
-
-  if (existing) {
-    const result = await handleCollision(dedupKey, definition.onDuplicate, doc);
-    if (result !== null) return result;
-    // Existing doc vanished between query and handleCollision — fall through to insert.
-  }
-
-  // No existing active job — try to insert.  The unique sparse index
-  // on `dedupKey` is the ultimate safety net for race conditions.
+  // Rely on the unique sparse index on dedupKey.  Attempt the insert
+  // directly; if a duplicate exists the index rejects with 11000 and we
+  // handle the collision in the catch block.  This avoids a speculative
+  // findOneAsync round-trip in the common (no-duplicate) case.
   try {
     await JobsCollection.insertAsync(doc);
     emit('enqueued', doc).catch(() => {});
@@ -241,24 +230,32 @@ export async function enqueueJob(name, data = {}, options = {}) {
  *   or already in a terminal state.
  */
 export async function cancelJob(jobId) {
-  const result = await JobsCollection.updateAsync(
-    {
-      _id: jobId,
-      status: { $in: ACTIVE_STATUSES },
-    },
-    {
-      $set: { status: 'cancelled', cancelledAt: new Date() },
-      $unset: { dedupKey: 1 },
-    }
-  );
-
-  if (result > 0) {
-    abortLocalJob(jobId);
-    const job = await JobsCollection.findOneAsync(jobId);
-    if (job) emit('cancelled', job).catch(() => {});
+  let job;
+  try {
+    const result = await JobsCollection.rawCollection().findOneAndUpdate(
+      {
+        _id: jobId,
+        status: { $in: ACTIVE_STATUSES },
+      },
+      {
+        $set: { status: 'cancelled', cancelledAt: new Date() },
+        $unset: { dedupKey: 1 },
+      },
+      { returnDocument: 'after' }
+    );
+    job = unwrapDriverResult(result);
+  } catch (err) {
+    console.error('[Jobs] Error cancelling job', jobId, err);
+    return false;
   }
 
-  return result > 0;
+  if (job && job.status === 'cancelled') {
+    abortLocalJob(jobId);
+    emit('cancelled', job).catch(() => {});
+    return true;
+  }
+
+  return false;
 }
 
 /**

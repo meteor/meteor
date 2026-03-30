@@ -16,7 +16,7 @@ const DEFAULTS = {
   pollInterval: 5000,
   stalledThreshold: 60000,
   heartbeatInterval: 15000,
-  retentionPeriod: '7d',
+  retentionPeriod: 604800000, // 7 days in ms
   leaderRenewalInterval: 10000,
   leaderTimeout: 30000,
   shutdownTimeout: 30000,
@@ -39,6 +39,15 @@ const _config = { ...DEFAULTS };
  * @private
  */
 let _instanceIdResolved = false;
+
+/**
+ * Cached config snapshot — invalidated on every `configure()` call so
+ * that hot-path consumers (`canAcceptJob`, heartbeat, polling) don't
+ * allocate a new object on every read.
+ * @type {Object|null}
+ * @private
+ */
+let _cachedSnapshot = null;
 
 /**
  * Validate and merge caller-supplied options into the active configuration.
@@ -121,6 +130,9 @@ export function configure(options) {
   if (typeof _config.retentionPeriod === 'string') {
     _config.retentionPeriod = ms(_config.retentionPeriod);
   }
+
+  // Invalidate cached snapshot.
+  _cachedSnapshot = null;
 }
 
 /**
@@ -136,6 +148,7 @@ export function _resetConfigForTesting() {
     _config[key] = DEFAULTS[key];
   }
   _instanceIdResolved = false;
+  _cachedSnapshot = null;
 }
 
 /**
@@ -144,12 +157,17 @@ export function _resetConfigForTesting() {
  * The first call ensures `instanceId` is populated (auto-generated via
  * `Random.id()` when the caller has not provided one).
  *
- * @returns {Object} A shallow copy of the active configuration.
+ * @returns {Object} A frozen snapshot of the active configuration.  Do not
+ *   mutate — call `configure()` to change settings.
  */
 export function getConfig() {
   if (!_instanceIdResolved) {
     _config.instanceId = Random.id();
     _instanceIdResolved = true;
+    _cachedSnapshot = null;
   }
-  return { ..._config };
+  if (!_cachedSnapshot) {
+    _cachedSnapshot = Object.freeze({ ..._config });
+  }
+  return _cachedSnapshot;
 }

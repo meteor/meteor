@@ -64,6 +64,18 @@ export function deriveDedupKey(definition, data) {
  * @returns {Object}  Base field set (does NOT include name, status, data,
  *   scheduledAt, dedupKey, source, cronSchedule, timezone, onDuplicate).
  */
+/**
+ * Unwrap a `rawCollection().findOneAndUpdate()` result, handling both
+ * MongoDB driver v4 (`{ value: doc }`) and v5+ (doc directly) shapes.
+ *
+ * @param {*} result  The raw driver result.
+ * @returns {Object|null}
+ */
+export function unwrapDriverResult(result) {
+  if (!result) return null;
+  return result.value != null ? result.value : result;
+}
+
 export function baseJobFields(definition) {
   return {
     _id: Random.id(),

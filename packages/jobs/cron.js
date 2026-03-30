@@ -173,10 +173,12 @@ function scheduleNextRun(jobDef, after) {
  */
 async function detectMissedRuns(scheduledJobs) {
   const now = new Date();
+  const eligible = scheduledJobs.filter(j => j.missedRun === 'run-once');
+  if (eligible.length === 0) return;
 
-  for (const jobDef of scheduledJobs) {
-    if (jobDef.missedRun !== 'run-once') continue;
-
+  // Process all eligible jobs in parallel — each queries/inserts for a
+  // different job name, so there is no interference between branches.
+  await Promise.all(eligible.map(async (jobDef) => {
     try {
       // Find the most recent cron-inserted job for this name.
       const lastRun = await JobsCollection.rawCollection().findOne(
@@ -187,7 +189,7 @@ async function detectMissedRuns(scheduledJobs) {
       if (!lastRun) {
         // No previous cron run exists at all.  The first timer will fire
         // at the next scheduled time — no catch-up needed.
-        continue;
+        return;
       }
 
       // What would the next fire time have been after the last recorded run?
@@ -208,7 +210,7 @@ async function detectMissedRuns(scheduledJobs) {
         err
       );
     }
-  }
+  }));
 }
 
 // ---------------------------------------------------------------------------

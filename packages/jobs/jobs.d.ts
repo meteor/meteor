@@ -60,7 +60,7 @@ declare module 'meteor/jobs' {
     completedAt: Date | null;
     failedAt: Date | null;
     cancelledAt: Date | null;
-    source: 'cron' | 'manual' | 'retry';
+    source: 'manual' | 'cron' | 'retry';
     runId: string | null;
   }
 
@@ -75,7 +75,7 @@ declare module 'meteor/jobs' {
     shutdownTimeout?: number;
     instanceId?: string;
     testMode?: 'inline' | 'manual' | null;
-    authorize?: (userId: string | null, subscription: any) => boolean;
+    authorize?: (userId: string | null, subscription: any) => boolean | Promise<boolean>;
   }
 
   type JobEventName =
