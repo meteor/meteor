@@ -51,8 +51,29 @@ const STATE = {
  * @property {number} total - Total workers (all states).
  * @property {number} idle - Workers waiting for a task.
  * @property {number} busy - Workers currently executing a task.
+ * @property {number} spawning - Workers currently starting up.
  * @property {number} pending - Queued tasks waiting for a free worker.
  */
+
+// --- Handler serialization cache ---------------------------------------------
+
+/** @type {WeakMap<Function, string>} Caches handler.toString() by function reference. */
+const _toStringCache = new WeakMap();
+
+/**
+ * Returns the string representation of a handler, caching the result so that
+ * the same function reference is only serialized once.
+ * @param {Function} handler
+ * @returns {string}
+ */
+function _serializeHandler(handler) {
+  let s = _toStringCache.get(handler);
+  if (!s) {
+    s = handler.toString();
+    _toStringCache.set(handler, s);
+  }
+  return s;
+}
 
 // --- PoolWorker (internal) ---------------------------------------------------
 
@@ -67,8 +88,8 @@ class PoolWorker {
     this.worker = worker;
     /** @type {Object} */
     this.threadContext = threadContext;
-    /** @type {string} */
-    this.state = STATE.SPAWNING;
+    /** @type {string|null} Managed exclusively via WorkerPool._changeState. */
+    this.state = null;
     /** @type {number} */
     this.taskCount = 0;
     /** @type {number} */
@@ -79,6 +100,8 @@ class PoolWorker {
     this.lastHeartbeat = null;
     /** @type {string|null} Current task ID being executed. */
     this.currentTaskId = null;
+    /** @type {boolean} True if this worker is being recycled (replacement deferred to exit). */
+    this.recycling = false;
   }
 }
 
@@ -120,8 +143,25 @@ export class WorkerPool {
 
     /** @type {Map<number, PoolWorker>} worker threadId -> PoolWorker */
     this._workers = new Map();
-    /** @type {Array<{ resolve: Function, reject: Function, task: Object, timer: ReturnType<typeof setTimeout> }>} */
-    this._queue = [];
+    /** @type {Set<PoolWorker>} O(1) idle worker lookup. */
+    this._idleWorkers = new Set();
+    /** @type {Object<string, number>} Incremental state counters, updated via _changeState. */
+    this._stateCounts = {
+      [STATE.SPAWNING]: 0,
+      [STATE.IDLE]: 0,
+      [STATE.BUSY]: 0,
+      [STATE.RECYCLING]: 0,
+      [STATE.TERMINATED]: 0,
+    };
+
+    // Task queue with O(1) enqueue/dequeue via head-pointer + periodic compaction.
+    /** @type {Array<Object>} */
+    this._queueItems = [];
+    /** @type {number} Index of the next entry to dequeue. */
+    this._queueHead = 0;
+    /** @type {number} Count of active (non-cancelled) entries in the queue. */
+    this._queueSize = 0;
+
     /** @type {boolean} */
     this._draining = false;
     /** @type {boolean} */
@@ -182,33 +222,38 @@ export class WorkerPool {
     const task = {
       type: MSG.TASK,
       id: taskId,
-      fnString: handler ? handler.toString() : null,
+      fnString: handler ? _serializeHandler(handler) : null,
       handlerName: handlerName || null,
       data: data !== undefined ? data : null,
     };
 
     return new Promise((resolve, reject) => {
+      // Entry tracks queue membership; entries dispatched directly are never enqueued.
+      const entry = { resolve, reject, task, timer: null, cancelled: false, enqueued: false };
+
       // Set up task timeout.
-      const timer = setTimeout(() => {
+      entry.timer = setTimeout(() => {
         this._pendingTasks.delete(taskId);
-        // Also dequeue if still waiting.
-        const idx = this._queue.findIndex((q) => q.task.id === taskId);
-        if (idx !== -1) this._queue.splice(idx, 1);
+        // Mark cancelled so dequeue skips it; only adjust count if actually queued.
+        if (entry.enqueued && !entry.cancelled) {
+          entry.cancelled = true;
+          this._queueSize--;
+        }
         reject(new Error(`Task timed out after ${taskTimeout}ms`));
       }, taskTimeout);
-      if (timer.unref) timer.unref();
+      if (entry.timer.unref) entry.timer.unref();
 
       // Try to find an idle worker.
       const worker = this._getIdleWorker();
       if (worker) {
-        this._assignTask(worker, task, resolve, reject, timer);
+        this._assignTask(worker, task, resolve, reject, entry.timer);
       } else if (this._workers.size < this.max) {
         // Spawn a new worker and queue the task (it'll be dispatched when ready).
-        this._queue.push({ resolve, reject, task, timer });
+        this._enqueue(entry);
         this._spawnWorker();
       } else {
         // All workers busy, queue the task.
-        this._queue.push({ resolve, reject, task, timer });
+        this._enqueue(entry);
       }
     });
   }
@@ -218,22 +263,12 @@ export class WorkerPool {
    * @returns {PoolStats}
    */
   stats() {
-    let idle = 0;
-    let busy = 0;
-    let spawning = 0;
-    for (const pw of this._workers.values()) {
-      switch (pw.state) {
-        case STATE.IDLE: idle++; break;
-        case STATE.BUSY: busy++; break;
-        case STATE.SPAWNING: spawning++; break;
-      }
-    }
     return {
       total: this._workers.size,
-      idle,
-      busy,
-      spawning,
-      pending: this._queue.length,
+      idle: this._stateCounts[STATE.IDLE],
+      busy: this._stateCounts[STATE.BUSY],
+      spawning: this._stateCounts[STATE.SPAWNING],
+      pending: this._queueSize,
     };
   }
 
@@ -249,23 +284,18 @@ export class WorkerPool {
     this._draining = true;
 
     // Reject all queued (not yet dispatched) tasks.
-    for (const queued of this._queue) {
-      clearTimeout(queued.timer);
-      queued.reject(new Error('WorkerPool is draining; task was never dispatched'));
-    }
-    this._queue = [];
+    this._rejectAllQueued('WorkerPool is draining; task was never dispatched');
 
-    // Terminate idle workers immediately.
-    for (const pw of this._workers.values()) {
-      if (pw.state === STATE.IDLE) {
-        this._terminateWorker(pw);
-      }
+    // Terminate idle workers immediately (copy the set since _terminateWorker mutates it).
+    for (const pw of [...this._idleWorkers]) {
+      this._terminateWorker(pw);
     }
 
     // If no busy workers remain, resolve immediately.
-    if (!this._hasBusyWorkers()) {
+    if (this._stateCounts[STATE.BUSY] === 0) {
       this._cleanupPool();
-      return Promise.resolve();
+      this._drainPromise = Promise.resolve();
+      return this._drainPromise;
     }
 
     this._drainPromise = new Promise((resolve) => {
@@ -291,11 +321,7 @@ export class WorkerPool {
     }
 
     // Reject queued tasks.
-    for (const queued of this._queue) {
-      clearTimeout(queued.timer);
-      queued.reject(new Error('WorkerPool terminated'));
-    }
-    this._queue = [];
+    this._rejectAllQueued('WorkerPool terminated');
 
     // Reject pending tasks.
     for (const [taskId, entry] of this._pendingTasks) {
@@ -312,11 +338,112 @@ export class WorkerPool {
 
     await Promise.allSettled(exits);
     this._workers.clear();
+    this._idleWorkers.clear();
+    for (const key of Object.keys(this._stateCounts)) {
+      this._stateCounts[key] = 0;
+    }
 
     if (this._drainResolve) {
       this._drainResolve();
       this._drainResolve = null;
     }
+  }
+
+  // --- Internal: State management -------------------------------------------
+
+  /**
+   * Transitions a worker to a new state, maintaining incremental counters
+   * and the idle worker set.
+   * @param {PoolWorker} pw
+   * @param {string} newState
+   * @private
+   */
+  _changeState(pw, newState) {
+    const oldState = pw.state;
+    if (oldState === newState) return;
+    if (oldState) {
+      this._stateCounts[oldState]--;
+      if (oldState === STATE.IDLE) this._idleWorkers.delete(pw);
+    }
+    this._stateCounts[newState]++;
+    if (newState === STATE.IDLE) this._idleWorkers.add(pw);
+    pw.state = newState;
+  }
+
+  /**
+   * Removes a worker from the pool entirely, decrementing its current state
+   * counter and clearing it from all tracking structures.
+   * @param {PoolWorker} pw
+   * @private
+   */
+  _removeFromPool(pw) {
+    if (pw.state) {
+      this._stateCounts[pw.state]--;
+      if (pw.state === STATE.IDLE) this._idleWorkers.delete(pw);
+    }
+    pw.state = null;
+    this._workers.delete(pw.worker.threadId);
+  }
+
+  // --- Internal: Queue -------------------------------------------------------
+
+  /**
+   * Adds an entry to the task queue.
+   * @param {Object} entry
+   * @private
+   */
+  _enqueue(entry) {
+    entry.enqueued = true;
+    this._queueItems.push(entry);
+    this._queueSize++;
+  }
+
+  /**
+   * Removes and returns the next non-cancelled entry from the queue,
+   * or null if the queue is empty / all remaining entries are cancelled.
+   * @returns {Object|null}
+   * @private
+   */
+  _dequeue() {
+    while (this._queueHead < this._queueItems.length) {
+      const entry = this._queueItems[this._queueHead];
+      this._queueItems[this._queueHead] = null; // release reference
+      this._queueHead++;
+
+      // Compact when head exceeds half the array and array is non-trivial.
+      if (this._queueHead > 1024 && this._queueHead > (this._queueItems.length >>> 1)) {
+        this._queueItems = this._queueItems.slice(this._queueHead);
+        this._queueHead = 0;
+      }
+
+      if (!entry.cancelled) {
+        this._queueSize--;
+        return entry;
+      }
+    }
+
+    // Queue exhausted, reset.
+    this._queueItems.length = 0;
+    this._queueHead = 0;
+    return null;
+  }
+
+  /**
+   * Rejects all non-cancelled queued entries and resets the queue.
+   * @param {string} message - Error message for rejected tasks.
+   * @private
+   */
+  _rejectAllQueued(message) {
+    for (let i = this._queueHead; i < this._queueItems.length; i++) {
+      const entry = this._queueItems[i];
+      if (entry && !entry.cancelled) {
+        clearTimeout(entry.timer);
+        entry.reject(new Error(message));
+      }
+    }
+    this._queueItems.length = 0;
+    this._queueHead = 0;
+    this._queueSize = 0;
   }
 
   // --- Internal: Spawning ----------------------------------------------------
@@ -352,6 +479,7 @@ export class WorkerPool {
 
     const pw = new PoolWorker(worker, ctx);
     this._workers.set(worker.threadId, pw);
+    this._changeState(pw, STATE.SPAWNING);
 
     worker.on('message', (msg) => this._onWorkerMessage(pw, msg));
     worker.on('error', (err) => this._onWorkerError(pw, err));
@@ -435,7 +563,7 @@ export class WorkerPool {
    * @private
    */
   _onWorkerReady(pw) {
-    pw.state = STATE.IDLE;
+    this._changeState(pw, STATE.IDLE);
     this._dispatchNextFromQueue(pw);
   }
 
@@ -504,7 +632,7 @@ export class WorkerPool {
     // If draining, terminate this now-idle worker.
     if (this._draining) {
       this._terminateWorker(pw);
-      if (!this._hasBusyWorkers() && this._drainResolve) {
+      if (this._stateCounts[STATE.BUSY] === 0 && this._drainResolve) {
         this._cleanupPool();
         this._drainResolve();
         this._drainResolve = null;
@@ -513,7 +641,7 @@ export class WorkerPool {
     }
 
     // Mark idle and try to dispatch next queued task.
-    pw.state = STATE.IDLE;
+    this._changeState(pw, STATE.IDLE);
     this._dispatchNextFromQueue(pw);
 
     // If still idle after dispatch attempt, start the idle timer.
@@ -570,12 +698,12 @@ export class WorkerPool {
       pw.currentTaskId = null;
     }
 
-    pw.state = STATE.TERMINATED;
-    this._workers.delete(pw.worker.threadId);
+    const wasRecycling = pw.recycling;
+    this._removeFromPool(pw);
 
     // If draining and no more busy workers, resolve the drain promise.
     if (this._draining) {
-      if (!this._hasBusyWorkers() && this._drainResolve) {
+      if (this._stateCounts[STATE.BUSY] === 0 && this._drainResolve) {
         this._cleanupPool();
         this._drainResolve();
         this._drainResolve = null;
@@ -583,28 +711,24 @@ export class WorkerPool {
       return;
     }
 
-    // If the pool is not draining and we're below minimum, respawn.
-    if (!this._terminated && this._workers.size < this.min) {
-      this._spawnWorker();
-    }
-
-    // If there are queued tasks and we're below max, spawn a replacement.
-    if (!this._terminated && this._queue.length > 0 && this._workers.size < this.max) {
-      this._spawnWorker();
+    // Spawn a replacement if needed: recycled worker, below minimum, or queued tasks.
+    if (!this._terminated) {
+      const shouldSpawn = wasRecycling || this._workers.size < this.min || this._queueSize > 0;
+      if (shouldSpawn && this._workers.size < this.max) {
+        this._spawnWorker();
+      }
     }
   }
 
   // --- Internal: Task dispatch -----------------------------------------------
 
   /**
-   * Finds the first idle worker.
+   * Returns an idle worker, or null if none are available. O(1) via idle set.
    * @returns {PoolWorker|null}
    * @private
    */
   _getIdleWorker() {
-    for (const pw of this._workers.values()) {
-      if (pw.state === STATE.IDLE) return pw;
-    }
+    for (const pw of this._idleWorkers) return pw;
     return null;
   }
 
@@ -624,7 +748,7 @@ export class WorkerPool {
       pw.idleTimer = null;
     }
 
-    pw.state = STATE.BUSY;
+    this._changeState(pw, STATE.BUSY);
     pw.currentTaskId = task.id;
     pw.lastActivity = Date.now();
 
@@ -640,14 +764,12 @@ export class WorkerPool {
 
   /**
    * Dispatches the next queued task to the given worker, if any.
+   * Automatically skips cancelled (timed-out) entries.
    * @param {PoolWorker} pw
    * @private
    */
   _dispatchNextFromQueue(pw) {
-    if (this._queue.length === 0) return;
-
-    const next = this._queue.shift();
-    // Check if the task was already timed out (timer already fired and rejected).
+    const next = this._dequeue();
     if (!next) return;
 
     this._assignTask(pw, next.task, next.resolve, next.reject, next.timer);
@@ -656,18 +778,15 @@ export class WorkerPool {
   // --- Internal: Worker lifecycle --------------------------------------------
 
   /**
-   * Recycles a worker: terminate and spawn a fresh replacement.
+   * Recycles a worker: terminate it and spawn a fresh replacement once it
+   * exits (deferred to _onWorkerExit to avoid temporarily exceeding max).
    * @param {PoolWorker} pw
    * @private
    */
   _recycleWorker(pw) {
-    pw.state = STATE.RECYCLING;
+    pw.recycling = true;
+    this._changeState(pw, STATE.RECYCLING);
     this._terminateWorker(pw);
-
-    // Spawn a replacement if not draining.
-    if (!this._draining && !this._terminated) {
-      this._spawnWorker();
-    }
   }
 
   /**
@@ -678,9 +797,9 @@ export class WorkerPool {
    * @private
    */
   _terminateWorker(pw) {
-    if (pw.state === STATE.TERMINATED) return Promise.resolve();
+    if (pw.state === STATE.TERMINATED || pw.state === null) return Promise.resolve();
 
-    pw.state = STATE.TERMINATED;
+    this._changeState(pw, STATE.TERMINATED);
 
     // Clear idle timer.
     if (pw.idleTimer) {
@@ -722,9 +841,7 @@ export class WorkerPool {
 
     pw.idleTimer = setTimeout(() => {
       // Don't terminate if we'd go below minimum.
-      const idleCount = this._countByState(STATE.IDLE);
-      const totalActive = this._workers.size;
-      if (totalActive <= this.min) return;
+      if (this._workers.size <= this.min) return;
 
       // Only terminate if still idle.
       if (pw.state === STATE.IDLE) {
@@ -738,15 +855,16 @@ export class WorkerPool {
   // --- Internal: Health monitoring -------------------------------------------
 
   /**
-   * Runs a heartbeat check on all non-spawning workers.
+   * Runs a heartbeat check on idle workers only. Busy workers are already
+   * monitored via their per-task timeout, so pinging them would be wasteful
+   * and could trigger false-positive timeouts during CPU-intensive tasks.
    * @private
    */
   _heartbeatCheck() {
     const now = Date.now();
 
-    for (const pw of this._workers.values()) {
-      if (pw.state === STATE.SPAWNING || pw.state === STATE.TERMINATED) continue;
-
+    // Copy the set since _terminateWorker mutates _idleWorkers via _changeState.
+    for (const pw of [...this._idleWorkers]) {
       // If the last heartbeat response is too old, the worker may be stuck.
       if (pw.lastHeartbeat !== null) {
         const sinceLastPong = now - pw.lastHeartbeat;
@@ -773,32 +891,6 @@ export class WorkerPool {
   // --- Internal: Utility -----------------------------------------------------
 
   /**
-   * Counts workers in a given state.
-   * @param {string} state
-   * @returns {number}
-   * @private
-   */
-  _countByState(state) {
-    let count = 0;
-    for (const pw of this._workers.values()) {
-      if (pw.state === state) count++;
-    }
-    return count;
-  }
-
-  /**
-   * Returns true if any worker is in the BUSY state.
-   * @returns {boolean}
-   * @private
-   */
-  _hasBusyWorkers() {
-    for (const pw of this._workers.values()) {
-      if (pw.state === STATE.BUSY) return true;
-    }
-    return false;
-  }
-
-  /**
    * Final cleanup after all workers have exited during drain.
    * @private
    */
@@ -815,9 +907,10 @@ export class WorkerPool {
 let _idSeq = 0;
 
 /**
- * Generates a unique task ID.
+ * Generates a unique task ID. Uses a monotonic counter only; the sequence
+ * is sufficient for uniqueness within a single process.
  * @returns {string}
  */
 function _generateId() {
-  return `wp_${Date.now().toString(36)}_${(++_idSeq).toString(36)}`;
+  return 'wp_' + (++_idSeq);
 }

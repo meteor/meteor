@@ -30,6 +30,30 @@ const MSG = {
   SHUTDOWN: 'shutdown',
 };
 
+// --- Function compilation cache ----------------------------------------------
+// Avoids re-parsing identical handler strings on every task dispatch.
+// Uses insertion-order eviction when the cache exceeds its size cap.
+
+const _fnCache = new Map();
+const _FN_CACHE_MAX = 256;
+
+function _compileHandler(fnString) {
+  let fn = _fnCache.get(fnString);
+  if (!fn) {
+    fn = new Function('return (' + fnString + ')')();
+    if (_fnCache.size >= _FN_CACHE_MAX) {
+      // Evict the oldest entry (first key in Map iteration order).
+      const firstKey = _fnCache.keys().next().value;
+      _fnCache.delete(firstKey);
+    }
+    _fnCache.set(fnString, fn);
+  }
+  return fn;
+}
+
+// Pre-compiled named handlers (populated during initialization).
+const _compiledHandlers = Object.create(null);
+
 // --- Thread-context hydration ------------------------------------------------
 // The thread-context package exposes a worker-side API that reconstructs the
 // Meteor API surface from a transferred MessagePort. We load it dynamically
@@ -75,18 +99,14 @@ async function executeTask(task) {
   try {
     let fn;
     if (fnString) {
-      // Reconstruct the function from its serialized string.
-      // Supports named functions, arrow functions, and async functions.
-      fn = new Function('return (' + fnString + ')')();
-    } else if (handlerName && workerData.handlers && workerData.handlers[handlerName]) {
-      // Named handler passed via workerData (pre-registered).
-      fn = new Function('return (' + workerData.handlers[handlerName] + ')')();
+      fn = _compileHandler(fnString);
+    } else if (handlerName) {
+      fn = _compiledHandlers[handlerName];
+      if (!fn) {
+        throw new Error(`Unknown handler: ${handlerName}`);
+      }
     } else {
-      throw new Error(
-        handlerName
-          ? `Unknown handler: ${handlerName}`
-          : 'Task must include either fnString or handlerName'
-      );
+      throw new Error('Task must include either fnString or handlerName');
     }
 
     const result = await fn(data, context);
@@ -97,17 +117,19 @@ async function executeTask(task) {
       result,
     });
   } catch (err) {
+    const errObj = {
+      message: err.message,
+      stack: err.stack,
+      name: err.name,
+    };
+    if (err.error !== undefined) errObj.meteorError = err.error;
+    if (err.reason !== undefined) errObj.meteorReason = err.reason;
+    if (err.details !== undefined) errObj.meteorDetails = err.details;
+
     parentPort.postMessage({
       type: MSG.ERROR,
       id,
-      error: {
-        message: err.message,
-        stack: err.stack,
-        name: err.name,
-        ...(err.error !== undefined ? { meteorError: err.error } : {}),
-        ...(err.reason !== undefined ? { meteorReason: err.reason } : {}),
-        ...(err.details !== undefined ? { meteorDetails: err.details } : {}),
-      },
+      error: errObj,
     });
   }
 }
@@ -148,6 +170,13 @@ try {
   } else {
     // No port — initialize minimal stubs for CPU-only tasks.
     hydrateFromPort(null, workerData.settings, workerData.userId, workerData.callTimeout);
+  }
+
+  // Pre-compile named handlers so they're ready before any task arrives.
+  if (workerData.handlers) {
+    for (const name of Object.keys(workerData.handlers)) {
+      _compiledHandlers[name] = _compileHandler(workerData.handlers[name]);
+    }
   }
 } catch (err) {
   parentPort.postMessage({
