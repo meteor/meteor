@@ -1,4 +1,4 @@
-import { createThreadContext, BridgeError, BridgeClient, createCollectionProxy, createMethodProxy, getActiveBridgeCount } from 'meteor/thread-context';
+import { createThreadContext, BridgeError, BridgeClient, createCollectionProxy, createMethodProxy } from 'meteor/thread-context';
 
 if (Meteor.isServer) {
 

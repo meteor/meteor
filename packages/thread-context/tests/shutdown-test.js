@@ -3,7 +3,7 @@ import { createThreadContext, getActiveBridgeCount, destroyAllBridges } from 'me
 if (Meteor.isServer) {
 
 Tinytest.add('thread-context - shutdown - getActiveBridgeCount starts at zero', function (test) {
-  test.isTrue(typeof getActiveBridgeCount() === 'number');
+  test.equal(getActiveBridgeCount(), 0);
 });
 
 Tinytest.add('thread-context - shutdown - createThreadContext registers, destroy unregisters', function (test) {
@@ -32,9 +32,9 @@ Tinytest.add('thread-context - shutdown - double destroy is safe', function (tes
 Tinytest.add('thread-context - shutdown - destroyAllBridges cleans up all contexts', function (test) {
   const before = getActiveBridgeCount();
 
-  const ctx1 = createThreadContext();
-  const ctx2 = createThreadContext();
-  const ctx3 = createThreadContext();
+  createThreadContext();
+  createThreadContext();
+  createThreadContext();
   test.equal(getActiveBridgeCount(), before + 3);
 
   destroyAllBridges();

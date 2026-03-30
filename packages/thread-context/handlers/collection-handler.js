@@ -34,7 +34,7 @@ export class CollectionHandler {
       throw new BridgeError(`Collection '${msg.collectionName}' not found`);
     }
 
-    const invocation = createBridgeInvocation(this.context);
+    const invocation = createBridgeInvocation(this.context, msg.op);
     return await DDP._CurrentMethodInvocation.withValue(invocation, () => this._execute(msg, collection));
   }
 

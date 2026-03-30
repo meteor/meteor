@@ -32,7 +32,7 @@ export class MethodHandler {
       throw new Meteor.Error(404, `Method '${methodName}' not found`);
     }
 
-    const invocation = createBridgeInvocation(this.context);
+    const invocation = createBridgeInvocation(this.context, methodName);
     return await DDP._CurrentMethodInvocation.withValue(invocation, async () => {
       return await handler.apply(invocation, methodArgs);
     });

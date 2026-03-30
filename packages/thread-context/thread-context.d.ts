@@ -11,6 +11,7 @@ export class BridgeSerializationError extends BridgeError {}
 export class BridgeContextError extends BridgeError {}
 
 export class MeteorError extends Error {
+  constructor(error: string | number, reason?: string, details?: string);
   isClientSafe: boolean;
   error: string | number;
   reason?: string;
@@ -110,7 +111,7 @@ export function createConnectionProxy(connectionId: string): { readonly id: stri
 export function createBridgeInvocation(context: {
   userId: string | null;
   connectionId: string | null;
-}): any;
+}, name: string): any;
 
 // --- Worker-Side ---
 

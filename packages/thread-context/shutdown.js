@@ -33,7 +33,11 @@ export function destroyAllBridges() {
   const bridges = [...activeBridges];
   activeBridges.clear();
   for (const host of bridges) {
-    host.destroy();
+    try {
+      host.destroy();
+    } catch (e) {
+      console.error('[thread-context] Error destroying bridge during shutdown:', e);
+    }
   }
 }
 
@@ -45,5 +49,9 @@ export function getActiveBridgeCount() {
   return activeBridges.size;
 }
 
-process.on('SIGTERM', destroyAllBridges);
-process.on('SIGINT', destroyAllBridges);
+function onSignal(signal) {
+  destroyAllBridges();
+  process.exit(signal === 'SIGTERM' ? 143 : 130);
+}
+process.once('SIGTERM', () => onSignal('SIGTERM'));
+process.once('SIGINT', () => onSignal('SIGINT'));

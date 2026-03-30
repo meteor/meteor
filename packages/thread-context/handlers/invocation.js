@@ -19,15 +19,16 @@ function noop() {}
  * Called once per `handle()` dispatch to ensure fresh per-call state.
  *
  * @param {{ userId: string|null, connectionId: string|null }} context
+ * @param {string} name - The method or operation name for the invocation.
  * @returns {DDPCommon.MethodInvocation}
  */
-export function createBridgeInvocation(context) {
+export function createBridgeInvocation(context, name) {
   const connection = context.connectionId
     ? createConnectionProxy(context.connectionId)
     : null;
 
   return new DDPCommon.MethodInvocation({
-    name: 'bridge',
+    name,
     isSimulation: false,
     userId: context.userId,
     setUserId: throwSetUserId,

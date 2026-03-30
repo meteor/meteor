@@ -91,14 +91,15 @@ const BRIDGE_ERROR_CLASSES = {
 /**
  * Serializes an error into a structured-clone-safe plain object for
  * transmission over the MessageChannel. Detects `Meteor.Error` via
- * duck-typing (`isClientSafe` + `error` + `reason`) so it works for
+ * duck-typing (`isClientSafe` + own `error` + own `reason`) so it works for
  * both real `Meteor.Error` on the host and `MeteorError` in workers.
  *
  * @param {Error} err - The error to serialize.
  * @returns {{ type: string, message: string, stack?: string, meteorError?: string|number, reason?: string, details?: string }}
  */
 function serializeError(err) {
-  if (err && err.isClientSafe && err.error !== undefined && err.reason !== undefined) {
+  const has = Object.prototype.hasOwnProperty;
+  if (err && err.isClientSafe && has.call(err, 'error') && has.call(err, 'reason')) {
     return {
       type: 'MeteorError',
       meteorError: err.error,
@@ -119,8 +120,8 @@ function serializeError(err) {
 
   return {
     type: 'BridgeError',
-    message: err.message || String(err),
-    stack: err.stack,
+    message: (err && err.message) || String(err),
+    stack: err && err.stack,
   };
 }
 
