@@ -25,7 +25,7 @@ export PATH=$METEOR_HOME:$PATH
 export URL='http://127.0.0.1:4096/'
 export METEOR_PACKAGE_DIRS='packages/deprecated'
 
-exec 3< <(./meteor test-packages --driver-package test-in-console -p 4096 --exclude ${TEST_PACKAGES_EXCLUDE:-''} $1)
+exec 3< <(./meteor test-packages --driver-package test-in-console -p 4096 --exclude ${TEST_PACKAGES_EXCLUDE:-''} ${1:-})
 EXEC_PID=$!
 trap "pkill -TERM -P $EXEC_PID; exit 1" SIGINT
 
@@ -40,8 +40,13 @@ cat <&3 >/dev/null &
 # a cold runner. Polling with curl here means Puppeteer navigates immediately
 # to a fully built page instead of waiting for it under a navigation timeout.
 echo "Waiting for Meteor test server to finish building..."
-until curl -sf --max-time 10 "$URL" -o /dev/null 2>/dev/null; do
-  sleep 3
+until curl -sfL --max-time 60 "$URL" -o /dev/null 2>/dev/null; do
+  # Abort early if Meteor died rather than looping forever.
+  if ! kill -0 $EXEC_PID 2>/dev/null; then
+    echo "Meteor process died while waiting for the server to become ready."
+    exit 1
+  fi
+  sleep 5
 done
 echo "Server is ready."
 
