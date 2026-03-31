@@ -17,9 +17,6 @@ jobs:
     env:
       CXX: g++-12
       phantom: false
-      # Chrome is downloaded here by run.sh via `./meteor npm install -g puppeteer`.
-      # This path is cached across runs to avoid re-downloading on every run.
-      PUPPETEER_DOWNLOAD_PATH: /home/ubuntu/.npm/chromium
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
@@ -39,7 +36,6 @@ jobs:
           node-version: 22.17.0
 
       - name: Restore caches
-        # /home/ubuntu/.npm/chromium matches PUPPETEER_DOWNLOAD_PATH — caches the Chrome binary
         uses: actions/cache@v4
         with:
           path: |
@@ -47,24 +43,18 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            /home/ubuntu/.npm/chromium
           key: ${{ runner.os }}-node-22.17-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-22.17-
 
       - name: Install system dependencies
+        # Only g++-12 is needed for building native Node.js add-ons.
+        # Chrome and all its Chromium system libs are provided by the
+        # ghcr.io/puppeteer/puppeteer Docker image used in run.sh.
         run: |
-          PKGS="g++-12 \
-            libatk-bridge2.0-0 libatk1.0-0t64 \
-            libcups2 libdbus-1-3 libdrm2 libgbm1 \
-            libgtk-3-0t64 libnspr4 libnss3 libpango-1.0-0 \
-            libxcomposite1 libxdamage1 libxfixes3 libxkbcommon0 libxrandr2 \
-            libasound2t64"
-          if dpkg -s $PKGS >/dev/null 2>&1; then
-            echo "All system dependencies already installed, skipping."
-          else
+          if ! dpkg -s g++-12 >/dev/null 2>&1; then
             sudo apt-get update
-            sudo apt-get install -y $PKGS
+            sudo apt-get install -y g++-12
           fi
 
       - name: Install npm dependencies

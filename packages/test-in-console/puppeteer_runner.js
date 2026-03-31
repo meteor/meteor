@@ -1,4 +1,12 @@
-const puppeteer = require("../../dev_bundle/lib/node_modules/puppeteer");
+// When running natively (local dev), Puppeteer lives in dev_bundle.
+// When running inside the Docker image, it is installed as a regular module.
+const puppeteer = (() => {
+  try {
+    return require("../../dev_bundle/lib/node_modules/puppeteer");
+  } catch (e) {
+    return require("puppeteer");
+  }
+})();
 
 let testNumber = 0;
 
