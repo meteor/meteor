@@ -37,12 +37,7 @@ async function getDevBundleDir() {
   }
 
   const devBundleLink = path.join(localDir, "dev_bundle");
-  const devBundleStat = statOrNull(devBundleLink);
-  if (devBundleStat) {
-    return new Promise(function (resolve) {
-      resolve(links.readLink(devBundleLink));
-    });
-  }
+  const devBundleReleaseFile = path.join(localDir, "dev_bundle_release");
 
   const release = fs.readFileSync(
     releaseFile, "utf8"
@@ -52,10 +47,38 @@ async function getDevBundleDir() {
     return DEFAULT_DEV_BUNDLE_DIR;
   }
 
+  // Check if the cached dev_bundle link still matches the current release.
+  // After a git branch switch, .meteor/release changes but
+  // .meteor/local/dev_bundle (which is gitignored) keeps pointing to
+  // the old release's dev_bundle.
+  const devBundleStat = statOrNull(devBundleLink);
+  if (devBundleStat) {
+    var cachedRelease = null;
+    try {
+      cachedRelease = fs.readFileSync(
+        devBundleReleaseFile, "utf8"
+      ).replace(/^\s+|\s+$/g, "");
+    } catch (e) {
+      // If the release cache file doesn't exist, invalidate the cache
+      // so we re-resolve the dev_bundle for the current release.
+    }
+
+    if (cachedRelease === release) {
+      return new Promise(function (resolve) {
+        resolve(links.readLink(devBundleLink));
+      });
+    }
+  }
+
   const devBundleDir = await getDevBundleForRelease(release);
 
   if (devBundleDir) {
     links.makeLink(devBundleDir, devBundleLink);
+    try {
+      fs.writeFileSync(devBundleReleaseFile, release, "utf8");
+    } catch (e) {
+      // Non-fatal: the link itself was created successfully.
+    }
     return devBundleDir;
   }
 

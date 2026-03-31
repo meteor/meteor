@@ -154,8 +154,8 @@ Options:
 >>> create
 Create a new project.
 Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid|--babel|--coffeescript|--angular] <path>
-       meteor create [--release <release>] --example <example_name> [<path>]
-       meteor create [--release <release>] --from <git_url> [<path>]
+       meteor create [--release <release>] --example <slug> [<path>]
+       meteor create [--release <release>] --from <url> [--from-branch <branch>] [--from-dir <dir>] [<path>]
        meteor create --list
        meteor create --package [<package_name>]
 
@@ -176,30 +176,35 @@ package created in an app, will be created using the application's version of
 meteor and a package created outside a meteor app will use the latest release).
 
 You can pass --example to start off with a copy of one of the Meteor
-sample applications. Use --list to see the available examples. There are
-currently no package examples.
+community examples. Use --list to see the available examples.
 
-Options:
-  --package     Create a new meteor package instead of an app.
-  --example     Example template to use.
-  --from        Clones a meteor project from a url.
-  --list        Show list of available examples.
-  --bare        Create an empty app.
-  --minimal     Create an app with as few Meteor packages as possible.
-  --full        Create a fully scaffolded app.
-  --react       Create a basic react-based app, same as default.
-  --vue         Create a basic vue3-based app.
-  --apollo      Create a basic apollo-based app.
-  --svelte      Create a basic svelte-based app.
-  --typescript  Create a basic Typescript React-based app.
-  --blaze       Create a basic blaze-based app.
-  --tailwind    Create a basic react-based app, with tailwind configured.
-  --chakra-ui   Create a basic react-based app, with chakra-ui configured.
+Skeleton options:
+  --bare         Create an empty app.
+  --minimal      Create an app with as few Meteor packages as possible.
+  --full         Create a fully scaffolded app.
+  --react        Create a basic react-based app, same as default.
+  --vue          Create a basic vue3-based app.
+  --apollo       Create a basic apollo-based app.
+  --svelte       Create a basic svelte-based app.
+  --typescript   Create a basic Typescript React-based app.
+  --blaze        Create a basic blaze-based app.
+  --tailwind     Create a basic react-based app, with tailwind configured.
+  --chakra-ui    Create a basic react-based app, with chakra-ui configured.
   --coffeescript Create a basic coffescript app, with react.
-  --babel       Create a React app with Babel support.
-  --solid       Create a basic solid-based app.
-  --angular       Create a basic Angular app.
-  --prototype Create a prototype app with the insecure & autopublish packages. Can be used along with other app commands
+  --babel        Create a React app with Babel support.
+  --solid        Create a basic solid-based app.
+  --angular      Create a basic Angular app.
+  --prototype    Create a prototype app with the insecure & autopublish packages.
+
+Example options:
+  --example      Create from a community example (use --list to browse).
+  --list         Show detailed list of available examples.
+  --from         Clone a Meteor project from a Git URL.
+  --from-branch  Branch to clone from (use with --from).
+  --from-dir     Extract only a subdirectory (use with --from).
+
+Other options:
+  --package      Create a new meteor package instead of an app.
 
 
 >>> update

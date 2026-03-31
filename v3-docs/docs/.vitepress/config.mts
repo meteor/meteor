@@ -163,10 +163,6 @@ export default defineConfig({
             text: "Roadmap",
             link: "/about/roadmap",
           },
-              {
-                text: "Contributing",
-                link: "/about/contributing",
-              }
         ],
         collapsed: true,
       },
@@ -414,8 +410,24 @@ export default defineConfig({
             ]
           },
           {
+            text: "Using Atmosphere packages",
+            link: "/packages/6.using-atmosphere-packages",
+          },
+          {
+            text: "Writing Atmosphere packages",
+            link: "/packages/7.writing-atmosphere-packages",
+          },
+          {
             link: "/packages/packages-listing",
             text: "Maintained Packages",
+          },
+          {
+            text: "Using npm packages",
+            link: "/packages/4.using-npm-packages",
+          },
+          {
+            text: "Writing npm packages",
+            link: "/packages/5.writing-npm-packages",
           },
           {
             link: "/community-packages/index",
@@ -449,6 +461,14 @@ export default defineConfig({
                 text: "jam:offline",
                 link: "/community-packages/offline",
               },
+              {
+                text: "dupontbertrand:cluster",
+                link: "/community-packages/cluster",
+              },
+              {
+                text: "dupontbertrand:mail-preview",
+                link: "/community-packages/mail-preview",
+              },
             ],
             collapsed: true,
           },
@@ -466,6 +486,10 @@ export default defineConfig({
           {
             text: "MongoDB Connection",
             link: "/troubleshooting/mongodb-connection",
+          },
+          {
+            text: "Hot Code Push",
+            link: "/troubleshooting/hot-code-push",
           },
         ],
         collapsed: true,
@@ -507,12 +531,75 @@ export default defineConfig({
             text: "Application structure",
           },
           {
+            text: "Build System",
+            link: "/about/build-tool",
+          },
+          {
+            text: "Core Concepts",
+            items: [
+              {
+                text: "Methods",
+                link: "/tutorials/methods/methods",
+              },
+              {
+                text: "Data Loading",
+                link: "/tutorials/data-loading/data-loading",
+              },
+              {
+                text: "Collections & Schemas",
+                link: "/tutorials/collections/collections",
+              },
+              {
+                text: "Accounts",
+                link: "/tutorials/accounts/accounts",
+              },
+              {
+                text: "Routing",
+                link: "/tutorials/routing/routing",
+              },
+            ]
+          },
+          {
             text: "Production",
             items:[
               {
                 text: "Security",
                 link: "/tutorials/security/security",
-              }
+              },
+              {
+                text: "Testing",
+                link: "/tutorials/testing/testing",
+              },
+              {
+                text: "Deployment",
+                link: "/tutorials/deployment/deployment",
+              },
+            ]
+          },
+          {
+            text: "Advanced Topics",
+            items: [
+              {
+                text: "Apollo & GraphQL",
+                link: "/tutorials/apollo/apollo",
+              },
+              {
+                text: "Code Style",
+                link: "/tutorials/code-style/code-style",
+              },
+            ]
+          },
+          {
+            text: "Integrations",
+            items: [
+              {
+                text: "React Native",
+                link: "/tutorials/integrations/react-native",
+              },
+              {
+                text: "Flowbite UI",
+                link: "/tutorials/integrations/flowbite",
+              },
             ]
           },
         ],
@@ -538,10 +625,29 @@ export default defineConfig({
         text: "Performance",
         items: [
           {
+            text: "Performance Improvements",
+            link: "/performance/performance-improvement",
+          },
+          {
             text: "WebSocket Compression",
             link: "/performance/websocket-compression",
           },
         ],
+        collapsed: true,
+      },
+      {
+        text: "Community",
+        items: [
+          {
+            text: "Contributing",
+            link: "/community/contributing",
+          },
+          {
+            text: "Contributors",
+            link: "/community/contributors",
+          },
+        ],
+        collapsed: true,
       },
     ],
 
@@ -579,7 +685,27 @@ export default defineConfig({
   vite: {
     plugins: [
       llmstxt({
-        title: "Meteor.js 3 Docs",
+        title: "Meteor.js 3 Documentation",
+        domain: "https://docs.meteor.com",
+        description: "Full-stack JavaScript platform for modern web and mobile applications.",
+        details: `
+Meteor is a full-stack JavaScript platform for developing web and mobile applications.
+
+Key capabilities:
+- Real-time data synchronization with publications and subscriptions
+- Built-in accounts and authentication system
+- Frontend agnostic (React, Vue, Solid, Blaze, Svelte)
+- Zero-config build system with modern tooling (SWC, Rspack)
+- One-command deployment to Galaxy Cloud
+- TypeScript support with full type inference
+
+Current version: Meteor ${metadata.currentVersion}.
+
+## Structured API Data
+
+For complete API documentation in machine-readable format, see:
+- [api-reference.json](/api-reference.json) - Full API reference with all functions, parameters, and types
+        `.trim(),
       }),
     ],
   },

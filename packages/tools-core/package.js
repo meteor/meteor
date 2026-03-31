@@ -9,3 +9,14 @@ Package.onUse(function (api) {
 
   api.mainModule('tools-core.js', 'server');
 });
+
+Package.onTest(function (api) {
+  api.use(['ecmascript', 'tinytest']);
+  api.use('tools-core');
+
+  // Add test files for each lib/ module
+  // This structure allows easy addition of tests for other lib/ categories
+  api.addFiles([
+    'tests/meteor_tests.js',
+  ], 'server');
+});

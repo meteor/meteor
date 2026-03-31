@@ -16,7 +16,7 @@ async function runNextUrl(browser) {
     if (text.includes('Permissions policy violation')) {
       return;
     }
-    if (msg._text !== undefined) console.log(msg._text);
+    if (text) console.log(text);
     else {
       testNumber++;
       const currentClientTest =

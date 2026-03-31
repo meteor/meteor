@@ -4,7 +4,7 @@ on:
   pull_request:
     paths:
       - 'meteor'
-      - 'tools/modern-tests/**'
+      - 'tools/e2e-tests/**'
       - 'packages/rspack/**'
       - 'packages/tools-core/**'
       - 'packages/babel-compiler/**'
@@ -18,6 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  TOOL_NODE_FLAGS: "--max_old_space_size=12288"
   NODE_OPTIONS: "--max_old_space_size=12288"
 
 jobs:
@@ -32,8 +33,9 @@ jobs:
           - Babel
           - Blaze
           - Coffeescript
-          - Library
+          - Examples
           - Monorepo
+          - Other
           - React
           - R.Router
           - Solid
@@ -51,7 +53,7 @@ jobs:
           path: |
             ~/.npm
             node_modules
-            tools/modern-tests/node_modules
+            tools/e2e-tests/node_modules
             packages/**/.npm
             .meteor
             dev_bundle
@@ -71,16 +73,39 @@ jobs:
         run: npm install
 
       - name: Install test deps
-        run: npm run install:modern
+        run: npm run install:e2e
+
+      - name: Set NPM_LINK_RSPACK=false for release branches
+        run: |
+          echo "Current branch: ${{ github.head_ref || github.ref_name }}"
+          if [[ "${{ github.head_ref || github.ref_name }}" == release-* ]]; then
+            echo "NPM_LINK_RSPACK=false" >> $GITHUB_ENV
+            echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm — make sure the latest version is published or tests may fail."
+          fi
 
       - name: Prepare Meteor
         run: ./meteor --get-ready
 
       - name: Run tests for ${{ matrix.category }}
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          retry_on: error
-          timeout_minutes: 15
-          retry_wait_seconds: 90
-          command: npm run test:modern -- -t="${{ matrix.category }}"
+        id: test-run
+        continue-on-error: true
+        timeout-minutes: 15
+        run: npm run test:e2e -- -t="${{ matrix.category }}"
+
+      - name: Retry failed tests for ${{ matrix.category }} (attempt 2)
+        id: test-retry-1
+        if: steps.test-run.outcome == 'failure'
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          echo "::warning::First attempt failed, retrying..."
+          sleep 90
+          npm run test:e2e -- -t="${{ matrix.category }}"
+
+      - name: Retry failed tests for ${{ matrix.category }} (attempt 3)
+        if: steps.test-retry-1.outcome == 'failure'
+        timeout-minutes: 15
+        run: |
+          echo "::warning::Second attempt failed, retrying..."
+          sleep 90
+          npm run test:e2e -- -t="${{ matrix.category }}"

@@ -45,7 +45,7 @@ selftest.define("create main", async function () {
   await run.stop();
 
   run = s.run("create", "--list");
-  await run.read('Available');
+  await run.match('Meteor Examples');
   await run.match('react');
   await run.expectExit(0);
 });

@@ -21,6 +21,7 @@ const {
   isMeteorAppBuild,
   isMeteorBlazeProject,
   isMeteorAppNative,
+  isMeteorAppTestFullApp,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -81,15 +82,26 @@ export function ensureRspackBuildContextExists() {
     }
   }
 
+  const commonBuildEntries = [
+    RSPACK_BUILD_CONTEXT,
+    `*/${RSPACK_ASSETS_CONTEXT}`,
+    `*/${RSPACK_CHUNKS_CONTEXT}`,
+    RSPACK_DOCTOR_CONTEXT,
+  ];
+
+  if (process.env.METEOR_LOCAL_DIR) {
+    addGitignoreEntries(
+      appDir,
+      [process.env.METEOR_LOCAL_DIR, ...commonBuildEntries],
+      "Meteor custom local directory (METEOR_LOCAL_DIR)"
+    );
+    return buildContextPath;
+  }
+
   addGitignoreEntries(
     appDir,
-    [
-      RSPACK_BUILD_CONTEXT,
-      `*/${RSPACK_ASSETS_CONTEXT}`,
-      `*/${RSPACK_CHUNKS_CONTEXT}`,
-      RSPACK_DOCTOR_CONTEXT,
-    ],
-    'Meteor Modern-Tools build context directories',
+    commonBuildEntries,
+    "Meteor Modern-Tools build context directories"
   );
 
   return buildContextPath;
@@ -129,11 +141,14 @@ export function ensureModuleFilesExist() {
   const testClientFiles = {
     entryFile: initialEntrypoints.testClient || '',
     outputFile: getBuildFilePath({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.output, onlyFilename: true }),
+    mainEntryFile: mainClientFiles.entryFile,
   };
   const testServerFiles = {
     entryFile: initialEntrypoints.testServer || '',
     outputFile: getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output, onlyFilename: true }),
+    mainEntryFile: mainServerFiles.entryFile,
   };
+  const isTestFullApp = isMeteorAppTestFullApp();
 
   const moduleFiles = {
     /* Main module files for client and server */
@@ -150,18 +165,18 @@ export function ensureModuleFilesExist() {
     [getBuildFilePath({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output })]:
       getBuildFileContent({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output, ...mainServerFiles }),
     /* Test module files when test module, test module files for client and server are present or eager discovery */
-    [getBuildFilePath({ isTest: true, isTestModule, isClient: true, ...commandRole })]:
-      getBuildFileContent({ isTest: true, isTestModule, isClient: true, ...commandRole, ...testClientFiles }),
-    [getBuildFilePath({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.entry })]:
-      getBuildFileContent({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.entry, ...testClientFiles }),
-    [getBuildFilePath({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.output })]:
-      getBuildFileContent({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.output, ...testClientFiles }),
-    [getBuildFilePath({ isTest: true, isTestModule, isServer: true, ...commandRole })]:
-      getBuildFileContent({ isTest: true, isTestModule, isServer: true, ...commandRole, ...testServerFiles }),
-    [getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.entry })]:
-      getBuildFileContent({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.entry, ...testServerFiles }),
-    [getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output })]:
-      getBuildFileContent({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
+    [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isClient: true, ...commandRole })]:
+      getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isClient: true, ...commandRole, ...testClientFiles }),
+    [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isClient: true, role: FILE_ROLE.entry })]:
+      getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isClient: true, role: FILE_ROLE.entry, ...testClientFiles }),
+    [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isClient: true, role: FILE_ROLE.output })]:
+      getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isClient: true, role: FILE_ROLE.output, ...testClientFiles }),
+    [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isServer: true, ...commandRole })]:
+      getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isServer: true, ...commandRole, ...testServerFiles }),
+    [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.entry })]:
+      getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.entry, ...testServerFiles }),
+    [getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output })]:
+      getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
   };
 
   Object.entries(moduleFiles).forEach(([filename, defaultContent]) => {
@@ -280,6 +295,20 @@ function getBanner(config, side, env, module, role) {
   if (module === 'test') {
     // Test file banners
     if (role === FILE_ROLE.entry) {
+      if (!config?.entryFile) {
+        return `/**
+* @file ${side}-entry.js
+* @description No code generated
+* --------------------------------------------------------------------------
+* ⚡ Rspack Test ${sideDisplay} Entry (${envDisplay})
+* --------------------------------------------------------------------------
+* • [■ ${side}-entry.js ] ──▶ [   ${side}-rspack.js ] ──▶ [   ${side}-meteor.js ]
+*
+* This file is empty because \`meteor.testModule${side === 'test' ? '' : `.${side}`}\` is not set in package.json.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+      }
       // For test mode, if side is client or server, include it in the title
       const testType = side === 'test' ? 'Test' : `Test ${sideDisplay}`;
       return `/**
@@ -299,6 +328,20 @@ ${AUTO_GENERATED_WARNING}
     }
 
     if (role === FILE_ROLE.output) {
+      if (!config?.entryFile) {
+        return `/**
+* @file ${side}-rspack.js
+* @description No code generated
+* --------------------------------------------------------------------------
+* ⚡ Rspack Test ${sideDisplay} App (${envDisplay})
+* --------------------------------------------------------------------------
+* • [   ${side}-entry.js ] ──▶ [■ ${side}-rspack.js ] ──▶ [   ${side}-meteor.js ]
+*
+* This file is empty because \`meteor.testModule${side === 'test' ? '' : `.${side}`}\` is not set in package.json.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+      }
       // For test mode, if side is client or server, include it in the title
       const testType = side === 'test' ? 'Test' : `Test ${sideDisplay}`;
       return `/**
@@ -318,6 +361,20 @@ ${AUTO_GENERATED_WARNING}
     }
 
     if (role === FILE_ROLE.run || role === FILE_ROLE.build) {
+      if (!config?.entryFile) {
+        return `/**
+* @file ${side}-meteor.js
+* @description No code generated
+* --------------------------------------------------------------------------
+* ☄️ Meteor Test ${sideDisplay} App (${envDisplay})
+* --------------------------------------------------------------------------
+* • [   ${side}-entry.js ] ──▶ [   ${side}-rspack.js ] ──▶ [■ ${side}-meteor.js ]
+*
+* This file is empty because \`meteor.testModule${side === 'test' ? '' : `.${side}`}\` is not set in package.json.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+      }
       // For test mode, if side is client or server, include it in the title
       const testType = side === 'test' ? 'Test' : `Test ${sideDisplay}`;
       return `/**
@@ -341,6 +398,20 @@ ${AUTO_GENERATED_WARNING}
   // For main modules (not test mode), use the new templates
   // Entry files
   if (role === FILE_ROLE.entry) {
+    if (!config?.entryFile) {
+      return `/**
+* @file ${side}-entry.js
+* @description No code generated
+* --------------------------------------------------------------------------
+* 🔌 Rspack ${sideDisplay} Entry (${envDisplay})
+* --------------------------------------------------------------------------
+* • [■ ${side}-entry.js ] ──▶ [   ${side}-rspack.js ] ──▶ [   ${side}-meteor.js ]
+*
+* This file is empty because \`meteor.mainModule.${side}\` is not set in package.json.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+    }
     return `/**
 * @file ${side}-entry.js
 * @description Entry point for Rspack build process
@@ -360,6 +431,20 @@ ${AUTO_GENERATED_WARNING}
 
   // Rspack output files
   if (role === FILE_ROLE.output) {
+    if (!config?.entryFile) {
+      return `/**
+* @file ${side}-rspack.js
+* @description No code generated
+* --------------------------------------------------------------------------
+* ⚡ Rspack ${sideDisplay} App (${envDisplay})
+* --------------------------------------------------------------------------
+* • [   ${side}-entry.js ] ──▶ [■ ${side}-rspack.js ] ──▶ [   ${side}-meteor.js ]
+*
+* This file is empty because \`meteor.mainModule.${side}\` is not set in package.json.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+    }
     return `/**
 * @file ${side}-rspack.js
 * @description Bundled output generated by Rspack
@@ -379,6 +464,20 @@ ${AUTO_GENERATED_WARNING}
 
   // Meteor files (run or build role)
   if (role === FILE_ROLE.run || role === FILE_ROLE.build) {
+    if (!config?.entryFile) {
+      return `/**
+* @file ${side}-meteor.js
+* @description No code generated
+* --------------------------------------------------------------------------
+* ☄️ Meteor ${sideDisplay} App (${envDisplay})
+* --------------------------------------------------------------------------
+* • [   ${side}-entry.js ] ──▶ [   ${side}-rspack.js ] ──▶ [■ ${side}-meteor.js ]
+*
+* This file is empty because \`meteor.mainModule.${side}\` is not set in package.json.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+    }
     return `/**
 * @file ${side}-meteor.js
 * @description Meteor runtime file that imports the Rspack bundle
@@ -404,6 +503,10 @@ ${AUTO_GENERATED_WARNING}
  * @returns {string} The HMR code or empty string
  */
 function getHmrCode(config, role) {
+  if (!config?.entryFile && !config?.isTest) {
+    return '';
+  }
+
   if (role === FILE_ROLE.entry && config?.isClient && !config?.isTest) {
     return `/* Enables HMR */
 if (module.hot) {
@@ -418,9 +521,33 @@ if (module.hot) {
  * @returns {string} The import content
  */
 function getImportContent(config, side, role) {
-  if (config?.entryFile && role === FILE_ROLE.entry) {
-    return `/* Link to 🔌 Meteor ${capitalizeFirstLetter(side)} Entry */
+  if (!config?.entryFile && !config?.isTest) {
+    return '';
+  }
+
+  if (role === FILE_ROLE.entry) {
+    if (config?.isTest) {
+      return `${
+        config?.isTestFullApp && config?.mainEntryFile
+          ? `/* Link to 🔌 Meteor ${capitalizeFirstLetter(
+              side
+            )} Main Entry (--full-app mode) */
+import '../../${config.mainEntryFile}';`
+          : ""
+      }
+${
+  config?.entryFile
+    ? `
+/* Link to 🔌 Meteor ${capitalizeFirstLetter(side)} Test Entry */
+import '../../${config.entryFile}';`
+    : ""
+}`;
+    }
+
+    if (config?.entryFile) {
+      return `/* Link to 🔌 Meteor ${capitalizeFirstLetter(side)} Entry */
 import '../../${config?.entryFile}';`;
+    }
   }
 
   if (config?.outputFile &&
