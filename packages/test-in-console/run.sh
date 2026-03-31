@@ -1,15 +1,24 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 # from Meteor local checkout run like
 # ./packages/test-in-console/run.sh
 # or for a specific package
 # ./packages/test-in-console/run.sh "mongo"
 
-cd $(dirname $0)/../..
-export METEOR_HOME=`pwd`
+cd "$(dirname "$0")/../.."
+export METEOR_HOME="$(pwd)"
 
-# Installs into dev_bundle/lib/node_modules/puppeteer.
-./meteor npm install -g puppeteer@23.6.0
+# Install puppeteer into dev_bundle/lib/node_modules/puppeteer.
+# Skip if the pinned version is already present to save ~5s on warm runners.
+PUPPETEER_VERSION="24.15.0"
+PUPPETEER_PKG="$METEOR_HOME/dev_bundle/lib/node_modules/puppeteer/package.json"
+PUPPETEER_INSTALLED=$(node -p "try{require('$PUPPETEER_PKG').version}catch(e){''}" 2>/dev/null || true)
+if [ "$PUPPETEER_INSTALLED" != "$PUPPETEER_VERSION" ]; then
+  ./meteor npm install -g "puppeteer@$PUPPETEER_VERSION"
+else
+  echo "puppeteer@$PUPPETEER_VERSION already installed, skipping."
+fi
 
 export PATH=$METEOR_HOME:$PATH
 
