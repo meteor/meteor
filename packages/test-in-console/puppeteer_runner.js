@@ -49,22 +49,21 @@ async function runNextUrl(browser) {
     return;
   }
 
-  // Retry on ERR_CONNECTION_REFUSED: Meteor may briefly restart (hot-reload)
-  // between the curl pre-warm succeeding and Puppeteer connecting.
-  // 120 s navigation timeout covers a slow first-paint while the bundle builds.
-  const MAX_GOTO_ATTEMPTS = 24;
+  // Retry on any navigation failure (ERR_CONNECTION_REFUSED, timeout, etc.):
+  // Meteor briefly restarts its HTTP server after the first bundle build, and
+  // puppeteer 24.x may surface connection errors with different message formats.
+  const MAX_GOTO_ATTEMPTS = 12;
   for (let attempt = 1; attempt <= MAX_GOTO_ATTEMPTS; attempt++) {
     try {
       page.setDefaultNavigationTimeout(120000);
       await page.goto(process.env.URL, { waitUntil: "domcontentloaded" });
       break;
     } catch (err) {
-      const refused =
-        err.message && err.message.includes("ERR_CONNECTION_REFUSED");
-      if (refused && attempt < MAX_GOTO_ATTEMPTS) {
+      if (attempt < MAX_GOTO_ATTEMPTS) {
         console.log(
-          `Server not ready (attempt ${attempt}/${MAX_GOTO_ATTEMPTS}), retrying in 5 s...`
+          `Navigation failed (attempt ${attempt}/${MAX_GOTO_ATTEMPTS}): ${err.message}`
         );
+        console.log(`Retrying in 5 s...`);
         await new Promise((r) => setTimeout(r, 5000));
         continue;
       }

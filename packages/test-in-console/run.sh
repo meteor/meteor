@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # from Meteor local checkout run like
 # ./packages/test-in-console/run.sh
@@ -48,11 +47,15 @@ until curl -sfL --max-time 60 "$URL" -o /dev/null 2>/dev/null; do
   fi
   sleep 5
 done
+# Grace period: Meteor briefly restarts its HTTP server after serving the
+# first bundled response. Without this delay Puppeteer can connect during
+# that window and get ERR_CONNECTION_REFUSED.
+sleep 5
 echo "Server is ready."
 
 node --trace-warnings "$METEOR_HOME/packages/test-in-console/puppeteer_runner.js"
 
 STATUS=$?
 
-pkill -TERM -P $EXEC_PID
+pkill -TERM -P $EXEC_PID || true
 exit $STATUS
