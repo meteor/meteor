@@ -49,12 +49,12 @@ async function runNextUrl(browser) {
     return;
   }
 
-  page.setDefaultNavigationTimeout(120000);
+  page.setDefaultNavigationTimeout(60000);
   await page.goto(process.env.URL, { waitUntil: "domcontentloaded" });
 
   async function poll() {
     if (await isDone(page)) {
-      let failCount = await getFailCount(page);
+      const failCount = await getFailCount(page);
       console.log(`Tests complete with ${failCount} failures`);
       console.log(`Tests complete with ${await getPassCount(page)} passes`);
       if (failCount > 0) {

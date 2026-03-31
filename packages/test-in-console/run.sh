@@ -34,6 +34,17 @@ sed '/test-in-console listening$/q' <&3
 # which would block Meteor's synchronous stdout writes and freeze the HTTP server.
 cat <&3 >/dev/null &
 
+# Wait for the server to finish building the bundle and serve the page.
+# 'test-in-console listening' only means the HTTP port is open; the first
+# request triggers the full bundle build which can take several minutes on
+# a cold runner. Polling with curl here means Puppeteer navigates immediately
+# to a fully built page instead of waiting for it under a navigation timeout.
+echo "Waiting for Meteor test server to finish building..."
+until curl -sf --max-time 10 "$URL" -o /dev/null 2>/dev/null; do
+  sleep 3
+done
+echo "Server is ready."
+
 node --trace-warnings "$METEOR_HOME/packages/test-in-console/puppeteer_runner.js"
 
 STATUS=$?
