@@ -11,7 +11,7 @@ import { compileToJsonSchema } from './schema_jsonschema.js';
 /**
  * @summary Constructor for a MongoSchema — a declarative schema definition for MongoDB documents.
  * @locus Anywhere
- * @class
+ * @class MongoSchema
  * @instancename schema
  * @param {Object} definition Schema definition mapping field paths to field definitions. Supports shorthand syntax (bare constructors like `String`, arrays like `[String]`, RegExp) and full definition objects with `type`, constraints, and options.
  * @param {Object} [options] Schema-level options.
