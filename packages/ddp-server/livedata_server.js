@@ -364,12 +364,13 @@ Object.assign(Session.prototype, {
       return;
     }
     if (self.socket) {
+      const stringMsg = DDPCommon.stringifyDDP(msg);
       if (Meteor._printSentDDP)
-        Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
+        Meteor._debug("Sent DDP", stringMsg);
       if (!isIgnoredMsg) {
         self.sentCount++;
       }
-      self.socket.send(DDPCommon.stringifyDDP(msg));
+      self.socket.send(stringMsg);
     }
   },
 
