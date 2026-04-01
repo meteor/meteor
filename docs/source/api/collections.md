@@ -177,6 +177,8 @@ index is worthwhile.
 
 Read more about collections and how to use them in the [Collections](http://guide.meteor.com/collections.html) article in the Meteor Guide.
 
+> **Schema Validation:** The [`mongo-schema`](packages/mongo-schema.html) package lets you attach a schema to any collection. Once attached, `insertAsync`, `updateAsync`, and `upsertAsync` automatically clean and validate documents — enforcing types, required fields, constraints, and defaults without any extra wiring. See the [`mongo-schema` docs](packages/mongo-schema.html) for details.
+
 {% apibox "Mongo.Collection#find" %}
 
 `find` returns a cursor. It does not immediately access the database or return
