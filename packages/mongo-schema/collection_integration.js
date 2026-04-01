@@ -97,7 +97,7 @@ export function setupCollectionIntegration() {
  *
  * @param {Object} operationOpts - Options passed to the mutation method.
  * @param {'insert'|'update'|'upsert'} operationType - The type of mutation.
- * @returns {import('./schema_clean.js').CleanOptions} Options for `MongoSchema#clean()`.
+ * @returns {Object} Options for `MongoSchema#clean()`.
  */
 function buildCleanOptions(operationOpts, operationType) {
   let userId = null;

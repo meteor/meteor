@@ -53,7 +53,7 @@ const VALID_OPTIONS = new Set([
 
 /**
  * @typedef {Object} FieldDescriptor
- * @property {import('./types.js').TypeDescriptor} resolvedType - Resolved type descriptor.
+ * @property {Object} resolvedType - Resolved type descriptor.
  * @property {boolean} required - Whether this field is required.
  * @property {string} [label] - Human-readable label for error messages.
  * @property {*} [defaultValue] - Default value applied during cleaning.
@@ -85,7 +85,7 @@ const VALID_OPTIONS = new Set([
  * - **Full form**: `{ name: { type: String, min: 1 } }` — returned as-is.
  *
  * @param {Function|RegExp|Array|FieldDefinition} def - Raw field definition from the user.
- * @returns {FieldDefinition & { _arrayItemType?: * }} Normalized definition in canonical form.
+ * @returns {Object} Normalized definition in canonical form.
  * @throws {Error} If `def` is not a recognized field definition format.
  */
 export function normalizeFieldDef(def) {

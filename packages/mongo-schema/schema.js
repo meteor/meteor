@@ -52,11 +52,14 @@ export class MongoSchema {
    * @private
    */
   constructor(definition, options = {}) {
-    /** @type {true} Sentinel for identifying MongoSchema instances. */
+    /** @type {true} */
     this._isMongoSchema = true;
     /** @private */
     this._definition = definition;
-    /** @type {MongoSchemaOptions} @private */
+    /**
+     * @type {Object}
+     * @private
+     */
     this._options = {
       requiredByDefault: true,
       humanizeAutoLabels: true,
@@ -74,15 +77,21 @@ export class MongoSchema {
     }
     /**
      * Parsed intermediate representation — a `Map<string, FieldDescriptor>`.
-     * @type {Map<string, import('./schema_definition.js').FieldDescriptor>}
+     * @type {Object}
      * @private
      */
     this._ir = parseDefinition(definition, this._options);
 
     // Validator registries
-    /** @type {Function[]} @private */
+    /**
+     * @type {Array}
+     * @private
+     */
     this._validators = [];
-    /** @type {Function[]} @private */
+    /**
+     * @type {Array}
+     * @private
+     */
     this._docValidators = [];
   }
 
@@ -391,22 +400,28 @@ MongoSchema.Any = AnyMarker;
 
 /**
  * Create a union type that accepts any of the provided types.
- * @type {typeof import('./types.js').oneOf}
- * @see {@link import('./types.js').oneOf}
+ * @type {Function}
+ * @see oneOf
  */
 MongoSchema.oneOf = oneOf;
 
 /**
  * Error type constants. Access via `MongoSchema.ErrorTypes.REQUIRED`, etc.
- * @type {typeof import('./schema_errors.js').ErrorTypes}
+ * @type {Object}
  */
 MongoSchema.ErrorTypes = ErrorTypes;
 
 // Global validators
 
-/** @type {Function[]} @private */
+/**
+ * @type {Array}
+ * @private
+ */
 MongoSchema._globalValidators = [];
-/** @type {Function[]} @private */
+/**
+ * @type {Array}
+ * @private
+ */
 MongoSchema._globalDocValidators = [];
 
 /**

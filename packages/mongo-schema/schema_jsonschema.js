@@ -40,7 +40,7 @@
  * recursively into `properties` of their parent object. Fields typed as
  * `MongoSchema.Any` or custom constructors (with `bsonType: null`) are excluded.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - The schema IR.
+ * @param {Object} ir - The schema IR.
  * @returns {JsonSchema} A MongoDB `$jsonSchema`-compatible object.
  *
  * @example
@@ -90,9 +90,9 @@ export function compileToJsonSchema(ir) {
  * Compile a single field descriptor into a `$jsonSchema` field definition.
  * Recursively processes children (for objects) and items (for arrays).
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {string} key - The dot-path key of the field being compiled.
- * @param {import('./schema_definition.js').FieldDescriptor} desc - The field's descriptor.
+ * @param {Object} desc - The field's descriptor.
  * @returns {JsonSchemaField} The compiled JSON Schema field definition.
  */
 function compileField(ir, key, desc) {

@@ -103,9 +103,9 @@ export class ValidationError extends (typeof Meteor !== 'undefined' ? Meteor.Err
       ? errors[0].message
       : 'Validation failed';
     super('validation-error', firstMessage);
-    /** @type {string} Error code — always `'validation-error'`. */
+    /** @type {string} */
     this.error = 'validation-error';
-    /** @type {ValidationErrorDetail[]} All individual field errors. */
+    /** @type {Array} */
     this.details = errors || [];
     // Ensure name is set for error identification
     if (!this.name) this.name = 'ValidationError';

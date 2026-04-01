@@ -10,7 +10,7 @@
 /**
  * @typedef {Object} TypeDescriptor
  * @property {string} name - Human-readable type name (e.g., `'string'`, `'number'`, `'oneOf'`, `'schema'`).
- * @property {(value: *) => boolean} check - Returns `true` if `value` matches this type.
+ * @property {Function} check - Returns `true` if `value` matches this type.
  * @property {string|string[]|null} [bsonType] - BSON type(s) for `$jsonSchema` compilation.
  *   `null` means the type is excluded from database-level schemas (e.g., `Any`, custom constructors).
  * @property {TypeDescriptor[]} [resolvedTypes] - Present only for `oneOf` unions; the resolved
@@ -82,7 +82,7 @@ function isPlainObject(v) {
  * Registered types: `String`, `Number`, `Boolean`, `Date`, `Object`, `Array`,
  * `IntegerMarker`, `AnyMarker`.
  *
- * @type {Map<Function|Object, TypeDescriptor>}
+ * @type {Object}
  */
 const TYPE_MAP = new Map();
 

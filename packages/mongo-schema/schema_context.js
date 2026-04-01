@@ -32,12 +32,12 @@ import { collectErrors } from './schema_validate.js';
  */
 export class ValidationContext {
   /**
-   * @param {import('./schema.js').MongoSchema} schema - The schema instance this context validates against.
+   * @param {MongoSchema} schema - The schema instance this context validates against.
    */
   constructor(schema) {
     /** @private */
     this._schema = schema;
-    /** @type {import('./schema_errors.js').ValidationErrorDetail[]} @private */
+    /** @type {Array} @private */
     this._errors = [];
     /** @private */
     this._dep = null;
@@ -52,7 +52,7 @@ export class ValidationContext {
    * Does **not** throw — returns a boolean instead.
    *
    * @param {Object} doc - The document to validate.
-   * @param {import('./schema_validate.js').ValidateOptions} [options={}] - Validation options.
+   * @param {Object} [options={}] - Validation options.
    * @returns {boolean} `true` if the document is valid, `false` otherwise.
    */
   validate(doc, options = {}) {
@@ -85,7 +85,7 @@ export class ValidationContext {
    * Retrieve all errors from the last `validate()` call.
    * Reactive when Tracker is available.
    *
-   * @returns {import('./schema_errors.js').ValidationErrorDetail[]} Array of error details,
+   * @returns {Array} Array of error details,
    *   or an empty array if valid.
    */
   validationErrors() {

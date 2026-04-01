@@ -29,10 +29,10 @@ import { getNestedValue } from './schema_clean.js';
  * Validate a document against the schema IR. Throws a {@link ValidationError}
  * if any fields fail validation.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - The document or modifier to validate.
  * @param {ValidateOptions} [options={}] - Validation options.
- * @throws {import('./schema_errors.js').ValidationError} If one or more fields fail validation.
+ * @throws {ValidationError} If one or more fields fail validation.
  *
  * @example
  * const schema = new MongoSchema({
@@ -67,10 +67,10 @@ export function validate(ir, doc, options = {}) {
  * 4. Global validators (`MongoSchema.addValidator`)
  * 5. Global doc validators (`MongoSchema.addDocValidator`)
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - The document or modifier to validate.
  * @param {ValidateOptions} [options={}] - Validation options.
- * @returns {import('./schema_errors.js').ValidationErrorDetail[]} Array of error details
+ * @returns {Object[]} Array of error details
  *   (empty if valid).
  */
 export function collectErrors(ir, doc, options = {}) {
@@ -137,12 +137,12 @@ export function collectErrors(ir, doc, options = {}) {
 /**
  * Validate a single field, recursing into nested objects and array items.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {string} key - Dot-delimited field path.
- * @param {import('./schema_definition.js').FieldDescriptor} desc - Field descriptor.
+ * @param {Object} desc - Field descriptor.
  * @param {Object} rootDoc - The root document (for cross-field lookups in custom validators).
  * @param {*} value - The field's current value.
- * @param {import('./schema_errors.js').ValidationErrorDetail[]} errors - Accumulator for errors.
+ * @param {Object[]} errors - Accumulator for errors.
  * @param {ValidateOptions} options - Validation options.
  */
 function validateField(ir, key, desc, rootDoc, value, errors, options) {
@@ -222,9 +222,9 @@ function validateField(ir, key, desc, rootDoc, value, errors, options) {
  * array `minCount`/`maxCount`.
  *
  * @param {string} key - Field path.
- * @param {import('./schema_definition.js').FieldDescriptor} desc - Field descriptor.
+ * @param {Object} desc - Field descriptor.
  * @param {*} value - The field value.
- * @param {import('./schema_errors.js').ValidationErrorDetail[]} errors - Error accumulator.
+ * @param {Object[]} errors - Error accumulator.
  * @param {ValidateOptions} options - Validation options.
  */
 function validateConstraints(key, desc, value, errors, options) {
@@ -307,12 +307,12 @@ function validateConstraints(key, desc, value, errors, options) {
  * @property {*} value - Current field value.
  * @property {boolean} isSet - Whether the field has a value.
  * @property {string|null} operator - Always `null` for plain documents.
- * @property {import('./schema_definition.js').FieldDescriptor} definition - The field's descriptor.
- * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} field -
+ * @property {Object} definition - The field's descriptor.
+ * @property {Function} field -
  *   Look up another field by full path.
- * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} siblingField -
+ * @property {Function} siblingField -
  *   Look up a sibling field by local name.
- * @property {() => { isSet: boolean, value: *, operator: string|null }} parentField -
+ * @property {Function} parentField -
  *   Access the parent object.
  */
 
@@ -322,12 +322,12 @@ function validateConstraints(key, desc, value, errors, options) {
  * The validator receives a {@link CustomValidatorContext} as `this` and should
  * return a string error type to fail, or `undefined` to pass.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {string} key - Field path.
- * @param {import('./schema_definition.js').FieldDescriptor} desc - Field descriptor.
+ * @param {Object} desc - Field descriptor.
  * @param {Object} rootDoc - Root document for cross-field lookups.
  * @param {*} value - Field value.
- * @param {import('./schema_errors.js').ValidationErrorDetail[]} errors - Error accumulator.
+ * @param {Object[]} errors - Error accumulator.
  * @param {ValidateOptions} options - Validation options.
  */
 function runCustomValidator(ir, key, desc, rootDoc, value, errors, options) {
@@ -367,10 +367,10 @@ function runCustomValidator(ir, key, desc, rootDoc, value, errors, options) {
  * Collect validation errors for a MongoDB update modifier. Validates fields
  * within `$set`, `$setOnInsert`, `$inc`, `$push`, and `$addToSet` operators.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} modifier - MongoDB update modifier.
  * @param {ValidateOptions} options - Validation options.
- * @returns {import('./schema_errors.js').ValidationErrorDetail[]} Array of error details.
+ * @returns {Object[]} Array of error details.
  */
 function collectModifierErrors(ir, modifier, options) {
   const errors = [];

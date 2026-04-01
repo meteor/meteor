@@ -40,7 +40,7 @@ import { EJSON } from 'meteor/ejson';
  * 5. **trimStrings** — trim whitespace from strings
  * 6. **getAutoValues** — apply `defaultValue` then `autoValue` functions
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - The document or modifier to clean.
  * @param {CleanOptions} options - Cleaning options (merged with schema-level defaults).
  * @returns {Object} The cleaned document (a new object unless `mutate` is `true`).
@@ -110,7 +110,7 @@ export function clean(ir, doc, options) {
  * Clean a MongoDB update modifier by applying the cleaning pipeline to each
  * operator's field set (`$set`, `$setOnInsert`, `$inc`, `$push`, `$addToSet`).
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} modifier - MongoDB update modifier (e.g., `{ $set: { name: 'Bob' } }`).
  * @param {CleanOptions} options - Cleaning options.
  * @returns {Object} The cleaned modifier.
@@ -146,7 +146,7 @@ function cleanModifier(ir, modifier, options) {
  * Remove keys from a flat field map that are not present in the schema IR.
  * Used for modifier operators where fields are flat dot-paths.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} fields - Flat key-value map from a modifier operator.
  * @returns {Object} Filtered copy containing only known keys.
  */
@@ -161,7 +161,7 @@ function filterUnknownKeysFlat(ir, fields) {
 /**
  * Auto-convert types for flat modifier fields.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} fields - Flat key-value map from a modifier operator.
  * @returns {Object} The same object with values converted in place.
  */
@@ -178,7 +178,7 @@ function autoConvertTypesFlat(ir, fields) {
 /**
  * Trim string values in flat modifier fields (unless the field has `trim: false`).
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} fields - Flat key-value map from a modifier operator.
  * @returns {Object} The same object with strings trimmed in place.
  */
@@ -204,7 +204,7 @@ function trimStringsFlat(ir, fields) {
  * - Call `this.unset()` → removes the field from `$set`/`$setOnInsert` and adds `$unset`
  * - Return `undefined` → no change
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} modifier - The MongoDB update modifier.
  * @param {CleanOptions} options - Cleaning options (may include `extendAutoValueContext`).
  * @returns {Object} The modifier with auto-values applied.
@@ -281,7 +281,7 @@ function applyAutoValuesModifier(ir, modifier, options) {
 /**
  * Recursively remove `null` entries from all arrays in the document.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - Document to process (mutated in place).
  */
 function removeNullsFromArrays(ir, doc) {
@@ -300,7 +300,7 @@ function removeNullsFromArrays(ir, doc) {
  * Remove top-level keys not defined in the schema (always keeps `_id`).
  * Recurses into nested objects using {@link filterNestedObject}.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - Document to filter.
  * @returns {Object} A new object containing only known keys.
  */
@@ -324,7 +324,7 @@ function filterUnknownKeys(ir, doc) {
 /**
  * Recursively filter unknown keys within a nested object.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {string} parentKey - Dot-path of the parent field.
  * @param {Object} obj - Nested object to filter.
  * @returns {Object} A new object containing only known child keys.
@@ -349,7 +349,7 @@ function filterNestedObject(ir, parentKey, obj) {
  * Trim whitespace from all string values in a document, including nested objects
  * and array items. Respects `trim: false` on individual fields.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - Document to process (mutated in place).
  * @returns {Object} The same document with strings trimmed.
  */
@@ -372,7 +372,7 @@ function trimStrings(ir, doc) {
 }
 
 /**
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir
+ * @param {Object} ir
  * @param {string} parentKey
  * @param {Object} obj
  */
@@ -392,7 +392,7 @@ function trimNestedStrings(ir, parentKey, obj) {
 }
 
 /**
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir
+ * @param {Object} ir
  * @param {string} parentKey
  * @param {Array} arr
  */
@@ -412,7 +412,7 @@ function trimArrayStrings(ir, parentKey, arr) {
 /**
  * Remove fields with empty string values (`""`) from the document.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - Document to process (mutated in place).
  * @returns {Object} The same document with empty strings removed.
  */
@@ -432,7 +432,7 @@ function removeEmptyStrings(ir, doc) {
  * conversion exists (e.g., string→number, number→string, string→boolean,
  * string→date).
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - Document to process (mutated in place).
  * @returns {Object} The same document with converted values.
  */
@@ -510,7 +510,7 @@ function convertValue(value, typeName) {
  * Apply `defaultValue`s recursively. `prefix` tracks the current dot-path
  * into `doc` so nested fields like `'address.country'` resolve correctly.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - Document to apply defaults to (mutated in place).
  * @param {string} prefix - Current dot-path prefix (empty string for top level).
  */
@@ -556,19 +556,19 @@ function applyDefaultValues(ir, doc, prefix) {
  * @property {string|null} operator - The MongoDB operator (e.g., `'$set'`) or `null` for plain docs.
  * @property {Object} obj - The root document or modifier being cleaned.
  * @property {boolean} [isModifier] - `true` when cleaning a modifier.
- * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} field -
+ * @property {Function} field -
  *   Look up another field by its full dot-path key.
- * @property {(name: string) => { isSet: boolean, value: *, operator: string|null }} siblingField -
+ * @property {Function} siblingField -
  *   Look up a sibling field by its local key name.
- * @property {() => { isSet: boolean, value: *, operator: string|null }} parentField -
+ * @property {Function} parentField -
  *   Access the parent object.
- * @property {() => void} unset - Call to remove this field from the document.
+ * @property {Function} unset - Call to remove this field from the document.
  */
 
 /**
  * Apply `autoValue` functions recursively. Handles nested fields by walking into objects.
  *
- * @param {Map<string, import('./schema_definition.js').FieldDescriptor>} ir - Schema IR.
+ * @param {Object} ir - Schema IR.
  * @param {Object} doc - Document to apply auto-values to (mutated in place).
  * @param {CleanOptions} options - Cleaning options.
  * @param {string} prefix - Current dot-path prefix.
