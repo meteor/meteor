@@ -1,11 +1,10 @@
 // packages/mongo-schema/tests/collection_integration_tests.js
 import { Tinytest } from 'meteor/tinytest';
 import { Mongo } from 'meteor/mongo';
-import { Random } from 'meteor/random';
 import { MongoSchema } from 'meteor/mongo-schema';
 
 Tinytest.add('integration - attachSchema adds schema', function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   const schema = new MongoSchema({ name: String });
   col.attachSchema(schema);
   test.isTrue(col.schema() !== undefined);
@@ -13,7 +12,7 @@ Tinytest.add('integration - attachSchema adds schema', function (test) {
 });
 
 Tinytest.add('integration - attachSchema merge', function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({ name: String }));
   col.attachSchema(new MongoSchema({ age: Number }));
   const schema = col.schema();
@@ -22,7 +21,7 @@ Tinytest.add('integration - attachSchema merge', function (test) {
 });
 
 Tinytest.add('integration - attachSchema replace', function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({ name: String }));
   col.attachSchema(new MongoSchema({ age: Number }), { replace: true });
   const schema = col.schema();
@@ -31,7 +30,7 @@ Tinytest.add('integration - attachSchema replace', function (test) {
 });
 
 Tinytest.addAsync('integration - insertAsync validates', async function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({ name: String, age: Number }));
   // Valid
   const id = await col.insertAsync({ name: 'Alice', age: 25 });
@@ -47,7 +46,7 @@ Tinytest.addAsync('integration - insertAsync validates', async function (test) {
 });
 
 Tinytest.addAsync('integration - insertAsync applies clean', async function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({
     name: String,
     active: { type: Boolean, defaultValue: true },
@@ -59,7 +58,7 @@ Tinytest.addAsync('integration - insertAsync applies clean', async function (tes
 });
 
 Tinytest.addAsync('integration - insertAsync with autoValue context', async function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({
     name: String,
     createdAt: {
@@ -75,7 +74,7 @@ Tinytest.addAsync('integration - insertAsync with autoValue context', async func
 });
 
 Tinytest.addAsync('integration - updateAsync validates', async function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({
     name: String,
     age: { type: Number, min: 0 },
@@ -93,7 +92,7 @@ Tinytest.addAsync('integration - updateAsync validates', async function (test) {
 });
 
 Tinytest.addAsync('integration - validate false skips validation', async function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({ name: String, age: Number }));
   // Should succeed even though age is missing
   const id = await col.insertAsync({ name: 'Alice' }, { validate: false });
@@ -103,7 +102,7 @@ Tinytest.addAsync('integration - validate false skips validation', async functio
 Tinytest.addAsync('integration - bypassSchema skips everything on server', async function (test) {
   if (!Meteor.isServer) {
     // bypassSchema is only honored in trusted server-side code
-    const col = new Mongo.Collection(Random.id());
+    const col = new Mongo.Collection(null);
     col.attachSchema(new MongoSchema({ name: String }));
     try {
       await col.insertAsync({ anything: 'goes' }, { bypassSchema: true });
@@ -113,7 +112,7 @@ Tinytest.addAsync('integration - bypassSchema skips everything on server', async
     }
     return;
   }
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({ name: String }));
   const id = await col.insertAsync({ anything: 'goes' }, { bypassSchema: true });
   const doc = await col.findOneAsync(id);
@@ -121,7 +120,7 @@ Tinytest.addAsync('integration - bypassSchema skips everything on server', async
 });
 
 Tinytest.addAsync('integration - removeAsync passes through', async function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({ name: String }));
   const id = await col.insertAsync({ name: 'Alice' });
   const removed = await col.removeAsync(id);
@@ -129,7 +128,7 @@ Tinytest.addAsync('integration - removeAsync passes through', async function (te
 });
 
 Tinytest.addAsync('integration - wrong type on insert throws', async function (test) {
-  const col = new Mongo.Collection(Random.id());
+  const col = new Mongo.Collection(null);
   col.attachSchema(new MongoSchema({ name: String }));
   try {
     await col.insertAsync({ name: 123 });

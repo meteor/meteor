@@ -62,7 +62,22 @@ export function clean(ir, doc, options) {
   let result = options.mutate ? doc : EJSON.clone(doc);
 
   if (options.filter) {
-    result = filterUnknownKeys(ir, result);
+    if (options.mutate) {
+      // Delete unknown keys in place to preserve object reference
+      for (const key of Object.keys(result)) {
+        if (key !== '_id' && !ir.has(key)) {
+          delete result[key];
+        }
+      }
+      for (const [key, desc] of ir) {
+        if (key.includes('.') || !desc.children) continue;
+        if (result[key] && typeof result[key] === 'object' && !Array.isArray(result[key])) {
+          result[key] = filterNestedObject(ir, key, result[key]);
+        }
+      }
+    } else {
+      result = filterUnknownKeys(ir, result);
+    }
   }
 
   if (options.autoConvert) {

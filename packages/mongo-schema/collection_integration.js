@@ -115,25 +115,38 @@ export function setupCollectionIntegration() {
  * @returns {import('./schema_clean.js').CleanOptions} Options for `MongoSchema#clean()`.
  */
 function buildCleanOptions(operationOpts, operationType) {
+  let userId = null;
+  try {
+    if (typeof Meteor !== 'undefined' && Meteor.userId) {
+      userId = Meteor.userId();
+    }
+  } catch (e) {
+    // Meteor.userId() throws outside method/publication context
+  }
+
   const ctx = {
     isInsert: operationType === 'insert',
     isUpdate: operationType === 'update',
     isUpsert: operationType === 'upsert',
-    userId: typeof Meteor !== 'undefined' ? (Meteor.userId ? Meteor.userId() : null) : null,
+    userId,
     isFromTrustedCode: typeof Meteor !== 'undefined' ? Meteor.isServer : false,
   };
 
-  return {
+  const opts = {
     mutate: true,
-    filter: operationOpts.filter,
-    autoConvert: operationOpts.autoConvert,
-    removeEmptyStrings: operationOpts.removeEmptyStrings,
-    trimStrings: operationOpts.trimStrings,
-    getAutoValues: operationOpts.getAutoValues,
     isModifier: operationType !== 'insert',
     isUpsert: operationType === 'upsert',
     extendAutoValueContext: ctx,
   };
+
+  // Only include explicitly-set options to avoid overriding schema defaults with undefined
+  if (operationOpts.filter !== undefined) opts.filter = operationOpts.filter;
+  if (operationOpts.autoConvert !== undefined) opts.autoConvert = operationOpts.autoConvert;
+  if (operationOpts.removeEmptyStrings !== undefined) opts.removeEmptyStrings = operationOpts.removeEmptyStrings;
+  if (operationOpts.trimStrings !== undefined) opts.trimStrings = operationOpts.trimStrings;
+  if (operationOpts.getAutoValues !== undefined) opts.getAutoValues = operationOpts.getAutoValues;
+
+  return opts;
 }
 
 /**

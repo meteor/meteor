@@ -349,7 +349,9 @@ export class MongoSchema {
   namedContext(name) {
     if (!this._namedContexts) this._namedContexts = new Map();
     if (!this._namedContexts.has(name)) {
-      this._namedContexts.set(name, new ValidationContext(this));
+      const ctx = new ValidationContext(this);
+      ctx._name = name;
+      this._namedContexts.set(name, ctx);
     }
     return this._namedContexts.get(name);
   }
