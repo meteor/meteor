@@ -1,0 +1,25 @@
+<template name="configureLoginServiceDialogForDiscord">
+  <p>
+    First, you'll need to register your application on the
+    <a href="https://discord.com/developers/applications" target="_blank">Discord Developer Portal</a>.
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://discord.com/developers/applications" target="_blank">discord.com/developers/applications</a>
+      and click "New Application".
+    </li>
+    <li>
+      Set the application name.
+    </li>
+    <li>
+      Go to the "OAuth2" section in the left sidebar.
+    </li>
+    <li>
+      Add <span class="url">{{siteUrl}}_oauth/discord</span> to the
+      Redirects field.
+    </li>
+    <li>
+      Copy the Client ID and Client Secret into the fields below.
+    </li>
+  </ol>
+</template>
