@@ -13,7 +13,8 @@ The basic Accounts system is in the `accounts-base` package, but
 applications typically include this automatically by adding one of the
 login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-github`, `accounts-google`, `accounts-meetup`,
-`accounts-twitter`, or `accounts-weibo`.
+`accounts-twitter`, `accounts-weibo`, `accounts-discord`,
+`accounts-slack`, `accounts-spotify`, or `accounts-twitch`.
 
 Read more about customizing user accounts in the [Accounts](/tutorials/accounts/accounts) article in the Meteor Guide.
 
@@ -250,6 +251,10 @@ Available functions are:
 - `Meteor.loginWithTwitter`
   - `options` may also include [Twitter's `force_login` parameter](https://dev.twitter.com/oauth/reference/get/oauth/authenticate)
 - `Meteor.loginWithWeibo`
+- `Meteor.loginWithDiscord`
+- `Meteor.loginWithSlack`
+- `Meteor.loginWithSpotify`
+- `Meteor.loginWithTwitch`
 
 These functions initiate the login process with an external
 service (eg: Facebook, Google, etc), using OAuth. When called they open a new pop-up

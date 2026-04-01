@@ -5,7 +5,8 @@ A turn-key user interface for Meteor Accounts.
 To add Accounts and a set of login controls to an application, add the
 `accounts-ui` package and at least one login provider package:
 `accounts-password`, `accounts-facebook`, `accounts-github`,
-`accounts-google`, `accounts-twitter`, or `accounts-weibo`.
+`accounts-google`, `accounts-twitter`, `accounts-weibo`,
+`accounts-discord`, `accounts-slack`, `accounts-spotify`, or `accounts-twitch`.
 
 Then simply add the <span v-pre>`{{> loginButtons}}`</span> helper to an HTML file. This
 will place a login widget on the page. If there is only one provider configured

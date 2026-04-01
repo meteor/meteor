@@ -54,6 +54,10 @@ meteor add accounts-github
 meteor add accounts-twitter
 meteor add accounts-meetup
 meteor add accounts-meteor-developer
+meteor add accounts-discord
+meteor add accounts-slack
+meteor add accounts-spotify
+meteor add accounts-twitch
 ```
 
 Now open your app, follow the configuration steps, and you're good to go - if you've done one of our [Meteor tutorials](/tutorials/react/1.creating-the-app), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of these tutorials.
