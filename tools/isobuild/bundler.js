@@ -213,6 +213,19 @@ exports._mainJsContents = [
   "require('./programs/server/boot.js');",
 ].join("\n");
 
+// ESM format: index.mjs boots the server via standard ESM imports
+// instead of boot.js + runtime.js + vm.runInThisContext.
+// The esm-loader.mjs is copied alongside and does the heavy lifting.
+exports._esmIndexContents = [
+  'import { fileURLToPath } from "node:url";',
+  'import path from "node:path";',
+  'const __filename = fileURLToPath(import.meta.url);',
+  'const __dirname = path.dirname(__filename);',
+  'const serverDir = path.join(__dirname, "programs", "server");',
+  'const { boot } = await import(path.join(serverDir, "esm-loader.mjs"));',
+  'await boot(serverDir);',
+].join("\n");
+
 ///////////////////////////////////////////////////////////////////////////////
 // NodeModulesDirectory
 ///////////////////////////////////////////////////////////////////////////////
@@ -2793,6 +2806,7 @@ class ServerTarget extends JsImageTarget {
     buildMode,
     // falsy or 'symlink', documented in exports.bundle
     includeNodeModules,
+    format,
   }) {
     var self = this;
 
@@ -2857,35 +2871,44 @@ class ServerTarget extends JsImageTarget {
 
     const toolsDir = files.pathDirname(
       files.convertToStandardPath(__dirname));
+    const serverAssetsDir = files.pathJoin(toolsDir, "static-assets", "server");
 
-    await builder.copyTranspiledModules([
-      "profile.ts"
-    ], {
-      sourceRootDir: files.pathJoin(toolsDir, "tool-env"),
-    });
+    if (format === 'esm') {
+      // ESM format: copy only npm-rebuild (needed for postinstall) and the ESM loader
+      await builder.copyTranspiledModules([
+        "npm-rebuild.js",
+        "npm-rebuild-args.js",
+      ], {
+        sourceRootDir: serverAssetsDir,
+        needToTranspile: files.inCheckout(),
+      });
 
-    // Server bootstrap
-    await builder.copyTranspiledModules([
-      "boot.js",
-      "boot-utils.js",
-      "debug.ts",
-      "server-json.js",
-      "mini-files.ts",
-      "npm-require.js",
-      "npm-rebuild.js",
-      "npm-rebuild-args.js",
-      "runtime.js",
-    ], {
-      sourceRootDir: files.pathJoin(
-        toolsDir,
-        "static-assets",
-        "server",
-      ),
-      // If we're not in a checkout, then <toolsDir>/static-assets/server
-      // already contains transpiled files, so we can just copy them, without
-      // also transpiling them again.
-      needToTranspile: files.inCheckout(),
-    });
+      await builder.write("esm-loader.mjs", {
+        file: files.pathJoin(serverAssetsDir, "esm-loader.mjs"),
+      });
+    } else {
+      // Legacy format: copy all boot files
+      await builder.copyTranspiledModules([
+        "profile.ts"
+      ], {
+        sourceRootDir: files.pathJoin(toolsDir, "tool-env"),
+      });
+
+      await builder.copyTranspiledModules([
+        "boot.js",
+        "boot-utils.js",
+        "debug.ts",
+        "server-json.js",
+        "mini-files.ts",
+        "npm-require.js",
+        "npm-rebuild.js",
+        "npm-rebuild-args.js",
+        "runtime.js",
+      ], {
+        sourceRootDir: serverAssetsDir,
+        needToTranspile: files.inCheckout(),
+      });
+    }
 
     // Script that fetches the dev_bundle and runs the server bootstrap
     // XXX this is #GalaxyLegacy, the generated start.sh is not really used by
@@ -2896,10 +2919,7 @@ class ServerTarget extends JsImageTarget {
       );
     }
 
-    // Nothing actually pays attention to the `path` field for a server program
-    // in star.json any more, so it might as well be boot.js. (It used to be
-    // start.sh, a script included for the legacy Galaxy prototype.)
-    var controlFilePath = 'boot.js';
+    var controlFilePath = format === 'esm' ? 'esm-loader.mjs' : 'boot.js';
     return {
       controlFile: controlFilePath,
     };
@@ -3004,7 +3024,8 @@ var writeTargetToPath = Profile(
     previousBuilder = null,
     buildMode,
     minifyMode,
-    forceInPlaceBuild
+    forceInPlaceBuild,
+    format,
   }) {
     var builder = new Builder({
       outputPath: files.pathJoin(outputPath, 'programs', name),
@@ -3024,6 +3045,7 @@ var writeTargetToPath = Profile(
       includeNodeModules,
       buildMode,
       minifyMode,
+      format,
     });
 
     await builder.complete();
@@ -3071,6 +3093,7 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", async function (
     minifyMode,
     sourceRoot,
     forceInPlaceBuild,
+    format,
   }) {
 
   const builders = {};
@@ -3120,12 +3143,35 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", async function (
 
     // Affordances for standalone use
     if (targets.server) {
-      // add program.json as the first argument after "node main.js" to the boot script.
-      await builder.write('main.js', {
-        data: Buffer.from(exports._mainJsContents, 'utf8')
-      });
+      if (format === 'esm') {
+        await builder.write('index.mjs', {
+          data: Buffer.from(exports._esmIndexContents, 'utf8')
+        });
 
-      await builder.write('README', { data: Buffer.from(
+        await builder.write('README', { data: Buffer.from(
+`This is a Meteor application bundle (ESM format). To run the application:
+
+  $ (cd programs/server && npm install)
+  $ export MONGO_URL='mongodb://user:password@host:port/databasename'
+  $ export ROOT_URL='http://example.com'
+  $ export MAIL_URL='smtp://user:password@mailhost:port/'
+  $ export METEOR_SETTINGS='{"public":{"key":"value"}}'
+  $ node index.mjs
+
+Use the PORT environment variable to set the port where the
+application will listen. The default is 80, but that will require
+root on most systems.
+
+Find out more about Meteor at meteor.com.
+`,
+        'utf8')});
+      } else {
+        // Legacy format: main.js + boot.js + runtime.js
+        await builder.write('main.js', {
+          data: Buffer.from(exports._mainJsContents, 'utf8')
+        });
+
+        await builder.write('README', { data: Buffer.from(
 `This is a Meteor application bundle. It has only one external dependency:
 Node.js ${process.version}. To run the application:
 
@@ -3142,7 +3188,8 @@ root on most systems.
 
 Find out more about Meteor at meteor.com.
 `,
-      'utf8')});
+        'utf8')});
+      }
     }
 
     // Merge the WatchSet of everything that went into the bundle.
@@ -3169,7 +3216,8 @@ Find out more about Meteor at meteor.com.
         previousBuilder: previousBuilders[name] || null,
         buildMode,
         minifyMode,
-        forceInPlaceBuild
+        forceInPlaceBuild,
+        format,
       });
 
       builders[name] = targetBuilder;
@@ -3455,6 +3503,7 @@ async function bundle({
       releaseName,
       minifyMode,
       forceInPlaceBuild,
+      format: buildOptions.format,
     };
 
     async function writeClientTarget(target) {

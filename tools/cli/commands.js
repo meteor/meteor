@@ -1318,7 +1318,8 @@ var buildCommands = {
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     'allow-incompatible-update': { type: Boolean },
-    platforms: { type: String }
+    platforms: { type: String },
+    format: { type: String },
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -1504,6 +1505,13 @@ ${Console.command("meteor build ../output")}`,
     projectContext: projectContext
   });
 
+  // Validate --format option
+  const format = options.format || undefined;
+  if (format && format !== 'esm') {
+    Console.error(`Unknown --format value: "${format}". Valid values: esm`);
+    return 1;
+  }
+
   var bundler = require('../isobuild/bundler.js');
   var bundleResult = await bundler.bundle({
     projectContext: projectContext,
@@ -1518,6 +1526,7 @@ ${Console.command("meteor build ../output")}`,
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
       webArchs,
+      format,
     },
   });
   if (bundleResult.errors) {
