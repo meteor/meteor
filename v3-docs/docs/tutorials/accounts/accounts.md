@@ -216,6 +216,10 @@ Here's a complete list of login providers for which Meteor actively maintains co
 4. Twitter with `accounts-twitter`
 5. Meetup with `accounts-meetup`
 6. Meteor Developer Accounts with `accounts-meteor-developer`
+7. Discord with `accounts-discord`
+8. Slack with `accounts-slack`
+9. Spotify with `accounts-spotify`
+10. Twitch with `accounts-twitch`
 
 ### Logging in
 

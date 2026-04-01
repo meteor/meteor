@@ -88,7 +88,7 @@ const getIdentity = async accessToken => {
         },
       }
     );
-    return request.json();
+    return await request.json();
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Spotify. ${err.message}`),
