@@ -26,39 +26,18 @@ export function setupCollectionIntegration() {
   const Mongo = Package.mongo.Mongo;
 
   /**
-   * Attach a schema to this collection. Subsequent `insertAsync`, `updateAsync`,
-   * and `upsertAsync` calls will automatically clean and validate documents.
-   *
-   * If a schema is already attached and `options.replace` is not `true`, the new
-   * schema is merged with the existing one via `MongoSchema#extend()`.
-   *
-   * @method Mongo.Collection#attachSchema
-   * @param {MongoSchema} schema - The schema to attach.
-   * @param {Object} [options={}] - Attachment options.
-   * @param {boolean} [options.replace=false] - Replace the existing schema entirely
-   *   instead of merging.
-   * @param {boolean} [options.enforceOnDatabase=false] - Apply the schema as a MongoDB
-   *   `$jsonSchema` validator via `collMod` (server only). Requires a running MongoDB
-   *   server with `collMod` support.
-   * @param {string} [options.validationLevel='moderate'] - MongoDB validation level
-   *   (`'off'`, `'strict'`, or `'moderate'`). Only used with `enforceOnDatabase`.
-   * @param {string} [options.validationAction='error'] - MongoDB validation action
-   *   (`'error'` or `'warn'`). Only used with `enforceOnDatabase`.
-   * @throws {Error} If `schema` is not a `MongoSchema` instance.
-   *
-   * @example
-   * const Players = new Mongo.Collection('players');
-   *
-   * Players.attachSchema(new MongoSchema({
-   *   name: { type: String, min: 1 },
-   *   score: { type: Number, defaultValue: 0 },
-   * }));
-   *
-   * // With database-level enforcement:
-   * Players.attachSchema(schema, {
-   *   enforceOnDatabase: true,
-   *   validationLevel: 'strict',
-   * });
+   * @summary Attach a schema to this collection. Subsequent `insertAsync`, `updateAsync`, and `upsertAsync` calls will automatically clean and validate documents. If a schema is already attached, the new schema is merged via `extend()` unless `options.replace` is `true`.
+   * @locus Anywhere
+   * @method attachSchema
+   * @memberof Mongo.Collection
+   * @instance
+   * @importfrompackage mongo-schema
+   * @param {MongoSchema} schema The schema to attach.
+   * @param {Object} [options] Attachment options.
+   * @param {Boolean} [options.replace=false] Replace the existing schema entirely instead of merging.
+   * @param {Boolean} [options.enforceOnDatabase=false] Apply the schema as a MongoDB `$jsonSchema` validator via `collMod` (server only).
+   * @param {String} [options.validationLevel='moderate'] MongoDB validation level: `'off'`, `'moderate'`, or `'strict'`. Only used with `enforceOnDatabase`.
+   * @param {String} [options.validationAction='error'] MongoDB validation action: `'error'` or `'warn'`. Only used with `enforceOnDatabase`.
    */
   Mongo.Collection.prototype.attachSchema = function (schema, options = {}) {
     if (!(schema instanceof MongoSchema)) {
@@ -86,20 +65,26 @@ export function setupCollectionIntegration() {
   };
 
   /**
-   * Return the currently attached schema, or `null` if none is attached.
-   *
-   * @method Mongo.Collection#schema
-   * @returns {MongoSchema|null}
+   * @summary Return the currently attached schema, or `null` if none is attached.
+   * @locus Anywhere
+   * @method schema
+   * @memberof Mongo.Collection
+   * @instance
+   * @importfrompackage mongo-schema
+   * @returns {MongoSchema} The attached schema, or `null`.
    */
   Mongo.Collection.prototype.schema = function () {
     return this._schema || null;
   };
 
   /**
-   * Check whether this collection has database-level `$jsonSchema` enforcement active.
-   *
-   * @method Mongo.Collection#schemaEnforcedOnDatabase
-   * @returns {boolean}
+   * @summary Check whether this collection has database-level `$jsonSchema` enforcement active.
+   * @locus Anywhere
+   * @method schemaEnforcedOnDatabase
+   * @memberof Mongo.Collection
+   * @instance
+   * @importfrompackage mongo-schema
+   * @returns {Boolean} `true` if `$jsonSchema` enforcement is active.
    */
   Mongo.Collection.prototype.schemaEnforcedOnDatabase = function () {
     return !!(this._schemaOptions && this._schemaOptions.enforceOnDatabase);
