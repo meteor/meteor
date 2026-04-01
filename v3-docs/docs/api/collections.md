@@ -756,6 +756,81 @@ Get all registered static methods. Returns a Map of method names to functions. U
 
 > **Deprecated** — backwards compatibility alias for [`removePrototypeMethod`](#Mongo-Collection-removePrototypeMethod). Use `removePrototypeMethod` instead.
 
+## Schema Validation {#schema-validation}
+
+The [`mongo-schema`](/packages/mongo-schema) package provides built-in schema validation for Meteor collections. Once a schema is attached, `insertAsync`, `updateAsync`, and `upsertAsync` automatically clean and validate documents before writing — enforcing types, required fields, constraints, and defaults with no extra wiring.
+
+```bash
+meteor add mongo-schema
+```
+
+```js
+import { MongoSchema } from 'meteor/mongo-schema';
+
+const Tasks = new Mongo.Collection('tasks');
+
+const TaskSchema = new MongoSchema({
+  title:       { type: String, min: 1, max: 200 },
+  completed:   { type: Boolean, defaultValue: false },
+  priority:    { type: String, optional: true, allowedValues: ['low', 'medium', 'high'] },
+  createdAt:   { type: Date, autoValue() { if (this.isInsert) return new Date(); } },
+});
+
+Tasks.attachSchema(TaskSchema);
+
+// Documents are automatically cleaned and validated:
+await Tasks.insertAsync({ title: 'Write docs' });
+// Sets completed=false, createdAt=now
+
+await Tasks.insertAsync({});
+// Throws ValidationError — title is required
+```
+
+<ApiBox name="Mongo.Collection#attachSchema" from="mongo-schema" instanceName="Collection" hasCustomExample/>
+
+When `attachSchema` is called more than once on the same collection, the new schema is merged with the existing one by default. Pass `options.replace` to replace the schema entirely instead.
+
+Mutations are wrapped only once — subsequent `attachSchema` calls update the schema reference without re-wrapping. The wrapped methods (`insertAsync`, `updateAsync`, `upsertAsync`) run the following pipeline before each write:
+
+1. **Clean** the document/modifier (filter unknown fields, auto-convert types, trim strings, set defaults).
+2. **Validate** the cleaned result (unless `options.validate` is `false`).
+3. **Write** to the database using the original method.
+
+You can pass per-operation options to control this behavior:
+
+```js
+// Skip validation for a trusted server import
+await Tasks.insertAsync(rawDoc, { validate: false });
+
+// Skip schema processing entirely (server only)
+await Tasks.insertAsync(rawDoc, { bypassSchema: true });
+```
+
+<ApiBox name="Mongo.Collection#schema" from="mongo-schema" instanceName="Collection" hasCustomExample/>
+
+```js
+const schema = Tasks.schema();
+if (schema) {
+  console.log(schema.label('title')); // "Title"
+}
+```
+
+<ApiBox name="Mongo.Collection#schemaEnforcedOnDatabase" from="mongo-schema" instanceName="Collection" hasCustomExample/>
+
+When `enforceOnDatabase` is `true` in `attachSchema` options, the schema is compiled to a MongoDB [`$jsonSchema`](https://www.mongodb.com/docs/manual/reference/operator/query/jsonSchema/) validator and applied via `collMod` at server startup. This provides a second layer of protection at the database level, independent of application code.
+
+```js
+// Server-only: enforce at the database level
+Tasks.attachSchema(TaskSchema, {
+  enforceOnDatabase: true,
+  validationLevel: 'strict',    // 'off', 'moderate', or 'strict'
+  validationAction: 'error',    // 'error' or 'warn'
+});
+
+Tasks.schemaEnforcedOnDatabase(); // true
+```
+
+For the full API — schema definition syntax, cleaning options, custom validators, composition (`extend`, `pick`, `omit`), reactive validation contexts, and migration guidance from SimpleSchema — see the [`mongo-schema` package documentation](/packages/mongo-schema).
 
 ## Cursors {#mongo_cursor}
 

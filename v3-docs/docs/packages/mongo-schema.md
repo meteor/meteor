@@ -1,7 +1,4 @@
----
-title: mongo-schema
-description: Documentation of Meteor's `mongo-schema` package.
----
+# mongo-schema
 
 The `mongo-schema` package provides native schema validation for MongoDB collections in Meteor.
 Define a schema once, attach it to a collection, and every `insertAsync`, `updateAsync`, and
@@ -17,7 +14,7 @@ Key capabilities:
 - **Reactive validation contexts** — wire form errors into Blaze or any reactive UI layer
 - **Drop-in replacement** for `SimpleSchema` + `aldeed:collection2` — same definition syntax, smaller footprint
 
-<h2 id="installation">Installation</h2>
+## Installation {#installation}
 
 To add this package to an existing app:
 
@@ -39,7 +36,7 @@ Then import the classes you need:
 import { MongoSchema, ValidationError } from 'meteor/mongo-schema';
 ```
 
-<h2 id="quick-start">Quick Start</h2>
+## Quick Start {#quick-start}
 
 Here is a complete example that defines a schema, attaches it to a collection, and inserts a document:
 
@@ -79,13 +76,13 @@ await Posts.insertAsync({ body: 'No title' });
 // => ValidationError: "Title is required"
 ```
 
-<h2 id="defining-schemas">Defining Schemas</h2>
+## Defining Schemas {#defining-schemas}
 
-{% apibox "MongoSchema" %}
+<ApiBox name="MongoSchema" hasCustomExample/>
 
 A schema is a plain object mapping field paths to field definitions. Each field definition describes the type, constraints, and behavior for that field.
 
-<h3 id="shorthand-syntax">Shorthand Syntax</h3>
+### Shorthand Syntax {#shorthand-syntax}
 
 `MongoSchema` supports several shorthand forms so that simple schemas stay concise:
 
@@ -105,7 +102,7 @@ const schema = new MongoSchema({
 });
 ```
 
-<h3 id="supported-types">Supported Types</h3>
+### Supported Types {#supported-types}
 
 | Type | Description |
 |------|-------------|
@@ -120,7 +117,7 @@ const schema = new MongoSchema({
 | `MongoSchema.oneOf(A, B, ...)` | Union — value must match at least one |
 | Custom constructor | Validated via `instanceof` |
 
-<h3 id="field-options">Field Options</h3>
+### Field Options {#field-options}
 
 Each field definition can include the following options:
 
@@ -146,7 +143,7 @@ Each field definition can include the following options:
 | `denyInsert` | Boolean | `false` | Reject this field on insert |
 | `denyUpdate` | Boolean | `false` | Reject this field on update |
 
-<h3 id="nested-fields">Nested Fields and Arrays</h3>
+### Nested Fields and Arrays {#nested-fields}
 
 Use dot notation to define nested object fields. Use `.$` to define array item schemas:
 
@@ -168,7 +165,7 @@ const OrderSchema = new MongoSchema({
 });
 ```
 
-<h3 id="constructor-options">Constructor Options</h3>
+### Constructor Options {#constructor-options}
 
 The second argument to `new MongoSchema()` configures schema-level behavior:
 
@@ -186,13 +183,13 @@ const schema = new MongoSchema(definition, {
 });
 ```
 
-<h2 id="cleaning">Cleaning Documents</h2>
+## Cleaning Documents {#cleaning}
 
 Cleaning transforms a raw document to conform to the schema. The cleaning pipeline
 runs automatically when you use collection methods with an attached schema, but you
 can also call it manually.
 
-{% apibox "MongoSchema#clean" %}
+<ApiBox name="MongoSchema#clean" hasCustomExample/>
 
 The pipeline runs these steps in order:
 
@@ -243,7 +240,7 @@ schema.clean(doc, {
 });
 ```
 
-<h3 id="auto-values">Auto Values</h3>
+### Auto Values {#auto-values}
 
 The `autoValue` function runs during cleaning and receives a rich context as `this`:
 
@@ -287,13 +284,13 @@ const schema = new MongoSchema({
 
 The return value determines what happens:
 
-- **Return a value** → sets the field to that value
-- **Return `undefined`** → no change
-- **Call `this.unset()`** → removes the field
+- **Return a value** — sets the field to that value
+- **Return `undefined`** — no change
+- **Call `this.unset()`** — removes the field
 
-<h2 id="validation">Validation</h2>
+## Validation {#validation}
 
-{% apibox "MongoSchema#validate" %}
+<ApiBox name="MongoSchema#validate" hasCustomExample/>
 
 `validate()` checks the document against all schema rules and throws a `ValidationError`
 if any field fails. The error contains structured details about every failing field.
@@ -333,7 +330,7 @@ schema.validate(doc, { ignore: [MongoSchema.ErrorTypes.REQUIRED] });
 schema.validate(doc, { keys: ['name', 'email'] });
 ```
 
-<h3 id="validation-error">ValidationError</h3>
+### ValidationError {#validation-error}
 
 `ValidationError` extends `Meteor.Error` (for DDP transport) with error code `'validation-error'`.
 It is compatible with the `mdg:validation-error` contract.
@@ -352,14 +349,14 @@ try {
 }
 ```
 
-<h3 id="validation-contexts">Reactive Validation Contexts</h3>
+### Reactive Validation Contexts {#validation-contexts}
 
 Validation contexts collect errors without throwing, making them ideal for form validation.
 They integrate with Meteor's Tracker for reactive error display.
 
-{% apibox "MongoSchema#newContext" %}
+<ApiBox name="MongoSchema#newContext" />
 
-{% apibox "MongoSchema#namedContext" %}
+<ApiBox name="MongoSchema#namedContext" hasCustomExample/>
 
 ```js
 const schema = new MongoSchema({
@@ -404,13 +401,13 @@ schema.namedContext('editForm').isValid(); // same context
 | `keyIsInvalid(key)` | Boolean | `true` if the specified field has an error. Reactive. |
 | `keyErrorMessage(key)` | String | Error message for a field, or `''`. Reactive. |
 
-<h2 id="collection-integration">Collection Integration</h2>
+## Collection Integration {#collection-integration}
 
 The most common way to use `mongo-schema` is by attaching a schema to a collection.
 Once attached, `insertAsync`, `updateAsync`, and `upsertAsync` automatically clean
 and validate documents before they reach MongoDB.
 
-{% apibox "Mongo.Collection#attachSchema" "module":"mongo-schema" %}
+<ApiBox name="Mongo.Collection#attachSchema" from="mongo-schema" instanceName="Collection" hasCustomExample/>
 
 ```js
 import { Mongo } from 'meteor/mongo';
@@ -436,7 +433,7 @@ await Players.insertAsync({ name: '' });
 // => ValidationError: "Name must be at least 1 characters"
 ```
 
-<h3 id="attach-options">Attach Options</h3>
+### Attach Options {#attach-options}
 
 ```js
 // Merge with an existing schema (default behavior)
@@ -446,7 +443,7 @@ Players.attachSchema(extraFields);
 Players.attachSchema(newSchema, { replace: true });
 ```
 
-<h3 id="mutation-options">Mutation Method Options</h3>
+### Mutation Method Options {#mutation-options}
 
 You can control schema behavior per-operation by passing options to the mutation methods:
 
@@ -465,13 +462,13 @@ await Players.insertAsync(doc, {
 });
 ```
 
-<h3 id="collection-helpers">Collection Helper Methods</h3>
+### Collection Helper Methods {#collection-helpers}
 
-{% apibox "Mongo.Collection#schema" "module":"mongo-schema" %}
+<ApiBox name="Mongo.Collection#schema" from="mongo-schema" instanceName="Collection"/>
 
-{% apibox "Mongo.Collection#schemaEnforcedOnDatabase" "module":"mongo-schema" %}
+<ApiBox name="Mongo.Collection#schemaEnforcedOnDatabase" from="mongo-schema" instanceName="Collection"/>
 
-<h3 id="database-enforcement">Database-Level Enforcement</h3>
+### Database-Level Enforcement {#database-enforcement}
 
 You can optionally push the schema to MongoDB itself using the `$jsonSchema` validator.
 This provides a second layer of protection at the database level, catching any writes
@@ -494,18 +491,20 @@ The schema is compiled to `$jsonSchema` via `toJsonSchema()` and applied using a
 command at server startup. Schema hashes are tracked in a `_meteor_schema_versions` collection
 to avoid reapplying unchanged schemas.
 
-> **Note:** Database-level enforcement only covers what `$jsonSchema` can express — types,
-> required fields, string patterns, numeric ranges, and enum values. Application-level
-> features like `autoValue`, `defaultValue`, `custom` validators, and `denyInsert`/`denyUpdate`
-> are not enforced at the database level.
+::: warning
+Database-level enforcement only covers what `$jsonSchema` can express — types,
+required fields, string patterns, numeric ranges, and enum values. Application-level
+features like `autoValue`, `defaultValue`, `custom` validators, and `denyInsert`/`denyUpdate`
+are not enforced at the database level.
+:::
 
-{% apibox "MongoSchema#toJsonSchema" %}
+<ApiBox name="MongoSchema#toJsonSchema" />
 
-<h2 id="schema-composition">Schema Composition</h2>
+## Schema Composition {#schema-composition}
 
 Schemas can be combined, split, and extracted to promote reuse and keep definitions DRY.
 
-{% apibox "MongoSchema#extend" %}
+<ApiBox name="MongoSchema#extend" hasCustomExample/>
 
 ```js
 const TimestampSchema = new MongoSchema({
@@ -522,20 +521,20 @@ const PostSchema = new MongoSchema({
 const FullPostSchema = PostSchema.extend(TimestampSchema);
 ```
 
-{% apibox "MongoSchema#pick" %}
+<ApiBox name="MongoSchema#pick" hasCustomExample/>
 
 ```js
 const NameAndEmail = UserSchema.pick('name', 'email');
 // Only name and email fields; nested fields like 'name.first' are included
 ```
 
-{% apibox "MongoSchema#omit" %}
+<ApiBox name="MongoSchema#omit" hasCustomExample/>
 
 ```js
 const PublicUser = UserSchema.omit('password', 'loginTokens');
 ```
 
-{% apibox "MongoSchema#getObjectSchema" %}
+<ApiBox name="MongoSchema#getObjectSchema" hasCustomExample/>
 
 ```js
 const fullSchema = new MongoSchema({
@@ -548,12 +547,12 @@ const addressSchema = fullSchema.getObjectSchema('address');
 // => MongoSchema with { street: String, city: String, zip: ... }
 ```
 
-<h2 id="custom-validators">Custom Validators</h2>
+## Custom Validators {#custom-validators}
 
 Beyond the built-in checks, you can add custom validation logic at three levels:
 per-field, per-schema, and globally.
 
-<h3 id="per-field-custom">Per-Field Custom Validators</h3>
+### Per-Field Custom Validators {#per-field-custom}
 
 Use the `custom` option in a field definition. The function receives the same context
 as `autoValue` and should return an error type string to fail, or `undefined` to pass:
@@ -573,9 +572,9 @@ const EventSchema = new MongoSchema({
 });
 ```
 
-<h3 id="schema-validators">Schema-Level Validators</h3>
+### Schema-Level Validators {#schema-validators}
 
-{% apibox "MongoSchema#addValidator" %}
+<ApiBox name="MongoSchema#addValidator" hasCustomExample/>
 
 Per-field validators run for every top-level field. The function receives a
 context as `this` (same shape as `custom`), and should return an error type string or `undefined`:
@@ -591,7 +590,7 @@ schema.addValidator(function () {
 });
 ```
 
-{% apibox "MongoSchema#addDocValidator" %}
+<ApiBox name="MongoSchema#addDocValidator" hasCustomExample/>
 
 Document validators receive the entire document and return an array of error detail objects:
 
@@ -610,10 +609,11 @@ schema.addDocValidator((doc) => {
 });
 ```
 
-<h3 id="global-validators">Global Validators</h3>
+### Global Validators {#global-validators}
 
-{% apibox "MongoSchema.addValidator" %}
-{% apibox "MongoSchema.addDocValidator" %}
+<ApiBox name="MongoSchema.addValidator" hasCustomExample/>
+
+<ApiBox name="MongoSchema.addDocValidator" hasCustomExample/>
 
 Global validators run on **every** `MongoSchema` instance. They follow the same signatures
 as their instance counterparts:
@@ -627,17 +627,22 @@ MongoSchema.addValidator(function () {
 });
 ```
 
-<h2 id="introspection">Introspection</h2>
+## Introspection {#introspection}
 
 These methods let you inspect a schema's definition at runtime — useful for building
 dynamic forms, generating documentation, or debugging.
 
-{% apibox "MongoSchema#schema" %}
-{% apibox "MongoSchema#get" %}
-{% apibox "MongoSchema#label" %}
-{% apibox "MongoSchema#labels" %}
-{% apibox "MongoSchema#defaultValue" %}
-{% apibox "MongoSchema#getAllowedValuesForKey" %}
+<ApiBox name="MongoSchema#schema" hasCustomExample/>
+
+<ApiBox name="MongoSchema#get" hasCustomExample/>
+
+<ApiBox name="MongoSchema#label" hasCustomExample/>
+
+<ApiBox name="MongoSchema#labels" hasCustomExample/>
+
+<ApiBox name="MongoSchema#defaultValue" hasCustomExample/>
+
+<ApiBox name="MongoSchema#getAllowedValuesForKey" hasCustomExample/>
 
 ```js
 const schema = new MongoSchema({
@@ -653,10 +658,10 @@ schema.defaultValue('score');             // 0
 schema.getAllowedValuesForKey('role');     // ['admin', 'user', 'guest']
 
 // Bulk-set labels
-schema.labels({ role: 'Rol de Usuario', score: 'Puntuación' });
+schema.labels({ role: 'Rol de Usuario', score: 'Puntuacion' });
 ```
 
-<h2 id="error-types">Error Types</h2>
+## Error Types {#error-types}
 
 All built-in validation error types are available as constants on `MongoSchema.ErrorTypes`:
 
@@ -668,8 +673,8 @@ All built-in validation error types are available as constants on `MongoSchema.E
 | `MAX_STRING` | `'maxString'` | String length exceeds `max` |
 | `MIN_NUMBER` | `'minNumber'` | Number is below `min` |
 | `MAX_NUMBER` | `'maxNumber'` | Number exceeds `max` |
-| `MIN_NUMBER_EXCLUSIVE` | `'minNumberExclusive'` | Number is ≤ `min` with `exclusiveMin` |
-| `MAX_NUMBER_EXCLUSIVE` | `'maxNumberExclusive'` | Number is ≥ `max` with `exclusiveMax` |
+| `MIN_NUMBER_EXCLUSIVE` | `'minNumberExclusive'` | Number is <= `min` with `exclusiveMin` |
+| `MAX_NUMBER_EXCLUSIVE` | `'maxNumberExclusive'` | Number is >= `max` with `exclusiveMax` |
 | `MIN_DATE` | `'minDate'` | Date is before `min` |
 | `MAX_DATE` | `'maxDate'` | Date is after `max` |
 | `BAD_DATE` | `'badDate'` | Value is a `Date` but invalid (`NaN`) |
@@ -702,13 +707,13 @@ schema.validate(doc, {
 });
 ```
 
-<h2 id="migration">Migrating from SimpleSchema & Collection2</h2>
+## Migrating from SimpleSchema & Collection2 {#migration}
 
 `mongo-schema` is designed as a drop-in replacement for the `simpl-schema` npm package
 and the `aldeed:collection2` Meteor package. If you are using those packages today,
 migration is straightforward — the schema definition syntax is the same.
 
-<h3 id="migration-steps">Step-by-Step Migration</h3>
+### Step-by-Step Migration {#migration-steps}
 
 **1. Swap the packages**
 
@@ -779,7 +784,7 @@ try {
 }
 ```
 
-<h3 id="migration-table">API Mapping Table</h3>
+### API Mapping Table {#migration-table}
 
 | SimpleSchema / Collection2 | mongo-schema | Notes |
 |-----------------------------|--------------|-------|
@@ -810,7 +815,7 @@ try {
 | `autoValue` with `this.isInsert` | Same context API | Same |
 | `selector` option | Not yet supported | Planned for a future release |
 
-<h3 id="migration-tips">Migration Tips</h3>
+### Migration Tips {#migration-tips}
 
 - **Schema definitions are fully compatible.** All field options (`type`, `optional`, `min`, `max`, `allowedValues`, `regEx`, `autoValue`, `defaultValue`, `custom`, `blackbox`, `denyInsert`, `denyUpdate`, `trim`, `label`, `minCount`, `maxCount`) work identically.
 

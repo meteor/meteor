@@ -83,7 +83,6 @@ sidebar_categories:
     - packages/logging
     - packages/markdown
     - packages/modules
-    - packages/mongo-schema
     - packages/oauth-encryption
     - packages/random
     - packages/server-render
