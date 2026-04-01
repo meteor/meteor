@@ -1,12 +1,5 @@
 // packages/mongo-schema/schema_context.js
 
-/**
- * @module mongo-schema/schema_context
- * @summary Provides `ValidationContext`, a stateful validation wrapper that
- * collects errors without throwing and integrates with Meteor's Tracker for
- * reactive error display in UI forms.
- */
-
 import { collectErrors } from './schema_validate.js';
 
 /**

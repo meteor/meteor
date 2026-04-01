@@ -1,14 +1,5 @@
 // packages/mongo-schema/schema.js
 
-/**
- * @module mongo-schema/schema
- * @summary The main `MongoSchema` class — a declarative schema definition and
- * validation system for MongoDB documents. Provides cleaning (type coercion,
- * filtering, defaults), validation (required, type, constraints, custom),
- * JSON Schema compilation for database-level enforcement, and reactive
- * validation contexts for UI integration.
- */
-
 import { IntegerMarker, AnyMarker, oneOf } from './types.js';
 import { ErrorTypes } from './schema_errors.js';
 import { parseDefinition, normalizeFieldDef } from './schema_definition.js';
@@ -16,20 +7,6 @@ import { clean as cleanDoc } from './schema_clean.js';
 import { validate as validateDoc } from './schema_validate.js';
 import { ValidationContext } from './schema_context.js';
 import { compileToJsonSchema } from './schema_jsonschema.js';
-
-/**
- * @typedef {Object} MongoSchemaOptions
- * @property {boolean} [requiredByDefault=true] - Whether fields without explicit
- *   `optional`/`required` are required. The `_id` field is always optional regardless.
- * @property {boolean} [humanizeAutoLabels=true] - Auto-generate human-readable labels
- *   from field keys (e.g., `'createdAt'` → `'Created at'`).
- * @property {Object} [clean] - Default cleaning options applied by `clean()`.
- * @property {boolean} [clean.filter=true] - Remove keys not in the schema.
- * @property {boolean} [clean.autoConvert=true] - Auto-convert types (e.g., `"42"` → `42`).
- * @property {boolean} [clean.removeEmptyStrings=true] - Delete fields with `""` values.
- * @property {boolean} [clean.trimStrings=true] - Trim whitespace from strings.
- * @property {boolean} [clean.getAutoValues=true] - Apply `defaultValue` and `autoValue`.
- */
 
 /**
  * @summary Constructor for a MongoSchema — a declarative schema definition for MongoDB documents.

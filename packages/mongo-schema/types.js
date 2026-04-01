@@ -1,25 +1,6 @@
 // packages/mongo-schema/types.js
 
 /**
- * @module mongo-schema/types
- * @summary Core type system for MongoSchema. Provides built-in type markers,
- * union types via `oneOf`, and a resolver that maps field definitions to
- * runtime type descriptors used by validation, cleaning, and JSON Schema compilation.
- */
-
-/**
- * @typedef {Object} TypeDescriptor
- * @property {string} name - Human-readable type name (e.g., `'string'`, `'number'`, `'oneOf'`, `'schema'`).
- * @property {Function} check - Returns `true` if `value` matches this type.
- * @property {string|string[]|null} [bsonType] - BSON type(s) for `$jsonSchema` compilation.
- *   `null` means the type is excluded from database-level schemas (e.g., `Any`, custom constructors).
- * @property {TypeDescriptor[]} [resolvedTypes] - Present only for `oneOf` unions; the resolved
- *   descriptors of each constituent type.
- * @property {MongoSchema} [schema] - Present only when a `MongoSchema` instance is used as a
- *   sub-schema type for nested object validation.
- */
-
-/**
  * Sentinel marker representing an integer type (no fractional part).
  * Use as `MongoSchema.Integer` in field definitions.
  *

@@ -1,13 +1,6 @@
 // packages/mongo-schema/schema_errors.js
 
 /**
- * @module mongo-schema/schema_errors
- * @summary Error type constants and the `ValidationError` class thrown when
- * schema validation fails. Error types align with the
- * [mdg:validation-error](https://github.com/meteor/validation-error) contract.
- */
-
-/**
  * Enumeration of all validation error type strings. Each key maps to a
  * short identifier used in {@link ValidationErrorDetail.type}.
  *
@@ -64,14 +57,6 @@ export const ErrorTypes = {
   DENY_UPDATE: 'denyUpdate',
 };
 Object.freeze(ErrorTypes);
-
-/**
- * @typedef {Object} ValidationErrorDetail
- * @property {string} name - Dot-delimited field path (e.g., `'address.city'`).
- * @property {string} type - One of the {@link ErrorTypes} values.
- * @property {*} value - The value that failed validation.
- * @property {string} message - Human-readable error message.
- */
 
 /**
  * Thrown by `MongoSchema#validate()` when one or more fields fail validation.

@@ -1,39 +1,6 @@
 // packages/mongo-schema/schema_jsonschema.js
 
 /**
- * @module mongo-schema/schema_jsonschema
- * @summary Compiles a schema IR into a MongoDB `$jsonSchema` document suitable
- * for use with `db.createCollection()` or `collMod` validator rules. The output
- * uses BSON types and MongoDB-specific extensions (e.g., `bsonType` instead of `type`).
- */
-
-/**
- * @typedef {Object} JsonSchema
- * @property {string} bsonType - Always `'object'` at the root level.
- * @property {string[]} [required] - Names of required top-level properties.
- * @property {Object<string, JsonSchemaField>} [properties] - Per-field schema definitions.
- */
-
-/**
- * @typedef {Object} JsonSchemaField
- * @property {string|string[]} [bsonType] - The BSON type(s) for this field.
- * @property {JsonSchemaField[]} [oneOf] - For union types, an array of type alternatives.
- * @property {string[]} [required] - Required child properties (for nested objects).
- * @property {Object<string, JsonSchemaField>} [properties] - Child property schemas (for nested objects).
- * @property {JsonSchemaField} [items] - Item schema (for arrays).
- * @property {number} [minimum] - Minimum numeric value.
- * @property {number} [maximum] - Maximum numeric value.
- * @property {boolean} [exclusiveMinimum] - Whether `minimum` is exclusive.
- * @property {boolean} [exclusiveMaximum] - Whether `maximum` is exclusive.
- * @property {number} [minLength] - Minimum string length.
- * @property {number} [maxLength] - Maximum string length.
- * @property {Array} [enum] - Allowed values whitelist.
- * @property {string} [pattern] - Regular expression pattern for strings.
- * @property {number} [minItems] - Minimum array length.
- * @property {number} [maxItems] - Maximum array length.
- */
-
-/**
  * Compile a schema IR into a MongoDB `$jsonSchema` validator document.
  *
  * Only top-level fields are emitted at the root; nested fields are compiled

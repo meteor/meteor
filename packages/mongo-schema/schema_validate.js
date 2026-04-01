@@ -1,29 +1,7 @@
 // packages/mongo-schema/schema_validate.js
 
-/**
- * @module mongo-schema/schema_validate
- * @summary Validation engine for MongoSchema. Validates plain documents and
- * MongoDB update modifiers against the schema IR, collecting structured error
- * details. Supports required checks, type checks, constraints (min/max,
- * allowedValues, regEx, minCount/maxCount), custom validators, and
- * schema-level/global doc validators.
- */
-
 import { ErrorTypes, ValidationError } from './schema_errors.js';
 import { getNestedValue } from './schema_clean.js';
-
-/**
- * @typedef {Object} ValidateOptions
- * @property {boolean} [modifier=false] - Treat the document as a MongoDB update modifier.
- * @property {string[]} [keys] - If provided, only validate these specific field paths.
- * @property {string[]} [ignore] - Error types to exclude from the result (e.g.,
- *   `[MongoSchema.ErrorTypes.REQUIRED]` to skip required-field errors).
- * @property {boolean} [isInsert] - Set to `true` when validating an insert (enables `denyInsert` checks).
- * @property {boolean} [isUpdate] - Set to `true` when validating an update (enables `denyUpdate` checks).
- * @property {boolean} [upsert] - Set to `true` for upsert operations.
- * @property {Object} [extendedCustomContext] - Extra properties merged into the `this`
- *   context of `custom` validator functions.
- */
 
 /**
  * Validate a document against the schema IR. Throws a {@link ValidationError}
@@ -299,22 +277,6 @@ function validateConstraints(key, desc, value, errors, options) {
     }
   }
 }
-
-/**
- * @typedef {Object} CustomValidatorContext
- * @property {string} key - The full dot-path key of the field.
- * @property {string} genericKey - Key with numeric indices replaced by `$`.
- * @property {*} value - Current field value.
- * @property {boolean} isSet - Whether the field has a value.
- * @property {string|null} operator - Always `null` for plain documents.
- * @property {Object} definition - The field's descriptor.
- * @property {Function} field -
- *   Look up another field by full path.
- * @property {Function} siblingField -
- *   Look up a sibling field by local name.
- * @property {Function} parentField -
- *   Access the parent object.
- */
 
 /**
  * Run a field's `custom` validator function and push any resulting error.

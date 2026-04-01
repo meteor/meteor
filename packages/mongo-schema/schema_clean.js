@@ -1,33 +1,6 @@
 // packages/mongo-schema/schema_clean.js
 
-/**
- * @module mongo-schema/schema_clean
- * @summary Document cleaning pipeline. Transforms raw documents (or MongoDB
- * update modifiers) to conform to a schema by filtering unknown keys,
- * auto-converting types, trimming strings, removing empty strings, and
- * applying default/auto values.
- */
-
 import { EJSON } from 'meteor/ejson';
-
-/**
- * @typedef {Object} CleanOptions
- * @property {boolean} [mutate=false] - If `true`, mutates the input document in place.
- *   If `false`, a deep clone is created first via `EJSON.clone`.
- * @property {boolean} [filter=true] - Remove keys not defined in the schema.
- * @property {boolean} [autoConvert=true] - Attempt automatic type conversion (e.g.,
- *   `"42"` → `42` for number fields, `"true"` → `true` for booleans).
- * @property {boolean} [removeEmptyStrings=true] - Delete fields whose value is `""`.
- * @property {boolean} [removeNullsFromArrays=false] - Filter out `null` entries from arrays.
- * @property {boolean} [trimStrings=true] - Trim leading/trailing whitespace from all string
- *   fields (unless the field's `trim` option is `false`).
- * @property {boolean} [getAutoValues=true] - Apply `defaultValue` and `autoValue` functions.
- * @property {boolean} [isModifier=false] - Treat the document as a MongoDB update modifier
- *   (e.g., `{ $set: { ... } }`). Cleaning is applied within each operator.
- * @property {boolean} [isUpsert=false] - Indicates an upsert context for auto-value functions.
- * @property {Object} [extendAutoValueContext] - Extra properties merged into the `this` context
- *   of `autoValue` functions (e.g., `{ userId, isFromTrustedCode }`).
- */
 
 /**
  * Clean a document or modifier according to the schema IR and options.
@@ -545,25 +518,6 @@ function applyDefaultValues(ir, doc, prefix) {
     }
   }
 }
-
-/**
- * @typedef {Object} AutoValueContext
- * @property {string} key - The full dot-path key of the field being processed.
- * @property {string} genericKey - The key with numeric indices replaced by `$`
- *   (e.g., `'items.0.name'` → `'items.$.name'`).
- * @property {*} value - The current value of the field (`undefined` if unset).
- * @property {boolean} isSet - Whether the field has a value.
- * @property {string|null} operator - The MongoDB operator (e.g., `'$set'`) or `null` for plain docs.
- * @property {Object} obj - The root document or modifier being cleaned.
- * @property {boolean} [isModifier] - `true` when cleaning a modifier.
- * @property {Function} field -
- *   Look up another field by its full dot-path key.
- * @property {Function} siblingField -
- *   Look up a sibling field by its local key name.
- * @property {Function} parentField -
- *   Access the parent object.
- * @property {Function} unset - Call to remove this field from the document.
- */
 
 /**
  * Apply `autoValue` functions recursively. Handles nested fields by walking into objects.

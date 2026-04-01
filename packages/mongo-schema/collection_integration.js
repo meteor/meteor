@@ -1,13 +1,5 @@
 // packages/mongo-schema/collection_integration.js
 
-/**
- * @module mongo-schema/collection_integration
- * @summary Integrates MongoSchema with `Mongo.Collection` by adding
- * `attachSchema()`, `schema()`, and `schemaEnforcedOnDatabase()` methods.
- * When a schema is attached, `insertAsync`, `updateAsync`, and `upsertAsync`
- * are wrapped to automatically clean and validate documents.
- */
-
 import { MongoSchema } from './schema.js';
 
 /**

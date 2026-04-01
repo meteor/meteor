@@ -1,11 +1,5 @@
 // packages/mongo-schema/schema_definition.js
 
-/**
- * @module mongo-schema/schema_definition
- * @summary Parses user-authored schema definitions into a flat intermediate
- * representation (IR) used by validation, cleaning, and JSON Schema compilation.
- */
-
 import { resolveType } from './types.js';
 
 /**
@@ -20,60 +14,6 @@ const VALID_OPTIONS = new Set([
   'blackbox', 'trim', 'label', 'custom',
   'denyInsert', 'denyUpdate',
 ]);
-
-/**
- * @typedef {Object} FieldDefinition
- * @property {Function|Object} type - The field type: a built-in constructor (`String`, `Number`,
- *   `Boolean`, `Date`, `Object`, `Array`), a sentinel marker (`MongoSchema.Integer`,
- *   `MongoSchema.Any`), a `MongoSchema.oneOf(...)` union, a `MongoSchema` instance for
- *   sub-schemas, or any custom constructor.
- * @property {boolean} [optional=false] - If `true`, the field is not required. Inverse of `required`.
- * @property {boolean} [required] - If `true`, the field is required. Overrides `optional` and the
- *   schema-level `requiredByDefault` option.
- * @property {*} [defaultValue] - Value applied during cleaning when the field is `undefined`.
- * @property {function(this:AutoValueContext): *} [autoValue] - Function called during cleaning to
- *   compute the field value. Receives an `AutoValueContext` as `this`.
- * @property {number|Date} [min] - Minimum value (number), minimum length (string), or earliest date.
- * @property {number|Date} [max] - Maximum value (number), maximum length (string), or latest date.
- * @property {boolean} [exclusiveMin=false] - If `true`, the `min` bound is exclusive (`>` not `>=`).
- * @property {boolean} [exclusiveMax=false] - If `true`, the `max` bound is exclusive (`<` not `<=`).
- * @property {Array|Set} [allowedValues] - Whitelist of permitted values. Sets are converted to Arrays.
- * @property {RegExp|RegExp[]} [regEx] - Regular expression(s) the string value must match.
- * @property {number} [minCount] - Minimum number of items for `Array` fields.
- * @property {number} [maxCount] - Maximum number of items for `Array` fields.
- * @property {boolean} [blackbox=false] - If `true`, nested object contents are not validated.
- * @property {boolean} [trim=true] - If `false`, strings for this field are not trimmed during cleaning.
- * @property {string} [label] - Human-readable label used in error messages. Auto-generated from
- *   the key name if `humanizeAutoLabels` is enabled.
- * @property {function(this:CustomValidatorContext): string|undefined} [custom] - Custom validation
- *   function. Return a string error type to fail validation, or `undefined` to pass.
- * @property {boolean} [denyInsert=false] - If `true`, setting this field during insert triggers an error.
- * @property {boolean} [denyUpdate=false] - If `true`, setting this field during update triggers an error.
- */
-
-/**
- * @typedef {Object} FieldDescriptor
- * @property {Object} resolvedType - Resolved type descriptor.
- * @property {boolean} required - Whether this field is required.
- * @property {string} [label] - Human-readable label for error messages.
- * @property {*} [defaultValue] - Default value applied during cleaning.
- * @property {Function} [autoValue] - Auto-value function.
- * @property {number|Date} [min] - Minimum constraint.
- * @property {number|Date} [max] - Maximum constraint.
- * @property {boolean} [exclusiveMin] - Exclusive minimum flag.
- * @property {boolean} [exclusiveMax] - Exclusive maximum flag.
- * @property {Array} [allowedValues] - Allowed values (always an Array in IR).
- * @property {RegExp|RegExp[]} [regEx] - Regular expression constraint(s).
- * @property {number} [minCount] - Minimum array item count.
- * @property {number} [maxCount] - Maximum array item count.
- * @property {boolean} [blackbox] - Skip nested validation for this object.
- * @property {boolean} [trim] - Whether to trim this string field.
- * @property {Function} [custom] - Custom validator function.
- * @property {boolean} [denyInsert] - Deny on insert.
- * @property {boolean} [denyUpdate] - Deny on update.
- * @property {string[]} [children] - Dot-path keys of child fields (for `object`/`schema` types).
- * @property {string} [itemKey] - Dot-path key of the array item descriptor (for `array` types).
- */
 
 /**
  * Normalize a single field definition from user input to canonical form.
