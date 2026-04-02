@@ -179,10 +179,10 @@ Object.assign(StreamServer.prototype, {
 
       // request and upgrade have different arguments passed but
       // we only care about the first one which is always request
-      var newListener = function(request, ...rest) {
+      const newListener = function (request, ...rest) {
         // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
         // preserving query string.
-        var parsedUrl = new URL(request.url, 'http://dummy');
+        const parsedUrl = new URL(request.url, 'http://dummy');
         if (parsedUrl.pathname === pathPrefix + '/websocket' ||
             parsedUrl.pathname === pathPrefix + '/websocket/') {
           parsedUrl.pathname = self.prefix + '/websocket';
