@@ -116,6 +116,30 @@ export async function boot(serverDir) {
 
   const { meteorNpmRequire, setCurrentPackage } = createResolver(serverDir, programJson);
 
+  // Build per-package asset maps from program.json
+  // In the legacy boot, Assets is injected per-package via closure.
+  // Here, we use a global Assets object that switches context per-package,
+  // same pattern as the resolver's setCurrentPackage.
+  const packageAssetsMap = {};
+  for (const item of programJson.load) {
+    if (item.assets) {
+      packageAssetsMap[item.path] = item.assets;
+    }
+  }
+  let currentAssets = null;
+
+  function setCurrentAssets(packagePath) {
+    currentAssets = packageAssetsMap[packagePath] || null;
+  }
+
+  // Path normalization matching boot.js behavior (via mini-files.ts)
+  function normalizeAssetPath(assetPath) {
+    if (process.platform === 'win32') {
+      assetPath = assetPath.replace(/\\/g, '/');
+    }
+    return assetPath ? assetPath.normalize('NFC') : assetPath;
+  }
+
   // Globals expected by Meteor packages
   globalThis.__meteor_bootstrap__ = {
     startupHooks: [],
@@ -130,12 +154,44 @@ export async function boot(serverDir) {
   if (!process.env.APP_ID) process.env.APP_ID = configJson.appId;
 
   globalThis.Npm = { require: meteorNpmRequire };
+
+  // Assets API — reads real files from the bundle, per-package context
   globalThis.Assets = {
-    getTextAsync() { return Promise.resolve(''); },
-    getBinaryAsync() { return Promise.resolve(new Uint8Array()); },
-    absoluteFilePath() { return ''; },
+    getTextAsync(assetPath, callback) {
+      return getAsset(assetPath, 'utf8', callback);
+    },
+    getBinaryAsync(assetPath, callback) {
+      return getAsset(assetPath, undefined, callback);
+    },
+    absoluteFilePath(assetPath) {
+      assetPath = normalizeAssetPath(assetPath);
+      if (!currentAssets || !currentAssets[assetPath]) {
+        throw new Error('Unknown asset: ' + assetPath);
+      }
+      return path.join(serverDir, currentAssets[assetPath]);
+    },
     getServerDir() { return serverDir; },
   };
+
+  function getAsset(assetPath, encoding, callback) {
+    assetPath = normalizeAssetPath(assetPath);
+    if (!currentAssets || !currentAssets[assetPath]) {
+      const err = new Error('Unknown asset: ' + assetPath);
+      if (callback) { callback(err); return; }
+      return Promise.reject(err);
+    }
+    const filePath = path.join(serverDir, currentAssets[assetPath]);
+    if (callback) {
+      fs.readFile(filePath, encoding, (err, result) => {
+        if (err) { callback(err); return; }
+        callback(null, encoding ? result : new Uint8Array(result));
+      });
+      return;
+    }
+    return fs.promises.readFile(filePath, encoding).then(result =>
+      encoding ? result : new Uint8Array(result)
+    );
+  }
 
   globalThis.npmRequire = meteorNpmRequire;
   globalThis.Profile = function (name, fn) { return fn || function () {}; };
@@ -143,6 +199,11 @@ export async function boot(serverDir) {
   globalThis.Profile.run = async function (name, fn) { return fn(); };
 
   globalThis.__METEOR_ASYNC_LOCAL_STORAGE = new AsyncLocalStorage();
+
+  // Enable native source maps (Node 20+)
+  if (typeof process.setSourceMapsEnabled === 'function') {
+    process.setSourceMapsEnabled(true);
+  }
 
   // Dynamic import info for the dynamic-import package
   globalThis.dynamicImportInfo = { server: { dynamicRoot: path.join(serverDir, 'dynamic') } };
@@ -167,6 +228,7 @@ export async function boot(serverDir) {
   // Import all packages in the dependency order computed by isobuild
   for (const item of programJson.load) {
     setCurrentPackage(item.path);
+    setCurrentAssets(item.path);
     await import(path.join(serverDir, item.path));
   }
 
