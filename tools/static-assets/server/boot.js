@@ -57,7 +57,7 @@ async function maybeWaitForDebuggerToAttach() {
     const { pause } = require("./debug");
     const pauseThresholdMs = 50;
     const pollIntervalMs = 500;
-    const waitStartTimeMs = +new Date;
+    const waitStartTimeMs = Date.now();
     const waitLimitMinutes = 5;
     const waitLimitMs = waitLimitMinutes * 60 * 1000;
 
@@ -65,7 +65,7 @@ async function maybeWaitForDebuggerToAttach() {
     // keeps the process alive by preventing the event loop from running
     // empty while the main Fiber yields.
     setTimeout(async function poll() {
-      const pauseStartTimeMs = +new Date;
+      const pauseStartTimeMs = Date.now();
 
       if (pauseStartTimeMs - waitStartTimeMs > waitLimitMs) {
         console.error(
@@ -87,7 +87,7 @@ async function maybeWaitForDebuggerToAttach() {
         // what we want to know: "Is the debugger keyword enabled yet?"
         pause();
 
-        if (new Date - pauseStartTimeMs > pauseThresholdMs) {
+        if (Date.now() - pauseStartTimeMs > pauseThresholdMs) {
           // If the pause() function call took a meaningful amount of
           // time, we can conclude the debugger keyword must be active,
           // which means a debugging client must be connected, which means
