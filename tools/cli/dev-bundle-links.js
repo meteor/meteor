@@ -17,7 +17,7 @@ exports.makeLink = function (target, linkPath) {
     fs.renameSync(tempPath, linkPath);
   } catch (e) {
     // If renaming fails, try unlinking first.
-    require("rimraf").sync(linkPath);
+    fs.rmSync(linkPath, { recursive: true, force: true });
     fs.renameSync(tempPath, linkPath);
   }
 };
