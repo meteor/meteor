@@ -3149,7 +3149,13 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", async function (
         });
 
         await builder.write('README', { data: Buffer.from(
-`This is a Meteor application bundle (ESM format). To run the application:
+`This is a Meteor application bundle (ESM format).
+
+EXPERIMENTAL: This bundle was built with --format=esm. The ESM format
+uses standard ES module imports instead of the legacy boot chain
+(boot.js + runtime.js + vm.runInThisContext). It requires Node.js ${process.version}+.
+
+To run the application:
 
   $ (cd programs/server && npm install)
   $ export MONGO_URL='mongodb://user:password@host:port/databasename'
@@ -3161,6 +3167,12 @@ var writeSiteArchive = Profile("bundler writeSiteArchive", async function (
 Use the PORT environment variable to set the port where the
 application will listen. The default is 80, but that will require
 root on most systems.
+
+Known limitations vs legacy format:
+- METEOR_INSPECT_BRK is not supported (use --inspect-brk flag directly)
+- METEOR_PARENT_PID monitoring is not implemented
+- Source maps are enabled via Node's native --enable-source-maps flag
+  (automatically enabled on Node 20+ via process.setSourceMapsEnabled)
 
 Find out more about Meteor at meteor.com.
 `,
