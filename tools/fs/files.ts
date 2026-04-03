@@ -347,7 +347,7 @@ export function rm_recursive_async(path: string) {
 // Like rm -r.
 export const rm_recursive = Profile("files.rm_recursive", async (path: string) => {
   try {
-    fs.rmSync(convertToOSPath(path), { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    fs.rmSync(convertToOSPath(path), { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
   } catch (e: any) {
     if ((e.code === "ENOTEMPTY" ||
          e.code === "EPERM")) {
@@ -1615,7 +1615,7 @@ export const rename = isWindowsLikeFilesystem() ? function (from: string, to: st
         // Despite previous failures, the top-level destination directory
         // may have been successfully created, so we must remove it to
         // avoid moving the source file *into* the destination directory.
-        fs.rmSync(osTo, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+        fs.rmSync(osTo, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
         wrappedRename(from, to);
         resolve();
       } catch (err: any) {
