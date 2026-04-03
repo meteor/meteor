@@ -252,14 +252,17 @@ WebApp.startListening = function(httpServer, listenOptions, cb) {
     const bunServer = Bun.serve({
       port: PORT,
       hostname: process.env.BIND_IP || '0.0.0.0',
+      idleTimeout: 120, // seconds, matches Meteor's LONG_SOCKET_TIMEOUT
 
       async fetch(req, server) {
         // --- WebSocket upgrade ---
         if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
           const url = new URL(req.url, `http://localhost:${PORT}`);
           const wsPath = url.pathname;
-          // Accept /websocket and /sockjs/*/websocket paths
-          if (wsPath === '/websocket' || wsPath.endsWith('/sockjs/websocket')) {
+          // Accept:
+          //   /websocket (direct)
+          //   /sockjs/.../websocket (SockJS client sends /sockjs/{server}/{session}/websocket)
+          if (wsPath === '/websocket' || (wsPath.includes('/sockjs/') && wsPath.endsWith('/websocket'))) {
             const ok = server.upgrade(req, { data: { req } });
             return ok ? undefined : new Response('WebSocket upgrade failed', { status: 400 });
           }
