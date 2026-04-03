@@ -160,6 +160,13 @@ export async function bootPackages(serverDir) {
     meteorRelease: configJson.meteorRelease,
     gitCommitHash: starJson.gitCommitHash,
   };
+
+  // When running on Bun, SockJS server-side is not available (no 'upgrade'
+  // event on http.createServer). Tell the client to use native WebSocket
+  // instead of the SockJS client library.
+  if (typeof Bun !== 'undefined') {
+    globalThis.__meteor_runtime_config__.DISABLE_SOCKJS = true;
+  }
   if (!process.env.APP_ID) process.env.APP_ID = configJson.appId;
 
   globalThis.Npm = { require: meteorNpmRequire };
