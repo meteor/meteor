@@ -467,6 +467,7 @@ var runCommandOptions = {
     'allow-incompatible-update': { type: Boolean },
     'extra-packages': { type: String },
     'exclude-archs': { type: String },
+    'runtime': { type: String },
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -588,10 +589,12 @@ async function doRunCommand(options) {
     appHost: appHost,
     ...normalizeInspectOptions(options),
     settingsFile: options.settings,
+    runtime: options.runtime || 'node',
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
       buildMode,
-      webArchs: webArchs
+      webArchs: webArchs,
+      format: options.runtime === 'bun' ? 'esm' : undefined,
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
