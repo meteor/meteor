@@ -39,13 +39,46 @@ DDP_TRANSPORT=uws meteor run
 DDP_TRANSPORT=sockjs meteor run
 ```
 
+You can also configure the transport via your `settings.json` file:
+```json
+{
+  "packages": {
+    "ddp-server": {
+      "transport": "uws"
+    }
+  }
+}
+```
+
 When using `uws`, the client automatically uses native WebSocket instead of the SockJS client protocol.
 
 ::: warning
 The `uws` transport uses raw WebSocket without HTTP polling fallback. Clients behind proxies that block WebSocket connections will not be able to connect. Make sure your deployment environment supports WebSocket before switching.
+If you are using a load balancer (such as NGINX, HAProxy, or AWS ALB), ensure it is configured to upgrade HTTP connections to WebSocket and that stickiness (session affinity) is not required since `uws` does not use polling.
 :::
 
 See also: [`DISABLE_SOCKJS`](#disable-sockjs).
+
+## METEOR_REACTIVITY_ORDER
+(_development, production_)
+
+Meteor configures data reactivity mechanism priorities using this variable. The default for Meteor 3.5 is `changeStreams,oplog,polling`. To override the order, set a comma-separated list.
+
+```bash
+# Prioritize oplog over change streams
+METEOR_REACTIVITY_ORDER="oplog,changeStreams,polling" meteor run
+```
+
+This can also be configured via your `settings.json` file:
+```json
+{
+  "packages": {
+    "mongo": {
+      "reactivity": ["changeStreams", "oplog", "polling"]
+    }
+  }
+}
+```
 
 ## DISABLE_WEBSOCKETS
 (_development, production_)
@@ -55,10 +88,10 @@ In the event that your own deployment platform does not support WebSockets, or y
 ## DISABLE_SOCKJS
 (_development, production_)
 
-Set `DISABLE_SOCKJS=1` to use raw WebSocket instead of SockJS. This is equivalent to `DDP_TRANSPORT=uws` and is kept for backward compatibility.
+Set `DISABLE_SOCKJS=1` to use raw WebSocket instead of SockJS. This is equivalent to `DDP_TRANSPORT=uws` and is kept for backward compatibility. 
 
 ::: tip
-Prefer using [`DDP_TRANSPORT=uws`](#ddp-transport) instead of `DISABLE_SOCKJS=1`. The `DDP_TRANSPORT` variable is more explicit and supports additional transports in the future.
+*Migration Note:* `DISABLE_SOCKJS=1` is deprecated. Prefer using [`DDP_TRANSPORT=uws`](#ddp-transport) or configuring `"transport": "uws"` in your `settings.json` file. `DDP_TRANSPORT` is more explicit and establishes a foundation for future transport backend additions.
 :::
 
 ## DO_NOT_TRACK
