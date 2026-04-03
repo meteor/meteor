@@ -810,13 +810,16 @@ Object.assign(AppRunner.prototype, {
     var serverWatcher;
     var clientWatcher;
 
-    appProcess.proc.onMessage("shell-server", message => {
-      if (message && message.command === "reload") {
-        self._resolvePromise("run", { outcome: "changed" });
-      } else {
-        return Promise.reject("Unsupported shell command: " + message);
-      }
-    });
+    // IPC messaging (not available with Bun runtime)
+    if (appProcess.proc.onMessage) {
+      appProcess.proc.onMessage("shell-server", message => {
+        if (message && message.command === "reload") {
+          self._resolvePromise("run", { outcome: "changed" });
+        } else {
+          return Promise.reject("Unsupported shell command: " + message);
+        }
+      });
+    }
 
     if (self.watchForChanges) {
       serverWatcher = new watch.Watcher({
@@ -856,16 +859,16 @@ Object.assign(AppRunner.prototype, {
     }
 
     function pauseClient(arch) {
-      return appProcess.proc.sendMessage("webapp-pause-client", { arch });
+      if (appProcess.proc.sendMessage) {
+        return appProcess.proc.sendMessage("webapp-pause-client", { arch });
+      }
     }
 
     async function refreshClient(arch) {
+      if (!appProcess.proc.sendMessage) return;
       if (typeof arch === "string") {
-        // This message will reload the client program and unpause it.
         await appProcess.proc.sendMessage("webapp-reload-client", { arch });
       }
-      // If arch is not a string, the receiver of this message should
-      // assume all clients need to be refreshed.
       await appProcess.proc.sendMessage("client-refresh");
     }
 
