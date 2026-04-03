@@ -323,7 +323,7 @@ export async function createMeteorApp(appName, example, options = {}) {
 export async function cleanupTempDir(tempDir) {
   if (tempDir) {
     try {
-      rimraf.sync(tempDir, { disableGlob: true, maxRetries: 5, retryDelay: 500 });
+      fs.rmSync(tempDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 500 });
       console.log(`Removed temporary directory: ${tempDir}`);
     } catch (err) {
       // Implement async removal as a fallback
