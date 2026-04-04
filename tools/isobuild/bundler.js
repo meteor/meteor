@@ -217,12 +217,12 @@ exports._mainJsContents = [
 // instead of boot.js + runtime.js + vm.runInThisContext.
 // The esm-loader.mjs is copied alongside and does the heavy lifting.
 exports._esmIndexContents = [
-  'import { fileURLToPath } from "node:url";',
+  'import { fileURLToPath, pathToFileURL } from "node:url";',
   'import path from "node:path";',
   'const __filename = fileURLToPath(import.meta.url);',
   'const __dirname = path.dirname(__filename);',
   'const serverDir = path.join(__dirname, "programs", "server");',
-  'const { boot } = await import(path.join(serverDir, "esm-loader.mjs"));',
+  'const { boot } = await import(pathToFileURL(path.join(serverDir, "esm-loader.mjs")).href);',
   'await boot(serverDir);',
 ].join("\n");
 
@@ -3354,6 +3354,10 @@ async function bundle({
   forceInPlaceBuild,
 }) {
   buildOptions = buildOptions || {};
+
+  if (buildOptions.format && buildOptions.format !== 'esm') {
+    throw new Error(`Unknown --format value: ${buildOptions.format}. Valid values: esm`);
+  }
 
   var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs;
