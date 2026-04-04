@@ -35,11 +35,16 @@ if (Meteor.isDevelopment) {
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
+  // Bun's http.createServer doesn't expose req.connection.server,
+  // which http-proxy-middleware needs for ws:true. Disable WS proxying
+  // on Bun — HMR WebSocket goes through the Rspack dev server directly.
+  const isBun = typeof Bun !== 'undefined';
+
   // Proxy HMR websocket upgrade requests
   WebApp.connectHandlers.use('/ws',
     createProxyMiddleware( {
       target,
-      ws: true,
+      ws: !isBun,
       logLevel: 'debug'
     })
   );
@@ -49,7 +54,7 @@ if (Meteor.isDevelopment) {
     createProxyMiddleware({
       target,
       changeOrigin: true,
-      ws: true,
+      ws: !isBun,
       logLevel: 'debug',
     })
   );
