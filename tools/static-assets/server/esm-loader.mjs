@@ -12,6 +12,7 @@
 //   await boot('/path/to/bundle/programs/server');
 
 import { createRequire } from 'node:module';
+import { pathToFileURL } from 'node:url';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -229,7 +230,7 @@ export async function boot(serverDir) {
   for (const item of programJson.load) {
     setCurrentPackage(item.path);
     setCurrentAssets(item.path);
-    await import(path.join(serverDir, item.path));
+    await import(pathToFileURL(path.join(serverDir, item.path)).href);
   }
 
   // Wait for core-runtime async queue (deferred package initialization)
