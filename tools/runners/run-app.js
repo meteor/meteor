@@ -258,11 +258,7 @@ Object.assign(AppProcess.prototype, {
     var opts = JSON.parse(JSON.stringify(self.nodeOptions));
 
     if (self.inspect) {
-      if (isBun) {
-        opts.push("--inspect=" + self.inspect.port);
-      } else {
-        opts.push("--inspect=" + self.inspect.port);
-      }
+      opts.push("--inspect=" + self.inspect.port);
     }
 
     if (!isBun) {
@@ -865,10 +861,14 @@ Object.assign(AppRunner.prototype, {
     }
 
     async function refreshClient(arch) {
+      // IPC not available when running on Bun
       if (!appProcess.proc.sendMessage) return;
+      // This message will reload the client program and unpause it.
       if (typeof arch === "string") {
         await appProcess.proc.sendMessage("webapp-reload-client", { arch });
       }
+      // If arch is not a string, the receiver of this message should
+      // assume all clients need to be refreshed.
       await appProcess.proc.sendMessage("client-refresh");
     }
 

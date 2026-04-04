@@ -1,4 +1,3 @@
-import once from 'lodash.once';
 import { EventEmitter } from 'events';
 
 var pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || "";
