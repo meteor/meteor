@@ -694,7 +694,9 @@ The methods (like `update` or `insert`) you call on the resulting _raw_ collecti
 
 `rawCollection()` talks directly to the MongoDB driver. It bypasses
 collection-level behavior added through `Mongo.Collection` mutator overrides or
-Collection Extensions. Use it when you explicitly want direct driver access.
+Collection Extensions, and it does not run collection hooks such as
+allow/deny-driven mutation handling or package-provided hook callbacks. Use it
+when you explicitly want direct driver access.
 
 <ApiBox name="Mongo.Collection#rawDatabase" instanceName="Collection"/>
 
@@ -755,8 +757,8 @@ Each registration returns a controller with:
 Notes:
 
 - Returning `false` from a `before.*` hook aborts that operation.
-- `before.find` hooks must be synchronous.
-- `after.find` hooks run when async cursor methods such as `fetchAsync()` or `countAsync()` are consumed.
+- `before.find` hooks must be synchronous. `findOneAsync()` can also invoke `before.find`, because when find hooks are present it routes through `Collection.find(...).fetchAsync()`.
+- `after.find` hooks run when async cursor methods such as `fetchAsync()` or `countAsync()` are consumed. `findOneAsync()` can trigger them for the same reason: it may resolve through `Collection.find(...).fetchAsync()` when any `before.find` or `after.find` hooks are registered.
 - There is no `after.upsert`. Upserts fire `after.insert` when they insert and `after.update` when they update.
 
 ### Hook context
@@ -1439,4 +1441,3 @@ You can also call `Mongo.setConnectionOptions` to set the connection options but
 you need to call it before any other package using Mongo connections is
 initialized so you need to add this code in a package and add it above the other
 packages, like accounts-base in your `.meteor/packages` file.
-
