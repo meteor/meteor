@@ -189,7 +189,7 @@ Tinytest.addAsync(
     async function start () {
       collection.after.update(
         function (userId, doc, fieldNames, modifier) {
-          test.notEqual('abc', undefined, 'previous must be an object')
+          test.notEqual(this.previous, undefined, 'previous must be an object')
           test.notEqual(this.previous.start_value, undefined)
         },
         { fetchPrevious: true }

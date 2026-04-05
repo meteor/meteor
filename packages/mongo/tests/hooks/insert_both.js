@@ -8,7 +8,7 @@ if (Meteor.isServer) {
 
   Tinytest.addAsync(
     'insert - collection1 document should have extra property added to it before it is inserted',
-    async function (test, next) {
+    async function (test) {
       const tmp = {}
 
       await collection1.removeAsync({})
@@ -29,8 +29,6 @@ if (Meteor.isServer) {
         1
       )
       test.equal(tmp.userId, undefined)
-
-      next()
     }
   )
 }

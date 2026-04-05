@@ -1,7 +1,7 @@
 import { Mongo } from 'meteor/mongo'
 import { Tinytest } from 'meteor/tinytest'
 
-Tinytest.addAsync('issue #296 - after update hook always finds all updated', async function (test, next) {
+Tinytest.addAsync('issue #296 - after update hook always finds all updated', async function (test) {
   const collection = new Mongo.Collection(null)
 
   collection.before.find((userId, selector) => {
@@ -28,7 +28,7 @@ Tinytest.addAsync('issue #296 - after update hook always finds all updated', asy
   test.equal(afterCalled, true)
 })
 
-Tinytest.addAsync('issue #296 - after insert hook always finds all inserted', async function (test, next) {
+Tinytest.addAsync('issue #296 - after insert hook always finds all inserted', async function (test) {
   const collection = new Mongo.Collection(null)
 
   collection.before.find((userId, selector) => {
@@ -53,7 +53,7 @@ Tinytest.addAsync('issue #296 - after insert hook always finds all inserted', as
   test.equal(afterCalled, true)
 })
 
-Tinytest.addAsync('find hook - after insert hook always finds all inserted', async function (test, next) {
+Tinytest.addAsync('find hook - after insert hook always finds all inserted', async function (test) {
   const collection = new Mongo.Collection(null)
 
   collection.before.find((userId, selector) => {

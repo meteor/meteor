@@ -96,7 +96,7 @@ if (Meteor.isClient) {
     }
 
     InsecureLogin.ready(function () {
-      Meteor.callAsync('test_update_reset_collection2').then(function (nil, result) {
+      Meteor.callAsync('test_update_reset_collection2').then(function () {
         collection2.insert({ start_value: true }, start)
       })
     })

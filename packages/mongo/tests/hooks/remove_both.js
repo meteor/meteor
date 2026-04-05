@@ -71,14 +71,13 @@ if (Meteor.isServer) {
 
   collection2.after.remove(function (userId, doc) {
     external2++
-    console.log('(temp) test passes:', external2 === 1)
   })
 }
 
 if (Meteor.isClient) {
   Meteor.subscribe('test_remove_publish_collection2')
 
-  Tinytest.add(
+  Tinytest.addAsync(
     'remove - collection2 document should affect external variable before and after it is removed',
     async function (test) {
       let external = 0

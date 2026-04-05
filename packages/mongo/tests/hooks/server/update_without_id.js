@@ -7,13 +7,15 @@ Tinytest.addAsync('update - server collection documents should have extra proper
 
   let retries = 0
   const retry = function (func, expect) {
-    if (++retries >= 5) return null
+    if (++retries >= 5) {
+      return Promise.reject(new Error('retry timeout'))
+    }
 
     return new Promise((resolve, reject) => {
       Meteor.setTimeout(function () {
         const r = func()
         if (expect(r)) return resolve(r)
-        retry(func, expect).then(resolve)
+        return retry(func, expect).then(resolve, reject)
       }, 100)
     })
   }

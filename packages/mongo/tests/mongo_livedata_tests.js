@@ -4546,14 +4546,21 @@ Meteor.isServer && testAsyncMulti(
       );
 
       let insertId;
+      let observeAddedResolve;
+      const observeAdded = new Promise(resolve => {
+        observeAddedResolve = resolve;
+      });
       await Collection.find({}).observeChangesAsync({
         async added(_id, fields) {
           insertId = _id;
+          observeAddedResolve(_id);
           throw new Error('Test error in async added observeChangesAsync');
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id) => {
+      return Collection.insertAsync({ foo: { bar: 123 } }).then(async (id) => {
+        const observedId = await observeAdded;
+        test.equal(insertId, observedId);
         test.equal(insertId, id);
       })
     },
@@ -4565,14 +4572,21 @@ Meteor.isServer && testAsyncMulti(
       );
 
       let insertId;
+      let observeAddedResolve;
+      const observeAdded = new Promise(resolve => {
+        observeAddedResolve = resolve;
+      });
       await Collection.find({}).observeChangesAsync({
         added(id) {
           insertId = id;
+          observeAddedResolve(id);
           throw new Error('Test error in sync added observeChangesAsync');
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id) => {
+      return Collection.insertAsync({ foo: { bar: 123 } }).then(async (id) => {
+        const observedId = await observeAdded;
+        test.equal(insertId, observedId);
         test.equal(insertId, id);
       })
     }

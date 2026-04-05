@@ -511,6 +511,9 @@ export namespace Mongo {
     ): Cursor<T, DispatchTransform<O["transform"], T, U>>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * Routes through `find(..., { limit: 1 })`, so `before.find` / `after.find`
+     * hooks may run when they are registered. Sync `before.findOne` /
+     * `after.findOne` hooks do not run for `findOne()`.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
      * @see findOneAsync
      * @param selector A query describing the documents to find
@@ -518,6 +521,9 @@ export namespace Mongo {
     findOne(selector?: Selector<T> | ObjectID | string): U | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * Routes through `find(..., { limit: 1 })`, so `before.find` / `after.find`
+     * hooks may run when they are registered. Sync `before.findOne` /
+     * `after.findOne` hooks do not run for `findOne()`.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
      * @see findOneAsync
      * @param selector A query describing the documents to find
@@ -574,6 +580,8 @@ export namespace Mongo {
     /**
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+     * This bypasses collection-level mutator overrides, Collection Extensions,
+     * and collection hooks.
      */
     rawCollection(): NpmModuleMongodb.Collection<T>;
     /**

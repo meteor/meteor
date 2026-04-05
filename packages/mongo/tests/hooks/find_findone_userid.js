@@ -1,8 +1,7 @@
 import { Meteor } from "meteor/meteor";
-import { Mongo } from "meteor/mongo";
+import { Mongo, CollectionHooks } from "meteor/mongo";
 import { Tinytest } from "meteor/tinytest";
 import { InsecureLogin } from "./insecure_login";
-import { CollectionHooks } from "meteor/mongo";
 
 const collection = new Mongo.Collection(
   "test_collection_for_find_findone_userid"
@@ -16,7 +15,19 @@ let beforeFindWithinPublish;
 let afterFindWithinPublish;
 let beforeFindOneWithinPublish;
 let afterFindOneWithinPublish;
-let serverCleanup;
+let publishContext = null;
+
+function resetHookState() {
+  beforeFindUserId = null;
+  afterFindUserId = null;
+  beforeFindOneUserId = null;
+  afterFindOneUserId = null;
+  beforeFindWithinPublish = false;
+  afterFindWithinPublish = false;
+  beforeFindOneWithinPublish = false;
+  afterFindOneWithinPublish = false;
+  publishContext = null;
+}
 
 // Don't declare hooks in publish method, as it is problematic
 // eslint-disable-next-line array-callback-return
@@ -66,15 +77,14 @@ collection.after.findOne(function(userId, selector, options, result) {
 });
 
 if (Meteor.isServer) {
-  let serverTestsAdded = false;
-  let publishContext = null;
+  const runWithinPublishContext = async function (context) {
+    resetHookState();
+    publishContext = context;
 
-  serverCleanup = () => {
-    beforeFindOneUserId = null;
-    afterFindOneUserId = null;
-    beforeFindOneWithinPublish = false;
-    afterFindOneWithinPublish = false;
-    publishContext = null;
+    await DDP._CurrentPublicationInvocation.withValue(context, async function () {
+      await collection.find({}, { test: 1 }).fetchAsync();
+      await collection.findOneAsync({}, { test: 1 });
+    });
   };
 
   Tinytest.add(
@@ -84,137 +94,113 @@ if (Meteor.isServer) {
     }
   );
 
-  Meteor.publish("test_publish_for_find_findone_userid", async function() {
-    // Reset test values on each connection
-    publishContext = null;
-
-    beforeFindUserId = null;
-    afterFindUserId = null;
-    beforeFindOneUserId = null;
-    afterFindOneUserId = null;
-
-    beforeFindWithinPublish = false;
-    afterFindWithinPublish = false;
-    beforeFindOneWithinPublish = false;
-    afterFindOneWithinPublish = false;
-
-    // Check publish context
-    publishContext = this;
-
-    // Trigger hooks
-    await collection.findOneAsync({}, { test: 1 });
-    await collection.findOneAsync({}, { test: 1 });
-
-    if (!serverTestsAdded) {
-      serverTestsAdded = true;
-
-      // Our hook system should preserve the value of 'this'.
-      Tinytest.add(
-        "general - this (context) preserved in publish functions",
-        function(test) {
-          test.isTrue(publishContext && publishContext.userId);
-        }
-      );
-
-      Tinytest.add(
-        "find - userId available to before find hook when within publish context",
-        function(test) {
-          test.notEqual(beforeFindUserId, null);
-          test.equal(beforeFindWithinPublish, true);
-        }
-      );
-
-      Tinytest.add(
-        "find - userId available to after find hook when within publish context",
-        function(test) {
-          test.notEqual(afterFindUserId, null);
-          test.equal(afterFindWithinPublish, true);
-        }
-      );
-
-      Tinytest.add(
-        "findone - userId available to before findOne hook when within publish context",
-        function(test) {
-          test.notEqual(beforeFindOneUserId, null);
-          test.equal(beforeFindOneWithinPublish, true);
-          serverCleanup();
-        }
-      );
-
-      Tinytest.add(
-        "findone - userId available to after findOne hook when within publish context",
-        function(test) {
-          test.notEqual(afterFindOneUserId, null);
-          test.equal(afterFindOneWithinPublish, true);
-          serverCleanup();
-        }
-      );
+  Tinytest.addAsync(
+    "general - this (context) preserved in publish functions",
+    async function(test) {
+      const context = { userId: "publish-test-user" };
+      await runWithinPublishContext(context);
+      test.equal(publishContext, context);
+      test.equal(publishContext.userId, "publish-test-user");
+      resetHookState();
     }
+  );
+
+  Tinytest.addAsync(
+    "find - userId available to before find hook when within publish context",
+    async function(test) {
+      const context = { userId: "publish-test-user" };
+      await runWithinPublishContext(context);
+      test.equal(beforeFindUserId, "publish-test-user");
+      test.equal(beforeFindWithinPublish, true);
+      resetHookState();
+    }
+  );
+
+  Tinytest.addAsync(
+    "find - userId available to after find hook when within publish context",
+    async function(test) {
+      const context = { userId: "publish-test-user" };
+      await runWithinPublishContext(context);
+      test.equal(afterFindUserId, "publish-test-user");
+      test.equal(afterFindWithinPublish, true);
+      resetHookState();
+    }
+  );
+
+  Tinytest.addAsync(
+    "findone - userId available to before findOne hook when within publish context",
+    async function(test) {
+      const context = { userId: "publish-test-user" };
+      await runWithinPublishContext(context);
+      test.equal(beforeFindOneUserId, "publish-test-user");
+      test.equal(beforeFindOneWithinPublish, true);
+      resetHookState();
+    }
+  );
+
+  Tinytest.addAsync(
+    "findone - userId available to after findOne hook when within publish context",
+    async function(test) {
+      const context = { userId: "publish-test-user" };
+      await runWithinPublishContext(context);
+      test.equal(afterFindOneUserId, "publish-test-user");
+      test.equal(afterFindOneWithinPublish, true);
+      resetHookState();
+    }
+  );
+
+  Meteor.publish("test_publish_for_find_findone_userid", async function() {
+    await runWithinPublishContext(this);
+    this.ready();
   });
 }
 
 if (Meteor.isClient) {
-  const cleanup = () => {
-    beforeFindUserId = null;
-    afterFindUserId = null;
-    beforeFindOneUserId = null;
-    afterFindOneUserId = null;
-  };
-
-  const withLogin = testFunc => {
-    return function(...args) {
-      const wrapper = cb => {
-        InsecureLogin.ready(() => {
-          cleanup();
-          try {
-            const result = testFunc.apply(this, args);
-            cb(null, result);
-          } catch (error) {
-            cb(error);
-          } finally {
-            cleanup();
-          }
-        });
-      };
-
-      return Meteor.wrapAsync(wrapper)();
-    };
-  };
-
-  Tinytest.add(
+  Tinytest.addAsync(
     "find - userId available to before find hook",
-    withLogin(function(test) {
-      collection.find({}, { test: 1 });
+    async function(test) {
+      await InsecureLogin.ready(async function() {
+        resetHookState();
+        await collection.find({}, { test: 1 }).fetchAsync();
+      });
       test.notEqual(beforeFindUserId, null);
-    })
+      resetHookState();
+    }
   );
 
-  Tinytest.add(
+  Tinytest.addAsync(
     "find - userId available to after find hook",
-    withLogin(function(test) {
-      collection.find({}, { test: 1 });
+    async function(test) {
+      await InsecureLogin.ready(async function() {
+        resetHookState();
+        await collection.find({}, { test: 1 }).fetchAsync();
+      });
       test.notEqual(afterFindUserId, null);
-    })
+      resetHookState();
+    }
   );
 
-  Tinytest.add(
+  Tinytest.addAsync(
     "findone - userId available to before findOne hook",
-    withLogin(function(test) {
-      collection.findOne({}, { test: 1 });
+    async function(test) {
+      await InsecureLogin.ready(async function() {
+        resetHookState();
+        await collection.findOneAsync({}, { test: 1 });
+      });
       test.notEqual(beforeFindOneUserId, null);
-    })
+      resetHookState();
+    }
   );
 
-  Tinytest.add(
+  Tinytest.addAsync(
     "findone - userId available to after findOne hook",
-    withLogin(function(test) {
-      collection.findOne({}, { test: 1 });
+    async function(test) {
+      await InsecureLogin.ready(async function() {
+        resetHookState();
+        await collection.findOneAsync({}, { test: 1 });
+      });
       test.notEqual(afterFindOneUserId, null);
-    })
+      resetHookState();
+    }
   );
-
-  InsecureLogin.ready(function() {
-    // Run server tests
-    Meteor.subscribe("test_publish_for_find_findone_userid");
-  });
 }

@@ -9,7 +9,22 @@ function createTest (cname, conntype) {
     )})`,
     async function (test) {
       // Use Mongo._collections instead of Mongo.Collection.get (no external package needed)
-      if (Mongo._collections.get(cname)) return
+      const existing = Mongo._collections.get(cname)
+      const requestedConnection = cname === null
+        ? null
+        : Object.prototype.hasOwnProperty.call(conntype, 'connection')
+          ? conntype.connection
+          : Meteor.isServer
+            ? Meteor.server
+            : Meteor.connection
+
+      if (
+        cname !== null &&
+        existing &&
+        (existing._connection ?? existing.connection) === requestedConnection
+      ) {
+        return
+      }
 
       const collection = new Mongo.Collection(cname, conntype)
       // Full permissions on collection
@@ -75,7 +90,7 @@ if (Meteor.isServer) {
         _id: 'directinserttestid',
         test: 1
       })
-      test.isFalse(Object(result) === result)
+      test.equal(result, 'directinserttestid')
     }
   )
 }

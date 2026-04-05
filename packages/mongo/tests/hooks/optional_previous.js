@@ -1,7 +1,6 @@
 import { Meteor } from "meteor/meteor";
-import { Mongo } from "meteor/mongo";
+import { Mongo, CollectionHooks } from "meteor/mongo";
 import { Tinytest } from "meteor/tinytest";
-import { CollectionHooks } from "meteor/mongo";
 
 Tinytest.addAsync(
   "optional-previous - update hook should not prefetch previous, via hook option param",
@@ -103,7 +102,7 @@ if (Meteor.isServer) {
       CollectionHooks.defaults.after.update = {};
 
       collection.insert({ _id: "test", test: 1 });
-      collection.update({ _id: "test" }, { $set: { test: 1 } });
+      collection.update({ _id: "test" }, { $set: { test: 1 } }, { test: true });
     }
   );
 
@@ -129,7 +128,7 @@ if (Meteor.isServer) {
       CollectionHooks.defaults.after.all = {};
 
       collection.insert({ _id: "test", test: 1 });
-      collection.update({ _id: "test" }, { $set: { test: 1 } });
+      collection.update({ _id: "test" }, { $set: { test: 1 } }, { test: true });
     }
   );
 
@@ -155,7 +154,7 @@ if (Meteor.isServer) {
       CollectionHooks.defaults.all.update = {};
 
       collection.insert({ _id: "test", test: 1 });
-      collection.update({ _id: "test" }, { $set: { test: 1 } });
+      collection.update({ _id: "test" }, { $set: { test: 1 } }, { test: true });
     }
   );
 
@@ -181,7 +180,7 @@ if (Meteor.isServer) {
       CollectionHooks.defaults.all.all = {};
 
       collection.insert({ _id: "test", test: 1 });
-      collection.update({ _id: "test" }, { $set: { test: 1 } });
+      collection.update({ _id: "test" }, { $set: { test: 1 } }, { test: true });
     }
   );
 }

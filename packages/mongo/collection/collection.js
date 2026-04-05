@@ -437,6 +437,7 @@ function rethrowMongoMutationError(error) {
     error?.name === 'MongoError' ||
     error?.name === 'BulkWriteError' ||
     error?.name === 'MongoBulkWriteError' ||
+    error?.name === 'MongoServerError' ||
     error?.name === 'MinimongoError'
   ) {
     throw new Meteor.Error(409, error.toString());
@@ -451,6 +452,20 @@ function throwIfSelectorIsNotId(selector, methodName) {
       403,
       'Not permitted. Untrusted code may only ' + methodName + ' documents by ID.'
     );
+  }
+}
+
+function validateHookAwareMutationArgs(method, args) {
+  if (method === 'insertAsync') {
+    check(args[0], Object);
+    return;
+  }
+
+  check(args[0], Match.Any);
+
+  if (method === 'updateAsync') {
+    check(args[1], Match.OneOf(Object, Array));
+    check(args[2], Match.Maybe(Object));
   }
 }
 
@@ -477,31 +492,31 @@ function setupHookAwareAsyncMutationMethodHandlers(collection, name, options) {
       return;
     }
 
-    methodHandlers[methodName] = function (...args) {
+    methodHandlers[methodName] = async function (...args) {
       const activeCollection = Mongo.getCollection(name) || collection;
 
       if (activeCollection._restricted || !activeCollection._isInsecure()) {
         return originalHandler.apply(this, args);
       }
 
-      check(args, [Match.Any]);
-
       try {
+        validateHookAwareMutationArgs(method, args);
+
         if (method === 'insertAsync') {
           if (!Object.prototype.hasOwnProperty.call(args[0], '_id')) {
             args[0]._id = activeCollection._makeNewID();
           }
 
-          return activeCollection.insertAsync(args[0]);
+          return await activeCollection.insertAsync(args[0]);
         }
 
         throwIfSelectorIsNotId(args[0], method);
 
         if (method === 'updateAsync') {
-          return activeCollection.updateAsync(args[0], args[1], args[2]);
+          return await activeCollection.updateAsync(args[0], args[1], args[2]);
         }
 
-        return activeCollection.removeAsync(args[0]);
+        return await activeCollection.removeAsync(args[0]);
       } catch (error) {
         rethrowMongoMutationError(error);
       }

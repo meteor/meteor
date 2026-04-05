@@ -42,11 +42,12 @@ if (Meteor.isClient) {
       test.equal(collection.findOne({ _id: id1 }), undefined)
       try {
         await collection.removeAsync({ _id: id2 })
-        test.equal(collection.findOne({ _id: id2 }), { _id: id2, start_value: true, allowed: false })
         test.fail('should not be allowed to remove')
       } catch (e) {
         // just ignore the error - it is expected
       }
+
+      test.equal(collection.findOne({ _id: id2 }), { _id: id2, start_value: true, allowed: false })
     })
   })
 }

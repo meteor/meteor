@@ -2,13 +2,12 @@ import { Meteor } from 'meteor/meteor'
 import { Mongo } from 'meteor/mongo'
 import { Tinytest } from 'meteor/tinytest'
 
-const collection = Meteor.users
+const testUsers = new Mongo.Collection('test_insert_user_collection')
 const collection1 = new Mongo.Collection('test_insert_mongoid_collection1', { idGeneration: 'MONGO' })
 
 if (Meteor.isServer) {
-  collection.allow({
+  testUsers.allow({
     insertAsync: function () { return true },
-    update: function () { return true },
     removeAsync: function () { return true }
   })
   collection1.allow({
@@ -20,16 +19,16 @@ if (Meteor.isServer) {
 Tinytest.addAsync('meteor_1_4_id_object - after insert hooks should be able to cope with object _id with ops property in Meteor 1.4', async function (test) {
   const key = Date.now()
 
-  const aspect1 = collection.after.insert(function (nil, doc) {
+  const aspect1 = testUsers.after.insert(function (nil, doc) {
     if (doc && doc.key && doc.key === key) {
       test.equal(doc._id, this._id)
       test.isFalse(Object(doc._id) === doc._id, '_id property should not be an object')
     }
   })
 
-  const id = await collection.insertAsync({ key })
+  const id = await testUsers.insertAsync({ key })
   // clean-up
-  await collection.removeAsync({ _id: id })
+  await testUsers.removeAsync({ _id: id })
   aspect1.remove()
 })
 

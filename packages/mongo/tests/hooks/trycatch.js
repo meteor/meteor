@@ -59,7 +59,7 @@ Tinytest.addAsync('try-catch - should call error callback on remove hook excepti
   })
 
   await InsecureLogin.ready(async function () {
-    const id = await collection.insert({ test: 1 })
+    const id = await collection.insertAsync({ test: 1 })
     try {
       await collection.removeAsync(id)
       test.fail('Delete must throw an error')

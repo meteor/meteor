@@ -322,40 +322,129 @@ export function setupDirectMethods(collection) {
 // === HOOK RUNNERS ===
 // Called inline from Mongo.Collection prototype methods
 
-export async function runInsertHooks(collection, doc, coreInsert) {
+const mutatorPromiseMetadata = new WeakMap();
+
+function withMutatorPromiseMetadata(promise, mutatorPromise) {
+  if (!mutatorPromise || typeof mutatorPromise !== "object") {
+    return;
+  }
+
+  if (
+    mutatorPromiseMetadata.get(promise)?.stubPromise &&
+    "stubPromise" in mutatorPromise &&
+    mutatorPromise.stubPromise
+  ) {
+    mutatorPromise.stubPromise.then(
+      mutatorPromiseMetadata.get(promise).stubPromise.resolve,
+      mutatorPromiseMetadata.get(promise).stubPromise.reject
+    );
+  }
+
+  if (
+    mutatorPromiseMetadata.get(promise)?.serverPromise &&
+    "serverPromise" in mutatorPromise &&
+    mutatorPromise.serverPromise
+  ) {
+    mutatorPromise.serverPromise.then(
+      mutatorPromiseMetadata.get(promise).serverPromise.resolve,
+      mutatorPromiseMetadata.get(promise).serverPromise.reject
+    );
+  }
+}
+
+function createDeferredPromise() {
+  let resolve;
+  let reject;
+  const promise = new Promise((nextResolve, nextReject) => {
+    resolve = nextResolve;
+    reject = nextReject;
+  });
+
+  return { promise, resolve, reject };
+}
+
+function prepareMutatorPromiseMetadata(collection, promise) {
+  if (!collection._isRemoteCollection()) {
+    return;
+  }
+
+  const wantsStubPromise =
+    collection.resolverType === "stub" || collection.resolverType == null;
+  const wantsServerPromise =
+    !collection._connection._stream._isStub && collection.resolverType !== "stub";
+
+  const promiseMetadata = {};
+
+  if (wantsStubPromise) {
+    promiseMetadata.stubPromise = createDeferredPromise();
+    promise.stubPromise = promiseMetadata.stubPromise.promise;
+  }
+
+  if (wantsServerPromise) {
+    promiseMetadata.serverPromise = createDeferredPromise();
+    promise.serverPromise = promiseMetadata.serverPromise.promise;
+  }
+
+  mutatorPromiseMetadata.set(promise, promiseMetadata);
+}
+
+function isAsyncHookFunction(hookFn) {
+  try {
+    return Function.prototype.toString.call(hookFn).startsWith("async");
+  } catch (error) {
+    return !!(
+      hookFn &&
+      hookFn.constructor &&
+      hookFn.constructor.name === "AsyncFunction"
+    );
+  }
+}
+
+export function runInsertHooks(collection, doc, coreInsert) {
   const userId = getHookUserId();
   const hooks = collection._hooks.insert;
   const getTransform = makeTransformGetter(collection);
 
-  // Before hooks
-  for (const hookEntry of hooks.before) {
-    const r = await hookEntry.fn.call(
-      { transform: getTransform(doc) },
-      userId,
-      doc
-    );
-    if (r === false) return; // abort
-  }
+  let mutatorPromise;
+  let completionPromise;
 
-  const id = await coreInsert();
-
-  // After hooks
-  if (!isEmpty(hooks.after)) {
-    const afterDoc = EJSON.clone(doc);
-    afterDoc._id = id;
-    for (const hookEntry of hooks.after) {
-      await hookEntry.fn.call(
-        { transform: getTransform(afterDoc), _id: id },
+  completionPromise = Promise.resolve().then(async function() {
+    // Before hooks
+    for (const hookEntry of hooks.before) {
+      const r = await hookEntry.fn.call(
+        { transform: getTransform(doc) },
         userId,
-        afterDoc
+        doc
       );
+      if (r === false) return; // abort
     }
-  }
 
-  return id;
+    mutatorPromise = coreInsert();
+    withMutatorPromiseMetadata(completionPromise, mutatorPromise);
+
+    const id = await mutatorPromise;
+
+    // After hooks
+    if (!isEmpty(hooks.after)) {
+      const afterDoc = EJSON.clone(doc);
+      afterDoc._id = id;
+      for (const hookEntry of hooks.after) {
+        await hookEntry.fn.call(
+          { transform: getTransform(afterDoc), _id: id },
+          userId,
+          afterDoc
+        );
+      }
+    }
+
+    return id;
+  });
+
+  prepareMutatorPromiseMetadata(collection, completionPromise);
+  return completionPromise;
 }
 
-export async function runUpdateHooks(
+export function runUpdateHooks(
   collection,
   selector,
   modifier,
@@ -384,114 +473,125 @@ export async function runUpdateHooks(
   prev.mutator = EJSON.clone(modifier);
   prev.options = EJSON.clone(options);
 
-  if (shouldFetch) {
-    const fetchOptions = { transform: null, reactive: false };
-    if (!(options && options.multi)) fetchOptions.limit = 1;
+  let mutatorPromise;
+  let completionPromise;
 
-    // Build projection from hook options
-    const projection = {};
-    if (shouldStorePrev) {
-      Object.assign(
-        projection,
-        buildHookProjection(
-          collection.hookOptions,
-          hooks.after,
-          "after",
-          "update"
-        )
-      );
-    }
-    if (hasBefore) {
-      Object.assign(
-        projection,
-        buildHookProjection(
-          collection.hookOptions,
-          hooks.before,
-          "before",
-          "update"
-        )
-      );
-    }
-    if (Object.keys(projection).length > 0) fetchOptions.fields = projection;
+  completionPromise = Promise.resolve().then(async function() {
+    if (shouldFetch) {
+      const fetchOptions = { transform: null, reactive: false };
+      if (!(options && options.multi)) fetchOptions.limit = 1;
 
-    docs = await collection._collection
-      .find(selector, fetchOptions)
-      .fetchAsync();
-    docIds = docs.map(d => d._id);
-
-    if (shouldStorePrev) {
-      prev.docs = {};
-      for (const doc of docs) {
-        prev.docs[doc._id] = EJSON.clone(doc);
-      }
-    }
-  }
-
-  const fields = getFields(modifier);
-
-  // Before hooks — run per-doc
-  if (hasBefore) {
-    let abort = false;
-    for (const hookEntry of hooks.before) {
-      for (const doc of docs) {
-        const r = await hookEntry.fn.call(
-          { transform: getTransform(doc) },
-          userId,
-          doc,
-          fields,
-          modifier,
-          options
+      // Build projection from hook options
+      const projection = {};
+      if (shouldStorePrev) {
+        Object.assign(
+          projection,
+          buildHookProjection(
+            collection.hookOptions,
+            hooks.after,
+            "after",
+            "update"
+          )
         );
-        if (r === false) {
-          abort = true;
-          break;
+      }
+      if (hasBefore) {
+        Object.assign(
+          projection,
+          buildHookProjection(
+            collection.hookOptions,
+            hooks.before,
+            "before",
+            "update"
+          )
+        );
+      }
+      if (Object.keys(projection).length > 0) fetchOptions.fields = projection;
+
+      docs = await collection._collection
+        .find(selector, fetchOptions)
+        .fetchAsync();
+      docIds = docs.map(d => d._id);
+
+      if (shouldStorePrev) {
+        prev.docs = {};
+        for (const doc of docs) {
+          prev.docs[doc._id] = EJSON.clone(doc);
         }
       }
-      if (abort) break;
     }
-    if (abort) return 0;
-  }
 
-  const affected = await coreUpdate();
+    const fields = getFields(modifier);
 
-  // After hooks — re-fetch and run per-doc
-  if (hasAfter && docIds.length > 0) {
-    const afterFetchOptions = { transform: null, reactive: false };
-    const afterProjection = buildHookProjection(
-      collection.hookOptions,
-      hooks.after,
-      "after",
-      "update"
-    );
-    if (Object.keys(afterProjection).length > 0)
-      afterFetchOptions.fields = afterProjection;
+    // Before hooks — run per-doc
+    if (hasBefore) {
+      let abort = false;
+      for (const hookEntry of hooks.before) {
+        for (const doc of docs) {
+          const r = await hookEntry.fn.call(
+            { transform: getTransform(doc) },
+            userId,
+            doc,
+            fields,
+            modifier,
+            options
+          );
+          if (r === false) {
+            abort = true;
+            break;
+          }
+        }
+        if (abort) break;
+      }
+      if (abort) return 0;
+    }
 
-    const afterDocs = await collection._collection
-      .find({ _id: { $in: docIds } }, afterFetchOptions)
-      .fetchAsync();
+    mutatorPromise = coreUpdate();
+    withMutatorPromiseMetadata(completionPromise, mutatorPromise);
 
-    for (const hookEntry of hooks.after) {
-      for (const doc of afterDocs) {
-        await hookEntry.fn.call(
-          {
-            transform: getTransform(doc),
-            previous: prev.docs && prev.docs[doc._id],
-            affected
-          },
-          userId,
-          doc,
-          fields,
-          prev.mutator,
-          prev.options
-        );
+    const affected = await mutatorPromise;
+
+    // After hooks — re-fetch and run per-doc
+    if (hasAfter && docIds.length > 0) {
+      const afterFetchOptions = { transform: null, reactive: false };
+      const afterProjection = buildHookProjection(
+        collection.hookOptions,
+        hooks.after,
+        "after",
+        "update"
+      );
+      if (Object.keys(afterProjection).length > 0)
+        afterFetchOptions.fields = afterProjection;
+
+      const afterDocs = await collection._collection
+        .find({ _id: { $in: docIds } }, afterFetchOptions)
+        .fetchAsync();
+
+      for (const hookEntry of hooks.after) {
+        for (const doc of afterDocs) {
+          await hookEntry.fn.call(
+            {
+              transform: getTransform(doc),
+              previous: prev.docs && prev.docs[doc._id],
+              affected
+            },
+            userId,
+            doc,
+            fields,
+            prev.mutator,
+            prev.options
+          );
+        }
       }
     }
-  }
 
-  return affected;
+    return affected;
+  });
+
+  prepareMutatorPromiseMetadata(collection, completionPromise);
+  return completionPromise;
 }
 
-export async function runRemoveHooks(collection, selector, coreRemove) {
+export function runRemoveHooks(collection, selector, coreRemove) {
   const userId = getHookUserId();
   const hooks = collection._hooks.remove;
   const getTransform = makeTransformGetter(collection);
@@ -502,50 +602,65 @@ export async function runRemoveHooks(collection, selector, coreRemove) {
   let docs = [];
   const prevDocs = [];
 
-  if (hasBefore || hasAfter) {
-    docs = await collection._collection
-      .find(selector, { transform: null, reactive: false })
-      .fetchAsync();
-    if (hasAfter) {
-      for (const doc of docs) prevDocs.push(EJSON.clone(doc));
-    }
-  }
+  let mutatorPromise;
+  let completionPromise;
 
-  // Before hooks — run per-doc
-  if (hasBefore) {
-    let abort = false;
-    for (const hookEntry of hooks.before) {
-      for (const doc of docs) {
-        const r = await hookEntry.fn.call(
-          { transform: getTransform(doc) },
-          userId,
-          doc
-        );
-        if (r === false) {
-          abort = true;
-          break;
+  completionPromise = Promise.resolve().then(async function() {
+    if (hasBefore || hasAfter) {
+      docs = await collection._collection
+        .find(selector, { transform: null, reactive: false })
+        .fetchAsync();
+      if (hasAfter) {
+        for (const doc of docs) prevDocs.push(EJSON.clone(doc));
+      }
+    }
+
+    // Before hooks — run per-doc
+    if (hasBefore) {
+      let abort = false;
+      for (const hookEntry of hooks.before) {
+        for (const doc of docs) {
+          const r = await hookEntry.fn.call(
+            { transform: getTransform(doc) },
+            userId,
+            doc
+          );
+          if (r === false) {
+            abort = true;
+            break;
+          }
+        }
+        if (abort) break;
+      }
+      if (abort) return 0;
+    }
+
+    mutatorPromise = coreRemove();
+    withMutatorPromiseMetadata(completionPromise, mutatorPromise);
+
+    const result = await mutatorPromise;
+
+    // After hooks — use pre-removal doc copies
+    if (hasAfter) {
+      for (const hookEntry of hooks.after) {
+        for (const doc of prevDocs) {
+          await hookEntry.fn.call(
+            { transform: getTransform(doc) },
+            userId,
+            doc
+          );
         }
       }
-      if (abort) break;
     }
-    if (abort) return 0;
-  }
 
-  const result = await coreRemove();
+    return result;
+  });
 
-  // After hooks — use pre-removal doc copies
-  if (hasAfter) {
-    for (const hookEntry of hooks.after) {
-      for (const doc of prevDocs) {
-        await hookEntry.fn.call({ transform: getTransform(doc) }, userId, doc);
-      }
-    }
-  }
-
-  return result;
+  prepareMutatorPromiseMetadata(collection, completionPromise);
+  return completionPromise;
 }
 
-export async function runUpsertHooks(
+export function runUpsertHooks(
   collection,
   selector,
   modifier,
@@ -567,129 +682,140 @@ export async function runUpsertHooks(
   const hasUpdateAfter = !isEmpty(updateHooks.after);
   const hasInsertAfter = !isEmpty(insertHooks.after);
 
-  if (hasUpsertBefore || hasUpdateAfter) {
-    const fetchOptions = { transform: null, reactive: false };
-    const beforeProjection = {};
+  let mutatorPromise;
+  let completionPromise;
+
+  completionPromise = Promise.resolve().then(async function() {
+    if (hasUpsertBefore || hasUpdateAfter) {
+      const fetchOptions = { transform: null, reactive: false };
+      const beforeProjection = {};
+
+      if (hasUpdateAfter) {
+        Object.assign(
+          beforeProjection,
+          buildHookProjection(
+            collection.hookOptions,
+            updateHooks.after,
+            "after",
+            "update"
+          )
+        );
+      }
+
+      if (Object.keys(beforeProjection).length > 0) {
+        fetchOptions.fields = beforeProjection;
+      }
+
+      docs = await collection._collection
+        .find(selector, fetchOptions)
+        .fetchAsync();
+      docIds = docs.map(d => d._id);
+    }
 
     if (hasUpdateAfter) {
-      Object.assign(
-        beforeProjection,
-        buildHookProjection(
-          collection.hookOptions,
-          updateHooks.after,
-          "after",
-          "update"
-        )
-      );
-    }
+      // Always preserve modifier and options for after hooks.
+      prev.mutator = EJSON.clone(modifier);
+      prev.options = EJSON.clone(options);
 
-    if (Object.keys(beforeProjection).length > 0) {
-      fetchOptions.fields = beforeProjection;
-    }
-
-    docs = await collection._collection
-      .find(selector, fetchOptions)
-      .fetchAsync();
-    docIds = docs.map(d => d._id);
-  }
-
-  if (hasUpdateAfter) {
-    // Always preserve modifier and options for after hooks.
-    prev.mutator = EJSON.clone(modifier);
-    prev.options = EJSON.clone(options);
-
-    const shouldStorePrev = shouldFetchPrevious(
-      collection.hookOptions,
-      updateHooks.after,
-      "after",
-      "update"
-    );
-
-    if (shouldStorePrev) {
-      prev.docs = {};
-      for (const doc of docs) {
-        prev.docs[doc._id] = EJSON.clone(doc);
-      }
-    }
-  }
-
-  // Before upsert hooks
-  if (hasUpsertBefore) {
-    for (const hookEntry of upsertHooks.before) {
-      const r = await hookEntry.fn.call(
-        {},
-        userId,
-        selector,
-        modifier,
-        options
-      );
-      if (r === false) return { numberAffected: 0 };
-    }
-  }
-
-  const ret = await coreUpsert();
-  const insertedId = ret && ret.insertedId;
-  const numberAffected = ret && ret.numberAffected;
-
-  if (insertedId) {
-    // Upsert resulted in an insert — fire after.insert hooks
-    if (hasInsertAfter) {
-      const insertedDocs = await collection._collection
-        .find(
-          { _id: insertedId },
-          { transform: null, reactive: false, limit: 1 }
-        )
-        .fetchAsync();
-      const doc = insertedDocs[0];
-      if (doc) {
-        for (const hookEntry of insertHooks.after) {
-          await hookEntry.fn.call(
-            { transform: getTransform(doc), _id: insertedId },
-            userId,
-            doc
-          );
-        }
-      }
-    }
-  } else {
-    // Upsert resulted in an update — fire after.update hooks
-    if (hasUpdateAfter && docIds.length > 0) {
-      const fields = getFields(modifier);
-      const afterFetchOptions = { transform: null, reactive: false };
-      const afterProjection = buildHookProjection(
+      const shouldStorePrev = shouldFetchPrevious(
         collection.hookOptions,
         updateHooks.after,
         "after",
         "update"
       );
-      if (Object.keys(afterProjection).length > 0) {
-        afterFetchOptions.fields = afterProjection;
-      }
 
-      const afterDocs = await collection._collection
-        .find({ _id: { $in: docIds } }, afterFetchOptions)
-        .fetchAsync();
-
-      for (const hookEntry of updateHooks.after) {
-        for (const doc of afterDocs) {
-          await hookEntry.fn.call(
-            {
-              transform: getTransform(doc),
-              previous: prev.docs && prev.docs[doc._id],
-              affected: numberAffected
-            },
-            userId,
-            doc,
-            fields,
-            prev.mutator,
-            prev.options
-          );
+      if (shouldStorePrev) {
+        prev.docs = {};
+        for (const doc of docs) {
+          prev.docs[doc._id] = EJSON.clone(doc);
         }
       }
     }
-  }
 
-  return ret;
+    // Before upsert hooks
+    if (hasUpsertBefore) {
+      for (const hookEntry of upsertHooks.before) {
+        const r = await hookEntry.fn.call(
+          {},
+          userId,
+          selector,
+          modifier,
+          options
+        );
+        if (r === false) return { numberAffected: 0 };
+      }
+    }
+
+    mutatorPromise = coreUpsert();
+    withMutatorPromiseMetadata(completionPromise, mutatorPromise);
+
+    const ret = await mutatorPromise;
+    const insertedId = ret && ret.insertedId;
+    const numberAffected = ret && ret.numberAffected;
+
+    if (insertedId) {
+      // Upsert resulted in an insert — fire after.insert hooks
+      if (hasInsertAfter) {
+        const insertedDocs = await collection._collection
+          .find(
+            { _id: insertedId },
+            { transform: null, reactive: false, limit: 1 }
+          )
+          .fetchAsync();
+        const doc = insertedDocs[0];
+        if (doc) {
+          for (const hookEntry of insertHooks.after) {
+            await hookEntry.fn.call(
+              { transform: getTransform(doc), _id: insertedId },
+              userId,
+              doc
+            );
+          }
+        }
+      }
+    } else {
+      // Upsert resulted in an update — fire after.update hooks
+      if (hasUpdateAfter && docIds.length > 0) {
+        const fields = getFields(modifier);
+        const afterFetchOptions = { transform: null, reactive: false };
+        const afterProjection = buildHookProjection(
+          collection.hookOptions,
+          updateHooks.after,
+          "after",
+          "update"
+        );
+        if (Object.keys(afterProjection).length > 0) {
+          afterFetchOptions.fields = afterProjection;
+        }
+
+        const afterDocs = await collection._collection
+          .find({ _id: { $in: docIds } }, afterFetchOptions)
+          .fetchAsync();
+
+        for (const hookEntry of updateHooks.after) {
+          for (const doc of afterDocs) {
+            await hookEntry.fn.call(
+              {
+                transform: getTransform(doc),
+                previous: prev.docs && prev.docs[doc._id],
+                affected: numberAffected
+              },
+              userId,
+              doc,
+              fields,
+              prev.mutator,
+              prev.options
+            );
+          }
+        }
+      }
+    }
+
+    return ret;
+  });
+
+  prepareMutatorPromiseMetadata(collection, completionPromise);
+  return completionPromise;
 }
 
 export function runFindHooks(collection, selector, options, coreFind) {
@@ -701,10 +827,7 @@ export function runFindHooks(collection, selector, options, coreFind) {
   // Before find hooks — must be synchronous
   if (hasBefore) {
     for (const hookEntry of hooks.before) {
-      if (
-        hookEntry.fn.constructor &&
-        hookEntry.fn.constructor.name === "AsyncFunction"
-      ) {
+      if (isAsyncHookFunction(hookEntry.fn)) {
         throw new Error("Cannot use async function as before.find hook");
       }
       const result = hookEntry.fn.call({}, userId, selector, options);

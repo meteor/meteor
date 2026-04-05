@@ -56,10 +56,16 @@ export const SyncMethods = {
    * @returns {Object}
    */
   findOne(...args) {
-    return this._collection.findOne(
+    const cursor = this.find(
       this._getFindSelector(args),
-      this._getFindOptions(args)
+      Object.assign({}, this._getFindOptions(args), { limit: 1 })
     );
+
+    if (!cursor) {
+      return undefined;
+    }
+
+    return cursor.fetch()[0];
   },
 
 
