@@ -33,6 +33,14 @@ can run Meteor directly from a Git checkout using these steps:
     $ ./meteor --help
     ```
 
+    > **Note for Windows (PowerShell):**
+    >
+    > * In PowerShell, use `.\meteor` (not `./meteor`).
+    > * Meteor may need `7z.exe` available in your `PATH` to download/extract binaries (dev_bundle).
+    >   * Verify: `where.exe 7z`
+    >   * If missing, install 7-Zip and ensure it is on your PATH (for example via `choco install 7zip -y` or `scoop install 7zip`).
+
+
 3. **Ready to Go!**
 
     Your local Meteor checkout is now ready to use!  You can use this `./meteor`
@@ -55,6 +63,35 @@ can run Meteor directly from a Git checkout using these steps:
     >        TOOL_NODE_FLAGS="--inspect-brk" mymeteor
     > 
     > Then you can use the chrome debugger inside `chrome://inspect`.
+
+### Testing a fork branch
+
+When reviewing a pull request or testing changes from a contributor's fork, use the `checkout-pr.js` script to set up a local branch automatically:
+
+```sh
+# From a PR URL (requires gh CLI or falls back to GitHub API via curl)
+$ npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
+
+# From a user:branch shorthand
+$ npm run checkout:pr -- <user>:<branch>
+
+# From a full fork repo URL and branch name (HTTPS)
+$ npm run checkout:pr -- <fork-repo-url> <branch>
+
+# From a full fork repo URL and branch name (SSH)
+$ npm run checkout:pr -- git@github.com:<user>/<repo>.git <branch>
+```
+
+The script will:
+
+1. Add the fork as a git remote (named after the fork owner) if not already present
+2. Fetch the target branch
+3. Create (or update) a local branch named `fork/<owner>/<branch>`
+4. Print instructions for switching back to your previous branch
+
+For upstream PRs (branches on `meteor/meteor` itself), the script detects the existing `origin` remote and checks out the branch directly without the `fork/` prefix.
+
+If you run the script again for the same fork branch, it will fetch the latest changes and update the local branch.
 
 ### Notes when running from a checkout
 
