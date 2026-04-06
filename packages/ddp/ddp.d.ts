@@ -6,7 +6,7 @@ export namespace DDP {
     call(method: string, ...parameters: any[]): any;
     callAsync(method: string, ...parameters: any[]): Promise<any>;
     apply(method: string, ...parameters: any[]): any;
-    methods(IMeteorMethodsDictionary: any): any;
+    methods(methods: Record<string, (this: DDPCommon.MethodInvocation, ...args: unknown[]) => unknown>): void;
     status(): DDPStatus;
     reconnect(): void;
     disconnect(): void;
