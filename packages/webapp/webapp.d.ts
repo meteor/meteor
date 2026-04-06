@@ -27,10 +27,10 @@ export declare module WebApp {
   var clientPrograms: {
     [key: string]: {
       format: string;
-      manifest: any;
+      manifest: Record<string, unknown>[];
       version: string;
-      cordovaCompatibilityVersions?: any;
-      PUBLIC_SETTINGS: any;
+      cordovaCompatibilityVersions?: Record<string, string>;
+      PUBLIC_SETTINGS: Record<string, unknown>;
     };
   };
   /**
@@ -73,7 +73,7 @@ export declare module WebAppInternals {
   var NpmModules: {
     [key: string]: {
       version: string;
-      module: any;
+      module: unknown;
     };
   };
   function identifyBrowser(userAgentString: string): {
@@ -88,9 +88,9 @@ export declare module WebAppInternals {
   ): Function;
   function generateBoilerplateInstance(
     arch: string,
-    manifest: any,
-    additionalOptions: any
-  ): any;
+    manifest: Record<string, unknown>[],
+    additionalOptions: Record<string, unknown>
+  ): unknown;
 
   function staticFilesMiddleware(
     staticFiles: StaticFiles,
@@ -109,5 +109,5 @@ export declare module WebAppInternals {
   function setBundledJsCssPrefix(bundledJsCssPrefix: string): void;
   function addStaticJs(): void;
   function getBoilerplate(request: http.IncomingMessage, arch: string): string;
-  var additionalStaticJs: any;
+  var additionalStaticJs: Record<string, string>;
 }
