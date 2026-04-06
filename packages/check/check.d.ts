@@ -12,7 +12,7 @@ export namespace Match {
           typeof Boolean |
           typeof Object |
           typeof Function |
-          (new (...args: any[]) => any) |
+          (new (...args: unknown[]) => unknown) |
           undefined | null | string | number | boolean |
           [Pattern] |
           {[key: string]: Pattern} |
@@ -26,7 +26,7 @@ export namespace Match {
           T extends typeof Object ? object :
           T extends typeof Function ? Function :
           T extends undefined | null | string | number | boolean ? T :
-          T extends new (...args: any[]) => infer U ? U :
+          T extends new (...args: unknown[]) => infer U ? U :
           T extends [Pattern] ? PatternMatch<T[0]>[] :
           T extends {[key: string]: Pattern} ? {[K in keyof T]: PatternMatch<T[K]>} :
           unknown;
