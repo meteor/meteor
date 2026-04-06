@@ -13,7 +13,11 @@ import {
 } from 'path';
 import nsfw from 'vscode-nsfw';
 
-const pathwatcher = require('pathwatcher');
+const pathwatcher: {
+  watch: (absPath: string, callback: (event: string, filename: string) => void) => { close: () => void };
+  closeAllWatchers: () => void;
+  getWatchedPaths: () => string[];
+} = require('pathwatcher');
 
 // Default to prioritizing changed files, but disable that behavior (and
 // thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
@@ -51,7 +55,7 @@ let watcherEnabled = ! JSON.parse(
     process.env.METEOR_WATCH_FORCE_POLLING || "false"
 );
 
-const entriesByIno = new Map;
+const entriesByIno = new Map<number | bigint, Entry>();
 
 export type SafeWatcher = {
     close: () => void;
@@ -298,7 +302,7 @@ export function closeAllWatchers() {
     });
 }
 
-const statWatchers = Object.create(null);
+const statWatchers: Record<string, { interval: number; changeListeners: Array<(current: Stats, previous: Stats) => void>; stat: Stats | null }> = Object.create(null);
 
 function statWatch(
     absPath: string,

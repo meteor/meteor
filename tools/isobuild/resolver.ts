@@ -22,7 +22,7 @@ import {
 } from "../fs/optimistic";
 
 const nativeModulesMap: Record<string, string> = Object.create(null);
-const nativeNames = require('module').builtinModules;
+const nativeNames: string[] = require('module').builtinModules;
 
 nativeNames.forEach((id: string) => {
   // When a native Node module is imported, we register a dependency on a

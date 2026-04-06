@@ -29,12 +29,18 @@ import {
 } from "../fs/files";
 import rspackHelpers from "../tool-env/rspack";
 
-const { SourceNode, SourceMapConsumer } = require("source-map");
+const { SourceNode, SourceMapConsumer }: {
+  SourceNode: {
+    new (line: number | null, column: number | null, source: string | null, chunks?: (string | unknown)[]): { toStringWithSourceMap: (opts: { file: string }) => { code: string; map: { toJSON: () => Record<string, unknown> } } };
+    fromStringWithSourceMap: (code: string, consumer: unknown) => { toStringWithSourceMap: (opts: { file: string }) => { code: string; map: { toJSON: () => Record<string, unknown> } } };
+  };
+  SourceMapConsumer: new (map: Record<string, unknown>) => { originalPositionFor: (pos: { line: number; column: number }) => { source: string | null; line: number | null; column: number | null }; destroy: () => void };
+} = require("source-map");
 
 const {
   relative: posixRelative,
   dirname: posixDirname,
-} = require("path").posix;
+}: { relative: (from: string, to: string) => string; dirname: (path: string) => string } = require("path").posix;
 
 import {
   optimisticReadFile,
@@ -45,9 +51,9 @@ import {
 } from "../fs/optimistic";
 
 import { wrap } from "optimism";
-const { compile: reifyCompile } = require("@meteorjs/reify/lib/compiler");
-const { parse: reifyAcornParse } = require("@meteorjs/reify/lib/parsers/acorn");
-const { parse: reifyBabelParse } = require("@meteorjs/reify/lib/parsers/babel");
+const { compile: reifyCompile }: { compile: (code: string, options?: Record<string, unknown>) => { code: string } } = require("@meteorjs/reify/lib/compiler");
+const { parse: reifyAcornParse }: { parse: (code: string) => Record<string, unknown> } = require("@meteorjs/reify/lib/parsers/acorn");
+const { parse: reifyBabelParse }: { parse: (code: string) => Record<string, unknown> } = require("@meteorjs/reify/lib/parsers/babel");
 
 import Resolver, { Resolution } from "./resolver";
 import LRUCache from 'lru-cache';
@@ -748,7 +754,7 @@ export default class ImportScanner {
       "\n\n",
       await getChunk(newFile)
     ]).toStringWithSourceMap({
-      file: oldFile.servePath || newFile.servePath
+      file: oldFile.servePath || newFile.servePath || ""
     });
 
     oldFile.dataString = combinedDataString;

@@ -31,9 +31,9 @@ function makeOptimistic<
 ): OptimisticWrapperFunction<TArgs, TResult> {
   fn = Profile("optimistic " + name, fn);
 
-  const wrapper = wrap(ENABLED ? function (this: any) {
-    maybeDependOnPath(arguments[0]);
-    return fn.apply(this, arguments as any);
+  const wrapper = wrap(ENABLED ? function (this: unknown) {
+    maybeDependOnPath(arguments[0] as string);
+    return fn.apply(this, arguments as unknown as TArgs);
   } as typeof fn : fn, {
     makeCacheKey(...args: TArgs) {
       if (! ENABLED) {
@@ -41,12 +41,12 @@ function makeOptimistic<
         return;
       }
 
-      const path = args[0];
+      const path = args[0] as string;
       if (! pathIsAbsolute(path)) {
         return;
       }
 
-      if (! args.every(arg => typeof arg === "string")) {
+      if (! args.every((arg: unknown) => typeof arg === "string")) {
         // If any of the arguments is not a string, then we won't cache the
         // result of the corresponding file.* method invocation.
         return;
@@ -56,7 +56,7 @@ function makeOptimistic<
     },
 
     subscribe(...args: TArgs) {
-      const path = args[0];
+      const path = args[0] as string;
 
       if (! shouldWatch(path)) {
         return;
