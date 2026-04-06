@@ -52,7 +52,7 @@ export namespace EJSON {
     options?: { keyOrderSensitive?: boolean | undefined }
   ): boolean;
 
-  function fromJSONValue(val: JSONable): any;
+  function fromJSONValue(val: JSONable): EJSONableProperty;
 
   function isBinary(x: Object): x is Uint8Array;
   function newBinary(size: number): Uint8Array;
