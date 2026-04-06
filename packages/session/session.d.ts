@@ -1,4 +1,4 @@
-import { EJSONable } from 'meteor/ejson';
+type SessionValue = string | number | boolean | Record<string, unknown> | unknown[] | Date | Uint8Array | null | undefined;
 
 export namespace Session {
   /**
@@ -8,7 +8,7 @@ export namespace Session {
    * @param key The name of the session variable to test
    * @param value The value to test against
    */
-  function equals(key: string, value: string | number | boolean | any): boolean;
+  function equals(key: string, value: string | number | boolean | null | undefined): boolean;
 
   /**
    * Get the value of a session variable. If inside a reactive
@@ -19,7 +19,7 @@ export namespace Session {
    * session.
    * @param key The name of the session variable to return
    */
-  function get(key: string): any;
+  function get(key: string): SessionValue;
 
   /**
    * Set a variable in the session. Notify any listeners that the value
@@ -29,7 +29,7 @@ export namespace Session {
    * @param key The key to set, eg, `selectedItem`
    * @param value The new value for `key`
    */
-  function set(key: string, value: EJSONable | any): void;
+  function set(key: string, value: SessionValue): void;
 
   /**
    * Set a variable in the session if it hasn't been set before.
@@ -37,5 +37,5 @@ export namespace Session {
    * @param key The key to set, eg, `selectedItem`
    * @param value The new value for `key`
    */
-  function setDefault(key: string, value: EJSONable | any): void;
+  function setDefault(key: string, value: SessionValue): void;
 }
