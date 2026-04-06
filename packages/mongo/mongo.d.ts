@@ -15,7 +15,7 @@ export namespace Mongo {
 
   export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: string | NpmModuleMongodb.ObjectId };
 
-  type SortSpecifier = NpmModuleMongodb.Sort;
+  export type SortSpecifier = NpmModuleMongodb.Sort;
 
   export interface FieldSpecifier {
     [id: string]: Number;
