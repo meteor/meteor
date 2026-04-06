@@ -1,11 +1,12 @@
 import { Meteor } from 'meteor/meteor';
+import { EJSONable } from 'meteor/ejson';
 
 export namespace DDP {
   interface DDPStatic {
-    subscribe(name: string, ...rest: any[]): Meteor.SubscriptionHandle;
-    call(method: string, ...parameters: any[]): any;
-    callAsync(method: string, ...parameters: any[]): Promise<any>;
-    apply(method: string, ...parameters: any[]): any;
+    subscribe(name: string, ...rest: EJSONable[]): Meteor.SubscriptionHandle;
+    call<Result = unknown>(method: string, ...parameters: EJSONable[]): Result;
+    callAsync<Result = unknown>(method: string, ...parameters: EJSONable[]): Promise<Result>;
+    apply<Result = unknown>(method: string, ...parameters: EJSONable[]): Result;
     methods(methods: Record<string, (this: DDPCommon.MethodInvocation, ...args: unknown[]) => unknown>): void;
     status(): DDPStatus;
     reconnect(): void;
