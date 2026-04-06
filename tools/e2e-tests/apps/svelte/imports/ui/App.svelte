@@ -3,13 +3,11 @@
   import { Tracker } from "meteor/tracker";
   import { onMount, onDestroy } from "svelte";
   import { LinksCollection } from "../api/links";
-
-  let counter = 0;
-  const addToCounter = () => { counter += 1 };
+  import { getCounter, addToCounter } from './counter.svelte';
 
   let handle;
-  let subIsReady = false;
-  let links = [];
+  let subIsReady = $state(false);
+  let links = $state([]);
 
   let computation; // Tracker.autorun handle
 
@@ -37,8 +35,8 @@
 
 <div class="container">
   <h1>Welcome to Meteor!</h1>
-  <button on:click={addToCounter}>Click Me</button>
-  <p>You've pressed the button {counter} times.</p>
+  <button onclick={addToCounter}>Click Me</button>
+  <p>You've pressed the button {getCounter()} times.</p>
 
   <h2>Learn Meteor!</h2>
   {#if subIsReady}
