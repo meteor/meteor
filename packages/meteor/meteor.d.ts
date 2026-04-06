@@ -63,14 +63,14 @@ export namespace Meteor {
     emails?: UserEmail[] | undefined;
     createdAt?: Date | undefined;
     profile?: UserProfile;
-    services?: any;
+    services?: Record<string, Record<string, unknown>>;
   }
 
   function user(options?: {
-    fields?: Mongo.FieldSpecifier | undefined;
+    fields?: Record<string, number> | undefined;
   }): User | null;
   function userAsync(options?: {
-    fields?: Mongo.FieldSpecifier | undefined;
+    fields?: Record<string, number> | undefined;
   }): Promise<Meteor.User | null>;
 
   function userId(): string | null;
