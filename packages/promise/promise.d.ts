@@ -1,16 +1,16 @@
 export declare class Promise<T> extends globalThis.Promise<T> {
   static async<
-    Fn extends (this: This, ...args: Args) => any,
+    Fn extends (this: This, ...args: Args) => unknown,
     This,
-    Args extends any[]
+    Args extends unknown[]
   >(
     fn: Fn,
     allowReuseOfCurrentFiber?: boolean
   ): (this: This, ...args: Args) => Promise<ReturnType<Fn>>;
   static asyncApply<
-    Fn extends (this: This, ...args: Args) => any,
+    Fn extends (this: This, ...args: Args) => unknown,
     This,
-    Args extends any[]
+    Args extends unknown[]
   >(
     fn: Fn,
     context: This,
