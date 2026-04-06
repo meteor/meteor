@@ -85,7 +85,7 @@ export function parse(err: Error): {
  * the bottom of the stack". Frames below the bottom are the outer
  * context of the framework running the user's code.
  */
-export function markBottom(f: Function, context: any) {
+export function markBottom(f: Function, context?: unknown) {
   /* eslint-disable camelcase */
   return function __bottom_mark__() {
     // @ts-ignore: Implicit this
@@ -102,7 +102,7 @@ export function markBottom(f: Function, context: any) {
  * framework and executed by user code whose internal behavior
  * should not be exposed.
  */
-export function markTop(f: Function, context: any) {
+export function markTop(f: Function, context?: unknown) {
   /* eslint-disable camelcase */
   return function __top_mark__() {
     // @ts-ignore: Implicit this
