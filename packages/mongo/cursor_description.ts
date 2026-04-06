@@ -1,4 +1,4 @@
-interface CursorOptions {
+export interface CursorOptions {
   limit?: number;
   skip?: number;
   sort?: Record<string, 1 | -1>;
@@ -7,7 +7,11 @@ interface CursorOptions {
   disableOplog?: boolean;
   _disableOplog?: boolean;
   tailable?: boolean;
-  transform?: (doc: any) => any;
+  pollingThrottleMs?: number;
+  pollingIntervalMs?: number;
+  _pollingInterval?: number;
+  maxTimeMs?: number;
+  transform?: (doc: Record<string, unknown>) => Record<string, unknown>;
 }
 
 /**
@@ -20,10 +24,10 @@ interface CursorOptions {
  */
 export class CursorDescription {
   collectionName: string;
-  selector: Record<string, any>;
+  selector: Record<string, unknown>;
   options: CursorOptions;
 
-  constructor(collectionName: string, selector: any, options?: CursorOptions) {
+  constructor(collectionName: string, selector: Record<string, unknown>, options?: CursorOptions) {
     this.collectionName = collectionName;
     // @ts-ignore
     this.selector = Mongo.Collection._rewriteSelector(selector);

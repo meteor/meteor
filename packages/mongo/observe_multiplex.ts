@@ -22,12 +22,12 @@ export type ObserveHandleCallback =
 export class ObserveMultiplexer {
   private readonly _ordered: boolean;
   private readonly _onStop: () => void;
-  private _queue: any;
+  private _queue: { runTask: (fn: () => void | Promise<void>) => Promise<void>; queueTask: (fn: () => void | Promise<void>) => Promise<void> };
   private _handles: { [key: string]: ObserveHandle } | null;
   private _resolver: ((value?: unknown) => void) | null;
   private readonly _readyPromise: Promise<boolean | void>;
   private _isReady: boolean;
-  private _cache: any;
+  private _cache: { applyChange: Record<string, (...args: unknown[]) => Promise<void>>; docs: { forEach: (fn: (doc: Record<string, unknown>, id: string) => void) => void } };
   private _addHandleTasksScheduledButNotPerformed: number;
 
   constructor({ ordered, onStop = () => {} }: ObserveMultiplexerOptions) {
@@ -55,7 +55,7 @@ export class ObserveMultiplexer {
     this._addHandleTasksScheduledButNotPerformed = 0;
 
     this.callbackNames().forEach((callbackName) => {
-      (this as any)[callbackName] = (...args: any[]) => {
+      (this as Record<string, unknown>)[callbackName] = (...args: unknown[]) => {
         this._applyCallback(callbackName, args);
       };
     });
@@ -165,7 +165,7 @@ export class ObserveMultiplexer {
     return !!this._isReady;
   }
 
-  _applyCallback(callbackName: string, args: any[]) {
+  _applyCallback(callbackName: string, args: unknown[]) {
     this._queue.queueTask(async () => {
       if (!this._handles) return;
 
@@ -183,17 +183,17 @@ export class ObserveMultiplexer {
 
         if (!handle) return;
 
-        const callback = (handle as any)[`_${callbackName}`];
+        const callback = (handle as Record<string, unknown>)[`_${callbackName}`] as ((...args: unknown[]) => unknown) | undefined;
 
         if (!callback) continue;
 
-        const result = callback.apply(
+        const result: unknown = callback.apply(
           null,
           handle.nonMutatingCallbacks ? args : EJSON.clone(args)
         );
 
-        if (result && Meteor._isPromise(result)) {
-          result.catch((error) => {
+        if (result && typeof result === 'object' && result !== null && 'catch' in result) {
+          (result as Promise<unknown>).catch((error: unknown) => {
             console.error(
               `Error in observeChanges callback ${callbackName}:`,
               error
@@ -212,18 +212,19 @@ export class ObserveMultiplexer {
     const addPromises: (Promise<void> | void)[] = [];
 
     // note: docs may be an _IdMap or an OrderedDict
-    this._cache.docs.forEach((doc: any, id: string) => {
+    this._cache.docs.forEach((doc: Record<string, unknown>, id: string) => {
       if (!(handle._id in this._handles!)) {
         throw Error("handle got removed before sending initial adds!");
       }
 
-      const { _id, ...fields } = handle.nonMutatingCallbacks
+      const clonedDoc: Record<string, unknown> = handle.nonMutatingCallbacks
         ? doc
-        : EJSON.clone(doc);
+        : EJSON.clone(doc) as Record<string, unknown>;
+      const { _id: _docId, ...docFields } = clonedDoc;
 
       const promise = new Promise<void>((resolve, reject) => {
         try {
-          const r = this._ordered ? add(id, fields, null) : add(id, fields);
+          const r = this._ordered ? add(id, docFields, null) : add(id, docFields);
           resolve(r);
         } catch (error) {
           reject(error);
@@ -236,7 +237,7 @@ export class ObserveMultiplexer {
     await Promise.allSettled(addPromises).then((p) => {
       p.forEach((result) => {
         if (result.status === "rejected") {
-          console.error(`Error in adds for handle: ${result.reason}`);
+          console.error(`Error in adds for handle: ${String(result.reason)}`);
         }
       });
     });

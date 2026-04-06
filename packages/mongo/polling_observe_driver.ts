@@ -1,10 +1,20 @@
 import throttle from 'lodash.throttle';
 import { listenAll } from './mongo_driver';
 import { ObserveMultiplexer } from './observe_multiplex';
+import { CursorDescription } from './cursor_description';
+import { MongoConnection } from './mongo_connection';
+
+interface WriteHandle {
+  committed: () => Promise<void>;
+}
+
+interface AsyncQueue {
+  runTask: (fn: () => void | Promise<void>) => Promise<void>;
+}
 
 interface PollingObserveDriverOptions {
-  cursorDescription: any;
-  mongoHandle: any;
+  cursorDescription: CursorDescription;
+  mongoHandle: MongoConnection;
   ordered: boolean;
   multiplexer: ObserveMultiplexer;
   _testOnlyPollCallback?: () => void;
@@ -25,18 +35,18 @@ const POLLING_INTERVAL_MS = +(process.env.METEOR_POLLING_INTERVAL_MS || '') || 1
  */
 export class PollingObserveDriver {
   private _options: PollingObserveDriverOptions;
-  private _cursorDescription: any;
-  private _mongoHandle: any;
+  private _cursorDescription: CursorDescription;
+  private _mongoHandle: MongoConnection;
   private _ordered: boolean;
-  private _multiplexer: any;
-  private _stopCallbacks: Array<() => Promise<void>>;
+  private _multiplexer: ObserveMultiplexer;
+  private _stopCallbacks: Array<() => void | Promise<void>>;
   private _stopped: boolean;
-  private _cursor: any;
-  private _results: any;
+  private _cursor: { getRawObjects: (ordered: boolean) => Promise<unknown> };
+  private _results: unknown;
   private _pollsScheduledButNotStarted: number;
-  private _pendingWrites: any[];
-  private _ensurePollIsScheduled: Function;
-  private _taskQueue: any;
+  private _pendingWrites: WriteHandle[];
+  private _ensurePollIsScheduled: (() => void) & { cancel?: () => void };
+  private _taskQueue: AsyncQueue;
   private _testOnlyPollCallback?: () => void;
 
   constructor(options: PollingObserveDriverOptions) {
@@ -60,15 +70,15 @@ export class PollingObserveDriver {
       this._cursorDescription.options.pollingThrottleMs || POLLING_THROTTLE_MS
     );
 
-    this._taskQueue = new (Meteor as any)._AsynchronousQueue();
+    this._taskQueue = new (Meteor as unknown as { _AsynchronousQueue: new () => AsyncQueue })._AsynchronousQueue();
   }
 
   async _init(): Promise<void> {
     const options = this._options;
     const listenersHandle = await listenAll(
       this._cursorDescription,
-      (notification: any) => {
-        const fence = (DDPServer as any)._getCurrentFence();
+      (_notification: Record<string, unknown>) => {
+        const fence: { beginWrite: () => WriteHandle } | null = (DDPServer as unknown as { _getCurrentFence: () => { beginWrite: () => WriteHandle } | null })._getCurrentFence();
         if (fence) {
           this._pendingWrites.push(fence.beginWrite());
         }
@@ -100,7 +110,7 @@ export class PollingObserveDriver {
 
     await this._unthrottledEnsurePollIsScheduled();
 
-    (Package['facts-base'] as any)?.Facts.incrementServerFact(
+    (Package['facts-base'] as { Facts?: { incrementServerFact: (pkg: string, fact: string, val: number) => void } } | undefined)?.Facts?.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", 1);
   }
 
@@ -136,12 +146,12 @@ export class PollingObserveDriver {
     if (this._stopped) return;
 
     let first = false;
-    let newResults;
+    let newResults: unknown;
     let oldResults = this._results;
 
     if (!oldResults) {
       first = true;
-      oldResults = this._ordered ? [] : new (LocalCollection as any)._IdMap;
+      oldResults = this._ordered ? [] : new (LocalCollection as unknown as { _IdMap: new () => Map<string, unknown> })._IdMap;
     }
 
     this._testOnlyPollCallback?.();
@@ -151,13 +161,14 @@ export class PollingObserveDriver {
 
     try {
       newResults = await this._cursor.getRawObjects(this._ordered);
-    } catch (e: any) {
-      if (first && typeof(e.code) === 'number') {
+    } catch (e: unknown) {
+      const err = e as { code?: number; message?: string };
+      if (first && typeof(err.code) === 'number') {
         await this._multiplexer.queryError(
           new Error(
             `Exception while polling query ${
               JSON.stringify(this._cursorDescription)
-            }: ${e.message}`
+            }: ${err.message}`
           )
         );
       }
@@ -169,7 +180,7 @@ export class PollingObserveDriver {
     }
 
     if (!this._stopped) {
-      (LocalCollection as any)._diffQueryChanges(
+      (LocalCollection as unknown as { _diffQueryChanges: (ordered: boolean, oldResults: unknown, newResults: unknown, multiplexer: ObserveMultiplexer) => void })._diffQueryChanges(
         this._ordered, oldResults, newResults, this._multiplexer);
     }
 
@@ -195,7 +206,7 @@ export class PollingObserveDriver {
       await w.committed();
     }
 
-    (Package['facts-base'] as any)?.Facts.incrementServerFact(
+    (Package['facts-base'] as { Facts?: { incrementServerFact: (pkg: string, fact: string, val: number) => void } } | undefined)?.Facts?.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);
   }
 }
