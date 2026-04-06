@@ -18,6 +18,7 @@ import {
 } from './socket_file.js';
 import cluster from 'cluster';
 import { execSync } from 'child_process';
+import { onMessage } from 'meteor/inter-process-messaging';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
@@ -794,8 +795,6 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 };
 
-import { onMessage } from 'meteor/inter-process-messaging';
-
 onMessage('webapp-pause-client', async ({ arch }) => {
   await WebAppInternals.pauseClient(arch);
 });
@@ -1448,7 +1447,15 @@ async function runWebAppServer() {
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
         }
-        chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        try {
+          chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        } catch (error) {
+          if (error.code === 'EPERM' || error.code === 'EACCES') {
+            console.error(`Skipping UNIX_SOCKET_GROUP change for "${unixSocketGroup}" because current user lacks permission.`);
+          } else {
+            throw error;
+          }
+        }
       }
 
       registerSocketFileCleanup(unixSocketPath);
