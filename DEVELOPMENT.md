@@ -286,3 +286,11 @@ Good commit messages are very important and you should make sure to explain what
 * A commit description which clearly explains the change if it's not super-obvious by the title.  Some description always helps!
 * Reference related issues and pull-requests by number in the description body (e.g. "#9999").
 * Add "Fixes" before the issue number if the addition of that commit fully resolves the issue.
+
+## Releases and AI Skills
+
+When preparing a release, Meteor uses AI skills to automate generating changelogs and blog posts. 
+If you are managing a release, you can use these skills (defined in `.github/skills/`):
+
+* **Changelog Generation**: See [`changelog` skill](.github/skills/changelog/SKILL.MD) to generate PR-based changelogs.
+* **Blog Post Generation**: See [`release-blog-post` skill](.github/skills/release-blog-post/SKILL.md) to generate an engaging release announcement from PRs.

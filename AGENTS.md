@@ -49,6 +49,7 @@ Load these for detailed context on specific topics:
 | [packages](.github/skills/packages/SKILL.md) | Finding packages by feature, understanding dependencies |
 | [modern-tools](.github/skills/modern-tools/SKILL.md) | tools-core utilities, rspack, modern integrations |
 | [ai-context](.github/skills/ai-context/SKILL.md) | Creating, updating, or maintaining AI documentation files |
+| [release-blog-post](.github/skills/release-blog-post/SKILL.md) | Generating release blog posts from PR data |
 
 ## Package Domains
 
