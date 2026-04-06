@@ -1,9 +1,12 @@
 import { DummyDocumentView } from "./dummy_document_view";
 import { SessionDocumentView } from "./session_document_view";
 
+/** Represents EJSON-serializable field values in the DDP protocol */
+type FieldValue = string | number | boolean | Date | Uint8Array | Record<string, unknown> | unknown[] | null | undefined;
+
 interface SessionCallbacks {
-  added: (collectionName: string, id: string, fields: Record<string, any>) => void;
-  changed: (collectionName: string, id: string, fields: Record<string, any>) => void;
+  added: (collectionName: string, id: string, fields: Record<string, FieldValue>) => void;
+  changed: (collectionName: string, id: string, fields: Record<string, FieldValue>) => void;
   removed: (collectionName: string, id: string) => void;
 }
 
@@ -42,18 +45,18 @@ export class SessionCollectionView {
   }
 
   private diffDocument(id: string, prevDV: DocumentView, nowDV: DocumentView): void {
-    const fields: Record<string, any> = {};
+    const fields: Record<string, FieldValue> = {};
     
     DiffSequence.diffObjects(prevDV.getFields(), nowDV.getFields(), {
-      both: (key: string, prev: any, now: any) => {
+      both: (key: string, prev: FieldValue, now: FieldValue) => {
         if (!EJSON.equals(prev, now)) {
           fields[key] = now;
         }
       },
-      rightOnly: (key: string, now: any) => {
+      rightOnly: (key: string, now: FieldValue) => {
         fields[key] = now;
       },
-      leftOnly: (key: string, prev: any) => {
+      leftOnly: (key: string, prev: FieldValue) => {
         fields[key] = undefined;
       }
     });
@@ -61,7 +64,7 @@ export class SessionCollectionView {
     this.callbacks.changed(this.collectionName, id, fields);
   }
 
-  public added(subscriptionHandle: string, id: string, fields: Record<string, any>): void {
+  public added(subscriptionHandle: string, id: string, fields: Record<string, FieldValue>): void {
     let docView: DocumentView | undefined = this.documents.get(id);
     let added = false;
 
@@ -76,7 +79,7 @@ export class SessionCollectionView {
     }
 
     docView.existsIn.add(subscriptionHandle);
-    const changeCollector: Record<string, any> = {};
+    const changeCollector: Record<string, FieldValue> = {};
 
     Object.entries(fields).forEach(([key, value]) => {
       docView!.changeField(
@@ -95,8 +98,8 @@ export class SessionCollectionView {
     }
   }
 
-  public changed(subscriptionHandle: string, id: string, changed: Record<string, any>): void {
-    const changedResult: Record<string, any> = {};
+  public changed(subscriptionHandle: string, id: string, changed: Record<string, FieldValue>): void {
+    const changedResult: Record<string, FieldValue> = {};
     const docView = this.documents.get(id);
 
     if (!docView) {
@@ -128,7 +131,7 @@ export class SessionCollectionView {
       this.callbacks.removed(this.collectionName, id);
       this.documents.delete(id);
     } else {
-      const changed: Record<string, any> = {};
+      const changed: Record<string, FieldValue> = {};
       // remove this subscription from every precedence list
       // and record the changes
       docView.dataByKey.forEach((precedenceList, key) => {
