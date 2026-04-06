@@ -11,16 +11,33 @@ export const OPLOG_COLLECTION = 'oplog.rs';
 let TOO_FAR_BEHIND = +(process.env.METEOR_OPLOG_TOO_FAR_BEHIND || 2000);
 const TAIL_TIMEOUT = +(process.env.METEOR_OPLOG_TAIL_TIMEOUT || 30000);
 
+/** BSON Timestamp from the MongoDB driver */
+type BSONTimestamp = InstanceType<typeof NpmModuleMongodb.Timestamp>;
+
+/** Represents an oplog document field value */
+type OplogFieldValue = string | number | boolean | null | undefined | Record<string, unknown> | unknown[];
+
+/** Operation document in oplog entries */
+interface OplogOperationDoc {
+  _id?: string | Record<string, unknown>;
+  drop?: string;
+  dropDatabase?: number;
+  applyOps?: OplogEntry[];
+  create?: string;
+  idIndex?: Record<string, unknown>;
+  [key: string]: OplogFieldValue | OplogEntry[] | Record<string, unknown> | undefined;
+}
+
 export interface OplogEntry {
   op: string;
-  o: any;
-  o2?: any;
-  ts: any;
+  o: OplogOperationDoc;
+  o2?: { _id: string | Record<string, unknown>; [key: string]: unknown };
+  ts: BSONTimestamp;
   ns: string;
 }
 
 export interface CatchingUpResolver {
-  ts: any;
+  ts: BSONTimestamp;
   resolver: () => void;
 }
 
@@ -44,15 +61,15 @@ export class OplogHandle {
   private _includeNSRegex?: RegExp;
   private _excludeNSRegex?: RegExp;
   private _stopped: boolean;
-  private _tailHandle: any;
+  private _tailHandle: { stop: () => Promise<void> } | null;
   private _readyPromiseResolver: (() => void) | null;
   private _readyPromise: Promise<void>;
-  public _crossbar: any;
+  public _crossbar: { listen: (trigger: OplogTrigger, callback: Function) => { stop: () => Promise<void> }; fire: (trigger: OplogTrigger) => Promise<void> };
   private _catchingUpResolvers: CatchingUpResolver[];
-  private _lastProcessedTS: any;
-  private _onSkippedEntriesHook: any;
+  private _lastProcessedTS: BSONTimestamp | null;
+  private _onSkippedEntriesHook: { register: (callback: Function) => { stop: () => void }; each: (callback: (fn: Function) => boolean) => void };
   private _startTrailingPromise: Promise<void>;
-  private _resolveTimeout: any;
+  private _resolveTimeout: ReturnType<typeof setTimeout> | null;
 
   private _entryQueue = new Meteor._DoubleEndedQueue();
   private _workerActive = false;
@@ -73,10 +90,9 @@ export class OplogHandle {
       factPackage: "mongo-livedata", factName: "oplog-watchers"
     });
 
-    const includeCollections =
-      Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
-    const excludeCollections =
-      Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    const mongoSettings = (Meteor.settings as Record<string, Record<string, Record<string, string[]>>>)?.packages?.mongo;
+    const includeCollections: string[] | undefined = mongoSettings?.oplogIncludeCollections;
+    const excludeCollections: string[] | undefined = mongoSettings?.oplogExcludeCollections;
     if (includeCollections?.length && excludeCollections?.length) {
       throw new Error(
         "Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time."
@@ -115,8 +131,8 @@ export class OplogHandle {
     return true;
   }
 
-  private _getOplogSelector(lastProcessedTS?: any): any {
-    const oplogCriteria: any = [
+  private _getOplogSelector(lastProcessedTS?: BSONTimestamp): Record<string, unknown> {
+    const oplogCriteria: Record<string, unknown>[] = [
       {
         $or: [
           { op: { $in: ["i", "u", "d"] } },
@@ -199,7 +215,7 @@ export class OplogHandle {
     }
   }
 
-  async _onOplogEntry(trigger: OplogTrigger, callback: Function): Promise<{ stop: () => Promise<void> }> {
+  async _onOplogEntry(trigger: OplogTrigger, callback: (notification: OplogTrigger) => void): Promise<{ stop: () => Promise<void> }> {
     if (this._stopped) {
       throw new Error("Called onOplogEntry on stopped handle!");
     }
@@ -214,11 +230,11 @@ export class OplogHandle {
      * @todo Check after we simplify the `bindEnvironment` implementation if we can remove the second wrap.
      */
     callback = Meteor.bindEnvironment(
-      function (notification: any) {
+      function (notification: OplogTrigger) {
         originalCallback(notification);
       },
       // @ts-ignore
-      function (err) {
+      function (err: Error) {
         Meteor._debug("Error in oplog callback", err);
       }
     );
@@ -231,11 +247,11 @@ export class OplogHandle {
     };
   }
 
-  onOplogEntry(trigger: OplogTrigger, callback: Function): Promise<{ stop: () => Promise<void> }> {
+  onOplogEntry(trigger: OplogTrigger, callback: (notification: OplogTrigger) => void): Promise<{ stop: () => Promise<void> }> {
     return this._onOplogEntry(trigger, callback);
   }
 
-  onSkippedEntries(callback: Function): { stop: () => void } {
+  onSkippedEntries(callback: () => void): { stop: () => void } {
     if (this._stopped) {
       throw new Error("Called onSkippedEntries on stopped handle!");
     }
@@ -286,9 +302,9 @@ export class OplogHandle {
       insertAfter--;
     }
 
-    let promiseResolver = null;
+    let promiseResolver: (() => void) | null = null;
 
-    const promiseToAwait = new Promise(r => promiseResolver = r);
+    const promiseToAwait = new Promise<void>(r => promiseResolver = r);
 
     clearTimeout(this._resolveTimeout);
 
@@ -308,7 +324,7 @@ export class OplogHandle {
   }
 
   async _startTailing(): Promise<void> {
-    const mongodbUri = require('mongodb-uri');
+    const mongodbUri: { parse: (uri: string) => { database: string } } = require('mongodb-uri');
     if (mongodbUri.parse(this._oplogUrl).database !== 'local') {
       throw new Error("$MONGO_OPLOG_URL must be set to the 'local' database of a Mongo replica set");
     }
@@ -321,7 +337,7 @@ export class OplogHandle {
     );
 
     try {
-      const isMasterDoc = await this._oplogLastEntryConnection!.db
+      const isMasterDoc: Record<string, unknown> = await this._oplogLastEntryConnection!.db
         .admin()
         .command({ ismaster: 1 });
 
@@ -333,7 +349,7 @@ export class OplogHandle {
         OPLOG_COLLECTION,
         {},
         { sort: { $natural: -1 }, projection: { ts: 1 } }
-      );
+      ) as { ts: BSONTimestamp } | null;
 
       const oplogSelector = this._getOplogSelector(lastOplogEntry?.ts);
       if (lastOplogEntry) {
@@ -348,7 +364,7 @@ export class OplogHandle {
 
       this._tailHandle = this._oplogTailConnection.tail(
         cursorDescription,
-        (doc: any) => {
+        (doc: OplogEntry) => {
           this._entryQueue.push(doc);
           this._maybeStartWorker();
         },
@@ -376,7 +392,7 @@ export class OplogHandle {
             const lastEntry = this._entryQueue.pop();
             this._entryQueue.clear();
 
-            this._onSkippedEntriesHook.each((callback: Function) => {
+            this._onSkippedEntriesHook.each((callback: () => void) => {
               callback();
               return true;
             });
@@ -408,7 +424,7 @@ export class OplogHandle {
     })();
   }
 
-  _setLastProcessedTS(ts: any): void {
+  _setLastProcessedTS(ts: BSONTimestamp): void {
     this._lastProcessedTS = ts;
     while (!isEmpty(this._catchingUpResolvers) && this._catchingUpResolvers[0].ts.lessThanOrEqual(this._lastProcessedTS)) {
       const sequencer = this._catchingUpResolvers.shift()!;
