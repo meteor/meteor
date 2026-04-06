@@ -11,8 +11,8 @@ interface DataEntry {
 }
 
 export class DummyDocumentView {
-  private existsIn: Set<string>;
-  private dataByKey: Map<string, DataEntry[]>;
+  existsIn: Set<string>;
+  dataByKey: Map<string, DataEntry[]>;
 
   constructor() {
     this.existsIn = new Set<string>(); // set of subscriptionHandle

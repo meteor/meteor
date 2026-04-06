@@ -11,8 +11,8 @@ interface ChangeCollector {
 }
 
 export class SessionDocumentView {
-  private existsIn: Set<string>;
-  private dataByKey: Map<string, PrecedenceItem[]>;
+  existsIn: Set<string>;
+  dataByKey: Map<string, PrecedenceItem[]>;
 
   constructor() {
     this.existsIn = new Set(); // set of subscriptionHandle
