@@ -20,7 +20,7 @@ type formatInput = {
   stderr?: string | Error;
 };
 
-export declare function Log(input: LogInput, ...optionalParams: any[]): void;
+export declare function Log(input: LogInput, ...optionalParams: unknown[]): void;
 
 export declare namespace Log {
   var outputFormat: 'json' | 'colored-text';
@@ -29,11 +29,11 @@ export declare namespace Log {
   function _suppress(count: number): void;
   function _intercepted(): string[];
   function _getCallerDetails(): { line: number; file: string };
-  function parse(line: object | string): object
-  function format(object: formatInput, options: { color: true }): object | string;
+  function parse(line: Record<string, unknown> | string): Record<string, unknown>;
+  function format(object: formatInput, options: { color: true }): Record<string, unknown> | string;
   function objFromText(
     line: string,
-    override: object
+    override: Record<string, unknown>
   ): {
     message: string
     level: 'info'
@@ -41,8 +41,8 @@ export declare namespace Log {
     timeInexact: true
   }
 
-  function debug(input: LogInput, ...optionalParams: any[]): void;
-  function info(input: LogInput, ...optionalParams: any[]): void;
-  function warn(input: LogInput, ...optionalParams: any[]): void;
-  function error(input: LogInput, ...optionalParams: any[]): void;
+  function debug(input: LogInput, ...optionalParams: unknown[]): void;
+  function info(input: LogInput, ...optionalParams: unknown[]): void;
+  function warn(input: LogInput, ...optionalParams: unknown[]): void;
+  function error(input: LogInput, ...optionalParams: unknown[]): void;
 }
