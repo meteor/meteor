@@ -23,17 +23,17 @@ export namespace Meteor {
   var meteorRelease: string;
 
   interface ErrorConstructor {
-    new (...args: any[]): Error;
+    new (...args: unknown[]): Error;
     errorType: string;
   }
 
-  function makeErrorType(name: string, constructor: Function): ErrorConstructor;
+  function makeErrorType(name: string, constructor: (this: Error, message: string, reason?: string) => void): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
   interface Settings {
-    public: { [id: string]: any };
-    [id: string]: any;
+    public: Record<string, unknown>;
+    [id: string]: unknown;
   }
   /**
    * `Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data)
@@ -154,7 +154,7 @@ export namespace Meteor {
    * @param methods Dictionary whose keys are method names and values are functions.
    */
   function methods(methods: {
-    [key: string]: (this: MethodThisType, ...args: any[]) => any;
+    [key: string]: (this: MethodThisType, ...args: EJSONableProperty[]) => EJSONableProperty | void | Promise<EJSONableProperty | void>;
   }): void;
 
   /**
@@ -168,7 +168,7 @@ export namespace Meteor {
       | EJSONable[]
       | EJSONableProperty
       | EJSONableProperty[]
-  >(name: string, ...args: any[]): Result;
+  >(name: string, ...args: (EJSONable | EJSONableProperty)[]): Result;
 
   /**
    * Invokes a method with an async stub, passing any number of arguments.
@@ -183,7 +183,7 @@ export namespace Meteor {
       | EJSONableProperty[]
   >(
     name: string,
-    ...args: any[]
+    ...args: (EJSONable | EJSONableProperty)[]
   ): Promise<Result> & {
     stubPromise: Promise<Result>;
     serverPromise: Promise<Result>;
@@ -302,14 +302,14 @@ export namespace Meteor {
    * @param func The function to run
    * @param delay Number of milliseconds to wait between each function call.
    */
-  function setInterval(func: Function, delay: number): number;
+  function setInterval(func: () => void, delay: number): number;
 
   /**
    * Call a function in the future after waiting for a specified delay.
    * @param func The function to run
    * @param delay Number of milliseconds to wait before calling function
    */
-  function setTimeout(func: Function, delay: number): number;
+  function setTimeout(func: () => void, delay: number): number;
   /**
    * Cancel a repeating function call scheduled by `Meteor.setInterval`.
    * @param id The handle returned by `Meteor.setInterval`
@@ -325,14 +325,14 @@ export namespace Meteor {
    * Defer execution of a function to run asynchronously in the background (similar to `Meteor.setTimeout(func, 0)`.
    * @param func The function to run
    */
-  function defer(func: Function): void;
+  function defer(func: () => void): void;
 
   /**
    * Wrap a function so that it only runs in the specified environments.
    * @param func The function to wrap
    * @param options An object with an `on` property that is an array of environment names: `"development"`, `"production"`, and/or `"test"`.
    */
-  function deferrable<T extends Function>(
+  function deferrable<T extends (...args: unknown[]) => unknown>(
     func: T,
     options: { on: Array<"development" | "production" | "test"> }
   ): T | void;
@@ -341,13 +341,13 @@ export namespace Meteor {
    * Wrap a function so that it only runs in development environment.
    * @param func The function to wrap
    */
-  function deferDev<T extends Function>(func: T): T | void;
+  function deferDev<T extends (...args: unknown[]) => unknown>(func: T): T | void;
 
   /**
    * Wrap a function so that it only runs in production environment.
    * @param func The function to wrap
    */
-  function deferProd<T extends Function>(func: T): T | void;
+  function deferProd<T extends (...args: unknown[]) => unknown>(func: T): T | void;
   /** Timeout **/
 
   /** utils **/
@@ -355,7 +355,7 @@ export namespace Meteor {
    * Run code when a client or a server starts.
    * @param func A function to run on startup.
    */
-  function startup(func: Function): void;
+  function startup(func: () => void | Promise<void>): void;
 
   /**
    * Wrap a function that takes a callback function as its final parameter.
@@ -367,12 +367,12 @@ export namespace Meteor {
    * @param func A function that takes a callback as its final parameter
    * @param context Optional `this` object against which the original function will be invoked
    */
-  function wrapAsync<T extends Function>(
-    func: T,
-    context?: ThisParameterType<T>
-  ): Function;
+  function wrapAsync<TFunc extends (...args: unknown[]) => unknown>(
+    func: TFunc,
+    context?: ThisParameterType<TFunc>
+  ): (...args: unknown[]) => unknown;
 
-  function bindEnvironment<TFunc extends Function>(func: TFunc): TFunc;
+  function bindEnvironment<TFunc extends (...args: unknown[]) => unknown>(func: TFunc): TFunc;
 
   class EnvironmentVariable<T> {
     readonly slot: number;
@@ -497,7 +497,11 @@ export namespace Meteor {
    * argument to `onStop`. If a function is passed instead of an object, it
    * is interpreted as an `onReady` callback.
    */
-  function subscribe(name: string, ...args: any[]): Meteor.SubscriptionHandle;
+  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty | {
+    onReady?: () => void;
+    onStop?: (error?: Meteor.Error) => void;
+    onError?: (error: Meteor.Error) => void;
+  } | (() => void))[]): Meteor.SubscriptionHandle;
   /** Pub/Sub **/
 }
 
@@ -524,16 +528,16 @@ export namespace Meteor {
     name: string | null,
     func: (
       this: Subscription,
-      ...args: any[]
+      ...args: EJSONableProperty[]
     ) =>
       | void
-      | Mongo.Cursor<any>
-      | Mongo.Cursor<any>[]
-      | Promise<void | Mongo.Cursor<any> | Mongo.Cursor<any>[]>,
+      | Mongo.Cursor<unknown>
+      | Mongo.Cursor<unknown>[]
+      | Promise<void | Mongo.Cursor<unknown> | Mongo.Cursor<unknown>[]>,
     options?: { is_auto: boolean }
   ): void;
 
-  function _debug(...args: any[]): void;
+  function _debug(...args: unknown[]): void;
 }
 
 export interface Subscription {
@@ -568,7 +572,7 @@ export interface Subscription {
    * Call inside the publish function. Registers a callback function to run when the subscription is stopped.
    * @param func The callback function
    */
-  onStop(func: Function): void;
+  onStop(func: () => void): void;
   /**
    * Call inside the publish function. Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onReady`
    * callback passed to  `Meteor.subscribe`, if any.
