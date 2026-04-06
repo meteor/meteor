@@ -1,4 +1,31 @@
-import { SendMailOptions } from 'nodemailer';
+import { Writable } from 'stream';
+
+interface Address {
+  name: string;
+  address: string;
+}
+
+interface SendMailOptions {
+  from?: string | Address;
+  to?: string | Address | (string | Address)[];
+  cc?: string | Address | (string | Address)[];
+  bcc?: string | Address | (string | Address)[];
+  replyTo?: string | Address;
+  subject?: string;
+  text?: string;
+  html?: string;
+  headers?: Record<string, string | string[]>;
+  attachments?: Array<{
+    filename?: string;
+    content?: string | Buffer;
+    path?: string;
+    contentType?: string;
+    encoding?: string;
+    cid?: string;
+  }>;
+  messageId?: string;
+  [key: string]: unknown;
+}
 
 export namespace Email {
   /**
@@ -40,5 +67,5 @@ export interface MailComposer {
   addHeader(name: string, value: string): void;
   setMessageOption(from: string, to: string, body: string, html: string): void;
   streamMessage(): void;
-  pipe(stream: any /** fs.WriteStream **/): void;
+  pipe(stream: Writable): void;
 }
