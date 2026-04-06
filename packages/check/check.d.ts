@@ -63,8 +63,8 @@ export namespace Match {
    * Calls the function condition with the value as the argument. If condition returns true, this matches. If condition throws a `Match.Error` or returns false, this fails. If condition throws
    * any other error, that error is thrown from the call to `check` or `Match.test`.
    */
-  function Where<T>(condition: (val: any) => val is T): Matcher<T>;
-  function Where(condition: (val: any) => boolean): Matcher<any>;
+  function Where<T>(condition: (val: unknown) => val is T): Matcher<T>;
+  function Where(condition: (val: unknown) => boolean): Matcher<unknown>;
 
   var NonEmptyString: Matcher<string>;
   /**
@@ -73,7 +73,7 @@ export namespace Match {
    * @param pattern The pattern to match `value` against
    */
   function test<T extends Pattern>(
-    value: any,
+    value: unknown,
     pattern: T
   ): value is PatternMatch<T>;
 }
@@ -91,7 +91,7 @@ export namespace Match {
  * @param {Boolean} [options.throwAllErrors=false] If true, throw all errors
  */
 export declare function check<T extends Match.Pattern>(
-  value: any,
+  value: unknown,
   pattern: T,
   options?: { throwAllErrors?: boolean }
 ): asserts value is Match.PatternMatch<T>;
