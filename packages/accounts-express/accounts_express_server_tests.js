@@ -359,59 +359,101 @@ if (Meteor.isServer) {
     }
   });
 
-  // Test server-side Meteor.fetch() with explicit token
-  Tinytest.addAsync('accounts-express - server fetch - explicit token', async (test) => {
-    const { userId, token } = await createUserWithToken();
+  // --- Fetch auth tests for both Meteor.fetch and import { fetch } from 'meteor/fetch' ---
 
-    try {
-      // Use Meteor.fetch with explicit token
-      const response = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
-        token,
-      });
+  const { fetch: packageFetch } = require('meteor/fetch');
+
+  const fetchTestCases = [
+    { name: 'Meteor.fetch', fetchFn: (...args) => Meteor.fetch(...args) },
+    { name: 'meteor/fetch', fetchFn: packageFetch },
+  ];
+
+  for (const { name, fetchFn } of fetchTestCases) {
+    Tinytest.addAsync(`accounts-express - ${name} - explicit token`, async (test) => {
+      const { userId, token } = await createUserWithToken();
+
+      try {
+        const response = await fetchFn(Meteor.absoluteUrl('api/express-test-request-echo'), {
+          token,
+        });
+        const data = await response.json();
+
+        test.equal(data.meteorUserId, userId);
+        test.equal(data.reqUserId, userId);
+      } finally {
+        await Meteor.users.removeAsync(userId);
+      }
+    });
+
+    Tinytest.addAsync(`accounts-express - ${name} - auth false skips token`, async (test) => {
+      const { userId, token } = await createUserWithToken();
+
+      try {
+        const response = await fetchFn(Meteor.absoluteUrl('api/express-test-request-echo'), {
+          token,
+          auth: false,
+        });
+        const data = await response.json();
+
+        test.isNull(data.meteorUserId);
+      } finally {
+        await Meteor.users.removeAsync(userId);
+      }
+    });
+
+    Tinytest.addAsync(`accounts-express - ${name} - no auth options uses raw fetch`, async (test) => {
+      const response = await fetchFn(Meteor.absoluteUrl('api/express-test-request-echo'));
       const data = await response.json();
 
-      test.equal(data.meteorUserId, userId);
-      test.equal(data.reqUserId, userId);
-    } finally {
-      await Meteor.users.removeAsync(userId);
-    }
-  });
-
-  // Test server-side Meteor.fetch() with auth: false
-  Tinytest.addAsync('accounts-express - server fetch - auth false skips token', async (test) => {
-    const { userId, token } = await createUserWithToken();
-
-    try {
-      // Use Meteor.fetch with auth: false -- should not send token
-      const response = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
-        token,
-        auth: false,
-      });
-      const data = await response.json();
-
-      // Should be unauthenticated since auth: false
       test.isNull(data.meteorUserId);
-    } finally {
-      await Meteor.users.removeAsync(userId);
-    }
+    });
+  }
+
+  // Context token forwarding tests — need dedicated routes per fetch variant
+  // to avoid re-registering the same path.
+
+  // Forwarding route for package fetch (Meteor.fetch route already registered above)
+  Tinytest.addAsync('accounts-express - fetch auth - setup forwarding routes', async (test) => {
+    const { fetch: pkgFetch } = require('meteor/fetch');
+
+    WebApp.handlers.get('/api/express-test-package-fetch-forward',
+      createAuthMiddleware({ required: true }),
+      async (req, res) => {
+        const innerResponse = await pkgFetch(Meteor.absoluteUrl('api/express-test-request-echo'), { auth: true });
+        const innerData = await innerResponse.json();
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+          outerUserId: Meteor.userId(),
+          innerUserId: innerData.meteorUserId,
+        }));
+      }
+    );
+
+    test.isTrue(true, 'Forwarding routes set up');
   });
 
-  // Test server-side Meteor.fetch() auto-reads token from endpoint context
-  Tinytest.addAsync('accounts-express - server fetch - context token forwarding', async (test) => {
-    const { userId, token } = await createUserWithToken();
+  const contextForwardingCases = [
+    { name: 'Meteor.fetch', path: 'api/express-test-request-forward' },
+    { name: 'meteor/fetch', path: 'api/express-test-package-fetch-forward' },
+  ];
 
-    try {
-      // Make request to the forwarding route
-      const response = await fetchWithToken(Meteor.absoluteUrl('api/express-test-request-forward'), token);
-      test.equal(response.status, 200);
+  for (const { name, path } of contextForwardingCases) {
+    Tinytest.addAsync(`accounts-express - ${name} - context token forwarding`, async (test) => {
+      const { userId, token } = await createUserWithToken();
 
-      const data = await response.json();
-      test.equal(data.outerUserId, userId);
-      test.equal(data.innerUserId, userId);
-    } finally {
-      await Meteor.users.removeAsync(userId);
-    }
-  });
+      try {
+        const response = await fetchWithToken(Meteor.absoluteUrl(path), token);
+        test.equal(response.status, 200);
+
+        const data = await response.json();
+        test.equal(data.outerUserId, userId);
+        test.equal(data.innerUserId, userId);
+      } finally {
+        await Meteor.users.removeAsync(userId);
+      }
+    });
+  }
 
   // --- HttpOnly Cookie Roundtrip Integration Tests ---
 

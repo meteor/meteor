@@ -24,4 +24,20 @@ function createAuthMiddleware(options = {}) {
 // Wrap the base Meteor.fetch with auth functionality
 Meteor.fetch = createAuthFetch(Meteor.fetch);
 
-export { createAuthMiddleware, createAuthFetch };
+/**
+ * @summary Handle fetch calls from the meteor/fetch package when auth
+ * options are present. Falls back to rawFetch when no auth is needed.
+ * @locus Server
+ * @param {string|Request} url
+ * @param {Object} [options]
+ * @param {Function} rawFetch - The underlying fetch implementation
+ * @returns {Promise<Response>|null} Response if handled, null to fall through
+ */
+function handleFetch(url, options, rawFetch = Meteor.fetch) {
+  if (options && ('auth' in options || 'token' in options)) {
+    return Meteor.fetch(url, options);
+  }
+  return rawFetch(url, options);
+}
+
+export { createAuthMiddleware, createAuthFetch, handleFetch };

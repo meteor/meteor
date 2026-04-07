@@ -33,3 +33,15 @@ declare module 'meteor/accounts-express' {
     options?: AuthMiddlewareOptions
   ): (req: any, res: any, next: () => void) => Promise<void>;
 }
+
+declare module 'meteor/fetch' {
+  /**
+   * When accounts-express is loaded, `fetch` from meteor/fetch also supports
+   * auth options. When `auth` or `token` are passed, the request is delegated
+   * through Meteor.fetch which injects the login token automatically.
+   */
+  function fetch(
+    url: string | Request,
+    options?: MeteorFetchOptions
+  ): Promise<Response>;
+}

@@ -10,6 +10,8 @@ Package.onUse((api) => {
 
   api.imply('accounts-base', ['client', 'server']);
 
+  api.export('handleFetch', ['client', 'server']);
+
   api.mainModule('server_main.js', 'server');
   api.mainModule('client_main.js', 'client');
 
@@ -22,6 +24,7 @@ Package.onTest((api) => {
     'accounts-base',
     'accounts-password',
     'ecmascript',
+    'fetch',
     'tinytest',
     'random',
     'test-helpers',
