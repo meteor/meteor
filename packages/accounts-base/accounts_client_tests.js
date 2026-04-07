@@ -281,8 +281,19 @@ Tinytest.addAsync(
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
       // Generates secret
-      Accounts.generate2faActivationQrCode('test', (err, svg) => {
-        test.isTrue(svg != null);
+      Accounts.generate2faActivationQrCode('test', (err, result) => {
+        test.equal(err, undefined);
+        test.isTrue(!!result);
+        test.isTrue(result?.svg != null);
+        test.isTrue(/^[A-Z2-7]+$/.test(result?.secret || ''));
+        test.isTrue(/^otpauth:\/\/totp\/.+[?&]secret=/.test(result?.uri || ''));
+        test.isTrue((result?.uri || '').includes(`secret=${result?.secret}`));
+
+        if (!result) {
+          removeTestUser(done);
+          return;
+        }
+
         getTokenFromSecret(token => {
           // enable 2fa
           Accounts.enableUser2fa(token, () => {
