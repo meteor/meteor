@@ -1,7 +1,7 @@
 import { Writable } from 'stream';
 
 interface Address {
-  name: string;
+  name?: string;
   address: string;
 }
 
