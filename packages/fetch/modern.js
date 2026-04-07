@@ -1,9 +1,9 @@
-const rawFetch = global.fetch.bind(global);
+var rawFetch = global.fetch.bind(global);
 
 function fetch(url, options) {
-  const handler = Package['accounts-express']?.handleFetch;
-  if (handler) {
-    return handler(url, options, rawFetch);
+  var ae = Package['accounts-express'];
+  if (ae && ae.handleFetch) {
+    return ae.handleFetch(url, options, rawFetch);
   }
   return rawFetch(url, options);
 }

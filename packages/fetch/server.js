@@ -5,9 +5,9 @@ const rawFetch = nodeFetch.default;
 // to it so auth/token options work transparently. Otherwise use
 // the raw node-fetch implementation directly.
 function fetch(url, options) {
-  const handler = Package['accounts-express']?.handleFetch;
-  if (handler) {
-    return handler(url, options, rawFetch);
+  var ae = Package['accounts-express'];
+  if (ae && ae.handleFetch) {
+    return ae.handleFetch(url, options, rawFetch);
   }
   return rawFetch(url, options);
 }
