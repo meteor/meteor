@@ -28,53 +28,25 @@ import {
 } from "../static-assets/server/mini-files";
 import { realpathSync } from './fsFixPath';
 
-const _: {
-  once: <T extends (...args: unknown[]) => unknown>(fn: T) => T;
-  each: <T>(list: T[] | Record<string, T>, iterator: (value: T, key: string | number) => void) => void;
-  isRegExp: (obj: unknown) => obj is RegExp;
-  has: (obj: Record<string, unknown>, key: string) => boolean;
-  keys: (obj: Record<string, unknown>) => string[];
-  isEmpty: (obj: unknown) => boolean;
-} = require('underscore');
+const _ = require('underscore');
 
-const rimraf: { sync: (path: string, options?: Record<string, unknown>) => void } = require('rimraf');
-const sourcemap: {
-  SourceMapConsumer: new (rawSourceMap: Record<string, unknown>) => { originalPositionFor: (pos: { line: number; column: number }) => { source: string | null; line: number | null; column: number | null } };
-} = require('source-map');
-const sourceMapRetrieverStack: { push: (retriever: (path: string) => { map: Record<string, unknown> } | null) => void } = require('../tool-env/source-map-retriever-stack.js');
+const rimraf = require('rimraf');
+const sourcemap = require('source-map');
+const sourceMapRetrieverStack = require('../tool-env/source-map-retriever-stack.js');
 
-const utils: {
-  generateSubsetsOfIncreasingSize: <T>(set: T[]) => T[][];
-  isUrlWithScheme: (url: string) => boolean;
-  [key: string]: unknown;
-} = require('../utils/utils.js');
-const cleanup: {
-  onExit: (fn: (code: number) => void) => void;
-} = require('../tool-env/cleanup.js');
-const buildmessage: {
-  assertInCapture: () => void;
-  assertInJob: () => void;
-  enterJob: <T>(options: { title: string }, fn: () => T) => T;
-  markBoundary: <T extends (...args: unknown[]) => unknown>(fn: T) => T;
-  error: (message: string, options?: { file?: string; line?: number; column?: number; useMyCaller?: boolean }) => void;
-  exception: (err: Error) => void;
-} = require('../utils/buildmessage.js');
-const fiberHelpers: {
-  noYieldsAllowed: <T>(fn: () => T) => T;
-  [key: string]: unknown;
-} = require('../utils/fiber-helpers.js');
-const colonConverter: {
-  convert: (path: string) => string;
-  unconvert: (path: string) => string;
-} = require('../utils/colon-converter.js');
+const utils = require('../utils/utils.js');
+const cleanup = require('../tool-env/cleanup.js');
+const buildmessage = require('../utils/buildmessage.js');
+const fiberHelpers = require('../utils/fiber-helpers.js');
+const colonConverter = require('../utils/colon-converter.js');
 
-const Profile: <T extends (...args: unknown[]) => unknown>(name: string, fn: T) => T = require('../tool-env/profile').Profile;
+const Profile = require('../tool-env/profile').Profile;
 
 export * from '../static-assets/server/mini-files';
 
 const { hasOwnProperty } = Object.prototype;
 
-const parsedSourceMaps: Record<string, Record<string, unknown>> = {};
+const parsedSourceMaps: Record<string, any> = {};
 let nextStackFilenameCounter = 1;
 
 // Use the source maps specified to runJavaScript

@@ -1,10 +1,6 @@
 import { max } from 'underscore';
 import os from 'os';
-const utils: {
-  execFileSync: (cmd: string, args: string[]) => { stdout: string; success: boolean };
-  architecture: () => string;
-  [key: string]: unknown;
-} = require('./utils');
+const utils = require('./utils');
 import { getMeteorConfig } from '../tool-env/meteor-config.js';
 
 /* Meteor's current architecture scheme defines the following virtual
@@ -247,7 +243,7 @@ function getLegacyArches(): string[] {
   // Check if cordova should use legacy mode
   // This needs to access the meteor config at runtime
   try {
-    const meteorConfig = getMeteorConfig() as { modern?: { cordova?: boolean } } | null;
+    const meteorConfig = getMeteorConfig();
 
     if (meteorConfig?.modern?.cordova === false) {
       arches.push("web.cordova");

@@ -1,5 +1,5 @@
-const split: (matcher: RegExp, mapper: null, options: { trailing: boolean }) => Transform = require("split2");
-const pipe: (...streams: Stream[]) => Stream = require("multipipe");
+const split = require("split2");
+const pipe = require("multipipe");
 
 import { Transform, Stream } from "stream";
 
@@ -20,7 +20,7 @@ export function transform(callback: LineTransformer) {
     let line = chunk.toString("utf8");
     try {
       line = await callback(line);
-    } catch (error: unknown) {
+    } catch (error: any) {
       done(error);
       return;
     }

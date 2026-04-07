@@ -4,8 +4,8 @@ import * as net from "net";
 import { isEmacs } from "./utils/utils";
 import { eachline } from "./utils/eachline";
 
-const chalk: { yellow: (s: string) => string; green: (s: string) => string; red: (s: string) => string } = require("chalk");
-const EOL: string = require("os").EOL;
+const chalk = require("chalk");
+const EOL = require("os").EOL;
 
 // These two values (EXITING_MESSAGE and getInfoFile) must match the
 // values used by the shell-server package.
@@ -56,7 +56,7 @@ class Client {
         return this.reconnect();
       }
 
-      let info: { status: string; port: number; key: string };
+      let info;
       try {
         info = JSON.parse(json);
       } catch (err) {

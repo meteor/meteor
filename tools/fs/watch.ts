@@ -9,14 +9,7 @@ import {
   optimisticStatOrNull,
 } from "./optimistic";
 
-const _: {
-  has: (obj: Record<string, unknown>, key: string) => boolean;
-  isEmpty: (obj: unknown) => boolean;
-  each: <T>(list: T[] | Record<string, T>, iterator: (value: T, key: string | number) => void) => void;
-  isEqual: (a: unknown, b: unknown) => boolean;
-  clone: <T>(obj: T) => T;
-  extend: <T extends Record<string, unknown>>(dest: T, ...sources: Record<string, unknown>[]) => T;
-} = require("underscore");
+const _ = require("underscore");
 
 const WATCH_COALESCE_MS =
   +(process.env.METEOR_FILE_WATCH_COALESCE_MS || 100);
@@ -275,7 +268,7 @@ export class WatchSet {
     };
   }
 
-  static fromJSON(json: { alwaysFire?: boolean; files: Record<string, string | null>; potentiallyUnusedFiles?: string[]; directories: Array<{ absPath: string; include: Array<string | { $regex: string; $options?: string }>; exclude: Array<string | { $regex: string; $options?: string }>; names: string[] | null; contents: string | null }> } | null) {
+  static fromJSON(json: any) {
     const watchSet = new WatchSet();
 
     if (! json) {
@@ -297,14 +290,14 @@ export class WatchSet {
       });
     }
 
-    function reFromJSON(j: string | { $regex: string; $options?: string }) {
-      if (typeof j === 'object' && j.$regex) {
+    function reFromJSON(j: any) {
+      if (j.$regex) {
         return new RegExp(j.$regex, j.$options);
       }
-      return new RegExp(j as string);
+      return new RegExp(j);
     }
 
-    json.directories.forEach((d: { absPath: string; include: Array<string | { $regex: string; $options?: string }>; exclude: Array<string | { $regex: string; $options?: string }>; names: string[] | null; contents: string | null }) => {
+    json.directories.forEach((d: any) => {
       watchSet.directories.push({
         absPath: d.absPath,
         include: d.include.map(reFromJSON),

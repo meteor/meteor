@@ -299,7 +299,7 @@ export function Profile<
     return f;
   }
 
-  return Object.assign(function profileWrapper(this: unknown) {
+  return Object.assign(function profileWrapper(this: any) {
     const args = Array.from(arguments) as TArgs;
 
     if (!running) {
@@ -325,8 +325,8 @@ export function Profile<
       if (profileInfo.isActive) {
         const handleTermination = (context: string) => {
           if (profileInfo.isActive && !profileInfo.isCompleted) {
-            return stopInspectorProfiling(name, true).catch((err: unknown) => {
-              process.stdout.write(`[PROFILING_${context}] Error stopping profiling: ${String(err)}\n`);
+            return stopInspectorProfiling(name, true).catch(err => {
+              process.stdout.write(`[PROFILING_${context}] Error stopping profiling: ${err}\n`);
             });
           }
           return Promise.resolve();
@@ -348,8 +348,8 @@ export function Profile<
     const completeProfiler = () => {
       if (profileInfo.isActive && !profileInfo.isCompleted) {
         profileInfo.isCompleted = true;
-        return stopInspectorProfiling(name, true).catch((err: unknown) => {
-          process.stdout.write(`[PROFILING_COMPLETE] Error stopping profiling: ${String(err)}`);
+        return stopInspectorProfiling(name, true).catch(err => {
+          process.stdout.write(`[PROFILING_COMPLETE] Error stopping profiling: ${err}`);
         });
       }
       return Promise.resolve();
@@ -447,7 +447,7 @@ function stopInspectorProfiling(name: string, isActive: boolean): Promise<void> 
         return resolve();
       }
       
-      session.post('Profiler.stop', (err: Error | null, result: { profile?: { nodes?: unknown[]; samples?: unknown[]; timeDeltas?: unknown[]; startTime?: number; endTime?: number } }) => {
+      session.post('Profiler.stop', (err: Error | null, result: any) => {
         if (err) {
           cleanupAndResolve(resolve);
           reject(err);
@@ -554,7 +554,7 @@ function stopInspectorProfiling(name: string, isActive: boolean): Promise<void> 
   }
 }
 
-function saveProfile(profile: Record<string, unknown>, name: string, filename: string, duration: number): void {
+function saveProfile(profile: any, name: string, filename: string, duration: number): void {
   if (!fs.existsSync(INSPECTOR_CONFIG.outputDir)) {
     fs.mkdirSync(INSPECTOR_CONFIG.outputDir, { recursive: true });
   }
@@ -571,12 +571,12 @@ function saveProfile(profile: Record<string, unknown>, name: string, filename: s
   process.stdout.write(`[PROFILING_SAVE] Duration: ${duration}ms, size: ${profileSize.toFixed(2)}MB`);
 }
 
-function runWithContext<TArgs extends unknown[], TResult>(
+function runWithContext<TArgs extends any[], TResult>(
     bucketName: string | ((...args: TArgs) => string),
-    store: { currentEntry: string[]; [key: string]: unknown },
+    store: { currentEntry: string[]; [key: string]: any },
     f: (...args: TArgs) => TResult | Promise<TResult>,
-    context: unknown,
-    args: TArgs,
+    context: any,
+    args: any[],
     completeProfiler: () => Promise<void>
 ): TResult | Promise<TResult> {
   const name = typeof bucketName === "function" ? bucketName.apply(context, args as TArgs) : bucketName;
