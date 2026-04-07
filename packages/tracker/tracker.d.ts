@@ -19,7 +19,7 @@ export namespace Tracker {
     /**
      * Forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
      */
-    firstRunPromise: Promise<void>;
+    firstRunPromise: Promise<unknown>;
     /**
      * Invalidates this computation so that it will be rerun.
      */
@@ -109,7 +109,7 @@ export namespace Tracker {
        * happens in the Computation. The only argument it receives is the Error
        * thrown. Defaults to the error being logged to the console.
        */
-      onError?: ((error: Error) => void) | undefined;
+      onError?: ((error: unknown) => void) | undefined;
     }
   ): Computation;
 
