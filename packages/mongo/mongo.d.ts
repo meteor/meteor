@@ -354,7 +354,7 @@ export namespace Mongo {
          * Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to
          * modify in an array field.
          */
-        arrayFilters?: Record<string, NpmModuleMongodb.Filter<T>>[] | undefined;
+        arrayFilters?: NpmModuleMongodb.Document[] | undefined;
       },
       callback?: (error: Error | null, result?: number) => void
     ): number;
@@ -376,7 +376,7 @@ export namespace Mongo {
          * Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to
          * modify in an array field.
          */
-        arrayFilters?: Record<string, NpmModuleMongodb.Filter<T>>[] | undefined;
+        arrayFilters?: NpmModuleMongodb.Document[] | undefined;
       },
       callback?: (error: Error | null, result?: number) => void
     ): Promise<number>;

@@ -6,7 +6,7 @@ export namespace DDP {
     subscribe(name: string, ...rest: EJSONable[]): Meteor.SubscriptionHandle;
     call<Result = unknown>(method: string, ...parameters: EJSONable[]): Result;
     callAsync<Result = unknown>(method: string, ...parameters: EJSONable[]): Promise<Result>;
-    apply<Result = unknown>(method: string, ...parameters: EJSONable[]): Result;
+    apply<Result = unknown>(method: string, args: EJSONable[], options?: unknown, callback?: (err: Error | undefined, result?: Result) => void): Result;
     methods(methods: Record<string, (this: DDPCommon.MethodInvocation, ...args: unknown[]) => unknown>): void;
     status(): DDPStatus;
     reconnect(): void;
