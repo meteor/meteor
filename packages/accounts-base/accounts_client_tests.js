@@ -273,15 +273,21 @@ Tinytest.addAsync(
 Tinytest.addAsync(
   'accounts async - async userCallback completes its async work',
   (test, done) => {
-    logoutAndCreateUser(test, done, () => {
-      Meteor.logout(() => {
-        Meteor.loginWithPassword(username, password, async (err) => {
-          test.isFalse(!!err);
-          const user = await Meteor.userAsync();
-          test.isTrue(!!user);
-          removeTestUser(done);
+    logoutAndCreateUser(test, done, async () => {
+      await new Promise((resolve, reject) => {
+        Meteor.logout(() => {
+          Meteor.loginWithPassword(username, password, (err) => {
+            void (async () => {
+              test.isFalse(!!err);
+              const user = await Meteor.userAsync();
+              test.isTrue(!!user);
+              resolve();
+            })().catch(reject);
+          });
         });
       });
+
+      removeTestUser(done);
     });
   }
 );
