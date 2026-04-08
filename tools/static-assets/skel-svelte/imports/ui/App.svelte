@@ -3,7 +3,7 @@
   import { Tracker } from "meteor/tracker";
   import { onMount, onDestroy } from "svelte";
   import { LinksCollection } from "../api/links";
-  import { getCounter, addToCounter } from './counter.svelte';
+  import { getCounter, addToCounter } from './counter.svelte.js';
 
   let handle;
   let subIsReady = $state(false);
