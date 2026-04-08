@@ -431,16 +431,27 @@ export class AccountsClient extends AccountsCommon {
   }
 
   async makeClientLoggedOut() {
-    // Ensure client was successfully logged in before running logout hooks.
-    if (this.connection._userId) {
-      await this._onLogoutHook.forEachAsync(async callback => {
-        await callback();
-        return true;
-      });
+    let hookError;
+
+    try {
+      // Ensure client was successfully logged in before running logout hooks.
+      if (this.connection._userId) {
+        await this._onLogoutHook.forEachAsync(async callback => {
+          await callback();
+          return true;
+        });
+      }
+    } catch (error) {
+      hookError = error;
+    } finally {
+      this._unstoreLoginToken();
+      this.connection.setUserId(null);
+      this._reconnectStopper && this._reconnectStopper.stop();
     }
-    this._unstoreLoginToken();
-    this.connection.setUserId(null);
-    this._reconnectStopper && this._reconnectStopper.stop();
+
+    if (hookError) {
+      throw hookError;
+    }
   }
 
   makeClientLoggedIn(userId, token, tokenExpires) {

@@ -252,6 +252,25 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts async - onLogout async callback failure still logs out client',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogout = Accounts.onLogout(async () => {
+        onLogout.stop();
+        throw new Error('Expected onLogout failure');
+      });
+
+      Meteor.logout(async (error) => {
+        test.equal(error?.message, 'Expected onLogout failure');
+        test.isFalse(!!(await Meteor.userAsync()));
+        test.isFalse(Meteor.loggingOut());
+        removeTestUser(done);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
   'accounts async - async userCallback completes its async work',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
