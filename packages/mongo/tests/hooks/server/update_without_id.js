@@ -37,13 +37,14 @@ Tinytest.addAsync('update - server collection documents should have extra proper
   await collection.insertAsync({ not_an_id: 'testing' })
 
   await collection.updateAsync({ not_an_id: 'testing' }, { $set: { not_an_id: 'newvalue', test: true } }, { multi: true })
+  const expectedCount = 3
 
   // retry a few times because the after.update's call to update doesn't block
   const r = await retry(function () {
     return collection.find({ not_an_id: 'newvalue', before_update_value: true, after_update_value: true }).count()
   }, function (r) {
-    return r > 0
+    return r === expectedCount
   })
 
-  test.equal(r, 3, 'number of docs found should be 3')
+  test.equal(r, expectedCount, 'number of docs found should be 3')
 })

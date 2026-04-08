@@ -1,4 +1,8 @@
-import { CollectionHooks, runFindHooks } from './collection_hooks';
+import {
+  CollectionHooks,
+  runFindHooks,
+  runFindOneHooksSync,
+} from './collection_hooks';
 
 export const SyncMethods = {
   /**
@@ -56,16 +60,27 @@ export const SyncMethods = {
    * @returns {Object}
    */
   findOne(...args) {
-    const cursor = this.find(
-      this._getFindSelector(args),
-      Object.assign({}, this._getFindOptions(args), { limit: 1 })
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+    const isDirect = CollectionHooks._directEnv.get();
+    const findOneHooks = this._hooks?.findOne;
+    const hasFindOneHooks = !isDirect && findOneHooks &&
+      (findOneHooks.before.length || findOneHooks.after.length);
+    const coreFindOne = () => {
+      const cursor = this.find(selector, { ...options, limit: 1 });
 
-    if (!cursor) {
-      return undefined;
+      if (!cursor) {
+        return undefined;
+      }
+
+      return cursor.fetch()[0];
+    };
+
+    if (hasFindOneHooks) {
+      return runFindOneHooksSync(this, selector, options, coreFindOne);
     }
 
-    return cursor.fetch()[0];
+    return coreFindOne();
   },
 
 

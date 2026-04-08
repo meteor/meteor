@@ -13,22 +13,27 @@ if (Meteor.isServer) {
 
       await collection1.removeAsync({})
 
-      collection1.before.insert(async function (userId, doc) {
+      const beforeHandle = collection1.before.insert(async function (userId, doc) {
         // There should be no userId because the insert was initiated
         // on the server -- there's no correlation to any specific user
         tmp.userId = userId // HACK: can't test here directly otherwise refreshing test stops execution here
         doc.before_insert_value = true
       })
 
-      await collection1.insertAsync({ start_value: true })
+      try {
+        await collection1.insertAsync({ start_value: true })
 
-      test.equal(
-        await collection1
-          .find({ start_value: true, before_insert_value: true })
-          .countAsync(),
-        1
-      )
-      test.equal(tmp.userId, undefined)
+        test.equal(
+          await collection1
+            .find({ start_value: true, before_insert_value: true })
+            .countAsync(),
+          1
+        )
+        test.equal(tmp.userId, undefined)
+      } finally {
+        beforeHandle.remove()
+        await collection1.removeAsync({})
+      }
     }
   )
 }
@@ -73,7 +78,7 @@ if (Meteor.isClient) {
   Tinytest.addAsync(
     'insert - collection2 document on client should have client-added and server-added extra properties added to it before it is inserted',
     async function (test) {
-      collection2.before.insert(function (userId, doc) {
+      const beforeHandle = collection2.before.insert(function (userId, doc) {
         test.notEqual(
           userId,
           undefined,
@@ -87,7 +92,7 @@ if (Meteor.isClient) {
         doc.client_value = true
       })
 
-      collection2.after.insert(function (userId, doc) {
+      const afterHandle = collection2.after.insert(function (userId, doc) {
         test.notEqual(
           this._id,
           undefined,
@@ -95,22 +100,28 @@ if (Meteor.isClient) {
         )
       })
 
-      await InsecureLogin.ready(async function () {
-        await Meteor.callAsync('test_insert_reset_collection2')
-        await collection2.insertAsync({ start_value: true })
+      try {
+        await InsecureLogin.ready(async function () {
+          await Meteor.callAsync('test_insert_reset_collection2')
+          await collection2.insertAsync({ start_value: true })
 
-        test.equal(
-          collection2
-            .find({
-              start_value: true,
-              client_value: true,
-              server_value: true
-            })
-            .count(),
-          1,
-          'collection2 should have the test document with client_value AND server_value in it'
-        )
-      })
+          test.equal(
+            collection2
+              .find({
+                start_value: true,
+                client_value: true,
+                server_value: true
+              })
+              .count(),
+            1,
+            'collection2 should have the test document with client_value AND server_value in it'
+          )
+        })
+      } finally {
+        beforeHandle.remove()
+        afterHandle.remove()
+        await Meteor.callAsync('test_insert_reset_collection2')
+      }
     }
   )
 }

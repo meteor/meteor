@@ -108,10 +108,10 @@ if (Meteor.isClient) {
   Tinytest.add('update - hooks are not called for sync methods', function (test) {
     let beforeCalled = false
     let afterCalled = false
-    collectionForSync.before.update(function (userId, selector, options) {
+    collectionForSync.before.update(function (userId, doc, fieldNames, modifier) {
       beforeCalled = true
     })
-    collectionForSync.after.update(function (userId, selector, options) {
+    collectionForSync.after.update(function (userId, doc, fieldNames, modifier) {
       afterCalled = true
     })
 

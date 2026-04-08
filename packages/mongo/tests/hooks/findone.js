@@ -52,7 +52,7 @@ Tinytest.addAsync('findone - tmp variable should have property added after the f
 
 const collection = new Mongo.Collection('collection_for_findone_sync_call')
 if (Meteor.isClient) {
-  Tinytest.add('findone - sync method runs find hooks', function (test) {
+  Tinytest.add('findone - sync findOne invokes before.find hook via internal find', function (test) {
     const localCollection = new Mongo.Collection(null)
     let beforeFindCalled = false
 
@@ -67,19 +67,24 @@ if (Meteor.isClient) {
     test.equal(beforeFindCalled, true)
   })
 
-  Tinytest.add('findone - hooks are not called for sync findOne hooks', function (test) {
+  Tinytest.add('findone - sync findOne invokes findOne-specific hooks', function (test) {
     let beforeCalled = false
     let afterCalled = false
-    collection.before.findOne(function (userId, selector, options) {
+    const beforeHandle = collection.before.findOne(function (userId, selector, options) {
       beforeCalled = true
     })
-    collection.after.findOne(function (userId, selector, options) {
+    const afterHandle = collection.after.findOne(function (userId, selector, options) {
       afterCalled = true
     })
 
-    collection.findOne({ test: 1 })
+    try {
+      collection.findOne({ test: 1 })
 
-    test.equal(beforeCalled, false)
-    test.equal(afterCalled, false)
+      test.equal(beforeCalled, true)
+      test.equal(afterCalled, true)
+    } finally {
+      beforeHandle.remove()
+      afterHandle.remove()
+    }
   })
 }

@@ -18,23 +18,26 @@ if (Meteor.isServer) {
 
 Tinytest.addAsync('meteor_1_4_id_object - after insert hooks should be able to cope with object _id with ops property in Meteor 1.4', async function (test) {
   const key = Date.now()
-
   const aspect1 = testUsers.after.insert(function (nil, doc) {
     if (doc && doc.key && doc.key === key) {
       test.equal(doc._id, this._id)
       test.isFalse(Object(doc._id) === doc._id, '_id property should not be an object')
     }
   })
+  let id
 
-  const id = await testUsers.insertAsync({ key })
-  // clean-up
-  await testUsers.removeAsync({ _id: id })
-  aspect1.remove()
+  try {
+    id = await testUsers.insertAsync({ key })
+  } finally {
+    aspect1.remove()
+    if (id) {
+      await testUsers.removeAsync({ _id: id })
+    }
+  }
 })
 
 Tinytest.addAsync('meteor_1_4_id_object - after insert hooks should be able to cope with Mongo.ObjectID _id with _str property in Meteor 1.4', async function (test) {
   const key = Date.now()
-
   const aspect1 = collection1.after.insert(async function (nil, doc) {
     if (doc && doc.key && doc.key === key) {
       let foundDoc = null
@@ -44,10 +47,14 @@ Tinytest.addAsync('meteor_1_4_id_object - after insert hooks should be able to c
       test.isNotNull(foundDoc)
     }
   })
+  let id
 
-  const id = await collection1.insertAsync({ key })
-
-  // clean-up
-  await collection1.removeAsync({ _id: id })
-  aspect1.remove()
+  try {
+    id = await collection1.insertAsync({ key })
+  } finally {
+    aspect1.remove()
+    if (id) {
+      await collection1.removeAsync({ _id: id })
+    }
+  }
 })

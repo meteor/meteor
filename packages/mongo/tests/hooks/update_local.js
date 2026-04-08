@@ -83,7 +83,7 @@ Tinytest.addAsync(
     await InsecureLogin.ready(async function () {
       // Add two documents
       await collection.insertAsync({ start_value: true })
-      await collection.insert({ start_value: true })
+      await collection.insertAsync({ start_value: true })
       await start()
     })
   }

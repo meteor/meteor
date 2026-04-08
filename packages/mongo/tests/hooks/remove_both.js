@@ -62,16 +62,6 @@ if (Meteor.isServer) {
   Meteor.publish('test_remove_publish_collection2', function () {
     return collection2.find()
   })
-
-  let external2 = -1
-
-  collection2.before.remove(function (userId, doc) {
-    external2 = 0
-  })
-
-  collection2.after.remove(function (userId, doc) {
-    external2++
-  })
 }
 
 if (Meteor.isClient) {
@@ -127,10 +117,10 @@ if (Meteor.isClient) {
   Tinytest.add('remove - hooks are not called for sync methods', function (test) {
     let beforeCalled = false
     let afterCalled = false
-    collectionForSync.before.remove(function (userId, selector, options) {
+    collectionForSync.before.remove(function (userId, doc) {
       beforeCalled = true
     })
-    collectionForSync.after.remove(function (userId, selector, options) {
+    collectionForSync.after.remove(function (userId, doc) {
       afterCalled = true
     })
 

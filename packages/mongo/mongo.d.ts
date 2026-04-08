@@ -13,6 +13,7 @@ export namespace Mongo {
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
   export type OptionalId<TSchema> = UnionOmit<TSchema, "_id"> & { _id?: any };
+  export type CollectionId = string | ObjectID;
 
   type SortSpecifier = NpmModuleMongodb.Sort;
 
@@ -142,7 +143,7 @@ export namespace Mongo {
   /** Context (`this`) available inside after.insert hooks */
   interface AfterInsertHookContext<T> {
     transform(doc?: T): any;
-    _id: string;
+    _id: CollectionId;
   }
 
   /** Context (`this`) available inside before.update hooks */
@@ -285,8 +286,11 @@ export namespace Mongo {
 
   /** Direct (hook-bypassing) method interface */
   interface DirectMethods<T, U> {
-    insert(doc: OptionalId<T>, callback?: Function): string;
-    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<string>;
+    insert(doc: OptionalId<T>, callback?: Function): CollectionId;
+    insertAsync(
+      doc: OptionalId<T>,
+      callback?: Function
+    ): Promise<CollectionId>;
     update(
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
@@ -312,13 +316,13 @@ export namespace Mongo {
       modifier: Modifier<T>,
       options?: any,
       callback?: Function
-    ): { numberAffected?: number; insertedId?: string };
+    ): { numberAffected?: number; insertedId?: CollectionId };
     upsertAsync(
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
       options?: any,
       callback?: Function
-    ): Promise<{ numberAffected?: number; insertedId?: string }>;
+    ): Promise<{ numberAffected?: number; insertedId?: CollectionId }>;
     find(
       selector?: Selector<T> | ObjectID | string,
       options?: Options<T>
@@ -511,9 +515,9 @@ export namespace Mongo {
     ): Cursor<T, DispatchTransform<O["transform"], T, U>>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
-     * Routes through `find(..., { limit: 1 })`, so `before.find` / `after.find`
-     * hooks may run when they are registered. Sync `before.findOne` /
-     * `after.findOne` hooks do not run for `findOne()`.
+     * Routes through `find(..., { limit: 1 })`, so sync `before.find` hooks may
+     * run when they are registered. Sync `before.findOne` /
+     * `after.findOne` hooks also run for `findOne()`.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
      * @see findOneAsync
      * @param selector A query describing the documents to find
@@ -521,9 +525,9 @@ export namespace Mongo {
     findOne(selector?: Selector<T> | ObjectID | string): U | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
-     * Routes through `find(..., { limit: 1 })`, so `before.find` / `after.find`
-     * hooks may run when they are registered. Sync `before.findOne` /
-     * `after.findOne` hooks do not run for `findOne()`.
+     * Routes through `find(..., { limit: 1 })`, so sync `before.find` hooks may
+     * run when they are registered. Sync `before.findOne` /
+     * `after.findOne` hooks also run for `findOne()`.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
      * @see findOneAsync
      * @param selector A query describing the documents to find
@@ -570,13 +574,13 @@ export namespace Mongo {
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insert(doc: OptionalId<T>, callback?: Function): string;
+    insert(doc: OptionalId<T>, callback?: Function): CollectionId;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<string>;
+    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<CollectionId>;
     /**
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
@@ -674,7 +678,7 @@ export namespace Mongo {
       callback?: Function
     ): {
       numberAffected?: number | undefined;
-      insertedId?: string | undefined;
+      insertedId?: CollectionId | undefined;
     };
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
@@ -693,7 +697,7 @@ export namespace Mongo {
       callback?: Function
     ): Promise<{
       numberAffected?: number | undefined;
-      insertedId?: string | undefined;
+      insertedId?: CollectionId | undefined;
     }>;
     _createCappedCollection(byteSize?: number, maxDocuments?: number): void;
     /** @deprecated */

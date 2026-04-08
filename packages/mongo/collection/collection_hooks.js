@@ -388,15 +388,28 @@ function prepareMutatorPromiseMetadata(collection, promise) {
   mutatorPromiseMetadata.set(promise, promiseMetadata);
 }
 
+const TRANSPILER_ASYNC_MARKERS = [
+  "regeneratorRuntime",
+  "_asyncToGenerator",
+  "asyncToGenerator"
+];
+
 function isAsyncHookFunction(hookFn) {
+  const isNativeAsync = !!(
+    hookFn &&
+    hookFn.constructor &&
+    hookFn.constructor.name === "AsyncFunction"
+  );
+
   try {
-    return Function.prototype.toString.call(hookFn).startsWith("async");
-  } catch (error) {
-    return !!(
-      hookFn &&
-      hookFn.constructor &&
-      hookFn.constructor.name === "AsyncFunction"
+    const source = Function.prototype.toString.call(hookFn);
+    return (
+      source.startsWith("async") ||
+      isNativeAsync ||
+      TRANSPILER_ASYNC_MARKERS.some(marker => source.includes(marker))
     );
+  } catch (error) {
+    return isNativeAsync;
   }
 }
 
@@ -860,6 +873,63 @@ export function runFindHooks(collection, selector, options, coreFind) {
   }
 
   return cursor;
+}
+
+function callSyncFindOneHook(hookFn, hookName, ...args) {
+  if (isAsyncHookFunction(hookFn)) {
+    throw new Error(
+      `Cannot use async function as ${hookName} hook with sync findOne`
+    );
+  }
+
+  const result = hookFn.call({}, ...args);
+  if (Meteor._isPromise(result)) {
+    throw new Error(
+      `Cannot use async function as ${hookName} hook with sync findOne`
+    );
+  }
+
+  return result;
+}
+
+export function runFindOneHooksSync(
+  collection,
+  selector,
+  options,
+  coreFindOne
+) {
+  const userId = getHookUserId();
+  const hooks = collection._hooks.findOne;
+
+  if (!isEmpty(hooks.before)) {
+    for (const hookEntry of hooks.before) {
+      const result = callSyncFindOneHook(
+        hookEntry.fn,
+        "before.findOne",
+        userId,
+        selector,
+        options
+      );
+      if (result === false) return;
+    }
+  }
+
+  const doc = coreFindOne();
+
+  if (!isEmpty(hooks.after)) {
+    for (const hookEntry of hooks.after) {
+      callSyncFindOneHook(
+        hookEntry.fn,
+        "after.findOne",
+        userId,
+        selector,
+        options,
+        doc
+      );
+    }
+  }
+
+  return doc;
 }
 
 export async function runFindOneHooks(

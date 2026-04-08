@@ -73,3 +73,25 @@ Tinytest.add("find - before hook can abort the operation", function(test) {
 
   test.isUndefined(collection.find({ start_value: true }));
 });
+
+Tinytest.addAsync(
+  "find - before hook rejects transpiled async functions",
+  async function(test) {
+    const collection = new Mongo.Collection(null);
+    const transpiledAsyncHook = Function(
+      "return _asyncToGenerator.apply(this, arguments);"
+    );
+
+    collection.before.find(transpiledAsyncHook);
+
+    let error;
+    try {
+      await collection.find({ start_value: true }).fetchAsync();
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    test.isTrue(!!error);
+    test.equal(error.message, "Cannot use async function as before.find hook");
+  }
+);
