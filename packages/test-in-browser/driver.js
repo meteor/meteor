@@ -1,16 +1,16 @@
 ////
 //// Setup
 ////
-import { diffChars } from 'diff'
-import 'bootstrap/dist/css/bootstrap.min.css';
+import { diffChars } from "diff";
+import "bootstrap/dist/css/bootstrap.min.css";
 
 const arraysEqual = (a, b) => {
   return a.length === b.length && a.every((v, i) => v === b[i]);
-}
+};
 
 // dependency for the count of tests running/passed/failed, etc. drives
 // the navbar and the like.
-const countDep = new Tracker.Dependency;
+const countDep = new Tracker.Dependency();
 // things that change on countDep
 let running = true;
 let totalCount = 0;
@@ -20,7 +20,7 @@ let failedTests = [];
 
 // Dependency for when a new top level group is added. Each group and
 // each test have their own dependency objects.
-const topLevelGroupsDep = new Tracker.Dependency;
+const topLevelGroupsDep = new Tracker.Dependency();
 
 // An array of top-level groups.
 //
@@ -47,32 +47,32 @@ window.onerror = (message, _source, _line) => {
   Session.set("uncaughtErrors", Array.from(uncaughtErrors));
 };
 
-const getGroupPathFromURL = function() {
+const getGroupPathFromURL = function () {
   const pathname = window.location.pathname;
   const match = pathname.match(/^\/group\/(.+)$/);
   if (match) {
     try {
       return JSON.parse(decodeURIComponent(match[1]));
     } catch {
-      console.warn('Invalid group path in URL:', match[1]);
+      console.warn("Invalid group path in URL:", match[1]);
     }
   }
   return ["tinytest"];
 };
 
-const setGroupPathInURL = function(groupPath, pushState = true) {
-  let newURL = '/';
+const setGroupPathInURL = function (groupPath, pushState = true) {
+  let newURL = "/";
 
-  if (!arraysEqual(groupPath, ['tinytest'])) {
+  if (!arraysEqual(groupPath, ["tinytest"])) {
     newURL = `/group/${encodeURIComponent(JSON.stringify(groupPath))}`;
   }
-  
+
   const historyState = { groupPath: groupPath };
-  
+
   if (pushState) {
-    window.history.pushState(historyState, '', newURL);
+    window.history.pushState(historyState, "", newURL);
   } else {
-    window.history.replaceState(historyState, '', newURL);
+    window.history.replaceState(historyState, "", newURL);
   }
 };
 
@@ -87,38 +87,38 @@ let lastNavigationTime = 0;
 const navigationDebounceMs = 200; // Minimum time between navigations
 
 // Handle browser back/forward navigation
-window.addEventListener('popstate', function(_event) {
+window.addEventListener("popstate", function (_event) {
   const now = Date.now();
-  
+
   // Safeguard 1: Prevent overlapping navigations
   if (isNavigating) {
-    console.log('Navigation already in progress, ignoring');
+    console.log("Navigation already in progress, ignoring");
     return;
   }
-  
+
   // Safeguard 2: Debounce rapid successive calls
   if (now - lastNavigationTime < navigationDebounceMs) {
-    console.log('Navigation too rapid, ignoring');
+    console.log("Navigation too rapid, ignoring");
     return;
   }
-  
+
   const newGroupPath = getGroupPathFromURL();
   const currentGroupPath = Session.get("groupPath");
-  
+
   if (!arraysEqual(newGroupPath, currentGroupPath)) {
     // Set navigation flag
     isNavigating = true;
     lastNavigationTime = now;
-    
+
     // Emulate the EXACT same sequence as changeToPath
-    
+
     // 1. URL is already changed by browser, but ensure it's correct
     setGroupPathInURL(newGroupPath, false); // replaceState, don't create new entry
-    
+
     // 2. Update session state (SAME as changeToPath)
     Session.set("groupPath", newGroupPath);
     Session.set("rerunScheduled", true);
-    
+
     // 3. Clean reload (SAME as changeToPath)
     Reload._reload();
   }
@@ -129,7 +129,7 @@ window.addEventListener('popstate', function(_event) {
 runTests = function () {
   // Reset navigation safeguards when app starts
   isNavigating = false;
-  
+
   // Reset all test state before starting
   running = true;
   totalCount = 0;
@@ -137,45 +137,51 @@ runTests = function () {
   failedCount = 0;
   failedTests = [];
   resultTree = [];
-  
+
   // Reset dependencies to trigger UI updates
   countDep.changed();
   topLevelGroupsDep.changed();
-  
+
   // Get current group path from URL (in case of refresh)
   const currentGroupPath = getGroupPathFromURL();
   Session.set("groupPath", currentGroupPath);
-  
+
   // Only update URL if it's actually different from what we expect
   let expectedURL;
-  if (currentGroupPath && currentGroupPath.length > 0 && JSON.stringify(currentGroupPath) !== JSON.stringify(["tinytest"])) {
+  if (
+    currentGroupPath &&
+    currentGroupPath.length > 0 &&
+    JSON.stringify(currentGroupPath) !== JSON.stringify(["tinytest"])
+  ) {
     expectedURL = `/group/${encodeURIComponent(JSON.stringify(currentGroupPath))}`;
   } else {
-    expectedURL = '/';
+    expectedURL = "/";
   }
-  
+
   // Only do replaceState if the URL doesn't match what we expect
   if (window.location.pathname !== expectedURL) {
     setGroupPathInURL(currentGroupPath, false);
   }
-  
+
   document.body.innerHTML = "";
   document.head.title = "Tests";
 
   Blaze.render(Template.testInBrowserBody, document.body);
 
   Tracker.flush();
-  Tinytest._runTestsEverywhere(reportResults, function () {
-    running = false;
-    if (Meteor.onTestsComplete) Meteor.onTestsComplete();
-    countDep.changed();
-    Tracker.flush();
+  Tinytest._runTestsEverywhere(
+    reportResults,
+    function () {
+      running = false;
+      if (Meteor.onTestsComplete) Meteor.onTestsComplete();
+      countDep.changed();
+      Tracker.flush();
 
-    Meteor.connection._unsubscribeAll();
-  }, currentGroupPath);
-
+      Meteor.connection._unsubscribeAll();
+    },
+    currentGroupPath,
+  );
 };
-
 
 ////
 //// Take incoming results and drive resultsTree
@@ -184,7 +190,7 @@ runTests = function () {
 // report a series of events in a single test, or just the existence of
 // that test if no events. this is the entry point for test results to
 // this module.
-const reportResults = function(results) {
+const reportResults = function (results) {
   const test = _findTestForResults(results);
 
   // Tolerate repeated reports: first undo the effect of any previous report
@@ -200,16 +206,14 @@ const reportResults = function(results) {
   // Now process the current report
   if (Array.isArray(results.events)) {
     // append events, if present
-    Array.prototype.push.apply((test.events || (test.events = [])),
-                               results.events);
+    Array.prototype.push.apply(test.events || (test.events = []), results.events);
     // sort and de-duplicate, based on sequence number
     test.events.sort(function (a, b) {
       return a.sequence - b.sequence;
     });
     const out = [];
     test.events.forEach(function (e) {
-      if (out.length === 0 || out[out.length - 1].sequence !== e.sequence)
-        out.push(e);
+      if (out.length === 0 || out[out.length - 1].sequence !== e.sequence) out.push(e);
     });
     test.events = out;
   }
@@ -218,10 +222,8 @@ const reportResults = function(results) {
     failedCount++;
     // Expand a failed test (but only set this if the user hasn't clicked on the
     // test name yet).
-    if (test.expanded === undefined)
-      test.expanded = true;
-    if (!failedTests.includes(test.fullName))
-      failedTests.push(test.fullName);
+    if (test.expanded === undefined) test.expanded = true;
+    if (!failedTests.includes(test.fullName)) failedTests.push(test.fullName);
 
     countDep.changed();
     test.dep.changed();
@@ -257,29 +259,28 @@ const forgetEvents = function (results) {
 // possibly 'events'.
 const _findTestForResults = function (results) {
   const groupPath = results.groupPath; // array
-  if ((! Array.isArray(groupPath)) || (groupPath.length < 1)) {
+  if (!Array.isArray(groupPath) || groupPath.length < 1) {
     throw new Error("Test must be part of a group");
   }
 
   let group;
   let i = 0;
-  groupPath.forEach(function(gname) {
-    const array = (group ? (group.groups || (group.groups = []))
-                 : resultTree);
-    let newGroup = array.find(function(g) { return g.name === gname; });
-    if (! newGroup) {
+  groupPath.forEach(function (gname) {
+    const array = group ? group.groups || (group.groups = []) : resultTree;
+    let newGroup = array.find(function (g) {
+      return g.name === gname;
+    });
+    if (!newGroup) {
       newGroup = {
         name: gname,
-        parent: (group || null),
-        path: groupPath.slice(0, i+1),
-        dep: new Tracker.Dependency
+        parent: group || null,
+        path: groupPath.slice(0, i + 1),
+        dep: new Tracker.Dependency(),
       }; // create group
       array.push(newGroup);
 
-      if (group)
-        group.dep.changed();
-      else
-        topLevelGroupsDep.changed();
+      if (group) group.dep.changed();
+      else topLevelGroupsDep.changed();
     }
     group = newGroup;
     i++;
@@ -287,20 +288,20 @@ const _findTestForResults = function (results) {
 
   const testName = results.test;
   const server = !!results.server;
-  let test = (group.tests || (group.tests = [])).find(
-                    function(t) { return t.name === testName &&
-                                  t.server === server; });
-  if (! test) {
+  let test = (group.tests || (group.tests = [])).find(function (t) {
+    return t.name === testName && t.server === server;
+  });
+  if (!test) {
     // create test
     const nameParts = [...groupPath];
     nameParts.push(testName);
-    const fullName = nameParts.join(' - ');
+    const fullName = nameParts.join(" - ");
     test = {
       name: testName,
       parent: group,
       server: server,
       fullName: fullName,
-      dep: new Tracker.Dependency
+      dep: new Tracker.Dependency(),
     };
     group.tests.push(test);
     group.dep.changed();
@@ -311,17 +312,15 @@ const _findTestForResults = function (results) {
   return test;
 };
 
-
-
 ////
 //// Helpers on test objects
 ////
 
-const _testTime = function(t) {
+const _testTime = function (t) {
   if (t.events && t.events.length > 0) {
     const lastEvent = t.events[t.events.length - 1];
     if (lastEvent.type === "finish") {
-      if ((typeof lastEvent.timeMs) === "number") {
+      if (typeof lastEvent.timeMs === "number") {
         return lastEvent.timeMs;
       }
     }
@@ -329,25 +328,30 @@ const _testTime = function(t) {
   return null;
 };
 
-const _testStatus = function(t) {
+const _testStatus = function (t) {
   const events = t.events || [];
-  if (events.find(function(x) { return x.type === "exception"; })) {
+  if (
+    events.find(function (x) {
+      return x.type === "exception";
+    })
+  ) {
     // "exception" should be last event, except race conditions on the
     // server can make this not the case.  Technically we can't tell
     // if the test is still running at this point, but it can only
     // result in FAIL.
     return "failed";
-  } else if (events.length == 0 || (events[events.length - 1].type != "finish")) {
+  } else if (events.length == 0 || events[events.length - 1].type != "finish") {
     return "running";
-  } else if (events.some(function(e) {
-    return e.type == "fail" || e.type == "exception"; })) {
+  } else if (
+    events.some(function (e) {
+      return e.type == "fail" || e.type == "exception";
+    })
+  ) {
     return "failed";
   } else {
     return "succeeded";
   }
 };
-
-
 
 ////
 //// Templates
@@ -356,15 +360,15 @@ const _testStatus = function(t) {
 //// Template - navBars
 
 Template.navBar.helpers({
-  running: function() {
+  running: function () {
     countDep.depend();
     return running;
   },
-  passed: function() {
+  passed: function () {
     countDep.depend();
     return failedCount === 0;
   },
-  total_test_time: function() {
+  total_test_time: function () {
     countDep.depend();
 
     // walk whole tree to get all tests
@@ -383,9 +387,8 @@ Template.navBar.helpers({
     };
 
     return walk(resultTree);
-  }
+  },
 });
-
 
 //// Template - progressBar
 
@@ -396,9 +399,8 @@ Template.progressBar.helpers({
   },
   percentPass: function () {
     countDep.depend();
-    if (totalCount === 0)
-      return 0;
-    return 100*passedCount/totalCount;
+    if (totalCount === 0) return 0;
+    return (100 * passedCount) / totalCount;
   },
   totalCount: function () {
     countDep.depend();
@@ -410,9 +412,8 @@ Template.progressBar.helpers({
   },
   percentFail: function () {
     countDep.depend();
-    if (totalCount === 0)
-      return 0;
-    return 100*failedCount/totalCount;
+    if (totalCount === 0) return 0;
+    return (100 * failedCount) / totalCount;
   },
   anyFail: function () {
     countDep.depend();
@@ -420,13 +421,12 @@ Template.progressBar.helpers({
   },
   barOuterClass: function () {
     countDep.depend();
-    return running ? 'progress-bar-animated progress-bar-striped' : '';
+    return running ? "progress-bar-animated progress-bar-striped" : "";
   },
   barInnerClass: function () {
     countDep.depend();
-    return (failedCount > 0 ?
-            'bg-warning' : 'bg-success');
-  }
+    return failedCount > 0 ? "bg-warning" : "bg-success";
+  },
 });
 
 //// Template - groupNav
@@ -434,7 +434,7 @@ Template.progressBar.helpers({
 const changeToPath = function (path) {
   // Update URL with new group path (pushState creates new history entry)
   setGroupPathInURL(path, true);
-  
+
   // Update session to trigger UI updates
   Session.set("groupPath", path);
   Session.set("rerunScheduled", true);
@@ -448,7 +448,7 @@ Template.groupNav.helpers({
     const groupPath = Session.get("groupPath");
     const ret = [];
     for (let i = 1; i <= groupPath.length; i++) {
-      ret.push({path: groupPath.slice(0,i), name: groupPath[i-1]});
+      ret.push({ path: groupPath.slice(0, i), name: groupPath[i - 1] });
     }
     return ret;
   },
@@ -458,30 +458,30 @@ Template.groupNav.helpers({
   isFiltered: function () {
     const groupPath = Session.get("groupPath");
     return groupPath.length > 1 || groupPath[0] !== "tinytest";
-  }
+  },
 });
 
 Template.groupNav.events({
-  'click .group': function () {
+  "click .group": function () {
     changeToPath(this.path);
   },
-  'click .rerun': function () {
+  "click .rerun": function () {
     Session.set("rerunScheduled", true);
     Reload._reload();
   },
-  'click .run-all': function () {
+  "click .run-all": function () {
     changeToPath(["tinytest"]);
-  }
+  },
 });
 
 Template.groupNav.onRendered(function () {
   Tinytest._onCurrentClientTest = function (name) {
-    name = (name ? `C: ${name}` : '');
+    name = name ? `C: ${name}` : "";
     // Set the DOM directly so that it's immediate and we
     // don't wait for Tracker to flush.
-    const span = document.getElementById('current-client-test');
+    const span = document.getElementById("current-client-test");
     if (span) {
-      span.innerHTML = '';
+      span.innerHTML = "";
       span.appendChild(document.createTextNode(name));
     }
   };
@@ -492,16 +492,16 @@ Template.groupNav.onRendered(function () {
 Template.uncaughtErrors.helpers({
   uncaughtErrors() {
     return Session.get("uncaughtErrors");
-  }
+  },
 });
 
 //// Template - failedTests
 
 Template.failedTests.helpers({
-  failedTests: function() {
+  failedTests: function () {
     countDep.depend();
     return failedTests;
-  }
+  },
 });
 
 //// Template - testTable
@@ -514,7 +514,7 @@ Template.testTable.helpers({
   thisWithDep: function () {
     this.dep.depend();
     return this;
-  }
+  },
 });
 
 //// Template - test_group
@@ -523,25 +523,24 @@ Template.test_group.helpers({
   thisWithDep: function () {
     this.dep.depend();
     return this;
-  }
+  },
 });
 
 Template.test_group.events({
-  'click .groupname': function (evt) {
+  "click .groupname": function (evt) {
     changeToPath(this.path);
     // prevent enclosing groups from also triggering on
     // same groupname.  It would be cleaner to think of
     // this as each group only listening to its *own*
     // groupname, but currently it listens to all of them.
     evt.stopImmediatePropagation();
-  }
+  },
 });
-
 
 //// Template - test
 
 Template.test.helpers({
-  test_status_display: function() {
+  test_status_display: function () {
     const status = _testStatus(this);
     if (status == "failed") {
       return "FAIL";
@@ -552,12 +551,12 @@ Template.test.helpers({
     }
   },
 
-  test_time_display: function() {
+  test_time_display: function () {
     const time = _testTime(this);
-    return (typeof time === "number") ? `${time} ms` : "";
+    return typeof time === "number" ? `${time} ms` : "";
   },
 
-  test_class: function() {
+  test_class: function () {
     const classes = [_testStatus(this)];
 
     if (this.expanded) {
@@ -566,21 +565,21 @@ Template.test.helpers({
       classes.push("collapsed");
     }
 
-    return classes.join(' ');
+    return classes.join(" ");
   },
 
-  eventsArray: function() {
-    const events = this.events.filter(function(e) {
+  eventsArray: function () {
+    const events = this.events.filter(function (e) {
       return e.type != "finish";
     });
 
-    const partitionBy = function(seq, func) {
+    const partitionBy = function (seq, func) {
       const result = [];
       let lastValue = {};
-      seq.forEach(function(x) {
+      seq.forEach(function (x) {
         const newValue = func(x);
         if (newValue === lastValue) {
-          result[result.length-1].push(x);
+          result[result.length - 1].push(x);
         } else {
           lastValue = newValue;
           result.push([x]);
@@ -590,46 +589,48 @@ Template.test.helpers({
     };
 
     const dupLists = partitionBy(
-      events.map(function(e) {
+      events.map(function (e) {
         // XXX XXX We need something better than stringify!
         // stringify([undefined]) === "[null]"
         e = Object.assign({}, e);
         delete e.sequence;
-        return {obj: e, str: JSON.stringify(e)};
-      }), function(x) { return x.str; });
+        return { obj: e, str: JSON.stringify(e) };
+      }),
+      function (x) {
+        return x.str;
+      },
+    );
 
-    return dupLists.map(function(L) {
+    return dupLists.map(function (L) {
       const obj = L[0].obj;
-      return (L.length > 1) ? Object.assign({times: L.length}, obj) : obj;
+      return L.length > 1 ? Object.assign({ times: L.length }, obj) : obj;
     });
-  }
+  },
 });
 
 Template.test.events({
-  'click .testname': function () {
-    this.expanded = ! this.expanded;
+  "click .testname": function () {
+    this.expanded = !this.expanded;
     this.dep.changed();
-  }
+  },
 });
-
 
 //// Template - event
 
 Template.event.events({
-  'click .debug': function () {
+  "click .debug": function () {
     // the way we manage groupPath, shortName, cookies, etc, is really
     // messy. needs to be aggressively refactored.
-    forgetEvents({groupPath: this.cookie.groupPath,
-                  test: this.cookie.shortName});
+    forgetEvents({ groupPath: this.cookie.groupPath, test: this.cookie.shortName });
     Tinytest._debugTest(this.cookie, reportResults);
-  }
+  },
 });
 
 // e.g. doDiff('abc', 'bcd') => [[-1, 'a'], [0, 'bc'], [1, 'd']]
 const doDiff = function (str1, str2) {
   const diff = diffChars(str1, str2);
-  
-  return diff.map(part => {
+
+  return diff.map((part) => {
     if (part.added) return [1, part.value];
     if (part.removed) return [-1, part.value];
     return [0, part.value];
@@ -637,72 +638,65 @@ const doDiff = function (str1, str2) {
 };
 
 Template.event.helpers({
-  get_details: function() {
-
+  get_details: function () {
     let details = this.details;
 
-    if (! details) {
+    if (!details) {
       return null;
     } else {
-
       const type = details.type;
       const stack = details.stack;
 
-      details = Array.isArray(details) && [...details] || Object.assign({}, details);
+      details = (Array.isArray(details) && [...details]) || Object.assign({}, details);
       delete details.type;
       delete details.stack;
 
-      const prepare = function(details) {
-        const diff = type === 'string_equal'
-          ? doDiff(details.actual, details.expected)
-          : null;
+      const prepare = function (details) {
+        const diff = type === "string_equal" ? doDiff(details.actual, details.expected) : null;
 
-        return Object.entries(details).map(function([key, val]) {
+        return Object.entries(details)
+          .map(function ([key, val]) {
+            // make test._stringEqual results print nicely,
+            // in particular for multiline strings
+            if (type === "string_equal" && (key === "actual" || key === "expected")) {
+              let html = `<pre class="string_equal string_equal_${key}">`;
+              diff.forEach(function (piece) {
+                const which = piece[0];
+                const text = piece[1];
+                if (which === 0 || which === (key === "actual" ? -1 : 1)) {
+                  let htmlBit = Blaze._escape(text).replace(/\n/g, "<br>");
+                  if (which !== 0) htmlBit = `<ins>${htmlBit}</ins>`;
+                  html += htmlBit;
+                }
+              });
+              html += "</pre>";
+              val = new Spacebars.SafeString(html);
+            }
 
-          // make test._stringEqual results print nicely,
-          // in particular for multiline strings
-          if (type === 'string_equal' &&
-              (key === 'actual' || key === 'expected')) {
-            let html = `<pre class="string_equal string_equal_${key}">`;
-            diff.forEach(function (piece) {
-              const which = piece[0];
-              const text = piece[1];
-              if (which === 0 ||
-                  which === (key === 'actual' ? -1 : 1)) {
-                let htmlBit = Blaze._escape(text).replace(
-                    /\n/g, '<br>');
-                if (which !== 0)
-                  htmlBit = `<ins>${htmlBit}</ins>`;
-                html += htmlBit;
-              }
-            });
-            html += '</pre>';
-            val = new Spacebars.SafeString(html);
-          }
-
-          // You can end up with a an undefined value, e.g. using
-          // isNull without providing a message attribute: isNull(1).
-          // No need to display those.
-          if (typeof val !== 'undefined') {
-            return {
-              key: key,
-              val: val
-            };
-          } else {
-            return undefined;
-          }
-        }).filter(Boolean);
+            // You can end up with a an undefined value, e.g. using
+            // isNull without providing a message attribute: isNull(1).
+            // No need to display those.
+            if (typeof val !== "undefined") {
+              return {
+                key: key,
+                val: val,
+              };
+            } else {
+              return undefined;
+            }
+          })
+          .filter(Boolean);
       };
 
       return {
         type: type,
         stack: stack,
-        details: prepare(details)
+        details: prepare(details),
       };
     }
   },
 
-  is_debuggable: function() {
+  is_debuggable: function () {
     return !!this.cookie;
-  }
+  },
 });

@@ -39,29 +39,26 @@ try_all_permutations = function () {
 
   const expand_next_set = function () {
     if (current_set === args.length) {
-      chosen.forEach(function (f) { f(); });
+      chosen.forEach(function (f) {
+        f();
+      });
     } else {
       let set = args[current_set];
-      if (typeof set === "function")
-        set = [set];
+      if (typeof set === "function") set = [set];
 
       current_set++;
-      if (typeof set[0] === "number")
-        pick(set[0], set.slice(1));
-      else
-        pick(set.length, set);
+      if (typeof set[0] === "number") pick(set[0], set.slice(1));
+      else pick(set.length, set);
       current_set--;
     }
   };
 
   const pick = function (how_many, remaining) {
-    if (how_many === 0)
-      expand_next_set();
+    if (how_many === 0) expand_next_set();
     else {
       for (let i = 0; i < remaining.length; i++) {
         chosen.push(remaining[i]);
-        pick(how_many - 1,
-             remaining.slice(0, i).concat(remaining.slice(i + 1)));
+        pick(how_many - 1, remaining.slice(0, i).concat(remaining.slice(i + 1)));
         chosen.pop();
       }
     }

@@ -1,7 +1,7 @@
-import { Meteor } from 'meteor/meteor';
-import { Random } from 'meteor/random';
+import { Meteor } from "meteor/meteor";
+import { Random } from "meteor/random";
 
-Tinytest.add('random', function (test) {
+Tinytest.add("random", function (test) {
   // Deterministic with a specified seed, which should generate the
   // same sequence in all environments.
   //
@@ -11,15 +11,15 @@ Tinytest.add('random', function (test) {
   // sequence for a seed, as long as the sequence is consistent for
   // a particular release.
   const random = Random.createWithSeeds(0);
-  test.equal(random.id(), 'cp9hWvhg8GSvuZ9os');
-  test.equal(random.id(), '3f3k6Xo7rrHCifQhR');
-  test.equal(random.id(), 'shxDnjWWmnKPEoLhM');
-  test.equal(random.id(), '6QTjB8C5SEqhmz4ni');
+  test.equal(random.id(), "cp9hWvhg8GSvuZ9os");
+  test.equal(random.id(), "3f3k6Xo7rrHCifQhR");
+  test.equal(random.id(), "shxDnjWWmnKPEoLhM");
+  test.equal(random.id(), "6QTjB8C5SEqhmz4ni");
 });
 
 // node crypto and window.crypto.getRandomValues() don't let us specify a seed,
 // but at least test that the output is in the right format.
-Tinytest.add('random - format', function (test) {
+Tinytest.add("random - format", function (test) {
   const idLen = 17;
   test.equal(Random.id().length, idLen);
   test.equal(Random.id(29).length, 29);
@@ -35,18 +35,21 @@ Tinytest.add('random - format', function (test) {
   test.equal(Random.secret(13).length, 13);
 });
 
-Tinytest.add('random - Alea is last resort', function (test) {
+Tinytest.add("random - Alea is last resort", function (test) {
   if (Meteor.isServer) {
     test.isTrue(Random.alea === undefined);
   }
   if (Meteor.isClient) {
-    const useGetRandomValues = !!(typeof window !== 'undefined' &&
-        window.crypto && window.crypto.getRandomValues);
+    const useGetRandomValues = !!(
+      typeof window !== "undefined" &&
+      window.crypto &&
+      window.crypto.getRandomValues
+    );
     test.equal(Random.alea === undefined, useGetRandomValues);
   }
 });
 
-Tinytest.add('random - createWithSeeds requires parameters', function (test) {
+Tinytest.add("random - createWithSeeds requires parameters", function (test) {
   test.throws(function () {
     Random.createWithSeeds();
   });

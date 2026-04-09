@@ -15,18 +15,12 @@ function isObjEmpty(obj) {
 // old_results and new_results: collections of documents.
 //    if ordered, they are arrays.
 //    if unordered, they are IdMaps
-DiffSequence.diffQueryChanges = function (ordered, oldResults, newResults,
-                                              observer, options) {
-  if (ordered)
-    DiffSequence.diffQueryOrderedChanges(
-      oldResults, newResults, observer, options);
-  else
-    DiffSequence.diffQueryUnorderedChanges(
-      oldResults, newResults, observer, options);
+DiffSequence.diffQueryChanges = function (ordered, oldResults, newResults, observer, options) {
+  if (ordered) DiffSequence.diffQueryOrderedChanges(oldResults, newResults, observer, options);
+  else DiffSequence.diffQueryUnorderedChanges(oldResults, newResults, observer, options);
 };
 
-DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
-                                                       observer, options) {
+DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults, observer, options) {
   options = options || {};
   const projectionFn = options.projectionFn || EJSON.clone;
 
@@ -40,9 +34,8 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
       if (observer.changed && !EJSON.equals(oldDoc, newDoc)) {
         const projectedNew = projectionFn(newDoc);
         const projectedOld = projectionFn(oldDoc);
-        const changedFields =
-              DiffSequence.makeChangedFields(projectedNew, projectedOld);
-        if (! isObjEmpty(changedFields)) {
+        const changedFields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
+        if (!isObjEmpty(changedFields)) {
           observer.changed(id, changedFields);
         }
       }
@@ -55,28 +48,24 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,
 
   if (observer.removed) {
     oldResults.forEach(function (oldDoc, id) {
-      if (!newResults.has(id))
-        observer.removed(id);
+      if (!newResults.has(id)) observer.removed(id);
     });
   }
 };
 
-DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
-                                                     observer, options) {
+DiffSequence.diffQueryOrderedChanges = function (old_results, new_results, observer, options) {
   options = options || {};
   const projectionFn = options.projectionFn || EJSON.clone;
 
   const new_presence_of_id = {};
   new_results.forEach(function (doc) {
-    if (new_presence_of_id[doc._id])
-      Meteor._debug("Duplicate _id in new_results");
+    if (new_presence_of_id[doc._id]) Meteor._debug("Duplicate _id in new_results");
     new_presence_of_id[doc._id] = true;
   });
 
   const old_index_of_id = {};
   old_results.forEach(function (doc, i) {
-    if (doc._id in old_index_of_id)
-      Meteor._debug("Duplicate _id in old_results");
+    if (doc._id in old_index_of_id) Meteor._debug("Duplicate _id in old_results");
     old_index_of_id[doc._id] = i;
   });
 
@@ -106,7 +95,6 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
   // Asymptotically: O(N k) where k is number of ops, or potentially
   // O(N log N) if inner loop of LCS were made to be binary search.
 
-
   //////// LCS (longest common sequence, with respect to _id)
   // (see Wikipedia article on Longest Increasing Subsequence,
   // where the LIS is taken of the sequence of old indices of the
@@ -126,12 +114,12 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
   // ptr[n] is -1.
   const ptrs = Array.from({ length: N });
   // virtual sequence of old indices of new results
-  const old_idx_seq = function(i_new) {
+  const old_idx_seq = function (i_new) {
     return old_index_of_id[new_results[i_new]._id];
   };
   // for each item in new_results, use it to extend a common subsequence
   // of length j <= max_seq_len
-  for(let i=0; i<N; i++) {
+  for (let i = 0; i < N; i++) {
     if (old_index_of_id[new_results[i]._id] !== undefined) {
       let j = max_seq_len;
       // this inner loop would traditionally be a binary search,
@@ -140,20 +128,18 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
       // If this were to be changed to a binary search, we'd still want
       // to scan backwards a bit as an optimization.
       while (j > 0) {
-        if (old_idx_seq(seq_ends[j-1]) < old_idx_seq(i))
-          break;
+        if (old_idx_seq(seq_ends[j - 1]) < old_idx_seq(i)) break;
         j--;
       }
 
-      ptrs[i] = (j === 0 ? -1 : seq_ends[j-1]);
+      ptrs[i] = j === 0 ? -1 : seq_ends[j - 1];
       seq_ends[j] = i;
-      if (j+1 > max_seq_len)
-        max_seq_len = j+1;
+      if (j + 1 > max_seq_len) max_seq_len = j + 1;
     }
   }
 
   // pull out the LCS/LIS into unmoved
-  let idx = (max_seq_len === 0 ? -1 : seq_ends[max_seq_len-1]);
+  let idx = max_seq_len === 0 ? -1 : seq_ends[max_seq_len - 1];
   while (idx >= 0) {
     unmoved.push(idx);
     idx = ptrs[idx];
@@ -206,12 +192,9 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
         if (observer.changed) observer.changed(newDoc._id, fields);
       }
     }
-    startOfGroup = endOfGroup+1;
+    startOfGroup = endOfGroup + 1;
   });
-
-
 };
-
 
 // General helper for diff-ing two objects.
 // callbacks is an object like so:
@@ -220,7 +203,7 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results,
 //   both: function (key, leftValue, rightValue) {...},
 // }
 DiffSequence.diffObjects = function (left, right, callbacks) {
-  Object.keys(left).forEach(key => {
+  Object.keys(left).forEach((key) => {
     const leftValue = left[key];
     if (hasOwn.call(right, key)) {
       if (callbacks.both) callbacks.both(key, leftValue, right[key]);
@@ -230,9 +213,9 @@ DiffSequence.diffObjects = function (left, right, callbacks) {
   });
 
   if (callbacks.rightOnly) {
-    Object.keys(right).forEach(key => {
+    Object.keys(right).forEach((key) => {
       const rightValue = right[key];
-      if (! hasOwn.call(left, key)) {
+      if (!hasOwn.call(left, key)) {
         callbacks.rightOnly(key, rightValue);
       }
     });
@@ -241,7 +224,7 @@ DiffSequence.diffObjects = function (left, right, callbacks) {
 
 DiffSequence.diffMaps = function (left, right, callbacks) {
   left.forEach(function (leftValue, key) {
-    if (right.has(key)){
+    if (right.has(key)) {
       if (callbacks.both) callbacks.both(key, leftValue, right.get(key));
     } else {
       if (callbacks.leftOnly) callbacks.leftOnly(key, leftValue);
@@ -250,13 +233,12 @@ DiffSequence.diffMaps = function (left, right, callbacks) {
 
   if (callbacks.rightOnly) {
     right.forEach(function (rightValue, key) {
-      if (!left.has(key)){
+      if (!left.has(key)) {
         callbacks.rightOnly(key, rightValue);
       }
     });
   }
 };
-
 
 DiffSequence.makeChangedFields = function (newDoc, oldDoc) {
   const fields = {};
@@ -268,15 +250,14 @@ DiffSequence.makeChangedFields = function (newDoc, oldDoc) {
       fields[key] = value;
     },
     both: function (key, leftValue, rightValue) {
-      if (!EJSON.equals(leftValue, rightValue))
-        fields[key] = rightValue;
-    }
+      if (!EJSON.equals(leftValue, rightValue)) fields[key] = rightValue;
+    },
   });
   return fields;
 };
 
 DiffSequence.applyChanges = function (doc, changeFields) {
-  Object.keys(changeFields).forEach(key => {
+  Object.keys(changeFields).forEach((key) => {
     const value = changeFields[key];
     if (typeof value === "undefined") {
       delete doc[key];
@@ -285,4 +266,3 @@ DiffSequence.applyChanges = function (doc, changeFields) {
     }
   });
 };
-

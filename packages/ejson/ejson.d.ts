@@ -39,17 +39,14 @@ export interface JSONable {
 export interface EJSON extends EJSONable {}
 
 export namespace EJSON {
-  function addType(
-    name: string,
-    factory: (val: JSONable) => EJSONableCustomType
-  ): void;
+  function addType(name: string, factory: (val: JSONable) => EJSONableCustomType): void;
 
   function clone<T>(val: T): T;
 
   function equals(
     a: EJSON,
     b: EJSON,
-    options?: { keyOrderSensitive?: boolean | undefined }
+    options?: { keyOrderSensitive?: boolean | undefined },
   ): boolean;
 
   function fromJSONValue(val: JSONable): any;
@@ -64,7 +61,7 @@ export namespace EJSON {
     options?: {
       indent?: boolean | number | string | undefined;
       canonical?: boolean | undefined;
-    }
+    },
   ): string;
 
   function toJSONValue(val: EJSON): JSONable;

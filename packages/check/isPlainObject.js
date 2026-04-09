@@ -12,10 +12,10 @@ const ObjectFunctionString = fnToString.call(Object);
 
 const getProto = Object.getPrototypeOf;
 
-export const isPlainObject = obj => {
+export const isPlainObject = (obj) => {
   // Detect obvious negatives
   // Use toString instead of jQuery.type to catch host objects
-  if (!obj || toString.call(obj) !== '[object Object]') {
+  if (!obj || toString.call(obj) !== "[object Object]") {
     return false;
   }
 
@@ -27,7 +27,6 @@ export const isPlainObject = obj => {
   }
 
   // Objects with prototype are plain iff they were constructed by a global Object function
-  const Ctor = hasOwn.call(proto, 'constructor') && proto.constructor;
-  return typeof Ctor === 'function' &&
-    fnToString.call(Ctor) === ObjectFunctionString;
+  const Ctor = hasOwn.call(proto, "constructor") && proto.constructor;
+  return typeof Ctor === "function" && fnToString.call(Ctor) === ObjectFunctionString;
 };

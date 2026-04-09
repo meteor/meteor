@@ -11,16 +11,16 @@ TEST_STATUS = {
   DONE: false,
   FAILURES: 0,
   PASSED: null,
-  WHERE_FAILED: []
+  WHERE_FAILED: [],
 };
 
 // xUnit format uses XML output
 const XML_CHAR_MAP = {
-  '<': '&lt;',
-  '>': '&gt;',
-  '&': '&amp;',
-  '"': '&quot;',
-  "'": '&apos;'
+  "<": "&lt;",
+  ">": "&gt;",
+  "&": "&amp;",
+  '"': "&quot;",
+  "'": "&apos;",
 };
 
 // Escapes a string for insertion into XML
@@ -28,7 +28,7 @@ const escapeXml = function (s) {
   return s.replace(/[<>&"']/g, function (c) {
     return XML_CHAR_MAP[c];
   });
-}
+};
 
 // Returns a human name for a test
 const getName = function (result) {
@@ -37,12 +37,12 @@ const getName = function (result) {
 
 // Calls console.log, but returns silently if console.log is not available
 const log = function (/*arguments*/) {
-  if (typeof console !== 'undefined') {
+  if (typeof console !== "undefined") {
     console.log.apply(console, arguments);
   }
 };
 
-const MAGIC_PREFIX = '##_meteor_magic##';
+const MAGIC_PREFIX = "##_meteor_magic##";
 // Write output so that other tools can read it
 // Output is sent to console.log, prefixed with the magic prefix and then the facility
 // By grepping for the prefix, other tools can get the 'special' output
@@ -54,7 +54,7 @@ const logMagic = function (facility, s) {
 // This uses logMagic with a facility of xunit
 const xunit = function (s) {
   if (xunitEnabled) {
-    logMagic('xunit', s);
+    logMagic("xunit", s);
   }
 };
 
@@ -67,16 +67,13 @@ let toReport = [];
 
 const hrefPath = window.location.href.split("/");
 let platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
-if (!platform)
-  platform = "local";
+if (!platform) platform = "local";
 
 // We enable xUnit output when platform is xunit
-const xunitEnabled = (platform == 'xunit');
+const xunitEnabled = platform == "xunit";
 
-const doReport = Meteor &&
-      Meteor.settings &&
-      Meteor.settings.public &&
-      Meteor.settings.public.runId;
+const doReport =
+  Meteor && Meteor.settings && Meteor.settings.public && Meteor.settings.public.runId;
 const report = function (name, last) {
   if (doReport) {
     const data = {
@@ -85,29 +82,26 @@ const report = function (name, last) {
       status: resultSet[name].status,
       platform: platform,
       server: resultSet[name].server,
-      fullName: name.substr(3)
+      fullName: name.substr(3),
     };
-    if ((data.status === "FAIL" || data.status === "EXPECTED") &&
-    !(Object.keys(resultSet[name].events).length === 0)) {
+    if (
+      (data.status === "FAIL" || data.status === "EXPECTED") &&
+      !(Object.keys(resultSet[name].events).length === 0)
+    ) {
       // only send events when bad things happen
       data.events = resultSet[name].events;
     }
-    if (last)
-      data.end = new Date();
-    else
-      data.start = new Date();
+    if (last) data.end = new Date();
+    else data.start = new Date();
     toReport.push(EJSON.toJSONValue(data));
   }
 };
 const sendReports = function (callback) {
   const reports = toReport;
-  if (!callback)
-    callback = function () {};
+  if (!callback) callback = function () {};
   toReport = [];
-  if (doReport)
-    Meteor.call("report", reports, callback);
-  else
-    callback();
+  if (doReport) Meteor.call("report", reports, callback);
+  else callback();
 };
 
 runTests = function () {
@@ -126,7 +120,7 @@ runTests = function () {
           events: [],
           server: !!results.server,
           testPath: testPath,
-          test: results.test
+          test: results.test,
         };
         report(name, false);
       }
@@ -135,51 +129,48 @@ runTests = function () {
       results.events.forEach(function (event) {
         resultSet[name].events.push(event);
         switch (event.type) {
-        case "ok":
-          break;
-        case "expected_fail":
-          if (resultSet[name].status !== "FAIL")
-            resultSet[name].status = "EXPECTED";
-          break;
-        case "exception":
-          log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
-          if (event.details && event.details.stack)
-            log(event.details.stack);
-          else
-            log("Test failed with exception");
-          failed++;
-          whereFailed.push({ name: name, info: JSON.stringify(event) });
-          break;
-        case "finish":
-          switch (resultSet[name].status) {
-          case "OK":
+          case "ok":
             break;
-          case "PENDING":
-            resultSet[name].status = "OK";
-            report(name, true);
-            log(name, ":", "OK");
-            passed++;
+          case "expected_fail":
+            if (resultSet[name].status !== "FAIL") resultSet[name].status = "EXPECTED";
             break;
-          case "EXPECTED":
-            report(name, true);
-            log(name, ":", "EXPECTED FAILURE");
-            expected++;
-            break;
-          case "FAIL":
-            failed++;
-            report(name, true);
+          case "exception":
             log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
-            log(JSON.stringify(resultSet[name].info));
-            whereFailed.push({ name: name, info: JSON.stringify(resultSet[name].info) });
+            if (event.details && event.details.stack) log(event.details.stack);
+            else log("Test failed with exception");
+            failed++;
+            whereFailed.push({ name: name, info: JSON.stringify(event) });
+            break;
+          case "finish":
+            switch (resultSet[name].status) {
+              case "OK":
+                break;
+              case "PENDING":
+                resultSet[name].status = "OK";
+                report(name, true);
+                log(name, ":", "OK");
+                passed++;
+                break;
+              case "EXPECTED":
+                report(name, true);
+                log(name, ":", "EXPECTED FAILURE");
+                expected++;
+                break;
+              case "FAIL":
+                failed++;
+                report(name, true);
+                log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
+                log(JSON.stringify(resultSet[name].info));
+                whereFailed.push({ name: name, info: JSON.stringify(resultSet[name].info) });
+                break;
+              default:
+                log(name, ": unknown state for the test to be in");
+            }
             break;
           default:
-            log(name, ": unknown state for the test to be in");
-          }
-          break;
-        default:
-          resultSet[name].status = "FAIL";
-          resultSet[name].info = results;
-          break;
+            resultSet[name].status = "FAIL";
+            resultSet[name].info = results;
+            break;
         }
       });
     },
@@ -189,7 +180,16 @@ runTests = function () {
       if (failed > 0) {
         log("~~~~~~~ THERE ARE FAILURES ~~~~~~~");
       }
-      log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", Object.keys(resultSet).length);
+      log(
+        "passed/expected/failed/total",
+        passed,
+        "/",
+        expected,
+        "/",
+        failed,
+        "/",
+        Object.keys(resultSet).length,
+      );
       sendReports(function () {
         if (doReport) {
           log("Waiting 3s for any last reports to get sent out");
@@ -210,8 +210,9 @@ runTests = function () {
       // Also log xUnit output
       xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
       resultSet.forEach(function (result, _name) {
-        const classname = result.testPath.join('.').replace(/ /g, '-') + (result.server ? "-server" : "-client");
-        const testName = result.test.replace(/ /g, '-') + (result.server ? "-server" : "-client");
+        const classname =
+          result.testPath.join(".").replace(/ /g, "-") + (result.server ? "-server" : "-client");
+        const testName = result.test.replace(/ /g, "-") + (result.server ? "-server" : "-client");
         let time = "";
         let error = "";
         result.events.forEach(function (event) {
@@ -224,27 +225,30 @@ runTests = function () {
               break;
             case "exception":
               const details = event.details || {};
-              error = `${details.message || '?'} filename=${details.filename || '?'} line=${details.line || '?'}`;
+              error = `${details.message || "?"} filename=${details.filename || "?"} line=${details.line || "?"}`;
               break;
           }
         });
         switch (result.status) {
           case "FAIL":
-            error = error || '?';
+            error = error || "?";
             break;
           case "EXPECTED":
             error = null;
             break;
         }
 
-        xunit(`<testcase classname="${escapeXml(classname)}" name="${escapeXml(testName)}" time="${time}">`);
+        xunit(
+          `<testcase classname="${escapeXml(classname)}" name="${escapeXml(testName)}" time="${time}">`,
+        );
         if (error) {
           xunit(`  <failure message="test failure">${escapeXml(error)}</failure>`);
         }
-        xunit('</testcase>');
+        xunit("</testcase>");
       });
-      xunit('</testsuite>');
-      logMagic('state', 'done');
+      xunit("</testsuite>");
+      logMagic("state", "done");
     },
-    ["tinytest"]);
-}
+    ["tinytest"],
+  );
+};

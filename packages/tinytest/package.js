@@ -1,24 +1,17 @@
 Package.describe({
   summary: "Tiny testing framework",
-  version: '1.3.2',
+  version: "1.3.2",
 });
 
 Npm.depends({
-  "lodash.isequal": "4.5.0"
+  "lodash.isequal": "4.5.0",
 });
 
 Package.onUse(function (api) {
-  api.use([
-    'ecmascript',
-    'ejson',
-    'random',
-    'ddp',
-    'mongo',
-    'check'
-  ]);
+  api.use(["ecmascript", "ejson", "random", "ddp", "mongo", "check"]);
 
-  api.mainModule('tinytest_client.js', 'client');
-  api.mainModule('tinytest_server.js', 'server');
+  api.mainModule("tinytest_client.js", "client");
+  api.mainModule("tinytest_server.js", "server");
 
-  api.export('Tinytest');
+  api.export("Tinytest");
 });

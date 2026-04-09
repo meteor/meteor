@@ -1,8 +1,5 @@
 import { Tinytest } from "./tinytest.js";
-import {
-  ServerTestResultsSubscription,
-  ServerTestResultsCollection,
-} from "./model.js";
+import { ServerTestResultsSubscription, ServerTestResultsCollection } from "./model.js";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -41,12 +38,16 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
     }
   };
 
-  const startLocalTests = function() {
+  const startLocalTests = function () {
     localStarted = true;
-    Tinytest._runTests(onReport, function () {
-      localComplete = true;
-      maybeDone();
-    }, pathPrefix);
+    Tinytest._runTests(
+      onReport,
+      function () {
+        localComplete = true;
+        maybeDone();
+      },
+      pathPrefix,
+    );
   };
 
   const handle = Meteor.subscribe(ServerTestResultsSubscription, runId);
@@ -59,19 +60,19 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
         return;
       }
 
-      if (! msg.fields) {
+      if (!msg.fields) {
         return;
       }
 
       // This will only work for added & changed messages.
       // hope that is all you get.
-      Object.keys(msg.fields).forEach(key => {
+      Object.keys(msg.fields).forEach((key) => {
         // Skip the 'complete' report (deal with it last)
-        if (key === 'complete') {
+        if (key === "complete") {
           return;
         }
         const report = msg.fields[key];
-        report.events.forEach(event => {
+        report.events.forEach((event) => {
           delete event.cookie; // can't debug a server test on the client..
         });
         report.server = true;
@@ -80,16 +81,16 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
 
       // Now that we've processed all the other messages,
       // check if we have the 'complete' message
-      if (hasOwn.call(msg.fields, 'complete')) {
+      if (hasOwn.call(msg.fields, "complete")) {
         remoteComplete = true;
         handle.stop();
-        Meteor.call('tinytest/clearResults', runId);
+        Meteor.call("tinytest/clearResults", runId);
         maybeDone();
       }
-    }
+    },
   });
 
-  Meteor.call('tinytest/run', runId, pathPrefix, function (error, _result) {
+  Meteor.call("tinytest/run", runId, pathPrefix, function (error, _result) {
     if (error) {
       // XXX better report error
       throw new Error("Test server returned an error");

@@ -1,8 +1,11 @@
 function isPromise(obj) {
-  return obj && typeof obj.then === 'function';
+  return obj && typeof obj.then === "function";
 }
 
-waitUntil = function _waitUntil(checkFunction, { timeout = 15_000, interval = 200, leading = true, description = '' } = {}) {
+waitUntil = function _waitUntil(
+  checkFunction,
+  { timeout = 15_000, interval = 200, leading = true, description = "" } = {},
+) {
   let waitTime = interval;
   return new Promise((resolve, reject) => {
     const shouldWait = checkFunction();
@@ -14,7 +17,7 @@ waitUntil = function _waitUntil(checkFunction, { timeout = 15_000, interval = 20
       const shouldWait = checkFunction();
       if (isPromise(shouldWait)) {
         shouldWait
-          .then(_shouldWait => {
+          .then((_shouldWait) => {
             if (_shouldWait) {
               resolve();
               clearInterval(handler);
@@ -22,7 +25,7 @@ waitUntil = function _waitUntil(checkFunction, { timeout = 15_000, interval = 20
             }
 
             if (waitTime > timeout) {
-              console.error(description, 'timed out');
+              console.error(description, "timed out");
               reject();
               clearInterval(handler);
             }
@@ -39,7 +42,7 @@ waitUntil = function _waitUntil(checkFunction, { timeout = 15_000, interval = 20
         clearInterval(handler);
       } else {
         if (waitTime > timeout) {
-          console.error(description, 'timed out');
+          console.error(description, "timed out");
           reject();
           clearInterval(handler);
         }

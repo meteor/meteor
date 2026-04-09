@@ -1,4 +1,4 @@
-import isEqual from 'lodash.isequal';
+import isEqual from "lodash.isequal";
 
 // This file allows you to write tests that expect certain callbacks to be
 // called in certain orders, or optionally in groups where the order does not
@@ -56,8 +56,8 @@ CallbackLogger.prototype.expectResultOnly = async function (callbackName, args) 
 
 CallbackLogger.prototype._waitForLengthOrTimeout = function (len) {
   const self = this;
-  const timeoutControl = { executionTime:  0 };
-  return new Promise(resolve => {
+  const timeoutControl = { executionTime: 0 };
+  return new Promise((resolve) => {
     const waitFunc = () => {
       if (timeoutControl.executionTime < TIMEOUT && self._log.length < len) {
         timeoutControl.executionTime += 100;
@@ -89,8 +89,7 @@ CallbackLogger.prototype.expectResultUnordered = async function (list) {
         break;
       }
     }
-    if (!found)
-      self._test.fail([`Found unexpected result: ${JSON.stringify(dequeued)}`]);
+    if (!found) self._test.fail([`Found unexpected result: ${JSON.stringify(dequeued)}`]);
     i--;
   }
 };

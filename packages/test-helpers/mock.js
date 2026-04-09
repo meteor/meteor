@@ -4,17 +4,17 @@ mockBehaviours = function _mockBehaviours(obj, mockBehaviors = {}) {
 
   // Store original functions
   for (const key in obj) {
-    if (typeof obj[key] === 'function') {
+    if (typeof obj[key] === "function") {
       originalFunctions[key] = obj[key];
     }
   }
 
   // Mutate functions to identity functions
   for (const key in obj) {
-    if (typeof obj[key] === 'function') {
-      obj[key] = function(...params) {
+    if (typeof obj[key] === "function") {
+      obj[key] = function (...params) {
         mockedRuns.push({ name: key, params });
-        if (typeof mockBehaviors?.[key] === 'function') {
+        if (typeof mockBehaviors?.[key] === "function") {
           return mockBehaviors[key](...params);
         }
         return params?.[0];
@@ -23,7 +23,7 @@ mockBehaviours = function _mockBehaviours(obj, mockBehaviors = {}) {
   }
 
   // Method to revert the mutation
-  const stop = function() {
+  const stop = function () {
     for (const key in originalFunctions) {
       obj[key] = originalFunctions[key];
     }

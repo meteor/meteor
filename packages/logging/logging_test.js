@@ -21,7 +21,7 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
     // for the minified filename
     test.matches(
       eval(code), // oxlint-disable-line no-eval -- intentional eval for testing caller details
-      /^(?:eval|local-test_logging\.js|[a-f0-9]{40}\.js)/
+      /^(?:eval|local-test_logging\.js|[a-f0-9]{40}\.js)/,
     );
   }
 });
@@ -64,11 +64,7 @@ Tinytest.add("logging - log", function (test) {
       [0, "0", "falsy - 0"],
       [null, "null", "falsy - null"],
       [undefined, "undefined", "falsy - undefined"],
-      [
-        new Date("2013-06-13T01:15:16.000Z"),
-        new Date("2013-06-13T01:15:16.000Z"),
-        "date",
-      ],
+      [new Date("2013-06-13T01:15:16.000Z"), new Date("2013-06-13T01:15:16.000Z"), "date"],
       [/[^regexp]{0,1}/g, "/[^regexp]{0,1}/g", "regexp"],
       [true, "true", "boolean - true"],
       [false, "false", "boolean - false"],
@@ -94,8 +90,7 @@ Tinytest.add("logging - log", function (test) {
       if (
         expected &&
         expected.toString &&
-        (expected.toString() === "NaN" ||
-          expected.toString() === "Invalid Date")
+        (expected.toString() === "NaN" || expected.toString() === "Invalid Date")
       ) {
         return;
       }
@@ -116,9 +111,7 @@ Tinytest.add("logging - log", function (test) {
     test.throws(function () {
       log({ level: "not the right level" });
     });
-    ["file", "line", "program", "originApp", "satellite"].forEach(function (
-      restrictedKey
-    ) {
+    ["file", "line", "program", "originApp", "satellite"].forEach(function (restrictedKey) {
       test.throws(function () {
         const obj = {};
         obj[restrictedKey] = "usage of restricted key";
@@ -177,9 +170,7 @@ Tinytest.add("logging - format", function (test) {
   ["debug", "info", "warn", "error"].forEach(function (level) {
     test.equal(
       Log.format({ message: "message", time, level }),
-      `${level
-        .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} message`
+      `${level.charAt(0).toUpperCase()}20120908-07:06:05.004${utcOffsetStr} message`,
     );
 
     test.equal(
@@ -189,23 +180,19 @@ Tinytest.add("logging - format", function (test) {
         timeInexact: true,
         level,
       }),
-      `${level
-        .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr}? message`
+      `${level.charAt(0).toUpperCase()}20120908-07:06:05.004${utcOffsetStr}? message`,
     );
 
     test.equal(
       Log.format({ foo1: "bar1", foo2: "bar2", time, level }),
       `${level
         .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} {"foo1":"bar1","foo2":"bar2"}`
+        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} {"foo1":"bar1","foo2":"bar2"}`,
     );
 
     test.equal(
       Log.format({ message: "message", foo: "bar", time, level }),
-      `${level
-        .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} message {"foo":"bar"}`
+      `${level.charAt(0).toUpperCase()}20120908-07:06:05.004${utcOffsetStr} message {"foo":"bar"}`,
     );
 
     // Has everything except stderr field
@@ -223,7 +210,7 @@ Tinytest.add("logging - format", function (test) {
       }),
       `${level
         .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [myApp via proxy] (server:app.js:42) message {"foo":"bar"}`
+        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [myApp via proxy] (server:app.js:42) message {"foo":"bar"}`,
     );
 
     // stderr
@@ -236,7 +223,7 @@ Tinytest.add("logging - format", function (test) {
       }),
       `${level
         .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} (STDERR) message from stderr`
+        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} (STDERR) message from stderr`,
     );
 
     // app/originApp
@@ -248,9 +235,7 @@ Tinytest.add("logging - format", function (test) {
         app: "app",
         originApp: "app",
       }),
-      `${level
-        .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [app] message`
+      `${level.charAt(0).toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [app] message`,
     );
     test.equal(
       Log.format({
@@ -262,7 +247,7 @@ Tinytest.add("logging - format", function (test) {
       }),
       `${level
         .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [app via proxy] message`
+        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [app via proxy] message`,
     );
 
     // source info
@@ -277,7 +262,7 @@ Tinytest.add("logging - format", function (test) {
       }),
       `${level
         .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} (server:app.js:42) message`
+        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} (server:app.js:42) message`,
     );
     test.equal(
       Log.format({
@@ -287,9 +272,7 @@ Tinytest.add("logging - format", function (test) {
         file: "app.js",
         line: 42,
       }),
-      `${level
-        .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} (app.js:42) message`
+      `${level.charAt(0).toUpperCase()}20120908-07:06:05.004${utcOffsetStr} (app.js:42) message`,
     );
   });
 
@@ -302,9 +285,9 @@ Tinytest.add("logging - format", function (test) {
       },
       {
         color: true,
-      }
+      },
     ),
-    /oyez/
+    /oyez/,
   );
 });
 
@@ -316,7 +299,7 @@ Tinytest.add("logging - formats - without time", function (test) {
   for (const level of levels) {
     test.equal(
       Log.format({ message: "message", time, level }),
-      `${level.charAt(0).toUpperCase()} message`
+      `${level.charAt(0).toUpperCase()} message`,
     );
 
     test.equal(
@@ -326,17 +309,17 @@ Tinytest.add("logging - formats - without time", function (test) {
         timeInexact: true,
         level,
       }),
-      `${level.charAt(0).toUpperCase()} message`
+      `${level.charAt(0).toUpperCase()} message`,
     );
 
     test.equal(
       Log.format({ foo1: "bar1", foo2: "bar2", time, level }),
-      `${level.charAt(0).toUpperCase()} {"foo1":"bar1","foo2":"bar2"}`
+      `${level.charAt(0).toUpperCase()} {"foo1":"bar1","foo2":"bar2"}`,
     );
 
     test.equal(
       Log.format({ message: "message", foo: "bar", time, level }),
-      `${level.charAt(0).toUpperCase()} message {"foo":"bar"}`
+      `${level.charAt(0).toUpperCase()} message {"foo":"bar"}`,
     );
 
     // Has everything except stderr field
@@ -352,9 +335,7 @@ Tinytest.add("logging - formats - without time", function (test) {
         originApp: "proxy",
         program: "server",
       }),
-      `${level
-        .charAt(0)
-        .toUpperCase()} [myApp via proxy] (server:app.js:42) message {"foo":"bar"}`
+      `${level.charAt(0).toUpperCase()} [myApp via proxy] (server:app.js:42) message {"foo":"bar"}`,
     );
 
     // stderr
@@ -365,7 +346,7 @@ Tinytest.add("logging - formats - without time", function (test) {
         level,
         stderr: true,
       }),
-      `${level.charAt(0).toUpperCase()} (STDERR) message from stderr`
+      `${level.charAt(0).toUpperCase()} (STDERR) message from stderr`,
     );
 
     // app/originApp
@@ -377,7 +358,7 @@ Tinytest.add("logging - formats - without time", function (test) {
         app: "app",
         originApp: "app",
       }),
-      `${level.charAt(0).toUpperCase()} [app] message`
+      `${level.charAt(0).toUpperCase()} [app] message`,
     );
     test.equal(
       Log.format({
@@ -387,7 +368,7 @@ Tinytest.add("logging - formats - without time", function (test) {
         app: "app",
         originApp: "proxy",
       }),
-      `${level.charAt(0).toUpperCase()} [app via proxy] message`
+      `${level.charAt(0).toUpperCase()} [app via proxy] message`,
     );
 
     // source info
@@ -400,7 +381,7 @@ Tinytest.add("logging - formats - without time", function (test) {
         line: 42,
         program: "server",
       }),
-      `${level.charAt(0).toUpperCase()} (server:app.js:42) message`
+      `${level.charAt(0).toUpperCase()} (server:app.js:42) message`,
     );
     test.equal(
       Log.format({
@@ -410,7 +391,7 @@ Tinytest.add("logging - formats - without time", function (test) {
         file: "app.js",
         line: 42,
       }),
-      `${level.charAt(0).toUpperCase()} (app.js:42) message`
+      `${level.charAt(0).toUpperCase()} (app.js:42) message`,
     );
   }
   Log.showTime = true; // reset

@@ -8,10 +8,10 @@
 //      each value is retained
 //   - IdMap - Constructor - Optional - custom IdMap class to store id->index
 //       mappings internally. Standard IdMap is used by default.
-export class MaxHeap { 
+export class MaxHeap {
   constructor(comparator, options = {}) {
-    if (typeof comparator !== 'function') {
-      throw new Error('Passed comparator is invalid, should be a comparison function');
+    if (typeof comparator !== "function") {
+      throw new Error("Passed comparator is invalid, should be a comparison function");
     }
 
     // a C-style comparator that is given two values and returns a number,
@@ -19,13 +19,13 @@ export class MaxHeap {
     // value is greater than the first and zero if they are equal.
     this._comparator = comparator;
 
-    if (! options.IdMap) {
+    if (!options.IdMap) {
       options.IdMap = IdMap;
     }
 
     // _heapIdx maps an id to an index in the Heap array the corresponding value
     // is located on.
-    this._heapIdx = new options.IdMap;
+    this._heapIdx = new options.IdMap();
 
     // The Heap data-structure implemented as a 0-based contiguous array where
     // every item on index idx is a node in a complete binary tree. Every node can
@@ -47,7 +47,7 @@ export class MaxHeap {
 
     data.forEach(({ id }, i) => this._heapIdx.set(id, i));
 
-    if (! data.length) {
+    if (!data.length) {
       return;
     }
 
@@ -84,7 +84,7 @@ export class MaxHeap {
     while (idx > 0) {
       const parent = parentIdx(idx);
       if (this._maxIndex(parent, idx) === idx) {
-        this._swap(parent, idx)
+        this._swap(parent, idx);
         idx = parent;
       } else {
         break;
@@ -115,9 +115,7 @@ export class MaxHeap {
   }
 
   get(id) {
-    return this.has(id) ?
-      this._get(this._heapIdx.get(id)) :
-      null;
+    return this.has(id) ? this._get(this._heapIdx.get(id)) : null;
   }
 
   set(id, value) {
@@ -176,7 +174,7 @@ export class MaxHeap {
 
   // iterate over values in no particular order
   forEach(iterator) {
-    this._heap.forEach(obj => iterator(obj.value, obj.id));
+    this._heap.forEach((obj) => iterator(obj.value, obj.id));
   }
 
   size() {
@@ -204,12 +202,14 @@ export class MaxHeap {
   _selfCheck() {
     for (let i = 1; i < this._heap.length; i++) {
       if (this._maxIndex(parentIdx(i), i) !== parentIdx(i)) {
-          throw new Error(`An item with id ${this._heap[i].id} has a parent younger than it: ${this._heap[parentIdx(i)].id}`);
+        throw new Error(
+          `An item with id ${this._heap[i].id} has a parent younger than it: ${this._heap[parentIdx(i)].id}`,
+        );
       }
     }
   }
 }
 
-const leftChildIdx = i => i * 2 + 1;
-const rightChildIdx = i => i * 2 + 2;
-const parentIdx = i => (i - 1) >> 1;
+const leftChildIdx = (i) => i * 2 + 1;
+const rightChildIdx = (i) => i * 2 + 2;
+const parentIdx = (i) => (i - 1) >> 1;

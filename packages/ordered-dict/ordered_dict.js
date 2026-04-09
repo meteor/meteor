@@ -12,7 +12,7 @@ function element(key, value, next, prev) {
     key: key,
     value: value,
     next: next,
-    prev: prev
+    prev: prev,
   };
 }
 
@@ -23,13 +23,15 @@ export class OrderedDict {
     this._last = null;
     this._size = 0;
 
-    if (typeof args[0] === 'function') {
+    if (typeof args[0] === "function") {
       this._stringify = args.shift();
     } else {
-      this._stringify = function (x) { return x; };
+      this._stringify = function (x) {
+        return x;
+      };
     }
 
-    args.forEach(kv => this.putBefore(kv[0], kv[1], null));
+    args.forEach((kv) => this.putBefore(kv[0], kv[1], null));
   }
 
   // the "prefix keys with a space" thing comes from here
@@ -49,36 +51,26 @@ export class OrderedDict {
   _linkEltIn(elt) {
     if (!elt.next) {
       elt.prev = this._last;
-      if (this._last)
-        this._last.next = elt;
+      if (this._last) this._last.next = elt;
       this._last = elt;
     } else {
       elt.prev = elt.next.prev;
       elt.next.prev = elt;
-      if (elt.prev)
-        elt.prev.next = elt;
+      if (elt.prev) elt.prev.next = elt;
     }
-    if (this._first === null || this._first === elt.next)
-      this._first = elt;
+    if (this._first === null || this._first === elt.next) this._first = elt;
   }
 
   _linkEltOut(elt) {
-    if (elt.next)
-      elt.next.prev = elt.prev;
-    if (elt.prev)
-      elt.prev.next = elt.next;
-    if (elt === this._last)
-      this._last = elt.prev;
-    if (elt === this._first)
-      this._first = elt.next;
+    if (elt.next) elt.next.prev = elt.prev;
+    if (elt.prev) elt.prev.next = elt.next;
+    if (elt === this._last) this._last = elt.prev;
+    if (elt === this._first) this._first = elt.next;
   }
 
   putBefore(key, item, before) {
-    if (this._dict[this._k(key)])
-      throw new Error(`Item ${key} already present in OrderedDict`);
-    const elt = before ?
-      element(key, item, this._dict[this._k(before)]) :
-      element(key, item, null);
+    if (this._dict[this._k(key)]) throw new Error(`Item ${key} already present in OrderedDict`);
+    const elt = before ? element(key, item, this._dict[this._k(before)]) : element(key, item, null);
     if (typeof elt.next === "undefined")
       throw new Error("could not find item to put this one before");
     this._linkEltIn(elt);
@@ -92,8 +84,7 @@ export class OrderedDict {
 
   remove(key) {
     const elt = this._dict[this._k(key)];
-    if (typeof elt === "undefined")
-      throw new Error(`Item ${key} not present in OrderedDict`);
+    if (typeof elt === "undefined") throw new Error(`Item ${key} not present in OrderedDict`);
     this._linkEltOut(elt);
     this._size--;
     delete this._dict[this._k(key)];
@@ -107,10 +98,7 @@ export class OrderedDict {
   }
 
   has(key) {
-    return Object.prototype.hasOwnProperty.call(
-      this._dict,
-      this._k(key)
-    );
+    return Object.prototype.hasOwnProperty.call(this._dict, this._k(key));
   }
 
   // Iterate through the items in this dictionary in order, calling
@@ -170,8 +158,7 @@ export class OrderedDict {
   prev(key) {
     if (this.has(key)) {
       const elt = this._dict[this._k(key)];
-      if (elt.prev)
-        return elt.prev.key;
+      if (elt.prev) return elt.prev.key;
     }
     return null;
   }
@@ -179,8 +166,7 @@ export class OrderedDict {
   next(key) {
     if (this.has(key)) {
       const elt = this._dict[this._k(key)];
-      if (elt.next)
-        return elt.next.key;
+      if (elt.next) return elt.next.key;
     }
     return null;
   }
@@ -194,7 +180,8 @@ export class OrderedDict {
     if (typeof eltBefore === "undefined") {
       throw new Error("Could not find element to move this one before");
     }
-    if (eltBefore === elt.next) // no moving necessary
+    if (eltBefore === elt.next)
+      // no moving necessary
       return;
     // remove from its old place
     this._linkEltOut(elt);
@@ -217,7 +204,7 @@ export class OrderedDict {
   }
 
   _checkRep() {
-    Object.keys(this._dict).forEach(k => {
+    Object.keys(this._dict).forEach((k) => {
       const v = this._dict[k];
       if (v.next === v) {
         throw new Error("Next is a loop");
@@ -229,4 +216,4 @@ export class OrderedDict {
   }
 }
 
-OrderedDict.BREAK = {"break": true};
+OrderedDict.BREAK = { break: true };

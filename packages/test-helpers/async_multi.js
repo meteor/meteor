@@ -57,25 +57,20 @@ Object.assign(ExpectationManager.prototype, {
     const self = this;
 
     let expected;
-    if (typeof arguments[0] === "function")
-      expected = arguments[0];
-    else
-      expected = Array.from(arguments);
+    if (typeof arguments[0] === "function") expected = arguments[0];
+    else expected = Array.from(arguments);
 
-    if (self.closed)
-      throw new Error("Too late to add more expectations to the test");
+    if (self.closed) throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
     return async function (/* arguments */) {
-      if (self.dead)
-        return;
+      if (self.dead) return;
 
       if (typeof expected === "function") {
         try {
           await expected.apply({}, arguments);
         } catch (e) {
-          if (self.cancel())
-            self.test.exception(e);
+          if (self.cancel()) self.test.exception(e);
         }
       } else {
         self.test.equal(Array.from(arguments), expected);
@@ -94,7 +89,7 @@ Object.assign(ExpectationManager.prototype, {
 
   cancel: function () {
     const self = this;
-    if (! self.dead) {
+    if (!self.dead) {
       self.dead = true;
       return true;
     }
@@ -107,7 +102,7 @@ Object.assign(ExpectationManager.prototype, {
       self.dead = true;
       self.onComplete();
     }
-  }
+  },
 });
 
 testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
@@ -116,7 +111,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, function (test, onComplete) {
-    const remaining = [...funcs]
+    const remaining = [...funcs];
     const context = {};
     let i = 0;
 
@@ -125,8 +120,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
       if (!func) {
         delete test.extraDetails.asyncBlock;
         onComplete();
-      }
-      else {
+      } else {
         const em = new ExpectationManager(test, function () {
           clearTimeout(timer);
           runNext();
@@ -134,7 +128,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
         const timer = setTimeout(function () {
           if (em.cancel()) {
-            test.fail({type: "timeout", message: "Async batch timed out"});
+            test.fail({ type: "timeout", message: "Async batch timed out" });
             onComplete();
           }
           return;
@@ -142,22 +136,25 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
         test.extraDetails.asyncBlock = i++;
 
-        new Promise(resolve => {
+        new Promise((resolve) => {
           const result = func.apply(context, [test, em.expect.bind(em)]);
           if (result && typeof result.then === "function") {
-            return result.then((r) => resolve(r))
+            return result.then((r) => resolve(r));
           }
 
           return resolve(result);
-        }).then(() => {
-          em.done();
-        }, exception => {
-          if (em.cancel()) {
-            test.exception(exception);
-            // Because we called test.exception, we're not to call onComplete.
-          }
-          clearTimeout(timer);
-        });
+        }).then(
+          () => {
+            em.done();
+          },
+          (exception) => {
+            if (em.cancel()) {
+              test.exception(exception);
+              // Because we called test.exception, we're not to call onComplete.
+            }
+            clearTimeout(timer);
+          },
+        );
       }
     };
 
@@ -170,7 +167,7 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 simplePoll = function (fn, success, failed, timeout, step) {
   timeout = timeout || 10000;
   step = step || 100;
-  const start = (new Date()).valueOf();
+  const start = new Date().valueOf();
   let timeOutId;
   const helper = function () {
     if (fn()) {
@@ -178,7 +175,7 @@ simplePoll = function (fn, success, failed, timeout, step) {
       Meteor.clearTimeout(timeOutId);
       return;
     }
-    if (start + timeout < (new Date()).valueOf()) {
+    if (start + timeout < new Date().valueOf()) {
       failed();
       Meteor.clearTimeout(timeOutId);
       return;
@@ -194,10 +191,14 @@ pollUntil = function (expect, f, timeout, step, noFail) {
   const expectation = expect(true);
   simplePoll(
     f,
-    function () { expectation(true) },
-    function () { expectation(noFail) },
+    function () {
+      expectation(true);
+    },
+    function () {
+      expectation(noFail);
+    },
     timeout,
-    step
+    step,
   );
 };
 

@@ -1,21 +1,22 @@
 Tinytest.add("diff-sequence - diff changes ordering", function (test) {
   const makeDocs = function (ids) {
-    return ids.map(function (id) { return {_id: id};});
+    return ids.map(function (id) {
+      return { _id: id };
+    });
   };
   const testMutation = function (a, b) {
     const aa = makeDocs(a);
     const bb = makeDocs(b);
     const aaCopy = EJSON.clone(aa);
     DiffSequence.diffQueryOrderedChanges(aa, bb, {
-
       addedBefore: function (id, doc, before) {
         if (before === null) {
-          aaCopy.push( Object.assign({_id: id}, doc));
+          aaCopy.push(Object.assign({ _id: id }, doc));
           return;
         }
         for (let i = 0; i < aaCopy.length; i++) {
           if (aaCopy[i]._id === before) {
-            aaCopy.splice(i, 0, Object.assign({_id: id}, doc));
+            aaCopy.splice(i, 0, Object.assign({ _id: id }, doc));
             return;
           }
         }
@@ -29,12 +30,12 @@ Tinytest.add("diff-sequence - diff changes ordering", function (test) {
           }
         }
         if (before === null) {
-          aaCopy.push( Object.assign({_id: id}, found));
+          aaCopy.push(Object.assign({ _id: id }, found));
           return;
         }
         for (let i = 0; i < aaCopy.length; i++) {
           if (aaCopy[i]._id === before) {
-            aaCopy.splice(i, 0, Object.assign({_id: id}, found));
+            aaCopy.splice(i, 0, Object.assign({ _id: id }, found));
             return;
           }
         }
@@ -45,7 +46,7 @@ Tinytest.add("diff-sequence - diff changes ordering", function (test) {
             aaCopy.splice(i, 1);
           }
         }
-      }
+      },
     });
     test.equal(aaCopy, bb);
   };
@@ -57,55 +58,54 @@ Tinytest.add("diff-sequence - diff changes ordering", function (test) {
 
   testBothWays(["a", "b", "c"], ["c", "b", "a"]);
   testBothWays(["a", "b", "c"], []);
-  testBothWays(["a", "b", "c"], ["e","f"]);
+  testBothWays(["a", "b", "c"], ["e", "f"]);
   testBothWays(["a", "b", "c", "d"], ["c", "b", "a"]);
-  testBothWays(['A','B','C','D','E','F','G','H','I'],
-               ['A','B','F','G','C','D','I','L','M','N','H']);
-  testBothWays(['A','B','C','D','E','F','G','H','I'],['A','B','C','D','F','G','H','E','I']);
+  testBothWays(
+    ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
+    ["A", "B", "F", "G", "C", "D", "I", "L", "M", "N", "H"],
+  );
+  testBothWays(
+    ["A", "B", "C", "D", "E", "F", "G", "H", "I"],
+    ["A", "B", "C", "D", "F", "G", "H", "E", "I"],
+  );
 });
 
 Tinytest.add("diff-sequence - diff", function (test) {
-
   // test correctness
 
-  const diffTest = function(origLen, newOldIdx) {
+  const diffTest = function (origLen, newOldIdx) {
     const oldResults = Array.from({ length: origLen });
-    for (let i = 1; i <= origLen; i++)
-      oldResults[i-1] = {_id: i};
+    for (let i = 1; i <= origLen; i++) oldResults[i - 1] = { _id: i };
 
-    const newResults = newOldIdx.map(function(n) {
-      const doc = {_id: Math.abs(n)};
-      if (n < 0)
-        doc.changed = true;
+    const newResults = newOldIdx.map(function (n) {
+      const doc = { _id: Math.abs(n) };
+      if (n < 0) doc.changed = true;
       return doc;
     });
     const find = function (arr, id) {
       for (let i = 0; i < arr.length; i++) {
-        if (EJSON.equals(arr[i]._id, id))
-          return i;
+        if (EJSON.equals(arr[i]._id, id)) return i;
       }
       return -1;
     };
 
     const results = [...oldResults];
     const observer = {
-      addedBefore: function(id, fields, before) {
+      addedBefore: function (id, fields, before) {
         let before_idx;
-        if (before === null)
-          before_idx = results.length;
-        else
-          before_idx = find (results, before);
-        const doc = Object.assign({_id: id}, fields);
+        if (before === null) before_idx = results.length;
+        else before_idx = find(results, before);
+        const doc = Object.assign({ _id: id }, fields);
         test.isFalse(before_idx < 0 || before_idx > results.length);
         results.splice(before_idx, 0, doc);
       },
-      removed: function(id) {
-        const at_idx = find (results, id);
+      removed: function (id) {
+        const at_idx = find(results, id);
         test.isFalse(at_idx < 0 || at_idx >= results.length);
         results.splice(at_idx, 1);
       },
-      changed: function(id, fields) {
-        const at_idx = find (results, id);
+      changed: function (id, fields) {
+        const at_idx = find(results, id);
         const oldDoc = results[at_idx];
         const doc = EJSON.clone(oldDoc);
         DiffSequence.applyChanges(doc, fields);
@@ -113,19 +113,16 @@ Tinytest.add("diff-sequence - diff", function (test) {
         test.equal(doc._id, oldDoc._id);
         results[at_idx] = doc;
       },
-      movedBefore: function(id, before) {
+      movedBefore: function (id, before) {
         const old_idx = find(results, id);
         let new_idx;
-        if (before === null)
-          new_idx = results.length;
-        else
-          new_idx = find (results, before);
-        if (new_idx > old_idx)
-          new_idx--;
+        if (before === null) new_idx = results.length;
+        else new_idx = find(results, before);
+        if (new_idx > old_idx) new_idx--;
         test.isFalse(old_idx < 0 || old_idx >= results.length);
         test.isFalse(new_idx < 0 || new_idx >= results.length);
         results.splice(new_idx, 0, results.splice(old_idx, 1)[0]);
-      }
+      },
     };
 
     DiffSequence.diffQueryOrderedChanges(oldResults, newResults, observer);

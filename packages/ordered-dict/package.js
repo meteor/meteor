@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Ordered traversable dictionary with a mutable ordering",
-  version: '1.2.0',
-  documentation: null
+  version: "1.2.0",
+  documentation: null,
 });
 
 Package.onUse(function (api) {
-  api.use('ecmascript');
-  api.mainModule('ordered_dict.js');
-  api.export('OrderedDict');
+  api.use("ecmascript");
+  api.mainModule("ordered_dict.js");
+  api.export("OrderedDict");
 });

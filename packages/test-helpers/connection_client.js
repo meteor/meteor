@@ -1,5 +1,5 @@
 captureConnectionMessagesClient = async function () {
-  const messages = []
+  const messages = [];
 
   const conn = DDP.connect(Meteor.absoluteUrl());
 
@@ -11,19 +11,19 @@ captureConnectionMessagesClient = async function () {
       messages.push(EJSON.parse(args[0]));
     }
     send.apply(this, args);
-  }
+  };
 
-  conn._stream.on('message', message => {
+  conn._stream.on("message", (message) => {
     return messages.push(EJSON.parse(message));
   });
 
   function cleanup() {
-    conn._stream.send = send
+    conn._stream.send = send;
   }
 
   return {
     conn,
     messages,
-    cleanup
-  }
+    cleanup,
+  };
 };
