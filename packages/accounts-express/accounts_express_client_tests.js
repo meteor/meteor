@@ -67,7 +67,7 @@ if (Meteor.isClient) {
         const response = await fetchFn(testUrl, { auth: true });
         test.isTrue(response.ok);
 
-        await Meteor.callAsync('removeAccountsTestUser', username);
+        await Meteor.callAsync('removeAccountsExpressTestUser', username);
       } finally {
         window.fetch = originalFetch;
         Meteor.logout();
@@ -90,7 +90,7 @@ if (Meteor.isClient) {
         const response = await fetchFn(testUrl, { auth: false });
         test.isTrue(response.ok);
 
-        await Meteor.callAsync('removeAccountsTestUser', username);
+        await Meteor.callAsync('removeAccountsExpressTestUser', username);
       } finally {
         window.fetch = originalFetch;
         Meteor.logout();
@@ -179,7 +179,7 @@ if (Meteor.isClient) {
       const response = await Meteor.fetch(testUrl);
       test.isTrue(response.ok);
 
-      await Meteor.callAsync('removeAccountsTestUser', username);
+      await Meteor.callAsync('removeAccountsExpressTestUser', username);
     } finally {
       window.fetch = originalFetch;
       Accounts._options = originalOptions;
@@ -294,7 +294,7 @@ if (Meteor.isClient) {
       const data = await response.json();
       test.isNull(data.meteorUserId, 'No auth should be injected without auth option');
 
-      await Meteor.callAsync('removeAccountsTestUser', username);
+      await Meteor.callAsync('removeAccountsExpressTestUser', username);
     } finally {
       Meteor.logout();
     }

@@ -1,5 +1,5 @@
 Meteor.methods({
-  async removeAccountsTestUser(username) {
+  async removeAccountsExpressTestUser(username) {
     await Meteor.users.removeAsync({ username });
   },
 });
