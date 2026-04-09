@@ -1,12 +1,173 @@
-Tinytest.add('facts-base - increments server facts', test => {
-  Facts.resetServerFacts()
+function mockSub() {
+  const calls = { added: [], changed: [] };
+  return {
+    added(collection, id, fields) {
+      calls.added.push({ collection, id, fields });
+    },
+    changed(collection, id, fields) {
+      calls.changed.push({ collection, id, fields });
+    },
+    calls,
+  };
+}
 
-  Facts.incrementServerFact('newPackage', 'skyIsBlue', 42);
-  test.equal(Facts._factsByPackage.newPackage, { skyIsBlue: 42 });
+// -- resetServerFacts --
 
-  Facts.incrementServerFact('newPackage', 'skyIsBlue', 21);
-  test.equal(Facts._factsByPackage.newPackage, { skyIsBlue: 63 });
+Tinytest.add("facts-base - resetServerFacts clears all facts", (test) => {
+  Facts.resetServerFacts();
+  Facts.incrementServerFact("pkg-a", "fact1", 10);
+  Facts.incrementServerFact("pkg-b", "fact2", 20);
 
-  Facts.incrementServerFact('newPackage', 'newFact', 7);
-  test.equal(Facts._factsByPackage.newPackage, { skyIsBlue: 63, newFact: 7 });
+  Facts.resetServerFacts();
+
+  test.equal(Facts._factsByPackage, {});
+});
+
+Tinytest.add("facts-base - resetServerFacts on already empty state is a no-op", (test) => {
+  Facts.resetServerFacts();
+  Facts.resetServerFacts();
+
+  test.equal(Facts._factsByPackage, {});
+});
+
+// -- incrementServerFact: new package --
+
+Tinytest.add("facts-base - incrementServerFact creates entry for new package", (test) => {
+  Facts.resetServerFacts();
+
+  Facts.incrementServerFact("new-pkg", "connections", 5);
+
+  test.equal(Facts._factsByPackage["new-pkg"], { connections: 5 });
+});
+
+// -- incrementServerFact: existing package, new fact --
+
+Tinytest.add("facts-base - incrementServerFact adds new fact to existing package", (test) => {
+  Facts.resetServerFacts();
+  Facts.incrementServerFact("my-pkg", "factA", 1);
+
+  Facts.incrementServerFact("my-pkg", "factB", 7);
+
+  test.equal(Facts._factsByPackage["my-pkg"], { factA: 1, factB: 7 });
+});
+
+// -- incrementServerFact: existing package, existing fact --
+
+Tinytest.add("facts-base - incrementServerFact accumulates on existing fact", (test) => {
+  Facts.resetServerFacts();
+  Facts.incrementServerFact("pkg", "counter", 10);
+
+  Facts.incrementServerFact("pkg", "counter", 3);
+
+  test.equal(Facts._factsByPackage["pkg"].counter, 13);
+});
+
+// -- incrementServerFact: negative increment --
+
+Tinytest.add("facts-base - incrementServerFact handles negative increment", (test) => {
+  Facts.resetServerFacts();
+  Facts.incrementServerFact("pkg", "counter", 10);
+
+  Facts.incrementServerFact("pkg", "counter", -4);
+
+  test.equal(Facts._factsByPackage["pkg"].counter, 6);
+});
+
+// -- incrementServerFact: multiple independent packages --
+
+Tinytest.add("facts-base - incrementServerFact keeps packages independent", (test) => {
+  Facts.resetServerFacts();
+
+  Facts.incrementServerFact("alpha", "x", 1);
+  Facts.incrementServerFact("beta", "x", 100);
+  Facts.incrementServerFact("alpha", "x", 2);
+
+  test.equal(Facts._factsByPackage["alpha"].x, 3);
+  test.equal(Facts._factsByPackage["beta"].x, 100);
+});
+
+// -- subscription notifications: sub.added on new package --
+
+Tinytest.add("facts-base - notifies subscriptions with added when package is new", (test) => {
+  Facts.resetServerFacts();
+  const sub = mockSub();
+  Facts._setActiveSubscriptions([sub]);
+
+  Facts.incrementServerFact("fresh-pkg", "sessions", 42);
+
+  test.equal(sub.calls.added.length, 1);
+  test.equal(sub.calls.added[0].collection, "meteor_Facts_server");
+  test.equal(sub.calls.added[0].id, "fresh-pkg");
+  test.equal(sub.calls.added[0].fields, { sessions: 42 });
+  test.equal(sub.calls.changed.length, 0);
+
+  Facts._setActiveSubscriptions([]);
+});
+
+// -- subscription notifications: sub.changed on existing package --
+
+Tinytest.add("facts-base - notifies subscriptions with changed when fact is updated", (test) => {
+  Facts.resetServerFacts();
+  const sub = mockSub();
+  Facts.incrementServerFact("pkg", "rps", 10);
+
+  Facts._setActiveSubscriptions([sub]);
+  Facts.incrementServerFact("pkg", "rps", 5);
+
+  test.equal(sub.calls.changed.length, 1);
+  test.equal(sub.calls.changed[0].collection, "meteor_Facts_server");
+  test.equal(sub.calls.changed[0].id, "pkg");
+  test.equal(sub.calls.changed[0].fields, { rps: 15 });
+  test.equal(sub.calls.added.length, 0);
+
+  Facts._setActiveSubscriptions([]);
+});
+
+// -- subscription notifications: multiple subscriptions --
+
+Tinytest.add("facts-base - notifies all active subscriptions on increment", (test) => {
+  Facts.resetServerFacts();
+  const sub1 = mockSub();
+  const sub2 = mockSub();
+  Facts._setActiveSubscriptions([sub1, sub2]);
+
+  Facts.incrementServerFact("pkg", "hits", 1);
+
+  test.equal(sub1.calls.added.length, 1);
+  test.equal(sub2.calls.added.length, 1);
+
+  Facts.incrementServerFact("pkg", "hits", 1);
+
+  test.equal(sub1.calls.changed.length, 1);
+  test.equal(sub2.calls.changed.length, 1);
+
+  Facts._setActiveSubscriptions([]);
+});
+
+// -- subscription notifications: no subscriptions --
+
+Tinytest.add("facts-base - incrementServerFact works with no active subscriptions", (test) => {
+  Facts.resetServerFacts();
+  Facts._setActiveSubscriptions([]);
+
+  Facts.incrementServerFact("lonely-pkg", "value", 99);
+
+  test.equal(Facts._factsByPackage["lonely-pkg"], { value: 99 });
+});
+
+// -- setUserIdFilter --
+
+Tinytest.add("facts-base - setUserIdFilter replaces the filter", (test) => {
+  let filterCalled = false;
+  Facts.setUserIdFilter(function (userId) {
+    filterCalled = true;
+    return userId === "admin";
+  });
+
+  test.isFalse(filterCalled);
+
+  // Restore default to not affect other tests
+  Facts.setUserIdFilter(function () {
+    return !!Package.autopublish;
+  });
 });
