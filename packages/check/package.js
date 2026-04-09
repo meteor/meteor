@@ -1,22 +1,22 @@
 Package.describe({
-  summary: "Check whether a value matches a pattern",
-  version: "1.5.0",
+  summary: 'Check whether a value matches a pattern',
+  version: '1.5.0',
 });
 
-Package.onUse((api) => {
-  api.use("ecmascript");
-  api.use("ejson");
+Package.onUse(api => {
+  api.use('ecmascript');
+  api.use('ejson');
 
-  api.addAssets("check.d.ts", "server");
+  api.addAssets('check.d.ts', 'server');
 
-  api.mainModule("match.js");
+  api.mainModule('match.js');
 
-  api.export("check");
-  api.export("Match");
+  api.export('check');
+  api.export('Match');
 });
 
-Package.onTest((api) => {
-  api.use(["check", "tinytest", "ejson", "ecmascript"], ["client", "server"]);
+Package.onTest(api => {
+  api.use(['check', 'tinytest', 'ejson', 'ecmascript'], ['client', 'server']);
 
-  api.addFiles("match_test.js", ["client", "server"]);
+  api.addFiles('match_test.js', ['client', 'server']);
 });

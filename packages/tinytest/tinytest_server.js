@@ -2,18 +2,21 @@ import { Tinytest } from "./tinytest.js";
 import { check, Match } from "meteor/check";
 import { Random } from "meteor/random";
 import { Meteor } from "meteor/meteor";
-import { ServerTestResultsSubscription, ServerTestResultsCollection } from "./model.js";
+import {
+  ServerTestResultsSubscription,
+  ServerTestResultsCollection,
+} from "./model.js";
 
 export { Tinytest };
 
-const handlesForRun = new Map();
-const reportsForRun = new Map();
+const handlesForRun = new Map;
+const reportsForRun = new Map;
 
 Meteor.publish(ServerTestResultsSubscription, async function (runId) {
   check(runId, String);
 
-  if (!handlesForRun.has(runId)) {
-    handlesForRun.set(runId, new Set());
+  if (! handlesForRun.has(runId)) {
+    handlesForRun.set(runId, new Set);
   }
 
   handlesForRun.get(runId).add(this);
@@ -23,7 +26,8 @@ Meteor.publish(ServerTestResultsSubscription, async function (runId) {
   });
 
   if (reportsForRun.has(runId)) {
-    this.added(ServerTestResultsCollection, runId, reportsForRun.get(runId));
+    this.added(ServerTestResultsCollection, runId,
+               reportsForRun.get(runId));
   } else {
     this.added(ServerTestResultsCollection, runId, {});
   }
@@ -32,7 +36,7 @@ Meteor.publish(ServerTestResultsSubscription, async function (runId) {
 });
 
 Meteor.methods({
-  async "tinytest/run"(runId, pathPrefix) {
+  async 'tinytest/run'(runId, pathPrefix) {
     check(runId, String);
     check(pathPrefix, Match.Optional([String]));
 
@@ -47,11 +51,11 @@ Meteor.methods({
     reportsForRun.set(runId, Object.create(null));
 
     function addReport(key, report) {
-      const fields = {};
+      var fields = {};
       fields[key] = report;
       const handles = handlesForRun.get(runId);
       if (handles) {
-        handles.forEach((handle) => {
+        handles.forEach(handle => {
           handle.changed(ServerTestResultsCollection, runId, fields);
         });
       }
@@ -60,25 +64,25 @@ Meteor.methods({
     }
 
     function onReport(report) {
-      const dummyKey = Random.id();
+      var dummyKey = Random.id();
       addReport(dummyKey, report);
     }
 
     function onComplete() {
       // We send an object for current and future compatibility,
       // though we could get away with just sending { complete: true }
-      const report = { done: true };
-      const key = "complete";
+      var report = { done: true };
+      var key = 'complete';
       addReport(key, report);
     }
 
     Tinytest._runTests(onReport, onComplete, pathPrefix);
   },
 
-  "tinytest/clearResults"(runId) {
+  'tinytest/clearResults'(runId) {
     check(runId, String);
 
-    handlesForRun.get(runId)?.forEach((handle) => {
+    handlesForRun.get(runId)?.forEach(handle => {
       // XXX this doesn't actually notify the client that it has been
       // unsubscribed.
       handle.stop();
@@ -86,5 +90,5 @@ Meteor.methods({
 
     handlesForRun.delete(runId);
     reportsForRun.delete(runId);
-  },
+  }
 });

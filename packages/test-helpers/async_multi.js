@@ -42,8 +42,8 @@
 //   }
 // ]);
 
-const ExpectationManager = function (test, onComplete) {
-  const self = this;
+var ExpectationManager = function (test, onComplete) {
+  var self = this;
 
   self.test = test;
   self.onComplete = onComplete;
@@ -54,23 +54,27 @@ const ExpectationManager = function (test, onComplete) {
 
 Object.assign(ExpectationManager.prototype, {
   expect: function (/* arguments */) {
-    const self = this;
+    var self = this;
 
-    let expected;
-    if (typeof arguments[0] === "function") expected = arguments[0];
-    else expected = Array.from(arguments);
+    if (typeof arguments[0] === "function")
+      var expected = arguments[0];
+    else
+      var expected = Array.from(arguments);
 
-    if (self.closed) throw new Error("Too late to add more expectations to the test");
+    if (self.closed)
+      throw new Error("Too late to add more expectations to the test");
     self.outstanding++;
 
     return async function (/* arguments */) {
-      if (self.dead) return;
+      if (self.dead)
+        return;
 
       if (typeof expected === "function") {
         try {
           await expected.apply({}, arguments);
         } catch (e) {
-          if (self.cancel()) self.test.exception(e);
+          if (self.cancel())
+            self.test.exception(e);
         }
       } else {
         self.test.equal(Array.from(arguments), expected);
@@ -82,14 +86,14 @@ Object.assign(ExpectationManager.prototype, {
   },
 
   done: function () {
-    const self = this;
+    var self = this;
     self.closed = true;
     self._check_complete();
   },
 
   cancel: function () {
-    const self = this;
-    if (!self.dead) {
+    var self = this;
+    if (! self.dead) {
       self.dead = true;
       return true;
     }
@@ -97,38 +101,39 @@ Object.assign(ExpectationManager.prototype, {
   },
 
   _check_complete: function () {
-    const self = this;
+    var self = this;
     if (!self.outstanding && self.closed && !self.dead) {
       self.dead = true;
       self.onComplete();
     }
-  },
+  }
 });
 
 testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
-  const timeout = 180000;
+  var timeout = 180000;
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, function (test, onComplete) {
-    const remaining = [...funcs];
-    const context = {};
-    let i = 0;
+    var remaining = [...funcs]
+    var context = {};
+    var i = 0;
 
-    const runNext = function () {
-      const func = remaining.shift();
+    var runNext = function () {
+      var func = remaining.shift();
       if (!func) {
         delete test.extraDetails.asyncBlock;
         onComplete();
-      } else {
-        const em = new ExpectationManager(test, function () {
+      }
+      else {
+        var em = new ExpectationManager(test, function () {
           clearTimeout(timer);
           runNext();
         });
 
-        const timer = setTimeout(function () {
+        var timer = setTimeout(function () {
           if (em.cancel()) {
-            test.fail({ type: "timeout", message: "Async batch timed out" });
+            test.fail({type: "timeout", message: "Async batch timed out"});
             onComplete();
           }
           return;
@@ -136,25 +141,22 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 
         test.extraDetails.asyncBlock = i++;
 
-        new Promise((resolve) => {
+        new Promise(resolve => {
           const result = func.apply(context, [test, em.expect.bind(em)]);
           if (result && typeof result.then === "function") {
-            return result.then((r) => resolve(r));
+            return result.then((r) => resolve(r))
           }
 
           return resolve(result);
-        }).then(
-          () => {
-            em.done();
-          },
-          (exception) => {
-            if (em.cancel()) {
-              test.exception(exception);
-              // Because we called test.exception, we're not to call onComplete.
-            }
-            clearTimeout(timer);
-          },
-        );
+        }).then(() => {
+          em.done();
+        }, exception => {
+          if (em.cancel()) {
+            test.exception(exception);
+            // Because we called test.exception, we're not to call onComplete.
+          }
+          clearTimeout(timer);
+        });
       }
     };
 
@@ -167,15 +169,15 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 simplePoll = function (fn, success, failed, timeout, step) {
   timeout = timeout || 10000;
   step = step || 100;
-  const start = new Date().valueOf();
+  var start = (new Date()).valueOf();
   let timeOutId;
-  const helper = function () {
+  var helper = function () {
     if (fn()) {
       success();
       Meteor.clearTimeout(timeOutId);
       return;
     }
-    if (start + timeout < new Date().valueOf()) {
+    if (start + timeout < (new Date()).valueOf()) {
       failed();
       Meteor.clearTimeout(timeOutId);
       return;
@@ -188,17 +190,13 @@ simplePoll = function (fn, success, failed, timeout, step) {
 pollUntil = function (expect, f, timeout, step, noFail) {
   noFail = noFail || false;
   step = step || 100;
-  const expectation = expect(true);
+  var expectation = expect(true);
   simplePoll(
     f,
-    function () {
-      expectation(true);
-    },
-    function () {
-      expectation(noFail);
-    },
+    function () { expectation(true) },
+    function () { expectation(noFail) },
     timeout,
-    step,
+    step
   );
 };
 

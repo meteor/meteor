@@ -4,13 +4,16 @@
 // side connection and the server side connection handle.  Call `failed` on
 // failure.
 makeTestConnection = function (test, succeeded, failed) {
+  // The connection from the client side.
+  var clientConn;
+
   // Track incoming connections server side until we know which one is
   // ours.
-  const serverConns = {};
+  var serverConns = {};
 
   // Add incoming connections to `serverConns`.
-  const onConnectionHandle = Meteor.onConnection(function (serverConn) {
-    test.isTrue(typeof serverConn.id === "string", "connection handle id exists and is a string");
+  var onConnectionHandle = Meteor.onConnection(function (serverConn) {
+    test.isTrue(typeof serverConn.id === 'string', "connection handle id exists and is a string");
     if (serverConns[serverConn.id]) {
       test.fail("onConnection callback called multiple times for same session id");
       failed();
@@ -19,17 +22,11 @@ makeTestConnection = function (test, succeeded, failed) {
     }
   });
 
-  // Connect and wait until the connection receives its session id.
-  // Disable retries so that when the connection is closed we don't
-  // automatically keep reconnecting on the client side.
-  // The connection from the client side.
-  const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: false });
-
   // We've succeeded when we get the session id on the client side.
-  const onClientSessionId = function (sessionId) {
+  var onClientSessionId = function (sessionId) {
     test.isTrue(clientConn.status().connected);
-    const serverConn = serverConns[sessionId];
-    if (!serverConn) {
+    var serverConn = serverConns[sessionId];
+    if (! serverConn) {
       test.fail("No onConnection received server side for connected client");
       failed();
     } else {
@@ -37,6 +34,11 @@ makeTestConnection = function (test, succeeded, failed) {
       succeeded(clientConn, serverConn);
     }
   };
+
+  // Connect and wait until the connection receives its session id.
+  // Disable retries so that when the connection is closed we don't
+  // automatically keep reconnecting on the client side.
+  clientConn = DDP.connect(Meteor.absoluteUrl(), {retry: false});
   simplePoll(
     function () {
       return clientConn._lastSessionId;
@@ -47,7 +49,7 @@ makeTestConnection = function (test, succeeded, failed) {
     function () {
       test.fail("client side of connection did not receive a session id");
       failed();
-    },
+    }
   );
 };
 
@@ -58,7 +60,7 @@ createTestConnectionPromise = function (test) {
 };
 
 captureConnectionMessages = async function (test) {
-  const messages = [];
+  const messages = []
 
   const conn = await createTestConnectionPromise(test);
 
@@ -67,17 +69,17 @@ captureConnectionMessages = async function (test) {
   conn._stream.send = function (...args) {
     send.apply(this, args);
     messages.push(EJSON.parse(args[0]));
-  };
+  }
 
-  conn._stream.on("message", (message) => messages.push(EJSON.parse(message)));
+  conn._stream.on('message', message => messages.push(EJSON.parse(message)));
 
   function cleanup() {
-    conn._stream.send = send;
+    conn._stream.send = send
   }
 
   return {
     conn,
     messages,
-    cleanup,
-  };
+    cleanup
+  }
 };

@@ -1,13 +1,13 @@
 // XXX docs
-import { isPlainObject } from "./isPlainObject";
+import { isPlainObject } from './isPlainObject';
 
 // Things we explicitly do NOT support:
 //    - heterogenous arrays
 
-const currentArgumentChecker = new Meteor.EnvironmentVariable();
+const currentArgumentChecker = new Meteor.EnvironmentVariable;
 const hasOwn = Object.prototype.hasOwnProperty;
 
-const format = (result) => {
+const format = result => {
   const err = new Match.Error(result.message);
   if (result.path) {
     err.message += ` in field ${result.path}`;
@@ -15,7 +15,7 @@ const format = (result) => {
   }
 
   return err;
-};
+}
 
 function nonEmptyStringCondition(value) {
   check(value, String);
@@ -53,61 +53,61 @@ export function check(value, pattern, options = { throwAllErrors: false }) {
 
   if (result) {
     if (options.throwAllErrors) {
-      throw Array.isArray(result) ? result.map((r) => format(r)) : [format(result)];
+      throw Array.isArray(result) ? result.map(r => format(r)) : [format(result)]
     } else {
-      throw format(result);
+      throw format(result)
     }
   }
-}
+};
 
 /**
  * @namespace Match
  * @summary The namespace for all Match types and methods.
  */
 export const Match = {
-  Optional: function (pattern) {
+  Optional: function(pattern) {
     return new Optional(pattern);
   },
 
-  Maybe: function (pattern) {
+  Maybe: function(pattern) {
     return new Maybe(pattern);
   },
 
-  OneOf: function (...args) {
+  OneOf: function(...args) {
     return new OneOf(args);
   },
 
-  Any: ["__any__"],
-  Where: function (condition) {
+  Any: ['__any__'],
+  Where: function(condition) {
     return new Where(condition);
   },
 
-  NonEmptyString: ["__NonEmptyString__"],
+  NonEmptyString: ['__NonEmptyString__'],
 
-  ObjectIncluding: function (pattern) {
-    return new ObjectIncluding(pattern);
+  ObjectIncluding: function(pattern) {
+    return new ObjectIncluding(pattern)
   },
 
-  ObjectWithValues: function (pattern) {
+  ObjectWithValues: function(pattern) {
     return new ObjectWithValues(pattern);
   },
 
   // Matches only signed 32-bit integers
-  Integer: ["__integer__"],
+  Integer: ['__integer__'],
 
   // XXX matchers should know how to describe themselves for errors
-  Error: Meteor.makeErrorType("Match.Error", function (msg) {
+  Error: Meteor.makeErrorType('Match.Error', function (msg) {
     this.message = `Match error: ${msg}`;
 
     // The path of the value that failed to match. Initially empty, this gets
     // populated by catching and rethrowing the exception as it goes back up the
     // stack.
     // E.g.: "vals[3].entity.created"
-    this.path = "";
+    this.path = '';
 
     // If this gets sent over DDP, don't give full internal details but at least
     // provide something better than 500 Internal server error.
-    this.sanitizedError = new Meteor.Error(400, "Match failed");
+    this.sanitizedError = new Meteor.Error(400, 'Match failed');
   }),
 
   // Tests to see if value matches pattern. Unlike check, it merely returns true
@@ -132,12 +132,15 @@ export const Match = {
   // (using `description` in the message).
   _failIfArgumentsAreNotAllChecked(f, context, args, description) {
     const argChecker = new ArgumentChecker(args, description);
-    const result = currentArgumentChecker.withValue(argChecker, () => f.apply(context, args));
+    const result = currentArgumentChecker.withValue(
+      argChecker,
+      () => f.apply(context, args)
+    );
 
     // If f didn't itself throw, make sure it checked all of its arguments.
     argChecker.throwUnlessAllArgumentsHaveBeenChecked();
     return result;
-  },
+  }
 };
 
 class Optional {
@@ -155,7 +158,7 @@ class Maybe {
 class OneOf {
   constructor(choices) {
     if (!choices || choices.length === 0) {
-      throw new Error("Must provide at least one choice to Match.OneOf");
+      throw new Error('Must provide at least one choice to Match.OneOf');
     }
 
     this.choices = choices;
@@ -181,25 +184,26 @@ class ObjectWithValues {
 }
 
 const stringForErrorMessage = (value, options = {}) => {
-  if (value === null) {
-    return "null";
+  if ( value === null ) {
+    return 'null';
   }
 
-  if (options.onlyShowType) {
+  if ( options.onlyShowType ) {
     return typeof value;
   }
 
   // Your average non-object things.  Saves from doing the try/catch below for.
-  if (typeof value !== "object") {
-    return EJSON.stringify(value);
+  if ( typeof value !== 'object' ) {
+    return EJSON.stringify(value)
   }
 
   try {
+
     // Find objects with circular references since EJSON doesn't support them yet (Issue #4778 + Unaccepted PR)
     // If the native stringify is going to choke, EJSON.stringify is going to choke too.
     JSON.stringify(value);
   } catch (stringifyError) {
-    if (stringifyError.name === "TypeError") {
+    if ( stringifyError.name === 'TypeError' ) {
       return typeof value;
     }
   }
@@ -207,19 +211,20 @@ const stringForErrorMessage = (value, options = {}) => {
   return EJSON.stringify(value);
 };
 
+
 const typeofChecks = [
-  [String, "string"],
-  [Number, "number"],
-  [Boolean, "boolean"],
+  [String, 'string'],
+  [Number, 'number'],
+  [Boolean, 'boolean'],
 
   // While we don't allow undefined/function in EJSON, this is good for optional
   // arguments with OneOf.
-  [Function, "function"],
-  [undefined, "undefined"],
+  [Function, 'function'],
+  [undefined, 'undefined'],
 ];
 
 // Return `false` if it matches. Otherwise, returns an object with a `message` and a `path` field or an array of objects each with a `message` and a `path` field when collecting errors.
-const testSubtree = (value, pattern, collectErrors = false, errors = [], path = "") => {
+const testSubtree = (value, pattern, collectErrors = false, errors = [], path = '') => {
   // Match anything!
   if (pattern === Match.Any) {
     return false;
@@ -235,7 +240,7 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
 
       return {
         message: `Expected ${typeofChecks[i][1]}, got ${stringForErrorMessage(value, { onlyShowType: true })}`,
-        path: "",
+        path: '',
       };
     }
   }
@@ -247,37 +252,38 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
 
     return {
       message: `Expected null, got ${stringForErrorMessage(value)}`,
-      path: "",
+      path: '',
     };
   }
 
   // Strings, numbers, and booleans match literally. Goes well with Match.OneOf.
-  if (typeof pattern === "string" || typeof pattern === "number" || typeof pattern === "boolean") {
+  if (typeof pattern === 'string' || typeof pattern === 'number' || typeof pattern === 'boolean') {
     if (value === pattern) {
       return false;
     }
 
     return {
       message: `Expected ${pattern}, got ${stringForErrorMessage(value)}`,
-      path: "",
+      path: '',
     };
   }
 
   // Match.Integer is special type encoded with array
   if (pattern === Match.Integer) {
+
     // There is no consistent and reliable way to check if variable is a 64-bit
     // integer. One of the popular solutions is to get reminder of division by 1
     // but this method fails on really large floats with big precision.
     // E.g.: 1.348192308491824e+23 % 1 === 0 in V8
     // Bitwise operators work consistantly but always cast variable to 32-bit
     // signed integer according to JavaScript specs.
-    if (typeof value === "number" && (value | 0) === value) {
+    if (typeof value === 'number' && (value | 0) === value) {
       return false;
     }
 
     return {
       message: `Expected Integer, got ${stringForErrorMessage(value)}`,
-      path: "",
+      path: '',
     };
   }
 
@@ -286,7 +292,7 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     pattern = Match.ObjectIncluding({});
   }
   // This must be invoked before pattern instanceof Array as strings are regarded as arrays
-  // We invoke the pattern as IIFE so that `pattern isntanceof Where` catches it
+  // We invoke the pattern as IIFE so that `pattern isntanceof Where` catches it 
   if (pattern === Match.NonEmptyString) {
     pattern = new Where(nonEmptyStringCondition);
   }
@@ -296,24 +302,25 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     if (pattern.length !== 1) {
       return {
         message: `Bad pattern: arrays must have one type element ${stringForErrorMessage(pattern)}`,
-        path: "",
+        path: '',
       };
     }
 
     if (!Array.isArray(value) && !isArguments(value)) {
       return {
         message: `Expected array, got ${stringForErrorMessage(value)}`,
-        path: "",
+        path: '',
       };
     }
 
+
     for (let i = 0, length = value.length; i < length; i++) {
-      const arrPath = `${path}[${i}]`;
+      const arrPath = `${path}[${i}]`
       const result = testSubtree(value[i], pattern[0], collectErrors, errors, arrPath);
       if (result) {
-        result.path = _prependPath(collectErrors ? arrPath : i, result.path);
+        result.path = _prependPath(collectErrors ? arrPath : i, result.path)
         if (!collectErrors) return result;
-        if (typeof value[i] !== "object" || result.message) errors.push(result);
+        if (typeof value[i] !== 'object' || result.message) errors.push(result)
       }
     }
 
@@ -334,7 +341,7 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
 
       return {
         message: err.message,
-        path: err.path,
+        path: err.path
       };
     }
 
@@ -345,8 +352,8 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     // XXX this error is terrible
 
     return {
-      message: "Failed Match.Where validation",
-      path: "",
+      message: 'Failed Match.Where validation',
+      path: '',
     };
   }
 
@@ -360,6 +367,7 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     for (let i = 0; i < pattern.choices.length; ++i) {
       const result = testSubtree(value, pattern.choices[i]);
       if (!result) {
+
         // No error? Yay, return.
         return false;
       }
@@ -369,8 +377,8 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
 
     // XXX this error is terrible
     return {
-      message: "Failed Match.OneOf, Match.Maybe or Match.Optional validation",
-      path: "",
+      message: 'Failed Match.OneOf, Match.Maybe or Match.Optional validation',
+      path: '',
     };
   }
 
@@ -382,8 +390,8 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     }
 
     return {
-      message: `Expected ${pattern.name || "particular constructor"}`,
-      path: "",
+      message: `Expected ${pattern.name || 'particular constructor'}`,
+      path: '',
     };
   }
 
@@ -397,75 +405,77 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
   if (pattern instanceof ObjectWithValues) {
     unknownKeysAllowed = true;
     unknownKeyPattern = [pattern.pattern];
-    pattern = {}; // no required keys
+    pattern = {};  // no required keys
   }
 
-  if (typeof pattern !== "object") {
+  if (typeof pattern !== 'object') {
     return {
-      message: "Bad pattern: unknown pattern type",
-      path: "",
+      message: 'Bad pattern: unknown pattern type',
+      path: '',
     };
   }
 
   // An object, with required and optional keys. Note that this does NOT do
   // structural matches against objects of special types that happen to match
   // the pattern: this really needs to be a plain old {Object}!
-  if (typeof value !== "object") {
+  if (typeof value !== 'object') {
     return {
       message: `Expected object, got ${typeof value}`,
-      path: "",
+      path: '',
     };
   }
 
   if (value === null) {
     return {
       message: `Expected object, got null`,
-      path: "",
+      path: '',
     };
   }
 
-  if (!isPlainObject(value)) {
+  if (! isPlainObject(value)) {
     return {
       message: `Expected plain object`,
-      path: "",
+      path: '',
     };
   }
 
   const requiredPatterns = Object.create(null);
   const optionalPatterns = Object.create(null);
 
-  Object.keys(pattern).forEach((key) => {
+  Object.keys(pattern).forEach(key => {
     const subPattern = pattern[key];
-    if (subPattern instanceof Optional || subPattern instanceof Maybe) {
+    if (subPattern instanceof Optional ||
+        subPattern instanceof Maybe) {
       optionalPatterns[key] = subPattern.pattern;
     } else {
       requiredPatterns[key] = subPattern;
     }
   });
 
-  for (const key in Object(value)) {
+  for (let key in Object(value)) {
     const subValue = value[key];
     const objPath = path ? `${path}.${key}` : key;
     if (hasOwn.call(requiredPatterns, key)) {
       const result = testSubtree(subValue, requiredPatterns[key], collectErrors, errors, objPath);
       if (result) {
-        result.path = _prependPath(collectErrors ? objPath : key, result.path);
+        result.path = _prependPath(collectErrors ? objPath : key, result.path)
         if (!collectErrors) return result;
-        if (typeof subValue !== "object" || result.message) errors.push(result);
+        if (typeof subValue !== 'object' || result.message) errors.push(result);
       }
 
       delete requiredPatterns[key];
     } else if (hasOwn.call(optionalPatterns, key)) {
       const result = testSubtree(subValue, optionalPatterns[key], collectErrors, errors, objPath);
       if (result) {
-        result.path = _prependPath(collectErrors ? objPath : key, result.path);
+        result.path = _prependPath(collectErrors ? objPath : key, result.path)
         if (!collectErrors) return result;
-        if (typeof subValue !== "object" || result.message) errors.push(result);
+        if (typeof subValue !== 'object' || result.message) errors.push(result);
       }
+
     } else {
       if (!unknownKeysAllowed) {
         const result = {
-          message: "Unknown key",
+          message: 'Unknown key',
           path: key,
         };
         if (!collectErrors) return result;
@@ -475,9 +485,9 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
       if (unknownKeyPattern) {
         const result = testSubtree(subValue, unknownKeyPattern[0], collectErrors, errors, objPath);
         if (result) {
-          result.path = _prependPath(collectErrors ? objPath : key, result.path);
+          result.path = _prependPath(collectErrors ? objPath : key, result.path)
           if (!collectErrors) return result;
-          if (typeof subValue !== "object" || result.message) errors.push(result);
+          if (typeof subValue !== 'object' || result.message) errors.push(result);
         }
       }
     }
@@ -485,9 +495,9 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
 
   const keys = Object.keys(requiredPatterns);
   if (keys.length) {
-    const createMissingError = (key) => ({
+    const createMissingError = key => ({
       message: `Missing key '${key}'`,
-      path: collectErrors ? path : "",
+      path: collectErrors ? path : '',
     });
 
     if (!collectErrors) {
@@ -504,7 +514,8 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
 };
 
 class ArgumentChecker {
-  constructor(args, description) {
+  constructor (args, description) {
+
     // Make a SHALLOW copy of the arguments. (We'll be doing identity checks
     // against its contents.)
     this.args = [...args];
@@ -531,11 +542,13 @@ class ArgumentChecker {
 
   _checkingOneValue(value) {
     for (let i = 0; i < this.args.length; ++i) {
+
       // Is this value one of the arguments? (This can have a false positive if
       // the argument is an interned primitive, but it's still a good enough
       // check.)
       // (NaN is not === to itself, so we have to check specially.)
-      if (value === this.args[i] || (Number.isNaN(value) && Number.isNaN(this.args[i]))) {
+      if (value === this.args[i] ||
+          (Number.isNaN(value) && Number.isNaN(this.args[i]))) {
         this.args.splice(i, 1);
         return true;
       }
@@ -549,81 +562,37 @@ class ArgumentChecker {
   }
 }
 
-const _jsKeywords = [
-  "do",
-  "if",
-  "in",
-  "for",
-  "let",
-  "new",
-  "try",
-  "var",
-  "case",
-  "else",
-  "enum",
-  "eval",
-  "false",
-  "null",
-  "this",
-  "true",
-  "void",
-  "with",
-  "break",
-  "catch",
-  "class",
-  "const",
-  "super",
-  "throw",
-  "while",
-  "yield",
-  "delete",
-  "export",
-  "import",
-  "public",
-  "return",
-  "static",
-  "switch",
-  "typeof",
-  "default",
-  "extends",
-  "finally",
-  "package",
-  "private",
-  "continue",
-  "debugger",
-  "function",
-  "arguments",
-  "interface",
-  "protected",
-  "implements",
-  "instanceof",
-];
+const _jsKeywords = ['do', 'if', 'in', 'for', 'let', 'new', 'try', 'var', 'case',
+  'else', 'enum', 'eval', 'false', 'null', 'this', 'true', 'void', 'with',
+  'break', 'catch', 'class', 'const', 'super', 'throw', 'while', 'yield',
+  'delete', 'export', 'import', 'public', 'return', 'static', 'switch',
+  'typeof', 'default', 'extends', 'finally', 'package', 'private', 'continue',
+  'debugger', 'function', 'arguments', 'interface', 'protected', 'implements',
+  'instanceof'];
 
 // Assumes the base of path is already escaped properly
 // returns key + base
 const _prependPath = (key, base) => {
-  if (typeof key === "number" || key.match(/^[0-9]+$/)) {
+  if ((typeof key) === 'number' || key.match(/^[0-9]+$/)) {
     key = `[${key}]`;
-  } else if (!key.match(/^[a-z_$][0-9a-z_$.[\]]*$/i) || _jsKeywords.indexOf(key) >= 0) {
+  } else if (!key.match(/^[a-z_$][0-9a-z_$.[\]]*$/i) ||
+             _jsKeywords.indexOf(key) >= 0) {
     key = JSON.stringify([key]);
   }
 
-  if (base && base[0] !== "[") {
+  if (base && base[0] !== '[') {
     return `${key}.${base}`;
   }
 
   return key + base;
-};
+}
 
-const isObject = (value) => typeof value === "object" && value !== null;
+const isObject = value => typeof value === 'object' && value !== null;
 
-const baseIsArguments = (item) =>
-  isObject(item) && Object.prototype.toString.call(item) === "[object Arguments]";
+const baseIsArguments = item =>
+  isObject(item) &&
+  Object.prototype.toString.call(item) === '[object Arguments]';
 
-const isArguments = baseIsArguments(
-  (function () {
-    return arguments;
-  })(),
-)
-  ? baseIsArguments
-  : (value) => isObject(value) && typeof value.callee === "function";
+const isArguments = baseIsArguments(function() { return arguments; }()) ?
+  baseIsArguments :
+  value => isObject(value) && typeof value.callee === 'function';

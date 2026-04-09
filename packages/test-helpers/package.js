@@ -4,11 +4,18 @@ Package.describe({
 });
 
 Npm.depends({
-  "lodash.isequal": "4.5.0",
-});
+  'lodash.isequal': '4.5.0',
+})
 
 Package.onUse(function (api) {
-  api.use(["ecmascript", "tracker", "ejson", "tinytest", "random", "blaze"]);
+  api.use([
+    "ecmascript",
+    "tracker",
+    "ejson",
+    "tinytest",
+    "random",
+    "blaze",
+  ]);
 
   // XXX for connection.js. Not sure this really belongs in
   // test-helpers. It probably would be better off in livedata. But it's

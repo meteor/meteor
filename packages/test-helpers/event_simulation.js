@@ -2,23 +2,23 @@
 // bubbles: A boolean indicating whether the event should bubble up through
 //  the event chain or not. (default is true)
 simulateEvent = function (node, event, args, options) {
-  node = node.jquery ? node[0] : node;
+  node = (node.jquery ? node[0] : node);
 
-  const bubbles = options && "bubbles" in options ? options.bubbles : true;
+  var bubbles = (options && "bubbles" in options) ? options.bubbles : true;
 
   if (document.createEvent) {
-    const e = document.createEvent("Event");
+    var e = document.createEvent("Event");
     e.initEvent(event, bubbles, true);
     Object.assign(e, args);
     node.dispatchEvent(e);
   } else {
-    const e = document.createEventObject();
+    var e = document.createEventObject();
     Object.assign(e, args);
-    node.fireEvent(`on${event}`, e);
+    node.fireEvent("on" + event, e);
   }
 };
 
-focusElement = function (elem) {
+focusElement = function(elem) {
   // This sequence is for benefit of IE 8 and 9;
   // test there before changing.
   window.focus();
@@ -26,21 +26,24 @@ focusElement = function (elem) {
   elem.focus();
 
   // focus() should set document.activeElement
-  if (document.activeElement !== elem) throw new Error("focus() didn't set activeElement");
+  if (document.activeElement !== elem)
+    throw new Error("focus() didn't set activeElement");
 };
 
-blurElement = function (elem) {
+blurElement = function(elem) {
   elem.blur();
-  if (document.activeElement === elem) throw new Error("blur() didn't affect activeElement");
+  if (document.activeElement === elem)
+    throw new Error("blur() didn't affect activeElement");
 };
 
-clickElement = function (elem) {
+clickElement = function(elem) {
   if (elem.click)
     elem.click(); // supported by form controls cross-browser; most native way
-  else simulateEvent(elem, "click");
+  else
+    simulateEvent(elem, 'click');
 };
 
-const inDocument = function (elem) {
+var inDocument = function (elem) {
   while ((elem = elem.parentNode)) {
     if (elem == document) {
       return true;
@@ -56,6 +59,8 @@ clickIt = function (elem) {
   // jQuery's bubbling change event polyfill for IE 8 seems
   // to require that the element in question have focus when
   // it receives a simulated click.
-  if (elem.focus) elem.focus();
+  if (elem.focus)
+    elem.focus();
   clickElement(elem);
 };
+

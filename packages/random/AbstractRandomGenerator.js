@@ -7,8 +7,11 @@
 // window.crypto.getRandomValues() or alea, the primitive is fraction and we use
 // that to construct hex string.
 
-const UNMISTAKABLE_CHARS = "23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz";
-const BASE64_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0123456789-_";
+import { Meteor } from 'meteor/meteor';
+
+const UNMISTAKABLE_CHARS = '23456789ABCDEFGHJKLMNPQRSTWXYZabcdefghijkmnopqrstuvwxyz';
+const BASE64_CHARS = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ' +
+  '0123456789-_';
 
 // `type` is one of `RandomGenerator.Type` as defined below.
 //
@@ -17,12 +20,13 @@ const BASE64_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ" + "0
 //   whose items will be `toString`ed and used as the seed to the Alea
 //   algorithm
 export default class RandomGenerator {
+
   /**
    * @name Random.fraction
    * @summary Return a number between 0 and 1, like `Math.random`.
    * @locus Anywhere
    */
-  fraction() {
+  fraction () {
     throw new Error(`Unknown random generator type`);
   }
 
@@ -32,13 +36,13 @@ export default class RandomGenerator {
    * @locus Anywhere
    * @param {Number} n Length of the string
    */
-  hexString(digits) {
-    return this._randomString(digits, "0123456789abcdef");
+  hexString (digits) {
+    return this._randomString(digits, '0123456789abcdef');
   }
 
-  _randomString(charsCount, alphabet) {
-    let result = "";
-    for (let i = 0; i < charsCount; i++) {
+  _randomString (charsCount, alphabet) {
+    let result = '';
+    for (let i = 0; i < charsCount; i++) {	
       result += this.choice(alphabet);
     }
     return result;
@@ -52,7 +56,7 @@ export default class RandomGenerator {
    * @param {Number} [n] Optional length of the identifier in characters
    *   (defaults to 17)
    */
-  id(charsCount) {
+  id (charsCount) {
     // 17 characters is around 96 bits of entropy, which is the amount of
     // state in the Alea PRNG.
     if (charsCount === undefined) {
@@ -71,7 +75,7 @@ export default class RandomGenerator {
    * @param {Number} [n] Optional length of the secret string (defaults to 43
    *   characters, or 256 bits of entropy)
    */
-  secret(charsCount) {
+  secret (charsCount) {
     // Default to 256 bits of entropy, or 43 characters at 6 bits per
     // character.
     if (charsCount === undefined) {
@@ -87,9 +91,9 @@ export default class RandomGenerator {
    * @locus Anywhere
    * @param {Array|String} arrayOrString Array or string to choose from
    */
-  choice(arrayOrString) {
+  choice (arrayOrString) {
     const index = Math.floor(this.fraction() * arrayOrString.length);
-    if (typeof arrayOrString === "string") {
+    if (typeof arrayOrString === 'string') {
       return arrayOrString.substr(index, 1);
     }
     return arrayOrString[index];

@@ -32,33 +32,36 @@
 // try_all_permutations(X, [A, B], Y)
 
 try_all_permutations = function () {
-  const args = Array.prototype.slice.call(arguments);
+  var args = Array.prototype.slice.call(arguments);
 
-  let current_set = 0;
-  const chosen = [];
+  var current_set = 0;
+  var chosen = [];
 
-  const expand_next_set = function () {
+  var expand_next_set = function () {
     if (current_set === args.length) {
-      chosen.forEach(function (f) {
-        f();
-      });
+      chosen.forEach(function (f) { f(); });
     } else {
-      let set = args[current_set];
-      if (typeof set === "function") set = [set];
+      var set = args[current_set];
+      if (typeof set === "function")
+        set = [set];
 
       current_set++;
-      if (typeof set[0] === "number") pick(set[0], set.slice(1));
-      else pick(set.length, set);
+      if (typeof set[0] === "number")
+        pick(set[0], set.slice(1));
+      else
+        pick(set.length, set);
       current_set--;
     }
   };
 
-  const pick = function (how_many, remaining) {
-    if (how_many === 0) expand_next_set();
+  var pick = function (how_many, remaining) {
+    if (how_many === 0)
+      expand_next_set();
     else {
-      for (let i = 0; i < remaining.length; i++) {
+      for (var i = 0; i < remaining.length; i++) {
         chosen.push(remaining[i]);
-        pick(how_many - 1, remaining.slice(0, i).concat(remaining.slice(i + 1)));
+        pick(how_many - 1,
+             remaining.slice(0, i).concat(remaining.slice(i + 1)));
         chosen.pop();
       }
     }

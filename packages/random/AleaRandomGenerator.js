@@ -1,4 +1,4 @@
-import RandomGenerator from "./AbstractRandomGenerator";
+import RandomGenerator from './AbstractRandomGenerator';
 
 // Alea PRNG, which is not cryptographically strong
 // see http://baagoe.org/en/wiki/Better_random_numbers_for_javascript
@@ -22,7 +22,7 @@ function Alea(seeds) {
       return (n >>> 0) * 2.3283064365386963e-10; // 2^-32
     };
 
-    mash.version = "Mash 0.9";
+    mash.version = 'Mash 0.9';
     return mash;
   }
 
@@ -31,12 +31,12 @@ function Alea(seeds) {
   let s2 = 0;
   let c = 1;
   if (seeds.length === 0) {
-    seeds = [+new Date()];
+    seeds = [+new Date];
   }
   let mash = Mash();
-  s0 = mash(" ");
-  s1 = mash(" ");
-  s2 = mash(" ");
+  s0 = mash(' ');
+  s1 = mash(' ');
+  s2 = mash(' ');
 
   for (let i = 0; i < seeds.length; i++) {
     s0 -= mash(seeds[i]);
@@ -55,17 +55,17 @@ function Alea(seeds) {
   mash = null;
 
   const random = () => {
-    const t = 2091639 * s0 + c * 2.3283064365386963e-10; // 2^-32
+    const t = (2091639 * s0) + (c * 2.3283064365386963e-10); // 2^-32
     s0 = s1;
     s1 = s2;
-    return (s2 = t - (c = t | 0));
+    return s2 = t - (c = t | 0);
   };
 
   random.uint32 = () => random() * 0x100000000; // 2^32
-  // oxlint-disable-next-line oxc/erasing-op -- intentional bitwise OR for float-to-int (Alea PRNG algorithm)
-  random.fract53 = () => random() + ((random() * 0x200000) | 0) * 1.1102230246251565e-16; // 2^-53
+  random.fract53 = () => random() +
+        ((random() * 0x200000 | 0) * 1.1102230246251565e-16); // 2^-53
 
-  random.version = "Alea 0.9";
+  random.version = 'Alea 0.9';
   random.args = seeds;
   return random;
 }
@@ -75,10 +75,10 @@ function Alea(seeds) {
 //   whose items will be `toString`ed and used as the seed to the Alea
 //   algorithm
 export default class AleaRandomGenerator extends RandomGenerator {
-  constructor({ seeds = [] } = {}) {
+  constructor ({ seeds = [] } = {}) {
     super();
     if (!seeds) {
-      throw new Error("No seeds were provided for Alea PRNG");
+      throw new Error('No seeds were provided for Alea PRNG');
     }
     this.alea = Alea(seeds);
   }
@@ -88,7 +88,7 @@ export default class AleaRandomGenerator extends RandomGenerator {
    * @summary Return a number between 0 and 1, like `Math.random`.
    * @locus Anywhere
    */
-  fraction() {
+  fraction () {
     return this.alea();
   }
 }

@@ -1,3 +1,5 @@
-export const ServerTestResultsSubscription = "tinytest_results_subscription";
+export const ServerTestResultsSubscription =
+  "tinytest_results_subscription";
 
-export const ServerTestResultsCollection = "tinytest_results_collection";
+export const ServerTestResultsCollection =
+  "tinytest_results_collection";
