@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Integrate rspack into the Meteor lifecycle to run the bundler independently",
-  version: '1.0.0',
+  version: '1.1.0-beta341.1',
 });
 
 Package.registerBuildPlugin({

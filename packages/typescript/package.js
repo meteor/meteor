@@ -1,6 +1,6 @@
 Package.describe({
   name: 'typescript',
-  version: '5.9.3',
+  version: '5.10.0-beta341.1',
   summary:
     'Compiler plugin that compiles TypeScript and ECMAScript in .ts and .tsx files',
   documentation: 'README.md',

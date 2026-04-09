@@ -3,11 +3,12 @@
 After reading this article, you'll know:
 
 1. What features in core Meteor enable user accounts
-2. How to use accounts-ui for a quick prototype
-3. How to build a fully-featured password login experience
-4. How to enable login through OAuth providers like Facebook
-5. How to add custom data to Meteor's users collection
-6. How to manage user roles and permissions
+2. How to build a fully-featured password login experience
+3. How to set up passwordless login
+4. How to add two-factor authentication (2FA)
+5. How to enable login through OAuth providers like Facebook
+6. How to add custom data to Meteor's users collection
+7. How to protect your data with per-document permissions
 
 ## Features in core Meteor
 
@@ -23,40 +24,12 @@ This built-in feature means that you always get `this.userId` inside Methods and
 
 This package is the core of Meteor's developer-facing user accounts functionality. This includes:
 
-1. A users collection with a standard schema, accessed through [`Meteor.users`](/api/accounts#Meteor-users), and the client-side singletons [`Meteor.userId()`](/api/accounts#Meteor-userId) and [`Meteor.user()`](/api/accounts#Meteor-user), which represent the login state on the client.
-2. A variety of helpful other generic methods to keep track of login state, log out, validate users, etc. Visit the [Accounts section of the docs](/api/accounts) to find a complete list.
-3. An API for registering new login handlers, which is used by all of the other accounts packages to integrate with the accounts system.
+1. A users collection with a standard schema, accessed through [`Meteor.users`](/api/accounts#Meteor-users), and the client-side singletons [`Meteor.userId()`](/api/accounts#Meteor-userId), [`Meteor.user()`](/api/accounts#Meteor-user), and the async [`Meteor.userAsync()`](/api/accounts#Meteor-userAsync), which represent the login state on the client.
+2. Reactive helpers [`Accounts.loggingIn()`](/api/accounts#Accounts-loggingIn) and [`Accounts.loggingOut()`](/api/accounts#Accounts-loggingOut) to track in-progress login/logout state.
+3. A variety of helpful other generic methods to keep track of login state, log out, validate users, etc. Visit the [Accounts section of the docs](/api/accounts) to find a complete list.
+4. An API for registering new login handlers, which is used by all of the other accounts packages to integrate with the accounts system.
 
 Usually, you don't need to include `accounts-base` yourself since it's added for you if you use `accounts-password` or similar, but it's good to be aware of what is what.
-
-## Fast prototyping with accounts-ui
-
-Often, a complicated accounts system is not the first thing you want to build when you're starting out with a new app, so it's useful to have something you can drop in quickly. This is where `accounts-ui` comes in - it's one line that you drop into your app to get an accounts system. To add it:
-
-```bash
-meteor add accounts-ui
-```
-
-Then include it anywhere in a Blaze template:
-
-```html
-{{> loginButtons}}
-```
-
-Then, make sure to pick a login provider; they will automatically integrate with `accounts-ui`:
-
-```bash
-# pick one or more of the below
-meteor add accounts-password
-meteor add accounts-facebook
-meteor add accounts-google
-meteor add accounts-github
-meteor add accounts-twitter
-meteor add accounts-meetup
-meteor add accounts-meteor-developer
-```
-
-Now open your app, follow the configuration steps, and you're good to go - if you've done one of our [Meteor tutorials](/tutorials/react/1.creating-the-app), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of these tutorials.
 
 ## Password login
 
@@ -66,11 +39,9 @@ Meteor comes with a secure and fully-featured password login system out of the b
 meteor add accounts-password
 ```
 
-To see what options are available to you, read the complete description of the [`accounts-password` API in the Meteor docs](/api/accounts).
-
 ### Requiring username or email
 
-By default, the `Accounts.createUser` function provided by `accounts-password` allows you to create an account with a username, email, or both. Most apps expect a specific combination of the two, so you will certainly want to validate the new user creation:
+By default, the `Accounts.createUserAsync` function provided by `accounts-password` allows you to create an account with a username, email, or both. Most apps expect a specific combination of the two, so you will certainly want to validate the new user creation:
 
 ```js
 // Ensuring every user has an email address, should be in server-side code
@@ -78,11 +49,11 @@ Accounts.validateNewUser((user) => {
   new SimpleSchema({
     _id: { type: String },
     emails: { type: Array },
-    'emails.$': { type: Object },
-    'emails.$.address': { type: String },
-    'emails.$.verified': { type: Boolean },
+    "emails.$": { type: Object },
+    "emails.$.address": { type: String },
+    "emails.$.verified": { type: Boolean },
     createdAt: { type: Date },
-    services: { type: Object, blackbox: true }
+    services: { type: Object, blackbox: true },
   }).validate(user);
 
   // Return true to allow user creation to proceed
@@ -90,11 +61,49 @@ Accounts.validateNewUser((user) => {
 });
 ```
 
-### Multiple emails
+> When creating users programmatically, prefer the async variant:
 
-Often, users might want to associate multiple email addresses with the same account. `accounts-password` addresses this case by storing the email addresses as an array in the user collection. There are some handy API methods to deal with [adding](/api/accounts#Accounts-addEmail), [removing](/api/accounts#Accounts-removeEmail), and [verifying](/api/accounts#Accounts-verifyEmail) emails.
+```js
+// Client or server
+const userId = await Accounts.createUserAsync({
+  username: "ada",
+  email: "ada@lovelace.com",
+  password: "secret",
+  profile: { name: "Ada Lovelace" },
+});
+```
 
-One useful thing to add for your app can be the concept of a "primary" email address. This way, if the user has added multiple emails, you know where to send confirmation emails and similar.
+If you want to automatically send an email verification after account creation, use `Accounts.createUserVerifyingEmail` instead:
+
+```js
+await Accounts.createUserVerifyingEmail({
+  email: "ada@lovelace.com",
+  password: "secret",
+});
+```
+
+### Managing multiple email addresses
+
+Users can associate more than one email address with their account. Meteor stores them as an array in the user document, so you can add, remove, and verify each one independently.
+
+```js
+// Add a new address for the user (server)
+await Accounts.addEmailAsync(userId, "work@example.com");
+
+// Remove an address (server)
+await Accounts.removeEmail(userId, "old@example.com");
+
+// Send a verification email to a specific address (server)
+await Accounts.sendVerificationEmail(userId, "work@example.com");
+```
+
+A common pattern is to record a "primary" email address — the one used for notifications and password resets — as a top-level field on the user document:
+
+```js
+await Meteor.users.updateAsync(userId, {
+  $set: { primaryEmail: "work@example.com" },
+});
+```
 
 ### Case sensitivity
 
@@ -103,6 +112,80 @@ Meteor handles case sensitivity for email addresses and usernames. Since MongoDB
 **What does this mean for your app?**
 
 Follow one rule: don't query the database by `username` or `email` directly. Instead, use the [`Accounts.findUserByUsername`](/api/accounts#Accounts-findUserByUsername) and [`Accounts.findUserByEmail`](/api/accounts#Accounts-findUserByEmail) methods provided by Meteor. This will run a query for you that is case-insensitive, so you will always find the user you are looking for.
+
+### Security configuration
+
+`Accounts.config()` exposes several options that harden your login system. Call it once from server-side startup code.
+
+**Prevent user enumeration.** When enabled (the default in Meteor 3), "user not found" and "incorrect password" return the same error message to the caller, making it impossible for an attacker to discover which email addresses are registered:
+
+```js
+Accounts.config({ ambiguousErrorMessages: true }); // default: true
+```
+
+**Block client-side account creation.** Ensure new accounts can only be created server-side (e.g. through a trusted Meteor Method), preventing unvetted signups from the browser console:
+
+```js
+Accounts.config({ forbidClientAccountCreation: true });
+```
+
+**Restrict signups by email domain.** Accept a string, an array of strings, or a function:
+
+```js
+// single domain
+Accounts.config({ restrictCreationByEmailDomain: "mycompany.com" });
+
+// multiple domains
+Accounts.config({
+  restrictCreationByEmailDomain: ["mycompany.com", "contractor.io"],
+});
+
+// custom logic
+Accounts.config({
+  restrictCreationByEmailDomain: (email) => email.endsWith(".edu"),
+});
+```
+
+**Credential storage.** By default, login tokens are stored in `localStorage` and survive across browser sessions. Set `clientStorage` to `'session'` to clear credentials when the browser tab is closed:
+
+```js
+Accounts.config({ clientStorage: "session" }); // 'local' (default) or 'session'
+```
+
+### Password hashing
+
+Meteor uses **bcrypt** to hash passwords by default. You can tune the work factor:
+
+```js
+Accounts.config({ bcryptRounds: 12 }); // default: 10
+```
+
+Meteor 3.x also supports **Argon2**, which is recommended by [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html) for new applications:
+
+```js
+// server-side startup code
+Accounts.config({
+  argon2Enabled: true,
+  argon2Type: "argon2id", // 'argon2i' | 'argon2d' | 'argon2id' (default)
+  argon2TimeCost: 2, // iterations (default: 2)
+  argon2MemoryCost: 19456, // memory in KiB — 19 MB (default)
+  argon2Parallelism: 1, // threads (default: 1)
+});
+```
+
+Enabling Argon2 does not break existing users. Existing bcrypt hashes continue to work and are transparently re-hashed to Argon2 the next time each user logs in.
+
+### Token lifetime configuration
+
+You can control how long session and email tokens remain valid:
+
+```js
+Accounts.config({
+  loginExpirationInDays: 90, // session token lifetime (default: 90; set to null to never expire)
+  passwordResetTokenExpirationInDays: 3, // password reset link lifetime (default: 3 days)
+  passwordEnrollTokenExpirationInDays: 30, // account enrollment link lifetime (default: 30 days)
+});
+```
 
 ### Email flows
 
@@ -116,38 +199,52 @@ When you have a login system for your app based on user emails, that opens up th
 
 `accounts-password` comes with handy functions that you can call from the server to send an email:
 
-1. [`Accounts.sendResetPasswordEmail`](/api/accounts#Accounts-sendResetPasswordEmail)
-2. [`Accounts.sendEnrollmentEmail`](/api/accounts#Accounts-sendEnrollmentEmail)
-3. [`Accounts.sendVerificationEmail`](/api/accounts#Accounts-sendVerificationEmail)
+1. [`Accounts.sendResetPasswordEmail(userId, email?, extraTokenData?, extraParams?)`](/api/accounts#Accounts-sendResetPasswordEmail)
+2. [`Accounts.sendEnrollmentEmail(userId, email?, extraTokenData?, extraParams?)`](/api/accounts#Accounts-sendEnrollmentEmail)
+3. [`Accounts.sendVerificationEmail(userId, email?, extraTokenData?, extraParams?)`](/api/accounts#Accounts-sendVerificationEmail)
 
-The email is generated using the email templates from [`Accounts.emailTemplates`](/api/accounts#Accounts-emailTemplates), and include links generated with `Accounts.urls`.
+The optional `extraTokenData` object is merged into the token stored in the database and is available inside email templates. The optional `extraParams` object is appended to the generated URL as query parameters.
 
-#### Identifying when the link is clicked
+If you need to generate a token without sending an email (for example, to build a custom mailer), use the lower-level helpers:
 
-When the user receives the email and clicks the link inside, their web browser will take them to your app. Now, you need to be able to identify these special links and act appropriately. If you haven't customized the link URL, then you can use some built-in callbacks to identify when the app is in the middle of an email flow:
+```js
+// Generate a password reset token (server)
+const { token } = await Accounts.generateResetToken(
+  userId,
+  email,
+  "resetPassword"
+);
 
-1. [`Accounts.onResetPasswordLink`](/api/accounts#Accounts-onResetPasswordLink)
-2. [`Accounts.onEnrollmentLink`](/api/accounts#Accounts-onEnrollmentLink)
-3. [`Accounts.onEmailVerificationLink`](/api/accounts#Accounts-onEmailVerificationLink)
+// Generate an email verification token (server)
+const { token } = await Accounts.generateVerificationToken(userId, email);
+```
 
-Here's how you would use one of these functions:
+The email is generated using the email templates from [`Accounts.emailTemplates`](/api/accounts#Accounts-emailTemplates), and includes links generated with `Accounts.urls`.
+
+#### Handling the link in your app
+
+When the user clicks the link in their email, their browser navigates to your app with the token embedded in the URL. Register a client-side callback to detect each flow and render the appropriate UI — there is one for each link type: `Accounts.onResetPasswordLink`, `Accounts.onEnrollmentLink`, and `Accounts.onEmailVerificationLink`. Here's how you would implement the password reset flow:
 
 ```js
 Accounts.onResetPasswordLink(async (token, done) => {
   // Display the password reset UI, get the new password...
 
   try {
-    await Accounts.resetPasswordAsync(token, newPassword);
+    await new Promise((resolve, reject) =>
+      Accounts.resetPassword(token, newPassword, (err) =>
+        err ? reject(err) : resolve()
+      )
+    );
     // Resume normal operation
     done();
   } catch (err) {
     // Display error
-    console.error('Password reset failed:', err);
+    console.error("Password reset failed:", err);
   }
 });
 ```
 
-If you want a different URL for your reset password page, you need to customize it using the `Accounts.urls` option:
+If you want a different URL for your reset password page, you need to customize it using the `Accounts.urls` option. URL generators can also be `async` or return a `Promise`:
 
 ```js
 Accounts.urls.resetPassword = (token) => {
@@ -159,10 +256,10 @@ If you have customized the URL, you will need to add a new route to your router 
 
 #### Completing the process
 
-When the user submits the form, you need to call the appropriate function to commit their change to the database:
+When the user submits the form, you need to call the appropriate function to commit their change to the database. Both functions are callback-based; wrap them in a `Promise` to use with `async/await`:
 
-1. [`Accounts.resetPasswordAsync`](/api/accounts#Accounts-resetPassword) - this one should be used both for resetting the password, and enrolling a new user; it accepts both kinds of tokens.
-2. [`Accounts.verifyEmailAsync`](/api/accounts#Accounts-verifyEmail)
+1. [`Accounts.resetPassword(token, newPassword, callback)`](/api/accounts#Accounts-resetPassword) — use this both for resetting the password and enrolling a new user; it accepts both kinds of tokens. Logs in the user after a successful reset (unless 2FA is enabled — see [Two-Factor Authentication](#two-factor-authentication-accounts-2fa)).
+2. [`Accounts.verifyEmail(token, callback)`](/api/accounts#Accounts-verifyEmail) — logs in the user after a successful verification (unless 2FA is enabled).
 
 After you have called one of the two functions above or the user has cancelled the process, call the `done` function you got in the link callback.
 
@@ -175,7 +272,7 @@ Accounts.emailTemplates.siteName = "Meteor Guide Todos Example";
 Accounts.emailTemplates.from = "Meteor Todos Accounts <accounts@example.com>";
 
 Accounts.emailTemplates.resetPassword = {
-  subject(user) {
+  subject(user, url) {
     return "Reset your password on Meteor Todos";
   },
   text(user, url) {
@@ -190,7 +287,7 @@ The Meteor Todos team
   html(user, url) {
     // This is where HTML email content would go.
     // See the section about html emails below.
-  }
+  },
 };
 ```
 
@@ -198,34 +295,205 @@ The Meteor Todos team
 
 If you've ever needed to deal with sending pretty HTML emails from an app, you know that it can quickly become a nightmare. Compatibility of popular email clients with basic HTML features like CSS is notoriously spotty. Start with a [responsive email template](https://github.com/leemunroe/responsive-html-email-template) or [framework](https://get.foundation/emails), and then use a tool to convert your email content into something that is compatible with all email clients.
 
+## Passwordless login
+
+The `accounts-passwordless` package provides a one-time token (magic link) login experience — no password required.
+
+```bash
+meteor add accounts-passwordless
+```
+
+### Requesting a login token
+
+On the client, call `Accounts.requestLoginTokenForUser` to send a one-time token to the user's email address:
+
+```js
+// Client
+await Accounts.requestLoginTokenForUser({
+  selector: { email: "ada@lovelace.com" },
+  // options.userCreationDisabled: true prevents creating a new account
+  // if no existing user matches the selector
+  options: {},
+});
+```
+
+If no account exists for the given selector and `userCreationDisabled` is not set, you can pass `userData` to create the account on the fly:
+
+```js
+await Accounts.requestLoginTokenForUser({
+  selector: { email: "ada@lovelace.com" },
+  userData: { email: "ada@lovelace.com", profile: { name: "Ada Lovelace" } },
+});
+```
+
+### Logging in with the token
+
+When the user clicks the link in their email (or copies the token), call:
+
+```js
+// Client
+await new Promise((resolve, reject) =>
+  Meteor.passwordlessLoginWithToken(
+    { email: "ada@lovelace.com" },
+    token,
+    (err) => (err ? reject(err) : resolve())
+  )
+);
+```
+
+If the user has [Two-Factor Authentication](#two-factor-authentication-accounts-2fa) enabled, use the 2FA variant instead:
+
+```js
+await new Promise((resolve, reject) =>
+  Meteor.passwordlessLoginWithTokenAnd2faCode(
+    { email: "ada@lovelace.com" },
+    token,
+    totpCode,
+    (err) => (err ? reject(err) : resolve())
+  )
+);
+```
+
+### Automatic URL-based login
+
+The `accounts-passwordless` package automatically detects when the URL contains a `loginToken` query parameter (e.g. from an email link) and logs the user in. This is handled by `Accounts.autoLoginWithToken()`, which the package calls internally on startup — **you do not need to call it yourself**.
+
+If you need to trigger the check manually (for example, after programmatically updating the URL), you can call it directly:
+
+```js
+Accounts.autoLoginWithToken();
+```
+
+### Customizing the email
+
+Customize the token email through `Accounts.emailTemplates.sendLoginToken`:
+
+```js
+Accounts.emailTemplates.sendLoginToken = {
+  subject(user) {
+    return "Your login link";
+  },
+  text(user, url) {
+    return `Click the link below to log in:\n\n${url}\n\nThis link expires in 15 minutes.`;
+  },
+};
+```
+
+## Two-Factor Authentication
+
+The `accounts-2fa` package adds Time-based One-Time Password (TOTP) two-factor authentication, compatible with any standard authenticator app (Google Authenticator, Authy, etc.).
+
+```bash
+meteor add accounts-2fa
+```
+
+### Enabling 2FA for a user
+
+The setup flow happens on the client:
+
+```js
+// Step 1: generate a QR code and display it to the user
+const { svg, secret, uri } = await new Promise((resolve, reject) =>
+  Accounts.generate2faActivationQrCode("My App", (err, result) => {
+    if (err) reject(err);
+    else resolve(result);
+  })
+);
+// Render `svg` in your UI so the user can scan it with their authenticator app
+
+// Step 2: once the user has scanned the QR code and sees the first code, confirm it
+await new Promise((resolve, reject) =>
+  Accounts.enableUser2fa(totpCode, (err) => {
+    if (err) reject(err);
+    else resolve();
+  })
+);
+```
+
+### Disabling 2FA and checking status
+
+```js
+// Check if the current user has 2FA enabled
+const enabled = await new Promise((resolve, reject) =>
+  Accounts.has2faEnabled((err, result) => {
+    if (err) reject(err);
+    else resolve(result);
+  })
+);
+
+// Disable 2FA for the current user
+await new Promise((resolve, reject) =>
+  Accounts.disableUser2fa((err) => {
+    if (err) reject(err);
+    else resolve();
+  })
+);
+```
+
+### Logging in with 2FA
+
+When a user has 2FA enabled, the standard `Meteor.loginWithPassword` call will fail with an error prompting for a code. Use the dedicated method instead:
+
+```js
+try {
+  await new Promise((resolve, reject) =>
+    Meteor.loginWithPasswordAnd2faCode(
+      "ada@lovelace.com",
+      "mypassword",
+      totpCode,
+      (err) => (err ? reject(err) : resolve())
+    )
+  );
+} catch (err) {
+  console.error("Login failed:", err);
+}
+```
+
+### Effect on password reset and email verification
+
+When 2FA is enabled, completing a password reset (`Accounts.resetPassword`) or email verification (`Accounts.verifyEmail`) will **not** automatically log the user in. The user must perform a full login (including the 2FA step) manually afterward.
+
+### Configuration
+
+```js
+Accounts.config({
+  loginTokenExpirationHours: 1, // how long a TOTP window stays valid (default: 1 hour)
+  tokenSequenceLength: 6, // TOTP code length (default: 6)
+});
+```
+
 ## OAuth login
 
 Meteor supports popular login providers through OAuth out of the box.
 
-### Facebook, Google, and more
+### Adding an OAuth provider
 
-Here's a complete list of login providers for which Meteor actively maintains core packages:
+Meteor maintains packages for popular login providers. Add one or more to your app:
 
-1. Facebook with `accounts-facebook`
-2. Google with `accounts-google`
-3. GitHub with `accounts-github`
-4. Twitter with `accounts-twitter`
-5. Meetup with `accounts-meetup`
-6. Meteor Developer Accounts with `accounts-meteor-developer`
+```bash
+meteor add accounts-facebook    # Facebook
+meteor add accounts-google      # Google
+meteor add accounts-github      # GitHub
+meteor add accounts-twitter     # Twitter
+meteor add accounts-meetup      # Meetup
+meteor add accounts-meteor-developer  # Meteor Developer Accounts
+```
 
-### Logging in
+Each package adds a `Meteor.loginWith<Service>` function and registers the service in the OAuth configuration UI.
 
-If you are using an off-the-shelf login UI like `accounts-ui`, you don't need to write any code after adding the relevant package. If you are building a login experience from scratch, you can log in programmatically using the [`Meteor.loginWith<Service>`](/api/accounts#Meteor-loginWithExternalService) function:
+### Logging in programmatically
+
+You can log in with any configured OAuth provider using the `Meteor.loginWith<Service>` function:
 
 ```js
 try {
-  await Meteor.loginWithFacebookAsync({
-    requestPermissions: ['user_friends', 'public_profile', 'email']
+  await Meteor.loginWithFacebook({
+    requestPermissions: ["user_friends", "public_profile", "email"],
   });
   // successful login!
 } catch (err) {
   // handle error
-  console.error('Login failed:', err);
+  console.error("Login failed:", err);
 }
 ```
 
@@ -234,8 +502,42 @@ try {
 There are a few points to know about configuring OAuth login:
 
 1. **Client ID and secret.** It's best to keep your OAuth secret keys outside of your source code, and pass them in through Meteor.settings. Read how in the [Security article](/tutorials/security/security#api-keys).
-2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a *redirect URL*. The URL will look like: `https://www.example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using. Note that you will need to configure two URLs - one for your production app, and one for your development environment, where the URL might be something like `http://localhost:3000/_oauth/facebook`.
+2. **Redirect URL.** On the OAuth provider's side, you'll need to specify a _redirect URL_. The URL will look like: `https://www.example.com/_oauth/facebook`. Replace `facebook` with the name of the service you are using. Note that you will need to configure two URLs - one for your production app, and one for your development environment, where the URL might be something like `http://localhost:3000/_oauth/facebook`.
 3. **Permissions.** Each login service provider should have documentation about which permissions are available. If you want additional permissions to the user's data when they log in, pass some of these strings in the `requestPermissions` option.
+
+### Server-side hooks for OAuth
+
+You can customize how OAuth accounts are created and updated on the server using these hooks. Each can only be registered once:
+
+```js
+// Called before processing an external login. Return false to block the login.
+Accounts.beforeExternalLogin((serviceName, serviceData, user) => {
+  // e.g. only allow logins from a specific GitHub org
+  if (serviceName === "github" && !serviceData.orgs?.includes("my-org")) {
+    return false;
+  }
+  return true;
+});
+
+// Provide additional lookup logic to find an existing user for an external login.
+// Useful for linking accounts when the external service email matches an existing user.
+Accounts.setAdditionalFindUserOnExternalLogin(
+  ({ serviceName, serviceData }) => {
+    if (serviceData.email) {
+      return Accounts.findUserByEmail(serviceData.email);
+    }
+  }
+);
+
+// Called on every external login to update the user document.
+// Return a modified user object to apply changes.
+Accounts.onExternalLogin((options, user) => {
+  // Merge the latest profile data from the OAuth provider
+  user.profile = user.profile || {};
+  user.profile.name = options.serviceData.name;
+  return user;
+});
+```
 
 ### Calling service API for more data
 
@@ -273,39 +575,44 @@ On the server, each connection has a different logged in user, so there is no gl
 
 ```js
 // Accessing this.userId inside a publication
-Meteor.publish('lists.private', function() {
+Meteor.publish("lists.private", function () {
   if (!this.userId) {
     return this.ready();
   }
 
-  return Lists.find({
-    userId: this.userId
-  }, {
-    fields: Lists.publicFields
-  });
+  return Lists.find(
+    {
+      userId: this.userId,
+    },
+    {
+      fields: Lists.publicFields,
+    }
+  );
 });
 ```
 
 ```js
 // Accessing this.userId inside a Method
 Meteor.methods({
-  async 'todos.updateText'({ todoId, newText }) {
+  async "todos.updateText"({ todoId, newText }) {
     new SimpleSchema({
       todoId: { type: String },
-      newText: { type: String }
+      newText: { type: String },
     }).validate({ todoId, newText });
 
     const todo = await Todos.findOneAsync(todoId);
 
     if (!todo.editableBy(this.userId)) {
-      throw new Meteor.Error('todos.updateText.unauthorized',
-        'Cannot edit todos in a private list that is not yours');
+      throw new Meteor.Error(
+        "todos.updateText.unauthorized",
+        "Cannot edit todos in a private list that is not yours"
+      );
     }
 
     await Todos.updateAsync(todoId, {
-      $set: { text: newText }
+      $set: { text: newText },
     });
-  }
+  },
 });
 ```
 
@@ -381,17 +688,17 @@ The best way to store your custom data onto the `Meteor.users` collection is to 
 ```js
 // Using address schema from schema.org
 const newMailingAddress = {
-  addressCountry: 'US',
-  addressLocality: 'Seattle',
-  addressRegion: 'WA',
-  postalCode: '98052',
-  streetAddress: "20341 Whitworth Institute 405 N. Whitworth"
+  addressCountry: "US",
+  addressLocality: "Seattle",
+  addressRegion: "WA",
+  postalCode: "98052",
+  streetAddress: "20341 Whitworth Institute 405 N. Whitworth",
 };
 
 await Meteor.users.updateAsync(userId, {
   $set: {
-    mailingAddress: newMailingAddress
-  }
+    mailingAddress: newMailingAddress,
+  },
 });
 ```
 
@@ -405,7 +712,7 @@ Sometimes, you want to set a field when the user first creates their account. Yo
 // Generate user initials after Facebook login
 Accounts.onCreateUser((options, user) => {
   if (!user.services.facebook) {
-    throw new Error('Expected login with Facebook only.');
+    throw new Error("Expected login with Facebook only.");
   }
 
   const { first_name, last_name } = user.services.facebook;
@@ -424,7 +731,7 @@ Accounts.onCreateUser((options, user) => {
 Note that the `user` object provided doesn't have an `_id` field yet. If you need to do something with the new user's ID inside this function, you can generate the ID yourself:
 
 ```js
-import { Random } from 'meteor/random';
+import { Random } from "meteor/random";
 
 // Generate a todo list for each new user
 Accounts.onCreateUser(async (options, user) => {
@@ -450,7 +757,9 @@ Rather than dealing with the specifics of this field, it can be helpful to ignor
 ```js
 // Deny all client-side updates to user documents
 Meteor.users.deny({
-  update() { return true; }
+  update() {
+    return true;
+  },
 });
 ```
 
@@ -459,21 +768,21 @@ Meteor.users.deny({
 If you want to access the custom data you've added to the `Meteor.users` collection in your UI, you'll need to publish it to the client. The most important thing to keep in mind is that user documents contain private data about your users—hashed passwords and access keys for external APIs. This means it's critically important to filter the fields of the user document that you send to any client.
 
 ```js
-Meteor.publish('Meteor.users.initials', function ({ userIds }) {
+Meteor.publish("Meteor.users.initials", function ({ userIds }) {
   // Validate the arguments to be what we expect
   new SimpleSchema({
     userIds: { type: Array },
-    'userIds.$': { type: String }
+    "userIds.$": { type: String },
   }).validate({ userIds });
 
   // Select only the users that match the array of IDs passed in
   const selector = {
-    _id: { $in: userIds }
+    _id: { $in: userIds },
   };
 
   // Only return one field, `initials`
   const options = {
-    fields: { initials: 1 }
+    fields: { initials: 1 },
   };
 
   return Meteor.users.find(selector, options);
@@ -492,10 +801,14 @@ const user = await Meteor.userAsync({ fields: { "profile.name": 1 } });
 const name = user?.profile?.name;
 
 // check if an email exists without fetching their entire document:
-const userExists = !!await Accounts.findUserByEmail(email, { fields: { _id: 1 } });
+const userExists = !!(await Accounts.findUserByEmail(email, {
+  fields: { _id: 1 },
+}));
 
 // get the user id from a userName:
-const user = await Accounts.findUserByUsername(userName, { fields: { _id: 1 } });
+const user = await Accounts.findUserByUsername(userName, {
+  fields: { _id: 1 },
+});
 const userId = user?._id;
 ```
 
@@ -509,7 +822,7 @@ Accounts.config({
     createdAt: 1,
     profile: 1,
     services: 1,
-  }
+  },
 });
 ```
 
@@ -521,21 +834,27 @@ Accounts.config({ defaultFieldSelector: { myBigArray: 0 } });
 
 ## Roles and permissions
 
-One of the main reasons you might want to add a login system to your app is to have permissions for your data. For example, if you were running a forum, you would want administrators or moderators to be able to delete any post, but normal users can only delete their own. This uncovers two different types of permissions:
+Once users are logged in, you'll often want to control what each user can do. This uncovers two different types of permissions:
 
 1. Role-based permissions
 2. Per-document permissions
 
-### alanning:roles
+### roles
 
-The most popular package for role-based permissions in Meteor is [`alanning:roles`](https://atmospherejs.com/alanning/roles). For example, here is how you would make a user into an administrator, or a moderator:
+Meteor ships a core [`roles`](/packages/roles) package for role-based permissions. Add it to your app:
+
+```bash
+meteor add roles
+```
+
+Here is how you would make a user into an administrator, or a moderator:
 
 ```js
 // Give Alice the 'admin' role
-await Roles.addUsersToRolesAsync(aliceUserId, 'admin', Roles.GLOBAL_GROUP);
+await Roles.addUsersToRolesAsync(aliceUserId, "admin", Roles.GLOBAL_GROUP);
 
 // Give Bob the 'moderator' role for a particular category
-await Roles.addUsersToRolesAsync(bobsUserId, 'moderator', categoryId);
+await Roles.addUsersToRolesAsync(bobsUserId, "moderator", categoryId);
 ```
 
 Now, let's say you wanted to check if someone was allowed to delete a particular forum post:
@@ -545,21 +864,21 @@ const forumPost = await Posts.findOneAsync(postId);
 
 const canDelete = await Roles.userIsInRoleAsync(
   userId,
-  ['admin', 'moderator'],
+  ["admin", "moderator"],
   forumPost.categoryId
 );
 
 if (!canDelete) {
-  throw new Meteor.Error('unauthorized',
-    'Only admins and moderators can delete posts.');
+  throw new Meteor.Error(
+    "unauthorized",
+    "Only admins and moderators can delete posts."
+  );
 }
 
 await Posts.removeAsync(postId);
 ```
 
-Note that we can check for multiple roles at once, and if someone has a role in the `GLOBAL_GROUP`, they are considered as having that role in every group.
-
-Read more in the [`alanning:roles` package documentation](https://atmospherejs.com/alanning/roles).
+Note that you can check for multiple roles at once, and if someone has a role in `GLOBAL_GROUP`, they are considered as having that role in every group.
 
 ### Per-document permissions
 
@@ -572,7 +891,7 @@ Lists.helpers({
       return false;
     }
     return this.userId === userId;
-  }
+  },
 });
 ```
 
@@ -582,8 +901,10 @@ Now, we can call this simple function to determine if a particular user is allow
 const list = await Lists.findOneAsync(listId);
 
 if (!list.editableBy(userId)) {
-  throw new Meteor.Error('unauthorized',
-    'Only list owners can edit private lists.');
+  throw new Meteor.Error(
+    "unauthorized",
+    "Only list owners can edit private lists."
+  );
 }
 ```
 
@@ -592,12 +913,15 @@ Learn more about how to use collection helpers in the [Collections article](/tut
 ## Best practices summary
 
 1. **Use accounts-password** for email/password login and add OAuth packages as needed.
-2. **Validate new users** with `Accounts.validateNewUser` to ensure required fields.
-3. **Use case-insensitive queries** with `Accounts.findUserByEmail` and `Accounts.findUserByUsername`.
-4. **Customize email templates** using `Accounts.emailTemplates` for professional communications.
-5. **Never use the profile field** for sensitive data—deny client-side writes to user documents.
-6. **Add custom data to top-level fields** on user documents, not nested in profile.
-7. **Always filter fields** when publishing user data to clients.
-8. **Use alanning:roles** for role-based access control.
-9. **Use collection helpers** for per-document permissions.
-10. **Configure defaultFieldSelector** to optimize user document fetching.
+2. **Validate new users** with `Accounts.validateNewUser` to ensure required fields are present.
+3. **Use `Accounts.createUserAsync`** (or `Accounts.createUserVerifyingEmail`) instead of the callback-based `createUser`.
+4. **Use case-insensitive queries** with `Accounts.findUserByEmail` and `Accounts.findUserByUsername` — never query `Meteor.users` directly by email or username.
+5. **Enable `ambiguousErrorMessages: true`** (the default) to prevent user enumeration attacks.
+6. **Customize email templates** using `Accounts.emailTemplates` for professional-looking communications.
+7. **Never use the profile field** for sensitive data — deny client-side writes with `Meteor.users.deny({ update() { return true; } })`.
+8. **Add custom data to top-level fields** on user documents, not nested inside `profile`.
+9. **Always filter fields** when publishing user data to clients — never expose password hashes or access tokens.
+10. **Consider Argon2** for new applications by enabling `argon2Enabled: true` in `Accounts.config()`.
+11. **Add 2FA** with `accounts-2fa` for applications with elevated security requirements.
+12. **Use `accounts-passwordless`** to offer a frictionless, password-free login experience.
+13. **Configure `defaultFieldSelector`** to avoid loading large user documents on every login.

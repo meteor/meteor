@@ -125,7 +125,6 @@ Tinytest.add(
       TOOL_NODE_FLAGS_INHERIT: "0",
     };
     const result = inheritMeteorToolNodeFlags(env);
-    console.log("--> (meteor_tests.js-Line: 128)\n result: ", result);
 
     test.equal(
       result.NODE_OPTIONS,

@@ -1,12 +1,6 @@
 // jest.setup.js
 import chalk from 'chalk';
 
-const isCI = process.env.GITHUB_ACTIONS === "true";
-if (isCI) {
-  jest.retryTimes(2);
-  console.log('Set 2 retries on Jest level');
-}
-
 // Clear NODE_ENV so meteor commands don't inherit any value from the test runner environment
 process.env.NODE_ENV = '';
 

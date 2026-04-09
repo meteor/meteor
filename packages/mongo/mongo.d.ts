@@ -538,8 +538,8 @@ export namespace Mongo {
       callbacks: ObserveChangesCallbacks<T>,
       options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Meteor.LiveQueryHandle;
-    [Symbol.iterator](): Iterator<T>;
-    [Symbol.asyncIterator](): AsyncIterator<T>;
+    [Symbol.iterator](): Iterator<U>;
+    [Symbol.asyncIterator](): AsyncIterator<U>;
     /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes

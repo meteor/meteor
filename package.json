@@ -40,7 +40,8 @@
     "install:e2e": "cd tools/e2e-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
     "test:e2e": "cd tools/e2e-tests && npm test -- ",
     "create-app:e2e": "cd tools/e2e-tests && node scripts/create-app.js",
-    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js"
+    "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
+    "checkout:pr": "node scripts/checkout-pr.js"
   },
   "jshintConfig": {
     "esversion": 11

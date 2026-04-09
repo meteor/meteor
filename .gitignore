@@ -40,3 +40,7 @@ packages/**/*.docs.js
 #cursor
 .cursorignore
 .cursorrules
+
+# claude code
+.claude/skills/
+.claude/settings.local.json

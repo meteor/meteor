@@ -30,4 +30,8 @@ module.exports = {
     }
   },
   maxWorkers: 1,
+  reporters: [
+    'default',
+    '<rootDir>/summary-reporter.js',
+  ],
 };
