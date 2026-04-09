@@ -4,15 +4,12 @@
 // side connection and the server side connection handle.  Call `failed` on
 // failure.
 makeTestConnection = function (test, succeeded, failed) {
-  // The connection from the client side.
-  var clientConn;
-
   // Track incoming connections server side until we know which one is
   // ours.
-  var serverConns = {};
+  const serverConns = {};
 
   // Add incoming connections to `serverConns`.
-  var onConnectionHandle = Meteor.onConnection(function (serverConn) {
+  const onConnectionHandle = Meteor.onConnection(function (serverConn) {
     test.isTrue(typeof serverConn.id === 'string', "connection handle id exists and is a string");
     if (serverConns[serverConn.id]) {
       test.fail("onConnection callback called multiple times for same session id");
@@ -22,10 +19,16 @@ makeTestConnection = function (test, succeeded, failed) {
     }
   });
 
+  // Connect and wait until the connection receives its session id.
+  // Disable retries so that when the connection is closed we don't
+  // automatically keep reconnecting on the client side.
+  // The connection from the client side.
+  const clientConn = DDP.connect(Meteor.absoluteUrl(), {retry: false});
+
   // We've succeeded when we get the session id on the client side.
-  var onClientSessionId = function (sessionId) {
+  const onClientSessionId = function (sessionId) {
     test.isTrue(clientConn.status().connected);
-    var serverConn = serverConns[sessionId];
+    const serverConn = serverConns[sessionId];
     if (! serverConn) {
       test.fail("No onConnection received server side for connected client");
       failed();
@@ -34,11 +37,6 @@ makeTestConnection = function (test, succeeded, failed) {
       succeeded(clientConn, serverConn);
     }
   };
-
-  // Connect and wait until the connection receives its session id.
-  // Disable retries so that when the connection is closed we don't
-  // automatically keep reconnecting on the client side.
-  clientConn = DDP.connect(Meteor.absoluteUrl(), {retry: false});
   simplePoll(
     function () {
       return clientConn._lastSessionId;

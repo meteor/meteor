@@ -47,7 +47,7 @@ async function runNextUrl(browser) {
 
   async function poll() {
     if (await isDone(page)) {
-      let failCount = await getFailCount(page);
+      const failCount = await getFailCount(page);
       console.log(`Tests complete with ${ failCount } failures`);
       console.log(`Tests complete with ${ await getPassCount(page) } passes`);
       if (failCount > 0) {

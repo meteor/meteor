@@ -16,11 +16,10 @@ SeededRandom.prototype.nextIntBetween = function(min, max) {
   return Math.floor(this.next() * (max-min+1)) + min;
 };
 SeededRandom.prototype.nextIdentifier = function(optLen) {
-  var letters = [];
-  var len = (typeof optLen === "number" ? optLen : 12);
-  for(var i=0; i<len; i++)
+  const letters = [];
+  const len = (typeof optLen === "number" ? optLen : 12);
+  for(let i=0; i<len; i++)
     letters.push(String.fromCharCode(this.nextIntBetween(97, 122)));
-  var x;
   return letters.join('');
 };
 SeededRandom.prototype.nextChoice = function(list) {

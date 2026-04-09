@@ -1,13 +1,13 @@
-var testDiv = document.createElement("div");
+const testDiv = document.createElement("div");
 testDiv.innerHTML = "   <link/><table></table><select><!----></select>";
 // Need to wrap in a div rather than directly creating SELECT to avoid
 // *another* IE bug.
-var testSelectDiv = document.createElement("div");
+const testSelectDiv = document.createElement("div");
 testSelectDiv.innerHTML = "<select><option selected>Foo</option></select>";
 testSelectDiv.firstChild.setAttribute("name", "myname");
 
 // Tests that, if true, indicate browser quirks present.
-var quirks = {
+const quirks = {
   // IE loses initial whitespace when setting innerHTML.
   leadingWhitespaceKilled: (testDiv.firstChild.nodeType !== 3),
 
@@ -41,8 +41,8 @@ DomUtils.setElementValue = function (node, value) {
   // match valid OPTION values... and moreover, the OPTION value must be
   // explicitly given as an attribute, not just as the text. So we hunt for
   // the OPTION and select it.
-  var options = node.querySelectorAll('option');
-  for (var i = 0; i < options.length; ++i) {
+  const options = node.querySelectorAll('option');
+  for (let i = 0; i < options.length; ++i) {
     if (DomUtils.getElementValue(options[i]) === value) {
       options[i].selected = true;
       return;
@@ -58,7 +58,7 @@ DomUtils.getElementValue = function (node) {
 
   if (node.nodeName === 'OPTION') {
     // Inspired by jQuery.valHooks.option.get.
-    var val = node.attributes.value;
+    const val = node.attributes.value;
     return !val || val.specified ? node.value : node.text;
   } else if (node.nodeName === 'SELECT') {
     if (node.selectedIndex < 0)

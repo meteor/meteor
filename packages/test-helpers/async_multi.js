@@ -42,8 +42,8 @@
 //   }
 // ]);
 
-var ExpectationManager = function (test, onComplete) {
-  var self = this;
+const ExpectationManager = function (test, onComplete) {
+  const self = this;
 
   self.test = test;
   self.onComplete = onComplete;
@@ -54,12 +54,13 @@ var ExpectationManager = function (test, onComplete) {
 
 Object.assign(ExpectationManager.prototype, {
   expect: function (/* arguments */) {
-    var self = this;
+    const self = this;
 
+    let expected;
     if (typeof arguments[0] === "function")
-      var expected = arguments[0];
+      expected = arguments[0];
     else
-      var expected = Array.from(arguments);
+      expected = Array.from(arguments);
 
     if (self.closed)
       throw new Error("Too late to add more expectations to the test");
@@ -86,13 +87,13 @@ Object.assign(ExpectationManager.prototype, {
   },
 
   done: function () {
-    var self = this;
+    const self = this;
     self.closed = true;
     self._check_complete();
   },
 
   cancel: function () {
-    var self = this;
+    const self = this;
     if (! self.dead) {
       self.dead = true;
       return true;
@@ -101,7 +102,7 @@ Object.assign(ExpectationManager.prototype, {
   },
 
   _check_complete: function () {
-    var self = this;
+    const self = this;
     if (!self.outstanding && self.closed && !self.dead) {
       self.dead = true;
       self.onComplete();
@@ -111,27 +112,27 @@ Object.assign(ExpectationManager.prototype, {
 
 testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
   // XXX Tests on remote browsers are _slow_. We need a better solution.
-  var timeout = 180000;
+  const timeout = 180000;
 
   const addFunction = isOnly ? Tinytest.onlyAsync : Tinytest.addAsync;
   addFunction(name, function (test, onComplete) {
-    var remaining = [...funcs]
-    var context = {};
-    var i = 0;
+    const remaining = [...funcs]
+    const context = {};
+    let i = 0;
 
-    var runNext = function () {
-      var func = remaining.shift();
+    const runNext = function () {
+      const func = remaining.shift();
       if (!func) {
         delete test.extraDetails.asyncBlock;
         onComplete();
       }
       else {
-        var em = new ExpectationManager(test, function () {
+        const em = new ExpectationManager(test, function () {
           clearTimeout(timer);
           runNext();
         });
 
-        var timer = setTimeout(function () {
+        const timer = setTimeout(function () {
           if (em.cancel()) {
             test.fail({type: "timeout", message: "Async batch timed out"});
             onComplete();
@@ -169,9 +170,9 @@ testAsyncMulti = function (name, funcs, { isOnly = false } = {}) {
 simplePoll = function (fn, success, failed, timeout, step) {
   timeout = timeout || 10000;
   step = step || 100;
-  var start = (new Date()).valueOf();
+  const start = (new Date()).valueOf();
   let timeOutId;
-  var helper = function () {
+  const helper = function () {
     if (fn()) {
       success();
       Meteor.clearTimeout(timeOutId);
@@ -190,7 +191,7 @@ simplePoll = function (fn, success, failed, timeout, step) {
 pollUntil = function (expect, f, timeout, step, noFail) {
   noFail = noFail || false;
   step = step || 100;
-  var expectation = expect(true);
+  const expectation = expect(true);
   simplePoll(
     f,
     function () { expectation(true) },

@@ -1,6 +1,6 @@
 export interface EJSONableCustomType {
   clone?(): EJSONableCustomType;
-  equals?(other: Object): boolean;
+  equals?(other: object): boolean;
   toJSONValue(): JSONable;
   typeName(): string;
 }
@@ -9,10 +9,10 @@ export type EJSONableProperty =
   | number
   | string
   | boolean
-  | Object
+  | object
   | number[]
   | string[]
-  | Object[]
+  | object[]
   | Date
   | Uint8Array
   | EJSONableCustomType
@@ -28,10 +28,10 @@ export interface JSONable {
     | number
     | string
     | boolean
-    | Object
+    | object
     | number[]
     | string[]
-    | Object[]
+    | object[]
     | undefined
     | null;
 }
@@ -54,7 +54,7 @@ export namespace EJSON {
 
   function fromJSONValue(val: JSONable): any;
 
-  function isBinary(x: Object): x is Uint8Array;
+  function isBinary(x: object): x is Uint8Array;
   function newBinary(size: number): Uint8Array;
 
   function parse(str: string): EJSON;

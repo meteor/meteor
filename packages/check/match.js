@@ -452,7 +452,7 @@ const testSubtree = (value, pattern, collectErrors = false, errors = [], path = 
     }
   });
 
-  for (let key in Object(value)) {
+  for (const key in Object(value)) {
     const subValue = value[key];
     const objPath = path ? `${path}.${key}` : key;
     if (hasOwn.call(requiredPatterns, key)) {

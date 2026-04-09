@@ -1,5 +1,5 @@
 renderToDiv = function (template, optData) {
-  var div = document.createElement("DIV");
+  const div = document.createElement("DIV");
   if (optData == null) {
     Blaze.render(template, div);
   } else {

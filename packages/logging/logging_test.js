@@ -20,7 +20,7 @@ Tinytest.add("logging - _getCallerDetails", function (test) {
     // Note that we want this to work in --production too, so we need to allow
     // for the minified filename
     test.matches(
-      eval(code),
+      eval(code), // oxlint-disable-line no-eval -- intentional eval for testing caller details
       /^(?:eval|local-test_logging\.js|[a-f0-9]{40}\.js)/
     );
   }
@@ -172,7 +172,7 @@ Tinytest.add("logging - parse", function (test) {
 
 Tinytest.add("logging - format", function (test) {
   const time = new Date(2012, 9 - 1 /*0-based*/, 8, 7, 6, 5, 4);
-  const utcOffsetStr = "(" + -(new Date().getTimezoneOffset() / 60) + ")";
+  const utcOffsetStr = `(${-(new Date().getTimezoneOffset() / 60)})`;
 
   ["debug", "info", "warn", "error"].forEach(function (level) {
     test.equal(
@@ -223,7 +223,7 @@ Tinytest.add("logging - format", function (test) {
       }),
       `${level
         .charAt(0)
-        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [myApp via proxy] (server:app.js:42) message {\"foo\":\"bar\"}`
+        .toUpperCase()}20120908-07:06:05.004${utcOffsetStr} [myApp via proxy] (server:app.js:42) message {"foo":"bar"}`
     );
 
     // stderr
@@ -354,7 +354,7 @@ Tinytest.add("logging - formats - without time", function (test) {
       }),
       `${level
         .charAt(0)
-        .toUpperCase()} [myApp via proxy] (server:app.js:42) message {\"foo\":\"bar\"}`
+        .toUpperCase()} [myApp via proxy] (server:app.js:42) message {"foo":"bar"}`
     );
 
     // stderr

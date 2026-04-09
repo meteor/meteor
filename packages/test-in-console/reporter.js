@@ -2,9 +2,7 @@ let url = null;
 
 if (Meteor.settings?.public?.runId &&
     Meteor.settings?.public?.reportTo) {
-  url = Meteor.settings.public.reportTo +
-      "/report/" +
-      Meteor.settings.public.runId;
+  url = `${Meteor.settings.public.reportTo}/report/${Meteor.settings.public.runId}`;
 }
 
 Meteor.methods({

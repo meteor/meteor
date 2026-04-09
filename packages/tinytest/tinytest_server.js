@@ -51,7 +51,7 @@ Meteor.methods({
     reportsForRun.set(runId, Object.create(null));
 
     function addReport(key, report) {
-      var fields = {};
+      const fields = {};
       fields[key] = report;
       const handles = handlesForRun.get(runId);
       if (handles) {
@@ -64,15 +64,15 @@ Meteor.methods({
     }
 
     function onReport(report) {
-      var dummyKey = Random.id();
+      const dummyKey = Random.id();
       addReport(dummyKey, report);
     }
 
     function onComplete() {
       // We send an object for current and future compatibility,
       // though we could get away with just sending { complete: true }
-      var report = { done: true };
-      var key = 'complete';
+      const report = { done: true };
+      const key = 'complete';
       addReport(key, report);
     }
 

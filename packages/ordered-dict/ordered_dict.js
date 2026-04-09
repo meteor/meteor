@@ -35,7 +35,7 @@ export class OrderedDict {
   // the "prefix keys with a space" thing comes from here
   // https://github.com/documentcloud/underscore/issues/376#issuecomment-2815649
   _k(key) {
-    return " " + this._stringify(key);
+    return ` ${this._stringify(key)}`;
   }
 
   empty() {
@@ -75,8 +75,8 @@ export class OrderedDict {
 
   putBefore(key, item, before) {
     if (this._dict[this._k(key)])
-      throw new Error("Item " + key + " already present in OrderedDict");
-    var elt = before ?
+      throw new Error(`Item ${key} already present in OrderedDict`);
+    const elt = before ?
       element(key, item, this._dict[this._k(before)]) :
       element(key, item, null);
     if (typeof elt.next === "undefined")
@@ -91,9 +91,9 @@ export class OrderedDict {
   }
 
   remove(key) {
-    var elt = this._dict[this._k(key)];
+    const elt = this._dict[this._k(key)];
     if (typeof elt === "undefined")
-      throw new Error("Item " + key + " not present in OrderedDict");
+      throw new Error(`Item ${key} not present in OrderedDict`);
     this._linkEltOut(elt);
     this._size--;
     delete this._dict[this._k(key)];
@@ -118,10 +118,10 @@ export class OrderedDict {
 
   // Stops whenever iter returns OrderedDict.BREAK, or after the last element.
   forEach(iter, context = null) {
-    var i = 0;
-    var elt = this._first;
+    let i = 0;
+    let elt = this._first;
     while (elt !== null) {
-      var b = iter.call(context, elt.value, elt.key, i);
+      const b = iter.call(context, elt.value, elt.key, i);
       if (b === OrderedDict.BREAK) return;
       elt = elt.next;
       i++;
@@ -169,7 +169,7 @@ export class OrderedDict {
 
   prev(key) {
     if (this.has(key)) {
-      var elt = this._dict[this._k(key)];
+      const elt = this._dict[this._k(key)];
       if (elt.prev)
         return elt.prev.key;
     }
@@ -178,7 +178,7 @@ export class OrderedDict {
 
   next(key) {
     if (this.has(key)) {
-      var elt = this._dict[this._k(key)];
+      const elt = this._dict[this._k(key)];
       if (elt.next)
         return elt.next.key;
     }
@@ -186,8 +186,8 @@ export class OrderedDict {
   }
 
   moveBefore(key, before) {
-    var elt = this._dict[this._k(key)];
-    var eltBefore = before ? this._dict[this._k(before)] : null;
+    const elt = this._dict[this._k(key)];
+    const eltBefore = before ? this._dict[this._k(before)] : null;
     if (typeof elt === "undefined") {
       throw new Error("Item to move is not present");
     }
@@ -205,7 +205,7 @@ export class OrderedDict {
 
   // Linear, sadly.
   indexOf(key) {
-    var ret = null;
+    let ret = null;
     this.forEach((v, k, i) => {
       if (this._k(k) === this._k(key)) {
         ret = i;

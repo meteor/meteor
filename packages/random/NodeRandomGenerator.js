@@ -25,7 +25,7 @@ export default class NodeRandomGenerator extends RandomGenerator {
     // non-cryptographically strong if not available.
     try {
       bytes = crypto.randomBytes(numBytes);
-    } catch (e) {
+    } catch {
       // XXX should re-throw any error except insufficient entropy
       bytes = crypto.pseudoRandomBytes(numBytes);
     }

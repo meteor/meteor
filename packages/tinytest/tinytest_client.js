@@ -18,30 +18,30 @@ export { Tinytest };
 //              Default is currently true (serial operation), but we will likely
 //              change this to false in future.
 Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, options) {
-  var runId = Random.id();
-  var localComplete = false;
-  var localStarted = false;
-  var remoteComplete = false;
-  var done = false;
+  const runId = Random.id();
+  let localComplete = false;
+  let localStarted = false;
+  let remoteComplete = false;
+  let done = false;
 
   options = {
     serial: true,
     ...options,
   };
 
-  var serial = !!options.serial;
+  const serial = !!options.serial;
 
-  var maybeDone = function () {
+  const maybeDone = function () {
     if (!done && localComplete && remoteComplete) {
       done = true;
-      onComplete && onComplete();
+      if (onComplete) onComplete();
     }
     if (serial && remoteComplete && !localStarted) {
       startLocalTests();
     }
   };
 
-  var startLocalTests = function() {
+  const startLocalTests = function() {
     localStarted = true;
     Tinytest._runTests(onReport, function () {
       localComplete = true;
@@ -49,7 +49,7 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
     }, pathPrefix);
   };
 
-  var handle;
+  const handle = Meteor.subscribe(ServerTestResultsSubscription, runId);
 
   Meteor.connection.registerStoreClient(ServerTestResultsCollection, {
     update(msg) {
@@ -89,9 +89,7 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
     }
   });
 
-  handle = Meteor.subscribe(ServerTestResultsSubscription, runId);
-
-  Meteor.call('tinytest/run', runId, pathPrefix, function (error, result) {
+  Meteor.call('tinytest/run', runId, pathPrefix, function (error, _result) {
     if (error) {
       // XXX better report error
       throw new Error("Test server returned an error");

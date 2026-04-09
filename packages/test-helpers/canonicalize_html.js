@@ -1,5 +1,5 @@
 canonicalizeHtml = function(html) {
-  var h = html;
+  let h = html;
   // kill IE-specific comments inserted by DomRange
   h = h.replace(/<!--IE-->/g, '');
   h = h.replace(/<!---->/g, '');
@@ -40,31 +40,31 @@ canonicalizeHtml = function(html) {
     // c="d"', assume they are separated by a single space and values
     // are double- or single-quoted, but allow for spaces inside the
     // quotes.  Split on space following quote.
-    var attrList = attrs.replace(/(\w)='([^']*)' /g, "$1='$2'\u0000");
+    let attrList = attrs.replace(/(\w)='([^']*)' /g, "$1='$2'\u0000");
     attrList = attrList.replace(/(\w)="([^"]*)" /g, '$1="$2"\u0000');
     attrList = attrList.split("\u0000");
     // put attributes in alphabetical order
     attrList.sort();
 
-    var tagContents = [tagName];
+    const tagContents = [tagName];
 
-    for(var i=0; i<attrList.length; i++) {
+    for(let i=0; i<attrList.length; i++) {
       // If there were no attrs, attrList could be `[""]`,
       // so skip falsy values.
       if (! attrList[i])
         continue;
-      var a = attrList[i].split('=');
+      const a = attrList[i].split('=');
 
       // In IE8, attributes whose value is "" appear
       // without the '=' sign altogether.
       if (a.length < 2)
         a.push("");
 
-      var key = a[0];
+      const key = a[0];
       // Drop another expando property used by Sizzle.
       if (key === 'sizset')
         continue;
-      var value = a[1];
+      let value = a[1];
 
       // make sure the attribute is doubled-quoted
       if (value.charAt(0) === '"') {
@@ -73,28 +73,28 @@ canonicalizeHtml = function(html) {
         if (value.charAt(0) !== "'") {
           // attribute is unquoted. should be unreachable because of
           // regex above.
-          value = '"' + value + '"';
+          value = `"${value}"`;
         } else {
           // attribute is single-quoted. make it double-quoted.
-          value = value.replace(/\"/g, "&quot;");
+          value = value.replace(/"/g, "&quot;");
         }
         value = value.replace(/["'`]/g, '"');
       }
 
       // Encode quotes and double quotes in the attribute.
-      var attr = value.slice(1, -1);
-      attr = attr.replace(/\"/g, "&quot;");
-      attr = attr.replace(/\'/g, "&quot;");
-      value = '"' + attr + '"';
+      let attr = value.slice(1, -1);
+      attr = attr.replace(/"/g, "&quot;");
+      attr = attr.replace(/'/g, "&quot;");
+      value = `"${attr}"`;
 
       // Ensure that styles do not end with a semicolon.
       if (key === 'style') {
-        value = value.replace(/;\"$/, '"');
+        value = value.replace(/;"$/, '"');
       }
 
-      tagContents.push(key+'='+value);
+      tagContents.push(`${key}=${value}`);
     }
-    return '<'+tagContents.join(' ')+'>';
+    return `<${tagContents.join(' ')}>`;
   });
   return h;
 };

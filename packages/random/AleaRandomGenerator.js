@@ -62,8 +62,8 @@ function Alea(seeds) {
   };
 
   random.uint32 = () => random() * 0x100000000; // 2^32
-  random.fract53 = () => random() +
-        ((random() * 0x200000 | 0) * 1.1102230246251565e-16); // 2^-53
+  // oxlint-disable-next-line -- intentional bitwise OR for float-to-int (Alea PRNG algorithm)
+  random.fract53 = () => random() + ((random() * 0x200000 | 0) * 1.1102230246251565e-16); // 2^-53
 
   random.version = 'Alea 0.9';
   random.args = seeds;

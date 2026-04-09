@@ -21,7 +21,7 @@ export class TestCaseResults {
   }
 
   ok(doc) {
-    var ok = {type: "ok"};
+    const ok = {type: "ok"};
     if (doc)
       ok.details = doc;
     if (this.expecting_failure) {
@@ -51,8 +51,8 @@ export class TestCaseResults {
     if (this.stop_at_offset === 0) {
       if (Meteor.isClient) {
         // Only supported on the browser for now..
-        var now = (+new Date);
-        debugger;
+        const now = (+new Date);
+        
         if ((+new Date) - now < 100)
           alert("To use this feature, first enable your browser's debugger.");
       }
@@ -64,14 +64,14 @@ export class TestCaseResults {
     // Get filename and line number of failure if we're using v8 (Chrome or
     // Node).
     if (Error.captureStackTrace) {
-      var savedPrepareStackTrace = Error.prepareStackTrace;
+      const savedPrepareStackTrace = Error.prepareStackTrace;
       Error.prepareStackTrace = function(_, stack){ return stack; };
-      var err = new Error;
+      const err = new Error;
       Error.captureStackTrace(err);
-      var stack = err.stack;
+      const stack = err.stack;
       Error.prepareStackTrace = savedPrepareStackTrace;
-      for (var i = stack.length - 1; i >= 0; --i) {
-        var frame = stack[i];
+      for (let i = stack.length - 1; i >= 0; --i) {
+        const frame = stack[i];
         // Heuristic: use the OUTERMOST line which is in a :tests.js
         // file (this is less likely to be a test helper function).
         const fileName = frame?.getFileName ? frame.getFileName() : null;
@@ -125,7 +125,7 @@ export class TestCaseResults {
      * actual. Otherwise do a deep comparison, as implemented by _.isEqual.
      */
 
-    var matched;
+    let matched;
     // XXX remove cruft specific to liverange
     if (typeof expected === "object" && expected && expected.nodeType) {
       matched = expected === actual;
@@ -142,7 +142,7 @@ export class TestCaseResults {
       if (expected.length !== actual.length)
         this.fail({type: "assert_equal", message: "lengths of typed arrays do not match",
                    expected: expected.length, actual: actual.length});
-      for (var i = 0; i < expected.length; i++) {
+      for (let i = 0; i < expected.length; i++) {
         this.equal(actual[i], expected[i]);
       }
     } else {
@@ -333,7 +333,7 @@ export class TestCaseResults {
   }
 
   include(s, v, message, not) {
-    var pass = false;
+    let pass = false;
     if (s instanceof Array) {
       pass = s.some(it => isEqual(v, it));
     } else if (s && typeof s === "object") {
@@ -403,7 +403,7 @@ export class TestCase {
     this.name = name;
     this.func = func;
 
-    var nameParts = name.split(" - ").map(s => {
+    const nameParts = name.split(" - ").map(s => {
       return s.replace(/^\s*|\s*$/g, ""); // trim
     });
     this.shortName = nameParts.pop();
@@ -468,8 +468,7 @@ export const TestManager = new (class TestManager {
   addCase(test, options = {}) {
     if (test.name in this.tests)
       throw new Error(
-        "Every test needs a unique name, but there are two tests named '" +
-          test.name + "'");
+        `Every test needs a unique name, but there are two tests named '${test.name}'`);
     if (__meteor_runtime_config__.tinytestFilter &&
         test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1) {
       return;
@@ -525,7 +524,7 @@ export class TestRun {
   }
 
   _prefixMatch(testPath) {
-    for (var i = 0; i < this._pathPrefix.length; i++) {
+    for (let i = 0; i < this._pathPrefix.length; i++) {
       if (!testPath[i] || this._pathPrefix[i] !== testPath[i]) {
         return false;
       }
@@ -534,7 +533,7 @@ export class TestRun {
   }
 
   _runTest(test, onComplete, stop_at_offset) {
-    var startTime = (+new Date);
+    const startTime = (+new Date);
     Tinytest._currentRunningTestName = test.name;
 
     return test.run(event => {
@@ -548,7 +547,7 @@ export class TestRun {
       /* onComplete */
       if (test.timedOut)
         return;
-      var totalTime = (+new Date) - startTime;
+      const totalTime = (+new Date) - startTime;
       this._report(test, {type: "finish", timeMs: totalTime});
       onComplete();
     }, exception => {
@@ -577,7 +576,7 @@ export class TestRun {
   //
   _runOne(test, onComplete, stop_at_offset) {
     if (! this._prefixMatch(test.groupPath)) {
-      onComplete && onComplete();
+      if (onComplete) onComplete();
       return;
     }
 
@@ -611,32 +610,32 @@ export class TestRun {
         });
 
         Promise.race([runnerPromise, timeoutPromise]).finally(() => {
-          onComplete && onComplete();
+          if (onComplete) onComplete();
         });
       });
     } else {
       // client
       return this._runTest(test, () => {
-        onComplete && onComplete();
+        if (onComplete) onComplete();
       }, stop_at_offset);
     }
   }
 
   run(onComplete) {
-    var tests = this.manager.ordered_tests.slice(0);
-    var reportCurrent = function (name) {
+    const tests = this.manager.ordered_tests.slice(0);
+    const reportCurrent = function (name) {
       if (Meteor.isClient)
         Tinytest._onCurrentClientTest(name);
     };
 
     const runNext = () => {
       if (tests.length) {
-        var t = tests.shift();
+        const t = tests.shift();
         reportCurrent(t.name);
         this._runOne(t, runNext);
       } else {
         reportCurrent(null);
-        onComplete && onComplete();
+        if (onComplete) onComplete();
       }
     };
 
@@ -647,9 +646,9 @@ export class TestRun {
   // failure record, try to rerun that particular test up to that
   // failure, and then open the debugger.
   debug(cookie, onComplete) {
-    var test = this.manager.tests[cookie.name];
+    const test = this.manager.tests[cookie.name];
     if (!test)
-      throw new Error("No such test '" + cookie.name + "'");
+      throw new Error(`No such test '${cookie.name}'`);
     this._runOne(test, onComplete, cookie.offset);
   }
 
@@ -703,7 +702,7 @@ Tinytest.only = function (name, func) {
 // onReport. Call onComplete when it's done.
 //
 Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
-  var testRun = TestManager.createRun(onReport, pathPrefix);
+  const testRun = TestManager.createRun(onReport, pathPrefix);
   testRun.run(onComplete);
 };
 
@@ -728,7 +727,7 @@ Tinytest._getCurrentRunningTestOnClient = function () {
 // failure event output by _runTests.
 //
 Tinytest._debugTest = function (cookie, onReport, onComplete) {
-  var testRun = TestManager.createRun(onReport);
+  const testRun = TestManager.createRun(onReport);
   testRun.debug(cookie, onComplete);
 };
 
@@ -736,7 +735,7 @@ Tinytest._debugTest = function (cookie, onReport, onComplete) {
 // and then called with `null` when the client tests are
 // done.  This is used to provide a live display of the current
 // running client test on the test results page.
-Tinytest._onCurrentClientTest = function (name) {};
+Tinytest._onCurrentClientTest = function (_name) {};
 
 Tinytest._TestCaseResults = TestCaseResults;
 Tinytest._TestCase = TestCase;

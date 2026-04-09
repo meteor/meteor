@@ -204,9 +204,7 @@ export class MaxHeap {
   _selfCheck() {
     for (let i = 1; i < this._heap.length; i++) {
       if (this._maxIndex(parentIdx(i), i) !== parentIdx(i)) {
-          throw new Error(`An item with id ${this._heap[i].id}` +
-                          " has a parent younger than it: " +
-                          this._heap[parentIdx(i)].id);
+          throw new Error(`An item with id ${this._heap[i].id} has a parent younger than it: ${this._heap[parentIdx(i)].id}`);
       }
     }
   }

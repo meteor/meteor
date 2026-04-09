@@ -4,17 +4,17 @@
 simulateEvent = function (node, event, args, options) {
   node = (node.jquery ? node[0] : node);
 
-  var bubbles = (options && "bubbles" in options) ? options.bubbles : true;
+  const bubbles = (options && "bubbles" in options) ? options.bubbles : true;
 
   if (document.createEvent) {
-    var e = document.createEvent("Event");
+    const e = document.createEvent("Event");
     e.initEvent(event, bubbles, true);
     Object.assign(e, args);
     node.dispatchEvent(e);
   } else {
-    var e = document.createEventObject();
+    const e = document.createEventObject();
     Object.assign(e, args);
-    node.fireEvent("on" + event, e);
+    node.fireEvent(`on${event}`, e);
   }
 };
 
@@ -43,7 +43,7 @@ clickElement = function(elem) {
     simulateEvent(elem, 'click');
 };
 
-var inDocument = function (elem) {
+const inDocument = function (elem) {
   while ((elem = elem.parentNode)) {
     if (elem == document) {
       return true;

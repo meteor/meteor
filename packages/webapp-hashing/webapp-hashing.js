@@ -13,15 +13,13 @@ WebAppHashing = {};
 
 WebAppHashing.calculateClientHash =
   function (manifest, includeFilter, runtimeConfigOverride) {
-  var hash = createHash('sha1');
+  const hash = createHash('sha1');
 
   // Omit the old hashed client values in the new hash. These may be
   // modified in the new boilerplate.
-  var { autoupdateVersion, autoupdateVersionRefreshable, autoupdateVersionCordova, ...runtimeCfg } = __meteor_runtime_config__;
+  const { autoupdateVersion: _av, autoupdateVersionRefreshable: _avr, autoupdateVersionCordova: _avc, ...runtimeCfgBase } = __meteor_runtime_config__;
 
-  if (runtimeConfigOverride) {
-    runtimeCfg = runtimeConfigOverride;
-  }
+  const runtimeCfg = runtimeConfigOverride || runtimeCfgBase;
 
   hash.update(JSON.stringify(runtimeCfg, 'utf8'));
 
@@ -43,7 +41,7 @@ WebAppHashing.calculateCordovaCompatibilityHash =
 
   // Sort plugins first so iteration order doesn't affect the hash
   const plugins = Object.keys(pluginVersions).sort();
-  for (let plugin of plugins) {
+  for (const plugin of plugins) {
     const version = pluginVersions[plugin];
     hash.update(plugin);
     hash.update(version);

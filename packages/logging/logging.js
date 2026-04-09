@@ -213,7 +213,7 @@ Log._getCallerDetails = () => {
 Log.parse = (line) => {
   let obj = null;
   if (line && line.startsWith('{')) { // might be json generated from calling 'Log'
-    try { obj = EJSON.parse(line); } catch (e) {}
+    try { obj = EJSON.parse(line); } catch { }
   }
 
   // XXX should probably check fields other than 'time'
@@ -227,7 +227,7 @@ Log.parse = (line) => {
 // formats a log object into colored human and machine-readable text
 Log.format = (obj, options = {}) => {
   obj = { ...obj }; // don't mutate the argument
-  let {
+  const {
     time,
     timeInexact,
     level = 'info',
@@ -235,10 +235,12 @@ Log.format = (obj, options = {}) => {
     line: lineNumber,
     app: appName = '',
     originApp,
-    message = '',
     program = '',
     satellite = '',
     stderr = '',
+  } = obj;
+  let {
+    message = '',
   } = obj;
 
   if (!(time instanceof Date)) {
@@ -260,13 +262,7 @@ Log.format = (obj, options = {}) => {
   const dateStamp = time.getFullYear().toString() +
     pad2(time.getMonth() + 1 /*0-based*/) +
     pad2(time.getDate());
-  const timeStamp = pad2(time.getHours()) +
-        ':' +
-        pad2(time.getMinutes()) +
-        ':' +
-        pad2(time.getSeconds()) +
-        '.' +
-        pad3(time.getMilliseconds());
+  const timeStamp = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:${pad2(time.getSeconds())}.${pad3(time.getMilliseconds())}`;
 
   // eg in San Francisco in June this will be '(-7)'
   const utcOffsetStr = `(${(-(new Date().getTimezoneOffset() / 60))})`;

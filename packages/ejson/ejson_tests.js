@@ -205,11 +205,10 @@ Tinytest.add('ejson - parse', test => {
 
 Tinytest.add("ejson - regexp", test => {
   test.equal(EJSON.stringify(/foo/gi), "{\"$regexp\":\"foo\",\"$flags\":\"gi\"}");
-  var d = new RegExp("foo", "gi");
-  var obj = { $regexp: "foo", $flags: "gi" };
+  const obj = { $regexp: "foo", $flags: "gi" };
 
-  var eObj = EJSON.toJSONValue(obj);
-  var roundTrip = EJSON.fromJSONValue(eObj);
+  const eObj = EJSON.toJSONValue(obj);
+  const roundTrip = EJSON.fromJSONValue(eObj);
   test.equal(obj, roundTrip);
 });
 

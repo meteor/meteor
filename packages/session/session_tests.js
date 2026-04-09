@@ -104,7 +104,7 @@ Tinytest.add('session - objects are cloned', function (test) {
 });
 
 Tinytest.add('session - context invalidation for get', function (test) {
-  var xGetExecutions = 0;
+  let xGetExecutions = 0;
   Tracker.autorun(function () {
     ++xGetExecutions;
     Session.get('x');
@@ -125,7 +125,7 @@ Tinytest.add('session - context invalidation for get', function (test) {
 });
 
 Tinytest.add('session - context invalidation for equals', function (test) {
-  var xEqualsExecutions = 0;
+  let xEqualsExecutions = 0;
   Tracker.autorun(function () {
     ++xEqualsExecutions;
     Session.equals('x', 5);
@@ -158,7 +158,7 @@ Tinytest.add(
   'session - context invalidation for equals with undefined',
   function (test) {
     // Make sure the special casing for equals undefined works.
-    var yEqualsExecutions = 0;
+    let yEqualsExecutions = 0;
     Tracker.autorun(function () {
       ++yEqualsExecutions;
       Session.equals('y', undefined);

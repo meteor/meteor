@@ -52,15 +52,9 @@ const str = (key, holder, singleIndent, outerIndent, canonical) => {
       if (partial.length === 0) {
         v = '[]';
       } else if (innerIndent) {
-        v = '[\n' +
-          innerIndent +
-          partial.join(',\n' +
-          innerIndent) +
-          '\n' +
-          outerIndent +
-          ']';
+        v = `[\n${innerIndent}${partial.join(`,\n${innerIndent}`)}\n${outerIndent}]`;
       } else {
-        v = '[' + partial.join(',') + ']';
+        v = `[${partial.join(',')}]`;
       }
       return v;
     }
@@ -82,15 +76,9 @@ const str = (key, holder, singleIndent, outerIndent, canonical) => {
     if (partial.length === 0) {
       v = '{}';
     } else if (innerIndent) {
-      v = '{\n' +
-        innerIndent +
-        partial.join(',\n' +
-        innerIndent) +
-        '\n' +
-        outerIndent +
-        '}';
+      v = `{\n${innerIndent}${partial.join(`,\n${innerIndent}`)}\n${outerIndent}}`;
     } else {
-      v = '{' + partial.join(',') + '}';
+      v = `{${partial.join(',')}}`;
     }
     return v;
   }

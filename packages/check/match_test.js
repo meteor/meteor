@@ -56,7 +56,7 @@ Tinytest.add('check - check', test => {
           try {
             check(pair[0], type);
             return true;
-          } catch (e) {
+          } catch {
             return false;
           }
         }));
@@ -72,7 +72,7 @@ Tinytest.add('check - check', test => {
           try {
             check(pair[0], type);
             return true;
-          } catch (e) {
+          } catch {
             return false;
           }
         }));
@@ -338,7 +338,7 @@ Tinytest.add('check - check throw all errors', test => {
           try {
             check(pair[0], type);
             return true;
-          } catch (e) {
+          } catch {
             return false;
           }
         }));
@@ -354,7 +354,7 @@ Tinytest.add('check - check throw all errors', test => {
           try {
             check(pair[0], type);
             return true;
-          } catch (e) {
+          } catch {
             return false;
           }
         }));
@@ -655,14 +655,14 @@ Tinytest.add('check - argument checker', test => {
   doesntCheckAllArguments(() => {}, undefined);
   doesntCheckAllArguments(() => {}, null);
   doesntCheckAllArguments(() => {}, 1);
-  doesntCheckAllArguments((x, ...args) => check(args, [String]), 1, 'asdf', 'foo');
-  doesntCheckAllArguments((x, y) => check(x, Boolean), true, false);
+  doesntCheckAllArguments((_x, ...args) => check(args, [String]), 1, 'asdf', 'foo');
+  doesntCheckAllArguments((x, _y) => check(x, Boolean), true, false);
 
   // One "true" check doesn't count for all.
-  doesntCheckAllArguments((x, y) => check(x, Boolean), true, true);
+  doesntCheckAllArguments((x, _y) => check(x, Boolean), true, true);
 
   // For non-primitives, we really do require that each arg gets checked.
-  doesntCheckAllArguments((x, y) => {
+  doesntCheckAllArguments((x, _y) => {
     check(x, [Boolean]);
     check(x, [Boolean]);
   }, [true], [true]);
@@ -671,7 +671,7 @@ Tinytest.add('check - argument checker', test => {
   // differentiate between "two calls to check x, both of which are true" and
   // "check x and check y, both of which are true" (for any interned primitive
   // type).
-  checksAllArguments((x, y) => {
+  checksAllArguments((x, _y) => {
     check(x, Boolean);
     check(x, Boolean);
   }, true, true);
@@ -705,7 +705,7 @@ Tinytest.add('check - Match error path', test => {
 
   // Numbers only, can be accessed w/o quotes
   match({ '1231': 123 }, { '1231': String }, '[1231]');
-  match({ '1234abcd': 123 }, { '1234abcd': String }, '[\"1234abcd\"]');
+  match({ '1234abcd': 123 }, { '1234abcd': String }, '["1234abcd"]');
   match({ $set: { people: 'nice' } }, { $set: { people: [String] } }, '$set.people');
   match({ _underscore: 'should work' }, { _underscore: Number }, '_underscore');
 
@@ -719,7 +719,7 @@ Tinytest.add('check - Match error path', test => {
         [[[{ foo: String }]]], '[1][0][0].foo');
 
   // JS keyword
-  match({ 'return': 0 }, { 'return': String }, '[\"return\"]');
+  match({ 'return': 0 }, { 'return': String }, '["return"]');
 });
 
 Tinytest.add('check - Match error message', test => {
@@ -748,7 +748,7 @@ Tinytest.add('check - Match error message', test => {
   match({}, Match.ObjectIncluding({ bar: String }), "Missing key 'bar'");
   match(null, Object, 'Expected object, got null');
   match(null, Function, 'Expected function, got null');
-  match('bar', 'foo', 'Expected foo, got \"bar\"');
+  match('bar', 'foo', 'Expected foo, got "bar"');
   match(3.14, Match.Integer, 'Expected Integer, got 3.14');
   match(false, [Boolean], 'Expected array, got false');
   match([null, null], [String], 'Expected string, got null in field [0]');
@@ -763,7 +763,7 @@ Tinytest.add('check - Match error message', test => {
   };
 
   const testInstanceChild = new TestInstanceChild()
-  const testInstanceParent = new TestInstanceParent(testInstanceChild);
+  new TestInstanceParent(testInstanceChild);
   match(testInstanceChild, TestInstanceParent, `Expected ${(TestInstanceParent.name || 'particular constructor')}`);
 
   const circleFoo = {};

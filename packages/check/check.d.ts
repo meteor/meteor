@@ -32,9 +32,9 @@ export namespace Match {
           unknown;
 
   /** Matches any value. */
-  var Any: Matcher<any>;
+  let Any: Matcher<any>;
   /** Matches a signed 32-bit integer. Doesn’t match `Infinity`, `-Infinity`, or `NaN`. */
-  var Integer: Matcher<number>;
+  let Integer: Matcher<number>;
 
   /**
    * Matches either `undefined`, `null`, or pattern. If used in an object, matches only if the key is not set as opposed to the value being set to `undefined` or `null`. This set of conditions
@@ -66,7 +66,7 @@ export namespace Match {
   function Where<T>(condition: (val: any) => val is T): Matcher<T>;
   function Where(condition: (val: any) => boolean): Matcher<any>;
 
-  var NonEmptyString: Matcher<string>;
+  let NonEmptyString: Matcher<string>;
   /**
    * Returns true if the value matches the pattern.
    * @param value The value to check

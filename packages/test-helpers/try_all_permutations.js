@@ -32,16 +32,16 @@
 // try_all_permutations(X, [A, B], Y)
 
 try_all_permutations = function () {
-  var args = Array.prototype.slice.call(arguments);
+  const args = Array.prototype.slice.call(arguments);
 
-  var current_set = 0;
-  var chosen = [];
+  let current_set = 0;
+  const chosen = [];
 
-  var expand_next_set = function () {
+  const expand_next_set = function () {
     if (current_set === args.length) {
       chosen.forEach(function (f) { f(); });
     } else {
-      var set = args[current_set];
+      let set = args[current_set];
       if (typeof set === "function")
         set = [set];
 
@@ -54,11 +54,11 @@ try_all_permutations = function () {
     }
   };
 
-  var pick = function (how_many, remaining) {
+  const pick = function (how_many, remaining) {
     if (how_many === 0)
       expand_next_set();
     else {
-      for (var i = 0; i < remaining.length; i++) {
+      for (let i = 0; i < remaining.length; i++) {
         chosen.push(remaining[i]);
         pick(how_many - 1,
              remaining.slice(0, i).concat(remaining.slice(i + 1)));

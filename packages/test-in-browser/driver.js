@@ -10,17 +10,17 @@ const arraysEqual = (a, b) => {
 
 // dependency for the count of tests running/passed/failed, etc. drives
 // the navbar and the like.
-var countDep = new Tracker.Dependency;
+const countDep = new Tracker.Dependency;
 // things that change on countDep
-var running = true;
-var totalCount = 0;
-var passedCount = 0;
-var failedCount = 0;
-var failedTests = [];
+let running = true;
+let totalCount = 0;
+let passedCount = 0;
+let failedCount = 0;
+let failedTests = [];
 
 // Dependency for when a new top level group is added. Each group and
 // each test have their own dependency objects.
-var topLevelGroupsDep = new Tracker.Dependency;
+const topLevelGroupsDep = new Tracker.Dependency;
 
 // An array of top-level groups.
 //
@@ -38,36 +38,36 @@ var topLevelGroupsDep = new Tracker.Dependency;
 // - server: boolean
 // - fullName: string
 // - dep: Tracker.Dependency object for this test. fires when the test completes.
-var resultTree = [];
+let resultTree = [];
 
 Session.set("uncaughtErrors", []);
-window.onerror = (message, source, line) => {
+window.onerror = (message, _source, _line) => {
   const uncaughtErrors = new Set(Session.get("uncaughtErrors"));
   uncaughtErrors.add(message);
   Session.set("uncaughtErrors", Array.from(uncaughtErrors));
 };
 
-var getGroupPathFromURL = function() {
-  var pathname = window.location.pathname;
-  var match = pathname.match(/^\/group\/(.+)$/);
+const getGroupPathFromURL = function() {
+  const pathname = window.location.pathname;
+  const match = pathname.match(/^\/group\/(.+)$/);
   if (match) {
     try {
       return JSON.parse(decodeURIComponent(match[1]));
-    } catch (e) {
+    } catch {
       console.warn('Invalid group path in URL:', match[1]);
     }
   }
   return ["tinytest"];
 };
 
-var setGroupPathInURL = function(groupPath, pushState = true) {
-  var newURL = '/';
+const setGroupPathInURL = function(groupPath, pushState = true) {
+  let newURL = '/';
 
   if (!arraysEqual(groupPath, ['tinytest'])) {
-    newURL = '/group/' + encodeURIComponent(JSON.stringify(groupPath));
+    newURL = `/group/${encodeURIComponent(JSON.stringify(groupPath))}`;
   }
   
-  var historyState = { groupPath: groupPath };
+  const historyState = { groupPath: groupPath };
   
   if (pushState) {
     window.history.pushState(historyState, '', newURL);
@@ -77,18 +77,18 @@ var setGroupPathInURL = function(groupPath, pushState = true) {
 };
 
 // Initialize group path from URL, fallback to default
-var initialGroupPath = getGroupPathFromURL();
+const initialGroupPath = getGroupPathFromURL();
 Session.setDefault("groupPath", initialGroupPath);
 Session.set("rerunScheduled", false);
 
 // Safeguards for rapid navigation
-var isNavigating = false;
-var lastNavigationTime = 0;
-var navigationDebounceMs = 200; // Minimum time between navigations
+let isNavigating = false;
+let lastNavigationTime = 0;
+const navigationDebounceMs = 200; // Minimum time between navigations
 
 // Handle browser back/forward navigation
-window.addEventListener('popstate', function(event) {
-  var now = Date.now();
+window.addEventListener('popstate', function(_event) {
+  const now = Date.now();
   
   // Safeguard 1: Prevent overlapping navigations
   if (isNavigating) {
@@ -102,8 +102,8 @@ window.addEventListener('popstate', function(event) {
     return;
   }
   
-  var newGroupPath = getGroupPathFromURL();
-  var currentGroupPath = Session.get("groupPath");
+  const newGroupPath = getGroupPathFromURL();
+  const currentGroupPath = Session.get("groupPath");
   
   if (!arraysEqual(newGroupPath, currentGroupPath)) {
     // Set navigation flag
@@ -143,13 +143,13 @@ runTests = function () {
   topLevelGroupsDep.changed();
   
   // Get current group path from URL (in case of refresh)
-  var currentGroupPath = getGroupPathFromURL();
+  const currentGroupPath = getGroupPathFromURL();
   Session.set("groupPath", currentGroupPath);
   
   // Only update URL if it's actually different from what we expect
-  var expectedURL;
+  let expectedURL;
   if (currentGroupPath && currentGroupPath.length > 0 && JSON.stringify(currentGroupPath) !== JSON.stringify(["tinytest"])) {
-    expectedURL = '/group/' + encodeURIComponent(JSON.stringify(currentGroupPath));
+    expectedURL = `/group/${encodeURIComponent(JSON.stringify(currentGroupPath))}`;
   } else {
     expectedURL = '/';
   }
@@ -167,7 +167,7 @@ runTests = function () {
   Tracker.flush();
   Tinytest._runTestsEverywhere(reportResults, function () {
     running = false;
-    Meteor.onTestsComplete && Meteor.onTestsComplete();
+    if (Meteor.onTestsComplete) Meteor.onTestsComplete();
     countDep.changed();
     Tracker.flush();
 
@@ -184,11 +184,11 @@ runTests = function () {
 // report a series of events in a single test, or just the existence of
 // that test if no events. this is the entry point for test results to
 // this module.
-var reportResults = function(results) {
-  var test = _findTestForResults(results);
+const reportResults = function(results) {
+  const test = _findTestForResults(results);
 
   // Tolerate repeated reports: first undo the effect of any previous report
-  var status = _testStatus(test);
+  let status = _testStatus(test);
   if (status === "failed") {
     failedCount--;
     countDep.changed();
@@ -206,7 +206,7 @@ var reportResults = function(results) {
     test.events.sort(function (a, b) {
       return a.sequence - b.sequence;
     });
-    var out = [];
+    const out = [];
     test.events.forEach(function (e) {
       if (out.length === 0 || out[out.length - 1].sequence !== e.sequence)
         out.push(e);
@@ -237,9 +237,9 @@ var reportResults = function(results) {
 };
 
 // forget all of the events for a particular test
-var forgetEvents = function (results) {
-  var test = _findTestForResults(results);
-  var status = _testStatus(test);
+const forgetEvents = function (results) {
+  const test = _findTestForResults(results);
+  const status = _testStatus(test);
   if (status === "failed") {
     failedCount--;
     countDep.changed();
@@ -255,18 +255,18 @@ var forgetEvents = function (results) {
 // corresponding leaf object in resultTree, creating one if it doesn't
 // exist. it will be an object with attributes 'name', 'parent', and
 // possibly 'events'.
-var _findTestForResults = function (results) {
-  var groupPath = results.groupPath; // array
+const _findTestForResults = function (results) {
+  const groupPath = results.groupPath; // array
   if ((! Array.isArray(groupPath)) || (groupPath.length < 1)) {
     throw new Error("Test must be part of a group");
   }
 
-  var group;
-  var i = 0;
+  let group;
+  let i = 0;
   groupPath.forEach(function(gname) {
-    var array = (group ? (group.groups || (group.groups = []))
+    const array = (group ? (group.groups || (group.groups = []))
                  : resultTree);
-    var newGroup = array.find(function(g) { return g.name === gname; });
+    let newGroup = array.find(function(g) { return g.name === gname; });
     if (! newGroup) {
       newGroup = {
         name: gname,
@@ -285,16 +285,16 @@ var _findTestForResults = function (results) {
     i++;
   });
 
-  var testName = results.test;
-  var server = !!results.server;
-  var test = (group.tests || (group.tests = [])).find(
+  const testName = results.test;
+  const server = !!results.server;
+  let test = (group.tests || (group.tests = [])).find(
                     function(t) { return t.name === testName &&
                                   t.server === server; });
   if (! test) {
     // create test
-    var nameParts = [...groupPath];
+    const nameParts = [...groupPath];
     nameParts.push(testName);
-    var fullName = nameParts.join(' - ');
+    const fullName = nameParts.join(' - ');
     test = {
       name: testName,
       parent: group,
@@ -317,9 +317,9 @@ var _findTestForResults = function (results) {
 //// Helpers on test objects
 ////
 
-var _testTime = function(t) {
+const _testTime = function(t) {
   if (t.events && t.events.length > 0) {
-    var lastEvent = t.events[t.events.length - 1];
+    const lastEvent = t.events[t.events.length - 1];
     if (lastEvent.type === "finish") {
       if ((typeof lastEvent.timeMs) === "number") {
         return lastEvent.timeMs;
@@ -329,8 +329,8 @@ var _testTime = function(t) {
   return null;
 };
 
-var _testStatus = function(t) {
-  var events = t.events || [];
+const _testStatus = function(t) {
+  const events = t.events || [];
   if (events.find(function(x) { return x.type === "exception"; })) {
     // "exception" should be last event, except race conditions on the
     // server can make this not the case.  Technically we can't tell
@@ -368,8 +368,8 @@ Template.navBar.helpers({
     countDep.depend();
 
     // walk whole tree to get all tests
-    var walk = function (groups) {
-      var total = 0;
+    const walk = function (groups) {
+      let total = 0;
 
       (groups || []).forEach(function (group) {
         (group.tests || []).forEach(function (t) {
@@ -431,7 +431,7 @@ Template.progressBar.helpers({
 
 //// Template - groupNav
 
-var changeToPath = function (path) {
+const changeToPath = function (path) {
   // Update URL with new group path (pushState creates new history entry)
   setGroupPathInURL(path, true);
   
@@ -445,9 +445,9 @@ var changeToPath = function (path) {
 
 Template.groupNav.helpers({
   groupPaths: function () {
-    var groupPath = Session.get("groupPath");
-    var ret = [];
-    for (var i = 1; i <= groupPath.length; i++) {
+    const groupPath = Session.get("groupPath");
+    const ret = [];
+    for (let i = 1; i <= groupPath.length; i++) {
       ret.push({path: groupPath.slice(0,i), name: groupPath[i-1]});
     }
     return ret;
@@ -456,7 +456,7 @@ Template.groupNav.helpers({
     return Session.get("rerunScheduled");
   },
   isFiltered: function () {
-    var groupPath = Session.get("groupPath");
+    const groupPath = Session.get("groupPath");
     return groupPath.length > 1 || groupPath[0] !== "tinytest";
   }
 });
@@ -476,10 +476,10 @@ Template.groupNav.events({
 
 Template.groupNav.onRendered(function () {
   Tinytest._onCurrentClientTest = function (name) {
-    name = (name ? 'C: '+name : '');
+    name = (name ? `C: ${name}` : '');
     // Set the DOM directly so that it's immediate and we
     // don't wait for Tracker to flush.
-    var span = document.getElementById('current-client-test');
+    const span = document.getElementById('current-client-test');
     if (span) {
       span.innerHTML = '';
       span.appendChild(document.createTextNode(name));
@@ -542,7 +542,7 @@ Template.test_group.events({
 
 Template.test.helpers({
   test_status_display: function() {
-    var status = _testStatus(this);
+    const status = _testStatus(this);
     if (status == "failed") {
       return "FAIL";
     } else if (status == "succeeded") {
@@ -553,13 +553,12 @@ Template.test.helpers({
   },
 
   test_time_display: function() {
-    var time = _testTime(this);
-    return (typeof time === "number") ? time + " ms" : "";
+    const time = _testTime(this);
+    return (typeof time === "number") ? `${time} ms` : "";
   },
 
   test_class: function() {
-    var events = this.events || [];
-    var classes = [_testStatus(this)];
+    const classes = [_testStatus(this)];
 
     if (this.expanded) {
       classes.push("expanded");
@@ -571,15 +570,15 @@ Template.test.helpers({
   },
 
   eventsArray: function() {
-    var events = this.events.filter(function(e) {
+    const events = this.events.filter(function(e) {
       return e.type != "finish";
     });
 
-    var partitionBy = function(seq, func) {
-      var result = [];
-      var lastValue = {};
+    const partitionBy = function(seq, func) {
+      const result = [];
+      let lastValue = {};
       seq.forEach(function(x) {
-        var newValue = func(x);
+        const newValue = func(x);
         if (newValue === lastValue) {
           result[result.length-1].push(x);
         } else {
@@ -590,7 +589,7 @@ Template.test.helpers({
       return result;
     };
 
-    var dupLists = partitionBy(
+    const dupLists = partitionBy(
       events.map(function(e) {
         // XXX XXX We need something better than stringify!
         // stringify([undefined]) === "[null]"
@@ -600,7 +599,7 @@ Template.test.helpers({
       }), function(x) { return x.str; });
 
     return dupLists.map(function(L) {
-      var obj = L[0].obj;
+      const obj = L[0].obj;
       return (L.length > 1) ? Object.assign({times: L.length}, obj) : obj;
     });
   }
@@ -627,7 +626,7 @@ Template.event.events({
 });
 
 // e.g. doDiff('abc', 'bcd') => [[-1, 'a'], [0, 'bc'], [1, 'd']]
-var doDiff = function (str1, str2) {
+const doDiff = function (str1, str2) {
   const diff = diffChars(str1, str2);
   
   return diff.map(part => {
@@ -640,24 +639,23 @@ var doDiff = function (str1, str2) {
 Template.event.helpers({
   get_details: function() {
 
-    var details = this.details;
+    let details = this.details;
 
     if (! details) {
       return null;
     } else {
 
-      var type = details.type;
-      var stack = details.stack;
+      const type = details.type;
+      const stack = details.stack;
 
       details = Array.isArray(details) && [...details] || Object.assign({}, details);
       delete details.type;
       delete details.stack;
 
-      var prepare = function(details) {
-        if (type === 'string_equal') {
-          var diff = doDiff(details.actual,
-                            details.expected);
-        }
+      const prepare = function(details) {
+        const diff = type === 'string_equal'
+          ? doDiff(details.actual, details.expected)
+          : null;
 
         return Object.entries(details).map(function([key, val]) {
 
@@ -665,16 +663,16 @@ Template.event.helpers({
           // in particular for multiline strings
           if (type === 'string_equal' &&
               (key === 'actual' || key === 'expected')) {
-            var html = '<pre class="string_equal string_equal_'+key+'">';
+            let html = `<pre class="string_equal string_equal_${key}">`;
             diff.forEach(function (piece) {
-              var which = piece[0];
-              var text = piece[1];
+              const which = piece[0];
+              const text = piece[1];
               if (which === 0 ||
                   which === (key === 'actual' ? -1 : 1)) {
-                var htmlBit = Blaze._escape(text).replace(
+                let htmlBit = Blaze._escape(text).replace(
                     /\n/g, '<br>');
                 if (which !== 0)
-                  htmlBit = '<ins>' + htmlBit + '</ins>';
+                  htmlBit = `<ins>${htmlBit}</ins>`;
                 html += htmlBit;
               }
             });

@@ -5,7 +5,7 @@ Tinytest.add("test-helpers - try_all_permutations", function (test) {
   // if try_all_permutations didn't actually run anything and so none
   // of our other tests actually did any testing.
 
-  var out = "";
+  let out = "";
   try_all_permutations(
     function () {out += ":";},
     [
@@ -55,13 +55,13 @@ Tinytest.add("test-helpers - try_all_permutations", function (test) {
   );
   test.equal(out, "ABXY.ABYX.ACXY.ACYX.ADXY.ADYX.BAXY.BAYX.BCXY.BCYX.BDXY.BDYX.CAXY.CAYX.CBXY.CBYX.CDXY.CDYX.DAXY.DAYX.DBXY.DBYX.DCXY.DCYX.");
 
-  var examine = function (n) {
-    var fs = [];
-    var seq = "";
-    var seen = {};
+  const examine = function (n) {
+    const fs = [];
+    let seq = "";
+    const seen = {};
 
-    for (var i = 0; i < n; i++)
-      fs.push((function (x) { seq += x + "_"; }).bind(null, i));
+    for (let i = 0; i < n; i++)
+      fs.push((function (x) { seq += `${x}_`; }).bind(null, i));
     try_all_permutations(
       function () {seq = "";},
       fs,
@@ -72,13 +72,13 @@ Tinytest.add("test-helpers - try_all_permutations", function (test) {
       }
     );
 
-    var expected_count = 1;
-    for (var i = n; i >= 1; i--)
+    let expected_count = 1;
+    for (let i = n; i >= 1; i--)
       expected_count *= i;
     test.equal(Object.keys(seen).length, expected_count);
   };
 
-  for (var i = 1; i <= 5; i++)
+  for (let i = 1; i <= 5; i++)
     examine(i);
 
   try_all_permutations();
