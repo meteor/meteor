@@ -84,14 +84,9 @@ We plan to document the changes in the Meteor documentation, including:
 
 ### Phase 1: Opined implementation
 
-**Target Release:** 3.5 ⏳
+**Target Release:** 3.5 ✅
 **Goal:** Implement a first version for MongoDB Change Streams in Meteor, allowing developers to opt-in to using change streams for real-time updates with a simple configuration option. This version should be transparent to existing applications, allowing them to continue using the current reactivity system while providing an easy path to switch to change streams via settings.json file or environment variable.
-
-### Phase 2: Configurable implementation + feedbacks
-
-**Target Release:** 3.5.x ⏳
-
-**Goal:** Make MongoDB Change Streams more configurable to bring better performance in specific scenarios for real-time updates in Meteor, while gathering feedback from the community to refine and improve the implementation based on real-world usage.
+Update for 3.5: MongoDB Change Streams have proven robust and are now the default reactivity engine in Meteor 3.5, replacing Oplog tailing as the default.
 
 ## Next priorities
 

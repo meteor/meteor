@@ -35,6 +35,41 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
 }
 ```
 
+### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
+
+Meteor 3.3 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+
+1. On the server, call `Accounts.config` during startup and set both options:
+
+   ```ts
+   import { Accounts } from "meteor/accounts-base";
+   import { Meteor } from "meteor/meteor";
+
+   Meteor.startup(() => {
+     Accounts.config({
+       clientStorage: "none",
+       useHttpOnlyCookies: true,
+     });
+   });
+   ```
+
+2. Surface the same flags to the client via settings so the browser-side Accounts instance starts with the right defaults:
+
+   ```json
+   {
+     "public": {
+       "packages": {
+         "accounts": {
+           "clientStorage": "none",
+           "useHttpOnlyCookies": true
+         }
+       }
+     }
+   }
+   ```
+
+After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
+
 <ApiBox name="Meteor.user" hasCustomExample/>
 
 Retrieves the user record for the current user from
@@ -890,7 +925,7 @@ To add password support to your application, run this command in your terminal:
 meteor add accounts-password
 ```
 
-> In addition to configuring the [`email`](./email.md) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails!
+> In addition to configuring the [`email`](./email.md) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails! Starting in Meteor 3.5, leaving the `from` address unconfigured will generate a server console warning to alert you of potential silent email delivery failures.
 
 You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](../packages/accounts-ui.md) to
@@ -1177,7 +1212,7 @@ Set the fields of the object by assigning to them:
 - `from`: (**required**) A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
   address. By default, the email is sent from `no-reply@example.com`. **If you
   want e-mails to send correctly, this should be changed to your own domain
-  as most e-mail providers will reject mail sent from `example.com`.**
+  as most e-mail providers will reject mail sent from `example.com`.** Starting in Meteor 3.5, failing to configure a valid custom `from` address will result in a prominent server console warning to help prevent silent email failures in production.
 - `siteName`: The public name of your application. Defaults to the DNS name of
   the application (eg: `awesome.meteor.com`).
 - `headers`: An `Object` for custom email headers as described in

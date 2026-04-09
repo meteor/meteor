@@ -10,7 +10,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "10.9.4",
+    npm: "11.10.1",
     "node-gyp": "10.2.0",
     "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "1.0.11",
@@ -44,7 +44,7 @@ var packageJson = {
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
     sqlite3: "5.1.7",
     inquirer: "8.2.6",
-    "http-proxy": "1.18.1",
+    "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
     "moment": "2.30.1",
