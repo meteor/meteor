@@ -127,38 +127,35 @@ Tinytest.add("callback-hook - forEach stops when iterator returns falsy", (test)
   test.equal(order, [1, 2]);
 });
 
-Tinytest.add(
-  "callback-hook - callback can safely stop itself during iteration",
-  (test) => {
-    const hook = new Hook({ bindEnvironment: false });
-    const calls = [];
-    let h2;
-    hook.register(function () {
-      calls.push("a");
-    });
-    h2 = hook.register(function () {
-      calls.push("b");
-      h2.stop();
-    });
-    hook.register(function () {
-      calls.push("c");
-    });
+Tinytest.add("callback-hook - callback can safely stop itself during iteration", (test) => {
+  const hook = new Hook({ bindEnvironment: false });
+  const calls = [];
+  const holder = {};
+  hook.register(function () {
+    calls.push("a");
+  });
+  holder.h2 = hook.register(function () {
+    calls.push("b");
+    holder.h2.stop();
+  });
+  hook.register(function () {
+    calls.push("c");
+  });
 
-    hook.forEach(function (callback) {
-      callback();
-      return true;
-    });
-    test.equal(calls, ["a", "b", "c"]);
+  hook.forEach(function (callback) {
+    callback();
+    return true;
+  });
+  test.equal(calls, ["a", "b", "c"]);
 
-    // A second pass confirms h2 is really gone.
-    calls.length = 0;
-    hook.forEach(function (callback) {
-      callback();
-      return true;
-    });
-    test.equal(calls, ["a", "c"]);
-  },
-);
+  // A second pass confirms h2 is really gone.
+  calls.length = 0;
+  hook.forEach(function (callback) {
+    callback();
+    return true;
+  });
+  test.equal(calls, ["a", "c"]);
+});
 
 Tinytest.add("callback-hook - clear removes all callbacks", (test) => {
   const hook = new Hook({ bindEnvironment: false });
@@ -203,14 +200,11 @@ Tinytest.addAsync(
   },
 );
 
-Tinytest.add(
-  "callback-hook - debugPrintExceptions must be a string",
-  function (test) {
-    test.throws(function () {
-      new Hook({ debugPrintExceptions: true });
-    }, /debugPrintExceptions should be a string/);
-  },
-);
+Tinytest.add("callback-hook - debugPrintExceptions must be a string", function (test) {
+  test.throws(function () {
+    new Hook({ debugPrintExceptions: true });
+  }, /debugPrintExceptions should be a string/);
+});
 
 Tinytest.add(
   "callback-hook - debugPrintExceptions swallows errors with {bindEnvironment: false}",

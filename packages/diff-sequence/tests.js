@@ -253,32 +253,29 @@ Tinytest.add("diff-sequence - applyChanges adds, replaces, removes fields", (tes
   test.equal(doc, { a: 99, c: 3 });
 });
 
-Tinytest.add(
-  "diff-sequence - diffQueryUnorderedChanges detects added/removed/changed",
-  (test) => {
-    const oldResults = new IdMap();
-    oldResults.set("x", { _id: "x", v: 1 });
-    oldResults.set("y", { _id: "y", v: 2 });
+Tinytest.add("diff-sequence - diffQueryUnorderedChanges detects added/removed/changed", (test) => {
+  const oldResults = new IdMap();
+  oldResults.set("x", { _id: "x", v: 1 });
+  oldResults.set("y", { _id: "y", v: 2 });
 
-    const newResults = new IdMap();
-    newResults.set("y", { _id: "y", v: 99 });
-    newResults.set("z", { _id: "z", v: 3 });
+  const newResults = new IdMap();
+  newResults.set("y", { _id: "y", v: 99 });
+  newResults.set("z", { _id: "z", v: 3 });
 
-    const added = [];
-    const removed = [];
-    const changed = [];
+  const added = [];
+  const removed = [];
+  const changed = [];
 
-    DiffSequence.diffQueryUnorderedChanges(oldResults, newResults, {
-      added: (id, fields) => added.push([id, fields]),
-      removed: (id) => removed.push(id),
-      changed: (id, fields) => changed.push([id, fields]),
-    });
+  DiffSequence.diffQueryUnorderedChanges(oldResults, newResults, {
+    added: (id, fields) => added.push([id, fields]),
+    removed: (id) => removed.push(id),
+    changed: (id, fields) => changed.push([id, fields]),
+  });
 
-    test.equal(added, [["z", { v: 3 }]]);
-    test.equal(removed, ["x"]);
-    test.equal(changed, [["y", { v: 99 }]]);
-  },
-);
+  test.equal(added, [["z", { v: 3 }]]);
+  test.equal(removed, ["x"]);
+  test.equal(changed, [["y", { v: 99 }]]);
+});
 
 Tinytest.add(
   "diff-sequence - diffQueryUnorderedChanges throws with a movedBefore observer",

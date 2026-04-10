@@ -88,24 +88,21 @@ Tinytest.add("idmap - clear empties everything", (test) => {
   test.isFalse(map.has("a"));
 });
 
-Tinytest.add(
-  "idmap - setDefault inserts when missing, returns existing when present",
-  (test) => {
-    const map = new IdMap();
+Tinytest.add("idmap - setDefault inserts when missing, returns existing when present", (test) => {
+  const map = new IdMap();
 
-    // Missing key: writes default, returns it.
-    const v1 = map.setDefault("k", 42);
-    test.equal(v1, 42);
-    test.equal(map.get("k"), 42);
-    test.equal(map.size(), 1);
+  // Missing key: writes default, returns it.
+  const v1 = map.setDefault("k", 42);
+  test.equal(v1, 42);
+  test.equal(map.get("k"), 42);
+  test.equal(map.size(), 1);
 
-    // Present key: returns existing, does not overwrite.
-    const v2 = map.setDefault("k", 999);
-    test.equal(v2, 42);
-    test.equal(map.get("k"), 42);
-    test.equal(map.size(), 1);
-  },
-);
+  // Present key: returns existing, does not overwrite.
+  const v2 = map.setDefault("k", 999);
+  test.equal(v2, 42);
+  test.equal(map.get("k"), 42);
+  test.equal(map.size(), 1);
+});
 
 Tinytest.add("idmap - forEach iterates all entries", (test) => {
   const map = new IdMap();
@@ -133,7 +130,7 @@ Tinytest.add("idmap - forEach stops when iterator returns false", (test) => {
   }
 
   let visited = 0;
-  map.forEach((value, id) => {
+  map.forEach((_value, _id) => {
     visited++;
     if (visited === 2) {
       return false;

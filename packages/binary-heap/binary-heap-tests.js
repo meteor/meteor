@@ -306,35 +306,32 @@ Tinytest.add("binary-heap - MaxHeap.set with same value is a no-op", (test) => {
 //   that mutations to the clone do not affect the original.
 // =============================================================================
 
-Tinytest.add(
-  "binary-heap - MaxHeap.clone (BROKEN) returns an empty heap",
-  (test) => {
-    const heap = new MaxHeap((a, b) => a - b);
-    heap.set("a", 1);
-    heap.set("b", 5);
-    heap.set("c", 3);
+Tinytest.add("binary-heap - MaxHeap.clone (BROKEN) returns an empty heap", (test) => {
+  const heap = new MaxHeap((a, b) => a - b);
+  heap.set("a", 1);
+  heap.set("b", 5);
+  heap.set("c", 3);
 
-    const clone = heap.clone();
+  const clone = heap.clone();
 
-    // BUG: clone is empty instead of mirroring the original's 3 entries.
-    test.equal(clone.size(), 0, "clone.size() should be 3 once clone() is fixed");
-    test.isTrue(clone.empty(), "clone.empty() should be false once clone() is fixed");
-    test.equal(
-      clone.maxElementId(),
-      null,
-      "clone.maxElementId() should be 'b' once clone() is fixed",
-    );
-    test.equal(clone.get("a"), null, "clone.get('a') should be 1 once clone() is fixed");
+  // BUG: clone is empty instead of mirroring the original's 3 entries.
+  test.equal(clone.size(), 0, "clone.size() should be 3 once clone() is fixed");
+  test.isTrue(clone.empty(), "clone.empty() should be false once clone() is fixed");
+  test.equal(
+    clone.maxElementId(),
+    null,
+    "clone.maxElementId() should be 'b' once clone() is fixed",
+  );
+  test.equal(clone.get("a"), null, "clone.get('a') should be 1 once clone() is fixed");
 
-    // The original is not structurally damaged — it still works — but
-    // as a side effect the constructor attached an IdMap property to the
-    // original heap's internal array. We intentionally do NOT assert on
-    // that side effect here: it is an implementation leak that should
-    // simply disappear once the fix lands.
-    test.equal(heap.size(), 3, "original should still have its 3 entries");
-    test.equal(heap.maxElementId(), "b");
-  },
-);
+  // The original is not structurally damaged — it still works — but
+  // as a side effect the constructor attached an IdMap property to the
+  // original heap's internal array. We intentionally do NOT assert on
+  // that side effect here: it is an implementation leak that should
+  // simply disappear once the fix lands.
+  test.equal(heap.size(), 3, "original should still have its 3 entries");
+  test.equal(heap.maxElementId(), "b");
+});
 
 Tinytest.add("binary-heap - MinHeap sorts ascending", (test) => {
   const heap = new MinHeap((a, b) => a - b);
@@ -361,49 +358,46 @@ Tinytest.add("binary-heap - MinHeap.maxElementId throws", (test) => {
   test.throws(() => heap.maxElementId(), /Cannot call maxElementId on MinHeap/);
 });
 
-Tinytest.add(
-  "binary-heap - MinMaxHeap.clone (BROKEN) returns an empty heap",
-  (test) => {
-    // See the lengthy bug comment above the MaxHeap.clone pinned test.
-    // MinMaxHeap.clone() has the exact same bug: it passes this._heap as
-    // the options argument instead of { initData: this._heap }.
-    //
-    // Once packages/binary-heap/min-max-heap.js clone() is fixed, delete
-    // this test and replace it with one that asserts:
-    //   clone.size() === 4
-    //   clone.maxElementId() === "b"
-    //   clone.minElementId() === "c"
-    //   clone.get("a") === 1
-    //   mutations to clone do not affect the original.
+Tinytest.add("binary-heap - MinMaxHeap.clone (BROKEN) returns an empty heap", (test) => {
+  // See the lengthy bug comment above the MaxHeap.clone pinned test.
+  // MinMaxHeap.clone() has the exact same bug: it passes this._heap as
+  // the options argument instead of { initData: this._heap }.
+  //
+  // Once packages/binary-heap/min-max-heap.js clone() is fixed, delete
+  // this test and replace it with one that asserts:
+  //   clone.size() === 4
+  //   clone.maxElementId() === "b"
+  //   clone.minElementId() === "c"
+  //   clone.get("a") === 1
+  //   mutations to clone do not affect the original.
 
-    const heap = new MinMaxHeap((a, b) => a - b);
-    heap.set("a", 1);
-    heap.set("b", 10);
-    heap.set("c", -5);
-    heap.set("d", 7);
+  const heap = new MinMaxHeap((a, b) => a - b);
+  heap.set("a", 1);
+  heap.set("b", 10);
+  heap.set("c", -5);
+  heap.set("d", 7);
 
-    const clone = heap.clone();
+  const clone = heap.clone();
 
-    // BUG: clone is empty instead of mirroring the original's 4 entries.
-    test.equal(clone.size(), 0, "clone.size() should be 4 once clone() is fixed");
-    test.isTrue(clone.empty(), "clone.empty() should be false once clone() is fixed");
-    test.equal(
-      clone.maxElementId(),
-      null,
-      "clone.maxElementId() should be 'b' once clone() is fixed",
-    );
-    // minElementId on an empty MinMaxHeap returns null via MinHeap.maxElementId
-    // which proxies to the inner min heap.
-    test.equal(
-      clone.minElementId(),
-      null,
-      "clone.minElementId() should be 'c' once clone() is fixed",
-    );
-    test.equal(clone.get("a"), null, "clone.get('a') should be 1 once clone() is fixed");
+  // BUG: clone is empty instead of mirroring the original's 4 entries.
+  test.equal(clone.size(), 0, "clone.size() should be 4 once clone() is fixed");
+  test.isTrue(clone.empty(), "clone.empty() should be false once clone() is fixed");
+  test.equal(
+    clone.maxElementId(),
+    null,
+    "clone.maxElementId() should be 'b' once clone() is fixed",
+  );
+  // minElementId on an empty MinMaxHeap returns null via MinHeap.maxElementId
+  // which proxies to the inner min heap.
+  test.equal(
+    clone.minElementId(),
+    null,
+    "clone.minElementId() should be 'c' once clone() is fixed",
+  );
+  test.equal(clone.get("a"), null, "clone.get('a') should be 1 once clone() is fixed");
 
-    // Original is not structurally damaged.
-    test.equal(heap.size(), 4);
-    test.equal(heap.maxElementId(), "b");
-    test.equal(heap.minElementId(), "c");
-  },
-);
+  // Original is not structurally damaged.
+  test.equal(heap.size(), 4);
+  test.equal(heap.maxElementId(), "b");
+  test.equal(heap.minElementId(), "c");
+});

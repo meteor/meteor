@@ -211,7 +211,7 @@ Tinytest.add("ordered-dict - forEach breaks on OrderedDict.BREAK", (test) => {
   dict.append("D", 4);
 
   let visited = 0;
-  dict.forEach((value, key) => {
+  dict.forEach((_value, _key) => {
     visited++;
     if (visited === 2) {
       return OrderedDict.BREAK;
