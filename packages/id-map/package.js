@@ -9,3 +9,8 @@ Package.onUse(function (api) {
   api.mainModule("id-map.js");
   api.export("IdMap");
 });
+
+Package.onTest(function (api) {
+  api.use(["ecmascript", "tinytest", "ejson", "id-map"]);
+  api.addFiles("id-map-tests.js", ["client", "server"]);
+});

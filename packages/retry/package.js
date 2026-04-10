@@ -9,3 +9,8 @@ Package.onUse(function (api) {
   api.mainModule("retry.js");
   api.export("Retry");
 });
+
+Package.onTest(function (api) {
+  api.use(["ecmascript", "tinytest", "random", "retry"]);
+  api.addFiles("retry-tests.js", ["client", "server"]);
+});

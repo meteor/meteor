@@ -9,3 +9,8 @@ Package.onUse(function (api) {
   api.mainModule("ordered_dict.js");
   api.export("OrderedDict");
 });
+
+Package.onTest(function (api) {
+  api.use(["ecmascript", "tinytest", "ordered-dict"]);
+  api.addFiles("ordered-dict-tests.js", ["client", "server"]);
+});
