@@ -304,7 +304,7 @@ export class Sunburst {
     });
   }
 
-  // Update the breadcrumb trail to show the current sequence and percentage.
+  // Update the breadcrumb trail to show the current sequence.
   updateBreadcrumbs(nodeArray) {
     // Data join; key function combines name and depth (= position in sequence).
     const trail = this.elements.trail

@@ -21,7 +21,9 @@
     "lefthook": "^2.1.4",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
-    "typescript": "^5.4.5"
+    "type-coverage": "^2.29.7",
+    "typescript": "^5.4.5",
+    "typescript-coverage-report": "^1.1.1"
   },
   "scripts": {
     "fmt": "oxfmt --ignore-path .fmtignore .",
@@ -33,7 +35,9 @@
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "install:e2e": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
     "test:e2e": "cd tools/modern-tests && npm test -- ",
-    "checkout:pr": "node scripts/checkout-pr.js"
+    "checkout:pr": "node scripts/checkout-pr.js",
+    "ts-coverage": "typescript-coverage-report",
+    "ts-coverage:ci": "type-coverage --at-least 80"
   },
   "jshintConfig": {
     "esversion": 11
