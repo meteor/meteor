@@ -14,9 +14,7 @@ env:
   CXX: g++-12
   METEOR_HOSTED_CI: "true"
   METEOR_MODERN: true
-  CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
-
 
 jobs:
   # ─── Setup ────────────────────────────────────────────────────────────────────
