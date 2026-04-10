@@ -10,70 +10,22 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CXX: g++-12
+  METEOR_HOSTED_CI: "true"
+
 jobs:
-  test-packages:
-    name: "packages / ${{ matrix.group.name }}"
+  # ─── Setup ────────────────────────────────────────────────────────────────────
+  # Prepares the Meteor environment and populates the cache so all parallel
+  # package test jobs get a cache hit and skip the slow --get-ready step.
+  setup:
+    name: Setup
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
-    timeout-minutes: 90
-    env:
-      CXX: g++-12
-      METEOR_HOSTED_CI: "true"
-
-    strategy:
-      fail-fast: false
-      matrix:
-        group:
-          - name: accounts
-            packages: >-
-              accounts-base accounts-password accounts-passwordless accounts-2fa
-              accounts-oauth accounts-ui-unstyled check
-
-          - name: auth-social
-            packages: >-
-              oauth oauth2 oauth-encryption
-              facebook-oauth github-oauth google-oauth weibo-oauth
-              meetup-oauth meteor-developer-oauth
-
-          - name: database
-            packages: >-
-              mongo minimongo allow-deny diff-sequence
-              geojson-utils binary-heap
-
-          - name: ddp-realtime
-            packages: >-
-              ddp-client ddp-common ddp-server ddp-rate-limiter
-              rate-limit inter-process-messaging reload
-              reload-safetybelt routepolicy
-
-          - name: build
-            packages: >-
-              ecmascript ecmascript-runtime
-              typescript minifier-css minifier-js
-              static-html-tools
-              constraint-solver package-version-parser
-              modules-runtime modules-runtime-hot
-
-          - name: webapp
-            packages: >-
-              webapp webapp-hashing boilerplate-generator-tests server-render
-              browser-policy force-ssl-common
-
-          - name: core
-            packages: >-
-              meteor base64 ejson random tracker
-              reactive-dict callback-hook url promise session
-              localstorage fetch roles facts-base
-              logic-solver test-helpers rspack
-
+    timeout-minutes: 75
     steps:
-      - name: Fix workspace permissions
-        # Self-hosted runners may leave files owned by root from previous runs.
-        run: sudo chown -R "$(id -un):$(id -gn)" "$GITHUB_WORKSPACE" || true
-        working-directory: /tmp
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -86,6 +38,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
+        id: meteor-cache
         uses: actions/cache@v4
         with:
           path: |
@@ -93,9 +46,356 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
+            ${{ runner.os }}-meteor-packages-
             ${{ runner.os }}-meteor-
 
-      - name: Run tests (${{ matrix.group.name }})
-        run: ./packages/test-in-console/run.sh "${{ matrix.group.packages }}"
+      - name: Prepare Meteor
+        if: steps.meteor-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 65
+        run: ./meteor --get-ready
+
+  # ─── Package Group: accounts ──────────────────────────────────────────────────
+  packages-accounts:
+    name: "packages / accounts"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    env:
+      PACKAGES: >-
+        accounts-base accounts-password accounts-passwordless accounts-2fa
+        accounts-oauth accounts-ui-unstyled check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-packages-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Run package tests (accounts)
+        run: ./packages/test-in-console/run.sh "$PACKAGES"
+
+  # ─── Package Group: auth-social ───────────────────────────────────────────────
+  packages-auth-social:
+    name: "packages / auth-social"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    env:
+      PACKAGES: >-
+        oauth oauth2 oauth-encryption
+        facebook-oauth github-oauth google-oauth weibo-oauth
+        meetup-oauth meteor-developer-oauth
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-packages-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Run package tests (auth-social)
+        run: ./packages/test-in-console/run.sh "$PACKAGES"
+
+  # ─── Package Group: database ──────────────────────────────────────────────────
+  packages-database:
+    name: "packages / database"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    env:
+      PACKAGES: >-
+        mongo minimongo allow-deny diff-sequence
+        geojson-utils binary-heap
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-packages-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Run package tests (database)
+        run: ./packages/test-in-console/run.sh "$PACKAGES"
+
+  # ─── Package Group: ddp-realtime ──────────────────────────────────────────────
+  packages-ddp-realtime:
+    name: "packages / ddp-realtime"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    env:
+      PACKAGES: >-
+        ddp-client ddp-common ddp-server ddp-rate-limiter
+        rate-limit inter-process-messaging reload
+        reload-safetybelt routepolicy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-packages-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Run package tests (ddp-realtime)
+        run: ./packages/test-in-console/run.sh "$PACKAGES"
+
+  # ─── Package Group: build ─────────────────────────────────────────────────────
+  packages-build:
+    name: "packages / build"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    env:
+      PACKAGES: >-
+        ecmascript ecmascript-runtime
+        typescript minifier-css minifier-js
+        static-html-tools
+        constraint-solver package-version-parser
+        modules-runtime modules-runtime-hot
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-packages-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Run package tests (build)
+        run: ./packages/test-in-console/run.sh "$PACKAGES"
+
+  # ─── Package Group: webapp ────────────────────────────────────────────────────
+  packages-webapp:
+    name: "packages / webapp"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    env:
+      PACKAGES: >-
+        webapp webapp-hashing boilerplate-generator-tests server-render
+        browser-policy force-ssl-common
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-packages-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Run package tests (webapp)
+        run: ./packages/test-in-console/run.sh "$PACKAGES"
+
+  # ─── Package Group: core ──────────────────────────────────────────────────────
+  packages-core:
+    name: "packages / core"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    env:
+      PACKAGES: >-
+        meteor base64 ejson random tracker
+        reactive-dict callback-hook url promise session
+        localstorage fetch roles facts-base
+        logic-solver test-helpers rspack
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-packages-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-packages-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Run package tests (core)
+        run: ./packages/test-in-console/run.sh "$PACKAGES"
