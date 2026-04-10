@@ -221,23 +221,20 @@ Tinytest.add("session - _setObject triggers reactive invalidation", function (te
   delete Session.keys["so-veggie"];
 });
 
-Tinytest.add(
-  "session - setDefault on an already-set key does not invalidate",
-  function (test) {
-    Session.set("sd-key", "original");
-    let runs = 0;
-    Tracker.autorun(function () {
-      runs++;
-      Session.get("sd-key");
-    });
-    test.equal(runs, 1);
+Tinytest.add("session - setDefault on an already-set key does not invalidate", function (test) {
+  Session.set("sd-key", "original");
+  let runs = 0;
+  Tracker.autorun(function () {
+    runs++;
+    Session.get("sd-key");
+  });
+  test.equal(runs, 1);
 
-    // Key already exists — setDefault should be a no-op and NOT invalidate.
-    Session.setDefault("sd-key", "fallback");
-    Tracker.flush();
-    test.equal(runs, 1);
-    test.equal(Session.get("sd-key"), "original");
+  // Key already exists — setDefault should be a no-op and NOT invalidate.
+  Session.setDefault("sd-key", "fallback");
+  Tracker.flush();
+  test.equal(runs, 1);
+  test.equal(Session.get("sd-key"), "original");
 
-    delete Session.keys["sd-key"];
-  },
-);
+  delete Session.keys["sd-key"];
+});
