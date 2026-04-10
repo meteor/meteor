@@ -291,6 +291,63 @@ Tinytest.add("logging - format", function (test) {
   );
 });
 
+Tinytest.add("logging - Log() delegates to Log.info", function (test) {
+  Log._intercept(1);
+  Log("hello");
+  const intercepted = Log._intercepted();
+  test.equal(intercepted.length, 1);
+  const obj = EJSON.parse(intercepted[0]);
+  test.equal(obj.message, "hello");
+  test.equal(obj.level, "info");
+});
+
+Tinytest.add("logging - _suppress drops the next N calls", function (test) {
+  Log._suppress(2);
+  // These should be dropped — not intercepted, not printed.
+  Log.info("dropped-1");
+  Log.info("dropped-2");
+
+  // Now an interception should capture the *next* line, not the suppressed ones.
+  Log._intercept(1);
+  Log.info("kept");
+  const intercepted = Log._intercepted();
+  test.equal(intercepted.length, 1);
+  test.equal(EJSON.parse(intercepted[0]).message, "kept");
+});
+
+Tinytest.add("logging - objFromText contract and override merging", function (test) {
+  const obj = Log.objFromText("raw line");
+  test.equal(obj.message, "raw line");
+  test.equal(obj.level, "info");
+  test.equal(obj.timeInexact, true);
+  test.instanceOf(obj.time, Date);
+
+  // Override wins for provided fields, leaves others intact.
+  const overridden = Log.objFromText("raw line", {
+    level: "error",
+    extra: "payload",
+  });
+  test.equal(overridden.level, "error");
+  test.equal(overridden.message, "raw line");
+  test.equal(overridden.timeInexact, true);
+  test.equal(overridden.extra, "payload");
+});
+
+Tinytest.add("logging - format throws when time is not a Date", function (test) {
+  test.throws(function () {
+    Log.format({ message: "hi", level: "info", time: "not a date" });
+  }, /'time' must be a Date object/);
+});
+
+Tinytest.add("logging - parse returns null for invalid payloads", function (test) {
+  // Empty object has no time field — parse returns null.
+  test.equal(Log.parse("{}"), null);
+  // JSON with time present but not a Date → null.
+  test.equal(Log.parse('{"time": 1234567890}'), null);
+  // Doesn't start with '{' → not EJSON; not parsed.
+  test.equal(Log.parse("plain string"), null);
+});
+
 Tinytest.add("logging - formats - without time", function (test) {
   const time = new Date(2012, 9 - 1 /*0-based*/, 8, 7, 6, 5, 4);
   // even tho time and offset are provided they should not be included in the output

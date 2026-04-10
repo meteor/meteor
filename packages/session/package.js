@@ -20,6 +20,7 @@ Package.onTest(function (api) {
   api.use("ecmascript");
   api.use("tinytest");
   api.use("session", "client");
+  api.use("reactive-dict", "client");
   api.use("tracker");
   api.use("mongo");
   api.addFiles("session_tests.js", "client");

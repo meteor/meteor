@@ -1,4 +1,5 @@
 import { Session } from "meteor/session";
+import { ReactiveDict } from "meteor/reactive-dict";
 
 Tinytest.add("session - setDefault", function (test) {
   Session.setDefault("def", "argyle");
@@ -191,3 +192,52 @@ Tinytest.add("session - parse an object of key/value pairs", function (test) {
   delete Session.keys["fruit"];
   delete Session.keys["vegetable"];
 });
+
+Tinytest.add("session - Session is a ReactiveDict instance", function (test) {
+  test.instanceOf(Session, ReactiveDict);
+});
+
+Tinytest.add("session - _setObject triggers reactive invalidation", function (test) {
+  let runs = 0;
+  let lastFruit;
+  Tracker.autorun(function () {
+    runs++;
+    lastFruit = Session.get("so-fruit");
+  });
+  test.equal(runs, 1);
+  test.equal(lastFruit, undefined);
+
+  Session._setObject({ "so-fruit": "apple", "so-veggie": "potato" });
+  Tracker.flush();
+  test.equal(runs, 2);
+  test.equal(lastFruit, "apple");
+
+  // Setting again with the same value should not re-run.
+  Session._setObject({ "so-fruit": "apple" });
+  Tracker.flush();
+  test.equal(runs, 2);
+
+  delete Session.keys["so-fruit"];
+  delete Session.keys["so-veggie"];
+});
+
+Tinytest.add(
+  "session - setDefault on an already-set key does not invalidate",
+  function (test) {
+    Session.set("sd-key", "original");
+    let runs = 0;
+    Tracker.autorun(function () {
+      runs++;
+      Session.get("sd-key");
+    });
+    test.equal(runs, 1);
+
+    // Key already exists — setDefault should be a no-op and NOT invalidate.
+    Session.setDefault("sd-key", "fallback");
+    Tracker.flush();
+    test.equal(runs, 1);
+    test.equal(Session.get("sd-key"), "original");
+
+    delete Session.keys["sd-key"];
+  },
+);
