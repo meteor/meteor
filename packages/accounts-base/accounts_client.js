@@ -228,7 +228,7 @@ export class AccountsClient extends AccountsCommon {
       'removeOtherTokens',
       [],
       { wait: true },
-      err => callback && callback(err)
+      err => callback?.(err)
     );
   }
 

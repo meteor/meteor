@@ -397,6 +397,46 @@ With the Meteor–Rspack integration, `zodern:melte` no longer works. Use the of
 
 Meteor-Rspack comes with built-in CSS support. You can import any CSS file into your code, and it will be processed and included in your HTML skeleton automatically. In addition, any CSS file placed in the same folder as your Meteor entry point will be processed and added as global styles without the need for explicit imports.
 
+### CSS Modules
+
+[CSS Modules](https://rspack.rs/guide/tech/css#css-modules) are supported out of the box — any file named `*.module.css` is automatically scoped locally.
+
+By default, rspack uses **named exports**, so imports look like:
+
+``` js
+import { app } from './App.module.css';
+```
+
+If you prefer **default imports** (`import styles from './App.module.css'`), disable `namedExports` on both the `css/auto` and `css/module` parsers:
+
+``` js
+module.exports = defineConfig(Meteor => ({
+  module: {
+    parser: {
+      'css/auto': {
+        namedExports: false,
+      },
+      'css/module': {
+        namedExports: false,
+      },
+    },
+  },
+}));
+```
+
+#### TypeScript
+
+When using CSS Modules with TypeScript, add a declaration file (e.g. `imports/css-modules.d.ts`) so the compiler recognizes `.module.css` imports:
+
+``` typescript
+declare module '*.module.css' {
+  const classes: { readonly [key: string]: string };
+  export default classes;
+}
+```
+
+For more details, check [the official Rspack CSS Modules guide](https://rspack.rs/guide/tech/css#css-modules).
+
 ### Less
 
 Less support is available in Meteor-Rspack. You need to replace the existing [Meteor `less` package](https://github.com/meteor/meteor/tree/master/packages/non-core/less) or similar with the Rspack configuration.
