@@ -1,0 +1,30 @@
+# Ignore everything by default
+
+# Root and top-level directories
+*.yml
+*.md
+*.json
+android_bundle/
+dev_bundle/
+docs/
+examples/
+guide/
+scripts/
+tools/
+npm-packages/
+v3-docs/
+node_modules/
+.meteor/
+.circleci/
+.github/
+.coderabbit.yaml
+
+# Ignore node_modules/npm inside packages
+packages/**/node_modules/
+packages/**/.npm/
+
+# All packages ignored by default
+# Only those listed below are linted
+packages/*
+
+!packages/facts-base/
