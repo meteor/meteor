@@ -12,19 +12,75 @@ concurrency:
 
 jobs:
   test-packages:
+    name: "packages / ${{ matrix.group.name }}"
     runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
     timeout-minutes: 90
     env:
       CXX: g++-12
+      METEOR_HOSTED_CI: "true"
+
+    strategy:
+      fail-fast: false
+      matrix:
+        group:
+          - name: accounts
+            packages: >-
+              accounts-base accounts-password accounts-passwordless accounts-2fa
+              accounts-oauth accounts-ui-unstyled check
+
+          - name: auth-social
+            packages: >-
+              oauth oauth2 oauth-encryption
+              facebook-oauth github-oauth google-oauth weibo-oauth
+              meetup-oauth meteor-developer-oauth
+
+          - name: database
+            packages: >-
+              mongo minimongo allow-deny diff-sequence
+              geojson-utils binary-heap
+
+          - name: ddp-realtime
+            packages: >-
+              ddp-client ddp-common ddp-server ddp-rate-limiter
+              rate-limit inter-process-messaging reload
+              reload-safetybelt routepolicy
+
+          - name: build
+            packages: >-
+              ecmascript ecmascript-runtime
+              typescript minifier-css minifier-js
+              static-html-tools
+              constraint-solver package-version-parser
+              modules-runtime modules-runtime-hot
+
+          - name: webapp
+            packages: >-
+              webapp webapp-hashing boilerplate-generator-tests server-render
+              browser-policy force-ssl-common
+
+          - name: core
+            packages: >-
+              meteor base64 ejson random tracker
+              reactive-dict callback-hook url promise session
+              localstorage fetch roles facts-base
+              logic-solver test-helpers rspack
 
     steps:
+      - name: Fix workspace permissions
+        # Self-hosted runners may leave files owned by root from previous runs.
+        run: sudo chown -R "$(id -un):$(id -gn)" "$GITHUB_WORKSPACE" || true
+        working-directory: /tmp
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
       - name: Expose globally-installed puppeteer to Node.js
-        # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
+        # puppeteer is pre-installed on oss-vm via `npm install -g`.
         # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
         # so run.sh skips the slow `./meteor npm install -g puppeteer` step.
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
@@ -41,13 +97,5 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-meteor-
 
-      - name: Run test-in-console suite
-        run: |
-          export TEST_PACKAGES_EXCLUDE="stylus"
-          export METEOR_MODERN="true"
-          export NODE_ENV="CI"
-          export CXX="g++-12"
-          export phantom="false"
-          export TIMEOUT_SCALE_FACTOR="20"
-          export METEOR_HEADLESS="true"
-          ./packages/test-in-console/run.sh
+      - name: Run tests (${{ matrix.group.name }})
+        run: ./packages/test-in-console/run.sh "${{ matrix.group.packages }}"

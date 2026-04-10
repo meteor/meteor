@@ -1,0 +1,25 @@
+name: Warn — testless package changes
+
+on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - ".github/workflows/warn-testless-packages.yml"
+
+jobs:
+  check:
+    name: Check for testless package changes
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Find and warn about testless packages
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const script = require('./.github/scripts/warn-testless-packages.js')
+            await script({github, context})
