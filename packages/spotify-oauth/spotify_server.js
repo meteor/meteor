@@ -88,7 +88,13 @@ const getIdentity = async accessToken => {
         },
       }
     );
-    return await request.json();
+    const data = await request.json();
+    if (!data || !data.id) {
+      throw new Error(
+        'Spotify identity response does not contain the expected "id" field.'
+      );
+    }
+    return data;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Spotify. ${err.message}`),

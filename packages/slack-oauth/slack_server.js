@@ -86,6 +86,11 @@ const getIdentity = async accessToken => {
     if (!data.ok) {
       throw new Error(data.error || 'Unknown error');
     }
+    if (!data.sub) {
+      throw new Error(
+        'Slack identity response does not contain the expected "sub" field.'
+      );
+    }
     return data;
   } catch (err) {
     throw Object.assign(

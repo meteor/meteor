@@ -86,7 +86,13 @@ const getIdentity = async accessToken => {
       }
     );
     const data = await request.json();
-    return data.data && data.data[0];
+    const identity = data && data.data && data.data[0];
+    if (!identity || !identity.id) {
+      throw new Error(
+        'Twitch identity response does not contain the expected user data.'
+      );
+    }
+    return identity;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Twitch. ${err.message}`),
