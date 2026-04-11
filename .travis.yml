@@ -18,6 +18,7 @@ env:
     - PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium
     - TEST_PACKAGES_EXCLUDE=stylus
     - METEOR_MODERN=true
+    - TRAVIS_CI=true
 addons:
   apt:
     sources:
