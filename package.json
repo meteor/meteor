@@ -31,6 +31,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "expect-type": "^1.3.0",
     "prettier": "^2.8.8",
     "type-coverage": "^2.29.7",
     "typescript": "^5.4.5",
