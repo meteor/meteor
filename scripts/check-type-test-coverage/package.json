@@ -1,0 +1,16 @@
+{
+  "name": "check-type-test-coverage",
+  "version": "1.0.0",
+  "description": "Report which exported .d.ts declarations are covered by a sibling *.test-d.ts",
+  "main": "index.js",
+  "private": true,
+  "bin": {
+    "check-type-test-coverage": "index.js"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
