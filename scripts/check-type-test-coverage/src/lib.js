@@ -10,8 +10,7 @@
 
 import ts from "typescript";
 
-import { collectDeclarations } from "./collectDeclarations.js";
-import { collectAssertions } from "./collectAssertions.js";
+import { collectDeclarations, collectAssertions } from "./tsAnalyze.js";
 import { discoverPairs } from "./files.js";
 
 // Strict + noEmit: we only want the type checker, not JS output.
