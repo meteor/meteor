@@ -1,5 +1,3 @@
-"use strict";
-
 // Walks a .d.ts SourceFile and returns the set of exported declarations that
 // should be covered by type tests. The output is a Map keyed by Symbol (not
 // by name) because collectAssertions later matches via Symbol identity — names
@@ -7,8 +5,8 @@
 //
 // Each entry carries a display-friendly { name, kind, line } used by the report.
 
-const ts = require("typescript");
-const { lineOf } = require("./utils");
+import ts from "typescript";
+import { lineOf } from "./utils.js";
 
 // Only declarations carrying a Symbol with a user-visible name land here.
 // VariableStatement is handled separately because its name lives on inner
@@ -26,7 +24,7 @@ const NAMED_DECLARATION_KINDS = {
 // Example: `export { Foo } from "./foo"` yields an alias symbol; we want the
 // underlying declaration symbol so that the test file's `expectTypeOf<Foo>()`
 // resolves to the same Symbol as the declaration site.
-function resolveAlias(checker, symbol) {
+export function resolveAlias(checker, symbol) {
   let sym = symbol;
   while (sym && sym.flags & ts.SymbolFlags.Alias) {
     const next = checker.getAliasedSymbol(sym);
@@ -101,7 +99,7 @@ function collectFromNamedDeclaration(stmt, checker, sourceFile, add) {
 // Only considers top-level statements — nested exports inside namespaces are
 // not surfaced as coverable declarations (would explode the report and be
 // unusual in published .d.ts files).
-function collectDeclarations(sourceFile, checker) {
+export function collectDeclarations(sourceFile, checker) {
   const out = new Map();
   // De-dupe by symbol — re-exports and default exports may point at a symbol
   // already captured via its original declaration site.
@@ -130,7 +128,3 @@ function collectDeclarations(sourceFile, checker) {
 
   return out;
 }
-
-// resolveAlias is re-exported so collectAssertions can normalize symbols
-// coming from the test file the same way.
-module.exports = { collectDeclarations, resolveAlias };

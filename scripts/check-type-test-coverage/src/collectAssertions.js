@@ -1,5 +1,3 @@
-"use strict";
-
 // Walks a *.test-d.ts SourceFile looking for tsd-style assertion calls
 // (`expectTypeOf<Foo>()`, `expectType<Foo>(value)`, chained `.toEqualTypeOf(...)`,
 // etc.) and marks the corresponding declaration symbols as covered.
@@ -9,9 +7,9 @@
 // against the Map returned by collectDeclarations. If nothing intersects the
 // call is recorded under `unrecognized` so the user can see what we missed.
 
-const ts = require("typescript");
-const { resolveAlias } = require("./collectDeclarations");
-const { lineOf } = require("./utils");
+import ts from "typescript";
+import { resolveAlias } from "./collectDeclarations.js";
+import { lineOf } from "./utils.js";
 
 // The only tsd-like helpers we recognize. Adding more (e.g. `assertType`)
 // would mean adding them here — no other change needed.
@@ -98,8 +96,8 @@ function symbolsFromValueArg(checker, valueArg) {
 
 // Union of all Symbol candidates for a single call, de-aliased and filtered.
 function resolveCandidateSymbols(checker, call) {
-  const typeArg = call.typeArguments && call.typeArguments[0];
-  const valueArg = call.arguments && call.arguments[0];
+  const typeArg = call.typeArguments?.[0];
+  const valueArg = call.arguments?.[0];
   const symbols = [
     ...symbolsFromTypeArg(checker, typeArg),
     ...symbolsFromValueArg(checker, valueArg),
@@ -111,7 +109,7 @@ function resolveCandidateSymbols(checker, call) {
 // match its candidates against `declarationSymbols`. A single call can cover
 // multiple declarations (e.g. via a qualified name), so we don't `break`
 // after the first match.
-function collectAssertions(sourceFile, checker, declarationSymbols) {
+export function collectAssertions(sourceFile, checker, declarationSymbols) {
   const covered = new Set();
   const unrecognized = [];
 
@@ -143,5 +141,3 @@ function collectAssertions(sourceFile, checker, declarationSymbols) {
   ts.forEachChild(sourceFile, visit);
   return { covered, unrecognized };
 }
-
-module.exports = { collectAssertions };

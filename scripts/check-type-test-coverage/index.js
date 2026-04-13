@@ -1,20 +1,11 @@
 #!/usr/bin/env node
-"use strict";
 
-// Entrypoint for the `check-type-test-coverage` CLI.
-// Responsibilities:
-//   - parse process.argv into a structured { args, opts } object
-//   - validate required inputs (existing directory, single positional arg)
-//   - dispatch to the runner (walk mode) and format the output (human or JSON)
-//   - translate the overall coverage percentage into a process exit code
-//
-// Keeping orchestration here means runner.js / report.js stay pure and reusable.
+import path from "node:path";
+import fs from "node:fs";
+import { parseArgs } from "node:util";
 
-const path = require("path");
-const fs = require("fs");
-
-const { evaluateTypes } = require("./src/lib");
-const { renderAggregateReport, aggregateTotals } = require("./src/report");
+import { evaluateTypes } from "./src/lib.js";
+import { renderAggregateReport, aggregateTotals } from "./src/report.js";
 
 const HELP = `
 Usage:
@@ -32,74 +23,65 @@ Options:
 Exit code: 0 if covered >= --min, 1 otherwise.
 `;
 
-function parseArgs(argv) {
-  const args = [];
-  const opts = { min: 100, json: false, verbose: false, help: false };
-  for (let i = 0; i < argv.length; i++) {
-    const a = argv[i];
-    if (a === "-h" || a === "--help") opts.help = true;
-    else if (a === "--json") opts.json = true;
-    else if (a === "--verbose") opts.verbose = true;
-    else if (a === "--min") {
-      // --min consumes the next argv entry as its value.
-      const raw = argv[++i];
-      const v = Number(raw);
-      if (Number.isNaN(v) || v < 0 || v > 100) {
-        throw new Error(`--min expects a number between 0 and 100, got ${raw}`);
-      }
-      opts.min = v;
-    } else if (a.startsWith("--")) {
-      // Unknown long flag — fail fast so typos don't silently become positionals.
-      throw new Error(`Unknown flag: ${a}`);
-    } else {
-      args.push(a);
-    }
-  }
-  return { args, opts };
-}
-
-function mustExist(label, p) {
-  if (!fs.existsSync(p)) throw new Error(`${label} not found: ${p}`);
-}
-
 // Print `message` + HELP to stderr and exit.
 // Exit code 2 is reserved for usage errors (distinct from "coverage below --min" which uses 1).
 function fail(message, code = 2) {
   process.stderr.write(`${message}\n${HELP}`);
-  process.exit(code);
+  process.exit(code); // process.exit is acceptable here for fatal CLI usage errors
 }
 
 function emitJson(payload) {
   process.stdout.write(JSON.stringify(payload, null, 2) + "\n");
 }
 
-function main(argv) {
-  let parsed;
+async function main() {
+  let values, positionals;
+
   try {
-    parsed = parseArgs(argv);
+    const parsed = parseArgs({
+      args: process.argv.slice(2),
+      allowPositionals: true,
+      options: {
+        min: { type: "string", default: "100" },
+        json: { type: "boolean", default: false },
+        verbose: { type: "boolean", default: false },
+        help: { type: "boolean", short: "h", default: false },
+      },
+    });
+
+    values = parsed.values;
+    positionals = parsed.positionals;
   } catch (e) {
+    // parseArgs automatically throws for unknown flags (e.g., --unknown)
     fail(e.message);
   }
 
-  const { opts, args } = parsed;
-
   // No args / explicit help: print usage. Exit 0 for --help, 2 for "nothing given".
-  if (opts.help || args.length === 0) {
+  if (values.help || positionals.length === 0) {
     process.stdout.write(HELP);
-    process.exit(opts.help ? 0 : 2);
+    process.exitCode = values.help ? 0 : 2;
+    return;
   }
 
-  if (args.length !== 1) {
-    fail(`Expected exactly 1 arg (<dir>), got ${args.length}. Check --help for more information.`);
+  if (positionals.length !== 1) {
+    fail(`Expected exactly 1 arg (<dir>), got ${positionals.length}. Check --help for more information.`);
   }
 
-  const root = path.resolve(args[0]);
-  mustExist("directory", root);
+  // Manual validation for --min since parseArgs extracts it as a string
+  const minCoverage = Number(values.min);
+  if (Number.isNaN(minCoverage) || minCoverage < 0 || minCoverage > 100) {
+    fail(`--min expects a number between 0 and 100, got ${values.min}`);
+  }
+
+  const root = path.resolve(positionals[0]);
+  if (!fs.existsSync(root)) {
+    fail(`Directory not found: ${root}`);
+  }
 
   // Walk `root`, pair each *.test-d.ts with its sibling *.d.ts, evaluate coverage.
   const { pairs, orphans } = evaluateTypes(root);
 
-  if (opts.json) {
+  if (values.json) {
     const { totalCovered, totalDecls, percent } = aggregateTotals(pairs);
     emitJson({
       pairs: pairs.map(({ dts, test, result }) => ({ dts, test, ...result })),
@@ -108,20 +90,21 @@ function main(argv) {
       totalCovered,
       totalDecls,
     });
-    process.exit(percent >= opts.min ? 0 : 1);
+
+    process.exitCode = percent >= minCoverage ? 0 : 1;
+    return;
   }
 
   const { text, percent } = renderAggregateReport({
     cwd: root,
     pairs,
     orphans,
-    verbose: opts.verbose,
+    verbose: values.verbose,
   });
+
   process.stdout.write(text);
   // Exit 1 when coverage is below --min — lets CI gate on this threshold.
-  process.exit(percent >= opts.min ? 0 : 1);
+  process.exitCode = percent >= minCoverage ? 0 : 1;
 }
 
-
-main(process.argv.slice(2));
-
+await main();

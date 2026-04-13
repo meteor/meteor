@@ -1,5 +1,3 @@
-"use strict";
-
 // Drives the TypeScript compiler over the discovered .d.ts / .test-d.ts pairs.
 //
 // Coverage is measured by symbol identity: the checker resolves both files
@@ -10,11 +8,11 @@
 // A single Program for all pairs is much faster than creating one per pair —
 // TypeScript's lib files (lib.es*.d.ts) only get parsed once.
 
-const ts = require("typescript");
+import ts from "typescript";
 
-const { collectDeclarations } = require("./collectDeclarations");
-const { collectAssertions } = require("./collectAssertions");
-const { discoverPairs } = require("./files");
+import { collectDeclarations } from "./collectDeclarations.js";
+import { collectAssertions } from "./collectAssertions.js";
+import { discoverPairs } from "./files.js";
 
 // Strict + noEmit: we only want the type checker, not JS output.
 // types: [] prevents auto-inclusion of @types/* which would otherwise pull in
@@ -81,7 +79,7 @@ function evaluatePair(program, checker, dtsPath, testPath) {
 }
 
 // Walk `root`, discover pairs, then evaluate them all in a single Program.
-function evaluateTypes(root) {
+export function evaluateTypes(root) {
   const { pairs, orphans } = discoverPairs(root);
   if (pairs.length === 0) {
     return { pairs: [], orphans };
@@ -101,5 +99,3 @@ function evaluateTypes(root) {
 
   return { pairs: evaluated, orphans };
 }
-
-module.exports = { evaluateTypes };

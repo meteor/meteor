@@ -1,16 +1,14 @@
-"use strict";
-
 // Human-readable report for walk mode. Renders a line per (dts, test) pair
 // with counts + percent + the names of the uncovered declarations, then a
-// closing aggregate total. Colors come from utils.colorForPercent so the
+// closing aggregate total. Colors come from utils.colorize so the
 // thresholds stay consistent across the whole CLI.
 
-const chalk = require("chalk");
-const { relOrAbs, colorForPercent } = require("./utils");
+import { styleText } from "node:util";
+import { relOrAbs, colorize } from "./utils.js";
 
 // Fold per-pair results into overall totals. Exposed so the CLI's JSON mode
 // can reuse the exact same math without going through the text renderer.
-function aggregateTotals(pairs) {
+export function aggregateTotals(pairs) {
   let totalDecls = 0;
   let totalCovered = 0;
   for (const { result } of pairs) {
@@ -25,23 +23,22 @@ function aggregateTotals(pairs) {
 // One line per pair: "  2/5  40%  packages/foo/foo.d.ts — missing: A, B, C"
 // Padding keeps the columns aligned even when counts vary.
 function renderPairRow({ dts, result }) {
-  const color = colorForPercent(result.percent);
   const missing = result.uncovered.length
-    ? chalk.dim(` \u2014 missing: ${result.uncovered.map((d) => d.name).join(", ")}`)
+    ? styleText("dim", ` \u2014 missing: ${result.uncovered.map((d) => d.name).join(", ")}`)
     : "";
-  const count = color(`${result.covered.length}/${result.total}`.padStart(5));
-  const pct = color(`${String(result.percent).padStart(3)}%`);
+  const count = colorize(result.percent, `${result.covered.length}/${result.total}`.padStart(5));
+  const pct = colorize(result.percent, `${String(result.percent).padStart(3)}%`);
   return `  ${count} ${pct}  ${relOrAbs(dts)}${missing}`;
 }
 
-function renderAggregateReport({ cwd, pairs, orphans, verbose }) {
+export function renderAggregateReport({ cwd, pairs, orphans, verbose }) {
   const { totalDecls, totalCovered, percent } = aggregateTotals(pairs);
 
   const lines = [
     "",
-    chalk.bold("Type-test coverage (directory mode)"),
-    `  ${chalk.dim("root:")} ${relOrAbs(cwd)}`,
-    `  ${chalk.dim("pairs:")} ${pairs.length}`,
+    styleText("bold", "Type-test coverage (directory mode)"),
+    `  ${styleText("dim", "root:")} ${relOrAbs(cwd)}`,
+    `  ${styleText("dim", "pairs:")} ${pairs.length}`,
     "",
   ];
 
@@ -51,7 +48,7 @@ function renderAggregateReport({ cwd, pairs, orphans, verbose }) {
     // not attribute to any declaration (usually a sign the test is exercising
     // something that's not exported or our matcher missed it).
     if (verbose && pair.result.unrecognized.length) {
-      lines.push(chalk.dim(`        ${pair.result.unrecognized.length} unrecognized assertion(s)`));
+      lines.push(styleText("dim", `        ${pair.result.unrecognized.length} unrecognized assertion(s)`));
     }
   }
 
@@ -59,18 +56,15 @@ function renderAggregateReport({ cwd, pairs, orphans, verbose }) {
   // almost always a mistake (misnamed file, missing declaration, etc.).
   if (orphans.length) {
     lines.push("");
-    lines.push(chalk.yellow(`Orphan test files (no sibling .d.ts): ${orphans.length}`));
-    for (const o of orphans) lines.push(`  ${chalk.yellow("!")} ${relOrAbs(o)}`);
+    lines.push(styleText("yellow", `Orphan test files (no sibling .d.ts): ${orphans.length}`));
+    for (const o of orphans) lines.push(`  ${styleText("yellow", "!")} ${relOrAbs(o)}`);
   }
 
-  const color = colorForPercent(percent);
   lines.push("");
-  lines.push(color(`Total: ${totalCovered}/${totalDecls} declarations covered (${percent}%)`));
+  lines.push(colorize(percent, `Total: ${totalCovered}/${totalDecls} declarations covered (${percent}%)`));
   lines.push("");
 
   // Return the precomputed percent too — the CLI uses it for its exit code
   // without having to re-aggregate.
   return { text: lines.join("\n"), percent, totalCovered, totalDecls };
 }
-
-module.exports = { renderAggregateReport, aggregateTotals };
