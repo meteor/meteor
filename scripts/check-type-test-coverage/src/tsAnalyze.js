@@ -16,6 +16,7 @@ function resolveAlias(checker, symbol) {
   let sym = symbol;
   while (sym && sym.flags & ts.SymbolFlags.Alias) {
     const next = checker.getAliasedSymbol(sym);
+    /* node:coverage ignore next */
     if (!next || next === sym) break;
     sym = next;
   }
@@ -26,6 +27,7 @@ export function collectDeclarations(sourceFile, checker) {
   const out = new Map();
   
   const add = (sym, nameText, kind, lineNode) => {
+    /* node:coverage ignore next */
     if (!sym) return;
     const resolved = resolveAlias(checker, sym);
     if (!out.has(resolved)) {
@@ -70,6 +72,7 @@ function resolveCandidateSymbols(checker, typeArg, valueArg) {
   const symbols = [];
   
   const addFromType = (type) => {
+    /* node:coverage ignore next */
     if (!type) return;
     if (type.aliasSymbol) symbols.push(type.aliasSymbol);
     const s = type.getSymbol();

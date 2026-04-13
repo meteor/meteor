@@ -11,6 +11,10 @@
   "bin": {
     "check-type-test-coverage": "index.js"
   },
+  "scripts": {
+    "test": "FORCE_COLOR=1 node --test test/*.test.js",
+    "test:coverage": "FORCE_COLOR=1 node --test --experimental-test-coverage --test-coverage-include='src/**' --test-coverage-include='index.js' --test-coverage-lines=100 --test-coverage-branches=100 --test-coverage-functions=100 test/*.test.js"
+  },
   "devDependencies": {
     "typescript": "^5.4.5"
   }

@@ -70,6 +70,7 @@ function computeCoverage(declarations, covered, unrecognized) {
 function evaluatePair(program, checker, dtsPath, testPath) {
   const dtsSource = program.getSourceFile(dtsPath);
   const testSource = program.getSourceFile(testPath);
+  /* node:coverage ignore next */
   if (!dtsSource || !testSource) return null;
 
   const declarations = collectDeclarations(dtsSource, checker);
