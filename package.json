@@ -37,7 +37,8 @@
     "test:e2e": "cd tools/modern-tests && npm test -- ",
     "checkout:pr": "node scripts/checkout-pr.js",
     "ts-coverage": "typescript-coverage-report",
-    "ts-coverage:ci": "type-coverage --at-least 80"
+    "ts-coverage:ci": "type-coverage --at-least 80",
+    "ts-coverage:table": "node -e \"require('typescript-coverage-report/dist/lib/getCoverage').default().then(d=>{process.stdout.write(require('typescript-coverage-report/dist/lib/reporters/text').generate(d,80)+'\\n');process.exit(d.percentage>=80?0:1)})\""
   },
   "jshintConfig": {
     "esversion": 11
