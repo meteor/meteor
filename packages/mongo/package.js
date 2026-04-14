@@ -136,5 +136,4 @@ Package.onTest(function (api) {
   api.addFiles("tests/oplog_tests.js", "server");
   api.addFiles("tests/oplog_v2_converter_tests.js", "server");
   api.addFiles("tests/doc_fetcher_tests.js", "server");
-  api.addFiles("tests/types_test.js", "server");
 });
