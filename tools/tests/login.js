@@ -153,5 +153,5 @@ selftest.define("login on deploy", ['net'], async function () {
   await run.match("Talking to Galaxy servers");
   run.waitSecs(commandTimeoutSecs * 10);
   await run.match("View deployment progress at:");
-
+  await run.expectExit();
 });
