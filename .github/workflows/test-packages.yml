@@ -1,0 +1,53 @@
+name: Test Packages
+
+on:
+  pull_request:
+    paths:
+      - "packages/**"
+      - ".github/workflows/test-packages.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-packages:
+    runs-on: oss-vm
+    timeout-minutes: 90
+    env:
+      CXX: g++-12
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
+        # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
+        # so run.sh skips the slow `./meteor npm install -g puppeteer` step.
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-
+
+      - name: Run test-in-console suite
+        run: |
+          export TEST_PACKAGES_EXCLUDE="stylus"
+          export METEOR_MODERN="true"
+          export NODE_ENV="CI"
+          export CXX="g++-12"
+          export phantom="false"
+          export TIMEOUT_SCALE_FACTOR="20"
+          export METEOR_HEADLESS="true"
+          ./packages/test-in-console/run.sh

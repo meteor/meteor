@@ -3,7 +3,7 @@ on:
   - pull_request
 jobs:
   type-coverage:
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
