@@ -17,15 +17,23 @@ export { Tinytest };
 //              running the server tests before running the client tests.
 //              Default is currently true (serial operation), but we will likely
 //              change this to false in future.
-Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, options) {
+Tinytest._runTestsEverywhere = function (
+  onReport,
+  onComplete,
+  pathPrefix,
+  options
+) {
   var runId = Random.id();
   var localComplete = false;
   var localStarted = false;
   var remoteComplete = false;
   var done = false;
 
+  // In parallel mode, run server and client tests concurrently instead of
+  // waiting for the server to finish before starting the client.
+  const isParallelMode = !!__meteor_runtime_config__.tinytestParallel;
   options = {
-    serial: true,
+    serial: !isParallelMode,
     ...options,
   };
 
@@ -41,12 +49,16 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
     }
   };
 
-  var startLocalTests = function() {
+  var startLocalTests = function () {
     localStarted = true;
-    Tinytest._runTests(onReport, function () {
-      localComplete = true;
-      maybeDone();
-    }, pathPrefix);
+    Tinytest._runTests(
+      onReport,
+      function () {
+        localComplete = true;
+        maybeDone();
+      },
+      pathPrefix
+    );
   };
 
   var handle;
@@ -59,19 +71,19 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
         return;
       }
 
-      if (! msg.fields) {
+      if (!msg.fields) {
         return;
       }
 
       // This will only work for added & changed messages.
       // hope that is all you get.
-      Object.keys(msg.fields).forEach(key => {
+      Object.keys(msg.fields).forEach((key) => {
         // Skip the 'complete' report (deal with it last)
-        if (key === 'complete') {
+        if (key === "complete") {
           return;
         }
         const report = msg.fields[key];
-        report.events.forEach(event => {
+        report.events.forEach((event) => {
           delete event.cookie; // can't debug a server test on the client..
         });
         report.server = true;
@@ -80,18 +92,18 @@ Tinytest._runTestsEverywhere = function (onReport, onComplete, pathPrefix, optio
 
       // Now that we've processed all the other messages,
       // check if we have the 'complete' message
-      if (hasOwn.call(msg.fields, 'complete')) {
+      if (hasOwn.call(msg.fields, "complete")) {
         remoteComplete = true;
         handle.stop();
-        Meteor.call('tinytest/clearResults', runId);
+        Meteor.call("tinytest/clearResults", runId);
         maybeDone();
       }
-    }
+    },
   });
 
   handle = Meteor.subscribe(ServerTestResultsSubscription, runId);
 
-  Meteor.call('tinytest/run', runId, pathPrefix, function (error, result) {
+  Meteor.call("tinytest/run", runId, pathPrefix, function (error, result) {
     if (error) {
       // XXX better report error
       throw new Error("Test server returned an error");

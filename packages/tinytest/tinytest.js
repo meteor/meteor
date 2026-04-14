@@ -17,13 +17,12 @@ export class TestCaseResults {
   }
 
   sleep(ms = 0) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   ok(doc) {
-    var ok = {type: "ok"};
-    if (doc)
-      ok.details = doc;
+    const ok = { type: "ok" };
+    if (doc) ok.details = doc;
     if (this.expecting_failure) {
       ok.details = ok.details || {};
       ok.details["was_expecting_failure"] = true;
@@ -51,27 +50,28 @@ export class TestCaseResults {
     if (this.stop_at_offset === 0) {
       if (Meteor.isClient) {
         // Only supported on the browser for now..
-        var now = (+new Date);
+        const now = +new Date();
         debugger;
-        if ((+new Date) - now < 100)
+        if (+new Date() - now < 100)
           alert("To use this feature, first enable your browser's debugger.");
       }
       this.stop_at_offset = null;
     }
-    if (this.stop_at_offset)
-      this.stop_at_offset--;
+    if (this.stop_at_offset) this.stop_at_offset--;
 
     // Get filename and line number of failure if we're using v8 (Chrome or
     // Node).
     if (Error.captureStackTrace) {
-      var savedPrepareStackTrace = Error.prepareStackTrace;
-      Error.prepareStackTrace = function(_, stack){ return stack; };
-      var err = new Error;
+      const savedPrepareStackTrace = Error.prepareStackTrace;
+      Error.prepareStackTrace = function (_, stack) {
+        return stack;
+      };
+      const err = new Error();
       Error.captureStackTrace(err);
-      var stack = err.stack;
+      const stack = err.stack;
       Error.prepareStackTrace = savedPrepareStackTrace;
-      for (var i = stack.length - 1; i >= 0; --i) {
-        var frame = stack[i];
+      for (let i = stack.length - 1; i >= 0; --i) {
+        const frame = stack[i];
         // Heuristic: use the OUTERMOST line which is in a :tests.js
         // file (this is less likely to be a test helper function).
         const fileName = frame?.getFileName ? frame.getFileName() : null;
@@ -84,11 +84,14 @@ export class TestCaseResults {
     }
 
     this.onEvent({
-        type: (this.expecting_failure ? "expected_fail" : "fail"),
-        details: doc,
-        cookie: {name: this.test_case.name, offset: this.current_fail_count,
-                 groupPath: this.test_case.groupPath,
-                 shortName: this.test_case.shortName}
+      type: this.expecting_failure ? "expected_fail" : "fail",
+      details: doc,
+      cookie: {
+        name: this.test_case.name,
+        offset: this.current_fail_count,
+        groupPath: this.test_case.groupPath,
+        shortName: this.test_case.shortName,
+      },
     });
     this.expecting_failure = false;
     this.current_fail_count++;
@@ -115,8 +118,7 @@ export class TestCaseResults {
 
   // XXX eliminate 'message' and 'not' arguments
   equal(actual, expected, message, not) {
-    if ((! not) && (typeof actual === 'string') &&
-        (typeof expected === 'string')) {
+    if (!not && typeof actual === "string" && typeof expected === "string") {
       this._stringEqual(actual, expected, message);
       return;
     }
@@ -125,24 +127,35 @@ export class TestCaseResults {
      * actual. Otherwise do a deep comparison, as implemented by _.isEqual.
      */
 
-    var matched;
+    let matched;
     // XXX remove cruft specific to liverange
     if (typeof expected === "object" && expected && expected.nodeType) {
       matched = expected === actual;
       expected = "[Node]";
       actual = "[Unknown]";
-    } else if (typeof Uint8Array !== 'undefined' && expected instanceof Uint8Array) {
+    } else if (
+      typeof Uint8Array !== "undefined" &&
+      expected instanceof Uint8Array
+    ) {
       // I have no idea why but _.isEqual on Chrome horks completely on Uint8Arrays.
       // and the symptom is the chrome renderer taking up an entire CPU and freezing
       // your web page, but not pausing anywhere in _.isEqual.  I don't understand it
       // but we fall back to a manual comparison
       if (!(actual instanceof Uint8Array))
-        this.fail({type: "assert_equal", message: "found object is not a typed array",
-                   expected: "A typed array", actual: actual.constructor.toString()});
+        this.fail({
+          type: "assert_equal",
+          message: "found object is not a typed array",
+          expected: "A typed array",
+          actual: actual.constructor.toString(),
+        });
       if (expected.length !== actual.length)
-        this.fail({type: "assert_equal", message: "lengths of typed arrays do not match",
-                   expected: expected.length, actual: actual.length});
-      for (var i = 0; i < expected.length; i++) {
+        this.fail({
+          type: "assert_equal",
+          message: "lengths of typed arrays do not match",
+          expected: expected.length,
+          actual: actual.length,
+        });
+      for (let i = 0; i < expected.length; i++) {
         this.equal(actual[i], expected[i]);
       }
     } else {
@@ -150,10 +163,14 @@ export class TestCaseResults {
     }
 
     if (matched === !!not) {
-      this.fail({type: "assert_equal", message: message,
-                 expected: JSON.stringify(expected), actual: JSON.stringify(actual), not: !!not});
-    } else
-      this.ok();
+      this.fail({
+        type: "assert_equal",
+        message,
+        expected: JSON.stringify(expected),
+        actual: JSON.stringify(actual),
+        not: !!not,
+      });
+    } else this.ok();
   }
 
   notEqual(actual, expected, message) {
@@ -161,44 +178,55 @@ export class TestCaseResults {
   }
 
   instanceOf(obj, klass, message) {
-    if (obj instanceof klass)
-      this.ok();
-    else
-      this.fail({type: "instanceOf", message: message, not: false}); // XXX what other data?
+    if (obj instanceof klass) this.ok();
+    else this.fail({ type: "instanceOf", message, not: false }); // XXX what other data?
   }
 
   notInstanceOf(obj, klass, message) {
     if (obj instanceof klass)
-      this.fail({type: "instanceOf", message: message, not: true}); // XXX what other data?
-    else
-      this.ok();
+      this.fail({
+        type: "instanceOf",
+        message,
+        not: true,
+      });
+    // XXX what other data?
+    else this.ok();
   }
 
   matches(actual, regexp, message) {
-    if (regexp.test(actual))
-      this.ok();
+    if (regexp.test(actual)) this.ok();
     else
-      this.fail({type: "matches", message: message,
-                 actual: actual, regexp: regexp.toString(), not: false});
+      this.fail({
+        type: "matches",
+        message,
+        actual,
+        regexp: regexp.toString(),
+        not: false,
+      });
   }
 
   notMatches(actual, regexp, message) {
     if (regexp.test(actual))
-      this.fail({type: "matches", message: message,
-                 actual: actual, regexp: regexp.toString(), not: true});
-    else
-      this.ok();
+      this.fail({
+        type: "matches",
+        message,
+        actual,
+        regexp: regexp.toString(),
+        not: true,
+      });
+    else this.ok();
   }
 
   _assertActual(actual, predicate, message) {
-    if (actual && predicate(actual))
-      this.ok();
+    if (actual && predicate(actual)) this.ok();
     else
       this.fail({
         type: "throws",
-        message: (actual ?
-            "wrong error thrown: " + actual.message :
-            "did not throw an error as expected") + (message ? ": " + message : ""),
+        message:
+          (actual
+            ? "wrong error thrown: " + actual.message
+            : "did not throw an error as expected") +
+          (message ? ": " + message : ""),
       });
   }
 
@@ -211,17 +239,21 @@ export class TestCaseResults {
       };
     } else if (typeof expected === "string") {
       predicate = function (actual) {
-        return typeof actual.message === "string" &&
-            actual.message.indexOf(expected) !== -1;
+        return (
+          typeof actual.message === "string" &&
+          actual.message.indexOf(expected) !== -1
+        );
       };
     } else if (expected instanceof RegExp) {
       predicate = function (actual) {
         return expected.test(actual.message);
       };
-    } else if (typeof expected === 'function') {
+    } else if (typeof expected === "function") {
       predicate = expected;
     } else {
-      throw new Error('expected should be a string, regexp, or predicate function');
+      throw new Error(
+        "expected should be a string, regexp, or predicate function"
+      );
     }
 
     return predicate;
@@ -277,65 +309,50 @@ export class TestCaseResults {
   }
 
   isTrue(v, msg) {
-    if (v)
-      this.ok();
-    else
-      this.fail({type: "true", message: msg, not: false});
+    if (v) this.ok();
+    else this.fail({ type: "true", message: msg, not: false });
   }
 
   isFalse(v, msg) {
-    if (v)
-      this.fail({type: "true", message: msg, not: true});
-    else
-      this.ok();
+    if (v) this.fail({ type: "true", message: msg, not: true });
+    else this.ok();
   }
 
   isNull(v, msg) {
-    if (v === null)
-      this.ok();
-    else
-      this.fail({type: "null", message: msg, not: false});
+    if (v === null) this.ok();
+    else this.fail({ type: "null", message: msg, not: false });
   }
 
   isNotNull(v, msg) {
-    if (v === null)
-      this.fail({type: "null", message: msg, not: true});
-    else
-      this.ok();
+    if (v === null) this.fail({ type: "null", message: msg, not: true });
+    else this.ok();
   }
 
   isUndefined(v, msg) {
-    if (v === undefined)
-      this.ok();
-    else
-      this.fail({type: "undefined", message: msg, not: false});
+    if (v === undefined) this.ok();
+    else this.fail({ type: "undefined", message: msg, not: false });
   }
 
   isNotUndefined(v, msg) {
     if (v === undefined)
-      this.fail({type: "undefined", message: msg, not: true});
-    else
-      this.ok();
+      this.fail({ type: "undefined", message: msg, not: true });
+    else this.ok();
   }
 
   isNaN(v, msg) {
-    if (isNaN(v))
-      this.ok();
-    else
-      this.fail({type: "NaN", message: msg, not: false});
+    if (isNaN(v)) this.ok();
+    else this.fail({ type: "NaN", message: msg, not: false });
   }
 
   isNotNaN(v, msg) {
-    if (isNaN(v))
-      this.fail({type: "NaN", message: msg, not: true});
-    else
-      this.ok();
+    if (isNaN(v)) this.fail({ type: "NaN", message: msg, not: true });
+    else this.ok();
   }
 
   include(s, v, message, not) {
-    var pass = false;
+    let pass = false;
     if (s instanceof Array) {
-      pass = s.some(it => isEqual(v, it));
+      pass = s.some((it) => isEqual(v, it));
     } else if (s && typeof s === "object") {
       pass = v in s;
     } else if (typeof s === "string") {
@@ -346,7 +363,7 @@ export class TestCaseResults {
       /* fail -- not something that contains other things */
     }
 
-    if (pass === ! not) {
+    if (pass === !not) {
       this.ok();
     } else {
       this.fail({
@@ -403,7 +420,7 @@ export class TestCase {
     this.name = name;
     this.func = func;
 
-    var nameParts = name.split(" - ").map(s => {
+    const nameParts = name.split(" - ").map((s) => {
       return s.replace(/^\s*|\s*$/g, ""); // trim
     });
     this.shortName = nameParts.pop();
@@ -420,13 +437,13 @@ export class TestCase {
     return new Promise((resolve, reject) => {
       const results = new TestCaseResults(
         this,
-        event => {
+        (event) => {
           // If this trace prints, it means you ran some test.* function
           // after the test finished! Another symptom will be that the
           // test will display as "waiting" even when it counts as passed
           // or failed.
           if (completed) {
-            console.warn('Test name:', self.name);
+            console.warn("Test name:", self.name);
             console.trace("event after complete!");
           }
           return onEvent(event);
@@ -439,13 +456,12 @@ export class TestCase {
       if (result && typeof result.then === "function") {
         return result.then(resolve, reject);
       }
-
     }).then(
       () => {
         completed = true;
         onComplete();
       },
-      error => {
+      (error) => {
         completed = true;
         onException(error);
       }
@@ -469,9 +485,13 @@ export const TestManager = new (class TestManager {
     if (test.name in this.tests)
       throw new Error(
         "Every test needs a unique name, but there are two tests named '" +
-          test.name + "'");
-    if (__meteor_runtime_config__.tinytestFilter &&
-        test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1) {
+          test.name +
+          "'"
+      );
+    if (
+      __meteor_runtime_config__.tinytestFilter &&
+      test.name.indexOf(__meteor_runtime_config__.tinytestFilter) === -1
+    ) {
       return;
     }
 
@@ -482,30 +502,47 @@ export const TestManager = new (class TestManager {
     this.tests[test.name] = test;
     this.ordered_tests.push(test);
 
-    if (this.onlyTestsNames.length){
+    if (this.onlyTestsNames.length) {
       this.tests = Object.entries(this.tests).reduce((acc, [key, value]) => {
-        if(this.onlyTestsNames.includes(key)){
-          return {...acc, [key]: value};
+        if (this.onlyTestsNames.includes(key)) {
+          return { ...acc, [key]: value };
         }
         return acc;
       }, {});
 
-      this.ordered_tests = this.ordered_tests.map(test => {
-        if (this.onlyTestsNames.includes(test.name)) {
-          return test;
-        }
-        return null;
-      }).filter(Boolean);
+      this.ordered_tests = this.ordered_tests
+        .map((test) => {
+          if (this.onlyTestsNames.includes(test.name)) {
+            return test;
+          }
+          return null;
+        })
+        .filter(Boolean);
     }
   }
 
   createRun(onReport, pathPrefix) {
     return new TestRun(this, onReport, pathPrefix);
   }
-});
+})();
 
 if (Meteor.isServer && process.env.TINYTEST_FILTER) {
   __meteor_runtime_config__.tinytestFilter = process.env.TINYTEST_FILTER;
+}
+
+if (Meteor.isServer && process.env.TINYTEST_PARALLEL) {
+  const n = parseInt(process.env.TINYTEST_PARALLEL, 10);
+  if (!isNaN(n) && n > 0) {
+    __meteor_runtime_config__.tinytestParallel = n;
+  }
+}
+
+if (Meteor.isServer && process.env.TINYTEST_SERIAL_PACKAGES) {
+  // Comma-separated list of package names that must run serially (one at a
+  // time, after all parallel-safe packages have finished). Useful for packages
+  // that share global DB state and cannot tolerate interleaved execution.
+  __meteor_runtime_config__.tinytestSerialPackages =
+    process.env.TINYTEST_SERIAL_PACKAGES;
 }
 
 /******************************************************************************/
@@ -518,14 +555,13 @@ export class TestRun {
     this.onReport = onReport;
     this.next_sequence_number = 0;
     this._pathPrefix = pathPrefix || [];
-    this.manager.ordered_tests.forEach(test => {
-      if (this._prefixMatch(test.groupPath))
-        this._report(test);
+    this.manager.ordered_tests.forEach((test) => {
+      if (this._prefixMatch(test.groupPath)) this._report(test);
     });
   }
 
   _prefixMatch(testPath) {
-    for (var i = 0; i < this._pathPrefix.length; i++) {
+    for (let i = 0; i < this._pathPrefix.length; i++) {
       if (!testPath[i] || this._pathPrefix[i] !== testPath[i]) {
         return false;
       }
@@ -534,40 +570,42 @@ export class TestRun {
   }
 
   _runTest(test, onComplete, stop_at_offset) {
-    var startTime = (+new Date);
+    const startTime = +new Date();
     Tinytest._currentRunningTestName = test.name;
 
-    return test.run(event => {
-      /* onEvent */
-      // Ignore result callbacks if the test has already been reported
-      // as timed out.
-      if (test.timedOut)
-        return;
-      this._report(test, event);
-    }, () => {
-      /* onComplete */
-      if (test.timedOut)
-        return;
-      var totalTime = (+new Date) - startTime;
-      this._report(test, {type: "finish", timeMs: totalTime});
-      onComplete();
-    }, exception => {
-      /* onException */
-      if (test.timedOut)
-        return;
+    return test.run(
+      (event) => {
+        /* onEvent */
+        // Ignore result callbacks if the test has already been reported
+        // as timed out.
+        if (test.timedOut) return;
+        this._report(test, event);
+      },
+      () => {
+        /* onComplete */
+        if (test.timedOut) return;
+        const totalTime = +new Date() - startTime;
+        this._report(test, { type: "finish", timeMs: totalTime });
+        onComplete();
+      },
+      (exception) => {
+        /* onException */
+        if (test.timedOut) return;
 
-      // XXX you want the "name" and "message" fields on the
-      // exception, to start with..
-      this._report(test, {
-        type: "exception",
-        details: {
-          message: exception.message, // XXX empty???
-          stack: exception.stack // XXX portability
-        }
-      });
+        // XXX you want the "name" and "message" fields on the
+        // exception, to start with..
+        this._report(test, {
+          type: "exception",
+          details: {
+            message: exception.message, // XXX empty???
+            stack: exception.stack, // XXX portability
+          },
+        });
 
-      onComplete();
-    }, stop_at_offset);
+        onComplete();
+      },
+      stop_at_offset
+    );
   }
 
   // Run a single test.  On the server, ensure that only one test runs
@@ -576,7 +614,7 @@ export class TestRun {
   // server if a test fails to complete.
   //
   _runOne(test, onComplete, stop_at_offset) {
-    if (! this._prefixMatch(test.groupPath)) {
+    if (!this._prefixMatch(test.groupPath)) {
       onComplete && onComplete();
       return;
     }
@@ -593,8 +631,8 @@ export class TestRun {
               this._report(test, {
                 type: "exception",
                 details: {
-                  message: "test timed out"
-                }
+                  message: "test timed out",
+                },
               });
             }
 
@@ -602,12 +640,16 @@ export class TestRun {
           }, 3 * 60 * 1000);
         });
         const runnerPromise = new Promise((resolve) => {
-          this._runTest(test, () => {
-            if (!hasRan) {
-              hasRan = true;
-            }
-            resolve();
-          }, stop_at_offset);
+          this._runTest(
+            test,
+            () => {
+              if (!hasRan) {
+                hasRan = true;
+              }
+              resolve();
+            },
+            stop_at_offset
+          );
         });
 
         Promise.race([runnerPromise, timeoutPromise]).finally(() => {
@@ -616,22 +658,30 @@ export class TestRun {
       });
     } else {
       // client
-      return this._runTest(test, () => {
-        onComplete && onComplete();
-      }, stop_at_offset);
+      return this._runTest(
+        test,
+        () => {
+          onComplete && onComplete();
+        },
+        stop_at_offset
+      );
     }
   }
 
   run(onComplete) {
-    var tests = this.manager.ordered_tests.slice(0);
-    var reportCurrent = function (name) {
-      if (Meteor.isClient)
-        Tinytest._onCurrentClientTest(name);
+    const concurrency = __meteor_runtime_config__.tinytestParallel;
+    if (concurrency && concurrency > 1) {
+      return this.runParallel(onComplete, concurrency);
+    }
+
+    const tests = this.manager.ordered_tests.slice(0);
+    const reportCurrent = function (name) {
+      if (Meteor.isClient) Tinytest._onCurrentClientTest(name);
     };
 
     const runNext = () => {
       if (tests.length) {
-        var t = tests.shift();
+        const t = tests.shift();
         reportCurrent(t.name);
         this._runOne(t, runNext);
       } else {
@@ -643,23 +693,131 @@ export class TestRun {
     runNext();
   }
 
+  // Run tests grouped by package name (groupPath[1]), with up to `concurrency`
+  // package-groups executing concurrently. Within each group tests remain
+  // sequential so that intra-package state is preserved.
+  //
+  // Packages listed in `tinytestSerialPackages` (env TINYTEST_SERIAL_PACKAGES)
+  // are always run one-at-a-time, after all parallel-safe groups finish.
+  runParallel(onComplete, concurrency) {
+    // Package names that must never overlap with anything else.
+    const serialSet = new Set(
+      (__meteor_runtime_config__.tinytestSerialPackages || "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean)
+    );
+
+    // Group tests by their package identifier (second segment of groupPath,
+    // e.g. "mongo" from ["tinytest", "mongo", "insert"]).
+    const parallelGroups = [];
+    const serialGroups = [];
+    for (const test of this.manager.ordered_tests) {
+      if (!this._prefixMatch(test.groupPath)) continue;
+      const key = test.groupPath[1] || test.groupPath[0] || "__root__";
+      const bucket = serialSet.has(key) ? serialGroups : parallelGroups;
+      // Find existing group for this key or create a new one.
+      let group = bucket.find((g) => g.key === key);
+      if (!group) {
+        group = { key, tests: [] };
+        bucket.push(group);
+      }
+      group.tests.push(test);
+    }
+
+    if (parallelGroups.length === 0 && serialGroups.length === 0) {
+      onComplete && onComplete();
+      return;
+    }
+
+    // Run serialGroups one-at-a-time after all parallel groups are done.
+    const runSerialGroups = () => {
+      const runNext = () => {
+        if (serialGroups.length === 0) {
+          if (Meteor.isClient) Tinytest._onCurrentClientTest(null);
+          onComplete && onComplete();
+          return;
+        }
+        const { tests } = serialGroups.shift();
+        const runGroupTest = () => {
+          if (tests.length) {
+            const t = tests.shift();
+            if (Meteor.isClient) Tinytest._onCurrentClientTest(t.name);
+            this._runOne(t, runGroupTest);
+          } else {
+            runNext();
+          }
+        };
+        runGroupTest();
+      };
+      runNext();
+    };
+
+    if (parallelGroups.length === 0) {
+      runSerialGroups();
+      return;
+    }
+
+    let groupIndex = 0;
+    let activeGroups = 0;
+    let finished = false;
+
+    const maybeComplete = () => {
+      if (
+        !finished &&
+        activeGroups === 0 &&
+        groupIndex >= parallelGroups.length
+      ) {
+        finished = true;
+        // All parallel groups done — now run the serial ones.
+        runSerialGroups();
+      }
+    };
+
+    const runGroup = ({ tests }) => {
+      activeGroups++;
+      const runNext = () => {
+        if (tests.length) {
+          const t = tests.shift();
+          if (Meteor.isClient) Tinytest._onCurrentClientTest(t.name);
+          this._runOne(t, runNext);
+        } else {
+          activeGroups--;
+          // Kick off the next waiting parallel group, if any.
+          if (groupIndex < parallelGroups.length) {
+            runGroup(parallelGroups[groupIndex++]);
+          }
+          maybeComplete();
+        }
+      };
+      runNext();
+    };
+
+    // Seed the initial batch of concurrent groups.
+    const initialBatch = Math.min(concurrency, parallelGroups.length);
+    for (let i = 0; i < initialBatch; i++) {
+      runGroup(parallelGroups[groupIndex++]);
+    }
+  }
+
   // An alternative to run(). Given the 'cookie' attribute of a
   // failure record, try to rerun that particular test up to that
   // failure, and then open the debugger.
   debug(cookie, onComplete) {
-    var test = this.manager.tests[cookie.name];
-    if (!test)
-      throw new Error("No such test '" + cookie.name + "'");
+    const test = this.manager.tests[cookie.name];
+    if (!test) throw new Error("No such test '" + cookie.name + "'");
     this._runOne(test, onComplete, cookie.offset);
   }
 
   _report(test, event) {
     let events;
     if (event) {
-      events = [{
-        sequence: this.next_sequence_number++,
-        ...event
-      }];
+      events = [
+        {
+          sequence: this.next_sequence_number++,
+          ...event,
+        },
+      ];
     } else {
       events = [];
     }
@@ -687,10 +845,14 @@ Tinytest.onlyAsync = function (name, func) {
 };
 
 Tinytest.add = function (name, func, options) {
-  Tinytest.addAsync(name, function (test, onComplete) {
-    func(test);
-    onComplete();
-  }, options);
+  Tinytest.addAsync(
+    name,
+    function (test, onComplete) {
+      func(test);
+      onComplete();
+    },
+    options
+  );
 };
 
 Tinytest.only = function (name, func) {
@@ -703,32 +865,32 @@ Tinytest.only = function (name, func) {
 // onReport. Call onComplete when it's done.
 //
 Tinytest._runTests = function (onReport, onComplete, pathPrefix) {
-  var testRun = TestManager.createRun(onReport, pathPrefix);
+  const testRun = TestManager.createRun(onReport, pathPrefix);
   testRun.run(onComplete);
 };
 
-Tinytest._currentRunningTestName = ""
+Tinytest._currentRunningTestName = "";
 
 Meteor.methods({
-  'tinytest/getCurrentRunningTestName'() {
+  "tinytest/getCurrentRunningTestName"() {
     return Tinytest._currentRunningTestName;
-  }
-})
+  },
+});
 
 Tinytest._getCurrentRunningTestOnServer = function () {
-  return Meteor.callAsync('tinytest/getCurrentRunningTestName');
-}
+  return Meteor.callAsync("tinytest/getCurrentRunningTestName");
+};
 
 Tinytest._getCurrentRunningTestOnClient = function () {
   return Tinytest._currentRunningTestName;
-}
+};
 
 // Run just one test case, and stop the debugger at a particular
 // error, all as indicated by 'cookie', which will have come from a
 // failure event output by _runTests.
 //
 Tinytest._debugTest = function (cookie, onReport, onComplete) {
-  var testRun = TestManager.createRun(onReport);
+  const testRun = TestManager.createRun(onReport);
   testRun.debug(cookie, onComplete);
 };
 

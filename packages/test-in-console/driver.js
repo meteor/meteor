@@ -11,16 +11,16 @@ TEST_STATUS = {
   DONE: false,
   FAILURES: 0,
   PASSED: null,
-  WHERE_FAILED: []
+  WHERE_FAILED: [],
 };
 
 // xUnit format uses XML output
 var XML_CHAR_MAP = {
-  '<': '&lt;',
-  '>': '&gt;',
-  '&': '&amp;',
-  '"': '&quot;',
-  "'": '&apos;'
+  "<": "&lt;",
+  ">": "&gt;",
+  "&": "&amp;",
+  '"': "&quot;",
+  "'": "&apos;",
 };
 
 // Escapes a string for insertion into XML
@@ -28,34 +28,38 @@ var escapeXml = function (s) {
   return s.replace(/[<>&"']/g, function (c) {
     return XML_CHAR_MAP[c];
   });
-}
+};
 
 // Returns a human name for a test
 var getName = function (result) {
-  return (result.server ? "S: " : "C: ") +
-    result.groupPath.join(" - ") + " - " + result.test;
+  return (
+    (result.server ? "S: " : "C: ") +
+    result.groupPath.join(" - ") +
+    " - " +
+    result.test
+  );
 };
 
 // Calls console.log, but returns silently if console.log is not available
 var log = function (/*arguments*/) {
-  if (typeof console !== 'undefined') {
+  if (typeof console !== "undefined") {
     console.log.apply(console, arguments);
   }
 };
 
-var MAGIC_PREFIX = '##_meteor_magic##';
+var MAGIC_PREFIX = "##_meteor_magic##";
 // Write output so that other tools can read it
 // Output is sent to console.log, prefixed with the magic prefix and then the facility
 // By grepping for the prefix, other tools can get the 'special' output
 var logMagic = function (facility, s) {
-  log(MAGIC_PREFIX + facility + ': ' + s);
+  log(MAGIC_PREFIX + facility + ": " + s);
 };
 
 // Logs xUnit output, if xunit output is enabled
 // This uses logMagic with a facility of xunit
 var xunit = function (s) {
   if (xunitEnabled) {
-    logMagic('xunit', s);
+    logMagic("xunit", s);
   }
 };
 
@@ -66,18 +70,34 @@ var expected = 0;
 var resultSet = {};
 var toReport = [];
 
+// Parallel-mode tracking: how many tests are currently in-flight per package group.
+var parallelMode = !!(
+  __meteor_runtime_config__ && __meteor_runtime_config__.tinytestParallel
+);
+var activeGroups = {}; // packageKey -> count of PENDING tests
+var packageStats = {}; // packageKey -> { passed, failed, expected }
+
+var getPackageKey = function (result) {
+  // groupPath is ["tinytest", "<package>", ...] — use index 1 as the package name.
+  return result.groupPath && result.groupPath[1]
+    ? result.groupPath[1]
+    : result.groupPath[0] || "?";
+};
+
 var hrefPath = window.location.href.split("/");
-var platform = decodeURIComponent(hrefPath.length && hrefPath[hrefPath.length - 1]);
-if (!platform)
-  platform = "local";
+var platform = decodeURIComponent(
+  hrefPath.length && hrefPath[hrefPath.length - 1]
+);
+if (!platform) platform = "local";
 
 // We enable xUnit output when platform is xunit
-var xunitEnabled = (platform == 'xunit');
+var xunitEnabled = platform == "xunit";
 
-var doReport = Meteor &&
-      Meteor.settings &&
-      Meteor.settings.public &&
-      Meteor.settings.public.runId;
+var doReport =
+  Meteor &&
+  Meteor.settings &&
+  Meteor.settings.public &&
+  Meteor.settings.public.runId;
 var report = function (name, last) {
   if (doReport) {
     var data = {
@@ -86,38 +106,66 @@ var report = function (name, last) {
       status: resultSet[name].status,
       platform: platform,
       server: resultSet[name].server,
-      fullName: name.substr(3)
+      fullName: name.substr(3),
     };
-    if ((data.status === "FAIL" || data.status === "EXPECTED") &&
-    !(Object.keys(resultSet[name].events).length === 0)) {
+    if (
+      (data.status === "FAIL" || data.status === "EXPECTED") &&
+      !(Object.keys(resultSet[name].events).length === 0)
+    ) {
       // only send events when bad things happen
       data.events = resultSet[name].events;
     }
-    if (last)
-      data.end = new Date();
-    else
-      data.start = new Date();
+    if (last) data.end = new Date();
+    else data.start = new Date();
     toReport.push(EJSON.toJSONValue(data));
   }
 };
 var sendReports = function (callback) {
   var reports = toReport;
-  if (!callback)
-    callback = function () {};
+  if (!callback) callback = function () {};
   toReport = [];
-  if (doReport)
-    Meteor.call("report", reports, callback);
-  else
-    callback();
+  if (doReport) Meteor.call("report", reports, callback);
+  else callback();
 };
 
 runTests = function () {
   setTimeout(sendReports, 500);
   setInterval(sendReports, 2000);
 
+  // In parallel mode, emit a periodic summary of in-flight groups.
+  if (parallelMode) {
+    setInterval(function () {
+      var keys = Object.keys(activeGroups).filter(function (k) {
+        return activeGroups[k] > 0;
+      });
+      if (keys.length > 0) {
+        var total = Object.keys(resultSet).length;
+        var done = passed + failed + expected;
+        log(
+          "[parallel] " +
+            keys.length +
+            " group(s) active: " +
+            keys.join(", ") +
+            " | " +
+            done +
+            "/" +
+            total +
+            " done" +
+            " (✓" +
+            passed +
+            " ✗" +
+            failed +
+            ")"
+        );
+      }
+    }, 5000);
+  }
+
   Tinytest._runTestsEverywhere(
     function (results) {
       var name = getName(results);
+      var pkgKey = getPackageKey(results);
+
       if (!(name in resultSet)) {
         var testPath = EJSON.clone(results.groupPath);
         testPath.push(results.test);
@@ -127,8 +175,13 @@ runTests = function () {
           events: [],
           server: !!results.server,
           testPath: testPath,
-          test: results.test
+          test: results.test,
+          pkgKey: pkgKey,
         };
+        // Track in-flight count for this group.
+        activeGroups[pkgKey] = (activeGroups[pkgKey] || 0) + 1;
+        if (!packageStats[pkgKey])
+          packageStats[pkgKey] = { passed: 0, failed: 0, expected: 0 };
         report(name, false);
       }
       // Loop through events, and record status for each test
@@ -136,51 +189,57 @@ runTests = function () {
       results.events.forEach(function (event) {
         resultSet[name].events.push(event);
         switch (event.type) {
-        case "ok":
-          break;
-        case "expected_fail":
-          if (resultSet[name].status !== "FAIL")
-            resultSet[name].status = "EXPECTED";
-          break;
-        case "exception":
-          log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
-          if (event.details && event.details.stack)
-            log(event.details.stack);
-          else
-            log("Test failed with exception");
-          failed++;
-          whereFailed.push({ name: name, info: JSON.stringify(event) });
-          break;
-        case "finish":
-          switch (resultSet[name].status) {
-          case "OK":
+          case "ok":
             break;
-          case "PENDING":
-            resultSet[name].status = "OK";
-            report(name, true);
-            log(name, ":", "OK");
-            passed++;
+          case "expected_fail":
+            if (resultSet[name].status !== "FAIL")
+              resultSet[name].status = "EXPECTED";
             break;
-          case "EXPECTED":
-            report(name, true);
-            log(name, ":", "EXPECTED FAILURE");
-            expected++;
-            break;
-          case "FAIL":
-            failed++;
-            report(name, true);
+          case "exception":
             log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
-            log(JSON.stringify(resultSet[name].info));
-            whereFailed.push({ name: name, info: JSON.stringify(resultSet[name].info) });
+            if (event.details && event.details.stack) log(event.details.stack);
+            else log("Test failed with exception");
+            failed++;
+            if (packageStats[pkgKey]) packageStats[pkgKey].failed++;
+            whereFailed.push({ name: name, info: JSON.stringify(event) });
+            break;
+          case "finish":
+            activeGroups[pkgKey] = Math.max(0, (activeGroups[pkgKey] || 1) - 1);
+            switch (resultSet[name].status) {
+              case "OK":
+                break;
+              case "PENDING":
+                resultSet[name].status = "OK";
+                report(name, true);
+                log(name, ":", "OK");
+                passed++;
+                if (packageStats[pkgKey]) packageStats[pkgKey].passed++;
+                break;
+              case "EXPECTED":
+                report(name, true);
+                log(name, ":", "EXPECTED FAILURE");
+                expected++;
+                if (packageStats[pkgKey]) packageStats[pkgKey].expected++;
+                break;
+              case "FAIL":
+                failed++;
+                if (packageStats[pkgKey]) packageStats[pkgKey].failed++;
+                report(name, true);
+                log(name, ":", "!!!!!!!!! FAIL !!!!!!!!!!!");
+                log(JSON.stringify(resultSet[name].info));
+                whereFailed.push({
+                  name: name,
+                  info: JSON.stringify(resultSet[name].info),
+                });
+                break;
+              default:
+                log(name, ": unknown state for the test to be in");
+            }
             break;
           default:
-            log(name, ": unknown state for the test to be in");
-          }
-          break;
-        default:
-          resultSet[name].status = "FAIL";
-          resultSet[name].info = results;
-          break;
+            resultSet[name].status = "FAIL";
+            resultSet[name].info = results;
+            break;
         }
       });
     },
@@ -190,7 +249,41 @@ runTests = function () {
       if (failed > 0) {
         log("~~~~~~~ THERE ARE FAILURES ~~~~~~~");
       }
-      log("passed/expected/failed/total", passed, "/", expected, "/", failed, "/", Object.keys(resultSet).length);
+
+      // In parallel mode, show a per-package breakdown alongside the totals.
+      if (parallelMode) {
+        log("--- Per-package results ---");
+        Object.keys(packageStats)
+          .sort()
+          .forEach(function (pkg) {
+            var s = packageStats[pkg];
+            var icon = s.failed > 0 ? "✗" : "✓";
+            log(
+              icon +
+                " " +
+                pkg +
+                ": " +
+                s.passed +
+                " passed, " +
+                s.failed +
+                " failed, " +
+                s.expected +
+                " expected"
+            );
+          });
+        log("--- End per-package results ---");
+      }
+
+      log(
+        "passed/expected/failed/total",
+        passed,
+        "/",
+        expected,
+        "/",
+        failed,
+        "/",
+        Object.keys(resultSet).length
+      );
       sendReports(function () {
         if (doReport) {
           log("Waiting 3s for any last reports to get sent out");
@@ -209,10 +302,16 @@ runTests = function () {
       });
 
       // Also log xUnit output
-      xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
+      xunit(
+        '<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">'
+      );
       resultSet.forEach(function (result, name) {
-        var classname = result.testPath.join('.').replace(/ /g, '-') + (result.server ? "-server" : "-client");
-        var name = result.test.replace(/ /g, '-') + (result.server ? "-server" : "-client");
+        var classname =
+          result.testPath.join(".").replace(/ /g, "-") +
+          (result.server ? "-server" : "-client");
+        var name =
+          result.test.replace(/ /g, "-") +
+          (result.server ? "-server" : "-client");
         var time = "";
         var error = "";
         result.events.forEach(function (event) {
@@ -220,32 +319,50 @@ runTests = function () {
             case "finish":
               var timeMs = event.timeMs;
               if (timeMs !== undefined) {
-                time = (timeMs / 1000) + "";
+                time = timeMs / 1000 + "";
               }
               break;
             case "exception":
               var details = event.details || {};
-              error = (details.message || '?') + " filename=" + (details.filename || '?') + " line=" + (details.line || '?');
+              error =
+                (details.message || "?") +
+                " filename=" +
+                (details.filename || "?") +
+                " line=" +
+                (details.line || "?");
               break;
           }
         });
         switch (result.status) {
           case "FAIL":
-            error = error || '?';
+            error = error || "?";
             break;
           case "EXPECTED":
             error = null;
             break;
         }
 
-        xunit('<testcase classname="' + escapeXml(classname) + '" name="' + escapeXml(name) + '" time="' + time + '">');
+        xunit(
+          '<testcase classname="' +
+            escapeXml(classname) +
+            '" name="' +
+            escapeXml(name) +
+            '" time="' +
+            time +
+            '">'
+        );
         if (error) {
-          xunit('  <failure message="test failure">' + escapeXml(error) + '</failure>');
+          xunit(
+            '  <failure message="test failure">' +
+              escapeXml(error) +
+              "</failure>"
+          );
         }
-        xunit('</testcase>');
+        xunit("</testcase>");
       });
-      xunit('</testsuite>');
-      logMagic('state', 'done');
+      xunit("</testsuite>");
+      logMagic("state", "done");
     },
-    ["tinytest"]);
-}
+    ["tinytest"]
+  );
+};

@@ -9,6 +9,29 @@ try {
 }
 
 let testNumber = 0;
+// Track the last time we saw any test output to detect genuine hangs.
+let lastActivityTime = Date.now();
+// Watchdog: if no activity for 10 minutes, force exit with failure.
+// Uses stderr so progress is visible even when stdout is buffered by a pipe.
+const WATCHDOG_TIMEOUT_MS = 10 * 60 * 1000;
+const watchdog = setInterval(() => {
+  const idleMs = Date.now() - lastActivityTime;
+  if (idleMs > WATCHDOG_TIMEOUT_MS) {
+    process.stderr.write(
+      `\n[puppeteer_runner] No test activity for ${Math.round(
+        idleMs / 1000
+      )}s — watchdog timeout, exiting with failure.\n`
+    );
+    process.exit(1);
+  } else {
+    process.stderr.write(
+      `[puppeteer_runner] Heartbeat: ${testNumber} ticks, idle ${Math.round(
+        idleMs / 1000
+      )}s\n`
+    );
+  }
+}, 60 * 1000); // check every 60 s
+watchdog.unref(); // don't prevent natural exit
 
 async function runNextUrl(browser) {
   const page = await browser.newPage();
@@ -24,9 +47,44 @@ async function runNextUrl(browser) {
     if (text.includes("Permissions policy violation")) {
       return;
     }
-    if (text) console.log(text);
-    else {
+    if (text) {
+      lastActivityTime = Date.now();
+      console.log(text);
+    } else {
       testNumber++;
+      lastActivityTime = Date.now();
+
+      const isParallel = await page
+        .evaluate(
+          () =>
+            !!(
+              __meteor_runtime_config__ &&
+              __meteor_runtime_config__.tinytestParallel
+            )
+        )
+        .catch(() => false);
+
+      if (isParallel) {
+        // In parallel mode several tests run simultaneously — just report the count.
+        const currentServerTest = await page
+          .evaluate(
+            async () => await __Tinytest._getCurrentRunningTestOnServer()
+          )
+          .catch(() => "");
+        const currentClientTest = await page
+          .evaluate(() => __Tinytest._getCurrentRunningTestOnClient())
+          .catch(() => "");
+        const parts = [];
+        if (currentClientTest) parts.push("client: " + currentClientTest);
+        if (currentServerTest) parts.push("server: " + currentServerTest);
+        if (parts.length > 0) {
+          console.log("[parallel] active — " + parts.join(" | "));
+        } else {
+          console.log("[parallel] test tick #" + testNumber);
+        }
+        return;
+      }
+
       const currentClientTest = await page.evaluate(() =>
         __Tinytest._getCurrentRunningTestOnClient()
       );
@@ -73,14 +131,13 @@ async function runNextUrl(browser) {
       if (failCount > 0) {
         const failed = await getFailed(page);
         failed.map((f) => console.log(`${f.name} failed: ${f.info}`));
-        await page.close();
-        await browser.close();
-        process.exit(1);
-      } else {
-        await page.close();
-        await browser.close();
-        process.exit(0);
       }
+      await page.close();
+      await browser.close();
+      // Use exitCode + natural exit so stdout is fully flushed before the
+      // process terminates (process.exit() can silently discard buffered data
+      // when writing to a non-TTY pipe or file).
+      process.exitCode = failCount > 0 ? 1 : 0;
     } else {
       setTimeout(poll, 1000);
     }
