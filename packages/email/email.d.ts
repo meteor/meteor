@@ -60,7 +60,7 @@ export interface MailComposerOptions {
 export declare var MailComposer: MailComposerStatic;
 
 export interface MailComposerStatic {
-  new (options: MailComposerOptions): MailComposer;
+  new (options?: MailComposerOptions | null): MailComposer;
 }
 
 export interface MailComposer {
