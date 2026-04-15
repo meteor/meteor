@@ -41,16 +41,11 @@ describe("evaluateTypes", () => {
     assert.equal(result.percent, 100);
   });
 
-  test("orphan test files are surfaced separately", () => {
-    const { pairs, orphans } = evaluateTypes(path.join(FIXTURES, "orphan"));
-    assert.equal(pairs.length, 0);
-    assert.equal(orphans.length, 1);
-  });
-
-  test("returns early when there are no pairs", () => {
+  test("orphan test files are surfaced separately and returns early when there are no pairs", () => {
     const { pairs, orphans } = evaluateTypes(path.join(FIXTURES, "orphan"));
     assert.equal(pairs.length, 0);
     assert.ok(Array.isArray(orphans));
+    assert.equal(orphans.length, 1);
   });
 
   test("covers every declaration kind when each is asserted", () => {

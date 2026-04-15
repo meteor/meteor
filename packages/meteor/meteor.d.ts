@@ -497,11 +497,25 @@ export namespace Meteor {
    * argument to `onStop`. If a function is passed instead of an object, it
    * is interpreted as an `onReady` callback.
    */
-  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty | {
-    onReady?: () => void;
-    onStop?: (error?: Meteor.Error) => void;
-    onError?: (error: Meteor.Error) => void;
-  } | (() => void))[]): Meteor.SubscriptionHandle;
+  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty)[]): Meteor.SubscriptionHandle;
+  function subscribe(
+    name: string,
+    ...args: [
+      ...args: (EJSONable | EJSONableProperty)[],
+      callbacks: {
+        onReady?: () => void;
+        onStop?: (error?: Meteor.Error) => void;
+        onError?: (error: Meteor.Error) => void;
+      }
+    ]
+  ): Meteor.SubscriptionHandle;
+  function subscribe(
+    name: string,
+    ...args: [
+      ...args: (EJSONable | EJSONableProperty)[],
+      onReady: () => void
+    ]
+  ): Meteor.SubscriptionHandle;
   /** Pub/Sub **/
 }
 

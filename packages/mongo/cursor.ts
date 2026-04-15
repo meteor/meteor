@@ -17,7 +17,7 @@ interface SynchronousCursor {
 interface MongoInterface {
   rawCollection: (collectionName: string) => RawCollection;
   _createAsynchronousCursor: (cursorDescription: CursorDescription, options: CursorOptions) => SynchronousCursor;
-  _observeChanges: (cursorDescription: CursorDescription, ordered: boolean, callbacks: ObserveChangesCallbacks<unknown>, nonMutatingCallbacks?: boolean) => Promise<{ stop: () => void }>;
+  _observeChanges: (cursorDescription: CursorDescription, ordered: boolean, callbacks: ObserveChangesCallbacks<unknown>, nonMutatingCallbacks?: boolean) => { stop: () => void };
 }
 
 interface CursorOptions {
@@ -80,18 +80,18 @@ export class Cursor<T, U = T> {
     return new Promise(resolve => resolve(this.observe(callbacks)));
   }
 
-  observeChanges(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): Promise<{ stop: () => void }> {
+  observeChanges(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): { stop: () => void } {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
     return this._mongo._observeChanges(
       this._cursorDescription,
       ordered,
       callbacks,
       options.nonMutatingCallbacks
-    );
+    ) as unknown as { stop: () => void };
   }
 
   async observeChangesAsync(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): Promise<{ stop: () => void }> {
-    return this.observeChanges(callbacks, options);
+    return Promise.resolve(this.observeChanges(callbacks, options));
   }
 }
 
@@ -101,7 +101,7 @@ export class Cursor<T, U = T> {
 
   (Cursor.prototype as Record<string | symbol, unknown>)[methodName] = function(this: Cursor<unknown>, ...args: unknown[]): unknown {
     const cursor = setupAsynchronousCursor(this, methodName);
-    return cursor[methodName as string](...args);
+    return (cursor as unknown as Record<string | symbol, (...args: unknown[]) => unknown>)[methodName](...args);
   };
 
   if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) return;
@@ -109,7 +109,7 @@ export class Cursor<T, U = T> {
   const methodNameAsync = getAsyncMethodName(methodName as string);
 
   (Cursor.prototype as Record<string | symbol, unknown>)[methodNameAsync] = function(this: Cursor<unknown>, ...args: unknown[]): unknown {
-    return (this as Record<string, (...a: unknown[]) => unknown>)[methodName as string](...args);
+    return (this as unknown as Record<string | symbol, (...a: unknown[]) => unknown>)[methodName](...args);
   };
 });
 

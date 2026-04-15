@@ -192,7 +192,7 @@ export class ObserveMultiplexer {
           handle.nonMutatingCallbacks ? args : EJSON.clone(args)
         );
 
-        if (result && typeof result === 'object' && result !== null && 'catch' in result) {
+        if (result && typeof (result as any).then === 'function') {
           (result as Promise<unknown>).catch((error: unknown) => {
             console.error(
               `Error in observeChanges callback ${callbackName}:`,
@@ -200,7 +200,7 @@ export class ObserveMultiplexer {
             );
           });
         }
-        handle.initialAddsSent.then(result);
+        handle.initialAddsSent.then(() => result);
       }
     });
   }

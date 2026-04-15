@@ -442,14 +442,23 @@ export class OplogHandle {
 }
 
 export function idForOp(op: OplogEntry): string {
+  let id: string | Record<string, unknown> | undefined;
   if (op.op === 'd' || op.op === 'i') {
-    return op.o._id;
+    id = op.o._id;
   } else if (op.op === 'u') {
-    return op.o2._id;
+    id = op.o2 ? op.o2._id : undefined;
   } else if (op.op === 'c') {
     throw Error("Operator 'c' doesn't supply an object with id: " + JSON.stringify(op));
   } else {
     throw Error("Unknown op: " + JSON.stringify(op));
+  }
+
+  if (typeof id === 'string') {
+    return id;
+  } else if (id != null && typeof id === 'object') {
+    return JSON.stringify(id);
+  } else {
+    throw Error("Missing id for op: " + JSON.stringify(op));
   }
 }
 

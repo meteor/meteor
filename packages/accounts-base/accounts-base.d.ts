@@ -288,15 +288,6 @@ export namespace Accounts {
 }
 
 export namespace Accounts {
-  function onLogout(
-    func: (options: {
-      user: Meteor.User;
-      connection: Meteor.Connection;
-    }) => void
-  ): void;
-}
-
-export namespace Accounts {
   interface LoginMethodOptions {
     /**
      * The method to call (default 'login')
