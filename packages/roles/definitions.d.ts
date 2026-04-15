@@ -489,7 +489,7 @@ export declare namespace Roles {
     fields?: Mongo.FieldSpecifier | undefined;
     projection?: Mongo.FieldSpecifier | undefined;
     reactive?: boolean | undefined;
-    transform?: ((...args: unknown[]) => unknown) | undefined;
+    transform?: Function | undefined;
   }
 } // module
 
