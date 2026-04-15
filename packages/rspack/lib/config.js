@@ -386,3 +386,52 @@ export function configureMeteorForRspack() {
     }
   }
 }
+
+/**
+ * Applies delegated extension ignore patterns for entry folder files.
+ * Called after rspack's first compilation reports which extensions it handles.
+ * Since Meteor awaits rspack compilation before scanning files, these patterns
+ * are in place before Meteor processes any application files.
+ *
+ * Uses gitignore semantics: a later positive pattern (client/*.css) overrides
+ * an earlier negation (!client/*.css) that was set in configureMeteorForRspack.
+ *
+ * @param {string[]} extensions - Array of extensions like ['.css', '.less']
+ */
+export function applyDelegatedExtensions(extensions) {
+  if (!extensions || extensions.length === 0) return;
+
+  const initialEntrypoints = getInitialEntrypoints();
+  const entrypointContexts = [
+    initialEntrypoints.mainClient,
+    initialEntrypoints.mainServer,
+  ]
+    .filter(Boolean)
+    .map(entrypoint => path.dirname(entrypoint));
+
+  const ignorePatterns = [];
+  for (const dir of entrypointContexts) {
+    for (const ext of extensions) {
+      // ext comes as '.css', glob needs '*.css'
+      ignorePatterns.push(`${dir}/*${ext}`);
+    }
+  }
+
+  if (ignorePatterns.length > 0) {
+    // Re-append meteor.modules unignore patterns after the delegation ignores
+    // so they take precedence (gitignore semantics: last match wins)
+    const meteorAppConfig = getMeteorAppConfig();
+    const unignoredFilesAndFolders = buildUnignorePatterns(
+      meteorAppConfig?.modules || [],
+      { skipLevel: 1 },
+    );
+
+    setMeteorAppIgnore(
+      [...ignorePatterns, ...unignoredFilesAndFolders].join(' ')
+    );
+
+    if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
+      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE}`);
+    }
+  }
+}

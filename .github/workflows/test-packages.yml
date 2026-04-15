@@ -1,14 +1,19 @@
-name: Package tests
+name: Test Packages
 
 on:
   pull_request:
+    paths:
+      - "packages/**"
+      - ".github/workflows/test-packages.yml"
 
 jobs:
   test-packages:
     runs-on: ubuntu-22.04
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
-      cancel-in-progress: true
+      cancel-in-progress: truejobs:
+  test-packages:
+    runs-on: oss-vm
     timeout-minutes: 90
     env:
       CXX: g++-12
@@ -25,7 +30,13 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.17.0
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
+        # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
+        # so run.sh skips the slow `./meteor npm install -g puppeteer` step.
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
         uses: actions/cache@v4
@@ -35,18 +46,17 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            /home/runner/.npm/chromium
-          key: ${{ runner.os }}-node-22.17-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-22.17-
+            ${{ runner.os }}-meteor-
 
-      - name: Install system dependencies
+      - name: Run test-in-console suite
         run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-12 libnss3
-
-      - name: Install npm dependencies
-        run: npm install
-
-      - name: Run test-in-console suite 
-        run: ./packages/test-in-console/run.sh
+          export TEST_PACKAGES_EXCLUDE="stylus"
+          export METEOR_MODERN="true"
+          export NODE_ENV="CI"
+          export CXX="g++-12"
+          export phantom="false"
+          export TIMEOUT_SCALE_FACTOR="20"
+          export METEOR_HEADLESS="true"
+          ./packages/test-in-console/run.sh

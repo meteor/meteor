@@ -31,6 +31,7 @@ const RSPACK_ASSETS_REGEX = new RegExp(
 const shouldEnableDevHMRProxy =
   global?.Package?.["tools-core"] != null &&
   Meteor.isDevelopment &&
+  !Meteor.isTest && !Meteor.isAppTest &&
   !process.env.RSPACK_NATIVE;
 if (shouldEnableDevHMRProxy) {
   const { shuffleString } = require('meteor/tools-core/lib/string');

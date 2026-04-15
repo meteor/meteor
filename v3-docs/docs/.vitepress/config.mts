@@ -461,6 +461,14 @@ export default defineConfig({
                 text: "jam:offline",
                 link: "/community-packages/offline",
               },
+              {
+                text: "dupontbertrand:cluster",
+                link: "/community-packages/cluster",
+              },
+              {
+                text: "dupontbertrand:mail-preview",
+                link: "/community-packages/mail-preview",
+              },
             ],
             collapsed: true,
           },
@@ -544,10 +552,6 @@ export default defineConfig({
               {
                 text: "Accounts",
                 link: "/tutorials/accounts/accounts",
-              },
-              {
-                text: "Routing",
-                link: "/tutorials/routing/routing",
               },
             ]
           },

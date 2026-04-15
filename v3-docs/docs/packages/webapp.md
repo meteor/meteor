@@ -103,6 +103,28 @@ We're using the [connect-route](https://www.npmjs.com/package/connect-route) NPM
 
 And finally, if you decide to use this technique you'll want to make sure you understand how conflicting client side routing will affect user experience.
 
+### Static Assets & Caching
+
+By default, Meteor serves different bundles (Modern vs. Legacy) based on the user's browser. Historically, this required the `Vary: User-Agent` header on all responses, which forced CDNs to fragment their cache (storing separate copies for Chrome, Safari, etc.).
+
+`webapp` now includes an automatic optimization to solve this:
+
+* **Production (Hashed Filenames):** Files with the hash in the pathname (e.g., `/app.abc12345.js`) are served **without** the `Vary: User-Agent` header. Since the pathname uniquely identifies the content, CDNs can safely cache a single copy for all users.
+* **Development (Unhashed Filenames):** Files without the hash in the pathname (e.g., `/packages/promise.js?hash=abc123`) **keep** the `Vary: User-Agent` header to ensure safety during development.
+
+This behavior is enabled by default. You can control it via `Meteor.settings`:
+```json
+{
+  "packages": {
+    "webapp": {
+      "includeVaryUserAgent": true
+    }
+  }
+}
+```
+
+Setting `includeVaryUserAgent` to `false` will disable the header for **all** static files. 
+
 ### React SSR Optimization (Meteor 3.4)
 
 **Experimental: Disable Boilerplate Response** ([PR#13855](https://github.com/meteor/meteor/pull/13855))

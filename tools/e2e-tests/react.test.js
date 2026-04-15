@@ -78,6 +78,13 @@ describe('React App Bundling /', () => {
       buildDir: "_build-local-custom",
       env: { METEOR_LOCAL_DIR: ".meteor/local-custom" },
       customAssertions: {
+        afterInit: async ({ result }) => {
+          // Verify unplugin transform hook is called on first run (fresh cache)
+          await waitForMeteorOutput(
+            result.outputLines,
+            /.*\[demo-unplugin\]\[transform-enter\].*/
+          );
+        },
         afterRun: async ({ result, tempDir }) => {
           const appDir = tempDir; // testMeteorRspackBundler uses tempDir as appDir if not monorepo
 
@@ -95,10 +102,19 @@ describe('React App Bundling /', () => {
           await assertImagesExistAndLoad();
 
           // Check custom plugin is disabled with Meteor.disablePlugins
+          // Use specific log prefix to avoid matching the filename in buildDependencies
           await waitForMeteorOutput(
             result.outputLines,
-            /.*CustomConsoleLogPlugin.*/,
+            /.*\[CustomConsoleLogPlugin\].*/,
             { negate: true }
+          );
+
+          // Verify unplugin factory is still created on second run (with cache)
+          // This confirms the plugin is loaded and active even when rspack uses
+          // cached transform results (#14031 regression test)
+          await waitForMeteorOutput(
+            result.outputLines,
+            /.*\[demo-unplugin\]\[factory-created\].*/
           );
         },
         afterRunRebuildClient: async ({ allConsoleLogs }) => {
@@ -115,10 +131,23 @@ describe('React App Bundling /', () => {
           await assertImagesExistAndLoad();
 
           // Check custom plugin is disabled with Meteor.disablePlugins
+          // Use specific log prefix to avoid matching the filename in buildDependencies
           await waitForMeteorOutput(
             result.outputLines,
-            /.*CustomConsoleLogPlugin.*/,
+            /.*\[CustomConsoleLogPlugin\].*/,
             { negate: true }
+          );
+
+          // Verify demo-unplugin.js is tracked in rspack buildDependencies (#14031)
+          await waitForMeteorOutput(
+            result.outputLines,
+            /.*plugins\/demo-unplugin\.js.*/
+          );
+
+          // Verify unplugin transform hook fires in production (separate cache version)
+          await waitForMeteorOutput(
+            result.outputLines,
+            /.*\[demo-unplugin\]\[transform-enter\].*/
           );
         },
         afterRunProductionRebuildClient: async ({ allConsoleLogs }) => {
@@ -133,9 +162,10 @@ describe('React App Bundling /', () => {
           await waitForReactEnvs(result.outputLines);
 
           // Check custom plugin is disabled with Meteor.disablePlugins
+          // Use specific log prefix to avoid matching the filename in buildDependencies
           await waitForMeteorOutput(
             result.outputLines,
-            /.*CustomConsoleLogPlugin.*/,
+            /.*\[CustomConsoleLogPlugin\].*/,
             { negate: true }
           );
         },
@@ -143,9 +173,10 @@ describe('React App Bundling /', () => {
           await waitForReactEnvs(result.outputLines);
 
           // Check custom plugin is disabled with Meteor.disablePlugins
+          // Use specific log prefix to avoid matching the filename in buildDependencies
           await waitForMeteorOutput(
             result.outputLines,
-            /.*CustomConsoleLogPlugin.*/,
+            /.*\[CustomConsoleLogPlugin\].*/,
             { negate: true }
           );
         },
@@ -153,9 +184,10 @@ describe('React App Bundling /', () => {
           await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
 
           // Check custom plugin is disabled with Meteor.disablePlugins
+          // Use specific log prefix to avoid matching the filename in buildDependencies
           await waitForMeteorOutput(
             result.outputLines,
-            /.*CustomConsoleLogPlugin.*/,
+            /.*\[CustomConsoleLogPlugin\].*/,
             { negate: true }
           );
         },

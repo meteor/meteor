@@ -33,6 +33,7 @@ jobs:
           - Babel
           - Blaze
           - Coffeescript
+          - Examples
           - Monorepo
           - Other
           - React
@@ -86,10 +87,25 @@ jobs:
         run: ./meteor --get-ready
 
       - name: Run tests for ${{ matrix.category }}
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          retry_on: error
-          timeout_minutes: 15
-          retry_wait_seconds: 90
-          command: npm run test:e2e -- -t="${{ matrix.category }}"
+        id: test-run
+        continue-on-error: true
+        timeout-minutes: 15
+        run: npm run test:e2e -- -t="${{ matrix.category }}"
+
+      - name: Retry failed tests for ${{ matrix.category }} (attempt 2)
+        id: test-retry-1
+        if: steps.test-run.outcome == 'failure'
+        continue-on-error: true
+        timeout-minutes: 15
+        run: |
+          echo "::warning::First attempt failed, retrying..."
+          sleep 90
+          npm run test:e2e -- -t="${{ matrix.category }}"
+
+      - name: Retry failed tests for ${{ matrix.category }} (attempt 3)
+        if: steps.test-retry-1.outcome == 'failure'
+        timeout-minutes: 15
+        run: |
+          echo "::warning::Second attempt failed, retrying..."
+          sleep 90
+          npm run test:e2e -- -t="${{ matrix.category }}"

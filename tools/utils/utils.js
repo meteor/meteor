@@ -10,6 +10,17 @@ var packageVersionParser = require('../packaging/package-version-parser.js');
 
 var utils = exports;
 
+// Cache regex patterns to avoid recompiling them on every function call.
+// This improves performance in hot paths like URL parsing.
+var REGEX_PORT_ONLY = /^[0-9]+$/;
+var REGEX_HAS_SCHEME = /^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//;
+var REGEX_IPV4_ADDRESS = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+var REGEX_VALID_EMAIL = /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/;
+var REGEX_FILE_SCHEME = /^file:\/\/.+/;
+var REGEX_URL_WITH_SHA = /^https?:\/\/.*[0-9a-f]{40}/;
+var REGEX_NPM_URL_PROTOCOL = /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//;
+var REGEX_RELEASE_VERSION = /^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/;
+
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
 // <port>. We're not simply using 'url.parse' because we want '3000' to
@@ -26,7 +37,7 @@ exports.parseUrl = function (str, defaults) {
   var defaultPort = defaults.port || undefined;
   var defaultProtocol = defaults.protocol || undefined;
 
-  if (str.match(/^[0-9]+$/)) { // just a port
+  if (REGEX_PORT_ONLY.test(str)) { // just a port
     return {
       port: str,
       hostname: defaultHostname,
@@ -82,12 +93,12 @@ ${addressEntries.map(entry => entry.address).join(', ')}`);
 };
 
 exports.hasScheme = function (str) {
-  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+  return REGEX_HAS_SCHEME.test(str);
 };
 
 exports.isIPv4Address = function (str) {
-  return str.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
-}
+  return REGEX_IPV4_ADDRESS.test(str);
+};
 
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
@@ -307,7 +318,7 @@ exports.validatePackageNameOrExit = function (packageName, options) {
 // - IP addresses in domains (eg, foo@1.2.3.4 or the IPv6 equivalent)
 // because they're weird and we don't want them in our database.
 exports.validEmail = function (address) {
-  return /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/.test(address);
+  return REGEX_VALID_EMAIL.test(address);
 };
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
@@ -333,7 +344,7 @@ exports.timeoutScaleFactor = timeoutScaleFactor;
 // the prerelease for a given release will sort before it. Because $ sorts
 // before '.', this means that 1.2 will sort before 1.2.3.)
 exports.defaultOrderKeyForReleaseVersion = function (v) {
-  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/);
+  var m = v.match(REGEX_RELEASE_VERSION);
   if (!m) {
     return null;
   }
@@ -444,21 +455,21 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
 };
 
 exports.isUrlWithFileScheme = function (x) {
-  return /^file:\/\/.+/.test(x);
+  return REGEX_FILE_SCHEME.test(x);
 };
 
 exports.isUrlWithSha = function (x) {
   // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
   // a URL like isNpmUrl(), there are a variety of problems with this,
   // see https://github.com/meteor/meteor/pull/5562
-  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
-}
+  return REGEX_URL_WITH_SHA.test(x);
+};
 
 exports.isNpmUrl = function (x) {
   // These are the various protocols that NPM supports, which we use to download NPM dependencies
   // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
   return exports.isUrlWithSha(x) ||
-    /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//.test(x);
+    REGEX_NPM_URL_PROTOCOL.test(x);
 };
 
 exports.isPathRelative = function (x) {

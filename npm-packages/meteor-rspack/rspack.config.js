@@ -10,7 +10,7 @@ const { getMeteorAppSwcConfig } = require('./lib/swc.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
-const { MeteorRspackOutputPlugin } = require('./plugins/MeteorRspackOutputPlugin.js');
+const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
@@ -27,6 +27,8 @@ const {
 } = require('./lib/meteorRspackHelpers.js');
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
+const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
+
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -69,10 +71,16 @@ function createCacheStrategy(
   const yarnLockPath = path.join(process.cwd(), 'yarn.lock');
   const hasYarnLock = fs.existsSync(yarnLockPath);
 
+  // Extract local dependencies from project config (e.g., plugin files)
+  const localDependencies = projectConfigPath 
+    ? extractLocalDependencies(projectConfigPath) 
+    : [];
+
   // Build dependencies array
   const buildDependencies = [
     ...(projectConfigPath ? [projectConfigPath] : []),
     ...(configPath ? [configPath] : []),
+    ...localDependencies,
     ...(hasTsconfig ? [tsconfigPath] : []),
     ...(hasBabelRcConfig ? [babelRcConfig] : []),
     ...(hasBabelJsConfig ? [babelJsConfig] : []),
@@ -643,7 +651,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         port: devServerPort,
         devMiddleware: {
           writeToDisk: (filePath) =>
-            /\.(html)$/.test(filePath) && !filePath.includes(".hot-update."),
+            /\.(html)$/.test(filePath) || filePath.endsWith('sw.js'),
         },
         onListening(devServer) {
           if (!devServer) return;
@@ -843,7 +851,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
-    getData: (stats, { isRebuild, compilationCount }) => ({
+    getData: (stats, { isRebuild, compilationCount, compiler }) => ({
       name: config.name,
       mode: config.mode,
       hasErrors: stats.hasErrors(),
@@ -852,6 +860,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       statsOverrided,
       compilationCount,
       isRebuild,
+      ...(!isRebuild && compiler && {
+        delegatedExtensions: extractDelegatedExtensions(stats, compiler),
+      }),
     }),
   });
   config.plugins = [meteorRspackOutputPlugin, ...(config.plugins || [])];
