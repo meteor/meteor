@@ -1,7 +1,7 @@
 // Filesystem discovery: find *.test-d.ts files under a root and pair each
 // with its sibling *.d.ts. Pairing is purely by filename convention
 // (foo.test-d.ts ↔ foo.d.ts in the same directory), no config needed.
-
+import path from "node:path";
 import fs from "node:fs";
 
 // Directories we never want to descend into — either machine-generated or
@@ -11,9 +11,11 @@ const SKIP_DIRS = ["node_modules", ".git", ".meteor", "dist", "build", "coverage
 // Uses Node.js native fs.globSync (stable since v22).
 // Returns sorted paths so the report is deterministic.
 function findTestFiles(root) {
-  return fs.globSync(`${root}/**/*.test-d.ts`, {
-    exclude: (p) => SKIP_DIRS.some((dir) => p.includes(`/${dir}/`) || p.endsWith(`/${dir}`)),
-  }).sort();
+  return fs.globSync("**/*.test-d.ts", {
+    cwd: root,
+    exclude: (p) =>
+      path.normalize(p).split(path.sep).some((part) => SKIP_DIRS.includes(part)),
+  }).map((p) => path.join(root, p)).sort();
 }
 
 // Split discovered tests into pairs (test + matching dts) and orphans (tests

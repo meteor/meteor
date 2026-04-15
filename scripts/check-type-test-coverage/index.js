@@ -74,8 +74,8 @@ async function main() {
   }
 
   const root = path.resolve(positionals[0]);
-  if (!fs.existsSync(root)) {
-    fail(`Directory not found: ${root}`);
+  if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
+    fail(`Directory not found or not a directory: ${root}`);
   }
 
   // Walk `root`, pair each *.test-d.ts with its sibling *.d.ts, evaluate coverage.
