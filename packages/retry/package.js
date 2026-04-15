@@ -8,4 +8,5 @@ Package.onUse(function (api) {
   api.use('random');
   api.mainModule('retry.js');
   api.export('Retry');
+  api.addAssets('retry.d.ts', 'server');
 });

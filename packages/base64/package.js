@@ -7,6 +7,7 @@ Package.onUse(api => {
   api.export('Base64');
   api.use('ecmascript');
   api.mainModule('base64.js');
+  api.addAssets('base64.d.ts', 'server');
 });
 
 Package.onTest(api => {
