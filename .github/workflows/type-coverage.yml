@@ -12,3 +12,8 @@ jobs:
       - run: npm ci
       - name: Check TypeScript type coverage (80%)
         run: npm run ts-coverage:ci
+      - name: Check TypeScript type test coverage
+        run: |
+          cd scripts/check-type-test-coverage
+          npm ci
+          node index.js ../../packages
