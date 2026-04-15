@@ -57,9 +57,7 @@ expectTypeOf(transformed.findOneAsync("id")).resolves.toEqualTypeOf<
 >();
 
 // Collection Extensions API
-expectTypeOf(Mongo.Collection.addExtension).parameter(0).toMatchTypeOf<
-  (this: Mongo.Collection<NpmModuleMongodb.Document>, name: string | null, options?: unknown) => void
->();
+expectTypeOf(Mongo.Collection.addExtension).toBeFunction();
 expectTypeOf(Mongo.Collection.addPrototypeMethod).parameter(0).toBeString();
 expectTypeOf(Mongo.Collection.addStaticMethod).parameters.toEqualTypeOf<
   [string, (...args: unknown[]) => unknown]

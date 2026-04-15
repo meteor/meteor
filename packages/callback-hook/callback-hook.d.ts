@@ -9,7 +9,7 @@ export interface HookOptions {
   debugPrintExceptions?: string;
 }
 
-export interface HookRegistration<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
+export interface HookRegistration<T extends (...args: any[]) => any = (...args: any[]) => any> {
   /** The (possibly wrapped) callback function */
   callback: T;
   /** Unregisters the callback */
@@ -19,7 +19,7 @@ export interface HookRegistration<T extends (...args: unknown[]) => unknown = (.
 /**
  * Encapsulates the pattern of registering callbacks on a hook.
  */
-export class Hook<T extends (...args: unknown[]) => unknown = (...args: unknown[]) => unknown> {
+export class Hook<T extends (...args: any[]) => any = (...args: any[]) => any> {
   constructor(options?: HookOptions);
 
   /**

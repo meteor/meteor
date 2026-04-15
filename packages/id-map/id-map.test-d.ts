@@ -3,7 +3,7 @@ import { IdMap } from "./id-map";
 
 expectTypeOf<typeof IdMap>().toBeConstructibleWith();
 expectTypeOf<typeof IdMap>().toBeConstructibleWith(
-  (id: string) => id,
+  (id: unknown) => String(id),
   (str: string) => str
 );
 

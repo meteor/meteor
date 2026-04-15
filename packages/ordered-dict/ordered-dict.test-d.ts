@@ -4,7 +4,7 @@ import { OrderedDict } from "./ordered-dict";
 expectTypeOf(OrderedDict.BREAK).toEqualTypeOf<{ break: true }>();
 
 expectTypeOf<typeof OrderedDict>().toBeConstructibleWith();
-expectTypeOf<typeof OrderedDict>().toBeConstructibleWith((k: string) => k);
+expectTypeOf<typeof OrderedDict>().toBeConstructibleWith((k: unknown) => String(k));
 
 const dict = new OrderedDict<string, number>((k) => k, ["a", 1], ["b", 2]);
 expectTypeOf(dict).toEqualTypeOf<OrderedDict<string, number>>();
