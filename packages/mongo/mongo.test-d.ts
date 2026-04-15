@@ -1,6 +1,6 @@
 import { expectTypeOf } from "expect-type";
 import type { NpmModuleMongodb } from "meteor/npm-mongo";
-import { Mongo, MongoInternals } from "./mongo";
+import { Mongo, MongoInternals, UnionOmit } from "./mongo";
 
 interface Doc {
   _id?: string;
@@ -8,12 +8,17 @@ interface Doc {
   value: number;
 }
 
+expectTypeOf<UnionOmit<{ a: 1, b: 2 }, 'a'>>().toEqualTypeOf<{ b: 2 }>();
+
 expectTypeOf<Mongo.OptionalId<Doc>>().toEqualTypeOf<
   { name: string; value: number } & { _id?: string | NpmModuleMongodb.ObjectId }
 >();
 
 expectTypeOf<Mongo.Selector<Doc>>().toEqualTypeOf<NpmModuleMongodb.Filter<Doc>>();
 expectTypeOf<Mongo.SortSpecifier>().toEqualTypeOf<NpmModuleMongodb.Sort>();
+expectTypeOf<Mongo.FieldSpecifier>().toEqualTypeOf<{ [id: string]: Number }>();
+expectTypeOf<Mongo.Transform<Doc>>().toEqualTypeOf<((doc: Doc) => Doc) | null | undefined>();
+expectTypeOf<Mongo.Options<Doc>>().toMatchTypeOf<{ limit?: number }>();
 
 expectTypeOf(Mongo.Collection).toBeConstructibleWith(null);
 expectTypeOf(Mongo.Collection).toBeConstructibleWith("name");
@@ -83,5 +88,6 @@ expectTypeOf(oid.toHexString()).toBeString();
 expectTypeOf(oid.equals(new Mongo.ObjectID())).toBeBoolean();
 
 // MongoInternals
+expectTypeOf(MongoInternals).toHaveProperty("defaultRemoteCollectionDriver");
 expectTypeOf(MongoInternals.defaultRemoteCollectionDriver).returns.toHaveProperty("mongo");
 expectTypeOf(MongoInternals.NpmModules.mongodb.version).toBeString();
