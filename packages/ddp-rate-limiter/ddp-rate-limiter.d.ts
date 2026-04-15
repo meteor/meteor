@@ -1,12 +1,12 @@
 export namespace DDPRateLimiter {
-  interface RateLimitResult {
+  export interface RateLimitResult {
     allowed: boolean;
     timeToReset: number;
     numInvocationsLeft: number;
     ruleId: string;
   }
 
-  interface Matcher {
+  export interface Matcher {
     type?: string | ((type: 'method' | 'subscription') => boolean) | undefined;
     name?: string | ((name: string) => boolean) | undefined;
     userId?: string | ((userId: string | null) => boolean) | undefined;
@@ -22,7 +22,7 @@ export namespace DDPRateLimiter {
    * @param callback Optional function called after rule is executed
    * @returns A unique ruleId string
    */
-  function addRule(
+  export function addRule(
     matcher: Matcher,
     numRequests?: number,
     timeInterval?: number,
@@ -34,23 +34,23 @@ export namespace DDPRateLimiter {
    * @param ruleId The ruleId returned from `addRule`
    * @returns True if a rule was removed
    */
-  function removeRule(ruleId: string): boolean;
+  export function removeRule(ruleId: string): boolean;
 
   /**
    * Set the default error message text when rate limit is exceeded.
    * @param message String or function that returns a string
    */
-  function setErrorMessage(message: string | ((result: RateLimitResult) => string)): void;
+  export function setErrorMessage(message: string | ((result: RateLimitResult) => string)): void;
 
   /**
    * Set error message for a specific rule.
    * @param ruleId The ruleId returned from `addRule`
    * @param message String or function that returns a string
    */
-  function setErrorMessageOnRule(ruleId: string, message: string | ((result: RateLimitResult) => string)): void;
+  export function setErrorMessageOnRule(ruleId: string, message: string | ((result: RateLimitResult) => string)): void;
 
   /**
    * Get the error message for a rate limit result.
    */
-  function getErrorMessage(rateLimitResult: RateLimitResult): string;
+  export function getErrorMessage(rateLimitResult: RateLimitResult): string;
 }

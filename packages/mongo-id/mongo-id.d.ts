@@ -2,12 +2,12 @@ export namespace MongoID {
   /**
    * Check whether a string looks like a Mongo ObjectID (24-char hex).
    */
-  function _looksLikeObjectID(str: string): boolean;
+  export function _looksLikeObjectID(str: string): boolean;
 
   /**
    * A Mongo-style ObjectID. Generates a random 24-character hex string if no argument is provided.
    */
-  class ObjectID {
+  export class ObjectID {
     _str: string;
 
     /**
@@ -46,12 +46,12 @@ export namespace MongoID {
    * @param id The ID to stringify
    * @returns A string representation of the ID
    */
-  function idStringify(id: string | ObjectID | undefined | number | boolean | null): string;
+  export function idStringify(id: string | ObjectID | undefined | number | boolean | null): string;
 
   /**
    * Parse a stringified Mongo ID back to its original value.
    * @param id The stringified ID
    * @returns The parsed ID value
    */
-  function idParse(id: string): string | ObjectID | undefined | number | boolean | null;
+  export function idParse(id: string): string | ObjectID | undefined | number | boolean | null;
 }

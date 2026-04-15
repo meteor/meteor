@@ -5,7 +5,7 @@ export namespace Base64 {
    * @returns The Base64-encoded string
    * @throws Error if the input string contains non-ASCII characters
    */
-  function encode(input: Uint8Array | string): string;
+  export function encode(input: Uint8Array | string): string;
 
   /**
    * Decode a Base64 string to a Uint8Array.
@@ -13,7 +13,7 @@ export namespace Base64 {
    * @returns The decoded binary data
    * @throws Error if the input is not valid Base64
    */
-  function decode(str: string): Uint8Array;
+  export function decode(str: string): Uint8Array;
 
   /**
    * Create a new binary array of the specified length, initialized to zeros.
@@ -21,5 +21,5 @@ export namespace Base64 {
    * @param len The length of the binary array to create
    * @returns A Uint8Array of the specified length
    */
-  function newBinary(len: number): Uint8Array;
+  export function newBinary(len: number): Uint8Array;
 }

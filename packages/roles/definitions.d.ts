@@ -4,6 +4,8 @@
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // Minimum TypeScript Version: 4.1
 
+import { Meteor } from 'meteor/meteor';
+import { Mongo } from 'meteor/mongo';
 /**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
  *
@@ -40,7 +42,7 @@ export declare namespace Roles {
    *
    * @for Roles
    */
-  var subscription: Subscription;
+  var subscription: Meteor.SubscriptionHandle;
 
   /**
    * Add users to roles.

@@ -3,23 +3,21 @@ type RoutePolicyType = 'network' | 'static-online';
 /**
  * A low-level API for declaring the route type of URL prefixes.
  */
-export default class RoutePolicy {
-  urlPrefixTypes: Record<string, RoutePolicyType>;
-
-  constructor();
+export namespace RoutePolicy {
+  export const urlPrefixTypes: Record<string, RoutePolicyType>;
 
   /** Check if a URL starts with the given prefix. */
-  urlPrefixMatches(urlPrefix: string, url: string): boolean;
+  export function urlPrefixMatches(urlPrefix: string, url: string): boolean;
 
   /**
    * Validate a route type. Returns an error message or null.
    */
-  checkType(type: string): string | null;
+  export function checkType(type: string): string | null;
 
   /**
    * Validate a URL prefix. Returns an error message or null.
    */
-  checkUrlPrefix(urlPrefix: string, type: RoutePolicyType): string | null;
+  export function checkUrlPrefix(urlPrefix: string, type: RoutePolicyType): string | null;
 
   /**
    * Check if a URL prefix would conflict with static resources.
@@ -28,7 +26,7 @@ export default class RoutePolicy {
    * @param _testManifest Optional test manifest for testing
    * @returns Error message or null
    */
-  checkForConflictWithStatic(
+  export function checkForConflictWithStatic(
     urlPrefix: string,
     type: RoutePolicyType,
     _testManifest?: Array<{ type: string; where: string; url: string }>
@@ -38,10 +36,10 @@ export default class RoutePolicy {
    * Declare a URL prefix as a specific route type.
    * @throws Error if the declaration is invalid or conflicts
    */
-  declare(urlPrefix: string, type: RoutePolicyType): void;
+  export function declare(urlPrefix: string, type: RoutePolicyType): void;
 
   /** Check whether a URL is valid (starts with '/'). */
-  isValidUrl(url: string): boolean;
+  export function isValidUrl(url: string): boolean;
 
   /**
    * Classify a URL by its route type.
@@ -49,12 +47,12 @@ export default class RoutePolicy {
    * @returns The route type or null if not matched
    * @throws Error if the URL is not relative
    */
-  classify(url: string): RoutePolicyType | null;
+  export function classify(url: string): RoutePolicyType | null;
 
   /**
    * Get all URL prefixes declared for a specific type.
    * @param type The route type to filter by
    * @returns Sorted array of URL prefixes
    */
-  urlPrefixesFor(type: RoutePolicyType): string[];
+  export function urlPrefixesFor(type: RoutePolicyType): string[];
 }

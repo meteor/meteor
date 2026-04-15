@@ -15,7 +15,7 @@ export namespace WebAppHashing {
    * @param runtimeConfigOverride Optional override for runtime config in the hash
    * @returns A hex-encoded SHA-1 hash string
    */
-  function calculateClientHash(
+  export function calculateClientHash(
     manifest: ManifestResource[],
     includeFilter?: (type: string, replaceable?: boolean) => boolean,
     runtimeConfigOverride?: Record<string, unknown>
@@ -27,7 +27,7 @@ export namespace WebAppHashing {
    * @param pluginVersions A map of plugin names to versions
    * @returns A hex-encoded SHA-1 hash string
    */
-  function calculateCordovaCompatibilityHash(
+  export function calculateCordovaCompatibilityHash(
     platformVersion: string,
     pluginVersions: Record<string, string>
   ): string;

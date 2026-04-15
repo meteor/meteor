@@ -1,5 +1,5 @@
 export namespace DiffSequence {
-  interface DiffObserver<T> {
+  export interface DiffObserver<T> {
     added?: (id: string, fields: Partial<T>) => void;
     addedBefore?: (id: string, fields: Partial<T>, before: string | null) => void;
     changed?: (id: string, fields: Partial<T>) => void;
@@ -7,17 +7,17 @@ export namespace DiffSequence {
     removed?: (id: string) => void;
   }
 
-  interface DiffOptions<T> {
+  export interface DiffOptions<T> {
     projectionFn?: (doc: T) => Partial<T>;
   }
 
-  interface ObjectDiffCallbacks<V> {
+  export interface ObjectDiffCallbacks<V> {
     leftOnly?: (key: string, leftValue: V) => void;
     rightOnly?: (key: string, rightValue: V) => void;
     both?: (key: string, leftValue: V, rightValue: V) => void;
   }
 
-  interface MapDiffCallbacks<K, V> {
+  export interface MapDiffCallbacks<K, V> {
     leftOnly?: (key: K, leftValue: V) => void;
     rightOnly?: (key: K, rightValue: V) => void;
     both?: (key: K, leftValue: V, rightValue: V) => void;
@@ -31,7 +31,7 @@ export namespace DiffSequence {
    * @param observer Callbacks for added, changed, removed, movedBefore
    * @param options Optional configuration
    */
-  function diffQueryChanges<T>(
+  export function diffQueryChanges<T>(
     ordered: boolean,
     oldResults: T[] | Map<string, T>,
     newResults: T[] | Map<string, T>,
@@ -42,7 +42,7 @@ export namespace DiffSequence {
   /**
    * Diff two unordered sets of query results.
    */
-  function diffQueryUnorderedChanges<T>(
+  export function diffQueryUnorderedChanges<T>(
     oldResults: Map<string, T>,
     newResults: Map<string, T>,
     observer: DiffObserver<T>,
@@ -52,7 +52,7 @@ export namespace DiffSequence {
   /**
    * Diff two ordered arrays of query results.
    */
-  function diffQueryOrderedChanges<T>(
+  export function diffQueryOrderedChanges<T>(
     oldResults: T[],
     newResults: T[],
     observer: DiffObserver<T>,
@@ -62,7 +62,7 @@ export namespace DiffSequence {
   /**
    * General helper for diff-ing two objects.
    */
-  function diffObjects<V>(
+  export function diffObjects<V>(
     left: Record<string, V>,
     right: Record<string, V>,
     callbacks: ObjectDiffCallbacks<V>
@@ -71,7 +71,7 @@ export namespace DiffSequence {
   /**
    * General helper for diff-ing two Maps.
    */
-  function diffMaps<K, V>(
+  export function diffMaps<K, V>(
     left: Map<K, V>,
     right: Map<K, V>,
     callbacks: MapDiffCallbacks<K, V>
@@ -81,7 +81,7 @@ export namespace DiffSequence {
    * Compute the changed fields between two documents.
    * @returns A fields object where keys with `undefined` values indicate removed fields
    */
-  function makeChangedFields<T extends Record<string, unknown>>(
+  export function makeChangedFields<T extends Record<string, unknown>>(
     newDoc: T,
     oldDoc: T
   ): Partial<T>;
@@ -90,7 +90,7 @@ export namespace DiffSequence {
    * Apply change fields to a document.
    * Fields with `undefined` values are deleted from the document.
    */
-  function applyChanges<T extends Record<string, unknown>>(
+  export function applyChanges<T extends Record<string, unknown>>(
     doc: T,
     changeFields: Partial<T>
   ): void;
