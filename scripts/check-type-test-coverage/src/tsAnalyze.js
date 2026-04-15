@@ -40,30 +40,41 @@ export function collectDeclarations(sourceFile, checker) {
     }
   };
 
-  for (const stmt of sourceFile.statements) {
-    if (ts.isExportDeclaration(stmt)) {
-      if (stmt.exportClause && ts.isNamedExports(stmt.exportClause)) {
-        for (const el of stmt.exportClause.elements) {
-          add(checker.getSymbolAtLocation(el.name), el.name.getText(sourceFile), "re-export", el);
-        }
-      }
-    } else if (ts.isExportAssignment(stmt)) {
-      add(checker.getSymbolAtLocation(stmt.expression), stmt.expression.getText(sourceFile), "default", stmt);
-    } else if ((ts.getCombinedModifierFlags(stmt) & ts.ModifierFlags.Export) !== 0) {
-      if (ts.isVariableStatement(stmt)) {
-        for (const decl of stmt.declarationList.declarations) {
-          if (ts.isIdentifier(decl.name)) {
-            add(checker.getSymbolAtLocation(decl.name), decl.name.getText(sourceFile), "const", stmt);
+  const processStatements = (statements) => {
+    for (const stmt of statements) {
+      if (ts.isExportDeclaration(stmt)) {
+        if (stmt.exportClause && ts.isNamedExports(stmt.exportClause)) {
+          for (const el of stmt.exportClause.elements) {
+            add(checker.getSymbolAtLocation(el.name), el.name.getText(sourceFile), "re-export", el);
           }
         }
-      } else {
-        const kind = NAMED_DECLARATION_KINDS[stmt.kind];
-        if (kind && stmt.name && ts.isIdentifier(stmt.name)) {
-          add(checker.getSymbolAtLocation(stmt.name), stmt.name.getText(sourceFile), kind, stmt);
+      } else if (ts.isExportAssignment(stmt)) {
+        add(checker.getSymbolAtLocation(stmt.expression), stmt.expression.getText(sourceFile), "default", stmt);
+      } else if ((ts.getCombinedModifierFlags(stmt) & ts.ModifierFlags.Export) !== 0) {
+        if (ts.isVariableStatement(stmt)) {
+          for (const decl of stmt.declarationList.declarations) {
+            if (ts.isIdentifier(decl.name)) {
+              add(checker.getSymbolAtLocation(decl.name), decl.name.getText(sourceFile), "const", stmt);
+            }
+          }
+        } else {
+          const kind = NAMED_DECLARATION_KINDS[stmt.kind];
+          if (kind && stmt.name && ts.isIdentifier(stmt.name)) {
+            add(checker.getSymbolAtLocation(stmt.name), stmt.name.getText(sourceFile), kind, stmt);
+          }
+          if (stmt.kind === ts.SyntaxKind.ModuleDeclaration && stmt.body) {
+            if (stmt.body.statements) {
+              processStatements(stmt.body.statements);
+            } else if (stmt.body.kind === ts.SyntaxKind.ModuleDeclaration) {
+              processStatements([stmt.body]);
+            }
+          }
         }
       }
     }
-  }
+  };
+
+  processStatements(sourceFile.statements);
 
   return out;
 }
@@ -120,8 +131,8 @@ export function collectAssertions(sourceFile, checker, declarationSymbols) {
       let calleeName = null;
       if (ts.isIdentifier(node.expression)) {
         calleeName = node.expression.text;
-      } else if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.expression)) {
-        calleeName = node.expression.expression.text;
+      } else if (ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.name)) {
+        calleeName = node.expression.name.text;
       }
 
       if (calleeName && RECOGNIZED_CALLEES.has(calleeName)) {
