@@ -209,6 +209,7 @@ When you deploy your Meteor server, you need a `MONGO_URL` that points to your M
 
 There are a variety of services out there:
 
+- [MongoDB hosted by Galaxy Cloud](https://galaxycloud.app/) - MongoDB hosting provided by Galaxy Cloud
 - [MongoDB Atlas](https://www.mongodb.com/cloud/atlas) - The official MongoDB cloud service
 - [DigitalOcean Managed Databases](https://www.digitalocean.com/products/managed-databases-mongodb)
 - [AWS DocumentDB](https://aws.amazon.com/documentdb/) (MongoDB compatible)
@@ -265,7 +266,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: 22.x
 
       - name: Install Meteor
         run: curl https://install.meteor.com/ | sh
