@@ -10,9 +10,11 @@ jobs:
         with:
           node-version: 22.x
       - run: npm ci
-      - name: Check TypeScript type coverage (80%)
+      - name: Type compilation 
+        run: npx tsc --noEmit
+      - name: Type coverage (80%)
         run: npm run ts-coverage:ci
-      - name: Check TypeScript type test coverage
+      - name: Type test coverage
         run: |
           cd scripts/check-type-test-coverage
           npm ci
