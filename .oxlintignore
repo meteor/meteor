@@ -28,3 +28,7 @@ packages/**/.npm/
 packages/*
 
 !packages/facts-base/
+!packages/facts-ui/
+!packages/non-core/bundle-visualizer/
+!packages/non-core/mongo-decimal/
+!packages/non-core/xmlbuilder/
