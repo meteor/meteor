@@ -1,4 +1,5 @@
 import isEmpty from "lodash.isempty";
+import { EJSON } from "meteor/ejson";
 import { ObserveHandle } from "./observe_handle";
 
 interface ObserveMultiplexerOptions {
@@ -166,10 +167,15 @@ export class ObserveMultiplexer {
   }
 
   _applyCallback(callbackName: string, args: any[]) {
+    // Update cache SYNCHRONOUSLY so it's immediately available for subsequent
+    // operations. This prevents race conditions where an update event arrives
+    // before the insert has been recorded in the cache.
+    this._cache.applyChange[callbackName].apply(null, args);
+
+    // Queue the callback notifications asynchronously
     this._queue.queueTask(async () => {
       if (!this._handles) return;
 
-      await this._cache.applyChange[callbackName].apply(null, args);
       if (
         !this._ready() &&
         callbackName !== "added" &&

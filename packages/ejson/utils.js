@@ -4,7 +4,29 @@ export const isObject = (fn) => typeof fn === "object";
 
 export const keysOf = (obj) => Object.keys(obj);
 
-export const lengthOf = (obj) => Object.keys(obj).length;
+export const lengthOf = (obj) => {
+  let count = 0;
+  for (const key in obj) {
+    if (hasOwn(obj, key)) count++;
+  }
+  return count;
+};
+
+/**
+ * Counts own properties of obj, but stops early once count exceeds limit.
+ * Useful for hot-path checks like `lengthOfWithLimit(obj, 1) === 1`
+ * without iterating all keys of large objects.
+ * @param {Object} obj
+ * @param {number} limit - stop counting beyond this value
+ * @returns {number} exact count if <= limit, otherwise limit + 1
+ */
+export const lengthOfWithLimit = (obj, limit) => {
+  let count = 0;
+  for (const key in obj) {
+    if (hasOwn(obj, key) && ++count > limit) return count;
+  }
+  return count;
+};
 
 export const hasOwn = (obj, prop) => Object.prototype.hasOwnProperty.call(obj, prop);
 

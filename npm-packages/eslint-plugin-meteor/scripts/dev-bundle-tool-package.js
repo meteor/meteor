@@ -10,7 +10,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "10.9.4",
+    npm: "11.10.1",
     pacote: "https://github.com/meteor/pacote/tarball/a81b0324686e85d22c7688c47629d4009000e8b8",
     "node-gyp": "9.4.0",
     "@mapbox/node-pre-gyp": "1.0.11",
@@ -39,7 +39,7 @@ var packageJson = {
     "source-map": "0.7.3",
     chalk: "4.1.2",
     sqlite3: "5.1.6",
-    "http-proxy": "1.18.1",
+    "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
     "moment": "2.29.1",
