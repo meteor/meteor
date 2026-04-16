@@ -36,6 +36,9 @@ packages/**/.npm
 # doc files should not be committed
 packages/**/*.docs.js
 
+# coverage
+coverage-ts/
+
 #cursor
 .cursorignore
 .cursorrules

@@ -1,0 +1,5 @@
+# This file lists commits that should be ignored by git blame.
+# Configure with: git config blame.ignoreRevsFile .git-blame-ignore-revs
+# auto-format and lint fixes 2026-03-27
+1bfad0bcbb9c495172d1475f1c6d54df8d34ceae
+
