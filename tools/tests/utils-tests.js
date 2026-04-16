@@ -132,7 +132,7 @@ selftest.define("parse url", async function () {
     protocol: "https"
   });
   await selftest.expectEqual(utils.parseUrl("[0000:0000:0000:0000:0000:0000:0000:0001]:3000"), {
-    hostname: "0000:0000:0000:0000:0000:0000:0000:0001",
+    hostname: "::1",
     port: "3000",
     protocol: undefined
   });

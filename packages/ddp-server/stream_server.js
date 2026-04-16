@@ -183,16 +183,13 @@ Object.assign(StreamServer.prototype, {
         // Store arguments for use within the closure below
         var args = arguments;
 
-        // TODO replace with url package
-        var url = Npm.require('url');
-
         // Rewrite /websocket and /websocket/ urls to /sockjs/websocket while
         // preserving query string.
-        var parsedUrl = url.parse(request.url);
+        var parsedUrl = new URL(request.url, 'http://localhost');
         if (parsedUrl.pathname === pathPrefix + '/websocket' ||
             parsedUrl.pathname === pathPrefix + '/websocket/') {
           parsedUrl.pathname = self.prefix + '/websocket';
-          request.url = url.format(parsedUrl);
+          request.url = parsedUrl.pathname + parsedUrl.search;
         }
         oldHttpServerListeners.forEach(function(oldListener) {
           oldListener.apply(httpServer, args);
