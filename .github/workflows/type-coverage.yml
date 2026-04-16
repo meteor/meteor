@@ -12,7 +12,7 @@ jobs:
       - run: npm ci
       - name: Type compilation 
         run: npx tsc --noEmit
-      - name: Type coverage (80%)
+      - name: Type coverage (99%)
         run: npm run ts-coverage:ci
       - name: Type test coverage
         run: |
