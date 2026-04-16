@@ -25,9 +25,12 @@ export default class Sorter {
   constructor(spec, collation) {
     this._sortSpecParts = [];
     this._sortFunction = null;
-    this._collation = collation
-      ? LocalCollection._createCollator(collation)
-      : null;
+    // Accepts either a pre-built Intl.Collator or a MongoDB collation spec.
+    this._collation = !collation
+      ? null
+      : collation instanceof Intl.Collator
+        ? collation
+        : LocalCollection._createCollator(collation);
 
     const addSpecPart = (path, ascending) => {
       if (!path) {

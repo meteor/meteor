@@ -9,7 +9,13 @@ export default class Cursor {
   constructor(collection, selector, options = {}) {
     this.collection = collection;
     this.sorter = null;
-    this.matcher = new Minimongo.Matcher(selector, undefined, options.collation);
+
+    // Create the collator once and share it with both Matcher and Sorter.
+    const collator = options.collation
+      ? LocalCollection._createCollator(options.collation)
+      : null;
+
+    this.matcher = new Minimongo.Matcher(selector, undefined, collator);
 
     if (LocalCollection._selectorIsIdPerhapsAsObject(selector) &&
         !options.collation) {
@@ -19,7 +25,7 @@ export default class Cursor {
       this._selectorId = undefined;
 
       if (this.matcher.hasGeoQuery() || options.sort) {
-        this.sorter = new Minimongo.Sorter(options.sort || [], options.collation);
+        this.sorter = new Minimongo.Sorter(options.sort || [], collator);
       }
     }
 

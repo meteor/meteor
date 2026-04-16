@@ -296,6 +296,54 @@ Tinytest.add('minimongo - collation - strength 1 ignores accents and case', test
   test.isTrue(matchBase({name: 'resume'}, {name: 'résumé'}));
 });
 
+Tinytest.add('minimongo - collation - Matcher and Sorter accept pre-built Intl.Collator', test => {
+  // Verify that passing an Intl.Collator instance directly works the same
+  // as passing a collation spec (this is the path used by Cursor).
+  const collator = LocalCollection._createCollator({locale: 'en', strength: 2});
+
+  // Matcher with pre-built collator
+  const matcher = new Minimongo.Matcher({name: 'alice'}, undefined, collator);
+  test.isTrue(matcher.documentMatches({name: 'Alice'}).result);
+  test.isTrue(matcher.documentMatches({name: 'ALICE'}).result);
+  test.isFalse(matcher.documentMatches({name: 'Bob'}).result);
+
+  // Sorter with pre-built collator
+  const sorter = new Minimongo.Sorter({name: 1}, collator);
+  const cmp = sorter.getComparator();
+  test.equal(cmp({name: 'alice'}, {name: 'Alice'}), 0);
+  test.isTrue(cmp({name: 'alice'}, {name: 'Bob'}) < 0);
+});
+
+Tinytest.add('minimongo - collation - _createCollator validates in development', test => {
+  // Missing locale
+  test.throws(() => {
+    LocalCollection._createCollator({strength: 2});
+  }, /collation\.locale must be a non-empty string/);
+
+  // Empty locale
+  test.throws(() => {
+    LocalCollection._createCollator({locale: ''});
+  }, /collation\.locale must be a non-empty string/);
+
+  // Non-object
+  test.throws(() => {
+    LocalCollection._createCollator(null);
+  }, /collation must be an object/);
+
+  test.throws(() => {
+    LocalCollection._createCollator('en');
+  }, /collation must be an object/);
+
+  // Invalid strength
+  test.throws(() => {
+    LocalCollection._createCollator({locale: 'en', strength: 0});
+  }, /collation\.strength must be an integer between 1 and 5/);
+
+  test.throws(() => {
+    LocalCollection._createCollator({locale: 'en', strength: 6});
+  }, /collation\.strength must be an integer between 1 and 5/);
+});
+
 Tinytest.add('minimongo - collation - _id matching with collation', test => {
   const collation = {locale: 'en', strength: 2};
   const c = new LocalCollection();

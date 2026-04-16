@@ -936,6 +936,10 @@ MongoConnection.prototype._observeChanges = async function (
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
       var matcher, sorter;
+      // Create the collator once and share it across Matcher and Sorter.
+      const collator = cursorDescription.options.collation
+        ? LocalCollection._createCollator(cursorDescription.options.collation)
+        : null;
       const configuredOrder = _getConfiguredReactivityOrder();
 
       const driverChecks = {
@@ -1007,7 +1011,7 @@ MongoConnection.prototype._observeChanges = async function (
             localMatcher = new Minimongo.Matcher(
               cursorDescription.selector,
               undefined,
-              cursorDescription.options.collation
+              collator
             );
           } catch (e) {
             if (Meteor.isClient && e instanceof MiniMongoQueryError) {
@@ -1055,7 +1059,7 @@ MongoConnection.prototype._observeChanges = async function (
               localMatcher = new Minimongo.Matcher(
                 cursorDescription.selector,
                 undefined,
-                cursorDescription.options.collation
+                collator
               );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
@@ -1075,7 +1079,7 @@ MongoConnection.prototype._observeChanges = async function (
             try {
               localSorter = new Minimongo.Sorter(
                 cursorDescription.options.sort,
-                cursorDescription.options.collation
+                collator
               );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
