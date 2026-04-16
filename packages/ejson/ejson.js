@@ -99,7 +99,7 @@ const builtinConverters = [
   {
     // Date
     matchJSONValue(obj) {
-      return hasOwn(obj, '$date') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$date") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       return obj instanceof Date;
@@ -114,9 +114,7 @@ const builtinConverters = [
   {
     // RegExp
     matchJSONValue(obj) {
-      return hasOwn(obj, '$regexp')
-        && hasOwn(obj, '$flags')
-        && lengthOfWithLimit(obj, 2) === 2;
+      return hasOwn(obj, "$regexp") && hasOwn(obj, "$flags") && lengthOfWithLimit(obj, 2) === 2;
     },
     matchObject(obj) {
       return obj instanceof RegExp;
@@ -143,7 +141,7 @@ const builtinConverters = [
     // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
     matchJSONValue(obj) {
-      return hasOwn(obj, '$InfNaN') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$InfNaN") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject: isInfOrNaN,
     toJSONValue(obj) {
@@ -164,7 +162,7 @@ const builtinConverters = [
   {
     // Binary
     matchJSONValue(obj) {
-      return hasOwn(obj, '$binary') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$binary") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       return (
@@ -182,7 +180,7 @@ const builtinConverters = [
   {
     // Escaping one level
     matchJSONValue(obj) {
-      return hasOwn(obj, '$escape') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$escape") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       let match = false;
@@ -212,8 +210,7 @@ const builtinConverters = [
   {
     // Custom
     matchJSONValue(obj) {
-      return hasOwn(obj, '$type')
-        && hasOwn(obj, '$value') && lengthOfWithLimit(obj, 2) === 2;
+      return hasOwn(obj, "$type") && hasOwn(obj, "$value") && lengthOfWithLimit(obj, 2) === 2;
     },
     matchObject(obj) {
       return EJSON._isCustomType(obj);
@@ -294,12 +291,15 @@ EJSON._adjustTypesToJSONValue = adjustTypesToJSONValue;
 // Copy-on-write recursive EJSON→JSON converter.
 // Only allocates new objects/arrays along paths that actually change,
 // returning the original reference when nothing needs conversion.
-const toJSONValueDeep = value => {
+const toJSONValueDeep = (value) => {
   // Short-circuit for primitives that toJSONValueHelper can never match.
-  if (value === null || value === undefined
-    || typeof value === 'boolean'
-    || typeof value === 'string'
-    || (typeof value === 'number' && !isInfOrNaN(value))) {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "boolean" ||
+    typeof value === "string" ||
+    (typeof value === "number" && !isInfOrNaN(value))
+  ) {
     return value;
   }
 
@@ -355,7 +355,7 @@ const toJSONValueDeep = value => {
  * @locus Anywhere
  * @param {EJSON} val A value to serialize to plain JSON.
  */
-EJSON.toJSONValue = item => toJSONValueDeep(item);
+EJSON.toJSONValue = (item) => toJSONValueDeep(item);
 
 // Either return the argument changed to have the non-json
 // rep of itself (the Object version) or the argument itself.
@@ -414,8 +414,8 @@ EJSON._adjustTypesFromJSONValue = adjustTypesFromJSONValue;
 
 // Copy-on-write recursive JSON→EJSON converter.
 // Same lazy-allocation strategy as toJSONValueDeep.
-const fromJSONValueDeep = value => {
-  if (value === null || typeof value !== 'object') {
+const fromJSONValueDeep = (value) => {
+  if (value === null || typeof value !== "object") {
     return value;
   }
 
@@ -468,7 +468,7 @@ const fromJSONValueDeep = value => {
  * @locus Anywhere
  * @param {JSONCompatible} val A value to deserialize into EJSON.
  */
-EJSON.fromJSONValue = item => fromJSONValueDeep(item);
+EJSON.fromJSONValue = (item) => fromJSONValueDeep(item);
 
 /**
  * @summary Serialize a value to a string. For EJSON values, the serialization
@@ -549,7 +549,7 @@ EJSON.equals = (a, b, options) => {
 
   // Same-type primitives that aren't === can only be equal if both are NaN.
   // This skips the NaN check entirely for strings, booleans, etc.
-  if (typeof a !== 'object') {
+  if (typeof a !== "object") {
     return Number.isNaN(a) && Number.isNaN(b);
   }
 

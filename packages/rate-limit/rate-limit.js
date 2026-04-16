@@ -60,7 +60,7 @@ class Rule {
       if (matcher !== null) {
         if (!hasOwn.call(input, key)) {
           return false;
-        } else if (typeof matcher === 'function') {
+        } else if (typeof matcher === "function") {
           if (!(await matcher(input[key]))) {
             return false;
           }
@@ -68,7 +68,7 @@ class Rule {
           return false;
         }
       }
-    };
+    }
     return true;
   }
 
@@ -183,8 +183,7 @@ class RateLimiter {
     if (ruleResult.timeToNextReset < 0) {
       // Reset all the counters since the rule has reset
       rule.resetCounter();
-      ruleResult.timeSinceLastReset = new Date().getTime() -
-        rule._lastResetTime;
+      ruleResult.timeSinceLastReset = new Date().getTime() - rule._lastResetTime;
       ruleResult.timeToNextReset = rule.options.intervalTime;
       numInvocations = 0;
     }
@@ -204,11 +203,12 @@ class RateLimiter {
     } else {
       // If this is an allowed attempt and we haven't failed on any of the
       // other rules that match, update the reply field.
-      if (rule.options.numRequestsAllowed - numInvocations <
-        reply.numInvocationsLeft && reply.allowed) {
+      if (
+        rule.options.numRequestsAllowed - numInvocations < reply.numInvocationsLeft &&
+        reply.allowed
+      ) {
         reply.timeToReset = ruleResult.timeToNextReset;
-        reply.numInvocationsLeft = rule.options.numRequestsAllowed -
-          numInvocations;
+        reply.numInvocationsLeft = rule.options.numRequestsAllowed - numInvocations;
       }
       reply.ruleId = rule.id;
       rule._executeCallback(reply, input);
@@ -266,11 +266,11 @@ class RateLimiter {
   }
 
   /**
-  * Increment counters in every rule that match to this input
-  * @param  {array} rules Array of rules to increment
-  * @param  {object} input Dictionary object containing attributes that may
-  * match to rules
-  */
+   * Increment counters in every rule that match to this input
+   * @param  {array} rules Array of rules to increment
+   * @param  {object} input Dictionary object containing attributes that may
+   * match to rules
+   */
   incrementRules(rules, input) {
     const _incrementForInput = (rule) => this._incrementRule(rule, input);
     rules.forEach(_incrementForInput);
