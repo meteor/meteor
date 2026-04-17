@@ -116,6 +116,19 @@ function resolveCandidateSymbols(checker, typeArg, valueArg) {
     if (ts.isIdentifier(valueArg)) {
       const s = checker.getSymbolAtLocation(valueArg);
       if (s) symbols.push(s);
+    } else if (ts.isPropertyAccessExpression(valueArg) && ts.isIdentifier(valueArg.name)) {
+      // e.g. `expectTypeOf(Ns.member)` — credit both the member and its container.
+      const memberSym = checker.getSymbolAtLocation(valueArg.name);
+      if (memberSym) symbols.push(memberSym);
+      let root = valueArg.expression;
+      while (root && !ts.isIdentifier(root)) {
+        if (ts.isPropertyAccessExpression(root)) root = root.expression;
+        else { root = null; break; }
+      }
+      if (root) {
+        const rootSym = checker.getSymbolAtLocation(root);
+        if (rootSym) symbols.push(rootSym);
+      }
     }
   }
 

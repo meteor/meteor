@@ -37,8 +37,9 @@
     "install:e2e": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
     "test:e2e": "cd tools/modern-tests && npm test -- ",
     "checkout:pr": "node scripts/checkout-pr.js",
-    "ts-coverage:ci": "type-coverage --at-least 99",
-    "ts-coverage:table": "node -e \"require('typescript-coverage-report/dist/lib/getCoverage').default().then(d=>{process.stdout.write(require('typescript-coverage-report/dist/lib/reporters/text').generate(d,80)+'\\n');process.exit(d.percentage>=80?0:1)})\""
+    "test:types": "npx tsc --noEmit",
+    "test:coverage": "npm run test:types && type-coverage --at-least 99",
+    "test:coverage:table": "npm run test:types && node -e \"require('typescript-coverage-report/dist/lib/getCoverage').default().then(d=>{process.stdout.write(require('typescript-coverage-report/dist/lib/reporters/text').generate(d,80)+'\\n');process.exit(d.percentage>=80?0:1)})\""
   },
   "jshintConfig": {
     "esversion": 11
