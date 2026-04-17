@@ -444,13 +444,16 @@ export class PackageAPI {
     this._typesEntry = typesEntry;
     this._typesModules = (options && options.modules) || null;
 
-    // Register the .d.ts files as server assets so they are included in the
-    // isopack and available when the package is installed from Atmosphere.
+    // Register the .d.ts files as assets in both client and server so they
+    // are included in the isopack regardless of whether the package is
+    // client-only, server-only, or universal.  The types generator reads all
+    // unibuilds and deduplicates by path, so having the same .d.ts in both
+    // arches is harmless.
     const filesToAdd = [typesEntry];
     if (this._typesModules) {
       filesToAdd.push(...Object.values(this._typesModules));
     }
-    this._addFiles('assets', filesToAdd, ['server']);
+    this._addFiles('assets', filesToAdd, ['server', 'client']);
   }
 
   /**
