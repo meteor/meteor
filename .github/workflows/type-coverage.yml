@@ -11,11 +11,12 @@ jobs:
           node-version: 22.x
       - run: npm ci
       - name: Type compilation 
-        run: npx tsc --noEmit
+        run: npm run types:compile
       - name: Type coverage (99%)
-        run: npm run ts-coverage:ci
+        run: npm run types:coverage
       - name: Type test coverage
         run: |
+          # replace by a npm pkg
           cd scripts/check-type-test-coverage
           npm ci
           node index.js ../../packages
