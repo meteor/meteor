@@ -3,8 +3,53 @@
  */
 
 import fs from 'fs-extra';
+import http from 'http';
 import path from 'path';
 import { wait } from "./helpers";
+
+/**
+ * Poll the Rspack dev-server bundle through the Meteor proxy until it returns
+ * 200, or we run out of attempts. In production mode this path 404s, which we
+ * treat as "not applicable" and return immediately. Any other outcome is
+ * logged so CI can see whether the proxy is timing out (504), refusing
+ * connections, or something else, without waiting 60s for Playwright to time
+ * out on the h1 selector.
+ */
+async function waitForRspackBundle(port, { attempts = 10, intervalMs = 500 } = {}) {
+  const url = `http://localhost:${port}/__rspack__/client-rspack.js`;
+  const probe = () =>
+    new Promise((resolve) => {
+      const req = http.get(url, (res) => {
+        res.resume();
+        resolve({ status: res.statusCode });
+      });
+      req.on('error', (err) => resolve({ error: err.code || err.message }));
+      req.setTimeout(5000, () => {
+        req.destroy(new Error('probe-timeout'));
+      });
+    });
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const result = await probe();
+    if (result.status === 200) {
+      if (attempt > 1) {
+        console.log(`✅ Rspack bundle ready after ${attempt} probe(s)`);
+      }
+      return;
+    }
+    if (result.status === 404) {
+      // Production/no-rspack app: nothing to gate on.
+      return;
+    }
+    console.log(
+      `⏳ Rspack bundle not ready (attempt ${attempt}/${attempts}): ${
+        result.status ? `status=${result.status}` : `error=${result.error}`
+      }`
+    );
+    await new Promise((r) => setTimeout(r, intervalMs));
+  }
+  console.log(`⚠️  Rspack bundle probe exhausted; proceeding anyway so Playwright can report its own diagnostics`);
+}
 
 /**
  * Helper function to assert that a Meteor app is running correctly
@@ -30,6 +75,11 @@ export async function assertMeteorApp(port, options = {}) {
       failedResponses.push(`${response.status()} ${response.url()}`);
     }
   });
+
+  // Gate on the Rspack dev bundle actually being reachable through Meteor's
+  // proxy before we load the page. Cheap in production (one 404) and avoids
+  // the 60s Playwright timeout when the proxy is 504ing.
+  await waitForRspackBundle(port);
 
   // Navigate to the app
   await page.goto(`http://localhost:${port}`);
