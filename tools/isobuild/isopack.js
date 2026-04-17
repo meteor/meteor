@@ -60,6 +60,12 @@ var Isopack = function () {
   self.testOnly = false;
   self.devOnly = false;
 
+  // TypeScript type declarations entry point (set via api.types() or package-types.json).
+  self.typesEntry = null;
+
+  // Optional sub-path module type declarations (set via api.types() modules option).
+  self.typesModules = null;
+
   // Unibuilds, an array of class Unibuild.
   self.unibuilds = [];
 
@@ -271,6 +277,8 @@ Object.assign(Isopack.prototype, {
     self.prodOnly = options.prodOnly;
     self.testOnly = options.testOnly;
     self.devOnly = options.devOnly;
+    self.typesEntry = options.typesEntry || null;
+    self.typesModules = options.typesModules || null;
     self.pluginCacheDir = options.pluginCacheDir || null;
     self.isobuildFeatures = options.isobuildFeatures;
   },
@@ -921,6 +929,8 @@ Object.assign(Isopack.prototype, {
       self.prodOnly = !!mainJson.prodOnly;
       self.testOnly = !!mainJson.testOnly;
       self.devOnly = !!mainJson.devOnly;
+      self.typesEntry = mainJson.typesEntry || null;
+      self.typesModules = mainJson.typesModules || null;
     }
     for (const pluginMeta of mainJson.plugins) {
       rejectBadPath(pluginMeta.path);
@@ -1074,6 +1084,12 @@ Object.assign(Isopack.prototype, {
       }
       if (self.devOnly) {
         mainJson.devOnly = true;
+      }
+      if (self.typesEntry) {
+        mainJson.typesEntry = self.typesEntry;
+      }
+      if (self.typesModules) {
+        mainJson.typesModules = self.typesModules;
       }
       if (! _.isEmpty(self.cordovaDependencies)) {
         mainJson.cordovaDependencies = self.cordovaDependencies;

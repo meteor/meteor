@@ -425,6 +425,35 @@ export class PackageAPI {
   }
 
   /**
+   * Declare the TypeScript type declaration entry point for this package.
+   *
+   * @param {String} typesEntry  Path to the main .d.ts file (relative to the
+   *   package directory), e.g. `'my-package.d.ts'`.
+   * @param {Object} [options]
+   * @param {Object} [options.modules]  A mapping of sub-path names to .d.ts
+   *   file paths, enabling sub-path imports such as
+   *   `import { X } from 'meteor/pkg/sub-path'`.
+   *   Example: `{ suspense: 'suspense.d.ts' }`.
+   */
+  types(typesEntry, options = {}) {
+    if (this._typesEntry) {
+      buildmessage.error('api.types() may only be called once per package.',
+        { useMyCaller: true });
+      return;
+    }
+    this._typesEntry = typesEntry;
+    this._typesModules = (options && options.modules) || null;
+
+    // Register the .d.ts files as server assets so they are included in the
+    // isopack and available when the package is installed from Atmosphere.
+    const filesToAdd = [typesEntry];
+    if (this._typesModules) {
+      filesToAdd.push(...Object.values(this._typesModules));
+    }
+    this._addFiles('assets', filesToAdd, ['server']);
+  }
+
+  /**
    * Internal method used by addFiles and addAssets.
    */
   _addFiles(type, paths, arch, fileOptions) {

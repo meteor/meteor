@@ -1,4 +1,5 @@
 import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config";
+import { generateTypes } from './isobuild/types-generator.js';
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -137,7 +138,8 @@ var STAGE = {
   INITIALIZE_CATALOG: '_resolveConstraints',
   RESOLVE_CONSTRAINTS: '_downloadMissingPackages',
   DOWNLOAD_MISSING_PACKAGES: '_buildLocalPackages',
-  BUILD_LOCAL_PACKAGES: '_saveChangedMetadata',
+  BUILD_LOCAL_PACKAGES: '_generateTypes',
+  GENERATE_TYPES: '_saveChangedMetadata',
   SAVE_CHANGED_METADATA: 'DONE'
 };
 
@@ -1028,6 +1030,38 @@ Object.assign(ProjectContext.prototype, {
       return await self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
+  }),
+
+  _generateTypes: Profile('_generateTypes', async function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    // Generate types for any project that has a tsconfig.json OR a
+    // jsconfig.json.  JavaScript projects with a jsconfig.json get the
+    // same Meteor-import IntelliSense as TypeScript projects.
+    // Each check is a single stat() call, so apps without either file
+    // have zero overhead.
+    const hasTsConfig = files.exists(files.pathJoin(self.projectDir, 'tsconfig.json'));
+    const hasJsConfig = files.exists(files.pathJoin(self.projectDir, 'jsconfig.json'));
+
+    if ((hasTsConfig || hasJsConfig) && self.isopackCache && self.packageMap) {
+      try {
+        await generateTypes({
+          isopackCache: self.isopackCache,
+          packageMap: self.packageMap,
+          projectLocalDir: self.projectLocalDir,
+        });
+      } catch (err) {
+        // Type generation is best-effort; a failure here should never break
+        // a build.  Log the error but continue.
+        Console.warn(
+          '[types] Failed to generate package type declarations: ' +
+          ((err && err.message) || String(err))
+        );
+      }
+    }
+
+    self._completedStage = STAGE.GENERATE_TYPES;
   }),
 
   _saveChangedMetadata: Profile('_saveChangedMetadata', async function () {
