@@ -26,10 +26,13 @@
     "paths": {
       /* Support absolute /imports/* with a leading '/' */
       "/*": ["*"],
-      /* Pull in type declarations for Meteor packages from either zodern:types or @types/meteor packages */
+      /* Pull in type declarations for Meteor packages.
+         Meteor's built-in type generator writes .meteor/local/types/packages.d.ts
+         automatically on every build. @types/meteor is kept as a fallback for
+         packages whose types are not yet bundled. */
       "meteor/*": [
-        "node_modules/@types/meteor/*",
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/local/types/packages.d.ts",
+        "node_modules/@types/meteor/*"
       ]
     },
     "moduleResolution": "node",
@@ -40,7 +43,8 @@
     "skipLibCheck": true
   },
   "exclude": [
-    "./.meteor/**",
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
     "./packages/**",
     "./_build/**",
     "./public/build-chunks/**",

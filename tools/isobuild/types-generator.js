@@ -1,0 +1,261 @@
+/**
+ * types-generator.js
+ *
+ * Generates .meteor/local/types/packages.d.ts so that TypeScript apps can
+ * resolve `import { X } from 'meteor/package-name'` and sub-path imports like
+ * `import { Y } from 'meteor/package-name/sub-path'`.
+ *
+ * Priority order for resolving a package's type entry:
+ *   1. isopack.typesEntry  (set via api.types() in package.js)
+ *   2. package-types.json  resource in the isopack (legacy / backward-compat)
+ *   3. A single .d.ts resource in the isopack
+ */
+
+"use strict";
+
+import * as files from "../fs/files";
+
+const TYPES_DIR = "types";
+const PACKAGES_SUBDIR = "packages";
+const PACKAGES_DTS = "packages.d.ts";
+
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
+/**
+ * Generate type declarations for all packages in the app and write them to
+ * .meteor/local/types/.
+ *
+ * @param {Object} options
+ * @param {Object} options.isopackCache  - The IsopackCache (fully built)
+ * @param {Object} options.packageMap    - The PackageMap
+ * @param {string} options.projectLocalDir - e.g. /app/.meteor/local
+ */
+export async function generateTypes({
+  isopackCache,
+  packageMap,
+  projectLocalDir,
+}) {
+  const typesDir = files.pathJoin(projectLocalDir, TYPES_DIR);
+  const packagesTypesDir = files.pathJoin(typesDir, PACKAGES_SUBDIR);
+
+  files.mkdir_p(packagesTypesDir);
+
+  // Collect entries: { name, normalizedName, dtsPath (relative to typesDir) }
+  const entries = [];
+
+  await packageMap.eachPackage(async (name) => {
+    let isopack;
+    try {
+      isopack = isopackCache.getIsopack(name);
+    } catch (_) {
+      // Package not yet built / not available – skip silently
+      return;
+    }
+
+    const info = findTypesInfo(isopack);
+    if (!info) return;
+
+    const normalizedName = normalizePackageName(name);
+
+    // Write main .d.ts
+    const mainFileName = `${normalizedName}.d.ts`;
+    const mainAbsPath = files.pathJoin(packagesTypesDir, mainFileName);
+    if (info.data) {
+      writeIfChanged(mainAbsPath, info.data);
+    } else {
+      // No content found – skip this package
+      return;
+    }
+
+    const entry = {
+      name,
+      normalizedName,
+      mainRelPath: `${PACKAGES_SUBDIR}/${mainFileName}`,
+      subModules: [],
+    };
+
+    // Write sub-path module .d.ts files (issue #10 fix)
+    if (info.modules) {
+      for (const [moduleName, moduleData] of Object.entries(info.modules)) {
+        if (!moduleData) continue;
+        const moduleFileName = `${normalizedName}__${normalizePackageName(
+          moduleName
+        )}.d.ts`;
+        const moduleAbsPath = files.pathJoin(packagesTypesDir, moduleFileName);
+        writeIfChanged(moduleAbsPath, moduleData);
+        entry.subModules.push({
+          name: moduleName,
+          relPath: `${PACKAGES_SUBDIR}/${moduleFileName}`,
+        });
+      }
+    }
+
+    entries.push(entry);
+  });
+
+  const declaration = generatePackagesDeclaration(entries);
+  writeIfChanged(
+    files.pathJoin(typesDir, PACKAGES_DTS),
+    Buffer.from(declaration, "utf8")
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Internal helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Find type information for an isopack.
+ * Returns { data: Buffer, modules: Map<string, Buffer|null>|null } or null.
+ */
+function findTypesInfo(isopack) {
+  // Priority 1: api.types() was called – typesEntry is set on the isopack
+  if (isopack.typesEntry) {
+    const data = findResourceData(isopack, isopack.typesEntry);
+    if (!data) return null;
+
+    let modules = null;
+    if (isopack.typesModules) {
+      modules = {};
+      for (const [key, filePath] of Object.entries(isopack.typesModules)) {
+        modules[key] = findResourceData(isopack, filePath);
+      }
+    }
+    return { data, modules };
+  }
+
+  // Priority 2: package-types.json resource (backward compatibility)
+  const packageTypesResource = findResourceByPath(
+    isopack,
+    "package-types.json"
+  );
+  if (packageTypesResource) {
+    let config;
+    try {
+      config = JSON.parse(packageTypesResource.data.toString("utf8"));
+    } catch (_) {
+      config = null;
+    }
+    if (config && config.typesEntry) {
+      const data = findResourceData(isopack, config.typesEntry);
+      if (data) {
+        let modules = null;
+        if (config.modules) {
+          modules = {};
+          for (const [key, filePath] of Object.entries(config.modules)) {
+            modules[key] = findResourceData(isopack, filePath);
+          }
+        }
+        return { data, modules };
+      }
+    }
+  }
+
+  // Priority 3: single .d.ts resource in the isopack
+  const dtsResources = findAllDtsResources(isopack);
+  if (dtsResources.length === 1) {
+    return { data: dtsResources[0].data, modules: null };
+  }
+
+  return null;
+}
+
+/**
+ * Find a resource by its `path` field across all unibuilds.
+ */
+function findResourceByPath(isopack, resourcePath) {
+  for (const unibuild of isopack.unibuilds) {
+    for (const resource of unibuild.resources) {
+      if (resource.path === resourcePath) {
+        return resource;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Find the data Buffer for a resource with the given path.
+ */
+function findResourceData(isopack, resourcePath) {
+  const resource = findResourceByPath(isopack, resourcePath);
+  return resource && resource.data instanceof Buffer ? resource.data : null;
+}
+
+/**
+ * Find all .d.ts resources in the isopack (deduped by path).
+ */
+function findAllDtsResources(isopack) {
+  const seen = new Set();
+  const results = [];
+  for (const unibuild of isopack.unibuilds) {
+    for (const resource of unibuild.resources) {
+      if (
+        resource.path &&
+        resource.path.endsWith(".d.ts") &&
+        resource.data instanceof Buffer &&
+        !seen.has(resource.path)
+      ) {
+        seen.add(resource.path);
+        results.push(resource);
+      }
+    }
+  }
+  return results;
+}
+
+/**
+ * Replace colons with underscores and slashes with double-underscores
+ * so the name is safe as a filename on all platforms (including Windows,
+ * where colons are forbidden in file names).
+ *
+ * Examples:
+ *   'random'              → 'random'
+ *   'accounts-base'       → 'accounts-base'
+ *   'author:package'      → 'author_package'
+ */
+function normalizePackageName(name) {
+  return name.replace(/:/g, "_").replace(/\//g, "__");
+}
+
+/**
+ * Generate the packages.d.ts content that maps `meteor/package-name` module
+ * specifiers to the individual per-package .d.ts files.
+ */
+function generatePackagesDeclaration(entries) {
+  let content =
+    "// This file is auto-generated by Meteor. Do not edit manually.\n";
+  content += "// Re-run `meteor run` or `meteor build` to regenerate.\n\n";
+
+  for (const entry of entries) {
+    // Main module declaration
+    content += `declare module 'meteor/${entry.name}' {\n`;
+    content += `  export * from './${entry.mainRelPath}';\n`;
+    content += "}\n\n";
+
+    // Sub-path module declarations (fixes zodern/meteor-types#10)
+    for (const sub of entry.subModules) {
+      content += `declare module 'meteor/${entry.name}/${sub.name}' {\n`;
+      content += `  export * from './${sub.relPath}';\n`;
+      content += "}\n\n";
+    }
+  }
+
+  return content;
+}
+
+/**
+ * Write data to a file only if the contents have changed, to avoid
+ * unnecessary TypeScript invalidation.
+ */
+function writeIfChanged(absPath, data) {
+  try {
+    const existing = files.readFile(absPath);
+    if (existing.equals(data)) return;
+  } catch (_) {
+    // File doesn't exist yet – fall through to write
+  }
+  files.writeFile(absPath, data);
+}

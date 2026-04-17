@@ -368,6 +368,14 @@ var PackageSource = function () {
   // part of the `meteor test` command.
   self.testOnly = false;
 
+  // TypeScript type declarations entry point declared via api.types().
+  // Null if the package does not declare types.
+  self.typesEntry = null;
+
+  // Optional sub-path module type declarations declared via api.types().
+  // An object mapping sub-path names to .d.ts file paths, or null.
+  self.typesModules = null;
+
   // If this is set, we will take the currently running git checkout and bundle
   // the meteor tool from it inside this package as a tool. We will include
   // built copies of all known isopackets.
@@ -773,6 +781,10 @@ Object.assign(PackageSource.prototype, {
     // Save information about npm dependencies. To keep metadata
     // loading inexpensive, we won't actually fetch them until build
     // time.
+
+    // Capture type declaration info set via api.types().
+    self.typesEntry = api._typesEntry || null;
+    self.typesModules = api._typesModules || null;
 
     // We used to put the cache directly in .npm, but in linker-land,
     // the package's own NPM dependencies go in .npm/package and build
