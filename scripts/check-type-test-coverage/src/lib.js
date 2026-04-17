@@ -78,16 +78,27 @@ function evaluatePair(program, checker, dtsPath, testPath) {
   return computeCoverage(declarations, covered, unrecognized);
 }
 
+// Coverage for a .d.ts without a matching test file: every declaration is
+// uncovered, so the percent is 0 (or 100 if the file declares nothing).
+function evaluateUntested(program, checker, dtsPath) {
+  const dtsSource = program.getSourceFile(dtsPath);
+  /* node:coverage ignore next */
+  if (!dtsSource) return null;
+  const declarations = collectDeclarations(dtsSource, checker);
+  return computeCoverage(declarations, new Set(), []);
+}
+
 // Walk `root`, discover pairs, then evaluate them all in a single Program.
 export function evaluateTypes(root) {
-  const { pairs, orphans } = discoverPairs(root);
-  if (pairs.length === 0) {
+  const { pairs, orphans, untested } = discoverPairs(root);
+  if (pairs.length === 0 && untested.length === 0) {
     return { pairs: [], orphans };
   }
 
   // Flatten every pair's paths into the Program root set — this is what makes
-  // symbol identity work across pairs.
-  const rootNames = pairs.flatMap((p) => [p.dts, p.test]);
+  // symbol identity work across pairs. Untested .d.ts files are included so
+  // their declarations are parsed the same way.
+  const rootNames = [...pairs.flatMap((p) => [p.dts, p.test]), ...untested];
   const program = ts.createProgram(rootNames, COMPILER_OPTIONS);
   const checker = program.getTypeChecker();
 
@@ -95,6 +106,10 @@ export function evaluateTypes(root) {
   for (const { dts, test } of pairs) {
     const result = evaluatePair(program, checker, dts, test);
     if (result) evaluated.push({ dts, test, result });
+  }
+  for (const dts of untested) {
+    const result = evaluateUntested(program, checker, dts);
+    if (result) evaluated.push({ dts, test: null, result });
   }
 
   return { pairs: evaluated, orphans };

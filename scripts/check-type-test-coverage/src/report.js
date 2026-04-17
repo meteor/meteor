@@ -21,24 +21,30 @@ export function aggregateTotals(pairs) {
 }
 
 // One line per pair: "  2/5  40%  packages/foo/foo.d.ts — missing: A, B, C"
-// Padding keeps the columns aligned even when counts vary.
-function renderPairRow({ dts, result }) {
+// Padding keeps the columns aligned even when counts vary. When `test` is
+// null, the row belongs to an untested .d.ts and we flag it explicitly so
+// readers don't mistake a 0% row for a broken test file.
+function renderPairRow({ dts, test, result }) {
   const missing = result.uncovered.length
     ? styleText("dim", ` \u2014 missing: ${result.uncovered.map((d) => d.name).join(", ")}`)
     : "";
   const count = colorize(result.percent, `${result.covered.length}/${result.total}`.padStart(5));
   const pct = colorize(result.percent, `${String(result.percent).padStart(3)}%`);
-  return `  ${count} ${pct}  ${relOrAbs(dts)}${missing}`;
+  const marker = test === null ? styleText("dim", " (no test file)") : "";
+  return `  ${count} ${pct}  ${relOrAbs(dts)}${marker}${missing}`;
 }
 
 export function renderAggregateReport({ cwd, pairs, orphans, verbose }) {
   const { totalDecls, totalCovered, percent } = aggregateTotals(pairs);
+  const untestedCount = pairs.filter((p) => p.test === null).length;
+  const testedCount = pairs.length - untestedCount;
 
   const lines = [
     "",
     styleText("bold", "Type-test coverage (directory mode)"),
     `  ${styleText("dim", "root:")} ${relOrAbs(cwd)}`,
-    `  ${styleText("dim", "pairs:")} ${pairs.length}`,
+    `  ${styleText("dim", "pairs:")} ${testedCount}`,
+    `  ${styleText("dim", "untested:")} ${untestedCount}`,
     "",
   ];
 

@@ -68,4 +68,16 @@ describe("evaluateTypes", () => {
     assert.equal(pair.result.percent, 100);
     assert.equal(pair.result.covered[0].name, "Src");
   });
+
+  test(".d.ts files without a sibling test count as 0% covered", () => {
+    const { pairs, orphans } = evaluateTypes(path.join(FIXTURES, "untested"));
+    assert.deepEqual(orphans, []);
+    assert.equal(pairs.length, 1);
+    const [{ test: testPath, result }] = pairs;
+    assert.equal(testPath, null);
+    assert.equal(result.total, 2);
+    assert.equal(result.covered.length, 0);
+    assert.equal(result.uncovered.length, 2);
+    assert.equal(result.percent, 0);
+  });
 });

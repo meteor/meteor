@@ -10,6 +10,10 @@ function pair({ dts = "a.d.ts", test: testPath = "a.test-d.ts", total, covered, 
   return { dts, test: testPath, result: { covered: coveredList, uncovered: uncoveredList, unrecognized, percent, total } };
 }
 
+function untestedPair({ dts = "u.d.ts", total }) {
+  return pair({ dts, test: null, total, covered: 0 });
+}
+
 describe("report", () => {
   describe("aggregateTotals", () => {
     test("empty pairs -> 100%", () => {
@@ -37,11 +41,33 @@ describe("report", () => {
       });
       assert.match(text, /Type-test coverage/);
       assert.match(text, /foo\.d\.ts/);
+      assert.match(text, /pairs:.*1/);
+      assert.match(text, /untested:.*0/);
       assert.match(text, /missing: U0/);
       assert.match(text, /Total: 1\/2 declarations covered \(50%\)/);
       assert.equal(percent, 50);
       assert.equal(totalCovered, 1);
       assert.equal(totalDecls, 2);
+    });
+
+    test("renders untested .d.ts rows with (no test file) marker and 0% total impact", () => {
+      const { text, percent, totalCovered, totalDecls } = renderAggregateReport({
+        cwd: process.cwd(),
+        pairs: [
+          pair({ dts: "ok.d.ts", total: 2, covered: 2 }),
+          untestedPair({ dts: "naked.d.ts", total: 3 }),
+        ],
+        orphans: [],
+        verbose: false,
+      });
+      assert.match(text, /naked\.d\.ts/);
+      assert.match(text, /no test file/);
+      assert.match(text, /pairs:.*1/);
+      assert.match(text, /untested:.*1/);
+      assert.match(text, /Total: 2\/5 declarations covered \(40%\)/);
+      assert.equal(percent, 40);
+      assert.equal(totalCovered, 2);
+      assert.equal(totalDecls, 5);
     });
 
     test("omits missing list when all covered", () => {

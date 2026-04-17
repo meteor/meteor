@@ -70,8 +70,10 @@ check-type-test-coverage ./packages --json > coverage.json
 
 ## How it works
 
-1. Walks `<dir>` and finds every `*.test-d.ts`.
-2. Pairs each test file with its sibling `*.d.ts` (files without a sibling are reported as **orphans**).
+1. Walks `<dir>` and finds every `*.d.ts` and `*.test-d.ts`.
+2. Pairs each test file with its sibling `*.d.ts`:
+   - Tests without a sibling declaration are reported as **orphans**.
+   - Declaration files without a sibling test are reported as **untested** and contribute 0% to the overall coverage (all their exported declarations count as uncovered).
 3. Parses both files via the TypeScript compiler API to:
    - Collect every exported declaration from the `.d.ts`.
    - Collect every type-level assertion from the `.test-d.ts`.

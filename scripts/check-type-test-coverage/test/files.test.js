@@ -11,8 +11,9 @@ describe("discoverPairs", () => {
       "foo.d.ts": "export interface Foo { x: 1 }\n",
       "foo.test-d.ts": "export {};\n",
     });
-    const { pairs, orphans } = discoverPairs(root);
+    const { pairs, orphans, untested } = discoverPairs(root);
     assert.equal(orphans.length, 0);
+    assert.equal(untested.length, 0);
     assert.equal(pairs.length, 1);
     assert.equal(pairs[0].dts, path.join(root, "foo.d.ts"));
     assert.equal(pairs[0].test, path.join(root, "foo.test-d.ts"));
@@ -22,31 +23,59 @@ describe("discoverPairs", () => {
     const root = tmpProject(t, {
       "lonely.test-d.ts": "export {};\n",
     });
-    const { pairs, orphans } = discoverPairs(root);
+    const { pairs, orphans, untested } = discoverPairs(root);
     assert.equal(pairs.length, 0);
+    assert.equal(untested.length, 0);
     assert.deepEqual(orphans, [path.join(root, "lonely.test-d.ts")]);
+  });
+
+  test("collects untested .d.ts files with no sibling .test-d.ts", (t) => {
+    const root = tmpProject(t, {
+      "naked.d.ts": "export interface Naked { x: 1 }\n",
+    });
+    const { pairs, orphans, untested } = discoverPairs(root);
+    assert.equal(pairs.length, 0);
+    assert.equal(orphans.length, 0);
+    assert.deepEqual(untested, [path.join(root, "naked.d.ts")]);
+  });
+
+  test("mixes paired, orphan, and untested files together", (t) => {
+    const root = tmpProject(t, {
+      "paired.d.ts": "export interface P { x: 1 }\n",
+      "paired.test-d.ts": "export {};\n",
+      "alone.d.ts": "export interface A { x: 1 }\n",
+      "ghost.test-d.ts": "export {};\n",
+    });
+    const { pairs, orphans, untested } = discoverPairs(root);
+    assert.equal(pairs.length, 1);
+    assert.equal(pairs[0].dts, path.join(root, "paired.d.ts"));
+    assert.deepEqual(orphans, [path.join(root, "ghost.test-d.ts")]);
+    assert.deepEqual(untested, [path.join(root, "alone.d.ts")]);
   });
 
   test("returns empty result when no test files exist", (t) => {
     const root = tmpProject(t, { "README.md": "no tests here\n" });
-    assert.deepEqual(discoverPairs(root), { pairs: [], orphans: [] });
+    assert.deepEqual(discoverPairs(root), { pairs: [], orphans: [], untested: [] });
   });
 
   test("skips node_modules, .git, dist, build, coverage, .meteor", (t) => {
     const root = tmpProject(t, {
       "keep.d.ts": "export interface A { x: 1 }\n",
       "keep.test-d.ts": "export {};\n",
+      "node_modules/ignored.d.ts": "export interface X { x: 1 }\n",
       "node_modules/ignored.test-d.ts": "export {};\n",
       ".git/ignored.test-d.ts": "export {};\n",
+      "dist/ignored.d.ts": "export interface Y { x: 1 }\n",
       "dist/ignored.test-d.ts": "export {};\n",
       "build/ignored.test-d.ts": "export {};\n",
       "coverage/ignored.test-d.ts": "export {};\n",
       "coverage-ts/ignored.test-d.ts": "export {};\n",
       ".meteor/ignored.test-d.ts": "export {};\n",
     });
-    const { pairs, orphans } = discoverPairs(root);
+    const { pairs, orphans, untested } = discoverPairs(root);
     assert.equal(pairs.length, 1);
     assert.equal(orphans.length, 0);
+    assert.equal(untested.length, 0);
     assert.equal(pairs[0].test, path.join(root, "keep.test-d.ts"));
   });
 
