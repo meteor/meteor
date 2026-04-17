@@ -92,6 +92,44 @@ After the first `meteor run`, TypeScript will resolve `meteor/random`,
 `meteor/accounts-base`, and all other typed packages from the auto-generated
 declarations.
 
+## JavaScript Apps
+
+JavaScript apps can get the same Meteor-import IntelliSense as TypeScript apps
+by adding a `jsconfig.json` to the project root. Meteor detects **either**
+`tsconfig.json` or `jsconfig.json` and generates the types accordingly.
+
+Apps created with `meteor create` (without `--typescript`) already include a
+`jsconfig.json` with the right configuration.
+
+For existing JavaScript apps, add a `jsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "/*": ["*"],
+      "meteor/*": [".meteor/local/types/packages.d.ts"]
+    },
+    "moduleResolution": "node",
+    "resolveJsonModule": true
+  },
+  "exclude": [
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
+    "./packages/**"
+  ]
+}
+```
+
+After the first `meteor run`, VS Code will resolve `meteor/random`,
+`meteor/accounts-base`, etc. with full IntelliSense even in `.js` files.
+
+::: tip Apps without either file
+If a project has no `tsconfig.json` and no `jsconfig.json`, the type generator
+is skipped entirely — zero overhead.
+:::
+
 ## Sub-Path Imports
 
 Some packages expose multiple entry points. For example,
