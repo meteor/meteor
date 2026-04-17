@@ -7,7 +7,7 @@
  *
  * Priority order for resolving a package's type entry:
  *   1. isopack.typesEntry  (set via api.types() in package.js)
- *   2. package-types.json  resource in the isopack (legacy / backward-compat)
+ *   2. package-types.json  resource in the isopack
  *   3. A single .d.ts resource in the isopack
  */
 
@@ -168,12 +168,23 @@ function findTypesInfo(isopack) {
 }
 
 /**
+ * Normalize a resource path: strip a leading `./` so that paths from
+ * package-types.json (which may be `"./module/foo.d.ts"`) match how
+ * isobuild stores them after the `pathRelative(".", p)` normalization
+ * in package-api.js (which strips the leading `./`).
+ */
+function normalizeResourcePath(p) {
+  return p && p.startsWith("./") ? p.slice(2) : p;
+}
+
+/**
  * Find a resource by its `path` field across all unibuilds.
  */
 function findResourceByPath(isopack, resourcePath) {
+  const normalized = normalizeResourcePath(resourcePath);
   for (const unibuild of isopack.unibuilds) {
     for (const resource of unibuild.resources) {
-      if (resource.path === resourcePath) {
+      if (normalizeResourcePath(resource.path) === normalized) {
         return resource;
       }
     }

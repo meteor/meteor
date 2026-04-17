@@ -267,6 +267,46 @@ describe("priority 2 – package-types.json", () => {
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/pkg");
   });
+
+  test("resolves module paths with a leading './' (real-world react-meteor-data case)", async () => {
+    // package-types.json uses "./suspense/foo.d.ts" but isobuild normalizes
+    // asset paths via pathRelative('.', p), storing them as "suspense/foo.d.ts".
+    // The generator must strip the leading "./" before looking up resources.
+    const MAIN = "export declare function useTracker<T>(fn: () => T): T;";
+    const SUSPENSE =
+      "export declare function useTracker<T>(fn: () => T, deps?: any[]): T;";
+    const config = JSON.stringify({
+      typesEntry: "react-meteor-data.d.ts",
+      modules: { suspense: "./suspense/react-meteor-data.d.ts" },
+    });
+    const isopack = makeIsopack({
+      resources: [
+        makeResource("package-types.json", config),
+        makeResource("react-meteor-data.d.ts", MAIN),
+        // stored WITHOUT the leading "./" (as isobuild does)
+        makeResource("suspense/react-meteor-data.d.ts", SUSPENSE),
+      ],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ "react-meteor-data": isopack }),
+      packageMap: makePackageMap(["react-meteor-data"]),
+      projectLocalDir: PROJECT_LOCAL,
+    });
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain(
+      '/// <reference path="./packages/react-meteor-data.d.ts" />'
+    );
+    expect(dts).toContain(
+      '/// <reference path="./packages/react-meteor-data__suspense.d.ts" />'
+    );
+    const suspensePkg = writtenContentAt(
+      `${PKGS_DIR}/react-meteor-data__suspense.d.ts`
+    );
+    expect(suspensePkg).toContain(
+      "declare module 'meteor/react-meteor-data/suspense'"
+    );
+    expect(suspensePkg).toContain(SUSPENSE);
+  });
 });
 
 // ---------------------------------------------------------------------------
