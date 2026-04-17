@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "/*": ["*"],
+      "meteor/*": [
+        ".meteor/local/types/packages.d.ts"
+      ]
+    },
+    "moduleResolution": "node",
+    "resolveJsonModule": true
+  },
+  "exclude": [
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
+    "./packages/**"
+  ]
+}
