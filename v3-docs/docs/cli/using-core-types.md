@@ -11,17 +11,18 @@ writes type declaration files to `.meteor/local/types/`:
 
 ```
 .meteor/local/types/
-├── packages.d.ts              ← single barrel file with all declare module entries
+├── packages.d.ts              ← barrel file with /// <reference> directives
 └── packages/
-    ├── random.d.ts
+    ├── random.d.ts            ← each file wraps its exports in declare module
     ├── accounts-base.d.ts
     ├── react-meteor-data.d.ts
     └── …one file per package that ships types
 ```
 
-`packages.d.ts` contains `declare module 'meteor/package-name'` entries that
-map every typed package to its `.d.ts` file so TypeScript can resolve imports
-like:
+`packages.d.ts` is a single barrel file of `/// <reference path="…" />` directives,
+one per package. Each per-package file under `packages/` wraps its exports
+in a `declare module 'meteor/package-name' { … }` block so TypeScript can
+resolve imports like:
 
 ```ts
 import { Random } from "meteor/random";
@@ -102,9 +103,10 @@ import { useTracker } from "meteor/react-meteor-data/suspense";
 ```
 
 When a package declares sub-path modules, Meteor generates separate
-`.d.ts` files for each sub-path and adds the corresponding
-`declare module 'meteor/pkg/sub-path'` entries to `packages.d.ts`
-automatically.
+`.d.ts` files for each sub-path (e.g. `react-meteor-data__suspense.d.ts`)
+and adds the corresponding `/// <reference>` entry to `packages.d.ts`
+automatically. Each sub-path file wraps its exports in a
+`declare module 'meteor/pkg/sub-path'` block.
 
 ## Bundling Types in Your Own Package
 
