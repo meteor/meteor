@@ -24,8 +24,8 @@ map every typed package to its `.d.ts` file so TypeScript can resolve imports
 like:
 
 ```ts
-import { Random } from 'meteor/random';
-import { Accounts } from 'meteor/accounts-base';
+import { Random } from "meteor/random";
+import { Accounts } from "meteor/accounts-base";
 ```
 
 ## Setup
@@ -108,9 +108,7 @@ For existing JavaScript apps, add a `jsconfig.json`:
     "baseUrl": ".",
     "paths": {
       "/*": ["*"],
-      "meteor/*": [
-        ".meteor/local/types/packages.d.ts"
-      ]
+      "meteor/*": [".meteor/local/types/packages.d.ts"]
     },
     "moduleResolution": "node",
     "resolveJsonModule": true
@@ -137,8 +135,8 @@ Some packages expose multiple entry points. For example,
 `react-meteor-data` exposes a `suspense` sub-path:
 
 ```ts
-import { useTracker } from 'meteor/react-meteor-data';
-import { useTracker } from 'meteor/react-meteor-data/suspense';
+import { useTracker } from "meteor/react-meteor-data";
+import { useTracker } from "meteor/react-meteor-data/suspense";
 ```
 
 When a package declares sub-path modules, Meteor generates separate
@@ -148,19 +146,28 @@ automatically.
 
 ## Bundling Types in Your Own Package
 
-If you are writing an Atmosphere package, use `api.types()` in your `package.js`
-to declare which `.d.ts` file contains the type exports:
+There are two ways to ship types with an Atmosphere package:
+
+**`package-types.json`** (established community approach, used by `zodern:types`):
+
+```json
+{
+  "typesEntry": "my-package.d.ts"
+}
+```
+
+**`api.types()` in `package.js`** _(experimental)_:
 
 ```js
-Package.onUse(function(api) {
-  api.use('ecmascript');
-  api.mainModule('my-package.js');
-  api.types('my-package.d.ts');
+Package.onUse(function (api) {
+  api.use("ecmascript");
+  api.mainModule("my-package.js");
+  api.types("my-package.d.ts");
 });
 ```
 
 See [Writing Atmosphere Packages — TypeScript Types](../packages/7.writing-atmosphere-packages#typescript-types)
-for full details, including how to declare sub-path modules.
+for full details, including sub-path modules and the priority resolution order.
 
 ## Migrating from `zodern:types`
 
