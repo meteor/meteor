@@ -63,7 +63,8 @@ export async function generateTypes({
     const mainFileName = `${normalizedName}.d.ts`;
     const mainAbsPath = files.pathJoin(packagesTypesDir, mainFileName);
     if (info.data) {
-      writeIfChanged(mainAbsPath, info.data);
+      const wrappedMain = wrapDeclareModule(`meteor/${name}`, info.data);
+      writeIfChanged(mainAbsPath, Buffer.from(wrappedMain, "utf8"));
     } else {
       // No content found – skip this package
       return;
@@ -84,7 +85,11 @@ export async function generateTypes({
           moduleName
         )}.d.ts`;
         const moduleAbsPath = files.pathJoin(packagesTypesDir, moduleFileName);
-        writeIfChanged(moduleAbsPath, moduleData);
+        const wrappedModule = wrapDeclareModule(
+          `meteor/${name}/${moduleName}`,
+          moduleData
+        );
+        writeIfChanged(moduleAbsPath, Buffer.from(wrappedModule, "utf8"));
         entry.subModules.push({
           name: moduleName,
           relPath: `${PACKAGES_SUBDIR}/${moduleFileName}`,
@@ -221,8 +226,12 @@ function normalizePackageName(name) {
 }
 
 /**
- * Generate the packages.d.ts content that maps `meteor/package-name` module
- * specifiers to the individual per-package .d.ts files.
+ * Generate the packages.d.ts content — a list of triple-slash reference
+ * directives pointing to the per-package .d.ts files.  Each per-package file
+ * already contains the `declare module 'meteor/…' { … }` wrapper so we never
+ * need relative imports inside an ambient module block (which TypeScript
+ * forbids with: "Import or export declaration in an ambient module declaration
+ * cannot reference module through relative module name").
  */
 function generatePackagesDeclaration(entries) {
   let content =
@@ -230,20 +239,33 @@ function generatePackagesDeclaration(entries) {
   content += "// Re-run `meteor run` or `meteor build` to regenerate.\n\n";
 
   for (const entry of entries) {
-    // Main module declaration
-    content += `declare module 'meteor/${entry.name}' {\n`;
-    content += `  export * from './${entry.mainRelPath}';\n`;
-    content += "}\n\n";
-
-    // Sub-path module declarations (fixes zodern/meteor-types#10)
+    content += `/// <reference path="./${entry.mainRelPath}" />\n`;
     for (const sub of entry.subModules) {
-      content += `declare module 'meteor/${entry.name}/${sub.name}' {\n`;
-      content += `  export * from './${sub.relPath}';\n`;
-      content += "}\n\n";
+      content += `/// <reference path="./${sub.relPath}" />\n`;
     }
   }
 
   return content;
+}
+
+/**
+ * Wrap the content of a raw .d.ts file inside a `declare module` block so
+ * that it can be included via a triple-slash reference without triggering the
+ * "relative import in ambient module" TypeScript error.
+ *
+ * @param {string} meteorModuleName  e.g. 'meteor/random' or 'meteor/rmd/hooks'
+ * @param {Buffer|string} content    raw declaration file content
+ * @returns {string}
+ */
+function wrapDeclareModule(meteorModuleName, content) {
+  const body = (
+    Buffer.isBuffer(content) ? content.toString("utf8") : content
+  ).trim();
+  const indented = body
+    .split("\n")
+    .map((line) => (line.length ? "  " + line : ""))
+    .join("\n");
+  return `declare module '${meteorModuleName}' {\n${indented}\n}\n`;
 }
 
 /**
