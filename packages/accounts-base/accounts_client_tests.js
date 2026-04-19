@@ -293,6 +293,65 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts async - onLogin callback failure does not leave Meteor.loggingIn() stuck',
+  async test => {
+    const rejectionMessage = 'Expected onLogin failure';
+    const handleUnhandledRejection = event => {
+      if (event.reason?.message === rejectionMessage) {
+        event.preventDefault();
+      }
+    };
+    const logout = () => new Promise(resolve => Meteor.logout(resolve));
+
+    globalThis.addEventListener?.('unhandledrejection', handleUnhandledRejection);
+
+    let onLogin;
+    try {
+      await logout();
+      test.isFalse(await Meteor.userAsync());
+
+      await new Promise((resolve, reject) => {
+        Accounts.createUser({ username, password, profile }, error => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        });
+      });
+
+      await logout();
+      test.isFalse(await Meteor.userAsync());
+
+      onLogin = Accounts.onLogin(async () => {
+        onLogin.stop();
+        await Promise.resolve();
+        throw new Error(rejectionMessage);
+      });
+
+      Meteor.loginWithPassword(username, password, error => {
+        test.isFalse(!!error);
+      });
+
+      await waitUntil(async () => !!(await Meteor.userAsync()), {
+        timeout: 5000,
+        interval: 50,
+        description: 'waiting for login before checking Meteor.loggingIn()',
+      });
+      await new Promise(resolve => Meteor.setTimeout(resolve, 0));
+
+      test.isFalse(Meteor.loggingIn());
+    } finally {
+      onLogin?.stop();
+      globalThis.removeEventListener?.('unhandledrejection', handleUnhandledRejection);
+      await logout();
+      await Meteor.callAsync('removeAccountsTestUser', username);
+    }
+  }
+);
+
+Tinytest.addAsync(
   'accounts - onLogin callback receives { type: "resume" } param on ' +
   'reconnect, if already logged in',
   (test, done) => {

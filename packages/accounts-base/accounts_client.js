@@ -413,15 +413,21 @@ export class AccountsClient extends AccountsCommon {
         error = error || new Error(
           `No result from call to ${options.methodName}`
         );
-        await loginCallbacks({ error });
-        this._setLoggingIn(false);
+        try {
+          await loginCallbacks({ error });
+        } finally {
+          this._setLoggingIn(false);
+        }
         return;
       }
       try {
         options.validateResult(result);
       } catch (e) {
-        await loginCallbacks({ error: e });
-        this._setLoggingIn(false);
+        try {
+          await loginCallbacks({ error: e });
+        } finally {
+          this._setLoggingIn(false);
+        }
         return;
       }
 
@@ -435,9 +441,12 @@ export class AccountsClient extends AccountsCommon {
         );
 
         if (user) {
-          await loginCallbacks({ loginDetails: result });
-          this._setLoggingIn(false);
-          computation.stop();
+          try {
+            await loginCallbacks({ loginDetails: result });
+          } finally {
+            this._setLoggingIn(false);
+            computation.stop();
+          }
         }
       });
 
