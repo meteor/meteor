@@ -109,7 +109,7 @@ In order to deploy to Galaxy, you'll need to sign up for an account and separate
 Once you've done that, deployment is straightforward. You need to add some environment variables to your settings file to point it at your MongoDB, and you can deploy with:
 
 ```bash
-DEPLOY_HOSTNAME=us-east-1.galaxy.meteor.com meteor deploy your-app.com --settings production-settings.json
+DEPLOY_HOSTNAME=us-east-1.galaxy-deploy.meteor.com meteor deploy your-app.com --settings production-settings.json
 ```
 
 You can also log into the Galaxy UI to manage your applications, monitor the number of connections and resource usage, view logs, and change settings.
@@ -277,7 +277,7 @@ jobs:
         run: |
           echo "$METEOR_SESSION_FILE" > meteor-session.json
           METEOR_SESSION_FILE=meteor-session.json \
-          DEPLOY_HOSTNAME=us-east-1.galaxy.meteor.com \
+          DEPLOY_HOSTNAME=us-east-1.galaxy-deploy.meteor.com \
           meteor deploy your-app.com --settings settings.json
 ```
 

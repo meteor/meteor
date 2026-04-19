@@ -171,3 +171,74 @@ Tinytest.add("facts-base - setUserIdFilter replaces the filter", (test) => {
     return !!Package.autopublish;
   });
 });
+
+// -- resetServerFacts with active subscriptions --
+
+Tinytest.add("facts-base - resetServerFacts does not notify subscriptions", (test) => {
+  Facts.resetServerFacts();
+  const sub = mockSub();
+  Facts._setActiveSubscriptions([sub]);
+
+  Facts.incrementServerFact("pkg", "val", 5);
+  Facts.resetServerFacts();
+
+  // added was called once for the increment, but reset should not trigger notifications
+  test.equal(sub.calls.added.length, 1);
+  test.equal(sub.calls.changed.length, 0);
+  test.equal(Facts._factsByPackage, {});
+
+  Facts._setActiveSubscriptions([]);
+});
+
+// -- incrementServerFact: zero increment --
+
+Tinytest.add("facts-base - incrementServerFact with zero increment", (test) => {
+  Facts.resetServerFacts();
+  Facts.incrementServerFact("pkg", "counter", 0);
+
+  test.equal(Facts._factsByPackage["pkg"].counter, 0);
+});
+
+// -- incrementServerFact: multiple facts same package --
+
+Tinytest.add("facts-base - incrementServerFact supports many facts per package", (test) => {
+  Facts.resetServerFacts();
+
+  Facts.incrementServerFact("multi", "a", 1);
+  Facts.incrementServerFact("multi", "b", 2);
+  Facts.incrementServerFact("multi", "c", 3);
+
+  test.equal(Facts._factsByPackage["multi"], { a: 1, b: 2, c: 3 });
+});
+
+// -- subscription: changed sends only the changed field --
+
+Tinytest.add("facts-base - changed notification only includes the updated field", (test) => {
+  Facts.resetServerFacts();
+  const sub = mockSub();
+
+  Facts.incrementServerFact("pkg", "a", 1);
+  Facts.incrementServerFact("pkg", "b", 2);
+  Facts._setActiveSubscriptions([sub]);
+
+  Facts.incrementServerFact("pkg", "a", 10);
+
+  test.equal(sub.calls.changed.length, 1);
+  test.equal(sub.calls.changed[0].fields, { a: 11 });
+
+  Facts._setActiveSubscriptions([]);
+});
+
+// -- subscription added uses correct collection name --
+
+Tinytest.add("facts-base - subscription added uses 'meteor_Facts_server' collection", (test) => {
+  Facts.resetServerFacts();
+  const sub = mockSub();
+  Facts._setActiveSubscriptions([sub]);
+
+  Facts.incrementServerFact("test-pkg", "val", 1);
+
+  test.equal(sub.calls.added[0].collection, "meteor_Facts_server");
+
+  Facts._setActiveSubscriptions([]);
+});
