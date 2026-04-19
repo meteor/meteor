@@ -502,6 +502,8 @@ attempt.
 
 On the client, callbacks passed to `onLogin` and `onLoginFailure` can be
 async functions. They will be awaited before proceeding.
+This can affect when login, logout, and reconnect flows are considered complete,
+including when `Meteor.loggingIn()` and `Meteor.loggingOut()` return to `false`.
 
 <ApiBox name="AccountsCommon#onLogout" instanceName="accountsCommon" hasCustomExample/>
 
