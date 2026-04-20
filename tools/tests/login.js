@@ -152,6 +152,7 @@ selftest.define("login on deploy", ['net'], async function () {
   run.waitSecs(commandTimeoutSecs);
   await run.match("Talking to Galaxy servers");
 
+  // Galaxy had some changes in the CLI, we plan to uncomment this test after we update the CLI in the tool.
   // run.waitSecs(commandTimeoutSecs * 10);
   // await run.match("View deployment progress at:");
   // await run.expectExit();
