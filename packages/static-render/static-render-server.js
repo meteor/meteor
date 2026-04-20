@@ -27,8 +27,11 @@ const ssgError = (api, suggestion) => function () {
   );
 };
 
-if (typeof Session === 'undefined') {
-  Session = {
+// Use globalThis assignment (explicit, strict-mode safe) instead of bare
+// identifier assignment. Only installed if no Session global already exists,
+// so we don't clash with a user-provided session package or similar.
+if (typeof globalThis.Session === 'undefined') {
+  globalThis.Session = {
     get: ssgError('Session.get', 'Use staticData() in your route options instead.'),
     set: ssgError('Session.set', 'Session is client-only.'),
     equals: ssgError('Session.equals', 'Use staticData() in your route options instead.'),
@@ -123,6 +126,8 @@ StaticRender = {
 
   /**
    * Get current stats.
+   * Note: `errors` reflects SSG/build-time diagnostics only. Per-request SSR
+   * failures are logged via console.warn but not accumulated (would leak memory).
    * @returns {{ ssgCacheSize: Number, ssrRoutes: Number, errors: Array, ready: Boolean }}
    */
   stats() {
@@ -151,27 +156,21 @@ StaticRender = {
   },
 
   /**
-   * Match a URL path against a route pathDef (e.g. '/produit/:slug').
-   * Returns params object if match, null otherwise.
+   * Find an SSR route matching the given path, reusing FlowRouter.matchPath
+   * so server routing mirrors client routing exactly. Returns the ORIGINAL
+   * route object from _ssrRoutes (not the clone from matchPath, which would
+   * lose function references in options like staticData/staticHead).
    */
-  _matchRoute(pathDef, path) {
-    // Convert pathDef like '/produit/:slug' to regex
-    const paramNames = [];
-    const regexStr = pathDef
-      .replace(/:(\w+)/g, (_, name) => {
-        paramNames.push(name);
-        return '([^/]+)';
-      })
-      .replace(/\//g, '\\/');
-    const regex = new RegExp(`^${regexStr}$`);
-    const match = path.match(regex);
-    if (!match) return null;
+  _findSSRRouteForPath(path) {
+    const fr = Package['ostrio:flow-router-extra'];
+    if (!fr) return null;
 
-    const params = {};
-    paramNames.forEach((name, i) => {
-      params[name] = decodeURIComponent(match[i + 1]);
-    });
-    return params;
+    const FlowRouter = fr.FlowRouter;
+    const match = FlowRouter.matchPath(path);
+    if (match && match.route && _ssrRoutes.has(match.route.pathDef)) {
+      return { route: _ssrRoutes.get(match.route.pathDef), params: match.params };
+    }
+    return null;
   },
 
   /**
@@ -203,6 +202,9 @@ StaticRender = {
 
   /**
    * Render a route on-the-fly for SSR (no cache).
+   * Errors are logged via console.warn inside render(); SSR errors are
+   * intentionally NOT accumulated in _errors — that would leak memory
+   * on long-running servers. _errors reflects only SSG/build diagnostics.
    */
   async _renderSSR(route, path, params) {
     const data = route.options.staticData
@@ -210,7 +212,7 @@ StaticRender = {
       : undefined;
 
     const context = { path };
-    const { html: body, error } = this.render(route.options.template, data, context);
+    const { html: body } = this.render(route.options.template, data, context);
 
     let head = undefined;
     if (route.options.staticHead) {
@@ -219,10 +221,6 @@ StaticRender = {
       } catch (e) {
         console.warn(`[StaticRender] Error in staticHead for "${path}": ${e.message}`);
       }
-    }
-
-    if (error) {
-      _errors.push(error);
     }
 
     return { body, head };
@@ -237,7 +235,12 @@ StaticRender = {
 
     const FlowRouter = fr.FlowRouter;
 
-    for (const route of FlowRouter._routes) {
+    // FlowRouter._routes is an internal property — guard defensively in case
+    // it's not yet initialized or the shape changes upstream.
+    const routes = Array.isArray(FlowRouter._routes) ? FlowRouter._routes : [];
+    if (routes.length === 0) return;
+
+    for (const route of routes) {
       if (!route.options.static || !route.options.template) continue;
 
       const mode = route.options.static; // 'ssg', 'ssr', or true (legacy → treat as 'ssg')
@@ -279,12 +282,34 @@ StaticRender = {
 
 // ---------------------------------------------------------------------------
 // Middleware — handles both SSG (from cache) and SSR (render on-the-fly).
+//
+// Filters:
+// - Only GET/HEAD requests (the only methods used to serve pages)
+// - Skip well-known non-app paths: /packages/, /sockjs/, /__meteor__/,
+//   /merged-stylesheets, and paths with common static-asset extensions
 // ---------------------------------------------------------------------------
+
+const NON_APP_PATH_EXT = /\.(js|css|map|png|jpe?g|svg|gif|ico|woff2?|ttf|eot|webp|avif)$/i;
 
 WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next) {
   if (!_ready) return next();
 
+  // Only handle page-serving methods — skip DDP/methods/API calls.
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+
   const path = req.url.split('?')[0];
+
+  // Early-skip for well-known non-app paths to avoid unnecessary work
+  // (the Meteor boilerplate handler doesn't run on these either).
+  if (
+    path.startsWith('/packages/') ||
+    path.startsWith('/sockjs/') ||
+    path.startsWith('/__meteor__/') ||
+    path.startsWith('/merged-stylesheets') ||
+    NON_APP_PATH_EXT.test(path)
+  ) {
+    return next();
+  }
 
   // 1. Try SSG cache first (fast path)
   const cached = cache.get(path);
@@ -297,24 +322,25 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
     return next();
   }
 
-  // 2. Try SSR routes (render on-the-fly with fresh data)
+  // 2. Try SSR routes (render on-the-fly with fresh data).
+  // Uses FlowRouter.matchPath() so server routing matches client routing.
   if (_ssrRoutes.size > 0) {
-    for (const [pathDef, route] of _ssrRoutes) {
-      const params = StaticRender._matchRoute(pathDef, path);
-      if (params) {
-        try {
-          const { body, head } = await StaticRender._renderSSR(route, path, params);
-          req.dynamicBody = (req.dynamicBody || '') +
-            '<div data-static-render="ssr">' + body + '</div>';
-          if (head) {
-            req.dynamicHead = (req.dynamicHead || '') + head;
-          }
-        } catch (e) {
-          console.warn(`[StaticRender] SSR error for "${path}": ${e.message}`);
-          // Fall through to normal client-side rendering
+    const routeInfo = StaticRender._findSSRRouteForPath(path);
+    if (routeInfo) {
+      try {
+        const { body, head } = await StaticRender._renderSSR(
+          routeInfo.route, path, routeInfo.params
+        );
+        req.dynamicBody = (req.dynamicBody || '') +
+          '<div data-static-render="ssr">' + body + '</div>';
+        if (head) {
+          req.dynamicHead = (req.dynamicHead || '') + head;
         }
-        return next();
+      } catch (e) {
+        console.warn(`[StaticRender] SSR error for "${path}": ${e.message}`);
+        // Fall through to normal client-side rendering
       }
+      return next();
     }
   }
 
@@ -325,31 +351,29 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
 // Startup — discover routes, pre-render SSG pages, register SSR routes.
 // ---------------------------------------------------------------------------
 
-Meteor.startup(function () {
-  Meteor.startup(async function () {
-    await StaticRender._discoverAndRender();
-    _ready = true;
-    StaticRender._ready = true;
+Meteor.startup(async function () {
+  await StaticRender._discoverAndRender();
+  _ready = true;
+  StaticRender._ready = true;
 
-    const ssgCount = cache.size;
-    const ssrCount = _ssrRoutes.size;
+  const ssgCount = cache.size;
+  const ssrCount = _ssrRoutes.size;
 
-    if (ssgCount > 0 || ssrCount > 0 || _errors.length > 0) {
-      const parts = [];
-      if (ssgCount > 0) parts.push(`${ssgCount} SSG pages pre-rendered`);
-      if (ssrCount > 0) parts.push(`${ssrCount} SSR routes registered`);
-      console.log(`[StaticRender] ${parts.join(', ')}`);
+  if (ssgCount > 0 || ssrCount > 0 || _errors.length > 0) {
+    const parts = [];
+    if (ssgCount > 0) parts.push(`${ssgCount} SSG pages pre-rendered`);
+    if (ssrCount > 0) parts.push(`${ssrCount} SSR routes registered`);
+    console.log(`[StaticRender] ${parts.join(', ')}`);
 
-      if (_errors.length > 0) {
-        console.warn(`[StaticRender] ${_errors.length} error(s):`);
-        for (const err of _errors) {
-          console.warn(
-            `  \u26A0 Template "${err.template}"` +
-            (err.path ? ` for "${err.path}"` : '') +
-            `:\n    ${err.message}`
-          );
-        }
+    if (_errors.length > 0) {
+      console.warn(`[StaticRender] ${_errors.length} error(s):`);
+      for (const err of _errors) {
+        console.warn(
+          `  \u26A0 Template "${err.template}"` +
+          (err.path ? ` for "${err.path}"` : '') +
+          `:\n    ${err.message}`
+        );
       }
     }
-  });
+  }
 });
