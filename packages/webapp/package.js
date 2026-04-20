@@ -4,17 +4,22 @@ Package.describe({
 });
 
 Npm.depends({
-  "cookie-parser": "1.4.6",
+  "cookie-parser": "1.4.7",
+  "@types/cookie-parser": "1.4.8",
   express: "5.1.0",
   "@types/express": "5.0.1",
-  compression: "1.7.4",
+  compression: "1.8.0",
+  "@types/compression": "1.7.5",
   errorhandler: "1.5.1",
-  parseurl: "1.3.3",
+  "@types/errorhandler": "1.5.3",
   send: "1.1.0",
+  "@types/send": "0.17.4",
   "stream-to-string": "1.2.1",
-  qs: "6.13.0",
+  qs: "6.14.0",
+  "@types/qs": "6.9.18",
   "useragent-ng": "2.4.4",
   "tmp": "0.2.3",
+  "@types/tmp": "0.2.6",
 });
 
 Npm.strip({

@@ -987,20 +987,6 @@ Object.assign(Roles, {
   },
 
   /**
-   * Throw an exception if `roleName` is an invalid role name.
-   *
-   * @method _checkRoleName
-   * @param {String} roleName A role name to match against.
-   * @private
-   * @static
-   */
-  _checkRoleName: function (roleName) {
-    if (!roleName || typeof roleName !== 'string' || roleName.trim() !== roleName) {
-      throw new Error('Invalid role name \'' + roleName + '\'.')
-    }
-  },
-
-  /**
    * Find out if a role is an ancestor of another role.
    *
    * WARNING: If you check this on the client, please make sure all roles are published.
