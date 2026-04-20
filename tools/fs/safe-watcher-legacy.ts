@@ -12,6 +12,7 @@ import {
     join as nativeJoin
 } from 'path';
 import nsfw from 'vscode-nsfw';
+import { shouldIgnorePathFromMeteorIgnore } from "./optimistic";
 
 const pathwatcher = require('pathwatcher');
 
@@ -407,6 +408,14 @@ function maybeSuggestRaisingWatchLimit(error: Error & { errno: number }) {
 export const watch = Profile(
     "safeWatcher.watchLegacy",
     (absPath: string, callback: EntryCallback) => {
+        // Check if the path should be ignored based on .meteorignore patterns
+        if (shouldIgnorePathFromMeteorIgnore(absPath)) {
+            // Return a no-op watcher for ignored files
+            return {
+                close() {}
+            } as SafeWatcher;
+        }
+
         const entry = acquireWatcher(absPath, callback);
         return {
             close() {

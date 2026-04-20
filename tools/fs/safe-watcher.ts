@@ -5,6 +5,7 @@ import { watch as watchLegacy, addWatchRoot as addWatchRootLegacy, closeAllWatch
 import { Profile } from "../tool-env/profile";
 import { statOrNull, lstat, toPosixPath, convertToOSPath, pathRelative, watchFile, unwatchFile, pathResolve, pathDirname } from "./files";
 import { getMeteorConfig } from "../tool-env/meteor-config";
+import { shouldIgnorePathFromMeteorIgnore } from "./optimistic";
 
 // Register process exit handlers to ensure subscriptions are properly cleaned up
 const registerExitHandlers = () => {
@@ -182,6 +183,10 @@ function shouldIgnorePath(absPath: string): boolean {
       }
       return true;
     } else {
+      // Check if the path matches any .meteorignore patterns
+      if (shouldIgnorePathFromMeteorIgnore(absPath)) {
+        return true;
+      }
       // Otherwise, don't ignore non-npm node_modules
       return false;
     }
