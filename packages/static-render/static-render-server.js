@@ -90,24 +90,37 @@ StaticRender = {
   },
 
   /**
-   * Regenerate a single SSG cached page.
+   * Regenerate a single SSG cached page. No-op for SSR routes (they render
+   * fresh per request and don't use the cache).
    * @param {String} path
    */
   async regenerate(path) {
     const routeInfo = this._findRouteForPath(path);
     if (!routeInfo) {
-      console.warn(`[StaticRender] No static route found for path "${path}"`);
+      console.warn(
+        `[StaticRender] No SSG route found for path "${path}" ` +
+        '(SSR routes render per-request and do not use the cache)'
+      );
       return;
+    }
+    // Drop any prior error for this path so repeated regenerate() calls on a
+    // failing path don't grow _errors unboundedly.
+    for (let i = _errors.length - 1; i >= 0; i--) {
+      if (_errors[i] && _errors[i].path === path) {
+        _errors.splice(i, 1);
+      }
     }
     const { route, params } = routeInfo;
     await this._renderAndCache(route, path, params);
   },
 
   /**
-   * Regenerate all SSG pages.
+   * Regenerate all SSG pages and re-discover SSR routes from scratch so
+   * that route mode changes (e.g. 'ssr' → 'ssg') are picked up cleanly.
    */
   async regenerateAll() {
     cache.clear();
+    _ssrRoutes.clear();
     _errors.length = 0;
     await this._discoverAndRender();
   },
@@ -143,13 +156,23 @@ StaticRender = {
   // Internal methods
   // -------------------------------------------------------------------------
 
+  /**
+   * Find an SSG route matching the given path — used only for regenerate()
+   * to avoid accidentally writing SSR route output into the SSG cache
+   * (which would serve stale snapshots instead of re-rendering per-request).
+   */
   _findRouteForPath(path) {
     const fr = Package['ostrio:flow-router-extra'];
     if (!fr) return null;
 
     const FlowRouter = fr.FlowRouter;
     const match = FlowRouter.matchPath(path);
-    if (match && match.route && match.route.options.static && match.route.options.template) {
+    if (
+      match &&
+      match.route &&
+      match.route.options.static === 'ssg' &&
+      match.route.options.template
+    ) {
       return { route: match.route, params: match.params };
     }
     return null;
