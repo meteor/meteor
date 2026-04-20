@@ -77,7 +77,7 @@ jobs:
         run: ./meteor --get-ready
 
       - name: Run tests for ${{ matrix.category }}
-        uses: nick-fields/retry@v3
+        uses: nick-fields/retry@v4
         with:
           max_attempts: 3
           retry_on: error
