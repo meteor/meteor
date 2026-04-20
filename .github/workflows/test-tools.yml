@@ -1,0 +1,932 @@
+name: Test Tools
+
+on:
+  pull_request:
+    paths:
+      - "tools/**"
+      - "packages/**"
+      - "meteor"
+      - "meteor.bat"
+      - ".github/workflows/test-tools.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Multiplies the waitSecs for self-tests.
+  TIMEOUT_SCALE_FACTOR: 8
+  # Retry failed tests additional times.
+  METEOR_SELF_TEST_RETRIES: 2
+  METEOR_HEADLESS: true
+  METEOR_PRETTY_OUTPUT: 0
+  # Avoid SIGSEGV from cleaning up temp directories.
+  METEOR_SAVE_TMPDIRS: 1
+  # Skip this test on every run (it lives in Isolated Tests instead).
+  SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
+  # Suppress the self-test node-flags reminder.
+  SELF_TEST_TOOL_NODE_FLAGS: " "
+  METEOR_MODERN: true
+  CXX: g++-12
+  METEOR_ALLOW_SUPERUSER: 1
+
+jobs:
+  # ─── Setup ────────────────────────────────────────────────────────────────────
+  # Prepares the Meteor environment and populates the cache so all parallel
+  # test jobs get a cache hit and skip the slow --get-ready step.
+  setup:
+    name: Setup
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    timeout-minutes: 75
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        # puppeteer is pre-installed on oss-vm via `npm install -g`.
+        # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
+        # so --get-ready skips the slow `./meteor npm install -g puppeteer` step.
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        id: meteor-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Prepare Meteor
+        if: steps.meteor-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 65
+        run: ./meteor --get-ready
+
+  # ─── Isolated Tests ───────────────────────────────────────────────────────────
+  # Tests that must run in isolation: the debugOnly/prodOnly package test
+  # (excluded from all groups) and any custom-warehouse tests.
+  isolated-tests:
+    name: Isolated Tests
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 45
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (add debugOnly and prodOnly packages)
+        timeout-minutes: 20
+        run: |
+          ulimit -c unlimited
+          ./meteor self-test \
+            'add debugOnly and prodOnly packages' \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --headless
+
+      - name: Running self-test (Custom Warehouse Tests)
+        timeout-minutes: 20
+        run: |
+          ulimit -c unlimited
+          ./meteor self-test \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --with-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-isolated-tests
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 0 ─────────────────────────────────────────────────────────────
+  test-group-0:
+    name: "Test Group 0 (^[a-b]|^c[a-n]|^co[a-l]|^comm)"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 35
+    env:
+      TEST_GROUP: "^[a-b]|^c[a-n]|^co[a-l]|^comm"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 0)
+        timeout-minutes: 35
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/0.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-0
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 1 ─────────────────────────────────────────────────────────────
+  test-group-1:
+    name: "Test Group 1 (^com[n-z])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^com[n-z]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 1)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/1.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-1
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 2 ─────────────────────────────────────────────────────────────
+  # Note: Gradle and Java are pre-installed in the meteor/circleci Docker image.
+  test-group-2:
+    name: "Test Group 2 (^co[n-z])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^co[n-z]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Add Gradle to PATH
+        # Gradle is installed via sdkman in the meteor/circleci image but not on PATH by default.
+        # This mirrors what CircleCI does: export PATH="/home/circleci/.sdkman/candidates/gradle/8.7/bin:${PATH}"
+        run: echo "/home/circleci/.sdkman/candidates/gradle/8.7/bin" >> "$GITHUB_PATH"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+          java --version
+          gradle --version
+
+      - name: Running self-test (Test Group 2)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/2.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-2
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 3 ─────────────────────────────────────────────────────────────
+  test-group-3:
+    name: "Test Group 3 (^c[p-z]|^h[a-e])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 35
+    env:
+      TEST_GROUP: "^c[p-z]|^h[a-e]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 3)
+        timeout-minutes: 35
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/3.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-3
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 4 ─────────────────────────────────────────────────────────────
+  test-group-4:
+    name: "Test Group 4 (^h[f-z]|^[i-l])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^h[f-z]|^[i-l]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 4)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/4.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-4
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 5 ─────────────────────────────────────────────────────────────
+  test-group-5:
+    name: "Test Group 5 (^m[a-n]|^mo[a-d])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^m[a-n]|^mo[a-d]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 5)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/5.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-5
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 6 ─────────────────────────────────────────────────────────────
+  test-group-6:
+    name: "Test Group 6 (^mo[e-z]|^m[p-z]|^[n-o])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^mo[e-z]|^m[p-z]|^[n-o]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 6)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/6.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-6
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 7 ─────────────────────────────────────────────────────────────
+  test-group-7:
+    name: "Test Group 7 (^[p-q]|^r[a-e])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^[p-q]|^r[a-e]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 7)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/7.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-7
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 8 ─────────────────────────────────────────────────────────────
+  test-group-8:
+    name: "Test Group 8 (^r[f-z])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^r[f-z]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 8)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/8.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-8
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 9 ─────────────────────────────────────────────────────────────
+  test-group-9:
+    name: "Test Group 9 (^s)"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^s"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 9)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/9.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-9
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 10 ────────────────────────────────────────────────────────────
+  test-group-10:
+    name: "Test Group 10 (^[t-z])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 25
+    env:
+      TEST_GROUP: "^[t-z]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 10)
+        timeout-minutes: 25
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/10.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-10
+          path: ./tmp/results
+          if-no-files-found: ignore
+
+  # ─── Test Group 11 ────────────────────────────────────────────────────────────
+  test-group-11:
+    name: "Test Group 11 (^[d-g])"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --user root
+    needs: setup
+    timeout-minutes: 40
+    env:
+      TEST_GROUP: "^[d-g]"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Log environment
+        run: |
+          lsb_release -a
+          uname -srm
+          echo "Node: $(node --version)"
+          echo "NPM: $(npm --version)"
+          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor NPM: $(./meteor npm --version)"
+
+      - name: Running self-test (Test Group 11)
+        timeout-minutes: 40
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/11.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-group-11
+          path: ./tmp/results
+          if-no-files-found: ignore
