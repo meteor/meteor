@@ -8,13 +8,6 @@
 cd $(dirname $0)/../..
 export METEOR_HOME=`pwd`
 
-# We are keeping travis just as a fallback, if we detect we have TRAVIS_CI env var,
-# We want to stop early and return true
-if [ "$TRAVIS_CI" = "true" ]; then
-  echo "Running in Travis CI, skipping test-in-console tests."
-  exit 0
-fi
-
 # Install puppeteer into dev_bundle only when it is not already available globally
 # (e.g. on oss-vm, where puppeteer@23.6.0 is pre-installed via system npm and
 # NODE_PATH is set to $(npm root -g) by the CI workflow).
