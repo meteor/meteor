@@ -8,8 +8,8 @@ import {
   isArguments,
   isInfOrNaN,
   handleError,
-} from './utils';
-import canonicalStringify from './stringify';
+} from "./utils";
+import canonicalStringify from "./stringify";
 
 /**
  * @namespace
@@ -96,25 +96,25 @@ EJSON.addType = (name, factory) => {
 };
 
 const builtinConverters = [
-  { // Date
+  {
+    // Date
     matchJSONValue(obj) {
-      return hasOwn(obj, '$date') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$date") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       return obj instanceof Date;
     },
     toJSONValue(obj) {
-      return {$date: obj.getTime()};
+      return { $date: obj.getTime() };
     },
     fromJSONValue(obj) {
       return new Date(obj.$date);
     },
   },
-  { // RegExp
+  {
+    // RegExp
     matchJSONValue(obj) {
-      return hasOwn(obj, '$regexp')
-        && hasOwn(obj, '$flags')
-        && lengthOfWithLimit(obj, 2) === 2;
+      return hasOwn(obj, "$regexp") && hasOwn(obj, "$flags") && lengthOfWithLimit(obj, 2) === 2;
     },
     matchObject(obj) {
       return obj instanceof RegExp;
@@ -122,7 +122,7 @@ const builtinConverters = [
     toJSONValue(regexp) {
       return {
         $regexp: regexp.source,
-        $flags: regexp.flags
+        $flags: regexp.flags,
       };
     },
     fromJSONValue(obj) {
@@ -132,15 +132,16 @@ const builtinConverters = [
         obj.$flags
           // Cut off flags at 50 chars to avoid abusing RegExp for DOS.
           .slice(0, 50)
-          .replace(/[^gimuy]/g,'')
-          .replace(/(.)(?=.*\1)/g, '')
+          .replace(/[^gimuy]/g, "")
+          .replace(/(.)(?=.*\1)/g, ""),
       );
     },
   },
-  { // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
+  {
+    // NaN, Inf, -Inf. (These are the only objects with typeof !== 'object'
     // which we match.)
     matchJSONValue(obj) {
-      return hasOwn(obj, '$InfNaN') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$InfNaN") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject: isInfOrNaN,
     toJSONValue(obj) {
@@ -152,68 +153,71 @@ const builtinConverters = [
       } else {
         sign = -1;
       }
-      return {$InfNaN: sign};
+      return { $InfNaN: sign };
     },
     fromJSONValue(obj) {
       return obj.$InfNaN / 0;
     },
   },
-  { // Binary
+  {
+    // Binary
     matchJSONValue(obj) {
-      return hasOwn(obj, '$binary') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$binary") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
-      return typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array
-        || (obj && hasOwn(obj, '$Uint8ArrayPolyfill'));
+      return (
+        (typeof Uint8Array !== "undefined" && obj instanceof Uint8Array) ||
+        (obj && hasOwn(obj, "$Uint8ArrayPolyfill"))
+      );
     },
     toJSONValue(obj) {
-      return {$binary: Base64.encode(obj)};
+      return { $binary: Base64.encode(obj) };
     },
     fromJSONValue(obj) {
       return Base64.decode(obj.$binary);
     },
   },
-  { // Escaping one level
+  {
+    // Escaping one level
     matchJSONValue(obj) {
-      return hasOwn(obj, '$escape') && lengthOfWithLimit(obj, 1) === 1;
+      return hasOwn(obj, "$escape") && lengthOfWithLimit(obj, 1) === 1;
     },
     matchObject(obj) {
       let match = false;
       if (obj) {
         const keyCount = lengthOfWithLimit(obj, 2);
         if (keyCount === 1 || keyCount === 2) {
-          match =
-            builtinConverters.some(converter => converter.matchJSONValue(obj));
+          match = builtinConverters.some((converter) => converter.matchJSONValue(obj));
         }
       }
       return match;
     },
     toJSONValue(obj) {
       const newObj = {};
-      keysOf(obj).forEach(key => {
+      keysOf(obj).forEach((key) => {
         newObj[key] = EJSON.toJSONValue(obj[key]);
       });
-      return {$escape: newObj};
+      return { $escape: newObj };
     },
     fromJSONValue(obj) {
       const newObj = {};
-      keysOf(obj.$escape).forEach(key => {
+      keysOf(obj.$escape).forEach((key) => {
         newObj[key] = EJSON.fromJSONValue(obj.$escape[key]);
       });
       return newObj;
     },
   },
-  { // Custom
+  {
+    // Custom
     matchJSONValue(obj) {
-      return hasOwn(obj, '$type')
-        && hasOwn(obj, '$value') && lengthOfWithLimit(obj, 2) === 2;
+      return hasOwn(obj, "$type") && hasOwn(obj, "$value") && lengthOfWithLimit(obj, 2) === 2;
     },
     matchObject(obj) {
       return EJSON._isCustomType(obj);
     },
     toJSONValue(obj) {
       const jsonValue = Meteor._noYieldsAllowed(() => obj.toJSONValue());
-      return {$type: obj.typeName(), $value: jsonValue};
+      return { $type: obj.typeName(), $value: jsonValue };
     },
     fromJSONValue(obj) {
       const typeName = obj.$type;
@@ -226,20 +230,17 @@ const builtinConverters = [
   },
 ];
 
-EJSON._isCustomType = (obj) => (
-  obj &&
-  isFunction(obj.toJSONValue) &&
-  isFunction(obj.typeName) &&
-  customTypes.has(obj.typeName())
-);
+EJSON._isCustomType = (obj) =>
+  obj && isFunction(obj.toJSONValue) && isFunction(obj.typeName) && customTypes.has(obj.typeName());
 
-EJSON._getTypes = (isOriginal = false) => (isOriginal ? customTypes : convertMapToObject(customTypes));
+EJSON._getTypes = (isOriginal = false) =>
+  isOriginal ? customTypes : convertMapToObject(customTypes);
 
 EJSON._getConverters = () => builtinConverters;
 
 // Either return the JSON-compatible version of the argument, or undefined (if
 // the item isn't itself replaceable, but maybe some fields in it are)
-const toJSONValueHelper = item => {
+const toJSONValueHelper = (item) => {
   for (let i = 0; i < builtinConverters.length; i++) {
     const converter = builtinConverters[i];
     if (converter.matchObject(item)) {
@@ -250,7 +251,7 @@ const toJSONValueHelper = item => {
 };
 
 // for both arrays and objects, in-place modification.
-const adjustTypesToJSONValue = obj => {
+const adjustTypesToJSONValue = (obj) => {
   // Is it an atom that we need to adjust?
   if (obj === null) {
     return null;
@@ -267,10 +268,9 @@ const adjustTypesToJSONValue = obj => {
   }
 
   // Iterate over array or object structure.
-  keysOf(obj).forEach(key => {
+  keysOf(obj).forEach((key) => {
     const value = obj[key];
-    if (!isObject(value) && value !== undefined &&
-        !isInfOrNaN(value)) {
+    if (!isObject(value) && value !== undefined && !isInfOrNaN(value)) {
       return; // continue
     }
 
@@ -291,12 +291,15 @@ EJSON._adjustTypesToJSONValue = adjustTypesToJSONValue;
 // Copy-on-write recursive EJSON→JSON converter.
 // Only allocates new objects/arrays along paths that actually change,
 // returning the original reference when nothing needs conversion.
-const toJSONValueDeep = value => {
+const toJSONValueDeep = (value) => {
   // Short-circuit for primitives that toJSONValueHelper can never match.
-  if (value === null || value === undefined
-      || typeof value === 'boolean'
-      || typeof value === 'string'
-      || (typeof value === 'number' && !isInfOrNaN(value))) {
+  if (
+    value === null ||
+    value === undefined ||
+    typeof value === "boolean" ||
+    typeof value === "string" ||
+    (typeof value === "number" && !isInfOrNaN(value))
+  ) {
     return value;
   }
 
@@ -352,17 +355,16 @@ const toJSONValueDeep = value => {
  * @locus Anywhere
  * @param {EJSON} val A value to serialize to plain JSON.
  */
-EJSON.toJSONValue = item => toJSONValueDeep(item);
+EJSON.toJSONValue = (item) => toJSONValueDeep(item);
 
 // Either return the argument changed to have the non-json
 // rep of itself (the Object version) or the argument itself.
 // DOES NOT RECURSE.  For actually getting the fully-changed value, use
 // EJSON.fromJSONValue
-const fromJSONValueHelper = value => {
+const fromJSONValueHelper = (value) => {
   if (isObject(value) && value !== null) {
     const keys = keysOf(value);
-    if (keys.length <= 2
-        && keys.every(k => typeof k === 'string' && k.substr(0, 1) === '$')) {
+    if (keys.length <= 2 && keys.every((k) => typeof k === "string" && k.substr(0, 1) === "$")) {
       for (let i = 0; i < builtinConverters.length; i++) {
         const converter = builtinConverters[i];
         if (converter.matchJSONValue(value)) {
@@ -377,7 +379,7 @@ const fromJSONValueHelper = value => {
 // for both arrays and objects. Tries its best to just
 // use the object you hand it, but may return something
 // different if the object you hand it itself needs changing.
-const adjustTypesFromJSONValue = obj => {
+const adjustTypesFromJSONValue = (obj) => {
   if (obj === null) {
     return null;
   }
@@ -392,7 +394,7 @@ const adjustTypesFromJSONValue = obj => {
     return obj;
   }
 
-  keysOf(obj).forEach(key => {
+  keysOf(obj).forEach((key) => {
     const value = obj[key];
     if (isObject(value)) {
       const changed = fromJSONValueHelper(value);
@@ -412,8 +414,8 @@ EJSON._adjustTypesFromJSONValue = adjustTypesFromJSONValue;
 
 // Copy-on-write recursive JSON→EJSON converter.
 // Same lazy-allocation strategy as toJSONValueDeep.
-const fromJSONValueDeep = value => {
-  if (value === null || typeof value !== 'object') {
+const fromJSONValueDeep = (value) => {
+  if (value === null || typeof value !== "object") {
     return value;
   }
 
@@ -466,7 +468,7 @@ const fromJSONValueDeep = value => {
  * @locus Anywhere
  * @param {JSONCompatible} val A value to deserialize into EJSON.
  */
-EJSON.fromJSONValue = item => fromJSONValueDeep(item);
+EJSON.fromJSONValue = (item) => fromJSONValueDeep(item);
 
 /**
  * @summary Serialize a value to a string. For EJSON values, the serialization
@@ -499,9 +501,9 @@ EJSON.stringify = handleError((item, options) => {
  * @locus Anywhere
  * @param {String} str A string to parse into an EJSON value.
  */
-EJSON.parse = item => {
-  if (typeof item !== 'string') {
-    throw new Error('EJSON.parse argument should be a string');
+EJSON.parse = (item) => {
+  if (typeof item !== "string") {
+    throw new Error("EJSON.parse argument should be a string");
   }
   return EJSON.fromJSONValue(JSON.parse(item));
 };
@@ -512,9 +514,11 @@ EJSON.parse = item => {
  * @param {Object} x The variable to check.
  * @locus Anywhere
  */
-EJSON.isBinary = obj => {
-  return !!((typeof Uint8Array !== 'undefined' && obj instanceof Uint8Array) ||
-    (obj && obj.$Uint8ArrayPolyfill));
+EJSON.isBinary = (obj) => {
+  return !!(
+    (typeof Uint8Array !== "undefined" && obj instanceof Uint8Array) ||
+    (obj && obj.$Uint8ArrayPolyfill)
+  );
 };
 
 /**
@@ -545,7 +549,7 @@ EJSON.equals = (a, b, options) => {
 
   // Same-type primitives that aren't === can only be equal if both are NaN.
   // This skips the NaN check entirely for strings, booleans, etc.
-  if (typeof a !== 'object') {
+  if (typeof a !== "object") {
     return Number.isNaN(a) && Number.isNaN(b);
   }
 
@@ -602,8 +606,10 @@ EJSON.equals = (a, b, options) => {
 
   // fallback for custom types that don't implement their own equals
   switch (EJSON._isCustomType(a) + EJSON._isCustomType(b)) {
-    case 1: return false;
-    case 2: return EJSON.equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
+    case 1:
+      return false;
+    case 2:
+      return EJSON.equals(EJSON.toJSONValue(a), EJSON.toJSONValue(b));
     default: // Do nothing
   }
 
@@ -616,7 +622,7 @@ EJSON.equals = (a, b, options) => {
   }
   if (keyOrderSensitive) {
     i = 0;
-    ret = aKeys.every(key => {
+    ret = aKeys.every((key) => {
       if (i >= bKeys.length) {
         return false;
       }
@@ -631,7 +637,7 @@ EJSON.equals = (a, b, options) => {
     });
   } else {
     i = 0;
-    ret = aKeys.every(key => {
+    ret = aKeys.every((key) => {
       if (!hasOwn(b, key)) {
         return false;
       }
@@ -650,7 +656,7 @@ EJSON.equals = (a, b, options) => {
  * @locus Anywhere
  * @param {EJSON} val A value to copy.
  */
-EJSON.clone = v => {
+EJSON.clone = (v) => {
   let ret;
   if (!isObject(v)) {
     return v;
