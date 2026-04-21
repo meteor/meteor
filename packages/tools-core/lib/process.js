@@ -20,12 +20,15 @@ const net = require('net');
  * @returns {Object} The spawned process with additional utility methods
  */
 export function spawnProcess(command, args, options = {}) {
+  const useShell = options.shell != null
+    ? options.shell
+    : process.platform === 'win32';
   const proc = spawn(command, args, {
     env: { ...process.env, ...(options.env || {}), FORCE_COLOR: '1', TERM: 'xterm-256color' },
     cwd: options.cwd || process.cwd(),
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: options.detached || false,
-    ...(process.platform === 'win32' && { shell: true }),
+    ...(useShell && { shell: true }),
   });
 
   // Add a reference to track if the process is running

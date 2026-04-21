@@ -198,8 +198,10 @@ export class Progress {
     }
 
     if (!state.done && this.state.done) {
-      // This shouldn't happen
-      throw new Error("Progress transition from done => !done");
+      // This can happen when parallel operations (Promise.all) add new
+      // child tasks to a progress node after earlier children completed.
+      // Allow the transition — the task is simply re-opened with new work.
+      this.isDone = false;
     }
 
     this.state = state;

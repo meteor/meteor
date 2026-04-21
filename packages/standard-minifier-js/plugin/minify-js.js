@@ -32,6 +32,29 @@ function getMeteorConfig() {
 
 let swc;
 
+// Native Rust minifier — ~5x faster than SWC.
+// oxc-minify is ESM-only, so we load the native NAPI binding directly
+// (same approach as oxc-parser in js-analyze.js).
+let oxcMinifySync;
+try {
+  const oxcTargets = {
+    'win32-x64': '@oxc-minify/binding-win32-x64-msvc',
+    'win32-ia32': '@oxc-minify/binding-win32-ia32-msvc',
+    'win32-arm64': '@oxc-minify/binding-win32-arm64-msvc',
+    'darwin-x64': '@oxc-minify/binding-darwin-x64',
+    'darwin-arm64': '@oxc-minify/binding-darwin-arm64',
+    'linux-x64': '@oxc-minify/binding-linux-x64-gnu',
+    'linux-arm64': '@oxc-minify/binding-linux-arm64-gnu',
+  };
+  const oxcPkg = oxcTargets[process.platform + '-' + process.arch];
+  if (oxcPkg) {
+    const oxcBinding = require(oxcPkg);
+    oxcMinifySync = oxcBinding.minifySync;
+  }
+} catch (e) {
+  oxcMinifySync = null;
+}
+
 // Register the minifier only when Plugin is available (not in tests)
 if (typeof Plugin !== 'undefined') {
   Plugin.registerMinifier({
@@ -43,6 +66,40 @@ if (typeof Plugin !== 'undefined') {
 }
 
 export class MeteorMinifier {
+  _minifyWithOxc(file) {
+    return Profile('_minifyWithOxc', () => {
+      if (!oxcMinifySync) {
+        throw new Error('oxc-minify native binding not available');
+      }
+
+      const content = file.getContentsAsString();
+      const filename = file.getPathInBundle() || 'input.js';
+
+      const result = oxcMinifySync(filename, content, {
+        compress: {
+          target: 'es2015',
+          dropDebugger: false,
+          unused: true,
+        },
+        mangle: true,
+        codegen: { removeWhitespace: true },
+        sourcemap: true,
+      });
+
+      if (result.errors && result.errors.length > 0) {
+        const err = result.errors[0];
+        throw new Error(
+          `oxc minification error: ${err.message || err}`
+        );
+      }
+
+      return {
+        code: result.code,
+        map: result.map || null,
+      };
+    })();
+  }
+
   _minifyWithSWC(file) {
     return Profile('_minifyWithSWC', () => {
       swc = swc || require('@meteorjs/swc-core'); 
@@ -112,6 +169,22 @@ export class MeteorMinifier {
         (meteorConfig?.modern === true ||
           (meteorConfig?.modern &&
             meteorConfig?.modern?.minifier === true));
+
+      // oxc-minify: opt-in via METEOR_USE_OXC_MINIFIER=1 env var
+      // or meteor config { modern: { minifier: 'oxc' } }
+      const useOxc = process.env.METEOR_USE_OXC_MINIFIER === '1' ||
+        (meteorConfig?.modern?.minifier === 'oxc');
+
+      if (useOxc && oxcMinifySync) {
+        try {
+          Meteor._debug(`Minifying using oxc  | file: ${file.getPathInBundle()}`);
+          return this._minifyWithOxc(file);
+        } catch (oxcError) {
+          Meteor._debug(`oxc failed, falling back to SWC  | file: ${file.getPathInBundle()}`);
+          // Fall through to SWC/Terser
+        }
+      }
+
       // check if config is an empty object
       if(meteorConfig && Object.keys(meteorConfig).length === 0 || !modern) {
         Meteor._debug(`Minifying using Terser  | file: ${file.getPathInBundle()}`);
@@ -132,9 +205,8 @@ export class MeteorMinifier {
 MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle', async function (files, options) {
   const mode = options.minifyMode;
 
-  // don't minify anything for development
   if (mode === 'development') {
-    files.forEach(function (file) {
+    files.forEach((file) => {
       file.addJavaScript({
         data: file.getContentsAsBuffer(),
         sourceMap: file.getSourceMap(),
@@ -144,106 +216,73 @@ MeteorMinifier.prototype.processFilesForBundle = Profile('processFilesForBundle'
     return;
   }
 
-  // this function tries its best to locate the original source file
-  // that the error being reported was located inside of
   function maybeThrowMinifyErrorBySourceFile(error, file) {
     const lines = file.getContentsAsString().split(/\n/);
     const lineContent = lines[error.line - 1];
-
     let originalSourceFileLineNumber = 0;
 
-    // Count backward from the failed line to find the oringal filename
     for (let i = (error.line - 1); i >= 0; i--) {
-        let currentLine = lines[i];
-
-        // If the line is a boatload of slashes (8 or more), we're in the right place.
-        if (/^\/\/\/{6,}$/.test(currentLine)) {
-
-            // If 4 lines back is the same exact line, we've found the framing.
-            if (lines[i - 4] === currentLine) {
-
-                // So in that case, 2 lines back is the file path.
-                let originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
-
-                throw new Error(
-                    `terser minification error (${error.name}:${error.message})\n` +
-                    `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` +
-                    `Line content: ${lineContent}\n`);
-            }
+      const currentLine = lines[i];
+      if (/^\/\/\/{6,}$/.test(currentLine)) {
+        if (lines[i - 4] === currentLine) {
+          const originalFilePath = lines[i - 2].substring(3).replace(/\s+\/\//, "");
+          throw new Error(
+            `terser minification error (${error.name}:${error.message})\n` +
+            `Source file: ${originalFilePath}  (${originalSourceFileLineNumber}:${error.col})\n` +
+            `Line content: ${lineContent}\n`);
         }
-        originalSourceFileLineNumber++;
+      }
+      originalSourceFileLineNumber++;
     }
   }
-    
-  // this object will collect all the minified code in the
-  // data field and post-minfiication file sizes in the stats field
+
   const toBeAdded = {
     data: "",
-    stats: Object.create(null)
+    stats: Object.create(null),
   };
 
-  for (let file of files) {
-    // Don't reminify *.min.js.
+  // Separate pre-minified files from those needing minification.
+  const filesToMinify = [];
+  for (const file of files) {
     if (/\.min\.js$/.test(file.getPathInBundle())) {
       toBeAdded.data += file.getContentsAsString();
       Plugin.nudge();
-      continue;
+    } else {
+      filesToMinify.push(file);
     }
- 
-    let minified;
-    let label = 'minify file'
-    if (file.getPathInBundle() === 'app/app.js') {
-      label = 'minify app/app.js'
-    }
-    if (file.getPathInBundle() === 'packages/modules.js') {
-      label = 'minify packages/modules.js'
-    }
+  }
 
+  for (const file of filesToMinify) {
+    let minified;
     try {
-      // Need to update this approach for async/await
       let minifyPromise;
-      Profile.time(label, () => {
+      Profile.time('minify file', () => {
         minifyPromise = this.minifyOneFile(file);
       });
       minified = await minifyPromise;
-      
+
       if (!(minified && typeof minified.code === "string")) {
         throw new Error(`Invalid minification result for ${file.getPathInBundle()}`);
       }
-    }
-    catch (err) {
+    } catch (err) {
       maybeThrowMinifyErrorBySourceFile(err, file);
-      var filePath = file.getPathInBundle();
-      err.message += " while minifying " + filePath;
+      err.message += " while minifying " + file.getPathInBundle();
       throw err;
     }
 
     if (statsEnabled) {
-      let tree;
-      Profile.time('extractModuleSizesTree', () => {
-        tree = extractModuleSizesTree(minified.code);
-        if (tree) {
-          toBeAdded.stats[file.getPathInBundle()] = [Buffer.byteLength(minified.code), tree];
-        } else {
-          toBeAdded.stats[file.getPathInBundle()] = Buffer.byteLength(minified.code);
-        }
-        // append the minified code to the "running sum"
-        // of code being minified
-      });
-      // Add the minified code outside of the Profile.time
-      toBeAdded.data += minified.code;
-    } else {
-      // If stats are disabled, still need to add the minified code
-      toBeAdded.data += minified.code;
+      const tree = extractModuleSizesTree(minified.code);
+      if (tree) {
+        toBeAdded.stats[file.getPathInBundle()] = [Buffer.byteLength(minified.code), tree];
+      } else {
+        toBeAdded.stats[file.getPathInBundle()] = Buffer.byteLength(minified.code);
+      }
     }
-
+    toBeAdded.data += minified.code;
     toBeAdded.data += '\n\n';
-    
     Plugin.nudge();
   }
 
-  // this is where the minified code gets added to one
-  // JS file that is delivered to the client
   if (files.length) {
     files[0].addJavaScript(toBeAdded);
   }

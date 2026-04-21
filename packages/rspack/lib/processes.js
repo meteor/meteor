@@ -41,6 +41,53 @@ const {
   getMonorepoPath,
 } = require('meteor/tools-core/lib/npm');
 
+/**
+ * Resolves the @rspack/cli binary path from the app's node_modules.
+ * Returns null if not found (falls back to npx).
+ * @returns {string|null} Absolute path to rspack.js binary
+ */
+function getRspackBinPath() {
+  const appDir = getMeteorAppDir();
+  const relBin = path.join('node_modules', '@rspack', 'cli', 'bin', 'rspack.js');
+
+  // Try app-level node_modules first
+  const directPath = path.join(appDir, relBin);
+  if (fs.existsSync(directPath)) {
+    return directPath;
+  }
+
+  // Try monorepo root
+  const monorepoPath = getMonorepoPath();
+  if (monorepoPath) {
+    const monoPath = path.join(monorepoPath, relBin);
+    if (fs.existsSync(monoPath)) {
+      return monoPath;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Gets the command and args to run rspack, preferring direct node invocation
+ * over npx to avoid shell + npx resolution overhead.
+ * @param {string[]} rspackArgs - Arguments to pass to rspack (e.g. ['serve', '--config', ...])
+ * @returns {{ command: string, args: string[], shell: boolean|undefined }}
+ */
+function getRspackCommand(rspackArgs) {
+  const binPath = getRspackBinPath();
+  if (binPath) {
+    return {
+      command: process.execPath,
+      args: [binPath, ...rspackArgs],
+      shell: false,
+    };
+  }
+  // Fallback to npx if binary not found at expected path
+  const npx = getNpxCommand(['rspack', ...rspackArgs]);
+  return { command: npx.command, args: npx.args };
+}
+
 const {
   getGlobalState,
   setGlobalState
@@ -322,11 +369,12 @@ export function startRspackClientServe(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
-  const { command, args } = getNpxCommand(['rspack', 'serve', '--config', configFile, ...params]);
+  const { command, args, shell } = getRspackCommand(['serve', '--config', configFile, ...params]);
   const newClientProcess = spawnProcess(
     command,
     args, {
       cwd: appDir,
+      shell,
       env: { ...process.env, ...envs },
       onStdout: (data) => {
         logInfo(`[Rspack Client] ${data}`);
@@ -385,11 +433,12 @@ export function startRspackServerWatch(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: false, isServer: true });
-  const { command, args } = getNpxCommand(['rspack', 'build', '--watch', '--config', configFile, ...params]);
+  const { command, args, shell } = getRspackCommand(['build', '--watch', '--config', configFile, ...params]);
   const newServerProcess = spawnProcess(
     command,
     args, {
     cwd: appDir,
+    shell,
     env: { ...process.env, ...envs },
     onStdout: (data) => {
       logInfo(`[Rspack Server] ${data}`);
@@ -443,20 +492,20 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
   // Use a promise to ensure Meteor waits until Rspack finishes
   return new Promise((resolve, reject) => {
     const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule, isTestLike });
-    const rspackArgs = [
-      'rspack',
+    const buildArgs = [
       'build',
       '--config',
       configFile,
       ...(watch && ['--watch']) || [],
       ...params,
     ].filter(Boolean);
-    const { command, args } = getNpxCommand(rspackArgs);
+    const { command, args, shell } = getRspackCommand(buildArgs);
     spawnProcess(
       command,
       args,
       {
       cwd: appDir,
+      shell,
       env: { ...process.env, ...envs },
       onStdout: (data) => {
         logInfo(`[Rspack ${label} ${endpoint}] ${data}`);

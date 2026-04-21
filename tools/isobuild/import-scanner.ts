@@ -1,15 +1,14 @@
 import assert from "assert";
 import {inspect} from "util";
 import {Script} from "vm";
-import {
-  isString, isObject, isEmpty, has, keys, each, omit,
-} from "underscore";
+
+
 import {sha1} from "../fs/watch";
 import {
   matches as archMatches,
   isLegacyArch,
 } from "../utils/archinfo";
-import {findImportedModuleIdentifiers} from "./js-analyze.js";
+import {findImportedModuleIdentifiers, findImportedModuleIdentifiersAsync} from "./js-analyze.js";
 import {cssToCommonJS} from "./css-modules";
 import buildmessage from "../utils/buildmessage.js";
 import {Profile} from "../tool-env/profile";
@@ -216,7 +215,7 @@ function jsonDataToCommonJS(data: any) {
 const scriptParseCache = Object.create(null);
 
 function canBeParsedAsPlainJS(dataString: string, hash: string): boolean {
-  if (hash && has(scriptParseCache, hash)) {
+  if (hash && (hash in scriptParseCache)) {
     return scriptParseCache[hash];
   }
 
@@ -315,7 +314,7 @@ const IMPORT_SCANNER_CACHE = new LRUCache({
   max: Math.pow(2, 23),
   length(ids: Record<string, ImportInfo>) {
     let total = 40; // size of key
-    each(ids, (_info, id) => { total += id.length; });
+    Object.keys(ids).forEach(id => { total += id.length; });
     return total;
   }
 });
@@ -452,7 +451,7 @@ export default class ImportScanner {
 
   private getFile(absPath: string): File | null {
     absPath = absPath.toLowerCase();
-    if (has(this.absPathToOutputIndex, absPath)) {
+    if (absPath in this.absPathToOutputIndex) {
       return this.outputFiles[this.absPathToOutputIndex[absPath]];
     }
     return null;
@@ -466,7 +465,7 @@ export default class ImportScanner {
 
     const absLowerPath = absPath.toLowerCase();
 
-    if (has(this.absPathToOutputIndex, absLowerPath)) {
+    if (absLowerPath in this.absPathToOutputIndex) {
       const old = this.outputFiles[
         this.absPathToOutputIndex[absLowerPath]];
 
@@ -533,7 +532,7 @@ export default class ImportScanner {
   }
 
   private addFileByRealPath(file: File, realPath: string) {
-    if (! has(this.realPathToFiles, realPath)) {
+    if (!(realPath in this.realPathToFiles)) {
       this.realPathToFiles[realPath] = [];
     }
 
@@ -562,7 +561,7 @@ export default class ImportScanner {
   }
 
   private realPath(absPath: string) {
-    if (has(this.realPathCache, absPath)) {
+    if (absPath in this.realPathCache) {
       return this.realPathCache[absPath];
     }
 
@@ -610,7 +609,7 @@ export default class ImportScanner {
   private async checkSourceAndTargetPaths(file: File) {
     file.sourcePath = this.getSourcePath(file);
 
-    if (! isString(file.targetPath)) {
+    if (typeof file.targetPath !== "string") {
       return;
     }
 
@@ -699,11 +698,11 @@ export default class ImportScanner {
     const scanner = this;
 
     function checkProperty(name: "lazy" | "bare") {
-      if (has(oldFile, name)) {
-        if (! has(newFile, name)) {
+      if (name in oldFile) {
+        if (!(name in newFile)) {
           newFile[name] = oldFile[name]!;
         }
-      } else if (has(newFile, name)) {
+      } else if (name in newFile) {
         oldFile[name] = newFile[name]!;
       }
 
@@ -711,12 +710,17 @@ export default class ImportScanner {
         const fuzzyCase =
           oldFile.sourcePath.toLowerCase() === newFile.sourcePath.toLowerCase();
 
+        const omitDataString = (obj: File) => {
+          const { dataString, ...rest } = obj;
+          return rest;
+        };
+
         throw new Error(
           "Attempting to combine different files" +
             ( fuzzyCase ? " (is the filename case slightly different?)" : "") +
             ":\n" +
-            inspect(omit(oldFile, "dataString")) + "\n" +
-            inspect(omit(newFile, "dataString")) + "\n"
+            inspect(omitDataString(oldFile)) + "\n" +
+            inspect(omitDataString(newFile)) + "\n"
         );
       }
     }
@@ -727,8 +731,10 @@ export default class ImportScanner {
     checkProperty("bare");
 
     async function getChunk(file: File) {
-      if (file.sourceMap) {
-        const consumer = await new SourceMapConsumer(file.sourceMap);
+      // Resolve sourceMap (may be a Promise from async OutputResource getter).
+      const sm = await file.sourceMap;
+      if (sm && sm.version) {
+        const consumer = await new SourceMapConsumer(sm);
         const node = SourceNode.fromStringWithSourceMap(
           await scanner.getDataString(file),
           consumer
@@ -740,13 +746,18 @@ export default class ImportScanner {
       }
     }
 
+    const [oldChunk, newChunk] = await Promise.all([
+      getChunk(oldFile),
+      getChunk(newFile),
+    ]);
+
     const {
       code: combinedDataString,
       map: combinedSourceMap,
     } = new SourceNode(null, null, null, [
-      await getChunk(oldFile),
+      oldChunk,
       "\n\n",
-      await getChunk(newFile)
+      newChunk
     ]).toStringWithSourceMap({
       file: oldFile.servePath || newFile.servePath
     });
@@ -764,10 +775,28 @@ export default class ImportScanner {
   }
 
   async scanImports() {
-    for (const file of this.outputFiles) {
-      if (!file.lazy) {
-        await this.scanFile(file);
+    const nonLazyFiles = this.outputFiles.filter(f => !f.lazy);
+
+    // Pre-compute import identifiers for all non-lazy files in parallel.
+    // This parallelizes Reify compilation and worker pool parsing across
+    // files instead of processing them one at a time. Each file's deps
+    // are independent (per-file data, per-file hash, per-file cache key).
+    // Errors are caught and ignored here — scanFile will re-attempt
+    // findImportedModuleIdentifiers and report errors via buildmessage.
+    await Promise.all(nonLazyFiles.map(async file => {
+      try {
+        file.deps = file.deps ||
+          await this.findImportedModuleIdentifiers(file);
+      } catch (_) {
+        // scanFile will retry and handle parse errors properly.
       }
+    }));
+
+    // Scan files sequentially for dependency resolution (modifies shared
+    // state: adds discovered files, sets import statuses). The expensive
+    // findImportedModuleIdentifiers call is skipped since deps are cached.
+    for (const file of nonLazyFiles) {
+      await this.scanFile(file);
     }
 
     return this;
@@ -781,7 +810,7 @@ export default class ImportScanner {
     const newlyMissing = Object.create(null);
     const newlyAdded = Object.create(null);
 
-    if (! isEmpty(missingModules)) {
+    if (Object.keys(missingModules).length > 0) {
       const previousAllMissingModules = this.allMissingModules;
       this.allMissingModules = newlyMissing;
 
@@ -841,7 +870,7 @@ export default class ImportScanner {
       this.allMissingModules = previousAllMissingModules;
 
       Object.keys(missingModules).forEach(id => {
-        if (! has(newlyMissing, id)) {
+        if (!(id in newlyMissing)) {
           // We don't need to use ImportScanner.mergeMissing here because
           // this is the first time newlyAdded[id] has been assigned.
           newlyAdded[id] = missingModules[id];
@@ -852,7 +881,7 @@ export default class ImportScanner {
       // newlyMissing and merge the new identifiers back into
       // this.allMissingModules.
       for (const id of Object.keys(newlyMissing)) {
-        const skipScan = has(previousAllMissingModules, id) &&
+        const skipScan = (id in previousAllMissingModules) &&
             !isHigherStatus(
                 getParentStatus(newlyMissing[id]),
                 getParentStatus(previousAllMissingModules[id]));
@@ -879,11 +908,11 @@ export default class ImportScanner {
   // exists. The array elements should be importInfo objects, and will be
   // deduplicated according to their .parentPath properties.
   static mergeMissing(target: MissingMap, source: MissingMap) {
-    keys(source).forEach(id => {
+    Object.keys(source).forEach(id => {
       const importInfoList = source[id];
       const pathToIndex = Object.create(null);
 
-      if (! has(target, id)) {
+      if (!(id in target)) {
         target[id] = [];
       } else {
         target[id].forEach((importInfo, index) => {
@@ -1016,7 +1045,7 @@ export default class ImportScanner {
       return IMPORT_SCANNER_CACHE.get(fileHash) as Record<string, ImportInfo>;
     }
 
-    const result = findImportedModuleIdentifiers(
+    const result = await findImportedModuleIdentifiersAsync(
       await this.getDataString(file),
         fileHash,
     );
@@ -1045,7 +1074,7 @@ export default class ImportScanner {
       const info = parentFile.deps![id];
       info.helpers = info.helpers || {};
 
-      each(resolved.packageJsonMap, (pkg, path) => {
+      Object.entries(resolved.packageJsonMap).forEach(([path, pkg]) => {
         const packageJsonFile =
           this.addPkgJsonToOutput(path, pkg, forDynamicImport);
 
@@ -1302,7 +1331,7 @@ export default class ImportScanner {
     const dataString = info.dataString;
 
     let ext = dotExt.slice(1);
-    if (! has(DefaultHandlers.prototype, ext)) {
+    if (!(ext in DefaultHandlers.prototype)) {
       if (canBeParsedAsPlainJS(dataString, info.hash)) {
         ext = "js";
       } else {
@@ -1574,7 +1603,7 @@ export default class ImportScanner {
       // To ensure the native module can be evaluated at runtime, register
       // a dependency on meteor-node-stubs/deps/<id>.js.
       const stubId = Resolver.getNativeStubId(id);
-      if (isString(stubId) && stubId !== id) {
+      if (typeof stubId === "string" && stubId !== id) {
         const info = parentFile.deps![id];
 
         // Although not explicitly imported, any stubs associated with
@@ -1602,7 +1631,7 @@ export default class ImportScanner {
 
     if (parentFile &&
         parentFile.deps &&
-        has(parentFile.deps, id)) {
+        (id in parentFile.deps)) {
       const importInfo = parentFile.deps[id];
       info.possiblySpurious = importInfo.possiblySpurious;
       // Remember that this property only indicates whether or not the
@@ -1688,7 +1717,7 @@ export default class ImportScanner {
     }
 
     const browser = pkgFile.jsonData!.browser;
-    if (! isObject(browser)) {
+    if (!browser || typeof browser !== "object") {
       return;
     }
 
@@ -1783,7 +1812,7 @@ export default class ImportScanner {
   }
 
   private areAbsModuleIdsInSamePackage(path1: string, path2: string) {
-    if (! (isString(path1) && isString(path2))) {
+    if (!(typeof path1 === "string" && typeof path2 === "string")) {
       return false;
     }
 

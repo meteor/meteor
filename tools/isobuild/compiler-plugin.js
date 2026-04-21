@@ -5,7 +5,6 @@ var colonConverter = require('../utils/colon-converter.js');
 var files = require('../fs/files');
 var compiler = require('./compiler.js');
 var linker = require('./linker.js');
-var _ = require('underscore');
 var Profile = require('../tool-env/profile').Profile;
 import assert from "assert";
 import {readAndWatchFileWithHash, sha1, WatchSet,} from '../fs/watch';
@@ -16,6 +15,7 @@ import ImportScanner from './import-scanner';
 import {cssToCommonJS} from "./css-modules";
 import Resolver from "./resolver";
 import {optimisticHashOrNull, optimisticStatOrNull,} from "../fs/optimistic";
+import v8 from "v8";
 
 import {isTestFilePath} from './test-files.js';
 
@@ -61,7 +61,9 @@ const hasOwn = Object.prototype.hasOwnProperty;
 // Cache the (slightly post-processed) results of linker.fullLink.
 const CACHE_SIZE = process.env.METEOR_LINKER_CACHE_SIZE || 1024*1024*100;
 const CACHE_DEBUG = !! process.env.METEOR_TEST_PRINT_LINKER_CACHE_DEBUG;
-const LINKER_CACHE_SALT = 26; // Increment this number to force relinking.
+const LINKER_CACHE_SALT = 27; // Increment this number to force relinking.
+const IMPORT_MAP_CACHE_SALT = 1; // Increment to force re-scanning.
+const IMPORT_MAP_CACHE_DEBUG = !! process.env.METEOR_IMPORT_MAP_CACHE_DEBUG;
 const LINKER_CACHE = new LRUCache({
   max: CACHE_SIZE,
   // Cache is measured in bytes. We don't care about servePath.
@@ -137,23 +139,20 @@ export class CompilerPluginProcessor {
     // plugin id -> {sourceProcessor, resourceSlots}
     var sourceProcessorsWithSlots = {};
 
-    const sourceBatches = [];
-    for (const unibuild of self.unibuilds) {
+    // Create all batches first, then init them in parallel
+    const sourceBatches = self.unibuilds.map(unibuild => {
       const { pkg: { name }, arch } = unibuild;
       const sourceRoot = name
           && self.isopackCache.getSourceRoot(name, arch)
           || self.sourceRoot;
-
-      const batch = new PackageSourceBatch(unibuild, self, {
+      return new PackageSourceBatch(unibuild, self, {
         sourceRoot,
         linkerCacheDir: self.linkerCacheDir,
         scannerCacheDir: self.scannerCacheDir,
       });
+    });
 
-      await batch.init();
-
-      sourceBatches.push(batch);
-    }
+    await Promise.all(sourceBatches.map(batch => batch.init()));
 
     // If we failed to match sources with processors, we're done.
     if (buildmessage.jobHasMessages()) {
@@ -161,15 +160,15 @@ export class CompilerPluginProcessor {
     }
 
     // Find out which files go with which CompilerPlugins.
-    _.each(sourceBatches, function (sourceBatch) {
-      _.each(sourceBatch.resourceSlots, function (resourceSlot) {
+    sourceBatches.forEach(function (sourceBatch) {
+      sourceBatch.resourceSlots.forEach(function (resourceSlot) {
         var sourceProcessor = resourceSlot.sourceProcessor;
         // Skip non-sources.
         if (! sourceProcessor) {
           return;
         }
 
-        if (! _.has(sourceProcessorsWithSlots, sourceProcessor.id)) {
+        if (!(sourceProcessor.id in sourceProcessorsWithSlots)) {
           sourceProcessorsWithSlots[sourceProcessor.id] = {
             sourceProcessor: sourceProcessor,
             resourceSlots: []
@@ -269,7 +268,7 @@ class InputFile extends buildPluginModule.InputFile {
   getSourceRoot(tolerant = false) {
     const sourceRoot = this._resourceSlot.packageSourceBatch.sourceRoot;
 
-    if (_.isString(sourceRoot)) {
+    if (typeof sourceRoot === 'string') {
       return sourceRoot;
     }
 
@@ -314,7 +313,7 @@ class InputFile extends buildPluginModule.InputFile {
   }
 
   _stat(absPath) {
-    return _.has(this._statCache, absPath)
+    return (absPath in this._statCache)
       ? this._statCache[absPath]
       : this._statCache[absPath] = optimisticStatOrNull(absPath);
   }
@@ -329,7 +328,7 @@ class InputFile extends buildPluginModule.InputFile {
     }
 
     const sourceRoot = this.getSourceRoot(true);
-    if (! _.isString(sourceRoot)) {
+    if (typeof sourceRoot !== 'string') {
       return this._controlFileCache[basename] = null;
     }
 
@@ -611,7 +610,7 @@ class ResourceSlot {
   }
 
   _getOption(name, options) {
-    if (options && _.has(options, name)) {
+    if (options && (name in options)) {
       return options[name];
     }
     const fileOptions = this.inputResource.fileOptions;
@@ -878,7 +877,7 @@ class OutputResource {
     this._errors = resourceSlot.errors;
 
     let sourcePath = resourceSlot.inputResource.path;
-    if (_.has(options, "sourcePath") &&
+    if (("sourcePath" in options) &&
         typeof options.sourcePath === "string") {
       sourcePath = options.sourcePath;
     }
@@ -1112,7 +1111,7 @@ export class PackageSourceBatch {
     }, (depUnibuild, { weak, unordered }) => {
       let packageName = depUnibuild.pkg.name;
 
-      _.each(depUnibuild.declaredExports, function (symbol) {
+      depUnibuild.declaredExports.forEach(function (symbol) {
         // Slightly hacky implementation of test-only exports.
         if (! symbol.testOnly || self.unibuild.pkg.isTest) {
           self.importedSymbolToPackageName[symbol.name] = packageName;
@@ -1123,7 +1122,7 @@ export class PackageSourceBatch {
     });
 
     self.useMeteorInstall =
-        _.isString(self.sourceRoot) &&
+        typeof self.sourceRoot === 'string' &&
         self.processor.isopackCache.uses(
             self.unibuild.pkg,
             "modules",
@@ -1256,7 +1255,7 @@ export class PackageSourceBatch {
       const nmds = this.unibuild.nodeModulesDirectories;
       this._nodeModulesPaths = [];
 
-      _.each(nmds, (nmd, path) => {
+      Object.entries(nmds).forEach(([path, nmd]) => {
         if (! nmd.local) {
           this._nodeModulesPaths.push(
             files.convertToOSPath(path.replace(/\/$/g, "")));
@@ -1291,10 +1290,212 @@ export class PackageSourceBatch {
     return this._sourceProcessorSet;
   }
 
+  // Compute a cache key for the import map based on all input source
+  // hashes, architecture, and node_modules state.
+  // Uses _inputHash (source hash) instead of compiled hash to avoid
+  // triggering lazy compilation during cache key computation.
+  static _computeImportMapCacheKey(sourceBatches, inputFilesPerBatch) {
+    const parts = [String(IMPORT_MAP_CACHE_SALT)];
+
+    // Architecture (same for all batches)
+    parts.push(sourceBatches[0].processor.arch);
+
+    // Per-batch: package name, config, source file hashes
+    for (const batch of sourceBatches) {
+      const name = batch.unibuild.pkg.name || null;
+      parts.push(name || "__app__");
+      parts.push(batch.useMeteorInstall ? "1" : "0");
+      parts.push(JSON.stringify(batch.importExtensions));
+
+      const batchFiles = inputFilesPerBatch.get(name);
+      if (batchFiles) {
+        for (const file of batchFiles) {
+          // Use _inputHash (source hash) — available synchronously,
+          // does NOT trigger lazy finalization/compilation.
+          // All input files are OutputResource objects with _inputHash set.
+          parts.push(file._inputHash || "");
+        }
+      }
+    }
+
+    // Hash of app's package.json and lockfile for node_modules state
+    const appBatch = sourceBatches.find(b => !b.unibuild.pkg.name);
+    if (appBatch) {
+      const pkgJsonPath = files.pathJoin(appBatch.sourceRoot, "package.json");
+      const lockPath = files.pathJoin(appBatch.sourceRoot, "package-lock.json");
+      const shrinkPath = files.pathJoin(appBatch.sourceRoot, "npm-shrinkwrap.json");
+      parts.push(optimisticHashOrNull(pkgJsonPath) || "");
+      parts.push(optimisticHashOrNull(lockPath) || optimisticHashOrNull(shrinkPath) || "");
+    }
+
+    return sha1(parts.join("\0"));
+  }
+
+  // Get the import map cache file path for a given scanner cache directory and arch.
+  static _getImportMapCachePath(scannerCacheDir, arch) {
+    if (!scannerCacheDir || !arch) return null;
+    return files.pathJoin(scannerCacheDir, arch, "import-map.v8cache");
+  }
+
+  // Serialize a file from the output map into a plain cacheable object.
+  // Resolves any async getters (OutputResource) to plain values.
+  static async _serializeFile(file) {
+    const data = await file.data;
+    const hash = await file.hash;
+    const sourceMap = await file.sourceMap;
+    return {
+      data: Buffer.isBuffer(data) ? data : (data ? Buffer.from(data) : Buffer.alloc(0)),
+      hash: hash || null,
+      sourcePath: file.sourcePath,
+      targetPath: file.targetPath,
+      servePath: file.servePath,
+      absModuleId: file.absModuleId,
+      absPath: file.absPath,
+      deps: file.deps || null,
+      imported: file.imported,
+      lazy: file.lazy,
+      bare: file.bare || false,
+      sourceMap: sourceMap || null,
+      mainModule: file.mainModule || false,
+      alias: file.alias || null,
+      jsonData: file.jsonData || null,
+      meteorInstallOptions: file.meteorInstallOptions || null,
+      _inputHash: file._inputHash || null,
+      sourceRoot: file.sourceRoot || null,
+      type: file.type || "js",
+    };
+  }
+
+  // Save the import map to disk cache.
+  static async _saveImportMapCache(scannerCacheDir, arch, cacheKey, jsOutputFilesMap) {
+    const cachePath = this._getImportMapCachePath(scannerCacheDir, arch);
+    if (!cachePath) return;
+
+    try {
+      const packages = {};
+      for (const [name, entry] of jsOutputFilesMap) {
+        const key = name === null ? "__app__" : name;
+        const serializedFiles = await Promise.all(
+          entry.files.map(f => this._serializeFile(f))
+        );
+        packages[key] = {
+          files: serializedFiles,
+          mainModulePath: entry.mainModule
+            ? entry.mainModule.sourcePath
+            : null,
+        };
+      }
+
+      const cacheData = { cacheKey, version: 1, packages };
+      const serialized = v8.serialize(cacheData);
+      files.writeFile(cachePath, serialized, { mode: 0o666 });
+
+      if (IMPORT_MAP_CACHE_DEBUG) {
+        console.log("IMPORT MAP CACHE SAVED:",
+          Object.keys(packages).length, "packages,",
+          (serialized.length / 1024 / 1024).toFixed(1) + "MB");
+      }
+    } catch (e) {
+      if (IMPORT_MAP_CACHE_DEBUG) {
+        console.log("IMPORT MAP CACHE SAVE FAILED:", e.message);
+      }
+    }
+  }
+
+  // Load the import map from disk cache. Returns the reconstructed map or null.
+  static _loadImportMapCache(scannerCacheDir, arch, cacheKey, sourceBatches) {
+    const cachePath = this._getImportMapCachePath(scannerCacheDir, arch);
+    if (!cachePath) return null;
+
+    try {
+      const raw = files.readFile(cachePath);
+      const cacheData = v8.deserialize(raw);
+
+      if (!cacheData || cacheData.version !== 1 || cacheData.cacheKey !== cacheKey) {
+        if (IMPORT_MAP_CACHE_DEBUG) {
+          console.log("IMPORT MAP CACHE KEY MISMATCH");
+        }
+        return null;
+      }
+
+      // Build a lookup from package name to batch
+      const batchByName = new Map();
+      for (const batch of sourceBatches) {
+        batchByName.set(batch.unibuild.pkg.name || null, batch);
+      }
+
+      // Reconstruct the map
+      const map = new Map();
+      for (const [key, pkgData] of Object.entries(cacheData.packages)) {
+        const name = key === "__app__" ? null : key;
+        const batch = batchByName.get(name);
+        if (!batch) {
+          // Package no longer exists — cache is stale
+          if (IMPORT_MAP_CACHE_DEBUG) {
+            console.log("IMPORT MAP CACHE STALE: missing batch for", name);
+          }
+          return null;
+        }
+
+        const restoredFiles = pkgData.files;
+        const mainModule = pkgData.mainModulePath
+          ? restoredFiles.find(f => f.sourcePath === pkgData.mainModulePath) || null
+          : null;
+
+        map.set(name, {
+          files: restoredFiles,
+          mainModule,
+          batch,
+          importScannerWatchSet: new WatchSet(),
+        });
+      }
+
+      // Validate that all batches are represented
+      for (const batch of sourceBatches) {
+        const name = batch.unibuild.pkg.name || null;
+        if (!map.has(name)) {
+          if (IMPORT_MAP_CACHE_DEBUG) {
+            console.log("IMPORT MAP CACHE STALE: new package", name);
+          }
+          return null;
+        }
+      }
+
+      // Fix meteorInstallOptions identity references.
+      // The linker uses Map with meteorInstallOptions as keys (identity
+      // comparison), so files from the same batch must share the exact
+      // same object reference. After deserialization, each file gets its
+      // own copy — we need to replace them with the batch's live objects.
+      for (const [name, entry] of map) {
+        const batchOptions = entry.batch.meteorInstallOptions;
+        for (const file of entry.files) {
+          if (file.meteorInstallOptions) {
+            file.meteorInstallOptions = batchOptions;
+          }
+        }
+      }
+
+      if (IMPORT_MAP_CACHE_DEBUG) {
+        console.log("IMPORT MAP CACHE HIT:",
+          map.size, "packages");
+      }
+
+      return map;
+
+    } catch (e) {
+      if (IMPORT_MAP_CACHE_DEBUG) {
+        console.log("IMPORT MAP CACHE LOAD FAILED:", e.message);
+      }
+      return null;
+    }
+  }
+
   // Returns a map from package names to arrays of JS output files.
   static async computeJsOutputFilesMap(sourceBatches) {
     const map = new Map;
 
+    // Collect input files per batch for both cache key and the map
+    const inputFilesPerBatch = new Map();
     sourceBatches.forEach(batch => {
       const name = batch.unibuild.pkg.name || null;
       const inputFiles = [];
@@ -1303,9 +1504,11 @@ export class PackageSourceBatch {
         inputFiles.push(...slot.jsOutputResources);
       });
 
+      inputFilesPerBatch.set(name, inputFiles);
+
       map.set(name, {
         files: inputFiles,
-        mainModule: _.find(inputFiles, file => file.mainModule) || null,
+        mainModule: inputFiles.find(file => file.mainModule) || null,
         batch,
         importScannerWatchSet: new WatchSet(),
       });
@@ -1316,6 +1519,18 @@ export class PackageSourceBatch {
       // package, then the map is already complete, and we don't need to
       // do any import scanning.
       return this._watchOutputFiles(map);
+    }
+
+    // Try to load from persistent import map cache.
+    const scannerCacheDir = sourceBatches[0] && sourceBatches[0].scannerCacheDir;
+    const cacheArch = sourceBatches[0] && sourceBatches[0].processor.arch;
+    let cacheKey = null;
+    if (!process.env.METEOR_NO_IMPORT_MAP_CACHE && scannerCacheDir) {
+      cacheKey = this._computeImportMapCacheKey(sourceBatches, inputFilesPerBatch);
+      const cached = this._loadImportMapCache(scannerCacheDir, cacheArch, cacheKey, sourceBatches);
+      if (cached) {
+        return this._watchOutputFiles(cached);
+      }
     }
 
     // Append install(<name>) calls to the install-packages.js file in the
@@ -1351,9 +1566,12 @@ export class PackageSourceBatch {
       );
       const fileHash = sha1(bufferData);
 
-      // The getter's from file (file.data and file.hash) are async, unfortunately.
-      // That's why we need the Object.assign here.
-      Object.assign(file, { data: bufferData, hash: fileHash });
+      // Update data, hash, AND _inputHash. The _inputHash must also be
+      // updated because the in-memory LINKER_CACHE uses _inputHash for
+      // cache keys. Without this, the linker may return a stale cached
+      // result from a prior build (e.g., a plugin build) that had fewer
+      // install() calls, causing "Cannot find package" errors at runtime.
+      Object.assign(file, { data: bufferData, hash: fileHash, _inputHash: fileHash });
       break;
     }
 
@@ -1377,7 +1595,7 @@ export class PackageSourceBatch {
       }
 
       const nodeModulesPaths = [];
-      _.each(batch.unibuild.nodeModulesDirectories, (nmd, sourcePath) => {
+      Object.entries(batch.unibuild.nodeModulesDirectories || {}).forEach(([sourcePath, nmd]) => {
         if (! nmd.local) {
           // Local node_modules directories will be found by the
           // ImportScanner, but we need to tell it about any external
@@ -1464,7 +1682,7 @@ export class PackageSourceBatch {
         await ImportScanner.mergeMissing(nextMissingModules, newlyMissing);
       }
 
-      if (! _.isEmpty(nextMissingModules)) {
+      if (Object.keys(nextMissingModules).length > 0) {
         await handleMissing(nextMissingModules);
       }
     }
@@ -1533,6 +1751,11 @@ export class PackageSourceBatch {
         entry.files = outputFiles;
       }
     });
+
+    // Save to persistent import map cache for cold start optimization.
+    if (cacheKey) {
+      await this._saveImportMapCache(scannerCacheDir, cacheArch, cacheKey, map);
+    }
 
     return this._watchOutputFiles(map);
   }
@@ -1630,7 +1853,7 @@ export class PackageSourceBatch {
           return;
         }
 
-        if (! _.has(topLevelMissingIDs, packageDir)) {
+        if (!(packageDir in topLevelMissingIDs)) {
           // This information will be used to recommend installing npm
           // packages below.
           topLevelMissingIDs[packageDir] = id;
@@ -1710,31 +1933,32 @@ export class PackageSourceBatch {
             (self.unibuild.kind === "main" ? "" : (":" + self.unibuild.kind)) +
             ".js"),
       name: self.unibuild.pkg.name || null,
-      declaredExports: _.pluck(self.unibuild.declaredExports, 'name'),
+      declaredExports: self.unibuild.declaredExports.map(e => e.name),
       imports: self.importedSymbolToPackageName,
       // XXX report an error if there is a package called global-imports
       includeSourceMapInstructions: isWeb,
       deps: self.deps
     };
 
+    // Compute cache key synchronously using _inputHash (source hash) instead
+    // of compiled hash. This avoids triggering lazy compilation (finalize) just
+    // for cache key computation. Trade-off: compiler plugin output changes for
+    // the same source won't invalidate cache — bump LINKER_CACHE_SALT for that.
     const fileHashes = [];
     const cacheKeyPrefix = sha1(JSON.stringify({
       linkerOptions,
-      files: await Promise.all(
-        jsResources.map(async (inputFile) => {
-          fileHashes.push(await inputFile.hash);
-          return {
-            meteorInstallOptions: inputFile.meteorInstallOptions,
-            absModuleId: inputFile.absModuleId,
-            sourceMap: !!(await inputFile.sourceMap),
-            mainModule: inputFile.mainModule,
-            imported: inputFile.imported,
-            alias: inputFile.alias,
-            lazy: inputFile.lazy,
-            bare: inputFile.bare,
-          };
-        })
-      )
+      files: jsResources.map((inputFile) => {
+        fileHashes.push(inputFile._inputHash || inputFile.hash || "");
+        return {
+          meteorInstallOptions: inputFile.meteorInstallOptions,
+          absModuleId: inputFile.absModuleId,
+          mainModule: inputFile.mainModule,
+          imported: inputFile.imported,
+          alias: inputFile.alias,
+          lazy: inputFile.lazy,
+          bare: inputFile.bare,
+        };
+      })
     }));
     const cacheKeySuffix = sha1(JSON.stringify({
       LINKER_CACHE_SALT,
@@ -1752,38 +1976,24 @@ export class PackageSourceBatch {
     }
 
     const cacheFilename = self.linkerCacheDir &&
-      files.pathJoin(self.linkerCacheDir, cacheKey + '.cache');
+      files.pathJoin(self.linkerCacheDir, cacheKey + '.v8cache');
 
     const wildcardCacheFilename = cacheFilename &&
-      files.pathJoin(self.linkerCacheDir, cacheKeyPrefix + "_*.cache");
-
-    // The return value from _linkJS includes Buffers, but we want everything to
-    // be JSON for writing to the disk cache. This function converts the string
-    // version to the Buffer version.
-    function bufferifyJSONReturnValue(resources) {
-      resources.forEach((r) => {
-        r.data = Buffer.from(r.data, 'utf8');
-      });
-    }
+      files.pathJoin(self.linkerCacheDir, cacheKeyPrefix + "_*.v8cache");
 
     if (cacheFilename) {
       let diskCached = null;
       try {
-        diskCached = files.readJSONOrNull(cacheFilename);
+        const raw = files.readFile(cacheFilename);
+        diskCached = v8.deserialize(raw);
       } catch (e) {
-        // Ignore JSON parse errors; pretend there was no cache.
-        if (!(e instanceof SyntaxError)) {
-          throw e;
-        }
+        // File not found or deserialization error; treat as cache miss.
       }
       if (diskCached && diskCached instanceof Array) {
-        // Fix the non-JSON part of our return value.
-        bufferifyJSONReturnValue(diskCached);
         if (CACHE_DEBUG) {
           console.log('LINKER DISK CACHE HIT:', linkerOptions.name, bundleArch);
         }
-        // Add the bufferized value of diskCached to the in-memory LRU cache
-        // so we don't have to go to disk next time.
+        // Add to in-memory LRU cache so we don't go to disk next time.
         LINKER_CACHE.set(cacheKey, diskCached);
         return diskCached;
       }
@@ -1803,38 +2013,31 @@ export class PackageSourceBatch {
         canCache = false;
       }
     });
-    // Add each output as a resource
+    // Add each output as a resource. Store data as Buffer directly —
+    // v8.serialize handles Buffers natively, eliminating JSON string encoding.
+    // Attach _linkerCacheKey so JsImage.write can derive a safe builder hash
+    // that changes when linking output changes (not just when source changes).
     const ret = linkedFiles.map((file) => {
       const sm = (typeof file.sourceMap === 'string')
         ? JSON.parse(file.sourceMap) : file.sourceMap;
       return {
         type: "js",
-        // This is a string... but we will convert it to a Buffer
-        // before returning from the method (but after writing
-        // to cache).
-        data: file.source,
+        data: Buffer.from(file.source, 'utf8'),
         hash: file.hash,
         servePath: file.servePath,
-        sourceMap: sm
+        sourceMap: sm,
+        _linkerCacheKey: cacheKey,
       };
     });
-
-    let retAsJSON;
-    if (canCache && cacheFilename) {
-      retAsJSON = JSON.stringify(ret);
-    }
-
-    // Convert strings to buffers, now that we've serialized it.
-    bufferifyJSONReturnValue(ret);
 
     if (canCache) {
       LINKER_CACHE.set(cacheKey, ret);
       if (cacheFilename) {
-        // Write asynchronously.
+        // Write asynchronously using v8.serialize (faster than JSON, native Buffer).
         try {
           await files.rm_recursive_deferred(wildcardCacheFilename);
         } finally {
-          await files.writeFileAtomically(cacheFilename, retAsJSON);
+          await files.writeFileAtomically(cacheFilename, v8.serialize(ret));
         }
       }
     }
@@ -1843,10 +2046,10 @@ export class PackageSourceBatch {
   }
 }
 
-_.each([
+[
   "getResources",
   "_linkJS",
-], method => {
+].forEach(method => {
   const proto = PackageSourceBatch.prototype;
   proto[method] = Profile(
     "PackageSourceBatch#" + method,
@@ -1855,10 +2058,10 @@ _.each([
 });
 
 // static methods to measure in profile
-_.each([
+[
   "computeJsOutputFilesMap",
   "_watchOutputFiles"
-], method => {
+].forEach(method => {
   PackageSourceBatch[method] = Profile(
     "PackageSourceBatch." + method,
     PackageSourceBatch[method]);

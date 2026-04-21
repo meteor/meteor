@@ -1,7 +1,6 @@
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
 var files = require('../fs/files');
-var _ = require('underscore');
 import utils from '../utils/utils.js';
 
 let nextId = 1;
@@ -167,7 +166,7 @@ export class SourceProcessorSet {
         this.addSourceProcessor(sourceProcessor);
       }
     });
-    _.each(otherSet._legacyHandlers, (info, extension) => {
+    Object.entries(otherSet._legacyHandlers).forEach(([extension, info]) => {
       const { handler, packageDisplayName, isTemplate, archMatching } = info;
       this.addLegacyHandler(
         {extension, handler, packageDisplayName, isTemplate, archMatching});
@@ -256,8 +255,9 @@ export class SourceProcessorSet {
   }
 
   isEmpty() {
-    return _.isEmpty(this._byFilename) && _.isEmpty(this._byExtension) &&
-      _.isEmpty(this._legacyHandlers);
+    return Object.keys(this._byFilename).length === 0 &&
+      Object.keys(this._byExtension).length === 0 &&
+      Object.keys(this._legacyHandlers).length === 0;
   }
 
   isConflictsAllowed() {
@@ -279,7 +279,7 @@ export class SourceProcessorSet {
       }
     }
 
-    _.each(this._byExtension, (sourceProcessors, ext) => {
+    Object.entries(this._byExtension).forEach(([ext, sourceProcessors]) => {
       if (sourceProcessors.some(sp => sp.relevantForArch(arch))) {
         addExtension(ext);
       }
@@ -293,7 +293,7 @@ export class SourceProcessorSet {
       addExtension('js');
     }
 
-    _.each(this._byFilename, (sourceProcessors, filename) => {
+    Object.entries(this._byFilename).forEach(([filename, sourceProcessors]) => {
       if (sourceProcessors.some(sp => sp.relevantForArch(arch))) {
         names.push(filename);
       }

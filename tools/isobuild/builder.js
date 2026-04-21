@@ -1,4 +1,5 @@
 import assert from "assert";
+import fs from "fs";
 import {WatchSet, readAndWatchFile, sha1} from '../fs/watch';
 import files, {
   symlinkWithOverwrite, realpath, rm_recursive_deferred,
@@ -117,10 +118,63 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       }
     }
 
+    // Cold start optimization: if no previousBuilder but the output
+    // directory has saved state from a prior process, reuse it in-place.
+    // This avoids rewriting thousands of unchanged files on restart.
+    if (resetBuildPath && !previousBuilder &&
+        (forceInPlaceBuild || ENABLE_IN_PLACE_BUILDER_REPLACEMENT) &&
+        files.exists(outputPath)) {
+      const savedState = Builder.loadState(outputPath);
+      if (savedState) {
+        this.buildPath = outputPath;
+        this.previousWrittenHashes = savedState.writtenHashes;
+        this.previousUsedAsFile = savedState.usedAsFile;
+        this.previousCreatedSymlinks = savedState.createdSymlinks || {};
+        resetBuildPath = false;
+      }
+    }
+
     this.resetBuildPath = resetBuildPath;
 
     // XXX cleaner error handling. don't make the humans read an
     // exception (and, make suitable for use in automated systems)
+  }
+
+  // Filename used to persist builder state across process restarts.
+  static STATE_FILENAME = '.builder-state.json';
+
+  // Save builder state to disk so cold starts can reuse the output
+  // directory in-place instead of rebuilding from scratch.
+  static saveState(outputPath, builder) {
+    try {
+      const statePath = files.pathJoin(outputPath, Builder.STATE_FILENAME);
+      const state = {
+        version: 1,
+        writtenHashes: builder.writtenHashes,
+        usedAsFile: builder.usedAsFile,
+        createdSymlinks: builder.createdSymlinks,
+      };
+      files.writeFile(statePath, JSON.stringify(state), { mode: 0o666 });
+    } catch (_) {
+      // Non-fatal — next cold start will just rebuild from scratch
+    }
+  }
+
+  // Load previously saved builder state from disk. Returns null if
+  // no valid state file exists.
+  static loadState(outputPath) {
+    try {
+      const statePath = files.pathJoin(outputPath, Builder.STATE_FILENAME);
+      const raw = files.readFile(statePath, 'utf8');
+      const state = JSON.parse(raw);
+      if (state && state.version === 1 &&
+          state.writtenHashes && state.usedAsFile) {
+        return state;
+      }
+    } catch (_) {
+      // No saved state or corrupt — will rebuild from scratch
+    }
+    return null;
   }
 
   async init() {
@@ -659,7 +713,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       this._ensureDirectory(relTo);
 
       for (const item of optimisticReaddir(absFrom)) {
-        let thisAbsFrom = files.pathResolve(absFrom, item);
+        const thisAbsFrom = files.pathResolve(absFrom, item);
         const thisRelTo = files.pathJoin(relTo, item);
 
         if (specificPaths && !(thisRelTo in specificPaths)) {
@@ -741,51 +795,52 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         }
 
         if (fileStatus.isSymbolicLink()) {
-          // Symbolic links pointing to relative external paths are less
-          // portable than absolute links, so getExternalPath() is
-          // preferred if it returns a path.
           const linkSource = getExternalPath() ||
               files.readlink(thisAbsFrom);
-
           const linkTarget =
               files.pathResolve(this.buildPath, thisRelTo);
 
           if (await symlinkIfPossible(linkSource, linkTarget)) {
-            // A symlink counts as a file, as far as "can you put
-            // something under it" goes.
             this.usedAsFile[thisRelTo] = true;
             continue;
           }
+
+          // Fall back to copying the file if symlink failed.
+          const fStatus = optimisticStatOrNull(thisAbsFrom);
+          if (fStatus && fStatus.isFile()) {
+            const hash = optimisticHashOrNull(thisAbsFrom);
+            if (this.previousWrittenHashes[thisRelTo] !== hash) {
+              const content = optimisticReadFile(thisAbsFrom);
+              files.writeFile(
+                  files.pathResolve(this.buildPath, thisRelTo),
+                  content,
+                  { mode: (fStatus.mode & 0o100) ? 0o777 : 0o666 },
+              );
+            }
+            this.writtenHashes[thisRelTo] = hash;
+            this.usedAsFile[thisRelTo] = true;
+          }
+          continue;
         }
 
-        // Fall back to copying the file, but make sure it's really a file
-        // first, just in case it was a symbolic link to a directory that
-        // could not be created above.
+        // Copy the file, but make sure it's really a file first, just in
+        // case it was a symbolic link to a directory that could not be
+        // created above.
         fileStatus = optimisticStatOrNull(thisAbsFrom);
         if (fileStatus && fileStatus.isFile()) {
           const hash = optimisticHashOrNull(thisAbsFrom);
 
+          this.writtenHashes[thisRelTo] = hash;
+          this.usedAsFile[thisRelTo] = true;
+
           if (this.previousWrittenHashes[thisRelTo] !== hash) {
             const content = optimisticReadFile(thisAbsFrom);
-
             files.writeFile(
                 files.pathResolve(this.buildPath, thisRelTo),
-                // The reason we call files.writeFile here instead of
-                // files.copyFile is so that we can read the file using
-                // optimisticReadFile instead of files.createReadStream.
                 content,
-                // Logic borrowed from files.copyFile: "Create the file as
-                // readable and writable by everyone, and executable by everyone
-                // if the original file is executably by owner. (This mode will be
-                // modified by umask.) We don't copy the mode *directly* because
-                // this function is used by 'meteor create' which is copying from
-                // the read-only tools tree into a writable app."
                 { mode: (fileStatus.mode & 0o100) ? 0o777 : 0o666 },
             );
           }
-
-          this.writtenHashes[thisRelTo] = hash;
-          this.usedAsFile[thisRelTo] = true;
         }
       }
     };
@@ -856,33 +911,34 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       subBuilder[method] = this[method];
     });
 
+    // usePreviousWrite is synchronous (returns boolean), so it cannot go
+    // through the async proxy. Prepend the sub-builder relPath manually.
+    subBuilder.usePreviousWrite = (filePath, ...rest) => {
+      return this.usePreviousWrite(files.pathJoin(relPath, filePath), ...rest);
+    };
+
     return subBuilder;
   }
 
   // Move the completed bundle into its final location (outputPath)
   async complete() {
     if (this.previousUsedAsFile) {
-      // delete files and folders left-over from previous runs and not
-      // re-used in this run
+      // Delete files and folders left-over from previous runs and not
+      // re-used in this run. Two passes: directories first (so their
+      // sub-paths get marked as removed), then batch file unlinks.
       const removed = {};
       const paths = Object.keys(this.previousUsedAsFile);
+
+      // Pass 1: remove stale directories and mark their sub-paths.
       for (const path of paths) {
-        // if the same path was re-used, leave it
-        if (this.usedAsFile.hasOwnProperty(path)) { return; }
+        if (this.usedAsFile.hasOwnProperty(path)) { continue; }
+        if (removed.hasOwnProperty(path)) { continue; }
 
-        // otherwise, remove it as it is no longer needed
-
-        // skip if already deleted
-        if (removed.hasOwnProperty(path)) { return; }
-
-        const absPath = files.pathJoin(this.buildPath, path);
-        if (this.previousUsedAsFile[path]) {
-          // file
-          files.unlink(absPath);
-          removed[path] = true;
-        } else {
+        if (!this.previousUsedAsFile[path]) {
           // directory
+          const absPath = files.pathJoin(this.buildPath, path);
           await files.rm_recursive_deferred(absPath);
+          removed[path] = true;
 
           // mark all sub-paths as removed, too
           paths.forEach((anotherPath) => {
@@ -891,6 +947,24 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
             }
           });
         }
+      }
+
+      // Pass 2: batch-unlink stale files in parallel.
+      const unlinkOps = [];
+      for (const path of paths) {
+        if (this.usedAsFile.hasOwnProperty(path)) { continue; }
+        if (removed.hasOwnProperty(path)) { continue; }
+
+        if (this.previousUsedAsFile[path]) {
+          // file
+          unlinkOps.push(
+            fs.promises.unlink(files.convertToOSPath(
+              files.pathJoin(this.buildPath, path))));
+        }
+      }
+
+      if (unlinkOps.length > 0) {
+        await Promise.all(unlinkOps);
       }
     }
 

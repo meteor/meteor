@@ -1,4 +1,3 @@
-var _ = require("underscore");
 var buildmessage = require('../utils/buildmessage.js');
 var utils = require('../utils/utils.js');
 var compiler = require('./compiler.js');
@@ -14,7 +13,7 @@ import {
 } from "../fs/files";
 
 function toArray (x) {
-  if (_.isArray(x)) {
+  if (Array.isArray(x)) {
     return x;
   }
   return x ? [x] : [];
@@ -36,9 +35,9 @@ function toArchArray(arch) {
   // avoid using _.each so as to not add more frames to skip
   for (var i = 0; i < arch.length; ++i) {
     var inputArch = arch[i];
-    var isMatch = _.any(_.map(compiler.ALL_ARCHES, function (actualArch) {
+    var isMatch = compiler.ALL_ARCHES.some(function (actualArch) {
       return archinfo.matches(actualArch, inputArch);
-    }));
+    });
     if (! isMatch) {
       buildmessage.error(
         "Invalid 'where' argument: '" + inputArch + "'",
@@ -90,7 +89,7 @@ export class PackageAPI {
     this.uses = {};
     this.implies = {};
 
-    _.each(compiler.ALL_ARCHES, arch => {
+    compiler.ALL_ARCHES.forEach(arch => {
       this.files[arch] = {
         assets: [],
         sources: [],
@@ -177,7 +176,7 @@ export class PackageAPI {
     var self = this;
 
     // Support `api.use(package, {weak: true})` without arch.
-    if (_.isObject(arch) && !_.isArray(arch) && !options) {
+    if (arch && typeof arch === 'object' && !Array.isArray(arch) && !options) {
       options = arch;
       arch = null;
     }
@@ -360,7 +359,7 @@ export class PackageAPI {
         // the last call takes precedence over the earlier calls.
         oldMain.fileOptions.mainModule = false;
 
-        if (! _.has(oldMain.fileOptions, "lazy")) {
+        if (!("lazy" in oldMain.fileOptions)) {
           // If the laziness of the old main module was not explicitly
           // specified, then it would have been implicitly eager just
           // because it was the main module. Since we are revoking its
@@ -441,7 +440,7 @@ export class PackageAPI {
     // XXX it is possible to convert an already Unix-style path by mistake
     // and break it. e.g.: 'some\folder/anotherFolder' is a valid path
     // consisting of two components. #WindowsPathApi
-    paths = _.map(paths, function (p) {
+    paths = paths.map(function (p) {
       // Normalize ./foo.js to foo.js.
       p = pathRelative(".", p);
 
@@ -454,7 +453,7 @@ export class PackageAPI {
     });
 
     var errors = [];
-    _.each(paths, function (path) {
+    paths.forEach(function (path) {
       forAllMatchingArchs(arch, function (a) {
         const filesOfType = self.files[a][type];
 
@@ -609,7 +608,7 @@ export class PackageAPI {
 
     // Support `api.export("FooTest", {testOnly: true})` without
     // arch.
-    if (_.isObject(arch) && !_.isArray(arch) && !options) {
+    if (arch && typeof arch === 'object' && !Array.isArray(arch) && !options) {
       options = arch;
       arch = null;
     }
@@ -618,7 +617,7 @@ export class PackageAPI {
     symbols = toArray(symbols);
     arch = toArchArray(arch);
 
-    _.each(symbols, function (symbol) {
+    symbols.forEach(function (symbol) {
       // XXX be unicode-friendlier
       if (!symbol.match(/^([_$a-zA-Z][_$a-zA-Z0-9]*)$/)) {
         buildmessage.error("Bad exported symbol: " + symbol,

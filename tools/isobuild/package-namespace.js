@@ -1,4 +1,5 @@
-import { each, size, compact } from "underscore";
+
+
 import { inCheckout } from "../fs/files";
 import buildmessage from "../utils/buildmessage.js";
 import packageVersionParser from "../packaging/package-version-parser.js";
@@ -62,7 +63,7 @@ export class PackageNamespace {
   describe(options) {
     const source = this._packageSource;
 
-    each(options, function (value, key) {
+    Object.entries(options).forEach(function ([key, value]) {
       if (key === "summary" ||
           key === "git") {
         source.metadata[key] = value;
@@ -155,7 +156,7 @@ export class PackageNamespace {
         // Do nothing. We might want to add some keys later, and we should err
         // on the side of backwards compatibility.
       }
-      if (size(compact([source.debugOnly, source.prodOnly, source.testOnly, source.devOnly])) > 1) {
+      if ([source.debugOnly, source.prodOnly, source.testOnly, source.devOnly].filter(Boolean).length > 1) {
         buildmessage.error(
           "Package can't have more than one of: debugOnly, prodOnly, testOnly or devOnly.");
       }

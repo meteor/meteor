@@ -1,4 +1,3 @@
-var _ = require('underscore');
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var watch = require('../fs/watch');
@@ -49,31 +48,35 @@ var genTestName = function (name) {
 
 // Returns a sort comparator to order files into load order.
 var loadOrderSort = function (sourceProcessorSet, arch) {
-  const isTemplate = _.memoize((filename) => {
+  const _isTemplateCache = new Map();
+  const isTemplate = ((filename) => {
+    if (_isTemplateCache.has(filename)) return _isTemplateCache.get(filename);
     const classification = sourceProcessorSet.classifyFilename(filename, arch);
+    let result;
     switch (classification.type) {
     case 'extension':
     case 'filename':
       if (! classification.sourceProcessors) {
-        // This is *.js, not a template. #HardcodeJs
-        return false;
+        result = false; break;
       }
       if (classification.sourceProcessors.length > 1) {
         throw Error("conflicts in compiler?");
       }
-      return classification.sourceProcessors[0].isTemplate;
+      result = classification.sourceProcessors[0].isTemplate; break;
 
     case 'legacy-handler':
-      return classification.legacyIsTemplate;
+      result = classification.legacyIsTemplate; break;
 
     case 'wrong-arch':
     case 'unmatched':
     case 'meteor-ignore':
-      return false;
+      result = false; break;
 
     default:
       throw Error(`Surprising type ${classification.type} for ${filename}`);
     }
+    _isTemplateCache.set(filename, result);
+    return result;
   });
 
   return function (a, b) {
@@ -172,7 +175,7 @@ var getExcerptFromReadme = function (text) {
 
   // Go through the document until we get the nodes that we are looking for,
   // then stop.
-  _.any(parsed.children, function (child) {
+  parsed.children.some(function (child) {
     var isHeader = (child.t === "Header");
     // Don't excerpt anything before the first header.
     if (! isHeader) {
@@ -180,7 +183,7 @@ var getExcerptFromReadme = function (text) {
       // until we hit hit a header (and this is not a header). Otherwise, if
       // this is text, we should begin to excerpt it.
       relevantNodes.push(child);
-    } else if (! _.isEmpty(relevantNodes) && isHeader) {
+    } else if (relevantNodes.length > 0 && isHeader) {
       // We have been excerpting, and came across a header. That means
       // that we are done.
       return true;
@@ -189,7 +192,7 @@ var getExcerptFromReadme = function (text) {
   });
 
   // If we have not found anything, we are done.
-  if (_.isEmpty(relevantNodes)) {
+  if (relevantNodes.length === 0) {
     return "";
   }
 
@@ -197,12 +200,12 @@ var getExcerptFromReadme = function (text) {
   // the start of the excerpt to the end.
   var textLines = text.split("\n");
   var start = relevantNodes[0].start_line - 1;
-  var stop = _.last(relevantNodes).end_line;
+  var stop = relevantNodes[relevantNodes.length - 1].end_line;
   // XXX: There is a bug in commonmark that happens when processing the last
   // node in the document. Here is the github issue:
   // https://github.com/jgm/CommonMark/issues/276
   // Remove this workaround when the issue is fixed.
-  if (stop === _.last(parsed.children).end_line) {
+  if (stop === parsed.children[parsed.children.length - 1].end_line) {
     stop++;
   }
   var excerpt = textLines.slice(start, stop).join("\n");
@@ -259,7 +262,7 @@ class SymlinkLoopChecker {
       // else leave realPath undefined
     }
 
-    if (! realPath || _.has(this._seenPaths, realPath)) {
+    if (! realPath || (realPath in this._seenPaths)) {
       if (! quietly) {
         buildmessage.error("Symlink cycle detected at " + relDir);
       }
@@ -426,7 +429,7 @@ Object.assign(PackageSource.prototype, {
     var self = this;
     self.name = name;
 
-    if (options.sources && ! _.isEmpty(options.sources) &&
+    if (options.sources && options.sources.length > 0 &&
         (! options.sourceRoot || ! options.serveRoot)) {
       throw new Error("When source files are given, sourceRoot and " +
                       "serveRoot must be specified");
@@ -445,7 +448,7 @@ Object.assign(PackageSource.prototype, {
     self.npmDevDependencies = options.npmDevDependencies;
 
     // If options.npmDir is a string, make sure it contains no colons.
-    self.npmCacheDirectory = _.isString(options.npmDir)
+    self.npmCacheDirectory = typeof options.npmDir === 'string'
       ? convertColonsInPath(options.npmDir)
       : options.npmDir;
 
@@ -466,7 +469,7 @@ Object.assign(PackageSource.prototype, {
       kind: options.kind,
       arch: "os",
       sourceRoot: self.sourceRoot,
-      uses: _.map(options.use, splitConstraint),
+      uses: (options.use || []).map(splitConstraint),
       getFiles() {
         // TODO We might want to call _findSources here, if we want plugins to
         // be able to import compiled files that were not explicitly included in
@@ -559,7 +562,7 @@ Object.assign(PackageSource.prototype, {
     }
 
     function watchPackageFiles(watchSet) {
-      _.each(packageFileHashes, (hash, path) => {
+      Object.entries(packageFileHashes).forEach(([path, hash]) => {
         watchSet.addFile(path, hash);
       });
     }
@@ -644,7 +647,7 @@ Object.assign(PackageSource.prototype, {
     // to exclude in production mode from a published package. Eventually, we'll
     // add such a flag to the isopack format, but until then we'll sidestep the
     // issue by disallowing build plugins in debugOnly packages.
-    if ((self.debugOnly || self.prodOnly || self.testOnly) && !_.isEmpty(self.pluginInfo)) {
+    if ((self.debugOnly || self.prodOnly || self.testOnly) && Object.keys(self.pluginInfo).length > 0) {
       buildmessage.error(
         "can't register build plugins in debugOnly, prodOnly or testOnly packages");
       // recover by ignoring
@@ -682,7 +685,7 @@ Object.assign(PackageSource.prototype, {
         // principle of least surprise to half-run a handler
         // and then continue.
         api.files = {};
-        _.each(compiler.ALL_ARCHES, function (arch) {
+        compiler.ALL_ARCHES.forEach(function (arch) {
           api.files[arch] = {
             sources: [],
             assets: []
@@ -704,9 +707,9 @@ Object.assign(PackageSource.prototype, {
                            " depends on itself.\n");
       }
     };
-    _.each(compiler.ALL_ARCHES, function (label) {
-      _.each(api.uses[label], doNotDepOnSelf);
-      _.each(api.implies[label], doNotDepOnSelf);
+    compiler.ALL_ARCHES.forEach(function (label) {
+      (api.uses[label] || []).forEach(doNotDepOnSelf);
+      (api.implies[label] || []).forEach(doNotDepOnSelf);
     });
 
     // Cause packages that use `prodOnly` to automatically depend on the
@@ -724,7 +727,7 @@ Object.assign(PackageSource.prototype, {
     // If we have specified some release, then we should go through the
     // dependencies and fill in the unspecified constraints with the versions in
     // the releases (if possible).
-    if (!_.isEmpty(api.releaseRecords)) {
+    if (api.releaseRecords.length > 0) {
 
       // Given a dependency object with keys package (the name of the package)
       // and constraint (the version constraint), if the constraint is null,
@@ -735,16 +738,16 @@ Object.assign(PackageSource.prototype, {
           return dep;
         }
         var newConstraint = [];
-        _.each(api.releaseRecords, function (releaseRecord) {
+        api.releaseRecords.forEach(function (releaseRecord) {
           var packages = releaseRecord.packages;
-          if(_.has(packages, dep.package)) {
+          if (dep.package in packages) {
             newConstraint.push(packages[dep.package]);
           }
         });
-        if (_.isEmpty(newConstraint)) {
+        if (newConstraint.length === 0) {
           return dep;
         }
-        dep.constraint = _.reduce(newConstraint,
+        dep.constraint = newConstraint.reduce(
           function(x, y) {
             return x + " || " + y;
           });
@@ -753,9 +756,9 @@ Object.assign(PackageSource.prototype, {
 
       // For all api.implies and api.uses, fill in the unspecified dependencies from the
       // release.
-      _.each(compiler.ALL_ARCHES, function (label) {
-        api.uses[label] = _.map(api.uses[label], setFromRel);
-        api.implies[label] = _.map(api.implies[label], setFromRel);
+      compiler.ALL_ARCHES.forEach(function (label) {
+        api.uses[label] = (api.uses[label] || []).map(setFromRel);
+        api.implies[label] = (api.implies[label] || []).map(setFromRel);
       });
      };
 
@@ -788,7 +791,7 @@ Object.assign(PackageSource.prototype, {
 
     // Create source architectures, one for the server and one for each web
     // arch.
-    _.each(compiler.ALL_ARCHES, function (arch) {
+    compiler.ALL_ARCHES.forEach(function (arch) {
       // Everything depends on the package 'meteor', which sets up
       // the basic environment) (except 'meteor' itself).
       if (self.name !== "meteor" && !process.env.NO_METEOR_PACKAGE) {
@@ -799,7 +802,7 @@ Object.assign(PackageSource.prototype, {
         // dependency on meteor dating from when the .js extension handler was
         // in the "meteor" package).
         var alreadyDependsOnMeteor =
-              !! _.find(api.uses[arch], function (u) {
+              !!(api.uses[arch] || []).find(function (u) {
                 return u.package === "meteor";
               });
         if (! alreadyDependsOnMeteor) {
@@ -927,11 +930,11 @@ Object.assign(PackageSource.prototype, {
 
     projectWatchSet.merge(projectContext.meteorConfig.watchSet);
 
-    _.each(compiler.ALL_ARCHES, function (arch) {
+    compiler.ALL_ARCHES.forEach(function (arch) {
       // We don't need to build a Cordova SourceArch if there are no Cordova
       // platforms.
       if (arch === 'web.cordova' &&
-          _.isEmpty(projectContext.platformList.getCordovaPlatforms())) {
+          projectContext.platformList.getCordovaPlatforms().length === 0) {
         return;
       }
 
@@ -1314,7 +1317,7 @@ Object.assign(PackageSource.prototype, {
       // stringify does not work on Set
       nodeModulesToRecompile: [...nodeModulesToRecompile],
     }, (key, value) => {
-      if (_.isRegExp(value)) {
+      if (value instanceof RegExp) {
         return [value.source, value.flags];
       }
       return value;
@@ -1426,10 +1429,9 @@ Object.assign(PackageSource.prototype, {
         }
       }
 
-      const sources = _.difference(
-        self._readAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions),
-        depth > 0 ? [] : controlFiles
-      );
+      const controlSet = depth > 0 ? [] : controlFiles;
+      const sources = self._readAndWatchDirectory(dir, inNodeModules ? null : watchSet, readOptions)
+        .filter(s => !controlSet.includes(s));
 
       const subdirectories = self._readAndWatchDirectory(
         dir,
@@ -1510,12 +1512,12 @@ Object.assign(PackageSource.prototype, {
 
     const assets = [];
 
-    if (!_.isEmpty(assetDirs)) {
-      if (!_.isEqual(assetDirs, [assetDir])) {
+    if (assetDirs.length > 0) {
+      if (assetDirs.length !== 1 || assetDirs[0] !== assetDir) {
         throw new Error("Surprising assetDirs: " + JSON.stringify(assetDirs));
       }
 
-      while (!_.isEmpty(assetDirs)) {
+      while (assetDirs.length > 0) {
         var dir = assetDirs.shift();
         // remove trailing slash
         dir = dir.substr(0, dir.length - 1);
@@ -1532,7 +1534,7 @@ Object.assign(PackageSource.prototype, {
           exclude: ignoreFiles
         });
 
-        _.each(assetsAndSubdirs, function (item) {
+        assetsAndSubdirs.forEach(function (item) {
           if (item[item.length - 1] === '/') {
             // Recurse on this directory.
             assetDirs.push(item);
@@ -1553,7 +1555,7 @@ Object.assign(PackageSource.prototype, {
   // True if the package defines any plugins.
   containsPlugins: function () {
     var self = this;
-    return ! _.isEmpty(self.pluginInfo);
+    return Object.keys(self.pluginInfo).length > 0;
   },
 
   // Return dependency metadata for all unibuilds, in the format needed
@@ -1620,19 +1622,19 @@ Object.assign(PackageSource.prototype, {
       packages[use.package] = true;
     };
 
-    _.each(self.architectures, function (arch) {
+    self.architectures.forEach(function (arch) {
       // We need to iterate over both uses and implies, since implied packages
       // also constitute dependencies. We don't have to include the dependencies
       // of implied packages directly here, since their own
       // getPackagesToLoadFirst will include those.
-      _.each(arch.uses, processUse);
-      _.each(arch.implies, processUse);
+      arch.uses.forEach(processUse);
+      (arch.implies || []).forEach(processUse);
     });
 
-    _.each(self.pluginInfo, function (info) {
+    Object.values(self.pluginInfo).forEach(function (info) {
       // info.use is currently just an array of strings, and there's
       // no way to specify weak/unordered. Much like an app.
-      _.each(info.use, function (spec) {
+      (info.use || []).forEach(function (spec) {
         var parsedSpec = splitConstraint(spec);
         if (! compiler.isIsobuildFeaturePackage(parsedSpec.package)) {
           packages[parsedSpec.package] = true;
@@ -1653,22 +1655,22 @@ Object.assign(PackageSource.prototype, {
     var self = this;
     var ret = {};
     // Go over all of the architectures, and aggregate the exports together.
-    _.each(self.architectures, function (arch) {
-      _.each(arch.declaredExports, function (exp) {
+    self.architectures.forEach(function (arch) {
+      (arch.declaredExports || []).forEach(function (exp) {
         // Skip testOnly exports -- the flag is intended for use in testing
         // only, so it is not of any interest outside this package.
         if (exp.testOnly) {
           return;
         }
         // Add the export to the export map.
-        if (! _.has(ret, exp.name)) {
+        if (!(exp.name in ret)) {
           ret[exp.name] = [arch.arch];
         } else {
           ret[exp.name].push(arch.arch);
         }
      });
     });
-    return _.map(ret, function (arches, name) {
+    return Object.entries(ret).map(function ([name, arches]) {
       return { name: name, architectures: arches };
     });
    },
@@ -1760,7 +1762,7 @@ Object.assign(PackageSource.prototype, {
     var allConstraints = {}; // for error reporting. package name to array
     var failed = false;
 
-    _.each(self.architectures, function (arch) {
+    self.architectures.forEach(function (arch) {
       // We need to iterate over both uses and implies, since implied packages
       // also constitute dependencies.
       var processUse = function (implied, use) {
@@ -1771,7 +1773,7 @@ Object.assign(PackageSource.prototype, {
           return;
         }
 
-        if (!_.has(dependencies, use.package)) {
+        if (!(use.package in dependencies)) {
           dependencies[use.package] = {
             constraint: null,
             references: []
@@ -1804,14 +1806,14 @@ Object.assign(PackageSource.prototype, {
         }
         d.references.push(reference);
       };
-      _.each(arch.uses, _.partial(processUse, false));
-      _.each(arch.implies, _.partial(processUse, true));
+      arch.uses.forEach(use => processUse(false, use));
+      (arch.implies || []).forEach(use => processUse(true, use));
     });
 
-    _.each(self.pluginInfo, function (info) {
-      _.each(info.use, function (spec) {
+    Object.values(self.pluginInfo).forEach(function (info) {
+      (info.use || []).forEach(function (spec) {
         var parsedSpec = splitConstraint(spec);
-        if (!_.has(dependencies, parsedSpec.package)) {
+        if (!(parsedSpec.package in dependencies)) {
           dependencies[parsedSpec.package] = {
             constraint: null,
             references: []
@@ -1833,8 +1835,8 @@ Object.assign(PackageSource.prototype, {
     });
 
     if (failed && options.logError) {
-      _.each(allConstraints, function (constraints, name) {
-        constraints = _.uniq(constraints);
+      Object.entries(allConstraints).forEach(function ([name, constraints]) {
+        constraints = [...new Set(constraints)];
         if (constraints.length > 1) {
           buildmessage.error(
             "The version constraint for a dependency must be the same " +
