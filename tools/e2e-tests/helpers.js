@@ -10,6 +10,73 @@ const REPO_ROOT = path.resolve(__dirname, '../..');
 const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
 
 /**
+ * Returns true when the current Jest test is a retry attempt.
+ */
+export function isRetryAttempt() {
+  return Boolean(globalThis.__e2eIsRetryAttempt);
+}
+
+/**
+ * Snapshot file contents so they can be restored after a test mutates them.
+ * @param {string} baseDir - Base directory for relative paths
+ * @param {string[]} relPaths - Relative paths to snapshot
+ * @returns {Promise<Map<string, {content: string|null, existed: boolean}>>}
+ */
+export async function snapshotFiles(baseDir, relPaths = []) {
+  const snapshot = new Map();
+  for (const relPath of relPaths) {
+    if (!relPath) continue;
+    const fullPath = path.join(baseDir, relPath);
+    if (await fs.pathExists(fullPath)) {
+      const content = await fs.readFile(fullPath, 'utf8');
+      snapshot.set(fullPath, { content, existed: true });
+    } else {
+      snapshot.set(fullPath, { content: null, existed: false });
+    }
+  }
+  return snapshot;
+}
+
+/**
+ * Restore files captured by snapshotFiles to their original state.
+ * @param {Map<string, {content: string|null, existed: boolean}>} snapshot
+ */
+export async function restoreFiles(snapshot) {
+  if (!snapshot || snapshot.size === 0) return;
+  for (const [fullPath, entry] of snapshot.entries()) {
+    if (entry.existed) {
+      await fs.writeFile(fullPath, entry.content, 'utf8');
+    } else if (await fs.pathExists(fullPath)) {
+      await fs.remove(fullPath);
+    }
+  }
+}
+
+/**
+ * Remove build artifacts and caches under a Meteor app directory.
+ * @param {string} appDir - Directory containing the Meteor app
+ */
+export async function clearBuildArtifacts(appDir) {
+  if (!appDir) return;
+  const targets = [
+    '_build',
+    '.meteor/local/build',
+    '.meteor/local/bundler-cache',
+    '.meteor/local/plugin-cache',
+    'node_modules/.cache/rspack',
+    'node_modules/.cache/meteor',
+  ];
+  for (const target of targets) {
+    const fullPath = path.join(appDir, target);
+    try {
+      await fs.remove(fullPath);
+    } catch (err) {
+      console.log(`Could not remove ${fullPath}: ${err.message}`);
+    }
+  }
+}
+
+/**
  * Helper function to set up a Meteor app in a temporary directory
  * Copies the app and runs npm install
  * @param {string} appName - Name of the app in the apps directory

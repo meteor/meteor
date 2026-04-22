@@ -23,6 +23,8 @@ env:
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
+  # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
+  METEOR_E2E_TEST_RETRIES: 1
 
 jobs:
   test:
