@@ -11,9 +11,7 @@ export default class Cursor {
     this.sorter = null;
 
     // Create the collator once and share it with both Matcher and Sorter.
-    const collator = options.collation
-      ? LocalCollection._createCollator(options.collation)
-      : null;
+    const collator = LocalCollection._createCollator(options.collation);
 
     this.matcher = new Minimongo.Matcher(selector, undefined, collator);
 

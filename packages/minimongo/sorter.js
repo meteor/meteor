@@ -25,12 +25,7 @@ export default class Sorter {
   constructor(spec, collation) {
     this._sortSpecParts = [];
     this._sortFunction = null;
-    // Accepts either a pre-built Intl.Collator or a MongoDB collation spec.
-    this._collation = !collation
-      ? null
-      : collation instanceof Intl.Collator
-        ? collation
-        : LocalCollection._createCollator(collation);
+    this._collator = LocalCollection._createCollator(collation);
 
     const addSpecPart = (path, ascending) => {
       if (!path) {
@@ -297,7 +292,7 @@ export default class Sorter {
   // on field 'i'.
   _keyFieldComparator(i) {
     const invert = !this._sortSpecParts[i].ascending;
-    const collator = this._collation;
+    const collator = this._collator;
 
     return (key1, key2) => {
       const compare = LocalCollection._f._cmp(key1[i], key2[i], collator);

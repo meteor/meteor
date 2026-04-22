@@ -325,11 +325,15 @@ Tinytest.add('minimongo - collation - _createCollator validates in development',
     LocalCollection._createCollator({locale: ''});
   }, /collation\.locale must be a non-empty string/);
 
-  // Non-object
-  test.throws(() => {
-    LocalCollection._createCollator(null);
-  }, /collation must be an object/);
+  // Falsy input returns null (no error).
+  test.equal(LocalCollection._createCollator(null), null);
+  test.equal(LocalCollection._createCollator(undefined), null);
 
+  // A pre-built Intl.Collator is returned as-is.
+  const existing = new Intl.Collator('en');
+  test.equal(LocalCollection._createCollator(existing), existing);
+
+  // Non-object spec
   test.throws(() => {
     LocalCollection._createCollator('en');
   }, /collation must be an object/);

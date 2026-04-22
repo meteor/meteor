@@ -50,13 +50,8 @@ export default class Matcher {
     // Sorter._useWithMatcher.
     this._selector = null;
     // An optional Intl.Collator for locale-aware string comparison (mirrors
-    // MongoDB's collation option).  Accepts either a pre-built Intl.Collator
-    // (when created by Cursor) or a MongoDB collation spec object.
-    this._collation = !collation
-      ? null
-      : collation instanceof Intl.Collator
-        ? collation
-        : LocalCollection._createCollator(collation);
+    // MongoDB's collation option).
+    this._collator = LocalCollection._createCollator(collation);
     this._docMatcher = this._compileSelector(selector);
     // Set to true if selection is done for an update operation
     // Default is false
@@ -101,8 +96,8 @@ export default class Matcher {
       this._selector = {_id: selector};
       this._recordPathUsed('_id');
 
-      if (this._collation) {
-        // When collation is active, compile {_id: selector} as a regular
+      if (this._collator) {
+        // When a collator is active, compile {_id: selector} as a regular
         // document selector so string comparison uses the collator.
         return compileDocumentSelector(this._selector, this, {isRoot: true});
       }
@@ -394,8 +389,14 @@ LocalCollection._f = {
 const STRENGTH_TO_SENSITIVITY = { 1: 'base', 2: 'accent' };
 
 LocalCollection._createCollator = function (collation) {
+  if (!collation) {
+    return null;
+  }
+  if (collation instanceof Intl.Collator) {
+    return collation;
+  }
   if (Meteor.isDevelopment) {
-    if (typeof collation !== 'object' || collation === null) {
+    if (typeof collation !== 'object') {
       throw Error('collation must be an object');
     }
     if (typeof collation.locale !== 'string' || !collation.locale) {
