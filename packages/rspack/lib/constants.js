@@ -5,19 +5,19 @@
 
 import path from 'path';
 
-export const DEFAULT_RSPACK_VERSION = '1.7.1';
+export const DEFAULT_RSPACK_VERSION = '2.0.0';
 
 export const DEFAULT_METEOR_RSPACK_VERSION = '1.1.0-beta.36';
 
-export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
+export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '2.0.0';
 
 export const DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION = '0.17.0';
 
 export const DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION = '0.2.6';
 
-export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.17';
+export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.21';
 
-export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.7';
+export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.9';
 
 /**
  * Global state keys used for storing and retrieving state across the application
