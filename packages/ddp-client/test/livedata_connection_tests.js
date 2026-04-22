@@ -2561,6 +2561,92 @@ if (Meteor.isClient) {
   );
 }
 
+if (Meteor.isClient) {
+  Tinytest.addAsync(
+    'livedata connection - onReconnect awaits async callbacks before sending outstanding methods',
+    async function(test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+      await startAndConnect(test, stream);
+      conn.methods({ do_something: function(x) {} });
+
+      // Queue a method before reconnect
+      conn.apply('do_something', ['original'], identity);
+      testGotMessage(test, stream, {
+        msg: 'method', method: 'do_something', params: ['original'], id: '*'
+      });
+
+      let outstandingMethodsSentDuringCallback = null;
+      const stopper = DDP.onReconnect(async (reconnectingConn) => {
+        if (reconnectingConn !== conn) return;
+        await new Promise(r => setTimeout(r, 10));
+        // Snapshot: were outstanding methods re-sent before this callback finished?
+        outstandingMethodsSentDuringCallback = stream.sent
+          .filter(msg => { const p = JSON.parse(msg); return p.msg === 'method'; });
+      });
+
+      stream.sent = [];
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId));
+
+      await new Promise(r => setTimeout(r, 50)); // let async callback finish
+
+      test.isNotNull(outstandingMethodsSentDuringCallback);
+      // BUG: methods re-sent synchronously before async callback completed
+      // FIX: methods deferred until all callbacks complete → empty during callback
+      test.equal(outstandingMethodsSentDuringCallback.length, 0,
+        'Outstanding methods should not be re-sent before async reconnect callbacks complete');
+      test.isTrue(stream.sent.some(msg => {
+        const parsed = JSON.parse(msg);
+        return parsed.msg === 'method' && parsed.method === 'do_something';
+      }), 'Outstanding methods should be re-sent after async reconnect callbacks settle');
+      stopper.stop();
+    }
+  );
+
+  Tinytest.addAsync(
+    'livedata connection - onReconnect still sends outstanding methods after rejected callbacks',
+    async function(test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+      await startAndConnect(test, stream);
+      conn.methods({ do_something: function(x) {} });
+
+      conn.apply('do_something', ['original'], identity);
+      testGotMessage(test, stream, {
+        msg: 'method', method: 'do_something', params: ['original'], id: '*'
+      });
+
+      conn.onReconnect = () => {
+        throw new Error('Expected reconnect failure');
+      };
+
+      const stopper = DDP.onReconnect(async (reconnectingConn) => {
+        if (reconnectingConn !== conn) return;
+        await new Promise(r => setTimeout(r, 10));
+        throw new Error('Expected async reconnect failure');
+      });
+
+      stream.sent = [];
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId));
+
+      await new Promise(r => setTimeout(r, 50));
+
+      test.isTrue(stream.sent.some(msg => {
+        const parsed = JSON.parse(msg);
+        return parsed.msg === 'method' &&
+          parsed.method === 'do_something' &&
+          parsed.params[0] === 'original';
+      }), 'Outstanding methods should still be re-sent after reconnect hook failures');
+
+      stopper.stop();
+      conn.onReconnect = null;
+    }
+  );
+
+}
+
 // ============================================================================
 // DDP Session Resumption Tests (Client-side)
 // ============================================================================

@@ -1098,6 +1098,10 @@ DDP.onReconnect((connection) => {
 
 Registers a callback hook that is invoked on the client whenever the DDP connection successfully re-establishes connectivity with the server. Starting in Meteor 3.5, the callback receives the connection instance which includes a `sessionResumed` boolean. You can use this flag to determine if the client recovered its previous session via the graceful disconnect period, or if the session expired forcing it to restart cleanly.
 
+Callbacks may be async functions. When any reconnect callback returns a promise,
+Meteor waits for those promises to settle before re-sending outstanding method
+messages.
+
 ## Timers { #timers }
 
 Meteor uses global environment variables

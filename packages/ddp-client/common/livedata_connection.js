@@ -1423,13 +1423,33 @@ export class Connection {
     const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
     self._outstandingMethodBlocks = [];
 
-    self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each((callback) => {
-      callback(self);
+    const promises = [];
+    const pushReconnectResult = (invoke) => {
+      try {
+        const result = invoke();
+        if (result && typeof result.then === 'function') {
+          promises.push(result);
+        }
+      } catch (error) {
+        promises.push(Promise.reject(error));
+      }
+    };
+
+    if (self.onReconnect) {
+      pushReconnectResult(() => self.onReconnect());
+    }
+    DDP._reconnectHook.forEach((callback) => {
+      pushReconnectResult(() => callback(self));
       return true;
     });
 
-    self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
+    const sendMessages = () => self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
+    if (promises.length > 0) {
+      // Always re-send outstanding methods, even if a callback rejects.
+      Promise.allSettled(promises).then(sendMessages);
+    } else {
+      sendMessages();
+    }
   }
 
   // We can accept a hot code push if there are no methods in flight.
