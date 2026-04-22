@@ -111,6 +111,9 @@ function buildCleanOptions(operationOpts, operationType) {
 
   const opts = {
     mutate: true,
+    // Strict type checking by default on collection mutations — wrong types throw
+    // instead of being silently coerced. Callers can opt back in with { autoConvert: true }.
+    autoConvert: false,
     isModifier: operationType !== 'insert',
     isUpsert: operationType === 'upsert',
     extendAutoValueContext: ctx,
