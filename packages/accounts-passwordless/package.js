@@ -4,7 +4,7 @@ Package.describe({
 });
 
 Package.onUse(api => {
-  api.use(['accounts-base', 'sha', 'ejson', 'ddp'], ['client', 'server']);
+  api.use(['accounts-base', 'sha', 'ddp'], ['client', 'server']);
 
   // Export Accounts (etc) to packages using this one.
   api.imply('accounts-base', ['client', 'server']);

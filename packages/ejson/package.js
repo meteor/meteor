@@ -1,17 +1,17 @@
 Package.describe({
-  summary: 'Extended and Extensible JSON library',
-  version: '1.1.5',
+  summary: "Extended and Extensible JSON library",
+  version: "1.2.0-beta350.7",
 });
 
 Package.onUse(function onUse(api) {
-  api.use(['ecmascript', 'base64']);
-  api.addAssets('ejson.d.ts', 'server');
-  api.mainModule('ejson.js');
-  api.export('EJSON');
+  api.use(["ecmascript", "base64"]);
+  api.addAssets("ejson.d.ts", "server");
+  api.mainModule("ejson.js");
+  api.export("EJSON");
 });
 
 Package.onTest(function onTest(api) {
-  api.use(['ecmascript', 'tinytest', 'mongo']);
-  api.use('ejson');
-  api.mainModule('ejson_tests.js');
+  api.use(["ecmascript", "tinytest", "mongo"]);
+  api.use("ejson");
+  api.mainModule("ejson_tests.js");
 });

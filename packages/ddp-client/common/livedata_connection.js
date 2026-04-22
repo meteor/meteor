@@ -93,6 +93,10 @@ export class Connection {
     }
 
     self._lastSessionId = null;
+    // how many messages we've received (excluding ping/pong).
+    // when we try to reconnect to the server, it will check this against the number of messages it sent.
+    // if there is a mismatch, our info is out of date and we need a clean session.
+    self._receivedCount = 0;
     self._versionSuggestion = null; // The last proposed DDP version.
     self._version = null; // The DDP version agreed on by client and server.
     self._stores = Object.create(null); // name -> object with methods
@@ -102,6 +106,7 @@ export class Connection {
 
     self._heartbeatInterval = options.heartbeatInterval;
     self._heartbeatTimeout = options.heartbeatTimeout;
+    self._ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
 
     // Tracks methods which the user has tried to call but which have not yet
     // called their user callback (ie, they are waiting on their result or for all
@@ -1081,11 +1086,13 @@ export class Connection {
    * @locus Client
    */
   disconnect(...args) {
+    this._send({ msg: 'disconnect' });
     return this._stream.disconnect(...args);
   }
 
   close() {
-    return this._stream.disconnect({ _permanent: true });
+    // _permanent is used by the underlying stream to prevent reconnection attempts
+    return this.disconnect({ _permanent: true });
   }
 
   ///
@@ -1416,13 +1423,33 @@ export class Connection {
     const oldOutstandingMethodBlocks = self._outstandingMethodBlocks;
     self._outstandingMethodBlocks = [];
 
-    self.onReconnect && self.onReconnect();
-    DDP._reconnectHook.each((callback) => {
-      callback(self);
+    const promises = [];
+    const pushReconnectResult = (invoke) => {
+      try {
+        const result = invoke();
+        if (result && typeof result.then === 'function') {
+          promises.push(result);
+        }
+      } catch (error) {
+        promises.push(Promise.reject(error));
+      }
+    };
+
+    if (self.onReconnect) {
+      pushReconnectResult(() => self.onReconnect());
+    }
+    DDP._reconnectHook.forEach((callback) => {
+      pushReconnectResult(() => callback(self));
       return true;
     });
 
-    self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
+    const sendMessages = () => self._sendOutstandingMethodBlocksMessages(oldOutstandingMethodBlocks);
+    if (promises.length > 0) {
+      // Always re-send outstanding methods, even if a callback rejects.
+      Promise.allSettled(promises).then(sendMessages);
+    } else {
+      sendMessages();
+    }
   }
 
   // We can accept a hot code push if there are no methods in flight.
