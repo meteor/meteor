@@ -6,7 +6,7 @@ module.exports = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   verbose: true,
   // Increase timeout for CLI operations (longer on CI to absorb host contention)
-  testTimeout: process.env.CI ? 240_000 : 60_000,
+  testTimeout: process.env.CI ? 240_000 : 120_000,
   // Transform ES modules in node_modules
   transformIgnorePatterns: [
     "/node_modules/(?!(execa|wait-on|is-docker|is-stream|human-signals|merge-stream|npm-run-path|onetime|mimic-fn|strip-final-newline|path-key|shebug-command|shebug-regex)/)"

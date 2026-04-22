@@ -7,13 +7,17 @@ import {
   appendFileContent,
   buildMeteorApp,
   cleanupTempDir,
+  clearBuildArtifacts,
   createMeteorApp,
+  isRetryAttempt,
   killMeteorProcess,
   killProcessByPort,
+  restoreFiles,
   runMeteorApp,
   runMeteorCommand,
   runMeteorTests,
   setupMeteorApp,
+  snapshotFiles,
   wait,
   waitForMeteorOutput,
   waitForPlaywrightConsole
@@ -111,6 +115,11 @@ export function testMeteorBundler(options) {
     beforeEach(async () => {
       // Ensure any process on the port is killed
       await killProcessByPort([port, devServerPortStr]);
+
+      // On retry, purge build caches so the next attempt starts clean.
+      if (isRetryAttempt() && tempDir) {
+        await clearBuildArtifacts(tempDir);
+      }
     });
 
     afterEach(async () => {
@@ -235,6 +244,17 @@ export function testMeteorRspackBundler(options) {
     let tempDir;
     let appDir;
     let previousRspackDevServerPort;
+    let fileSnapshot;
+
+    // Paths the rspack bundler generator mutates via appendFileContent. Snapshotted
+    // in beforeEach and restored in afterEach so retries see pristine source files.
+    const mutatedPaths = [
+      filePaths.client,
+      filePaths.server,
+      filePaths.test,
+      filePaths.testClient,
+      filePaths.testServer,
+    ].filter(Boolean);
 
     beforeAll(async () => {
       // Route this test's rspack dev server to the configured port so it doesn't
@@ -324,12 +344,29 @@ export function testMeteorRspackBundler(options) {
     beforeEach(async () => {
       // Ensure any process on the port is killed
       await killProcessByPort([port, devServerPortStr]);
+
+      // On retry, purge build artifacts so the next attempt recompiles from a
+      // clean slate (guards against caches that encode the failed attempt's state).
+      if (isRetryAttempt() && appDir) {
+        await clearBuildArtifacts(appDir);
+      }
+
+      // Capture mutable source files so afterEach can restore them. This makes
+      // retries see pristine files even after appendFileContent calls.
+      fileSnapshot = tempDir ? await snapshotFiles(tempDir, mutatedPaths) : null;
     });
 
     afterEach(async () => {
       if (meteorProcess) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
+      }
+
+      // Restore mutated files regardless of pass/fail — idempotent on green runs,
+      // essential on retries.
+      if (fileSnapshot) {
+        await restoreFiles(fileSnapshot);
+        fileSnapshot = null;
       }
     });
 
@@ -355,6 +392,9 @@ export function testMeteorRspackBundler(options) {
       await assertFileExist(appDir, `${buildDir}/main-dev/server-entry.js`);
       await assertFileExist(appDir, `${buildDir}/main-dev/server-rspack.js`);
       await assertFileExist(appDir, `${buildDir}/main-dev/server-meteor.js`);
+
+      // node_modules/.cache is rspack scratch — must not leak into the server bundle.
+      await assertPathNotExist(appDir, '.meteor/local/build/programs/server/npm/node_modules/.cache');
 
       if (!skipClient) {
         // Assert that the Meteor app is running correctly
@@ -760,6 +800,9 @@ export function testMeteorRspackBundler(options) {
         expect(await fs.pathExists(`${buildOutputDir}/bundle/programs/web.browser/program.json`)).toBe(true);
         expect(await fs.pathExists(`${buildOutputDir}/bundle/programs/web.browser.legacy/program.json`)).toBe(true);
 
+        // node_modules/.cache is rspack scratch — must not leak into the built bundle.
+        await assertPathNotExist(buildOutputDir, 'bundle/programs/server/npm/node_modules/.cache');
+
         // Run npm install in the server directory
         console.log('Running npm install in the server directory...');
         const serverDir = path.join(buildOutputDir, 'bundle', 'programs', 'server');
@@ -811,6 +854,20 @@ export function testMeteorRspackBundler(options) {
         ? path.basename(meteorLocalDirEnv.replace(/\\/g, '/'))
         : '';
       const localDirSuffix = meteorLocalDirName ? `-${meteorLocalDirName}` : '';
+
+      // On retry, the prior attempt deleted the artifacts this test asserts on.
+      // Re-seed by running meteor briefly so the assertFileExist checks below hold.
+      if (isRetryAttempt()) {
+        console.log('[retry] re-seeding build artifacts for meteor reset test');
+        const seedResult = await runMeteorApp(tempDir, port, {
+          waitForOutput: "=> App running at",
+          isMonorepo,
+          skipWaitOn: skipClient,
+          env: { ...env, ...(env.meteorRun || {}) },
+        });
+        await killMeteorProcess(seedResult.meteorProcess);
+        await killProcessByPort([port, devServerPortStr]);
+      }
 
       // Verify build artifacts exist from previous tests
       await assertFileExist(appDir, buildDir);
@@ -966,6 +1023,13 @@ export function testMeteorSkeleton(options) {
     beforeEach(async () => {
       // Ensure any process on the port is killed
       await killProcessByPort([port, devServerPortStr]);
+
+      // On retry, purge caches left by the failing attempt so the next one
+      // recompiles from scratch. Skip when tempDir isn't set yet (e.g. retry
+      // of the "meteor create" test, which allocates its own tempDir).
+      if (isRetryAttempt() && tempDir) {
+        await clearBuildArtifacts(tempDir);
+      }
     });
 
     afterEach(async () => {
@@ -1176,6 +1240,18 @@ export function testMeteorSkeleton(options) {
         ? path.basename(meteorLocalDirEnv.replace(/\\/g, '/'))
         : '';
       const localDirSuffix = meteorLocalDirName ? `-${meteorLocalDirName}` : '';
+
+      // On retry, the prior attempt deleted the artifacts this test asserts on.
+      // Re-seed by running meteor briefly when the skeleton produces build caches.
+      if (isRetryAttempt() && !skipBuildCacheCheck) {
+        console.log('[retry] re-seeding build artifacts for meteor reset test');
+        const seedResult = await runMeteorApp(tempDir, port, {
+          waitForOutput: "=> App running at",
+          env: env.meteorRun,
+        });
+        await killMeteorProcess(seedResult.meteorProcess);
+        await killProcessByPort([port, devServerPortStr]);
+      }
 
       // Verify build artifacts exist from previous tests
       if (!skipBuildCacheCheck) {

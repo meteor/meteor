@@ -816,46 +816,136 @@ This helper provide a shortcut to apply the needed Rspack configuration and safe
 
 ### Service Worker
 
-Rspack lets you use standard plugins to manage Service Workers, such as Workbox, so you don’t need to maintain your own setup. You can follow the Webpack guide for integrating Workbox with [`workbox-webpack-plugin`](https://developer.chrome.com/docs/workbox/modules/workbox-webpack-plugin) (it should be compatible), or try the Rspack-specific version [`@aaroon/workbox-rspack-plugin`](https://github.com/Clarkkkk/workbox-rspack-plugin).
+::: info
+Starting with Meteor 3.4.1
+:::
 
-Whether you use a managed tool or a custom setup, ensure that only the Rspack dev server endpoints are treated as network-only for proper development. Otherwise, you may end up with infinite reload loops that only clear after removing the Service Worker. Skip caching of `__rspack__` endpoints.
+Rspack lets you use standard plugins to manage Service Workers, such as Workbox, so you don't need to maintain your own setup. You can follow the Webpack guide for integrating Workbox with [`workbox-webpack-plugin`](https://developer.chrome.com/docs/workbox/modules/workbox-webpack-plugin).
 
-If you use a custom implementation in your `sw.js`, intercept fetch requests to ignore Rspack contexts like this:
+Here is a recommended `GenerateSW` configuration that works with Meteor's build pipeline:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+const { GenerateSW } = require('workbox-webpack-plugin');
+
+module.exports = defineConfig(Meteor => ({
+  plugins: [
+    Meteor.isClient &&
+      new GenerateSW({
+        swDest: 'sw.js',
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        inlineWorkboxRuntime: true,
+        // Skip precaching for build output, runtime caching handles app bundles
+        exclude: [/./],
+        // Precache static files that should be available offline immediately
+        additionalManifestEntries: [
+          { url: '/icon.png', revision: '1' },
+        ],
+        runtimeCaching: [
+          // Never cache HMR hot-update files
+          {
+            urlPattern: /\.hot-update\./,
+            handler: 'NetworkOnly',
+          },
+          // Navigation requests: network-first with fallback
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 15,
+            },
+          },
+          // Meteor/Rspack build assets (dev server, asset & chunk contexts)
+          {
+            urlPattern: new RegExp(
+              `(/__rspack__/|/${Meteor.assetsContext}/|/${Meteor.chunksContext}/|[?&](hash|meteor_css_resource|meteor_js_resource)=)`
+            ),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'bundles',
+              // Meteor serves assets with Vary headers that can cause cache misses
+              matchOptions: { ignoreVary: true },
+            },
+          },
+          // Static assets: scripts, styles, workers
+          {
+            urlPattern: ({ request }) =>
+              request.destination === 'style' ||
+              request.destination === 'script' ||
+              request.destination === 'worker',
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'assets' },
+          },
+          // Images: cache-first for fast repeat loads
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico|webp)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: { maxEntries: 60 },
+              matchOptions: { ignoreVary: true },
+            },
+          },
+        ],
+      }),
+  ].filter(Boolean),
+  // GenerateSW runs per compiler (client + legacy); suppress the warning
+  ignoreWarnings: [/GenerateSW has been called multiple times/],
+}));
+```
+
+Key points:
+- **`exclude: [/./]`** skips precaching for build output, runtime caching rules handle the dynamic app bundles instead. You can still precache other static files (e.g. offline fallback pages, icons) via `additionalManifestEntries`, which are cached during SW installation and available offline immediately.
+- **`.hot-update.` is `NetworkOnly`** so HMR payloads are never served from cache.
+- **`Meteor.assetsContext` and `Meteor.chunksContext`** match the directories Meteor uses for build output, keeping the cache strategy aligned with the build pipeline.
+- **`ignoreWarnings`** silences the expected duplicate-call warning because `GenerateSW` runs once per Rspack compiler (modern + legacy).
+
+If you use a custom `sw.js` instead of Workbox, ensure your fetch handler applies the same principles:
 
 ```js
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-
   const sameOrigin = url.origin === self.location.origin;
-  // Skip Rspack  devServer
-  if (sameOrigin && url.pathname.includes('/__rspack__/')) {
-    // Never cache ignores and hot updates; hit the network every time
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+
+  // Never cache HMR hot-update files
+  if (url.pathname.match(/\.hot-update\./)) {
     return;
   }
 
+  // Skip Meteor build-asset and chunk contexts, always fetch fresh
+  if (sameOrigin && (
+    url.pathname.includes('/build-assets/') ||
+    url.pathname.includes('/build-chunks/')
+  )) {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
+
+  // Your caching strategy for navigation, scripts, styles, images, etc.
   // ...
 });
 ```
 
-When using Workbox, the equivalent with `GenerateSW` might look like this:
+During development, the HMR dev server keeps most build assets in memory for faster rebuilds and reduced disk I/O, and only writes `sw.js` (on the first build only). Subsequent HMR rebuilds skip rewriting `sw.js` on purpose: rewriting it re-registers the service worker and forces a full page reload, which defeats HMR.
+
+This is handled internally by [`Meteor.persistDevFiles`](#persist-dev-files), which controls the Rspack [`devServer.devMiddleware.writeToDisk`](https://rspack.rs/config/dev-server#devserverdevmiddleware) option. If your service worker uses a custom filename (via `swDest` in `GenerateSW`), you also need to register it with `persistDevFiles` so it gets written to disk during development:
 
 ```js
 new GenerateSW({
+  swDest: 'service-worker.js',
   // ...
-  runtimeCaching: [
-    {
-      urlPattern: ({ url }) => url.pathname.includes('/__rspack__/'),
-      handler: 'NetworkOnly',
-    },
-    // ...
-  ],
-  // ...
-})
+}),
 ```
 
-During development, the HMR dev server writes `sw.js` to disk by default, so build-generated service workers are served by Meteor's web server without extra configuration. If your service worker uses a different filename, see the [Dev Server](#dev-server) section for how to extend `writeToDisk`.
+```js
+...Meteor.persistDevFiles({ once: ['service-worker.js'] }),
+```
+
+For more details on strategies and matchers, see the [Persist Dev Files](#persist-dev-files) section.
 
 ### Dev Server
 
@@ -870,19 +960,52 @@ RSPACK_DEVSERVER_PORT=3232 meteor run
 
 The reason is that the Rspack dev server is handled by the Meteor so it can make both dev server works together, and the info of the port needs to be properly shared via the env.
 
-During development, the HMR dev server keeps most build assets in memory and only writes HTML files and `sw.js` to disk by default. This means if your build pipeline generates files that need to be served from the root path, like `service-worker.js`, `manifest.json`, or any other output that Meteor's web server should serve directly, you can extend `writeToDisk` in your `rspack.config.js`:
+### Persist Dev Files
+
+::: info
+Starting with Meteor 3.4.1
+:::
+
+During development, the Rspack dev server keeps most build assets in memory for faster rebuilds and reduced disk I/O. Files that are part of the Rspack build output (generated by plugins like `GenerateSW`, `HtmlRspackPlugin`, etc.) live in memory by default. If Meteor's web server needs to serve any of these files directly, they must be explicitly persisted to disk.
+
+This is powered by Rspack's [`devServer.devMiddleware`](https://rspack.rs/config/dev-server#devserverdevmiddleware) option (see also [webpack-dev-middleware#writeToDisk](https://github.com/webpack/webpack-dev-middleware#writetodisk)). Static files in `public/` that are not part of the build output (e.g. images, fonts) are served by Meteor directly and do not need to be listed here.
+
+`Meteor.persistDevFiles` provides a declarative way to control which files are persisted and how often. HTML files are always persisted automatically, as Meteor's web server relies on them to serve the app shell.
 
 ```js
 const { defineConfig } = require('@meteorjs/rspack');
 
 module.exports = defineConfig(Meteor => ({
-  devServer: {
-    devMiddleware: {
-      writeToDisk: (filePath) =>
-        /\.(html)$/.test(filePath) || filePath.endsWith('service-worker.js'),
-    },
-  },
+  // Array form: writes on every rebuild (default)
+  ...Meteor.persistDevFiles(['manifest.json']),
 }));
+```
+
+For files that should only be written once per run (e.g. service workers, where rewriting triggers a full page reload), use the `once` strategy:
+
+```js
+...Meteor.persistDevFiles({
+  once: ['sw.js'],              // first build only (avoids SW re-registration)
+  always: ['manifest.json'],    // every rebuild
+})
+```
+
+**Strategies:**
+
+| Strategy | Behavior | Use case |
+|----------|----------|----------|
+| `always` | Written on every build (default) | Manifests, files that should always reflect the latest output |
+| `once` | Written on the first build, skipped on HMR rebuilds | Service workers, files that trigger full reloads when rewritten |
+
+HTML files (`.html`) are always persisted regardless of the matchers provided.
+
+**Matchers** can be strings (matched with `endsWith`), regular expressions, or functions:
+
+```js
+...Meteor.persistDevFiles({
+  once: [/\.worker\.js$/],
+  always: [(filePath) => filePath.includes('/custom/')],
+})
 ```
 
 In production, all build outputs are written to disk normally, so this only affects local development.

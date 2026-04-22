@@ -166,14 +166,23 @@ Svelte framework integration.
 
 ### monorepo
 
-Monorepo structure with app in subdirectory.
+Monorepo structure with app in subdirectory, service worker, and PWA manifest.
 
 | What is covered | Phase |
 |----------------|-------|
 | Monorepo layout (`app/` subdirectory) | All |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | `rspack.config.override.cjs` custom plugin loading | Run, Test, Build |
-| Static assets in bundle (png, md) | Build |
+| Static assets in bundle (png, md, icon, manifest) | Build |
+| Service worker in production build (`sw.js` found in bundle tree) | Build |
+| Service worker file served (`/sw.js`) | Run |
+| Service worker registers, activates, controls page | Run |
+| Service worker runtime caching (images) | Run |
+| Service worker precaching (`/icon.png` via `additionalManifestEntries`) | Run |
+| Service worker stability (`sw.js` not rewritten on rebuild) | Run |
+| Service worker regenerated on restart (`sw.js` changed between runs) | Run, Prod |
+| PWA manifest linked and fields validated | Run |
+| Meta tags (`theme-color`) | Run |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### server-only
@@ -271,13 +280,13 @@ Where each feature is tested across apps and skeletons.
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
 | Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
-| Static asset bundling | react-router, monorepo | |
+| Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
 | Tailwind CSS | vue (PostCSS) | tailwind |
 | Image asset loading | react | |
 | 404 routing | react-router | |
-| Meta tags | react-router | |
+| Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
 | TypeScript type checking | typescript | |
 | Meteor.disablePlugins | react | |
@@ -303,3 +312,10 @@ Where each feature is tested across apps and skeletons.
 | `node:` protocol imports | monorepo, typescript | |
 | Untranspiled npm deps (`compileWithRspack`) | monorepo | |
 | Worker resolution (`compileWithMeteor`) | monorepo | |
+| Service worker (Workbox GenerateSW) | monorepo | |
+| Service worker stability (no rewrite on rebuild) | monorepo | |
+| Service worker regenerated on restart | monorepo | |
+| Service worker in production build | monorepo | |
+| Service worker runtime caching (images) | monorepo | |
+| Service worker precaching (`additionalManifestEntries`) | monorepo | |
+| PWA manifest | monorepo | |

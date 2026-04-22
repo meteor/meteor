@@ -6,7 +6,6 @@
 *.md
 *.json
 tsconfig.json
-.travis.yml
 android_bundle/
 dev_bundle/
 docs/
@@ -18,7 +17,6 @@ npm-packages/
 v3-docs/
 node_modules/
 .meteor/
-.circleci/
 .github/
 .coderabbit.yaml
 
