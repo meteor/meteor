@@ -1,5 +1,6 @@
 import { Random } from 'meteor/random';
 import BigInteger from './biginteger';
+import { SHA256 } from './sha256-legacy';
 
 // This package contains just enough of the original SRP code to
 // support the backwards-compatibility upgrade path.

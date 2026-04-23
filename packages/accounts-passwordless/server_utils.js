@@ -16,7 +16,7 @@ export const tokenValidator = () => {
   );
 };
 
-export const checkToken = ({
+export const checkToken = async ({
   user,
   sequence,
   selector,
@@ -39,20 +39,20 @@ export const checkToken = ({
   }
 
   if (selector.email) {
-    const foundTokenEmail = user.services.passwordless.tokens.find(
-      ({ email: tokenEmail, token }) =>
-        SHA256(selector.email + sequence) === token &&
+    for (const { email: tokenEmail, token } of user.services.passwordless.tokens) {
+      if (
+        await SHA256(selector.email + sequence) === token &&
         selector.email === tokenEmail
-    );
-    if (foundTokenEmail) {
-      return { ...result, verifiedEmail: foundTokenEmail.email };
+      ) {
+        return { ...result, verifiedEmail: tokenEmail };
+      }
     }
 
     result.error = Accounts._handleError('Email or token mismatch', false);
     return result;
   }
 
-  if (sequence && SHA256(user._id + sequence) === userToken) {
+  if (sequence && await SHA256(user._id + sequence) === userToken) {
     return result;
   }
 

@@ -50,7 +50,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
     Accounts._handleError('User has no token set');
   }
 
-  const result = checkToken({
+  const result = await checkToken({
     user,
     selector,
     sequence,
@@ -171,15 +171,20 @@ Meteor.methods({
       Accounts._handleError(`Login tokens could not be generated`);
     }
 
+    const mainToken = await SHA256(user._id + userSequence);
+    const hashedTokens = await Promise.all(
+      tokens.map(async ({ email, sequence }) => ({
+        email,
+        token: await SHA256(email + sequence),
+      }))
+    );
+
     await Meteor.users.updateAsync(user._id, {
       $set: {
         'services.passwordless': {
           createdAt: new Date(),
-          token: SHA256(user._id + userSequence),
-          tokens: tokens.map(({ email, sequence }) => ({
-            email,
-            token: SHA256(email + sequence),
-          })),
+          token: mainToken,
+          tokens: hashedTokens,
           ...(isNewUser ? { isNewUser } : {}),
         },
       },

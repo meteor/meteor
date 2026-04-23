@@ -52,9 +52,9 @@ Accounts._argon2Parallelism = () => Accounts._options.argon2Parallelism || 1;
  *
  * @throws {Error} - If the `algorithm` in the password object is not "sha-256".
  */
-const getPasswordString = password => {
+const getPasswordString = async (password) => {
   if (typeof password === "string") {
-    password = SHA256(password);
+    password = await SHA256(password);
   }
   else { // 'password' is an object
     if (password.algorithm !== "sha-256") {
@@ -72,7 +72,7 @@ const getPasswordString = password => {
  * @returns {Promise<string>} The encrypted password.
  */
 const hashPassword = async (password) => {
-  password = getPasswordString(password);
+  password = await getPasswordString(password);
   if (Accounts._argon2Enabled() === true) {
     return await argon2.hash(password, {
       type: Accounts._argon2Type(),

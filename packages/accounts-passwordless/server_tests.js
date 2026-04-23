@@ -4,12 +4,12 @@ import { SHA256 } from 'meteor/sha';
 
 const USER_TOKEN = '123ABC';
 
-const getData = ({ createdAt }) => {
+const getData = async ({ createdAt }) => {
   const userId = Random.id();
   const email = `${userId}@meteorapp.com`;
 
-  const idToken = SHA256(userId + USER_TOKEN);
-  const emailToken = SHA256(email + USER_TOKEN);
+  const idToken = await SHA256(userId + USER_TOKEN);
+  const emailToken = await SHA256(email + USER_TOKEN);
 
   const user = {
     _id: userId,
@@ -27,13 +27,13 @@ const getData = ({ createdAt }) => {
   };
 };
 
-Tinytest.add('passwordless - time expired', test => {
+Tinytest.addAsync('passwordless - time expired', async (test) => {
   const createdAt = new Date('July 17, 2022 13:00:00');
   const currentDate = new Date('July 17, 2022 14:01:00');
 
-  const { user } = getData({ createdAt });
+  const { user } = await getData({ createdAt });
 
-  const result = checkToken({
+  const result = await checkToken({
     user,
     sequence: USER_TOKEN,
     selector: { email: user.email },
@@ -44,14 +44,14 @@ Tinytest.add('passwordless - time expired', test => {
   test.equal(result.error.reason, 'Expired token');
 });
 
-Tinytest.add('passwordless - Email and token mismatch', test => {
+Tinytest.addAsync('passwordless - Email and token mismatch', async (test) => {
   const createdAt = new Date('July 17, 2022 13:00:00');
   const currentDate = new Date('July 17, 2022 13:05:00');
 
-  const { user } = getData({ createdAt });
+  const { user } = await getData({ createdAt });
 
   // Email mismatch
-  const resultEmail = checkToken({
+  const resultEmail = await checkToken({
     user,
     sequence: USER_TOKEN,
     selector: { email: 'invalid@email.com' },
@@ -61,7 +61,7 @@ Tinytest.add('passwordless - Email and token mismatch', test => {
   test.isTrue(!!resultEmail.error);
   test.equal(resultEmail.error.reason, 'Email or token mismatch');
   // Token mismatch
-  const resultToken = checkToken({
+  const resultToken = await checkToken({
     user,
     sequence: 'ABC321',
     selector: { email: user.email },
@@ -72,13 +72,13 @@ Tinytest.add('passwordless - Email and token mismatch', test => {
   test.equal(resultToken.error.reason, 'Email or token mismatch');
 });
 
-Tinytest.add('passwordless - Token mismatch', test => {
+Tinytest.addAsync('passwordless - Token mismatch', async (test) => {
   const createdAt = new Date('July 17, 2022 13:00:00');
   const currentDate = new Date('July 17, 2022 13:05:00');
 
-  const { user } = getData({ createdAt });
+  const { user } = await getData({ createdAt });
 
-  const result = checkToken({
+  const result = await checkToken({
     user,
     sequence: 'AAA111',
     selector: {},
@@ -89,13 +89,13 @@ Tinytest.add('passwordless - Token mismatch', test => {
   test.equal(result.error.reason, 'Token mismatch');
 });
 
-Tinytest.add('passwordless - Valid token with email', test => {
+Tinytest.addAsync('passwordless - Valid token with email', async (test) => {
   const createdAt = new Date('July 17, 2022 13:00:00');
   const currentDate = new Date('July 17, 2022 13:05:00');
 
-  const { user } = getData({ createdAt });
+  const { user } = await getData({ createdAt });
 
-  const result = checkToken({
+  const result = await checkToken({
     user,
     sequence: USER_TOKEN,
     selector: { email: user.email },
@@ -105,13 +105,13 @@ Tinytest.add('passwordless - Valid token with email', test => {
   test.isFalse(!!result.error);
 });
 
-Tinytest.add('passwordless - Valid token without email', test => {
+Tinytest.addAsync('passwordless - Valid token without email', async (test) => {
   const createdAt = new Date('July 17, 2022 13:00:00');
   const currentDate = new Date('July 17, 2022 13:05:00');
 
-  const { user } = getData({ createdAt });
+  const { user } = await getData({ createdAt });
 
-  const result = checkToken({
+  const result = await checkToken({
     user,
     sequence: USER_TOKEN,
     selector: {},
