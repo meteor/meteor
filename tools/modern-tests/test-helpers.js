@@ -843,11 +843,14 @@ export function testMeteorSkeleton(options) {
     });
 
     test(`"meteor test --once" / should run tests once for the ${skeletonName} app`, async () => {
-      // Install playwright as a dev dependency
-      console.log("Installing playwright as a dev dependency...");
+      // Install playwright as a dev dependency, pinned to the same version
+      // as the test environment so pre-installed browser binaries are reused.
+      const testPkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'));
+      const playwrightVersion = testPkg.devDependencies.playwright;
+      console.log(`Installing playwright@${playwrightVersion} as a dev dependency...`);
       const repoRoot = path.resolve(process.cwd(), "..", "..");
       const meteorBin = path.join(repoRoot, "meteor");
-      await execa.command(`${meteorBin} npm i --save-dev playwright`, {
+      await execa.command(`${meteorBin} npm i --save-dev playwright@${playwrightVersion}`, {
         cwd: tempDir,
         stdio: "inherit",
         shell: true
@@ -870,7 +873,7 @@ export function testMeteorSkeleton(options) {
 
       // Ensure any process on the port is killed
       await killProcessByPort(port);
-    });
+    }, 300_000);
 
     test(`"meteor build" / should build the ${skeletonName} app`, async () => {
       // Build the app
