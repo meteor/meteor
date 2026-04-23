@@ -65,20 +65,10 @@ Meteor.loginWithPassword = (selector, password, callback) => {
  *   single key: `email`, `username` or `id`. Username or email match in a case
  *   insensitive manner.
  * @param {String} password The user's password.
- * @returns {Promise<void>} Resolves on success, rejects with error on failure.
+ * @returns {Promise<Object>} Resolves with login details on success, rejects with error on failure.
  * @importFromPackage meteor
  */
-Meteor.loginWithPasswordAsync = (selector, password) => {
-  return new Promise((resolve, reject) => {
-    Meteor.loginWithPassword(selector, password, (error) => {
-      if (error) {
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-};
+Meteor.loginWithPasswordAsync = Meteor.promisify(Meteor.loginWithPassword);
 
 Accounts._hashPassword = password => ({
   digest: SHA256(password),

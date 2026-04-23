@@ -75,6 +75,14 @@ export namespace Meteor {
 
   function userId(): string | null;
   var users: Mongo.Collection<User>;
+
+  interface LoginMethodResult {
+    id: string;
+    token: string;
+    tokenExpires?: Date | undefined;
+    type: string;
+    [key: string]: any;
+  }
   /** User **/
 
   /** Error **/
@@ -464,9 +472,9 @@ export namespace Meteor {
   function loginWithPasswordAsync(
     user: { username: string } | { email: string } | { id: string } | string,
     password: string
-  ): Promise<void>;
+  ): Promise<LoginMethodResult>;
 
-  function loginWithTokenAsync(token: string): Promise<void>;
+  function loginWithTokenAsync(token: string): Promise<LoginMethodResult>;
 
   function loggingIn(): boolean;
 
@@ -476,9 +484,19 @@ export namespace Meteor {
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
+  function logoutAsync(): Promise<void>;
+
+  function logoutAllClients(
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function logoutAllClientsAsync(): Promise<void>;
+
   function logoutOtherClients(
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
+
+  function logoutOtherClientsAsync(): Promise<void>;
   /** Login **/
 
   /** Connection **/
