@@ -22,8 +22,11 @@ Test patterns, commands, and utilities for the Meteor codebase.
 ./meteor test-packages mongo                 # Test specific package
 TINYTEST_FILTER="collection" ./meteor test-packages  # Filter specific tests
 
-# Package tests in console (headless via Puppeteer)
+# Package tests in console (headless via Puppeteer — prints results to terminal)
+# Use this for automation or when you need terminal output without a browser.
 PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
+./packages/test-in-console/run.sh            # Test all core packages
+./packages/test-in-console/run.sh "mongo"    # Test specific package
 
 # Modern E2E tests (Jest + Playwright)
 npm run install:modern                       # Install dependencies

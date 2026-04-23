@@ -21,9 +21,9 @@ const internalLoginWithPassword = ({ selector, password, code, callback }) => {
     ],
     userCallback: (error, result) => {
       if (error) {
-        reportError(error, callback);
+        return reportError(error, callback);
       } else {
-        callback && callback(error, result);
+        return callback && callback(error, result);
       }
     },
   });
