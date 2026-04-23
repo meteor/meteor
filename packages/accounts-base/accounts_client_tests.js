@@ -99,12 +99,16 @@ Tinytest.addAsync(
   'accounts async - Meteor.loggingIn() is false after login has completed',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
-      // Login then verify loggingIn is false after login has completed
-      Meteor.loginWithPassword(username, password, async () => {
-        test.isFalse(Meteor.loggingIn());
-        test.isTrue(await Meteor.userAsync());
-        removeTestUser(done);
-      });
+      Meteor.loginWithPasswordAsync(username, password)
+        .then(async (loginDetails) => {
+          test.isFalse(Meteor.loggingIn());
+          test.isTrue(await Meteor.userAsync());
+          test.equal(loginDetails.type, 'password');
+          test.equal(loginDetails.id, Meteor.userId());
+          test.isTrue(!!loginDetails.token);
+        })
+        .catch(error => test.fail(error.message))
+        .finally(() => removeTestUser(done));
     });
   }
 );
@@ -125,12 +129,13 @@ Tinytest.addAsync(
   'accounts - Meteor.loggingOut() is false after logout has completed',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
-      // Logout then verify loggingOut is false after logout has completed
-      Meteor.logout((error) => {
-        test.isFalse(Meteor.user());
-        test.isFalse(Meteor.loggingOut());
-        removeTestUser(done);
-      });
+      Meteor.logoutAsync()
+        .then(async () => {
+          test.isFalse(await Meteor.userAsync());
+          test.isFalse(Meteor.loggingOut());
+        })
+        .catch(error => test.fail(error.message))
+        .finally(() => removeTestUser(done));
     });
   }
 );
@@ -516,11 +521,13 @@ Tinytest.addAsync('accounts - logoutAllClients', function (test, done) {
     await Meteor.callAsync('pushFakeLoginToken', userId, 'test-token');
     await Meteor.callAsync('pushFakeLoginToken', userId, 'test-token2');
     test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 3);
-    Meteor.logoutAllClients(async () => {
-      test.isFalse(!!Meteor.user());
-      test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 0);
-      removeTestUser(done);
-    });
+    Meteor.logoutAllClientsAsync()
+      .then(async () => {
+        test.isFalse(!!Meteor.user());
+        test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 0);
+      })
+      .catch(error => test.fail(error.message))
+      .finally(() => removeTestUser(done));
   });
 });
 
