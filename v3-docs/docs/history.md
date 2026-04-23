@@ -8,23 +8,22 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (If you want to change something in this file)
 
-[//]: # (go to meteor/docs/generators/changelog/docs)
-
-## v3.4.0, 30-01-2026
+[//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.4.0, 2026-01-30
 
 ### Highlights
 
 - **Meteor-Rspack Integration**, [PR#13910](https://github.com/meteor/meteor/pull/13910)
   - ⚡ New `rspack` atmosphere package (requires at least rspack@1.7.1)
-    Orchestrates the full Rspack setup, including the development server and production builds.
+  Orchestrates the full Rspack setup, including the development server and production builds.
   - 📦 New `@meteorjs/rspack` npm package
-    Provides a default rspack.config.js. Applications can extend or override this configuration with their own.
+  Provides a default rspack.config.js. Applications can extend or override this configuration with their own.
   - 🛠️ New `tools-core` package
-    Supplies runtime utilities for Meteor, designed to support this integration and future tool integrations.
+  Supplies runtime utilities for Meteor, designed to support this integration and future tool integrations.
   - 🔑 Core updates
-    Enhanced Meteor’s core to support the Rspack integration.
+  Enhanced Meteor’s core to support the Rspack integration.
   - ✅ Test suite additions
-    Introduced tests for app skeletons and Meteor-Rspack features to ensure quality and reliability.
+  Introduced tests for app skeletons and Meteor-Rspack features to ensure quality and reliability.
   - 📃 [Documentation](https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration.html)
     Complete documentation section covering all details of the Meteor-Rspack integration, including migration guides, configuration helpers and more.
   - Adopting Rspack gives you a faster build experience
@@ -156,8 +155,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@copleykj](https://github.com/copleykj)
 
   ✨✨✨
-
-## v3.3.2, 01-09-2025
+## v3.3.2, 2025-09-01
 
 ### Highlights
 
@@ -226,8 +224,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@copleykj](https://github.com/copleykj)
 
 ✨✨✨
-
-## v3.3.1, 05-08-2025
+## v3.3.1, 2025-08-05
 
 ### Highlights
 
@@ -342,7 +339,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@welkinwong](https://github.com/welkinwong)
 - [@Saksham-Goel1107](https://github.com/Saksham-Goel1107)
 
-✨✨✨ 
+✨✨✨
 ## v3.3.0, 2025-06-11
 
 ### Highlights
