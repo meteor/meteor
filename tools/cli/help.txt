@@ -297,13 +297,22 @@ Options:
 
 >>> remove
 Remove a package from this project.
-Usage: meteor remove <package> [package..]
+Usage: meteor remove [package..]
+       meteor remove --search <query>
 
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
 'meteor list'.
 
+Run without any package names to open an interactive picker listing
+the packages currently in `.meteor/packages`. Use `meteor remove
+--search <query>` to open the picker pre-filtered. Both forms
+require an interactive terminal.
+
 Options:
+  --search <query>              Open an interactive picker pre-filtered by the
+                                given query. Incompatible with positional
+                                package names.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package

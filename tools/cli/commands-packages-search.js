@@ -10,9 +10,44 @@ const chalk = require('chalk');
 const authClient = require('../meteor-services/auth-client.js');
 const config = require('../meteor-services/config.js');
 const Console = require('../console/console.js').Console;
+const files = require('../fs/files');
+
+// Lightweight `.meteor/packages` reader. We need the installed name set
+// before the full ProjectContext is initialized (which happens after the
+// interactive prompt returns). Returns a Set of package names.
+exports.readInstalledPackageNames = function (projectDir) {
+  const installed = new Set();
+  if (!projectDir) return installed;
+  const path = files.pathJoin(projectDir, '.meteor', 'packages');
+  let raw;
+  try {
+    raw = files.readFile(path, 'utf8');
+  } catch (_e) {
+    return installed;
+  }
+  for (const rawLine of raw.split(/\r?\n/)) {
+    // Strip comments and surrounding whitespace.
+    const line = rawLine.replace(/#.*$/, '').trim();
+    if (!line) continue;
+    // Take the name portion (before any whitespace or `@version` marker).
+    const name = line.split(/[@\s]/)[0];
+    if (name) installed.add(name);
+  }
+  return installed;
+};
 
 const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 250;
+const DEBUG = !!process.env.METEOR_ATMOSPHERE_DEBUG;
+
+function debugLog(msg) {
+  if (!DEBUG) return;
+  try {
+    process.stderr.write(
+      '[atmosphere-search ' + (Date.now() % 100000) + '] ' + msg + '\n'
+    );
+  } catch (_e) {}
+}
 
 function createPromptModuleWithCheckboxPlus() {
   // `inquirer.createPromptModule()` builds a fresh module that only has the
@@ -40,26 +75,33 @@ function pad(str, width) {
   return str + ' '.repeat(width - str.length);
 }
 
-function renderChoiceLabel(pkg, termWidth) {
-  // Layout: name (padded) │ description (star-suffix if any)
+function renderChoiceLabel(pkg, termWidth, installed) {
+  // Layout: name (padded) │ description (installed-tag and star-suffix if any)
   // Atmosphere nests description/flags under `latestVersion`.
   const description = (pkg.latestVersion && pkg.latestVersion.description) || '';
+  const isInstalled = installed && installed.has(pkg.name);
   const NAME_COL = 34;
-  const name = pkg.name.length > NAME_COL
-    ? pkg.name.slice(0, NAME_COL - 1) + '...'
-    : pad(pkg.name, NAME_COL);
+  const displayName = isInstalled ? chalk.green(pad(pkg.name, NAME_COL)) : (
+    pkg.name.length > NAME_COL
+      ? pkg.name.slice(0, NAME_COL - 1) + '...'
+      : pad(pkg.name, NAME_COL)
+  );
   const separator = chalk.dim(' │ ');
+  const installedTag = isInstalled ? chalk.green(' [installed]') : '';
   const starSuffix = pkg.starCount > 0
     ? chalk.dim(' (' + pkg.starCount + '★)')
     : '';
-  // Separator and star suffix contain ANSI escapes; size the description
+  // Separator and suffixes contain ANSI escapes; size the description
   // budget against the *visible* widths.
-  const visibleFixed = name.length + 3 /* ' │ ' */ + (pkg.starCount > 0
-    ? (' (' + pkg.starCount + '★)').length : 0);
+  const visibleFixed = Math.min(pkg.name.length, NAME_COL)
+    + Math.max(0, NAME_COL - pkg.name.length)  // padding width
+    + 3 /* ' │ ' */
+    + (isInstalled ? ' [installed]'.length : 0)
+    + (pkg.starCount > 0 ? (' (' + pkg.starCount + '★)').length : 0);
   // checkbox-plus adds a ~4-char "[ ] " prefix on the left, leave headroom.
   const budget = Math.max(10, termWidth - visibleFixed - 8);
   const desc = truncate(description || '(no description)', budget);
-  return name + separator + desc + starSuffix;
+  return displayName + separator + desc + installedTag + starSuffix;
 }
 
 function filterPackages(packages) {
@@ -71,10 +113,10 @@ function filterPackages(packages) {
   });
 }
 
-function buildChoices(pkgs, termWidth) {
+function buildChoices(pkgs, termWidth, installed) {
   return pkgs.map(function (pkg) {
     return {
-      name: renderChoiceLabel(pkg, termWidth),
+      name: renderChoiceLabel(pkg, termWidth, installed),
       value: pkg.name,
       short: pkg.name,
     };
@@ -101,7 +143,7 @@ function errorChoice(err) {
 // via its own lastSourcePromise check, but we still want to avoid
 // ServiceConnection's "can't wait on two things at once" race, so we
 // serialize RPC starts through `rpcInFlight`.
-function makeDebouncedSearcher(conn) {
+function makeDebouncedSearcher(conn, installed) {
   let generation = 0;
   let rpcInFlight = null;
   let activeTimer = null;
@@ -111,10 +153,22 @@ function makeDebouncedSearcher(conn) {
       // ServiceConnection disallows concurrent apply()s, so serialize.
       try { await rpcInFlight; } catch (_e) { /* ignore */ }
     }
+    const rpcStart = Date.now();
+    debugLog('rpc start query=' + JSON.stringify(input));
     const p = (async function () {
       const result = await conn.call('Search.query', input, 0, PAGE_SIZE);
       return filterPackages(result && result.packages);
-    })();
+    })().then(function (pkgs) {
+      debugLog('rpc ok query=' + JSON.stringify(input)
+        + ' results=' + pkgs.length
+        + ' took=' + (Date.now() - rpcStart) + 'ms');
+      return pkgs;
+    }, function (err) {
+      debugLog('rpc err query=' + JSON.stringify(input)
+        + ' after=' + (Date.now() - rpcStart) + 'ms'
+        + ' err=' + (err && err.message ? err.message : err));
+      throw err;
+    });
     rpcInFlight = p;
     try {
       // `return await` (not `return`) so `finally` runs after p settles;
@@ -149,7 +203,7 @@ function makeDebouncedSearcher(conn) {
             resolve([]);
             return;
           }
-          const choices = buildChoices(pkgs, Console.width());
+          const choices = buildChoices(pkgs, Console.width(), installed);
           resolve(choices.length === 0 ? noResultsChoice(input) : choices);
         } catch (err) {
           if (myGen !== generation) {
@@ -163,8 +217,8 @@ function makeDebouncedSearcher(conn) {
   };
 }
 
-async function runSearchPrompt(conn, initialQuery) {
-  const search = makeDebouncedSearcher(conn);
+async function runSearchPrompt(conn, initialQuery, installed) {
+  const search = makeDebouncedSearcher(conn, installed);
   const prompt = createPromptModuleWithCheckboxPlus();
   const promptPromise = prompt([
     {
@@ -206,18 +260,27 @@ exports.runInteractivePackageSearch = async function (opts) {
   // active when our handler starts; inquirer's redraw collides with it.
   Console.enableProgressDisplay(false);
 
+  // Visible progress line so the user isn't staring at a blank terminal
+  // during the DDP handshake. Inquirer will overwrite this line once it
+  // starts rendering.
+  Console.info('Connecting to Atmosphere...');
+  debugLog('connect start url=' + url);
+  const connectStart = Date.now();
+
   let conn;
   try {
     conn = await authClient.openServiceConnection(url);
   } catch (err) {
+    debugLog('connect failed after ' + (Date.now() - connectStart) + 'ms');
     throw new Error(
       'Could not connect to Atmosphere at ' + url + ': '
       + (err && err.message ? err.message : err)
     );
   }
+  debugLog('connected in ' + (Date.now() - connectStart) + 'ms');
 
   try {
-    return await runSearchPrompt(conn, opts.initialQuery);
+    return await runSearchPrompt(conn, opts.initialQuery, opts.installed);
   } catch (err) {
     if (err && (err.isTtyError || err.name === 'ExitPromptError')) {
       throw new MeteorSearchAbortedError();
