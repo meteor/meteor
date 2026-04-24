@@ -48,9 +48,9 @@ const getGroupToUse = () => {
   return getCurrentGroupName() || 'root';
 };
 
-const removeTestSocketFile = () => {
+const removeTestSocketFile = (path = testSocketFile) => {
   try {
-    unlinkSync(testSocketFile);
+    unlinkSync(path);
   } catch (error) {
     // Do nothing
   }
@@ -123,19 +123,22 @@ Tinytest.add(
     const testEventEmitter = new EventEmitter();
     registerSocketFileCleanup(testSocketFile, testEventEmitter);
     registerSocketFileCleanup(testSocketFile2, testEventEmitter);
-    ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
-      test.equal(testEventEmitter.listenerCount(signal), 1);
-    });
+    try {
+      ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
+        test.equal(testEventEmitter.listenerCount(signal), 1);
+      });
 
-    writeFileSync(testSocketFile, "");
-    writeFileSync(testSocketFile2, "");
-    testEventEmitter.emit('exit');
+      writeFileSync(testSocketFile, "");
+      writeFileSync(testSocketFile2, "");
+      testEventEmitter.emit('exit');
 
-    // Original path was replaced; only the latest path should be cleaned up.
-    test.isNotUndefined(statSync(testSocketFile));
-    test.throws(() => { statSync(testSocketFile2); }, /ENOENT/);
-
-    unlinkSync(testSocketFile);
+      // Original path was replaced; only the latest path should be cleaned up.
+      test.isNotUndefined(statSync(testSocketFile));
+      test.throws(() => { statSync(testSocketFile2); }, /ENOENT/);
+    } finally {
+      removeTestSocketFile(testSocketFile);
+      removeTestSocketFile(testSocketFile2);
+    }
   }
 );
 
