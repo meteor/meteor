@@ -7,7 +7,7 @@ const BridgeTestCol = new Mongo.Collection(bridgeTestCollName);
 
 Meteor.methods({
   'threadContext.bridge.echo'(val) {
-    return { val, userId: this.userId };
+    return { val, userId: this.userId, connectionId: this.connection?.id };
   },
 });
 

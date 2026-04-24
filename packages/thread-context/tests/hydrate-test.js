@@ -278,6 +278,7 @@ Tinytest.addAsync('thread-context - bridge - connectionId is forwarded without e
   const result = await methodProxy.callAsync('threadContext.bridge.echo', 'connTest');
   test.equal(result.val, 'connTest');
   test.equal(result.userId, 'connUser');
+  test.equal(result.connectionId, 'conn-abc-123');
 
   ctx.destroy();
 });
