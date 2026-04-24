@@ -434,6 +434,10 @@ Tinytest.add("webapp - _timeoutAdjustmentRequestCallback sets correct timeouts",
 
   // Response timeout should be reset to short timeout (5s)
   test.equal(timeouts.res, 5 * 1000, "res timeout should be reset to 5s after finish");
+
+  // prependOnceListener should auto-remove after firing
+  test.equal(res.listeners('finish').length, 0,
+    "finish listener should be removed after firing (once semantics)");
 });
 
 Tinytest.addAsync("webapp - parse url queries", async function (test) {
