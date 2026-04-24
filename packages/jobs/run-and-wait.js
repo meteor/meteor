@@ -37,6 +37,10 @@ export async function runAndWait(name, data, options = {}) {
   return new Promise((resolve, reject) => {
     let settled = false;
     let handle = null;
+    // `observe()` fires `added` synchronously for existing documents, which
+    // may settle the promise before the `observe()` call returns. Defer the
+    // handle.stop() until after assignment in that case.
+    let pendingStop = false;
 
     function settle(fn, value) {
       if (settled) return;
@@ -44,6 +48,8 @@ export async function runAndWait(name, data, options = {}) {
       try { clearTimeout(timeout); } catch (_) {}
       if (handle) {
         try { handle.stop(); } catch (_) {}
+      } else {
+        pendingStop = true;
       }
       fn(value);
     }
@@ -83,5 +89,9 @@ export async function runAndWait(name, data, options = {}) {
         checkDoc(doc);
       },
     });
+
+    if (pendingStop) {
+      try { handle.stop(); } catch (_) {}
+    }
   });
 }
