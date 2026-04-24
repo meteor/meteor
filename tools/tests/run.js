@@ -269,7 +269,7 @@ selftest.define("handle requests with large headers", async function() {
   await run.match('due to the header size exceeding Node\'s currently');
 });
 
-selftest.define("update during run", ["checkout", 'custom-warehouse'], async function () {
+selftest.define("update during run", ["checkout", 'custom-warehouse', 'serial'], async function () {
   var s = new Sandbox({
     warehouse: SIMPLE_WAREHOUSE,
     fakeMongo: true

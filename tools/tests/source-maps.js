@@ -25,7 +25,7 @@ selftest.define("source maps from checkout", ['checkout'], async function () {
   }
 });
 
-selftest.define("source maps from an app", ['checkout', 'custom-warehouse'], async function () {
+selftest.define("source maps from an app", ['checkout', 'custom-warehouse', 'serial'], async function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true }
@@ -58,7 +58,7 @@ selftest.define("source maps from an app", ['checkout', 'custom-warehouse'], asy
   await run.stop();
 });
 
-selftest.define("source maps from built meteor tool", ['checkout', 'custom-warehouse'], async function () {
+selftest.define("source maps from built meteor tool", ['checkout', 'custom-warehouse', 'serial'], async function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true }
@@ -90,7 +90,7 @@ selftest.define("source maps from built meteor tool", ['checkout', 'custom-wareh
   await run.expectExit(1);
 });
 
-selftest.define("source maps from a build plugin implementation", ['checkout', 'custom-warehouse'], async function () {
+selftest.define("source maps from a build plugin implementation", ['checkout', 'custom-warehouse', 'serial'], async function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true }

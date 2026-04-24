@@ -420,7 +420,7 @@ selftest.define("add package with no builds", ["net"], async function () {
 
 selftest.define(
   "package skeleton creates correct versionsFrom",
-  ["custom-warehouse"],
+  ["custom-warehouse", "serial"],
   async function () {
     var s = new Sandbox({ warehouse: { v1: { recommended: true } } });
     await s.init();

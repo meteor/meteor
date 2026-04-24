@@ -35,7 +35,7 @@ var checkAppIsRunning = selftest.markStack(async function (appUrl, checks) {
 });
 
 // Deploy a simple app to Galaxy.
-selftest.define('galaxy deploy - simple', ['galaxy'], async function () {
+selftest.define('galaxy deploy - simple', ['galaxy', 'serial'], async function () {
   galaxyUtils.sanityCheck();
   var s = new Sandbox;
   await s.init();
@@ -79,7 +79,7 @@ selftest.define('galaxy deploy - simple', ['galaxy'], async function () {
 });
 
 // Deploy an app with some public settings to galaxy, check that everything works.
-selftest.define('galaxy deploy - settings', ['galaxy'], async function () {
+selftest.define('galaxy deploy - settings', ['galaxy', 'serial'], async function () {
   galaxyUtils.sanityCheck();
   var s = new Sandbox;
   await s.init();
@@ -135,7 +135,7 @@ selftest.define('galaxy deploy - settings', ['galaxy'], async function () {
 
 
 // Rescale the app and check status.
-selftest.define('galaxy deploy - rescale', ['galaxy'], async function () {
+selftest.define('galaxy deploy - rescale', ['galaxy', 'serial'], async function () {
   galaxyUtils.sanityCheck();
   var s = new Sandbox;
   await s.init();
@@ -186,7 +186,7 @@ selftest.define('galaxy deploy - rescale', ['galaxy'], async function () {
 
 // Upload an app, allocate it a self-signed cert, check that we get https
 // redirection.
-selftest.define('galaxy self-signed cert', ['galaxy'], async function () {
+selftest.define('galaxy self-signed cert', ['galaxy', 'serial'], async function () {
   galaxyUtils.sanityCheck();
   var s = new Sandbox;
   await s.init();
@@ -258,7 +258,7 @@ selftest.define('galaxy self-signed cert', ['galaxy'], async function () {
 });
 
 // Unauthorized users cannot deploy to Galaxy.
-selftest.define('unauthorized deploy', ['galaxy'], async function () {
+selftest.define('unauthorized deploy', ['galaxy', 'serial'], async function () {
   var sandbox = new Sandbox;
   await sandbox.init();
   // This is the test user. The test user is not currently authorized to deploy

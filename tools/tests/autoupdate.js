@@ -31,7 +31,7 @@ var recommend = async function (sandbox, version) {
   });
 };
 
-selftest.define("autoupdate", ['checkout', 'custom-warehouse'], async function () {
+selftest.define("autoupdate", ['checkout', 'custom-warehouse', 'serial'], async function () {
   var s = new Sandbox({
     warehouse: {
       v1: { recommended: true },

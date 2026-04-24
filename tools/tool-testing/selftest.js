@@ -188,6 +188,11 @@ const tagDescriptions = {
   // These tests require a setup step which can be amortized across multiple
   // similar tests, so it makes sense to segregate them
   'custom-warehouse': "requires a custom warehouse",
+  // Tests that cannot run concurrently with other tests because they touch
+  // process-global state: the user's ~/.meteor, shared servers (packages.meteor,
+  // galaxy), warehouse registries, or a fixed port/path that can't be scoped
+  // to a worker. The Phase 5 worker pool runs these in a final serial pass.
+  serial: 'cannot run in parallel with other tests (shared global state)',
   'manually-ignored': 'excluded by selftest.skip'
 };
 

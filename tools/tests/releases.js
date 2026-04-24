@@ -13,7 +13,7 @@ var DEFAULT_RELEASE_TRACK = catalog.DEFAULT_TRACK;
 // because it calls 'create' from a warehouse, to be specific).
 selftest.define(
   "springboard",
-  ["checkout", "net", "custom-warehouse"],
+  ["checkout", "net", "custom-warehouse", "serial"],
   async function () {
     var s = new Sandbox({
       warehouse: {
@@ -143,7 +143,7 @@ selftest.define(
 // instead, or think that it already has the packages, it would be ok).
 selftest.define(
   "writing versions file",
-  ["checkout", "net", "custom-warehouse"],
+  ["checkout", "net", "custom-warehouse", "serial"],
   async function () {
     var s = new Sandbox({
       warehouse: {
@@ -250,7 +250,7 @@ selftest.define(
   }
 );
 
-selftest.define("unknown release", ["custom-warehouse"], async function () {
+selftest.define("unknown release", ["custom-warehouse", "serial"], async function () {
   var s = new Sandbox({
     warehouse: {
       v2: { recommended: true },

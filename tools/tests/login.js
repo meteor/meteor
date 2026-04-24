@@ -5,7 +5,7 @@ var testUtils = require('../tool-testing/test-utils.js');
 var commandTimeoutSecs = 10;
 var loginTimeoutSecs = 2;
 
-selftest.define("login", ['net'], async function () {
+selftest.define("login", ['net', 'serial'], async function () {
   var s = new Sandbox;
   await s.init();
 
@@ -125,7 +125,7 @@ selftest.define("login", ['net'], async function () {
 });
 
 // This is a Galaxy-related command (deploy), but still pretty auth-y.
-selftest.define("login on deploy", ['net'], async function () {
+selftest.define("login on deploy", ['net', 'serial'], async function () {
   const s = new Sandbox;
   await s.init();
 
