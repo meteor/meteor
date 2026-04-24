@@ -1104,15 +1104,25 @@ export async function stopExecutionEngine() {
   _claimInFlight.clear();
 
   // Drain and terminate the worker pool if it was created.
+  // terminate() must run unconditionally — if drain() throws and we skip it,
+  // worker threads stay alive and the next startExecutionEngine() creates a
+  // fresh pool while the old workers linger.
   if (_pool) {
     try {
-      await _pool.drain();
-      await _pool.terminate();
-    } catch (err) {
-      console.error('[Jobs] Error shutting down worker pool:', err);
+      try {
+        await _pool.drain();
+      } catch (err) {
+        console.error('[Jobs] Error draining worker pool:', err);
+      }
+      try {
+        await _pool.terminate();
+      } catch (err) {
+        console.error('[Jobs] Error terminating worker pool:', err);
+      }
+    } finally {
+      _pool = null;
+      _workerPoolAvailable = null;
     }
-    _pool = null;
-    _workerPoolAvailable = null;
   }
 }
 
