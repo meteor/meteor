@@ -2,8 +2,8 @@
  * @module jobs/events
  * @summary Lifecycle event hooks using the callback-hook package.
  *
- * Events: enqueued, started, completed, failed, retrying, stalled,
- * leader.acquired, leader.lost.
+ * Events: enqueued, started, completed, failed, cancelled, retrying,
+ * stalled, leader.acquired, leader.lost.
  *
  * Usage:
  *   import { on, emit } from './events.js';
