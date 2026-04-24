@@ -113,10 +113,22 @@ async function insertCronJob(doc) {
 // ---------------------------------------------------------------------------
 
 /**
+ * Node's setTimeout uses a signed 32-bit int for the delay. Delays larger
+ * than this are silently clamped to 1 ms and fire immediately, so cron
+ * expressions with a next fire time more than ~24.8 days away (e.g. annual
+ * schedules) need to be armed in multiple clamped legs.
+ * @private
+ */
+const MAX_TIMEOUT_DELAY = 2147483647;
+
+/**
  * Schedule the next timer for a given cron job definition.
  *
- * Computes the next fire time and sets a `setTimeout`.  When the timer
- * fires it inserts the job document, then recursively schedules the next.
+ * Computes the next fire time and arms a `setTimeout`, clamping to
+ * MAX_TIMEOUT_DELAY so far-future runs don't fire immediately. When the
+ * clamped leg fires, if we haven't actually reached the fire time yet,
+ * we arm another clamped leg. Only once the real fire time arrives do
+ * we insert the job document and schedule the next run.
  *
  * @param {Object} jobDef  The registered job definition.
  * @param {Date} [after]   Compute the next run after this date.
@@ -133,23 +145,40 @@ function scheduleNextRun(jobDef, after) {
     return;
   }
 
-  const delay = Math.max(nextTime.getTime() - Date.now(), 0);
-
-  const handle = setTimeout(async () => {
-    // Guard: check we're still the active leader.
+  const arm = () => {
     if (!_active) return;
 
-    _timers.delete(jobDef.name);
+    const remaining = Math.max(nextTime.getTime() - Date.now(), 0);
+    const delay = Math.min(remaining, MAX_TIMEOUT_DELAY);
 
-    // 1. Insert the job document.
-    const doc = buildCronJobDoc(jobDef, nextTime);
-    await insertCronJob(doc);
+    const handle = setTimeout(async () => {
+      // Guard: check we're still the active leader.
+      if (!_active) return;
 
-    // 2. Schedule the next timer (after the fire time we just processed).
-    scheduleNextRun(jobDef, nextTime);
-  }, delay);
+      // Clamped leg fired early — we're not actually at the real fire
+      // time yet. Arm another clamped leg and wait.
+      if (Date.now() < nextTime.getTime()) {
+        arm();
+        return;
+      }
 
-  _timers.set(jobDef.name, handle);
+      // At (or past) the real fire time — delete the timer entry just
+      // before actually inserting the cron document, preserving the
+      // existing _timers.set/_timers.delete pairing.
+      _timers.delete(jobDef.name);
+
+      // 1. Insert the job document.
+      const doc = buildCronJobDoc(jobDef, nextTime);
+      await insertCronJob(doc);
+
+      // 2. Schedule the next timer (after the fire time we just processed).
+      scheduleNextRun(jobDef, nextTime);
+    }, delay);
+
+    _timers.set(jobDef.name, handle);
+  };
+
+  arm();
 }
 
 // ---------------------------------------------------------------------------
