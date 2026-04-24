@@ -209,7 +209,7 @@ must be called by the host if that behavior is desired.
 
 ## Architecture
 
-```
+```text
 Main Thread (Host)                    Worker Thread
 ─────────────────────────────────────────────────────
 
