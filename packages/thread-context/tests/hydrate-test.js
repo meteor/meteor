@@ -159,7 +159,7 @@ Tinytest.add('thread-context - createThreadContext - settings snapshot is shared
   const ctx2 = createThreadContext();
 
   // Same object reference — cloned once, reused
-  test.equal(ctx1.settings, ctx2.settings);
+  test.isTrue(ctx1.settings === ctx2.settings);
 
   ctx1.destroy();
   ctx2.destroy();
@@ -278,6 +278,7 @@ Tinytest.addAsync('thread-context - bridge - connectionId is forwarded without e
   const result = await methodProxy.callAsync('threadContext.bridge.echo', 'connTest');
   test.equal(result.val, 'connTest');
   test.equal(result.userId, 'connUser');
+  test.equal(result.connectionId, 'conn-abc-123');
 
   ctx.destroy();
 });
