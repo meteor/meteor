@@ -39,7 +39,7 @@ import {
   buildDeleteQuery,
   buildUpsertQuery,
 } from './sql_compiler';
-import { POLLING_INTERVAL_MS } from './observe_driver';
+import { POLLING_INTERVAL_MS, getObserveDriver } from './observe_driver';
 
 // ---------------------------------------------------------------------------
 // Helper: create a test schema
@@ -796,7 +796,11 @@ Tinytest.add('postgres - query builder - buildSelectQuery', (test) => {
   const { text, values } = buildSelectQuery(
     'posts', { published: true }, { sort: { createdAt: -1 }, limit: 10, skip: 5 }, schema
   );
-  test.isTrue(text.includes('SELECT * FROM "posts"'));
+  // Projection is explicit (not SELECT *). _id must always lead; the schema
+  // columns and the _extra overflow JSONB column follow.
+  test.isTrue(text.includes('SELECT "_id"'), `projection starts with _id: ${text}`);
+  test.isTrue(text.includes('"_extra"'), `projection includes _extra: ${text}`);
+  test.isTrue(text.includes('FROM "posts"'), `FROM clause quotes table: ${text}`);
   test.isTrue(text.includes('WHERE "published" = $1'));
   test.isTrue(text.includes('ORDER BY'));
   test.isTrue(text.includes('LIMIT'));
@@ -1489,13 +1493,13 @@ if (hasPostgres) {
 // minimize merge conflict risk with other agents editing this file concurrently.
 // ============================================================================
 
-// The 53-byte cap is defined as MAX_COLLECTION_NAME_BYTES in postgres_driver.js.
-// Duplicated here as a literal to keep this test block self-contained and
-// avoid touching the import list (other agents may be editing it).
-const _PG_MAX_COLLECTION_NAME_BYTES = 53;
+// MAX_COLLECTION_NAME_BYTES lives in postgres_driver.js. Duplicated here as
+// a literal to keep this block self-contained and avoid touching the import
+// list (other agents may be editing it). Must match postgres_driver.js.
+const _PG_MAX_COLLECTION_NAME_BYTES = 38;
 
 Tinytest.addAsync(
-  'postgres - driver - C3 - setupListenNotify rejects >53 byte collection name',
+  'postgres - driver - C3 - setupListenNotify rejects over-cap collection name',
   async (test) => {
     const conn = new PostgresConnection('postgres://example');
     conn._notifyCallbacks = new Map();
@@ -1515,7 +1519,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'postgres - driver - C3 - ensureTable rejects >53 byte collection name',
+  'postgres - driver - C3 - ensureTable rejects over-cap collection name',
   async (test) => {
     const conn = new PostgresConnection('postgres://example');
     conn.query = async () => {
@@ -1529,7 +1533,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'postgres - driver - C3 - setupListenNotify accepts exactly 53 byte collection name',
+  'postgres - driver - C3 - setupListenNotify accepts exactly max-byte collection name',
   async (test) => {
     const conn = new PostgresConnection('postgres://example');
     conn._notifyCallbacks = new Map();
@@ -1838,10 +1842,21 @@ Tinytest.add('postgres - regression - $push on non-array value throws', (test) =
   });
 });
 
-Tinytest.add('postgres - regression - $elemMatch with null does not throw and produces valid SQL', (test) => {
+Tinytest.add('postgres - regression - $elemMatch with null throws a clear error (no TypeError)', (test) => {
   const schema = createTestSchema();
-  const result = compileSelector({ tags: { $elemMatch: null } }, schema);
-  test.isTrue(typeof result.text === 'string' && result.text.length > 0);
+  // Mongo rejects $elemMatch: null as an error too. The compiler must raise
+  // a clear error rather than crash with `TypeError: Cannot read properties
+  // of null (reading '$options')`.
+  test.throws(() => {
+    compileSelector({ tags: { $elemMatch: null } }, schema);
+  }, /\$elemMatch requires an object operand/);
+});
+
+Tinytest.add('postgres - regression - $not with null throws a clear error (no TypeError)', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ title: { $not: null } }, schema);
+  }, /\$not requires an operator object/);
 });
 
 Tinytest.add('postgres - regression - schema rejects non-finite number default (NaN)', (test) => {
@@ -2123,4 +2138,151 @@ Tinytest.add('postgres - regression - C4 $not with PCRE inline flag still reject
     compileSelector({ title: { $not: { $regex: '(?i)Foo' } } }, schema);
   }, /PCRE construct/);
 });
+
+// ---------------------------------------------------------------------------
+// I12 — observeChanges must fire `changed` and `removed` callbacks, not only
+// `added`, and must emit a `reset` on forced driver reset. These integration
+// tests require POSTGRES_URL.
+// ---------------------------------------------------------------------------
+
+if (hasPostgres) {
+  Tinytest.addAsync(
+    'postgres - integration - I12 - observeChanges fires changed on update',
+    async (test) => {
+      const table = `test_ocu_${Random.id(8).toLowerCase()}`;
+      const provider = new PostgresStreamProvider(POSTGRES_URL);
+      await provider.connect();
+      const schema = new ResolvedSchema({
+        title: { type: 'text' },
+        views: { type: 'integer', default: 0 },
+      });
+      await provider.registerSchema(table, schema);
+
+      try {
+        const id = await provider.insertAsync(table, { title: 'orig', views: 1 });
+
+        const changed = [];
+        const handle = await provider.observeChanges(
+          { collectionName: table, selector: {}, options: {} },
+          false,
+          {
+            added() {},
+            changed(docId, fields) { changed.push({ id: docId, fields }); },
+            removed() {},
+          }
+        );
+
+        // Let the initial snapshot settle.
+        await new Promise(r => setTimeout(r, 200));
+
+        await provider.updateAsync(table, { _id: id }, { $set: { views: 42 } });
+
+        // Wait for LISTEN/NOTIFY -> poll cycle.
+        const deadline = Date.now() + 3000;
+        while (changed.length === 0 && Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        test.isTrue(changed.length >= 1, `expected changed callback; got ${changed.length}`);
+        test.equal(changed[0].id, id);
+        test.equal(changed[0].fields.views, 42);
+
+        handle.stop();
+      } finally {
+        await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+        await provider.close();
+      }
+    }
+  );
+
+  Tinytest.addAsync(
+    'postgres - integration - I12 - observeChanges fires removed on delete',
+    async (test) => {
+      const table = `test_ocr_${Random.id(8).toLowerCase()}`;
+      const provider = new PostgresStreamProvider(POSTGRES_URL);
+      await provider.connect();
+      const schema = new ResolvedSchema({ title: { type: 'text' } });
+      await provider.registerSchema(table, schema);
+
+      try {
+        const id = await provider.insertAsync(table, { title: 'doomed' });
+
+        const removed = [];
+        const handle = await provider.observeChanges(
+          { collectionName: table, selector: {}, options: {} },
+          false,
+          {
+            added() {},
+            changed() {},
+            removed(docId) { removed.push(docId); },
+          }
+        );
+
+        await new Promise(r => setTimeout(r, 200));
+
+        await provider.removeAsync(table, { _id: id });
+
+        const deadline = Date.now() + 3000;
+        while (removed.length === 0 && Date.now() < deadline) {
+          await new Promise(r => setTimeout(r, 100));
+        }
+
+        test.isTrue(removed.length >= 1, `expected removed callback; got ${removed.length}`);
+        test.equal(removed[0], id);
+
+        handle.stop();
+      } finally {
+        await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+        await provider.close();
+      }
+    }
+  );
+
+  Tinytest.addAsync(
+    'postgres - integration - I12 - driver emits reset on markReset()',
+    async (test) => {
+      const table = `test_ocrst_${Random.id(8).toLowerCase()}`;
+      const provider = new PostgresStreamProvider(POSTGRES_URL);
+      await provider.connect();
+      const schema = new ResolvedSchema({ title: { type: 'text' } });
+      await provider.registerSchema(table, schema);
+
+      try {
+        await provider.insertAsync(table, { title: 'resetme' });
+
+        // Start an observe so the AFS ChangeStream is wired up.
+        const added = [];
+        const handle = await provider.observeChanges(
+          { collectionName: table, selector: {}, options: {} },
+          false,
+          {
+            added(id, fields) { added.push({ id, fields }); },
+            changed() {},
+            removed() {},
+          }
+        );
+        await new Promise(r => setTimeout(r, 200));
+        test.isTrue(added.length >= 1, 'initial snapshot emitted added');
+
+        // Drive markReset() directly on the underlying observe-driver stream
+        // so we exercise the code path without simulating a real disconnect.
+        const driver = getObserveDriver(
+          { collectionName: table, selector: {}, options: {} },
+          false,
+          provider
+        );
+        test.isTrue(!!driver._stream, 'driver has a ChangeStream');
+        let resetFired = false;
+        driver._stream.on('reset', () => { resetFired = true; });
+        driver._stream.markReset();
+        test.isTrue(resetFired, 'markReset() emitted reset');
+
+        handle.stop();
+      } finally {
+        await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+        await provider.close();
+      }
+    }
+  );
+}
 

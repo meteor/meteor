@@ -39,9 +39,23 @@ export class ResolvedSchema {
    * @param {Object} schemaDef - User-provided schema definition
    *   e.g. { title: { type: 'text', required: true }, views: { type: 'integer', default: 0 } }
    */
-  constructor(schemaDef) {
+  constructor(schemaDef, options = {}) {
     this.columns = new Map();
     this._raw = schemaDef;
+    // Per-field ORDER BY cast hints for JSONB paths. Without a hint,
+    // compileSort uses text ordering; with a hint, it casts to the
+    // declared type so numeric/date fields sort in the right order.
+    //
+    // Hints are additionally seeded from schema columns: any field whose
+    // column type is a numeric/date/boolean type is also valid for dotted
+    // JSONB paths off of it (e.g. hint for `meta.score` falls through to
+    // the caller-provided map). See getSortHint.
+    this._sortHints = new Map();
+    if (options && options.sortHints && typeof options.sortHints === 'object') {
+      for (const [path, type] of Object.entries(options.sortHints)) {
+        this._sortHints.set(path, type);
+      }
+    }
 
     for (const [name, def] of Object.entries(schemaDef)) {
       const typeName = (typeof def === 'string') ? def : def.type;
@@ -55,6 +69,16 @@ export class ResolvedSchema {
         default: def.default !== undefined ? def.default : undefined,
       });
     }
+  }
+
+  /**
+   * Return the sort-time cast hint for a dotted field path, or null.
+   * Examples of values: 'number', 'numeric', 'date', 'timestamp', 'boolean'.
+   * @param {string} fieldPath
+   * @returns {string|null}
+   */
+  getSortHint(fieldPath) {
+    return this._sortHints.get(fieldPath) || null;
   }
 
   /**

@@ -24,12 +24,53 @@ function assertSafeFieldPath(path) {
   }
 }
 
+// Hard cap on $regex source length. Postgres regex evaluation is server-side
+// CPU time; patterns are expected to be server-trusted (validated by the
+// publish/method handler), but we impose a ceiling as defense-in-depth
+// against accidental overruns and to make accidental ReDoS harder to
+// trigger. Raise via METEOR_POSTGRES_MAX_REGEX_LENGTH if you have a
+// legitimate long pattern.
+const DEFAULT_MAX_REGEX_LENGTH = 1000;
+function maxRegexLength() {
+  const n = parseInt(process.env.METEOR_POSTGRES_MAX_REGEX_LENGTH, 10);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_REGEX_LENGTH;
+}
+
 // PCRE-vs-POSIX-ERE divergence guard: Postgres `~`/`~*` use POSIX ERE,
 // which silently diverges from JavaScript's PCRE on several constructs.
 // Fail loudly instead of executing a different regex than the caller
 // wrote.
+//
+// Note: `$regex` must come from a server-trusted source. Accepting
+// arbitrary regex strings from an untrusted network input is a DoS vector
+// regardless of the guards below — the regex engine will happily accept
+// patterns that these quick checks don't flag but that still exhibit
+// exponential backtracking. If you need to accept user regex, validate
+// against an explicit allowlist at the method boundary before this point.
 function assertPosixRegex(source) {
   if (typeof source !== 'string') return;
+
+  const cap = maxRegexLength();
+  if (source.length > cap) {
+    throw new Error(
+      `Postgres SQL compiler: $regex source is ${source.length} chars, exceeds cap of ${cap}. ` +
+      `Regex must come from server-trusted input; raise METEOR_POSTGRES_MAX_REGEX_LENGTH if needed.`
+    );
+  }
+
+  // Best-effort nested-quantifier ReDoS check: catches patterns like
+  // `(a+)+`, `(.*)*`, `(\w{1,})+` where an inner quantifier is wrapped in
+  // a group that is itself quantified. This does NOT catch every
+  // exponential-backtracking pattern (alternation overlap, nested
+  // alternations, etc.) — it's a cheap trip-wire, not a proof of safety.
+  if (/\([^()]*[+*][^()]*\)\s*[+*]/.test(source) ||
+      /\([^()]*\{[^{}]*\}[^()]*\)\s*[+*]/.test(source)) {
+    throw new Error(
+      `Postgres SQL compiler: $regex pattern '${source}' contains a ` +
+      `nested-quantifier construct associated with exponential backtracking (ReDoS). ` +
+      `Rewrite the pattern or use an anchored/atomic equivalent.`
+    );
+  }
 
   // Inline flags like `(?i)` at the start of the pattern.
   const inlineFlag = source.match(/^\(\?[imsx]\)/);
@@ -379,7 +420,13 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
     }
 
     case '$not': {
-      // $not wraps another operator
+      // $not wraps another operator. Guard against null operand: a bare
+      // `{ field: { $not: null } }` is meaningless in Mongo (there's no
+      // operator to invert) and dereferencing operand.$options on null
+      // would throw.
+      if (operand === null || operand === undefined) {
+        throw new Error('$not requires an operator object or a RegExp, not null/undefined');
+      }
       if (typeof operand === 'object' && !(operand instanceof RegExp)) {
         const innerOptions = typeof operand.$options === 'string' ? operand.$options : '';
         const inner = [];
@@ -428,6 +475,15 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
     }
 
     case '$elemMatch': {
+      // Guard against null / non-object operand before any property access.
+      // `{ field: { $elemMatch: null } }` is an error in Mongo too; we fail
+      // loudly instead of crashing with TypeError on `operand.$options`.
+      if (operand === null || operand === undefined || typeof operand !== 'object') {
+        throw new Error(
+          `$elemMatch requires an object operand, got ${operand === null ? 'null' : typeof operand}`
+        );
+      }
+
       // EXISTS subquery over jsonb_array_elements
       let arrayRef;
       if (kind === 'jsonb_column') {
@@ -462,8 +518,20 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
               `(jsonb_typeof(elem->${quoteLiteral(subKey)}) = 'null' ` +
               `OR NOT (elem ? ${quoteLiteral(subKey)}))`
             );
+          } else if (typeof subVal === 'number') {
+            // Number scalar: cast the extracted text to numeric so `{ score: 5 }`
+            // matches JSON `5` and also parses the jsonb representation
+            // consistently (e.g. `5.0` vs `5`).
+            const param = ctx.addParam(subVal);
+            innerClauses.push(`(${subRef})::numeric = ${param}`);
+          } else if (typeof subVal === 'boolean') {
+            const param = ctx.addParam(subVal);
+            innerClauses.push(`(${subRef})::boolean = ${param}`);
+          } else if (subVal instanceof Date) {
+            const param = ctx.addParam(subVal.toISOString());
+            innerClauses.push(`(${subRef})::timestamptz = ${param}::timestamptz`);
           } else {
-            const param = ctx.addParam(typeof subVal === 'string' ? subVal : String(subVal));
+            const param = ctx.addParam(String(subVal));
             innerClauses.push(`${subRef} = ${param}`);
           }
         }
@@ -988,7 +1056,36 @@ export function compileSort(sortSpec, schema) {
     assertSafeFieldPath(field);
     const resolved = resolveField(field, schema);
     const direction = dir === -1 || dir === 'desc' ? 'DESC' : 'ASC';
-    return `${resolved.sqlRef} ${direction} NULLS LAST`;
+
+    // JSONB text-extraction (->>) returns text, so ORDER BY produces
+    // lexicographic order. "10" < "2" lexicographically — silently wrong for
+    // numeric fields. Users hint the intended type via a schema sort-hint
+    // map, e.g. `new ResolvedSchema({...}, { sortHints: { 'meta.score': 'number' } })`.
+    // If no hint is provided, fall back to text ordering (the legacy behavior)
+    // rather than guessing — a wrong guess is worse than a known-wrong default.
+    const hintedType =
+      schema && typeof schema.getSortHint === 'function'
+        ? schema.getSortHint(field)
+        : null;
+
+    let expr = resolved.sqlRef;
+    if (
+      (resolved.kind === 'jsonb_path' ||
+        resolved.kind === 'extra' ||
+        resolved.kind === 'extra_path') &&
+      hintedType
+    ) {
+      if (hintedType === 'number' || hintedType === 'numeric') {
+        expr = `(${resolved.sqlRef})::numeric`;
+      } else if (hintedType === 'date' || hintedType === 'timestamp') {
+        expr = `(${resolved.sqlRef})::timestamptz`;
+      } else if (hintedType === 'boolean') {
+        expr = `(${resolved.sqlRef})::boolean`;
+      }
+      // 'text' / 'string' / unknown → leave as-is.
+    }
+
+    return `${expr} ${direction} NULLS LAST`;
   });
 
   return parts.join(', ');

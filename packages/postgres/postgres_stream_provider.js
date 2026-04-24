@@ -20,6 +20,7 @@ import {
   buildUpsertQuery,
 } from './sql_compiler';
 import { quoteIdent } from './schema';
+import crypto from 'crypto';
 import { getObserveDriver, dropCachedDriversForProvider } from './observe_driver';
 
 export class PostgresStreamProvider extends StreamProvider {
@@ -46,6 +47,9 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   async close() {
+    // Idempotent: if super.close() already flipped _state, nothing more to do.
+    if (this._state === 'closed') return;
+
     this._closeMultiplexers();
 
     // Drop any observe drivers cached for this provider so they don't
@@ -74,6 +78,10 @@ export class PostgresStreamProvider extends StreamProvider {
       this._connection = null;
     }
     this._connected = false;
+
+    // Transition _state to 'closed' so post-close calls surface
+    // ProviderClosedError via _assertOpen() (see C1 fix).
+    await super.close();
   }
 
   // ---------------------------------------------------------------------------
@@ -106,6 +114,7 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async insertAsync(collectionName, doc) {
+    this._assertOpen('insertAsync');
     const schema = this._getSchema(collectionName);
 
     // Ensure table exists
@@ -119,7 +128,13 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   async updateAsync(collectionName, selector, modifier, options = {}) {
+    this._assertOpen('updateAsync');
     const schema = this._getSchema(collectionName);
+
+    // Self-heal: first-use against a collection constructed after connect
+    // would otherwise fail with `relation "x" does not exist`. ensureTable
+    // is a no-op once the table has been verified.
+    await this._connection.ensureTable(collectionName, schema);
 
     if (options.upsert) {
       return this._upsertAsync(collectionName, selector, modifier, options, schema);
@@ -140,19 +155,25 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   async removeAsync(collectionName, selector) {
+    this._assertOpen('removeAsync');
     const schema = this._getSchema(collectionName);
+    await this._connection.ensureTable(collectionName, schema);
     const { text, values } = buildDeleteQuery(collectionName, selector, schema);
     const result = await this._connection.query(text, values);
     return result.rowCount;
   }
 
   async findOneAsync(collectionName, selector, options = {}) {
+    this._assertOpen('findOneAsync');
     const results = await this._fetchResults(collectionName, selector, { ...options, limit: 1 });
     return results[0];
   }
 
   async upsertAsync(collectionName, selector, modifier, options = {}) {
-    return this._upsertAsync(collectionName, selector, modifier, options, this._getSchema(collectionName));
+    this._assertOpen('upsertAsync');
+    const schema = this._getSchema(collectionName);
+    await this._connection.ensureTable(collectionName, schema);
+    return this._upsertAsync(collectionName, selector, modifier, options, schema);
   }
 
   // ---------------------------------------------------------------------------
@@ -160,6 +181,7 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   find(collectionName, selector = {}, options = {}) {
+    this._assertOpen('find');
     return new AFSCursor(this, collectionName, selector, options);
   }
 
@@ -171,7 +193,9 @@ export class PostgresStreamProvider extends StreamProvider {
    * @returns {Promise<Object[]>}
    */
   async _fetchResults(collectionName, selector, options = {}) {
+    this._assertOpen('_fetchResults');
     const schema = this._getSchema(collectionName);
+    await this._connection.ensureTable(collectionName, schema);
     const { text, values } = buildSelectQuery(collectionName, selector, options, schema);
     const result = await this._connection.query(text, values);
     return result.rows.map(row => rowToDocument(row, schema));
@@ -182,6 +206,7 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async observeChanges(cursorDescription, ordered, callbacks, options = {}) {
+    this._assertOpen('observeChanges');
     // Delegate to the EventEmitter path via the cached multiplexer
     const multiplexer = await this._getMultiplexer(cursorDescription, ordered);
     return multiplexer.addHandle(callbacks, options);
@@ -255,6 +280,11 @@ export class PostgresStreamProvider extends StreamProvider {
   capabilities() {
     return {
       reactiveQueries: true,
+      // `transactions: true` means this provider exposes an explicit
+      // withTransactionAsync() entry point for callers to run multiple
+      // statements atomically. CRUD operations that need internal
+      // transactional guarantees (fetch-modify-write updates, non-_id
+      // upsert serialization) already use transactions under the hood.
       transactions: true,
       changeStreams: false,
       oplog: false,
@@ -264,6 +294,36 @@ export class PostgresStreamProvider extends StreamProvider {
       joins: true,
       upsert: true,
     };
+  }
+
+  /**
+   * Run `callback` inside a single Postgres transaction. The callback
+   * receives a transactional query function `(sql, params) => Promise<result>`
+   * — use it for every statement that must be part of the transaction.
+   * The transaction commits on normal return and rolls back on any throw.
+   *
+   * This is the public surface behind `capabilities().transactions`.
+   * Callers that need lower-level client access (e.g. LISTEN, cursors)
+   * can `rawDatabase().connect()` and manage BEGIN/COMMIT themselves.
+   *
+   * @param {(query: (sql: string, params?: any[]) => Promise<any>) => Promise<any>} callback
+   * @returns {Promise<any>} the callback's return value
+   */
+  async withTransactionAsync(callback) {
+    this._assertOpen('withTransactionAsync');
+    const client = await this._connection.getClient();
+    try {
+      await client.query('BEGIN');
+      const txQuery = (sql, params) => client.query(sql, params);
+      const result = await callback(txQuery);
+      await client.query('COMMIT');
+      return result;
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+      throw e;
+    } finally {
+      client.release();
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -287,17 +347,38 @@ export class PostgresStreamProvider extends StreamProvider {
     // Full teardown: table, trigger function, LISTEN state, cached schema.
     // Trigger function name follows the convention used by
     // postgres_driver.js setupListenNotify: `meteor_pg_<name>_notify_fn`.
+    //
+    // All three steps — DROP TABLE, DROP FUNCTION, UNLISTEN — run inside the
+    // same channel-op slot so they cannot interleave with a pending
+    // setupListenNotify for the same collection. Without this, a LISTEN
+    // completing between our DROP TABLE and UNLISTEN would leave the
+    // LISTEN client subscribed to a channel whose trigger we're about to
+    // delete.
     const channel = `meteor_pg_${collectionName}`;
     const triggerFnName = `${channel}_notify_fn`;
 
-    await this._connection.query(
-      `DROP TABLE IF EXISTS ${quoteIdent(collectionName)} CASCADE`
-    );
-    await this._connection.query(
-      `DROP FUNCTION IF EXISTS ${quoteIdent(triggerFnName)}() CASCADE`
-    );
+    await this._connection.runChannelOp(channel, async () => {
+      await this._connection.query(
+        `DROP TABLE IF EXISTS ${quoteIdent(collectionName)} CASCADE`
+      );
+      await this._connection.query(
+        `DROP FUNCTION IF EXISTS ${quoteIdent(triggerFnName)}() CASCADE`
+      );
 
-    await this._connection.unregisterChannel(channel);
+      // Inlined unregisterChannel body — we're already inside the queue
+      // slot for this channel, so calling unregisterChannel would deadlock.
+      this._connection._notifyCallbacks.delete(channel);
+      if (this._connection._listenClient) {
+        try {
+          await this._connection._listenClient.query(
+            `UNLISTEN ${quoteIdent(channel)}`
+          );
+        } catch (e) {
+          // Ignore if client is gone.
+        }
+      }
+    });
+
     this._connection.forgetKnownTable(collectionName);
     this._schemas.delete(collectionName);
   }
@@ -425,8 +506,39 @@ export class PostgresStreamProvider extends StreamProvider {
 
   /**
    * Handle upsert operations.
+   *
+   * Three paths:
+   * 1. Modifier uses operators the single-statement compiler cannot emit as
+   *    SET clauses ($pull, $rename, $addToSet, $push with $each, etc.): route
+   *    through _fetchModifyWriteUpsert so the modifier is honored on both
+   *    the insert and update branches.
+   * 2. Non-`_id` selector with a simple modifier: let buildUpsertQuery emit
+   *    its CTE form, but wrap the query in a transaction that takes an
+   *    advisory lock keyed on (collectionName, selector) so two concurrent
+   *    upserts with the same selector serialize and can't both INSERT.
+   * 3. `_id` selector with simple modifier: ON CONFLICT(_id) path — atomic
+   *    by primary key, no locking needed.
    */
   async _upsertAsync(collectionName, selector, modifier, options, schema) {
+    const { needsFetchModifyWrite } = compileModifier(modifier, schema);
+
+    if (needsFetchModifyWrite) {
+      return this._fetchModifyWriteUpsert(
+        collectionName, selector, modifier, options, schema
+      );
+    }
+
+    const hasIdSelector =
+      selector && typeof selector === 'object' && typeof selector._id === 'string';
+
+    if (!hasIdSelector) {
+      // Non-`_id` selector path: wrap in a transaction with an advisory lock
+      // keyed on the selector so concurrent upserts serialize (I4).
+      return this._upsertNonIdWithLock(
+        collectionName, selector, modifier, options, schema
+      );
+    }
+
     const { text, values } = buildUpsertQuery(
       collectionName, selector, modifier, schema
     );
@@ -442,5 +554,156 @@ export class PostgresStreamProvider extends StreamProvider {
     // Fall back to regular update
     const updateCount = await this.updateAsync(collectionName, selector, modifier, { ...options, upsert: false });
     return { numberAffected: updateCount };
+  }
+
+  /**
+   * Non-`_id` upsert under an advisory lock. The lock key is derived from
+   * (collectionName, canonical selector JSON) so two concurrent upserts with
+   * the same selector serialize — without it, both transactions can observe
+   * no matching row and both INSERT, producing duplicates.
+   */
+  async _upsertNonIdWithLock(collectionName, selector, modifier, options, schema) {
+    const lockKey = this._advisoryLockKey(collectionName, selector);
+
+    const client = await this._connection.getClient();
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
+
+      const { text, values } = buildUpsertQuery(
+        collectionName, selector, modifier, schema
+      );
+      const result = await client.query(text, values);
+
+      let response;
+      if (result.rows.length > 0) {
+        const row = result.rows[0];
+        response = { numberAffected: 1, insertedId: row.__inserted ? row._id : undefined };
+      } else {
+        // Shouldn't happen with the CTE form (it always returns one row);
+        // kept as a safety net for the _id-bearing ON CONFLICT variant.
+        response = { numberAffected: 0 };
+      }
+
+      await client.query('COMMIT');
+      return response;
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Fetch-modify-write upsert: lock-matching-row → LocalCollection._modify →
+   * write back. If no row matches, synthesize a new doc from selector +
+   * $setOnInsert and apply the modifier to an empty document.
+   */
+  async _fetchModifyWriteUpsert(collectionName, selector, modifier, options, schema) {
+    await this._connection.ensureTable(collectionName, schema);
+
+    const lockKey = this._advisoryLockKey(collectionName, selector);
+    const client = await this._connection.getClient();
+
+    try {
+      await client.query('BEGIN');
+      await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
+
+      // SELECT … FOR UPDATE the first matching row.
+      const { text: selectText, values: selectValues } = buildSelectQuery(
+        collectionName, selector, {}, schema
+      );
+      const selectResult = await client.query(
+        selectText + ' FOR UPDATE LIMIT 1', selectValues
+      );
+
+      if (selectResult.rows.length > 0) {
+        // Update path — apply modifier to the fetched doc.
+        const doc = rowToDocument(selectResult.rows[0], schema);
+        LocalCollection._modify(doc, modifier);
+        const newRow = documentToRow(doc, schema);
+
+        const setClauses = [];
+        const updateValues = [];
+        let idx = 0;
+        if (schema) {
+          for (const colName of schema.getColumnNames()) {
+            idx++;
+            setClauses.push(`${quoteIdent(colName)} = $${idx}`);
+            updateValues.push(newRow[colName] !== undefined ? newRow[colName] : null);
+          }
+        }
+        idx++;
+        setClauses.push(`_extra = $${idx}`);
+        updateValues.push(newRow._extra || {});
+        idx++;
+        updateValues.push(doc._id);
+
+        const updateSql =
+          `UPDATE ${quoteIdent(collectionName)} SET ${setClauses.join(', ')} ` +
+          `WHERE _id = $${idx}`;
+        await client.query(updateSql, updateValues);
+
+        await client.query('COMMIT');
+        return { numberAffected: 1, insertedId: undefined };
+      }
+
+      // Insert path — build the new doc from selector + $setOnInsert, then
+      // apply the modifier on top. `_modify` with `isInsert: true` throws on
+      // operators that are not legal at insert time.
+      const insertDoc = this._buildUpsertInsertDoc(selector, modifier);
+      LocalCollection._modify(insertDoc, modifier, { isInsert: true });
+
+      const { text: insertSql, values: insertValues } = buildInsertQuery(
+        collectionName, insertDoc, schema
+      );
+      const insertRes = await client.query(insertSql, insertValues);
+
+      await client.query('COMMIT');
+      return { numberAffected: 1, insertedId: insertRes.rows[0]._id };
+    } catch (e) {
+      try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+      throw e;
+    } finally {
+      client.release();
+    }
+  }
+
+  /**
+   * Seed an insert doc from the upsert selector's scalar fields plus
+   * $setOnInsert. Anything else ($set, array ops, etc.) is left to
+   * LocalCollection._modify.
+   */
+  _buildUpsertInsertDoc(selector, modifier) {
+    const doc = {};
+    if (selector && typeof selector === 'object') {
+      for (const [k, v] of Object.entries(selector)) {
+        if (k.startsWith('$')) continue;
+        if (v === null || v === undefined) continue;
+        if (typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v)) {
+          // Operator object ({$gt: 5}) — skip.
+          const subKeys = Object.keys(v);
+          if (subKeys.length > 0 && subKeys.every(sk => sk.startsWith('$'))) continue;
+        }
+        doc[k] = v;
+      }
+    }
+    if (!doc._id) doc._id = this.generateId();
+    return doc;
+  }
+
+  /**
+   * Derive a stable 64-bit advisory lock key from (collectionName, selector).
+   * SHA-1 is cheap and collision risk across two different selectors is
+   * astronomical at the serialization rates this path sees.
+   */
+  _advisoryLockKey(collectionName, selector) {
+    const material = `${collectionName}\0${EJSON.stringify(selector)}`;
+    const h = crypto.createHash('sha1').update(material).digest();
+    // Take the low 64 bits and return as a signed BigInt — pg accepts BigInt
+    // for bigint parameters and wraps into signed range on its own.
+    const low64 = h.readBigInt64BE(0);
+    return low64;
   }
 }

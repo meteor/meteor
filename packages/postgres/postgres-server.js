@@ -59,20 +59,30 @@ Postgres = {
         );
       }
 
+      // Normalize the schema now (catches type errors before super()), then
+      // strip the `schema` option from what we forward to super() — AFS.Collection
+      // does not know what to do with it.
       let schema = null;
       if (options.schema) {
-        schema = new ResolvedSchema(options.schema);
-        // registerSchema is async but we need it before super()
-        // Table creation will be deferred to first operation or Meteor.startup
-        _provider._schemas.set(name, schema);
+        // Pass through sortHints if the caller supplied them alongside `schema`.
+        const sortHints = options.sortHints || undefined;
+        schema = new ResolvedSchema(options.schema, { sortHints });
       }
 
-      super(name, { provider: _provider, ...options });
+      const forwardOptions = { ...options };
+      delete forwardOptions.schema;
+      delete forwardOptions.sortHints;
 
-      // Ensure table is created async
-      if (schema && _provider._connection && _provider._connection.isConnected()) {
-        _provider._connection.ensureTable(name, schema).catch(e => {
-          Log.error(`Postgres: Failed to create table "${name}":`, e);
+      super(name, { provider: _provider, ...forwardOptions });
+
+      if (schema) {
+        // Use the public registerSchema API rather than poking `_schemas` directly.
+        // registerSchema is async and handles both the schema map and (if already
+        // connected) the DDL. We can't await here because super() must run first
+        // and the constructor is sync — so we fire-and-forget. `ensureTable` in
+        // the CRUD paths will self-heal if this races a first insert.
+        _provider.registerSchema(name, schema).catch(e => {
+          Log.error(`Postgres: Failed to register schema for "${name}":`, e);
         });
       }
     }
@@ -106,6 +116,13 @@ Postgres = {
     }
     return Postgres._query(sql, params);
   },
+
+  // Test hooks. `_testSetConnectFailed` mirrors the name Tinytest uses in
+  // postgres-tests.js regression tests — kept at the top level (single
+  // underscore prefix) to match Meteor convention for test-only hooks.
+  // The `_internal` mirror stays for anyone who was accessing it there.
+  _testSetConnectFailed: (err) => { _connectFailed = err; },
+  _testGetConnectFailed: () => _connectFailed,
 
   _internal: {
     compileSelector,

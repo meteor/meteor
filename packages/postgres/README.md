@@ -76,6 +76,22 @@ const found = await Posts.findOneAsync({ published: false });
 Use `{ required: true }` to emit `NOT NULL`. Non-finite number defaults
 (`NaN`, `Infinity`) throw at table-creation time, not at runtime.
 
+### Schema evolution
+
+Schemas are only applied on *first* table creation. Registering a new
+schema for an existing table does **not** `ALTER TABLE` — adding, removing,
+or retyping columns on a live table is a migration concern that the
+package deliberately leaves to the operator (ALTER semantics, default
+backfills, and online-migration strategy vary too much to automate
+safely). If you change a collection's schema in code:
+
+- For local development: drop the collection (`Posts._provider.dropCollectionAsync('posts')`) and let it be re-created.
+- For production: issue the `ALTER TABLE` yourself (via migration tooling or `Postgres._query`) and update the schema registration to match.
+
+Unknown fields overflow into `_extra`, so *additive* JS-side schema
+changes (new fields) work without DDL — only column-type changes or
+NOT-NULL transitions require a migration.
+
 ## Reactivity
 
 `observeChanges` attaches a Postgres trigger that `pg_notify`s on
@@ -117,6 +133,8 @@ per process.
 | `METEOR_POSTGRES_LISTEN_MAX_LISTENERS`         | EventEmitter max-listener ceiling for the LISTEN client.                         | `1024`  |
 | `METEOR_POSTGRES_NUMERIC_BIGINT`               | `=1` to coerce overflowing `numeric` values to BigInt instead of string.         | off     |
 | `METEOR_POSTGRES_SUPPRESS_UNKNOWN_TABLE_WARN`  | `=1` to suppress "unregistered table" debug warnings on raw SQL.                 | off     |
+| `METEOR_POSTGRES_WARN_UNKNOWN_TABLE`           | `=1` to enable the unregistered-table scan in production (dev-only by default).  | off     |
+| `METEOR_POSTGRES_MAX_REGEX_LENGTH`             | Max `$regex` source length accepted by the SQL compiler.                         | `1000`  |
 | `METEOR_POSTGRES_POOL_MAX`                     | Maximum pool size (`pool.max`).                                                  | `10`    |
 | `METEOR_POSTGRES_POOL_IDLE_TIMEOUT_MS`         | Pool idle timeout (ms) before connections are released.                          | `10000` |
 | `METEOR_POSTGRES_POOL_CONNECT_TIMEOUT_MS`      | Pool connect timeout (ms) for new connections.                                   | `0`     |

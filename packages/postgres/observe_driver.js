@@ -161,6 +161,15 @@ class PostgresObserveDriver {
         clearTimeout(this._notifyDebounceTimer);
       }
       this._notifyDebounceTimer = setTimeout(() => {
+        if (this._stopped) return;
+        // If a poll is already running, request a coalesced re-poll rather
+        // than silently returning from _poll(). Otherwise a notification that
+        // arrives while the prior poll is still in flight is dropped and the
+        // change waits for the next regular poll tick (up to POLLING_INTERVAL_MS).
+        if (this._polling) {
+          this._repollNeeded = true;
+          return;
+        }
         this._poll().catch(e => {
           Log.error('Postgres observe poll error:', e);
           if (!isConnectionError(e)) this._stream.markError(e);
@@ -196,11 +205,16 @@ class PostgresObserveDriver {
         }
 
         // Writes that happened between disconnect and re-LISTEN were never
-        // delivered; divergence is guaranteed, not hypothetical. Emit `reset`
-        // so downstream re-issues the initial snapshot. Also clear the diff
-        // baseline so the next poll replays full state against empty.
+        // delivered; divergence is guaranteed, not hypothetical. markReset()
+        // clears _ready and emits 'reset' — using raw emit('reset') would
+        // leave _ready=true and lie to downstream consumers that the initial
+        // snapshot is still authoritative. Also clear the diff baseline so
+        // the next poll replays full state against empty.
         try {
-          if (typeof this._stream.emit === 'function') {
+          if (typeof this._stream.markReset === 'function') {
+            this._stream.markReset();
+          } else if (typeof this._stream.emit === 'function') {
+            // Backcompat for older stream shims.
             this._stream.emit('reset');
           }
           this._lastResults = this._ordered

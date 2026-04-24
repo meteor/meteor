@@ -16,13 +16,21 @@ const readPositiveIntEnv = (name, defaultValue, floor = 0) => {
 
 /**
  * PostgreSQL's NAMEDATALEN is 64, so identifiers/channels are silently
- * truncated at 63 bytes. We build channel names as `meteor_pg_${collectionName}`
- * (10-byte prefix) and trigger names as `meteor_pg_${collectionName}_notify_trigger`
- * (25-byte overhead). Capping the collection name at 53 bytes ensures the longest
- * derived identifier (channel + `_notify_trigger`) stays under the 63-byte limit
- * so two similar collection names can't collide after truncation.
+ * truncated at 63 bytes. The longest derived identifier we emit is the
+ * trigger name:
+ *
+ *   `meteor_pg_` (10) + collectionName + `_notify_trigger` (15) = 25 + N
+ *
+ * So N ≤ 38 bytes guarantees no truncation of the trigger, function, or
+ * channel name — and therefore no post-truncation collision between two
+ * collections with long similar prefixes.
+ *
+ * The previous cap of 53 correctly bounded the channel (`meteor_pg_<N>`,
+ * 10 + N ≤ 63 → N ≤ 53) but NOT the trigger name, so a 53-byte collection
+ * name would still produce a 78-byte trigger identifier that Postgres
+ * silently truncates.
  */
-export const MAX_COLLECTION_NAME_BYTES = 53;
+export const MAX_COLLECTION_NAME_BYTES = 38;
 
 /**
  * Validate that a collection name fits within Postgres identifier/channel limits.
@@ -211,7 +219,20 @@ export class PostgresConnection extends EventEmitter {
    */
   _warnIfUnregisteredTables(text) {
     if (typeof text !== 'string' || text.length === 0) return;
-    if (process.env.METEOR_POSTGRES_SUPPRESS_UNKNOWN_TABLE_WARN === '1') return;
+    // Development-only by default: in production the regex-based scan costs
+    // per-query CPU for a warning most apps will never see. Explicit opt-in
+    // via METEOR_POSTGRES_WARN_UNKNOWN_TABLE=1 lets staging/canary servers
+    // re-enable it without a code change. (METEOR_POSTGRES_SUPPRESS_…
+    // still works for backward compatibility.)
+    const explicitOptIn =
+      process.env.METEOR_POSTGRES_WARN_UNKNOWN_TABLE === '1';
+    const suppress =
+      process.env.METEOR_POSTGRES_SUPPRESS_UNKNOWN_TABLE_WARN === '1';
+    const isDev =
+      (typeof Meteor !== 'undefined' && Meteor.isDevelopment) ||
+      process.env.NODE_ENV === 'development';
+    if (suppress) return;
+    if (!isDev && !explicitOptIn) return;
     // Each regex is anchored to a keyword and captures the first identifier
     // (optionally double-quoted). Case-insensitive + global.
     const patterns = [
@@ -604,6 +625,19 @@ export class PostgresConnection extends EventEmitter {
         }
       }
     });
+  }
+
+  /**
+   * Run an async op serialized through the channel-op queue. Use this to
+   * splice DDL (DROP TABLE / DROP FUNCTION) against a collection whose
+   * channel you're about to unregister — it prevents a pending
+   * setupListenNotify from completing after the DROP and leaving a LISTEN
+   * pointed at a no-longer-existing table.
+   * @param {string} channel
+   * @param {() => Promise<any>} op
+   */
+  async runChannelOp(channel, op) {
+    return this._enqueueChannelOp(channel, op);
   }
 
   /**
