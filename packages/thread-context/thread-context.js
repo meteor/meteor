@@ -41,6 +41,15 @@ export { createBridgeInvocation } from './handlers/invocation.js';
 let _settingsSnapshot = null;
 
 /**
+ * Resets the cached settings snapshot, forcing the next
+ * `createThreadContext()` to re-clone `Meteor.settings`.
+ * Useful for testing and hot-reload scenarios.
+ */
+export function resetSettingsSnapshot() {
+  _settingsSnapshot = null;
+}
+
+/**
  * Creates a bridge host on the main thread and returns a context object
  * ready to be transferred into a worker thread.
  *
@@ -58,15 +67,6 @@ let _settingsSnapshot = null;
  * });
  * worker.on('exit', () => ctx.destroy());
  */
-/**
- * Resets the cached settings snapshot, forcing the next
- * `createThreadContext()` to re-clone `Meteor.settings`.
- * Useful for testing and hot-reload scenarios.
- */
-export function resetSettingsSnapshot() {
-  _settingsSnapshot = null;
-}
-
 export function createThreadContext(options = {}) {
   const host = new BridgeHost(options);
 
