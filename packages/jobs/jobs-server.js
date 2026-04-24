@@ -29,7 +29,7 @@ import {
   getRunningJobIds,
   abortLocalJob,
 } from './execution.js';
-import { startCronScheduler, stopCronScheduler } from './cron.js';
+import { startCronScheduler, stopCronScheduler, getCronTimerCount } from './cron.js';
 import { on } from './events.js';
 import { runAndWait } from './run-and-wait.js';
 import { retryJob } from './retry.js';
@@ -363,6 +363,15 @@ export const Jobs = {
    */
   _stopCron() {
     stopCronScheduler();
+  },
+
+  /**
+   * Number of armed cron timers. Test-only accessor.
+   *
+   * @returns {number}
+   */
+  _getCronTimerCount() {
+    return getCronTimerCount();
   },
 
   // --- Collections (exposed for advanced use / testing) -----------------

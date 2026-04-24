@@ -168,36 +168,22 @@ Tinytest.addAsync('jobs - cron - stopCronScheduler cancels timers', async functi
 
   await Jobs._startCron();
 
-  // The cron module's timer Map is module-private, so observe behaviour
-  // through clearTimeout. The first stop must clear the armed timer(s);
-  // the second stop must not clear anything further (no double-clearing of
-  // already-freed handles).
-  const originalClearTimeout = global.clearTimeout;
-  let clearTimeoutCalls = 0;
-  global.clearTimeout = function (handle) {
-    clearTimeoutCalls++;
-    return originalClearTimeout(handle);
-  };
+  // Assert on cron-specific state rather than patching process-wide
+  // clearTimeout. A second _stopCron() must be a no-op: since the
+  // implementation only clears handles it iterates from the timer map, an
+  // empty map after the first stop guarantees no re-clearing on the second.
+  const beforeStop = Jobs._getCronTimerCount();
+  test.isTrue(beforeStop >= 1, 'startCron should arm at least one timer');
 
-  try {
-    const baseline = clearTimeoutCalls;
-    Jobs._stopCron();
-    const afterFirstStop = clearTimeoutCalls;
-    Jobs._stopCron();
-    const afterSecondStop = clearTimeoutCalls;
+  Jobs._stopCron();
+  test.equal(Jobs._getCronTimerCount(), 0, 'first stop clears all timers');
 
-    test.isTrue(
-      afterFirstStop > baseline,
-      'first stop should cancel at least one timer'
-    );
-    test.equal(
-      afterSecondStop,
-      afterFirstStop,
-      'second stop must not attempt to clear already-cleared timers'
-    );
-  } finally {
-    global.clearTimeout = originalClearTimeout;
-  }
+  Jobs._stopCron();
+  test.equal(
+    Jobs._getCronTimerCount(),
+    0,
+    'second stop is a no-op — timer map stays empty'
+  );
 });
 
 // ---------------------------------------------------------------------------

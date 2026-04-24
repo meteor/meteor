@@ -297,3 +297,12 @@ export function stopCronScheduler() {
   }
   _timers.clear();
 }
+
+/**
+ * Number of currently-armed cron timers. Exposed for testing.
+ *
+ * @returns {number}
+ */
+export function getCronTimerCount() {
+  return _timers.size;
+}
