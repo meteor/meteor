@@ -5,51 +5,28 @@
  */
 
 const { Jobs } = require('meteor/jobs');
+const { Random } = require('meteor/random');
 
 let _seq = 0;
 function uniqueName(prefix) {
   return `test_cron_${prefix}_${++_seq}_${Date.now()}`;
 }
 
-// Reset config and registry before cron tests to ensure clean state.
-Jobs._resetConfig();
-Jobs._resetRegistry();
-Jobs.configure({ testMode: 'manual' });
-
-// ---------------------------------------------------------------------------
-// Cron job insertion at fire time
-// ---------------------------------------------------------------------------
-
-Tinytest.addAsync('jobs - cron - inserts a job document at fire time', async function (test) {
-  Jobs._resetConfig();
-  Jobs._resetRegistry();
-  Jobs.configure({ testMode: 'manual' });
-
-  const { Random } = require('meteor/random');
-  const name = uniqueName('fire');
-  Jobs.register({
-    name,
-    schedule: '* * * * *',
-    timezone: 'UTC',
-    missedRun: 'run-once',
-    run() { return 'ok'; },
-  });
-
-  // Seed a pretend prior cron run two minutes in the past. _startCron's
-  // detectMissedRuns will compute the next fire time after this timestamp,
-  // see that it is already in the past, and synchronously insert a
-  // catch-up cron-sourced document — giving this test a deterministic
-  // assertion target without waiting on a minute-boundary timer.
-  const priorRun = new Date(Date.now() - 2 * 60 * 1000);
-  await Jobs._collection.insertAsync({
+/**
+ * Insert a "completed" cron-run document to act as the prior execution that
+ * `detectMissedRuns` will evaluate. Kept as a helper so the full document
+ * shape lives in one place — schema changes only need updating here.
+ */
+function seedCronRun({ name, schedule, priorRun, timezone = 'UTC' }) {
+  return Jobs._collection.insertAsync({
     _id: Random.id(),
     name,
     status: 'completed',
     source: 'cron',
     data: {},
     scheduledAt: priorRun,
-    cronSchedule: '* * * * *',
-    timezone: 'UTC',
+    cronSchedule: schedule,
+    timezone,
     dedupKey: `cron:${name}:${priorRun.toISOString()}`,
     result: null,
     offload: false,
@@ -69,6 +46,39 @@ Tinytest.addAsync('jobs - cron - inserts a job document at fire time', async fun
     failedAt: null,
     runId: null,
   });
+}
+
+// Reset config and registry before cron tests to ensure clean state.
+Jobs._resetConfig();
+Jobs._resetRegistry();
+Jobs.configure({ testMode: 'manual' });
+
+// ---------------------------------------------------------------------------
+// Cron job insertion at fire time
+// ---------------------------------------------------------------------------
+
+Tinytest.addAsync('jobs - cron - inserts a job document at fire time', async function (test) {
+  Jobs._resetConfig();
+  Jobs._resetRegistry();
+  Jobs.configure({ testMode: 'manual' });
+
+  const name = uniqueName('fire');
+  const schedule = '* * * * *';
+  Jobs.register({
+    name,
+    schedule,
+    timezone: 'UTC',
+    missedRun: 'run-once',
+    run() { return 'ok'; },
+  });
+
+  // Seed a pretend prior cron run two minutes in the past. _startCron's
+  // detectMissedRuns will compute the next fire time after this timestamp,
+  // see that it is already in the past, and synchronously insert a
+  // catch-up cron-sourced document — giving this test a deterministic
+  // assertion target without waiting on a minute-boundary timer.
+  const priorRun = new Date(Date.now() - 2 * 60 * 1000);
+  await seedCronRun({ name, schedule, priorRun });
 
   try {
     await Jobs._startCron();
@@ -95,11 +105,11 @@ Tinytest.addAsync('jobs - cron - dedup key format is cron:{name}:{isoTime}', asy
   Jobs._resetRegistry();
   Jobs.configure({ testMode: 'manual' });
 
-  const { Random } = require('meteor/random');
   const name = uniqueName('dedup');
+  const schedule = '0 0 * * *'; // Daily at midnight UTC
   Jobs.register({
     name,
-    schedule: '0 0 * * *', // Daily at midnight UTC
+    schedule,
     timezone: 'UTC',
     missedRun: 'run-once',
     run() { return 'ok'; },
@@ -113,34 +123,7 @@ Tinytest.addAsync('jobs - cron - dedup key format is cron:{name}:{isoTime}', asy
   priorRun.setUTCHours(0, 0, 0, 0);
   priorRun.setUTCDate(priorRun.getUTCDate() - 3);
 
-  await Jobs._collection.insertAsync({
-    _id: Random.id(),
-    name,
-    status: 'completed',
-    source: 'cron',
-    data: {},
-    scheduledAt: priorRun,
-    cronSchedule: '0 0 * * *',
-    timezone: 'UTC',
-    dedupKey: `cron:${name}:${priorRun.toISOString()}`,
-    result: null,
-    offload: false,
-    priority: 0,
-    timeout: 300000,
-    attempts: 1,
-    maxAttempts: 1,
-    lastError: null,
-    nextRetryAt: null,
-    onDuplicate: null,
-    claimedBy: null,
-    claimedAt: null,
-    heartbeatAt: null,
-    createdAt: priorRun,
-    startedAt: null,
-    completedAt: new Date(),
-    failedAt: null,
-    runId: null,
-  });
+  await seedCronRun({ name, schedule, priorRun });
 
   try {
     await Jobs._startCron();
