@@ -76,6 +76,15 @@ jobs:
       - name: Prepare Meteor
         run: ./meteor --get-ready
 
+      # Phase 7 opt-in (disabled by default, safe to flip per-category):
+      # setting MODERN_TESTS_WORKERS=2 here will have Jest run two test
+      # files in parallel inside this job. The port-allocator already
+      # hands out disjoint PORT/rspack port ranges per JEST_WORKER_ID,
+      # and MODERN_TESTS_WAIT_TIMEOUT_MS=180000 can be set to give cold
+      # rebuilds room when both workers are building at once.
+      #   env:
+      #     MODERN_TESTS_WORKERS: 2
+      #     MODERN_TESTS_WAIT_TIMEOUT_MS: 180000
       - name: Run tests for ${{ matrix.category }}
         uses: nick-fields/retry@v3
         with:

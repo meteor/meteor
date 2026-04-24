@@ -208,9 +208,12 @@ runTests = function () {
         }
       });
 
-      // Also log xUnit output
+      // Also log xUnit output. resultSet is a plain object keyed by test
+      // name, not an Array — use Object.keys(..).forEach so this doesn't
+      // throw "resultSet.forEach is not a function" after a run finishes.
       xunit('<testsuite errors="" failures="" name="meteor" skips="" tests="" time="">');
-      resultSet.forEach(function (result, name) {
+      Object.keys(resultSet).forEach(function (name) {
+        var result = resultSet[name];
         var classname = result.testPath.join('.').replace(/ /g, '-') + (result.server ? "-server" : "-client");
         var name = result.test.replace(/ /g, '-') + (result.server ? "-server" : "-client");
         var time = "";
@@ -249,3 +252,12 @@ runTests = function () {
     },
     ["tinytest"]);
 }
+
+// `runTests` is exported for the automated driver. In 3.x the test-runner
+// app that used to invoke it is gone, so puppeteer_runner.js calls it
+// directly via page.evaluate once the page loads. We deliberately do NOT
+// call runTests() on Meteor.startup here: with many packages under test,
+// the client-side package graph can still be loading when startup fires,
+// and re-triggering runTests() (directly or indirectly) raises the "only
+// one _runTestsEverywhere per page-load" guard inside tinytest. Letting
+// Puppeteer drive the invocation ensures it runs once, at a known time.

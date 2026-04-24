@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "packages/**"
+      - "scripts/list-test-packages.js"
       - ".github/workflows/test-packages.yml"
 
 concurrency:
@@ -11,12 +12,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  test-packages:
+  # ─── Setup ────────────────────────────────────────────────────────────────────
+  # Builds the Meteor dependency cache once so each shard below gets a cache
+  # hit and skips the slow --get-ready / puppeteer install.
+  setup:
+    name: Setup
     runs-on: oss-vm
-    timeout-minutes: 90
+    timeout-minutes: 75
     env:
       CXX: g++-12
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -24,12 +28,10 @@ jobs:
           submodules: recursive
 
       - name: Expose globally-installed puppeteer to Node.js
-        # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
-        # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
-        # so run.sh skips the slow `./meteor npm install -g puppeteer` step.
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
+        id: meteor-cache
         uses: actions/cache@v4
         with:
           path: |
@@ -41,7 +43,58 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-meteor-
 
-      - name: Run test-in-console suite
+      - name: Prepare Meteor
+        if: steps.meteor-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 65
+        run: ./meteor --get-ready
+
+  # ─── Shards ───────────────────────────────────────────────────────────────────
+  # test-in-console used to run all ~80 packages in a single Puppeteer session.
+  # We now split that across 6 shards (Phase 6). Each shard runs the same
+  # run.sh but with --shard i/6, which asks scripts/list-test-packages.js for
+  # its slice of the alphabetically-sorted package list. Coverage is exact:
+  # every package is in exactly one shard.
+  test-packages:
+    name: "Shard ${{ matrix.shard }}"
+    runs-on: oss-vm
+    needs: setup
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/6", "2/6", "3/6", "4/6", "5/6", "6/6"]
+    env:
+      CXX: g++-12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore caches
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-
+
+      - name: Derive a unique port for this shard
+        # Bind on 4100..4105 so two shards that happen to land on the same
+        # host can't race on port 4096.
+        run: |
+          idx="${{ matrix.shard }}"
+          idx="${idx%/*}"
+          echo "METEOR_TEST_PACKAGES_PORT=$((4100 + idx - 1))" >> "$GITHUB_ENV"
+
+      - name: Run test-in-console shard
         run: |
           export TEST_PACKAGES_EXCLUDE="stylus"
           export METEOR_MODERN="true"
@@ -50,4 +103,13 @@ jobs:
           export phantom="false"
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
-          ./packages/test-in-console/run.sh
+          ./packages/test-in-console/run.sh --shard "${{ matrix.shard }}"
+
+      - name: Upload shard log
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-packages-shard-${{ strategy.job-index }}
+          path: |
+            /tmp/test-in-console-shard.list
+          if-no-files-found: ignore

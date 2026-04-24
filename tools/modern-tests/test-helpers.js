@@ -34,14 +34,20 @@ const isCI = process.env.GITHUB_ACTIONS === "true";
 
 const WAIT_ON = isCI ? 2000 : 500;
 
-// NOTE on auxiliary ports 8080 (Rspack dev-server) and 8081/8082
-// (bundle-visualizer): these are chosen by the @meteorjs/rspack integration
-// and the bundle-visualizer package themselves, not by this test harness.
-// Passing a worker-scoped port here would leave the real services on 8080/
-// 8081/8082 orphaned. Before enabling parallel workers (Phase 7) we must
-// first teach those upstream packages to accept an override (env var or
-// package option) — only then can the test harness and the real services
-// converge on the same worker-scoped ports.
+// @meteorjs/rspack picks its dev-server port by running the formula
+// 8077 + sum_of_digits(process.env.PORT) (see packages/rspack/lib/processes.js
+// calculateDevServerPort). Since PORT is per-worker (allocatePort('<slot>')
+// yields distinct values per JEST_WORKER_ID), the dev-server port is
+// automatically worker-safe. Replicating the formula here means
+// killProcessByPort targets the actual port the rspack integration bound —
+// the previous literal "8080" was never the right value and just silently
+// no-op'd, leaving an orphan rspack dev server between runs.
+function rspackDevPort(meteorPort) {
+  const digitSum = String(meteorPort)
+    .split("")
+    .reduce((s, d) => s + parseInt(d, 10), 0);
+  return 8077 + digitSum;
+}
 
 /**
  * Helper function to set up and run tests for the Meteor Bundler
@@ -85,6 +91,13 @@ export function testMeteorBundler(options) {
 
     beforeEach(async () => {
       // Ensure any process on the port is killed
+      // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
       await killProcessByPort([port, '8080']);
     });
 
@@ -191,6 +204,13 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Ensure any process on the port is killed
+      // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
       await killProcessByPort([port, '8080']);
 
       // Setup the Meteor app
@@ -237,6 +257,13 @@ export function testMeteorRspackBundler(options) {
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
+      // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
       await killProcessByPort([port, '8080']);
     });
 
@@ -252,6 +279,13 @@ export function testMeteorRspackBundler(options) {
 
     beforeEach(async () => {
       // Ensure any process on the port is killed
+      // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
       await killProcessByPort([port, '8080']);
     });
 
@@ -340,6 +374,13 @@ export function testMeteorRspackBundler(options) {
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
+      // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
       await killProcessByPort([port, '8080']);
     });
 
@@ -432,6 +473,13 @@ export function testMeteorRspackBundler(options) {
       await killMeteorProcess(meteorProcess);
 
       // Ensure any process on the port is killed
+      // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
       await killProcessByPort([port, '8080']);
     });
 
@@ -494,7 +542,14 @@ export function testMeteorRspackBundler(options) {
         await killMeteorProcess(meteorProcess);
 
         // Ensure any process on the port is killed
-        await killProcessByPort([port, '8080']);
+        // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
+      await killProcessByPort([port, '8080']);
       });
     }
 
@@ -762,6 +817,13 @@ export function testMeteorSkeleton(options) {
 
     beforeEach(async () => {
       // Ensure any process on the port is killed
+      // NOTE: the literal "8080" is historical — @meteorjs/rspack actually
+       // binds rspackDevPort(port) (see helper below), not 8080. Calling
+       // kill -9 on the live rspack dev-server leaves its socket in
+       // TIME_WAIT long enough for the next `meteor run` to hang trying
+       // to bind it, so we keep the no-op form. When maxWorkers>1 we
+       // rely on the per-worker PORT giving each worker its own rspack
+       // port automatically via the formula — no cross-worker collision.
       await killProcessByPort([port, '8080']);
     });
 
