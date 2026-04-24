@@ -1407,6 +1407,22 @@ export class AccountsServer extends AccountsCommon {
 
   // @override from accounts_common.js
   config(options) {
+    // tokenTrackingStrategy is resolved once in the constructor; a post-startup
+    // call to Accounts.config() stores the new value in _options but does not
+    // rebuild the observer/in-memory bookkeeping. Warn if the caller is asking
+    // for a mode different from the one already in effect.
+    if (options && hasOwn.call(options, 'tokenTrackingStrategy')) {
+      const requestedInMemory = (options.tokenTrackingStrategy === 'in-memory');
+      if (requestedInMemory !== this._useInMemoryTokenTracking) {
+        Meteor._debug(
+          'Accounts.config: tokenTrackingStrategy is resolved at ' +
+          'AccountsServer construction and cannot be switched at runtime. ' +
+          'Set it via Meteor.settings.packages["accounts-base"] (or the ' +
+          'AccountsServer constructor options) before login handlers run.'
+        );
+      }
+    }
+
     // Call the overridden implementation of the method.
     const superResult = AccountsCommon.prototype.config.apply(this, arguments);
 
