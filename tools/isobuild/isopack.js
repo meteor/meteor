@@ -66,7 +66,7 @@ var Isopack = function () {
   // Plugins are package-supplied classes and functions that can change the
   // build process: introduce a new source processor (compiler, minifier,
   // linter)
-  self.plugins = {};
+  self.plugins = Object.create(null);
 
   self.cordovaDependencies = {};
 
@@ -926,7 +926,7 @@ Object.assign(Isopack.prototype, {
       var plugin = await bundler.readJsImage(files.pathJoin(dir, pluginMeta.path));
 
       if (!(pluginMeta.name in self.plugins)) {
-        self.plugins[pluginMeta.name] = {};
+        self.plugins[pluginMeta.name] = Object.create(null);
       }
       // If we already loaded a plugin of this name/arch, just ignore this one.
       if (!(plugin.arch in self.plugins[pluginMeta.name])) {
@@ -1292,7 +1292,7 @@ Object.assign(Isopack.prototype, {
             // Determine captured variables, legacy way. First, start with the
             // exports. We'll add the package variables after running prelink.
             packageVariables = [];
-            var packageVariableNames = {};
+            var packageVariableNames = Object.create(null);
             (unibuild.declaredExports || []).forEach(function (symbol) {
               if (symbol.name in packageVariableNames) {
                 return;

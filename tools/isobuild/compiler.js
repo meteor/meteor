@@ -53,7 +53,7 @@ compiler.compile = Profile(function (packageSource, options) {
   var includeCordovaUnibuild = options.includeCordovaUnibuild;
 
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
-  var plugins = {};
+  var plugins = Object.create(null);
 
   var pluginProviderPackageNames = {};
 

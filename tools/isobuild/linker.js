@@ -473,7 +473,7 @@ export function addToTree(value, path, tree) {
 // ensure that its parents exist. For example, {'A.B.C': null} means
 // to make sure that symbol tree contains at least {A: {B: {}}}.
 var buildSymbolTree = function (symbolMap) {
-  var ret = {};
+  var ret = Object.create(null);
 
   Object.entries(symbolMap).forEach(function ([symbol, value]) {
     var parts = symbol.split('.');
@@ -482,7 +482,7 @@ var buildSymbolTree = function (symbolMap) {
     var walk = ret;
     parts.forEach(function (part) {
       if (! (part in walk)) {
-        walk[part] = {};
+        walk[part] = Object.create(null);
       }
       walk = walk[part];
     });
@@ -954,7 +954,7 @@ var getHeader = function (options) {
   }
 
   const packageVariables = options.packageVariables.filter(
-    name => !(name in options.imports),
+    name => !Object.prototype.hasOwnProperty.call(options.imports, name),
   );
 
   if (packageVariables.length > 0) {
@@ -1240,7 +1240,7 @@ export var fullLink = Profile("linker.fullLink", async function (inputFiles, {
   if (prelinkedFiles.every(file => ! file.source)) {
     const newImports = {};
     declaredExports.forEach(name => {
-      if (name in imports) {
+      if (Object.prototype.hasOwnProperty.call(imports, name)) {
         newImports[name] = imports[name]
       }
     });

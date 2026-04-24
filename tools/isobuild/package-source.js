@@ -740,7 +740,7 @@ Object.assign(PackageSource.prototype, {
         var newConstraint = [];
         api.releaseRecords.forEach(function (releaseRecord) {
           var packages = releaseRecord.packages;
-          if (dep.package in packages) {
+          if (Object.prototype.hasOwnProperty.call(packages, dep.package)) {
             newConstraint.push(packages[dep.package]);
           }
         });
@@ -1653,7 +1653,7 @@ Object.assign(PackageSource.prototype, {
   // This ignores testOnly exports.
   getExports: function () {
     var self = this;
-    var ret = {};
+    var ret = Object.create(null);
     // Go over all of the architectures, and aggregate the exports together.
     self.architectures.forEach(function (arch) {
       (arch.declaredExports || []).forEach(function (exp) {
@@ -1758,8 +1758,8 @@ Object.assign(PackageSource.prototype, {
     var self = this;
     options = options || {};
 
-    var dependencies = {};
-    var allConstraints = {}; // for error reporting. package name to array
+    var dependencies = Object.create(null);
+    var allConstraints = Object.create(null); // for error reporting. package name to array
     var failed = false;
 
     self.architectures.forEach(function (arch) {

@@ -363,7 +363,7 @@ export default class Resolver {
   private getPkgJsonSubsetForDir(dirPath: string) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
     const pkg = optimisticReadJsonOrNull(pkgJsonPath);
-    if (! pkg) {
+    if (! pkg || typeof pkg !== "object" || Array.isArray(pkg)) {
       return null;
     }
 
@@ -371,11 +371,11 @@ export default class Resolver {
     // and "browser" properties (if defined) from the package.json file.
     const pkgSubset: Partial<typeof pkg> = {};
 
-    if ("name" in pkg) {
+    if (Object.prototype.hasOwnProperty.call(pkg, "name")) {
       pkgSubset.name = pkg.name;
     }
 
-    if ("version" in pkg) {
+    if (Object.prototype.hasOwnProperty.call(pkg, "version")) {
       pkgSubset.version = pkg.version;
     }
 

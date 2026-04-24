@@ -1249,7 +1249,7 @@ export class PackageSourceBatch {
 
   _getNodeModulesPaths() {
     if (! this._nodeModulesPaths) {
-      const nmds = this.unibuild.nodeModulesDirectories;
+      const nmds = this.unibuild.nodeModulesDirectories || {};
       this._nodeModulesPaths = [];
 
       Object.entries(nmds).forEach(([path, nmd]) => {

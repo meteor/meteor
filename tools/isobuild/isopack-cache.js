@@ -62,7 +62,7 @@ export class IsopackCache {
       files.mkdir_p(self.cacheDir);
     }
 
-    var onStack = {};
+    var onStack = Object.create(null);
     if (rootPackageNames) {
       for (const name of rootPackageNames) {
         await self._ensurePackageLoaded(name, onStack);

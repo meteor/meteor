@@ -2218,7 +2218,7 @@ class JsImage {
               }
             }
 
-            let found = Object.values(item.nodeModulesDirectories).some(nmd => {
+            let found = Object.values(item.nodeModulesDirectories || {}).some(nmd => {
               // Npm.require doesn't consider local node_modules
               // directories.
               return ! nmd.local && tryLookup(nmd.sourcePath, name);

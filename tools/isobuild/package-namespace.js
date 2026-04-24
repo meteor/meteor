@@ -63,7 +63,7 @@ export class PackageNamespace {
   describe(options) {
     const source = this._packageSource;
 
-    Object.entries(options).forEach(function ([key, value]) {
+    Object.entries(options || {}).forEach(function ([key, value]) {
       if (key === "summary" ||
           key === "git") {
         source.metadata[key] = value;

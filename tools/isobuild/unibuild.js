@@ -84,7 +84,7 @@ export class Unibuild {
 
     // Provided for backwards compatibility; please use
     // unibuild.nodeModulesDirectories instead!
-    Object.entries(this.nodeModulesDirectories).some(([nodeModulesPath, nmd]) => {
+    Object.entries(this.nodeModulesDirectories || {}).some(([nodeModulesPath, nmd]) => {
       if (! nmd.local) {
         this.nodeModulesPath = nodeModulesPath;
         return true;
