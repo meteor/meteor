@@ -83,6 +83,9 @@ Creates a bridge host and returns a transfer-ready context object.
 
 - `port` — `MessagePort` to transfer into the worker via `workerData` + `transferList`
 - `settings` — Snapshot of `Meteor.settings` (cloned once, shared across contexts; pass via `workerData`)
+- `userId` — `string | null` echoed back from options (see Options table); pass via `workerData` so the worker can hydrate it
+- `connectionId` — `string | null` echoed back from options (see Options table); pass via `workerData` to expose `this.connection.id` in method calls
+- `callTimeout` — `number` (ms) echoed back from options; forward to `hydrateContext` so both sides share the same per-call timeout
 - `destroy()` — Closes the bridge and cleans up. Call on worker exit.
 
 ### `hydrateContext(port, options?)`
