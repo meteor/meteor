@@ -875,13 +875,15 @@ Tinytest.addAsync('worker-pool - terminate rejects in-flight tasks', async funct
 Tinytest.addAsync('worker-pool - terminate rejects queued tasks', async function (test) {
   const pool = new WorkerPool({ min: 0, max: 1, enableHeartbeat: false });
 
-  // Occupy the worker.
-  pool.dispatch({
+  // Occupy the worker. The dispatch will reject when we terminate below;
+  // swallow that expected rejection so it isn't reported as unhandled.
+  const occupying = pool.dispatch({
     handler: async () => {
       await new Promise(r => setTimeout(r, 10000));
       return 'slow';
     },
   });
+  occupying.catch(() => {});
 
   await _waitFor(() => pool.stats().busy === 1);
 
@@ -1083,10 +1085,13 @@ Tinytest.addAsync('worker-pool - stats consistent after terminate', async functi
 
   await _waitFor(() => pool.stats().idle >= 2);
 
-  // Dispatch and immediately terminate.
-  pool.dispatch({
+  // Dispatch and immediately terminate. The dispatch will reject when we
+  // terminate below; swallow that expected rejection so it isn't reported
+  // as unhandled.
+  const occupying = pool.dispatch({
     handler: async () => { await new Promise(r => setTimeout(r, 10000)); },
   });
+  occupying.catch(() => {});
 
   await _wait(100);
   await pool.terminate();
