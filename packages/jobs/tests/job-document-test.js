@@ -161,7 +161,9 @@ Tinytest.addAsync('jobs - document - null data stored as empty object', async fu
 
   const jobId = await Jobs.run(name, null);
   const job = await Jobs.get(jobId);
-  test.equal(typeof job.data, 'object');
+  test.isNotNull(job.data, 'job.data should not be null');
+  test.equal(Object.prototype.toString.call(job.data), '[object Object]');
+  test.equal(Object.keys(job.data).length, 0);
 
   await Jobs.cancel(jobId);
 });
@@ -178,7 +180,8 @@ Tinytest.addAsync('jobs - document - default data is empty object', async functi
 
   const jobId = await Jobs.run(name);
   const job = await Jobs.get(jobId);
-  test.equal(typeof job.data, 'object');
+  test.isNotNull(job.data, 'job.data should not be null');
+  test.equal(Object.prototype.toString.call(job.data), '[object Object]');
   test.equal(Object.keys(job.data).length, 0);
 
   await Jobs.cancel(jobId);
