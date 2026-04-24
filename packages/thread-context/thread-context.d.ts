@@ -165,4 +165,5 @@ export function hydrateContext(port: MessagePort, options?: HydrateOptions): Hyd
 
 export function getActiveBridgeCount(): number;
 export function destroyAllBridges(): void;
+export function installShutdownHandlers(options?: { exit?: boolean }): void;
 export function resetSettingsSnapshot(): void;

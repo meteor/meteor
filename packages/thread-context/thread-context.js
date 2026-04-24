@@ -19,7 +19,7 @@ export {
 
 export { CollectionHandler } from './handlers/collection-handler.js';
 export { MethodHandler } from './handlers/method-handler.js';
-export { getActiveBridgeCount, destroyAllBridges } from './shutdown.js';
+export { getActiveBridgeCount, destroyAllBridges, installShutdownHandlers } from './shutdown.js';
 export { createCollectionProxy } from './proxies/collection-proxy.js';
 export { createMethodProxy } from './proxies/method-proxy.js';
 export { BridgeClient } from './bridge-client.js';

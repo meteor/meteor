@@ -183,14 +183,27 @@ try {
 
 ## Shutdown
 
-Active bridges are tracked and destroyed on `SIGTERM`/`SIGINT`. You can also manage them manually:
+Active bridges are tracked so they can be torn down explicitly, either by the
+host application or via opt-in signal handlers:
 
 ```js
-import { getActiveBridgeCount, destroyAllBridges } from 'meteor/thread-context';
+import {
+  getActiveBridgeCount,
+  destroyAllBridges,
+  installShutdownHandlers,
+} from 'meteor/thread-context';
 
 console.log(getActiveBridgeCount()); // number of active bridges
 destroyAllBridges();                 // destroy all at once
+
+// Opt-in: destroy active bridges on SIGTERM/SIGINT and re-raise the signal
+// so the host process exits naturally. Pass { exit: true } to force
+// `process.exit(143 | 130)` after teardown instead.
+installShutdownHandlers();
 ```
+
+Signal handlers are **not** registered at import time — `installShutdownHandlers()`
+must be called by the host if that behavior is desired.
 
 ## Architecture
 
