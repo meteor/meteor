@@ -202,6 +202,10 @@ const tagDescriptions = {
 // and runTests.
 //
 // Options: testRegexp, fileRegexp, onlyChanged, offline, includeSlowTests, galaxyOnly
+// Also exported for the Phase 5 worker-pool so each forked worker can
+// rebuild the same filtered list from the same options and locate the
+// Test instance sent by the orchestrator.
+export { getFilteredTests };
 async function getFilteredTests(options) {
   options = options || {};
   let allTests = await getAllTests();

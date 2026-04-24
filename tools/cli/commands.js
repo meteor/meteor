@@ -2862,6 +2862,13 @@ main.registerCommand({
     // the built artifacts land in $METEOR_TEST_TROPOHOUSE_DIR (or a tmp
     // dir when unset) so subsequent self-test runs skip the slow build.
     prewarm: { type: Boolean },
+    // Phase 5: run this invocation as a worker inside the parallel pool.
+    // The orchestrator spawns `meteor self-test --as-worker <id>` and
+    // drives it via IPC; the flag is internal.
+    'as-worker': { type: Number },
+    // Phase 5: number of parallel self-test workers. Falls back to the
+    // METEOR_TEST_WORKERS env var, then to 1 (sequential, original).
+    workers: { type: Number },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2879,6 +2886,26 @@ main.registerCommand({
     const dir = await warmTropohouse();
     const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
     Console.info(`self-test prewarm: tropohouse ready at ${dir} (${secs}s)`);
+    return 0;
+  }
+
+  if (options['as-worker']) {
+    // Internal mode: don't run tests ourselves, just listen for IPC
+    // messages from the orchestrator. The orchestrator process hands us
+    // tests one at a time and waits for results.
+    const { runWorkerLoop } = require('../tool-testing/worker-entry.js');
+    await runWorkerLoop({
+      workerId: options['as-worker'],
+      // Worker will rebuild the filtered test list from the same options
+      // passed to the orchestrator, so selection stays consistent.
+      filterOptions: {
+        // We don't know the offline/regexp state the parent used yet.
+        // The parent re-sends filterOptions with every `run` message,
+        // which overrides any default list cached here.
+      },
+      runOptions: { retries: options.retries },
+    });
+    // runWorkerLoop exits the process when the IPC channel closes.
     return 0;
   }
 
@@ -2957,7 +2984,14 @@ main.registerCommand({
     Console.setHeadless(true);
   }
 
-  return selftest.runTests({
+  // Phase 5: decide between the sequential runTests (original path) and
+  // the parallel worker pool. Workers count can be set via --workers or
+  // the METEOR_TEST_WORKERS env var; a value of 1 stays on the old path.
+  const envWorkers = parseInt(process.env.METEOR_TEST_WORKERS || '', 10);
+  const workers = options.workers
+    || (Number.isFinite(envWorkers) && envWorkers > 0 ? envWorkers : 1);
+
+  const runOpts = {
     // filtering options
     onlyChanged: options.changed,
     offline: offline,
@@ -2976,7 +3010,21 @@ main.registerCommand({
     skip: options.skip,
     limit: options.limit,
     preview: options.preview,
-  });
+  };
+
+  if (workers > 1) {
+    const { runTestsParallel } = require('../tool-testing/worker-pool.js');
+    const meteorScript = process.platform === 'win32' ? 'meteor.bat' : 'meteor';
+    return runTestsParallel({
+      ...runOpts,
+      workers,
+      meteorExecPath: files.convertToOSPath(
+        files.pathJoin(files.getCurrentToolsDir(), meteorScript),
+      ),
+    });
+  }
+
+  return selftest.runTests(runOpts);
 
 });
 
