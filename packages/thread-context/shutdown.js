@@ -49,9 +49,40 @@ export function getActiveBridgeCount() {
   return activeBridges.size;
 }
 
-function onSignal(signal) {
-  destroyAllBridges();
-  process.exit(signal === 'SIGTERM' ? 143 : 130);
+/** @type {boolean} */
+let handlersInstalled = false;
+
+/**
+ * Installs process-level `SIGTERM`/`SIGINT` handlers that destroy all active
+ * bridges before the process exits. Opt-in — call this once from the host
+ * application if you want automatic bridge cleanup on signal.
+ *
+ * After teardown, the signal is re-raised so the process exits naturally
+ * (honoring any other handlers and the default termination action). Pass
+ * `{ exit: true }` to call `process.exit(code)` instead, using the
+ * conventional exit codes (143 for `SIGTERM`, 130 for `SIGINT`).
+ *
+ * Idempotent — subsequent calls are no-ops.
+ *
+ * @param {{ exit?: boolean }} [options]
+ */
+export function installShutdownHandlers({ exit = false } = {}) {
+  if (handlersInstalled) return;
+  handlersInstalled = true;
+
+  const onSignal = async (signal) => {
+    try {
+      await destroyAllBridges();
+    } catch (e) {
+      console.error('[thread-context] Error during shutdown:', e);
+    }
+    if (exit) {
+      process.exit(signal === 'SIGTERM' ? 143 : 130);
+      return;
+    }
+    process.kill(process.pid, signal);
+  };
+
+  process.once('SIGTERM', () => onSignal('SIGTERM'));
+  process.once('SIGINT', () => onSignal('SIGINT'));
 }
-process.once('SIGTERM', () => onSignal('SIGTERM'));
-process.once('SIGINT', () => onSignal('SIGINT'));
