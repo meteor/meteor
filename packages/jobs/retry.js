@@ -38,29 +38,38 @@ export async function retryJob(jobId) {
 
   const definition = getJobDefinition(job.name);
 
-  // Re-derive dedupKey if the definition has a unique function.
+  // Re-derive dedupKey if the definition has a unique function. If the
+  // definition is unavailable or no longer declares `unique`, explicitly
+  // unset dedupKey so a stale key from an earlier enqueue can't orphan the
+  // unique-index slot on the newly-ready job.
   const dedupKey = definition ? deriveDedupKey(definition, job.data) : null;
 
+  const update = {
+    $set: {
+      status: 'ready',
+      attempts: 0,
+      lastError: null,
+      nextRetryAt: null,
+      scheduledAt: new Date(),
+      failedAt: null,
+      completedAt: null,
+      result: null,
+      runId: null,
+      claimedBy: null,
+      claimedAt: null,
+      heartbeatAt: null,
+      startedAt: null,
+      source: 'retry',
+    },
+  };
+  if (dedupKey) {
+    update.$set.dedupKey = dedupKey;
+  } else {
+    update.$unset = { dedupKey: 1 };
+  }
+
   try {
-    await JobsCollection.updateAsync(jobId, {
-      $set: {
-        status: 'ready',
-        attempts: 0,
-        lastError: null,
-        nextRetryAt: null,
-        scheduledAt: new Date(),
-        failedAt: null,
-        completedAt: null,
-        result: null,
-        runId: null,
-        claimedBy: null,
-        claimedAt: null,
-        heartbeatAt: null,
-        startedAt: null,
-        source: 'retry',
-        ...(dedupKey ? { dedupKey } : {}),
-      },
-    });
+    await JobsCollection.updateAsync(jobId, update);
   } catch (err) {
     if (err && err.code === 11000) {
       throw new DuplicateError(
