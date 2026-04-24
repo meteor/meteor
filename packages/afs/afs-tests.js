@@ -1746,3 +1746,191 @@ if (Meteor.isServer) {
     engine.reset();
   });
 }
+
+// ===========================================================================
+// Allow/Deny integration tests for AFS.Collection (server only)
+// ---------------------------------------------------------------------------
+// These tests verify that allow/deny rules actually gate client-originated
+// writes to an AFS collection (not just that the methods exist). They simulate
+// the DDP method-call path that a real client would take by invoking the
+// registered method handler via Meteor.server.applyAsync, which constructs a
+// MethodInvocation with isSimulation: false and userId: null — the same path
+// used by mongo's allow_tests.js (see packages/mongo/tests/allow_tests.js:284
+// for the client-side equivalent using collection.updateAsync with
+// returnServerResultPromise; we mirror the server-side receive behavior here).
+//
+// Server-side direct calls (collection.insertAsync etc.) intentionally bypass
+// allow/deny — we verify this is preserved by the final assertion of test (2).
+// ===========================================================================
+
+if (Meteor.isServer) {
+  // Helper: wrap a MockStreamProvider so we can spy on the mutation calls
+  // it receives. Returns the wrapped provider plus a calls[] array.
+  const makeSpyProvider = () => {
+    const provider = new AFS.MockStreamProvider();
+    const calls = [];
+    const wrapMethod = (name) => {
+      const original = provider[name].bind(provider);
+      provider[name] = async (...args) => {
+        calls.push({ method: name, args });
+        return original(...args);
+      };
+    };
+    wrapMethod('insertAsync');
+    wrapMethod('updateAsync');
+    wrapMethod('removeAsync');
+    return { provider, calls };
+  };
+
+  // Helper: simulate a client-originated DDP method call. On the server
+  // Meteor.server.applyAsync invokes method_handlers[name] inside a
+  // MethodInvocation with isSimulation: false and userId: null — which is
+  // exactly what allow-deny.js's handler checks at line 162/171.
+  const simulateClientCall = (methodName, args) =>
+    Meteor.server.applyAsync(methodName, args);
+
+  Tinytest.addAsync(
+    'afs - Integration - deny rejects client-originated insert',
+    async (test) => {
+      const { provider, calls } = makeSpyProvider();
+      const name = 'afs-allow-deny-insert-' + Random.id();
+      const collection = new AFS.Collection(name, {
+        provider,
+        connection: Meteor.server,
+        // defineMutationMethods defaults to true — registers the DDP methods.
+      });
+      collection._insecure = false; // ensure we're in secure mode
+
+      // deny-only rule: in Meteor's semantics, calling any deny/allow makes
+      // the collection restricted (_restricted = true). With no allow
+      // validators, the handler short-circuits with 403 before even running
+      // the deny validator — which is the correct denial outcome. The
+      // "deny actively blocks despite an allow" case is covered by the
+      // precedence test below.
+      collection.deny({ insertAsync: () => true, insert: () => true });
+
+      let threw = false;
+      try {
+        await simulateClientCall('/' + name + '/insertAsync', [
+          { title: 'should be denied' },
+        ]);
+      } catch (e) {
+        threw = true;
+        test.equal(e.error, 403);
+      }
+      test.isTrue(threw, 'expected client insert to be rejected');
+
+      // Provider must not have observed an insertAsync call.
+      const insertCalls = calls.filter((c) => c.method === 'insertAsync');
+      test.equal(
+        insertCalls.length,
+        0,
+        'provider should not have received an insert when deny ruled'
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'afs - Integration - allow accepts matching client-originated insert',
+    async (test) => {
+      const { provider, calls } = makeSpyProvider();
+      const name = 'afs-allow-accept-' + Random.id();
+      const collection = new AFS.Collection(name, {
+        provider,
+        connection: Meteor.server,
+      });
+      collection._insecure = false;
+
+      collection.allow({ insertAsync: () => true, insert: () => true });
+
+      const id = await simulateClientCall('/' + name + '/insertAsync', [
+        { title: 'allowed', v: 1 },
+      ]);
+      test.isTrue(typeof id === 'string' && id.length > 0);
+
+      const insertCalls = calls.filter((c) => c.method === 'insertAsync');
+      test.equal(insertCalls.length, 1, 'provider should have observed one insert');
+      test.equal(insertCalls[0].args[0], name);
+      test.equal(insertCalls[0].args[1].title, 'allowed');
+
+      // Confirm server-side direct calls bypass allow/deny (standard Meteor
+      // semantics). This uses the trusted path, so even if allow returned
+      // false it would still run.
+      const directId = await collection.insertAsync({ title: 'direct' });
+      test.isTrue(typeof directId === 'string');
+    }
+  );
+
+  Tinytest.addAsync(
+    'afs - Integration - deny wins over allow on client-originated insert',
+    async (test) => {
+      const { provider, calls } = makeSpyProvider();
+      const name = 'afs-allow-deny-precedence-' + Random.id();
+      const collection = new AFS.Collection(name, {
+        provider,
+        connection: Meteor.server,
+      });
+      collection._insecure = false;
+
+      collection.allow({ insertAsync: () => true, insert: () => true });
+      collection.deny({ insertAsync: () => true, insert: () => true });
+
+      let threw = false;
+      try {
+        await simulateClientCall('/' + name + '/insertAsync', [
+          { title: 'should be denied despite allow' },
+        ]);
+      } catch (e) {
+        threw = true;
+        test.equal(e.error, 403);
+      }
+      test.isTrue(threw, 'deny must take precedence over allow');
+
+      const insertCalls = calls.filter((c) => c.method === 'insertAsync');
+      test.equal(insertCalls.length, 0);
+    }
+  );
+
+  Tinytest.addAsync(
+    'afs - Integration - deny rejects client-originated update',
+    async (test) => {
+      const { provider, calls } = makeSpyProvider();
+      const name = 'afs-allow-deny-update-' + Random.id();
+      const collection = new AFS.Collection(name, {
+        provider,
+        connection: Meteor.server,
+      });
+      collection._insecure = false;
+
+      // Seed a document via the trusted server path (bypasses allow/deny).
+      const id = await collection.insertAsync({ title: 'Seeded', v: 1 });
+      // Ignore the seed write when counting spy calls below.
+      const seedCallCount = calls.length;
+
+      collection.deny({ updateAsync: () => true, update: () => true });
+      // An allow rule is required to even reach the deny check path,
+      // otherwise the short-circuit "no allow validators" 403 fires before
+      // the deny runs. Both shapes of 403 are correct "denied" outcomes —
+      // we just want to prove the mutation does not reach the provider.
+      collection.allow({ updateAsync: () => true, update: () => true });
+
+      let threw = false;
+      try {
+        await simulateClientCall('/' + name + '/updateAsync', [
+          id,
+          { $set: { title: 'Tampered' } },
+        ]);
+      } catch (e) {
+        threw = true;
+        test.equal(e.error, 403);
+      }
+      test.isTrue(threw, 'expected deny rule to reject the client update');
+
+      // No updateAsync should have reached the provider after the seed.
+      const updateCalls = calls
+        .slice(seedCallCount)
+        .filter((c) => c.method === 'updateAsync');
+      test.equal(updateCalls.length, 0);
+    }
+  );
+}

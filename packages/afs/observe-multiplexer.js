@@ -39,6 +39,22 @@ export class ObserveMultiplexer {
   }
 
   /**
+   * Determine whether the shared event args need to be cloned before fan-out.
+   *
+   * Returns false (skip the clone) when every handle has
+   * `nonMutatingCallbacks: true`, or when there is only a single handle. In
+   * both cases there is no mutation-induced aliasing risk between handles.
+   * @private
+   */
+  _handlesNeedCloning() {
+    if (this._handles.size <= 1) return false;
+    for (const [, handle] of this._handles) {
+      if (!handle.nonMutatingCallbacks) return true;
+    }
+    return false;
+  }
+
+  /**
    * Bind to ChangeStream events: update cache and fan out to handles.
    * @private
    */
@@ -49,8 +65,22 @@ export class ObserveMultiplexer {
 
     for (const name of callbackNames) {
       this._stream.on(name, (...args) => {
-        // Update cache
+        // Update cache first. _CachingChangeObserver takes a defensive shallow
+        // copy of `fields` via `{ ...fields }` before storing it in its docs
+        // map, so the cache does NOT alias the args we're about to broadcast.
         this._cache.applyChange[name](...args);
+
+        // Clone the mutable arguments ONCE per event and broadcast the same
+        // reference to every mutating handle. This mirrors Mongo's
+        // ObserveMultiplexer pattern: one clone, broadcast reference.
+        //
+        // Skip the clone entirely when we can prove no handle will mutate:
+        //   - every registered handle has nonMutatingCallbacks: true, or
+        //   - there is only a single handle (the clone would be pointless
+        //     since there's no cross-handle aliasing to protect against).
+        // In those cases the raw args are forwarded directly.
+        let sharedClonedArgs = null;
+        const needsClone = this._handlesNeedCloning();
 
         // Fan out to all handles
         for (const [, handle] of this._handles) {
@@ -58,11 +88,17 @@ export class ObserveMultiplexer {
           const cb = handle.callbacks[name];
           if (cb) {
             try {
-              const callArgs = handle.nonMutatingCallbacks
-                ? args
-                : args.map(a =>
+              let callArgs;
+              if (handle.nonMutatingCallbacks || !needsClone) {
+                callArgs = args;
+              } else {
+                if (sharedClonedArgs === null) {
+                  sharedClonedArgs = args.map(a =>
                     a !== null && typeof a === 'object' ? EJSON.clone(a) : a
                   );
+                }
+                callArgs = sharedClonedArgs;
+              }
               const result = cb(...callArgs);
               if (result && typeof result === 'object' && typeof result.then === 'function') {
                 result.catch(err =>

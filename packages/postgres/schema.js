@@ -1,30 +1,15 @@
-// Reserved SQL keywords that need quoting (common subset)
-const RESERVED_WORDS = new Set([
-  'all', 'analyse', 'analyze', 'and', 'any', 'array', 'as', 'asc',
-  'between', 'by', 'case', 'cast', 'check', 'column', 'constraint',
-  'create', 'cross', 'current', 'default', 'delete', 'desc', 'distinct',
-  'do', 'else', 'end', 'except', 'exists', 'false', 'for', 'foreign',
-  'from', 'full', 'grant', 'group', 'having', 'in', 'index', 'inner',
-  'insert', 'intersect', 'into', 'is', 'join', 'key', 'left', 'like',
-  'limit', 'not', 'null', 'offset', 'on', 'or', 'order', 'outer',
-  'primary', 'references', 'right', 'select', 'set', 'table', 'then',
-  'to', 'true', 'union', 'unique', 'update', 'user', 'using', 'values',
-  'when', 'where', 'with',
-]);
-
 const VALID_COLUMN_TYPES = new Set([
   'text', 'integer', 'numeric', 'boolean', 'timestamp', 'jsonb',
 ]);
 
 /**
- * Quote a SQL identifier if it contains uppercase letters, special
- * characters, or is a reserved word.
+ * Quote a SQL identifier. Always emits double-quoted form with embedded
+ * quotes doubled. Unconditionally quoting closes the lowercase-bypass class
+ * of bugs (e.g. identifiers like `1users` that the old simple-form rule
+ * produced unquoted) and guarantees reserved-word safety.
  */
 export function quoteIdent(name) {
-  if (RESERVED_WORDS.has(name.toLowerCase()) || /[A-Z]/.test(name) || /[^a-z0-9_]/.test(name)) {
-    return '"' + name.replace(/"/g, '""') + '"';
-  }
-  return name;
+  return '"' + String(name).replace(/"/g, '""') + '"';
 }
 
 /**

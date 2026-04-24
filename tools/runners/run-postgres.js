@@ -287,6 +287,27 @@ async function ensureDataDir(pgDataDir) {
     '--no-locale',
   ]);
 
+  // SECURITY: This dev server runs with --auth=trust (any local user can
+  // connect without a password). If Postgres were ever to bind to a
+  // non-loopback interface it would expose the dev database to the
+  // network. Pin listen_addresses to 127.0.0.1 in postgresql.conf as an
+  // authoritative override (belt; the postgres start command also passes
+  // -c listen_addresses=127.0.0.1 as suspenders).
+  var pgConfPath = files.pathJoin(pgDataDir, 'postgresql.conf');
+  try {
+    var override =
+      '\n' +
+      '# Meteor dev server: trust auth requires loopback-only binding.\n' +
+      "listen_addresses = '127.0.0.1'\n";
+    fs.appendFileSync(files.convertToOSPath(pgConfPath), override);
+  } catch (e) {
+    // If we can't write the override, bail out — running with trust auth
+    // without a guaranteed loopback binding is not safe.
+    throw new Error(
+      'Failed to pin listen_addresses in ' + pgConfPath + ': ' + e.message
+    );
+  }
+
   return true;
 }
 
@@ -338,10 +359,14 @@ function spawnPostgres(pgDataDir, port) {
   var postgresPath = files.convertToOSPath(pgBinary('postgres'));
   var osDataDir = files.convertToOSPath(pgDataDir);
 
+  // SECURITY: -c listen_addresses=127.0.0.1 forces loopback-only binding,
+  // overriding anything in postgresql.conf. Dev server runs with trust
+  // auth, so this must not be network-exposed.
   var args = [
     '-D', osDataDir,
     '-p', '' + port,
     '-k', '',  // disable Unix domain sockets, TCP only
+    '-c', 'listen_addresses=127.0.0.1',
   ];
 
   if (process.platform === 'win32') {
@@ -350,6 +375,7 @@ function spawnPostgres(pgDataDir, port) {
     args = [
       '-D', osDataDir,
       '-p', '' + port,
+      '-c', 'listen_addresses=127.0.0.1',
     ];
   }
 
@@ -582,8 +608,9 @@ Object.assign(PRp, {
     self._fail();
   },
 
-  // Idempotent
-  stop: function () {
+  // Idempotent. Returns a Promise that resolves once the underlying
+  // postgres child process has actually exited (or been force-killed).
+  stop: async function () {
     var self = this;
 
     if (self.shuttingDown) {
@@ -595,22 +622,65 @@ Object.assign(PRp, {
     self.errorTimer && clearTimeout(self.errorTimer);
     self.restartTimer && clearTimeout(self.restartTimer);
 
-    if (self.proc) {
-      // Send SIGINT for fast shutdown
-      self.proc.kill('SIGINT');
+    var proc = self.proc;
+    if (!proc) {
+      return;
+    }
 
-      // Give it up to 10 seconds, then SIGKILL
-      var proc = self.proc;
-      setTimeout(function () {
-        if (proc) {
-          try {
-            proc.kill('SIGKILL');
-          } catch (e) {}
+    // Drop our reference up front so _exited() / restart logic treats
+    // this instance as no longer running.
+    self.proc = null;
+
+    await new Promise(function (resolve) {
+      var killTimer = null;
+      var done = false;
+
+      function finish() {
+        if (done) return;
+        done = true;
+        if (killTimer) {
+          clearTimeout(killTimer);
+          killTimer = null;
+        }
+        resolve();
+      }
+
+      // If the process has already exited (race), resolve immediately.
+      if (proc.exitCode !== null || proc.signalCode !== null) {
+        finish();
+        return;
+      }
+
+      proc.once('exit', finish);
+      // 'error' can fire if kill() fails (e.g. process already gone); treat
+      // as done so we don't hang forever.
+      proc.once('error', finish);
+
+      // Send SIGINT for fast shutdown (PostgreSQL's "fast shutdown" signal).
+      // On Windows, process.kill() on a child always behaves like SIGKILL,
+      // but we still go through the same code path for consistency.
+      try {
+        proc.kill('SIGINT');
+      } catch (e) {
+        // If kill throws (e.g. ESRCH because the process is already gone),
+        // the 'exit' event may never fire — resolve now.
+        finish();
+        return;
+      }
+
+      // Give it up to 10 seconds, then SIGKILL. The timer is cleared in
+      // finish() so it cannot fire against a dead process.
+      killTimer = setTimeout(function () {
+        killTimer = null;
+        if (done) return;
+        try {
+          proc.kill('SIGKILL');
+        } catch (e) {
+          // Process is already gone — the 'exit' handler will resolve,
+          // or finish() will have already run.
         }
       }, 10000);
-
-      self.proc = null;
-    }
+    });
   },
 
   _allowStartupToReturn: function () {
@@ -624,7 +694,7 @@ Object.assign(PRp, {
 
   _fail: async function () {
     var self = this;
-    self.stop();
+    await self.stop();
     self.onFailure && await self.onFailure();
     self._allowStartupToReturn();
   },

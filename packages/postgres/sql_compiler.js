@@ -952,35 +952,77 @@ export function buildDeleteQuery(table, selector, schema) {
 }
 
 /**
- * Build an UPSERT query (INSERT ... ON CONFLICT DO UPDATE).
+ * Build an UPSERT query.
+ *
+ * Two strategies depending on whether the selector carries a concrete `_id`:
+ *
+ * 1. Selector has `_id`: emit `INSERT ... ON CONFLICT(_id) DO UPDATE`.
+ *    The primary-key conflict path is correct and atomic.
+ *
+ * 2. Selector has NO `_id` (e.g. `{ slug: 'foo' }`): the old code generated
+ *    a fresh `Random.id()` and used `ON CONFLICT(_id) DO UPDATE`. The fresh
+ *    id never conflicts, so every call inserted a new row — the exact bug
+ *    we're fixing here.
+ *
+ *    The fix: emit a single atomic CTE that UPDATEs the first matching row
+ *    (by selector WHERE) if one exists, otherwise INSERTs a new row with a
+ *    fresh `_id` derived from selector + modifier fields. The CTE produces
+ *    exactly one output row so the caller's existing
+ *    `{ text, values, insertedId }` contract is preserved — the caller can
+ *    detect insert-vs-update by comparing the returned `_id` against
+ *    `insertedId`.
+ *
+ * The CTE form (non-`_id` selector):
+ *
+ *   WITH updated AS (
+ *     UPDATE <table> SET <setClauses>
+ *     WHERE _id = (SELECT _id FROM <table> WHERE <sel> LIMIT 1)
+ *     RETURNING _id
+ *   ), inserted AS (
+ *     INSERT INTO <table> (<cols>) SELECT <vals>
+ *     WHERE NOT EXISTS (SELECT 1 FROM updated)
+ *     RETURNING _id
+ *   )
+ *   SELECT _id FROM updated UNION ALL SELECT _id FROM inserted
+ *
+ * `RETURNING _id` from the INSERT yields the freshly generated id, matching
+ * `insertedId`. The UPDATE returns the pre-existing `_id`, which differs
+ * from `insertedId`, so the caller correctly reports `insertedId: undefined`
+ * for update-in-place.
+ *
  * @param {string} table
  * @param {Object} selector
  * @param {Object} modifier
  * @param {import('./schema').ResolvedSchema|null} schema
- * @returns {{ text: string, values: any[] }}
+ * @returns {{ text: string, values: any[], insertedId: string }}
  */
 export function buildUpsertQuery(table, selector, modifier, schema) {
-  // For upsert, we need to construct the initial doc from selector + modifier
-  // This is complex — we build the insert part from the selector,
-  // then use ON CONFLICT to apply the modifier as an update
-
   const { setClauses, values: modValues } = compileModifier(modifier, schema);
 
-  // Build the insert portion from selector fields
+  // Build the would-be-inserted doc from selector + modifier fields.
+  // Only scalar selector fields are eligible (selector can contain operator
+  // objects like { $gt: 5 } that must not leak into the inserted row).
   const insertDoc = {};
   if (typeof selector === 'object' && selector !== null) {
     for (const [key, value] of Object.entries(selector)) {
-      if (!key.startsWith('$') && typeof value !== 'object') {
-        insertDoc[key] = value;
+      if (key.startsWith('$')) continue;
+      if (value === null || value === undefined) continue;
+      if (typeof value === 'object' && !(value instanceof Date) && !Array.isArray(value)) {
+        // Operator object (e.g. { $gt: 5 }) or plain object — skip.
+        const subKeys = Object.keys(value);
+        if (subKeys.length > 0 && subKeys.every(k => k.startsWith('$'))) continue;
       }
+      insertDoc[key] = value;
     }
   }
 
-  if (!insertDoc._id) {
+  const hasIdInSelector = !!insertDoc._id;
+  if (!hasIdInSelector) {
     insertDoc._id = Random.id();
   }
 
-  // Apply $set fields for the insert case
+  // Apply $set / $setOnInsert for the insert case so the new row starts
+  // with modifier-supplied values.
   if (modifier.$set) {
     Object.assign(insertDoc, modifier.$set);
   }
@@ -1022,19 +1064,58 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
     values.push(row._extra);
   }
 
-  // Build the ON CONFLICT update part
-  // Rebase setClauses params
-  const rebasedSetClauses = setClauses.map(clause => rebaseParams(clause, idx));
-  const allValues = [...values, ...modValues];
+  const insertedId = insertDoc._id;
+  const quotedTable = quoteIdent(table);
 
-  let sql;
-  if (rebasedSetClauses.length > 0) {
-    sql = `INSERT INTO ${quoteIdent(table)} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO UPDATE SET ${rebasedSetClauses.join(', ')} RETURNING _id`;
-  } else {
-    sql = `INSERT INTO ${quoteIdent(table)} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO NOTHING RETURNING _id`;
+  if (hasIdInSelector) {
+    // Primary-key conflict path — preserved from the original implementation.
+    const rebasedSetClauses = setClauses.map(clause => rebaseParams(clause, idx));
+    const allValues = [...values, ...modValues];
+
+    let sql;
+    if (rebasedSetClauses.length > 0) {
+      sql = `INSERT INTO ${quotedTable} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO UPDATE SET ${rebasedSetClauses.join(', ')} RETURNING _id`;
+    } else {
+      sql = `INSERT INTO ${quotedTable} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO NOTHING RETURNING _id`;
+    }
+
+    return { text: sql, values: allValues, insertedId };
   }
 
-  return { text: sql, values: allValues, insertedId: insertDoc._id };
+  // Non-`_id` selector: CTE that UPDATEs if a row matches, else INSERTs.
+  // Parameter layout: insertValues ($1..$idx), then modValues, then
+  // selector WHERE values.
+  const insertValuesCount = idx;
+  const rebasedSetClauses = setClauses.map(clause => rebaseParams(clause, insertValuesCount));
+
+  const { text: whereText, values: whereValues } = compileSelector(selector, schema);
+  const rebasedWhere = rebaseParams(whereText, insertValuesCount + modValues.length);
+
+  const allValues = [...values, ...modValues, ...whereValues];
+
+  // If modifier has no emittable SET clauses (e.g. fetch-modify-write
+  // operators only), we still need a legal UPDATE. Fall back to updating
+  // `_id = _id` which is a no-op that still registers a rowCount. That
+  // shouldn't actually happen because callers that need fetch-modify-write
+  // don't route through buildUpsertQuery, but we guard defensively.
+  const setSql = rebasedSetClauses.length > 0
+    ? rebasedSetClauses.join(', ')
+    : '_id = _id';
+
+  const sql =
+    `WITH updated AS (` +
+      `UPDATE ${quotedTable} SET ${setSql} ` +
+      `WHERE _id = (SELECT _id FROM ${quotedTable} WHERE ${rebasedWhere} LIMIT 1) ` +
+      `RETURNING _id` +
+    `), inserted AS (` +
+      `INSERT INTO ${quotedTable} (${columns.join(', ')}) ` +
+      `SELECT ${placeholders.join(', ')} ` +
+      `WHERE NOT EXISTS (SELECT 1 FROM updated) ` +
+      `RETURNING _id` +
+    `) ` +
+    `SELECT _id FROM updated UNION ALL SELECT _id FROM inserted`;
+
+  return { text: sql, values: allValues, insertedId };
 }
 
 /**

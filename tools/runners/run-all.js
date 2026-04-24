@@ -317,7 +317,9 @@ class Runner {
     await self.proxy.stop();
     await self.updater.stop();
     await self.mongoRunner && self.mongoRunner.stop();
-    self.postgresRunner && self.postgresRunner.stop();
+    if (self.postgresRunner) {
+      await self.postgresRunner.stop();
+    }
     await self.appRunner.stop();
     await (self.selenium && self.selenium.stop());
     // XXX does calling this 'finish' still make sense now that runLog is a

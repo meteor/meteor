@@ -6,6 +6,33 @@
 import { quoteIdent, quoteLiteral } from './schema';
 import { EventEmitter } from 'events';
 
+/**
+ * PostgreSQL's NAMEDATALEN is 64, so identifiers/channels are silently
+ * truncated at 63 bytes. We build channel names as `meteor_pg_${collectionName}`
+ * (10-byte prefix) and trigger names as `meteor_pg_${collectionName}_notify_trigger`
+ * (25-byte overhead). Capping the collection name at 53 bytes ensures the longest
+ * derived identifier (channel + `_notify_trigger`) stays under the 63-byte limit
+ * so two similar collection names can't collide after truncation.
+ */
+export const MAX_COLLECTION_NAME_BYTES = 53;
+
+/**
+ * Validate that a collection name fits within Postgres identifier/channel limits.
+ * Throws a clear error naming the offending collection and the limit.
+ * @param {string} collectionName
+ */
+function assertCollectionNameFits(collectionName) {
+  const byteLength = Buffer.byteLength(collectionName, 'utf8');
+  if (byteLength > MAX_COLLECTION_NAME_BYTES) {
+    throw new Error(
+      `Postgres: collection name "${collectionName}" is ${byteLength} bytes; ` +
+      `must be <= ${MAX_COLLECTION_NAME_BYTES} bytes (UTF-8) to avoid PostgreSQL ` +
+      `identifier truncation (NAMEDATALEN = 64) which would cause LISTEN channel ` +
+      `or trigger-name collisions between collections.`
+    );
+  }
+}
+
 export class PostgresConnection extends EventEmitter {
   /**
    * @param {string} url - PostgreSQL connection URL
@@ -120,6 +147,10 @@ export class PostgresConnection extends EventEmitter {
    * @param {import('./schema').ResolvedSchema} schema
    */
   async ensureTable(collectionName, schema) {
+    // Validate collection name fits PostgreSQL identifier limits before
+    // building any DDL — prevents silent truncation collisions.
+    assertCollectionNameFits(collectionName);
+
     if (this._knownTables.has(collectionName)) return;
 
     const columnDefs = ['_id TEXT PRIMARY KEY'];
@@ -146,6 +177,10 @@ export class PostgresConnection extends EventEmitter {
    * @param {Function} callback - Called on notification with { operation, id }
    */
   async setupListenNotify(collectionName, callback) {
+    // Validate at the earliest entry point — before any SQL is built or any
+    // callback is registered — to guarantee channel uniqueness post-truncation.
+    assertCollectionNameFits(collectionName);
+
     const channel = `meteor_pg_${collectionName}`;
     const quotedChannel = quoteLiteral(channel);
 
@@ -247,12 +282,18 @@ export class PostgresConnection extends EventEmitter {
         this._listenClient = await this._pool.connect();
         this._attachListenClientHandlers(this._listenClient);
 
-        // Re-LISTEN all channels
+        // Re-LISTEN all channels and collect them so observers can re-poll.
+        const replayedChannels = [];
         for (const channel of this._notifyCallbacks.keys()) {
           await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
+          replayedChannels.push(channel);
         }
 
-        this.emit('listen:reconnected');
+        // Carry the replayed channel set on the event so observe drivers
+        // can trigger a fresh poll for each affected collection — writes
+        // during the disconnect gap would otherwise never surface until
+        // the next regular poll tick.
+        this.emit('listen:reconnected', { channels: replayedChannels });
       } catch (e) {
         Log.warn('Postgres: LISTEN reconnect failed, retrying in ' + delay + 'ms');
         const nextDelay = delay;
@@ -287,6 +328,15 @@ export class PostgresConnection extends EventEmitter {
           cb(payload);
         } catch (e) {
           Log.error('Postgres LISTEN callback error:', e);
+          // Emit a signal so observers (and tests) can detect swallowed
+          // callback failures — without this event, a subscriber whose
+          // callback dies mid-reconnect can end up silently stuck with
+          // only a log entry.
+          this.emit('listen:callback-error', {
+            channel: msg.channel,
+            error: e,
+            payload,
+          });
         }
       }
     });

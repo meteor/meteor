@@ -61,6 +61,11 @@ class PostgresObserveDriver {
     this._pollTimer = null;
     this._notifyDebounceTimer = null;
     this._notifyCallback = null;
+    this._reconnectHandler = null;
+    // When a reconnect fires during an in-flight poll we can't just kick
+    // off a second poll; instead we set this flag and re-poll once the
+    // current one finishes. Idempotent under repeated reconnect signals.
+    this._repollNeeded = false;
 
     // Create the ChangeStream that this driver emits into
     this._stream = new ChangeStream(cursorDescription);
@@ -105,6 +110,44 @@ class PostgresObserveDriver {
       }
     }
 
+    // Subscribe to listen-client reconnects so we can re-poll and signal
+    // downstream consumers. Without this, writes during the disconnect
+    // gap never surface until the next regular poll tick.
+    const connection = this._provider._connection;
+    if (connection && typeof connection.on === 'function') {
+      this._reconnectHandler = (info) => {
+        if (this._stopped) return;
+
+        // Only react if our channel was among those replayed (when payload
+        // supplies a channel list). Falls back to always-react otherwise.
+        if (info && Array.isArray(info.channels)) {
+          const ourChannel = `meteor_pg_${collectionName}`;
+          if (!info.channels.includes(ourChannel)) return;
+        }
+
+        // Signal consumers that state may be stale; observe-multiplexer
+        // forwards 'reconnected' through to ChangeStream subscribers.
+        // `reconnected` is the minimum needed here — `reset` would imply
+        // divergence we haven't actually verified yet.
+        try {
+          if (typeof this._stream.emit === 'function') {
+            this._stream.emit('reconnected');
+          }
+        } catch (emitErr) {
+          Log.error('Postgres observe driver: error emitting reconnected:', emitErr);
+        }
+
+        // Debounce / coalesce: if a poll is already in flight, just mark
+        // that we need another pass when it finishes. Otherwise poll now.
+        if (this._polling) {
+          this._repollNeeded = true;
+          return;
+        }
+        this._poll().catch(e => Log.error('Postgres observe reconnect poll error:', e));
+      };
+      connection.on('listen:reconnected', this._reconnectHandler);
+    }
+
     // Run initial poll
     await this._poll();
     this._initialized = true;
@@ -143,6 +186,13 @@ class PostgresObserveDriver {
       }
     } finally {
       this._polling = false;
+    }
+
+    // If a reconnect fired while we were mid-poll, run exactly one more pass.
+    // This keeps the trigger idempotent under listen-client flapping.
+    if (this._repollNeeded && !this._stopped) {
+      this._repollNeeded = false;
+      this._poll().catch(e => Log.error('Postgres observe coalesced repoll error:', e));
     }
   }
 
@@ -226,6 +276,19 @@ class PostgresObserveDriver {
     if (this._notifyDebounceTimer) {
       clearTimeout(this._notifyDebounceTimer);
       this._notifyDebounceTimer = null;
+    }
+
+    // Detach reconnect listener to avoid leaks
+    if (this._reconnectHandler) {
+      const connection = this._provider._connection;
+      if (connection && typeof connection.removeListener === 'function') {
+        try {
+          connection.removeListener('listen:reconnected', this._reconnectHandler);
+        } catch (e) {
+          // ignore
+        }
+      }
+      this._reconnectHandler = null;
     }
 
     // Remove LISTEN/NOTIFY callback
