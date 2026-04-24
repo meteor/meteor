@@ -37,12 +37,23 @@ export async function retryJob(jobId) {
   }
 
   const definition = getJobDefinition(job.name);
+  if (!definition) {
+    // Retrying a job whose type is no longer registered would produce an
+    // immediate failure in executeJob (see execution.js where a missing
+    // definition flips the job to failed). Surface that here so the caller
+    // can re-register the job type before retrying, and so we don't have
+    // to guess whether to preserve or clear the existing dedupKey on a
+    // job whose contract we can't reason about.
+    throw new Error(
+      `Jobs.retry(): job type "${job.name}" is no longer registered; re-register before retrying.`
+    );
+  }
 
   // Re-derive dedupKey if the definition has a unique function. If the
-  // definition is unavailable or no longer declares `unique`, explicitly
-  // unset dedupKey so a stale key from an earlier enqueue can't orphan the
-  // unique-index slot on the newly-ready job.
-  const dedupKey = definition ? deriveDedupKey(definition, job.data) : null;
+  // definition no longer declares `unique`, explicitly unset dedupKey so a
+  // stale key from an earlier enqueue can't orphan the unique-index slot
+  // on the newly-ready job.
+  const dedupKey = deriveDedupKey(definition, job.data);
 
   const update = {
     $set: {
@@ -68,8 +79,16 @@ export async function retryJob(jobId) {
     update.$unset = { dedupKey: 1 };
   }
 
+  let modifiedCount;
   try {
-    await JobsCollection.updateAsync(jobId, update);
+    // Atomic compare-and-set on status — closes the TOCTOU window between
+    // the findOneAsync above and this write. If a concurrent actor flipped
+    // the job out of failed/cancelled (e.g. re-enqueued, started running),
+    // this update matches zero documents and we report the race.
+    modifiedCount = await JobsCollection.updateAsync(
+      { _id: jobId, status: { $in: ['failed', 'cancelled'] } },
+      update
+    );
   } catch (err) {
     if (err && err.code === 11000) {
       throw new DuplicateError(
@@ -77,6 +96,12 @@ export async function retryJob(jobId) {
       );
     }
     throw err;
+  }
+
+  if (!modifiedCount) {
+    throw new Error(
+      `Jobs.retry(): job ${jobId} is no longer in a retryable status; its state changed concurrently.`
+    );
   }
 
   return jobId;
