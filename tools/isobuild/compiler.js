@@ -444,7 +444,7 @@ var compileUnibuild = Profile(function (options) {
       // The values of inputSourceArch.localNodeModulesDirs are usually
       // just `true`, but if `info` is an object, then we let its
       // properties override the properties defined above.
-      ...((typeof info === 'object' && info !== null) ? info : Object.prototype),
+      ...((typeof info === 'object' && info !== null) ? info : {}),
     });
   });
 
