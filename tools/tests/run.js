@@ -1,6 +1,7 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var utils = require('../utils/utils.js');
+var slot = require('../tool-testing/slot.js');
 var net = require('net');
 var _ = require('underscore');
 var files = require('../fs/files');
@@ -193,7 +194,7 @@ selftest.define("run errors", async function () {
 
   // Prevent mongod from starting up.  (Note that "127.0.0.1" matches the
   // interface that mongo uses.)
-  var proxyPort = utils.randomPort();
+  var proxyPort = slot.allocatePort('app');
   var mongoPort = proxyPort + 1;
   let resolver;
   let toWait = new Promise(r => resolver = r);

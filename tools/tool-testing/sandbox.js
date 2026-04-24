@@ -43,6 +43,7 @@ import PuppeteerClient from './clients/puppeteer/index.js';
 import BrowserStackClient from './clients/browserstack/index.js';
 import Builder from '../isobuild/builder.js';
 import Run from './run.js';
+import { allocatePort } from './slot.js';
 import { Console } from '../console/console.js';
 import {
   getPackagesDirectoryName,
@@ -107,6 +108,28 @@ export default class Sandbox {
     });
   }
 
+  // Like run(), but intended for starting an app (`meteor run`, `meteor test`,
+  // etc.) on a worker-specific port. If the caller didn't already pass -p /
+  // --port, we inject `-p ${slot.allocatePort('app')}` so two workers testing
+  // in parallel don't try to bind the same port.
+  //
+  // Migrate `s.run()` to `s.runApp()` wherever the test is actually starting
+  // an app; leave `s.run()` for CLI-parsing tests and subcommands that do not
+  // open a port (create, mongo, reset, help, ...).
+  runApp(...args) {
+    const hasPortFlag = args.some((arg) => {
+      if (typeof arg !== 'string') {
+        return false;
+      }
+      return arg === '-p' || arg === '--port'
+          || arg.startsWith('-p=') || arg.startsWith('--port=');
+    });
+    const withPort = hasPortFlag
+      ? args
+      : ['-p', String(allocatePort('app')), ...args];
+    return this.run(...withPort);
+  }
+
   // Tests a set of clients with the argument function. Each call to f(run)
   // instantiates a Run with a different client.
   // Use:
@@ -128,7 +151,7 @@ export default class Sandbox {
 
       const appConfig = {
         host: "localhost",
-        port: clientOptions.port || 3000,
+        port: clientOptions.port || allocatePort('app'),
       };
 
       if (clientOptions.phantom) {
@@ -526,48 +549,71 @@ async function doOrThrow(f) {
   return ret;
 }
 
+// Guards concurrent callers of setUpBuiltPackageTropohouse. The first
+// caller runs the (slow) build and every other caller awaits the same
+// promise and then sees the populated module-level globals below. Without
+// this the Phase 5 worker pool (or any accidental concurrency) would race
+// on builtPackageTropohouseDir and corrupt the shared tropohouse.
+let setUpBuiltPackageTropohousePromise = null;
+
 async function setUpBuiltPackageTropohouse() {
   if (builtPackageTropohouseDir) {
     return;
   }
-  builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
+  if (!setUpBuiltPackageTropohousePromise) {
+    setUpBuiltPackageTropohousePromise = (async () => {
+      builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
 
-  if (getPackagesDirectoryName() !== 'packages') {
-    throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
+      if (getPackagesDirectoryName() !== 'packages') {
+        throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
+      }
+
+      const tropohouse = new Tropohouse(builtPackageTropohouseDir);
+      tropohouseLocalCatalog = await newSelfTestCatalog();
+      const versions = {};
+      for (const packageName of tropohouseLocalCatalog.getAllNonTestPackageNames()) {
+        versions[packageName] =
+            await tropohouseLocalCatalog.getLatestVersion(packageName).version;
+      }
+      const packageMap = new PackageMap(versions, {
+        localCatalog: tropohouseLocalCatalog
+      });
+      // Make an isopack cache that doesn't automatically save isopacks to disk
+      // and has no access to versioned packages.
+      tropohouseIsopackCache = new IsopackCache({
+        packageMap: packageMap,
+        includeCordovaUnibuild: true
+      });
+      await doOrThrow(function () {
+        return enterJob("building self-test packages", () => {
+          // Build the packages into the in-memory IsopackCache.
+          return tropohouseIsopackCache.buildLocalPackages(
+            ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
+        });
+      });
+
+      // Save all the isopacks into builtPackageTropohouseDir/packages. (We
+      // always put them into the default 'packages' directory assuming
+      // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself,
+      // though some tests will want them under
+      // 'packages-for-server/test-packages' — we fix that up in _makeWarehouse.)
+      await tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
+        return tropohouse._saveIsopack(isopack, name);
+      });
+    })();
+
+    try {
+      await setUpBuiltPackageTropohousePromise;
+    } catch (err) {
+      // Let the next caller retry if the build failed, otherwise every
+      // subsequent test would see the same stale rejection.
+      setUpBuiltPackageTropohousePromise = null;
+      builtPackageTropohouseDir = null;
+      throw err;
+    }
+    return;
   }
-
-  const tropohouse = new Tropohouse(builtPackageTropohouseDir);
-  tropohouseLocalCatalog = await newSelfTestCatalog();
-  const versions = {};
-  for (const packageName of tropohouseLocalCatalog.getAllNonTestPackageNames()) {
-    versions[packageName] =
-        await tropohouseLocalCatalog.getLatestVersion(packageName).version;
-  }
-  const packageMap = new PackageMap(versions, {
-    localCatalog: tropohouseLocalCatalog
-  });
-  // Make an isopack cache that doesn't automatically save isopacks to disk and
-  // has no access to versioned packages.
-  tropohouseIsopackCache = new IsopackCache({
-    packageMap: packageMap,
-    includeCordovaUnibuild: true
-  });
-  await doOrThrow(function () {
-    return enterJob("building self-test packages", () => {
-      // Build the packages into the in-memory IsopackCache.
-      return tropohouseIsopackCache.buildLocalPackages(
-        ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
-    });
-  });
-
-  // Save all the isopacks into builtPackageTropohouseDir/packages.  (Note that
-  // we are always putting them into the default 'packages' (assuming
-  // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
-  // though some tests will want them to be under
-  // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
-  await tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
-    return tropohouse._saveIsopack(isopack, name);
-  });
+  await setUpBuiltPackageTropohousePromise;
 }
 
 // Our current strategy for running tests that need warehouses is to build all

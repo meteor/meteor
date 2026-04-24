@@ -19,7 +19,8 @@ import {
 import { Console } from '../console/console.js';
 import Matcher from './matcher.js';
 import OutputLog from './output-log.js';
-import { randomPort, timeoutScaleFactor, sleepMs } from '../utils/utils.js';
+import { timeoutScaleFactor, sleepMs } from '../utils/utils.js';
+import { allocatePort } from './slot.js';
 import TestFailure from './test-failure.js';
 import { execFileAsync } from '../utils/processes';
 
@@ -51,7 +52,7 @@ export default class Run {
     this.fakeMongoPort = null;
     this.fakeMongoConnection = null;
     if (options.fakeMongo) {
-      this.fakeMongoPort = randomPort();
+      this.fakeMongoPort = allocatePort('fakeMongoControl');
       this.env.METEOR_TEST_FAKE_MONGOD_CONTROL_PORT = this.fakeMongoPort;
     }
 

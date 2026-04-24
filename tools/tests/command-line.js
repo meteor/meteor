@@ -5,6 +5,9 @@ var release = require('../packaging/release.js');
 var files = require('../fs/files');
 var utils = require('../utils/utils.js');
 var runMongo = require('../runners/run-mongo.js');
+var slot = require('../tool-testing/slot.js');
+var os = require('os');
+var path = require('path');
 
 selftest.define("argument parsing", async function () {
   var s = new Sandbox;
@@ -629,7 +632,11 @@ selftest.define(
     var run;
 
     // If test-app-path doesn't exist, it should be created.
-    var testAppPath = '/tmp/meteor_test_app_path';
+    // Scoped by worker id so two workers on the same host don't race on the
+    // same path. Still an absolute path, as the test needs --test-app-path
+    // to land outside the sandbox.
+    var testAppPath = path.join(os.tmpdir(),
+        'meteor_test_app_path_w' + slot.getWorkerId());
     await files.rm_recursive(testAppPath);
     selftest.expectFalse(files.exists(testAppPath));
     await s.createApp('test-app-path-app', 'package-tests', {
@@ -649,7 +656,11 @@ selftest.define(
     });
 
     // If test-app-path already exists, make sure that directory is used.
-    var testAppPath = '/tmp/meteor_test_app_path';
+    // Scoped by worker id so two workers on the same host don't race on the
+    // same path. Still an absolute path, as the test needs --test-app-path
+    // to land outside the sandbox.
+    var testAppPath = path.join(os.tmpdir(),
+        'meteor_test_app_path_w' + slot.getWorkerId());
     await files.rm_recursive(testAppPath);
     files.mkdir_p(testAppPath);
     selftest.expectTrue(files.exists(testAppPath));
@@ -672,7 +683,11 @@ selftest.define(
 
     // If test-app-path already exists but is a file instead of a directory,
     // show a console error message explaining this, and exit.
-    var testAppPath = '/tmp/meteor_test_app_path';
+    // Scoped by worker id so two workers on the same host don't race on the
+    // same path. Still an absolute path, as the test needs --test-app-path
+    // to land outside the sandbox.
+    var testAppPath = path.join(os.tmpdir(),
+        'meteor_test_app_path_w' + slot.getWorkerId());
     await files.rm_recursive(testAppPath);
     files.writeFile(testAppPath, '<3 meteor');
     selftest.expectTrue(files.exists(testAppPath));
