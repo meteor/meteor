@@ -21,10 +21,28 @@ const url =
   null;
 
 let _provider = null;
+// Set by the Meteor.startup block if connect() throws. Used by the
+// Collection constructor / query shim to surface startup failures at first
+// use instead of silently continuing with a half-initialized provider.
+let _connectFailed = null;
 
 if (url) {
   _provider = new PostgresStreamProvider(url);
 }
+
+function _throwIfStartupFailed() {
+  if (_connectFailed) {
+    const err = new Error(
+      `Postgres connection failed at startup: ${_connectFailed.message}. ` +
+      'Fix the connection config and restart.'
+    );
+    err.cause = _connectFailed;
+    throw err;
+  }
+}
+
+// Latch so the Postgres.query deprecation warning only fires once per process.
+let _warnedQueryDeprecation = false;
 
 /**
  * Postgres namespace — top-level API.
@@ -32,6 +50,8 @@ if (url) {
 Postgres = {
   Collection: class PostgresCollection extends AFS.Collection {
     constructor(name, options = {}) {
+      _throwIfStartupFailed();
+
       if (!_provider) {
         throw new Error(
           'Postgres: No connection URL configured. Set POSTGRES_URL environment variable ' +
@@ -61,11 +81,29 @@ Postgres = {
   // Utilities
   getProvider: () => _provider,
   rawPool: () => _provider ? _provider.rawDatabase() : null,
-  query: (sql, params) => {
+
+  // Raw SQL entry point. Renamed from Postgres.query; the old name remains
+  // as a deprecation shim below. This bypasses Meteor-level safety guarantees
+  // (ACLs, schema conversion, reactive notifications) — caller beware.
+  _query: (sql, params) => {
+    _throwIfStartupFailed();
     if (!_provider || !_provider._connection) {
       throw new Error('Postgres: Not connected');
     }
     return _provider._connection.query(sql, params);
+  },
+
+  // Deprecated alias for Postgres._query. Warns once per process, then
+  // delegates. Remove in a future major release.
+  query: (sql, params) => {
+    if (!_warnedQueryDeprecation) {
+      _warnedQueryDeprecation = true;
+      Meteor._debug(
+        'Postgres.query is deprecated; use Postgres._query for raw SQL. ' +
+        'This bypasses Meteor-level safety guarantees.'
+      );
+    }
+    return Postgres._query(sql, params);
   },
 
   // Exposed for testing
@@ -74,6 +112,8 @@ Postgres = {
   _compileSort: compileSort,
   _ResolvedSchema: ResolvedSchema,
   _quoteIdent: quoteIdent,
+  _testSetConnectFailed: (err) => { _connectFailed = err; },
+  _testGetConnectFailed: () => _connectFailed,
 };
 
 // Connect on startup
@@ -92,6 +132,9 @@ Meteor.startup(async () => {
       await _provider._connection.ensureTable(name, schema);
     }
   } catch (e) {
+    // Latch the failure so first-use of a collection / Postgres._query
+    // surfaces a hard error instead of silently no-oping.
+    _connectFailed = e;
     Log.error('Postgres: Failed to connect:', e);
   }
 });

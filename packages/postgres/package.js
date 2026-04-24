@@ -30,7 +30,7 @@ Package.onUse(function (api) {
     'afs',
   ]);
 
-  api.use(['insecure', 'autopublish'], { weak: true });
+  api.use(['autopublish'], { weak: true });
 
   api.mainModule('postgres-server.js', 'server');
   api.mainModule('postgres-client.js', 'client');

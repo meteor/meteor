@@ -96,6 +96,11 @@ export class ResolvedSchema {
         } else if (typeof col.default === 'boolean') {
           def += ` DEFAULT ${col.default}`;
         } else if (typeof col.default === 'number') {
+          if (!Number.isFinite(col.default)) {
+            throw new Error(
+              `Postgres schema: column "${col.name}" default must be a finite number, got ${col.default}`
+            );
+          }
           def += ` DEFAULT ${col.default}`;
         } else if (typeof col.default === 'string') {
           def += ` DEFAULT ${quoteLiteral(col.default)}`;

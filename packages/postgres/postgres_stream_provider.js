@@ -20,7 +20,7 @@ import {
   buildUpsertQuery,
 } from './sql_compiler';
 import { quoteIdent } from './schema';
-import { getObserveDriver } from './observe_driver';
+import { getObserveDriver, dropCachedDriversForProvider } from './observe_driver';
 
 export class PostgresStreamProvider extends StreamProvider {
   /**
@@ -47,7 +47,29 @@ export class PostgresStreamProvider extends StreamProvider {
 
   async close() {
     this._closeMultiplexers();
+
+    // Drop any observe drivers cached for this provider so they don't
+    // hold references to the about-to-be-closed connection.
+    try {
+      dropCachedDriversForProvider(this);
+    } catch (e) {
+      // Best effort — the export may not exist yet in partial-merge states.
+    }
+
     if (this._connection) {
+      // Proactively release the LISTEN client's channels so a pooled
+      // connection returning to a pool can't leak notifications across
+      // reconnects. Wrapped in try/catch because the client may already
+      // be gone if the connection errored.
+      const listenClient = this._connection._listenClient;
+      if (listenClient) {
+        try {
+          await listenClient.query('UNLISTEN *');
+        } catch (e) {
+          // Ignore — client may already be disconnected.
+        }
+      }
+
       await this._connection.close();
       this._connection = null;
     }
@@ -265,8 +287,41 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async dropCollectionAsync(collectionName) {
-    await this._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(collectionName)} CASCADE`);
-    this._connection._knownTables.delete(collectionName);
+    // Full teardown: table, trigger function, LISTEN state, cached schema.
+    // Trigger function name follows the convention used by
+    // postgres_driver.js setupListenNotify: `meteor_pg_<name>_notify_fn`.
+    const channel = `meteor_pg_${collectionName}`;
+    const triggerFnName = `${channel}_notify_fn`;
+
+    await this._connection.query(
+      `DROP TABLE IF EXISTS ${quoteIdent(collectionName)} CASCADE`
+    );
+    await this._connection.query(
+      `DROP FUNCTION IF EXISTS ${quoteIdent(triggerFnName)}() CASCADE`
+    );
+
+    // TODO: expose a public driver method (e.g. cleanupChannel) to
+    // UNLISTEN + clear callbacks atomically. For now the driver only
+    // exposes removeListenNotify(callback) which requires knowing each
+    // registered callback, so we fall back to best-effort direct cleanup.
+    if (this._connection._listenClient) {
+      try {
+        await this._connection._listenClient.query(
+          `UNLISTEN ${quoteIdent(channel)}`
+        );
+      } catch (e) {
+        // Ignore — listen client may already be gone.
+      }
+    }
+    if (this._connection._notifyCallbacks) {
+      this._connection._notifyCallbacks.delete(channel);
+    }
+
+    // TODO: _knownTables is an internal field on the driver; ideally the
+    // driver would expose a forgetTable(name) method.
+    if (this._connection._knownTables) {
+      this._connection._knownTables.delete(collectionName);
+    }
     this._schemas.delete(collectionName);
   }
 
@@ -277,13 +332,62 @@ export class PostgresStreamProvider extends StreamProvider {
   /**
    * Fetch-modify-write pattern for complex modifiers.
    * Uses a transaction with SELECT FOR UPDATE → JS modify → UPDATE.
+   *
+   * Each attempt sets per-transaction statement/idle timeouts (env-tunable
+   * via METEOR_POSTGRES_STATEMENT_TIMEOUT_MS and
+   * METEOR_POSTGRES_IDLE_IN_TX_TIMEOUT_MS) and, for multi-doc updates,
+   * REPEATABLE READ isolation. Serialization failures (SQLSTATE 40001) are
+   * retried up to 3 times before bubbling.
    */
   async _fetchModifyWrite(collectionName, selector, modifier, options, schema) {
+    const MAX_ATTEMPTS = 3;
+    let lastErr = null;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        return await this._fetchModifyWriteOnce(
+          collectionName, selector, modifier, options, schema
+        );
+      } catch (e) {
+        // PG serialization failure — safe to retry on a fresh transaction.
+        if (e && e.code === '40001' && attempt < MAX_ATTEMPTS) {
+          lastErr = e;
+          continue;
+        }
+        throw e;
+      }
+    }
+
+    // Should be unreachable (the loop either returns or throws), but keep a
+    // guard in case MAX_ATTEMPTS is ever set to 0.
+    throw lastErr || new Error('Postgres _fetchModifyWrite: exhausted retries');
+  }
+
+  async _fetchModifyWriteOnce(collectionName, selector, modifier, options, schema) {
+    const statementTimeoutMs = Math.max(
+      1000,
+      parseInt(process.env.METEOR_POSTGRES_STATEMENT_TIMEOUT_MS, 10) || 30000
+    );
+    const idleInTxTimeoutMs = Math.max(
+      1000,
+      parseInt(process.env.METEOR_POSTGRES_IDLE_IN_TX_TIMEOUT_MS, 10) || 10000
+    );
+
     const client = await this._connection.getClient();
     let affected = 0;
 
     try {
       await client.query('BEGIN');
+
+      // Per-transaction timeouts: bound worst-case lock waits and prevent a
+      // stalled client from holding row locks indefinitely.
+      await client.query(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
+      await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${idleInTxTimeoutMs}`);
+
+      if (options.multi === true) {
+        // REPEATABLE READ prevents phantom-insert inconsistency for multi-doc updates; full SERIALIZABLE would need retry-on-40001 logic we skip for now.
+        await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+      }
 
       // Fetch matching rows with FOR UPDATE lock
       const { text: selectText, values: selectValues } = buildSelectQuery(
@@ -329,7 +433,11 @@ export class PostgresStreamProvider extends StreamProvider {
 
       await client.query('COMMIT');
     } catch (e) {
-      await client.query('ROLLBACK');
+      try {
+        await client.query('ROLLBACK');
+      } catch (rollbackErr) {
+        // Ignore — original error is more informative.
+      }
       throw e;
     } finally {
       client.release();

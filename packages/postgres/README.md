@@ -1,0 +1,195 @@
+# postgres
+
+PostgreSQL as a first-class Meteor data source, via AFS.
+
+Mongo-style API (`insertAsync`, `updateAsync`, `findOneAsync`,
+`observeChanges`) compiled to parameterized SQL against a real Postgres
+schema. Reactivity is backed by LISTEN/NOTIFY triggers per collection,
+with a polling fallback.
+
+## Status
+
+Experimental. APIs are stable enough to build against; some edges
+(subsecond TIMESTAMPTZ precision, regex dialect, JSONB-in-`_extra`) have
+documented caveats below. Treat this as "production-ready for
+well-scoped workloads, not drop-in mongo parity".
+
+## Installation
+
+```bash
+meteor add postgres
+```
+
+Declare a connection string via environment variable:
+
+```bash
+export POSTGRES_URL='postgres://user:pass@host:5432/db'
+```
+
+Or via `Meteor.settings`:
+
+```json
+{
+  "packages": {
+    "postgres": { "url": "postgres://user:pass@host:5432/db" }
+  }
+}
+```
+
+If no URL is configured, the package loads but `new Postgres.Collection`
+and `Postgres._query` throw on first use.
+
+## Defining a collection
+
+Each collection maps to one Postgres table. Columns are declared up
+front; unknown fields overflow into a JSONB `_extra` column.
+
+```js
+import { Postgres } from 'meteor/postgres';
+
+const Posts = new Postgres.Collection('posts', {
+  schema: {
+    title:     { type: 'text', required: true },
+    body:      { type: 'text' },
+    views:     { type: 'integer', default: 0 },
+    published: { type: 'boolean', default: false },
+    tags:      { type: 'jsonb' },
+    createdAt: { type: 'timestamp', default: 'now' },
+  },
+});
+
+await Posts.insertAsync({ title: 'Hello', tags: ['intro'] });
+const found = await Posts.findOneAsync({ published: false });
+```
+
+### Schema types
+
+| `type`      | Postgres type   | Default options                        |
+|-------------|-----------------|----------------------------------------|
+| `text`      | `TEXT`          | string default → quoted literal        |
+| `integer`   | `INTEGER`       | finite number default only             |
+| `numeric`   | `NUMERIC`       | finite number default only             |
+| `boolean`   | `BOOLEAN`       | boolean default                        |
+| `timestamp` | `TIMESTAMPTZ`   | `'now'` → `DEFAULT NOW()`              |
+| `jsonb`     | `JSONB`         | —                                      |
+
+Use `{ required: true }` to emit `NOT NULL`. Non-finite number defaults
+(`NaN`, `Infinity`) throw at table-creation time, not at runtime.
+
+## Reactivity
+
+`observeChanges` attaches a Postgres trigger that `pg_notify`s on
+INSERT/UPDATE/DELETE. The provider maintains a shared LISTEN client per
+connection; changes are delivered to observers, which then re-query to
+reconcile state. A bounded polling loop catches writes that bypass the
+trigger (e.g. raw SQL via `Postgres._query`) and serves as a fallback
+after LISTEN reconnects.
+
+Reconnect behaviour:
+
+- On LISTEN-client disconnect the driver re-dials with exponential
+  backoff + jitter (up to a capped attempt count), re-LISTENs each
+  registered channel, and emits `listen:reconnected` on the driver.
+- Observers receive a `reset` on reconnect, then a catch-up poll
+  reconciles any writes that happened during the gap.
+- If reconnect gives up, the driver emits `listen:gave-up` and the
+  polling loop continues to deliver changes.
+
+## Raw SQL
+
+`Postgres._query(sql, params)` executes a parameterized statement
+against the connection pool. This bypasses schema conversion, ACLs, and
+reactive notifications — caller beware. Writes made via `_query` are
+still observable through the polling fallback, but you lose LISTEN
+propagation unless your SQL fires the table's trigger.
+
+`Postgres.query` is a deprecation shim for the old name and warns once
+per process.
+
+## Environment variables
+
+| Variable                                       | Effect                                                                           | Default |
+|------------------------------------------------|----------------------------------------------------------------------------------|---------|
+| `POSTGRES_URL`                                 | Connection string                                                                | —       |
+| `METEOR_POSTGRES_POLLING_INTERVAL_MS`          | Observer polling cadence (ms). Clamped to 100ms floor.                           | `1000`  |
+| `METEOR_POSTGRES_STATEMENT_TIMEOUT_MS`         | Per-statement timeout inside fetch-modify-write transactions. Floor 1000ms.      | `30000` |
+| `METEOR_POSTGRES_IDLE_TX_TIMEOUT_MS`           | `idle_in_transaction_session_timeout` inside same transactions. Floor 1000ms.    | `30000` |
+| `METEOR_POSTGRES_LISTEN_MAX_LISTENERS`         | EventEmitter max-listener ceiling for the LISTEN client.                         | `1024`  |
+| `METEOR_POSTGRES_NUMERIC_BIGINT`               | `=1` to coerce overflowing `numeric` values to BigInt instead of string.         | off     |
+
+## Known caveats
+
+### Regex dialect
+
+Postgres regex operators (`~`, `~*`) use POSIX ERE, which diverges from
+JavaScript's PCRE. The compiler rejects the following constructs
+instead of silently running a different pattern than you wrote:
+
+- Inline flags: `(?i)`, `(?m)`, etc.
+- Lookarounds: `(?=…)`, `(?!…)`, `(?<=…)`, `(?<!…)`
+- Character-class shorthands: `\d`, `\D`, `\w`, `\W`, `\s`, `\S`
+
+Use POSIX classes instead: `[[:digit:]]`, `[[:alpha:]]`, `[[:space:]]`.
+Both `$regex: '…'` (with optional sibling `$options: 'i'`) and
+`$regex: /…/flags` forms are supported; flags from both sources are
+unioned.
+
+### TIMESTAMPTZ precision
+
+Postgres `TIMESTAMPTZ` stores microseconds; JavaScript `Date` stores
+milliseconds. Writes round-trip cleanly as milliseconds; reads of
+values written from outside Meteor may lose sub-millisecond precision.
+
+### `_extra` overflow column
+
+Unknown fields are serialized to JSONB in the `_extra` column. This is
+convenient for flexible schemas but has cost implications:
+
+- Queries on `_extra.foo` paths cannot use column indexes; add a
+  targeted GIN or expression index if you filter on them hotly.
+- Selectors on `_extra` paths type-cast at query time.
+
+Model anything you'll query or sort on as a real column.
+
+### Concurrency
+
+- Multi-document updates wrapping a `$push`/`$pull`/`$addToSet`/`$rename`
+  (fetch-modify-write path) run under `REPEATABLE READ` with 3 retries
+  on serialization failure (40001). Non-FMW updates run with default
+  isolation.
+- Single-document updates with a non-`_id` selector and `options.sort`
+  pick a deterministic row via `ORDER BY … LIMIT 1` inside the UPDATE
+  subquery.
+
+### Security
+
+- All identifiers (table names, column names, JSONB path segments) are
+  double-quoted with embedded quotes doubled; values use `$N`
+  parameterization exclusively.
+- Prototype-bearing keys (`__proto__`, `constructor`, `prototype`) are
+  rejected at every boundary that becomes a SQL identifier or JSONB
+  path.
+- The trigger function is created with
+  `SET search_path = pg_catalog, pg_temp` and uses schema-qualified
+  `pg_catalog.pg_notify` / `pg_catalog.jsonb_build_object` to prevent
+  search-path hijacks.
+- Collection names are validated for length before trigger function
+  naming to avoid NAMEDATALEN (63-byte) collisions.
+
+## Running tests
+
+Unit tests need no database:
+
+```bash
+./packages/test-in-console/run.sh postgres
+```
+
+Integration tests require a live Postgres:
+
+```bash
+export POSTGRES_URL='postgres://postgres:postgres@localhost:5432/test'
+./packages/test-in-console/run.sh postgres
+```
+
+CI runs both via a Postgres service container; see
+`.github/workflows/test-postgres.yml`.

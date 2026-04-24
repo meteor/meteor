@@ -144,12 +144,27 @@ function convertFromColumnValue(value, columnType) {
 
   switch (columnType) {
     case 'numeric':
-      // pg returns strings for numeric precision — convert back
-      if (typeof value === 'string') return parseFloat(value);
+      // pg returns strings for numeric precision — convert back.
+      // Opt-in BigInt fallback via METEOR_POSTGRES_NUMERIC_BIGINT=1 for
+      // integer-valued numerics that overflow JS safe-integer range.
+      if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        if (
+          process.env.METEOR_POSTGRES_NUMERIC_BIGINT === '1' &&
+          !value.includes('.') &&
+          (parsed < Number.MIN_SAFE_INTEGER || parsed > Number.MAX_SAFE_INTEGER)
+        ) {
+          return BigInt(value);
+        }
+        return parsed;
+      }
       return value;
 
     case 'timestamp':
-      // pg driver returns Date objects natively
+      // pg driver returns Date objects natively.
+      // Note: TIMESTAMPTZ subsecond precision may be truncated depending on
+      // node-pg version; consumers needing microsecond precision should store
+      // as text or numeric.
       if (value instanceof Date) return value;
       return new Date(value);
 

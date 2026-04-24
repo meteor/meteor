@@ -39,6 +39,7 @@ import {
   buildDeleteQuery,
   buildUpsertQuery,
 } from './sql_compiler';
+import { POLLING_INTERVAL_MS } from './observe_driver';
 
 // ---------------------------------------------------------------------------
 // Helper: create a test schema
@@ -1626,26 +1627,274 @@ Tinytest.addAsync(
 );
 
 // C4 observe-side end-to-end — observe driver reacts to reconnect event.
+// Integration test: kills the LISTEN backend via pg_terminate_backend,
+// awaits reconnect, inserts a row during the "gap", and verifies the
+// observer surfaces the new row via the catch-up poll.
+if (hasPostgres) {
+  Tinytest.addAsync(
+    'postgres - observe_driver - C4 - reconnect triggers reset + catch-up poll',
+    async (test) => {
+      const table = `test_rc_${Random.id(8).toLowerCase()}`;
+      const provider = new PostgresStreamProvider(POSTGRES_URL);
+      await provider.connect();
+      const schema = new ResolvedSchema({ title: { type: 'text' } });
+      await provider.registerSchema(table, schema);
+
+      try {
+        await provider.insertAsync(table, { _id: 'r1', title: 'before' });
+
+        const driver = provider._connection;
+        const events = [];
+        driver.on('listen:reconnected', (info) => events.push({ type: 'reconnected', info }));
+        driver.on('listen:gave-up', (info) => events.push({ type: 'gave-up', info }));
+
+        const added = [];
+        const handle = await provider.observeChanges(
+          { collectionName: table, selector: {}, options: { sort: { _id: 1 } } },
+          false,
+          {
+            added(id, fields) { added.push({ id, fields }); },
+            changed() {},
+            removed() {},
+          }
+        );
+
+        // Wait for initial snapshot to settle.
+        await new Promise((r) => setTimeout(r, 300));
+        test.equal(added.length, 1, 'initial snapshot saw the pre-existing row');
+
+        // Grab the LISTEN backend PID via the listen client itself.
+        const pidRow = await driver._listenClient.query('SELECT pg_backend_pid() AS pid');
+        const listenPid = pidRow.rows[0].pid;
+
+        // From a separate pool connection, kill the LISTEN backend.
+        await driver.query('SELECT pg_terminate_backend($1)', [listenPid]);
+
+        // Wait for reconnect (bounded).
+        const reconnectStart = Date.now();
+        while (events.length === 0 && Date.now() - reconnectStart < 10000) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        test.isTrue(events.some((e) => e.type === 'reconnected'),
+          'driver emitted listen:reconnected within 10s');
+
+        // Insert a row while the observer is reconciling.
+        await provider.insertAsync(table, { _id: 'r2', title: 'after' });
+
+        // Wait for the catch-up poll to deliver the new row.
+        const pollStart = Date.now();
+        while (added.length < 2 && Date.now() - pollStart < 5000) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+
+        test.equal(added.length, 2, 'observer saw both rows (no rows lost)');
+        const addedIds = added.map((a) => a.id).sort();
+        test.equal(addedIds, ['r1', 'r2'], 'no duplicated ids');
+
+        handle.stop();
+      } finally {
+        await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+        await provider.close();
+      }
+    }
+  );
+}
+
+// ============================================================================
+// REGRESSION TESTS — Security & Correctness Fixes
+// ============================================================================
 //
-// Fully exercising the observe-driver path requires constructing a
-// PostgresObserveDriver (with a real ChangeStream + provider); that would
-// duplicate a large part of the integration-test scaffolding. The event
-// emission half of C4 is covered above; the observe-side reaction is best
-// verified manually against a live DB:
-//
-//   1. Set POSTGRES_URL and start an observeChanges on a collection.
-//   2. Kill the LISTEN client backend via
-//        SELECT pg_terminate_backend(pid) FROM pg_stat_activity
-//         WHERE application_name LIKE '%' AND query LIKE 'LISTEN %';
-//   3. Confirm after reconnect: ChangeStream emits 'reconnected' AND the
-//      driver runs a fresh poll (verify via debug logs or a surprise write
-//      that happened during the gap now showing up promptly).
-Tinytest.add(
-  'postgres - observe_driver - C4 - reconnected signal triggers re-poll (TODO manual)',
-  (test) => {
-    test.isTrue(true,
-      'TODO: cover PostgresObserveDriver reaction to listen:reconnected. ' +
-      'See manual repro steps in the comment above this test.');
+// Each test below locks in a specific Critical/Important fix from the
+// packages/postgres senior review so the failure mode can never silently
+// reappear. Tests are grouped by the file/concern they exercise.
+// ============================================================================
+
+// ---------------------------------------------------------------------------
+// Prototype-pollution guard — unsafe keys must be rejected everywhere a
+// user-supplied string becomes a SQL identifier or JSONB path.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - proto-pollution guard rejects __proto__ in selector top-level key', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ __proto__: { x: 1 } }, schema);
+  }, /unsafe field path/);
+});
+
+Tinytest.add('postgres - regression - proto-pollution guard rejects constructor in dotted selector key', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ 'metadata.constructor.polluted': 'x' }, schema);
+  }, /unsafe field path/);
+});
+
+Tinytest.add('postgres - regression - proto-pollution guard rejects prototype segment in sort', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSort({ 'metadata.prototype': 1 }, schema);
+  }, /unsafe field path/);
+});
+
+Tinytest.add('postgres - regression - proto-pollution guard rejects __proto__ in $set modifier', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileModifier({ $set: { '__proto__.polluted': true } }, schema);
+  }, /unsafe field path/);
+});
+
+// ---------------------------------------------------------------------------
+// PCRE→POSIX regex guard — reject constructs Postgres POSIX ERE does not
+// support instead of silently running a different regex than the caller
+// wrote.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - $regex rejects inline PCRE flags like (?i)', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ title: { $regex: '(?i)hello' } }, schema);
+  }, /PCRE construct/);
+});
+
+Tinytest.add('postgres - regression - $regex rejects lookaheads', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ title: { $regex: 'foo(?=bar)' } }, schema);
+  }, /PCRE construct/);
+});
+
+Tinytest.add('postgres - regression - $regex rejects negative lookbehinds', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ title: { $regex: '(?<!foo)bar' } }, schema);
+  }, /PCRE construct/);
+});
+
+Tinytest.add('postgres - regression - $regex rejects \\d shorthand', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ title: { $regex: '\\d+' } }, schema);
+  }, /PCRE construct/);
+});
+
+Tinytest.add('postgres - regression - $regex allows escaped backslash followed by d (\\\\d is literal)', (test) => {
+  const schema = createTestSchema();
+  // `\\d` in a pattern is a literal backslash followed by `d`, not a
+  // shorthand class. Should NOT trip the guard.
+  const result = compileSelector({ title: { $regex: '\\\\d' } }, schema);
+  test.isTrue(result.text.length > 0);
+});
+
+Tinytest.add('postgres - regression - $not with PCRE regex is rejected', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ title: { $not: /foo(?=bar)/ } }, schema);
+  }, /PCRE construct/);
+});
+
+// ---------------------------------------------------------------------------
+// $options merging — Mongo allows `{ $regex: '...', $options: 'i' }` as a
+// sibling pair; flags from $options must be folded into RegExp flags.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - $options "i" folded into $regex string makes case-insensitive operator', (test) => {
+  const schema = createTestSchema();
+  const result = compileSelector({ title: { $regex: 'hello', $options: 'i' } }, schema);
+  test.isTrue(result.text.includes('~*'), 'case-insensitive regex operator ~* selected');
+});
+
+Tinytest.add('postgres - regression - $options "i" folded when $regex is a RegExp without i flag', (test) => {
+  const schema = createTestSchema();
+  const result = compileSelector({ title: { $regex: /hello/, $options: 'i' } }, schema);
+  test.isTrue(result.text.includes('~*'), 'flags union yields case-insensitive');
+});
+
+// ---------------------------------------------------------------------------
+// $push on scalar / $elemMatch null / schema finite-default
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - $push on non-array value throws', (test) => {
+  const schema = createTestSchema();
+  // `title` is a text column, not an array. $push must not silently coerce.
+  test.throws(() => {
+    compileModifier({ $push: { title: 'x' } }, schema);
+  });
+});
+
+Tinytest.add('postgres - regression - $elemMatch with null does not throw and produces valid SQL', (test) => {
+  const schema = createTestSchema();
+  const result = compileSelector({ tags: { $elemMatch: null } }, schema);
+  test.isTrue(typeof result.text === 'string' && result.text.length > 0);
+});
+
+Tinytest.add('postgres - regression - schema rejects non-finite number default (NaN)', (test) => {
+  const schema = new ResolvedSchema({
+    bad: { type: 'integer', default: NaN },
+  });
+  test.throws(() => schema.getColumnDefinitions(), /finite number/);
+});
+
+Tinytest.add('postgres - regression - schema rejects non-finite number default (Infinity)', (test) => {
+  const schema = new ResolvedSchema({
+    bad: { type: 'numeric', default: Infinity },
+  });
+  test.throws(() => schema.getColumnDefinitions(), /finite number/);
+});
+
+// ---------------------------------------------------------------------------
+// ORDER BY in LIMIT-1 UPDATE subqueries — non-multi update must pick a
+// deterministic row when a selector matches >1 row plus options.sort.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - non-multi update with sort emits ORDER BY inside LIMIT 1 subquery', (test) => {
+  const schema = createTestSchema();
+  const { text } = buildUpdateQuery(
+    'T',
+    { published: true },
+    { $set: { title: 'x' } },
+    { multi: false, sort: { views: -1 } },
+    schema
+  );
+  // The subquery that picks the single target row must carry ORDER BY so
+  // "update oldest/newest/highest" is deterministic. Without it, Postgres
+  // returns an implementation-defined row.
+  test.isTrue(/ORDER BY/.test(text), 'UPDATE subquery includes ORDER BY');
+  test.isTrue(/LIMIT 1/.test(text), 'UPDATE subquery limited to one row');
+});
+
+// ---------------------------------------------------------------------------
+// Observe-driver polling interval clamp — a misconfigured interval must not
+// melt the database with sub-millisecond polling.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - observe_driver POLLING_INTERVAL_MS clamped to >= 100ms', (test) => {
+  // The constant is evaluated once at module load. Whatever it was parsed
+  // from, it must have been clamped up to the 100ms floor.
+  test.isTrue(typeof POLLING_INTERVAL_MS === 'number');
+  test.isTrue(POLLING_INTERVAL_MS >= 100, `interval ${POLLING_INTERVAL_MS} >= 100ms floor`);
+});
+
+// ---------------------------------------------------------------------------
+// Server startup-failure latch — Postgres.Collection / Postgres._query must
+// surface the latched error instead of silently no-oping.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - _query throws latched startup error', (test) => {
+  const latched = new Error('simulated startup failure');
+  Postgres._testSetConnectFailed(latched);
+  try {
+    test.throws(() => Postgres._query('SELECT 1'), /Postgres connection failed at startup/);
+  } finally {
+    Postgres._testSetConnectFailed(null);
   }
-);
+});
+
+Tinytest.add('postgres - regression - Collection constructor throws latched startup error', (test) => {
+  const latched = new Error('simulated startup failure');
+  Postgres._testSetConnectFailed(latched);
+  try {
+    test.throws(() => new Postgres.Collection('t'), /Postgres connection failed at startup/);
+  } finally {
+    Postgres._testSetConnectFailed(null);
+  }
+});
 

@@ -14,14 +14,39 @@
  * share a single driver instance.
  */
 
-import { ChangeStream } from 'meteor/afs';
+// TODO: postgres_stream_provider.js close() should import and call
+// dropCachedDriversForProvider(this) to evict this module's cached drivers
+// when a provider is torn down.
 
-const POLLING_INTERVAL_MS = parseInt(
+import { ChangeStream } from 'meteor/afs';
+import { Random } from 'meteor/random';
+
+// Minimum 100ms to avoid hot loops if a misconfigured env var is provided.
+const _parsedPollingInterval = parseInt(
   process.env.METEOR_POSTGRES_POLLING_INTERVAL_MS || '1000',
   10
 );
+export const POLLING_INTERVAL_MS = Math.max(
+  100,
+  Number.isFinite(_parsedPollingInterval) && _parsedPollingInterval > 0
+    ? _parsedPollingInterval
+    : 1000
+);
 
 const NOTIFY_DEBOUNCE_MS = 50;
+
+// Postgres error codes / Node socket codes that indicate a transient
+// connection-class failure rather than a semantic query error.
+const CONN_ERROR_CODES = new Set([
+  'ECONNREFUSED', 'ECONNRESET', 'ETIMEDOUT', 'EPIPE', 'ENOTFOUND',
+  '57P01', '57P02', '57P03', '08000', '08003', '08006', '08001', '08004'
+]);
+
+function isConnectionError(err) {
+  if (!err) return false;
+  return CONN_ERROR_CODES.has(err.code) ||
+    /connection terminated|connection closed|connection ended/i.test(err.message || '');
+}
 
 // Driver cache: key → PostgresObserveDriver
 const _driverCache = new Map();
@@ -36,7 +61,12 @@ const _driverCache = new Map();
  * @returns {ChangeStream}
  */
 export function getObserveDriver(cursorDescription, ordered, provider) {
-  const key = EJSON.stringify({ ...cursorDescription, ordered });
+  // Key by provider identity so two providers (e.g. two different pools or
+  // connection URLs) don't collide in the module-level cache.
+  const providerId =
+    provider._url ||
+    (provider._cacheKey = provider._cacheKey || Random.id());
+  const key = EJSON.stringify({ providerId, ...cursorDescription, ordered });
 
   if (_driverCache.has(key)) {
     const driver = _driverCache.get(key);
@@ -49,6 +79,26 @@ export function getObserveDriver(cursorDescription, ordered, provider) {
   const driver = new PostgresObserveDriver(cursorDescription, ordered, provider, key);
   _driverCache.set(key, driver);
   return driver._stream;
+}
+
+/**
+ * Drop all cached drivers that belong to the given provider. Intended to be
+ * called from `postgres_stream_provider.js` `close()` so a provider teardown
+ * evicts its drivers (rather than leaving them wired to a closed connection).
+ *
+ * @param {Object} provider
+ */
+export function dropCachedDriversForProvider(provider) {
+  for (const [key, driver] of _driverCache) {
+    if (driver._provider === provider) {
+      _driverCache.delete(key);
+      try {
+        driver.stop();
+      } catch (e) {
+        // best-effort; stop() is idempotent
+      }
+    }
+  }
 }
 
 class PostgresObserveDriver {
@@ -80,7 +130,27 @@ class PostgresObserveDriver {
     this._polling = false;
 
     this._initialized = false;
+    // Tracks whether a reconnect-driven catch-up retry chain is in flight.
+    // Used to coalesce overlapping `listen:reconnected` events so we don't
+    // run multiple retry chains concurrently.
+    this._reconnectRetryInFlight = false;
     this._initPromise = this._init();
+    // If _init() rejects we must surface the error to the stream and stop
+    // the driver — otherwise consumers sit waiting on a ready that never
+    // arrives and we leak timers / listeners.
+    this._initPromise.catch(err => {
+      if (this._stopped) return;
+      try {
+        this._stream.markError(err);
+      } catch (e) {
+        // ignore — stream may already be stopped
+      }
+      try {
+        this.stop();
+      } catch (e) {
+        // ignore — stop() is guarded against re-entry
+      }
+    });
   }
 
   async _init() {
@@ -94,7 +164,10 @@ class PostgresObserveDriver {
         clearTimeout(this._notifyDebounceTimer);
       }
       this._notifyDebounceTimer = setTimeout(() => {
-        this._poll().catch(e => Log.error('Postgres observe poll error:', e));
+        this._poll().catch(e => {
+          Log.error('Postgres observe poll error:', e);
+          if (!isConnectionError(e)) this._stream.markError(e);
+        });
       }, NOTIFY_DEBOUNCE_MS);
     };
 
@@ -125,25 +198,29 @@ class PostgresObserveDriver {
           if (!info.channels.includes(ourChannel)) return;
         }
 
-        // Signal consumers that state may be stale; observe-multiplexer
-        // forwards 'reconnected' through to ChangeStream subscribers.
-        // `reconnected` is the minimum needed here — `reset` would imply
-        // divergence we haven't actually verified yet.
+        // Writes that happened between disconnect and re-LISTEN were never
+        // delivered; divergence is guaranteed, not hypothetical. Emit `reset`
+        // so downstream re-issues the initial snapshot.
         try {
           if (typeof this._stream.emit === 'function') {
-            this._stream.emit('reconnected');
+            this._stream.emit('reset');
           }
         } catch (emitErr) {
-          Log.error('Postgres observe driver: error emitting reconnected:', emitErr);
+          Log.error('Postgres observe driver: error emitting reset:', emitErr);
         }
 
-        // Debounce / coalesce: if a poll is already in flight, just mark
-        // that we need another pass when it finishes. Otherwise poll now.
-        if (this._polling) {
-          this._repollNeeded = true;
+        // Coalesce overlapping reconnects: if a retry chain is already
+        // running, don't start a second one — the in-flight chain will
+        // resolve state for both signals.
+        if (this._reconnectRetryInFlight) {
           return;
         }
-        this._poll().catch(e => Log.error('Postgres observe reconnect poll error:', e));
+        this._reconnectRetryInFlight = true;
+        this._catchUpPollWithRetry()
+          .catch(e => Log.error('Postgres observe reconnect poll error:', e))
+          .then(() => {
+            this._reconnectRetryInFlight = false;
+          });
       };
       connection.on('listen:reconnected', this._reconnectHandler);
     }
@@ -157,14 +234,54 @@ class PostgresObserveDriver {
 
     // Start polling interval
     this._pollTimer = setInterval(() => {
-      this._poll().catch(e => Log.error('Postgres observe poll error:', e));
+      this._poll().catch(e => {
+        Log.error('Postgres observe poll error:', e);
+        if (!isConnectionError(e)) this._stream.markError(e);
+      });
     }, POLLING_INTERVAL_MS);
+  }
+
+  /**
+   * Run the catch-up poll after a listen reconnect, retrying up to 3 times
+   * with backoff + jitter. If all attempts fail we surface the error to the
+   * stream (via markError) so the subscription terminates instead of silently
+   * sitting stale for up to `POLLING_INTERVAL_MS`.
+   *
+   * Delays: 200ms, 500ms, 1000ms, each multiplied by `0.5 + Math.random()`.
+   */
+  async _catchUpPollWithRetry() {
+    const baseDelays = [200, 500, 1000];
+    let lastErr = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (this._stopped) return;
+      try {
+        await this._poll();
+        return;
+      } catch (e) {
+        lastErr = e;
+        Log.error(
+          `Postgres observe catch-up poll attempt ${attempt + 1} failed:`,
+          e
+        );
+        if (attempt < 2) {
+          const delay = baseDelays[attempt] * (0.5 + Math.random());
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    if (this._stopped) return;
+    try {
+      this._stream.markError(lastErr);
+    } catch (e) {
+      // stream may already be stopped
+    }
   }
 
   async _poll() {
     if (this._stopped || this._polling) return;
     this._polling = true;
 
+    let fetchErr = null;
     try {
       const { collectionName, selector, options } = this._cursorDescription;
 
@@ -172,8 +289,22 @@ class PostgresObserveDriver {
       try {
         results = await this._provider._fetchResults(collectionName, selector, options || {});
       } catch (e) {
+        fetchErr = e;
+        if (isConnectionError(e)) {
+          // Transient connection-class error — do NOT markError here; the
+          // normal poll interval / reconnect cycle will recover. We still
+          // propagate the error so the reconnect retry chain can apply
+          // backoff; non-reconnect callers swallow the throw via `.catch`.
+          Meteor._debug(
+            'Postgres observe: transient connection error, will retry',
+            e && e.message ? e.message : e
+          );
+          return;
+        }
+        // Semantic / unexpected error — log it. `markError` is deferred to
+        // the caller (initial-poll handler, retry chain, or periodic poll's
+        // `.catch`) so we don't double-mark when errors rethrow.
         Log.error('Postgres observe query error:', e);
-        this._stream.markError(e);
         return;
       }
 
@@ -193,6 +324,12 @@ class PostgresObserveDriver {
     if (this._repollNeeded && !this._stopped) {
       this._repollNeeded = false;
       this._poll().catch(e => Log.error('Postgres observe coalesced repoll error:', e));
+    }
+
+    // Propagate the fetch error (after finally cleared `_polling`) so callers
+    // can decide whether to retry, markError, or swallow.
+    if (fetchErr) {
+      throw fetchErr;
     }
   }
 

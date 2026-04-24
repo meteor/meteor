@@ -10,6 +10,70 @@ import { resolveField, quoteIdent, quoteLiteral, quoteTextArray } from './schema
 import { documentToRow } from './row_converter';
 
 // ---------------------------------------------------------------------------
+// Security helpers
+// ---------------------------------------------------------------------------
+
+// Prototype-pollution guard: reject any field path whose top-level key or
+// dotted segment is a reserved prototype-bearing name. Applied at every
+// boundary where a user-supplied key becomes part of a SQL identifier or
+// a JSONB path.
+const UNSAFE_KEY_RE = /(?:^|\.)(?:__proto__|constructor|prototype)(?:\.|$)/;
+function assertSafeFieldPath(path) {
+  if (typeof path !== 'string' || UNSAFE_KEY_RE.test(path)) {
+    throw new Error(`Postgres SQL compiler: unsafe field path '${path}'`);
+  }
+}
+
+// PCRE-vs-POSIX-ERE divergence guard: Postgres `~`/`~*` use POSIX ERE,
+// which silently diverges from JavaScript's PCRE on several constructs.
+// Fail loudly instead of executing a different regex than the caller
+// wrote.
+function assertPosixRegex(source) {
+  if (typeof source !== 'string') return;
+
+  // Inline flags like `(?i)` at the start of the pattern.
+  const inlineFlag = source.match(/^\(\?[imsx]\)/);
+  if (inlineFlag) {
+    throw new Error(
+      `Postgres SQL compiler: $regex uses PCRE construct '${inlineFlag[0]}' ` +
+      `that Postgres POSIX regex does not support. ` +
+      `Rewrite using POSIX classes (e.g. [[:digit:]] for \\d).`
+    );
+  }
+
+  // Lookarounds.
+  const lookaround = source.match(/\(\?<?[=!]/);
+  if (lookaround) {
+    throw new Error(
+      `Postgres SQL compiler: $regex uses PCRE construct '${lookaround[0]}' ` +
+      `that Postgres POSIX regex does not support. ` +
+      `Rewrite using POSIX classes (e.g. [[:digit:]] for \\d).`
+    );
+  }
+
+  // Character-class shortcuts \d \D \w \W \s \S. Walk the string so an
+  // even run of backslashes (e.g. `\\d`, which is a literal `\` followed
+  // by `d`) is not treated as a shortcut.
+  let i = 0;
+  while (i < source.length) {
+    if (source[i] !== '\\') { i++; continue; }
+    // Count the consecutive backslash run starting at i.
+    let run = 0;
+    while (i + run < source.length && source[i + run] === '\\') run++;
+    const afterRun = source[i + run];
+    if (run % 2 === 1 && afterRun && /[dDwWsS]/.test(afterRun)) {
+      throw new Error(
+        `Postgres SQL compiler: $regex uses PCRE construct '\\${afterRun}' ` +
+        `that Postgres POSIX regex does not support. ` +
+        `Rewrite using POSIX classes (e.g. [[:digit:]] for \\d).`
+      );
+    }
+    // Skip the run and the escaped character (if any).
+    i += run + (afterRun ? 1 : 0);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // CompilationContext — tracks $N parameter indices and accumulated values
 // ---------------------------------------------------------------------------
 
@@ -86,6 +150,7 @@ function compileSelectorInner(selector, schema, ctx) {
       continue;
     } else {
       // Field-level selector
+      assertSafeFieldPath(key);
       clauses.push(compileFieldSelector(key, value, schema, ctx));
     }
   }
@@ -114,10 +179,16 @@ function compileFieldSelector(fieldPath, value, schema, ctx) {
     return compileEquality(resolved, value, schema, ctx);
   }
 
+  // Pre-scan for $options so it can be folded into the adjacent $regex.
+  // Mongo treats `{ $regex: '...', $options: 'i' }` as a single match; we
+  // must pass the flag string through to the $regex handler because it
+  // only inspects `operand.flags` for RegExp operands, not sibling keys.
+  const extraOptions = typeof value.$options === 'string' ? value.$options : '';
+
   // Compile each operator
   const opClauses = [];
   for (const [op, operand] of Object.entries(value)) {
-    opClauses.push(compileOperator(resolved, op, operand, fieldPath, schema, ctx));
+    opClauses.push(compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOptions));
   }
 
   return opClauses.length === 1 ? opClauses[0] : `(${opClauses.join(' AND ')})`;
@@ -179,7 +250,7 @@ function compileNullCheck(resolved, isNull) {
   return isNull ? `${sqlRef} IS NULL` : `${sqlRef} IS NOT NULL`;
 }
 
-function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
+function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOptions = '') {
   const { kind, sqlRef } = resolved;
 
   switch (op) {
@@ -270,21 +341,28 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
         flags = operand.flags;
       }
 
-      // Check for $options alongside $regex
-      // (handled at the parent level, but operand might have flags)
+      // Fold in $options from the parent operator object (Fix I-2).
+      // Mongo's `{ $regex: '...', $options: 'i' }` surfaces here: flags
+      // from a RegExp operand and the sibling $options string are unioned.
+      if (extraOptions) {
+        for (const ch of extraOptions) {
+          if (!flags.includes(ch)) flags += ch;
+        }
+      }
+
+      // Reject PCRE constructs Postgres POSIX ERE does not support (Fix I-1).
+      assertPosixRegex(pattern);
+
       const caseInsensitive = flags.includes('i');
       const regexOp = caseInsensitive ? '~*' : '~';
 
-      if (kind === 'column' || kind === 'jsonb_column') {
-        const param = ctx.addParam(pattern);
-        return `${sqlRef} ${regexOp} ${param}`;
-      }
       const param = ctx.addParam(pattern);
       return `${sqlRef} ${regexOp} ${param}`;
     }
 
     case '$options':
-      // Handled as part of $regex — ignored standalone
+      // Consumed alongside $regex (see extraOptions folding above). A
+      // bare $options with no adjacent $regex is a no-op.
       return 'TRUE';
 
     case '$mod': {
@@ -315,6 +393,7 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
       // $not with a regex
       if (operand instanceof RegExp) {
         const pattern = operand.source;
+        assertPosixRegex(pattern);
         const caseInsensitive = operand.flags.includes('i');
         const regexOp = caseInsensitive ? '~*' : '~';
         const param = ctx.addParam(pattern);
@@ -372,6 +451,14 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx) {
             for (const [subOp, subOperand] of Object.entries(subVal)) {
               innerClauses.push(compileElemOperator(subRef, subOp, subOperand, ctx));
             }
+          } else if (subVal === null || subVal === undefined) {
+            // Mongo semantics: match when the array element's key is
+            // JSON null or absent. Stringifying `null` to `'null'` would
+            // silently match the literal string "null", which is wrong.
+            innerClauses.push(
+              `(jsonb_typeof(elem->${quoteLiteral(subKey)}) = 'null' ` +
+              `OR NOT (elem ? ${quoteLiteral(subKey)}))`
+            );
           } else {
             const param = ctx.addParam(typeof subVal === 'string' ? subVal : String(subVal));
             innerClauses.push(`${subRef} = ${param}`);
@@ -420,7 +507,9 @@ function compileElemOperator(ref, op, operand, ctx) {
       return `${ref}::text != ${param}`;
     }
     case '$regex': {
-      const param = ctx.addParam(operand instanceof RegExp ? operand.source : operand);
+      const pattern = operand instanceof RegExp ? operand.source : operand;
+      assertPosixRegex(pattern);
+      const param = ctx.addParam(pattern);
       return `${ref}::text ~ ${param}`;
     }
     default:
@@ -488,6 +577,7 @@ export function compileModifier(modifier, schema) {
     switch (op) {
       case '$set':
         for (const [field, value] of Object.entries(fields)) {
+          assertSafeFieldPath(field);
           const clause = compileSet(field, value, schema, ctx);
           if (clause) setClauses.push(clause);
         }
@@ -495,6 +585,7 @@ export function compileModifier(modifier, schema) {
 
       case '$unset':
         for (const [field] of Object.entries(fields)) {
+          assertSafeFieldPath(field);
           const clause = compileUnset(field, schema, ctx);
           if (clause) setClauses.push(clause);
         }
@@ -502,6 +593,7 @@ export function compileModifier(modifier, schema) {
 
       case '$inc':
         for (const [field, value] of Object.entries(fields)) {
+          assertSafeFieldPath(field);
           const clause = compileInc(field, value, schema, ctx);
           if (clause) setClauses.push(clause);
         }
@@ -509,6 +601,7 @@ export function compileModifier(modifier, schema) {
 
       case '$mul':
         for (const [field, value] of Object.entries(fields)) {
+          assertSafeFieldPath(field);
           const clause = compileMul(field, value, schema, ctx);
           if (clause) setClauses.push(clause);
         }
@@ -516,6 +609,7 @@ export function compileModifier(modifier, schema) {
 
       case '$min':
         for (const [field, value] of Object.entries(fields)) {
+          assertSafeFieldPath(field);
           const clause = compileMin(field, value, schema, ctx);
           if (clause) setClauses.push(clause);
         }
@@ -523,6 +617,7 @@ export function compileModifier(modifier, schema) {
 
       case '$max':
         for (const [field, value] of Object.entries(fields)) {
+          assertSafeFieldPath(field);
           const clause = compileMax(field, value, schema, ctx);
           if (clause) setClauses.push(clause);
         }
@@ -530,6 +625,7 @@ export function compileModifier(modifier, schema) {
 
       case '$currentDate':
         for (const [field] of Object.entries(fields)) {
+          assertSafeFieldPath(field);
           const clause = compileCurrentDate(field, schema);
           if (clause) setClauses.push(clause);
         }
@@ -549,6 +645,7 @@ export function compileModifier(modifier, schema) {
         // Check if we can do a simple $push without $each/$position/$slice/$sort
         if (op === '$push') {
           for (const [field, value] of Object.entries(fields)) {
+            assertSafeFieldPath(field);
             if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date) && ('$each' in value || '$position' in value || '$slice' in value || '$sort' in value)) {
               needsFetchModifyWrite = true;
               fetchModifyWriteOps.push(op);
@@ -753,6 +850,16 @@ function compileSimplePush(field, value, schema, ctx) {
     return `_extra = jsonb_set(COALESCE(_extra, '{}'), ${quoteTextArray([topField])}, COALESCE(_extra->${quoteLiteral(topField)}, '[]'::jsonb) || ${param}::jsonb)`;
   }
 
+  // A regular scalar column (kind === 'column') cannot hold an array.
+  // Silently dropping the clause used to hide the mismatch; throw so the
+  // caller sees the schema error instead of a successful no-op UPDATE.
+  if (resolved.kind === 'column') {
+    throw new Error(
+      `Postgres SQL compiler: $push requires a JSONB/array column; ` +
+      `field "${field}" is a scalar column`
+    );
+  }
+
   return null;
 }
 
@@ -812,6 +919,7 @@ export function compileSort(sortSpec, schema) {
   if (entries.length === 0) return '';
 
   const parts = entries.map(([field, dir]) => {
+    assertSafeFieldPath(field);
     const resolved = resolveField(field, schema);
     const direction = dir === -1 || dir === 'desc' ? 'DESC' : 'ASC';
     return `${resolved.sqlRef} ${direction} NULLS LAST`;
@@ -931,8 +1039,16 @@ export function buildUpdateQuery(table, selector, modifier, options, schema) {
   if (options && options.multi) {
     sql = `UPDATE ${quoteIdent(table)} SET ${setClauses.join(', ')} WHERE ${rebasedWhere}`;
   } else {
-    // Non-multi: update only the first matching row
-    sql = `UPDATE ${quoteIdent(table)} SET ${setClauses.join(', ')} WHERE _id = (SELECT _id FROM ${quoteIdent(table)} WHERE ${rebasedWhere} LIMIT 1)`;
+    // Non-multi: update only the first matching row. Without an ORDER BY
+    // the LIMIT 1 subquery picks an arbitrary row — Mongo promises
+    // deterministic ordering, either from the caller's `sort` option or
+    // (by default) the oldest `_id`.
+    let orderBy;
+    if (options && options.sort) {
+      orderBy = compileSort(options.sort, schema);
+    }
+    if (!orderBy) orderBy = `${quoteIdent('_id')} ASC`;
+    sql = `UPDATE ${quoteIdent(table)} SET ${setClauses.join(', ')} WHERE _id = (SELECT _id FROM ${quoteIdent(table)} WHERE ${rebasedWhere} ORDER BY ${orderBy} LIMIT 1)`;
   }
 
   return { text: sql, values: allValues, needsFetchModifyWrite: false, fetchModifyWriteOps: [] };
@@ -1002,10 +1118,11 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
   // Build the would-be-inserted doc from selector + modifier fields.
   // Only scalar selector fields are eligible (selector can contain operator
   // objects like { $gt: 5 } that must not leak into the inserted row).
-  const insertDoc = {};
+  const insertDoc = Object.create(null);
   if (typeof selector === 'object' && selector !== null) {
     for (const [key, value] of Object.entries(selector)) {
       if (key.startsWith('$')) continue;
+      assertSafeFieldPath(key);
       if (value === null || value === undefined) continue;
       if (typeof value === 'object' && !(value instanceof Date) && !Array.isArray(value)) {
         // Operator object (e.g. { $gt: 5 }) or plain object — skip.
@@ -1022,12 +1139,20 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
   }
 
   // Apply $set / $setOnInsert for the insert case so the new row starts
-  // with modifier-supplied values.
+  // with modifier-supplied values. Guard each key against prototype
+  // pollution before copying — Object.assign would otherwise let a
+  // crafted key like "__proto__" poison the prototype chain.
   if (modifier.$set) {
-    Object.assign(insertDoc, modifier.$set);
+    for (const [k, v] of Object.entries(modifier.$set)) {
+      assertSafeFieldPath(k);
+      insertDoc[k] = v;
+    }
   }
   if (modifier.$setOnInsert) {
-    Object.assign(insertDoc, modifier.$setOnInsert);
+    for (const [k, v] of Object.entries(modifier.$setOnInsert)) {
+      assertSafeFieldPath(k);
+      insertDoc[k] = v;
+    }
   }
 
   const row = documentToRow(insertDoc, schema);
@@ -1105,7 +1230,7 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
   const sql =
     `WITH updated AS (` +
       `UPDATE ${quotedTable} SET ${setSql} ` +
-      `WHERE _id = (SELECT _id FROM ${quotedTable} WHERE ${rebasedWhere} LIMIT 1) ` +
+      `WHERE _id = (SELECT _id FROM ${quotedTable} WHERE ${rebasedWhere} ORDER BY ${quoteIdent('_id')} ASC LIMIT 1) ` +
       `RETURNING _id` +
     `), inserted AS (` +
       `INSERT INTO ${quotedTable} (${columns.join(', ')}) ` +

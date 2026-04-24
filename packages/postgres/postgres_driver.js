@@ -40,17 +40,64 @@ export class PostgresConnection extends EventEmitter {
    */
   constructor(url, options = {}) {
     super();
-    this.setMaxListeners(0);
+    // Finite maxListeners: default 1024, overridable via env, floor of 64.
+    // Avoids the "possible EventEmitter memory leak" warning being silenced
+    // entirely (0 = unlimited) while still allowing many concurrent
+    // subscribers to attach listen:* / callback-error handlers.
+    const maxListeners = Math.max(
+      64,
+      parseInt(process.env.METEOR_POSTGRES_MAX_LISTENERS, 10) || 1024
+    );
+    this.setMaxListeners(maxListeners);
     this._url = url;
     this._options = options;
     this._pool = null;
     this._listenClient = null;
     this._knownTables = new Set();
-    this._notifyCallbacks = new Map(); // collectionName -> Set of callbacks
+    this._notifyCallbacks = new Map(); // channel -> Set of callbacks
     this._connected = false;
+
+    // Serialize LISTEN/UNLISTEN per channel (keyed by channel name, same as
+    // _notifyCallbacks). Prevents interleaving between setupListenNotify and
+    // removeListenNotify when concurrent observers race on the same channel.
+    this._channelOps = new Map(); // channel -> Promise chain of ops
+
+    // Shutdown flag + pending abort hook so _reconnectListenClient can exit
+    // its backoff loop cleanly when close() is called mid-retry.
+    this._shutdown = false;
+    this._abortReconnectSleep = null;
 
     // Lazy-load pg to avoid issues during package load
     this._pg = null;
+  }
+
+  /**
+   * Serialize operations that mutate LISTEN state for a single channel.
+   * Both LISTEN (setupListenNotify) and UNLISTEN (removeListenNotify) paths
+   * run through this queue so the `_notifyCallbacks.has(channel)` check and
+   * the SQL that follows it can't interleave across coroutines.
+   *
+   * @param {string} channel
+   * @param {() => Promise<any>} op
+   * @returns {Promise<any>}
+   * @private
+   */
+  _enqueueChannelOp(channel, op) {
+    const prev = this._channelOps.get(channel) ?? Promise.resolve();
+    // Run `op` whether the previous op resolved or rejected — a failure in a
+    // prior setup/teardown on this channel must not block later operations.
+    const next = prev.then(op, op);
+    this._channelOps.set(
+      channel,
+      next.finally(() => {
+        // Only clear the slot if nothing newer has been chained on top,
+        // otherwise we'd orphan the tail of the chain.
+        if (this._channelOps.get(channel) === next) {
+          this._channelOps.delete(channel);
+        }
+      })
+    );
+    return next;
   }
 
   _getPg() {
@@ -90,6 +137,15 @@ export class PostgresConnection extends EventEmitter {
    * Drain the pool and close all connections.
    */
   async close() {
+    // Mark shutdown first so any in-flight reconnect loop sees the flag on
+    // its next iteration and exits instead of re-acquiring a client from a
+    // pool we're about to end.
+    this._shutdown = true;
+    if (typeof this._abortReconnectSleep === 'function') {
+      try { this._abortReconnectSleep(); } catch (e) { /* ignore */ }
+      this._abortReconnectSleep = null;
+    }
+
     if (this._listenClient) {
       try {
         this._listenClient.release();
@@ -107,6 +163,7 @@ export class PostgresConnection extends EventEmitter {
     this._connected = false;
     this._knownTables.clear();
     this._notifyCallbacks.clear();
+    this._channelOps.clear();
     this.emit('disconnected');
   }
 
@@ -118,7 +175,56 @@ export class PostgresConnection extends EventEmitter {
    */
   async query(text, params) {
     if (!this._pool) throw new Error('PostgresConnection is not connected');
+    this._warnIfUnregisteredTables(text);
     return this._pool.query(text, params);
+  }
+
+  /**
+   * Best-effort scan for plain collection-name references in a raw SQL
+   * string. Warns (but does NOT block) if any look-alike identifier has
+   * never been registered via ensureTable(). This helps catch typos /
+   * missing schemas in user-supplied SQL without punishing legitimate raw
+   * SQL against foreign tables.
+   * @param {string} text
+   * @private
+   */
+  _warnIfUnregisteredTables(text) {
+    if (typeof text !== 'string' || text.length === 0) return;
+    // Each regex is anchored to a keyword and captures the first identifier
+    // (optionally double-quoted). Case-insensitive + global.
+    const patterns = [
+      /\bFROM\s+"?(\w+)"?/gi,
+      /\bUPDATE\s+"?(\w+)"?/gi,
+      /\bINSERT\s+INTO\s+"?(\w+)"?/gi,
+      /\bDELETE\s+FROM\s+"?(\w+)"?/gi,
+    ];
+    const seen = new Set();
+    for (const re of patterns) {
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        const name = m[1];
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        // Skip schema-qualified ("schema.table" would be split across tokens),
+        // system tables, and anything already registered.
+        if (name.startsWith('pg_')) continue;
+        if (name.toLowerCase() === 'information_schema') continue;
+        if (this._knownTables.has(name)) continue;
+        // A dot immediately after the match indicates a schema qualifier
+        // like `public.users` — we captured `public`, which isn't a
+        // collection name; skip.
+        const after = text.slice(re.lastIndex, re.lastIndex + 1);
+        if (after === '.') continue;
+        try {
+          Meteor._debug(
+            `Postgres: table "${name}" is not registered as a Meteor collection. ` +
+            `If this is intentional raw SQL this warning can be ignored.`
+          );
+        } catch (e) {
+          // Meteor._debug may not be available in every test harness; fail silent.
+        }
+      }
+    }
   }
 
   /**
@@ -189,19 +295,26 @@ export class PostgresConnection extends EventEmitter {
     const triggerName = `${channel}_notify_trigger`;
     const quotedTriggerName = quoteLiteral(triggerName);
 
+    // SET search_path = pg_catalog, pg_temp on the function so a caller
+    // with a hostile search_path can't shadow pg_notify / jsonb_build_object
+    // with their own functions in a user schema. Built-ins are also
+    // fully-qualified as defense in depth.
     const fnSql = `
       CREATE OR REPLACE FUNCTION ${quoteIdent(triggerFnName)}()
-      RETURNS TRIGGER AS $$
+      RETURNS TRIGGER
+      LANGUAGE plpgsql
+      SET search_path = pg_catalog, pg_temp
+      AS $$
       BEGIN
         IF TG_OP = 'DELETE' THEN
-          PERFORM pg_notify(${quotedChannel}, json_build_object('op', TG_OP, 'id', OLD._id)::text);
+          PERFORM pg_catalog.pg_notify(${quotedChannel}, pg_catalog.jsonb_build_object('op', TG_OP, 'id', OLD._id)::text);
           RETURN OLD;
         ELSE
-          PERFORM pg_notify(${quotedChannel}, json_build_object('op', TG_OP, 'id', NEW._id)::text);
+          PERFORM pg_catalog.pg_notify(${quotedChannel}, pg_catalog.jsonb_build_object('op', TG_OP, 'id', NEW._id)::text);
           RETURN NEW;
         END IF;
       END;
-      $$ LANGUAGE plpgsql;
+      $$;
     `;
 
     const triggerSql = `
@@ -218,36 +331,42 @@ export class PostgresConnection extends EventEmitter {
       $$;
     `;
 
-    // Register callback
-    const shouldListen = !this._notifyCallbacks.has(channel);
-    if (shouldListen) {
-      const client = await this.getClient();
-      try {
-        await client.query('BEGIN');
-        await client.query(fnSql);
-        await client.query(triggerSql);
-        await client.query('COMMIT');
-      } catch (error) {
+    // Serialize with any in-flight LISTEN/UNLISTEN for this same channel.
+    // The `shouldListen` check, callback-set mutation, trigger DDL, and
+    // LISTEN SQL must all run atomically with respect to other channel ops
+    // — otherwise a concurrent removeListenNotify can delete the callback
+    // set between our check and our LISTEN, or vice versa.
+    await this._enqueueChannelOp(channel, async () => {
+      const shouldListen = !this._notifyCallbacks.has(channel);
+      if (shouldListen) {
+        const client = await this.getClient();
         try {
-          await client.query('ROLLBACK');
-        } catch (rollbackError) {
-          Log.error('Postgres: rollback failed after trigger/function setup error:', rollbackError);
+          await client.query('BEGIN');
+          await client.query(fnSql);
+          await client.query(triggerSql);
+          await client.query('COMMIT');
+        } catch (error) {
+          try {
+            await client.query('ROLLBACK');
+          } catch (rollbackError) {
+            Log.error('Postgres: rollback failed after trigger/function setup error:', rollbackError);
+          }
+          throw error;
+        } finally {
+          client.release();
         }
-        throw error;
-      } finally {
-        client.release();
+
+        this._notifyCallbacks.set(channel, new Set());
       }
+      this._notifyCallbacks.get(channel).add(callback);
 
-      this._notifyCallbacks.set(channel, new Set());
-    }
-    this._notifyCallbacks.get(channel).add(callback);
-
-    // Set up LISTEN on dedicated client (once)
-    await this._ensureListenClient();
-    if (shouldListen) {
-      await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
-    }
-    this.emit('listen:ready', { channel, collectionName });
+      // Set up LISTEN on dedicated client (once)
+      await this._ensureListenClient();
+      if (shouldListen) {
+        await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
+      }
+      this.emit('listen:ready', { channel, collectionName });
+    });
   }
 
   /**
@@ -267,15 +386,36 @@ export class PostgresConnection extends EventEmitter {
    */
   async _reconnectListenClient() {
     if (!this._connected) return; // Pool is closed, give up
+    if (this._shutdown) return;
     if (this._listenClient) return; // Already reconnected
 
     let delay = 1000;
     const maxDelay = 30000;
+    const maxAttempts = Math.max(
+      1,
+      parseInt(process.env.METEOR_POSTGRES_MAX_RECONNECT_ATTEMPTS, 10) || 10
+    );
 
     this.emit('listen:reconnecting');
 
-    const attempt = async () => {
-      if (!this._connected) return;
+    // Cancellable sleep: resolves normally on timeout, or early when
+    // close() invokes the abort hook. We expose the aborter on `this`
+    // so close() can break us out of the wait synchronously.
+    const cancellableSleep = (ms) => new Promise((resolve) => {
+      const timer = setTimeout(() => {
+        this._abortReconnectSleep = null;
+        resolve();
+      }, ms);
+      this._abortReconnectSleep = () => {
+        clearTimeout(timer);
+        this._abortReconnectSleep = null;
+        resolve();
+      };
+    });
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      if (!this._connected || this._shutdown) return;
       if (this._listenClient) return;
 
       try {
@@ -294,15 +434,33 @@ export class PostgresConnection extends EventEmitter {
         // during the disconnect gap would otherwise never surface until
         // the next regular poll tick.
         this.emit('listen:reconnected', { channels: replayedChannels });
+        return;
       } catch (e) {
-        Log.warn('Postgres: LISTEN reconnect failed, retrying in ' + delay + 'ms');
-        const nextDelay = delay;
-        delay = Math.min(delay * 2, maxDelay);
-        setTimeout(() => attempt(), nextDelay);
-      }
-    };
+        lastError = e;
+        // Jitter: 0.5x–1.5x of the current base delay. Prevents thundering
+        // herd when many connections fail at the same moment.
+        const jittered = Math.floor(delay * (0.5 + Math.random()));
+        Log.warn('Postgres: LISTEN reconnect failed (attempt ' + attempt +
+          '/' + maxAttempts + '), retrying in ' + jittered + 'ms');
+        this.emit('listen:reconnect-attempt', { attempt, delayMs: jittered });
 
-    await attempt();
+        if (attempt === maxAttempts) break;
+
+        await cancellableSleep(jittered);
+        if (!this._connected || this._shutdown) return;
+
+        delay = Math.min(delay * 2, maxDelay);
+      }
+    }
+
+    // Exhausted retries — tear down listener state and surface the failure
+    // so observers can decide whether to fall back to polling-only mode.
+    this._notifyCallbacks.clear();
+    if (this._listenClient) {
+      try { this._listenClient.release(); } catch (e) { /* ignore */ }
+      this._listenClient = null;
+    }
+    this.emit('listen:gave-up', { attempts: maxAttempts, error: lastError });
   }
 
   /**
@@ -362,8 +520,12 @@ export class PostgresConnection extends EventEmitter {
    */
   async removeListenNotify(collectionName, callback) {
     const channel = `meteor_pg_${collectionName}`;
-    const callbacks = this._notifyCallbacks.get(channel);
-    if (callbacks) {
+    // Serialize with any in-flight LISTEN/UNLISTEN for this channel so the
+    // callback-set mutation, the emptiness check, and the UNLISTEN SQL are
+    // atomic relative to a concurrent setupListenNotify on the same channel.
+    await this._enqueueChannelOp(channel, async () => {
+      const callbacks = this._notifyCallbacks.get(channel);
+      if (!callbacks) return;
       callbacks.delete(callback);
       if (callbacks.size === 0) {
         this._notifyCallbacks.delete(channel);
@@ -375,7 +537,7 @@ export class PostgresConnection extends EventEmitter {
           }
         }
       }
-    }
+    });
   }
 
   /**
