@@ -95,54 +95,75 @@ Tinytest.addAsync('jobs - cron - dedup key format is cron:{name}:{isoTime}', asy
   Jobs._resetRegistry();
   Jobs.configure({ testMode: 'manual' });
 
+  const { Random } = require('meteor/random');
   const name = uniqueName('dedup');
   Jobs.register({
     name,
-    schedule: '0 0 * * *', // Daily at midnight
+    schedule: '0 0 * * *', // Daily at midnight UTC
     timezone: 'UTC',
+    missedRun: 'run-once',
     run() { return 'ok'; },
   });
 
-  // Manually insert a cron job to verify the dedup key format
-  const fireTime = new Date('2030-01-01T00:00:00.000Z');
-  const doc = {
-    _id: require('meteor/random').Random.id(),
+  // Seed a prior midnight-UTC run three days ago so detectMissedRuns will
+  // compute the next fire time (the following midnight) and insert a
+  // catch-up document. Asserting against *that* scheduler-generated
+  // document validates the real dedup-key producer, not our own input.
+  const priorRun = new Date();
+  priorRun.setUTCHours(0, 0, 0, 0);
+  priorRun.setUTCDate(priorRun.getUTCDate() - 3);
+
+  await Jobs._collection.insertAsync({
+    _id: Random.id(),
     name,
-    status: 'ready',
+    status: 'completed',
+    source: 'cron',
     data: {},
-    scheduledAt: fireTime,
+    scheduledAt: priorRun,
     cronSchedule: '0 0 * * *',
     timezone: 'UTC',
-    dedupKey: `cron:${name}:${fireTime.toISOString()}`,
-    source: 'cron',
+    dedupKey: `cron:${name}:${priorRun.toISOString()}`,
     result: null,
     offload: false,
     priority: 0,
     timeout: 300000,
-    attempts: 0,
-    maxAttempts: 4,
+    attempts: 1,
+    maxAttempts: 1,
     lastError: null,
     nextRetryAt: null,
     onDuplicate: null,
     claimedBy: null,
     claimedAt: null,
     heartbeatAt: null,
-    createdAt: new Date(),
+    createdAt: priorRun,
     startedAt: null,
-    completedAt: null,
+    completedAt: new Date(),
     failedAt: null,
     runId: null,
-  };
+  });
 
-  await Jobs._collection.insertAsync(doc);
+  try {
+    await Jobs._startCron();
 
-  const found = await Jobs._collection.findOneAsync({ _id: doc._id });
-  test.isNotNull(found);
-  test.equal(found.dedupKey, `cron:${name}:2030-01-01T00:00:00.000Z`);
-  test.matches(found.dedupKey, /^cron:.+:\d{4}-\d{2}-\d{2}T/);
-
-  // Clean up
-  await Jobs._collection.removeAsync({ _id: doc._id });
+    const inserted = await Jobs._collection.findOneAsync({
+      name,
+      source: 'cron',
+      scheduledAt: { $gt: priorRun },
+    });
+    test.isNotNull(inserted, 'scheduler should have inserted a catch-up doc');
+    test.equal(
+      inserted.dedupKey,
+      `cron:${name}:${inserted.scheduledAt.toISOString()}`,
+      'dedup key must be cron:{name}:{scheduledAt-ISO}'
+    );
+    test.matches(
+      inserted.dedupKey,
+      /^cron:.+:\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+    );
+  } finally {
+    Jobs._stopCron();
+    await Jobs._collection.removeAsync({ name });
+  }
 });
 
 // ---------------------------------------------------------------------------
