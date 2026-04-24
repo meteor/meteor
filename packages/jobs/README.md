@@ -273,7 +273,7 @@ When a job is offloaded, the second argument to `run` is a thread-context bridge
 Jobs.register({
   name: 'processImage',
   offload: true,
-  run(data, { Collections, Meteor }) {
+  async run(data, { Collections, Meteor }) {
     // This runs in a worker thread.
 
     // Collections is a universal proxy -- use any collection by name.
@@ -296,7 +296,7 @@ Jobs.register({
 The `Collections` proxy supports all the standard async collection methods:
 
 ```js
-run(data, { Collections, Meteor }) {
+async run(data, { Collections, Meteor }) {
   // Reading
   const doc = await Collections.Orders.findOneAsync({ _id: data.orderId });
   const docs = await Collections.Orders.find({ status: 'pending' }).fetchAsync();
