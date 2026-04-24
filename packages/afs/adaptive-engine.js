@@ -267,9 +267,15 @@ export class AdaptiveEngine {
    */
   _notifySlotAvailable(type) {
     const waiting = this._waitingForSlot[type];
-    if (waiting && waiting.length > 0 && !this.shouldApplyBackpressure(type)) {
-      const { resolve } = waiting.shift();
-      resolve(this.acquireSlot(type));
+    while (waiting && waiting.length > 0 && !this.shouldApplyBackpressure(type)) {
+      const waiter = waiting.shift();
+      // Skip waiters that already timed out and settled — acquireSlot()
+      // would otherwise bump the pending counter for a dead waiter whose
+      // release function nobody will ever call. See waitForSlot below.
+      if (waiter.settled) continue;
+      waiter.settled = true;
+      waiter.resolve(this.acquireSlot(type));
+      return;
     }
   }
 
@@ -285,22 +291,31 @@ export class AdaptiveEngine {
       return this.acquireSlot(type);
     }
 
+    const self = this;
     return new Promise((resolve, reject) => {
+      // Shared waiter state. Both the timer and _notifySlotAvailable flip
+      // `settled` so neither path can double-fire: if the timer trips
+      // first, _notifySlotAvailable will skip this entry (no acquireSlot
+      // leak); if _notifySlotAvailable fires first, the timer becomes a
+      // no-op via clearTimeout.
+      const waiter = { settled: false, resolve: null };
+
       const timer = setTimeout(() => {
-        // Remove from queue
-        const waiting = this._waitingForSlot[type];
-        const idx = waiting.findIndex(w => w.resolve === wrappedResolve);
+        if (waiter.settled) return;
+        waiter.settled = true;
+        const waiting = self._waitingForSlot[type];
+        const idx = waiting.indexOf(waiter);
         if (idx !== -1) waiting.splice(idx, 1);
-        this._metrics.backpressureEvents++;
+        self._metrics.backpressureEvents++;
         reject(new Meteor.Error('backpressure', `Too many pending ${type} operations.`));
       }, timeout);
 
-      const wrappedResolve = (slot) => {
+      waiter.resolve = (slot) => {
         clearTimeout(timer);
         resolve(slot);
       };
 
-      this._waitingForSlot[type].push({ resolve: wrappedResolve });
+      self._waitingForSlot[type].push(waiter);
     });
   }
 

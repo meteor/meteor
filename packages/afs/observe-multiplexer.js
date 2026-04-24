@@ -6,6 +6,18 @@
  *
  * Inspired by Mongo's ObserveMultiplexer but built on EventEmitter-based
  * ChangeStream rather than direct callbacks.
+ *
+ * ## Observer callback contract
+ *
+ * Consumer callbacks (added/addedBefore/changed/removed/movedBefore,
+ * error, reconnected, reset, paused, resumed) MUST NOT throw. A throwing
+ * callback is caught and logged to console.error as a last-resort
+ * diagnostic — the error does NOT stop the handle, tear down the
+ * subscription, or propagate to other handles. Observers that need to
+ * signal a fatal condition should call `stop()` explicitly.
+ *
+ * Async callbacks returning a rejected promise are handled the same way:
+ * the rejection is caught and logged; the handle remains active.
  */
 
 export class ObserveMultiplexer {
@@ -27,6 +39,10 @@ export class ObserveMultiplexer {
     // 'reconnected', 'reset') that don't mutate the cache aren't lost.
     this._pendingHandles = new Map();
     this._handleIdCounter = 0;
+    // Cached count of handles with mutating callbacks. Avoids an O(n) scan
+    // on every cache-mutating event when fan-out asks whether args need
+    // cloning.
+    this._mutatingHandleCount = 0;
 
     // Cache current result set using Minimongo's caching observer
     this._cache = new LocalCollection._CachingChangeObserver({
@@ -49,14 +65,13 @@ export class ObserveMultiplexer {
    * Returns false (skip the clone) when every handle has
    * `nonMutatingCallbacks: true`, or when there is only a single handle. In
    * both cases there is no mutation-induced aliasing risk between handles.
+   * Uses `_mutatingHandleCount` so the check is O(1) per cache-mutating
+   * event regardless of handle count.
    * @private
    */
   _handlesNeedCloning() {
     if (this._handles.size <= 1) return false;
-    for (const [, handle] of this._handles) {
-      if (!handle.nonMutatingCallbacks) return true;
-    }
-    return false;
+    return this._mutatingHandleCount > 0;
   }
 
   /**
@@ -109,12 +124,15 @@ export class ObserveMultiplexer {
           }
         }
 
-        // NOTE: cache-mutating events (added/changed/removed/addedBefore/
-        // movedBefore) are NOT buffered for pending handles — the cache has
-        // already absorbed them, and _sendInitialAdds will deliver the
-        // resulting state from the cache. Buffering here would cause
-        // duplicates. Only live-only lifecycle events need the buffer
-        // (see the 'error' and lifecycle handlers below).
+        // Buffer cache-mutating events for any handle mid-addHandle so the
+        // handle does not miss deltas that fire while it is receiving its
+        // initial adds. addHandle replays buffered events after its snapshot
+        // has been delivered, which brings the handle to the current state.
+        if (this._pendingHandles.size > 0) {
+          for (const [, queue] of this._pendingHandles) {
+            queue.push({ name, args });
+          }
+        }
       });
     }
 
@@ -189,26 +207,42 @@ export class ObserveMultiplexer {
       _stopped: false,
     };
 
-    // Register as pending BEFORE awaiting readiness so any live emission that
-    // happens during the initial-adds window is captured and replayed.
+    // Register as pending BEFORE awaiting readiness. Any live emission
+    // (cache-mutating AND lifecycle) that fires while this handle is
+    // mid-setup will be captured here and replayed after initial adds.
     this._pendingHandles.set(id, []);
 
     try {
       // Wait for initial data to be ready
       await this._readyPromise;
 
-      // Send initial adds BEFORE adding to handles (so live events don't interleave)
-      this._sendInitialAdds(handle);
+      // Snapshot the cache BEFORE sending initial adds. Sending directly
+      // from this._cache.docs is unsafe when consumer callbacks can
+      // synchronously mutate the collection: the iteration would observe
+      // partially-mutated state and the cache-mutating events that fire
+      // during the iteration would be dropped for this handle (it is not
+      // yet in _handles). The snapshot-plus-replay pattern below avoids
+      // both problems.
+      const snapshot = this._snapshotCache();
 
-      // NOW add to handles — live events will fan out from this point
-      this._handles.set(id, handle);
+      // Send initial adds from the snapshot. Callbacks may synchronously
+      // mutate the collection; resulting events land in _pendingHandles.
+      this._sendInitialAddsFromSnapshot(handle, snapshot);
 
-      // Drain live-only lifecycle events (error/reconnected/reset/paused/
-      // resumed) that fired during the initial-adds window. Cache-mutating
-      // events (added/changed/removed/...) are NOT buffered here because the
-      // cache already absorbed them and _sendInitialAdds delivered them.
-      const queue = this._pendingHandles.get(id) || [];
-      for (const { name, args } of queue) {
+      // A reentrant stop() during the snapshot is possible. Skip the
+      // promotion to _handles and drop the buffered queue in that case.
+      if (handle._stopped) {
+        return this._makeHandle(id, handle);
+      }
+
+      // Drain everything buffered during the snapshot window, in FIFO
+      // order. The handle is NOT yet in _handles, so live mutations fired
+      // by drain callbacks only enter the buffer (not the fan-out path);
+      // that prevents double-delivery while preserving chronological
+      // order of the original events relative to any reentrant emissions.
+      const queue = this._pendingHandles.get(id);
+      while (queue && queue.length > 0) {
+        const { name, args } = queue.shift();
         if (handle._stopped) break;
         const cb = handle.callbacks[name];
         if (!cb) continue;
@@ -223,16 +257,36 @@ export class ObserveMultiplexer {
           console.error(`Error in observeChanges ${name} callback:`, err);
         }
       }
+
+      // Handle may have been stopped during the drain; honor that.
+      if (handle._stopped) {
+        return this._makeHandle(id, handle);
+      }
+
+      // Promote to _handles — live events will fan out directly from here.
+      // _pendingHandles entry is removed in the finally below, so future
+      // events take the fan-out path only (no double-delivery).
+      this._handles.set(id, handle);
+      if (!handle.nonMutatingCallbacks) this._mutatingHandleCount++;
     } finally {
       this._pendingHandles.delete(id);
     }
 
+    return this._makeHandle(id, handle);
+  }
+
+  /**
+   * @private
+   */
+  _makeHandle(id, handle) {
     const self = this;
     return {
       stop() {
         if (handle._stopped) return;
         handle._stopped = true;
-        self._handles.delete(id);
+        if (self._handles.delete(id) && !handle.nonMutatingCallbacks) {
+          self._mutatingHandleCount--;
+        }
         // If no more handles, clean up
         if (self._handles.size === 0) {
           if (self._onEmpty) {
@@ -246,21 +300,38 @@ export class ObserveMultiplexer {
   }
 
   /**
-   * Send cached documents to a newly added handle.
+   * Take a shallow-but-stable snapshot of the current cache. For ordered
+   * multiplexers we also snapshot the iteration order of ids so addedBefore
+   * references remain consistent during initial-adds.
    * @private
    */
-  _sendInitialAdds(handle) {
+  _snapshotCache() {
+    const docs = new Map();
+    const ids = [];
+    this._cache.docs.forEach((doc, id) => {
+      ids.push(id);
+      // Clone the doc so a subsequent mutation of the cache entry does not
+      // change the fields we are about to emit.
+      docs.set(id, EJSON.clone(doc));
+    });
+    return { docs, ids };
+  }
+
+  /**
+   * Send snapshot documents to a newly added handle.
+   * @private
+   */
+  _sendInitialAddsFromSnapshot(handle, snapshot) {
     if (this._ordered) {
       const addCb = handle.callbacks.addedBefore || handle.callbacks.added;
       if (!addCb) return;
 
-      // Collect IDs in order to compute correct `before` values
-      const ids = [];
-      this._cache.docs.forEach((doc, id) => { ids.push(id); });
-
+      const { ids, docs } = snapshot;
       for (let i = 0; i < ids.length; i++) {
+        if (handle._stopped) return;
         const id = ids[i];
-        const doc = this._cache.docs.get(id);
+        const doc = docs.get(id);
+        if (!doc) continue;
         const fields = handle.nonMutatingCallbacks
           ? Object.assign({}, doc)
           : EJSON.clone(doc);
@@ -281,7 +352,9 @@ export class ObserveMultiplexer {
       const addCb = handle.callbacks.added;
       if (!addCb) return;
 
-      this._cache.docs.forEach((doc, id) => {
+      const { docs } = snapshot;
+      docs.forEach((doc, id) => {
+        if (handle._stopped) return;
         const fields = handle.nonMutatingCallbacks
           ? Object.assign({}, doc)
           : EJSON.clone(doc);

@@ -774,4 +774,67 @@ if (Meteor.isServer) {
     }
   );
 
+  // ---------------------------------------------------------------------------
+  // C1 regression: reentrant stop() during initial-adds must not poison cache
+  // ---------------------------------------------------------------------------
+
+  Tinytest.addAsync(
+    'afs - stream-provider - reentrant stop during initial-adds does not poison cache',
+    async (test) => {
+      const provider = new AFS.MockStreamProvider();
+      const collName = Random.id();
+      await provider.insertAsync(collName, { n: 1 });
+      await provider.insertAsync(collName, { n: 2 });
+
+      const desc = { collectionName: collName, selector: {}, options: {} };
+
+      // First subscriber: attach a handle that synchronously stops from inside
+      // the initial-adds callback. onEmpty must clean up and NOT leave a
+      // stopped multiplexer in the cache for later subscribers to reuse.
+      const mx1 = await provider._getMultiplexer(desc, false);
+      let stoppedFromInitialAdd = false;
+      const handleRef = {};
+      handleRef.h = await mx1.addHandle({
+        added(/* id, fields */) {
+          if (!stoppedFromInitialAdd) {
+            stoppedFromInitialAdd = true;
+            // Synchronous stop from inside an initial-add callback
+            handleRef.h.stop();
+          }
+        },
+      });
+
+      // Let any pending microtasks settle.
+      await new Promise(resolve => setImmediate(resolve));
+
+      // After reentrant stop, cache must not hold a stopped multiplexer.
+      const key = EJSON.stringify({ ...desc, ordered: false }, { canonical: true });
+      const cached = provider._multiplexerCache.get(key);
+      if (cached) {
+        test.isFalse(
+          cached._stream.isStopped(),
+          'cache entry must not be a stopped multiplexer after reentrant stop'
+        );
+      }
+
+      // Second subscriber: must get a working multiplexer and receive initial adds.
+      const mx2 = await provider._getMultiplexer(desc, false);
+      let addedCount = 0;
+      const handle2 = await mx2.addHandle({
+        added() { addedCount++; },
+      });
+
+      await new Promise(resolve => setImmediate(resolve));
+
+      test.equal(
+        addedCount, 2,
+        'second subscriber must receive initial adds on a live multiplexer'
+      );
+      test.isFalse(mx2._stream.isStopped(), 'second multiplexer stream must be live');
+
+      handle2.stop();
+      await provider.close();
+    }
+  );
+
 }

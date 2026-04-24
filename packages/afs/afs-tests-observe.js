@@ -946,4 +946,102 @@ if (Meteor.isServer) {
 
     handle.stop();
   });
+
+  // --------------------------------------------------------------------------
+  // I3 regression: reentrant mutation during _sendInitialAdds
+  //
+  // Before the fix, a synchronous mutation fired from an `added` callback
+  // during initial-adds would update the cache and fan out to handles in
+  // _handles — but the handle currently receiving initial adds was NOT yet
+  // in _handles, so it dropped the delta. Its internal state drifted one
+  // revision behind the cache, breaking all future delta calculations.
+  // --------------------------------------------------------------------------
+
+  Tinytest.addAsync(
+    'afs - observe-multiplexer - reentrant mutation during initial adds is delivered',
+    async (test) => {
+      const provider = new AFS.MockStreamProvider();
+      const collName = Random.id();
+      await provider.insertAsync(collName, { _id: 'a', n: 1 });
+      await provider.insertAsync(collName, { _id: 'b', n: 2 });
+
+      const desc = { collectionName: collName, selector: {}, options: {} };
+      const multiplexer = await provider._getMultiplexer(desc, false);
+
+      // Let MockStreamProvider finish its deferred initial-add bridging so
+      // the cache is populated before we attach our test handle.
+      await multiplexer._readyPromise;
+      await new Promise(resolve => setImmediate(resolve));
+
+      const events = [];
+      let mutated = false;
+      const handle = await multiplexer.addHandle({
+        added(id, fields) {
+          events.push({ type: 'added', id, n: fields.n });
+          // Synchronously mutate on the first `added` only. The resulting
+          // `changed` event fires during this handle's initial-adds window.
+          if (!mutated && id === 'a') {
+            mutated = true;
+            provider.updateAsync(collName, { _id: 'a' }, { $set: { n: 99 } });
+          }
+        },
+        changed(id, fields) {
+          events.push({ type: 'changed', id, n: fields.n });
+        },
+      });
+
+      // Let the reentrant mutation's async promise settle.
+      await new Promise(resolve => setImmediate(resolve));
+
+      const changedEvents = events.filter(e => e.type === 'changed' && e.id === 'a');
+      test.isTrue(
+        changedEvents.length >= 1,
+        `handle must receive 'changed' for doc 'a' that fired during ` +
+        `initial adds (observed events: ${JSON.stringify(events)})`
+      );
+      test.equal(
+        changedEvents[0].n, 99,
+        'changed event must carry the mutation delta'
+      );
+
+      handle.stop();
+      await provider.close();
+    }
+  );
+
+  // --------------------------------------------------------------------------
+  // I3 regression: reentrant stop() during _sendInitialAdds is handled safely
+  // --------------------------------------------------------------------------
+
+  Tinytest.addAsync(
+    'afs - observe-multiplexer - reentrant stop during initial adds does not leak handle',
+    async (test) => {
+      const provider = new AFS.MockStreamProvider();
+      const collName = Random.id();
+      await provider.insertAsync(collName, { _id: 'x', n: 1 });
+      await provider.insertAsync(collName, { _id: 'y', n: 2 });
+
+      const desc = { collectionName: collName, selector: {}, options: {} };
+      const multiplexer = await provider._getMultiplexer(desc, false);
+      await multiplexer._readyPromise;
+      await new Promise(resolve => setImmediate(resolve));
+
+      let seen = 0;
+      const ref = {};
+      ref.handle = await multiplexer.addHandle({
+        added(/* id, fields */) {
+          seen++;
+          if (seen === 1) ref.handle.stop();
+        },
+      });
+
+      let found = false;
+      for (const [, h] of multiplexer._handles) {
+        if (h === ref.handle) { found = true; break; }
+      }
+      test.isFalse(found, 'stopped handle must not be registered in _handles');
+
+      await provider.close();
+    }
+  );
 }

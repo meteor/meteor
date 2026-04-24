@@ -163,7 +163,11 @@ export const Registry = {
   },
 
   /**
-   * Remove a collection from the registry.
+   * Remove a collection from the registry. Registry-only: this does NOT
+   * tear down an active FederatedCollection instance, stop its observers,
+   * or clear its local-collection cache. Call `collection.destroy()` on
+   * the instance for full teardown, or `collection.dropCollectionAsync()`
+   * to also delete the underlying data.
    * @param {string} name
    */
   removeCollection(name) {
@@ -277,7 +281,12 @@ export const Registry = {
 
   /**
    * Reset all registries. Test-only.
-   * Throws if called outside a Meteor test environment.
+   *
+   * Caveat: this removes ALL listeners attached via Registry.on/.once
+   * (including any from long-lived external test harnesses). Tests that
+   * need harness listeners to persist across resets should re-attach them
+   * after each _resetForTests() call. Throws if called outside a Meteor
+   * test environment.
    */
   _resetForTests() {
     const inTest =

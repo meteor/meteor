@@ -214,9 +214,10 @@ export class AFSCursor {
       { nonMutatingCallbacks: true }
     );
 
-    // Clean up observer when subscription stops
-    sub.onStop(async function () {
-      return await observeHandle.stop();
+    // Clean up observer when subscription stops. observeHandle.stop() is
+    // synchronous — no async wrapper needed.
+    sub.onStop(function () {
+      observeHandle.stop();
     });
 
     return observeHandle;

@@ -74,7 +74,7 @@ const _CollectionExtensions = {
  * This class implements the same interface as Mongo.Collection, so it can be
  * used interchangeably in publications, methods, templates, and application code.
  */
-export class FederatedCollection {
+export class FederatedCollection extends EventEmitter {
   /**
    * @param {string|null} name - Collection name. null for local-only collections.
    * @param {Object} [options]
@@ -86,8 +86,7 @@ export class FederatedCollection {
    * @param {boolean} [options._preventAutopublish=false] - Prevent auto-publishing
    */
   constructor(name, options = {}) {
-    // Initialize EventEmitter
-    EventEmitter.call(this);
+    super();
     this.setMaxListeners(0);
 
     // Validate name
@@ -235,6 +234,7 @@ export class FederatedCollection {
     }
 
     if (this._isRemoteCollection()) {
+      this._assertHasMutationMethods('insertAsync');
       return this._callMutatorMethodAsync('insertAsync', [doc]);
     }
 
@@ -260,6 +260,7 @@ export class FederatedCollection {
     selector = this._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
+      this._assertHasMutationMethods('updateAsync');
       return this._callMutatorMethodAsync('updateAsync', [selector, modifier, options]);
     }
 
@@ -283,6 +284,7 @@ export class FederatedCollection {
     selector = this._rewriteSelector(selector);
 
     if (this._isRemoteCollection()) {
+      this._assertHasMutationMethods('removeAsync');
       return this._callMutatorMethodAsync('removeAsync', [selector]);
     }
 
@@ -299,6 +301,14 @@ export class FederatedCollection {
 
   /**
    * Upsert: update or insert.
+   *
+   * NOTE on allow/deny: client-invoked upserts on a collection that has
+   * `allow`/`deny` rules are rejected server-side by allow-deny's
+   * `_validatedUpdateAsync`, which refuses `upsert: true`. This matches
+   * `Mongo.Collection` behavior — upserts via DDP only work in insecure
+   * mode or from trusted server code. If you need upsert on a restricted
+   * collection, wrap it in a Meteor method.
+   *
    * @param {Object} selector
    * @param {Object} modifier
    * @param {Object} [options]
@@ -370,6 +380,24 @@ export class FederatedCollection {
     return this._connection && this._connection !== Meteor.server;
   }
 
+  /**
+   * Throws a clear error when a DDP mutator is invoked but no mutation
+   * methods were defined (`defineMutationMethods: false`). Without this
+   * guard, `_callMutatorMethodAsync` silently builds the method name as
+   * `undefined + 'insertAsync'` and the user sees a confusing
+   * "Method 'undefinedinsertAsync' not found" failure.
+   * @private
+   */
+  _assertHasMutationMethods(methodName) {
+    if (typeof this._prefix !== 'string') {
+      throw new Error(
+        `AFS.Collection("${this._name}"): cannot call ${methodName} over DDP ` +
+        `because mutation methods were not defined ` +
+        `(defineMutationMethods: false was passed to the constructor).`
+      );
+    }
+  }
+
   _getCollectionName() {
     return this._name;
   }
@@ -380,6 +408,13 @@ export class FederatedCollection {
 
   _createIdGenerator(name, idGeneration) {
     if (idGeneration === 'UUID') {
+      // WARNING: UUID ids are NOT client-server consistent. On the server
+      // we use Node's crypto.randomUUID(); on the client we synthesize a
+      // UUID-v4 from Random.hexString. These use different RNG streams, so
+      // optimistic-UI inserts will always produce a client id that differs
+      // from the server's authoritative id. Use 'STRING' (the default) if
+      // you need the id chosen by the client stub to survive the round
+      // trip through DDP.randomStream.
       if (Meteor.isServer) {
         // Lazy require keeps this out of the client bundle.
         const { randomUUID } = require('crypto');
@@ -387,7 +422,6 @@ export class FederatedCollection {
           return randomUUID();
         };
       }
-      // Client fallback: use Random.hexString for UUID-like IDs
       return function () {
         const hex = Random.hexString(32);
         return [hex.slice(0,8), hex.slice(8,12), '4' + hex.slice(13,16),
@@ -395,7 +429,8 @@ export class FederatedCollection {
                 hex.slice(20,32)].join('-');
       };
     }
-    // Default: STRING
+    // Default: STRING — uses DDP.randomStream so the client stub and the
+    // server produce the same id for the same method invocation.
     return function () {
       const src = name ? DDP.randomStream('/collection/' + name) : Random.insecure;
       return src.id();
@@ -608,21 +643,23 @@ export class FederatedCollection {
         const mongoId = MongoID.idParse(msg.id);
         const doc = self._collection._docs.get(mongoId);
 
-        // Handle mergebox-disabled gracefully
+        // Handle mergebox-disabled gracefully. Copy the message so callers
+        // that reuse the original object (DDP message reuse is rare but
+        // possible) don't observe our rewrites.
         if (Meteor.isClient) {
           if (msg.msg === 'added' && doc) {
-            msg.msg = 'changed';
+            msg = { ...msg, msg: 'changed' };
           } else if (msg.msg === 'removed' && !doc) {
             return;
           } else if (msg.msg === 'changed' && !doc) {
-            msg.msg = 'added';
-            const _ref = msg.fields;
-            for (let field in _ref) {
-              const value = _ref[field];
-              if (value === void 0) {
-                delete msg.fields[field];
+            const filteredFields = {};
+            if (msg.fields) {
+              for (const field in msg.fields) {
+                const value = msg.fields[field];
+                if (value !== void 0) filteredFields[field] = value;
               }
             }
+            msg = { ...msg, msg: 'added', fields: filteredFields };
           }
         }
 
@@ -778,14 +815,92 @@ export class FederatedCollection {
       return logWarn();
     }
 
-    return registerStoreResult?.then?.(ok => {
-      if (!ok) {
-        logWarn();
+    // If the connection returns a thenable, attach both success and failure
+    // handlers so a rejection surfaces through Meteor._debug instead of
+    // becoming an unhandled promise rejection that could crash the process
+    // under --unhandled-rejections=strict.
+    if (registerStoreResult && typeof registerStoreResult.then === 'function') {
+      return registerStoreResult.then(
+        ok => { if (!ok) logWarn(); },
+        err => {
+          if (typeof Meteor !== 'undefined' && Meteor._debug) {
+            Meteor._debug(`AFS replication setup failed for "${name}":`, err);
+          }
+        }
+      );
+    }
+    return registerStoreResult;
+  }
+
+  /**
+   * Tear down this collection instance WITHOUT deleting its data.
+   *
+   * Use this when a collection object is going out of scope (e.g. hot-reload,
+   * test teardown) but the underlying data should remain on disk. Stops
+   * active observers, unregisters from AFS, clears local-collection caches,
+   * and removes EventEmitter listeners.
+   *
+   * If you want to ALSO delete the data, call `dropCollectionAsync()` instead
+   * — it calls `destroy()` internally after dropping the storage.
+   *
+   * Note: `AFS.removeCollection(name)` is registry-only — it unregisters
+   * a name from lookup tables but does NOT tear down an instance. Call
+   * `destroy()` on the instance when you need full teardown.
+   */
+  destroy() {
+    if (this._name && this._provider && this._provider._multiplexerCache) {
+      const stale = [];
+      for (const [key, multiplexer] of this._provider._multiplexerCache) {
+        const desc = multiplexer._stream && multiplexer._stream._cursorDescription;
+        if (desc && desc.collectionName === this._name) {
+          stale.push([key, multiplexer]);
+        }
       }
-    });
+      for (const [, multiplexer] of stale) {
+        try { multiplexer._stream.stop(); } catch (_e) { /* best-effort */ }
+      }
+      for (const [key] of stale) {
+        this._provider._multiplexerCache.delete(key);
+      }
+    }
+
+    if (this._name && typeof AFS !== 'undefined') {
+      AFS.removeCollection(this._name);
+    }
+
+    if (this._name) {
+      const key = _localKey(this._providerName, this._name);
+      if (_afsLocalCollections[key]) {
+        delete _afsLocalCollections[key];
+      }
+    }
+
+    this.emit('destroyed', { name: this._name });
+    this.removeAllListeners();
   }
 
   async dropCollectionAsync() {
+    // Tear down active observers BEFORE dropping data — otherwise live
+    // publications either see mass "removed" storms or crash when the
+    // underlying storage disappears from under them. This also evicts
+    // multiplexer cache entries for this collection so any later
+    // subscribers don't reuse stopped streams.
+    if (this._name && this._provider && this._provider._multiplexerCache) {
+      const stale = [];
+      for (const [key, multiplexer] of this._provider._multiplexerCache) {
+        const desc = multiplexer._stream && multiplexer._stream._cursorDescription;
+        if (desc && desc.collectionName === this._name) {
+          stale.push([key, multiplexer]);
+        }
+      }
+      for (const [, multiplexer] of stale) {
+        try { multiplexer._stream.stop(); } catch (_e) { /* best-effort */ }
+      }
+      for (const [key] of stale) {
+        this._provider._multiplexerCache.delete(key);
+      }
+    }
+
     if (this._provider && this._provider.dropCollectionAsync) {
       await this._provider.dropCollectionAsync(this._name);
     } else if (this._collection.dropCollectionAsync) {
@@ -794,12 +909,14 @@ export class FederatedCollection {
       throw new Error('Can only call dropCollectionAsync on server collections');
     }
 
-    // Clean up registry
+    // Registry + local-cache teardown. Emit 'collection:dropped' before the
+    // 'destroyed' event so subscribers can distinguish "data gone" from
+    // "instance gone".
+    this.emit('collection:dropped', { name: this._name });
+
     if (this._name && typeof AFS !== 'undefined') {
       AFS.removeCollection(this._name);
     }
-
-    // Clean up local collection cache
     if (this._name) {
       const key = _localKey(this._providerName, this._name);
       if (_afsLocalCollections[key]) {
@@ -807,7 +924,6 @@ export class FederatedCollection {
       }
     }
 
-    // Remove all EventEmitter listeners
     this.removeAllListeners();
   }
 
@@ -843,17 +959,12 @@ export class FederatedCollection {
   }
 }
 
-// Mix in EventEmitter methods (on, once, emit, removeListener, etc.)
-// Applied first so AllowDeny wins on any property conflicts.
-Object.getOwnPropertyNames(EventEmitter.prototype).forEach(key => {
-  if (key !== 'constructor') {
-    FederatedCollection.prototype[key] = EventEmitter.prototype[key];
-  }
-});
-
 // Mix in allow/deny methods from the allow-deny package.
 // Explicit copy with collision detection so a future method rename on either
 // side does not silently clobber behavior here.
+// FederatedCollection extends EventEmitter so its prototype chain already
+// provides on/once/emit/removeListener without the copy step that used to
+// live here.
 const _AllowDenyMethods = [
   'allow',
   'deny',

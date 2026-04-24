@@ -116,6 +116,11 @@ export class ChangeStream extends EventEmitter {
 
   /**
    * Stop this ChangeStream. Emits 'stop', then removes all listeners.
+   *
+   * Ordering note: listeners attached AFTER stop() returns will not receive
+   * the 'stop' event (it has already fired, and removeAllListeners has run).
+   * Consumers that may race attach vs stop should check `isStopped()`
+   * before relying on a 'stop' listener.
    */
   stop() {
     if (this._stopped) return;

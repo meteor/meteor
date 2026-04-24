@@ -20,7 +20,8 @@ export class ProviderClosedError extends Error {
  * handles all communication with the underlying data store.
  *
  * Subclasses MUST implement: connect, close, insertAsync, updateAsync,
- * removeAsync, find, observeChanges.
+ * removeAsync, find, observeChanges, _fetchResults (cursor.fetchAsync,
+ * cursor.countAsync, and the default countAsync all delegate to it).
  *
  * Subclasses SHOULD implement: findOneAsync, upsertAsync, createIndexAsync,
  * dropIndexAsync, rawDatabase, rawCollection, capabilities.
@@ -398,6 +399,22 @@ export class StreamProvider {
    * Start observing a query and return a ChangeStream that emits changes.
    * Override this in providers that support EventEmitter mode.
    *
+   * ## Event emission contract (MUST NOT violate)
+   *
+   * The caller (typically {@link _createMultiplexer}) attaches its
+   * listeners AFTER this method returns. Therefore:
+   *
+   *   - The provider MUST NOT emit ANY event (added, addedBefore, changed,
+   *     removed, movedBefore, ready, error, reset, reconnected, paused,
+   *     resumed) synchronously during startObserving.
+   *   - The provider MUST defer ALL initial emission to at least the next
+   *     microtask (e.g. `Promise.resolve().then(...)` or `setImmediate`).
+   *
+   * Violating this contract will silently drop events — the multiplexer's
+   * listeners aren't attached yet, so synchronously-emitted events go
+   * nowhere. See {@link MockStreamProvider.startObserving} for the
+   * canonical pattern.
+   *
    * The returned ChangeStream must eventually emit 'ready' after sending
    * the initial result set via added/addedBefore events.
    *
@@ -441,9 +458,7 @@ export class StreamProvider {
     this._multiplexerPending.set(key, promise);
 
     try {
-      const multiplexer = await promise;
-      this._multiplexerCache.set(key, multiplexer);
-      return multiplexer;
+      return await promise;
     } finally {
       this._multiplexerPending.delete(key);
     }
@@ -451,10 +466,29 @@ export class StreamProvider {
 
   /**
    * Create a new multiplexer for a cursor description.
+   *
+   * Caches the multiplexer BEFORE any handle can be attached, so a reentrant
+   * stop() fired synchronously during initial-adds cannot leave a stopped
+   * multiplexer pinned in the cache. The onEmpty handler guards against
+   * stale-reference deletions via an identity check on the cache entry.
    * @private
    */
   async _createMultiplexer(cursorDescription, ordered, key) {
     const stream = this.startObserving(cursorDescription, ordered);
+
+    // Contract check: the provider MUST NOT emit synchronously from
+    // startObserving (see the JSDoc on startObserving for the full rule).
+    // If the stream is already ready here, the provider either emitted
+    // initial adds or markReady before we could attach listeners — any
+    // data events that preceded this line have already been silently
+    // dropped. Warn so the provider author notices.
+    if (stream._ready && typeof Meteor !== 'undefined') {
+      Meteor._debug(
+        `${this.constructor.name}.startObserving violated the sync-emission ` +
+        `contract: stream is already ready before listeners could attach. ` +
+        `Provider MUST defer initial emission to the next microtask.`
+      );
+    }
 
     // Auto-attach the adaptive engine for metrics collection
     let detachEngine = null;
@@ -463,15 +497,28 @@ export class StreamProvider {
     }
 
     const self = this;
-    const multiplexer = new ObserveMultiplexer(stream, ordered, {
-      onEmpty() {
-        // When the last handle is removed, clean up
-        if (detachEngine) detachEngine();
-        self._multiplexerCache.delete(key);
-        stream.stop();
-      },
-    });
+    let multiplexer;
+    try {
+      multiplexer = new ObserveMultiplexer(stream, ordered, {
+        onEmpty() {
+          // Only evict if we're still the cached entry for this key.
+          // Prevents a late onEmpty from clobbering a replacement multiplexer
+          // that a later _getMultiplexer call may have installed.
+          if (self._multiplexerCache.get(key) !== multiplexer) return;
+          self._multiplexerCache.delete(key);
+          if (detachEngine) detachEngine();
+          stream.stop();
+        },
+      });
+    } catch (err) {
+      if (detachEngine) detachEngine();
+      stream.stop();
+      throw err;
+    }
 
+    // Cache before returning so the entry is visible to onEmpty handlers that
+    // may fire the moment a consumer attaches and synchronously calls stop().
+    self._multiplexerCache.set(key, multiplexer);
     return multiplexer;
   }
 
