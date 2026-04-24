@@ -131,5 +131,9 @@ Tinytest.addAsync('jobs - runAndWait - rejects on timeout', async function (test
     test.fail('Should have rejected');
   } catch (err) {
     test.matches(err.message, /timed? ?out/i);
+  } finally {
+    // runAndWait times out without cancelling the enqueued job; remove the
+    // stale ready job so a later test that resets testMode can't pick it up.
+    await Jobs.cancelAll(name);
   }
 });
