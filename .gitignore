@@ -42,3 +42,5 @@ coverage-ts/
 #cursor
 .cursorignore
 .cursorrules
+
+.meteor-test-tropohouse/*
