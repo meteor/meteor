@@ -227,7 +227,8 @@ export class AccountsCommon {
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
-   * 
+   * @param {'observer' | 'in-memory'} options.tokenTrackingStrategy Server-only. Selects how login-token -> connection associations are tracked. `'observer'` (default) opens one `observeChanges` cursor per authenticated connection on the users collection, relying on Mongo change streams to close connections when a token is revoked. `'in-memory'` instead maintains a `userId -> Map<hashedToken, Set<connectionId>>` lookup in memory and avoids per-connection observers, at the cost of requiring token mutations to go through the Accounts API (or be reconciled by the periodic `_verifyTrackedTokens` sweep). The strategy is resolved once in the `AccountsServer` constructor, so this option must be provided at startup via `Meteor.settings.packages['accounts-base']` (or the `AccountsServer` constructor options); calling `Accounts.config({ tokenTrackingStrategy })` after startup only updates `_options` and will not switch modes.
+   *
    * @example
    * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server
    * // Create a shared configuration file (e.g., lib/accounts-config.js):
