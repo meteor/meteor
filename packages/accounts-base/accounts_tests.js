@@ -1029,10 +1029,6 @@ if (Meteor.isServer) {
         Accounts._useInMemoryTokenTracking,
         'default should be observer mode (_useInMemoryTokenTracking === false)'
       );
-      // Any value other than 'in-memory' should resolve to observer mode.
-      test.isFalse('observer' === 'in-memory');
-      test.isFalse(undefined === 'in-memory');
-      test.isTrue('in-memory' === 'in-memory');
     }
   );
 
