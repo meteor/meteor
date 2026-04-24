@@ -281,7 +281,7 @@ Jobs.register({
     const asset = await Collections.Assets.findOneAsync({ _id: data.assetId });
 
     // Do the CPU-heavy work (this won't block the main event loop)
-    const resized = sharp(asset.buffer).resize(800).toBuffer();
+    const resized = await sharp(asset.buffer).resize(800).toBuffer();
 
     // Write results back through the bridge
     await Collections.Assets.updateAsync(data.assetId, {
