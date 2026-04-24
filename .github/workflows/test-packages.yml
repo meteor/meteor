@@ -2,11 +2,9 @@ name: Test Packages
 
 on:
   pull_request:
-    - "packages/**"
-    - ".github/workflows/test-packages.yml"
-  paths:
-    - "packages/**"
-    - ".github/workflows/test-packages.yml"
+    paths:
+      - "packages/**"
+      - ".github/workflows/test-packages.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
