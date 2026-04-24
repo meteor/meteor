@@ -66,27 +66,32 @@ function hydrateFromPort(port, settings, userId, callTimeout) {
   // thread-context's BridgeClient + proxy factories are bundled into the
   // Meteor app. We need to load them from the app's node_modules or the
   // Meteor package cache. The parent passes the resolved paths via workerData.
-  if (workerData.hydrateContextPath) {
-    // The parent resolved the path to the thread-context worker module for us.
-    const { hydrateContext } = require(workerData.hydrateContextPath);
-    const ctx = hydrateContext(port, { settings, userId, callTimeout });
-    Collections = ctx.Collections;
-    MeteorStub = ctx.Meteor;
-  } else {
-    // Fallback: create a minimal stub when no thread-context path is provided.
-    // This allows running the pool without thread-context for simple CPU tasks.
-    Collections = null;
-    MeteorStub = {
-      settings: Object.freeze(settings || {}),
-      userId: userId || null,
-      isServer: true,
-      isClient: false,
-      isSimulation: false,
-      callAsync() {
-        throw new Error('Meteor.callAsync is not available without thread-context');
-      },
-    };
+  if (workerData.hydrateContextPath && port) {
+    try {
+      const mod = require(workerData.hydrateContextPath);
+      if (mod && typeof mod.hydrateContext === 'function') {
+        const ctx = mod.hydrateContext(port, { settings, userId, callTimeout });
+        Collections = ctx.Collections;
+        MeteorStub = ctx.Meteor;
+        return;
+      }
+    } catch {
+      // The resolved path may be a virtual Meteor module ID that plain Node
+      // require() cannot load. Fall through to the minimal stub so the worker
+      // can still run CPU-only tasks.
+    }
   }
+  Collections = null;
+  MeteorStub = {
+    settings: Object.freeze(settings || {}),
+    userId: userId || null,
+    isServer: true,
+    isClient: false,
+    isSimulation: false,
+    callAsync() {
+      throw new Error('Meteor.callAsync is not available without thread-context');
+    },
+  };
 }
 
 // --- Task execution ----------------------------------------------------------
