@@ -115,14 +115,35 @@ Tinytest.addAsync('jobs - lifecycle - onFailure per-type hook fires', async func
   test.matches(hookError.message, /hook test/);
 });
 
-Tinytest.add('jobs - lifecycle - event handle stop() unregisters callback', function (test) {
-  let count = 0;
-  const handle = Jobs.on('completed', function () {
-    count++;
+Tinytest.addAsync('jobs - lifecycle - event handle stop() unregisters callback', async function (test) {
+  Jobs.configure({ testMode: 'manual' });
+
+  const name = uniqueName('stop_handle');
+  Jobs.register({ name, retries: 0, run() { return 'ok'; } });
+
+  let stoppedCount = 0;
+  const stoppedHandle = Jobs.on('completed', function (job) {
+    if (job.name === name) stoppedCount++;
   });
-  // Stop immediately
-  handle.stop();
-  test.equal(typeof handle.stop, 'function');
-  // The callback should no longer be registered
-  test.equal(count, 0);
+  test.equal(typeof stoppedHandle.stop, 'function');
+  stoppedHandle.stop();
+
+  // Independent listener verifies the completed event actually fires for this
+  // job — otherwise a silent regression in emit/executeNow would make the
+  // stoppedCount assertion trivially pass.
+  let witnessFired = false;
+  const witness = Jobs.on('completed', function (job) {
+    if (job.name === name) witnessFired = true;
+  });
+
+  try {
+    const jobId = await Jobs.run(name, {});
+    await Jobs.executeNow(jobId);
+    await new Promise(r => setTimeout(r, 50));
+
+    test.isTrue(witnessFired, 'completed event should have fired for this job');
+    test.equal(stoppedCount, 0, 'stopped listener must not have been called');
+  } finally {
+    witness.stop();
+  }
 });
