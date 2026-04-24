@@ -2,11 +2,12 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
+import { allocatePort } from './port-allocator';
 
 describe('Svelte App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'svelte',
-    port: 3122,
+    port: allocatePort('svelte'),
     filePaths: { 
       client: 'client/main.js', 
       server: 'server/main.js',

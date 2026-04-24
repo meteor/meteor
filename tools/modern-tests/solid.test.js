@@ -2,11 +2,12 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
+import { allocatePort } from './port-allocator';
 
 describe('Solid App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'solid',
-    port: 3122,
+    port: allocatePort('solid'),
     filePaths: { 
       client: 'client/main.js', 
       server: 'server/main.js',

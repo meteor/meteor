@@ -22,6 +22,10 @@ env:
   METEOR_PRETTY_OUTPUT: 0
   # Avoid SIGSEGV from cleaning up temp directories.
   METEOR_SAVE_TMPDIRS: 1
+  # Persistent tropohouse for self-test. The setup job populates it via
+  # --prewarm; every test job restores it from cache so buildLocalPackages
+  # short-circuits on unchanged isopacks.
+  METEOR_TEST_TROPOHOUSE_DIR: .meteor-test-tropohouse
   # Skip this test on every run (it lives in Isolated Tests instead).
   SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
   # Suppress the self-test node-flags reminder.
@@ -63,6 +67,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -72,6 +77,13 @@ jobs:
         if: steps.meteor-cache.outputs.cache-hit != 'true'
         timeout-minutes: 65
         run: ./meteor --get-ready
+
+      - name: Prewarm self-test tropohouse
+        # Builds the sandbox tropohouse into $METEOR_TEST_TROPOHOUSE_DIR so
+        # every group below sees a populated cache and skips the slow
+        # buildLocalPackages() on first run.
+        timeout-minutes: 25
+        run: ./meteor self-test --prewarm --headless
 
   # ─── Isolated Tests ───────────────────────────────────────────────────────────
   # Tests that must run in isolation: the debugOnly/prodOnly package test
@@ -102,6 +114,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -173,6 +186,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -238,6 +252,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -309,6 +324,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -376,6 +392,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -441,6 +458,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -507,6 +525,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -572,6 +591,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -637,6 +657,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -702,6 +723,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -767,6 +789,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -832,6 +855,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -897,6 +921,7 @@ jobs:
             .babel-cache
             dev_bundle
             packages/**/.npm
+            .meteor-test-tropohouse
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-

@@ -29,5 +29,10 @@ module.exports = {
       }
     }
   },
-  maxWorkers: 1,
+  // CI stays single-worker until Phase 7 opts in explicitly via
+  // MODERN_TESTS_WORKERS. Locally, '50%' gives a reasonable default that
+  // uses the port-allocator's per-worker ranges without overwhelming the
+  // machine (Chromium + Meteor dev-mode per worker is heavy).
+  maxWorkers: process.env.MODERN_TESTS_WORKERS
+    || (process.env.CI ? 1 : '50%'),
 };

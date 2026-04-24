@@ -2,11 +2,12 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
+import { allocatePort } from './port-allocator';
 
 describe('Babel App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'babel',
-    port: 3122,
+    port: allocatePort('babel'),
     filePaths: { 
       client: 'client/main.jsx', 
       server: 'server/main.js',

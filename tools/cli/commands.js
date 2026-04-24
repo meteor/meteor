@@ -2858,6 +2858,10 @@ main.registerCommand({
     limit: { type: Number },
     // Don't run tests, just show the plan after filter, skip and limit
     preview: { type: Boolean },
+    // Build the sandbox tropohouse and exit. Intended for CI setup jobs:
+    // the built artifacts land in $METEOR_TEST_TROPOHOUSE_DIR (or a tmp
+    // dir when unset) so subsequent self-test runs skip the slow build.
+    prewarm: { type: Boolean },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -2868,6 +2872,15 @@ main.registerCommand({
   }
 
   var selftest = require('../tool-testing/selftest.js');
+
+  if (options.prewarm) {
+    const { warmTropohouse } = require('../tool-testing/sandbox.js');
+    const startedAt = Date.now();
+    const dir = await warmTropohouse();
+    const secs = ((Date.now() - startedAt) / 1000).toFixed(1);
+    Console.info(`self-test prewarm: tropohouse ready at ${dir} (${secs}s)`);
+    return 0;
+  }
 
   // Auto-detect whether to skip 'net' tests, unless --force-online is passed.
   var offline = false;

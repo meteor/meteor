@@ -9,15 +9,20 @@ import fs from 'fs';
 
 import { assertStyles } from './assertions';
 import { testMeteorSkeleton } from './test-helpers';
+import { allocatePortRange } from './port-allocator';
 
 const isCI = process.env.GITHUB_ACTIONS === 'true';
+
+// 13 contiguous ports inside the 'skeleton' slot. Order is stable so the
+// mapping below (angular=0, apollo=1, ...) is deterministic per run.
+const SKELETON_PORTS = allocatePortRange('skeleton', 13);
 
 describe('Meteor Skeletons /', () => {
   describe(
     'Angular Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'angular',
-      port: 3213,
+      port: SKELETON_PORTS[0],
       filePaths: {
         client: 'client/main.ts',
         server: 'server/main.ts',
@@ -30,7 +35,7 @@ describe('Meteor Skeletons /', () => {
     'Apollo Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'apollo',
-      port: 3201,
+      port: SKELETON_PORTS[1],
       filePaths: {
         client: 'client/main.jsx',
         server: 'server/main.js',
@@ -43,7 +48,7 @@ describe('Meteor Skeletons /', () => {
     'Babel Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'babel',
-      port: 3212,
+      port: SKELETON_PORTS[2],
       filePaths: {
         client: 'client/main.jsx',
         server: 'server/main.js',
@@ -56,7 +61,7 @@ describe('Meteor Skeletons /', () => {
     'Blaze Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'blaze',
-      port: 3202,
+      port: SKELETON_PORTS[3],
       filePaths: {
         client: 'client/main.js',
         server: 'server/main.js',
@@ -69,7 +74,7 @@ describe('Meteor Skeletons /', () => {
     'ChakraUI Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'chakra-ui',
-      port: 3203,
+      port: SKELETON_PORTS[4],
       filePaths: {
         client: 'client/main.jsx',
         server: 'server/main.js',
@@ -83,7 +88,7 @@ describe('Meteor Skeletons /', () => {
     'Coffeescript Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'coffeescript',
-      port: 3211,
+      port: SKELETON_PORTS[5],
       filePaths: {
         client: 'client/main.coffee',
         server: 'server/main.coffee',
@@ -96,7 +101,7 @@ describe('Meteor Skeletons /', () => {
     'Full Library Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'full',
-      port: 3204,
+      port: SKELETON_PORTS[6],
       filePaths: {
         client: 'client/main.js',
         server: 'server/main.js',
@@ -109,7 +114,7 @@ describe('Meteor Skeletons /', () => {
     'React Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'react',
-      port: 3205,
+      port: SKELETON_PORTS[7],
       filePaths: {
         client: 'client/main.jsx',
         server: 'server/main.js',
@@ -128,7 +133,7 @@ describe('Meteor Skeletons /', () => {
     'Solid Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'solid',
-      port: 3206,
+      port: SKELETON_PORTS[8],
       filePaths: {
         client: 'client/main.js',
         server: 'server/main.js',
@@ -141,7 +146,7 @@ describe('Meteor Skeletons /', () => {
     'Svelte Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'svelte',
-      port: 3207,
+      port: SKELETON_PORTS[9],
       filePaths: {
         client: 'client/main.js',
         server: 'server/main.js',
@@ -154,7 +159,7 @@ describe('Meteor Skeletons /', () => {
     'Tailwind Library Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'tailwind',
-      port: 3208,
+      port: SKELETON_PORTS[10],
       filePaths: {
         client: 'client/main.tsx',
         server: 'server/main.ts',
@@ -181,7 +186,7 @@ describe('Meteor Skeletons /', () => {
     'Typescript Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'typescript',
-      port: 3209,
+      port: SKELETON_PORTS[11],
       filePaths: {
         client: 'client/main.tsx',
         server: 'server/main.ts',
@@ -208,7 +213,7 @@ describe('Meteor Skeletons /', () => {
     'Vue Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'vue',
-      port: 3210,
+      port: SKELETON_PORTS[12],
       filePaths: {
         client: 'client/main.js',
         server: 'server/main.js',

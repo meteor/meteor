@@ -34,6 +34,15 @@ const isCI = process.env.GITHUB_ACTIONS === "true";
 
 const WAIT_ON = isCI ? 2000 : 500;
 
+// NOTE on auxiliary ports 8080 (Rspack dev-server) and 8081/8082
+// (bundle-visualizer): these are chosen by the @meteorjs/rspack integration
+// and the bundle-visualizer package themselves, not by this test harness.
+// Passing a worker-scoped port here would leave the real services on 8080/
+// 8081/8082 orphaned. Before enabling parallel workers (Phase 7) we must
+// first teach those upstream packages to accept an override (env var or
+// package option) — only then can the test harness and the real services
+// converge on the same worker-scoped ports.
+
 /**
  * Helper function to set up and run tests for the Meteor Bundler
  * @param {Object} options - Options for the test
@@ -452,7 +461,12 @@ export function testMeteorRspackBundler(options) {
         // Assert that the Meteor app is running correctly
         await assertMeteorReactApp(port, { title: appName });
 
-        // Wait for bundle-visualizer ports to be available
+        // TODO(Phase 7): the bundle-visualizer package itself binds 8081/8082
+        // unconditionally. Before enabling parallel workers for any test that
+        // sets testBundleVisualizer: true, we need to teach bundle-visualizer
+        // to accept an override (env var or pkg option) and wire it through
+        // aux.visualizer1 / aux.visualizer2 here. No current .test.js opts in,
+        // so this stays on the literal ports for now.
         console.log('Waiting for bundle-visualizer ports 8081 and 8082 to be available...');
         try {
           await waitOn({

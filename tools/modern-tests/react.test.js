@@ -7,6 +7,7 @@ import {
   waitForMeteorOutput, waitForPlaywrightConsole
 } from "./helpers";
 import { testMeteorBundler, testMeteorRspackBundler } from './test-helpers';
+import { allocatePort } from './port-allocator';
 import fs from 'fs-extra';
 import path from 'path';
 import { assertMeteorReactApp, assertConsoleEval } from "./assertions";
@@ -15,7 +16,7 @@ describe('React App Bundling /', () => {
 
   // TODO: Create one test aside for all skeletons
   describe.skip('Meteor Creator /', () => {
-    const PORT = 3100;
+    const PORT = allocatePort('react');
 
     beforeAll(async () => {
       // Ensure any process on the port is killed
@@ -66,7 +67,7 @@ describe('React App Bundling /', () => {
 
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'react',
-    port: 3102,
+    port: allocatePort('react', 2),
     filePaths: { 
       client: 'client/main.jsx', 
       server: 'server/main.js',

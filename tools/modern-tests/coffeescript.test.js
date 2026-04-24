@@ -2,11 +2,12 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
+import { allocatePort } from './port-allocator';
 
 describe('CoffeeScript App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'coffeescript',
-    port: 3132,
+    port: allocatePort('coffeescript'),
     filePaths: { 
       client: 'client/main.coffee', 
       server: 'server/main.coffee',

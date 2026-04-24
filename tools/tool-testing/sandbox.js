@@ -562,7 +562,18 @@ async function setUpBuiltPackageTropohouse() {
   }
   if (!setUpBuiltPackageTropohousePromise) {
     setUpBuiltPackageTropohousePromise = (async () => {
-      builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
+      // When METEOR_TEST_TROPOHOUSE_DIR is set, reuse that directory across
+      // runs: the IsopackCache persists on disk and rebuilds are
+      // incremental. Without it, fall back to the historical behavior
+      // (tmp dir, in-memory cache only) so nothing changes for callers
+      // that haven't opted in.
+      const envDir = process.env.METEOR_TEST_TROPOHOUSE_DIR;
+      if (envDir) {
+        builtPackageTropohouseDir = files.pathResolve(envDir);
+        files.mkdir_p(builtPackageTropohouseDir);
+      } else {
+        builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
+      }
 
       if (getPackagesDirectoryName() !== 'packages') {
         throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
@@ -578,15 +589,21 @@ async function setUpBuiltPackageTropohouse() {
       const packageMap = new PackageMap(versions, {
         localCatalog: tropohouseLocalCatalog
       });
-      // Make an isopack cache that doesn't automatically save isopacks to disk
-      // and has no access to versioned packages.
+      // With a persistent dir we also persist the IsopackCache to disk so
+      // the next run skips rebuilding unchanged packages. Without envDir
+      // the cache stays in memory (original behavior — no on-disk state
+      // carried between runs).
       tropohouseIsopackCache = new IsopackCache({
         packageMap: packageMap,
-        includeCordovaUnibuild: true
+        includeCordovaUnibuild: true,
+        cacheDir: envDir
+          ? files.pathJoin(builtPackageTropohouseDir, 'isopack-cache')
+          : undefined,
       });
       await doOrThrow(function () {
         return enterJob("building self-test packages", () => {
-          // Build the packages into the in-memory IsopackCache.
+          // Build the packages into the IsopackCache. With cacheDir set,
+          // this reuses any already-built isopacks on disk.
           return tropohouseIsopackCache.buildLocalPackages(
             ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
         });
@@ -614,6 +631,14 @@ async function setUpBuiltPackageTropohouse() {
     return;
   }
   await setUpBuiltPackageTropohousePromise;
+}
+
+// Public trigger for the `--prewarm` flag. Builds the tropohouse (possibly
+// into METEOR_TEST_TROPOHOUSE_DIR) and returns its absolute path so the
+// caller can log or export it. Safe to call before any test runs.
+export async function warmTropohouse() {
+  await setUpBuiltPackageTropohouse();
+  return builtPackageTropohouseDir;
 }
 
 // Our current strategy for running tests that need warehouses is to build all
