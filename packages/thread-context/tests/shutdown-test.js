@@ -23,10 +23,16 @@ Tinytest.add('thread-context - shutdown - createThreadContext registers, destroy
 });
 
 Tinytest.add('thread-context - shutdown - double destroy is safe', function (test) {
+  const before = getActiveBridgeCount();
+
   const ctx = createThreadContext();
+  test.equal(getActiveBridgeCount(), before + 1);
+
   ctx.destroy();
+  test.equal(getActiveBridgeCount(), before);
+
   ctx.destroy();
-  test.ok();
+  test.equal(getActiveBridgeCount(), before);
 });
 
 Tinytest.add('thread-context - shutdown - destroyAllBridges cleans up all contexts', function (test) {
