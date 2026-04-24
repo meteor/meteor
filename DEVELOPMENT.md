@@ -33,6 +33,14 @@ can run Meteor directly from a Git checkout using these steps:
     $ ./meteor --help
     ```
 
+    > **Note for Windows (PowerShell):**
+    >
+    > * In PowerShell, use `.\meteor` (not `./meteor`).
+    > * Meteor may need `7z.exe` available in your `PATH` to download/extract binaries (dev_bundle).
+    >   * Verify: `where.exe 7z`
+    >   * If missing, install 7-Zip and ensure it is on your PATH (for example via `choco install 7zip -y` or `scoop install 7zip`).
+
+
 3. **Ready to Go!**
 
     Your local Meteor checkout is now ready to use!  You can use this `./meteor`
@@ -53,8 +61,37 @@ can run Meteor directly from a Git checkout using these steps:
     > _Tip 2:_ When working with meteor tool, it may be helpful to use the debugger to check what's happening. You can do this using the following flag:
     >
     >        TOOL_NODE_FLAGS="--inspect-brk" mymeteor
-    > 
+    >
     > Then you can use the chrome debugger inside `chrome://inspect`.
+
+### Testing a fork branch
+
+When reviewing a pull request or testing changes from a contributor's fork, use the `checkout-pr.js` script to set up a local branch automatically:
+
+```sh
+# From a PR URL (requires gh CLI or falls back to GitHub API via curl)
+$ npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
+
+# From a user:branch shorthand
+$ npm run checkout:pr -- <user>:<branch>
+
+# From a full fork repo URL and branch name (HTTPS)
+$ npm run checkout:pr -- <fork-repo-url> <branch>
+
+# From a full fork repo URL and branch name (SSH)
+$ npm run checkout:pr -- git@github.com:<user>/<repo>.git <branch>
+```
+
+The script will:
+
+1. Add the fork as a git remote (named after the fork owner) if not already present
+2. Fetch the target branch
+3. Create (or update) a local branch named `fork/<owner>/<branch>`
+4. Print instructions for switching back to your previous branch
+
+For upstream PRs (branches on `meteor/meteor` itself), the script detects the existing `origin` remote and checks out the branch directly without the `fork/` prefix.
+
+If you run the script again for the same fork branch, it will fetch the latest changes and update the local branch.
 
 ### Notes when running from a checkout
 
@@ -115,103 +152,108 @@ For the rest, try looking nearby for a `README.md`.  For example, [`isobuild`](t
 
 ## Tests
 
-### Test against the local meteor copy
+When running tests that use `./meteor`, be sure to run them against the checked-out copy of Meteor instead of the globally-installed version. This ensures tests run against your local development version.
 
-When running any tests, be sure to run them against the checked-out copy of Meteor instead of
-the globally-installed version.  This means ensuring that the command is `path-to-meteor-checkout/meteor` and not just `meteor`.
+The repository has four test layers, each covering a different scope:
 
-This is important so that tests are run against your local development version and not the stable (installed) Meteor release.
+| Command | Layer | Scope |
+|---------|-------|-------|
+| `npm run test:unit` | **Unit** (Jest) | Pure logic in `tools/`, `scripts/`, and helpers: fast, no Meteor runtime needed |
+| `npm run test:e2e` | **E2E** (Jest + Playwright) | Bundler integration and skeleton apps: creates real Meteor projects, launches a browser |
+| `./meteor self-test` | **Self-test** (custom) | Meteor CLI tool itself, spawns sandboxed Meteor processes to verify commands end-to-end |
+| `./meteor test-packages` | **Package** (TinyTest) | Atmosphere packages in `packages/`, runs inside a Meteor app with the full reactive runtime |
 
-### Running tests on Meteor core
+### Unit tests (Jest)
 
-When you are working with code in the core Meteor packages, you will want to make sure you run the
-full test-suite (including the tests you added) to ensure you haven't broken anything in Meteor. The
-`test-packages` command will do just that for you:
+Unit tests cover pure helpers, scripts, and tool logic that does not require the Meteor runtime. They use [Jest](https://jestjs.io/) configured in `tools/unit-tests/`, targeting `tools/**/*.test.js` and `scripts/**/*.test.js`.
 
-    ./meteor test-packages
+```sh
+# Install dependencies (first time)
+npm run install:unit
 
-Exactly in the same way that [`test-packages` works in standalone Meteor apps](https://guide.meteor.com/writing-atmosphere-packages.html#testing), the `test-packages` command will start up a Meteor app with [TinyTest](./packages/tinytest/README.md).  To view the results, just connect to `http://localhost:3000`.
+# Run all unit tests
+npm run test:unit
 
-If you want to see results in the console you can use:
+# Run a specific test file
+npm run test:unit -- tools/path/to/file.test.js
 
-    PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
+# Run tests matching a name pattern
+npm run test:unit -- -t "my test name"
+```
 
-> [PUPPETEER_DOWNLOAD_PATH](https://github.com/dfernandez79/puppeteer/blob/main/README.md#q-chromium-gets-downloaded-on-every-npm-ci-run-how-can-i-cache-the-download) is optional but this is useful to skip Downloading Chromium on every run
+Place test files next to the module they test using the `*.test.js` naming convention. Jest will pick them up automatically.
 
-> We run our tests on Travis like above.
+### E2E tests (Jest + Playwright)
 
-#### Running specific tests
+End-to-end tests in `tools/modern-tests/` validate that Meteor skeletons and bundler integrations work correctly. They create real Meteor apps, start dev servers, and assert behavior in a headless Chromium browser.
 
-Specific package tests can be run by passing a `<package name>` or `<package path>` to the `test-packages` command. For example, to run `mongo` tests, it's possible to run:
+```sh
+# Install dependencies (first time)
+npm run install:e2e
 
-    ./meteor test-packages mongo
+# Run all E2E tests
+npm run test:e2e
 
-For more fine-grained control, if you're interested in running only the specific tests that relate to the functionality you're working on, you can filter individual tests by using the `TINYTEST_FILTER` environment variable (which supports regex's). For example, to run only the package tests that verify `new Mongo.Collection` behavior, try:
+# Run a specific suite
+npm run test:e2e -- -t="React"
+```
 
-    TINYTEST_FILTER="collection - call new Mongo.Collection" ./meteor test-packages
+Each test has a corresponding app fixture in `tools/modern-tests/apps/`. See that directory for examples when adding new E2E tests.
 
-You can also provide the same filters for `./packages/test-in-console/run.sh` explained above.
+### Self-tests (Meteor tool)
 
-### Running Meteor Tool self-tests
+The Meteor CLI has its own "self-test" framework that spawns sandboxed Meteor processes. It tests commands like `create`, `build`, `deploy`, and `publish`.
 
-While TinyTest and the `test-packages` command can be used to test internal Meteor packages, they cannot be used to test the Meteor Tool itself. The Meteor Tool is a node app that uses a home-grown "self test" system.
+```sh
+# List all self-tests
+./meteor self-test --list
 
-#### Listing available tests
+# Run all self-tests
+./meteor self-test
 
-To see a list of tests included in the self-test system, use the `--list` option:
+# Run tests matching a regex
+./meteor self-test "^[a-b]"
 
-    ./meteor self-test --list
+# Exclude tests matching a regex
+./meteor self-test --exclude "^[a-b]"
 
-#### Running specific tests
+# Skip retries during development
+./meteor self-test --retries 0
+```
 
-The self-test commands support a regular-expression syntax in order to specific/search for specific tests.  For example, to search for tests starting with `a` or `b`, it's possible to run:
+### Package tests (TinyTest)
 
-    ./meteor self-test "^[a-b]" --list
+When working with core Atmosphere packages, use `test-packages` to run their tests via [TinyTest](./packages/tinytest/README.md). This starts a Meteor app, view results at `http://localhost:3000`.
 
-Simply remove the `--list` flag to actually run the matching tests.
+```sh
+# Test all packages
+./meteor test-packages
 
-#### Excluding specific tests
+# Test a specific package
+./meteor test-packages mongo
 
-In a similar way to the method of specifying which tests TO run, there is a way to specify which tests should NOT run.  Again, using regular-expressions, this command will NOT list any tests which start with `a` or `b`:
+# Filter by test name (supports regex), using --filter or -f
+./meteor test-packages --filter "collection - call new Mongo.Collection"
 
-    ./meteor self-test --exclude "^[a-b]" --list
+# Equivalent using the environment variable
+TINYTEST_FILTER="collection - call new Mongo.Collection" ./meteor test-packages
+```
 
-Simply remove the `--list` flag to actually run the matching tests.
+For headless console output:
 
-#### Avoiding retries
-
-On CI we want to retry the tests to avoid false failures but in development can take some time if you retry every time a test is failing. So to avoid retries use:
-
-    ./meteor self-test --retries 0
-
-
-#### More reading
-
-For even more details on how to run Meteor Tool "self tests", please refer to the [Testing section of the Meteor Tool README](https://github.com/meteor/meteor/blob/master/tools/README.md#testing).
+```sh
+PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
+```
 
 ### Continuous integration
 
-Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  These are run by [Circle CI](https://circleci.com/) and defined in the [`circle.yml` file](./circle.yml).  Even more specifically, the tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
+Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  The tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
 
 Not every test which is defined in a test spec is actually ran by the CI server.  Some tests are simply too long-running and some tests are just no longer relevant.  As one particular example, there is a suite of very slow tests grouped into a `slow` designator within the test framework.  These can be executed by adding the `--slow` option to the `self-test` command.
 
 > Please Note: Windows
 >
 > There is not currently a continuous integration system setup for Windows.  Additionally, not all tests are known to work on Windows.  If you're able to take time to improve those tests, it would be greatly appreciated.  Currently, there isn't an official list of known tests which do not run on Windows, but a PR to note those here and get them fixed would be ideal!
-
-#### Running your own CircleCI
-
-Since Meteor is a free, open-source project, you can run tests in the context of your own CircleCI account at no cost (up to the maximum number of containers allowed by them) during development and prior to submitting a pull-request.  For some, this may be quicker or more convenient than running tests on their own workstation.  As an added advantage, when your tests are "green", that status will be immediately shown (as passing) when a pull-request is opened with the official Meteor repository.
-
-To enable CircleCI for your development:
-
-0. Make sure you have an account with [CircleCI](https://circleci.com)
-0. Make sure you have [forked](https://help.github.com/articles/fork-a-repo/) [Meteor](https://github.com/meteor/meteor) into your own GitHub account.
-0. Go to the [Add Projects](https://circleci.com/add-projects) page on CircleCI.
-0. On the left, click on your GitHub username.
-0. On the right, find `meteor`
-0. Click on the "Build project" button next to `meteor`.
-0. Your build will start automatically!
 
 ## Code style
 
