@@ -266,8 +266,9 @@ export async function claimAndExecute(jobId, jobName) {
     return;
   }
 
-  // We successfully claimed this job — track per-type count and execute.
-  _incrementTypeCount(claimed.name);
+  // We successfully claimed this job — execute. The per-type counter is
+  // incremented inside executeJob alongside _runningJobs.set so the two
+  // stay paired with _cleanup's decrement+delete.
   await executeJob(claimed);
 }
 
@@ -313,6 +314,7 @@ async function executeJob(jobDoc) {
     abortController,
     timeoutHandle,
   });
+  _incrementTypeCount(jobDoc.name);
 
   // --- Emit 'started' lifecycle event --------------------------------------
 
