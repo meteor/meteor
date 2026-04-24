@@ -1,0 +1,6 @@
+{
+  "//": "Phase 8 registry of known-flaky self-tests. Each entry is a test 'name' (matches selftest.define's first arg) that gets an implicit 'serial' tag at test-load time. The intent is a low-ceremony place to nail a flaky test to the serial pass while a real fix is in flight, without touching the test source or the git log for every oscillation. Populate automatically via:",
+  "//_how": "  node scripts/test-report.js --input <dir> --threshold 5 --format json  → feed names here",
+  "//_remove": "  delete the entry once the upstream fix lands and the test is stable again",
+  "flakyTests": []
+}

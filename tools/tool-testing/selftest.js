@@ -138,6 +138,28 @@ const getAllTests = async () => {
   return allTests;
 };
 
+// Phase 8: tests listed in tools/tool-testing/flaky.json get an implicit
+// 'serial' tag so the worker pool runs them in the final serial pass. The
+// file is loaded lazily on first define() — it is optional.
+let _flakySetCache = null;
+function getFlakyNames() {
+  if (_flakySetCache) return _flakySetCache;
+  _flakySetCache = new Set();
+  try {
+    const flakyPath = files.pathJoin(__dirname, 'flaky.json');
+    if (files.exists(flakyPath)) {
+      const doc = JSON.parse(files.readFile(flakyPath, 'utf8'));
+      for (const n of (doc.flakyTests || [])) {
+        _flakySetCache.add(n);
+      }
+    }
+  } catch (err) {
+    // Malformed flaky.json shouldn't break the test loader; just warn.
+    Console.warn(`self-test: failed to read flaky.json: ${err.message}`);
+  }
+  return _flakySetCache;
+}
+
 export function define(name, tagsList, f) {
   if (typeof tagsList === "function") {
     // tagsList is optional
@@ -146,6 +168,11 @@ export function define(name, tagsList, f) {
   }
 
   const tags = tagsList.slice();
+  // Apply the flaky-list → serial promotion before dedup/sort so we can
+  // see the injected tag in --list output.
+  if (getFlakyNames().has(name) && !tags.includes('serial')) {
+    tags.push('serial');
+  }
   tags.sort();
 
   allTests.push(new Test({
@@ -610,6 +637,10 @@ export async function runTests(options) {
 
   testList.startTime = new Date;
 
+  // Phase 8: optional telemetry array. Enabled when caller passed
+  // --worker-report so scripts/test-report.js can aggregate flakiness.
+  const reportEntries = options.workerReport ? [] : null;
+
   let totalRun = 0;
 
   for (const [index, test] of testList.filteredTests.entries()) {
@@ -633,6 +664,7 @@ export async function runTests(options) {
       return;
     }
 
+    const startedAt = Date.now();
     await Run.runTest(
         testList,
         test,
@@ -643,6 +675,22 @@ export async function runTests(options) {
           retries: options.retries,
         }
     );
+    if (reportEntries) {
+      reportEntries.push({
+        name: test.name,
+        file: test.file,
+        workerId: 0, // 0 = sequential orchestrator
+        status: test.failed ? 'failed' : 'passed',
+        durationMs: test.durationMs || (Date.now() - startedAt),
+        retries: 0,
+        tags: Array.isArray(test.tags) ? test.tags.slice() : [],
+        ...(test.failed && test.failureObject
+          ? { failureReason: test.failureObject.reason
+                            || test.failureObject.message
+                            || 'failure' }
+          : {}),
+      });
+    }
   }
 
   testList.endTime = new Date;
@@ -652,6 +700,27 @@ export async function runTests(options) {
 
   if (options.junit) {
     testList.saveJUnitOutput(options.junit);
+  }
+  if (options.workerReport && reportEntries) {
+    try {
+      files.writeFile(
+        options.workerReport,
+        JSON.stringify({
+          generatedAt: new Date().toISOString(),
+          workers: 1,
+          durationMs: testList.durationMs,
+          totalRun: reportEntries.length,
+          failures: testList.failedTests.length,
+          tests: reportEntries,
+        }, null, 2),
+        'utf8',
+      );
+      Console.info(
+        `self-test: wrote worker report (${reportEntries.length} entries) to ${options.workerReport}`,
+      );
+    } catch (err) {
+      Console.error(`self-test: failed to write worker report: ${err.message}`);
+    }
   }
 
   if (totalRun > 0) {

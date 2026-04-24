@@ -29,6 +29,40 @@ import { getFilteredTests } from './selftest.js';
 import TestFailure from './test-failure.js';
 import { markBottom as parseStackMarkBottom } from '../utils/parse-stack';
 
+// Phase 8: collect per-test telemetry so scripts/test-report.js can
+// compute flakiness across runs without parsing JUnit.
+function makeReportEntry({ test, workerId, status, durationMs, failure, retries }) {
+  const entry = {
+    name: test.name,
+    file: test.file,
+    workerId,
+    status,
+    durationMs,
+    retries: retries || 0,
+    tags: Array.isArray(test.tags) ? test.tags.slice() : [],
+  };
+  if (failure) {
+    entry.failureReason = failure.reason
+      || (failure.kind === 'TestFailure' && failure.reason)
+      || failure.message
+      || 'failure';
+  }
+  return entry;
+}
+
+function saveWorkerReport(path, runMeta, entries) {
+  try {
+    files.writeFile(
+      path,
+      JSON.stringify({ ...runMeta, tests: entries }, null, 2),
+      'utf8',
+    );
+    Console.info(`self-test: wrote worker report (${entries.length} entries) to ${path}`);
+  } catch (err) {
+    Console.error(`self-test: failed to write worker report: ${err.message}`);
+  }
+}
+
 const SERIAL_TAG = 'serial';
 
 // Heuristic order: longest tests first so the tail isn't dominated by
@@ -184,8 +218,17 @@ class Worker {
   }
 }
 
-function applyResult(testList, test, result) {
+function applyResult(testList, test, result, reportEntries) {
   test.durationMs = result.durationMs;
+  if (reportEntries) {
+    reportEntries.push(makeReportEntry({
+      test,
+      workerId: result.workerId,
+      status: result.status,
+      durationMs: result.durationMs,
+      failure: result.failure,
+    }));
+  }
   if (result.status === 'passed') {
     return;
   }
@@ -208,18 +251,32 @@ function rehydrateFailure(f) {
 
 // Run only the tests tagged "serial" inline (no workers). Used both at
 // the end of a parallel run and whenever --workers <= 1.
-async function runSerialInline(testList, serialTests, runOptions) {
+async function runSerialInline(testList, serialTests, runOptions, reportEntries) {
   const total = serialTests.length;
   const Run = require('./run.js').default;
   for (let i = 0; i < total; i++) {
     const test = serialTests[i];
     Console.info(`running [serial] (${i + 1}/${total}) ${test.file}.js test:${test.name} ...`);
+    const startedAt = Date.now();
     await Run.runTest(
       testList,
       test,
       parseStackMarkBottom(() => test.f(runOptions || {})),
       { retries: (runOptions && runOptions.retries) || 0 },
     );
+    if (reportEntries) {
+      reportEntries.push(makeReportEntry({
+        test,
+        workerId: 0, // 0 = orchestrator/serial phase
+        status: test.failed ? 'failed' : 'passed',
+        durationMs: test.durationMs || (Date.now() - startedAt),
+        failure: test.failureObject
+          ? (test.failureObject instanceof TestFailure
+              ? { kind: 'TestFailure', reason: test.failureObject.reason }
+              : { kind: 'Exception', message: String(test.failureObject.message || test.failureObject) })
+          : null,
+      }));
+    }
   }
 }
 
@@ -235,8 +292,10 @@ export async function runTestsParallel(options) {
     retries = 0,
     historyLines,
     junit,
+    workerReport,
     ...filterOptions
   } = options;
+  const reportEntries = workerReport ? [] : null;
 
   // Build the same filtered list the sequential path would produce.
   const testList = await getFilteredTests(filterOptions);
@@ -346,7 +405,7 @@ export async function runTestsParallel(options) {
       // worker (and forwarded with the "[wN] " prefix). Only emit from
       // the orchestrator side on failure, where we need to render the
       // serialized failure DTO that the worker shipped back.
-      applyResult(testList, test, result);
+      applyResult(testList, test, result, reportEntries);
     }
   }
 
@@ -359,7 +418,7 @@ export async function runTestsParallel(options) {
 
   // Serial phase in the orchestrator process.
   if (serial.length && !interrupted) {
-    await runSerialInline(testList, serial, { retries });
+    await runSerialInline(testList, serial, { retries }, reportEntries);
   }
 
   process.off('SIGINT', sigintHandler);
@@ -372,6 +431,15 @@ export async function runTestsParallel(options) {
   testList.saveTestState();
   if (junit) {
     testList.saveJUnitOutput(junit);
+  }
+  if (workerReport && reportEntries) {
+    saveWorkerReport(workerReport, {
+      generatedAt: new Date().toISOString(),
+      workers,
+      durationMs: testList.durationMs,
+      totalRun: reportEntries.length,
+      failures: testList.failedTests.length,
+    }, reportEntries);
   }
 
   Console.error();

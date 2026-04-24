@@ -2869,6 +2869,10 @@ main.registerCommand({
     // Phase 5: number of parallel self-test workers. Falls back to the
     // METEOR_TEST_WORKERS env var, then to 1 (sequential, original).
     workers: { type: Number },
+    // Phase 8: emit a JSON report of {name,file,workerId,status,
+    // durationMs,retries,tags,failureReason?} for each test. Used by
+    // scripts/test-report.js to detect flakiness across runs.
+    'worker-report': { type: String },
   },
   hidden: true,
   catalogRefresh: new catalog.Refresh.Never()
@@ -3005,6 +3009,7 @@ main.registerCommand({
     historyLines: options.history,
     clients: clients,
     junit: options.junit && files.pathResolve(options.junit),
+    workerReport: options['worker-report'] && files.pathResolve(options['worker-report']),
     'without-tag': options['without-tag'],
     'with-tag': options['with-tag'],
     skip: options.skip,
