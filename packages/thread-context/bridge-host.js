@@ -91,14 +91,14 @@ export class BridgeHost {
   async _dispatch(msg) {
     if (this.destroyed) return;
 
+    if (!msg.id) return;
+
     if (msg.v !== PROTOCOL_VERSION) {
       this._postError(msg.id, new BridgeError(
         `Protocol version mismatch: expected ${PROTOCOL_VERSION}, got ${msg.v}`
       ));
       return;
     }
-
-    if (!msg.id) return;
 
     try {
       if (this.onMessage) {
