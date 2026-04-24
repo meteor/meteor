@@ -157,7 +157,7 @@ export class AccountsServer extends AccountsCommon {
       this._CurrentEndpointInvocation.get();
     if (!currentInvocation) {
       throw new Error(
-        "Meteor.userId can only be invoked in method, publications or WebApp endpoints calls."
+        "Meteor.userId can only be invoked inside a method, publication, or WebApp endpoint."
       );
     }
     return currentInvocation.userId;
