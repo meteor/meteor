@@ -1089,3 +1089,30 @@ Tinytest.addAsync(
     }
   }
 );
+
+// When user.emails is present it is authoritative: a valid service email does
+// not rescue a user whose emails array contains only non-matching addresses.
+Tinytest.addAsync(
+  'accounts - restrictCreationByEmailDomain - emails take precedence over services',
+  async (test) => {
+    const { restrictCreationByEmailDomain } = Accounts._options;
+    Accounts._options.restrictCreationByEmailDomain = 'example.com';
+
+    try {
+      await test.throwsAsync(async () => {
+        await Accounts.insertUserDoc(
+          {},
+          {
+            username: Random.id(),
+            emails: [{ address: 'bad@other.com', verified: false }],
+            services: {
+              google: { id: 'g5', email: 'user@example.com' },
+            },
+          }
+        );
+      }, '@example.com email required');
+    } finally {
+      Accounts._options.restrictCreationByEmailDomain = restrictCreationByEmailDomain;
+    }
+  }
+);
