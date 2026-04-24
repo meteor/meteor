@@ -54,7 +54,7 @@ jobs:
 
       - name: Install puppeteer (headless test runner)
         run: |
-          npm install -g puppeteer@23.6.0 || true
+          npm install -g puppeteer@24.42.0 || true
           echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Wait for Postgres
