@@ -339,10 +339,13 @@ async function executeJob(jobDoc) {
     const pool = getWorkerPool();
     if (!pool) {
       _cleanup(jobDoc._id);
-      await markTerminalFailed(jobDoc._id, new Error(
+      // FatalError so handleFailure skips retries (missing package won't
+      // resolve itself between attempts) but still fires the onFailure hook.
+      const fatalErr = new FatalError(
         'Job requires offload: true but the worker-pool package is not available. ' +
         'Add worker-pool to your packages.'
-      ));
+      );
+      await handleFailure(jobDoc._id, fatalErr);
       return;
     }
 
