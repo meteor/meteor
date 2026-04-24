@@ -246,7 +246,7 @@ export class Unibuild {
         unordered: u.unordered || undefined,
         weak: u.weak || undefined,
       })),
-      implies: unibuild.implies && unibuild.implies.length ? unibuild.implies : undefined,
+      implies: unibuild.implies.length ? unibuild.implies : undefined,
       resources: [],
     };
 
