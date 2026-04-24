@@ -58,7 +58,7 @@ interface ThreadContext {
 }
 
 interface BridgeMessage {
-  v: number;
+  v: 1;
   id: string;
   type: string;
   collectionName?: string;
