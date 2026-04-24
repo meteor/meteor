@@ -166,7 +166,7 @@ The `jobs` package has built-in support for worker-pool. Add the package and set
 Jobs.register({
   name: 'processImage',
   offload: true,
-  run(data, { Collections, Meteor }) {
+  async run(data, { Collections, Meteor }) {
     // runs in a worker thread
     const asset = await Collections.Assets.findOneAsync({ _id: data.assetId });
     const resized = sharp(asset.buffer).resize(800).toBuffer();
