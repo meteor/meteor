@@ -162,8 +162,7 @@ compiler.compile = Profile(function (packageSource, options) {
   packageSource.architectures.forEach((sourceArch) => {
     if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(sourceArch.arch)) return;
     sourceArch.uses.forEach((use) => {
-      if (!use.weak && isIsobuildFeaturePackage(use.package) &&
-          isobuildFeatures.indexOf(use.package) === -1) {
+      if (!use.weak && isIsobuildFeaturePackage(use.package)) {
         isobuildFeatures.push(use.package);
       }
     });
