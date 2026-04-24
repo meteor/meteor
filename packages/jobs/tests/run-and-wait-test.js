@@ -10,6 +10,20 @@ function uniqueName(prefix) {
   return `test_rw_${prefix}_${++_seq}_${Date.now()}`;
 }
 
+/**
+ * Poll for a ready job by name. Replaces fixed-interval sleeps so slow CI
+ * doesn't produce null-deref on `job._id`.
+ */
+async function waitForReadyJob(name, { timeoutMs = 5000, intervalMs = 20 } = {}) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const job = await Jobs._collection.findOneAsync({ name, status: 'ready' });
+    if (job) return job;
+    await new Promise(r => setTimeout(r, intervalMs));
+  }
+  return null;
+}
+
 // ---------------------------------------------------------------------------
 // runAndWait: successful job returns result
 // ---------------------------------------------------------------------------
@@ -56,9 +70,9 @@ Tinytest.addAsync('jobs - runAndWait - rejects on failure', async function (test
   });
 
   const waitPromise = Jobs.runAndWait(name, {}, { waitTimeout: 5000 });
-  await new Promise(r => setTimeout(r, 100));
 
-  const job = await Jobs._collection.findOneAsync({ name, status: 'ready' });
+  const job = await waitForReadyJob(name);
+  test.isNotNull(job, 'Job should exist in collection');
   await Jobs.executeNow(job._id);
 
   try {
@@ -84,9 +98,9 @@ Tinytest.addAsync('jobs - runAndWait - rejects on cancellation', async function 
   });
 
   const waitPromise = Jobs.runAndWait(name, {}, { waitTimeout: 5000 });
-  await new Promise(r => setTimeout(r, 100));
 
-  const job = await Jobs._collection.findOneAsync({ name, status: 'ready' });
+  const job = await waitForReadyJob(name);
+  test.isNotNull(job, 'Job should exist in collection');
   await Jobs.cancel(job._id);
 
   try {
