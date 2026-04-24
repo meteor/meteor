@@ -290,16 +290,47 @@ function _demote() {
 /** @type {boolean} Whether SIGTERM/SIGINT handlers have been registered. */
 let _signalHandlersInstalled = false;
 
+/** @type {number} Maximum time (ms) to wait for lock release before exiting. */
+const SHUTDOWN_GRACE_MS = 5000;
+
 /**
  * Handle SIGTERM/SIGINT — release the lock so a new leader can be elected
- * quickly.  Since Node.js signal handlers are synchronous, we give the
- * async release a short grace window before allowing the process to exit.
+ * quickly, then exit the process.
+ *
+ * Awaits `stopLeaderElection()` with a bounded grace window so the lock
+ * is released reliably even if Mongo is slow to respond. On timeout or
+ * error we still call `process.exit(code)` so the process doesn't hang
+ * (`process.on(...)` suppresses Node's default terminate action).
+ *
+ * @param {NodeJS.Signals} signal
  * @private
  */
-function _onShutdownSignal() {
-  stopLeaderElection().catch(err => {
-    console.error('[Jobs] Error releasing leader lock on shutdown:', err);
-  });
+async function _onShutdownSignal(signal) {
+  const code = signal === 'SIGINT' ? 130 : 143;
+
+  try {
+    let timeoutHandle;
+    const timeout = new Promise((resolve) => {
+      timeoutHandle = setTimeout(() => {
+        console.error(
+          `[Jobs] Leader shutdown exceeded ${SHUTDOWN_GRACE_MS}ms grace window; exiting.`
+        );
+        resolve();
+      }, SHUTDOWN_GRACE_MS);
+      timeoutHandle.unref?.();
+    });
+
+    await Promise.race([
+      stopLeaderElection().catch((err) => {
+        console.error('[Jobs] Error releasing leader lock on shutdown:', err);
+      }),
+      timeout,
+    ]);
+
+    clearTimeout(timeoutHandle);
+  } finally {
+    process.exit(code);
+  }
 }
 
 /**
