@@ -159,7 +159,7 @@ Tinytest.add('thread-context - createThreadContext - settings snapshot is shared
   const ctx2 = createThreadContext();
 
   // Same object reference — cloned once, reused
-  test.equal(ctx1.settings, ctx2.settings);
+  test.isTrue(ctx1.settings === ctx2.settings);
 
   ctx1.destroy();
   ctx2.destroy();
