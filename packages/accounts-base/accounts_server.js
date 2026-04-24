@@ -1988,10 +1988,6 @@ const setExpireTokensInterval = accounts => {
    await accounts._expireTokens();
    await accounts._expirePasswordResetTokens();
    await accounts._expirePasswordEnrollTokens();
-   if (accounts._useInMemoryTokenTracking) {
-     // Safety-net: catch tokens removed by direct DB manipulation.
-     await accounts._verifyTrackedTokens();
-   }
   }, EXPIRE_TOKENS_INTERVAL_MS);
 };
 
