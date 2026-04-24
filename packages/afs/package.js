@@ -45,4 +45,11 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use(['afs', 'ecmascript', 'tinytest', 'test-helpers', 'ejson', 'random', 'ddp', 'mongo', 'tracker']);
   api.addFiles('afs-tests.js', ['client', 'server']);
+  api.addFiles('afs-tests-crud.js', 'server');
+  api.addFiles('afs-tests-observe.js', 'server');
+  api.addFiles('afs-tests-stream-provider.js', 'server');
+  api.addFiles('afs-tests-ddp.js', 'server');
+  api.addFiles('afs-tests-adaptive.js', 'server');
+  api.addFiles('afs-tests-registry-idgen.js', ['client', 'server']);
+  api.addFiles('afs-tests-chaos.js', 'server');
 });
