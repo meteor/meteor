@@ -774,7 +774,7 @@ Tinytest.addAsync('worker-pool - double drain returns same promise', async funct
   const pool = new WorkerPool({ min: 0, enableHeartbeat: false });
   const p1 = pool.drain();
   const p2 = pool.drain();
-  test.equal(p1, p2, 'drain() should return the same promise on second call');
+  test.isTrue(p1 === p2, 'drain() should return the same promise on second call');
   await p1;
   await p2;
   test.ok();
