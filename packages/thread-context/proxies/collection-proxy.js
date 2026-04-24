@@ -105,7 +105,7 @@ export function createCollectionProxy(client) {
           }
 
           if (op === 'aggregate') {
-            return (pipeline, options) => client.call({
+            return (pipeline, options = {}) => client.call({
               type: MSG_TYPE.COLLECTION, collectionName, op: 'aggregate', args: [pipeline, options]
             });
           }
