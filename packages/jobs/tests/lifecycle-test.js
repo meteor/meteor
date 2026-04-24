@@ -27,14 +27,17 @@ Tinytest.addAsync('jobs - lifecycle - events fire for completed jobs', async fun
     }
   });
 
-  const jobId = await Jobs.run(name, {});
-  await Jobs.executeNow(jobId);
+  try {
+    const jobId = await Jobs.run(name, {});
+    await Jobs.executeNow(jobId);
 
-  // Give event handlers a tick to fire
-  await new Promise(r => setTimeout(r, 50));
+    // Give event handlers a tick to fire
+    await new Promise(r => setTimeout(r, 50));
 
-  test.isTrue(completedFired, 'completed event should have fired');
-  handle.stop();
+    test.isTrue(completedFired, 'completed event should have fired');
+  } finally {
+    handle.stop();
+  }
 });
 
 Tinytest.addAsync('jobs - lifecycle - events fire for failed jobs', async function (test) {
@@ -54,13 +57,16 @@ Tinytest.addAsync('jobs - lifecycle - events fire for failed jobs', async functi
     }
   });
 
-  const jobId = await Jobs.run(name, {});
-  await Jobs.executeNow(jobId);
+  try {
+    const jobId = await Jobs.run(name, {});
+    await Jobs.executeNow(jobId);
 
-  await new Promise(r => setTimeout(r, 50));
+    await new Promise(r => setTimeout(r, 50));
 
-  test.isTrue(failedFired, 'failed event should have fired');
-  handle.stop();
+    test.isTrue(failedFired, 'failed event should have fired');
+  } finally {
+    handle.stop();
+  }
 });
 
 Tinytest.addAsync('jobs - lifecycle - onComplete per-type hook fires', async function (test) {
