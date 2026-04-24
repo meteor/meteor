@@ -42,12 +42,17 @@ Tinytest.addAsync('thread-context - MethodHandler - method not found', async fun
   const { MethodHandler } = require('meteor/thread-context');
   const handler = new MethodHandler({ userId: null, connectionId: null });
 
-  await test.throwsAsync(async () => {
+  try {
     await handler.handle({
       methodName: 'threadContext.test.doesNotExist',
       methodArgs: [],
     });
-  });
+    test.fail('Expected error');
+  } catch (err) {
+    test.instanceOf(err, Meteor.Error);
+    test.equal(err.error, 404);
+    test.matches(err.message, /threadContext\.test\.doesNotExist/);
+  }
 });
 
 Tinytest.addAsync('thread-context - MethodHandler - method throws Meteor.Error', async function (test) {

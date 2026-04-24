@@ -141,29 +141,37 @@ Tinytest.addAsync('thread-context - CollectionHandler - aggregate', async functi
 });
 
 Tinytest.addAsync('thread-context - CollectionHandler - unknown collection', async function (test) {
-  const { CollectionHandler } = require('meteor/thread-context');
+  const { CollectionHandler, BridgeError } = require('meteor/thread-context');
   const handler = new CollectionHandler({ userId: null, connectionId: null });
 
-  await test.throwsAsync(async () => {
+  try {
     await handler.handle({
       collectionName: 'nonexistent_collection_xyz',
       op: 'findOneAsync',
       args: [{}],
     });
-  });
+    test.fail('Expected error');
+  } catch (err) {
+    test.instanceOf(err, BridgeError);
+    test.matches(err.message, /Collection 'nonexistent_collection_xyz' not found/);
+  }
 });
 
 Tinytest.addAsync('thread-context - CollectionHandler - unknown operation', async function (test) {
-  const { CollectionHandler } = require('meteor/thread-context');
+  const { CollectionHandler, BridgeError } = require('meteor/thread-context');
   const handler = new CollectionHandler({ userId: null, connectionId: null });
 
-  await test.throwsAsync(async () => {
+  try {
     await handler.handle({
       collectionName: testCollName,
       op: 'badOp',
       args: [],
     });
-  });
+    test.fail('Expected error');
+  } catch (err) {
+    test.instanceOf(err, BridgeError);
+    test.matches(err.message, /Unknown collection operation: 'badOp'/);
+  }
 });
 
 Tinytest.addAsync('thread-context - CollectionHandler - find.countAsync on empty collection', async function (test) {

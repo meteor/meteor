@@ -106,7 +106,7 @@ export class BridgeClient {
    * @private
    */
   _onPortClose() {
-    for (const [id, { reject, timer }] of this.pending) {
+    for (const { reject, timer } of this.pending.values()) {
       clearTimeout(timer);
       reject(new BridgeError('Bridge context destroyed'));
     }
