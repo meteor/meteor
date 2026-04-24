@@ -107,7 +107,7 @@ export function createCollectionProxy(client: BridgeClient): CollectionsProxy;
 export function createMethodProxy(client: BridgeClient): {
   callAsync(methodName: string, ...args: any[]): Promise<any>;
 };
-export function createConnectionProxy(connectionId: string): { readonly id: string };
+export function createConnectionProxy(connectionId: string | null): { readonly id: string | null };
 export function createBridgeInvocation(context: {
   userId: string | null;
   connectionId: string | null;
