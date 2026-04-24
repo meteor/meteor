@@ -2,6 +2,17 @@ import { ChangeStream } from './change-stream';
 import { ObserveMultiplexer } from './observe-multiplexer';
 
 /**
+ * Thrown when a method is called on a StreamProvider that has been closed.
+ */
+export class ProviderClosedError extends Error {
+  constructor(providerName, methodName) {
+    super(`${providerName}.${methodName}() called on a closed provider`);
+    this.name = 'ProviderClosedError';
+    this.code = 'provider-closed';
+  }
+}
+
+/**
  * StreamProvider - Abstract base class for all AFS data source adapters.
  *
  * Each data source (MongoDB, PostgreSQL, Redis, Kafka, etc.) implements this
@@ -28,6 +39,7 @@ export class StreamProvider {
     }
     this.name = options.name || 'unknown';
     this._connected = false;
+    this._state = 'open';
     this._collections = new Map();
     this._multiplexerCache = new Map();
     this._multiplexerPending = new Map();
@@ -38,21 +50,36 @@ export class StreamProvider {
   // ---------------------------------------------------------------------------
 
   /**
+   * @private
+   * Throws ProviderClosedError if this provider has been closed.
+   */
+  _assertOpen(methodName) {
+    if (this._state === 'closed') {
+      throw new ProviderClosedError(this.constructor.name, methodName);
+    }
+  }
+
+  /**
    * Establish connection to the data source.
    * @returns {Promise<void>}
    */
   async connect() {
+    this._assertOpen('connect');
     throw new Error(`${this.constructor.name}.connect() must be implemented`);
   }
 
   /**
    * Close the connection to the data source.
-   * Subclasses MUST call super.close() or _closeMultiplexers() to clean up.
+   * Subclasses SHOULD call super.close() as the LAST step of their cleanup.
+   * The base implementation stops all cached multiplexers, marks the provider
+   * as closed, and is safe to call more than once.
    * @returns {Promise<void>}
    */
   async close() {
+    if (this._state === 'closed') return;
     this._closeMultiplexers();
-    throw new Error(`${this.constructor.name}.close() must be implemented`);
+    this._state = 'closed';
+    this._connected = false;
   }
 
   /**
@@ -87,6 +114,7 @@ export class StreamProvider {
    * @returns {Promise<string>} The _id of the inserted document
    */
   async insertAsync(collectionName, doc) {
+    this._assertOpen('insertAsync');
     throw new Error(`${this.constructor.name}.insertAsync() must be implemented`);
   }
 
@@ -101,6 +129,7 @@ export class StreamProvider {
    * @returns {Promise<number>} Number of affected documents
    */
   async updateAsync(collectionName, selector, modifier, options) {
+    this._assertOpen('updateAsync');
     throw new Error(`${this.constructor.name}.updateAsync() must be implemented`);
   }
 
@@ -111,6 +140,7 @@ export class StreamProvider {
    * @returns {Promise<number>} Number of removed documents
    */
   async removeAsync(collectionName, selector) {
+    this._assertOpen('removeAsync');
     throw new Error(`${this.constructor.name}.removeAsync() must be implemented`);
   }
 
@@ -164,6 +194,7 @@ export class StreamProvider {
    * @returns {Promise<Array>}
    */
   async _fetchResults(collectionName, selector, options) {
+    this._assertOpen('_fetchResults');
     throw new Error(`${this.constructor.name}._fetchResults() must be implemented`);
   }
 
@@ -179,6 +210,7 @@ export class StreamProvider {
    * @returns {AFSCursor} A cursor implementing the Meteor cursor interface
    */
   find(collectionName, selector, options) {
+    this._assertOpen('find');
     throw new Error(`${this.constructor.name}.find() must be implemented`);
   }
 
@@ -196,6 +228,7 @@ export class StreamProvider {
    * @returns {Promise<{stop: Function}>} An observe handle with a stop() method
    */
   async observeChanges(cursorDescription, ordered, callbacks, options) {
+    this._assertOpen('observeChanges');
     throw new Error(`${this.constructor.name}.observeChanges() must be implemented`);
   }
 
@@ -220,6 +253,7 @@ export class StreamProvider {
    * @returns {Promise<void>}
    */
   async createIndexAsync(collectionName, index, options) {
+    this._assertOpen('createIndexAsync');
     throw new Error(`${this.constructor.name}.createIndexAsync() must be implemented`);
   }
 
@@ -230,6 +264,7 @@ export class StreamProvider {
    * @returns {Promise<void>}
    */
   async dropIndexAsync(collectionName, indexName) {
+    this._assertOpen('dropIndexAsync');
     throw new Error(`${this.constructor.name}.dropIndexAsync() must be implemented`);
   }
 
@@ -371,6 +406,7 @@ export class StreamProvider {
    * @returns {ChangeStream}
    */
   startObserving(cursorDescription, ordered) {
+    this._assertOpen('startObserving');
     throw new Error(
       `${this.constructor.name}.startObserving() must be implemented ` +
       `when _supportsEventEmitter() returns true`
@@ -388,7 +424,9 @@ export class StreamProvider {
    * @returns {Promise<ObserveMultiplexer>}
    */
   async _getMultiplexer(cursorDescription, ordered) {
-    const key = EJSON.stringify({ ...cursorDescription, ordered });
+    // Canonical stringify so semantically-equal cursor descriptions with
+    // differing key-insertion orders dedupe to the same multiplexer.
+    const key = EJSON.stringify({ ...cursorDescription, ordered }, { canonical: true });
 
     if (this._multiplexerCache.has(key)) {
       return this._multiplexerCache.get(key);

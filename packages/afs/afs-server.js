@@ -14,7 +14,11 @@ import { ObserveMultiplexer } from './observe-multiplexer';
  * This namespace is exported globally and provides access to all AFS
  * functionality.
  */
-AFS = {
+// `AFS` is declared as a package global in package.js (`api.export('AFS')`).
+// We assign explicitly through `global.AFS` instead of relying on an
+// undeclared bare-identifier assignment, which strict-mode and linters flag
+// as an accidental global leak.
+const AFS = {
   // Classes
   StreamProvider,
   Cursor: AFSCursor,
@@ -141,6 +145,9 @@ AFS = {
    */
   version: '0.1.0',
 };
+
+// Bind to the Meteor package-global slot declared in package.js.
+global.AFS = AFS;
 
 // Export for ES module imports
 export {

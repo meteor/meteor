@@ -221,5 +221,10 @@ export function registerMongoWithAFS() {
   AFS.registerProvider('mongo', mongoProvider);
   AFS.setDefaultProvider('mongo');
 
+  if (typeof AFS.registerCoreResolver === 'function' &&
+      typeof Mongo !== 'undefined' && typeof Mongo.getCollection === 'function') {
+    AFS.registerCoreResolver(name => Mongo.getCollection(name));
+  }
+
   return mongoProvider;
 }

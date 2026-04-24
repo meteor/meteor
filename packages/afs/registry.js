@@ -22,6 +22,11 @@ import { EventEmitter } from 'events';
 const _registryEmitter = new EventEmitter();
 _registryEmitter.setMaxListeners(0);
 
+// Pluggable core-collection resolvers. External packages (e.g. mongo) register
+// a resolver via AFS.registerCoreResolver so the AFS registry stays free of
+// any hard dependency on a specific data source.
+const _coreResolvers = [];
+
 export const Registry = {
   // ---------------------------------------------------------------------------
   // Provider management
@@ -103,13 +108,24 @@ export const Registry = {
    * @param {string} name
    */
   removeProvider(name) {
+    const wasDefault = this._defaultProviderName === name;
     this._providers.delete(name);
-    if (this._defaultProviderName === name) {
+    let defaultChanged = false;
+    let newDefaultName = null;
+    if (wasDefault) {
       // Fall back to first remaining provider
       const first = this._providers.keys().next().value;
-      this._defaultProviderName = first || null;
+      newDefaultName = first || null;
+      this._defaultProviderName = newDefaultName;
+      defaultChanged = true;
     }
     _registryEmitter.emit('provider:removed', name);
+    if (defaultChanged) {
+      const newProvider = newDefaultName
+        ? this._providers.get(newDefaultName)
+        : null;
+      _registryEmitter.emit('provider:default-changed', newDefaultName, newProvider);
+    }
   },
 
   // ---------------------------------------------------------------------------
@@ -184,27 +200,58 @@ export const Registry = {
   /**
    * Get a core framework collection by name.
    *
-   * Falls back to the general collection registry if not found in core.
-   * Falls back to Mongo.Collection lookup if available.
+   * Lookup order:
+   *   1. core-collection registry
+   *   2. general collection registry
+   *   3. each resolver registered via registerCoreResolver, in insertion order
+   *
+   * The registry has no hard dependency on any particular data source.
+   * Packages like `mongo` register a resolver to expose their collections.
    *
    * @param {string} name - Core collection identifier (e.g., 'users')
    * @returns {Object|undefined}
    */
   getCoreCollection(name) {
-    // First try core registry
     const core = this._coreCollections.get(name);
     if (core) return core;
 
-    // Then try general collection registry
     const general = this._collections.get(name);
     if (general) return general;
 
-    // Fallback: try Mongo.getCollection if mongo package is loaded
-    if (typeof Mongo !== 'undefined' && Mongo.getCollection) {
-      return Mongo.getCollection(name);
+    for (const resolver of _coreResolvers) {
+      try {
+        const resolved = resolver(name);
+        if (resolved) return resolved;
+      } catch (_e) {
+        // A broken resolver must not break the chain.
+      }
     }
 
     return undefined;
+  },
+
+  /**
+   * Register a resolver used by getCoreCollection as a last-resort lookup.
+   * Resolvers are called in insertion order; the first truthy return wins.
+   * @param {Function} resolver - (name) => collection | undefined
+   */
+  registerCoreResolver(resolver) {
+    if (typeof resolver !== 'function') {
+      throw new TypeError('registerCoreResolver requires a function');
+    }
+    _coreResolvers.push(resolver);
+  },
+
+  /**
+   * Remove a previously-registered core resolver. Primarily for testing.
+   * @param {Function} resolver
+   * @returns {boolean} true if removed
+   */
+  unregisterCoreResolver(resolver) {
+    const idx = _coreResolvers.indexOf(resolver);
+    if (idx === -1) return false;
+    _coreResolvers.splice(idx, 1);
+    return true;
   },
 
   /**
@@ -229,14 +276,30 @@ export const Registry = {
   // ---------------------------------------------------------------------------
 
   /**
-   * Reset all registries. Primarily for testing.
+   * Reset all registries. Test-only.
+   * Throws if called outside a Meteor test environment.
    */
-  _reset() {
+  _resetForTests() {
+    const inTest =
+      (typeof Meteor !== 'undefined' && (Meteor.isTest || Meteor.isAppTest || Meteor.isPackageTest)) ||
+      process.env.NODE_ENV === 'test';
+    if (!inTest) {
+      throw new Error('Registry._resetForTests may only be called from tests');
+    }
     this._providers.clear();
     this._collections.clear();
     this._coreCollections.clear();
     this._defaultProviderName = null;
+    _coreResolvers.length = 0;
     _registryEmitter.removeAllListeners();
+  },
+
+  /**
+   * @deprecated Use _resetForTests. Kept as an alias so existing test code
+   * does not break during the rename rollout. Applies the same test-env guard.
+   */
+  _reset() {
+    this._resetForTests();
   },
 
   // ---------------------------------------------------------------------------

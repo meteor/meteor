@@ -1,8 +1,8 @@
 /**
  * AFSCursor - A cursor implementation that works with any StreamProvider.
  *
- * Implements the full Meteor cursor interface so it can be used in publications,
- * templates, and application code identically to Mongo.Cursor.
+ * Implements the async Meteor 3 cursor interface so it can be used in
+ * publications, templates, and application code identically to Mongo.Cursor.
  *
  * On the server, delegates queries and observations to the StreamProvider.
  * On the client, this is not used directly - client-side collections use
@@ -40,19 +40,11 @@ export class AFSCursor {
   }
 
   // ---------------------------------------------------------------------------
-  // Core cursor interface
+  // Core cursor interface (async-only; Meteor 3)
   // ---------------------------------------------------------------------------
 
   /**
    * Return all matching documents as an array.
-   * @returns {Array<Object>}
-   */
-  fetch() {
-    return Promise.await(this.fetchAsync());
-  }
-
-  /**
-   * Return all matching documents as an array (async).
    * @returns {Promise<Array<Object>>}
    */
   async fetchAsync() {
@@ -76,15 +68,6 @@ export class AFSCursor {
   }
 
   /**
-   * Call callback for each matching document.
-   * @param {Function} callback - Called with (doc, index, cursor)
-   * @param {*} [thisArg]
-   */
-  forEach(callback, thisArg) {
-    return Promise.await(this.forEachAsync(callback, thisArg));
-  }
-
-  /**
    * Call callback for each matching document (async).
    * @param {Function} callback - Called with (doc, index, cursor)
    * @param {*} [thisArg]
@@ -95,16 +78,6 @@ export class AFSCursor {
     for (let i = 0; i < docs.length; i++) {
       await callback.call(thisArg, docs[i], i, this);
     }
-  }
-
-  /**
-   * Map callback over all matching documents.
-   * @param {Function} callback - Called with (doc, index, cursor)
-   * @param {*} [thisArg]
-   * @returns {Array}
-   */
-  map(callback, thisArg) {
-    return Promise.await(this.mapAsync(callback, thisArg));
   }
 
   /**
@@ -120,14 +93,6 @@ export class AFSCursor {
       result.push(await callback.call(thisArg, docs[i], i, this));
     }
     return result;
-  }
-
-  /**
-   * Count matching documents.
-   * @returns {number}
-   */
-  count() {
-    return Promise.await(this.countAsync());
   }
 
   /**
@@ -162,24 +127,9 @@ export class AFSCursor {
     }
   }
 
-  [Symbol.iterator]() {
-    const docs = this.fetch();
-    return docs[Symbol.iterator]();
-  }
-
   // ---------------------------------------------------------------------------
-  // Observer interface (reactive queries)
+  // Observer interface (reactive queries, async-only)
   // ---------------------------------------------------------------------------
-
-  /**
-   * Watch for changes to the cursor result set.
-   * @param {Object} callbacks - { added, changed, removed } or { addedBefore, changed, movedBefore, removed }
-   * @param {Object} [options]
-   * @returns {Object} Handle with stop() method
-   */
-  observe(callbacks) {
-    return Promise.await(this.observeAsync(callbacks));
-  }
 
   /**
    * Watch for changes (async).
@@ -187,25 +137,8 @@ export class AFSCursor {
    * @returns {Promise<Object>}
    */
   async observeAsync(callbacks) {
-    const ordered = !!(
-      callbacks.addedAt ||
-      callbacks.changedAt ||
-      callbacks.removedAt ||
-      callbacks.movedTo
-    );
-
     // Use LocalCollection._observeFromObserveChanges for compatibility
     return LocalCollection._observeFromObserveChanges(this, callbacks);
-  }
-
-  /**
-   * Watch for changes to the cursor (low-level delta callbacks).
-   * @param {Object} callbacks - { added(id, fields), changed(id, fields), removed(id) }
-   * @param {Object} [options]
-   * @returns {Object} Handle with stop() method
-   */
-  observeChanges(callbacks, options = {}) {
-    return Promise.await(this.observeChangesAsync(callbacks, options));
   }
 
   /**

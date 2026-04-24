@@ -816,6 +816,102 @@ if (Meteor.isServer) {
   // Ordered multiplexer: initial-adds preserve correct `before` values
   // --------------------------------------------------------------------------
 
+  // --------------------------------------------------------------------------
+  // I3 — markReset must reset _ready; subsequent readers must wait for a new
+  // markReady() before observing as "ready".
+  // --------------------------------------------------------------------------
+
+  Tinytest.addAsync('afs - observe - markReset clears _ready until next markReady', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 't', selector: {} });
+    // Attach a no-op error listener so stray 'error' emissions don't throw.
+    stream.on('error', () => {});
+
+    test.isFalse(stream.isReady(), 'fresh stream is not ready');
+    stream.markReady();
+    test.isTrue(stream.isReady(), 'markReady sets ready');
+
+    stream.markReset();
+    test.isFalse(stream.isReady(), 'markReset must clear ready state');
+
+    // A fresh multiplexer binding to this stream AFTER the reset must NOT see
+    // a ready stream — its constructor branch `if (this._stream.isReady())`
+    // should be false, so _readyPromise stays pending.
+    const mux = new AFS.ObserveMultiplexer(stream, false);
+    test.isFalse(mux._isReady, 'multiplexer built after reset must not be ready');
+
+    let handleResolved = false;
+    const pending = mux.addHandle({ added() {} }).then((h) => {
+      handleResolved = true;
+      return h;
+    });
+    // Give microtasks a turn.
+    await Promise.resolve().then(() => Promise.resolve());
+    test.isFalse(handleResolved, 'addHandle must wait for a new markReady');
+
+    // A new markReady resolves the waiting reader.
+    stream.markReady();
+    const h = await pending;
+    test.isTrue(stream.isReady(), 'next markReady flips ready back on');
+    test.isTrue(mux._isReady, 'multiplexer sees the new ready');
+    h.stop();
+  });
+
+  // --------------------------------------------------------------------------
+  // I5 — live events emitted during addHandle's initial-adds window must be
+  // delivered to the new handle exactly once, after the initial adds.
+  // --------------------------------------------------------------------------
+
+  Tinytest.addAsync('afs - observe - live event during addHandle is replayed to pending handle exactly once', async (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 't', selector: {} });
+    stream.on('error', () => {});
+    const mux = new AFS.ObserveMultiplexer(stream, false);
+
+    // Populate cache before markReady so _sendInitialAdds has something to do.
+    stream.added('seed1', { v: 1 });
+    stream.added('seed2', { v: 2 });
+    stream.markReady();
+
+    // Inject a hook that fires a LIVE emission in the middle of
+    // _sendInitialAdds. The live emission cannot be satisfied from the cache
+    // (reconnected is not cache-bearing), so the I5 fix ensures it is queued
+    // to the pending handle and delivered after initial adds.
+    const origSendInitialAdds = mux._sendInitialAdds.bind(mux);
+    mux._sendInitialAdds = function (handle) {
+      origSendInitialAdds(handle);
+      // At this point the handle is not yet in _handles. Fire a live event.
+      stream.markReconnected();
+    };
+
+    const received = [];
+    const handle = await mux.addHandle({
+      added(id) { received.push({ kind: 'added', id }); },
+      reconnected() { received.push({ kind: 'reconnected' }); },
+    });
+
+    // Order: initial adds (seed1, seed2) then the reconnected that was
+    // emitted during the initial-adds window.
+    const addedIds = received.filter(e => e.kind === 'added').map(e => e.id);
+    const reconnectedCount = received.filter(e => e.kind === 'reconnected').length;
+
+    test.equal(addedIds.sort(), ['seed1', 'seed2']);
+    test.equal(reconnectedCount, 1, 'reconnected must be delivered exactly once');
+
+    // Ordering: the reconnected entry must come AFTER both initial adds.
+    const reconnIdx = received.findIndex(e => e.kind === 'reconnected');
+    const lastAddIdx = received.map(e => e.kind).lastIndexOf('added');
+    test.isTrue(
+      reconnIdx > lastAddIdx,
+      'reconnected must be delivered after initial adds'
+    );
+
+    // Subsequent live events must flow through ordinary fan-out (not duped).
+    stream.markReconnected();
+    const reconnectedCount2 = received.filter(e => e.kind === 'reconnected').length;
+    test.equal(reconnectedCount2, 2, 'second reconnected is delivered once via live fan-out');
+
+    handle.stop();
+  });
+
   Tinytest.addAsync('afs - observe - ordered initial adds set before=null on last and prev-id on earlier entries', async (test) => {
     const stream = new AFS.ChangeStream({ collectionName: 't', selector: {} });
     const multiplexer = new AFS.ObserveMultiplexer(stream, true);

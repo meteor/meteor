@@ -13,6 +13,7 @@ export class AdaptiveEngine {
       // Prefetch settings
       prefetchEnabled: options.prefetchEnabled !== false,
       prefetchThreshold: options.prefetchThreshold || 3, // hits before prefetching
+      maxPatterns: options.maxPatterns || 1000, // LRU cap for access patterns
 
       // Throttle settings
       throttleEnabled: options.throttleEnabled !== false,
@@ -66,7 +67,8 @@ export class AdaptiveEngine {
     if (!this._options.prefetchEnabled) return;
 
     const key = this._patternKey(collectionName, selector);
-    const pattern = this._accessPatterns.get(key) || {
+    const existing = this._accessPatterns.get(key);
+    const pattern = existing || {
       count: 0,
       lastAccess: 0,
       selector,
@@ -76,7 +78,19 @@ export class AdaptiveEngine {
 
     pattern.count++;
     pattern.lastAccess = Date.now();
+
+    // LRU: delete so re-set places at the tail (most-recently-used).
+    if (existing) this._accessPatterns.delete(key);
     this._accessPatterns.set(key, pattern);
+
+    // Evict least-recently-used entries once we exceed the cap.
+    const cap = this._options.maxPatterns;
+    while (this._accessPatterns.size > cap) {
+      const oldestKey = this._accessPatterns.keys().next().value;
+      if (oldestKey === undefined) break;
+      this._accessPatterns.delete(oldestKey);
+    }
+
     this._metrics.totalQueries++;
   }
 
@@ -223,18 +237,25 @@ export class AdaptiveEngine {
   /**
    * Increment pending operation counter.
    * @param {string} type - 'query' or 'write'
-   * @returns {Function} Release function to call when operation completes
+   * @returns {Function} Release function to call when operation completes.
+   *   Calling the release function more than once is a no-op — the counter
+   *   is only ever decremented once per acquire.
    */
   acquireSlot(type = 'query') {
+    let released = false;
     if (type === 'write') {
       this._pendingWrites++;
       return () => {
+        if (released) return;
+        released = true;
         this._pendingWrites--;
         this._notifySlotAvailable('write');
       };
     }
     this._pendingQueries++;
     return () => {
+      if (released) return;
+      released = true;
       this._pendingQueries--;
       this._notifySlotAvailable('query');
     };
@@ -362,12 +383,13 @@ export class AdaptiveEngine {
 
   /**
    * Generate a stable key for a query pattern.
+   * Uses canonical EJSON so semantically-equal selectors with differing
+   * key insertion orders produce the same pattern key.
    * @private
    */
   _patternKey(collectionName, selector) {
     try {
-      // Use sorted keys for consistent hashing
-      return collectionName + ':' + EJSON.stringify(selector);
+      return collectionName + ':' + EJSON.stringify(selector, { canonical: true });
     } catch (e) {
       return collectionName + ':*';
     }

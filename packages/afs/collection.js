@@ -4,28 +4,37 @@ import { EventEmitter } from 'events';
 // Lightweight local collection driver for AFS.
 // Replicates the same pattern as mongo/local_collection_driver.js
 // without depending on the mongo package.
+//
+// Keys are namespaced by provider so two collections with the same name but
+// different server-side providers cannot share client-side Minimongo state.
 const _afsLocalCollections = Object.create(null);
 
-function openLocalCollection(name, conn) {
+function _localKey(providerName, name) {
+  return `${providerName || 'default'}:${name}`;
+}
+
+function openLocalCollection(providerName, name, conn) {
   if (!name) {
     return new LocalCollection();
   }
 
+  const key = _localKey(providerName, name);
+
   if (!conn) {
-    if (!(name in _afsLocalCollections)) {
-      _afsLocalCollections[name] = new LocalCollection(name);
+    if (!(key in _afsLocalCollections)) {
+      _afsLocalCollections[key] = new LocalCollection(name);
     }
-    return _afsLocalCollections[name];
+    return _afsLocalCollections[key];
   }
 
   if (!conn._afs_collections) {
     conn._afs_collections = Object.create(null);
   }
 
-  if (!(name in conn._afs_collections)) {
-    conn._afs_collections[name] = new LocalCollection(name);
+  if (!(key in conn._afs_collections)) {
+    conn._afs_collections[key] = new LocalCollection(name);
   }
-  return conn._afs_collections[name];
+  return conn._afs_collections[key];
 }
 
 // ---------------------------------------------------------------------------
@@ -98,6 +107,10 @@ export class FederatedCollection {
 
     this._name = name;
     this._provider = options.provider || null;
+    this._providerName =
+      (options.provider && options.provider.name) ||
+      options.providerName ||
+      null;
     this._transform = LocalCollection.wrapTransform(options.transform || null);
     this.resolverType = options.resolverType;
 
@@ -166,28 +179,6 @@ export class FederatedCollection {
 
     // Client or local-only: use LocalCollection
     return this._collection.find(
-      this._rewriteSelector(selector),
-      options
-    );
-  }
-
-  /**
-   * Find a single document.
-   * @param {Object} [selector]
-   * @param {Object} [options]
-   * @returns {Object|undefined}
-   */
-  findOne(selector, options) {
-    if (arguments.length === 0) {
-      selector = {};
-    }
-    options = { ...this._getFindOptions(options), limit: 1 };
-
-    if (Meteor.isServer && this._provider) {
-      return Promise.await(this.findOneAsync(selector, options));
-    }
-
-    return this._collection.findOne(
       this._rewriteSelector(selector),
       options
     );
@@ -318,81 +309,6 @@ export class FederatedCollection {
   }
 
   // ---------------------------------------------------------------------------
-  // Sync mutation methods (backward compatibility)
-  // ---------------------------------------------------------------------------
-
-  insert(doc, callback) {
-    if (!doc) {
-      throw new Error('insert requires a document argument');
-    }
-
-    doc = EJSON.clone(doc);
-
-    if (!doc._id) {
-      doc._id = this._makeNewID();
-    }
-
-    if (this._isRemoteCollection()) {
-      return this._callMutatorMethod('insert', [doc], callback);
-    }
-
-    try {
-      const result = this._collection.insert(doc);
-      if (callback) callback(null, result);
-      return result;
-    } catch (e) {
-      if (callback) { callback(e); return null; }
-      throw e;
-    }
-  }
-
-  update(selector, modifier, options, callback) {
-    if (typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-    selector = this._rewriteSelector(selector);
-
-    if (this._isRemoteCollection()) {
-      return this._callMutatorMethod('update', [selector, modifier, options], callback);
-    }
-
-    try {
-      const result = this._collection.update(selector, modifier, options);
-      if (callback) callback(null, result);
-      return result;
-    } catch (e) {
-      if (callback) { callback(e); return null; }
-      throw e;
-    }
-  }
-
-  remove(selector, callback) {
-    selector = this._rewriteSelector(selector);
-
-    if (this._isRemoteCollection()) {
-      return this._callMutatorMethod('remove', [selector], callback);
-    }
-
-    try {
-      const result = this._collection.remove(selector);
-      if (callback) callback(null, result);
-      return result;
-    } catch (e) {
-      if (callback) { callback(e); return null; }
-      throw e;
-    }
-  }
-
-  upsert(selector, modifier, options, callback) {
-    if (typeof options === 'function') {
-      callback = options;
-      options = {};
-    }
-    return this.update(selector, modifier, { ...options, upsert: true, _returnObject: true }, callback);
-  }
-
-  // ---------------------------------------------------------------------------
   // Index methods
   // ---------------------------------------------------------------------------
 
@@ -403,7 +319,9 @@ export class FederatedCollection {
     if (this._collection.createIndexAsync) {
       return this._collection.createIndexAsync(index, options);
     }
-    throw new Error('createIndexAsync is not available on this collection');
+    throw new Error(
+      `createIndexAsync is not available on collection "${this._name}"`
+    );
   }
 
   async dropIndexAsync(indexName) {
@@ -413,7 +331,9 @@ export class FederatedCollection {
     if (this._collection.dropIndexAsync) {
       return this._collection.dropIndexAsync(indexName);
     }
-    throw new Error('dropIndexAsync is not available on this collection');
+    throw new Error(
+      `dropIndexAsync is not available on collection "${this._name}"`
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -461,9 +381,10 @@ export class FederatedCollection {
   _createIdGenerator(name, idGeneration) {
     if (idGeneration === 'UUID') {
       if (Meteor.isServer) {
-        const crypto = Npm.require('crypto');
+        // Lazy require keeps this out of the client bundle.
+        const { randomUUID } = require('crypto');
         return function () {
-          return crypto.randomUUID();
+          return randomUUID();
         };
       }
       // Client fallback: use Random.hexString for UUID-like IDs
@@ -495,7 +416,11 @@ export class FederatedCollection {
     } else {
       // Client or no provider: use LocalCollection directly
       // This mirrors what mongo/local_collection_driver.js does
-      this._collection = openLocalCollection(name, this._connection);
+      this._collection = openLocalCollection(
+        this._providerName,
+        name,
+        this._connection
+      );
     }
   }
 
@@ -511,25 +436,12 @@ export class FederatedCollection {
     const self = this;
 
     return {
-      // Required for allow/deny validated methods
       async findOneAsync(selector, options) {
         return provider.findOneAsync(collectionName, selector, options);
       },
 
-      findOne(selector, options) {
-        return Promise.await(provider.findOneAsync(collectionName, selector, options));
-      },
-
       find(selector, options) {
         return provider.find(collectionName, selector, options);
-      },
-
-      insert(doc) {
-        self.emit('before:insert', { doc });
-        const id = Promise.await(provider.insertAsync(collectionName, doc));
-        self.emit('after:insert', { doc, id });
-        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
-        return id;
       },
 
       async insertAsync(doc) {
@@ -540,26 +452,10 @@ export class FederatedCollection {
         return id;
       },
 
-      update(selector, modifier, options) {
-        self.emit('before:update', { selector, modifier, options });
-        const result = Promise.await(provider.updateAsync(collectionName, selector, modifier, options));
-        self.emit('after:update', { selector, modifier, options, result });
-        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
-        return result;
-      },
-
       async updateAsync(selector, modifier, options) {
         self.emit('before:update', { selector, modifier, options });
         const result = await provider.updateAsync(collectionName, selector, modifier, options);
         self.emit('after:update', { selector, modifier, options, result });
-        if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
-        return result;
-      },
-
-      remove(selector) {
-        self.emit('before:remove', { selector });
-        const result = Promise.await(provider.removeAsync(collectionName, selector));
-        self.emit('after:remove', { selector, result });
         if (typeof AFS !== 'undefined' && AFS._engine) AFS._engine._metrics.totalWrites++;
         return result;
       },
@@ -592,8 +488,8 @@ export class FederatedCollection {
 
       // Document access for replication
       _docs: {
-        get(id) {
-          return Promise.await(provider.findOneAsync(collectionName, { _id: id }));
+        async get(id) {
+          return provider.findOneAsync(collectionName, { _id: id });
         },
       },
     };
@@ -638,8 +534,19 @@ export class FederatedCollection {
       throw new Error("Selector can't be an array.");
     }
 
-    if (!selector || ('_id' in selector && !selector._id)) {
+    // Missing selector: forge an unmatchable _id so write paths with no
+    // selector do not accidentally match every document.
+    if (selector === undefined || selector === null) {
       return { _id: fallbackId || Random.id() };
+    }
+
+    // Selector is present but contains an explicitly falsy _id. Silently
+    // rewriting would destroy valid IDs like { _id: 0 } or { _id: false }
+    // and silently turn a bad query into "match nothing". Surface it loudly.
+    if ('_id' in selector && !selector._id) {
+      throw new Error(
+        `Invalid selector on collection "${this._name}": _id is ${JSON.stringify(selector._id)}`
+      );
     }
 
     return selector;
@@ -770,8 +677,8 @@ export class FederatedCollection {
         self.emit('replication:batch-ended');
       },
 
-      getDoc(id) {
-        return self.findOne(id);
+      async getDoc(id) {
+        return self.findOneAsync(id);
       },
 
       ...wrappedStoreCommon,
@@ -786,7 +693,10 @@ export class FederatedCollection {
 
       async update(msg) {
         const mongoId = MongoID.idParse(msg.id);
-        const doc = self._collection._docs.get(mongoId);
+        // On the server-with-provider path, _docs.get returns a Promise
+        // that resolves to the current doc; on LocalCollection it returns
+        // the doc synchronously. `await` handles both.
+        const doc = await self._collection._docs.get(mongoId);
 
         if (msg.msg === 'replace') {
           const replace = msg.replace;
@@ -890,8 +800,11 @@ export class FederatedCollection {
     }
 
     // Clean up local collection cache
-    if (this._name && _afsLocalCollections[this._name]) {
-      delete _afsLocalCollections[this._name];
+    if (this._name) {
+      const key = _localKey(this._providerName, this._name);
+      if (_afsLocalCollections[key]) {
+        delete _afsLocalCollections[key];
+      }
     }
 
     // Remove all EventEmitter listeners
@@ -915,7 +828,9 @@ export class FederatedCollection {
     if (this._collection.find) {
       return this._collection.find(selector, options).count();
     }
-    throw new Error('countDocuments is not available on this collection');
+    throw new Error(
+      `countDocuments is not available on collection "${this._name}"`
+    );
   }
 
   /**
@@ -936,8 +851,37 @@ Object.getOwnPropertyNames(EventEmitter.prototype).forEach(key => {
   }
 });
 
-// Mix in allow/deny methods from the allow-deny package
-Object.assign(FederatedCollection.prototype, AllowDeny.CollectionPrototype);
+// Mix in allow/deny methods from the allow-deny package.
+// Explicit copy with collision detection so a future method rename on either
+// side does not silently clobber behavior here.
+const _AllowDenyMethods = [
+  'allow',
+  'deny',
+  '_defineMutationMethods',
+  '_updateFetch',
+  '_isInsecure',
+  '_validatedInsertAsync',
+  '_validatedUpdateAsync',
+  '_validatedRemoveAsync',
+  '_callMutatorMethodAsync',
+  '_callMutatorMethod',
+];
+for (const methodName of _AllowDenyMethods) {
+  const impl = AllowDeny.CollectionPrototype[methodName];
+  if (typeof impl !== 'function') {
+    throw new Error(
+      `AFS: AllowDeny.CollectionPrototype.${methodName} is missing; ` +
+      `allow-deny package is incompatible with this version of afs.`
+    );
+  }
+  if (Object.prototype.hasOwnProperty.call(FederatedCollection.prototype, methodName)) {
+    throw new Error(
+      `AFS: refusing to overwrite FederatedCollection.prototype.${methodName} ` +
+      `with allow-deny mixin (would hide existing implementation).`
+    );
+  }
+  FederatedCollection.prototype[methodName] = impl;
+}
 
 // Collection Extensions static API
 FederatedCollection.addExtension = (ext) => _CollectionExtensions.addExtension(ext);

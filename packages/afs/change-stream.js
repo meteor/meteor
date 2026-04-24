@@ -30,22 +30,31 @@ export class ChangeStream extends EventEmitter {
   /**
    * @param {Object} cursorDescription - Describes the query
    * @param {Object} [options]
+   * @param {boolean} [options.silentErrors=false] - If true, unlistened 'error'
+   *   events are routed to Meteor._debug instead of throwing (Node default).
+   *   Default is false: Node's default semantics apply and an unlistened
+   *   'error' will throw.
    */
   constructor(cursorDescription, options = {}) {
     super();
     this._cursorDescription = cursorDescription;
     this._stopped = false;
     this._ready = false;
+    this.silentErrors = !!options.silentErrors;
     // Allow many listeners (publications + engine + debug tools)
     this.setMaxListeners(0);
   }
 
   // ---------------------------------------------------------------------------
-  // Override emit to handle unlistened 'error' events gracefully
+  // Override emit only when silentErrors is set; otherwise defer to Node.
   // ---------------------------------------------------------------------------
 
   emit(event, ...args) {
-    if (event === 'error' && this.listenerCount('error') === 0) {
+    if (
+      event === 'error' &&
+      this.silentErrors &&
+      this.listenerCount('error') === 0
+    ) {
       Meteor._debug('ChangeStream unhandled error:', args[0]);
       return false;
     }
@@ -84,6 +93,7 @@ export class ChangeStream extends EventEmitter {
 
   markReset() {
     if (this._stopped) return;
+    this._ready = false;
     this.emit('reset');
   }
 

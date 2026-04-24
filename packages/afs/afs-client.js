@@ -2,13 +2,34 @@ import { StreamProvider } from './stream-provider';
 import { FederatedCollection } from './collection';
 import { Registry } from './registry';
 
-// Lightweight client-side stubs for server-only classes.
-// Prevents `import { ChangeStream } from 'meteor/afs'` from being undefined.
-class ChangeStream {}
-class ObserveMultiplexer {}
-class AFSCursor {}
-class AdaptiveEngine {}
-class MockStreamProvider {}
+// Client-side stubs for server-only classes. The exported identifier exists
+// so `import { ChangeStream } from 'meteor/afs'` does not fail at module load,
+// but constructing one on the client is a programmer error and throws.
+class ChangeStream {
+  constructor() {
+    throw new Error('ChangeStream is server-only');
+  }
+}
+class ObserveMultiplexer {
+  constructor() {
+    throw new Error('ObserveMultiplexer is server-only');
+  }
+}
+class AFSCursor {
+  constructor() {
+    throw new Error('AFSCursor is server-only');
+  }
+}
+class AdaptiveEngine {
+  constructor() {
+    throw new Error('AdaptiveEngine is server-only');
+  }
+}
+class MockStreamProvider {
+  constructor() {
+    throw new Error('MockStreamProvider is server-only');
+  }
+}
 
 /**
  * AFS Client - Adaptive Federated Streams (Client-side)
@@ -20,7 +41,9 @@ class MockStreamProvider {}
  * Client-side collections always use Minimongo for local state and DDP
  * for server synchronization, regardless of the server-side data source.
  */
-AFS = {
+// Declare once, then publish on the global so legacy callers that look up
+// `AFS` without an import still find it. (The server file does the same.)
+const AFS = {
   // Classes (subset available on client)
   StreamProvider, // Available for type checking / instanceof
   Collection: FederatedCollection,
@@ -65,6 +88,14 @@ AFS = {
     return Registry.hasCoreCollection(name);
   },
 
+  registerCoreResolver(resolver) {
+    return Registry.registerCoreResolver(resolver);
+  },
+
+  unregisterCoreResolver(resolver) {
+    return Registry.unregisterCoreResolver(resolver);
+  },
+
   // ---------------------------------------------------------------------------
   // Server-only method stubs (no-ops on client)
   // ---------------------------------------------------------------------------
@@ -94,12 +125,20 @@ AFS = {
   // Utility
   // ---------------------------------------------------------------------------
 
+  _resetForTests() {
+    Registry._resetForTests();
+  },
+
+  // Deprecated alias for _resetForTests.
   _reset() {
-    Registry._reset();
+    Registry._resetForTests();
   },
 
   version: '0.1.0',
 };
+
+// Publish on the global for legacy lookups.
+global.AFS = AFS;
 
 export {
   AFS,

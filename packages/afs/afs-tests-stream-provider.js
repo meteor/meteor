@@ -477,12 +477,15 @@ if (Meteor.isServer) {
   // ---------------------------------------------------------------------------
 
   Tinytest.add(
-    'afs - stream-provider - ChangeStream markError without listener routes to Meteor._debug',
+    'afs - stream-provider - ChangeStream markError without listener routes to Meteor._debug (silentErrors opt-in)',
     (test) => {
-      const stream = new AFS.ChangeStream({
-        collectionName: Random.id(),
-        selector: {},
-      });
+      // Under the restored Node default semantics an unlistened 'error' will
+      // throw; callers that want the old silent behavior must opt in via
+      // { silentErrors: true }.
+      const stream = new AFS.ChangeStream(
+        { collectionName: Random.id(), selector: {} },
+        { silentErrors: true }
+      );
 
       const originalDebug = Meteor._debug;
       const debugCalls = [];
@@ -507,6 +510,117 @@ if (Meteor.isServer) {
       test.matches(errArg.message, /boom/);
 
       stream.stop();
+    }
+  );
+
+  Tinytest.add(
+    'afs - stream-provider - ChangeStream unlistened error throws by default (Node semantics)',
+    (test) => {
+      // Default: silentErrors === false — an unlistened 'error' must throw,
+      // matching Node's EventEmitter contract.
+      const stream = new AFS.ChangeStream({
+        collectionName: Random.id(),
+        selector: {},
+      });
+
+      let threw = null;
+      try {
+        stream.markError(new Error('node-default-boom'));
+      } catch (e) {
+        threw = e;
+      }
+      test.isTrue(threw instanceof Error, 'unlistened error must throw');
+      test.matches(threw && threw.message, /node-default-boom/);
+
+      stream.stop();
+    }
+  );
+
+  // ---------------------------------------------------------------------------
+  // C2 — base close() cleanup is safe to call from a subclass.
+  // ---------------------------------------------------------------------------
+
+  Tinytest.addAsync(
+    'afs - StreamProvider - close() cleanup is safe to call from subclass',
+    async (test) => {
+      // A subclass that does its own cleanup and then calls super.close() as
+      // the last step (per the documented contract) must not throw.
+      let subclassCleanupRan = false;
+      class Sub extends AFS.StreamProvider {
+        constructor() {
+          super({ name: 'sub-for-close-test' });
+        }
+        // startObserving is unused in this test but required by the contract.
+        startObserving() { return new AFS.ChangeStream({ collectionName: 'x', selector: {} }); }
+        _supportsEventEmitter() { return true; }
+        async close() {
+          // Subclass-specific cleanup first.
+          subclassCleanupRan = true;
+          // Then delegate to the base. Per the new contract this must not throw.
+          await super.close();
+        }
+      }
+
+      const provider = new Sub();
+      test.equal(provider._state, 'open', 'provider starts in open state');
+
+      let threw = null;
+      try {
+        await provider.close();
+      } catch (e) {
+        threw = e;
+      }
+      test.isNull(threw, 'super.close() must not throw');
+      test.isTrue(subclassCleanupRan, 'subclass cleanup ran');
+      test.equal(provider._state, 'closed', 'provider state is closed after close()');
+
+      // Second close is a safe no-op.
+      let secondThrew = null;
+      try {
+        await provider.close();
+      } catch (e) {
+        secondThrew = e;
+      }
+      test.isNull(secondThrew, 'repeated close() must be idempotent');
+    }
+  );
+
+  Tinytest.addAsync(
+    'afs - StreamProvider - abstract methods on a closed provider throw ProviderClosedError',
+    async (test) => {
+      // A minimal abstract subclass — when closed, its inherited base methods
+      // (find, startObserving, insertAsync, …) must throw provider-closed
+      // instead of the generic "must be implemented" error.
+      class BareSub extends AFS.StreamProvider {
+        constructor() { super({ name: 'bare-sub' }); }
+      }
+      const provider = new BareSub();
+      await provider.close();
+
+      const callers = [
+        () => provider.find('x'),
+        () => provider.startObserving({ collectionName: 'x', selector: {} }, false),
+      ];
+      for (const call of callers) {
+        let caught = null;
+        try { call(); } catch (e) { caught = e; }
+        test.isTrue(caught instanceof Error, 'method on closed provider must throw');
+        test.equal(
+          caught.code,
+          'provider-closed',
+          'error code should be provider-closed, not a must-implement message'
+        );
+      }
+
+      // Async variant.
+      let asyncCaught = null;
+      try {
+        await provider.insertAsync('x', {});
+      } catch (e) {
+        asyncCaught = e;
+      }
+      test.isTrue(asyncCaught instanceof Error, 'async method on closed provider must reject');
+      test.equal(asyncCaught.code, 'provider-closed');
     }
   );
 

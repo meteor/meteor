@@ -20,12 +20,13 @@ export class MockStreamProvider extends StreamProvider {
 
   async connect() {
     this._connected = true;
+    // Reopen a previously-closed provider so CRUD/observe can be used again.
+    this._state = 'open';
   }
 
   async close() {
-    this._closeMultiplexers();
-    this._connected = false;
     this._localCollections = {};
+    await super.close();
   }
 
   _getLocalCollection(collectionName) {
@@ -103,16 +104,14 @@ export class MockStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async observeChanges(cursorDescription, ordered, callbacks, options = {}) {
+    if (ordered) {
+      throw new Error('MockStreamProvider does not support ordered observes');
+    }
     const lc = this._getLocalCollection(cursorDescription.collectionName);
     const cursor = lc.find(
       cursorDescription.selector,
       cursorDescription.options || {}
     );
-
-    if (ordered) {
-      return cursor.observeChanges(callbacks);
-    }
-
     return cursor.observeChanges(callbacks);
   }
 

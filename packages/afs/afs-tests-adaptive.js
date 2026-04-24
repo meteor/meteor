@@ -489,3 +489,134 @@ if (Meteor.isServer) {
     test.equal(engine._accessPatterns.get(keyCy).count, 1);
   });
 }
+
+// ---------------------------------------------------------------------------
+// I4 — acquireSlot release is idempotent
+// ---------------------------------------------------------------------------
+
+if (Meteor.isServer) {
+  Tinytest.add('afs - adaptive - acquireSlot release is idempotent (double-release no-op)', (test) => {
+    const engine = new AFS.AdaptiveEngine({ maxPendingQueries: 10, maxPendingWrites: 10 });
+
+    const r1 = engine.acquireSlot('query');
+    const r2 = engine.acquireSlot('query');
+    test.equal(engine.getMetrics().pendingQueries, 2);
+
+    // Release r1 twice — counter must end at 1, not drop to 0 (and definitely not negative).
+    r1();
+    r1();
+    r1();
+    test.equal(engine.getMetrics().pendingQueries, 1, 'double-release must not drive counter negative');
+
+    r2();
+    r2();
+    test.equal(engine.getMetrics().pendingQueries, 0);
+
+    // And repeated release from the released slot must not push it below zero.
+    r1();
+    r2();
+    test.equal(engine.getMetrics().pendingQueries, 0);
+
+    // Same story for writes.
+    const w1 = engine.acquireSlot('write');
+    test.equal(engine.getMetrics().pendingWrites, 1);
+    w1();
+    w1();
+    w1();
+    test.equal(engine.getMetrics().pendingWrites, 0);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// I8 — _patternKey is canonical (key order insensitive)
+// ---------------------------------------------------------------------------
+
+if (Meteor.isServer) {
+  Tinytest.add('afs - adaptive - patternKey canonicalizes key order', (test) => {
+    const engine = new AFS.AdaptiveEngine();
+    const k1 = engine._patternKey('col', { a: 1, b: 2 });
+    const k2 = engine._patternKey('col', { b: 2, a: 1 });
+    test.equal(k1, k2, 'same selector with different key order must produce the same pattern key');
+
+    // Nested objects must also canonicalize.
+    const k3 = engine._patternKey('col', { outer: { a: 1, b: 2 }, top: true });
+    const k4 = engine._patternKey('col', { top: true, outer: { b: 2, a: 1 } });
+    test.equal(k3, k4);
+  });
+
+  Tinytest.add('afs - adaptive - recordAccess with reordered keys shares a single counter', (test) => {
+    const engine = new AFS.AdaptiveEngine();
+    const name = 'afs-canon-' + Random.id();
+
+    engine.recordAccess(name, { a: 1, b: 2 }, {});
+    engine.recordAccess(name, { b: 2, a: 1 }, {});
+    engine.recordAccess(name, { a: 1, b: 2 }, {});
+
+    // All three must collapse into one pattern entry with count 3.
+    const key = engine._patternKey(name, { a: 1, b: 2 });
+    const pattern = engine._accessPatterns.get(key);
+    test.isTrue(!!pattern);
+    test.equal(pattern.count, 3);
+    test.equal(engine._accessPatterns.size, 1);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// A5 — _accessPatterns is bounded by maxPatterns (LRU eviction)
+// ---------------------------------------------------------------------------
+
+if (Meteor.isServer) {
+  Tinytest.add('afs - adaptive - accessPatterns evicts LRU when over maxPatterns cap', (test) => {
+    const cap = 16;
+    const engine = new AFS.AdaptiveEngine({ maxPatterns: cap });
+
+    // Insert many more distinct selectors than the cap allows.
+    const total = cap * 10;
+    for (let i = 0; i < total; i++) {
+      engine.recordAccess('col', { i }, {});
+      test.isTrue(
+        engine._accessPatterns.size <= cap,
+        `size ${engine._accessPatterns.size} exceeded cap ${cap} at step ${i}`
+      );
+    }
+
+    test.equal(engine._accessPatterns.size, cap, 'final size should be exactly the cap');
+
+    // Oldest entries (i = 0 .. total-cap-1) must have been evicted; newest
+    // cap entries must still be present.
+    for (let i = 0; i < total - cap; i++) {
+      const key = engine._patternKey('col', { i });
+      test.isFalse(engine._accessPatterns.has(key), `old entry i=${i} should be evicted`);
+    }
+    for (let i = total - cap; i < total; i++) {
+      const key = engine._patternKey('col', { i });
+      test.isTrue(engine._accessPatterns.has(key), `recent entry i=${i} should be retained`);
+    }
+  });
+
+  Tinytest.add('afs - adaptive - accessPatterns refreshes LRU position on repeat access', (test) => {
+    const engine = new AFS.AdaptiveEngine({ maxPatterns: 3 });
+
+    engine.recordAccess('col', { k: 'a' }, {});
+    engine.recordAccess('col', { k: 'b' }, {});
+    engine.recordAccess('col', { k: 'c' }, {});
+    test.equal(engine._accessPatterns.size, 3);
+
+    // Touch 'a' so it becomes most-recently-used.
+    engine.recordAccess('col', { k: 'a' }, {});
+
+    // Add 'd' — oldest should now be 'b', not 'a'.
+    engine.recordAccess('col', { k: 'd' }, {});
+    test.equal(engine._accessPatterns.size, 3);
+
+    const keyA = engine._patternKey('col', { k: 'a' });
+    const keyB = engine._patternKey('col', { k: 'b' });
+    const keyC = engine._patternKey('col', { k: 'c' });
+    const keyD = engine._patternKey('col', { k: 'd' });
+
+    test.isTrue(engine._accessPatterns.has(keyA), 'a must survive because it was just accessed');
+    test.isFalse(engine._accessPatterns.has(keyB), 'b must be evicted (least recently used)');
+    test.isTrue(engine._accessPatterns.has(keyC));
+    test.isTrue(engine._accessPatterns.has(keyD));
+  });
+}

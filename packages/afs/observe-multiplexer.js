@@ -21,6 +21,11 @@ export class ObserveMultiplexer {
     this._ordered = ordered;
     this._onEmpty = options.onEmpty || null;
     this._handles = new Map();
+    // Handles that are mid-addHandle (awaiting initial-adds). Any live event
+    // emitted while a handle is pending is queued here and replayed to that
+    // handle once it transitions into _handles, so live-only emissions (e.g.
+    // 'reconnected', 'reset') that don't mutate the cache aren't lost.
+    this._pendingHandles = new Map();
     this._handleIdCounter = 0;
 
     // Cache current result set using Minimongo's caching observer
@@ -70,15 +75,8 @@ export class ObserveMultiplexer {
         // map, so the cache does NOT alias the args we're about to broadcast.
         this._cache.applyChange[name](...args);
 
-        // Clone the mutable arguments ONCE per event and broadcast the same
-        // reference to every mutating handle. This mirrors Mongo's
-        // ObserveMultiplexer pattern: one clone, broadcast reference.
-        //
-        // Skip the clone entirely when we can prove no handle will mutate:
-        //   - every registered handle has nonMutatingCallbacks: true, or
-        //   - there is only a single handle (the clone would be pointless
-        //     since there's no cross-handle aliasing to protect against).
-        // In those cases the raw args are forwarded directly.
+        // Clone-on-write invariant: args are broadcast by reference; any handle
+        // that may mutate MUST receive an EJSON.clone to avoid cross-handle aliasing.
         let sharedClonedArgs = null;
         const needsClone = this._handlesNeedCloning();
 
@@ -110,6 +108,13 @@ export class ObserveMultiplexer {
             }
           }
         }
+
+        // NOTE: cache-mutating events (added/changed/removed/addedBefore/
+        // movedBefore) are NOT buffered for pending handles — the cache has
+        // already absorbed them, and _sendInitialAdds will deliver the
+        // resulting state from the cache. Buffering here would cause
+        // duplicates. Only live-only lifecycle events need the buffer
+        // (see the 'error' and lifecycle handlers below).
       });
     }
 
@@ -135,6 +140,11 @@ export class ObserveMultiplexer {
           }
         }
       }
+      if (this._pendingHandles.size > 0) {
+        for (const [, queue] of this._pendingHandles) {
+          queue.push({ name: 'error', args: [err] });
+        }
+      }
     });
 
     // Lifecycle events forwarded to handles
@@ -148,6 +158,11 @@ export class ObserveMultiplexer {
             } catch (e) {
               console.error(`Error in observeChanges ${evt} callback:`, e);
             }
+          }
+        }
+        if (this._pendingHandles.size > 0) {
+          for (const [, queue] of this._pendingHandles) {
+            queue.push({ name: evt, args });
           }
         }
       });
@@ -174,18 +189,48 @@ export class ObserveMultiplexer {
       _stopped: false,
     };
 
-    // Wait for initial data to be ready
-    await this._readyPromise;
+    // Register as pending BEFORE awaiting readiness so any live emission that
+    // happens during the initial-adds window is captured and replayed.
+    this._pendingHandles.set(id, []);
 
-    // Send initial adds BEFORE adding to handles (so live events don't interleave)
-    this._sendInitialAdds(handle);
+    try {
+      // Wait for initial data to be ready
+      await this._readyPromise;
 
-    // NOW add to handles — live events will fan out from this point
-    this._handles.set(id, handle);
+      // Send initial adds BEFORE adding to handles (so live events don't interleave)
+      this._sendInitialAdds(handle);
+
+      // NOW add to handles — live events will fan out from this point
+      this._handles.set(id, handle);
+
+      // Drain live-only lifecycle events (error/reconnected/reset/paused/
+      // resumed) that fired during the initial-adds window. Cache-mutating
+      // events (added/changed/removed/...) are NOT buffered here because the
+      // cache already absorbed them and _sendInitialAdds delivered them.
+      const queue = this._pendingHandles.get(id) || [];
+      for (const { name, args } of queue) {
+        if (handle._stopped) break;
+        const cb = handle.callbacks[name];
+        if (!cb) continue;
+        try {
+          const result = cb(...args);
+          if (result && typeof result === 'object' && typeof result.then === 'function') {
+            result.catch(err =>
+              console.error(`Error in observeChanges ${name} callback:`, err)
+            );
+          }
+        } catch (err) {
+          console.error(`Error in observeChanges ${name} callback:`, err);
+        }
+      }
+    } finally {
+      this._pendingHandles.delete(id);
+    }
 
     const self = this;
     return {
       stop() {
+        if (handle._stopped) return;
         handle._stopped = true;
         self._handles.delete(id);
         // If no more handles, clean up

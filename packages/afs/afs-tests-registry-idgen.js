@@ -8,7 +8,7 @@ import { Tinytest } from 'meteor/tinytest';
 //   - getCoreCollection third-tier fallback to Mongo.getCollection (registry.js:203)
 //   - registry event payloads (provider:registered/removed/default-changed,
 //     collection:registered, core-collection:registered)
-//   - listener cleanup behavior of AFS._reset() (registry.js:234)
+//   - listener cleanup behavior of AFS._resetForTests() (registry.js:234)
 //   - _createIdGenerator STRING path (collection.js:478-481)
 //   - _createIdGenerator UUID client fallback path (collection.js:469-475)
 //   - createIndexAsync / dropIndexAsync failure paths (collection.js:399-417)
@@ -30,7 +30,7 @@ const UUID_V4_RE =
 Tinytest.add(
   'afs - registry - removeProvider rebinds default to remaining provider',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
     const providerA = new AFS.MockStreamProvider();
     const providerB = new AFS.MockStreamProvider();
@@ -53,14 +53,14 @@ Tinytest.add(
     test.equal(AFS.getDefaultProviderName(), 'B');
     test.equal(AFS.getDefaultProvider(), providerB);
 
-    AFS._reset();
+    AFS._resetForTests();
   }
 );
 
 Tinytest.add(
   'afs - registry - removeProvider picks first remaining provider (insertion order)',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
     const providerA = new AFS.MockStreamProvider();
     const providerB = new AFS.MockStreamProvider();
@@ -79,14 +79,14 @@ Tinytest.add(
     test.equal(AFS.getDefaultProviderName(), 'B');
     test.equal(AFS.getDefaultProvider(), providerB);
 
-    AFS._reset();
+    AFS._resetForTests();
   }
 );
 
 Tinytest.add(
   'afs - registry - removing last provider leaves default null',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
     const provider = new AFS.MockStreamProvider();
     AFS.registerProvider('only', provider);
@@ -101,14 +101,14 @@ Tinytest.add(
     test.equal(AFS.getDefaultProvider(), null);
     test.equal(AFS.getDefaultProviderName(), null);
 
-    AFS._reset();
+    AFS._resetForTests();
   }
 );
 
 Tinytest.add(
   'afs - registry - removing a non-default provider leaves default untouched',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
     const providerA = new AFS.MockStreamProvider();
     const providerB = new AFS.MockStreamProvider();
@@ -124,7 +124,7 @@ Tinytest.add(
     test.equal(AFS.getDefaultProviderName(), 'A');
     test.equal(AFS.getDefaultProvider(), providerA);
 
-    AFS._reset();
+    AFS._resetForTests();
   }
 );
 
@@ -133,56 +133,90 @@ Tinytest.add(
 // ===========================================================================
 
 Tinytest.add(
-  'afs - registry - getCoreCollection falls back to Mongo.getCollection',
+  'afs - registry - getCoreCollection falls back via registered core resolver',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
-    // The third-tier fallback requires the mongo package. Skip gracefully
-    // if it's not loaded for some reason.
+    // AFS no longer hard-codes Mongo into the registry. A resolver must be
+    // registered (in production, the mongo package does this on its own).
+    // We register one here and assert the fallback chain walks through it.
     if (typeof Mongo === 'undefined' || typeof Mongo.getCollection !== 'function') {
       return;
     }
 
-    // Create a Mongo.Collection so it registers itself in Mongo._collections.
-    // Use a unique name so it doesn't collide with anything else.
+    AFS.registerCoreResolver((n) => Mongo.getCollection(n));
+
     const name = 'afs-core-fallback-' + Random.id();
-    // connection: null -> purely in-memory, no DDP / no server state needed.
     const mongoColl = new Mongo.Collection(name, { connection: null });
 
-    // Nothing is registered in AFS for this name; fallback to Mongo.getCollection
-    // should resolve it.
     const resolved = AFS.getCoreCollection(name);
-    test.isTrue(!!resolved, 'expected a truthy collection from Mongo fallback');
+    test.isTrue(!!resolved, 'expected a truthy collection from resolver fallback');
     test.equal(resolved, mongoColl);
 
-    AFS._reset();
+    AFS._resetForTests();
+  }
+);
+
+Tinytest.add(
+  'afs - registry - registerCoreResolver chain: first truthy wins, later resolvers skipped',
+  (test) => {
+    AFS._resetForTests();
+
+    const calls = [];
+    const sentinel = { tag: 'from-second' };
+    AFS.registerCoreResolver((n) => { calls.push(['first', n]); return undefined; });
+    AFS.registerCoreResolver((n) => { calls.push(['second', n]); return sentinel; });
+    AFS.registerCoreResolver((n) => { calls.push(['third', n]); return { tag: 'should-not-win' }; });
+
+    const resolved = AFS.getCoreCollection('anything');
+    test.equal(resolved, sentinel);
+    test.equal(calls.length, 2, 'third resolver must not be called once second returned truthy');
+    test.equal(calls[0][0], 'first');
+    test.equal(calls[1][0], 'second');
+
+    AFS._resetForTests();
+  }
+);
+
+Tinytest.add(
+  'afs - registry - registerCoreResolver: throwing resolver does not break chain',
+  (test) => {
+    AFS._resetForTests();
+
+    const sentinel = { tag: 'ok' };
+    AFS.registerCoreResolver(() => { throw new Error('boom'); });
+    AFS.registerCoreResolver(() => sentinel);
+
+    const resolved = AFS.getCoreCollection('anything');
+    test.equal(resolved, sentinel);
+
+    AFS._resetForTests();
   }
 );
 
 Tinytest.add(
   'afs - registry - getCoreCollection returns undefined for unknown name',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
+    // With no registered resolvers and no registered collection, the chain
+    // exits at the tail and returns undefined.
     const unknown = 'afs-nonexistent-core-' + Random.id();
     const resolved = AFS.getCoreCollection(unknown);
-    // When nothing matches in any tier, the fallback chain returns undefined.
-    // Mongo.getCollection itself returns undefined for unknown names, which
-    // the fallback returns verbatim.
     test.equal(resolved, undefined);
 
-    AFS._reset();
+    AFS._resetForTests();
   }
 );
 
 // ===========================================================================
-// Registry — event payloads and listener cleanup on _reset
+// Registry — event payloads and listener cleanup on _resetForTests
 // ===========================================================================
 
 Tinytest.add(
   'afs - registry - provider:registered event payload is (name, provider)',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
     // NOTE: the review referred to this as 'provider-changed' with a
     // { name, provider } object payload. The actual event name is
@@ -200,14 +234,14 @@ Tinytest.add(
     test.equal(captured[0].name, 'evt-reg');
     test.equal(captured[0].provider, provider);
 
-    AFS._reset();
+    AFS._resetForTests();
   }
 );
 
 Tinytest.add(
   'afs - registry - provider:removed event carries only the name',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
     // NOTE: the review claimed the payload is { name, provider: null }.
     // In fact registry.js:112 emits only (name) — no provider argument.
@@ -224,58 +258,70 @@ Tinytest.add(
     // Second arg is undefined — no provider payload.
     test.equal(captured[0][1], undefined);
 
-    AFS._reset();
+    AFS._resetForTests();
   }
 );
 
 Tinytest.add(
-  'afs - registry - provider:default-changed fires only on setDefaultProvider',
+  'afs - registry - provider:default-changed fires on setDefaultProvider and removeProvider rebind',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
-    // NOTE: the review claimed payload includes old and new provider names.
-    // Actual emit (registry.js:73) is (name, provider) — only the new one.
-    // Also: it fires only from setDefaultProvider. registerProvider sets the
-    // very first provider as default silently, without emitting this event.
-    // And removeProvider does not emit it either when rebinding the default.
+    // Payload is (name, provider) — only the new one. registerProvider sets
+    // the very first provider as default silently, without emitting this
+    // event. setDefaultProvider and removeProvider (when rebinding the
+    // default) both emit it.
     const providerA = new AFS.MockStreamProvider();
     const providerB = new AFS.MockStreamProvider();
+    const providerC = new AFS.MockStreamProvider();
 
     AFS.registerProvider('A', providerA);
     AFS.registerProvider('B', providerB);
+    AFS.registerProvider('C', providerC);
 
     const events = [];
     AFS.on('provider:default-changed', (name, provider) => {
       events.push({ name, provider });
     });
 
+    // Explicit setDefaultProvider emits.
     AFS.setDefaultProvider('B');
-
     test.equal(events.length, 1);
     test.equal(events[0].name, 'B');
     test.equal(events[0].provider, providerB);
 
-    // Rebinding the default via removeProvider does NOT emit
-    // provider:default-changed under the current implementation.
-    AFS.removeProvider('B');
+    // Removing the non-default C does not rebind default, must NOT emit.
+    AFS.removeProvider('C');
     test.equal(events.length, 1);
 
-    AFS._reset();
+    // Removing the current default B rebinds to A — MUST emit with new name.
+    AFS.removeProvider('B');
+    test.equal(events.length, 2);
+    test.equal(events[1].name, 'A');
+    test.equal(events[1].provider, providerA);
+
+    // Removing the last provider leaves default null — MUST emit with null.
+    AFS.removeProvider('A');
+    test.equal(events.length, 3);
+    test.equal(events[2].name, null);
+    test.equal(events[2].provider, null);
+
+    AFS._resetForTests();
   }
 );
 
 Tinytest.add(
-  'afs - registry - _reset drops listeners so pre-reset callbacks do not fire',
+  'afs - registry - _resetForTests drops listeners so pre-reset callbacks do not fire',
   (test) => {
-    AFS._reset();
+    AFS._resetForTests();
 
-    // registry.js:239 calls _registryEmitter.removeAllListeners() during reset.
-    // A listener registered before _reset() should therefore NOT fire for
-    // registrations that occur after _reset().
+    // _resetForTests calls _registryEmitter.removeAllListeners(). A listener
+    // registered before the reset should therefore NOT fire for registrations
+    // that occur after the reset.
     let firedForPreReset = 0;
     AFS.on('provider:registered', () => { firedForPreReset += 1; });
 
-    AFS._reset();
+    AFS._resetForTests();
 
     const provider = new AFS.MockStreamProvider();
     AFS.registerProvider('post-reset', provider);
@@ -289,7 +335,40 @@ Tinytest.add(
     AFS.registerProvider('post-reset-2', new AFS.MockStreamProvider());
     test.equal(firedForPostReset, 1);
 
-    AFS._reset();
+    AFS._resetForTests();
+  }
+);
+
+Tinytest.add(
+  'afs - registry - _resetForTests throws outside a test environment',
+  (test) => {
+    // Sanity: verify the guard rejects non-test callers. We flip the env flags
+    // that the guard reads, call through the raw Registry (not AFS facade),
+    // and expect a throw.
+    const Registry = AFS._registry;
+    const origIsTest = Meteor.isTest;
+    const origIsAppTest = Meteor.isAppTest;
+    const origIsPackageTest = Meteor.isPackageTest;
+    const origNodeEnv = process.env.NODE_ENV;
+
+    try {
+      Meteor.isTest = false;
+      Meteor.isAppTest = false;
+      Meteor.isPackageTest = false;
+      process.env.NODE_ENV = 'production';
+
+      test.throws(() => {
+        Registry._resetForTests();
+      }, /only be called from tests/);
+    } finally {
+      Meteor.isTest = origIsTest;
+      Meteor.isAppTest = origIsAppTest;
+      Meteor.isPackageTest = origIsPackageTest;
+      process.env.NODE_ENV = origNodeEnv;
+    }
+
+    // And the happy path still works.
+    AFS._resetForTests();
   }
 );
 
@@ -569,7 +648,7 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  'afs - misc - _rewriteSelector replaces { _id: null } with generated _id',
+  'afs - misc - _rewriteSelector throws on { _id: null } (no silent rewrite)',
   (test) => {
     const name = 'afs-rewrite-null-id-' + Random.id();
     const collection = new AFS.Collection(name, {
@@ -577,26 +656,24 @@ Tinytest.add(
       defineMutationMethods: false,
     });
 
-    // '_id' in selector is true AND selector._id is falsy -> branch at
-    // collection.js:641-643 fires. The null _id is replaced with a fresh
-    // Random.id(); it is NOT kept as null (which would otherwise be an
-    // accidental "match documents with _id=null" query).
-    const rewritten = collection._rewriteSelector({ _id: null });
-    test.isTrue(typeof rewritten._id === 'string');
-    test.notEqual(rewritten._id, null);
-    test.isTrue(rewritten._id.length > 0);
+    // A present-but-falsy _id used to be silently replaced with a random
+    // string, which turned valid queries into "match nothing" and
+    // destroyed update/remove targeting. The fixed implementation throws
+    // so the caller sees the bug immediately.
+    test.throws(() => {
+      collection._rewriteSelector({ _id: null });
+    }, /Invalid selector on collection "[^"]+": _id is null/);
 
-    // fallbackId wins over a generated id in this branch too.
-    const rewrittenFb = collection._rewriteSelector(
-      { _id: null },
-      { fallbackId: 'fb-id' }
-    );
-    test.equal(rewrittenFb._id, 'fb-id');
+    // fallbackId does NOT rescue a bogus _id; the throw still happens so
+    // silent data loss cannot reappear through that path.
+    test.throws(() => {
+      collection._rewriteSelector({ _id: null }, { fallbackId: 'fb-id' });
+    }, /Invalid selector on collection "[^"]+": _id is null/);
   }
 );
 
 Tinytest.add(
-  'afs - misc - _rewriteSelector replaces { _id: undefined } with generated _id',
+  'afs - misc - _rewriteSelector throws on { _id: undefined } (no silent rewrite)',
   (test) => {
     const name = 'afs-rewrite-undef-id-' + Random.id();
     const collection = new AFS.Collection(name, {
@@ -604,10 +681,45 @@ Tinytest.add(
       defineMutationMethods: false,
     });
 
-    // '_id' in selector is true (the key is present) and the value is
-    // falsy, so the same replacement branch fires.
-    const rewritten = collection._rewriteSelector({ _id: undefined });
-    test.isTrue(typeof rewritten._id === 'string');
-    test.isTrue(rewritten._id.length > 0);
+    // Same reasoning as the { _id: null } case — the key is present and
+    // the value is falsy, so throw rather than forge a random id.
+    test.throws(() => {
+      collection._rewriteSelector({ _id: undefined });
+    });
+  }
+);
+
+Tinytest.add(
+  'afs - misc - _rewriteSelector throws on falsy numeric/boolean _id instead of forging',
+  (test) => {
+    const name = 'afs-rewrite-falsy-id-' + Random.id();
+    const collection = new AFS.Collection(name, {
+      connection: null,
+      defineMutationMethods: false,
+    });
+
+    // The old behavior silently rewrote { _id: 0 } and { _id: false } to
+    // { _id: Random.id() }, which broke Postgres serial ids and legitimate
+    // boolean-keyed lookups. The new contract: surface the bad input
+    // instead of making it unmatchable.
+    test.throws(() => {
+      collection._rewriteSelector({ _id: 0 });
+    }, /Invalid selector on collection "[^"]+": _id is 0/);
+
+    test.throws(() => {
+      collection._rewriteSelector({ _id: false });
+    }, /Invalid selector on collection "[^"]+": _id is false/);
+
+    // Sanity: a truthy _id (including strings, numbers > 0, and objects
+    // such as UUID wrappers) passes through unchanged.
+    const str = collection._rewriteSelector({ _id: 'abc' });
+    test.equal(str._id, 'abc');
+
+    const num = collection._rewriteSelector({ _id: 42 });
+    test.equal(num._id, 42);
+
+    const uuidLike = { toString: () => 'uuid' };
+    const objId = collection._rewriteSelector({ _id: uuidLike });
+    test.equal(objId._id, uuidLike);
   }
 );

@@ -415,7 +415,7 @@ if (Meteor.isServer) {
     await collection.insertAsync({ _id: 'abc', name: 'chosen' });
     await collection.insertAsync({ _id: 'def', name: 'other' });
 
-    const docs = collection.find('abc').fetch();
+    const docs = await collection.find('abc').fetchAsync();
     test.equal(docs.length, 1);
     test.equal(docs[0]._id, 'abc');
     test.equal(docs[0].name, 'chosen');
@@ -442,7 +442,7 @@ if (Meteor.isServer) {
     await collection.insertAsync({ name: 'A', secret: 's1', other: 1 });
     await collection.insertAsync({ name: 'B', secret: 's2', other: 2 });
 
-    const docs = collection.find({}, { fields: { name: 1 } }).fetch();
+    const docs = await collection.find({}, { fields: { name: 1 } }).fetchAsync();
     test.equal(docs.length, 2);
 
     for (const doc of docs) {
@@ -459,7 +459,7 @@ if (Meteor.isServer) {
     await collection.insertAsync({ value: 1 });
     await collection.insertAsync({ value: 4 });
 
-    const docs = collection.find({}, { sort: { value: -1 } }).fetch();
+    const docs = await collection.find({}, { sort: { value: -1 } }).fetchAsync();
     test.equal(docs.length, 4);
     test.equal(docs.map(d => d.value), [5, 4, 2, 1]);
   });
@@ -472,7 +472,7 @@ if (Meteor.isServer) {
     await collection.insertAsync({ value: 3 });
     await collection.insertAsync({ value: 4 });
 
-    const docs = collection.find({}, { limit: 2 }).fetch();
+    const docs = await collection.find({}, { limit: 2 }).fetchAsync();
     test.equal(docs.length, 2);
   });
 
@@ -483,7 +483,7 @@ if (Meteor.isServer) {
     await collection.insertAsync({ value: 20 });
     await collection.insertAsync({ value: 30 });
 
-    const docs = collection.find({}, { skip: 1, sort: { value: 1 } }).fetch();
+    const docs = await collection.find({}, { skip: 1, sort: { value: 1 } }).fetchAsync();
     test.equal(docs.length, 2);
     test.equal(docs.map(d => d.value), [20, 30]);
   });

@@ -460,7 +460,7 @@ if (Meteor.isServer) {
     await collection.insertAsync({ letter: 'C' });
 
     const cursor = collection.find({});
-    const docs = cursor.fetch();
+    const docs = await cursor.fetchAsync();
     test.equal(docs.length, 3);
   });
 
@@ -477,7 +477,7 @@ if (Meteor.isServer) {
     await collection.insertAsync({ category: 'vegetable', name: 'Carrot' });
     await collection.insertAsync({ category: 'fruit', name: 'Banana' });
 
-    const fruits = collection.find({ category: 'fruit' }).fetch();
+    const fruits = await collection.find({ category: 'fruit' }).fetchAsync();
     test.equal(fruits.length, 2);
     test.isTrue(fruits.every(d => d.category === 'fruit'));
   });
@@ -1248,12 +1248,15 @@ if (Meteor.isClient) {
 // ===========================================================================
 
 if (Meteor.isServer) {
-  // Task 23: ChangeStream — markError on stream with no error listener doesn't crash
+  // Task 23: ChangeStream — markError on a silentErrors stream does not crash
   Tinytest.add('afs - ChangeStream - markError without error listener does not crash', (test) => {
-    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} });
-    // No error listener attached — should NOT throw
+    // ChangeStream defaults to Node's unlistened-'error'-throws semantics.
+    // This test predates that change and exercises the opt-in silent path —
+    // markError must not crash the process when silentErrors: true even with
+    // zero listeners attached.
+    const stream = new AFS.ChangeStream({ collectionName: 'test', selector: {} }, { silentErrors: true });
     stream.markError(new Error('should not crash'));
-    test.isTrue(true); // If we get here, no crash
+    test.isTrue(true);
     stream.stop();
   });
 
