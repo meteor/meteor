@@ -156,11 +156,12 @@ export class PackageNamespace {
         // Do nothing. We might want to add some keys later, and we should err
         // on the side of backwards compatibility.
       }
-      if ([source.debugOnly, source.prodOnly, source.testOnly, source.devOnly].filter(Boolean).length > 1) {
-        buildmessage.error(
-          "Package can't have more than one of: debugOnly, prodOnly, testOnly or devOnly.");
-      }
     });
+
+    if ([source.debugOnly, source.prodOnly, source.testOnly, source.devOnly].filter(Boolean).length > 1) {
+      buildmessage.error(
+        "Package can't have more than one of: debugOnly, prodOnly, testOnly or devOnly.");
+    }
   }
 
   /**
