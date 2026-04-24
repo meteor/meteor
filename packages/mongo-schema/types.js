@@ -145,6 +145,8 @@ function resolveType(typeDef) {
   // oneOf union
   if (typeDef && typeDef._isOneOf) {
     const resolvedTypes = typeDef.types.map(t => resolveType(t));
+    // No top-level bsonType: $jsonSchema compilation walks `resolvedTypes`
+    // and emits a per-branch `oneOf` (see schema_jsonschema.js).
     return {
       name: 'oneOf',
       check: (v) => resolvedTypes.some(rt => rt.check(v)),
