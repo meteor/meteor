@@ -974,9 +974,9 @@ compiler.eachUsedUnibuild = async function (
   var arch = options.arch;
   var isopackCache = options.isopackCache;
 
-  var acceptableWeakPackages = options.acceptableWeakPackages || {};
+  var acceptableWeakPackages = options.acceptableWeakPackages || Object.create(null);
 
-  var processedUnibuildId = {};
+  var processedUnibuildId = Object.create(null);
   var usesToProcess = [];
   dependencies.forEach(function (use) {
     if (options.skipUnordered && use.unordered) {
