@@ -111,12 +111,9 @@ export class PostgresStreamProvider extends StreamProvider {
     // Ensure table exists
     await this._connection.ensureTable(collectionName, schema);
 
-    // Generate _id if needed
-    if (!doc._id) {
-      doc._id = this.generateId(collectionName);
-    }
+    const insertDoc = doc._id ? doc : { ...doc, _id: this.generateId(collectionName) };
 
-    const { text, values } = buildInsertQuery(collectionName, doc, schema);
+    const { text, values } = buildInsertQuery(collectionName, insertDoc, schema);
     const result = await this._connection.query(text, values);
     return result.rows[0]._id;
   }
@@ -300,28 +297,8 @@ export class PostgresStreamProvider extends StreamProvider {
       `DROP FUNCTION IF EXISTS ${quoteIdent(triggerFnName)}() CASCADE`
     );
 
-    // TODO: expose a public driver method (e.g. cleanupChannel) to
-    // UNLISTEN + clear callbacks atomically. For now the driver only
-    // exposes removeListenNotify(callback) which requires knowing each
-    // registered callback, so we fall back to best-effort direct cleanup.
-    if (this._connection._listenClient) {
-      try {
-        await this._connection._listenClient.query(
-          `UNLISTEN ${quoteIdent(channel)}`
-        );
-      } catch (e) {
-        // Ignore — listen client may already be gone.
-      }
-    }
-    if (this._connection._notifyCallbacks) {
-      this._connection._notifyCallbacks.delete(channel);
-    }
-
-    // TODO: _knownTables is an internal field on the driver; ideally the
-    // driver would expose a forgetTable(name) method.
-    if (this._connection._knownTables) {
-      this._connection._knownTables.delete(collectionName);
-    }
+    await this._connection.unregisterChannel(channel);
+    this._connection.forgetKnownTable(collectionName);
     this._schemas.delete(collectionName);
   }
 
@@ -379,15 +356,15 @@ export class PostgresStreamProvider extends StreamProvider {
     try {
       await client.query('BEGIN');
 
-      // Per-transaction timeouts: bound worst-case lock waits and prevent a
-      // stalled client from holding row locks indefinitely.
-      await client.query(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
-      await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${idleInTxTimeoutMs}`);
-
       if (options.multi === true) {
         // REPEATABLE READ prevents phantom-insert inconsistency for multi-doc updates; full SERIALIZABLE would need retry-on-40001 logic we skip for now.
         await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
       }
+
+      // Per-transaction timeouts: bound worst-case lock waits and prevent a
+      // stalled client from holding row locks indefinitely.
+      await client.query(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
+      await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${idleInTxTimeoutMs}`);
 
       // Fetch matching rows with FOR UPDATE lock
       const { text: selectText, values: selectValues } = buildSelectQuery(
@@ -450,14 +427,15 @@ export class PostgresStreamProvider extends StreamProvider {
    * Handle upsert operations.
    */
   async _upsertAsync(collectionName, selector, modifier, options, schema) {
-    const { text, values, insertedId } = buildUpsertQuery(
+    const { text, values } = buildUpsertQuery(
       collectionName, selector, modifier, schema
     );
 
     const result = await this._connection.query(text, values);
 
     if (result.rows.length > 0) {
-      return { numberAffected: 1, insertedId: result.rows[0]._id === insertedId ? insertedId : undefined };
+      const row = result.rows[0];
+      return { numberAffected: 1, insertedId: row.__inserted ? row._id : undefined };
     }
 
     // ON CONFLICT DO NOTHING returned no rows — means conflict with existing _id, need to update

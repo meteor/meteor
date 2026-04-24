@@ -116,6 +116,10 @@ per process.
 | `METEOR_POSTGRES_IDLE_TX_TIMEOUT_MS`           | `idle_in_transaction_session_timeout` inside same transactions. Floor 1000ms.    | `30000` |
 | `METEOR_POSTGRES_LISTEN_MAX_LISTENERS`         | EventEmitter max-listener ceiling for the LISTEN client.                         | `1024`  |
 | `METEOR_POSTGRES_NUMERIC_BIGINT`               | `=1` to coerce overflowing `numeric` values to BigInt instead of string.         | off     |
+| `METEOR_POSTGRES_SUPPRESS_UNKNOWN_TABLE_WARN`  | `=1` to suppress "unregistered table" debug warnings on raw SQL.                 | off     |
+| `METEOR_POSTGRES_POOL_MAX`                     | Maximum pool size (`pool.max`).                                                  | `10`    |
+| `METEOR_POSTGRES_POOL_IDLE_TIMEOUT_MS`         | Pool idle timeout (ms) before connections are released.                          | `10000` |
+| `METEOR_POSTGRES_POOL_CONNECT_TIMEOUT_MS`      | Pool connect timeout (ms) for new connections.                                   | `0`     |
 
 ## Known caveats
 
@@ -151,6 +155,21 @@ convenient for flexible schemas but has cost implications:
 
 Model anything you'll query or sort on as a real column.
 
+### Numeric precision on JSONB paths
+
+`$inc`, `$mul`, `$min`, `$max` against `_extra` or `jsonb` fields go
+through `numeric` and return through JSON, which may lose precision
+for values outside safe-integer range. Model high-precision counters
+as `numeric` columns.
+
+### Array modifier overhead
+
+`$addToSet`, `$pull`, `$pullAll`, and `$pop` always route through the
+fetch-modify-write path: the driver issues a `SELECT ... FOR UPDATE`
+under `REPEATABLE READ`, runs `LocalCollection._modify()` on the fetched
+row, then writes it back. This is an extra round-trip per document versus
+a pure SQL `UPDATE`. Batch where possible if latency matters.
+
 ### Concurrency
 
 - Multi-document updates wrapping a `$push`/`$pull`/`$addToSet`/`$rename`
@@ -175,6 +194,11 @@ Model anything you'll query or sort on as a real column.
   search-path hijacks.
 - Collection names are validated for length before trigger function
   naming to avoid NAMEDATALEN (63-byte) collisions.
+
+This package assumes the Postgres server has
+`standard_conforming_strings = on` (default since 9.1). Deployments
+that flip this off can cause backslash-containing literals to be
+interpreted as escape strings.
 
 ## Running tests
 

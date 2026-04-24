@@ -48,7 +48,7 @@ function isConnectionError(err) {
     /connection terminated|connection closed|connection ended/i.test(err.message || '');
 }
 
-// Driver cache: key → PostgresObserveDriver
+// Module-scoped: drivers are keyed by provider URL; multiple providers with distinct URLs never collide.
 const _driverCache = new Map();
 
 /**
@@ -112,9 +112,6 @@ class PostgresObserveDriver {
     this._notifyDebounceTimer = null;
     this._notifyCallback = null;
     this._reconnectHandler = null;
-    // When a reconnect fires during an in-flight poll we can't just kick
-    // off a second poll; instead we set this flag and re-poll once the
-    // current one finishes. Idempotent under repeated reconnect signals.
     this._repollNeeded = false;
 
     // Create the ChangeStream that this driver emits into
@@ -200,13 +197,22 @@ class PostgresObserveDriver {
 
         // Writes that happened between disconnect and re-LISTEN were never
         // delivered; divergence is guaranteed, not hypothetical. Emit `reset`
-        // so downstream re-issues the initial snapshot.
+        // so downstream re-issues the initial snapshot. Also clear the diff
+        // baseline so the next poll replays full state against empty.
         try {
           if (typeof this._stream.emit === 'function') {
             this._stream.emit('reset');
           }
+          this._lastResults = this._ordered
+            ? []
+            : new IdMap(MongoID.idStringify, MongoID.idParse);
         } catch (emitErr) {
           Log.error('Postgres observe driver: error emitting reset:', emitErr);
+        }
+
+        if (this._polling) {
+          this._repollNeeded = true;
+          return;
         }
 
         // Coalesce overlapping reconnects: if a retry chain is already
@@ -319,11 +325,12 @@ class PostgresObserveDriver {
       this._polling = false;
     }
 
-    // If a reconnect fired while we were mid-poll, run exactly one more pass.
-    // This keeps the trigger idempotent under listen-client flapping.
     if (this._repollNeeded && !this._stopped) {
       this._repollNeeded = false;
-      this._poll().catch(e => Log.error('Postgres observe coalesced repoll error:', e));
+      setImmediate(() => {
+        if (this._stopped) return;
+        this._poll().catch(e => Log.error('Postgres observe coalesced repoll error:', e));
+      });
     }
 
     // Propagate the fetch error (after finally cleared `_polling`) so callers

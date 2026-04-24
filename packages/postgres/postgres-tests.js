@@ -1459,6 +1459,24 @@ if (hasPostgres) {
   });
 
 } else {
+  const _inCI =
+    process.env.CI === 'true' ||
+    process.env.CONTINUOUS_INTEGRATION === 'true' ||
+    process.env.GITHUB_ACTIONS === 'true';
+  const _banner =
+    '\n=========================================================\n' +
+    'POSTGRES_URL not set — integration tests are SKIPPED.\n' +
+    'Set POSTGRES_URL to a reachable Postgres to run them.\n' +
+    '=========================================================\n';
+  if (_inCI) {
+    if (typeof Meteor !== 'undefined' && Meteor._debug) Meteor._debug(_banner);
+    console.error(_banner);
+    process.exitCode = 1;
+  } else {
+    if (typeof Meteor !== 'undefined' && Meteor._debug) Meteor._debug(_banner);
+    console.warn(_banner);
+  }
+
   Tinytest.add('postgres - integration - SKIPPED (set POSTGRES_URL to run)', (test) => {
     // Placeholder test when POSTGRES_URL is not set
     test.isTrue(true, 'Integration tests skipped: POSTGRES_URL not set');
@@ -1896,5 +1914,213 @@ Tinytest.add('postgres - regression - Collection constructor throws latched star
   } finally {
     Postgres._testSetConnectFailed(null);
   }
+});
+
+// ---------------------------------------------------------------------------
+// C2 — rebaseParams must preserve $N tokens that appear inside single-quoted
+// string literals (e.g. user-controlled field names routed through
+// quoteLiteral) while still shifting real $N parameter placeholders.
+// Tested indirectly via buildUpdateQuery: a selector on an _extra field
+// whose name contains "$1" forces a quoted literal "_extra->>'...$1...'"
+// into the WHERE clause, and the modifier contributes parameters that force
+// rebaseParams to run with a non-zero offset.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - C2 rebaseParams preserves $N inside string literals', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildUpdateQuery(
+    'T',
+    { 'weird_$1_field': 'match-me' },
+    { $set: { title: 'new-title' } },
+    { multi: true },
+    schema
+  );
+  test.isTrue(text.includes("'weird_$1_field'"),
+    `literal field name preserved; got: ${text}`);
+  test.equal(values.length, 2, 'two params: one for $set, one for selector');
+  const paramTokens = text.match(/\$\d+/g) || [];
+  const realParams = paramTokens.filter(t => !text.includes(`'${t}`));
+  test.isTrue(realParams.length >= 2,
+    `expected at least two real $N placeholders, got tokens: ${paramTokens.join(',')}`);
+});
+
+Tinytest.add('postgres - regression - C2 rebaseParams is a no-op at offset 0 (no modifier params, single WHERE)', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildDeleteQuery('T', { title: 'x' }, schema);
+  test.equal(values, ['x']);
+  test.isTrue(/\$1/.test(text), `expected $1 placeholder, got: ${text}`);
+  test.isFalse(/\$2/.test(text), `no $2 should appear, got: ${text}`);
+});
+
+Tinytest.add('postgres - regression - C2 rebaseParams shifts multiple placeholders correctly', (test) => {
+  const schema = createTestSchema();
+  const { text, values } = buildUpdateQuery(
+    'T',
+    { title: 'old', views: 5 },
+    { $set: { title: 'new', body: 'hello' } },
+    { multi: true },
+    schema
+  );
+  test.equal(values, ['new', 'hello', 'old', 5]);
+  const placeholders = text.match(/\$\d+/g) || [];
+  const distinct = Array.from(new Set(placeholders)).sort();
+  test.equal(distinct.length, 4, `expected 4 distinct placeholders, got: ${placeholders.join(',')}`);
+  test.isTrue(distinct.includes('$1'));
+  test.isTrue(distinct.includes('$2'));
+  test.isTrue(distinct.includes('$3'));
+  test.isTrue(distinct.includes('$4'));
+});
+
+Tinytest.add('postgres - regression - C2 compileModifier on extra field name containing $1 produces well-formed SQL', (test) => {
+  const schema = createTestSchema();
+  const { setClauses, values } = compileModifier(
+    { $set: { 'extra_field_with_$1_in_name': 'v' } },
+    schema
+  );
+  test.isTrue(setClauses.length >= 1);
+  const joined = setClauses.join(' , ');
+  test.isTrue(joined.includes("'extra_field_with_$1_in_name'"),
+    `field literal preserved; got: ${joined}`);
+  const placeholders = joined.match(/\$\d+/g) || [];
+  const realOnly = placeholders.filter(p => {
+    const re = new RegExp(`'[^']*\\${p}[^']*'`);
+    return !re.test(joined);
+  });
+  test.equal(realOnly.length, values.length,
+    `param count (${realOnly.length}) should equal values length (${values.length})`);
+});
+
+// ---------------------------------------------------------------------------
+// C3 — documentToRow rejects dangerous top-level keys; rowToDocument does
+// not merge unsafe _extra keys into the returned document nor the global
+// Object.prototype.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - C3 documentToRow throws on __proto__ own key', (test) => {
+  const schema = createTestSchema();
+  const doc = {};
+  Object.defineProperty(doc, '__proto__', {
+    value: { polluted: 'x' },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  test.throws(() => documentToRow(doc, schema), /[Uu]nsafe|__proto__/);
+});
+
+Tinytest.add('postgres - regression - C3 documentToRow throws on constructor own key', (test) => {
+  const schema = createTestSchema();
+  const doc = {};
+  Object.defineProperty(doc, 'constructor', {
+    value: { polluted: 'x' },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  test.throws(() => documentToRow(doc, schema), /[Uu]nsafe|constructor/);
+});
+
+Tinytest.add('postgres - regression - C3 documentToRow throws on prototype own key', (test) => {
+  const schema = createTestSchema();
+  const doc = {};
+  Object.defineProperty(doc, 'prototype', {
+    value: { polluted: 'x' },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  test.throws(() => documentToRow(doc, schema), /[Uu]nsafe|prototype/);
+});
+
+Tinytest.add('postgres - regression - C3 rowToDocument does not pollute Object.prototype via _extra.__proto__', (test) => {
+  const schema = createTestSchema();
+  const extra = {};
+  Object.defineProperty(extra, '__proto__', {
+    value: { polluted: 'pwn' },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  const row = { _id: 'r1', _extra: extra };
+
+  const doc = rowToDocument(row, schema);
+
+  test.isUndefined(({}).polluted, 'empty object literal not polluted');
+  test.isUndefined(Object.prototype.polluted, 'Object.prototype not polluted');
+
+  const descriptor = Object.getOwnPropertyDescriptor(doc, '__proto__');
+  if (descriptor !== undefined) {
+    test.isTrue(
+      'value' in descriptor,
+      '__proto__ if present must be an own data property, not a setter'
+    );
+  }
+
+  test.isUndefined(doc.polluted, 'returned doc does not carry polluted through prototype');
+});
+
+Tinytest.add('postgres - regression - C3 rowToDocument on empty plain object causes no global prototype pollution', (test) => {
+  const schema = createTestSchema();
+  const before = ({}).polluted;
+  rowToDocument({ _id: 'r1', _extra: {} }, schema);
+  test.equal(({}).polluted, before, 'no side-effect pollution');
+  test.isUndefined(({}).polluted);
+});
+
+Tinytest.add('postgres - regression - C3 rowToDocument skips unsafe keys in _extra without throwing', (test) => {
+  const schema = createTestSchema();
+  const extra = { safe: 'ok' };
+  Object.defineProperty(extra, 'constructor', {
+    value: { polluted: 'x' },
+    enumerable: true,
+    configurable: true,
+    writable: true,
+  });
+  const doc = rowToDocument({ _id: 'r1', _extra: extra }, schema);
+  test.equal(doc.safe, 'ok');
+  test.isUndefined(({}).polluted);
+});
+
+// ---------------------------------------------------------------------------
+// C4 — $options must apply to $regex inside $elemMatch and $not, not only at
+// the top operator level. The POSIX-ERE inline-flag guard stays active
+// inside $not.
+// ---------------------------------------------------------------------------
+
+Tinytest.add('postgres - regression - C4 $options "i" applies inside $elemMatch', (test) => {
+  const schema = createTestSchema();
+  const { text } = compileSelector(
+    { tags: { $elemMatch: { $regex: 'Foo', $options: 'i' } } },
+    schema
+  );
+  test.isTrue(text.includes('~*'), `case-insensitive operator ~* in $elemMatch; got: ${text}`);
+  test.isFalse(/[^*~]~[^*~]/.test(text.replace(/~\*/g, '')),
+    'no stray case-sensitive ~ operator');
+});
+
+Tinytest.add('postgres - regression - C4 $options "i" applies inside $not', (test) => {
+  const schema = createTestSchema();
+  const { text } = compileSelector(
+    { title: { $not: { $regex: 'Foo', $options: 'i' } } },
+    schema
+  );
+  test.isTrue(text.includes('~*'), `case-insensitive operator ~* inside $not; got: ${text}`);
+  test.isTrue(/NOT \(/.test(text), 'NOT wrapper preserved');
+});
+
+Tinytest.add('postgres - regression - C4 $options "i" applies at top-level (baseline)', (test) => {
+  const schema = createTestSchema();
+  const { text } = compileSelector(
+    { title: { $regex: 'Foo', $options: 'i' } },
+    schema
+  );
+  test.isTrue(text.includes('~*'), `case-insensitive operator ~* at top level; got: ${text}`);
+});
+
+Tinytest.add('postgres - regression - C4 $not with PCRE inline flag still rejected (guard active inside $not)', (test) => {
+  const schema = createTestSchema();
+  test.throws(() => {
+    compileSelector({ title: { $not: { $regex: '(?i)Foo' } } }, schema);
+  }, /PCRE construct/);
 });
 

@@ -6,6 +6,14 @@
 import { quoteIdent, quoteLiteral } from './schema';
 import { EventEmitter } from 'events';
 
+const readPositiveIntEnv = (name, defaultValue, floor = 0) => {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return defaultValue;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n < floor) return defaultValue;
+  return n;
+};
+
 /**
  * PostgreSQL's NAMEDATALEN is 64, so identifiers/channels are silently
  * truncated at 63 bytes. We build channel names as `meteor_pg_${collectionName}`
@@ -46,15 +54,27 @@ export class PostgresConnection extends EventEmitter {
     // subscribers to attach listen:* / callback-error handlers.
     const maxListeners = Math.max(
       64,
-      parseInt(process.env.METEOR_POSTGRES_MAX_LISTENERS, 10) || 1024
+      readPositiveIntEnv('METEOR_POSTGRES_LISTEN_MAX_LISTENERS', 1024, 1)
     );
     this.setMaxListeners(maxListeners);
     this._url = url;
     this._options = options;
+
+    this._poolMax = options.max !== undefined
+      ? options.max
+      : readPositiveIntEnv('METEOR_POSTGRES_POOL_MAX', options.poolSize || 10, 1);
+    this._poolIdleTimeoutMs = options.idleTimeoutMillis !== undefined
+      ? options.idleTimeoutMillis
+      : readPositiveIntEnv('METEOR_POSTGRES_POOL_IDLE_TIMEOUT_MS', options.idleTimeout || 30000, 0);
+    this._poolConnectionTimeoutMs = options.connectionTimeoutMillis !== undefined
+      ? options.connectionTimeoutMillis
+      : readPositiveIntEnv('METEOR_POSTGRES_POOL_CONNECT_TIMEOUT_MS', options.connectionTimeout || 5000, 0);
+
     this._pool = null;
     this._listenClient = null;
     this._knownTables = new Set();
     this._notifyCallbacks = new Map(); // channel -> Set of callbacks
+    this._warnedUnknownTables = new Set();
     this._connected = false;
 
     // Serialize LISTEN/UNLISTEN per channel (keyed by channel name, same as
@@ -115,9 +135,9 @@ export class PostgresConnection extends EventEmitter {
 
     this._pool = new Pool({
       connectionString: this._url,
-      max: this._options.poolSize || 10,
-      idleTimeoutMillis: this._options.idleTimeout || 30000,
-      connectionTimeoutMillis: this._options.connectionTimeout || 5000,
+      max: this._poolMax,
+      idleTimeoutMillis: this._poolIdleTimeoutMs,
+      connectionTimeoutMillis: this._poolConnectionTimeoutMs,
     });
 
     // Verify connection
@@ -147,12 +167,13 @@ export class PostgresConnection extends EventEmitter {
     }
 
     if (this._listenClient) {
-      try {
-        this._listenClient.release();
-      } catch (e) {
-        // Ignore release errors on close
-      }
+      const client = this._listenClient;
       this._listenClient = null;
+      try {
+        await client.end();
+      } catch (e) {
+        // Ignore end errors on close
+      }
     }
 
     if (this._pool) {
@@ -190,6 +211,7 @@ export class PostgresConnection extends EventEmitter {
    */
   _warnIfUnregisteredTables(text) {
     if (typeof text !== 'string' || text.length === 0) return;
+    if (process.env.METEOR_POSTGRES_SUPPRESS_UNKNOWN_TABLE_WARN === '1') return;
     // Each regex is anchored to a keyword and captures the first identifier
     // (optionally double-quoted). Case-insensitive + global.
     const patterns = [
@@ -215,6 +237,8 @@ export class PostgresConnection extends EventEmitter {
         // collection name; skip.
         const after = text.slice(re.lastIndex, re.lastIndex + 1);
         if (after === '.') continue;
+        if (this._warnedUnknownTables.has(name)) continue;
+        this._warnedUnknownTables.add(name);
         try {
           Meteor._debug(
             `Postgres: table "${name}" is not registered as a Meteor collection. ` +
@@ -375,7 +399,13 @@ export class PostgresConnection extends EventEmitter {
   async _ensureListenClient() {
     if (this._listenClient) return;
 
-    this._listenClient = await this._pool.connect();
+    const { Client } = this._getPg();
+    const client = new Client({
+      connectionString: this._url,
+      connectionTimeoutMillis: this._poolConnectionTimeoutMs,
+    });
+    await client.connect();
+    this._listenClient = client;
     this._attachListenClientHandlers(this._listenClient);
   }
 
@@ -393,7 +423,7 @@ export class PostgresConnection extends EventEmitter {
     const maxDelay = 30000;
     const maxAttempts = Math.max(
       1,
-      parseInt(process.env.METEOR_POSTGRES_MAX_RECONNECT_ATTEMPTS, 10) || 10
+      readPositiveIntEnv('METEOR_POSTGRES_MAX_RECONNECT_ATTEMPTS', 10, 1)
     );
 
     this.emit('listen:reconnecting');
@@ -413,13 +443,27 @@ export class PostgresConnection extends EventEmitter {
       };
     });
 
+    const { Client } = this._getPg();
+
     let lastError = null;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       if (!this._connected || this._shutdown) return;
       if (this._listenClient) return;
 
+      let client = null;
       try {
-        this._listenClient = await this._pool.connect();
+        client = new Client({
+          connectionString: this._url,
+          connectionTimeoutMillis: this._poolConnectionTimeoutMs,
+        });
+        await client.connect();
+
+        if (this._shutdown) {
+          try { await client.end(); } catch (e) { /* ignore */ }
+          return;
+        }
+
+        this._listenClient = client;
         this._attachListenClientHandlers(this._listenClient);
 
         // Re-LISTEN all channels and collect them so observers can re-poll.
@@ -437,6 +481,9 @@ export class PostgresConnection extends EventEmitter {
         return;
       } catch (e) {
         lastError = e;
+        if (client && this._listenClient !== client) {
+          try { await client.end(); } catch (endErr) { /* ignore */ }
+        }
         // Jitter: 0.5x–1.5x of the current base delay. Prevents thundering
         // herd when many connections fail at the same moment.
         const jittered = Math.floor(delay * (0.5 + Math.random()));
@@ -457,8 +504,9 @@ export class PostgresConnection extends EventEmitter {
     // so observers can decide whether to fall back to polling-only mode.
     this._notifyCallbacks.clear();
     if (this._listenClient) {
-      try { this._listenClient.release(); } catch (e) { /* ignore */ }
+      const c = this._listenClient;
       this._listenClient = null;
+      try { await c.end(); } catch (e) { /* ignore */ }
     }
     this.emit('listen:gave-up', { attempts: maxAttempts, error: lastError });
   }
@@ -538,6 +586,33 @@ export class PostgresConnection extends EventEmitter {
         }
       }
     });
+  }
+
+  /**
+   * UNLISTEN a channel and drop all of its registered callbacks. Serialized
+   * through the same channel-op queue as LISTEN/UNLISTEN.
+   * @param {string} channel
+   */
+  async unregisterChannel(channel) {
+    await this._enqueueChannelOp(channel, async () => {
+      this._notifyCallbacks.delete(channel);
+      if (this._listenClient) {
+        try {
+          await this._listenClient.query(`UNLISTEN ${quoteIdent(channel)}`);
+        } catch (e) {
+          // Ignore if client is gone
+        }
+      }
+    });
+  }
+
+  /**
+   * Forget that a table has been provisioned so the next call for it will
+   * re-run ensureTable.
+   * @param {string} tableName
+   */
+  forgetKnownTable(tableName) {
+    this._knownTables.delete(tableName);
   }
 
   /**

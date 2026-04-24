@@ -41,8 +41,8 @@ function _throwIfStartupFailed() {
   }
 }
 
-// Latch so the Postgres.query deprecation warning only fires once per process.
-let _warnedQueryDeprecation = false;
+let _lastQueryDeprecationWarnAt = 0;
+const _QUERY_DEPRECATION_WARN_INTERVAL_MS = 15 * 60 * 1000;
 
 /**
  * Postgres namespace — top-level API.
@@ -96,8 +96,9 @@ Postgres = {
   // Deprecated alias for Postgres._query. Warns once per process, then
   // delegates. Remove in a future major release.
   query: (sql, params) => {
-    if (!_warnedQueryDeprecation) {
-      _warnedQueryDeprecation = true;
+    const now = Date.now();
+    if (now - _lastQueryDeprecationWarnAt > _QUERY_DEPRECATION_WARN_INTERVAL_MS) {
+      _lastQueryDeprecationWarnAt = now;
       Meteor._debug(
         'Postgres.query is deprecated; use Postgres._query for raw SQL. ' +
         'This bypasses Meteor-level safety guarantees.'
@@ -106,14 +107,15 @@ Postgres = {
     return Postgres._query(sql, params);
   },
 
-  // Exposed for testing
-  _compileSelector: compileSelector,
-  _compileModifier: compileModifier,
-  _compileSort: compileSort,
-  _ResolvedSchema: ResolvedSchema,
-  _quoteIdent: quoteIdent,
-  _testSetConnectFailed: (err) => { _connectFailed = err; },
-  _testGetConnectFailed: () => _connectFailed,
+  _internal: {
+    compileSelector,
+    compileModifier,
+    compileSort,
+    ResolvedSchema,
+    quoteIdent,
+    testSetConnectFailed: (err) => { _connectFailed = err; },
+    testGetConnectFailed: () => _connectFailed,
+  },
 };
 
 // Connect on startup

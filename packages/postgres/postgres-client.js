@@ -1,19 +1,10 @@
-/**
- * Client entry point for the postgres package.
- *
- * On the client, Postgres.Collection uses AFS.Collection which
- * delegates to Minimongo + DDP. No schema needed client-side.
- */
+import { AFS } from 'meteor/afs';
 
-const { AFS } = Package.afs;
-
-// Module-level latch: fire the provider-on-client warning once per page load.
 let _warnedProviderOnClient = false;
 
 Postgres = {
   Collection: class PostgresCollection extends AFS.Collection {
     constructor(name, options = {}) {
-      // Client-side: strip schema (not needed, client uses Minimongo + DDP)
       const clientOptions = { ...options };
       delete clientOptions.schema;
       if (clientOptions.provider !== undefined) {

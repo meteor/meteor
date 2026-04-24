@@ -210,8 +210,7 @@ export function resolveField(fieldPath, schema) {
       };
     }
 
-    // Nested path into a non-JSONB column — doesn't make sense, treat as extra
-    // Fall through to _extra handling
+    throw new Error(`Cannot traverse into non-jsonb column "${topLevel}" with path "${fieldPath}"`);
   }
 
   // Field not in schema — goes to _extra JSONB column

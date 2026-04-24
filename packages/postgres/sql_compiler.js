@@ -292,9 +292,7 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
           const param = ctx.addParam(nonNull);
           parts.push(`${sqlRef} = ANY(${param})`);
         } else {
-          // For JSONB fields, use OR
-          const orClauses = nonNull.map(v => compileTypedComparison(sqlRef, '=', v, ctx));
-          parts.push(`(${orClauses.join(' OR ')})`);
+          parts.push(compileJsonbInClause(resolved, nonNull, ctx, false));
         }
       }
 
@@ -316,8 +314,7 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
           const param = ctx.addParam(nonNull);
           parts.push(`NOT (${sqlRef} = ANY(${param}))`);
         } else {
-          const orClauses = nonNull.map(v => compileTypedComparison(sqlRef, '=', v, ctx));
-          parts.push(`NOT (${orClauses.join(' OR ')})`);
+          parts.push(`NOT (${compileJsonbInClause(resolved, nonNull, ctx, false)})`);
         }
       }
 
@@ -384,9 +381,11 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
     case '$not': {
       // $not wraps another operator
       if (typeof operand === 'object' && !(operand instanceof RegExp)) {
+        const innerOptions = typeof operand.$options === 'string' ? operand.$options : '';
         const inner = [];
         for (const [innerOp, innerVal] of Object.entries(operand)) {
-          inner.push(compileOperator(resolved, innerOp, innerVal, fieldPath, schema, ctx));
+          if (innerOp === '$options') continue;
+          inner.push(compileOperator(resolved, innerOp, innerVal, fieldPath, schema, ctx, innerOptions));
         }
         return `NOT (${inner.join(' AND ')})`;
       }
@@ -439,17 +438,21 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
         throw new Error(`$elemMatch requires a JSONB array field, got ${kind} for ${fieldPath}`);
       }
 
+      const elemOptions = typeof operand.$options === 'string' ? operand.$options : '';
       const innerClauses = [];
       for (const [subKey, subVal] of Object.entries(operand)) {
+        if (subKey === '$options') continue;
         if (subKey.startsWith('$')) {
           // Operator on element itself
-          innerClauses.push(compileElemOperator('elem', subKey, subVal, ctx));
+          innerClauses.push(compileElemOperator('elem', subKey, subVal, ctx, elemOptions));
         } else {
           // Field within array element
           const subRef = `elem->>${quoteLiteral(subKey)}`;
           if (typeof subVal === 'object' && subVal !== null && !Array.isArray(subVal) && !(subVal instanceof Date)) {
+            const subOptions = typeof subVal.$options === 'string' ? subVal.$options : '';
             for (const [subOp, subOperand] of Object.entries(subVal)) {
-              innerClauses.push(compileElemOperator(subRef, subOp, subOperand, ctx));
+              if (subOp === '$options') continue;
+              innerClauses.push(compileElemOperator(subRef, subOp, subOperand, ctx, subOptions));
             }
           } else if (subVal === null || subVal === undefined) {
             // Mongo semantics: match when the array element's key is
@@ -480,7 +483,21 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
       if (kind === 'jsonb_column') {
         return `jsonb_typeof(${sqlRef}) = ${quoteLiteral(pgType)}`;
       }
-      return 'TRUE'; // Fallback for non-JSONB columns
+      if (kind === 'jsonb_path') {
+        const quotedTop = quoteIdent(resolved.topLevelField);
+        const jsonbRef = resolved.jsonPath.length === 1
+          ? `${quotedTop}->${quoteLiteral(resolved.jsonPath[0])}`
+          : `${quotedTop} #> ${quoteTextArray(resolved.jsonPath)}`;
+        return `jsonb_typeof(${jsonbRef}) = ${quoteLiteral(pgType)}`;
+      }
+      if (kind === 'extra') {
+        return `jsonb_typeof(_extra->${quoteLiteral(resolved.topLevelField)}) = ${quoteLiteral(pgType)}`;
+      }
+      if (kind === 'extra_path') {
+        const parts = fieldPath.split('.');
+        return `jsonb_typeof(_extra #> ${quoteTextArray(parts)}) = ${quoteLiteral(pgType)}`;
+      }
+      throw new Error('$type is only supported on jsonb columns and _extra paths');
     }
 
     default:
@@ -488,7 +505,43 @@ function compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOpt
   }
 }
 
-function compileElemOperator(ref, op, operand, ctx) {
+// Single-parameter $in-style clause for JSONB-backed refs. Binds the
+// element list as one JSON-array parameter to stay under pg's 65535-param
+// cap on large lists.
+function compileJsonbInClause(resolved, nonNull, ctx) {
+  const { kind, sqlRef } = resolved;
+  const sample = nonNull.find(v => v !== undefined && v !== null);
+  const serialized = nonNull.map(v => (v instanceof Date ? v.toISOString() : v));
+  const param = ctx.addParam(JSON.stringify(serialized));
+
+  let leftExpr;
+  if (kind === 'jsonb_column') {
+    if (typeof sample === 'number') leftExpr = `(${sqlRef})::numeric`;
+    else if (typeof sample === 'boolean') leftExpr = `(${sqlRef})::boolean`;
+    else if (sample instanceof Date) leftExpr = `(${sqlRef})::timestamptz`;
+    else leftExpr = `${sqlRef}::text`;
+  } else {
+    if (typeof sample === 'number') leftExpr = `(${sqlRef})::numeric`;
+    else if (typeof sample === 'boolean') leftExpr = `(${sqlRef})::boolean`;
+    else if (sample instanceof Date) leftExpr = `(${sqlRef})::timestamptz`;
+    else leftExpr = sqlRef;
+  }
+
+  let rightExpr;
+  if (typeof sample === 'number') {
+    rightExpr = `SELECT (jsonb_array_elements_text(${param}::jsonb))::numeric`;
+  } else if (typeof sample === 'boolean') {
+    rightExpr = `SELECT (jsonb_array_elements_text(${param}::jsonb))::boolean`;
+  } else if (sample instanceof Date) {
+    rightExpr = `SELECT (jsonb_array_elements_text(${param}::jsonb))::timestamptz`;
+  } else {
+    rightExpr = `SELECT jsonb_array_elements_text(${param}::jsonb)`;
+  }
+
+  return `${leftExpr} IN (${rightExpr})`;
+}
+
+function compileElemOperator(ref, op, operand, ctx, extraOptions = '') {
   switch (op) {
     case '$eq': {
       const param = ctx.addParam(String(operand));
@@ -507,11 +560,24 @@ function compileElemOperator(ref, op, operand, ctx) {
       return `${ref}::text != ${param}`;
     }
     case '$regex': {
-      const pattern = operand instanceof RegExp ? operand.source : operand;
+      let pattern = operand;
+      let flags = '';
+      if (operand instanceof RegExp) {
+        pattern = operand.source;
+        flags = operand.flags;
+      }
+      if (extraOptions) {
+        for (const ch of extraOptions) {
+          if (!flags.includes(ch)) flags += ch;
+        }
+      }
       assertPosixRegex(pattern);
+      const regexOp = flags.includes('i') ? '~*' : '~';
       const param = ctx.addParam(pattern);
-      return `${ref}::text ~ ${param}`;
+      return `${ref}::text ${regexOp} ${param}`;
     }
+    case '$options':
+      return 'TRUE';
     default:
       throw new Error(`Unsupported $elemMatch operator: ${op}`);
   }
@@ -944,7 +1010,14 @@ export function buildSelectQuery(table, selector, options, schema) {
   const { text: whereText, values } = compileSelector(selector, schema);
   const ctx = { values: [...values], paramCount: values.length };
 
-  let sql = `SELECT * FROM ${quoteIdent(table)} WHERE ${whereText}`;
+  const projection = ['_id'];
+  if (schema) {
+    for (const colName of schema.getColumnNames()) projection.push(colName);
+  }
+  projection.push('_extra');
+  const projectionSql = projection.map(c => quoteIdent(c)).join(', ');
+
+  let sql = `SELECT ${projectionSql} FROM ${quoteIdent(table)} WHERE ${whereText}`;
 
   if (options && options.sort) {
     const orderBy = compileSort(options.sort, schema);
@@ -996,6 +1069,11 @@ export function buildInsertQuery(table, doc, schema) {
         columns.push(quoteIdent(colName));
         placeholders.push(`$${idx}`);
         values.push(row[colName]);
+      } else {
+        const col = schema.getColumn(colName);
+        if (col && col.required && col.default === undefined) {
+          throw new Error(`Required field "${colName}" is missing`);
+        }
       }
     }
   }
@@ -1177,6 +1255,11 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
         columns.push(quoteIdent(colName));
         placeholders.push(`$${idx}`);
         values.push(row[colName]);
+      } else {
+        const col = schema.getColumn(colName);
+        if (col && col.required && col.default === undefined) {
+          throw new Error(`Required field "${colName}" is missing`);
+        }
       }
     }
   }
@@ -1199,9 +1282,9 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
 
     let sql;
     if (rebasedSetClauses.length > 0) {
-      sql = `INSERT INTO ${quotedTable} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO UPDATE SET ${rebasedSetClauses.join(', ')} RETURNING _id`;
+      sql = `INSERT INTO ${quotedTable} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO UPDATE SET ${rebasedSetClauses.join(', ')} RETURNING _id, (xmax = 0) AS "__inserted"`;
     } else {
-      sql = `INSERT INTO ${quotedTable} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO NOTHING RETURNING _id`;
+      sql = `INSERT INTO ${quotedTable} (${columns.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (_id) DO NOTHING RETURNING _id, TRUE AS "__inserted"`;
     }
 
     return { text: sql, values: allValues, insertedId };
@@ -1231,14 +1314,14 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
     `WITH updated AS (` +
       `UPDATE ${quotedTable} SET ${setSql} ` +
       `WHERE _id = (SELECT _id FROM ${quotedTable} WHERE ${rebasedWhere} ORDER BY ${quoteIdent('_id')} ASC LIMIT 1) ` +
-      `RETURNING _id` +
+      `RETURNING _id, FALSE AS "__inserted"` +
     `), inserted AS (` +
       `INSERT INTO ${quotedTable} (${columns.join(', ')}) ` +
       `SELECT ${placeholders.join(', ')} ` +
       `WHERE NOT EXISTS (SELECT 1 FROM updated) ` +
-      `RETURNING _id` +
+      `RETURNING _id, TRUE AS "__inserted"` +
     `) ` +
-    `SELECT _id FROM updated UNION ALL SELECT _id FROM inserted`;
+    `SELECT _id, "__inserted" FROM updated UNION ALL SELECT _id, "__inserted" FROM inserted`;
 
   return { text: sql, values: allValues, insertedId };
 }
@@ -1246,8 +1329,45 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
 /**
  * Rebase $N parameter placeholders by an offset.
  * e.g. rebaseParams('$1 AND $2', 3) → '$4 AND $5'
+ *
+ * Skips single-quoted string spans so inlined literals containing `$N`
+ * (e.g. user-controlled field names routed through quoteLiteral) are not
+ * rewritten. Postgres escapes an inner quote by doubling it (`''`).
  */
 function rebaseParams(sql, offset) {
   if (offset === 0) return sql;
-  return sql.replace(/\$(\d+)/g, (_, n) => `$${parseInt(n) + offset}`);
+  let out = '';
+  let i = 0;
+  let inLiteral = false;
+  while (i < sql.length) {
+    const ch = sql[i];
+    if (inLiteral) {
+      out += ch;
+      if (ch === "'") {
+        if (sql[i + 1] === "'") { out += "'"; i += 2; continue; }
+        inLiteral = false;
+      }
+      i++;
+      continue;
+    }
+    if (ch === "'") {
+      out += ch;
+      inLiteral = true;
+      i++;
+      continue;
+    }
+    if (ch === '$') {
+      let j = i + 1;
+      while (j < sql.length && sql[j] >= '0' && sql[j] <= '9') j++;
+      if (j > i + 1) {
+        const n = parseInt(sql.slice(i + 1, j), 10);
+        out += `$${n + offset}`;
+        i = j;
+        continue;
+      }
+    }
+    out += ch;
+    i++;
+  }
+  return out;
 }

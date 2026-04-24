@@ -8,6 +8,9 @@
  * Meteor document with all fields merged.
  */
 
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+const isUnsafeKey = (k) => UNSAFE_KEYS.has(k);
+
 /**
  * Convert a Meteor document into a PostgreSQL row.
  *
@@ -31,6 +34,10 @@ export function documentToRow(doc, schema) {
 
   for (const [key, value] of Object.entries(doc)) {
     if (key === '_id') continue;
+
+    if (isUnsafeKey(key)) {
+      throw new Error(`Unsafe field name: ${key}`);
+    }
 
     if (schema && schemaSet.has(key)) {
       const col = schema.getColumn(key);
@@ -60,7 +67,7 @@ export function documentToRow(doc, schema) {
  * @returns {Object} Meteor document
  */
 export function rowToDocument(row, schema) {
-  const doc = {};
+  const doc = Object.create(null);
 
   if (row._id !== undefined) {
     doc._id = row._id;
@@ -80,8 +87,12 @@ export function rowToDocument(row, schema) {
 
   // Merge _extra overflow fields into doc
   if (row._extra && typeof row._extra === 'object') {
-    for (const [key, value] of Object.entries(row._extra)) {
-      doc[key] = value;
+    for (const key of Object.keys(row._extra)) {
+      if (isUnsafeKey(key)) {
+        Meteor._debug('[postgres] skipping unsafe _extra key:', key);
+        continue;
+      }
+      doc[key] = row._extra[key];
     }
   }
 
@@ -89,6 +100,10 @@ export function rowToDocument(row, schema) {
   if (!schema) {
     for (const [key, value] of Object.entries(row)) {
       if (key === '_id' || key === '_extra') continue;
+      if (isUnsafeKey(key)) {
+        Meteor._debug('[postgres] skipping unsafe row key:', key);
+        continue;
+      }
       if (value !== null && value !== undefined) {
         doc[key] = value;
       }
