@@ -45,10 +45,6 @@ const getGroupToUse = () => {
     return 'staff';
   }
 
-  if (process.env.TRAVIS) {
-    return 'travis';
-  }
-
   return getCurrentGroupName() || 'root';
 };
 

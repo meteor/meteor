@@ -15,7 +15,6 @@ npm-packages/
 v3-docs/
 node_modules/
 .meteor/
-.circleci/
 .github/
 .coderabbit.yaml
 
