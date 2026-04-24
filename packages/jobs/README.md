@@ -31,7 +31,7 @@ Run a job later:
 
 ```js
 await Jobs.run('cleanup', {}, { delay: '30m' });
-await Jobs.run('report', {}, { scheduledAt: new Date('2025-01-01') });
+await Jobs.run('report', {}, { scheduledAt: new Date(Date.now() + 24 * 60 * 60 * 1000) });
 ```
 
 Run a job on a cron schedule:
