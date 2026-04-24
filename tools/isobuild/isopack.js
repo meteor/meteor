@@ -893,7 +893,7 @@ Object.assign(Isopack.prototype, {
 
       // Read the watch sets for each unibuild
       Object.entries(
-        options.isopackBuildInfoJson.unibuildDependencies
+        options.isopackBuildInfoJson.unibuildDependencies || {}
       ).forEach(function ([unibuildTag, watchSetJSON]) {
           unibuildWatchSets[unibuildTag] =
             watch.WatchSet.fromJSON(watchSetJSON);
