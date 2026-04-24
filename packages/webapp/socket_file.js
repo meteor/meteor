@@ -1,4 +1,4 @@
-import { statSync, unlinkSync, existsSync } from 'fs';
+import { statSync, unlinkSync } from 'fs';
 
 // Track registered cleanup handlers per EventEmitter to prevent
 // listener accumulation across hot code reloads.
@@ -67,8 +67,12 @@ export const registerSocketFileCleanup =
     const handlers = new Map();
     ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
       const handler = Meteor.bindEnvironment(() => {
-        if (existsSync(socketPath)) {
+        try {
           unlinkSync(socketPath);
+        } catch (err) {
+          if (err.code !== 'ENOENT') {
+            throw err;
+          }
         }
       });
       handlers.set(signal, handler);
