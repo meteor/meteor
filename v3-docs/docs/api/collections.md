@@ -87,16 +87,9 @@ that supports Mongo-style [`find`](#Mongo-Collection-find), [`insert`](#Mongo-Co
 [`update`](#Mongo-Collection-update), and [`remove`](#Mongo-Collection-remove) operations. (On both the
 client and the server, this scratchpad is implemented using Minimongo.)
 
-By default, Meteor automatically publishes every document in your
-collection to each connected client. To turn this behavior off, remove
-the `autopublish` package, in your terminal:
-
-```bash
-meteor remove autopublish
-```
-
-and instead call [`Meteor.publish`](./meteor.md#Meteor-publish) to specify which parts of
-your collection should be published to which users.
+New Meteor 3.x projects do **not** include the `autopublish` package, so you need
+to call [`Meteor.publish`](./meteor.md#Meteor-publish) to specify which parts of your collection
+should be published to which users.
 
 ```js
 // client.js
@@ -105,7 +98,7 @@ your collection should be published to which users.
 // written to the server-side database a fraction of a second later, and a
 // fraction of a second after that, it will be synchronized down to any other
 // clients that are subscribed to a query that includes it (see
-// `Meteor.subscribe` and `autopublish`).
+// `Meteor.subscribe`).
 const Posts = new Mongo.Collection("posts");
 Posts.insert({ title: "Hello world", body: "First post" });
 
@@ -140,7 +133,7 @@ the value of the document's `_id` field (though it's OK to leave it out).
 // An animal class that takes a document in its constructor.
 class Animal {
   constructor(doc) {
-    _.extend(this, doc);
+    Object.assign(this, doc);
   }
 
   makeNoise() {
@@ -354,7 +347,24 @@ Meteor.methods({
 });
 ```
 
-```js [client.js]
+```jsx [client.jsx (React)]
+// When the 'give points' button in the admin dashboard is pressed, give 5
+// points to the current player. The new score will be immediately visible on
+// everyone's screens.
+import { useTracker } from 'meteor/react-meteor-data';
+
+function AdminDashboard() {
+  const currentPlayer = useTracker(() => Session.get('currentPlayer'));
+
+  const handleGivePoints = () => {
+    Players.update(currentPlayer, { $inc: { score: 5 } });
+  };
+
+  return <button onClick={handleGivePoints}>Give Points</button>;
+}
+```
+
+```js [client.js (Blaze)]
 // When the 'give points' button in the admin dashboard is pressed, give 5
 // points to the current player. The new score will be immediately visible on
 // everyone's screens.
@@ -367,6 +377,7 @@ Template.adminDashboard.events({
 });
 ```
 
+:::
 
 You can use `update` to perform a Mongo upsert by setting the `upsert`
 option to true. You can also use the [`upsert`](#Mongo-Collection-upsert) method to perform an
@@ -446,7 +457,18 @@ Meteor.startup(async () => {
 });
 ```
 
-```js [client.js]
+```jsx [client.jsx (React)]
+// When the 'remove' button is clicked on a chat message, delete that message.
+function ChatMessage({ message }) {
+  const handleRemove = () => {
+    Messages.remove(message._id);
+  };
+
+  return <button onClick={handleRemove}>Remove</button>;
+}
+```
+
+```js [client.js (Blaze)]
 // When the 'remove' button is clicked on a chat message, delete that message.
 Template.chat.events({
   "click .remove"() {
@@ -606,7 +628,7 @@ Posts.allow({
 Posts.deny({
   update(userId, doc, fields, modifier) {
     // Can't change owners.
-    return _.contains(fields, "owner");
+    return fields.includes("owner");
   },
 
   async remove(userId, doc) {
@@ -635,12 +657,8 @@ applications. In insecure mode, if you haven't set up any `allow` or `deny`
 rules on a collection, then all users have full write access to the
 collection. This is the only effect of insecure mode. If you call `allow` or
 `deny` at all on a collection, even `Posts.allow({})`, then access is checked
-just like normal on that collection. **New Meteor projects start in insecure
-mode by default.** To turn it off just run in your terminal:
-
-```bash
-meteor remove insecure
-```
+just like normal on that collection. New Meteor 3.x projects do **not** include
+the `insecure` package by default.
 
 <ApiBox name="Mongo.Collection#deny" instanceName="Collection"/>
 
@@ -665,7 +683,7 @@ if no `deny` rules return `true` and at least one `allow` rule returns
 
 <ApiBox name="Mongo.Collection#rawCollection" instanceName="Collection"/>
 
-The methods (like `update` or `insert`) you call on the resulting _raw_ collection return promises and can be used outside of a Fiber.
+The methods (like `update` or `insert`) you call on the resulting _raw_ collection return promises.
 
 <ApiBox name="Mongo.Collection#rawDatabase" instanceName="Collection"/>
 
@@ -819,8 +837,8 @@ the matching documents.
 <!-- The following is not yet implemented, but users shouldn't assume
      sequential execution anyway because that will break. -->
 
-On the server, if `callback` yields, other calls to `callback` may occur while
-the first call is waiting. If strict sequential execution is necessary, use
+On the server, if `callback` is async, other calls to `callback` may occur while
+the first call is awaiting. If strict sequential execution is necessary, use
 `forEach` instead.
 
 ::: warning
@@ -1005,7 +1023,7 @@ setTimeout(() => handle.stop(), 5000);
 <ApiBox name="Mongo.ObjectID" />
 
 
-`Mongo.ObjectID` follows the same API as the [Node MongoDB driver `ObjectID`](http://mongodb.github.io/node-mongodb-native/3.0/api/ObjectID.html)
+`Mongo.ObjectID` follows the same API as the [Node MongoDB driver `ObjectID`](https://mongodb.github.io/node-mongodb-native/6.16/classes/ObjectId.html)
 class. Note that you must use the `equals` method (or [`EJSON.equals`](./EJSON.md#EJSON-equals)) to
 compare them; the `===` operator will not work. If you are writing generic code
 that needs to deal with `_id` fields that may be either strings or `ObjectID`s, use
@@ -1060,7 +1078,7 @@ But they can also contain more complicated tests:
 }
 ```
 
-See the [complete documentation](http://docs.mongodb.org/manual/reference/operator/).
+See the [complete documentation](https://www.mongodb.com/docs/manual/reference/operator/).
 
 ## Modifiers {#modifiers}
 
@@ -1085,10 +1103,10 @@ supported by [validated updates](#Mongo-Collection-allow).)
 
 ```js
 // Find the document with ID '123' and completely replace it.
-Users.update({ _id: "123" }, { name: "Alice", friends: ["Bob"] });
+await Users.updateAsync({ _id: "123" }, { name: "Alice", friends: ["Bob"] });
 ```
 
-See the [full list of modifiers](http://docs.mongodb.org/manual/reference/operator/update/).
+See the [full list of modifiers](https://www.mongodb.com/docs/manual/reference/operator/update/).
 
 ## Sort specifiers {#sortspecifiers}
 
@@ -1145,7 +1163,7 @@ object as well. However, such field specifiers can not be used with
 from a [publish function](./meteor.md#Meteor-publish). They may be used with [`fetch`](#Mongo-Cursor-fetch),
 [`findOne`](#Mongo-Collection-findOne), [`forEach`](#Mongo-Cursor-forEach), and [`map`](#Mongo-Cursor-map).
 
-<a href="http://docs.mongodb.org/manual/reference/operator/projection/">Field
+<a href="https://www.mongodb.com/docs/manual/reference/operator/projection/">Field
 operators</a> such as `$` and `$elemMatch` are not available on the client side
 yet.
 
@@ -1153,7 +1171,7 @@ yet.
 A more advanced example:
 
 ```js
-Users.insert({
+await Users.insertAsync({
   alterEgos: [
     { name: "Kira", alliance: "murderer" },
     { name: "L", alliance: "police" },
@@ -1161,13 +1179,13 @@ Users.insert({
   name: "Yagami Light",
 });
 
-Users.findOne({}, { fields: { "alterEgos.name": 1, _id: 0 } });
+await Users.findOneAsync({}, { fields: { "alterEgos.name": 1, _id: 0 } });
 // Returns { alterEgos: [{ name: 'Kira' }, { name: 'L' }] }
 ```
 
 
 
-See <a href="http://docs.mongodb.org/manual/tutorial/project-fields-from-query-results/#projection">
+See <a href="https://www.mongodb.com/docs/manual/tutorial/project-fields-from-query-results/#projection">
 the MongoDB docs</a> for details of the nested field rules and array behavior.
 
 ## Connecting to your database {#mongo_url}
@@ -1184,8 +1202,8 @@ If you want to use oplog tailing for livequeries, you should also set
 `MONGO_OPLOG_URL` (generally you'll need a special user with oplog access, but
 the detail can differ depending on how you host your MongoDB. Read more [here](https://github.com/meteor/docs/blob/master/long-form/oplog-observe-driver.md)).
 
-> As of Meteor 1.4, you must ensure you set the `replicaSet` parameter on your
-> `METEOR_OPLOG_URL`
+> You must ensure you set the `replicaSet` parameter on your
+> `MONGO_OPLOG_URL`
 
 ## MongoDB connection options {#mongo_connection_options}
 
@@ -1198,10 +1216,8 @@ You can use your Meteor settings file to set the options in a property called
 `options` inside `packages` > `mongo`, these values will be provided as options for MongoDB in
 the connect method.
 
-> this option was introduced in Meteor 1.10.2
-
 For example, you may want to specify a certificate for your
-TLS connection ([see the options here](https://mongodb.github.io/node-mongodb-native/3.5/tutorials/connect/tls/)) then you could use these options:
+TLS connection ([see the options here](https://mongodb.github.io/node-mongodb-native/6.16/fundamentals/connection/tls/)) then you could use these options:
 
 ```json
   "packages": {
@@ -1260,7 +1276,6 @@ mongodb://<username>:<password>@[server-1],[server-2],[server-3]/my-database?rep
 
 ### Mongo Oplog Options {#mongo-oplog-options}
 
-> Oplog options were introduced in Meteor 2.15.1
 If you set the [`MONGO_OPLOG_URL`](/cli/environment-variables.html#mongo-oplog-url) env var, Meteor will use MongoDB's Oplog to show efficient, real time updates to your users via your subscriptions.
 
 Due to how Meteor's Oplog implementation is built behind the scenes, if you have certain collections where you expect **big amounts of write operations**, this might lead to **big CPU spikes on your meteor app server, even if you have no publications/subscriptions on any data/documents of these collections**. For more information on this, please have a look into [this blog post from 2016](https://blog.meteor.com/tuning-meteor-mongo-livedata-for-scalability-13fe9deb8908), [this github discussion from 2022](https://github.com/meteor/meteor/discussions/11842) or [this meteor forums post from 2023](https://forums.meteor.com/t/cpu-spikes-due-to-oplog-updates-without-subscriptions/60028).
@@ -1296,4 +1311,3 @@ you need to call it before any other package using Mongo connections is
 initialized so you need to add this code in a package and add it above the other
 packages, like accounts-base in your `.meteor/packages` file.
 
-> this option was introduced in Meteor 1.4
