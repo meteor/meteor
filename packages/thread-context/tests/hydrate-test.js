@@ -95,8 +95,6 @@ Tinytest.add('thread-context - hydrateContext - defaults without options', funct
 
 Tinytest.addAsync('thread-context - hydrateContext - Collections proxy bridges to host', async function (test) {
   const collName = 'thread_context_hydrate_test';
-  const col = new Mongo.Collection(collName, { connection: null });
-  // Ensure collection is registered — use existing if already registered
   let resolvedCol = Mongo.getCollection(collName);
   if (!resolvedCol) {
     resolvedCol = new Mongo.Collection(collName);
