@@ -103,7 +103,7 @@ compiler.compile = Profile(function (packageSource, options) {
 
       // Register the built plugin's code.
       if (!(info.name in plugins)) {
-        plugins[info.name] = {};
+        plugins[info.name] = Object.create(null);
       }
       plugins[info.name][buildResult.image.arch] = buildResult.image;
     });
