@@ -14,8 +14,8 @@ permissions:
   contents: read
 
 env:
-  # Phase 1: enforce failures only for highest-impact package while reporting all.
-  # Matrix intentionally includes only actively used runtime/installer npm packages.
+  # Phase 1: audit selected active runtime/installer npm packages, but enforce
+  # failures only for packages whose existing baseline is clean and high-impact.
   ENFORCED_AUDIT_PATHS: "npm-packages/meteor-node-stubs"
 
 jobs:
@@ -63,12 +63,21 @@ jobs:
             npm audit --package-lock-only --omit=dev --json > "$audit_file" || true
           )
 
-          read -r total critical high moderate low <<< "$(node -e '
+          audit_counts="$(node -e '
             const fs = require("fs");
             const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-            const v = report.metadata?.vulnerabilities || {};
+            if (report.error || !report.metadata?.vulnerabilities) {
+              console.error(
+                report.error
+                  ? `npm audit failed: ${JSON.stringify(report.error)}`
+                  : "npm audit output did not include metadata.vulnerabilities"
+              );
+              process.exit(2);
+            }
+            const v = report.metadata.vulnerabilities;
             console.log(`${v.total || 0} ${v.critical || 0} ${v.high || 0} ${v.moderate || 0} ${v.low || 0}`);
           ' "$audit_file")"
+          read -r total critical high moderate low <<< "$audit_counts"
 
           {
             echo "### $package_dir"
