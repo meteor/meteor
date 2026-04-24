@@ -38,8 +38,13 @@ export function normalizeFieldDef(def) {
     return { type: String, regEx: def };
   }
   // Shorthand: Array of type (e.g., { tags: [String] })
-  if (Array.isArray(def) && def.length === 1) {
-    return { type: Array, _arrayItemType: def[0] };
+  if (Array.isArray(def)) {
+    if (def.length === 0) {
+      throw new Error('MongoSchema: Empty array shorthand [] is not allowed; expected one type like [String]');
+    }
+    if (def.length === 1) {
+      return { type: Array, _arrayItemType: def[0] };
+    }
   }
   // Full form object
   if (typeof def === 'object' && def !== null && def.type !== undefined) {
