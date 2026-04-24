@@ -1032,6 +1032,35 @@ if (Meteor.isServer) {
     }
   );
 
+  // tokenTrackingStrategy is resolved once in the AccountsServer constructor.
+  // Calling Accounts.config() afterwards may store the new value in _options
+  // but must not flip the effective mode. The config override also warns via
+  // Meteor._debug when the requested mode differs from the effective one.
+  Tinytest.addAsync(
+    'accounts - tokenTrackingStrategy is startup-only (config() does not switch modes)',
+    async (test) => {
+      const origOptions = Accounts._options;
+      const origDebug = Meteor._debug;
+      Accounts._options = {};
+      let warned = null;
+      Meteor._debug = (msg) => { warned = String(msg); };
+      try {
+        Accounts.config({ tokenTrackingStrategy: 'in-memory' });
+        test.isFalse(
+          Accounts._useInMemoryTokenTracking,
+          'effective mode must remain observer despite in-memory config call'
+        );
+        test.isTrue(
+          warned && warned.includes('tokenTrackingStrategy'),
+          'config() should warn via Meteor._debug on a mismatched strategy'
+        );
+      } finally {
+        Meteor._debug = origDebug;
+        Accounts._options = origOptions;
+      }
+    }
+  );
+
   // ==========================================================================
   // In-memory helper unit tests (mock connections, no mode swap needed)
   //
@@ -1254,9 +1283,19 @@ if (Meteor.isServer) {
   // These tests switch the global Accounts instance to in-memory mode,
   // perform real DDP logins, and verify the _tokenConnections map state.
   // State is saved/restored in a try/finally block.
+  //
+  // Why not use Accounts.config({ tokenTrackingStrategy: 'in-memory' })?
+  // The strategy is resolved at AccountsServer construction (see
+  // accounts_server.js constructor: `_useInMemoryTokenTracking =
+  // options.tokenTrackingStrategy === 'in-memory'`). Calling config() at
+  // runtime does not rebuild the observer/in-memory bookkeeping, and
+  // instantiating a fresh AccountsServer for a test would re-register
+  // methods/publications on Meteor.server and trigger a DB scan. Tests
+  // therefore mutate the resolved flag and backing structures directly.
   // ==========================================================================
 
   // Helper to save and swap to in-memory mode, returning a restore function.
+  // Direct internal-state mutation is intentional here — see the comment above.
   function switchToInMemoryMode() {
     const saved = {
       flag: Accounts._useInMemoryTokenTracking,
