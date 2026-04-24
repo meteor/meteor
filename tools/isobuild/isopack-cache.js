@@ -436,6 +436,9 @@ export class IsopackCache {
     var watchSet = watch.WatchSet.fromJSON(
       isopackBuildInfoJson.pluginDependencies);
 
+    if (!isopackBuildInfoJson.unibuildDependencies) {
+      return false;
+    }
     Object.values(isopackBuildInfoJson.unibuildDependencies).forEach(function (deps) {
       watchSet.merge(watch.WatchSet.fromJSON(deps));
     });
