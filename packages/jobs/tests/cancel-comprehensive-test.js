@@ -113,28 +113,32 @@ Tinytest.addAsync('jobs - cancel - returns false for already-cancelled job', asy
 Tinytest.addAsync('jobs - cancel - cancelled event fires', async function (test) {
   Jobs.configure({ testMode: 'manual' });
 
-  let cancelledFired = false;
-  let cancelledJobId = null;
-
   const name = uniqueName('cancel_evt');
   Jobs.register({ name, run() { return 'ok'; } });
 
+  let resolveCancelled;
+  let timer;
+  const cancelledPromise = new Promise((resolve, reject) => {
+    resolveCancelled = resolve;
+    timer = setTimeout(() => reject(new Error('cancelled event did not fire within 2s')), 2000);
+  });
+
   const handle = Jobs.on('cancelled', function (job) {
     if (job.name === name) {
-      cancelledFired = true;
-      cancelledJobId = job._id;
+      resolveCancelled(job);
     }
   });
 
-  const jobId = await Jobs.run(name, {});
-  await Jobs.cancel(jobId);
+  try {
+    const jobId = await Jobs.run(name, {});
+    await Jobs.cancel(jobId);
 
-  await new Promise(r => setTimeout(r, 100));
-
-  test.isTrue(cancelledFired, 'cancelled event should fire');
-  test.equal(cancelledJobId, jobId);
-
-  handle.stop();
+    const job = await cancelledPromise;
+    test.equal(job._id, jobId);
+  } finally {
+    clearTimeout(timer);
+    handle.stop();
+  }
 });
 
 // ---------------------------------------------------------------------------
