@@ -43,11 +43,7 @@ Tinytest.addAsync('jobs - runAndWait - resolves with result on completion', asyn
   // Start runAndWait in background, then execute the job
   const waitPromise = Jobs.runAndWait(name, { x: 21 }, { waitTimeout: 5000 });
 
-  // Give the observer a moment to set up
-  await new Promise(r => setTimeout(r, 100));
-
-  // Find the job and execute it
-  const job = await Jobs._collection.findOneAsync({ name, status: 'ready' });
+  const job = await waitForReadyJob(name);
   test.isNotNull(job, 'Job should exist in collection');
   await Jobs.executeNow(job._id);
 
