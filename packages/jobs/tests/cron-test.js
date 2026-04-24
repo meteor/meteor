@@ -228,9 +228,6 @@ Tinytest.addAsync('jobs - cron - warns when no timezone set', async function (te
 
   const name = uniqueName('tz_warn');
 
-  // Register a cron job without timezone — should trigger a console.warn
-  // when the scheduler starts. We can't easily capture console.warn in
-  // tinytest, so we just verify the scheduler starts without error.
   Jobs.register({
     name,
     schedule: '0 0 * * *',
@@ -238,8 +235,20 @@ Tinytest.addAsync('jobs - cron - warns when no timezone set', async function (te
     run() { return 'ok'; },
   });
 
-  await Jobs._startCron();
-  Jobs._stopCron();
+  const originalWarn = console.warn;
+  const warnCalls = [];
+  console.warn = (...args) => { warnCalls.push(args); };
 
-  test.isTrue(true, 'Cron scheduler handles missing timezone gracefully');
+  try {
+    await Jobs._startCron();
+    Jobs._stopCron();
+  } finally {
+    console.warn = originalWarn;
+  }
+
+  const match = warnCalls.find(
+    args => typeof args[0] === 'string' && args[0].includes(`"${name}"`)
+  );
+  test.isTrue(match, 'console.warn should be called for the un-timezoned job');
+  test.matches(match[0], /no timezone set/i);
 });
