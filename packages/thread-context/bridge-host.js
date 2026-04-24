@@ -114,9 +114,13 @@ export class BridgeHost {
 
       const result = await handler.handle(msg);
 
-      const finalResult = this.onResult
-        ? (await this.onResult(msg, result)) ?? result
-        : result;
+      let finalResult = result;
+      if (this.onResult) {
+        const override = await this.onResult(msg, result);
+        if (override !== undefined) {
+          finalResult = override;
+        }
+      }
 
       this._postResult(msg.id, finalResult);
     } catch (err) {
