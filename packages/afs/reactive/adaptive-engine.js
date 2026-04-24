@@ -1,3 +1,5 @@
+import { CHANGE_EVENTS } from './change-stream';
+
 /**
  * AdaptiveEngine - Intelligent optimization layer for AFS.
  *
@@ -50,6 +52,10 @@ export class AdaptiveEngine {
       totalChanges: 0,
       errors: 0,
       reconnections: 0,
+      // Selectors that could not be canonically stringified (e.g. circular
+      // refs). They collapse to `collectionName:*` and are excluded from
+      // pattern tracking so we don't pool unrelated queries together.
+      patternKeyFailures: 0,
     };
   }
 
@@ -95,6 +101,16 @@ export class AdaptiveEngine {
   }
 
   /**
+   * Record that a write (insert/update/remove) happened for a collection.
+   * Single centralized accounting so the metric stays accurate even as
+   * mutation surfaces multiply (collection.js, provider adapter, DDP path).
+   * @param {string} collectionName
+   */
+  recordWrite(collectionName) {
+    this._metrics.totalWrites++;
+  }
+
+  /**
    * Check if a query result should be prefetched based on access patterns.
    * @param {string} collectionName
    * @param {Object} selector
@@ -124,22 +140,19 @@ export class AdaptiveEngine {
         pattern.collectionName === collectionName &&
         pattern.count >= this._options.prefetchThreshold
       ) {
+        // Include count so sort is O(n log n) comparisons (no extra Map
+        // lookups / EJSON.stringify per comparison). We strip it before
+        // returning so callers don't see an internal field.
         suggestions.push({
           selector: pattern.selector,
           options: pattern.options,
+          _count: pattern.count,
         });
       }
     }
 
-    return suggestions.sort((a, b) => {
-      const patternA = this._accessPatterns.get(
-        this._patternKey(collectionName, a.selector)
-      );
-      const patternB = this._accessPatterns.get(
-        this._patternKey(collectionName, b.selector)
-      );
-      return (patternB?.count || 0) - (patternA?.count || 0);
-    });
+    suggestions.sort((a, b) => b._count - a._count);
+    return suggestions.map(s => ({ selector: s.selector, options: s.options }));
   }
 
   // ---------------------------------------------------------------------------
@@ -298,6 +311,11 @@ export class AdaptiveEngine {
       // first, _notifySlotAvailable will skip this entry (no acquireSlot
       // leak); if _notifySlotAvailable fires first, the timer becomes a
       // no-op via clearTimeout.
+      //
+      // The waiter object is fully constructed (including its `resolve`
+      // function) BEFORE being pushed into the queue. That preserves the
+      // invariant that _notifySlotAvailable never observes a half-built
+      // waiter, even if a synchronous release() races the Promise executor.
       const waiter = { settled: false, resolve: null };
 
       const timer = setTimeout(() => {
@@ -356,6 +374,7 @@ export class AdaptiveEngine {
       totalChanges: 0,
       errors: 0,
       reconnections: 0,
+      patternKeyFailures: 0,
     };
   }
 
@@ -377,18 +396,18 @@ export class AdaptiveEngine {
     const onError = () => { this._metrics.errors = (this._metrics.errors || 0) + 1; };
     const onReconnected = () => { this._metrics.reconnections = (this._metrics.reconnections || 0) + 1; };
 
-    stream.on('added', onAdded);
-    stream.on('changed', onChanged);
-    stream.on('removed', onRemoved);
-    stream.on('error', onError);
-    stream.on('reconnected', onReconnected);
+    stream.on(CHANGE_EVENTS.ADDED, onAdded);
+    stream.on(CHANGE_EVENTS.CHANGED, onChanged);
+    stream.on(CHANGE_EVENTS.REMOVED, onRemoved);
+    stream.on(CHANGE_EVENTS.ERROR, onError);
+    stream.on(CHANGE_EVENTS.RECONNECTED, onReconnected);
 
     return () => {
-      stream.removeListener('added', onAdded);
-      stream.removeListener('changed', onChanged);
-      stream.removeListener('removed', onRemoved);
-      stream.removeListener('error', onError);
-      stream.removeListener('reconnected', onReconnected);
+      stream.removeListener(CHANGE_EVENTS.ADDED, onAdded);
+      stream.removeListener(CHANGE_EVENTS.CHANGED, onChanged);
+      stream.removeListener(CHANGE_EVENTS.REMOVED, onRemoved);
+      stream.removeListener(CHANGE_EVENTS.ERROR, onError);
+      stream.removeListener(CHANGE_EVENTS.RECONNECTED, onReconnected);
     };
   }
 
@@ -406,6 +425,13 @@ export class AdaptiveEngine {
     try {
       return collectionName + ':' + EJSON.stringify(selector, { canonical: true });
     } catch (e) {
+      this._metrics.patternKeyFailures++;
+      if (typeof Meteor !== 'undefined' && Meteor._debug) {
+        Meteor._debug(
+          `AFS.AdaptiveEngine: failed to canonicalize selector for '${collectionName}':`,
+          e.message
+        );
+      }
       return collectionName + ':*';
     }
   }

@@ -1,3 +1,5 @@
+import { CHANGE_EVENTS } from './change-stream';
+
 /**
  * ObserveMultiplexer - Fans out ChangeStream events to N ObserveHandles.
  *
@@ -27,18 +29,23 @@ export class ObserveMultiplexer {
    * @param {Object} [options]
    * @param {Function} [options.onEmpty] - Called when last handle is removed.
    *   If not provided, the stream is stopped automatically.
+   * @param {number} [options.pendingQueueCap=10000] - Max number of events
+   *   buffered per pending handle before the queue is collapsed to a single
+   *   'reset' replay entry. Prevents unbounded memory growth if a handle's
+   *   initial-add phase stalls while a burst of live events fires. Pass 0
+   *   to disable the cap.
    */
   constructor(changeStream, ordered, options = {}) {
     this._stream = changeStream;
     this._ordered = ordered;
     this._onEmpty = options.onEmpty || null;
+    this._pendingQueueCap = options.pendingQueueCap == null ? 10000 : options.pendingQueueCap;
     this._handles = new Map();
     // Handles that are mid-addHandle (awaiting initial-adds). Any live event
     // emitted while a handle is pending is queued here and replayed to that
     // handle once it transitions into _handles, so live-only emissions (e.g.
     // 'reconnected', 'reset') that don't mutate the cache aren't lost.
     this._pendingHandles = new Map();
-    this._handleIdCounter = 0;
     // Cached count of handles with mutating callbacks. Avoids an O(n) scan
     // on every cache-mutating event when fan-out asks whether args need
     // cloning.
@@ -79,12 +86,16 @@ export class ObserveMultiplexer {
    * @private
    */
   _bindStreamEvents() {
+    // Retain listener refs so destroy() can detach them explicitly — the
+    // anonymous-fn closure captured `this`, so we need the ref to remove.
+    this._boundListeners = [];
+
     const callbackNames = this._ordered
-      ? ['addedBefore', 'changed', 'movedBefore', 'removed']
-      : ['added', 'changed', 'removed'];
+      ? [CHANGE_EVENTS.ADDED_BEFORE, CHANGE_EVENTS.CHANGED, CHANGE_EVENTS.MOVED_BEFORE, CHANGE_EVENTS.REMOVED]
+      : [CHANGE_EVENTS.ADDED, CHANGE_EVENTS.CHANGED, CHANGE_EVENTS.REMOVED];
 
     for (const name of callbackNames) {
-      this._stream.on(name, (...args) => {
+      const listener = (...args) => {
         // Update cache first. _CachingChangeObserver takes a defensive shallow
         // copy of `fields` via `{ ...fields }` before storing it in its docs
         // map, so the cache does NOT alias the args we're about to broadcast.
@@ -128,12 +139,10 @@ export class ObserveMultiplexer {
         // handle does not miss deltas that fire while it is receiving its
         // initial adds. addHandle replays buffered events after its snapshot
         // has been delivered, which brings the handle to the current state.
-        if (this._pendingHandles.size > 0) {
-          for (const [, queue] of this._pendingHandles) {
-            queue.push({ name, args });
-          }
-        }
-      });
+        this._bufferForPending(name, args);
+      };
+      this._stream.on(name, listener);
+      this._boundListeners.push([name, listener]);
     }
 
     // Ready event — also check if stream was already ready before we attached
@@ -141,13 +150,15 @@ export class ObserveMultiplexer {
       this._isReady = true;
       this._readyResolver();
     }
-    this._stream.on('ready', () => {
+    const readyListener = () => {
       this._isReady = true;
       this._readyResolver();
-    });
+    };
+    this._stream.on(CHANGE_EVENTS.READY, readyListener);
+    this._boundListeners.push([CHANGE_EVENTS.READY, readyListener]);
 
     // Error event forwarded to handles
-    this._stream.on('error', (err) => {
+    const errorListener = (err) => {
       for (const [, handle] of this._handles) {
         if (handle._stopped) continue;
         if (handle.callbacks.error) {
@@ -158,16 +169,14 @@ export class ObserveMultiplexer {
           }
         }
       }
-      if (this._pendingHandles.size > 0) {
-        for (const [, queue] of this._pendingHandles) {
-          queue.push({ name: 'error', args: [err] });
-        }
-      }
-    });
+      this._bufferForPending(CHANGE_EVENTS.ERROR, [err]);
+    };
+    this._stream.on(CHANGE_EVENTS.ERROR, errorListener);
+    this._boundListeners.push([CHANGE_EVENTS.ERROR, errorListener]);
 
     // Lifecycle events forwarded to handles
-    for (const evt of ['reconnected', 'reset', 'paused', 'resumed']) {
-      this._stream.on(evt, (...args) => {
+    for (const evt of [CHANGE_EVENTS.RECONNECTED, CHANGE_EVENTS.RESET, CHANGE_EVENTS.PAUSED, CHANGE_EVENTS.RESUMED]) {
+      const lifecycleListener = (...args) => {
         for (const [, handle] of this._handles) {
           if (handle._stopped) continue;
           if (handle.callbacks[evt]) {
@@ -178,13 +187,56 @@ export class ObserveMultiplexer {
             }
           }
         }
-        if (this._pendingHandles.size > 0) {
-          for (const [, queue] of this._pendingHandles) {
-            queue.push({ name: evt, args });
-          }
-        }
-      });
+        this._bufferForPending(evt, args);
+      };
+      this._stream.on(evt, lifecycleListener);
+      this._boundListeners.push([evt, lifecycleListener]);
     }
+  }
+
+  /**
+   * Buffer an event into every pending handle's replay queue.
+   * Honors the pending-queue cap set on construction — a handle whose
+   * queue exceeds the cap is converted to a "reset" replay item so the
+   * eventual drain tells it to resubscribe from scratch rather than
+   * silently dropping events.
+   * @private
+   */
+  _bufferForPending(name, args) {
+    if (this._pendingHandles.size === 0) return;
+    for (const [, queue] of this._pendingHandles) {
+      if (queue._overflowed) continue;
+      if (this._pendingQueueCap > 0 && queue.length >= this._pendingQueueCap) {
+        queue.length = 0;
+        queue.push({ name: CHANGE_EVENTS.RESET, args: [] });
+        queue._overflowed = true;
+        continue;
+      }
+      queue.push({ name, args });
+    }
+  }
+
+  /**
+   * Explicitly detach all listeners from the underlying ChangeStream and
+   * release internal state. Safe to call more than once.
+   *
+   * Normally the multiplexer is torn down when the last handle stops (via
+   * onEmpty, which stops the stream and removes its listeners). This method
+   * exists so callers that share a stream across multiplexers — or that
+   * want to unbind without stopping the stream — can do so explicitly.
+   */
+  destroy() {
+    if (this._destroyed) return;
+    this._destroyed = true;
+    if (this._boundListeners) {
+      for (const [name, listener] of this._boundListeners) {
+        this._stream.removeListener(name, listener);
+      }
+      this._boundListeners.length = 0;
+    }
+    this._handles.clear();
+    this._pendingHandles.clear();
+    this._mutatingHandleCount = 0;
   }
 
   /**
@@ -199,7 +251,9 @@ export class ObserveMultiplexer {
    * @returns {Promise<{stop: Function}>}
    */
   async addHandle(callbacks, options = {}) {
-    const id = ++this._handleIdCounter;
+    // Symbol() gives each handle a guaranteed-unique identity without the
+    // risk of counter overflow in long-lived multiplexers.
+    const id = Symbol('handle');
     const handle = {
       id,
       callbacks,

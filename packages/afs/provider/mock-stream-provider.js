@@ -1,5 +1,5 @@
 import { StreamProvider } from './stream-provider';
-import { ChangeStream } from './change-stream';
+import { ChangeStream } from '../reactive/change-stream';
 
 /**
  * MockStreamProvider - An in-memory StreamProvider for testing.
@@ -154,7 +154,9 @@ export class MockStreamProvider extends StreamProvider {
       const lcHandle = cursor.observeChanges(bridgeCallbacks);
       stream.markReady();
 
-      stream.on('stop', () => {
+      // Use onStopOrImmediate so a stop() raced during the microtask gap
+      // still frees the LocalCollection observer we just created.
+      stream.onStopOrImmediate(() => {
         lcHandle.stop();
       });
     }).catch(err => {

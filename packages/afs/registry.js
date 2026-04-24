@@ -19,6 +19,8 @@
  */
 
 import { EventEmitter } from 'events';
+import { _resetAllForTests as _resetLocalCollections } from './collection/local-collection-driver';
+
 const _registryEmitter = new EventEmitter();
 _registryEmitter.setMaxListeners(0);
 
@@ -301,6 +303,9 @@ export const Registry = {
     this._defaultProviderName = null;
     _coreResolvers.length = 0;
     _registryEmitter.removeAllListeners();
+    // Wipe the process-global LocalCollection cache so tests cannot
+    // inherit Minimongo state from a prior run.
+    _resetLocalCollections();
   },
 
   /**

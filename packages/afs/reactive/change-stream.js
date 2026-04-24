@@ -26,6 +26,28 @@
 
 import { EventEmitter } from 'events';
 
+/**
+ * Canonical event names emitted by ChangeStream.
+ *
+ * Consumers (ObserveMultiplexer, AdaptiveEngine) reference these constants
+ * instead of duplicating raw strings, so a rename here stays in sync
+ * automatically.
+ */
+export const CHANGE_EVENTS = Object.freeze({
+  ADDED: 'added',
+  ADDED_BEFORE: 'addedBefore',
+  CHANGED: 'changed',
+  MOVED_BEFORE: 'movedBefore',
+  REMOVED: 'removed',
+  READY: 'ready',
+  ERROR: 'error',
+  RESET: 'reset',
+  PAUSED: 'paused',
+  RESUMED: 'resumed',
+  RECONNECTED: 'reconnected',
+  STOP: 'stop',
+});
+
 export class ChangeStream extends EventEmitter {
   /**
    * @param {Object} cursorDescription - Describes the query
@@ -115,12 +137,31 @@ export class ChangeStream extends EventEmitter {
   isStopped() { return this._stopped; }
 
   /**
+   * Register `fn` to run on stream stop — synchronously if the stream is
+   * already stopped, otherwise attached as a one-shot listener.
+   *
+   * Use this instead of `stream.on('stop', fn)` whenever the registration
+   * may race against `stop()`. Attaching after stop() has already fired
+   * (removing all listeners in the process) would otherwise silently leak
+   * the resource `fn` is supposed to free.
+   *
+   * @param {Function} fn
+   */
+  onStopOrImmediate(fn) {
+    if (this._stopped) {
+      try { fn(); } catch (e) { console.error('onStopOrImmediate callback threw:', e); }
+      return;
+    }
+    this.once('stop', fn);
+  }
+
+  /**
    * Stop this ChangeStream. Emits 'stop', then removes all listeners.
    *
    * Ordering note: listeners attached AFTER stop() returns will not receive
    * the 'stop' event (it has already fired, and removeAllListeners has run).
-   * Consumers that may race attach vs stop should check `isStopped()`
-   * before relying on a 'stop' listener.
+   * Consumers that may race attach vs stop should use `onStopOrImmediate`
+   * instead of raw `on('stop', …)`.
    */
   stop() {
     if (this._stopped) return;

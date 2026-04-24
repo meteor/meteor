@@ -1,158 +1,86 @@
-import { StreamProvider } from './stream-provider';
-import { AFSCursor } from './cursor';
-import { FederatedCollection } from './collection';
-import { AdaptiveEngine } from './adaptive-engine';
-import { MockStreamProvider } from './mock-stream-provider';
+import { StreamProvider, ProviderClosedError } from './provider/stream-provider';
+import { MockStreamProvider } from './provider/mock-stream-provider';
+import { AFSCursor } from './collection/cursor';
+import { FederatedCollection } from './collection/collection';
+import { ChangeStream } from './reactive/change-stream';
+import { ObserveMultiplexer } from './reactive/observe-multiplexer';
+import { AdaptiveEngine } from './reactive/adaptive-engine';
 import { Registry } from './registry';
-import { ChangeStream } from './change-stream';
-import { ObserveMultiplexer } from './observe-multiplexer';
+import { buildCommonAFS } from './afs-common';
 
 /**
- * AFS - Adaptive Federated Streams
+ * AFS - Adaptive Federated Streams (server entry point)
  *
- * The global entry point for Meteor's data-source agnostic reactivity engine.
- * This namespace is exported globally and provides access to all AFS
- * functionality.
+ * Extends the shared surface from afs-common.js with server-only capabilities:
+ *   - Reactive internals (ChangeStream, ObserveMultiplexer, AFSCursor)
+ *   - Provider registration / lookup (mongo, postgres, etc.)
+ *   - AdaptiveEngine singleton for metrics and prefetching
+ *
+ * `AFS` is declared as a package global in package.js. We assign explicitly
+ * through `global.AFS` instead of relying on an undeclared bare-identifier
+ * assignment, which strict-mode and linters flag as an accidental global leak.
  */
-// `AFS` is declared as a package global in package.js (`api.export('AFS')`).
-// We assign explicitly through `global.AFS` instead of relying on an
-// undeclared bare-identifier assignment, which strict-mode and linters flag
-// as an accidental global leak.
+
+const _engine = new AdaptiveEngine();
+
 const AFS = {
-  // Classes
-  StreamProvider,
+  ...buildCommonAFS(),
+
+  // Server-side classes not exposed via afs-common
   Cursor: AFSCursor,
-  Collection: FederatedCollection,
   MockStreamProvider,
   ChangeStream,
   ObserveMultiplexer,
-  ObjectID: MongoID.ObjectID,
 
-  // Singleton instances
-  _engine: new AdaptiveEngine(),
-  _registry: Registry,
+  // Singleton
+  _engine,
 
   // ---------------------------------------------------------------------------
-  // Provider management (delegates to Registry)
+  // Provider management (server-only) — delegates to Registry
   // ---------------------------------------------------------------------------
 
-  registerProvider(name, provider) {
-    Registry.registerProvider(name, provider);
-  },
-
-  getProvider(name) {
-    return Registry.getProvider(name);
-  },
-
-  setDefaultProvider(name) {
-    Registry.setDefaultProvider(name);
-  },
-
-  getDefaultProvider() {
-    return Registry.getDefaultProvider();
-  },
-
-  listProviders() {
-    return Registry.listProviders();
-  },
-
-  removeProvider(name) {
-    Registry.removeProvider(name);
-  },
-
-  // ---------------------------------------------------------------------------
-  // Collection management (delegates to Registry)
-  // ---------------------------------------------------------------------------
-
-  registerCollection(name, collection) {
-    Registry.registerCollection(name, collection);
-  },
-
-  getCollection(name) {
-    return Registry.getCollection(name);
-  },
-
-  listCollections() {
-    return Registry.listCollections();
-  },
-
-  removeCollection(name) {
-    Registry.removeCollection(name);
-  },
-
-  getDefaultProviderName() {
-    return Registry.getDefaultProviderName();
-  },
-
-  // ---------------------------------------------------------------------------
-  // Core collection management (delegates to Registry)
-  // ---------------------------------------------------------------------------
-
-  registerCoreCollection(name, collection) {
-    Registry.registerCoreCollection(name, collection);
-  },
-
-  getCoreCollection(name) {
-    return Registry.getCoreCollection(name);
-  },
-
-  hasCoreCollection(name) {
-    return Registry.hasCoreCollection(name);
-  },
-
-  listCoreCollections() {
-    return Registry.listCoreCollections();
-  },
+  registerProvider(name, provider) { Registry.registerProvider(name, provider); },
+  getProvider(name) { return Registry.getProvider(name); },
+  setDefaultProvider(name) { Registry.setDefaultProvider(name); },
+  getDefaultProvider() { return Registry.getDefaultProvider(); },
+  getDefaultProviderName() { return Registry.getDefaultProviderName(); },
+  listProviders() { return Registry.listProviders(); },
+  removeProvider(name) { Registry.removeProvider(name); },
 
   // ---------------------------------------------------------------------------
   // Adaptive engine access
   // ---------------------------------------------------------------------------
 
-  getEngine() {
-    return this._engine;
-  },
-
-  getMetrics() {
-    return this._engine.getMetrics();
-  },
-
-  resetMetrics() {
-    this._engine.reset();
-  },
+  getEngine() { return _engine; },
+  getMetrics() { return _engine.getMetrics(); },
+  resetMetrics() { _engine.reset(); },
 
   // ---------------------------------------------------------------------------
   // Utility
   // ---------------------------------------------------------------------------
 
   /**
-   * Reset all AFS state. For testing only.
+   * Reset all AFS state. Test-only.
+   * Registry._resetForTests enforces the environment guard.
    */
-  _reset() {
-    Registry._reset();
-    this._engine.reset();
+  _resetForTests() {
+    Registry._resetForTests();
+    _engine.reset();
   },
 
-  // ---------------------------------------------------------------------------
-  // EventEmitter delegation (Registry events)
-  // ---------------------------------------------------------------------------
-
-  on(event, listener) { return Registry.on(event, listener); },
-  once(event, listener) { return Registry.once(event, listener); },
-  off(event, listener) { return Registry.off(event, listener); },
-
-  /**
-   * Get the AFS version info.
-   */
-  version: '0.1.0',
+  /** @deprecated Use _resetForTests. */
+  _reset() {
+    this._resetForTests();
+  },
 };
 
 // Bind to the Meteor package-global slot declared in package.js.
 global.AFS = AFS;
 
-// Export for ES module imports
 export {
   AFS,
   StreamProvider,
+  ProviderClosedError,
   AFSCursor,
   FederatedCollection,
   AdaptiveEngine,

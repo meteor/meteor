@@ -1,5 +1,5 @@
-import { ChangeStream } from './change-stream';
-import { ObserveMultiplexer } from './observe-multiplexer';
+import { ChangeStream } from '../reactive/change-stream';
+import { ObserveMultiplexer } from '../reactive/observe-multiplexer';
 
 /**
  * Thrown when a method is called on a StreamProvider that has been closed.
@@ -20,14 +20,11 @@ export class ProviderClosedError extends Error {
  * handles all communication with the underlying data store.
  *
  * Subclasses MUST implement: connect, close, insertAsync, updateAsync,
- * removeAsync, find, observeChanges, _fetchResults (cursor.fetchAsync,
- * cursor.countAsync, and the default countAsync all delegate to it).
+ * removeAsync, find, _fetchResults, and exactly one reactive path
+ * (either `observeChanges` OR `startObserving` + `_supportsEventEmitter`).
  *
  * Subclasses SHOULD implement: findOneAsync, upsertAsync, createIndexAsync,
  * dropIndexAsync, rawDatabase, rawCollection, capabilities.
- *
- * Subclasses MAY implement: _supportsEventEmitter, startObserving
- * (to opt into the EventEmitter-based reactive path via ChangeStream).
  */
 export class StreamProvider {
   /**
@@ -153,7 +150,7 @@ export class StreamProvider {
    * @returns {Promise<Object|undefined>}
    */
   async findOneAsync(collectionName, selector, options) {
-    // Default implementation using find().fetchAsync()
+    this._assertOpen('findOneAsync');
     const cursor = this.find(collectionName, selector, { ...options, limit: 1 });
     const docs = await cursor.fetchAsync();
     return docs[0];
@@ -168,6 +165,7 @@ export class StreamProvider {
    * @returns {Promise<{numberAffected: number, insertedId?: string}>}
    */
   async upsertAsync(collectionName, selector, modifier, options) {
+    this._assertOpen('upsertAsync');
     return this.updateAsync(collectionName, selector, modifier, {
       ...options,
       upsert: true,
@@ -183,6 +181,7 @@ export class StreamProvider {
    * @returns {Promise<number>}
    */
   async countAsync(collectionName, selector, options) {
+    this._assertOpen('countAsync');
     const docs = await this._fetchResults(collectionName, selector, options || {});
     return docs.length;
   }
@@ -220,7 +219,15 @@ export class StreamProvider {
   // ---------------------------------------------------------------------------
 
   /**
-   * Observe changes to a query result set. This is the core reactive primitive.
+   * LEGACY callback-based reactive path. Implement this OR
+   * {@link startObserving}+{@link _supportsEventEmitter}, never both.
+   *
+   * The cursor dispatches on `_supportsEventEmitter()` — returning `true`
+   * routes through the EventEmitter path and skips `observeChanges` entirely.
+   * New providers should prefer the EventEmitter path: it participates in
+   * the provider's multiplexer cache, snapshot-plus-replay late-join, and
+   * automatic engine metrics. `observeChanges` bypasses all of that — each
+   * call stands up its own observer.
    *
    * @param {Object} cursorDescription - Describes the query (collectionName, selector, options)
    * @param {boolean} ordered - Whether to track document ordering
@@ -231,15 +238,6 @@ export class StreamProvider {
   async observeChanges(cursorDescription, ordered, callbacks, options) {
     this._assertOpen('observeChanges');
     throw new Error(`${this.constructor.name}.observeChanges() must be implemented`);
-  }
-
-  /**
-   * Notify the system that a change occurred (for providers that push changes).
-   * @param {string} collectionName
-   * @param {Object} change - { type: 'added'|'changed'|'removed', id, fields, doc }
-   */
-  async publishChange(collectionName, change) {
-    // Optional: override in providers that push changes externally
   }
 
   // ---------------------------------------------------------------------------
@@ -273,23 +271,11 @@ export class StreamProvider {
   // Raw access (adapter-specific escape hatch)
   // ---------------------------------------------------------------------------
 
-  /**
-   * Get the raw database client for this provider.
-   * Returns adapter-specific objects (e.g., MongoDB Db, pg Pool).
-   * @returns {Object|null}
-   */
-  rawDatabase() {
-    return null;
-  }
+  /** Adapter-specific raw database client (e.g. MongoDB Db, pg Pool). */
+  rawDatabase() { return null; }
 
-  /**
-   * Get the raw collection/table handle for adapter-specific operations.
-   * @param {string} collectionName
-   * @returns {Object|null}
-   */
-  rawCollection(collectionName) {
-    return null;
-  }
+  /** Adapter-specific raw collection/table handle. */
+  rawCollection(collectionName) { return null; }
 
   // ---------------------------------------------------------------------------
   // ID generation
@@ -309,45 +295,11 @@ export class StreamProvider {
   // Type conversion
   // ---------------------------------------------------------------------------
 
-  /**
-   * Convert a Meteor document to the store's native format before writing.
-   * @param {Object} doc
-   * @returns {Object}
-   */
-  convertToStoreType(doc) {
-    return doc;
-  }
+  /** Convert a Meteor document to the store's native format before writing. */
+  convertToStoreType(doc) { return doc; }
 
-  /**
-   * Convert a document from the store's native format after reading.
-   * @param {Object} doc
-   * @returns {Object}
-   */
-  convertFromStoreType(doc) {
-    return doc;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Schema support
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Whether this provider supports schema-driven migrations.
-   * @returns {boolean}
-   */
-  supportsSchema() {
-    return false;
-  }
-
-  /**
-   * Apply a schema migration for a collection.
-   * @param {string} collectionName
-   * @param {Object} schema - Schema definition
-   * @returns {Promise<void>}
-   */
-  async migrateSchema(collectionName, schema) {
-    // Optional: override in providers with schema support
-  }
+  /** Convert a document from the store's native format after reading. */
+  convertFromStoreType(doc) { return doc; }
 
   // ---------------------------------------------------------------------------
   // Capabilities declaration
@@ -356,11 +308,17 @@ export class StreamProvider {
   /**
    * Declare what this provider supports. Used by FederatedCollection and
    * the adaptive engine to optimize behavior.
+   *
+   * `reactiveQueries: true` reflects that every StreamProvider MUST implement
+   * either `observeChanges` or `startObserving` — reactivity is not optional.
+   * Providers that want to declare non-reactive capabilities should still
+   * satisfy the observe contract; otherwise subscriptions will fail.
+   *
    * @returns {Object}
    */
   capabilities() {
     return {
-      reactiveQueries: false,
+      reactiveQueries: true,
       transactions: false,
       changeStreams: false,
       oplog: false,
@@ -525,6 +483,35 @@ export class StreamProvider {
   // ---------------------------------------------------------------------------
   // Collection tracking
   // ---------------------------------------------------------------------------
+
+  /**
+   * Stop every cached multiplexer whose cursor description targets the
+   * given collection and evict its cache entry. Used by
+   * `FederatedCollection.destroy()` / `dropCollectionAsync()` so a
+   * collection tear-down does not leave stopped streams pinned in the
+   * cache or live observers writing into dropped storage.
+   *
+   * Best-effort: a stop() that throws is swallowed so one broken stream
+   * cannot leave later entries pinned.
+   *
+   * @param {string} name
+   */
+  stopObserversForCollection(name) {
+    if (!name) return;
+    const stale = [];
+    for (const [key, multiplexer] of this._multiplexerCache) {
+      const desc = multiplexer._stream && multiplexer._stream._cursorDescription;
+      if (desc && desc.collectionName === name) {
+        stale.push([key, multiplexer]);
+      }
+    }
+    for (const [, multiplexer] of stale) {
+      try { multiplexer._stream.stop(); } catch (_e) { /* best-effort */ }
+    }
+    for (const [key] of stale) {
+      this._multiplexerCache.delete(key);
+    }
+  }
 
   /**
    * Register a collection with this provider.

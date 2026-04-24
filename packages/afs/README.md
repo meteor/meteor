@@ -114,7 +114,7 @@ await Items.upsertAsync(selector, modifier)
 await Items.createIndexAsync({ field: 1 })
 await Items.dropIndexAsync('index_name')
 
-// Raw escape hatch (returns provider-specific objects)
+// Raw escape hatch (server-only; throws on client or without a provider)
 Items.rawDatabase()                   // e.g. pg Pool, Redis client
 Items.rawCollection()                 // e.g. table name, collection handle
 ```
@@ -267,10 +267,6 @@ async dropIndexAsync(collectionName, indexName) { }
 // Raw access for advanced use cases
 rawDatabase() { return this._client; }
 rawCollection(collectionName) { return this._client.table(collectionName); }
-
-// Schema support
-supportsSchema() { return true; }
-async migrateSchema(collectionName, schema) { }
 ```
 
 ### Capabilities
