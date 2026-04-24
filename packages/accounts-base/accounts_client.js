@@ -161,15 +161,15 @@ export class AccountsClient extends AccountsCommon {
       // TODO[FIBERS]: Look this { wait: true } later.
       wait: true
     })
-      .then((result) => {
+      .then(async (result) => {
         this._loggingOut.set(false);
         this._loginCallbacksCalled = false;
-        this.makeClientLoggedOut();
-        callback && callback();
+        await this.makeClientLoggedOut();
+        callback?.();
       })
       .catch((e) => {
         this._loggingOut.set(false);
-        callback && callback(e);
+        callback?.(e);
       });
   }
 
@@ -185,15 +185,15 @@ export class AccountsClient extends AccountsCommon {
       // TODO[FIBERS]: Look this { wait: true } later.
       wait: true
     })
-      .then((result) => {
+      .then(async (result) => {
         this._loggingOut.set(false);
         this._loginCallbacksCalled = false;
-        this.makeClientLoggedOut();
-        callback && callback();
+        await this.makeClientLoggedOut();
+        callback?.();
       })
       .catch((e) => {
         this._loggingOut.set(false);
-        callback && callback(e);
+        callback?.(e);
       });
   }
 
@@ -238,7 +238,7 @@ export class AccountsClient extends AccountsCommon {
       'removeOtherTokens',
       [],
       { wait: true },
-      err => callback && callback(err)
+      err => callback?.(err)
     );
   }
 
@@ -287,23 +287,23 @@ export class AccountsClient extends AccountsCommon {
 
     let called;
     // Prepare callbacks: user provided and onLogin/onLoginFailure hooks.
-    const loginCallbacks = ({ error, loginDetails }) => {
+    const loginCallbacks = async ({ error, loginDetails }) => {
       if (!called) {
         called = true;
         if (!error) {
-          this._onLoginHook.forEach(callback => {
-            callback(loginDetails);
+          await this._onLoginHook.forEachAsync(async callback => {
+            await callback(loginDetails);
             return true;
           });
           this._loginCallbacksCalled = true;
         } else {
           this._loginCallbacksCalled = false;
-          this._onLoginFailureHook.forEach(callback => {
-            callback({ error });
+          await this._onLoginFailureHook.forEachAsync(async callback => {
+            await callback({ error });
             return true;
           });
         }
-        options.userCallback(error, loginDetails);
+        await options.userCallback(error, loginDetails);
       }
     };
 
@@ -336,7 +336,7 @@ export class AccountsClient extends AccountsCommon {
           this._reconnectStopper.stop();
         }
 
-        this._reconnectStopper = DDP.onReconnect(conn => {
+        this._reconnectStopper = DDP.onReconnect(async conn => {
           if (conn != this.connection) {
             return;
           }
@@ -352,7 +352,7 @@ export class AccountsClient extends AccountsCommon {
           if (!result.tokenExpires)
             result.tokenExpires = this._tokenExpiration(new Date());
           if (this._tokenExpiresSoon(result.tokenExpires)) {
-            this.makeClientLoggedOut();
+            await this.makeClientLoggedOut();
           } else {
             this.callLoginMethod({
               methodArguments: [{resume: result.token}],
@@ -360,7 +360,7 @@ export class AccountsClient extends AccountsCommon {
               // intermediate state before the login method finishes. So we don't
               // need to show a logging-in animation.
               _suppressLoggingIn: true,
-              userCallback: (error, loginDetails) => {
+              userCallback: async (error, loginDetails) => {
                 const storedTokenNow = this._storedLoginToken();
                 if (error) {
                   // If we had a login error AND the current stored token is the
@@ -381,13 +381,13 @@ export class AccountsClient extends AccountsCommon {
                   // periodic localStorage poll will call `makeClientLoggedOut`
                   // eventually if another tab wiped the token from storage.
                   if (storedTokenNow && storedTokenNow === result.token) {
-                    this.makeClientLoggedOut();
+                    await this.makeClientLoggedOut();
                   }
                 }
                 // Possibly a weird callback to call, but better than nothing if
                 // there is a reconnect between "login result received" and "data
                 // ready".
-                loginCallbacks({ error, loginDetails });
+                await loginCallbacks({ error, loginDetails });
               }});
           }
         });
@@ -397,7 +397,7 @@ export class AccountsClient extends AccountsCommon {
     // This callback is called once the local cache of the current-user
     // subscription (and all subscriptions, in fact) are guaranteed to be up to
     // date.
-    const loggedInAndDataReadyCallback = (error, result) => {
+    const loggedInAndDataReadyCallback = async (error, result) => {
       // If the login method returns its result but the connection is lost
       // before the data is in the local cache, it'll set an onReconnect (see
       // above). The onReconnect will try to log in using the token, and *it*
@@ -413,15 +413,21 @@ export class AccountsClient extends AccountsCommon {
         error = error || new Error(
           `No result from call to ${options.methodName}`
         );
-        loginCallbacks({ error });
-        this._setLoggingIn(false);
+        try {
+          await loginCallbacks({ error });
+        } finally {
+          this._setLoggingIn(false);
+        }
         return;
       }
       try {
         options.validateResult(result);
       } catch (e) {
-        loginCallbacks({ error: e });
-        this._setLoggingIn(false);
+        try {
+          await loginCallbacks({ error: e });
+        } finally {
+          this._setLoggingIn(false);
+        }
         return;
       }
 
@@ -435,9 +441,12 @@ export class AccountsClient extends AccountsCommon {
         );
 
         if (user) {
-          loginCallbacks({ loginDetails: result });
-          this._setLoggingIn(false);
-          computation.stop();
+          try {
+            await loginCallbacks({ loginDetails: result });
+          } finally {
+            this._setLoggingIn(false);
+            computation.stop();
+          }
         }
       });
 
@@ -453,20 +462,31 @@ export class AccountsClient extends AccountsCommon {
       loggedInAndDataReadyCallback);
   }
 
-  makeClientLoggedOut() {
-    // Ensure client was successfully logged in before running logout hooks.
-    if (this.connection._userId) {
-      this._onLogoutHook.each(callback => {
-        callback();
-        return true;
-      });
+  async makeClientLoggedOut() {
+    let hookError;
+
+    try {
+      // Ensure client was successfully logged in before running logout hooks.
+      if (this.connection._userId) {
+        await this._onLogoutHook.forEachAsync(async callback => {
+          await callback();
+          return true;
+        });
+      }
+    } catch (error) {
+      hookError = error;
+    } finally {
+      this._unstoreLoginToken();
+      this.connection.setUserId(null);
+      this._reconnectStopper && this._reconnectStopper.stop();
+      // Clear HttpOnly cookie if enabled.
+      if (this._useHttpOnlyCookies) {
+        await this._clearHttpOnlyCookie();
+      }
     }
-    this._unstoreLoginToken();
-    this.connection.setUserId(null);
-    this._reconnectStopper && this._reconnectStopper.stop();
-    // Clear HttpOnly cookie if enabled
-    if (this._useHttpOnlyCookies) {
-      this._clearHttpOnlyCookie();
+
+    if (hookError) {
+      throw hookError;
     }
   }
 
@@ -706,10 +726,10 @@ export class AccountsClient extends AccountsCommon {
         // request is in flight. This reduces page flicker on startup.
         const userId = this._storedUserId();
         userId && this.connection.setUserId(userId);
-        this.loginWithToken(token, err => {
+        this.loginWithToken(token, async err => {
           if (err) {
             Meteor._debug(`Error logging in with token: ${err}`);
-            this.makeClientLoggedOut();
+            await this.makeClientLoggedOut();
           }
 
           this._pageLoadLogin({
@@ -760,9 +780,9 @@ export class AccountsClient extends AccountsCommon {
     // != instead of !== just to make sure undefined and null are treated the same
     if (this._lastLoginTokenWhenPolled != currentLoginToken) {
       if (currentLoginToken) {
-        this.loginWithToken(currentLoginToken, (err) => {
+        this.loginWithToken(currentLoginToken, async (err) => {
           if (err) {
-            this.makeClientLoggedOut();
+            await this.makeClientLoggedOut();
           }
         });
       } else {
@@ -794,6 +814,22 @@ export class AccountsClient extends AccountsCommon {
   };
 
   /**
+   * @summary Shared implementation for registering account link callbacks.
+   * @param {String} type The callback type (e.g. 'reset-password', 'verify-email', 'enroll-account').
+   * @param {Function} callback The function to call when the link is clicked.
+   * @locus Client
+   */
+  _registerLinkCallback(type, callback) {
+    if (this._accountsCallbacks[type]) {
+      Meteor._debug(
+        `Accounts callback for "${type}" was registered more than once. ` +
+        "Only one callback added will be executed."
+      );
+    }
+    this._accountsCallbacks[type] = callback;
+  };
+
+  /**
    * @summary Register a function to call when a reset password link is clicked
    * in an email sent by
    * [`Accounts.sendResetPasswordEmail`](#Accounts-sendResetPasswordEmail).
@@ -811,12 +847,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onResetPasswordLink(callback) {
-    if (this._accountsCallbacks["reset-password"]) {
-      Meteor._debug("Accounts.onResetPasswordLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["reset-password"] = callback;
+    this._registerLinkCallback("reset-password", callback);
   };
 
   /**
@@ -838,12 +869,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onEmailVerificationLink(callback) {
-    if (this._accountsCallbacks["verify-email"]) {
-      Meteor._debug("Accounts.onEmailVerificationLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["verify-email"] = callback;
+    this._registerLinkCallback("verify-email", callback);
   };
 
   /**
@@ -865,12 +891,7 @@ export class AccountsClient extends AccountsCommon {
    * @locus Client
    */
   onEnrollmentLink(callback) {
-    if (this._accountsCallbacks["enroll-account"]) {
-      Meteor._debug("Accounts.onEnrollmentLink was called more than once. " +
-        "Only one callback added will be executed.");
-    }
-
-    this._accountsCallbacks["enroll-account"] = callback;
+    this._registerLinkCallback("enroll-account", callback);
   };
 
 }

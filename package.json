@@ -32,12 +32,26 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
     "prettier": "^3.8.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "lefthook": "^2.1.4",
+    "oxfmt": "^0.42.0",
+    "oxlint": "^1.57.0",
+    "type-coverage": "^2.29.7",
+    "typescript-coverage-report": "^1.1.1"
   },
   "scripts": {
-    "install:modern": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
+    "fmt": "oxfmt --ignore-path .fmtignore .",
+    "fmt:check": "oxfmt --ignore-path .fmtignore --check .",
+    "lint": "oxlint --ignore-path .oxlintignore .",
+    "lint:fix": "oxlint --fix --ignore-path .oxlintignore .",
+    "install:unit": "cd tools/unit-tests && npm install",
+    "test:unit": "cd tools/unit-tests && npm test",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
-    "test:modern": "cd tools/modern-tests && npm test -- "
+    "install:e2e": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
+    "test:e2e": "cd tools/modern-tests && npm test -- ",
+    "checkout:pr": "node scripts/checkout-pr.js",
+    "ts-coverage": "typescript-coverage-report",
+    "ts-coverage:ci": "type-coverage --at-least 80"
   },
   "jshintConfig": {
     "esversion": 11

@@ -50,7 +50,8 @@ export const normalizeModernConfig = (r = false) => Object.fromEntries(
  * @returns {Object} - The initialized Meteor configuration object.
  */
 export function initMeteorConfig(appDir = process.cwd()) {
-  const modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
+  const rawModern = process.env.METEOR_MODERN;
+  const modernForced = JSON.parse(rawModern && rawModern !== 'undefined' ? rawModern : 'false');
   let packageJson;
   if (appDir) {
     const packageJsonPath = files.pathJoin(appDir, 'package.json');

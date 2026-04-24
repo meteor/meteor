@@ -1,8 +1,6 @@
 var _ = require('underscore');
 var semver = require('semver');
 var os = require('os');
-var url = require('url');
-
 var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
@@ -33,19 +31,31 @@ exports.parseUrl = function (str, defaults) {
       protocol: defaultProtocol };
   }
 
+  // Capture any IPv6 address in brackets before new URL() normalizes it
+  // (e.g. "0000:...0001" gets compressed to "::1" by the WHATWG parser).
+  var ipv6Match = str.match(/\[([^\]]+)\]/);
+  var rawIPv6 = ipv6Match ? ipv6Match[1] : null;
+
   var hasScheme = exports.hasScheme(str);
   if (! hasScheme) {
     str = "http://" + str;
   }
 
-  var parsed = url.parse(str);
+  var parsed = new URL(str);
 
   // for consistency remove colon at the end of protocol
-  parsed.protocol = parsed.protocol.replace(/\:$/, '');
+  var parsedProtocol = parsed.protocol.replace(/\:$/, '');
+
+  // WHATWG URL wraps IPv6 in brackets and normalizes the address; use the
+  // raw value extracted above to preserve the original formatting.
+  var hostname = parsed.hostname || defaultHostname;
+  if (hostname && hostname.startsWith('[') && hostname.endsWith(']')) {
+    hostname = rawIPv6 || hostname.slice(1, -1);
+  }
 
   var ret = {
-    protocol: hasScheme ? parsed.protocol : defaultProtocol,
-    hostname: parsed.hostname || defaultHostname,
+    protocol: hasScheme ? parsedProtocol : defaultProtocol,
+    hostname: hostname,
     port: parsed.port || defaultPort
   };
   if (parsed.pathname !== '/' && parsed.pathname) {
@@ -57,12 +67,12 @@ exports.parseUrl = function (str, defaults) {
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
 // the return value of parseUrl.
 exports.formatUrl = function (options) {
-  // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
-  // this a valid URL
-  if (!options.pathname)
-    options.pathname = "/";
-
-  return url.format(options);
+  const u = new URL('http://placeholder');
+  u.protocol = options.protocol + ':';
+  u.hostname = options.hostname;
+  if (options.port) u.port = options.port;
+  u.pathname = options.pathname || '/';
+  return u.toString();
 };
 
 exports.ipAddress = function () {
