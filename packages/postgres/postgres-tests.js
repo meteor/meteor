@@ -39,7 +39,8 @@ import {
   buildDeleteQuery,
   buildUpsertQuery,
 } from './sql_compiler';
-import { POLLING_INTERVAL_MS, getObserveDriver } from './observe_driver';
+import { POLLING_INTERVAL_MS, getObserveDriver, dropCachedDriversForProvider } from './observe_driver';
+import { EventEmitter } from 'events';
 
 // ---------------------------------------------------------------------------
 // Helper: create a test schema
@@ -2285,4 +2286,268 @@ if (hasPostgres) {
     }
   );
 }
+
+// ============================================================================
+// UNIT TESTS — follow-up review fixes (C-1, I-1, I-2, I-3, I-4, M-4).
+// ============================================================================
+
+// C-1: pg.Pool 'error' events (idle-client failures from TCP RST, server
+// restart, PgBouncer idle-kill) become an uncaughtException unless the
+// pool has an 'error' listener. connect() must attach one, and the
+// connection should re-emit as 'pool-error' for observability.
+Tinytest.addAsync(
+  'postgres - driver - C-1 - connect attaches pool error listener and re-emits',
+  async (test) => {
+    const conn = new PostgresConnection('postgres://example');
+
+    const fakePool = new EventEmitter();
+    fakePool.connect = async () => ({
+      query: async () => ({ rows: [], rowCount: 0 }),
+      release() {},
+    });
+    fakePool.end = async () => {};
+    fakePool.query = async () => ({ rows: [], rowCount: 0 });
+    conn._getPg = () => ({
+      Pool: function () { return fakePool; },
+    });
+
+    await conn.connect();
+
+    test.equal(
+      fakePool.listenerCount('error'), 1,
+      'pool should have exactly one error listener attached by connect()'
+    );
+
+    const captured = [];
+    conn.on('pool-error', (err) => captured.push(err));
+
+    const boom = new Error('idle client died');
+    // Without the listener this emit would become an uncaughtException.
+    fakePool.emit('error', boom);
+
+    test.equal(captured.length, 1, 'pool-error re-emitted on connection');
+    test.equal(captured[0], boom);
+
+    await conn.close();
+  }
+);
+
+// I-1: DDL/schema methods on a closed provider must throw ProviderClosedError
+// before any connection access, for parity with CRUD methods.
+Tinytest.addAsync(
+  'postgres - provider - I-1 - registerSchema throws after close',
+  async (test) => {
+    const provider = new PostgresStreamProvider('postgres://example');
+    provider._state = 'closed';
+    let caught = null;
+    try {
+      await provider.registerSchema('x', null);
+    } catch (e) {
+      caught = e;
+    }
+    test.isTrue(!!caught, 'registerSchema should throw after close');
+    test.equal(caught.name, 'ProviderClosedError');
+  }
+);
+
+Tinytest.addAsync(
+  'postgres - provider - I-1 - createIndexAsync throws after close',
+  async (test) => {
+    const provider = new PostgresStreamProvider('postgres://example');
+    provider._state = 'closed';
+    let caught = null;
+    try {
+      await provider.createIndexAsync('c', { a: 1 });
+    } catch (e) {
+      caught = e;
+    }
+    test.isTrue(!!caught, 'createIndexAsync should throw after close');
+    test.equal(caught.name, 'ProviderClosedError');
+  }
+);
+
+Tinytest.addAsync(
+  'postgres - provider - I-1 - dropIndexAsync throws after close',
+  async (test) => {
+    const provider = new PostgresStreamProvider('postgres://example');
+    provider._state = 'closed';
+    let caught = null;
+    try {
+      await provider.dropIndexAsync('c', 'idx');
+    } catch (e) {
+      caught = e;
+    }
+    test.isTrue(!!caught, 'dropIndexAsync should throw after close');
+    test.equal(caught.name, 'ProviderClosedError');
+  }
+);
+
+Tinytest.addAsync(
+  'postgres - provider - I-1 - dropCollectionAsync throws after close',
+  async (test) => {
+    const provider = new PostgresStreamProvider('postgres://example');
+    provider._state = 'closed';
+    let caught = null;
+    try {
+      await provider.dropCollectionAsync('c');
+    } catch (e) {
+      caught = e;
+    }
+    test.isTrue(!!caught, 'dropCollectionAsync should throw after close');
+    test.equal(caught.name, 'ProviderClosedError');
+  }
+);
+
+// I-2: silent truncation past NAMEDATALEN makes CREATE/DROP index names
+// drift. Explicit byte-length check prevents the drift.
+Tinytest.addAsync(
+  'postgres - provider - I-2 - createIndexAsync rejects over-long explicit name',
+  async (test) => {
+    const provider = new PostgresStreamProvider('postgres://example');
+    provider._connection = {
+      query: async () => { throw new Error('should not reach query'); },
+    };
+    const longName = 'i'.repeat(64);
+    let caught = null;
+    try {
+      await provider.createIndexAsync('c', { a: 1 }, { name: longName });
+    } catch (e) {
+      caught = e;
+    }
+    test.isTrue(!!caught, 'should throw for over-long index name');
+    test.matches(caught.message, /63 bytes|NAMEDATALEN|index name/i);
+  }
+);
+
+Tinytest.addAsync(
+  'postgres - provider - I-2 - createIndexAsync rejects over-long derived name',
+  async (test) => {
+    const provider = new PostgresStreamProvider('postgres://example');
+    provider._connection = {
+      query: async () => { throw new Error('should not reach query'); },
+    };
+    // idx_(38 bytes)_(25 bytes) = 4 + 38 + 1 + 25 = 68 bytes > 63.
+    const longColl = 'c'.repeat(38);
+    const longField = 'f'.repeat(25);
+    let caught = null;
+    try {
+      await provider.createIndexAsync(longColl, { [longField]: 1 });
+    } catch (e) {
+      caught = e;
+    }
+    test.isTrue(!!caught, 'should throw for over-long derived name');
+    test.matches(caught.message, /63 bytes|NAMEDATALEN|index name/i);
+  }
+);
+
+Tinytest.addAsync(
+  'postgres - provider - I-2 - createIndexAsync accepts exactly-max-byte name',
+  async (test) => {
+    const provider = new PostgresStreamProvider('postgres://example');
+    const queries = [];
+    provider._connection = {
+      _queryInternal: async (text) => {
+        queries.push(text);
+        return { rows: [], rowCount: 0 };
+      },
+    };
+    const okName = 'i'.repeat(63);
+    await provider.createIndexAsync('c', { a: 1 }, { name: okName });
+    test.equal(queries.length, 1, 'one CREATE INDEX issued');
+    test.isTrue(queries[0].includes(okName));
+  }
+);
+
+// I-3: internal compiler-generated queries reference known tables and
+// don't need the unknown-table regex scan. _queryInternal bypasses it.
+Tinytest.addAsync(
+  'postgres - driver - I-3 - _queryInternal skips unknown-table scan',
+  async (test) => {
+    const conn = new PostgresConnection('postgres://example');
+    let warnCalls = 0;
+    const origWarn = conn._warnIfUnregisteredTables.bind(conn);
+    conn._warnIfUnregisteredTables = (text) => { warnCalls++; return origWarn(text); };
+    conn._pool = {
+      query: async () => ({ rows: [], rowCount: 0 }),
+    };
+
+    await conn._queryInternal('SELECT * FROM foo_unknown', []);
+    test.equal(warnCalls, 0, 'internal query should not scan for unknown tables');
+
+    await conn.query('SELECT * FROM foo_unknown', []);
+    test.equal(warnCalls, 1, 'public query path still scans');
+  }
+);
+
+// I-4: _driverCache key must be canonical so cursor descriptions with
+// differently-ordered keys don't over-allocate drivers.
+Tinytest.addAsync(
+  'postgres - observe_driver - I-4 - cache dedupes logically-equal descriptions',
+  async (test) => {
+    // Minimal provider shape — observe_driver only touches _url,
+    // _connection.setupListenNotify / on / removeListener, and _fetchResults.
+    const provider = {
+      _url: `postgres://cache-key-test-${Random.id(8)}`,
+      _connection: {
+        setupListenNotify: async () => {},
+        removeListenNotify: async () => {},
+        on: () => {},
+        removeListener: () => {},
+        emit: () => {},
+      },
+      _fetchResults: async () => [],
+    };
+
+    const desc1 = {
+      collectionName: 'c',
+      selector: { a: 1, b: 2 },
+      options: { limit: 10, skip: 0 },
+    };
+    const desc2 = {
+      collectionName: 'c',
+      options: { skip: 0, limit: 10 },
+      selector: { b: 2, a: 1 },
+    };
+
+    const s1 = getObserveDriver(desc1, false, provider);
+    const s2 = getObserveDriver(desc2, false, provider);
+
+    test.isTrue(
+      s1 === s2,
+      'same ChangeStream instance for logically-equal descriptions'
+    );
+
+    // Clean up timers + cache so the test harness doesn't leak.
+    dropCachedDriversForProvider(provider);
+  }
+);
+
+// M-4: close()'s `disconnected` event must fire BEFORE internal state is
+// cleared, so listeners can read _notifyCallbacks / _knownTables in their
+// handler to decide how to react.
+Tinytest.addAsync(
+  'postgres - driver - M-4 - disconnected event fires before state is cleared',
+  async (test) => {
+    const conn = new PostgresConnection('postgres://example');
+    conn._pool = { end: async () => {} };
+    conn._connected = true;
+    conn._knownTables.add('some_table');
+    conn._notifyCallbacks.set('meteor_pg_some_table', new Set([() => {}]));
+
+    let snapshotKnown = null;
+    let snapshotCallbacks = null;
+    conn.on('disconnected', () => {
+      snapshotKnown = conn._knownTables.size;
+      snapshotCallbacks = conn._notifyCallbacks.size;
+    });
+
+    await conn.close();
+
+    test.equal(snapshotKnown, 1, 'known tables still populated during disconnected emit');
+    test.equal(snapshotCallbacks, 1, 'notify callbacks still populated during disconnected emit');
+    // And cleared afterward:
+    test.equal(conn._knownTables.size, 0);
+    test.equal(conn._notifyCallbacks.size, 0);
+  }
+);
 

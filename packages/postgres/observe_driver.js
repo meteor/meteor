@@ -66,7 +66,14 @@ export function getObserveDriver(cursorDescription, ordered, provider) {
   const providerId =
     provider._url ||
     (provider._cacheKey = provider._cacheKey || Random.id());
-  const key = EJSON.stringify({ providerId, ...cursorDescription, ordered });
+  // Canonical stringification: sort keys recursively so two logically-equal
+  // cursor descriptions with differently-ordered keys ({a,b} vs {b,a}) share
+  // a cache entry — otherwise we over-allocate drivers and each one opens
+  // its own LISTEN subscription + polling loop.
+  const key = EJSON.stringify(
+    { providerId, ...cursorDescription, ordered },
+    { canonical: true }
+  );
 
   if (_driverCache.has(key)) {
     const driver = _driverCache.get(key);

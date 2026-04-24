@@ -156,6 +156,14 @@ Both `$regex: '…'` (with optional sibling `$options: 'i'`) and
 `$regex: /…/flags` forms are supported; flags from both sources are
 unioned.
 
+The compiler also rejects obvious nested-quantifier ReDoS patterns
+(`(a+)+`, `(a*)*`) and caps source length at
+`METEOR_POSTGRES_MAX_REGEX_LENGTH` (default 1000). It does *not*
+detect alternation-overlap patterns such as `(a|a)+` — Postgres'
+regex engine handles these well in practice, but if you pass
+untrusted regex sources, treat the length cap as the primary defence
+and validate separately at your input boundary.
+
 ### TIMESTAMPTZ precision
 
 Postgres `TIMESTAMPTZ` stores microseconds; JavaScript `Date` stores

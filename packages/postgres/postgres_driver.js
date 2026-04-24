@@ -148,6 +148,22 @@ export class PostgresConnection extends EventEmitter {
       connectionTimeoutMillis: this._poolConnectionTimeoutMs,
     });
 
+    // pg.Pool emits 'error' on idle-client failures (TCP RST, server
+    // restart, PgBouncer idle-kill). Without a listener, Node routes
+    // unhandled 'error' events to uncaughtException and the process
+    // exits — the single most common prod crash mode for node-postgres.
+    // Re-emit as 'pool-error' so callers that care (health checks,
+    // metrics) can subscribe.
+    this._pool.on('error', (err) => {
+      try {
+        Log.warn('Postgres: idle pool client error: ' +
+          (err && err.message ? err.message : err));
+      } catch (logErr) {
+        // Log may be unavailable in some harnesses.
+      }
+      this.emit('pool-error', err);
+    });
+
     // Verify connection
     const client = await this._pool.connect();
     try {
@@ -190,10 +206,15 @@ export class PostgresConnection extends EventEmitter {
     }
 
     this._connected = false;
+    // Emit BEFORE clearing so `disconnected` handlers can still inspect
+    // _knownTables / _notifyCallbacks / _channelOps to decide how to
+    // react (e.g. metrics: "how many observers were live at teardown?").
+    // Clearing afterward is still required — any post-emit access via a
+    // later method call sees an empty state, consistent with "closed".
+    this.emit('disconnected');
     this._knownTables.clear();
     this._notifyCallbacks.clear();
     this._channelOps.clear();
-    this.emit('disconnected');
   }
 
   /**
@@ -205,6 +226,20 @@ export class PostgresConnection extends EventEmitter {
   async query(text, params) {
     if (!this._pool) throw new Error('PostgresConnection is not connected');
     this._warnIfUnregisteredTables(text);
+    return this._pool.query(text, params);
+  }
+
+  /**
+   * Internal query path for compiler-generated SQL that always references
+   * known (registered) tables. Skips `_warnIfUnregisteredTables`, whose
+   * whole-text regex scan would otherwise run on every CRUD call even in
+   * dev. Public-facing raw SQL should continue to use `query()`.
+   * @param {string} text - SQL with $N placeholders
+   * @param {any[]} [params]
+   * @returns {Promise<{rows: Object[], rowCount: number}>}
+   */
+  async _queryInternal(text, params) {
+    if (!this._pool) throw new Error('PostgresConnection is not connected');
     return this._pool.query(text, params);
   }
 
@@ -314,7 +349,7 @@ export class PostgresConnection extends EventEmitter {
 
     const ddl = `CREATE TABLE IF NOT EXISTS ${quoteIdent(collectionName)} (\n  ${columnDefs.join(',\n  ')}\n)`;
 
-    await this.query(ddl);
+    await this._queryInternal(ddl);
     this._knownTables.add(collectionName);
   }
 

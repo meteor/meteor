@@ -23,6 +23,25 @@ import { quoteIdent } from './schema';
 import crypto from 'crypto';
 import { getObserveDriver, dropCachedDriversForProvider } from './observe_driver';
 
+// Postgres NAMEDATALEN = 64 bytes; any identifier longer than 63 bytes is
+// silently truncated. For index names that causes CREATE/DROP drift (you
+// can't drop what you named if the stored name was truncated). Reject
+// over-long names explicitly — the caller picks a shorter options.name,
+// a shorter collection, or shorter field names.
+const MAX_IDENTIFIER_BYTES = 63;
+function assertIndexNameFits(indexName) {
+  const byteLength = Buffer.byteLength(indexName, 'utf8');
+  if (byteLength > MAX_IDENTIFIER_BYTES) {
+    throw new Error(
+      `Postgres: index name "${indexName}" is ${byteLength} bytes; must be ` +
+      `<= ${MAX_IDENTIFIER_BYTES} bytes (NAMEDATALEN - 1) to avoid silent ` +
+      `identifier truncation, which would prevent dropIndexAsync from ` +
+      `matching the stored name. Pass a shorter options.name or use shorter ` +
+      `field/collection names.`
+    );
+  }
+}
+
 export class PostgresStreamProvider extends StreamProvider {
   /**
    * @param {string} url - PostgreSQL connection URL
@@ -94,6 +113,7 @@ export class PostgresStreamProvider extends StreamProvider {
    * @param {ResolvedSchema} schema
    */
   async registerSchema(collectionName, schema) {
+    this._assertOpen('registerSchema');
     this._schemas.set(collectionName, schema);
     if (this._connection && this._connection.isConnected()) {
       await this._connection.ensureTable(collectionName, schema);
@@ -120,10 +140,10 @@ export class PostgresStreamProvider extends StreamProvider {
     // Ensure table exists
     await this._connection.ensureTable(collectionName, schema);
 
-    const insertDoc = doc._id ? doc : { ...doc, _id: this.generateId(collectionName) };
+    const insertDoc = doc._id ? doc : { ...doc, _id: this.generateId() };
 
     const { text, values } = buildInsertQuery(collectionName, insertDoc, schema);
-    const result = await this._connection.query(text, values);
+    const result = await this._connection._queryInternal(text, values);
     return result.rows[0]._id;
   }
 
@@ -150,7 +170,7 @@ export class PostgresStreamProvider extends StreamProvider {
 
     if (!text) return 0;
 
-    const result = await this._connection.query(text, values);
+    const result = await this._connection._queryInternal(text, values);
     return result.rowCount;
   }
 
@@ -159,7 +179,7 @@ export class PostgresStreamProvider extends StreamProvider {
     const schema = this._getSchema(collectionName);
     await this._connection.ensureTable(collectionName, schema);
     const { text, values } = buildDeleteQuery(collectionName, selector, schema);
-    const result = await this._connection.query(text, values);
+    const result = await this._connection._queryInternal(text, values);
     return result.rowCount;
   }
 
@@ -197,7 +217,7 @@ export class PostgresStreamProvider extends StreamProvider {
     const schema = this._getSchema(collectionName);
     await this._connection.ensureTable(collectionName, schema);
     const { text, values } = buildSelectQuery(collectionName, selector, options, schema);
-    const result = await this._connection.query(text, values);
+    const result = await this._connection._queryInternal(text, values);
     return result.rows.map(row => rowToDocument(row, schema));
   }
 
@@ -229,8 +249,16 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async createIndexAsync(collectionName, index, options = {}) {
+    this._assertOpen('createIndexAsync');
     const schema = this._getSchema(collectionName);
     const indexName = options.name || `idx_${collectionName}_${Object.keys(index).join('_')}`;
+
+    // Postgres NAMEDATALEN = 64 → identifiers silently truncate past 63
+    // bytes. A name that "worked" at CREATE time then fails to match
+    // the same name at DROP time, so refuse to proceed. Mirrors the
+    // collection-name guard in postgres_driver.js.
+    assertIndexNameFits(indexName);
+
     const unique = options.unique ? 'UNIQUE ' : '';
 
     const columns = Object.entries(index).map(([field, dir]) => {
@@ -246,11 +274,15 @@ export class PostgresStreamProvider extends StreamProvider {
     });
 
     const sql = `CREATE ${unique}INDEX IF NOT EXISTS ${quoteIdent(indexName)} ON ${quoteIdent(collectionName)} (${columns.join(', ')})`;
-    await this._connection.query(sql);
+    await this._connection._queryInternal(sql);
   }
 
   async dropIndexAsync(collectionName, indexName) {
-    await this._connection.query(`DROP INDEX IF EXISTS ${quoteIdent(indexName)}`);
+    this._assertOpen('dropIndexAsync');
+    // Same truncation trap — refuse a name we would be unable to match
+    // against the stored identifier if it had been truncated at create.
+    assertIndexNameFits(indexName);
+    await this._connection._queryInternal(`DROP INDEX IF EXISTS ${quoteIdent(indexName)}`);
   }
 
   // ---------------------------------------------------------------------------
@@ -269,7 +301,7 @@ export class PostgresStreamProvider extends StreamProvider {
   // ID generation
   // ---------------------------------------------------------------------------
 
-  generateId(collectionName) {
+  generateId() {
     return Random.id();
   }
 
@@ -327,23 +359,11 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Schema support
-  // ---------------------------------------------------------------------------
-
-  supportsSchema() {
-    return true;
-  }
-
-  async migrateSchema(collectionName, schema) {
-    const resolved = new ResolvedSchema(schema);
-    await this.registerSchema(collectionName, resolved);
-  }
-
-  // ---------------------------------------------------------------------------
   // Drop collection
   // ---------------------------------------------------------------------------
 
   async dropCollectionAsync(collectionName) {
+    this._assertOpen('dropCollectionAsync');
     // Full teardown: table, trigger function, LISTEN state, cached schema.
     // Trigger function name follows the convention used by
     // postgres_driver.js setupListenNotify: `meteor_pg_<name>_notify_fn`.
@@ -358,10 +378,10 @@ export class PostgresStreamProvider extends StreamProvider {
     const triggerFnName = `${channel}_notify_fn`;
 
     await this._connection.runChannelOp(channel, async () => {
-      await this._connection.query(
+      await this._connection._queryInternal(
         `DROP TABLE IF EXISTS ${quoteIdent(collectionName)} CASCADE`
       );
-      await this._connection.query(
+      await this._connection._queryInternal(
         `DROP FUNCTION IF EXISTS ${quoteIdent(triggerFnName)}() CASCADE`
       );
 
@@ -543,7 +563,7 @@ export class PostgresStreamProvider extends StreamProvider {
       collectionName, selector, modifier, schema
     );
 
-    const result = await this._connection.query(text, values);
+    const result = await this._connection._queryInternal(text, values);
 
     if (result.rows.length > 0) {
       const row = result.rows[0];
