@@ -61,6 +61,8 @@ await Meteor.callAsync('notify.send', { recipient: Meteor.userId });
 console.log(Meteor.settings.public.appName);
 ```
 
+> **Note:** Inside the worker, `Meteor.userId` is a **plain string property**, not a function. On the main thread it is called as `Meteor.userId()`. When porting code into a worker, replace `Meteor.userId()` with `Meteor.userId` — e.g. `Collections.Users.findOneAsync({ _id: Meteor.userId })` in the worker corresponds to `Meteor.users.findOneAsync({ _id: Meteor.userId() })` on the main thread.
+
 ## API
 
 ### `createThreadContext(options?)`
@@ -126,7 +128,7 @@ await Collections.MyCol.aggregate(pipeline, options)
 |----------|-------------|
 | `Meteor.callAsync(name, ...args)` | Call a Meteor method on the main thread |
 | `Meteor.settings` | Frozen deep clone from spawn time |
-| `Meteor.userId` | The forwarded userId |
+| `Meteor.userId` | The forwarded userId — a **plain property** here, not a function like `Meteor.userId()` on the main thread |
 | `Meteor.isServer` | Always `true` |
 | `Meteor.isClient` | Always `false` |
 | `Meteor.isSimulation` | Always `false` |
