@@ -5,15 +5,14 @@
 
 const { Jobs } = require('meteor/jobs');
 
-// Configure inline mode so Jobs.run() executes the handler immediately.
-Jobs.configure({ testMode: 'inline' });
-
 let _seq = 0;
 function uniqueName(prefix) {
   return `test_exec_${prefix}_${++_seq}_${Date.now()}`;
 }
 
 Tinytest.addAsync('jobs - execution - job runs and returns result (inline mode)', async function (test) {
+  Jobs.configure({ testMode: 'inline' });
+
   const name = uniqueName('return');
   Jobs.register({
     name,
@@ -27,6 +26,8 @@ Tinytest.addAsync('jobs - execution - job runs and returns result (inline mode)'
 });
 
 Tinytest.addAsync('jobs - execution - handler receives correct jobContext', async function (test) {
+  Jobs.configure({ testMode: 'inline' });
+
   const name = uniqueName('ctx');
   let capturedCtx = null;
 
@@ -50,6 +51,8 @@ Tinytest.addAsync('jobs - execution - handler receives correct jobContext', asyn
 });
 
 Tinytest.addAsync('jobs - execution - handler error propagates (inline mode)', async function (test) {
+  Jobs.configure({ testMode: 'inline' });
+
   const name = uniqueName('err');
   Jobs.register({
     name,
@@ -67,6 +70,8 @@ Tinytest.addAsync('jobs - execution - handler error propagates (inline mode)', a
 });
 
 Tinytest.addAsync('jobs - execution - async handler works (inline mode)', async function (test) {
+  Jobs.configure({ testMode: 'inline' });
+
   const name = uniqueName('async');
   Jobs.register({
     name,
