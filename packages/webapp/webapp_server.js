@@ -681,11 +681,17 @@ WebAppInternals.staticFilesMiddleware = async function(
   // We cache them ~forever (1yr).
   const maxAge = info.cacheable ? 1000 * 60 * 60 * 24 * 365 : 0;
 
-  if (info.cacheable) {
-    // Since we use req.headers["user-agent"] to determine whether the
-    // client should receive modern or legacy resources, tell the client
-    // to invalidate cached resources when/if its user agent string
-    // changes in the future.
+  // Resources whose URL already contains the content hash are immutable
+  // and unique per architecture (modern vs legacy), so Vary: User-Agent
+  // is unnecessary and harms CDN cache efficiency.
+  //
+  // If the requested URL does not contain the hash (e.g. development
+  // or unhashed assets), we keep Vary: User-Agent to prevent cache
+  // poisoning across different browsers.
+  const includeVaryUserAgent =
+  Meteor.settings.packages?.webapp?.includeVaryUserAgent ?? true;
+
+  if (info.cacheable && !pathname.includes(info.hash) && includeVaryUserAgent) {
     res.setHeader('Vary', 'User-Agent');
   }
 

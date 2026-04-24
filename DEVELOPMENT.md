@@ -61,8 +61,37 @@ can run Meteor directly from a Git checkout using these steps:
     > _Tip 2:_ When working with meteor tool, it may be helpful to use the debugger to check what's happening. You can do this using the following flag:
     >
     >        TOOL_NODE_FLAGS="--inspect-brk" mymeteor
-    > 
+    >
     > Then you can use the chrome debugger inside `chrome://inspect`.
+
+### Testing a fork branch
+
+When reviewing a pull request or testing changes from a contributor's fork, use the `checkout-pr.js` script to set up a local branch automatically:
+
+```sh
+# From a PR URL (requires gh CLI or falls back to GitHub API via curl)
+$ npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
+
+# From a user:branch shorthand
+$ npm run checkout:pr -- <user>:<branch>
+
+# From a full fork repo URL and branch name (HTTPS)
+$ npm run checkout:pr -- <fork-repo-url> <branch>
+
+# From a full fork repo URL and branch name (SSH)
+$ npm run checkout:pr -- git@github.com:<user>/<repo>.git <branch>
+```
+
+The script will:
+
+1. Add the fork as a git remote (named after the fork owner) if not already present
+2. Fetch the target branch
+3. Create (or update) a local branch named `fork/<owner>/<branch>`
+4. Print instructions for switching back to your previous branch
+
+For upstream PRs (branches on `meteor/meteor` itself), the script detects the existing `origin` remote and checks out the branch directly without the `fork/` prefix.
+
+If you run the script again for the same fork branch, it will fetch the latest changes and update the local branch.
 
 ### Notes when running from a checkout
 
@@ -218,27 +247,13 @@ PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
 
 ### Continuous integration
 
-Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  These are run by [Circle CI](https://circleci.com/) and defined in the [`circle.yml` file](./circle.yml).  Even more specifically, the tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
+Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  The tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
 
 Not every test which is defined in a test spec is actually ran by the CI server.  Some tests are simply too long-running and some tests are just no longer relevant.  As one particular example, there is a suite of very slow tests grouped into a `slow` designator within the test framework.  These can be executed by adding the `--slow` option to the `self-test` command.
 
 > Please Note: Windows
 >
 > There is not currently a continuous integration system setup for Windows.  Additionally, not all tests are known to work on Windows.  If you're able to take time to improve those tests, it would be greatly appreciated.  Currently, there isn't an official list of known tests which do not run on Windows, but a PR to note those here and get them fixed would be ideal!
-
-#### Running your own CircleCI
-
-Since Meteor is a free, open-source project, you can run tests in the context of your own CircleCI account at no cost (up to the maximum number of containers allowed by them) during development and prior to submitting a pull-request.  For some, this may be quicker or more convenient than running tests on their own workstation.  As an added advantage, when your tests are "green", that status will be immediately shown (as passing) when a pull-request is opened with the official Meteor repository.
-
-To enable CircleCI for your development:
-
-0. Make sure you have an account with [CircleCI](https://circleci.com)
-0. Make sure you have [forked](https://help.github.com/articles/fork-a-repo/) [Meteor](https://github.com/meteor/meteor) into your own GitHub account.
-0. Go to the [Add Projects](https://circleci.com/add-projects) page on CircleCI.
-0. On the left, click on your GitHub username.
-0. On the right, find `meteor`
-0. Click on the "Build project" button next to `meteor`.
-0. Your build will start automatically!
 
 ## Code style
 
