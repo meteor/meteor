@@ -586,6 +586,7 @@ Tinytest.addAsync('worker-pool - queued task times out before dispatch', async f
       return 'slow';
     },
   });
+  slow.catch(() => {});
 
   await _waitFor(() => pool.stats().busy === 1);
 
