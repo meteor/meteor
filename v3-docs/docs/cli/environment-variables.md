@@ -52,6 +52,17 @@ Use this variable to set the SMTP server for sending e-mails.  [Postmark](https:
 
 The `smtp://` form is for mail servers which support encryption via `STARTTLS` or those that do not use encryption at all and is most common for servers on port 587 and _sometimes_ port 25.  On the other hand, the `smtps://` form (the `s` stands for "secure") should be used if the server only supports TLS/SSL (and does not support connection upgrade with `STARTTLS`) and is most common for servers on port 465.
 
+## METEOR_ALLOW_SUPERUSER
+(_development, production_)
+
+By default, the Meteor tool refuses to run as the `root` user on Unix-like systems, because it commonly causes incorrect file permissions in your app directory.
+
+Set `METEOR_ALLOW_SUPERUSER=true` (or pass `meteor --allow-superuser`) to bypass this check.
+
+```bash
+sudo METEOR_ALLOW_SUPERUSER=true meteor run
+```
+
 ## METEOR_DISABLE_OPTIMISTIC_CACHING
 (_production_)
 
@@ -94,6 +105,120 @@ This way each command only processes the files it actually needs, reducing build
 ::: info
 `METEOR_IGNORE` is automatically set when using the [Rspack bundler integration](../about/modern-build-stack/rspack-bundler-integration.md). Since Rspack handles the client and server app bundling, Meteor's bundler should only worry about what it strictly needs for the Meteor-Rspack integration. By using `METEOR_IGNORE` to exclude folders and dependencies that Rspack already manages or that are irrelevant to Meteor's side of the build, you ensure the most speed is gained from the Rspack delegation.
 :::
+
+## METEOR_LOCAL_DIR
+(_development_)
+
+Overrides the directory Meteor uses for per-project local runtime/build state. By default, this directory is `.meteor/local` inside your app.
+
+Setting `METEOR_LOCAL_DIR` moves everything that would normally be written under `.meteor/local` (for example build output and caches like `build/`, `isopacks/`, and `plugin-cache/`, and other command runtime state) to the specified directory.
+
+If you set a relative path, it is resolved relative to your project directory.
+
+The directory must be writable by the user running Meteor. If you run multiple processes concurrently, make sure each process uses a different `METEOR_LOCAL_DIR`.
+
+This is useful if you want to:
+
+- run multiple Meteor processes against the same app without them fighting over `.meteor/local`
+- relocate build caches to a faster disk
+- keep `.meteor/local` out of your working tree (for example in CI)
+
+Examples:
+
+```bash
+# Use a separate local dir for this run (relative to the project directory)
+METEOR_LOCAL_DIR=.meteor/local-dev meteor run
+
+# Put local state outside the repo
+METEOR_LOCAL_DIR=/tmp/my-app-meteor-local meteor run
+
+# Run two instances of the same app with isolated local state
+METEOR_LOCAL_DIR=/tmp/my-app-local-1 meteor run --port 3000
+METEOR_LOCAL_DIR=/tmp/my-app-local-2 meteor run --port 3001
+
+# CI: use an isolated temp directory per job
+METEOR_LOCAL_DIR="$(mktemp -d)" meteor test --driver-package meteor/test-in-console
+```
+
+## METEOR_NO_RELEASE_CHECK
+(_development_)
+
+Disable Meteor release checks during `meteor run` and `meteor test`.
+
+This can be useful in automated environments where you want to avoid update prompts or any delay caused by checking for newer tool releases.
+
+```bash
+METEOR_NO_RELEASE_CHECK=1 meteor run
+```
+
+## METEOR_OFFLINE_CATALOG
+(_development_)
+
+When set to a truthy value, Meteor initializes the package catalog in "offline" mode (only using locally cached catalog data).
+
+This is useful if you are offline or operating in an environment that blocks access to Meteor's package services.
+
+```bash
+METEOR_OFFLINE_CATALOG=1 meteor add react-meteor-data
+```
+
+## METEOR_PACKAGE_SERVER_URL
+(_development, production_)
+
+Overrides the default package server URL (`https://packages.meteor.com`) used by the Meteor tool to fetch package metadata and packages.
+
+This is primarily useful for custom/internal package servers or testing.
+
+```bash
+METEOR_PACKAGE_SERVER_URL="https://my-packages.example.com" meteor update
+```
+
+## METEOR_PACKAGE_STATS_SERVER_URL
+(_development, production_)
+
+Overrides the server Meteor uses for package usage reporting (defaults to `https://activity.meteor.com`).
+
+Most users will not need this. To disable package usage reporting entirely, see [`DO_NOT_TRACK`](#do_not_track).
+
+## METEOR_BUILD_FARM_URL
+(_development, production_)
+
+Overrides the Meteor build farm URL used by the tool (defaults to `https://build.meteor.com`).
+
+This is typically only relevant for Meteor's hosted build farm workflows.
+
+## METEOR_PRETTY_OUTPUT
+(_development, production_)
+
+Controls whether the Meteor tool uses "pretty" terminal output (colors/spinners/progress rendering). If set and not equal to `0`, pretty output is forced on.
+
+This can be useful if you want to force rich output in terminals where auto-detection is unreliable.
+
+## METEOR_PROGRESS_DEBUG
+(_development_)
+
+Enables additional debug output for the tool's progress display.
+
+## METEOR_WATCH_FORCE_POLLING
+(_development_)
+
+Force the Meteor tool's file watching to use polling instead of native file system events.
+
+This can help in environments where native watchers are unreliable (some network filesystems, certain containers/VMs, etc.).
+
+```bash
+METEOR_WATCH_FORCE_POLLING=1 meteor run
+```
+
+## METEOR_WATCH_POLLING_INTERVAL_MS
+(_development_)
+
+Configure the polling interval (in milliseconds) used by the file watcher when polling is enabled.
+
+## METEOR_WATCH_PRIORITIZE_CHANGED
+(_development_)
+
+Controls whether the file watcher prioritizes recently changed paths while polling. Set to `0`/`false` to disable.
 
 ## METEOR_PROFILE
 (_development_)
