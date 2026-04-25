@@ -18,7 +18,6 @@ async function runNextUrl(browser) {
   // });
 
   page.on("console", async (msg) => {
-    // this is a way to make sure the travis does not timeout
     // if the test is running for too long without any output to the console (10 minutes)
     const text = msg.text();
     if (text.includes("Permissions policy violation")) {

@@ -4553,17 +4553,24 @@ Meteor.isServer && testAsyncMulti(
         { resolverType: 'stub' }
       );
 
-      let insertId;
-      await Collection.find({}).observeChangesAsync({
+      let observerInsertId;
+      let resolveObserver;
+      const observerFired = new Promise((resolve) => { resolveObserver = resolve; });
+
+      const handle = await Collection.find({}).observeChangesAsync({
         async added(_id, fields) {
-          insertId = _id;
+          observerInsertId = _id;
+          resolveObserver();
           throw new Error('Test error in async added observeChangesAsync');
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
-        test.equal(insertId, id);
-      })
+      // insertAsync resolves normally — observer errors are caught and logged,
+      // not propagated back to the caller (see observe_multiplex `_applyCallback`).
+      const id = await Collection.insertAsync({ foo: { bar: 123 } });
+      await observerFired;
+      test.equal(observerInsertId, id);
+      await handle.stop();
     },
 
     async (test) => {
@@ -4572,17 +4579,22 @@ Meteor.isServer && testAsyncMulti(
         { resolverType: 'stub' }
       );
 
-      let insertId;
-      await Collection.find({}).observeChangesAsync({
+      let observerInsertId;
+      let resolveObserver;
+      const observerFired = new Promise((resolve) => { resolveObserver = resolve; });
+
+      const handle = await Collection.find({}).observeChangesAsync({
         added(id) {
-          insertId = id;
+          observerInsertId = id;
+          resolveObserver();
           throw new Error('Test error in sync added observeChangesAsync');
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).finally((id, bad) => {
-        test.equal(insertId, id);
-      })
+      const id = await Collection.insertAsync({ foo: { bar: 123 } });
+      await observerFired;
+      test.equal(observerInsertId, id);
+      await handle.stop();
     }
   ]
 );

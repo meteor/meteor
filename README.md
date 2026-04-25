@@ -10,8 +10,6 @@
 
 <div align="center">
 
-[![Travis CI Status](https://api.travis-ci.com/meteor/meteor.svg?branch=devel)](https://app.travis-ci.com/github/meteor/meteor)
-[![CircleCI Status](https://circleci.com/gh/meteor/meteor.svg?style=svg)](https://app.circleci.com/pipelines/github/meteor/meteor?branch=devel)
 [![built with Meteor](https://img.shields.io/badge/Meteor-3.4.0-green?logo=meteor&logoColor=white)](https://meteor.com)
 ![node-current](https://img.shields.io/node/v/meteor)
 ![Discord](https://img.shields.io/discord/1247973371040239676)
@@ -67,7 +65,7 @@ On your platform, use this line:
 ```shell
 > npx meteor
 ```
- 
+
 🚀 To create a project:
 
 ```shell
