@@ -5,19 +5,18 @@
  * schema-aware SQL compilation.
  */
 
-import { StreamProvider } from 'meteor/afs';
-import { AFSCursor } from 'meteor/afs';
+import { StreamProvider, AFSCursor, applyModifier, parseSelector, parseModifier, parseSort, parseProjection } from 'meteor/afs';
 import { PostgresConnection } from './postgres_driver';
 import { ResolvedSchema } from './schema';
 import { documentToRow, rowToDocument } from './row_converter';
 import {
-  compileSelector,
-  compileModifier,
+  compileSet,
   buildSelectQuery,
   buildInsertQuery,
   buildUpdateQuery,
   buildDeleteQuery,
   buildUpsertQuery,
+  extractEqualityFieldsFromAST,
 } from './sql_compiler';
 import { quoteIdent } from './schema';
 import crypto from 'crypto';
@@ -152,8 +151,10 @@ export class PostgresStreamProvider extends StreamProvider {
       return this._upsertAsync(collectionName, selector, modifier, options, schema);
     }
 
+    const sortAST = options.sort ? parseSort(options.sort) : null;
+    const optsForBuild = sortAST ? { ...options, sortAST } : options;
     const { text, values, needsFetchModifyWrite } = buildUpdateQuery(
-      collectionName, selector, modifier, options, schema
+      collectionName, parseSelector(selector), parseModifier(modifier), optsForBuild, schema
     );
 
     if (needsFetchModifyWrite) {
@@ -170,7 +171,7 @@ export class PostgresStreamProvider extends StreamProvider {
     this._assertOpen('removeAsync');
     const schema = this._getSchema(collectionName);
     await this._connection.ensureTable(collectionName, schema);
-    const { text, values } = buildDeleteQuery(collectionName, selector, schema);
+    const { text, values } = buildDeleteQuery(collectionName, parseSelector(selector), schema);
     const result = await this._connection._queryInternal(text, values);
     return result.rowCount;
   }
@@ -208,7 +209,14 @@ export class PostgresStreamProvider extends StreamProvider {
     this._assertOpen('fetchResults');
     const schema = this._getSchema(collectionName);
     await this._connection.ensureTable(collectionName, schema);
-    const { text, values } = buildSelectQuery(collectionName, selector, options, schema);
+    const { text, values } = buildSelectQuery(
+      collectionName,
+      parseSelector(selector),
+      options.sort ? parseSort(options.sort) : null,
+      (options.fields || options.projection) ? parseProjection(options.fields || options.projection) : null,
+      options,
+      schema
+    );
     const result = await this._connection._queryInternal(text, values);
     return result.rows.map(row => rowToDocument(row, schema));
   }
@@ -303,19 +311,25 @@ export class PostgresStreamProvider extends StreamProvider {
 
   capabilities() {
     return {
-      reactiveQueries: true,
+      ...super.capabilities(),
       // `transactions: true` means this provider exposes an explicit
       // withTransactionAsync() entry point for callers to run multiple
       // statements atomically. CRUD operations that need internal
       // transactional guarantees (fetch-modify-write updates, non-_id
       // upsert serialization) already use transactions under the hood.
       transactions: true,
-      changeStreams: false,
-      oplog: false,
-      fullTextSearch: false,
-      geoQueries: false,
-      aggregation: false,
       joins: true,
+      selectorOperators: [
+        'And', 'Or', 'Nor', 'Not', 'Field',
+      ],
+      selectorPredicates: [
+        'Eq', 'Ne', 'Gt', 'Gte', 'Lt', 'Lte', 'In', 'Nin',
+        'Exists', 'Type', 'Regex', 'Mod', 'Size', 'All', 'ElemMatch',
+      ],
+      modifierOperators: [
+        'Set', 'SetOnInsert', 'Unset', 'Inc', 'Mul', 'Min', 'Max', 'Rename',
+        'CurrentDate', 'Push', 'Pop', 'Pull', 'PullAll', 'AddToSet', 'Bit',
+      ],
       upsert: true,
     };
   }
@@ -461,7 +475,7 @@ export class PostgresStreamProvider extends StreamProvider {
 
       // Fetch matching rows with FOR UPDATE lock
       const { text: selectText, values: selectValues } = buildSelectQuery(
-        collectionName, selector, {}, schema
+        collectionName, parseSelector(selector), null, null, {}, schema
       );
       const lockSql = selectText + ' FOR UPDATE' + (options.multi ? '' : ' LIMIT 1');
       const selectResult = await client.query(lockSql, selectValues);
@@ -469,8 +483,7 @@ export class PostgresStreamProvider extends StreamProvider {
       for (const row of selectResult.rows) {
         const doc = rowToDocument(row, schema);
 
-        // Apply modifier using Minimongo's _modify
-        LocalCollection._modify(doc, modifier);
+        applyModifier(doc, modifier);
 
         // Convert back to row and update
         const newRow = documentToRow(doc, schema);
@@ -532,7 +545,8 @@ export class PostgresStreamProvider extends StreamProvider {
    *    by primary key, no locking needed.
    */
   async _upsertAsync(collectionName, selector, modifier, options, schema) {
-    const { needsFetchModifyWrite } = compileModifier(modifier, schema);
+    const modifierAST = parseModifier(modifier);
+    const { needsFetchModifyWrite } = compileSet(modifierAST, schema);
 
     if (needsFetchModifyWrite) {
       return this._fetchModifyWriteUpsert(
@@ -540,19 +554,24 @@ export class PostgresStreamProvider extends StreamProvider {
       );
     }
 
-    const hasIdSelector =
-      selector && typeof selector === 'object' && typeof selector._id === 'string';
+    const selectorAST = parseSelector(selector);
+    // Match buildUpsertQuery's view of "the selector pins _id" — extract
+    // _id from the AST (handles $and, dotted paths, etc.) so the dispatch
+    // here and the SQL emitted there agree on whether ON CONFLICT(_id) is
+    // safe vs whether we need the advisory-lock path.
+    const hasIdSelector = extractEqualityFieldsFromAST(selectorAST)
+      .some((f) => f.path === '_id');
 
     if (!hasIdSelector) {
       // Non-`_id` selector path: wrap in a transaction with an advisory lock
       // keyed on the selector so concurrent upserts serialize (I4).
       return this._upsertNonIdWithLock(
-        collectionName, selector, modifier, options, schema
+        collectionName, selector, selectorAST, modifierAST, options, schema
       );
     }
 
     const { text, values } = buildUpsertQuery(
-      collectionName, selector, modifier, schema
+      collectionName, selectorAST, modifierAST, schema
     );
 
     const result = await this._connection._queryInternal(text, values);
@@ -574,7 +593,7 @@ export class PostgresStreamProvider extends StreamProvider {
    * the same selector serialize — without it, both transactions can observe
    * no matching row and both INSERT, producing duplicates.
    */
-  async _upsertNonIdWithLock(collectionName, selector, modifier, options, schema) {
+  async _upsertNonIdWithLock(collectionName, selector, selectorAST, modifierAST, options, schema) {
     const lockKey = this._advisoryLockKey(collectionName, selector);
 
     const client = await this._connection.getClient();
@@ -583,7 +602,7 @@ export class PostgresStreamProvider extends StreamProvider {
       await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
 
       const { text, values } = buildUpsertQuery(
-        collectionName, selector, modifier, schema
+        collectionName, selectorAST, modifierAST, schema
       );
       const result = await client.query(text, values);
 
@@ -608,7 +627,7 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   /**
-   * Fetch-modify-write upsert: lock-matching-row → LocalCollection._modify →
+   * Fetch-modify-write upsert: lock-matching-row → applyModifier →
    * write back. If no row matches, synthesize a new doc from selector +
    * $setOnInsert and apply the modifier to an empty document.
    */
@@ -624,7 +643,7 @@ export class PostgresStreamProvider extends StreamProvider {
 
       // SELECT … FOR UPDATE the first matching row.
       const { text: selectText, values: selectValues } = buildSelectQuery(
-        collectionName, selector, {}, schema
+        collectionName, parseSelector(selector), null, null, {}, schema
       );
       const selectResult = await client.query(
         selectText + ' FOR UPDATE LIMIT 1', selectValues
@@ -633,7 +652,7 @@ export class PostgresStreamProvider extends StreamProvider {
       if (selectResult.rows.length > 0) {
         // Update path — apply modifier to the fetched doc.
         const doc = rowToDocument(selectResult.rows[0], schema);
-        LocalCollection._modify(doc, modifier);
+        applyModifier(doc, modifier);
         const newRow = documentToRow(doc, schema);
 
         const setClauses = [];
@@ -665,7 +684,7 @@ export class PostgresStreamProvider extends StreamProvider {
       // apply the modifier on top. `_modify` with `isInsert: true` throws on
       // operators that are not legal at insert time.
       const insertDoc = this._buildUpsertInsertDoc(selector, modifier);
-      LocalCollection._modify(insertDoc, modifier, { isInsert: true });
+      applyModifier(insertDoc, modifier, { isInsert: true });
 
       const { text: insertSql, values: insertValues } = buildInsertQuery(
         collectionName, insertDoc, schema
@@ -685,7 +704,7 @@ export class PostgresStreamProvider extends StreamProvider {
   /**
    * Seed an insert doc from the upsert selector's scalar fields plus
    * $setOnInsert. Anything else ($set, array ops, etc.) is left to
-   * LocalCollection._modify.
+   * applyModifier.
    */
   _buildUpsertInsertDoc(selector, modifier) {
     const doc = {};

@@ -8,6 +8,15 @@
 
 import { resolveField, quoteIdent, quoteLiteral, quoteTextArray } from './schema';
 import { documentToRow } from './row_converter';
+import {
+  AST,
+  PRED,
+  MOD,
+  walkSelector,
+  walkModifier,
+  astToRawSelector,
+  UnsupportedOperatorError,
+} from 'meteor/afs';
 
 // ---------------------------------------------------------------------------
 // Security helpers
@@ -164,6 +173,162 @@ export function compileSelector(selector, schema) {
 
   const text = compileSelectorInner(selector, schema, ctx);
   return { text: text || 'TRUE', values: ctx.values };
+}
+
+// ---------------------------------------------------------------------------
+// AST-walking selector compiler (Phase C of the AST migration)
+//
+// compileWhere walks a SelectorAST produced by parseSelector and emits the
+// same SQL fragments that compileSelector would for the equivalent raw
+// selector. Predicate kinds are mapped back to $-prefixed op strings so the
+// existing compileOperator helpers stay the single source of compilation
+// truth — see Task 18 of docs/superpowers/plans/2026-04-26-selector-modifier-ast.md.
+// ---------------------------------------------------------------------------
+
+const PRED_TO_OP = {
+  [PRED.EQ]:  '$eq',
+  [PRED.NE]:  '$ne',
+  [PRED.GT]:  '$gt',
+  [PRED.GTE]: '$gte',
+  [PRED.LT]:  '$lt',
+  [PRED.LTE]: '$lte',
+  [PRED.IN]:  '$in',
+  [PRED.NIN]: '$nin',
+  [PRED.EXISTS]: '$exists',
+  [PRED.TYPE]:   '$type',
+  [PRED.REGEX]:  '$regex',
+  [PRED.MOD]:    '$mod',
+  [PRED.SIZE]:   '$size',
+  [PRED.ALL]:    '$all',
+  [PRED.ELEM_MATCH]: '$elemMatch',
+};
+
+/**
+ * AST-walking selector compiler. Walks a SelectorAST and emits a
+ * parameterized SQL WHERE fragment, delegating to the same helpers used by
+ * compileSelector (compileOperator, compileEquality, compileNullCheck) so
+ * behavior is identical to the raw-selector path.
+ *
+ * @param {Object} selectorAST - SelectorAST from parseSelector
+ * @param {import('./schema').ResolvedSchema|null} schema
+ * @param {CompilationContext} [ctx]
+ * @returns {{ text: string, values: any[] }}
+ */
+export function compileWhere(selectorAST, schema, ctx) {
+  ctx = ctx || new CompilationContext();
+  const visitor = makeWhereVisitor(schema, ctx);
+  const text = walkSelector(selectorAST, visitor);
+  return { text: text || 'TRUE', values: ctx.values };
+}
+
+function makeWhereVisitor(schema, ctx) {
+  const visitor = {
+    __adapterName__: 'postgres',
+
+    [AST.AND]: (node) => {
+      if (!node.clauses || node.clauses.length === 0) return 'TRUE';
+      const inner = node.clauses.map((c) => walkSelector(c, visitor));
+      return inner.length === 1 ? inner[0] : `(${inner.join(' AND ')})`;
+    },
+    [AST.OR]: (node) => {
+      if (!node.clauses || node.clauses.length === 0) return 'TRUE';
+      return `(${node.clauses.map((c) => walkSelector(c, visitor)).join(' OR ')})`;
+    },
+    [AST.NOR]: (node) => {
+      if (!node.clauses || node.clauses.length === 0) return 'TRUE';
+      return `NOT (${node.clauses.map((c) => walkSelector(c, visitor)).join(' OR ')})`;
+    },
+    [AST.NOT]: (node) => `NOT (${walkSelector(node.clause, visitor)})`,
+    [AST.FIELD]: (node) => emitFieldPredicate(node.path, node.predicate, schema, ctx),
+
+    [AST.WHERE]: () => {
+      throw new UnsupportedOperatorError(
+        '$where is not supported in Postgres collections',
+        { nodeType: AST.WHERE, adapterName: 'postgres' }
+      );
+    },
+    [AST.EXPR]: () => {
+      throw new UnsupportedOperatorError(
+        '$expr is not supported in Postgres collections',
+        { nodeType: AST.EXPR, adapterName: 'postgres' }
+      );
+    },
+    [AST.GEO]: (node) => {
+      throw new UnsupportedOperatorError(
+        `${node.op} geo queries are not supported in Postgres collections (future: PostGIS)`,
+        { nodeType: AST.GEO, adapterName: 'postgres' }
+      );
+    },
+    [AST.TEXT]: () => {
+      throw new UnsupportedOperatorError(
+        '$text is not supported in Postgres collections',
+        { nodeType: AST.TEXT, adapterName: 'postgres' }
+      );
+    },
+  };
+  return visitor;
+}
+
+function emitFieldPredicate(path, pred, schema, ctx) {
+  const fieldPath = path.join('.');
+  assertSafeFieldPath(fieldPath);
+  const resolved = resolveField(fieldPath, schema);
+
+  if (pred.kind === PRED.BITS) {
+    throw new UnsupportedOperatorError(
+      `$bits${pred.op} is not supported in Postgres collections`,
+      { nodeType: PRED.BITS, adapterName: 'postgres' }
+    );
+  }
+
+  const op = PRED_TO_OP[pred.kind];
+  if (!op) {
+    throw new UnsupportedOperatorError(
+      `Postgres: predicate kind '${pred.kind}' not supported`,
+      { nodeType: pred.kind, adapterName: 'postgres' }
+    );
+  }
+
+  // EQ shadows compileFieldSelector's null/object branching.
+  if (pred.kind === PRED.EQ) {
+    if (pred.value === null || pred.value === undefined) {
+      return compileNullCheck(resolved, true);
+    }
+    return compileEquality(resolved, pred.value, schema, ctx);
+  }
+
+  let operand;
+  let extraOptions = '';
+  switch (pred.kind) {
+    case PRED.IN:
+    case PRED.NIN:
+    case PRED.ALL:
+      operand = pred.values;
+      break;
+    case PRED.EXISTS:
+      operand = pred.value;
+      break;
+    case PRED.TYPE:
+      operand = pred.bsonType;
+      break;
+    case PRED.SIZE:
+      operand = pred.value;
+      break;
+    case PRED.MOD:
+      operand = [pred.divisor, pred.remainder];
+      break;
+    case PRED.REGEX:
+      operand = pred.source;
+      extraOptions = pred.flags || '';
+      break;
+    case PRED.ELEM_MATCH:
+      operand = astToRawSelector(pred.inner);
+      break;
+    default:
+      operand = pred.value;
+  }
+
+  return compileOperator(resolved, op, operand, fieldPath, schema, ctx, extraOptions);
 }
 
 function compileSelectorInner(selector, schema, ctx) {
@@ -687,7 +852,7 @@ function compileTypedComparison(sqlRef, op, value, ctx) {
  * Returns { setClauses, values, needsFetchModifyWrite, fetchModifyWriteOps }
  *
  * When needsFetchModifyWrite is true, the caller must use a transaction:
- * SELECT FOR UPDATE → LocalCollection._modify() → full row UPDATE.
+ * SELECT FOR UPDATE → applyModifier() → full row UPDATE.
  *
  * @param {Object} modifier
  * @param {import('./schema').ResolvedSchema|null} schema
@@ -712,7 +877,7 @@ export function compileModifier(modifier, schema) {
       case '$set':
         for (const [field, value] of Object.entries(fields)) {
           assertSafeFieldPath(field);
-          const clause = compileSet(field, value, schema, ctx);
+          const clause = compileSetAssignment(field, value, schema, ctx);
           if (clause) setClauses.push(clause);
         }
         break;
@@ -811,7 +976,107 @@ export function compileModifier(modifier, schema) {
   };
 }
 
-function compileSet(field, value, schema, ctx) {
+// ---------------------------------------------------------------------------
+// AST-walking modifier compiler (Phase C of the AST migration)
+//
+// compileSet walks a ModifierAST produced by parseModifier and emits the same
+// SET-clause shape as compileModifier. Per-op SQL is produced by the same
+// private helpers (compileSetAssignment, compileUnset, compileInc, ...) so
+// behavior is identical to the raw-modifier path. Operators that postgres
+// can't express in a single statement (push-with-options, pop, pull, etc.)
+// signal needsFetchModifyWrite so the caller routes through fetch-modify-write.
+// ---------------------------------------------------------------------------
+
+/**
+ * AST-walking modifier compiler. Returns the same shape as compileModifier:
+ *   { setClauses, values, needsFetchModifyWrite, fetchModifyWriteOps }
+ *
+ * @param {Object} modifierAST - ModifierAST from parseModifier
+ * @param {import('./schema').ResolvedSchema|null} schema
+ * @param {CompilationContext} [ctx]
+ */
+export function compileSet(modifierAST, schema, ctx) {
+  ctx = ctx || new CompilationContext();
+
+  if (modifierAST.isReplacement) {
+    return compileReplacementDoc(modifierAST.replacement, schema);
+  }
+
+  const setClauses = [];
+  const fetchModifyWriteOps = [];
+  let needsFetchModifyWrite = false;
+
+  const dotted = (op) => {
+    const f = op.path.join('.');
+    assertSafeFieldPath(f);
+    return f;
+  };
+
+  const visitor = {
+    __adapterName__: 'postgres',
+
+    [MOD.SET]: (op) => {
+      const c = compileSetAssignment(dotted(op), op.value, schema, ctx);
+      if (c) setClauses.push(c);
+    },
+    [MOD.UNSET]: (op) => {
+      const c = compileUnset(dotted(op), schema, ctx);
+      if (c) setClauses.push(c);
+    },
+    [MOD.INC]: (op) => {
+      const c = compileInc(dotted(op), op.value, schema, ctx);
+      if (c) setClauses.push(c);
+    },
+    [MOD.MUL]: (op) => {
+      const c = compileMul(dotted(op), op.value, schema, ctx);
+      if (c) setClauses.push(c);
+    },
+    [MOD.MIN]: (op) => {
+      const c = compileMin(dotted(op), op.value, schema, ctx);
+      if (c) setClauses.push(c);
+    },
+    [MOD.MAX]: (op) => {
+      const c = compileMax(dotted(op), op.value, schema, ctx);
+      if (c) setClauses.push(c);
+    },
+    [MOD.CURRENT_DATE]: (op) => {
+      const c = compileCurrentDate(dotted(op), schema);
+      if (c) setClauses.push(c);
+    },
+    [MOD.PUSH]: (op) => {
+      // Simple $push only — anything with $each/$position/$slice/$sort routes
+      // through fetch-modify-write so applyModifier handles the
+      // array semantics consistently.
+      if (op.each !== null || op.position !== null || op.slice !== null || op.sort !== null) {
+        needsFetchModifyWrite = true;
+        fetchModifyWriteOps.push('$push');
+      } else {
+        const c = compileSimplePush(dotted(op), op.value, schema, ctx);
+        if (c) setClauses.push(c);
+      }
+    },
+
+    // Operators that always require fetch-modify-write.
+    [MOD.POP]:        () => { needsFetchModifyWrite = true; fetchModifyWriteOps.push('$pop'); },
+    [MOD.PULL]:       () => { needsFetchModifyWrite = true; fetchModifyWriteOps.push('$pull'); },
+    [MOD.PULL_ALL]:   () => { needsFetchModifyWrite = true; fetchModifyWriteOps.push('$pullAll'); },
+    [MOD.ADD_TO_SET]: () => { needsFetchModifyWrite = true; fetchModifyWriteOps.push('$addToSet'); },
+    [MOD.RENAME]:     () => { needsFetchModifyWrite = true; fetchModifyWriteOps.push('$rename'); },
+    [MOD.BIT]:        () => { needsFetchModifyWrite = true; fetchModifyWriteOps.push('$bit'); },
+
+    // Upsert-only; ignored on the update path. compileSet runs in update context.
+    [MOD.SET_ON_INSERT]: () => {},
+  };
+
+  walkModifier(modifierAST, visitor);
+
+  return { setClauses, values: ctx.values, needsFetchModifyWrite, fetchModifyWriteOps };
+}
+
+// Renamed from `compileSet` to avoid collision with the new exported
+// AST-walking `compileSet(modifierAST, ...)` (Phase C of the AST migration).
+// Same implementation; produces a single `column = expr` SQL fragment.
+function compileSetAssignment(field, value, schema, ctx) {
   const resolved = resolveField(field, schema);
 
   if (resolved.kind === 'column') {
@@ -1092,32 +1357,125 @@ export function compileSort(sortSpec, schema) {
 }
 
 // ---------------------------------------------------------------------------
+// AST-walking sort + projection compilers (Phase C of the AST migration)
+// ---------------------------------------------------------------------------
+
+/**
+ * AST-walking sort compiler. Returns the comma-separated ORDER BY column
+ * list (without the leading `ORDER BY` keyword) so callers can compose it
+ * with the rest of the SQL fragment, matching `compileSort`'s contract.
+ *
+ * Throws UnsupportedOperatorError on $meta sort directions, which postgres
+ * does not natively support (would require a parallel text-search column).
+ */
+export function compileOrderBy(sortAST, schema) {
+  if (!sortAST || !sortAST.keys || sortAST.keys.length === 0) return '';
+
+  const parts = sortAST.keys.map((k) => {
+    if (k.direction === 'meta') {
+      throw new UnsupportedOperatorError(
+        `Postgres does not support $meta sort '${k.metaField}'`,
+        { nodeType: 'SortMeta', adapterName: 'postgres' }
+      );
+    }
+    const field = k.path.join('.');
+    assertSafeFieldPath(field);
+    const resolved = resolveField(field, schema);
+    const direction = k.direction === 'desc' ? 'DESC' : 'ASC';
+
+    const hintedType =
+      schema && typeof schema.getSortHint === 'function'
+        ? schema.getSortHint(field)
+        : null;
+
+    let expr = resolved.sqlRef;
+    if (
+      (resolved.kind === 'jsonb_path' ||
+        resolved.kind === 'extra' ||
+        resolved.kind === 'extra_path') &&
+      hintedType
+    ) {
+      if (hintedType === 'number' || hintedType === 'numeric') {
+        expr = `(${resolved.sqlRef})::numeric`;
+      } else if (hintedType === 'date' || hintedType === 'timestamp') {
+        expr = `(${resolved.sqlRef})::timestamptz`;
+      } else if (hintedType === 'boolean') {
+        expr = `(${resolved.sqlRef})::boolean`;
+      }
+    }
+
+    return `${expr} ${direction} NULLS LAST`;
+  });
+
+  return parts.join(', ');
+}
+
+/**
+ * Compile a ProjectionAST into a SELECT-list SQL fragment.
+ *
+ * Postgres can't trivially emit "all columns except X" or extract JSONB
+ * sub-paths via SELECT-list expressions, so exclude-mode projections and
+ * any include path that doesn't resolve to a top-level column fall back to
+ * `*` — the caller trims fields in JS post-fetch.
+ */
+export function compileColumns(projectionAST, schema) {
+  if (!projectionAST || !projectionAST.fields || projectionAST.fields.length === 0) return '*';
+  if (projectionAST.mode === 'exclude') return '*';
+
+  // Include mode (or mixed): only emit an explicit list if every field is a
+  // top-level native column. Otherwise SELECT * for safety.
+  for (const f of projectionAST.fields) {
+    if (f.include === false) continue;
+    const resolved = resolveField(f.path.join('.'), schema);
+    if (resolved.kind !== 'column') return '*';
+  }
+
+  const cols = projectionAST.fields
+    .filter((f) => f.include !== false)
+    .map((f) => quoteIdent(f.path[0]));
+  if (cols.length === 0) return '*';
+  return cols.join(', ');
+}
+
+// ---------------------------------------------------------------------------
 // Query Builders
 // ---------------------------------------------------------------------------
 
 /**
  * Build a SELECT query.
  * @param {string} table
- * @param {Object} selector
- * @param {Object} options - { sort, skip, limit }
+ * @param {Object} selectorAST - SelectorAST from parseSelector
+ * @param {Object|null} sortAST - SortAST from parseSort, or null
+ * @param {Object|null} projectionAST - ProjectionAST from parseProjection, or null
+ * @param {Object} options - { skip, limit }
  * @param {import('./schema').ResolvedSchema|null} schema
  * @returns {{ text: string, values: any[] }}
  */
-export function buildSelectQuery(table, selector, options, schema) {
-  const { text: whereText, values } = compileSelector(selector, schema);
-  const ctx = { values: [...values], paramCount: values.length };
+export function buildSelectQuery(table, selectorAST, sortAST, projectionAST, options, schema) {
+  const ctx = new CompilationContext();
+  const { text: whereText } = compileWhere(selectorAST, schema, ctx);
 
-  const projection = ['_id'];
-  if (schema) {
-    for (const colName of schema.getColumnNames()) projection.push(colName);
+  // Projection: use compileColumns only when it returns an explicit column list
+  // (include-mode with all fields resolving to native columns). Otherwise fall
+  // back to the historical explicit list (_id, schema columns, _extra) which
+  // the rest of the codebase relies on for correct rowToDocument reconstruction.
+  let projectionSql;
+  const colsFromAST = compileColumns(projectionAST, schema);
+  if (colsFromAST !== '*') {
+    projectionSql = colsFromAST;
+  } else {
+    const projection = ['_id'];
+    if (schema) {
+      for (const colName of schema.getColumnNames()) projection.push(colName);
+    }
+    projection.push('_extra');
+    projectionSql = projection.map(c => quoteIdent(c)).join(', ');
   }
-  projection.push('_extra');
-  const projectionSql = projection.map(c => quoteIdent(c)).join(', ');
 
   let sql = `SELECT ${projectionSql} FROM ${quoteIdent(table)} WHERE ${whereText}`;
 
-  if (options && options.sort) {
-    const orderBy = compileSort(options.sort, schema);
+  if (sortAST) {
+    const orderBy = compileOrderBy(sortAST, schema);
     if (orderBy) sql += ` ORDER BY ${orderBy}`;
   }
 
@@ -1190,21 +1548,23 @@ export function buildInsertQuery(table, doc, schema) {
 /**
  * Build an UPDATE query.
  * @param {string} table
- * @param {Object} selector
- * @param {Object} modifier
- * @param {Object} options - { multi }
+ * @param {Object} selectorAST - SelectorAST from parseSelector
+ * @param {Object} modifierAST - ModifierAST from parseModifier
+ * @param {Object} options - { multi, sortAST? } — sortAST is a pre-parsed SortAST or null/undefined
  * @param {import('./schema').ResolvedSchema|null} schema
  * @returns {{ text: string, values: any[], needsFetchModifyWrite: boolean, fetchModifyWriteOps: string[] }}
  */
-export function buildUpdateQuery(table, selector, modifier, options, schema) {
-  const { setClauses, values: modValues, needsFetchModifyWrite, fetchModifyWriteOps } = compileModifier(modifier, schema);
+export function buildUpdateQuery(table, selectorAST, modifierAST, options, schema) {
+  const { setClauses, values: modValues, needsFetchModifyWrite, fetchModifyWriteOps } = compileSet(modifierAST, schema);
 
   if (needsFetchModifyWrite || setClauses.length === 0) {
     // Caller must handle this via transaction
     return { text: null, values: [], needsFetchModifyWrite: true, fetchModifyWriteOps };
   }
 
-  const { text: whereText, values: whereValues } = compileSelector(selector, schema);
+  const whereCtx = new CompilationContext();
+  const { text: whereText } = compileWhere(selectorAST, schema, whereCtx);
+  const whereValues = whereCtx.values;
 
   // Rebase where parameter indices to account for modifier params
   const rebasedWhere = rebaseParams(whereText, modValues.length);
@@ -1216,11 +1576,11 @@ export function buildUpdateQuery(table, selector, modifier, options, schema) {
   } else {
     // Non-multi: update only the first matching row. Without an ORDER BY
     // the LIMIT 1 subquery picks an arbitrary row — Mongo promises
-    // deterministic ordering, either from the caller's `sort` option or
+    // deterministic ordering, either from the caller's sortAST option or
     // (by default) the oldest `_id`.
     let orderBy;
-    if (options && options.sort) {
-      orderBy = compileSort(options.sort, schema);
+    if (options && options.sortAST) {
+      orderBy = compileOrderBy(options.sortAST, schema);
     }
     if (!orderBy) orderBy = `${quoteIdent('_id')} ASC`;
     sql = `UPDATE ${quoteIdent(table)} SET ${setClauses.join(', ')} WHERE _id = (SELECT _id FROM ${quoteIdent(table)} WHERE ${rebasedWhere} ORDER BY ${orderBy} LIMIT 1)`;
@@ -1232,12 +1592,12 @@ export function buildUpdateQuery(table, selector, modifier, options, schema) {
 /**
  * Build a DELETE query.
  * @param {string} table
- * @param {Object} selector
+ * @param {Object} selectorAST - SelectorAST from parseSelector
  * @param {import('./schema').ResolvedSchema|null} schema
  * @returns {{ text: string, values: any[] }}
  */
-export function buildDeleteQuery(table, selector, schema) {
-  const { text: whereText, values } = compileSelector(selector, schema);
+export function buildDeleteQuery(table, selectorAST, schema) {
+  const { text: whereText, values } = compileWhere(selectorAST, schema);
   const sql = `DELETE FROM ${quoteIdent(table)} WHERE ${whereText}`;
   return { text: sql, values };
 }
@@ -1282,30 +1642,22 @@ export function buildDeleteQuery(table, selector, schema) {
  * for update-in-place.
  *
  * @param {string} table
- * @param {Object} selector
- * @param {Object} modifier
+ * @param {Object} selectorAST - SelectorAST from parseSelector
+ * @param {Object} modifierAST - ModifierAST from parseModifier
  * @param {import('./schema').ResolvedSchema|null} schema
  * @returns {{ text: string, values: any[], insertedId: string }}
  */
-export function buildUpsertQuery(table, selector, modifier, schema) {
-  const { setClauses, values: modValues } = compileModifier(modifier, schema);
+export function buildUpsertQuery(table, selectorAST, modifierAST, schema) {
+  const { setClauses, values: modValues } = compileSet(modifierAST, schema);
 
-  // Build the would-be-inserted doc from selector + modifier fields.
-  // Only scalar selector fields are eligible (selector can contain operator
-  // objects like { $gt: 5 } that must not leak into the inserted row).
+  // Build the would-be-inserted doc from selector equality fields + $set/$setOnInsert.
+  // Walk the AST for top-level Field nodes with an Eq predicate — anything else
+  // (operators, $-keys, compound predicates) is skipped to avoid leaking query
+  // operators into the inserted row.
   const insertDoc = Object.create(null);
-  if (typeof selector === 'object' && selector !== null) {
-    for (const [key, value] of Object.entries(selector)) {
-      if (key.startsWith('$')) continue;
-      assertSafeFieldPath(key);
-      if (value === null || value === undefined) continue;
-      if (typeof value === 'object' && !(value instanceof Date) && !Array.isArray(value)) {
-        // Operator object (e.g. { $gt: 5 }) or plain object — skip.
-        const subKeys = Object.keys(value);
-        if (subKeys.length > 0 && subKeys.every(k => k.startsWith('$'))) continue;
-      }
-      insertDoc[key] = value;
-    }
+  const selectorFields = extractEqualityFieldsFromAST(selectorAST);
+  for (const { path, value } of selectorFields) {
+    insertDoc[path] = value;
   }
 
   const hasIdInSelector = !!insertDoc._id;
@@ -1313,20 +1665,23 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
     insertDoc._id = Random.id();
   }
 
-  // Apply $set / $setOnInsert for the insert case so the new row starts
-  // with modifier-supplied values. Guard each key against prototype
-  // pollution before copying — Object.assign would otherwise let a
-  // crafted key like "__proto__" poison the prototype chain.
-  if (modifier.$set) {
-    for (const [k, v] of Object.entries(modifier.$set)) {
-      assertSafeFieldPath(k);
-      insertDoc[k] = v;
+  // Apply $set / $setOnInsert from the modifier AST for the insert case so
+  // the new row starts with modifier-supplied values. Walk modifierAST.ops
+  // in order: $set first, then $setOnInsert (which can override $set values).
+  if (!modifierAST.isReplacement && modifierAST.ops) {
+    for (const op of modifierAST.ops) {
+      if (op.kind === MOD.SET) {
+        const k = op.path.join('.');
+        assertSafeFieldPath(k);
+        insertDoc[k] = op.value;
+      }
     }
-  }
-  if (modifier.$setOnInsert) {
-    for (const [k, v] of Object.entries(modifier.$setOnInsert)) {
-      assertSafeFieldPath(k);
-      insertDoc[k] = v;
+    for (const op of modifierAST.ops) {
+      if (op.kind === MOD.SET_ON_INSERT) {
+        const k = op.path.join('.');
+        assertSafeFieldPath(k);
+        insertDoc[k] = op.value;
+      }
     }
   }
 
@@ -1393,7 +1748,9 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
   const insertValuesCount = idx;
   const rebasedSetClauses = setClauses.map(clause => rebaseParams(clause, insertValuesCount));
 
-  const { text: whereText, values: whereValues } = compileSelector(selector, schema);
+  const whereCtx = new CompilationContext();
+  const { text: whereText } = compileWhere(selectorAST, schema, whereCtx);
+  const whereValues = whereCtx.values;
   const rebasedWhere = rebaseParams(whereText, insertValuesCount + modValues.length);
 
   const allValues = [...values, ...modValues, ...whereValues];
@@ -1421,6 +1778,45 @@ export function buildUpsertQuery(table, selector, modifier, schema) {
     `SELECT _id, "__inserted" FROM updated UNION ALL SELECT _id, "__inserted" FROM inserted`;
 
   return { text: sql, values: allValues, insertedId };
+}
+
+/**
+ * Walk a SelectorAST and extract top-level Field nodes whose predicate is a
+ * simple Eq (scalar equality). Used by buildUpsertQuery to seed the insert
+ * doc from the selector — only scalar equalities are safe to project into
+ * the new row; operator predicates ($gt, $in, etc.) must not leak.
+ *
+ * Returns an array of { path: string, value: any } objects.
+ * Dotted-path safety is asserted for each extracted path.
+ *
+ * @param {Object} selectorAST
+ * @returns {{ path: string, value: any }[]}
+ */
+export function extractEqualityFieldsFromAST(selectorAST) {
+  if (!selectorAST) return [];
+  const result = [];
+
+  function visit(node) {
+    if (!node) return;
+    if (node.type === AST.AND && node.clauses) {
+      for (const c of node.clauses) visit(c);
+      return;
+    }
+    if (node.type === AST.FIELD) {
+      const pred = node.predicate;
+      if (pred && pred.kind === PRED.EQ) {
+        const path = node.path.join('.');
+        assertSafeFieldPath(path);
+        const val = pred.value;
+        // Skip null/undefined — they indicate missing/absent; not safe to insert.
+        if (val === null || val === undefined) return;
+        result.push({ path, value: val });
+      }
+    }
+  }
+
+  visit(selectorAST);
+  return result;
 }
 
 /**

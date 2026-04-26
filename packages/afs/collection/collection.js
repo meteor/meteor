@@ -7,6 +7,83 @@ import {
 } from './local-collection-driver';
 import { makeClientStore, makeServerStore } from './replication-store';
 import { CollectionExtensions, installStatics } from './extensions';
+import { parseSelector, parseModifier, PRED } from '../query/index';
+
+/**
+ * Assert that a provider's declared capabilities cover all node types in an AST.
+ * For selectors: checks selectorOperators and selectorPredicates.
+ * For modifiers: checks modifierOperators.
+ * If a capability list is undeclared (undefined), the check is skipped
+ * (legacy providers that predate capability declarations are not gated).
+ *
+ * @param {StreamProvider} provider
+ * @param {Object} ast - A parsed SelectorAST or ModifierAST
+ * @param {'selector'|'modifier'} kind
+ */
+function assertProviderSupports(provider, ast, kind) {
+  const caps = provider.capabilities ? provider.capabilities() : {};
+  const providerName = provider.name || provider.constructor.name;
+
+  if (kind === 'selector') {
+    _assertSelector(ast, caps, providerName);
+  } else if (kind === 'modifier') {
+    _assertModifier(ast, caps, providerName);
+  }
+}
+
+function _assertSelector(node, caps, providerName) {
+  if (!node) return;
+
+  if (caps.selectorOperators !== undefined) {
+    if (!caps.selectorOperators.includes(node.type)) {
+      const e = new Error(
+        `Provider '${providerName}' does not support selector node-type '${node.type}'`
+      );
+      e.code = 'not-supported';
+      throw e;
+    }
+  }
+
+  if (node.clauses) {
+    for (const clause of node.clauses) {
+      _assertSelector(clause, caps, providerName);
+    }
+  } else if (node.clause) {
+    _assertSelector(node.clause, caps, providerName);
+  }
+
+  if (node.type === 'Field' && node.predicate) {
+    if (caps.selectorPredicates !== undefined) {
+      if (!caps.selectorPredicates.includes(node.predicate.kind)) {
+        const e = new Error(
+          `Provider '${providerName}' does not support predicate kind '${node.predicate.kind}'`
+        );
+        e.code = 'not-supported';
+        throw e;
+      }
+    }
+
+    if (node.predicate.kind === PRED.ELEM_MATCH && node.predicate.inner) {
+      _assertSelector(node.predicate.inner, caps, providerName);
+    }
+  }
+}
+
+function _assertModifier(ast, caps, providerName) {
+  if (!ast || ast.isReplacement) return;
+
+  if (caps.modifierOperators !== undefined && ast.ops) {
+    for (const op of ast.ops) {
+      if (!caps.modifierOperators.includes(op.kind)) {
+        const e = new Error(
+          `Provider '${providerName}' does not support modifier op '${op.kind}'`
+        );
+        e.code = 'not-supported';
+        throw e;
+      }
+    }
+  }
+}
 
 /**
  * FederatedCollection - A collection that works with any StreamProvider.
@@ -97,10 +174,12 @@ export class FederatedCollection extends EventEmitter {
         AFS._engine.recordAccess(this._name, selector, options);
       }
 
+      const rewrittenSelector = this._rewriteSelector(selector);
+      assertProviderSupports(this._provider, parseSelector(rewrittenSelector), 'selector');
       return new AFSCursor(
         this._provider,
         this._name,
-        this._rewriteSelector(selector),
+        rewrittenSelector,
         options
       );
     }
@@ -120,10 +199,12 @@ export class FederatedCollection extends EventEmitter {
     }
     options = this._getFindOptions(options);
 
-    if (this._provider) {
+    if (Meteor.isServer && this._provider) {
+      const rewrittenSelector = this._rewriteSelector(selector);
+      assertProviderSupports(this._provider, parseSelector(rewrittenSelector), 'selector');
       const result = await this._provider.findOneAsync(
         this._name,
-        this._rewriteSelector(selector),
+        rewrittenSelector,
         options
       );
       if (result && this._transform) {
@@ -178,6 +259,8 @@ export class FederatedCollection extends EventEmitter {
     }
 
     if (this._provider && Meteor.isServer) {
+      assertProviderSupports(this._provider, parseSelector(selector), 'selector');
+      assertProviderSupports(this._provider, parseModifier(modifier), 'modifier');
       this.emit('before:update', { selector, modifier, options });
       const result = await this._provider.updateAsync(this._name, selector, modifier, options);
       this.emit('after:update', { selector, modifier, options, result });
@@ -197,6 +280,7 @@ export class FederatedCollection extends EventEmitter {
     }
 
     if (this._provider && Meteor.isServer) {
+      assertProviderSupports(this._provider, parseSelector(selector), 'selector');
       this.emit('before:remove', { selector });
       const result = await this._provider.removeAsync(this._name, selector);
       this.emit('after:remove', { selector, result });
@@ -598,6 +682,7 @@ export class FederatedCollection extends EventEmitter {
 
   async countDocuments(selector = {}, options = {}) {
     if (this._provider && this._provider.countAsync) {
+      assertProviderSupports(this._provider, parseSelector(selector), 'selector');
       return this._provider.countAsync(this._name, selector, options);
     }
     if (this._collection.find) {

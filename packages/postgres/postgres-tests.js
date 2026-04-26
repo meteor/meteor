@@ -39,6 +39,7 @@ import {
   buildDeleteQuery,
   buildUpsertQuery,
 } from './sql_compiler';
+import { parseSelector, parseModifier, parseSort, parseProjection, match, applyModifier } from 'meteor/afs';
 import { POLLING_INTERVAL_MS, createObserveDriver } from './observe_driver';
 import { EventEmitter } from 'events';
 
@@ -795,7 +796,12 @@ Tinytest.add('postgres - row converter - NULL handling', (test) => {
 Tinytest.add('postgres - query builder - buildSelectQuery', (test) => {
   const schema = createTestSchema();
   const { text, values } = buildSelectQuery(
-    'posts', { published: true }, { sort: { createdAt: -1 }, limit: 10, skip: 5 }, schema
+    'posts',
+    parseSelector({ published: true }),
+    parseSort({ createdAt: -1 }),
+    null,
+    { limit: 10, skip: 5 },
+    schema
   );
   // Projection is explicit (not SELECT *). _id must always lead; the schema
   // columns and the _extra overflow JSONB column follow.
@@ -823,7 +829,7 @@ Tinytest.add('postgres - query builder - buildInsertQuery', (test) => {
 Tinytest.add('postgres - query builder - buildDeleteQuery', (test) => {
   const schema = createTestSchema();
   const { text, values } = buildDeleteQuery(
-    'posts', { _id: '1' }, schema
+    'posts', parseSelector({ _id: '1' }), schema
   );
   test.isTrue(text.includes('DELETE FROM "posts"'));
   test.isTrue(text.includes('WHERE _id = $1'));
@@ -833,7 +839,7 @@ Tinytest.add('postgres - query builder - buildDeleteQuery', (test) => {
 Tinytest.add('postgres - query builder - buildUpdateQuery (non-multi)', (test) => {
   const schema = createTestSchema();
   const { text, values } = buildUpdateQuery(
-    'posts', { published: true }, { $set: { title: 'New' } }, {}, schema
+    'posts', parseSelector({ published: true }), parseModifier({ $set: { title: 'New' } }), {}, schema
   );
   // Non-multi: should use subquery with LIMIT 1
   test.isTrue(text.includes('UPDATE "posts" SET "title" = $1'));
@@ -844,7 +850,7 @@ Tinytest.add('postgres - query builder - buildUpdateQuery (non-multi)', (test) =
 Tinytest.add('postgres - query builder - buildUpdateQuery (multi)', (test) => {
   const schema = createTestSchema();
   const { text, values } = buildUpdateQuery(
-    'posts', { published: true }, { $inc: { views: 1 } }, { multi: true }, schema
+    'posts', parseSelector({ published: true }), parseModifier({ $inc: { views: 1 } }), { multi: true }, schema
   );
   test.isTrue(text.includes('UPDATE "posts" SET'));
   test.isFalse(text.includes('LIMIT 1'));
@@ -854,7 +860,7 @@ Tinytest.add('postgres - query builder - buildUpdateQuery (multi)', (test) => {
 Tinytest.add('postgres - query builder - buildUpsertQuery', (test) => {
   const schema = createTestSchema();
   const { text, values } = buildUpsertQuery(
-    'posts', { _id: '1' }, { $set: { title: 'Upserted' } }, schema
+    'posts', parseSelector({ _id: '1' }), parseModifier({ $set: { title: 'Upserted' } }), schema
   );
   test.isTrue(text.includes('INSERT INTO "posts"'));
   test.isTrue(text.includes('ON CONFLICT (_id) DO UPDATE'));
@@ -867,7 +873,7 @@ Tinytest.add('postgres - query builder - C1 - buildUpsertQuery non-_id selector 
     views: { type: 'integer', default: 0 },
   });
   const { text, values, insertedId } = buildUpsertQuery(
-    'posts', { slug: 'foo' }, { $set: { views: 5 } }, schema
+    'posts', parseSelector({ slug: 'foo' }), parseModifier({ $set: { views: 5 } }), schema
   );
   // New behavior: a CTE with an UPDATE pass (matched row) and an INSERT
   // pass guarded by NOT EXISTS. No ON CONFLICT path — that would require
@@ -1883,9 +1889,9 @@ Tinytest.add('postgres - regression - non-multi update with sort emits ORDER BY 
   const schema = createTestSchema();
   const { text } = buildUpdateQuery(
     'T',
-    { published: true },
-    { $set: { title: 'x' } },
-    { multi: false, sort: { views: -1 } },
+    parseSelector({ published: true }),
+    parseModifier({ $set: { title: 'x' } }),
+    { multi: false, sortAST: parseSort({ views: -1 }) },
     schema
   );
   // The subquery that picks the single target row must carry ORDER BY so
@@ -1946,8 +1952,8 @@ Tinytest.add('postgres - regression - C2 rebaseParams preserves $N inside string
   const schema = createTestSchema();
   const { text, values } = buildUpdateQuery(
     'T',
-    { 'weird_$1_field': 'match-me' },
-    { $set: { title: 'new-title' } },
+    parseSelector({ 'weird_$1_field': 'match-me' }),
+    parseModifier({ $set: { title: 'new-title' } }),
     { multi: true },
     schema
   );
@@ -1962,7 +1968,7 @@ Tinytest.add('postgres - regression - C2 rebaseParams preserves $N inside string
 
 Tinytest.add('postgres - regression - C2 rebaseParams is a no-op at offset 0 (no modifier params, single WHERE)', (test) => {
   const schema = createTestSchema();
-  const { text, values } = buildDeleteQuery('T', { title: 'x' }, schema);
+  const { text, values } = buildDeleteQuery('T', parseSelector({ title: 'x' }), schema);
   test.equal(values, ['x']);
   test.isTrue(/\$1/.test(text), `expected $1 placeholder, got: ${text}`);
   test.isFalse(/\$2/.test(text), `no $2 should appear, got: ${text}`);
@@ -1972,8 +1978,8 @@ Tinytest.add('postgres - regression - C2 rebaseParams shifts multiple placeholde
   const schema = createTestSchema();
   const { text, values } = buildUpdateQuery(
     'T',
-    { title: 'old', views: 5 },
-    { $set: { title: 'new', body: 'hello' } },
+    parseSelector({ title: 'old', views: 5 }),
+    parseModifier({ $set: { title: 'new', body: 'hello' } }),
     { multi: true },
     schema
   );
@@ -2291,6 +2297,105 @@ if (hasPostgres) {
       }
     }
   );
+
+  // --------------------------------------------------------------------------
+  // Task 24: AST→SQL→result equivalence and capability-gated rejection tests
+  // --------------------------------------------------------------------------
+
+  Tinytest.addAsync('postgres - AST→SQL→result equivalence (basic)', async (test) => {
+    const table = `test_ast_eq_${Random.id(8).toLowerCase()}`;
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      name:  { type: 'text' },
+      age:   { type: 'integer' },
+      tags:  { type: 'jsonb' },
+    });
+    await provider.registerSchema(table, schema);
+    try {
+      const docs = [
+        { _id: 'a', name: 'alice', age: 30, tags: ['x', 'y'] },
+        { _id: 'b', name: 'bob',   age: 25, tags: ['y'] },
+        { _id: 'c', name: 'carol', age: 35, tags: ['z'] },
+      ];
+      for (const d of docs) await provider.insertAsync(table, d);
+
+      const selectors = [
+        { age: { $gt: 26 } },
+        { name: { $in: ['alice', 'bob'] } },
+        { tags: 'y' },
+        { $and: [{ age: { $gt: 24 } }, { age: { $lt: 31 } }] },
+      ];
+
+      for (const sel of selectors) {
+        const fromSQL = await provider.fetchResults(table, sel, {});
+        const fromJS  = docs.filter((d) => match(d, sel));
+        test.equal(
+          fromSQL.map((d) => d._id).sort(),
+          fromJS.map((d) => d._id).sort(),
+          `Selector ${JSON.stringify(sel)} mismatch`
+        );
+      }
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - modifier parity vs applyModifier', async (test) => {
+    const table = `test_mod_par_${Random.id(8).toLowerCase()}`;
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({
+      name:  { type: 'text' },
+      count: { type: 'integer' },
+      flag:  { type: 'boolean' },
+    });
+    await provider.registerSchema(table, schema);
+    try {
+      const cases = [
+        { mod: { $set:   { name: 'updated' } } },
+        { mod: { $inc:   { count: 3 } } },
+        { mod: { $unset: { flag: '' } } },
+      ];
+      for (const c of cases) {
+        const id = `doc_${Random.id(4).toLowerCase()}`;
+        const original = { _id: id, name: 'a', count: 5, flag: false };
+        await provider.insertAsync(table, original);
+        await provider.updateAsync(table, { _id: id }, c.mod, {});
+        const [fromSQL] = await provider.fetchResults(table, { _id: id }, {});
+        const fromJS = applyModifier({ ...original }, parseModifier(c.mod));
+        test.equal(fromSQL.name,  fromJS.name,  `case ${JSON.stringify(c.mod)} name mismatch`);
+        test.equal(fromSQL.count, fromJS.count, `case ${JSON.stringify(c.mod)} count mismatch`);
+        test.equal(fromSQL.flag,  fromJS.flag,  `case ${JSON.stringify(c.mod)} flag mismatch`);
+      }
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
+
+  Tinytest.addAsync('postgres - capability-gated rejection: $where', async (test) => {
+    const table = `test_capreject_${Random.id(8).toLowerCase()}`;
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
+    await provider.connect();
+    const schema = new ResolvedSchema({ name: { type: 'text' } });
+    await provider.registerSchema(table, schema);
+    try {
+      let raised = false;
+      let raisedMessage = '';
+      try {
+        await provider.fetchResults(table, { $where: function () { return true; } }, {});
+      } catch (e) {
+        raised = e.code === 'unsupported-operator' || /not supported|UnsupportedOperatorError/.test(e.message || '');
+        raisedMessage = e.message;
+      }
+      test.isTrue(raised, `expected unsupported-operator / UnsupportedOperatorError, got: ${raisedMessage}`);
+    } finally {
+      await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
+      await provider.close();
+    }
+  });
 }
 
 // ============================================================================

@@ -378,6 +378,99 @@ const Items = new AFS.Collection('items', { provider: myPostgres });
 const Items = new AFS.Collection('items');
 ```
 
+## Writing an adapter: the AST contract
+
+Adapter authors translate Meteor's collection API to a backend store. afs
+provides a normalized **AST** family — `SelectorAST`, `ModifierAST`,
+`SortAST`, `ProjectionAST` — that adapters walk to compile to native query
+syntax. Adapters that filter or modify in JS after fetch (polling adapters,
+in-memory caches) use afs's `match` and `applyModifier` directly.
+
+```js
+import {
+  parseSelector, parseModifier, parseSort, parseProjection,
+  walkSelector, walkModifier,
+  match, applyModifier,
+  AST, PRED, MOD,
+  UnsupportedOperatorError,
+} from 'meteor/afs';
+```
+
+### Selector AST shape
+
+```js
+{ type: 'And',  clauses: SelectorAST[] }
+{ type: 'Or',   clauses: SelectorAST[] }
+{ type: 'Not',  clause:  SelectorAST }
+{ type: 'Field', path: string[], predicate: { kind, ... } }
+// predicate kinds: Eq, Ne, Gt, Gte, Lt, Lte, In, Nin, Exists, Type, Regex,
+// Mod, Size, All, ElemMatch, Bits
+```
+
+Field paths are arrays (`['profile', 'name']`), never dotted strings.
+
+### Walking the AST (worked example — Redis adapter sketch)
+
+```js
+const visitor = {
+  __adapterName__: 'redis',
+  And:   (node, ctx) => node.clauses.map((c) => walkSelector(c, visitor, ctx)).reduce(intersect),
+  Or:    (node, ctx) => node.clauses.map((c) => walkSelector(c, visitor, ctx)).reduce(union),
+  Field: (node, ctx) => {
+    const key = `${ctx.collectionName}:${node.path[0]}:${node.predicate.value}`;
+    return ctx.client.smembers(key);   // example: pre-built index
+  },
+};
+
+const ast = parseSelector(rawSelector);
+const ids = await walkSelector(ast, visitor, { collectionName, client });
+```
+
+Operators outside the adapter's capability set throw
+`UnsupportedOperatorError` from `walkSelector`. Declare what the adapter
+supports in `capabilities()`:
+
+```js
+class RedisStreamProvider extends StreamProvider {
+  capabilities() {
+    return {
+      reactiveQueries: true,
+      selectorOperators: ['Eq', 'In', 'And', 'Or'],
+      modifierOperators: ['Set', 'Unset', 'Inc'],
+    };
+  }
+}
+```
+
+`FederatedCollection` consults these and rejects with `NotSupported` *before*
+dispatching, so an unsupported operator surfaces at the API call site rather
+than mid-walk.
+
+### When to use `match` / `applyModifier`
+
+For adapters that filter or modify in JS (e.g., polling adapters that fetch
+the whole collection then filter, or a snapshot diff after each poll):
+
+```js
+const ast = parseSelector(rawSelector);
+const matches = docs.filter((doc) => match(doc, ast));
+```
+
+```js
+const ast = parseModifier(rawModifier);
+applyModifier(doc, ast);   // mutates in place
+```
+
+Both functions accept either raw shapes or pre-parsed ASTs. Pre-parse in the
+adapter's hot path; the WeakMap-backed compiled-matcher cache keys on AST
+instance identity.
+
+### Reference adapter
+
+`packages/postgres/sql_compiler.js` is the worked reference: visitor objects
+that walk `SelectorAST` to emit parameterized `WHERE` clauses, walk
+`ModifierAST` to emit `SET` clauses or fall through to fetch-modify-write.
+
 ## Adapter sketches
 
 These aren't shipped implementations — they're outlines showing how different

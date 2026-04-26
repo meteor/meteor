@@ -25,8 +25,11 @@ Package.onUse(function (api) {
   // Allow-deny is needed for FederatedCollection access control
   api.use('allow-deny');
 
-  // Weak dependency on mongo - AFS works without it but integrates when available
-  api.use('mongo', { weak: true });
+  // Weak + unordered dependency on mongo. Mongo's stream provider extends
+  // AFS.StreamProvider at module-eval time, so mongo must load *after* afs.
+  // The `unordered` flag breaks the otherwise-circular load order; `weak`
+  // keeps mongo optional at runtime.
+  api.use('mongo', { weak: true, unordered: true });
 
   // Allow us to detect 'insecure' for allow/deny defaults
   api.use('insecure', { weak: true });
@@ -36,6 +39,21 @@ Package.onUse(function (api) {
 
   api.mainModule('afs-server.js', 'server');
   api.mainModule('afs-client.js', 'client');
+
+  api.addFiles([
+    'query/errors.js',
+    'query/paths.js',
+    'query/ast.js',
+    'query/parse-selector.js',
+    'query/parse-modifier.js',
+    'query/parse-sort.js',
+    'query/parse-projection.js',
+    'query/round-trip.js',
+    'query/match.js',
+    'query/apply-modifier.js',
+    'query/walk.js',
+    'query/index.js',
+  ], ['client', 'server']);
 
   api.export('AFS');
 });
@@ -51,4 +69,11 @@ Package.onTest(function (api) {
   api.addFiles('tests/registry-idgen.js', ['client', 'server']);
   api.addFiles('tests/chaos.js', 'server');
   api.addFiles('tests/teardown.js', 'server');
+  api.addFiles('tests/query-paths.js', ['client', 'server']);
+  api.addFiles('tests/query-parse.js', ['client', 'server']);
+  api.addFiles('tests/query-round-trip.js', 'server');
+  api.addFiles('tests/query-match.js', 'server');
+  api.addFiles('tests/query-modify.js', 'server');
+  api.addFiles('tests/query-walk.js', ['client', 'server']);
+  api.addFiles('tests/query-coverage.js', 'server');
 });

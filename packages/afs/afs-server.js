@@ -90,3 +90,23 @@ export {
   ChangeStream,
   ObserveMultiplexer,
 };
+
+export {
+  parseSelector,
+  parseModifier,
+  parseSort,
+  parseProjection,
+  match,
+  applyModifier,
+  walkSelector,
+  walkModifier,
+  AST,
+  PRED,
+  MOD,
+  isAST,
+  pathFromDotted,
+  pathToDotted,
+  isNumericSegment,
+  ParseError,
+  UnsupportedOperatorError,
+} from './query/index';

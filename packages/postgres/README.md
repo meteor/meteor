@@ -192,7 +192,7 @@ as `numeric` columns.
 
 `$addToSet`, `$pull`, `$pullAll`, and `$pop` always route through the
 fetch-modify-write path: the driver issues a `SELECT ... FOR UPDATE`
-under `REPEATABLE READ`, runs `LocalCollection._modify()` on the fetched
+under `REPEATABLE READ`, runs `applyModifier()` (from `meteor/afs`) on the fetched
 row, then writes it back. This is an extra round-trip per document versus
 a pure SQL `UPDATE`. Batch where possible if latency matters.
 

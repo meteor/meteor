@@ -18,7 +18,6 @@ Package.onUse(function (api) {
     'ddp',
     'tracker',
     'check',
-    'minimongo',
     'diff-sequence',
     'mongo-id',
     'id-map',

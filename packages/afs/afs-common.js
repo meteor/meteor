@@ -12,6 +12,7 @@
 import { StreamProvider, ProviderClosedError, NotImplementedError } from './provider/stream-provider';
 import { FederatedCollection } from './collection/collection';
 import { Registry } from './registry';
+import * as Query from './query/index';
 
 export const AFS_VERSION = '0.1.0';
 
@@ -23,6 +24,10 @@ export function buildCommonAFS() {
     NotImplementedError,
     Collection: FederatedCollection,
     ObjectID: MongoID.ObjectID,
+
+    // Query AST + helpers (parseSelector, parseModifier, match, applyModifier,
+    // walkSelector, walkModifier, AST/PRED/MOD constants, etc.) — see query/index.js
+    Query,
 
     // Singleton
     _registry: Registry,
