@@ -25,7 +25,10 @@ const UUID_V4_RE =
 
 // ===========================================================================
 // Registry — default-rebinding in removeProvider (registry.js:105-113)
+// (server-only — uses AFS.MockStreamProvider which throws in client unibuild)
 // ===========================================================================
+
+if (Meteor.isServer) {
 
 Tinytest.add(
   'afs - registry - removeProvider rebinds default to remaining provider',
@@ -372,6 +375,8 @@ Tinytest.add(
   }
 );
 
+} // end if (Meteor.isServer) — Registry tests
+
 // ===========================================================================
 // _createIdGenerator — STRING path (collection.js:478-481)
 // ===========================================================================
@@ -526,7 +531,10 @@ if (Meteor.isServer) {
         err = e;
       }
       test.isTrue(err instanceof Error);
-      test.equal(err.message, 'createIndexAsync is not available on this collection');
+      test.equal(
+        err.message,
+        `createIndexAsync is not available on collection "${name}"`
+      );
     }
   );
 
@@ -550,7 +558,10 @@ if (Meteor.isServer) {
         err = e;
       }
       test.isTrue(err instanceof Error);
-      test.equal(err.message, 'dropIndexAsync is not available on this collection');
+      test.equal(
+        err.message,
+        `dropIndexAsync is not available on collection "${name}"`
+      );
     }
   );
 }

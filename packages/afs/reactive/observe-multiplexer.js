@@ -120,8 +120,9 @@ export class ObserveMultiplexer {
         this._cache.applyChange[name](...args);
 
         // Clone-on-write invariant: args are broadcast by reference; any handle
-        // that may mutate MUST receive an EJSON.clone to avoid cross-handle aliasing.
-        let sharedClonedArgs = null;
+        // that may mutate MUST receive its OWN EJSON.clone — a single shared
+        // clone would still alias across handles, so a mutating handle could
+        // corrupt the view delivered to later handles in the same fan-out.
         const needsClone = this._handlesNeedCloning();
 
         // Fan out to all handles
@@ -134,12 +135,9 @@ export class ObserveMultiplexer {
               if (handle.nonMutatingCallbacks || !needsClone) {
                 callArgs = args;
               } else {
-                if (sharedClonedArgs === null) {
-                  sharedClonedArgs = args.map(a =>
-                    a !== null && typeof a === 'object' ? EJSON.clone(a) : a
-                  );
-                }
-                callArgs = sharedClonedArgs;
+                callArgs = args.map(a =>
+                  a !== null && typeof a === 'object' ? EJSON.clone(a) : a
+                );
               }
               const result = cb(...callArgs);
               if (result && typeof result === 'object' && typeof result.then === 'function') {
@@ -288,6 +286,13 @@ export class ObserveMultiplexer {
       // Wait for initial data to be ready
       await this._readyPromise;
 
+      // Drop anything captured pre-ready: those events have already been
+      // applied to the cache and will be delivered via the snapshot below.
+      // Without this reset, a stream whose initial adds fire before
+      // markReady (e.g. MockStreamProvider awaiting LocalCollection's
+      // observe-queue drain) would double-deliver every initial doc.
+      this._pendingHandles.set(id, []);
+
       // Snapshot the cache BEFORE sending initial adds. Sending directly
       // from this._cache.docs is unsafe when consumer callbacks can
       // synchronously mutate the collection: the iteration would observe
@@ -411,8 +416,10 @@ export class ObserveMultiplexer {
 
         try {
           if (handle.callbacks.addedBefore) {
-            const before = i < ids.length - 1 ? ids[i + 1] : null;
-            addCb(id, fields, before);
+            // Iterating in sort order — pass null so consumer appends.
+            // Passing ids[i+1] would reference an id not yet in the
+            // consumer's tracker, breaking OrderedDict.putBefore.
+            addCb(id, fields, null);
           } else {
             addCb(id, fields);
           }

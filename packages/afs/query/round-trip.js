@@ -18,6 +18,10 @@ export function astToRawSelector(ast) {
     case AST.NOT:
       return wrapWithNot(ast.clause);
     case AST.FIELD:
+      // Empty-path Field is the self-match form used by `$pull` bare-operator
+      // criteria like `{ $pull: { tags: { $gt: 5 } } }`. Round-tripping it
+      // under a literal '' key would not be a valid Mongo selector.
+      if (ast.path.length === 0) return predicateToRaw(ast.predicate);
       return { [pathToDotted(ast.path)]: predicateToRaw(ast.predicate) };
     case AST.WHERE:
       return { $where: ast.fn };

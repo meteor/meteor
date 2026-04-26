@@ -319,16 +319,6 @@ generateId(collectionName) {
   return uuid.v4();
 }
 
-// Convert Meteor docs to your storage format
-convertToStoreType(doc) {
-  return doc; // e.g., convert Date objects to timestamps
-}
-
-// Convert stored docs back to Meteor format
-convertFromStoreType(doc) {
-  return doc; // e.g., convert timestamps back to Dates
-}
-
 // Index management
 async createIndexAsync(collectionName, index, options) { }
 async dropIndexAsync(collectionName, indexName) { }

@@ -1,7 +1,7 @@
 import { AST, MOD, isAST } from './ast';
 import { ParseError } from './errors';
 import { pathFromDotted } from './paths';
-import { parseSelector } from './parse-selector';
+import { parseSelector, parsePullCriterion } from './parse-selector';
 import { parseSort } from './parse-sort';
 
 /**
@@ -83,13 +83,11 @@ function parseOp(op, fields, ops) {
       return;
     case '$pull':
       for (const f of Object.keys(fields)) {
-        const criterion = fields[f];
-        // $pull with an object/operator-shape → SelectorAST; with a scalar/array
-        // value → equality criterion preserved as-is.
-        const parsed = isPullSelector(criterion)
-          ? parseSelector(criterion)
-          : criterion;
-        ops.push({ kind: MOD.PULL, path: pathFromDotted(f), criterion: parsed });
+        ops.push({
+          kind: MOD.PULL,
+          path: pathFromDotted(f),
+          criterion: parsePullCriterion(fields[f]),
+        });
       }
       return;
     case '$pullAll':
@@ -155,11 +153,3 @@ function parsePushOp(field, arg) {
   };
 }
 
-function isPullSelector(value) {
-  // Operator-shape object → treat as a selector. Plain scalar / array → equality.
-  if (value === null || typeof value !== 'object') return false;
-  if (Array.isArray(value)) return false;
-  if (value instanceof Date) return false;
-  if (value instanceof RegExp) return false;
-  return true;
-}

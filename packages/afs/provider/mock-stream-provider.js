@@ -46,18 +46,21 @@ export class MockStreamProvider extends StreamProvider {
     if (!cloned._id) {
       cloned._id = this.generateId(collectionName);
     }
-    lc.insert(cloned);
+    // Use the async LC API so the observe queue drain is awaited; otherwise
+    // bridge.added fires on a later microtask and observers see stale state
+    // when the test inspects them right after the await.
+    await lc.insertAsync(cloned);
     return cloned._id;
   }
 
   async updateAsync(collectionName, selector, modifier, options = {}) {
     const lc = this._getLocalCollection(collectionName);
-    return lc.update(selector, modifier, options);
+    return lc.updateAsync(selector, modifier, options);
   }
 
   async removeAsync(collectionName, selector) {
     const lc = this._getLocalCollection(collectionName);
-    return lc.remove(selector);
+    return lc.removeAsync(selector);
   }
 
   async findOneAsync(collectionName, selector, options = {}) {
@@ -67,7 +70,7 @@ export class MockStreamProvider extends StreamProvider {
 
   async upsertAsync(collectionName, selector, modifier, options = {}) {
     const lc = this._getLocalCollection(collectionName);
-    return lc.upsert(selector, modifier, options);
+    return lc.updateAsync(selector, modifier, { ...options, upsert: true });
   }
 
   // ---------------------------------------------------------------------------
@@ -147,11 +150,18 @@ export class MockStreamProvider extends StreamProvider {
           removed(id) { stream.removed(id); },
         };
 
-    // Use Promise.resolve().then() to defer initial emission to next microtask.
-    // This ensures the ObserveMultiplexer has time to bind its listeners.
-    Promise.resolve().then(() => {
+    // Defer to the next microtask so the ObserveMultiplexer has time to bind
+    // its listeners. Use observeChangesAsync so initial adds drain (the
+    // server-side LocalCollection queue is asynchronous) before markReady,
+    // otherwise the multiplexer snapshots an empty cache and the consumer
+    // misses the seed events.
+    Promise.resolve().then(async () => {
       if (stream.isStopped()) return;
-      const lcHandle = cursor.observeChanges(bridgeCallbacks);
+      const lcHandle = await cursor.observeChangesAsync(bridgeCallbacks);
+      if (stream.isStopped()) {
+        lcHandle.stop();
+        return;
+      }
       stream.markReady();
 
       // Use onStopOrImmediate so a stop() raced during the microtask gap
@@ -178,6 +188,14 @@ export class MockStreamProvider extends StreamProvider {
 
   async dropIndexAsync(collectionName, indexName) {
     // No-op
+  }
+
+  // ---------------------------------------------------------------------------
+  // Collection drop
+  // ---------------------------------------------------------------------------
+
+  async dropCollectionAsync(collectionName) {
+    delete this._localCollections[collectionName];
   }
 
   // ---------------------------------------------------------------------------

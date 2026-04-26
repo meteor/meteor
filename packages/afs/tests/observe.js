@@ -872,12 +872,12 @@ if (Meteor.isServer) {
     stream.markReady();
 
     // Inject a hook that fires a LIVE emission in the middle of
-    // _sendInitialAdds. The live emission cannot be satisfied from the cache
-    // (reconnected is not cache-bearing), so the I5 fix ensures it is queued
-    // to the pending handle and delivered after initial adds.
-    const origSendInitialAdds = mux._sendInitialAdds.bind(mux);
-    mux._sendInitialAdds = function (handle) {
-      origSendInitialAdds(handle);
+    // _sendInitialAddsFromSnapshot. The live emission cannot be satisfied from
+    // the cache (reconnected is not cache-bearing), so the I5 fix ensures it
+    // is queued to the pending handle and delivered after initial adds.
+    const origSend = mux._sendInitialAddsFromSnapshot.bind(mux);
+    mux._sendInitialAddsFromSnapshot = function (handle, snapshot) {
+      origSend(handle, snapshot);
       // At this point the handle is not yet in _handles. Fire a live event.
       stream.markReconnected();
     };
@@ -912,7 +912,7 @@ if (Meteor.isServer) {
     handle.stop();
   });
 
-  Tinytest.addAsync('afs - observe - ordered initial adds set before=null on last and prev-id on earlier entries', async (test) => {
+  Tinytest.addAsync('afs - observe - ordered initial adds emit before=null while iterating in cache order', async (test) => {
     const stream = new AFS.ChangeStream({ collectionName: 't', selector: {} });
     const multiplexer = new AFS.ObserveMultiplexer(stream, true);
 
@@ -930,17 +930,15 @@ if (Meteor.isServer) {
       },
     });
 
-    // _sendInitialAdds walks the cache in insertion order and, for each
-    // index i, uses ids[i+1] as `before` (or null if last). So for the
-    // cache [doc1, doc2, doc3] we expect:
-    //   i=0: doc1 before doc2
-    //   i=1: doc2 before doc3
-    //   i=2: doc3 before null
+    // _sendInitialAdds walks the cache in insertion (sort) order and emits
+    // each doc with before=null — matching Minimongo's reference pattern
+    // (cursor.js:332). Passing the next id as `before` would reference an
+    // id not yet tracked by the consumer's OrderedDict, breaking putBefore.
     test.equal(events.length, 3);
     test.equal(events[0].id, 'doc1');
-    test.equal(events[0].before, 'doc2');
+    test.equal(events[0].before, null);
     test.equal(events[1].id, 'doc2');
-    test.equal(events[1].before, 'doc3');
+    test.equal(events[1].before, null);
     test.equal(events[2].id, 'doc3');
     test.equal(events[2].before, null);
 

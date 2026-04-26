@@ -31,6 +31,7 @@ const AFS = {
   MockStreamProvider,
   ChangeStream,
   ObserveMultiplexer,
+  AdaptiveEngine,
 
   // Singleton
   _engine,

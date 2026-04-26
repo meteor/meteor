@@ -25,11 +25,12 @@ Package.onUse(function (api) {
   // Allow-deny is needed for FederatedCollection access control
   api.use('allow-deny');
 
-  // Weak + unordered dependency on mongo. Mongo's stream provider extends
-  // AFS.StreamProvider at module-eval time, so mongo must load *after* afs.
-  // The `unordered` flag breaks the otherwise-circular load order; `weak`
-  // keeps mongo optional at runtime.
-  api.use('mongo', { weak: true, unordered: true });
+  // Mongo's stream provider extends AFS.StreamProvider at module-eval time,
+  // so mongo must load *after* afs. We declare no edge to mongo here — the
+  // mongo→afs weak edge alone is enough to express "mongo integrates with
+  // afs when both are present." Adding an afs→mongo edge here would form a
+  // package-level cycle that Meteor's linker refuses (a dependency cannot
+  // be both `weak` and `unordered`).
 
   // Allow us to detect 'insecure' for allow/deny defaults
   api.use('insecure', { weak: true });
@@ -59,7 +60,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['afs', 'ecmascript', 'tinytest', 'test-helpers', 'ejson', 'random', 'ddp', 'mongo', 'tracker']);
+  api.use(['afs', 'ecmascript', 'tinytest', 'ejson', 'random', 'ddp', 'mongo', 'tracker']);
   api.addFiles('tests/core.js', ['client', 'server']);
   api.addFiles('tests/crud.js', 'server');
   api.addFiles('tests/observe.js', 'server');

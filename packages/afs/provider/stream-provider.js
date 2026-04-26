@@ -46,7 +46,7 @@ export class NotImplementedError extends Error {
  *
  * Optional overrides:
  *   - findOneAsync, upsertAsync, countAsync
- *   - generateId, convertToStoreType, convertFromStoreType
+ *   - generateId
  *   - capabilities (defaults to a conservative dict; override to declare features)
  *   - rawDatabase, rawCollection
  *
@@ -322,16 +322,6 @@ export class StreamProvider {
   }
 
   // ---------------------------------------------------------------------------
-  // Type conversion
-  // ---------------------------------------------------------------------------
-
-  /** Convert a Meteor document to the store's native format before writing. */
-  convertToStoreType(doc) { return doc; }
-
-  /** Convert a document from the store's native format after reading. */
-  convertFromStoreType(doc) { return doc; }
-
-  // ---------------------------------------------------------------------------
   // Capabilities declaration
   // ---------------------------------------------------------------------------
 
@@ -552,8 +542,9 @@ export class StreamProvider {
 
     // Auto-attach the adaptive engine for metrics collection
     let detachEngine = null;
-    if (typeof AFS !== 'undefined' && AFS._engine) {
-      detachEngine = AFS._engine.attachToStream(stream);
+    const engine = global.AFS && global.AFS._engine;
+    if (engine) {
+      detachEngine = engine.attachToStream(stream);
     }
 
     const self = this;

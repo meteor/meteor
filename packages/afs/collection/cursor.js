@@ -57,8 +57,9 @@ export class AFSCursor {
     const duration = Date.now() - startTime;
 
     // Record query execution time for adaptive engine
-    if (typeof AFS !== 'undefined' && AFS._engine) {
-      AFS._engine.recordQueryExecution(this._collectionName, duration);
+    const engine = global.AFS && global.AFS._engine;
+    if (engine) {
+      engine.recordQueryExecution(this._collectionName, duration);
     }
 
     if (this._transform) {
@@ -139,6 +140,14 @@ export class AFSCursor {
   async observeAsync(callbacks) {
     // Use LocalCollection._observeFromObserveChanges for compatibility
     return LocalCollection._observeFromObserveChanges(this, callbacks);
+  }
+
+  /**
+   * Synchronous-API alias used by `LocalCollection._observeFromObserveChanges`.
+   * AFSCursor is async-first, so this returns the same promise.
+   */
+  observeChanges(callbacks, options = {}) {
+    return this.observeChangesAsync(callbacks, options);
   }
 
   /**

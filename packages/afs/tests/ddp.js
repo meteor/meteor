@@ -273,10 +273,10 @@ if (Meteor.isServer) {
       const handle = await cursor._publishCursor(sub);
 
       // Reach through to the underlying multiplexer's stream and force an error.
-      const key = EJSON.stringify({
-        ...cursor.getCursorDescription(),
-        ordered: false,
-      });
+      const key = EJSON.stringify(
+        { ...cursor.getCursorDescription(), ordered: false },
+        { canonical: true }
+      );
       const mux = provider._multiplexerCache.get(key);
       test.isTrue(!!mux, 'multiplexer cached');
       mux._stream.markError(new Error('boom'));
@@ -312,10 +312,10 @@ if (Meteor.isServer) {
       // closed-over reference directly — instead verify the cache-eviction
       // side effect (which only happens when the underlying observe handle
       // is stopped and the multiplexer's onEmpty fires).
-      const key = EJSON.stringify({
-        ...cursor.getCursorDescription(),
-        ordered: false,
-      });
+      const key = EJSON.stringify(
+        { ...cursor.getCursorDescription(), ordered: false },
+        { canonical: true }
+      );
       test.isTrue(provider._multiplexerCache.has(key), 'mux cached');
 
       await sub._runStopFns();

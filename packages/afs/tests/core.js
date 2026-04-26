@@ -32,8 +32,10 @@ Tinytest.add('afs - StreamProvider - subclass must implement methods', async (te
 });
 
 // ===========================================================================
-// MockStreamProvider Tests
+// MockStreamProvider Tests (server-only — class throws on construction in client unibuild)
 // ===========================================================================
+
+if (Meteor.isServer) {
 
 Tinytest.addAsync('afs - MockStreamProvider - insert and find', async (test) => {
   const provider = new AFS.MockStreamProvider();
@@ -269,6 +271,8 @@ Tinytest.add('afs - Registry - reset clears all state', (test) => {
   test.equal(AFS.getDefaultProvider(), null);
 });
 
+} // end if (Meteor.isServer) — MockStreamProvider + Registry tests
+
 // ===========================================================================
 // AdaptiveEngine Tests (server only)
 // ===========================================================================
@@ -381,9 +385,9 @@ if (Meteor.isServer) {
     await provider.insertAsync('observe-test', { name: 'Existing' });
 
     const added = [];
-    const cursor = provider.find('observe-test', {});
+    const cursor = new AFS.Cursor(provider, 'observe-test', {});
 
-    const handle = cursor.observeChanges({
+    const handle = await cursor.observeChangesAsync({
       added(id, fields) {
         added.push({ id, fields });
       },
@@ -1701,7 +1705,7 @@ if (Meteor.isServer) {
 
   // Task 26: AdaptiveEngine — waitForSlot resolves when slot is released (no busy-loop)
   Tinytest.addAsync('afs - AdaptiveEngine - waitForSlot resolves on release', async (test) => {
-    const engine = new AFS.getEngine().constructor({
+    const engine = new AFS.AdaptiveEngine({
       maxPendingQueries: 2,
     });
 
@@ -1730,7 +1734,7 @@ if (Meteor.isServer) {
 
   // Task 26: AdaptiveEngine — waitForSlot times out
   Tinytest.addAsync('afs - AdaptiveEngine - waitForSlot timeout', async (test) => {
-    const engine = new AFS.getEngine().constructor({
+    const engine = new AFS.AdaptiveEngine({
       maxPendingQueries: 1,
     });
 
@@ -1946,6 +1950,8 @@ Tinytest.add('afs - errors - NotImplementedError shape', (test) => {
   test.isTrue(err instanceof Error);
 });
 
+if (Meteor.isServer) {
+
 Tinytest.add('afs - ChangeStream - cursorDescription getter returns constructor arg', (test) => {
   const desc = { collectionName: 'cd-getter', selector: { x: 1 } };
   const stream = new AFS.ChangeStream(desc);
@@ -1974,6 +1980,8 @@ Tinytest.add('afs - ChangeStream - markReconnecting is no-op after stop', (test)
   stream.markReconnecting();
   test.equal(fired, 0);
 });
+
+} // end if (Meteor.isServer) — ChangeStream tests
 
 Tinytest.addAsync('afs - StreamProvider - unimplemented overrides throw NotImplementedError', async (test) => {
   class BareProvider extends AFS.StreamProvider {

@@ -8,6 +8,7 @@ import {
 import { makeClientStore, makeServerStore } from './replication-store';
 import { CollectionExtensions, installStatics } from './extensions';
 import { parseSelector, parseModifier, PRED } from '../query/index';
+import { Registry } from '../registry';
 
 /**
  * Assert that a provider's declared capabilities cover all node types in an AST.
@@ -145,8 +146,8 @@ export class FederatedCollection extends EventEmitter {
 
     this._setupAutopublish(name, options);
 
-    if (name && typeof AFS !== 'undefined') {
-      AFS.registerCollection(name, this);
+    if (name) {
+      Registry.registerCollection(name, this);
     }
 
     CollectionExtensions.applyExtensions(this, name, options);
@@ -170,8 +171,9 @@ export class FederatedCollection extends EventEmitter {
     options = this._getFindOptions(options);
 
     if (Meteor.isServer && this._provider) {
-      if (typeof AFS !== 'undefined' && AFS._engine) {
-        AFS._engine.recordAccess(this._name, selector, options);
+      const engine = global.AFS && global.AFS._engine;
+      if (engine) {
+        engine.recordAccess(this._name, selector, options);
       }
 
       const rewrittenSelector = this._rewriteSelector(selector);
@@ -384,8 +386,9 @@ export class FederatedCollection extends EventEmitter {
    * @private
    */
   _recordWrite() {
-    if (typeof AFS !== 'undefined' && AFS._engine && AFS._engine.recordWrite) {
-      AFS._engine.recordWrite(this._name);
+    const engine = global.AFS && global.AFS._engine;
+    if (engine && engine.recordWrite) {
+      engine.recordWrite(this._name);
     }
   }
 
@@ -433,12 +436,34 @@ export class FederatedCollection extends EventEmitter {
       find: (selector, options) =>
         provider.find(collectionName, selector, options),
 
-      // Mutation surfaces route through the collection's own mutators so
-      // lifecycle events and engine metrics fire in exactly one place.
-      insertAsync: (doc) => self.insertAsync(doc),
-      updateAsync: (selector, modifier, options) =>
-        self.updateAsync(selector, modifier, options),
-      removeAsync: (selector) => self.removeAsync(selector),
+      // Mutation surfaces are inlined: the replication store talks DIRECTLY
+      // to the provider (not through `self.{insert,update,remove}Async`),
+      // because the public mutators check `_isRemoteCollection()` and would
+      // re-route an applied-from-server doc back through DDP — wrong for
+      // this internal flow, and an outright throw when the test/app passes
+      // `defineMutationMethods: false`. Lifecycle events + engine metrics
+      // are emitted here so they still fire exactly once per replicated op.
+      insertAsync: async (doc) => {
+        self.emit('before:insert', { doc });
+        const id = await provider.insertAsync(collectionName, doc);
+        self.emit('after:insert', { doc, id });
+        self._recordWrite();
+        return id;
+      },
+      updateAsync: async (selector, modifier, options) => {
+        self.emit('before:update', { selector, modifier, options });
+        const result = await provider.updateAsync(collectionName, selector, modifier, options);
+        self.emit('after:update', { selector, modifier, options, result });
+        self._recordWrite();
+        return result;
+      },
+      removeAsync: async (selector) => {
+        self.emit('before:remove', { selector });
+        const result = await provider.removeAsync(collectionName, selector);
+        self.emit('after:remove', { selector, result });
+        self._recordWrite();
+        return result;
+      },
 
       countDocuments: (selector, options) =>
         provider.countAsync(collectionName, selector, options),
@@ -608,8 +633,8 @@ export class FederatedCollection extends EventEmitter {
   destroy() {
     this._stopObserversForThisCollection();
 
-    if (this._name && typeof AFS !== 'undefined') {
-      AFS.removeCollection(this._name);
+    if (this._name) {
+      Registry.removeCollection(this._name);
     }
 
     forgetLocalCollection(this._providerName, this._name);
@@ -636,8 +661,8 @@ export class FederatedCollection extends EventEmitter {
 
     this.emit('collection:dropped', { name: this._name });
 
-    if (this._name && typeof AFS !== 'undefined') {
-      AFS.removeCollection(this._name);
+    if (this._name) {
+      Registry.removeCollection(this._name);
     }
     forgetLocalCollection(this._providerName, this._name);
 

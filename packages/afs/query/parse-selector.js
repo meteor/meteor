@@ -44,8 +44,14 @@ export function parseSelector(raw, opts = {}) {
 }
 
 function parseObjectSelector(obj, opts) {
+  const keys = Object.keys(obj);
+  // Hoist a sole top-level $and: the wrapper AND would otherwise nest
+  // around the $and's own AND, producing redundant single-clause wrappers.
+  if (keys.length === 1 && keys[0] === '$and') {
+    return parseTopLevelOperator('$and', obj.$and, opts);
+  }
   const clauses = [];
-  for (const key of Object.keys(obj)) {
+  for (const key of keys) {
     const value = obj[key];
     if (key.startsWith('$')) {
       clauses.push(parseTopLevelOperator(key, value, opts));
@@ -54,6 +60,35 @@ function parseObjectSelector(obj, opts) {
     }
   }
   return { type: AST.AND, clauses };
+}
+
+/**
+ * Parse a `$pull` criterion. The criterion can be:
+ *   - a scalar / array / Date / RegExp → equality, returned as-is
+ *   - a document with non-`$` keys → full sub-selector against array elements
+ *   - a bare operator-object like `{ $gt: 5 }` → element-self predicate(s)
+ *
+ * The bare-operator case is what minimongo's Matcher silently absorbs;
+ * `parseSelector` rejects it because `$gt` is not a top-level operator.
+ * We route it through `parseFieldClause` with an empty path so the result
+ * is a `Field` AST node whose path is `[]` (interpreted as "this element").
+ */
+export function parsePullCriterion(criterion, opts = {}) {
+  if (criterion === null || typeof criterion !== 'object') return criterion;
+  if (Array.isArray(criterion)) return criterion;
+  if (criterion instanceof Date || criterion instanceof RegExp) return criterion;
+  if (isAST(criterion)) return criterion;
+
+  const ks = Object.keys(criterion);
+  if (ks.length > 0 && ks.every((k) => k.startsWith('$'))) {
+    // All keys are operators. If any are top-level, parseSelector handles
+    // them; otherwise treat as a self-match operator object.
+    const TOP_LEVEL = ['$and', '$or', '$nor', '$where', '$expr', '$text', '$comment'];
+    if (!ks.some((k) => TOP_LEVEL.includes(k))) {
+      return parseFieldClause('', criterion, opts);
+    }
+  }
+  return parseSelector(criterion, opts);
 }
 
 function parseTopLevelOperator(op, value, opts) {
