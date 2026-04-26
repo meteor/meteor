@@ -962,7 +962,7 @@ if (hasPostgres) {
       const id = await provider.insertAsync(table, { title: 'Hello', views: 10 });
       test.isTrue(typeof id === 'string');
 
-      const results = await provider._fetchResults(table, { _id: id }, {});
+      const results = await provider.fetchResults(table, { _id: id }, {});
       test.equal(results.length, 1);
       test.equal(results[0].title, 'Hello');
       test.equal(results[0].views, 10);
@@ -1110,7 +1110,7 @@ if (hasPostgres) {
       await provider.insertAsync(table, { title: 'D', order: 4 });
 
       // Sort ascending, skip 1, limit 2
-      const results = await provider._fetchResults(table, {}, {
+      const results = await provider.fetchResults(table, {}, {
         sort: { order: 1 },
         skip: 1,
         limit: 2,
@@ -1178,7 +1178,7 @@ if (hasPostgres) {
       );
       test.equal(affected, 2);
 
-      const all = await provider._fetchResults(table, { published: true }, {});
+      const all = await provider.fetchResults(table, { published: true }, {});
       test.equal(all.length, 3);
     } finally {
       await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
@@ -1208,7 +1208,7 @@ if (hasPostgres) {
         metadata: { author: 'Bob', rating: 3 },
       });
 
-      const results = await provider._fetchResults(table, { 'metadata.author': 'Alice' }, {});
+      const results = await provider.fetchResults(table, { 'metadata.author': 'Alice' }, {});
       test.equal(results.length, 1);
       test.equal(results[0].title, 'Post 1');
     } finally {
@@ -1239,11 +1239,11 @@ if (hasPostgres) {
         metadata: 'plain text',
       });
 
-      const stringMatches = await provider._fetchResults(table, { metadata: { $type: 'string' } }, {});
+      const stringMatches = await provider.fetchResults(table, { metadata: { $type: 'string' } }, {});
       test.equal(stringMatches.length, 1);
       test.equal(stringMatches[0].title, 'String metadata');
 
-      const injectedOperandMatches = await provider._fetchResults(table, {
+      const injectedOperandMatches = await provider.fetchResults(table, {
         metadata: { $type: "string' OR '1'='1" },
       }, {});
       test.equal(injectedOperandMatches.length, 0);
@@ -1387,7 +1387,7 @@ if (hasPostgres) {
       test.isTrue(second.insertedId === undefined || second.insertedId === null);
 
       // Exactly one row should exist.
-      const rows = await provider._fetchResults(table, {}, {});
+      const rows = await provider.fetchResults(table, {}, {});
       test.equal(rows.length, 1);
       test.equal(rows[0]._id, 'alpha');
       test.equal(rows[0].slug, 'second');
@@ -1417,7 +1417,7 @@ if (hasPostgres) {
       test.equal(res.numberAffected, 1);
       test.isTrue(typeof res.insertedId === 'string' && res.insertedId.length > 0);
 
-      const rows = await provider._fetchResults(table, {}, {});
+      const rows = await provider.fetchResults(table, {}, {});
       test.equal(rows.length, 1);
       test.equal(rows[0].slug, 'foo');
       test.equal(rows[0].views, 10);
@@ -1452,7 +1452,7 @@ if (hasPostgres) {
         `expected insertedId undefined/null, got ${res.insertedId}`);
 
       // Regression guard for the duplicate-insert bug: exactly ONE row.
-      const rows = await provider._fetchResults(table, {}, {});
+      const rows = await provider.fetchResults(table, {}, {});
       test.equal(rows.length, 1);
       test.equal(rows[0]._id, existingId);
       test.equal(rows[0].slug, 'foo');
@@ -2485,7 +2485,7 @@ Tinytest.addAsync(
   'postgres - observe_driver - I-4 - cache dedupes logically-equal descriptions',
   async (test) => {
     // Minimal provider shape — observe_driver only touches _url,
-    // _connection.setupListenNotify / on / removeListener, and _fetchResults.
+    // _connection.setupListenNotify / on / removeListener, and fetchResults.
     const provider = {
       _url: `postgres://cache-key-test-${Random.id(8)}`,
       _connection: {
@@ -2495,7 +2495,7 @@ Tinytest.addAsync(
         removeListener: () => {},
         emit: () => {},
       },
-      _fetchResults: async () => [],
+      fetchResults: async () => [],
     };
 
     const desc1 = {

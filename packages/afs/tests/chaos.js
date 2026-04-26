@@ -231,7 +231,7 @@ if (Meteor.isServer) {
 
     // Forcibly inject a reset followed by a full re-emit of current state.
     async injectReset(collectionName) {
-      const docs = await this._fetchResults(collectionName, {}, {});
+      const docs = await this.fetchResults(collectionName, {}, {});
       for (const stream of this._streams) {
         if (stream._cursorDescription.collectionName !== collectionName) continue;
         if (stream.isStopped()) continue;

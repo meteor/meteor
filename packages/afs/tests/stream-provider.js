@@ -552,7 +552,7 @@ if (Meteor.isServer) {
         }
         // startObserving is unused in this test but required by the contract.
         startObserving() { return new AFS.ChangeStream({ collectionName: 'x', selector: {} }); }
-        _supportsEventEmitter() { return true; }
+        supportsEventEmitter() { return true; }
         async close() {
           // Subclass-specific cleanup first.
           subclassCleanupRan = true;

@@ -1044,4 +1044,20 @@ if (Meteor.isServer) {
       await provider.close();
     }
   );
+
+  Tinytest.add('afs - ObserveMultiplexer - cursorDescription delegates to underlying stream', (test) => {
+    const desc = { collectionName: 'mux-desc', selector: {} };
+    const stream = new AFS.ChangeStream(desc);
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false, { onEmpty() {} });
+    test.equal(multiplexer.cursorDescription, desc);
+    stream.stop();
+  });
+
+  Tinytest.add('afs - ObserveMultiplexer - stop() stops the underlying stream', (test) => {
+    const stream = new AFS.ChangeStream({ collectionName: 'mux-stop' });
+    const multiplexer = new AFS.ObserveMultiplexer(stream, false, { onEmpty() {} });
+    test.isFalse(stream.isStopped());
+    multiplexer.stop();
+    test.isTrue(stream.isStopped());
+  });
 }

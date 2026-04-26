@@ -228,11 +228,11 @@ into whatever your database understands.
 
 ### Fetching query results
 
-AFS cursors call `provider._fetchResults()` internally. Implement this to
+AFS cursors call `provider.fetchResults()` internally. Implement this to
 run the actual query:
 
 ```js
-async _fetchResults(collectionName, selector, options) {
+async fetchResults(collectionName, selector, options) {
   // Run your query, return an array of plain JS objects.
   // Each object must have an _id field.
   const rows = await this._client.query(collectionName, selector, options);
@@ -426,7 +426,7 @@ class KafkaProvider extends AFS.StreamProvider {
   }
 
   // find() queries the materialized in-memory view
-  async _fetchResults(collectionName, selector) {
+  async fetchResults(collectionName, selector) {
     // Filter this._materialized using selector
   }
 
@@ -452,7 +452,7 @@ class RestProvider extends AFS.StreamProvider {
     this._baseUrl = baseUrl;
   }
 
-  async _fetchResults(collectionName, selector) {
+  async fetchResults(collectionName, selector) {
     const params = selectorToQueryString(selector);
     const res = await fetch(`${this._baseUrl}/${collectionName}?${params}`);
     return res.json();
@@ -461,7 +461,7 @@ class RestProvider extends AFS.StreamProvider {
   // Reactivity: poll on interval
   async observeChanges(cursorDescription, ordered, callbacks) {
     const poll = setInterval(async () => {
-      const current = await this._fetchResults(/* ... */);
+      const current = await this.fetchResults(/* ... */);
       // Diff against previous results, fire callbacks
     }, 5000);
     return { stop: () => clearInterval(poll) };

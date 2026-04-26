@@ -559,11 +559,11 @@ if (Meteor.isServer) {
 // StreamProvider default countAsync (stream-provider.js:154-157)
 // ===========================================================================
 //
-// A provider that only overrides _fetchResults (not countAsync) must still
+// A provider that only overrides fetchResults (not countAsync) must still
 // be able to report counts — the base class fetches and returns .length.
 
 Tinytest.addAsync(
-  'afs - misc - StreamProvider default countAsync returns length of _fetchResults',
+  'afs - misc - StreamProvider default countAsync returns length of fetchResults',
   async (test) => {
     class FetchOnlyProvider extends AFS.StreamProvider {
       constructor() {
@@ -574,7 +574,7 @@ Tinytest.addAsync(
           { _id: 'c', kind: 'y' },
         ];
       }
-      async _fetchResults(collectionName, selector, options) {
+      async fetchResults(collectionName, selector, options) {
         if (!selector || Object.keys(selector).length === 0) {
           return this._docs.slice();
         }

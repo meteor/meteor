@@ -1,4 +1,4 @@
-import { StreamProvider, ProviderClosedError } from './provider/stream-provider';
+import { StreamProvider, ProviderClosedError, NotImplementedError } from './provider/stream-provider';
 import { MockStreamProvider } from './provider/mock-stream-provider';
 import { AFSCursor } from './collection/cursor';
 import { FederatedCollection } from './collection/collection';
@@ -81,6 +81,7 @@ export {
   AFS,
   StreamProvider,
   ProviderClosedError,
+  NotImplementedError,
   AFSCursor,
   FederatedCollection,
   AdaptiveEngine,

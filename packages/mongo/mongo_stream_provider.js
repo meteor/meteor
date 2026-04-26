@@ -92,7 +92,7 @@ export class MongoStreamProvider extends StreamProviderBase {
    * Fetch query results. Used internally by AFSCursor.
    * @private
    */
-  async _fetchResults(collectionName, selector, options) {
+  async fetchResults(collectionName, selector, options) {
     const cursor = this._mongo.find(collectionName, selector, options);
     return cursor.fetchAsync();
   }

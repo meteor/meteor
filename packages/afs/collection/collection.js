@@ -579,13 +579,13 @@ export class FederatedCollection extends EventEmitter {
     if (!cache) return;
     const stale = [];
     for (const [key, multiplexer] of cache) {
-      const desc = multiplexer._stream && multiplexer._stream._cursorDescription;
+      const desc = multiplexer.cursorDescription;
       if (desc && desc.collectionName === this._name) {
         stale.push([key, multiplexer]);
       }
     }
     for (const [, multiplexer] of stale) {
-      try { multiplexer._stream.stop(); } catch (_e) { /* best-effort */ }
+      try { multiplexer.stop(); } catch (_e) { /* best-effort */ }
     }
     for (const [key] of stale) {
       cache.delete(key);

@@ -49,7 +49,7 @@ export class AFSCursor {
    */
   async fetchAsync() {
     const startTime = Date.now();
-    const results = await this._provider._fetchResults(
+    const results = await this._provider.fetchResults(
       this._collectionName,
       this._selector,
       this._options
@@ -108,7 +108,7 @@ export class AFSCursor {
         { ...this._options, skip: undefined, limit: undefined }
       );
     }
-    const docs = await this._provider._fetchResults(
+    const docs = await this._provider.fetchResults(
       this._collectionName,
       this._selector,
       { ...this._options, skip: undefined, limit: undefined }
@@ -153,7 +153,7 @@ export class AFSCursor {
       callbacks.movedBefore
     );
 
-    if (this._provider._supportsEventEmitter()) {
+    if (this._provider.supportsEventEmitter()) {
       // New EventEmitter path: provider returns a ChangeStream,
       // and the provider's _getMultiplexer handles caching and fan-out
       return this._provider._getMultiplexer(

@@ -826,7 +826,7 @@ if (Meteor.isServer) {
     await provider.insertAsync('ee-test', { name: 'Bob' });
 
     // Verify provider supports EventEmitter
-    test.isTrue(provider._supportsEventEmitter());
+    test.isTrue(provider.supportsEventEmitter());
 
     const cursor = new AFS.Cursor(provider, 'ee-test', {});
     const added = [];
@@ -873,12 +873,12 @@ if (Meteor.isServer) {
     handle.stop();
   });
 
-  Tinytest.add('afs - StreamProvider - _supportsEventEmitter defaults false', (test) => {
+  Tinytest.add('afs - StreamProvider - supportsEventEmitter defaults false', (test) => {
     class TestProvider extends AFS.StreamProvider {
       constructor() { super({ name: 'test' }); }
     }
     const provider = new TestProvider();
-    test.isFalse(provider._supportsEventEmitter());
+    test.isFalse(provider.supportsEventEmitter());
   });
 
   Tinytest.add('afs - StreamProvider - createChangeStream returns ChangeStream', (test) => {
@@ -1937,3 +1937,68 @@ if (Meteor.isServer) {
     }
   );
 }
+
+Tinytest.add('afs - errors - NotImplementedError shape', (test) => {
+  const err = new AFS.NotImplementedError('Foo', 'bar');
+  test.equal(err.name, 'NotImplementedError');
+  test.equal(err.code, 'not-implemented');
+  test.equal(err.message, 'Foo.bar() must be implemented');
+  test.isTrue(err instanceof Error);
+});
+
+Tinytest.add('afs - ChangeStream - cursorDescription getter returns constructor arg', (test) => {
+  const desc = { collectionName: 'cd-getter', selector: { x: 1 } };
+  const stream = new AFS.ChangeStream(desc);
+  test.equal(stream.cursorDescription, desc);
+  stream.stop();
+});
+
+Tinytest.add('afs - ChangeStream - CHANGE_EVENTS.RECONNECTING is "reconnecting"', (test) => {
+  test.equal(AFS.ChangeStream.CHANGE_EVENTS.RECONNECTING, 'reconnecting');
+});
+
+Tinytest.add('afs - ChangeStream - markReconnecting emits reconnecting event', (test) => {
+  const stream = new AFS.ChangeStream({ collectionName: 'reconn-test' });
+  let fired = 0;
+  stream.on('reconnecting', () => { fired += 1; });
+  stream.markReconnecting();
+  test.equal(fired, 1);
+  stream.stop();
+});
+
+Tinytest.add('afs - ChangeStream - markReconnecting is no-op after stop', (test) => {
+  const stream = new AFS.ChangeStream({ collectionName: 'reconn-stopped' });
+  stream.stop();
+  let fired = 0;
+  stream.on('reconnecting', () => { fired += 1; });
+  stream.markReconnecting();
+  test.equal(fired, 0);
+});
+
+Tinytest.addAsync('afs - StreamProvider - unimplemented overrides throw NotImplementedError', async (test) => {
+  class BareProvider extends AFS.StreamProvider {
+    constructor() { super({ name: 'bare' }); }
+  }
+  const p = new BareProvider();
+
+  const calls = [
+    () => p.connect(),
+    () => p.insertAsync('c', {}),
+    () => p.updateAsync('c', {}, { $set: {} }),
+    () => p.removeAsync('c', {}),
+    () => p.find('c'),
+    () => p.fetchResults('c', {}, {}),
+    () => p.observeChanges({ collectionName: 'c' }, false, {}),
+    () => p.startObserving({ collectionName: 'c' }, false),
+    () => p.createIndexAsync('c', {}),
+    () => p.dropIndexAsync('c', 'i'),
+  ];
+
+  for (const call of calls) {
+    let caught = null;
+    try { await call(); } catch (e) { caught = e; }
+    test.isNotNull(caught, 'expected throw from unimplemented method');
+    test.equal(caught.code, 'not-implemented');
+    test.equal(caught.name, 'NotImplementedError');
+  }
+});

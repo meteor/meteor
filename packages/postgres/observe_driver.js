@@ -314,7 +314,7 @@ class PostgresObserveDriver {
 
       let results;
       try {
-        results = await this._provider._fetchResults(collectionName, selector, options || {});
+        results = await this._provider.fetchResults(collectionName, selector, options || {});
       } catch (e) {
         fetchErr = e;
         if (isConnectionError(e)) {

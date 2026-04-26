@@ -185,7 +185,7 @@ export class PostgresStreamProvider extends StreamProvider {
 
   async findOneAsync(collectionName, selector, options = {}) {
     this._assertOpen('findOneAsync');
-    const results = await this._fetchResults(collectionName, selector, { ...options, limit: 1 });
+    const results = await this.fetchResults(collectionName, selector, { ...options, limit: 1 });
     return results[0];
   }
 
@@ -212,8 +212,8 @@ export class PostgresStreamProvider extends StreamProvider {
    * @param {Object} options
    * @returns {Promise<Object[]>}
    */
-  async _fetchResults(collectionName, selector, options = {}) {
-    this._assertOpen('_fetchResults');
+  async fetchResults(collectionName, selector, options = {}) {
+    this._assertOpen('fetchResults');
     const schema = this._getSchema(collectionName);
     await this._connection.ensureTable(collectionName, schema);
     const { text, values } = buildSelectQuery(collectionName, selector, options, schema);
@@ -236,7 +236,7 @@ export class PostgresStreamProvider extends StreamProvider {
   // EventEmitter-based reactive support
   // ---------------------------------------------------------------------------
 
-  _supportsEventEmitter() {
+  supportsEventEmitter() {
     return true;
   }
 

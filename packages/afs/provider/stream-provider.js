@@ -13,18 +13,47 @@ export class ProviderClosedError extends Error {
 }
 
 /**
- * StreamProvider - Abstract base class for all AFS data source adapters.
+ * Thrown when a base-class method that the provider was expected to override
+ * is called without an override. Distinct from `ProviderClosedError` (provider
+ * was closed) and any future operational errors.
+ */
+export class NotImplementedError extends Error {
+  constructor(className, methodName) {
+    super(`${className}.${methodName}() must be implemented`);
+    this.name = 'NotImplementedError';
+    this.code = 'not-implemented';
+  }
+}
+
+/**
+ * StreamProvider — abstract base class for all AFS data source adapters.
  *
- * Each data source (MongoDB, PostgreSQL, Redis, Kafka, etc.) implements this
- * interface to participate in Meteor's reactive data system. A StreamProvider
- * handles all communication with the underlying data store.
+ * afs is a Mongo-DX mapping contract: every adapter implements the same
+ * Mongo-shaped CRUD and observe surface. The adapter author decides HOW the
+ * adapter satisfies each method (Postgres compiles to SQL, Redis maps to its
+ * primitives, etc.) — but the surface is uniform so Meteor app developers
+ * write identical code regardless of which backend the Collection lives in.
  *
- * Subclasses MUST implement: connect, close, insertAsync, updateAsync,
- * removeAsync, find, _fetchResults, and exactly one reactive path
- * (either `observeChanges` OR `startObserving` + `_supportsEventEmitter`).
+ * ## Provider implementer's contract
  *
- * Subclasses SHOULD implement: findOneAsync, upsertAsync, createIndexAsync,
- * dropIndexAsync, rawDatabase, rawCollection, capabilities.
+ * Required overrides:
+ *   - connect(), close()
+ *   - insertAsync(), updateAsync(), removeAsync()
+ *   - find(), fetchResults()
+ *   - One reactive path:
+ *       observeChanges()  OR  (startObserving() + supportsEventEmitter() returning true)
+ *   - createIndexAsync(), dropIndexAsync()
+ *
+ * Optional overrides:
+ *   - findOneAsync, upsertAsync, countAsync
+ *   - generateId, convertToStoreType, convertFromStoreType
+ *   - capabilities (defaults to a conservative dict; override to declare features)
+ *   - rawDatabase, rawCollection
+ *
+ * Protected hooks (call but don't override unless extending):
+ *   - _assertOpen, _getMultiplexer, _createMultiplexer, _closeMultiplexers
+ *
+ * Unimplemented required overrides throw `NotImplementedError`.
  */
 export class StreamProvider {
   /**
@@ -48,7 +77,7 @@ export class StreamProvider {
   // ---------------------------------------------------------------------------
 
   /**
-   * @private
+   * @protected
    * Throws ProviderClosedError if this provider has been closed.
    */
   _assertOpen(methodName) {
@@ -63,7 +92,7 @@ export class StreamProvider {
    */
   async connect() {
     this._assertOpen('connect');
-    throw new Error(`${this.constructor.name}.connect() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'connect');
   }
 
   /**
@@ -83,6 +112,7 @@ export class StreamProvider {
   /**
    * Stop all cached multiplexers and their underlying ChangeStreams.
    * Called automatically from close().
+   * @protected
    */
   _closeMultiplexers() {
     for (const [, multiplexer] of this._multiplexerCache) {
@@ -113,7 +143,7 @@ export class StreamProvider {
    */
   async insertAsync(collectionName, doc) {
     this._assertOpen('insertAsync');
-    throw new Error(`${this.constructor.name}.insertAsync() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'insertAsync');
   }
 
   /**
@@ -128,7 +158,7 @@ export class StreamProvider {
    */
   async updateAsync(collectionName, selector, modifier, options) {
     this._assertOpen('updateAsync');
-    throw new Error(`${this.constructor.name}.updateAsync() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'updateAsync');
   }
 
   /**
@@ -139,7 +169,7 @@ export class StreamProvider {
    */
   async removeAsync(collectionName, selector) {
     this._assertOpen('removeAsync');
-    throw new Error(`${this.constructor.name}.removeAsync() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'removeAsync');
   }
 
   /**
@@ -182,7 +212,7 @@ export class StreamProvider {
    */
   async countAsync(collectionName, selector, options) {
     this._assertOpen('countAsync');
-    const docs = await this._fetchResults(collectionName, selector, options || {});
+    const docs = await this.fetchResults(collectionName, selector, options || {});
     return docs.length;
   }
 
@@ -193,9 +223,9 @@ export class StreamProvider {
    * @param {Object} options
    * @returns {Promise<Array>}
    */
-  async _fetchResults(collectionName, selector, options) {
-    this._assertOpen('_fetchResults');
-    throw new Error(`${this.constructor.name}._fetchResults() must be implemented`);
+  async fetchResults(collectionName, selector, options) {
+    this._assertOpen('fetchResults');
+    throw new NotImplementedError(this.constructor.name, 'fetchResults');
   }
 
   // ---------------------------------------------------------------------------
@@ -211,7 +241,7 @@ export class StreamProvider {
    */
   find(collectionName, selector, options) {
     this._assertOpen('find');
-    throw new Error(`${this.constructor.name}.find() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'find');
   }
 
   // ---------------------------------------------------------------------------
@@ -220,9 +250,9 @@ export class StreamProvider {
 
   /**
    * LEGACY callback-based reactive path. Implement this OR
-   * {@link startObserving}+{@link _supportsEventEmitter}, never both.
+   * {@link startObserving}+{@link supportsEventEmitter}, never both.
    *
-   * The cursor dispatches on `_supportsEventEmitter()` — returning `true`
+   * The cursor dispatches on `supportsEventEmitter()` — returning `true`
    * routes through the EventEmitter path and skips `observeChanges` entirely.
    * New providers should prefer the EventEmitter path: it participates in
    * the provider's multiplexer cache, snapshot-plus-replay late-join, and
@@ -237,7 +267,7 @@ export class StreamProvider {
    */
   async observeChanges(cursorDescription, ordered, callbacks, options) {
     this._assertOpen('observeChanges');
-    throw new Error(`${this.constructor.name}.observeChanges() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'observeChanges');
   }
 
   // ---------------------------------------------------------------------------
@@ -253,7 +283,7 @@ export class StreamProvider {
    */
   async createIndexAsync(collectionName, index, options) {
     this._assertOpen('createIndexAsync');
-    throw new Error(`${this.constructor.name}.createIndexAsync() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'createIndexAsync');
   }
 
   /**
@@ -264,7 +294,7 @@ export class StreamProvider {
    */
   async dropIndexAsync(collectionName, indexName) {
     this._assertOpen('dropIndexAsync');
-    throw new Error(`${this.constructor.name}.dropIndexAsync() must be implemented`);
+    throw new NotImplementedError(this.constructor.name, 'dropIndexAsync');
   }
 
   // ---------------------------------------------------------------------------
@@ -339,7 +369,7 @@ export class StreamProvider {
    * Override to return true when the provider implements startObserving().
    * @returns {boolean}
    */
-  _supportsEventEmitter() {
+  supportsEventEmitter() {
     return false;
   }
 
@@ -382,9 +412,9 @@ export class StreamProvider {
    */
   startObserving(cursorDescription, ordered) {
     this._assertOpen('startObserving');
-    throw new Error(
-      `${this.constructor.name}.startObserving() must be implemented ` +
-      `when _supportsEventEmitter() returns true`
+    throw new NotImplementedError(
+      this.constructor.name,
+      'startObserving (when supportsEventEmitter() returns true)'
     );
   }
 
@@ -397,6 +427,7 @@ export class StreamProvider {
    * @param {Object} cursorDescription
    * @param {boolean} ordered
    * @returns {Promise<ObserveMultiplexer>}
+   * @protected
    */
   async _getMultiplexer(cursorDescription, ordered) {
     // Canonical stringify so semantically-equal cursor descriptions with
@@ -429,7 +460,7 @@ export class StreamProvider {
    * stop() fired synchronously during initial-adds cannot leave a stopped
    * multiplexer pinned in the cache. The onEmpty handler guards against
    * stale-reference deletions via an identity check on the cache entry.
-   * @private
+   * @protected
    */
   async _createMultiplexer(cursorDescription, ordered, key) {
     const stream = this.startObserving(cursorDescription, ordered);
@@ -440,7 +471,7 @@ export class StreamProvider {
     // initial adds or markReady before we could attach listeners — any
     // data events that preceded this line have already been silently
     // dropped. Warn so the provider author notices.
-    if (stream._ready && typeof Meteor !== 'undefined') {
+    if (stream.isReady() && typeof Meteor !== 'undefined') {
       Meteor._debug(
         `${this.constructor.name}.startObserving violated the sync-emission ` +
         `contract: stream is already ready before listeners could attach. ` +
@@ -500,13 +531,13 @@ export class StreamProvider {
     if (!name) return;
     const stale = [];
     for (const [key, multiplexer] of this._multiplexerCache) {
-      const desc = multiplexer._stream && multiplexer._stream._cursorDescription;
+      const desc = multiplexer.cursorDescription;
       if (desc && desc.collectionName === name) {
         stale.push([key, multiplexer]);
       }
     }
     for (const [, multiplexer] of stale) {
-      try { multiplexer._stream.stop(); } catch (_e) { /* best-effort */ }
+      try { multiplexer.stop(); } catch (_e) { /* best-effort */ }
     }
     for (const [key] of stale) {
       this._multiplexerCache.delete(key);

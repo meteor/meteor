@@ -67,6 +67,24 @@ export class ObserveMultiplexer {
   }
 
   /**
+   * Cursor description of the underlying stream. Public window onto
+   * `_stream.cursorDescription` so afs-internal callers (e.g.
+   * `StreamProvider.stopObserversForCollection`) don't reach into the
+   * multiplexer's private stream reference.
+   */
+  get cursorDescription() {
+    return this._stream && this._stream.cursorDescription;
+  }
+
+  /**
+   * Stop the underlying stream. Convenience delegator that prevents callers
+   * from reaching into `_stream` directly.
+   */
+  stop() {
+    if (this._stream) this._stream.stop();
+  }
+
+  /**
    * Determine whether the shared event args need to be cloned before fan-out.
    *
    * Returns false (skip the clone) when every handle has

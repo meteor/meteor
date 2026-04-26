@@ -9,7 +9,7 @@
  * `listCollections()` only needs to be made once.
  */
 
-import { StreamProvider, ProviderClosedError } from './provider/stream-provider';
+import { StreamProvider, ProviderClosedError, NotImplementedError } from './provider/stream-provider';
 import { FederatedCollection } from './collection/collection';
 import { Registry } from './registry';
 
@@ -20,6 +20,7 @@ export function buildCommonAFS() {
     // Classes always safe to expose
     StreamProvider,
     ProviderClosedError,
+    NotImplementedError,
     Collection: FederatedCollection,
     ObjectID: MongoID.ObjectID,
 

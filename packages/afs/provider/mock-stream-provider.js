@@ -94,7 +94,7 @@ export class MockStreamProvider extends StreamProvider {
    * Fetch results for AFSCursor. Used internally.
    * @private
    */
-  async _fetchResults(collectionName, selector, options) {
+  async fetchResults(collectionName, selector, options) {
     const lc = this._getLocalCollection(collectionName);
     return lc.find(selector, options).fetch();
   }
@@ -119,7 +119,7 @@ export class MockStreamProvider extends StreamProvider {
   // EventEmitter-based reactive support
   // ---------------------------------------------------------------------------
 
-  _supportsEventEmitter() {
+  supportsEventEmitter() {
     return true;
   }
 

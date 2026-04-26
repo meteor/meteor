@@ -17,6 +17,7 @@
  *   - movedBefore(id, before)   — ordered: doc moved position
  *   - ready()                   — initial result set fully sent
  *   - error(err)                — query/connection error
+ *   - reconnecting()            — provider attempting to reconnect
  *   - reconnected()             — provider reconnected after disconnect
  *   - reset()                   — full result set invalidated
  *   - paused()                  — observer paused (e.g., during batch)
@@ -44,6 +45,7 @@ export const CHANGE_EVENTS = Object.freeze({
   RESET: 'reset',
   PAUSED: 'paused',
   RESUMED: 'resumed',
+  RECONNECTING: 'reconnecting',
   RECONNECTED: 'reconnected',
   STOP: 'stop',
 });
@@ -108,6 +110,11 @@ export class ChangeStream extends EventEmitter {
     this.emit('error', err);
   }
 
+  markReconnecting() {
+    if (this._stopped) return;
+    this.emit('reconnecting');
+  }
+
   markReconnected() {
     if (this._stopped) return;
     this.emit('reconnected');
@@ -135,6 +142,15 @@ export class ChangeStream extends EventEmitter {
 
   isReady()   { return this._ready; }
   isStopped() { return this._stopped; }
+
+  /**
+   * The cursor description this stream was opened with. Read-only — returns
+   * the same object the constructor was given. Public window onto the
+   * private `_cursorDescription` field; consumers that need to inspect the
+   * query (e.g. multiplexer cache eviction by collection) should use this
+   * getter instead of reaching into `_cursorDescription`.
+   */
+  get cursorDescription() { return this._cursorDescription; }
 
   /**
    * Register `fn` to run on stream stop — synchronously if the stream is
@@ -170,3 +186,8 @@ export class ChangeStream extends EventEmitter {
     this.removeAllListeners();
   }
 }
+
+// Expose canonical event-name table as a static so consumers reaching the
+// class via the AFS namespace (AFS.ChangeStream.CHANGE_EVENTS) get the same
+// frozen object as the named export.
+ChangeStream.CHANGE_EVENTS = CHANGE_EVENTS;
