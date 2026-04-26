@@ -50,4 +50,5 @@ Package.onTest(function (api) {
   api.addFiles('tests/adaptive.js', 'server');
   api.addFiles('tests/registry-idgen.js', ['client', 'server']);
   api.addFiles('tests/chaos.js', 'server');
+  api.addFiles('tests/teardown.js', 'server');
 });

@@ -39,7 +39,7 @@ import {
   buildDeleteQuery,
   buildUpsertQuery,
 } from './sql_compiler';
-import { POLLING_INTERVAL_MS, getObserveDriver, dropCachedDriversForProvider } from './observe_driver';
+import { POLLING_INTERVAL_MS, createObserveDriver } from './observe_driver';
 import { EventEmitter } from 'events';
 
 // ---------------------------------------------------------------------------
@@ -2267,17 +2267,23 @@ if (hasPostgres) {
 
         // Drive markReset() directly on the underlying observe-driver stream
         // so we exercise the code path without simulating a real disconnect.
-        const driver = getObserveDriver(
+        // createObserveDriver returns { stream, teardown }; we drive markReset
+        // on the stream and call teardown ourselves so the standalone polling
+        // timer this driver started is cleaned up (this driver is NOT going
+        // through afs's multiplexer cache, so afs's teardown wiring doesn't
+        // apply to it).
+        const { stream, teardown } = createObserveDriver(
           { collectionName: table, selector: {}, options: {} },
           false,
           provider
         );
-        test.isTrue(!!driver._stream, 'driver has a ChangeStream');
+        test.isTrue(!!stream, 'factory returned a ChangeStream');
         let resetFired = false;
-        driver._stream.on('reset', () => { resetFired = true; });
-        driver._stream.markReset();
+        stream.on('reset', () => { resetFired = true; });
+        stream.markReset();
         test.isTrue(resetFired, 'markReset() emitted reset');
 
+        teardown();
         handle.stop();
       } finally {
         await provider._connection.query(`DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`);
@@ -2479,49 +2485,6 @@ Tinytest.addAsync(
   }
 );
 
-// I-4: _driverCache key must be canonical so cursor descriptions with
-// differently-ordered keys don't over-allocate drivers.
-Tinytest.addAsync(
-  'postgres - observe_driver - I-4 - cache dedupes logically-equal descriptions',
-  async (test) => {
-    // Minimal provider shape — observe_driver only touches _url,
-    // _connection.setupListenNotify / on / removeListener, and fetchResults.
-    const provider = {
-      _url: `postgres://cache-key-test-${Random.id(8)}`,
-      _connection: {
-        setupListenNotify: async () => {},
-        removeListenNotify: async () => {},
-        on: () => {},
-        removeListener: () => {},
-        emit: () => {},
-      },
-      fetchResults: async () => [],
-    };
-
-    const desc1 = {
-      collectionName: 'c',
-      selector: { a: 1, b: 2 },
-      options: { limit: 10, skip: 0 },
-    };
-    const desc2 = {
-      collectionName: 'c',
-      options: { skip: 0, limit: 10 },
-      selector: { b: 2, a: 1 },
-    };
-
-    const s1 = getObserveDriver(desc1, false, provider);
-    const s2 = getObserveDriver(desc2, false, provider);
-
-    test.isTrue(
-      s1 === s2,
-      'same ChangeStream instance for logically-equal descriptions'
-    );
-
-    // Clean up timers + cache so the test harness doesn't leak.
-    dropCachedDriversForProvider(provider);
-  }
-);
-
 // M-4: close()'s `disconnected` event must fire BEFORE internal state is
 // cleared, so listeners can read _notifyCallbacks / _knownTables in their
 // handler to decide how to react.
@@ -2548,6 +2511,70 @@ Tinytest.addAsync(
     // And cleared afterward:
     test.equal(conn._knownTables.size, 0);
     test.equal(conn._notifyCallbacks.size, 0);
+  }
+);
+
+// After the driver-caching hoist: provider.close() must trigger the
+// safety-net teardown path in afs, which calls our driver's teardown,
+// which clears the polling interval. We assert no further polling
+// happens for a short window after close.
+Tinytest.addAsync(
+  'postgres - observe_driver - provider.close() stops polling for live observes',
+  async (test) => {
+    const url = process.env.MONGO_URL || process.env.POSTGRES_URL;
+    if (!url) {
+      // Skip silently in environments without a Postgres URL.
+      return;
+    }
+    const provider = new PostgresStreamProvider(url);
+    await provider.connect();
+    const table = `t_close_${Random.id(6).toLowerCase()}`;
+    try {
+      await provider._connection.query(
+        `CREATE TABLE IF NOT EXISTS ${quoteIdent(table)} ` +
+        `(_id text PRIMARY KEY, n int)`
+      );
+
+      const handle = await provider.observeChanges(
+        { collectionName: table, selector: {}, options: {} },
+        false,
+        { added() {}, changed() {}, removed() {} }
+      );
+      // Make sure the driver actually started polling before we close.
+      await new Promise(r => setTimeout(r, POLLING_INTERVAL_MS + 50));
+
+      // Count queries that happen AFTER close. If teardown ran, the polling
+      // interval has been cleared and this count must stay at zero.
+      let postCloseQueries = 0;
+      const origQuery = provider._connection.query.bind(provider._connection);
+      provider._connection.query = (...args) => {
+        postCloseQueries += 1;
+        return origQuery(...args);
+      };
+
+      await provider.close();
+      // Wait long enough for at least one poll tick.
+      await new Promise(r => setTimeout(r, POLLING_INTERVAL_MS * 2 + 50));
+
+      test.equal(
+        postCloseQueries,
+        0,
+        'no polling queries should fire after provider.close() — teardown ' +
+        'must have cleared the interval via afs safety-net listener'
+      );
+
+      try { handle.stop(); } catch (e) { /* multiplexer already stopped */ }
+    } finally {
+      try {
+        // Reconnect briefly only to drop the table.
+        const cleanup = new PostgresStreamProvider(url);
+        await cleanup.connect();
+        await cleanup._connection.query(
+          `DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`
+        );
+        await cleanup.close();
+      } catch (e) { /* best effort */ }
+    }
   }
 );
 

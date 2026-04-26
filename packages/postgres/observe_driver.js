@@ -6,20 +6,16 @@
  * using DiffSequence. LISTEN/NOTIFY triggers immediate re-poll
  * (debounced) for low-latency reactivity.
  *
- * Emits changes into an AFS.ChangeStream instead of manually
- * managing observer callbacks. The ChangeStream + ObserveMultiplexer
- * handle fan-out to N consumers.
- *
- * Includes driver caching — identical cursor descriptions
- * share a single driver instance.
+ * Emits changes into an AFS.ChangeStream. The ChangeStream is wrapped by
+ * afs's ObserveMultiplexer for fan-out to N consumers; afs owns the
+ * subscription lifecycle (refcount, teardown on last-consumer detach,
+ * cleanup on provider close) via the `{ stream, teardown }` return shape
+ * of `startObserving`. This module exports `createObserveDriver` as the
+ * single entry point; the `PostgresObserveDriver` class itself is a
+ * private implementation detail.
  */
 
-// TODO: postgres_stream_provider.js close() should import and call
-// dropCachedDriversForProvider(this) to evict this module's cached drivers
-// when a provider is torn down.
-
 import { ChangeStream } from 'meteor/afs';
-import { Random } from 'meteor/random';
 
 // Minimum 100ms to avoid hot loops if a misconfigured env var is provided.
 const _parsedPollingInterval = parseInt(
@@ -48,72 +44,11 @@ function isConnectionError(err) {
     /connection terminated|connection closed|connection ended/i.test(err.message || '');
 }
 
-// Module-scoped: drivers are keyed by provider URL; multiple providers with distinct URLs never collide.
-const _driverCache = new Map();
-
-/**
- * Get or create an observe driver for a cursor description.
- * Returns the driver's ChangeStream for consumers to listen on.
- *
- * @param {Object} cursorDescription
- * @param {boolean} ordered
- * @param {Object} provider - PostgresStreamProvider
- * @returns {ChangeStream}
- */
-export function getObserveDriver(cursorDescription, ordered, provider) {
-  // Key by provider identity so two providers (e.g. two different pools or
-  // connection URLs) don't collide in the module-level cache.
-  const providerId =
-    provider._url ||
-    (provider._cacheKey = provider._cacheKey || Random.id());
-  // Canonical stringification: sort keys recursively so two logically-equal
-  // cursor descriptions with differently-ordered keys ({a,b} vs {b,a}) share
-  // a cache entry — otherwise we over-allocate drivers and each one opens
-  // its own LISTEN subscription + polling loop.
-  const key = EJSON.stringify(
-    { providerId, ...cursorDescription, ordered },
-    { canonical: true }
-  );
-
-  if (_driverCache.has(key)) {
-    const driver = _driverCache.get(key);
-    if (!driver._stopped) {
-      return driver._stream;
-    }
-    _driverCache.delete(key);
-  }
-
-  const driver = new PostgresObserveDriver(cursorDescription, ordered, provider, key);
-  _driverCache.set(key, driver);
-  return driver._stream;
-}
-
-/**
- * Drop all cached drivers that belong to the given provider. Intended to be
- * called from `postgres_stream_provider.js` `close()` so a provider teardown
- * evicts its drivers (rather than leaving them wired to a closed connection).
- *
- * @param {Object} provider
- */
-export function dropCachedDriversForProvider(provider) {
-  for (const [key, driver] of _driverCache) {
-    if (driver._provider === provider) {
-      _driverCache.delete(key);
-      try {
-        driver.stop();
-      } catch (e) {
-        // best-effort; stop() is idempotent
-      }
-    }
-  }
-}
-
 class PostgresObserveDriver {
-  constructor(cursorDescription, ordered, provider, cacheKey) {
+  constructor(cursorDescription, ordered, provider) {
     this._cursorDescription = cursorDescription;
     this._ordered = ordered;
     this._provider = provider;
-    this._cacheKey = cacheKey;
     this._stopped = false;
     this._pollTimer = null;
     this._notifyDebounceTimer = null;
@@ -123,11 +58,6 @@ class PostgresObserveDriver {
 
     // Create the ChangeStream that this driver emits into
     this._stream = new ChangeStream(cursorDescription);
-
-    // Clean up when the stream is stopped externally
-    this._stream.on('stop', () => {
-      this.stop();
-    });
 
     // Current result state for diffing
     this._lastResults = ordered ? [] : new IdMap(MongoID.idStringify, MongoID.idParse);
@@ -427,7 +357,7 @@ class PostgresObserveDriver {
   }
 
   /**
-   * Stop the driver — clear timers, UNLISTEN, remove from cache.
+   * Stop the driver — clear timers, UNLISTEN. afs runs `stream.stop()` after this returns.
    */
   stop() {
     if (this._stopped) return;
@@ -463,13 +393,24 @@ class PostgresObserveDriver {
         .catch(e => Log.error('Postgres: UNLISTEN error:', e));
       this._notifyCallback = null;
     }
-
-    // Stop the ChangeStream (if not already stopped)
-    if (!this._stream.isStopped()) {
-      this._stream.stop();
-    }
-
-    // Remove from driver cache
-    _driverCache.delete(this._cacheKey);
   }
+}
+
+/**
+ * Construct a postgres observe driver and return it bundled with a teardown
+ * closure for afs. afs invokes `teardown` exactly once when the multiplexer's
+ * refcount drops to zero or the provider closes; afs always calls
+ * `stream.stop()` afterward.
+ *
+ * @param {Object} cursorDescription
+ * @param {boolean} ordered
+ * @param {Object} provider - PostgresStreamProvider instance
+ * @returns {{ stream: ChangeStream, teardown: Function }}
+ */
+export function createObserveDriver(cursorDescription, ordered, provider) {
+  const driver = new PostgresObserveDriver(cursorDescription, ordered, provider);
+  return {
+    stream: driver._stream,
+    teardown: () => driver.stop(),
+  };
 }

@@ -21,7 +21,7 @@ import {
 } from './sql_compiler';
 import { quoteIdent } from './schema';
 import crypto from 'crypto';
-import { getObserveDriver, dropCachedDriversForProvider } from './observe_driver';
+import { createObserveDriver } from './observe_driver';
 
 // Postgres NAMEDATALEN = 64 bytes; any identifier longer than 63 bytes is
 // silently truncated. For index names that causes CREATE/DROP drift (you
@@ -70,14 +70,6 @@ export class PostgresStreamProvider extends StreamProvider {
     if (this._state === 'closed') return;
 
     this._closeMultiplexers();
-
-    // Drop any observe drivers cached for this provider so they don't
-    // hold references to the about-to-be-closed connection.
-    try {
-      dropCachedDriversForProvider(this);
-    } catch (e) {
-      // Best effort — the export may not exist yet in partial-merge states.
-    }
 
     if (this._connection) {
       // Proactively release the LISTEN client's channels so a pooled
@@ -241,7 +233,7 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   startObserving(cursorDescription, ordered) {
-    return getObserveDriver(cursorDescription, ordered, this);
+    return createObserveDriver(cursorDescription, ordered, this);
   }
 
   // ---------------------------------------------------------------------------

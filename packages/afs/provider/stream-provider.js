@@ -460,10 +460,81 @@ export class StreamProvider {
    * stop() fired synchronously during initial-adds cannot leave a stopped
    * multiplexer pinned in the cache. The onEmpty handler guards against
    * stale-reference deletions via an identity check on the cache entry.
+   *
+   * Provider teardown contract:
+   *   `startObserving` may return either a bare `ChangeStream` (legacy form,
+   *   used by mock and mongo providers) or `{ stream, teardown }` (new form,
+   *   used by providers that own resources — polling timers, LISTEN handlers,
+   *   reconnect listeners — that must be released when the subscription's
+   *   refcount hits zero). afs guarantees `teardown` is invoked at most once
+   *   per `startObserving` return, with errors caught and logged. Teardown
+   *   precedes `stream.stop()` on the eviction (onEmpty) and construction-
+   *   failure paths; on `_closeMultiplexers` and provider self-stop paths,
+   *   a safety-net `stream.once('stop', …)` listener fires teardown during
+   *   stream stop.
    * @protected
    */
   async _createMultiplexer(cursorDescription, ordered, key) {
-    const stream = this.startObserving(cursorDescription, ordered);
+    const result = this.startObserving(cursorDescription, ordered);
+
+    // Discriminate the union return type: bare ChangeStream (legacy) or
+    // { stream, teardown } (new). Reject anything else with a TypeError
+    // naming the offending provider class.
+    let stream, providerTeardown;
+    if (result instanceof ChangeStream) {
+      stream = result;
+      providerTeardown = null;
+    } else if (
+      result &&
+      result.stream instanceof ChangeStream &&
+      typeof result.teardown === 'function'
+    ) {
+      stream = result.stream;
+      providerTeardown = result.teardown;
+    } else {
+      throw new TypeError(
+        `${this.constructor.name}.startObserving must return a ChangeStream ` +
+        `or { stream: ChangeStream, teardown: Function }; got ${
+          result === null ? 'null' : typeof result
+        }`
+      );
+    }
+
+    // Wrap teardown: at-most-once + error catch. afs owns the guard so
+    // providers don't have to write their own.
+    let teardownInvoked = false;
+    const safeTeardown = () => {
+      if (teardownInvoked || !providerTeardown) return;
+      teardownInvoked = true;
+      try {
+        providerTeardown();
+      } catch (e) {
+        if (typeof Meteor !== 'undefined' && Meteor._debug) {
+          Meteor._debug(
+            `${this.constructor.name}.startObserving teardown threw:`,
+            e
+          );
+        }
+      }
+    };
+
+    // Defensive: a contract-violating provider that synchronously stops
+    // the stream inside startObserving would have its 'stop' listener
+    // registered too late to fire. Run teardown explicitly and bail.
+    if (stream.isStopped()) {
+      safeTeardown();
+      throw new Error(
+        `${this.constructor.name}.startObserving returned an already-stopped stream`
+      );
+    }
+
+    // Safety net: any path ending in stream.stop() runs teardown. Covers
+    // _closeMultiplexers (which bypasses onEmpty by stopping the stream
+    // directly) and provider-initiated fatal stops. Onset is non-issue
+    // because the at-most-once flag short-circuits redundant calls.
+    if (providerTeardown) {
+      stream.once('stop', safeTeardown);
+    }
 
     // Contract check: the provider MUST NOT emit synchronously from
     // startObserving (see the JSDoc on startObserving for the full rule).
@@ -496,11 +567,17 @@ export class StreamProvider {
           if (self._multiplexerCache.get(key) !== multiplexer) return;
           self._multiplexerCache.delete(key);
           if (detachEngine) detachEngine();
+          // Explicit ordering: teardown BEFORE stream.stop() on the normal
+          // eviction path. The safety-net once-listener will then fire
+          // during stream.stop(), but at-most-once makes it a no-op.
+          safeTeardown();
           stream.stop();
         },
       });
     } catch (err) {
       if (detachEngine) detachEngine();
+      // Same explicit ordering on the construction-failure path.
+      safeTeardown();
       stream.stop();
       throw err;
     }

@@ -226,6 +226,75 @@ class MyProvider extends AFS.StreamProvider {
 That's the core contract. AFS calls these methods; you translate them
 into whatever your database understands.
 
+### Optional: EventEmitter path (`startObserving`)
+
+Providers that have a natural push channel (LISTEN/NOTIFY, Redis pub/sub,
+Kafka, change streams) can implement `startObserving` instead of (or in
+addition to) `observeChanges`. afs handles fan-out and refcounting via
+its `ObserveMultiplexer`; you just emit changes into a `ChangeStream`.
+
+```js
+import { AFS } from 'meteor/afs';
+
+class MyProvider extends AFS.StreamProvider {
+  supportsEventEmitter() { return true; }
+
+  startObserving(cursorDescription, ordered) {
+    const stream = new AFS.ChangeStream(cursorDescription);
+
+    // Defer initial emission to the next microtask so afs has time to
+    // attach listeners (sync emission would silently drop early events).
+    Promise.resolve().then(async () => {
+      const initial = await this._fetchInitial(cursorDescription);
+      for (const doc of initial) stream.added(doc._id, doc);
+      stream.markReady();
+    });
+
+    // Set up your push channel — the bits that need cleaning up later.
+    const timer = setInterval(() => this._poll(stream, cursorDescription), 1000);
+    const onNotify = (msg) => stream.changed(msg.id, msg.fields);
+    this._bus.on('change', onNotify);
+
+    // Bundle the stream with a teardown closure. afs invokes teardown
+    // exactly once when the subscription's last consumer detaches OR
+    // when the provider closes. afs always calls `stream.stop()` after
+    // teardown returns — don't call it yourself.
+    return {
+      stream,
+      teardown: () => {
+        clearInterval(timer);
+        this._bus.removeListener('change', onNotify);
+      },
+    };
+  }
+}
+```
+
+A provider may also return a bare `ChangeStream` (no teardown) if it has
+no per-subscription resources to release — `MockStreamProvider` and
+`MongoStreamProvider` both do. afs detects which form was returned via
+`instanceof ChangeStream`.
+
+afs's contract:
+
+- **Teardown ordering:** runs *before* `stream.stop()` on the normal
+  eviction (last-consumer-detach) and construction-failure paths. On
+  the provider-close and provider-self-stop paths a safety-net listener
+  fires teardown during stream stop.
+- **At-most-once:** afs guarantees teardown is invoked at most once per
+  `startObserving` return. You don't need to write your own guard.
+- **Errors:** A throw from teardown is caught and logged via
+  `Meteor._debug`; `stream.stop()` still runs. One bad teardown can't
+  strand a stream.
+- **Garbage returns:** Anything other than `ChangeStream` or
+  `{ stream: ChangeStream, teardown: Function }` raises a `TypeError`
+  naming your provider class. Fail-fast.
+- **No sync emission:** Don't call `stream.added`/`changed`/`markReady`
+  synchronously inside `startObserving` — defer to the next microtask.
+  afs needs the call to return so it can attach listeners; sync emission
+  silently drops events. afs warns via `Meteor._debug` if the stream is
+  already ready when `startObserving` returns.
+
 ### Fetching query results
 
 AFS cursors call `provider.fetchResults()` internally. Implement this to
@@ -500,6 +569,17 @@ const Sessions = new AFS.Collection('sessions', { provider: redisProvider });
 
 Both collections work identically from the client's perspective. The
 client doesn't know or care which database backs each collection.
+
+### Subscription dedup is per provider instance
+
+afs caches multiplexers per `(cursorDescription, ordered)` *within a
+single provider*. Constructing two providers that point at the same
+backend results in two independent caches and two physical subscriptions
+(e.g. two polling timers, two LISTEN handlers). This is intentional: the
+alternative — module-global dedup keyed by backend URL — couples the
+lifecycles of unrelated providers and produces silent termination bugs
+when one closes. Application code that wants a single physical
+subscription should singleton the provider.
 
 ## The dev server pattern
 
