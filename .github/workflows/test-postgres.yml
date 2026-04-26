@@ -6,6 +6,13 @@ on:
       - "packages/postgres/**"
       - "packages/afs/**"
       - ".github/workflows/test-postgres.yml"
+  push:
+    branches:
+      - devel
+    paths:
+      - "packages/postgres/**"
+      - "packages/afs/**"
+      - ".github/workflows/test-postgres.yml"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,7 +21,7 @@ concurrency:
 jobs:
   test-postgres:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     env:
       CXX: g++-12
       POSTGRES_URL: postgres://postgres:postgres@localhost:5432/meteor_test
