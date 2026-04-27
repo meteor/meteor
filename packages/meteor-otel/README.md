@@ -60,6 +60,8 @@ Out of the box, the package provides:
 - **Host metrics**: CPU, memory, network, disk
 - **Node.js runtime metrics**: Event loop, GC, heap usage
 
+> Note: Automatic instrumentation of core Node.js modules (such as `http`) and common drivers (MongoDB, etc.) is **not** yet provided out of the box by this package. For now, you must configure any desired instrumentations manually (see [Custom Instrumentations](#custom-instrumentations) below) and ensure you initialize OpenTelemetry **before** importing the modules you want instrumented.
+
 ### 2. DDP Roundtrip Tracing
 
 Track the full roundtrip from method call to DDP publish:
