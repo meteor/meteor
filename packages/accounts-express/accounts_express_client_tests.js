@@ -162,6 +162,7 @@ if (Meteor.isClient) {
   Tinytest.addAsync('accounts-express - Meteor.fetch - works with session storage', async (test) => {
     const originalFetch = window.fetch;
     const originalOptions = Accounts._options;
+    const originalStorageLocation = Accounts.storageLocation;
 
     try {
       cleanUp();
@@ -183,6 +184,7 @@ if (Meteor.isClient) {
     } finally {
       window.fetch = originalFetch;
       Accounts._options = originalOptions;
+      Accounts.storageLocation = originalStorageLocation;
       Meteor.logout();
     }
   });
@@ -299,4 +301,36 @@ if (Meteor.isClient) {
       Meteor.logout();
     }
   });
+
+  // --- Authorization header preservation ---
+
+  Tinytest.addAsync('accounts-express - Meteor.fetch - does not clobber caller-supplied Authorization', async (test) => {
+    const originalFetch = window.fetch;
+
+    try {
+      const { username, token } = await loginNewUser();
+      test.isTrue(!!token, 'Login token should be available');
+
+      window.fetch = async (url, options = {}) => {
+        const headers = options.headers;
+        test.equal(
+          headers.get('Authorization'),
+          'Bearer caller-supplied-key',
+          'Caller-supplied Authorization must take precedence over the login token',
+        );
+        return mockResponse();
+      };
+
+      const response = await Meteor.fetch(testUrl, {
+        headers: { Authorization: 'Bearer caller-supplied-key' },
+      });
+      test.isTrue(response.ok);
+
+      await Meteor.callAsync('removeAccountsExpressTestUser', username);
+    } finally {
+      window.fetch = originalFetch;
+      Meteor.logout();
+    }
+  });
+
 }

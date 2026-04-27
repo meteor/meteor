@@ -16,7 +16,7 @@ export function createAuthFetch(originalFetch) {
 
     if (auth) {
       const token = Accounts._storedLoginToken();
-      if (token) {
+      if (token && !headers.has('Authorization')) {
         headers.set('Authorization', `Bearer ${token}`);
       }
 

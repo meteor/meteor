@@ -39,7 +39,7 @@ export function createAuthFetch(originalFetch) {
         }
       }
 
-      if (token) {
+      if (token && !headers.has('Authorization')) {
         headers.set('Authorization', `Bearer ${token}`);
       }
     }

@@ -631,6 +631,22 @@ if (Meteor.isServer) {
     }
   });
 
+  // --- Authorization header preservation ---
+
+  Tinytest.addAsync('accounts-express - createAuthFetch - does not clobber caller-supplied Authorization', async (test) => {
+    const { wrapped, capture } = buildCapturingFetch();
+
+    await _CurrentEndpointInvocation.withValue(
+      { userId: 'u1', loginToken: 'context-tok' },
+      () => wrapped(Meteor.absoluteUrl('/api/internal'), {
+        headers: { Authorization: 'Bearer caller-key' },
+      })
+    );
+
+    test.equal(capture.headers.get('Authorization'), 'Bearer caller-key',
+      'Caller-supplied Authorization must win over the implicit context token');
+  });
+
   // Test that a cleared cookie results in unauthenticated access
   Tinytest.addAsync('accounts-express - cookie roundtrip - cleared cookie results in unauthenticated', async (test) => {
     const { userId, token } = await createUserWithToken();
