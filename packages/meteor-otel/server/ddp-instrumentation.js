@@ -10,7 +10,15 @@ import { trace, SpanStatusCode, context } from '@opentelemetry/api';
 /* global DDPServer */
 
 let ddpHookInstalled = false;
+// pendingSpans maps `${collection}:${id}` -> SpanInfo[] (FIFO queue).
+// We use a queue rather than a single entry per key because two concurrent
+// roundtrips for the same document (e.g., insert followed quickly by update,
+// or two callers racing) would otherwise overwrite each other and leak the
+// earlier span. With a queue, the DDP `added` hook dequeues the oldest
+// matching span, while explicit `fail`/`end`/timeout paths remove the
+// specific span by identity so out-of-order completion still works.
 const pendingSpans = new Map();
+let pendingSpansCount = 0;
 
 // Hard cap on the number of pending roundtrip spans we hold in memory. Each
 // entry is created by `trackDocument` and is normally cleared by the DDP
@@ -22,6 +30,36 @@ const MAX_PENDING_SPANS = Number(process.env.OTEL_DDP_MAX_PENDING_SPANS) > 0
   ? Number(process.env.OTEL_DDP_MAX_PENDING_SPANS)
   : 10000;
 let pendingSpansOverflowWarned = false;
+
+function enqueueSpanInfo(key, spanInfo) {
+  let queue = pendingSpans.get(key);
+  if (!queue) {
+    queue = [];
+    pendingSpans.set(key, queue);
+  }
+  queue.push(spanInfo);
+  pendingSpansCount += 1;
+}
+
+function dequeueSpanInfo(key) {
+  const queue = pendingSpans.get(key);
+  if (!queue || queue.length === 0) return null;
+  const spanInfo = queue.shift();
+  pendingSpansCount -= 1;
+  if (queue.length === 0) pendingSpans.delete(key);
+  return spanInfo;
+}
+
+function removeSpanInfo(key, span) {
+  const queue = pendingSpans.get(key);
+  if (!queue) return false;
+  const index = queue.findIndex((entry) => entry.span === span);
+  if (index < 0) return false;
+  queue.splice(index, 1);
+  pendingSpansCount -= 1;
+  if (queue.length === 0) pendingSpans.delete(key);
+  return true;
+}
 
 // Cap on the number of argument types captured per call. Beyond this point we
 // only record the count to keep span attribute cardinality bounded — high
@@ -187,9 +225,17 @@ export function installDDPHooks() {
   DDPServer._Session.prototype.send = function send(payload, ...rest) {
     if (payload?.msg === 'added' && payload.collection && payload.id) {
       const key = `${payload.collection}:${payload.id}`;
-      const spanInfo = pendingSpans.get(key);
+      // Match the *oldest* pending span for this document (FIFO). With a
+      // queue, two concurrent trackDocument calls for the same key both end
+      // up associated with their own roundtrip and neither is silently
+      // overwritten.
+      const spanInfo = dequeueSpanInfo(key);
 
       if (spanInfo) {
+        if (spanInfo.timer) {
+          clearTimeout(spanInfo.timer);
+          spanInfo.timer = null;
+        }
         spanInfo.span.addEvent('ddp.send.added', {
           'ddp.session.id': this.id,
           'ddp.collection': payload.collection,
@@ -197,11 +243,6 @@ export function installDDPHooks() {
         });
         spanInfo.span.setStatus({ code: SpanStatusCode.OK });
         spanInfo.span.end();
-        pendingSpans.delete(key);
-
-        if (spanInfo.timer) {
-          clearTimeout(spanInfo.timer);
-        }
       }
     }
 
@@ -277,7 +318,7 @@ export function createRoundtripTracer(tracerName) {
           // Refuse to enqueue when at capacity. End the span as ERROR rather
           // than holding onto it; the alternative is silently leaking memory
           // when many trackDocument calls never see their DDP 'added' message.
-          if (pendingSpans.size >= MAX_PENDING_SPANS) {
+          if (pendingSpansCount >= MAX_PENDING_SPANS) {
             if (!pendingSpansOverflowWarned) {
               pendingSpansOverflowWarned = true;
               console.warn(
@@ -297,25 +338,22 @@ export function createRoundtripTracer(tracerName) {
           span.setAttribute('meteor.doc.id', docId);
 
           const spanInfo = { span, timer: null };
-          pendingSpans.set(trackedKey, spanInfo);
+          enqueueSpanInfo(trackedKey, spanInfo);
 
           clearTimer();
           timer = setTimeout(() => {
-            const currentInfo = pendingSpans.get(trackedKey);
-            // Ensure this timeout still owns the entry: another trackDocument
-            // call (or a successful ddp 'added' completion) may have replaced
-            // or cleared it before this fired.
-            if (!currentInfo || currentInfo.span !== span || currentInfo.timer !== timer) {
-              return;
+            // Defensive: a re-entrant trackDocument call could have rotated
+            // out our spanInfo before this fires. Only act if our specific
+            // entry still owns the timer.
+            if (spanInfo.timer !== timer) return;
+            if (removeSpanInfo(trackedKey, span)) {
+              span.setStatus({
+                code: SpanStatusCode.ERROR,
+                message: 'Timeout waiting for DDP added message',
+              });
+              span.end();
+              spanInfo.timer = null;
             }
-
-            span.setStatus({
-              code: SpanStatusCode.ERROR,
-              message: 'Timeout waiting for DDP added message',
-            });
-            span.end();
-            currentInfo.timer = null;
-            pendingSpans.delete(trackedKey);
           }, timeoutMs);
 
           spanInfo.timer = timer;
@@ -330,7 +368,7 @@ export function createRoundtripTracer(tracerName) {
           clearTimer();
 
           if (trackedKey) {
-            pendingSpans.delete(trackedKey);
+            removeSpanInfo(trackedKey, span);
           }
 
           const status = { code: SpanStatusCode.ERROR };
@@ -380,7 +418,7 @@ export function createRoundtripTracer(tracerName) {
         end() {
           clearTimer();
           if (trackedKey) {
-            pendingSpans.delete(trackedKey);
+            removeSpanInfo(trackedKey, span);
           }
           span.setStatus({ code: SpanStatusCode.OK });
           span.end();
