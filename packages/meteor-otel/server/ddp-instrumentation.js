@@ -12,6 +12,17 @@ import { trace, SpanStatusCode, context } from '@opentelemetry/api';
 let ddpHookInstalled = false;
 const pendingSpans = new Map();
 
+// Hard cap on the number of pending roundtrip spans we hold in memory. Each
+// entry is created by `trackDocument` and is normally cleared by the DDP
+// 'added' hook or by the per-span timeout. If publication errors or buggy
+// callers prevent cleanup, this cap stops the map from growing unbounded.
+// New entries beyond the limit are dropped (the span ends as ERROR with a
+// dedicated reason) and a single warning is logged.
+const MAX_PENDING_SPANS = Number(process.env.OTEL_DDP_MAX_PENDING_SPANS) > 0
+  ? Number(process.env.OTEL_DDP_MAX_PENDING_SPANS)
+  : 10000;
+let pendingSpansOverflowWarned = false;
+
 // Cap on the number of argument types captured per call. Beyond this point we
 // only record the count to keep span attribute cardinality bounded — high
 // cardinality on per-call attributes can blow up storage on the backend.
@@ -226,6 +237,24 @@ export function createRoundtripTracer(tracerName) {
          */
         trackDocument(collection, docId) {
           if (!docId) return;
+
+          // Refuse to enqueue when at capacity. End the span as ERROR rather
+          // than holding onto it; the alternative is silently leaking memory
+          // when many trackDocument calls never see their DDP 'added' message.
+          if (pendingSpans.size >= MAX_PENDING_SPANS) {
+            if (!pendingSpansOverflowWarned) {
+              pendingSpansOverflowWarned = true;
+              console.warn(
+                `[meteor-otel] pendingSpans reached MAX_PENDING_SPANS=${MAX_PENDING_SPANS}; new roundtrip spans will be ended as ERROR. Override via OTEL_DDP_MAX_PENDING_SPANS.`
+              );
+            }
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: 'pendingSpans capacity exceeded',
+            });
+            span.end();
+            return;
+          }
 
           trackedKey = `${collection}:${docId}`;
           span.setAttribute('meteor.collection', collection);

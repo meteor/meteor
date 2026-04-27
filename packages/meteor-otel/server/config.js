@@ -18,6 +18,9 @@
  *   on DDP spans (default: user-agent,x-forwarded-for,x-real-ip,accept-language,host).
  *   Set to an empty string to disable header capture entirely. Useful for
  *   regulatory environments (e.g., GDPR) that disallow certain headers.
+ * - OTEL_DDP_MAX_PENDING_SPANS: Hard cap on simultaneously pending roundtrip
+ *   spans (default: 10000). Prevents unbounded memory growth when documents
+ *   are tracked but the matching DDP 'added' message never arrives.
  */
 
 function parseOptionalPositiveInt(value) {
