@@ -17,13 +17,29 @@ const pendingSpans = new Map();
 // cardinality on per-call attributes can blow up storage on the backend.
 const MAX_PARAM_TYPES = 10;
 
-const SAFE_HEADER_KEYS = [
+const DEFAULT_SAFE_HEADER_KEYS = [
   'user-agent',
   'x-forwarded-for',
   'x-real-ip',
   'accept-language',
   'host',
 ];
+
+// Resolve the list of headers to capture from `OTEL_DDP_CAPTURED_HEADERS`.
+// Empty string disables header capture entirely. Anything else is parsed as a
+// comma-separated allowlist (case-insensitive). Some of these headers may
+// contain PII (user-agent, forwarded IPs, etc.) and tighter regulatory
+// environments (e.g., GDPR) may want to override the default.
+function resolveSafeHeaderKeys() {
+  const raw = process.env.OTEL_DDP_CAPTURED_HEADERS;
+  if (raw === undefined) return DEFAULT_SAFE_HEADER_KEYS;
+  return raw
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+const SAFE_HEADER_KEYS = resolveSafeHeaderKeys();
 
 function summarizeArgTypes(args) {
   if (!Array.isArray(args)) return [];

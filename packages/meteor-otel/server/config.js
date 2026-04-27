@@ -14,6 +14,10 @@
  * - OTEL_BSP_MAX_EXPORT_BATCH_SIZE: BatchSpanProcessor max export batch size (optional)
  * - OTEL_BSP_SCHEDULED_DELAY_MS: BatchSpanProcessor scheduled delay (ms, optional)
  * - OTEL_BSP_EXPORT_TIMEOUT_MS: BatchSpanProcessor export timeout (ms, optional)
+ * - OTEL_DDP_CAPTURED_HEADERS: Comma-separated list of HTTP headers to capture
+ *   on DDP spans (default: user-agent,x-forwarded-for,x-real-ip,accept-language,host).
+ *   Set to an empty string to disable header capture entirely. Useful for
+ *   regulatory environments (e.g., GDPR) that disallow certain headers.
  */
 
 function parseOptionalPositiveInt(value) {

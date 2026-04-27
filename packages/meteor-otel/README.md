@@ -39,6 +39,7 @@ Configuration is done via environment variables:
 | `OTEL_METRICS_EXPORT_INTERVAL_MS` | `1000` | Metrics export interval |
 | `OTEL_HOST_METRICS_ENABLED` | `1` | Set to `0` to disable host metrics |
 | `OTEL_RUNTIME_METRICS_ENABLED` | `1` | Set to `0` to disable Node.js runtime metrics |
+| `OTEL_DDP_CAPTURED_HEADERS` | `user-agent,x-forwarded-for,x-real-ip,accept-language,host` | Comma-separated list of HTTP headers captured on DDP spans. Set to empty string to disable. |
 
 Or programmatically:
 
