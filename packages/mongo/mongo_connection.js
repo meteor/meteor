@@ -6,7 +6,7 @@ import { AsynchronousCursor } from './asynchronous_cursor';
 import { Cursor } from './cursor';
 import { CursorDescription } from './cursor_description';
 import { DocFetcher } from './doc_fetcher';
-import { MongoDB, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
+import { MongoDB, compareOperationTimes, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
 import { ObserveHandle } from './observe_handle';
 import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
@@ -165,6 +165,26 @@ MongoConnection.prototype._maybeBeginWrite = function () {
   }
 };
 
+// Record the clusterTime of a write on the current DDP write fence so the
+// ChangeStreamObserveDriver can wait for that exact timestamp instead of
+// polling the server for a "current" time that may not be echoed by the
+// stream until the next heartbeat (~1s).
+//
+// The target is per-collection: each change stream driver watches a single
+// collection and will only observe clusterTimes from events in that
+// collection. A fence may cover writes across multiple collections (e.g.
+// creating a card also writes to activities), so picking a single "max ts"
+// for the whole fence would stall drivers whose collection never sees
+// that specific ts. We therefore keep the max ts per collection.
+function _annotateFenceWithWriteTs(fence, collectionName, writeTs) {
+  if (!fence || !writeTs || !collectionName) return;
+  const map = fence._csTargetTsByCollection = fence._csTargetTsByCollection || {};
+  const prev = map[collectionName];
+  if (!prev || compareOperationTimes(writeTs, prev) > 0) {
+    map[collectionName] = writeTs;
+  }
+}
+
 // Internal interface: adds a callback which is called when the Mongo primary
 // changes. Returns a stop handle.
 MongoConnection.prototype._onFailover = function (callback) {
@@ -189,16 +209,21 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
   var refresh = async function () {
     await Meteor.refresh({collection: collection_name, id: document._id });
   };
+  const session = self.client.startSession();
   return self.rawCollection(collection_name).insertOne(
     replaceTypes(document, replaceMeteorAtomWithMongo),
     {
       safe: true,
+      session,
     }
   ).then(async ({insertedId}) => {
+    _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+    await session.endSession();
     await refresh();
     await write.committed();
     return insertedId;
   }).catch(async e => {
+    try { await session.endSession(); } catch (_) { /* ignore */ }
     await write.committed();
     throw e;
   });
@@ -237,15 +262,20 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
     await self._refresh(collection_name, selector);
   };
 
+  const session = self.client.startSession();
   return self.rawCollection(collection_name)
     .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
       safe: true,
+      session,
     })
     .then(async ({ deletedCount }) => {
+      _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+      await session.endSession();
       await refresh();
       await write.committed();
       return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
     }).catch(async (err) => {
+      try { await session.endSession(); } catch (_) { /* ignore */ }
       await write.committed();
       throw err;
     });
@@ -264,15 +294,19 @@ MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
     });
   };
 
+  const session = self.client.startSession();
   return self
     .rawCollection(collectionName)
-    .drop()
+    .drop({ session })
     .then(async result => {
+      _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collectionName, session.operationTime);
+      await session.endSession();
       await refresh();
       await write.committed();
       return result;
     })
     .catch(async e => {
+      try { await session.endSession(); } catch (_) { /* ignore */ }
       await write.committed();
       throw e;
     });
@@ -334,7 +368,8 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
   };
 
   var collection = self.rawCollection(collection_name);
-  var mongoOpts = {safe: true};
+  const session = self.client.startSession();
+  var mongoOpts = {safe: true, session};
   // Add support for filtered positional operator
   if (options.arrayFilters !== undefined) mongoOpts.arrayFilters = options.arrayFilters;
   // explictly enumerate options that minimongo supports
@@ -386,8 +421,10 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     // - The id is defined by query or mod we can just add it to the replacement doc
     // - The user did not specify any id preference and the id is a Mongo ObjectId,
     //     then we can just let Mongo generate the id
-    return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
+    return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options, session)
       .then(async result => {
+        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        await session.endSession();
         await refresh();
         await write.committed();
         if (result && ! options._returnObject) {
@@ -395,6 +432,9 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
         } else {
           return result;
         }
+      }).catch(async err => {
+        try { await session.endSession(); } catch (_) { /* ignore */ }
+        throw err;
       });
   } else {
     if (options.upsert && !knownId && options.insertedId && isModify) {
@@ -414,6 +454,8 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     return collection[updateMethod]
       .bind(collection)(mongoSelector, mongoMod, mongoOpts)
       .then(async result => {
+        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        await session.endSession();
         var meteorResult = transformResult({result});
         if (meteorResult && options._returnObject) {
           // If this was an upsertAsync() call, and we ended up
@@ -435,6 +477,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
           return meteorResult.numberAffected;
         }
       }).catch(async (err) => {
+        try { await session.endSession(); } catch (_) { /* ignore */ }
         await write.committed();
         throw err;
       });
@@ -561,7 +604,7 @@ var NUM_OPTIMISTIC_TRIES = 3;
 
 
 
-var simulateUpsertWithInsertedId = async function (collection, selector, mod, options) {
+var simulateUpsertWithInsertedId = async function (collection, selector, mod, options, session) {
   // STRATEGY: First try doing an upsert with a generated ID.
   // If this throws an error about changing the ID on an existing document
   // then without affecting the database, we know we should probably try
@@ -578,11 +621,13 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
   var insertedId = options.insertedId; // must exist
   var mongoOptsForUpdate = {
     safe: true,
-    multi: options.multi
+    multi: options.multi,
+    session,
   };
   var mongoOptsForInsert = {
     safe: true,
-    upsert: true
+    upsert: true,
+    session,
   };
 
   var replacementWithId = Object.assign(
