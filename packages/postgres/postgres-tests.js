@@ -2724,12 +2724,12 @@ Tinytest.addAsync(
 Tinytest.addAsync(
   'postgres - observe_driver - provider.close() stops polling for live observes',
   async (test) => {
-    const url = process.env.MONGO_URL || process.env.POSTGRES_URL;
-    if (!url) {
-      // Skip silently in environments without a Postgres URL.
+    if (!hasPostgres) {
+      // Skip silently in environments without a Postgres URL (or when the
+      // meteor tool's 'no-postgres-server' sentinel is in play).
       return;
     }
-    const provider = new PostgresStreamProvider(url);
+    const provider = new PostgresStreamProvider(POSTGRES_URL);
     await provider.connect();
     const table = `t_close_${Random.id(6).toLowerCase()}`;
     try {
@@ -2770,7 +2770,7 @@ Tinytest.addAsync(
     } finally {
       try {
         // Reconnect briefly only to drop the table.
-        const cleanup = new PostgresStreamProvider(url);
+        const cleanup = new PostgresStreamProvider(POSTGRES_URL);
         await cleanup.connect();
         await cleanup._connection.query(
           `DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`
