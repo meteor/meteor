@@ -333,4 +333,44 @@ if (Meteor.isClient) {
     }
   });
 
+  // --- handleFetch: 'auth: undefined' should not route through auth wrapper ---
+
+  Tinytest.addAsync('accounts-express - meteor/fetch - auth: undefined does not inject token', async (test) => {
+    try {
+      const { username, token } = await loginNewUser();
+      test.isTrue(!!token, 'Login token should be available');
+
+      // packageFetch with auth: undefined should hit rawFetch (no auth injection),
+      // even though the user is logged in.
+      const response = await packageFetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
+        auth: undefined,
+      });
+      test.isTrue(response.ok);
+
+      const data = await response.json();
+      test.isNull(data.meteorUserId, 'auth: undefined must not trigger token injection');
+
+      await Meteor.callAsync('removeAccountsExpressTestUser', username);
+    } finally {
+      Meteor.logout();
+    }
+  });
+
+  // --- token option is server-only on the client ---
+
+  Tinytest.addAsync('accounts-express - meteor/fetch - token option is ignored on the client (server-only)', async (test) => {
+    try {
+      // packageFetch with only `token` (no `auth`) on the client should NOT
+      // route through the auth wrapper — `token` is documented as server-only.
+      const response = await packageFetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
+        token: 'arbitrary-string',
+      });
+      test.isTrue(response.ok);
+
+      const data = await response.json();
+      test.isNull(data.meteorUserId, 'Client must not inject the token option');
+    } finally {
+      Meteor.logout();
+    }
+  });
 }

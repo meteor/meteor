@@ -27,6 +27,8 @@ Meteor.fetch = createAuthFetch(Meteor.fetch);
 /**
  * @summary Handle fetch calls from the meteor/fetch package when auth
  * options are present. Falls back to rawFetch when no auth is needed.
+ * The auth path intentionally dispatches through Meteor.fetch (which
+ * has its own bound rawFetch) and ignores the passed rawFetch.
  * @locus Server
  * @param {string|Request} url
  * @param {Object} [options]
@@ -34,7 +36,7 @@ Meteor.fetch = createAuthFetch(Meteor.fetch);
  * @returns {Promise<Response>|null} Response if handled, null to fall through
  */
 function handleFetch(url, options, rawFetch = Meteor.fetch) {
-  if (options && ('auth' in options || 'token' in options)) {
+  if (options && (options.auth !== undefined || options.token !== undefined)) {
     return Meteor.fetch(url, options);
   }
   return rawFetch(url, options);

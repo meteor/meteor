@@ -14,7 +14,7 @@ Meteor.fetch = createAuthFetch(Meteor.fetch);
  * @returns {Promise<Response>|null} Response if handled, null to fall through
  */
 function handleFetch(url, options, rawFetch = Meteor.fetch) {
-  if (options && 'auth' in options) {
+  if (options && options.auth !== undefined) {
     return Meteor.fetch(url, options);
   }
   return rawFetch(url, options);

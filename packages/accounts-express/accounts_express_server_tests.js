@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts, _CurrentEndpointInvocation } from 'meteor/accounts-base';
-import { createAuthMiddleware, createAuthFetch } from 'meteor/accounts-express';
+import { createAuthMiddleware, createAuthFetch, handleFetch } from 'meteor/accounts-express';
 import { Random } from 'meteor/random';
 import { WebApp } from 'meteor/webapp';
 
@@ -628,6 +628,40 @@ if (Meteor.isServer) {
       test.isNull(data.reqUserId, 'req.userId should be null when the token is expired');
     } finally {
       await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  // --- handleFetch: 'auth: undefined' should not route through auth wrapper ---
+
+  Tinytest.addAsync('accounts-express - handleFetch - auth: undefined falls back to rawFetch', async (test) => {
+    let rawCalled = false;
+    let meteorFetchCalled = false;
+
+    const rawFetch = async () => { rawCalled = true; return { ok: true }; };
+
+    // Spy: temporarily replace Meteor.fetch to detect if handleFetch routed through it.
+    const originalMeteorFetch = Meteor.fetch;
+    Meteor.fetch = async () => { meteorFetchCalled = true; return { ok: true }; };
+
+    try {
+      await handleFetch('http://example.test/x', { auth: undefined }, rawFetch);
+      test.isTrue(rawCalled, 'rawFetch should be called when auth is undefined');
+      test.isFalse(meteorFetchCalled, 'auth-wrapped Meteor.fetch should NOT be called when auth is undefined');
+    } finally {
+      Meteor.fetch = originalMeteorFetch;
+    }
+  });
+
+  Tinytest.addAsync('accounts-express - handleFetch - explicit auth: false routes through Meteor.fetch', async (test) => {
+    let meteorFetchCalled = false;
+    const originalMeteorFetch = Meteor.fetch;
+    Meteor.fetch = async () => { meteorFetchCalled = true; return { ok: true }; };
+
+    try {
+      await handleFetch('http://example.test/x', { auth: false }, async () => ({ ok: true }));
+      test.isTrue(meteorFetchCalled, 'auth: false is still an explicit signal — route through Meteor.fetch');
+    } finally {
+      Meteor.fetch = originalMeteorFetch;
     }
   });
 

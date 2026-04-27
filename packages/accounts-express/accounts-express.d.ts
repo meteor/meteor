@@ -1,7 +1,7 @@
 interface MeteorFetchOptions extends RequestInit {
   /** Set to false to skip the authentication header. Default: true */
   auth?: boolean;
-  /** Explicit token to use (server only). If omitted, uses context token. */
+  /** Explicit token to use. Server only — ignored on the client. */
   token?: string;
 }
 
