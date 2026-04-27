@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'No-password login/sign-up support for accounts',
-  version: '3.1.0',
+  version: '3.1.1-beta350.8',
 });
 
 Package.onUse(api => {
@@ -21,7 +21,7 @@ Package.onUse(api => {
   api.addFiles('server_utils.js', 'server');
 });
 
-Package.onTest(function(api) {
+Package.onTest(function (api) {
   api.use(['accounts-base', 'ecmascript', 'tinytest', 'sha']);
 
   api.addFiles('server_utils.js', 'server');
