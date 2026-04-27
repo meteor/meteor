@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
-import { Accounts } from 'meteor/accounts-base';
-import { createAuthMiddleware } from 'meteor/accounts-express';
+import { Accounts, _CurrentEndpointInvocation } from 'meteor/accounts-base';
+import { createAuthMiddleware, createAuthFetch } from 'meteor/accounts-express';
 import { Random } from 'meteor/random';
 import { WebApp } from 'meteor/webapp';
 
@@ -508,6 +508,68 @@ if (Meteor.isServer) {
     } finally {
       await Meteor.users.removeAsync(userId);
     }
+  });
+
+  // --- Cross-origin token guard ---
+
+  // Capture-style helper: run createAuthFetch against a fake originalFetch
+  // that records the headers it was called with.
+  const buildCapturingFetch = () => {
+    const capture = { url: null, headers: null, options: null };
+    const fakeOriginal = async (url, options = {}) => {
+      capture.url = url;
+      capture.options = options;
+      capture.headers = options.headers;
+      return { ok: true, status: 200 };
+    };
+    return { wrapped: createAuthFetch(fakeOriginal), capture };
+  };
+
+  Tinytest.addAsync('accounts-express - createAuthFetch - same-origin URL gets context token', async (test) => {
+    const { wrapped, capture } = buildCapturingFetch();
+
+    await _CurrentEndpointInvocation.withValue(
+      { userId: 'u1', loginToken: 'context-tok' },
+      () => wrapped(Meteor.absoluteUrl('/api/internal'))
+    );
+
+    test.equal(capture.headers.get('Authorization'), 'Bearer context-tok');
+  });
+
+  Tinytest.addAsync('accounts-express - createAuthFetch - cross-origin URL does NOT leak context token', async (test) => {
+    const { wrapped, capture } = buildCapturingFetch();
+
+    await _CurrentEndpointInvocation.withValue(
+      { userId: 'u1', loginToken: 'context-tok' },
+      () => wrapped('https://other-origin.example/some/path')
+    );
+
+    test.isFalse(capture.headers.has('Authorization'),
+      'Authorization header must not be set for cross-origin URLs');
+  });
+
+  Tinytest.addAsync('accounts-express - createAuthFetch - explicit token attaches even cross-origin', async (test) => {
+    const { wrapped, capture } = buildCapturingFetch();
+
+    await _CurrentEndpointInvocation.withValue(
+      { userId: 'u1', loginToken: 'context-tok' },
+      () => wrapped('https://other-origin.example/some/path', { token: 'explicit-tok' })
+    );
+
+    test.equal(capture.headers.get('Authorization'), 'Bearer explicit-tok',
+      'Explicit token opt-in attaches regardless of origin');
+  });
+
+  Tinytest.addAsync('accounts-express - createAuthFetch - unparseable URL fails closed', async (test) => {
+    const { wrapped, capture } = buildCapturingFetch();
+
+    await _CurrentEndpointInvocation.withValue(
+      { userId: 'u1', loginToken: 'context-tok' },
+      () => wrapped('not a valid url')
+    );
+
+    test.isFalse(capture.headers.has('Authorization'),
+      'Unparseable URL must not implicitly receive the context token');
   });
 
   // Test that a cleared cookie results in unauthenticated access
