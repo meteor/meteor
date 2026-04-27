@@ -11,9 +11,12 @@ import { compileSelector, compileModifier, compileSort } from './sql_compiler';
 
 const { AFS } = Package.afs;
 
-// Resolve connection URL
+// Resolve connection URL. The Meteor tool injects POSTGRES_URL='no-postgres-server'
+// as a sentinel when the app doesn't include the `postgres-dev-server` package
+// (mirroring 'no-mongo-server'); treat it the same as no URL configured.
+const _envUrl = process.env.POSTGRES_URL;
 const url =
-  process.env.POSTGRES_URL ||
+  (_envUrl && _envUrl !== 'no-postgres-server' ? _envUrl : null) ||
   (Meteor.settings &&
     Meteor.settings.packages &&
     Meteor.settings.packages.postgres &&

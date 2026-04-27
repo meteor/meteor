@@ -916,7 +916,11 @@ Tinytest.add('postgres - CompilationContext - addParam tracking', (test) => {
 // ============================================================================
 
 const POSTGRES_URL = process.env.POSTGRES_URL;
-const hasPostgres = !!POSTGRES_URL;
+// The Meteor tool injects POSTGRES_URL='no-postgres-server' when the
+// test-runner app doesn't include the `postgres-dev-server` package
+// (mirroring `no-mongo-server`). Treat that sentinel as "not configured".
+const _isPostgresSentinel = POSTGRES_URL === 'no-postgres-server';
+const hasPostgres = !!POSTGRES_URL && !_isPostgresSentinel;
 
 if (hasPostgres) {
   // Use a unique table name per test run to avoid conflicts
@@ -1486,7 +1490,10 @@ if (hasPostgres) {
     'POSTGRES_URL not set — integration tests are SKIPPED.\n' +
     'Set POSTGRES_URL to a reachable Postgres to run them.\n' +
     '=========================================================\n';
-  if (_inCI) {
+  // Don't fail CI when the meteor tool explicitly signaled "no postgres"
+  // (e.g. the test-packages workflow, which is intentionally separate from
+  // the dedicated test-postgres workflow that provides POSTGRES_URL).
+  if (_inCI && !_isPostgresSentinel) {
     if (typeof Meteor !== 'undefined' && Meteor._debug) Meteor._debug(_banner);
     console.error(_banner);
     process.exitCode = 1;
