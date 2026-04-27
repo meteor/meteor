@@ -703,12 +703,17 @@ datasources:
     editable: true
     jsonData:
       httpMethod: GET
-      tracesToLogsV2:
-        datasourceUid: loki
-        spanStartTimeShift: '-10m'
-        spanEndTimeShift: '10m'
-        filterByTraceID: true
-        filterBySpanID: false
+      # NOTE: tracesToLogsV2 is intentionally omitted from this guide because
+      # this stack does not provision a Loki datasource. If you add Loki to
+      # your Compose file, also add it to the datasources list above and
+      # uncomment this block (the `datasourceUid` must match the Loki uid).
+      #
+      # tracesToLogsV2:
+      #   datasourceUid: loki
+      #   spanStartTimeShift: '-10m'
+      #   spanEndTimeShift: '10m'
+      #   filterByTraceID: true
+      #   filterBySpanID: false
       tracesToMetrics:
         datasourceUid: prometheus
         spanStartTimeShift: '-10m'
