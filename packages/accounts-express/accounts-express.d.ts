@@ -1,13 +1,23 @@
-interface MeteorFetchOptions extends RequestInit {
-  /** Set to false to skip the authentication header. Default: true */
-  auth?: boolean;
-  /** Explicit token to use. Server only — ignored on the client. */
-  token?: string;
-}
+declare module 'meteor/accounts-express' {
+  interface MeteorFetchOptions extends RequestInit {
+    /** Set to false to skip the authentication header. Default: true for Meteor.fetch; opt-in for fetch from meteor/fetch. */
+    auth?: boolean;
+    /** Explicit token to use. Server only — ignored on the client. */
+    token?: string;
+  }
 
-interface AuthMiddlewareOptions {
-  /** Whether authentication is required (401 for unauthenticated) or optional (null userId). Default: false */
-  required?: boolean;
+  interface AuthMiddlewareOptions {
+    /** Whether authentication is required (401 for unauthenticated) or optional (null userId). Default: false */
+    required?: boolean;
+  }
+
+  /**
+   * Create Express middleware that authenticates requests using Meteor login tokens.
+   * Tokens can be provided via Authorization Bearer header or meteor_login_token cookie.
+   */
+  function createAuthMiddleware(
+    options?: AuthMiddlewareOptions
+  ): (req: any, res: any, next: () => void) => Promise<void>;
 }
 
 declare module 'meteor/meteor' {
@@ -19,19 +29,9 @@ declare module 'meteor/meteor' {
      */
     function fetch(
       url: string | Request,
-      options?: MeteorFetchOptions
+      options?: import('meteor/accounts-express').MeteorFetchOptions
     ): Promise<Response>;
   }
-}
-
-declare module 'meteor/accounts-express' {
-  /**
-   * Create Express middleware that authenticates requests using Meteor login tokens.
-   * Tokens can be provided via Authorization Bearer header or meteor_login_token cookie.
-   */
-  function createAuthMiddleware(
-    options?: AuthMiddlewareOptions
-  ): (req: any, res: any, next: () => void) => Promise<void>;
 }
 
 declare module 'meteor/fetch' {
@@ -42,6 +42,6 @@ declare module 'meteor/fetch' {
    */
   function fetch(
     url: string | Request,
-    options?: MeteorFetchOptions
+    options?: import('meteor/accounts-express').MeteorFetchOptions
   ): Promise<Response>;
 }
