@@ -381,4 +381,279 @@ if (Meteor.isServer) {
     }
   );
 
+  // ---------------------------------------------------------------------------
+  // close() lifecycle contract — hook order, transitional state, idempotency
+  // ---------------------------------------------------------------------------
+
+  // A minimal MockStreamProvider subclass that records when each lifecycle
+  // hook fires and lets the test gate `_drainPendingWrites` on a deferred
+  // promise. Used to verify the canonical teardown order on the base class.
+  class LifecycleProbeProvider extends AFS.MockStreamProvider {
+    constructor(options = {}) {
+      super(options);
+      this.events = [];
+      // If set, _drainPendingWrites awaits this promise before resolving.
+      // Lets a test put close() into the 'closing' state and probe behavior
+      // mid-flight.
+      this._drainGate = null;
+      // Snapshot of _state taken at the moment each hook fires.
+      this.stateAtMultiplexerClose = null;
+      this.stateAtDrain = null;
+      this.stateAtTransport = null;
+      this._closeMultiplexersCalls = 0;
+      this._drainCalls = 0;
+      this._transportCalls = 0;
+    }
+
+    _closeMultiplexers() {
+      this._closeMultiplexersCalls++;
+      this.stateAtMultiplexerClose = this._state;
+      this.events.push('closeMultiplexers');
+      return super._closeMultiplexers();
+    }
+
+    async _drainPendingWrites() {
+      this._drainCalls++;
+      this.stateAtDrain = this._state;
+      this.events.push('drainPendingWrites');
+      if (this._drainGate) await this._drainGate;
+    }
+
+    async _closeTransport() {
+      this._transportCalls++;
+      this.stateAtTransport = this._state;
+      this.events.push('closeTransport');
+      // Defer to base mock cleanup so post-close re-use still works.
+      await super._closeTransport();
+    }
+  }
+
+  // Test 10: hooks fire in the documented order and _state reflects each step.
+  Tinytest.addAsync(
+    'afs - close lifecycle - hooks run in canonical order',
+    async (test) => {
+      const provider = new LifecycleProbeProvider();
+      test.equal(provider._state, 'open', 'starts open');
+
+      await provider.close();
+
+      test.equal(
+        provider.events.join(','),
+        'closeMultiplexers,drainPendingWrites,closeTransport',
+        'hook order: multiplexers → drain → transport'
+      );
+      test.equal(provider.stateAtMultiplexerClose, 'closing',
+        '_state is "closing" during _closeMultiplexers');
+      test.equal(provider.stateAtDrain, 'closing',
+        '_state is "closing" during _drainPendingWrites');
+      test.equal(provider.stateAtTransport, 'closing',
+        '_state is "closing" during _closeTransport');
+      test.equal(provider._state, 'closed',
+        '_state flips to "closed" only after all hooks settle');
+    }
+  );
+
+  // Test 11: a CRUD write started after close() begins fails fast with
+  // ProviderClosedError, even though _state is 'closing' (not yet 'closed').
+  Tinytest.addAsync(
+    'afs - close lifecycle - writes during closing reject with ProviderClosedError',
+    async (test) => {
+      const provider = new LifecycleProbeProvider();
+      let resolveDrain;
+      provider._drainGate = new Promise((resolve) => { resolveDrain = resolve; });
+
+      const closePromise = provider.close();
+      // Yield once so close() reaches the await on _drainPendingWrites.
+      await flushMicrotasks();
+      test.equal(provider._state, 'closing',
+        'provider is mid-close, in transitional "closing" state');
+
+      let threw = null;
+      try {
+        await provider.insertAsync('c', { _id: 'late', x: 1 });
+      } catch (e) {
+        threw = e;
+      }
+      test.isTrue(threw instanceof AFS.ProviderClosedError,
+        'insertAsync during closing throws ProviderClosedError');
+      test.equal(threw && threw.code, 'provider-closed',
+        'error has the canonical code');
+
+      // Release the drain so close() can finish.
+      resolveDrain();
+      await closePromise;
+      test.equal(provider._state, 'closed', 'close() completes after drain');
+    }
+  );
+
+  // Test 12: close() is idempotent. A second call is a no-op and the hooks
+  // run exactly once total.
+  Tinytest.addAsync(
+    'afs - close lifecycle - close() is idempotent',
+    async (test) => {
+      const provider = new LifecycleProbeProvider();
+
+      const [a, b] = await Promise.all([provider.close(), provider.close()]);
+      test.equal(a, undefined, 'first close resolves');
+      test.equal(b, undefined, 'second close resolves');
+      test.equal(provider._closeMultiplexersCalls, 1,
+        '_closeMultiplexers ran exactly once');
+      test.equal(provider._drainCalls, 1,
+        '_drainPendingWrites ran exactly once');
+      test.equal(provider._transportCalls, 1,
+        '_closeTransport ran exactly once');
+      test.equal(provider._state, 'closed', 'ends in "closed"');
+
+      // A third sequential call is also a no-op.
+      await provider.close();
+      test.equal(provider._closeMultiplexersCalls, 1,
+        'third close is still a no-op');
+    }
+  );
+
+  // Test 13: an observe attempt arriving during 'closing' rejects with
+  // ProviderClosedError (via _getMultiplexer's _assertOpen guard). Uses a
+  // FederatedCollection-style cursor over the provider to mirror the path
+  // a real subscription would take.
+  Tinytest.addAsync(
+    'afs - close lifecycle - observes during closing reject with ProviderClosedError',
+    async (test) => {
+      const provider = new LifecycleProbeProvider();
+      let resolveDrain;
+      provider._drainGate = new Promise((resolve) => { resolveDrain = resolve; });
+
+      const collectionName = 'teardown-observe-' + Random.id();
+      const collection = new AFS.Collection(collectionName, {
+        provider,
+      });
+
+      const closePromise = provider.close();
+      await flushMicrotasks();
+      test.equal(provider._state, 'closing',
+        'provider is mid-close, in transitional "closing" state');
+
+      let threw = null;
+      try {
+        const cursor = collection.find({});
+        await cursor.observeChangesAsync({
+          added() {}, changed() {}, removed() {},
+        });
+      } catch (e) {
+        threw = e;
+      }
+      test.isTrue(threw instanceof AFS.ProviderClosedError,
+        'observeChangesAsync during closing throws ProviderClosedError');
+      // Sharper: the failure must come from _getMultiplexer's _assertOpen
+      // guard, not from find()'s assertProviderSupports walking the AST.
+      // _closeMultiplexers ran exactly once and the cache is empty —
+      // no new multiplexer was constructed for the late observe attempt.
+      test.equal(provider._closeMultiplexersCalls, 1,
+        '_closeMultiplexers ran exactly once');
+      test.equal(provider._multiplexerCache.size, 0,
+        '_multiplexerCache is empty — late observe never installed an entry');
+
+      resolveDrain();
+      await closePromise;
+
+      // Registry cleanup so this collection name doesn't pollute later tests.
+      AFS.removeCollection(collectionName);
+    }
+  );
+
+  // Test 12b: concurrent close() returns the same in-flight promise.
+  // Caller B awaiting after caller A has already started close() must
+  // observe the same teardown — _state must be 'closed' the moment B's
+  // await resolves, and each hook fires exactly once.
+  Tinytest.addAsync(
+    'afs - close lifecycle - concurrent close() shares the in-flight promise',
+    async (test) => {
+      const provider = new LifecycleProbeProvider();
+      let resolveDrain;
+      provider._drainGate = new Promise((resolve) => { resolveDrain = resolve; });
+
+      const callerA = provider.close();
+      // Yield once so close() reaches the await on _drainPendingWrites.
+      await flushMicrotasks();
+      test.equal(provider._state, 'closing',
+        'first call put the provider into "closing"');
+
+      // Second caller arrives mid-flight. It must NOT resolve until A finishes.
+      const callerB = provider.close();
+      test.equal(callerA, callerB,
+        'concurrent close() returns the SAME promise');
+
+      // Release the drain so both callers settle.
+      resolveDrain();
+      await callerB;
+
+      // After awaiting B, A's teardown is fully done.
+      test.equal(provider._state, 'closed',
+        'caller B observes _state === "closed" after its await resolves');
+      test.equal(provider._closeMultiplexersCalls, 1,
+        '_closeMultiplexers ran exactly once across concurrent callers');
+      test.equal(provider._drainCalls, 1,
+        '_drainPendingWrites ran exactly once');
+      test.equal(provider._transportCalls, 1,
+        '_closeTransport ran exactly once');
+
+      await callerA; // already settled; no-op.
+    }
+  );
+
+  // Test 14: _drainPendingWrites rejects. _closeTransport MUST still run,
+  // close() rejects with the drain error, _state ends in 'closed'.
+  Tinytest.addAsync(
+    'afs - close lifecycle - drain failure still runs transport, surfaces drain error',
+    async (test) => {
+      const provider = new LifecycleProbeProvider();
+      provider._drainPendingWrites = async function () {
+        this._drainCalls++;
+        this.stateAtDrain = this._state;
+        this.events.push('drainPendingWrites');
+        throw new Error('drain');
+      };
+
+      let threw = null;
+      try {
+        await provider.close();
+      } catch (e) {
+        threw = e;
+      }
+
+      test.isTrue(threw instanceof Error, 'close() rejected');
+      test.equal(threw && threw.message, 'drain',
+        'close() rejected with the drain error');
+      test.equal(provider._transportCalls, 1,
+        '_closeTransport STILL fired exactly once despite drain failure');
+      test.equal(provider._state, 'closed', '_state ends in "closed"');
+    }
+  );
+
+  // Test 15: _closeTransport rejects. close() rejects with the transport
+  // error, _state ends in 'closed'.
+  Tinytest.addAsync(
+    'afs - close lifecycle - transport failure surfaces transport error',
+    async (test) => {
+      const provider = new LifecycleProbeProvider();
+      provider._closeTransport = async function () {
+        this._transportCalls++;
+        this.stateAtTransport = this._state;
+        this.events.push('closeTransport');
+        throw new Error('transport');
+      };
+
+      let threw = null;
+      try {
+        await provider.close();
+      } catch (e) {
+        threw = e;
+      }
+
+      test.isTrue(threw instanceof Error, 'close() rejected');
+      test.equal(threw && threw.message, 'transport',
+        'close() rejected with the transport error');
+      test.equal(provider._state, 'closed', '_state ends in "closed"');
+    }
+  );
+
 }

@@ -4,6 +4,7 @@
  */
 
 import { quoteIdent, quoteLiteral } from './schema';
+import { ReconnectLoop, SubscriptionRegistry } from 'meteor/afs';
 import { EventEmitter } from 'events';
 
 const readPositiveIntEnv = (name, defaultValue, floor = 0) => {
@@ -85,47 +86,26 @@ export class PostgresConnection extends EventEmitter {
     this._warnedUnknownTables = new Set();
     this._connected = false;
 
-    // Serialize LISTEN/UNLISTEN per channel (keyed by channel name, same as
-    // _notifyCallbacks). Prevents interleaving between setupListenNotify and
-    // removeListenNotify when concurrent observers race on the same channel.
-    this._channelOps = new Map(); // channel -> Promise chain of ops
+    // Serialize LISTEN/UNLISTEN per channel through a SubscriptionRegistry.
+    // The provider passes its own registry instance via the `subscriptions`
+    // option so dropCollectionAsync (at the provider layer) and setup /
+    // remove (here) share a single per-channel queue — without this they
+    // would be independent queues and a concurrent setup vs drop on the
+    // same channel could interleave. When constructed without a registry
+    // (e.g. unit tests that drive the connection directly) we instantiate
+    // our own — fine in isolation, but provider code paths must pass one
+    // through to keep the unified-serialization contract.
+    this._subscriptions = options.subscriptions || new SubscriptionRegistry();
 
-    // Shutdown flag + pending abort hook so _reconnectListenClient can exit
-    // its backoff loop cleanly when close() is called mid-retry.
+    // Shutdown flag + active ReconnectLoop reference so close() can abort an
+    // in-flight LISTEN-client reconnect cleanly. Backoff/jitter/event vocab
+    // live in afs's ReconnectLoop; this flag short-circuits before the loop
+    // even starts when close() races a connection drop.
     this._shutdown = false;
-    this._abortReconnectSleep = null;
+    this._listenReconnectLoop = null;
 
     // Lazy-load pg to avoid issues during package load
     this._pg = null;
-  }
-
-  /**
-   * Serialize operations that mutate LISTEN state for a single channel.
-   * Both LISTEN (setupListenNotify) and UNLISTEN (removeListenNotify) paths
-   * run through this queue so the `_notifyCallbacks.has(channel)` check and
-   * the SQL that follows it can't interleave across coroutines.
-   *
-   * @param {string} channel
-   * @param {() => Promise<any>} op
-   * @returns {Promise<any>}
-   * @private
-   */
-  _enqueueChannelOp(channel, op) {
-    const prev = this._channelOps.get(channel) ?? Promise.resolve();
-    // Run `op` whether the previous op resolved or rejected — a failure in a
-    // prior setup/teardown on this channel must not block later operations.
-    const next = prev.then(op, op);
-    this._channelOps.set(
-      channel,
-      next.finally(() => {
-        // Only clear the slot if nothing newer has been chained on top,
-        // otherwise we'd orphan the tail of the chain.
-        if (this._channelOps.get(channel) === next) {
-          this._channelOps.delete(channel);
-        }
-      })
-    );
-    return next;
   }
 
   _getPg() {
@@ -185,9 +165,9 @@ export class PostgresConnection extends EventEmitter {
     // its next iteration and exits instead of re-acquiring a client from a
     // pool we're about to end.
     this._shutdown = true;
-    if (typeof this._abortReconnectSleep === 'function') {
-      try { this._abortReconnectSleep(); } catch (e) { /* ignore */ }
-      this._abortReconnectSleep = null;
+    if (this._listenReconnectLoop) {
+      try { this._listenReconnectLoop.stop(); } catch (e) { /* ignore */ }
+      this._listenReconnectLoop = null;
     }
 
     if (this._listenClient) {
@@ -207,14 +187,14 @@ export class PostgresConnection extends EventEmitter {
 
     this._connected = false;
     // Emit BEFORE clearing so `disconnected` handlers can still inspect
-    // _knownTables / _notifyCallbacks / _channelOps to decide how to
-    // react (e.g. metrics: "how many observers were live at teardown?").
-    // Clearing afterward is still required — any post-emit access via a
-    // later method call sees an empty state, consistent with "closed".
+    // _knownTables / _notifyCallbacks to decide how to react (e.g. metrics:
+    // "how many observers were live at teardown?"). Clearing afterward is
+    // still required — any post-emit access via a later method call sees
+    // an empty state, consistent with "closed". The SubscriptionRegistry
+    // is owned by the provider and is intentionally NOT cleared here.
     this.emit('disconnected');
     this._knownTables.clear();
     this._notifyCallbacks.clear();
-    this._channelOps.clear();
   }
 
   /**
@@ -411,12 +391,14 @@ export class PostgresConnection extends EventEmitter {
       $$;
     `;
 
-    // Serialize with any in-flight LISTEN/UNLISTEN for this same channel.
-    // The `shouldListen` check, callback-set mutation, trigger DDL, and
-    // LISTEN SQL must all run atomically with respect to other channel ops
-    // — otherwise a concurrent removeListenNotify can delete the callback
-    // set between our check and our LISTEN, or vice versa.
-    await this._enqueueChannelOp(channel, async () => {
+    // Serialize with any in-flight LISTEN/UNLISTEN/drop for this same
+    // channel through the shared SubscriptionRegistry. The `shouldListen`
+    // check, callback-set mutation, trigger DDL, and LISTEN SQL must all
+    // run atomically with respect to other channel ops — otherwise a
+    // concurrent removeListenNotify (or dropCollectionAsync at the
+    // provider layer) can delete the callback set between our check and
+    // our LISTEN, or vice versa.
+    await this._subscriptions.run(channel, async () => {
       const shouldListen = !this._notifyCallbacks.has(channel);
       if (shouldListen) {
         const client = await this.getClient();
@@ -468,103 +450,139 @@ export class PostgresConnection extends EventEmitter {
   /**
    * Reconnect the LISTEN client with exponential backoff.
    * Re-subscribes to all active LISTEN channels.
+   *
+   * Implementation: delegates the loop / backoff / cancellable sleep to
+   * afs's `ReconnectLoop`. Postgres-specific work — building a `pg.Client`,
+   * re-LISTENing every channel, mapping events onto the existing
+   * `listen:*` vocabulary — stays in the callbacks below.
+   *
    * @private
    */
   async _reconnectListenClient() {
     if (!this._connected) return; // Pool is closed, give up
     if (this._shutdown) return;
     if (this._listenClient) return; // Already reconnected
+    if (this._listenReconnectLoop) return; // Already running
 
-    let delay = 1000;
-    const maxDelay = 30000;
     const maxAttempts = Math.max(
       1,
       readPositiveIntEnv('METEOR_POSTGRES_MAX_RECONNECT_ATTEMPTS', 10, 1)
     );
 
-    this.emit('listen:reconnecting');
-
-    // Cancellable sleep: resolves normally on timeout, or early when
-    // close() invokes the abort hook. We expose the aborter on `this`
-    // so close() can break us out of the wait synchronously.
-    const cancellableSleep = (ms) => new Promise((resolve) => {
-      const timer = setTimeout(() => {
-        this._abortReconnectSleep = null;
-        resolve();
-      }, ms);
-      this._abortReconnectSleep = () => {
-        clearTimeout(timer);
-        this._abortReconnectSleep = null;
-        resolve();
-      };
-    });
-
     const { Client } = this._getPg();
+    let replayedChannels = [];
+    let attemptNumber = 0;
 
-    let lastError = null;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      if (!this._connected || this._shutdown) return;
-      if (this._listenClient) return;
-
-      let client = null;
-      try {
-        client = new Client({
-          connectionString: this._url,
-          connectionTimeoutMillis: this._poolConnectionTimeoutMs,
-        });
-        await client.connect();
-
-        if (this._shutdown) {
-          try { await client.end(); } catch (e) { /* ignore */ }
+    const loop = new ReconnectLoop({
+      doReconnect: async () => {
+        attemptNumber += 1;
+        if (!this._connected || this._shutdown) {
+          loop.stop();
           return;
         }
+        if (this._listenClient) return; // raced; treat as success
 
-        this._listenClient = client;
-        this._attachListenClientHandlers(this._listenClient);
+        let client = null;
+        try {
+          client = new Client({
+            connectionString: this._url,
+            connectionTimeoutMillis: this._poolConnectionTimeoutMs,
+          });
+          await client.connect();
 
-        // Re-LISTEN all channels and collect them so observers can re-poll.
-        const replayedChannels = [];
-        for (const channel of this._notifyCallbacks.keys()) {
-          await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
-          replayedChannels.push(channel);
+          if (this._shutdown) {
+            try { await client.end(); } catch (e) { /* ignore */ }
+            loop.stop();
+            return;
+          }
+
+          this._listenClient = client;
+          this._attachListenClientHandlers(this._listenClient);
+
+          // Re-LISTEN all channels and collect them so observers can re-poll.
+          replayedChannels = [];
+          for (const channel of this._notifyCallbacks.keys()) {
+            await this._listenClient.query(`LISTEN ${quoteIdent(channel)}`);
+            replayedChannels.push(channel);
+          }
+        } catch (e) {
+          if (client && this._listenClient !== client) {
+            try { await client.end(); } catch (endErr) { /* ignore */ }
+          }
+          throw e;
         }
-
-        // Carry the replayed channel set on the event so observe drivers
-        // can trigger a fresh poll for each affected collection — writes
-        // during the disconnect gap would otherwise never surface until
-        // the next regular poll tick.
-        this.emit('listen:reconnected', { channels: replayedChannels });
-        return;
-      } catch (e) {
-        lastError = e;
-        if (client && this._listenClient !== client) {
-          try { await client.end(); } catch (endErr) { /* ignore */ }
+      },
+      // Map afs's generic events onto the postgres `listen:*` vocabulary.
+      // The `listen:reconnect-attempt` event carries the SAME `{attempt,
+      // delay}` ReconnectLoop reports for its next sleep — no separate
+      // `Math.random()` draw at this layer (which would shadow the actual
+      // sleep with a different jittered value and produce misleading logs).
+      onEvent: (evt, payload) => {
+        if (evt === 'reconnecting') {
+          this.emit('listen:reconnecting');
+        } else if (evt === 'attempt') {
+          // payload = { attempt, delay } from ReconnectLoop. Forward as
+          // listen:reconnect-attempt with `delayMs` for backward compat
+          // with callers that read the old field name.
+          if (payload && payload.attempt > 1) {
+            // Skip the first attempt's "about to sleep 0ms" notice — the
+            // legacy implementation only logged AFTER a failure. Surface
+            // attempts 2..N which is when a sleep actually occurs.
+            Log.warn('Postgres: LISTEN reconnect retry (attempt ' +
+              payload.attempt + '/' + maxAttempts +
+              '), sleeping ' + payload.delay + 'ms');
+            this.emit('listen:reconnect-attempt', {
+              attempt: payload.attempt,
+              delayMs: payload.delay,
+            });
+          }
+        } else if (evt === 'success') {
+          this.emit('listen:reconnected', { channels: replayedChannels });
+        } else if (evt === 'gave-up') {
+          // Single emit point for `listen:gave-up`, symmetrical with the
+          // other onEvent cases. The catch-block below performs cleanup
+          // (tear down listener state) but does NOT re-emit — emitting from
+          // both places risked double-fires if a future onEvent handler
+          // also routed 'gave-up'.
+          this.emit('listen:gave-up', {
+            attempts: payload && payload.attempts !== undefined
+              ? payload.attempts
+              : maxAttempts,
+            error: payload ? payload.error : null,
+          });
         }
-        // Jitter: 0.5x–1.5x of the current base delay. Prevents thundering
-        // herd when many connections fail at the same moment.
-        const jittered = Math.floor(delay * (0.5 + Math.random()));
-        Log.warn('Postgres: LISTEN reconnect failed (attempt ' + attempt +
-          '/' + maxAttempts + '), retrying in ' + jittered + 'ms');
-        this.emit('listen:reconnect-attempt', { attempt, delayMs: jittered });
+      },
+      backoff: {
+        // Schedule mirrors the prior implementation: 1000, 2000, 4000, ...
+        // capped at 30000ms. ReconnectLoop sleeps with its own jitter draw
+        // from the same [0.5x, 1.5x] range as the legacy code.
+        initialMs: 1000,
+        maxMs: 30000,
+        factor: 2,
+        // 0.5 jitter centered on 1.0 -> [0.5x, 1.5x] of base.
+        jitter: 0.5,
+        maxAttempts,
+        immediateFirst: true,
+      },
+    });
 
-        if (attempt === maxAttempts) break;
-
-        await cancellableSleep(jittered);
-        if (!this._connected || this._shutdown) return;
-
-        delay = Math.min(delay * 2, maxDelay);
+    this._listenReconnectLoop = loop;
+    try {
+      await loop.start();
+    } catch (lastError) {
+      // Exhausted retries — tear down listener state so observers can decide
+      // whether to fall back to polling-only mode. The `listen:gave-up`
+      // event has already been emitted via onEvent's 'gave-up' case;
+      // emitting again here would double-fire to consumers.
+      this._notifyCallbacks.clear();
+      if (this._listenClient) {
+        const c = this._listenClient;
+        this._listenClient = null;
+        try { await c.end(); } catch (e) { /* ignore */ }
       }
+    } finally {
+      if (this._listenReconnectLoop === loop) this._listenReconnectLoop = null;
     }
-
-    // Exhausted retries — tear down listener state and surface the failure
-    // so observers can decide whether to fall back to polling-only mode.
-    this._notifyCallbacks.clear();
-    if (this._listenClient) {
-      const c = this._listenClient;
-      this._listenClient = null;
-      try { await c.end(); } catch (e) { /* ignore */ }
-    }
-    this.emit('listen:gave-up', { attempts: maxAttempts, error: lastError });
   }
 
   /**
@@ -624,10 +642,12 @@ export class PostgresConnection extends EventEmitter {
    */
   async removeListenNotify(collectionName, callback) {
     const channel = `meteor_pg_${collectionName}`;
-    // Serialize with any in-flight LISTEN/UNLISTEN for this channel so the
-    // callback-set mutation, the emptiness check, and the UNLISTEN SQL are
-    // atomic relative to a concurrent setupListenNotify on the same channel.
-    await this._enqueueChannelOp(channel, async () => {
+    // Serialize with any in-flight LISTEN/UNLISTEN/drop for this channel
+    // through the shared SubscriptionRegistry so the callback-set mutation,
+    // the emptiness check, and the UNLISTEN SQL are atomic relative to a
+    // concurrent setupListenNotify (or dropCollectionAsync) on the same
+    // channel.
+    await this._subscriptions.run(channel, async () => {
       const callbacks = this._notifyCallbacks.get(channel);
       if (!callbacks) return;
       callbacks.delete(callback);
@@ -646,33 +666,43 @@ export class PostgresConnection extends EventEmitter {
 
   /**
    * UNLISTEN a channel and drop all of its registered callbacks. Serialized
-   * through the same channel-op queue as LISTEN/UNLISTEN.
+   * through the SubscriptionRegistry, the same queue used by setup/remove.
    * @param {string} channel
    */
   async unregisterChannel(channel) {
-    await this._enqueueChannelOp(channel, async () => {
-      this._notifyCallbacks.delete(channel);
-      if (this._listenClient) {
-        try {
-          await this._listenClient.query(`UNLISTEN ${quoteIdent(channel)}`);
-        } catch (e) {
-          // Ignore if client is gone
-        }
-      }
-    });
+    await this._subscriptions.run(channel, () => this._unregisterChannelBody(channel));
   }
 
   /**
-   * Run an async op serialized through the channel-op queue. Use this to
-   * splice DDL (DROP TABLE / DROP FUNCTION) against a collection whose
-   * channel you're about to unregister — it prevents a pending
-   * setupListenNotify from completing after the DROP and leaving a LISTEN
-   * pointed at a no-longer-existing table.
+   * UNLISTEN body without going through the SubscriptionRegistry. Use this
+   * only from a caller that has already taken a lock equivalent to (or
+   * stronger than) the registry's per-channel queue — e.g. from inside a
+   * SubscriptionRegistry `dropAtomically` slot at the provider layer.
+   * Calling this from arbitrary code can interleave with setupListenNotify
+   * and corrupt callback state.
+   *
+   * Public so adapters can compose teardown (DROP TABLE + UNLISTEN +
+   * registry cleanup) without reaching into private fields.
    * @param {string} channel
-   * @param {() => Promise<any>} op
    */
-  async runChannelOp(channel, op) {
-    return this._enqueueChannelOp(channel, op);
+  async unregisterChannelDirect(channel) {
+    await this._unregisterChannelBody(channel);
+  }
+
+  /**
+   * Internal helper used by both the queued and direct unregister paths.
+   * @param {string} channel
+   * @private
+   */
+  async _unregisterChannelBody(channel) {
+    this._notifyCallbacks.delete(channel);
+    if (this._listenClient) {
+      try {
+        await this._listenClient.query(`UNLISTEN ${quoteIdent(channel)}`);
+      } catch (e) {
+        // Ignore if client is gone
+      }
+    }
   }
 
   /**

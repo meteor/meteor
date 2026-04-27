@@ -7,6 +7,17 @@
  * On the server, delegates queries and observations to the StreamProvider.
  * On the client, this is not used directly - client-side collections use
  * Minimongo cursors via LocalCollectionDriver.
+ *
+ * **`_id` assumption (Mongo-DX shape).** The `added` / `changed` / `removed`
+ * event payloads this cursor surfaces — and the `cursorDescription` it
+ * passes to the provider — are Mongo-DX shaped: they assume `_id` is the
+ * document identifier. Backends whose primary key is not `_id` (Kafka
+ * offset, SQL `BIGSERIAL`, REST resource path, Redis key) MUST map their
+ * native key to `_id` in the row converter / response decoder before
+ * handing documents to afs, and accept `_id` as the selector key on the
+ * way back. This matches afs's "Mongo-DX mapping per backend" design
+ * intent — adapters translate at the boundary so application code stays
+ * uniform.
  */
 export class AFSCursor {
   /**

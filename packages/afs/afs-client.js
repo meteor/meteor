@@ -1,6 +1,13 @@
-import { StreamProvider, ProviderClosedError } from './provider/stream-provider';
+import {
+  StreamProvider,
+  ProviderClosedError,
+  NotSupportedError,
+  ConflictError,
+  ConnectionLostError,
+} from './provider/stream-provider';
 import { FederatedCollection } from './collection/collection';
 import { Registry } from './registry';
+import { SubscriptionRegistry } from './subscription-registry';
 import { buildCommonAFS } from './afs-common';
 
 /**
@@ -81,8 +88,12 @@ export {
   AFS,
   StreamProvider,
   ProviderClosedError,
+  NotSupportedError,
+  ConflictError,
+  ConnectionLostError,
   FederatedCollection,
   Registry,
+  SubscriptionRegistry,
   ChangeStream,
   ObserveMultiplexer,
   AFSCursor,

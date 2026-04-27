@@ -1950,6 +1950,38 @@ Tinytest.add('afs - errors - NotImplementedError shape', (test) => {
   test.isTrue(err instanceof Error);
 });
 
+Tinytest.add('afs - errors - NotSupportedError code is not-supported', (test) => {
+  const err = new AFS.NotSupportedError('postgres', 'transactions');
+  test.equal(err.name, 'NotSupportedError');
+  test.equal(err.code, 'not-supported');
+  test.isTrue(err instanceof Error);
+});
+
+Tinytest.add('afs - errors - NotSupportedError message includes feature and detail', (test) => {
+  const err = new AFS.NotSupportedError('postgres', 'op', 'detail');
+  test.isTrue(err.message.includes('op'), 'expected feature in message');
+  test.isTrue(err.message.includes('detail'), 'expected detail in message');
+  test.isTrue(err.message.includes('postgres'), 'expected provider name in message');
+});
+
+Tinytest.add('afs - errors - ConflictError preserves cause', (test) => {
+  const inner = new Error('inner');
+  const err = new AFS.ConflictError('msg', { cause: inner });
+  test.equal(err.name, 'ConflictError');
+  test.equal(err.code, 'conflict');
+  test.equal(err.message, 'msg');
+  test.equal(err.cause, inner);
+  test.isTrue(err instanceof Error);
+});
+
+Tinytest.add('afs - errors - ConnectionLostError message includes provider', (test) => {
+  const err = new AFS.ConnectionLostError('postgres');
+  test.equal(err.name, 'ConnectionLostError');
+  test.equal(err.code, 'connection-lost');
+  test.isTrue(err.message.includes('postgres'));
+  test.isTrue(err instanceof Error);
+});
+
 if (Meteor.isServer) {
 
 Tinytest.add('afs - ChangeStream - cursorDescription getter returns constructor arg', (test) => {

@@ -24,9 +24,10 @@ export class MockStreamProvider extends StreamProvider {
     this._state = 'open';
   }
 
-  async close() {
+  async _closeTransport() {
+    // In-memory "transport" is just the LocalCollection map.
+    // `_connected` is cleared by base close().
     this._localCollections = {};
-    await super.close();
   }
 
   _getLocalCollection(collectionName) {

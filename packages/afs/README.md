@@ -181,10 +181,12 @@ class MyProvider extends AFS.StreamProvider {
     this._connected = true;
   }
 
-  // Disconnect
-  async close() {
+  // Release transport resources. afs's `close()` runs the lifecycle
+  // ('open' → 'closing' → 'closed') and calls this hook after stopping
+  // multiplexers and draining pending writes. Override the hook, not
+  // `close()` itself — see "Lifecycle and close hooks" below.
+  async _closeTransport() {
     await this._client.close();
-    this._connected = false;
   }
 
   // Insert a document. Return its _id.
@@ -336,18 +338,143 @@ make smart decisions:
 ```js
 capabilities() {
   return {
-    reactiveQueries: true,    // Can push changes as they happen
-    transactions: true,       // ACID transactions
-    changeStreams: false,      // Native change stream support
-    oplog: false,             // Operation log tailing
-    fullTextSearch: true,     // Full-text search
-    geoQueries: false,        // Geospatial queries
-    aggregation: true,        // Aggregation pipelines
-    joins: true,              // Table/collection joins
-    upsert: true,             // Upsert operations
+    // Load-bearing — afs's collection layer rejects unsupported
+    // operators with NotSupportedError before dispatch.
+    selectorOperators: ['Eq', 'In', 'And', 'Or', 'Gt', 'Lt'],
+    modifierOperators: ['Set', 'Unset', 'Inc'],
+
+    // Informational — surfaced to apps via `provider.capabilities()`.
+    reactiveQueries: true,
+    transactions: true,
+    upsert: true,
+    aggregation: false,
+    joins: false,
   };
 }
 ```
+
+`selectorOperators` and `modifierOperators` are the only keys afs itself
+checks (via `assertProviderSupports` and the AST walkers). The rest are
+informational hints for application code.
+
+### Lifecycle and close hooks
+
+`close()` runs a state machine — `'open'` → `'closing'` → `'closed'` —
+that:
+
+1. Stops every multiplexer (no new observe results land).
+2. Awaits `_drainPendingWrites()` (your hook; default no-op).
+3. Awaits `_closeTransport()` (your hook; default no-op).
+4. Marks the provider closed and rejects subsequent observe calls with
+   `ProviderClosedError`.
+
+Concurrent callers share one in-flight close promise. The two hooks run
+best-effort: a throw from `_drainPendingWrites` doesn't skip
+`_closeTransport`, and the first error wins. **Override the hooks, not
+`close()`.**
+
+```js
+async _drainPendingWrites() { await Promise.allSettled(this._inFlight); }
+async _closeTransport()     { await this._client.close(); }
+```
+
+### Errors
+
+afs ships a small error taxonomy that providers raise and the collection
+layer translates:
+
+| Class | When to raise |
+|-------|---------------|
+| `NotSupportedError`     | Operator/feature outside the provider's capabilities |
+| `ConflictError`         | Retry budget exhausted (write conflict, etc.) |
+| `ConnectionLostError`   | Transport disconnect callers should treat as transient |
+| `ProviderClosedError`   | Operation attempted after `close()` |
+| `NotImplementedError`   | Abstract-method placeholder |
+
+All five are exposed on the package namespace — `AFS.NotSupportedError`,
+`AFS.ConflictError`, etc.
+
+### Serializing per-key work — `SubscriptionRegistry`
+
+`AFS.SubscriptionRegistry` is a per-key FIFO queue. Use it when a provider
+must serialize operations on the same logical resource (e.g. all
+`SETUP`/`REMOVE`/`DROP` operations for one channel or table) without
+blocking unrelated keys.
+
+```js
+const registry = new AFS.SubscriptionRegistry();
+
+await registry.run(key, fn);                // queues per key
+await registry.dropAtomically(key, async () => {
+  await stopWatcher(key);
+  await dropTable(key);
+});
+registry.isBusy(key);
+await registry.drain();                     // waits for all keys
+```
+
+`dropAtomically` is currently an alias for `run` — exposed as a separate
+name so call-site intent stays legible.
+
+### Reconnecting — `ReconnectLoop`
+
+`AFS.ReconnectLoop` is a cancellable exponential-backoff state machine for
+push-channel reconnects (LISTEN/NOTIFY, pub/sub, change streams).
+
+```js
+const loop = new AFS.ReconnectLoop({
+  reconnect:      () => this._dialAndListen(),
+  doReplay:       () => this._catchUpPoll(),   // optional, runs after reconnect
+  maxAttempts:    10,
+  initialDelayMs: 250,
+  maxDelayMs:     30_000,
+  onAttempt:      ({ attempt, delayMs }) => { /* log */ },
+  onGiveUp:       () => this._fallBackToPolling(),
+});
+
+loop.start();
+loop.stop();        // cancels in-flight sleeps so shutdown is prompt
+loop.running;       // boolean
+```
+
+### Fetch-modify-write template
+
+For update paths that need read-then-write semantics (array modifiers,
+complex `$rename`, anything `applyModifier`-shaped), use the base class
+`_fetchModifyWrite` / `_fetchModifyWriteUpsert` templates instead of
+hand-rolling SELECT-FOR-UPDATE plus retry. Subclasses override five hooks:
+
+```js
+class MyProvider extends AFS.StreamProvider {
+  async _lockMatching(ctx)   { /* fetch + lock matching rows */ }
+  async _writeRow(ctx, row)  { /* persist a modified row */ }
+  _isRetryableConflict(err)  { return err.code === 'SERIALIZATION_FAILURE'; }
+  _buildInsertDoc(ctx)       { /* construct upsert payload */ }
+  _finalizeAttempt(ctx, res) { /* commit/rollback bookkeeping */ }
+}
+```
+
+The template owns the transaction and retry loop and calls
+`applyModifier()` between read and write.
+
+### Poll-based providers — `PollingStreamProvider`
+
+Backends without a native push channel (REST APIs, plain SQL without
+LISTEN/NOTIFY, file watchers) should extend `AFS.PollingStreamProvider`
+instead of `AFS.StreamProvider` directly. Subclasses override one method:
+
+```js
+class MyPollingProvider extends AFS.PollingStreamProvider {
+  async _fetchSnapshot(cursorDescription) {
+    return await this._fetchAll(cursorDescription); // array of docs
+  }
+}
+```
+
+The base class owns the timer, diffs snapshots with `diff-sequence` to emit
+`added`/`changed`/`removed`, coalesces overlapping polls, and recovers via
+`ReconnectLoop`. `AFS.MockPollingStreamProvider` (server-only) is a working
+in-memory reference and a useful test target.
 
 ### Registering a provider
 
@@ -488,7 +615,9 @@ A SQLite provider would look almost identical to PostgreSQL, minus the
 network layer. Good candidate for mobile/embedded apps or Electron.
 
 ```js
-class SQLiteProvider extends AFS.StreamProvider {
+// SQLite has no native change-notification, so extend PollingStreamProvider.
+// The base class owns the timer + diff loop; we just answer "what's there now?"
+class SQLiteProvider extends AFS.PollingStreamProvider {
   constructor(filepath) {
     super({ name: 'sqlite' });
     this._filepath = filepath;
@@ -499,16 +628,22 @@ class SQLiteProvider extends AFS.StreamProvider {
     this._connected = true;
   }
 
+  async _closeTransport() { this._db.close(); }
+
   // Same SQL compilation as Postgres, adjusted for SQLite dialect
   async insertAsync(collectionName, doc) { /* ... */ }
 
-  // Reactive: poll-and-diff (SQLite has no built-in change notification)
-  async observeChanges(cursorDescription, ordered, callbacks) {
-    // Poll on interval, diff results, fire callbacks
+  // Single override drives reactivity: the framework polls and diffs.
+  async _fetchSnapshot(cursorDescription) {
+    return this._db.all(/* ...selector → SQL... */);
   }
 
   capabilities() {
-    return { transactions: true, joins: true, upsert: true };
+    return {
+      selectorOperators: ['Eq', 'In', 'And', 'Or', 'Gt', 'Lt'],
+      modifierOperators: ['Set', 'Unset', 'Inc'],
+      transactions: true, joins: true, upsert: true,
+    };
   }
 }
 ```
@@ -595,13 +730,25 @@ class KafkaProvider extends AFS.StreamProvider {
 
 ### REST API (hypothetical)
 
-For bridging external APIs into Meteor's reactive system:
+Extending `PollingStreamProvider` lets a REST adapter inherit the timer,
+snapshot diffing, coalescing, and reconnect loop — all that's left is
+"fetch the current snapshot" and the write methods:
 
 ```js
-class RestProvider extends AFS.StreamProvider {
+class RestProvider extends AFS.PollingStreamProvider {
   constructor(baseUrl) {
-    super({ name: 'rest' });
+    super({ name: 'rest', pollIntervalMs: 5000 });
     this._baseUrl = baseUrl;
+  }
+
+  // PollingStreamProvider calls this each tick; it diffs against the
+  // previous snapshot and fires added/changed/removed for you.
+  async _fetchSnapshot(cursorDescription) {
+    const params = selectorToQueryString(cursorDescription.selector);
+    const res = await fetch(
+      `${this._baseUrl}/${cursorDescription.collectionName}?${params}`
+    );
+    return res.json();   // array of { _id, ... }
   }
 
   async fetchResults(collectionName, selector) {
@@ -610,16 +757,6 @@ class RestProvider extends AFS.StreamProvider {
     return res.json();
   }
 
-  // Reactivity: poll on interval
-  async observeChanges(cursorDescription, ordered, callbacks) {
-    const poll = setInterval(async () => {
-      const current = await this.fetchResults(/* ... */);
-      // Diff against previous results, fire callbacks
-    }, 5000);
-    return { stop: () => clearInterval(poll) };
-  }
-
-  // Writes proxy to REST endpoints
   async insertAsync(collectionName, doc) {
     const res = await fetch(`${this._baseUrl}/${collectionName}`, {
       method: 'POST', body: JSON.stringify(doc),

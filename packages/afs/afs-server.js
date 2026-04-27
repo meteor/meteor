@@ -1,11 +1,22 @@
-import { StreamProvider, ProviderClosedError, NotImplementedError } from './provider/stream-provider';
+import {
+  StreamProvider,
+  ProviderClosedError,
+  NotImplementedError,
+  NotSupportedError,
+  ConflictError,
+  ConnectionLostError,
+} from './provider/stream-provider';
 import { MockStreamProvider } from './provider/mock-stream-provider';
+import { PollingStreamProvider } from './provider/polling-stream-provider';
+import { MockPollingStreamProvider } from './provider/mock-polling-stream-provider';
 import { AFSCursor } from './collection/cursor';
 import { FederatedCollection } from './collection/collection';
 import { ChangeStream } from './reactive/change-stream';
 import { ObserveMultiplexer } from './reactive/observe-multiplexer';
 import { AdaptiveEngine } from './reactive/adaptive-engine';
+import { ReconnectLoop } from './reactive/reconnect-loop';
 import { Registry } from './registry';
+import { SubscriptionRegistry } from './subscription-registry';
 import { buildCommonAFS } from './afs-common';
 
 /**
@@ -29,9 +40,12 @@ const AFS = {
   // Server-side classes not exposed via afs-common
   Cursor: AFSCursor,
   MockStreamProvider,
+  PollingStreamProvider,
+  MockPollingStreamProvider,
   ChangeStream,
   ObserveMultiplexer,
   AdaptiveEngine,
+  ReconnectLoop,
 
   // Singleton
   _engine,
@@ -83,13 +97,20 @@ export {
   StreamProvider,
   ProviderClosedError,
   NotImplementedError,
+  NotSupportedError,
+  ConflictError,
+  ConnectionLostError,
   AFSCursor,
   FederatedCollection,
   AdaptiveEngine,
   MockStreamProvider,
+  PollingStreamProvider,
+  MockPollingStreamProvider,
   Registry,
+  SubscriptionRegistry,
   ChangeStream,
   ObserveMultiplexer,
+  ReconnectLoop,
 };
 
 export {

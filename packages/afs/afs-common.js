@@ -9,9 +9,17 @@
  * `listCollections()` only needs to be made once.
  */
 
-import { StreamProvider, ProviderClosedError, NotImplementedError } from './provider/stream-provider';
+import {
+  StreamProvider,
+  ProviderClosedError,
+  NotImplementedError,
+  NotSupportedError,
+  ConflictError,
+  ConnectionLostError,
+} from './provider/stream-provider';
 import { FederatedCollection } from './collection/collection';
 import { Registry } from './registry';
+import { SubscriptionRegistry } from './subscription-registry';
 import * as Query from './query/index';
 
 export const AFS_VERSION = '0.1.0';
@@ -22,7 +30,11 @@ export function buildCommonAFS() {
     StreamProvider,
     ProviderClosedError,
     NotImplementedError,
+    NotSupportedError,
+    ConflictError,
+    ConnectionLostError,
     Collection: FederatedCollection,
+    SubscriptionRegistry,
     ObjectID: MongoID.ObjectID,
 
     // Query AST + helpers (parseSelector, parseModifier, match, applyModifier,

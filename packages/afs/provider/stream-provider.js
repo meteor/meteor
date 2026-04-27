@@ -1,5 +1,6 @@
 import { ChangeStream } from '../reactive/change-stream';
 import { ObserveMultiplexer } from '../reactive/observe-multiplexer';
+import { applyModifier } from '../query/apply-modifier';
 
 /**
  * Thrown when a method is called on a StreamProvider that has been closed.
@@ -22,6 +23,47 @@ export class NotImplementedError extends Error {
     super(`${className}.${methodName}() must be implemented`);
     this.name = 'NotImplementedError';
     this.code = 'not-implemented';
+  }
+}
+
+/**
+ * Thrown when a provider is asked to perform an operation it does not support
+ * (capability gating, unsupported operators, missing feature for this backend).
+ */
+export class NotSupportedError extends Error {
+  constructor(providerName, feature, details) {
+    super(`${providerName} does not support ${feature}${details ? ': ' + details : ''}`);
+    this.name = 'NotSupportedError';
+    this.code = 'not-supported';
+  }
+}
+
+/**
+ * Thrown when a write fails because of a concurrent conflict — serialization
+ * failure, optimistic-lock failure, or write-write conflict. The `cause`
+ * (when supplied) preserves the underlying driver error for diagnostics.
+ */
+export class ConflictError extends Error {
+  constructor(message, { cause } = {}) {
+    super(message, cause !== undefined ? { cause } : undefined);
+    this.name = 'ConflictError';
+    this.code = 'conflict';
+  }
+}
+
+/**
+ * Thrown when an operation fails because the underlying connection to the
+ * data source was lost (network failure, driver disconnect). The `cause`
+ * (when supplied) preserves the underlying driver error for diagnostics.
+ */
+export class ConnectionLostError extends Error {
+  constructor(providerName, { cause } = {}) {
+    super(
+      `${providerName} connection lost`,
+      cause !== undefined ? { cause } : undefined
+    );
+    this.name = 'ConnectionLostError';
+    this.code = 'connection-lost';
   }
 }
 
@@ -53,6 +95,10 @@ export class NotImplementedError extends Error {
  * Protected hooks (call but don't override unless extending):
  *   - _assertOpen, _getMultiplexer, _createMultiplexer, _closeMultiplexers
  *
+ * Lifecycle hooks (override in subclasses, no-op defaults):
+ *   - _drainPendingWrites — await in-flight writes during close()
+ *   - _closeTransport     — release pool / sockets / driver during close()
+ *
  * Unimplemented required overrides throw `NotImplementedError`.
  */
 export class StreamProvider {
@@ -70,6 +116,9 @@ export class StreamProvider {
     this._collections = new Map();
     this._multiplexerCache = new Map();
     this._multiplexerPending = new Map();
+    // In-flight close() promise. Cached so concurrent close() callers
+    // observe the same teardown rather than racing.
+    this._closing = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -78,16 +127,34 @@ export class StreamProvider {
 
   /**
    * @protected
-   * Throws ProviderClosedError if this provider has been closed.
+   * Throws ProviderClosedError if this provider has been closed OR is in the
+   * middle of closing. The state machine is `'open' → 'closing' → 'closed'`;
+   * only `'open'` admits new work. As soon as `close()` flips the state to
+   * `'closing'`, any concurrent caller (a write racing against teardown, an
+   * observe attempt mid-drain) fails fast with `ProviderClosedError` instead
+   * of slipping through behind a half-torn-down transport.
    */
   _assertOpen(methodName) {
-    if (this._state === 'closed') {
+    if (this._state !== 'open') {
       throw new ProviderClosedError(this.constructor.name, methodName);
     }
   }
 
   /**
    * Establish connection to the data source.
+   *
+   * ## State-machine semantics
+   *
+   * `connect()` is gated by `_assertOpen`, which means `'closed'` is terminal
+   * at the base contract: a provider that has been through `close()` cannot
+   * be reconnected by calling `connect()` directly — `_assertOpen` will throw
+   * `ProviderClosedError`.
+   *
+   * Subclasses that wish to support reopen MUST flip `_state = 'open'`
+   * themselves before calling `super.connect()`, or simply not call super
+   * (the base implementation throws `NotImplementedError` anyway). See
+   * `MockStreamProvider.connect()` for the canonical reopen pattern.
+   *
    * @returns {Promise<void>}
    */
   async connect() {
@@ -96,22 +163,136 @@ export class StreamProvider {
   }
 
   /**
-   * Close the connection to the data source.
-   * Subclasses SHOULD call super.close() as the LAST step of their cleanup.
-   * The base implementation stops all cached multiplexers, marks the provider
-   * as closed, and is safe to call more than once.
+   * Close the provider and release every resource it owns.
+   *
+   * ## Canonical teardown order (the contract subclasses rely on)
+   *
+   *   1. **Stop accepting new work.** `_state` flips from `'open'` to
+   *      `'closing'` synchronously, before any awaits. From this point on
+   *      every `_assertOpen` caller — writes, finds, observes — fails with
+   *      `ProviderClosedError`. New observe attempts via `_getMultiplexer`
+   *      also reject for the same reason.
+   *   2. **Stop reactive deliveries.** `_closeMultiplexers()` tears down all
+   *      cached observe drivers (multiplexers + their underlying streams +
+   *      provider teardown hooks) before any in-flight write is awaited, so
+   *      a still-live observer cannot fire a notification into a draining
+   *      write path.
+   *   3. **Drain in-flight writes.** `await _drainPendingWrites()`. Default
+   *      no-op. Subclasses override to await tracked write futures (and may
+   *      bound the wait — the base does not impose a timeout). Concurrent
+   *      writers that arrived between steps 1 and 3 are already rejected by
+   *      `_assertOpen`; this drains the writes that started before step 1.
+   *   4. **Close transport.** `await _closeTransport()`. Default no-op.
+   *      Subclasses override to end pools, close sockets, send `UNLISTEN *`,
+   *      etc. Runs after multiplexers are dead and writes have settled, so
+   *      the transport can shut down without orphaning callbacks or losing
+   *      ack-paths.
+   *   5. **Mark closed.** `_state` flips to `'closed'` and `_connected` is
+   *      cleared. Idempotent: a second `close()` returns immediately.
+   *
+   * Subclasses SHOULD override `_drainPendingWrites()` and/or
+   * `_closeTransport()` rather than `close()` itself — the base is the
+   * canonical orchestrator. Subclasses that must override `close()` for
+   * back-compat MUST call `super.close()` LAST and put their work inside
+   * `_closeTransport()` shape (otherwise the contract above does not hold).
+   *
+   * Idempotent: safe to call more than once. A second invocation while a
+   * first is still in `'closing'` returns the same in-flight promise — both
+   * callers resolve (or reject) together once the first run reaches
+   * `'closed'`. A call after the first has settled returns immediately.
+   *
+   * ## Error contract for hook failures
+   *
+   * `_drainPendingWrites` and `_closeTransport` are invoked best-effort and
+   * independently: `_closeTransport` ALWAYS runs, even if `_drainPendingWrites`
+   * rejects, because a leaked pool / socket is a worse outcome than a lost
+   * drain error. If either hook (or both) rejects, `close()` rejects with the
+   * FIRST error encountered — drain's error if drain threw, otherwise
+   * transport's error. The `_state` flips to `'closed'` regardless, so the
+   * provider never gets stuck in `'closing'`.
+   *
    * @returns {Promise<void>}
    */
   async close() {
     if (this._state === 'closed') return;
-    this._closeMultiplexers();
-    this._state = 'closed';
-    this._connected = false;
+    if (this._closing) return this._closing;
+    this._state = 'closing';
+    this._closing = (async () => {
+      try {
+        // Step 2: stop reactive deliveries.
+        this._closeMultiplexers();
+        // Steps 3 + 4: drain and transport-close are best-effort and
+        // independent. _closeTransport MUST run even if _drainPendingWrites
+        // throws (otherwise a transport leak hides behind a drain error).
+        let firstError = null;
+        try {
+          await this._drainPendingWrites();
+        } catch (e) {
+          firstError = e;
+        }
+        try {
+          await this._closeTransport();
+        } catch (e) {
+          firstError = firstError || e;
+        }
+        if (firstError) throw firstError;
+      } finally {
+        // Step 5: mark closed even if a hook threw, so the provider does not
+        // get stuck in 'closing' forever.
+        this._state = 'closed';
+        this._connected = false;
+        this._closing = null;
+      }
+    })();
+    return this._closing;
+  }
+
+  /**
+   * Subclass hook (step 3 of `close()`): await every in-flight write so the
+   * transport close that follows does not abort an unacknowledged INSERT/
+   * UPDATE/DELETE.
+   *
+   * Default: no-op (resolves immediately) — adapters with no write tracking
+   * skip this step. Adapters that DO track in-flight writes return a Promise
+   * that settles when they have all completed; if the adapter wants a bound,
+   * it imposes one itself (the base does not provide a default timeout).
+   *
+   * Called after multiplexers have been stopped and before `_closeTransport`.
+   * Concurrent writers arriving after `close()` started are already rejected
+   * by `_assertOpen` (state is `'closing'`), so this hook only needs to wait
+   * for writes that began while the provider was still `'open'`.
+   *
+   * @returns {Promise<void>}
+   * @protected
+   */
+  async _drainPendingWrites() {
+    // No-op default. Adapters with write tracking override.
+  }
+
+  /**
+   * Subclass hook (step 4 of `close()`): release transport-owned resources —
+   * end the connection pool, close LISTEN sockets, etc. Runs after
+   * multiplexers have been stopped and writes have drained, so the transport
+   * teardown does not race a live observer or an unacked write.
+   *
+   * Default: no-op.
+   *
+   * @returns {Promise<void>}
+   * @protected
+   */
+  async _closeTransport() {
+    // No-op default. Adapters with transport state override.
   }
 
   /**
    * Stop all cached multiplexers and their underlying ChangeStreams.
    * Called automatically from close().
+   *
+   * Sync by contract; emit-during-tear-down is not supported. Multiplexer /
+   * stream stop callbacks that synchronously emit observe events into a
+   * draining provider violate the close() ordering and will surface as
+   * dropped or undefined-target deliveries.
+   *
    * @protected
    */
   _closeMultiplexers() {
@@ -226,6 +407,305 @@ export class StreamProvider {
   async fetchResults(collectionName, selector, options) {
     this._assertOpen('fetchResults');
     throw new NotImplementedError(this.constructor.name, 'fetchResults');
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fetch-modify-write template (generic SELECT-FOR-UPDATE → modify → UPDATE)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Generic fetch-modify-write loop. Universal across backends that can lock
+   * rows (or fetch optimistically) and write them back: SQL `SELECT ... FOR
+   * UPDATE`, Redis `WATCH`/`MULTI`, REST `If-Match` PATCH, etc. afs owns the
+   * loop, the modifier application via `applyModifier`, and the
+   * conflict-retry policy. Subclasses override the four hooks below to
+   * supply backend-specific lock + write + retry-classification logic.
+   *
+   * Behavior (per attempt, up to `maxAttempts`):
+   *   1. `locked = await _lockMatching(collectionName, selector, opts)` —
+   *      returns the rows to modify. Single-row by default; if `opts.multi`
+   *      is true, the hook decides whether and how to lock multiple rows.
+   *   2. If `locked.length === 0`, return `{ matchedCount: 0,
+   *      modifiedCount: 0 }`.
+   *   3. For each `row` in `locked`, call `applyModifier(row, modifier,
+   *      applyOptions)` to mutate it in place, then
+   *      `await _writeRow(collectionName, modifiedRow, originalRow, opts)`.
+   *   4. Return `{ matchedCount, modifiedCount }`.
+   *
+   * If any step throws and `_isRetryableConflict(err)` returns truthy, retry
+   * on a fresh attempt. Past `maxAttempts`, the last conflict surfaces as
+   * `ConflictError(... { cause: lastErr })`. Non-conflict errors propagate
+   * raw.
+   *
+   * The base loop is transaction-agnostic: subclasses that need atomic
+   * lock-modify-write semantics open the transaction in `_lockMatching`
+   * (typically returning a context handle stashed on `opts`) and consume
+   * it in `_writeRow`. Subclasses that fetch optimistically (REST PATCH,
+   * Redis without WATCH) skip the transaction entirely and rely on the
+   * retry loop to recover from concurrent writes.
+   *
+   * @param {string} collectionName
+   * @param {Object} selector
+   * @param {Object} modifier
+   * @param {Object} [opts]
+   * @param {number} [opts.maxAttempts=3]
+   * @param {Object} [opts.applyOptions] Forwarded to applyModifier.
+   * @param {boolean} [opts.multi=false] Multi-row update (hook-dependent).
+   * @returns {Promise<{ matchedCount: number, modifiedCount: number }>}
+   * @protected
+   */
+  async _fetchModifyWrite(collectionName, selector, modifier, opts = {}) {
+    const maxAttempts = opts.maxAttempts || 3;
+    let lastErr = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let attemptError = null;
+      let result = null;
+      try {
+        const locked = await this._lockMatching(collectionName, selector, opts);
+        if (!locked || locked.length === 0) {
+          result = { matchedCount: 0, modifiedCount: 0 };
+        } else {
+          let modifiedCount = 0;
+          for (const row of locked) {
+            const original = row;
+            // applyModifier mutates in place and returns the modified doc.
+            applyModifier(row, modifier, opts.applyOptions);
+            await this._writeRow(collectionName, row, original, opts);
+            modifiedCount++;
+          }
+          result = { matchedCount: locked.length, modifiedCount };
+        }
+      } catch (e) {
+        attemptError = e;
+      }
+
+      // Per-attempt cleanup hook (commit/rollback/release for transactional
+      // adapters). Runs whether the attempt succeeded or threw.
+      try {
+        await this._finalizeAttempt(opts, attemptError);
+      } catch (finalizeErr) {
+        // If the attempt itself succeeded but finalize threw, surface the
+        // finalize error. If the attempt threw, prefer the original error.
+        if (!attemptError) attemptError = finalizeErr;
+      }
+
+      if (!attemptError) return result;
+
+      if (this._isRetryableConflict(attemptError) && attempt < maxAttempts) {
+        lastErr = attemptError;
+        continue;
+      }
+      if (this._isRetryableConflict(attemptError)) {
+        throw new ConflictError(
+          `serialization conflict after ${maxAttempts} retries`,
+          { cause: attemptError }
+        );
+      }
+      throw attemptError;
+    }
+
+    // Unreachable when maxAttempts >= 1, but keep a guard for maxAttempts=0.
+    throw lastErr || new Error(
+      `${this.constructor.name}._fetchModifyWrite: exhausted retries`
+    );
+  }
+
+  /**
+   * Same loop as {@link _fetchModifyWrite} but with insert-on-no-match. If
+   * `_lockMatching` returns no rows on the first successful attempt, the
+   * hook builds an insert document via `_buildInsertDoc(selector, modifier)`,
+   * applies the modifier with `{ isInsert: true }`, and calls `_writeRow`
+   * with `opts.isInsert = true`. The returned `insertedId` comes from the
+   * built document's `_id`.
+   *
+   * Like `_fetchModifyWrite`, the loop retries on conflicts (per
+   * `_isRetryableConflict`) up to `maxAttempts` and surfaces a
+   * `ConflictError` past that.
+   *
+   * @param {string} collectionName
+   * @param {Object} selector
+   * @param {Object} modifier
+   * @param {Object} [opts]
+   * @returns {Promise<{ matchedCount: number, modifiedCount: number,
+   *   insertedId?: any }>}
+   * @protected
+   */
+  async _fetchModifyWriteUpsert(collectionName, selector, modifier, opts = {}) {
+    const maxAttempts = opts.maxAttempts || 3;
+    let lastErr = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      let attemptError = null;
+      let result = null;
+      try {
+        const locked = await this._lockMatching(collectionName, selector, opts);
+        if (locked && locked.length > 0) {
+          let modifiedCount = 0;
+          for (const row of locked) {
+            const original = row;
+            applyModifier(row, modifier, opts.applyOptions);
+            await this._writeRow(collectionName, row, original, opts);
+            modifiedCount++;
+          }
+          result = {
+            matchedCount: locked.length,
+            modifiedCount,
+            insertedId: undefined,
+          };
+        } else {
+          // No match → insert path.
+          const insertDoc = this._buildInsertDoc(selector, modifier);
+          applyModifier(insertDoc, modifier, {
+            ...(opts.applyOptions || {}),
+            isInsert: true,
+          });
+          const insertOpts = { ...opts, isInsert: true };
+          await this._writeRow(collectionName, insertDoc, null, insertOpts);
+          result = {
+            matchedCount: 0,
+            modifiedCount: 0,
+            insertedId: insertDoc._id,
+          };
+        }
+      } catch (e) {
+        attemptError = e;
+      }
+
+      try {
+        await this._finalizeAttempt(opts, attemptError);
+      } catch (finalizeErr) {
+        if (!attemptError) attemptError = finalizeErr;
+      }
+
+      if (!attemptError) return result;
+
+      if (this._isRetryableConflict(attemptError) && attempt < maxAttempts) {
+        lastErr = attemptError;
+        continue;
+      }
+      if (this._isRetryableConflict(attemptError)) {
+        throw new ConflictError(
+          `serialization conflict after ${maxAttempts} retries`,
+          { cause: attemptError }
+        );
+      }
+      throw attemptError;
+    }
+
+    throw lastErr || new Error(
+      `${this.constructor.name}._fetchModifyWriteUpsert: exhausted retries`
+    );
+  }
+
+  /**
+   * Lock-and-fetch rows matching `selector`. The default throws
+   * `NotImplementedError`; subclasses that use `_fetchModifyWrite` /
+   * `_fetchModifyWriteUpsert` MUST override.
+   *
+   * Sources without row-level locking (REST PATCH, Redis without WATCH)
+   * may fetch optimistically — the retry loop handles concurrent writes
+   * via `_isRetryableConflict`.
+   *
+   * @param {string} collectionName
+   * @param {Object} selector
+   * @param {Object} opts Forwarded from the template method. Subclasses
+   *   may stash a transaction / lock-context handle on `opts` here for
+   *   `_writeRow` to consume.
+   * @returns {Promise<Array<Object>>} Matching rows (mutated in place by
+   *   the loop's `applyModifier` call — return clones if the hook needs
+   *   to retain the originals).
+   * @protected
+   */
+  async _lockMatching(collectionName, selector, opts) {
+    throw new NotImplementedError(this.constructor.name, '_lockMatching');
+  }
+
+  /**
+   * Write a row that has already been modified by `applyModifier` (or, on
+   * the upsert insert path, freshly built by `_buildInsertDoc`). Subclasses
+   * MUST override.
+   *
+   * `originalRow` is `null` on the upsert insert path; otherwise it is the
+   * row reference returned from `_lockMatching` (same reference as `row`,
+   * since the loop mutates in place). `opts.isInsert === true` distinguishes
+   * the insert case.
+   *
+   * @param {string} collectionName
+   * @param {Object} row Modified or inserted document.
+   * @param {Object|null} originalRow
+   * @param {Object} opts
+   * @returns {Promise<void>}
+   * @protected
+   */
+  async _writeRow(collectionName, row, originalRow, opts) {
+    throw new NotImplementedError(this.constructor.name, '_writeRow');
+  }
+
+  /**
+   * Decide whether `err` is a retryable conflict (e.g., Postgres SQLSTATE
+   * 40001 serialization failure, optimistic-lock failure, version mismatch).
+   * The default never retries; subclasses override to opt into retry.
+   *
+   * @param {Error} err
+   * @returns {boolean}
+   * @protected
+   */
+  _isRetryableConflict(err) {
+    return false;
+  }
+
+  /**
+   * Build the document to insert when `_fetchModifyWriteUpsert` finds no
+   * matching row. The default throws `NotImplementedError`; only required
+   * when the caller routes through the upsert template.
+   *
+   * Implementations typically copy scalar equality fields out of `selector`
+   * and seed an `_id` (calling `generateId` when absent). The loop then
+   * applies the modifier with `{ isInsert: true }` on top.
+   *
+   * @param {Object} selector
+   * @param {Object} modifier
+   * @returns {Object} New document.
+   * @protected
+   */
+  _buildInsertDoc(selector, modifier) {
+    throw new NotImplementedError(this.constructor.name, '_buildInsertDoc');
+  }
+
+  /**
+   * Per-attempt cleanup hook. Invoked by the fetch-modify-write loop after
+   * each attempt — successful or failed — and before the loop decides
+   * whether to retry. The default is a no-op; transactional adapters
+   * override to commit on success and roll back on error, plus release
+   * any client/connection stashed on `opts` by `_lockMatching`.
+   *
+   * `error` is `null` on success and the thrown error on failure. The hook
+   * MUST be safe to call multiple times across attempts and MUST NOT throw
+   * for cleanup paths that already settled (e.g., a release on a
+   * not-yet-acquired client). If the hook itself throws and the attempt
+   * was otherwise successful, the loop surfaces the cleanup error;
+   * otherwise the original attempt error wins.
+   *
+   * Subclasses with per-attempt transactional state (e.g., a row lock or an
+   * open client) MUST clear that state from `opts` (e.g.,
+   * `opts._client = null`) inside this hook. Otherwise the next attempt
+   * will see stale context — `_lockMatching` is expected to attach a fresh
+   * client every iteration.
+   *
+   * Called even on the no-match branch (when `matchedCount === 0`).
+   * Implementations doing transaction commit/rollback should be safe to
+   * commit empty transactions — Postgres `COMMIT` on a transaction that
+   * issued only a SELECT is a no-op, and other backends should treat the
+   * matching empty-commit case identically.
+   *
+   * @param {Object} opts The same opts object passed through the loop.
+   * @param {Error|null} error
+   * @returns {Promise<void>}
+   * @protected
+   */
+  async _finalizeAttempt(opts, error) {
+    // No-op default. Transactional adapters override.
   }
 
   // ---------------------------------------------------------------------------
@@ -420,6 +900,11 @@ export class StreamProvider {
    * @protected
    */
   async _getMultiplexer(cursorDescription, ordered) {
+    // Reactive observe is the EventEmitter equivalent of CRUD entry points;
+    // gate it on the same state machine so an observe attempt arriving
+    // mid-`close()` (state = 'closing') rejects with ProviderClosedError
+    // instead of standing up a multiplexer the close() about to drain.
+    this._assertOpen('observeChanges');
     // Canonical stringify so semantically-equal cursor descriptions with
     // differing key-insertion orders dedupe to the same multiplexer.
     const key = EJSON.stringify({ ...cursorDescription, ordered }, { canonical: true });

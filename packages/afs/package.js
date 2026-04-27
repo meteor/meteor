@@ -65,11 +65,16 @@ Package.onTest(function (api) {
   api.addFiles('tests/crud.js', 'server');
   api.addFiles('tests/observe.js', 'server');
   api.addFiles('tests/stream-provider.js', 'server');
+  api.addFiles('tests/fetch-modify-write.js', 'server');
   api.addFiles('tests/ddp.js', 'server');
   api.addFiles('tests/adaptive.js', 'server');
   api.addFiles('tests/registry-idgen.js', ['client', 'server']);
   api.addFiles('tests/chaos.js', 'server');
   api.addFiles('tests/teardown.js', 'server');
+  api.addFiles('tests/subscription-registry.js', 'server');
+  api.addFiles('tests/reconnect-loop.js', 'server');
+  api.addFiles('tests/polling-stream-provider.js', 'server');
+  api.addFiles('tests/mock-polling-stream-provider.js', 'server');
   api.addFiles('tests/query-paths.js', ['client', 'server']);
   api.addFiles('tests/query-parse.js', ['client', 'server']);
   api.addFiles('tests/query-round-trip.js', 'server');

@@ -139,6 +139,18 @@ export const Registry = {
 
   /**
    * Register a collection (FederatedCollection or Mongo.Collection).
+   *
+   * Collection-name uniqueness is **per-registry**, not per-provider: there
+   * is one `_collections` map shared across every registered provider in a
+   * Meteor process, so two providers cannot both host a collection named
+   * `"users"` in the same process — the second registration silently
+   * overwrites the first. This is intentional given afs's "Mongo-DX
+   * mapping per backend" intent: a Meteor app addresses a collection by
+   * name, and a name must resolve to exactly one collection regardless of
+   * which provider backs it. Multi-provider deployments that genuinely
+   * need same-named collections must namespace at the application level
+   * (e.g., `"tenantA:users"`).
+   *
    * @param {string} name - Collection name
    * @param {Object} collection - The collection instance
    */

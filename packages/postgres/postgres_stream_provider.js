@@ -5,9 +5,8 @@
  * schema-aware SQL compilation.
  */
 
-import { StreamProvider, AFSCursor, applyModifier, parseSelector, parseModifier, parseSort, parseProjection } from 'meteor/afs';
+import { StreamProvider, AFSCursor, SubscriptionRegistry, parseSelector, parseModifier, parseSort, parseProjection } from 'meteor/afs';
 import { PostgresConnection } from './postgres_driver';
-import { ResolvedSchema } from './schema';
 import { documentToRow, rowToDocument } from './row_converter';
 import {
   compileSet,
@@ -52,6 +51,13 @@ export class PostgresStreamProvider extends StreamProvider {
     this._options = options;
     this._connection = null;
     this._schemas = new Map(); // collectionName → ResolvedSchema
+    // Per-channel serialization for ALL subscription lifecycle ops (setup,
+    // remove, drop). The provider OWNS this registry and passes it to the
+    // PostgresConnection at connect() time so dropCollectionAsync (here)
+    // and setupListenNotify / removeListenNotify (in the connection) share
+    // a single queue per channel — without this, a concurrent setup vs
+    // drop on the same channel could interleave.
+    this._subscriptions = new SubscriptionRegistry();
   }
 
   // ---------------------------------------------------------------------------
@@ -59,39 +65,62 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async connect() {
-    this._connection = new PostgresConnection(this._url, this._options);
+    // Pass the provider-owned SubscriptionRegistry through so the connection's
+    // setupListenNotify / removeListenNotify queue against the SAME registry
+    // that dropCollectionAsync uses. Otherwise the two sides would have
+    // independent queues and could interleave.
+    this._connection = new PostgresConnection(this._url, {
+      ...this._options,
+      subscriptions: this._subscriptions,
+    });
     await this._connection.connect();
     this._connected = true;
   }
 
-  async close() {
-    // Idempotent: if super.close() already flipped _state, nothing more to do.
-    if (this._state === 'closed') return;
+  /**
+   * In-flight write drain (step 3 of StreamProvider.close()).
+   *
+   * Postgres does not currently track per-statement write futures, so this
+   * is intentionally a no-op: writes started before close() began either
+   * complete on the pool client they were issued against, or fail when
+   * `_closeTransport()` ends the pool — the pg pool surfaces a clear error
+   * either way. Adding a tracking layer here is follow-up work; the hook
+   * exists so that work can be slotted in without touching close() again.
+   *
+   * @protected
+   */
+  async _drainPendingWrites() {
+    // No-op (see JSDoc). The hook exists so future work can plug write
+    // tracking in without re-opening the close() lifecycle.
+  }
 
-    this._closeMultiplexers();
+  /**
+   * Transport teardown (step 4 of StreamProvider.close()).
+   *
+   * Runs after multiplexers have been stopped and `_drainPendingWrites`
+   * has settled. Releases LISTEN-client channels (UNLISTEN *), ends the
+   * connection (which drains the pool), and clears the connection handle.
+   *
+   * @protected
+   */
+  async _closeTransport() {
+    if (!this._connection) return;
 
-    if (this._connection) {
-      // Proactively release the LISTEN client's channels so a pooled
-      // connection returning to a pool can't leak notifications across
-      // reconnects. Wrapped in try/catch because the client may already
-      // be gone if the connection errored.
-      const listenClient = this._connection._listenClient;
-      if (listenClient) {
-        try {
-          await listenClient.query('UNLISTEN *');
-        } catch (e) {
-          // Ignore — client may already be disconnected.
-        }
+    // Proactively release the LISTEN client's channels so a pooled
+    // connection returning to a pool can't leak notifications across
+    // reconnects. Wrapped in try/catch because the client may already
+    // be gone if the connection errored.
+    const listenClient = this._connection._listenClient;
+    if (listenClient) {
+      try {
+        await listenClient.query('UNLISTEN *');
+      } catch (e) {
+        // Ignore — client may already be disconnected.
       }
-
-      await this._connection.close();
-      this._connection = null;
     }
-    this._connected = false;
 
-    // Transition _state to 'closed' so post-close calls surface
-    // ProviderClosedError via _assertOpen() (see C1 fix).
-    await super.close();
+    await this._connection.close();
+    this._connection = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -158,7 +187,11 @@ export class PostgresStreamProvider extends StreamProvider {
     );
 
     if (needsFetchModifyWrite) {
-      return this._fetchModifyWrite(collectionName, selector, modifier, options, schema);
+      const fmwOpts = { ...options, _schema: schema };
+      const { matchedCount } = await this._fetchModifyWrite(
+        collectionName, selector, modifier, fmwOpts
+      );
+      return matchedCount;
     }
 
     if (!text) return 0;
@@ -375,34 +408,24 @@ export class PostgresStreamProvider extends StreamProvider {
     // postgres_driver.js setupListenNotify: `meteor_pg_<name>_notify_fn`.
     //
     // All three steps — DROP TABLE, DROP FUNCTION, UNLISTEN — run inside the
-    // same channel-op slot so they cannot interleave with a pending
-    // setupListenNotify for the same collection. Without this, a LISTEN
-    // completing between our DROP TABLE and UNLISTEN would leave the
-    // LISTEN client subscribed to a channel whose trigger we're about to
-    // delete.
+    // same SubscriptionRegistry slot for this channel so they cannot
+    // interleave with a concurrent setupListenNotify, removeListenNotify, or
+    // dropCollectionAsync targeting the same collection (driver and provider
+    // share the same registry). We call `unregisterChannelDirect` (not the
+    // queued variant) because the registry slot already serializes us —
+    // going through `unregisterChannel` here would deadlock by recursing
+    // into the same registry slot.
     const channel = `meteor_pg_${collectionName}`;
     const triggerFnName = `${channel}_notify_fn`;
 
-    await this._connection.runChannelOp(channel, async () => {
+    await this._subscriptions.dropAtomically(channel, async () => {
       await this._connection._queryInternal(
         `DROP TABLE IF EXISTS ${quoteIdent(collectionName)} CASCADE`
       );
       await this._connection._queryInternal(
         `DROP FUNCTION IF EXISTS ${quoteIdent(triggerFnName)}() CASCADE`
       );
-
-      // Inlined unregisterChannel body — we're already inside the queue
-      // slot for this channel, so calling unregisterChannel would deadlock.
-      this._connection._notifyCallbacks.delete(channel);
-      if (this._connection._listenClient) {
-        try {
-          await this._connection._listenClient.query(
-            `UNLISTEN ${quoteIdent(channel)}`
-          );
-        } catch (e) {
-          // Ignore if client is gone.
-        }
-      }
+      await this._connection.unregisterChannelDirect(channel);
     });
 
     this._connection.forgetKnownTable(collectionName);
@@ -412,122 +435,6 @@ export class PostgresStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
   // Private helpers
   // ---------------------------------------------------------------------------
-
-  /**
-   * Fetch-modify-write pattern for complex modifiers.
-   * Uses a transaction with SELECT FOR UPDATE → JS modify → UPDATE.
-   *
-   * Each attempt sets per-transaction statement/idle timeouts (env-tunable
-   * via METEOR_POSTGRES_STATEMENT_TIMEOUT_MS and
-   * METEOR_POSTGRES_IDLE_IN_TX_TIMEOUT_MS) and, for multi-doc updates,
-   * REPEATABLE READ isolation. Serialization failures (SQLSTATE 40001) are
-   * retried up to 3 times before bubbling.
-   */
-  async _fetchModifyWrite(collectionName, selector, modifier, options, schema) {
-    const MAX_ATTEMPTS = 3;
-    let lastErr = null;
-
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      try {
-        return await this._fetchModifyWriteOnce(
-          collectionName, selector, modifier, options, schema
-        );
-      } catch (e) {
-        // PG serialization failure — safe to retry on a fresh transaction.
-        if (e && e.code === '40001' && attempt < MAX_ATTEMPTS) {
-          lastErr = e;
-          continue;
-        }
-        throw e;
-      }
-    }
-
-    // Should be unreachable (the loop either returns or throws), but keep a
-    // guard in case MAX_ATTEMPTS is ever set to 0.
-    throw lastErr || new Error('Postgres _fetchModifyWrite: exhausted retries');
-  }
-
-  async _fetchModifyWriteOnce(collectionName, selector, modifier, options, schema) {
-    const statementTimeoutMs = Math.max(
-      1000,
-      parseInt(process.env.METEOR_POSTGRES_STATEMENT_TIMEOUT_MS, 10) || 30000
-    );
-    const idleInTxTimeoutMs = Math.max(
-      1000,
-      parseInt(process.env.METEOR_POSTGRES_IDLE_IN_TX_TIMEOUT_MS, 10) || 10000
-    );
-
-    const client = await this._connection.getClient();
-    let affected = 0;
-
-    try {
-      await client.query('BEGIN');
-
-      if (options.multi === true) {
-        // REPEATABLE READ prevents phantom-insert inconsistency for multi-doc updates; full SERIALIZABLE would need retry-on-40001 logic we skip for now.
-        await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
-      }
-
-      // Per-transaction timeouts: bound worst-case lock waits and prevent a
-      // stalled client from holding row locks indefinitely.
-      await client.query(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
-      await client.query(`SET LOCAL idle_in_transaction_session_timeout = ${idleInTxTimeoutMs}`);
-
-      // Fetch matching rows with FOR UPDATE lock
-      const { text: selectText, values: selectValues } = buildSelectQuery(
-        collectionName, parseSelector(selector), null, null, {}, schema
-      );
-      const lockSql = selectText + ' FOR UPDATE' + (options.multi ? '' : ' LIMIT 1');
-      const selectResult = await client.query(lockSql, selectValues);
-
-      for (const row of selectResult.rows) {
-        const doc = rowToDocument(row, schema);
-
-        applyModifier(doc, modifier);
-
-        // Convert back to row and update
-        const newRow = documentToRow(doc, schema);
-        const setClauses = [];
-        const updateValues = [];
-        let idx = 0;
-
-        // Set all schema columns
-        if (schema) {
-          for (const colName of schema.getColumnNames()) {
-            idx++;
-            setClauses.push(`${quoteIdent(colName)} = $${idx}`);
-            updateValues.push(newRow[colName] !== undefined ? newRow[colName] : null);
-          }
-        }
-
-        // Set _extra
-        idx++;
-        setClauses.push(`_extra = $${idx}`);
-        updateValues.push(newRow._extra || {});
-
-        // WHERE _id = ...
-        idx++;
-        updateValues.push(doc._id);
-
-        const updateSql = `UPDATE ${quoteIdent(collectionName)} SET ${setClauses.join(', ')} WHERE _id = $${idx}`;
-        await client.query(updateSql, updateValues);
-        affected++;
-      }
-
-      await client.query('COMMIT');
-    } catch (e) {
-      try {
-        await client.query('ROLLBACK');
-      } catch (rollbackErr) {
-        // Ignore — original error is more informative.
-      }
-      throw e;
-    } finally {
-      client.release();
-    }
-
-    return affected;
-  }
 
   /**
    * Handle upsert operations.
@@ -549,9 +456,14 @@ export class PostgresStreamProvider extends StreamProvider {
     const { needsFetchModifyWrite } = compileSet(modifierAST, schema);
 
     if (needsFetchModifyWrite) {
-      return this._fetchModifyWriteUpsert(
-        collectionName, selector, modifier, options, schema
+      const fmwOpts = { ...options, _schema: schema, _isUpsert: true };
+      const { matchedCount, insertedId } = await this._fetchModifyWriteUpsert(
+        collectionName, selector, modifier, fmwOpts
       );
+      return {
+        numberAffected: insertedId ? 1 : matchedCount,
+        insertedId,
+      };
     }
 
     const selectorAST = parseSelector(selector);
@@ -627,104 +539,6 @@ export class PostgresStreamProvider extends StreamProvider {
   }
 
   /**
-   * Fetch-modify-write upsert: lock-matching-row → applyModifier →
-   * write back. If no row matches, synthesize a new doc from selector +
-   * $setOnInsert and apply the modifier to an empty document.
-   */
-  async _fetchModifyWriteUpsert(collectionName, selector, modifier, options, schema) {
-    await this._connection.ensureTable(collectionName, schema);
-
-    const lockKey = this._advisoryLockKey(collectionName, selector);
-    const client = await this._connection.getClient();
-
-    try {
-      await client.query('BEGIN');
-      await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
-
-      // SELECT … FOR UPDATE the first matching row.
-      const { text: selectText, values: selectValues } = buildSelectQuery(
-        collectionName, parseSelector(selector), null, null, {}, schema
-      );
-      const selectResult = await client.query(
-        selectText + ' FOR UPDATE LIMIT 1', selectValues
-      );
-
-      if (selectResult.rows.length > 0) {
-        // Update path — apply modifier to the fetched doc.
-        const doc = rowToDocument(selectResult.rows[0], schema);
-        applyModifier(doc, modifier);
-        const newRow = documentToRow(doc, schema);
-
-        const setClauses = [];
-        const updateValues = [];
-        let idx = 0;
-        if (schema) {
-          for (const colName of schema.getColumnNames()) {
-            idx++;
-            setClauses.push(`${quoteIdent(colName)} = $${idx}`);
-            updateValues.push(newRow[colName] !== undefined ? newRow[colName] : null);
-          }
-        }
-        idx++;
-        setClauses.push(`_extra = $${idx}`);
-        updateValues.push(newRow._extra || {});
-        idx++;
-        updateValues.push(doc._id);
-
-        const updateSql =
-          `UPDATE ${quoteIdent(collectionName)} SET ${setClauses.join(', ')} ` +
-          `WHERE _id = $${idx}`;
-        await client.query(updateSql, updateValues);
-
-        await client.query('COMMIT');
-        return { numberAffected: 1, insertedId: undefined };
-      }
-
-      // Insert path — build the new doc from selector + $setOnInsert, then
-      // apply the modifier on top. `_modify` with `isInsert: true` throws on
-      // operators that are not legal at insert time.
-      const insertDoc = this._buildUpsertInsertDoc(selector, modifier);
-      applyModifier(insertDoc, modifier, { isInsert: true });
-
-      const { text: insertSql, values: insertValues } = buildInsertQuery(
-        collectionName, insertDoc, schema
-      );
-      const insertRes = await client.query(insertSql, insertValues);
-
-      await client.query('COMMIT');
-      return { numberAffected: 1, insertedId: insertRes.rows[0]._id };
-    } catch (e) {
-      try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
-      throw e;
-    } finally {
-      client.release();
-    }
-  }
-
-  /**
-   * Seed an insert doc from the upsert selector's scalar fields plus
-   * $setOnInsert. Anything else ($set, array ops, etc.) is left to
-   * applyModifier.
-   */
-  _buildUpsertInsertDoc(selector, modifier) {
-    const doc = {};
-    if (selector && typeof selector === 'object') {
-      for (const [k, v] of Object.entries(selector)) {
-        if (k.startsWith('$')) continue;
-        if (v === null || v === undefined) continue;
-        if (typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v)) {
-          // Operator object ({$gt: 5}) — skip.
-          const subKeys = Object.keys(v);
-          if (subKeys.length > 0 && subKeys.every(sk => sk.startsWith('$'))) continue;
-        }
-        doc[k] = v;
-      }
-    }
-    if (!doc._id) doc._id = this.generateId();
-    return doc;
-  }
-
-  /**
    * Derive a stable 64-bit advisory lock key from (collectionName, selector).
    * SHA-1 is cheap and collision risk across two different selectors is
    * astronomical at the serialization rates this path sees.
@@ -736,5 +550,193 @@ export class PostgresStreamProvider extends StreamProvider {
     // for bigint parameters and wraps into signed range on its own.
     const low64 = h.readBigInt64BE(0);
     return low64;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Fetch-modify-write hooks (StreamProvider template)
+  //
+  // afs owns the retry loop and the modifier application; postgres supplies
+  // the lock + write + commit/rollback semantics through these hooks. The
+  // tx state is carried on `opts._client` between `_lockMatching` and
+  // `_writeRow`; `_finalizeAttempt` commits or rolls back at the end of
+  // each attempt and releases the client back to the pool.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * @protected
+   * Open a per-attempt transaction with the postgres-specific isolation /
+   * timeout / advisory-lock setup, then SELECT … FOR UPDATE the rows
+   * matching `selector`. Stashes the pooled client on `opts._client` for
+   * `_writeRow` and `_finalizeAttempt` to consume.
+   */
+  async _lockMatching(collectionName, selector, opts) {
+    const schema = opts._schema || this._getSchema(collectionName);
+
+    const statementTimeoutMs = Math.max(
+      1000,
+      parseInt(process.env.METEOR_POSTGRES_STATEMENT_TIMEOUT_MS, 10) || 30000
+    );
+    const idleInTxTimeoutMs = Math.max(
+      1000,
+      parseInt(process.env.METEOR_POSTGRES_IDLE_IN_TX_TIMEOUT_MS, 10) || 10000
+    );
+
+    const client = await this._connection.getClient();
+    opts._client = client;
+
+    try {
+      await client.query('BEGIN');
+
+      if (opts.multi === true) {
+        // REPEATABLE READ prevents phantom-insert inconsistency for
+        // multi-doc updates; SERIALIZABLE would push us into 40001 retry
+        // territory which the base loop already handles.
+        await client.query('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ');
+      }
+
+      // Per-transaction timeouts: bound worst-case lock waits and prevent a
+      // stalled client from holding row locks indefinitely.
+      await client.query(`SET LOCAL statement_timeout = ${statementTimeoutMs}`);
+      await client.query(
+        `SET LOCAL idle_in_transaction_session_timeout = ${idleInTxTimeoutMs}`
+      );
+
+      // Upsert path takes an advisory lock keyed on (collection, selector)
+      // so two concurrent upserts with the same selector serialize — without
+      // it, both transactions can observe no matching row and both INSERT.
+      if (opts._isUpsert) {
+        const lockKey = this._advisoryLockKey(collectionName, selector);
+        await client.query('SELECT pg_advisory_xact_lock($1)', [lockKey]);
+      }
+
+      const { text: selectText, values: selectValues } = buildSelectQuery(
+        collectionName, parseSelector(selector), null, null, {}, schema
+      );
+      // Upsert is always single-row (Mongo upsert semantics); regular update
+      // honours opts.multi for the multi-row path.
+      const limit = opts._isUpsert || !opts.multi ? ' LIMIT 1' : '';
+      const lockSql = selectText + ' FOR UPDATE' + limit;
+      const result = await client.query(lockSql, selectValues);
+
+      // Convert rows to docs upfront so `_writeRow` operates on documents
+      // (which is what the base loop's `applyModifier` expects).
+      return result.rows.map(row => rowToDocument(row, schema));
+    } catch (e) {
+      // If the BEGIN / SELECT itself fails, ensure the client is rolled
+      // back and released; `_finalizeAttempt` will see no client and
+      // skip its work.
+      try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+      try { client.release(); } catch (_) { /* ignore */ }
+      opts._client = null;
+      throw e;
+    }
+  }
+
+  /**
+   * @protected
+   * Write a row that the base loop has already mutated via `applyModifier`
+   * (or that `_buildInsertDoc` produced on the upsert insert path).
+   */
+  async _writeRow(collectionName, doc, originalRow, opts) {
+    const schema = opts._schema || this._getSchema(collectionName);
+    const client = opts._client;
+    if (!client) {
+      throw new Error(
+        'PostgresStreamProvider._writeRow: no transaction client on opts; ' +
+        '_lockMatching must run before _writeRow'
+      );
+    }
+
+    if (opts.isInsert) {
+      const { text, values } = buildInsertQuery(collectionName, doc, schema);
+      await client.query(text, values);
+      return;
+    }
+
+    const newRow = documentToRow(doc, schema);
+    const setClauses = [];
+    const updateValues = [];
+    let idx = 0;
+    if (schema) {
+      for (const colName of schema.getColumnNames()) {
+        idx++;
+        setClauses.push(`${quoteIdent(colName)} = $${idx}`);
+        updateValues.push(newRow[colName] !== undefined ? newRow[colName] : null);
+      }
+    }
+    idx++;
+    setClauses.push(`_extra = $${idx}`);
+    updateValues.push(newRow._extra || {});
+    idx++;
+    updateValues.push(doc._id);
+
+    const updateSql =
+      `UPDATE ${quoteIdent(collectionName)} SET ${setClauses.join(', ')} ` +
+      `WHERE _id = $${idx}`;
+    await client.query(updateSql, updateValues);
+  }
+
+  /**
+   * @protected
+   * Postgres SQLSTATE 40001 = serialization failure — safe to retry on a
+   * fresh transaction.
+   */
+  _isRetryableConflict(err) {
+    return !!(err && err.code === '40001');
+  }
+
+  /**
+   * @protected
+   * Seed an insert doc from the upsert selector's scalar fields plus
+   * $setOnInsert. Anything else ($set, array ops, etc.) is left to the
+   * base loop's `applyModifier(... { isInsert: true })` call on top.
+   */
+  _buildInsertDoc(selector, modifier) {
+    const doc = {};
+    if (selector && typeof selector === 'object') {
+      for (const [k, v] of Object.entries(selector)) {
+        if (k.startsWith('$')) continue;
+        if (v === null || v === undefined) continue;
+        if (typeof v === 'object' && !(v instanceof Date) && !Array.isArray(v)) {
+          // Mongo heuristic: a sub-document is treated as an operator
+          // expression (and skipped on upsert insert) iff its FIRST key
+          // begins with `$`. The previous "every sub-key starts with $"
+          // check was too strict and would project mixed objects like
+          // `{ $gt: 5, foo: 1 }` into the insert doc — which Mongo would
+          // refuse. Match Mongo's actual behavior here.
+          // Caveat for adapter authors: Mongo's first-key heuristic. A
+          // mixed inner object like `{addr: {street: 'x', $exists: true}}`
+          // is copied wholesale (first key is non-`$`), matching neither
+          // strict Mongo (which rejects it) nor a strict operator-stripping
+          // pass. Worth knowing if you reuse this helper.
+          const subKeys = Object.keys(v);
+          if (subKeys.length > 0 && subKeys[0].startsWith('$')) continue;
+        }
+        doc[k] = v;
+      }
+    }
+    if (!doc._id) doc._id = this.generateId();
+    return doc;
+  }
+
+  /**
+   * @protected
+   * Commit on success, roll back on error, and release the client.
+   * Idempotent across attempts — clears `opts._client` after release so
+   * the next attempt's `_lockMatching` reattaches a fresh client.
+   */
+  async _finalizeAttempt(opts, error) {
+    const client = opts._client;
+    if (!client) return;
+    opts._client = null;
+    try {
+      if (error) {
+        try { await client.query('ROLLBACK'); } catch (_) { /* ignore */ }
+      } else {
+        await client.query('COMMIT');
+      }
+    } finally {
+      try { client.release(); } catch (_) { /* ignore */ }
+    }
   }
 }

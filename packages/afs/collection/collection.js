@@ -9,6 +9,7 @@ import { makeClientStore, makeServerStore } from './replication-store';
 import { CollectionExtensions, installStatics } from './extensions';
 import { parseSelector, parseModifier, PRED } from '../query/index';
 import { Registry } from '../registry';
+import { NotSupportedError } from '../provider/stream-provider';
 
 /**
  * Assert that a provider's declared capabilities cover all node types in an AST.
@@ -37,11 +38,10 @@ function _assertSelector(node, caps, providerName) {
 
   if (caps.selectorOperators !== undefined) {
     if (!caps.selectorOperators.includes(node.type)) {
-      const e = new Error(
-        `Provider '${providerName}' does not support selector node-type '${node.type}'`
+      throw new NotSupportedError(
+        providerName,
+        `selector node-type '${node.type}'`
       );
-      e.code = 'not-supported';
-      throw e;
     }
   }
 
@@ -56,11 +56,10 @@ function _assertSelector(node, caps, providerName) {
   if (node.type === 'Field' && node.predicate) {
     if (caps.selectorPredicates !== undefined) {
       if (!caps.selectorPredicates.includes(node.predicate.kind)) {
-        const e = new Error(
-          `Provider '${providerName}' does not support predicate kind '${node.predicate.kind}'`
+        throw new NotSupportedError(
+          providerName,
+          `predicate kind '${node.predicate.kind}'`
         );
-        e.code = 'not-supported';
-        throw e;
       }
     }
 
@@ -76,11 +75,10 @@ function _assertModifier(ast, caps, providerName) {
   if (caps.modifierOperators !== undefined && ast.ops) {
     for (const op of ast.ops) {
       if (!caps.modifierOperators.includes(op.kind)) {
-        const e = new Error(
-          `Provider '${providerName}' does not support modifier op '${op.kind}'`
+        throw new NotSupportedError(
+          providerName,
+          `modifier op '${op.kind}'`
         );
-        e.code = 'not-supported';
-        throw e;
       }
     }
   }

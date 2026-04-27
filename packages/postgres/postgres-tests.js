@@ -242,11 +242,18 @@ Tinytest.addAsync('postgres - driver - setupListenNotify handles escaping and de
 
 Tinytest.addAsync('postgres - driver - ensureListenClient attaches shared handlers', async (test) => {
   const conn = new PostgresConnection('postgres://example');
-  const listenClient = { on() {} };
+  const listenClient = {
+    on() {},
+    connect: async () => {},
+  };
   let attachedClient = null;
 
-  conn._pool = {
-    connect: async () => listenClient,
+  // _ensureListenClient builds a dedicated pg.Client via _getPg() — inject
+  // a fake factory so no real DNS / TCP work happens against 'example'.
+  conn._pg = {
+    Client: function FakeClient() {
+      return listenClient;
+    },
   };
   conn._attachListenClientHandlers = (client) => {
     attachedClient = client;
@@ -1729,6 +1736,55 @@ if (hasPostgres) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// C1 — setupListenNotify and dropCollectionAsync share a SubscriptionRegistry.
+// A concurrent setup vs drop on the same channel must serialize: either the
+// setup wins (and the subsequent drop tears it down) or the drop wins (and
+// the setup runs after, against an empty state). They MUST NOT interleave.
+// ---------------------------------------------------------------------------
+Tinytest.addAsync(
+  'postgres - driver - C1 - setupListenNotify and dropCollectionAsync serialize via shared registry',
+  async (test) => {
+    // Build a provider with an in-memory connection stub, then verify that
+    // the connection's registry is the same instance the provider holds.
+    // That identity is the contract under test — without it, the two paths
+    // queue independently and can race.
+    const provider = new PostgresStreamProvider('postgres://example');
+    // Skip provider.connect() (no real DB); construct the connection
+    // ourselves with the provider's registry so the wiring matches what
+    // connect() would do.
+    provider._connection = new PostgresConnection('postgres://example', {
+      subscriptions: provider._subscriptions,
+    });
+    test.equal(
+      provider._connection._subscriptions,
+      provider._subscriptions,
+      'connection and provider share the same SubscriptionRegistry instance'
+    );
+
+    // Verify that ops on the same channel run serialized through that
+    // shared registry by enqueuing two ops via the connection's registry
+    // and asserting they don't interleave.
+    const channel = 'meteor_pg_c1race';
+    const events = [];
+    const gate = new Promise((res) => { setTimeout(res, 20); });
+
+    const p1 = provider._connection._subscriptions.run(channel, async () => {
+      events.push('op1:start');
+      await gate;
+      events.push('op1:end');
+    });
+    const p2 = provider._subscriptions.run(channel, async () => {
+      events.push('op2:start');
+      events.push('op2:end');
+    });
+
+    await Promise.all([p1, p2]);
+    // Strict ordering: op1 must fully settle before op2 starts.
+    test.equal(events, ['op1:start', 'op1:end', 'op2:start', 'op2:end']);
+  }
+);
+
 // ============================================================================
 // REGRESSION TESTS — Security & Correctness Fixes
 // ============================================================================
@@ -2449,7 +2505,9 @@ Tinytest.addAsync(
   'postgres - provider - I-1 - registerSchema throws after close',
   async (test) => {
     const provider = new PostgresStreamProvider('postgres://example');
-    provider._state = 'closed';
+    // Exercise the real close() path. Never-connected → close() is a clean
+    // no-op because postgres _closeTransport early-returns when !_connection.
+    await provider.close();
     let caught = null;
     try {
       await provider.registerSchema('x', null);
@@ -2465,7 +2523,9 @@ Tinytest.addAsync(
   'postgres - provider - I-1 - createIndexAsync throws after close',
   async (test) => {
     const provider = new PostgresStreamProvider('postgres://example');
-    provider._state = 'closed';
+    // Exercise the real close() path. Never-connected → close() is a clean
+    // no-op because postgres _closeTransport early-returns when !_connection.
+    await provider.close();
     let caught = null;
     try {
       await provider.createIndexAsync('c', { a: 1 });
@@ -2481,7 +2541,9 @@ Tinytest.addAsync(
   'postgres - provider - I-1 - dropIndexAsync throws after close',
   async (test) => {
     const provider = new PostgresStreamProvider('postgres://example');
-    provider._state = 'closed';
+    // Exercise the real close() path. Never-connected → close() is a clean
+    // no-op because postgres _closeTransport early-returns when !_connection.
+    await provider.close();
     let caught = null;
     try {
       await provider.dropIndexAsync('c', 'idx');
@@ -2497,7 +2559,9 @@ Tinytest.addAsync(
   'postgres - provider - I-1 - dropCollectionAsync throws after close',
   async (test) => {
     const provider = new PostgresStreamProvider('postgres://example');
-    provider._state = 'closed';
+    // Exercise the real close() path. Never-connected → close() is a clean
+    // no-op because postgres _closeTransport early-returns when !_connection.
+    await provider.close();
     let caught = null;
     try {
       await provider.dropCollectionAsync('c');
@@ -2682,4 +2746,111 @@ Tinytest.addAsync(
     }
   }
 );
+
+// ============================================================================
+// SubscriptionRegistry-backed dropCollectionAsync — migration tests
+// (C1) These are integration tests that depend on POSTGRES_URL.
+// ============================================================================
+
+if (hasPostgres) {
+  Tinytest.addAsync(
+    'postgres - dropCollectionAsync - drops table and unregisters channel',
+    async (test) => {
+      const table = `test_dca_${Random.id(8).toLowerCase()}`;
+      const channel = `meteor_pg_${table}`;
+
+      const provider = new PostgresStreamProvider(POSTGRES_URL);
+      await provider.connect();
+      const schema = new ResolvedSchema({ title: { type: 'text' } });
+      await provider.registerSchema(table, schema);
+      await provider.insertAsync(table, { title: 'x' });
+
+      // Subscribe so there's a registered channel + LISTEN to tear down.
+      let _calls = 0;
+      await provider._connection.setupListenNotify(table, () => { _calls++; });
+      test.isTrue(provider._connection._notifyCallbacks.has(channel),
+        'precondition: channel registered');
+
+      await provider.dropCollectionAsync(table);
+
+      // Table is gone.
+      const r = await provider._connection.query(
+        `SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = $1)`,
+        [table]
+      );
+      test.isFalse(r.rows[0].exists, 'table should be dropped');
+
+      // Channel is unregistered.
+      test.isFalse(provider._connection._notifyCallbacks.has(channel),
+        'channel callbacks should be removed');
+
+      await provider.close();
+    }
+  );
+
+  Tinytest.addAsync(
+    'postgres - dropCollectionAsync - subsequent registerChannel works',
+    async (test) => {
+      const table = `test_dcr_${Random.id(8).toLowerCase()}`;
+
+      const provider = new PostgresStreamProvider(POSTGRES_URL);
+      await provider.connect();
+      const schema = new ResolvedSchema({ title: { type: 'text' } });
+      await provider.registerSchema(table, schema);
+      await provider._connection.setupListenNotify(table, () => {});
+      await provider.dropCollectionAsync(table);
+
+      // Re-create and re-listen — must work cleanly with no leftover state.
+      await provider.registerSchema(table, schema);
+      let received = false;
+      await provider._connection.setupListenNotify(table, () => { received = true; });
+      await provider.insertAsync(table, { title: 'after-drop' });
+
+      // Give the LISTEN a moment to deliver the NOTIFY.
+      await new Promise((r) => setTimeout(r, 100));
+      test.isTrue(received, 'should receive notify after re-register');
+
+      try {
+        await provider._connection.query(
+          `DROP TABLE IF EXISTS ${quoteIdent(table)} CASCADE`
+        );
+      } catch (e) { /* best effort */ }
+      await provider.close();
+    }
+  );
+
+  Tinytest.addAsync(
+    'postgres - dropCollectionAsync - concurrent drops are atomic',
+    async (test) => {
+      const table = `test_dcc_${Random.id(8).toLowerCase()}`;
+
+      const provider = new PostgresStreamProvider(POSTGRES_URL);
+      await provider.connect();
+      const schema = new ResolvedSchema({ title: { type: 'text' } });
+      await provider.registerSchema(table, schema);
+      await provider._connection.setupListenNotify(table, () => {});
+
+      // Two concurrent drops — both must complete without error and the
+      // table must be gone exactly once. The SubscriptionRegistry slot
+      // serializes them: one wins, the other observes "already dropped"
+      // (DROP TABLE IF EXISTS is a no-op the second time).
+      const results = await Promise.allSettled([
+        provider.dropCollectionAsync(table),
+        provider.dropCollectionAsync(table),
+      ]);
+      for (const r of results) {
+        test.equal(r.status, 'fulfilled',
+          `concurrent drop should not throw: ${r.reason}`);
+      }
+
+      const r = await provider._connection.query(
+        `SELECT EXISTS (SELECT FROM pg_tables WHERE tablename = $1)`,
+        [table]
+      );
+      test.isFalse(r.rows[0].exists, 'table should be dropped');
+
+      await provider.close();
+    }
+  );
+}
 

@@ -15,7 +15,7 @@
  * private implementation detail.
  */
 
-import { ChangeStream } from 'meteor/afs';
+import { ChangeStream, ReconnectLoop } from 'meteor/afs';
 
 // Minimum 100ms to avoid hot loops if a misconfigured env var is provided.
 const _parsedPollingInterval = parseInt(
@@ -55,6 +55,7 @@ class PostgresObserveDriver {
     this._notifyCallback = null;
     this._reconnectHandler = null;
     this._repollNeeded = false;
+    this._catchUpLoop = null;
 
     // Create the ChangeStream that this driver emits into
     this._stream = new ChangeStream(cursorDescription);
@@ -204,33 +205,51 @@ class PostgresObserveDriver {
    * stream (via markError) so the subscription terminates instead of silently
    * sitting stale for up to `POLLING_INTERVAL_MS`.
    *
-   * Delays: 200ms, 500ms, 1000ms, each multiplied by `0.5 + Math.random()`.
+   * Schedule (matches the legacy hardcoded `[200, 500, 1000]` for the two
+   * sleeps that actually run): attempt 1 immediate, sleep 200ms before
+   * attempt 2, sleep 500ms before attempt 3. ReconnectLoop is exponential
+   * so we set `factor: 2.5` to land on 200 → 500. The legacy code's third
+   * entry (1000ms) was unreachable — the loop exited after the 3rd attempt
+   * without sleeping — so dropping it is no behavior change. Jitter
+   * [0.5x, 1.5x] matches the legacy `delay * (0.5 + Math.random())` form.
+   * Backoff / sleep / cancellation live in afs's ReconnectLoop now.
    */
   async _catchUpPollWithRetry() {
-    const baseDelays = [200, 500, 1000];
-    let lastErr = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const driver = this;
+    const loop = new ReconnectLoop({
+      doReconnect: async () => {
+        if (driver._stopped) {
+          loop.stop();
+          return;
+        }
+        try {
+          await driver._poll();
+        } catch (e) {
+          Log.error('Postgres observe catch-up poll failed:', e);
+          throw e;
+        }
+      },
+      backoff: {
+        initialMs: 200,
+        maxMs: 10000,
+        factor: 2.5,
+        jitter: 0.5, // [0.5x, 1.5x] — same range as the prior code
+        maxAttempts: 3,
+        immediateFirst: true,
+      },
+    });
+    this._catchUpLoop = loop;
+    try {
+      await loop.start();
+    } catch (lastErr) {
       if (this._stopped) return;
       try {
-        await this._poll();
-        return;
+        this._stream.markError(lastErr);
       } catch (e) {
-        lastErr = e;
-        Log.error(
-          `Postgres observe catch-up poll attempt ${attempt + 1} failed:`,
-          e
-        );
-        if (attempt < 2) {
-          const delay = baseDelays[attempt] * (0.5 + Math.random());
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
+        // stream may already be stopped
       }
-    }
-    if (this._stopped) return;
-    try {
-      this._stream.markError(lastErr);
-    } catch (e) {
-      // stream may already be stopped
+    } finally {
+      if (this._catchUpLoop === loop) this._catchUpLoop = null;
     }
   }
 
@@ -371,6 +390,13 @@ class PostgresObserveDriver {
     if (this._notifyDebounceTimer) {
       clearTimeout(this._notifyDebounceTimer);
       this._notifyDebounceTimer = null;
+    }
+
+    // Abort any in-flight catch-up reconnect loop so its pending sleep
+    // doesn't outlive the driver.
+    if (this._catchUpLoop) {
+      try { this._catchUpLoop.stop(); } catch (e) { /* ignore */ }
+      this._catchUpLoop = null;
     }
 
     // Detach reconnect listener to avoid leaks
