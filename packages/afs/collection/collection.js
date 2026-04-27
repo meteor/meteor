@@ -117,7 +117,7 @@ export class FederatedCollection extends EventEmitter {
     }
 
     if (name !== null && typeof name !== 'string') {
-      throw new Error(
+      throw new TypeError(
         'First argument to new AFS.Collection must be a string or null'
       );
     }
@@ -225,7 +225,7 @@ export class FederatedCollection extends EventEmitter {
 
   async insertAsync(doc) {
     if (!doc) {
-      throw new Error('insertAsync requires a document argument');
+      throw new TypeError('insertAsync requires a document argument');
     }
 
     doc = EJSON.clone(doc);
@@ -527,7 +527,7 @@ export class FederatedCollection extends EventEmitter {
     }
 
     if (Array.isArray(selector)) {
-      throw new Error("Selector can't be an array.");
+      throw new TypeError("Selector can't be an array.");
     }
 
     // Missing selector: forge an unmatchable _id so write paths with no
@@ -540,7 +540,7 @@ export class FederatedCollection extends EventEmitter {
     // rewriting would destroy valid IDs like { _id: 0 } or { _id: false }
     // and silently turn a bad query into "match nothing". Surface it loudly.
     if ('_id' in selector && !selector._id) {
-      throw new Error(
+      throw new TypeError(
         `Invalid selector on collection "${this._name}": _id is ${JSON.stringify(selector._id)}`
       );
     }

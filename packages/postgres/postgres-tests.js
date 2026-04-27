@@ -1635,14 +1635,20 @@ Tinytest.addAsync(
     conn._notifyCallbacks.set('meteor_pg_colB', new Set([() => {}]));
 
     const listenQueries = [];
-    conn._pool = {
-      connect: async () => ({
-        on() {},
-        query: async (text) => {
-          listenQueries.push(text);
-          return { rows: [], rowCount: 0 };
-        },
-      }),
+    const fakeListenClient = {
+      on() {},
+      connect: async () => {},
+      query: async (text) => {
+        listenQueries.push(text);
+        return { rows: [], rowCount: 0 };
+      },
+    };
+    // _reconnectListenClient builds a fresh pg.Client via _getPg() — inject
+    // a fake factory so no real DNS / TCP work happens against 'example'.
+    conn._pg = {
+      Client: function FakeClient() {
+        return fakeListenClient;
+      },
     };
     // No-op real handler attach; we only need the replay+emit path.
     conn._attachListenClientHandlers = () => {};
@@ -1801,8 +1807,12 @@ Tinytest.addAsync(
 
 Tinytest.add('postgres - regression - proto-pollution guard rejects __proto__ in selector top-level key', (test) => {
   const schema = createTestSchema();
+  // Use a computed key so the literal `__proto__` is treated as an OWN
+  // property, not as the object-literal prototype-assignment shorthand.
+  // (Bare `{ __proto__: ... }` sets the prototype and creates no own keys,
+  // which would let the test pass vacuously without exercising the guard.)
   test.throws(() => {
-    compileSelector({ __proto__: { x: 1 } }, schema);
+    compileSelector({ ['__proto__']: { x: 1 } }, schema);
   }, /unsafe field path/);
 });
 
@@ -2059,11 +2069,28 @@ Tinytest.add('postgres - regression - C2 compileModifier on extra field name con
   const joined = setClauses.join(' , ');
   test.isTrue(joined.includes("'extra_field_with_$1_in_name'"),
     `field literal preserved; got: ${joined}`);
-  const placeholders = joined.match(/\$\d+/g) || [];
-  const realOnly = placeholders.filter(p => {
-    const re = new RegExp(`'[^']*\\${p}[^']*'`);
-    return !re.test(joined);
-  });
+  // Position-aware scan: collect $N occurrences that sit OUTSIDE single-quoted
+  // string literals. A naive `/\$\d+/g` global match plus an "is $N anywhere
+  // in any literal?" filter mis-classifies the real placeholder when the same
+  // token appears inside a literal (the field name here contains `$1`).
+  const realOnly = [];
+  let inString = false;
+  for (let i = 0; i < joined.length; i++) {
+    const ch = joined[i];
+    if (ch === "'") {
+      // Doubled '' is the SQL escape for a literal quote inside a string.
+      // Toggling on each ' handles it correctly: end-of-string immediately
+      // followed by start-of-string keeps `inString` toggled back on.
+      inString = !inString;
+      continue;
+    }
+    if (!inString && ch === '$' && i + 1 < joined.length && /\d/.test(joined[i + 1])) {
+      let j = i + 1;
+      while (j < joined.length && /\d/.test(joined[j])) j++;
+      realOnly.push(joined.slice(i, j));
+      i = j - 1;
+    }
+  }
   test.equal(realOnly.length, values.length,
     `param count (${realOnly.length}) should equal values length (${values.length})`);
 });

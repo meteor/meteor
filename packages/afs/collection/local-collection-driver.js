@@ -27,22 +27,11 @@ export function openLocalCollection(providerName, name, conn) {
   }
 
   const key = localKey(providerName, name);
-
-  if (!conn) {
-    if (!(key in _afsLocalCollections)) {
-      _afsLocalCollections[key] = new LocalCollection(name);
-    }
-    return _afsLocalCollections[key];
-  }
-
-  if (!conn._afs_collections) {
-    conn._afs_collections = Object.create(null);
-  }
-
-  if (!(key in conn._afs_collections)) {
-    conn._afs_collections[key] = new LocalCollection(name);
-  }
-  return conn._afs_collections[key];
+  const cache = conn
+    ? (conn._afs_collections ??= Object.create(null))
+    : _afsLocalCollections;
+  if (!(key in cache)) cache[key] = new LocalCollection(name);
+  return cache[key];
 }
 
 export function forgetLocalCollection(providerName, name) {

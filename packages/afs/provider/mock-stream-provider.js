@@ -42,6 +42,7 @@ export class MockStreamProvider extends StreamProvider {
   // ---------------------------------------------------------------------------
 
   async insertAsync(collectionName, doc) {
+    this._assertOpen('insertAsync');
     const lc = this._getLocalCollection(collectionName);
     const cloned = EJSON.clone(doc);
     if (!cloned._id) {

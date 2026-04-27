@@ -42,10 +42,17 @@ export const CollectionExtensions = {
  * given class. Call once from collection.js at module load.
  */
 export function installStatics(Class) {
-  Class.addExtension = (ext) => CollectionExtensions.addExtension(ext);
-  Class.removeExtension = (ext) => CollectionExtensions.removeExtension(ext);
-  Class.addPrototypeMethod = (name, method) => CollectionExtensions.addPrototypeMethod(name, method);
-  Class.removePrototypeMethod = (name) => CollectionExtensions.removePrototypeMethod(name);
+  // Pure passthroughs: each delegates verbatim to CollectionExtensions.
+  const passthrough = [
+    'addExtension', 'removeExtension',
+    'addPrototypeMethod', 'removePrototypeMethod',
+    'clearExtensions',
+    'getExtensions', 'getPrototypeMethods', 'getStaticMethods',
+  ];
+  for (const name of passthrough) {
+    Class[name] = (...args) => CollectionExtensions[name](...args);
+  }
+  // add/removeStaticMethod also mutate the Class itself, so they stay explicit.
   Class.addStaticMethod = (name, method) => {
     CollectionExtensions.addStaticMethod(name, method);
     Class[name] = method;
@@ -54,8 +61,4 @@ export function installStatics(Class) {
     CollectionExtensions.removeStaticMethod(name);
     delete Class[name];
   };
-  Class.clearExtensions = () => CollectionExtensions.clearExtensions();
-  Class.getExtensions = () => CollectionExtensions.getExtensions();
-  Class.getPrototypeMethods = () => CollectionExtensions.getPrototypeMethods();
-  Class.getStaticMethods = () => CollectionExtensions.getStaticMethods();
 }

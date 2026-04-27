@@ -110,30 +110,15 @@ export class ChangeStream extends EventEmitter {
     this.emit('error', err);
   }
 
-  markReconnecting() {
-    if (this._stopped) return;
-    this.emit('reconnecting');
-  }
-
-  markReconnected() {
-    if (this._stopped) return;
-    this.emit('reconnected');
-  }
+  markReconnecting() { if (this._stopped) return; this.emit('reconnecting'); }
+  markReconnected()  { if (this._stopped) return; this.emit('reconnected'); }
+  markPaused()       { if (this._stopped) return; this.emit('paused'); }
+  markResumed()      { if (this._stopped) return; this.emit('resumed'); }
 
   markReset() {
     if (this._stopped) return;
     this._ready = false;
     this.emit('reset');
-  }
-
-  markPaused() {
-    if (this._stopped) return;
-    this.emit('paused');
-  }
-
-  markResumed() {
-    if (this._stopped) return;
-    this.emit('resumed');
   }
 
   // ---------------------------------------------------------------------------

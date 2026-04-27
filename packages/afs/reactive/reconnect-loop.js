@@ -57,11 +57,11 @@ export class ReconnectLoop {
     this._onEvent = typeof opts.onEvent === 'function' ? opts.onEvent : () => {};
 
     const b = opts.backoff || {};
-    this._initialMs = b.initialMs !== undefined ? b.initialMs : 500;
-    this._maxMs = b.maxMs !== undefined ? b.maxMs : 30000;
-    this._factor = b.factor !== undefined ? b.factor : 2;
-    this._jitter = b.jitter !== undefined ? b.jitter : 0.2;
-    this._maxAttempts = b.maxAttempts !== undefined ? b.maxAttempts : Infinity;
+    this._initialMs = b.initialMs ?? 500;
+    this._maxMs = b.maxMs ?? 30000;
+    this._factor = b.factor ?? 2;
+    this._jitter = b.jitter ?? 0.2;
+    this._maxAttempts = b.maxAttempts ?? Infinity;
     this._immediateFirst = !!b.immediateFirst;
 
     this._random = typeof opts.random === 'function' ? opts.random : Math.random;

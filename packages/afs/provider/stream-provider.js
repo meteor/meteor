@@ -455,60 +455,16 @@ export class StreamProvider {
    * @protected
    */
   async _fetchModifyWrite(collectionName, selector, modifier, opts = {}) {
-    const maxAttempts = opts.maxAttempts || 3;
-    let lastErr = null;
-
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      let attemptError = null;
-      let result = null;
-      try {
-        const locked = await this._lockMatching(collectionName, selector, opts);
-        if (!locked || locked.length === 0) {
-          result = { matchedCount: 0, modifiedCount: 0 };
-        } else {
-          let modifiedCount = 0;
-          for (const row of locked) {
-            const original = row;
-            // applyModifier mutates in place and returns the modified doc.
-            applyModifier(row, modifier, opts.applyOptions);
-            await this._writeRow(collectionName, row, original, opts);
-            modifiedCount++;
-          }
-          result = { matchedCount: locked.length, modifiedCount };
-        }
-      } catch (e) {
-        attemptError = e;
+    return this._runFetchModifyWriteLoop(opts, '_fetchModifyWrite', async () => {
+      const locked = await this._lockMatching(collectionName, selector, opts);
+      if (!locked || locked.length === 0) {
+        return { matchedCount: 0, modifiedCount: 0 };
       }
-
-      // Per-attempt cleanup hook (commit/rollback/release for transactional
-      // adapters). Runs whether the attempt succeeded or threw.
-      try {
-        await this._finalizeAttempt(opts, attemptError);
-      } catch (finalizeErr) {
-        // If the attempt itself succeeded but finalize threw, surface the
-        // finalize error. If the attempt threw, prefer the original error.
-        if (!attemptError) attemptError = finalizeErr;
-      }
-
-      if (!attemptError) return result;
-
-      if (this._isRetryableConflict(attemptError) && attempt < maxAttempts) {
-        lastErr = attemptError;
-        continue;
-      }
-      if (this._isRetryableConflict(attemptError)) {
-        throw new ConflictError(
-          `serialization conflict after ${maxAttempts} retries`,
-          { cause: attemptError }
-        );
-      }
-      throw attemptError;
-    }
-
-    // Unreachable when maxAttempts >= 1, but keep a guard for maxAttempts=0.
-    throw lastErr || new Error(
-      `${this.constructor.name}._fetchModifyWrite: exhausted retries`
-    );
+      const modifiedCount = await this._applyModifierToLocked(
+        collectionName, locked, modifier, opts
+      );
+      return { matchedCount: locked.length, modifiedCount };
+    });
   }
 
   /**
@@ -532,6 +488,37 @@ export class StreamProvider {
    * @protected
    */
   async _fetchModifyWriteUpsert(collectionName, selector, modifier, opts = {}) {
+    return this._runFetchModifyWriteLoop(opts, '_fetchModifyWriteUpsert', async () => {
+      const locked = await this._lockMatching(collectionName, selector, opts);
+      if (locked && locked.length > 0) {
+        const modifiedCount = await this._applyModifierToLocked(
+          collectionName, locked, modifier, opts
+        );
+        return { matchedCount: locked.length, modifiedCount, insertedId: undefined };
+      }
+      // No match → insert path.
+      const insertDoc = this._buildInsertDoc(selector, modifier);
+      applyModifier(insertDoc, modifier, {
+        ...(opts.applyOptions || {}),
+        isInsert: true,
+      });
+      await this._writeRow(collectionName, insertDoc, null, { ...opts, isInsert: true });
+      return { matchedCount: 0, modifiedCount: 0, insertedId: insertDoc._id };
+    });
+  }
+
+  /**
+   * Shared retry/finalize/conflict shell for `_fetchModifyWrite` and
+   * `_fetchModifyWriteUpsert`. Runs `runAttempt()` up to `opts.maxAttempts`
+   * times, invoking `_finalizeAttempt` after each attempt (success or
+   * failure), and translating sustained conflicts into a `ConflictError`.
+   *
+   * @param {Object} opts             Caller's opts object (maxAttempts read here).
+   * @param {string} methodName       Name surfaced in the exhausted-retries error.
+   * @param {() => Promise<Object>} runAttempt  Single-attempt body returning the result.
+   * @protected
+   */
+  async _runFetchModifyWriteLoop(opts, methodName, runAttempt) {
     const maxAttempts = opts.maxAttempts || 3;
     let lastErr = null;
 
@@ -539,39 +526,15 @@ export class StreamProvider {
       let attemptError = null;
       let result = null;
       try {
-        const locked = await this._lockMatching(collectionName, selector, opts);
-        if (locked && locked.length > 0) {
-          let modifiedCount = 0;
-          for (const row of locked) {
-            const original = row;
-            applyModifier(row, modifier, opts.applyOptions);
-            await this._writeRow(collectionName, row, original, opts);
-            modifiedCount++;
-          }
-          result = {
-            matchedCount: locked.length,
-            modifiedCount,
-            insertedId: undefined,
-          };
-        } else {
-          // No match → insert path.
-          const insertDoc = this._buildInsertDoc(selector, modifier);
-          applyModifier(insertDoc, modifier, {
-            ...(opts.applyOptions || {}),
-            isInsert: true,
-          });
-          const insertOpts = { ...opts, isInsert: true };
-          await this._writeRow(collectionName, insertDoc, null, insertOpts);
-          result = {
-            matchedCount: 0,
-            modifiedCount: 0,
-            insertedId: insertDoc._id,
-          };
-        }
+        result = await runAttempt();
       } catch (e) {
         attemptError = e;
       }
 
+      // Per-attempt cleanup hook (commit/rollback/release for transactional
+      // adapters). Runs whether the attempt succeeded or threw. If the
+      // attempt itself succeeded but finalize threw, surface the finalize
+      // error; if the attempt threw, prefer the original error.
       try {
         await this._finalizeAttempt(opts, attemptError);
       } catch (finalizeErr) {
@@ -580,11 +543,12 @@ export class StreamProvider {
 
       if (!attemptError) return result;
 
-      if (this._isRetryableConflict(attemptError) && attempt < maxAttempts) {
+      const retryable = this._isRetryableConflict(attemptError);
+      if (retryable && attempt < maxAttempts) {
         lastErr = attemptError;
         continue;
       }
-      if (this._isRetryableConflict(attemptError)) {
+      if (retryable) {
         throw new ConflictError(
           `serialization conflict after ${maxAttempts} retries`,
           { cause: attemptError }
@@ -593,9 +557,33 @@ export class StreamProvider {
       throw attemptError;
     }
 
+    // Unreachable when maxAttempts >= 1, but keep a guard for maxAttempts=0.
     throw lastErr || new Error(
-      `${this.constructor.name}._fetchModifyWriteUpsert: exhausted retries`
+      `${this.constructor.name}.${methodName}: exhausted retries`
     );
+  }
+
+  /**
+   * Apply `modifier` to every row in `locked`, writing each via `_writeRow`.
+   * Returns the count of rows written.
+   *
+   * @param {string} collectionName
+   * @param {Array<Object>} locked    Rows from `_lockMatching`.
+   * @param {Object} modifier
+   * @param {Object} opts
+   * @returns {Promise<number>}
+   * @protected
+   */
+  async _applyModifierToLocked(collectionName, locked, modifier, opts) {
+    let modifiedCount = 0;
+    for (const row of locked) {
+      const original = row;
+      // applyModifier mutates in place and returns the modified doc.
+      applyModifier(row, modifier, opts.applyOptions);
+      await this._writeRow(collectionName, row, original, opts);
+      modifiedCount++;
+    }
+    return modifiedCount;
   }
 
   /**

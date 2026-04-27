@@ -75,23 +75,13 @@ async function applyDdpMessage(msg, doc, ops) {
 
   if (msg.msg === 'changed') {
     if (!doc) throw new Error('Expected to find a document to change');
-    const keys = Object.keys(msg.fields);
-    if (keys.length === 0) return;
     const modifier = {};
-    for (const key of keys) {
-      const value = msg.fields[key];
+    for (const [key, value] of Object.entries(msg.fields)) {
       if (EJSON.equals(doc[key], value)) continue;
-      if (typeof value === 'undefined') {
-        if (!modifier.$unset) modifier.$unset = {};
-        modifier.$unset[key] = 1;
-      } else {
-        if (!modifier.$set) modifier.$set = {};
-        modifier.$set[key] = value;
-      }
+      if (value === undefined) (modifier.$unset ??= {})[key] = 1;
+      else (modifier.$set ??= {})[key] = value;
     }
-    if (Object.keys(modifier).length > 0) {
-      await ops.update(id, modifier);
-    }
+    if (Object.keys(modifier).length > 0) await ops.update(id, modifier);
     return;
   }
 

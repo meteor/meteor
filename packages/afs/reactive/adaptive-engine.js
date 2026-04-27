@@ -390,24 +390,22 @@ export class AdaptiveEngine {
    * @returns {Function} Detach function to stop monitoring
    */
   attachToStream(stream) {
-    const onAdded = () => { this._metrics.totalChanges = (this._metrics.totalChanges || 0) + 1; };
-    const onChanged = () => { this._metrics.totalChanges = (this._metrics.totalChanges || 0) + 1; };
-    const onRemoved = () => { this._metrics.totalChanges = (this._metrics.totalChanges || 0) + 1; };
-    const onError = () => { this._metrics.errors = (this._metrics.errors || 0) + 1; };
-    const onReconnected = () => { this._metrics.reconnections = (this._metrics.reconnections || 0) + 1; };
-
-    stream.on(CHANGE_EVENTS.ADDED, onAdded);
-    stream.on(CHANGE_EVENTS.CHANGED, onChanged);
-    stream.on(CHANGE_EVENTS.REMOVED, onRemoved);
-    stream.on(CHANGE_EVENTS.ERROR, onError);
-    stream.on(CHANGE_EVENTS.RECONNECTED, onReconnected);
+    const bindings = [
+      [CHANGE_EVENTS.ADDED, 'totalChanges'],
+      [CHANGE_EVENTS.CHANGED, 'totalChanges'],
+      [CHANGE_EVENTS.REMOVED, 'totalChanges'],
+      [CHANGE_EVENTS.ERROR, 'errors'],
+      [CHANGE_EVENTS.RECONNECTED, 'reconnections'],
+    ].map(([event, key]) => {
+      const handler = () => { this._metrics[key] = (this._metrics[key] || 0) + 1; };
+      stream.on(event, handler);
+      return [event, handler];
+    });
 
     return () => {
-      stream.removeListener(CHANGE_EVENTS.ADDED, onAdded);
-      stream.removeListener(CHANGE_EVENTS.CHANGED, onChanged);
-      stream.removeListener(CHANGE_EVENTS.REMOVED, onRemoved);
-      stream.removeListener(CHANGE_EVENTS.ERROR, onError);
-      stream.removeListener(CHANGE_EVENTS.RECONNECTED, onReconnected);
+      for (const [event, handler] of bindings) {
+        stream.removeListener(event, handler);
+      }
     };
   }
 

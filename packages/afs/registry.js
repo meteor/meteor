@@ -112,21 +112,18 @@ export const Registry = {
   removeProvider(name) {
     const wasDefault = this._defaultProviderName === name;
     this._providers.delete(name);
-    let defaultChanged = false;
-    let newDefaultName = null;
     if (wasDefault) {
-      // Fall back to first remaining provider
-      const first = this._providers.keys().next().value;
-      newDefaultName = first || null;
-      this._defaultProviderName = newDefaultName;
-      defaultChanged = true;
+      // Fall back to first remaining provider, or null if none.
+      this._defaultProviderName = this._providers.keys().next().value ?? null;
     }
     _registryEmitter.emit('provider:removed', name);
-    if (defaultChanged) {
-      const newProvider = newDefaultName
-        ? this._providers.get(newDefaultName)
-        : null;
-      _registryEmitter.emit('provider:default-changed', newDefaultName, newProvider);
+    if (wasDefault) {
+      const newName = this._defaultProviderName;
+      _registryEmitter.emit(
+        'provider:default-changed',
+        newName,
+        newName ? this._providers.get(newName) : null
+      );
     }
   },
 

@@ -66,8 +66,8 @@ export class PollingStreamProvider extends StreamProvider {
    */
   constructor(opts = {}) {
     super(opts);
-    this._pollIntervalMs = opts.pollIntervalMs != null ? opts.pollIntervalMs : 5000;
-    this._backoffOpts = opts.backoff || null;
+    this._pollIntervalMs = opts.pollIntervalMs ?? 5000;
+    this._backoffOpts = opts.backoff ?? null;
     this._coalescePolls = opts.coalescePolls !== false;
     // Per-cursor poll contexts (so requestImmediatePoll can find the right one).
     // Keyed by EJSON-canonical cursorDescription string. Multiple distinct
@@ -327,7 +327,7 @@ export class PollingStreamProvider extends StreamProvider {
       // clear error rather than letting a mysterious `undefined` id leak
       // into the diff and the multiplexer.
       for (const doc of snapshot) {
-        if (doc == null || doc._id === undefined || doc._id === null) {
+        if (doc == null || doc._id == null) {
           throw new Error(
             `${this.constructor.name}: _fetchSnapshot returned a doc without _id; ` +
             `map your native key to _id in your row converter`
@@ -343,6 +343,15 @@ export class PollingStreamProvider extends StreamProvider {
         ctx.initialized = true;
         ctx.stream.markReady();
       }
+    } catch (diffErr) {
+      // Diff / markReady threw. Surface to the stream and stop the poller —
+      // otherwise the throw propagates to the outer .catch() callers and
+      // disappears silently, leaving observers stuck on a stale snapshot.
+      if (!ctx.stopped) {
+        try { ctx.stream.markError(diffErr); } catch (_e) { /* ignore */ }
+        this._stopPoller(ctx);
+      }
+      return;
     } finally {
       ctx.polling = false;
     }

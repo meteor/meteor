@@ -39,7 +39,7 @@ export class ObserveMultiplexer {
     this._stream = changeStream;
     this._ordered = ordered;
     this._onEmpty = options.onEmpty || null;
-    this._pendingQueueCap = options.pendingQueueCap == null ? 10000 : options.pendingQueueCap;
+    this._pendingQueueCap = options.pendingQueueCap ?? 10000;
     this._handles = new Map();
     // Handles that are mid-addHandle (awaiting initial-adds). Any live event
     // emitted while a handle is pending is queued here and replayed to that

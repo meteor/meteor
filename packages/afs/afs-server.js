@@ -51,16 +51,8 @@ const AFS = {
   _engine,
 
   // ---------------------------------------------------------------------------
-  // Provider management (server-only) — delegates to Registry
+  // Provider management (server-only) — installed below as Registry passthroughs
   // ---------------------------------------------------------------------------
-
-  registerProvider(name, provider) { Registry.registerProvider(name, provider); },
-  getProvider(name) { return Registry.getProvider(name); },
-  setDefaultProvider(name) { Registry.setDefaultProvider(name); },
-  getDefaultProvider() { return Registry.getDefaultProvider(); },
-  getDefaultProviderName() { return Registry.getDefaultProviderName(); },
-  listProviders() { return Registry.listProviders(); },
-  removeProvider(name) { Registry.removeProvider(name); },
 
   // ---------------------------------------------------------------------------
   // Adaptive engine access
@@ -88,6 +80,15 @@ const AFS = {
     this._resetForTests();
   },
 };
+
+// Provider-management methods on AFS are pure passthroughs to Registry.
+// Installed via loop to avoid seven near-identical method definitions.
+for (const m of [
+  'registerProvider', 'getProvider', 'setDefaultProvider', 'getDefaultProvider',
+  'getDefaultProviderName', 'listProviders', 'removeProvider',
+]) {
+  AFS[m] = (...args) => Registry[m](...args);
+}
 
 // Bind to the Meteor package-global slot declared in package.js.
 global.AFS = AFS;

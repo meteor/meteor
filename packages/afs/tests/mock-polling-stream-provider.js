@@ -156,15 +156,22 @@ if (Meteor.isServer) {
     'afs - mock-polling - ordered observe sees movedBefore on sort-key change',
     async (test) => {
       const provider = makeProvider();
+      // Three docs (not two): with only [a, b] → [b, a] the LCS is length 1
+      // and either {a} or {b} is a valid common subsequence. Meteor's
+      // diffQueryOrderedChanges resolves the tie by keeping the latest doc
+      // in new_results unmoved, so it would report movedBefore('b', 'a')
+      // instead of moving 'a'. Adding a stable third doc forces the LCS
+      // ({b, c}) to length 2, leaving 'a' as the unambiguous moved doc.
       await provider.insertAsync('obs4', { _id: 'a', n: 1 });
       await provider.insertAsync('obs4', { _id: 'b', n: 2 });
+      await provider.insertAsync('obs4', { _id: 'c', n: 3 });
       const desc = { collectionName: 'obs4', selector: {}, options: { sort: { n: 1 } } };
       const { stream, teardown } = provider.startObserving(desc, true);
       const events = collectStreamEvents(stream);
       await waitFor(() => events.some(e => e.evt === 'ready'));
 
       const before = events.length;
-      // Bump a's sort key past b — a should move after b.
+      // Bump a's sort key past b and c — a should move to the end.
       await provider.updateAsync('obs4', { _id: 'a' }, { $set: { n: 99 } });
       await waitFor(() => events.slice(before).some(e => e.evt === 'movedBefore'));
 
