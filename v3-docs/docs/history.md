@@ -8,11 +8,8 @@ This is a complete history of changes for Meteor releases.
 
 [//]: # (If you want to change something in this file)
 
-[//]: # (go to meteor/docs/generators/changelog/docs)
-
-
-
-## v3.4.0, 30-01-2026
+[//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.4.0, 2026-01-30
 
 ### Highlights
 
@@ -157,8 +154,8 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@jeetburman](https://github.com/jeetburman)
 - [@copleykj](https://github.com/copleykj)
 
-  ✨✨✨ 
-## v3.3.2, 01-09-2025
+  ✨✨✨
+## v3.3.2, 2025-09-01
 
 ### Highlights
 
@@ -227,7 +224,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@copleykj](https://github.com/copleykj)
 
 ✨✨✨
-## v3.3.1, 05-08-2025
+## v3.3.1, 2025-08-05
 
 ### Highlights
 
@@ -342,7 +339,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@welkinwong](https://github.com/welkinwong)
 - [@Saksham-Goel1107](https://github.com/Saksham-Goel1107)
 
-✨✨✨ 
+✨✨✨
 ## v3.3.0, 2025-06-11
 
 ### Highlights

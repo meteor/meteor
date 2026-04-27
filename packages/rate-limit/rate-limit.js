@@ -1,5 +1,5 @@
-import { Meteor } from 'meteor/meteor';
-import { Random } from 'meteor/random';
+import { Meteor } from "meteor/meteor";
+import { Random } from "meteor/random";
 
 // Default time interval (in milliseconds) to reset rate limit counters
 const DEFAULT_INTERVAL_TIME_IN_MILLISECONDS = 1000;
@@ -39,38 +39,36 @@ class Rule {
   // rule.matchers. If the match fails, search short circuits instead of
   // iterating through all matchers.
   match(input) {
-    return Object
-      .entries(this._matchers)
-      .every(([key, matcher]) => {
-        if (matcher !== null) {
-          if (!hasOwn.call(input, key)) {
-            return false;
-          } else if (typeof matcher === 'function') {
-            if (!(matcher(input[key]))) {
-              return false;
-            }
-          } else if (matcher !== input[key]) {
+    return Object.entries(this._matchers).every(([key, matcher]) => {
+      if (matcher !== null) {
+        if (!hasOwn.call(input, key)) {
+          return false;
+        } else if (typeof matcher === "function") {
+          if (!matcher(input[key])) {
             return false;
           }
+        } else if (matcher !== input[key]) {
+          return false;
         }
-        return true;
-      });
+      }
+      return true;
+    });
   }
 
   async matchAsync(input) {
-      for (const [key, matcher] of Object.entries(this._matchers)) {
-        if (matcher !== null) {
-          if (!hasOwn.call(input, key)) {
-            return false;
-          } else if (typeof matcher === 'function') {
-            if (!(await matcher(input[key]))) {
-              return false;
-            }
-          } else if (matcher !== input[key]) {
+    for (const [key, matcher] of Object.entries(this._matchers)) {
+      if (matcher !== null) {
+        if (!hasOwn.call(input, key)) {
+          return false;
+        } else if (typeof matcher === "function") {
+          if (!(await matcher(input[key]))) {
             return false;
           }
+        } else if (matcher !== input[key]) {
+          return false;
         }
-      };
+      }
+    }
     return true;
   }
 
@@ -81,7 +79,7 @@ class Rule {
     return Object.entries(this._matchers)
       .filter(([key]) => this._matchers[key] !== null)
       .reduce((returnString, [key, matcher]) => {
-        if (typeof matcher === 'function') {
+        if (typeof matcher === "function") {
           if (matcher(input[key])) {
             returnString += key + input[key];
           }
@@ -89,7 +87,7 @@ class Rule {
           returnString += key + input[key];
         }
         return returnString;
-      }, '');
+      }, "");
   }
 
   // Applies the provided input and returns the key string, time since counters
@@ -137,19 +135,19 @@ class RateLimiter {
   }
 
   /**
-  * Checks if this input has exceeded any rate limits.
-  * @param  {object} input dictionary containing key-value pairs of attributes
-  * that match to rules
-  * @return {object} Returns object of following structure
-  * { 'allowed': boolean - is this input allowed
-  *   'timeToReset': integer | Infinity - returns time until counters are reset
-  *                   in milliseconds
-  *   'numInvocationsLeft': integer | Infinity - returns number of calls left
-  *   before limit is reached
-  * }
-  * If multiple rules match, the least number of invocations left is returned.
-  * If the rate limit has been reached, the longest timeToReset is returned.
-  */
+   * Checks if this input has exceeded any rate limits.
+   * @param  {object} input dictionary containing key-value pairs of attributes
+   * that match to rules
+   * @return {object} Returns object of following structure
+   * { 'allowed': boolean - is this input allowed
+   *   'timeToReset': integer | Infinity - returns time until counters are reset
+   *                   in milliseconds
+   *   'numInvocationsLeft': integer | Infinity - returns number of calls left
+   *   before limit is reached
+   * }
+   * If multiple rules match, the least number of invocations left is returned.
+   * If the rate limit has been reached, the longest timeToReset is returned.
+   */
   check(input) {
     const reply = {
       allowed: true,
@@ -185,8 +183,7 @@ class RateLimiter {
     if (ruleResult.timeToNextReset < 0) {
       // Reset all the counters since the rule has reset
       rule.resetCounter();
-      ruleResult.timeSinceLastReset = new Date().getTime() -
-        rule._lastResetTime;
+      ruleResult.timeSinceLastReset = new Date().getTime() - rule._lastResetTime;
       ruleResult.timeToNextReset = rule.options.intervalTime;
       numInvocations = 0;
     }
@@ -206,11 +203,12 @@ class RateLimiter {
     } else {
       // If this is an allowed attempt and we haven't failed on any of the
       // other rules that match, update the reply field.
-      if (rule.options.numRequestsAllowed - numInvocations <
-        reply.numInvocationsLeft && reply.allowed) {
+      if (
+        rule.options.numRequestsAllowed - numInvocations < reply.numInvocationsLeft &&
+        reply.allowed
+      ) {
         reply.timeToReset = ruleResult.timeToNextReset;
-        reply.numInvocationsLeft = rule.options.numRequestsAllowed -
-          numInvocations;
+        reply.numInvocationsLeft = rule.options.numRequestsAllowed - numInvocations;
       }
       reply.ruleId = rule.id;
       rule._executeCallback(reply, input);
@@ -218,31 +216,31 @@ class RateLimiter {
   }
 
   /**
-  * Adds a rule to dictionary of rules that are checked against on every call.
-  * Only inputs that pass all of the rules will be allowed. Returns unique rule
-  * id that can be passed to `removeRule`.
-  * @param {object} rule    Input dictionary defining certain attributes and
-  * rules associated with them.
-  * Each attribute's value can either be a value, a function or null. All
-  * functions must return a boolean of whether the input is matched by that
-  * attribute's rule or not
-  * @param {integer} numRequestsAllowed Optional. Number of events allowed per
-  * interval. Default = 10.
-  * @param {integer} intervalTime Optional. Number of milliseconds before
-  * rule's counters are reset. Default = 1000.
-  * @param {function} callback Optional. Function to be called after a
-  * rule is executed. Two objects will be passed to this function.
-  * The first one is the result of RateLimiter.prototype.check
-  * The second is the input object of the rule, it has the following structure:
-  * {
-  *   'type': string - either 'method' or 'subscription'
-  *   'name': string - the name of the method or subscription being called
-  *   'userId': string - the user ID attempting the method or subscription
-  *   'connectionId': string - a string representing the user's DDP connection
-  *   'clientAddress': string - the IP address of the user
-  * }
-  * @return {string} Returns unique rule id
-  */
+   * Adds a rule to dictionary of rules that are checked against on every call.
+   * Only inputs that pass all of the rules will be allowed. Returns unique rule
+   * id that can be passed to `removeRule`.
+   * @param {object} rule    Input dictionary defining certain attributes and
+   * rules associated with them.
+   * Each attribute's value can either be a value, a function or null. All
+   * functions must return a boolean of whether the input is matched by that
+   * attribute's rule or not
+   * @param {integer} numRequestsAllowed Optional. Number of events allowed per
+   * interval. Default = 10.
+   * @param {integer} intervalTime Optional. Number of milliseconds before
+   * rule's counters are reset. Default = 1000.
+   * @param {function} callback Optional. Function to be called after a
+   * rule is executed. Two objects will be passed to this function.
+   * The first one is the result of RateLimiter.prototype.check
+   * The second is the input object of the rule, it has the following structure:
+   * {
+   *   'type': string - either 'method' or 'subscription'
+   *   'name': string - the name of the method or subscription being called
+   *   'userId': string - the user ID attempting the method or subscription
+   *   'connectionId': string - a string representing the user's DDP connection
+   *   'clientAddress': string - the IP address of the user
+   * }
+   * @return {string} Returns unique rule id
+   */
   addRule(rule, numRequestsAllowed, intervalTime, callback) {
     const options = {
       numRequestsAllowed: numRequestsAllowed || DEFAULT_REQUESTS_PER_INTERVAL,
@@ -256,10 +254,10 @@ class RateLimiter {
   }
 
   /**
-  * Increment counters in every rule that match to this input
-  * @param  {object} input Dictionary object containing attributes that may
-  * match to rules
-  */
+   * Increment counters in every rule that match to this input
+   * @param  {object} input Dictionary object containing attributes that may
+   * match to rules
+   */
   increment(input) {
     // Only increment rule counters that match this input
     const matchedRules = this._findAllMatchingRules(input);
@@ -268,11 +266,11 @@ class RateLimiter {
   }
 
   /**
-  * Increment counters in every rule that match to this input
-  * @param  {array} rules Array of rules to increment
-  * @param  {object} input Dictionary object containing attributes that may
-  * match to rules
-  */
+   * Increment counters in every rule that match to this input
+   * @param  {array} rules Array of rules to increment
+   * @param  {object} input Dictionary object containing attributes that may
+   * match to rules
+   */
   incrementRules(rules, input) {
     const _incrementForInput = (rule) => this._incrementRule(rule, input);
     rules.forEach(_incrementForInput);
@@ -297,7 +295,7 @@ class RateLimiter {
 
   // Returns an array of all rules that apply to provided input
   _findAllMatchingRules(input) {
-    return Object.values(this.rules).filter(rule => rule.match(input));
+    return Object.values(this.rules).filter((rule) => rule.match(input));
   }
 
   async _findAllMatchingRulesAsync(input) {

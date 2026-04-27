@@ -500,10 +500,18 @@ client, the callback argument is an object containing a single `error`
 property set to the `Error`-object which was received from the failed login
 attempt.
 
+On the client, callbacks passed to `onLogin` and `onLoginFailure` can be
+async functions. They will be awaited before proceeding.
+This can affect when login, logout, and reconnect flows are considered complete,
+including when `Meteor.loggingIn()` and `Meteor.loggingOut()` return to `false`.
+
 <ApiBox name="AccountsCommon#onLogout" instanceName="accountsCommon" hasCustomExample/>
 
 On the server, the `func` callback receives a single argument with the object below. On the
-client, no arguments are passed.
+client, no arguments are passed. On the client, callbacks can be async functions and will be awaited.
+
+Like `onLogin` and `onLoginFailure`, this function returns an object with a
+single method, `stop`. Calling `stop()` unregisters the callback.
 
 ```js
 import { AccountsCommon } from "meteor/accounts-base";
@@ -545,6 +553,8 @@ available only on the client:
 <ApiBox name="AccountsClient#loggingIn" instanceName="accountsClient"/>
 
 <ApiBox name="AccountsClient#logout" instanceName="accountsClient"/>
+
+<ApiBox name="AccountsClient#logoutAllClients" instanceName="accountsClient"/>
 
 <ApiBox name="AccountsClient#logoutOtherClients" instanceName="accountsClient"/>
 
@@ -917,7 +927,7 @@ To add password support to your application, run this command in your terminal:
 meteor add accounts-password
 ```
 
-> In addition to configuring the [`email`](./email.md) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails!
+> In addition to configuring the [`email`](./email.md) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails! Starting in Meteor 3.5, leaving the `from` address unconfigured will generate a server console warning to alert you of potential silent email delivery failures.
 
 You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](../packages/accounts-ui.md) to
@@ -1204,7 +1214,7 @@ Set the fields of the object by assigning to them:
 - `from`: (**required**) A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
   address. By default, the email is sent from `no-reply@example.com`. **If you
   want e-mails to send correctly, this should be changed to your own domain
-  as most e-mail providers will reject mail sent from `example.com`.**
+  as most e-mail providers will reject mail sent from `example.com`.** Starting in Meteor 3.5, failing to configure a valid custom `from` address will result in a prominent server console warning to help prevent silent email failures in production.
 - `siteName`: The public name of your application. Defaults to the DNS name of
   the application (eg: `awesome.meteor.com`).
 - `headers`: An `Object` for custom email headers as described in
