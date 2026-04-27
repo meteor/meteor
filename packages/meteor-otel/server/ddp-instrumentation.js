@@ -12,6 +12,11 @@ import { trace, SpanStatusCode, context } from '@opentelemetry/api';
 let ddpHookInstalled = false;
 const pendingSpans = new Map();
 
+// Cap on the number of argument types captured per call. Beyond this point we
+// only record the count to keep span attribute cardinality bounded — high
+// cardinality on per-call attributes can blow up storage on the backend.
+const MAX_PARAM_TYPES = 10;
+
 const SAFE_HEADER_KEYS = [
   'user-agent',
   'x-forwarded-for',
@@ -19,6 +24,16 @@ const SAFE_HEADER_KEYS = [
   'accept-language',
   'host',
 ];
+
+function summarizeArgTypes(args) {
+  if (!Array.isArray(args)) return [];
+  if (args.length <= MAX_PARAM_TYPES) {
+    return args.map((arg) => typeof arg);
+  }
+  const truncated = args.slice(0, MAX_PARAM_TYPES).map((arg) => typeof arg);
+  truncated.push('...');
+  return truncated;
+}
 
 
 function extractConnectionAttributes(connection, session) {
@@ -47,7 +62,7 @@ function extractConnectionAttributes(connection, session) {
 
 function buildMethodAttributes(context, methodName, args = []) {
   const session = context?._session || null;
-  const argTypes = Array.isArray(args) ? args.map((arg) => typeof arg) : [];
+  const argTypes = summarizeArgTypes(args);
   const userId = context?.userId ?? 'anonymous';
 
   const base = {
@@ -70,7 +85,7 @@ function buildMethodAttributes(context, methodName, args = []) {
 
 function buildPublicationAttributes(subscription, pubName, args = []) {
   const session = subscription?._session || null;
-  const argTypes = Array.isArray(args) ? args.map((arg) => typeof arg) : [];
+  const argTypes = summarizeArgTypes(args);
   const isUniversal = !subscription?._subscriptionId;
   const userId = subscription?.userId ?? 'anonymous';
 
