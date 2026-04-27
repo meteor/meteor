@@ -1473,12 +1473,21 @@ Object.assign(Server.prototype, {
     if (!isObject(name)) {
       options = options || {};
 
-      // Apply OpenTelemetry tracing if enabled
+      // Apply OpenTelemetry tracing if enabled.
+      // Check that meteor-otel is not just present but has been initialized
+      // (i.e., its API is exported). If wrapping fails for any reason, fall
+      // back to the original handler so a misconfigured otel does not break
+      // the publication itself.
       if (options.otel) {
-        if (Package['meteor-otel']) {
-          handler = Package['meteor-otel'].wrapPublication(name, handler);
+        var otelPackage = Package['meteor-otel'];
+        if (otelPackage && typeof otelPackage.wrapPublication === 'function') {
+          try {
+            handler = otelPackage.wrapPublication(name, handler);
+          } catch (e) {
+            Meteor._debug("[ddp-server] Failed to apply otel wrapping for publish '" + name + "'. Proceeding without otel tracing. Error: " + (e && e.message));
+          }
         } else {
-          Meteor._debug("[ddp-server] otel option requires meteor-otel package. Ignoring otel option for publish '" + name + "'");
+          Meteor._debug("[ddp-server] otel option requires meteor-otel package to be installed and initialized. Ignoring otel option for publish '" + name + "'");
         }
       }
 
@@ -1571,13 +1580,21 @@ Object.assign(Server.prototype, {
       if (self.method_handlers[name])
         throw new Error("A method named '" + name + "' is already defined");
 
-      // Apply OpenTelemetry tracing if enabled for this method
+      // Apply OpenTelemetry tracing if enabled for this method.
+      // Check that meteor-otel is not just present but has been initialized
+      // (i.e., its API is exported). If wrapping fails, fall back to the
+      // original handler so a misconfigured otel does not break the method.
       var shouldTrace = otelMethods === true || (Array.isArray(otelMethods) && otelMethods.includes(name));
       if (shouldTrace) {
-        if (Package['meteor-otel']) {
-          func = Package['meteor-otel'].wrapMethod(name, func);
+        var otelPackage = Package['meteor-otel'];
+        if (otelPackage && typeof otelPackage.wrapMethod === 'function') {
+          try {
+            func = otelPackage.wrapMethod(name, func);
+          } catch (e) {
+            Meteor._debug("[ddp-server] Failed to apply otel wrapping for method '" + name + "'. Proceeding without otel tracing. Error: " + (e && e.message));
+          }
         } else {
-          Meteor._debug("[ddp-server] otel option requires meteor-otel package. Ignoring otel option for method '" + name + "'");
+          Meteor._debug("[ddp-server] otel option requires meteor-otel package to be installed and initialized. Ignoring otel option for method '" + name + "'");
         }
       }
 
