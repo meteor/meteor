@@ -21,6 +21,9 @@
  * - OTEL_DDP_MAX_PENDING_SPANS: Hard cap on simultaneously pending roundtrip
  *   spans (default: 10000). Prevents unbounded memory growth when documents
  *   are tracked but the matching DDP 'added' message never arrives.
+ * - OTEL_DDP_CAPTURE_IP: Set to '0' to omit `net.peer.ip` from DDP spans.
+ *   IP addresses can be PII under regulations like GDPR; disable when traces
+ *   may be retained by a provider that cannot strip them.
  */
 
 function parseOptionalPositiveInt(value) {

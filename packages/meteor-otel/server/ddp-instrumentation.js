@@ -52,6 +52,30 @@ function resolveSafeHeaderKeys() {
 
 const SAFE_HEADER_KEYS = resolveSafeHeaderKeys();
 
+// IP addresses can be considered PII under regulations like GDPR. Allow ops
+// to disable the default `net.peer.ip` attribute via OTEL_DDP_CAPTURE_IP=0.
+const CAPTURE_CLIENT_IP = process.env.OTEL_DDP_CAPTURE_IP !== '0';
+
+// Optional hook for callers to enrich/replace the connection attributes per
+// span — modeled after `applyCustomAttributesOnSpan` from
+// @opentelemetry/instrumentation-http. Set via `setConnectionAttributesHook`.
+let connectionAttributesHook = null;
+
+/**
+ * Register a hook to customize connection attributes captured on DDP spans.
+ * The hook receives `(attrs, { connection, session })` and may mutate `attrs`
+ * (delete keys, add keys) or return a replacement object. Useful when the
+ * default capture is too broad for your privacy/regulatory requirements.
+ *
+ * @param {Function|null} fn - Hook function or null to clear.
+ */
+export function setConnectionAttributesHook(fn) {
+  if (fn !== null && typeof fn !== 'function') {
+    throw new TypeError('setConnectionAttributesHook expects a function or null');
+  }
+  connectionAttributesHook = fn;
+}
+
 function summarizeArgTypes(args) {
   if (!Array.isArray(args)) return [];
   if (args.length <= MAX_PARAM_TYPES) {
@@ -69,19 +93,31 @@ function extractConnectionAttributes(connection, session) {
   const attrs = {};
 
   if (connection?.id)  attrs['ddp.session.id'] = connection.id;
-  if (connection?.clientAddress) attrs['net.peer.ip'] = connection.clientAddress;
+  if (CAPTURE_CLIENT_IP && connection?.clientAddress) attrs['net.peer.ip'] = connection.clientAddress;
   if (session?.version) attrs['ddp.protocol.version'] = session.version;
   if (session?._socketUrl) attrs['ddp.connection.url'] = session._socketUrl;
   if (session?.userId) attrs['ddp.session.user_id'] = session.userId;
 
   const headers = connection?.httpHeaders;
-  if (headers) {
+  if (headers && SAFE_HEADER_KEYS.length > 0) {
     SAFE_HEADER_KEYS.forEach((header) => {
       const value = headers[header] ?? headers[header.toLowerCase()];
       if (value) {
         attrs[`ddp.connection.header.${header.replace(/-/g, '_').toLowerCase()}`] = Array.isArray(value) ? value : [value];
       }
     });
+  }
+
+  if (connectionAttributesHook) {
+    try {
+      const replacement = connectionAttributesHook(attrs, { connection, session });
+      if (replacement && typeof replacement === 'object') {
+        return replacement;
+      }
+    } catch (e) {
+      // Never let user code break tracing.
+      console.warn('[meteor-otel] connectionAttributesHook threw:', e?.message || e);
+    }
   }
 
   return attrs;

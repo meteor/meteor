@@ -82,6 +82,7 @@ export {
   installDDPHooks,
   wrapMethod,
   wrapPublication,
+  setConnectionAttributesHook,
   // Active span utilities
   getActiveSpan,
   addEvent,
