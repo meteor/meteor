@@ -333,15 +333,12 @@ export function createRoundtripTracer(tracerName) {
             pendingSpans.delete(trackedKey);
           }
 
+          const status = { code: SpanStatusCode.ERROR };
           if (error) {
             span.recordException(error);
-            span.setStatus({
-              code: SpanStatusCode.ERROR,
-              message: error?.message || 'Unknown error',
-            });
-          } else {
-            span.setStatus({ code: SpanStatusCode.ERROR });
+            if (error.message) status.message = error.message;
           }
+          span.setStatus(status);
 
           span.end();
         },
@@ -423,10 +420,9 @@ export function wrapMethod(methodName, fn) {
       return result;
     } catch (error) {
       span.recordException(error);
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error?.message || 'Method failed',
-      });
+      const status = { code: SpanStatusCode.ERROR };
+      if (error?.message) status.message = error.message;
+      span.setStatus(status);
       throw error;
     } finally {
       span.end();
@@ -458,10 +454,9 @@ export function wrapPublication(pubName, fn) {
 
     const onError = (error) => {
       span.recordException(error);
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error?.message || 'Publication failed',
-      });
+      const status = { code: SpanStatusCode.ERROR };
+      if (error?.message) status.message = error.message;
+      span.setStatus(status);
       span.end();
     };
 
@@ -597,20 +592,14 @@ export function recordException(exception) {
  */
 export function setSpanError(error) {
   const span = getActiveSpan();
-  if (span) {
-    if (error instanceof Error) {
-      span.recordException(error);
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error.message || 'Operation failed',
-      });
-    } else if (typeof error === 'string') {
-      span.setStatus({
-        code: SpanStatusCode.ERROR,
-        message: error,
-      });
-    } else {
-      span.setStatus({ code: SpanStatusCode.ERROR });
-    }
+  if (!span) return;
+
+  const status = { code: SpanStatusCode.ERROR };
+  if (error instanceof Error) {
+    span.recordException(error);
+    if (error.message) status.message = error.message;
+  } else if (typeof error === 'string' && error) {
+    status.message = error;
   }
+  span.setStatus(status);
 }

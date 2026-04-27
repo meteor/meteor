@@ -31,10 +31,9 @@ export async function withSpan(tracerName, spanName, fn, attributes = {}) {
     return result;
   } catch (error) {
     span.recordException(error);
-    span.setStatus({
-      code: SpanStatusCode.ERROR,
-      message: error?.message || 'Operation failed',
-    });
+    const status = { code: SpanStatusCode.ERROR };
+    if (error?.message) status.message = error.message;
+    span.setStatus(status);
     throw error;
   } finally {
     span.end();
@@ -61,10 +60,9 @@ export function withSpanSync(tracerName, spanName, fn, attributes = {}) {
     return result;
   } catch (error) {
     span.recordException(error);
-    span.setStatus({
-      code: SpanStatusCode.ERROR,
-      message: error?.message || 'Operation failed',
-    });
+    const status = { code: SpanStatusCode.ERROR };
+    if (error?.message) status.message = error.message;
+    span.setStatus(status);
     throw error;
   } finally {
     span.end();
@@ -144,15 +142,12 @@ export function createSpanBuilder(tracerName) {
          * Mark the span as failed and end it.
          */
         error(err) {
+          const status = { code: SpanStatusCode.ERROR };
           if (err) {
             span.recordException(err);
-            span.setStatus({
-              code: SpanStatusCode.ERROR,
-              message: err?.message || 'Operation failed',
-            });
-          } else {
-            span.setStatus({ code: SpanStatusCode.ERROR });
+            if (err.message) status.message = err.message;
           }
+          span.setStatus(status);
           span.end();
         },
 
@@ -476,15 +471,12 @@ export function createLinkedSpan(tracerName, spanName, links = [], attributes = 
     },
 
     fail(error) {
+      const status = { code: SpanStatusCode.ERROR };
       if (error) {
         span.recordException(error);
-        span.setStatus({
-          code: SpanStatusCode.ERROR,
-          message: error?.message || 'Operation failed',
-        });
-      } else {
-        span.setStatus({ code: SpanStatusCode.ERROR });
+        if (error.message) status.message = error.message;
       }
+      span.setStatus(status);
       span.end();
     },
 
