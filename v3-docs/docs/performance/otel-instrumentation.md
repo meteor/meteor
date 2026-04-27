@@ -351,7 +351,7 @@ Meteor.methods({
 
 That's it! With this single option, every method call will automatically:
 
-1. **Create a span** with the method name (e.g., `meteor.method links.insert`)
+1. **Create a span** named `method:<methodName>` (e.g., `method:links.insert`)
 2. **Record the duration** of the method execution
 3. **Capture errors** if the method throws an exception
 
@@ -361,20 +361,23 @@ When `{ otel: true }` is enabled, each method call generates a trace with the fo
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│ Trace: meteor.method links.insert                                       │
+│ Trace: method:links.insert                                              │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │  ┌─────────────────────────────────────────────────────────────────┐   │
-│  │ Span: meteor.method links.insert                                │   │
+│  │ Span: method:links.insert                                       │   │
 │  │ Duration: 45ms                                                  │   │
 │  │ Attributes:                                                     │   │
+│  │   • ddp.type: "method"                                          │   │
+│  │   • ddp.method.name: "links.insert"                             │   │
 │  │   • meteor.method.name: "links.insert"                          │   │
-│  │   • meteor.userId: "abc123" (if authenticated)                  │   │
-│  │   • meteor.connection.id: "xyz789"                              │   │
+│  │   • user.id / meteor.user.id: "abc123" (or "anonymous")         │   │
+│  │   • ddp.session.id: "xyz789"                                    │   │
+│  │   • net.peer.ip: "192.168.1.1" (unless OTEL_DDP_CAPTURE_IP=0)   │   │
 │  │                                                                 │   │
 │  │  ┌─────────────────────────────────────────────────────────┐   │   │
-│  │  │ Child Span: mongodb.insert                              │   │   │
-│  │  │ Duration: 12ms                                          │   │   │
+│  │  │ Child Span: mongodb.insert (if a Mongo instrumentation  │   │   │
+│  │  │ is registered before the driver loads)                  │   │   │
 │  │  │ Attributes:                                             │   │   │
 │  │  │   • db.system: "mongodb"                                │   │   │
 │  │  │   • db.name: "meteor"                                   │   │   │
@@ -387,14 +390,21 @@ When `{ otel: true }` is enabled, each method call generates a trace with the fo
 
 ### Span Attributes
 
-The following attributes are automatically added to method spans:
+The following attributes are automatically added to method spans (see `packages/meteor-otel/server/ddp-instrumentation.js` for the full list):
 
 | Attribute | Description | Example |
 |-----------|-------------|---------|
-| `meteor.method.name` | The name of the method | `"links.insert"` |
-| `meteor.userId` | The ID of the authenticated user (if any) | `"abc123"` |
-| `meteor.connection.id` | The DDP connection ID | `"xyz789"` |
-| `meteor.connection.clientAddress` | Client IP address | `"192.168.1.1"` |
+| `ddp.type` | Always `"method"` for method spans | `"method"` |
+| `ddp.method.name` / `meteor.method.name` | The name of the method | `"links.insert"` |
+| `user.id` / `meteor.user.id` | The authenticated user id, or `"anonymous"` | `"abc123"` |
+| `ddp.method.id` | The DDP message id, when available | `"42"` |
+| `ddp.method.params.length` | Number of arguments passed to the method | `3` |
+| `ddp.method.params.types` | First-N JS types of arguments (cardinality-capped) | `["string", "number"]` |
+| `ddp.session.id` | DDP session/connection id | `"xyz789"` |
+| `net.peer.ip` | Client IP (omitted if `OTEL_DDP_CAPTURE_IP=0`) | `"192.168.1.1"` |
+| `ddp.connection.header.<name>` | Selected request headers (controlled by `OTEL_DDP_CAPTURED_HEADERS`) | `"Mozilla/5.0 ..."` |
+
+> Publications use the same instrumentation with `ddp.type: "publication"` and the equivalent `ddp.publication.name` / `meteor.publication.name` / `ddp.subscription.*` attributes; their span name is `publish:<publicationName>`.
 
 ### Example: Tracing Multiple Methods
 
@@ -458,13 +468,13 @@ After enabling tracing, make some method calls from your client and then check G
 4. Use TraceQL to find your traces:
 
 ```
-{ resource.service.name = "meteor-app" && name =~ "meteor.method.*" }
+{ resource.service.name = "meteor-app" && name =~ "method:.*" }
 ```
 
-Or search for a specific method:
+Or search for a specific method (the attribute key is `ddp.method.name`, mirrored as `meteor.method.name`):
 
 ```
-{ span.meteor.method.name = "links.insert" }
+{ span.ddp.method.name = "links.insert" }
 ```
 
 // TODO: add image of a trace in Grafana
