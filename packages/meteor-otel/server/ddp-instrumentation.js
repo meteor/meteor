@@ -205,14 +205,21 @@ export function createRoundtripTracer(tracerName) {
 
           clearTimer();
           timer = setTimeout(() => {
-            if (pendingSpans.get(trackedKey)?.span === span) {
-              span.setStatus({
-                code: SpanStatusCode.ERROR,
-                message: 'Timeout waiting for DDP added message',
-              });
-              span.end();
-              pendingSpans.delete(trackedKey);
+            const currentInfo = pendingSpans.get(trackedKey);
+            // Ensure this timeout still owns the entry: another trackDocument
+            // call (or a successful ddp 'added' completion) may have replaced
+            // or cleared it before this fired.
+            if (!currentInfo || currentInfo.span !== span || currentInfo.timer !== timer) {
+              return;
             }
+
+            span.setStatus({
+              code: SpanStatusCode.ERROR,
+              message: 'Timeout waiting for DDP added message',
+            });
+            span.end();
+            currentInfo.timer = null;
+            pendingSpans.delete(trackedKey);
           }, timeoutMs);
 
           spanInfo.timer = timer;
