@@ -500,10 +500,18 @@ client, the callback argument is an object containing a single `error`
 property set to the `Error`-object which was received from the failed login
 attempt.
 
+On the client, callbacks passed to `onLogin` and `onLoginFailure` can be
+async functions. They will be awaited before proceeding.
+This can affect when login, logout, and reconnect flows are considered complete,
+including when `Meteor.loggingIn()` and `Meteor.loggingOut()` return to `false`.
+
 <ApiBox name="AccountsCommon#onLogout" instanceName="accountsCommon" hasCustomExample/>
 
 On the server, the `func` callback receives a single argument with the object below. On the
-client, no arguments are passed.
+client, no arguments are passed. On the client, callbacks can be async functions and will be awaited.
+
+Like `onLogin` and `onLoginFailure`, this function returns an object with a
+single method, `stop`. Calling `stop()` unregisters the callback.
 
 ```js
 import { AccountsCommon } from "meteor/accounts-base";
@@ -545,6 +553,8 @@ available only on the client:
 <ApiBox name="AccountsClient#loggingIn" instanceName="accountsClient"/>
 
 <ApiBox name="AccountsClient#logout" instanceName="accountsClient"/>
+
+<ApiBox name="AccountsClient#logoutAllClients" instanceName="accountsClient"/>
 
 <ApiBox name="AccountsClient#logoutOtherClients" instanceName="accountsClient"/>
 

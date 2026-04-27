@@ -2,7 +2,7 @@ let puppeteer;
 try {
   // Prefer the copy bundled inside dev_bundle (local checkout / CI after first run).
   puppeteer = require("../../dev_bundle/lib/node_modules/puppeteer");
-} catch (_) {
+} catch {
   // Fallback: globally-installed puppeteer (e.g. on oss-vm where it is pre-installed
   // via `npm install -g puppeteer@23.6.0` and NODE_PATH is set to `npm root -g`).
   puppeteer = require("puppeteer");
@@ -18,7 +18,6 @@ async function runNextUrl(browser) {
   // });
 
   page.on("console", async (msg) => {
-    // this is a way to make sure the travis does not timeout
     // if the test is running for too long without any output to the console (10 minutes)
     const text = msg.text();
     if (text.includes("Permissions policy violation")) {
@@ -28,23 +27,19 @@ async function runNextUrl(browser) {
     else {
       testNumber++;
       const currentClientTest = await page.evaluate(() =>
-        __Tinytest._getCurrentRunningTestOnClient()
+        __Tinytest._getCurrentRunningTestOnClient(),
       );
       if (currentClientTest !== "") {
-        console.log(
-          `Currently running on the client test: ${currentClientTest}`
-        );
+        console.log(`Currently running on the client test: ${currentClientTest}`);
         return;
       }
       // If we get here is because we have not yet started the test on the client
       const currentServerTest = await page.evaluate(
-        async () => await __Tinytest._getCurrentRunningTestOnServer()
+        async () => await __Tinytest._getCurrentRunningTestOnServer(),
       );
 
       if (currentServerTest !== "") {
-        console.log(
-          `Currently running on the server test: ${currentServerTest}`
-        );
+        console.log(`Currently running on the server test: ${currentServerTest}`);
         return;
       }
       // we were not able to find the name of the test, this is a way to make sure the test is still running
@@ -153,17 +148,11 @@ async function runTests() {
 
   // --no-sandbox and --disable-setuid-sandbox must be disabled for CI compatibility
   const browser = await puppeteer.launch({
-    args: [
-      "--no-sandbox",
-      "--disable-setuid-sandbox",
-      "--disable-web-security",
-    ],
+    args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security"],
     headless: "new",
   });
   console.log(`Using version: ${await browser.version()}`);
   await runNextUrl(browser);
 }
 
-runTests().catch((e) =>
-  console.log(`something broke while running puppeter: `, e)
-);
+runTests().catch((e) => console.log(`something broke while running puppeter: `, e));

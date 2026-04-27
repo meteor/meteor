@@ -65,12 +65,14 @@ export class Hook {
   }
 
   register(callback) {
-    const exceptionHandler = this.exceptionHandler || function (exception) {
-      // Note: this relies on the undocumented fact that if bindEnvironment's
-      // onException throws, and you are invoking the callback either in the
-      // browser or from within a Fiber in Node, the exception is propagated.
-      throw exception;
-    };
+    const exceptionHandler =
+      this.exceptionHandler ||
+      function (exception) {
+        // Note: this relies on the undocumented fact that if bindEnvironment's
+        // onException throws, and you are invoking the callback either in the
+        // browser or from within a Fiber in Node, the exception is propagated.
+        throw exception;
+      };
 
     if (this.bindEnvironment) {
       callback = Meteor.bindEnvironment(callback, exceptionHandler);
@@ -89,7 +91,7 @@ export class Hook {
       callback,
       stop: () => {
         delete this.callbacks[id];
-      }
+      },
     };
   }
 
@@ -110,14 +112,13 @@ export class Hook {
    * @param iterator
    */
   forEach(iterator) {
-
     const ids = Object.keys(this.callbacks);
-    for (let i = 0;  i < ids.length;  ++i) {
+    for (let i = 0; i < ids.length; ++i) {
       const id = ids[i];
       // check to see if the callback was removed during iteration
       if (hasOwn.call(this.callbacks, id)) {
         const callback = this.callbacks[id];
-        if (! iterator(callback)) {
+        if (!iterator(callback)) {
           break;
         }
       }
@@ -134,12 +135,12 @@ export class Hook {
    */
   async forEachAsync(iterator) {
     const ids = Object.keys(this.callbacks);
-    for (let i = 0;  i < ids.length;  ++i) {
+    for (let i = 0; i < ids.length; ++i) {
       const id = ids[i];
       // check to see if the callback was removed during iteration
       if (hasOwn.call(this.callbacks, id)) {
         const callback = this.callbacks[id];
-        if (!await iterator(callback)) {
+        if (!(await iterator(callback))) {
           break;
         }
       }
@@ -157,13 +158,10 @@ export class Hook {
 
 // Copied from Meteor.bindEnvironment and removed all the env stuff.
 function dontBindEnvironment(func, onException, _this) {
-  if (!onException || typeof(onException) === 'string') {
+  if (!onException || typeof onException === "string") {
     const description = onException || "callback of async function";
     onException = function (error) {
-      Meteor._debug(
-        "Exception in " + description,
-        error
-      );
+      Meteor._debug(`Exception in ${description}`, error);
     };
   }
 
