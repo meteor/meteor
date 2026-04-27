@@ -350,7 +350,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       var swcOptions = {
         jsc: {
-          ...(!isLegacyWebArch && { target: 'es2015' }),
+          ...(!isLegacyWebArch && { target: isNodeTarget ? 'es2022' : 'es2015' }),
           parser: {
             syntax: isTypescriptSyntax ? 'typescript' : 'ecmascript',
             jsx: hasJSXSupport,
