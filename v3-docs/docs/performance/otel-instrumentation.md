@@ -152,16 +152,16 @@ environment:
 
 ### Initializing OpenTelemetry
 
-The most critical aspect of OpenTelemetry initialization is **timing**. The `initOtel()` function must be called **before any other imports** in your server's main file. This ensures that all auto-instrumentation (like MongoDB) is properly set up before those libraries are loaded.
+The most critical aspect of OpenTelemetry initialization is **timing**. `initOtel()` must run **before any module you want auto-instrumented** is loaded — that includes Meteor itself and any npm dependency you import. Because ECMAScript module imports inside a single file are hoisted, you cannot safely place `initOtel()` "above" sibling `import` statements in `server/main.js`. Use a dedicated bootstrap file instead, and import that file as the very first statement of your entrypoint.
 
-Create or modify your `server/main.js`:
+Create `server/otel-bootstrap.js`:
 
 ```javascript
-// ⚠️ CRITICAL: Initialize OpenTelemetry FIRST, before any other imports
+// server/otel-bootstrap.js
+// Single-purpose module: load and call initOtel() before anything else.
 import os from 'node:os';
 import { initOtel } from 'meteor/meteor-otel';
 
-// Initialize OpenTelemetry
 initOtel({
   serviceName: process.env.OTEL_SERVICE_NAME || 'my-meteor-app',
   resourceAttributes: {
@@ -170,8 +170,17 @@ initOtel({
     'service.instance.id': `${os.hostname()}-${process.pid}`,
   }
 });
+```
 
-// NOW import everything else
+Then make `server/main.js` import the bootstrap file first:
+
+```javascript
+// server/main.js
+// IMPORTANT: this import must be FIRST so OTel is initialized before any
+// other module (Meteor core, your app code, npm deps) is loaded.
+import './otel-bootstrap.js';
+
+// Now the rest of your server can be imported normally.
 import { Meteor } from 'meteor/meteor';
 import { MyCollection } from '/imports/api/collections';
 // ... other imports
@@ -268,12 +277,10 @@ Open `http://localhost:3000`, go to **Explore**, select **Prometheus**, and run 
 
 ### A Complete Minimal Example
 
-Here's a complete minimal `server/main.js` that initializes OpenTelemetry:
+Here's a complete minimal setup. **`initOtel()` must run before any other module is loaded**, so it lives in its own bootstrap file that `server/main.js` imports first.
 
 ```javascript
-// server/main.js
-
-// Step 1: Initialize OTel FIRST
+// server/otel-bootstrap.js
 import os from 'node:os';
 import { initOtel } from 'meteor/meteor-otel';
 
@@ -285,8 +292,15 @@ initOtel({
     'service.instance.id': `${os.hostname()}-${process.pid}`,
   }
 });
+```
 
-// Step 2: Now import everything else
+```javascript
+// server/main.js
+
+// Step 1: bootstrap OTel BEFORE everything else
+import './otel-bootstrap.js';
+
+// Step 2: now the rest of the server is loaded with OTel already running
 import { Meteor } from 'meteor/meteor';
 import { LinksCollection } from '/imports/api/links';
 
