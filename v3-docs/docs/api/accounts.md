@@ -225,6 +225,16 @@ animation while the login request is being processed.
 
 <ApiBox name="Meteor.logoutAllClientsAsync" />
 
+Available since Meteor 3.5. Logs the current user out of *every* device, including the browser where the call originated. Useful for "sign out everywhere" actions in security settings:
+
+```js
+import { Meteor } from "meteor/meteor";
+
+await Meteor.logoutAllClientsAsync();
+```
+
+Compare with `Meteor.logoutOtherClients` below, which keeps the calling browser logged in.
+
 <ApiBox name="Meteor.logoutOtherClients" />
 
 <ApiBox name="Meteor.logoutOtherClientsAsync" />
@@ -514,6 +524,44 @@ On the client, callbacks passed to `onLogin` and `onLoginFailure` can be
 async functions. They will be awaited before proceeding.
 This can affect when login, logout, and reconnect flows are considered complete,
 including when `Meteor.loggingIn()` and `Meteor.loggingOut()` return to `false`.
+
+::: warning
+Async client-side login hooks are awaited sequentially before the originating call resolves. A slow `await` inside `onLogin` (e.g. a network round-trip to your analytics backend) will visibly delay the user's login. Keep client hooks fast or fire-and-forget the slow work:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+
+Accounts.onLogin(async ({ user }) => {
+  // OK: a quick local enrichment
+  await Meteor.callAsync("profile.touchLastSeen");
+
+  // Don't block the login on slow work — fire-and-forget instead
+  void fetch("/analytics/login", {
+    method: "POST",
+    body: JSON.stringify({ userId: user._id }),
+  });
+});
+```
+:::
+
+Example — async client hooks for audit logging:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+
+const loginHandle = Accounts.onLogin(async ({ user }) => {
+  await Meteor.callAsync("audit.recordLogin", { userId: user._id });
+});
+
+const failureHandle = Accounts.onLoginFailure(async ({ error }) => {
+  await Meteor.callAsync("audit.recordLoginFailure", {
+    reason: error.reason,
+  });
+});
+
+// Both registrations return a handle with a stop() method.
+// Call stop() when the hook is no longer needed (e.g. on component unmount).
+```
 
 <ApiBox name="AccountsCommon#onLogout" instanceName="accountsCommon" hasCustomExample/>
 
