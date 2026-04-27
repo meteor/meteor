@@ -1536,8 +1536,13 @@ Object.assign(Server.prototype, {
       }
     }
     else{
+      // Object-form Meteor.publish({ name: handler, ... }, options).
+      // Forward options (including `otel`) to each individual registration so
+      // tracing can be opted-in at the dictionary level just like the
+      // single-name form.
+      var publishOptions = options || {};
       Object.entries(name).forEach(function([key, value]) {
-        self.publish(key, value, {});
+        self.publish(key, value, publishOptions);
       });
     }
   },
