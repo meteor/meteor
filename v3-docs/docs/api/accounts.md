@@ -219,15 +219,23 @@ animation while the login request is being processed.
 
 <ApiBox name="Meteor.logout" />
 
+<ApiBox name="Meteor.logoutAsync" />
+
 <ApiBox name="Meteor.logoutAllClients" />
 
+<ApiBox name="Meteor.logoutAllClientsAsync" />
+
 <ApiBox name="Meteor.logoutOtherClients" />
+
+<ApiBox name="Meteor.logoutOtherClientsAsync" />
 
 For example, when called in a user's browser, connections in that browser
 remain logged in, but any other browsers or DDP clients logged in as that user
 will be logged out.
 
 <ApiBox name="Meteor.loginWithPassword" />
+
+<ApiBox name="Meteor.loginWithPasswordAsync" />
 
 If there are multiple users with a username or email only differing in case, a case sensitive match is required. Although `createUser` won't let you create users with ambiguous usernames or emails, this could happen with existing databases or if you modify the users collection directly.
 
@@ -243,6 +251,8 @@ This function is provided by the `accounts-password` package. See the
 [Passwords](#passwords) section below.
 
 <ApiBox name="Meteor.loginWithToken" />
+
+<ApiBox name="Meteor.loginWithTokenAsync" />
 
 Logs the user in using a valid Meteor login token (also called a resume token). This is typically used to restore a user's session across browser reloads, between tabs, or across DDP connections (such as in multi-server setups).
 
