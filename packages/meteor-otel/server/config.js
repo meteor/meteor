@@ -32,10 +32,21 @@ function parseOptionalPositiveInt(value) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
+const DEFAULT_EXPORT_INTERVAL_MS = 1000;
+
 export function getConfig() {
   const serviceName = process.env.OTEL_SERVICE_NAME || 'meteor-app';
   const debug = process.env.OTEL_DEBUG === '1';
-  const exportIntervalMs = Number(process.env.OTEL_METRICS_EXPORT_INTERVAL_MS || 1000);
+
+  // OTEL_METRICS_EXPORT_INTERVAL_MS may be missing, malformed, zero, or
+  // negative. Any of those would propagate into PeriodicExportingMetricReader
+  // and produce undefined behavior, so fall back to the default in those
+  // cases.
+  const parsedInterval = Number(process.env.OTEL_METRICS_EXPORT_INTERVAL_MS);
+  const exportIntervalMs =
+    Number.isFinite(parsedInterval) && parsedInterval > 0
+      ? parsedInterval
+      : DEFAULT_EXPORT_INTERVAL_MS;
 
   const baseEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT || 'http://localhost:4318';
   const normalizedBase = baseEndpoint.replace(/\/?$/, '');
