@@ -72,7 +72,10 @@ DDPCommon.MethodInvocation = class MethodInvocation {
      */
     this.connection = options.connection;
 
-    // The seed for randomStream value generation
+    // The seed for randomStream value generation. Kept enumerable because
+    // `randomSeed` is part of the long-standing public surface of
+    // MethodInvocation and is consumed by user code (e.g., RandomStream
+    // helpers); changing its enumerability would be a breaking change.
     this.randomSeed = options.randomSeed;
 
     // This is set by RandomStream.get; and holds the random stream state
@@ -80,9 +83,10 @@ DDPCommon.MethodInvocation = class MethodInvocation {
 
     this.fence = options.fence;
 
-    // Internal references used for tracing/instrumentation.
-    // Stored as non-enumerable properties to avoid changing the public API
-    // surface of MethodInvocation while still exposing the data when needed.
+    // Internal references used for tracing/instrumentation. These are new
+    // additions and are intentionally non-enumerable so they don't appear in
+    // Object.keys / spreads / serialization of the public MethodInvocation
+    // surface, while still being readable by instrumentation code.
     Object.defineProperty(this, '_session', {
       value: options.session || null,
       enumerable: false,
