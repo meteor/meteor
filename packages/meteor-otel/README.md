@@ -150,8 +150,7 @@ import { withSpan } from 'meteor/meteor-otel';
 
 async function processOrder(orderId) {
   return withSpan('orders', 'processOrder', async () => {
-    // your code here
-    return result;
+    return await OrdersCollection.findOneAsync({ _id: orderId });
   }, { 'order.id': orderId });
 }
 ```
