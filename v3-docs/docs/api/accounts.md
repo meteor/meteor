@@ -247,6 +247,25 @@ will be logged out.
 
 <ApiBox name="Meteor.loginWithPasswordAsync" />
 
+Available since Meteor 3.5. The promise-returning counterpart to `Meteor.loginWithPassword`. Use it inside `async` functions where `await` reads more naturally than a callback. The login attempt info object that the callback would have received is the resolved value of the promise; failures reject with the same `Error` you would have seen on the callback's first argument.
+
+```js
+import { Meteor } from "meteor/meteor";
+
+try {
+  const loginDetails = await Meteor.loginWithPasswordAsync("alice@example.com", "hunter2");
+  console.log("Logged in via", loginDetails.type);
+} catch (error) {
+  if (error.error === "no-2fa-code") {
+    // prompt the user for their 2FA code, then call loginWithPasswordAnd2faCode
+  } else {
+    console.error("Login failed:", error);
+  }
+}
+```
+
+This function is provided by the `accounts-password` package and accepts the same arguments and produces the same errors as `Meteor.loginWithPassword`.
+
 If there are multiple users with a username or email only differing in case, a case sensitive match is required. Although `createUser` won't let you create users with ambiguous usernames or emails, this could happen with existing databases or if you modify the users collection directly.
 
 This method can fail throwing one of the following errors:
@@ -290,6 +309,21 @@ Meteor.loginWithToken(token, (error) => {
 - If the token is invalid, expired, or revoked, the callback will be called with an error and the user will not be logged in.
 - This method is used internally by Meteor to automatically restore login state on page reload and across tabs.
 - Can be used with custom DDP connections to authenticate across multiple Meteor servers sharing the same database.
+
+Available since Meteor 3.5, `Meteor.loginWithTokenAsync` is the promise-returning counterpart. Use it from `async` functions instead of passing a callback:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+import { Meteor } from "meteor/meteor";
+
+const token = Accounts._storedLoginToken();
+try {
+  await Meteor.loginWithTokenAsync(token);
+  console.log("Session restored");
+} catch (error) {
+  console.error("Token login failed:", error);
+}
+```
 
 <ApiBox name="Meteor.loginWith<ExternalService>" />
 
