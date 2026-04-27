@@ -2,13 +2,12 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { allocatePort } from './port-allocator';
 import { assertStyles } from "./assertions";
 
 describe('Vue App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'vue',
-    port: allocatePort('vue'),
+    port: 3132,
     filePaths: { 
       client: 'client/main.js', 
       server: 'server/main.js',

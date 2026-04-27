@@ -360,17 +360,8 @@ export async function wait(ms) {
  * @param {boolean} options.negate - If true, wait until the pattern is NOT found in any output line
  * @returns {Promise<string>} - A promise that resolves with the matched line
  */
-// Default timeout for waitForMeteorOutput. 90s covers the single-worker
-// path; with maxWorkers>=2 two Meteor builds can compete for CPU/IO and
-// push the first cold rebuild past it — export MODERN_TESTS_WAIT_TIMEOUT_MS
-// (e.g. 180000) when opting in to parallel workers.
-const DEFAULT_METEOR_OUTPUT_TIMEOUT_MS = parseInt(
-  process.env.MODERN_TESTS_WAIT_TIMEOUT_MS || "90000",
-  10,
-);
-
 export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
-  const timeout = options.timeout || DEFAULT_METEOR_OUTPUT_TIMEOUT_MS;
+  const timeout = options.timeout || 90000; // Default 1 minute timeout
   const checkInterval = options.checkInterval || 100; // Check every 100ms by default
   const negate = options.negate || false; // Default is to check for presence, not absence
 

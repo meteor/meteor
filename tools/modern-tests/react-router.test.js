@@ -1,12 +1,11 @@
 import { waitForMeteorOutput } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { allocatePort } from './port-allocator';
 import { assertBodyStyles, assertMetaTags } from "./assertions";
 
 describe('R.Router App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'react-router',
-    port: allocatePort('reactRouter'),
+    port: 3142,
     filePaths: { 
       client: 'client/main.jsx', 
       server: 'server/main.js',

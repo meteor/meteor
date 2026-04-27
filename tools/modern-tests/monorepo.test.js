@@ -2,12 +2,11 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { allocatePort } from './port-allocator';
 
 describe('Monorepo App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'monorepo',
-    port: allocatePort('monorepo'),
+    port: 3133,
     isMonorepo: true,
     filePaths: { 
       client: 'app/client/main.jsx', 

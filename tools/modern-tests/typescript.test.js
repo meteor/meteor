@@ -2,7 +2,6 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { allocatePort } from './port-allocator';
 import { assertBodyStyles, assertFileExist } from "./assertions";
 import path from "path";
 import fs from "fs";
@@ -12,7 +11,7 @@ const isCI = process.env.GITHUB_ACTIONS === 'true';
 describe('TypeScript App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'typescript',
-    port: allocatePort('typescript'),
+    port: 3112,
     filePaths: { 
       client: 'client/main.tsx', 
       server: 'server/main.ts',
