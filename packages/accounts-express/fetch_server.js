@@ -1,9 +1,9 @@
-import { Meteor } from 'meteor/meteor';
-import { _CurrentEndpointInvocation } from 'meteor/accounts-base';
+import { Meteor } from "meteor/meteor";
+import { _CurrentEndpointInvocation } from "meteor/accounts-base";
 
 function isSameOriginAsApp(url) {
   try {
-    const target = new URL(typeof url === 'string' ? url : url.url);
+    const target = new URL(typeof url === "string" ? url : url.url);
     const root = new URL(Meteor.absoluteUrl());
     return target.origin === root.origin;
   } catch {
@@ -27,7 +27,7 @@ export function createAuthFetch(originalFetch) {
     const { auth: authOpt, token: explicitToken, ...fetchOptions } = options;
     // Token presence is itself an opt-in signal. Only when `auth` is
     // explicitly set does it override that.
-    const auth = authOpt ?? (explicitToken !== undefined);
+    const auth = authOpt ?? explicitToken !== undefined;
 
     const headers = new Headers(fetchOptions.headers || {});
 
@@ -44,8 +44,8 @@ export function createAuthFetch(originalFetch) {
         }
       }
 
-      if (token && !headers.has('Authorization')) {
-        headers.set('Authorization', `Bearer ${token}`);
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
       }
     }
 

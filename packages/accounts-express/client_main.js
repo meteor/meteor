@@ -1,11 +1,11 @@
-import { Meteor } from 'meteor/meteor';
-import { createAuthFetch } from './fetch_client.js';
-import { fetch } from './fetch_authed.js';
+import { Meteor } from "meteor/meteor";
+import { createAuthFetch } from "./fetch_client.js";
+import { fetch } from "./fetch_authed.js";
 
 // Wrap the base Meteor.fetch with auth functionality. Guard the wrap
 // in case meteor/fetch hasn't populated Meteor.fetch yet (load-order
 // races) — handleFetch falls back to rawFetch for non-auth calls.
-if (typeof Meteor.fetch === 'function') {
+if (typeof Meteor.fetch === "function") {
   Meteor.fetch = createAuthFetch(Meteor.fetch);
 }
 

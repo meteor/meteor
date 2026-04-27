@@ -1,4 +1,4 @@
-declare module 'meteor/accounts-express' {
+declare module "meteor/accounts-express" {
   interface MeteorFetchOptions extends RequestInit {
     /** Set to true to attach the user's login token. Default: false for Meteor.fetch and meteor/fetch; true for fetch from meteor/accounts-express. */
     auth?: boolean;
@@ -16,7 +16,7 @@ declare module 'meteor/accounts-express' {
    * Tokens can be provided via Authorization Bearer header or meteor_login_token cookie.
    */
   function createAuthMiddleware(
-    options?: AuthMiddlewareOptions
+    options?: AuthMiddlewareOptions,
   ): (req: any, res: any, next: () => void) => Promise<void>;
 
   /**
@@ -24,13 +24,10 @@ declare module 'meteor/accounts-express' {
    * auth: true unless overridden. Pass auth: false to opt out, or token
    * (server only) to provide an explicit token.
    */
-  function fetch(
-    url: string | Request,
-    options?: MeteorFetchOptions
-  ): Promise<Response>;
+  function fetch(url: string | Request, options?: MeteorFetchOptions): Promise<Response>;
 }
 
-declare module 'meteor/meteor' {
+declare module "meteor/meteor" {
   namespace Meteor {
     /**
      * When accounts-express is loaded, Meteor.fetch is wrapped with an
@@ -41,12 +38,12 @@ declare module 'meteor/meteor' {
      */
     function fetch(
       url: string | Request,
-      options?: import('meteor/accounts-express').MeteorFetchOptions
+      options?: import("meteor/accounts-express").MeteorFetchOptions,
     ): Promise<Response>;
   }
 }
 
-declare module 'meteor/fetch' {
+declare module "meteor/fetch" {
   /**
    * When accounts-express is loaded, fetch from meteor/fetch also supports
    * auth options. Auth is opt-in: pass auth: true (or token on the server)
@@ -56,6 +53,6 @@ declare module 'meteor/fetch' {
    */
   function fetch(
     url: string | Request,
-    options?: import('meteor/accounts-express').MeteorFetchOptions
+    options?: import("meteor/accounts-express").MeteorFetchOptions,
   ): Promise<Response>;
 }

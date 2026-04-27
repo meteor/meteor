@@ -1,8 +1,8 @@
-import { Accounts } from 'meteor/accounts-base';
-import { Meteor } from 'meteor/meteor';
-import { createWebAppAuthMiddleware } from './create_auth_middleware.js';
-import { createAuthFetch } from './fetch_server.js';
-import { fetch } from './fetch_authed.js';
+import { Accounts } from "meteor/accounts-base";
+import { Meteor } from "meteor/meteor";
+import { createWebAppAuthMiddleware } from "./create_auth_middleware.js";
+import { createAuthFetch } from "./fetch_server.js";
+import { fetch } from "./fetch_authed.js";
 
 /**
  * @summary Create Express middleware that authenticates requests using
@@ -25,7 +25,7 @@ function createAuthMiddleware(options = {}) {
 // Wrap the base Meteor.fetch with auth functionality. Guard the wrap
 // in case meteor/fetch hasn't populated Meteor.fetch yet (load-order
 // races) — handleFetch falls back to rawFetch for non-auth calls.
-if (typeof Meteor.fetch === 'function') {
+if (typeof Meteor.fetch === "function") {
   Meteor.fetch = createAuthFetch(Meteor.fetch);
 }
 

@@ -1,4 +1,4 @@
-import { Meteor } from 'meteor/meteor';
+import { Meteor } from "meteor/meteor";
 
 /**
  * @summary Auth-on-by-default fetch. Thin wrapper around Meteor.fetch that

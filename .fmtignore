@@ -28,6 +28,7 @@ packages/**/.npm/
 # Only those listed below are formatted
 packages/*
 
+!packages/accounts-express/
 !packages/facts-base/
 !packages/facts-ui/
 !packages/non-core/bundle-visualizer/

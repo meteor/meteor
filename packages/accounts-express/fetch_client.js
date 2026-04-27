@@ -1,4 +1,4 @@
-import { Accounts } from 'meteor/accounts-base';
+import { Accounts } from "meteor/accounts-base";
 
 /**
  * @summary Wraps Meteor.fetch with opt-in authentication. Auth is off by
@@ -18,8 +18,8 @@ export function createAuthFetch(originalFetch) {
 
     if (auth) {
       const token = Accounts._storedLoginToken();
-      if (token && !headers.has('Authorization')) {
-        headers.set('Authorization', `Bearer ${token}`);
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
       }
 
       // When HttpOnly cookies are enabled, include credentials so the
@@ -27,7 +27,7 @@ export function createAuthFetch(originalFetch) {
       // This covers the case where the in-memory token is unavailable
       // (e.g. after page reload with clientStorage: 'none').
       if (Accounts._useHttpOnlyCookies && !fetchOptions.credentials) {
-        fetchOptions.credentials = 'include';
+        fetchOptions.credentials = "include";
       }
     }
 
