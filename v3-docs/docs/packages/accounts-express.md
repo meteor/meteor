@@ -124,8 +124,8 @@ const publicRes = await fetch('/api/public');
 
 | Option | Type | Default | Where | Description |
 |--------|------|---------|-------|-------------|
-| `auth` | `boolean` | `true` | Client & Server | Set to `false` to skip automatic token injection. |
-| `token` | `string` | — | Server only | Explicit token to use instead of reading from context. |
+| `auth` | `boolean` | `true` for `Meteor.fetch`, opt-in for `fetch` from `meteor/fetch` | Client & Server | For `Meteor.fetch`, the token is injected by default (pass `auth: false` to skip). For `fetch` from `meteor/fetch`, the auth wrapper only runs when `auth` or `token` is explicitly provided. |
+| `token` | `string` | — | Server only | Explicit token to use instead of reading from context. Ignored on the client. |
 
 ### Skipping Authentication
 
@@ -148,6 +148,8 @@ const response = await Meteor.fetch(Meteor.absoluteUrl('api/protected'), {
 ### HttpOnly Cookies
 
 On the client, when HttpOnly cookies are enabled (`Accounts.config({ useHttpOnlyCookies: true })`), `Meteor.fetch` automatically sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie. If you provide your own `credentials` option, it is not overridden.
+
+Passing `auth: false` disables both the `Authorization` Bearer header and the automatic `credentials: 'include'` behavior, so the `meteor_login_token` cookie won't be sent either.
 
 ## TypeScript
 
