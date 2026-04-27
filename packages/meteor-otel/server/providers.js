@@ -107,10 +107,19 @@ export function initOtel(options = {}) {
     instrumentations.push(new RuntimeNodeInstrumentation());
   }
 
-  // Add any custom instrumentations passed in options
-  // TODO: instrumentations like HTTP, MongoDB, etc
-  // can't work since modules like http or mongo is loaded before opentelemetry
-  if (options.instrumentations) {
+  // Add any custom instrumentations passed in options.
+  // Auto-instrumentations for core modules (http, mongodb, etc.) generally
+  // require the OpenTelemetry runtime to load *before* the instrumented
+  // modules are imported. In Meteor, app/package modules already finish
+  // loading by the time `initOtel()` runs from server/main.js, so callers
+  // may pass instrumentations that silently no-op. We surface that risk via
+  // a warning rather than dropping the instrumentations outright, since
+  // some callers may have engineered the load order themselves (e.g.,
+  // bootstrap entrypoint that imports otel before anything else).
+  if (options.instrumentations && options.instrumentations.length > 0) {
+    console.warn(
+      '[meteor-otel] Custom instrumentations were provided. Note: instrumentations for core modules (e.g., http, mongodb) may not be effective unless OpenTelemetry is initialized before those modules are loaded.'
+    );
     instrumentations.push(...options.instrumentations);
   }
 
