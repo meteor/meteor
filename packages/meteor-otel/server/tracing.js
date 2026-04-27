@@ -191,22 +191,22 @@ export function createSpanBuilder(tracerName) {
 // Simple carrier for header manipulation
 class HeaderCarrier {
   constructor(headers = {}) {
+    // Preserve original header casing for compatibility with downstream consumers.
     this.headers = { ...headers };
+    // Maintain a lowercase key map for O(1) case-insensitive lookups.
+    this._headersLower = {};
+    for (const [k, v] of Object.entries(this.headers)) {
+      this._headersLower[k.toLowerCase()] = v;
+    }
   }
 
   get(key) {
-    // Handle case-insensitive header lookup
-    const lowerKey = key.toLowerCase();
-    for (const [k, v] of Object.entries(this.headers)) {
-      if (k.toLowerCase() === lowerKey) {
-        return v;
-      }
-    }
-    return undefined;
+    return this._headersLower[key.toLowerCase()];
   }
 
   set(key, value) {
     this.headers[key] = value;
+    this._headersLower[key.toLowerCase()] = value;
   }
 
   keys() {
