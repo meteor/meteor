@@ -572,6 +572,65 @@ if (Meteor.isServer) {
       'Unparseable URL must not implicitly receive the context token');
   });
 
+  // --- Middleware error propagation ---
+
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - propagates async errors via next(err)', async (test) => {
+    const middleware = createAuthMiddleware({ required: true });
+
+    const originalFindOne = Meteor.users.findOneAsync.bind(Meteor.users);
+    Meteor.users.findOneAsync = async () => { throw new Error('synthetic db error'); };
+
+    try {
+      let nextErr;
+      await middleware(
+        { headers: { authorization: 'Bearer some-token' } },
+        { status: () => ({ json: () => {} }) },
+        (err) => { nextErr = err; }
+      );
+
+      test.isTrue(nextErr instanceof Error, 'next() should be called with the error');
+      test.equal(nextErr.message, 'synthetic db error');
+    } finally {
+      Meteor.users.findOneAsync = originalFindOne;
+    }
+  });
+
+  // --- Optional auth: req.userId === null on every fallback path ---
+
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - optional sets req.userId=null on no token', async (test) => {
+    const res = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth-optional'), { auth: false });
+    const data = await res.json();
+    // reqUserId is JSON-serialized — null serializes as null, undefined is dropped.
+    test.isTrue('reqUserId' in data, 'req.userId should be set on the request (not undefined)');
+    test.isNull(data.reqUserId, 'req.userId should be null when no token is provided');
+  });
+
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - optional sets req.userId=null on invalid token', async (test) => {
+    const res = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth-optional'), 'totally-bogus');
+    const data = await res.json();
+    test.isTrue('reqUserId' in data);
+    test.isNull(data.reqUserId, 'req.userId should be null when the token does not resolve to a user');
+  });
+
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - optional sets req.userId=null on expired token', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      const hashedToken = Accounts._hashLoginToken(token);
+      await Meteor.users.updateAsync(
+        { _id: userId, 'services.resume.loginTokens.hashedToken': hashedToken },
+        { $set: { 'services.resume.loginTokens.$.when': new Date('2000-01-01') } }
+      );
+
+      const res = await fetchWithToken(Meteor.absoluteUrl('api/express-test-auth-optional'), token);
+      const data = await res.json();
+      test.isTrue('reqUserId' in data);
+      test.isNull(data.reqUserId, 'req.userId should be null when the token is expired');
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
   // Test that a cleared cookie results in unauthenticated access
   Tinytest.addAsync('accounts-express - cookie roundtrip - cleared cookie results in unauthenticated', async (test) => {
     const { userId, token } = await createUserWithToken();
