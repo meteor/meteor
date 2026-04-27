@@ -631,6 +631,28 @@ if (Meteor.isServer) {
     }
   });
 
+  // --- Cookie parser robustness ---
+
+  Tinytest.addAsync('accounts-express - createAuthMiddleware - cookie value containing = is preserved', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      // A neighboring cookie whose value contains '=' (e.g. base64 padding)
+      // must not corrupt the meteor_login_token entry.
+      const cookieHeader = `id_token=abc==; meteor_login_token=${token}; pref=hello%20world`;
+      const res = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-auth'), {
+        headers: { Cookie: cookieHeader },
+        auth: false,
+      });
+      test.equal(res.status, 200, 'Auth should succeed despite neighboring "=" in cookies');
+
+      const data = await res.json();
+      test.equal(data.meteorUserId, userId);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
   // --- handleFetch: 'auth: undefined' should not route through auth wrapper ---
 
   Tinytest.addAsync('accounts-express - handleFetch - auth: undefined falls back to rawFetch', async (test) => {

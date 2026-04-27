@@ -1,6 +1,22 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts, _CurrentEndpointInvocation } from 'meteor/accounts-base';
 
+function parseCookies(header) {
+  return header.split(';').reduce((acc, pair) => {
+    const trimmed = pair.trim();
+    const eqIdx = trimmed.indexOf('=');
+    if (eqIdx === -1) return acc;
+    const key = trimmed.slice(0, eqIdx);
+    const raw = trimmed.slice(eqIdx + 1);
+    try {
+      acc[key] = decodeURIComponent(raw);
+    } catch {
+      acc[key] = raw;
+    }
+    return acc;
+  }, {});
+}
+
 export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false }) {
   return async function meteorWebAppAuthMiddleware(req, res, next) {
     const continueUnauthenticated = () => {
@@ -20,13 +36,7 @@ export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false 
       if (authHeader?.startsWith("Bearer ")) {
         token = authHeader.replace("Bearer ", "");
       } else if (cookies) {
-        // Try to get token from cookies
-        const cookieMap = cookies.split(';').reduce((acc, cookie) => {
-          const [key, value] = cookie.trim().split('=');
-          acc[key] = value;
-          return acc;
-        }, {});
-
+        const cookieMap = parseCookies(cookies);
         if (cookieMap['meteor_login_token']) {
           token = cookieMap['meteor_login_token'];
         }
