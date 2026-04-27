@@ -30,6 +30,45 @@ const MSG = {
   SHUTDOWN: 'shutdown',
 };
 
+// --- SWC runtime helpers -----------------------------------------------------
+// Handlers are serialized via Function.prototype.toString() in the parent.
+// Meteor's SWC pipeline targets es2015 on the server, so async arrows are
+// lowered into calls to module-scoped helpers (e.g. _async_to_generator). The
+// helpers are inlined into the source module and are NOT part of the function
+// body that toString() emits, so they must be injected as outer-scope bindings
+// when the body is recompiled here. Helpers are reproduced verbatim from
+// @swc/helpers so behavior matches what SWC inlines at the call site.
+
+function _asyncGeneratorStep(gen, resolve, reject, _next, _throw, key, arg) {
+  try {
+    var info = gen[key](arg);
+    var value = info.value;
+  } catch (error) {
+    reject(error);
+    return;
+  }
+  if (info.done) {
+    resolve(value);
+  } else {
+    Promise.resolve(value).then(_next, _throw);
+  }
+}
+
+function _async_to_generator(fn) {
+  return function () {
+    var self = this, args = arguments;
+    return new Promise(function (resolve, reject) {
+      var gen = fn.apply(self, args);
+      function _next(value) { _asyncGeneratorStep(gen, resolve, reject, _next, _throw, 'next', value); }
+      function _throw(err) { _asyncGeneratorStep(gen, resolve, reject, _next, _throw, 'throw', err); }
+      _next(undefined);
+    });
+  };
+}
+
+const _SWC_HELPER_NAMES = ['_async_to_generator', '_asyncGeneratorStep'];
+const _SWC_HELPER_VALUES = [_async_to_generator, _asyncGeneratorStep];
+
 // --- Function compilation cache ----------------------------------------------
 // Avoids re-parsing identical handler strings on every task dispatch.
 // Uses insertion-order eviction when the cache exceeds its size cap.
@@ -40,7 +79,10 @@ const _FN_CACHE_MAX = 256;
 function _compileHandler(fnString) {
   let fn = _fnCache.get(fnString);
   if (!fn) {
-    fn = new Function('return (' + fnString + ')')();
+    fn = new Function(
+      ..._SWC_HELPER_NAMES,
+      'return (' + fnString + ')'
+    )(..._SWC_HELPER_VALUES);
     if (_fnCache.size >= _FN_CACHE_MAX) {
       // Evict the oldest entry (first key in Map iteration order).
       const firstKey = _fnCache.keys().next().value;
