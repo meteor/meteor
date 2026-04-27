@@ -1,16 +1,18 @@
 import { Accounts } from 'meteor/accounts-base';
-import { Meteor } from 'meteor/meteor';
 
 /**
- * @summary Extends Meteor.fetch with authentication. Automatically
- * includes the user's login token in the Authorization header.
+ * @summary Wraps Meteor.fetch with opt-in authentication. Auth is off by
+ * default; pass `auth: true` to attach the user's login token. For an
+ * auth-on-by-default ergonomic, import `fetch` from `meteor/accounts-express`.
  * @locus Client
  * @param {Function} originalFetch - The base Meteor.fetch to wrap
  * @returns {Function} Enhanced fetch function with auth support
  */
 export function createAuthFetch(originalFetch) {
   return async function (url, options = {}) {
-    const { auth = true, ...fetchOptions } = options;
+    // `token` is server-only on the client; strip it so it doesn't leak
+    // into the underlying fetch call.
+    const { auth = false, token: _ignoredToken, ...fetchOptions } = options;
 
     const headers = new Headers(fetchOptions.headers || {});
 

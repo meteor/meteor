@@ -12,17 +12,22 @@ function isSameOriginAsApp(url) {
 }
 
 /**
- * @summary Extends Meteor.fetch with authentication. Automatically
- * includes the login token from the current endpoint invocation
- * context for same-origin requests, or uses an explicitly provided
- * token for any URL.
+ * @summary Wraps Meteor.fetch with opt-in authentication. Auth is off by
+ * default; pass `auth: true` to attach the login token from the current
+ * endpoint invocation context (same-origin only), or `token: '...'` to
+ * supply an explicit token. Passing `token` is itself an opt-in: it
+ * implies `auth: true` unless `auth: false` is also set. For an
+ * auth-on-by-default ergonomic, import `fetch` from `meteor/accounts-express`.
  * @locus Server
  * @param {Function} originalFetch - The base Meteor.fetch to wrap
  * @returns {Function} Enhanced fetch function with auth support
  */
 export function createAuthFetch(originalFetch) {
   return async function (url, options = {}) {
-    const { auth = true, token: explicitToken, ...fetchOptions } = options;
+    const { auth: authOpt, token: explicitToken, ...fetchOptions } = options;
+    // Token presence is itself an opt-in signal. Only when `auth` is
+    // explicitly set does it override that.
+    const auth = authOpt ?? (explicitToken !== undefined);
 
     const headers = new Headers(fetchOptions.headers || {});
 

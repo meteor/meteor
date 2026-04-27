@@ -2,6 +2,7 @@ import { Accounts } from 'meteor/accounts-base';
 import { Meteor } from 'meteor/meteor';
 import { createWebAppAuthMiddleware } from './create_auth_middleware.js';
 import { createAuthFetch } from './fetch_server.js';
+import { fetch } from './fetch_authed.js';
 
 /**
  * @summary Create Express middleware that authenticates requests using
@@ -46,4 +47,4 @@ function handleFetch(url, options, rawFetch = Meteor.fetch) {
   return rawFetch(url, options);
 }
 
-export { createAuthMiddleware, createAuthFetch, handleFetch };
+export { createAuthMiddleware, createAuthFetch, handleFetch, fetch };

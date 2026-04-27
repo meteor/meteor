@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts, _CurrentEndpointInvocation } from 'meteor/accounts-base';
-import { createAuthMiddleware, createAuthFetch, handleFetch } from 'meteor/accounts-express';
+import { createAuthMiddleware, createAuthFetch, handleFetch, fetch as aeFetch } from 'meteor/accounts-express';
 import { Random } from 'meteor/random';
 import { WebApp } from 'meteor/webapp';
 
@@ -123,9 +123,9 @@ if (Meteor.isServer) {
     WebApp.handlers.get('/api/express-test-request-forward',
       createAuthMiddleware({ required: true }),
       async (req, res) => {
-        // Inside this handler, _CurrentEndpointInvocation has the loginToken
-        // Meteor.fetch() should auto-read it
-        const innerResponse = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'));
+        // Inside this handler, _CurrentEndpointInvocation has the loginToken.
+        // Meteor.fetch is opt-in for auth, so pass auth: true to forward it.
+        const innerResponse = await Meteor.fetch(Meteor.absoluteUrl('api/express-test-request-echo'), { auth: true });
         const innerData = await innerResponse.json();
 
         res.setHeader('Content-Type', 'application/json');
@@ -530,7 +530,7 @@ if (Meteor.isServer) {
 
     await _CurrentEndpointInvocation.withValue(
       { userId: 'u1', loginToken: 'context-tok' },
-      () => wrapped(Meteor.absoluteUrl('/api/internal'))
+      () => wrapped(Meteor.absoluteUrl('/api/internal'), { auth: true })
     );
 
     test.equal(capture.headers.get('Authorization'), 'Bearer context-tok');
@@ -541,7 +541,7 @@ if (Meteor.isServer) {
 
     await _CurrentEndpointInvocation.withValue(
       { userId: 'u1', loginToken: 'context-tok' },
-      () => wrapped('https://other-origin.example/some/path')
+      () => wrapped('https://other-origin.example/some/path', { auth: true })
     );
 
     test.isFalse(capture.headers.has('Authorization'),
@@ -565,11 +565,23 @@ if (Meteor.isServer) {
 
     await _CurrentEndpointInvocation.withValue(
       { userId: 'u1', loginToken: 'context-tok' },
-      () => wrapped('not a valid url')
+      () => wrapped('not a valid url', { auth: true })
     );
 
     test.isFalse(capture.headers.has('Authorization'),
       'Unparseable URL must not implicitly receive the context token');
+  });
+
+  Tinytest.addAsync('accounts-express - createAuthFetch - no auth opt-in skips context token', async (test) => {
+    const { wrapped, capture } = buildCapturingFetch();
+
+    await _CurrentEndpointInvocation.withValue(
+      { userId: 'u1', loginToken: 'context-tok' },
+      () => wrapped(Meteor.absoluteUrl('/api/internal'))
+    );
+
+    test.isFalse(capture.headers.has('Authorization'),
+      'Without auth: true the wrapper must not attach the context token');
   });
 
   // --- Middleware error propagation ---
@@ -695,6 +707,7 @@ if (Meteor.isServer) {
     await _CurrentEndpointInvocation.withValue(
       { userId: 'u1', loginToken: 'context-tok' },
       () => wrapped(Meteor.absoluteUrl('/api/internal'), {
+        auth: true,
         headers: { Authorization: 'Bearer caller-key' },
       })
     );
@@ -733,6 +746,70 @@ if (Meteor.isServer) {
       const data = await authRes.json();
       test.isNull(data.meteorUserId);
       test.isFalse(data.authenticated);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  // --- meteor/accounts-express fetch: auth on by default ---
+
+  Tinytest.addAsync('accounts-express - aeFetch - explicit token attaches by default', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      const response = await aeFetch(Meteor.absoluteUrl('api/express-test-request-echo'), { token });
+      const data = await response.json();
+      test.equal(data.meteorUserId, userId);
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  Tinytest.addAsync('accounts-express - aeFetch - context token forwards by default', async (test) => {
+    const { fetch: pkgFetch } = require('meteor/fetch');
+
+    // Dedicated route to avoid re-registering an existing path.
+    WebApp.handlers.get('/api/express-test-aefetch-forward',
+      createAuthMiddleware({ required: true }),
+      async (req, res) => {
+        const innerResponse = await aeFetch(Meteor.absoluteUrl('api/express-test-request-echo'));
+        const innerData = await innerResponse.json();
+
+        res.setHeader('Content-Type', 'application/json');
+        res.end(JSON.stringify({
+          outerUserId: Meteor.userId(),
+          innerUserId: innerData.meteorUserId,
+        }));
+      }
+    );
+
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      const response = await pkgFetch(Meteor.absoluteUrl('api/express-test-aefetch-forward'), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      test.equal(response.status, 200);
+
+      const data = await response.json();
+      test.equal(data.outerUserId, userId);
+      test.equal(data.innerUserId, userId,
+        'aeFetch must forward the context loginToken without an explicit auth opt-in');
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  });
+
+  Tinytest.addAsync('accounts-express - aeFetch - auth false opts out', async (test) => {
+    const { userId, token } = await createUserWithToken();
+
+    try {
+      const response = await aeFetch(Meteor.absoluteUrl('api/express-test-request-echo'), {
+        token,
+        auth: false,
+      });
+      const data = await response.json();
+      test.isNull(data.meteorUserId, 'aeFetch with auth: false must not attach the token');
     } finally {
       await Meteor.users.removeAsync(userId);
     }

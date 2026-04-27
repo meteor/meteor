@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { createAuthFetch } from './fetch_client.js';
+import { fetch } from './fetch_authed.js';
 
 // Wrap the base Meteor.fetch with auth functionality. Guard the wrap
 // in case meteor/fetch hasn't populated Meteor.fetch yet (load-order
@@ -24,4 +25,4 @@ function handleFetch(url, options, rawFetch = Meteor.fetch) {
   return rawFetch(url, options);
 }
 
-export { createAuthFetch, handleFetch };
+export { createAuthFetch, handleFetch, fetch };

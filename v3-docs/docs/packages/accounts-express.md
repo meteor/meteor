@@ -2,7 +2,7 @@
 
 Express middleware and authenticated fetch helpers for Meteor accounts.
 
-This package bridges Meteor's account system with Express routes, letting you authenticate HTTP/REST requests using the same login tokens that power DDP. It also enhances `Meteor.fetch` and `import { fetch } from 'meteor/fetch'` with automatic token injection, so server-to-server and client-to-server requests carry authentication transparently.
+This package bridges Meteor's account system with Express routes, letting you authenticate HTTP/REST requests using the same login tokens that power DDP. It also enhances `Meteor.fetch` and `import { fetch } from 'meteor/fetch'` with opt-in authentication and exposes an auth-on-by-default `fetch` from `meteor/accounts-express` for server-to-server and client-to-server requests.
 
 ## Installation
 
@@ -79,44 +79,62 @@ WebApp.handlers.use('/api', apiRouter);
 
 ## Authenticated Fetch {#authenticated-fetch}
 
-When `accounts-express` is added to your project, both `Meteor.fetch` and `import { fetch } from 'meteor/fetch'` are enhanced with authentication support.
+When `accounts-express` is added to your project, three fetch entry points become available. They share the same options (`auth`, `token`), but differ in their default behavior.
 
-### Meteor.fetch
+| Entry point | Default | When to reach for it |
+|-------------|---------|----------------------|
+| `Meteor.fetch` | `auth: false` (opt-in) | A neutral fetch that becomes auth-aware when you pass `auth: true` (or `token` on the server). |
+| `import { fetch } from 'meteor/fetch'` | `auth: false` (opt-in) | A generic fetch shim. Stays neutral by default so installing `accounts-express` doesn't silently start attaching the user's token to arbitrary URLs. |
+| `import { fetch } from 'meteor/accounts-express'` | `auth: true` (opt-out) | The auth-on-by-default fetch. Attaches the login token automatically, just like the rest of the accounts-express surface. Pass `auth: false` to opt out for a single call. |
 
-`Meteor.fetch` automatically injects the user's login token into outgoing requests via the `Authorization: Bearer` header. This happens by default — no extra options needed.
+The asymmetry is deliberate: importing from `meteor/accounts-express` *is* the opt-in. The other two entry points are shared with non-auth code paths and stay neutral until you ask for auth.
+
+### auth-on-by-default fetch
 
 ```js
+import { fetch } from 'meteor/accounts-express';
+
 // Client: automatically includes the logged-in user's token
-const response = await Meteor.fetch('/api/protected');
+const response = await fetch('/api/protected');
 const data = await response.json();
 ```
 
 ```js
 // Server: inside an authenticated endpoint handler, the token
 // is automatically forwarded from the current request context
+import { fetch } from 'meteor/accounts-express';
+
 WebApp.handlers.get(
   '/api/proxy',
   createAuthMiddleware({ required: true }),
   async (req, res) => {
-    // Meteor.fetch reads the token from the current endpoint context
-    const inner = await Meteor.fetch(Meteor.absoluteUrl('api/other'));
+    const inner = await fetch(Meteor.absoluteUrl('api/other'));
     const data = await inner.json();
     res.json(data);
   }
 );
 ```
 
-### fetch from meteor/fetch
+### Meteor.fetch (opt-in)
 
-When you pass `auth` or `token` options, `fetch` from `meteor/fetch` delegates through `Meteor.fetch` and gets the same authentication behavior. Without those options, it uses the raw fetch directly (no auth injected).
+`Meteor.fetch` is the neutral entry point. Pass `auth: true` to attach the login token, or omit it for a plain fetch.
+
+```js
+// No token attached
+const publicRes = await Meteor.fetch('/api/public');
+
+// Token attached
+const protectedRes = await Meteor.fetch('/api/protected', { auth: true });
+```
+
+### fetch from meteor/fetch (opt-in)
+
+Passing `auth: true` or `token` makes `fetch` from `meteor/fetch` delegate through `Meteor.fetch` and pick up the same authentication behavior. Without those options it uses the raw fetch (no auth).
 
 ```js
 import { fetch } from 'meteor/fetch';
 
-// With auth: true — delegates to Meteor.fetch, token is injected
 const res = await fetch('/api/protected', { auth: true });
-
-// Without auth option — uses raw fetch, no token injected
 const publicRes = await fetch('/api/public');
 ```
 
@@ -124,15 +142,17 @@ const publicRes = await fetch('/api/public');
 
 | Option | Type | Default | Where | Description |
 |--------|------|---------|-------|-------------|
-| `auth` | `boolean` | `true` for `Meteor.fetch`, opt-in for `fetch` from `meteor/fetch` | Client & Server | For `Meteor.fetch`, the token is injected by default (pass `auth: false` to skip). For `fetch` from `meteor/fetch`, the auth wrapper only runs when `auth` or `token` is explicitly provided. |
-| `token` | `string` | — | Server only | Explicit token to use instead of reading from context. Ignored on the client. |
+| `auth` | `boolean` | `false` for `Meteor.fetch` and `meteor/fetch`; `true` for `fetch` from `meteor/accounts-express` | Client & Server | When truthy, attach the login token via the `Authorization: Bearer` header. |
+| `token` | `string` | — | Server only | Explicit token to use instead of reading from context. Implies `auth: true` unless `auth: false` is set explicitly. Ignored on the client. |
 
 ### Skipping Authentication
 
-Pass `auth: false` to make a request without the token, even when a user is logged in:
+Pass `auth: false` to skip the token even when calling the auth-on-by-default `fetch`:
 
 ```js
-const response = await Meteor.fetch('/api/public-endpoint', { auth: false });
+import { fetch } from 'meteor/accounts-express';
+
+const response = await fetch('/api/public-endpoint', { auth: false });
 ```
 
 ### Using an Explicit Token (Server)
@@ -147,20 +167,24 @@ const response = await Meteor.fetch(Meteor.absoluteUrl('api/protected'), {
 
 ### HttpOnly Cookies
 
-On the client, when HttpOnly cookies are enabled (`Accounts.config({ useHttpOnlyCookies: true })`), `Meteor.fetch` automatically sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie. If you provide your own `credentials` option, it is not overridden.
+On the client, when HttpOnly cookies are enabled (`Accounts.config({ useHttpOnlyCookies: true })`), the auth path also sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie. If you provide your own `credentials` option, it is not overridden. The credentials handling only kicks in when auth is on, so calling `Meteor.fetch(url)` (auth off by default) does not change credentials behavior.
 
-Passing `auth: false` disables both the `Authorization` Bearer header and the automatic `credentials: 'include'` behavior, so the `meteor_login_token` cookie won't be sent either.
+Passing `auth: false` disables both the `Authorization` Bearer header and the automatic `credentials: 'include'` behavior.
 
 ## TypeScript
 
-When `accounts-express` is installed, TypeScript definitions are augmented for both `Meteor.fetch` and `meteor/fetch` to include the `auth` and `token` options:
+When `accounts-express` is installed, TypeScript definitions are augmented for `Meteor.fetch` and `meteor/fetch` to include the `auth` and `token` options. The `meteor/accounts-express` module also exposes its own typed `fetch`:
 
 ```ts
-// Meteor.fetch accepts MeteorFetchOptions
-await Meteor.fetch(url, { auth: false });
+// Meteor.fetch and meteor/fetch: opt-in auth
+await Meteor.fetch(url, { auth: true });
 await Meteor.fetch(url, { token: 'my-token' }); // server only
 
-// fetch from meteor/fetch also accepts these when accounts-express is loaded
-import { fetch } from 'meteor/fetch';
-await fetch(url, { auth: true });
+import { fetch as packageFetch } from 'meteor/fetch';
+await packageFetch(url, { auth: true });
+
+// meteor/accounts-express fetch: auth on by default
+import { fetch } from 'meteor/accounts-express';
+await fetch(url);                 // auth attached
+await fetch(url, { auth: false }); // opt out
 ```

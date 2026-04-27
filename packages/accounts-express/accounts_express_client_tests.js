@@ -5,6 +5,7 @@ import { Tinytest } from 'meteor/tinytest';
 // Only run these tests on the client
 if (Meteor.isClient) {
   const { fetch: packageFetch } = require('meteor/fetch');
+  const { fetch: aeFetch } = require('meteor/accounts-express');
 
   const cleanUp = () => {
     localStorage.removeItem('Meteor.loginToken');
@@ -100,8 +101,8 @@ if (Meteor.isClient) {
 
   // --- Meteor.fetch-specific tests ---
 
-  // Meteor.fetch without options defaults to auth: true — no token when not logged in
-  Tinytest.addAsync('accounts-express - Meteor.fetch - works without auth token when not logged in', async (test) => {
+  // Meteor.fetch without options defaults to auth: false — works without attaching a token.
+  Tinytest.addAsync('accounts-express - Meteor.fetch - works without auth options', async (test) => {
     const originalFetch = window.fetch;
 
     try {
@@ -177,7 +178,7 @@ if (Meteor.isClient) {
         return mockResponse();
       };
 
-      const response = await Meteor.fetch(testUrl);
+      const response = await Meteor.fetch(testUrl, { auth: true });
       test.isTrue(response.ok);
 
       await Meteor.callAsync('removeAccountsExpressTestUser', username);
@@ -205,7 +206,7 @@ if (Meteor.isClient) {
         return mockResponse();
       };
 
-      const response = await Meteor.fetch(testUrl);
+      const response = await Meteor.fetch(testUrl, { auth: true });
       test.isTrue(response.ok);
     } finally {
       window.fetch = originalFetch;
@@ -227,7 +228,7 @@ if (Meteor.isClient) {
         return mockResponse();
       };
 
-      const response = await Meteor.fetch(testUrl);
+      const response = await Meteor.fetch(testUrl, { auth: true });
       test.isTrue(response.ok);
     } finally {
       window.fetch = originalFetch;
@@ -249,7 +250,7 @@ if (Meteor.isClient) {
         return mockResponse();
       };
 
-      const response = await Meteor.fetch(testUrl, { credentials: 'same-origin' });
+      const response = await Meteor.fetch(testUrl, { auth: true, credentials: 'same-origin' });
       test.isTrue(response.ok);
     } finally {
       window.fetch = originalFetch;
@@ -322,6 +323,7 @@ if (Meteor.isClient) {
       };
 
       const response = await Meteor.fetch(testUrl, {
+        auth: true,
         headers: { Authorization: 'Bearer caller-supplied-key' },
       });
       test.isTrue(response.ok);
@@ -370,6 +372,54 @@ if (Meteor.isClient) {
       const data = await response.json();
       test.isNull(data.meteorUserId, 'Client must not inject the token option');
     } finally {
+      Meteor.logout();
+    }
+  });
+
+  // --- meteor/accounts-express fetch: auth is on by default ---
+
+  Tinytest.addAsync('accounts-express - aeFetch - default attaches token when logged in', async (test) => {
+    const originalFetch = window.fetch;
+
+    try {
+      const { username, token } = await loginNewUser();
+      test.isTrue(!!token, 'Login token should be available');
+
+      window.fetch = async (url, options = {}) => {
+        test.equal(options.headers.get('Authorization'), `Bearer ${token}`,
+          'aeFetch should attach the login token by default');
+        return mockResponse();
+      };
+
+      const response = await aeFetch(testUrl);
+      test.isTrue(response.ok);
+
+      await Meteor.callAsync('removeAccountsExpressTestUser', username);
+    } finally {
+      window.fetch = originalFetch;
+      Meteor.logout();
+    }
+  });
+
+  Tinytest.addAsync('accounts-express - aeFetch - auth false opts out', async (test) => {
+    const originalFetch = window.fetch;
+
+    try {
+      const { username, token } = await loginNewUser();
+      test.isTrue(!!token, 'Login token should be available');
+
+      window.fetch = async (url, options = {}) => {
+        test.isFalse(options.headers.has('Authorization'),
+          'aeFetch with auth: false must not attach the token');
+        return mockResponse();
+      };
+
+      const response = await aeFetch(testUrl, { auth: false });
+      test.isTrue(response.ok);
+
+      await Meteor.callAsync('removeAccountsExpressTestUser', username);
+    } finally {
+      window.fetch = originalFetch;
       Meteor.logout();
     }
   });
