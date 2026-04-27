@@ -17,6 +17,14 @@ describe("meteor.settings", () => {
   it("reflects meteor.settings from package.json in Meteor.settings", async () => {
     await startupPromise;
 
+    // When METEOR_SETTINGS_* env vars are present they intentionally override
+    // values from package.json, so skip the strict deep-equality check to
+    // avoid false failures from the nesting-override selftest.
+    var hasEnvOverrides = Object.keys(process.env).some(function (k) {
+      return k.indexOf('METEOR_SETTINGS_') === 0;
+    });
+    if (hasEnvOverrides) return;
+
     const expectedSettings = config?.settings || {};
     const expectedPublic = expectedSettings.public || {};
 
@@ -31,6 +39,31 @@ describe("meteor.settings", () => {
       assert.deepEqual(Meteor.settings.public, expectedPublic);
     }
   });
+
+  if (Meteor.isServer) {
+    it("METEOR_SETTINGS_PUBLIC_* overrides a nested public key and preserves others", async () => {
+      await startupPromise;
+
+      // Activated by the selftest that sets METEOR_SETTINGS_PUBLIC_SOMETHING.
+      // Verifies:
+      //   1. env var value overrides the package.json value for that specific key
+      //   2. other public keys from package.json are preserved (deep merge, not replace)
+      const envValue = process.env.METEOR_SETTINGS_PUBLIC_SOMETHING;
+      if (envValue === undefined) return;
+
+      assert.strictEqual(Meteor.settings.public.something, envValue);
+
+      const pkgPublic = (config && config.settings && config.settings.public) || {};
+      Object.keys(pkgPublic).forEach(function (key) {
+        if (key === 'something') return;
+        assert.strictEqual(
+          Meteor.settings.public[key],
+          pkgPublic[key],
+          `public.${key} should be preserved from package.json`
+        );
+      });
+    });
+  }
 });
 
 describe("meteor.{mainModule,testModule}", () => {

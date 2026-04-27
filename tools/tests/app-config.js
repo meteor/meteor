@@ -1,4 +1,4 @@
-var selftest = require('../tool-testing/selftest.js');
+var selftest = require("../tool-testing/selftest.js");
 var Sandbox = selftest.Sandbox;
 
 selftest.define("mainModule", async function () {
@@ -15,7 +15,8 @@ selftest.define("mainModule", async function () {
   const run = s.run(
     "test",
     "--full-app",
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package",
+    "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -123,7 +124,7 @@ async function writeConfig(s, run, mainModule, errorPattern) {
 
   json.meteor = {
     // Make sure the tests.js module is always loaded eagerly.
-    testModule: "tests.js"
+    testModule: "tests.js",
   };
 
   if (typeof mainModule === "undefined") {
@@ -160,7 +161,8 @@ selftest.define("testModule", async function () {
     "test",
     // Not running with the --full-app option here, in order to exercise
     // the normal `meteor test` behavior.
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package",
+    "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -175,26 +177,26 @@ selftest.define("testModule", async function () {
   await check(false);
 
   await check({
-    client: "abc"
+    client: "abc",
   });
 
   await check({
-    server: "abc"
+    server: "abc",
   });
 
   await check({
     client: "abc",
-    server: "abc"
+    server: "abc",
   });
 
   await check({
     client: "abc",
-    server: false
+    server: false,
   });
 
   await check({
     client: false,
-    server: "abc"
+    server: "abc",
   });
 
   await run.stop();
@@ -205,7 +207,7 @@ async function writeModernConfig(s, run, modernConfig, errorPattern) {
 
   json.meteor = {
     // Make sure the tests.js module is always loaded eagerly.
-    testModule: "tests.js"
+    testModule: "tests.js",
   };
 
   if (typeof modernConfig === "undefined") {
@@ -241,7 +243,8 @@ selftest.define("modernConfig", async function () {
   const run = s.run(
     "test",
     "--full-app",
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package",
+    "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -299,7 +302,8 @@ selftest.define("packageJsonSettings", async function () {
   const run = s.run(
     "test",
     "--full-app",
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package",
+    "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -325,27 +329,85 @@ selftest.define("packageJsonSettings", async function () {
   await run.stop();
 });
 
-selftest.define("packageJsonSettings conflicts with --settings flag", async function () {
-  var s = new Sandbox({ fakeMongo: true });
-  await s.init();
+selftest.define(
+  "packageJsonSettings conflicts with --settings flag",
+  async function () {
+    // Verifies that when both --settings and meteor.settings in package.json are
+    // provided they are MERGED rather than producing an error.
+    // The --settings file has higher precedence on conflicting keys.
+    var s = new Sandbox({ fakeMongo: true });
+    await s.init();
 
-  await s.createApp("app-config-settings-conflict", "standard-app");
-  s.cd("app-config-settings-conflict");
+    await s.createApp("app-config-settings-merge", "standard-app");
+    s.cd("app-config-settings-merge");
 
-  // Write a valid settings file for the --settings flag
-  s.write("extra-settings.json", JSON.stringify({ fromFile: true }));
+    // Write a settings file that adds a key and overrides one from package.json
+    s.write(
+      "extra-settings.json",
+      JSON.stringify({ fromfile: true, overriddenbyfile: "from-file" })
+    );
 
-  // Add meteor.settings to package.json so both sources are present
-  const json = JSON.parse(s.read("package.json"));
-  json.meteor = json.meteor || {};
-  json.meteor.settings = { fromPackageJson: true };
-  s.write("package.json", JSON.stringify(json, null, 2) + "\n");
+    // Add meteor.settings to package.json
+    const json = JSON.parse(s.read("package.json"));
+    json.meteor = json.meteor || {};
+    json.meteor.settings = { frompkg: true, overriddenbyfile: "from-pkg" };
+    s.write("package.json", JSON.stringify(json, null, 2) + "\n");
 
-  const run = s.run("--settings", "extra-settings.json");
-  await run.tellMongo({ stdout: " [initandlisten] waiting for connections on port" });
+    const run = s.run("--settings", "extra-settings.json");
+    await run.tellMongo({
+      stdout: " [initandlisten] waiting for connections on port",
+    });
 
-  run.waitSecs(15);
-  await run.match("You have defined settings in both the --settings flag");
-  await run.match("Waiting for file change");
-  await run.stop();
-});
+    run.waitSecs(15);
+    // Both sources should co-exist — no error output
+    run.forbid("Please use only one");
+    run.forbid("bundle-fail");
+    await run.match("App running at");
+    await run.stop();
+  }
+);
+
+selftest.define(
+  "settings: METEOR_SETTINGS_PUBLIC_* overrides nested key and preserves other keys",
+  async function () {
+    // Verifies the highest-priority settings tier:
+    //   METEOR_SETTINGS_PUBLIC_SOMETHING=from-env must win over
+    //   package.json's meteor.settings.public.something = "from-pkg",
+    //   while other public keys from package.json are preserved (deep merge).
+    var s = new Sandbox();
+    await s.init();
+
+    await s.createApp("app-config-settings-nesting", "app-config");
+    s.cd("app-config-settings-nesting");
+
+    // Set up initial package.json: public.something will be overridden,
+    // public.other must be preserved by the merge.
+    var pkgJson = JSON.parse(s.read("package.json"));
+    pkgJson.meteor = pkgJson.meteor || {};
+    pkgJson.meteor.testModule = "tests.js";
+    pkgJson.meteor.settings = {
+      public: { something: "from-pkg", other: "keep" },
+    };
+    s.write("package.json", JSON.stringify(pkgJson, null, 2) + "\n");
+
+    // env var takes highest precedence
+    s.set("METEOR_SETTINGS_PUBLIC_SOMETHING", "from-env");
+    s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
+    var run = s.run(
+      "test",
+      "--full-app",
+      "--driver-package",
+      "meteortesting:mocha"
+    );
+
+    run.waitSecs(60);
+    await run.match("App running at");
+
+    run.forbid(" 0 passing ");
+    await run.match("SERVER FAILURES: 0");
+    await run.match("CLIENT FAILURES: 0");
+
+    await run.stop();
+  }
+);
