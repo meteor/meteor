@@ -15,15 +15,34 @@ meteor add meteorx:meteorx
 
 ## Quick Start
 
+To guarantee that `initOtel()` runs **before** any module you want instrumented (the `http` module, MongoDB drivers, etc.), put initialization in a dedicated bootstrap file and import that file as the very first statement of your server entrypoint:
+
 ```javascript
-// server/main.js - import FIRST, before other imports
+// server/otel-bootstrap.js
+// Single-purpose module: load and call initOtel before anything else.
 import { initOtel } from 'meteor/meteor-otel';
 
-initOtel();
-
-// Rest of your imports...
-import { Meteor } from 'meteor/meteor';
+initOtel({
+  serviceName: 'my-meteor-app',
+});
 ```
+
+```javascript
+// server/main.js
+// IMPORTANT: this import must come first so OTel is initialized before
+// any other module (Meteor core, your app code, npm deps) is loaded.
+import './otel-bootstrap.js';
+
+// Now the rest of your server can be imported normally.
+import { Meteor } from 'meteor/meteor';
+import './methods.js';
+import './publications.js';
+```
+
+> Why a separate file? ECMAScript module imports are hoisted: an
+> `import { initOtel } from 'meteor/meteor-otel';` at the top of `main.js`
+> would evaluate **after** sibling imports in the same module. A dedicated
+> bootstrap file is the simplest pattern that guarantees correct ordering.
 
 ## Configuration
 
