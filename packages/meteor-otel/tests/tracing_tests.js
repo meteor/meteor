@@ -335,10 +335,10 @@ Tinytest.add('meteor-otel - tracing - injectTraceContext adds traceparent when i
   });
 
   test.isNotNull(headers);
-  // traceparent should be present when inside a span
-  if (headers.traceparent) {
-    test.matches(headers.traceparent, /^00-[a-f0-9]{32}-[a-f0-9]{16}-0[0-1]$/);
-  }
+  // Assert presence first so a missing traceparent fails the test instead of
+  // silently passing a regex check on undefined.
+  test.isTrue(!!headers.traceparent, 'expected traceparent when inside a span');
+  test.matches(headers.traceparent, /^00-[a-f0-9]{32}-[a-f0-9]{16}-0[0-1]$/);
 });
 
 // ============================================================================
@@ -360,9 +360,8 @@ Tinytest.add('meteor-otel - tracing - getTraceContext returns traceparent when i
   });
 
   test.isNotNull(ctx);
-  if (ctx.traceparent) {
-    test.matches(ctx.traceparent, /^00-[a-f0-9]{32}-[a-f0-9]{16}-0[0-1]$/);
-  }
+  test.isTrue(!!ctx.traceparent, 'expected traceparent when inside a span');
+  test.matches(ctx.traceparent, /^00-[a-f0-9]{32}-[a-f0-9]{16}-0[0-1]$/);
 });
 
 // ============================================================================
