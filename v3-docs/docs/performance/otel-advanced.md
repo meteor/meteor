@@ -352,16 +352,15 @@ Custom metrics answer questions that automatic instrumentation can't:
 
 ### Creating a Metrics Recorder
 
-First, create a metrics recorder with a namespace for your metrics:
+First, create a metrics recorder. The argument is the **meter name** (instrumentation scope), not a metric-name prefix:
 
 ```javascript
 import { createMetricsRecorder } from 'meteor/meteor-otel';
 
-// Create a recorder - all metrics will be prefixed with this namespace
 const appMetrics = createMetricsRecorder('myapp');
 ```
 
-The namespace helps organize your metrics in Grafana. Metrics created with this recorder will be named like `myapp.orders.created`, `myapp.checkout.latency`, etc.
+> **Important — meter name vs. metric name.** The meter name does **not** prefix exported metric names. Calling `appMetrics.counter('orders.created')` produces a metric exported as `orders_created_total` (after Prometheus name sanitization), **not** `myapp_orders_created_total`. With the Prometheus exporter, the meter name shows up only as the `otel_scope_name` label on each series. If you want a real prefix on the metric name, include it in the instrument name itself (e.g., `appMetrics.counter('myapp.orders.created')`) or configure a prefix in your exporter setup.
 
 ### Metric Types
 
@@ -426,11 +425,11 @@ Meteor.methods({
 }, { otel: true });
 ```
 
-In Grafana, you can then query percentiles:
+In Grafana, you can then query percentiles. Note that Prometheus metric names are derived from the **instrument** name (with `.` translated to `_` and the appropriate suffixes added), not from the meter name. The meter name appears as the `otel_scope_name` label.
 
 ```promql
-# 95th percentile checkout latency
-histogram_quantile(0.95, rate(myapp_checkout_latency_bucket[5m]))
+# 95th percentile checkout latency (meter name 'myapp' is a label, not a prefix)
+histogram_quantile(0.95, rate(checkout_latency_bucket{otel_scope_name="myapp"}[5m]))
 ```
 
 #### 3. UpDownCounter - Values That Can Increase or Decrease
@@ -584,27 +583,31 @@ ordersCounter.add(1, {
 
 ### Querying Custom Metrics in Grafana
 
-Your custom metrics are available in Prometheus. Here are example queries:
+Your custom metrics are available in Prometheus. Metric names come from the instrument name (with `.` → `_` and Prometheus naming suffixes), and the meter name shows up as the `otel_scope_name` label. The examples below assume you created instruments via `createMetricsRecorder('ecommerce')` with names like `orders.created`, `checkout.latency`, `carts.active`, and `payments.failed`:
 
 ```promql
 # Total orders in the last hour
-increase(ecommerce_orders_created_total[1h])
+increase(orders_created_total{otel_scope_name="ecommerce"}[1h])
 
 # Orders per minute by type
-rate(ecommerce_orders_created_total[5m]) by (order_type)
+rate(orders_created_total{otel_scope_name="ecommerce"}[5m]) by (order_type)
 
 # Average checkout latency
-rate(ecommerce_checkout_latency_sum[5m]) / rate(ecommerce_checkout_latency_count[5m])
+rate(checkout_latency_sum{otel_scope_name="ecommerce"}[5m])
+  / rate(checkout_latency_count{otel_scope_name="ecommerce"}[5m])
 
 # 99th percentile checkout latency
-histogram_quantile(0.99, rate(ecommerce_checkout_latency_bucket[5m]))
+histogram_quantile(0.99, rate(checkout_latency_bucket{otel_scope_name="ecommerce"}[5m]))
 
 # Current active carts
-ecommerce_carts_active
+carts_active{otel_scope_name="ecommerce"}
 
 # Payment failure rate
-rate(ecommerce_payments_failed_total[5m]) / rate(ecommerce_orders_created_total[5m])
+rate(payments_failed_total{otel_scope_name="ecommerce"}[5m])
+  / rate(orders_created_total{otel_scope_name="ecommerce"}[5m])
 ```
+
+> If you prefer the metric name itself to carry the prefix (so queries don't need the `otel_scope_name` label), include it in the instrument name (e.g., `recorder.counter('ecommerce.orders.created')` → `ecommerce_orders_created_total`) or configure a prefix in your Prometheus exporter.
 
 ### API Reference
 
