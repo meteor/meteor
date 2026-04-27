@@ -420,19 +420,42 @@ export function wrapPublication(pubName, fn) {
 
     const spanContext = trace.setSpan(context.active(), span);
 
-    try {
-      // Run within span context so child spans are properly nested
-      const result = context.with(spanContext, () => fn.apply(this, args));
-      span.setStatus({ code: SpanStatusCode.OK });
-      span.end();
-      return result;
-    } catch (error) {
+    const onError = (error) => {
       span.recordException(error);
       span.setStatus({
         code: SpanStatusCode.ERROR,
         message: error?.message || 'Publication failed',
       });
       span.end();
+    };
+
+    try {
+      // Run within span context so child spans are properly nested.
+      const result = context.with(spanContext, () => fn.apply(this, args));
+
+      // Publish handlers may be async (return a Promise) or sync (return a
+      // cursor / cursor list / undefined). For async handlers we must keep
+      // the span open until the promise settles, otherwise span timing only
+      // reflects the synchronous portion of setup.
+      if (result && typeof result.then === 'function') {
+        return result.then(
+          (value) => {
+            span.setStatus({ code: SpanStatusCode.OK });
+            span.end();
+            return value;
+          },
+          (error) => {
+            onError(error);
+            throw error;
+          }
+        );
+      }
+
+      span.setStatus({ code: SpanStatusCode.OK });
+      span.end();
+      return result;
+    } catch (error) {
+      onError(error);
       throw error;
     }
   };
