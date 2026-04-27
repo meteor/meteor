@@ -31,6 +31,9 @@ let _hostMetrics = null;
  * @param {string} options.serviceName - Override service name
  * @param {Object} options.resourceAttributes - Additional resource attributes
  * @param {Array} options.instrumentations - Additional instrumentations to register
+ * @param {Object} options.spanProcessor - BatchSpanProcessor tuning options
+ *   (maxQueueSize, maxExportBatchSize, scheduledDelayMillis, exportTimeoutMillis).
+ *   Undefined values fall back to SDK defaults.
  * @returns {{ tracerProvider, meterProvider }}
  */
 export function initOtel(options = {}) {
@@ -67,13 +70,28 @@ export function initOtel(options = {}) {
   });
 
   // Setup tracer provider
+  // BatchSpanProcessor options can be tuned via OTEL_BSP_* env vars or via
+  // options.spanProcessor; undefined values fall back to SDK defaults.
+  const bspOptionsFromConfig = config.spanProcessor || {};
+  const bspOptionsFromCaller = options.spanProcessor || {};
+  const bspOptions = {
+    maxQueueSize: bspOptionsFromCaller.maxQueueSize ?? bspOptionsFromConfig.maxQueueSize,
+    maxExportBatchSize:
+      bspOptionsFromCaller.maxExportBatchSize ?? bspOptionsFromConfig.maxExportBatchSize,
+    scheduledDelayMillis:
+      bspOptionsFromCaller.scheduledDelayMillis ?? bspOptionsFromConfig.scheduledDelayMillis,
+    exportTimeoutMillis:
+      bspOptionsFromCaller.exportTimeoutMillis ?? bspOptionsFromConfig.exportTimeoutMillis,
+  };
+
   _tracerProvider = new NodeTracerProvider({
     resource,
     spanProcessors: [
       new BatchSpanProcessor(
         new OTLPTraceExporter({
           url: config.tracesEndpoint,
-        })
+        }),
+        bspOptions
       ),
     ],
   });
