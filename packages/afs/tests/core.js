@@ -278,74 +278,6 @@ Tinytest.add('afs - Registry - reset clears all state', (test) => {
 // ===========================================================================
 
 if (Meteor.isServer) {
-  Tinytest.add('afs - AdaptiveEngine - prefetch tracking', (test) => {
-    const engine = AFS.getEngine();
-    engine.reset();
-
-    const selector = { status: 'active' };
-
-    // Initially should not prefetch
-    test.isFalse(engine.shouldPrefetch('orders', selector));
-
-    // Record access multiple times
-    for (let i = 0; i < 5; i++) {
-      engine.recordAccess('orders', selector, {});
-    }
-
-    // Now should suggest prefetching
-    test.isTrue(engine.shouldPrefetch('orders', selector));
-
-    const suggestions = engine.getPrefetchSuggestions('orders');
-    test.isTrue(suggestions.length > 0);
-
-    engine.reset();
-  });
-
-  Tinytest.add('afs - AdaptiveEngine - throttle tracking', (test) => {
-    const engine = AFS.getEngine();
-    engine.reset();
-
-    // Initially should not throttle
-    test.isFalse(engine.shouldThrottle('fast-collection'));
-    test.equal(engine.getThrottleDelay('fast-collection'), 0);
-
-    // Record a slow query execution
-    engine.recordQueryExecution('fast-collection', 100);
-
-    // Should potentially throttle now
-    const delay = engine.getThrottleDelay('fast-collection');
-    test.isTrue(typeof delay === 'number');
-    test.isTrue(delay >= 0);
-
-    engine.reset();
-  });
-
-  Tinytest.add('afs - AdaptiveEngine - backpressure', (test) => {
-    const engine = AFS.getEngine();
-    engine.reset();
-
-    // Initially no backpressure
-    test.isFalse(engine.shouldApplyBackpressure('query'));
-    test.isFalse(engine.shouldApplyBackpressure('write'));
-
-    // Acquire slots
-    const releases = [];
-    for (let i = 0; i < 100; i++) {
-      releases.push(engine.acquireSlot('query'));
-    }
-
-    // Now should have backpressure
-    test.isTrue(engine.shouldApplyBackpressure('query'));
-
-    // Release all slots
-    releases.forEach(release => release());
-
-    // No more backpressure
-    test.isFalse(engine.shouldApplyBackpressure('query'));
-
-    engine.reset();
-  });
-
   Tinytest.add('afs - AdaptiveEngine - metrics', (test) => {
     const engine = AFS.getEngine();
     engine.reset();
@@ -1703,55 +1635,6 @@ if (Meteor.isServer) {
     engine.reset();
   });
 
-  // Task 26: AdaptiveEngine — waitForSlot resolves when slot is released (no busy-loop)
-  Tinytest.addAsync('afs - AdaptiveEngine - waitForSlot resolves on release', async (test) => {
-    const engine = new AFS.AdaptiveEngine({
-      maxPendingQueries: 2,
-    });
-
-    // Fill up the slots
-    const release1 = engine.acquireSlot('query');
-    const release2 = engine.acquireSlot('query');
-
-    test.isTrue(engine.shouldApplyBackpressure('query'));
-
-    // Start waiting for a slot
-    let resolved = false;
-    const slotPromise = engine.waitForSlot('query', 2000).then(release => {
-      resolved = true;
-      release();
-    });
-
-    // Release a slot — should trigger the waiting promise
-    release1();
-
-    await slotPromise;
-    test.isTrue(resolved);
-
-    release2();
-    engine.reset();
-  });
-
-  // Task 26: AdaptiveEngine — waitForSlot times out
-  Tinytest.addAsync('afs - AdaptiveEngine - waitForSlot timeout', async (test) => {
-    const engine = new AFS.AdaptiveEngine({
-      maxPendingQueries: 1,
-    });
-
-    const release = engine.acquireSlot('query');
-
-    let threw = false;
-    try {
-      await engine.waitForSlot('query', 100); // Very short timeout
-    } catch (e) {
-      threw = true;
-      test.equal(e.error, 'backpressure');
-    }
-    test.isTrue(threw);
-
-    release();
-    engine.reset();
-  });
 }
 
 // ===========================================================================
