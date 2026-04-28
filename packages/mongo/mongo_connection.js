@@ -981,6 +981,10 @@ MongoConnection.prototype._observeChanges = async function (
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
       var matcher, sorter;
+      // Create the collator once and share it across Matcher and Sorter.
+      const collator = cursorDescription.options.collation
+        ? LocalCollection._createCollator(cursorDescription.options.collation)
+        : null;
       const configuredOrder = _getConfiguredReactivityOrder();
 
       const driverChecks = {
