@@ -527,7 +527,13 @@ async function doOrThrow(f) {
 }
 
 async function setUpBuiltPackageTropohouse() {
-  if (builtPackageTropohouseDir) {
+  // Use tropohouseIsopackCache (the *last* variable assigned) as the
+  // success sentinel. Earlier this guard checked builtPackageTropohouseDir
+  // (the *first* variable assigned), which meant a mid-setup throw would
+  // leave the dir set but empty — and every subsequent call would
+  // early-return as if setup had completed, causing _makeWarehouse to
+  // ENOENT on a missing 'packages' subdirectory inside the empty tmpdir.
+  if (tropohouseIsopackCache) {
     return;
   }
   const dir = files.mkdtemp('built-package-tropohouse');
@@ -641,6 +647,7 @@ async function newSelfTestCatalog() {
           files.pathJoin(packagesDir, "non-core"),
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
+        buildingSelfTestCatalog: true,
       });
     });
   if (messages.hasMessages()) {
