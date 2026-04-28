@@ -957,3 +957,507 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
+
+Tinytest.addAsync(
+  'accounts - login observer behavior depends on tokenTrackingStrategy',
+  async (test) => {
+    const { Facts } = Package['facts-base'];
+    const getObserveHandles = () =>
+      Facts._factsByPackage?.['mongo-livedata']?.['observe-handles'] || 0;
+
+    const baseline = getObserveHandles();
+
+    // Create a test user with a login token.
+    const username = Random.id();
+    const userId = await Accounts.insertUserDoc({}, { username });
+    const stampedToken = Accounts._generateStampedLoginToken();
+    await Accounts._insertLoginToken(userId, stampedToken);
+
+    // Open 3 connections and log each in with the same token.
+    const conns = [];
+    for (let i = 0; i < 3; i++) {
+      const conn = DDP.connect(Meteor.absoluteUrl());
+      await conn.callAsync('login', { resume: stampedToken.token });
+      conns.push(conn);
+    }
+
+    if (Accounts._useInMemoryTokenTracking) {
+      // In-memory mode: no new observe handles should be created.
+      test.equal(
+        getObserveHandles(), baseline,
+        'in-memory mode should not create new observe handles'
+      );
+    } else {
+      // Observer mode: each login creates a per-connection observe handle.
+      test.isTrue(
+        getObserveHandles() > baseline,
+        'observer mode should create observe handles on login'
+      );
+    }
+
+    // Clean up.
+    conns.forEach(c => c.disconnect());
+  }
+);
+
+if (Meteor.isServer) {
+  // ==========================================================================
+  // tokenTrackingStrategy config tests
+  // ==========================================================================
+
+  Tinytest.addAsync(
+    'accounts - config - tokenTrackingStrategy is a valid config key',
+    async (test) => {
+      const origOptions = Accounts._options;
+      Accounts._options = {};
+      try {
+        Accounts.config({ tokenTrackingStrategy: 'observer' });
+        test.equal(
+          Accounts._options.tokenTrackingStrategy, 'observer',
+          'tokenTrackingStrategy should be stored in _options'
+        );
+      } finally {
+        Accounts._options = origOptions;
+      }
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - tokenTrackingStrategy defaults to observer mode',
+    async (test) => {
+      test.isFalse(
+        Accounts._useInMemoryTokenTracking,
+        'default should be observer mode (_useInMemoryTokenTracking === false)'
+      );
+    }
+  );
+
+  // tokenTrackingStrategy is resolved once in the AccountsServer constructor.
+  // Calling Accounts.config() afterwards may store the new value in _options
+  // but must not flip the effective mode. The config override also warns via
+  // Meteor._debug when the requested mode differs from the effective one.
+  Tinytest.addAsync(
+    'accounts - tokenTrackingStrategy is startup-only (config() does not switch modes)',
+    async (test) => {
+      const origOptions = Accounts._options;
+      const origDebug = Meteor._debug;
+      Accounts._options = {};
+      let warned = null;
+      Meteor._debug = (msg) => { warned = String(msg); };
+      try {
+        Accounts.config({ tokenTrackingStrategy: 'in-memory' });
+        test.isFalse(
+          Accounts._useInMemoryTokenTracking,
+          'effective mode must remain observer despite in-memory config call'
+        );
+        test.isTrue(
+          warned && warned.includes('tokenTrackingStrategy'),
+          'config() should warn via Meteor._debug on a mismatched strategy'
+        );
+      } finally {
+        Meteor._debug = origDebug;
+        Accounts._options = origOptions;
+      }
+    }
+  );
+
+  // ==========================================================================
+  // In-memory helper unit tests (mock connections, no mode swap needed)
+  //
+  // The helpers (_closeConnectionsForToken, _closeAllConnectionsForUser, etc.)
+  // are unconditionally defined on the prototype and operate directly on
+  // _tokenConnections + _accountData. We test them with mock connection objects
+  // whose close() just records the call.
+  // ==========================================================================
+
+  Tinytest.addAsync(
+    'accounts - in-memory helpers: _closeConnectionsForToken',
+    async (test) => {
+      const origTokenConns = Accounts._tokenConnections;
+      Accounts._tokenConnections = new Map();
+
+      const userId = 'mock-user-' + Random.id();
+      const hashedToken = 'mock-token-' + Random.id();
+      const otherToken = 'mock-other-' + Random.id();
+      const connId1 = 'mock-conn-' + Random.id();
+      const connId2 = 'mock-conn-' + Random.id();
+      const connId3 = 'mock-conn-' + Random.id();
+      let closed1 = false, closed2 = false, closed3 = false;
+
+      // Mock connections in _accountData
+      Accounts._accountData[connId1] = {
+        connection: { close() { closed1 = true; } },
+      };
+      Accounts._accountData[connId2] = {
+        connection: { close() { closed2 = true; } },
+      };
+      Accounts._accountData[connId3] = {
+        connection: { close() { closed3 = true; } },
+      };
+
+      // Populate _tokenConnections: two connections on hashedToken, one on otherToken
+      const tokenMap = new Map();
+      tokenMap.set(hashedToken, new Set([connId1, connId2]));
+      tokenMap.set(otherToken, new Set([connId3]));
+      Accounts._tokenConnections.set(userId, tokenMap);
+
+      // Close connections for hashedToken only
+      Accounts._closeConnectionsForToken(userId, hashedToken);
+
+      test.isTrue(closed1, 'conn1 (same token) should be closed');
+      test.isTrue(closed2, 'conn2 (same token) should be closed');
+      test.isFalse(closed3, 'conn3 (different token) should NOT be closed');
+
+      // Cleanup
+      delete Accounts._accountData[connId1];
+      delete Accounts._accountData[connId2];
+      delete Accounts._accountData[connId3];
+      Accounts._tokenConnections = origTokenConns;
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - in-memory helpers: _closeAllConnectionsForUser',
+    async (test) => {
+      const origTokenConns = Accounts._tokenConnections;
+      Accounts._tokenConnections = new Map();
+
+      const userId = 'mock-user-' + Random.id();
+      const otherUserId = 'mock-other-user-' + Random.id();
+      const token1 = 'mock-token-' + Random.id();
+      const token2 = 'mock-token-' + Random.id();
+      const connId1 = 'mock-conn-' + Random.id();
+      const connId2 = 'mock-conn-' + Random.id();
+      const connId3 = 'mock-conn-' + Random.id();
+      let closed1 = false, closed2 = false, closed3 = false;
+
+      Accounts._accountData[connId1] = {
+        connection: { close() { closed1 = true; } },
+      };
+      Accounts._accountData[connId2] = {
+        connection: { close() { closed2 = true; } },
+      };
+      Accounts._accountData[connId3] = {
+        connection: { close() { closed3 = true; } },
+      };
+
+      // userId has two tokens with one connection each
+      const tokenMap1 = new Map();
+      tokenMap1.set(token1, new Set([connId1]));
+      tokenMap1.set(token2, new Set([connId2]));
+      Accounts._tokenConnections.set(userId, tokenMap1);
+
+      // otherUserId has one connection
+      const tokenMap2 = new Map();
+      tokenMap2.set(token1, new Set([connId3]));
+      Accounts._tokenConnections.set(otherUserId, tokenMap2);
+
+      Accounts._closeAllConnectionsForUser(userId);
+
+      test.isTrue(closed1, 'conn1 (same user, token1) should be closed');
+      test.isTrue(closed2, 'conn2 (same user, token2) should be closed');
+      test.isFalse(closed3, 'conn3 (different user) should NOT be closed');
+
+      delete Accounts._accountData[connId1];
+      delete Accounts._accountData[connId2];
+      delete Accounts._accountData[connId3];
+      Accounts._tokenConnections = origTokenConns;
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - in-memory helpers: _closeOtherConnectionsForUser excludes specified connection',
+    async (test) => {
+      const origTokenConns = Accounts._tokenConnections;
+      Accounts._tokenConnections = new Map();
+
+      const userId = 'mock-user-' + Random.id();
+      const token1 = 'mock-token-' + Random.id();
+      const connId1 = 'mock-conn-' + Random.id();
+      const connId2 = 'mock-conn-' + Random.id();
+      const connId3 = 'mock-conn-' + Random.id();
+      let closed1 = false, closed2 = false, closed3 = false;
+
+      Accounts._accountData[connId1] = {
+        connection: { close() { closed1 = true; } },
+      };
+      Accounts._accountData[connId2] = {
+        connection: { close() { closed2 = true; } },
+      };
+      Accounts._accountData[connId3] = {
+        connection: { close() { closed3 = true; } },
+      };
+
+      const tokenMap = new Map();
+      tokenMap.set(token1, new Set([connId1, connId2, connId3]));
+      Accounts._tokenConnections.set(userId, tokenMap);
+
+      // Exclude connId1 — only connId2 and connId3 should be closed
+      Accounts._closeOtherConnectionsForUser(userId, connId1);
+
+      test.isFalse(closed1, 'excluded connection should NOT be closed');
+      test.isTrue(closed2, 'other connection 2 should be closed');
+      test.isTrue(closed3, 'other connection 3 should be closed');
+
+      delete Accounts._accountData[connId1];
+      delete Accounts._accountData[connId2];
+      delete Accounts._accountData[connId3];
+      Accounts._tokenConnections = origTokenConns;
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - in-memory helpers: _verifyTrackedTokens closes stale, keeps valid',
+    async (test) => {
+      const origTokenConns = Accounts._tokenConnections;
+      Accounts._tokenConnections = new Map();
+
+      // Create a real user with a real token in the DB.
+      const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+      const stampedToken = Accounts._generateStampedLoginToken();
+      await Accounts._insertLoginToken(userId, stampedToken);
+      const validHashedToken = Accounts._hashLoginToken(stampedToken.token);
+
+      const staleToken = 'stale-token-' + Random.id();
+      const staleConnId = 'mock-conn-stale-' + Random.id();
+      const validConnId = 'mock-conn-valid-' + Random.id();
+      let staleClosed = false, validClosed = false;
+
+      Accounts._accountData[staleConnId] = {
+        connection: { close() { staleClosed = true; } },
+      };
+      Accounts._accountData[validConnId] = {
+        connection: { close() { validClosed = true; } },
+      };
+
+      // Track both a valid token and a stale (non-existent) token.
+      const tokenMap = new Map();
+      tokenMap.set(staleToken, new Set([staleConnId]));
+      tokenMap.set(validHashedToken, new Set([validConnId]));
+      Accounts._tokenConnections.set(userId, tokenMap);
+
+      await Accounts._verifyTrackedTokens();
+
+      test.isTrue(staleClosed, 'connection with stale token should be closed');
+      test.isFalse(validClosed, 'connection with valid token should NOT be closed');
+
+      delete Accounts._accountData[staleConnId];
+      delete Accounts._accountData[validConnId];
+      Accounts._tokenConnections = origTokenConns;
+      await Meteor.users.removeAsync(userId);
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - in-memory helpers: _verifyTrackedTokens handles unknown userId',
+    async (test) => {
+      const origTokenConns = Accounts._tokenConnections;
+      Accounts._tokenConnections = new Map();
+
+      // Track a token for a userId that doesn't exist in the DB at all.
+      const fakeUserId = 'nonexistent-' + Random.id();
+      const fakeToken = 'fake-token-' + Random.id();
+      const connId = 'mock-conn-' + Random.id();
+      let closed = false;
+
+      Accounts._accountData[connId] = {
+        connection: { close() { closed = true; } },
+      };
+
+      const tokenMap = new Map();
+      tokenMap.set(fakeToken, new Set([connId]));
+      Accounts._tokenConnections.set(fakeUserId, tokenMap);
+
+      await Accounts._verifyTrackedTokens();
+
+      test.isTrue(closed, 'connection for non-existent user should be closed');
+
+      delete Accounts._accountData[connId];
+      Accounts._tokenConnections = origTokenConns;
+    }
+  );
+
+  // ==========================================================================
+  // In-memory integration tests (temporarily swap mode, real DDP connections)
+  //
+  // These tests switch the global Accounts instance to in-memory mode,
+  // perform real DDP logins, and verify the _tokenConnections map state.
+  // State is saved/restored in a try/finally block.
+  //
+  // Why not use Accounts.config({ tokenTrackingStrategy: 'in-memory' })?
+  // The strategy is resolved at AccountsServer construction (see
+  // accounts_server.js constructor: `_useInMemoryTokenTracking =
+  // options.tokenTrackingStrategy === 'in-memory'`). Calling config() at
+  // runtime does not rebuild the observer/in-memory bookkeeping, and
+  // instantiating a fresh AccountsServer for a test would re-register
+  // methods/publications on Meteor.server and trigger a DB scan. Tests
+  // therefore mutate the resolved flag and backing structures directly.
+  // ==========================================================================
+
+  // Helper to save and swap to in-memory mode, returning a restore function.
+  // Direct internal-state mutation is intentional here — see the comment above.
+  function switchToInMemoryMode() {
+    const saved = {
+      flag: Accounts._useInMemoryTokenTracking,
+      tokenConns: Accounts._tokenConnections,
+      observes: Accounts._userObservesForConnections,
+      observeNum: Accounts._nextUserObserveNumber,
+    };
+    Accounts._useInMemoryTokenTracking = true;
+    Accounts._tokenConnections = new Map();
+    delete Accounts._userObservesForConnections;
+    delete Accounts._nextUserObserveNumber;
+    return function restore() {
+      Accounts._useInMemoryTokenTracking = saved.flag;
+      Accounts._tokenConnections = saved.tokenConns;
+      if (saved.observes !== undefined) {
+        Accounts._userObservesForConnections = saved.observes;
+      }
+      if (saved.observeNum !== undefined) {
+        Accounts._nextUserObserveNumber = saved.observeNum;
+      }
+    };
+  }
+
+  Tinytest.addAsync(
+    'accounts - in-memory mode: _tokenConnections populated on login and cleaned on logout',
+    async (test) => {
+      const restore = switchToInMemoryMode();
+      try {
+        const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+        const stampedToken = Accounts._generateStampedLoginToken();
+        await Accounts._insertLoginToken(userId, stampedToken);
+        const hashedToken = Accounts._hashLoginToken(stampedToken.token);
+
+        // Login via DDP
+        const conn = DDP.connect(Meteor.absoluteUrl());
+        await conn.callAsync('login', { resume: stampedToken.token });
+
+        // Verify _tokenConnections is populated
+        const tokenMap = Accounts._tokenConnections.get(userId);
+        test.isTrue(tokenMap, '_tokenConnections should have entry for userId');
+        test.isTrue(
+          tokenMap && tokenMap.has(hashedToken),
+          '_tokenConnections should track the hashed token'
+        );
+        const connIds = tokenMap && tokenMap.get(hashedToken);
+        test.isTrue(
+          connIds && connIds.size > 0,
+          'token should have at least one tracked connection'
+        );
+
+        // Logout should clear the tracking for this connection
+        await conn.callAsync('logout');
+
+        const tokenMapAfter = Accounts._tokenConnections.get(userId);
+        if (tokenMapAfter) {
+          const connIdsAfter = tokenMapAfter.get(hashedToken);
+          test.isTrue(
+            !connIdsAfter || connIdsAfter.size === 0,
+            'connection should be removed from tracking after logout'
+          );
+        }
+
+        conn.disconnect();
+        await Meteor.users.removeAsync(userId);
+      } finally {
+        restore();
+      }
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - in-memory mode: destroyToken closes connections before DB update',
+    async (test) => {
+      const restore = switchToInMemoryMode();
+      try {
+        const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+        const stampedToken1 = Accounts._generateStampedLoginToken();
+        const stampedToken2 = Accounts._generateStampedLoginToken();
+        await Accounts._insertLoginToken(userId, stampedToken1);
+        await Accounts._insertLoginToken(userId, stampedToken2);
+        const hashedToken1 = Accounts._hashLoginToken(stampedToken1.token);
+        const hashedToken2 = Accounts._hashLoginToken(stampedToken2.token);
+
+        // Login with each token on separate connections
+        const conn1 = DDP.connect(Meteor.absoluteUrl());
+        await conn1.callAsync('login', { resume: stampedToken1.token });
+        const conn2 = DDP.connect(Meteor.absoluteUrl());
+        await conn2.callAsync('login', { resume: stampedToken2.token });
+
+        // Both should be tracked
+        test.isTrue(
+          Accounts._tokenConnections.has(userId),
+          'user should be tracked'
+        );
+
+        // Destroy token1 — should close conn1
+        await Accounts.destroyToken(userId, hashedToken1);
+
+        // token1 should no longer have tracked connections
+        const tokenMap = Accounts._tokenConnections.get(userId);
+        if (tokenMap) {
+          const connIds = tokenMap.get(hashedToken1);
+          test.isTrue(
+            !connIds || connIds.size === 0,
+            'destroyed token should have no tracked connections'
+          );
+        }
+
+        // token2 should still be tracked
+        test.isTrue(
+          tokenMap && tokenMap.has(hashedToken2),
+          'other token should still be tracked'
+        );
+
+        conn1.disconnect();
+        conn2.disconnect();
+        await Meteor.users.removeAsync(userId);
+      } finally {
+        restore();
+      }
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - in-memory mode: logoutAllClients closes all connections',
+    async (test) => {
+      const restore = switchToInMemoryMode();
+      try {
+        const userId = await Accounts.insertUserDoc({}, { username: Random.id() });
+        const stampedToken1 = Accounts._generateStampedLoginToken();
+        const stampedToken2 = Accounts._generateStampedLoginToken();
+        await Accounts._insertLoginToken(userId, stampedToken1);
+        await Accounts._insertLoginToken(userId, stampedToken2);
+
+        const conn1 = DDP.connect(Meteor.absoluteUrl());
+        await conn1.callAsync('login', { resume: stampedToken1.token });
+        const conn2 = DDP.connect(Meteor.absoluteUrl());
+        await conn2.callAsync('login', { resume: stampedToken2.token });
+
+        // Both should be tracked
+        const mapBefore = Accounts._tokenConnections.get(userId);
+        test.isTrue(mapBefore && mapBefore.size >= 2, 'both tokens should be tracked');
+
+        // logoutAllClients from conn1 — should close conn2 and clear all tokens
+        await conn1.callAsync('logoutAllClients');
+
+        // After logoutAllClients, all tokens for this user should be cleared
+        const mapAfter = Accounts._tokenConnections.get(userId);
+        if (mapAfter) {
+          let totalConns = 0;
+          for (const connIds of mapAfter.values()) {
+            totalConns += connIds.size;
+          }
+          test.equal(totalConns, 0, 'no connections should remain tracked');
+        }
+
+        conn1.disconnect();
+        conn2.disconnect();
+        await Meteor.users.removeAsync(userId);
+      } finally {
+        restore();
+      }
+    }
+  );
+}

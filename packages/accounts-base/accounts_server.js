@@ -53,16 +53,29 @@ export class AccountsServer extends AccountsCommon {
 
     this._initServerPublications();
 
-    // connectionId -> {connection, loginToken}
+    // Determine token tracking strategy from config.
+    // 'observer' (default): per-connection observeChanges on the user document.
+    // 'in-memory': in-memory _tokenConnections map (no observers).
+    this._useInMemoryTokenTracking =
+      (this._options.tokenTrackingStrategy === 'in-memory');
+
+    // connectionId -> {connection, loginToken[, userId]}
+    // userId is stored only in in-memory mode.
     this._accountData = {};
 
-    // connection id -> observe handle for the login token that this connection is
-    // currently associated with, or a number. The number indicates that we are in
-    // the process of setting up the observe (using a number instead of a single
-    // sentinel allows multiple attempts to set up the observe to identify which
-    // one was theirs).
-    this._userObservesForConnections = {};
-    this._nextUserObserveNumber = 1;  // for the number described above.
+    if (this._useInMemoryTokenTracking) {
+      // userId -> Map<hashedToken, Set<connectionId>>
+      // In-memory reverse lookup for closing connections when tokens are revoked.
+      this._tokenConnections = new Map();
+    } else {
+      // connection id -> observe handle for the login token that this connection is
+      // currently associated with, or a number. The number indicates that we are in
+      // the process of setting up the observe (using a number instead of a single
+      // sentinel allows multiple attempts to set up the observe to identify which
+      // one was theirs).
+      this._userObservesForConnections = {};
+      this._nextUserObserveNumber = 1;  // for the number described above.
+    }
 
     // list of all registered handlers.
     this._loginHandlers = [];
@@ -667,13 +680,14 @@ export class AccountsServer extends AccountsCommon {
 
   // Deletes the given loginToken from the database.
   //
-  // For new-style hashed token, this will cause all connections
-  // associated with the token to be closed.
-  //
-  // Any connections associated with old-style unhashed tokens will be
-  // in the process of becoming associated with hashed tokens and then
-  // they'll get closed.
+  // In-memory mode: connections using this token are closed directly
+  // before the DB update via the _tokenConnections map.
+  // Observer mode: the per-connection observeChanges detects the removal.
   async destroyToken(userId, loginToken) {
+    if (this._useInMemoryTokenTracking) {
+      // Close connections using this token before removing it from the DB.
+      this._closeConnectionsForToken(userId, loginToken);
+    }
     await this.users.updateAsync(userId, {
       $pull: {
         "services.resume.loginTokens": {
@@ -726,7 +740,7 @@ export class AccountsServer extends AccountsCommon {
     methods.logoutAllClients = async function() {
       const logoutUserId = this.userId;
       accounts._setLoginToken(logoutUserId, this.connection, null);
-      accounts._clearAllLoginTokens(logoutUserId);
+      await accounts._clearAllLoginTokens(logoutUserId);
       await accounts._successfulLogout(this.connection, logoutUserId);
       await this.setUserId(null);
     };
@@ -769,6 +783,10 @@ export class AccountsServer extends AccountsCommon {
     methods.removeOtherTokens = async function () {
       if (! this.userId) {
         throw new Meteor.Error("You are not logged in.");
+      }
+      if (accounts._useInMemoryTokenTracking) {
+        // Close other connections before removing their tokens from the DB.
+        accounts._closeOtherConnectionsForUser(this.userId, this.connection.id);
       }
       const currentToken = accounts._getLoginToken(this.connection.id);
       await accounts.users.updateAsync(this.userId, {
@@ -991,34 +1009,71 @@ export class AccountsServer extends AccountsCommon {
    * @private
    * @returns {Promise<void>}
    */
-  _clearAllLoginTokens(userId) {
-    this.users.updateAsync(userId, {
+  async _clearAllLoginTokens(userId) {
+    if (this._useInMemoryTokenTracking) {
+      // Close all connections for this user before clearing tokens.
+      this._closeAllConnectionsForUser(userId);
+    }
+    await this.users.updateAsync(userId, {
       $set: {
         'services.resume.loginTokens': [],
       },
     });
   };
 
-  // test hook
+  // test hook — returns truthy when the connection has a tracked token/observe.
   _getUserObserve(connectionId) {
+    if (this._useInMemoryTokenTracking) {
+      const token = this._getAccountData(connectionId, 'loginToken');
+      const userId = this._getAccountData(connectionId, 'userId');
+      if (!token || !userId) return undefined;
+      const tokenMap = this._tokenConnections.get(userId);
+      if (!tokenMap) return undefined;
+      const connIds = tokenMap.get(token);
+      return connIds && connIds.has(connectionId) ? true : undefined;
+    }
     return this._userObservesForConnections[connectionId];
   };
 
-  // Clean up this connection's association with the token: that is, stop
-  // the observe that we started when we associated the connection with
-  // this token.
+  // Clean up this connection's association with the token.
+  // In-memory mode: remove from _tokenConnections map and clear account data.
+  // Observer mode: stop the observe handle from _userObservesForConnections.
   _removeTokenFromConnection(connectionId) {
-    if (hasOwn.call(this._userObservesForConnections, connectionId)) {
-      const observe = this._userObservesForConnections[connectionId];
-      if (typeof observe === 'number') {
-        // We're in the process of setting up an observe for this connection. We
-        // can't clean up that observe yet, but if we delete the placeholder for
-        // this connection, then the observe will get cleaned up as soon as it has
-        // been set up.
-        delete this._userObservesForConnections[connectionId];
-      } else {
-        delete this._userObservesForConnections[connectionId];
-        observe.stop();
+    if (this._useInMemoryTokenTracking) {
+      const loginToken = this._getAccountData(connectionId, 'loginToken');
+      const userId = this._getAccountData(connectionId, 'userId');
+
+      if (userId && loginToken) {
+        const tokenMap = this._tokenConnections.get(userId);
+        if (tokenMap) {
+          const connIds = tokenMap.get(loginToken);
+          if (connIds) {
+            connIds.delete(connectionId);
+            if (connIds.size === 0) {
+              tokenMap.delete(loginToken);
+            }
+          }
+          if (tokenMap.size === 0) {
+            this._tokenConnections.delete(userId);
+          }
+        }
+      }
+
+      this._setAccountData(connectionId, 'loginToken', null);
+      this._setAccountData(connectionId, 'userId', null);
+    } else {
+      if (hasOwn.call(this._userObservesForConnections, connectionId)) {
+        const observe = this._userObservesForConnections[connectionId];
+        if (typeof observe === 'number') {
+          // We're in the process of setting up an observe for this connection. We
+          // can't clean up that observe yet, but if we delete the placeholder for
+          // this connection, then the observe will get cleaned up as soon as it has
+          // been set up.
+          delete this._userObservesForConnections[connectionId];
+        } else {
+          delete this._userObservesForConnections[connectionId];
+          observe.stop();
+        }
       }
     }
   };
@@ -1032,11 +1087,44 @@ export class AccountsServer extends AccountsCommon {
     this._removeTokenFromConnection(connection.id);
     this._setAccountData(connection.id, 'loginToken', newToken);
 
-    if (newToken) {
-      // Set up an observe for this token. If the token goes away, we need
-      // to close the connection.  We defer the observe because there's
-      // no need for it to be on the critical path for login; we just need
-      // to ensure that the connection will get closed at some point if
+    if (this._useInMemoryTokenTracking) {
+      this._setAccountData(connection.id, 'userId', newToken ? userId : null);
+
+      if (newToken) {
+        // Register (userId, newToken, connectionId) in _tokenConnections.
+        if (!this._tokenConnections.has(userId)) {
+          this._tokenConnections.set(userId, new Map());
+        }
+        const tokenMap = this._tokenConnections.get(userId);
+        if (!tokenMap.has(newToken)) {
+          tokenMap.set(newToken, new Set());
+        }
+        tokenMap.get(newToken).add(connection.id);
+
+        // Deferred DB check: handle the race where the token was destroyed
+        // between _insertLoginToken and _setLoginToken.
+        Meteor.defer(async () => {
+          // If the connection was already closed or re-logged-in, skip.
+          if (this._getAccountData(connection.id, 'loginToken') !== newToken) {
+            return;
+          }
+
+          const user = await this.users.findOneAsync(
+            { _id: userId, 'services.resume.loginTokens.hashedToken': newToken },
+            { fields: { _id: 1 } }
+          );
+          if (!user) {
+            // Token was already removed from DB before we registered —
+            // close the connection (mirrors the old foundMatchingUser check).
+            connection.close();
+          }
+        });
+      }
+    } else if (newToken) {
+      // Observer mode: set up an observe for this token. If the token goes
+      // away, we need to close the connection. We defer the observe because
+      // there's no need for it to be on the critical path for login; we just
+      // need to ensure that the connection will get closed at some point if
       // the token gets deleted.
       //
       // Initially, we set the observe for this connection to a number; this
@@ -1044,7 +1132,7 @@ export class AccountsServer extends AccountsCommon {
       // the process of setting up an observe for this connection. Once the
       // observe is ready to go, we replace the number with the real observe
       // handle (unless the placeholder has been deleted or replaced by a
-      // different placehold number, signifying that the connection was closed
+      // different placeholder number, signifying that the connection was closed
       // already -- in this case we just clean up the observe that we started).
       const myObserveNumber = ++this._nextUserObserveNumber;
       this._userObservesForConnections[connection.id] = myObserveNumber;
@@ -1098,6 +1186,106 @@ export class AccountsServer extends AccountsCommon {
           connection.close();
         }
       });
+    }
+  };
+
+  // Close all connections using a specific token for a given user.
+  // Collects connectionIds first to avoid mutation during iteration.
+  _closeConnectionsForToken(userId, hashedToken) {
+    const tokenMap = this._tokenConnections.get(userId);
+    if (!tokenMap) return;
+    const connIds = tokenMap.get(hashedToken);
+    if (!connIds) return;
+    // Copy to avoid mutation during iteration (connection.close triggers
+    // _removeTokenFromConnection which modifies the set).
+    const ids = [...connIds];
+    for (const connId of ids) {
+      const conn = this._getAccountData(connId, 'connection');
+      if (conn) {
+        conn.close();
+      }
+    }
+  };
+
+  // Close all connections for a user (all tokens).
+  _closeAllConnectionsForUser(userId) {
+    const tokenMap = this._tokenConnections.get(userId);
+    if (!tokenMap) return;
+    // Collect all connectionIds across all tokens first.
+    const allConnIds = new Set();
+    for (const connIds of tokenMap.values()) {
+      for (const connId of connIds) {
+        allConnIds.add(connId);
+      }
+    }
+    for (const connId of allConnIds) {
+      const conn = this._getAccountData(connId, 'connection');
+      if (conn) {
+        conn.close();
+      }
+    }
+  };
+
+  // Close all connections for a user except the specified one.
+  _closeOtherConnectionsForUser(userId, excludeConnId) {
+    const tokenMap = this._tokenConnections.get(userId);
+    if (!tokenMap) return;
+    const allConnIds = new Set();
+    for (const connIds of tokenMap.values()) {
+      for (const connId of connIds) {
+        if (connId !== excludeConnId) {
+          allConnIds.add(connId);
+        }
+      }
+    }
+    for (const connId of allConnIds) {
+      const conn = this._getAccountData(connId, 'connection');
+      if (conn) {
+        conn.close();
+      }
+    }
+  };
+
+  // Safety-net: verify all tracked tokens still exist in the database.
+  // Closes connections for any tokens that are no longer present.
+  async _verifyTrackedTokens() {
+    if (this._tokenConnections.size === 0) return;
+
+    const userIds = [...this._tokenConnections.keys()];
+    const users = await this.users.find(
+      { _id: { $in: userIds } },
+      { fields: { 'services.resume.loginTokens.hashedToken': 1 } }
+    ).fetchAsync();
+
+    // Build a set of valid (userId, hashedToken) pairs from DB.
+    const validTokens = new Map();
+    for (const user of users) {
+      const tokens = user.services?.resume?.loginTokens;
+      if (tokens) {
+        validTokens.set(user._id, new Set(tokens.map(t => t.hashedToken)));
+      } else {
+        validTokens.set(user._id, new Set());
+      }
+    }
+
+    // Check each tracked entry against the DB state.
+    for (const userId of userIds) {
+      const tokenMap = this._tokenConnections.get(userId);
+      if (!tokenMap) continue;
+
+      const dbTokens = validTokens.get(userId) || new Set();
+      for (const [hashedToken, connIds] of tokenMap) {
+        if (!dbTokens.has(hashedToken)) {
+          // Token no longer exists in DB — close all connections using it.
+          const ids = [...connIds];
+          for (const connId of ids) {
+            const conn = this._getAccountData(connId, 'connection');
+            if (conn) {
+              conn.close();
+            }
+          }
+        }
+      }
     }
   };
 
@@ -1209,12 +1397,32 @@ export class AccountsServer extends AccountsCommon {
         }
       }
     }, { multi: true });
-    // The observe on Meteor.users will take care of closing connections for
-    // expired tokens.
+    if (this._useInMemoryTokenTracking) {
+      // Verify tracked tokens and close connections for any that were removed.
+      await this._verifyTrackedTokens();
+    }
+    // In observer mode, the per-connection observeChanges handles closing
+    // connections for expired tokens.
   };
 
   // @override from accounts_common.js
   config(options) {
+    // tokenTrackingStrategy is resolved once in the constructor; a post-startup
+    // call to Accounts.config() stores the new value in _options but does not
+    // rebuild the observer/in-memory bookkeeping. Warn if the caller is asking
+    // for a mode different from the one already in effect.
+    if (options && hasOwn.call(options, 'tokenTrackingStrategy')) {
+      const requestedInMemory = (options.tokenTrackingStrategy === 'in-memory');
+      if (requestedInMemory !== this._useInMemoryTokenTracking) {
+        Meteor._debug(
+          'Accounts.config: tokenTrackingStrategy is resolved at ' +
+          'AccountsServer construction and cannot be switched at runtime. ' +
+          'Set it via Meteor.settings.packages["accounts-base"] (or the ' +
+          'AccountsServer constructor options) before login handlers run.'
+        );
+      }
+    }
+
     // Call the overridden implementation of the method.
     const superResult = AccountsCommon.prototype.config.apply(this, arguments);
 
@@ -1309,6 +1517,14 @@ export class AccountsServer extends AccountsCommon {
 
   async _deleteSavedTokensForUser(userId, tokensToDelete) {
     if (tokensToDelete) {
+      if (this._useInMemoryTokenTracking) {
+        // Close connections for each token being deleted.
+        for (const tokenObj of tokensToDelete) {
+          if (tokenObj.hashedToken) {
+            this._closeConnectionsForToken(userId, tokenObj.hashedToken);
+          }
+        }
+      }
       await this.users.updateAsync(userId, {
         $unset: {
           "services.resume.haveLoginTokensToDelete": 1,
