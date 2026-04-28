@@ -76,6 +76,13 @@ export class PackageAPI {
 
     this.buildingIsopackets = !!options.buildingIsopackets;
 
+    // When true, `versionsFrom` becomes a no-op. Used by callers that scan
+    // local packages without needing to resolve release constraints (e.g.
+    // self-test's local catalog). Avoids a hard dependency on
+    // `catalog.official` being populated with every release referenced by
+    // package.js files in the checkout.
+    this.skipReleaseResolution = !!options.skipReleaseResolution;
+
     // source files used.
     // It's a multi-level map structured as:
     //   arch -> sources|assets -> relPath -> {relPath, fileOptions}
@@ -529,6 +536,12 @@ export class PackageAPI {
       buildmessage.error(
         "packages in isopackets may not use versionsFrom");
       // recover by ignoring
+      return;
+    }
+
+    if (self.skipReleaseResolution) {
+      // Caller is doing a local-only scan and does not consume
+      // `releaseRecords`. Skip the catalog lookup entirely.
       return;
     }
 

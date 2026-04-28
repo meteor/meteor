@@ -641,6 +641,11 @@ async function newSelfTestCatalog() {
           files.pathJoin(packagesDir, "non-core"),
           files.pathJoin(packagesDir, "non-core", "*", "packages"),
         ],
+        // Self-test only consumes name/latest-version of each local
+        // package; it never reads `releaseRecords`. Skip the lookup so a
+        // missing release record (e.g. a fresh CI runner) does not abort
+        // the scan with "Unknown release METEOR@x.y.z".
+        skipReleaseResolution: true,
       });
     });
   if (messages.hasMessages()) {

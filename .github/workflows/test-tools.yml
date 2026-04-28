@@ -69,8 +69,7 @@ jobs:
             ${{ runner.os }}-meteor-
 
       - name: Prepare Meteor
-        # Run on every workflow so the package catalog at .meteor/package-metadata
-        # is refreshed and includes any release referenced by versionsFrom.
+        if: steps.meteor-cache.outputs.cache-hit != 'true'
         timeout-minutes: 65
         run: ./meteor --get-ready
 

@@ -500,6 +500,9 @@ Object.assign(PackageSource.prototype, {
   // - name: override the name of this package with a different name.
   // - buildingIsopackets: true if this is being scanned in the process
   //   of building isopackets
+  // - skipReleaseResolution: true if `versionsFrom` should be a no-op.
+  //   Used by callers that only need pkg metadata (name/version) and do
+  //   not consume the resolved release records.
   initFromPackageDir: Profile((dir, options) => {
     return `PackageSource#initFromPackageDir for ${
       options?.name || dir.split(files.pathSep).pop()
@@ -664,7 +667,8 @@ Object.assign(PackageSource.prototype, {
     // exist in the field, if not every single one. #OldStylePackageSupport
 
     var api = new PackageAPI({
-      buildingIsopackets: !! initFromPackageDirOptions.buildingIsopackets
+      buildingIsopackets: !! initFromPackageDirOptions.buildingIsopackets,
+      skipReleaseResolution: !! initFromPackageDirOptions.skipReleaseResolution
     });
 
     if (Package._fileAndDepLoader) {

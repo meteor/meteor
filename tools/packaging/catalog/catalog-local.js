@@ -138,6 +138,10 @@ Object.assign(LocalCatalog.prototype, {
   //    are package source trees.  Takes precedence over packages found
   //    via localPackageSearchDirs.
   //  - buildingIsopackets: true if we are building isopackets
+  //  - skipReleaseResolution: true if `versionsFrom` should be a no-op
+  //    when loading each local package. Use when the caller only needs
+  //    package metadata and does not consume resolved release records;
+  //    avoids requiring `catalog.official` to be populated.
   async initialize(options) {
     var self = this;
     buildmessage.assertInCapture();
@@ -172,7 +176,9 @@ Object.assign(LocalCatalog.prototype, {
     );
 
     await self._computeEffectiveLocalPackages();
-    await self._loadLocalPackages(options.buildingIsopackets);
+    await self._loadLocalPackages(options.buildingIsopackets, {
+      skipReleaseResolution: !! options.skipReleaseResolution,
+    });
     self.initialized = true;
   },
 
@@ -378,7 +384,8 @@ Object.assign(LocalCatalog.prototype, {
     });
   },
 
-  async _loadLocalPackages(buildingIsopackets) {
+  async _loadLocalPackages(buildingIsopackets, loadOptions) {
+    loadOptions = loadOptions || {};
     var self = this;
     buildmessage.assertInCapture();
 
@@ -399,7 +406,8 @@ Object.assign(LocalCatalog.prototype, {
         rootPath: packageDir
       }, async function () {
         var initFromPackageDirOptions = {
-          buildingIsopackets: !! buildingIsopackets
+          buildingIsopackets: !! buildingIsopackets,
+          skipReleaseResolution: !! loadOptions.skipReleaseResolution
         };
         // If we specified a name, then we know what we want to get and should
         // pass that into the options. Otherwise, we will use the 'name'
