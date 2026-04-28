@@ -15,9 +15,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        reactivity_order:
-          - 'changeStreams,polling'
-          - 'oplog,polling'
+        include:
+          - reactivity_order: 'changeStreams,polling'
+            test_port: 4096
+          - reactivity_order: 'oplog,polling'
+            test_port: 4097
     runs-on: oss-vm
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
@@ -31,6 +33,7 @@ jobs:
       METEOR_MODERN: true
       NODE_ENV: CI
       METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
+      TEST_PORT: ${{ matrix.test_port }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
