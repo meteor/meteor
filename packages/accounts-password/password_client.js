@@ -57,6 +57,19 @@ Meteor.loginWithPassword = (selector, password, callback) => {
   return internalLoginWithPassword({ selector, password, callback });
 };
 
+/**
+ * @summary Log the user in with a password. Returns a Promise.
+ * @locus Client
+ * @param {Object | String} selector
+ *   Either a string interpreted as a username or an email; or an object with a
+ *   single key: `email`, `username` or `id`. Username or email match in a case
+ *   insensitive manner.
+ * @param {String} password The user's password.
+ * @returns {Promise<Object>} Resolves with login details on success, rejects with error on failure.
+ * @importFromPackage meteor
+ */
+Meteor.loginWithPasswordAsync = Meteor.promisify(Meteor.loginWithPassword);
+
 Accounts._hashPassword = password => ({
   digest: SHA256(password),
   algorithm: "sha-256"
