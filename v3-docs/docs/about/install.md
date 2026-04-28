@@ -18,12 +18,13 @@ And it will prompt you to choose a project name and frontend framework.
 
 ### Operating System (OS) {#prereqs-os}
 
-- Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
-- Meteor supports Windows 7 / Windows Server 2008 R2 and up.
-- Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, rosetta terminal is required).
-- If you are using Meteor <= 3.0.4 and you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/). *No longer needed in Meteor 3.1*.
-- Disabling antivirus (Windows Defender, etc.) will improve performance.
-- For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
+- Meteor supports **OS X, Windows, and Linux**, 64-bit only.
+- Linux binaries are built with CentOS 6.4 (i386/amd64) for compatibility.
+- Apple M1 is supported natively from Meteor 2.5.1+. Older versions need Rosetta.
+- For Meteor ≤ 3.0.4 on Mac M1, Rosetta 2 is required for MongoDB. Install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/). Not needed in Meteor 3.1+.
+- Windows 7 / Server 2008 R2 or newer is supported.
+- On Windows, [Developer mode](https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development#activate-developer-mode) must be enabled.
+- Disabling antivirus (e.g. Windows Defender) can boost performance.
 
 ### Mobile Development {#prereqs-mobile}
 
@@ -111,10 +112,6 @@ You can also use a Docker container for running Meteor inside your CI, or even i
 We do provide the meteor/meteor-base ubuntu-based Docker image, that comes pre-bundled with Node.JS and Meteor, and runs it as a local user (not as root).
 
 You can refer to our meteor/galaxy-images repository to see how to use it, and the latest version. [More about meteor-base here.](https://github.com/meteor/galaxy-images/blob/master/meteor-base/README.md)
-
-## Note for Windows users {#windows}
-
-On Windows, the installer runs faster when [Windows Developer Mode](https://docs.microsoft.com/en-us/windows/apps/get-started/enable-your-device-for-development) is enabled. The installation extracts a large number of small files, which Windows Defender can cause to be very slow.
 
 ## Node version manager {#nvm}
 
