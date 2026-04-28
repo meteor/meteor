@@ -1056,7 +1056,7 @@ MongoConnection.prototype._observeChanges = async function (
             localMatcher = new Minimongo.Matcher(
               cursorDescription.selector,
               undefined,
-              cursorDescription.options.collation
+              collator
             );
           } catch (e) {
             if (Meteor.isClient && e instanceof MiniMongoQueryError) {
@@ -1104,7 +1104,7 @@ MongoConnection.prototype._observeChanges = async function (
               localMatcher = new Minimongo.Matcher(
                 cursorDescription.selector,
                 undefined,
-                cursorDescription.options.collation
+                collator
               );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
@@ -1124,7 +1124,7 @@ MongoConnection.prototype._observeChanges = async function (
             try {
               localSorter = new Minimongo.Sorter(
                 cursorDescription.options.sort,
-                cursorDescription.options.collation
+                collator
               );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something

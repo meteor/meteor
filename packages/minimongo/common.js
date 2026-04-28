@@ -42,7 +42,7 @@ export const ELEMENT_OPERATORS = {
         throw new MiniMongoQueryError('$in needs an array');
       }
 
-      const collator = matcher && matcher._collation;
+      const collator = matcher && matcher._collator;
       const elementMatchers = operand.map(option => {
         if (option instanceof RegExp) {
           return regexpElementMatcher(option);
@@ -328,7 +328,7 @@ const LOGICAL_OPERATORS = {
 const VALUE_OPERATORS = {
   $eq(operand, valueSelector, matcher) {
     return convertElementMatcherToBranchedMatcher(
-      equalityElementMatcher(operand, matcher && matcher._collation)
+      equalityElementMatcher(operand, matcher && matcher._collator)
     );
   },
   $not(operand, valueSelector, matcher) {
@@ -337,7 +337,7 @@ const VALUE_OPERATORS = {
   $ne(operand, valueSelector, matcher) {
     return invertBranchedMatcher(
       convertElementMatcherToBranchedMatcher(
-        equalityElementMatcher(operand, matcher && matcher._collation)
+        equalityElementMatcher(operand, matcher && matcher._collator)
       )
     );
   },
@@ -631,7 +631,7 @@ function compileValueSelector(valueSelector, matcher, isRoot) {
   }
 
   return convertElementMatcherToBranchedMatcher(
-    equalityElementMatcher(valueSelector, matcher && matcher._collation)
+    equalityElementMatcher(valueSelector, matcher && matcher._collator)
   );
 }
 
@@ -898,7 +898,7 @@ function makeInequality(cmpValueComparator) {
       }
 
       const operandType = LocalCollection._f._type(operand);
-      const collator = matcher && matcher._collation;
+      const collator = matcher && matcher._collator;
 
       return value => {
         if (value === undefined) {
