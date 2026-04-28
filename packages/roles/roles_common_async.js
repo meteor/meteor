@@ -1052,13 +1052,22 @@ Object.assign(Roles, {
    * @return {Promise<Cursor>} Cursor of users in roles.
    */
   getUsersInRoleAsync: async function (roles, options, queryOptions) {
+    const effectiveOptions = options || {}
+    const effectiveQueryOptions = effectiveOptions.queryOptions || queryOptions || {}
+
+    // Strip queryOptions so it is not passed to getUserAssignmentsForRole,
+    // which would otherwise apply its field projection to role-assignment
+    // documents and drop the 'user' field needed for a.user._id.
+    const roleOptions = Object.assign({}, effectiveOptions)
+    delete roleOptions.queryOptions
+
     const ids = (
-      await Roles.getUserAssignmentsForRole(roles, options).fetchAsync()
+      await Roles.getUserAssignmentsForRole(roles, roleOptions).fetchAsync()
     ).map((a) => a.user._id)
 
     return Meteor.users.find(
       { _id: { $in: ids } },
-      (options && options.queryOptions) || queryOptions || {}
+      effectiveQueryOptions
     )
   },
 
