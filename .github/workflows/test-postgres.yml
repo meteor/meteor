@@ -1,0 +1,86 @@
+name: Test Postgres Package
+
+on:
+  pull_request:
+    paths:
+      - "packages/postgres/**"
+      - "packages/afs/**"
+      - ".github/workflows/test-postgres.yml"
+  push:
+    branches:
+      - devel
+    paths:
+      - "packages/postgres/**"
+      - "packages/afs/**"
+      - ".github/workflows/test-postgres.yml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CXX: g++-12
+      POSTGRES_URL: postgres://postgres:postgres@localhost:5432/meteor_test
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: meteor_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-
+
+      - name: Install puppeteer (headless test runner)
+        run: |
+          npm install -g puppeteer@24.42.0 || true
+          echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Wait for Postgres
+        run: |
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U postgres; then
+              echo "Postgres ready after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Postgres failed to become ready" >&2
+          exit 1
+
+      - name: Run postgres package tests
+        env:
+          METEOR_MODERN: "true"
+          NODE_ENV: CI
+          METEOR_HEADLESS: "true"
+          TIMEOUT_SCALE_FACTOR: "20"
+          phantom: "false"
+        run: ./packages/test-in-console/run.sh postgres

@@ -98,8 +98,13 @@ export class AccountsCommon {
   }
 
   _initializeCollection(options) {
-    if (options.collection && typeof options.collection !== 'string' && !(options.collection instanceof Mongo.Collection)) {
-      throw new Meteor.Error('Collection parameter can be only of type string or "Mongo.Collection"');
+    // Accept AFS.Collection instances in addition to Mongo.Collection
+    const isCollectionInstance = (obj) =>
+      obj instanceof Mongo.Collection ||
+      (typeof AFS !== 'undefined' && obj instanceof AFS.Collection);
+
+    if (options.collection && typeof options.collection !== 'string' && !isCollectionInstance(options.collection)) {
+      throw new Meteor.Error('Collection parameter can be only of type string, "Mongo.Collection", or "AFS.Collection"');
     }
 
     let collectionName = 'users';
@@ -108,12 +113,36 @@ export class AccountsCommon {
     }
 
     let collection;
-    if (options.collection instanceof Mongo.Collection) {
+    if (isCollectionInstance(options.collection)) {
       collection = options.collection;
     } else {
       collection = new Mongo.Collection(collectionName, {
         _preventAutopublish: true,
         connection: this.connection,
+      });
+    }
+
+    // Register with AFS as a core collection so other packages can find it
+    // regardless of whether it's backed by Mongo, Postgres, or any other source.
+    // AFS is a weak dependency: the symbol may be defined but not yet fully
+    // initialized at this point (race on load order, or partial load). Guard
+    // against an undefined registerCoreCollection and defer to Meteor.startup
+    // if the singleton is not ready yet.
+    const registerWithAFS = () => {
+      if (
+        typeof AFS !== 'undefined' &&
+        typeof AFS.registerCoreCollection === 'function'
+      ) {
+        AFS.registerCoreCollection(collectionName, collection);
+        return true;
+      }
+      return false;
+    };
+
+    if (!registerWithAFS()) {
+      // Late initialization: try again at startup in case afs loads after us.
+      Meteor.startup(() => {
+        registerWithAFS();
       });
     }
 

@@ -22,6 +22,9 @@ Package.onUse((api) => {
   // we'd probably want to abstract this away
   api.use("mongo", ["client", "server"]);
 
+  // AFS integration - register users collection as a core collection
+  api.use("afs", { weak: true });
+
   // If the 'blaze' package is loaded, we'll define some helpers like
   // {{currentUser}}.  If not, no biggie.
   api.use("blaze", "client", { weak: true });

@@ -1,0 +1,10 @@
+export { ParseError, UnsupportedOperatorError } from './errors';
+export { pathFromDotted, pathToDotted, isNumericSegment } from './paths';
+export { AST, PRED, MOD, isAST } from './ast';
+export { parseSelector }   from './parse-selector';
+export { parseModifier }   from './parse-modifier';
+export { parseSort }       from './parse-sort';
+export { parseProjection } from './parse-projection';
+export { match }           from './match';
+export { applyModifier }   from './apply-modifier';
+export { walkSelector, walkModifier } from './walk';

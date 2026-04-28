@@ -57,6 +57,7 @@ var AppProcess = function (options) {
   self.rootUrl = options.rootUrl;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
+  self.postgresUrl = options.postgresUrl;
   self.mobileServerUrl = options.mobileServerUrl;
 
   self.onExit = options.onExit;
@@ -154,6 +155,9 @@ Object.assign(AppProcess.prototype, {
     env.PORT = self.port;
     env.ROOT_URL = self.rootUrl;
     env.MONGO_URL = self.mongoUrl;
+    if (self.postgresUrl) {
+      env.POSTGRES_URL = self.postgresUrl;
+    }
     if (self.mobileServerUrl) {
       env.MOBILE_DDP_URL = self.mobileServerUrl;
       env.MOBILE_ROOT_URL = self.mobileServerUrl;
@@ -355,6 +359,7 @@ var AppRunner = function (options) {
   self.listenHost = options.listenHost;
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
+  self.postgresUrl = options.postgresUrl;
   self.buildOptions = options.buildOptions;
   self.rootUrl = options.rootUrl;
   self.mobileServerUrl = options.mobileServerUrl;
@@ -726,6 +731,7 @@ Object.assign(AppRunner.prototype, {
       rootUrl: self.rootUrl,
       mongoUrl: self.mongoUrl,
       oplogUrl: self.oplogUrl,
+      postgresUrl: self.postgresUrl,
       mobileServerUrl: self.mobileServerUrl,
       onExit: function (code, signal) {
         self._resolvePromise("run", {

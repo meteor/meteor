@@ -393,3 +393,48 @@ Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
 Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
+
+// ---------------------------------------------------------------------------
+// AFS Integration (OPT-IN)
+// ---------------------------------------------------------------------------
+// When the afs package is loaded AND the user has explicitly opted in via the
+// METEOR_AFS_AUTO_REGISTER env var, register each Mongo.Collection with AFS so
+// other packages can find collections by name regardless of data source.
+//
+// Default: OFF. Auto-registering every Mongo.Collection with AFS adds a hot-
+// path side effect (an addExtension callback on every collection construction
+// plus a side-effecting import of ../mongo_stream_provider) that users who
+// have never heard of AFS should not pay for. If afs is ever pulled into core
+// or transitively via another package, this gate preserves today's Mongo-only
+// behavior. See packages/afs/README.md for details on enabling auto-
+// registration.
+//
+// Read the flag ONCE at module load (not per-collection) to keep construction
+// cheap. Users opt in with: METEOR_AFS_AUTO_REGISTER=1
+const AFS_AUTO_REGISTER =
+  typeof process !== 'undefined' &&
+  process.env &&
+  process.env.METEOR_AFS_AUTO_REGISTER === '1';
+
+if (AFS_AUTO_REGISTER) {
+  if (Meteor.isServer) {
+    Meteor.startup(() => {
+      if (Package.afs) {
+        const { registerMongoWithAFS } = require('../mongo_stream_provider');
+        registerMongoWithAFS();
+
+        // Register all existing Mongo.Collections with AFS
+        for (const [name, collection] of Mongo._collections) {
+          Package.afs.AFS.registerCollection(name, collection);
+        }
+      }
+    });
+  }
+
+  // Register collections with AFS as they're created (if afs is loaded)
+  Mongo.Collection.addExtension(function (name) {
+    if (Package.afs && name) {
+      Package.afs.AFS.registerCollection(name, this);
+    }
+  });
+}

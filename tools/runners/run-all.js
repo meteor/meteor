@@ -13,6 +13,7 @@ const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
+const PostgresRunner = require('./run-postgres.js').PostgresRunner;
 const HMRServer = require('./run-hmr').HMRServer;
 const Updater = require('./run-updater').Updater;
 
@@ -43,6 +44,7 @@ class Runner {
           seleniumBrowser,
           noReleaseCheck,
           cordovaServerPort,
+          postgresUrl: externalPostgresUrl,
     ...optionsForAppRunner
     } = self.options;
 
@@ -118,6 +120,25 @@ class Runner {
       mongoUrl = 'no-mongo-server';
     }
 
+    const hasPostgresDevServerPackage =
+        packageMap && packageMap.getInfo('postgres-dev-server') != null;
+    self.postgresRunner = null;
+    let postgresUrl = externalPostgresUrl || null;
+
+    if (postgresUrl) {
+      // External postgres URL provided — use it as-is
+    } else if (hasPostgresDevServerPackage) {
+      const postgresPort = parseInt(listenPort, 10) + 2;
+      self.postgresRunner = new PostgresRunner({
+        projectLocalDir: self.projectContext.projectLocalDir,
+        port: postgresPort,
+        onFailure,
+      });
+      postgresUrl = self.postgresRunner.postgresUrl();
+    } else {
+      postgresUrl = 'no-postgres-server';
+    }
+
     const hasHotModuleReplacementPackage = packageMap &&
         packageMap.getInfo('hot-module-replacement') != null;
     self.hmrServer = null;
@@ -142,6 +163,7 @@ class Runner {
       listenHost: appHost,
       mongoUrl,
       oplogUrl,
+      postgresUrl,
       rootUrl: self.rootUrl,
       proxy: self.proxy,
       noRestartBanner: self.quiet,
@@ -172,10 +194,13 @@ class Runner {
 
     var unblockAppRunner = self.appRunner.makeBeforeStartPromise();
 
+    // Start database servers in parallel, unblocking the app once all are ready.
+    var dbStartPromises = [];
+
     function startMongo(tries = 3) {
       self
         ._startMongoAsync()
-        .then(() => unblockAppRunner())
+        .then(() => mongoReadyResolve())
         .catch(async (error) => {
           --tries;
           const left = tries + (tries === 1 ? " try" : " tries");
@@ -189,7 +214,28 @@ class Runner {
         });
     }
 
-    startMongo();
+    var mongoReadyResolve;
+    if (self.mongoRunner) {
+      dbStartPromises.push(new Promise(resolve => {
+        mongoReadyResolve = resolve;
+      }));
+      startMongo();
+    }
+
+    if (!self.stopped && self.postgresRunner) {
+      dbStartPromises.push(
+        self._startPostgresAsync().catch(async (error) => {
+          Console.error(`Error starting PostgreSQL: ${error.message}`);
+          await self.postgresRunner._fail();
+        })
+      );
+    }
+
+    if (dbStartPromises.length > 0) {
+      Promise.all(dbStartPromises).then(() => unblockAppRunner());
+    } else {
+      unblockAppRunner();
+    }
 
     if (!self.noReleaseCheck && ! self.stopped) {
       self.updater.start();
@@ -251,6 +297,15 @@ class Runner {
     }
   }
 
+  async _startPostgresAsync() {
+    if (! this.stopped && this.postgresRunner) {
+      await this.postgresRunner.start();
+      if (! this.stopped && ! this.quiet) {
+        runLog.log("Started PostgreSQL.", { arrow: true });
+      }
+    }
+  }
+
   // Idempotent
   async stop() {
     const self = this;
@@ -262,6 +317,9 @@ class Runner {
     await self.proxy.stop();
     await self.updater.stop();
     await self.mongoRunner && self.mongoRunner.stop();
+    if (self.postgresRunner) {
+      await self.postgresRunner.stop();
+    }
     await self.appRunner.stop();
     await (self.selenium && self.selenium.stop());
     // XXX does calling this 'finish' still make sense now that runLog is a

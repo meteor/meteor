@@ -1,0 +1,261 @@
+const VALID_COLUMN_TYPES = new Set([
+  'text', 'integer', 'numeric', 'boolean', 'timestamp', 'jsonb',
+]);
+
+/**
+ * Quote a SQL identifier. Always emits double-quoted form with embedded
+ * quotes doubled. Unconditionally quoting closes the lowercase-bypass class
+ * of bugs (e.g. identifiers like `1users` that the old simple-form rule
+ * produced unquoted) and guarantees reserved-word safety.
+ */
+export function quoteIdent(name) {
+  return '"' + String(name).replace(/"/g, '""') + '"';
+}
+
+/**
+ * Quote a SQL string literal.
+ */
+export function quoteLiteral(value) {
+  if (value === null) {
+    return 'NULL';
+  }
+
+  return `'${String(value).replace(/'/g, "''")}'`;
+}
+
+export function quoteTextArray(parts) {
+  return `ARRAY[${parts.map(part => quoteLiteral(part)).join(', ')}]`;
+}
+
+/**
+ * ResolvedSchema — normalizes user schema into typed column maps.
+ *
+ * Provides field resolution: given a field path, determines whether it
+ * maps to a native column, a JSONB path inside a JSONB column, or
+ * overflow into the _extra JSONB column.
+ */
+export class ResolvedSchema {
+  /**
+   * @param {Object} schemaDef - User-provided schema definition
+   *   e.g. { title: { type: 'text', required: true }, views: { type: 'integer', default: 0 } }
+   */
+  constructor(schemaDef, options = {}) {
+    this.columns = new Map();
+    this._raw = schemaDef;
+    // Per-field ORDER BY cast hints for JSONB paths. Without a hint,
+    // compileSort uses text ordering; with a hint, it casts to the
+    // declared type so numeric/date fields sort in the right order.
+    //
+    // Hints are additionally seeded from schema columns: any field whose
+    // column type is a numeric/date/boolean type is also valid for dotted
+    // JSONB paths off of it (e.g. hint for `meta.score` falls through to
+    // the caller-provided map). See getSortHint.
+    this._sortHints = new Map();
+    if (options && options.sortHints && typeof options.sortHints === 'object') {
+      for (const [path, type] of Object.entries(options.sortHints)) {
+        this._sortHints.set(path, type);
+      }
+    }
+
+    for (const [name, def] of Object.entries(schemaDef)) {
+      const typeName = (typeof def === 'string') ? def : def.type;
+      if (!VALID_COLUMN_TYPES.has(typeName)) {
+        throw new Error(`Invalid column type "${typeName}" for field "${name}". Valid types: ${[...VALID_COLUMN_TYPES].join(', ')}`);
+      }
+      this.columns.set(name, {
+        name,
+        type: typeName,
+        required: def.required || false,
+        default: def.default !== undefined ? def.default : undefined,
+      });
+    }
+  }
+
+  /**
+   * Return the sort-time cast hint for a dotted field path, or null.
+   * Examples of values: 'number', 'numeric', 'date', 'timestamp', 'boolean'.
+   * @param {string} fieldPath
+   * @returns {string|null}
+   */
+  getSortHint(fieldPath) {
+    return this._sortHints.get(fieldPath) || null;
+  }
+
+  /**
+   * Resolve a field path to its SQL representation.
+   * @param {string} fieldPath - Dot-separated field path (e.g. 'title', 'metadata.key', 'unknown.nested')
+   * @returns {Object} { kind, sqlRef, columnType, topLevelField, jsonPath, needsCast }
+   */
+  resolveField(fieldPath) {
+    return resolveField(fieldPath, this);
+  }
+
+  /**
+   * Build the CREATE TABLE column definitions (excluding _id and _extra).
+   * @returns {string[]} Array of column definition SQL fragments
+   */
+  getColumnDefinitions() {
+    const defs = [];
+    for (const col of this.columns.values()) {
+      let sqlType;
+      switch (col.type) {
+        case 'text':      sqlType = 'TEXT'; break;
+        case 'integer':   sqlType = 'INTEGER'; break;
+        case 'numeric':   sqlType = 'NUMERIC'; break;
+        case 'boolean':   sqlType = 'BOOLEAN'; break;
+        case 'timestamp': sqlType = 'TIMESTAMPTZ'; break;
+        case 'jsonb':     sqlType = 'JSONB'; break;
+        default:          sqlType = 'TEXT'; break;
+      }
+
+      let def = `${quoteIdent(col.name)} ${sqlType}`;
+
+      if (col.required) {
+        def += ' NOT NULL';
+      }
+
+      if (col.default !== undefined) {
+        if (col.default === 'now') {
+          def += ' DEFAULT NOW()';
+        } else if (typeof col.default === 'boolean') {
+          def += ` DEFAULT ${col.default}`;
+        } else if (typeof col.default === 'number') {
+          if (!Number.isFinite(col.default)) {
+            throw new Error(
+              `Postgres schema: column "${col.name}" default must be a finite number, got ${col.default}`
+            );
+          }
+          def += ` DEFAULT ${col.default}`;
+        } else if (typeof col.default === 'string') {
+          def += ` DEFAULT ${quoteLiteral(col.default)}`;
+        }
+      }
+
+      defs.push(def);
+    }
+    return defs;
+  }
+
+  /**
+   * Get the list of all column names defined in the schema.
+   * @returns {string[]}
+   */
+  getColumnNames() {
+    return [...this.columns.keys()];
+  }
+
+  /**
+   * Check if a field name is a declared schema column.
+   * @param {string} name
+   * @returns {boolean}
+   */
+  hasColumn(name) {
+    return this.columns.has(name);
+  }
+
+  /**
+   * Get column definition by name.
+   * @param {string} name
+   * @returns {Object|undefined}
+   */
+  getColumn(name) {
+    return this.columns.get(name);
+  }
+}
+
+/**
+ * Core field resolution function used by all compilers.
+ *
+ * Given a dot-separated field path and a schema, determines how to
+ * reference the field in SQL.
+ *
+ * @param {string} fieldPath
+ * @param {ResolvedSchema|null} schema
+ * @returns {{ kind: string, sqlRef: string, columnType: string|null, topLevelField: string, jsonPath: string[]|null, needsCast: boolean }}
+ */
+export function resolveField(fieldPath, schema) {
+  // _id is always a direct column
+  if (fieldPath === '_id') {
+    return {
+      kind: 'column',
+      sqlRef: '_id',
+      columnType: 'text',
+      topLevelField: '_id',
+      jsonPath: null,
+      needsCast: false,
+    };
+  }
+
+  const parts = fieldPath.split('.');
+  const topLevel = parts[0];
+  const hasNested = parts.length > 1;
+
+  if (schema && schema.hasColumn(topLevel)) {
+    const col = schema.getColumn(topLevel);
+
+    if (!hasNested) {
+      // Direct column access
+      if (col.type === 'jsonb') {
+        return {
+          kind: 'jsonb_column',
+          sqlRef: quoteIdent(topLevel),
+          columnType: 'jsonb',
+          topLevelField: topLevel,
+          jsonPath: null,
+          needsCast: false,
+        };
+      }
+      return {
+        kind: 'column',
+        sqlRef: quoteIdent(topLevel),
+        columnType: col.type,
+        topLevelField: topLevel,
+        jsonPath: null,
+        needsCast: false,
+      };
+    }
+
+    // Nested path into a schema column — must be JSONB type
+    if (col.type === 'jsonb') {
+      const jsonPath = parts.slice(1);
+      let sqlRef;
+      if (jsonPath.length === 1) {
+        sqlRef = `${quoteIdent(topLevel)}->>${quoteLiteral(jsonPath[0])}`;
+      } else {
+        sqlRef = `${quoteIdent(topLevel)} #>> ${quoteTextArray(jsonPath)}`;
+      }
+      return {
+        kind: 'jsonb_path',
+        sqlRef,
+        columnType: 'jsonb',
+        topLevelField: topLevel,
+        jsonPath,
+        needsCast: true,
+      };
+    }
+
+    throw new Error(`Cannot traverse into non-jsonb column "${topLevel}" with path "${fieldPath}"`);
+  }
+
+  // Field not in schema — goes to _extra JSONB column
+  if (!hasNested) {
+    return {
+      kind: 'extra',
+      sqlRef: `_extra->>${quoteLiteral(topLevel)}`,
+      columnType: null,
+      topLevelField: topLevel,
+      jsonPath: null,
+      needsCast: true,
+    };
+  }
+
+  const jsonPath = parts;
+  return {
+    kind: 'extra_path',
+    sqlRef: `_extra #>> ${quoteTextArray(jsonPath)}`,
+    columnType: null,
+    topLevelField: topLevel,
+    jsonPath: parts.slice(1),
+    needsCast: true,
+  };
+}

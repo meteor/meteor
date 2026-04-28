@@ -43,6 +43,7 @@ jobs:
 
       - name: Run test-in-console suite
         run: |
+          unset POSTGRES_URL
           export TEST_PACKAGES_EXCLUDE="stylus"
           export METEOR_MODERN="true"
           export NODE_ENV="CI"

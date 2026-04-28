@@ -1,0 +1,135 @@
+import {
+  StreamProvider,
+  ProviderClosedError,
+  NotImplementedError,
+  NotSupportedError,
+  ConflictError,
+  ConnectionLostError,
+} from './provider/stream-provider';
+import { MockStreamProvider } from './provider/mock-stream-provider';
+import { PollingStreamProvider } from './provider/polling-stream-provider';
+import { MockPollingStreamProvider } from './provider/mock-polling-stream-provider';
+import { AFSCursor } from './collection/cursor';
+import { FederatedCollection } from './collection/collection';
+import { ChangeStream } from './reactive/change-stream';
+import { ObserveMultiplexer } from './reactive/observe-multiplexer';
+import { AdaptiveEngine } from './reactive/adaptive-engine';
+import { ReconnectLoop } from './reactive/reconnect-loop';
+import { Registry } from './registry';
+import { SubscriptionRegistry } from './subscription-registry';
+import { buildCommonAFS } from './afs-common';
+
+/**
+ * AFS - Adaptive Federated Streams (server entry point)
+ *
+ * Extends the shared surface from afs-common.js with server-only capabilities:
+ *   - Reactive internals (ChangeStream, ObserveMultiplexer, AFSCursor)
+ *   - Provider registration / lookup (mongo, postgres, etc.)
+ *   - AdaptiveEngine singleton for metrics and prefetching
+ *
+ * `AFS` is declared as a package global in package.js. We assign explicitly
+ * through `global.AFS` instead of relying on an undeclared bare-identifier
+ * assignment, which strict-mode and linters flag as an accidental global leak.
+ */
+
+const _engine = new AdaptiveEngine();
+
+const AFS = {
+  ...buildCommonAFS(),
+
+  // Server-side classes not exposed via afs-common
+  Cursor: AFSCursor,
+  MockStreamProvider,
+  PollingStreamProvider,
+  MockPollingStreamProvider,
+  ChangeStream,
+  ObserveMultiplexer,
+  AdaptiveEngine,
+  ReconnectLoop,
+
+  // Singleton
+  _engine,
+
+  // ---------------------------------------------------------------------------
+  // Provider management (server-only) — installed below as Registry passthroughs
+  // ---------------------------------------------------------------------------
+
+  // ---------------------------------------------------------------------------
+  // Adaptive engine access
+  // ---------------------------------------------------------------------------
+
+  getEngine() { return _engine; },
+  getMetrics() { return _engine.getMetrics(); },
+  resetMetrics() { _engine.reset(); },
+
+  // ---------------------------------------------------------------------------
+  // Utility
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Reset all AFS state. Test-only.
+   * Registry._resetForTests enforces the environment guard.
+   */
+  _resetForTests() {
+    Registry._resetForTests();
+    _engine.reset();
+  },
+
+  /** @deprecated Use _resetForTests. */
+  _reset() {
+    this._resetForTests();
+  },
+};
+
+// Provider-management methods on AFS are pure passthroughs to Registry.
+// Installed via loop to avoid seven near-identical method definitions.
+for (const m of [
+  'registerProvider', 'getProvider', 'setDefaultProvider', 'getDefaultProvider',
+  'getDefaultProviderName', 'listProviders', 'removeProvider',
+]) {
+  AFS[m] = (...args) => Registry[m](...args);
+}
+
+// Bind to the Meteor package-global slot declared in package.js.
+global.AFS = AFS;
+
+export {
+  AFS,
+  StreamProvider,
+  ProviderClosedError,
+  NotImplementedError,
+  NotSupportedError,
+  ConflictError,
+  ConnectionLostError,
+  AFSCursor,
+  FederatedCollection,
+  AdaptiveEngine,
+  MockStreamProvider,
+  PollingStreamProvider,
+  MockPollingStreamProvider,
+  Registry,
+  SubscriptionRegistry,
+  ChangeStream,
+  ObserveMultiplexer,
+  ReconnectLoop,
+};
+
+export {
+  parseSelector,
+  parseModifier,
+  parseSort,
+  parseProjection,
+  match,
+  applyModifier,
+  walkSelector,
+  walkModifier,
+  AST,
+  PRED,
+  MOD,
+  isAST,
+  pathFromDotted,
+  pathToDotted,
+  isNumericSegment,
+  ParseError,
+  UnsupportedOperatorError,
+} from './query/index';
