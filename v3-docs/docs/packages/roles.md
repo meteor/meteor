@@ -234,7 +234,7 @@ const adminUsers = await (await Roles.getUsersInRoleAsync("admin")).fetchAsync()
 // Find users with specific roles in a scope
 const scopedUsers = await (await Roles.getUsersInRoleAsync(
   ["editor", "writer"],
-  "blog"
+  { scope: "blog" }
 )).fetchAsync();
 
 // Find users with custom options
@@ -245,6 +245,19 @@ const users = await (await Roles.getUsersInRoleAsync("manager", {
     limit: 10,
   },
 })).fetchAsync();
+
+// Legacy usage with separate queryOptions (not recommended)
+const legacyUsers = await (await Roles.getUsersInRoleAsync(
+  "manager",
+  {},
+  { sort: { createdAt: -1 }, limit: 10 }
+)).fetchAsync();
+
+// Preferred usage with queryOptions in options
+const users = await (await Roles.getUsersInRoleAsync("manager", {
+  queryOptions: { sort: { createdAt: -1 }, limit: 10 }
+})).fetchAsync();
+
 ```
 
 ## Checking Roles
