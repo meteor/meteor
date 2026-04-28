@@ -530,44 +530,54 @@ async function setUpBuiltPackageTropohouse() {
   if (builtPackageTropohouseDir) {
     return;
   }
-  builtPackageTropohouseDir = files.mkdtemp('built-package-tropohouse');
+  const dir = files.mkdtemp('built-package-tropohouse');
+  builtPackageTropohouseDir = dir;
 
-  if (getPackagesDirectoryName() !== 'packages') {
-    throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
-  }
+  // Reset module-scoped state on failure so --retries re-runs setup instead
+  // of reusing a half-initialized tropohouse dir.
+  try {
+    if (getPackagesDirectoryName() !== 'packages') {
+      throw Error("running self-test with METEOR_PACKAGE_SERVER_URL set?");
+    }
 
-  const tropohouse = new Tropohouse(builtPackageTropohouseDir);
-  tropohouseLocalCatalog = await newSelfTestCatalog();
-  const versions = {};
-  for (const packageName of tropohouseLocalCatalog.getAllNonTestPackageNames()) {
-    versions[packageName] =
-        await tropohouseLocalCatalog.getLatestVersion(packageName).version;
-  }
-  const packageMap = new PackageMap(versions, {
-    localCatalog: tropohouseLocalCatalog
-  });
-  // Make an isopack cache that doesn't automatically save isopacks to disk and
-  // has no access to versioned packages.
-  tropohouseIsopackCache = new IsopackCache({
-    packageMap: packageMap,
-    includeCordovaUnibuild: true
-  });
-  await doOrThrow(function () {
-    return enterJob("building self-test packages", () => {
-      // Build the packages into the in-memory IsopackCache.
-      return tropohouseIsopackCache.buildLocalPackages(
-        ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
+    const tropohouse = new Tropohouse(dir);
+    tropohouseLocalCatalog = await newSelfTestCatalog();
+    const versions = {};
+    for (const packageName of tropohouseLocalCatalog.getAllNonTestPackageNames()) {
+      versions[packageName] =
+          await tropohouseLocalCatalog.getLatestVersion(packageName).version;
+    }
+    const packageMap = new PackageMap(versions, {
+      localCatalog: tropohouseLocalCatalog
     });
-  });
+    // Make an isopack cache that doesn't automatically save isopacks to disk and
+    // has no access to versioned packages.
+    tropohouseIsopackCache = new IsopackCache({
+      packageMap: packageMap,
+      includeCordovaUnibuild: true
+    });
+    await doOrThrow(function () {
+      return enterJob("building self-test packages", () => {
+        // Build the packages into the in-memory IsopackCache.
+        return tropohouseIsopackCache.buildLocalPackages(
+          ROOT_PACKAGES_TO_BUILD_IN_SANDBOX);
+      });
+    });
 
-  // Save all the isopacks into builtPackageTropohouseDir/packages.  (Note that
-  // we are always putting them into the default 'packages' (assuming
-  // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
-  // though some tests will want them to be under
-  // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
-  await tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
-    return tropohouse._saveIsopack(isopack, name);
-  });
+    // Save all the isopacks into builtPackageTropohouseDir/packages.  (Note that
+    // we are always putting them into the default 'packages' (assuming
+    // $METEOR_PACKAGE_SERVER_URL is not set in the self-test process itself) even
+    // though some tests will want them to be under
+    // 'packages-for-server/test-packages'; we'll fix this in _makeWarehouse.
+    await tropohouseIsopackCache.eachBuiltIsopack((name, isopack) => {
+      return tropohouse._saveIsopack(isopack, name);
+    });
+  } catch (err) {
+    builtPackageTropohouseDir = null;
+    tropohouseLocalCatalog = null;
+    tropohouseIsopackCache = null;
+    throw err;
+  }
 }
 
 // Our current strategy for running tests that need warehouses is to build all
