@@ -6,9 +6,12 @@ on:
       - "packages/**"
       - ".github/workflows/test-packages.yml"
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+jobs:
+  test-packages:
+    runs-on: ubuntu-22.04
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
 
 jobs:
   test-packages:
@@ -16,10 +19,18 @@ jobs:
     timeout-minutes: 90
     env:
       CXX: g++-12
+      phantom: false
+      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
+      TEST_PACKAGES_EXCLUDE: stylus
+      METEOR_MODERN: true
+      NODE_ENV: CI
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           submodules: recursive
 

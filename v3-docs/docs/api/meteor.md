@@ -749,6 +749,8 @@ function is rerun with the new value, assuming it didn't throw an error at the p
 If you call [`observe`](./collections.md#Mongo-Cursor-observe) or [`observeChanges`](./collections.md#Mongo-Cursor-observeChanges) in your
 publish handler, this is the place to stop the observes.
 
+As of Meteor 3.4.1, `onStop` callbacks can be `async` functions. The server awaits all async `onStop` callbacks before completing session cleanup, which prevents resource leaks from unawaited asynchronous teardown logic.
+
 <ApiBox name="Subscription#error" />
 <ApiBox name="Subscription#stop" />
 <ApiBox name="Subscription#connection" />

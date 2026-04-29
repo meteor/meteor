@@ -26,23 +26,35 @@ const isMacOS = () => {
   return platform() === 'darwin';
 };
 
-// Resolve the current process's primary group name by looking up its GID in
-// /etc/group. This is used in tests that chown a socket file: we need a group
-// the running user actually belongs to, so the chown doesn't fail with EPERM.
-const getCurrentGroupName = () => {
+const getGroupNameForGid = (gid) => {
   try {
-    const gid = userInfo().gid;
-    const lines = readFileSync('/etc/group', 'utf8').split('\n');
-    const match = lines.find(line => parseInt(line.split(':')[2], 10) === gid);
-    return match ? match.split(':')[0] : null;
-  } catch (_) {
+    const data = readFileSync('/etc/group', 'utf8');
+    const line = data
+      .trim()
+      .split('\n')
+      .find((groupLine) => {
+        const [, , groupGid] = groupLine.trim().split(':');
+        return Number(groupGid) === gid;
+      });
+
+    if (!line) return null;
+    const [name] = line.trim().split(':');
+    return name || null;
+  } catch {
     return null;
   }
 };
 
-const getGroupToUse = () => {
-  if (isMacOS()) {
-    return 'staff';
+const getWritableGroupName = () => {
+  const { gid, uid } = userInfo();
+  const gidsToTry = new Set();
+
+  if (typeof gid === 'number') {
+    gidsToTry.add(gid);
+  }
+
+  if (typeof process.getgroups === 'function') {
+    process.getgroups().forEach((groupId) => gidsToTry.add(groupId));
   }
 
   return getCurrentGroupName() || 'root';
@@ -153,9 +165,17 @@ testAsyncMulti(
     },
     async (test) => {
       // use UNIX_SOCKET_PATH and UNIX_SOCKET_GROUP
+      const groupToUse = getWritableGroupName();
+
+      if (!groupToUse) {
+        // Skip when no writable group could be determined for the current user.
+        // test.isTrue(true);
+        test.fail(`fail test: no writable group could be determined for the current user.`);
+        return;
+      }
+
       const { httpServer, server } = prepareServer();
 
-      const groupToUse = getGroupToUse();
       process.env.UNIX_SOCKET_PATH = testSocketFile;
       process.env.UNIX_SOCKET_GROUP = groupToUse;
       process.env.UNIX_SOCKET_PERMISSIONS = '777';
