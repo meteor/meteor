@@ -4,7 +4,16 @@ var net = require('net');
 var selftest = require('../tool-testing/selftest.js');
 var Proxy = require('../runners/run-proxy.js').Proxy;
 
-selftest.define("dev proxy releases abandoned websocket upgrades", async function () {
+selftest.define(
+  "dev proxy releases abandoned websocket upgrades",
+  testAbandonedWebsocketUpgrades
+);
+
+/**
+ * Verifies abandoned websocket upgrades do not exhaust the dev proxy's shared
+ * HTTP agent and block later non-websocket requests.
+ */
+async function testAbandonedWebsocketUpgrades() {
   var targetSockets = [];
   var clientSockets = [];
 
@@ -41,25 +50,20 @@ selftest.define("dev proxy releases abandoned websocket upgrades", async functio
       return targetSockets.length === upgradeCount;
     });
 
-    clientSockets.forEach(function (socket) {
-      socket.destroy();
-    });
-
-    await sleep(100);
+    await destroySockets(clientSockets);
 
     await expectHttpResponse(proxyPort, 'ok');
   } finally {
-    clientSockets.forEach(function (socket) {
-      socket.destroy();
-    });
-    targetSockets.forEach(function (socket) {
-      socket.destroy();
-    });
+    await destroySockets(clientSockets);
+    await destroySockets(targetSockets);
     proxy.stop();
-    target.close();
+    await closeServer(target);
   }
-});
+}
 
+/**
+ * Starts an HTTP server on an ephemeral port.
+ */
 function listen(server, host) {
   return new Promise(function (resolve, reject) {
     server.once('error', reject);
@@ -70,6 +74,9 @@ function listen(server, host) {
   });
 }
 
+/**
+ * Opens a raw websocket upgrade request and leaves the upgrade unresolved.
+ */
 function openWebsocketUpgrade(port) {
   return new Promise(function (resolve, reject) {
     var socket = net.connect({ host: '127.0.0.1', port: port }, function () {
@@ -90,6 +97,9 @@ function openWebsocketUpgrade(port) {
   });
 }
 
+/**
+ * Polls until the provided condition is true.
+ */
 async function waitUntil(fn) {
   var start = Date.now();
   while (! fn()) {
@@ -100,12 +110,57 @@ async function waitUntil(fn) {
   }
 }
 
+/**
+ * Waits for a socket to emit close if it has not already closed.
+ */
+function waitForSocketToClose(socket) {
+  if (socket.closed) {
+    return Promise.resolve();
+  }
+
+  return new Promise(function (resolve) {
+    socket.once('close', resolve);
+  });
+}
+
+/**
+ * Destroys sockets and waits for their close events.
+ */
+function destroySockets(sockets) {
+  var closePromises = sockets.map(waitForSocketToClose);
+  sockets.forEach(function (socket) {
+    socket.destroy();
+  });
+  return Promise.all(closePromises);
+}
+
+/**
+ * Closes an HTTP server and waits for the close callback.
+ */
+function closeServer(server) {
+  return new Promise(function (resolve, reject) {
+    server.close(function (err) {
+      if (! err || err.code === 'ERR_SERVER_NOT_RUNNING') {
+        resolve();
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+/**
+ * Waits for the given amount of time.
+ */
 function sleep(ms) {
   return new Promise(function (resolve) {
     setTimeout(resolve, ms);
   });
 }
 
+/**
+ * Asserts the proxy still serves normal HTTP requests.
+ */
 function expectHttpResponse(port, expectedBody) {
   return new Promise(function (resolve, reject) {
     var req = http.get({
