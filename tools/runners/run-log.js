@@ -158,7 +158,7 @@ Object.assign(RunLog.prototype, {
       self.consecutiveRestartMessages = 1;
     }
 
-    var message = "=> Meteor server restarted at: " + options.rootUrl;
+    var message = "=> Meteor server restarted at " + options.rootUrl;
     if (self.consecutiveRestartMessages > 1) {
       message += " (x" + self.consecutiveRestartMessages + ")";
     }
@@ -225,3 +225,6 @@ var runLogInstance = new RunLog;
   function (method) {
     exports[method] = runLogInstance[method].bind(runLogInstance);
   });
+
+// Export the singleton instance for use in plugins
+exports.runLogInstance = runLogInstance;

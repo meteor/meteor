@@ -594,3 +594,78 @@ function getTestConnections(test) {
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
+
+// ============================================================================
+// Async onStop cleanup tests (memory leak fix)
+// ============================================================================
+
+const asyncCleanupTracker = {};
+
+Meteor.publish('test_async_onstop_cleanup', function (trackerId) {
+  this.onStop(async function () {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    asyncCleanupTracker[trackerId] = true;
+  });
+  this.ready();
+});
+
+Tinytest.addAsync(
+  'livedata server - async onStop callbacks complete on unsubscribe',
+  async function (test) {
+    const trackerId = Random.id();
+    asyncCleanupTracker[trackerId] = false;
+
+    const { clientConn } = await getTestConnections(test);
+    const sub = clientConn.subscribe('test_async_onstop_cleanup', trackerId);
+
+    await waitUntil(
+      () => sub.ready(),
+      { description: 'subscription is ready' }
+    );
+
+    sub.stop();
+
+    await waitUntil(
+      () => asyncCleanupTracker[trackerId] === true,
+      { description: 'async onStop callback completed after unsubscribe' }
+    );
+
+    test.isTrue(
+      asyncCleanupTracker[trackerId],
+      'Async onStop callback should have completed'
+    );
+
+    clientConn.disconnect();
+    delete asyncCleanupTracker[trackerId];
+  }
+);
+
+Tinytest.addAsync(
+  'livedata server - async onStop callbacks complete on disconnect',
+  async function (test) {
+    const trackerId = Random.id();
+    asyncCleanupTracker[trackerId] = false;
+
+    const { clientConn } = await getTestConnections(test);
+    clientConn.subscribe('test_async_onstop_cleanup', trackerId);
+
+    await waitUntil(
+      () => clientConn.status().connected,
+      { description: 'client is connected' }
+    );
+
+    clientConn.disconnect();
+
+    await waitUntil(
+      () => asyncCleanupTracker[trackerId] === true,
+      { description: 'async onStop callback completed after disconnect' }
+    );
+
+    test.isTrue(
+      asyncCleanupTracker[trackerId],
+      'Async onStop callback should have completed on disconnect'
+    );
+
+    delete asyncCleanupTracker[trackerId];
+  }
+);
