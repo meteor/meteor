@@ -67,5 +67,14 @@ module.exports = defineConfig(Meteor => {
         },
       }),
     ],
+    // User-level devServer.onListening: verifies that meteor-rspack
+    // composes its default hook (which reports the dev server URL and
+    // installs the Windows socket guard) with a user-supplied hook
+    // instead of letting the user replace the default outright.
+    devServer: {
+      onListening(_devServer) {
+        console.log('[user-onListening] fired from rspack.config.js');
+      },
+    },
   };
 });

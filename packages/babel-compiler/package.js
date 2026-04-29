@@ -1,7 +1,7 @@
 Package.describe({
   name: "babel-compiler",
   summary: "Parser/transpiler for ECMAScript 2015+ syntax",
-  version: '7.14.0-rc341.1',
+  version: '7.14.0',
   devOnly: true,
 });
 
