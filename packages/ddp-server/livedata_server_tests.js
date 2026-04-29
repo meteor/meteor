@@ -136,7 +136,7 @@ Tinytest.addAsync(
   function (test, onComplete) {
     var cb = Meteor.onMessage(function (msg, session) {
       if (msg.method !== 'livedata_server_test_inner') return;
-            test.equal(msg.method, "livedata_server_test_inner");
+      test.equal(msg.method, "livedata_server_test_inner");
       cb.stop();
       onComplete();
     });
@@ -552,22 +552,22 @@ Tinytest.addAsync('livedata server - stopping a handle should preserve its conte
 
     if (user) {
       let count = 0;
-  
+
       let initializing = true;
       const handle = await coll.find({}).observeChangesAsync({
         added: () => {
           count += 1;
-          if (!initializing) this.changed('issueUnreadCount', user._id, {count});
+          if (!initializing) this.changed('issueUnreadCount', user._id, { count });
         },
         removed: () => {
           count -= 1;
-          this.changed('issueUnreadCount', user._id, {count});
+          this.changed('issueUnreadCount', user._id, { count });
         }
       });
 
       initializing = false;
 
-      this.added('issueUnreadCount', user._id, {count});
+      this.added('issueUnreadCount', user._id, { count });
 
       // Should be the same as `this.onStop(() => handle.stop())`
       this.onStop(handle.stop);
@@ -588,24 +588,24 @@ Tinytest.addAsync('livedata server - stopping a handle should preserve its conte
 
   // Make changes that will affect all subs
   await coll.insertAsync({ _id: 'item_10', title: 'Item #10' });
-  
+
   // Stop middle subscription during changes
   sub2.stop();
-  
+
   await coll.insertAsync({ _id: 'item_11', title: 'Item #11' });
-  
+
   // Create new subscription while changes happening
   const sub4 = conn.subscribe(publicationName);
-  
+
   await coll.removeAsync({ _id: 'item_10' });
-  
+
   sub1.stop();
-  
+
   await coll.insertAsync({ _id: 'item_12', title: 'Item #12' });
-  
+
   // Final subscription during teardown of others
   const sub5 = conn.subscribe(publicationName);
-  
+
   sub3.stop();
   sub4.stop();
 
@@ -992,10 +992,18 @@ Tinytest.addAsync(
 
     const { clientConn } = await getTestConnections(test);
     const sub = clientConn.subscribe('test_async_onstop_cleanup', trackerId);
-    await sleep(100);
+
+    await waitUntil(
+      () => sub.ready(),
+      { description: 'subscription is ready' }
+    );
 
     sub.stop();
-    await sleep(200);
+
+    await waitUntil(
+      () => asyncCleanupTracker[trackerId] === true,
+      { description: 'async onStop callback completed after unsubscribe' }
+    );
 
     test.isTrue(
       asyncCleanupTracker[trackerId],
@@ -1015,10 +1023,18 @@ Tinytest.addAsync(
 
     const { clientConn } = await getTestConnections(test);
     clientConn.subscribe('test_async_onstop_cleanup', trackerId);
-    await sleep(100);
+
+    await waitUntil(
+      () => clientConn.status().connected,
+      { description: 'client is connected' }
+    );
 
     clientConn.disconnect();
-    await sleep(300);
+
+    await waitUntil(
+      () => asyncCleanupTracker[trackerId] === true,
+      { description: 'async onStop callback completed after disconnect' }
+    );
 
     test.isTrue(
       asyncCleanupTracker[trackerId],

@@ -161,7 +161,7 @@ Meteor.methods({
     );
   },
   async has2faEnabled() {
-    return await Accounts._is2faEnabledForUser();
+    return Accounts._is2faEnabledForUser();
   },
 });
 

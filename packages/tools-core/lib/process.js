@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const net = require('net');
+const { logError } = require('./log');
 
 /**
  * Spawns a new OS process with the given command and arguments.
@@ -55,7 +56,7 @@ export function spawnProcess(command, args, options = {}) {
   proc.on('error', (err) => {
     proc.isRunning = false;
     if (options.onError) options.onError(err);
-    else console.error(`Process error: ${err.message}`);
+    else logError(`=> Process error: ${err.message}`);
   });
 
   // This happens sometimes when we write to stdin after the app

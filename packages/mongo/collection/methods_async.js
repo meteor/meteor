@@ -13,7 +13,6 @@ export const AsyncMethods = {
    * @param {Boolean} options.reactive (Client only) Default true; pass false to disable reactivity
    * @param {Function} options.transform Overrides `transform` on the [`Collection`](#collections) for this cursor.  Pass `null` to disable transformation.
    * @param {String} options.readPreference (Server only) Specifies a custom MongoDB [`readPreference`](https://docs.mongodb.com/manual/core/read-preference) for fetching the document. Possible values are `primary`, `primaryPreferred`, `secondary`, `secondaryPreferred` and `nearest`.
-   * @param {Object} options.collation Specifies a [collation](https://docs.mongodb.com/manual/reference/collation/) for string comparison. See [`find`](#find) for details.
    * @returns {Object}
    */
   findOneAsync(...args) {
