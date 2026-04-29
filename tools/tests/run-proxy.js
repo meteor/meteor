@@ -32,12 +32,13 @@ selftest.define("dev proxy releases abandoned websocket upgrades", async functio
     proxy.setMode("proxy");
 
     var proxyPort = proxy.server.address().port;
-    for (var i = 0; i < 100; i++) {
+    var upgradeCount = proxy.proxyAgent?.maxSockets || 100;
+    for (var i = 0; i < upgradeCount; i++) {
       clientSockets.push(await openWebsocketUpgrade(proxyPort));
     }
 
     await waitUntil(function () {
-      return targetSockets.length === 100;
+      return targetSockets.length === upgradeCount;
     });
 
     clientSockets.forEach(function (socket) {

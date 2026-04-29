@@ -186,6 +186,7 @@ Object.assign(Proxy.prototype, {
       // race condition and we could be in the middle of starting to listen! In
       // that case, the listen callback will notice that we nulled out server
       // here.
+      self.proxy = null;
       self.server = null;
       self.proxyAgent?.destroy();
       self.proxyAgent = null;
@@ -194,10 +195,12 @@ Object.assign(Proxy.prototype, {
 
     // This stops listening but allows existing connections to
     // complete gracefully.
-    self.server.close();
+    var proxyAgent = self.proxyAgent;
+    self.server.close(function () {
+      proxyAgent?.destroy();
+    });
     self.server = null;
 
-    self.proxyAgent?.destroy();
     self.proxyAgent = null;
     self.proxy = null;
 
