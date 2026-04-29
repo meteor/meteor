@@ -1392,8 +1392,6 @@ Server = function (options = {}) {
         socket._meteorSession.processMessage(msg);
       } catch (e) {
         // XXX print stack nicely
-        // Temporary: write to stderr so it's visible through test-in-console run.sh.
-        console.error("Internal exception while processing message", msg, e && e.stack || e);
         Meteor._debug("Internal exception while processing message", msg, e);
       }
     });
