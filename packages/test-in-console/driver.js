@@ -98,7 +98,7 @@ const report = function (name, last) {
 };
 const sendReports = function (callback) {
   const reports = toReport;
-  if (!callback) callback = function () { };
+  if (!callback) callback = function () {};
   toReport = [];
   if (doReport) Meteor.call("report", reports, callback);
   else callback();

@@ -140,7 +140,7 @@ export class Hook {
       callback,
       stop: () => {
         this.callbacks.delete(callback);
-      }
+      },
     };
   }
 
@@ -179,7 +179,7 @@ export class Hook {
    */
   async forEachAsync(iterator) {
     for (const callback of this.callbacks) {
-      if (!await iterator(callback)) break;
+      if (!(await iterator(callback))) break;
     }
   }
 
@@ -236,15 +236,14 @@ function wrapHookWithErrorHandling(func, onException, _this) {
  * @returns {Function} A function that handles exceptions.
  */
 function normalizeHookExceptionHandler(exceptionHandler) {
-  if (typeof exceptionHandler === 'function') {
+  if (typeof exceptionHandler === "function") {
     return exceptionHandler;
   }
 
-  const description = typeof exceptionHandler === 'string'
-    ? exceptionHandler
-    : "callback of async function";
+  const description =
+    typeof exceptionHandler === "string" ? exceptionHandler : "callback of async function";
 
   return function defaultHookExceptionHandler(error) {
     Meteor._debug(`Exception in ${description}`, error);
-  }
+  };
 }
