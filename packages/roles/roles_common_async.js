@@ -1052,14 +1052,42 @@ Object.assign(Roles, {
    * @return {Promise<Cursor>} Cursor of users in roles.
    */
   getUsersInRoleAsync: async function (roles, options, queryOptions) {
+    options = Roles._normalizeOptions(options)
+    
+    const assignmentOptions = { ...options }
+   assignmentOptions.queryOptions = undefined 
+
     const ids = (
-      await Roles.getUserAssignmentsForRole(roles, options).fetchAsync()
+      await Roles.getUserAssignmentsForRole(roles, assignmentOptions).fetchAsync()
     ).map((a) => a.user._id)
 
     return Meteor.users.find(
       { _id: { $in: ids } },
       (options && options.queryOptions) || queryOptions || {}
     )
+  },
+
+  /**
+   * Retrieve all userIds who are in target role.
+   *
+   * Options:
+   *
+   * @method getUserIdsInRoleAsync
+   * @param {Array|String} roles Name of role or an array of roles. If array, users
+   *                             returned will have at least one of the roles
+   *                             specified but need not have _all_ roles.
+   *                             Roles do not have to exist.
+   * @param {Object|String} [options] Options:
+   *   - `scope`: name of the scope to restrict roles to; user's global
+   *     roles will also be checked
+   *   - `anyScope`: if set, role can be in any scope (`scope` option is ignored)
+   * @return {Promise<Array>} Array of user IDs in roles.
+   * @static
+   */
+  getUserIdsInRoleAsync: async function (roles, options) {
+    const cursor = Roles.getUserAssignmentsForRole(roles, options)
+
+    return (await cursor.fetchAsync()).map((a) => a.user._id)
   },
 
   /**
