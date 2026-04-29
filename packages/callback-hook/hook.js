@@ -156,16 +156,8 @@ export class Hook {
    * @param iterator
    */
   forEach(iterator) {
-    const ids = Object.keys(this.callbacks);
-    for (let i = 0; i < ids.length; ++i) {
-      const id = ids[i];
-      // check to see if the callback was removed during iteration
-      if (hasOwn.call(this.callbacks, id)) {
-        const callback = this.callbacks[id];
-        if (!iterator(callback)) {
-          break;
-        }
-      }
+    for (const callback of this.callbacks) {
+      if (!iterator(callback)) break;
     }
   }
 
