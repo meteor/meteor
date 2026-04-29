@@ -9,6 +9,142 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.4.1, 2026-04-28
+
+### Highlights
+
+#### Rspack Improvements
+
+- **Pin `@meteorjs/rspack` to v2.x in Meteor 3.4.1**, [PR#14365](https://github.com/meteor/meteor/pull/14365)
+  - Bumps the minimum `@meteorjs/rspack` requirement from `^1.0.0` to `^2.0.0` across all core packages, skeletons, and docs
+  - v1.1.x introduced significant changes to config defaults. Without this bump, Meteor 3.4 users running `npm install @meteorjs/rspack@^1.0.0` could silently pick up incompatible defaults and hit a broken build
+  - Each Meteor release now pins to a major of `@meteorjs/rspack` (Meteor 3.4 -> v1, Meteor 3.4.1 -> v2). A future release may further restrict to a specific minor (e.g., `2.x.x`) so breaking changes are clearer
+  - `@meteorjs/rspack` semver is independent of `@rspack/core` / `@rspack/cli`; keeping them in sync is not practical because the Meteor integration may have different needs
+  - Existing apps pick up v2 automatically after running `meteor update --release 3.4.1`, followed by `meteor run` or `meteor update --npm`
+- Enable automatic CSS delegation to Rspack, [PR#14257](https://github.com/meteor/meteor/pull/14257)
+- Add support for `swc.config.ts` configuration files, [PR#14150](https://github.com/meteor/meteor/pull/14150), [PR#14233](https://github.com/meteor/meteor/pull/14233)
+- Support running multiple Rspack instances via `METEOR_LOCAL_DIR` to isolate build contexts, [PR#14165](https://github.com/meteor/meteor/pull/14165)
+- Support server-only apps with Rspack, [PR#14171](https://github.com/meteor/meteor/pull/14171)
+- Serve `sw.js` files during development (HMR), [PR#14255](https://github.com/meteor/meteor/pull/14255)
+- Simplify Rspack build logs, [PR#14158](https://github.com/meteor/meteor/pull/14158)
+- Track local dependencies in `rspack.config.js` for cache invalidation, [PR#14111](https://github.com/meteor/meteor/pull/14111)
+- Fix tools-core error on certain environments and support `NODE_ENV` override, [PR#14166](https://github.com/meteor/meteor/pull/14166)
+- Ensure consistent POSIX-style paths to fix Windows Blaze issues, [PR#14210](https://github.com/meteor/meteor/pull/14210)
+- Inherit `TOOL_NODE_FLAGS` in Rspack processes, [PR#14131](https://github.com/meteor/meteor/pull/14131)
+- Skip Rspack HMR proxy middleware setup on Cordova, [PR#14226](https://github.com/meteor/meteor/pull/14226)
+- Disable Rspack HMR proxy in test mode to prevent WebSocket interference, [PR#14329](https://github.com/meteor/meteor/pull/14329)
+- Ensure Rspack child processes can find Meteor's bundled Node, [PR#14336](https://github.com/meteor/meteor/pull/14336)
+- Add `skipLibCheck` to avoid Rspack CLI type failure, [PR#14094](https://github.com/meteor/meteor/pull/14094)
+- Check if Preact is installed before adding React dependencies, [PR#14268](https://github.com/meteor/meteor/pull/14268)
+- Reduce resource usage in `meteor test --full-app` by running a single Rspack process, [PR#14139](https://github.com/meteor/meteor/pull/14139)
+- Resolve eager test ignore patterns relative to the project path and broaden ignore test coverage, [PR#14148](https://github.com/meteor/meteor/pull/14148)
+- Add `Meteor.enablePortableBuild()` for single-artifact deployments across environments, [PR#14166](https://github.com/meteor/meteor/pull/14166)
+- Add Service Worker and PWA support via the Workbox plugin, with HMR and offline-refresh fixes, [PR#14344](https://github.com/meteor/meteor/pull/14344)
+- Enable `.html` imports on the server config for Blaze apps, [PR#14350](https://github.com/meteor/meteor/pull/14350)
+- Bump `@rsdoctor/rspack-plugin` to v1.5.7, [PR#14294](https://github.com/meteor/meteor/pull/14294)
+
+#### Features
+
+- Add `getUserIdsInRoleAsync` methods with tests, [PR#14030](https://github.com/meteor/meteor/pull/14030)
+- Add TypeScript + Tailwind skeleton, [PR#14237](https://github.com/meteor/meteor/pull/14237)
+- Revamp `meteor create` examples with dynamic fetching, `--from-branch`, and `--from-dir` options, [PR#14266](https://github.com/meteor/meteor/pull/14266)
+
+#### Improvements
+
+- Update Blaze to v3.0.3 for SWC compatibility, speeding up the Blaze package build, [PR#14354](https://github.com/meteor/meteor/pull/14354)
+- Update to Node v22.22.1, [PR#14219](https://github.com/meteor/meteor/pull/14219)
+- Refactor `callback-hook` package with deduplication and bug fix in `clear`, [PR#13861](https://github.com/meteor/meteor/pull/13861)
+- Cache regex patterns in `utils.js` for improved performance, [PR#14062](https://github.com/meteor/meteor/pull/14062)
+- Add optional `cookies` property to `CategorizedRequest` type, [PR#14085](https://github.com/meteor/meteor/pull/14085)
+- Add support for dots in minimongo key names, [PR#13975](https://github.com/meteor/meteor/pull/13975)
+- Use concurrency-safe iteration in Minimongo async methods, [PR#13927](https://github.com/meteor/meteor/pull/13927)
+- Constrain TypeScript extension types to `Document` in collection extensions, [PR#14105](https://github.com/meteor/meteor/pull/14105)
+- Remove redundant `await` on returned promises in accounts-base, [PR#14017](https://github.com/meteor/meteor/pull/14017), [PR#14186](https://github.com/meteor/meteor/pull/14186)
+- Remove `import React from 'react'` from project skeletons, [PR#14041](https://github.com/meteor/meteor/pull/14041)
+- Add IntelliJ IDEs icon, [PR#14059](https://github.com/meteor/meteor/pull/14059)
+- Improve TypeScript signatures and docs for defer functions, [PR#14104](https://github.com/meteor/meteor/pull/14104)
+- Update OAuth configuration instructions, [PR#13947](https://github.com/meteor/meteor/pull/13947)
+- Auto-detect branch and subdirectory in `meteor create --from` from GitHub, GitLab, and Bitbucket tree URLs, [PR#14323](https://github.com/meteor/meteor/pull/14323)
+- Delegate CSS processing to Rspack and switch to SCSS in the `meteor create --full` skeleton, [PR#14324](https://github.com/meteor/meteor/pull/14324)
+
+#### Fixes
+
+- Await async `onStop` callbacks in DDP server to fix session memory leak, [PR#14236](https://github.com/meteor/meteor/pull/14236)
+- Handle deleted PostCSS dependency files gracefully, [PR#14128](https://github.com/meteor/meteor/pull/14128)
+- Fix `meteor node` using wrong Node.js version after git branch switch, [PR#14144](https://github.com/meteor/meteor/pull/14144)
+- Enable dev-bundle fast path on Apple Silicon Macs, [PR#14146](https://github.com/meteor/meteor/pull/14146)
+- Fix Cordova platforms detection to avoid modern/legacy mismatch, [PR#14113](https://github.com/meteor/meteor/pull/14113)
+- Remove `Vary: User-Agent` header from hashed assets, [PR#14122](https://github.com/meteor/meteor/pull/14122)
+- Handle quoted values in `SERVER_NODE_OPTIONS`, [PR#14225](https://github.com/meteor/meteor/pull/14225)
+- Skip CSS fragment identifiers in module warnings, [PR#14079](https://github.com/meteor/meteor/pull/14079)
+- Lazy-load `vscode-nsfw` to support RHEL 8 environments, [PR#14058](https://github.com/meteor/meteor/pull/14058)
+- Fix `Cursor` transform types in `mongo.d.ts`, [PR#13774](https://github.com/meteor/meteor/pull/13774)
+- Do not throw error on `forgotPassword` when `ambiguousErrorMessages` is set, [PR#14060](https://github.com/meteor/meteor/pull/14060)
+- Fix Watchman `RootResolveError` for symlinked packages, [PR#14045](https://github.com/meteor/meteor/pull/14045)
+- Fix `getUsersInRoleAsync` to handle assignment options correctly, [PR#14014](https://github.com/meteor/meteor/pull/14014)
+- Fix displaying Google Maps in mobile applications by preserving native globals in legacy polyfills
+- Remove unused `_processOneDataMessage` from DDP client
+- Fix bugs with test-in-console, [PR#13000](https://github.com/meteor/meteor/pull/13000)
+- Await async test driver `start()` in `test_environment.js` to prevent unhandled rejections, [PR#14317](https://github.com/meteor/meteor/pull/14317)
+- Disable `hot-module-replacement` client WebSocket in test modes to stop `__meteor__hmr__/websocket` console errors, [PR#14333](https://github.com/meteor/meteor/pull/14333)
+- Exclude transient `.cache` directory from `node_modules` during bundling to prevent ENOENT race conditions, [PR#14339](https://github.com/meteor/meteor/pull/14339)
+- Fix operator precedence bug in `passwordValidator` that could reject valid passwords, [PR#14075](https://github.com/meteor/meteor/pull/14075), [PR#14169](https://github.com/meteor/meteor/pull/14169)
+
+All Merged PRs@[GitHub PRs 3.4.1](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.4.1)
+
+#### Breaking Changes
+
+N/A
+
+#### Internal API changes
+
+- Removed unused `_processOneDataMessage` method from DDP client `Connection` class
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.4.1
+```
+
+#### Bumped Meteor Packages
+
+- meteor-tool@3.4.1
+- accounts-2fa@3.0.2
+- accounts-base@3.2.1
+- accounts-password@3.2.3
+- babel-compiler@7.14.0
+- callback-hook@1.7.0
+- ddp-client@3.2.0
+- ddp-server@3.2.0
+- ecmascript@0.18.0
+- ecmascript-runtime-client@0.13.0
+- facebook-config-ui@1.1.0
+- google-config-ui@1.1.0
+- hot-module-replacement@0.6.0
+- meetup-config-ui@1.1.0
+- meteor@2.3.0
+- meteor-developer-config-ui@1.1.0
+- minifier-js@3.2.0
+- minimongo@2.1.0
+- mongo@2.3.0
+- roles@1.1.0
+- rspack@1.1.0
+- server-render@0.4.4
+- standard-minifier-css@1.10.1
+- test-in-console@2.0.2
+- tinytest@1.4.0
+- tools-core@1.1.0
+- twitter-config-ui@1.1.0
+- typescript@5.10.0
+- webapp@2.1.2
+- weibo-config-ui@1.1.0
+
+#### Bumped NPM Packages
+
+- @meteorjs/rspack@2.0.1
+
 ## v3.4.0, 2026-01-30
 
 ### Highlights

@@ -32,9 +32,10 @@
     "lint:fix": "oxlint --fix --ignore-path .oxlintignore .",
     "install:unit": "cd tools/unit-tests && npm install",
     "test:unit": "cd tools/unit-tests && npm test",
+    "install:e2e": "cd tools/e2e-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
+    "test:e2e": "cd tools/e2e-tests && npm test -- ",
+    "create-app:e2e": "cd tools/e2e-tests && node scripts/create-app.js",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
-    "install:e2e": "cd tools/modern-tests && npm install && npx playwright install --with-deps chromium chromium-headless-shell",
-    "test:e2e": "cd tools/modern-tests && npm test -- ",
     "checkout:pr": "node scripts/checkout-pr.js",
     "ts-coverage": "typescript-coverage-report",
     "ts-coverage:ci": "type-coverage --at-least 80"

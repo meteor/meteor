@@ -4,36 +4,49 @@ on:
   pull_request:
     paths:
       - 'meteor'
-      - 'tools/modern-tests/**'
+      - 'tools/e2e-tests/**'
       - 'packages/rspack/**'
       - 'packages/tools-core/**'
       - 'packages/babel-compiler/**'
       - 'packages/meteor-tool/**'
       - 'npm-packages/meteor-rspack/**'
+      - 'tools/isobuild/**'
       - 'tools/static-assets/skel-**'
       - '.github/workflows/e2e-tests.yml'
 
 concurrency:
-  group: meteor-rspack-tests-${{ github.ref }}
+  group: meteor-e2e-tests-${{ github.ref }}
   cancel-in-progress: true
 
 env:
-  NODE_OPTIONS: "--max_old_space_size=12288"
+  TOOL_NODE_FLAGS: "--max_old_space_size=12288"
+  # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
+  # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
+  NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
+  # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
+  METEOR_E2E_TEST_RETRIES: 1
 
 jobs:
   test:
     name: ${{ matrix.category }}
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
+    timeout-minutes: 60
+    container:
+      image: node:22-bookworm
+      options: --cpus 6 --memory 16g --security-opt seccomp=unconfined
+
     strategy:
       fail-fast: false
+      max-parallel: 4
       matrix:
         category:
           - Angular
           - Babel
           - Blaze
           - Coffeescript
-          - Library
+          - Examples
           - Monorepo
+          - Other
           - React
           - R.Router
           - Solid
@@ -43,29 +56,30 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Cache dependencies
+        id: deps-cache
         uses: actions/cache@v4
         with:
           path: |
-            ~/.npm
-            node_modules
-            tools/modern-tests/node_modules
-            packages/**/.npm
-            .meteor
+            /root/.npm
+            /root/.cache/ms-playwright
             dev_bundle
             .babel-cache
-            ~/.cache/ms-playwright
-
-          key: ${{ runner.os }}-meteor-${{ hashFiles('**/package-lock.json', 'meteor') }}
+            .meteor
+            node_modules
+            tools/e2e-tests/node_modules
+          key: e2e-${{ runner.os }}-${{ hashFiles('package-lock.json', 'meteor', 'tools/e2e-tests/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-
+            e2e-${{ runner.os }}-
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22.x
+      - name: Install Playwright browsers
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium chromium-headless-shell
+
+      - name: Install Playwright system dependencies
+        run: npx playwright install-deps chromium
 
       - name: Install deps
         run: npm install
@@ -73,14 +87,27 @@ jobs:
       - name: Install test deps
         run: npm run install:e2e
 
+      - name: Set NPM_LINK_RSPACK=false for release branches
+        run: |
+          echo "Current branch: ${{ github.head_ref || github.ref_name }}"
+          if [[ "${{ github.head_ref || github.ref_name }}" == release-* ]]; then
+            echo "NPM_LINK_RSPACK=false" >> $GITHUB_ENV
+            echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm — make sure the latest version is published or tests may fail."
+          fi
+
       - name: Prepare Meteor
-        run: ./meteor --get-ready
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: ./meteor --get-ready --allow-superuser
 
       - name: Run tests for ${{ matrix.category }}
-        uses: nick-fields/retry@v3
-        with:
-          max_attempts: 3
-          retry_on: error
-          timeout_minutes: 15
-          retry_wait_seconds: 90
-          command: npm run test:e2e -- -t="${{ matrix.category }}"
+        id: test-run
+        continue-on-error: true
+        timeout-minutes: 15
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+
+      - name: Retry failed tests for ${{ matrix.category }}
+        if: steps.test-run.outcome == 'failure'
+        timeout-minutes: 20
+        run: |
+          echo "::warning::First attempt failed, retrying..."
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"

@@ -1,0 +1,15 @@
+{
+  "name": "Monorepo Test App",
+  "short_name": "Monorepo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/icon.png",
+      "sizes": "1x1",
+      "type": "image/png"
+    }
+  ]
+}
