@@ -3,31 +3,64 @@ const path = require('path');
 const { spawnProcess } = require('./process');
 
 /**
+ * Returns the Meteor dev_bundle bin directory path if available, otherwise null.
+ *
+ * @returns {string|null} The path to the dev_bundle bin directory, or null if not available
+ */
+function resolveNodeBinDir() {
+  try {
+    if (typeof Plugin !== 'undefined' &&
+        typeof Plugin.getCurrentNodeBinDir === 'function' &&
+        Plugin.getCurrentNodeBinDir()) {
+      return Plugin.getCurrentNodeBinDir();
+    }
+
+    if (typeof getCurrentNodeBinDir === 'function') {
+      return getCurrentNodeBinDir();
+    }
+  } catch (e) {
+    // fall through
+  }
+  return null;
+}
+
+/**
+ * Returns environment variables that ensure child processes can find
+ * Meteor's bundled Node.js (and npm/npx) on their PATH.
+ *
+ * When the dev_bundle bin directory is available, it is prepended to PATH
+ * so that `#!/usr/bin/env node` shebangs in spawned scripts resolve to
+ * Meteor's Node rather than requiring a separate global install.
+ *
+ * Returns an empty object when the bin directory cannot be determined,
+ * leaving the caller's environment unchanged.
+ *
+ * @returns {Object} An object with a PATH key, or empty object
+ */
+export function getNodeBinEnv() {
+  const binDir = resolveNodeBinDir();
+  if (!binDir) {
+    return {};
+  }
+  const currentPath = process.env.PATH || process.env.Path || '';
+  return {
+    PATH: binDir + path.delimiter + currentPath,
+  };
+}
+
+/**
  * Gets the path to a Node.js binary using Plugin.getCurrentNodeBinDir() if available,
  * otherwise returns null.
- * 
+ *
  * @param {string} binaryName - The name of the binary (e.g., 'npm', 'npx', 'node')
  * @returns {string|null} The path to the specified binary, or null if not available
  */
 export function getNodeBinaryPath(binaryName) {
-  try {
-    // Try to access Plugin.getCurrentNodeBinDir()
-    if (typeof Plugin !== 'undefined' && 
-        typeof Plugin.getCurrentNodeBinDir === 'function' && 
-        Plugin.getCurrentNodeBinDir()) {
-      return path.join(Plugin.getCurrentNodeBinDir(), binaryName);
-    }
-
-    // If we're in a context where we can directly access the function
-    if (typeof getCurrentNodeBinDir === 'function') {
-      return path.join(getCurrentNodeBinDir(), binaryName);
-    }
-
-    return null;
-  } catch (e) {
-    // If any error occurs, return null
-    return null;
+  const binDir = resolveNodeBinDir();
+  if (binDir) {
+    return path.join(binDir, binaryName);
   }
+  return null;
 }
 
 /**

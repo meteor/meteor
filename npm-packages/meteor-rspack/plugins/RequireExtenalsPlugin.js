@@ -10,6 +10,10 @@
 const fs = require('fs');
 const path = require('path');
 
+// Normalize a path to always use forward slashes (POSIX style).
+// Module identifiers in bundled JS must use '/' regardless of OS.
+const toPosix = (p) => p.replace(/\\/g, '/');
+
 class RequireExternalsPlugin {
   constructor({
     filePath,
@@ -46,7 +50,7 @@ class RequireExternalsPlugin {
     // Prepare paths
     this.filePath = path.resolve(process.cwd(), filePath);
     this.backRoot = '../'.repeat(
-      filePath.replace(/^\.?\/+/, '').split('/').length - 1
+      filePath.replace(/^\.?[/\\]+/, '').split(/[/\\]/).length - 1
     );
 
     // Initialize funcCount based on existing helpers in the file
@@ -96,14 +100,16 @@ class RequireExternalsPlugin {
       pkg &&
       (path.isAbsolute(pkg) ||
         pkg.startsWith('./') ||
+        pkg.startsWith('.\\') ||
         pkg.startsWith('../') ||
+        pkg.startsWith('..\\') ||
         !!depInfo.ext)
     ) {
       const module = this.externalsMeta.get(pkg);
       if (module) {
-        return `${this.backRoot}${module.relativeRequest}`;
+        return `${this.backRoot}${toPosix(module.relativeRequest)}`;
       }
-      return `${this.backRoot}${name}`;
+      return `${this.backRoot}${toPosix(name)}`;
     }
 
     return pkg;
@@ -132,7 +138,7 @@ class RequireExternalsPlugin {
               this.externalsMeta.set(externalRequest, {
                 originalRequest: request,
                 externalRequest,
-                relativeRequest: path.join(relContext, request),
+                relativeRequest: toPosix(path.join(relContext, request)),
               });
 
               // tell Rspack "don't bundle this, import it at runtime"
