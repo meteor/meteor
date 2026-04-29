@@ -15,11 +15,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - reactivity_order: 'changeStreams,polling'
-            test_port: 4096
-          - reactivity_order: 'oplog,polling'
-            test_port: 4097
+        reactivity_order:
+          - 'changeStreams,polling'
+          - 'oplog,polling'
     runs-on: oss-vm
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
@@ -33,7 +31,6 @@ jobs:
       METEOR_MODERN: true
       NODE_ENV: CI
       METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
-      TEST_PORT: ${{ matrix.test_port }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -49,6 +46,16 @@ jobs:
         # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
         # so run.sh skips the slow `./meteor npm install -g puppeteer` step.
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Kill stale Meteor processes from previous runs
+        # Self-hosted runners reuse the same VM across jobs. If a previous run
+        # was cancelled or timed out, leftover `meteor`/`node` processes can
+        # still hold the test port and break this run.
+        run: |
+          pkill -f "meteor test-packages" || true
+          pkill -f "puppeteer_runner.js" || true
+          pkill -f "test-in-console" || true
+          sleep 1
 
       - name: Restore caches
         uses: actions/cache@v4

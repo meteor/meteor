@@ -18,7 +18,11 @@ fi
 
 export PATH=$METEOR_HOME:$PATH
 
-TEST_PORT="${TEST_PORT:-4096}"
+if [ -z "$TEST_PORT" ]; then
+  # Pick a free ephemeral port to avoid colliding with stale Meteor instances
+  # left behind on shared/self-hosted runners.
+  TEST_PORT=$(node -e 'const s=require("net").createServer();s.listen(0,"127.0.0.1",()=>{const p=s.address().port;s.close(()=>console.log(p))})' 2>/dev/null || echo 4096)
+fi
 export URL="http://127.0.0.1:${TEST_PORT}/"
 export METEOR_PACKAGE_DIRS='packages/deprecated'
 export METEOR_NO_DEPRECATION=true
