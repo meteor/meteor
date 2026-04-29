@@ -3,9 +3,11 @@
  * @description Constants and global state keys for Rspack plugin
  */
 
+import path from 'path';
+
 export const DEFAULT_RSPACK_VERSION = '1.7.1';
 
-export const DEFAULT_METEOR_RSPACK_VERSION = '1.0.1';
+export const DEFAULT_METEOR_RSPACK_VERSION = '2.0.1';
 
 export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';
 
@@ -15,7 +17,7 @@ export const DEFAULT_METEOR_RSPACK_SWC_LOADER_VERSION = '0.2.6';
 
 export const DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION = '0.5.17';
 
-export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.2.3';
+export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.7';
 
 /**
  * Global state keys used for storing and retrieving state across the application
@@ -46,6 +48,10 @@ export const GLOBAL_STATE_KEYS = {
 
 const meteorConfig = typeof Plugin !== 'undefined' ? Plugin?.getMeteorConfig() : null;
 
+const meteorLocalDirName = process.env.METEOR_LOCAL_DIR
+  ? path.basename(process.env.METEOR_LOCAL_DIR.replace(/\\/g, '/'))
+  : '';
+
 /**
  * Directory name for Rspack build context
  * Can be overridden with RSPACK_BUILD_CONTEXT environment variable
@@ -54,7 +60,7 @@ const meteorConfig = typeof Plugin !== 'undefined' ? Plugin?.getMeteorConfig() :
 export const RSPACK_BUILD_CONTEXT =
   meteorConfig?.buildContext ||
   process.env.RSPACK_BUILD_CONTEXT ||
-  '_build';
+  `_build${(meteorLocalDirName && `-${meteorLocalDirName}`) || ''}`;
 
 process.env.RSPACK_BUILD_CONTEXT = RSPACK_BUILD_CONTEXT;
 
@@ -66,7 +72,7 @@ process.env.RSPACK_BUILD_CONTEXT = RSPACK_BUILD_CONTEXT;
 export const RSPACK_ASSETS_CONTEXT =
   meteorConfig?.assetsContext ||
   process.env.RSPACK_ASSETS_CONTEXT ||
-  'build-assets';
+  `build-assets${(meteorLocalDirName && `-${meteorLocalDirName}`) || ''}`;
 
 process.env.RSPACK_ASSETS_CONTEXT = RSPACK_ASSETS_CONTEXT;
 
@@ -78,7 +84,7 @@ process.env.RSPACK_ASSETS_CONTEXT = RSPACK_ASSETS_CONTEXT;
 export const RSPACK_CHUNKS_CONTEXT =
   meteorConfig?.chunksContext ||
   process.env.RSPACK_CHUNKS_CONTEXT ||
-  'build-chunks';
+  `build-chunks${(meteorLocalDirName && `-${meteorLocalDirName}`) || ''}`;
 
 process.env.RSPACK_CHUNKS_CONTEXT = RSPACK_CHUNKS_CONTEXT;
 

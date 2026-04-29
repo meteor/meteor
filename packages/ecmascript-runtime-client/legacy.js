@@ -1,8 +1,7 @@
 try {
-  Symbol = exports.Symbol = require("core-js/es/symbol");
-  Map = exports.Map = require("core-js/es/map");
-  Set = exports.Set = require("core-js/es/set");
-
+  Symbol = exports.Symbol = global.Symbol || require("core-js/es/symbol");
+  Map = exports.Map = global.Map || require("core-js/es/map");
+  Set = exports.Set = global.Set || require("core-js/es/set");
 } catch (e) {
   throw new Error([
     "The core-js npm package could not be found in your node_modules ",
