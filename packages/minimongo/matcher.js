@@ -28,7 +28,7 @@ const Decimal = Package['mongo-decimal']?.Decimal || class DecimalStub {}
 //   var matcher = new Minimongo.Matcher({a: {$gt: 5}});
 //   if (matcher.documentMatches({a: 7})) ...
 export default class Matcher {
-  constructor(selector, isUpdate, collation) {
+  constructor(selector, isUpdate) {
     // A set (object mapping string -> *) of all of the document paths looked
     // at by the selector. Also includes the empty string if it may look at any
     // path (eg, $where).
@@ -49,9 +49,6 @@ export default class Matcher {
     // translated into {_id: ID} first. Used by canBecomeTrueByModifier and
     // Sorter._useWithMatcher.
     this._selector = null;
-    // An optional Intl.Collator for locale-aware string comparison (mirrors
-    // MongoDB's collation option).
-    this._collator = LocalCollection._createCollator(collation);
     this._docMatcher = this._compileSelector(selector);
     // Set to true if selection is done for an update operation
     // Default is false
@@ -95,12 +92,6 @@ export default class Matcher {
     if (LocalCollection._selectorIsId(selector)) {
       this._selector = {_id: selector};
       this._recordPathUsed('_id');
-
-      if (this._collator) {
-        // When a collator is active, compile {_id: selector} as a regular
-        // document selector so string comparison uses the collator.
-        return compileDocumentSelector(this._selector, this, {isRoot: true});
-      }
 
       return doc => ({result: EJSON.equals(doc._id, selector)});
     }
@@ -198,12 +189,7 @@ LocalCollection._f = {
   },
 
   // deep equality test: use for literal document and array matches
-  // When a collator (Intl.Collator) is provided, string equality uses
-  // locale-aware comparison instead of strict ===.
-  _equal(a, b, collator) {
-    if (collator && typeof a === 'string' && typeof b === 'string') {
-      return collator.compare(a, b) === 0;
-    }
+  _equal(a, b) {
     return EJSON.equals(a, b, {keyOrderSensitive: true});
   },
 
@@ -241,9 +227,7 @@ LocalCollection._f = {
   // semantics. (as an extension, consider 'undefined' to be less than
   // any other value.) return negative if a is less, positive if b is
   // less, or 0 if equal
-  // When a collator (Intl.Collator) is provided, string comparison uses
-  // locale-aware ordering instead of lexicographic <.
-  _cmp(a, b, collator) {
+  _cmp(a, b) {
     if (a === undefined) {
       return b === undefined ? 0 : -1;
     }
@@ -290,12 +274,8 @@ LocalCollection._f = {
       }
     }
 
-    if (tb === 2) { // string
-      if (collator) {
-        return collator.compare(a, b);
-      }
+    if (tb === 2) // string
       return a < b ? -1 : a === b ? 0 : 1;
-    }
 
     if (ta === 3) { // Object
       // this could be much more efficient in the expected case ...
@@ -309,7 +289,7 @@ LocalCollection._f = {
         return result;
       };
 
-      return LocalCollection._f._cmp(toArray(a), toArray(b), collator);
+      return LocalCollection._f._cmp(toArray(a), toArray(b));
     }
 
     if (ta === 4) { // Array
@@ -322,7 +302,7 @@ LocalCollection._f = {
           return 1;
         }
 
-        const s = LocalCollection._f._cmp(a[i], b[i], collator);
+        const s = LocalCollection._f._cmp(a[i], b[i]);
         if (s !== 0) {
           return s;
         }
@@ -376,57 +356,4 @@ LocalCollection._f = {
 
     throw Error('Unknown type to sort');
   },
-};
-
-// Creates an Intl.Collator from a MongoDB-style collation spec.
-// MongoDB collation options map to Intl.Collator options as follows:
-//   strength 1 (primary)   → sensitivity 'base'   (a = A = á = Á)
-//   strength 2 (secondary) → sensitivity 'accent'  (a = A, á ≠ a)
-//   strength 3 (tertiary)  → sensitivity 'variant' (a ≠ A, á ≠ a)
-//   caseLevel true at strength 1 → sensitivity 'case' (a ≠ A, á = a)
-//   numericOrdering        → numeric
-//   caseFirst              → caseFirst ('upper'|'lower'|'false')
-const STRENGTH_TO_SENSITIVITY = { 1: 'base', 2: 'accent' };
-
-LocalCollection._createCollator = function (collation) {
-  if (!collation) {
-    return null;
-  }
-  if (collation instanceof Intl.Collator) {
-    return collation;
-  }
-  if (Meteor.isDevelopment) {
-    if (typeof collation !== 'object') {
-      throw Error('collation must be an object');
-    }
-    if (typeof collation.locale !== 'string' || !collation.locale) {
-      throw Error('collation.locale must be a non-empty string');
-    }
-    if (collation.strength != null &&
-        (typeof collation.strength !== 'number' || collation.strength < 1 || collation.strength > 5)) {
-      throw Error('collation.strength must be an integer between 1 and 5');
-    }
-    if (collation.strength != null && collation.strength > 3) {
-      Meteor._debug(
-        'collation.strength values 4 and 5 have no Intl.Collator equivalent ' +
-        'and are only supported server-side via the MongoDB driver'
-      );
-    }
-  }
-
-  const options = {};
-  if (collation.strength != null) {
-    if (collation.strength === 1 && collation.caseLevel) {
-      options.sensitivity = 'case';
-    } else {
-      options.sensitivity = STRENGTH_TO_SENSITIVITY[collation.strength] || 'variant';
-    }
-  }
-  if (collation.numericOrdering != null) {
-    options.numeric = collation.numericOrdering;
-  }
-  if (collation.caseFirst != null && collation.caseFirst !== 'off') {
-    options.caseFirst = collation.caseFirst;
-  }
-  return new Intl.Collator(collation.locale, options);
 };

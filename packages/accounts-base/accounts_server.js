@@ -570,7 +570,7 @@ export class AccountsServer extends AccountsCommon {
     type,
     fn
   ) {
-    return await this._attemptLogin(
+    return this._attemptLogin(
       methodInvocation,
       methodName,
       methodArgs,
@@ -717,7 +717,7 @@ export class AccountsServer extends AccountsCommon {
       const result = await accounts._runLoginHandlers(this, options);
       //console.log({result});
 
-      return await accounts._attemptLogin(this, "login", arguments, result);
+      return accounts._attemptLogin(this, "login", arguments, result);
     };
 
     methods.logout = async function () {
@@ -770,7 +770,7 @@ export class AccountsServer extends AccountsCommon {
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
       await accounts._insertLoginToken(this.userId, newStampedToken);
-      return await accounts._loginUser(this, this.userId, newStampedToken);
+      return accounts._loginUser(this, this.userId, newStampedToken);
     };
 
     // Removes all tokens except the token associated with the current
@@ -1688,13 +1688,13 @@ const defaultResumeLoginHandler = async (accounts, options) => {
   // {hashedToken, when} for a hashed token or {token, when} for an
   // unhashed token.
   let oldUnhashedStyleToken;
-  let token = await user.services.resume.loginTokens.find(token =>
+  let token = user.services.resume.loginTokens.find(token =>
     token.hashedToken === hashedToken
   );
   if (token) {
     oldUnhashedStyleToken = false;
   } else {
-     token = await user.services.resume.loginTokens.find(token =>
+    token = user.services.resume.loginTokens.find(token =>
       token.token === options.resume
     );
     oldUnhashedStyleToken = true;

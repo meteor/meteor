@@ -22,10 +22,9 @@ import {
 // first, or 0 if neither object comes before the other.
 
 export default class Sorter {
-  constructor(spec, collation) {
+  constructor(spec) {
     this._sortSpecParts = [];
     this._sortFunction = null;
-    this._collator = LocalCollection._createCollator(collation);
 
     const addSpecPart = (path, ascending) => {
       if (!path) {
@@ -292,10 +291,9 @@ export default class Sorter {
   // on field 'i'.
   _keyFieldComparator(i) {
     const invert = !this._sortSpecParts[i].ascending;
-    const collator = this._collator;
 
     return (key1, key2) => {
-      const compare = LocalCollection._f._cmp(key1[i], key2[i], collator);
+      const compare = LocalCollection._f._cmp(key1[i], key2[i]);
       return invert ? -compare : compare;
     };
   }

@@ -57,6 +57,10 @@ const getWritableGroupName = () => {
     process.getgroups().forEach((groupId) => gidsToTry.add(groupId));
   }
 
+  if (typeof process.getgroups === 'function') {
+    process.getgroups().forEach((groupId) => gidsToTry.add(groupId));
+  }
+
   for (const groupId of gidsToTry) {
     const groupName = getGroupNameForGid(groupId);
     if (groupName) {
