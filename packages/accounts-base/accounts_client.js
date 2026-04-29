@@ -181,6 +181,10 @@ export class AccountsClient extends AccountsCommon {
     this._callLogoutMethod('logout', callback);
   }
 
+  logoutAsync() {
+    return Meteor.promisify(this.logout, this)();
+  }
+
   /**
    * @summary Log out all clients logged in as the current user and logs the current user out as well.
    * @locus Client
@@ -188,6 +192,10 @@ export class AccountsClient extends AccountsCommon {
    */
   logoutAllClients(callback) {
     this._callLogoutMethod('logoutAllClients', callback);
+  }
+
+  logoutAllClientsAsync() {
+    return Meteor.promisify(this.logoutAllClients, this)();
   }
 
   /**
@@ -233,6 +241,10 @@ export class AccountsClient extends AccountsCommon {
       { wait: true },
       err => callback?.(err)
     );
+  }
+
+  logoutOtherClientsAsync() {
+    return Meteor.promisify(this.logoutOtherClients, this)();
   }
 
   ///
@@ -576,6 +588,10 @@ export class AccountsClient extends AccountsCommon {
     });
   };
 
+  loginWithTokenAsync(token) {
+    return Meteor.promisify(this.loginWithToken, this)(token);
+  };
+
   // Attempt startup login using an HttpOnly cookie by requesting a
   // short-lived resume token from the server.
   async loginWithCookie() {
@@ -583,21 +599,21 @@ export class AccountsClient extends AccountsCommon {
       const res = await fetch('/_accounts/cookie/refresh', {
         method: 'GET',
         credentials: 'include',
-        headers: { 'Accept': 'application/json' },
+        headers: { Accept: 'application/json' },
       });
       if (!res.ok) return;
       const body = await res.json();
-      if (body && body.token) {
-        this.loginWithToken(body.token, (err) => {
+      if (body?.token) {
+        this.loginWithToken(body.token, async (err) => {
           if (err) {
-            this.makeClientLoggedOut();
+            await this.makeClientLoggedOut();
           }
         });
       }
     } catch (_e) {
       // ignore
     }
-  }
+  };
 
   // Semi-internal API. Call this function to re-enable auto login after
   // if it was disabled at startup.
@@ -915,12 +931,28 @@ Meteor.loggingOut = () => Accounts.loggingOut();
 Meteor.logout = callback => Accounts.logout(callback);
 
 /**
+ * @summary Log the user out. Returns a Promise.
+ * @locus Client
+ * @returns {Promise<void>} Resolves on success, rejects with error on failure.
+ * @importFromPackage meteor
+ */
+Meteor.logoutAsync = () => Accounts.logoutAsync();
+
+/**
  * @summary Log out all clients logged in as the current user and logs the current user out as well.
  * @locus Client
  * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
  * @importFromPackage meteor
  */
 Meteor.logoutAllClients = callback => Accounts.logoutAllClients(callback);
+
+/**
+ * @summary Log out all clients logged in as the current user and logs the current user out as well. Returns a Promise.
+ * @locus Client
+ * @returns {Promise<void>} Resolves on success, rejects with error on failure.
+ * @importFromPackage meteor
+ */
+Meteor.logoutAllClientsAsync = () => Accounts.logoutAllClientsAsync();
 
 /**
  * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function.
@@ -931,16 +963,35 @@ Meteor.logoutAllClients = callback => Accounts.logoutAllClients(callback);
 Meteor.logoutOtherClients = callback => Accounts.logoutOtherClients(callback);
 
 /**
+ * @summary Log out other clients logged in as the current user, but does not log out the client that calls this function. Returns a Promise.
+ * @locus Client
+ * @returns {Promise<void>} Resolves on success, rejects with error on failure.
+ * @importFromPackage meteor
+ */
+Meteor.logoutOtherClientsAsync = () => Accounts.logoutOtherClientsAsync();
+
+/**
  * @summary Login with a Meteor access token.
  * @locus Client
- * @param {Object} [token] Local storage token for use with login across
+ * @param {String} token Local storage token for use with login across
  * multiple tabs in the same browser.
  * @param {Function} [callback] Optional callback. Called with no arguments on
- * success.
+ * success, or with a single `Error` argument on failure.
  * @importFromPackage meteor
  */
 Meteor.loginWithToken = (token, callback) =>
   Accounts.loginWithToken(token, callback);
+
+/**
+ * @summary Login with a Meteor access token. Returns a Promise.
+ * @locus Client
+ * @param {String} token Local storage token for use with login across
+ * multiple tabs in the same browser.
+ * @returns {Promise<Object>} Resolves with login details on success, rejects with error on failure.
+ * @importFromPackage meteor
+ */
+Meteor.loginWithTokenAsync = (token) =>
+  Accounts.loginWithTokenAsync(token);
 
 ///
 /// HANDLEBARS HELPERS
