@@ -138,5 +138,4 @@ Package.onTest(function (api) {
   api.addFiles("tests/changestream_observe_driver_tests.js", "server");
   api.addFiles("tests/oplog_v2_converter_tests.js", "server");
   api.addFiles("tests/doc_fetcher_tests.js", "server");
-  api.addFiles("tests/collation_tests.js", ["client", "server"]);
 });

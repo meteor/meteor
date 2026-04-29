@@ -9,21 +9,16 @@ export default class Cursor {
   constructor(collection, selector, options = {}) {
     this.collection = collection;
     this.sorter = null;
+    this.matcher = new Minimongo.Matcher(selector);
 
-    // Create the collator once and share it with both Matcher and Sorter.
-    const collator = LocalCollection._createCollator(options.collation);
-
-    this.matcher = new Minimongo.Matcher(selector, undefined, collator);
-
-    if (LocalCollection._selectorIsIdPerhapsAsObject(selector) &&
-        !options.collation) {
+    if (LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
       // stash for fast _id and { _id }
       this._selectorId = hasOwn.call(selector, '_id') ? selector._id : selector;
     } else {
       this._selectorId = undefined;
 
       if (this.matcher.hasGeoQuery() || options.sort) {
-        this.sorter = new Minimongo.Sorter(options.sort || [], collator);
+        this.sorter = new Minimongo.Sorter(options.sort || []);
       }
     }
 

@@ -23,6 +23,7 @@ import { requestGarbageCollection } from "../utils/gc.js";
 import { Unibuild } from "./unibuild.js";
 import rspackHelpers from "../tool-env/rspack";
 import { getCurrentNodeBinDir, getDevBundle } from "../fs/files";
+import { runLogInstance } from "../runners/run-log";
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -529,6 +530,9 @@ Object.assign(Isopack.prototype, {
 
       // Share the rspackHelpers as part of plugin API
       rspackHelpers,
+
+      // Share the runLogInstance as part of plugin API
+      runLogInstance,
 
       // 'extension' is a file extension without the separation dot
       // (eg 'js', 'coffee', 'coffee.md')
