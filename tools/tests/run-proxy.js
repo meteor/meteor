@@ -114,7 +114,7 @@ async function waitUntil(fn) {
  * Waits for a socket to emit close if it has not already closed.
  */
 function waitForSocketToClose(socket) {
-  if (socket.closed) {
+  if (socket.destroyed || socket.closed) {
     return Promise.resolve();
   }
 
