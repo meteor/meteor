@@ -677,9 +677,37 @@ export class TestRun {
         });
       });
     } else {
-      // client
-      return this._runTest(test, () => {
+      // client. Mirror the server-side three-minute guard so a test that
+      // hangs awaiting a never-completing Meteor.callAsync (e.g. a DDP
+      // transport regression that drops the response) fails loudly with a
+      // recognizable message instead of silently stalling the whole run
+      // until the CI job timeout fires.
+      const timeoutMs = (typeof Meteor !== "undefined"
+        && Meteor.settings
+        && Meteor.settings.public
+        && Number(Meteor.settings.public.tinytestClientTimeoutMs)) || 3 * 60 * 1000;
+
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        Meteor.clearTimeout(timeoutId);
         onComplete && onComplete();
+      };
+      const timeoutId = Meteor.setTimeout(() => {
+        if (settled) return;
+        test.timedOut = true;
+        this._report(test, {
+          type: "exception",
+          details: {
+            message: "test timed out (client)"
+          }
+        });
+        finish();
+      }, timeoutMs);
+
+      return this._runTest(test, () => {
+        finish();
       }, stop_at_offset);
     }
   }

@@ -10,15 +10,77 @@ try {
 
 let testNumber = 0;
 
+// Watchdog: convert silent stalls into actionable failures. The runner used to
+// rely entirely on the per-`console`-event heartbeat, which is driven by client
+// log output. A client test that hangs awaiting a never-completing Meteor call
+// (e.g. a DDP transport regression) produces no console output, so nothing
+// fires and the whole run silently waits for the GitHub Actions job timeout.
+const IDLE_TIMEOUT_MS = parseInt(process.env.PUPPETEER_IDLE_TIMEOUT_MS, 10) || 120000;
+const WATCHDOG_TICK_MS = 5000;
+let lastActivityAt = Date.now();
+const bumpActivity = () => { lastActivityAt = Date.now(); };
+
+function fail(reason, code = 1) {
+  // Best-effort exit. Some callers may already have torn down the browser;
+  // log first so the reason always lands in CI output.
+  console.error(reason);
+  process.exit(code);
+}
+
+async function dumpDiagnostics(page, label) {
+  const safe = async (fn, fallback) => {
+    try { return await fn(); } catch (e) { return fallback ?? `<error: ${e.message}>`; }
+  };
+  const clientTest = await safe(
+    () => page.evaluate(() => __Tinytest._getCurrentRunningTestOnClient()),
+    "<unavailable>"
+  );
+  const serverTest = await safe(
+    () => page.evaluate(async () => await __Tinytest._getCurrentRunningTestOnServer()),
+    "<unavailable>"
+  );
+  const ddpState = await safe(
+    () => page.evaluate(() => {
+      const conn = (typeof Meteor !== "undefined" && Meteor.connection) || null;
+      if (!conn) return { error: "Meteor.connection unavailable" };
+      const status = typeof conn.status === "function" ? conn.status() : null;
+      const pendingMethods = [];
+      const methodInvokers = conn._methodInvokers || {};
+      for (const id of Object.keys(methodInvokers)) {
+        const inv = methodInvokers[id];
+        pendingMethods.push({
+          id,
+          method: inv && inv._message && inv._message.method,
+          sentByClient: !!(inv && inv.sentMessage),
+        });
+      }
+      const subs = conn._subscriptions || {};
+      const pendingSubs = [];
+      for (const id of Object.keys(subs)) {
+        const sub = subs[id];
+        if (!sub || !sub.ready) {
+          pendingSubs.push({ id, name: sub && sub.name });
+        }
+      }
+      return { status, pendingMethods, pendingSubs };
+    }),
+    {}
+  );
+  console.error(`=== ${label} ===`);
+  console.error(`  current client test: ${clientTest}`);
+  console.error(`  current server test: ${serverTest}`);
+  console.error(`  ddp: ${JSON.stringify(ddpState)}`);
+  await safe(
+    () => page.screenshot({ path: `puppeteer-${label}.png`, fullPage: true }),
+    null
+  );
+}
+
 async function runNextUrl(browser) {
   const page = await browser.newPage();
 
-  // page.on('console', msg => {
-  //   console.log('PAGE LOG:', msg.text());
-  // });
-
   page.on("console", async (msg) => {
-    // if the test is running for too long without any output to the console (10 minutes)
+    bumpActivity();
     const text = msg.text();
     if (text.includes("Permissions policy violation")) {
       return;
@@ -47,6 +109,26 @@ async function runNextUrl(browser) {
     }
   });
 
+  // Surface every browser-side failure mode that was previously silent.
+  page.on("pageerror", (err) => {
+    bumpActivity();
+    console.error(`pageerror: ${err && err.message}\n${(err && err.stack) || ""}`);
+  });
+  page.on("error", (err) => {
+    // 'error' fires when the page process itself crashes — fatal for the run.
+    console.error(`page crashed: ${err && err.message}\n${(err && err.stack) || ""}`);
+    fail("aborting because the puppeteer page crashed");
+  });
+  page.on("requestfailed", (req) => {
+    bumpActivity();
+    const failure = req.failure();
+    console.error(`request failed: ${req.url()} — ${failure ? failure.errorText : "<no failure info>"}`);
+  });
+  page.on("requestfinished", () => bumpActivity());
+  browser.on("disconnected", () => {
+    fail("aborting because the puppeteer browser disconnected unexpectedly");
+  });
+
   if (!process.env.URL) {
     process.exit(1);
     return;
@@ -59,9 +141,25 @@ async function runNextUrl(browser) {
     timeout: 90000,
     waitUntil: "domcontentloaded",
   });
+  bumpActivity();
+
+  // Start the watchdog only after the initial navigation succeeded so a slow
+  // build does not get spuriously flagged.
+  const watchdog = setInterval(async () => {
+    const idleFor = Date.now() - lastActivityAt;
+    if (idleFor < IDLE_TIMEOUT_MS) return;
+    clearInterval(watchdog);
+    try {
+      await dumpDiagnostics(page, "watchdog-stall");
+    } finally {
+      fail(`watchdog: no browser activity for ${idleFor}ms — aborting (idle limit ${IDLE_TIMEOUT_MS}ms)`);
+    }
+  }, WATCHDOG_TICK_MS);
+  watchdog.unref?.();
 
   async function poll() {
     if (await isDone(page)) {
+      clearInterval(watchdog);
       const failCount = await getFailCount(page);
       console.log(`Tests complete with ${failCount} failures`);
       console.log(`Tests complete with ${await getPassCount(page)} passes`);
@@ -155,4 +253,17 @@ async function runTests() {
   await runNextUrl(browser);
 }
 
-runTests().catch((e) => console.log(`something broke while running puppeter: `, e));
+// Translate signals from run.sh / GitHub Actions into a non-zero exit so the
+// CI step is reported as failed (with whatever diagnostics already landed in
+// the log) instead of being marked cancelled.
+for (const sig of ["SIGTERM", "SIGINT"]) {
+  process.on(sig, () => {
+    console.error(`puppeteer_runner: received ${sig}, exiting`);
+    process.exit(1);
+  });
+}
+
+runTests().catch((e) => {
+  console.error(`something broke while running puppeteer:`, e);
+  process.exit(1);
+});
