@@ -567,6 +567,34 @@ export async function listTests(options) {
   Console.error(testList.generateSkipReport());
 }
 
+// Same options as getFilteredTests, plus `outFile` (filesystem path). Writes
+// a single JSON array (one entry per filtered test) to that file and a short
+// summary to stderr. Writing to a file rather than stdout keeps machine
+// consumers (e.g. the CI matrix builder) immune to any stdout preamble the
+// meteor wrapper or boot path may emit.
+export async function listTestsJson(options) {
+  const testList = await getFilteredTests(options);
+
+  // Pseudo-tags injected by getFilteredTests during filtering — strip them
+  // so consumers see only the tags each test was registered with.
+  const PSEUDO_TAGS = new Set([
+    'in other files', 'non-matching', 'unchanged', 'excluded', 'non-galaxy',
+  ]);
+
+  const entries = testList.filteredTests.map((test) => ({
+    file: test.file,
+    name: test.name,
+    tags: test.tags.filter((tag) => !PSEUDO_TAGS.has(tag)),
+  }));
+
+  files.writeFile(
+    files.pathResolve(options.outFile),
+    JSON.stringify(entries),
+    'utf8',
+  );
+  Console.error(entries.length + " tests listed.");
+}
+
 const shouldSkipCurrentTest = ({currentTestIndex, options: {skip, limit} = {}}) => {
   if (!skip && !limit) {
     return false;
