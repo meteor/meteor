@@ -1927,24 +1927,29 @@ if (Meteor.isServer) {
   });
 }
 
-testAsyncMulti('livedata connection - reconnect to a different server', [
-  function (test, expect) {
-    const self = this;
-    self.conn = DDP.connect('reverse.meteor.com');
-    pollUntil(
-      expect,
-      function () {
-        return self.conn.status().connected;
-      },
-      5000,
-      100,
-      false
-    );
-  },
-  function (test, expect) {
-    const self = this;
-    self.doTest = self.conn.status().connected;
-    if (self.doTest) {
+// Server-only: validates that conn.reconnect({url}) re-points the connection
+// to a different DDP server. The first endpoint is a hermetic in-process
+// fixture (see test/reverse_fixture.js); the second is the running test app.
+// Two distinct `reverse` implementations let us prove method calls land on
+// the new endpoint after the reconnect.
+if (Meteor.isServer) {
+  testAsyncMulti('livedata connection - reconnect to a different server', [
+    async function (test, expect) {
+      const self = this;
+      self.fixture = await ReverseFixture.start();
+      self.conn = DDP.connect(self.fixture.url);
+      pollUntil(
+        expect,
+        function () {
+          return self.conn.status().connected;
+        },
+        5000,
+        100,
+        false
+      );
+    },
+    function (test, expect) {
+      const self = this;
       self.conn.call(
         'reverse',
         'foo',
@@ -1952,11 +1957,9 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
           test.equal(res, 'oof');
         })
       );
-    }
-  },
-  function (test, expect) {
-    const self = this;
-    if (self.doTest) {
+    },
+    function (test, expect) {
+      const self = this;
       self.conn.reconnect({ url: getSelfConnectionUrl() });
       self.conn.call(
         'reverse',
@@ -1965,9 +1968,14 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
           test.equal(res, 'rab LOCAL');
         })
       );
-    }
-  }
-]);
+    },
+    async function (test, expect) {
+      const self = this;
+      self.conn.disconnect();
+      await self.fixture.stop();
+    },
+  ]);
+}
 
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
