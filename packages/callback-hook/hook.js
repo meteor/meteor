@@ -156,7 +156,12 @@ export class Hook {
    * @param iterator
    */
   forEach(iterator) {
-    for (const callback of this.callbacks) {
+    // Snapshot first so a callback can safely unregister itself (or other
+    // callbacks) without disturbing this iteration. The Set is also re-checked
+    // each step in case a callback removed a later one in the snapshot.
+    const snapshot = Array.from(this.callbacks);
+    for (const callback of snapshot) {
+      if (!this.callbacks.has(callback)) continue;
       if (!iterator(callback)) break;
     }
   }
