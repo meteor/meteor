@@ -59,6 +59,10 @@ import { randomToken } from '../utils/utils.js';
 import { Tropohouse } from '../packaging/tropohouse.js';
 import { PackageMap } from '../packaging/package-map.js';
 import { capture, enterJob } from '../utils/buildmessage.js';
+import {
+  getPreparedAppCacheEntry,
+  applyPreparedAppCacheEntry,
+} from './prepared-app-cache.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -185,6 +189,32 @@ export default class Sandbox {
   async createApp(to, template, options) {
     options = options || {};
     const absoluteTo = files.pathJoin(this.cwd, to);
+
+    // Cache fast-path: most self-tests call createApp(template) with no mock
+    // warehouse, no caller-specified release, and want --prepare-app to run.
+    // For that shape we can reuse a single warmed snapshot across sandboxes,
+    // skipping the (slow) cp_r → npm install → --prepare-app sequence below.
+    // Cache misses fall through to the inline path; the cache module returns
+    // null for unsupported configurations.
+    const useCache =
+      !this.warehouse && !options.release && !options.dontPrepareApp;
+    if (useCache) {
+      const releaseName = releaseCurrent.isProperRelease()
+        ? releaseCurrent.name
+        : null;
+      const cacheEntry = await getPreparedAppCacheEntry({
+        template,
+        releaseName,
+        upgradersToAppend: allUpgraders(),
+        execPath: this.execPath,
+        env: this._makeEnv(),
+      });
+      if (cacheEntry) {
+        await applyPreparedAppCacheEntry({ cacheEntry, destAppDir: absoluteTo });
+        return;
+      }
+    }
+
     const absoluteFrom = files.pathJoin(
       files.convertToStandardPath(__dirname),
       '..', 'tests', 'apps', template
@@ -220,10 +250,6 @@ export default class Sandbox {
     // timeout. (meteor create does this anyway.)
     await this.cd(to, async () => {
       const run = this.run("--prepare-app");
-      // XXX Can we cache the output of running this once somewhere, so that
-      // multiple calls to createApp with the same template get the same cache?
-      // This is a little tricky because isopack-buildinfo.json uses absolute
-      // paths.
       run.waitSecs(150);
       await run.expectExit(0);
     });
