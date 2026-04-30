@@ -73,6 +73,9 @@ selftest.define('prepared-app-cache roundtrip', async function () {
     // No copied isopack-buildinfo.json may still mention the warming
     // sentinel path — that would mean the path-rewriter missed a key and
     // the cached IsopackCache._checkUpToDate would fire on a stale path.
+    // We don't positively assert the new app dir appears in buildinfo,
+    // because templates without local app packages (like 'modern') only
+    // reference checkout paths — there's nothing app-relative to rewrite.
     const sentinelPath = files
       .readFile(files.pathJoin(cacheEntryDir, SENTINEL_PATH_FILE), 'utf8')
       .trim();
@@ -85,9 +88,6 @@ selftest.define('prepared-app-cache roundtrip', async function () {
         if (!files.exists(buildInfoPath)) continue;
         const contents = files.readFile(buildInfoPath, 'utf8');
         selftest.expectFalse(contents.includes(sentinelPath));
-        // And rewritten paths must point at app2.
-        const app2Posix = files.convertToStandardPath(app2Dir);
-        selftest.expectTrue(contents.includes(app2Posix));
       }
     }
   });
