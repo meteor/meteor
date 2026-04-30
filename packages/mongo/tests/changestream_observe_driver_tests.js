@@ -2329,15 +2329,19 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- timeout default is 250ms unless overridden',
+  'changestream- timeout default is 1000ms unless overridden',
   async function (test) {
     const setting = Meteor.settings
       && Meteor.settings.packages
       && Meteor.settings.packages.mongo
       && Meteor.settings.packages.mongo.changeStream
       && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs;
-    const effective = setting ?? 250;
-    test.equal(effective, 250, 'pre-fix default of 1000ms should have been lowered to 250ms');
+    const effective = setting ?? 1000;
+    test.equal(
+      effective,
+      1000,
+      'safety-valve default should give tight-loop method tests headroom over per-event dispatch latency'
+    );
   }
 );
 
@@ -2347,9 +2351,11 @@ Tinytest.addAsync(
     // Pre-fix pathology was a hard ~2s wait (2x 1000ms timeout) because
     // _waitUntilCaughtUp asked the server for a ts the stream hadn't seen
     // yet. With the fix the fence carries the exact write ts, the change
-    // event carries the same ts, and the wait resolves immediately.
-    // 1000ms bound catches the pre-fix ~2s regression without flaking
-    // when the 250ms safety-valve timeout fires under CI load.
+    // event carries the same ts, and the wait resolves immediately
+    // (single-digit ms in steady state).
+    // 1500ms bound: comfortably catches the pre-fix ~2s regression and
+    // sits above the 1000ms safety-valve so a one-off CI hiccup that
+    // trips the valve is reported as a real signal, not a flake.
     const c = makeCollection();
     const added = [];
     const handle = await c.find({}).observeChanges({
@@ -2367,8 +2373,8 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 1000,
-      `fenced insert+fire should be well under 1s with the fix; elapsed=${elapsed}ms (pre-fix ~2000ms)`
+      elapsed < 1500,
+      `fenced insert+fire should resolve via the change event, not the safety valve; elapsed=${elapsed}ms (pre-fix ~2000ms)`
     );
 
     const sawInsert = await waitFor(

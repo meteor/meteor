@@ -533,7 +533,13 @@ export class ChangeStreamObserveDriver {
     let timeoutId = null;
     const entry = { ts: targetTs, resolver: null };
 
-    const timeoutMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpTimeoutMs ?? 250;
+    // Safety valve only — under steady-state load the change event arrives
+    // in single-digit ms. The timeout exists so a missed/lost event can't
+    // hang the fence forever. 1000ms gives tight-loop method tests
+    // (250-iter insert/update/remove) headroom over the per-event
+    // dispatch latency without making real failures unbearable.
+    // Override via Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs.
+    const timeoutMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpTimeoutMs ?? 1000;
 
     await new Promise((resolve) => {
       entry.resolver = () => {
