@@ -111,8 +111,15 @@ jobs:
         id: discover
         run: |
           ./meteor self-test --list-json-out /tmp/tests.json --headless
-          MATRIX=$(node scripts/ci/build-test-matrix.js /tmp/tests.json)
-          echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
+          node scripts/ci/build-test-matrix.js /tmp/tests.json > /tmp/matrix.json
+          # Heredoc form, not `name=value`. Single-line $GITHUB_OUTPUT
+          # interprets backslashes inside the value (regexes contain `\(`,
+          # `\)`, etc.), which makes fromJson() reject the matrix.
+          {
+            echo 'matrix<<MATRIX_EOF'
+            cat /tmp/matrix.json
+            echo 'MATRIX_EOF'
+          } >> "$GITHUB_OUTPUT"
 
   # ─── Per-test matrix ──────────────────────────────────────────────────────
   # One job per self-test. Heavy tests (modern/compiler-plugins/cordova) get
