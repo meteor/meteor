@@ -398,24 +398,24 @@ export class ChangeStreamObserveDriver {
   }
 
   _buildPipeline() {
-    // For now, use a simple pipeline that watches all operations
-    // We'll filter using our matcher in _handleChange
-    const selector = this._cursorDescription.selector;
-
-    if (!selector || Object.keys(selector).length === 0) {
-      // No selector, watch all changes
-      return [];
-    }
-
-    // Simple pipeline that just filters by operation type
-    // More complex selector filtering will be done in _handleChange
-    return [
-      {
-        $match: {
-          operationType: { $in: ['insert', 'update', 'replace', 'delete'] }
-        }
-      }
-    ];
+    // Always return an empty pipeline so mongo delivers EVERY change event
+    // (including drop, invalidate, create, modify, rename, ...). We filter
+    // unsupported operation types in _handleChange instead.
+    //
+    // Why: events filtered out server-side never reach our on('change')
+    // handler, so `_setLastProcessedOperationTime` does not advance for
+    // their clusterTime. Meanwhile fence write paths annotate
+    // `_csTargetTsByCollection` with `session.operationTime`, which
+    // includes increments from operations whose events the pipeline
+    // dropped — leaving _waitUntilCaughtUp pinned to a ts that this
+    // stream's lastProcessedOperationTime can never reach. Observed in
+    // CI as a `users` driver stuck on `{t:T, i:25}` while seeing only up
+    // to `{t:T, i:15}`, blocking removeUserByUsername forever.
+    //
+    // Per-document selector filtering still happens in _handleChange via
+    // the matcher; offloading that to the pipeline is a future
+    // optimization that needs to coexist with always-deliver semantics.
+    return [];
   }
 
   async _handleChange(change) {
