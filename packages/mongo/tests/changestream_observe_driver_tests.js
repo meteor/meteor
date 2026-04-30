@@ -2283,7 +2283,7 @@ Tinytest.addAsync(
 
     // Build a fake fence whose target ts is <= _lastProcessedOperationTime.
     // _waitUntilCaughtUp should hit the 'already-caught-up' early exit
-    // without falling back to the (network) _getServerOperationTime call.
+    // and not enqueue a resolver.
     const pastTs = driver._lastProcessedOperationTime;
     const fakeFence = { _csTargetTsByCollection: { [c._name]: pastTs } };
 
@@ -2297,20 +2297,19 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- _waitUntilCaughtUp falls back to server ping when no fence annotation',
+  'changestream- _waitUntilCaughtUp returns immediately when no fence annotation',
   async function (test) {
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
     const driver = handle._multiplexer._observeDriver;
 
-    // Undefined fence → fallback path. Should complete within the safety
-    // timeout (default 1000ms) plus headroom for the server-ping round trip.
+    // No fence at all → no specific write to wait for, return without waiting.
     const t0 = Date.now();
     await driver._waitUntilCaughtUp(undefined);
     const elapsed = Date.now() - t0;
 
-    test.isTrue(elapsed < 2000, `fallback path should not hang past the safety timeout; elapsed=${elapsed}ms`);
+    test.isTrue(elapsed < 250, `no-fence path should return immediately; elapsed=${elapsed}ms`);
     handle.stop();
   }
 );
@@ -2319,8 +2318,10 @@ Tinytest.addAsync(
   'changestream- _waitUntilCaughtUp ignores annotation for a different collection',
   async function (test) {
     // If _waitUntilCaughtUp took ts from another collection, we'd spin
-    // waiting for a clusterTime this driver's stream never observes.
-    // The correct behaviour is to ignore that key and fall back.
+    // forever waiting for a clusterTime this driver's stream never observes
+    // (no safety-valve timeout — the wait is unbounded by design, mirroring
+    // OplogHandle._waitUntilCaughtUp). The correct behaviour is to skip
+    // entirely when our collection isn't in the annotation map.
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
@@ -2336,8 +2337,8 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 2000,
-      `annotation for another collection should fall back without spinning; elapsed=${elapsed}ms (safety timeout default 1000ms)`
+      elapsed < 250,
+      `annotation for another collection should be ignored; elapsed=${elapsed}ms`
     );
     handle.stop();
   }
@@ -2366,15 +2367,21 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- timeout default is 1000ms unless overridden',
+  'changestream- waitUntilCaughtUp warn watchdog default is 10s',
   async function (test) {
+    // The previous implementation had a hard safety-valve timeout that
+    // released the wait early; that caused fences to fire before the
+    // change had been delivered to the multiplexer (e.g. client received
+    // `updated` without `changed`). The wait is now unbounded — only a
+    // log-only watchdog at waitUntilCaughtUpWarnMs (default 10s) flags
+    // genuinely stalled streams without masking them.
     const setting = Meteor.settings
       && Meteor.settings.packages
       && Meteor.settings.packages.mongo
       && Meteor.settings.packages.mongo.changeStream
-      && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs;
-    const effective = setting ?? 1000;
-    test.equal(effective, 1000, 'safety-valve default should be 1000ms (overridable via settings); see ChangeStreamObserveDriver._waitUntilCaughtUp');
+      && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpWarnMs;
+    const effective = setting ?? 10000;
+    test.equal(effective, 10000, 'warn watchdog default should be 10s; override via Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpWarnMs');
   }
 );
 

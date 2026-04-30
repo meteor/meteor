@@ -32,6 +32,11 @@ export class ChangeStreamObserveDriver {
     this._lastProcessedOperationTime = null;
     this._catchingUpResolvers = [];
     this._resolveTimeout = null;
+    // Tracked across restarts so we can resume the stream from where it left
+    // off instead of "now" — without this, events that arrived between an
+    // error/close and the restart are silently dropped, leaving fences waiting
+    // for clusterTimes that will never appear in the new stream.
+    this._resumeToken = null;
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
 
@@ -147,21 +152,28 @@ export class ChangeStreamObserveDriver {
 
       const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
 
-      // First, get all existing documents that match our selector
-      await this._sendInitialAdds(collection);
-
-      // Signal initial adds are complete (but delay being 'ready' for commits
-      // until the change stream is attached to avoid fence ordering gaps)
-      this._multiplexer.ready();
-
-      // Then start watching for changes
+      // Open the change stream BEFORE the snapshot read. Without this ordering
+      // there is a race window between _sendInitialAdds finishing and watch()
+      // being established during which any insert/update/delete on this
+      // collection emits a change event that the stream never sees — leaving
+      // fence waiters blocked on a clusterTime that will never arrive on this
+      // stream. Opening the stream first means events emitted while
+      // _sendInitialAdds is running are queued by the driver (in
+      // _pendingWrites) and replayed once the multiplexer is ready, with
+      // _handleInsert deduping against the cache for any doc the snapshot
+      // already covered.
       const pipeline = this._buildPipeline();
-
-      // Create change stream with appropriate options
       const changeStreamOptions = {
         fullDocument: 'updateLookup',
-        fullDocumentBeforeChange: 'whenAvailable'
+        fullDocumentBeforeChange: 'whenAvailable',
       };
+      // If we are resuming from a prior token (after an error/close restart),
+      // startAfter tells Mongo to deliver every event since that token —
+      // re-opening with no resume would silently drop events emitted between
+      // the error and the restart.
+      if (this._resumeToken) {
+        changeStreamOptions.startAfter = this._resumeToken;
+      }
 
       this._changeStream = collection.watch(pipeline, changeStreamOptions);
 
@@ -177,22 +189,26 @@ export class ChangeStreamObserveDriver {
         }
       });
 
-      // Handle change events
+      // Handle change events. While _sendInitialAdds is still running these
+      // events get queued via _handleChange and only processed once the
+      // multiplexer is ready (see _flushPendingWrites guard below).
       this._changeStream.on('change', Meteor.bindEnvironment((change) => {
         if (this._stopped) return;
+        // Capture the resume token so a future restart picks up where this
+        // event left off (see startAfter in changeStreamOptions above).
+        if (change && change._id) {
+          this._resumeToken = change._id;
+        }
         // Update last processed op time early so fences can unblock promptly
         if (change && change.clusterTime) {
           this._setLastProcessedOperationTime(change.clusterTime);
         }
         this._handleChange(change);
 
-        // Check if we're in a fence
         const fence = DDPServer._getCurrentFence();
         if (fence && !fence.fired) {
-          // Process immediately if we're in a fence
           this._flushPendingWrites();
         } else {
-          // Otherwise defer processing (similar to polling cycle)
           Meteor.defer(() => {
             if (!this._stopped) {
               this._flushPendingWrites();
@@ -234,11 +250,25 @@ export class ChangeStreamObserveDriver {
         }
       }));
 
-      // Now we can allow queued fence writes to commit safely
-      this._isReady = true;
-      await this._flushWritesToCommit();
+      // Now read the snapshot. Events that arrived while we were getting
+      // here are sitting in _pendingWrites and will be flushed below.
+      await this._sendInitialAdds(collection);
 
-      // Remove the defer that was calling _flushPendingWrites
+      // Mark ready so _flushPendingWrites lets the queued change events
+      // through (it short-circuits when !_isReady to avoid calling
+      // multiplexer.changed/removed before ready()).
+      this._multiplexer.ready();
+      this._isReady = true;
+
+      // Replay change events that arrived during _sendInitialAdds BEFORE
+      // committing fence writes. _handleInsert dedups against the multiplexer
+      // cache so events that overlap with the snapshot don't double-emit.
+      // Commit order matters: ObserveMultiplexer.onFlush below waits for the
+      // queue to drain, so client `added`/`changed` reach handles before the
+      // fence's `updated` message — without this, clients see `updated`
+      // without the corresponding data and stub-reverts wipe the local view.
+      this._flushPendingWrites();
+      await this._flushWritesToCommit();
 
     } catch (error) {
       console.error('Failed to start ChangeStream:', error);
@@ -378,47 +408,14 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  async _getServerOperationTime() {
-    const db = this._mongoHandle.db;
-    const admin = db.admin();
-
-    const commands = [
-      () => db.command({ ping: 1 }),
-      () => admin.command({ hello: 1 }),
-      () => admin.command({ ismaster: 1 })
-    ];
-
-    const runCommandRecursive = async (index = 0) => {
-      if (index >= commands.length) {
-        return null;
-      }
-
-      try {
-        const res = await commands[index]();
-        return res?.operationTime || res?.$clusterTime?.clusterTime || null;
-      } catch (error) {
-        if (!error) {
-          return false;
-        }
-
-        // CommandNotFound https://www.mongodb.com/pt-br/docs/manual/reference/error-codes/
-        const isUnsupportedCommandError = error.code === 59;
-        if (isUnsupportedCommandError) {
-          return runCommandRecursive(index + 1);
-        }
-        throw error;
-      }
-    };
-
-    try {
-      return await runCommandRecursive();
-    } catch (error) {
-      console.error(`[ChangeStream ${this._id}] Failed to fetch server operation time:`, error);
-      return null;
-    }
-  }
-
   async _flushPendingWrites() {
+    // Hold off processing until the multiplexer has had its `ready()` call.
+    // We open the change stream before _sendInitialAdds so events emitted
+    // during the snapshot are not lost — those events sit here until the
+    // driver is ready, and _startWatching's tail flush replays them.
+    // ObserveMultiplexer.changed / removed throw if called before ready.
+    if (!this._isReady) return;
+
     const callbacksToFlush = this._pendingWrites;
     this._pendingWrites = [];
 
@@ -461,12 +458,21 @@ export class ChangeStreamObserveDriver {
   }
 
   _handleInsert(id, doc) {
-    // Apply projection and check if document matches our criteria
     const matches = this._matcher.documentMatches(doc).result;
-    if (matches) {
-      const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
-      this._sendMultiplexerAdded(id, projectedDoc);
+    if (!matches) return;
+
+    // Dedup against the cache: opening the change stream before
+    // _sendInitialAdds means a doc inserted between watch() and the snapshot
+    // read is reported by both. Without this guard we would emit `added`
+    // twice for the same id, and ObserveMultiplexer / publication views
+    // assume each id is added exactly once.
+    if (this._multiplexer?._cache?.docs?.has?.(id)) {
+      this._handleUpdate(id, doc, null);
+      return;
     }
+
+    const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
+    this._sendMultiplexerAdded(id, projectedDoc);
   }
 
   _handleUpdate(id, newDoc, oldDoc) {
@@ -528,27 +534,25 @@ export class ChangeStreamObserveDriver {
     // server's current operation time. Mirrors oplog's wait logic.
     if (this._stopped) return;
 
-    // Prefer the exact clusterTime of the write(s) that triggered this fence,
-    // when the write path annotated it on the fence (see
-    // mongo_connection._annotateFenceWithWriteTs). Falls back to asking the
-    // server for its current operationTime, which races ahead of the write's
-    // ts and historically caused every fence to wait the full 1000ms timeout.
-    // The fence must be passed explicitly because fence.fire() runs outside
-    // the AsyncLocalStorage context where _getCurrentFence() would find it.
-    // Target is looked up per-collection: this driver only observes events
-    // from its own collection, so waiting on a ts from a different
-    // collection's write would always time out.
+    // The fence's write path stamps the exact clusterTime of each write on
+    // fence._csTargetTsByCollection[collectionName] (see
+    // mongo_connection._annotateFenceWithWriteTs). Wait specifically for
+    // that ts. The fence must be passed explicitly because fence.fire()
+    // runs outside the AsyncLocalStorage context where _getCurrentFence()
+    // would find it.
+    //
+    // If there is no annotation for our collection, there is no specific
+    // write to wait for and we return immediately. Asking the server for
+    // its current operationTime here would chase a moving target — the
+    // server's clock advances with replication heartbeats, but our stream
+    // only sees events emitted on this collection, so the wait would never
+    // resolve under the previous (no-timeout) regime.
     const fence = fenceOverride || DDPServer._getCurrentFence();
     const { collectionName } = this._cursorDescription;
     const { _csTargetTsByCollection } = fence || {};
-    let targetTs = _csTargetTsByCollection && collectionName ? _csTargetTsByCollection[collectionName] : undefined;
-    if (!targetTs) {
-      targetTs = await this._getServerOperationTime();
-    }
+    const targetTs = _csTargetTsByCollection && collectionName ? _csTargetTsByCollection[collectionName] : undefined;
 
     if (!targetTs) {
-      // Best-effort fallback: yield to I/O but don't artificially delay
-      await new Promise((r) => setImmediate(r));
       return;
     }
 
@@ -562,35 +566,36 @@ export class ChangeStreamObserveDriver {
       insertIdx--;
     }
 
-    // Wait with an upper bound: release if it takes too long
-    let timeoutId = null;
     const entry = { ts: targetTs, resolver: null };
 
-    // With fence._csTargetTsByCollection annotated by the write path, the
-    // resolver fires as soon as the driver's own change event arrives,
-    // typically <100ms. The timeout is a safety valve for edge cases
-    // (stream stalled, write outside a fence, etc.). Default 1000ms gives
-    // headroom on contended CI runners (oss-vm shares 16 threads across 10
-    // concurrent jobs); a fast workstation can drop it via
-    // Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs.
-    const timeoutMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpTimeoutMs ?? 1000;
+    // Wait until our change stream has actually delivered an event with
+    // clusterTime >= targetTs. Mirrors OplogHandle._waitUntilCaughtUp: the
+    // wait has no upper bound — releasing early causes the fence to fire
+    // before the change has been applied to the multiplexer, which surfaces
+    // as the client receiving `updated` without the corresponding
+    // `added`/`changed`/`removed` (e.g. `livedata - method updated message
+    // with subscriptions` failing with "Should receive CHANGED message").
+    //
+    // Liveness is guaranteed by:
+    //   1. The change stream resuming from this._resumeToken on error/close,
+    //      so events emitted while the stream was reconnecting are replayed.
+    //   2. The watchdog below logging if the wait stalls past warnMs, which
+    //      makes a genuinely-broken stream visible without masking it.
+    const warnMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpWarnMs ?? 10000;
+
+    let warnTimeoutId = setTimeout(() => {
+      console.error(
+        `Meteor: change stream catching up took too long`,
+        { collectionName, ts: targetTs }
+      );
+    }, warnMs);
 
     await new Promise((resolve) => {
       entry.resolver = () => {
-        if (timeoutId) clearTimeout(timeoutId);
+        clearTimeout(warnTimeoutId);
         resolve();
       };
-
-      // Insert our entry to be resolved when we process >= targetTs
       this._catchingUpResolvers.splice(insertIdx, 0, entry);
-
-      // Safety valve: if it takes more than timeoutMs, just release
-      timeoutId = setTimeout(() => {
-        // Remove our entry if still pending
-        const idx = this._catchingUpResolvers.indexOf(entry);
-        if (idx !== -1) this._catchingUpResolvers.splice(idx, 1);
-        resolve();
-      }, timeoutMs);
     });
   }
 
