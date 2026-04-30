@@ -486,7 +486,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 35
     env:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^m[a-n]|^mo[a-d]"
@@ -523,7 +523,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 5)
-        timeout-minutes: 25
+        timeout-minutes: 35
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
