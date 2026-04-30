@@ -9,6 +9,11 @@ try {
 }
 
 let testNumber = 0;
+// Set once we begin the deliberate teardown (poll() success/failure branch).
+// browser.close() naturally fires 'disconnected'; without this flag the
+// disconnect handler would treat clean shutdown as an unexpected crash and
+// race-win the exit code.
+let shuttingDown = false;
 
 // Watchdog: convert silent stalls into actionable failures. The runner used to
 // rely entirely on the per-`console`-event heartbeat, which is driven by client
@@ -119,6 +124,7 @@ async function runNextUrl(browser) {
     console.error(`pageerror: ${err && err.message}\n${(err && err.stack) || ""}`);
   });
   page.on("error", (err) => {
+    if (shuttingDown) return;
     // 'error' fires when the page process itself crashes — fatal for the run.
     console.error(`page crashed: ${err && err.message}\n${(err && err.stack) || ""}`);
     fail("aborting because the puppeteer page crashed");
@@ -132,6 +138,7 @@ async function runNextUrl(browser) {
   });
   page.on("requestfinished", () => bumpActivity());
   browser.on("disconnected", () => {
+    if (shuttingDown) return;
     fail("aborting because the puppeteer browser disconnected unexpectedly");
   });
 
@@ -171,6 +178,7 @@ async function runNextUrl(browser) {
       const failCount = await getFailCount(page);
       console.log(`Tests complete with ${failCount} failures`);
       console.log(`Tests complete with ${await getPassCount(page)} passes`);
+      shuttingDown = true;
       if (failCount > 0) {
         const failed = await getFailed(page);
         failed.map((f) => console.log(`${f.name} failed: ${f.info}`));
