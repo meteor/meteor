@@ -2194,20 +2194,23 @@ Tinytest.addAsync(
   'changestream- two writes to same collection keep the later ts',
   async function (test) {
     const c = makeCollection();
+    // Don't spread the Timestamp objects: in bson 6.x, `t` and `i` are
+    // prototype getters, not own properties, so `{ ...ts }` would drop them
+    // and leave only the underlying Long fields (low/high/unsigned).
     let tsFirst = null;
     let tsFinal = null;
     await withFence(async (f) => {
       await c.insertAsync({ n: 1 });
-      tsFirst = { ...f._csTargetTsByCollection[c._name] };
+      tsFirst = f._csTargetTsByCollection[c._name];
       await c.insertAsync({ n: 2 });
-      tsFinal = { ...f._csTargetTsByCollection[c._name] };
+      tsFinal = f._csTargetTsByCollection[c._name];
     });
     test.isTrue(isBsonTimestamp(tsFirst) && isBsonTimestamp(tsFinal));
     const firstLessOrEqual = tsFirst.t < tsFinal.t
       || (tsFirst.t === tsFinal.t && tsFirst.i <= tsFinal.i);
     test.isTrue(
       firstLessOrEqual,
-      `later write should have ts >= earlier; got ${JSON.stringify(tsFirst)} → ${JSON.stringify(tsFinal)}`
+      `later write should have ts >= earlier; got {t:${tsFirst.t},i:${tsFirst.i}} → {t:${tsFinal.t},i:${tsFinal.i}}`
     );
   }
 );
@@ -2345,7 +2348,8 @@ Tinytest.addAsync(
     // _waitUntilCaughtUp asked the server for a ts the stream hadn't seen
     // yet. With the fix the fence carries the exact write ts, the change
     // event carries the same ts, and the wait resolves immediately.
-    // 500ms bound catches a regression without flaking on slow CI.
+    // 1000ms bound catches the pre-fix ~2s regression without flaking
+    // when the 250ms safety-valve timeout fires under CI load.
     const c = makeCollection();
     const added = [];
     const handle = await c.find({}).observeChanges({
@@ -2363,8 +2367,8 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 500,
-      `fenced insert+fire should be fast with the fix; elapsed=${elapsed}ms (pre-fix ~2000ms)`
+      elapsed < 1000,
+      `fenced insert+fire should be well under 1s with the fix; elapsed=${elapsed}ms (pre-fix ~2000ms)`
     );
 
     const sawInsert = await waitFor(
