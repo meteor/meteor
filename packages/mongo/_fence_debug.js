@@ -19,10 +19,20 @@
 // To correlate driver activity with multiplexer activity, drivers emit
 // their fence callback's lifecycle around the multiplexer's onFlush events.
 
-const enabled = !!process.env.METEOR_DEBUG_OBSERVE_FENCE;
+// Guard against client-side import: tests/mongo_livedata_tests.js is added for
+// both client and server and imports observe_multiplex via ES module, which
+// transitively pulls this file into the client bundle. process.hrtime is a
+// node-only API and is undefined in the browser. Only the server should ever
+// flip METEOR_DEBUG_OBSERVE_FENCE on, so leaving this disabled on the client
+// is correct — but the module must still load without crashing.
+const enabled =
+  typeof process !== 'undefined' &&
+  process.hrtime &&
+  typeof process.hrtime.bigint === 'function' &&
+  !!process.env?.METEOR_DEBUG_OBSERVE_FENCE;
 
 let seq = 0;
-const startNs = process.hrtime.bigint();
+const startNs = enabled ? process.hrtime.bigint() : 0n;
 
 function nowMs() {
   return Number(process.hrtime.bigint() - startNs) / 1e6;
