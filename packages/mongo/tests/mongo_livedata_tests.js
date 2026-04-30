@@ -3051,25 +3051,6 @@ async function functionChain2Upsert(test, expect, coll, index) {
   test.equal(o.name, 'foo');
 }
 
-// FLACKY: some times we get timeout when run all tests at same time.
-//
-// Symptom: testAsyncMulti's 180s batch timeout fires inside the per-iteration
-// `await Meteor.callAsync('upsertObject', ...)` — the method's `result`
-// arrives, but `updated` does not, so callAsync never resolves. Reproduces
-// only under parallel load (many subscription-bearing tests creating /
-// dropping collections at once); each variant passes in isolation.
-//
-// Root cause is upstream of this file: when many concurrent observers are
-// active, the ObserveMultiplexer callback queue (observe_multiplex.ts) can
-// serialize a fence's `write.committed()` behind another driver's slow
-// upstream callback, deferring the `updated` send. The change-stream and
-// oplog drivers both commit through that single per-multiplexer queue, so
-// neither reactivity backend is the culprit on its own. Reproduction
-// requires concurrent stop/restart of cursors against dropped collections.
-//
-// If you hit this and need a quick unblock, retry the failing variant
-// alone — that's the canary that the underlying issue is parallel
-// pressure, not a real regression in the variant under test.
 Object.entries({
   collectionInsert: collectionInsert,
   collectionUpsert: collectionUpsert,
