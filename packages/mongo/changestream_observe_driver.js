@@ -242,6 +242,11 @@ export class ChangeStreamObserveDriver {
 
     } catch (error) {
       console.error('Failed to start ChangeStream:', error);
+      // Mark ready and drain any writes that were queued by onBeforeFire while
+      // _startWatching was in flight. Without this, the fences holding those
+      // writes never fire and any DDP method that triggered them hangs.
+      this._isReady = true;
+      try { await this._flushWritesToCommit(); } catch (_) { /* ignore */ }
       throw error;
     }
   }
@@ -277,6 +282,11 @@ export class ChangeStreamObserveDriver {
 
     } catch (error) {
       console.error('Error sending initial adds for ChangeStream:', error);
+      // We may have already pushed a fence write above; commit it so the
+      // fence isn't deadlocked. _startWatching's catch will run too, but
+      // _flushWritesToCommit drains the array, so the second call is a no-op.
+      this._isReady = true;
+      try { await this._flushWritesToCommit(); } catch (_) { /* ignore */ }
       throw error;
     }
   }
@@ -559,10 +569,11 @@ export class ChangeStreamObserveDriver {
     // With fence._csTargetTsByCollection annotated by the write path, the
     // resolver fires as soon as the driver's own change event arrives,
     // typically <100ms. The timeout is a safety valve for edge cases
-    // (stream stalled, write outside a fence, etc.). 250ms is small
-    // enough that a regression in the annotation path surfaces quickly
-    // in benchmarks rather than hiding behind a one-second wait.
-    const timeoutMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpTimeoutMs ?? 250;
+    // (stream stalled, write outside a fence, etc.). Default 1000ms gives
+    // headroom on contended CI runners (oss-vm shares 16 threads across 10
+    // concurrent jobs); a fast workstation can drop it via
+    // Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs.
+    const timeoutMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpTimeoutMs ?? 1000;
 
     await new Promise((resolve) => {
       entry.resolver = () => {

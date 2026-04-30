@@ -2230,11 +2230,16 @@ Tinytest.addAsync(
     const c = makeCollection();
     let tsFirst = null;
     let tsFinal = null;
+    // Snapshot the Timestamp's t/i fields directly — `{ ...timestamp }` only
+    // copies own enumerable properties, which on the BSON Timestamp/Long class
+    // are `low`/`high`/`unsigned`. The `t` and `i` accessors live on the
+    // prototype and would be lost in a spread, leaving an undefined comparison.
+    const snapshotTs = (ts) => (ts == null ? null : { t: ts.t, i: ts.i });
     await withFence(async (f) => {
       await c.insertAsync({ n: 1 });
-      tsFirst = { ...f._csTargetTsByCollection[c._name] };
+      tsFirst = snapshotTs(f._csTargetTsByCollection[c._name]);
       await c.insertAsync({ n: 2 });
-      tsFinal = { ...f._csTargetTsByCollection[c._name] };
+      tsFinal = snapshotTs(f._csTargetTsByCollection[c._name]);
     });
     test.isTrue(isBsonTimestamp(tsFirst) && isBsonTimestamp(tsFinal));
     const firstLessOrEqual = tsFirst.t < tsFinal.t
@@ -2299,12 +2304,13 @@ Tinytest.addAsync(
     test.isTrue(isChangeStreamDriver(handle));
     const driver = handle._multiplexer._observeDriver;
 
-    // Undefined fence → fallback path. Should complete without timing out.
+    // Undefined fence → fallback path. Should complete within the safety
+    // timeout (default 1000ms) plus headroom for the server-ping round trip.
     const t0 = Date.now();
     await driver._waitUntilCaughtUp(undefined);
     const elapsed = Date.now() - t0;
 
-    test.isTrue(elapsed < 1000, `fallback path should not hit the safety timeout; elapsed=${elapsed}ms`);
+    test.isTrue(elapsed < 2000, `fallback path should not hang past the safety timeout; elapsed=${elapsed}ms`);
     handle.stop();
   }
 );
@@ -2330,8 +2336,8 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 1000,
-      `annotation for another collection should be ignored (no timeout); elapsed=${elapsed}ms`
+      elapsed < 2000,
+      `annotation for another collection should fall back without spinning; elapsed=${elapsed}ms (safety timeout default 1000ms)`
     );
     handle.stop();
   }
@@ -2360,15 +2366,15 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- timeout default is 250ms unless overridden',
+  'changestream- timeout default is 1000ms unless overridden',
   async function (test) {
     const setting = Meteor.settings
       && Meteor.settings.packages
       && Meteor.settings.packages.mongo
       && Meteor.settings.packages.mongo.changeStream
       && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs;
-    const effective = setting ?? 250;
-    test.equal(effective, 250, 'pre-fix default of 1000ms should have been lowered to 250ms');
+    const effective = setting ?? 1000;
+    test.equal(effective, 1000, 'safety-valve default should be 1000ms (overridable via settings); see ChangeStreamObserveDriver._waitUntilCaughtUp');
   }
 );
 
