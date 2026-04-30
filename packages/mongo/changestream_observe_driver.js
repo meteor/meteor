@@ -152,12 +152,26 @@ export class ChangeStreamObserveDriver {
 
       const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
 
-      // Open the change stream BEFORE the snapshot read. Without this ordering
-      // there is a race window between _sendInitialAdds finishing and watch()
-      // being established during which any insert/update/delete on this
-      // collection emits a change event that the stream never sees — leaving
-      // fence waiters blocked on a clusterTime that will never arrive on this
-      // stream. Opening the stream first means events emitted while
+      // Capture the cluster time BEFORE opening the stream so we can pass
+      // startAtOperationTime to watch(). Without this, the change stream
+      // begins at whatever time mongo processes the aggregate $changeStream
+      // command — which under contention can be MILLISECONDS later than the
+      // call site, and any write that lands in that window is silently
+      // dropped from the stream. With startAtOperationTime set to a known
+      // earlier ts, mongo replays every event from that ts forward, closing
+      // the race. Skipped on resume (the prior token already pins the start).
+      let startAtOperationTime;
+      if (!this._resumeToken) {
+        try {
+          const pingRes = await this._mongoHandle.db.command({ ping: 1 });
+          startAtOperationTime = pingRes?.operationTime;
+        } catch (e) {
+          // Best-effort. If the ping fails the stream falls back to
+          // mongo's default of "now" — same as the pre-fix behaviour.
+        }
+      }
+
+      // Open the change stream BEFORE the snapshot read. Events emitted while
       // _sendInitialAdds is running are queued by the driver (in
       // _pendingWrites) and replayed once the multiplexer is ready, with
       // _handleInsert deduping against the cache for any doc the snapshot
@@ -167,12 +181,13 @@ export class ChangeStreamObserveDriver {
         fullDocument: 'updateLookup',
         fullDocumentBeforeChange: 'whenAvailable',
       };
-      // If we are resuming from a prior token (after an error/close restart),
-      // startAfter tells Mongo to deliver every event since that token —
-      // re-opening with no resume would silently drop events emitted between
-      // the error and the restart.
       if (this._resumeToken) {
+        // Resuming after an error/close restart: startAfter replays every
+        // event since the last token we saw, so events emitted while the
+        // stream was reconnecting are not silently dropped.
         changeStreamOptions.startAfter = this._resumeToken;
+      } else if (startAtOperationTime) {
+        changeStreamOptions.startAtOperationTime = startAtOperationTime;
       }
 
       this._changeStream = collection.watch(pipeline, changeStreamOptions);
@@ -286,7 +301,17 @@ export class ChangeStreamObserveDriver {
 
     } catch (error) {
       console.error('Failed to start ChangeStream:', error);
-      // Mark ready and drain any writes that were queued by onBeforeFire while
+      // Make sure the multiplexer is ready'd even on failure — without this
+      // the publication's _readyPromise never resolves, the subscription
+      // never sends `ready` to the client, and any test that polls
+      // sub.ready() (e.g. `livedata - methods with nested stubs`) hangs
+      // its setup block to the testAsyncMulti timeout.
+      try {
+        if (!this._multiplexer._ready()) {
+          await this._multiplexer.ready();
+        }
+      } catch (_) { /* ready() throws if already ready; ignore */ }
+      // Drain any writes that were queued by onBeforeFire while
       // _startWatching was in flight. Without this, the fences holding those
       // writes never fire and any DDP method that triggered them hangs.
       this._isReady = true;
@@ -329,6 +354,7 @@ export class ChangeStreamObserveDriver {
       // We may have already pushed a fence write above; commit it so the
       // fence isn't deadlocked. _startWatching's catch will run too, but
       // _flushWritesToCommit drains the array, so the second call is a no-op.
+      // Multiplexer.ready() is handled in _startWatching's catch.
       this._isReady = true;
       try { await this._flushWritesToCommit(); } catch (_) { /* ignore */ }
       throw error;
