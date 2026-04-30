@@ -1667,7 +1667,7 @@ Tinytest.addAsync(
 // ============================================================================
 
 Tinytest.addAsync(
-  'changestream - stop callbacks are executed on stop',
+  'changestream - stop closes the change stream cursor',
   async function (test) {
     const c = makeCollection();
 
@@ -1678,18 +1678,14 @@ Tinytest.addAsync(
     test.isTrue(isChangeStreamDriver(handle));
 
     const driver = handle._multiplexer._observeDriver;
-    const initialCallbackCount = driver._stopCallbacks.length;
-
-    // Should have some stop callbacks registered
-    test.isTrue(initialCallbackCount > 0, 'Should have stop callbacks');
+    test.isNotNull(driver._changeStream, 'Cursor should be open before stop');
 
     handle.stop();
 
-    // Wait for async stop to complete
-    await waitFor(() => driver._stopCallbacks.length === 0, 2000);
+    await waitFor(() => driver._stopped && driver._changeStream === null, 2000);
 
-    // After stop, callbacks should be cleared
-    test.equal(driver._stopCallbacks.length, 0, 'Callbacks should be cleared after stop');
+    test.isTrue(driver._stopped, 'Driver should be marked as stopped');
+    test.isNull(driver._changeStream, 'Cursor reference should be cleared after stop');
   }
 );
 
@@ -1706,16 +1702,15 @@ Tinytest.addAsync(
 
     const driver = handle._multiplexer._observeDriver;
 
-    // Stop and verify cleanup
     handle.stop();
 
-    // Wait for async stop to complete
-    await waitFor(() => driver._stopped && driver._stopCallbacks.length === 0, 2000);
+    await waitFor(() => driver._stopped && driver._changeStream === null, 2000);
 
     test.isTrue(driver._stopped, 'Driver should be marked as stopped');
     test.equal(driver._pendingWrites.length, 0, 'Pending writes should be cleared');
     test.equal(driver._writesToCommitWhenReady.length, 0, 'Writes to commit should be cleared');
-    test.equal(driver._stopCallbacks.length, 0, 'Stop callbacks should be cleared');
+    test.isNull(driver._changeStream, 'Change stream cursor should be released');
+    test.isNull(driver._listenStopHandle, 'Listen handle should be released');
   }
 );
 
@@ -2042,36 +2037,6 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream - _addStopCallback validates input',
-  async function (test) {
-    const c = makeCollection();
-
-    const handle = await c.find({}).observeChanges({
-      added: function () { }
-    });
-
-    test.isTrue(isChangeStreamDriver(handle));
-
-    const driver = handle._multiplexer._observeDriver;
-
-    // Should throw on non-function
-    try {
-      driver._addStopCallback('not a function');
-      test.fail('Should throw on non-function');
-    } catch (e) {
-      test.isTrue(e.message.includes('function'));
-    }
-
-    // Should accept function
-    const callbackCount = driver._stopCallbacks.length;
-    driver._addStopCallback(() => { });
-    test.equal(driver._stopCallbacks.length, callbackCount + 1);
-
-    handle.stop();
-  }
-);
-
-Tinytest.addAsync(
   'changestream - driver has correct initial state',
   async function (test) {
     const c = makeCollection();
@@ -2084,10 +2049,11 @@ Tinytest.addAsync(
 
     const driver = handle._multiplexer._observeDriver;
 
-    // Check initial state properties
     test.isTrue(driver._usesChangeStreams);
     test.isFalse(driver._stopped);
-    test.isTrue(Array.isArray(driver._stopCallbacks));
+    test.isFalse(driver._invalidated);
+    test.isNotNull(driver._changeStream);
+    test.equal(driver._restartAttempt, 0);
     test.isTrue(Array.isArray(driver._pendingWrites));
     test.isTrue(Array.isArray(driver._writesToCommitWhenReady));
     test.isTrue(Array.isArray(driver._catchingUpResolvers));
