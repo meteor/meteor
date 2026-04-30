@@ -18,7 +18,9 @@ let testNumber = 0;
 const IDLE_TIMEOUT_MS = parseInt(process.env.PUPPETEER_IDLE_TIMEOUT_MS, 10) || 120000;
 const WATCHDOG_TICK_MS = 5000;
 let lastActivityAt = Date.now();
-const bumpActivity = () => { lastActivityAt = Date.now(); };
+const bumpActivity = () => {
+  lastActivityAt = Date.now();
+};
 
 function fail(reason, code = 1) {
   // Best-effort exit. Some callers may already have torn down the browser;
@@ -29,51 +31,53 @@ function fail(reason, code = 1) {
 
 async function dumpDiagnostics(page, label) {
   const safe = async (fn, fallback) => {
-    try { return await fn(); } catch (e) { return fallback ?? `<error: ${e.message}>`; }
+    try {
+      return await fn();
+    } catch (e) {
+      return fallback ?? `<error: ${e.message}>`;
+    }
   };
   const clientTest = await safe(
     () => page.evaluate(() => __Tinytest._getCurrentRunningTestOnClient()),
-    "<unavailable>"
+    "<unavailable>",
   );
   const serverTest = await safe(
     () => page.evaluate(async () => await __Tinytest._getCurrentRunningTestOnServer()),
-    "<unavailable>"
+    "<unavailable>",
   );
   const ddpState = await safe(
-    () => page.evaluate(() => {
-      const conn = (typeof Meteor !== "undefined" && Meteor.connection) || null;
-      if (!conn) return { error: "Meteor.connection unavailable" };
-      const status = typeof conn.status === "function" ? conn.status() : null;
-      const pendingMethods = [];
-      const methodInvokers = conn._methodInvokers || {};
-      for (const id of Object.keys(methodInvokers)) {
-        const inv = methodInvokers[id];
-        pendingMethods.push({
-          id,
-          method: inv && inv._message && inv._message.method,
-          sentByClient: !!(inv && inv.sentMessage),
-        });
-      }
-      const subs = conn._subscriptions || {};
-      const pendingSubs = [];
-      for (const id of Object.keys(subs)) {
-        const sub = subs[id];
-        if (!sub || !sub.ready) {
-          pendingSubs.push({ id, name: sub && sub.name });
+    () =>
+      page.evaluate(() => {
+        const conn = (typeof Meteor !== "undefined" && Meteor.connection) || null;
+        if (!conn) return { error: "Meteor.connection unavailable" };
+        const status = typeof conn.status === "function" ? conn.status() : null;
+        const pendingMethods = [];
+        const methodInvokers = conn._methodInvokers || {};
+        for (const id of Object.keys(methodInvokers)) {
+          const inv = methodInvokers[id];
+          pendingMethods.push({
+            id,
+            method: inv && inv._message && inv._message.method,
+            sentByClient: !!(inv && inv.sentMessage),
+          });
         }
-      }
-      return { status, pendingMethods, pendingSubs };
-    }),
-    {}
+        const subs = conn._subscriptions || {};
+        const pendingSubs = [];
+        for (const id of Object.keys(subs)) {
+          const sub = subs[id];
+          if (!sub || !sub.ready) {
+            pendingSubs.push({ id, name: sub && sub.name });
+          }
+        }
+        return { status, pendingMethods, pendingSubs };
+      }),
+    {},
   );
   console.error(`=== ${label} ===`);
   console.error(`  current client test: ${clientTest}`);
   console.error(`  current server test: ${serverTest}`);
   console.error(`  ddp: ${JSON.stringify(ddpState)}`);
-  await safe(
-    () => page.screenshot({ path: `puppeteer-${label}.png`, fullPage: true }),
-    null
-  );
+  await safe(() => page.screenshot({ path: `puppeteer-${label}.png`, fullPage: true }), null);
 }
 
 async function runNextUrl(browser) {
@@ -122,7 +126,9 @@ async function runNextUrl(browser) {
   page.on("requestfailed", (req) => {
     bumpActivity();
     const failure = req.failure();
-    console.error(`request failed: ${req.url()} — ${failure ? failure.errorText : "<no failure info>"}`);
+    console.error(
+      `request failed: ${req.url()} — ${failure ? failure.errorText : "<no failure info>"}`,
+    );
   });
   page.on("requestfinished", () => bumpActivity());
   browser.on("disconnected", () => {
@@ -152,7 +158,9 @@ async function runNextUrl(browser) {
     try {
       await dumpDiagnostics(page, "watchdog-stall");
     } finally {
-      fail(`watchdog: no browser activity for ${idleFor}ms — aborting (idle limit ${IDLE_TIMEOUT_MS}ms)`);
+      fail(
+        `watchdog: no browser activity for ${idleFor}ms — aborting (idle limit ${IDLE_TIMEOUT_MS}ms)`,
+      );
     }
   }, WATCHDOG_TICK_MS);
   watchdog.unref?.();
