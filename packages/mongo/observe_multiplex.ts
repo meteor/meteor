@@ -1,6 +1,8 @@
 import isEmpty from "lodash.isempty";
 import { EJSON } from "meteor/ejson";
 import { ObserveHandle } from "./observe_handle";
+// @ts-ignore - plain JS module
+import { fenceLog, FENCE_DEBUG_ENABLED } from "./_fence_debug";
 
 interface ObserveMultiplexerOptions {
   ordered: boolean;
@@ -60,6 +62,11 @@ interface ChainedHandle extends ObserveHandle {
  *     do not block this commit. This preserves backpressure between a write's
  *     own notifications and its commit while removing cross-write blocking.
  */
+// Monotonic id for the in-process multiplexer instance. Used purely as a
+// correlation handle in `[fence-debug]` log lines so an investigator can tie
+// `_applyCallback` events to the matching `onFlush` calls. Not persisted.
+let nextMultiplexerDebugId = 0;
+
 export class ObserveMultiplexer {
   private readonly _ordered: boolean;
   private readonly _onStop: () => void;
@@ -69,6 +76,7 @@ export class ObserveMultiplexer {
   private _isReady: boolean;
   private _cache: any;
   private _addHandleTasksScheduledButNotPerformed: number;
+  readonly _debugId: number;
 
   constructor({ ordered, onStop = () => {} }: ObserveMultiplexerOptions) {
     if (ordered === undefined) throw Error("must specify ordered");
@@ -86,6 +94,7 @@ export class ObserveMultiplexer {
     this._handles = {};
     this._resolver = null;
     this._isReady = false;
+    this._debugId = ++nextMultiplexerDebugId;
     this._readyPromise = new Promise((r) => (this._resolver = r)).then(
       () => (this._isReady = true)
     );
@@ -228,6 +237,7 @@ export class ObserveMultiplexer {
     }
 
     const inflight: Promise<unknown>[] = [];
+    let seededFromInitialAdds = 0;
     if (this._handles) {
       for (const handleId of Object.keys(this._handles)) {
         const handle = this._handles[handleId];
@@ -239,13 +249,30 @@ export class ObserveMultiplexer {
           // its initialAddsSent so a commit can't fire ahead of the very
           // first `_added` for a freshly-attached handle.
           inflight.push(handle.initialAddsSent);
+          seededFromInitialAdds++;
         }
       }
     }
+
+    fenceLog("mux:onFlush:snapshot", {
+      mxId: this._debugId,
+      chain: inflight.length,
+      fromInitialAdds: seededFromInitialAdds,
+      handleCount: this._handles ? Object.keys(this._handles).length : 0,
+    });
+
     if (inflight.length) {
       await Promise.allSettled(inflight);
     }
+
+    fenceLog("mux:onFlush:awaited", {
+      mxId: this._debugId,
+      chain: inflight.length,
+    });
+
     await cb();
+
+    fenceLog("mux:onFlush:cbDone", { mxId: this._debugId });
   }
 
   callbackNames(): ObserveHandleCallback[] {
@@ -263,6 +290,18 @@ export class ObserveMultiplexer {
     // operations. This prevents race conditions where an update event arrives
     // before the insert has been recorded in the cache.
     this._cache.applyChange[callbackName].apply(null, args);
+
+    if (FENCE_DEBUG_ENABLED) {
+      // args[0] is the doc id for added/changed/removed (and addedBefore /
+      // movedBefore on ordered observers). Best-effort because the id may be
+      // a Mongo ObjectID instance.
+      fenceLog("mux:apply", {
+        mxId: this._debugId,
+        cb: callbackName,
+        docId: args[0],
+        handleCount: this._handles ? Object.keys(this._handles).length : 0,
+      });
+    }
 
     if (!this._handles) return;
 

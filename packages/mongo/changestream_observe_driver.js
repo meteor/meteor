@@ -7,8 +7,12 @@ import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
 import { replaceTypes, replaceMongoAtomWithMeteor } from './mongo_common';
 import { compareOperationTimes } from './mongo_common';
+import { fenceLog, FENCE_DEBUG_ENABLED } from './_fence_debug';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
+
+let nextDriverDebugId = 0;
+let nextFenceDebugId = 0;
 
 // Restart backoff: 100ms, 200ms, 400ms, 800ms, 1.6s, 3.2s, 5s (capped).
 // Resets on a successful re-open.
@@ -46,6 +50,7 @@ export class ChangeStreamObserveDriver {
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
 
+    this._debugId = ++nextDriverDebugId;
     this._stopped = false;
     this._invalidated = false;
     this._isReady = false;
@@ -282,9 +287,26 @@ export class ChangeStreamObserveDriver {
     fence._changeStreamObserveDrivers = {};
     fence._changeStreamObserveDrivers[this._id] = this;
 
+    const fenceDebugId = FENCE_DEBUG_ENABLED ? ++nextFenceDebugId : 0;
+    if (FENCE_DEBUG_ENABLED) {
+      fence._fenceDebugId = fenceDebugId;
+      fenceLog('driver:onWrite:registerFence', {
+        driverId: this._debugId,
+        fenceId: fenceDebugId,
+        collection: this._cursorDescription.collectionName,
+      });
+    }
+
     fence.onBeforeFire(async () => {
       const drivers = fence._changeStreamObserveDrivers;
       delete fence._changeStreamObserveDrivers;
+
+      if (FENCE_DEBUG_ENABLED) {
+        fenceLog('driver:onBeforeFire:enter', {
+          fenceId: fenceDebugId,
+          driverCount: Object.keys(drivers).length,
+        });
+      }
 
       for (const driver of Object.values(drivers)) {
         if (driver._stopped) continue;
@@ -295,18 +317,68 @@ export class ChangeStreamObserveDriver {
         // AsyncLocalStorage context, so DDPServer._getCurrentFence()
         // would return undefined here and miss the per-collection
         // target timestamp annotation.
+        if (FENCE_DEBUG_ENABLED) {
+          fenceLog('driver:waitUntilCaughtUp:before', {
+            fenceId: fenceDebugId,
+            driverId: driver._debugId,
+            mxId: driver._multiplexer?._debugId,
+            collection: driver._cursorDescription.collectionName,
+            targetTs: fence._csTargetTsByCollection?.[driver._cursorDescription.collectionName]?.toString?.(),
+            lastProcessed: driver._lastProcessedOperationTime?.toString?.(),
+          });
+        }
         await driver._waitUntilCaughtUp(fence);
+        if (FENCE_DEBUG_ENABLED) {
+          fenceLog('driver:waitUntilCaughtUp:after', {
+            fenceId: fenceDebugId,
+            driverId: driver._debugId,
+            mxId: driver._multiplexer?._debugId,
+            lastProcessed: driver._lastProcessedOperationTime?.toString?.(),
+            pendingCount: driver._pendingWrites.length,
+          });
+        }
         driver._flushPendingWrites();
+        if (FENCE_DEBUG_ENABLED) {
+          fenceLog('driver:flushPending:after', {
+            fenceId: fenceDebugId,
+            driverId: driver._debugId,
+            mxId: driver._multiplexer?._debugId,
+          });
+        }
 
         if (driver._isReady) {
+          if (FENCE_DEBUG_ENABLED) {
+            fenceLog('driver:onFlush:before', {
+              fenceId: fenceDebugId,
+              driverId: driver._debugId,
+              mxId: driver._multiplexer?._debugId,
+            });
+          }
           await driver._multiplexer.onFlush(async () => {
             await write.committed();
           });
+          if (FENCE_DEBUG_ENABLED) {
+            fenceLog('driver:onFlush:after', {
+              fenceId: fenceDebugId,
+              driverId: driver._debugId,
+              mxId: driver._multiplexer?._debugId,
+            });
+          }
         } else {
+          if (FENCE_DEBUG_ENABLED) {
+            fenceLog('driver:onFlush:deferred', {
+              fenceId: fenceDebugId,
+              driverId: driver._debugId,
+              mxId: driver._multiplexer?._debugId,
+            });
+          }
           driver._writesToCommitWhenReady.push(write);
         }
       }
       delete fence._csTargetTsByCollection;
+      if (FENCE_DEBUG_ENABLED) {
+        fenceLog('driver:onBeforeFire:exit', { fenceId: fenceDebugId });
+      }
     });
   }
 
@@ -444,11 +516,24 @@ export class ChangeStreamObserveDriver {
     this._writesToCommitWhenReady = [];
 
     if (writes.length > 0) {
+      if (FENCE_DEBUG_ENABLED) {
+        fenceLog('driver:flushWritesToCommit:before', {
+          driverId: this._debugId,
+          mxId: this._multiplexer?._debugId,
+          writeCount: writes.length,
+        });
+      }
       await this._multiplexer.onFlush(async () => {
         for (const write of writes) {
           await write.committed();
         }
       });
+      if (FENCE_DEBUG_ENABLED) {
+        fenceLog('driver:flushWritesToCommit:after', {
+          driverId: this._debugId,
+          mxId: this._multiplexer?._debugId,
+        });
+      }
     }
   }
 

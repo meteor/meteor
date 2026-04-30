@@ -84,6 +84,7 @@ Package.onUse(function (api) {
 
   api.addFiles(
     [
+      "_fence_debug.js",
       "mongo_driver.js",
       "oplog_tailing.ts",
       "observe_multiplex.ts",
