@@ -47,11 +47,6 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-node-24-
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y g++-12 libnss3
-
       - name: Install npm dependencies
         run: npm install
 
