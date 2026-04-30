@@ -11,7 +11,7 @@ jobs:
         transport:
           - 'sockjs'
           - 'uws'
-    runs-on: ubuntu-24.04
+    runs-on: vm-oss
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.transport }}
       cancel-in-progress: true
