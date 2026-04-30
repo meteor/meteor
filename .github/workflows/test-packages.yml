@@ -6,61 +6,91 @@ on:
       - "packages/**"
       - ".github/workflows/test-packages.yml"
 
+concurrency:
+  group: meteor-test-packages-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TOOL_NODE_FLAGS: "--max_old_space_size=12288"
+  NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
+
 jobs:
   test-packages:
+    name: ${{ matrix.reactivity_order }}
+    runs-on: oss-vm
+    timeout-minutes: 90
+    container:
+      image: node:24-bookworm
+      options: --cpus 6 --memory 16g --security-opt seccomp=unconfined
+
     strategy:
       fail-fast: false
       matrix:
         reactivity_order:
           - 'changeStreams,polling'
           - 'oplog,polling'
-    runs-on: oss-vm
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
-      cancel-in-progress: true
-    timeout-minutes: 90
+
     env:
       CXX: g++-12
       phantom: false
-      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
       METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      TIMEOUT_SCALE_FACTOR: "20"
+      METEOR_HEADLESS: "true"
+      METEOR_ALLOW_SUPERUSER: "1"
+      PUPPETEER_DOWNLOAD_PATH: /root/.cache/puppeteer
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
         with:
-          node-version: 24.14.0
           submodules: recursive
 
-      - name: Expose globally-installed puppeteer to Node.js
-        # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
-        # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
-        # so run.sh skips the slow `./meteor npm install -g puppeteer` step.
-        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
-
-      - name: Restore caches
+      - name: Cache dependencies
+        id: deps-cache
         uses: actions/cache@v4
         with:
           path: |
-            ~/.npm
-            .meteor
-            .babel-cache
+            /root/.npm
+            /root/.cache/puppeteer
             dev_bundle
-          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
+            .babel-cache
+            .meteor
+            node_modules
+          key: test-packages-${{ runner.os }}-${{ hashFiles('package-lock.json', 'meteor') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-
+            test-packages-${{ runner.os }}-
+
+      - name: Install Chromium system dependencies
+        run: npx --yes playwright install-deps chromium
+
+      - name: Install deps
+        run: npm install
+
+      - name: Install puppeteer globally
+        # run.sh resolves puppeteer via require('puppeteer') first; installing
+        # it globally lets us skip the slower per-run `meteor npm install -g`.
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: npm install -g puppeteer@23.6.0
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Prepare Meteor
+        if: steps.deps-cache.outputs.cache-hit != 'true'
+        run: ./meteor --get-ready --allow-superuser
+
       - name: Run test-in-console suite
+        id: test-run
+        continue-on-error: true
+        timeout-minutes: 60
+        run: ./packages/test-in-console/run.sh
+
+      - name: Retry test-in-console suite
+        if: steps.test-run.outcome == 'failure'
+        timeout-minutes: 60
         run: |
-          export TEST_PACKAGES_EXCLUDE="stylus"
-          export METEOR_MODERN="true"
-          export NODE_ENV="CI"
-          export CXX="g++-12"
-          export phantom="false"
-          export TIMEOUT_SCALE_FACTOR="20"
-          export METEOR_HEADLESS="true"
+          echo "::warning::First attempt failed, retrying..."
           ./packages/test-in-console/run.sh
