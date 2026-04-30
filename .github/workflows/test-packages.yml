@@ -63,4 +63,4 @@ jobs:
           export phantom="false"
           export TIMEOUT_SCALE_FACTOR="20"
           export METEOR_HEADLESS="true"
-          ./packages/test-in-console/run.sh
+          ./packages/test-in-console/run.sh mongo

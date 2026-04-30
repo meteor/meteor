@@ -220,7 +220,14 @@ export class ChangeStreamObserveDriver {
       // Handle errors and reconnection
       this._changeStream.on('error', Meteor.bindEnvironment((error) => {
         if (this._stopped) return;
-        console.error('ChangeStream error:', error);
+        console.error('ChangeStream error:', {
+          driverId: this._id,
+          collectionName: this._cursorDescription.collectionName,
+          resumeTokenPresent: !!this._resumeToken,
+          lastProcessedOperationTime: this._lastProcessedOperationTime,
+          catchingUpResolversCount: this._catchingUpResolvers.length,
+          error,
+        });
         // Attempt to restart after a delay
         const timeoutId = setTimeout(() => {
           if (!this._stopped) {
@@ -236,6 +243,13 @@ export class ChangeStreamObserveDriver {
 
       this._changeStream.on('close', Meteor.bindEnvironment(() => {
         if (!this._stopped) {
+          console.error('ChangeStream closed unexpectedly, scheduling restart:', {
+            driverId: this._id,
+            collectionName: this._cursorDescription.collectionName,
+            resumeTokenPresent: !!this._resumeToken,
+            lastProcessedOperationTime: this._lastProcessedOperationTime,
+            catchingUpResolversCount: this._catchingUpResolvers.length,
+          });
           // Unexpected close, attempt restart
           const timeoutId = setTimeout(() => {
             if (!this._stopped) {
@@ -322,6 +336,13 @@ export class ChangeStreamObserveDriver {
   }
 
   async _restartChangeStream() {
+    const collectionName = this._cursorDescription.collectionName;
+    console.error('ChangeStream restart begin:', {
+      driverId: this._id,
+      collectionName,
+      resumeTokenPresent: !!this._resumeToken,
+      catchingUpResolversCount: this._catchingUpResolvers.length,
+    });
     try {
       // Close current stream using stop callbacks if they exist
       if (this._changeStream) {
@@ -336,8 +357,17 @@ export class ChangeStreamObserveDriver {
         }
       }
       await this._startWatching();
+      console.error('ChangeStream restart done:', {
+        driverId: this._id,
+        collectionName,
+        catchingUpResolversCount: this._catchingUpResolvers.length,
+      });
     } catch (error) {
-      console.error('Failed to restart ChangeStream:', error);
+      console.error('Failed to restart ChangeStream:', {
+        driverId: this._id,
+        collectionName,
+        error,
+      });
     }
   }
 
@@ -582,17 +612,53 @@ export class ChangeStreamObserveDriver {
     //   2. The watchdog below logging if the wait stalls past warnMs, which
     //      makes a genuinely-broken stream visible without masking it.
     const warnMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpWarnMs ?? 10000;
-
-    let warnTimeoutId = setTimeout(() => {
+    const waitStartedAt = Date.now();
+    let warnCount = 0;
+    const dumpDiagnostics = () => {
+      warnCount++;
       console.error(
         `Meteor: change stream catching up took too long`,
-        { collectionName, ts: targetTs }
+        {
+          driverId: this._id,
+          collectionName,
+          targetTs,
+          lastProcessedOperationTime: this._lastProcessedOperationTime,
+          stopped: this._stopped,
+          isReady: this._isReady,
+          changeStreamOpen: !!this._changeStream,
+          resumeTokenPresent: !!this._resumeToken,
+          pendingWritesCount: this._pendingWrites.length,
+          writesToCommitWhenReadyCount: this._writesToCommitWhenReady.length,
+          catchingUpResolversCount: this._catchingUpResolvers.length,
+          waitedMs: Date.now() - waitStartedAt,
+          warnCount,
+        }
       );
+    };
+
+    let warnTimeoutId = setTimeout(function tick() {
+      dumpDiagnostics();
+      // Re-arm so we keep dumping state every warnMs while the wait is stuck.
+      // Without this we only ever see the first snapshot and can't tell whether
+      // the stream made any progress before the test gave up.
+      warnTimeoutId = setTimeout(tick, warnMs);
     }, warnMs);
 
     await new Promise((resolve) => {
       entry.resolver = () => {
         clearTimeout(warnTimeoutId);
+        if (warnCount > 0) {
+          console.error(
+            `Meteor: change stream caught up after warn`,
+            {
+              driverId: this._id,
+              collectionName,
+              targetTs,
+              waitedMs: Date.now() - waitStartedAt,
+              warnCount,
+            }
+          );
+        }
         resolve();
       };
       this._catchingUpResolvers.splice(insertIdx, 0, entry);
