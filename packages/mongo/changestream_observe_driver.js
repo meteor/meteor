@@ -411,38 +411,6 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  async _getServerOperationTime() {
-    const db = this._mongoHandle.db;
-    const admin = db.admin();
-
-    const commands = [
-      () => db.command({ ping: 1 }),
-      () => admin.command({ hello: 1 }),
-      () => admin.command({ ismaster: 1 }),
-    ];
-
-    const runCommandRecursive = async (index = 0) => {
-      if (index >= commands.length) return null;
-
-      try {
-        const res = await commands[index]();
-        return res?.operationTime || res?.$clusterTime?.clusterTime || null;
-      } catch (error) {
-        if (!error) return false;
-        const isUnsupportedCommandError = error.code === 59;
-        if (isUnsupportedCommandError) return runCommandRecursive(index + 1);
-        throw error;
-      }
-    };
-
-    try {
-      return await runCommandRecursive();
-    } catch (error) {
-      console.error(`[ChangeStream ${this._id}] Failed to fetch server operation time:`, error);
-      return null;
-    }
-  }
-
   async _flushPendingWrites() {
     const callbacksToFlush = this._pendingWrites;
     this._pendingWrites = [];
@@ -550,22 +518,23 @@ export class ChangeStreamObserveDriver {
   async _waitUntilCaughtUp(fenceOverride) {
     if (this._stopped) return;
 
-    // Prefer the exact clusterTime of the write(s) that triggered this fence,
-    // when the write path annotated it on the fence (see
-    // mongo_connection._annotateFenceWithWriteTs). Falls back to asking the
-    // server for its current operationTime, which races ahead of the write's
-    // ts and historically caused every fence to wait the full timeout.
+    // The write path annotates the fence with the exact clusterTime of any
+    // write that hit our collection (see mongo_connection._annotateFenceWithWriteTs).
     // Target is looked up per-collection: this driver only observes events
     // from its own collection, so waiting on a ts from a different
     // collection's write would always time out.
+    //
+    // No annotation for our collection ⇒ this fence didn't record a write
+    // we'd ever observe (write was on another collection, write was a no-op,
+    // or there's no fence at all). There's nothing for us to wait for —
+    // yield once and return. Manufacturing a target via a server ping was
+    // the previous behaviour and produced an artificial "wait until now"
+    // goal that an idle stream could never reach, forcing the safety
+    // timeout to fire for no semantic reason.
     const fence = fenceOverride || DDPServer._getCurrentFence();
     const { collectionName } = this._cursorDescription;
     const { _csTargetTsByCollection } = fence || {};
-    let targetTs = _csTargetTsByCollection && collectionName ? _csTargetTsByCollection[collectionName] : undefined;
-    if (!targetTs) {
-      targetTs = await this._getServerOperationTime();
-    }
-
+    const targetTs = _csTargetTsByCollection && collectionName ? _csTargetTsByCollection[collectionName] : undefined;
     if (!targetTs) {
       await new Promise((r) => setImmediate(r));
       return;

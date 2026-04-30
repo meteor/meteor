@@ -2246,8 +2246,7 @@ Tinytest.addAsync(
     await waitFor(() => driver._lastProcessedOperationTime !== null, 2000);
 
     // Build a fake fence whose target ts is <= _lastProcessedOperationTime.
-    // _waitUntilCaughtUp should hit the 'already-caught-up' early exit
-    // without falling back to the (network) _getServerOperationTime call.
+    // _waitUntilCaughtUp should hit the 'already-caught-up' early exit.
     const pastTs = driver._lastProcessedOperationTime;
     const fakeFence = { _csTargetTsByCollection: { [c._name]: pastTs } };
 
@@ -2261,19 +2260,20 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- _waitUntilCaughtUp falls back to server ping when no fence annotation',
+  'changestream- _waitUntilCaughtUp returns fast when no fence annotation',
   async function (test) {
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
     const driver = handle._multiplexer._observeDriver;
 
-    // Undefined fence → fallback path. Should complete without timing out.
+    // Undefined fence → no target ts to wait for. Should yield once and return,
+    // not synthesize an artificial wait goal that could force a safety timeout.
     const t0 = Date.now();
     await driver._waitUntilCaughtUp(undefined);
     const elapsed = Date.now() - t0;
 
-    test.isTrue(elapsed < 1000, `fallback path should not hit the safety timeout; elapsed=${elapsed}ms`);
+    test.isTrue(elapsed < 50, `no-annotation path should short-circuit fast; elapsed=${elapsed}ms`);
     handle.stop();
   }
 );
@@ -2283,7 +2283,7 @@ Tinytest.addAsync(
   async function (test) {
     // If _waitUntilCaughtUp took ts from another collection, we'd spin
     // waiting for a clusterTime this driver's stream never observes.
-    // The correct behaviour is to ignore that key and fall back.
+    // The correct behaviour is to ignore that key and return immediately.
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
@@ -2299,8 +2299,8 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 1000,
-      `annotation for another collection should be ignored (no timeout); elapsed=${elapsed}ms`
+      elapsed < 50,
+      `annotation for another collection should be ignored (short-circuit); elapsed=${elapsed}ms`
     );
     handle.stop();
   }
