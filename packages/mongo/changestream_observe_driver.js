@@ -100,33 +100,62 @@ export class ChangeStreamObserveDriver {
   async _start() {
     if (this._stopped) return;
 
-    const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
+    try {
+      const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
 
-    // Register the fence listener and send initial adds in parallel: neither
-    // depends on the other and both must complete before the multiplexer is
-    // marked ready.
-    const [stopHandle] = await Promise.all([
-      listenAll(this._cursorDescription, this._onWrite),
-      this._sendInitialAdds(collection),
-    ]);
+      // Capture the cluster time BEFORE the snapshot read so the first
+      // cursor can be opened with startAtOperationTime. Without this there
+      // is a race window between _sendInitialAdds finishing and watch()
+      // establishing the cursor during which any write on this collection
+      // emits a change event the stream never sees — leaving fence waiters
+      // blocked on a clusterTime that will never arrive. Best-effort: if
+      // the ping fails we fall back to mongo's default of "now".
+      let startAtOperationTime;
+      try {
+        const pingRes = await this._mongoHandle.db.command({ ping: 1 });
+        startAtOperationTime = pingRes?.operationTime;
+      } catch (_) { /* best-effort */ }
 
-    if (this._stopped) {
-      try { await stopHandle.stop(); } catch { /* ignore */ }
-      return;
+      // Register the fence listener and send initial adds in parallel: neither
+      // depends on the other and both must complete before the multiplexer is
+      // marked ready.
+      const [stopHandle] = await Promise.all([
+        listenAll(this._cursorDescription, this._onWrite),
+        this._sendInitialAdds(collection),
+      ]);
+
+      if (this._stopped) {
+        try { await stopHandle.stop(); } catch { /* ignore */ }
+        return;
+      }
+      this._listenStopHandle = stopHandle;
+
+      // Signal initial adds are complete. _isReady stays false until the
+      // cursor is actually attached so fence writes don't commit through a
+      // gap where events would be lost.
+      this._multiplexer.ready();
+
+      await this._openCursor(null, startAtOperationTime);
+      this._isReady = true;
+      await this._flushWritesToCommit();
+    } catch (error) {
+      // If init fails we still need to release any fence writes that were
+      // queued in _writesToCommitWhenReady — otherwise the publication's
+      // _readyPromise never resolves, the subscription never sends `ready`
+      // to the client, and any test that polls sub.ready() hangs to its
+      // testAsyncMulti timeout.
+      try {
+        if (!this._multiplexer._ready()) {
+          await this._multiplexer.ready();
+        }
+      } catch (_) { /* ready() throws if already ready; ignore */ }
+      this._isReady = true;
+      try { await this._flushWritesToCommit(); } catch (_) { /* ignore */ }
+      throw error;
     }
-    this._listenStopHandle = stopHandle;
-
-    // Signal initial adds are complete. _isReady stays false until the
-    // cursor is actually attached so fence writes don't commit through a
-    // gap where events would be lost.
-    this._multiplexer.ready();
-
-    await this._openCursor(null);
-    this._isReady = true;
-    await this._flushWritesToCommit();
   }
 
-  async _openCursor(resumeToken) {
+  async _openCursor(resumeToken, startAtOperationTime) {
     if (this._stopped || this._invalidated) return;
 
     const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
@@ -134,7 +163,14 @@ export class ChangeStreamObserveDriver {
       fullDocument: 'updateLookup',
       fullDocumentBeforeChange: 'whenAvailable',
     };
-    if (resumeToken) opts.resumeAfter = resumeToken;
+    if (resumeToken) {
+      opts.resumeAfter = resumeToken;
+    } else if (startAtOperationTime) {
+      // Replay events from the captured ts forward so writes that landed
+      // between the ping and the cursor establishment are not silently
+      // dropped. Skipped on resume — the prior token already pins the start.
+      opts.startAtOperationTime = startAtOperationTime;
+    }
 
     const stream = collection.watch(this._buildPipeline(), opts);
     stream.on('change', this._onChange);
@@ -314,19 +350,25 @@ export class ChangeStreamObserveDriver {
   }
 
   _buildPipeline() {
-    const selector = this._cursorDescription.selector;
-
-    if (!selector || Object.keys(selector).length === 0) {
-      return [];
-    }
-
-    return [
-      {
-        $match: {
-          operationType: { $in: ['insert', 'update', 'replace', 'delete'] }
-        }
-      }
-    ];
+    // Always return an empty pipeline so mongo delivers EVERY change event
+    // (including drop, invalidate, create, modify, rename, ...). Per-event
+    // type filtering happens in _handleChange via SUPPORTED_OPERATIONS.
+    //
+    // Why not filter server-side: events filtered out by the pipeline never
+    // reach our on('change') handler, so _setLastProcessedOperationTime
+    // does not advance for their clusterTime. Meanwhile the fence write
+    // path annotates _csTargetTsByCollection with session.operationTime,
+    // which advances on every cluster operation — so the wait could pin
+    // to a clusterTime that this stream's _lastProcessedOperationTime can
+    // never reach. Observed in CI as a `users` driver stuck on
+    // {t:T, i:25} while seeing only up to {t:T, i:15}, blocking
+    // removeUserByUsername forever.
+    //
+    // Per-document selector filtering still happens in _handleChange via
+    // the matcher; promoting that into the pipeline is a separate
+    // optimization that would have to coexist with always-deliver
+    // semantics.
+    return [];
   }
 
   async _handleChange(change) {
@@ -444,10 +486,18 @@ export class ChangeStreamObserveDriver {
 
   _handleInsert(id, doc) {
     const matches = this._matcher.documentMatches(doc).result;
-    if (matches) {
-      const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
-      this._sendMultiplexerAdded(id, projectedDoc);
-    }
+    if (!matches) return;
+
+    // Dedup against the snapshot. The cursor is opened with
+    // startAtOperationTime set to a ping timestamp captured BEFORE
+    // _sendInitialAdds, so any insert that lands during the snapshot is
+    // replayed through the stream. Without this guard the multiplexer
+    // would receive a second `added` for a doc the snapshot already
+    // delivered, breaking observer state.
+    if (this._multiplexer?._cache?.docs.has(id)) return;
+
+    const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
+    this._sendMultiplexerAdded(id, projectedDoc);
   }
 
   _handleUpdate(id, newDoc, oldDoc) {
