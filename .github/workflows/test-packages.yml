@@ -84,13 +84,5 @@ jobs:
 
       - name: Run test-in-console suite
         id: test-run
-        continue-on-error: true
         timeout-minutes: 60
         run: ./packages/test-in-console/run.sh
-
-      - name: Retry test-in-console suite
-        if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 60
-        run: |
-          echo "::warning::First attempt failed, retrying..."
-          ./packages/test-in-console/run.sh
