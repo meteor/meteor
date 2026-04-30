@@ -4359,6 +4359,13 @@ Tinytest.addAsync(
       `maintained_col_op_iso${test.runId()}`,
       { resolverType: 'stub' }
     );
+    // Without this, the server denies the client-issued mutations (no allow
+    // rules, insecure not auto-loaded by test-packages), the denial reverts
+    // the optimistic writes, and whether the assertions pass depends on
+    // whether the server response arrives before the next find. Marking the
+    // collection insecure makes server-side mutations succeed so the test
+    // measures resolverType:'stub' semantics, not race timing.
+    Collection._insecure = true;
 
     await Collection.insertAsync({ _id: 'a' });
     await Collection.insertAsync({ _id: 'b' });
@@ -4371,10 +4378,9 @@ Tinytest.addAsync(
     await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
     await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
 
-    if(Meteor.isClient) Meteor._sleepForMs(100); // wait for async operations to complete 
     items = await Collection.find().fetchAsync();
     itemIds = items.map(_item => _item.num);
-    
+
     test.equal(itemIds, [1, 2]);
 
     await Collection.removeAsync({ _id: 'a' });
