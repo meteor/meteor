@@ -1067,6 +1067,20 @@ MongoConnection.prototype._observeChanges = async function (
             reasons.push('Change Streams cannot be used with _testOnlyPollCallback');
           }
 
+          // Cursors with `skip` or `limit` are not supported. Change streams
+          // emit one event per write across the entire collection, but the
+          // result set of a limit/skip cursor is a moving window — when a doc
+          // outside that window changes it can shift the window, and inferring
+          // that purely from change events would require re-running the
+          // query. Without this fall-back we'd emit added events for any
+          // matching insert anywhere in the collection (regardless of limit),
+          // breaking tests like `livedata server - publish cursor is properly
+          // awaited`. Mirrors OplogObserveDriver.cursorSupported's reasoning.
+          const csOptions = cursorDescription.options || {};
+          if (csOptions.skip || csOptions.limit) {
+            reasons.push('Cursor with skip/limit not supported by Change Streams');
+          }
+
           if (reasons.length) {
             return {
               available: false,
