@@ -20,7 +20,12 @@ let shuttingDown = false;
 // log output. A client test that hangs awaiting a never-completing Meteor call
 // (e.g. a DDP transport regression) produces no console output, so nothing
 // fires and the whole run silently waits for the GitHub Actions job timeout.
-const IDLE_TIMEOUT_MS = parseInt(process.env.PUPPETEER_IDLE_TIMEOUT_MS, 10) || 120000;
+//
+// Default 240s sits above Tinytest's own 3-minute per-test timeouts (server
+// branch in tinytest.js, plus the matching client branch added in this PR) so
+// the in-suite timeouts get first chance to convert a hung test into a clean
+// failure event before the watchdog kills the whole run.
+const IDLE_TIMEOUT_MS = parseInt(process.env.PUPPETEER_IDLE_TIMEOUT_MS, 10) || 240000;
 const WATCHDOG_TICK_MS = 5000;
 let lastActivityAt = Date.now();
 const bumpActivity = () => {
@@ -53,7 +58,14 @@ async function dumpDiagnostics(page, label) {
   const ddpState = await safe(
     () =>
       page.evaluate(() => {
-        const conn = (typeof Meteor !== "undefined" && Meteor.connection) || null;
+        // `Meteor` is exported by the meteor package and lives on
+        // Package.meteor.Meteor in the bundled output; it is not a top-level
+        // page global. Fall back to a top-level `Meteor` if some build mode
+        // exposes it that way.
+        const meteorPkg =
+          (typeof Package !== "undefined" && Package.meteor && Package.meteor.Meteor) ||
+          (typeof Meteor !== "undefined" ? Meteor : null);
+        const conn = meteorPkg && meteorPkg.connection;
         if (!conn) return { error: "Meteor.connection unavailable" };
         const status = typeof conn.status === "function" ? conn.status() : null;
         const pendingMethods = [];
