@@ -40,6 +40,12 @@ export class ChangeStreamObserveDriver {
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
 
+    // Ring buffer of recent diagnostic events (last 20). Always populated so
+    // the watchdog log can attach a timeline when a wait stalls. Each entry
+    // is `{ kind, at, ...details }` — kept tiny to avoid memory pressure.
+    this._diagEvents = [];
+    this._diagDebugEnabled = !!process.env.METEOR_CS_DEBUG;
+
     // Projection function similar to oplog driver
     const projection = this._cursorDescription.options.projection || this._cursorDescription.options.fields;
     if (projection) {
@@ -61,6 +67,18 @@ export class ChangeStreamObserveDriver {
 
     this._startListening();
     this._startWatching();
+  }
+
+  _diagPush(kind, details) {
+    const entry = { kind, at: Date.now(), ...details };
+    this._diagEvents.push(entry);
+    if (this._diagEvents.length > 20) this._diagEvents.shift();
+    if (this._diagDebugEnabled) {
+      console.error(
+        `[CS ${this._id}/${this._cursorDescription.collectionName}] ${kind}`,
+        details
+      );
+    }
   }
 
   _sendMultiplexerAdded(id, projectedDoc) {
@@ -191,6 +209,11 @@ export class ChangeStreamObserveDriver {
       }
 
       this._changeStream = collection.watch(pipeline, changeStreamOptions);
+      this._diagPush('streamOpen', {
+        startAtOperationTime: changeStreamOptions.startAtOperationTime,
+        startAfter: changeStreamOptions.startAfter ? '<token>' : undefined,
+        pipelineLen: pipeline.length,
+      });
 
       // Register stop callback for the change stream
       this._stopCallbacks.push(async () => {
@@ -218,6 +241,11 @@ export class ChangeStreamObserveDriver {
         if (change && change.clusterTime) {
           this._setLastProcessedOperationTime(change.clusterTime);
         }
+        this._diagPush('change', {
+          op: change?.operationType,
+          ts: change?.clusterTime,
+          docKey: change?.documentKey?._id,
+        });
         this._handleChange(change);
 
         const fence = DDPServer._getCurrentFence();
@@ -235,6 +263,7 @@ export class ChangeStreamObserveDriver {
       // Handle errors and reconnection
       this._changeStream.on('error', Meteor.bindEnvironment((error) => {
         if (this._stopped) return;
+        this._diagPush('streamError', { msg: error?.message, code: error?.code });
         console.error('ChangeStream error:', {
           driverId: this._id,
           collectionName: this._cursorDescription.collectionName,
@@ -258,6 +287,7 @@ export class ChangeStreamObserveDriver {
 
       this._changeStream.on('close', Meteor.bindEnvironment(() => {
         if (!this._stopped) {
+          this._diagPush('streamClose', {});
           console.error('ChangeStream closed unexpectedly, scheduling restart:', {
             driverId: this._id,
             collectionName: this._cursorDescription.collectionName,
@@ -638,10 +668,17 @@ export class ChangeStreamObserveDriver {
     //   2. The watchdog below logging if the wait stalls past warnMs, which
     //      makes a genuinely-broken stream visible without masking it.
     const warnMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpWarnMs ?? 10000;
+
     const waitStartedAt = Date.now();
     let warnCount = 0;
+    this._diagPush('waitRegister', { targetTs, last: this._lastProcessedOperationTime });
+
+    // Periodic watchdog: re-fires every warnMs so we can see whether a wait
+    // is making progress (lastProcessedOperationTime advancing) or genuinely
+    // stuck. Carries the recent diag-event ring buffer so the timeline of
+    // what the stream HAS been seeing is visible at the failure point.
     const dumpDiagnostics = () => {
-      warnCount++;
+      warnCount += 1;
       console.error(
         `Meteor: change stream catching up took too long`,
         {
@@ -658,6 +695,7 @@ export class ChangeStreamObserveDriver {
           catchingUpResolversCount: this._catchingUpResolvers.length,
           waitedMs: Date.now() - waitStartedAt,
           warnCount,
+          recentEvents: this._diagEvents.slice(-10),
         }
       );
     };
@@ -673,6 +711,11 @@ export class ChangeStreamObserveDriver {
     await new Promise((resolve) => {
       entry.resolver = () => {
         clearTimeout(warnTimeoutId);
+        this._diagPush('waitResolved', {
+          targetTs,
+          waitedMs: Date.now() - waitStartedAt,
+          warnCount,
+        });
         if (warnCount > 0) {
           console.error(
             `Meteor: change stream caught up after warn`,

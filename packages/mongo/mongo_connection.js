@@ -182,6 +182,11 @@ function _annotateFenceWithWriteTs(fence, collectionName, writeTs) {
   const prev = map[collectionName];
   if (!prev || compareOperationTimes(writeTs, prev) > 0) {
     map[collectionName] = writeTs;
+    if (process.env.METEOR_CS_DEBUG) {
+      console.error(
+        `[CS-fence] annotate collection=${collectionName} ts=${writeTs?.t}.${writeTs?.i}`
+      );
+    }
   }
 }
 
