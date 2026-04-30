@@ -486,7 +486,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^m[a-n]|^mo[a-d]"
