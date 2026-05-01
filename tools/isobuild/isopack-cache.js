@@ -89,33 +89,28 @@ export class IsopackCache {
   // the shrinkwrap-subtree check at meteor-npm.js:682, so this becomes a
   // no-op when prefetch already did the work.
   //
-  // Each package's `.npm/package/` dir is independent — `updateDependencies`
-  // notes it "runs mostly safely multiple times in parallel" — so we cap
-  // concurrency to avoid fork-bombing npm but otherwise let them run.
-  // Errors are swallowed; the per-package compile call will retry and
-  // surface them through the normal buildmessage path.
+  // Tasks are keyed by directory, not by package, because a package and its
+  // auto-generated `local-test:` twin share the same `sourceRoot` and
+  // therefore the same `.npm/package/` dir (see package-source.js:782).
+  // Running parallel installs against the same dir would race the atomic
+  // rename in `completeNpmDirectory`. Errors are swallowed; the per-package
+  // compile call will retry and surface them through the normal
+  // buildmessage path.
   async _prefetchNpmDependencies() {
-    const tasks = [];
+    const byDir = new Map();
+    const enqueue = (name, dir, deps) => {
+      if (! dir || _.isEmpty(deps) || byDir.has(dir)) return;
+      byDir.set(dir, { name, dir, deps });
+    };
     for (const [, info] of Object.entries(this._packageMap._map)) {
       if (info.kind !== 'local') continue;
       const ps = info.packageSource;
       if (! ps) continue;
-      if (ps.npmCacheDirectory && ! _.isEmpty(ps.npmDependencies)) {
-        tasks.push({
-          name: ps.name,
-          dir: ps.npmCacheDirectory,
-          deps: ps.npmDependencies,
-        });
-      }
-      if (ps.npmDevCacheDirectory && ! _.isEmpty(ps.npmDevDependencies)) {
-        tasks.push({
-          name: ps.name,
-          dir: ps.npmDevCacheDirectory,
-          deps: ps.npmDevDependencies,
-        });
-      }
+      enqueue(ps.name, ps.npmCacheDirectory, ps.npmDependencies);
+      enqueue(ps.name, ps.npmDevCacheDirectory, ps.npmDevDependencies);
     }
 
+    const tasks = Array.from(byDir.values());
     if (tasks.length === 0) return;
 
     const concurrency = Math.max(1, Math.min(os.cpus().length, 8));
