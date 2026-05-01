@@ -62,6 +62,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | Default + custom package loading | Run |
 | `resolve.extensions` loading (`.jsx`) | Run |
 | `rspack.config.override.js` custom plugin loading | Run, Test, Build |
+| User-level `devServer.onListening` composed with meteor-rspack default | Run |
 | React + TSX environment detection | Run, Prod, Test, Build |
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
@@ -277,6 +278,7 @@ Where each feature is tested across apps and skeletons.
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
 | Custom SWC config (.ts) | typescript | |
 | Config override file | react-router, monorepo | |
+| User-level `devServer.onListening` composition | react-router | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
 | Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
