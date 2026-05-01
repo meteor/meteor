@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnProcess } = require('./process');
+const { logError } = require('./log');
 
 /**
  * Returns the Meteor dev_bundle bin directory path if available, otherwise null.
@@ -211,12 +212,32 @@ function buildYarnInstallArgs(dependencies, options = {}) {
  */
 function executeCommand(command, args, options) {
   return new Promise((resolve) => {
+    let stdoutBuf = '';
+    let stderrBuf = '';
+
+    const formatCommand = () => `${command} ${args.join(' ')}`.trim();
+    const tail = (str, max = 4000) =>
+      str.length > max ? `…(truncated)\n${str.slice(-max)}` : str;
+
     spawnProcess(command, args, {
       cwd: options.cwd,
-      onExit: (code) => {
-        resolve(code === 0);
+      onStdout: (chunk) => { stdoutBuf += chunk; },
+      onStderr: (chunk) => { stderrBuf += chunk; },
+      onExit: (code, signal) => {
+        if (code === 0) {
+          resolve(true);
+          return;
+        }
+        logError(`=> Command failed: ${formatCommand()}`);
+        logError(`   cwd: ${options.cwd || process.cwd()}`);
+        logError(`   exit code: ${code}${signal ? ` (signal: ${signal})` : ''}`);
+        if (stderrBuf.trim()) logError(`   stderr:\n${tail(stderrBuf)}`);
+        if (stdoutBuf.trim()) logError(`   stdout:\n${tail(stdoutBuf)}`);
+        resolve(false);
       },
-      onError: () => {
+      onError: (err) => {
+        logError(`=> Command could not be spawned: ${formatCommand()}`);
+        logError(`   ${err && err.message ? err.message : String(err)}`);
         resolve(false);
       }
     });
