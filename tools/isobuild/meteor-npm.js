@@ -818,15 +818,68 @@ async function installNpmDependencies(dependencies, dir) {
     JSON.stringify({ dependencies }, null, 2)
   );
 
+  const entries = Object.entries(dependencies);
+
   try {
-    for (const name of Object.keys(dependencies)) {
-      const version = dependencies[name];
-      await installNpmModule(name, version, dir);
+    if (entries.length === 0) return;
+
+    // One `npm install <a@v> <b@v> ...` is dramatically faster than N
+    // separate child processes — npm resolves and downloads in parallel
+    // internally, and we save N-1 process startups + ~N-1 npm cache reads.
+    const installArgs = entries.map(
+      ([name, version]) => npmInstallArgFor(name, version),
+    );
+    const result = await runNpmCommand(["install", ...installArgs], dir);
+
+    if (! result.success) {
+      // Fall back to per-dep installs to surface the targeted error message
+      // (`installNpmModule` parses stderr to identify which name/version is
+      // bad). The success path never hits this branch.
+      for (const [name, version] of entries) {
+        await installNpmModule(name, version, dir);
+      }
+      return;
     }
+
+    for (const [name] of entries) {
+      checkPostInstallPortability(name, dir);
+    }
+    checkNodeModulesForColons(dir);
   } finally {
     if (! packageJsonExisted) {
       files.unlink(packageJsonPath);
     }
+  }
+}
+
+function npmInstallArgFor(name, version) {
+  return utils.isNpmUrl(version) ? version : `${name}@${version}`;
+}
+
+function checkPostInstallPortability(name, dir) {
+  const pkgDir = files.pathJoin(dir, "node_modules", name);
+  if (! isPortable(pkgDir)) {
+    recordLastRebuildVersions(pkgDir);
+  }
+}
+
+function checkNodeModulesForColons(dir) {
+  if (process.platform === "win32") return;
+
+  const pathsWithColons = files.findPathsWithRegex(".", new RegExp(":"),
+    { cwd: files.pathJoin(dir, "node_modules") });
+
+  if (pathsWithColons.length) {
+    const firstTen = pathsWithColons.slice(0, 10);
+    if (pathsWithColons.length > 10) {
+      firstTen.push(`... ${pathsWithColons.length - 10} paths omitted.`);
+    }
+    buildmessage.error(
+      "Some filenames in your package have invalid characters.\n" +
+      "The following file paths in installed npm modules have colons, ':', " +
+      "which won't work on Windows:\n" +
+      firstTen.join("\n"));
+    throw new NpmFailure();
   }
 }
 
