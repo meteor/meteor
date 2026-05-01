@@ -50,7 +50,7 @@ jobs:
       matrix: ${{ steps.discover.outputs.matrix }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -63,7 +63,7 @@ jobs:
       # the files that actually pin the dev bundle and tool deps.
       - name: Restore caches
         id: meteor-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: |
             .meteor
@@ -82,7 +82,7 @@ jobs:
 
       - name: Restore prepared-app cache
         id: prepared-app-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ${{ env.METEOR_SELFTEST_PREPARED_APP_CACHE_DIR }}
           key: ${{ runner.os }}-prepared-app-${{ github.sha }}
@@ -107,7 +107,7 @@ jobs:
         # Skip when this SHA already has an exact-match entry (workflow re-run
         # without new commits). actions/cache/save errors on duplicate keys.
         if: steps.prepared-app-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v5
         with:
           path: ${{ env.METEOR_SELFTEST_PREPARED_APP_CACHE_DIR }}
           key: ${{ runner.os }}-prepared-app-${{ github.sha }}
@@ -149,7 +149,7 @@ jobs:
       TIMEOUT_SCALE_FACTOR: ${{ matrix.resources == 'heavy' && '14' || '8' }}
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -162,7 +162,7 @@ jobs:
         run: echo "/home/circleci/.sdkman/candidates/gradle/8.7/bin" >> "$GITHUB_PATH"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: |
             .meteor
@@ -180,7 +180,7 @@ jobs:
             ${{ runner.os }}-meteor-
 
       - name: Restore prepared-app cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v5
         with:
           path: ${{ env.METEOR_SELFTEST_PREPARED_APP_CACHE_DIR }}
           key: ${{ runner.os }}-prepared-app-${{ github.sha }}
@@ -231,7 +231,7 @@ jobs:
     if: always()
     steps:
       - name: Download all junit artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v8
         with:
           pattern: junit-*
           path: ./junit-artifacts
