@@ -1,10 +1,20 @@
 const selftest = require("../tool-testing/selftest.js");
-const { sleepMs } = require("../utils/utils.js");
 const Sandbox = selftest.Sandbox;
 
 selftest.define(".meteorignore", async function () {
   const s = new Sandbox();
   await s.init();
+
+  // Force fs.watchFile-based polling (safe-watcher.ts:111). The test writes
+  // a file the millisecond after the app reports "App running at", and
+  // @parcel/watcher's recursive subscription on Linux is both async-init
+  // and prone to silently dropping events on inotify queue overflow
+  // (safe-watcher.ts:312-314) — under those failure modes the optimistic
+  // cache stays convinced the .meteorignore doesn't exist and no rebuild
+  // ever fires. Polling is slower (500ms tick) but observes real mtimes
+  // and is reliable across CI hosts. The cost is invisible here since
+  // the test already tolerates 10s+ waits between mutations.
+  s.set("METEOR_WATCH_FORCE_POLLING", "t");
 
   await s.createApp("myapp", "meteor-ignore");
   s.cd("myapp");
@@ -19,15 +29,6 @@ selftest.define(".meteorignore", async function () {
   await run.match("/server/c.js");
   await run.match("/server/d.js");
   await run.match("App running at");
-
-  // The serverWatcher is constructed with `async: true` (run-app.js), so
-  // ParcelWatcher.subscribe() is still completing asynchronously when
-  // "App running at" is logged. On slower CI filesystems the create event
-  // for the file we're about to write can land before the subscription
-  // is active and be lost — leaving the optimistic cache convinced the
-  // file still doesn't exist. Match the established hot-code-push.js
-  // pattern and let the watcher settle before the first mutation.
-  await sleepMs(10000);
 
   s.write("server/.meteorignore", "c.*");
   run.waitSecs(10);
