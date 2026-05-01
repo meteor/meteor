@@ -68,6 +68,13 @@ jobs:
           path: |
             .meteor
             dev_bundle
+            # Per-package node_modules. Restoring these lets `meteor --get-ready`
+            # short-circuit the per-package "updating npm dependencies" loop via
+            # the shrinkwrap-subtree check in meteor-npm.js (line ~682). Cold
+            # runs without this take ~4-5min just spawning serial `npm install`
+            # children. Stale caches are safe — the runtime subtree check
+            # detects mismatches and reinstalls per-package on demand.
+            packages/**/.npm
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
@@ -160,6 +167,13 @@ jobs:
           path: |
             .meteor
             dev_bundle
+            # Per-package node_modules. Restoring these lets `meteor --get-ready`
+            # short-circuit the per-package "updating npm dependencies" loop via
+            # the shrinkwrap-subtree check in meteor-npm.js (line ~682). Cold
+            # runs without this take ~4-5min just spawning serial `npm install`
+            # children. Stale caches are safe — the runtime subtree check
+            # detects mismatches and reinstalls per-package on demand.
+            packages/**/.npm
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
