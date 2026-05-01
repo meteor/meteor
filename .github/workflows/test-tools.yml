@@ -31,6 +31,10 @@ env:
   # invalidates entries when tools/ or packages/ change, so the GHA cache
   # is safe to share across runs.
   METEOR_SELFTEST_PREPARED_APP_CACHE_DIR: /tmp/meteor-selftest-prepared-app-cache
+  # Pin puppeteer to a specific major version so the GHA cache key for
+  # ~/.npm-global + ~/.cache/puppeteer is stable. Bumping this string
+  # invalidates the cache and pulls a fresh chromium on the next setup run.
+  PUPPETEER_VERSION: "24"
 
 jobs:
   # ─── Setup ────────────────────────────────────────────────────────────────
@@ -49,14 +53,33 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install puppeteer globally and expose to Node.js
-        # Hosted runners don't pre-bake a global puppeteer the way the old
-        # meteor/circleci container did. Install once and surface via NODE_PATH
-        # so self-tests can `require('puppeteer')` from the same module
-        # resolution path the container historically provided.
+      # Install once in setup, save the result, then matrix jobs restore.
+      # Caches both the global npm dir (the `puppeteer` package) and
+      # ~/.cache/puppeteer (the chromium binary puppeteer downloads at
+      # postinstall — this is the bulk of the cost, ~30-60s per job).
+      # User-owned ~/.npm-global avoids sudo and gives a predictable path
+      # for the cache action; would be /usr/local/lib/node_modules with
+      # the default prefix.
+      - name: Restore puppeteer install cache
+        id: puppeteer-cache
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.npm-global
+            ~/.cache/puppeteer
+          key: ${{ runner.os }}-puppeteer-${{ env.PUPPETEER_VERSION }}
+
+      - name: Install puppeteer (cache miss only)
+        if: steps.puppeteer-cache.outputs.cache-hit != 'true'
         run: |
-          npm install -g puppeteer
-          echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.npm-global"
+          npm config set prefix "$HOME/.npm-global"
+          npm install -g "puppeteer@$PUPPETEER_VERSION"
+
+      - name: Expose puppeteer to Node.js
+        run: |
+          echo "NODE_PATH=$HOME/.npm-global/lib/node_modules" >> "$GITHUB_ENV"
+          echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
 
       # Split into two caches because the two buckets evolve on completely
       # different timescales: the dev_bundle key files churn ~31x/90d (mostly
@@ -183,10 +206,29 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Install puppeteer globally and expose to Node.js
+      # Restore from the cache populated by the setup job. Fallback install
+      # below is defensive — if setup ever fails to save (e.g. cache eviction
+      # mid-workflow), the matrix job still works at the cost of one slow run.
+      - name: Restore puppeteer install cache
+        id: puppeteer-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ~/.npm-global
+            ~/.cache/puppeteer
+          key: ${{ runner.os }}-puppeteer-${{ env.PUPPETEER_VERSION }}
+
+      - name: Install puppeteer (cache miss only)
+        if: steps.puppeteer-cache.outputs.cache-hit != 'true'
         run: |
-          npm install -g puppeteer
-          echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+          mkdir -p "$HOME/.npm-global"
+          npm config set prefix "$HOME/.npm-global"
+          npm install -g "puppeteer@$PUPPETEER_VERSION"
+
+      - name: Expose puppeteer to Node.js
+        run: |
+          echo "NODE_PATH=$HOME/.npm-global/lib/node_modules" >> "$GITHUB_ENV"
+          echo "$HOME/.npm-global/bin" >> "$GITHUB_PATH"
 
       # Mirrors the two-bucket cache layout from the setup job. See the
       # comment there for why these are split.
