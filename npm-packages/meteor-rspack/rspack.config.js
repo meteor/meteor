@@ -95,21 +95,18 @@ function createCacheStrategy(
   ].filter(Boolean);
 
   return {
-    cache: true,
-    experiments: {
-      cache: {
-        version: `cache-${mode}${(side && `-${side}`) || ""}`,
-        type: "persistent",
-        storage: {
-          type: "filesystem",
-          directory: `node_modules/.cache/rspack/${
-            [buildContext, side].filter(Boolean).join('-') || 'default'
-          }`,
-        },
-        ...(buildDependencies.length > 0 && {
-          buildDependencies: buildDependencies,
-        })
+    cache: {
+      version: `cache-${mode}${(side && `-${side}`) || ""}`,
+      type: "persistent",
+      storage: {
+        type: "filesystem",
+        directory: `node_modules/.cache/rspack/${
+          [buildContext, side].filter(Boolean).join('-') || 'default'
+        }`,
       },
+      ...(buildDependencies.length > 0 && {
+        buildDependencies: buildDependencies,
+      })
     },
   };
 }
