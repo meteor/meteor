@@ -23,57 +23,23 @@ type ParsedStackFrame = {
 /**
  * Returns the stack associated with an error as an array.
  * More recently called functions appear first.
- * 
+ *
  * Accomplishes this by parsing the text representation of the stack
  * with regular expressions. Unlikely to work anywhere but v8.
- * 
+ *
  * If a function on the stack has been marked with mark(), will not
  * return anything past that function. We call this the "user portion"
  * of the stack.
  */
-export function parse(err: Error): {
-  insideFiber?: ParsedStackFrame[],
-  outsideFiber?: ParsedStackFrame[],
-} {
+export function parse(err: Error): ParsedStackFrame[] {
   const stack = err.stack;
   if (typeof stack !== "string") {
-    return {};
+    return [];
   }
 
   // at least the first line is the exception
-  const frames = stack.split("\n").slice(1)
-    // longjohn adds lines of the form '---' (45 times) to separate
-    // the trace across async boundaries. It's not clear if we need to
-    // separate the trace in the same way we do for future boundaries below
-    // (it's not clear that that code is still useful either)
-    // so for now, we'll just remove such lines
-    .filter(f => ! f.match(/^\-{45}$/));
-  
-  // "    - - - - -"
-  // This is something added when you throw an Error through a Future. The
-  // stack above the dashes is the stack of the 'wait' call; the stack below
-  // is the stack inside the fiber where the Error is originally
-  // constructed.
-  // XXX This code assumes that the stack trace can only be split once. It's not
-  // clear whether this can happen multiple times.
-  const indexOfFiberSplit = frames.indexOf('    - - - - -');
-
-  if (indexOfFiberSplit === -1) {
-    // This is a normal stack trace, not a split fiber stack trace
-    return {
-      outsideFiber: parseStackFrames(frames)
-    }
-  }
-
-  // If this is a split stack trace from a future, parse the frames above and
-  // below the split separately.
-  const outsideFiber = parseStackFrames(frames);
-  const insideFiber = parseStackFrames(frames.slice(indexOfFiberSplit + 1));
-
-  return {
-    insideFiber,
-    outsideFiber
-  };
+  const frames = stack.split("\n").slice(1);
+  return parseStackFrames(frames);
 }
 
 /**
@@ -164,17 +130,6 @@ function parseStackFrames(frames: string[]): ParsedStackFrame[] {
         func: null,
       });
       return;
-    }
-
-    if (m = frame.match(/^\s*-\s*-\s*-\s*-\s*-\s*$/)) {
-      // Stop parsing if we reach a stack split from a Future
-      return stop = true;
-    }
-
-    if (frame.startsWith(" => awaited here:")) {
-      // The meteor-promise library inserts " => awaited here:" lines to
-      // indicate async boundaries.
-      return stop = true;
     }
 
     if (parsedFrames.length === 0) {

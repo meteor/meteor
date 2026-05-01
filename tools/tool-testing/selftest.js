@@ -381,7 +381,16 @@ class TestList {
     // We'll form an collection of "testsuites"
     const testSuites = [];
 
-    const attrSafe = attr => (attr || "").replace('"', "&quot;");
+    const attrSafe = attr => (attr || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+    // CDATA sections cannot contain the literal "]]>"; split it across two
+    // sections so any embedded occurrences in test output don't terminate
+    // the section prematurely.
+    const cdataSafe = data => String(data ?? "").replace(/]]>/g, "]]]]><![CDATA[>");
     const durationForOutput = durationMs => durationMs / 1000;
 
     // Each file is a testsuite.
@@ -410,9 +419,9 @@ class TestList {
             countFailure++;
 
             failureElement = [
-              `<error type="${test.failureObject.reason}">`,
+              `<error type="${attrSafe(test.failureObject.reason)}">`,
               '<![CDATA[',
-              inspect(test.failureObject.details, { depth: 4 }),
+              cdataSafe(inspect(test.failureObject.details, { depth: 4 })),
               ']]>',
               '</error>',
             ].join('\n');
@@ -422,7 +431,7 @@ class TestList {
             failureElement = [
               '<failure>',
               '<![CDATA[',
-              test.failureObject.stack,
+              cdataSafe(test.failureObject.stack),
               ']]>',
               '</failure>',
             ].join('\n');
@@ -445,7 +454,7 @@ class TestList {
       });
 
       const testSuiteAttrs = [
-        `name="${file}"`,
+        `name="${attrSafe(file)}"`,
         `tests="${testCases.length}"`,
         `failures="${countFailure}"`,
         `errors="${countError}"`,
@@ -649,7 +658,7 @@ export async function runTests(options) {
     Console.info(`${skipMessage} ${countMessage} ${testMessage}`);
 
     if (shouldSkip || options.preview) {
-      return;
+      continue;
     }
 
     await Run.runTest(

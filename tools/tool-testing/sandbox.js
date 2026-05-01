@@ -38,7 +38,6 @@
 //   - browserstack: true if browserstack clients should be used
 //   - port: the port that the clients should run on
 import * as files from '../fs/files';
-import PhantomClient from './clients/phantom/index.js';
 import PuppeteerClient from './clients/puppeteer/index.js';
 import BrowserStackClient from './clients/browserstack/index.js';
 import Builder from '../isobuild/builder.js';
@@ -63,6 +62,8 @@ import {
   getPreparedAppCacheEntry,
   applyPreparedAppCacheEntry,
 } from './prepared-app-cache.js';
+import * as catalogLocal from '../packaging/catalog/catalog-local.js';
+import * as defaultNpmDeps from '../cli/default-npm-deps.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -134,10 +135,6 @@ export default class Sandbox {
         host: "localhost",
         port: clientOptions.port || 3000,
       };
-
-      if (clientOptions.phantom) {
-        PhantomClient.pushClients(this.clients, appConfig);
-      }
 
       if (clientOptions.puppeteer) {
         await PuppeteerClient.pushClients(this.clients, appConfig);
@@ -239,7 +236,7 @@ export default class Sandbox {
       upgradersFile.appendUpgraders(allUpgraders());
     }
 
-    await require("../cli/default-npm-deps.js").install(absoluteTo);
+    await defaultNpmDeps.install(absoluteTo);
 
     if (options.dontPrepareApp) {
       return;
@@ -654,7 +651,6 @@ async function newSelfTestCatalog() {
     throw Error("Only can build packages from a checkout");
   }
 
-  const catalogLocal = require('../packaging/catalog/catalog-local.js');
   const selfTestCatalog = new catalogLocal.LocalCatalog;
   const messages = await capture(
     { title: "scanning local core packages" },

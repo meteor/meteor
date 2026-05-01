@@ -12,6 +12,7 @@
 // Arguments in the 'args' option are not assumed to be standard paths, so
 // calling any of the 'files.*' methods on them is not safe.
 import { spawn } from 'child_process';
+import net from 'net';
 import * as files from '../fs/files';
 import {
   parse as parseStackParse,
@@ -391,8 +392,6 @@ export default class Run {
     // great, but it probably doesn't actually create any practical
     // problems since this is only for testing.
     if (! this.fakeMongoConnection) {
-      const net = require('net');
-
       let lastStartTime = 0;
       for (
         let attempts = 0;
@@ -469,7 +468,7 @@ export default class Run {
       Console.error(`... fail! (${test.durationMs} ms)`, Console.options({ bulletPoint: `${checkmark} ` }));
 
       if (failure instanceof TestFailure) {
-        const frames = parseStackParse(failure).outsideFiber;
+        const frames = parseStackParse(failure);
         const toolsDir = files.getCurrentToolsDir();
         let pathWithLineNumber;
         frames.some(frame => {

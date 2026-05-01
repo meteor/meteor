@@ -477,13 +477,9 @@ var error = function (message, options) {
 
   if ('useMyCaller' in info) {
     if (info.useMyCaller) {
-      const {
-        insideFiber,
-        outsideFiber
-      } = parseStack.parse(new Error());
-
-      // Concatenate and get rid of lines about Future and buildmessage
-      info.stack = outsideFiber.concat(insideFiber || []).slice(2);
+      // Drop the two innermost frames so the reported caller is buildmessage's
+      // caller, not buildmessage itself.
+      info.stack = parseStack.parse(new Error()).slice(2);
       if (typeof info.useMyCaller === 'number') {
         info.stack = info.stack.slice(info.useMyCaller);
       }
@@ -530,11 +526,8 @@ var exception = function (error) {
       column: error.column
     });
   } else {
-    var parsed = parseStack.parse(error);
+    var stack = parseStack.parse(error);
 
-    // If there is a part inside the fiber, that's the one we want. Otherwise,
-    // use the one outside.
-    var stack = parsed.insideFiber || parsed.outsideFiber;
     if (stack && stack.length > 0) {
       var locus = stack[0];
       currentJob.get().addMessage({
