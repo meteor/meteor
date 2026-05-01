@@ -171,7 +171,7 @@ jobs:
       options: ${{ matrix.resources == 'heavy' && '--user root --cpus 4 --memory 16g --security-opt seccomp=unconfined' || '--user root' }}
     strategy:
       fail-fast: false
-      max-parallel: 24
+      max-parallel: 55
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     env:
       # Heavy files need extra wait for slow operations (Cordova builds, etc.)
