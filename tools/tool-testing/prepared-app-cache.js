@@ -195,6 +195,26 @@ function assertNoResidualSentinel(localDir, sentinelPath) {
   }
 }
 
+// plugin-cache/<plugin>/local/<sha>.json holds compiler output keyed by the
+// app's absolute source paths. Larger templates (modern.js exercises swc/
+// ecmascript across many files) can produce dozens of these per plugin.
+function rewritePluginCache(localDir, fromPrefix, toPrefix) {
+  const pluginCacheDir = files.pathJoin(localDir, 'plugin-cache');
+  if (!files.exists(pluginCacheDir)) return;
+  for (const plugin of files.readdirNoDots(pluginCacheDir)) {
+    const pluginLocalDir = files.pathJoin(pluginCacheDir, plugin, 'local');
+    if (!files.exists(pluginLocalDir)) continue;
+    for (const entry of files.readdirNoDots(pluginLocalDir)) {
+      if (!entry.endsWith('.json')) continue;
+      const filePath = files.pathJoin(pluginLocalDir, entry);
+      const json = files.readJSONOrNull(filePath);
+      if (!json) continue;
+      const rewritten = deepRewriteStrings(json, fromPrefix, toPrefix);
+      files.writeFile(filePath, JSON.stringify(rewritten) + '\n', 'utf8');
+    }
+  }
+}
+
 async function rewritePaths(targetAppDir, sentinelPath, finalAppPath) {
   const localDir = files.pathJoin(targetAppDir, '.meteor', 'local');
   if (!files.exists(localDir)) return;
@@ -208,6 +228,8 @@ async function rewritePaths(targetAppDir, sentinelPath, finalAppPath) {
       }
     }
   }
+
+  rewritePluginCache(localDir, sentinelPath, finalAppPath);
 
   assertNoResidualSentinel(localDir, sentinelPath);
 }
