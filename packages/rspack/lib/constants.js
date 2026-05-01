@@ -5,11 +5,11 @@
 
 import path from 'path';
 
-export const DEFAULT_RSPACK_VERSION = '2.0.0';
+export const DEFAULT_RSPACK_VERSION = '2.0.1';
 
 export const DEFAULT_METEOR_RSPACK_VERSION = '2.0.1';
 
-export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '2.0.0';
+export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '2.0.1';
 
 export const DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION = '0.17.0';
 
