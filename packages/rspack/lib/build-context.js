@@ -558,7 +558,19 @@ import '../../${config?.entryFile}';`;
     return `/* Link to ⚡ Rspack ${capitalizeFirstLetter(side)} App */
 ${
   (isMeteorBlazeProject() && config?.isClient && '// In Blaze, import happens last so HTML files preload first') ||
-  `import './${config?.outputFile || ''}';`
+  (config?.isServer
+    // fix(meteor#14395): on the server, use `import * as` + top-level await so
+    // reify wraps this bridge file with wrapAsync(). Without that, the rspack
+    // bundle's `module.exports = Promise` (when the bundle has TLA in its dep
+    // graph) is never awaited, mocha runs against an empty suite, and
+    // `meteor test` reports 0 passing. Non-TLA server bundles see a
+    // `Promise.resolve(<obj>)` microtask that's effectively a no-op.
+    // Client/native bundles keep the static import: Meteor's terser-based
+    // minifier doesn't accept top-level await, and the TLA race only manifests
+    // server-side.
+    ? `import * as __rspackBundleNs from './${config?.outputFile || ''}';
+await Promise.resolve(__rspackBundleNs && __rspackBundleNs.default);`
+    : `import './${config?.outputFile || ''}';`)
 }`;
   }
 
