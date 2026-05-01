@@ -14,7 +14,7 @@ selftest.define(".meteorignore", async function () {
   // ever fires. Polling is slower (500ms tick) but observes real mtimes
   // and is reliable across CI hosts. The cost is invisible here since
   // the test already tolerates 10s+ waits between mutations.
-  s.set("METEOR_WATCH_FORCE_POLLING", "t");
+  s.set("METEOR_WATCH_FORCE_POLLING", "true");
 
   await s.createApp("myapp", "meteor-ignore");
   s.cd("myapp");
