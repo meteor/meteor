@@ -26,8 +26,6 @@ env:
   # Suppress the self-test node-flags reminder.
   SELF_TEST_TOOL_NODE_FLAGS: " "
   METEOR_MODERN: true
-  CXX: g++-12
-  METEOR_ALLOW_SUPERUSER: 1
   # Pin the prepared-app-cache to a path that survives across the matrix
   # via actions/cache. The module's own (source-fingerprint, template) key
   # invalidates entries when tools/ or packages/ change, so the GHA cache
@@ -41,10 +39,7 @@ jobs:
   # for the test job.
   setup:
     name: Setup
-    runs-on: oss-vm
-    container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+    runs-on: ubuntu-latest
     timeout-minutes: 75
     outputs:
       matrix: ${{ steps.discover.outputs.matrix }}
@@ -54,8 +49,14 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Expose globally-installed puppeteer to Node.js
-        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+      - name: Install puppeteer globally and expose to Node.js
+        # Hosted runners don't pre-bake a global puppeteer the way the old
+        # meteor/circleci container did. Install once and surface via NODE_PATH
+        # so self-tests can `require('puppeteer')` from the same module
+        # resolution path the container historically provided.
+        run: |
+          npm install -g puppeteer
+          echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       # Split into two caches because the two buckets evolve on completely
       # different timescales: the dev_bundle key files churn ~31x/90d (mostly
@@ -103,10 +104,10 @@ jobs:
         timeout-minutes: 65
         run: ./meteor --get-ready
 
-      # One-shot diagnostic: prints what's eating the 378 MB cache so we can
-      # decide whether to bake dev_bundle into the container image, prune
-      # packages/*/.npm, or split the cache. Cheap (a few seconds of `du`)
-      # and only runs in the setup job, not the matrix.
+      # One-shot diagnostic: prints what's eating the cache so we can
+      # decide whether to prune dev_bundle subdirs, packages/*/.npm, or
+      # split the cache further. Cheap (a few seconds of `du`) and only
+      # runs in the setup job, not the matrix.
       - name: Inspect cache contents
         run: |
           set +e
@@ -158,20 +159,20 @@ jobs:
   # ─── Per-file matrix ──────────────────────────────────────────────────────
   # One job per test file. All tests in a file run in a single meteor process
   # so they share the prepared-app-cache copy + per-process build state, which
-  # matters for files that exercise the same template repeatedly. Heavy files
-  # (modern bundler / Cordova / compiler plugins) get elevated container
-  # resources via the matrix `resources` field.
+  # matters for files that exercise the same template repeatedly. ubuntu-latest
+  # gives every job 4 vCPU / 16 GB which already matches the previous `heavy`
+  # tier — TIMEOUT_SCALE_FACTOR is the only knob that still differentiates.
   test:
     name: "${{ matrix.name }}"
-    runs-on: oss-vm
+    runs-on: ubuntu-latest
     needs: setup
     timeout-minutes: 45
-    container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: ${{ matrix.resources == 'heavy' && '--user root --cpus 4 --memory 16g --security-opt seccomp=unconfined' || '--user root' }}
     strategy:
       fail-fast: false
-      max-parallel: 12
+      # Effectively unlimited for our matrix size (~55 entries). Hosted
+      # runners have no pool capacity; cap exists only as a safety rail
+      # against runaway matrices from a future build-test-matrix.js bug.
+      max-parallel: 256
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     env:
       # Heavy files need extra wait for slow operations (Cordova builds, etc.)
@@ -182,13 +183,10 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Expose globally-installed puppeteer to Node.js
-        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
-
-      - name: Add Gradle to PATH
-        # Cordova tests need gradle. Cheap to add unconditionally — sdkman
-        # path is the same regardless of whether the test consumes it.
-        run: echo "/home/circleci/.sdkman/candidates/gradle/8.7/bin" >> "$GITHUB_PATH"
+      - name: Install puppeteer globally and expose to Node.js
+        run: |
+          npm install -g puppeteer
+          echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       # Mirrors the two-bucket cache layout from the setup job. See the
       # comment there for why these are split.
@@ -227,7 +225,6 @@ jobs:
         run: |
           echo "File: $TEST_FILE.js ($TEST_COUNT tests)"
           echo "Resources: $TEST_RESOURCES"
-          echo "Node: $(node --version)"
           echo "Meteor Node: $(dev_bundle/bin/node --version)"
 
       - name: Run self-test
