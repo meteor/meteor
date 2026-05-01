@@ -81,7 +81,14 @@ exports.parseUrl = function (str, defaults) {
 exports.formatUrl = function (options) {
   const u = new URL('http://placeholder');
   u.protocol = options.protocol + ':';
-  u.hostname = options.hostname;
+  // The WHATWG URL hostname setter requires IPv6 addresses to be bracketed;
+  // a bare "::" assignment silently fails and leaves "placeholder" in place.
+  // parseUrl() strips brackets when normalizing, so restore them for any
+  // hostname that contains a colon and isn't already bracketed.
+  const hostname = options.hostname;
+  u.hostname = (hostname && hostname.includes(':') && !hostname.startsWith('['))
+    ? `[${hostname}]`
+    : hostname;
   if (options.port) u.port = options.port;
   u.pathname = options.pathname || '/';
   return u.toString();

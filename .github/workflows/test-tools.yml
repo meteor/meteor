@@ -129,6 +129,16 @@ jobs:
           sudo sysctl -w fs.inotify.max_user_watches=524288
           sudo sysctl -w fs.inotify.max_user_instances=512
 
+      # The dev_bundle cache key only hashes meteor/package-lock.json/etc.,
+      # not packages/** source files. The restore-keys fallback can therefore
+      # pull in a .meteor/isopackets/combined/ that was built against
+      # different package sources, producing duplicate-module bundles
+      # (symptom: "Type oid already present" from EJSON.addType when
+      # mongo-id/id.js evaluates twice). Drop the prebuilt isopackets and
+      # let --get-ready rebuild them from the current packages/ tree.
+      - name: Drop stale prebuilt isopackets
+        run: rm -rf .meteor/isopackets .meteor/local
+
       - name: Prepare Meteor
         timeout-minutes: 65
         run: ./meteor --get-ready
