@@ -16,7 +16,7 @@
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.0",
-    "@rsdoctor/rspack-plugin": "^1.5.7",
+    "@rsdoctor/rspack-plugin": "^1.5.9",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
     "@swc/core": "^1.15.18",
