@@ -25,8 +25,9 @@
     "@meteorjs/rspack": "^3.0.0-beta.0",
     "@nx/angular-rspack": "^21.1.0",
     "@rsdoctor/rspack-plugin": "^1.5.9",
-    "@rspack/cli": "^1.7.1",
-    "@rspack/core": "^1.7.1",
+    "@rspack/cli": "^2.0.1",
+    "@rspack/core": "^2.0.1",
+    "@rspack/dev-server": "^2.0.1",
     "@types/meteor": "^2.9.9",
     "typescript": "~5.8.2"
   },

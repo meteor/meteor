@@ -18,8 +18,9 @@
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.0",
-    "@rspack/cli": "^1.4.8",
-    "@rspack/core": "^1.4.8",
+    "@rspack/cli": "^2.0.1",
+    "@rspack/core": "^2.0.1",
+    "@rspack/dev-server": "^2.0.1",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/meteor": "^2.9.7",
     "postcss": "^8.5.6",
@@ -34,7 +35,9 @@
       "client": "client/main.js",
       "server": "server/main.js"
     },
-    "modules": ["client/meteor.css"],
+    "modules": [
+      "client/meteor.css"
+    ],
     "testModule": "tests/main.js"
   }
 }

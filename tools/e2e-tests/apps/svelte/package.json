@@ -14,8 +14,9 @@
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.0",
-    "@rspack/cli": "^1.4.8",
-    "@rspack/core": "^1.4.8",
+    "@rspack/cli": "^2.0.1",
+    "@rspack/core": "^2.0.1",
+    "@rspack/dev-server": "^2.0.1",
     "playwright": "1.59.0",
     "postcss-load-config": "^5.1.0",
     "svelte": "^5.38.2",
