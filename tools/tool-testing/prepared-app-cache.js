@@ -198,6 +198,8 @@ function assertNoResidualSentinel(localDir, sentinelPath) {
 // plugin-cache/<plugin>/local/<sha>.json holds compiler output keyed by the
 // app's absolute source paths. Larger templates (modern.js exercises swc/
 // ecmascript across many files) can produce dozens of these per plugin.
+// Empty or malformed entries are skipped — they can't carry paths and
+// readJSONOrNull only swallows ENOENT.
 function rewritePluginCache(localDir, fromPrefix, toPrefix) {
   const pluginCacheDir = files.pathJoin(localDir, 'plugin-cache');
   if (!files.exists(pluginCacheDir)) return;
@@ -207,7 +209,14 @@ function rewritePluginCache(localDir, fromPrefix, toPrefix) {
     for (const entry of files.readdirNoDots(pluginLocalDir)) {
       if (!entry.endsWith('.json')) continue;
       const filePath = files.pathJoin(pluginLocalDir, entry);
-      const json = files.readJSONOrNull(filePath);
+      let json;
+      try {
+        const raw = files.readFile(filePath, 'utf8');
+        if (!raw.trim()) continue;
+        json = JSON.parse(raw);
+      } catch {
+        continue;
+      }
       if (!json) continue;
       const rewritten = deepRewriteStrings(json, fromPrefix, toPrefix);
       files.writeFile(filePath, JSON.stringify(rewritten) + '\n', 'utf8');
