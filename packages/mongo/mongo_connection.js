@@ -768,6 +768,7 @@ MongoConnection.prototype._createAsynchronousCursor = function(
     skip: cursorOptions.skip,
     projection: cursorOptions.fields || cursorOptions.projection,
     readPreference: cursorOptions.readPreference,
+    collation: cursorOptions.collation,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -1002,6 +1003,10 @@ MongoConnection.prototype._observeChanges = async function (
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
       var matcher, sorter;
+      // Create the collator once and share it across Matcher and Sorter.
+      const collator = cursorDescription.options.collation
+        ? LocalCollection._createCollator(cursorDescription.options.collation)
+        : null;
       const configuredOrder = _getConfiguredReactivityOrder();
 
       const driverChecks = {
@@ -1084,7 +1089,11 @@ MongoConnection.prototype._observeChanges = async function (
           }
 
           try {
-            localMatcher = new Minimongo.Matcher(cursorDescription.selector);
+            localMatcher = new Minimongo.Matcher(
+              cursorDescription.selector,
+              undefined,
+              collator
+            );
           } catch (e) {
             if (Meteor.isClient && e instanceof MiniMongoQueryError) {
               throw e;
@@ -1128,7 +1137,11 @@ MongoConnection.prototype._observeChanges = async function (
 
           if (!reasons.length) {
             try {
-              localMatcher = new Minimongo.Matcher(cursorDescription.selector);
+              localMatcher = new Minimongo.Matcher(
+                cursorDescription.selector,
+                undefined,
+                collator
+              );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
               //     so that this doesn't ignore unrelated exceptions
@@ -1145,7 +1158,10 @@ MongoConnection.prototype._observeChanges = async function (
 
           if (!reasons.length && cursorDescription.options.sort) {
             try {
-              localSorter = new Minimongo.Sorter(cursorDescription.options.sort);
+              localSorter = new Minimongo.Sorter(
+                cursorDescription.options.sort,
+                collator
+              );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
               //     so that this doesn't ignore unrelated exceptions
