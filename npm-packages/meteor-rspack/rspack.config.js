@@ -24,6 +24,8 @@ const {
   disablePlugins,
   outputMeteorRspack,
   enablePortableBuild,
+  persistDevFiles,
+  createPersistCallback,
 } = require('./lib/meteorRspackHelpers.js');
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
@@ -348,6 +350,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       disablePlugins: matchers,
     });
   Meteor.enablePortableBuild = () => enablePortableBuild();
+  Meteor.persistDevFiles = (matchers) => persistDevFiles(matchers);
 
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
@@ -415,6 +418,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Determine output directories
   const clientOutputDir = path.resolve(projectDir, "public");
   const serverOutputDir = path.resolve(projectDir, "private");
+
 
   // Get Meteor ignore entries
   const meteorIgnoreEntries = getMeteorIgnoreEntries(projectDir);
@@ -558,6 +562,43 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
   const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
+
+  // Default onListening provided by meteor-rspack. Kept as a named
+  // reference so we can detect a user-supplied override after merge
+  // and compose (run default first, then user's).
+  const meteorDefaultOnListening = function (devServer) {
+    if (!devServer) return;
+    const { host, port } = devServer.options;
+    const protocol =
+      devServer.options.server?.type === "https" ? "https" : "http";
+    const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
+    outputMeteorRspack({ devServerUrl });
+
+    // Windows-only: webpack-dev-server tracks accepted sockets
+    // but doesn't attach 'error'. On Windows, teardown of a
+    // closed proxy connection sends RST, producing an unhandled
+    // ECONNRESET that crashes the dev server. Unix peers send
+    // FIN and never hit this.
+    if (process.platform === "win32") {
+      const server = devServer.server;
+      if (!server || server.__meteorRspackErrorGuard) return;
+      server.__meteorRspackErrorGuard = true;
+
+      server.on("connection", (socket) => {
+        if (!socket || socket.__meteorRspackGuarded) return;
+        socket.__meteorRspackGuarded = true;
+        socket.on("error", (err) => {
+          if (err && err.code === "ECONNRESET") return;
+          console.warn(
+            `[meteor-rspack] dev server socket error: ${
+              err && (err.code || err.message)
+            }`
+          );
+        });
+      });
+    }
+  };
+
   // Base client config
   let clientConfig = {
     name: clientNameConfig,
@@ -650,17 +691,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(Meteor.isBlazeEnabled && { hot: false }),
         port: devServerPort,
         devMiddleware: {
-          writeToDisk: (filePath) =>
-            /\.(html)$/.test(filePath) || filePath.endsWith('sw.js'),
+          writeToDisk: createPersistCallback({ once: ['sw.js'], always: ['.html'] }),
         },
-        onListening(devServer) {
-          if (!devServer) return;
-          const { host, port } = devServer.options;
-          const protocol =
-            devServer.options.server?.type === "https" ? "https" : "http";
-          const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
-          outputMeteorRspack({ devServerUrl });
-        },
+        onListening: meteorDefaultOnListening,
       },
     }),
     ...merge(cacheStrategy, { experiments: { css: true } }),
@@ -713,7 +746,22 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       runtimeChunk: false,
     },
     module: {
-      rules: [swcConfigRule, ...extraRules],
+      rules: [
+        swcConfigRule,
+        // Mirror the client rule: ignore .html so rspack doesn't try to
+        // parse them as JavaScript. Meteor's template compiler handles
+        // .html files separately, and RequireExternalsPlugin below wires
+        // the imports to Meteor's module system.
+        ...(Meteor.isBlazeEnabled
+          ? [
+              {
+                test: /\.html$/i,
+                loader: 'ignore-loader',
+              },
+            ]
+          : []),
+        ...extraRules,
+      ],
       parser: {
         javascript: {
           // Dynamic imports on the server are treated as bundled in the same chunk
@@ -822,6 +870,23 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     config = mergeSplitOverlap(config, nextOverrideConfig);
     if (nextOverrideConfig.stats != null) {
       statsOverrided = true;
+    }
+  }
+
+  // If the user or an override replaced devServer.onListening, compose
+  // so our default runs first (attaches the Windows socket guard and
+  // reports the dev server URL) and the user's hook runs second.
+  if (isClient && config.devServer) {
+    const finalOnListening = config.devServer.onListening;
+    if (
+      typeof finalOnListening === "function" &&
+      finalOnListening !== meteorDefaultOnListening
+    ) {
+      const userOnListening = finalOnListening;
+      config.devServer.onListening = function (devServer) {
+        meteorDefaultOnListening(devServer);
+        userOnListening(devServer);
+      };
     }
   }
 

@@ -5,8 +5,8 @@ module.exports = {
   testPathIgnorePatterns: ["<rootDir>/apps/"],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   verbose: true,
-  // Increase timeout for CLI operations
-  testTimeout: 60_000,
+  // Increase timeout for CLI operations (longer on CI to absorb host contention)
+  testTimeout: process.env.CI ? 240_000 : 120_000,
   // Transform ES modules in node_modules
   transformIgnorePatterns: [
     "/node_modules/(?!(execa|wait-on|is-docker|is-stream|human-signals|merge-stream|npm-run-path|onetime|mimic-fn|strip-final-newline|path-key|shebug-command|shebug-regex)/)"
@@ -30,6 +30,9 @@ module.exports = {
     }
   },
   maxWorkers: 1,
+  // Force Jest to exit after all tests complete, even if there are
+  // dangling async operations (e.g., orphan rspack child processes).
+  forceExit: true,
   reporters: [
     'default',
     '<rootDir>/summary-reporter.js',

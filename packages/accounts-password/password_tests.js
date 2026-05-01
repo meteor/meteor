@@ -848,8 +848,11 @@ if (Meteor.isClient) (() => {
 
     function (test, expect) {
       // we can login with a valid token
-      const expectLoginOK = expect(err => test.isFalse(err));
-      Meteor.loginWithToken(Accounts._storedLoginToken(), expectLoginOK);
+      return Meteor.loginWithTokenAsync(Accounts._storedLoginToken())
+        .then((loginDetails) => {
+          test.equal(loginDetails.type, 'resume');
+          test.isTrue(!!loginDetails.token);
+        });
     },
 
     function (test, expect) {
@@ -904,14 +907,15 @@ if (Meteor.isClient) (() => {
       const expectSecondConnLoggedIn = expect((err, result) => {
         test.equal(result.token, token);
         test.isFalse(err);
-        Meteor.logoutOtherClients(err => {
-          test.isFalse(err);
-          secondConn.call('login', { resume: token },
-            expectSecondConnLoggedOut);
-          Accounts.connection.call('login', {
-            resume: Accounts._storedLoginToken()
-          }, expectAccountsConnLoggedIn);
-        });
+        Meteor.logoutOtherClientsAsync()
+          .then(() => {
+            secondConn.call('login', { resume: token },
+              expectSecondConnLoggedOut);
+            Accounts.connection.call('login', {
+              resume: Accounts._storedLoginToken()
+            }, expectAccountsConnLoggedIn);
+          })
+          .catch(asyncError => test.fail(asyncError.message));
       });
 
       Meteor.loginWithPassword(

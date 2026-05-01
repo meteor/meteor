@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '2.2.1-beta341.1',
+  version: '2.2.1-beta350.8',
 });
 
 Package.registerBuildPlugin({
@@ -84,7 +84,7 @@ Package.onTest(function (api) {
 
   api.addFiles('debug_test.js', 'client');
 
-  api.addFiles('bare_test_setup.js', 'client', {bare: true});
+  api.addFiles('bare_test_setup.js', 'client', { bare: true });
   api.addFiles('bare_tests.js', 'client');
   //api.addFiles('asl_helpers_test.js', 'server');
   api.addFiles('emitter-promise-tests.js', 'server');

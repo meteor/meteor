@@ -244,6 +244,92 @@ function disablePlugins(config, matchers) {
   return config;
 }
 
+/**
+ * Create a `writeToDisk` callback that persists specific files to disk
+ * during development.
+ *
+ * Accepts an array (defaults to "always" strategy) or an object with
+ * `once` and/or `always` keys for mixed strategies.
+ *
+ * Matchers can be:
+ * - **string**: matched with `endsWith` (e.g. `'sw.js'`, `'.html'`)
+ * - **RegExp**: tested against the full file path
+ * - **function**: `(filePath: string) => boolean`
+ *
+ * Strategies:
+ * - `always`: Write on every build (default). Use for files that should
+ *             always reflect the latest build output.
+ * - `once`:   Write on the first build only. Skipped on HMR rebuilds to
+ *             avoid triggering service worker re-registration or file
+ *             watcher restarts.
+ *
+ * @example
+ * // Simple: array defaults to "always"
+ * ...Meteor.persistDevFiles(['manifest.json'])
+ *
+ * // Mixed strategies with strings, regex, and functions
+ * ...Meteor.persistDevFiles({
+ *   once: ['sw.js', /\.worker\.js$/],
+ *   always: ['manifest.json', (filePath) => filePath.includes('/custom/')],
+ * })
+ *
+ * @param {(string|RegExp|Function)[] | { once?: (string|RegExp|Function)[], always?: (string|RegExp|Function)[] }} matchers
+ * @returns {Record<string, object>} config fragment with devServer.devMiddleware.writeToDisk
+ */
+/**
+ * Build the writeToDisk callback from matchers.
+ * Shared by persistDevFiles (fragment) and internal usage (direct).
+ * @private
+ */
+function createPersistCallback(matchers) {
+  const once = [];
+  const always = [];
+
+  if (Array.isArray(matchers)) {
+    always.push(...matchers);
+  } else {
+    if (matchers.once) once.push(...matchers.once);
+    if (matchers.always) always.push(...matchers.always);
+  }
+
+  // HTML files are always persisted, Meteor's web server relies on them
+  if (!always.includes('.html')) {
+    always.push('.html');
+  }
+
+  const match = (filePath, pattern) => {
+    if (typeof pattern === 'function') return pattern(filePath);
+    if (typeof pattern === 'string') return filePath.endsWith(pattern);
+    return pattern.test(filePath);
+  };
+
+  const written = new Set();
+
+  return (filePath) => {
+    for (const pattern of always) {
+      if (match(filePath, pattern)) return true;
+    }
+    for (let i = 0; i < once.length; i++) {
+      if (match(filePath, once[i])) {
+        if (written.has(i)) return false;
+        written.add(i);
+        return true;
+      }
+    }
+    return false;
+  };
+}
+
+function persistDevFiles(matchers) {
+  return prepareMeteorRspackConfig({
+    devServer: {
+      devMiddleware: {
+        writeToDisk: createPersistCallback(matchers),
+      },
+    },
+  });
+}
+
 function outputMeteorRspack(data) {
   const jsonString = JSON.stringify(data);
   const output = `[Meteor-Rspack]${jsonString}[/Meteor-Rspack]`;
@@ -261,4 +347,6 @@ module.exports = {
   disablePlugins,
   outputMeteorRspack,
   enablePortableBuild,
+  persistDevFiles,
+  createPersistCallback,
 };

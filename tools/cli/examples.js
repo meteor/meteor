@@ -4,7 +4,7 @@ var Console = require('../console/console.js').Console;
 const { execFile } = require('child_process');
 
 const EXAMPLES_REPO = 'https://github.com/meteor/examples';
-const EXAMPLES_BRANCH = 'migrate-examples';
+const EXAMPLES_BRANCH = 'main';
 const EXAMPLES_JSON_URL =
   `https://raw.githubusercontent.com/meteor/examples/${EXAMPLES_BRANCH}/examples.json`;
 

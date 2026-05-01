@@ -1,16 +1,16 @@
 Package.describe({
   summary: "Register callbacks on a hook",
-  version: '1.6.3-beta341.1',
+  version: "1.7.0",
 });
 
 Package.onUse(function (api) {
-  api.use('ecmascript');
-  api.mainModule('hook.js');
-  api.export('Hook');
+  api.use("ecmascript");
+  api.mainModule("hook.js");
+  api.export("Hook");
 });
 
 Package.onTest(function (api) {
-  api.use('callback-hook');
-  api.use('tinytest');
-  api.addFiles('hook_tests.js', 'server');
+  api.use("callback-hook");
+  api.use("tinytest");
+  api.addFiles("hook_tests.js", "server");
 });
