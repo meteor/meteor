@@ -93,6 +93,25 @@ jobs:
         timeout-minutes: 65
         run: ./meteor --get-ready
 
+      # One-shot diagnostic: prints what's eating the 378 MB cache so we can
+      # decide whether to bake dev_bundle into the container image, prune
+      # packages/*/.npm, or split the cache. Cheap (a few seconds of `du`)
+      # and only runs in the setup job, not the matrix.
+      - name: Inspect cache contents
+        run: |
+          set +e
+          echo "=== Top-level cache paths ==="
+          du -shc .meteor dev_bundle 2>/dev/null
+          echo ""
+          echo "=== dev_bundle subdirs (top 15 by size) ==="
+          du -sh dev_bundle/* 2>/dev/null | sort -hr | head -15
+          echo ""
+          echo "=== packages/*/.npm total ==="
+          du -shc packages/*/.npm 2>/dev/null | tail -1
+          echo ""
+          echo "=== Top 20 packages/*/.npm by size ==="
+          du -sh packages/*/.npm 2>/dev/null | sort -hr | head -20
+
       - name: Warm prepared-app cache (modern template)
         timeout-minutes: 10
         run: |
