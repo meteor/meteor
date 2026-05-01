@@ -1146,7 +1146,7 @@ export function testMeteorSkeleton(options) {
       console.log("Installing playwright as a dev dependency...");
       const repoRoot = path.resolve(process.cwd(), "..", "..");
       const meteorBin = path.join(repoRoot, "meteor");
-      await execa.command(`${meteorBin} npm i --save-dev playwright`, {
+      await execa.command(`${meteorBin} npm i --save-dev playwright@1.59.0`, {
         cwd: tempDir,
         stdio: "inherit",
         shell: true
