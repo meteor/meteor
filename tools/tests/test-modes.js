@@ -71,6 +71,56 @@ selftest.define("'meteor test' eagerly loads correct files", async () => {
   expectEqual(isTestFilePath('/foo.app-spectacular.bar.js'), false);
   expectEqual(isTestFilePath('/foo.reapp-spec.bar.js'), false);
 
+  // DIAGNOSTIC (remove once CI-only "Type oid already present" is rooted out):
+  // dump the on-disk state of the combined isopacket right before we spawn
+  // the child meteor that fails. We see only one mongo-id load entry locally
+  // and the failure is CI-only, so this captures whether the artifact looks
+  // different on the runner than on dev machines.
+  {
+    const fs = require('fs');
+    const nodePath = require('path');
+    const files = require('../fs/files');
+    const root = files.getCurrentToolsDir();
+    const isopacketDir = nodePath.join(root, '.meteor', 'isopackets', 'combined');
+    const programJson = nodePath.join(isopacketDir, 'program.json');
+    const mongoIdJs = nodePath.join(isopacketDir, 'packages', 'mongo-id.js');
+    const buildinfo = nodePath.join(isopacketDir, 'isopacket-buildinfo.json');
+    try {
+      const src = fs.readFileSync(programJson, 'utf8');
+      const pathRe = /"path"\s*:\s*"([^"]+)"/g;
+      const paths = [];
+      let m;
+      while ((m = pathRe.exec(src))) paths.push(m[1]);
+      const counts = {};
+      for (const p of paths) counts[p] = (counts[p] || 0) + 1;
+      const dups = Object.entries(counts).filter(([, n]) => n > 1);
+      console.log('[ISOPACKET-DIAG] program.json load entries:', paths.length);
+      console.log('[ISOPACKET-DIAG] mongo-id entries:',
+        paths.filter(p => p.includes('mongo-id')).join(', ') || '(none)');
+      console.log('[ISOPACKET-DIAG] ejson entries:',
+        paths.filter(p => p.includes('ejson')).join(', ') || '(none)');
+      console.log('[ISOPACKET-DIAG] duplicated paths:',
+        dups.length ? JSON.stringify(dups) : '(none)');
+    } catch (e) {
+      console.log('[ISOPACKET-DIAG] program.json read failed:', e.message);
+    }
+    try {
+      const src = fs.readFileSync(mongoIdJs, 'utf8');
+      const addTypeMatches = src.match(/EJSON\.addType\s*\(\s*["']oid["']/g) || [];
+      console.log('[ISOPACKET-DIAG] mongo-id.js bytes:', src.length);
+      console.log('[ISOPACKET-DIAG] mongo-id.js addType("oid") count:', addTypeMatches.length);
+    } catch (e) {
+      console.log('[ISOPACKET-DIAG] mongo-id.js read failed:', e.message);
+    }
+    try {
+      const st = fs.statSync(buildinfo);
+      console.log('[ISOPACKET-DIAG] buildinfo mtime:', st.mtime.toISOString(),
+        'size:', st.size);
+    } catch (e) {
+      console.log('[ISOPACKET-DIAG] buildinfo stat failed:', e.message);
+    }
+  }
+
   // Integration tests for test file eager loading with `meteor test` and
   // `meteor test --full-app`
   const s = new Sandbox();
