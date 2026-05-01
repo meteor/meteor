@@ -92,11 +92,15 @@ async function getEnv(options) {
     env.NPM_CONFIG_PREFIX = devBundleDir;
   }
 
-  if (env.METEOR_ALLOW_SUPERUSER) {
-    // Note that env.METEOR_ALLOW_SUPERUSER could be "0" or "false", which
-    // should propagate falsy semantics to NPM_CONFIG_UNSAFE_PERM.
-    env.NPM_CONFIG_UNSAFE_PERM = env.METEOR_ALLOW_SUPERUSER;
-  }
+  // Historically we forwarded METEOR_ALLOW_SUPERUSER to
+  // NPM_CONFIG_UNSAFE_PERM so npm wouldn't drop privileges when running
+  // install scripts as root. npm 7 removed the automatic privilege drop
+  // (so the flag became a no-op) and npm 8+ now treats it as an unknown
+  // env config and prints `npm warn Unknown env config "unsafe-perm"`,
+  // which leaks into stdout/stderr and breaks self-tests that assert on
+  // exact output (e.g. `typescript template works` doing
+  // `await run.expectEnd()` after `npx tsc`). dev_bundle currently ships
+  // npm 11, so we just don't set it.
 
   const PATH = env.PATH || env.Path;
 

@@ -269,7 +269,13 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
       session,
     })
     .then(async ({ deletedCount }) => {
-      _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+      // Only annotate the fence when the operation actually modified data:
+      // a no-op deleteMany (matched no docs) does not generate a change-
+      // stream event, so a ChangeStreamObserveDriver waiting on this ts
+      // would block forever waiting for an event Mongo will never emit.
+      if (deletedCount > 0) {
+        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+      }
       await session.endSession();
       await refresh();
       await write.committed();
@@ -299,7 +305,11 @@ MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
     .rawCollection(collectionName)
     .drop({ session })
     .then(async result => {
-      _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collectionName, session.operationTime);
+      // Do NOT annotate the fence here. ChangeStreamObserveDriver's pipeline
+      // only forwards insert/update/replace/delete; mongo emits a `drop`
+      // (and follow-up `invalidate`) event that our $match drops, so a
+      // fence waiter pinned to this clusterTime would block forever waiting
+      // for an event that never reaches the driver.
       await session.endSession();
       await refresh();
       await write.committed();
@@ -423,7 +433,12 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     //     then we can just let Mongo generate the id
     return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options, session)
       .then(async result => {
-        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        // Skip annotation when nothing actually changed — change-stream
+        // observers wait for the exact ts and a no-op upsert produces no
+        // event, so the wait would never resolve.
+        if (result && result.numberAffected) {
+          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        }
         await session.endSession();
         await refresh();
         await write.committed();
@@ -454,7 +469,14 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     return collection[updateMethod]
       .bind(collection)(mongoSelector, mongoMod, mongoOpts)
       .then(async result => {
-        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        // Skip annotation when nothing actually changed: a no-op
+        // updateOne / updateMany / replaceOne does not emit a change-
+        // stream event, so a fence waiter pinned to this ts would block
+        // forever. modifiedCount excludes matched-but-unchanged docs (which
+        // also produce no event), and upsertedCount catches inserts.
+        if (result && (result.modifiedCount > 0 || result.upsertedCount > 0)) {
+          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        }
         await session.endSession();
         var meteorResult = transformResult({result});
         if (meteorResult && options._returnObject) {
@@ -746,6 +768,7 @@ MongoConnection.prototype._createAsynchronousCursor = function(
     skip: cursorOptions.skip,
     projection: cursorOptions.fields || cursorOptions.projection,
     readPreference: cursorOptions.readPreference,
+    collation: cursorOptions.collation,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -980,6 +1003,10 @@ MongoConnection.prototype._observeChanges = async function (
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
       var matcher, sorter;
+      // Create the collator once and share it across Matcher and Sorter.
+      const collator = cursorDescription.options.collation
+        ? LocalCollection._createCollator(cursorDescription.options.collation)
+        : null;
       const configuredOrder = _getConfiguredReactivityOrder();
 
       const driverChecks = {
@@ -1040,6 +1067,20 @@ MongoConnection.prototype._observeChanges = async function (
             reasons.push('Change Streams cannot be used with _testOnlyPollCallback');
           }
 
+          // Cursors with `skip` or `limit` are not supported. Change streams
+          // emit one event per write across the entire collection, but the
+          // result set of a limit/skip cursor is a moving window — when a doc
+          // outside that window changes it can shift the window, and inferring
+          // that purely from change events would require re-running the
+          // query. Without this fall-back we'd emit added events for any
+          // matching insert anywhere in the collection (regardless of limit),
+          // breaking tests like `livedata server - publish cursor is properly
+          // awaited`. Mirrors OplogObserveDriver.cursorSupported's reasoning.
+          const csOptions = cursorDescription.options || {};
+          if (csOptions.skip || csOptions.limit) {
+            reasons.push('Cursor with skip/limit not supported by Change Streams');
+          }
+
           if (reasons.length) {
             return {
               available: false,
@@ -1048,7 +1089,11 @@ MongoConnection.prototype._observeChanges = async function (
           }
 
           try {
-            localMatcher = new Minimongo.Matcher(cursorDescription.selector);
+            localMatcher = new Minimongo.Matcher(
+              cursorDescription.selector,
+              undefined,
+              collator
+            );
           } catch (e) {
             if (Meteor.isClient && e instanceof MiniMongoQueryError) {
               throw e;
@@ -1092,7 +1137,11 @@ MongoConnection.prototype._observeChanges = async function (
 
           if (!reasons.length) {
             try {
-              localMatcher = new Minimongo.Matcher(cursorDescription.selector);
+              localMatcher = new Minimongo.Matcher(
+                cursorDescription.selector,
+                undefined,
+                collator
+              );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
               //     so that this doesn't ignore unrelated exceptions
@@ -1109,7 +1158,10 @@ MongoConnection.prototype._observeChanges = async function (
 
           if (!reasons.length && cursorDescription.options.sort) {
             try {
-              localSorter = new Minimongo.Sorter(cursorDescription.options.sort);
+              localSorter = new Minimongo.Sorter(
+                cursorDescription.options.sort,
+                collator
+              );
             } catch (e) {
               // XXX make all compilation errors MinimongoError or something
               //     so that this doesn't ignore unrelated exceptions
