@@ -215,7 +215,7 @@ jobs:
           echo "File: $TEST_FILE.js ($TEST_COUNT tests)"
           echo "Resources: $TEST_RESOURCES"
           echo "Node: $(node --version)"
-          echo "Meteor Node: $(./meteor node --version)"
+          echo "Meteor Node: $(dev_bundle/bin/node --version)"
 
       - name: Run self-test
         env:
