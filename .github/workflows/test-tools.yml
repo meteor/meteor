@@ -57,28 +57,38 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      # Narrowed cache key: the previous '**/package-lock.json' glob matched
-      # 30+ files (including dev_bundle.xxx/ and packages/**/.npm/ dirs that
-      # meteor itself writes during builds), thrashing the cache. Hash only
-      # the files that actually pin the dev bundle and tool deps.
-      - name: Restore caches
-        id: meteor-cache
+      # Split into two caches because the two buckets evolve on completely
+      # different timescales: the dev_bundle key files churn ~31x/90d (mostly
+      # BUNDLE_VERSION bumps) while packages/**/npm-shrinkwrap.json changes
+      # ~1x/90d, and the two sets never change in the same commit. With a
+      # single combined key, every dev_bundle bump unnecessarily evicted the
+      # 409M packages/.npm bucket and forced cold per-package npm reinstalls.
+      - name: Restore dev_bundle cache
+        id: dev-bundle-cache
         uses: actions/cache@v5
         with:
           path: |
             .meteor
             dev_bundle
-            # Per-package node_modules. Restoring these lets `meteor --get-ready`
-            # short-circuit the per-package "updating npm dependencies" loop via
-            # the shrinkwrap-subtree check in meteor-npm.js (line ~682). Cold
-            # runs without this take ~4-5min just spawning serial `npm install`
-            # children. Stale caches are safe — the runtime subtree check
-            # detects mismatches and reinstalls per-package on demand.
-            packages/**/.npm
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
+
+      # Per-package node_modules. Restoring these lets `meteor --get-ready`
+      # short-circuit the per-package "updating npm dependencies" loop via
+      # the shrinkwrap-subtree check in meteor-npm.js (line ~682). Cold
+      # runs without this take ~4-5min just spawning serial `npm install`
+      # children. Stale caches are safe — the runtime subtree check
+      # detects mismatches and reinstalls per-package on demand.
+      - name: Restore per-package npm cache
+        id: pkg-npm-cache
+        uses: actions/cache@v5
+        with:
+          path: packages/**/.npm
+          key: ${{ runner.os }}-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pkg-npm-
 
       - name: Restore prepared-app cache
         id: prepared-app-cache
@@ -180,23 +190,26 @@ jobs:
         # path is the same regardless of whether the test consumes it.
         run: echo "/home/circleci/.sdkman/candidates/gradle/8.7/bin" >> "$GITHUB_PATH"
 
-      - name: Restore caches
+      # Mirrors the two-bucket cache layout from the setup job. See the
+      # comment there for why these are split.
+      - name: Restore dev_bundle cache
         uses: actions/cache/restore@v5
         with:
           path: |
             .meteor
             dev_bundle
-            # Per-package node_modules. Restoring these lets `meteor --get-ready`
-            # short-circuit the per-package "updating npm dependencies" loop via
-            # the shrinkwrap-subtree check in meteor-npm.js (line ~682). Cold
-            # runs without this take ~4-5min just spawning serial `npm install`
-            # children. Stale caches are safe — the runtime subtree check
-            # detects mismatches and reinstalls per-package on demand.
-            packages/**/.npm
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-tools-
             ${{ runner.os }}-meteor-
+
+      - name: Restore per-package npm cache
+        uses: actions/cache/restore@v5
+        with:
+          path: packages/**/.npm
+          key: ${{ runner.os }}-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-pkg-npm-
 
       - name: Restore prepared-app cache
         uses: actions/cache/restore@v5
