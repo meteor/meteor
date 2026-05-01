@@ -149,8 +149,10 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       if (!devDepsSuccess) allFailedDeps.push('dev dependencies');
       if (!regularDepsSuccess) allFailedDeps.push('regular dependencies');
 
+      const commandWord = allFailedDeps.length === 1 ? 'command' : 'commands';
+
       throw new Error(
-        `Failed to install ${packageName} ${joinWithAnd(allFailedDeps)}. Please install them manually with the commands above.`
+        `Failed to install ${packageName} ${joinWithAnd(allFailedDeps)}. Please install them manually with the ${commandWord} above.`
       );
     }
 
