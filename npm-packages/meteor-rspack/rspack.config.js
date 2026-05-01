@@ -652,6 +652,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     },
     resolve: { extensions, alias, fallback },
     externals,
+    externalsType: "commonjs2",
     plugins: [
       ...[
         ...(isReactEnabled && reactRefreshModule && isDevEnvironment
@@ -776,6 +777,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       conditionNames: ["import", "require", "node", "default"],
     },
     externals,
+    externalsType: "commonjs2",
     externalsPresets: { node: true },
     plugins: [
       new DefinePlugin(
