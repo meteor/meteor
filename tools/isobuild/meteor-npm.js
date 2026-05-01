@@ -1298,14 +1298,18 @@ function shrinkwrap(dir) {
 // not share state with its input
 function minimizeDependencyTree(tree) {
   function minimizeModule(module) {
-    var version;
-    if (module.resolved && ! isUrlFromRegistry(module.resolved)) {
-      version = module.resolved;
-    } else if (utils.isNpmUrl(module.from)) {
-      version = module.from;
-    } else {
-      version = module.version;
-    }
+    // Prefer the semver from the lockfile (e.g. "20.58.0") over the
+    // resolved URL. For git/tarball deps, npm records resolved as
+    // "git+ssh://...#<commit-sha>" while Npm.depends declares
+    // "git+https://...#v<semver>"; comparing those two URL forms always
+    // mismatches and forces reinstall. With the semver here, the
+    // declaredSpecMatchesResolved predicate at the call sites can
+    // strip the "#v"/"#" ref from the declared spec and compare it to
+    // the installed version.
+    var version =
+      module.version ||
+      (module.resolved && ! isUrlFromRegistry(module.resolved) && module.resolved) ||
+      (utils.isNpmUrl(module.from) && module.from);
     var minimized = {version: version};
 
     if (module.dependencies) {
