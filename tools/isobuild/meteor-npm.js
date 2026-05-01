@@ -948,7 +948,7 @@ const npmUserConfigFile = files.pathJoin(
 );
 
 var runNpmCommand = meteorNpm.runNpmCommand =
-Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
+Profile("meteorNpm.runNpmCommand", async function (args, cwd, options) {
   import { getEnv } from "../cli/dev-bundle-bin-helpers.js";
 
   const devBundleDir = files.getDevBundle();
@@ -990,6 +990,16 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
 
   // Make sure we don't honor any user-provided configuration files.
   env.npm_config_userconfig = npmUserConfigFile;
+
+  // Single chokepoint for npm-version-aware install flag synthesis. Use
+  // env (`NPM_CONFIG_*`) instead of CLI flags so callers don't have to
+  // track which spelling the dev_bundle's npm version accepts (e.g.
+  // `--production=false` was removed in npm 9; `--include=dev` is the
+  // current form). Future install-flag bugs should be fixed here, not
+  // at call sites.
+  if (options && options.includeDev) {
+    env.NPM_CONFIG_INCLUDE = "dev";
+  }
 
   return new Promise(function (resolve) {
     require('child_process').execFile(
