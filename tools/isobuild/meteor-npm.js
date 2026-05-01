@@ -679,7 +679,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
 
-  if (isSubtreeOf(npmTree, minInstalledTree) &&
+  if (isSubtreeOf(npmTree, minInstalledTree, declaredSpecMatchesResolved) &&
       isSubtreeOf(minShrinkwrapTree, minInstalledTree)) {
     return;
   }
@@ -696,7 +696,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     // If there are no npmDependencies, make sure nothing is installed.
     preservedShrinkwrap = { dependencies: {} };
 
-  } else if (isSubtreeOf(npmTree, minShrinkwrapTree)) {
+  } else if (isSubtreeOf(npmTree, minShrinkwrapTree, declaredSpecMatchesResolved)) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
     preservedShrinkwrap = shrinkwrappedDependenciesTree;
@@ -772,6 +772,22 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   await completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
+
+// Predicate for the shrinkwrap-subtree check that lets a git/github URL
+// spec from Npm.depends (e.g. "git+https://github.com/foo/bar#v20.58.0")
+// match the resolved version npm records after install (e.g. "20.58.0").
+// Without this, every package that declares a git/tarball Npm.depends
+// fails the cache short-circuit and is reinstalled on every meteor
+// invocation. Returns true on a match; returning undefined/false makes
+// isSubtreeOf fall through to its default behavior.
+function declaredSpecMatchesResolved(declared, resolved) {
+  if (typeof declared !== "string" || typeof resolved !== "string") return;
+  const hashIdx = declared.lastIndexOf("#");
+  if (hashIdx < 0) return;
+  let ref = declared.slice(hashIdx + 1);
+  if (ref[0] === "v" || ref[0] === "V") ref = ref.slice(1);
+  return ref === resolved ? true : undefined;
+}
 
 function isSubtreeOf(subsetTree, supersetTree, predicate) {
   if (subsetTree === supersetTree) {
