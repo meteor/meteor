@@ -55,6 +55,11 @@ describe('R.Router App Bundling /', () => {
         await waitForMeteorOutput(result.outputLines, /.*first\.jsx loaded.*/);
         // Check custom plugin gets loaded from rspack.config.override.js file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
+        // User-level devServer.onListening composes with meteor-rspack's
+        // default: the default emits the HMR server URL, and the user's
+        // hook emits its own marker. Both must appear.
+        await waitForMeteorOutput(result.outputLines, /.*Started Rspack HMR server at.*/);
+        await waitForMeteorOutput(result.outputLines, /.*\[user-onListening\] fired from rspack\.config\.js.*/);
       },
       afterRunRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR output as enabled by default

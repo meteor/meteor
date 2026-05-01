@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Helpers for managing modern tools in Meteor",
-  version: '1.1.0-rc341.1',
+  version: '1.1.0',
   devOnly: true,
 });
 
