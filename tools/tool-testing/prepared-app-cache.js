@@ -125,36 +125,37 @@ function swapPathPrefix(p, fromPrefix, toPrefix) {
   return p;
 }
 
-function rewriteWatchSet(ws, fromPrefix, toPrefix) {
-  if (!ws || ws.alwaysFire) return;
-  if (ws.files && typeof ws.files === 'object') {
-    const rewritten = Object.create(null);
-    for (const [absPath, sha] of Object.entries(ws.files)) {
-      rewritten[swapPathPrefix(absPath, fromPrefix, toPrefix)] = sha;
-    }
-    ws.files = rewritten;
+// Recursively replace `fromPrefix` with `toPrefix` in every string value and
+// object key. Required because isopack-buildinfo.json buries absolute paths
+// in many shapes — WatchSet (files keyed by absPath, directories[].absPath),
+// pluginProviderPackageMap[pkg].sourceRoot, and any other key meteor's build
+// system may add later. A generic walk is safer than enumerating each shape.
+function deepRewriteStrings(value, fromPrefix, toPrefix) {
+  if (typeof value === 'string') {
+    return swapPathPrefix(value, fromPrefix, toPrefix);
   }
-  if (Array.isArray(ws.directories)) {
-    for (const dir of ws.directories) {
-      if (dir?.absPath) {
-        dir.absPath = swapPathPrefix(dir.absPath, fromPrefix, toPrefix);
-      }
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      value[i] = deepRewriteStrings(value[i], fromPrefix, toPrefix);
     }
+    return value;
   }
+  if (value && typeof value === 'object') {
+    const out = {};
+    for (const [k, v] of Object.entries(value)) {
+      out[swapPathPrefix(k, fromPrefix, toPrefix)] =
+        deepRewriteStrings(v, fromPrefix, toPrefix);
+    }
+    return out;
+  }
+  return value;
 }
 
 function rewriteIsopackBuildInfo(buildInfoPath, fromPrefix, toPrefix) {
   const json = files.readJSONOrNull(buildInfoPath);
   if (!json) return;
-  if (json.pluginDependencies) {
-    rewriteWatchSet(json.pluginDependencies, fromPrefix, toPrefix);
-  }
-  if (json.unibuildDependencies && typeof json.unibuildDependencies === 'object') {
-    for (const key of Object.keys(json.unibuildDependencies)) {
-      rewriteWatchSet(json.unibuildDependencies[key], fromPrefix, toPrefix);
-    }
-  }
-  files.writeFile(buildInfoPath, JSON.stringify(json) + '\n', 'utf8');
+  const rewritten = deepRewriteStrings(json, fromPrefix, toPrefix);
+  files.writeFile(buildInfoPath, JSON.stringify(rewritten) + '\n', 'utf8');
 }
 
 // Belt-and-suspenders: walk the freshly-copied .meteor/local and assert no

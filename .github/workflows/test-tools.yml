@@ -66,9 +66,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.npm
             .meteor
-            .babel-cache
             dev_bundle
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
@@ -121,11 +119,14 @@ jobs:
             echo 'MATRIX_EOF'
           } >> "$GITHUB_OUTPUT"
 
-  # ─── Per-test matrix ──────────────────────────────────────────────────────
-  # One job per self-test. Heavy tests (modern/compiler-plugins/cordova) get
-  # elevated container resources via the matrix `resources` field.
+  # ─── Per-file matrix ──────────────────────────────────────────────────────
+  # One job per test file. All tests in a file run in a single meteor process
+  # so they share the prepared-app-cache copy + per-process build state, which
+  # matters for files that exercise the same template repeatedly. Heavy files
+  # (modern bundler / Cordova / compiler plugins) get elevated container
+  # resources via the matrix `resources` field.
   test:
-    name: "${{ matrix.file }}: ${{ matrix.name }}"
+    name: "${{ matrix.name }}"
     runs-on: oss-vm
     needs: setup
     timeout-minutes: 45
@@ -137,7 +138,7 @@ jobs:
       max-parallel: 12
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     env:
-      # Heavy tests need extra wait for slow operations (Cordova builds, etc.)
+      # Heavy files need extra wait for slow operations (Cordova builds, etc.)
       TIMEOUT_SCALE_FACTOR: ${{ matrix.resources == 'heavy' && '14' || '8' }}
     steps:
       - name: Checkout repository
@@ -157,9 +158,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            ~/.npm
             .meteor
-            .babel-cache
             dev_bundle
           key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
@@ -176,27 +175,26 @@ jobs:
 
       - name: Log environment
         env:
-          TEST_NAME: ${{ matrix.name }}
           TEST_FILE: ${{ matrix.file }}
+          TEST_COUNT: ${{ matrix.count }}
           TEST_RESOURCES: ${{ matrix.resources }}
         run: |
-          echo "Test: $TEST_NAME"
-          echo "File: $TEST_FILE.js"
+          echo "File: $TEST_FILE.js ($TEST_COUNT tests)"
           echo "Resources: $TEST_RESOURCES"
           echo "Node: $(node --version)"
           echo "Meteor Node: $(./meteor node --version)"
 
       - name: Run self-test
         env:
-          # Pass via env so test names with shell metacharacters ($, `, etc.)
-          # reach meteor verbatim instead of being expanded by bash.
-          TEST_REGEX: ${{ matrix.regex }}
+          # Pass via env to avoid shell interpolation surprises for filenames
+          # like cordova-append-config that contain hyphens etc.
+          TEST_FILE_REGEX: ${{ matrix.fileRegex }}
           TEST_JUNIT: ${{ matrix.junit }}
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
           ./meteor self-test \
-            "$TEST_REGEX" \
+            --file "$TEST_FILE_REGEX" \
             --retries "$METEOR_SELF_TEST_RETRIES" \
             --headless \
             --junit "./tmp/results/junit/$TEST_JUNIT"

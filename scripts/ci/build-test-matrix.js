@@ -5,16 +5,17 @@
 //   ./meteor self-test --list-json-out /tmp/tests.json
 //   node scripts/ci/build-test-matrix.js /tmp/tests.json
 //
-// Output shape:
-//   {"include":[{id, name, file, junit, regex, resources}, ...]}
+// Output shape (one entry per test FILE — all tests in a file run together
+// in one job, sharing the prepared-app-cache and per-process build state):
+//   {"include":[{id, name, file, junit, fileRegex, count, resources}, ...]}
 //
 // - id: zero-padded ordinal, used in artifact names and JUnit filenames.
-// - name: the original test name (kept for the GHA job display).
 // - file: source file basename (without .js).
+// - name: display label for the GHA job (file + test count).
 // - junit: filesystem-safe filename for --junit output.
-// - regex: regex-escaped, anchored form of `name` for `./meteor self-test`.
-// - resources: "heavy" for tests in HEAVY_FILES, otherwise "default". The
-//              workflow promotes this to elevated container resources.
+// - fileRegex: regex-escaped, anchored form of `file` for `--file`.
+// - count: number of tests in the file (informational).
+// - resources: "heavy" for tests in HEAVY_FILES, otherwise "default".
 
 'use strict';
 
@@ -35,8 +36,6 @@ const HEAVY_FILES = new Set([
   'modules-modern',
 ]);
 
-// Escape a string so it can be used as a literal inside a JS RegExp source.
-// The set matches what `meteor self-test` compiles via `new RegExp(arg)`.
 function escapeRegex(s) {
   return s.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&');
 }
@@ -60,19 +59,32 @@ if (!Array.isArray(tests) || tests.length === 0) {
   process.exit(1);
 }
 
-const padWidth = String(tests.length).length;
-const include = tests.map((t, i) => {
-  const id = String(i + 1).padStart(padWidth, '0');
-  return {
+// Group tests by file. Insertion order is preserved (--list-json emits in
+// the order tests were registered, which keeps related files adjacent).
+const byFile = new Map();
+for (const t of tests) {
+  if (!byFile.has(t.file)) byFile.set(t.file, 0);
+  byFile.set(t.file, byFile.get(t.file) + 1);
+}
+
+const padWidth = String(byFile.size).length;
+let i = 0;
+const include = [];
+for (const [file, count] of byFile) {
+  i++;
+  const id = String(i).padStart(padWidth, '0');
+  include.push({
     id,
-    name: t.name,
-    file: t.file,
-    junit: `${id}.xml`,
-    regex: `^${escapeRegex(t.name)}$`,
-    resources: HEAVY_FILES.has(t.file) ? 'heavy' : 'default',
-  };
-});
+    file,
+    name: `${file}.js (${count} test${count === 1 ? '' : 's'})`,
+    junit: `${id}-${file}.xml`,
+    fileRegex: `^${escapeRegex(file)}$`,
+    count,
+    resources: HEAVY_FILES.has(file) ? 'heavy' : 'default',
+  });
+}
 
 process.stdout.write(JSON.stringify({ include }) + '\n');
-process.stderr.write(`build-test-matrix: ${include.length} entries `
-  + `(${include.filter((e) => e.resources === 'heavy').length} heavy)\n`);
+process.stderr.write(`build-test-matrix: ${include.length} files, `
+  + `${tests.length} tests `
+  + `(${include.filter((e) => e.resources === 'heavy').length} heavy files)\n`);
