@@ -704,7 +704,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   } else {
     // Otherwise install npmTree.dependencies as if we were creating a new
     // .npm/package directory, and leave preservedShrinkwrap empty.
-    await installNpmDependencies(npmDependencies, newPackageNpmDir);
+    await batchInstallNpmModules(npmDependencies, newPackageNpmDir);
 
     // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
     // "canonical," meaning `npm install` (without a package argument)
@@ -803,29 +803,11 @@ var createFreshNpmDirectory = async function (packageName, newPackageNpmDir,
 
   makeNewPackageNpmDir(newPackageNpmDir);
 
-  await installNpmDependencies(npmDependencies, newPackageNpmDir);
+  await batchInstallNpmModules(npmDependencies, newPackageNpmDir);
 
   await completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
-
-async function installNpmDependencies(dependencies, dir) {
-  const packageJsonPath = files.pathJoin(dir, "package.json");
-  const packageJsonExisted = files.exists(packageJsonPath);
-
-  files.writeFile(
-    packageJsonPath,
-    JSON.stringify({ dependencies }, null, 2)
-  );
-
-  try {
-    await batchInstallNpmModules(dependencies, dir);
-  } finally {
-    if (! packageJsonExisted) {
-      files.unlink(packageJsonPath);
-    }
-  }
-}
 
 // Installs many `name@version` deps (or tarball/git URLs) into `dir` with a
 // single `npm install` invocation. One child process instead of N is

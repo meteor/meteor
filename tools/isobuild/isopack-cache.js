@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var os = require('os');
 
 var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('./compiler.js');
@@ -6,6 +7,7 @@ var files = require('../fs/files');
 var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
+var meteorNpm = require('./meteor-npm.js');
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 
@@ -64,6 +66,10 @@ export class IsopackCache {
       files.mkdir_p(self.cacheDir);
     }
 
+    await Profile.time('IsopackCache prefetch npm dependencies', async () => {
+      await self._prefetchNpmDependencies();
+    });
+
     var onStack = {};
     if (rootPackageNames) {
       for (const name of rootPackageNames) {
@@ -75,6 +81,61 @@ export class IsopackCache {
         await requestGarbageCollection();
       });
     }
+  }
+
+  // Warm `meteorNpm.updateDependencies` for every local package in parallel,
+  // before the dependency-ordered build loop starts. The compile-time call
+  // (compiler.js:129/140) is unchanged; on a warm tree it short-circuits via
+  // the shrinkwrap-subtree check at meteor-npm.js:682, so this becomes a
+  // no-op when prefetch already did the work.
+  //
+  // Each package's `.npm/package/` dir is independent — `updateDependencies`
+  // notes it "runs mostly safely multiple times in parallel" — so we cap
+  // concurrency to avoid fork-bombing npm but otherwise let them run.
+  // Errors are swallowed; the per-package compile call will retry and
+  // surface them through the normal buildmessage path.
+  async _prefetchNpmDependencies() {
+    const tasks = [];
+    for (const [, info] of Object.entries(this._packageMap._map)) {
+      if (info.kind !== 'local') continue;
+      const ps = info.packageSource;
+      if (! ps) continue;
+      if (ps.npmCacheDirectory && ! _.isEmpty(ps.npmDependencies)) {
+        tasks.push({
+          name: ps.name,
+          dir: ps.npmCacheDirectory,
+          deps: ps.npmDependencies,
+        });
+      }
+      if (ps.npmDevCacheDirectory && ! _.isEmpty(ps.npmDevDependencies)) {
+        tasks.push({
+          name: ps.name,
+          dir: ps.npmDevCacheDirectory,
+          deps: ps.npmDevDependencies,
+        });
+      }
+    }
+
+    if (tasks.length === 0) return;
+
+    const concurrency = Math.max(1, Math.min(os.cpus().length, 8));
+    let cursor = 0;
+
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, tasks.length) }, async () => {
+        while (true) {
+          const i = cursor++;
+          if (i >= tasks.length) return;
+          const { name, dir, deps } = tasks[i];
+          try {
+            await meteorNpm.updateDependencies(name, dir, deps);
+          } catch {
+            // Best-effort. compiler.compile will run updateDependencies
+            // again per-package and surface errors normally.
+          }
+        }
+      })
+    );
   }
 
   async wipeCachedPackages(packages) {
