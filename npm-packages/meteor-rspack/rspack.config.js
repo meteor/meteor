@@ -647,6 +647,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
               },
             ]
           : []),
+        { test: /\.css$/, type: "css/auto" },
         ...extraRules,
       ],
     },
@@ -692,12 +693,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(Meteor.isBlazeEnabled && { hot: false }),
         port: devServerPort,
         devMiddleware: {
-          writeToDisk: createPersistCallback({ once: ['sw.js'], always: ['.html'] }),
+          writeToDisk: createPersistCallback({
+            once: ["sw.js"],
+            always: [".html"],
+          }),
         },
         onListening: meteorDefaultOnListening,
       },
     }),
-    ...merge(cacheStrategy, { experiments: { css: true } }),
+    ...cacheStrategy,
     ...lazyCompilationConfig,
     ...loggingConfig,
   };
