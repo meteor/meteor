@@ -818,39 +818,43 @@ async function installNpmDependencies(dependencies, dir) {
     JSON.stringify({ dependencies }, null, 2)
   );
 
-  const entries = Object.entries(dependencies);
-
   try {
-    if (entries.length === 0) return;
-
-    // One `npm install <a@v> <b@v> ...` is dramatically faster than N
-    // separate child processes — npm resolves and downloads in parallel
-    // internally, and we save N-1 process startups + ~N-1 npm cache reads.
-    const installArgs = entries.map(
-      ([name, version]) => npmInstallArgFor(name, version),
-    );
-    const result = await runNpmCommand(["install", ...installArgs], dir);
-
-    if (! result.success) {
-      // Fall back to per-dep installs to surface the targeted error message
-      // (`installNpmModule` parses stderr to identify which name/version is
-      // bad). The success path never hits this branch.
-      for (const [name, version] of entries) {
-        await installNpmModule(name, version, dir);
-      }
-      return;
-    }
-
-    for (const [name] of entries) {
-      checkPostInstallPortability(name, dir);
-    }
-    checkNodeModulesForColons(dir);
+    await batchInstallNpmModules(dependencies, dir);
   } finally {
     if (! packageJsonExisted) {
       files.unlink(packageJsonPath);
     }
   }
 }
+
+// Installs many `name@version` deps (or tarball/git URLs) into `dir` with a
+// single `npm install` invocation. One child process instead of N is
+// dramatically faster — npm resolves and downloads in parallel internally,
+// and we save N-1 process startups + ~N-1 npm cache reads. On failure, falls
+// back to per-dep `installNpmModule` so its stderr-parsing surfaces the
+// targeted error (bad name vs. bad version vs. unavailable).
+const batchInstallNpmModules = meteorNpm.batchInstallNpmModules =
+async function batchInstallNpmModules(dependencies, dir) {
+  const entries = Object.entries(dependencies);
+  if (entries.length === 0) return;
+
+  const installArgs = entries.map(
+    ([name, version]) => npmInstallArgFor(name, version),
+  );
+  const result = await runNpmCommand(["install", ...installArgs], dir);
+
+  if (! result.success) {
+    for (const [name, version] of entries) {
+      await installNpmModule(name, version, dir);
+    }
+    return;
+  }
+
+  for (const [name] of entries) {
+    checkPostInstallPortability(name, dir);
+  }
+  checkNodeModulesForColons(dir);
+};
 
 function npmInstallArgFor(name, version) {
   return utils.isNpmUrl(version) ? version : `${name}@${version}`;
