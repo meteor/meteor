@@ -123,6 +123,12 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-prepared-app-
 
+      # See matching step in the test job for rationale.
+      - name: Raise inotify limits
+        run: |
+          sudo sysctl -w fs.inotify.max_user_watches=524288
+          sudo sysctl -w fs.inotify.max_user_instances=512
+
       - name: Prepare Meteor
         timeout-minutes: 65
         run: ./meteor --get-ready
@@ -258,6 +264,16 @@ jobs:
           key: ${{ runner.os }}-prepared-app-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-prepared-app-
+
+      # GitHub-hosted ubuntu-latest defaults to fs.inotify.max_user_watches=8192
+      # and max_user_instances=128, which is exhausted by Meteor's recursive
+      # watch + node_modules. When the kernel returns ENOSPC, @parcel/watcher
+      # silently drops post-init events, so tests that write a file and wait
+      # for a rebuild (e.g. meteor-ignore.js) hang on match-timeout.
+      - name: Raise inotify limits
+        run: |
+          sudo sysctl -w fs.inotify.max_user_watches=524288
+          sudo sysctl -w fs.inotify.max_user_instances=512
 
       - name: Log environment
         env:
