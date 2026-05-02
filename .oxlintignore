@@ -26,6 +26,7 @@ packages/**/.npm/
 # Only those listed below are linted
 packages/*
 
+!packages/accounts-express/
 !packages/facts-base/
 !packages/facts-ui/
 !packages/non-core/bundle-visualizer/
