@@ -297,6 +297,10 @@ export default defineConfig({
             text: "Accounts and security",
             items: [
               {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
+              {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
               },
