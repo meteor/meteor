@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Express middleware and authenticated request helpers for Meteor accounts",
-  version: "1.0.0-beta350.4",
+  version: "1.0.0-beta350.9",
 });
 
 Package.onUse((api) => {
