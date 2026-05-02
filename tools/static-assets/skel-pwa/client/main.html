@@ -1,0 +1,53 @@
+<head>
+  <title>~name~</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ff6b35">
+  <meta name="description" content="A Meteor + Blaze Progressive Web App">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="~name~">
+</head>
+
+<body>
+  <h1>Welcome to ~name~</h1>
+
+  {{> installPanel}}
+  {{> hello}}
+  {{> info}}
+</body>
+
+<template name="installPanel">
+  {{#if isInstalled}}
+    <p class="pwa-status pwa-status--ok">Running as an installed PWA.</p>
+  {{else if canInstall}}
+    <div class="pwa-install">
+      <p>Install this app on your device for a native-like experience.</p>
+      <button class="install-btn" type="button">Install</button>
+      <button class="dismiss-btn" type="button">Not now</button>
+    </div>
+  {{else}}
+    <p class="pwa-status pwa-status--muted">
+      On Chrome/Edge desktop, the install prompt appears once eligibility criteria are met.
+      On iOS Safari, use the Share menu &rarr; "Add to Home Screen".
+    </p>
+  {{/if}}
+</template>
+
+<template name="hello">
+  <button>Click Me</button>
+  <p>You've pressed the button {{counter}} times.</p>
+</template>
+
+<template name="info">
+  <h2>Learn Meteor!</h2>
+  <ul>
+    <li><a href="https://www.meteor.com/try" target="_blank">Do the Tutorial</a></li>
+    <li><a href="https://guide.meteor.com" target="_blank">Follow the Guide</a></li>
+    <li><a href="https://docs.meteor.com" target="_blank">Read the Docs</a></li>
+    <li><a href="https://forums.meteor.com" target="_blank">Discussions</a></li>
+  </ul>
+</template>

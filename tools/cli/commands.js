@@ -687,6 +687,7 @@ export const AVAILABLE_SKELETONS = [
   "blaze",
   "full",
   "minimal",
+  "pwa",
   DEFAULT_SKELETON,
   "typescript",
   "typescript-tailwind",
@@ -706,6 +707,7 @@ const SKELETON_INFO = {
   "blaze": "To create an app using Blaze",
   "full": "To create a more complete scaffolded app",
   "minimal": "To create an app with as few Meteor packages as possible",
+  "pwa": "To create an installable Progressive Web App with Blaze",
   "react": "To create a basic React-based app",
   "typescript": "To create an app using TypeScript and React",
   "typescript-tailwind": "To create an app using TypeScript, React, and Tailwind",
@@ -732,6 +734,7 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     blaze: { type: Boolean },
+    pwa: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
     typescript: { type: Boolean },
@@ -1269,7 +1272,7 @@ main.registerCommand({
               return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
             }
           }
-          if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
+          if (/(\.html|\.[jt]sx?|\.css|\.coffee|\.webmanifest)/.test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;

@@ -1,0 +1,49 @@
+body {
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+  color: #222;
+}
+
+h1 { color: #ff6b35; }
+
+.pwa-install {
+  border: 2px solid #ff6b35;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fff5f0;
+  margin: 16px 0;
+}
+
+.pwa-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin: 16px 0;
+}
+.pwa-status--ok { background: #e6f7e6; color: #1a6b1a; }
+.pwa-status--muted { background: #f0f0f0; color: #555; }
+
+.install-btn {
+  background: #ff6b35;
+  color: #fff;
+  border: 0;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-right: 6px;
+}
+.install-btn:hover { background: #e95a25; }
+
+.dismiss-btn {
+  background: transparent;
+  color: #555;
+  border: 1px solid #ccc;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.dismiss-btn:hover { background: #f4f4f4; }
