@@ -36,6 +36,8 @@ const HEAVY_FILES = new Set([
   'cordova-append-config',
   'modules',
   'modules-modern',
+  'package-tests-changes',
+  'package-tests-versions',
 ]);
 
 function escapeRegex(s) {
