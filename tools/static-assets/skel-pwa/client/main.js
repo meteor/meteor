@@ -3,6 +3,8 @@ import { Template } from 'meteor/templating';
 import { ReactiveVar } from 'meteor/reactive-var';
 
 import './main.html';
+import './todos.js';
+import './capabilities.js';
 
 const DISMISS_KEY = 'pwa-install-dismissed-at';
 const DISMISS_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
@@ -16,6 +18,7 @@ const isInstalled = new ReactiveVar(
       window.matchMedia('(display-mode: window-controls-overlay)').matches ||
       window.navigator.standalone === true)
 );
+const activeTab = new ReactiveVar('todos');
 
 function recentlyDismissed() {
   const at = Number(localStorage.getItem(DISMISS_KEY));
@@ -42,6 +45,21 @@ Meteor.startup(() => {
   }
 });
 
+Template.body.helpers({
+  isTab(name) {
+    return activeTab.get() === name;
+  },
+  tabClass(name) {
+    return activeTab.get() === name ? 'tab--active' : '';
+  },
+});
+
+Template.body.events({
+  'click .tab'(event) {
+    activeTab.set(event.currentTarget.dataset.tab);
+  },
+});
+
 Template.installPanel.helpers({
   canInstall() {
     return Boolean(installPromptEvent.get()) && !isInstalled.get() && !recentlyDismissed();
@@ -65,23 +83,5 @@ Template.installPanel.events({
   'click .dismiss-btn'() {
     localStorage.setItem(DISMISS_KEY, String(Date.now()));
     installPromptEvent.set(null);
-  },
-});
-
-Template.hello.onCreated(function helloOnCreated() {
-  // counter starts at 0
-  this.counter = new ReactiveVar(0);
-});
-
-Template.hello.helpers({
-  counter() {
-    return Template.instance().counter.get();
-  },
-});
-
-Template.hello.events({
-  'click button'(event, instance) {
-    // increment the counter when button is clicked
-    instance.counter.set(instance.counter.get() + 1);
   },
 });

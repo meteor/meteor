@@ -13,11 +13,20 @@
 </head>
 
 <body>
-  <h1>Welcome to ~name~</h1>
+  <header>
+    <h1>~name~</h1>
+    {{> installPanel}}
+  </header>
 
-  {{> installPanel}}
-  {{> hello}}
-  {{> info}}
+  <nav class="tabs">
+    <button class="tab {{tabClass 'todos'}}" type="button" data-tab="todos">Todos</button>
+    <button class="tab {{tabClass 'capabilities'}}" type="button" data-tab="capabilities">Capabilities</button>
+  </nav>
+
+  <main>
+    {{#if isTab 'todos'}}{{> todosPanel}}{{/if}}
+    {{#if isTab 'capabilities'}}{{> capabilitiesPanel}}{{/if}}
+  </main>
 </body>
 
 <template name="installPanel">
@@ -29,25 +38,5 @@
       <button class="install-btn" type="button">Install</button>
       <button class="dismiss-btn" type="button">Not now</button>
     </div>
-  {{else}}
-    <p class="pwa-status pwa-status--muted">
-      On Chrome/Edge desktop, the install prompt appears once eligibility criteria are met.
-      On iOS Safari, use the Share menu &rarr; "Add to Home Screen".
-    </p>
   {{/if}}
-</template>
-
-<template name="hello">
-  <button>Click Me</button>
-  <p>You've pressed the button {{counter}} times.</p>
-</template>
-
-<template name="info">
-  <h2>Learn Meteor!</h2>
-  <ul>
-    <li><a href="https://www.meteor.com/try" target="_blank">Do the Tutorial</a></li>
-    <li><a href="https://guide.meteor.com" target="_blank">Follow the Guide</a></li>
-    <li><a href="https://docs.meteor.com" target="_blank">Read the Docs</a></li>
-    <li><a href="https://forums.meteor.com" target="_blank">Discussions</a></li>
-  </ul>
 </template>

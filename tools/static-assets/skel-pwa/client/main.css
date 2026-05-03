@@ -6,28 +6,28 @@ body {
   color: #222;
 }
 
-h1 { color: #ff6b35; }
+header h1 { color: #ff6b35; margin: 0 0 12px; }
+header { margin-bottom: 16px; }
 
+.muted { color: #888; font-size: 0.9rem; }
+
+/* ===== Install banner (top of page) ===== */
 .pwa-install {
   border: 2px solid #ff6b35;
   border-radius: 8px;
   padding: 12px 16px;
   background: #fff5f0;
-  margin: 16px 0;
+  margin: 12px 0;
 }
-
 .pwa-status {
   padding: 8px 12px;
   border-radius: 4px;
   font-size: 0.9rem;
-  margin: 16px 0;
+  margin: 12px 0;
 }
 .pwa-status--ok { background: #e6f7e6; color: #1a6b1a; }
-.pwa-status--muted { background: #f0f0f0; color: #555; }
 
-.install-btn {
-  background: #ff6b35;
-  color: #fff;
+.install-btn, .dismiss-btn {
   border: 0;
   padding: 8px 16px;
   border-radius: 4px;
@@ -35,15 +35,82 @@ h1 { color: #ff6b35; }
   cursor: pointer;
   margin-right: 6px;
 }
+.install-btn { background: #ff6b35; color: #fff; }
 .install-btn:hover { background: #e95a25; }
+.dismiss-btn { background: transparent; color: #555; border: 1px solid #ccc; }
+.dismiss-btn:hover { background: #f4f4f4; }
 
-.dismiss-btn {
+/* ===== Tabs ===== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 16px;
+}
+.tab {
   background: transparent;
+  border: 0;
+  padding: 10px 18px;
+  font-size: 1rem;
+  cursor: pointer;
   color: #555;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.tab:hover { color: #ff6b35; }
+.tab--active { color: #ff6b35; border-bottom-color: #ff6b35; font-weight: 600; }
+
+/* ===== Panels (shared across tabs) ===== */
+.panel {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+.panel h2 { font-size: 1.1rem; margin: 0 0 8px; }
+
+/* ===== Todos ===== */
+.todo-form { display: flex; gap: 6px; margin-bottom: 12px; }
+.todo-form input[type=text] {
+  flex: 1;
+  padding: 8px 10px;
   border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+.todo-form button {
+  background: #ff6b35;
+  color: #fff;
+  border: 0;
   padding: 8px 16px;
   border-radius: 4px;
   font-size: 1rem;
   cursor: pointer;
 }
-.dismiss-btn:hover { background: #f4f4f4; }
+.todo-form button:hover { background: #e95a25; }
+
+.todos { list-style: none; padding: 0; margin: 0; }
+.todo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.todo label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+}
+.todo--done .todo-text { text-decoration: line-through; color: #888; }
+.todo .remove {
+  background: transparent;
+  color: #c00;
+  border: 0;
+  padding: 0 8px;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.todo .remove:hover { color: #800; }
