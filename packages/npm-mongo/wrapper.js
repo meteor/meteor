@@ -25,7 +25,12 @@ if (process.env.MONGO_URL && (/^mongodb(\+srv)?:\/\//.test(process.env.MONGO_URL
       if (client) client.close();
     });
   } catch (e) {
-    console.warn('Invalid MongoDB connection string in MONGO_URL:', process.env.MONGO_URL);
+    // Strip creds in mongo url for log
+    const safeMongoUrl = process.env.MONGO_URL.replace(
+      /(\bmongodb(?:\+srv)?:\/\/)[^:@/]+:[^@]+@/,
+      '$1***:***@'
+    );
+    console.warn('Invalid MongoDB connection string in MONGO_URL:', safeMongoUrl);
   }
 }
 
