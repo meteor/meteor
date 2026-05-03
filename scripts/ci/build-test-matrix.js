@@ -26,6 +26,8 @@ const fs = require('node:fs');
 // (Group 0 and Group 5 were given --cpus 4 --memory 16g for these reasons).
 const HEAVY_FILES = new Set([
   'modern',
+  'modern-transpiler',
+  'modern-build',
   'compiler-plugins',
   'cordova-builds',
   'cordova-hcp',
