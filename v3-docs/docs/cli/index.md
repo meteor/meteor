@@ -876,6 +876,8 @@ Adds packages to your Meteor project.
 ```bash
 meteor add [package1] [package2] ...
 meteor add package@version
+meteor add                    # interactive Atmosphere search
+meteor add --search <query>   # interactive search pre-filled with <query>
 ```
 
 **Version Constraints:**
@@ -887,6 +889,24 @@ meteor add package@version
 - By convention, community packages include the maintainer's name (e.g., `iron:router`)
 - To remove a version constraint, run `meteor add package` without specifying a version
 
+### Interactive search {#meteor-add-interactive}
+
+Run `meteor add` without any package names to open an interactive search against the [Atmosphere](https://atmospherejs.com/) community package directory. Type to filter results, use the arrow keys to highlight a package, and press Enter to add it to your project.
+
+Pass `--search <query>` to skip straight to results for a given query:
+
+```bash
+meteor add --search blaze
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names; pass either a query or package names, not both.
+:::
+
+::: tip Non-interactive search
+For scripted searches, use [`meteor search`](#meteorsearch), which prints results to stdout and accepts a regular expression.
+:::
+
 ## meteor remove *package* {#meteor-remove}
 
 Removes a package previously added to your Meteor project.
@@ -894,12 +914,28 @@ Removes a package previously added to your Meteor project.
 **Usage:**
 ```bash
 meteor remove [package1] [package2] ...
+meteor remove                    # interactive picker over installed packages
+meteor remove --search <query>   # picker pre-filtered by <query>
 ```
 
 **Notes:**
 - For a list of currently used packages, run `meteor list`
 - This removes the package entirely (to only remove version constraints, use [`meteor add`](#meteor-add))
 - Transitive dependencies aren't automatically downgraded unless necessary
+
+### Interactive picker {#meteor-remove-interactive}
+
+Run `meteor remove` without any package names to open an interactive picker listing the packages currently in `.meteor/packages`. Type to filter the list, use the arrow keys to highlight a package, and press Enter to remove it.
+
+Pass `--search <query>` to open the picker pre-filtered:
+
+```bash
+meteor remove --search accounts
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names; pass either a query or package names, not both.
+:::
 
 ## meteor list {#meteor-list}
 
