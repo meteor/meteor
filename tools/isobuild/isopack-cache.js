@@ -124,9 +124,12 @@ export class IsopackCache {
           const { name, dir, deps } = tasks[i];
           try {
             await meteorNpm.updateDependencies(name, dir, deps);
-          } catch {
-            // Best-effort. compiler.compile will run updateDependencies
-            // again per-package and surface errors normally.
+          } catch (err) {
+            // Best-effort: compiler.compile will retry per-package serially
+            // and surface errors normally. Log here so silent prefetch
+            // failures are diagnosable in CI.
+            console.error(`[prefetch] ${name} failed:`,
+              (err && err.stack) || err);
           }
         }
       })
