@@ -31,6 +31,8 @@ const HEAVY_FILES = new Set([
   'compiler-plugins',
   'compiler-plugins-local',
   'compiler-plugins-features',
+  'bundle',
+  'bundle-npm',
   'cordova-builds',
   'cordova-hcp',
   'cordova-plugins',
