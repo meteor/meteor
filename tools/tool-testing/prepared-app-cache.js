@@ -27,7 +27,9 @@ const READY_MARKER = '.meteor-selftest-cache-ready';
 const SENTINEL_PATH_FILE = '.meteor-selftest-cache-sentinel-path';
 const CACHE_DIR_ENV = 'METEOR_SELFTEST_PREPARED_APP_CACHE_DIR';
 const DISABLE_ENV = 'METEOR_DISABLE_PREPARED_APP_CACHE';
-const PREPARE_TIMEOUT_MS = 5 * 60 * 1000;
+// Windows CI runners take 2-3x longer than Linux for prepare-app; 5 min was
+// hitting timeouts on heavier templates (e.g., client-refresh).
+const PREPARE_TIMEOUT_MS = 15 * 60 * 1000;
 
 export const isDisabled = () => Boolean(process.env[DISABLE_ENV]);
 
