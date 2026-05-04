@@ -29,6 +29,8 @@ const HEAVY_FILES = new Set([
   'modern-transpiler',
   'modern-build',
   'compiler-plugins',
+  'compiler-plugins-local',
+  'compiler-plugins-features',
   'cordova-builds',
   'cordova-hcp',
   'cordova-plugins',
