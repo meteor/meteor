@@ -28,15 +28,15 @@ PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
 ./packages/test-in-console/run.sh            # Test all core packages
 ./packages/test-in-console/run.sh "mongo"    # Test specific package
 
-# Modern E2E tests (Jest + Playwright)
-npm run install:modern                       # Install dependencies
-npm run test:modern                          # Run all E2E tests
-npm run test:modern -- -t="React"            # Run specific test
+# E2E tests (Jest + Playwright)
+npm run install:e2e                          # Install dependencies
+npm run test:e2e                             # Run all E2E tests
+npm run test:e2e -- -t="React"               # Run specific test
 ```
 
-## Modern E2E Tests (`tools/modern-tests/`)
+## E2E Tests (`tools/e2e-tests/`)
 
-Jest + Playwright suite for verifying modern bundler integrations (rspack). Tests cover framework skeletons and build scenarios.
+Jest + Playwright suite for verifying bundler integrations (rspack). Tests cover framework skeletons and build scenarios.
 
 **Test apps:** `apps/{react,vue,svelte,solid,blaze,typescript,babel,coffeescript,monorepo}`
 
