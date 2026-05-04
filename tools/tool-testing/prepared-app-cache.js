@@ -249,6 +249,9 @@ async function runMeteorPrepareApp({ execPath, cwd, env }) {
     env: { ...process.env, ...env },
     timeout: PREPARE_TIMEOUT_MS,
     maxBuffer: 32 * 1024 * 1024,
+    // Node's CVE-2024-27980 mitigation refuses to spawn .bat/.cmd files
+    // (meteor.bat on Windows) via execFile without `shell: true`.
+    ...process.platform === 'win32' && { shell: true },
   });
 }
 
