@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth-based services",
-  version: '3.0.2',
+  version: '3.0.4-beta.10',
 });
 
 Package.onUse(api => {
@@ -10,12 +10,12 @@ Package.onUse(api => {
 
   api.use(['reload', 'base64'], 'client');
 
-  api.use('oauth-encryption', 'server', {weak: true});
+  api.use('oauth-encryption', 'server', { weak: true });
   api.use('fetch', 'server');
 
 
   api.export('OAuth');
-  api.export('OAuthTest', 'server', {testOnly: true});
+  api.export('OAuthTest', 'server', { testOnly: true });
 
   api.addFiles('oauth_client.js', 'web');
   api.addFiles('oauth_browser.js', 'web.browser');
