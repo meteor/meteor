@@ -1,6 +1,6 @@
 import { Accounts } from "meteor/accounts-base";
 import { Meteor } from "meteor/meteor";
-import { check, Match } from "meteor/check";
+import { check } from "meteor/check";
 import { setCookieOnResponse } from "./cookie_helpers.js";
 
 /**
@@ -22,7 +22,7 @@ import { setCookieOnResponse } from "./cookie_helpers.js";
  * @param {Object} [options]
  * @returns {Function} Express route handler
  */
-export function handleLogin(options = {}) {
+export function handleLogin(_options = {}) {
   return async function restLoginHandler(req, res) {
     const body = req.body || {};
     const { email, username, password, code } = body;
@@ -50,7 +50,7 @@ export function handleLogin(options = {}) {
           { fields: Accounts._checkPasswordUserFields },
         );
       }
-    } catch (e) {
+    } catch {
       return res.status(400).json({ error: "Invalid request" });
     }
 

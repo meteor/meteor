@@ -6,14 +6,6 @@ import { WebApp } from "meteor/webapp";
 
 if (Meteor.isServer) {
   // Helpers
-  const createUserWithToken = async () => {
-    const username = Random.id();
-    const userId = await Accounts.createUser({ username });
-    const stampedToken = Accounts._generateStampedLoginToken();
-    await Accounts._insertLoginToken(userId, stampedToken);
-    return { userId, username, token: stampedToken.token };
-  };
-
   const createUserWithPassword = async (password) => {
     const username = `test_${Random.id()}`;
     const email = `${username}@example.com`;
@@ -134,7 +126,7 @@ if (Meteor.isServer) {
 
   Tinytest.addAsync("accounts-express - handleLogin - nonexistent user", async (test) => {
     const res = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
-      username: "nonexistent_user_" + Random.id(),
+      username: `nonexistent_user_${Random.id()}`,
       password: "whatever",
     });
     test.equal(res.status, 401);

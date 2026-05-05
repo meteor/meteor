@@ -20,7 +20,7 @@ import { clearCookieOnResponse } from "./cookie_helpers.js";
  * @param {Object} [options]
  * @returns {Function} Express route handler
  */
-export function handleLogout(options = {}) {
+export function handleLogout(_options = {}) {
   return async function restLogoutHandler(req, res) {
     const invocation = _CurrentEndpointInvocation.get();
     const userId = invocation?.userId;
