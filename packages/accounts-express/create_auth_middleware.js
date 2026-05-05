@@ -1,78 +1,78 @@
-import { Meteor } from 'meteor/meteor';
-import { Accounts, _CurrentEndpointInvocation } from 'meteor/accounts-base';
+import { Meteor } from "meteor/meteor";
+import { Accounts, _CurrentEndpointInvocation } from "meteor/accounts-base";
+
+function parseCookies(header) {
+  return header.split(";").reduce((acc, pair) => {
+    const trimmed = pair.trim();
+    const eqIdx = trimmed.indexOf("=");
+    if (eqIdx === -1) return acc;
+    const key = trimmed.slice(0, eqIdx);
+    const raw = trimmed.slice(eqIdx + 1);
+    try {
+      acc[key] = decodeURIComponent(raw);
+    } catch {
+      acc[key] = raw;
+    }
+    return acc;
+  }, {});
+}
 
 export function createWebAppAuthMiddleware({ hashLoginTokenFn, required = false }) {
   return async function meteorWebAppAuthMiddleware(req, res, next) {
-    const authHeader = req.headers.authorization;
-    const cookies = req.headers.cookie;
-    let token;
+    const continueUnauthenticated = () => {
+      req.userId = null;
+      return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => next());
+    };
 
-    // Try to get token from Authorization header
-    if (authHeader?.startsWith("Bearer ")) {
-      token = authHeader.replace("Bearer ", "");
-    } else if (cookies) {
-      // Try to get token from cookies
-      const cookieMap = cookies.split(';').reduce((acc, cookie) => {
-        const [key, value] = cookie.trim().split('=');
-        acc[key] = value;
-        return acc;
-      }, {});
+    try {
+      const authHeader = req.headers.authorization;
+      const cookies = req.headers.cookie;
+      let token;
 
-      if (cookieMap['meteor_login_token']) {
-        token = cookieMap['meteor_login_token'];
+      // Try to get token from Authorization header
+      if (authHeader?.startsWith("Bearer ")) {
+        token = authHeader.replace("Bearer ", "");
+      } else if (cookies) {
+        const cookieMap = parseCookies(cookies);
+        if (cookieMap["meteor_login_token"]) {
+          token = cookieMap["meteor_login_token"];
+        }
       }
-    }
 
-    // If no token and authentication is optional, continue without authentication
-    if (!token) {
-      if (!required) {
-        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
-          next();
-        });
+      if (!token) {
+        if (!required) return continueUnauthenticated();
+        return res.status(401).json({ error: "Unauthorized" });
       }
-      return res.status(401).json({ error: "Unauthorized" });
-    }
 
-    const hashedToken = hashLoginTokenFn(token);
+      const hashedToken = hashLoginTokenFn(token);
 
-    const user = await Meteor.users.findOneAsync({
-      "services.resume.loginTokens.hashedToken": hashedToken,
-    });
-    if (!user) {
-      if (!required) {
-        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
-          next();
-        });
+      const user = await Meteor.users.findOneAsync({
+        "services.resume.loginTokens.hashedToken": hashedToken,
+      });
+      if (!user) {
+        if (!required) return continueUnauthenticated();
+        return res.status(401).json({ error: "Invalid token" });
       }
-      return res.status(401).json({ error: "Invalid token" });
-    }
 
-    const tokenData = user.services.resume.loginTokens.find(
-      (t) => t.hashedToken === hashedToken
-    );
-    if (!tokenData) {
-      if (!required) {
-        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
-          next();
-        });
+      const tokenData = user.services.resume.loginTokens.find((t) => t.hashedToken === hashedToken);
+      if (!tokenData) {
+        if (!required) return continueUnauthenticated();
+        return res.status(401).json({ error: "Invalid token" });
       }
-      return res.status(401).json({ error: "Invalid token" });
-    }
 
-    const tokenAge = Date.now() - tokenData.when.getTime();
-    if (tokenAge > Accounts._getTokenLifetimeMs()) {
-      if (!required) {
-        return _CurrentEndpointInvocation.withValue({ userId: null, loginToken: null }, () => {
-          next();
-        });
+      const tokenAge = Date.now() - tokenData.when.getTime();
+      if (tokenAge > Accounts._getTokenLifetimeMs()) {
+        if (!required) return continueUnauthenticated();
+        return res.status(401).json({ error: "Token expired" });
       }
-      return res.status(401).json({ error: "Token expired" });
+
+      req.userId = user._id;
+
+      return _CurrentEndpointInvocation.withValue({ userId: user._id, loginToken: token }, () =>
+        next(),
+      );
+    } catch (err) {
+      return next(err);
     }
-
-    req.userId = user._id;
-
-    _CurrentEndpointInvocation.withValue({ userId: user._id, loginToken: token }, () => {
-      next();
-    });
   };
 }

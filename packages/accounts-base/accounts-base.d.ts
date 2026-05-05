@@ -124,6 +124,8 @@ export namespace Accounts {
   function loginServicesConfigured(): boolean;
 
   function onPageLoadLogin(func: Function): void;
+
+  function loginWithTokenAsync(token: string): Promise<Meteor.LoginMethodResult>;
 }
 
 export namespace Accounts {
@@ -163,9 +165,19 @@ export namespace Accounts {
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<void>;
 
+  function logoutAsync(): Promise<void>;
+
+  function logoutAllClients(
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ): Promise<void>;
+
+  function logoutAllClientsAsync(): Promise<void>;
+
   function logoutOtherClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<void>;
+
+  function logoutOtherClientsAsync(): Promise<void>;
 
   type PasswordSignupField = 'USERNAME_AND_EMAIL' | 'USERNAME_AND_OPTIONAL_EMAIL' | 'USERNAME_ONLY' | 'EMAIL_ONLY';
   type PasswordlessSignupField = 'USERNAME_AND_EMAIL' | 'EMAIL_ONLY';
@@ -287,16 +299,17 @@ export namespace Accounts {
 }
 
 export namespace Accounts {
-  function onLogout(func: Function): void;
-}
-
-export namespace Accounts {
+  function onLogout(func: Function): {
+    stop: () => void;
+  };
   function onLogout(
     func: (options: {
       user: Meteor.User;
       connection: Meteor.Connection;
     }) => void
-  ): void;
+  ): {
+    stop: () => void;
+  };
 }
 
 export namespace Accounts {

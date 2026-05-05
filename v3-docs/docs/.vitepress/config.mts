@@ -163,10 +163,6 @@ export default defineConfig({
             text: "Roadmap",
             link: "/about/roadmap",
           },
-              {
-                text: "Contributing",
-                link: "/about/contributing",
-              }
         ],
         collapsed: true,
       },
@@ -300,6 +296,10 @@ export default defineConfig({
           {
             text: "Accounts and security",
             items: [
+              {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
               {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
@@ -465,6 +465,14 @@ export default defineConfig({
                 text: "jam:offline",
                 link: "/community-packages/offline",
               },
+              {
+                text: "dupontbertrand:cluster",
+                link: "/community-packages/cluster",
+              },
+              {
+                text: "dupontbertrand:mail-preview",
+                link: "/community-packages/mail-preview",
+              },
             ],
             collapsed: true,
           },
@@ -549,10 +557,6 @@ export default defineConfig({
                 text: "Accounts",
                 link: "/tutorials/accounts/accounts",
               },
-              {
-                text: "Routing",
-                link: "/tutorials/routing/routing",
-              },
             ]
           },
           {
@@ -635,6 +639,20 @@ export default defineConfig({
         ],
         collapsed: true,
       },
+      {
+        text: "Community",
+        items: [
+          {
+            text: "Contributing",
+            link: "/community/contributing",
+          },
+          {
+            text: "Contributors",
+            link: "/community/contributors",
+          },
+        ],
+        collapsed: true,
+      },
     ],
 
     socialLinks: [
@@ -671,7 +689,27 @@ export default defineConfig({
   vite: {
     plugins: [
       llmstxt({
-        title: "Meteor.js 3 Docs",
+        title: "Meteor.js 3 Documentation",
+        domain: "https://docs.meteor.com",
+        description: "Full-stack JavaScript platform for modern web and mobile applications.",
+        details: `
+Meteor is a full-stack JavaScript platform for developing web and mobile applications.
+
+Key capabilities:
+- Real-time data synchronization with publications and subscriptions
+- Built-in accounts and authentication system
+- Frontend agnostic (React, Vue, Solid, Blaze, Svelte)
+- Zero-config build system with modern tooling (SWC, Rspack)
+- One-command deployment to Galaxy Cloud
+- TypeScript support with full type inference
+
+Current version: Meteor ${metadata.currentVersion}.
+
+## Structured API Data
+
+For complete API documentation in machine-readable format, see:
+- [api-reference.json](/api-reference.json) - Full API reference with all functions, parameters, and types
+        `.trim(),
       }),
     ],
   },

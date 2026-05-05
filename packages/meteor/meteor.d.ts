@@ -75,6 +75,14 @@ export namespace Meteor {
 
   function userId(): string | null;
   var users: Mongo.Collection<User>;
+
+  interface LoginMethodResult {
+    id: string;
+    token: string;
+    tokenExpires?: Date | undefined;
+    type: string;
+    [key: string]: any;
+  }
   /** User **/
 
   /** Error **/
@@ -328,26 +336,30 @@ export namespace Meteor {
   function defer(func: Function): void;
 
   /**
-   * Wrap a function so that it only runs in the specified environments.
+   * Wrap a function so that it only runs in background in specified environments.
    * @param func The function to wrap
    * @param options An object with an `on` property that is an array of environment names: `"development"`, `"production"`, and/or `"test"`.
    */
-  function deferrable<T extends Function>(
-    func: T,
+  function deferrable<T>(
+    func: () => T,
     options: { on: Array<"development" | "production" | "test"> }
   ): T | void;
 
   /**
-   * Wrap a function so that it only runs in development environment.
+   * Wrap a function to run in the background in development (similar to Meteor.isDevelopment ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferDev<T extends Function>(func: T): T | void;
+  function deferDev<T>(
+    func: () => T
+  ): T | void;
 
   /**
-   * Wrap a function so that it only runs in production environment.
+   * Wrap a function to run in the background in production (similar to Meteor.isProduction ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferProd<T extends Function>(func: T): T | void;
+  function deferProd<T>(
+    func: () => T
+  ): T | void;
   /** Timeout **/
 
   /** utils **/
@@ -472,6 +484,13 @@ export namespace Meteor {
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
+  function loginWithPasswordAsync(
+    user: { username: string } | { email: string } | { id: string } | string,
+    password: string
+  ): Promise<LoginMethodResult>;
+
+  function loginWithTokenAsync(token: string): Promise<LoginMethodResult>;
+
   function loggingIn(): boolean;
 
   function loggingOut(): boolean;
@@ -480,9 +499,19 @@ export namespace Meteor {
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
+  function logoutAsync(): Promise<void>;
+
+  function logoutAllClients(
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function logoutAllClientsAsync(): Promise<void>;
+
   function logoutOtherClients(
     callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
+
+  function logoutOtherClientsAsync(): Promise<void>;
   /** Login **/
 
   /** Connection **/

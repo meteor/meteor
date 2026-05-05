@@ -1,400 +1,497 @@
-import { Meteor } from 'meteor/meteor';
-import { Accounts } from 'meteor/accounts-base';
-import { Tinytest } from 'meteor/tinytest';
+import { Meteor } from "meteor/meteor";
+import { Accounts } from "meteor/accounts-base";
+import { Tinytest } from "meteor/tinytest";
 
 // Only run these tests on the client
 if (Meteor.isClient) {
-  // Helper function to create a mock fetch implementation
-  const createMockFetch = (expectedHeaders, responseData) => {
-    return async (url, options = {}) => {
-      // Verify headers match expected headers
-      const headers = options.headers || {};
-      for (const [key, value] of Object.entries(expectedHeaders)) {
-        if (headers.get(key) !== value) {
-          throw new Error(`Expected header ${key} to be ${value}, got ${headers.get(key)}`);
-        }
-      }
-
-      // Return a mock response
-      return {
-        ok: true,
-        status: 200,
-        json: async () => responseData,
-        text: async () => JSON.stringify(responseData)
-      };
-    };
-  };
+  const { fetch: packageFetch } = require("meteor/fetch");
+  const { fetch: aeFetch } = require("meteor/accounts-express");
 
   const cleanUp = () => {
-    localStorage.removeItem('Meteor.loginToken');
-    sessionStorage.removeItem('Meteor.loginToken');
+    localStorage.removeItem("Meteor.loginToken");
+    sessionStorage.removeItem("Meteor.loginToken");
   };
 
-  // Setup test endpoint
-  const testEndpoint = '/api/test-client-fetch';
-  const testUrl = Meteor.absoluteUrl(testEndpoint);
+  const loginNewUser = async () => {
+    cleanUp();
+    const username = `test-${Random.id()}`;
+    const password = "password";
 
-  // Test that Meteor.fetch adds auth token when logged in
-  Tinytest.addAsync('accounts-express - client fetch - adds auth token when logged in', async (test) => {
-    // Save original fetch
-    const originalFetch = window.fetch;
-
-    try {
-      cleanUp();
-
-      // Create a test user and login
-      const username = `test-${Random.id()}`;
-      const password = 'password';
-
-      await new Promise((resolve, reject) => {
-        Accounts.createUser({ username, password }, (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            Meteor.loginWithPassword(username, password, (err) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve();
-              }
-            });
-          }
-        });
-      });
-
-      // Use Accounts._storedLoginToken() to get the token correctly
-      const token = Accounts._storedLoginToken();
-      test.isTrue(!!token, 'Login token should be available via _storedLoginToken()');
-
-      // Set up mock fetch that expects the auth header
-      const expectedHeaders = {
-        'Authorization': `Bearer ${token}`
-      };
-      const responseData = { success: true };
-      window.fetch = createMockFetch(expectedHeaders, responseData);
-
-      // Call Meteor.fetch
-      const response = await Meteor.fetch(testUrl);
-      const data = await response.json();
-
-      // Verify response
-      test.isTrue(response.ok);
-      test.equal(data, responseData);
-
-      // Clean up
-      await Meteor.callAsync('removeAccountsTestUser', username);
-    } finally {
-      window.fetch = originalFetch;
-      Meteor.logout();
-    }
-  });
-
-  // Test that Meteor.fetch works without auth token when not logged in
-  Tinytest.addAsync('accounts-express - client fetch - works without auth token when not logged in', async (test) => {
-    const originalFetch = window.fetch;
-
-    try {
-      cleanUp();
-      Meteor.logout();
-
-      // Verify no stored token
-      const token = Accounts._storedLoginToken();
-      test.isFalse(!!token, 'Login token should not be available');
-
-      // Set up mock fetch that expects no auth header
-      const expectedHeaders = {};
-      const responseData = { success: true };
-      window.fetch = createMockFetch(expectedHeaders, responseData);
-
-      const response = await Meteor.fetch(testUrl);
-      const data = await response.json();
-
-      test.isTrue(response.ok);
-      test.equal(data, responseData);
-    } finally {
-      window.fetch = originalFetch;
-    }
-  });
-
-  // Test that Meteor.fetch preserves other headers and options
-  Tinytest.addAsync('accounts-express - client fetch - preserves other headers and options', async (test) => {
-    const originalFetch = window.fetch;
-
-    try {
-      cleanUp();
-      Meteor.logout();
-
-      const customHeaders = {
-        'Content-Type': 'application/json',
-        'X-Custom-Header': 'custom-value'
-      };
-
-      const customOptions = {
-        method: 'POST',
-        body: JSON.stringify({ data: 'test' })
-      };
-
-      const expectedHeaders = { ...customHeaders };
-      const responseData = { success: true };
-
-      window.fetch = async (url, options = {}) => {
-        test.equal(url, testUrl);
-        test.equal(options.method, customOptions.method);
-        test.equal(options.body, customOptions.body);
-
-        const headers = options.headers;
-        for (const [key, value] of Object.entries(expectedHeaders)) {
-          test.equal(headers.get(key), value);
+    await new Promise((resolve, reject) => {
+      Accounts.createUser({ username, password }, (error) => {
+        if (error) reject(error);
+        else {
+          Meteor.loginWithPassword(username, password, (err) => {
+            if (err) reject(err);
+            else resolve();
+          });
         }
-
-        return {
-          ok: true,
-          status: 200,
-          json: async () => responseData,
-          text: async () => JSON.stringify(responseData)
-        };
-      };
-
-      const response = await Meteor.fetch(testUrl, {
-        ...customOptions,
-        headers: customHeaders
       });
+    });
 
-      const data = await response.json();
+    return { username, token: Accounts._storedLoginToken() };
+  };
 
-      test.isTrue(response.ok);
-      test.equal(data, responseData);
-    } finally {
-      window.fetch = originalFetch;
-    }
+  const mockResponse = (data = { success: true }) => ({
+    ok: true,
+    status: 200,
+    json: async () => data,
+    text: async () => JSON.stringify(data),
   });
 
-  // Test that auth: false skips token injection even when logged in
-  Tinytest.addAsync('accounts-express - client fetch - auth false skips token when logged in', async (test) => {
-    const originalFetch = window.fetch;
+  const testUrl = Meteor.absoluteUrl("/api/test-client-fetch");
 
-    try {
-      cleanUp();
+  // --- Shared fetch auth tests for both Meteor.fetch and meteor/fetch ---
+  // Both paths (Meteor.fetch and packageFetch with auth options) go through
+  // the auth wrapper and ultimately call window.fetch, so mocking works for both.
 
-      const username = `test-${Random.id()}`;
-      const password = 'password';
+  const fetchTestCases = [
+    { name: "Meteor.fetch", fetchFn: (...args) => Meteor.fetch(...args) },
+    { name: "meteor/fetch", fetchFn: packageFetch },
+  ];
 
-      await new Promise((resolve, reject) => {
-        Accounts.createUser({ username, password }, (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            Meteor.loginWithPassword(username, password, (err) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve();
-              }
-            });
+  for (const { name, fetchFn } of fetchTestCases) {
+    Tinytest.addAsync(
+      `accounts-express - ${name} - auth true adds token when logged in`,
+      async (test) => {
+        const originalFetch = window.fetch;
+
+        try {
+          const { username, token } = await loginNewUser();
+          test.isTrue(!!token, "Login token should be available");
+
+          window.fetch = async (url, options = {}) => {
+            const headers = options.headers;
+            test.equal(
+              headers.get("Authorization"),
+              `Bearer ${token}`,
+              "Authorization header should be set",
+            );
+            return mockResponse();
+          };
+
+          // Both variants: pass auth: true (or implicit for Meteor.fetch)
+          const response = await fetchFn(testUrl, { auth: true });
+          test.isTrue(response.ok);
+
+          await Meteor.callAsync("removeAccountsExpressTestUser", username);
+        } finally {
+          window.fetch = originalFetch;
+          Meteor.logout();
+        }
+      },
+    );
+
+    Tinytest.addAsync(
+      `accounts-express - ${name} - auth false skips token when logged in`,
+      async (test) => {
+        const originalFetch = window.fetch;
+
+        try {
+          const { username, token } = await loginNewUser();
+          test.isTrue(!!token, "Login token should be available");
+
+          window.fetch = async (url, options = {}) => {
+            const headers = options.headers;
+            test.isFalse(
+              headers.has("Authorization"),
+              "Authorization header should not be set when auth: false",
+            );
+            return mockResponse();
+          };
+
+          const response = await fetchFn(testUrl, { auth: false });
+          test.isTrue(response.ok);
+
+          await Meteor.callAsync("removeAccountsExpressTestUser", username);
+        } finally {
+          window.fetch = originalFetch;
+          Meteor.logout();
+        }
+      },
+    );
+  }
+
+  // --- Meteor.fetch-specific tests ---
+
+  // Meteor.fetch without options defaults to auth: false — works without attaching a token.
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - works without auth options",
+    async (test) => {
+      const originalFetch = window.fetch;
+
+      try {
+        cleanUp();
+        Meteor.logout();
+
+        const token = Accounts._storedLoginToken();
+        test.isFalse(!!token, "Login token should not be available");
+
+        window.fetch = async () => mockResponse();
+
+        const response = await Meteor.fetch(testUrl);
+        test.isTrue(response.ok);
+      } finally {
+        window.fetch = originalFetch;
+      }
+    },
+  );
+
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - preserves other headers and options",
+    async (test) => {
+      const originalFetch = window.fetch;
+
+      try {
+        cleanUp();
+        Meteor.logout();
+
+        const customHeaders = {
+          "Content-Type": "application/json",
+          "X-Custom-Header": "custom-value",
+        };
+        const customOptions = {
+          method: "POST",
+          body: JSON.stringify({ data: "test" }),
+        };
+
+        window.fetch = async (url, options = {}) => {
+          test.equal(url, testUrl);
+          test.equal(options.method, customOptions.method);
+          test.equal(options.body, customOptions.body);
+
+          const headers = options.headers;
+          for (const [key, value] of Object.entries(customHeaders)) {
+            test.equal(headers.get(key), value);
           }
+
+          return mockResponse();
+        };
+
+        const response = await Meteor.fetch(testUrl, {
+          ...customOptions,
+          headers: customHeaders,
         });
-      });
+        test.isTrue(response.ok);
+      } finally {
+        window.fetch = originalFetch;
+      }
+    },
+  );
 
-      // Verify token exists
-      const token = Accounts._storedLoginToken();
-      test.isTrue(!!token, 'Login token should be available');
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - works with session storage",
+    async (test) => {
+      const originalFetch = window.fetch;
+      const originalOptions = Accounts._options;
+      const originalStorageLocation = Accounts.storageLocation;
 
-      // Set up mock fetch that checks NO auth header is present
-      window.fetch = async (url, options = {}) => {
-        const headers = options.headers;
-        test.isFalse(headers.has('Authorization'), 'Authorization header should not be set when auth: false');
+      try {
+        cleanUp();
+        Accounts.config({ clientStorage: "session" });
 
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ success: true }),
-          text: async () => JSON.stringify({ success: true })
+        const { username, token } = await loginNewUser();
+        test.isTrue(!!token, "Login token should be available via _storedLoginToken()");
+
+        window.fetch = async (url, options = {}) => {
+          const headers = options.headers;
+          test.equal(headers.get("Authorization"), `Bearer ${token}`);
+          return mockResponse();
         };
-      };
 
-      const response = await Meteor.fetch(testUrl, { auth: false });
-      test.isTrue(response.ok);
+        const response = await Meteor.fetch(testUrl, { auth: true });
+        test.isTrue(response.ok);
 
-      await Meteor.callAsync('removeAccountsTestUser', username);
-    } finally {
-      window.fetch = originalFetch;
-      Meteor.logout();
-    }
-  });
+        await Meteor.callAsync("removeAccountsExpressTestUser", username);
+      } finally {
+        window.fetch = originalFetch;
+        Accounts._options = originalOptions;
+        Accounts.storageLocation = originalStorageLocation;
+        Meteor.logout();
+      }
+    },
+  );
 
-  // Test that Meteor.fetch works with session storage when configured
-  Tinytest.addAsync('accounts-express - client fetch - works with session storage', async (test) => {
-    const originalFetch = window.fetch;
-    const originalOptions = Accounts._options;
+  // --- HttpOnly cookie / credentials tests (Meteor.fetch only) ---
 
-    try {
-      cleanUp();
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - sets credentials include when httpOnly cookies enabled",
+    async (test) => {
+      const originalFetch = window.fetch;
+      const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
 
-      // Configure Accounts to use session storage
-      Accounts.config({ clientStorage: 'session' });
+      try {
+        cleanUp();
+        Meteor.logout();
+        Accounts._useHttpOnlyCookies = true;
 
-      const username = `test-${Random.id()}`;
-      const password = 'password';
+        window.fetch = async (url, options = {}) => {
+          test.equal(
+            options.credentials,
+            "include",
+            "credentials should be include when useHttpOnlyCookies is true",
+          );
+          return mockResponse();
+        };
 
-      await new Promise((resolve, reject) => {
-        Accounts.createUser({ username, password }, (error) => {
-          if (error) {
-            reject(error);
-          } else {
-            Meteor.loginWithPassword(username, password, (err) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve();
-              }
-            });
-          }
+        const response = await Meteor.fetch(testUrl, { auth: true });
+        test.isTrue(response.ok);
+      } finally {
+        window.fetch = originalFetch;
+        Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+      }
+    },
+  );
+
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - does not set credentials when httpOnly cookies disabled",
+    async (test) => {
+      const originalFetch = window.fetch;
+      const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
+
+      try {
+        cleanUp();
+        Meteor.logout();
+        Accounts._useHttpOnlyCookies = false;
+
+        window.fetch = async (url, options = {}) => {
+          test.isFalse(
+            "credentials" in options,
+            "credentials should not be set when useHttpOnlyCookies is false",
+          );
+          return mockResponse();
+        };
+
+        const response = await Meteor.fetch(testUrl, { auth: true });
+        test.isTrue(response.ok);
+      } finally {
+        window.fetch = originalFetch;
+        Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+      }
+    },
+  );
+
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - does not override user-provided credentials",
+    async (test) => {
+      const originalFetch = window.fetch;
+      const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
+
+      try {
+        cleanUp();
+        Meteor.logout();
+        Accounts._useHttpOnlyCookies = true;
+
+        window.fetch = async (url, options = {}) => {
+          test.equal(
+            options.credentials,
+            "same-origin",
+            "user-provided credentials should not be overridden",
+          );
+          return mockResponse();
+        };
+
+        const response = await Meteor.fetch(testUrl, { auth: true, credentials: "same-origin" });
+        test.isTrue(response.ok);
+      } finally {
+        window.fetch = originalFetch;
+        Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+      }
+    },
+  );
+
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - auth false skips credentials include",
+    async (test) => {
+      const originalFetch = window.fetch;
+      const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
+
+      try {
+        cleanUp();
+        Meteor.logout();
+        Accounts._useHttpOnlyCookies = true;
+
+        window.fetch = async (url, options = {}) => {
+          test.isFalse(
+            "credentials" in options,
+            "credentials should not be set when auth is false",
+          );
+          test.isFalse(
+            options.headers?.has("Authorization"),
+            "Authorization should not be set when auth is false",
+          );
+          return mockResponse();
+        };
+
+        const response = await Meteor.fetch(testUrl, { auth: false });
+        test.isTrue(response.ok);
+      } finally {
+        window.fetch = originalFetch;
+        Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
+      }
+    },
+  );
+
+  // --- meteor/fetch-specific test: no auth options bypasses Meteor.fetch ---
+  // Cannot mock window.fetch here because rawFetch is bound at module load time,
+  // so we hit the real echo endpoint and verify no auth is injected.
+
+  Tinytest.addAsync(
+    "accounts-express - meteor/fetch - no auth options uses raw fetch",
+    async (test) => {
+      try {
+        const { username, token } = await loginNewUser();
+        test.isTrue(!!token, "Login token should be available");
+
+        // Call packageFetch WITHOUT auth options — goes to rawFetch, no auth injected
+        const response = await packageFetch(Meteor.absoluteUrl("api/express-test-request-echo"));
+        test.isTrue(response.ok);
+
+        const data = await response.json();
+        test.isNull(data.meteorUserId, "No auth should be injected without auth option");
+
+        await Meteor.callAsync("removeAccountsExpressTestUser", username);
+      } finally {
+        Meteor.logout();
+      }
+    },
+  );
+
+  // --- Authorization header preservation ---
+
+  Tinytest.addAsync(
+    "accounts-express - Meteor.fetch - does not clobber caller-supplied Authorization",
+    async (test) => {
+      const originalFetch = window.fetch;
+
+      try {
+        const { username, token } = await loginNewUser();
+        test.isTrue(!!token, "Login token should be available");
+
+        window.fetch = async (url, options = {}) => {
+          const headers = options.headers;
+          test.equal(
+            headers.get("Authorization"),
+            "Bearer caller-supplied-key",
+            "Caller-supplied Authorization must take precedence over the login token",
+          );
+          return mockResponse();
+        };
+
+        const response = await Meteor.fetch(testUrl, {
+          auth: true,
+          headers: { Authorization: "Bearer caller-supplied-key" },
         });
-      });
+        test.isTrue(response.ok);
 
-      // Get the token via the proper API (handles session storage correctly)
-      const token = Accounts._storedLoginToken();
-      test.isTrue(!!token, 'Login token should be available via _storedLoginToken()');
+        await Meteor.callAsync("removeAccountsExpressTestUser", username);
+      } finally {
+        window.fetch = originalFetch;
+        Meteor.logout();
+      }
+    },
+  );
 
-      // Set up mock fetch that expects the auth header
-      const expectedHeaders = {
-        'Authorization': `Bearer ${token}`
-      };
-      const responseData = { success: true };
-      window.fetch = createMockFetch(expectedHeaders, responseData);
+  // --- handleFetch: 'auth: undefined' should not route through auth wrapper ---
 
-      const response = await Meteor.fetch(testUrl);
-      const data = await response.json();
+  Tinytest.addAsync(
+    "accounts-express - meteor/fetch - auth: undefined does not inject token",
+    async (test) => {
+      try {
+        const { username, token } = await loginNewUser();
+        test.isTrue(!!token, "Login token should be available");
 
-      test.isTrue(response.ok);
-      test.equal(data, responseData);
+        // packageFetch with auth: undefined should hit rawFetch (no auth injection),
+        // even though the user is logged in.
+        const response = await packageFetch(Meteor.absoluteUrl("api/express-test-request-echo"), {
+          auth: undefined,
+        });
+        test.isTrue(response.ok);
 
-      await Meteor.callAsync('removeAccountsTestUser', username);
-    } finally {
-      window.fetch = originalFetch;
-      Accounts._options = originalOptions;
-      Meteor.logout();
-    }
-  });
+        const data = await response.json();
+        test.isNull(data.meteorUserId, "auth: undefined must not trigger token injection");
 
-  // Test that credentials: 'include' is set when useHttpOnlyCookies is enabled
-  Tinytest.addAsync('accounts-express - client fetch - sets credentials include when httpOnly cookies enabled', async (test) => {
+        await Meteor.callAsync("removeAccountsExpressTestUser", username);
+      } finally {
+        Meteor.logout();
+      }
+    },
+  );
+
+  // --- token option is server-only on the client ---
+
+  Tinytest.addAsync(
+    "accounts-express - meteor/fetch - token option is ignored on the client (server-only)",
+    async (test) => {
+      try {
+        // packageFetch with only `token` (no `auth`) on the client should NOT
+        // route through the auth wrapper — `token` is documented as server-only.
+        const response = await packageFetch(Meteor.absoluteUrl("api/express-test-request-echo"), {
+          token: "arbitrary-string",
+        });
+        test.isTrue(response.ok);
+
+        const data = await response.json();
+        test.isNull(data.meteorUserId, "Client must not inject the token option");
+      } finally {
+        Meteor.logout();
+      }
+    },
+  );
+
+  // --- meteor/accounts-express fetch: auth is on by default ---
+
+  Tinytest.addAsync(
+    "accounts-express - aeFetch - default attaches token when logged in",
+    async (test) => {
+      const originalFetch = window.fetch;
+
+      try {
+        const { username, token } = await loginNewUser();
+        test.isTrue(!!token, "Login token should be available");
+
+        window.fetch = async (url, options = {}) => {
+          test.equal(
+            options.headers.get("Authorization"),
+            `Bearer ${token}`,
+            "aeFetch should attach the login token by default",
+          );
+          return mockResponse();
+        };
+
+        const response = await aeFetch(testUrl);
+        test.isTrue(response.ok);
+
+        await Meteor.callAsync("removeAccountsExpressTestUser", username);
+      } finally {
+        window.fetch = originalFetch;
+        Meteor.logout();
+      }
+    },
+  );
+
+  Tinytest.addAsync("accounts-express - aeFetch - auth false opts out", async (test) => {
     const originalFetch = window.fetch;
-    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
 
     try {
-      cleanUp();
-      Meteor.logout();
-
-      Accounts._useHttpOnlyCookies = true;
+      const { username, token } = await loginNewUser();
+      test.isTrue(!!token, "Login token should be available");
 
       window.fetch = async (url, options = {}) => {
-        test.equal(options.credentials, 'include', 'credentials should be include when useHttpOnlyCookies is true');
-
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ success: true }),
-          text: async () => JSON.stringify({ success: true })
-        };
+        test.isFalse(
+          options.headers.has("Authorization"),
+          "aeFetch with auth: false must not attach the token",
+        );
+        return mockResponse();
       };
 
-      const response = await Meteor.fetch(testUrl);
+      const response = await aeFetch(testUrl, { auth: false });
       test.isTrue(response.ok);
+
+      await Meteor.callAsync("removeAccountsExpressTestUser", username);
     } finally {
       window.fetch = originalFetch;
-      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
-    }
-  });
-
-  // Test that credentials is NOT set when useHttpOnlyCookies is disabled
-  Tinytest.addAsync('accounts-express - client fetch - does not set credentials when httpOnly cookies disabled', async (test) => {
-    const originalFetch = window.fetch;
-    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
-
-    try {
-      cleanUp();
       Meteor.logout();
-
-      Accounts._useHttpOnlyCookies = false;
-
-      window.fetch = async (url, options = {}) => {
-        test.isFalse('credentials' in options, 'credentials should not be set when useHttpOnlyCookies is false');
-
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ success: true }),
-          text: async () => JSON.stringify({ success: true })
-        };
-      };
-
-      const response = await Meteor.fetch(testUrl);
-      test.isTrue(response.ok);
-    } finally {
-      window.fetch = originalFetch;
-      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
-    }
-  });
-
-  // Test that user-provided credentials option is not overridden
-  Tinytest.addAsync('accounts-express - client fetch - does not override user-provided credentials', async (test) => {
-    const originalFetch = window.fetch;
-    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
-
-    try {
-      cleanUp();
-      Meteor.logout();
-
-      Accounts._useHttpOnlyCookies = true;
-
-      window.fetch = async (url, options = {}) => {
-        test.equal(options.credentials, 'same-origin', 'user-provided credentials should not be overridden');
-
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ success: true }),
-          text: async () => JSON.stringify({ success: true })
-        };
-      };
-
-      const response = await Meteor.fetch(testUrl, { credentials: 'same-origin' });
-      test.isTrue(response.ok);
-    } finally {
-      window.fetch = originalFetch;
-      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
-    }
-  });
-
-  // Test that auth: false does not set credentials even with httpOnly cookies
-  Tinytest.addAsync('accounts-express - client fetch - auth false skips credentials include', async (test) => {
-    const originalFetch = window.fetch;
-    const originalUseHttpOnlyCookies = Accounts._useHttpOnlyCookies;
-
-    try {
-      cleanUp();
-      Meteor.logout();
-
-      Accounts._useHttpOnlyCookies = true;
-
-      window.fetch = async (url, options = {}) => {
-        test.isFalse('credentials' in options, 'credentials should not be set when auth is false');
-        test.isFalse(options.headers?.has('Authorization'), 'Authorization should not be set when auth is false');
-
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ success: true }),
-          text: async () => JSON.stringify({ success: true })
-        };
-      };
-
-      const response = await Meteor.fetch(testUrl, { auth: false });
-      test.isTrue(response.ok);
-    } finally {
-      window.fetch = originalFetch;
-      Accounts._useHttpOnlyCookies = originalUseHttpOnlyCookies;
     }
   });
 }

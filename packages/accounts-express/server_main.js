@@ -1,7 +1,8 @@
-import { Accounts } from 'meteor/accounts-base';
-import { Meteor } from 'meteor/meteor';
-import { createWebAppAuthMiddleware } from './create_auth_middleware.js';
-import { createAuthFetch } from './fetch_server.js';
+import { Accounts } from "meteor/accounts-base";
+import { Meteor } from "meteor/meteor";
+import { createWebAppAuthMiddleware } from "./create_auth_middleware.js";
+import { createAuthFetch } from "./fetch_server.js";
+import { fetch } from "./fetch_authed.js";
 import { handleLogin } from './rest_login.js';
 import { handleLogout } from './rest_logout.js';
 
@@ -23,7 +24,29 @@ function createAuthMiddleware(options = {}) {
   });
 }
 
-// Wrap the base Meteor.fetch with auth functionality
-Meteor.fetch = createAuthFetch(Meteor.fetch);
+// Wrap the base Meteor.fetch with auth functionality. Guard the wrap
+// in case meteor/fetch hasn't populated Meteor.fetch yet (load-order
+// races) — handleFetch falls back to rawFetch for non-auth calls.
+if (typeof Meteor.fetch === "function") {
+  Meteor.fetch = createAuthFetch(Meteor.fetch);
+}
 
-export { createAuthMiddleware, createAuthFetch, handleLogin, handleLogout };
+/**
+ * @summary Handle fetch calls from the meteor/fetch package when auth
+ * options are present. Falls back to rawFetch when no auth is needed.
+ * The auth path intentionally dispatches through Meteor.fetch (which
+ * has its own bound rawFetch) and ignores the passed rawFetch.
+ * @locus Server
+ * @param {string|Request} url
+ * @param {Object} [options]
+ * @param {Function} rawFetch - The underlying fetch implementation
+ * @returns {Promise<Response>|null} Response if handled, null to fall through
+ */
+function handleFetch(url, options, rawFetch = Meteor.fetch) {
+  if (options && (options.auth !== undefined || options.token !== undefined)) {
+    return Meteor.fetch(url, options);
+  }
+  return rawFetch(url, options);
+}
+
+export { createAuthMiddleware, createAuthFetch, handleFetch, fetch, handleLogin, handleLogout };
