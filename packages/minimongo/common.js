@@ -37,11 +37,12 @@ export const ELEMENT_OPERATORS = {
     },
   },
   $in: {
-    compileElementSelector(operand) {
+    compileElementSelector(operand, valueSelector, matcher) {
       if (!Array.isArray(operand)) {
         throw new MiniMongoQueryError('$in needs an array');
       }
 
+      const collator = matcher && matcher._collator;
       const elementMatchers = operand.map(option => {
         if (option instanceof RegExp) {
           return regexpElementMatcher(option);
@@ -51,7 +52,7 @@ export const ELEMENT_OPERATORS = {
           throw new MiniMongoQueryError('cannot nest $ under $in');
         }
 
-        return equalityElementMatcher(option);
+        return equalityElementMatcher(option, collator);
       });
 
       return value => {
@@ -325,23 +326,25 @@ const LOGICAL_OPERATORS = {
 // "match each branched value independently and combine with
 // convertElementMatcherToBranchedMatcher".
 const VALUE_OPERATORS = {
-  $eq(operand) {
+  $eq(operand, valueSelector, matcher) {
     return convertElementMatcherToBranchedMatcher(
-      equalityElementMatcher(operand)
+      equalityElementMatcher(operand, matcher && matcher._collator)
     );
   },
   $not(operand, valueSelector, matcher) {
     return invertBranchedMatcher(compileValueSelector(operand, matcher));
   },
-  $ne(operand) {
-    return invertBranchedMatcher(
-      convertElementMatcherToBranchedMatcher(equalityElementMatcher(operand))
-    );
-  },
-  $nin(operand) {
+  $ne(operand, valueSelector, matcher) {
     return invertBranchedMatcher(
       convertElementMatcherToBranchedMatcher(
-        ELEMENT_OPERATORS.$in.compileElementSelector(operand)
+        equalityElementMatcher(operand, matcher && matcher._collator)
+      )
+    );
+  },
+  $nin(operand, valueSelector, matcher) {
+    return invertBranchedMatcher(
+      convertElementMatcherToBranchedMatcher(
+        ELEMENT_OPERATORS.$in.compileElementSelector(operand, valueSelector, matcher)
       )
     );
   },
@@ -628,7 +631,7 @@ function compileValueSelector(valueSelector, matcher, isRoot) {
   }
 
   return convertElementMatcherToBranchedMatcher(
-    equalityElementMatcher(valueSelector)
+    equalityElementMatcher(valueSelector, matcher && matcher._collator)
   );
 }
 
@@ -680,8 +683,9 @@ function distanceCoordinatePairs(a, b) {
 }
 
 // Takes something that is not an operator object and returns an element matcher
-// for equality with that thing.
-export function equalityElementMatcher(elementSelector) {
+// for equality with that thing.  When a collator (Intl.Collator) is provided,
+// string equality uses locale-aware comparison.
+export function equalityElementMatcher(elementSelector, collator) {
   if (isOperatorObject(elementSelector)) {
     throw new MiniMongoQueryError('Can\'t create equalityValueSelector for operator object');
   }
@@ -694,7 +698,7 @@ export function equalityElementMatcher(elementSelector) {
     return value => value == null;
   }
 
-  return value => LocalCollection._f._equal(elementSelector, value);
+  return value => LocalCollection._f._equal(elementSelector, value, collator);
 }
 
 function everythingMatcher(docOrBranchedValues) {
@@ -878,7 +882,7 @@ export function isOperatorObject(valueSelector, inconsistentOK) {
 // Helper for $lt/$gt/$lte/$gte.
 function makeInequality(cmpValueComparator) {
   return {
-    compileElementSelector(operand) {
+    compileElementSelector(operand, valueSelector, matcher) {
       // Arrays never compare false with non-arrays for any inequality.
       // XXX This was behavior we observed in pre-release MongoDB 2.5, but
       //     it seems to have been reverted.
@@ -894,6 +898,7 @@ function makeInequality(cmpValueComparator) {
       }
 
       const operandType = LocalCollection._f._type(operand);
+      const collator = matcher && matcher._collator;
 
       return value => {
         if (value === undefined) {
@@ -906,7 +911,7 @@ function makeInequality(cmpValueComparator) {
           return false;
         }
 
-        return cmpValueComparator(LocalCollection._f._cmp(value, operand));
+        return cmpValueComparator(LocalCollection._f._cmp(value, operand, collator));
       };
     },
   };
