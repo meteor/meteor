@@ -408,7 +408,7 @@ await ServiceConfiguration.configurations.upsertAsync(
 
 ### Setting up Meteor Developer OAuth
 
-1. Visit [https://beta.galaxycloud.app/](https://beta.galaxycloud.app/) and sign in
+1. Visit [https://my.galaxycloud.app/](https://my.galaxycloud.app/) and sign in
 
 2. Go to **Settings** -> **Authorized Domains** and **Add New Domain**
 
