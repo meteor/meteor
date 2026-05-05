@@ -66,9 +66,7 @@ declare module "meteor/fetch" {
    *
    * Requires accounts-password. Request body: {email|username, password, code?}
    */
-  function handleLogin(
-    options?: {}
-  ): (req: any, res: any) => Promise<void>;
+  function handleLogin(options?: {}): (req: any, res: any) => Promise<void>;
 
   /**
    * Create an Express route handler for logout.
@@ -76,7 +74,5 @@ declare module "meteor/fetch" {
    * Invalidates the current login token and fires onLogout hooks.
    * When useHttpOnlyCookies is enabled, clears the cookie.
    */
-  function handleLogout(
-    options?: {}
-  ): (req: any, res: any) => Promise<void>;
+  function handleLogout(options?: {}): (req: any, res: any) => Promise<void>;
 }

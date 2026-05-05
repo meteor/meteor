@@ -1,5 +1,5 @@
-import { Accounts, _CurrentEndpointInvocation } from 'meteor/accounts-base';
-import { clearCookieOnResponse } from './cookie_helpers.js';
+import { Accounts, _CurrentEndpointInvocation } from "meteor/accounts-base";
+import { clearCookieOnResponse } from "./cookie_helpers.js";
 
 /**
  * @summary Create an Express handler for logout.
@@ -27,7 +27,7 @@ export function handleLogout(options = {}) {
     const loginToken = invocation?.loginToken;
 
     if (!userId || !loginToken) {
-      return res.status(401).json({ error: 'Not authenticated' });
+      return res.status(401).json({ error: "Not authenticated" });
     }
 
     // Destroy the specific token
@@ -42,6 +42,6 @@ export function handleLogout(options = {}) {
       clearCookieOnResponse(res, req);
     }
 
-    res.json({ message: 'Logged out' });
+    res.json({ message: "Logged out" });
   };
 }

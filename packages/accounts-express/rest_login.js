@@ -1,7 +1,7 @@
-import { Accounts } from 'meteor/accounts-base';
-import { Meteor } from 'meteor/meteor';
-import { check, Match } from 'meteor/check';
-import { setCookieOnResponse } from './cookie_helpers.js';
+import { Accounts } from "meteor/accounts-base";
+import { Meteor } from "meteor/meteor";
+import { check, Match } from "meteor/check";
+import { setCookieOnResponse } from "./cookie_helpers.js";
 
 /**
  * @summary Create an Express handler for password-based login.
@@ -27,11 +27,11 @@ export function handleLogin(options = {}) {
     const body = req.body || {};
     const { email, username, password, code } = body;
 
-    if (!password || typeof password !== 'string') {
-      return res.status(400).json({ error: 'Password is required' });
+    if (!password || typeof password !== "string") {
+      return res.status(400).json({ error: "Password is required" });
     }
     if (!email && !username) {
-      return res.status(400).json({ error: 'Email or username is required' });
+      return res.status(400).json({ error: "Email or username is required" });
     }
 
     // Find user
@@ -40,22 +40,22 @@ export function handleLogin(options = {}) {
       if (email) {
         check(email, String);
         user = await Meteor.users.findOneAsync(
-          { 'emails.address': email },
-          { fields: Accounts._checkPasswordUserFields }
+          { "emails.address": email },
+          { fields: Accounts._checkPasswordUserFields },
         );
       } else {
         check(username, String);
         user = await Meteor.users.findOneAsync(
           { username },
-          { fields: Accounts._checkPasswordUserFields }
+          { fields: Accounts._checkPasswordUserFields },
         );
       }
     } catch (e) {
-      return res.status(400).json({ error: 'Invalid request' });
+      return res.status(400).json({ error: "Invalid request" });
     }
 
     if (!user) {
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ error: "Invalid credentials" });
     }
 
     // Check password
@@ -63,14 +63,15 @@ export function handleLogin(options = {}) {
 
     // Build attempt object (mirrors _attemptLogin structure)
     const attempt = {
-      type: 'password',
+      type: "password",
       allowed: !!(checkResult.userId && !checkResult.error),
-      methodName: 'rest-login',
+      methodName: "rest-login",
       methodArguments: [{ email, username }],
     };
 
-    if (checkResult.error) {
-      attempt.error = checkResult.error;
+    const passwordCheckError = checkResult.error;
+    if (passwordCheckError) {
+      attempt.error = passwordCheckError;
     }
 
     if (attempt.allowed) {
@@ -90,9 +91,17 @@ export function handleLogin(options = {}) {
 
     if (!attempt.allowed) {
       await Accounts._failedLogin(null, attempt);
+
+      // Password-check failures map to 401 "Invalid credentials" so we don't
+      // leak whether the username or the password was wrong. Only use the
+      // error's status code when a validateLoginAttempt hook replaced it.
+      if (passwordCheckError && attempt.error === passwordCheckError) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
       const status = attempt.error?.error === 403 ? 403 : 401;
       return res.status(status).json({
-        error: attempt.error?.reason || attempt.error?.message || 'Login not allowed',
+        error: attempt.error?.reason || attempt.error?.message || "Login not allowed",
       });
     }
 
