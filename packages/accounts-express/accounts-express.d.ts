@@ -11,6 +11,11 @@ declare module "meteor/accounts-express" {
     required?: boolean;
   }
 
+  interface RestEndpointMiddlewareOptions {
+    /** Path to match (exact, query string ignored). Default: "/login" or "/logout". */
+    path?: string;
+  }
+
   /**
    * Create Express middleware that authenticates requests using Meteor login tokens.
    * Tokens can be provided via Authorization Bearer header or meteor_login_token cookie.
@@ -18,6 +23,36 @@ declare module "meteor/accounts-express" {
   function createAuthMiddleware(
     options?: AuthMiddlewareOptions,
   ): (req: any, res: any, next: () => void) => Promise<void>;
+
+  /**
+   * Create Express middleware that handles password-based login on a
+   * configurable path. Mounts via app.use(...). Matches POST <path> and
+   * delegates to the internal login handler; any other request passes
+   * through to next().
+   *
+   * Returns JSON {id, token, tokenExpires}. When useHttpOnlyCookies is
+   * enabled, also sets the meteor_login_token HttpOnly cookie. Fires all
+   * standard Meteor login hooks (validateLoginAttempt, onLogin,
+   * onLoginFailure).
+   *
+   * Requires accounts-password. Request body: {email|username, password, code?}
+   */
+  function createLoginMiddleware(
+    options?: RestEndpointMiddlewareOptions,
+  ): (req: any, res: any, next: (err?: any) => void) => void;
+
+  /**
+   * Create Express middleware that handles logout on a configurable path.
+   * Mounts via app.use(...). Matches POST <path>, runs the auth check
+   * (required), then delegates to the internal logout handler. Any other
+   * request passes through to next().
+   *
+   * Invalidates the current login token and fires onLogout hooks. When
+   * useHttpOnlyCookies is enabled, clears the cookie.
+   */
+  function createLogoutMiddleware(
+    options?: RestEndpointMiddlewareOptions,
+  ): (req: any, res: any, next: (err?: any) => void) => void;
 
   /**
    * Auth-on-by-default fetch. Thin wrapper around Meteor.fetch that sets
@@ -55,24 +90,4 @@ declare module "meteor/fetch" {
     url: string | Request,
     options?: import("meteor/accounts-express").MeteorFetchOptions,
   ): Promise<Response>;
-
-  /**
-   * Create an Express route handler for password-based login.
-   * Returns JSON {id, token, tokenExpires}. When useHttpOnlyCookies is
-   * enabled, also sets the meteor_login_token HttpOnly cookie.
-   *
-   * Fires all standard Meteor login hooks (validateLoginAttempt, onLogin,
-   * onLoginFailure). REST logins pass null for the connection parameter.
-   *
-   * Requires accounts-password. Request body: {email|username, password, code?}
-   */
-  function handleLogin(options?: {}): (req: any, res: any) => Promise<void>;
-
-  /**
-   * Create an Express route handler for logout.
-   * Must be mounted after createAuthMiddleware({ required: true }).
-   * Invalidates the current login token and fires onLogout hooks.
-   * When useHttpOnlyCookies is enabled, clears the cookie.
-   */
-  function handleLogout(options?: {}): (req: any, res: any) => Promise<void>;
 }

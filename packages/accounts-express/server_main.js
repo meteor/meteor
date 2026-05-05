@@ -3,8 +3,8 @@ import { Meteor } from "meteor/meteor";
 import { createWebAppAuthMiddleware } from "./create_auth_middleware.js";
 import { createAuthFetch } from "./fetch_server.js";
 import { fetch } from "./fetch_authed.js";
-import { handleLogin } from "./rest_login.js";
-import { handleLogout } from "./rest_logout.js";
+import { createLoginMiddleware } from "./rest_login.js";
+import { createLogoutMiddleware } from "./rest_logout.js";
 
 /**
  * @summary Create Express middleware that authenticates requests using
@@ -49,4 +49,11 @@ function handleFetch(url, options, rawFetch = Meteor.fetch) {
   return rawFetch(url, options);
 }
 
-export { createAuthMiddleware, createAuthFetch, handleFetch, fetch, handleLogin, handleLogout };
+export {
+  createAuthMiddleware,
+  createAuthFetch,
+  handleFetch,
+  fetch,
+  createLoginMiddleware,
+  createLogoutMiddleware,
+};

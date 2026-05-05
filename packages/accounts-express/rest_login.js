@@ -4,7 +4,9 @@ import { check } from "meteor/check";
 import { setCookieOnResponse } from "./cookie_helpers.js";
 
 /**
- * @summary Create an Express handler for password-based login.
+ * Internal: build the terminal Express route handler for password login.
+ * Public consumers should use createLoginMiddleware below.
+ *
  * Returns a JSON response with {id, token, tokenExpires}.
  * When useHttpOnlyCookies is enabled, also sets the meteor_login_token cookie.
  *
@@ -17,12 +19,8 @@ import { setCookieOnResponse } from "./cookie_helpers.js";
  *   Accounts._insertLoginToken, Accounts._tokenExpiration,
  *   Accounts._validateLogin, Accounts._successfulLogin, Accounts._failedLogin,
  *   Accounts._checkPasswordUserFields, Accounts._options
- *
- * @locus Server
- * @param {Object} [options]
- * @returns {Function} Express route handler
  */
-export function handleLogin(_options = {}) {
+function createLoginHandler(_options = {}) {
   return async function restLoginHandler(req, res) {
     const body = req.body || {};
     const { email, username, password, code } = body;
@@ -123,5 +121,29 @@ export function handleLogin(_options = {}) {
       token: stampedLoginToken.token,
       tokenExpires,
     });
+  };
+}
+
+/**
+ * @summary Create Express middleware that handles password-based login on a
+ * configurable path. Mounts as a single drop-in middleware via app.use(...).
+ *
+ * Matches POST <path> and delegates to the internal login handler;
+ * any other request is passed through to the next middleware.
+ *
+ * @locus Server
+ * @param {Object} [options]
+ * @param {string} [options.path="/login"] - Path to match (exact, query
+ *   string ignored). The match is performed against req.url, so when the
+ *   middleware is mounted under a sub-router this path is relative to the
+ *   router's mount point.
+ * @returns {Function} Express middleware (req, res, next) => void
+ */
+export function createLoginMiddleware({ path = "/login", ...handlerOptions } = {}) {
+  const handler = createLoginHandler(handlerOptions);
+  return function loginMiddleware(req, res, next) {
+    const reqPath = (req.url || "").split("?")[0];
+    if (req.method !== "POST" || reqPath !== path) return next();
+    return handler(req, res);
   };
 }

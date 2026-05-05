@@ -1,6 +1,10 @@
 import { Meteor } from "meteor/meteor";
 import { Accounts } from "meteor/accounts-base";
-import { createAuthMiddleware, handleLogin, handleLogout } from "meteor/accounts-express";
+import {
+  createAuthMiddleware,
+  createLoginMiddleware,
+  createLogoutMiddleware,
+} from "meteor/accounts-express";
 import { Random } from "meteor/random";
 import { WebApp } from "meteor/webapp";
 
@@ -39,8 +43,8 @@ if (Meteor.isServer) {
   Tinytest.addAsync("accounts-express - rest login/logout - setup routes", async (test) => {
     const router = WebApp.express.Router();
     router.use(WebApp.express.json());
-    router.post("/login", handleLogin());
-    router.post("/logout", createAuthMiddleware({ required: true }), handleLogout());
+    router.use(createLoginMiddleware({ path: "/login" }));
+    router.use(createLogoutMiddleware({ path: "/logout" }));
     WebApp.handlers.use("/api/rest-auth", router);
 
     // Protected endpoint for verifying tokens work
@@ -63,29 +67,32 @@ if (Meteor.isServer) {
 
   // --- Login tests ---
 
-  Tinytest.addAsync("accounts-express - handleLogin - valid email and password", async (test) => {
-    const password = Random.secret();
-    const { userId, email } = await createUserWithPassword(password);
+  Tinytest.addAsync(
+    "accounts-express - createLoginMiddleware - valid email and password",
+    async (test) => {
+      const password = Random.secret();
+      const { userId, email } = await createUserWithPassword(password);
 
-    try {
-      const res = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
-        email,
-        password,
-      });
-      test.equal(res.status, 200);
+      try {
+        const res = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
+          email,
+          password,
+        });
+        test.equal(res.status, 200);
 
-      const data = await res.json();
-      test.equal(data.id, userId);
-      test.isTrue(typeof data.token === "string");
-      test.isTrue(data.token.length > 0);
-      test.isTrue(!!data.tokenExpires);
-    } finally {
-      await Meteor.users.removeAsync(userId);
-    }
-  });
+        const data = await res.json();
+        test.equal(data.id, userId);
+        test.isTrue(typeof data.token === "string");
+        test.isTrue(data.token.length > 0);
+        test.isTrue(!!data.tokenExpires);
+      } finally {
+        await Meteor.users.removeAsync(userId);
+      }
+    },
+  );
 
   Tinytest.addAsync(
-    "accounts-express - handleLogin - valid username and password",
+    "accounts-express - createLoginMiddleware - valid username and password",
     async (test) => {
       const password = Random.secret();
       const { userId, username } = await createUserWithPassword(password);
@@ -106,7 +113,7 @@ if (Meteor.isServer) {
     },
   );
 
-  Tinytest.addAsync("accounts-express - handleLogin - wrong password", async (test) => {
+  Tinytest.addAsync("accounts-express - createLoginMiddleware - wrong password", async (test) => {
     const password = Random.secret();
     const { userId } = await createUserWithPassword(password);
 
@@ -124,7 +131,7 @@ if (Meteor.isServer) {
     }
   });
 
-  Tinytest.addAsync("accounts-express - handleLogin - nonexistent user", async (test) => {
+  Tinytest.addAsync("accounts-express - createLoginMiddleware - nonexistent user", async (test) => {
     const res = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
       username: `nonexistent_user_${Random.id()}`,
       password: "whatever",
@@ -135,22 +142,25 @@ if (Meteor.isServer) {
     test.isTrue(data.error.includes("Invalid credentials"));
   });
 
-  Tinytest.addAsync("accounts-express - handleLogin - missing password", async (test) => {
+  Tinytest.addAsync("accounts-express - createLoginMiddleware - missing password", async (test) => {
     const res = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
       username: "someuser",
     });
     test.equal(res.status, 400);
   });
 
-  Tinytest.addAsync("accounts-express - handleLogin - missing email and username", async (test) => {
-    const res = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
-      password: "somepassword",
-    });
-    test.equal(res.status, 400);
-  });
+  Tinytest.addAsync(
+    "accounts-express - createLoginMiddleware - missing email and username",
+    async (test) => {
+      const res = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
+        password: "somepassword",
+      });
+      test.equal(res.status, 400);
+    },
+  );
 
   Tinytest.addAsync(
-    "accounts-express - handleLogin - returned token authenticates",
+    "accounts-express - createLoginMiddleware - returned token authenticates",
     async (test) => {
       const password = Random.secret();
       const { userId, username } = await createUserWithPassword(password);
@@ -177,7 +187,7 @@ if (Meteor.isServer) {
   );
 
   Tinytest.addAsync(
-    "accounts-express - handleLogin - token expiry matches config",
+    "accounts-express - createLoginMiddleware - token expiry matches config",
     async (test) => {
       const password = Random.secret();
       const { userId, username } = await createUserWithPassword(password);
@@ -202,59 +212,65 @@ if (Meteor.isServer) {
     },
   );
 
-  Tinytest.addAsync("accounts-express - handleLogin - fires onLogin hook", async (test) => {
-    const password = Random.secret();
-    const { userId, username } = await createUserWithPassword(password);
-    let hookCalled = false;
-    let hookUserId = null;
+  Tinytest.addAsync(
+    "accounts-express - createLoginMiddleware - fires onLogin hook",
+    async (test) => {
+      const password = Random.secret();
+      const { userId, username } = await createUserWithPassword(password);
+      let hookCalled = false;
+      let hookUserId = null;
 
-    const stop = Accounts.onLogin((info) => {
-      if (info.type === "password" && info.user?._id === userId) {
-        hookCalled = true;
-        hookUserId = info.user._id;
-      }
-    });
-
-    try {
-      await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
-        username,
-        password,
+      const stop = Accounts.onLogin((info) => {
+        if (info.type === "password" && info.user?._id === userId) {
+          hookCalled = true;
+          hookUserId = info.user._id;
+        }
       });
 
-      test.isTrue(hookCalled, "onLogin hook should have been called");
-      test.equal(hookUserId, userId);
-    } finally {
-      stop.stop();
-      await Meteor.users.removeAsync(userId);
-    }
-  });
+      try {
+        await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
+          username,
+          password,
+        });
 
-  Tinytest.addAsync("accounts-express - handleLogin - fires onLoginFailure hook", async (test) => {
-    const password = Random.secret();
-    const { userId, username } = await createUserWithPassword(password);
-    let hookCalled = false;
-
-    const stop = Accounts.onLoginFailure((info) => {
-      if (info.type === "password") {
-        hookCalled = true;
+        test.isTrue(hookCalled, "onLogin hook should have been called");
+        test.equal(hookUserId, userId);
+      } finally {
+        stop.stop();
+        await Meteor.users.removeAsync(userId);
       }
-    });
-
-    try {
-      await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
-        username,
-        password: "wrong-password",
-      });
-
-      test.isTrue(hookCalled, "onLoginFailure hook should have been called");
-    } finally {
-      stop.stop();
-      await Meteor.users.removeAsync(userId);
-    }
-  });
+    },
+  );
 
   Tinytest.addAsync(
-    "accounts-express - handleLogin - validateLoginAttempt can reject",
+    "accounts-express - createLoginMiddleware - fires onLoginFailure hook",
+    async (test) => {
+      const password = Random.secret();
+      const { userId, username } = await createUserWithPassword(password);
+      let hookCalled = false;
+
+      const stop = Accounts.onLoginFailure((info) => {
+        if (info.type === "password") {
+          hookCalled = true;
+        }
+      });
+
+      try {
+        await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
+          username,
+          password: "wrong-password",
+        });
+
+        test.isTrue(hookCalled, "onLoginFailure hook should have been called");
+      } finally {
+        stop.stop();
+        await Meteor.users.removeAsync(userId);
+      }
+    },
+  );
+
+  Tinytest.addAsync(
+    "accounts-express - createLoginMiddleware - validateLoginAttempt can reject",
     async (test) => {
       const password = Random.secret();
       const { userId, username } = await createUserWithPassword(password);
@@ -284,7 +300,7 @@ if (Meteor.isServer) {
 
   // --- Logout tests ---
 
-  Tinytest.addAsync("accounts-express - handleLogout - valid token", async (test) => {
+  Tinytest.addAsync("accounts-express - createLogoutMiddleware - valid token", async (test) => {
     const password = Random.secret();
     const { userId, username } = await createUserWithPassword(password);
 
@@ -313,16 +329,19 @@ if (Meteor.isServer) {
     }
   });
 
-  Tinytest.addAsync("accounts-express - handleLogout - no auth returns 401", async (test) => {
-    const res = await Meteor.fetch(Meteor.absoluteUrl("api/rest-auth/logout"), {
-      method: "POST",
-      auth: false,
-    });
-    test.equal(res.status, 401);
-  });
+  Tinytest.addAsync(
+    "accounts-express - createLogoutMiddleware - no auth returns 401",
+    async (test) => {
+      const res = await Meteor.fetch(Meteor.absoluteUrl("api/rest-auth/logout"), {
+        method: "POST",
+        auth: false,
+      });
+      test.equal(res.status, 401);
+    },
+  );
 
   Tinytest.addAsync(
-    "accounts-express - handleLogout - only invalidates specific token",
+    "accounts-express - createLogoutMiddleware - only invalidates specific token",
     async (test) => {
       const password = Random.secret();
       const { userId, username } = await createUserWithPassword(password);
@@ -362,35 +381,38 @@ if (Meteor.isServer) {
     },
   );
 
-  Tinytest.addAsync("accounts-express - handleLogout - fires onLogout hook", async (test) => {
-    const password = Random.secret();
-    const { userId, username } = await createUserWithPassword(password);
-    let hookCalled = false;
-    let hookUserId = null;
+  Tinytest.addAsync(
+    "accounts-express - createLogoutMiddleware - fires onLogout hook",
+    async (test) => {
+      const password = Random.secret();
+      const { userId, username } = await createUserWithPassword(password);
+      let hookCalled = false;
+      let hookUserId = null;
 
-    const stop = Accounts.onLogout((info) => {
-      if (info.user?._id === userId) {
-        hookCalled = true;
-        hookUserId = info.user._id;
-      }
-    });
-
-    try {
-      const loginRes = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
-        username,
-        password,
+      const stop = Accounts.onLogout((info) => {
+        if (info.user?._id === userId) {
+          hookCalled = true;
+          hookUserId = info.user._id;
+        }
       });
-      const { token } = await loginRes.json();
 
-      await fetchWithToken(Meteor.absoluteUrl("api/rest-auth/logout"), token, { method: "POST" });
+      try {
+        const loginRes = await postJson(Meteor.absoluteUrl("api/rest-auth/login"), {
+          username,
+          password,
+        });
+        const { token } = await loginRes.json();
 
-      test.isTrue(hookCalled, "onLogout hook should have been called");
-      test.equal(hookUserId, userId);
-    } finally {
-      stop.stop();
-      await Meteor.users.removeAsync(userId);
-    }
-  });
+        await fetchWithToken(Meteor.absoluteUrl("api/rest-auth/logout"), token, { method: "POST" });
+
+        test.isTrue(hookCalled, "onLogout hook should have been called");
+        test.equal(hookUserId, userId);
+      } finally {
+        stop.stop();
+        await Meteor.users.removeAsync(userId);
+      }
+    },
+  );
 
   // --- Full lifecycle integration tests ---
 
