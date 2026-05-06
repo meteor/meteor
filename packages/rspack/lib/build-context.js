@@ -111,13 +111,17 @@ export function ensureRspackBuildContextExists() {
  * Returns true if the rspack-emitted bundle at the given absolute path contains
  * async modules (top-level await in its transitive dep graph).
  *
- * Detection signal: rspack injects the runtime helper
- * `__webpack_handle_async_dependencies__` into a chunk's preamble only when
- * that chunk contains at least one async module. Reading the first 64 KB is
- * sufficient since the helper sits near the top of the chunk. If the file
- * doesn't exist yet (first run, before rspack has emitted anything) or read
- * fails, we conservatively report false; a subsequent post-compile refresh
- * will re-evaluate.
+ * Detection signals: rspack only emits the async-module wrapper helper
+ * `__webpack_require__.a = (module, body, hasAwait) => { ... }` and the
+ * per-async-import await helper `__rspack_load_async_deps([...])` when at
+ * least one module in the chunk is async. Either signal is sufficient.
+ *
+ * The helpers live in the runtime-helpers section near the END of the bundle
+ * (after all module bodies), so we read the whole file rather than a head
+ * window. Bundles are typically a few hundred KB; reading the full content
+ * is acceptable. If the file doesn't exist yet (first run, before rspack has
+ * emitted anything) or read fails, we conservatively report false; a
+ * subsequent post-compile refresh will re-evaluate.
  *
  * @param {string} absBundlePath - Absolute path to the emitted bundle file.
  * @returns {boolean} True if the bundle contains async modules.
@@ -126,11 +130,12 @@ function detectAsyncBundle(absBundlePath) {
   let fd;
   try {
     fd = fs.openSync(absBundlePath, 'r');
-    const buf = Buffer.alloc(64 * 1024);
+    const stat = fs.fstatSync(fd);
+    const buf = Buffer.alloc(Math.max(stat.size, 1));
     const bytes = fs.readSync(fd, buf, 0, buf.length, 0);
-    return buf.toString('utf8', 0, bytes).includes(
-      '__webpack_handle_async_dependencies__'
-    );
+    const text = buf.toString('utf8', 0, bytes);
+    return text.includes('__webpack_require__.a ') ||
+           text.includes('__rspack_load_async_deps');
   } catch (err) {
     return false;
   } finally {
@@ -246,8 +251,14 @@ export function ensureModuleFilesExist() {
         return;
       }
 
-      // 3. If it doesn't already start with the new defaultContent, overwrite it
-      if (!existing.includes(defaultContent)) {
+      // 3. If it doesn't already start with the new defaultContent, overwrite it.
+      //    Skip output-role bundle files (`*-rspack.js`) once rspack has populated
+      //    them with the real bundle — re-invocation from the post-compile hook
+      //    would otherwise clobber the emitted bundle with the placeholder.
+      //    See meteor#14395.
+      const looksLikeRspackBundle = filename.endsWith('-rspack.js') &&
+        existing.length > defaultContent.length * 2;
+      if (!looksLikeRspackBundle && !existing.includes(defaultContent)) {
         try {
           fs.writeFileSync(filePath, defaultContent, 'utf8');
         } catch (err) {
