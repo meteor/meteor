@@ -108,6 +108,39 @@ export function ensureRspackBuildContextExists() {
 }
 
 /**
+ * Returns true if the rspack-emitted bundle at the given absolute path contains
+ * async modules (top-level await in its transitive dep graph).
+ *
+ * Detection signal: rspack injects the runtime helper
+ * `__webpack_handle_async_dependencies__` into a chunk's preamble only when
+ * that chunk contains at least one async module. Reading the first 64 KB is
+ * sufficient since the helper sits near the top of the chunk. If the file
+ * doesn't exist yet (first run, before rspack has emitted anything) or read
+ * fails, we conservatively report false; a subsequent post-compile refresh
+ * will re-evaluate.
+ *
+ * @param {string} absBundlePath - Absolute path to the emitted bundle file.
+ * @returns {boolean} True if the bundle contains async modules.
+ */
+function detectAsyncBundle(absBundlePath) {
+  let fd;
+  try {
+    fd = fs.openSync(absBundlePath, 'r');
+    const buf = Buffer.alloc(64 * 1024);
+    const bytes = fs.readSync(fd, buf, 0, buf.length, 0);
+    return buf.toString('utf8', 0, bytes).includes(
+      '__webpack_handle_async_dependencies__'
+    );
+  } catch (err) {
+    return false;
+  } finally {
+    if (fd !== undefined) {
+      try { fs.closeSync(fd); } catch (_) {}
+    }
+  }
+}
+
+/**
  * Ensures module files exist in the build context directory
  * Creates default module files if they don't exist
  * @returns {void}
@@ -132,6 +165,12 @@ export function ensureModuleFilesExist() {
   const mainServerFiles = {
     entryFile: initialEntrypoints.mainServer || '',
     outputFile: getBuildFilePath({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output, onlyFilename: true }),
+    // See meteor#14395.
+    bundleHasAsync: detectAsyncBundle(path.join(
+      appDir,
+      RSPACK_BUILD_CONTEXT,
+      getBuildFilePath({ isMain: true, isServer: true, ...env, role: FILE_ROLE.output })
+    )),
   };
   const isTestEager =
     initialEntrypoints.testModule == null &&
@@ -147,6 +186,11 @@ export function ensureModuleFilesExist() {
     entryFile: initialEntrypoints.testServer || '',
     outputFile: getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output, onlyFilename: true }),
     mainEntryFile: mainServerFiles.entryFile,
+    bundleHasAsync: detectAsyncBundle(path.join(
+      appDir,
+      RSPACK_BUILD_CONTEXT,
+      getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output })
+    )),
   };
   const isTestFullApp = isMeteorAppTestFullApp();
 
@@ -558,16 +602,9 @@ import '../../${config?.entryFile}';`;
     return `/* Link to ⚡ Rspack ${capitalizeFirstLetter(side)} App */
 ${
   (isMeteorBlazeProject() && config?.isClient && '// In Blaze, import happens last so HTML files preload first') ||
-  (config?.isServer
-    // fix(meteor#14395): on the server, use `import * as` + top-level await so
-    // reify wraps this bridge file with wrapAsync(). Without that, the rspack
-    // bundle's `module.exports = Promise` (when the bundle has TLA in its dep
-    // graph) is never awaited, mocha runs against an empty suite, and
-    // `meteor test` reports 0 passing. Non-TLA server bundles see a
-    // `Promise.resolve(<obj>)` microtask that's effectively a no-op.
-    // Client/native bundles keep the static import: Meteor's terser-based
-    // minifier doesn't accept top-level await, and the TLA race only manifests
-    // server-side.
+  // TLA bridge form is server-only and gated on detected async-ness
+  // of the bundle; see meteor#14395.
+  (config?.isServer && config?.bundleHasAsync
     ? `import * as __rspackBundleNs from './${config?.outputFile || ''}';
 await Promise.resolve(__rspackBundleNs && __rspackBundleNs.default);`
     : `import './${config?.outputFile || ''}';`)

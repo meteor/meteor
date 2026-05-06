@@ -17,6 +17,7 @@ const {
 } = require('meteor/tools-core/lib/global-state');
 
 const { applyDelegatedExtensions } = require('./config');
+const { ensureModuleFilesExist } = require('./build-context');
 
 // Helper function to format milliseconds with comma separators
 function formatMilliseconds(ms) {
@@ -153,6 +154,13 @@ export function setupCompilationTracking() {
   };
 
   const onCompileServer = (data) => {
+    // Re-emit bridges now the server bundle exists; see meteor#14395.
+    try {
+      ensureModuleFilesExist();
+    } catch (err) {
+      // Bridge refresh shouldn't block server start.
+    }
+
     // Resolve the promise if it's the first compilation
     const serverState = getGlobalState(GLOBAL_STATE_KEYS.SERVER_FIRST_COMPILE, serverFirstCompile);
     if (!serverState?.resolved) {
