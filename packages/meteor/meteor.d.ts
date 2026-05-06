@@ -338,26 +338,30 @@ export namespace Meteor {
   function defer(func: Function): void;
 
   /**
-   * Wrap a function so that it only runs in the specified environments.
+   * Wrap a function so that it only runs in background in specified environments.
    * @param func The function to wrap
    * @param options An object with an `on` property that is an array of environment names: `"development"`, `"production"`, and/or `"test"`.
    */
-  function deferrable<T extends Function>(
-    func: T,
+  function deferrable<T>(
+    func: () => T,
     options: { on: Array<"development" | "production" | "test"> }
   ): T | void;
 
   /**
-   * Wrap a function so that it only runs in development environment.
+   * Wrap a function to run in the background in development (similar to Meteor.isDevelopment ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferDev<T extends Function>(func: T): T | void;
+  function deferDev<T>(
+    func: () => T
+  ): T | void;
 
   /**
-   * Wrap a function so that it only runs in production environment.
+   * Wrap a function to run in the background in production (similar to Meteor.isProduction ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferProd<T extends Function>(func: T): T | void;
+  function deferProd<T>(
+    func: () => T
+  ): T | void;
   /** Timeout **/
 
   /** utils **/
@@ -366,6 +370,17 @@ export namespace Meteor {
    * @param func A function to run on startup.
    */
   function startup(func: Function): void;
+
+  /**
+   * Wrapper around the standard `fetch` API. Packages can extend this
+   * function to add middleware-like behavior (e.g. accounts-express with authentication).
+   * @param url The URL to fetch or a Request object
+   * @param options Standard fetch options
+   */
+  function fetch(
+    url: string | Request,
+    options?: RequestInit
+  ): Promise<Response>;
 
   /**
    * Wrap a function that takes a callback function as its final parameter.

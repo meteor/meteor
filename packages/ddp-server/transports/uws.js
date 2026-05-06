@@ -31,6 +31,8 @@ export function createUwsTransport() {
 
       // WeakMaps for event listeners (uWS sockets don't have EventEmitter).
       // WeakMap allows automatic GC if uWS drops a socket without firing close.
+      // Values are arrays so multiple consumers (e.g. stream_server and
+      // livedata_server) can each register a 'close' or 'data' listener.
       const closeListeners = new WeakMap();
       const messageListeners = new WeakMap();
 
@@ -49,10 +51,15 @@ export function createUwsTransport() {
           // Adapt uWS socket to the interface expected by _onConnection.
           // uWS sockets don't have EventEmitter methods, so we provide them.
           socket.on = function (event, callback) {
-            if (event === 'close') {
-              closeListeners.set(socket, callback);
-            } else if (event === 'data') {
-              messageListeners.set(socket, callback);
+            const map = event === 'close' ? closeListeners
+              : event === 'data' ? messageListeners
+              : null;
+            if (!map) return;
+            const list = map.get(socket);
+            if (list) {
+              list.push(callback);
+            } else {
+              map.set(socket, [callback]);
             }
           };
 
@@ -83,17 +90,24 @@ export function createUwsTransport() {
 
         close(socket) {
           socket.isClosed = true;
-          const closeListener = closeListeners.get(socket);
+          const listeners = closeListeners.get(socket);
           closeListeners.delete(socket);
           messageListeners.delete(socket);
-          if (closeListener) closeListener();
+          if (listeners) {
+            for (const cb of listeners) {
+              try { cb(); } catch (e) { Meteor._debug('uws close listener threw', e); }
+            }
+          }
         },
 
         message(socket, message, isBinary) {
           if (isBinary) return;
+          const listeners = messageListeners.get(socket);
+          if (!listeners || listeners.length === 0) return;
           const str = Buffer.from(message).toString('utf-8');
-          const messageListener = messageListeners.get(socket);
-          if (messageListener) messageListener(str);
+          for (const cb of listeners) {
+            try { cb(str); } catch (e) { Meteor._debug('uws data listener threw', e); }
+          }
         }
       });
 

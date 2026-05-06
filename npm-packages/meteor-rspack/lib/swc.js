@@ -9,11 +9,38 @@ const vm = require('vm');
 function getMeteorAppSwcrc(file = '.swcrc') {
   try {
     const filePath = `${process.cwd()}/${file}`;
-    if (file.endsWith('.js')) {
+    if (file.endsWith('.js') || file.endsWith('.ts')) {
       let content = fs.readFileSync(filePath, 'utf-8');
-      // Check if the content uses ES module syntax (export default)
+      
+      if (file.endsWith('.ts')) {
+        try {
+          const swc = require('@swc/core');
+          const result = swc.transformSync(content, {
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+              },
+              target: 'es2015',
+            },
+          });
+          content = result.code;
+        } catch (swcError) {
+          content = content
+            .replace(/import\s+type\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+['"][^'"]+['"];?/g, '')
+            .replace(/export\s+default\s+/, 'module.exports = ')
+            .replace(/export\s+/g, '')
+            .replace(/:\s*\w+(\[\])?(\s*=)/g, '$2')
+            .replace(/\(([^)]*?):\s*\w+(\[\])?\)/g, '($1)')
+            .replace(/\):\s*\w+(\[\])?\s*\{/g, ') {')
+            .replace(/interface\s+\w+\s*\{[^}]*\}/g, '')
+            .replace(/type\s+\w+\s*=\s*[^;]+;/g, '')
+            .replace(/as\s+\w+(\[\])?/g, '');
+        }
+      }
+      
       if (content.includes('export default')) {
-        // Transform ES module syntax to CommonJS
         content = content.replace(/export\s+default\s+/, 'module.exports = ');
       }
       const script = new vm.Script(`
@@ -27,7 +54,9 @@ function getMeteorAppSwcrc(file = '.swcrc') {
         })()
       `);
       const context = vm.createContext({ process });
-      return script.runInContext(context);
+      const result = script.runInContext(context);
+      // Handle CJS interop wrapper (e.g. { __esModule: true, default: config })
+      return result && result.__esModule && result.default ? result.default : result;
     } else {
       // For .swcrc and other JSON files, parse as JSON
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
@@ -45,12 +74,13 @@ function getMeteorAppSwcrc(file = '.swcrc') {
 function getMeteorAppSwcConfig() {
   const hasSwcRc = fs.existsSync(`${process.cwd()}/.swcrc`);
   const hasSwcJs = !hasSwcRc && fs.existsSync(`${process.cwd()}/swc.config.js`);
+  const hasSwcTs = !hasSwcRc && !hasSwcJs && fs.existsSync(`${process.cwd()}/swc.config.ts`);
 
-  if (!hasSwcRc && !hasSwcJs) {
+  if (!hasSwcRc && !hasSwcJs && !hasSwcTs) {
     return undefined;
   }
 
-  const swcFile = hasSwcJs ? 'swc.config.js' : '.swcrc';
+  const swcFile = hasSwcTs ? 'swc.config.ts' : hasSwcJs ? 'swc.config.js' : '.swcrc';
   const config = getMeteorAppSwcrc(swcFile);
 
   // Set baseUrl to process.cwd() if it exists

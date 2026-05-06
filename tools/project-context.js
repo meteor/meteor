@@ -1470,8 +1470,7 @@ Object.assign(exports.PlatformList.prototype, {
 
   getCordovaPlatforms: function () {
     var self = this;
-    return _.difference(self._platforms,
-                        exports.PlatformList.DEFAULT_PLATFORMS);
+    return _.intersection(self._platforms, ['ios', 'android']);
   },
 
   usesCordova: function () {
