@@ -54,9 +54,7 @@ const makeTransport = function (mailUrlString, options) {
   }
 
   const transport = nodemailer.createTransport(url.format(mailUrl));
-  if (options?.encryptionKeys || options?.shouldSign) {
-    transport.use('stream', openpgpEncrypt(options));
-  }
+  transport.use('stream', openpgpEncrypt(options));
   return transport;
 };
 
@@ -106,9 +104,7 @@ const knownHostsTransport = function (settings = undefined, url = undefined, opt
     },
   });
 
-  if (options?.encryptionKeys || options?.shouldSign) {
-    transport.use('stream', openpgpEncrypt(options));
-  }
+  transport.use('stream', openpgpEncrypt(options));
   return transport;
 };
 EmailTest.knowHostsTransport = knownHostsTransport;

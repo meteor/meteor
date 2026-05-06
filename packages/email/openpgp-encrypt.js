@@ -12,15 +12,17 @@ function findHeaderEnd(raw) {
 
 function readHeaders(headerBlock) {
   const headers = [];
-  for (const raw of headerBlock.split('\r\n')) {
-    if (/^[ \t]/.test(raw) && headers.length > 0) {
-      headers[headers.length - 1].value += ` ${raw.trim()}`;
+  for (const line of headerBlock.split('\r\n')) {
+    if (/^[ \t]/.test(line) && headers.length > 0) {
+      headers[headers.length - 1].value += ` ${line.trim()}`;
+      headers[headers.length - 1].raw += `\r\n${line}`;
     } else {
-      const colon = raw.indexOf(':');
+      const colon = line.indexOf(':');
       if (colon > 0) {
         headers.push({
-          name: raw.substring(0, colon),
-          value: raw.substring(colon + 1).trim(),
+          name: line.substring(0, colon),
+          value: line.substring(colon + 1).trim(),
+          raw: line,
         });
       }
     }
@@ -47,7 +49,7 @@ function splitHeaders(headers) {
 }
 
 function writeHeaders(headers) {
-  return headers.map(h => `${h.name}: ${h.value}`).join('\r\n');
+  return headers.map(h => h.raw || `${h.name}: ${h.value}`).join('\r\n');
 }
 
 // Transform stream
@@ -225,11 +227,13 @@ export class PGPMimeTransform extends Transform {
  */
 export function openpgpEncrypt(options) {
   return function handleStream(mail, done) {
-    const hasPluginKey = !!(options && options.signingKey);
+    const signingKey = mail.data.signingKey || (options && options.signingKey);
+    const passphrase = mail.data.passphrase || (options && options.passphrase);
+    const hasSigningKey = !!signingKey;
     const mailKeys = mail.data.encryptionKeys;
     const hasMailKeys =
       Array.isArray(mailKeys) && mailKeys.length > 0;
-    const wantsSign = hasPluginKey && mail.data.shouldSign !== false;
+    const wantsSign = hasSigningKey && mail.data.shouldSign !== false;
 
     if (!hasMailKeys && !wantsSign) {
       return setImmediate(done);
@@ -237,8 +241,8 @@ export function openpgpEncrypt(options) {
 
     mail.message.transform(() => {
       return new PGPMimeTransform({
-        signingKey: options && options.signingKey,
-        passphrase: options && options.passphrase,
+        signingKey,
+        passphrase,
         encryptionKeys: mail.data.encryptionKeys,
         shouldSign: mail.data.shouldSign,
       });
