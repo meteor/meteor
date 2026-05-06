@@ -127,21 +127,12 @@ export function ensureRspackBuildContextExists() {
  * @returns {boolean} True if the bundle contains async modules.
  */
 function detectAsyncBundle(absBundlePath) {
-  let fd;
   try {
-    fd = fs.openSync(absBundlePath, 'r');
-    const stat = fs.fstatSync(fd);
-    const buf = Buffer.alloc(Math.max(stat.size, 1));
-    const bytes = fs.readSync(fd, buf, 0, buf.length, 0);
-    const text = buf.toString('utf8', 0, bytes);
+    const text = fs.readFileSync(absBundlePath, 'utf8');
     return text.includes('__webpack_require__.a ') ||
            text.includes('__rspack_load_async_deps');
   } catch (err) {
     return false;
-  } finally {
-    if (fd !== undefined) {
-      try { fs.closeSync(fd); } catch (_) {}
-    }
   }
 }
 
