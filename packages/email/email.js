@@ -5,7 +5,7 @@ import { Hook } from 'meteor/callback-hook';
 import url from 'url';
 import nodemailer from 'nodemailer';
 import wellKnow from 'nodemailer/lib/well-known';
-import { openpgpEncrypt } from 'nodemailer-openpgp';
+import { openpgpEncrypt } from './openpgp-encrypt';
 
 export const Email = {};
 export const EmailTest = {};

@@ -1,13 +1,13 @@
 Package.describe({
   summary: "Send email messages",
-  version: "3.1.2",
+  version: "3.2.0",
 });
 
 Npm.depends({
-  nodemailer: "6.9.10",
+  nodemailer: "7.0.11",
   "stream-buffers": "3.0.2",
   "@types/nodemailer": "6.4.14",
-  "nodemailer-openpgp": "2.2.1",
+  openpgp: "5.11.3",
 });
 
 Package.onUse(function (api) {
@@ -21,5 +21,13 @@ Package.onUse(function (api) {
 Package.onTest(function (api) {
   api.use("email", "server");
   api.use(["tinytest", "ecmascript"]);
-  api.addFiles("email_tests.js", "server");
+  api.addAssets(
+    [
+      "test/fixtures/test_private_2048bit.key",
+      "test/fixtures/test_private_1024bit.key",
+      "test/fixtures/test_public.pem",
+    ],
+    "server"
+  );
+  api.addFiles(["email_tests.js", "email_openpgp_tests.js"], "server");
 });
