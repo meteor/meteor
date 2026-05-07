@@ -38,7 +38,9 @@
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
     "ts-coverage": "typescript-coverage-report",
-    "ts-coverage:ci": "type-coverage --at-least 80"
+    "ts-coverage:ci": "type-coverage --at-least 80",
+    "npm-packages:bump": "node scripts/admin/bump-npm-package.js --package",
+    "npm-packages:publish": "bash scripts/admin/publish-npm-package.sh"
   },
   "jshintConfig": {
     "esversion": 11
