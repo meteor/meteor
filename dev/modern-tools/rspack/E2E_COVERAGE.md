@@ -45,6 +45,7 @@ Core React integration with custom Meteor local directory.
 | Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
+| Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
 
 ### react-router
 
@@ -296,6 +297,7 @@ Where each feature is tested across apps and skeletons.
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
+| Rspack process cleanup | react | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router | |
 | Module rules override | babel | |

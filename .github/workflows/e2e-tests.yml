@@ -49,6 +49,7 @@ jobs:
           - Other
           - React
           - R.Router
+          - Regressions
           - Solid
           - Svelte
           - Typescript
