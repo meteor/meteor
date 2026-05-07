@@ -556,7 +556,14 @@ async function doRunCommand(options) {
   const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
-  const shouldDisableCordova =  Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false'));
+  // Cordova's runner is bypassed when METEOR_CORDOVA_DISABLE=true OR when the
+  // project has the `capacitor` package added. Capacitor reuses the same
+  // android/ios run targets but transforms web.cordova/ output into
+  // build-native/ via the `capacitor` build plugin instead of invoking Cordova.
+  const hasCapacitorPackage = !!projectContext.projectConstraintsFile?.getConstraint('capacitor');
+  const shouldDisableCordova =
+    Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false')) ||
+    hasCapacitorPackage;
   if (!shouldDisableCordova && !_.isEmpty(runTargets)) {
 
     async function prepareCordovaProject() {
