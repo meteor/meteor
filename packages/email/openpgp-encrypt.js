@@ -1,4 +1,13 @@
-// OpenPGP/MIME plugin for Nodemailer (RFC 3156)
+// OpenPGP/MIME plugin for Nodemailer (RFC 3156).
+//
+// In-tree replacement for the `nodemailer-openpgp` npm package. We carry our
+// own copy so the email package depends only on `openpgp` directly — no
+// unmaintained wrapper in between. Behavior matches `nodemailer-openpgp@2.2.1`:
+// same plugin signature (`openpgpEncrypt(options)`), same mail-level options
+// (`encryptionKeys`, `shouldSign`), same encrypt-only / sign-only / both
+// branches. Differences are RFC 3156 refinements (micalg derived from the
+// actual signature, quoted filename params) and one additive feature: per-mail
+// `signingKey` / `passphrase` overrides via `mail.data`.
 
 import { Transform } from 'stream';
 import crypto from 'crypto';
