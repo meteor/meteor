@@ -29,6 +29,12 @@ export function spawnProcess(command, args, options = {}) {
     ...(process.platform === 'win32' && { shell: true }),
   });
 
+  // Track detached spawns so stopProcess can signal the whole process group.
+  // POSIX-only: kernels deliver `proc.kill(signal)` to the immediate child PID,
+  // but wrappers like npx don't reliably forward that signal to the real binary
+  // they exec'd, leaving the grandchild (e.g. rspack devserver) holding ports.
+  proc.meteorDetached = options.detached === true;
+
   // Add a reference to track if the process is running
   proc.isRunning = true;
 
@@ -89,7 +95,7 @@ export function stopProcess(proc, options = {}) {
     // Set a timeout to force kill if the process doesn't exit gracefully
     const forceKillTimeout = setTimeout(() => {
       if (isProcessRunning(proc)) {
-        proc.kill('SIGKILL');
+        sendSignal(proc, 'SIGKILL');
       }
     }, timeout);
 
@@ -101,8 +107,34 @@ export function stopProcess(proc, options = {}) {
     });
 
     // Send the signal to terminate the process
-    proc.kill(signal);
+    sendSignal(proc, signal);
   });
+}
+
+/**
+ * Sends a signal to a child process. For detached children on POSIX, signals
+ * the whole process group (negative PID) so wrappers like npx propagate the
+ * signal to the real binary they spawned. Falls back to a direct PID signal
+ * if the group signal fails or on Windows.
+ *
+ * @param {Object} proc - The child process to signal
+ * @param {string} signal - The signal name (e.g. 'SIGTERM', 'SIGKILL')
+ * @returns {void}
+ */
+function sendSignal(proc, signal) {
+  if (proc.meteorDetached && process.platform !== 'win32') {
+    try {
+      process.kill(-proc.pid, signal);
+      return;
+    } catch (e) {
+      // ESRCH means group is already gone; otherwise fall through to direct kill.
+    }
+  }
+  try {
+    proc.kill(signal);
+  } catch (e) {
+    // Best-effort: child may have already exited.
+  }
 }
 
 /**

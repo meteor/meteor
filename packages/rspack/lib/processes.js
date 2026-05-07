@@ -386,6 +386,11 @@ export function startRspackClientServe(options = {}) {
     command,
     args, {
       cwd: appDir,
+      // Detach so the npx wrapper and the rspack devserver share a process
+      // group separate from meteor-tool. stopProcess can then signal the whole
+      // group, releasing the devserver port even when npx wouldn't forward
+      // SIGTERM/SIGINT on its own.
+      detached: process.platform !== 'win32',
       env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
@@ -488,6 +493,8 @@ export function startRspackServerWatch(options = {}) {
     command,
     args, {
     cwd: appDir,
+    // Detach for the same reason as the client serve process; see comment there.
+    detached: process.platform !== 'win32',
     env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
@@ -647,19 +654,39 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
 
 /**
  * Cleans up processes when the plugin is stopped
- * Stops any running client and server processes and clears their global state
+ * Stops any running client and server processes and clears their global state.
+ * Awaits both stops in parallel so the parent waits for the rspack devserver
+ * to release its port before exiting on SIGTERM/SIGHUP/SIGINT.
+ * @returns {Promise<void>}
+ */
+export async function cleanup() {
+  const clientProcess = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
+  const serverProcess = getGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+
+  setGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
+  setGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+
+  await Promise.all([
+    clientProcess ? stopProcess(clientProcess) : Promise.resolve(),
+    serverProcess ? stopProcess(serverProcess) : Promise.resolve(),
+  ]);
+}
+
+/**
+ * Synchronous best-effort variant for signal handlers. Sends SIGTERM to each
+ * rspack child's process group on POSIX (so the npx wrapper and the rspack
+ * binary it spawned both receive it) so the devserver port is released even
+ * if the parent terminates before the async cleanup awaits resolve.
  * @returns {void}
  */
-export function cleanup() {
-  const clientProcess = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
-  if (clientProcess) {
-    stopProcess(clientProcess);
-    setGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
-  }
+export function cleanupSync() {
+  for (const key of [GLOBAL_STATE_KEYS.CLIENT_PROCESS, GLOBAL_STATE_KEYS.SERVER_PROCESS]) {
+    const proc = getGlobalState(key, null);
+    if (!proc || !proc.pid || !isProcessRunning(proc)) continue;
 
-  const serverProcess = getGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
-  if (serverProcess) {
-    stopProcess(serverProcess);
-    setGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+    if (proc.meteorDetached && process.platform !== 'win32') {
+      try { process.kill(-proc.pid, 'SIGTERM'); continue; } catch (e) {}
+    }
+    try { proc.kill('SIGTERM'); } catch (e) {}
   }
 }

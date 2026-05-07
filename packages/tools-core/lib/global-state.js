@@ -10,9 +10,8 @@
  * @returns {any} The value associated with the key, or the default value if not found.
  */
 export function getGlobalState(key, defaultValue) {
-  return Package.meteor?.global?.[key] !== undefined
-    ? Package.meteor.global.persistentState[key]
-    : defaultValue;
+  const value = Package.meteor?.global?.persistentState?.[key];
+  return value !== undefined ? value : defaultValue;
 }
 
 /**
