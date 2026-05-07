@@ -1,3 +1,4 @@
+import nodemailer from 'nodemailer';
 import { Email } from 'meteor/email';
 import { smokeEmailTest } from './email_test_helpers';
 import { TEST_CASES } from './email_tests_data';
@@ -210,6 +211,58 @@ Tinytest.addAsync(
       );
       Promise.all(allPromises).then(() => onComplete());
     });
+  }
+);
+
+// Smoke test for the nodemailer 7 createTransport + sendMail surface, without
+// the PGP transform plugin in the path. The PGP tests cover the same API but
+// only along the encrypt/sign branch; this exercises the plain delivery path.
+Tinytest.addAsync(
+  'email - customTransport round-trips through nodemailer streamTransport',
+  async function (test) {
+    let captured = null;
+
+    Email.customTransport = async (options) => {
+      const transport = nodemailer.createTransport({
+        streamTransport: true,
+        buffer: true,
+        newline: 'unix',
+      });
+      const info = await transport.sendMail(options);
+      captured = info.message.toString();
+    };
+
+    await Email.sendAsync({
+      from: 'foo@example.com',
+      to: 'bar@example.com',
+      subject: 'streamTransport smoke',
+      text: 'plain body',
+      html: '<i>plain body</i>',
+    });
+
+    test.isNotNull(captured, 'customTransport should have been invoked');
+    test.isTrue(
+      captured.indexOf('From: foo@example.com') >= 0,
+      'output should include the From header'
+    );
+    test.isTrue(
+      captured.indexOf('To: bar@example.com') >= 0,
+      'output should include the To header'
+    );
+    test.isTrue(
+      captured.indexOf('Subject: streamTransport smoke') >= 0,
+      'output should include the Subject header'
+    );
+    test.isTrue(
+      captured.indexOf('plain body') >= 0,
+      'output should include the body'
+    );
+    test.isTrue(
+      captured.indexOf('multipart/alternative') >= 0,
+      'text+html should produce a multipart/alternative envelope'
+    );
+
+    Email.customTransport = undefined;
   }
 );
 
