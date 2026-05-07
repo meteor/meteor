@@ -217,6 +217,14 @@ export function isMeteorAppUpdate() {
 }
 
 /**
+ * Checks if the current Meteor command is 'add-platform'.
+ * @returns {boolean} True if the current command is 'add-platform', false otherwise.
+ */
+export function isMeteorAppAddPlatform() {
+  return Package?.meteor?.global?.currentCommand?.name === 'add-platform';
+}
+
+/**
  * Checks if the current Meteor command is 'test'.
  * @returns {boolean} True if the current command is 'test', false otherwise.
  */
@@ -266,6 +274,24 @@ export function isMeteorAppNativeIos() {
  */
 export function isMeteorAppNative() {
   return isMeteorAppNativeAndroid() || isMeteorAppNativeIos();
+}
+
+/**
+ * Checks if the Meteor application has the `capacitor` package added.
+ * Package presence is the source of truth.
+ * @returns {boolean}
+ */
+export function isMeteorCapacitorProject() {
+  return getMeteorAppPackages().includes('capacitor');
+}
+
+/**
+ * Checks if the current Meteor run/build targets Capacitor: the `capacitor`
+ * package is added AND a native arg (android|ios|*-device) is present.
+ * @returns {boolean}
+ */
+export function isMeteorAppCapacitor() {
+  return isMeteorCapacitorProject() && isMeteorAppNative();
 }
 
 /**
