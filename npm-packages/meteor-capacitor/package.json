@@ -1,0 +1,30 @@
+{
+  "name": "@meteorjs/capacitor",
+  "version": "0.1.0-alpha.0",
+  "description": "Configuration helpers for using CapacitorJS in Meteor projects",
+  "main": "index.js",
+  "type": "commonjs",
+  "files": [
+    "index.js",
+    "lib/"
+  ],
+  "exports": {
+    ".": "./index.js"
+  },
+  "scripts": {
+    "bump": "node ../../scripts/admin/bump-npm-package.js",
+    "publish": "npm publish",
+    "publish:alpha": "npm publish --tag alpha",
+    "publish:beta": "npm publish --tag beta",
+    "publish:rc": "npm publish --tag rc"
+  },
+  "license": "ISC",
+  "peerDependencies": {
+    "@capacitor/cli": ">=6.0.0",
+    "@capacitor/core": ">=6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@capacitor/cli": { "optional": true },
+    "@capacitor/core": { "optional": true }
+  }
+}
