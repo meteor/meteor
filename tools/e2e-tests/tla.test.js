@@ -25,7 +25,7 @@ describe('tla /', () => {
     await killProcessByPort(port);
   });
 
-  test('"meteor test --full-app --once" runs tla tests', async () => {
+  test('"meteor test --full-app --once" runs tests', async () => {
     const result = await runMeteorTests(tempDir, port, {
       commandOptions: ['--full-app', '--once'],
       checkTestResults: true,
