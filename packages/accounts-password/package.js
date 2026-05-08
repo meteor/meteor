@@ -5,11 +5,11 @@ Package.describe({
   // 2.2.x in the future. The version was also bumped to 2.0.0 temporarily
   // during the Meteor 1.5.1 release process, so versions 2.0.0-beta.2
   // through -beta.5 and -rc.0 have already been published.
-  version: '3.2.3',
+  version: '3.2.4',
 });
 
 Npm.depends({
-  bcrypt: "5.0.1",
+  bcrypt: "6.0.0",
   argon2: "0.41.1",
   "node-gyp-build": "4.8.4",
 });
