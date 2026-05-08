@@ -185,7 +185,7 @@ Place test files next to the module they test using the `*.test.js` naming conve
 
 ### E2E tests (Jest + Playwright)
 
-End-to-end tests in `tools/modern-tests/` validate that Meteor skeletons and bundler integrations work correctly. They create real Meteor apps, start dev servers, and assert behavior in a headless Chromium browser.
+End-to-end tests in `tools/e2e-tests/` validate that Meteor skeletons and bundler integrations work correctly. They create real Meteor apps, start dev servers, and assert behavior in a headless Chromium browser.
 
 ```sh
 # Install dependencies (first time)
@@ -198,7 +198,7 @@ npm run test:e2e
 npm run test:e2e -- -t="React"
 ```
 
-Each test has a corresponding app fixture in `tools/modern-tests/apps/`. See that directory for examples when adding new E2E tests.
+Each test has a corresponding app fixture in `tools/e2e-tests/apps/`. See that directory for examples when adding new E2E tests.
 
 ### Self-tests (Meteor tool)
 
@@ -272,3 +272,95 @@ Good commit messages are very important and you should make sure to explain what
 * A commit description which clearly explains the change if it's not super-obvious by the title.  Some description always helps!
 * Reference related issues and pull-requests by number in the description body (e.g. "#9999").
 * Add "Fixes" before the issue number if the addition of that commit fully resolves the issue.
+
+## Release Process
+
+Meteor releases follow a lifecycle: **beta** -> **RC (release candidate)** -> **official**. Releases are prepared on `release-<VERSION>` branches (e.g., `release-3.4.1`) and compared against the `devel` branch.
+
+Three AI skills support this process. They are defined as markdown files under `.github/skills/` and can be used by any AI coding assistant that supports reading project context. Trigger them from any session on a release branch.
+
+### AI Skills for Releases
+
+| Skill | Purpose | Skill File |
+|-------|---------|------------|
+| [changelog](.github/skills/changelog/SKILL.md) | Generate and update changelog entries from merged PRs | `v3-docs/docs/generators/changelog/versions/` |
+| [version-bump](.github/skills/version-bump/SKILL.md) | Bump package versions for beta, RC, or official releases | `packages/*/package.js`, release config files |
+| [docs-gap](.github/skills/docs-gap/SKILL.md) | Identify missing user-facing documentation for release changes | Produces a gap report in `docs/plans/` |
+
+### Preparing a Beta Release
+
+A beta is the first prerelease for a new version. It bumps all changed packages with a `-betaXXX.0` suffix.
+
+**Step 1 — Update the changelog:**
+
+```
+Update the changelog for 3.4.1 from the current branch compared to devel.
+Check all merged PRs and complete with the missing fixes and features.
+```
+
+**Step 2 — Bump versions:**
+
+```
+Apply the version-bump skill for a beta.0 release on this branch against devel.
+```
+
+Claude will analyze each changed package, determine patch vs minor bumps based on the diff, present a table with reasons, and apply after confirmation.
+
+**Step 3 — Check for documentation gaps:**
+
+```
+Run the docs-gap skill to analyze what documentation is missing for this release.
+```
+
+### Preparing an RC Release
+
+An RC transitions beta versions to release candidate. The base version stays the same, only the suffix changes.
+
+**Step 1 — Update the changelog** (same as beta, catches any new PRs merged since the last beta).
+
+**Step 2 — Bump versions:**
+
+```
+Apply the version-bump skill to move from beta to RC on this branch.
+```
+
+### Preparing an Official Release
+
+An official release strips all prerelease suffixes and updates the release config and npm installer.
+
+**Step 1 — Finalize the changelog:**
+
+```
+Finalize the changelog for 3.4.1 — set the release date and replace any
+RC version references with final versions.
+```
+
+**Step 2 — Bump versions:**
+
+```
+Apply the version-bump skill for an official release on this branch.
+```
+
+This is a two-commit process: packages and release config first, npm installer second.
+
+**Step 3 — Verify documentation coverage:**
+
+```
+Run the docs-gap skill and apply any missing documentation for this release.
+```
+
+### Other Useful Prompts
+
+```
+# Separate Rspack improvements from other changes in the changelog
+Update the changelog separating Rspack improvements from other contributions.
+
+# Override a specific package bump magnitude
+The roles package should be a minor bump because it adds getUserIdsInRoleAsync.
+
+# Generate the gap report without applying fixes
+Run the docs-gap skill to produce a gap report only — don't write any docs yet.
+
+# Check which packages changed vs devel
+What packages have changed on this branch compared to devel?
+```
