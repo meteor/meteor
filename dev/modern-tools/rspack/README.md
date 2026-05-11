@@ -1,0 +1,152 @@
+# Rspack
+
+Rspack is the Rust-based, Webpack-compatible bundler that handles app source compilation, HMR, and asset emission for Meteor apps that opt in via `meteor add rspack`. Meteor itself still owns package compilation, the dev server lifecycle, and the runtime program manifest; this document covers the integration layer between the two.
+
+End-user documentation is at [`v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md`](../../../v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md). The E2E coverage matrix is at [`E2E_COVERAGE.md`](E2E_COVERAGE.md).
+
+- [**Why Rspack**](#why-rspack): goals of the Rspack integration.
+- [**Rspack integration and modules**](#rspack-integration-and-modules): the Atmosphere package and the npm package, file-by-file responsibilities, and how Rspack fits next to Meteor's own bundler.
+- [**E2E testing**](#e2e-testing): strategy, how to add a new test app, what to verify.
+- [**Common maintenance tasks**](#common-maintenance-tasks): linking `@meteorjs/rspack` locally and upgrading Rspack.
+
+## Why Rspack
+
+Rspack replaces parts of Meteor's bundler for client and server code. The goals of the integration are:
+
+- Get faster cold and incremental builds without giving up Webpack ecosystem compatibility (loaders, plugins, HMR semantics).
+- Support modern app code patterns (full ESM with `exports` fields, tree shaking, dynamic import, persistent FS cache) on the same code path Meteor uses for SSR and packages.
+- Keep Meteor packages, atmosphere conventions, and the dev server flow working unchanged from the app's perspective: `meteor add rspack` is the only required step.
+
+## Rspack integration and modules
+
+The integration is split across two packages.
+
+### `packages/rspack` (Atmosphere package)
+
+This is the build-plugin side. `package.js` registers a build plugin and declares the runtime package:
+
+```js
+Package.registerBuildPlugin({
+  name: 'rspack',
+  sources: ['lib/constants.js', 'lib/dependencies.js',
+            'lib/build-context.js', 'lib/processes.js',
+            'lib/config.js', 'rspack_plugin.js'],
+  use: ['modules@0.8.2', 'ecmascript', 'tools-core'],
+});
+
+Package.onUse(function (api) {
+  api.use('ecmascript', ['client', 'server']);
+  api.use(['tools-core', 'webapp']);
+  api.mainModule('rspack_server.js', 'server');
+});
+```
+
+`lib/` contains:
+
+| File | Responsibility |
+|------|----------------|
+| `constants.js` | Default versions of `@rspack/core`, `@meteorjs/rspack`, `swc-loader`, etc. Build context directory names (`_build`, `build-assets`, `build-chunks`, `.rsdoctor`). `GLOBAL_STATE_KEYS` used to track installation/compile state across rebuilds. |
+| `dependencies.js` | Auto-install flow for `@rspack/core`, `@meteorjs/rspack`, React HMR, Rsdoctor. Uses `tools-core`'s npm helpers. |
+| `build-context.js` | Creates and cleans the build context, asset, and chunk directories. Manages the default `rspack.config.js`. |
+| `config.js` | Sets Meteor entry points and env from the resolved app config. |
+| `processes.js` | Spawns the Rspack dev server and server-side watch process, computes ports, picks the right config file (`.cjs`/`.mjs`/`.ts`/...), handles cleanup. |
+| `compilation.js` | First-compile barrier; coordinates the Meteor server start with Rspack's first emit. |
+
+`rspack_plugin.js` is the orchestrator that runs inside the plugin sandbox: it checks installation, ensures the build context exists, configures Meteor, starts the Rspack processes (or runs a one-shot build), and waits for first compilation.
+
+`rspack_server.js` is the runtime side that runs inside the user's app (see `mainModule` in `package.js`). It uses `webapp` to compose Meteor with the Rspack dev server (proxy middleware in development, static serving in production).
+
+### `npm-packages/meteor-rspack` (the `@meteorjs/rspack` npm package)
+
+This is the configuration side. Users install it through the Atmosphere package's auto-install flow, and it provides the default Rspack configuration plus a `defineConfig(factory)` helper. Key files:
+
+| Path | Responsibility |
+|------|----------------|
+| `index.js`, `index.d.ts` | Public API: `defineConfig`, `HtmlRspackPlugin`. |
+| `rspack.config.js` | The big default Rspack config (client + server, SWC loader, plugins, externals, HMR, persistent cache). |
+| `lib/meteorRspackConfigFactory.js` | Factory that builds the `Meteor.*` helpers (`compileWithMeteor`, `compileWithRspack`, `extendSwcConfig`, `replaceSwcConfig`, `disablePlugins`, `enablePortableBuild`, `persistDevFiles`, `splitVendorChunk`, `setCache`, `extendConfig`). |
+| `lib/meteorRspackHelpers.js`, `lib/meteorRspackConfigHelpers.js` | Detection helpers (React/Blaze/TS/etc.), Meteor define plugin values, output and externals wiring. |
+| `lib/swc.js` | Resolves `.swcrc` / `swc.config.js` / `swc.config.ts` using `@swc/core` for TS configs; see also [`../swc/README.md`](../swc/README.md). |
+| `lib/localDependenciesHelpers.js` | Parses the user's `rspack.config.js` with `@swc/core` to discover local plugin files and add them to the FS cache's `buildDependencies`. |
+| `lib/mergeRulesSplitOverlap.js`, `lib/ignore.js` | Safe-merge logic for module rules and ignore-loader rules. |
+| `plugins/` | Custom Rspack plugins (HTML generation, asset externals, server output, require externals). |
+| `scripts/bump-version.js`, `scripts/publish-beta.sh` | Version bumper and beta publish script (see [`README.md`](../../../npm-packages/meteor-rspack/README.md) in the package). |
+
+### How it interacts with Meteor
+
+The bundler does *not* replace Meteor's bundler wholesale. Instead:
+
+- Meteor still owns package compilation, the boilerplate generator, the dev server lifecycle, and the runtime program manifest.
+- Rspack owns app source compilation (client and server), HMR, asset emission, and the chunk graph for user code.
+- The two are stitched together at three points: the `webapp` middleware (dev: proxy to the Rspack dev server; prod: serve emitted files), the asset externals plugin (so Meteor packages remain external to Rspack), and the entry point env vars (`METEOR_CONFIG_CLIENT` / `METEOR_CONFIG_SERVER` / ...) set by the build plugin via `tools-core`'s `setMeteorAppEntrypoints`.
+
+When debugging an integration issue, it is usually one of: a missing externals binding, a stale build context directory, an entrypoint env var that did not reach the bundler, or a config helper that returned a fragment Rspack does not merge correctly. The places to start are `packages/rspack/lib/build-context.js` (directory state), `packages/rspack/lib/processes.js` (process and port wiring), `npm-packages/meteor-rspack/rspack.config.js` (defaults), and `npm-packages/meteor-rspack/lib/meteorRspackConfigFactory.js` (helpers).
+
+## E2E testing
+
+The Rspack integration is exercised by the Jest + Playwright suite in `tools/e2e-tests/`. Each app fixture under `tools/e2e-tests/apps/<name>/` has a matching `<name>.test.js` that runs init/dev/prod/test/build/reset phases against a real Meteor + Rspack project. The full matrix lives in [`E2E_COVERAGE.md`](E2E_COVERAGE.md); maintain that file via the [`e2e-coverage`](../../../.github/skills/e2e-coverage/SKILL.md) skill when adding or modifying apps.
+
+### Strategy
+
+- **Real projects, not mocks.** Each test copies an app fixture, installs deps, adds the `rspack` package, and runs the Meteor CLI. This catches integration bugs that unit tests miss (HMR wiring, externals, asset paths, Windows quirks).
+- **Same lifecycle for every fixture.** Init, dev run, prod run, test (watch and once), build, reset. The shared `helpers.js` and `test-helpers.js` enforce a consistent set of assertions: build artifacts exist, the page renders, `__rspack__` script is present, HMR is on in dev and off in prod.
+- **Skeletons are covered too.** `skeleton.test.js` walks every `meteor create --<skeleton>` template through the same phases on dedicated ports.
+
+### Creating a new E2E test app
+
+1. Copy an existing app under `tools/e2e-tests/apps/` as the starting point (`apps/react` is a good baseline for a generic case).
+2. Add an `<name>.test.js` next to the existing ones; reuse the helpers in `test-helpers.js` to drive lifecycle phases.
+3. Update `jest.config.js` if the new file is not picked up by the default `testMatch`.
+4. Install deps once with `npm run install:e2e` (run from repo root).
+5. Run the new file alone: `npm run test:e2e -- --testPathPattern <name>`. That is also the fastest way to debug a single regression.
+6. Update [`E2E_COVERAGE.md`](E2E_COVERAGE.md) per the e2e-coverage skill so the matrix stays accurate.
+
+### What to verify when touching Rspack
+
+- Dev run: build artifacts exist under the build context dir, the client loads in the browser, HMR triggers on a source edit.
+- Prod run: same assertions with `--production`; HMR must be off.
+- Test mode: `meteor test` runs the mocha driver, watches rebuilds, and `meteor test --once` exits with the expected code.
+- Build: `meteor build` produces a valid bundle tree (`main.js`, `programs/server`, `web.browser`, `web.browser.legacy`) and any static assets the app expects.
+- Reset: `meteor reset` clears the build context, asset/chunk directories, and `.meteor/local` subdirs.
+
+## Common maintenance tasks
+
+### Link `@meteorjs/rspack` to a local app
+
+When iterating on the npm package (default config, helpers, plugins), linking it into a sandbox app is the fastest feedback loop. The `tools/e2e-tests/apps/*` fixtures and the standard skeletons under `tools/static-assets/skel-*` are good targets.
+
+Steps:
+
+```bash
+# In the meteor-rspack package
+cd npm-packages/meteor-rspack
+npm link
+
+# In the target app
+cd /path/to/target-app
+meteor add rspack          # if not already added
+meteor npm link @meteorjs/rspack
+meteor run
+```
+
+Notes:
+
+- The Rspack Atmosphere package's auto-install flow may try to install a newer version of `@meteorjs/rspack`. Set `meteor.autoInstallDeps` to `false` in the app's `package.json` to make the link stick.
+- Local plugin files referenced from the app's `rspack.config.js` are parsed via `lib/localDependenciesHelpers.js` and added to the persistent cache's `buildDependencies`. If a change to a local plugin is not reflected after a rebuild, run `meteor reset`.
+
+### Upgrade Rspack to verify compatibility
+
+This covers bumping `@rspack/core`, `@rspack/plugin-react-refresh`, `swc-loader`, and `@rsdoctor/rspack-plugin`. The default versions are declared in `packages/rspack/lib/constants.js` (`DEFAULT_RSPACK_VERSION` and friends) and as `peerDependencies` / `devDependencies` in `npm-packages/meteor-rspack/package.json`.
+
+Expected process:
+
+1. Bump versions in `packages/rspack/lib/constants.js` and `npm-packages/meteor-rspack/package.json` together. Keep `peerDependencies` ranges as broad as the new minimum allows.
+2. Run `npm install` inside `npm-packages/meteor-rspack/` to refresh `package-lock.json`.
+3. Run the full E2E suite: `npm run test:e2e` from the repo root. At minimum confirm `react`, `react-router`, `typescript`, `blaze`, `monorepo`, and the skeletons pass.
+4. Check Rspack's release notes for breaking changes in:
+   - Module resolution (especially around `exports` conditions, ESM, `node:` protocol).
+   - Persistent FS cache layout, since user apps may carry stale caches across the bump.
+   - HMR client wiring (the `__rspack__` script tag, dev server URL).
+   - SWC loader options if SWC was bumped at the same time; see [`../swc/README.md`](../swc/README.md).
+5. If a regression appears, the safest rollback is to revert the constants and the `package.json` bumps and rerun the failing E2E target with `npm run test:e2e -- --testPathPattern <name>` to confirm. Apps can opt out of the new version with `meteor reset` followed by manually pinning `@meteorjs/rspack` and `@rspack/core` in `package.json` until a fix lands.
+6. When ready to ship, follow the [`version-bump`](../../../.github/skills/version-bump/SKILL.md) skill for the Atmosphere package and use `npm run bump` / `npm run publish:beta` in `npm-packages/meteor-rspack/` for the npm side.
