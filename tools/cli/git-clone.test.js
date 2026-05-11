@@ -1,9 +1,28 @@
-// Mock heavy dependencies that examples.js requires at module load
 jest.mock('../fs/files', () => ({}));
-jest.mock('../utils/http-helpers.js', () => ({}));
-jest.mock('../console/console.js', () => ({ Console: { warn: jest.fn() } }));
 
-const { parseGitUrl } = require('./examples.js');
+const { parseGitUrl, resolveRepoUrl } = require('./git-clone.js');
+
+describe('resolveRepoUrl', () => {
+  it('expands GitHub shorthand owner/repo', () => {
+    expect(resolveRepoUrl('meteor/meteor3-vue3'))
+      .toBe('https://github.com/meteor/meteor3-vue3');
+  });
+
+  it('returns full URLs unchanged', () => {
+    expect(resolveRepoUrl('https://github.com/meteor/meteor3-vue3'))
+      .toBe('https://github.com/meteor/meteor3-vue3');
+  });
+
+  it('returns SSH URLs unchanged', () => {
+    expect(resolveRepoUrl('git@github.com:owner/repo.git'))
+      .toBe('git@github.com:owner/repo.git');
+  });
+
+  it('returns non-string input unchanged', () => {
+    expect(resolveRepoUrl(null)).toBe(null);
+    expect(resolveRepoUrl(42)).toBe(42);
+  });
+});
 
 describe('parseGitUrl', () => {
   describe('GitHub URLs', () => {
@@ -98,6 +117,17 @@ describe('parseGitUrl', () => {
         repoUrl: 'https://bitbucket.org/owner/repo',
         branch: 'develop',
         dir: 'lib/core',
+      });
+    });
+  });
+
+  describe('GitHub shorthand', () => {
+    it('expands owner/repo to a github URL', () => {
+      const result = parseGitUrl('meteor/meteor3-vue3');
+      expect(result).toEqual({
+        repoUrl: 'https://github.com/meteor/meteor3-vue3',
+        branch: null,
+        dir: null,
       });
     });
   });

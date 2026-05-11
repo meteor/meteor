@@ -272,6 +272,7 @@ internal functionality of Meteor.
 >>> add
 Add a package to this project.
 Usage: meteor add <package> [package..]
+       meteor add --from <url|user/repo> [--from-branch <branch>] [--from-dir <dir>] [--to <path>] [--force]
 
 Adds packages to your Meteor project. You can add multiple
 packages with one command. To query for available packages, use
@@ -287,11 +288,24 @@ To remove a version constraint for a specific package, run "meteor add" command
 again without specifying a version. For example above, to stop using
 version 1.1.0 exactly, run `meteor add package`.
 
+You can use --from to clone a package from a Git repository and place it
+as a local package in your project. The cloned directory must contain a
+valid package.js file. The package name is read from Package.describe and
+registered in .meteor/packages automatically.
+
 Options:
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
+
+Git options:
+  --from           Clone a package from a Git URL or GitHub shorthand (user/repo).
+  --from-branch    Branch to clone from (use with --from).
+  --from-dir       Extract only a subdirectory from the repo (use with --from).
+  --to             Destination path relative to project root
+                   (default: packages/<repo-name>).
+  --force          Overwrite destination directory if it already exists.
 
 
 >>> remove

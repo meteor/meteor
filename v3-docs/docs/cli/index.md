@@ -887,6 +887,51 @@ meteor add package@version
 - By convention, community packages include the maintainer's name (e.g., `iron:router`)
 - To remove a version constraint, run `meteor add package` without specifying a version
 
+### Clone a Package from a Git Repository
+
+You can also use `meteor add --from` to clone an existing Meteor package from any Git repository into your project's `packages/` directory:
+
+```bash
+meteor add --from https://github.com/Meteor-Community-Packages/meteor-publish-composite
+```
+
+The package name is read from `Package.describe` in the cloned `package.js` and registered in `.meteor/packages` automatically, so the package is ready to use after a single command.
+
+`--from` accepts the same input formats as [`meteor create --from`](#create-from-a-git-repository):
+
+- A full Git URL, for example `https://github.com/owner/repo`
+- A GitHub shorthand `owner/repo`, expanded to `https://github.com/owner/repo`
+- A browser-style tree/src URL from GitHub, GitLab, or Bitbucket. Branch and subdirectory are auto-detected from the URL when possible:
+
+```bash
+# GitHub shorthand
+meteor add --from Meteor-Community-Packages/meteor-publish-composite
+
+# tree URL with branch and subdirectory auto-detection
+meteor add --from https://github.com/meteor/blaze/tree/master/packages/blaze
+```
+
+Use `--from-branch` to pin a branch, tag, or commit SHA, `--from-dir` to extract a subdirectory, and `--to` to write to a custom destination relative to the project root:
+
+```bash
+meteor add --from https://github.com/meteor/blaze \
+  --from-branch master \
+  --from-dir packages/blaze \
+  --to packages/my-blaze
+```
+
+Passing `--from-branch` or `--from-dir` explicitly overrides the values parsed from the URL.
+
+If the destination already exists, Meteor prompts before overwriting. Pass `--force` to skip the prompt. The cloned directory must contain a valid `package.js` with a `Package.describe` call; otherwise the clone is rolled back and the command exits with an error.
+
+| Option | Description |
+|--------|-------------|
+| `--from <url>` | Clone a Meteor package from a Git URL. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
+| `--from-branch <ref>` | Git ref to check out (branch, tag, or commit SHA). Overrides the branch parsed from the URL. |
+| `--from-dir <dir>` | Extract only a subdirectory of the cloned repository. Overrides the subdirectory parsed from the URL. |
+| `--to <path>` | Destination path relative to the project root (default: `packages/<repo-name>`). |
+| `--force` | Overwrite an existing destination directory without prompting. |
+
 ## meteor remove *package* {#meteor-remove}
 
 Removes a package previously added to your Meteor project.
