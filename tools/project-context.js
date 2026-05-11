@@ -1839,13 +1839,15 @@ export class MeteorConfig {
             },
           }),
         } : this._config;
-    const modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
+    const modernForced = process.env.METEOR_MODERN
+      ? JSON.parse(process.env.METEOR_MODERN)
+      : undefined;
     // Reinitialize meteorConfig globally for project context
     // Updates config when package.json changes trigger rebuilds
     setMeteorConfig({
       ...(this._config || {}),
       modern: {
-        ...normalizeModernConfig(modernForced || this._config?.modern || false),
+        ...normalizeModernConfig(modernForced ?? this._config?.modern ?? true),
         ...(this._config?.verbose || this._config?.modern?.verbose) && { verbose: true },
       },
     });
