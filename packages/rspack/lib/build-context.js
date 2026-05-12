@@ -652,11 +652,27 @@ try {
 /* rspack-server-build-id:initial */`;
     }
 
-    return `/* Link to ⚡ Rspack ${capitalizeFirstLetter(side)} App */
-${
-  (isMeteorBlazeProject() && config?.isClient && '// In Blaze, import happens last so HTML files preload first') ||
-  `import './${config?.outputFile || ''}';`
-}`;
+    const linkBanner = `/* Link to ⚡ Rspack ${capitalizeFirstLetter(side)} App */`;
+    if (isMeteorBlazeProject() && config?.isClient) {
+      return `${linkBanner}
+// In Blaze, import happens last so HTML files preload first`;
+    }
+    if (config?.isServer && !config?.isNative) {
+      // Register the rspack bundle as an async dep via reify's runtime API; meteor#14395.
+      return `${linkBanner}
+var __rspackBundle = require('./${config?.outputFile || ''}');
+module.wrapAsync(async function (_module, __reifyWaitForDeps__, __reifyAsyncResult__) {
+  __reifyWaitForDeps__();
+  try {
+    await Promise.resolve(__rspackBundle);
+  } catch (err) {
+    return __reifyAsyncResult__(err);
+  }
+  __reifyAsyncResult__();
+}, { self: this, async: true });`;
+    }
+    return `${linkBanner}
+import './${config?.outputFile || ''}';`;
   }
 
   if (role === FILE_ROLE.run && config?.isServer && !config?.isTest) {
