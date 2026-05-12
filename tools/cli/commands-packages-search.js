@@ -37,7 +37,7 @@ const PAGE_SIZE = 20;
 const DEBOUNCE_MS = 250;
 const DEBUG = !!process.env.METEOR_ATMOSPHERE_DEBUG;
 
-const STALE_THRESHOLD_MONTHS = 18;
+const STALE_THRESHOLD_MONTHS = 24;
 const MS_PER_MONTH = 1000 * 60 * 60 * 24 * 30.4375;
 
 const CORE_RECOMMENDED = [
@@ -436,6 +436,19 @@ async function fetchReadmePreview(versionRecord) {
   return preview;
 }
 
+// Atmosphere routes /<author>/<basename> for community packages and
+// /meteor/<name> for the core namespace, mirroring how `meteor add` names
+// them. Used to give the README preview a "Read more" link to the rendered
+// page.
+function atmosphereUrlForPackage(name) {
+  if (!name) return null;
+  const idx = name.indexOf(':');
+  if (idx > 0) {
+    return 'https://atmospherejs.com/' + name.slice(0, idx) + '/' + name.slice(idx + 1);
+  }
+  return 'https://atmospherejs.com/meteor/' + name;
+}
+
 function formatReadmePreview(body) {
   if (!body || typeof body !== 'string') return null;
   const lines = body.replace(/\r\n/g, '\n').split('\n');
@@ -494,6 +507,8 @@ async function loadPackageDetail(name) {
   if (readmePreview) {
     lines.push(chalk.dim('─ README ─'));
     lines.push(readmePreview);
+    const url = atmosphereUrlForPackage(name);
+    if (url) lines.push(chalk.dim('Read more: ') + url);
   }
   lines.push(chalk.dim('(press any key to dismiss)'));
   return lines.join('\n');
@@ -505,14 +520,25 @@ exports.loadPackageDetail = loadPackageDetail;
 // character to rl.line, leaving nothing to strip. Inside onKeypress
 // rl.line already ends with `?`, so we can rewrite it before render/source
 // reads it. Guarded on the prototype to stay idempotent.
-function patchCheckboxPlusForDetailHook() {
+// The patch must install before checkbox-plus's _run subscribes to keypress
+// events. _run captures `onKeypress` via .bind(self) at subscribe time, so
+// any later replacement of the prototype method has no effect on already-
+// bound listeners. Subscribe time is "after `source()` resolves"; for the
+// add picker source is async (Atmosphere RPC + catalog reads) so a
+// setImmediate-attached patch wins, but the remove picker's source is
+// synchronous (Promise.resolve(matches)), so its microtask drains the
+// .then-of-executeSource and binds before our setImmediate ever fires.
+// Installing at module load sidesteps the race.
+(function patchCheckboxPlusForDetailHook() {
   if (checkboxPlus.prototype._meteorDetailPatchInstalled) return;
   checkboxPlus.prototype._meteorDetailPatchInstalled = true;
 
   const origOnKeypress = checkboxPlus.prototype.onKeypress;
   checkboxPlus.prototype.onKeypress = function () {
     const hook = this._meteorDetailHook;
-    if (!hook) return origOnKeypress.call(this);
+    if (!hook) {
+      return origOnKeypress.call(this);
+    }
 
     if (this.rl.line.endsWith('?')) {
       this.rl.line = this.rl.line.slice(0, -1);
@@ -533,11 +559,10 @@ function patchCheckboxPlusForDetailHook() {
     hook.onOtherKey(this);
     return origOnKeypress.call(this);
   };
-}
+})();
 
 exports.attachDetailHotkey = function (activePrompt, getValueAtPointer) {
   if (!activePrompt || !activePrompt.rl || !activePrompt.screen) return;
-  patchCheckboxPlusForDetailHook();
 
   let detailContent = null;
   let loadToken = 0;
