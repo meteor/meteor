@@ -1,5 +1,5 @@
-var selftest = require("../tool-testing/selftest.js");
-var Sandbox = selftest.Sandbox;
+const selftest = require("../tool-testing/selftest.js");
+const Sandbox = selftest.Sandbox;
 
 selftest.define("mainModule", async function () {
   const s = new Sandbox();
@@ -330,12 +330,12 @@ selftest.define("packageJsonSettings", async function () {
 });
 
 selftest.define(
-  "packageJsonSettings conflicts with --settings flag",
+  "packageJsonSettings merges with --settings flag",
   async function () {
     // Verifies that when both --settings and meteor.settings in package.json are
     // provided they are MERGED rather than producing an error.
     // The --settings file has higher precedence on conflicting keys.
-    var s = new Sandbox({ fakeMongo: true });
+    const s = new Sandbox({ fakeMongo: true });
     await s.init();
 
     await s.createApp("app-config-settings-merge", "standard-app");
@@ -359,7 +359,7 @@ selftest.define(
     });
 
     run.waitSecs(15);
-    // Both sources should co-exist — no error output
+    // Both sources should co-exist; the legacy conflict message must not appear.
     run.forbid("Please use only one");
     run.forbid("bundle-fail");
     await run.match("App running at");
@@ -374,7 +374,7 @@ selftest.define(
     //   METEOR_SETTINGS_PUBLIC_SOMETHING=from-env must win over
     //   package.json's meteor.settings.public.something = "from-pkg",
     //   while other public keys from package.json are preserved (deep merge).
-    var s = new Sandbox();
+    const s = new Sandbox();
     await s.init();
 
     await s.createApp("app-config-settings-nesting", "app-config");
@@ -382,8 +382,11 @@ selftest.define(
 
     // Set up initial package.json: public.something will be overridden,
     // public.other must be preserved by the merge.
-    var pkgJson = JSON.parse(s.read("package.json"));
+    const pkgJson = JSON.parse(s.read("package.json"));
     pkgJson.meteor = pkgJson.meteor || {};
+    pkgJson.meteor.__selfTestExpectEnvOverrides = {
+      publicSomething: "from-env",
+    };
     pkgJson.meteor.testModule = "tests.js";
     pkgJson.meteor.settings = {
       public: { something: "from-pkg", other: "keep" },
@@ -394,7 +397,7 @@ selftest.define(
     s.set("METEOR_SETTINGS_PUBLIC_SOMETHING", "from-env");
     s.set("TEST_BROWSER_DRIVER", "puppeteer");
 
-    var run = s.run(
+    const run = s.run(
       "test",
       "--full-app",
       "--driver-package",

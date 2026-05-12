@@ -42,7 +42,7 @@ export namespace Meteor {
    * variable. If the settings object contains a key named `public`, then `Meteor.settings.public` will be available on the client as well as the server.  All other properties of
    * `Meteor.settings` are only defined on the server.  You can rely on `Meteor.settings` and `Meteor.settings.public` being defined objects (not undefined) on both client and server even if
    * there are no settings specified.  Changes to `Meteor.settings.public` at runtime will be picked up by new client connections.
-   * Note: if both `--settings` and `meteor.settings` in `package.json` are provided simultaneously, Meteor will exit with an error.
+   * Note: if both `--settings` and `meteor.settings` in `package.json` are provided, Meteor deep-merges them, with `--settings` taking precedence on conflicting keys.
    */
   var settings: Settings;
   /** Settings **/
@@ -351,17 +351,13 @@ export namespace Meteor {
    * Wrap a function to run in the background in development (similar to Meteor.isDevelopment ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferDev<T>(
-    func: () => T
-  ): T | void;
+  function deferDev<T>(func: () => T): T | void;
 
   /**
    * Wrap a function to run in the background in production (similar to Meteor.isProduction ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferProd<T>(
-    func: () => T
-  ): T | void;
+  function deferProd<T>(func: () => T): T | void;
   /** Timeout **/
 
   /** utils **/
