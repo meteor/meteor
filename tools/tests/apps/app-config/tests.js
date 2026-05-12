@@ -26,6 +26,7 @@ function getComparablePublicSettings() {
 describe("meteor.settings", () => {
   const config = require("./package.json").meteor;
   const expectedEnvOverrides = config?.__selfTestExpectEnvOverrides;
+  const expectedResolvedSettings = config?.__selfTestExpectedResolvedSettings;
 
   it("reflects meteor.settings from package.json in Meteor.settings", async () => {
     await startupPromise;
@@ -36,7 +37,9 @@ describe("meteor.settings", () => {
     const hasEnvOverrides = Object.keys(process.env).some(function (k) {
       return k.indexOf("METEOR_SETTINGS_") === 0;
     });
-    if (hasEnvOverrides || expectedEnvOverrides) return;
+    if (hasEnvOverrides || expectedEnvOverrides || expectedResolvedSettings) {
+      return;
+    }
 
     const expectedSettings = config?.settings || {};
     const expectedPublic = expectedSettings.public || {};
@@ -79,6 +82,32 @@ describe("meteor.settings", () => {
           `public.${key} should be preserved from package.json`
         );
       });
+    });
+  }
+
+  if (expectedResolvedSettings) {
+    it("applies the expected merged settings result", async () => {
+      await startupPromise;
+
+      const expectedPublic = expectedResolvedSettings.public || {};
+      const actualPublic = getComparablePublicSettings();
+
+      if (Meteor.isServer) {
+        assert.deepEqual(
+          {
+            ...Meteor.settings,
+            public: actualPublic,
+          },
+          {
+            ...expectedResolvedSettings,
+            public: expectedPublic,
+          }
+        );
+      }
+
+      if (Meteor.isClient) {
+        assert.deepEqual(actualPublic, expectedPublic);
+      }
     });
   }
 });

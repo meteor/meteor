@@ -414,3 +414,83 @@ selftest.define(
     await run.stop();
   }
 );
+
+selftest.define(
+  "settings precedence: package.json < settings file < METEOR_SETTINGS_* env vars",
+  async function () {
+    // Verifies the full compatibility story for settings resolution:
+    //   1. package.json provides defaults
+    //   2. --settings overrides selected keys
+    //   3. METEOR_SETTINGS_* overrides selected keys last
+    const s = new Sandbox();
+    await s.init();
+
+    await s.createApp("app-config-settings-precedence", "app-config");
+    s.cd("app-config-settings-precedence");
+
+    s.write(
+      "extra-settings.json",
+      JSON.stringify({
+        overriddenbyfile: "from-file",
+        addedbysettingsfile: true,
+        public: {
+          publicoverriddenbyfile: "from-file",
+          publicaddedbysettingsfile: true,
+        },
+      })
+    );
+
+    const pkgJson = JSON.parse(s.read("package.json"));
+    pkgJson.meteor = pkgJson.meteor || {};
+    pkgJson.meteor.testModule = "tests.js";
+    pkgJson.meteor.settings = {
+      settinga: true,
+      overriddenbyfile: "from-pkg",
+      overriddenbyenv: "from-pkg",
+      public: {
+        publicfrompkg: true,
+        publicoverriddenbyfile: "from-pkg",
+        publicoverriddenbyenv: "from-pkg",
+      },
+    };
+    pkgJson.meteor.__selfTestExpectedResolvedSettings = {
+      settinga: true,
+      overriddenbyfile: "from-file",
+      overriddenbyenv: "from-env",
+      addedbysettingsfile: true,
+      addedbyenv: true,
+      public: {
+        publicfrompkg: true,
+        publicoverriddenbyfile: "from-file",
+        publicoverriddenbyenv: "from-env",
+        publicaddedbysettingsfile: true,
+        publicaddedbyenv: true,
+      },
+    };
+    s.write("package.json", JSON.stringify(pkgJson, null, 2) + "\n");
+
+    s.set("METEOR_SETTINGS_OVERRIDDENBYENV", "from-env");
+    s.set("METEOR_SETTINGS_ADDEDBYENV", "true");
+    s.set("METEOR_SETTINGS_PUBLIC_PUBLICOVERRIDDENBYENV", "from-env");
+    s.set("METEOR_SETTINGS_PUBLIC_PUBLICADDEDBYENV", "true");
+    s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
+    const run = s.run(
+      "test",
+      "--full-app",
+      "--driver-package",
+      "meteortesting:mocha",
+      "--settings",
+      "extra-settings.json"
+    );
+
+    run.waitSecs(60);
+    await run.match("App running at");
+
+    run.forbid(" 0 passing ");
+    await run.match("SERVER FAILURES: 0");
+    await run.match("CLIENT FAILURES: 0");
+
+    await run.stop();
+  }
+);
