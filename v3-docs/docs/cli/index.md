@@ -891,7 +891,13 @@ meteor add --search <query>   # interactive search pre-filled with <query>
 
 ### Interactive search {#meteor-add-interactive}
 
-Run `meteor add` without any package names to open an interactive search against the [Atmosphere](https://atmospherejs.com/) community package directory. Type to filter results, use the arrow keys to highlight a package, and press Enter to add it to your project.
+Run `meteor add` without any package names to open an interactive search against the [Atmosphere](https://atmospherejs.com/) community package directory. Type to search Atmosphere, use the arrow keys to highlight a package, press Space to toggle, and press Enter to add the selected packages to your project.
+
+With no query typed, the picker shows two starter sections: a small curated **Core recommended** list of core Meteor packages (accounts, email, check, typescript, rspack, roles, react-meteor-data) followed by **Top community-maintained packages**, drawn once from Atmosphere via the `packages/mostUsed` subscription, filtered to community packages updated within the last 12 months, and capped at 10. Entries already present in the curated list are not repeated.
+
+Results are reordered to favor up-to-date packages. Anything published in the last 24 months keeps its original Atmosphere relevance ranking; older packages are pushed below them. Each row shows when its latest version was published (for example `4mo ago`, `3y ago`) so the freshness signal is visible at a glance.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the package description, latest version, last-updated date, maintainers, and git URL. The panel uses the same local catalog data as `meteor show` and dismisses on the next keypress.
 
 Pass `--search <query>` to skip straight to results for a given query:
 
@@ -925,7 +931,9 @@ meteor remove --search <query>   # picker pre-filtered by <query>
 
 ### Interactive picker {#meteor-remove-interactive}
 
-Run `meteor remove` without any package names to open an interactive picker listing the packages currently in `.meteor/packages`. Type to filter the list, use the arrow keys to highlight a package, and press Enter to remove it.
+Run `meteor remove` without any package names to open an interactive picker listing the packages currently in `.meteor/packages`. Type to filter the list, use the arrow keys to highlight a package, press Space to toggle, and press Enter to remove the selected packages.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the description, latest version, last-updated date, and maintainers of the highlighted package, useful for double-checking what you're about to remove.
 
 Pass `--search <query>` to open the picker pre-filtered:
 

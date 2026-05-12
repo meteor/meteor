@@ -12,6 +12,7 @@ const chalk = require('chalk');
 const Console = require('../console/console.js').Console;
 const {
   MeteorSearchAbortedError,
+  attachDetailHotkey,
 } = require('./commands-packages-search.js');
 
 function createPromptModuleWithCheckboxPlus() {
@@ -50,7 +51,7 @@ async function runRemovePrompt(installed, initialQuery) {
       type: 'checkbox-plus',
       name: 'picks',
       message:
-        'Select packages to remove (type to filter, <space> to toggle, <enter> to confirm):',
+        'Select packages to remove (type to filter, <space> to toggle, ? for details, <enter> to confirm):',
       pageSize: 20,
       highlight: true,
       searchable: true,
@@ -71,12 +72,17 @@ async function runRemovePrompt(installed, initialQuery) {
     },
   ]);
 
-  if (initialQuery && promptPromise && promptPromise.ui) {
+  if (promptPromise && promptPromise.ui) {
     setImmediate(function () {
       const active = promptPromise.ui.activePrompt;
-      if (active && active.rl && typeof active.rl.write === 'function') {
+      if (!active) return;
+      if (initialQuery && active.rl && typeof active.rl.write === 'function') {
         active.rl.write(initialQuery);
       }
+      attachDetailHotkey(active, function () {
+        const choice = active.choices && active.choices.getChoice(active.pointer);
+        return choice && choice.value;
+      });
     });
   }
 
