@@ -497,17 +497,24 @@ class RequireExternalsPlugin {
 
   _readExistingRequires() {
     const existing = new Set();
+    // Only track external-looking paths; relative/absolute paths belong to the
+    // bridge codegen, not to this plugin's lazy-imports lifecycle.
+    const isExternalLike = (p) =>
+      typeof p === 'string' &&
+      !p.startsWith('./') &&
+      !p.startsWith('../') &&
+      !p.startsWith('/');
     try {
       const content = fs.readFileSync(this.filePath, 'utf-8');
       // Check for require statements
       let match;
       while ((match = STANDALONE_REQUIRE_REGEX.exec(content)) !== null) {
-        existing.add(match[1]);
+        if (isExternalLike(match[1])) existing.add(match[1]);
       }
 
       // Also check for import statements (used in the new format)
       while ((match = STANDALONE_IMPORT_REGEX.exec(content)) !== null) {
-        existing.add(match[1]);
+        if (isExternalLike(match[1])) existing.add(match[1]);
       }
     } catch {
       // ignore if file missing or unreadable
