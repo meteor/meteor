@@ -30,6 +30,9 @@ module.exports = {
     }
   },
   maxWorkers: 1,
+  // Force Jest to exit after all tests complete, even if there are
+  // dangling async operations (e.g., orphan rspack child processes).
+  forceExit: true,
   reporters: [
     'default',
     '<rootDir>/summary-reporter.js',

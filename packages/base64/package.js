@@ -1,15 +1,15 @@
 Package.describe({
   summary: "Base64 encoding and decoding",
-  version: '1.0.13',
+  version: "1.0.14-beta350.10",
 });
 
-Package.onUse(api => {
-  api.export('Base64');
-  api.use('ecmascript');
-  api.mainModule('base64.js');
+Package.onUse((api) => {
+  api.export("Base64");
+  api.use("ecmascript");
+  api.mainModule("base64.js");
 });
 
-Package.onTest(api => {
-  api.use(['ecmascript', 'tinytest', 'ejson']);
-  api.addFiles('base64_test.js', ['client', 'server']);
+Package.onTest((api) => {
+  api.use(["ecmascript", "tinytest", "ejson"]);
+  api.addFiles("base64_test.js", ["client", "server"]);
 });

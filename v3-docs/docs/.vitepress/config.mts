@@ -297,6 +297,10 @@ export default defineConfig({
             text: "Accounts and security",
             items: [
               {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
+              {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
               },
@@ -620,6 +624,10 @@ export default defineConfig({
       {
         text: "Performance",
         items: [
+          {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
           {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",
