@@ -31,9 +31,6 @@ const ALT_CONFIG_PORT = 3326;
 jest.setTimeout(process.env.CI ? 300_000 : 180_000);
 
 function defineAccountsScenarios(storageMode, getCtx) {
-  const onlyLocalStorage = storageMode === 'localStorage' ? it : it.skip;
-  const onlyCookies = storageMode === 'cookies' ? it : it.skip;
-
   beforeEach(async () => {
     const { page } = getCtx();
     await openHarness(page, getCtx().port);
@@ -203,58 +200,62 @@ function defineAccountsScenarios(storageMode, getCtx) {
     });
   });
 
+  if (storageMode === 'localStorage') {
+    describe('accounts-base: localStorage token persistence', () => {
+      it('stores token, expiry, userId in localStorage', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'p@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'p@example.com' }, 'pw12345');
+        const stored = await readLocalStorageToken(page);
+        expect(stored.token).toBeTruthy();
+        expect(stored.userId).toBe(userId);
+        expect(Date.parse(stored.expires || '0')).toBeGreaterThan(Date.now());
+      });
+
+      it('reload resumes the session from localStorage', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'r@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'r@example.com' }, 'pw12345');
+        await page.reload();
+        await openHarness(page, getCtx().port);
+        await page.waitForFunction(() => Meteor.userId() != null, { timeout: 10_000 });
+        await expectLoggedIn(page, userId);
+      });
+
+      it('wiping token in localStorage logs the user out on reload', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'r@example.com', password: 'pw12345' });
+        await login(page, { email: 'r@example.com' }, 'pw12345');
+        await page.evaluate(() => window.__accountsE2E.setStoredToken(null));
+        await page.reload();
+        await openHarness(page, getCtx().port);
+        await expectLoggedOut(page);
+      });
+
+      it('expired token in localStorage logs the user out on reload', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'r@example.com', password: 'pw12345' });
+        await login(page, { email: 'r@example.com' }, 'pw12345');
+        const stored = await readLocalStorageToken(page);
+        const expired = new Date(Date.now() - 1000 * 60).toISOString();
+        await page.evaluate(
+          ({ token, expires }) => window.__accountsE2E.setStoredToken(token, expires),
+          { token: stored.token, expires: expired },
+        );
+        await page.reload();
+        await openHarness(page, getCtx().port);
+        await expectLoggedOut(page);
+      });
+    });
+  }
+
   describe('accounts-base: token persistence', () => {
-    onlyLocalStorage('stores token, expiry, userId in localStorage', async () => {
-      const { page } = getCtx();
-      const userId = await seedUser(page, {
-        email: 'p@example.com',
-        password: 'pw12345',
-      });
-      await login(page, { email: 'p@example.com' }, 'pw12345');
-      const stored = await readLocalStorageToken(page);
-      expect(stored.token).toBeTruthy();
-      expect(stored.userId).toBe(userId);
-      expect(Date.parse(stored.expires || '0')).toBeGreaterThan(Date.now());
-    });
-
-    onlyLocalStorage('reload resumes the session from localStorage', async () => {
-      const { page } = getCtx();
-      const userId = await seedUser(page, {
-        email: 'r@example.com',
-        password: 'pw12345',
-      });
-      await login(page, { email: 'r@example.com' }, 'pw12345');
-      await page.reload();
-      await openHarness(page, getCtx().port);
-      await page.waitForFunction(() => Meteor.userId() != null, { timeout: 10_000 });
-      await expectLoggedIn(page, userId);
-    });
-
-    onlyLocalStorage('wiping token in localStorage logs the user out on reload', async () => {
-      const { page } = getCtx();
-      await seedUser(page, { email: 'r@example.com', password: 'pw12345' });
-      await login(page, { email: 'r@example.com' }, 'pw12345');
-      await page.evaluate(() => window.__accountsE2E.setStoredToken(null));
-      await page.reload();
-      await openHarness(page, getCtx().port);
-      await expectLoggedOut(page);
-    });
-
-    onlyLocalStorage('expired token in localStorage logs the user out on reload', async () => {
-      const { page } = getCtx();
-      await seedUser(page, { email: 'r@example.com', password: 'pw12345' });
-      await login(page, { email: 'r@example.com' }, 'pw12345');
-      const stored = await readLocalStorageToken(page);
-      const expired = new Date(Date.now() - 1000 * 60).toISOString();
-      await page.evaluate(
-        ({ token, expires }) => window.__accountsE2E.setStoredToken(token, expires),
-        { token: stored.token, expires: expired },
-      );
-      await page.reload();
-      await openHarness(page, getCtx().port);
-      await expectLoggedOut(page);
-    });
-
     it('loginWithToken rejects a stale token and leaves user logged out', async () => {
       const { page } = getCtx();
       const userId = await seedUser(page, {
@@ -275,78 +276,80 @@ function defineAccountsScenarios(storageMode, getCtx) {
     });
   });
 
-  describe('accounts-base: HTTP-only cookie persistence', () => {
-    onlyCookies('login sets an HttpOnly meteor_login_token cookie', async () => {
-      const { page } = getCtx();
-      await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
-      await login(page, { email: 'c@example.com' }, 'pw12345');
-      const cookie = await readCookie(page);
-      expect(cookie).toBeTruthy();
-      expect(cookie.httpOnly).toBe(true);
-      expect(cookie.path).toBe('/');
-      // SameSite=Lax is the package default.
-      expect((cookie.sameSite || '').toLowerCase()).toBe('lax');
-    });
-
-    onlyCookies('document.cookie does NOT expose meteor_login_token (HttpOnly)', async () => {
-      const { page } = getCtx();
-      await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
-      await login(page, { email: 'c@example.com' }, 'pw12345');
-      const docCookie = await page.evaluate(() => document.cookie);
-      expect(docCookie).not.toMatch(/meteor_login_token/);
-    });
-
-    onlyCookies('/_accounts/cookie/refresh returns 204 before login', async () => {
-      const { page } = getCtx();
-      const res = await fetchJson(page, '/_accounts/cookie/refresh');
-      expect(res.status).toBe(204);
-    });
-
-    onlyCookies('/_accounts/cookie/refresh returns 200 with token after login', async () => {
-      const { page } = getCtx();
-      await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
-      await login(page, { email: 'c@example.com' }, 'pw12345');
-      const res = await fetchJson(page, '/_accounts/cookie/refresh');
-      expect(res.status).toBe(200);
-      expect(res.body.token).toBeTruthy();
-    });
-
-    onlyCookies('reload resumes via cookie refresh endpoint', async () => {
-      const { page } = getCtx();
-      const userId = await seedUser(page, {
-        email: 'c@example.com',
-        password: 'pw12345',
+  if (storageMode === 'cookies') {
+    describe('accounts-base: HTTP-only cookie persistence', () => {
+      it('login sets an HttpOnly meteor_login_token cookie', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
+        await login(page, { email: 'c@example.com' }, 'pw12345');
+        const cookie = await readCookie(page);
+        expect(cookie).toBeTruthy();
+        expect(cookie.httpOnly).toBe(true);
+        expect(cookie.path).toBe('/');
+        // SameSite=Lax is the package default.
+        expect((cookie.sameSite || '').toLowerCase()).toBe('lax');
       });
-      await login(page, { email: 'c@example.com' }, 'pw12345');
-      // Wipe localStorage so resume must come from the cookie.
-      await page.evaluate(() => {
-        try {
-          localStorage.removeItem('Meteor.loginToken');
-          localStorage.removeItem('Meteor.loginTokenExpires');
-          localStorage.removeItem('Meteor.userId');
-        } catch {}
+
+      it('document.cookie does NOT expose meteor_login_token (HttpOnly)', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
+        await login(page, { email: 'c@example.com' }, 'pw12345');
+        const docCookie = await page.evaluate(() => document.cookie);
+        expect(docCookie).not.toMatch(/meteor_login_token/);
       });
-      await page.reload();
-      await openHarness(page, getCtx().port);
-      await page.waitForFunction(() => Meteor.userId() != null, { timeout: 10_000 });
-      await expectLoggedIn(page, userId);
-    });
 
-    onlyCookies('logout clears the cookie', async () => {
-      const { page } = getCtx();
-      await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
-      await login(page, { email: 'c@example.com' }, 'pw12345');
-      await logout(page);
-      const after = await fetchJson(page, '/_accounts/cookie/refresh');
-      expect(after.status).toBe(204);
-    });
+      it('/_accounts/cookie/refresh returns 204 before login', async () => {
+        const { page } = getCtx();
+        const res = await fetchJson(page, '/_accounts/cookie/refresh');
+        expect(res.status).toBe(204);
+      });
 
-    onlyCookies('/_accounts/cookie/* endpoints reject wrong methods', async () => {
-      const { page } = getCtx();
-      const res = await fetchJson(page, '/_accounts/cookie/set', { method: 'GET' });
-      expect(res.status).toBe(405);
+      it('/_accounts/cookie/refresh returns 200 with token after login', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
+        await login(page, { email: 'c@example.com' }, 'pw12345');
+        const res = await fetchJson(page, '/_accounts/cookie/refresh');
+        expect(res.status).toBe(200);
+        expect(res.body.token).toBeTruthy();
+      });
+
+      it('reload resumes via cookie refresh endpoint', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'c@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'c@example.com' }, 'pw12345');
+        // Wipe localStorage so resume must come from the cookie.
+        await page.evaluate(() => {
+          try {
+            localStorage.removeItem('Meteor.loginToken');
+            localStorage.removeItem('Meteor.loginTokenExpires');
+            localStorage.removeItem('Meteor.userId');
+          } catch {}
+        });
+        await page.reload();
+        await openHarness(page, getCtx().port);
+        await page.waitForFunction(() => Meteor.userId() != null, { timeout: 10_000 });
+        await expectLoggedIn(page, userId);
+      });
+
+      it('logout clears the cookie', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
+        await login(page, { email: 'c@example.com' }, 'pw12345');
+        await logout(page);
+        const after = await fetchJson(page, '/_accounts/cookie/refresh');
+        expect(after.status).toBe(204);
+      });
+
+      it('/_accounts/cookie/* endpoints reject wrong methods', async () => {
+        const { page } = getCtx();
+        const res = await fetchJson(page, '/_accounts/cookie/set', { method: 'GET' });
+        expect(res.status).toBe(405);
+      });
     });
-  });
+  }
 
   describe('accounts-base: reconnect', () => {
     it('disconnect + reconnect keeps the user logged in', async () => {
