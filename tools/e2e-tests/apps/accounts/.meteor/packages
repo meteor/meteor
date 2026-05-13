@@ -17,6 +17,15 @@ accounts-passwordless
 accounts-oauth
 accounts-express
 
+# OAuth provider wrappers under test
+accounts-facebook
+accounts-github
+accounts-google
+accounts-meetup
+accounts-meteor-developer
+accounts-twitter
+accounts-weibo
+
 # Support packages used by accounts
 email
 ddp-rate-limiter

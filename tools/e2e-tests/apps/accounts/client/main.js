@@ -214,6 +214,53 @@ const api = {
       });
     }),
 
+  loginWithProvider: async ({ serviceName, serviceData, options }) => {
+    const providers = {
+      facebook: { global: 'Facebook', loginFn: 'loginWithFacebook' },
+      github: { global: 'Github', loginFn: 'loginWithGithub' },
+      google: { global: 'Google', loginFn: 'loginWithGoogle' },
+      meetup: { global: 'Meetup', loginFn: 'loginWithMeetup' },
+      'meteor-developer': {
+        global: 'MeteorDeveloperAccounts',
+        loginFn: 'loginWithMeteorDeveloperAccount',
+      },
+      twitter: { global: 'Twitter', loginFn: 'loginWithTwitter' },
+      weibo: { global: 'Weibo', loginFn: 'loginWithWeibo' },
+    };
+    const provider = providers[serviceName];
+    if (!provider) throw new Error('Unknown OAuth provider: ' + serviceName);
+
+    const providerGlobal = window[provider.global];
+    if (!providerGlobal) {
+      throw new Error('Provider global ' + provider.global + ' not available on window');
+    }
+    const loginFn = Meteor[provider.loginFn];
+    if (typeof loginFn !== 'function') {
+      throw new Error('Meteor.' + provider.loginFn + ' is not a function');
+    }
+
+    const { credentialToken, credentialSecret } = await callMethod(
+      '_e2e.primeOAuthCredential',
+      { serviceName, serviceData, options },
+    );
+    // Stash the secret where Accounts.oauth.tryLoginAfterPopupClosed can find it.
+    window.OAuth._handleCredentialSecret(credentialToken, credentialSecret);
+
+    const original = providerGlobal.requestCredential;
+    providerGlobal.requestCredential = (optsOrCb, maybeCb) => {
+      const cb = typeof optsOrCb === 'function' ? optsOrCb : maybeCb;
+      cb(credentialToken);
+    };
+
+    try {
+      await new Promise((resolve, reject) => {
+        loginFn((err) => (err ? reject(reserializeError(err)) : resolve()));
+      });
+    } finally {
+      providerGlobal.requestCredential = original;
+    }
+  },
+
   callMethod,
 
   disconnect: () => Meteor.disconnect(),

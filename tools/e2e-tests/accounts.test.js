@@ -765,6 +765,147 @@ function defineAccountsScenarios(storageMode, getCtx) {
     });
   });
 
+  describe('accounts-* OAuth provider wrappers', () => {
+    const providers = [
+      {
+        service: 'facebook',
+        loginFn: 'loginWithFacebook',
+        providerGlobal: 'Facebook',
+        identity: 'fb-1',
+        fakeData: {
+          id: 'fb-1',
+          email: 'fb@example.com',
+          name: 'FB User',
+          accessToken: 'fb-tok',
+          expiresAt: 9999999999999,
+        },
+      },
+      {
+        service: 'github',
+        loginFn: 'loginWithGithub',
+        providerGlobal: 'Github',
+        identity: 'gh-1',
+        fakeData: {
+          id: 'gh-1',
+          accessToken: 'gh-tok',
+          email: 'gh@example.com',
+          username: 'ghuser',
+          name: 'GH User',
+        },
+      },
+      {
+        service: 'google',
+        loginFn: 'loginWithGoogle',
+        providerGlobal: 'Google',
+        identity: 'goog-1',
+        fakeData: {
+          id: 'goog-1',
+          email: 'goog@example.com',
+          verified_email: true,
+          accessToken: 'g-tok',
+          expiresAt: 9999999999999,
+          name: 'G User',
+        },
+      },
+      {
+        service: 'meetup',
+        loginFn: 'loginWithMeetup',
+        providerGlobal: 'Meetup',
+        identity: 'm-1',
+        fakeData: {
+          id: 'm-1',
+          name: 'M User',
+          accessToken: 'm-tok',
+          expiresAt: 9999999999999,
+        },
+      },
+      {
+        service: 'meteor-developer',
+        loginFn: 'loginWithMeteorDeveloperAccount',
+        providerGlobal: 'MeteorDeveloperAccounts',
+        identity: 'md-1',
+        fakeData: {
+          id: 'md-1',
+          username: 'mduser',
+          accessToken: 'md-tok',
+          expiresAt: 9999999999999,
+        },
+      },
+      {
+        service: 'twitter',
+        loginFn: 'loginWithTwitter',
+        providerGlobal: 'Twitter',
+        identity: 'tw-1',
+        fakeData: {
+          id: 'tw-1',
+          screenName: 'twuser',
+          accessToken: 'tw-tok',
+          accessTokenSecret: 'tw-secret',
+        },
+      },
+      {
+        service: 'weibo',
+        loginFn: 'loginWithWeibo',
+        providerGlobal: 'Weibo',
+        identity: 'wb-1',
+        fakeData: {
+          id: 'wb-1',
+          screenName: 'wbuser',
+          accessToken: 'wb-tok',
+          expiresAt: 9999999999999,
+        },
+      },
+    ];
+
+    providers.forEach(({ service, loginFn, providerGlobal, identity, fakeData }) => {
+      describe(`accounts-${service}`, () => {
+        it(`registers '${service}' and exposes Meteor.${loginFn}`, async () => {
+          const { page } = getCtx();
+          const result = await page.evaluate(
+            (info) => ({
+              registered: window.__accountsE2E.Accounts.oauth
+                .serviceNames()
+                .includes(info.service),
+              loginFn: typeof window.Meteor[info.loginFn],
+              providerGlobal: typeof window[info.providerGlobal],
+            }),
+            { service, loginFn, providerGlobal },
+          );
+          expect(result.registered).toBe(true);
+          expect(result.loginFn).toBe('function');
+          expect(result.providerGlobal).toBe('object');
+        });
+
+        it(`stubbed Meteor.${loginFn} creates a user; second login matches`, async () => {
+          const { page } = getCtx();
+          await page.evaluate(
+            (info) =>
+              window.__accountsE2E.loginWithProvider({
+                serviceName: info.service,
+                serviceData: info.fakeData,
+              }),
+            { service, fakeData },
+          );
+          const first = await expectLoggedIn(page);
+          const user = await callMethod(page, '_e2e.getUser', first.userId);
+          expect(user.services[service].id).toBe(identity);
+          await logout(page);
+
+          await page.evaluate(
+            (info) =>
+              window.__accountsE2E.loginWithProvider({
+                serviceName: info.service,
+                serviceData: info.fakeData,
+              }),
+            { service, fakeData },
+          );
+          const second = await expectLoggedIn(page);
+          expect(second.userId).toBe(first.userId);
+        });
+      });
+    });
+  });
+
   describe('publications and methods see the user', () => {
     it('authenticated method receives this.userId', async () => {
       const { page } = getCtx();

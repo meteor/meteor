@@ -6,36 +6,55 @@ import { Random } from 'meteor/random';
 
 Accounts.oauth.registerService('fake');
 
+const PROVIDER_SERVICES = [
+  'fake',
+  'facebook',
+  'github',
+  'google',
+  'meetup',
+  'meteor-developer',
+  'twitter',
+  'weibo',
+];
+
 Meteor.startup(async () => {
-  await ServiceConfiguration.configurations.upsertAsync(
-    { service: 'fake' },
-    {
-      $set: {
-        service: 'fake',
-        clientId: 'fake-client',
-        secret: 'fake-secret',
-        loginStyle: 'popup',
+  for (const service of PROVIDER_SERVICES) {
+    await ServiceConfiguration.configurations.upsertAsync(
+      { service },
+      {
+        $set: {
+          service,
+          clientId: `fake-${service}-client`,
+          secret: `fake-${service}-secret`,
+          loginStyle: 'popup',
+        },
       },
-    },
-  );
+    );
+  }
 });
 
 export async function primeFakeOAuthCredential({ identity, email, profile }) {
+  return primeOAuthCredential({
+    serviceName: 'fake',
+    serviceData: {
+      id: identity,
+      email,
+      ...(profile ? { profile } : {}),
+    },
+    options: { profile: profile || { name: identity } },
+  });
+}
+
+export async function primeOAuthCredential({ serviceName, serviceData, options }) {
   const credentialToken = Random.id();
   const credentialSecret = Random.secret();
 
   await OAuth._storePendingCredential(
     credentialToken,
     {
-      serviceName: 'fake',
-      serviceData: {
-        id: identity,
-        email,
-        ...(profile ? { profile } : {}),
-      },
-      options: {
-        profile: profile || { name: identity },
-      },
+      serviceName,
+      serviceData,
+      options: options || {},
     },
     credentialSecret,
   );
