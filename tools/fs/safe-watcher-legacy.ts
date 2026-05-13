@@ -11,9 +11,23 @@ import {
 import {
     join as nativeJoin
 } from 'path';
-import nsfw from 'vscode-nsfw';
 
 const pathwatcher = require('pathwatcher');
+
+let nsfw: any = null;
+function getNsfw() {
+    if (nsfw === null) {
+        try {
+            nsfw = require('vscode-nsfw');
+        } catch (error: any) {
+            console.error('Failed to load vscode-nsfw:', error.message);
+            console.error('Falling back to polling-based file watching.');
+            nsfw = false;
+            watcherEnabled = false;
+        }
+    }
+    return nsfw;
+}
 
 // Default to prioritizing changed files, but disable that behavior (and
 // thus prioritize all files equally) if METEOR_WATCH_PRIORITIZE_CHANGED
@@ -416,14 +430,25 @@ export const watch = Profile(
     }
 );
 
-const fireNames = {
-    [nsfw.actions.CREATED]: 'change',
-    [nsfw.actions.MODIFIED]: 'change',
-    [nsfw.actions.DELETED]: 'delete'
+function getFireNames() {
+    const nsfwLib = getNsfw();
+    if (!nsfwLib) {
+        return {};
+    }
+    return {
+        [nsfwLib.actions.CREATED]: 'change',
+        [nsfwLib.actions.MODIFIED]: 'change',
+        [nsfwLib.actions.DELETED]: 'delete'
+    };
 }
 
 export function addWatchRoot(absPath: string) {
     if (watchRoots.has(absPath) || watcherLibrary !== 'nsfw' || !watcherEnabled) {
+        return;
+    }
+
+    const nsfwLib = getNsfw();
+    if (!nsfwLib) {
         return;
     }
 
@@ -445,11 +470,13 @@ export function addWatchRoot(absPath: string) {
     // TODO: check if there are any existing watchers that are children of this
     // watcher and stop them
 
-    nsfw(
+    const fireNames = getFireNames();
+
+    nsfwLib(
         convertToOSPath(absPath),
         (events) => {
             events.forEach(event => {
-                if(event.action === nsfw.actions.RENAMED) {
+                if(event.action === nsfwLib.actions.RENAMED) {
                     let oldPath = nativeJoin(event.directory, event.oldFile);
                     let oldEntry = entries[toPosixPath(oldPath)];
                     if (oldEntry) {
@@ -472,5 +499,7 @@ export function addWatchRoot(absPath: string) {
         }
     ).then(watcher => {
         watcher.start()
+    }).catch((error: any) => {
+        console.error('Failed to start nsfw watcher for', absPath, ':', error.message);
     });
 }
