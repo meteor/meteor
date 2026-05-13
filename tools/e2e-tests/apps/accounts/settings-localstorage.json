@@ -1,0 +1,12 @@
+{
+  "public": {
+    "packages": {
+      "accounts": {
+        "useHttpOnlyCookies": false
+      }
+    },
+    "e2e": {
+      "storageMode": "localStorage"
+    }
+  }
+}
