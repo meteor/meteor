@@ -178,16 +178,20 @@ function defineAccountsScenarios(storageMode, getCtx) {
     it('loggingIn() is true during login and false after', async () => {
       const { page } = getCtx();
       await seedUser(page, { email: 'a@example.com', password: 'pw12345' });
-      const transitions = await page.evaluate(async () => {
+      const { transitions, loggingInAfterAwait } = await page.evaluate(async () => {
         const samples = [];
         const stop = Tracker.autorun(() => samples.push(Meteor.loggingIn()));
         await window.__accountsE2E.loginWithPassword(
           { email: 'a@example.com' },
           'pw12345',
         );
+        const valueAfterAwait = Meteor.loggingIn();
+        // Flush so the autorun samples the post-login value.
+        Tracker.flush();
         stop.stop();
-        return samples;
+        return { transitions: samples, loggingInAfterAwait: valueAfterAwait };
       });
+      expect(loggingInAfterAwait).toBe(false);
       expect(transitions).toContain(true);
       expect(transitions[transitions.length - 1]).toBe(false);
     });
