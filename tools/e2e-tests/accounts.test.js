@@ -185,13 +185,6 @@ function defineAccountsScenarios(storageMode, getCtx) {
           { email: 'a@example.com' },
           'pw12345',
         );
-        // accounts-base sets _loggingIn(false) AFTER our userCallback fires,
-        // so the await above resolves before the reactive transition. Poll
-        // until it flips, then flush so the autorun captures the final value.
-        for (let i = 0; i < 100 && Meteor.loggingIn(); i++) {
-          await new Promise((r) => setTimeout(r, 10));
-        }
-        Tracker.flush();
         stop.stop();
         return samples;
       });
