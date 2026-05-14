@@ -7,7 +7,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",
-    "meteor-node-stubs": "^1.2.12"
+    "meteor-node-stubs": "^1.2.12",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "playwright": "1.59.0"

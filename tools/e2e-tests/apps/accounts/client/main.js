@@ -2,6 +2,8 @@ import { Meteor } from 'meteor/meteor';
 import { Accounts, AccountsTest } from 'meteor/accounts-base';
 import { Tracker } from 'meteor/tracker';
 
+import './react-mount.jsx';
+
 // Playwright strips custom fields off Errors thrown in page.evaluate, so the
 // `error`/`reason`/`details` properties of a Meteor.Error don't survive the
 // page-to-node hop. Re-throw as a plain Error whose message embeds the
@@ -103,6 +105,12 @@ const api = {
     callbackLog.resetPasswordLink.length = 0;
     callbackLog.enrollmentLink.length = 0;
     callbackLog.emailVerificationLink.length = 0;
+  },
+
+  reactRenders: () => (window.__reactRenders || []).slice(),
+  resetReactRenders: () => {
+    if (Array.isArray(window.__reactRenders)) window.__reactRenders.length = 0;
+    else window.__reactRenders = [];
   },
 
   storedToken: () => {
