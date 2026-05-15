@@ -33,7 +33,7 @@ var meteorNpm = exports;
 
 // change this will recreate the npm-shrinkwrap.json file
 // and install all dependencies from scratch
-const LOCK_FILE_VERSION = 4;
+const LOCK_FILE_VERSION = 5;
 
 // Expose the version of npm in use from the dev bundle.
 meteorNpm.npmVersion = "10.1.0";
