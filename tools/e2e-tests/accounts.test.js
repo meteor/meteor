@@ -195,6 +195,37 @@ function defineAccountsScenarios(storageMode, getCtx) {
       expect(transitions).toContain(true);
       expect(transitions[transitions.length - 1]).toBe(false);
     });
+
+    // Regression for PR #13369: a useTracker subscriber on Meteor.user() +
+    // Meteor.loggingIn() must not render `{user:null, loggingIn:false}` after
+    // the loading frame. Harness: apps/accounts/client/react-mount.jsx.
+    it('React useTracker never observes {loggingIn:false,user:null} mid-login', async () => {
+      const { page } = getCtx();
+      await seedUser(page, { email: 'react@example.com', password: 'pw12345' });
+      await page.waitForFunction(
+        () => Array.isArray(window.__reactRenders) && window.__reactRenders.length > 0,
+        { timeout: 10_000 },
+      );
+      await page.evaluate(() => window.__accountsE2E.resetReactRenders());
+      await login(page, { email: 'react@example.com' }, 'pw12345');
+      await page.waitForFunction(
+        () => {
+          const r = window.__reactRenders;
+          if (!r || r.length === 0) return false;
+          const last = r[r.length - 1];
+          return last.user === true && last.loggingIn === false;
+        },
+        { timeout: 5_000 },
+      );
+      const renders = await page.evaluate(() => window.__accountsE2E.reactRenders());
+      expect(renders.some((r) => r.loggingIn === true && r.user === false)).toBe(true);
+      const firstLoadingIdx = renders.findIndex((r) => r.loggingIn === true);
+      const after = renders.slice(firstLoadingIdx + 1);
+      const flicker = after.filter((r) => r.loggingIn === false && r.user === false);
+      expect(flicker).toEqual([]);
+      const last = renders[renders.length - 1];
+      expect(last).toEqual({ user: true, loggingIn: false });
+    });
   });
 
   if (storageMode === 'localStorage') {
