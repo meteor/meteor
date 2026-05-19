@@ -347,12 +347,18 @@ async function setupFromApp(appName, destDir, { isMonorepo = false, force = fals
   log.success('Copy complete.');
 
   const isPnpmWorkspace = fs.existsSync(path.join(destDir, 'pnpm-workspace.yaml'));
-  const hasNestedMeteorApp = fs.existsSync(path.join(destDir, 'app', '.meteor'));
+  const nestedMeteorAppPath = fs.existsSync(path.join(destDir, 'apps', 'app', '.meteor'))
+    ? path.join('apps', 'app')
+    : fs.existsSync(path.join(destDir, 'app', '.meteor'))
+      ? 'app'
+      : null;
+  const hasNestedMeteorApp = !!nestedMeteorAppPath;
   const packageManager = isPnpmWorkspace ? 'pnpm' : 'npm';
   const treatAsMonorepo = isMonorepo || isPnpmWorkspace || hasNestedMeteorApp;
+  const monorepoAppPath = nestedMeteorAppPath || 'app';
 
   const appPackageJsonPath = treatAsMonorepo
-    ? path.join(destDir, 'app', 'package.json')
+    ? path.join(destDir, monorepoAppPath, 'package.json')
     : path.join(destDir, 'package.json');
 
   const envVars = extractEnvVarsFromTestFile(appName, true);
@@ -360,7 +366,7 @@ async function setupFromApp(appName, destDir, { isMonorepo = false, force = fals
     log.detail(`env from test file: ${c.magenta}${Object.entries(envVars).map(([k, v]) => `${k}=${v}`).join(' ')}${c.reset}`);
   }
 
-  const meteorAppDir = treatAsMonorepo ? path.join(destDir, 'app') : destDir;
+  const meteorAppDir = treatAsMonorepo ? path.join(destDir, monorepoAppPath) : destDir;
   const execEnv = Object.keys(envVars).length > 0 ? { env: { ...process.env, ...envVars } } : {};
 
   log.step('Adding rspack package...');
@@ -385,7 +391,7 @@ async function setupFromApp(appName, destDir, { isMonorepo = false, force = fals
     await execa(METEOR_EXECUTABLE, ['npm', 'install'], { cwd: destDir, stdio: 'inherit', ...execEnv });
     log.step('Running meteor npm install at app level...');
     await execa(METEOR_EXECUTABLE, ['npm', 'install'], {
-      cwd: path.join(destDir, 'app'),
+      cwd: path.join(destDir, monorepoAppPath),
       stdio: 'inherit',
       ...execEnv,
     });

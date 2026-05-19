@@ -6,11 +6,12 @@ describe('Pnpm Monorepo App Bundling /', () => {
     appName: 'pnpm-monorepo',
     port: 3134,
     isMonorepo: true,
+    monorepoAppPath: 'apps/app',
     packageManager: 'pnpm',
     filePaths: {
       client: 'packages/ui/src/client.ts',
-      server: 'app/server/main.js',
-      test: 'app/tests/main.test.js',
+      server: 'apps/app/server/main.js',
+      test: 'apps/app/tests/main.test.js',
     },
     customMessages: {
       devClient: '[webpack-dev-server] App hot update',

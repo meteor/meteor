@@ -181,6 +181,7 @@ export function testMeteorRspackBundler(options) {
   const {
     appName,
     port,
+    monorepoAppPath = 'app',
     packageManager = 'npm',
     // Rspack dev server port. Defaults to 18080 to avoid colliding with dev servers
     // that some skeletons bundle on :8080 (e.g. Angular CLI's webpack-dev-server).
@@ -284,7 +285,7 @@ export function testMeteorRspackBundler(options) {
       }
 
       // Add Rspack package
-      appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+      appDir = isMonorepo ? path.join(tempDir, monorepoAppPath) : tempDir;
 
       await runMeteorCommand("add", ["rspack"], appDir, {
         checkExitCode: true,
@@ -303,6 +304,7 @@ export function testMeteorRspackBundler(options) {
       const result = await runMeteorApp(tempDir, port, {
         waitForOutput: "=> App running at",
         isMonorepo,
+        monorepoAppPath,
         env: { ...env, ...(env.meteorRun || {}) },
       });
       meteorProcess = result.meteorProcess;
@@ -377,6 +379,7 @@ export function testMeteorRspackBundler(options) {
       const result = await runMeteorApp(tempDir, port, {
         waitForOutput: "=> App running at",
         isMonorepo,
+        monorepoAppPath,
         skipWaitOn: skipClient,
         env: { ...env, ...(env.meteorRun || {}) },
       });
@@ -477,6 +480,7 @@ export function testMeteorRspackBundler(options) {
         waitForOutput: "=> App running at",
         commandOptions: ['--production'],
         isMonorepo,
+        monorepoAppPath,
         skipWaitOn: skipClient,
         env: { ...env, ...(env.meteorRunProduction || {}) },
       });
@@ -581,7 +585,8 @@ export function testMeteorRspackBundler(options) {
         const result = await runMeteorApp(tempDir, port, {
           waitForOutput: "=> App running at",
           commandOptions: ['--extra-packages', 'bundle-visualizer', '--production'],
-          isMonorepo,
+         isMonorepo,
+          monorepoAppPath,
           env: env.meteorRunProduction
         });
         meteorProcess = result.meteorProcess;
@@ -641,6 +646,7 @@ export function testMeteorRspackBundler(options) {
         commandOptions: testFullApp ? ['--full-app'] : [],
         checkTestResults: false,
         isMonorepo,
+        monorepoAppPath,
         testClient: !skipTestClient,
         env: { ...env, ...(env.meteorTest || {}) },
       });
@@ -728,6 +734,7 @@ export function testMeteorRspackBundler(options) {
         commandOptions: testFullApp ? ['--full-app', '--once'] : ['--once'],
         checkTestResults: true,
         isMonorepo,
+        monorepoAppPath,
         testClient: !skipTestClient,
         env: { ...env, ...(env.meteorTestOnce || {}) },
       });
@@ -769,6 +776,7 @@ export function testMeteorRspackBundler(options) {
         commandOptions: ['--directory'],
         captureOutput: true,
         isMonorepo,
+        monorepoAppPath,
         env: env.meteorBuild
       });
 
@@ -864,6 +872,7 @@ export function testMeteorRspackBundler(options) {
         const seedResult = await runMeteorApp(tempDir, port, {
           waitForOutput: "=> App running at",
           isMonorepo,
+          monorepoAppPath,
           skipWaitOn: skipClient,
           env: { ...env, ...(env.meteorRun || {}) },
         });
