@@ -270,6 +270,7 @@ function printCommandSummary(destDir, appPackageJsonPath) {
   const hasClient = !!(meteorConfig.mainModule && meteorConfig.mainModule.client);
   const m = METEOR_EXECUTABLE;
   const scripts = pkg.scripts || {};
+  const appDir = path.dirname(appPackageJsonPath);
 
   // Longest invocation string, for alignment
   const names = Object.keys(scripts);
@@ -285,7 +286,7 @@ function printCommandSummary(destDir, appPackageJsonPath) {
   console.log(`  ${c.green}${c.bold}App ready at:${c.reset} ${c.cyan}${destDir}${c.reset}`);
   console.log(line);
   console.log('');
-  console.log(`  ${c.yellow}cd ${destDir}${c.reset}`);
+  console.log(`  ${c.yellow}cd ${appDir}${c.reset}`);
   console.log('');
   console.log(`  ${c.bold}Run commands${c.reset} ${c.dim}(meteor checkout binary):${c.reset}`);
   console.log(`    ${c.dim}${m} run${c.reset}`);
@@ -345,7 +346,12 @@ async function setupFromApp(appName, destDir, { isMonorepo = false, force = fals
   });
   log.success('Copy complete.');
 
-  const appPackageJsonPath = isMonorepo
+  const isPnpmWorkspace = fs.existsSync(path.join(destDir, 'pnpm-workspace.yaml'));
+  const hasNestedMeteorApp = fs.existsSync(path.join(destDir, 'app', '.meteor'));
+  const packageManager = isPnpmWorkspace ? 'pnpm' : 'npm';
+  const treatAsMonorepo = isMonorepo || isPnpmWorkspace || hasNestedMeteorApp;
+
+  const appPackageJsonPath = treatAsMonorepo
     ? path.join(destDir, 'app', 'package.json')
     : path.join(destDir, 'package.json');
 
@@ -354,7 +360,7 @@ async function setupFromApp(appName, destDir, { isMonorepo = false, force = fals
     log.detail(`env from test file: ${c.magenta}${Object.entries(envVars).map(([k, v]) => `${k}=${v}`).join(' ')}${c.reset}`);
   }
 
-  const meteorAppDir = isMonorepo ? path.join(destDir, 'app') : destDir;
+  const meteorAppDir = treatAsMonorepo ? path.join(destDir, 'app') : destDir;
   const execEnv = Object.keys(envVars).length > 0 ? { env: { ...process.env, ...envVars } } : {};
 
   log.step('Adding rspack package...');
@@ -365,9 +371,16 @@ async function setupFromApp(appName, destDir, { isMonorepo = false, force = fals
   });
 
   log.step('Linking local @meteorjs/rspack...');
-  await linkLocalRspack(meteorAppDir, { env: envVars });
+  await linkLocalRspack(meteorAppDir, { env: envVars, packageManager });
 
-  if (isMonorepo) {
+  if (packageManager === 'pnpm') {
+    log.step('Running pnpm install at workspace root...');
+    await execa('corepack', ['pnpm', 'install', '--frozen-lockfile=false'], {
+      cwd: destDir,
+      stdio: 'inherit',
+      ...execEnv,
+    });
+  } else if (treatAsMonorepo) {
     log.step('Running meteor npm install at root level...');
     await execa(METEOR_EXECUTABLE, ['npm', 'install'], { cwd: destDir, stdio: 'inherit', ...execEnv });
     log.step('Running meteor npm install at app level...');
