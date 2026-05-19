@@ -1,12 +1,16 @@
-import { Meteor } from 'meteor/meteor';
-import { createClientMessage } from '@e2e/domain';
+import { createClientMessage } from '@example/shared';
 
-export const packageTitle = 'Workspace Packages Loaded';
+export const packageTitle = 'Meteor + pnpm workspace';
 
 export const renderWorkspaceStatus = () => {
   return [
     '<h1>Welcome to Meteor!</h1>',
-    `<p>${packageTitle}</p>`,
-    `<p id="workspace-status">${createClientMessage('ui')}:client-tools:compiled</p>`,
+    `<h2>${packageTitle}</h2>`,
+    '<p>This Meteor app imports code from local pnpm workspace packages.</p>',
+    '<ul>',
+    `<li><code>@example/ui</code> rendered this content.</li>`,
+    `<li><code>@example/shared</code> says: ${createClientMessage('browser')}</li>`,
+    '<li id="workspace-status"><code>@example/ui</code>: client package compiled by Rspack</li>',
+    '</ul>',
   ].join('');
 };

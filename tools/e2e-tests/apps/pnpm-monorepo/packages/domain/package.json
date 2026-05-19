@@ -1,5 +1,5 @@
 {
-  "name": "@e2e/domain",
+  "name": "@example/shared",
   "version": "0.0.0",
   "private": true,
   "type": "module",

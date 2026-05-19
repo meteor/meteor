@@ -1,10 +1,10 @@
 import assert from 'assert';
-import { createClientMessage, createServerMessage } from '@e2e/domain';
+import { createClientMessage, createServerMessage } from '@example/shared';
 
 describe('pnpm-monorepo', function () {
   it('package.json has correct name', async function () {
     const { name } = await import('../package.json');
-    assert.strictEqual(name, 'pnpm-monorepo-app');
+    assert.strictEqual(name, 'meteor-pnpm-app');
   });
 
   it('loads compiled workspace packages', function () {

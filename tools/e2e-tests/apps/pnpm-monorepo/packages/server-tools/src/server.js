@@ -1,5 +1,5 @@
 const packageInfo = {
-  name: 'server-tools',
+  name: '@example/server',
   compiled: true,
 };
 

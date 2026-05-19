@@ -1,5 +1,5 @@
 {
-  "name": "@e2e/ui",
+  "name": "@example/ui",
   "version": "0.0.0",
   "private": true,
   "type": "module",

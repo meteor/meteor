@@ -1,8 +1,8 @@
 import { Meteor } from 'meteor/meteor';
-import { createServerMessage } from '@e2e/domain';
-import { describeServerPackage } from '@e2e/server-tools/server';
+import { createServerMessage } from '@example/shared';
+import { describeServerPackage } from '@example/server';
 
-console.log(createServerMessage('server package loaded'));
+console.log(createServerMessage('workspace package loaded on the server'));
 console.log(describeServerPackage());
 
 Meteor.startup(() => {

@@ -24,16 +24,18 @@ describe('Pnpm Monorepo App Bundling /', () => {
     configFile: 'rspack.config.cjs',
     customAssertions: {
       afterRun: async ({ result }) => {
-        await waitForMeteorOutput(result.outputLines, /domain:server:server package loaded/);
-        await waitForMeteorOutput(result.outputLines, /server-tools:compiled/);
+        await waitForMeteorOutput(result.outputLines, /domain:server:workspace package loaded on the server/);
+        await waitForMeteorOutput(result.outputLines, /@example\/server:compiled/);
         const statusText = await page.$eval('#workspace-status', el => el.textContent);
-        expect(statusText).toContain('client-tools:compiled');
+        expect(statusText).toContain('@example/ui');
+        expect(statusText).toContain('client package compiled by Rspack');
       },
       afterRunProduction: async ({ result }) => {
-        await waitForMeteorOutput(result.outputLines, /domain:server:server package loaded/);
-        await waitForMeteorOutput(result.outputLines, /server-tools:compiled/);
+        await waitForMeteorOutput(result.outputLines, /domain:server:workspace package loaded on the server/);
+        await waitForMeteorOutput(result.outputLines, /@example\/server:compiled/);
         const statusText = await page.$eval('#workspace-status', el => el.textContent);
-        expect(statusText).toContain('client-tools:compiled');
+        expect(statusText).toContain('@example/ui');
+        expect(statusText).toContain('client package compiled by Rspack');
       },
       afterTest: async ({ result }) => {
         await waitForMeteorOutput(result.outputLines, /pnpm workspace packages compiled/);

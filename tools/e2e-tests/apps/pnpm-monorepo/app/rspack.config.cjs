@@ -2,9 +2,9 @@ const path = require('path');
 const { defineConfig } = require('@meteorjs/rspack');
 
 const workspacePackageDirs = [
-  '@e2e/domain',
-  '@e2e/server-tools',
-  '@e2e/ui',
+  '@example/shared',
+  '@example/server',
+  '@example/ui',
 ].map(packageName => path.join(__dirname, 'node_modules', packageName));
 
 module.exports = defineConfig(Meteor => ({

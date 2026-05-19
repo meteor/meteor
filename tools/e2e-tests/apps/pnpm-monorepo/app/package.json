@@ -1,5 +1,5 @@
 {
-  "name": "pnpm-monorepo-app",
+  "name": "meteor-pnpm-app",
   "private": true,
   "scripts": {
     "start": "meteor run",
@@ -7,9 +7,9 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",
-    "@e2e/domain": "workspace:*",
-    "@e2e/server-tools": "workspace:*",
-    "@e2e/ui": "workspace:*",
+    "@example/shared": "workspace:*",
+    "@example/server": "workspace:*",
+    "@example/ui": "workspace:*",
     "@swc/helpers": "^0.5.17",
     "meteor-node-stubs": "^1.2.12"
   },
