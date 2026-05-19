@@ -22,8 +22,76 @@ const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
 const RSPACK_PACKAGE_DIR = path.join(REPO_ROOT, 'npm-packages', 'meteor-rspack');
 const CONSTANTS_PATH = path.join(REPO_ROOT, 'packages', 'rspack', 'lib', 'constants.js');
 
-async function linkLocalRspack(appDir, { env } = {}) {
+function findUp(startDir, fileName) {
+  let currentDir = startDir;
+  while (currentDir !== path.dirname(currentDir)) {
+    const candidate = path.join(currentDir, fileName);
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+    currentDir = path.dirname(currentDir);
+  }
+  return null;
+}
+
+function isPnpmProject(appDir, packageManager) {
+  if (packageManager === 'pnpm') {
+    return true;
+  }
+
+  if (findUp(appDir, 'pnpm-workspace.yaml')) {
+    return true;
+  }
+
+  try {
+    const packageJsonPath = path.join(appDir, 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+    return packageJson.packageManager?.includes('pnpm') === true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function readRspackVersions() {
+  const constantsContent = fs.readFileSync(CONSTANTS_PATH, 'utf8');
+  const readVersion = (name) => {
+    const match = constantsContent.match(new RegExp(`${name}\\s*=\\s*['"]([^'"]+)['"]`));
+    return match?.[1];
+  };
+
+  return {
+    rspackVersion: readVersion('DEFAULT_RSPACK_VERSION'),
+    rsdoctorRspackPluginVersion: readVersion('DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION'),
+  };
+}
+
+async function linkLocalRspack(appDir, { env, packageManager } = {}) {
   const execOpts = env ? { env: { ...process.env, ...env } } : {};
+  const pnpmProject = isPnpmProject(appDir, packageManager);
+  const {
+    rspackVersion,
+    rsdoctorRspackPluginVersion,
+  } = readRspackVersions();
+
+  if (pnpmProject) {
+    const deps = [
+      'ignore-loader',
+      RSPACK_PACKAGE_DIR,
+      rspackVersion && `@rspack/core@${rspackVersion}`,
+      rspackVersion && `@rspack/cli@${rspackVersion}`,
+      rsdoctorRspackPluginVersion && `@rsdoctor/rspack-plugin@${rsdoctorRspackPluginVersion}`,
+    ].filter(Boolean);
+
+    console.log(`Installing/linking local meteor-rspack with pnpm in ${appDir}...`);
+    await execa('corepack', ['pnpm', 'add', '-D', ...deps], {
+      cwd: appDir,
+      stdio: 'inherit',
+      ...execOpts,
+    });
+
+    console.log('Local meteor-rspack linked successfully.');
+    return;
+  }
 
   console.log(`Running meteor update --npm in ${appDir}...`);
   await execa(METEOR_EXECUTABLE, ['update', '--npm'], {
@@ -32,11 +100,6 @@ async function linkLocalRspack(appDir, { env } = {}) {
     ...execOpts,
   });
 
-  const constantsContent = fs.readFileSync(CONSTANTS_PATH, 'utf8');
-  const rspackVersionMatch = constantsContent.match(
-    /DEFAULT_RSPACK_VERSION\s*=\s*['"]([^'"]+)['"]/
-  );
-  const rspackVersion = rspackVersionMatch?.[1];
   if (rspackVersion) {
     console.log(`Installing @rspack/core@${rspackVersion} and @rspack/cli@${rspackVersion}...`);
     await execa(

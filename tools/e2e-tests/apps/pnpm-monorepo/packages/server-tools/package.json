@@ -1,0 +1,9 @@
+{
+  "name": "@e2e/server-tools",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./server": "./src/server.js"
+  }
+}

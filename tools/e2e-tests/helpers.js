@@ -82,10 +82,11 @@ export async function clearBuildArtifacts(appDir) {
  * @param {string} appName - Name of the app in the apps directory
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
+ * @param {string} options.packageManager - Package manager to use for setup ("npm" or "pnpm")
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
-  const { isMonorepo = false } = options;
+  const { isMonorepo = false, packageManager = 'npm' } = options;
 
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -113,7 +114,13 @@ export async function setupMeteorApp(appName, options = {}) {
     console.error('Error during copy:', err);
   }
 
-  if (isMonorepo) {
+  if (packageManager === 'pnpm') {
+    console.log('Running pnpm install at workspace root...');
+    await execa('corepack', ['pnpm', 'install', '--frozen-lockfile=false'], {
+      cwd: tempDir,
+      stdio: 'inherit',
+    });
+  } else if (isMonorepo) {
     // For monorepo, install dependencies at both root and app level
     console.log('Running npm install at root level...');
     await execa.command('npm install', {

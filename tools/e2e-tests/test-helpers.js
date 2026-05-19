@@ -50,9 +50,9 @@ const WAIT_ON = isCI ? 2000 : 500;
 
 const { linkLocalRspack: _linkLocalRspack } = require('./scripts/link-rspack');
 
-async function linkLocalRspack(appDir) {
+async function linkLocalRspack(appDir, options = {}) {
   if (!npmLinkLocalRspack) return;
-  await _linkLocalRspack(appDir);
+  await _linkLocalRspack(appDir, options);
 }
 
 /**
@@ -155,6 +155,7 @@ export function testMeteorBundler(options) {
  * @param {Object} options - Options for the test
  * @param {string} options.appName - Name of the app ('react', 'typescript', etc)
  * @param {number} options.port - Port to run the app on
+ * @param {string} options.packageManager - Package manager used while setting up the fixture ("npm" or "pnpm")
  * @param {Object} options.filePaths - File paths for the app
  * @param {string} options.filePaths.client - Client file path (e.g., 'client/main.jsx')
  * @param {string} options.filePaths.server - Server file path (e.g., 'server/main.js')
@@ -180,6 +181,7 @@ export function testMeteorRspackBundler(options) {
   const {
     appName,
     port,
+    packageManager = 'npm',
     // Rspack dev server port. Defaults to 18080 to avoid colliding with dev servers
     // that some skeletons bundle on :8080 (e.g. Angular CLI's webpack-dev-server).
     devServerPort = 18080,
@@ -271,7 +273,7 @@ export function testMeteorRspackBundler(options) {
       await killProcessByPort([port, devServerPortStr]);
 
       // Setup the Meteor app
-      tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+      tempDir = (await setupMeteorApp(appName, { isMonorepo, packageManager }))?.tempDir;
 
       // Wait for a margin
       await wait(WAIT_ON);
@@ -289,7 +291,7 @@ export function testMeteorRspackBundler(options) {
       });
 
       // Link local meteor-rspack so the app picks up the latest dev version
-      await linkLocalRspack(appDir);
+      await linkLocalRspack(appDir, { packageManager });
 
       // Set meteor.modern.verbose to true
       if (verbose) {
