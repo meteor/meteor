@@ -1,0 +1,6 @@
+appId: com.meteor.smoke
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Meteor ready"
+- assertVisible: "DDP connected"
