@@ -13,11 +13,13 @@ import {
   killMeteorProcess,
   killProcessByPort,
   restoreFiles,
+  runBuiltApp,
   runMeteorApp,
   runMeteorCommand,
   runMeteorTests,
   setupMeteorApp,
   snapshotFiles,
+  startMongo,
   wait,
   waitForMeteorOutput,
   waitForPlaywrightConsole
@@ -219,6 +221,9 @@ export function testMeteorRspackBundler(options) {
     testBundleVisualizer = false,
     // Array of file paths to check for existence in the bundle
     checkBundleFilePaths = [],
+    // Whether to boot the built bundle (node main.js) and verify it serves HTTP.
+    // Requires MongoDB; uses the dev bundle's mongod, falling back to MONGO_URL.
+    testBuiltApp = true,
     // Additional behavior for beforeAll and afterAll
     beforeAllBehavior,
     afterAllBehavior,
@@ -850,6 +855,48 @@ export function testMeteorRspackBundler(options) {
         if (customAssertions && customAssertions.afterBuild) {
           await customAssertions.afterBuild({ tempDir, buildOutputDir, result, fileCheckResults });
         }
+
+        // Boot the built bundle to verify it actually runs, not just that the
+        // expected files exist. Needs a MongoDB; startMongo reuses the dev
+        // bundle's mongod and skips gracefully when neither it nor MONGO_URL
+        // is available.
+        if (testBuiltApp) {
+          const mongo = await startMongo();
+          if (!mongo) {
+            console.warn('Skipping built-app boot check: no bundled mongod and no MONGO_URL set.');
+          } else {
+            let builtApp;
+            try {
+              builtApp = await runBuiltApp(buildOutputDir, {
+                port,
+                mongoUrl: mongo.mongoUrl,
+                skipNpmInstall: true, // npm install already ran above
+                env: env.builtApp,
+              });
+              console.log('Built app booted and is serving HTTP.');
+
+              // Minimal common check: the built bundle renders the app in a
+              // real browser (production assets load, app mounts, CSS applies).
+              if (!skipClient) {
+                await assertMeteorApp(port, { title: appName });
+                await assertBodyStyles({
+                  'padding': '10px',
+                  'font-family': 'sans-serif',
+                });
+              }
+
+              if (customAssertions && customAssertions.afterRunBuiltApp) {
+                await customAssertions.afterRunBuiltApp({
+                  tempDir, buildOutputDir, port, mongoUrl: mongo.mongoUrl,
+                });
+              }
+            } finally {
+              if (builtApp) await builtApp.stop();
+              await mongo.stop();
+              await killProcessByPort(port);
+            }
+          }
+        }
       } finally {
         // Clean up the build output directory
         await cleanupTempDir(buildOutputDir);
@@ -989,6 +1036,9 @@ export function testMeteorSkeleton(options) {
     assetsContext = 'build-assets',
     // Chunks context directory (default: 'build-chunks')
     chunksContext = 'build-chunks',
+    // Whether to boot the built bundle (node main.js) and verify it serves HTTP.
+    // Requires MongoDB; uses the dev bundle's mongod, falling back to MONGO_URL.
+    testBuiltApp = true,
   } = options;
   const devServerPortStr = String(devServerPort);
 
@@ -1236,6 +1286,49 @@ export function testMeteorSkeleton(options) {
         // Run custom assertions if provided
         if (customAssertions.afterBuild) {
           await customAssertions.afterBuild({ tempDir, buildOutputDir, result, fileCheckResults });
+        }
+
+        // Boot the built bundle to verify it actually runs, not just that the
+        // expected files exist. Needs a MongoDB; startMongo reuses the dev
+        // bundle's mongod and skips gracefully when neither it nor MONGO_URL
+        // is available.
+        if (testBuiltApp) {
+          const mongo = await startMongo();
+          if (!mongo) {
+            console.warn('Skipping built-app boot check: no bundled mongod and no MONGO_URL set.');
+          } else {
+            let builtApp;
+            try {
+              builtApp = await runBuiltApp(buildOutputDir, {
+                port,
+                mongoUrl: mongo.mongoUrl,
+                env: env.builtApp,
+              });
+              console.log('Built app booted and is serving HTTP.');
+
+              // Minimal common check: the built bundle renders the app in a
+              // real browser (production assets load, app mounts, CSS applies).
+              if (checkAppTitle) {
+                await assertMeteorApp(port, { title });
+              }
+              if (checkBodyStyles) {
+                await assertBodyStyles(bodyStyles || {
+                  'padding': '10px',
+                  'font-family': 'sans-serif',
+                });
+              }
+
+              if (customAssertions.afterRunBuiltApp) {
+                await customAssertions.afterRunBuiltApp({
+                  tempDir, buildOutputDir, port, mongoUrl: mongo.mongoUrl,
+                });
+              }
+            } finally {
+              if (builtApp) await builtApp.stop();
+              await mongo.stop();
+              await killProcessByPort(port);
+            }
+          }
         }
       } finally {
         // Clean up the build output directory
