@@ -11,12 +11,14 @@ module.exports = {
   testPathIgnorePatterns: [
     "/node_modules/",
     "<rootDir>/tools/e2e-tests/",
+    "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
     "<rootDir>/packages/",
     "<rootDir>/.github/",
   ],
   modulePathIgnorePatterns: [
     "<rootDir>/tools/e2e-tests/",
+    "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
     "<rootDir>/tools/static-assets/",
     "<rootDir>/npm-packages/",
