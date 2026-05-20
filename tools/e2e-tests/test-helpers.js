@@ -775,7 +775,7 @@ export function testMeteorRspackBundler(options) {
       await killProcessByPort(port);
     });
 
-    test(`"meteor build" / should build the app with Rspack`, async () => {
+    test(`"meteor build" / should build and run the app with Rspack`, async () => {
       // Build the app with Rspack
       const { buildOutputDir, processResult: result } = await buildMeteorApp(tempDir, {
         commandOptions: ['--directory'],
@@ -1235,7 +1235,7 @@ export function testMeteorSkeleton(options) {
       await killProcessByPort(port);
     });
 
-    test(`"meteor build" / should build the ${skeletonName} app`, async () => {
+    test(`"meteor build" / should build and run the ${skeletonName} app`, async () => {
       // Build the app
       const { buildOutputDir, processResult: result } = await buildMeteorApp(tempDir, {
         commandOptions: ["--directory"],
