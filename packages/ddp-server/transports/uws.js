@@ -2,41 +2,8 @@ import { EventEmitter } from 'events';
 import net from 'node:net';
 
 /**
- * uWebSockets.js transport — high-performance WebSocket via uWebSockets.js.
- *
- * Unlike other transports, uWebSockets.js runs its own internal server on a
- * separate port. HTTP upgrade requests on /websocket are proxied from the
- * main Meteor HTTP server to the uWS server via a raw TCP connection.
- *
- * Configuration via Meteor.settings (read on the server from
- * `Meteor.settings.packages["ddp-server"].uws`):
- *
- *   {
- *     "packages": {
- *       "ddp-server": {
- *         "transport": "uws",
- *         "uws": {
- *           "port": 5001,            // internal listen port
- *           "host": "127.0.0.1",      // internal listen address
- *           "payloadLength": 48,     // max WS payload, in KiB
- *           "timeout": 45            // idle timeout in seconds
- *         }
- *       }
- *     }
- *   }
- *
- * Per-process configuration is required when running multiple Meteor
- * instances on a single host that share a Linux network namespace —
- * multi-tenant containers under `network_mode: "host"`, multi-process
- * scaling on one VM, Galaxy multi-pod nodes, or simply two local
- * Meteor projects running with `DDP_TRANSPORT=uws` at the same time.
- * Each process must declare a distinct `uws.port` (or `uws.host`):
- * the listen socket is now bound with `LIBUS_LISTEN_EXCLUSIVE_PORT`,
- * so a second instance trying to bind the default `127.0.0.1:5001`
- * throws EADDRINUSE at startup instead of silently SO_REUSEPORT-sharing
- * the port and load-balancing inbound WebSocket traffic across
- * unrelated app processes. See packages/ddp-server/MULTITENANCY-BUG.md
- * for the full bug history.
+ * Configuration via Meteor.settings:
+ *   { "packages": { "ddp-server": { "transport": "uws", "uws": { "port": 5001, "host": "127.0.0.1", "payloadLength": 48, "timeout": 45 } } } }
  */
 export function createUwsTransport() {
   return {

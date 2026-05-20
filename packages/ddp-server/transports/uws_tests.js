@@ -1,22 +1,3 @@
-// Regression tests for the multitenancy cross-routing bug fixed in
-// commit ae176b9bbb (see packages/ddp-server/MULTITENANCY-BUG.md).
-//
-// Two angles are covered here:
-//
-//   1. LIBUS_LISTEN_EXCLUSIVE_PORT really disables SO_REUSEPORT on the
-//      uWebSockets.js listen socket. Pre-fix, two Meteor instances in
-//      the same kernel netns would silently share the uws internal
-//      port (default 127.0.0.1:5001) and have inbound WS upgrade
-//      traffic load-balanced between them by the kernel. With the
-//      EXCLUSIVE flag, the second listen call returns a falsy token
-//      so the transport's existing throw fires loudly instead.
-//
-//   2. The uws transport reads its configuration from `Meteor.settings`
-//      (server-side global), not from `__meteor_runtime_config__.meteorSettings`
-//      (a client-side-only object). Pre-fix, settings users put in
-//      `Meteor.settings.packages["ddp-server"].uws` were silently
-//      ignored and the hard-coded defaults always won.
-
 const uws = Npm.require('uWebSockets.js');
 
 // Pick a random high port to avoid clashing with anything else on the
@@ -82,10 +63,7 @@ Tinytest.addAsync(
 Tinytest.addAsync(
   'ddp-server/uws - LIBUS_LISTEN_EXCLUSIVE_PORT enum exists and equals 1',
   function (test, onComplete) {
-    // Sanity check on the uws binding contract this fix depends on.
-    // If uws ever renamed or removed this constant we'd want the
-    // test suite to flag the breakage explicitly instead of the fix
-    // silently degrading back to SO_REUSEPORT semantics.
+
     test.equal(
       uws.LIBUS_LISTEN_EXCLUSIVE_PORT,
       1,
@@ -99,20 +77,6 @@ Tinytest.addAsync(
 Tinytest.add(
   'ddp-server/uws - settings read path goes through Meteor.settings',
   function (test) {
-    // We can't trivially exercise createUwsTransport() inside a test
-    // (it has side effects on the global httpServer and WebApp
-    // routes), so instead this test asserts the *structural*
-    // invariant the fix relies on: an object placed at
-    // `Meteor.settings.packages["ddp-server"].uws` is visible via
-    // the same optional-chain expression the transport now uses.
-    //
-    // Pre-fix the transport used `__meteor_runtime_config__.meteorSettings.*`,
-    // which the server boot script never populates — so even when
-    // operators set METEOR_SETTINGS correctly the transport saw
-    // `undefined` and silently fell back to its defaults. The
-    // regression we want to catch is the read path drifting back to
-    // the dead-code object.
-
     const savedSettings = Meteor.settings;
     try {
       Meteor.settings = {
@@ -165,15 +129,6 @@ Tinytest.add(
 Tinytest.add(
   'ddp-server/transport-selection - transport setting honoured via Meteor.settings',
   function (test) {
-    // Same invariant as above, applied to transports/index.js
-    // `resolveTransportName()`. The function picks the transport
-    // name by reading Meteor.settings.packages["ddp-server"].transport
-    // (priority 1), then DDP_TRANSPORT env var (priority 2). Pre-fix
-    // it read from __meteor_runtime_config__.meteorSettings.packages
-    // ["ddp-server"], which is never populated server-side, so the
-    // env-var fallback was the only path that worked in practice and
-    // the documented Meteor.settings configuration was dead.
-
     const savedSettings = Meteor.settings;
     try {
       Meteor.settings = {
