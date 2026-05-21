@@ -1,7 +1,7 @@
 import {
   runMeteorCommand,
   waitForMeteorOutput,
-} from './helpers';
+} from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
 import { assertBodyStyles, assertFileExist } from "./assertions";
 import path from "path";
