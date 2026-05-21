@@ -629,6 +629,10 @@ export default defineConfig({
             link: "/performance/change-streams-observer-driver",
           },
           {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
+          },
+          {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",
           },
