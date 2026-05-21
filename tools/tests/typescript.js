@@ -1,4 +1,4 @@
-var selftest = require('../tool-testing/selftest.js');
+var selftest = require("../tool-testing/selftest.js");
 var Sandbox = selftest.Sandbox;
 
 selftest.define("typescript template works", async function () {
@@ -16,12 +16,12 @@ selftest.define("typescript template works", async function () {
   run = s.run("npm", "install");
   await run.expectExit(0);
 
-  run = s.run("lint");
+  run = s.run("types");
   run.waitSecs(60);
-  await run.match('[zodern:types] Exiting "meteor lint" early');
+  await run.match("Generated package type declarations.");
   await run.expectExit(0);
 
-  run = s.run("npx", "tsc");
+  run = s.run("npm", "exec", "--", "tsc");
   run.waitSecs(60);
   await run.expectEnd();
   await run.expectExit(0);

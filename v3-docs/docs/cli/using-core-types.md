@@ -88,9 +88,9 @@ no longer required because the native type generator writes real files rather
 than symlinks.
 :::
 
-After the first `meteor run`, TypeScript will resolve `meteor/random`,
-`meteor/accounts-base`, and all other typed packages from the auto-generated
-declarations.
+After running `meteor types` once, or starting the app with `meteor run`,
+TypeScript will resolve `meteor/random`, `meteor/accounts-base`, and all other
+typed packages from the auto-generated declarations.
 
 ## JavaScript Apps
 
@@ -122,8 +122,9 @@ For existing JavaScript apps, add a `jsconfig.json`:
 }
 ```
 
-After the first `meteor run`, VS Code will resolve `meteor/random`,
-`meteor/accounts-base`, etc. with full IntelliSense even in `.js` files.
+After running `meteor types` once, or starting the app with `meteor run`,
+VS Code will resolve `meteor/random`, `meteor/accounts-base`, etc. with full
+IntelliSense even in `.js` files.
 
 ::: tip Apps without either file
 If a project has no `tsconfig.json` and no `jsconfig.json`, the type generator
@@ -181,6 +182,7 @@ meteor remove zodern:types
 ```
 
 Then update the `paths` entry as described in [Setup](#setup) above and run
-`meteor run` once to regenerate the types. The output format is compatible:
-Meteor's native generator produces the same `declare module 'meteor/…'` structure
-that `zodern:types` produced.
+`meteor types` once to regenerate the types. `meteor run`, `meteor build`, and
+`meteor lint` also regenerate them as part of their existing build pipeline.
+The output format is compatible: Meteor's native generator produces the same
+`declare module 'meteor/…'` structure that `zodern:types` produced.
