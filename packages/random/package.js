@@ -1,19 +1,19 @@
 Package.describe({
-  summary: "Random number generator and utilities",
-  version: "1.2.2",
+  summary: 'Random number generator and utilities',
+  version: '1.2.2',
 });
 
 Package.onUse(function (api) {
-  api.use("ecmascript");
-  api.export("Random");
-  api.mainModule("main_client.js", "client");
-  api.mainModule("main_server.js", "server");
-  api.types("random.d.ts");
+  api.use('ecmascript');
+  api.export('Random');
+  api.mainModule('main_client.js', 'client');
+  api.mainModule('main_server.js', 'server');
+  api.types('random.d.ts');
 });
 
 Package.onTest(function (api) {
-  api.use("random");
-  api.use("ecmascript");
-  api.use("tinytest");
-  api.mainModule("random_tests.js");
+  api.use('random');
+  api.use('ecmascript');
+  api.use('tinytest');
+  api.mainModule('random_tests.js');
 });

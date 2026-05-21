@@ -1,4 +1,4 @@
-var selftest = require("../tool-testing/selftest.js");
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 
 selftest.define("typescript template works", async function () {
