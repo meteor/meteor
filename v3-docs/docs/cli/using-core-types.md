@@ -9,7 +9,7 @@ manual steps are required.
 During every build, Meteor scans the compiled packages in your project and
 writes type declaration files to `.meteor/local/types/`:
 
-```
+```text
 .meteor/local/types/
 ├── packages.d.ts              ← barrel file with /// <reference> directives
 └── packages/
@@ -134,10 +134,13 @@ is skipped entirely — zero overhead.
 ## Sub-Path Imports
 
 Some packages expose multiple entry points. For example,
-`react-meteor-data` exposes a `suspense` sub-path:
+`react-meteor-data` exposes a `suspense` sub-path with alternative imports:
 
 ```ts
+// Main module:
 import { useTracker } from "meteor/react-meteor-data";
+
+// Or suspense sub-path:
 import { useTracker } from "meteor/react-meteor-data/suspense";
 ```
 

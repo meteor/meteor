@@ -105,6 +105,8 @@ export class PackageAPI {
 
     this.releaseRecords = [];
     this.pendingPromises = [];
+    this._typesEntry = null;
+    this._typesModules = null;
   }
 
   // Called when this package wants to make another package be
@@ -426,22 +428,45 @@ export class PackageAPI {
   }
 
   /**
-   * Declare the TypeScript type declaration entry point for this package.
-   *
-   * @param {String} typesEntry  Path to the main .d.ts file (relative to the
+   * `@memberOf` PackageAPI
+   * `@instance`
+   * `@summary` Declare the TypeScript type declaration entry point for this
+   * package.
+   * `@locus` package.js
+   * @param {String} typesEntry Path to the main .d.ts file (relative to the
    *   package directory), e.g. `'my-package.d.ts'`.
    * @param {Object} [options]
-   * @param {Object} [options.modules]  A mapping of sub-path names to .d.ts
+   * @param {Object} [options.modules] A mapping of sub-path names to .d.ts
    *   file paths, enabling sub-path imports such as
    *   `import { X } from 'meteor/pkg/sub-path'`.
    *   Example: `{ suspense: 'suspense.d.ts' }`.
    */
   types(typesEntry, options = {}) {
-    if (this._typesEntry) {
+    if (this._typesEntry !== null) {
       buildmessage.error('api.types() may only be called once per package.',
         { useMyCaller: true });
       return;
     }
+
+    if (typeof typesEntry !== 'string' || !typesEntry.trim()) {
+      buildmessage.error(
+        'api.types() requires a non-empty path to a .d.ts file as its first argument.',
+        { useMyCaller: true }
+      );
+      return;
+    }
+
+    if (options.modules !== undefined && (
+      typeof options.modules !== 'object' || options.modules === null ||
+      Array.isArray(options.modules)
+    )) {
+      buildmessage.error(
+        'api.types(): options.modules must be an object mapping sub-path names to .d.ts file paths.',
+        { useMyCaller: true }
+      );
+      return;
+    }
+
     this._typesEntry = typesEntry;
     this._typesModules = (options && options.modules) || null;
 
@@ -452,7 +477,16 @@ export class PackageAPI {
     // arches is harmless.
     const filesToAdd = [typesEntry];
     if (this._typesModules) {
-      filesToAdd.push(...Object.values(this._typesModules));
+      for (const [name, modulePath] of Object.entries(this._typesModules)) {
+        if (typeof modulePath !== 'string' || !modulePath.trim()) {
+          buildmessage.error(
+            `api.types(): options.modules.${name} must be a non-empty .d.ts path.`,
+            { useMyCaller: true }
+          );
+          return;
+        }
+        filesToAdd.push(modulePath);
+      }
     }
     this._addFiles('assets', filesToAdd, ['server', 'client']);
   }

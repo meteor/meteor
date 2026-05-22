@@ -1256,6 +1256,8 @@ Object.assign(Isopack.prototype, {
       var mainLegacyJson = null;
       if (writeLegacyBuilds) {
         mainLegacyJson = _.clone(mainJson);
+        delete mainLegacyJson.typesEntry;
+        delete mainLegacyJson.typesModules;
         mainLegacyJson.builds = [];
 
         for (const unibuildInfo of unibuildInfos) {
