@@ -105,6 +105,21 @@ jobs:
         timeout-minutes: 15
         run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
 
+      - name: Clean up before retry
+        if: steps.test-run.outcome == 'failure'
+        run: |
+          # First attempt and retry share this container; a hard timeout can
+          # orphan processes (EADDRINUSE) and temp dirs. The retry recreates
+          # each app fresh, so only container leftovers need clearing.
+          echo "Cleaning up after the failed attempt..."
+          pkill -9 -f 'meteortest-' || true
+          # Detached bundler/db children may not carry the temp path in argv.
+          pkill -9 -f mongod || true
+          pkill -9 -f rspack || true
+          rm -rf /tmp/meteortest-* /tmp/meteor-build-* || true
+          sleep 3
+          echo "Cleanup done."
+
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
         timeout-minutes: 20
