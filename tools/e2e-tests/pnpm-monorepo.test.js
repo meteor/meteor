@@ -46,6 +46,16 @@ describe('Pnpm Monorepo App Bundling /', () => {
         const accentText = await page.$eval('#accent-color', el => el.textContent);
         expect(accentText).toContain('#40E0D0');
       },
+      afterRunBuiltApp: async () => {
+        // Boot the `meteor build` output and verify the production bundle
+        // actually imported the workspace packages and the `color` transitive
+        // dependency tree, not just that the dev/prod-run servers did.
+        const statusText = await page.$eval('#workspace-status', el => el.textContent);
+        expect(statusText).toContain('@example/ui');
+        expect(statusText).toContain('client package compiled by Rspack');
+        const accentText = await page.$eval('#accent-color', el => el.textContent);
+        expect(accentText).toContain('#40E0D0');
+      },
       afterTest: async ({ result }) => {
         await waitForMeteorOutput(result.outputLines, /pnpm workspace packages compiled/);
         await waitForMeteorOutput(result.outputLines, /pnpm transitive dependencies resolved/);

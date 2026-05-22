@@ -203,6 +203,7 @@ Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` p
 | Transitive npm dependency resolution through pnpm store (`color` tree) — client | Run, Prod |
 | Transitive npm dependency resolution through pnpm store (`color` tree) — server | Run, Prod |
 | Transitive npm dependency resolution through pnpm store (`color` tree) — tests | Test |
+| Built app boots; workspace packages + `color` tree imported in production bundle | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### server-only
