@@ -31,6 +31,17 @@ function waitForProcessExit(proc) {
   );
 }
 
+async function waitForPortState(predicate, { timeout = 5000, interval = 100 } = {}) {
+  const deadline = Date.now() + timeout;
+  for (;;) {
+    if (await predicate()) return;
+    if (Date.now() >= deadline) {
+      throw new Error(`Timed out after ${timeout}ms waiting for port state`);
+    }
+    await wait(interval);
+  }
+}
+
 describe("Regressions / PortCleanup /", () => {
   const port = 3146;
   const rspackPort = 18146;
@@ -68,14 +79,18 @@ describe("Regressions / PortCleanup /", () => {
     meteorProcess = result.meteorProcess;
     const exitPromise = waitForProcessExit(meteorProcess);
 
-    expect(await isPortAvailable(rspackPort)).toBe(false);
+    await waitForPortState(async () => (await isPortAvailable(rspackPort)) === false, {
+      timeout: 5000,
+      interval: 100,
+    });
 
     meteorProcess.kill("SIGTERM");
     await exitPromise;
     meteorProcess = null;
 
-    await wait(1000);
-
-    expect(await isPortAvailable(rspackPort)).toBe(true);
+    await waitForPortState(async () => (await isPortAvailable(rspackPort)) === true, {
+      timeout: 5000,
+      interval: 100,
+    });
   });
 });
