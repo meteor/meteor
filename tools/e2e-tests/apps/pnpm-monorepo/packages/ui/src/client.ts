@@ -1,4 +1,4 @@
-import { createClientMessage } from '@example/shared';
+import { accentColor, createClientMessage } from '@example/shared';
 
 export const packageTitle = 'Meteor + pnpm workspace';
 
@@ -11,6 +11,7 @@ export const renderWorkspaceStatus = () => {
     `<li><code>@example/ui</code> rendered this content.</li>`,
     `<li><code>@example/shared</code> says: ${createClientMessage('browser')}</li>`,
     '<li id="workspace-status"><code>@example/ui</code>: client package compiled by Rspack</li>',
+    `<li id="accent-color" style="color: ${accentColor}">accent color resolved through the npm transitive dependency tree: ${accentColor}</li>`,
     '</ul>',
   ].join('');
 };

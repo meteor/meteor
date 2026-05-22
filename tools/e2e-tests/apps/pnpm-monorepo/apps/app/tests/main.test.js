@@ -1,5 +1,5 @@
 import assert from 'assert';
-import { createClientMessage, createServerMessage } from '@example/shared';
+import { accentColor, createClientMessage, createServerMessage } from '@example/shared';
 
 describe('pnpm-monorepo', function () {
   it('package.json has correct name', async function () {
@@ -11,6 +11,14 @@ describe('pnpm-monorepo', function () {
     assert.strictEqual(createClientMessage('test'), 'domain:client:test');
     assert.strictEqual(createServerMessage('test'), 'domain:server:test');
     console.log('pnpm workspace packages compiled');
+  });
+
+  it('resolves transitive npm dependencies through the pnpm store', function () {
+    // `accentColor` is computed by the `color` npm dependency of @example/shared,
+    // which pnpm resolves via color-convert/color-name and
+    // color-string/simple-swizzle/is-arrayish, none hoisted to the app.
+    assert.strictEqual(accentColor, '#40E0D0');
+    console.log('pnpm transitive dependencies resolved');
   });
 
   if (Meteor.isClient) {

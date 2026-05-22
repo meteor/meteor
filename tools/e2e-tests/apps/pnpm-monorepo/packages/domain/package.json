@@ -5,5 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.js"
+  },
+  "dependencies": {
+    "color": "^4.2.3"
   }
 }

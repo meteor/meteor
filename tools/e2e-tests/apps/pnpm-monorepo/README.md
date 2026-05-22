@@ -34,6 +34,11 @@ Open http://localhost:3000.
 - `apps/app/rspack.config.cjs` compiles workspace package sources through Rspack.
 - The browser renders content imported from `@example/ui` and `@example/shared`.
 - The server imports `@example/shared` and `@example/server`.
+- `@example/shared` depends on the `color` npm package, which pulls a
+  multi-level transitive tree (`color-convert`, `color-name`, `color-string`,
+  `simple-swizzle`, `is-arrayish`). pnpm does not hoist these to the app's
+  `node_modules`, so this exercises transitive resolution through the pnpm
+  store on the client, server, and during tests.
 
 The Meteor app sets `meteor.autoInstallDeps` to `false` because pnpm owns npm
 dependency installation for this workspace.
