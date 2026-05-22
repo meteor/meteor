@@ -186,6 +186,25 @@ Monorepo structure with app in subdirectory, service worker, and PWA manifest.
 | Meta tags (`theme-color`) | Run |
 | HMR works in dev, disabled in prod | Run, Prod |
 
+### pnpm-monorepo
+
+Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` packages compiled through Rspack. Meteor app lives at `apps/app/`.
+
+| What is covered | Phase |
+|----------------|-------|
+| pnpm workspace layout (`apps/` + `packages/`, Meteor app at `apps/app`) | All |
+| `corepack pnpm install` at workspace root | Init |
+| `workspace:*` dependency linking between local packages | All |
+| `meteor.autoInstallDeps: false` (pnpm owns npm install) | All |
+| Workspace package sources compiled by Rspack (`compileWithRspack`, `resolve.symlinks: false`) | All |
+| Workspace packages render on client (`@example/ui`, `@example/shared`) | Run, Prod |
+| Workspace packages load on server (`@example/shared`, `@example/server`) | Run, Prod |
+| Compiled workspace packages available in tests | Test |
+| Transitive npm dependency resolution through pnpm store (`color` tree) — client | Run, Prod |
+| Transitive npm dependency resolution through pnpm store (`color` tree) — server | Run, Prod |
+| Transitive npm dependency resolution through pnpm store (`color` tree) — tests | Test |
+| HMR works in dev, disabled in prod | Run, Prod |
+
 ### server-only
 
 Server-only app (no client entry point).
@@ -243,6 +262,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `node:buffer` | `imports/api/links.js` | Node.js built-in via `node:` protocol in shared client/server code — must be ignored on client without errors |
 | `@react-email/components` | `imports/emails/TestEmail.jsx` | JSX-heavy ESM package with many subpath exports |
 
+### pnpm-monorepo (`apps/pnpm-monorepo/packages/domain/`)
+
+| Package | File | Reason |
+|---------|------|--------|
+| `color` | `packages/domain/src/index.js` | npm dependency of a `workspace:*` package, pulling a multi-level transitive tree (`color-convert`, `color-name`, `color-string`, `simple-swizzle`, `is-arrayish`) — pnpm does not hoist these to the app, so it validates transitive resolution through the pnpm store |
+
 ### react (`apps/react/plugins/demo-unplugin.js`)
 
 | Package | Reason |
@@ -272,7 +297,7 @@ Where each feature is tested across apps and skeletons.
 
 | Feature | Apps | Skeletons |
 |---------|------|-----------|
-| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, typescript | |
+| HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, pnpm-monorepo, typescript | |
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
@@ -296,7 +321,9 @@ Where each feature is tested across apps and skeletons.
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
-| Monorepo layout | monorepo | |
+| Monorepo layout | monorepo, pnpm-monorepo | |
+| pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | |
+| Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | |
 | Full-app test mode | react-router | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
