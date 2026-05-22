@@ -459,9 +459,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
     ...(isServer ? [/^bcrypt$/] : []),
   ];
-  const alias = {
-    "/": path.resolve(process.cwd()),
-  };
   const fallback = {
     ...(isClient && makeWebNodeBuiltinsAlias()),
   };
@@ -648,7 +645,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...extraRules,
       ],
     },
-    resolve: { extensions, alias, fallback },
+    resolve: {
+      extensions,
+      roots: [path.resolve(process.cwd())],
+      fallback,
+    },
     externals,
     externalsType: "commonjs2",
     plugins: [
@@ -773,7 +774,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     },
     resolve: {
       extensions,
-      alias,
+      roots: [path.resolve(process.cwd())],
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
     },
