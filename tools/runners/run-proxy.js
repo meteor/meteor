@@ -37,7 +37,7 @@ Object.assign(Proxy.prototype, {
 
     var http = require('http');
     var net = require('net');
-    var httpProxy = require('http-proxy');
+    var httpProxy = require('http-proxy-3');
 
     self.proxy = httpProxy.createProxyServer({
       // agent is required to handle keep-alive, and http-proxy 1.0 is a little

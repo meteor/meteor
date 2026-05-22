@@ -1,15 +1,15 @@
 Package.describe({
   summary: "Binary Heap datastructure implementation",
-  version: '1.0.12',
+  version: "1.0.13-beta350.10",
 });
 
-Package.onUse(api => {
-  api.export(['MaxHeap', 'MinHeap', 'MinMaxHeap']);
-  api.use(['id-map', 'ecmascript']);
-  api.mainModule('binary-heap.js');
+Package.onUse((api) => {
+  api.export(["MaxHeap", "MinHeap", "MinMaxHeap"]);
+  api.use(["id-map", "ecmascript"]);
+  api.mainModule("binary-heap.js");
 });
 
-Package.onTest(api => {
-  api.use(['tinytest', 'binary-heap', 'ecmascript']);
-  api.addFiles('binary-heap-tests.js');
+Package.onTest((api) => {
+  api.use(["tinytest", "binary-heap", "ecmascript"]);
+  api.addFiles("binary-heap-tests.js");
 });

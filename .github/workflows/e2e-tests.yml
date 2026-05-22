@@ -44,6 +44,8 @@ jobs:
           - Babel
           - Blaze
           - Coffeescript
+          - Full Skeleton
+          - Tailwind Skeleton
           - Examples
           - Monorepo
           - Other

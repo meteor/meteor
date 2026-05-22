@@ -33,6 +33,11 @@ export class ConnectionStreamHandlers {
       return;
     }
 
+    // Track received message count for session resumption (excluding ping/pong)
+    if (!this._connection._ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg)) {
+      this._connection._receivedCount++;
+    }
+
     // Important: This was missing from previous version
     // We need to set the current version before routing the message
     if (msg.msg === 'connected') {
@@ -139,6 +144,7 @@ export class ConnectionStreamHandlers {
     const msg = { msg: 'connect' };
     if (this._connection._lastSessionId) {
       msg.session = this._connection._lastSessionId;
+      msg.receivedCount = this._connection._receivedCount;
     }
     msg.version = this._connection._versionSuggestion || this._connection._supportedDDPVersions[0];
     this._connection._versionSuggestion = msg.version;
