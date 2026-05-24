@@ -96,6 +96,7 @@ export class PackageAPI {
         assets: [],
         sources: [],
         main: null,
+        mainModules: null,
       };
 
       this.exports[arch] = [];
@@ -376,6 +377,7 @@ export class PackageAPI {
       }
 
       filesForArch.main = source;
+      filesForArch.mainModules = null;
       filesForArch.sources.push(source);
 
       this._forbidExportWithLazyMain(a);
@@ -386,10 +388,51 @@ export class PackageAPI {
     });
   }
 
+  /**
+   * @memberOf PackageAPI
+   * @instance
+   * @summary Generate a package main module that re-exports matching source
+   * files.
+   * @locus package.js
+   * @param {String|String[]} filenames Glob patterns for source files to
+   * re-export from the generated main module.
+   * @param {String|String[]} [architecture] Target architecture.
+   * @param {Object} [options] Options that will be passed to build plugins.
+   */
+  mainModules(paths, arch, fileOptions = {}) {
+    arch = toArchArray(arch);
+
+    forAllMatchingArchs(arch, a => {
+      const filesForArch = this.files[a];
+      const oldMain = filesForArch.main;
+
+      if (oldMain) {
+        oldMain.fileOptions.mainModule = false;
+
+        if (! _.has(oldMain.fileOptions, "lazy")) {
+          oldMain.fileOptions.lazy = true;
+        }
+      }
+
+      filesForArch.main = null;
+      filesForArch.mainModules = {
+        paths: toArray(paths).map(path => convertToPosixPath(pathRelative(".", path))),
+        fileOptions: {
+          ...fileOptions,
+          mainModule: true
+        }
+      };
+
+      this._forbidExportWithLazyMain(a);
+    });
+  }
+
   _forbidExportWithLazyMain(arch) {
     const filesForArch = this.files[arch];
-    if (filesForArch.main &&
-        filesForArch.main.fileOptions.lazy &&
+    const main = filesForArch.main || filesForArch.mainModules;
+
+    if (main &&
+        main.fileOptions.lazy &&
         this.exports[arch].length > 0) {
       buildmessage.error(
         "Architecture " + JSON.stringify(arch) + " cannot both " +

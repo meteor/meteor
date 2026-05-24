@@ -34,6 +34,44 @@ import {
 // resolve package includes malformed package.json intentionally
 // https://forums.meteor.com/t/unable-to-run-after-update-to-2-5-2/57266/6
 const EXPECTED_INVALID_PACKAGE_JSON_PATHS_TO_IGNORE = ['resolve/test/resolver/malformed_package_json']
+const SYNTHETIC_MAIN_MODULE_PATH = "__meteor_main_modules__.js";
+
+function globToRegExp(pattern) {
+  let regexp = "^";
+
+  for (let i = 0; i < pattern.length; i++) {
+    const char = pattern[i];
+    const next = pattern[i + 1];
+
+    if (char === "*" && next === "*" && pattern[i + 2] === "/") {
+      regexp += "(?:.*/)?";
+      i += 2;
+    } else if (char === "*" && next === "*") {
+      regexp += ".*";
+      i++;
+    } else if (char === "*") {
+      regexp += "[^/]*";
+    } else if (char === "?") {
+      regexp += "[^/]";
+    } else {
+      regexp += char.replace(/[|\\{}()[\]^$+*?.]/g, "\\$&");
+    }
+  }
+
+  return new RegExp(regexp + "$");
+}
+
+function matchesGlob(relPath, patterns) {
+  return patterns.some(pattern => globToRegExp(pattern).test(relPath));
+}
+
+function makeSyntheticMainModule(paths) {
+  const exports = paths.map(path =>
+    `export * from ${JSON.stringify("./" + path)};`
+  );
+
+  return Buffer.from(exports.join("\n") + "\n", "utf8");
+}
 
 // XXX: This is a medium-term hack, to avoid having the user set a package name
 // & test-name in package.describe. We will change this in the new control file
@@ -828,6 +866,7 @@ Object.assign(PackageSource.prototype, {
           const result = api.files[arch];
           const relPathToSourceObj = Object.create(null);
           const sources = result.sources;
+          const mainModules = result.mainModules;
 
           // Files explicitly passed to api.addFiles remain at the
           // beginning of api.files[arch].sources in their given order.
@@ -867,6 +906,20 @@ Object.assign(PackageSource.prototype, {
               });
             }
           });
+
+          if (mainModules) {
+            const paths = sources
+              .map(source => source.relPath)
+              .filter(relPath => relPath !== SYNTHETIC_MAIN_MODULE_PATH)
+              .filter(relPath => matchesGlob(relPath, mainModules.paths))
+              .sort();
+
+            sources.push({
+              relPath: SYNTHETIC_MAIN_MODULE_PATH,
+              fileOptions: mainModules.fileOptions,
+              data: makeSyntheticMainModule(paths)
+            });
+          }
 
           return result;
         },
