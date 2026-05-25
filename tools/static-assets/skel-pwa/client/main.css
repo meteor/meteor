@@ -114,3 +114,62 @@ header { margin-bottom: 16px; }
   cursor: pointer;
 }
 .todo .remove:hover { color: #800; }
+
+/* ===== Capabilities sub-tabs ===== */
+.subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e0e0e0;
+  margin: 8px 0 16px;
+}
+.subtab {
+  background: transparent;
+  border: 0;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #555;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.subtab:hover { color: #ff6b35; }
+.subtab--active { color: #ff6b35; border-bottom-color: #ff6b35; font-weight: 600; }
+.subpanel h3 { margin: 0 0 12px; font-size: 1rem; }
+.subpanel p { margin: 8px 0; }
+
+/* ===== Capability rows / widgets ===== */
+.cap-row { display: flex; gap: 8px; padding: 4px 0; }
+.cap-label { color: #555; min-width: 120px; }
+.cap-value { font-weight: 600; }
+.cap-ok, .cap-value.cap-ok { color: #1a6b1a; }
+.cap-ko, .cap-value.cap-ko { color: #c00; }
+.cap-value.cap-pending { color: #888; }
+.cap-status { padding: 6px 10px; background: #f4f4f4; border-radius: 4px; font-size: 0.9rem; }
+.cap-btn {
+  display: inline-block;
+  background: #ff6b35;
+  color: #fff;
+  border: 0;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-right: 6px;
+  text-decoration: none;
+}
+.cap-btn:hover { background: #e95a25; }
+.cap-btn--secondary { background: #777; }
+.cap-btn--secondary:hover { background: #555; }
+.cap-disabled {
+  background: #ddd; color: #999; border: 0;
+  padding: 6px 14px; border-radius: 4px; cursor: not-allowed;
+}
+.cap-unsupported-note { font-size: 0.85rem; color: #888; }
+.cap-actions { margin: 12px 0; }
+.cap-video, .cap-canvas { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; margin: 8px 0; }
+.share-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.share-form label { display: flex; flex-direction: column; font-size: 0.85rem; color: #555; }
+.share-form input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; margin-top: 2px; }
+.cap-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.cap-table th, .cap-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+.cap-table th { color: #555; font-weight: 600; }

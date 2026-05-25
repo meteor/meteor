@@ -1,0 +1,30 @@
+<template name="networkPanel">
+  <h3>Network</h3>
+  <div class="cap-row">
+    <span class="cap-label">Connection</span>
+    <span class="cap-value cap-{{statusClass}}">{{statusText}}</span>
+  </div>
+  {{#if hasConnectionInfo}}
+    <div class="cap-row">
+      <span class="cap-label">Effective type</span>
+      <span class="cap-value">{{effectiveType}}</span>
+    </div>
+    <div class="cap-row">
+      <span class="cap-label">Downlink</span>
+      <span class="cap-value">{{downlink}} Mbps</span>
+    </div>
+    <div class="cap-row">
+      <span class="cap-label">RTT</span>
+      <span class="cap-value">{{rtt}} ms</span>
+    </div>
+  {{else}}
+    <p class="cap-unsupported-note">
+      Detailed connection info isn't available in this browser
+      (<a href="https://caniuse.com/netinfo" target="_blank" rel="noopener">caniuse: netinfo</a>).
+    </p>
+  {{/if}}
+  <p class="muted">
+    Note: <code>navigator.onLine</code> reports the OS connectivity, not real Internet
+    reachability &mdash; it can be true even when offline.
+  </p>
+</template>

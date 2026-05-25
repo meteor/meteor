@@ -1,0 +1,18 @@
+<template name="detectPanel">
+  <h3>Feature detection</h3>
+  <p class="muted">Snapshot at page load. Permission states (e.g. notifications) may change later.</p>
+  <table class="cap-table">
+    <thead>
+      <tr><th>API</th><th>Supported</th><th>Reference</th></tr>
+    </thead>
+    <tbody>
+      {{#each features}}
+        <tr>
+          <td>{{name}}</td>
+          <td>{{#if supported}}<span class="cap-ok">supported</span>{{else}}<span class="cap-ko">missing</span>{{/if}}</td>
+          <td><a href="{{url}}" target="_blank" rel="noopener">caniuse</a></td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</template>
