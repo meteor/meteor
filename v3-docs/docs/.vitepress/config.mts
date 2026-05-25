@@ -195,6 +195,10 @@ export default defineConfig({
             text: "Cordova",
             link: "/about/cordova",
           },
+          {
+            text: "Progressive Web Apps",
+            link: "/about/progressive-web-apps",
+          },
         ],
         collapsed: true,
       },
