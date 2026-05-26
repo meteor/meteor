@@ -644,6 +644,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         { test: /\.css$/, type: "css/auto" },
         ...extraRules,
       ],
+      parser: {
+        javascript: {
+          // Relax Rspack 2.0 strict ESM linking; SWC-stripped TS type re-exports otherwise fail the build.
+          exportsPresence: "warn",
+        },
+      },
     },
     resolve: {
       extensions,
@@ -769,6 +775,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         javascript: {
           // Dynamic imports on the server are treated as bundled in the same chunk
           dynamicImportMode: "eager",
+          // Relax Rspack 2.0 strict ESM linking; SWC-stripped TS type re-exports otherwise fail the build.
+          exportsPresence: "warn",
         },
       },
     },
