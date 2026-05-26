@@ -369,7 +369,7 @@ export function testMeteorRspackBundler(options) {
       // Safety net: reap anything the test orphaned before the next one runs.
       await killStrayAppProcesses();
 
-      // Restore mutated files regardless of pass/fail — idempotent on green runs,
+      // Restore mutated files regardless of pass/fail: idempotent on green runs,
       // essential on retries.
       if (fileSnapshot) {
         await restoreFiles(fileSnapshot);
