@@ -5,7 +5,7 @@ Package.describe({
 });
 
 Npm.depends({
-  "uWebSockets.js": "git+https://github.com/unetworking/uWebSockets.js#v20.58.0",
+  "uWebSockets.js": "git+https://github.com/unetworking/uWebSockets.js#v20.66.0",
   "permessage-deflate2": "0.1.8",
   sockjs: "0.3.24",
   "lodash.once": "4.1.1",
