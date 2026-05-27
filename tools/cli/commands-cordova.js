@@ -58,8 +58,6 @@ async function compileApp(options) {
 }
 
 async function doAddPlatform(options) {
-  import { CordovaProject } from '../cordova/project.js';
-
   Console.setVerbose(!!options.verbose);
 
   const projectContext = await createProjectContext(options.appDir);
@@ -102,6 +100,7 @@ async function doAddPlatform(options) {
       return;
     }
 
+    const { CordovaProject } = require('../cordova/project.js');
     const cordovaProject = new CordovaProject(projectContext);
     await cordovaProject.init();
 
@@ -128,9 +127,6 @@ async function doAddPlatform(options) {
 }
 
 async function doRemovePlatform(options) {
-  import { CordovaProject } from '../cordova/project.js';
-  import { PlatformList } from '../project-context.js';
-
   const projectContext = await createProjectContext(options.appDir);
 
   // Capacitor: there is no `cap remove`, and we deliberately leave the
@@ -160,6 +156,9 @@ async function doRemovePlatform(options) {
     }
     return;
   }
+
+  const { CordovaProject } = require('../cordova/project.js');
+  const { PlatformList } = require('../project-context.js');
 
   const platformsToRemove = options.args;
   let installedPlatforms = projectContext.platformList.getPlatforms();
