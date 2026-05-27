@@ -3,6 +3,9 @@
  * @description Ensures Capacitor NPM dependencies are present in the consuming app.
  */
 
+const fs = require('fs');
+const path = require('path');
+
 const {
   getGlobalState,
   setGlobalState,
@@ -17,9 +20,14 @@ const {
   getMeteorAppDir,
 } = require('meteor/tools-core/lib/meteor');
 const {
-  checkNpmDependencyExists,
   installNpmDependency,
 } = require('meteor/tools-core/lib/npm');
+
+// Checks node_modules, not package.json. checkNpmDependencyExists treats
+// a declaration as "exists", which masks half-installed apps.
+function isCapacitorDepInstalled(name, appDir) {
+  return fs.existsSync(path.join(appDir, 'node_modules', name, 'package.json'));
+}
 
 const {
   DEFAULT_CAPACITOR_VERSION,
@@ -47,7 +55,7 @@ export async function ensureCapacitorInstalled() {
   ];
 
   const missing = dependencies.filter(
-    dep => !checkNpmDependencyExists(dep.name, { cwd: appDir })
+    dep => !isCapacitorDepInstalled(dep.name, appDir)
   );
 
   if (missing.length === 0) {

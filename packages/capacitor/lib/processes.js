@@ -130,20 +130,20 @@ function runCapAdd({ appDir = getMeteorAppDir(), platform } = {}) {
 }
 
 /**
- * `meteor add-platform <platform>` core: runs `npx cap add <platform>` when
- * the native dir is missing, or `npx cap sync <platform>` when it already
- * exists.
- *
- * @returns {Promise<number>} Exit code (non-zero aborts the parent compile).
+ * `meteor add-platform <platform>` core: runs `npx cap add` if the native
+ * dir is missing, no-ops if it exists. cap sync is intentionally skipped —
+ * meteor run / meteor build handle that via transformAndSync (sync needs a
+ * populated webDir that add-platform can't produce on its own).
+ * @returns {Promise<number>}
  */
-export async function addOrSyncNativePlatform({ appDir = getMeteorAppDir(), platform } = {}) {
+export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), platform } = {}) {
   if (!platform) return 0;
   const path = require('path');
   const fs = require('fs');
   const nativeDir = path.join(appDir, platform);
   if (fs.existsSync(nativeDir)) {
-    logInfo(`[Capacitor] ${platform}: native project already exists at ./${platform}/, running cap sync`);
-    return runCapSync({ appDir, platform });
+    logInfo(`[Capacitor] ${platform}: native project already exists at ./${platform}/, skipping cap add`);
+    return 0;
   }
   return runCapAdd({ appDir, platform });
 }

@@ -22,6 +22,7 @@ const {
   isMeteorAppNativeAndroid,
   isMeteorAppNativeIos,
   getMeteorAppDir,
+  setMeteorAppIgnore,
 } = require('meteor/tools-core/lib/meteor');
 const {
   logInfo,
@@ -33,6 +34,7 @@ const { isYarnProject } = require('meteor/tools-core/lib/npm');
 const {
   CAPACITOR_BUILD_CONTEXT,
   CAPACITOR_CORDOVA_OUTPUT_DIR,
+  getCapacitorWebDirCandidates,
 } = require('./lib/constants');
 const { ensureCapacitorInstalled } = require('./lib/dependencies');
 const {
@@ -44,7 +46,7 @@ const { runCapacitorTransforms } = require('./lib/transforms');
 const {
   runCapSync,
   ensureNativePlatformAdded,
-  addOrSyncNativePlatform,
+  addNativePlatformIfMissing,
   cleanup,
 } = require('./lib/processes');
 const {
@@ -65,9 +67,9 @@ function logVerbose(...args) {
  * Runs the cordova→build-native transform. Returns false if the
  * transform itself failed (web.cordova/ exists but transforms threw).
  */
-function runTransform({ appDir }) {
+async function runTransform({ appDir }) {
   logProgress('=> 🔧 Capacitor: transforming web.cordova → build-native/');
-  const ok = runCapacitorTransforms({
+  const ok = await runCapacitorTransforms({
     appDir,
     verbose: isMeteorAppDebug() || isMeteorAppConfigModernVerbose(),
   });
@@ -80,18 +82,18 @@ function runTransform({ appDir }) {
 }
 
 /**
- * Resolves once `web.cordova/index.html` exists on disk (i.e. the bundler
- * has emitted the cordova arch the transform reads from). Polls the actual
- * file rather than guessing a delay; returns false on timeout.
+ * Resolves once `web.cordova/program.json` is on disk (the bundle Meteor
+ * actually emits — buildIndex composes index.html from it). Returns false
+ * on timeout.
  */
 function waitForCordovaBundle(cordovaOutDir, { intervalMs = 100, timeoutMs = 30_000 } = {}) {
-  const indexPath = path.join(cordovaOutDir, 'index.html');
-  if (fs.existsSync(indexPath)) return Promise.resolve(true);
+  const sentinelPath = path.join(cordovaOutDir, 'program.json');
+  if (fs.existsSync(sentinelPath)) return Promise.resolve(true);
 
   return new Promise(resolve => {
     const start = Date.now();
     const interval = setInterval(() => {
-      if (fs.existsSync(indexPath)) {
+      if (fs.existsSync(sentinelPath)) {
         clearInterval(interval);
         resolve(true);
       } else if (Date.now() - start >= timeoutMs) {
@@ -115,14 +117,14 @@ function waitForCordovaBundle(cordovaOutDir, { intervalMs = 100, timeoutMs = 30_
 async function transformAndSync({ appDir, platform = null }) {
   const cordovaOutDir = path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
 
-  logVerbose(`[i] Capacitor: waiting for ${CAPACITOR_CORDOVA_OUTPUT_DIR}/index.html`);
+  logVerbose(`[i] Capacitor: waiting for ${CAPACITOR_CORDOVA_OUTPUT_DIR}/program.json`);
   const ready = await waitForCordovaBundle(cordovaOutDir);
   if (!ready) {
     logError(`Capacitor: timed out waiting for ${CAPACITOR_CORDOVA_OUTPUT_DIR} (30s).`);
     return;
   }
 
-  if (!runTransform({ appDir })) return;
+  if (!(await runTransform({ appDir }))) return;
 
   return runCapSync({ appDir, platform }).catch(err =>
     logError(`Capacitor sync failed: ${err.message}`),
@@ -142,6 +144,11 @@ if (isCapacitorOptIn()) {
     // capacitor package constraint); this assignment covers downstream
     // child processes spawned by the plugin (cap sync, etc.).
     process.env.METEOR_CORDOVA_DISABLE = 'true';
+
+    // Skip native webDirs at isobuild scan time. Scoped to native-*
+    // subdirs so rspack's main-* outputs under the same _build/ root
+    // stay visible.
+    setMeteorAppIgnore(getCapacitorWebDirCandidates().join(' '));
 
     if (hasMeteorAppConfigAutoInstallDeps()) {
       // Top-level await: build plugins are evaluated as ESM with TLA enabled.
@@ -170,15 +177,13 @@ if (isCapacitorOptIn()) {
     });
 
     if (isCapacitorAddPlatformOptIn()) {
-      // The CLI forces a compile on `meteor add-platform` so this build
-      // plugin loads. Run cap add against each requested platform (or cap
-      // sync if the native dir already exists). The CLI writes
-      // .meteor/platforms after the compile returns.
+      // Run cap add per requested platform; no-op when already added.
+      // The CLI writes .meteor/platforms after the compile returns.
       const appDir = getMeteorAppDir();
       const requested = Package?.meteor?.global?.currentCommand?.options?.args || [];
       const platforms = requested.filter(p => CAPACITOR_PLATFORMS.includes(p));
       for (const platform of platforms) {
-        const code = await addOrSyncNativePlatform({ appDir, platform });
+        const code = await addNativePlatformIfMissing({ appDir, platform });
         if (code !== 0) {
           throw new Error(`cap add ${platform} exited with code ${code}`);
         }

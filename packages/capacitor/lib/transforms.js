@@ -1,24 +1,22 @@
 /**
  * @module transforms
- * @description Transforms Meteor's web.cordova/ output into a Capacitor webDir.
- *
- * Two pure operations, no network and no shell:
- *   - buildIndex(): patch index.html (inject WebAppLocalServer no-op, strip __cordova/)
- *   - syncBundleFiles(): copy assets, drop server-only files, flatten app/* upward
- *
- * Doing the transform in Node means the same logic runs in `meteor build`,
- * `meteor run android|ios`, and the watcher on top of it.
+ * @description web.cordova/ → Capacitor webDir transforms.
+ *   - buildIndex(): compose index.html via boilerplate-generator, patch shim + __cordova/.
+ *   - syncBundleFiles(): copy assets, drop server-only files, flatten app/* upward.
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 
 const { logError, logInfo } = require('meteor/tools-core/lib/log');
 const {
   getMeteorAppDir,
+  getMeteorAppPort,
   isMeteorAppDevelopment,
   isMeteorAppProduction,
 } = require('meteor/tools-core/lib/meteor');
+const { Boilerplate } = require('meteor/boilerplate-generator');
 
 const {
   CAPACITOR_CORDOVA_OUTPUT_DIR,
@@ -26,6 +24,24 @@ const {
   WEB_APP_LOCAL_SERVER_SHIM,
   getCapacitorWebDir,
 } = require('./constants');
+
+const CORDOVA_ARCH = 'web.cordova';
+
+function detectLocalIp() {
+  if (process.env.METEOR_CAPACITOR_LOCAL_IP) return process.env.METEOR_CAPACITOR_LOCAL_IP;
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const info of interfaces[name] || []) {
+      if (info.family === 'IPv4' && !info.internal) return info.address;
+    }
+  }
+  return '127.0.0.1';
+}
+
+function resolveRootUrl() {
+  if (process.env.ROOT_URL) return process.env.ROOT_URL;
+  return `http://${detectLocalIp()}:${getMeteorAppPort()}/`;
+}
 
 function resolveWebDir() {
   return getCapacitorWebDir({
@@ -59,25 +75,66 @@ function patchCordovaIndexHtml(html) {
 }
 
 /**
- * Reads index.html from web.cordova/, applies patchCordovaIndexHtml, writes it
- * into build-native/index.html.
- *
- * @returns {boolean} True if the file was written.
+ * Composes index.html from head.html/body.html/program.json via
+ * boilerplate-generator (the composer tools/cordova/builder.js uses),
+ * patches it, and writes to webDir.
+ * @returns {Promise<boolean>}
  */
-function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir() } = {}) {
-  const sourcePath = path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR, 'index.html');
+async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir() } = {}) {
+  const cordovaOutDir = path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
+  const programJsonPath = path.join(cordovaOutDir, 'program.json');
   const targetPath = path.join(appDir, webDir, 'index.html');
 
-  if (!fs.existsSync(sourcePath)) {
-    logError(`Capacitor: ${path.relative(appDir, sourcePath)} not found — has the web.cordova arch been built?`);
+  if (!fs.existsSync(programJsonPath)) {
+    logError(`Capacitor: ${path.relative(appDir, programJsonPath)} not found — has the web.cordova arch been built?`);
     return false;
   }
 
+  let program;
+  try {
+    program = JSON.parse(fs.readFileSync(programJsonPath, 'utf8'));
+  } catch (err) {
+    logError(`Capacitor: failed to parse ${path.relative(appDir, programJsonPath)}: ${err.message}`);
+    return false;
+  }
+
+  const rootUrl = resolveRootUrl();
+  const runtimeConfig = {
+    meteorRelease: 'none',
+    ROOT_URL: rootUrl,
+    ROOT_URL_PATH_PREFIX: '',
+    DDP_DEFAULT_CONNECTION_URL: process.env.DDP_DEFAULT_CONNECTION_URL || rootUrl,
+    autoupdate: {
+      versions: {
+        [CORDOVA_ARCH]: {
+          version: program.version,
+          versionRefreshable: program.versionRefreshable,
+          versionNonRefreshable: program.versionNonRefreshable,
+          versionReplaceable: program.versionReplaceable,
+        },
+      },
+    },
+    appId: process.env.METEOR_APP_ID || 'meteor-app',
+    meteorEnv: {
+      NODE_ENV: process.env.NODE_ENV || 'development',
+      TEST_METADATA: process.env.TEST_METADATA || '{}',
+    },
+  };
+
   let html;
   try {
-    html = fs.readFileSync(sourcePath, 'utf8');
+    const boilerplate = new Boilerplate(CORDOVA_ARCH, program.manifest, {
+      pathMapper: p => path.join(cordovaOutDir, p),
+      baseDataExtension: {
+        meteorRuntimeConfig: JSON.stringify(encodeURIComponent(JSON.stringify(runtimeConfig))),
+        rootUrlPathPrefix: '',
+        inlineScriptsAllowed: true,
+        htmlAttributes: {},
+      },
+    });
+    html = await boilerplate.toHTMLAsync();
   } catch (err) {
-    logError(`Capacitor: failed to read ${sourcePath}: ${err.message}`);
+    logError(`Capacitor: failed to render index.html via boilerplate-generator: ${err.message}`);
     return false;
   }
 
@@ -111,8 +168,11 @@ function copyTreeFiltered(srcDir, dstDir, excludedFiles) {
     if (entry.isDirectory()) {
       copyTreeFiltered(srcPath, dstPath, excludedFiles);
     } else if (entry.isFile()) {
+      // Meteor writes web.cordova/ read-only; unlink first so re-runs overwrite.
+      fs.rmSync(dstPath, { force: true });
       fs.copyFileSync(srcPath, dstPath);
     } else if (entry.isSymbolicLink()) {
+      fs.rmSync(dstPath, { force: true });
       const linkTarget = fs.readlinkSync(srcPath);
       try {
         fs.symlinkSync(linkTarget, dstPath);
@@ -163,9 +223,9 @@ function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir() 
  *
  * @returns {boolean} True if both succeeded.
  */
-export function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), verbose = false } = {}) {
+export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), verbose = false } = {}) {
   const okFiles = syncBundleFiles({ appDir, webDir });
-  const okIndex = buildIndex({ appDir, webDir });
+  const okIndex = await buildIndex({ appDir, webDir });
   if (verbose && okFiles && okIndex) {
     logInfo(`[i] Capacitor transform applied: ${CAPACITOR_CORDOVA_OUTPUT_DIR} → ${webDir}`);
   }

@@ -76,8 +76,12 @@ export function ensureCapacitorConfigExists() {
   }
 
   const pkgJson = getMeteorAppPackageJson() || {};
-  const fallbackName = (pkgJson.name || 'meteor-app').replace(/[^a-zA-Z0-9]/g, '-');
-  const appId = pkgJson?.capacitor?.appId || `com.example.${fallbackName.toLowerCase()}`;
+  // Java package segment: [a-zA-Z][a-zA-Z0-9_]+, no dashes.
+  const sanitizedSegment = (pkgJson.name || 'meteor-app')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '')
+    .replace(/^[^a-z]+/, '') || 'meteorapp';
+  const appId = pkgJson?.capacitor?.appId || `com.example.${sanitizedSegment}`;
   const appName = pkgJson?.capacitor?.appName || pkgJson.name || 'MeteorApp';
 
   const target = path.join(appDir, 'capacitor.config.js');
@@ -168,10 +172,12 @@ export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() }
     } else if (configPath.endsWith('.json')) {
       resolved = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     } else {
-      // .js / .cjs: drop any cached copy so live edits are picked up
-      // (matters once a file watcher is wired up; harmless otherwise).
-      delete require.cache[require.resolve(configPath)];
-      const mod = require(configPath);
+      // Meteor's build-plugin require can't resolve arbitrary file paths;
+      // createRequire anchors a real Node require at the user's config.
+      const { createRequire } = require('module');
+      const nodeRequire = createRequire(configPath);
+      delete nodeRequire.cache[nodeRequire.resolve(configPath)];
+      const mod = nodeRequire(configPath);
       resolved = mod && mod.default ? mod.default : mod;
     }
   } catch (error) {

@@ -28,13 +28,32 @@ process.env.CAPACITOR_BUILD_CONTEXT = CAPACITOR_BUILD_CONTEXT;
 /**
  * Subfolder name used as Capacitor's webDir, scoped per environment so
  * dev and prod outputs don't clobber each other under the build context.
+ * Honors METEOR_CAPACITOR_WEB_DIR for users who want to relocate the
+ * native asset output entirely.
  *
  * @param {{ isDevelopment?: boolean, isProduction?: boolean }} [env]
  * @returns {string} e.g. `_build/native-dev` or `_build/native-prod`
  */
 export function getCapacitorWebDir({ isDevelopment, isProduction } = {}) {
+  if (process.env.METEOR_CAPACITOR_WEB_DIR) {
+    return process.env.METEOR_CAPACITOR_WEB_DIR;
+  }
   const suffix = isDevelopment ? 'dev' : isProduction ? 'prod' : 'dev';
   return `${CAPACITOR_BUILD_CONTEXT}/native-${suffix}`;
+}
+
+/**
+ * All possible capacitor webDir paths (both env defaults + override).
+ * Used by setMeteorAppIgnore so a switch between dev/prod doesn't leave
+ * stale artifacts in the bundler scan.
+ * @returns {string[]}
+ */
+export function getCapacitorWebDirCandidates() {
+  return Array.from(new Set([
+    `${CAPACITOR_BUILD_CONTEXT}/native-dev`,
+    `${CAPACITOR_BUILD_CONTEXT}/native-prod`,
+    ...(process.env.METEOR_CAPACITOR_WEB_DIR ? [process.env.METEOR_CAPACITOR_WEB_DIR] : []),
+  ]));
 }
 
 /**

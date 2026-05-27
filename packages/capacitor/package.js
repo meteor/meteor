@@ -14,7 +14,7 @@ Package.registerBuildPlugin({
     'lib/command.js',
     'capacitor_plugin.js',
   ],
-  use: ['modules@0.8.2', 'ecmascript', 'tools-core'],
+  use: ['modules@0.8.2', 'ecmascript', 'tools-core', 'boilerplate-generator'],
 });
 
 Package.onUse(function (api) {
