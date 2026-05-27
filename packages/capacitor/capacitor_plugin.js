@@ -57,10 +57,9 @@ const {
   isCapacitorAddPlatformOptIn,
 } = require('./lib/command');
 
+const isVerbose = () => isMeteorAppDebug() || isMeteorAppConfigModernVerbose();
 function logVerbose(...args) {
-  if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-    logInfo(...args);
-  }
+  if (isVerbose()) logInfo(...args);
 }
 
 /**
@@ -68,11 +67,8 @@ function logVerbose(...args) {
  * transform itself failed (web.cordova/ exists but transforms threw).
  */
 async function runTransform({ appDir }) {
-  logProgress('=> 🔧 Capacitor: transforming web.cordova → build-native/');
-  const ok = await runCapacitorTransforms({
-    appDir,
-    verbose: isMeteorAppDebug() || isMeteorAppConfigModernVerbose(),
-  });
+  if (isVerbose()) logProgress('=> 🔧 Capacitor: transforming web.cordova → build-native/');
+  const ok = await runCapacitorTransforms({ appDir, verbose: isVerbose() });
   if (!ok) {
     logError('=> ❌ Capacitor transform failed');
     return false;

@@ -86,13 +86,18 @@ function spawnCap(args, { cwd, label, env, onExit, mode, platform }) {
       ...(env || {}),
     }),
     onStdout: data => {
-      if (!isVerbose()) return;
-      logRaw(`[Capacitor ${label}] ${data.replace(/\s+$/, '')}`);
+      const trimmed = data.replace(/\s+$/, '');
+      if (!trimmed) return;
+      trimmed.split(/\r?\n/).forEach(line => {
+        if (line) logRaw(`=> ${line}`);
+      });
     },
     onStderr: data => {
       const trimmed = data.replace(/\s+$/, '');
       if (!trimmed) return;
-      logError(`[Capacitor ${label}] ${trimmed}`);
+      trimmed.split(/\r?\n/).forEach(line => {
+        if (line) logError(`=> ${line}`);
+      });
     },
     onError: err => logError(`Capacitor ${label} error: ${err.message}`),
     onExit: code => {
