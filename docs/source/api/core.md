@@ -45,6 +45,34 @@ if (Meteor.isServer) {
 }
 ```
 
+{% apibox "Meteor.shutdown" %}
+
+On `SIGTERM` or `SIGINT`, registered shutdown hooks run sequentially in
+reverse registration order (LIFO), so dependent resources can tear down
+before the resources they depend on. Each hook may be `async`; the next
+hook does not start until the previous one resolves.
+
+If a hook throws or rejects, the error is logged and subsequent hooks
+still run (best-effort cleanup). Total shutdown time is capped by the
+`METEOR_SHUTDOWN_TIMEOUT_MS` environment variable (default `10000`);
+when the cap is reached the process exits even if hooks are still
+running, to avoid stalling supervisor escalation (Galaxy, Kubernetes,
+systemd) to `SIGKILL`.
+
+Exit codes follow POSIX convention: `SIGINT` → 130, `SIGTERM` → 143.
+
+`Meteor.shutdown` is server-only — there is no client equivalent.
+
+```js
+import { Meteor } from 'meteor/meteor';
+
+Meteor.shutdown(async (signal) => {
+  console.log(`Shutting down on ${signal}, flushing pending writes...`);
+  await jobQueue.flush();
+  await mongoClient.close();
+});
+```
+
 {% apibox "Meteor.wrapAsync" %}
 
 {% apibox "Meteor.defer" %}

@@ -25,6 +25,11 @@ Meteor.startup = function startup(callback) {
   }
 };
 
+/**
+ * @summary Run code when the server is about to shut down (on SIGINT or SIGTERM).
+ * @locus Server
+ * @param {Function} func A function to run on shutdown. Receives the triggering signal name (`'SIGINT'` or `'SIGTERM'`) as its first argument. May be async.
+ */
 Meteor.shutdown = function shutdown(callback) {
   callback = Meteor.wrapFn(callback);
   var bootstrap = global.__meteor_bootstrap__;
