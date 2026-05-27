@@ -24,3 +24,21 @@ Meteor.startup = function startup(callback) {
     callback();
   }
 };
+
+Meteor.shutdown = function shutdown(callback) {
+  callback = Meteor.wrapFn(callback);
+  var bootstrap = global.__meteor_bootstrap__;
+  if (bootstrap && bootstrap.shutdownHooks) {
+    bootstrap.shutdownHooks.push(callback);
+  } else {
+    // shutdownHooks is null -> shutdown has already begun (or core is missing).
+    // Warn loudly and best-effort the hook via a microtask; if the process
+    // exits before it runs, the warning is the user-visible signal.
+    console.warn(
+      '[Meteor.shutdown] hook registered after shutdown started; running immediately'
+    );
+    Promise.resolve().then(callback).catch(function (e) {
+      console.error('[Meteor.shutdown] late hook threw:', e && e.stack || e);
+    });
+  }
+};

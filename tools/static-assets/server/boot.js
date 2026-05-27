@@ -32,6 +32,7 @@ var starJson = JSON.parse(fs.readFileSync(path.join(buildDir, "star.json")));
 // Set up environment
 __meteor_bootstrap__ = {
   startupHooks: [],
+  shutdownHooks: [],
   serverDir: serverDir,
   configJson: configJson,
   isFibersDisabled: true
@@ -454,6 +455,43 @@ var callStartupHooks = Profile("Call Meteor.startup hooks", async function () {
   }
   // Setting this to null tells Meteor.startup to call hooks immediately.
   __meteor_bootstrap__.startupHooks = null;
+});
+
+var shutdownInProgress = false;
+
+var callShutdownHooks = Profile("Call Meteor.shutdown hooks", async function (signal) {
+  if (shutdownInProgress) return;
+  shutdownInProgress = true;
+
+  var hooks = __meteor_bootstrap__.shutdownHooks || [];
+  // Setting this to null tells Meteor.shutdown that shutdown has begun.
+  __meteor_bootstrap__.shutdownHooks = null;
+
+  var timeoutMs = parseInt(process.env.METEOR_SHUTDOWN_TIMEOUT_MS, 10) || 10000;
+  var exitCode = 128 + (signal === 'SIGINT' ? 2 : 15);
+
+  var timer = setTimeout(function () {
+    console.error('[Meteor.shutdown] timeout after ' + timeoutMs + 'ms, forcing exit');
+    process.exit(exitCode);
+  }, timeoutMs);
+  if (timer.unref) timer.unref();
+
+  // LIFO — last registered runs first, mirroring teardown order.
+  while (hooks.length) {
+    var hook = hooks.pop();
+    try {
+      await Profile.time(hook.stack || "(unknown)", function () { return hook(signal); });
+    } catch (e) {
+      console.error('[Meteor.shutdown] hook threw:', e && e.stack || e);
+    }
+  }
+
+  clearTimeout(timer);
+  process.exit(exitCode);
+});
+
+['SIGTERM', 'SIGINT'].forEach(function (signal) {
+  process.on(signal, function () { callShutdownHooks(signal); });
 });
 
 var runMain = Profile("Run main()", async function () {
