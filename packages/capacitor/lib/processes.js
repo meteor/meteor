@@ -31,6 +31,8 @@ const {
   isMeteorAppNativeAndroid,
   isMeteorAppNativeIos,
 } = require('meteor/tools-core/lib/meteor');
+
+const isVerbose = () => isMeteorAppDebug() || isMeteorAppConfigModernVerbose();
 const {
   getGlobalState,
   setGlobalState,
@@ -83,7 +85,10 @@ function spawnCap(args, { cwd, label, env, onExit, mode, platform }) {
       ...getCapacitorEnv({ platform, mode }),
       ...(env || {}),
     }),
-    onStdout: data => logRaw(`[Capacitor ${label}] ${data.replace(/\s+$/, '')}`),
+    onStdout: data => {
+      if (!isVerbose()) return;
+      logRaw(`[Capacitor ${label}] ${data.replace(/\s+$/, '')}`);
+    },
     onStderr: data => {
       const trimmed = data.replace(/\s+$/, '');
       if (!trimmed) return;
@@ -142,7 +147,9 @@ export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), p
   const fs = require('fs');
   const nativeDir = path.join(appDir, platform);
   if (fs.existsSync(nativeDir)) {
-    logInfo(`[Capacitor] ${platform}: native project already exists at ./${platform}/, skipping cap add`);
+    if (isVerbose()) {
+      logInfo(`[Capacitor] ${platform}: native project already exists at ./${platform}/, skipping cap add`);
+    }
     return 0;
   }
   return runCapAdd({ appDir, platform });
@@ -173,20 +180,25 @@ export function ensureNativePlatformAdded({ appDir = getMeteorAppDir() } = {}) {
 export function runCapSync({ appDir = getMeteorAppDir(), platform } = {}) {
   const existing = getGlobalState(PROC_KEYS.SYNC, null);
   if (existing && isProcessRunning(existing)) {
-    logInfo('[Capacitor] Skipping cap sync: previous run still in progress');
+    if (isVerbose()) {
+      logInfo('[Capacitor] Skipping cap sync: previous run still in progress');
+    }
     return Promise.resolve(0);
   }
 
   return new Promise(resolve => {
-    logProgress('=> 🔄 Capacitor sync');
+    if (isVerbose()) logProgress('=> 🔄 Capacitor sync');
     const proc = spawnCap(['sync', ...(platform ? [platform] : [])], {
       cwd: appDir,
       label: 'Sync',
       platform,
       onExit: code => {
         setGlobalState(PROC_KEYS.SYNC, null);
-        if (code === 0) logSuccess('=> ✅ Capacitor sync complete');
-        else logError(`=> ❌ Capacitor sync exited with code ${code}`);
+        if (code === 0) {
+          if (isVerbose()) logSuccess('=> ✅ Capacitor sync complete');
+        } else {
+          logError(`=> ❌ Capacitor sync exited with code ${code}`);
+        }
         resolve(code);
       },
     });

@@ -13,7 +13,11 @@ const {
   getMeteorAppPackageJson,
   isMeteorAppDevelopment,
   isMeteorAppProduction,
+  isMeteorAppDebug,
+  isMeteorAppConfigModernVerbose,
 } = require('meteor/tools-core/lib/meteor');
+
+const isVerbose = () => isMeteorAppDebug() || isMeteorAppConfigModernVerbose();
 const { setGlobalState } = require('meteor/tools-core/lib/global-state');
 
 const {
@@ -194,6 +198,8 @@ export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() }
 
   const snapshotPath = path.join(targetDir, 'capacitor.config.json');
   fs.writeFileSync(snapshotPath, JSON.stringify(resolved, null, 2) + '\n', 'utf8');
-  logInfo(`[i] Capacitor: snapshot resolved config -> ${path.relative(appDir, snapshotPath)}`);
+  if (isVerbose()) {
+    logInfo(`[i] Capacitor: snapshot resolved config -> ${path.relative(appDir, snapshotPath)}`);
+  }
   return true;
 }
