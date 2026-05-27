@@ -11,6 +11,7 @@ const { addGitignoreEntries } = require('meteor/tools-core/lib/git');
 const {
   getMeteorAppDir,
   getMeteorAppPackageJson,
+  getMeteorAppPlatforms,
   isMeteorAppDevelopment,
   isMeteorAppProduction,
   isMeteorAppDebug,
@@ -27,10 +28,9 @@ const {
 } = require('./constants');
 
 /**
- * Ensures the build context root (matches RSPACK_BUILD_CONTEXT) exists at the
- * project root and is gitignored. Per-env native-{dev,prod} subfolders are
- * created on demand by the transform.
- * @returns {string} The absolute path to the build context root.
+ * Creates the build context root (shared with rspack) and gitignores it
+ * plus the per-platform cap-sync targets.
+ * @returns {string} Build context absolute path.
  */
 export function ensureCapacitorBuildContextExists() {
   const appDir = getMeteorAppDir();
@@ -51,16 +51,33 @@ export function ensureCapacitorBuildContextExists() {
     'Meteor build context (rspack + capacitor)'
   );
 
+  // Gate entries by platforms present. Union the current command args so
+  // the first `meteor add-platform` lands lines on the same compile.
+  const platformArgs = Package?.meteor?.global?.currentCommand?.options?.args || [];
+  const platforms = new Set([...getMeteorAppPlatforms(), ...platformArgs]);
+  const platformEntries = [
+    ...(platforms.has('android') ? [
+      'android/app/src/main/assets/public',
+      'android/app/src/main/assets/capacitor.*.json',
+    ] : []),
+    ...(platforms.has('ios') ? [
+      'ios/App/App/public',
+      'ios/App/App/capacitor.*.json',
+      'ios/App/App/config.xml',
+    ] : []),
+  ];
+  if (platformEntries.length > 0) {
+    addGitignoreEntries(appDir, platformEntries, 'Meteor Capacitor synced native assets');
+  }
+
   setGlobalState(GLOBAL_STATE_KEYS.CAPACITOR_BUILD_CONTEXT_PREPARED, true);
   return buildContextPath;
 }
 
 /**
- * Ensures a capacitor.config.{js,ts,mjs,cjs,json} exists at project root.
- * If none exists, scaffolds a JS file that imports defineConfig from
- * @meteorjs/capacitor and reads appId/appName from package.json.
- *
- * @returns {string} Path to the config file.
+ * Returns the existing capacitor.config.* at project root or scaffolds a
+ * defineConfig-based JS file from package.json metadata.
+ * @returns {string} Config file path.
  */
 export function ensureCapacitorConfigExists() {
   const appDir = getMeteorAppDir();
@@ -137,23 +154,11 @@ const CAPACITOR_CONFIG_LOOKUP = [
 ];
 
 /**
- * Loads the project's capacitor.config.{js,cjs,mjs,json}, evaluates
- * defineConfig (which deep-merges Meteor defaults under the user factory
- * and re-enforces RESERVED_PATHS), and writes the resolved object as
- * `capacitor.config.json` inside the per-env webDir
- * (`_build/native-{dev,prod}/`).
- *
- * The snapshot is informational; Capacitor's CLI hardcodes its lookup to
- * project-root `capacitor.config.{ts,js,json}` and continues to load the
- * source .js, re-running defineConfig per invocation. The snapshot exists
- * so users (and other tools) can inspect what defineConfig actually
- * produced for the current env without re-running the factory.
- *
- * Skips silently when:
- *   - no capacitor.config.* found,
- *   - the file is .ts (plain Node can't load it without a TS loader).
- *
- * @returns {Promise<boolean>} True if a snapshot was written.
+ * Loads capacitor.config.{js,cjs,mjs,json}, runs defineConfig, and writes
+ * the resolved object as capacitor.config.json into the per-env webDir.
+ * Informational only (cap CLI re-evaluates the source on each invocation).
+ * Skips .ts and missing configs silently.
+ * @returns {Promise<boolean>}
  */
 export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() } = {}) {
   let configPath;

@@ -1,4 +1,4 @@
-import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config";
+import { normalizeModernConfig, setMeteorConfig, setProjectPlatforms } from "./tool-env/meteor-config";
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -474,6 +474,9 @@ Object.assign(ProjectContext.prototype, {
         projectDir: self.projectDir
       });
       await self.platformList._init();
+
+      // Expose to build plugins as Plugin.getPlatforms().
+      setProjectPlatforms(self.platformList.getPlatforms());
 
       if (buildmessage.jobHasMessages())
         return;

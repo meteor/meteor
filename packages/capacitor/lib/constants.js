@@ -12,10 +12,8 @@ const meteorLocalDirName = process.env.METEOR_LOCAL_DIR
   : '';
 
 /**
- * Root directory name for build context output. Resolution order:
- * meteor.buildContext > RSPACK_BUILD_CONTEXT env > CAPACITOR_BUILD_CONTEXT
- * env > `_build[-<localDir>]`. The Capacitor webDir is a per-env subfolder
- * underneath this root (see getCapacitorWebDir below).
+ * Build context root. Resolution: meteor.buildContext >
+ * RSPACK_BUILD_CONTEXT > CAPACITOR_BUILD_CONTEXT > `_build[-<localDir>]`.
  */
 export const CAPACITOR_BUILD_CONTEXT =
   meteorConfig?.buildContext ||
@@ -26,13 +24,9 @@ export const CAPACITOR_BUILD_CONTEXT =
 process.env.CAPACITOR_BUILD_CONTEXT = CAPACITOR_BUILD_CONTEXT;
 
 /**
- * Subfolder name used as Capacitor's webDir, scoped per environment so
- * dev and prod outputs don't clobber each other under the build context.
- * Honors METEOR_CAPACITOR_WEB_DIR for users who want to relocate the
- * native asset output entirely.
- *
+ * Capacitor webDir per env. Honors METEOR_CAPACITOR_WEB_DIR.
  * @param {{ isDevelopment?: boolean, isProduction?: boolean }} [env]
- * @returns {string} e.g. `_build/native-dev` or `_build/native-prod`
+ * @returns {string}
  */
 export function getCapacitorWebDir({ isDevelopment, isProduction } = {}) {
   if (process.env.METEOR_CAPACITOR_WEB_DIR) {
@@ -44,8 +38,7 @@ export function getCapacitorWebDir({ isDevelopment, isProduction } = {}) {
 
 /**
  * All possible capacitor webDir paths (both env defaults + override).
- * Used by setMeteorAppIgnore so a switch between dev/prod doesn't leave
- * stale artifacts in the bundler scan.
+ * Used to feed setMeteorAppIgnore covering dev↔prod switches.
  * @returns {string[]}
  */
 export function getCapacitorWebDirCandidates() {

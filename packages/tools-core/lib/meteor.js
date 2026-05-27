@@ -355,6 +355,27 @@ export function getMeteorAppPackages() {
 }
 
 /**
+ * Returns the platforms listed in `.meteor/platforms`. Prefers
+ * Plugin.getPlatforms() (set by ProjectContext); falls back to the file.
+ * @returns {string[]}
+ */
+export function getMeteorAppPlatforms() {
+  if (typeof Plugin?.getPlatforms === 'function') {
+    const fromPlugin = Plugin.getPlatforms();
+    if (Array.isArray(fromPlugin) && fromPlugin.length > 0) return fromPlugin;
+  }
+  const platformsPath = path.join(getMeteorAppDir(), '.meteor', 'platforms');
+  try {
+    return fs.readFileSync(platformsPath, 'utf8')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Gets all files and folders from the root level of the Meteor application.
  * @param {Object} options - Options for getting files and folders.
  * @param {boolean} [options.recursive=true] - Whether to scan directories recursively.

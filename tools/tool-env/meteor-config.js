@@ -88,3 +88,16 @@ export function getMeteorConfig() {
 export function setMeteorConfig(config) {
   meteorConfig = config;
 }
+
+let projectPlatforms = [];
+
+/**
+ * @returns {string[]} Platforms from `.meteor/platforms` (set by ProjectContext).
+ */
+export function getProjectPlatforms() {
+  return projectPlatforms;
+}
+
+export function setProjectPlatforms(platforms) {
+  projectPlatforms = Array.isArray(platforms) ? platforms : [];
+}

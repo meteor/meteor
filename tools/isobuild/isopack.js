@@ -1,4 +1,4 @@
-import { getMeteorConfig } from "../tool-env/meteor-config";
+import { getMeteorConfig, getProjectPlatforms } from "../tool-env/meteor-config";
 
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo');
@@ -523,6 +523,9 @@ Object.assign(Isopack.prototype, {
 
       // Share the meteorConfig object as part of plugin API
       getMeteorConfig: getMeteorConfig,
+
+      // Project platforms from .meteor/platforms (set during prepareProjectForBuild)
+      getPlatforms: getProjectPlatforms,
 
       // Share functions to get the dev bundle context
       getDevBundle,
