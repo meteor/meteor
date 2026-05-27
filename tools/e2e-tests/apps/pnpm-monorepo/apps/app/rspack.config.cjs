@@ -9,7 +9,4 @@ const workspacePackageDirs = [
 
 module.exports = defineConfig(Meteor => ({
   ...Meteor.compileWithRspack(workspacePackageDirs),
-  resolve: {
-    symlinks: false,
-  },
 }));

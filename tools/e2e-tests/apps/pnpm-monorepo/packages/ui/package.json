@@ -5,5 +5,8 @@
   "type": "module",
   "exports": {
     "./client": "./src/client.ts"
+  },
+  "dependencies": {
+    "@example/shared": "workspace:*"
   }
 }
