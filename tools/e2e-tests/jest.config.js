@@ -30,6 +30,8 @@ module.exports = {
     }
   },
   maxWorkers: 1,
+  // jest-playwright-preset leaks chromium handles past the exit deadline.
+  forceExit: true,
   reporters: [
     'default',
     '<rootDir>/summary-reporter.js',
