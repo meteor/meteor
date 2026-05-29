@@ -75,8 +75,26 @@ function getCapacitorEnv({ platform, mode } = {}) {
   };
 }
 
-function spawnCap(args, { cwd, label, env, onExit, mode, platform }) {
+function spawnCap(args, { cwd, label, env, onExit, mode, platform, interactive }) {
   const { command, args: cmdArgs } = getNpxCommand(['cap', ...args]);
+  // Interactive commands (cap run's target picker) need the parent's TTY;
+  // piped stdio corrupts arrow-key navigation and ANSI cursor moves.
+  if (interactive) {
+    return spawnProcess(command, cmdArgs, {
+      cwd,
+      env: inheritMeteorToolNodeFlags({
+        ...process.env,
+        ...getNodeBinEnv(),
+        ...getCapacitorEnv({ platform, mode }),
+        ...(env || {}),
+      }),
+      stdio: 'inherit',
+      onError: err => logError(`Capacitor ${label} error: ${err.message}`),
+      onExit: code => {
+        if (typeof onExit === 'function') onExit(code);
+      },
+    });
+  }
   return spawnProcess(command, cmdArgs, {
     cwd,
     env: inheritMeteorToolNodeFlags({
@@ -211,6 +229,51 @@ export function runCapSync({ appDir = getMeteorAppDir(), platform } = {}) {
   });
 }
 
+function shouldAutoPickTarget() {
+  return /^(1|true|yes)$/i.test(process.env.METEOR_CAPACITOR_AUTO_PICK_TARGET || '');
+}
+
+/**
+ * Lists run targets via `cap run <platform> --list --json` and returns the
+ * parsed array. Empty on no targets / parse failure.
+ * @returns {Promise<Array<{name:string,api:string,id:string}>>}
+ */
+export function listCapTargets({ appDir = getMeteorAppDir(), platform } = {}) {
+  return new Promise(resolve => {
+    const { command, args: cmdArgs } = getNpxCommand(['cap', 'run', platform, '--list', '--json']);
+    let stdoutBuf = '';
+    spawnProcess(command, cmdArgs, {
+      cwd: appDir,
+      env: inheritMeteorToolNodeFlags({
+        ...process.env,
+        ...getNodeBinEnv(),
+        ...getCapacitorEnv({ platform }),
+      }),
+      onStdout: data => { stdoutBuf += data; },
+      onStderr: () => {},
+      onExit: () => {
+        const match = stdoutBuf.match(/\[\s*{[\s\S]*}\s*\]|\[\s*\]/);
+        if (!match) return resolve([]);
+        try { resolve(JSON.parse(match[0])); }
+        catch { resolve([]); }
+      },
+    });
+  });
+}
+
+/**
+ * Resolves a target for `cap run`. METEOR_CAPACITOR_TARGET wins; the temporary
+ * first-target auto-pick path only runs when METEOR_CAPACITOR_AUTO_PICK_TARGET
+ * is truthy. Null leaves target selection to Capacitor.
+ * @returns {Promise<string|null>}
+ */
+export async function resolveCapTarget({ appDir = getMeteorAppDir(), platform } = {}) {
+  if (process.env.METEOR_CAPACITOR_TARGET) return process.env.METEOR_CAPACITOR_TARGET;
+  if (!shouldAutoPickTarget()) return null;
+  const targets = await listCapTargets({ appDir, platform });
+  return targets[0]?.id || null;
+}
+
 /**
  * Runs `npx cap run <platform>` in the app directory.
  * Long-running: returns the spawned process so callers can manage lifecycle.
@@ -223,11 +286,12 @@ export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = []
     return existing;
   }
 
-  logProgress(`=> ▶️  Capacitor run ${platform}`);
+  if (isVerbose()) logProgress(`=> ▶️  Capacitor run ${platform}`);
   const proc = spawnCap(['run', platform, ...extraArgs], {
     cwd: appDir,
     label: `Run/${platform}`,
     platform,
+    interactive: true,
     onExit: code => {
       setGlobalState(PROC_KEYS.RUN, null);
       if (code !== 0) logError(`=> ❌ Capacitor run exited with code ${code}`);

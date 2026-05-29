@@ -70,11 +70,11 @@ export const GLOBAL_STATE_KEYS = {
 };
 
 /**
- * Inline source of the WebAppLocalServer no-op shim injected after <head>.
+ * Inline source of the WebAppLocalServer compatibility shim injected after <head>.
  * Capacitor doesn't ship Cordova's WebAppLocalServer plugin; without this stub
  * Meteor's Cordova bundle throws at boot.
  */
-export const WEB_APP_LOCAL_SERVER_SHIM = `<script type="text/javascript">var WebAppLocalServer = { onError() {}, onNewVersionReady() {}, startupDidComplete() {}, switchToPendingVersion() {}, checkForUpdates() {} };</script>`;
+export const WEB_APP_LOCAL_SERVER_SHIM = `<script type="text/javascript">var WebAppLocalServer = { onError() {}, onNewVersionReady() {}, startupDidComplete(callback) { if (typeof callback === "function") callback(); }, switchToPendingVersion(callback) { if (typeof callback === "function") callback(); }, checkForUpdates(callback) { if (typeof callback === "function") callback(); } };</script>`;
 
 /**
  * Files emitted in web.cordova/ that must NOT be copied into the Capacitor

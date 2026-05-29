@@ -21,10 +21,11 @@ const { logError } = require('./log');
  * @returns {Object} The spawned process with additional utility methods
  */
 export function spawnProcess(command, args, options = {}) {
+  const stdio = options.stdio || ['pipe', 'pipe', 'pipe'];
   const proc = spawn(command, args, {
     env: { ...process.env, ...(options.env || {}), FORCE_COLOR: '1', TERM: 'xterm-256color' },
     cwd: options.cwd || process.cwd(),
-    stdio: ['pipe', 'pipe', 'pipe'],
+    stdio,
     detached: options.detached || false,
     ...(process.platform === 'win32' && { shell: true }),
   });
@@ -32,19 +33,18 @@ export function spawnProcess(command, args, options = {}) {
   // Add a reference to track if the process is running
   proc.isRunning = true;
 
-  // Handle stdout
-  proc.stdout.on('data', (buf) => {
-    if (options.onStdout) {
-      options.onStdout(buf.toString());
-    }
-  });
-
-  // Handle stderr
-  proc.stderr.on('data', (buf) => {
-    if (options.onStderr) {
-      options.onStderr(buf.toString());
-    }
-  });
+  // Only wire stdio listeners when we actually piped (inherit hands the
+  // child the parent's tty directly, so proc.stdout/stderr/stdin are null).
+  if (proc.stdout) {
+    proc.stdout.on('data', (buf) => {
+      if (options.onStdout) options.onStdout(buf.toString());
+    });
+  }
+  if (proc.stderr) {
+    proc.stderr.on('data', (buf) => {
+      if (options.onStderr) options.onStderr(buf.toString());
+    });
+  }
 
   // Handle process exit
   proc.on('close', (code, signal) => {
@@ -62,7 +62,7 @@ export function spawnProcess(command, args, options = {}) {
   // This happens sometimes when we write to stdin after the app
   // is dead. If we don't register a handler, we get a top level
   // exception and the whole app dies.
-  proc.stdin.on('error', () => {});
+  if (proc.stdin) proc.stdin.on('error', () => {});
 
   if (options.detached) proc.unref();
   return proc;

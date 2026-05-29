@@ -45,6 +45,8 @@ const {
 const { runCapacitorTransforms } = require('./lib/transforms');
 const {
   runCapSync,
+  runCapRun,
+  resolveCapTarget,
   ensureNativePlatformAdded,
   addNativePlatformIfMissing,
   cleanup,
@@ -194,13 +196,24 @@ if (isCapacitorOptIn()) {
     }
 
     if (isCapacitorRunOptIn()) {
-      // `meteor run android|ios`: same pipeline, scoped to the active
-      // platform. Continuous re-sync on subsequent rebuilds (the watcher)
-      // is planned separately; this is the one-shot at startup.
+      // Sync once at startup, then launch Capacitor. METEOR_CAPACITOR_TARGET
+      // selects a specific device/emulator. METEOR_CAPACITOR_AUTO_PICK_TARGET
+      // enables the temporary first-target auto-pick path; otherwise Capacitor
+      // keeps its normal target-selection behavior.
       const platform = isMeteorAppNativeAndroid() ? 'android'
         : isMeteorAppNativeIos() ? 'ios'
         : null;
-      transformAndSync({ appDir: getMeteorAppDir(), platform });
+      const appDir = getMeteorAppDir();
+      await transformAndSync({ appDir, platform });
+      if (platform) {
+        const target = await resolveCapTarget({ appDir, platform });
+        const extraArgs = ['--no-sync'];
+        if (target) {
+          logInfo(`=> Capacitor launching on ${target}${process.env.METEOR_CAPACITOR_TARGET ? '' : ' (auto-picked)'}`);
+          extraArgs.push(`--target=${target}`);
+        }
+        runCapRun({ appDir, platform, extraArgs });
+      }
     }
   } catch (error) {
     logError(`Capacitor plugin error: ${error.message}`);
