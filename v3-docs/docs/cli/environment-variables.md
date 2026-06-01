@@ -62,11 +62,11 @@ See also: [`DISABLE_SOCKJS`](#disable-sockjs).
 ## METEOR_REACTIVITY_ORDER
 (_development, production_)
 
-Meteor configures data reactivity mechanism priorities using this variable. The default for Meteor 3.5 is `changeStreams,oplog,polling`. To override the order, set a comma-separated list.
+Meteor configures data reactivity mechanism priorities using this variable. Starting in Meteor 3.5, the default is `changeStreams,oplog,polling` — Change Streams are enabled automatically, with `oplog` and `polling` as fallbacks in that order. You only need to set this variable (or the equivalent `settings.json` entry) when you want to **override** that default — for example, to force `oplog`:
 
 ```bash
-# Prioritize oplog over change streams
-METEOR_REACTIVITY_ORDER="oplog,changeStreams,polling" meteor run
+# Force oplog (with polling as fallback) instead of the default change streams
+METEOR_REACTIVITY_ORDER="oplog,polling" meteor run
 ```
 
 This can also be configured via your `settings.json` file:
@@ -74,7 +74,7 @@ This can also be configured via your `settings.json` file:
 {
   "packages": {
     "mongo": {
-      "reactivity": ["changeStreams", "oplog", "polling"]
+      "reactivity": ["oplog", "polling"]
     }
   }
 }
