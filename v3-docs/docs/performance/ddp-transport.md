@@ -134,7 +134,44 @@ The full set of settings:
 
 If you cannot avoid running on the same port, use distinct loopback hosts (`127.0.0.2`, `127.0.0.3`, …) — Linux routes all of `127.0.0.0/8` to `lo` by default, so each process binds a distinct `(host, port)` tuple and the kernel demuxes correctly.
 
-#### What happens if you forget
+#### Example: multi-tenant `docker-compose.yml`
+
+A typical multi-tenant setup running several Wekan / Meteor 3.5 containers on one Linux host with shared kernel netns (`network_mode: "host"`) needs **two** things in every service's `environment`: the `DDP_TRANSPORT=uws` opt-in, **and** a `METEOR_SETTINGS` block with that service's own `uws.port`. The `PORT` env var (public HTTP port) and the `uws.port` (internal proxy port) are independent — both must be distinct per service:
+
+```yaml
+services:
+  customer1:
+    image: ghcr.io/wekan/wekan:v9.31     # or any Meteor 3.5+ image
+    network_mode: "host"
+    environment:
+      - PORT=3039                         # public HTTP port — distinct per service
+      - ROOT_URL=https://kanban1.example.com
+      - DDP_TRANSPORT=uws
+      - METEOR_REACTIVITY_ORDER=changeStreams,oplog,polling
+      # Internal uws proxy port — distinct per service
+      - METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":5001,"host":"127.0.0.1"}}}}
+      - MONGO_URL=mongodb://…/customer1
+      # … rest of the customer1 config
+
+  customer2:
+    image: ghcr.io/wekan/wekan:v9.31
+    network_mode: "host"
+    environment:
+      - PORT=3040                         # different public port
+      - ROOT_URL=https://kanban2.example.com
+      - DDP_TRANSPORT=uws
+      - METEOR_REACTIVITY_ORDER=changeStreams,oplog,polling
+      # Different internal uws port too
+      - METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":5002,"host":"127.0.0.1"}}}}
+      - MONGO_URL=mongodb://…/customer2
+      # … rest of the customer2 config
+
+  # customer3 -> uws.port 5003, customer4 -> 5004, etc.
+```
+
+If you have a reverse proxy (NGINX, Caddy, …) in front, it does not need any change: it keeps talking to each service's public `PORT` exactly as before. The `uws.port` is purely internal — never exposed outside the container/process.
+
+#### Troubleshooting: `failed to listen on 127.0.0.1:5001 (address already in use)`
 
 Since Meteor 3.5, the internal listen socket is opened with `LIBUS_LISTEN_EXCLUSIVE_PORT`, so the second process trying to bind the default port fails fast at startup:
 
@@ -142,9 +179,20 @@ Since Meteor 3.5, the internal listen socket is opened with `LIBUS_LISTEN_EXCLUS
 Error: uWebSockets.js: failed to listen on 127.0.0.1:5001 (address already in use).
   Another Meteor instance in this network namespace is already bound to this port.
   Set a distinct Meteor.settings.packages["ddp-server"].uws.port (or .host) for each instance.
+    at packages/ddp-server/transports/uws.js:121:17
+    at Object.setup (packages/ddp-server/transports/uws.js:119:14)
+    at new StreamServer (packages/ddp-server/stream_server.js:45:27)
+    …
 ```
 
-In Meteor 3.5-beta releases prior to this fix the same misconfiguration would silently succeed via `SO_REUSEPORT`, with inbound WebSocket frames mix-routed between the two processes. If you operate a deployment that was set up against an earlier beta, audit it with the verification step below before upgrading.
+If you see this on first boot after upgrading from an earlier 3.5 beta — especially if you operate a multi-tenant Wekan or any multi-process Meteor deployment — it is **not a regression**. It is the fail-fast behaviour replacing the silent SO_REUSEPORT mix-routing that pre-3.5-beta.12 versions exhibited. The fix surfaces a latent misconfiguration that used to corrupt data without warning.
+
+To resolve, give the failing service its own internal uws port:
+
+- **Quick**: edit the service's `environment:` block in `docker-compose.yml` (or equivalent in your orchestrator) and add a `METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":<DISTINCT>,"host":"127.0.0.1"}}}}` line, pick a port no other service in the same netns uses, restart.
+- **Alternative** (if you cannot configure per-service settings right now): set `DDP_TRANSPORT=sockjs` and `METEOR_REACTIVITY_ORDER=oplog,polling` on every service. SockJS does not run a separate internal port and does not collide. Trade-off: lower DDP throughput.
+
+In Meteor 3.5-beta releases prior to this fix the same misconfiguration would silently succeed via `SO_REUSEPORT`, with inbound WebSocket frames mix-routed between the two processes. If you upgraded from an earlier beta and have not yet seen this error, audit with the verification step below before assuming your previous deployment was correct.
 
 #### Verifying the internal listen sockets
 
@@ -167,7 +215,7 @@ If you see `2 0100007F:1389`, two processes are sharing the default uws port via
 
 The internal uws port is purely local — it is never exposed to clients. The reverse proxy in front of Meteor (NGINX, Caddy, ALB, Galaxy…) talks to each process's *public* port (`PORT` env var) exactly as it would for `sockjs`. The per-process uws port configuration only matters between the public port and the internal uws server inside the same process.
 
-For an end-to-end walkthrough — reproduction recipe, the two interacting latent bugs the fix addresses, and validation against an unmodified Wekan multi-tenant image — see [`packages/ddp-server/MULTITENANCY-BUG.md`](https://github.com/meteor/meteor/blob/release-3.5/packages/ddp-server/MULTITENANCY-BUG.md) in the Meteor source.
+For an end-to-end walkthrough — reproduction recipe, the two interacting latent bugs the fix addresses ([PR #14425](https://github.com/meteor/meteor/pull/14425)), and validation against a real Wekan multi-tenant image — see the [Wekan reproduction guide](https://github.com/italojs/wekan/blob/repro/uws-changestreams-multitenancy/tests/multitenancy-repro/README.md) on the bug's original reporter's fork, kept as the historical record of how the bug was reproduced and how the fix was empirically validated.
 
 ## Verifying which transport is active
 
@@ -194,6 +242,25 @@ If you are switching an existing app from `sockjs` to `uws`:
 - [ ] Roll out to a subset of traffic first if your load balancer supports it.
 - [ ] Keep `sockjs` available as a rollback (toggle the env var, redeploy).
 - [ ] If multiple Meteor processes will share a host (multi-tenant, multi-process scaling, Galaxy co-scheduling, etc.), set a distinct `Meteor.settings.packages["ddp-server"].uws.port` for each. See [Multi-process and multi-tenant deployments](#multitenancy).
+
+### Upgrading from earlier 3.5 betas (3.5-beta.10 / .11)
+
+If you ran `DDP_TRANSPORT=uws` on a multi-process host with an earlier 3.5 beta, your deployment was working **but** silently mix-routing inbound WebSocket frames between processes via `SO_REUSEPORT`. The first container to bind `127.0.0.1:5001` "won", and inbound DDP traffic from every public port was distributed by the kernel across every process. This was the cross-tenant data leakage documented in [PR #14425](https://github.com/meteor/meteor/pull/14425).
+
+After upgrading to 3.5-beta.12 or later, the same misconfiguration **throws at startup** instead of silently corrupting data:
+
+```text
+Error: uWebSockets.js: failed to listen on 127.0.0.1:5001 (address already in use).
+  Another Meteor instance in this network namespace is already bound to this port.
+  …
+```
+
+This is the **intended fix**, not a regression. To bring your deployment back up:
+
+1. **Recommended**: add a distinct `Meteor.settings.packages["ddp-server"].uws.port` per service (see [Multi-process and multi-tenant deployments](#multitenancy) for the docker-compose example). All your services keep using `uws` with the per-tenant configuration; no SockJS perf trade-off.
+2. **Quick rollback**: set `DDP_TRANSPORT=sockjs` and `METEOR_REACTIVITY_ORDER=oplog,polling` on every service. Single env-var change per service, no per-service uniqueness needed.
+
+Both paths are valid. Option 1 keeps the uws performance improvements and works correctly. Option 2 is the same workaround used in earlier wekan releases via [wekan commit 7b88f4c21](https://github.com/wekan/wekan/commit/7b88f4c21a05810966e49833b393f4bd02d70d47).
 
 ## Reverting to `sockjs`
 
