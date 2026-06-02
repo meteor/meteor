@@ -474,7 +474,6 @@ var callShutdownHooks = Profile("Call Meteor.shutdown hooks", async function (si
     console.error('[Meteor.shutdown] timeout after ' + timeoutMs + 'ms, forcing exit');
     process.exit(exitCode);
   }, timeoutMs);
-  if (timer.unref) timer.unref();
 
   // LIFO — last registered runs first, mirroring teardown order.
   while (hooks.length) {
