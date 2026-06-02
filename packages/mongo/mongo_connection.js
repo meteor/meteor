@@ -34,6 +34,14 @@ export const MongoConnection = function (url, options) {
     ignoreUndefined: true,
   }, userOptions);
 
+  if (
+    Meteor.isDevelopment &&
+    mongoOptions.connectTimeoutMS === undefined &&
+    /^mongodb:\/\/(?:127\.0\.0\.1|localhost):3001(?:\/|$)/.test(url)
+  ) {
+    mongoOptions.connectTimeoutMS = 86400000;
+  }
+
 
 
   // Internally the oplog connections specify their own maxPoolSize
