@@ -82,10 +82,11 @@ export async function clearBuildArtifacts(appDir) {
  * @param {string} appName - Name of the app in the apps directory
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
+ * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
-  const { isMonorepo = false } = options;
+  const { isMonorepo = false, preserveFixtureSymlinks = false } = options;
 
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -104,7 +105,7 @@ export async function setupMeteorApp(appName, options = {}) {
 
     // Use fs-extra's copy method with recursive option
     await fs.copy(sourceAppDir, tempDir, {
-      dereference: true,
+      dereference: !preserveFixtureSymlinks,
       preserveTimestamps: true,
       overwrite: true
     });
@@ -153,9 +154,34 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
     pattern,
     { ...options, meteorProcess }
   );
+  const failPatterns = Array.isArray(options.failOnOutput)
+    ? options.failOnOutput
+    : options.failOnOutput
+    ? [options.failOnOutput]
+    : [];
+  const failWaits = failPatterns.map((failPattern) =>
+    waitForMeteorOutput(
+      outputLines,
+      failPattern,
+      { ...options, meteorProcess }
+    )
+      .then((line) => {
+        throw new Error(
+          `Meteor output matched fail pattern ${failPattern}:\n${line}`
+        );
+      })
+      .catch((err) => {
+        if (/Timeout waiting for output|process exited/i.test(err.message)) {
+          return new Promise(() => {});
+        }
+        throw err;
+      })
+  );
+  mainWait.catch(() => {});
 
   const usesExternalMongo = !!(env.MONGO_URL || process.env.MONGO_URL);
   if (options.mongoWatchdog === false || usesExternalMongo) {
+    await Promise.race([mainWait, ...failWaits]);
     return mainWait;
   }
 
@@ -173,10 +199,9 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
     );
   });
 
-  // Mark both handled so the race's loser can't reject unhandled later.
-  mainWait.catch(() => {});
+  // Mark the Mongo watchdog handled so the race's loser can't reject unhandled later.
   mongoWait.catch(() => {});
-  await Promise.race([mainWait, mongoWait]);
+  await Promise.race([mainWait, mongoWait, ...failWaits]);
   return mainWait;
 }
 
