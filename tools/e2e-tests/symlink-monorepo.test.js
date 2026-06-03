@@ -207,7 +207,7 @@ async function runBuiltBundleAssertions(buildOutputDir) {
   }
 }
 
-describeSymlinkApp('Symlink App Bundling /', () => {
+describeSymlinkApp('Symlink Monorepo App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
     appName: 'symlink-monorepo',
     port: APP_PORT,
