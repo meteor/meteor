@@ -290,6 +290,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
+    } else if (arch === "web.tauri") {
+      // Tauri targets a modern WKWebView / WebView2 / WebKitGTK, so it
+      // should be treated like web.browser (modern), not legacy.
+      features.modernBrowsers = true;
     } else if (arch === "web.cordova") {
       features.modernBrowsers = ! getMeteorConfig()?.modern?.cordova === false;
     }

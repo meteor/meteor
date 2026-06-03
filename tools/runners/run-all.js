@@ -31,6 +31,7 @@ class Runner {
           banner,
           disableOplog,
           cordovaRunner,
+          tauriRunner,
           mongoUrl,
           onFailure,
           oplogUrl,
@@ -158,6 +159,7 @@ class Runner {
       proxy: self.proxy,
       noRestartBanner: self.quiet,
       cordovaRunner: cordovaRunner,
+      tauriRunner: tauriRunner,
       hmrServer: self.hmrServer,
       hmrSecret
     });

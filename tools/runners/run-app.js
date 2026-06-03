@@ -430,6 +430,7 @@ var AppRunner = function (options) {
   self.rootUrl = options.rootUrl;
   self.mobileServerUrl = options.mobileServerUrl;
   self.cordovaRunner = options.cordovaRunner;
+  self.tauriRunner = options.tauriRunner;
   self.settingsFile = options.settingsFile;
   self.testMetadata = options.testMetadata;
   self.inspect = options.inspect;
@@ -534,6 +535,10 @@ Object.assign(AppRunner.prototype, {
 
     // The existence of this promise makes the fiber break out of its loop.
     self.exitPromise = self._makePromise("exit");
+
+    if (self.tauriRunner) {
+      self.tauriRunner.stop();
+    }
 
     self._resolvePromise("run", { outcome: 'stopped' });
     self._resolvePromise("watch");
@@ -774,6 +779,24 @@ Object.assign(AppRunner.prototype, {
       }
     }
 
+    const tauriRunner = self.tauriRunner;
+    if (tauriRunner && !tauriRunner.started && !tauriRunner._scaffolded) {
+      const { settingsFile, mobileServerUrl } = self;
+      const messages = await buildmessage.capture(async () => {
+        await tauriRunner.prepareProject(bundlePath, null,
+          { settingsFile, mobileServerUrl });
+      });
+
+      if (messages.hasMessages()) {
+        return {
+          outcome: 'bundle-fail',
+          errors: messages,
+          watchSet: combinedWatchSetForBundleResult(bundleResult)
+        };
+      }
+      tauriRunner.printWarningsIfNeeded();
+    }
+
     // Atomically (1) see if we've been stop()'d, (2) if not, create a
     // promise that can be used to stop() us once we start running.
     if (self.exitPromise) {
@@ -851,6 +874,10 @@ Object.assign(AppRunner.prototype, {
 
     if (cordovaRunner && !cordovaRunner.started) {
       await cordovaRunner.startRunTargets();
+    }
+
+    if (tauriRunner && !tauriRunner.started) {
+      await tauriRunner.startRunTargets();
     }
 
     // Start watching for changes for files if requested. There's no

@@ -28,6 +28,7 @@
 import { ClientVersions } from "./client_versions.js";
 
 const clientArch = Meteor.isCordova ? "web.cordova" :
+  Meteor.isTauri ? "web.tauri" :
   Meteor.isModern ? "web.browser" : "web.browser.legacy";
 
 const autoupdateVersions =

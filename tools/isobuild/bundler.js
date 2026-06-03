@@ -3393,7 +3393,8 @@ async function bundle({
     var app = await compiler.compile(packageSource, {
       packageMap: projectContext.packageMap,
       isopackCache: projectContext.isopackCache,
-      includeCordovaUnibuild: projectContext.platformList.usesCordova()
+      includeCordovaUnibuild: projectContext.platformList.usesCordova(),
+      includeTauriUnibuild: projectContext.platformList.usesTauri()
     });
 
     const mergeAppWatchSets = () => {
