@@ -37,6 +37,7 @@ const {
   getGlobalState,
   setGlobalState,
 } = require('meteor/tools-core/lib/global-state');
+const { waitForMeteorIndexReady, getMeteorIndexUrl } = require('./readiness');
 
 const {
   CAPACITOR_BUILD_CONTEXT,
@@ -47,6 +48,8 @@ const PROC_KEYS = {
   SYNC: 'capacitor.process.sync',
   RUN: 'capacitor.process.run',
 };
+
+const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
 
 /**
  * Builds the env block injected into every spawned `cap` invocation.
@@ -299,6 +302,56 @@ export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = []
   });
   setGlobalState(PROC_KEYS.RUN, proc);
   return proc;
+}
+
+/**
+ * Schedules the single interactive `cap run` launch for a Meteor run command.
+ * The build plugin must not await Meteor HTTP readiness during bundling because
+ * the app server only starts after the bundle step returns.
+ */
+export function scheduleCapRunAfterMeteorReady({
+  appDir = getMeteorAppDir(),
+  platform,
+  extraArgs = [],
+  readinessUrl = getMeteorIndexUrl(),
+  waitForReady = waitForMeteorIndexReady,
+  resolveTarget = resolveCapTarget,
+  run = runCapRun,
+} = {}) {
+  if (!platform) return false;
+
+  const existingLaunch = getGlobalState(RUN_LAUNCH_STATE_KEY, null);
+  const existingRun = getGlobalState(PROC_KEYS.RUN, null);
+  if (existingLaunch || (existingRun && isProcessRunning(existingRun))) {
+    return false;
+  }
+
+  setGlobalState(RUN_LAUNCH_STATE_KEY, true);
+
+  (async () => {
+    if (isVerbose()) {
+      logProgress(`=> ⏳ Capacitor waiting for Meteor server at ${readinessUrl}`);
+    }
+    const ready = await waitForReady({ url: readinessUrl });
+    if (!ready?.ok) {
+      setGlobalState(RUN_LAUNCH_STATE_KEY, null);
+      logError(`=> ❌ Capacitor timed out waiting for Meteor server at ${readinessUrl}`);
+      return;
+    }
+
+    const target = await resolveTarget({ appDir, platform });
+    const runArgs = [...extraArgs];
+    if (target) {
+      logInfo(`=> Capacitor launching on ${target}${process.env.METEOR_CAPACITOR_TARGET ? '' : ' (auto-picked)'}`);
+      runArgs.push(`--target=${target}`);
+    }
+    run({ appDir, platform, extraArgs: runArgs });
+  })().catch(error => {
+    setGlobalState(RUN_LAUNCH_STATE_KEY, null);
+    logError(`=> ❌ Capacitor launch failed: ${error.message}`);
+  });
+
+  return true;
 }
 
 /**

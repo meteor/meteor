@@ -45,8 +45,7 @@ const {
 const { runCapacitorTransforms } = require('./lib/transforms');
 const {
   runCapSync,
-  runCapRun,
-  resolveCapTarget,
+  scheduleCapRunAfterMeteorReady,
   ensureNativePlatformAdded,
   addNativePlatformIfMissing,
   cleanup,
@@ -196,23 +195,21 @@ if (isCapacitorOptIn()) {
     }
 
     if (isCapacitorRunOptIn()) {
-      // Sync once at startup, then launch Capacitor. METEOR_CAPACITOR_TARGET
-      // selects a specific device/emulator. METEOR_CAPACITOR_AUTO_PICK_TARGET
-      // enables the temporary first-target auto-pick path; otherwise Capacitor
-      // keeps its normal target-selection behavior.
+      // Sync once at startup, then schedule Capacitor launch after the Meteor
+      // HTTP index route is actually available. The launch scheduler is not
+      // awaited here because the server starts only after this bundle step
+      // returns.
       const platform = isMeteorAppNativeAndroid() ? 'android'
         : isMeteorAppNativeIos() ? 'ios'
         : null;
       const appDir = getMeteorAppDir();
       await transformAndSync({ appDir, platform });
       if (platform) {
-        const target = await resolveCapTarget({ appDir, platform });
-        const extraArgs = ['--no-sync'];
-        if (target) {
-          logInfo(`=> Capacitor launching on ${target}${process.env.METEOR_CAPACITOR_TARGET ? '' : ' (auto-picked)'}`);
-          extraArgs.push(`--target=${target}`);
-        }
-        runCapRun({ appDir, platform, extraArgs });
+        scheduleCapRunAfterMeteorReady({
+          appDir,
+          platform,
+          extraArgs: ['--no-sync'],
+        });
       }
     }
   } catch (error) {

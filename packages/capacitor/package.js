@@ -10,6 +10,7 @@ Package.registerBuildPlugin({
     'lib/dependencies.js',
     'lib/build-context.js',
     'lib/transforms.js',
+    'lib/readiness.js',
     'lib/processes.js',
     'lib/command.js',
     'capacitor_plugin.js',
@@ -25,6 +26,6 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['tinytest', 'ecmascript', 'capacitor']);
-  api.addFiles(['capacitor_tests.js']);
+  api.use(['tinytest', 'ecmascript', 'capacitor', 'tools-core']);
+  api.addFiles(['capacitor_tests.js'], 'server');
 });
