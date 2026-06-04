@@ -388,10 +388,18 @@ meteor create my-app --example simple-tasks
 
 ### Create from a Git Repository
 
-You can create a new Meteor app by cloning any Git repository:
+You can create a new Meteor app by cloning any Git repository. Pass the source URL as a positional argument, or use `--from` explicitly:
 
 ```bash
+meteor create my-app https://github.com/fredmaiaarantes/simpletasks
+
 meteor create my-app --from https://github.com/fredmaiaarantes/simpletasks
+```
+
+If you pass only the URL, Meteor derives the app directory from the repository or subdirectory name:
+
+```bash
+meteor create https://github.com/meteor/examples/tree/main/parties
 ```
 
 To extract a specific subdirectory from a repository, use `--from-dir`. You can also pin to a specific branch, tag, or commit SHA with `--from-branch`:
@@ -400,24 +408,26 @@ To extract a specific subdirectory from a repository, use `--from-dir`. You can 
 meteor create my-app --from https://github.com/meteor/examples --from-branch main --from-dir parties
 ```
 
-`--from` also accepts browser-style tree/src URLs from GitHub, GitLab, and Bitbucket. When you paste one, Meteor auto-detects the branch and subdirectory from the URL, so `--from-branch` and `--from-dir` become optional:
+The source also accepts browser-style tree/src URLs from GitHub, GitLab, and Bitbucket. When you paste one, Meteor auto-detects the branch and subdirectory from the URL, so `--from-branch` and `--from-dir` become optional:
 
 ```bash
-meteor create my-app --from https://github.com/meteor/examples/tree/main/parties
+meteor create my-app https://github.com/meteor/examples/tree/main/parties
 ```
 
 Supported URL patterns:
 
-- GitHub — `https://github.com/<owner>/<repo>/tree/<branch>[/<path>]`
-- GitLab — `https://gitlab.com/<owner>/<repo>/-/tree/<branch>[/<path>]`
-- Bitbucket — `https://bitbucket.org/<owner>/<repo>/src/<branch>[/<path>]`
+- GitHub: `https://github.com/<owner>/<repo>/tree/<branch>[/<path>]`
+- GitLab: `https://gitlab.com/<owner>/<repo>/-/tree/<branch>[/<path>]`
+- Bitbucket: `https://bitbucket.org/<owner>/<repo>/src/<branch>[/<path>]`
 
 Passing `--from-branch` or `--from-dir` explicitly overrides the values parsed from the URL.
 
+GitHub shorthand such as `owner/repo` is still supported with `--from owner/repo`. Positional inference requires a full URL so paths like `apps/my-app` keep their existing meaning.
+
 | Option | Description |
 |--------|-------------|
-| `--from <url>` | Clone a Meteor project from a Git URL. Accepts GitHub, GitLab, and Bitbucket tree/src URLs; branch and subdirectory are auto-detected from the URL when possible. |
-| `--from-branch <ref>` | Git ref to check out — accepts a branch, tag, or commit SHA. Overrides the branch parsed from the URL. |
+| `--from <url>` | Clone a Meteor project from a Git URL explicitly. Optional when a positional source is an unambiguous Git URL. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
+| `--from-branch <ref>` | Git ref to check out, accepts a branch, tag, or commit SHA. Overrides the branch parsed from the URL. |
 | `--from-dir <dir>` | Extract only a subdirectory (overrides the subdirectory parsed from the URL). |
 
 ##  meteor generate  {meteorgenerate}
@@ -889,15 +899,17 @@ meteor add package@version
 
 ### Clone a Package from a Git Repository
 
-You can also use `meteor add --from` to clone an existing Meteor package from any Git repository into your project's `packages/` directory:
+You can also clone an existing Meteor package from any Git repository into your project's `packages/` directory. Pass the source URL as the only package argument, or use `--from` explicitly:
 
 ```bash
+meteor add https://github.com/Meteor-Community-Packages/meteor-publish-composite
+
 meteor add --from https://github.com/Meteor-Community-Packages/meteor-publish-composite
 ```
 
 The package name is read from `Package.describe` in the cloned `package.js` and registered in `.meteor/packages` automatically, so the package is ready to use after a single command.
 
-`--from` accepts the same input formats as [`meteor create --from`](#create-from-a-git-repository):
+The source accepts the same input formats as [`meteor create --from`](#create-from-a-git-repository):
 
 - A full Git URL, for example `https://github.com/owner/repo`
 - A GitHub shorthand `owner/repo`, expanded to `https://github.com/owner/repo`
@@ -905,10 +917,10 @@ The package name is read from `Package.describe` in the cloned `package.js` and 
 
 ```bash
 # GitHub shorthand
-meteor add --from Meteor-Community-Packages/meteor-publish-composite
+meteor add Meteor-Community-Packages/meteor-publish-composite
 
 # tree URL with branch and subdirectory auto-detection
-meteor add --from https://github.com/meteor/blaze/tree/master/packages/blaze
+meteor add https://github.com/meteor/blaze/tree/master/packages/blaze
 ```
 
 Use `--from-branch` to pin a branch, tag, or commit SHA, `--from-dir` to extract a subdirectory, and `--to` to write to a custom destination relative to the project root:
@@ -926,7 +938,7 @@ If the destination already exists, Meteor prompts before overwriting. Pass `--fo
 
 | Option | Description |
 |--------|-------------|
-| `--from <url>` | Clone a Meteor package from a Git URL. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
+| `--from <url>` | Clone a Meteor package from a Git URL explicitly. Optional when the only package argument is URL-like. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
 | `--from-branch <ref>` | Git ref to check out (branch, tag, or commit SHA). Overrides the branch parsed from the URL. |
 | `--from-dir <dir>` | Extract only a subdirectory of the cloned repository. Overrides the subdirectory parsed from the URL. |
 | `--to <path>` | Destination path relative to the project root (default: `packages/<repo-name>`). |

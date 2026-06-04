@@ -19,8 +19,29 @@ function execGit(args, options = {}) {
  * If input matches `user/repo` with no protocol, expand to https://github.com/user/repo.
  * Otherwise return as-is.
  */
+function isGitHubShorthand(input) {
+  return typeof input === 'string' &&
+    /^[A-Za-z0-9][A-Za-z0-9_.-]*\/[A-Za-z0-9][A-Za-z0-9_.-]*(?:\.git)?$/.test(input);
+}
+
+function isGitSourceLike(input, { githubShorthand = true } = {}) {
+  if (typeof input !== 'string' || input.length === 0) {
+    return false;
+  }
+
+  if (/^(?:https?|ssh|git|file):\/\//i.test(input)) {
+    return true;
+  }
+
+  if (/^[^@\s]+@[^:\s]+:[^/\s]+\/[^\s]+$/.test(input)) {
+    return true;
+  }
+
+  return githubShorthand && isGitHubShorthand(input);
+}
+
 function resolveRepoUrl(input) {
-  if (typeof input === 'string' && /^[^/:\s]+\/[^/\s]+$/.test(input)) {
+  if (isGitHubShorthand(input)) {
     return `https://github.com/${input}`;
   }
   return input;
@@ -191,6 +212,7 @@ function validatePackageJs(dirPath) {
 }
 
 module.exports = {
+  isGitSourceLike,
   resolveRepoUrl,
   parseGitUrl,
   cloneRepo,
