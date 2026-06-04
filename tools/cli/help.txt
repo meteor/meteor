@@ -317,8 +317,10 @@ Git options:
                    Optional when the only package argument is URL-like.
   --from-branch    Branch to clone from.
   --from-dir       Extract only a subdirectory from the repo.
-  --to             Destination path relative to project root
-                   (default: packages/<repo-name>).
+  --to             Destination path relative to project root. By default, Meteor
+                   uses packages/<dir-name> when --from-dir is set or when a
+                   tree/.../<dir> URL parses into fromDir, otherwise
+                   packages/<repo-name>.
   --force          Overwrite destination directory if it already exists.
 
 
