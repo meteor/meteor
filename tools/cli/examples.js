@@ -1,7 +1,12 @@
 var files = require('../fs/files');
 var httpHelpers = require('../utils/http-helpers.js');
 var Console = require('../console/console.js').Console;
-const { cloneRepo, cloneSubdirectory, parseGitUrl } = require('./git-clone.js');
+const {
+  cloneRepo,
+  cloneSubdirectory,
+  isGitSourceLike,
+  parseGitUrl
+} = require('./git-clone.js');
 
 const EXAMPLES_REPO = 'https://github.com/meteor/examples';
 const EXAMPLES_BRANCH = 'main';
@@ -91,13 +96,13 @@ async function getExamples({ refresh = false } = {}) {
       throw fetchError;
     }
 
-    // Network failed — fall back to cache if available
+    // Network failed, fall back to cache if available
     const cached = readCache();
     if (cached && cached.examples) {
       return cached.examples;
     }
 
-    // No cache either — surface the original fetch error
+    // No cache either, surface the original fetch error
     throw fetchError;
   }
 }
@@ -121,6 +126,7 @@ module.exports = {
   findExample,
   cloneRepo,
   cloneSubdirectory,
+  isGitSourceLike,
   parseGitUrl,
   validateMeteorApp,
   EXAMPLES_REPO,

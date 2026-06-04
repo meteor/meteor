@@ -31,7 +31,13 @@ import {
 } from '../cordova/index.js';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
-const { parseGitUrl, cloneRepo, cloneSubdirectory, validatePackageJs } = require('./git-clone.js');
+const {
+  isGitSourceLike,
+  parseGitUrl,
+  cloneRepo,
+  cloneSubdirectory,
+  validatePackageJs
+} = require('./git-clone.js');
 const inquirer = require('inquirer');
 
 // For each release (or package), we store a meta-record with its name,
@@ -2193,6 +2199,16 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, async function (options) {
+  if (
+    !options.from &&
+    options.args &&
+    options.args.length === 1 &&
+    isGitSourceLike(options.args[0])
+  ) {
+    options.from = options.args[0];
+    options.args = [];
+  }
+
   // --from flow: clone a package from a git repository
   if (options['from-branch'] && !options.from) {
     Console.error('--from-branch requires --from to specify the source repository.');

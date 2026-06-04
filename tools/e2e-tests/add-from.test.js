@@ -108,12 +108,11 @@ describe('Other / Add --from /', () => {
       }
     });
 
-    it('meteor add --from accepts GitHub shorthand owner/repo', async () => {
+    it('meteor add infers --from for GitHub shorthand owner/repo', async () => {
       const { tempDir } = await createBaseApp('shorthand');
       try {
         await runMeteorCommand(
           'add', [
-            '--from',
             'Meteor-Community-Packages/meteor-publish-composite',
           ], tempDir,
           { captureOutput: true, checkExitCode: true }
@@ -125,14 +124,13 @@ describe('Other / Add --from /', () => {
       }
     });
 
-    it('meteor add --from parses a GitHub tree URL with subdirectory', async () => {
+    it('meteor add infers --from for a GitHub tree URL with subdirectory', async () => {
       const { tempDir } = await createBaseApp('tree');
       try {
         // meteor/blaze hosts multiple packages under packages/<name>/package.js;
         // a tree URL with subdir should auto-extract that single package.
         await runMeteorCommand(
           'add', [
-            '--from',
             'https://github.com/meteor/blaze/tree/master/packages/blaze',
           ], tempDir,
           { captureOutput: true, checkExitCode: true }
@@ -263,12 +261,12 @@ describe('Other / Add --from /', () => {
           stdio: 'inherit',
         });
 
-        // 3) Clone and register the package via meteor add --from using a
+        // 3) Clone and register the package via meteor add using a
         //    file:// git URL. The package is read from Package.describe and
         //    appended to .meteor/packages automatically.
         await runMeteorCommand(
           'add', [
-            '--from', `file://${pkgRepoDir}`,
+            `file://${pkgRepoDir}`,
             '--to', 'packages/smoketest',
           ], tempDir,
           { captureOutput: true, checkExitCode: true }

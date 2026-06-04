@@ -1,6 +1,47 @@
 jest.mock('../fs/files', () => ({}));
 
-const { parseGitUrl, resolveRepoUrl } = require('./git-clone.js');
+const { isGitSourceLike, parseGitUrl, resolveRepoUrl } = require('./git-clone.js');
+
+describe('isGitSourceLike', () => {
+  it('detects full Git URLs', () => {
+    expect(isGitSourceLike('https://github.com/owner/repo')).toBe(true);
+    expect(isGitSourceLike('http://github.com/owner/repo')).toBe(true);
+    expect(isGitSourceLike('ssh://git@github.com/owner/repo.git')).toBe(true);
+    expect(isGitSourceLike('git://github.com/owner/repo.git')).toBe(true);
+    expect(isGitSourceLike('file:///tmp/repo')).toBe(true);
+  });
+
+  it('detects SCP-style Git URLs', () => {
+    expect(isGitSourceLike('git@github.com:owner/repo.git')).toBe(true);
+  });
+
+  it('detects GitHub shorthand owner/repo', () => {
+    expect(isGitSourceLike('Meteor-Community-Packages/meteor-publish-composite'))
+      .toBe(true);
+  });
+
+  it('can ignore GitHub shorthand when it would conflict with paths', () => {
+    expect(isGitSourceLike('owner/repo', { githubShorthand: false }))
+      .toBe(false);
+    expect(isGitSourceLike('https://github.com/owner/repo', {
+      githubShorthand: false,
+    })).toBe(true);
+  });
+
+  it('does not detect package-like inputs', () => {
+    expect(isGitSourceLike('accounts-base')).toBe(false);
+    expect(isGitSourceLike('iron:router')).toBe(false);
+    expect(isGitSourceLike('accounts-base@1.0.0')).toBe(false);
+    expect(isGitSourceLike('cordova:cordova-plugin-camera')).toBe(false);
+    expect(isGitSourceLike('@scope/name')).toBe(false);
+  });
+
+  it('does not detect local paths as GitHub shorthand', () => {
+    expect(isGitSourceLike('../repo')).toBe(false);
+    expect(isGitSourceLike('./repo')).toBe(false);
+    expect(isGitSourceLike('/tmp/repo')).toBe(false);
+  });
+});
 
 describe('resolveRepoUrl', () => {
   it('expands GitHub shorthand owner/repo', () => {
@@ -16,6 +57,10 @@ describe('resolveRepoUrl', () => {
   it('returns SSH URLs unchanged', () => {
     expect(resolveRepoUrl('git@github.com:owner/repo.git'))
       .toBe('git@github.com:owner/repo.git');
+  });
+
+  it('returns npm-style scoped names unchanged', () => {
+    expect(resolveRepoUrl('@scope/name')).toBe('@scope/name');
   });
 
   it('returns non-string input unchanged', () => {
