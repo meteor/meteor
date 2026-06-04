@@ -40,6 +40,7 @@
     "test:native:ios": "cd tools/native-tests && npm test -- --platform=ios",
     "test:native:android": "cd tools/native-tests && npm test -- --platform=android",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
+    "test:self-hosted-runner-cleanup": "node --test scripts/ci/__tests__/self-hosted-runner-cleanup.node-test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
     "ts-coverage": "typescript-coverage-report",
     "ts-coverage:ci": "type-coverage --at-least 80"
