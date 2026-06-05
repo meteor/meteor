@@ -305,11 +305,11 @@ MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
     .rawCollection(collectionName)
     .drop({ session })
     .then(async result => {
-      // Do NOT annotate the fence here. ChangeStreamObserveDriver's pipeline
-      // only forwards insert/update/replace/delete; mongo emits a `drop`
-      // (and follow-up `invalidate`) event that our $match drops, so a
-      // fence waiter pinned to this clusterTime would block forever waiting
-      // for an event that never reaches the driver.
+      // Do NOT annotate the fence here. dropCollection emits `drop` followed
+      // by `invalidate`; ChangeStreamObserveDriver treats `invalidate` as
+      // terminal and stops the cursor immediately, so a fence waiter pinned
+      // to this clusterTime races against the driver's own teardown and can
+      // block waiting for a resolver that will never fire.
       await session.endSession();
       await refresh();
       await write.committed();

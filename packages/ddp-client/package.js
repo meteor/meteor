@@ -60,6 +60,7 @@ Package.onTest((api) => {
   ]);
 
   api.addFiles("test/stub_stream.js");
+  api.addFiles("test/reverse_fixture.js", "server");
   api.addFiles("test/livedata_connection_tests.js");
   api.addFiles("test/livedata_tests.js");
   api.addFiles("test/livedata_test_service.js");

@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var os = require('os');
 
 var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('./compiler.js');
@@ -6,6 +7,7 @@ var files = require('../fs/files');
 var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
+var meteorNpm = require('./meteor-npm.js');
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 
@@ -64,6 +66,10 @@ export class IsopackCache {
       files.mkdir_p(self.cacheDir);
     }
 
+    await Profile.time('IsopackCache prefetch npm dependencies', async () => {
+      await self._prefetchNpmDependencies();
+    });
+
     var onStack = {};
     if (rootPackageNames) {
       for (const name of rootPackageNames) {
@@ -75,6 +81,59 @@ export class IsopackCache {
         await requestGarbageCollection();
       });
     }
+  }
+
+  // Warm `meteorNpm.updateDependencies` for every local package in parallel,
+  // before the dependency-ordered build loop starts. The compile-time call
+  // (compiler.js:129/140) is unchanged; on a warm tree it short-circuits via
+  // the shrinkwrap-subtree check at meteor-npm.js:682, so this becomes a
+  // no-op when prefetch already did the work.
+  //
+  // Tasks are keyed by directory, not by package, because a package and its
+  // auto-generated `local-test:` twin share the same `sourceRoot` and
+  // therefore the same `.npm/package/` dir (see package-source.js:782).
+  // Running parallel installs against the same dir would race the atomic
+  // rename in `completeNpmDirectory`. Errors are swallowed; the per-package
+  // compile call will retry and surface them through the normal
+  // buildmessage path.
+  async _prefetchNpmDependencies() {
+    const byDir = new Map();
+    const enqueue = (name, dir, deps) => {
+      if (! dir || _.isEmpty(deps) || byDir.has(dir)) return;
+      byDir.set(dir, { name, dir, deps });
+    };
+    for (const [, info] of Object.entries(this._packageMap._map)) {
+      if (info.kind !== 'local') continue;
+      const ps = info.packageSource;
+      if (! ps) continue;
+      enqueue(ps.name, ps.npmCacheDirectory, ps.npmDependencies);
+      enqueue(ps.name, ps.npmDevCacheDirectory, ps.npmDevDependencies);
+    }
+
+    const tasks = Array.from(byDir.values());
+    if (tasks.length === 0) return;
+
+    const concurrency = Math.max(1, Math.min(os.cpus().length, 8));
+    let cursor = 0;
+
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, tasks.length) }, async () => {
+        while (true) {
+          const i = cursor++;
+          if (i >= tasks.length) return;
+          const { name, dir, deps } = tasks[i];
+          try {
+            await meteorNpm.updateDependencies(name, dir, deps);
+          } catch (err) {
+            // Best-effort: compiler.compile will retry per-package serially
+            // and surface errors normally. Log here so silent prefetch
+            // failures are diagnosable in CI.
+            console.error(`[prefetch] ${name} failed:`,
+              (err && err.stack) || err);
+          }
+        }
+      })
+    );
   }
 
   async wipeCachedPackages(packages) {

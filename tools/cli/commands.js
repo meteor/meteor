@@ -2891,13 +2891,15 @@ main.registerCommand({
     slow: { type: Boolean },
     galaxy: { type: Boolean },
     browserstack: { type: Boolean },
-    phantom: { type: Boolean },
     // Indicates whether these self-tests are running headless, e.g. in a
     // continuous integration testing environment, where visual niceties
     // like progress bars and spinners are unimportant.
     headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
+    // Path to write a JSON array of filtered tests to. Used by CI to build
+    // a per-test matrix without parsing human-readable --list output.
+    'list-json-out': { type: String },
     file: { type: String },
     exclude: { type: String },
     // Skip tests w/ this tag
@@ -2986,9 +2988,24 @@ main.registerCommand({
     return 0;
   }
 
+  if (options['list-json-out']) {
+    await selftest.listTestsJson({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      galaxyOnly: options.galaxy,
+      testRegexp: testRegexp,
+      fileRegexp: fileRegexp,
+      'without-tag': options['without-tag'],
+      'with-tag': options['with-tag'],
+      outFile: options['list-json-out'],
+    });
+
+    return 0;
+  }
+
   const clients = {
     puppeteer: true, // Puppeteer is always enabled.
-    phantom: options.phantom,
     browserstack: options.browserstack,
   };
 

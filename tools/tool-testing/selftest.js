@@ -381,7 +381,16 @@ class TestList {
     // We'll form an collection of "testsuites"
     const testSuites = [];
 
-    const attrSafe = attr => (attr || "").replace('"', "&quot;");
+    const attrSafe = attr => (attr || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&apos;");
+    // CDATA sections cannot contain the literal "]]>"; split it across two
+    // sections so any embedded occurrences in test output don't terminate
+    // the section prematurely.
+    const cdataSafe = data => String(data ?? "").replace(/]]>/g, "]]]]><![CDATA[>");
     const durationForOutput = durationMs => durationMs / 1000;
 
     // Each file is a testsuite.
@@ -410,9 +419,9 @@ class TestList {
             countFailure++;
 
             failureElement = [
-              `<error type="${test.failureObject.reason}">`,
+              `<error type="${attrSafe(test.failureObject.reason)}">`,
               '<![CDATA[',
-              inspect(test.failureObject.details, { depth: 4 }),
+              cdataSafe(inspect(test.failureObject.details, { depth: 4 })),
               ']]>',
               '</error>',
             ].join('\n');
@@ -422,7 +431,7 @@ class TestList {
             failureElement = [
               '<failure>',
               '<![CDATA[',
-              test.failureObject.stack,
+              cdataSafe(test.failureObject.stack),
               ']]>',
               '</failure>',
             ].join('\n');
@@ -445,7 +454,7 @@ class TestList {
       });
 
       const testSuiteAttrs = [
-        `name="${file}"`,
+        `name="${attrSafe(file)}"`,
         `tests="${testCases.length}"`,
         `failures="${countFailure}"`,
         `errors="${countError}"`,
@@ -567,6 +576,34 @@ export async function listTests(options) {
   Console.error(testList.generateSkipReport());
 }
 
+// Same options as getFilteredTests, plus `outFile` (filesystem path). Writes
+// a single JSON array (one entry per filtered test) to that file and a short
+// summary to stderr. Writing to a file rather than stdout keeps machine
+// consumers (e.g. the CI matrix builder) immune to any stdout preamble the
+// meteor wrapper or boot path may emit.
+export async function listTestsJson(options) {
+  const testList = await getFilteredTests(options);
+
+  // Pseudo-tags injected by getFilteredTests during filtering — strip them
+  // so consumers see only the tags each test was registered with.
+  const PSEUDO_TAGS = new Set([
+    'in other files', 'non-matching', 'unchanged', 'excluded', 'non-galaxy',
+  ]);
+
+  const entries = testList.filteredTests.map((test) => ({
+    file: test.file,
+    name: test.name,
+    tags: test.tags.filter((tag) => !PSEUDO_TAGS.has(tag)),
+  }));
+
+  files.writeFile(
+    files.pathResolve(options.outFile),
+    JSON.stringify(entries),
+    'utf8',
+  );
+  Console.error(entries.length + " tests listed.");
+}
+
 const shouldSkipCurrentTest = ({currentTestIndex, options: {skip, limit} = {}}) => {
   if (!skip && !limit) {
     return false;
@@ -621,7 +658,7 @@ export async function runTests(options) {
     Console.info(`${skipMessage} ${countMessage} ${testMessage}`);
 
     if (shouldSkip || options.preview) {
-      return;
+      continue;
     }
 
     await Run.runTest(

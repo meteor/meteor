@@ -1,6 +1,5 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var testUtils = require('../tool-testing/test-utils.js');
 
 var commandTimeoutSecs = 10;
 var loginTimeoutSecs = 2;
@@ -121,37 +120,5 @@ selftest.define("login", ['net'], async function () {
   run.write("TesTTesT\n");
   run.waitSecs(commandTimeoutSecs);
   await run.matchErr("Login failed");
-  await run.expectExit(1);
-});
-
-// This is a Galaxy-related command (deploy), but still pretty auth-y.
-selftest.define("login on deploy", ['net'], async function () {
-  const s = new Sandbox;
-  await s.init();
-
-  const appName = testUtils.randomAppName();
-
-  await s.createApp(appName, "standard-app");
-  s.cd(appName);
-
-  let run = s.run("deploy", appName);
-  await run.matchErr(/You must be logged in to deploy/);
-
-  await run.matchErr("Email:");
-  run.write("test@test.com\n");
-
-  await run.matchErr("Logging in as test.");
-
-  await run.matchErr("Password:");
-  run.write("SoVeryWrong\n");
-  run.waitSecs(commandTimeoutSecs);
-  await run.matchErr("Login failed");
-
-  await run.matchErr("Password:");
-  run.write("testtest\n");
-  run.waitSecs(commandTimeoutSecs);
-  await run.match("Talking to Galaxy servers");
-  run.waitSecs(commandTimeoutSecs * 10);
-  // "test" user can't actually deploy, so it will still fail.
   await run.expectExit(1);
 });

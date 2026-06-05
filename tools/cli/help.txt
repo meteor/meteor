@@ -785,7 +785,7 @@ Options:
 Run tests of the 'meteor' tool.
 Usage: meteor self-test [pattern] [--list] [--file pattern] [--changed]
                         [--slow] [--force-online] [--history n]
-                        [--browserstack] [--phantom] [--retries n]
+                        [--browserstack] [--retries n]
 
 Runs internal tests. Exits with status 0 on success.
 
@@ -814,8 +814,6 @@ shown on test failure. The default is 10.
 
 Pass --browserstack to enable client side tests using BrowserStack.
 --browserstack requires s3cmd credentials.
-
-Pass --phantom to enable client side tests using Phantom.
 
 By default, failed tests are retried twice. Use --retries to change
 the number of retries, or disable retries by setting the value to 0.

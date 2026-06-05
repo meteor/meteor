@@ -1667,7 +1667,7 @@ Tinytest.addAsync(
 // ============================================================================
 
 Tinytest.addAsync(
-  'changestream - stop callbacks are executed on stop',
+  'changestream - stop closes the change stream cursor',
   async function (test) {
     const c = makeCollection();
 
@@ -1678,18 +1678,14 @@ Tinytest.addAsync(
     test.isTrue(isChangeStreamDriver(handle));
 
     const driver = handle._multiplexer._observeDriver;
-    const initialCallbackCount = driver._stopCallbacks.length;
-
-    // Should have some stop callbacks registered
-    test.isTrue(initialCallbackCount > 0, 'Should have stop callbacks');
+    test.isNotNull(driver._changeStream, 'Cursor should be open before stop');
 
     handle.stop();
 
-    // Wait for async stop to complete
-    await waitFor(() => driver._stopCallbacks.length === 0, 2000);
+    await waitFor(() => driver._stopped && driver._changeStream === null, 2000);
 
-    // After stop, callbacks should be cleared
-    test.equal(driver._stopCallbacks.length, 0, 'Callbacks should be cleared after stop');
+    test.isTrue(driver._stopped, 'Driver should be marked as stopped');
+    test.isNull(driver._changeStream, 'Cursor reference should be cleared after stop');
   }
 );
 
@@ -1706,16 +1702,15 @@ Tinytest.addAsync(
 
     const driver = handle._multiplexer._observeDriver;
 
-    // Stop and verify cleanup
     handle.stop();
 
-    // Wait for async stop to complete
-    await waitFor(() => driver._stopped && driver._stopCallbacks.length === 0, 2000);
+    await waitFor(() => driver._stopped && driver._changeStream === null, 2000);
 
     test.isTrue(driver._stopped, 'Driver should be marked as stopped');
     test.equal(driver._pendingWrites.length, 0, 'Pending writes should be cleared');
     test.equal(driver._writesToCommitWhenReady.length, 0, 'Writes to commit should be cleared');
-    test.equal(driver._stopCallbacks.length, 0, 'Stop callbacks should be cleared');
+    test.isNull(driver._changeStream, 'Change stream cursor should be released');
+    test.isNull(driver._listenStopHandle, 'Listen handle should be released');
   }
 );
 
@@ -2042,36 +2037,6 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream - _addStopCallback validates input',
-  async function (test) {
-    const c = makeCollection();
-
-    const handle = await c.find({}).observeChanges({
-      added: function () { }
-    });
-
-    test.isTrue(isChangeStreamDriver(handle));
-
-    const driver = handle._multiplexer._observeDriver;
-
-    // Should throw on non-function
-    try {
-      driver._addStopCallback('not a function');
-      test.fail('Should throw on non-function');
-    } catch (e) {
-      test.isTrue(e.message.includes('function'));
-    }
-
-    // Should accept function
-    const callbackCount = driver._stopCallbacks.length;
-    driver._addStopCallback(() => { });
-    test.equal(driver._stopCallbacks.length, callbackCount + 1);
-
-    handle.stop();
-  }
-);
-
-Tinytest.addAsync(
   'changestream - driver has correct initial state',
   async function (test) {
     const c = makeCollection();
@@ -2084,10 +2049,11 @@ Tinytest.addAsync(
 
     const driver = handle._multiplexer._observeDriver;
 
-    // Check initial state properties
     test.isTrue(driver._usesChangeStreams);
     test.isFalse(driver._stopped);
-    test.isTrue(Array.isArray(driver._stopCallbacks));
+    test.isFalse(driver._invalidated);
+    test.isNotNull(driver._changeStream);
+    test.equal(driver._restartAttempt, 0);
     test.isTrue(Array.isArray(driver._pendingWrites));
     test.isTrue(Array.isArray(driver._writesToCommitWhenReady));
     test.isTrue(Array.isArray(driver._catchingUpResolvers));
@@ -2228,25 +2194,23 @@ Tinytest.addAsync(
   'changestream- two writes to same collection keep the later ts',
   async function (test) {
     const c = makeCollection();
+    // Don't spread the Timestamp objects: in bson 6.x, `t` and `i` are
+    // prototype getters, not own properties, so `{ ...ts }` would drop them
+    // and leave only the underlying Long fields (low/high/unsigned).
     let tsFirst = null;
     let tsFinal = null;
-    // Snapshot the Timestamp's t/i fields directly — `{ ...timestamp }` only
-    // copies own enumerable properties, which on the BSON Timestamp/Long class
-    // are `low`/`high`/`unsigned`. The `t` and `i` accessors live on the
-    // prototype and would be lost in a spread, leaving an undefined comparison.
-    const snapshotTs = (ts) => (ts == null ? null : { t: ts.t, i: ts.i });
     await withFence(async (f) => {
       await c.insertAsync({ n: 1 });
-      tsFirst = snapshotTs(f._csTargetTsByCollection[c._name]);
+      tsFirst = f._csTargetTsByCollection[c._name];
       await c.insertAsync({ n: 2 });
-      tsFinal = snapshotTs(f._csTargetTsByCollection[c._name]);
+      tsFinal = f._csTargetTsByCollection[c._name];
     });
     test.isTrue(isBsonTimestamp(tsFirst) && isBsonTimestamp(tsFinal));
     const firstLessOrEqual = tsFirst.t < tsFinal.t
       || (tsFirst.t === tsFinal.t && tsFirst.i <= tsFinal.i);
     test.isTrue(
       firstLessOrEqual,
-      `later write should have ts >= earlier; got ${JSON.stringify(tsFirst)} → ${JSON.stringify(tsFinal)}`
+      `later write should have ts >= earlier; got {t:${tsFirst.t},i:${tsFirst.i}} → {t:${tsFinal.t},i:${tsFinal.i}}`
     );
   }
 );
@@ -2282,8 +2246,7 @@ Tinytest.addAsync(
     await waitFor(() => driver._lastProcessedOperationTime !== null, 2000);
 
     // Build a fake fence whose target ts is <= _lastProcessedOperationTime.
-    // _waitUntilCaughtUp should hit the 'already-caught-up' early exit
-    // and not enqueue a resolver.
+    // _waitUntilCaughtUp should hit the 'already-caught-up' early exit.
     const pastTs = driver._lastProcessedOperationTime;
     const fakeFence = { _csTargetTsByCollection: { [c._name]: pastTs } };
 
@@ -2297,19 +2260,20 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- _waitUntilCaughtUp returns immediately when no fence annotation',
+  'changestream- _waitUntilCaughtUp returns fast when no fence annotation',
   async function (test) {
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
     const driver = handle._multiplexer._observeDriver;
 
-    // No fence at all → no specific write to wait for, return without waiting.
+    // Undefined fence → no target ts to wait for. Should yield once and return,
+    // not synthesize an artificial wait goal that could force a safety timeout.
     const t0 = Date.now();
     await driver._waitUntilCaughtUp(undefined);
     const elapsed = Date.now() - t0;
 
-    test.isTrue(elapsed < 250, `no-fence path should return immediately; elapsed=${elapsed}ms`);
+    test.isTrue(elapsed < 50, `no-annotation path should short-circuit fast; elapsed=${elapsed}ms`);
     handle.stop();
   }
 );
@@ -2318,10 +2282,8 @@ Tinytest.addAsync(
   'changestream- _waitUntilCaughtUp ignores annotation for a different collection',
   async function (test) {
     // If _waitUntilCaughtUp took ts from another collection, we'd spin
-    // forever waiting for a clusterTime this driver's stream never observes
-    // (no safety-valve timeout — the wait is unbounded by design, mirroring
-    // OplogHandle._waitUntilCaughtUp). The correct behaviour is to skip
-    // entirely when our collection isn't in the annotation map.
+    // waiting for a clusterTime this driver's stream never observes.
+    // The correct behaviour is to ignore that key and return immediately.
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
@@ -2337,8 +2299,8 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 250,
-      `annotation for another collection should be ignored; elapsed=${elapsed}ms`
+      elapsed < 50,
+      `annotation for another collection should be ignored (short-circuit); elapsed=${elapsed}ms`
     );
     handle.stop();
   }
@@ -2367,21 +2329,19 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- waitUntilCaughtUp warn watchdog default is 10s',
+  'changestream- timeout default is 1000ms unless overridden',
   async function (test) {
-    // The previous implementation had a hard safety-valve timeout that
-    // released the wait early; that caused fences to fire before the
-    // change had been delivered to the multiplexer (e.g. client received
-    // `updated` without `changed`). The wait is now unbounded — only a
-    // log-only watchdog at waitUntilCaughtUpWarnMs (default 10s) flags
-    // genuinely stalled streams without masking them.
     const setting = Meteor.settings
       && Meteor.settings.packages
       && Meteor.settings.packages.mongo
       && Meteor.settings.packages.mongo.changeStream
-      && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpWarnMs;
-    const effective = setting ?? 10000;
-    test.equal(effective, 10000, 'warn watchdog default should be 10s; override via Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpWarnMs');
+      && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs;
+    const effective = setting ?? 1000;
+    test.equal(
+      effective,
+      1000,
+      'safety-valve default should give tight-loop method tests headroom over per-event dispatch latency'
+    );
   }
 );
 
@@ -2391,8 +2351,11 @@ Tinytest.addAsync(
     // Pre-fix pathology was a hard ~2s wait (2x 1000ms timeout) because
     // _waitUntilCaughtUp asked the server for a ts the stream hadn't seen
     // yet. With the fix the fence carries the exact write ts, the change
-    // event carries the same ts, and the wait resolves immediately.
-    // 500ms bound catches a regression without flaking on slow CI.
+    // event carries the same ts, and the wait resolves immediately
+    // (single-digit ms in steady state).
+    // 1500ms bound: comfortably catches the pre-fix ~2s regression and
+    // sits above the 1000ms safety-valve so a one-off CI hiccup that
+    // trips the valve is reported as a real signal, not a flake.
     const c = makeCollection();
     const added = [];
     const handle = await c.find({}).observeChanges({
@@ -2410,8 +2373,8 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 500,
-      `fenced insert+fire should be fast with the fix; elapsed=${elapsed}ms (pre-fix ~2000ms)`
+      elapsed < 1500,
+      `fenced insert+fire should resolve via the change event, not the safety valve; elapsed=${elapsed}ms (pre-fix ~2000ms)`
     );
 
     const sawInsert = await waitFor(

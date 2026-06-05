@@ -7,6 +7,10 @@ import { forEachTrigger, listenAll } from './mongo_driver';
 import { Cursor } from './cursor';
 import LocalCollection from 'meteor/minimongo/local_collection';
 import { idForOp } from './oplog_tailing';
+import { fenceLog, FENCE_DEBUG_ENABLED } from './_fence_debug';
+
+let nextOplogDriverDebugId = 0;
+let nextOplogFenceDebugId = 0;
 
 var PHASE = {
   QUERYING: "QUERYING",
@@ -129,6 +133,7 @@ export const OplogObserveDriver = function (options) {
 
   self._requeryWhenDoneThisQuery = false;
   self._writesToCommitWhenWeReachSteady = [];
+  self._debugId = ++nextOplogDriverDebugId;
  };
 
 Object.assign(OplogObserveDriver.prototype, {
@@ -182,27 +187,70 @@ Object.assign(OplogObserveDriver.prototype, {
         fence._oplogObserveDrivers = {};
         fence._oplogObserveDrivers[self._id] = self;
   
+        const fenceDebugId = FENCE_DEBUG_ENABLED ? ++nextOplogFenceDebugId : 0;
+        if (FENCE_DEBUG_ENABLED) {
+          fenceLog('oplog:onWrite:registerFence', {
+            driverId: self._debugId,
+            fenceId: fenceDebugId,
+          });
+        }
+
         fence.onBeforeFire(async function () {
           const drivers = fence._oplogObserveDrivers;
           delete fence._oplogObserveDrivers;
-  
+
+          if (FENCE_DEBUG_ENABLED) {
+            fenceLog('oplog:onBeforeFire:enter', {
+              fenceId: fenceDebugId,
+              driverCount: Object.keys(drivers).length,
+            });
+          }
+
           // This fence cannot fire until we've caught up to "this point" in the
           // oplog, and all observers made it back to the steady state.
           await self._mongoHandle._oplogHandle.waitUntilCaughtUp();
-  
+          if (FENCE_DEBUG_ENABLED) {
+            fenceLog('oplog:waitUntilCaughtUp:after', { fenceId: fenceDebugId });
+          }
+
           for (const driver of Object.values(drivers)) {
             if (driver._stopped)
               continue;
-  
+
             const write = await fence.beginWrite();
             if (driver._phase === PHASE.STEADY) {
+              if (FENCE_DEBUG_ENABLED) {
+                fenceLog('oplog:onFlush:before', {
+                  fenceId: fenceDebugId,
+                  driverId: driver._debugId,
+                  mxId: driver._multiplexer?._debugId,
+                });
+              }
               // Make sure that all of the callbacks have made it through the
               // multiplexer and been delivered to ObserveHandles before committing
               // writes.
               await driver._multiplexer.onFlush(write.committed);
+              if (FENCE_DEBUG_ENABLED) {
+                fenceLog('oplog:onFlush:after', {
+                  fenceId: fenceDebugId,
+                  driverId: driver._debugId,
+                  mxId: driver._multiplexer?._debugId,
+                });
+              }
             } else {
+              if (FENCE_DEBUG_ENABLED) {
+                fenceLog('oplog:onFlush:deferred', {
+                  fenceId: fenceDebugId,
+                  driverId: driver._debugId,
+                  mxId: driver._multiplexer?._debugId,
+                  phase: driver._phase,
+                });
+              }
               driver._writesToCommitWhenWeReachSteady.push(write);
             }
+          }
+          if (FENCE_DEBUG_ENABLED) {
+            fenceLog('oplog:onBeforeFire:exit', { fenceId: fenceDebugId });
           }
         });
       }
@@ -601,6 +649,13 @@ Object.assign(OplogObserveDriver.prototype, {
     self._registerPhaseChange(PHASE.STEADY);
     var writes = self._writesToCommitWhenWeReachSteady || [];
     self._writesToCommitWhenWeReachSteady = [];
+    if (FENCE_DEBUG_ENABLED) {
+      fenceLog('oplog:beSteady:before', {
+        driverId: self._debugId,
+        mxId: self._multiplexer?._debugId,
+        writeCount: writes.length,
+      });
+    }
     await self._multiplexer.onFlush(async function () {
       try {
         for (const w of writes) {
@@ -610,6 +665,12 @@ Object.assign(OplogObserveDriver.prototype, {
         console.error("_beSteady error", {writes}, e);
       }
     });
+    if (FENCE_DEBUG_ENABLED) {
+      fenceLog('oplog:beSteady:after', {
+        driverId: self._debugId,
+        mxId: self._multiplexer?._debugId,
+      });
+    }
   },
   _handleOplogEntryQuerying: function (op) {
     var self = this;

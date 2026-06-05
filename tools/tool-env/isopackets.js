@@ -103,15 +103,28 @@ export async function loadIsopackage(packageName, isopacketName = "combined") {
   async function load() {
     if (_.has(loadedIsopackets, isopacketName)) {
       if (loadedIsopackets[isopacketName]) {
+        // Either the resolved package registry or an in-flight promise from
+        // a concurrent caller — awaiting either yields the resolved value.
         return loadedIsopackets[isopacketName];
       }
 
-      // This is the case where the isopacket is up to date on disk but not
-      // loaded.
-      const loaded = await loadIsopacketFromDisk(isopacketName);
-      loadedIsopackets[isopacketName] = loaded;
-
-      return loaded;
+      // Cache the in-flight promise (not just the resolved value) so
+      // concurrent callers share one disk load. Two concurrent image.load()
+      // invocations share the process-global reify runtime via Node's
+      // require cache, which produces a duplicate EJSON.addType('oid')
+      // when both bundles evaluate mongo-id/id.js.
+      const inflight = loadIsopacketFromDisk(isopacketName);
+      loadedIsopackets[isopacketName] = inflight;
+      try {
+        const loaded = await inflight;
+        loadedIsopackets[isopacketName] = loaded;
+        return loaded;
+      } catch (err) {
+        // Reset the sentinel on failure so a future call can retry instead
+        // of forever returning the rejected promise.
+        loadedIsopackets[isopacketName] = null;
+        throw err;
+      }
     }
 
     if (_.has(ISOPACKETS, isopacketName)) {

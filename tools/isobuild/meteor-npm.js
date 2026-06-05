@@ -679,7 +679,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
 
-  if (isSubtreeOf(npmTree, minInstalledTree) &&
+  if (isSubtreeOf(npmTree, minInstalledTree, declaredSpecMatchesResolved) &&
       isSubtreeOf(minShrinkwrapTree, minInstalledTree)) {
     return;
   }
@@ -696,7 +696,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     // If there are no npmDependencies, make sure nothing is installed.
     preservedShrinkwrap = { dependencies: {} };
 
-  } else if (isSubtreeOf(npmTree, minShrinkwrapTree)) {
+  } else if (isSubtreeOf(npmTree, minShrinkwrapTree, declaredSpecMatchesResolved)) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
     preservedShrinkwrap = shrinkwrappedDependenciesTree;
@@ -704,7 +704,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   } else {
     // Otherwise install npmTree.dependencies as if we were creating a new
     // .npm/package directory, and leave preservedShrinkwrap empty.
-    await installNpmDependencies(npmDependencies, newPackageNpmDir);
+    await batchInstallNpmModules(npmDependencies, newPackageNpmDir);
 
     // Note: as of npm@4.0.0, npm-shrinkwrap.json files are regarded as
     // "canonical," meaning `npm install` (without a package argument)
@@ -773,6 +773,22 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
                        npmDependencies);
 };
 
+// Predicate for the shrinkwrap-subtree check that lets a git/github URL
+// spec from Npm.depends (e.g. "git+https://github.com/foo/bar#v20.58.0")
+// match the resolved version npm records after install (e.g. "20.58.0").
+// Without this, every package that declares a git/tarball Npm.depends
+// fails the cache short-circuit and is reinstalled on every meteor
+// invocation. Returns true on a match; returning undefined/false makes
+// isSubtreeOf fall through to its default behavior.
+function declaredSpecMatchesResolved(declared, resolved) {
+  if (typeof declared !== "string" || typeof resolved !== "string") return;
+  const hashIdx = declared.lastIndexOf("#");
+  if (hashIdx < 0) return;
+  let ref = declared.slice(hashIdx + 1);
+  if (ref[0] === "v" || ref[0] === "V") ref = ref.slice(1);
+  return ref === resolved ? true : undefined;
+}
+
 function isSubtreeOf(subsetTree, supersetTree, predicate) {
   if (subsetTree === supersetTree) {
     return true;
@@ -803,30 +819,69 @@ var createFreshNpmDirectory = async function (packageName, newPackageNpmDir,
 
   makeNewPackageNpmDir(newPackageNpmDir);
 
-  await installNpmDependencies(npmDependencies, newPackageNpmDir);
+  await batchInstallNpmModules(npmDependencies, newPackageNpmDir);
 
   await completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
 
-async function installNpmDependencies(dependencies, dir) {
-  const packageJsonPath = files.pathJoin(dir, "package.json");
-  const packageJsonExisted = files.exists(packageJsonPath);
+// Installs many `name@version` deps (or tarball/git URLs) into `dir` with a
+// single `npm install` invocation. One child process instead of N is
+// dramatically faster — npm resolves and downloads in parallel internally,
+// and we save N-1 process startups + ~N-1 npm cache reads. On failure, falls
+// back to per-dep `installNpmModule` so its stderr-parsing surfaces the
+// targeted error (bad name vs. bad version vs. unavailable).
+const batchInstallNpmModules = meteorNpm.batchInstallNpmModules =
+async function batchInstallNpmModules(dependencies, dir) {
+  const entries = Object.entries(dependencies);
+  if (entries.length === 0) return;
 
-  files.writeFile(
-    packageJsonPath,
-    JSON.stringify({ dependencies }, null, 2)
+  const installArgs = entries.map(
+    ([name, version]) => npmInstallArgFor(name, version),
   );
+  const result = await runNpmCommand(["install", ...installArgs], dir);
 
-  try {
-    for (const name of Object.keys(dependencies)) {
-      const version = dependencies[name];
+  if (! result.success) {
+    for (const [name, version] of entries) {
       await installNpmModule(name, version, dir);
     }
-  } finally {
-    if (! packageJsonExisted) {
-      files.unlink(packageJsonPath);
+    return;
+  }
+
+  for (const [name] of entries) {
+    checkPostInstallPortability(name, dir);
+  }
+  checkNodeModulesForColons(dir);
+};
+
+function npmInstallArgFor(name, version) {
+  return utils.isNpmUrl(version) ? version : `${name}@${version}`;
+}
+
+function checkPostInstallPortability(name, dir) {
+  const pkgDir = files.pathJoin(dir, "node_modules", name);
+  if (! isPortable(pkgDir)) {
+    recordLastRebuildVersions(pkgDir);
+  }
+}
+
+function checkNodeModulesForColons(dir) {
+  if (process.platform === "win32") return;
+
+  const pathsWithColons = files.findPathsWithRegex(".", new RegExp(":"),
+    { cwd: files.pathJoin(dir, "node_modules") });
+
+  if (pathsWithColons.length) {
+    const firstTen = pathsWithColons.slice(0, 10);
+    if (pathsWithColons.length > 10) {
+      firstTen.push(`... ${pathsWithColons.length - 10} paths omitted.`);
     }
+    buildmessage.error(
+      "Some filenames in your package have invalid characters.\n" +
+      "The following file paths in installed npm modules have colons, ':', " +
+      "which won't work on Windows:\n" +
+      firstTen.join("\n"));
+    throw new NpmFailure();
   }
 }
 
@@ -893,7 +948,7 @@ const npmUserConfigFile = files.pathJoin(
 );
 
 var runNpmCommand = meteorNpm.runNpmCommand =
-Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
+Profile("meteorNpm.runNpmCommand", async function (args, cwd, options) {
   import { getEnv } from "../cli/dev-bundle-bin-helpers.js";
 
   const devBundleDir = files.getDevBundle();
@@ -935,6 +990,16 @@ Profile("meteorNpm.runNpmCommand", async function (args, cwd) {
 
   // Make sure we don't honor any user-provided configuration files.
   env.npm_config_userconfig = npmUserConfigFile;
+
+  // Single chokepoint for npm-version-aware install flag synthesis. Use
+  // env (`NPM_CONFIG_*`) instead of CLI flags so callers don't have to
+  // track which spelling the dev_bundle's npm version accepts (e.g.
+  // `--production=false` was removed in npm 9; `--include=dev` is the
+  // current form). Future install-flag bugs should be fixed here, not
+  // at call sites.
+  if (options && options.includeDev) {
+    env.NPM_CONFIG_INCLUDE = "dev";
+  }
 
   return new Promise(function (resolve) {
     require('child_process').execFile(
@@ -1243,14 +1308,18 @@ function shrinkwrap(dir) {
 // not share state with its input
 function minimizeDependencyTree(tree) {
   function minimizeModule(module) {
-    var version;
-    if (module.resolved && ! isUrlFromRegistry(module.resolved)) {
-      version = module.resolved;
-    } else if (utils.isNpmUrl(module.from)) {
-      version = module.from;
-    } else {
-      version = module.version;
-    }
+    // Prefer the semver from the lockfile (e.g. "20.58.0") over the
+    // resolved URL. For git/tarball deps, npm records resolved as
+    // "git+ssh://...#<commit-sha>" while Npm.depends declares
+    // "git+https://...#v<semver>"; comparing those two URL forms always
+    // mismatches and forces reinstall. With the semver here, the
+    // declaredSpecMatchesResolved predicate at the call sites can
+    // strip the "#v"/"#" ref from the declared spec and compare it to
+    // the installed version.
+    var version =
+      module.version ||
+      (module.resolved && ! isUrlFromRegistry(module.resolved) && module.resolved) ||
+      (utils.isNpmUrl(module.from) && module.from);
     var minimized = {version: version};
 
     if (module.dependencies) {
