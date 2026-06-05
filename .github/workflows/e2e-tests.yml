@@ -3,16 +3,16 @@ name: E2E Tests
 on:
   pull_request:
     paths:
-      - 'meteor'
-      - 'tools/e2e-tests/**'
-      - 'packages/rspack/**'
-      - 'packages/tools-core/**'
-      - 'packages/babel-compiler/**'
-      - 'packages/meteor-tool/**'
-      - 'npm-packages/meteor-rspack/**'
-      - 'tools/isobuild/**'
-      - 'tools/static-assets/skel-**'
-      - '.github/workflows/e2e-tests.yml'
+      - "meteor"
+      - "tools/e2e-tests/**"
+      - "packages/rspack/**"
+      - "packages/tools-core/**"
+      - "packages/babel-compiler/**"
+      - "packages/meteor-tool/**"
+      - "npm-packages/meteor-rspack/**"
+      - "tools/isobuild/**"
+      - "tools/static-assets/skel-**"
+      - ".github/workflows/e2e-tests.yml"
 
 concurrency:
   group: meteor-e2e-tests-${{ github.ref }}
@@ -25,6 +25,21 @@ env:
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
+  SELF_HOSTED_MIN_FREE_GB: "20"
+  # actions/github-script is a JavaScript action, so this loader runs on the
+  # runner host even when the job later uses a container.
+  SELF_HOSTED_RUNNER_CLEANUP_LOADER: |
+    const { data } = await github.rest.repos.getContent({
+      owner: context.repo.owner,
+      repo: context.repo.repo,
+      path: ".github/scripts/run-self-hosted-runner-cleanup.js",
+      ref: context.sha,
+    });
+    const loaderSource = data.content.replace(/\n/g, "");
+    await (await import(`data:text/javascript;base64,${loaderSource}`)).default({
+      github,
+      context,
+    });
 
 jobs:
   test:
@@ -33,7 +48,11 @@ jobs:
     timeout-minutes: 60
     container:
       image: node:22-bookworm
-      options: --cpus 6 --memory 16g --security-opt seccomp=unconfined
+      options: >-
+        --cpus 6
+        --memory 16g
+        --security-opt seccomp=unconfined
+        -v /var/run/docker.sock:/var/run/docker.sock
 
     strategy:
       fail-fast: false
@@ -55,6 +74,19 @@ jobs:
           - Vue
 
     steps:
+      - name: Install Docker CLI
+        run: |
+          apt-get update
+          apt-get install -y docker.io
+          docker version
+          docker ps
+          docker system df
+
+      - name: Clean self-hosted runner
+        uses: actions/github-script@v7
+        with:
+          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
+
       - name: Checkout code
         uses: actions/checkout@v6
 
