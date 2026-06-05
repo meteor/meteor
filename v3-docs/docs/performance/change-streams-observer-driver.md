@@ -59,6 +59,35 @@ Optional tuning is available via `Meteor.settings`:
 - `waitUntilCaughtUpTimeoutMs`: Upper bound for waiting until the stream catches up to the server's current operation time when coordinating with DDP fences (default: `1000`).
   - If this timeout elapses, the driver stops waiting and lets the fence continue; the change stream will catch up later, so data is not lost, but clients can temporarily miss read-your-writes (a publication may become ready before the client's own writes appear).
 
+## Reducing Delivery Latency
+
+Change Streams gate delivery on **majority commit**, which in turn waits for the WiredTiger journal flush. MongoDB's default `journalCommitInterval` is **100 ms**, so an isolated change-stream event can take up to ~100 ms to reach your Meteor server, even on localhost. The oplog driver does not gate on majority commit, so this floor does not apply to it.
+
+You can lower the journal interval at startup via the opt-in env var:
+
+```bash
+METEOR_MONGO_JOURNAL_COMMIT_INTERVAL_MS=1 meteor run
+```
+
+This calls `setParameter` on the connected MongoDB to shrink the interval from 100 ms to the value you provide. Internal benchmarks (Meteor 3.5, single-node replica set, 600 concurrent DDP subscribers on a `find({})` publication) show:
+
+| `journalCommitInterval` | Change-stream delivery (p50) | DDP `added` messages | DB CPU |
+|---|---|---|---|
+| 100 ms (default) | ~106 ms | baseline | baseline |
+| 10 ms | ~13 ms | -68% | +85% |
+| 1 ms | ~6 ms | -70% | +110% |
+
+Trade-offs:
+
+- **Lower interval → lower latency.** Setting `1` drops cs delivery p50 by ~94%, which in turn shrinks the multiplexer's resident document cache (because subscriptions complete faster), reducing total DDP fanout messages by ~70%.
+- **Lower interval → higher DB CPU.** The mongod process performs `fsync` more frequently. The cost is mostly on the DB side, not on the Meteor app.
+- **No effect on the oplog driver.** If you're forcing `oplog` ahead of `changeStreams`, this env var changes nothing for your workload.
+- **No effect on data durability.** `journalCommitInterval` only changes how often the journal is flushed to disk; writes are still durable once flushed.
+
+::: warning
+This is a server-wide MongoDB setting applied at app startup. If multiple Meteor apps share the same MongoDB instance, the **last connector wins** and the change persists until mongod restarts. Do not enable in production without measuring DB CPU impact on your specific workload — the gain is most visible when change-stream delivery latency is on your critical path (e.g. reactive UIs with hundreds of concurrent subscribers to broad publications).
+:::
+
 ## Performance Comparison
 
 - **Change Streams**: The default in Meteor 3.5+. Offloads the work of determining what changed entirely to the MongoDB server. It is extremely efficient for targeted queries but may cause high overhead on the MongoDB cluster if you have broad selectors or highly mutated collections.

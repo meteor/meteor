@@ -81,6 +81,22 @@ export const MongoConnection = function (url, options) {
   self.client = new MongoDB.MongoClient(url, mongoOptions);
   self.db = self.client.db();
 
+  // Opt-in journalCommitInterval tuning. Default mongod journalCommitInterval
+  // is 100ms. Change streams gate on majority-commit which gates on journal
+  // flush — so this interval bounds change-stream delivery latency. Setting
+  // it to 1ms drops change-stream delivery p50 from ~106ms to ~6ms on a
+  // single-node replica set. Trade-off: higher DB CPU from more frequent
+  // fsync. Oplog driver is unaffected (no majority-commit gate).
+  // Fire-and-forget so app startup is not blocked.
+  //   METEOR_MONGO_JOURNAL_COMMIT_INTERVAL_MS=1   -> set to 1ms
+  //   (unset)                                     -> no change
+  const journalMs = parseInt(process.env.METEOR_MONGO_JOURNAL_COMMIT_INTERVAL_MS, 10);
+  if (Number.isFinite(journalMs) && journalMs > 0) {
+    self.db.admin().command({ setParameter: 1, journalCommitInterval: journalMs })
+      .then(res => process.stderr.write(`[mongo] journalCommitInterval ${res.was}ms -> ${journalMs}ms\n`))
+      .catch(err => process.stderr.write(`[mongo] setParameter failed: ${err && err.message ? err.message : err}\n`));
+  }
+
   self.client.on('serverDescriptionChanged', Meteor.bindEnvironment(event => {
     // When the connection is no longer against the primary node, execute all
     // failover hooks. This is important for the driver as it has to re-pool the
