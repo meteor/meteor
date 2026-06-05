@@ -1018,20 +1018,19 @@ MongoConnection.prototype._observeChanges = async function (
             const serverReasons = [];
 
             try {
-              // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
+              // Change Streams require MongoDB 6+ and replica set or sharded cluster
               const admin = this.db.admin();
               const serverInfo = await admin.serverInfo();
               const isMasterPromise = admin.command({ isMaster: 1 });
               const versionString = serverInfo.version || 'unknown';
               const versionParts = versionString.split('.').map(Number);
               const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
-              const minor = Number.isFinite(versionParts[1]) ? versionParts[1] : 0;
 
-              // Check MongoDB version (3.6+)
-              const hasMinVersion = major > 3 || (major === 3 && minor >= 6);
+              // Check MongoDB version (6+)
+              const hasMinVersion = major >= 6;
 
               if (!hasMinVersion) {
-                serverReasons.push(`Change Streams require MongoDB 3.6+ (current ${versionString})`);
+                serverReasons.push(`Change Streams feature require MongoDB 6+ (current ${versionString})`);
               } else {
                 // Check if we're running on a replica set or sharded cluster
                 const isMaster = await isMasterPromise;
