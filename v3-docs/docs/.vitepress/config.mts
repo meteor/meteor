@@ -6,7 +6,14 @@ import llmstxt from "vitepress-plugin-llms";
 export default defineConfig({
   title: "Docs",
   description: "Meteor.js Docs",
-  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  head: [
+    ["link", { rel: "icon", href: "/logo.png" }],
+    ["script", {
+      defer: "",
+      "data-domain": "meteor.com",
+      src: "https://plausible.io/js/script.js"
+    }]
+  ],
   lastUpdated: true,
   sitemap: {
     hostname: "https://v3-docs.meteor.com",
