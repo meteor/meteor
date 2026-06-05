@@ -10,7 +10,7 @@
  * @returns {any} The value associated with the key, or the default value if not found.
  */
 export function getGlobalState(key, defaultValue) {
-  return Package.meteor?.global?.[key] !== undefined
+  return Package.meteor?.global?.persistentState?.[key] !== undefined
     ? Package.meteor.global.persistentState[key]
     : defaultValue;
 }
@@ -34,7 +34,9 @@ export function setGlobalState(key, value) {
  * @param {string} key - The key to remove.
  */
 export function removeGlobalState(key) {
-  delete Package.meteor.global.persistentState[key];
+  if (Package.meteor?.global?.persistentState) {
+    delete Package.meteor.global.persistentState[key];
+  }
 }
 
 /**

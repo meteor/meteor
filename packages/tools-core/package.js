@@ -17,6 +17,7 @@ Package.onTest(function (api) {
   // Add test files for each lib/ module
   // This structure allows easy addition of tests for other lib/ categories
   api.addFiles([
+    'tests/global_state_tests.js',
     'tests/meteor_tests.js',
     'tests/readiness_tests.js',
   ], 'server');

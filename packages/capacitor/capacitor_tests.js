@@ -13,9 +13,11 @@ import {
 } from './lib/processes.js';
 
 const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
+const RUN_PROCESS_STATE_KEY = 'capacitor.process.run';
 
-function clearLaunchState() {
+function clearRunState() {
   setGlobalState(RUN_LAUNCH_STATE_KEY, null);
+  setGlobalState(RUN_PROCESS_STATE_KEY, null);
 }
 
 function nextTick() {
@@ -112,7 +114,7 @@ Tinytest.add('capacitor - readiness - rejects non-index responses', test => {
 });
 
 Tinytest.addAsync('capacitor - run launch waits for readiness once', async test => {
-  clearLaunchState();
+  clearRunState();
 
   let releaseReady;
   let waitCalls = 0;
@@ -165,11 +167,11 @@ Tinytest.addAsync('capacitor - run launch waits for readiness once', async test 
   test.equal(runs.length, 1);
   test.equal(runs[0].extraArgs, ['--no-sync', '--target=emulator-5554']);
 
-  clearLaunchState();
+  clearRunState();
 });
 
 Tinytest.addAsync('capacitor - run launch retries after readiness failure', async test => {
-  clearLaunchState();
+  clearRunState();
 
   const failed = scheduleCapRunAfterMeteorReady({
     appDir: '/tmp/app',
@@ -194,5 +196,5 @@ Tinytest.addAsync('capacitor - run launch retries after readiness failure', asyn
   test.isTrue(failed);
   test.isTrue(retried);
 
-  clearLaunchState();
+  clearRunState();
 });

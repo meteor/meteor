@@ -30,7 +30,7 @@ export function getMeteorAppPackageJson() {
  * @returns {Object|undefined} The Meteor configuration object or undefined if not found.
  */
 export function getMeteorAppConfig() {
-  return typeof Plugin?.getMeteorConfig === 'function'
+  return typeof Plugin !== 'undefined' && typeof Plugin.getMeteorConfig === 'function'
     ? Plugin.getMeteorConfig()
     : getMeteorAppPackageJson()?.meteor;
 }
@@ -360,7 +360,7 @@ export function getMeteorAppPackages() {
  * @returns {string[]}
  */
 export function getMeteorAppPlatforms() {
-  if (typeof Plugin?.getPlatforms === 'function') {
+  if (typeof Plugin !== 'undefined' && typeof Plugin.getPlatforms === 'function') {
     const fromPlugin = Plugin.getPlatforms();
     if (Array.isArray(fromPlugin) && fromPlugin.length > 0) return fromPlugin;
   }
