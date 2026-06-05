@@ -297,7 +297,9 @@ export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = []
     interactive: true,
     onExit: code => {
       setGlobalState(PROC_KEYS.RUN, null);
-      if (code !== 0) logError(`=> ❌ Capacitor run exited with code ${code}`);
+      if (code !== 0 && isVerbose()) {
+        logError(`=> ❌ Capacitor run exited with code ${code}`);
+      }
     },
   });
   setGlobalState(PROC_KEYS.RUN, proc);
