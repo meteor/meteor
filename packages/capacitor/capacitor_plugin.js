@@ -65,7 +65,11 @@ function logVerbose(...args) {
 
 function getRequestedCapacitorPlatforms() {
   const requested = Package?.meteor?.global?.currentCommand?.options?.args || [];
-  return requested.filter(platform => CAPACITOR_PLATFORMS.includes(platform));
+  return Array.from(new Set(requested.map(arg => {
+    if (arg === 'android' || arg === 'android-device') return 'android';
+    if (arg === 'ios' || arg === 'ios-device') return 'ios';
+    return arg;
+  }).filter(platform => CAPACITOR_PLATFORMS.includes(platform))));
 }
 
 /**
@@ -155,7 +159,9 @@ if (isCapacitorOptIn()) {
     if (hasMeteorAppConfigAutoInstallDeps()) {
       // Top-level await: build plugins are evaluated as ESM with TLA enabled.
       await ensureCapacitorInstalled({
-        platforms: isCapacitorAddPlatformOptIn() ? getRequestedCapacitorPlatforms() : null,
+        platforms: (
+          isCapacitorAddPlatformOptIn() || isCapacitorRunOptIn()
+        ) ? getRequestedCapacitorPlatforms() : null,
       });
     }
 

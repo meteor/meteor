@@ -42,7 +42,7 @@ Tinytest.add('capacitor - dependencies - default includes both native platforms'
   test.isTrue(dependencies.includes('@capacitor/ios'));
 });
 
-Tinytest.add('capacitor - dependencies - add-platform scopes native platform package', test => {
+Tinytest.add('capacitor - dependencies - platform scope includes only selected native package', test => {
   const androidDependencies = dependencyNamesForPlatforms(['android']);
   test.isTrue(androidDependencies.includes('@capacitor/core'));
   test.isTrue(androidDependencies.includes('@capacitor/cli'));
