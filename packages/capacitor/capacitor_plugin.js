@@ -63,6 +63,11 @@ function logVerbose(...args) {
   if (isVerbose()) logInfo(...args);
 }
 
+function getRequestedCapacitorPlatforms() {
+  const requested = Package?.meteor?.global?.currentCommand?.options?.args || [];
+  return requested.filter(platform => CAPACITOR_PLATFORMS.includes(platform));
+}
+
 /**
  * Runs the cordova→build-native transform. Returns false if the
  * transform itself failed (web.cordova/ exists but transforms threw).
@@ -149,7 +154,9 @@ if (isCapacitorOptIn()) {
 
     if (hasMeteorAppConfigAutoInstallDeps()) {
       // Top-level await: build plugins are evaluated as ESM with TLA enabled.
-      await ensureCapacitorInstalled();
+      await ensureCapacitorInstalled({
+        platforms: isCapacitorAddPlatformOptIn() ? getRequestedCapacitorPlatforms() : null,
+      });
     }
 
     ensureCapacitorBuildContextExists();
@@ -177,8 +184,7 @@ if (isCapacitorOptIn()) {
       // Run cap add per requested platform; no-op when already added.
       // The CLI writes .meteor/platforms after the compile returns.
       const appDir = getMeteorAppDir();
-      const requested = Package?.meteor?.global?.currentCommand?.options?.args || [];
-      const platforms = requested.filter(p => CAPACITOR_PLATFORMS.includes(p));
+      const platforms = getRequestedCapacitorPlatforms();
       for (const platform of platforms) {
         const code = await addNativePlatformIfMissing({ appDir, platform });
         if (code !== 0) {

@@ -18,44 +18,70 @@ const {
 } = require('meteor/tools-core/lib/log');
 const {
   getMeteorAppDir,
+  getMeteorAppPackageJson,
 } = require('meteor/tools-core/lib/meteor');
 const {
   installNpmDependency,
 } = require('meteor/tools-core/lib/npm');
 
-// Checks node_modules, not package.json. checkNpmDependencyExists treats
-// a declaration as "exists", which masks half-installed apps.
 function isCapacitorDepInstalled(name, appDir) {
   return fs.existsSync(path.join(appDir, 'node_modules', name, 'package.json'));
+}
+
+export function isCapacitorDepDeclared({ name, dev }, packageJson) {
+  const expectedSection = dev ? packageJson.devDependencies : packageJson.dependencies;
+  return !!expectedSection?.[name];
 }
 
 const {
   DEFAULT_CAPACITOR_VERSION,
   DEFAULT_METEOR_CAPACITOR_VERSION,
+  CAPACITOR_PLATFORMS,
   GLOBAL_STATE_KEYS,
 } = require('./constants');
+
+const BASE_DEPENDENCIES = [
+  { name: '@capacitor/core', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
+  { name: '@capacitor/cli', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: true },
+  { name: '@meteorjs/capacitor', version: `^${DEFAULT_METEOR_CAPACITOR_VERSION}`, dev: true },
+];
+
+const PLATFORM_DEPENDENCIES = {
+  android: { name: '@capacitor/android', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
+  ios: { name: '@capacitor/ios', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
+};
+
+export function getCapacitorDependenciesForPlatforms(platforms) {
+  const selectedPlatforms = platforms
+    ? Array.from(new Set(platforms)).filter(platform => CAPACITOR_PLATFORMS.includes(platform))
+    : CAPACITOR_PLATFORMS;
+
+  return [
+    ...BASE_DEPENDENCIES,
+    ...selectedPlatforms.map(platform => PLATFORM_DEPENDENCIES[platform]),
+  ];
+}
 
 /**
  * Installs the minimum set of Capacitor packages the build plugin assumes.
  *
+ * @param {Object} [options]
+ * @param {string[]|null} [options.platforms] Native platform dependencies to
+ * include. Omit to install all platform dependencies.
  * @returns {Promise<void>}
  */
-export async function ensureCapacitorInstalled() {
+export async function ensureCapacitorInstalled({ platforms = null } = {}) {
   if (getGlobalState(GLOBAL_STATE_KEYS.CAPACITOR_INSTALLATION_CHECKED, false)) {
     return;
   }
 
   const appDir = getMeteorAppDir();
-  const dependencies = [
-    { name: '@capacitor/core', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
-    { name: '@capacitor/cli', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: true },
-    { name: '@capacitor/android', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
-    { name: '@capacitor/ios', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
-    { name: '@meteorjs/capacitor', version: `^${DEFAULT_METEOR_CAPACITOR_VERSION}`, dev: true },
-  ];
+  const packageJson = getMeteorAppPackageJson();
+  const dependencies = getCapacitorDependenciesForPlatforms(platforms);
 
   const missing = dependencies.filter(
-    dep => !isCapacitorDepInstalled(dep.name, appDir)
+    dep => !isCapacitorDepDeclared(dep, packageJson) ||
+      !isCapacitorDepInstalled(dep.name, appDir)
   );
 
   if (missing.length === 0) {
