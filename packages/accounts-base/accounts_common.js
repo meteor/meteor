@@ -112,10 +112,17 @@ export class AccountsCommon {
     if (options.collection instanceof Mongo.Collection) {
       collection = options.collection;
     } else {
-      collection = new Mongo.Collection(collectionName, {
+      const collectionOptions = {
         _preventAutopublish: true,
         connection: this.connection,
-      });
+      };
+      // Allow packages to provide a custom collection driver (e.g., for
+      // PostgreSQL-backed users). The _driver option is an existing
+      // Mongo.Collection extension point.
+      if (options.collectionDriver) {
+        collectionOptions._driver = options.collectionDriver;
+      }
+      collection = new Mongo.Collection(collectionName, collectionOptions);
     }
 
     return collection;

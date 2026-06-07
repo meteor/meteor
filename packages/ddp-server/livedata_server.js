@@ -153,7 +153,23 @@ var Session = function (server, version, socket, options) {
       }
     },
     clientAddress: self._clientAddress(),
-    httpHeaders: self.socket.headers
+    httpHeaders: self.socket.headers,
+    // Parsed cookies from the WebSocket handshake headers.
+    // Enables cookie-based auth packages to read session cookies
+    // from DDP connections.
+    get cookies() {
+      const cookieHeader = self.socket.headers.cookie || '';
+      const cookies = Object.create(null);
+      if (!cookieHeader) return cookies;
+      cookieHeader.split(';').forEach(pair => {
+        const eqIdx = pair.indexOf('=');
+        if (eqIdx < 0) return;
+        const key = pair.substring(0, eqIdx).trim();
+        const val = pair.substring(eqIdx + 1).trim();
+        if (key) cookies[key] = decodeURIComponent(val);
+      });
+      return cookies;
+    }
   };
 
   self.send({ msg: 'connected', session: self.id });

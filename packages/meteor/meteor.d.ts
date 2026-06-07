@@ -549,6 +549,7 @@ export namespace Meteor {
     onClose: (callback: () => void) => void;
     clientAddress: string;
     httpHeaders: Record<string, string>;
+    cookies: Record<string, string>;
   }
 
   function onConnection(callback: (connection: Connection) => void): void;

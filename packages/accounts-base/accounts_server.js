@@ -78,6 +78,11 @@ export class AccountsServer extends AccountsCommon {
 
     this._skipCaseInsensitiveChecksForTest = {};
 
+    // Session resolvers: functions that resolve a userId from a DDP
+    // connection's cookies/headers without requiring a DDP login method call.
+    // Used by cookie-based auth packages (e.g., better-auth).
+    this._sessionResolvers = [];
+
     // Helper function to resolve promises if needed
     this._resolvePromise = async (value) => {
       return Meteor._isPromise(value) ? await value : value;
@@ -636,6 +641,20 @@ export class AccountsServer extends AccountsCommon {
     });
   };
 
+  /**
+   * @summary Register a session resolver that can authenticate DDP connections
+   * from cookies or headers without requiring a DDP login method call.
+   * Resolvers run when a new DDP connection is established. If a resolver
+   * returns a userId string, that user is logged in on the connection.
+   * @locus Server
+   * @param {Function} resolver A function that receives a connection object
+   * (with id, httpHeaders, cookies) and returns a userId string or null/undefined.
+   * May be async.
+   */
+  registerSessionResolver(resolver) {
+    this._sessionResolvers.push(resolver);
+  };
+
 
   // Checks a user's credentials against all the registered login
   // handlers, and returns a login token if the credentials are valid. It
@@ -832,7 +851,32 @@ export class AccountsServer extends AccountsCommon {
         this._removeTokenFromConnection(connection.id);
         delete this._accountData[connection.id];
       });
+
+      // Run session resolvers to authenticate from cookies/headers.
+      // This runs asynchronously after the connection is established.
+      // If a resolver returns a userId, set it on the DDP session
+      // which reruns all subscriptions with the authenticated userId.
+      if (this._sessionResolvers.length > 0) {
+        this._resolveSessionForConnection(connection);
+      }
     });
+  };
+
+  async _resolveSessionForConnection(connection) {
+    try {
+      for (const resolver of this._sessionResolvers) {
+        const userId = await resolver(connection);
+        if (userId && typeof userId === 'string') {
+          const session = this._server.sessions.get(connection.id);
+          if (session) {
+            await session._setUserId(userId);
+          }
+          break;
+        }
+      }
+    } catch (e) {
+      Meteor._debug('Error in session resolver:', e);
+    }
   };
 
   _initServerPublications() {

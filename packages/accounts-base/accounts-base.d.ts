@@ -126,6 +126,12 @@ export namespace Accounts {
   function onPageLoadLogin(func: Function): void;
 
   function loginWithTokenAsync(token: string): Promise<Meteor.LoginMethodResult>;
+
+  function registerSessionResolver(
+    resolver: (
+      connection: Meteor.Connection
+    ) => string | null | undefined | Promise<string | null | undefined>
+  ): void;
 }
 
 export namespace Accounts {

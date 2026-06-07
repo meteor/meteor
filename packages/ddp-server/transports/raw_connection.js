@@ -22,7 +22,7 @@ export class RawWebSocketConnection extends EventEmitter {
       'referer', 'x-client-ip', 'x-forwarded-for',
       'x-forwarded-host', 'x-forwarded-port', 'x-cluster-client-ip',
       'via', 'x-real-ip', 'x-forwarded-proto', 'x-ssl', 'dnt',
-      'host', 'user-agent', 'accept-language'
+      'host', 'user-agent', 'accept-language', 'cookie'
     ];
     for (const key of headerKeys) {
       if (req.headers[key]) this.headers[key] = req.headers[key];
