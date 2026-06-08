@@ -205,23 +205,26 @@ Tinytest.add('capacitor - run - environment variables mapping', test => {
   const originalEnv = { ...process.env };
   try {
     // Clear relevant env vars
-    delete process.env.METEOR_CAPACITOR_FLAVOR;
-    delete process.env.METEOR_CAPACITOR_SCHEME;
-    delete process.env.METEOR_CAPACITOR_LIST;
-    delete process.env.METEOR_CAPACITOR_LIVE_RELOAD;
+    Object.keys(process.env).forEach(k => {
+      if (k.startsWith('METEOR_CAPACITOR_')) delete process.env[k];
+    });
 
     test.equal(_getCapRunArgsFromEnv(), []);
 
     process.env.METEOR_CAPACITOR_FLAVOR = 'dev';
-    process.env.METEOR_CAPACITOR_SCHEME = 'AppScheme';
     process.env.METEOR_CAPACITOR_LIST = 'true';
-    process.env.METEOR_CAPACITOR_LIVE_RELOAD = '1';
+    process.env.METEOR_CAPACITOR_SOME_NEW_FUTURE_OPTION = 'hello';
+    process.env.METEOR_CAPACITOR_FORWARD_PORTS = '8080:80';
 
     const args = _getCapRunArgsFromEnv();
     test.isTrue(args.includes('--flavor=dev'));
-    test.isTrue(args.includes('--scheme=AppScheme'));
     test.isTrue(args.includes('--list'));
-    test.isTrue(args.includes('--live-reload'));
+    test.isTrue(args.includes('--some-new-future-option=hello'));
+    test.isTrue(args.includes('--forwardPorts=8080:80'));
+    
+    // Ensure internal ones are excluded
+    process.env.METEOR_CAPACITOR_AUTO_PICK_TARGET = 'true';
+    test.isFalse(_getCapRunArgsFromEnv().includes('--auto-pick-target'));
   } finally {
     process.env = originalEnv;
   }

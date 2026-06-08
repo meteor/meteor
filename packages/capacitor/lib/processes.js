@@ -278,48 +278,49 @@ export async function resolveCapTarget({ appDir = getMeteorAppDir(), platform } 
 }
 
 /**
- * Mappings from METEOR_CAPACITOR_* environment variables to `cap run` CLI flags.
+ * Environment variables starting with this prefix are automatically passed
+ * through to the Capacitor CLI as flags.
  */
-const CAP_RUN_MAP = {
-  // Value options (take an argument)
-  VALUE_OPTIONS: {
-    METEOR_CAPACITOR_FLAVOR: '--flavor',
-    METEOR_CAPACITOR_SCHEME: '--scheme',
-    METEOR_CAPACITOR_CONFIGURATION: '--configuration',
-    METEOR_CAPACITOR_TARGET: '--target',
-    METEOR_CAPACITOR_TARGET_NAME: '--target-name',
-    METEOR_CAPACITOR_TARGET_NAME_SDK_VERSION: '--target-name-sdk-version',
-    METEOR_CAPACITOR_HOST: '--host',
-    METEOR_CAPACITOR_PORT: '--port',
-    METEOR_CAPACITOR_FORWARD_PORTS: '--forwardPorts',
-  },
-  // Boolean flags (no argument)
-  FLAG_OPTIONS: {
-    METEOR_CAPACITOR_LIST: '--list',
-    METEOR_CAPACITOR_NO_SYNC: '--no-sync',
-    METEOR_CAPACITOR_LIVE_RELOAD: '--live-reload',
-    METEOR_CAPACITOR_HTTPS: '--https',
-  },
-};
+const CAP_ENV_PREFIX = 'METEOR_CAPACITOR_';
 
 /**
- * Returns an array of CLI arguments for `cap run` derived from METEOR_CAPACITOR_*
- * environment variables.
+ * Internal environment variables that should NOT be passed as CLI flags.
+ */
+const CAP_INTERNAL_ENVS = new Set([
+  'METEOR_CAPACITOR',
+  'METEOR_CAPACITOR_MODE',
+  'METEOR_CAPACITOR_PLATFORM',
+  'METEOR_CAPACITOR_WEB_DIR',
+  'METEOR_CAPACITOR_AUTO_PICK_TARGET',
+]);
+
+/**
+ * Returns an array of CLI arguments for `cap run` derived dynamically from
+ * METEOR_CAPACITOR_* environment variables.
  *
  * @private (exported for testing)
  */
 export function _getCapRunArgsFromEnv() {
   const args = [];
-  Object.entries(CAP_RUN_MAP.VALUE_OPTIONS).forEach(([envVar, flag]) => {
-    const value = process.env[envVar];
-    if (value) {
-      args.push(`${flag}=${value}`);
-    }
-  });
-  Object.entries(CAP_RUN_MAP.FLAG_OPTIONS).forEach(([envVar, flag]) => {
-    const value = process.env[envVar];
-    if (value && /^(1|true|yes)$/i.test(value)) {
-      args.push(flag);
+  Object.keys(process.env).forEach(key => {
+    if (key.startsWith(CAP_ENV_PREFIX) && !CAP_INTERNAL_ENVS.has(key)) {
+      const value = process.env[key];
+      if (!value) return;
+
+      // Convert METEOR_CAPACITOR_SOME_FLAG to --some-flag
+      let flag = '--' + key
+        .slice(CAP_ENV_PREFIX.length)
+        .toLowerCase()
+        .replace(/_/g, '-');
+
+      // Special case: FORWARD_PORTS -> forwardPorts (camelCase)
+      if (key === 'METEOR_CAPACITOR_FORWARD_PORTS') flag = '--forwardPorts';
+
+      if (/^(1|true|yes)$/i.test(value)) {
+        args.push(flag);
+      } else {
+        args.push(`${flag}=${value}`);
+      }
     }
   });
   return args;
