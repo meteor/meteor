@@ -65,6 +65,8 @@ npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
 
 The contributors with commit access to meteor/meteor are employees of Meteor Software LP or community members who have distinguished themselves in other contribution areas or members of partner companies. If you want to become a core committer, please start writing PRs.
 
+Anyone can open a pull request nominating a person for the Core Committer program; the community — and in particular the other Core Committers — approves or rejects the nomination. See [GOVERNANCE.md](GOVERNANCE.md) for the full process. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
+
 Current Core Team:
 - [meteor](https://github.com/meteor/meteor)
   - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
