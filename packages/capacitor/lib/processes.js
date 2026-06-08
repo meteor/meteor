@@ -278,6 +278,73 @@ export async function resolveCapTarget({ appDir = getMeteorAppDir(), platform } 
 }
 
 /**
+ * Mappings from METEOR_CAPACITOR_* environment variables to `cap run` CLI flags.
+ */
+const CAP_RUN_MAP = {
+  // Value options (take an argument)
+  VALUE_OPTIONS: {
+    METEOR_CAPACITOR_FLAVOR: '--flavor',
+    METEOR_CAPACITOR_SCHEME: '--scheme',
+    METEOR_CAPACITOR_CONFIGURATION: '--configuration',
+    METEOR_CAPACITOR_TARGET: '--target',
+    METEOR_CAPACITOR_TARGET_NAME: '--target-name',
+    METEOR_CAPACITOR_TARGET_NAME_SDK_VERSION: '--target-name-sdk-version',
+    METEOR_CAPACITOR_HOST: '--host',
+    METEOR_CAPACITOR_PORT: '--port',
+    METEOR_CAPACITOR_FORWARD_PORTS: '--forwardPorts',
+  },
+  // Boolean flags (no argument)
+  FLAG_OPTIONS: {
+    METEOR_CAPACITOR_LIST: '--list',
+    METEOR_CAPACITOR_NO_SYNC: '--no-sync',
+    METEOR_CAPACITOR_LIVE_RELOAD: '--live-reload',
+    METEOR_CAPACITOR_HTTPS: '--https',
+  },
+};
+
+/**
+ * Returns an array of CLI arguments for `cap run` derived from METEOR_CAPACITOR_*
+ * environment variables.
+ *
+ * @private (exported for testing)
+ */
+export function _getCapRunArgsFromEnv() {
+  const args = [];
+  Object.entries(CAP_RUN_MAP.VALUE_OPTIONS).forEach(([envVar, flag]) => {
+    const value = process.env[envVar];
+    if (value) {
+      args.push(`${flag}=${value}`);
+    }
+  });
+  Object.entries(CAP_RUN_MAP.FLAG_OPTIONS).forEach(([envVar, flag]) => {
+    const value = process.env[envVar];
+    if (value && /^(1|true|yes)$/i.test(value)) {
+      args.push(flag);
+    }
+  });
+  return args;
+}
+
+/**
+ * Merges extraArgs with arguments derived from METEOR_CAPACITOR_* environment
+ * variables. extraArgs takes precedence in case of collisions.
+ *
+ * @private (exported for testing)
+ */
+export function _mergeExtraArgsWithEnv(extraArgs = []) {
+  const envArgs = _getCapRunArgsFromEnv();
+  const finalArgs = [...extraArgs];
+  envArgs.forEach(arg => {
+    const flag = arg.split('=')[0];
+    // Check for exact match or flag= prefix to avoid --target matching --target-name
+    if (!finalArgs.some(a => a === flag || a.startsWith(flag + '='))) {
+      finalArgs.push(arg);
+    }
+  });
+  return finalArgs;
+}
+
+/**
  * Runs `npx cap run <platform>` in the app directory.
  * Long-running: returns the spawned process so callers can manage lifecycle.
  *
@@ -289,8 +356,10 @@ export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = []
     return existing;
   }
 
+  const finalArgs = _mergeExtraArgsWithEnv(extraArgs);
+
   if (isVerbose()) logProgress(`=> ▶️  Capacitor run ${platform}`);
-  const proc = spawnCap(['run', platform, ...extraArgs], {
+  const proc = spawnCap(['run', platform, ...finalArgs], {
     cwd: appDir,
     label: `Run/${platform}`,
     platform,

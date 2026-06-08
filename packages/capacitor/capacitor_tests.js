@@ -10,6 +10,8 @@ import {
 } from './lib/dependencies.js';
 import {
   scheduleCapRunAfterMeteorReady,
+  _getCapRunArgsFromEnv,
+  _mergeExtraArgsWithEnv,
 } from './lib/processes.js';
 
 const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
@@ -197,4 +199,68 @@ Tinytest.addAsync('capacitor - run launch retries after readiness failure', asyn
   test.isTrue(retried);
 
   clearRunState();
+});
+
+Tinytest.add('capacitor - run - environment variables mapping', test => {
+  const originalEnv = { ...process.env };
+  try {
+    // Clear relevant env vars
+    delete process.env.METEOR_CAPACITOR_FLAVOR;
+    delete process.env.METEOR_CAPACITOR_SCHEME;
+    delete process.env.METEOR_CAPACITOR_LIST;
+    delete process.env.METEOR_CAPACITOR_LIVE_RELOAD;
+
+    test.equal(_getCapRunArgsFromEnv(), []);
+
+    process.env.METEOR_CAPACITOR_FLAVOR = 'dev';
+    process.env.METEOR_CAPACITOR_SCHEME = 'AppScheme';
+    process.env.METEOR_CAPACITOR_LIST = 'true';
+    process.env.METEOR_CAPACITOR_LIVE_RELOAD = '1';
+
+    const args = _getCapRunArgsFromEnv();
+    test.isTrue(args.includes('--flavor=dev'));
+    test.isTrue(args.includes('--scheme=AppScheme'));
+    test.isTrue(args.includes('--list'));
+    test.isTrue(args.includes('--live-reload'));
+  } finally {
+    process.env = originalEnv;
+  }
+});
+
+Tinytest.add('capacitor - run - env vars merge with extraArgs', test => {
+  const originalEnv = { ...process.env };
+  try {
+    process.env.METEOR_CAPACITOR_TARGET = 'emulator-1';
+    process.env.METEOR_CAPACITOR_NO_SYNC = 'true';
+
+    // extraArgs has --target=manual-target, should win over env var
+    const extraArgs = ['--target=manual-target'];
+    const merged = _mergeExtraArgsWithEnv(extraArgs);
+
+    test.isTrue(merged.includes('--target=manual-target'));
+    test.isTrue(merged.includes('--no-sync'));
+    
+    // Ensure no duplication of --target
+    const targetFlags = merged.filter(a => a.startsWith('--target'));
+    test.equal(targetFlags.length, 1);
+  } finally {
+    process.env = originalEnv;
+  }
+});
+
+Tinytest.add('capacitor - run - deduplication avoids false positives', test => {
+  const originalEnv = { ...process.env };
+  try {
+    process.env.METEOR_CAPACITOR_TARGET = 'env-target';
+    
+    // --target-name should not collide with --target
+    const extraArgs = ['--target-name=MyiPhone'];
+    const merged = _mergeExtraArgsWithEnv(extraArgs);
+
+    test.isTrue(merged.includes('--target-name=MyiPhone'));
+    test.isTrue(merged.includes('--target=env-target'));
+    test.equal(merged.length, 2);
+  } finally {
+    process.env = originalEnv;
+  }
 });
