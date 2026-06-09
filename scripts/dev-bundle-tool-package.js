@@ -60,7 +60,7 @@ var packageJson = {
     multipipe: "2.0.1",
     pathwatcher: "8.1.2",
     "vscode-nsfw": "2.1.8",
-    "@parcel/watcher": "2.5.1",
+    "@parcel/watcher": "2.5.6",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.16.1",
