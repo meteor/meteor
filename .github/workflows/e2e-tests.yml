@@ -11,6 +11,8 @@ on:
       - "packages/meteor-tool/**"
       - "npm-packages/meteor-rspack/**"
       - "tools/isobuild/**"
+      - "scripts/dev-bundle-tool-package.js"
+      - "tools/fs/safe-watcher.ts"
       - "tools/static-assets/skel-**"
       - ".github/workflows/e2e-tests.yml"
 
