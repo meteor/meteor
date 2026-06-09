@@ -319,7 +319,8 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
               return;
             }
             console.error(`Parcel watcher error on ${osDirPath}:`, err);
-            if (err.code === "ENOSPC" || err.errno === require("constants").ENOSPC) {
+            if (err.code === "ENOSPC" || err.errno === require("constants").ENOSPC ||
+                err.code === "EINTR" || err.errno === require("constants").EINTR) {
               fallbackToPolling();
             }
             watchRoots.delete(dirPath);
@@ -352,7 +353,8 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
       ignoredWatchRoots.add(dirPath);
     } else {
       console.error(`Failed to start watcher for ${osDirPath}:`, e);
-      if (e.code === "ENOSPC" || e.errno === require("constants").ENOSPC) {
+      if (e.code === "ENOSPC" || e.errno === require("constants").ENOSPC ||
+          e.code === "EINTR" || e.errno === require("constants").EINTR) {
         fallbackToPolling();
       }
     }
