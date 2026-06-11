@@ -1990,7 +1990,7 @@ Tinytest.addAsync(
 // ============================================================================
 
 Tinytest.addAsync(
-  'changestream - _buildPipeline returns correct structure',
+  'changestream - driver subscribes to a shared per-collection change stream',
   async function (test) {
     const c = makeCollection();
 
@@ -2001,17 +2001,118 @@ Tinytest.addAsync(
     test.isTrue(isChangeStreamDriver(handle));
 
     const driver = handle._multiplexer._observeDriver;
-    const pipeline = driver._buildPipeline();
+    const shared = driver._sharedStream;
 
-    // Should be an array
-    test.isTrue(Array.isArray(pipeline));
+    // The cursor lifecycle lives on the shared change stream, not the driver.
+    test.isTrue(!!shared, 'driver should hold a shared change stream');
+    test.isTrue(!!shared._changeStream, 'shared stream should have an open cursor');
+    test.isTrue(shared._drivers.has(driver), 'driver should be registered on the shared stream');
 
-    // If there's a selector, should have a $match stage
-    if (pipeline.length > 0) {
-      test.isTrue(pipeline[0].$match !== undefined);
-    }
+    // The owning MongoConnection should track exactly one multiplexer for the
+    // collection.
+    test.equal(
+      shared._mongoHandle._sharedChangeStreams[c._name],
+      shared,
+      'connection registry should hold the shared stream for this collection'
+    );
 
     handle.stop();
+  }
+);
+
+// ============================================================================
+// CHANGE STREAM FANOUT (shared cursor per collection)
+// ============================================================================
+
+Tinytest.addAsync(
+  'changestream - many distinct selectors share ONE change stream cursor (#14453)',
+  async function (test) {
+    const c = makeCollection();
+    const N = 6;
+    const handles = [];
+    const seen = [];
+
+    // Open N observers, each with a DISTINCT selector on the SAME collection.
+    for (let i = 0; i < N; i++) {
+      const events = [];
+      seen.push(events);
+      // eslint-disable-next-line no-await-in-loop
+      const handle = await c.find({ envId: 'env-' + i }).observeChanges({
+        added: (id, fields) => events.push({ type: 'added', fields }),
+        changed: (id, fields) => events.push({ type: 'changed', fields }),
+        removed: (id) => events.push({ type: 'removed' }),
+      });
+      handles.push(handle);
+    }
+
+    test.isTrue(isChangeStreamDriver(handles[0]));
+
+    const drivers = handles.map(h => h._multiplexer._observeDriver);
+    const shared = drivers[0]._sharedStream;
+
+    // All drivers for distinct selectors on one collection share ONE
+    // SharedChangeStream with ONE underlying cursor.
+    for (const d of drivers) {
+      test.equal(d._sharedStream, shared, 'every driver shares the same change stream');
+    }
+    test.equal(shared._drivers.size, N, 'shared stream tracks all N drivers');
+    test.isTrue(!!shared._changeStream, 'exactly one underlying cursor is open');
+    test.equal(
+      Object.keys(shared._mongoHandle._sharedChangeStreams).filter(
+        k => k === c._name
+      ).length,
+      1,
+      'exactly one shared stream registered for the collection'
+    );
+
+    // Functional: a write to env-2 must reach ONLY env-2's observer through the
+    // single shared stream — proving in-process fanout still routes per selector.
+    await c.insertAsync({ envId: 'env-2', payload: 'a' });
+    await waitFor(() => seen[2].some(e => e.type === 'added'), 3000);
+
+    test.isTrue(seen[2].some(e => e.type === 'added'), 'env-2 observer saw its insert');
+    for (let i = 0; i < N; i++) {
+      if (i === 2) continue;
+      test.equal(seen[i].length, 0, `env-${i} observer must not see env-2's write`);
+    }
+
+    handles.forEach(h => h.stop());
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - shared cursor closes only after the last driver stops (#14453)',
+  async function (test) {
+    const c = makeCollection();
+
+    const h1 = await c.find({ envId: 'a' }).observeChanges({ added: function () { } });
+    const h2 = await c.find({ envId: 'b' }).observeChanges({ added: function () { } });
+
+    test.isTrue(isChangeStreamDriver(h1));
+
+    const shared = h1._multiplexer._observeDriver._sharedStream;
+    const mongo = shared._mongoHandle;
+    test.equal(shared._drivers.size, 2, 'both drivers attached to one shared stream');
+
+    // Stopping the first observer must NOT close the shared cursor — the second
+    // observer still needs it.
+    h1.stop();
+    await waitFor(() => shared._drivers.size === 1, 2000);
+    test.equal(shared._drivers.size, 1, 'one driver remains');
+    test.isFalse(shared._stopped, 'shared stream stays open while a driver remains');
+    test.isTrue(!!shared._changeStream, 'cursor still open');
+    test.equal(mongo._sharedChangeStreams[c._name], shared, 'still registered');
+
+    // Stopping the last observer tears the shared stream down and drops it from
+    // the registry, so the server-side cursor is released.
+    h2.stop();
+    await waitFor(() => shared._stopped, 2000);
+    test.isTrue(shared._stopped, 'shared stream stopped after last driver left');
+    test.isTrue(!shared._changeStream, 'cursor closed');
+    test.isUndefined(
+      mongo._sharedChangeStreams[c._name],
+      'shared stream removed from the connection registry'
+    );
   }
 );
 
