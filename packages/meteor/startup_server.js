@@ -32,6 +32,21 @@ Meteor.startup = function startup(callback) {
  */
 Meteor.onShutdown = function onShutdown(callback) {
   callback = Meteor.wrapFn(callback);
+  if (process.env.METEOR_PROFILE) {
+    // Create a temporary error to capture the current stack trace.
+    const error = new Error("Meteor.onShutdown");
+
+    // Capture the stack trace of the Meteor.onShutdown call, excluding the
+    // onShutdown stack frame itself.
+    Error.captureStackTrace(error, onShutdown);
+
+    callback.stack = error.stack
+      .split(/\n\s*/) // Split lines and remove leading whitespace.
+      .slice(0, 2) // Only include the call site.
+      .join(" ") // Collapse to one line.
+      .replace(/^Error: /, ""); // Not really an Error per se.
+  }
+
   const bootstrap = global.__meteor_bootstrap__;
   if (bootstrap && bootstrap.shutdownHooks) {
     bootstrap.shutdownHooks.push(callback);
