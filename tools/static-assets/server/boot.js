@@ -457,35 +457,60 @@ var callStartupHooks = Profile("Call Meteor.startup hooks", async function () {
   __meteor_bootstrap__.startupHooks = null;
 });
 
-var shutdownInProgress = false;
+let shutdownInProgress = false;
 
-var callShutdownHooks = Profile("Call Meteor.shutdown hooks", async function (signal) {
-  if (shutdownInProgress) return;
+const callShutdownHooks = Profile("Call Meteor.onShutdown hooks", async function (signal) {
+  const exitCode = 128 + (signal === 'SIGINT' ? 2 : 15);
+
+  // A second signal while shutdown is already running is the operator's
+  // "force quit" escape hatch (e.g. double Ctrl-C). Exit immediately instead
+  // of waiting for the in-flight hooks or the timeout.
+  if (shutdownInProgress) {
+    console.error('[Meteor.onShutdown] received ' + signal + ' during shutdown, forcing exit');
+    process.exit(exitCode);
+  }
   shutdownInProgress = true;
 
-  var hooks = __meteor_bootstrap__.shutdownHooks || [];
-  // Setting this to null tells Meteor.shutdown that shutdown has begun.
+  const hooks = __meteor_bootstrap__.shutdownHooks || [];
+  // Setting this to null tells Meteor.onShutdown that shutdown has begun.
   __meteor_bootstrap__.shutdownHooks = null;
 
-  var timeoutMs = parseInt(process.env.METEOR_SHUTDOWN_TIMEOUT_MS, 10) || 10000;
-  var exitCode = 128 + (signal === 'SIGINT' ? 2 : 15);
-
-  var timer = setTimeout(function () {
-    console.error('[Meteor.shutdown] timeout after ' + timeoutMs + 'ms, forcing exit');
-    process.exit(exitCode);
-  }, timeoutMs);
-
-  // LIFO — last registered runs first, mirroring teardown order.
-  while (hooks.length) {
-    var hook = hooks.pop();
-    try {
-      await Profile.time(hook.stack || "(unknown)", function () { return hook(signal); });
-    } catch (e) {
-      console.error('[Meteor.shutdown] hook threw:', e && e.stack || e);
+  // METEOR_SHUTDOWN_TIMEOUT_MS caps total shutdown time before forcing exit.
+  // 0 = no cap (wait for hooks indefinitely); any positive value = ms.
+  // Invalid or negative values fall back to the default with a warning.
+  let timeoutMs = 10000;
+  const rawTimeout = process.env.METEOR_SHUTDOWN_TIMEOUT_MS;
+  if (rawTimeout !== undefined && rawTimeout !== '') {
+    const parsed = parseInt(rawTimeout, 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      console.error(
+        '[Meteor.onShutdown] invalid METEOR_SHUTDOWN_TIMEOUT_MS="' + rawTimeout +
+        '", using default ' + timeoutMs + 'ms'
+      );
+    } else {
+      timeoutMs = parsed;
     }
   }
 
-  clearTimeout(timer);
+  let timer = null;
+  if (timeoutMs > 0) {
+    timer = setTimeout(function () {
+      console.error('[Meteor.onShutdown] timeout after ' + timeoutMs + 'ms, forcing exit');
+      process.exit(exitCode);
+    }, timeoutMs);
+  }
+
+  // LIFO — last registered runs first, mirroring teardown order.
+  while (hooks.length) {
+    const hook = hooks.pop();
+    try {
+      await Profile.time(hook.stack || "(unknown)", function () { return hook(signal); });
+    } catch (e) {
+      console.error('[Meteor.onShutdown] hook threw:', e && e.stack || e);
+    }
+  }
+
+  if (timer) clearTimeout(timer);
   process.exit(exitCode);
 });
 
