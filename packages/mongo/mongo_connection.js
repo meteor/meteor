@@ -13,6 +13,7 @@ import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
 import { ChangeStreamObserveDriver } from './changestream_observe_driver';
+import { ChangeStreamMultiplexer } from './changestream_multiplexer';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
@@ -35,6 +36,11 @@ export const MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
+  // One shared MongoDB change stream per collection, keyed by collection name.
+  // Lazily created/removed by _acquireChangeStreamMultiplexer so N distinct
+  // observe drivers on the same collection share a single server-side cursor
+  // (meteor/meteor#14453) instead of one cursor each.
+  self._changeStreamMultiplexers = {};
   self._onFailoverHook = new Hook;
 
   const userOptions = {
@@ -137,6 +143,25 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
     throw Error("rawCollection called before Connection created?");
 
   return self.db.collection(collectionName);
+};
+
+// Returns the shared ChangeStreamMultiplexer for a collection, creating it on
+// first use. The multiplexer removes itself from this registry once its last
+// driver detaches, so a later observer on the same collection opens a fresh
+// shared stream rather than reusing a torn-down one.
+MongoConnection.prototype._acquireChangeStreamMultiplexer = function (collectionName) {
+  var self = this;
+  var existing = self._changeStreamMultiplexers[collectionName];
+  if (existing) {
+    return existing;
+  }
+  var multiplexer = new ChangeStreamMultiplexer(self, collectionName, function () {
+    if (self._changeStreamMultiplexers[collectionName] === multiplexer) {
+      delete self._changeStreamMultiplexers[collectionName];
+    }
+  });
+  self._changeStreamMultiplexers[collectionName] = multiplexer;
+  return multiplexer;
 };
 
 MongoConnection.prototype.createCappedCollectionAsync = async function (
