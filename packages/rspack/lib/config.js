@@ -95,17 +95,8 @@ function getFileExtensionsToIgnore() {
     return [];
   }
 
-  const allFiles = glob.sync('**/*', {
-    nodir: true,
-    dot: true,
-    ignore: ['node_modules/**', '.meteor/**'],
-  });
-  const existingExts = Array.from(
-    new Set(allFiles.map(f => path.extname(f).toLowerCase())),
-  );
-
-  // Base extensions to ignore
-  const baseExtensions = [
+  // Base extensions that Rspack handles and Meteor should ignore
+  const extensionsToIgnore = [
     '.ts',
     '.tsx',
     '.js',
@@ -113,27 +104,41 @@ function getFileExtensionsToIgnore() {
     '.mjs',
     '.cjs',
     '.json',
+    '.css',
+    '.png',
+    '.jpg',
+    '.jpeg',
+    '.gif',
+    '.svg',
+    '.webp',
+    '.woff',
+    '.woff2',
+    '.eot',
+    '.ttf',
+    '.otf',
   ];
 
-  // Filter existing extensions based on project type
-  let filteredExts = existingExts;
+  let filteredExts = extensionsToIgnore;
 
-  // For Blaze projects, exclude .html files
+  // If the project uses a specific Meteor compiler, we must NOT ignore its files
+  // so that Meteor's compiler can still process them (e.g. Blaze templates).
+  
   if (isMeteorBlazeProject()) {
-    filteredExts = existingExts.filter(ext => ext !== '.html');
+    // Keep .html for Meteor
+    filteredExts = filteredExts.filter(ext => ext !== '.html');
   }
 
-  // Check for Less projects and exclude .less files
   if (isMeteorLessProject()) {
+    // Keep .less for Meteor
     filteredExts = filteredExts.filter(ext => ext !== '.less');
   }
 
-  // Check for SCSS projects and exclude .scss files
   if (isMeteorScssProject()) {
-    filteredExts = filteredExts.filter(ext => ext !== '.scss');
+    // Keep .scss/.sass for Meteor
+    filteredExts = filteredExts.filter(ext => ext !== '.scss' && ext !== '.sass');
   }
 
-  return Array.from(new Set([...baseExtensions, ...filteredExts])).filter(
+  return Array.from(new Set(filteredExts)).filter(
     ext => ext !== '',
   );
 }
