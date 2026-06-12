@@ -50,6 +50,7 @@ Environment Variables:
   MODE           'matrix' for the comparison report, 'leak' for long-churn issue-style capture (default: matrix)
   USE_GLOBAL     If 'true', use the system meteor instead of current checkout (default: false)
                  When false, the app is linked to the local npm-packages/meteor-rspack first
+                 Legacy is auto-skipped for TypeScript Rspack apps that use zodern:types
   METEOR_PATH    Path to meteor binary (default: checkout or ~/.meteor/meteor)
   APP_PATH       Path to the app to test (default: dist/repro-app)
   TOUCH_FILE     File to modify to trigger rebuild (default: server/main.js)
@@ -122,6 +123,37 @@ function ensureLocalRspackLink() {
   hasEnsuredLocalRspackLink = true;
 }
 
+function readAppPackageJson() {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(CONFIG.APP_PATH, 'package.json'), 'utf8'));
+  } catch (e) {
+    return null;
+  }
+}
+
+function readMeteorPackagesFile() {
+  try {
+    return fs.readFileSync(path.join(CONFIG.APP_PATH, '.meteor/packages'), 'utf8');
+  } catch (e) {
+    return '';
+  }
+}
+
+function isTypescriptPath(filePath) {
+  return typeof filePath === 'string' && /\.(ts|tsx|mts|cts)$/.test(filePath);
+}
+
+function shouldSkipLegacyVariant() {
+  const packageJson = readAppPackageJson();
+  const meteorPackages = readMeteorPackagesFile();
+  const mainModules = Object.values(packageJson?.meteor?.mainModule || {});
+  const testModule = packageJson?.meteor?.testModule;
+  const hasTypescriptEntrypoint = [...mainModules, testModule, CONFIG.TOUCH_FILE].some(isTypescriptPath);
+  const hasRspackPackage = /(^|\n)rspack(\s|$)/m.test(meteorPackages);
+  const hasZodernTypes = /(^|\n)zodern:types(\s|$)/m.test(meteorPackages);
+  return hasTypescriptEntrypoint && hasRspackPackage && hasZodernTypes;
+}
+
 function getRSS(pid) {
   try {
     const output = execSync(`ps -o rss= -p ${pid}`, { stdio: ['pipe', 'pipe', 'ignore'] }).toString().trim();
@@ -138,6 +170,53 @@ function getFDCount(pid) {
   } catch (e) {
     return 0;
   }
+}
+
+function getProcessCommand(pid) {
+  try {
+    return execSync(`ps -o args= -p ${pid}`, { stdio: ['pipe', 'pipe', 'ignore'] }).toString().trim();
+  } catch (e) {
+    return '';
+  }
+}
+
+function isAppServerCommand(cmd) {
+  return cmd.includes('main.js') && (cmd.includes('.meteor/local/build') || cmd.includes('programs/server'));
+}
+
+function getProcessLabel(pid, rootPid, cmd) {
+  if (pid === rootPid) {
+    return 'meteor-tool';
+  }
+
+  if (isAppServerCommand(cmd)) {
+    return 'app-server';
+  }
+
+  if (cmd.includes('mongod') || cmd.includes('.meteor/local/db')) {
+    return 'mongodb';
+  }
+
+  if (cmd.includes('ts-checker-rspack-plugin')) {
+    return 'ts-checker';
+  }
+
+  if (
+    cmd.includes('webpack-dev-server') ||
+    cmd.includes('@rspack/dev-server') ||
+    cmd.includes('@rspack/cli') ||
+    cmd.includes('/rspack ') ||
+    cmd.includes(' rspack ')
+  ) {
+    return 'rspack-dev-server';
+  }
+
+  if (cmd.includes('node')) {
+    return 'node-worker';
+  }
+
+  const executable = cmd.split(/\s+/)[0] || 'unknown';
+  return path.basename(executable);
 }
 
 function getProcessTree(pid) {
@@ -160,27 +239,35 @@ function getTreeStats(pid) {
   const pids = getProcessTree(pid);
   let totalRSS = 0;
   let appRSS = 0;
+  const breakdown = {};
+  const processes = [];
 
   for (const p of pids) {
     const rss = getRSS(p);
+    const cmd = getProcessCommand(p);
+    const label = getProcessLabel(p, pid, cmd);
     totalRSS += rss;
-    
-    if (p !== pid) {
-      try {
-        const cmd = execSync(`ps -o args= -p ${p}`, { stdio: ['pipe', 'pipe', 'ignore'] }).toString();
-        if (cmd.includes('main.js') && (cmd.includes('.meteor/local/build') || cmd.includes('programs/server'))) {
-           appRSS = rss;
-        }
-      } catch (e) {}
+
+    if (label === 'app-server') {
+      appRSS = rss;
     }
+
+    breakdown[label] = (breakdown[label] || 0) + rss;
+    processes.push({ pid: p, rss, label, cmd });
   }
-  return { 
+
+  const toolRSS = getRSS(pid);
+  const otherRSS = Math.max(totalRSS - toolRSS - appRSS, 0);
+  return {
     totalRSS, 
     count: pids.length, 
     pids,
-    toolRSS: getRSS(pid),
+    toolRSS,
     toolFDs: getFDCount(pid),
-    appRSS
+    appRSS,
+    otherRSS,
+    breakdown,
+    processes: processes.sort((a, b) => b.rss - a.rss),
   };
 }
 
@@ -483,13 +570,23 @@ async function runVariant(name, config, options = {}) {
         totalRSS: Math.round(stats.totalRSS / 1024), 
         toolRSS: Math.round(stats.toolRSS / 1024),   
         appRSS: Math.round(stats.appRSS / 1024),     
+        otherRSS: Math.round(stats.otherRSS / 1024),
         processCount: stats.count,
         toolFDs: stats.toolFDs,
         serverJsSize: fs.existsSync(serverJsPath) ? Math.round(fs.statSync(serverJsPath).size / 1024) : 0, 
+        processBreakdown: Object.fromEntries(
+          Object.entries(stats.breakdown).map(([label, rss]) => [label, Math.round(rss / 1024)])
+        ),
+        topProcesses: stats.processes.slice(0, 6).map((processInfo) => ({
+          pid: processInfo.pid,
+          label: processInfo.label,
+          rss: Math.round(processInfo.rss / 1024),
+          cmd: processInfo.cmd,
+        })),
       };
       
       results.push(entry);
-      console.log(`  RSS Total: ${entry.totalRSS} MB, Tool: ${entry.toolRSS} MB, App: ${entry.appRSS} MB, FDs: ${entry.toolFDs}, Procs: ${stats.count}`);
+      console.log(`  RSS Total: ${entry.totalRSS} MB, Tool: ${entry.toolRSS} MB, App: ${entry.appRSS} MB, Other: ${entry.otherRSS} MB, FDs: ${entry.toolFDs}, Procs: ${stats.count}`);
 
       if (onCycle) {
         const outcome = await onCycle({ entry, results, cycle, child });
@@ -569,8 +666,25 @@ const matrix = [
   { name: 'cache:false+devtool:false', config: { cache: false, devtool: false } },
 ];
 
+let activeMatrixCache = null;
+
+function getActiveMatrix() {
+  if (activeMatrixCache) {
+    return activeMatrixCache;
+  }
+
+  if (!shouldSkipLegacyVariant()) {
+    activeMatrixCache = matrix;
+    return activeMatrixCache;
+  }
+
+  console.log('Skipping legacy variant: TypeScript Rspack app with zodern:types would emit expected legacy-only lint noise.');
+  activeMatrixCache = matrix.filter(item => item.name !== 'legacy');
+  return activeMatrixCache;
+}
+
 function getVariantByName(name) {
-  return matrix.find(item => item.name === name) || null;
+  return getActiveMatrix().find(item => item.name === name) || null;
 }
 
 function average(values) {
@@ -600,6 +714,7 @@ function analyzeResults(res) {
   const totals = res.map(r => r.totalRSS);
   const tools = res.map(r => r.toolRSS);
   const apps = res.map(r => r.appRSS);
+  const others = res.map(r => r.otherRSS || 0);
   const fds = res.map(r => r.toolFDs);
   const procs = res.map(r => r.processCount);
   const serverJsSizes = res.map(r => r.serverJsSize);
@@ -607,10 +722,32 @@ function analyzeResults(res) {
   const warmTotals = warmRes.map(r => r.totalRSS);
   const warmTools = warmRes.map(r => r.toolRSS);
   const warmApps = warmRes.map(r => r.appRSS);
+  const warmOthers = warmRes.map(r => r.otherRSS || 0);
 
   const start = res[0];
   const end = res[res.length - 1];
   const rebuilds = Math.max(res.length - 1, 0);
+  const breakdownByLabel = {};
+
+  for (const entry of res) {
+    for (const [label, rss] of Object.entries(entry.processBreakdown || {})) {
+      if (!breakdownByLabel[label]) {
+        breakdownByLabel[label] = [];
+      }
+      breakdownByLabel[label].push(rss);
+    }
+  }
+
+  const processLabels = Object.entries(breakdownByLabel)
+    .map(([label, values]) => ({
+      label,
+      avgRSS: average(values),
+      peakRSS: max(values),
+      startRSS: values[0] || 0,
+      endRSS: values[values.length - 1] || 0,
+      deltaRSS: (values[values.length - 1] || 0) - (values[0] || 0),
+    }))
+    .sort((a, b) => b.avgRSS - a.avgRSS);
 
   return {
     samples: res.length,
@@ -620,31 +757,39 @@ function analyzeResults(res) {
     deltaTotal: end.totalRSS - start.totalRSS,
     deltaTool: end.toolRSS - start.toolRSS,
     deltaApp: end.appRSS - start.appRSS,
+    deltaOther: (end.otherRSS || 0) - (start.otherRSS || 0),
     slopeTotal: rebuilds > 0 ? (end.totalRSS - start.totalRSS) / rebuilds : null,
     slopeTool: rebuilds > 0 ? (end.toolRSS - start.toolRSS) / rebuilds : null,
     slopeApp: rebuilds > 0 ? (end.appRSS - start.appRSS) / rebuilds : null,
+    slopeOther: rebuilds > 0 ? ((end.otherRSS || 0) - (start.otherRSS || 0)) / rebuilds : null,
     avgTotal: average(totals),
     avgTool: average(tools),
     avgApp: average(apps),
+    avgOther: average(others),
     medianTotal: median(totals),
     medianTool: median(tools),
     medianApp: median(apps),
+    medianOther: median(others),
     peakTotal: max(totals),
     peakTool: max(tools),
     peakApp: max(apps),
+    peakOther: max(others),
     postWarmSamples: warmRes.length,
     postWarmAvgTotal: average(warmTotals),
     postWarmAvgTool: average(warmTools),
     postWarmAvgApp: average(warmApps),
+    postWarmAvgOther: average(warmOthers),
     postWarmMedianTotal: median(warmTotals),
     postWarmMedianTool: median(warmTools),
     postWarmMedianApp: median(warmApps),
+    postWarmMedianOther: median(warmOthers),
     avgFDs: average(fds),
     peakFDs: max(fds),
     avgProcs: average(procs),
     peakProcs: max(procs),
     avgServerJsSize: average(serverJsSizes),
     peakServerJsSize: max(serverJsSizes),
+    processLabels,
   };
 }
 
@@ -736,6 +881,9 @@ async function runLeakHarness() {
           appStartMb: stats.start.appRSS,
           appEndMb: stats.end.appRSS,
           appDeltaMb: stats.deltaApp,
+          otherStartMb: stats.start.otherRSS,
+          otherEndMb: stats.end.otherRSS,
+          otherDeltaMb: stats.deltaOther,
           totalStartMb: stats.start.totalRSS,
           totalEndMb: stats.end.totalRSS,
           totalDeltaMb: stats.deltaTotal,
@@ -753,6 +901,7 @@ async function runLeakHarness() {
     console.log(`Samples: ${stats.samples}, Rebuilds: ${stats.rebuilds}`);
     console.log(`Tool RSS: ${stats.start.toolRSS} -> ${stats.end.toolRSS} MB (${stats.deltaTool >= 0 ? '+' : ''}${stats.deltaTool} MB)`);
     console.log(`App RSS:  ${stats.start.appRSS} -> ${stats.end.appRSS} MB (${stats.deltaApp >= 0 ? '+' : ''}${stats.deltaApp} MB)`);
+    console.log(`Other RSS:${stats.start.otherRSS} -> ${stats.end.otherRSS} MB (${stats.deltaOther >= 0 ? '+' : ''}${stats.deltaOther} MB)`);
     if (stats.slopeTool !== null) {
       console.log(`Tool slope: ${formatSignedNumber(stats.slopeTool, 5, ' MB/rebuild')}`);
     }
@@ -771,8 +920,9 @@ async function main() {
   const allResults = {};
   const summary = {};
   const variantWidth = 25;
-  
-  for (const item of matrix) {
+  const activeMatrix = getActiveMatrix();
+
+  for (const item of activeMatrix) {
     allResults[item.name] = await runVariant(item.name, item.config);
     summary[item.name] = analyzeResults(allResults[item.name]);
   }
@@ -783,7 +933,7 @@ async function main() {
   );
   console.log('-'.repeat(variantWidth + 3 + 15 + 3 + 14 + 3 + 25));
 
-  let csv = 'Variant,Cycle,TotalRSS,ToolRSS,AppRSS,FDs,Procs,ServerJsKB\n';
+  let csv = 'Variant,Cycle,TotalRSS,ToolRSS,AppRSS,OtherRSS,FDs,Procs,ServerJsKB\n';
 
   for (const name in allResults) {
     const res = allResults[name];
@@ -804,7 +954,7 @@ async function main() {
     );
 
     res.forEach(r => {
-      csv += `${name},${r.cycle},${r.totalRSS},${r.toolRSS},${r.appRSS},${r.toolFDs},${r.processCount},${r.serverJsSize}\n`;
+      csv += `${name},${r.cycle},${r.totalRSS},${r.toolRSS},${r.appRSS},${r.otherRSS},${r.toolFDs},${r.processCount},${r.serverJsSize}\n`;
     });
   }
 
@@ -846,9 +996,9 @@ async function main() {
 
   console.log('\n=== DELTAS / OVERHEAD ===');
   console.log(
-    `${padCell('Variant', variantWidth)} | ${padCell('Samples', 7)} | ${padCell('Rebuilds', 8)} | ${padCell('Total Delta', 12)} | ${padCell('Tool Delta', 11)} | ${padCell('App Delta', 10)} | ${padCell('Avg FDs', 8)} | ${padCell('Avg Procs', 10)} | ${padCell('Avg ServerJs', 13)}`
+    `${padCell('Variant', variantWidth)} | ${padCell('Samples', 7)} | ${padCell('Rebuilds', 8)} | ${padCell('Total Delta', 12)} | ${padCell('Tool Delta', 11)} | ${padCell('App Delta', 10)} | ${padCell('Other Delta', 12)} | ${padCell('Avg FDs', 8)} | ${padCell('Avg Procs', 10)} | ${padCell('Avg ServerJs', 13)}`
   );
-  console.log('-'.repeat(variantWidth + 3 + 7 + 3 + 8 + 3 + 12 + 3 + 11 + 3 + 10 + 3 + 8 + 3 + 10 + 3 + 13));
+  console.log('-'.repeat(variantWidth + 3 + 7 + 3 + 8 + 3 + 12 + 3 + 11 + 3 + 10 + 3 + 12 + 3 + 8 + 3 + 10 + 3 + 13));
 
   for (const name in summary) {
     const stats = summary[name];
@@ -858,7 +1008,31 @@ async function main() {
     }
 
     console.log(
-      `${padCell(name, variantWidth)} | ${padCell(stats.samples, 7, 'right')} | ${padCell(stats.rebuilds, 8, 'right')} | ${padCell(`${stats.deltaTotal >= 0 ? '+' : ''}${stats.deltaTotal} MB`, 12, 'right')} | ${padCell(`${stats.deltaTool >= 0 ? '+' : ''}${stats.deltaTool} MB`, 11, 'right')} | ${padCell(`${stats.deltaApp >= 0 ? '+' : ''}${stats.deltaApp} MB`, 10, 'right')} | ${padCell(stats.avgFDs.toFixed(1), 8, 'right')} | ${padCell(stats.avgProcs.toFixed(1), 10, 'right')} | ${padCell(`${stats.avgServerJsSize.toFixed(1)} KB`, 13, 'right')}`
+      `${padCell(name, variantWidth)} | ${padCell(stats.samples, 7, 'right')} | ${padCell(stats.rebuilds, 8, 'right')} | ${padCell(`${stats.deltaTotal >= 0 ? '+' : ''}${stats.deltaTotal} MB`, 12, 'right')} | ${padCell(`${stats.deltaTool >= 0 ? '+' : ''}${stats.deltaTool} MB`, 11, 'right')} | ${padCell(`${stats.deltaApp >= 0 ? '+' : ''}${stats.deltaApp} MB`, 10, 'right')} | ${padCell(`${stats.deltaOther >= 0 ? '+' : ''}${stats.deltaOther} MB`, 12, 'right')} | ${padCell(stats.avgFDs.toFixed(1), 8, 'right')} | ${padCell(stats.avgProcs.toFixed(1), 10, 'right')} | ${padCell(`${stats.avgServerJsSize.toFixed(1)} KB`, 13, 'right')}`
+    );
+  }
+
+  console.log('\n=== OTHER PROCESS ATTRIBUTION ===');
+  console.log(
+    `${padCell('Variant', variantWidth)} | ${padCell('Avg Other', 11)} | ${padCell('Peak Other', 12)} | ${padCell('Top Other Avg', 16)} | ${padCell('Top Other Delta', 18)}`
+  );
+  console.log('-'.repeat(variantWidth + 3 + 11 + 3 + 12 + 3 + 16 + 3 + 18));
+
+  for (const name in summary) {
+    const stats = summary[name];
+    if (!stats) {
+      console.log(`${name.padEnd(25)} | No data collected`);
+      continue;
+    }
+
+    const otherLabels = (stats.processLabels || []).filter(({ label }) => !['meteor-tool', 'app-server'].includes(label));
+    const topOtherAvg = otherLabels[0] || null;
+    const topOtherDelta = [...otherLabels].sort((a, b) => b.deltaRSS - a.deltaRSS)[0] || null;
+    const topOtherAvgText = topOtherAvg ? `${topOtherAvg.label} ${topOtherAvg.avgRSS.toFixed(1)} MB` : 'n/a';
+    const topOtherDeltaText = topOtherDelta ? `${topOtherDelta.label} ${topOtherDelta.deltaRSS >= 0 ? '+' : ''}${topOtherDelta.deltaRSS} MB` : 'n/a';
+
+    console.log(
+      `${padCell(name, variantWidth)} | ${padCell(`${stats.avgOther.toFixed(1)} MB`, 11, 'right')} | ${padCell(`${stats.peakOther} MB`, 12, 'right')} | ${padCell(topOtherAvgText, 16, 'right')} | ${padCell(topOtherDeltaText, 18, 'right')}`
     );
   }
 
