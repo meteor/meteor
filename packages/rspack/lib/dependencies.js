@@ -119,6 +119,7 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       regularDepsSuccess = await installNpmDependency(regularDepsStrings, {
         cwd: appDir,
         dev: false,
+        includeDev: true,
         yarn: isYarnProj,
       });
     }

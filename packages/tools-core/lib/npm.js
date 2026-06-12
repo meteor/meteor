@@ -156,6 +156,10 @@ function buildNpmInstallArgs(dependencies, options = {}) {
     args.push('--save-dev');
   }
 
+  if (options.includeDev) {
+    args.push('--include=dev');
+  }
+
   if (options.exact) {
     args.push('--save-exact');
   }
@@ -279,6 +283,8 @@ export function installNpmDependency(dependencies, options = {}) {
   const args = buildNpmInstallArgs(dependencies, { ...options, isMeteorCommand: true });
   return executeCommand('meteor', args, { cwd });
 }
+
+export const _buildNpmInstallArgs = buildNpmInstallArgs;
 
 
 /**

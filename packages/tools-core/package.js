@@ -19,6 +19,7 @@ Package.onTest(function (api) {
   api.addFiles([
     'tests/global_state_tests.js',
     'tests/meteor_tests.js',
+    'tests/npm_tests.js',
     'tests/readiness_tests.js',
   ], 'server');
 });

@@ -101,7 +101,12 @@ export async function ensureCapacitorInstalled({ platforms = null } = {}) {
     ok = ok && await installNpmDependency(devDeps, { cwd: appDir, dev: true, yarn: isYarn });
   }
   if (runtimeDeps.length) {
-    ok = ok && await installNpmDependency(runtimeDeps, { cwd: appDir, dev: false, yarn: isYarn });
+    ok = ok && await installNpmDependency(runtimeDeps, {
+      cwd: appDir,
+      dev: false,
+      includeDev: true,
+      yarn: isYarn,
+    });
   }
 
   if (!ok) {
