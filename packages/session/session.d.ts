@@ -30,6 +30,13 @@ export namespace Session {
    * @param value The new value for `key`
    */
   function set(key: string, value: SessionValue): void;
+  /**
+   * Set multiple session variables at once. Equivalent to calling
+   * `Session.set` individually on each key/value pair.
+   * @param object An object whose keys are session variable names and
+   *   whose values are the new values for those variables.
+   */
+  function set(object: Record<string, SessionValue>): void;
 
   /**
    * Set a variable in the session if it hasn't been set before.
