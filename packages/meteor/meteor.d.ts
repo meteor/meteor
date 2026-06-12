@@ -154,7 +154,8 @@ export namespace Meteor {
    * @param methods Dictionary whose keys are method names and values are functions.
    */
   function methods(methods: {
-    [key: string]: (this: MethodThisType, ...args: EJSONableProperty[]) => EJSONableProperty | void | Promise<EJSONableProperty | void>;
+    [key: string]: (this: MethodThisType, ...args: (EJSONable | EJSONableProperty)[]) =>
+      EJSONable | EJSONableProperty | void | Promise<EJSONable | EJSONableProperty | void>;
   }): void;
 
   /**
