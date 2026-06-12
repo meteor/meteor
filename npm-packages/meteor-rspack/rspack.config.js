@@ -426,7 +426,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    "**/dist/**",
+    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
