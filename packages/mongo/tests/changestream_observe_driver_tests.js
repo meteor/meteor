@@ -704,6 +704,111 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - #14460 initial adds deliver a pre-existing doc matched by an ObjectID _id selector',
+  async function (test) {
+    const c = new Mongo.Collection(
+      'changestream_test_objectid_' + Random.id(),
+      { idGeneration: 'MONGO' }
+    );
+
+    const id1 = await c.insertAsync({ name: 'pet-1' });
+    await c.insertAsync({ name: 'pet-2' });
+    test.isTrue(id1 instanceof Mongo.ObjectID, 'MONGO idGeneration should yield an ObjectID');
+
+    const fetched = await c.find({ _id: id1 }).fetchAsync();
+    test.equal(fetched.length, 1, 'fetchAsync should find the doc by ObjectID');
+
+    const added = [];
+    const handle = await c.find({ _id: id1 }).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => added.length > 0);
+    test.equal(added.length, 1, 'initial added should fire for the ObjectID-matched doc');
+    test.isTrue(added[0].id instanceof Mongo.ObjectID, 'delivered id should be an ObjectID');
+    test.equal(added[0].id.toHexString(), id1.toHexString());
+    test.equal(added[0].fields.name, 'pet-1');
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - #14460 initial adds deliver pre-existing docs matched by { _id: { $in: [ObjectID, ...] } }',
+  async function (test) {
+    const c = new Mongo.Collection(
+      'changestream_test_objectid_in_' + Random.id(),
+      { idGeneration: 'MONGO' }
+    );
+
+    const id1 = await c.insertAsync({ name: 'pet-1' });
+    const id2 = await c.insertAsync({ name: 'pet-2' });
+    const id3 = await c.insertAsync({ name: 'pet-3' });
+
+    const selector = { _id: { $in: [id1, id3] } };
+
+    const fetched = await c.find(selector).fetchAsync();
+    test.equal(fetched.length, 2, 'fetchAsync should find both $in docs');
+
+    const added = [];
+    const handle = await c.find(selector).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => added.length >= 2);
+    test.equal(added.length, 2, 'initial added should fire for both $in-matched docs');
+
+    const gotHex = added.map(a => a.id.toHexString()).sort();
+    const wantHex = [id1.toHexString(), id3.toHexString()].sort();
+    test.equal(gotHex, wantHex, 'should deliver exactly the $in-selected docs');
+    test.isFalse(
+      added.some(a => a.id.toHexString() === id2.toHexString()),
+      'a doc outside the $in must not be delivered'
+    );
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - #14460 live update to an ObjectID-selected doc stays in the set (changed, not removed)',
+  async function (test) {
+    const c = new Mongo.Collection(
+      'changestream_test_objectid_live_' + Random.id(),
+      { idGeneration: 'MONGO' }
+    );
+
+    const id1 = await c.insertAsync({ name: 'pet-1', n: 1 });
+
+    const events = [];
+    const handle = await c.find({ _id: { $in: [id1] } }).observeChanges({
+      added(id, fields) { events.push({ type: 'added', id, fields }); },
+      changed(id, fields) { events.push({ type: 'changed', id, fields }); },
+      removed(id) { events.push({ type: 'removed', id }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => events.length > 0);
+    test.equal(events.length, 1, 'initial added for the selected doc');
+    test.equal(events[0].type, 'added');
+    events.length = 0;
+
+    await c.updateAsync(id1, { $set: { n: 2 } });
+    await waitFor(() => events.length > 0);
+    test.equal(events[0].type, 'changed', 'update to a selected doc should emit changed, not removed');
+    test.equal(events[0].fields.n, 2);
+    test.isFalse(
+      events.some(e => e.type === 'removed'),
+      'a selected doc must not be spuriously removed on update'
+    );
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
   'changestream - handles nested documents',
   async function (test) {
     const c = makeCollection();
