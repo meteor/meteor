@@ -63,7 +63,7 @@ export namespace Meteor {
     emails?: UserEmail[] | undefined;
     createdAt?: Date | undefined;
     profile?: UserProfile;
-    services?: Record<string, Record<string, unknown>>;
+    services?: Record<string, unknown>;
   }
 
   function user(options?: {
