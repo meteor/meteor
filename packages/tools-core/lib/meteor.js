@@ -185,11 +185,25 @@ export function setMeteorAppEntrypoints({
 
 /**
  * Sets patterns to be ignored by the Meteor application in the environment variable.
- * Appends the new ignore pattern to any existing ones.
+ * Does not append if the pattern is already present.
  * @param {string} ignore - The pattern to be ignored.
  */
 export function setMeteorAppIgnore(ignore) {
-  process.env.METEOR_IGNORE = `${process.env.METEOR_IGNORE || ''} ${ignore}`.trim();
+  const current = process.env.METEOR_IGNORE || '';
+  const patterns = ignore.trim().split(/\s+/);
+  const currentPatterns = new Set(current.trim().split(/\s+/).filter(Boolean));
+  
+  let added = false;
+  for (const pattern of patterns) {
+    if (pattern && !currentPatterns.has(pattern)) {
+      currentPatterns.add(pattern);
+      added = true;
+    }
+  }
+
+  if (added) {
+    process.env.METEOR_IGNORE = Array.from(currentPatterns).join(' ');
+  }
 }
 
 /**
