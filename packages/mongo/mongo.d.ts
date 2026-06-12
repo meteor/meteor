@@ -13,7 +13,7 @@ export namespace Mongo {
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
-  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: string | NpmModuleMongodb.ObjectId };
+  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: string | ObjectID | NpmModuleMongodb.ObjectId };
 
   export type SortSpecifier = NpmModuleMongodb.Sort;
 
