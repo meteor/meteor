@@ -1434,6 +1434,7 @@ var buildCommand = async function (options) {
     return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
+  const hasCapacitorPackage = !!projectContext.projectConstraintsFile?.getConstraint('capacitor');
 
   // _bundleOnly implies serverOnly
   const serverOnly = options._bundleOnly || !!options['server-only'];
@@ -1584,7 +1585,7 @@ ${Console.command("meteor build ../output")}`,
     });
   }
 
-  if (!_.isEmpty(cordovaPlatforms)) {
+  if (!hasCapacitorPackage && !_.isEmpty(cordovaPlatforms)) {
 
     let cordovaProject;
     await main.captureAndExit('', async () => {

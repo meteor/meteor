@@ -44,6 +44,9 @@ const {
   getCapacitorWebDir,
 } = require('./constants');
 
+const fs = require('fs');
+const path = require('path');
+
 const PROC_KEYS = {
   SYNC: 'capacitor.process.sync',
   RUN: 'capacitor.process.run',
@@ -56,7 +59,7 @@ const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
  * defineConfig (in @meteorjs/capacitor) reads these to populate the
  * Meteor flag object handed to the user's capacitor.config.js factory.
  */
-function getCapacitorEnv({ platform, mode } = {}) {
+export function getCapacitorEnv({ platform, mode } = {}) {
   const isAndroid = isMeteorAppNativeAndroid();
   const isIos = isMeteorAppNativeIos();
   const isDev = isMeteorAppDevelopment();
@@ -78,8 +81,42 @@ function getCapacitorEnv({ platform, mode } = {}) {
   };
 }
 
+export function _getCapCommand(args, { cwd = getMeteorAppDir() } = {}) {
+  const binName = process.platform === 'win32' ? 'cap.cmd' : 'cap';
+  const localCap = path.join(cwd, 'node_modules', '.bin', binName);
+  if (fs.existsSync(localCap)) {
+    return {
+      command: localCap,
+      args,
+      prefix: localCap,
+    };
+  }
+  return getNpxCommand(['cap', ...args]);
+}
+
+export function _ensureCapacitorWebDirIndex({
+  appDir = getMeteorAppDir(),
+  webDir = getCapacitorWebDir({
+    isDevelopment: isMeteorAppDevelopment(),
+    isProduction: isMeteorAppProduction(),
+  }),
+} = {}) {
+  const targetDir = path.join(appDir, webDir);
+  const indexPath = path.join(targetDir, 'index.html');
+  if (fs.existsSync(indexPath)) {
+    return indexPath;
+  }
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.writeFileSync(
+    indexPath,
+    '<!doctype html><html><head><meta charset="utf-8"><title>Meteor Capacitor</title></head><body></body></html>\n',
+    'utf8'
+  );
+  return indexPath;
+}
+
 function spawnCap(args, { cwd, label, env, onExit, mode, platform, interactive }) {
-  const { command, args: cmdArgs } = getNpxCommand(['cap', ...args]);
+  const { command, args: cmdArgs } = _getCapCommand(args, { cwd });
   // Interactive commands (cap run's target picker) need the parent's TTY;
   // piped stdio corrupts arrow-key navigation and ANSI cursor moves.
   if (interactive) {
@@ -147,6 +184,7 @@ function runCapAdd({ appDir = getMeteorAppDir(), platform } = {}) {
 
   return new Promise(resolve => {
     logProgress(`=> 📱 Capacitor add ${platform} (native project missing — bootstrapping)`);
+    _ensureCapacitorWebDirIndex({ appDir });
     spawnCap(['add', platform], {
       cwd: appDir,
       label: `Add/${platform}`,
@@ -236,6 +274,10 @@ function shouldAutoPickTarget() {
   return /^(1|true|yes)$/i.test(process.env.METEOR_CAPACITOR_AUTO_PICK_TARGET || '');
 }
 
+function shouldSkipNativeRun() {
+  return /^(1|true|yes)$/i.test(process.env.METEOR_CAPACITOR_SKIP_NATIVE_RUN || '');
+}
+
 /**
  * Lists run targets via `cap run <platform> --list --json` and returns the
  * parsed array. Empty on no targets / parse failure.
@@ -243,7 +285,9 @@ function shouldAutoPickTarget() {
  */
 export function listCapTargets({ appDir = getMeteorAppDir(), platform } = {}) {
   return new Promise(resolve => {
-    const { command, args: cmdArgs } = getNpxCommand(['cap', 'run', platform, '--list', '--json']);
+    const { command, args: cmdArgs } = _getCapCommand(['run', platform, '--list', '--json'], {
+      cwd: appDir,
+    });
     let stdoutBuf = '';
     spawnProcess(command, cmdArgs, {
       cwd: appDir,
@@ -292,6 +336,7 @@ const CAP_INTERNAL_ENVS = new Set([
   'METEOR_CAPACITOR_PLATFORM',
   'METEOR_CAPACITOR_WEB_DIR',
   'METEOR_CAPACITOR_AUTO_PICK_TARGET',
+  'METEOR_CAPACITOR_SKIP_NATIVE_RUN',
 ]);
 
 /**
@@ -388,6 +433,7 @@ export function scheduleCapRunAfterMeteorReady({
   readinessUrl = getMeteorIndexUrl(),
   waitForReady = waitForMeteorIndexReady,
   resolveTarget = resolveCapTarget,
+  beforeRun = async () => true,
   run = runCapRun,
 } = {}) {
   if (!platform) return false;
@@ -408,6 +454,18 @@ export function scheduleCapRunAfterMeteorReady({
     if (!ready?.ok) {
       setGlobalState(RUN_LAUNCH_STATE_KEY, null);
       logError(`=> ❌ Capacitor timed out waiting for Meteor server at ${readinessUrl}`);
+      return;
+    }
+
+    const beforeRunOk = await beforeRun({ appDir, platform });
+    if (beforeRunOk === false) {
+      setGlobalState(RUN_LAUNCH_STATE_KEY, null);
+      return;
+    }
+
+    if (shouldSkipNativeRun()) {
+      setGlobalState(RUN_LAUNCH_STATE_KEY, null);
+      logInfo('=> Capacitor native run skipped by METEOR_CAPACITOR_SKIP_NATIVE_RUN');
       return;
     }
 

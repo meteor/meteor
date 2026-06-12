@@ -49,6 +49,7 @@ const {
   ensureNativePlatformAdded,
   addNativePlatformIfMissing,
   cleanup,
+  getCapacitorEnv,
 } = require('./lib/processes');
 const {
   CAPACITOR_PLATFORMS,
@@ -64,12 +65,35 @@ function logVerbose(...args) {
 }
 
 function getRequestedCapacitorPlatforms() {
-  const requested = Package?.meteor?.global?.currentCommand?.options?.args || [];
+  const options = Package?.meteor?.global?.currentCommand?.options || {};
+  const requested = [
+    ...(options.args || []),
+    ...(options.platforms ? String(options.platforms).split(',') : []),
+  ];
   return Array.from(new Set(requested.map(arg => {
     if (arg === 'android' || arg === 'android-device') return 'android';
     if (arg === 'ios' || arg === 'ios-device') return 'ios';
     return arg;
   }).filter(platform => CAPACITOR_PLATFORMS.includes(platform))));
+}
+
+async function withProcessEnv(env, fn) {
+  const previous = {};
+  Object.keys(env).forEach(key => {
+    previous[key] = process.env[key];
+    process.env[key] = env[key];
+  });
+  try {
+    return await fn();
+  } finally {
+    Object.keys(env).forEach(key => {
+      if (previous[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = previous[key];
+      }
+    });
+  }
 }
 
 /**
@@ -129,6 +153,10 @@ async function transformAndSync({ appDir, platform = null }) {
     logError(`Capacitor: timed out waiting for ${CAPACITOR_CORDOVA_OUTPUT_DIR} (30s).`);
     return;
   }
+
+  await withProcessEnv(getCapacitorEnv({ platform }), () =>
+    writeResolvedConfigSnapshot({ appDir })
+  );
 
   if (!(await runTransform({ appDir }))) return;
 
@@ -200,10 +228,14 @@ if (isCapacitorOptIn()) {
     }
 
     if (isCapacitorBuildOptIn()) {
-      // `meteor build` emits all platforms in .meteor/platforms. Sync without
-      // a platform arg lets capacitor mirror the build-native bundle into both
-      // android and ios native projects when present.
-      transformAndSync({ appDir: getMeteorAppDir() });
+      // `meteor build --platforms=android|ios` syncs the selected native
+      // project. Without a single selected platform, Capacitor syncs all
+      // native projects present in the app.
+      const platforms = getRequestedCapacitorPlatforms();
+      transformAndSync({
+        appDir: getMeteorAppDir(),
+        platform: platforms.length === 1 ? platforms[0] : null,
+      });
     }
 
     if (isCapacitorRunOptIn()) {
@@ -215,11 +247,11 @@ if (isCapacitorOptIn()) {
         : isMeteorAppNativeIos() ? 'ios'
         : null;
       const appDir = getMeteorAppDir();
-      await transformAndSync({ appDir, platform });
       if (platform) {
         scheduleCapRunAfterMeteorReady({
           appDir,
           platform,
+          beforeRun: () => transformAndSync({ appDir, platform }),
           extraArgs: ['--no-sync'],
         });
       }

@@ -1,5 +1,8 @@
 import { Tinytest } from 'meteor/tinytest';
 import { setGlobalState } from 'meteor/tools-core/lib/global-state';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 
 import {
   isMeteorIndexReadyResponse,
@@ -9,7 +12,10 @@ import {
   isCapacitorDepDeclared,
 } from './lib/dependencies.js';
 import {
+  getCapacitorEnv,
   scheduleCapRunAfterMeteorReady,
+  _getCapCommand,
+  _ensureCapacitorWebDirIndex,
   _getCapRunArgsFromEnv,
   _mergeExtraArgsWithEnv,
 } from './lib/processes.js';
@@ -113,6 +119,58 @@ Tinytest.add('capacitor - readiness - rejects non-index responses', test => {
     headers: { 'content-type': 'application/json' },
     body: '{"__meteor_runtime_config__":true}',
   }));
+});
+
+Tinytest.add('capacitor - cli - prefers the app-local cap binary', test => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-cap-cli-'));
+  try {
+    const binDir = path.join(tempDir, 'node_modules', '.bin');
+    fs.mkdirSync(binDir, { recursive: true });
+    const binName = process.platform === 'win32' ? 'cap.cmd' : 'cap';
+    const localCap = path.join(binDir, binName);
+    fs.writeFileSync(localCap, '', 'utf8');
+    fs.chmodSync(localCap, 0o755);
+
+    const command = _getCapCommand(['add', 'android'], { cwd: tempDir });
+
+    test.equal(command.command, localCap);
+    test.equal(command.args, ['add', 'android']);
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+Tinytest.add('capacitor - cli - creates placeholder webDir for native add', test => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-cap-webdir-'));
+  try {
+    const indexPath = _ensureCapacitorWebDirIndex({
+      appDir: tempDir,
+      webDir: '_build/native-prod',
+    });
+
+    test.isTrue(fs.existsSync(indexPath));
+    test.equal(
+      fs.readFileSync(indexPath, 'utf8'),
+      '<!doctype html><html><head><meta charset="utf-8"><title>Meteor Capacitor</title></head><body></body></html>\n'
+    );
+
+    fs.writeFileSync(indexPath, 'existing', 'utf8');
+    _ensureCapacitorWebDirIndex({
+      appDir: tempDir,
+      webDir: '_build/native-prod',
+    });
+
+    test.equal(fs.readFileSync(indexPath, 'utf8'), 'existing');
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+Tinytest.add('capacitor - env - platform override is explicit', test => {
+  const env = getCapacitorEnv({ platform: 'android' });
+
+  test.equal(env.METEOR_CAPACITOR, 'true');
+  test.equal(env.METEOR_CAPACITOR_PLATFORM, 'android');
 });
 
 Tinytest.addAsync('capacitor - run launch waits for readiness once', async test => {
@@ -225,8 +283,80 @@ Tinytest.add('capacitor - run - environment variables mapping', test => {
     // Ensure internal ones are excluded
     process.env.METEOR_CAPACITOR_AUTO_PICK_TARGET = 'true';
     test.isFalse(_getCapRunArgsFromEnv().includes('--auto-pick-target'));
+
+    process.env.METEOR_CAPACITOR_SKIP_NATIVE_RUN = 'true';
+    test.isFalse(_getCapRunArgsFromEnv().includes('--skip-native-run'));
   } finally {
     process.env = originalEnv;
+  }
+});
+
+Tinytest.addAsync('capacitor - run launch can skip native run after readiness', async test => {
+  clearRunState();
+
+  const originalEnv = { ...process.env };
+  try {
+    process.env.METEOR_CAPACITOR_SKIP_NATIVE_RUN = 'true';
+
+    let releaseReady;
+    let waitCalls = 0;
+    let beforeRunCalls = 0;
+    let resolveCalls = 0;
+    let runCalls = 0;
+
+    const scheduled = scheduleCapRunAfterMeteorReady({
+      appDir: '/tmp/app',
+      platform: 'android',
+      readinessUrl: 'http://127.0.0.1:3000/',
+      waitForReady: async ({ url }) => {
+        waitCalls += 1;
+        test.equal(url, 'http://127.0.0.1:3000/');
+        return new Promise(resolve => {
+          releaseReady = resolve;
+        });
+      },
+      beforeRun: async ({ appDir, platform }) => {
+        beforeRunCalls += 1;
+        test.equal(appDir, '/tmp/app');
+        test.equal(platform, 'android');
+        return true;
+      },
+      resolveTarget: async () => {
+        resolveCalls += 1;
+        return 'emulator-5554';
+      },
+      run: () => {
+        runCalls += 1;
+      },
+    });
+
+    await nextTick();
+
+    test.isTrue(scheduled);
+    test.equal(waitCalls, 1);
+    test.equal(beforeRunCalls, 0);
+    test.equal(resolveCalls, 0);
+    test.equal(runCalls, 0);
+
+    releaseReady({ ok: true });
+    await nextTick();
+
+    test.equal(beforeRunCalls, 1);
+    test.equal(resolveCalls, 0);
+    test.equal(runCalls, 0);
+
+    const rescheduled = scheduleCapRunAfterMeteorReady({
+      appDir: '/tmp/app',
+      platform: 'android',
+      waitForReady: async () => ({ ok: true }),
+      resolveTarget: async () => null,
+      run: () => {},
+    });
+
+    test.isTrue(rescheduled);
+  } finally {
+    process.env = originalEnv;
+    clearRunState();
   }
 });
 
