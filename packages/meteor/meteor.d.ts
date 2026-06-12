@@ -27,7 +27,7 @@ export namespace Meteor {
     errorType: string;
   }
 
-  function makeErrorType(name: string, constructor: (this: Error, message: string, reason?: string) => void): ErrorConstructor;
+  function makeErrorType(name: string, constructor: (this: any, ...args: any[]) => void): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
