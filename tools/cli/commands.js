@@ -126,6 +126,9 @@ const bashLive = (text, ...values) =>
 import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
+import {
+  createRegistryForProject,
+} from '../tool-extensions/index.js';
 
 import { getExamples, findExample, cloneRepo, cloneSubdirectory, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
 
@@ -265,6 +268,22 @@ export function parseRunTargets(targets) {
     }
   });
 };
+
+function isCordovaRunTargetName(target) {
+  return ['ios', 'ios-device', 'android', 'android-device'].includes(target);
+}
+
+function resolveToolPlatformOrExit(registry, platformName) {
+  try {
+    return registry.resolvePlatform(platformName);
+  } catch (e) {
+    if (e?.code?.startsWith('TOOL_EXTENSION_')) {
+      Console.error(e.message);
+      throw new main.ExitWithCode(1);
+    }
+    throw e;
+  }
+}
 
 function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
   const platforms = (options.platforms || []);
@@ -482,11 +501,15 @@ main.registerCommand(Object.assign(
 async function doRunCommand(options) {
   Console.setVerbose(!!options.verbose);
 
-  // Additional args are interpreted as run targets
-  const runTargets = parseRunTargets(options.args);
+  const requestedRunTargetNames = options.args || [];
+  const initiallyKnownRunTargets = parseRunTargets(
+    requestedRunTargetNames.filter(isCordovaRunTargetName)
+  );
+  let runTargets = initiallyKnownRunTargets;
+  let providerRunPlatformNames = [];
 
   const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
-    parseServerOptionsForRunCommand(options, runTargets);
+    parseServerOptionsForRunCommand(options, initiallyKnownRunTargets);
 
   var includePackages = [];
   if (options['extra-packages']) {
@@ -513,6 +536,42 @@ async function doRunCommand(options) {
                   projectContext.releaseFile.displayReleaseName);
       console.log();
     }
+  }
+
+  let toolExtensionRegistry = null;
+  if (!_.isEmpty(requestedRunTargetNames)) {
+    const registryProjectContext = new projectContextModule.ProjectContext({
+      projectDir: options.appDir,
+      allowIncompatibleUpdate: options['allow-incompatible-update'],
+      lintAppAndLocalPackages: !options['no-lint'],
+      includePackages: includePackages,
+    });
+    await main.captureAndExit("=> Errors while initializing project:", function () {
+      return registryProjectContext.readProjectMetadata();
+    });
+    await main.captureAndExit("=> Errors while resolving package constraints:", function () {
+      return registryProjectContext.resolveConstraints();
+    });
+
+    toolExtensionRegistry = await createRegistryForProject(registryProjectContext);
+    const resolvedRunTargets = requestedRunTargetNames.map(targetName => {
+      const platformName = targetName.replace(/-device$/, '');
+      return {
+        targetName,
+        resolution: resolveToolPlatformOrExit(toolExtensionRegistry, platformName),
+      };
+    });
+
+    runTargets = parseRunTargets(resolvedRunTargets
+      .filter(result => result.resolution.isFallback)
+      .map(result => (
+        isCordovaRunTargetName(result.targetName)
+          ? result.targetName
+          : result.resolution.platform.name
+      )));
+    providerRunPlatformNames = resolvedRunTargets
+      .filter(result => !result.resolution.isFallback)
+      .map(result => result.resolution.platform.name);
   }
 
   let appHost, appPort;
@@ -548,6 +607,15 @@ async function doRunCommand(options) {
       webArchs.push("web.cordova");
     }
   }
+  if (toolExtensionRegistry) {
+    for (const platformName of providerRunPlatformNames) {
+      for (const webArch of toolExtensionRegistry.getBaseWebArchsForPlatform(platformName)) {
+        if (!webArchs.includes(webArch)) {
+          webArchs.push(webArch);
+        }
+      }
+    }
+  }
 
   webArchs = filterWebArchs(webArchs, options['exclude-archs'], options.appDir, options);
   // Set the webArchs to include for compilation later
@@ -556,14 +624,8 @@ async function doRunCommand(options) {
   const buildMode = options.production ? 'production' : 'development';
 
   let cordovaRunner;
-  // Cordova's runner is bypassed when METEOR_CORDOVA_DISABLE=true OR when the
-  // project has the `capacitor` package added. Capacitor reuses the same
-  // android/ios run targets but transforms web.cordova/ output into
-  // build-native/ via the `capacitor` build plugin instead of invoking Cordova.
-  const hasCapacitorPackage = !!projectContext.projectConstraintsFile?.getConstraint('capacitor');
   const shouldDisableCordova =
-    Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false')) ||
-    hasCapacitorPackage;
+    Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false'));
   if (!shouldDisableCordova && !_.isEmpty(runTargets)) {
 
     async function prepareCordovaProject() {
@@ -1434,7 +1496,7 @@ var buildCommand = async function (options) {
     return projectContext.prepareProjectForBuild();
   });
   projectContext.packageMapDelta.displayOnConsole();
-  const hasCapacitorPackage = !!projectContext.projectConstraintsFile?.getConstraint('capacitor');
+  const toolExtensionRegistry = await createRegistryForProject(projectContext);
 
   // _bundleOnly implies serverOnly
   const serverOnly = options._bundleOnly || !!options['server-only'];
@@ -1449,14 +1511,18 @@ var buildCommand = async function (options) {
   const appName = files.pathBasename(options.appDir);
   let parsedCordovaServerPort;
   let selectedPlatforms = null;
+  let selectedResolvedPlatforms = [];
   if (options.platforms) {
     const platformsArray = options.platforms.split(",");
     const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
     platformsArray.forEach(plat => {
-      if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
-        throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
+      if (excludableWebArchs.includes(plat)) {
+        return;
       }
-    })
+      selectedResolvedPlatforms.push(
+        resolveToolPlatformOrExit(toolExtensionRegistry, plat)
+      );
+    });
 
     selectedPlatforms = platformsArray;
   }
@@ -1464,10 +1530,18 @@ var buildCommand = async function (options) {
   let cordovaPlatforms;
   let parsedMobileServerUrl;
   if (!serverOnly) {
-    cordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+    const projectCordovaPlatforms = projectContext.platformList.getCordovaPlatforms();
+    const fallbackCordovaPlatforms = projectCordovaPlatforms.filter(platform =>
+      resolveToolPlatformOrExit(toolExtensionRegistry, platform).isFallback
+    );
 
     if (selectedPlatforms) {
-      cordovaPlatforms = _.intersection(selectedPlatforms, cordovaPlatforms)
+      const selectedFallbackPlatforms = selectedResolvedPlatforms
+        .filter(result => result.isFallback)
+        .map(result => result.platform.name);
+      cordovaPlatforms = _.intersection(selectedFallbackPlatforms, projectCordovaPlatforms);
+    } else {
+      cordovaPlatforms = fallbackCordovaPlatforms;
     }
 
     if (process.platform !== 'darwin' && cordovaPlatforms.includes('ios')) {
@@ -1502,6 +1576,17 @@ on an OS X system.");
   if (selectedPlatforms) {
     const filteredArchs = baseWebArchs
       .filter(arch => selectedPlatforms.includes(arch));
+    const providerBaseWebArchs = selectedResolvedPlatforms
+      .filter(result => !result.isFallback)
+      .flatMap(result =>
+        toolExtensionRegistry.getBaseWebArchsForPlatform(result.platform.name)
+      );
+
+    for (const webArch of providerBaseWebArchs) {
+      if (!filteredArchs.includes(webArch)) {
+        filteredArchs.push(webArch);
+      }
+    }
 
     if (
       !_.isEmpty(cordovaPlatforms) &&
@@ -1585,7 +1670,7 @@ ${Console.command("meteor build ../output")}`,
     });
   }
 
-  if (!hasCapacitorPackage && !_.isEmpty(cordovaPlatforms)) {
+  if (!_.isEmpty(cordovaPlatforms)) {
 
     let cordovaProject;
     await main.captureAndExit('', async () => {

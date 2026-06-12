@@ -9,34 +9,31 @@ import {
   ensureDevBundleDependencies,
   filterPlatforms,
 } from '../cordova/index.js';
+import {
+  createRegistryForProject,
+} from '../tool-extensions/index.js';
 var archinfo = require('../utils/archinfo');
 var compiler = require('../isobuild/compiler.js');
 var PackageSource = require('../isobuild/package-source.js');
 var projectContextModule = require('../project-context.js');
 
-// All Capacitor lifecycle work lives in the build plugin
-// (packages/capacitor/capacitor_plugin.js). The CLI only needs to know
-// whether the project opted in and which platforms are valid; cap add is
-// triggered by compiling the app, which loads the build plugin and runs
-// its add-platform branch.
-const CAPACITOR_PLATFORMS = ['android', 'ios'];
-const projectHasCapacitor = (projectContext) =>
-  !!projectContext?.projectConstraintsFile?.getConstraint('capacitor');
-
-async function createProjectContext(appDir) {
+async function createProjectContext(appDir, { prepareForBuild = false } = {}) {
   import { ProjectContext } from '../project-context.js';
 
   const projectContext = new ProjectContext({
     projectDir: appDir
   });
   await main.captureAndExit('=> Errors while initializing project:', async () => {
-    // We're just reading metadata here; we don't need to resolve constraints.
-    await projectContext.readProjectMetadata();
+    if (prepareForBuild) {
+      await projectContext.prepareProjectForBuild();
+    } else {
+      await projectContext.readProjectMetadata();
+    }
   });
   return projectContext;
 }
 
-// Forces a full app compile purely so build plugins load and run their
+// Forces a full app compile so provider package build plugins can run
 // command-time hooks.
 async function compileApp(options) {
   const compileContext = new projectContextModule.ProjectContext({
@@ -57,38 +54,48 @@ async function compileApp(options) {
   });
 }
 
-async function doAddPlatform(options) {
-  Console.setVerbose(!!options.verbose);
-
-  const projectContext = await createProjectContext(options.appDir);
-
-  // For Capacitor projects, force a compile so the capacitor build plugin
-  // loads. Its add-platform branch runs `npx cap add <platform>` (or
-  // `cap sync` if the native dir already exists). We then write
-  // .meteor/platforms on success.
-  if (projectHasCapacitor(projectContext)) {
-    const platformsToAdd = options.args || [];
-    const invalid = platformsToAdd.find(p => !CAPACITOR_PLATFORMS.includes(p));
-    if (invalid) {
-      Console.error(`${invalid}: no such Capacitor platform (expected one of: ${CAPACITOR_PLATFORMS.join(', ')})`);
-      return 1;
-    }
-    await compileApp(options);
-    const installedPlatforms = projectContext.platformList.getPlatforms();
-    await projectContext.platformList.write(
-      Array.from(new Set([...installedPlatforms, ...platformsToAdd]))
+function resolveRequestedPlatforms(registry, platformNames) {
+  try {
+    return platformNames.map(platformName =>
+      registry.resolvePlatform(platformName)
     );
-    for (const platform of platformsToAdd) {
-      Console.info(`${platform}: added platform`);
+  } catch (e) {
+    if (e?.code?.startsWith('TOOL_EXTENSION_')) {
+      Console.error(e.message);
+      return null;
     }
-    return;
+    throw e;
   }
+}
 
-  const platformsToAdd = options.args;
+function resolvePlatformsForRemove(registry, platformNames, installedPlatforms) {
+  const resolvedPlatforms = [];
+  for (const platformName of platformNames) {
+    try {
+      resolvedPlatforms.push(registry.resolvePlatform(platformName));
+    } catch (e) {
+      if (
+        e?.code === 'TOOL_EXTENSION_UNKNOWN_PLATFORM' &&
+        !installedPlatforms.includes(platformName)
+      ) {
+        Console.error(`${platformName}: platform is not in this project`);
+        return null;
+      }
+      if (e?.code?.startsWith('TOOL_EXTENSION_')) {
+        Console.error(e.message);
+        return null;
+      }
+      throw e;
+    }
+  }
+  return resolvedPlatforms;
+}
+
+async function addCordovaPlatforms(projectContext, platformsToAdd) {
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
   await main.captureAndExit('', 'adding platforms', async () => {
-    for (var platform of platformsToAdd) {
+    for (const platform of platformsToAdd) {
       if (installedPlatforms.includes(platform)) {
         buildmessage.error(`${platform}: platform is already added`);
       } else if (!CORDOVA_PLATFORMS.includes(platform)) {
@@ -114,10 +121,9 @@ async function doAddPlatform(options) {
       return;
     }
 
-    // Only write the new platform list when we have successfully synchronized.
     await projectContext.platformList.write(installedPlatforms);
 
-    for (var platform of platformsToAdd) {
+    for (const platform of platformsToAdd) {
       Console.info(`${platform}: added platform`);
       if (cordovaPlatforms.includes(platform)) {
         await cordovaProject.checkPlatformRequirements(platform);
@@ -126,46 +132,14 @@ async function doAddPlatform(options) {
   });
 }
 
-async function doRemovePlatform(options) {
-  const projectContext = await createProjectContext(options.appDir);
-
-  // Capacitor: there is no `cap remove`, and we deliberately leave the
-  // native folder (./android, ./ios) on disk so user edits aren't lost.
-  // All we do is filter `.meteor/platforms` and report.
-  if (projectHasCapacitor(projectContext)) {
-    const platformsToRemove = options.args || [];
-    const invalid = platformsToRemove.find(p => !CAPACITOR_PLATFORMS.includes(p));
-    if (invalid) {
-      Console.error(`${invalid}: no such Capacitor platform`);
-      return 1;
-    }
-    const installedPlatforms = projectContext.platformList.getPlatforms();
-    for (const platform of platformsToRemove) {
-      if (!installedPlatforms.includes(platform)) {
-        Console.warn(`${platform}: platform is not in this project`);
-      }
-    }
-    await projectContext.platformList.write(
-      installedPlatforms.filter(p => !platformsToRemove.includes(p))
-    );
-    for (const platform of platformsToRemove) {
-      Console.info(`${platform}: removed platform`);
-      if (files.exists(files.pathJoin(options.appDir, platform))) {
-        Console.info(`   Native project at ./${platform}/ left untouched. Delete manually if you want to start fresh.`);
-      }
-    }
-    return;
-  }
-
+async function removeCordovaPlatforms(projectContext, platformsToRemove) {
   const { CordovaProject } = require('../cordova/project.js');
   const { PlatformList } = require('../project-context.js');
 
-  const platformsToRemove = options.args;
   let installedPlatforms = projectContext.platformList.getPlatforms();
 
   await main.captureAndExit('', 'removing platforms', async () => {
-    for (platform of platformsToRemove) {
-      // Explain why we can't remove server or browser platforms
+    for (const platform of platformsToRemove) {
       if (PlatformList.DEFAULT_PLATFORMS.includes(platform)) {
         buildmessage.error(`${platform}: cannot remove platform in this \
 version of Meteor`);
@@ -181,7 +155,7 @@ version of Meteor`);
     installedPlatforms = _.without(installedPlatforms, ...platformsToRemove);
     projectContext.platformList.write(installedPlatforms);
 
-    for (platform of platformsToRemove) {
+    for (const platform of platformsToRemove) {
       Console.info(`${platform}: removed platform`);
     }
 
@@ -193,6 +167,98 @@ version of Meteor`);
       await cordovaProject.ensurePlatformsAreSynchronized(cordovaPlatforms);
     }
   });
+}
+
+async function doAddPlatform(options) {
+  Console.setVerbose(!!options.verbose);
+
+  const projectContext = await createProjectContext(options.appDir, {
+    prepareForBuild: true,
+  });
+  const registry = await createRegistryForProject(projectContext);
+  const platformsToAdd = options.args || [];
+  const resolvedPlatforms = resolveRequestedPlatforms(registry, platformsToAdd);
+
+  if (!resolvedPlatforms) {
+    return 1;
+  }
+
+  const providerPlatforms = resolvedPlatforms.filter(result => !result.isFallback);
+  const cordovaPlatforms = resolvedPlatforms
+    .filter(result => result.isFallback)
+    .map(result => result.platform.name);
+
+  if (providerPlatforms.length) {
+    if (cordovaPlatforms.length) {
+      await ensureDevBundleDependencies();
+      await addCordovaPlatforms(projectContext, cordovaPlatforms);
+    }
+
+    await compileApp(options);
+    const installedPlatforms = projectContext.platformList.getPlatforms();
+    const providerPlatformNames = providerPlatforms.map(result => result.platform.name);
+    await projectContext.platformList.write(
+      Array.from(new Set([...installedPlatforms, ...providerPlatformNames]))
+    );
+    for (const platform of providerPlatformNames) {
+      Console.info(`${platform}: added platform`);
+    }
+    return;
+  }
+
+  await ensureDevBundleDependencies();
+  await addCordovaPlatforms(projectContext, cordovaPlatforms);
+}
+
+async function doRemovePlatform(options) {
+  const projectContext = await createProjectContext(options.appDir, {
+    prepareForBuild: true,
+  });
+  const registry = await createRegistryForProject(projectContext);
+  const platformsToRemove = options.args || [];
+  const installedPlatforms = projectContext.platformList.getPlatforms();
+  const resolvedPlatforms = resolvePlatformsForRemove(
+    registry,
+    platformsToRemove,
+    installedPlatforms
+  );
+
+  if (!resolvedPlatforms) {
+    return 1;
+  }
+
+  const providerPlatforms = resolvedPlatforms.filter(result => !result.isFallback);
+  const cordovaPlatforms = resolvedPlatforms
+    .filter(result => result.isFallback)
+    .map(result => result.platform.name);
+
+  if (providerPlatforms.length) {
+    if (cordovaPlatforms.length) {
+      await ensureDevBundleDependencies();
+      await removeCordovaPlatforms(projectContext, cordovaPlatforms);
+    }
+
+    const providerPlatformNames = providerPlatforms.map(result => result.platform.name);
+    for (const platform of providerPlatformNames) {
+      if (!installedPlatforms.includes(platform)) {
+        Console.warn(`${platform}: platform is not in this project`);
+      }
+    }
+    await projectContext.platformList.write(
+      installedPlatforms.filter(p => !providerPlatformNames.includes(p))
+    );
+    for (const result of providerPlatforms) {
+      const nativeProjectDir = result.platform.nativeProjectDir || result.platform.name;
+      Console.info(`${result.platform.name}: removed platform`);
+      if (files.exists(files.pathJoin(options.appDir, nativeProjectDir))) {
+        Console.info(`   Native project at ./${nativeProjectDir}/ left untouched. Delete manually if you want to start fresh.`);
+      }
+    }
+    return;
+  }
+
+  await ensureDevBundleDependencies();
+  await removeCordovaPlatforms(projectContext, cordovaPlatforms);
 }
 
 // Add one or more Cordova platforms
@@ -209,11 +275,7 @@ main.registerCommand(
     notOnWindows: false,
   },
   async function(options) {
-    const projectContext = await createProjectContext(options.appDir);
-    if (!projectHasCapacitor(projectContext)) {
-      await ensureDevBundleDependencies();
-    }
-    await doAddPlatform(options);
+    return await doAddPlatform(options);
   }
 );
 
@@ -225,11 +287,7 @@ main.registerCommand({
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
-  const projectContext = await createProjectContext(options.appDir);
-  if (!projectHasCapacitor(projectContext)) {
-    await ensureDevBundleDependencies();
-  }
-  await doRemovePlatform(options);
+  return await doRemovePlatform(options);
 });
 
 main.registerCommand({
