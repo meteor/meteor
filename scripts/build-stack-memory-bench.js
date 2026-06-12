@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const fs = require('fs');
+const net = require('net');
 const path = require('path');
 const { execSync } = require('child_process');
 
@@ -26,6 +27,7 @@ const CONFIG = {
   MAX_CYCLES: parseInt(process.env.MAX_CYCLES, 10) || 10,
   PORT: process.env.PORT || '3333',
   SETTLE_TIME: parseInt(process.env.SETTLE_TIME, 10) || 3000,
+  CYCLE_TIMEOUT: parseInt(process.env.CYCLE_TIMEOUT, 10) || 60000,
   TOOL_NODE_FLAGS: process.env.TOOL_NODE_FLAGS || '--max-old-space-size=4096 --expose-gc',
   SKIP_RESET: process.env.SKIP_RESET === 'true',
   READY_PATTERN: process.env.READY_PATTERN || 'App running at|Meteor server restarted at',
@@ -46,6 +48,7 @@ Environment Variables:
   MAX_CYCLES     Number of rebuilds to perform (default: 10)
   PORT           Port to run the app on (default: 3333)
   SETTLE_TIME    MS to wait after rebuild before sampling (default: 3000)
+  CYCLE_TIMEOUT  MS to wait for initial readiness or next rebuild before failing the variant (default: 60000)
   TOOL_NODE_FLAGS Flags for the Meteor tool (default: --max-old-space-size=4096 --expose-gc)
   SKIP_RESET     If 'true', don't run 'meteor reset' before variants
   READY_PATTERN  Regex pattern to detect app readiness (default: App running at|restarted at)
@@ -148,6 +151,141 @@ function getTreeStats(pid) {
   };
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function getMtimeMs(filePath) {
+  try {
+    return fs.statSync(filePath).mtimeMs;
+  } catch (e) {
+    return null;
+  }
+}
+
+function formatMtime(filePath) {
+  const mtimeMs = getMtimeMs(filePath);
+  if (mtimeMs === null) {
+    return `${filePath} (missing)`;
+  }
+
+  return `${filePath} (${new Date(mtimeMs).toISOString()})`;
+}
+
+function getLocalDirPath(appPath) {
+  const localRelative = process.env.METEOR_LOCAL_DIR || '.meteor/local';
+  return path.isAbsolute(localRelative)
+    ? localRelative
+    : path.join(appPath, localRelative);
+}
+
+function pidExists(pid) {
+  if (!pid) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function getListeningPorts(pids) {
+  if (!pids.length) {
+    return [];
+  }
+
+  try {
+    const output = execSync(`lsof -Pan -p ${pids.join(',')} -iTCP -sTCP:LISTEN`, {
+      stdio: ['pipe', 'pipe', 'ignore']
+    }).toString();
+
+    return [...new Set(
+      output
+        .split('\n')
+        .map((line) => {
+          const match = line.match(/:(\d+)\s+\(LISTEN\)\s*$/);
+          return match ? parseInt(match[1], 10) : null;
+        })
+        .filter(Boolean)
+    )];
+  } catch (e) {
+    return [];
+  }
+}
+
+function isPortOpen(port, host = '127.0.0.1') {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ port, host });
+    const finish = (open) => {
+      socket.destroy();
+      resolve(open);
+    };
+
+    socket.once('connect', () => finish(true));
+    socket.once('error', () => finish(false));
+  });
+}
+
+async function waitForPortsToClose(ports, timeoutMs) {
+  if (!ports.length) {
+    return true;
+  }
+
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const stillOpen = [];
+    for (const port of ports) {
+      if (await isPortOpen(port)) {
+        stillOpen.push(port);
+      }
+    }
+
+    if (!stillOpen.length) {
+      return true;
+    }
+
+    await sleep(200);
+  }
+
+  return false;
+}
+
+async function stopProcessTree(rootPid, options = {}) {
+  if (!rootPid) {
+    return;
+  }
+
+  const graceMs = options.graceMs || 2000;
+  const waitMs = options.waitMs || 5000;
+  const pids = [...new Set(getProcessTree(rootPid))].sort((a, b) => b - a);
+  const ports = [...new Set([...getListeningPorts(pids), parseInt(CONFIG.PORT, 10)].filter(Number.isFinite))];
+
+  for (const pid of pids) {
+    try {
+      process.kill(pid, 'SIGINT');
+    } catch (e) {}
+  }
+
+  await sleep(graceMs);
+
+  const survivors = pids.filter(pidExists);
+  for (const pid of survivors) {
+    try {
+      process.kill(pid, 'SIGKILL');
+    } catch (e) {}
+  }
+
+  const deadline = Date.now() + waitMs;
+  while (Date.now() < deadline) {
+    if (!pids.some(pidExists)) {
+      break;
+    }
+    await sleep(200);
+  }
+
+  await waitForPortsToClose(ports, waitMs);
+}
+
 async function runVariant(name, config) {
   console.log(`\n>>> Testing variant: ${name}`);
   
@@ -189,11 +327,55 @@ async function runVariant(name, config) {
   let results = [];
   let cycle = 0;
   let isReady = false;
+  let isFinished = false;
+  let waitTimer = null;
+  let lastOutput = '';
 
   return new Promise((resolve) => {
+    const finishVariant = () => {
+      if (isFinished) return;
+      isFinished = true;
+      if (waitTimer) {
+        clearTimeout(waitTimer);
+        waitTimer = null;
+      }
+      stopProcessTree(child.pid).finally(() => {
+        resolve(results);
+      });
+    };
+
+    const scheduleWaitTimeout = ({ reason, touchPath = null }) => {
+      if (waitTimer) {
+        clearTimeout(waitTimer);
+      }
+      waitTimer = setTimeout(() => {
+        if (isFinished || isReady) return;
+
+        const stats = getTreeStats(child.pid);
+        const touchedInfo = touchPath ? formatMtime(touchPath) : '(none)';
+        const serverRspackPath = path.join(CONFIG.APP_PATH, '_build/main-dev/server-rspack.js');
+        const localServerPath = path.join(getLocalDirPath(CONFIG.APP_PATH), 'build/main.js');
+
+        console.error(`\nTimeout waiting ${CONFIG.CYCLE_TIMEOUT}ms for ${reason}.`);
+        console.error(`  Variant: ${name}`);
+        console.error(`  Touch file: ${touchedInfo}`);
+        console.error(`  Output check: ${formatMtime(serverRspackPath)}`);
+        console.error(`  Local server: ${formatMtime(localServerPath)}`);
+        console.error(`  Last output: ${lastOutput || '(none captured)'}`);
+        console.error(`  Current RSS: total ${Math.round(stats.totalRSS / 1024)} MB, tool ${Math.round(stats.toolRSS / 1024)} MB, app ${Math.round(stats.appRSS / 1024)} MB`);
+        console.error('  The touched file likely did not trigger another rebuild for this variant/app.');
+
+        finishVariant();
+      }, CONFIG.CYCLE_TIMEOUT);
+    };
+
     const onReady = async () => {
-      if (isReady) return;
+      if (isFinished || isReady) return;
       isReady = true;
+      if (waitTimer) {
+        clearTimeout(waitTimer);
+        waitTimer = null;
+      }
       cycle++;
       console.log(`Cycle ${cycle}/${CONFIG.MAX_CYCLES} ready.`);
       
@@ -221,37 +403,56 @@ async function runVariant(name, config) {
         const mainPath = path.join(CONFIG.APP_PATH, CONFIG.TOUCH_FILE);
         if (fs.existsSync(mainPath)) {
           fs.appendFileSync(mainPath, `\n// ${Date.now()}`);
+          scheduleWaitTimeout({
+            reason: `cycle ${cycle + 1} readiness after touching ${CONFIG.TOUCH_FILE}`,
+            touchPath: mainPath,
+          });
         } else {
            console.log(`Warning: Touch file ${CONFIG.TOUCH_FILE} not found.`);
+           finishVariant();
         }
       } else {
         console.log('Test variant complete. Killing meteor...');
-        child.kill('SIGINT');
-        setTimeout(() => {
-          child.kill('SIGKILL');
-          resolve(results);
-        }, 5000);
+        finishVariant();
       }
     };
 
     child.stdout.on('data', (data) => {
       const str = data.toString();
       process.stdout.write(str);
+      const trimmed = str.trim();
+      if (trimmed) {
+        lastOutput = trimmed.split('\n').pop();
+      }
       if (readyRegex.test(str)) {
         onReady();
       }
     });
 
     child.stderr.on('data', (data) => {
-      process.stderr.write(data.toString());
+      const str = data.toString();
+      process.stderr.write(str);
+      const trimmed = str.trim();
+      if (trimmed) {
+        lastOutput = trimmed.split('\n').pop();
+      }
     });
 
     child.on('exit', (code) => {
+      if (isFinished) {
+        return;
+      }
+      if (waitTimer) {
+        clearTimeout(waitTimer);
+        waitTimer = null;
+      }
       if (cycle < CONFIG.MAX_CYCLES) {
         console.log(`Meteor process exited prematurely (code ${code})`);
         resolve(results);
       }
     });
+
+    scheduleWaitTimeout({ reason: 'initial startup' });
   });
 }
 
@@ -264,11 +465,65 @@ const matrix = [
   { name: 'cache:false+devtool:false', config: { cache: false, devtool: false } },
 ];
 
+function average(values) {
+  if (!values.length) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function max(values) {
+  if (!values.length) return 0;
+  return Math.max(...values);
+}
+
+function analyzeResults(res) {
+  if (!res.length) {
+    return null;
+  }
+
+  const totals = res.map(r => r.totalRSS);
+  const tools = res.map(r => r.toolRSS);
+  const apps = res.map(r => r.appRSS);
+  const fds = res.map(r => r.toolFDs);
+  const procs = res.map(r => r.processCount);
+  const serverJsSizes = res.map(r => r.serverJsSize);
+
+  const start = res[0];
+  const end = res[res.length - 1];
+  const rebuilds = Math.max(res.length - 1, 0);
+
+  return {
+    samples: res.length,
+    rebuilds,
+    start,
+    end,
+    deltaTotal: end.totalRSS - start.totalRSS,
+    deltaTool: end.toolRSS - start.toolRSS,
+    deltaApp: end.appRSS - start.appRSS,
+    slopeTotal: rebuilds > 0 ? (end.totalRSS - start.totalRSS) / rebuilds : null,
+    slopeTool: rebuilds > 0 ? (end.toolRSS - start.toolRSS) / rebuilds : null,
+    slopeApp: rebuilds > 0 ? (end.appRSS - start.appRSS) / rebuilds : null,
+    avgTotal: average(totals),
+    avgTool: average(tools),
+    avgApp: average(apps),
+    peakTotal: max(totals),
+    peakTool: max(tools),
+    peakApp: max(apps),
+    avgFDs: average(fds),
+    peakFDs: max(fds),
+    avgProcs: average(procs),
+    peakProcs: max(procs),
+    avgServerJsSize: average(serverJsSizes),
+    peakServerJsSize: max(serverJsSizes),
+  };
+}
+
 async function main() {
   const allResults = {};
+  const summary = {};
   
   for (const item of matrix) {
     allResults[item.name] = await runVariant(item.name, item.config);
+    summary[item.name] = analyzeResults(allResults[item.name]);
   }
 
   console.log('\n\n=== FINAL REPRODUCTION SUMMARY ===');
@@ -279,29 +534,61 @@ async function main() {
 
   for (const name in allResults) {
     const res = allResults[name];
-    if (res.length < 2) {
+    const stats = summary[name];
+
+    if (!stats) {
+      console.log(`${name.padEnd(25)} | No data collected`);
+      continue;
+    }
+
+    if (stats.slopeTotal === null) {
       console.log(`${name.padEnd(25)} | Insufficient data collected`);
       continue;
     }
-    
-    const start = res[0];
-    const end = res[res.length - 1];
-    const cycles = res.length - 1;
-    
-    const slopeTotal = (end.totalRSS - start.totalRSS) / cycles;
-    const slopeTool = (end.toolRSS - start.toolRSS) / cycles;
-    const slopeApp = (end.appRSS - start.appRSS) / cycles;
 
-    console.log(`${name.padEnd(25)} | +${slopeTool.toFixed(1).padStart(5)} MB | +${slopeApp.toFixed(1).padStart(5)} MB | +${slopeTotal.toFixed(1).padStart(5)} MB`);
+    console.log(`${name.padEnd(25)} | ${stats.slopeTool >= 0 ? '+' : ''}${stats.slopeTool.toFixed(1).padStart(5)} MB | ${stats.slopeApp >= 0 ? '+' : ''}${stats.slopeApp.toFixed(1).padStart(5)} MB | ${stats.slopeTotal >= 0 ? '+' : ''}${stats.slopeTotal.toFixed(1).padStart(5)} MB`);
 
     res.forEach(r => {
       csv += `${name},${r.cycle},${r.totalRSS},${r.toolRSS},${r.appRSS},${r.toolFDs},${r.processCount},${r.serverJsSize}\n`;
     });
   }
 
+  console.log('\n=== RESOURCE AVERAGES / PEAKS ===');
+  console.log('Variant'.padEnd(25) + ' | Avg Total | Peak Total | Avg Tool | Peak Tool | Avg App | Peak App');
+  console.log('-'.repeat(105));
+
+  for (const name in summary) {
+    const stats = summary[name];
+    if (!stats) {
+      console.log(`${name.padEnd(25)} | No data collected`);
+      continue;
+    }
+
+    console.log(
+      `${name.padEnd(25)} | ${stats.avgTotal.toFixed(1).padStart(7)} MB | ${String(stats.peakTotal).padStart(10)} MB | ${stats.avgTool.toFixed(1).padStart(7)} MB | ${String(stats.peakTool).padStart(9)} MB | ${stats.avgApp.toFixed(1).padStart(6)} MB | ${String(stats.peakApp).padStart(8)} MB`
+    );
+  }
+
+  console.log('\n=== DELTAS / OVERHEAD ===');
+  console.log('Variant'.padEnd(25) + ' | Samples | Rebuilds | Total Delta | Tool Delta | App Delta | Avg FDs | Avg Procs | Avg ServerJs');
+  console.log('-'.repeat(125));
+
+  for (const name in summary) {
+    const stats = summary[name];
+    if (!stats) {
+      console.log(`${name.padEnd(25)} | No data collected`);
+      continue;
+    }
+
+    console.log(
+      `${name.padEnd(25)} | ${String(stats.samples).padStart(7)} | ${String(stats.rebuilds).padStart(8)} | ${stats.deltaTotal >= 0 ? '+' : ''}${String(stats.deltaTotal).padStart(5)} MB | ${stats.deltaTool >= 0 ? '+' : ''}${String(stats.deltaTool).padStart(4)} MB | ${stats.deltaApp >= 0 ? '+' : ''}${String(stats.deltaApp).padStart(3)} MB | ${stats.avgFDs.toFixed(1).padStart(7)} | ${stats.avgProcs.toFixed(1).padStart(9)} | ${stats.avgServerJsSize.toFixed(1).padStart(12)} KB`
+    );
+  }
+
   fs.writeFileSync('repro-report.json', JSON.stringify(allResults, null, 2));
+  fs.writeFileSync('repro-summary.json', JSON.stringify(summary, null, 2));
   fs.writeFileSync('repro-report.csv', csv);
-  console.log('\nDetailed reports saved to repro-report.json and repro-report.csv');
+  console.log('\nDetailed reports saved to repro-report.json, repro-summary.json and repro-report.csv');
 }
 
 main().catch(err => {
