@@ -135,13 +135,13 @@ export namespace Mongo {
      * @param name The name of the static method to add
      * @param method The static method function
      */
-    addStaticMethod(name: string, method: (...args: unknown[]) => unknown): void;
+    addStaticMethod(name: string, method: Function): void;
 
     /**
      * Remove a constructor extension (useful for testing).
      * @param extension The extension function to remove
      */
-    removeExtension(extension: (...args: unknown[]) => unknown): void;
+    removeExtension(extension: Function): void;
 
     /**
      * Remove a prototype method from all collection instances.
@@ -164,19 +164,19 @@ export namespace Mongo {
      * Get all registered constructor extensions (useful for debugging).
      * @returns Array of registered extension functions
      */
-    getExtensions(): Array<(...args: unknown[]) => unknown>;
+    getExtensions(): Array<Function>;
 
     /**
      * Get all registered prototype methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getPrototypeMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getPrototypeMethods(): Map<string, Function>;
 
     /**
      * Get all registered static methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getStaticMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getStaticMethods(): Map<string, Function>;
   }
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T, U> = undefined>(options: {
@@ -586,13 +586,13 @@ export namespace Mongo {
      * @param name The name of the static method to add
      * @param method The static method function
      */
-    addStaticMethod(name: string, method: (...args: unknown[]) => unknown): void;
+    addStaticMethod(name: string, method: Function): void;
 
     /**
      * Remove a constructor extension (useful for testing).
      * @param extension The extension function to remove
      */
-    removeExtension(extension: (...args: unknown[]) => unknown): void;
+    removeExtension(extension: Function): void;
 
     /**
      * Remove a prototype method from all collection instances.
@@ -615,19 +615,19 @@ export namespace Mongo {
      * Get all registered constructor extensions (useful for debugging).
      * @returns Array of registered extension functions
      */
-    getExtensions(): Array<(...args: unknown[]) => unknown>;
+    getExtensions(): Array<Function>;
 
     /**
      * Get all registered prototype methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getPrototypeMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getPrototypeMethods(): Map<string, Function>;
 
     /**
      * Get all registered static methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getStaticMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getStaticMethods(): Map<string, Function>;
   }
 
   var CollectionExtensions: CollectionExtensions;
