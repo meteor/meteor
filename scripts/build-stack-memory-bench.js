@@ -197,6 +197,10 @@ function getProcessLabel(pid, rootPid, cmd) {
     return 'mongodb';
   }
 
+  if (cmd === 'rspack-node' || cmd.includes('rspack-node')) {
+    return 'rspack-node';
+  }
+
   if (cmd.includes('ts-checker-rspack-plugin')) {
     return 'ts-checker';
   }
@@ -1014,9 +1018,9 @@ async function main() {
 
   console.log('\n=== OTHER PROCESS ATTRIBUTION ===');
   console.log(
-    `${padCell('Variant', variantWidth)} | ${padCell('Avg Other', 11)} | ${padCell('Peak Other', 12)} | ${padCell('Top Other Avg', 16)} | ${padCell('Top Other Delta', 18)}`
+    `${padCell('Variant', variantWidth)} | ${padCell('Avg Other', 11)} | ${padCell('Peak Other', 12)} | ${padCell('Top Other Avg', 22)} | ${padCell('Second Other Avg', 22)} | ${padCell('Top Other Delta', 20)}`
   );
-  console.log('-'.repeat(variantWidth + 3 + 11 + 3 + 12 + 3 + 16 + 3 + 18));
+  console.log('-'.repeat(variantWidth + 3 + 11 + 3 + 12 + 3 + 22 + 3 + 22 + 3 + 20));
 
   for (const name in summary) {
     const stats = summary[name];
@@ -1027,12 +1031,14 @@ async function main() {
 
     const otherLabels = (stats.processLabels || []).filter(({ label }) => !['meteor-tool', 'app-server'].includes(label));
     const topOtherAvg = otherLabels[0] || null;
+    const secondOtherAvg = otherLabels[1] || null;
     const topOtherDelta = [...otherLabels].sort((a, b) => b.deltaRSS - a.deltaRSS)[0] || null;
     const topOtherAvgText = topOtherAvg ? `${topOtherAvg.label} ${topOtherAvg.avgRSS.toFixed(1)} MB` : 'n/a';
+    const secondOtherAvgText = secondOtherAvg ? `${secondOtherAvg.label} ${secondOtherAvg.avgRSS.toFixed(1)} MB` : 'n/a';
     const topOtherDeltaText = topOtherDelta ? `${topOtherDelta.label} ${topOtherDelta.deltaRSS >= 0 ? '+' : ''}${topOtherDelta.deltaRSS} MB` : 'n/a';
 
     console.log(
-      `${padCell(name, variantWidth)} | ${padCell(`${stats.avgOther.toFixed(1)} MB`, 11, 'right')} | ${padCell(`${stats.peakOther} MB`, 12, 'right')} | ${padCell(topOtherAvgText, 16, 'right')} | ${padCell(topOtherDeltaText, 18, 'right')}`
+      `${padCell(name, variantWidth)} | ${padCell(`${stats.avgOther.toFixed(1)} MB`, 11, 'right')} | ${padCell(`${stats.peakOther} MB`, 12, 'right')} | ${padCell(topOtherAvgText, 22, 'right')} | ${padCell(secondOtherAvgText, 22, 'right')} | ${padCell(topOtherDeltaText, 20, 'right')}`
     );
   }
 
