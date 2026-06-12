@@ -196,6 +196,25 @@ Server-only app (no client entry point).
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
 
+### native-react
+
+React app using both Rspack and Capacitor, with web-only native lifecycle coverage.
+
+| What is covered | Phase |
+|----------------|-------|
+| Local `@meteorjs/rspack` and `@meteorjs/capacitor` packages linked into the app | Init |
+| `meteor add-platform android` installs Capacitor npm deps and creates `android/` | Init |
+| `.meteor/platforms` and Capacitor `.gitignore` entries are updated | Init |
+| `meteor run android` includes `web.cordova`, transforms it into `_build/native-dev`, and runs `cap sync` | Run |
+| Native simulator launch is skipped via `METEOR_CAPACITOR_SKIP_NATIVE_RUN` | Run, Prod |
+| Rspack dev artifacts and Capacitor webDir artifacts coexist under `_build` | Run |
+| Client and server rebuilds work during native dev run | Run |
+| `meteor run android --production` prepares `_build/native-prod` and syncs Android assets | Prod |
+| Production client and server rebuilds work with the native run target | Prod |
+| `meteor build --directory --platforms=android` prepares Capacitor web output without Cordova or Gradle native build | Build |
+| `meteor reset` clears generated Rspack and Capacitor build artifacts but keeps native project sources | Reset |
+| Repeated native run does not reinstall Capacitor deps | Run |
+
 ---
 
 ## Skeletons
@@ -248,6 +267,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | Package | Reason |
 |---------|--------|
 | `unplugin` | Unplugin transform hook integration — validates rspack cache tracks plugin dependency files (#14031) |
+
+### native-react (`apps/native-react/capacitor.config.js`)
+
+| Package | Reason |
+|---------|--------|
+| `@meteorjs/capacitor` | `defineConfig` API, Meteor native/runtime context, and Capacitor defaults |
 
 ### babel (`apps/babel/server/apollo.js`)
 
@@ -321,3 +346,7 @@ Where each feature is tested across apps and skeletons.
 | Service worker runtime caching (images) | monorepo | |
 | Service worker precaching (`additionalManifestEntries`) | monorepo | |
 | PWA manifest | monorepo | |
+| Capacitor native web lifecycle | native-react | |
+| `web.cordova` to Capacitor webDir transform | native-react | |
+| Native simulator launch bypass | native-react | |
+| Cordova native build bypass for Capacitor | native-react | |
