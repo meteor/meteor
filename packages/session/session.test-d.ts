@@ -22,7 +22,8 @@ expectTypeOf(Session.equals).returns.toBeBoolean();
 expectTypeOf(Session.get).parameters.toEqualTypeOf<[string]>();
 expectTypeOf(Session.get).returns.toEqualTypeOf<SessionValue>();
 
-expectTypeOf(Session.set).parameters.toEqualTypeOf<[string, SessionValue]>();
+expectTypeOf(Session.set).toBeCallableWith("key", "value");
+expectTypeOf(Session.set).toBeCallableWith({ k: "v" });
 expectTypeOf(Session.set).returns.toBeVoid();
 
 expectTypeOf(Session.setDefault).parameters.toEqualTypeOf<[string, SessionValue]>();
