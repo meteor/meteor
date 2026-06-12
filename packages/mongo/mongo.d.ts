@@ -356,7 +356,7 @@ export namespace Mongo {
          */
         arrayFilters?: NpmModuleMongodb.Document[] | undefined;
       },
-      callback?: (error: Error | null, result?: number) => void
+      callback?: Function
     ): number;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
@@ -378,7 +378,7 @@ export namespace Mongo {
          */
         arrayFilters?: NpmModuleMongodb.Document[] | undefined;
       },
-      callback?: (error: Error | null, result?: number) => void
+      callback?: Function
     ): Promise<number>;
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
