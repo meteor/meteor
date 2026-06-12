@@ -141,13 +141,21 @@ function assertCapacitorConfig(config, mode) {
 
 async function assertNativeReactApp(port) {
   const consoleErrors = [];
+  const pageErrors = [];
   const consoleListener = msg => {
     if (msg.type() === 'error') {
       consoleErrors.push(msg.text());
     }
   };
+  const pageErrorListener = err => {
+    const message = err?.message || String(err);
+    if (!/_jp\.[a-z0-9]+ is not a function/.test(message)) {
+      pageErrors.push(message);
+    }
+  };
 
   page.on('console', consoleListener);
+  page.on('pageerror', pageErrorListener);
   try {
     await page.goto(`http://localhost:${port}`);
     await page.waitForSelector('[data-testid="native-react-root"]');
@@ -161,9 +169,13 @@ async function assertNativeReactApp(port) {
     const context = await page.$eval('[data-testid="native-context"]', el => el.textContent);
     expect(context).toBe('Rspack and Capacitor fixture');
 
-    expect(consoleErrors).toEqual([]);
+    expect([...consoleErrors, ...pageErrors]).toEqual([]);
   } finally {
-    page.removeListener('console', consoleListener);
+    try {
+      page.removeListener('console', consoleListener);
+      page.removeListener('pageerror', pageErrorListener);
+    } catch (err) {
+    }
   }
 }
 
@@ -190,6 +202,9 @@ describe('Capacitor App Web Lifecycle /', () => {
   });
 
   beforeEach(async () => {
+    if (globalThis.page && !globalThis.page.isClosed?.()) {
+      globalThis.page.removeAllListeners('pageerror');
+    }
     await killProcessByPort([PORT, RSPACK_DEVSERVER_PORT]);
     fileSnapshot = tempDir ? await snapshotFiles(tempDir, MUTATED_FILES) : null;
   });
