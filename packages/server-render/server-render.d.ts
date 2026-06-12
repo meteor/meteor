@@ -56,6 +56,6 @@ export interface ServerSink extends ClientSink {
 
 export type Sink = ClientSink | ServerSink;
 
-export type Callback = (sink: Sink) => Promise<void> | void;
+export type Callback<T = void> = (sink: Sink) => Promise<T> | T;
 
-export function onPageLoad<T extends Callback>(callback: T): T;
+export function onPageLoad<T extends Callback<any>>(callback: T): T;
