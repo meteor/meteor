@@ -18,6 +18,7 @@ Package.onTest(function (api) {
   // This structure allows easy addition of tests for other lib/ categories
   api.addFiles([
     'tests/global_state_tests.js',
+    'tests/lifecycle_tests.js',
     'tests/meteor_tests.js',
     'tests/npm_tests.js',
     'tests/readiness_tests.js',

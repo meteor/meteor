@@ -19,11 +19,13 @@ const {
   isMeteorAppDebug,
   isMeteorAppConfigModernVerbose,
   hasMeteorAppConfigAutoInstallDeps,
-  isMeteorAppNativeAndroid,
-  isMeteorAppNativeIos,
-  getMeteorAppDir,
   setMeteorAppIgnore,
 } = require('meteor/tools-core/lib/meteor');
+const {
+  createMeteorToolContext,
+  runToolScenarios,
+  scenario,
+} = require('meteor/tools-core/lib/lifecycle');
 const {
   logInfo,
   logError,
@@ -59,13 +61,134 @@ const {
   isCapacitorAddPlatformOptIn,
 } = require('./lib/command');
 
-const isVerbose = () => isMeteorAppDebug() || isMeteorAppConfigModernVerbose();
+if (isCapacitorOptIn()) {
+  await runCapacitorPlugin();
+}
+
+async function runCapacitorPlugin() {
+  try {
+    const context = createMeteorToolContext({
+      provider: 'capacitor',
+      state: {
+        platforms: [],
+      },
+    });
+
+    await runToolScenarios({
+      context,
+      setup: async context => {
+        context.state.platforms = getRequestedCapacitorPlatforms(context.options);
+
+        if (process.env.YARN_ENABLED === undefined) {
+          process.env.YARN_ENABLED = isYarnProject() ? 'true' : 'false';
+        }
+
+        process.env.METEOR_CAPACITOR = 'true';
+        // Bypass Cordova's runner when the project has the `capacitor` package.
+        // The Meteor CLI now skips Cordova through provider resolution; this
+        // assignment covers downstream child processes spawned by the plugin.
+        process.env.METEOR_CORDOVA_DISABLE = 'true';
+
+        // Skip native webDirs at isobuild scan time. Scoped to native-*
+        // subdirs so rspack's main-* outputs under the same _build/ root
+        // stay visible.
+        setMeteorAppIgnore(getCapacitorWebDirCandidates().join(' '));
+
+        if (hasMeteorAppConfigAutoInstallDeps()) {
+          // Top-level await: build plugins are evaluated as ESM with TLA enabled.
+          await ensureCapacitorInstalled({
+            platforms: (
+              isCapacitorAddPlatformOptIn() || isCapacitorRunOptIn()
+            ) ? context.state.platforms : null,
+          });
+        }
+
+        ensureCapacitorBuildContextExists();
+        ensureCapacitorConfigExists();
+
+        // Snapshot the resolved capacitor.config to the per-env webDir
+        // (`_build/native-{dev,prod}/capacitor.config.json`). Informational:
+        // capacitor's CLI still loads the source .js from project root.
+        await writeResolvedConfigSnapshot({ appDir: context.appDir });
+
+        process.on('exit', cleanup);
+        process.on('SIGINT', () => {
+          cleanup();
+          process.exit();
+        });
+      },
+      scenarios: [
+        scenario('add-platform', {
+          when: isCapacitorAddPlatformOptIn,
+          run: async context => {
+            // Run cap add per requested platform; no-op when already added.
+            // The CLI writes .meteor/platforms after the compile returns.
+            for (const platform of context.state.platforms) {
+              const code = await addNativePlatformIfMissing({
+                appDir: context.appDir,
+                platform,
+              });
+              if (code !== 0) {
+                throw new Error(`cap add ${platform} exited with code ${code}`);
+              }
+            }
+          },
+        }),
+        scenario('build', {
+          when: isCapacitorBuildOptIn,
+          run: context => {
+            // `meteor build --platforms=android|ios` syncs the selected native
+            // project. Without a single selected platform, Capacitor syncs all
+            // native projects present in the app.
+            const { platforms } = context.state;
+            transformAndSync({
+              appDir: context.appDir,
+              platform: platforms.length === 1 ? platforms[0] : null,
+            });
+          },
+        }),
+        scenario('run:native', {
+          when: isCapacitorRunOptIn,
+          run: async context => {
+            // Auto-bootstrap the native project (`android/` or `ios/`) when the user
+            // ran `meteor run android|ios|*-device` without a prior `meteor add-platform`,
+            // so a freshly-cloned project just works.
+            await ensureNativePlatformAdded({ appDir: context.appDir });
+
+            // Sync once at startup, then schedule Capacitor launch after the Meteor
+            // HTTP index route is actually available. The launch scheduler is not
+            // awaited here because the server starts only after this bundle step
+            // returns.
+            if (context.platform) {
+              scheduleCapRunAfterMeteorReady({
+                appDir: context.appDir,
+                platform: context.platform,
+                beforeRun: () => transformAndSync({
+                  appDir: context.appDir,
+                  platform: context.platform,
+                }),
+                extraArgs: ['--no-sync'],
+              });
+            }
+          },
+        }),
+      ],
+    });
+  } catch (error) {
+    logError(`Capacitor plugin error: ${error.message}`);
+    throw error;
+  }
+}
+
+function isVerbose() {
+  return isMeteorAppDebug() || isMeteorAppConfigModernVerbose();
+}
+
 function logVerbose(...args) {
   if (isVerbose()) logInfo(...args);
 }
 
-function getRequestedCapacitorPlatforms() {
-  const options = Package?.meteor?.global?.currentCommand?.options || {};
+function getRequestedCapacitorPlatforms(options = {}) {
   const requested = [
     ...(options.args || []),
     ...(options.platforms ? String(options.platforms).split(',') : []),
@@ -163,99 +286,4 @@ async function transformAndSync({ appDir, platform = null }) {
   return runCapSync({ appDir, platform }).catch(err =>
     logError(`Capacitor sync failed: ${err.message}`),
   );
-}
-
-if (isCapacitorOptIn()) {
-  try {
-    if (process.env.YARN_ENABLED === undefined) {
-      process.env.YARN_ENABLED = isYarnProject() ? 'true' : 'false';
-    }
-
-    process.env.METEOR_CAPACITOR = 'true';
-    // Bypass Cordova's runner when the project has the `capacitor` package.
-    // The Meteor CLI now skips Cordova through provider resolution; this
-    // assignment covers downstream child processes spawned by the plugin.
-    process.env.METEOR_CORDOVA_DISABLE = 'true';
-
-    // Skip native webDirs at isobuild scan time. Scoped to native-*
-    // subdirs so rspack's main-* outputs under the same _build/ root
-    // stay visible.
-    setMeteorAppIgnore(getCapacitorWebDirCandidates().join(' '));
-
-    if (hasMeteorAppConfigAutoInstallDeps()) {
-      // Top-level await: build plugins are evaluated as ESM with TLA enabled.
-      await ensureCapacitorInstalled({
-        platforms: (
-          isCapacitorAddPlatformOptIn() || isCapacitorRunOptIn()
-        ) ? getRequestedCapacitorPlatforms() : null,
-      });
-    }
-
-    ensureCapacitorBuildContextExists();
-    ensureCapacitorConfigExists();
-
-    // Snapshot the resolved capacitor.config to the per-env webDir
-    // (`_build/native-{dev,prod}/capacitor.config.json`). Informational:
-    // capacitor's CLI still loads the source .js from project root.
-    await writeResolvedConfigSnapshot({ appDir: getMeteorAppDir() });
-
-    // Auto-bootstrap the native project (`android/` or `ios/`) when the user
-    // ran `meteor run android|ios|*-device` without a prior `meteor add-platform`,
-    // so a freshly-cloned project just works.
-    if (isCapacitorRunOptIn()) {
-      await ensureNativePlatformAdded({ appDir: getMeteorAppDir() });
-    }
-
-    process.on('exit', cleanup);
-    process.on('SIGINT', () => {
-      cleanup();
-      process.exit();
-    });
-
-    if (isCapacitorAddPlatformOptIn()) {
-      // Run cap add per requested platform; no-op when already added.
-      // The CLI writes .meteor/platforms after the compile returns.
-      const appDir = getMeteorAppDir();
-      const platforms = getRequestedCapacitorPlatforms();
-      for (const platform of platforms) {
-        const code = await addNativePlatformIfMissing({ appDir, platform });
-        if (code !== 0) {
-          throw new Error(`cap add ${platform} exited with code ${code}`);
-        }
-      }
-    }
-
-    if (isCapacitorBuildOptIn()) {
-      // `meteor build --platforms=android|ios` syncs the selected native
-      // project. Without a single selected platform, Capacitor syncs all
-      // native projects present in the app.
-      const platforms = getRequestedCapacitorPlatforms();
-      transformAndSync({
-        appDir: getMeteorAppDir(),
-        platform: platforms.length === 1 ? platforms[0] : null,
-      });
-    }
-
-    if (isCapacitorRunOptIn()) {
-      // Sync once at startup, then schedule Capacitor launch after the Meteor
-      // HTTP index route is actually available. The launch scheduler is not
-      // awaited here because the server starts only after this bundle step
-      // returns.
-      const platform = isMeteorAppNativeAndroid() ? 'android'
-        : isMeteorAppNativeIos() ? 'ios'
-        : null;
-      const appDir = getMeteorAppDir();
-      if (platform) {
-        scheduleCapRunAfterMeteorReady({
-          appDir,
-          platform,
-          beforeRun: () => transformAndSync({ appDir, platform }),
-          extraArgs: ['--no-sync'],
-        });
-      }
-    }
-  } catch (error) {
-    logError(`Capacitor plugin error: ${error.message}`);
-    throw error;
-  }
 }
