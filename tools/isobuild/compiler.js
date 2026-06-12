@@ -176,6 +176,7 @@ compiler.compile = Profile(function (packageSource, options) {
   isopk.initFromOptions({
     name: packageSource.name,
     metadata: packageSource.metadata,
+    toolExtensions: packageSource.toolExtensions || [],
     version: packageSource.version,
     isTest: packageSource.isTest,
     plugins: plugins,

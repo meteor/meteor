@@ -285,6 +285,20 @@ export class PackageNamespace {
     pluginInfo[options.name] = options;
   }
 
+  registerToolExtension(options) {
+    const source = this._packageSource;
+
+    if (source.isTest) {
+      return;
+    }
+
+    if (! source.toolExtensions) {
+      source.toolExtensions = [];
+    }
+
+    source.toolExtensions.push({ ...options });
+  }
+
   includeTool() {
     const source = this._packageSource;
     if (! inCheckout()) {

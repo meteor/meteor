@@ -54,6 +54,7 @@ var Isopack = function () {
   // These have the same meaning as in PackageSource.
   self.name = null;
   self.metadata = {};
+  self.toolExtensions = [];
   self.version = null;
   self.isTest = false;
   self.debugOnly = false;
@@ -261,6 +262,7 @@ Object.assign(Isopack.prototype, {
     var self = this;
     self.name = options.name;
     self.metadata = options.metadata;
+    self.toolExtensions = options.toolExtensions || [];
     self.version = options.version;
     self.isTest = options.isTest;
     self.plugins = options.plugins;
@@ -922,6 +924,7 @@ Object.assign(Isopack.prototype, {
       self.metadata = {
         summary: mainJson.summary
       };
+      self.toolExtensions = mainJson.toolExtensions || [];
       self.version = mainJson.version;
       self.isTest = mainJson.isTest;
       self.debugOnly = !!mainJson.debugOnly;
@@ -1066,6 +1069,7 @@ Object.assign(Isopack.prototype, {
         summary: self.metadata.summary,
         version: self.version,
         isTest: self.isTest,
+        toolExtensions: self.toolExtensions || [],
         builds: [],
         plugins: []
       };
