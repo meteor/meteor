@@ -46,7 +46,7 @@ export namespace Mongo {
   };
 
   type DispatchTransform<TransformFn, T, U> = TransformFn extends (
-    ...args: unknown[]
+    ...args: any[]
   ) => infer R
     ? R
     : TransformFn extends null
