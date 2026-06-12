@@ -1,38 +1,32 @@
 import { Meteor } from 'meteor/meteor';
 
 /**
- * SharedChangeStream — one shared MongoDB change stream per collection.
+ * SharedChangeStream — one MongoDB change stream shared per collection.
  *
- * Every ChangeStreamObserveDriver on a collection watches the whole collection
- * (empty pipeline) with the same options (`fullDocument: 'updateLookup'`,
- * `fullDocumentBeforeChange: 'whenAvailable'`) and filters per-document via its
- * own matcher, so they share a single server-side cursor. This class opens one
- * `collection.watch()` and multicasts each raw change event, in-process, to
- * every subscribed driver — the same way the oplog driver shares a single tail
- * and dispatches via a crossbar.
+ * Every driver on a collection watches the whole collection with identical
+ * options and filters per-document in its own matcher, so they can share one
+ * server-side cursor. This opens a single collection.watch() and multicasts each
+ * raw event in-process to every subscribed driver — like the oplog driver
+ * sharing one tail via a crossbar.
  *
- * It owns the cursor lifecycle: an error or close triggers a restart that
- * resumes from the last resume token (`startAfter`), so events emitted while the
- * stream was reconnecting are replayed rather than dropped. A restart replaces
- * only the cursor; the subscribed drivers are left untouched.
+ * It owns the cursor lifecycle: an error/close restarts from the last resume
+ * token (startAfter), replaying events missed while reconnecting. A restart
+ * replaces only the cursor; drivers are untouched.
  */
 export class SharedChangeStream {
   constructor(mongoHandle, collectionName, onEmpty) {
     this._mongoHandle = mongoHandle;
     this._collectionName = collectionName;
-    // Called when the last driver detaches so the owner (MongoConnection) can
-    // drop us from its registry.
+    // Called when the last driver detaches so the owner can deregister us.
     this._onEmpty = onEmpty;
 
     this._drivers = new Set();
     this._changeStream = null;
     this._stopped = false;
-    // Resume token of the last event we saw, so a restart replays everything
-    // emitted while the stream was reconnecting instead of dropping it.
+    // Last seen resume token; a restart replays from here (startAfter).
     this._resumeToken = null;
-    // Promise of the in-flight open, so concurrent addDriver()/restart calls
-    // for the same collection all await the same single watch() instead of
-    // racing a second cursor into existence.
+    // In-flight open, so concurrent callers share one watch() instead of
+    // racing a second cursor.
     this._startPromise = null;
     this._restartTimer = null;
   }
@@ -41,9 +35,8 @@ export class SharedChangeStream {
     return this._drivers.size;
   }
 
-  // Subscribe a driver. Opens the shared stream on first subscriber. Resolves
-  // once the stream is open so the driver can safely read its snapshot knowing
-  // events emitted from here on are being queued for it.
+  // Subscribe a driver, opening the stream on the first one. Resolves once open
+  // so the driver can read its snapshot knowing events are now queued for it.
   async addDriver(driver) {
     if (this._stopped) {
       throw new Error('SharedChangeStream used after stop');
@@ -52,9 +45,8 @@ export class SharedChangeStream {
     await this._ensureOpen();
   }
 
-  // Open the shared stream if it isn't already open, coalescing concurrent
-  // callers onto a single in-flight open. Setting _startPromise is synchronous
-  // before any await, so two callers can never both start an _open().
+  // Open if needed, coalescing concurrent callers onto one in-flight open.
+  // _startPromise is set synchronously before any await, so no double open.
   _ensureOpen() {
     if (this._changeStream || this._stopped) {
       return Promise.resolve();
@@ -67,8 +59,7 @@ export class SharedChangeStream {
     return this._startPromise;
   }
 
-  // Unsubscribe a driver. Closes the shared stream (and asks the owner to drop
-  // us) once the last driver leaves.
+  // Unsubscribe a driver; tear down once the last one leaves.
   async removeDriver(driver) {
     this._drivers.delete(driver);
     if (this._drivers.size === 0) {
@@ -81,12 +72,9 @@ export class SharedChangeStream {
 
     const collection = this._mongoHandle.rawCollection(this._collectionName);
 
-    // Capture the cluster time BEFORE opening the stream so we can pass
-    // startAtOperationTime to watch(). Without this, the change stream begins
-    // at whatever time mongo processes the aggregate $changeStream command —
-    // which under contention can be milliseconds later than the call site, and
-    // any write that lands in that window is silently dropped. Skipped on
-    // resume (the prior token already pins the start).
+    // Pin the start time before opening: otherwise the stream begins whenever
+    // mongo processes the $changeStream command, and writes landing in that gap
+    // are dropped. Skipped on resume (the token already pins the start).
     let startAtOperationTime;
     if (!this._resumeToken) {
       try {
@@ -99,13 +87,10 @@ export class SharedChangeStream {
 
     if (this._stopped) return;
 
-    // Always an empty pipeline so mongo delivers EVERY change event (including
-    // drop/invalidate/rename). Events filtered out server-side would never
-    // reach our handler, so _setLastProcessedOperationTime would not advance
-    // for their clusterTime — while fence write paths annotate target ts from
-    // session.operationTime including those dropped ops, leaving
-    // _waitUntilCaughtUp pinned to a ts the stream can never reach. Per-document
-    // selector filtering happens in each driver's matcher instead.
+    // Empty pipeline so mongo delivers EVERY event: a server-side filter would
+    // skip events, so _setLastProcessedOperationTime wouldn't advance for their
+    // clusterTime while the fence still targets it — wedging _waitUntilCaughtUp.
+    // Per-document filtering happens in each driver's matcher instead.
     const changeStreamOptions = {
       fullDocument: 'updateLookup',
       fullDocumentBeforeChange: 'whenAvailable',
@@ -155,15 +140,13 @@ export class SharedChangeStream {
   _onChange(change) {
     if (this._stopped) return;
 
-    // Capture the resume token so a future restart picks up where this event
-    // left off (see startAfter in _open).
+    // Remember the resume token so a restart picks up here (see _open).
     if (change && change._id) {
       this._resumeToken = change._id;
     }
 
-    // Multicast the raw event to every subscribed driver. Each driver updates
-    // its own lastProcessedOperationTime (for fence catch-up), runs its matcher
-    // and projection, and queues/flushes its pending writes.
+    // Multicast to every driver; each runs its own matcher/projection, advances
+    // its lastProcessedOperationTime, and flushes pending writes.
     for (const driver of this._drivers) {
       if (driver._stopped) continue;
       try {
@@ -198,8 +181,7 @@ export class SharedChangeStream {
     try {
       await this._closeStream();
       if (this._stopped) return;
-      // Reopen through the shared guard so a driver subscribing mid-restart
-      // awaits this same reopen instead of racing a second cursor.
+      // Reopen via the shared guard so a mid-restart subscriber awaits it too.
       await this._ensureOpen();
       console.error('ChangeStream restart done:', {
         collectionName: this._collectionName,
@@ -210,8 +192,7 @@ export class SharedChangeStream {
         collectionName: this._collectionName,
         error,
       });
-      // Try again so a single failed reopen doesn't permanently wedge the
-      // shared stream for every driver on this collection.
+      // Retry so one failed reopen doesn't wedge the stream for all drivers.
       this._scheduleRestart(
         Meteor?.settings?.packages?.mongo?.changeStream?.delay?.error || 100
       );
@@ -237,10 +218,8 @@ export class SharedChangeStream {
       clearTimeout(this._restartTimer);
       this._restartTimer = null;
     }
-    // Deregister from the connection BEFORE awaiting the cursor close. Otherwise
-    // an observe on the same collection arriving during that await would acquire
-    // this now-stopped multiplexer (addDriver would throw "used after stop")
-    // instead of creating a fresh one.
+    // Deregister before awaiting close, else an observe arriving during the
+    // await would acquire this stopped stream (addDriver throws) not a fresh one.
     if (typeof this._onEmpty === 'function') {
       try {
         this._onEmpty();

@@ -147,12 +147,10 @@ export class ChangeStreamObserveDriver {
 
       const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
 
-      // Subscribe to the shared per-collection change stream. addDriver()
-      // resolves once the stream is open; from that point events are dispatched
-      // to this driver via _onChange and queued in _pendingWrites (held back
-      // until _isReady), so any write that lands during _sendInitialAdds below
-      // is captured and replayed — with _handleInsert deduping against the
-      // snapshot for overlapping docs.
+      // Subscribe to the shared per-collection stream. addDriver() resolves once
+      // it's open; from then events dispatch here via _onChange and queue in
+      // _pendingWrites until ready, so writes during the snapshot below are
+      // captured and replayed (_handleInsert dedupes overlaps with the snapshot).
       this._sharedStream = this._mongoHandle._acquireSharedChangeStream(
         this._cursorDescription.collectionName
       );
@@ -242,9 +240,8 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  // Called by the shared change stream for every raw change event on
-  // this collection. The multiplexer owns the resume token (it drives
-  // reconnection), so this only advances our processed time, runs the matcher,
+  // Called by the shared stream for every raw change. The shared stream owns the
+  // resume token, so this just advances our processed time, runs the matcher,
   // and flushes pending writes.
   _onChange(change) {
     if (this._stopped) return;
@@ -483,8 +480,8 @@ export class ChangeStreamObserveDriver {
     //
     // Liveness is guaranteed by:
     //   1. The shared change stream resuming from its resume token on
-    //      error/close, so events emitted while the stream was reconnecting are
-    //      replayed and our lastProcessedOperationTime still advances to target.
+    //      error/close, so events missed while reconnecting are replayed and
+    //      our lastProcessedOperationTime still advances to target.
     //   2. The watchdog below logging if the wait stalls past warnMs, which
     //      makes a genuinely-broken stream visible without masking it.
     const warnMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpWarnMs ?? 10000;
@@ -560,10 +557,8 @@ export class ChangeStreamObserveDriver {
       }
     }
 
-    // Detach from the shared per-collection change stream. The multiplexer
-    // closes the underlying cursor (and drops itself from the connection
-    // registry) once its last driver leaves, so the cursor lives exactly as
-    // long as there is an observer that needs it.
+    // Detach from the shared stream. It closes the underlying cursor (and drops
+    // itself from the connection registry) once its last driver leaves.
     if (this._sharedStream) {
       try {
         await this._sharedStream.removeDriver(this);

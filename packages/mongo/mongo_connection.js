@@ -141,10 +141,8 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
   return self.db.collection(collectionName);
 };
 
-// Returns the shared change stream for a collection, creating it on first use.
-// It removes itself from this registry once its last driver detaches, so a
-// later observer on the same collection opens a fresh shared stream rather than
-// reusing a torn-down one.
+// Shared change stream for a collection, created on first use. It deregisters
+// itself once its last driver detaches, so a later observer opens a fresh one.
 MongoConnection.prototype._acquireSharedChangeStream = function (collectionName) {
   const self = this;
   const existing = self._sharedChangeStreams[collectionName];
