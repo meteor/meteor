@@ -1,4 +1,4 @@
-const { spawn } = require('child_process');
+const { spawn, execFileSync } = require('child_process');
 const fs = require('fs');
 const net = require('net');
 const path = require('path');
@@ -49,6 +49,7 @@ Usage:
 Environment Variables:
   MODE           'matrix' for the comparison report, 'leak' for long-churn issue-style capture (default: matrix)
   USE_GLOBAL     If 'true', use the system meteor instead of current checkout (default: false)
+                 When false, the app is linked to the local npm-packages/meteor-rspack first
   METEOR_PATH    Path to meteor binary (default: checkout or ~/.meteor/meteor)
   APP_PATH       Path to the app to test (default: dist/repro-app)
   TOUCH_FILE     File to modify to trigger rebuild (default: server/main.js)
@@ -103,6 +104,23 @@ if (!fs.existsSync(CONFIG.APP_PATH)) {
 }
 
 const readyRegex = new RegExp(CONFIG.READY_PATTERN);
+
+let hasEnsuredLocalRspackLink = false;
+
+function ensureLocalRspackLink() {
+  if (CONFIG.USE_GLOBAL || hasEnsuredLocalRspackLink) {
+    return;
+  }
+
+  const linkScriptPath = path.resolve(__dirname, '../tools/e2e-tests/scripts/link-rspack.js');
+  console.log('Linking local meteor-rspack into the app for local-checkout validation...');
+  execFileSync(process.execPath, [linkScriptPath, CONFIG.APP_PATH], {
+    cwd: path.resolve(__dirname, '..'),
+    env: process.env,
+    stdio: 'inherit',
+  });
+  hasEnsuredLocalRspackLink = true;
+}
 
 function getRSS(pid) {
   try {
@@ -743,6 +761,8 @@ async function runLeakHarness() {
 }
 
 async function main() {
+  ensureLocalRspackLink();
+
   if (CONFIG.MODE === 'leak') {
     await runLeakHarness();
     return;
