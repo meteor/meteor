@@ -368,12 +368,12 @@ export namespace Meteor {
    * @param func A function that takes a callback as its final parameter
    * @param context Optional `this` object against which the original function will be invoked
    */
-  function wrapAsync<TFunc extends (...args: unknown[]) => unknown>(
+  function wrapAsync<TFunc extends (...args: any[]) => any>(
     func: TFunc,
     context?: ThisParameterType<TFunc>
-  ): (...args: unknown[]) => unknown;
+  ): (...args: any[]) => any;
 
-  function bindEnvironment<TFunc extends (...args: unknown[]) => unknown>(func: TFunc): TFunc;
+  function bindEnvironment<TFunc extends (...args: any[]) => any>(func: TFunc): TFunc;
 
   class EnvironmentVariable<T> {
     readonly slot: number;
