@@ -20,6 +20,7 @@ const GLOBAL_METEOR = findGlobalMeteor();
 
 // Configuration from Environment Variables
 const CONFIG = {
+  MODE: process.env.MODE || 'matrix',
   USE_GLOBAL: process.env.USE_GLOBAL === 'true',
   METEOR_PATH: process.env.METEOR_PATH || (process.env.USE_GLOBAL === 'true' ? (GLOBAL_METEOR || DEFAULT_METEOR) : DEFAULT_METEOR),
   APP_PATH: process.argv[2] ? path.resolve(process.argv[2]) : (process.env.APP_PATH || path.resolve(__dirname, '../dist/repro-app')),
@@ -28,6 +29,11 @@ const CONFIG = {
   PORT: process.env.PORT || '3333',
   SETTLE_TIME: parseInt(process.env.SETTLE_TIME, 10) || 3000,
   CYCLE_TIMEOUT: parseInt(process.env.CYCLE_TIMEOUT, 10) || 60000,
+  LEAK_VARIANT: process.env.LEAK_VARIANT || 'baseline',
+  LEAK_RSS_THRESHOLD_MB: parseInt(process.env.LEAK_RSS_THRESHOLD_MB, 10) || 2000,
+  LEAK_MAX_CYCLES: parseInt(process.env.LEAK_MAX_CYCLES, 10) || 200,
+  HEAPSNAPSHOT_SIGNAL: process.env.HEAPSNAPSHOT_SIGNAL || 'SIGUSR2',
+  SNAPSHOT_SETTLE_TIME: parseInt(process.env.SNAPSHOT_SETTLE_TIME, 10) || 6000,
   TOOL_NODE_FLAGS: process.env.TOOL_NODE_FLAGS || '--max-old-space-size=4096 --expose-gc',
   SKIP_RESET: process.env.SKIP_RESET === 'true',
   READY_PATTERN: process.env.READY_PATTERN || 'App running at|Meteor server restarted at',
@@ -41,6 +47,7 @@ Usage:
   node scripts/build-stack-memory-bench.js [APP_PATH]
 
 Environment Variables:
+  MODE           'matrix' for the comparison report, 'leak' for long-churn issue-style capture (default: matrix)
   USE_GLOBAL     If 'true', use the system meteor instead of current checkout (default: false)
   METEOR_PATH    Path to meteor binary (default: checkout or ~/.meteor/meteor)
   APP_PATH       Path to the app to test (default: dist/repro-app)
@@ -49,6 +56,11 @@ Environment Variables:
   PORT           Port to run the app on (default: 3333)
   SETTLE_TIME    MS to wait after rebuild before sampling (default: 3000)
   CYCLE_TIMEOUT  MS to wait for initial readiness or next rebuild before failing the variant (default: 60000)
+  LEAK_VARIANT   Variant to churn in MODE=leak (default: baseline)
+  LEAK_RSS_THRESHOLD_MB Tool RSS threshold that triggers snapshot signaling in MODE=leak (default: 2000)
+  LEAK_MAX_CYCLES Max rebuilds to attempt in MODE=leak before stopping (default: 200)
+  HEAPSNAPSHOT_SIGNAL Signal sent to the tool process when threshold is hit (default: SIGUSR2)
+  SNAPSHOT_SETTLE_TIME MS to wait for heapsnapshot files to stabilize after signaling (default: 6000)
   TOOL_NODE_FLAGS Flags for the Meteor tool (default: --max-old-space-size=4096 --expose-gc)
   SKIP_RESET     If 'true', don't run 'meteor reset' before variants
   READY_PATTERN  Regex pattern to detect app readiness (default: App running at|restarted at)
@@ -71,6 +83,9 @@ Example Usage:
 
   # Use a custom regex to detect readiness for a project with unique logs
   READY_PATTERN="Server is now online" node scripts/build-stack-memory-bench.js
+
+  # Run a single long churn like issue #14443 and capture a snapshot once the tool crosses 2 GB RSS
+  MODE=leak LEAK_VARIANT=baseline LEAK_RSS_THRESHOLD_MB=2000 TOOL_NODE_FLAGS="--max-old-space-size=4096 --heapsnapshot-signal=SIGUSR2" node scripts/build-stack-memory-bench.js
 `);
   process.exit(0);
 }
@@ -163,6 +178,11 @@ function getMtimeMs(filePath) {
   }
 }
 
+function snapshotSearchDirs() {
+  const dirs = [CONFIG.APP_PATH, process.cwd()];
+  return [...new Set(dirs.map(dir => path.resolve(dir)))];
+}
+
 function formatMtime(filePath) {
   const mtimeMs = getMtimeMs(filePath);
   if (mtimeMs === null) {
@@ -250,6 +270,58 @@ async function waitForPortsToClose(ports, timeoutMs) {
   return false;
 }
 
+function findHeapSnapshotsSince(markMs) {
+  const snapshots = [];
+
+  for (const dir of snapshotSearchDirs()) {
+    try {
+      const output = execSync(`find ${JSON.stringify(dir)} -maxdepth 2 -name '*.heapsnapshot' -printf '%T@ %p\n'`, {
+        stdio: ['pipe', 'pipe', 'ignore']
+      }).toString();
+
+      output
+        .split('\n')
+        .filter(Boolean)
+        .forEach((line) => {
+          const firstSpace = line.indexOf(' ');
+          if (firstSpace === -1) return;
+          const ts = parseFloat(line.slice(0, firstSpace));
+          const filePath = line.slice(firstSpace + 1);
+          if (Number.isFinite(ts) && ts * 1000 >= markMs) {
+            snapshots.push(filePath);
+          }
+        });
+    } catch (e) {}
+  }
+
+  return [...new Set(snapshots)];
+}
+
+async function waitForStableHeapSnapshot(markMs) {
+  const deadline = Date.now() + CONFIG.CYCLE_TIMEOUT;
+
+  while (Date.now() < deadline) {
+    const snapshots = findHeapSnapshotsSince(markMs);
+    for (const filePath of snapshots) {
+      try {
+        const size1 = fs.statSync(filePath).size;
+        await sleep(CONFIG.SNAPSHOT_SETTLE_TIME);
+        const size2 = fs.statSync(filePath).size;
+        if (size1 === size2 && size2 > 1_000_000) {
+          return {
+            path: filePath,
+            sizeBytes: size2,
+          };
+        }
+      } catch (e) {}
+    }
+
+    await sleep(1000);
+  }
+
+  return null;
+}
+
 async function stopProcessTree(rootPid, options = {}) {
   if (!rootPid) {
     return;
@@ -286,7 +358,10 @@ async function stopProcessTree(rootPid, options = {}) {
   await waitForPortsToClose(ports, waitMs);
 }
 
-async function runVariant(name, config) {
+async function runVariant(name, config, options = {}) {
+  const maxCycles = options.maxCycles || CONFIG.MAX_CYCLES;
+  const onCycle = options.onCycle || null;
+
   console.log(`\n>>> Testing variant: ${name}`);
   
   if (name === 'legacy') {
@@ -377,7 +452,7 @@ async function runVariant(name, config) {
         waitTimer = null;
       }
       cycle++;
-      console.log(`Cycle ${cycle}/${CONFIG.MAX_CYCLES} ready.`);
+      console.log(`Cycle ${cycle}/${maxCycles} ready.`);
       
       await new Promise(r => setTimeout(r, CONFIG.SETTLE_TIME));
 
@@ -398,7 +473,18 @@ async function runVariant(name, config) {
       results.push(entry);
       console.log(`  RSS Total: ${entry.totalRSS} MB, Tool: ${entry.toolRSS} MB, App: ${entry.appRSS} MB, FDs: ${entry.toolFDs}, Procs: ${stats.count}`);
 
-      if (cycle < CONFIG.MAX_CYCLES) {
+      if (onCycle) {
+        const outcome = await onCycle({ entry, results, cycle, child });
+        if (outcome && outcome.stop) {
+          if (outcome.reason) {
+            console.log(`Stopping variant early: ${outcome.reason}`);
+          }
+          finishVariant();
+          return;
+        }
+      }
+
+      if (cycle < maxCycles) {
         isReady = false;
         const mainPath = path.join(CONFIG.APP_PATH, CONFIG.TOUCH_FILE);
         if (fs.existsSync(mainPath)) {
@@ -446,7 +532,7 @@ async function runVariant(name, config) {
         clearTimeout(waitTimer);
         waitTimer = null;
       }
-      if (cycle < CONFIG.MAX_CYCLES) {
+      if (cycle < maxCycles) {
         console.log(`Meteor process exited prematurely (code ${code})`);
         resolve(results);
       }
@@ -465,6 +551,10 @@ const matrix = [
   { name: 'cache:false+devtool:false', config: { cache: false, devtool: false } },
 ];
 
+function getVariantByName(name) {
+  return matrix.find(item => item.name === name) || null;
+}
+
 function average(values) {
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -473,6 +563,15 @@ function average(values) {
 function max(values) {
   if (!values.length) return 0;
   return Math.max(...values);
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
 }
 
 function analyzeResults(res) {
@@ -486,6 +585,10 @@ function analyzeResults(res) {
   const fds = res.map(r => r.toolFDs);
   const procs = res.map(r => r.processCount);
   const serverJsSizes = res.map(r => r.serverJsSize);
+  const warmRes = res.slice(Math.min(2, res.length));
+  const warmTotals = warmRes.map(r => r.totalRSS);
+  const warmTools = warmRes.map(r => r.toolRSS);
+  const warmApps = warmRes.map(r => r.appRSS);
 
   const start = res[0];
   const end = res[res.length - 1];
@@ -505,9 +608,19 @@ function analyzeResults(res) {
     avgTotal: average(totals),
     avgTool: average(tools),
     avgApp: average(apps),
+    medianTotal: median(totals),
+    medianTool: median(tools),
+    medianApp: median(apps),
     peakTotal: max(totals),
     peakTool: max(tools),
     peakApp: max(apps),
+    postWarmSamples: warmRes.length,
+    postWarmAvgTotal: average(warmTotals),
+    postWarmAvgTool: average(warmTools),
+    postWarmAvgApp: average(warmApps),
+    postWarmMedianTotal: median(warmTotals),
+    postWarmMedianTool: median(warmTools),
+    postWarmMedianApp: median(warmApps),
     avgFDs: average(fds),
     peakFDs: max(fds),
     avgProcs: average(procs),
@@ -517,9 +630,127 @@ function analyzeResults(res) {
   };
 }
 
+function formatSignedNumber(value, width = 5, suffix = '') {
+  if (value === null || value === undefined || Number.isNaN(value)) {
+    return `${'n/a'.padStart(width)}${suffix}`;
+  }
+
+  const sign = value >= 0 ? '+' : '';
+  return `${sign}${value.toFixed(1).padStart(width)}${suffix}`;
+}
+
+function padCell(value, width, align = 'left') {
+  const stringValue = String(value);
+  return align === 'right'
+    ? stringValue.padStart(width)
+    : stringValue.padEnd(width);
+}
+
+async function runLeakHarness() {
+  const variant = getVariantByName(CONFIG.LEAK_VARIANT);
+  if (!variant) {
+    throw new Error(`Unknown LEAK_VARIANT "${CONFIG.LEAK_VARIANT}". Expected one of: ${matrix.map(item => item.name).join(', ')}`);
+  }
+
+  const results = await runVariant(variant.name, variant.config, {
+    maxCycles: CONFIG.LEAK_MAX_CYCLES,
+    onCycle: async ({ entry, child, cycle }) => {
+      const toolRss = entry.toolRSS;
+      if (toolRss < CONFIG.LEAK_RSS_THRESHOLD_MB) {
+        return { stop: false };
+      }
+
+      console.log(`Threshold hit at cycle ${cycle}: tool RSS ${toolRss} MB >= ${CONFIG.LEAK_RSS_THRESHOLD_MB} MB`);
+
+      const markMs = Date.now();
+      try {
+        process.kill(child.pid, CONFIG.HEAPSNAPSHOT_SIGNAL);
+      } catch (e) {
+        console.error(`Failed to send ${CONFIG.HEAPSNAPSHOT_SIGNAL} to tool pid ${child.pid}: ${e.message}`);
+        return {
+          stop: true,
+          reason: `threshold hit but snapshot signal failed: ${e.message}`,
+          extra: {
+            snapshot: null,
+            thresholdReached: true,
+          },
+        };
+      }
+
+      console.log(`Sent ${CONFIG.HEAPSNAPSHOT_SIGNAL} to tool pid ${child.pid}. Waiting for heapsnapshot...`);
+      const snapshot = await waitForStableHeapSnapshot(markMs);
+
+      if (snapshot) {
+        console.log(`Heapsnapshot captured: ${snapshot.path} (${Math.round(snapshot.sizeBytes / 1048576)} MB)`);
+      } else {
+        console.log('No stable heapsnapshot found before timeout.');
+      }
+
+      return {
+        stop: true,
+        reason: snapshot
+          ? `threshold hit and heapsnapshot captured at cycle ${cycle}`
+          : `threshold hit at cycle ${cycle} but no stable heapsnapshot was found`,
+        extra: {
+          snapshot,
+          thresholdReached: true,
+        },
+      };
+    },
+  });
+
+  const stats = analyzeResults(results);
+  const report = {
+    mode: 'leak',
+    variant: variant.name,
+    thresholdMb: CONFIG.LEAK_RSS_THRESHOLD_MB,
+    maxCycles: CONFIG.LEAK_MAX_CYCLES,
+    touchFile: CONFIG.TOUCH_FILE,
+    toolNodeFlags: CONFIG.TOOL_NODE_FLAGS,
+    results,
+    summary: stats,
+    issueStyle: stats && stats.rebuilds > 0
+      ? {
+          toolStartMb: stats.start.toolRSS,
+          toolEndMb: stats.end.toolRSS,
+          toolDeltaMb: stats.deltaTool,
+          toolSlopeMbPerRebuild: stats.slopeTool,
+          appStartMb: stats.start.appRSS,
+          appEndMb: stats.end.appRSS,
+          appDeltaMb: stats.deltaApp,
+          totalStartMb: stats.start.totalRSS,
+          totalEndMb: stats.end.totalRSS,
+          totalDeltaMb: stats.deltaTotal,
+        }
+      : null,
+  };
+
+  fs.writeFileSync('leak-report.json', JSON.stringify(report, null, 2));
+
+  console.log('\n=== LEAK HARNESS SUMMARY ===');
+  if (!stats) {
+    console.log('No data collected.');
+  } else {
+    console.log(`Variant: ${variant.name}`);
+    console.log(`Samples: ${stats.samples}, Rebuilds: ${stats.rebuilds}`);
+    console.log(`Tool RSS: ${stats.start.toolRSS} -> ${stats.end.toolRSS} MB (${stats.deltaTool >= 0 ? '+' : ''}${stats.deltaTool} MB)`);
+    console.log(`App RSS:  ${stats.start.appRSS} -> ${stats.end.appRSS} MB (${stats.deltaApp >= 0 ? '+' : ''}${stats.deltaApp} MB)`);
+    if (stats.slopeTool !== null) {
+      console.log(`Tool slope: ${formatSignedNumber(stats.slopeTool, 5, ' MB/rebuild')}`);
+    }
+  }
+  console.log('Saved leak-report.json');
+}
+
 async function main() {
+  if (CONFIG.MODE === 'leak') {
+    await runLeakHarness();
+    return;
+  }
+
   const allResults = {};
   const summary = {};
+  const variantWidth = 25;
   
   for (const item of matrix) {
     allResults[item.name] = await runVariant(item.name, item.config);
@@ -527,8 +758,10 @@ async function main() {
   }
 
   console.log('\n\n=== FINAL REPRODUCTION SUMMARY ===');
-  console.log('Variant'.padEnd(25) + ' | Tool Slope | App Slope | Total Slope (MB/rebuild)');
-  console.log('-'.repeat(95));
+  console.log(
+    `${padCell('Variant', variantWidth)} | ${padCell('Tool Slope', 15)} | ${padCell('App Slope', 14)} | ${padCell('Total Slope (MB/rebuild)', 25)}`
+  );
+  console.log('-'.repeat(variantWidth + 3 + 15 + 3 + 14 + 3 + 25));
 
   let csv = 'Variant,Cycle,TotalRSS,ToolRSS,AppRSS,FDs,Procs,ServerJsKB\n';
 
@@ -542,11 +775,13 @@ async function main() {
     }
 
     if (stats.slopeTotal === null) {
-      console.log(`${name.padEnd(25)} | Insufficient data collected`);
+      console.log(`${padCell(name, variantWidth)} | Insufficient data collected`);
       continue;
     }
 
-    console.log(`${name.padEnd(25)} | ${stats.slopeTool >= 0 ? '+' : ''}${stats.slopeTool.toFixed(1).padStart(5)} MB | ${stats.slopeApp >= 0 ? '+' : ''}${stats.slopeApp.toFixed(1).padStart(5)} MB | ${stats.slopeTotal >= 0 ? '+' : ''}${stats.slopeTotal.toFixed(1).padStart(5)} MB`);
+    console.log(
+      `${padCell(name, variantWidth)} | ${padCell(formatSignedNumber(stats.slopeTool, 5, ' MB'), 15, 'right')} | ${padCell(formatSignedNumber(stats.slopeApp, 5, ' MB'), 14, 'right')} | ${padCell(formatSignedNumber(stats.slopeTotal, 5, ' MB'), 25, 'right')}`
+    );
 
     res.forEach(r => {
       csv += `${name},${r.cycle},${r.totalRSS},${r.toolRSS},${r.appRSS},${r.toolFDs},${r.processCount},${r.serverJsSize}\n`;
@@ -554,8 +789,10 @@ async function main() {
   }
 
   console.log('\n=== RESOURCE AVERAGES / PEAKS ===');
-  console.log('Variant'.padEnd(25) + ' | Avg Total | Peak Total | Avg Tool | Peak Tool | Avg App | Peak App');
-  console.log('-'.repeat(105));
+  console.log(
+    `${padCell('Variant', variantWidth)} | ${padCell('Avg Total', 12)} | ${padCell('Peak Total', 13)} | ${padCell('Avg Tool', 11)} | ${padCell('Peak Tool', 12)} | ${padCell('Avg App', 10)} | ${padCell('Peak App', 11)}`
+  );
+  console.log('-'.repeat(variantWidth + 3 + 12 + 3 + 13 + 3 + 11 + 3 + 12 + 3 + 10 + 3 + 11));
 
   for (const name in summary) {
     const stats = summary[name];
@@ -565,13 +802,33 @@ async function main() {
     }
 
     console.log(
-      `${name.padEnd(25)} | ${stats.avgTotal.toFixed(1).padStart(7)} MB | ${String(stats.peakTotal).padStart(10)} MB | ${stats.avgTool.toFixed(1).padStart(7)} MB | ${String(stats.peakTool).padStart(9)} MB | ${stats.avgApp.toFixed(1).padStart(6)} MB | ${String(stats.peakApp).padStart(8)} MB`
+      `${padCell(name, variantWidth)} | ${padCell(`${stats.avgTotal.toFixed(1)} MB`, 12, 'right')} | ${padCell(`${stats.peakTotal} MB`, 13, 'right')} | ${padCell(`${stats.avgTool.toFixed(1)} MB`, 11, 'right')} | ${padCell(`${stats.peakTool} MB`, 12, 'right')} | ${padCell(`${stats.avgApp.toFixed(1)} MB`, 10, 'right')} | ${padCell(`${stats.peakApp} MB`, 11, 'right')}`
+    );
+  }
+
+  console.log('\n=== MEDIANS / POST-WARM ===');
+  console.log(
+    `${padCell('Variant', variantWidth)} | ${padCell('Median Tool', 13)} | ${padCell('Warm Avg Tool', 15)} | ${padCell('Warm Median Tool', 18)} | ${padCell('Warm Avg Total', 16)} | ${padCell('Warm Avg App', 14)}`
+  );
+  console.log('-'.repeat(variantWidth + 3 + 13 + 3 + 15 + 3 + 18 + 3 + 16 + 3 + 14));
+
+  for (const name in summary) {
+    const stats = summary[name];
+    if (!stats) {
+      console.log(`${name.padEnd(25)} | No data collected`);
+      continue;
+    }
+
+    console.log(
+      `${padCell(name, variantWidth)} | ${padCell(`${stats.medianTool.toFixed(1)} MB`, 13, 'right')} | ${padCell(`${stats.postWarmAvgTool.toFixed(1)} MB`, 15, 'right')} | ${padCell(`${stats.postWarmMedianTool.toFixed(1)} MB`, 18, 'right')} | ${padCell(`${stats.postWarmAvgTotal.toFixed(1)} MB`, 16, 'right')} | ${padCell(`${stats.postWarmAvgApp.toFixed(1)} MB`, 14, 'right')}`
     );
   }
 
   console.log('\n=== DELTAS / OVERHEAD ===');
-  console.log('Variant'.padEnd(25) + ' | Samples | Rebuilds | Total Delta | Tool Delta | App Delta | Avg FDs | Avg Procs | Avg ServerJs');
-  console.log('-'.repeat(125));
+  console.log(
+    `${padCell('Variant', variantWidth)} | ${padCell('Samples', 7)} | ${padCell('Rebuilds', 8)} | ${padCell('Total Delta', 12)} | ${padCell('Tool Delta', 11)} | ${padCell('App Delta', 10)} | ${padCell('Avg FDs', 8)} | ${padCell('Avg Procs', 10)} | ${padCell('Avg ServerJs', 13)}`
+  );
+  console.log('-'.repeat(variantWidth + 3 + 7 + 3 + 8 + 3 + 12 + 3 + 11 + 3 + 10 + 3 + 8 + 3 + 10 + 3 + 13));
 
   for (const name in summary) {
     const stats = summary[name];
@@ -581,7 +838,34 @@ async function main() {
     }
 
     console.log(
-      `${name.padEnd(25)} | ${String(stats.samples).padStart(7)} | ${String(stats.rebuilds).padStart(8)} | ${stats.deltaTotal >= 0 ? '+' : ''}${String(stats.deltaTotal).padStart(5)} MB | ${stats.deltaTool >= 0 ? '+' : ''}${String(stats.deltaTool).padStart(4)} MB | ${stats.deltaApp >= 0 ? '+' : ''}${String(stats.deltaApp).padStart(3)} MB | ${stats.avgFDs.toFixed(1).padStart(7)} | ${stats.avgProcs.toFixed(1).padStart(9)} | ${stats.avgServerJsSize.toFixed(1).padStart(12)} KB`
+      `${padCell(name, variantWidth)} | ${padCell(stats.samples, 7, 'right')} | ${padCell(stats.rebuilds, 8, 'right')} | ${padCell(`${stats.deltaTotal >= 0 ? '+' : ''}${stats.deltaTotal} MB`, 12, 'right')} | ${padCell(`${stats.deltaTool >= 0 ? '+' : ''}${stats.deltaTool} MB`, 11, 'right')} | ${padCell(`${stats.deltaApp >= 0 ? '+' : ''}${stats.deltaApp} MB`, 10, 'right')} | ${padCell(stats.avgFDs.toFixed(1), 8, 'right')} | ${padCell(stats.avgProcs.toFixed(1), 10, 'right')} | ${padCell(`${stats.avgServerJsSize.toFixed(1)} KB`, 13, 'right')}`
+    );
+  }
+
+  const legacyStats = summary.legacy || null;
+  const baselineStats = summary.baseline || null;
+
+  console.log('\n=== DELTA VS LEGACY / BASELINE ===');
+  console.log(
+    `${padCell('Variant', variantWidth)} | ${padCell('vs Legacy Avg Tool', 18)} | ${padCell('vs Legacy Avg Total', 19)} | ${padCell('vs Baseline Avg Tool', 20)} | ${padCell('vs Baseline Avg Total', 21)} | ${padCell('vs Baseline Warm Tool', 22)}`
+  );
+  console.log('-'.repeat(variantWidth + 3 + 18 + 3 + 19 + 3 + 20 + 3 + 21 + 3 + 22));
+
+  for (const name in summary) {
+    const stats = summary[name];
+    if (!stats) {
+      console.log(`${name.padEnd(25)} | No data collected`);
+      continue;
+    }
+
+    const deltaVsLegacyAvgTool = legacyStats ? stats.avgTool - legacyStats.avgTool : null;
+    const deltaVsLegacyAvgTotal = legacyStats ? stats.avgTotal - legacyStats.avgTotal : null;
+    const deltaVsBaselineAvgTool = baselineStats ? stats.avgTool - baselineStats.avgTool : null;
+    const deltaVsBaselineAvgTotal = baselineStats ? stats.avgTotal - baselineStats.avgTotal : null;
+    const deltaVsBaselineWarmTool = baselineStats ? stats.postWarmAvgTool - baselineStats.postWarmAvgTool : null;
+
+    console.log(
+      `${padCell(name, variantWidth)} | ${padCell(formatSignedNumber(deltaVsLegacyAvgTool, 6, ' MB'), 18, 'right')} | ${padCell(formatSignedNumber(deltaVsLegacyAvgTotal, 7, ' MB'), 19, 'right')} | ${padCell(formatSignedNumber(deltaVsBaselineAvgTool, 8, ' MB'), 20, 'right')} | ${padCell(formatSignedNumber(deltaVsBaselineAvgTotal, 9, ' MB'), 21, 'right')} | ${padCell(formatSignedNumber(deltaVsBaselineWarmTool, 8, ' MB'), 22, 'right')}`
     );
   }
 
