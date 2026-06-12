@@ -333,7 +333,7 @@ export namespace Meteor {
    * @param func The function to wrap
    * @param options An object with an `on` property that is an array of environment names: `"development"`, `"production"`, and/or `"test"`.
    */
-  function deferrable<T extends (...args: unknown[]) => unknown>(
+  function deferrable<T extends (...args: any[]) => any>(
     func: T,
     options: { on: Array<"development" | "production" | "test"> }
   ): T | void;
@@ -342,13 +342,13 @@ export namespace Meteor {
    * Wrap a function so that it only runs in development environment.
    * @param func The function to wrap
    */
-  function deferDev<T extends (...args: unknown[]) => unknown>(func: T): T | void;
+  function deferDev<T extends (...args: any[]) => any>(func: T): T | void;
 
   /**
    * Wrap a function so that it only runs in production environment.
    * @param func The function to wrap
    */
-  function deferProd<T extends (...args: unknown[]) => unknown>(func: T): T | void;
+  function deferProd<T extends (...args: any[]) => any>(func: T): T | void;
   /** Timeout **/
 
   /** utils **/
