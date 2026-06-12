@@ -22,8 +22,16 @@ expectTypeOf(Session.equals).returns.toBeBoolean();
 expectTypeOf(Session.get).parameters.toEqualTypeOf<[string]>();
 expectTypeOf(Session.get).returns.toEqualTypeOf<SessionValue>();
 
-expectTypeOf(Session.set).toBeCallableWith("key", "value");
-expectTypeOf(Session.set).toBeCallableWith({ k: "v" });
+expectTypeOf(Session.set).toBeCallableWith("k", "value");
+expectTypeOf(Session.set).toBeCallableWith("k", 42);
+expectTypeOf(Session.set).toBeCallableWith("k", true);
+expectTypeOf(Session.set).toBeCallableWith("k", null);
+expectTypeOf(Session.set).toBeCallableWith("k", undefined);
+expectTypeOf(Session.set).toBeCallableWith("k", new Date());
+expectTypeOf(Session.set).toBeCallableWith("k", new Uint8Array());
+expectTypeOf(Session.set).toBeCallableWith("k", { nested: 1 });
+expectTypeOf(Session.set).toBeCallableWith("k", [1, 2, 3]);
+expectTypeOf(Session.set).toBeCallableWith({ s: "v", n: 1, b: true, x: null });
 expectTypeOf(Session.set).returns.toBeVoid();
 
 expectTypeOf(Session.setDefault).parameters.toEqualTypeOf<[string, SessionValue]>();
