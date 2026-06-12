@@ -396,7 +396,7 @@ export namespace Mongo {
         /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
         multi?: boolean | undefined;
       },
-      callback?: (error: Error | null, result?: { numberAffected?: number; insertedId?: string }) => void
+      callback?: Function
     ): {
       numberAffected?: number | undefined;
       insertedId?: string | undefined;
@@ -415,7 +415,7 @@ export namespace Mongo {
         /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
         multi?: boolean | undefined;
       },
-      callback?: (error: Error | null, result?: { numberAffected?: number; insertedId?: string }) => void
+      callback?: Function
     ): Promise<{
       numberAffected?: number | undefined;
       insertedId?: string | undefined;
