@@ -543,7 +543,7 @@ export namespace Meteor {
     name: string | null,
     func: (
       this: Subscription,
-      ...args: EJSONableProperty[]
+      ...args: (EJSONable | EJSONableProperty)[]
     ) =>
       | void
       | Mongo.Cursor<unknown>
