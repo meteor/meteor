@@ -124,7 +124,8 @@ export class SharedChangeStream {
     }));
 
     changeStream.on('error', Meteor.bindEnvironment((error) => {
-      if (this._stopped) return;
+      // Only the active stream restarts; ignore a superseded one.
+      if (this._stopped || this._changeStream !== changeStream) return;
       console.error('ChangeStream error:', {
         collectionName: this._collectionName,
         driverCount: this._drivers.size,
@@ -137,7 +138,9 @@ export class SharedChangeStream {
     }));
 
     changeStream.on('close', Meteor.bindEnvironment(() => {
-      if (this._stopped) return;
+      // _closeStream() replaces this._changeStream before closing, so a
+      // deliberate close fails this check and won't loop into a restart.
+      if (this._stopped || this._changeStream !== changeStream) return;
       console.error('ChangeStream closed unexpectedly, scheduling restart:', {
         collectionName: this._collectionName,
         driverCount: this._drivers.size,

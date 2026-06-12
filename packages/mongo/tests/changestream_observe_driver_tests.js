@@ -2117,6 +2117,47 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - a deliberate restart does not perpetuate a close→reopen loop (#14456)',
+  async function (test) {
+    const c = makeCollection();
+
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    test.isTrue(!!shared._changeStream, 'cursor is open before the restart');
+
+    // Count restarts that fire.
+    let restarts = 0;
+    const origRestart = shared._restart.bind(shared);
+    shared._restart = function () {
+      restarts++;
+      return origRestart();
+    };
+
+    // Trigger one restart; its deliberate close must not cascade into more.
+    shared._scheduleRestart(10);
+
+    // delay defaults to 100 ms — a cascade would fire several in this window.
+    await waitFor(() => restarts > 1, 800);
+
+    test.equal(restarts, 1, 'a single restart must not trigger further restarts');
+    test.isFalse(shared._stopped, 'shared stream stays alive after the restart');
+    test.isTrue(!!shared._changeStream, 'cursor is reopened and stays open');
+
+    // The reopened cursor must still deliver events to its drivers.
+    await c.insertAsync({ name: 'after-restart' });
+    const got = await waitFor(async () => {
+      const found = await c.findOneAsync({ name: 'after-restart' });
+      return !!found;
+    }, 3000);
+    test.isTrue(got, 'collection write succeeds after the restart');
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
   'changestream - _projectionFn works correctly',
   async function (test) {
     const c = makeCollection();
