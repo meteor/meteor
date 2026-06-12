@@ -3,6 +3,53 @@ Package.describe({
   version: '0.1.0-alpha.0',
 });
 
+Package.registerToolExtension({
+  id: 'meteor:capacitor',
+  label: 'Meteor Capacitor',
+  apiVersion: '1.0',
+  platforms: [
+    {
+      name: 'android',
+      kind: 'mobile',
+      provider: 'capacitor',
+      claimsBuiltIn: true,
+      aliases: ['capacitor:android'],
+      buildTargets: ['web.capacitor'],
+      nativeProjectDir: 'android',
+      hcpMode: 'native-runtime',
+    },
+    {
+      name: 'ios',
+      kind: 'mobile',
+      provider: 'capacitor',
+      claimsBuiltIn: true,
+      aliases: ['capacitor:ios'],
+      buildTargets: ['web.capacitor'],
+      nativeProjectDir: 'ios',
+      hcpMode: 'native-runtime',
+    },
+  ],
+  buildTargets: [
+    {
+      name: 'web.capacitor',
+      baseArch: 'web.cordova',
+      outputKind: 'web-dir',
+      runtime: 'native-webview',
+      hcpMode: 'native-runtime',
+    },
+  ],
+  capabilities: {
+    run: true,
+    build: true,
+    addPlatform: true,
+    removePlatform: true,
+    nativeSync: true,
+    nativeOpen: true,
+    targetSelection: true,
+    hcp: true,
+  },
+});
+
 Package.registerBuildPlugin({
   name: 'capacitor',
   sources: [

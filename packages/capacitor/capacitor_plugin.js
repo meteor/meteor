@@ -113,7 +113,7 @@ async function runTransform({ appDir }) {
 
 /**
  * Resolves once `web.cordova/program.json` is on disk (the bundle Meteor
- * actually emits — buildIndex composes index.html from it). Returns false
+ * actually emits, buildIndex composes index.html from it). Returns false
  * on timeout.
  */
 function waitForCordovaBundle(cordovaOutDir, { intervalMs = 100, timeoutMs = 30_000 } = {}) {
@@ -173,10 +173,8 @@ if (isCapacitorOptIn()) {
 
     process.env.METEOR_CAPACITOR = 'true';
     // Bypass Cordova's runner when the project has the `capacitor` package.
-    // The Meteor CLI sets the same disable flag at command start (see
-    // tools/cli/commands.js shouldDisableCordova, which checks for the
-    // capacitor package constraint); this assignment covers downstream
-    // child processes spawned by the plugin (cap sync, etc.).
+    // The Meteor CLI now skips Cordova through provider resolution; this
+    // assignment covers downstream child processes spawned by the plugin.
     process.env.METEOR_CORDOVA_DISABLE = 'true';
 
     // Skip native webDirs at isobuild scan time. Scoped to native-*
