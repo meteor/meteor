@@ -67,10 +67,10 @@ export namespace Meteor {
   }
 
   function user(options?: {
-    fields?: Record<string, number> | undefined;
+    fields?: Mongo.FieldSpecifier | undefined;
   }): User | null;
   function userAsync(options?: {
-    fields?: Record<string, number> | undefined;
+    fields?: Mongo.FieldSpecifier | undefined;
   }): Promise<Meteor.User | null>;
 
   function userId(): string | null;
