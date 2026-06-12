@@ -11,7 +11,7 @@ interface Doc {
 expectTypeOf<UnionOmit<{ a: 1, b: 2 }, 'a'>>().toEqualTypeOf<{ b: 2 }>();
 
 expectTypeOf<Mongo.OptionalId<Doc>>().toEqualTypeOf<
-  { name: string; value: number } & { _id?: string | NpmModuleMongodb.ObjectId }
+  { name: string; value: number } & { _id?: string | Mongo.ObjectID | NpmModuleMongodb.ObjectId }
 >();
 
 expectTypeOf<Mongo.Selector<Doc>>().toEqualTypeOf<NpmModuleMongodb.Filter<Doc>>();
@@ -65,16 +65,16 @@ expectTypeOf(transformed.findOneAsync("id")).resolves.toEqualTypeOf<
 expectTypeOf(Mongo.Collection.addExtension).toBeFunction();
 expectTypeOf(Mongo.Collection.addPrototypeMethod).parameter(0).toBeString();
 expectTypeOf(Mongo.Collection.addStaticMethod).parameters.toEqualTypeOf<
-  [string, (...args: unknown[]) => unknown]
+  [string, Function]
 >();
 expectTypeOf(Mongo.Collection.getExtensions).returns.toEqualTypeOf<
-  Array<(...args: unknown[]) => unknown>
+  Array<Function>
 >();
 expectTypeOf(Mongo.Collection.getPrototypeMethods).returns.toEqualTypeOf<
-  Map<string, (...args: unknown[]) => unknown>
+  Map<string, Function>
 >();
 expectTypeOf(Mongo.Collection.getStaticMethods).returns.toEqualTypeOf<
-  Map<string, (...args: unknown[]) => unknown>
+  Map<string, Function>
 >();
 expectTypeOf(Mongo.Collection.clearExtensions).returns.toBeVoid();
 
