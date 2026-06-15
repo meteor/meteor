@@ -30,7 +30,7 @@ export declare namespace Log {
   function _intercepted(): string[];
   function _getCallerDetails(): { line: number; file: string };
   function parse(line: Record<string, unknown> | string): Record<string, unknown>;
-  function format(object: formatInput, options: { color: true }): Record<string, unknown> | string;
+  function format(object: formatInput, options?: { color?: boolean; metaColor?: string }): string;
   function objFromText(
     line: string,
     override: Record<string, unknown>
