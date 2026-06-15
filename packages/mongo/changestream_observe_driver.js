@@ -104,6 +104,18 @@ export class ChangeStreamObserveDriver {
             // return undefined here and miss the fence._csTargetTs annotation.
             await driver._waitUntilCaughtUp(fence);
 
+            // The driver may have been stopped while we were parked in
+            // _waitUntilCaughtUp (stop() drains the waiter so we don't hang —
+            // meteor/meteor#14452). Once stopped, neither branch below can be
+            // trusted to release this write: the multiplexer is being torn
+            // down, and a push to _writesToCommitWhenReady can race stop()'s
+            // own drain of that array and be lost. Commit directly so the
+            // fence still fires.
+            if (driver._stopped) {
+              await write.committed();
+              continue;
+            }
+
             // Process any pending writes immediately
             driver._flushPendingWrites();
 
@@ -527,7 +539,12 @@ export class ChangeStreamObserveDriver {
         clearTimeout(warnTimeoutId);
         if (warnCount > 0) {
           console.error(
-            `Meteor: change stream caught up after warn`,
+            // When stop() drains this resolver the stream never reached
+            // targetTs — say so rather than claiming we caught up, so the logs
+            // reflect that the wait was released by teardown (#14452).
+            this._stopped
+              ? `Meteor: change stream wait released because observer stopped`
+              : `Meteor: change stream caught up after warn`,
             {
               driverId: this._id,
               collectionName,
@@ -547,6 +564,27 @@ export class ChangeStreamObserveDriver {
     if (this._stopped) return;
 
     this._stopped = true;
+
+    // Release any fence waiters still parked in _waitUntilCaughtUp before we
+    // close the change stream below. Those resolvers are waiting for an event
+    // with clusterTime >= targetTs, but once the stream is closed that event
+    // will never arrive, so leaving them parked hangs the fence's
+    // onBeforeFire (which awaits _waitUntilCaughtUp) forever — the DDP method
+    // that issued the write never gets its `updated` message and the client
+    // call hangs until timeout (meteor/meteor#14452). Resolve (don't reject):
+    // the fence may carry writes from other, still-healthy drivers, and the
+    // continuation just commits this driver's already-begun write so the fence
+    // can fire. The driver is being torn down, so not reaching targetTs on it
+    // is harmless — its handles are gone.
+    const pendingCatchUp = this._catchingUpResolvers;
+    this._catchingUpResolvers = [];
+    for (const entry of pendingCatchUp) {
+      try {
+        entry.resolver();
+      } catch (e) {
+        // ignore resolver errors
+      }
+    }
 
     // Execute all stop callbacks
     for (const callback of this._stopCallbacks) {
