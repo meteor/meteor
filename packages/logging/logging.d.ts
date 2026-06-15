@@ -29,7 +29,7 @@ export declare namespace Log {
   function _suppress(count: number): void;
   function _intercepted(): string[];
   function _getCallerDetails(): { line: number; file: string };
-  function parse(line: Record<string, unknown> | string): Record<string, unknown>;
+  function parse(line: Record<string, unknown> | string): Record<string, unknown> | null;
   function format(object: formatInput, options?: { color?: boolean; metaColor?: string }): string;
   function objFromText(
     line: string,
