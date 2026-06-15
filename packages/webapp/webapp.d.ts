@@ -98,7 +98,7 @@ export declare namespace WebAppInternals {
     res: http.ServerResponse,
     next: Function
   ): void;
-  function parsePort(port: string): number;
+  function parsePort(port: string | number): string | number;
   function reloadClientPrograms(): void;
   function generateBoilerplate(): void;
   var staticFiles: StaticFiles;
