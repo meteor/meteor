@@ -2345,6 +2345,65 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream- stop() releases a fence waiter parked in _waitUntilCaughtUp (#14452)',
+  async function (test) {
+    // Regression for meteor/meteor#14452. If the driver is stopped while a
+    // write fence is still parked in _waitUntilCaughtUp, the change-stream
+    // event that would advance _lastProcessedOperationTime to targetTs never
+    // arrives (the stream is being closed), so the parked resolver would hang
+    // forever. The fence's onBeforeFire awaits that resolver, so the DDP
+    // method that issued the write never gets its `updated` message and the
+    // client call hangs until timeout. stop() must release the waiter.
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const driver = handle._multiplexer._observeDriver;
+
+    // Seed so _lastProcessedOperationTime is non-null, then build a fence with
+    // a target ts far in the future. The stream will never deliver an event
+    // with clusterTime >= this, so the wait parks a resolver and blocks.
+    // The ts must be a real BSON Timestamp (not a plain {t, i}) — Timestamp's
+    // compare() mishandles plain objects, which would send _waitUntilCaughtUp
+    // down its already-caught-up early return instead of parking.
+    await c.insertAsync({ n: 1 });
+    await waitFor(() => driver._lastProcessedOperationTime !== null, 2000);
+
+    const Timestamp = driver._lastProcessedOperationTime.constructor;
+    const farFutureTs = new Timestamp({ t: Math.floor(Date.now() / 1000) + 3600, i: 1 });
+    const fakeFence = { _csTargetTsByCollection: { [c._name]: farFutureTs } };
+
+    // Park the waiter. Do NOT await — it must not resolve until stop().
+    let resolved = false;
+    const waitPromise = driver
+      ._waitUntilCaughtUp(fakeFence)
+      .then(() => { resolved = true; });
+
+    await waitFor(() => driver._catchingUpResolvers.length === 1, 1000);
+    test.equal(
+      driver._catchingUpResolvers.length,
+      1,
+      'a resolver should be parked while the fence waits for a future ts'
+    );
+    test.isFalse(resolved, 'wait must not resolve before stop');
+
+    // Stop the driver. This must drain the parked resolver rather than leaving
+    // it (and its watchdog) running forever.
+    await driver.stop();
+
+    const released = await waitFor(() => resolved, 3000);
+    test.isTrue(released, 'stop() should release the parked fence waiter (#14452)');
+    test.equal(
+      driver._catchingUpResolvers.length,
+      0,
+      'catching-up resolvers should be drained on stop'
+    );
+
+    await waitPromise;
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
   'changestream- annotation is cleared after fence fires (with active observer)',
   async function (test) {
     const c = makeCollection();
