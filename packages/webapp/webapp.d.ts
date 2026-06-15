@@ -63,7 +63,7 @@ export declare namespace WebApp {
     encodedCurrentConfig: string;
     updated: boolean;
   }) => string | undefined | null | false;
-  function addRuntimeConfigHook(callback: RuntimeConfigHookCallback): void;
+  function addRuntimeConfigHook(callback: RuntimeConfigHookCallback): { stop: () => void; callback: RuntimeConfigHookCallback };
   function decodeRuntimeConfig(rtimeConfigString: string): unknown;
   function encodeRuntimeConfig(rtimeConfig: unknown): string;
   function addHtmlAttributeHook(hook: Function): void;
