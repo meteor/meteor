@@ -49,7 +49,7 @@ export namespace DDPCommon {
      * Set the logged in user.
      * @param userId The value that should be returned by `userId` on this connection.
      */
-    setUserId(userId: string | null): void;
+    setUserId(userId: string | null): Promise<void>;
     /**
      * The id of the user that made this method call, or `null` if no user was logged in.
      */
