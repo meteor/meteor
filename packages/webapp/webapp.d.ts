@@ -108,6 +108,10 @@ export declare namespace WebAppInternals {
   function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): void;
   function setBundledJsCssPrefix(bundledJsCssPrefix: string): void;
   function addStaticJs(): void;
-  function getBoilerplate(request: http.IncomingMessage, arch: string): string;
+  function getBoilerplate(request: http.IncomingMessage, arch: string): Promise<{
+    stream: NodeJS.ReadableStream;
+    statusCode?: number;
+    headers?: Record<string, string>;
+  }>;
   var additionalStaticJs: Record<string, string>;
 }
