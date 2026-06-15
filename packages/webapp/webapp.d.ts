@@ -84,8 +84,8 @@ export declare namespace WebAppInternals {
   };
   function registerBoilerplateDataCallback(
     key: string,
-    callback: Function
-  ): Function;
+    callback: Function | null
+  ): Function | null;
   function generateBoilerplateInstance(
     arch: string,
     manifest: Record<string, unknown>[],
