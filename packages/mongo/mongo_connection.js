@@ -13,6 +13,7 @@ import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
 import { ChangeStreamObserveDriver } from './changestream_observe_driver';
+import { SharedChangeStream } from './shared_change_stream';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
@@ -35,6 +36,7 @@ export const MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
+  self._sharedChangeStreams = {};
   self._onFailoverHook = new Hook;
 
   const userOptions = {
@@ -137,6 +139,23 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
     throw Error("rawCollection called before Connection created?");
 
   return self.db.collection(collectionName);
+};
+
+// Shared change stream for a collection, created on first use. It deregisters
+// itself once its last driver detaches, so a later observer opens a fresh one.
+MongoConnection.prototype._acquireSharedChangeStream = function (collectionName) {
+  const self = this;
+  const existing = self._sharedChangeStreams[collectionName];
+  if (existing) {
+    return existing;
+  }
+  const sharedStream = new SharedChangeStream(self, collectionName, function () {
+    if (self._sharedChangeStreams[collectionName] === sharedStream) {
+      delete self._sharedChangeStreams[collectionName];
+    }
+  });
+  self._sharedChangeStreams[collectionName] = sharedStream;
+  return sharedStream;
 };
 
 MongoConnection.prototype.createCappedCollectionAsync = async function (
