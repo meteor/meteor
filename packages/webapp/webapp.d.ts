@@ -99,14 +99,14 @@ export declare namespace WebAppInternals {
     next: Function
   ): void;
   function parsePort(port: string | number): string | number;
-  function reloadClientPrograms(): void;
-  function generateBoilerplate(): void;
+  function reloadClientPrograms(): Promise<void>;
+  function generateBoilerplate(): Promise<void>;
   var staticFiles: StaticFiles;
   function inlineScriptsAllowed(): boolean;
-  function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): void;
+  function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): Promise<void>;
 
-  function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): void;
-  function setBundledJsCssPrefix(bundledJsCssPrefix: string): void;
+  function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): Promise<void>;
+  function setBundledJsCssPrefix(bundledJsCssPrefix: string): Promise<void>;
   function addStaticJs(contents: string): void;
   function getBoilerplate(request: http.IncomingMessage, arch: string): Promise<{
     stream: NodeJS.ReadableStream;
