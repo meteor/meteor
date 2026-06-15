@@ -406,6 +406,6 @@ export namespace Accounts {
     userId: string,
     token: HashedStampedLoginToken,
     query?: Mongo.Selector<T> | Mongo.ObjectID | string
-  ): void;
+  ): Promise<void>;
   function _hashLoginToken(token: string): string;
 }
