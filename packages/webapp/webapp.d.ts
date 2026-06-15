@@ -55,7 +55,7 @@ export declare namespace WebApp {
    * Should be used only for testing
    */
   function _suppressExpressErrors(): void;
-  function onListening(callback: Function): void;
+  function onListening(callback: () => void): void;
 
   type RuntimeConfigHookCallback = (options: {
     arch: "web.browser" | "web.browser.legacy" | "web.cordova";
@@ -66,7 +66,7 @@ export declare namespace WebApp {
   function addRuntimeConfigHook(callback: RuntimeConfigHookCallback): { stop: () => void; callback: RuntimeConfigHookCallback };
   function decodeRuntimeConfig(rtimeConfigString: string): unknown;
   function encodeRuntimeConfig(rtimeConfig: unknown): string;
-  function addHtmlAttributeHook(hook: Function): void;
+  function addHtmlAttributeHook(hook: (request: http.IncomingMessage) => Record<string, unknown> | null): void;
 }
 
 export declare namespace WebAppInternals {
