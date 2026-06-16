@@ -293,7 +293,18 @@ export function configureMeteorForRspack() {
         ].includes(file),
     ),
   ];
-  const filesToIgnore = [...rootFilesToIgnore, ...extraFilesToIgnore];
+  const rspackOutputFilesToIgnore =
+    isMeteorAppDevelopment() && isMeteorAppRun() && !isMeteorAppNative()
+      ? [
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js`,
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js.map`,
+        ]
+      : [];
+  const filesToIgnore = [
+    ...rootFilesToIgnore,
+    ...extraFilesToIgnore,
+    ...rspackOutputFilesToIgnore,
+  ];
   const unignoredFilesAndFolders = buildUnignorePatterns(
     meteorAppConfig?.modules || [],
     { skipLevel: 1 },
