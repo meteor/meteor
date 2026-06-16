@@ -1051,9 +1051,14 @@ MongoConnection.prototype._observeChanges = async function (
               if (!hasMinVersion) {
                 serverReasons.push(`Change Streams feature require MongoDB 6+ (current ${versionString})`);
               } else {
-                // Check if we're running on a replica set or sharded cluster
+                // Check if we're running on a replica set or sharded cluster.
+                // `isMaster.ismaster` is true on a standalone too (it only means
+                // the node accepts writes), so it is NOT a replica-set signal:
+                // including it made standalone deployments select Change Streams
+                // and then fail at watch() with "$changeStream is only supported
+                // on replica sets". `setName` is the replica-set signal.
                 const isMaster = await isMasterPromise;
-                const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
+                const isReplicaSet = Boolean(isMaster.setName || isMaster.secondary);
                 const isSharded = isMaster.msg === 'isdbgrid';
 
                 if (!(isReplicaSet || isSharded)) {
