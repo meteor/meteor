@@ -1,0 +1,87 @@
+name: Native mobile smoke tests
+
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  pull_request:
+    types: [labeled]
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Install root deps
+        run: npm ci
+      - name: Install native-tests deps
+        run: npm run install:native
+      - name: Run smoke flow on Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          force-avd-creation: false
+          emulator-options: -no-window -no-audio -gpu swiftshader_indirect
+          script: npm run test:native -- --platform=android
+      - name: Upload JUnit and device logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-android-${{ github.run_id }}
+          path: tools/native-tests/junit/
+
+  ios:
+    if: github.event_name == 'schedule' || github.event.label.name == 'mobile'
+    runs-on: macos-14
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Install Maestro
+        run: |
+          curl -fsSL "https://get.maestro.mobile.dev" | bash
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Install root deps
+        run: npm ci
+      - name: Install native-tests deps
+        run: npm run install:native
+      - name: Pre-boot iOS Simulator
+        run: |
+          xcrun simctl boot "iPhone 15" || true
+          xcrun simctl bootstatus "iPhone 15" -b
+      - name: Run smoke flow on iOS Simulator
+        run: npm run test:native -- --platform=ios
+      - name: Upload JUnit and device logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-ios-${{ github.run_id }}
+          path: tools/native-tests/junit/

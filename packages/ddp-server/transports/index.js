@@ -37,7 +37,7 @@ export function getTransport() {
 
 function resolveTransportName() {
   // 1. Meteor settings
-  var settings = __meteor_runtime_config__?.meteorSettings?.packages?.['ddp-server'];
+  var settings = Meteor.settings?.packages?.['ddp-server'];
   if (settings && settings.transport) {
     return settings.transport;
   }
