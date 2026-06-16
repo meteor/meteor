@@ -2,7 +2,7 @@
 
 Package.describe({
   summary: "Core Meteor environment",
-  version: '2.2.1-beta350.8',
+  version: '2.3.1-rc350.1',
 });
 
 Package.registerBuildPlugin({
@@ -54,6 +54,8 @@ Package.onUse(function (api) {
   // in this case server must load first.
   api.addFiles('url_server.js', 'server');
   api.addFiles('url_common.js', ['client', 'server']);
+
+  api.addFiles('fetch.js', ['client', 'server']);
 
   // People expect process.exit() to not swallow console output.
   // On Windows, it sometimes does, so we fix it for all apps and packages
