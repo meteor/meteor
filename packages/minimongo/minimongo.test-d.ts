@@ -18,8 +18,8 @@ expectTypeOf<MinimongoObserveChangesCallbacks>().toBeObject();
 expectTypeOf<MinimongoObserveHandle>().toBeObject();
 expectTypeOf<MinimongoFindOptions>().toBeObject();
 
-expectTypeOf(Cursor).toBeFunction();
-expectTypeOf(LocalCollection).toBeFunction();
-expectTypeOf(Matcher).toBeFunction();
-expectTypeOf(Sorter).toBeFunction();
+expectTypeOf(Cursor).toBeObject();
+expectTypeOf(LocalCollection).toBeObject();
+expectTypeOf(Matcher).toBeObject();
+expectTypeOf(Sorter).toBeObject();
 expectTypeOf(Minimongo).toBeObject();
