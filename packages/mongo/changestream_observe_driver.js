@@ -5,7 +5,7 @@ import { MongoID } from 'meteor/mongo-id';
 import { DDPServer } from 'meteor/ddp-server';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
-import { replaceTypes, replaceMongoAtomWithMeteor } from './mongo_common';
+import { replaceTypes, replaceMongoAtomWithMeteor, replaceMeteorAtomWithMongo } from './mongo_common';
 import { compareOperationTimes } from './mongo_common';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
@@ -216,7 +216,10 @@ export class ChangeStreamObserveDriver {
 
     try {
       // Build the same selector and options that the cursor would use
-      const selector = this._cursorDescription.selector || {};
+      const selector = replaceTypes(
+        this._cursorDescription.selector || {},
+        replaceMeteorAtomWithMongo
+      );
       const options = { ...this._cursorDescription.options };
 
       // Find all existing documents
@@ -279,11 +282,17 @@ export class ChangeStreamObserveDriver {
   async _handleChange(change) {
     if (this._stopped) return;
 
-    const { operationType, documentKey, fullDocument, fullDocumentBeforeChange, clusterTime } = change;
+    const { operationType, documentKey, clusterTime } = change;
 
     if (!SUPPORTED_OPERATIONS.includes(operationType)) {
       return; // Ignore unsupported operations
     }
+
+    const fullDocument = replaceTypes(change.fullDocument, replaceMongoAtomWithMeteor);
+    const fullDocumentBeforeChange = replaceTypes(
+      change.fullDocumentBeforeChange,
+      replaceMongoAtomWithMeteor
+    );
 
     let id = documentKey._id;
     if (typeof documentKey._id?.toHexString === 'function') {
