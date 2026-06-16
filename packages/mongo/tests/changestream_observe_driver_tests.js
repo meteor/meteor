@@ -2728,3 +2728,111 @@ Tinytest.addAsync(
     handle.stop();
   }
 );
+
+// ============================================================================
+// TRANSLATION BOUNDARY TESTS
+//
+// The driver translates native BSON <-> Meteor types exactly once per path:
+// the selector is translated to native types for the snapshot query, and
+// documents are translated back to Meteor types at two boundaries
+// (_sendInitialAdds for the snapshot, _handleChange for live events) before
+// they reach the projection, the matcher or the multiplexer. These tests guard
+// that boundary for special-typed *field values* (not just the _id), on every
+// path a document can take to the client: initial snapshot, live insert and
+// live changed. They fail if any boundary forwards a raw BSON atom.
+// ============================================================================
+
+Tinytest.addAsync(
+  'changestream - translation boundary: ObjectID/Binary fields survive the initial snapshot',
+  async function (test) {
+    const c = new Mongo.Collection('changestream_test_fieldtypes_snap_' + Random.id());
+
+    const ref = new Mongo.ObjectID();
+    const blob = EJSON.newBinary(3);
+    blob[0] = 10; blob[1] = 20; blob[2] = 30;
+
+    await c.insertAsync({ ref, blob, n: 1 });
+
+    const added = [];
+    const handle = await c.find({}).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => added.length > 0);
+    test.equal(added.length, 1, 'initial added should fire');
+
+    const f = added[0].fields;
+    test.isTrue(
+      f.ref instanceof Mongo.ObjectID,
+      'snapshot must deliver an ObjectID field as Mongo.ObjectID, not a native BSON atom'
+    );
+    test.equal(f.ref.toHexString(), ref.toHexString());
+    test.isTrue(EJSON.isBinary(f.blob), 'snapshot must deliver a Binary field as a Meteor binary');
+    test.isTrue(EJSON.equals(f.blob, blob), 'Binary field bytes should round-trip');
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - translation boundary: ObjectID field survives a live insert',
+  async function (test) {
+    const c = new Mongo.Collection('changestream_test_fieldtypes_ins_' + Random.id());
+
+    const added = [];
+    const handle = await c.find({}).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    const ref = new Mongo.ObjectID();
+    await c.insertAsync({ ref, n: 1 });
+
+    await waitFor(() => added.length > 0);
+    test.equal(added.length, 1, 'live insert should fire added');
+    const f = added[0].fields;
+    test.isTrue(
+      f.ref instanceof Mongo.ObjectID,
+      'live insert must deliver an ObjectID field as Mongo.ObjectID, not a native BSON atom'
+    );
+    test.equal(f.ref.toHexString(), ref.toHexString());
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - translation boundary: ObjectID field survives a live changed (diff path)',
+  async function (test) {
+    const c = new Mongo.Collection('changestream_test_fieldtypes_upd_' + Random.id());
+
+    const ref1 = new Mongo.ObjectID();
+    const id = await c.insertAsync({ ref: ref1, n: 1 });
+
+    const events = [];
+    const handle = await c.find({}).observeChanges({
+      added(docId, fields) { events.push({ type: 'added', fields }); },
+      changed(docId, fields) { events.push({ type: 'changed', fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => events.length > 0);
+    test.equal(events[0].type, 'added', 'initial added for the pre-existing doc');
+    events.length = 0;
+
+    const ref2 = new Mongo.ObjectID();
+    await c.updateAsync(id, { $set: { ref: ref2 } });
+
+    await waitFor(() => events.length > 0);
+    test.equal(events[0].type, 'changed', 'update should emit changed');
+    const f = events[0].fields;
+    test.isTrue(
+      f.ref instanceof Mongo.ObjectID,
+      'live changed must deliver an ObjectID field as Mongo.ObjectID, not a native BSON atom'
+    );
+    test.equal(f.ref.toHexString(), ref2.toHexString(), 'changed should carry the new ObjectID value');
+
+    handle.stop();
+  }
+);
