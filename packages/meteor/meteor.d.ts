@@ -27,7 +27,7 @@ export namespace Meteor {
     errorType: string;
   }
 
-  function makeErrorType(name: string, constructor: (this: Error, message: string, reason?: string) => void): ErrorConstructor;
+  function makeErrorType(name: string, constructor: (this: any, ...args: any[]) => void): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
@@ -63,14 +63,14 @@ export namespace Meteor {
     emails?: UserEmail[] | undefined;
     createdAt?: Date | undefined;
     profile?: UserProfile;
-    services?: Record<string, Record<string, unknown>>;
+    services?: Record<string, unknown>;
   }
 
   function user(options?: {
-    fields?: Record<string, number> | undefined;
+    fields?: Mongo.FieldSpecifier | undefined;
   }): User | null;
   function userAsync(options?: {
-    fields?: Record<string, number> | undefined;
+    fields?: Mongo.FieldSpecifier | undefined;
   }): Promise<Meteor.User | null>;
 
   function userId(): string | null;
@@ -154,7 +154,8 @@ export namespace Meteor {
    * @param methods Dictionary whose keys are method names and values are functions.
    */
   function methods(methods: {
-    [key: string]: (this: MethodThisType, ...args: EJSONableProperty[]) => EJSONableProperty | void | Promise<EJSONableProperty | void>;
+    [key: string]: (this: MethodThisType, ...args: (EJSONable | EJSONableProperty)[]) =>
+      EJSONable | EJSONableProperty | void | Promise<EJSONable | EJSONableProperty | void>;
   }): void;
 
   /**
@@ -332,7 +333,7 @@ export namespace Meteor {
    * @param func The function to wrap
    * @param options An object with an `on` property that is an array of environment names: `"development"`, `"production"`, and/or `"test"`.
    */
-  function deferrable<T extends (...args: unknown[]) => unknown>(
+  function deferrable<T extends (...args: any[]) => any>(
     func: T,
     options: { on: Array<"development" | "production" | "test"> }
   ): T | void;
@@ -341,13 +342,13 @@ export namespace Meteor {
    * Wrap a function so that it only runs in development environment.
    * @param func The function to wrap
    */
-  function deferDev<T extends (...args: unknown[]) => unknown>(func: T): T | void;
+  function deferDev<T extends (...args: any[]) => any>(func: T): T | void;
 
   /**
    * Wrap a function so that it only runs in production environment.
    * @param func The function to wrap
    */
-  function deferProd<T extends (...args: unknown[]) => unknown>(func: T): T | void;
+  function deferProd<T extends (...args: any[]) => any>(func: T): T | void;
   /** Timeout **/
 
   /** utils **/
@@ -367,12 +368,12 @@ export namespace Meteor {
    * @param func A function that takes a callback as its final parameter
    * @param context Optional `this` object against which the original function will be invoked
    */
-  function wrapAsync<TFunc extends (...args: unknown[]) => unknown>(
+  function wrapAsync<TFunc extends (...args: any[]) => any>(
     func: TFunc,
     context?: ThisParameterType<TFunc>
-  ): (...args: unknown[]) => unknown;
+  ): (...args: any[]) => any;
 
-  function bindEnvironment<TFunc extends (...args: unknown[]) => unknown>(func: TFunc): TFunc;
+  function bindEnvironment<TFunc extends (...args: any[]) => any>(func: TFunc): TFunc;
 
   class EnvironmentVariable<T> {
     readonly slot: number;
@@ -542,7 +543,7 @@ export namespace Meteor {
     name: string | null,
     func: (
       this: Subscription,
-      ...args: EJSONableProperty[]
+      ...args: (EJSONable | EJSONableProperty)[]
     ) =>
       | void
       | Mongo.Cursor<unknown>

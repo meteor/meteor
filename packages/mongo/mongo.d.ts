@@ -13,7 +13,7 @@ export namespace Mongo {
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
-  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: string | NpmModuleMongodb.ObjectId };
+  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: string | ObjectID | NpmModuleMongodb.ObjectId };
 
   export type SortSpecifier = NpmModuleMongodb.Sort;
 
@@ -46,7 +46,7 @@ export namespace Mongo {
   };
 
   type DispatchTransform<TransformFn, T, U> = TransformFn extends (
-    ...args: unknown[]
+    ...args: any[]
   ) => infer R
     ? R
     : TransformFn extends null
@@ -135,13 +135,13 @@ export namespace Mongo {
      * @param name The name of the static method to add
      * @param method The static method function
      */
-    addStaticMethod(name: string, method: (...args: unknown[]) => unknown): void;
+    addStaticMethod(name: string, method: Function): void;
 
     /**
      * Remove a constructor extension (useful for testing).
      * @param extension The extension function to remove
      */
-    removeExtension(extension: (...args: unknown[]) => unknown): void;
+    removeExtension(extension: Function): void;
 
     /**
      * Remove a prototype method from all collection instances.
@@ -164,19 +164,19 @@ export namespace Mongo {
      * Get all registered constructor extensions (useful for debugging).
      * @returns Array of registered extension functions
      */
-    getExtensions(): Array<(...args: unknown[]) => unknown>;
+    getExtensions(): Array<Function>;
 
     /**
      * Get all registered prototype methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getPrototypeMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getPrototypeMethods(): Map<string, Function>;
 
     /**
      * Get all registered static methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getStaticMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getStaticMethods(): Map<string, Function>;
   }
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T, U> = undefined>(options: {
@@ -297,13 +297,13 @@ export namespace Mongo {
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insert(doc: OptionalId<T>, callback?: (error: Error | null, _id?: string) => void): string;
+    insert(doc: OptionalId<T>, callback?: Function): string;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insertAsync(doc: OptionalId<T>, callback?: (error: Error | null, _id?: string) => void): Promise<string>;
+    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<string>;
     /**
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
@@ -356,7 +356,7 @@ export namespace Mongo {
          */
         arrayFilters?: NpmModuleMongodb.Document[] | undefined;
       },
-      callback?: (error: Error | null, result?: number) => void
+      callback?: Function
     ): number;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
@@ -378,7 +378,7 @@ export namespace Mongo {
          */
         arrayFilters?: NpmModuleMongodb.Document[] | undefined;
       },
-      callback?: (error: Error | null, result?: number) => void
+      callback?: Function
     ): Promise<number>;
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
@@ -396,7 +396,7 @@ export namespace Mongo {
         /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
         multi?: boolean | undefined;
       },
-      callback?: (error: Error | null, result?: { numberAffected?: number; insertedId?: string }) => void
+      callback?: Function
     ): {
       numberAffected?: number | undefined;
       insertedId?: string | undefined;
@@ -415,7 +415,7 @@ export namespace Mongo {
         /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
         multi?: boolean | undefined;
       },
-      callback?: (error: Error | null, result?: { numberAffected?: number; insertedId?: string }) => void
+      callback?: Function
     ): Promise<{
       numberAffected?: number | undefined;
       insertedId?: string | undefined;
@@ -586,13 +586,13 @@ export namespace Mongo {
      * @param name The name of the static method to add
      * @param method The static method function
      */
-    addStaticMethod(name: string, method: (...args: unknown[]) => unknown): void;
+    addStaticMethod(name: string, method: Function): void;
 
     /**
      * Remove a constructor extension (useful for testing).
      * @param extension The extension function to remove
      */
-    removeExtension(extension: (...args: unknown[]) => unknown): void;
+    removeExtension(extension: Function): void;
 
     /**
      * Remove a prototype method from all collection instances.
@@ -615,19 +615,19 @@ export namespace Mongo {
      * Get all registered constructor extensions (useful for debugging).
      * @returns Array of registered extension functions
      */
-    getExtensions(): Array<(...args: unknown[]) => unknown>;
+    getExtensions(): Array<Function>;
 
     /**
      * Get all registered prototype methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getPrototypeMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getPrototypeMethods(): Map<string, Function>;
 
     /**
      * Get all registered static methods (useful for debugging).
      * @returns Map of method names to functions
      */
-    getStaticMethods(): Map<string, (...args: unknown[]) => unknown>;
+    getStaticMethods(): Map<string, Function>;
   }
 
   var CollectionExtensions: CollectionExtensions;
