@@ -13,6 +13,11 @@ const path = require('path');
 // Normalize a path to always use forward slashes (POSIX style).
 // Module identifiers in bundled JS must use '/' regardless of OS.
 const toPosix = (p) => p.replace(/\\/g, '/');
+const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const buildStandaloneRequireRegex = (pkg) =>
+  new RegExp(`^\\s*require\\('${escapeRegExp(pkg)}'\\);?.*(\\r?\\n)?`, 'gm');
+const STANDALONE_REQUIRE_REGEX = /^\s*require\('([^']+)'\)/gm;
+const STANDALONE_IMPORT_REGEX = /^\s*import\s+'([^']+)'/gm;
 
 class RequireExternalsPlugin {
   constructor({
@@ -180,7 +185,7 @@ class RequireExternalsPlugin {
 
         // Strip stale require(...) lines
         for (const pkg of toRemove) {
-          const re = new RegExp(`^.*require\\('${pkg}'\\);?.*(\\r?\\n)?`, 'gm');
+          const re = buildStandaloneRequireRegex(pkg);
           content = content.replace(re, '');
         }
 
@@ -206,11 +211,11 @@ class RequireExternalsPlugin {
         // Re-populate `existing` so the add-diff is accurate
         existing.clear();
         // Check for require statements
-        for (const match of content.matchAll(/require\('([^']+)'\)/g)) {
+        for (const match of content.matchAll(STANDALONE_REQUIRE_REGEX)) {
           existing.add(match[1]);
         }
         // Also check for import statements (used in the new format)
-        for (const match of content.matchAll(/import\s+'([^']+)'/g)) {
+        for (const match of content.matchAll(STANDALONE_IMPORT_REGEX)) {
           existing.add(match[1]);
         }
       }
@@ -481,15 +486,13 @@ class RequireExternalsPlugin {
     try {
       const content = fs.readFileSync(this.filePath, 'utf-8');
       // Check for require statements
-      const requireRegex = /require\('([^']+)'\)/g;
       let match;
-      while ((match = requireRegex.exec(content)) !== null) {
+      while ((match = STANDALONE_REQUIRE_REGEX.exec(content)) !== null) {
         existing.add(match[1]);
       }
 
       // Also check for import statements (used in the new format)
-      const importRegex = /import\s+'([^']+)'/g;
-      while ((match = importRegex.exec(content)) !== null) {
+      while ((match = STANDALONE_IMPORT_REGEX.exec(content)) !== null) {
         existing.add(match[1]);
       }
     } catch {
