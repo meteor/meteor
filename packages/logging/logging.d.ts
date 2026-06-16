@@ -28,9 +28,9 @@ export declare namespace Log {
   function _intercept(count: number): void;
   function _suppress(count: number): void;
   function _intercepted(): string[];
-  function _getCallerDetails(): { line: number; file: string };
-  function parse(line: Record<string, unknown> | string): Record<string, unknown>;
-  function format(object: formatInput, options: { color: true }): Record<string, unknown> | string;
+  function _getCallerDetails(): { line?: string; file?: string };
+  function parse(line: Record<string, unknown> | string): Record<string, unknown> | null;
+  function format(object: formatInput, options?: { color?: boolean; metaColor?: string }): string;
   function objFromText(
     line: string,
     override: Record<string, unknown>

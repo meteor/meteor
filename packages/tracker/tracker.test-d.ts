@@ -41,7 +41,7 @@ expectTypeOf(Tracker.onInvalidate).returns.toBeVoid();
 
 // Computation interface
 expectTypeOf<Tracker.Computation>().toHaveProperty("firstRun").toBeBoolean();
-expectTypeOf<Tracker.Computation>().toHaveProperty("firstRunPromise").toEqualTypeOf<Promise<unknown>>();
+expectTypeOf<Tracker.Computation>().toHaveProperty("firstRunPromise").toEqualTypeOf<Promise<unknown> | undefined>();
 expectTypeOf<Tracker.Computation>().toHaveProperty("invalidated").toBeBoolean();
 expectTypeOf<Tracker.Computation>().toHaveProperty("stopped").toBeBoolean();
 expectTypeOf<Tracker.Computation["invalidate"]>().toEqualTypeOf<() => void>();

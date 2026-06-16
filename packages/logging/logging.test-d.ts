@@ -28,20 +28,18 @@ expectTypeOf(Log._suppress).parameters.toEqualTypeOf<[number]>();
 expectTypeOf(Log._suppress).returns.toBeVoid();
 expectTypeOf(Log._intercepted).returns.toEqualTypeOf<string[]>();
 expectTypeOf(Log._getCallerDetails).returns.toEqualTypeOf<{
-  line: number;
-  file: string;
+  line?: string;
+  file?: string;
 }>();
 
 // parse / format / objFromText
 expectTypeOf(Log.parse).parameters.toEqualTypeOf<
   [Record<string, unknown> | string]
 >();
-expectTypeOf(Log.parse).returns.toEqualTypeOf<Record<string, unknown>>();
+expectTypeOf(Log.parse).returns.toEqualTypeOf<Record<string, unknown> | null>();
 
-expectTypeOf(Log.format).parameter(1).toEqualTypeOf<{ color: true }>();
-expectTypeOf(Log.format).returns.toEqualTypeOf<
-  Record<string, unknown> | string
->();
+expectTypeOf(Log.format).parameter(1).toEqualTypeOf<{ color?: boolean; metaColor?: string } | undefined>();
+expectTypeOf(Log.format).returns.toBeString();
 
 expectTypeOf(Log.objFromText).parameters.toEqualTypeOf<
   [string, Record<string, unknown>]

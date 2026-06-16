@@ -158,11 +158,11 @@ export namespace Accounts {
 
   function logout(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): Promise<void>;
+  ): void;
 
   function logoutOtherClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): Promise<void>;
+  ): void;
 
   type PasswordSignupField = 'USERNAME_AND_EMAIL' | 'USERNAME_AND_OPTIONAL_EMAIL' | 'USERNAME_ONLY' | 'EMAIL_ONLY';
   type PasswordlessSignupField = 'USERNAME_AND_EMAIL' | 'EMAIL_ONLY';
@@ -406,6 +406,6 @@ export namespace Accounts {
     userId: string,
     token: HashedStampedLoginToken,
     query?: Mongo.Selector<T> | Mongo.ObjectID | string
-  ): void;
+  ): Promise<void>;
   function _hashLoginToken(token: string): string;
 }
