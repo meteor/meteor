@@ -607,7 +607,10 @@ import '../../${config?.entryFile}';`;
       })}`;
 
       return `/* Load the server Rspack bundle with Node at runtime so Meteor does not link it */
-Npm.require('module').createRequire(Npm.require('path').resolve(__meteor_bootstrap__.serverDir, '..', '..', '..', '..', '..', ${JSON.stringify(serverBundlePath)}))(Npm.require('path').resolve(__meteor_bootstrap__.serverDir, '..', '..', '..', '..', '..', ${JSON.stringify(serverBundlePath)}));
+const __rspackServerBundlePath = Npm.require('path').resolve(__meteor_bootstrap__.serverDir, '..', '..', '..', '..', '..', ${JSON.stringify(serverBundlePath)});
+const __rspackServerRequire = Npm.require('module').createRequire(__rspackServerBundlePath);
+delete __rspackServerRequire.cache[__rspackServerBundlePath];
+__rspackServerRequire(__rspackServerBundlePath);
 /* rspack-server-build-id:initial */`;
     }
 
