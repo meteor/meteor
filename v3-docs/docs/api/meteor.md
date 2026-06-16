@@ -113,6 +113,8 @@ Meteor.startup(async () => {
 });
 ```
 
+:::
+
 <ApiBox name="Meteor.deferProd" hasCustomExample />
 
 This helper function allows you to defer the execution of a function only in production environments.
@@ -136,6 +138,8 @@ Meteor.startup(async () => {
   }
 });
 ```
+
+:::
 
 <ApiBox name="Meteor.absoluteUrl" />
 <ApiBox name="Meteor.settings" />
@@ -438,22 +442,22 @@ then `error` will be the exception object. Otherwise, `error` will be
 Meteor.call('foo', 1, 2, (error, result) => { ... });
 ```
 
-If you do not pass a callback on the server, the method invocation will
-block until the method is complete. It will eventually return the
-return value of the method, or it will throw an exception if the method
-threw an exception. (Possibly mapped to 500 Server Error if the
-exception happened remotely and it was not a `Meteor.Error` exception.)
+On the server, if you do not pass a callback, `Meteor.call` returns a
+`Promise` — it does not block. `await` it to get the method's return
+value (the promise rejects if the method threw, possibly mapped to a
+500 Server Error if the exception happened remotely and was not a
+`Meteor.Error`). Prefer [`Meteor.callAsync`](#Meteor-callAsync):
 
 ```js
-// Synchronous call
-const result = Meteor.call("foo", 1, 2);
+// On the server, await the returned promise
+const result = await Meteor.call("foo", 1, 2);
 ```
 
 On the client, if you do not pass a callback and you are not inside a
-stub, `call` will return `undefined`, and you will have no way to get
-the return value of the method. That is because the client doesn't have
-fibers, so there is not actually any way it can block on the remote
-execution of a method.
+stub, `call` returns `undefined`, and you have no way to get the return
+value of the method — there is no way to block on the remote execution
+of a method in the browser. Use [`Meteor.callAsync`](#Meteor-callAsync),
+or pass a callback, to get the result.
 
 Finally, if you are inside a stub on the client and call another
 method, the other method is not executed (no RPC is generated, nothing
@@ -480,7 +484,7 @@ Use `Meteor.call` only to call methods that do not have a stub, or have a sync s
 
 <ApiBox name="Meteor.callAsync" />
 
-`Meteor.callAsync` is just like `Meteor.call`, except that it'll return a promise that you need to solve to get the server result. Along with the promise returned by `callAsync`, you can also handle `stubPromise` and `serverPromise` for managing client-side simulation and server response.
+`Meteor.callAsync` is just like `Meteor.call`, except that it returns a `Promise` that resolves to the server result. That returned promise also carries two extra properties — `stubPromise` and `serverPromise` — so you can handle the client-side simulation and the server response separately.
 
 The following sections guide you in understanding these promises and how to manage them effectively.
 
@@ -491,7 +495,7 @@ try {
   await Meteor.callAsync("greetUser", "John");
   // 🟢 Server ended with success
 } catch (e) {
-  console.error("Error:", error.reason); // 🔴 Server ended with error
+  console.error("Error:", e.reason); // 🔴 Server ended with error
 }
 
 Greetings.findOne({ name: "John" }); // 🗑️ Data is NOT available
@@ -520,7 +524,7 @@ try {
   await serverPromise;
   // 🟢 Server ended with success
 } catch (e) {
-  console.error("Error:", error.reason); // 🔴 Server ended with error
+  console.error("Error:", e.reason); // 🔴 Server ended with error
 }
 
 Greetings.findOne({ name: "John" }); // 🗑️ Data is NOT available
@@ -593,7 +597,7 @@ Meteor.publish("rooms", function () {
   return Rooms.find(
     {},
     {
-      fields: { secretInfo: 0 },
+      projection: { secretInfo: 0 },
     }
   );
 });
@@ -607,7 +611,7 @@ Meteor.publish("adminSecretInfo", function () {
   return Rooms.find(
     { admin: this.userId },
     {
-      fields: { secretInfo: 1 },
+      projection: { secretInfo: 1 },
     }
   );
 });
@@ -620,7 +624,7 @@ Meteor.publish("roomAndMessages", function (roomId) {
     Rooms.find(
       { _id: roomId },
       {
-        fields: { secretInfo: 0 },
+        projection: { secretInfo: 0 },
       }
     ),
     Messages.find({ roomId }),
@@ -664,7 +668,7 @@ Meteor.publish("countsByRoom", function (roomId) {
   // `observeChanges` only returns after the initial `added` callbacks have run.
   // Until then, we don't want to send a lot of `changed` messages—hence
   // tracking the `initializing` state.
-  const handle = Messages.find({ roomId }).observeChanges({
+  const handle = SecretData.find({ roomId }).observeChanges({
     added: (id) => {
       count += 1;
 
@@ -723,6 +727,8 @@ Tracker.autorun(() => {
 const roomCount = Counts.findOne(Session.get("roomId")).count;
 console.log(`Current room has ${roomCount} messages.`);
 ```
+
+:::
 
 ::: warning
 
@@ -922,9 +928,9 @@ Status object has the following fields:
   to connect and waiting to try to reconnect) and `offline` (user has disconnected the connection).
 - `retryCount` - _*Number*_: The number of times the client has tried to reconnect since the
   connection was lost. 0 when connected.
-- `retryTime` - _*Number or undefined*_: The estimated time of the next reconnection attempt. To turn this
-  into an interval until the next reconnection, This key will be set only when `status` is `waiting`.
-  You canuse this snippet:
+- `retryTime` - _*Number or undefined*_: The estimated time of the next reconnection attempt. This key is
+  set only when `status` is `waiting`. To turn it into an interval until the next reconnection, you can
+  use this snippet:
   ```js
   retryTime - new Date().getTime();
   ```
@@ -1012,7 +1018,7 @@ contains the following fields:
 import { DDP } from "meteor/ddp-client";
 import { Mongo } from "meteor/mongo";
 import { Meteor } from "meteor/meteor";
-const options = {...};
+const options = { /* ... */ };
 
 const otherServer = DDP.connect("http://example.com", options);
 
@@ -1020,7 +1026,7 @@ otherServer.call("foo.from.other.server", 1, 2, function (err, result) {
   // ...
 });
 
-Metepr.call("foo.from.this.server", 1, 2, function (err, result) {
+Meteor.call("foo.from.this.server", 1, 2, function (err, result) {
   // ...
 });
 const remoteColl = new Mongo.Collection("collectionName", { connection: otherServer });
@@ -1061,16 +1067,15 @@ server.
 
 ## Timers { #timers }
 
-Meteor uses global environment variables
-to keep track of things like the current request's user. To make sure
-these variables have the right values, you need to use
-`Meteor.setTimeout` instead of `setTimeout` and `Meteor.setInterval`
-instead of `setInterval`.
+Meteor maintains contextual values — such as the current request's
+[user](#Meteor-userId) — across asynchronous boundaries using
+[AsyncLocalStorage](#envs). To keep that context available inside a
+timer callback, use `Meteor.setTimeout` instead of `setTimeout` and
+`Meteor.setInterval` instead of `setInterval`.
 
-These functions work just like their native JavaScript equivalents.
-If you call the native function, you'll get an error stating that Meteor
-code must always run within a Fiber, and advising to use
-`Meteor.bindEnvironment`.
+These functions work just like their native JavaScript equivalents. You
+can also preserve Meteor's context in any callback by wrapping it with
+[`Meteor.bindEnvironment`](#Meteor-bindEnvironment).
 
 <ApiBox name="Meteor.setTimeout" />
 
@@ -1083,7 +1088,7 @@ Returns a handle that can be used by `Meteor.clearInterval`.
 <ApiBox name="Meteor.clearTimeout" />
 <ApiBox name="Meteor.clearInterval" />
 
-## Enviroment variables {#envs}
+## Environment variables {#envs}
 
 Meteor implements `Meteor.EnvironmentVariable` with AsyncLocalStorage, which allows for maintaining context across asynchronous boundaries. `Meteor.EnvironmentVariable` works with `Meteor.bindEnvironment`, promises, and many other Meteor API's to preserve the context in async code. Some examples of how it is used in Meteor are to store the current user in methods, and record which arguments have been checked when using `audit-argument-checks`.
 

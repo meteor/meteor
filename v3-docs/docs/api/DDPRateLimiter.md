@@ -27,23 +27,37 @@ buckets are reset. Buckets are regularly reset after the end of a time
 interval.
 
 
-Here's example of defining a rule and adding it into the `DDPRateLimiter`:
+Here's an example of defining a rule and adding it into the `DDPRateLimiter`:
 ```js
-// Define a rule that matches login attempts by non-admin users.
-const loginRule = {
-  userId(userId) {
-    const user = Meteor.users.findOne(userId);
-    return user && user.type !== 'admin';
-  },
-
+// Rate-limit `login` attempts *before* users are authenticated, scoped per
+// client IP. Matchers run synchronously (see the note below), so they may only
+// read values already on the invocation — never the database.
+const loginRateLimit = {
   type: 'method',
-  name: 'login'
+  name: 'login',
+  // A function matcher must return `true` for the rule to apply. Including
+  // `clientAddress` also scopes the rate-limit bucket per IP address.
+  clientAddress() {
+    return true;
+  },
 };
 
-// Add the rule, allowing up to 5 messages every 1000 milliseconds.
-DDPRateLimiter.addRule(loginRule, 5, 1000);
+// Allow at most 5 login attempts every 10 seconds, per IP address.
+DDPRateLimiter.addRule(loginRateLimit, 5, 10000);
 
 ```
+
+::: warning
+Rule matchers run **synchronously**, and their return value is not awaited. In
+Meteor 3 you therefore cannot read from the database inside a matcher: the
+synchronous `findOne` throws on the server, and switching to `findOneAsync` /
+`await` does not help. Match only on values already on the invocation:
+`type`, `name`, `userId`, `connectionId`, `clientAddress`.
+
+If a rule's logic depends on something like a user's role, perform that check
+**inside the method itself** (where you can `await` a database read) — not in
+the matcher.
+:::
 
 <ApiBox name="DDPRateLimiter.removeRule" />
 <ApiBox name="DDPRateLimiter.setErrorMessage" />
@@ -57,10 +71,12 @@ default English error message.
 
 Here is an example with a custom error message:
 ```js
+// Rate-limit a sensitive method called by authenticated users, scoped per user.
 const setupGoogleAuthenticatorRule = {
+  // Apply only to logged-in users; `userId` also scopes the bucket per user.
+  // (Matchers are synchronous — no database reads.)
   userId(userId) {
-    const user = Meteor.users.findOne(userId);
-    return user;
+    return userId != null;
   },
   type: 'method',
   name: 'Users.setupGoogleAuthenticator',
