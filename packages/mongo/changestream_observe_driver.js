@@ -35,12 +35,18 @@ export class ChangeStreamObserveDriver {
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
 
-    // Projection function similar to oplog driver
+    // Projection function similar to oplog driver.
+    //
+    // `doc` is expected to already be Meteor-typed: native BSON is translated
+    // to Meteor types once at each path boundary (_sendInitialAdds for the
+    // snapshot, _handleChange for live change events) before any doc reaches
+    // the projection, the matcher or the multiplexer. Translating here as well
+    // would just re-walk an already-converted document.
     const projection = this._cursorDescription.options.projection || this._cursorDescription.options.fields;
     if (projection) {
       const baseProjectionFn = LocalCollection._compileProjection(projection);
       this._projectionFn = (doc) => {
-        const projected = baseProjectionFn(replaceTypes(doc, replaceMongoAtomWithMeteor));
+        const projected = baseProjectionFn(doc);
         if (projected && typeof projected === 'object') {
           const { _id, ...fields } = projected;
           return fields;
@@ -49,7 +55,7 @@ export class ChangeStreamObserveDriver {
       };
     } else {
       this._projectionFn = (doc) => {
-        const { _id, ...fields } = replaceTypes(doc, replaceMongoAtomWithMeteor);
+        const { _id, ...fields } = doc;
         return fields;
       };
     }
@@ -59,8 +65,8 @@ export class ChangeStreamObserveDriver {
   }
 
   _sendMultiplexerAdded(id, projectedDoc) {
-    // Apply EJSON transformation before sending to client
-    projectedDoc = replaceTypes(projectedDoc, replaceMongoAtomWithMeteor);
+    // projectedDoc is already Meteor-typed — its caller translated the source
+    // document at the path boundary (see the _projectionFn comment above).
     try {
       this._multiplexer.added(id, projectedDoc);
     } catch (error) {
@@ -233,8 +239,12 @@ export class ChangeStreamObserveDriver {
 
       // Send 'added' for each existing document that matches our matcher
       let docCount = 0;
-      for await (const doc of cursor) {
+      for await (const rawDoc of cursor) {
         if (this._stopped) return;
+        // The native driver yields BSON-typed docs. Translate once here so the
+        // projection and the multiplexer only ever see Meteor types — the same
+        // boundary _handleChange establishes for live change events.
+        const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
         const id = typeof doc._id !== 'string' ? new MongoID.ObjectID(doc._id.toHexString()) : doc._id;
         const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
         this._sendMultiplexerAdded(id, projectedDoc);
@@ -425,16 +435,16 @@ export class ChangeStreamObserveDriver {
           const changedFields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
 
           if (Object.keys(changedFields).length > 0) {
-            const transformedDoc = replaceTypes(changedFields, replaceMongoAtomWithMeteor);
-            this._multiplexer.changed(id, transformedDoc);
+            // changedFields is derived from already-translated docs via the
+            // projection, so it is already Meteor-typed.
+            this._multiplexer.changed(id, changedFields);
           }
           return;
         }
 
         // Without a pre-image we can't diff reliably; fall back to sending full doc
         const projectedDoc = this._projectionFn ? this._projectionFn(newDoc) : newDoc;
-        const transformedDoc = replaceTypes(projectedDoc, replaceMongoAtomWithMeteor);
-        this._multiplexer.changed(id, transformedDoc);
+        this._multiplexer.changed(id, projectedDoc);
       }
       return;
     }
