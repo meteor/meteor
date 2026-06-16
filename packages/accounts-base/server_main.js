@@ -1,4 +1,4 @@
-import { AccountsServer } from "./accounts_server.js";
+import { AccountsServer, _CurrentEndpointInvocation } from "./accounts_server.js";
 
 /**
  * @namespace Accounts
@@ -28,5 +28,6 @@ export {
   // accounts-base package, properties of non-entry-point modules need to
   // be re-exported in order to be accessible to modules that import the
   // accounts-base package.
-  AccountsServer
+  AccountsServer,
+  _CurrentEndpointInvocation,
 };

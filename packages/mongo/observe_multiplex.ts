@@ -149,7 +149,12 @@ export class ObserveMultiplexer {
   }
 
   async onFlush(cb: () => void): Promise<void> {
-    await this._queue.queueTask(async () => {
+    // Use runTask, not queueTask: queueTask returns void so `await` resolves
+    // immediately and the cb runs as fire-and-forget. Callers (e.g.
+    // ChangeStreamObserveDriver.onBeforeFire) rely on `await onFlush(...)`
+    // actually waiting for the cb to commit its write — without this, fences
+    // fire before queued commits run and we lose backpressure.
+    await this._queue.runTask(async () => {
       if (!this._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
