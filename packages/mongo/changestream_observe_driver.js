@@ -5,7 +5,7 @@ import { MongoID } from 'meteor/mongo-id';
 import { DDPServer } from 'meteor/ddp-server';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
-import { replaceTypes, replaceMongoAtomWithMeteor } from './mongo_common';
+import { replaceTypes, replaceMongoAtomWithMeteor, replaceMeteorAtomWithMongo } from './mongo_common';
 import { compareOperationTimes } from './mongo_common';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
@@ -23,7 +23,7 @@ export class ChangeStreamObserveDriver {
     this._cursorDescription = options.cursorDescription;
     this._mongoHandle = options.mongoHandle;
     this._multiplexer = options.multiplexer;
-    this._changeStream = null;
+    this._sharedStream = null;
     this._stopped = false;
     this._stopCallbacks = [];
     this._pendingWrites = [];
@@ -32,11 +32,6 @@ export class ChangeStreamObserveDriver {
     this._lastProcessedOperationTime = null;
     this._catchingUpResolvers = [];
     this._resolveTimeout = null;
-    // Tracked across restarts so we can resume the stream from where it left
-    // off instead of "now" — without this, events that arrived between an
-    // error/close and the restart are silently dropped, leaving fences waiting
-    // for clusterTimes that will never appear in the new stream.
-    this._resumeToken = null;
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
 
@@ -109,6 +104,18 @@ export class ChangeStreamObserveDriver {
             // return undefined here and miss the fence._csTargetTs annotation.
             await driver._waitUntilCaughtUp(fence);
 
+            // The driver may have been stopped while we were parked in
+            // _waitUntilCaughtUp (stop() drains the waiter so we don't hang —
+            // meteor/meteor#14452). Once stopped, neither branch below can be
+            // trusted to release this write: the multiplexer is being torn
+            // down, and a push to _writesToCommitWhenReady can race stop()'s
+            // own drain of that array and be lost. Commit directly so the
+            // fence still fires.
+            if (driver._stopped) {
+              await write.committed();
+              continue;
+            }
+
             // Process any pending writes immediately
             driver._flushPendingWrites();
 
@@ -152,132 +159,16 @@ export class ChangeStreamObserveDriver {
 
       const collection = this._mongoHandle.rawCollection(this._cursorDescription.collectionName);
 
-      // Capture the cluster time BEFORE opening the stream so we can pass
-      // startAtOperationTime to watch(). Without this, the change stream
-      // begins at whatever time mongo processes the aggregate $changeStream
-      // command — which under contention can be MILLISECONDS later than the
-      // call site, and any write that lands in that window is silently
-      // dropped from the stream. With startAtOperationTime set to a known
-      // earlier ts, mongo replays every event from that ts forward, closing
-      // the race. Skipped on resume (the prior token already pins the start).
-      let startAtOperationTime;
-      if (!this._resumeToken) {
-        try {
-          const pingRes = await this._mongoHandle.db.command({ ping: 1 });
-          startAtOperationTime = pingRes?.operationTime;
-        } catch (e) {
-          // Best-effort. If the ping fails the stream falls back to
-          // mongo's default of "now" — same as the pre-fix behaviour.
-        }
-      }
+      // Subscribe to the shared per-collection stream. addDriver() resolves once
+      // it's open; from then events dispatch here via _onChange and queue in
+      // _pendingWrites until ready, so writes during the snapshot below are
+      // captured and replayed (_handleInsert dedupes overlaps with the snapshot).
+      this._sharedStream = this._mongoHandle._acquireSharedChangeStream(
+        this._cursorDescription.collectionName
+      );
+      await this._sharedStream.addDriver(this);
 
-      // Open the change stream BEFORE the snapshot read. Events emitted while
-      // _sendInitialAdds is running are queued by the driver (in
-      // _pendingWrites) and replayed once the multiplexer is ready, with
-      // _handleInsert deduping against the cache for any doc the snapshot
-      // already covered.
-      const pipeline = this._buildPipeline();
-      const changeStreamOptions = {
-        fullDocument: 'updateLookup',
-        fullDocumentBeforeChange: 'whenAvailable',
-      };
-      if (this._resumeToken) {
-        // Resuming after an error/close restart: startAfter replays every
-        // event since the last token we saw, so events emitted while the
-        // stream was reconnecting are not silently dropped.
-        changeStreamOptions.startAfter = this._resumeToken;
-      } else if (startAtOperationTime) {
-        changeStreamOptions.startAtOperationTime = startAtOperationTime;
-      }
-
-      this._changeStream = collection.watch(pipeline, changeStreamOptions);
-
-      // Register stop callback for the change stream
-      this._stopCallbacks.push(async () => {
-        if (this._changeStream) {
-          try {
-            await this._changeStream.close();
-          } catch (error) {
-            // Ignore errors when closing
-          }
-          this._changeStream = null;
-        }
-      });
-
-      // Handle change events. While _sendInitialAdds is still running these
-      // events get queued via _handleChange and only processed once the
-      // multiplexer is ready (see _flushPendingWrites guard below).
-      this._changeStream.on('change', Meteor.bindEnvironment((change) => {
-        if (this._stopped) return;
-        // Capture the resume token so a future restart picks up where this
-        // event left off (see startAfter in changeStreamOptions above).
-        if (change && change._id) {
-          this._resumeToken = change._id;
-        }
-        // Update last processed op time early so fences can unblock promptly
-        if (change && change.clusterTime) {
-          this._setLastProcessedOperationTime(change.clusterTime);
-        }
-        this._handleChange(change);
-
-        const fence = DDPServer._getCurrentFence();
-        if (fence && !fence.fired) {
-          this._flushPendingWrites();
-        } else {
-          Meteor.defer(() => {
-            if (!this._stopped) {
-              this._flushPendingWrites();
-            }
-          });
-        }
-      }));
-
-      // Handle errors and reconnection
-      this._changeStream.on('error', Meteor.bindEnvironment((error) => {
-        if (this._stopped) return;
-        console.error('ChangeStream error:', {
-          driverId: this._id,
-          collectionName: this._cursorDescription.collectionName,
-          resumeTokenPresent: !!this._resumeToken,
-          lastProcessedOperationTime: this._lastProcessedOperationTime,
-          catchingUpResolversCount: this._catchingUpResolvers.length,
-          error,
-        });
-        // Attempt to restart after a delay
-        const timeoutId = setTimeout(() => {
-          if (!this._stopped) {
-            this._restartChangeStream();
-          }
-        }, Meteor?.settings?.packages?.mongo?.changeStream?.delay?.error || 100);
-
-        // Register timeout cleanup
-        this._addStopCallback(() => {
-          clearTimeout(timeoutId);
-        });
-      }));
-
-      this._changeStream.on('close', Meteor.bindEnvironment(() => {
-        if (!this._stopped) {
-          console.error('ChangeStream closed unexpectedly, scheduling restart:', {
-            driverId: this._id,
-            collectionName: this._cursorDescription.collectionName,
-            resumeTokenPresent: !!this._resumeToken,
-            lastProcessedOperationTime: this._lastProcessedOperationTime,
-            catchingUpResolversCount: this._catchingUpResolvers.length,
-          });
-          // Unexpected close, attempt restart
-          const timeoutId = setTimeout(() => {
-            if (!this._stopped) {
-              this._restartChangeStream();
-            }
-          }, Meteor?.settings?.packages?.mongo?.changeStream?.delay?.close || 100);
-
-          // Register timeout cleanup
-          this._addStopCallback(() => {
-            clearTimeout(timeoutId);
-          });
-        }
-      }));
+      if (this._stopped) return;
 
       // Now read the snapshot. Events that arrived while we were getting
       // here are sitting in _pendingWrites and will be flushed below.
@@ -325,7 +216,10 @@ export class ChangeStreamObserveDriver {
 
     try {
       // Build the same selector and options that the cursor would use
-      const selector = this._cursorDescription.selector || {};
+      const selector = replaceTypes(
+        this._cursorDescription.selector || {},
+        replaceMeteorAtomWithMongo
+      );
       const options = { ...this._cursorDescription.options };
 
       // Find all existing documents
@@ -361,71 +255,44 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  async _restartChangeStream() {
-    const collectionName = this._cursorDescription.collectionName;
-    console.error('ChangeStream restart begin:', {
-      driverId: this._id,
-      collectionName,
-      resumeTokenPresent: !!this._resumeToken,
-      catchingUpResolversCount: this._catchingUpResolvers.length,
-    });
-    try {
-      // Close current stream using stop callbacks if they exist
-      if (this._changeStream) {
-        // Find and execute the change stream stop callback
-        const changeStreamCallback = this._stopCallbacks.find(cb =>
-          typeof cb._changeStream === 'function'
-        );
-        if (changeStreamCallback) {
-          await changeStreamCallback();
-          // Remove the old callback since we'll add a new one
-          this._stopCallbacks = this._stopCallbacks.filter(cb => cb !== changeStreamCallback);
+  // Called by the shared stream for every raw change. The shared stream owns the
+  // resume token, so this just advances our processed time, runs the matcher,
+  // and flushes pending writes.
+  _onChange(change) {
+    if (this._stopped) return;
+
+    // Update last processed op time early so fences can unblock promptly.
+    if (change && change.clusterTime) {
+      this._setLastProcessedOperationTime(change.clusterTime);
+    }
+    this._handleChange(change);
+
+    const fence = DDPServer._getCurrentFence();
+    if (fence && !fence.fired) {
+      this._flushPendingWrites();
+    } else {
+      Meteor.defer(() => {
+        if (!this._stopped) {
+          this._flushPendingWrites();
         }
-      }
-      await this._startWatching();
-      console.error('ChangeStream restart done:', {
-        driverId: this._id,
-        collectionName,
-        catchingUpResolversCount: this._catchingUpResolvers.length,
-      });
-    } catch (error) {
-      console.error('Failed to restart ChangeStream:', {
-        driverId: this._id,
-        collectionName,
-        error,
       });
     }
-  }
-
-  _buildPipeline() {
-    // Always return an empty pipeline so mongo delivers EVERY change event
-    // (including drop, invalidate, create, modify, rename, ...). We filter
-    // unsupported operation types in _handleChange instead.
-    //
-    // Why: events filtered out server-side never reach our on('change')
-    // handler, so `_setLastProcessedOperationTime` does not advance for
-    // their clusterTime. Meanwhile fence write paths annotate
-    // `_csTargetTsByCollection` with `session.operationTime`, which
-    // includes increments from operations whose events the pipeline
-    // dropped — leaving _waitUntilCaughtUp pinned to a ts that this
-    // stream's lastProcessedOperationTime can never reach. Observed in
-    // CI as a `users` driver stuck on `{t:T, i:25}` while seeing only up
-    // to `{t:T, i:15}`, blocking removeUserByUsername forever.
-    //
-    // Per-document selector filtering still happens in _handleChange via
-    // the matcher; offloading that to the pipeline is a future
-    // optimization that needs to coexist with always-deliver semantics.
-    return [];
   }
 
   async _handleChange(change) {
     if (this._stopped) return;
 
-    const { operationType, documentKey, fullDocument, fullDocumentBeforeChange, clusterTime } = change;
+    const { operationType, documentKey, clusterTime } = change;
 
     if (!SUPPORTED_OPERATIONS.includes(operationType)) {
       return; // Ignore unsupported operations
     }
+
+    const fullDocument = replaceTypes(change.fullDocument, replaceMongoAtomWithMeteor);
+    const fullDocumentBeforeChange = replaceTypes(
+      change.fullDocumentBeforeChange,
+      replaceMongoAtomWithMeteor
+    );
 
     let id = documentKey._id;
     if (typeof documentKey._id?.toHexString === 'function') {
@@ -633,8 +500,9 @@ export class ChangeStreamObserveDriver {
     // with subscriptions` failing with "Should receive CHANGED message").
     //
     // Liveness is guaranteed by:
-    //   1. The change stream resuming from this._resumeToken on error/close,
-    //      so events emitted while the stream was reconnecting are replayed.
+    //   1. The shared change stream resuming from its resume token on
+    //      error/close, so events missed while reconnecting are replayed and
+    //      our lastProcessedOperationTime still advances to target.
     //   2. The watchdog below logging if the wait stalls past warnMs, which
     //      makes a genuinely-broken stream visible without masking it.
     const warnMs = Meteor?.settings?.packages?.mongo?.changeStream?.waitUntilCaughtUpWarnMs ?? 10000;
@@ -656,8 +524,8 @@ export class ChangeStreamObserveDriver {
           lastProcessedOperationTime: this._lastProcessedOperationTime,
           stopped: this._stopped,
           isReady: this._isReady,
-          changeStreamOpen: !!this._changeStream,
-          resumeTokenPresent: !!this._resumeToken,
+          changeStreamOpen: !!(this._sharedStream && this._sharedStream._changeStream),
+          resumeTokenPresent: !!(this._sharedStream && this._sharedStream._resumeToken),
           pendingWritesCount: this._pendingWrites.length,
           writesToCommitWhenReadyCount: this._writesToCommitWhenReady.length,
           catchingUpResolversCount: this._catchingUpResolvers.length,
@@ -680,7 +548,12 @@ export class ChangeStreamObserveDriver {
         clearTimeout(warnTimeoutId);
         if (warnCount > 0) {
           console.error(
-            `Meteor: change stream caught up after warn`,
+            // When stop() drains this resolver the stream never reached
+            // targetTs — say so rather than claiming we caught up, so the logs
+            // reflect that the wait was released by teardown (#14452).
+            this._stopped
+              ? `Meteor: change stream wait released because observer stopped`
+              : `Meteor: change stream caught up after warn`,
             {
               driverId: this._id,
               collectionName,
@@ -701,6 +574,27 @@ export class ChangeStreamObserveDriver {
 
     this._stopped = true;
 
+    // Release any fence waiters still parked in _waitUntilCaughtUp before we
+    // close the change stream below. Those resolvers are waiting for an event
+    // with clusterTime >= targetTs, but once the stream is closed that event
+    // will never arrive, so leaving them parked hangs the fence's
+    // onBeforeFire (which awaits _waitUntilCaughtUp) forever — the DDP method
+    // that issued the write never gets its `updated` message and the client
+    // call hangs until timeout (meteor/meteor#14452). Resolve (don't reject):
+    // the fence may carry writes from other, still-healthy drivers, and the
+    // continuation just commits this driver's already-begun write so the fence
+    // can fire. The driver is being torn down, so not reaching targetTs on it
+    // is harmless — its handles are gone.
+    const pendingCatchUp = this._catchingUpResolvers;
+    this._catchingUpResolvers = [];
+    for (const entry of pendingCatchUp) {
+      try {
+        entry.resolver();
+      } catch (e) {
+        // ignore resolver errors
+      }
+    }
+
     // Execute all stop callbacks
     for (const callback of this._stopCallbacks) {
       try {
@@ -708,6 +602,17 @@ export class ChangeStreamObserveDriver {
       } catch (error) {
         console.error('Error in stop callback:', error);
       }
+    }
+
+    // Detach from the shared stream. It closes the underlying cursor (and drops
+    // itself from the connection registry) once its last driver leaves.
+    if (this._sharedStream) {
+      try {
+        await this._sharedStream.removeDriver(this);
+      } catch (error) {
+        console.error('Error detaching from shared change stream:', error);
+      }
+      this._sharedStream = null;
     }
 
     // Handle any remaining pending writes (following oplog driver pattern)
