@@ -15,4 +15,24 @@ expectTypeOf<CategorizedRequest>().toBeObject();
 expectTypeOf<ServerSink>().toBeObject();
 expectTypeOf<Sink>().not.toBeNever();
 expectTypeOf<Callback>().toBeFunction();
+expectTypeOf<Callback<string>>().toBeFunction();
 expectTypeOf(onPageLoad).toBeFunction();
+
+expectTypeOf<Callback>().returns.toEqualTypeOf<Promise<void> | void>();
+expectTypeOf<Callback<string>>().returns.toEqualTypeOf<Promise<string> | string>();
+expectTypeOf<Callback>().parameter(0).toEqualTypeOf<Sink>();
+
+onPageLoad((sink) => {
+  expectTypeOf(sink).toEqualTypeOf<Sink>();
+});
+onPageLoad(async (sink) => {
+  expectTypeOf(sink).toEqualTypeOf<Sink>();
+});
+onPageLoad(async (sink) => {
+  expectTypeOf(sink).toEqualTypeOf<Sink>();
+  return "value";
+});
+onPageLoad((sink) => {
+  expectTypeOf(sink).toEqualTypeOf<Sink>();
+  return 42;
+});
