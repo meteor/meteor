@@ -2,6 +2,14 @@ const { spawn } = require('child_process');
 const net = require('net');
 const { logError } = require('./log');
 
+export function shouldUseShell(command, options = {}) {
+  if (typeof options.shell === 'boolean') {
+    return options.shell;
+  }
+
+  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+}
+
 /**
  * Spawns a new OS process with the given command and arguments.
  * Streams output with original styling and handles errors and exit events.
@@ -26,7 +34,7 @@ export function spawnProcess(command, args, options = {}) {
     cwd: options.cwd || process.cwd(),
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: options.detached || false,
-    ...(process.platform === 'win32' && { shell: true }),
+    shell: shouldUseShell(command, options),
   });
 
   // Add a reference to track if the process is running

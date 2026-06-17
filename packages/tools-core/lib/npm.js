@@ -2,6 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const { spawnProcess } = require('./process');
 
+export function getNodeBinaryCandidates(binaryName, platform = process.platform) {
+  return platform === 'win32'
+    ? [`${binaryName}.cmd`, `${binaryName}.exe`, binaryName]
+    : [binaryName];
+}
+
 /**
  * Returns the Meteor dev_bundle bin directory path if available, otherwise null.
  *
@@ -58,7 +64,14 @@ export function getNodeBinEnv() {
 export function getNodeBinaryPath(binaryName) {
   const binDir = resolveNodeBinDir();
   if (binDir) {
-    return path.join(binDir, binaryName);
+    const candidates = getNodeBinaryCandidates(binaryName);
+
+    for (const candidate of candidates) {
+      const binaryPath = path.join(binDir, candidate);
+      if (fs.existsSync(binaryPath)) {
+        return binaryPath;
+      }
+    }
   }
   return null;
 }
