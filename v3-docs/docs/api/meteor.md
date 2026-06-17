@@ -442,22 +442,44 @@ then `error` will be the exception object. Otherwise, `error` will be
 Meteor.call('foo', 1, 2, (error, result) => { ... });
 ```
 
-On the server, if you do not pass a callback, `Meteor.call` returns a
-`Promise` — it does not block. `await` it to get the method's return
-value (the promise rejects if the method threw, possibly mapped to a
-500 Server Error if the exception happened remotely and was not a
-`Meteor.Error`). Prefer [`Meteor.callAsync`](#Meteor-callAsync):
+The behavior of `Meteor.call` depends on whether the method runs **locally** or
+over a **DDP connection**.
+
+**On the server (local, in-process).** On the server, `Meteor.call` (and
+`Meteor.callAsync` / `Meteor.apply` / `Meteor.applyAsync`) is bound to
+`Meteor.server` and runs the method **directly in the same process**. It does
+not open a DDP connection and nothing goes over the wire. The invocation has
+`this.isSimulation === false`, and no stub runs.
+
+With no callback, it returns a `Promise`; `await` it, or preferably use
+[`Meteor.callAsync`](#Meteor-callAsync), to get the return value. If the method
+throws, the promise rejects with **the actual error**. A local server call does
+not sanitize non-`Meteor.Error` exceptions to
+`Meteor.Error(500, "Internal server error")`.
 
 ```js
-// On the server, await the returned promise
-const result = await Meteor.call("foo", 1, 2);
+// Server: runs the `foo` method locally, in-process.
+const result = await Meteor.callAsync("foo", 1, 2);
 ```
 
-On the client, if you do not pass a callback and you are not inside a
-stub, `call` returns `undefined`, and you have no way to get the return
-value of the method — there is no way to block on the remote execution
-of a method in the browser. Use [`Meteor.callAsync`](#Meteor-callAsync),
-or pass a callback, to get the result.
+**Over a DDP connection (remote).** A DDP client connection — whether it is the
+browser client's default connection or a connection opened on the server with
+[`DDP.connect`](#DDP-connect) — sends the call over DDP to that connection's
+server, which runs the method there. A non-`Meteor.Error` thrown by the remote
+method is sanitized to `Meteor.Error(500, "Internal server error")` before it
+reaches the caller.
+
+On the browser client, if you don't pass a callback and aren't inside a stub,
+`call` returns `undefined`; there is no way to block on the remote round trip.
+Use [`Meteor.callAsync`](#Meteor-callAsync), or pass a callback, to get the
+result.
+
+::: warning
+A DDP connection opened on the **server** with `DDP.connect` does not serialize
+method calls the way the browser client does. If the remote methods have stubs,
+don't invoke several of them concurrently. `await` each call before starting the
+next, otherwise their stub simulations can interleave.
+:::
 
 Finally, if you are inside a stub on the client and call another
 method, the other method is not executed (no RPC is generated, nothing
