@@ -654,6 +654,29 @@ export async function wait(ms) {
 }
 
 /**
+ * Navigates the shared Playwright page away from the app under test so late
+ * client callbacks do not leak into the next test after the app process dies.
+ * @returns {Promise<void>}
+ */
+export async function resetPlaywrightPage() {
+  if (typeof page === 'undefined') {
+    return;
+  }
+
+  try {
+    if (!page.isClosed()) {
+      await page.goto('about:blank', {
+        waitUntil: 'load',
+        timeout: 3000,
+      });
+    }
+  } catch {
+    // Best effort only. Some tests never navigate the page, and it may already
+    // be tearing down if the browser crashed or the test aborted.
+  }
+}
+
+/**
  * Helper function to wait for specific output from a Meteor process
  * @param {string[]} outputLines - Array that will be populated with output lines
  * @param {string|RegExp} pattern - String or RegExp pattern to wait for
