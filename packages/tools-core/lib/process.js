@@ -2,6 +2,18 @@ const { spawn } = require('child_process');
 const net = require('net');
 const { logError } = require('./log');
 
+/**
+ * Determines whether a spawned command should run through a shell.
+ *
+ * On Windows, batch launchers such as .cmd and .bat require a shell, while
+ * direct executables should avoid shell parsing so argument boundaries are
+ * preserved.
+ *
+ * @param {string} command - The command to evaluate
+ * @param {Object} [options] - Spawn options
+ * @param {boolean} [options.shell] - Explicit shell override
+ * @returns {boolean} True if the command should run through a shell
+ */
 export function shouldUseShell(command, options = {}) {
   if (typeof options.shell === 'boolean') {
     return options.shell;
