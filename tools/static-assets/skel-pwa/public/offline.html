@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Offline &mdash; ~name~</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ff6b35">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+      max-width: 480px;
+      margin: 80px auto;
+      padding: 0 24px;
+      color: #222;
+      text-align: center;
+    }
+    h1 { color: #ff6b35; margin-bottom: 8px; }
+    p { line-height: 1.5; }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    button {
+      background: #ff6b35;
+      color: #fff;
+      border: 0;
+      padding: 10px 22px;
+      border-radius: 4px;
+      font-size: 1rem;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    button:hover { background: #e95a25; }
+    .muted { color: #888; font-size: 0.9rem; }
+  </style>
+</head>
+<body>
+  <div class="icon">&#128268;</div>
+  <h1>You are offline</h1>
+  <p>This page hasn't been cached yet. Already-visited pages are still available from inside the app.</p>
+  <button type="button" onclick="location.reload()">Try again</button>
+  <p class="muted">The connection state will recover automatically once you regain network access.</p>
+  <script>
+    window.addEventListener('online', () => location.reload());
+  </script>
+</body>
+</html>

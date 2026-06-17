@@ -685,6 +685,7 @@ export const AVAILABLE_SKELETONS = [
   "babel",
   "bare",
   "blaze",
+  "pwa",
   "full",
   "minimal",
   DEFAULT_SKELETON,
@@ -704,6 +705,7 @@ const SKELETON_INFO = {
   "apollo": "To create a basic Apollo + React app",
   "bare": "To create an empty app",
   "blaze": "To create an app using Blaze",
+  "pwa": "To create an installable Progressive Web App using Blaze",
   "full": "To create a more complete scaffolded app",
   "minimal": "To create an app with as few Meteor packages as possible",
   "react": "To create a basic React-based app",
@@ -732,6 +734,7 @@ main.registerCommand({
     minimal: { type: Boolean },
     full: { type: Boolean },
     blaze: { type: Boolean },
+    pwa: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
     typescript: { type: Boolean },
@@ -1269,7 +1272,7 @@ main.registerCommand({
               return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
             }
           }
-          if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
+          if (/(\.html|\.[jt]sx?|\.css|\.coffee|\.webmanifest)/.test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
