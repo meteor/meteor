@@ -163,6 +163,8 @@ Minimongo has some limitations:
   of selectors.
 - `findAndModify`, aggregate functions, and
   map/reduce aren't supported.
+
+For the full list, see [`packages/minimongo/NOTES.md`](https://github.com/meteor/meteor/blob/devel/packages/minimongo/NOTES.md).
 :::
 
 
