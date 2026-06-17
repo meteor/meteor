@@ -185,25 +185,36 @@ export function setMeteorAppEntrypoints({
 
 /**
  * Sets patterns to be ignored by the Meteor application in the environment variable.
- * Does not append if the pattern is already present.
+ * Appends new patterns while deduplicating by keeping the last occurrence of
+ * each exact pattern. This preserves gitignore-style "last match wins"
+ * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
  */
 export function setMeteorAppIgnore(ignore) {
-  const current = process.env.METEOR_IGNORE || '';
-  const patterns = ignore.trim().split(/\s+/);
-  const currentPatterns = new Set(current.trim().split(/\s+/).filter(Boolean));
-  
-  let added = false;
-  for (const pattern of patterns) {
-    if (pattern && !currentPatterns.has(pattern)) {
-      currentPatterns.add(pattern);
-      added = true;
+  const currentPatterns = (process.env.METEOR_IGNORE || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const newPatterns = ignore.trim().split(/\s+/).filter(Boolean);
+
+  if (newPatterns.length === 0) {
+    return;
+  }
+
+  const combinedPatterns = [...currentPatterns, ...newPatterns];
+  const seenPatterns = new Set();
+  const dedupedPatterns = [];
+
+  for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
+    const pattern = combinedPatterns[index];
+
+    if (!seenPatterns.has(pattern)) {
+      seenPatterns.add(pattern);
+      dedupedPatterns.push(pattern);
     }
   }
 
-  if (added) {
-    process.env.METEOR_IGNORE = Array.from(currentPatterns).join(' ');
-  }
+  process.env.METEOR_IGNORE = dedupedPatterns.reverse().join(' ');
 }
 
 /**
