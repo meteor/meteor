@@ -1245,7 +1245,7 @@ main.registerCommand({
   if (destinationHasCodeFiles) {
     // If there is already source code in the directory, don't copy our
     // skeleton app code over it. Just create the .meteor folder and metadata
-    toIgnore.push(/(\.html|\.js|\.css)/);
+    toIgnore.push(/(\.html|\.js|\.css|\.webmanifest)/);
   }
 
   const copyFromLocalSkeleton = async () => {
