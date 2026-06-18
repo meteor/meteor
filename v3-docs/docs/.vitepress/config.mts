@@ -414,6 +414,10 @@ export default defineConfig({
                 text: "react-meteor-data",
                 link: "/packages/react-meteor-data",
               },
+              {
+                text: "typescript",
+                link: "/packages/typescript",
+              },
             ]
           },
           {
