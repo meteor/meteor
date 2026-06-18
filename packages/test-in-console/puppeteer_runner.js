@@ -1,10 +1,10 @@
+// PUPPETEER_CACHE_DIR is set by run.sh to a temp directory outside dev_bundle,
+// guaranteeing a fresh Chrome download each CI run. Load puppeteer from
+// dev_bundle (preferred) or the globally-installed copy as a fallback.
 let puppeteer;
 try {
-  // Prefer the copy bundled inside dev_bundle (local checkout / CI after first run).
   puppeteer = require("../../dev_bundle/lib/node_modules/puppeteer");
 } catch {
-  // Fallback: globally-installed puppeteer (e.g. on oss-vm where it is pre-installed
-  // via `npm install -g puppeteer@23.6.0` and NODE_PATH is set to `npm root -g`).
   puppeteer = require("puppeteer");
 }
 

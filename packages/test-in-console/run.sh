@@ -8,13 +8,18 @@
 cd $(dirname $0)/../..
 export METEOR_HOME=`pwd`
 
-# Install puppeteer into dev_bundle only when it is not already available globally
-# (e.g. on oss-vm, where puppeteer@23.6.0 is pre-installed via system npm and
-# NODE_PATH is set to $(npm root -g) by the CI workflow).
-if ! node -e "require('./dev_bundle/lib/node_modules/puppeteer')" 2>/dev/null && \
-   ! node -e "require('puppeteer')" 2>/dev/null; then
-  ./meteor npm install -g puppeteer@23.6.0
-fi
+# Store Chrome in a temp dir outside dev_bundle so it is never included in the
+# CI cache. dev_bundle is cached between runs; a browser binary inside it can
+# end up in a corrupted state (directory present, binary missing) that blocks
+# re-downloads. TMPDIR is ephemeral per CI container so Chrome is always
+# downloaded fresh. The env var is inherited by puppeteer_runner.js so launch()
+# finds the same binary.
+export PUPPETEER_CACHE_DIR="${TMPDIR:-/tmp}/puppeteer-chrome-cache"
+
+# Download Chrome. @puppeteer/browsers is idempotent — if the binary is already
+# present in PUPPETEER_CACHE_DIR it returns immediately.
+node ./dev_bundle/lib/node_modules/puppeteer/lib/cjs/puppeteer/node/cli.js \
+  browsers install chrome
 
 export PATH=$METEOR_HOME:$PATH
 
