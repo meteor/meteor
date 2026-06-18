@@ -8,7 +8,6 @@ Package.describe({
 Npm.depends({
   '@meteorjs/babel': '7.20.1',
   'json5': '2.2.3',
-  'semver': '7.6.3',
   "@meteorjs/swc-core": "1.15.3",
 });
 
