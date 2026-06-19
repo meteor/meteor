@@ -1,13 +1,22 @@
 const execa = require("execa");
 
 const BOOT_TIMEOUT_MS = 300_000;
-const APP_ID = "com.meteor.smoke";
+const DEFAULT_APP_ID = "com.meteor.smoke";
 
 async function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function bootIos() {
+async function waitForInstall(checkInstalled, timeoutMs = 240_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await checkInstalled()) return;
+    await sleep(2000);
+  }
+  throw new Error("Timed out waiting for native app install");
+}
+
+async function bootIos({ appId = DEFAULT_APP_ID } = {}) {
   const deviceName = process.env.MAESTRO_IOS_DEVICE || "iPhone 15";
 
   await execa("xcrun", ["simctl", "boot", deviceName], { reject: false });
@@ -36,7 +45,17 @@ async function bootIos() {
       await execa("xcrun", ["simctl", "install", udid, bundlePath]);
     },
     async uninstall() {
-      await execa("xcrun", ["simctl", "uninstall", udid, APP_ID], { reject: false });
+      await execa("xcrun", ["simctl", "uninstall", udid, appId], { reject: false });
+    },
+    async waitForInstall() {
+      await waitForInstall(async () => {
+        const result = await execa(
+          "xcrun",
+          ["simctl", "get_app_container", udid, appId],
+          { reject: false }
+        );
+        return result.exitCode === 0;
+      });
     },
     async captureLogs(outPath) {
       const { stdout } = await execa(
@@ -53,7 +72,7 @@ async function bootIos() {
   };
 }
 
-async function bootAndroid() {
+async function bootAndroid({ appId = DEFAULT_APP_ID } = {}) {
   // On CI, reactivecircus/android-emulator-runner@v2 brings the emulator up
   // before our script runs. Locally, the caller must have run `emulator -avd <name>`
   // beforehand. Either way, `adb wait-for-device` is the right ready gate.
@@ -91,7 +110,17 @@ async function bootAndroid() {
       await execa("adb", ["-s", deviceId, "install", "-r", bundlePath]);
     },
     async uninstall() {
-      await execa("adb", ["-s", deviceId, "uninstall", APP_ID], { reject: false });
+      await execa("adb", ["-s", deviceId, "uninstall", appId], { reject: false });
+    },
+    async waitForInstall() {
+      await waitForInstall(async () => {
+        const { stdout } = await execa(
+          "adb",
+          ["-s", deviceId, "shell", "pm", "path", appId],
+          { reject: false }
+        );
+        return stdout.trim().startsWith("package:");
+      });
     },
     async captureLogs(outPath) {
       const { stdout } = await execa(
@@ -109,9 +138,9 @@ async function bootAndroid() {
   };
 }
 
-async function bootSimulator(platform) {
-  if (platform === "ios") return bootIos();
-  if (platform === "android") return bootAndroid();
+async function bootSimulator(platform, options = {}) {
+  if (platform === "ios") return bootIos(options);
+  if (platform === "android") return bootAndroid(options);
   throw new Error(`Unsupported platform: ${platform}`);
 }
 

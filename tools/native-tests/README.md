@@ -1,11 +1,17 @@
-# Native mobile smoke tests
+# Native mobile tests
 
-Maestro flows verifying Meteor's native mobile shell. Builds a minimal Meteor
-app for Cordova, installs it on an iOS Simulator or Android emulator, and asserts
-that the app launches, the Meteor client renders, and DDP connects.
+Maestro flows verifying Meteor's native mobile shell. The default `capacitor-tests`
+app is a Capacitor target that runs on an iOS Simulator or Android emulator,
+loads the generated native webDir, and asserts native launch, minimal rendering,
+CSS delivery, DDP connectivity, Capacitor runtime availability,
+`WebAppLocalServer` shim behavior, and `__cordova` path adaptation.
 
 Sibling to `tools/e2e-tests/`. Isolated `package.json` so test dependencies never
 contaminate the dev bundle's `node_modules`.
+
+This suite is not a browser E2E duplicate. Browser/build artifact coverage stays
+in `tools/e2e-tests`; this suite proves native build, simulator, WebView, and DDP
+stability.
 
 ## Local usage
 
@@ -16,24 +22,54 @@ Prerequisites: Node 20+, Maestro CLI, Xcode (for iOS), Android SDK + emulator
 npm run install:native            # installs deps and checks for maestro CLI
 npm run test:native:android       # alias for: npm run test:native -- --platform=android
 npm run test:native:ios           # alias for: npm run test:native -- --platform=ios
+npm run test:native:capacitor:android
+npm run test:native:capacitor:ios
 ```
 
 The generic `npm run test:native -- --platform=<ios|android>` form also works; the
 per-platform scripts above are just shorthands.
 
+The old Cordova smoke fixture remains available as a fallback:
+
+```sh
+cd tools/native-tests
+node scripts/run.js --platform=android --app=smoke
+```
+
+For debugging, keep the temporary app and simulator running:
+
+```sh
+cd tools/native-tests
+node scripts/run.js --platform=android --keep-running
+```
+
 ## Layout
 
 | Path | Purpose |
 |------|---------|
-| `apps/smoke/` | Minimal Meteor app under test (committed source) |
-| `flows/launch.yaml` | The single smoke flow |
+| `apps/capacitor-tests/` | Default Capacitor app under test |
+| `apps/smoke/` | Legacy Cordova smoke fixture |
+| `flows/capacitor-tests.yaml` | Default Capacitor runtime flow |
+| `flows/launch.yaml` | Legacy smoke flow |
 | `scripts/run.js` | Entrypoint, wires the pipeline |
-| `scripts/build-app.js` | `meteor add-platform` + `meteor build` |
+| `scripts/build-app.js` | Prepares app fixtures and native platforms |
 | `scripts/server.js` | Starts `meteor run` and waits for ready |
 | `scripts/simulator.js` | Boots iOS Simulator or Android emulator |
 | `scripts/maestro.js` | Spawns Maestro and captures JUnit output |
 | `scripts/check-maestro.js` | Preflight; prints install hint if Maestro missing |
 | `junit/` | JUnit reports (gitignored, uploaded as CI artifact) |
+
+## Default app assertions
+
+`flows/capacitor-tests.yaml` treats these visible strings as test API:
+
+- `Welcome to Meteor Capacitor Tests`
+- `Native render ready`
+- `Style preserved`
+- `DDP verified`
+- `Capacitor runtime ready`
+- `WebAppLocalServer shim ready`
+- `__cordova paths adapted`
 
 ## CI
 

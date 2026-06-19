@@ -1,4 +1,4 @@
-name: Native mobile smoke tests
+name: Native mobile tests
 
 on:
   schedule:
@@ -39,7 +39,7 @@ jobs:
         run: npm ci
       - name: Install native-tests deps
         run: npm run install:native
-      - name: Run smoke flow on Android emulator
+      - name: Run native tests on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
@@ -77,7 +77,7 @@ jobs:
         run: |
           xcrun simctl boot "iPhone 15" || true
           xcrun simctl bootstatus "iPhone 15" -b
-      - name: Run smoke flow on iOS Simulator
+      - name: Run native tests on iOS Simulator
         run: npm run test:native -- --platform=ios
       - name: Upload JUnit and device logs
         if: always()

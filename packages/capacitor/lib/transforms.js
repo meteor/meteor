@@ -185,9 +185,9 @@ function copyTreeFiltered(srcDir, dstDir, excludedFiles) {
 }
 
 /**
- * Copies web.cordova/ → build-native/ minus excluded server-only files,
- * then flattens build-native/app/* up to build-native/ (Meteor places client
- * sources under app/ inside the cordova program).
+ * Copies web.cordova/ → build-native/ minus excluded server-only files.
+ * Keep the app/ directory intact because the generated index references
+ * /app/app.js and /app/global-imports.js after __cordova/ path adaptation.
  *
  * @returns {boolean}
  */
@@ -202,12 +202,6 @@ function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir() 
 
   try {
     copyTreeFiltered(sourceDir, targetDir, CAPACITOR_EXCLUDED_FILES);
-
-    const appNested = path.join(targetDir, 'app');
-    if (fs.existsSync(appNested) && fs.statSync(appNested).isDirectory()) {
-      copyTreeFiltered(appNested, targetDir, CAPACITOR_EXCLUDED_FILES);
-      fs.rmSync(appNested, { recursive: true, force: true });
-    }
   } catch (err) {
     logError(`Capacitor: failed to sync bundle files: ${err.message}`);
     return false;
@@ -231,3 +225,5 @@ export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDi
   }
   return okFiles && okIndex;
 }
+
+export const _syncBundleFiles = syncBundleFiles;

@@ -1,0 +1,11 @@
+appId: com.meteor.capacitortests
+---
+- launchApp:
+    clearState: true
+- assertVisible: "Welcome to Meteor Capacitor Tests"
+- assertVisible: "Native render ready"
+- assertVisible: "Style preserved"
+- assertVisible: "DDP verified"
+- assertVisible: "Capacitor runtime ready"
+- assertVisible: "WebAppLocalServer shim ready"
+- assertVisible: "__cordova paths adapted"

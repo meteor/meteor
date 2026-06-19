@@ -19,6 +19,9 @@ import {
   _getCapRunArgsFromEnv,
   _mergeExtraArgsWithEnv,
 } from './lib/processes.js';
+import {
+  _syncBundleFiles,
+} from './lib/transforms.js';
 
 const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
 const RUN_PROCESS_STATE_KEY = 'capacitor.process.run';
@@ -161,6 +164,34 @@ Tinytest.add('capacitor - cli - creates placeholder webDir for native add', test
     });
 
     test.equal(fs.readFileSync(indexPath, 'utf8'), 'existing');
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+Tinytest.add('capacitor - transform - preserves app directory asset paths', test => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-cap-sync-'));
+  try {
+    const sourceDir = path.join(tempDir, '.meteor', 'local', 'build', 'programs', 'web.cordova');
+    fs.mkdirSync(path.join(sourceDir, 'app'), { recursive: true });
+    fs.mkdirSync(path.join(sourceDir, 'packages'), { recursive: true });
+    fs.writeFileSync(path.join(sourceDir, 'program.json'), '{}', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'body.html'), '<body></body>', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'app', 'global-imports.js'), 'imports', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'app', 'app.js'), 'app', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'packages', 'meteor.js'), 'meteor', 'utf8');
+
+    const ok = _syncBundleFiles({
+      appDir: tempDir,
+      webDir: '_build/native-dev',
+    });
+
+    test.isTrue(ok);
+    test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'app', 'global-imports.js')));
+    test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'app', 'app.js')));
+    test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'packages', 'meteor.js')));
+    test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'program.json')));
+    test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'body.html')));
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

@@ -3,6 +3,8 @@ const path = require("node:path");
 const execa = require("execa");
 const waitOn = require("wait-on");
 
+const DEFAULT_PORT = 3000;
+
 function resolveLanIp({ interfaces = os.networkInterfaces(), prefer } = {}) {
   const flat = [];
   for (const [name, addrs] of Object.entries(interfaces)) {
@@ -20,6 +22,35 @@ function resolveLanIp({ interfaces = os.networkInterfaces(), prefer } = {}) {
     if (preferred) return preferred.address;
   }
   return flat[0].address;
+}
+
+function buildNativeRunOptions({
+  platform,
+  lanIp,
+  port = DEFAULT_PORT,
+  deviceId,
+  baseEnv = process.env,
+  meteorBin,
+} = {}) {
+  const repoRoot = path.resolve(__dirname, "..", "..", "..");
+  const meteor = meteorBin || path.join(repoRoot, "meteor");
+  const url = `http://${lanIp}:${port}`;
+  const env = {
+    ...baseEnv,
+    PORT: String(port),
+    ROOT_URL: url,
+  };
+
+  if (deviceId) {
+    env.METEOR_CAPACITOR_TARGET = deviceId;
+  }
+
+  return {
+    command: meteor,
+    args: ["run", platform, "--port", `${lanIp}:${port}`],
+    env,
+    url,
+  };
 }
 
 /**
@@ -62,4 +93,51 @@ async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
   };
 }
 
-module.exports = { resolveLanIp, startServer };
+async function startNativeRun({
+  appDir,
+  platform,
+  lanIp,
+  port = DEFAULT_PORT,
+  deviceId,
+  meteorBin,
+}) {
+  const { command, args, env, url } = buildNativeRunOptions({
+    platform,
+    lanIp,
+    port,
+    deviceId,
+    meteorBin,
+  });
+
+  const child = execa(
+    command,
+    args,
+    {
+      cwd: appDir,
+      env,
+      stdio: "inherit",
+      reject: false,
+      detached: false,
+    }
+  );
+
+  await waitOn({ resources: [url], timeout: 240_000, interval: 1000 });
+
+  return {
+    url,
+    async stop() {
+      if (child.pid && !child.killed) {
+        child.kill("SIGTERM");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        if (!child.killed) child.kill("SIGKILL");
+      }
+    },
+  };
+}
+
+module.exports = {
+  buildNativeRunOptions,
+  resolveLanIp,
+  startNativeRun,
+  startServer,
+};

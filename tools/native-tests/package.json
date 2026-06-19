@@ -2,7 +2,7 @@
   "name": "meteor-native-tests",
   "version": "1.0.0",
   "private": true,
-  "description": "Maestro flows verifying Meteor's native mobile shell (Cordova).",
+  "description": "Maestro flows verifying Meteor's native mobile shell.",
   "scripts": {
     "test": "node scripts/run.js"
   },
