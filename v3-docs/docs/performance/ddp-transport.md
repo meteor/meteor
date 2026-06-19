@@ -75,7 +75,37 @@ The `SERVER_WEBSOCKET_COMPRESSION` setting still applies to both transports. If 
 
 ### Combining with session resumption
 
-The DDP [session resumption](/api/meteor#reconnection) feature added in 3.5 is transport-agnostic. Both `sockjs` and `uws` benefit from sessions surviving brief network blips.
+Meteor 3.5 introduced DDP session resumption: when a client reconnects within a configurable grace period, the server restores the existing session instead of creating a new one. Active subscriptions are not re-published, in-flight method calls are replayed, and the connection retains its original `id`. This is transport-agnostic — both `sockjs` and `uws` benefit equally.
+
+#### Enabling and tuning
+
+Session resumption is on by default. You can tune its two parameters in server startup code:
+
+```js
+import { Meteor } from 'meteor/meteor';
+
+// Keep disconnected sessions alive for 30 seconds (default: 15000 ms)
+Meteor.server.options.disconnectGracePeriod = 30000;
+
+// Queue up to 500 messages per disconnected session (default: 100)
+Meteor.server.options.maxMessageQueueLength = 500;
+```
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `disconnectGracePeriod` | `15000` ms | How long a disconnected session is held before being destroyed |
+| `maxMessageQueueLength` | `100` | Max messages queued per session; session is discarded if exceeded |
+
+To disable resumption entirely set `disconnectGracePeriod` to `0`.
+
+#### Things to know before enabling a longer grace period
+
+- **Load balancers:** The client must reconnect to the *same* physical Meteor instance. Make sure sticky sessions (or IP hash) are configured in your load balancer.
+- **Memory:** Each queued message and live subscription cursor is held in memory for the duration of the grace period. Large `maxMessageQueueLength` values on high-traffic servers can increase memory pressure.
+- **`onConnection` is not called on resume:** If you track presence with `onConnection`/`onClose`, see the [presence tracking pattern](/api/meteor#reconnection) in the API reference.
+- **Hot Code Push is unaffected:** HCP is a graceful disconnect and always initiates a fresh session so clients pick up the new code.
+
+See the full [Reconnection reference](/api/meteor#reconnection) for edge cases and the presence heartbeat pattern.
 
 ### Multi-process and multi-tenant deployments {#multitenancy}
 
