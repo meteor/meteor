@@ -833,7 +833,18 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         devServer: { port: devServerPort },
         stats: { preset: "normal" },
         infrastructureLogging: { level: "info" },
-        ...(isProd && isClient && { output: { module: false } }),
+        ...(isProd &&
+          isClient && {
+            output: {
+              // Nx Angular config emits ESM chunks in production by default.
+              // Meteor serves and minifies classic browser bundles here.
+              module: false,
+              scriptType: false,
+              chunkFormat: "array-push",
+              chunkLoading: "jsonp",
+              workerChunkLoading: "import-scripts",
+            },
+          }),
       }
     : {};
 
