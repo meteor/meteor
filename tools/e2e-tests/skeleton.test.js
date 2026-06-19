@@ -13,8 +13,7 @@ import { testMeteorSkeleton } from './test-helpers';
 const isCI = process.env.GITHUB_ACTIONS === 'true';
 
 describe('Meteor Skeletons /', () => {
-  // TODO: Wait for @nx/angular-rspack to have support for Rspack 2.0: https://github.com/nrwl/nx/pull/35682
-  describe.skip(
+  describe(
     'Angular Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'angular',
