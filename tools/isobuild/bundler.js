@@ -1780,6 +1780,21 @@ class ClientTarget extends Target {
         replaceable: file.replaceable
       };
 
+      // writeFile() (below) strips //# sourceMappingURL / //# sourceURL comments from
+      // non-asset, non-dynamic client files before writing them (removeSourceMappingURLs,
+      // added for #9894). Bake that strip into the file's contents *now*, before its
+      // size/hash/sri are read, so the manifest describes the bytes actually written and
+      // served. Otherwise size/hash/sri (and the SRI / integrity= attribute) describe the
+      // pre-strip contents and never match the served file — e.g. packages/modules.js under
+      // @meteorjs/rspack, which ships un-minified with per-module //# sourceURL= comments,
+      // ends up off by exactly the stripped bytes (#10710).
+      if (type !== 'asset' && ! file.targetPath.startsWith("dynamic/")) {
+        const stripped = removeSourceMappingURLs(file.contents());
+        if (stripped !== file.contents()) {
+          file.setContents(stripped);
+        }
+      }
+
       const antiXSSIPrepend = Profile("anti-XSSI header for source-maps", function (sourceMap) {
         // Add anti-XSSI header to this file which will be served over
         // HTTP. Note that the Mozilla and WebKit implementations differ as to
