@@ -68,10 +68,15 @@ function maybeFinalize() {
   if (state.failed)  parts.push(c.red(`${state.failed} failed`));
   if (state.skipped) parts.push(c.yellow(`${state.skipped} skipped`));
   if (state.todo)    parts.push(c.gray(`${state.todo} todo`));
+  // Exit from the write callback so the summary is flushed before we force-exit.
+  // We must force-exit (process.exitCode alone would hang: Meteor keeps the event
+  // loop alive — HTTP + Mongo — so the process never drains on its own). Calling
+  // process.exit() *immediately* after write() can truncate piped stdout, so we wait
+  // for the write to be handled first.
   process.stdout.write(
     `\n${c.bold('test-in-node')} ${c.gray('· node:test')}\n  ` +
     (parts.join(', ') || c.gray('no assertions')) +
     c.gray(` (${state.tests} tests)`) + '\n\n',
+    () => process.exit(state.failed > 0 ? 1 : 0),
   );
-  process.exit(state.failed > 0 ? 1 : 0);   // finalize OUTSIDE the after() hook
 }
