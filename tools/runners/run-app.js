@@ -323,6 +323,15 @@ Object.assign(AppProcess.prototype, {
 
     opts.push(`--require=${files.convertToOSPath(files.pathJoin(__dirname, '../node-process-warnings.js'))}`)
 
+    // test-in-node driver: attach its node:test reporter at process START (node:test
+    // reporters can only be set via a startup flag, before app code runs). The reporter
+    // lives here under tools/ — not in the package/isopack, which would be fragile to
+    // resolve. Mirrors the --require injection just above.
+    if (global.testCommandMetadata &&
+        global.testCommandMetadata.driverPackage === 'test-in-node') {
+      opts.push(`--test-reporter=${files.convertToOSPath(files.pathJoin(__dirname, 'test-in-node-reporter.mjs'))}`);
+    }
+
     opts.push(entryPoint);
 
     // Call node

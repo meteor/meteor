@@ -7,8 +7,10 @@ Package.describe({
 Package.onUse(function (api) {
   api.use('ecmascript', 'server');
   api.addFiles('driver.js', 'server');
-  // reporter.mjs is intentionally a loose file (loaded by Node via --test-reporter),
-  // not added here — bundling it would break standalone loading.
+  // The node:test reporter is NOT part of this package: node:test reporters must be
+  // resolved by Node at process startup, so the Meteor tool ships it under tools/ and
+  // auto-attaches it (see tools/runners/run-app.js). Resolving a loose file from an
+  // isopack would make the driver fragile.
 });
 
 Package.onTest(function (api) {
