@@ -100,6 +100,7 @@ function plan(overrides = {}) {
     labels: [],
     changedFiles: [],
     isDraft: false,
+    enablePathRules: true,
     action: "opened",
     addedLabel: null,
     ...overrides
@@ -175,6 +176,42 @@ test("skeleton asset path selects skeleton slices only", () => {
       jestArgsJson: JSON.stringify([
         "--testPathPattern=skeleton.test.js -t=\"Babel Skeleton\""
       ])
+    }
+  ]);
+  assert.deepEqual(checkNames(result.noopMatrix), ["Examples"]);
+});
+
+test("path-triggered selection can be disabled for experiments", () => {
+  const result = plan({
+    changedFiles: ["packages/meteor-tool/foo.js"],
+    enablePathRules: false
+  });
+
+  assert.equal(result.emitChecks, true);
+  assert.equal(result.runE2E, false);
+  assert.equal(result.reason, "no E2E selection");
+  assert.deepEqual(result.realMatrix.include, []);
+  assert.deepEqual(checkNames(result.noopMatrix), ["React", "Babel", "Examples"]);
+});
+
+test("labels still trigger when path-triggered selection is disabled", () => {
+  const result = plan({
+    labels: ["ci:e2e:apps"],
+    changedFiles: ["packages/meteor-tool/foo.js"],
+    enablePathRules: false
+  });
+
+  assert.equal(result.runE2E, true);
+  assert.deepEqual(result.realMatrix.include, [
+    {
+      check: "React",
+      sliceIds: "react-app",
+      jestArgsJson: JSON.stringify(["--testPathPattern=react.test.js"])
+    },
+    {
+      check: "Babel",
+      sliceIds: "babel-app",
+      jestArgsJson: JSON.stringify(["--testPathPattern=babel.test.js"])
     }
   ]);
   assert.deepEqual(checkNames(result.noopMatrix), ["Examples"]);

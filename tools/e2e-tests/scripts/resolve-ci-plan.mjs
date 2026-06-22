@@ -87,6 +87,7 @@ export function resolveCiPlan({
   labels = [],
   changedFiles = [],
   isDraft = false,
+  enablePathRules = true,
   action = "",
   addedLabel = null
 }) {
@@ -121,12 +122,14 @@ export function resolveCiPlan({
     }
   }
 
-  for (const rule of manifest.pathRules) {
-    if (changedFiles.some((file) => matchesPath(rule.paths, file))) {
-      for (const id of selectSliceIds(manifest, rule.select)) {
-        selectedIds.add(id);
+  if (enablePathRules) {
+    for (const rule of manifest.pathRules) {
+      if (changedFiles.some((file) => matchesPath(rule.paths, file))) {
+        for (const id of selectSliceIds(manifest, rule.select)) {
+          selectedIds.add(id);
+        }
+        reasons.push(`selected by path rule: ${rule.name}`);
       }
-      reasons.push(`selected by path rule: ${rule.name}`);
     }
   }
 

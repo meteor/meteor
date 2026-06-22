@@ -20,6 +20,7 @@ concurrency:
 
 env:
   E2E_OPT_IN_LABEL: "ci:e2e"
+  E2E_ENABLE_PATH_RULES: "false"
   TOOL_NODE_FLAGS: "--max_old_space_size=12288"
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
@@ -74,6 +75,7 @@ jobs:
       - name: Write resolver input
         env:
           CHANGED_FILES: ${{ steps.files.outputs.result }}
+          E2E_ENABLE_PATH_RULES: ${{ env.E2E_ENABLE_PATH_RULES }}
         run: |
           node - <<'NODE'
           const fs = require("fs");
@@ -81,6 +83,7 @@ jobs:
             labels: ${{ toJSON(github.event.pull_request.labels.*.name) }},
             changedFiles: JSON.parse(process.env.CHANGED_FILES),
             isDraft: ${{ toJSON(github.event.pull_request.draft) }},
+            enablePathRules: process.env.E2E_ENABLE_PATH_RULES === "true",
             action: ${{ toJSON(github.event.action) }},
             addedLabel: ${{ toJSON(github.event.label.name || null) }}
           };
