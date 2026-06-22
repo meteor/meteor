@@ -69,10 +69,12 @@ Package.onUse(function (api) {
   api.use('ecmascript', ['client', 'server']);
   api.use(['tools-core', 'webapp']);
 
+  api.mainModule('capacitor_client.js', 'client');
   api.mainModule('capacitor_server.js', 'server');
 });
 
 Package.onTest(function (api) {
   api.use(['tinytest', 'ecmascript', 'capacitor', 'tools-core']);
+  api.addFiles(['capacitor_client_tests.js'], 'client');
   api.addFiles(['capacitor_tests.js'], 'server');
 });
