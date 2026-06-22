@@ -98,7 +98,18 @@ async function assertNoCordovaNativeBuild(outputLines) {
   expectOutputNotContains(outputLines, /Gradle/i);
 }
 
-async function assertCapacitorWebDir(appDir, mode) {
+async function assertCapacitorSyncedNativeAssets(appDir, platform) {
+  if (platform === 'android') {
+    await assertFileExist(appDir, 'android/app/src/main/assets/public/index.html', { content: 'var WebAppLocalServer' });
+    await assertFileExist(appDir, 'android/app/src/main/assets/capacitor.config.json');
+    return;
+  }
+
+  await assertFileExist(appDir, 'ios/App/App/public/index.html', { content: 'var WebAppLocalServer' });
+  await assertFileExist(appDir, 'ios/App/App/capacitor.config.json');
+}
+
+async function assertCapacitorWebDir(appDir, mode, platform = 'android') {
   const webDir = mode === 'prod' ? '_build/native-prod' : '_build/native-dev';
 
   await assertFileExist(appDir, '.meteor/local/build/programs/web.cordova/program.json');
@@ -113,20 +124,20 @@ async function assertCapacitorWebDir(appDir, mode) {
   const indexHtml = await fs.readFile(path.join(appDir, webDir, 'index.html'), 'utf8');
   expect(indexHtml).not.toContain('__cordova/');
 
-  await assertFileExist(appDir, 'android/app/src/main/assets/public/index.html', { content: 'var WebAppLocalServer' });
-  await assertFileExist(appDir, 'android/app/src/main/assets/capacitor.config.json');
+  await assertCapacitorSyncedNativeAssets(appDir, platform);
 
   return readJson(appDir, `${webDir}/capacitor.config.json`);
 }
 
-function assertCapacitorConfig(config, mode) {
+function assertCapacitorConfig(config, mode, platform = 'android') {
   const webDir = mode === 'prod' ? '_build/native-prod' : '_build/native-dev';
 
   expect(config.webDir).toBe(webDir);
   expect(config.bundledWebRuntime).toBe(false);
-  expect(config.plugins.MeteorE2E.platform).toBe('android');
+  expect(config.plugins.MeteorE2E.platform).toBe(platform);
   expect(config.plugins.MeteorE2E.isRun).toBe(true);
-  expect(config.plugins.MeteorE2E.isNativeAndroid).toBe(true);
+  expect(config.plugins.MeteorE2E.isNativeAndroid).toBe(platform === 'android');
+  expect(config.plugins.MeteorE2E.isNativeIos).toBe(platform === 'ios');
   expect(config.plugins.MeteorE2E.webDir).toBe(webDir);
   expect(config.plugins.MeteorE2E.mode).toBe(mode === 'prod' ? 'bundled' : 'development');
   expect(config.plugins.MeteorE2E.localIp).toBe('127.0.0.1');
@@ -249,6 +260,35 @@ describe('Capacitor App Web Lifecycle /', () => {
     await assertFileExist(tempDir, '.gitignore', { content: 'android/app/src/main/assets/capacitor.*.json' });
   });
 
+  test('"meteor add-platform ios" installs deps and creates native context', async () => {
+    const result = await runMeteorCommand('add-platform', ['ios'], tempDir, {
+      captureOutput: true,
+      checkExitCode: true,
+      env: e2eEnv(),
+    });
+
+    expectOutputContains(result.outputLines, /Capacitor Dependencies/);
+    expectOutputContains(result.outputLines, /Installed Capacitor dependencies/);
+    expectOutputContains(result.outputLines, /Capacitor add ios|ios: added platform/);
+
+    const packageJson = await readJson(tempDir, 'package.json');
+    expect(packageJson.dependencies).toHaveProperty('@capacitor/core');
+    expect(packageJson.dependencies).toHaveProperty('@capacitor/ios');
+    expect(packageJson.devDependencies).toHaveProperty('@capacitor/cli');
+    expect(packageJson.devDependencies).toHaveProperty('@meteorjs/capacitor');
+
+    await assertFileExist(tempDir, 'node_modules/@capacitor/core/package.json');
+    await assertFileExist(tempDir, 'node_modules/@capacitor/ios/package.json');
+    await assertFileExist(tempDir, 'node_modules/@capacitor/cli/package.json');
+    await assertFileExist(tempDir, 'node_modules/@meteorjs/capacitor/package.json');
+    await assertFileExist(tempDir, '.meteor/platforms', { content: 'ios' });
+    await assertFileExist(tempDir, 'ios/App/App.xcworkspace');
+    await assertFileExist(tempDir, '.gitignore', { content: '_build' });
+    await assertFileExist(tempDir, '.gitignore', { content: 'ios/App/App/public' });
+    await assertFileExist(tempDir, '.gitignore', { content: 'ios/App/App/capacitor.*.json' });
+    await assertFileExist(tempDir, '.gitignore', { content: 'ios/App/App/config.xml' });
+  });
+
   test('"meteor run android" serves web app and prepares Capacitor webDir', async () => {
     const result = await runMeteorApp(tempDir, PORT, {
       waitForOutput: /Capacitor native run skipped/,
@@ -349,6 +389,35 @@ describe('Capacitor App Web Lifecycle /', () => {
       expect(config.plugins.MeteorE2E.isBuild).toBe(true);
       expect(config.plugins.MeteorE2E.isRun).toBe(false);
       expect(config.plugins.MeteorE2E.platform).toBe('android');
+      expect(config.server).toBeUndefined();
+      await assertNoNativeLaunch(result.processResult.outputLines);
+      await assertNoCordovaNativeBuild(result.processResult.outputLines);
+    } finally {
+      await cleanupTempDir(buildOutputDir);
+    }
+  });
+
+  test('"meteor build --directory --platforms=ios" builds Capacitor web output without running native tools', async () => {
+    let buildOutputDir;
+
+    try {
+      const result = await buildMeteorApp(tempDir, {
+        commandOptions: ['--directory', '--platforms=ios', '--server=http://127.0.0.1:3000'],
+        captureOutput: true,
+        env: e2eEnv(),
+      });
+      buildOutputDir = result.buildOutputDir;
+
+      await assertFileExist(buildOutputDir, 'bundle/main.js');
+      await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
+      await assertFileExist(tempDir, '_build/main-prod/server-rspack.js');
+
+      const config = await assertCapacitorWebDir(tempDir, 'prod', 'ios');
+      expect(config.plugins.MeteorE2E.isBuild).toBe(true);
+      expect(config.plugins.MeteorE2E.isRun).toBe(false);
+      expect(config.plugins.MeteorE2E.platform).toBe('ios');
+      expect(config.plugins.MeteorE2E.isNativeIos).toBe(true);
+      expect(config.plugins.MeteorE2E.isNativeAndroid).toBe(false);
       expect(config.server).toBeUndefined();
       await assertNoNativeLaunch(result.processResult.outputLines);
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
