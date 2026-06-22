@@ -1789,8 +1789,10 @@ class ClientTarget extends Target {
       // @meteorjs/rspack, which ships un-minified with per-module //# sourceURL= comments,
       // ends up off by exactly the stripped bytes (#10710).
       if (type !== 'asset' && ! file.targetPath.startsWith("dynamic/")) {
-        const stripped = removeSourceMappingURLs(file.contents());
-        if (stripped !== file.contents()) {
+        const original = file.contents();
+        const stripped = removeSourceMappingURLs(original);
+        if (stripped !== original &&
+            (stripped.length !== original.length || ! stripped.equals(original))) {
           file.setContents(stripped);
         }
       }
