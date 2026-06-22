@@ -36,14 +36,17 @@ function checkStyleProbe() {
   }
 }
 
-function checkCapacitorRuntime() {
+function checkWindowCapacitor() {
   const capacitor = window.Capacitor;
-  const native = typeof capacitor?.isNativePlatform === "function"
-    ? capacitor.isNativePlatform()
-    : !!capacitor?.isNative;
 
-  if (capacitor && native) {
-    setStatus("capacitor-status", "Capacitor runtime ready");
+  if (capacitor) {
+    setStatus("capacitor-status", "window.Capacitor available");
+  }
+}
+
+function checkMeteorIsCapacitor() {
+  if (Meteor.isCapacitor === true) {
+    setStatus("meteor-capacitor-status", "Meteor.isCapacitor true");
   }
 }
 
@@ -77,7 +80,8 @@ function checkCordovaPaths() {
 Meteor.startup(() => {
   setStatus("render-status", "Native render ready");
   checkStyleProbe();
-  checkCapacitorRuntime();
+  checkWindowCapacitor();
+  checkMeteorIsCapacitor();
   checkWebAppLocalServerShim();
   checkCordovaPaths();
 

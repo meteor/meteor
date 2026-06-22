@@ -67,7 +67,8 @@ node scripts/run.js --platform=android --keep-running
 - `Native render ready`
 - `Style preserved`
 - `DDP verified`
-- `Capacitor runtime ready`
+- `window.Capacitor available`
+- `Meteor.isCapacitor true`
 - `WebAppLocalServer shim ready`
 - `__cordova paths adapted`
 
