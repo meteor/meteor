@@ -14,4 +14,4 @@ appId: com.meteor.capacitortests
 - assertVisible: "Meteor.isCapacitor true"
 - assertVisible: "Capacitor native platform ready"
 - assertVisible: "WebAppLocalServer shim ready"
-- assertVisible: "__cordova paths adapted"
+- assertVisible: "__cordova paths served"

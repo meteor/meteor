@@ -11,6 +11,8 @@ const APPS = {
     wrapper: "capacitor",
     sourceDir: path.join(ROOT, "apps", "capacitor-tests"),
     flowPath: path.join(ROOT, "flows", "capacitor-tests.yaml"),
+    livereloadInitialFlowPath: path.join(ROOT, "flows", "capacitor-tests-livereload-initial.yaml"),
+    livereloadFlowPath: path.join(ROOT, "flows", "capacitor-tests-livereload.yaml"),
   },
   smoke: {
     name: "smoke",

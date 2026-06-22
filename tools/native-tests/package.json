@@ -6,7 +6,9 @@
   "scripts": {
     "test": "node scripts/run.js",
     "test:capacitor:android:build": "node scripts/run.js --platform=android --app=capacitor-tests --mode=build",
-    "test:capacitor:ios:build": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=build"
+    "test:capacitor:ios:build": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=build",
+    "test:capacitor:android:livereload": "node scripts/run.js --platform=android --app=capacitor-tests --mode=livereload",
+    "test:capacitor:ios:livereload": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=livereload"
   },
   "devDependencies": {
     "execa": "^5.1.1",

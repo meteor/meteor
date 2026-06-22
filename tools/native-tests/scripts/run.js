@@ -9,9 +9,10 @@ const { bootSimulator } = require("./simulator");
 const { runFlow } = require("./maestro");
 
 const PLATFORMS = new Set(["ios", "android"]);
-const MODES = new Set(["run", "build"]);
+const MODES = new Set(["run", "build", "livereload"]);
 const JUNIT_DIR = path.resolve(__dirname, "..", "junit");
 const HARD_TIMEOUT_MS = 8 * 60 * 1000;
+const LIVERELOAD_SETTLE_MS = 30_000;
 
 const EXIT_PASS = 0;
 const EXIT_FLOW_FAIL = 1;
@@ -61,6 +62,31 @@ function artifactStem({ platform, appName, mode }) {
   return mode === "run" ? stem : `${stem}-${mode}`;
 }
 
+async function replaceFileText(file, replacements) {
+  let content = await fs.readFile(file, "utf8");
+  for (const [from, to] of replacements) {
+    content = content.replace(from, to);
+  }
+  await fs.writeFile(file, content, "utf8");
+}
+
+async function applyLivereloadFixtureChanges(appDir) {
+  await Promise.all([
+    replaceFileText(
+      path.join(appDir, "client", "main.js"),
+      [["Native client version initial", "Native client version updated"]]
+    ),
+    replaceFileText(
+      path.join(appDir, "server", "main.js"),
+      [["Native server version initial", "Native server version updated"]]
+    ),
+  ]);
+}
+
+function updatedJunitPath(junitOut) {
+  return junitOut.replace(/\.xml$/, "-updated.xml");
+}
+
 async function run(argv) {
   let args;
   try {
@@ -74,6 +100,20 @@ async function run(argv) {
 
   if (!(await fs.pathExists(appConfig.flowPath))) {
     console.error(`Missing flow file: ${appConfig.flowPath}`);
+    return EXIT_FRAMEWORK;
+  }
+  if (
+    args.mode === "livereload" &&
+    !(await fs.pathExists(appConfig.livereloadInitialFlowPath))
+  ) {
+    console.error(`Missing livereload initial flow file: ${appConfig.livereloadInitialFlowPath}`);
+    return EXIT_FRAMEWORK;
+  }
+  if (
+    args.mode === "livereload" &&
+    !(await fs.pathExists(appConfig.livereloadFlowPath))
+  ) {
+    console.error(`Missing livereload flow file: ${appConfig.livereloadFlowPath}`);
     return EXIT_FRAMEWORK;
   }
 
@@ -126,12 +166,13 @@ async function run(argv) {
     cleanup.push(() => sim.shutdown());
     await sim.uninstall();
 
-    if (appConfig.wrapper === "capacitor" && args.mode === "run") {
+    if (appConfig.wrapper === "capacitor" && args.mode !== "build") {
       const nativeRun = await startNativeRun({
         appDir: build.appDir,
         platform: args.platform,
         lanIp,
         deviceId: sim.deviceId,
+        capacitorMode: args.mode === "livereload" ? "livereload" : "bundled",
       });
       cleanup.push(() => nativeRun.stop());
       console.log(`Native Meteor run up at ${nativeRun.url}`);
@@ -146,14 +187,29 @@ async function run(argv) {
       console.log(`Installed bundle on ${args.platform} device ${sim.deviceId}`);
     }
 
+    const initialFlowPath = args.mode === "livereload"
+      ? appConfig.livereloadInitialFlowPath
+      : appConfig.flowPath;
+
     const { exitCode } = await runFlow({
-      flowPath: appConfig.flowPath,
+      flowPath: initialFlowPath,
       deviceId: sim.deviceId,
       junitOut,
     });
 
-    if (exitCode === 0) return EXIT_PASS;
-    return EXIT_FLOW_FAIL;
+    if (exitCode !== 0) return EXIT_FLOW_FAIL;
+    if (args.mode === "livereload") {
+      await applyLivereloadFixtureChanges(build.appDir);
+      await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
+      const updated = await runFlow({
+        flowPath: appConfig.livereloadFlowPath,
+        deviceId: sim.deviceId,
+        junitOut: updatedJunitPath(junitOut),
+      });
+      if (updated.exitCode === 0) return EXIT_PASS;
+      return EXIT_FLOW_FAIL;
+    }
+    return EXIT_PASS;
   } catch (err) {
     console.error("Infrastructure failure:", err.message);
     if (err.stack) console.error(err.stack);

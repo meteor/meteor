@@ -218,9 +218,14 @@ function assertCapacitorConfig(config, mode, platform = 'android') {
   expect(config.plugins.MeteorE2E.port).toBe(String(PORT));
 
   if (mode === 'prod') {
-    expect(config.server).toBeUndefined();
+    expect(config.server.url).toBeUndefined();
+    expect(config.server.androidScheme).toBe('http');
+    expect(config.server.cleartext).toBe(
+      config.plugins.MeteorE2E.isRun ? true : undefined
+    );
   } else {
-    expect(config.server.url).toBe(`http://127.0.0.1:${PORT}`);
+    expect(config.server.url).toBe(`http://127.0.0.1:${PORT}/__cordova/`);
+    expect(config.server.androidScheme).toBe('http');
   }
 }
 
@@ -465,7 +470,9 @@ describe('Capacitor App Web Lifecycle /', () => {
       expect(config.plugins.MeteorE2E.isBuild).toBe(true);
       expect(config.plugins.MeteorE2E.isRun).toBe(false);
       expect(config.plugins.MeteorE2E.platform).toBe('android');
-      expect(config.server).toBeUndefined();
+      expect(config.server.url).toBeUndefined();
+      expect(config.server.androidScheme).toBe('http');
+      expect(config.server.cleartext).toBeUndefined();
       await assertNoNativeLaunch(result.processResult.outputLines);
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
     } finally {
@@ -496,7 +503,9 @@ describe('Capacitor App Web Lifecycle /', () => {
       expect(config.plugins.MeteorE2E.platform).toBe('ios');
       expect(config.plugins.MeteorE2E.isNativeIos).toBe(true);
       expect(config.plugins.MeteorE2E.isNativeAndroid).toBe(false);
-      expect(config.server).toBeUndefined();
+      expect(config.server.url).toBeUndefined();
+      expect(config.server.androidScheme).toBe('http');
+      expect(config.server.cleartext).toBeUndefined();
       await assertNoNativeLaunch(result.processResult.outputLines);
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
     } finally {
@@ -555,7 +564,9 @@ describe('Capacitor App Web Lifecycle /', () => {
       expect(config.plugins.MeteorE2E.isBuild).toBe(true);
       expect(config.plugins.MeteorE2E.isRun).toBe(false);
       expect(config.plugins.MeteorE2E.webDir).toBe('_build/native-prod');
-      expect(config.server).toBeUndefined();
+      expect(config.server.url).toBeUndefined();
+      expect(config.server.androidScheme).toBe('http');
+      expect(config.server.cleartext).toBeUndefined();
       await assertNoNativeLaunch(result.processResult.outputLines);
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
     } finally {

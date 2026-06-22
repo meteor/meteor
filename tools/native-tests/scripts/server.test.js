@@ -47,6 +47,21 @@ test("builds capacitor meteor run command and env for a device target", () => {
   assert.equal(options.env.EXISTING, "1");
   assert.equal(options.env.PORT, "3210");
   assert.equal(options.env.ROOT_URL, "http://10.0.0.5:3210");
-  assert.equal(options.env.METEOR_CAPACITOR_LOCAL_IP, undefined);
+  assert.equal(options.env.METEOR_CAPACITOR_LOCAL_IP, "10.0.0.5");
   assert.equal(options.env.METEOR_CAPACITOR_TARGET, "emulator-5554");
+});
+
+test("passes explicit Capacitor mode into meteor run env", () => {
+  const options = buildNativeRunOptions({
+    platform: "ios",
+    lanIp: "10.0.0.6",
+    port: 3211,
+    capacitorMode: "livereload",
+    baseEnv: {},
+    meteorBin: "/repo/meteor",
+  });
+
+  assert.equal(options.env.METEOR_CAPACITOR_MODE, "livereload");
+  assert.equal(options.env.METEOR_CAPACITOR_LOCAL_IP, "10.0.0.6");
+  assert.equal(options.env.ROOT_URL, "http://10.0.0.6:3211");
 });

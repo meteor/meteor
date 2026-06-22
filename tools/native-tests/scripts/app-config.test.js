@@ -15,6 +15,8 @@ test("defaults to the capacitor-tests app", () => {
   assert.equal(app.wrapper, "capacitor");
   assert.match(app.sourceDir, /tools\/native-tests\/apps\/capacitor-tests$/);
   assert.match(app.flowPath, /tools\/native-tests\/flows\/capacitor-tests\.yaml$/);
+  assert.match(app.livereloadInitialFlowPath, /tools\/native-tests\/flows\/capacitor-tests-livereload-initial\.yaml$/);
+  assert.match(app.livereloadFlowPath, /tools\/native-tests\/flows\/capacitor-tests-livereload\.yaml$/);
 });
 
 test("keeps smoke app available as Cordova fallback", () => {

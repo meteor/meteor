@@ -112,7 +112,7 @@ export function ensureCapacitorConfigExists() {
  * Capacitor configuration for a Meteor project.
  *
  * defineConfig deep-merges this on top of Meteor defaults
- * (webDir, plugins.SplashScreen, …) and re-enforces \`bundledWebRuntime: false\`.
+ * (webDir, server.url, plugins.SplashScreen, …) and re-enforces \`bundledWebRuntime: false\`.
  * Anything set here wins, except RESERVED_PATHS, which warn and are ignored.
  *
  * Typed flags on the \`Meteor\` object include:
@@ -125,11 +125,6 @@ export function ensureCapacitorConfigExists() {
 module.exports = defineConfig(Meteor => ({
   appId: ${JSON.stringify(appId)},
   appName: ${JSON.stringify(appName)},
-  server: Meteor.isDevelopment
-    ? { url: \`http://\${Meteor.localIp}:\${Meteor.port}\`, cleartext: true }
-    : Meteor.isLivereload
-    ? { url: Meteor.rootUrl }
-    : undefined,
   ios: { contentInset: 'always' },
 }));
 `;

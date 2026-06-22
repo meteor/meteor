@@ -6,6 +6,7 @@ const ddpState = {
   methodReady: false,
   subscriptionReady: false,
 };
+const CLIENT_VERSION = "Native client version initial";
 
 function setStatus(id, text) {
   const node = document.getElementById(id);
@@ -78,13 +79,16 @@ function checkCordovaPaths() {
     ])
     .filter(Boolean);
 
-  if (!urls.some((url) => String(url).includes("__cordova/"))) {
+  if (urls.some((url) => String(url).includes("__cordova/"))) {
+    setStatus("cordova-status", "__cordova paths served");
+  } else {
     setStatus("cordova-status", "__cordova paths adapted");
   }
 }
 
 Meteor.startup(() => {
   setStatus("render-status", "Native render ready");
+  setStatus("client-version-status", CLIENT_VERSION);
   checkStyleProbe();
   checkWindowCapacitor();
   checkMeteorIsCapacitor();
@@ -101,6 +105,7 @@ Meteor.startup(() => {
 
   Meteor.call("nativeEcho", "ping", (error, result) => {
     if (!error && result?.ok === true && result?.echo === "ping") {
+      setStatus("server-version-status", result.serverVersion);
       ddpState.methodReady = true;
       updateDdpStatus();
     }

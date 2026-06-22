@@ -23,6 +23,11 @@ import {
   runCapacitorTransforms,
   _syncBundleFiles,
 } from './lib/transforms.js';
+import {
+  getCordovaJsStub,
+  injectWebAppLocalServerShim,
+  isCapacitorDirectServerMode,
+} from './capacitor_server.js';
 
 const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
 const RUN_PROCESS_STATE_KEY = 'capacitor.process.run';
@@ -123,6 +128,71 @@ Tinytest.add('capacitor - readiness - rejects non-index responses', test => {
     headers: { 'content-type': 'application/json' },
     body: '{"__meteor_runtime_config__":true}',
   }));
+});
+
+Tinytest.add('capacitor - server runtime - direct server mode detection', test => {
+  test.isFalse(isCapacitorDirectServerMode({}));
+  test.isFalse(isCapacitorDirectServerMode({
+    METEOR_CAPACITOR: 'true',
+    METEOR_CAPACITOR_MODE: 'bundled',
+  }));
+  test.isTrue(isCapacitorDirectServerMode({
+    METEOR_CAPACITOR: 'true',
+  }));
+  test.isTrue(isCapacitorDirectServerMode({
+    METEOR_CAPACITOR: 'true',
+    METEOR_CAPACITOR_MODE: 'livereload',
+  }));
+});
+
+Tinytest.add('capacitor - server runtime - injects shim into cordova head', test => {
+  const data = {
+    head: '<meta name="app">',
+    dynamicHead: '<script>dynamic</script>',
+  };
+
+  const changed = injectWebAppLocalServerShim(
+    {},
+    data,
+    'web.cordova',
+    null,
+    { env: { METEOR_CAPACITOR: 'true', METEOR_CAPACITOR_MODE: 'livereload' } }
+  );
+
+  test.isTrue(changed);
+  test.matches(data.head, /var WebAppLocalServer/);
+  test.matches(data.head, /<meta name="app">/);
+  test.equal(data.dynamicHead, '<script>dynamic</script>');
+});
+
+Tinytest.add('capacitor - server runtime - skips shim outside direct server mode', test => {
+  const data = { head: '<meta name="app">' };
+
+  const changed = injectWebAppLocalServerShim(
+    {},
+    data,
+    'web.cordova',
+    null,
+    { env: { METEOR_CAPACITOR: 'true', METEOR_CAPACITOR_MODE: 'bundled' } }
+  );
+
+  test.isFalse(changed);
+  test.equal(data.head, '<meta name="app">');
+});
+
+Tinytest.add('capacitor - server runtime - cordova stub is direct server only', test => {
+  test.isNull(getCordovaJsStub({
+    METEOR_CAPACITOR: 'true',
+    METEOR_CAPACITOR_MODE: 'bundled',
+  }));
+
+  const stub = getCordovaJsStub({
+    METEOR_CAPACITOR: 'true',
+    METEOR_CAPACITOR_MODE: 'livereload',
+  });
+
+  test.matches(stub, /document\.dispatchEvent\(new Event\("deviceready"\)\)/);
+  test.matches(stub, /window\.cordova = window\.cordova \|\| \{\}/);
 });
 
 Tinytest.add('capacitor - cli - prefers the app-local cap binary', test => {
@@ -342,6 +412,9 @@ Tinytest.add('capacitor - run - environment variables mapping', test => {
 
     process.env.METEOR_CAPACITOR_SKIP_NATIVE_RUN = 'true';
     test.isFalse(_getCapRunArgsFromEnv().includes('--skip-native-run'));
+
+    process.env.METEOR_CAPACITOR_LOCAL_IP = '192.168.0.10';
+    test.isFalse(_getCapRunArgsFromEnv().includes('--local-ip=192.168.0.10'));
   } finally {
     process.env = originalEnv;
   }

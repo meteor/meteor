@@ -1,11 +1,8 @@
 const { defineConfig } = require('@meteorjs/capacitor');
 
 module.exports = defineConfig(Meteor => ({
-  appId: 'com.meteor.e2e.native.react',
+  appId: 'com.meteor.e2e.nativeReact',
   appName: 'Meteor Native React E2E',
-  server: Meteor.isDevelopment
-    ? { url: `http://${Meteor.localIp}:${Meteor.port}`, cleartext: true }
-    : undefined,
   plugins: {
     MeteorE2E: {
       platform: Meteor.platform,

@@ -12,6 +12,7 @@
     ".": "./index.js"
   },
   "scripts": {
+    "test": "node --test test/*.test.js",
     "bump": "node ../../scripts/admin/bump-npm-package.js",
     "publish": "npm publish",
     "publish:alpha": "npm publish --tag alpha",

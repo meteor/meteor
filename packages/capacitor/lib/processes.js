@@ -65,9 +65,11 @@ export function getCapacitorEnv({ platform, mode } = {}) {
   const isDev = isMeteorAppDevelopment();
   const isProd = isMeteorAppProduction();
   const webDir = getCapacitorWebDir({ isDevelopment: isDev, isProduction: isProd });
+  const capacitorMode = mode || process.env.METEOR_CAPACITOR_MODE ||
+    (isProd ? 'bundled' : 'development');
   return {
     METEOR_CAPACITOR: 'true',
-    METEOR_CAPACITOR_MODE: mode || (isProd ? 'bundled' : 'development'),
+    METEOR_CAPACITOR_MODE: capacitorMode,
     METEOR_CAPACITOR_PLATFORM: platform || (isAndroid ? 'android' : isIos ? 'ios' : ''),
     METEOR_BUILD_CONTEXT: CAPACITOR_BUILD_CONTEXT,
     METEOR_CAPACITOR_WEB_DIR: webDir,
@@ -335,6 +337,7 @@ const CAP_INTERNAL_ENVS = new Set([
   'METEOR_CAPACITOR_MODE',
   'METEOR_CAPACITOR_PLATFORM',
   'METEOR_CAPACITOR_WEB_DIR',
+  'METEOR_CAPACITOR_LOCAL_IP',
   'METEOR_CAPACITOR_AUTO_PICK_TARGET',
   'METEOR_CAPACITOR_SKIP_NATIVE_RUN',
 ]);

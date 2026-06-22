@@ -29,6 +29,7 @@ function buildNativeRunOptions({
   lanIp,
   port = DEFAULT_PORT,
   deviceId,
+  capacitorMode,
   baseEnv = process.env,
   meteorBin,
 } = {}) {
@@ -39,7 +40,12 @@ function buildNativeRunOptions({
     ...baseEnv,
     PORT: String(port),
     ROOT_URL: url,
+    METEOR_CAPACITOR_LOCAL_IP: lanIp,
   };
+
+  if (capacitorMode) {
+    env.METEOR_CAPACITOR_MODE = capacitorMode;
+  }
 
   if (deviceId) {
     env.METEOR_CAPACITOR_TARGET = deviceId;
@@ -99,6 +105,7 @@ async function startNativeRun({
   lanIp,
   port = DEFAULT_PORT,
   deviceId,
+  capacitorMode,
   meteorBin,
 }) {
   const { command, args, env, url } = buildNativeRunOptions({
@@ -106,6 +113,7 @@ async function startNativeRun({
     lanIp,
     port,
     deviceId,
+    capacitorMode,
     meteorBin,
   });
 

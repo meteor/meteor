@@ -14,6 +14,7 @@ var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
+const net = require('net');
 const {
   blue,
   bold,
@@ -224,7 +225,23 @@ function parseCordovaServerPortOption(options = {}) {
   return cordovaServerPortOption ? parseInt(cordovaServerPortOption, 10) : null;
 }
 
+function isExplicitMobileServerHost(hostname) {
+  return net.isIP(hostname) &&
+    hostname !== '127.0.0.1' &&
+    hostname !== '::1' &&
+    hostname !== '0.0.0.0' &&
+    hostname !== '::';
+}
+
 function detectMobileServerUrl(parsedServerUrl, isRunOnDeviceRequested) {
+  if (isExplicitMobileServerHost(parsedServerUrl.hostname)) {
+    return {
+      protocol: parsedServerUrl.protocol || 'http',
+      hostname: parsedServerUrl.hostname,
+      port: parsedServerUrl.port
+    };
+  }
+
   // Always try to use an auto-detected IP first
   try {
     const myIp = utils.ipAddress();

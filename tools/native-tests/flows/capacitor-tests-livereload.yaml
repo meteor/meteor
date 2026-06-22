@@ -8,10 +8,10 @@ appId: com.meteor.capacitortests
 - extendedWaitUntil:
     visible: "DDP verified"
     timeout: 60000
-- assertVisible: "Native client version initial"
-- assertVisible: "Native server version initial"
+- assertVisible: "Native client version updated"
+- assertVisible: "Native server version updated"
 - assertVisible: "window.Capacitor available"
 - assertVisible: "Meteor.isCapacitor true"
 - assertVisible: "Capacitor native platform ready"
 - assertVisible: "WebAppLocalServer shim ready"
-- assertVisible: "__cordova paths adapted"
+- assertVisible: "__cordova paths served"
