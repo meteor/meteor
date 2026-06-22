@@ -77,7 +77,7 @@
         {
           "id": "blaze-app",
           "kind": "app",
-          "jestArgs": "--testPathPattern=blaze.test.js"
+          "jestArgs": "--testPathPattern=\"(^|/)blaze\\.test\\.js$\""
         },
         {
           "id": "full-blaze-app",
@@ -135,9 +135,19 @@
           "jestArgs": "--testPathPattern=server-only.test.js"
         },
         {
+          "id": "apollo-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Apollo Skeleton\""
+        },
+        {
           "id": "bare-skeleton",
           "kind": "skeleton",
           "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Bare Skeleton\""
+        },
+        {
+          "id": "chakra-ui-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"ChakraUI Skeleton\""
         },
         {
           "id": "full-skeleton",
