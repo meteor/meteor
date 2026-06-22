@@ -1,0 +1,34 @@
+name: Reset managed CI labels
+
+on:
+  pull_request_target:
+    types:
+      - synchronize
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  reset-managed-ci-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reset managed E2E labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const managedPrefix = "ci:e2e:";
+            const labels = context.payload.pull_request.labels
+              .map((label) => label.name)
+              .filter((name) => name.startsWith(managedPrefix));
+
+            for (const name of labels) {
+              core.info(`Removing stale managed CI label: ${name}`);
+              await github.rest.issues.removeLabel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.pull_request.number,
+                name,
+              });
+            }
