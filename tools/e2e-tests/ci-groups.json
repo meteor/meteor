@@ -30,6 +30,13 @@
         "packages/meteor-tool/**",
         "tools/cli/**",
         "tools/isobuild/**",
+        "tools/runners/**",
+        "tools/fs/**",
+        "tools/packaging/**",
+        "tools/tool-env/**",
+        "tools/utils/**",
+        "tools/console/**",
+        "tools/meteor-services/**",
         ".github/workflows/e2e-tests.yml",
         "tools/e2e-tests/ci-groups.json",
         "tools/e2e-tests/scripts/resolve-ci-plan.mjs"
@@ -50,6 +57,66 @@
       "name": "e2e-skeletons",
       "paths": ["tools/e2e-tests/skeleton.test.js"],
       "select": [{ "kind": "skeleton" }]
+    },
+    {
+      "name": "e2e-babel-test",
+      "paths": ["tools/e2e-tests/babel.test.js"],
+      "select": [{ "id": "babel-app" }]
+    },
+    {
+      "name": "e2e-blaze-test",
+      "paths": ["tools/e2e-tests/blaze.test.js"],
+      "select": [{ "id": "blaze-app" }]
+    },
+    {
+      "name": "e2e-full-blaze-test",
+      "paths": ["tools/e2e-tests/full-blaze.test.js"],
+      "select": [{ "id": "full-blaze-app" }]
+    },
+    {
+      "name": "e2e-coffeescript-test",
+      "paths": ["tools/e2e-tests/coffeescript.test.js"],
+      "select": [{ "id": "coffeescript-app" }]
+    },
+    {
+      "name": "e2e-monorepo-test",
+      "paths": ["tools/e2e-tests/monorepo.test.js"],
+      "select": [{ "id": "monorepo-app" }]
+    },
+    {
+      "name": "e2e-server-only-test",
+      "paths": ["tools/e2e-tests/server-only.test.js"],
+      "select": [{ "id": "server-only-app" }]
+    },
+    {
+      "name": "e2e-react-test",
+      "paths": ["tools/e2e-tests/react.test.js"],
+      "select": [{ "id": "react-app" }]
+    },
+    {
+      "name": "e2e-react-router-test",
+      "paths": ["tools/e2e-tests/react-router.test.js"],
+      "select": [{ "id": "react-router-app" }]
+    },
+    {
+      "name": "e2e-solid-test",
+      "paths": ["tools/e2e-tests/solid.test.js"],
+      "select": [{ "id": "solid-app" }]
+    },
+    {
+      "name": "e2e-svelte-test",
+      "paths": ["tools/e2e-tests/svelte.test.js"],
+      "select": [{ "id": "svelte-app" }]
+    },
+    {
+      "name": "e2e-typescript-test",
+      "paths": ["tools/e2e-tests/typescript.test.js"],
+      "select": [{ "id": "typescript-app" }]
+    },
+    {
+      "name": "e2e-vue-test",
+      "paths": ["tools/e2e-tests/vue.test.js"],
+      "select": [{ "id": "vue-app" }]
     },
     {
       "name": "e2e-shared-infra",
