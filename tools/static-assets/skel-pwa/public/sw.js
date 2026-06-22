@@ -57,7 +57,7 @@ async function staleWhileRevalidate(req, cacheName) {
   const fresh = fetch(req).then((res) => {
     if (res.ok) cache.put(req, res.clone());
     return res;
-  }).catch(() => cached);
+  }).catch(() => cached || Response.error());
   return cached || fresh;
 }
 
@@ -71,9 +71,14 @@ async function cacheFirst(req, cacheName, maxAgeSeconds) {
       : Infinity;
     if (!maxAgeSeconds || age < maxAgeSeconds) return cached;
   }
-  const res = await fetch(req);
-  if (res.ok) cache.put(req, res.clone());
-  return res;
+  try {
+    const res = await fetch(req);
+    if (res.ok) cache.put(req, res.clone());
+    return res;
+  } catch (err) {
+    if (cached) return cached; // stale, but better than a broken asset offline
+    throw err;
+  }
 }
 
 async function networkFirst(req, cacheName, timeoutMs = 3000) {
