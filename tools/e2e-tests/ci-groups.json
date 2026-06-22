@@ -1,0 +1,245 @@
+{
+  "labels": {
+    "ci:e2e": {
+      "managed": false,
+      "description": "Run all E2E slices.",
+      "select": [{ "group": "all" }]
+    },
+    "ci:e2e:apps": {
+      "managed": true,
+      "description": "Run app lifecycle and bundling slices.",
+      "select": [{ "kind": "app" }]
+    },
+    "ci:e2e:skeletons": {
+      "managed": true,
+      "description": "Run meteor create skeleton slices.",
+      "select": [{ "kind": "skeleton" }]
+    },
+    "ci:e2e:examples": {
+      "managed": true,
+      "description": "Run example creation slices.",
+      "select": [{ "id": "examples" }]
+    }
+  },
+  "pathRules": [
+    {
+      "name": "core-tool",
+      "paths": [
+        "meteor",
+        "meteor/**",
+        "packages/meteor-tool/**",
+        ".github/workflows/e2e-tests.yml",
+        "tools/e2e-tests/ci-groups.json",
+        "tools/e2e-tests/scripts/resolve-ci-plan.mjs"
+      ],
+      "select": [{ "group": "all" }]
+    },
+    {
+      "name": "e2e-infra",
+      "paths": ["tools/e2e-tests/**"],
+      "select": [{ "group": "all" }]
+    },
+    {
+      "name": "skeleton-assets",
+      "paths": ["tools/static-assets/skel-**"],
+      "select": [{ "kind": "skeleton" }]
+    }
+  ],
+  "checks": [
+    {
+      "check": "Angular",
+      "slices": [
+        {
+          "id": "angular-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Angular Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Babel",
+      "slices": [
+        {
+          "id": "babel-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=babel.test.js"
+        },
+        {
+          "id": "babel-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Babel Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Blaze",
+      "slices": [
+        {
+          "id": "blaze-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=blaze.test.js"
+        },
+        {
+          "id": "full-blaze-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=full-blaze.test.js"
+        },
+        {
+          "id": "blaze-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Blaze Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Coffeescript",
+      "slices": [
+        {
+          "id": "coffeescript-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=coffeescript.test.js"
+        },
+        {
+          "id": "coffeescript-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Coffeescript Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Examples",
+      "slices": [
+        {
+          "id": "examples",
+          "kind": "examples",
+          "jestArgs": "--testPathPattern=example.test.js"
+        }
+      ]
+    },
+    {
+      "check": "Monorepo",
+      "slices": [
+        {
+          "id": "monorepo-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=monorepo.test.js"
+        }
+      ]
+    },
+    {
+      "check": "Other",
+      "slices": [
+        {
+          "id": "server-only-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=server-only.test.js"
+        },
+        {
+          "id": "bare-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Bare Skeleton\""
+        },
+        {
+          "id": "full-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Full Skeleton\""
+        },
+        {
+          "id": "tailwind-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Tailwind Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "React",
+      "slices": [
+        {
+          "id": "react-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=react.test.js"
+        },
+        {
+          "id": "react-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"React Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "R.Router",
+      "slices": [
+        {
+          "id": "react-router-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=react-router.test.js"
+        }
+      ]
+    },
+    {
+      "check": "Solid",
+      "slices": [
+        {
+          "id": "solid-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=solid.test.js"
+        },
+        {
+          "id": "solid-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Solid Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Svelte",
+      "slices": [
+        {
+          "id": "svelte-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=svelte.test.js"
+        },
+        {
+          "id": "svelte-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Svelte Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Typescript",
+      "slices": [
+        {
+          "id": "typescript-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=typescript.test.js"
+        },
+        {
+          "id": "typescript-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Typescript Skeleton\""
+        },
+        {
+          "id": "typescript-tailwind-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Typescript Tailwind Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Vue",
+      "slices": [
+        {
+          "id": "vue-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=vue.test.js"
+        },
+        {
+          "id": "vue-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Vue Skeleton\""
+        }
+      ]
+    }
+  ]
+}
