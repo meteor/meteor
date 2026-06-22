@@ -40,6 +40,11 @@ const manifest = {
       select: [{ id: "babel-app" }]
     },
     {
+      name: "e2e-react-test",
+      paths: ["tools/e2e-tests/react.test.js"],
+      select: [{ id: "react-app" }]
+    },
+    {
       name: "skeleton-assets",
       paths: ["tools/static-assets/skel-**"],
       select: [{ kind: "skeleton" }]
@@ -250,6 +255,33 @@ test("apps and skeleton labels are unioned without duplicate checks", () => {
   assert.deepEqual(checkNames(result.noopMatrix), ["Examples"]);
 });
 
+test("overlapping label and path selections deduplicate slices", () => {
+  const result = plan({
+    labels: ["ci:e2e:apps"],
+    changedFiles: ["tools/e2e-tests/react.test.js"]
+  });
+
+  assert.equal(result.runE2E, true);
+  assert.deepEqual(checkNames(result.realMatrix), ["React", "Babel"]);
+  assert.equal(
+    result.realMatrix.include.filter((item) => item.check === "React").length,
+    1
+  );
+  assert.deepEqual(result.realMatrix.include, [
+    {
+      check: "React",
+      sliceIds: "react-app",
+      jestArgsJson: JSON.stringify(["--testPathPattern=react.test.js"])
+    },
+    {
+      check: "Babel",
+      sliceIds: "babel-app",
+      jestArgsJson: JSON.stringify(["--testPathPattern=babel.test.js"])
+    }
+  ]);
+  assert.deepEqual(checkNames(result.noopMatrix), ["Examples"]);
+});
+
 test("examples label selects examples only", () => {
   const result = plan({
     labels: ["ci:e2e:examples"],
@@ -315,6 +347,7 @@ test("managed scoped labels are ignored on synchronize while sticky ci:e2e remai
     action: "synchronize"
   });
 
+  assert.equal(managedOnly.emitChecks, true);
   assert.equal(managedOnly.runE2E, false);
   assert.equal(managedOnly.reason, "no E2E selection");
   assert.deepEqual(managedOnly.realMatrix.include, []);
