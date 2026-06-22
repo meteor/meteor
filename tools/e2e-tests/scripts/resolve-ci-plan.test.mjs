@@ -30,6 +30,16 @@ const manifest = {
       select: [{ group: "all" }]
     },
     {
+      name: "e2e-examples",
+      paths: ["tools/e2e-tests/example.test.js"],
+      select: [{ id: "examples" }]
+    },
+    {
+      name: "e2e-babel-test",
+      paths: ["tools/e2e-tests/babel.test.js"],
+      select: [{ id: "babel-app" }]
+    },
+    {
       name: "skeleton-assets",
       paths: ["tools/static-assets/skel-**"],
       select: [{ kind: "skeleton" }]
@@ -126,6 +136,45 @@ test("core path selects every slice", () => {
   assert.deepEqual(result.noopMatrix.include, []);
 });
 
+test("babel test path selects only the babel app slice", () => {
+  const result = plan({ changedFiles: ["tools/e2e-tests/babel.test.js"] });
+
+  assert.equal(result.runE2E, true);
+  assert.deepEqual(result.realMatrix.include, [
+    {
+      check: "Babel",
+      sliceIds: "babel-app",
+      jestArgsJson: JSON.stringify(["--testPathPattern=babel.test.js"])
+    }
+  ]);
+  assert.deepEqual(checkNames(result.noopMatrix), ["React", "Examples"]);
+});
+
+test("skeleton asset path selects skeleton slices only", () => {
+  const result = plan({
+    changedFiles: ["tools/static-assets/skel-react/package.json"]
+  });
+
+  assert.equal(result.runE2E, true);
+  assert.deepEqual(result.realMatrix.include, [
+    {
+      check: "React",
+      sliceIds: "react-skeleton",
+      jestArgsJson: JSON.stringify([
+        "--testPathPattern=skeleton.test.js -t=\"React Skeleton\""
+      ])
+    },
+    {
+      check: "Babel",
+      sliceIds: "babel-skeleton",
+      jestArgsJson: JSON.stringify([
+        "--testPathPattern=skeleton.test.js -t=\"Babel Skeleton\""
+      ])
+    }
+  ]);
+  assert.deepEqual(checkNames(result.noopMatrix), ["Examples"]);
+});
+
 test("apps label selects only app slices and keeps noop checks", () => {
   const result = plan({
     labels: ["ci:e2e:apps"],
@@ -165,6 +214,35 @@ test("skeleton label selects skeleton slices under stable check names", () => {
       check: "Babel",
       sliceIds: "babel-skeleton",
       jestArgsJson: JSON.stringify([
+        "--testPathPattern=skeleton.test.js -t=\"Babel Skeleton\""
+      ])
+    }
+  ]);
+  assert.deepEqual(checkNames(result.noopMatrix), ["Examples"]);
+});
+
+test("apps and skeleton labels are unioned without duplicate checks", () => {
+  const result = plan({
+    labels: ["ci:e2e:apps", "ci:e2e:skeletons"],
+    changedFiles: ["docs/page.md"]
+  });
+
+  assert.deepEqual(checkNames(result.realMatrix), ["React", "Babel"]);
+  assert.equal(new Set(checkNames(result.realMatrix)).size, 2);
+  assert.deepEqual(result.realMatrix.include, [
+    {
+      check: "React",
+      sliceIds: "react-app,react-skeleton",
+      jestArgsJson: JSON.stringify([
+        "--testPathPattern=react.test.js",
+        "--testPathPattern=skeleton.test.js -t=\"React Skeleton\""
+      ])
+    },
+    {
+      check: "Babel",
+      sliceIds: "babel-app,babel-skeleton",
+      jestArgsJson: JSON.stringify([
+        "--testPathPattern=babel.test.js",
         "--testPathPattern=skeleton.test.js -t=\"Babel Skeleton\""
       ])
     }
@@ -251,6 +329,25 @@ test("managed scoped labels are ignored on synchronize while sticky ci:e2e remai
   assert.equal(stickyAll.runE2E, true);
   assert.deepEqual(checkNames(stickyAll.realMatrix), ["React", "Babel", "Examples"]);
   assert.deepEqual(stickyAll.noopMatrix.include, []);
+});
+
+test("synchronize ignores stale managed labels but keeps path rule selections", () => {
+  const result = plan({
+    labels: ["ci:e2e:apps"],
+    changedFiles: ["tools/e2e-tests/example.test.js"],
+    action: "synchronize"
+  });
+
+  assert.equal(result.runE2E, true);
+  assert.equal(result.reason, "selected by path rule: e2e-examples");
+  assert.deepEqual(result.realMatrix.include, [
+    {
+      check: "Examples",
+      sliceIds: "examples",
+      jestArgsJson: JSON.stringify(["--testPathPattern=example.test.js"])
+    }
+  ]);
+  assert.deepEqual(checkNames(result.noopMatrix), ["React", "Babel"]);
 });
 
 test("managed scoped labels are honored when action is labeled, opened, or ready_for_review", () => {
