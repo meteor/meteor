@@ -41,6 +41,8 @@
     "test:native:android": "cd tools/native-tests && npm test -- --platform=android",
     "test:native:capacitor:ios": "cd tools/native-tests && npm test -- --platform=ios --app=capacitor-tests",
     "test:native:capacitor:android": "cd tools/native-tests && npm test -- --platform=android --app=capacitor-tests",
+    "test:native:capacitor:ios:build": "cd tools/native-tests && npm run test:capacitor:ios:build",
+    "test:native:capacitor:android:build": "cd tools/native-tests && npm run test:capacitor:android:build",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
     "ts-coverage": "typescript-coverage-report",

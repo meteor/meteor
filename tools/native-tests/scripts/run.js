@@ -9,6 +9,7 @@ const { bootSimulator } = require("./simulator");
 const { runFlow } = require("./maestro");
 
 const PLATFORMS = new Set(["ios", "android"]);
+const MODES = new Set(["run", "build"]);
 const JUNIT_DIR = path.resolve(__dirname, "..", "junit");
 const HARD_TIMEOUT_MS = 8 * 60 * 1000;
 
@@ -18,7 +19,12 @@ const EXIT_INFRA = 2;
 const EXIT_FRAMEWORK = 3;
 
 function parseArgs(argv) {
-  const out = { platform: null, appName: DEFAULT_APP, keepRunning: false };
+  const out = {
+    platform: null,
+    appName: DEFAULT_APP,
+    keepRunning: false,
+    mode: "run",
+  };
   for (let i = 0; i < argv.length; i++) {
     const token = argv[i];
     if (token === "--keep-running") {
@@ -27,6 +33,10 @@ function parseArgs(argv) {
       out.appName = argv[++i];
     } else if (token.startsWith("--app=")) {
       out.appName = token.slice("--app=".length);
+    } else if (token === "--mode") {
+      out.mode = argv[++i];
+    } else if (token.startsWith("--mode=")) {
+      out.mode = token.slice("--mode=".length);
     } else if (token === "--platform") {
       out.platform = argv[++i];
     } else if (token.startsWith("--platform=")) {
@@ -39,8 +49,16 @@ function parseArgs(argv) {
   if (!PLATFORMS.has(out.platform)) {
     throw new Error(`Unsupported platform: ${out.platform}`);
   }
+  if (!MODES.has(out.mode)) {
+    throw new Error(`Unsupported mode: ${out.mode}`);
+  }
   getAppConfig(out.appName);
   return out;
+}
+
+function artifactStem({ platform, appName, mode }) {
+  const stem = `${platform}-${appName}`;
+  return mode === "run" ? stem : `${stem}-${mode}`;
 }
 
 async function run(argv) {
@@ -65,8 +83,13 @@ async function run(argv) {
     return EXIT_INFRA;
   }
 
-  const junitOut = path.join(JUNIT_DIR, `${args.platform}-${appConfig.name}.xml`);
-  const logOut = path.join(JUNIT_DIR, `${args.platform}-${appConfig.name}-device.log`);
+  const stem = artifactStem({
+    platform: args.platform,
+    appName: appConfig.name,
+    mode: args.mode,
+  });
+  const junitOut = path.join(JUNIT_DIR, `${stem}.xml`);
+  const logOut = path.join(JUNIT_DIR, `${stem}-device.log`);
   await fs.ensureDir(JUNIT_DIR);
 
   const cleanup = [];
@@ -93,6 +116,7 @@ async function run(argv) {
       appConfig,
       platform: args.platform,
       lanIp,
+      mode: args.mode,
     });
     cleanup.push(() => cleanupApp(build.workDir));
 
@@ -102,7 +126,7 @@ async function run(argv) {
     cleanup.push(() => sim.shutdown());
     await sim.uninstall();
 
-    if (appConfig.wrapper === "capacitor") {
+    if (appConfig.wrapper === "capacitor" && args.mode === "run") {
       const nativeRun = await startNativeRun({
         appDir: build.appDir,
         platform: args.platform,
@@ -149,6 +173,7 @@ if (require.main === module) {
 }
 
 module.exports = {
+  artifactStem,
   parseArgs,
   run,
   EXIT_PASS,

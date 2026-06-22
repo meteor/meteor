@@ -8,5 +8,6 @@ appId: com.meteor.capacitortests
 - assertVisible: "DDP verified"
 - assertVisible: "window.Capacitor available"
 - assertVisible: "Meteor.isCapacitor true"
+- assertVisible: "Capacitor native platform ready"
 - assertVisible: "WebAppLocalServer shim ready"
 - assertVisible: "__cordova paths adapted"

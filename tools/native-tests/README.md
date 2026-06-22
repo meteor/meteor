@@ -13,6 +13,14 @@ This suite is not a browser E2E duplicate. Browser/build artifact coverage stays
 in `tools/e2e-tests`; this suite proves native build, simulator, WebView, and DDP
 stability.
 
+The default Capacitor run mode exercises `meteor run android|ios`. Build mode
+uses `meteor build --directory --platforms=<platform> --server=<LAN URL>` to
+produce production web assets, compiles a native debug shell around those
+assets, starts the Meteor server at the embedded mobile server URL, installs the
+app, and runs the same Maestro assertions. E2E tests still own generated-file
+assertions; build-mode native tests prove the production bundle boots in a real
+WebView and connects back to the server.
+
 ## Local usage
 
 Prerequisites: Node 20+, Maestro CLI, Xcode (for iOS), Android SDK + emulator
@@ -24,6 +32,8 @@ npm run test:native:android       # alias for: npm run test:native -- --platform
 npm run test:native:ios           # alias for: npm run test:native -- --platform=ios
 npm run test:native:capacitor:android
 npm run test:native:capacitor:ios
+npm run test:native:capacitor:android:build  # production meteor build + Android emulator
+npm run test:native:capacitor:ios:build      # production meteor build + iOS Simulator
 ```
 
 The generic `npm run test:native -- --platform=<ios|android>` form also works; the
@@ -69,6 +79,7 @@ node scripts/run.js --platform=android --keep-running
 - `DDP verified`
 - `window.Capacitor available`
 - `Meteor.isCapacitor true`
+- `Capacitor native platform ready`
 - `WebAppLocalServer shim ready`
 - `__cordova paths adapted`
 

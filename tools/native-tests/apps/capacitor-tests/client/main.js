@@ -50,6 +50,12 @@ function checkMeteorIsCapacitor() {
   }
 }
 
+function checkCapacitorNativePlatform() {
+  if (window.Capacitor?.isNativePlatform?.() === true) {
+    setStatus("native-platform-status", "Capacitor native platform ready");
+  }
+}
+
 function checkWebAppLocalServerShim() {
   const shim = window.WebAppLocalServer;
   if (
@@ -82,6 +88,7 @@ Meteor.startup(() => {
   checkStyleProbe();
   checkWindowCapacitor();
   checkMeteorIsCapacitor();
+  checkCapacitorNativePlatform();
   checkWebAppLocalServerShim();
   checkCordovaPaths();
 
