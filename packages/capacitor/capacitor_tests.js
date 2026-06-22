@@ -20,6 +20,7 @@ import {
   _mergeExtraArgsWithEnv,
 } from './lib/processes.js';
 import {
+  runCapacitorTransforms,
   _syncBundleFiles,
 } from './lib/transforms.js';
 
@@ -192,6 +193,30 @@ Tinytest.add('capacitor - transform - preserves app directory asset paths', test
     test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'packages', 'meteor.js')));
     test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'program.json')));
     test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'body.html')));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+Tinytest.addAsync('capacitor - transform - fails when web.cordova program.json is missing', async test => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-cap-missing-program-'));
+  try {
+    const sourceDir = path.join(tempDir, 'bundle', 'programs', 'web.cordova');
+    const webDir = '_build/native-prod';
+    const staleIndexPath = path.join(tempDir, webDir, 'index.html');
+
+    fs.mkdirSync(sourceDir, { recursive: true });
+    fs.mkdirSync(path.dirname(staleIndexPath), { recursive: true });
+    fs.writeFileSync(staleIndexPath, 'stale capacitor output', 'utf8');
+
+    const ok = await runCapacitorTransforms({
+      appDir: tempDir,
+      webDir,
+      cordovaOutDir: sourceDir,
+    });
+
+    test.isFalse(ok);
+    test.equal(fs.readFileSync(staleIndexPath, 'utf8'), 'stale capacitor output');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

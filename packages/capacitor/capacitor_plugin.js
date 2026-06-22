@@ -146,6 +146,7 @@ async function runCapacitorPlugin() {
                 appDir: context.appDir,
                 platform: platforms.length === 1 ? platforms[0] : null,
                 cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
+                fatal: true,
               });
             });
           },
@@ -278,8 +279,14 @@ function waitForCordovaBundle(cordovaOutDir, { intervalMs = 100, timeoutMs = 30_
  * @param {string} opts.appDir
  * @param {string|null} [opts.platform] 'android' / 'ios' for run, null for build.
  * @param {string|null} [opts.cordovaOutDir] Explicit web.cordova source dir.
+ * @param {boolean} [opts.fatal] Throw on failure instead of returning false.
  */
-async function transformAndSync({ appDir, platform = null, cordovaOutDir = null }) {
+async function transformAndSync({
+  appDir,
+  platform = null,
+  cordovaOutDir = null,
+  fatal = false,
+}) {
   const resolvedCordovaOutDir = cordovaOutDir ||
     path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
   const displayCordovaOutDir = path.relative(appDir, resolvedCordovaOutDir);
@@ -287,17 +294,37 @@ async function transformAndSync({ appDir, platform = null, cordovaOutDir = null 
   logVerbose(`[i] Capacitor: waiting for ${displayCordovaOutDir}/program.json`);
   const ready = await waitForCordovaBundle(resolvedCordovaOutDir);
   if (!ready) {
-    logError(`Capacitor: timed out waiting for ${displayCordovaOutDir} (30s).`);
-    return;
+    return handleTransformFailure(
+      `Capacitor: ${displayCordovaOutDir}/program.json not found in Meteor build output.`,
+      { fatal }
+    );
   }
 
   await withProcessEnv(getCapacitorEnv({ platform }), () =>
     writeResolvedConfigSnapshot({ appDir })
   );
 
-  if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir }))) return;
+  if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir }))) {
+    return handleTransformFailure('Capacitor build sync failed during web.cordova transform.', {
+      fatal,
+      log: false,
+    });
+  }
 
-  return runCapSync({ appDir, platform }).catch(err =>
-    logError(`Capacitor sync failed: ${err.message}`),
-  );
+  try {
+    await runCapSync({ appDir, platform });
+    return true;
+  } catch (err) {
+    return handleTransformFailure(`Capacitor sync failed: ${err.message}`, { fatal });
+  }
+}
+
+function handleTransformFailure(message, { fatal = false, log = true } = {}) {
+  if (fatal) {
+    throw new Error(message);
+  }
+  if (log) {
+    logError(message);
+  }
+  return false;
 }

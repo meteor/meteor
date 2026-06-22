@@ -63,6 +63,69 @@ async function readJson(appDir, relPath) {
   return fs.readJson(path.join(appDir, relPath));
 }
 
+async function ensureIosPlatform(appDir) {
+  if (await fs.pathExists(path.join(appDir, 'ios', 'App', 'App.xcworkspace'))) {
+    return;
+  }
+
+  await runMeteorCommand('add-platform', ['ios'], appDir, {
+    captureOutput: true,
+    checkExitCode: true,
+    env: e2eEnv(),
+  });
+}
+
+async function installNativeProdAppBlocker(appDir) {
+  const packageName = 'native-prod-app-blocker';
+  const packageDir = path.join(appDir, 'packages', packageName);
+  const packagesPath = path.join(appDir, '.meteor', 'packages');
+  const originalPackages = await fs.readFile(packagesPath, 'utf8');
+
+  await fs.ensureDir(packageDir);
+  await fs.writeFile(path.join(packageDir, 'package.js'), `
+Package.describe({
+  name: '${packageName}',
+  version: '0.0.1'
+});
+
+Package.onUse(function (api) {
+  api.use('isobuild:compiler-plugin@1.0.0');
+});
+
+Package.registerBuildPlugin({
+  name: '${packageName}',
+  sources: ['plugin.js'],
+  use: ['isobuild:compiler-plugin@1.0.0']
+});
+`, 'utf8');
+  await fs.writeFile(path.join(packageDir, 'plugin.js'), `
+var fs = Plugin.fs;
+var path = Plugin.path;
+
+Plugin.registerCompiler({
+  extensions: ['blocknativeprod']
+}, function () {
+  return {
+    processFilesForTarget: function () {
+      var blockedPath = path.join(process.cwd(), '_build', 'native-prod', 'app');
+      fs.writeFileSync(blockedPath, 'stale capacitor output', 'utf8');
+    }
+  };
+});
+`, 'utf8');
+  await fs.writeFile(path.join(packageDir, 'trigger.blocknativeprod'), '', 'utf8');
+  await fs.writeFile(
+    packagesPath,
+    `${originalPackages.trimEnd()}\n${packageName}\n`,
+    'utf8'
+  );
+
+  return async () => {
+    await fs.writeFile(packagesPath, originalPackages, 'utf8');
+    await fs.remove(packageDir);
+  };
+}
+
 async function assertRspackDevelopmentArtifacts(appDir) {
   await assertFileExist(appDir, '_build/main-dev/client-entry.js');
   await assertFileExist(appDir, '_build/main-dev/client-rspack.js');
@@ -107,6 +170,12 @@ async function assertCapacitorSyncedNativeAssets(appDir, platform) {
 
   await assertFileExist(appDir, 'ios/App/App/public/index.html', { content: 'var WebAppLocalServer' });
   await assertFileExist(appDir, 'ios/App/App/capacitor.config.json');
+}
+
+async function assertCapacitorSyncedNativeAssetsForPlatforms(appDir, platforms) {
+  for (const platform of platforms) {
+    await assertCapacitorSyncedNativeAssets(appDir, platform);
+  }
 }
 
 async function assertCapacitorWebDir(appDir, mode, platform = 'android', options = {}) {
@@ -435,6 +504,65 @@ describe('Capacitor App Web Lifecycle /', () => {
     }
   });
 
+  test('"meteor build --platforms=android" uses the temporary tar bundle for Capacitor sync', async () => {
+    let buildOutputDir;
+
+    await fs.remove(path.join(tempDir, '.meteor/local/build/programs/web.cordova'));
+    await fs.remove(path.join(tempDir, '_build/native-prod'));
+
+    try {
+      const result = await buildMeteorApp(tempDir, {
+        commandOptions: ['--platforms=android', '--server=http://127.0.0.1:3000'],
+        captureOutput: true,
+        env: e2eEnv(),
+      });
+      buildOutputDir = result.buildOutputDir;
+
+      await assertFileExist(buildOutputDir, `${path.basename(tempDir)}.tar.gz`);
+      await assertPathNotExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
+
+      const config = await assertCapacitorWebDir(tempDir, 'prod', 'android', {
+        cordovaProgramPath: null,
+      });
+      expect(config.plugins.MeteorE2E.isBuild).toBe(true);
+      expect(config.plugins.MeteorE2E.isRun).toBe(false);
+      expect(config.plugins.MeteorE2E.platform).toBe('android');
+      await assertNoNativeLaunch(result.processResult.outputLines);
+      await assertNoCordovaNativeBuild(result.processResult.outputLines);
+    } finally {
+      await cleanupTempDir(buildOutputDir);
+    }
+  });
+
+  test('"meteor build --directory --platforms=android,ios" syncs all Capacitor native projects', async () => {
+    let buildOutputDir;
+
+    await ensureIosPlatform(tempDir);
+
+    try {
+      const result = await buildMeteorApp(tempDir, {
+        commandOptions: ['--directory', '--platforms=android,ios', '--server=http://127.0.0.1:3000'],
+        captureOutput: true,
+        env: e2eEnv(),
+      });
+      buildOutputDir = result.buildOutputDir;
+
+      await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
+      await assertCapacitorSyncedNativeAssetsForPlatforms(tempDir, ['android', 'ios']);
+
+      const config = await readJson(tempDir, '_build/native-prod/capacitor.config.json');
+      expect(config.webDir).toBe('_build/native-prod');
+      expect(config.plugins.MeteorE2E.isBuild).toBe(true);
+      expect(config.plugins.MeteorE2E.isRun).toBe(false);
+      expect(config.plugins.MeteorE2E.webDir).toBe('_build/native-prod');
+      expect(config.server).toBeUndefined();
+      await assertNoNativeLaunch(result.processResult.outputLines);
+      await assertNoCordovaNativeBuild(result.processResult.outputLines);
+    } finally {
+      await cleanupTempDir(buildOutputDir);
+    }
+  });
+
   test('"meteor build --directory --platforms=android" rebuilds Capacitor web output without stale local web.cordova', async () => {
     let buildOutputDir;
 
@@ -459,6 +587,49 @@ describe('Capacitor App Web Lifecycle /', () => {
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
     } finally {
       await cleanupTempDir(buildOutputDir);
+    }
+  });
+
+  test('"meteor build --directory --platforms=android" fails instead of reusing stale Capacitor output', async () => {
+    const buildOutputDir = path.join(tempDir, '_build-missing-web-cordova');
+    let uninstallBlocker;
+
+    await fs.remove(buildOutputDir);
+    await fs.remove(path.join(tempDir, '_build/native-prod'));
+
+    try {
+      uninstallBlocker = await installNativeProdAppBlocker(tempDir);
+
+      const result = await runMeteorCommand(
+        'build',
+        [buildOutputDir, '--directory', '--platforms=android', '--server=http://127.0.0.1:3000'],
+        tempDir,
+        {
+          captureOutput: true,
+          env: e2eEnv(),
+        }
+      );
+
+      let exitCode = 0;
+      try {
+        await result.meteorProcess;
+      } catch (error) {
+        exitCode = error.exitCode;
+      }
+
+      expect(exitCode).not.toBe(0);
+      expectOutputContains(
+        result.outputLines,
+        /Capacitor build sync failed|Capacitor transform failed|failed to sync bundle files/i
+      );
+      expect(await fs.readFile(path.join(tempDir, '_build/native-prod/app'), 'utf8'))
+        .toBe('stale capacitor output');
+    } finally {
+      if (uninstallBlocker) {
+        await uninstallBlocker();
+      }
+      await cleanupTempDir(buildOutputDir);
+      await fs.remove(path.join(tempDir, '_build/native-prod'));
     }
   });
 
