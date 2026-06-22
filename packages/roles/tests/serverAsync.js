@@ -1,16 +1,18 @@
+import { Accounts } from "meteor/accounts-base";
 import { Meteor } from "meteor/meteor";
 import { Tinytest } from "meteor/tinytest";
 
 // To ensure that the files are loaded for coverage
 import "../roles_common_async";
+import { RolesCollection, RoleAssignmentCollection } from "../roles_common_async";
 
 // Publication for the client tests
 Meteor.publish("client_assignments", async () => {
-  return Meteor.roleAssignment.find();
+  return RoleAssignmentCollection.find();
 });
 
 // To allow inserting on the client, needed for testing.
-Meteor.roleAssignment.allow({
+RoleAssignmentCollection.allow({
   insert() {
     return true;
   },
@@ -151,7 +153,7 @@ async function clearData() {
   };
 }
 
-Tinytest.addAsync("roles -can create and delete roles", async function (test) {
+Tinytest.addAsync("roles - can create and delete roles", async function (test) {
   await clearData();
   const role1Id = await Roles.createRoleAsync("test1");
   const test1a = await Meteor.roles.findOneAsync();
@@ -177,7 +179,7 @@ Tinytest.addAsync("roles -can create and delete roles", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -can try to remove non-existing roles without crashing",
+  "roles - can try to remove non-existing roles without crashing",
   async function (test) {
     await clearData();
     try {
@@ -189,7 +191,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -can't create duplicate roles", async function (test) {
+Tinytest.addAsync("roles - can't create duplicate roles", async function (test) {
   await clearData();
   try {
     await Roles.createRoleAsync("test1");
@@ -276,7 +278,7 @@ Tinytest.addAsync("roles - can't use invalid scope names", async (test) => {
   }
 });
 
-Tinytest.addAsync("roles -can check if user is in role", async function (test) {
+Tinytest.addAsync("roles - can check if user is in role", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -286,7 +288,7 @@ Tinytest.addAsync("roles -can check if user is in role", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -can check if user is in role by scope",
+  "roles - can check if user is in role by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -317,7 +319,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can check if user is in role by scope through options",
+  "roles - can check if user is in role by scope through options",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -336,7 +338,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can check if user is in role by scope with global role",
+  "roles - can check if user is in role by scope with global role",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -366,7 +368,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -renaming scopes", async function (test) {
+Tinytest.addAsync("roles - renaming scopes", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -419,7 +421,7 @@ Tinytest.addAsync("roles -renaming scopes", async function (test) {
   test.isFalse(await Roles.userIsInRoleAsync(users.eve, ["user"], null));
 });
 
-Tinytest.addAsync("roles -removing scopes", async function (test) {
+Tinytest.addAsync("roles - removing scopes", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -443,7 +445,7 @@ Tinytest.addAsync("roles -removing scopes", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -can check if non-existant user is in role",
+  "roles - can check if non-existant user is in role",
   async function (test) {
     await clearData();
     test.isFalse(await Roles.userIsInRoleAsync("1", "admin"));
@@ -451,7 +453,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can check if null user is in role",
+  "roles - can check if null user is in role",
   async function (test) {
     await clearData();
     test.isFalse(await Roles.userIsInRoleAsync(null, "admin"));
@@ -459,7 +461,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can check user against several roles at once",
+  "roles - can check user against several roles at once",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -474,7 +476,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can't add non-existent user to role",
+  "roles - can't add non-existent user to role",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -485,7 +487,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can't add user to non-existent role",
+  "roles - can't add user to non-existent role",
   async function (test) {
     await clearData();
     try {
@@ -499,7 +501,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can't set non-existent user to role",
+  "roles - can't set non-existent user to role",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -510,7 +512,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can't set user to non-existent role",
+  "roles - can't set user to non-existent role",
   async function (test) {
     await clearData();
     try {
@@ -524,7 +526,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can add individual users to roles",
+  "roles - can add individual users to roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -546,7 +548,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can add individual users to roles by scope",
+  "roles - can add individual users to roles by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -577,7 +579,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can add user to roles via user object",
+  "roles - can add user to roles via user object",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -602,7 +604,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can add user to roles multiple times",
+  "roles - can add user to roles multiple times",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -626,7 +628,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can add user to roles multiple times by scope",
+  "roles - can add user to roles multiple times by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -650,7 +652,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can add multiple users to roles",
+  "roles - can add multiple users to roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -675,7 +677,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can add multiple users to roles by scope",
+  "roles - can add multiple users to roles by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -718,7 +720,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove individual users from roles",
+  "roles - can remove individual users from roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("user");
@@ -738,7 +740,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove user from roles multiple times",
+  "roles - can remove user from roles multiple times",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("user");
@@ -762,7 +764,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove users from roles via user object",
+  "roles - can remove users from roles via user object",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("user");
@@ -782,7 +784,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove individual users from roles by scope",
+  "roles - can remove individual users from roles by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -818,7 +820,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove individual users from roles by scope through options",
+  "roles - can remove individual users from roles by scope through options",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -854,7 +856,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove multiple users from roles",
+  "roles - can remove multiple users from roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -880,7 +882,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove multiple users from roles by scope",
+  "roles - can remove multiple users from roles by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -929,7 +931,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can remove multiple users from roles of any scope",
+  "roles - can remove multiple users from roles of any scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -966,7 +968,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -can set user roles", async function (test) {
+Tinytest.addAsync("roles - can set user roles", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -1002,7 +1004,7 @@ Tinytest.addAsync("roles -can set user roles", async function (test) {
   await testUser(test, "joe", []);
 });
 
-Tinytest.addAsync("roles -can set user roles by scope", async function (test) {
+Tinytest.addAsync("roles - can set user roles by scope", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -1089,7 +1091,7 @@ Tinytest.addAsync("roles -can set user roles by scope", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -can set user roles by scope including GLOBAL_SCOPE",
+  "roles - can set user roles by scope including GLOBAL_SCOPE",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1108,7 +1110,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can set user roles by scope and anyScope",
+  "roles - can set user roles by scope and anyScope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1178,7 +1180,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -can get all roles", async function (test) {
+Tinytest.addAsync("roles - can get all roles", async function (test) {
   await clearData();
   for (const role of roles) {
     await Roles.createRoleAsync(role);
@@ -1202,7 +1204,7 @@ Tinytest.addAsync("roles -can get all roles", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -get an empty list of roles for an empty user",
+  "roles - get an empty list of roles for an empty user",
   async function (test) {
     await clearData();
     sameMembers(test, await Roles.getRolesForUserAsync(undefined), []);
@@ -1212,7 +1214,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -get an empty list of roles for non-existant user",
+  "roles - get an empty list of roles for non-existant user",
   async function (test) {
     await clearData();
     sameMembers(test, await Roles.getRolesForUserAsync("1"), []);
@@ -1220,7 +1222,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -can get all roles for user", async function (test) {
+Tinytest.addAsync("roles - can get all roles for user", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -1277,7 +1279,7 @@ Tinytest.addAsync("roles -can get all roles for user", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -can get all roles for user by scope",
+  "roles - can get all roles for user by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1313,49 +1315,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -getScopesForUser returns [] when not using scopes",
-  async function (test) {
-    await clearData();
-    await Roles.createRoleAsync("user");
-    await Roles.createRoleAsync("editor");
-
-    const userId = users.eve;
-
-    await Roles.addUsersToRolesAsync([users.eve], ["editor", "user"]);
-
-    // by userId
-    sameMembers(test, await Roles.getScopesForUserAsync(userId), []);
-    sameMembers(test, await Roles.getScopesForUserAsync(userId, "editor"), []);
-    sameMembers(
-      test,
-      await Roles.getScopesForUserAsync(userId, ["editor"]),
-      []
-    );
-    sameMembers(
-      test,
-      await Roles.getScopesForUserAsync(userId, ["editor", "user"]),
-      []
-    );
-
-    // by user object
-    const userObj = await Meteor.users.findOneAsync({ _id: userId });
-    sameMembers(test, await Roles.getScopesForUserAsync(userObj), []);
-    sameMembers(test, await Roles.getScopesForUserAsync(userObj, "editor"), []);
-    sameMembers(
-      test,
-      await Roles.getScopesForUserAsync(userObj, ["editor"]),
-      []
-    );
-    sameMembers(
-      test,
-      await Roles.getScopesForUserAsync(userObj, ["editor", "user"]),
-      []
-    );
-  }
-);
-
-Tinytest.addAsync(
-  "roles -can get all groups for user by role array",
+  "roles - can get all groups for user by role array",
   async function (test) {
     await clearData();
     const userId = users.eve;
@@ -1431,7 +1391,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -getting all scopes for user does not include GLOBAL_SCOPE",
+  "roles - getting all scopes for user does not include GLOBAL_SCOPE",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1501,7 +1461,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -can get all users in role", async function (test) {
+Tinytest.addAsync("roles - can get all users in role", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -1535,7 +1495,7 @@ Tinytest.addAsync("roles - can get all userIds in role", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -can get all users in role by scope",
+  "roles - can get all users in role by scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1583,7 +1543,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -can get all users in role by scope and passes through mongo query arguments",
+  "roles - can get all users in role by scope and passes through mongo query arguments",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1645,7 +1605,7 @@ Tinytest.addAsync(
 
 
 Tinytest.addAsync(
-  "roles -can use Roles.GLOBAL_SCOPE to assign blanket roles",
+  "roles - can use Roles.GLOBAL_SCOPE to assign blanket roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1677,7 +1637,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -Roles.GLOBAL_SCOPE is independent of other scopes",
+  "roles - Roles.GLOBAL_SCOPE is independent of other scopes",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1718,7 +1678,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -Roles.GLOBAL_SCOPE also checked when scope not specified",
+  "roles - Roles.GLOBAL_SCOPE also checked when scope not specified",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1737,7 +1697,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -can use '.' in scope name", async function (test) {
+Tinytest.addAsync("roles - can use '.' in scope name", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
 
@@ -1746,7 +1706,7 @@ Tinytest.addAsync("roles -can use '.' in scope name", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -can use multiple periods in scope name",
+  "roles - can use multiple periods in scope name",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -1756,7 +1716,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -renaming of roles", async function (test) {
+Tinytest.addAsync("roles - renaming of roles", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -1810,7 +1770,7 @@ Tinytest.addAsync("roles -renaming of roles", async function (test) {
   test.isFalse(await Roles.userIsInRoleAsync(users.eve, "user", "scope2"));
 });
 
-Tinytest.addAsync("roles -_addUserToRole", async function (test) {
+Tinytest.addAsync("roles - _addUserToRole", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
 
@@ -1880,7 +1840,7 @@ Tinytest.addAsync("roles -_addUserToRole", async function (test) {
   );
 });
 
-Tinytest.addAsync("roles -_removeUserFromRole", async function (test) {
+Tinytest.addAsync("roles - _removeUserFromRole", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
 
@@ -1922,7 +1882,7 @@ Tinytest.addAsync("roles -_removeUserFromRole", async function (test) {
   );
 });
 
-Tinytest.addAsync("roles -keep assigned roles", async function (test) {
+Tinytest.addAsync("roles - keep assigned roles", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -2042,7 +2002,7 @@ Tinytest.addAsync("roles -keep assigned roles", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -adds children of the added role to the assignments",
+  "roles - adds children of the added role to the assignments",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2067,7 +2027,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -removes children of the removed role from the assignments",
+  "roles - removes children of the removed role from the assignments",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2093,7 +2053,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -modify assigned hierarchical roles",
+  "roles - modify assigned hierarchical roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2385,7 +2345,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -delete role with overlapping hierarchical roles",
+  "roles - delete role with overlapping hierarchical roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("role1");
@@ -2585,7 +2545,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -set parent on assigned role", async function (test) {
+Tinytest.addAsync("roles - set parent on assigned role", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("EDIT_PERMISSION");
@@ -2642,7 +2602,7 @@ Tinytest.addAsync("roles -set parent on assigned role", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -remove parent on assigned role",
+  "roles - remove parent on assigned role",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2703,7 +2663,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -adding and removing extra role parents",
+  "roles - adding and removing extra role parents",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2789,7 +2749,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("roles -cyclic roles", async function (test) {
+Tinytest.addAsync("roles - cyclic roles", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("editor");
@@ -2807,7 +2767,7 @@ Tinytest.addAsync("roles -cyclic roles", async function (test) {
 });
 
 Tinytest.addAsync(
-  "roles -userIsInRole returns false for unknown roles",
+  "roles - userIsInRole returns false for unknown roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2845,7 +2805,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -userIsInRole returns false if user is a function",
+  "roles - userIsInRole returns false if user is a function",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2856,7 +2816,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -returns false for unknown roles",
+  "roles - returns false for unknown roles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2872,7 +2832,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -returns false if role is not parent of",
+  "roles - returns false if role is not parent of",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2887,7 +2847,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "roles -returns true if role is parent of the demanded role",
+  "roles - returns true if role is parent of the demanded role",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("admin");
@@ -2909,7 +2869,7 @@ Tinytest.addAsync(
 // here
 
 Tinytest.addAsync(
-  "should not return null entries if user has no roles for scope",
+  "roles - should not return null entries if user has no roles for scope",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("editor");
@@ -2948,7 +2908,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "should not fail during a call of addUsersToRoles",
+  "roles - should not fail during a call of addUsersToRoles",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("editor");
@@ -2975,7 +2935,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  "returns an empty list of scopes for null as user-id",
+  "roles - returns an empty list of scopes for null as user-id",
   async function (test) {
     await clearData();
     sameMembers(test,await Roles.getScopesForUserAsync(undefined), []);
@@ -2986,7 +2946,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync("can get all scopes for user", async function (test) {
+Tinytest.addAsync("roels - can get all scopes for user", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -3011,7 +2971,7 @@ Tinytest.addAsync("can get all scopes for user", async function (test) {
   ]);
 });
 
-Tinytest.addAsync("can get all scopes for user by role", async function (test) {
+Tinytest.addAsync("roles - can get all scopes for user by role", async function (test) {
   await clearData();
   await Roles.createRoleAsync("admin");
   await Roles.createRoleAsync("user");
@@ -3045,7 +3005,7 @@ Tinytest.addAsync("can get all scopes for user by role", async function (test) {
 });
 
 Tinytest.addAsync(
-  "getScopesForUser returns [] when not using scopes",
+  "roles - getScopesForUser returns [] when not using scopes",
   async function (test) {
     await clearData();
     await Roles.createRoleAsync("user");
@@ -3084,3 +3044,23 @@ Tinytest.addAsync(
     );
   }
 );
+
+Tinytest.addAsync("roles - settings adminRole", async function (test) {
+  await clearData();
+  await Roles.config({ adminRole: 'administrator' });
+
+  // The default admin role gets created
+  const adminRole = await RolesCollection.findOneAsync({ _id: 'administrator' });
+  test.equal(adminRole?._id, 'administrator')
+});
+
+// Tinytest.addAsync("roles - settings addFirstUserAsAdmin", async function (test) {
+//   await clearData();
+//   await Meteor.users.removeAsync({});
+//   await Roles.config({ adminRole: 'admin', addFirstUserAsAdmin: true });
+//
+//   const userId = await Accounts.createUserAsync({ username: 'admin' });
+//
+//   const roleAssignment = await RoleAssignmentCollection.findOneAsync({ 'user._id': userId });
+//   test.equal(roleAssignment?.role._id, 'admin');
+// });

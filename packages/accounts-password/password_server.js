@@ -1026,7 +1026,7 @@ Accounts.replaceEmailAsync = async (userId, oldEmail, newEmail, verified) => {
     { _id: user._id, 'emails.address': oldEmail },
     { $set: { 'emails.$.address': newEmail, 'emails.$.verified': verified } }
   );
-  
+
   if (result.modifiedCount === 0) {
     throw new Meteor.Error(404, "No user could be found with old email");
   }
@@ -1183,7 +1183,10 @@ const createUser =
     check(options, Match.ObjectIncluding({
       username: Match.Optional(String),
       email: Match.Optional(String),
-      password: Match.Optional(passwordValidator)
+      password: Match.Optional(passwordValidator),
+      role: Match.Optional(String),
+      scope: Match.Optional(String),
+      profile: Match.Optional(Object),
     }));
 
     const { username, email, password } = options;
@@ -1244,6 +1247,9 @@ Meteor.methods(
  * @param {String} options.email The user's email address.
  * @param {String} options.password The user's password. This is __not__ sent in plain text over the wire.
  * @param {Object} options.profile The user's profile, typically including the `name` field.
+ * @param {Object} options.role If you have the `roles` package installed, this user will be
+ * given the specified role. Make sure that the role is created.
+ * @param {String} options.scope Optional scope to the user's role.
  * @importFromPackage accounts-base
  * */
 Accounts.createUserVerifyingEmail =
@@ -1283,7 +1289,7 @@ Accounts.createUserVerifyingEmail =
 // method calling Accounts.createUser could set?
 //
 
-Accounts.createUserAsync = createUser
+Accounts.createUserAsync = createUser;
 
 // Create user directly on the server.
 //

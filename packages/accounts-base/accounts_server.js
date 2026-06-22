@@ -6,6 +6,8 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+import { check, Match } from 'meteor/check';
+import { Hook } from 'meteor/callback-hook';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -133,6 +135,8 @@ export class AccountsServer extends AccountsCommon {
       }
       return url.toString();
     };
+
+    this.afterCreateUserHook = new Hook({ bindEnvironment: false });
   }
 
   ///
@@ -1423,13 +1427,20 @@ export class AccountsServer extends AccountsCommon {
       opts = await this._onExternalLoginHook(options, user);
     }
 
+    const role = options?.role;
+    const scope = options?.scope;
+    if (Package['roles'] && options?.role) {
+      options.role === undefined;
+      options.scope === undefined;
+    }
+
     if (user) {
       await pinEncryptedFieldsToUser(serviceData, user._id);
 
       let setAttrs = {};
-      Object.keys(serviceData).forEach(key =>
-        setAttrs[`services.${serviceName}.${key}`] = serviceData[key]
-      );
+      for (const key of Object.keys(serviceData)) {
+        setAttrs[`services.${serviceName}.${key}`] = serviceData[key];
+      }
 
       // XXX Maybe we should re-use the selector above and notice if the update
       //     touches nothing?
@@ -1447,9 +1458,12 @@ export class AccountsServer extends AccountsCommon {
       user = {services: {}};
       user.services[serviceName] = serviceData;
       const userId = await this.insertUserDoc(opts, user);
+      if (Package["roles"] && role) {
+        await Package["roles"].Roles.addUsersToRolesAsync(userId, role, scope);
+      }
       return {
         type: serviceName,
-        userId
+        userId,
       };
     }
   };
@@ -1568,6 +1582,12 @@ export class AccountsServer extends AccountsCommon {
     await this._checkForCaseInsensitiveDuplicates('username', 'Username', username);
     await this._checkForCaseInsensitiveDuplicates('emails.address', 'Email', email);
 
+    const role = options?.role;
+    const scope = options?.scope;
+    if (Package['roles'] && options?.role) {
+      options.role === undefined;
+      options.scope === undefined;
+    }
     const userId = await this.insertUserDoc(options, newUser);
     // Perform another check after insert, in case a matching user has been
     // inserted in the meantime
@@ -1579,6 +1599,21 @@ export class AccountsServer extends AccountsCommon {
       await Meteor.users.removeAsync(userId);
       throw ex;
     }
+
+    if (Package['roles'] && options?.role) {
+      try {
+        await Package['roles'].Roles.addUsersToRolesAsync(userId, role, scope);
+      } catch (e) {
+        // Delete user if adding roles fails
+        await Meteor.users.removeAsync(userId);
+        throw e;
+      }
+    }
+
+    this.afterCreateUserHook.forEachAsync((hook) => {
+      hook({ ...newUser, _id: userId });
+    });
+
     return userId;
   }
 

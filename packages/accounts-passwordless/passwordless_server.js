@@ -20,7 +20,7 @@ const findUserWithOptions = async ({ selector }) => {
       ...(email && { 'emails.address': email })
     },
     {
-      fields: {
+      projection: {
         services: 1,
         emails: 1,
       },
@@ -116,7 +116,7 @@ function generateSequence() {
 Meteor.methods({
   requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
     let user = await Accounts._findUserByQuery(selector, {
-      fields: { emails: 1 },
+      projection: { emails: 1 },
     });
 
     if (
@@ -135,7 +135,7 @@ Meteor.methods({
       user = await Accounts._findUserByQuery(
         { id: userId },
         {
-          fields: { emails: 1 },
+          projection: { emails: 1 },
         }
       );
     }
