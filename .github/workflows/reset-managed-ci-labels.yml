@@ -25,10 +25,19 @@ jobs:
 
             for (const name of labels) {
               core.info(`Removing stale managed CI label: ${name}`);
-              await github.rest.issues.removeLabel({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.payload.pull_request.number,
-                name,
-              });
+              try {
+                await github.rest.issues.removeLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: context.payload.pull_request.number,
+                  name,
+                });
+              } catch (error) {
+                if (error.status === 404) {
+                  core.info(`Managed CI label is already absent: ${name}`);
+                  continue;
+                }
+
+                throw error;
+              }
             }
