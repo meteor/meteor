@@ -101,3 +101,36 @@ export function getProjectPlatforms() {
 export function setProjectPlatforms(platforms) {
   projectPlatforms = Array.isArray(platforms) ? platforms : [];
 }
+
+let currentBuildOutputContext = null;
+let buildOutputReadyCallbacks = [];
+
+export function setCurrentBuildOutputContext(context) {
+  currentBuildOutputContext = context ? { ...context } : null;
+}
+
+export function getCurrentBuildOutputContext() {
+  return currentBuildOutputContext;
+}
+
+export function onBuildOutputReady(callback) {
+  if (typeof callback !== 'function') {
+    throw new Error('Plugin.onBuildOutputReady requires a function callback');
+  }
+
+  buildOutputReadyCallbacks.push(callback);
+}
+
+export async function runBuildOutputReadyCallbacks(context = currentBuildOutputContext) {
+  const callbacks = buildOutputReadyCallbacks;
+  buildOutputReadyCallbacks = [];
+
+  for (const callback of callbacks) {
+    await callback(context || {});
+  }
+}
+
+export function clearCurrentBuildOutputContext() {
+  currentBuildOutputContext = null;
+  buildOutputReadyCallbacks = [];
+}

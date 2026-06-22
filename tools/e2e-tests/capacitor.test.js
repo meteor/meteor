@@ -109,10 +109,15 @@ async function assertCapacitorSyncedNativeAssets(appDir, platform) {
   await assertFileExist(appDir, 'ios/App/App/capacitor.config.json');
 }
 
-async function assertCapacitorWebDir(appDir, mode, platform = 'android') {
+async function assertCapacitorWebDir(appDir, mode, platform = 'android', options = {}) {
   const webDir = mode === 'prod' ? '_build/native-prod' : '_build/native-dev';
+  const {
+    cordovaProgramPath = '.meteor/local/build/programs/web.cordova/program.json',
+  } = options;
 
-  await assertFileExist(appDir, '.meteor/local/build/programs/web.cordova/program.json');
+  if (cordovaProgramPath) {
+    await assertFileExist(appDir, cordovaProgramPath);
+  }
   await assertFileExist(appDir, `${webDir}/index.html`);
   await assertFileExist(appDir, `${webDir}/capacitor.config.json`);
   await assertPathNotExist(appDir, `${webDir}/program.json`);
@@ -385,7 +390,9 @@ describe('Capacitor App Web Lifecycle /', () => {
       await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
       await assertFileExist(tempDir, '_build/main-prod/server-rspack.js');
 
-      const config = await assertCapacitorWebDir(tempDir, 'prod');
+      const config = await assertCapacitorWebDir(tempDir, 'prod', 'android', {
+        cordovaProgramPath: null,
+      });
       expect(config.plugins.MeteorE2E.isBuild).toBe(true);
       expect(config.plugins.MeteorE2E.isRun).toBe(false);
       expect(config.plugins.MeteorE2E.platform).toBe('android');
@@ -412,13 +419,42 @@ describe('Capacitor App Web Lifecycle /', () => {
       await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
       await assertFileExist(tempDir, '_build/main-prod/server-rspack.js');
 
-      const config = await assertCapacitorWebDir(tempDir, 'prod', 'ios');
+      const config = await assertCapacitorWebDir(tempDir, 'prod', 'ios', {
+        cordovaProgramPath: null,
+      });
       expect(config.plugins.MeteorE2E.isBuild).toBe(true);
       expect(config.plugins.MeteorE2E.isRun).toBe(false);
       expect(config.plugins.MeteorE2E.platform).toBe('ios');
       expect(config.plugins.MeteorE2E.isNativeIos).toBe(true);
       expect(config.plugins.MeteorE2E.isNativeAndroid).toBe(false);
       expect(config.server).toBeUndefined();
+      await assertNoNativeLaunch(result.processResult.outputLines);
+      await assertNoCordovaNativeBuild(result.processResult.outputLines);
+    } finally {
+      await cleanupTempDir(buildOutputDir);
+    }
+  });
+
+  test('"meteor build --directory --platforms=android" rebuilds Capacitor web output without stale local web.cordova', async () => {
+    let buildOutputDir;
+
+    await fs.remove(path.join(tempDir, '.meteor/local/build/programs/web.cordova'));
+    await fs.remove(path.join(tempDir, '_build/native-prod'));
+
+    try {
+      const result = await buildMeteorApp(tempDir, {
+        commandOptions: ['--directory', '--platforms=android', '--server=http://127.0.0.1:3000'],
+        captureOutput: true,
+        env: e2eEnv(),
+      });
+      buildOutputDir = result.buildOutputDir;
+
+      await assertFileExist(buildOutputDir, 'bundle/programs/web.cordova/program.json');
+      const config = await assertCapacitorWebDir(tempDir, 'prod', 'android', {
+        cordovaProgramPath: null,
+      });
+      expect(config.plugins.MeteorE2E.isBuild).toBe(true);
+      expect(config.plugins.MeteorE2E.platform).toBe('android');
       await assertNoNativeLaunch(result.processResult.outputLines);
       await assertNoCordovaNativeBuild(result.processResult.outputLines);
     } finally {

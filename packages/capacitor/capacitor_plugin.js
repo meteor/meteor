@@ -141,9 +141,12 @@ async function runCapacitorPlugin() {
             // project. Without a single selected platform, Capacitor syncs all
             // native projects present in the app.
             const { platforms } = context.state;
-            transformAndSync({
-              appDir: context.appDir,
-              platform: platforms.length === 1 ? platforms[0] : null,
+            Plugin.onBuildOutputReady(async buildOutputContext => {
+              await transformAndSync({
+                appDir: context.appDir,
+                platform: platforms.length === 1 ? platforms[0] : null,
+                cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
+              });
             });
           },
         }),
@@ -200,6 +203,14 @@ function getRequestedCapacitorPlatforms(options = {}) {
   }).filter(platform => CAPACITOR_PLATFORMS.includes(platform))));
 }
 
+function getBuildCordovaOutDir(buildOutputContext = {}) {
+  if (!buildOutputContext.outputPath) {
+    return null;
+  }
+
+  return path.join(buildOutputContext.outputPath, 'programs', 'web.cordova');
+}
+
 async function withProcessEnv(env, fn) {
   const previous = {};
   Object.keys(env).forEach(key => {
@@ -223,9 +234,9 @@ async function withProcessEnv(env, fn) {
  * Runs the cordova→build-native transform. Returns false if the
  * transform itself failed (web.cordova/ exists but transforms threw).
  */
-async function runTransform({ appDir }) {
+async function runTransform({ appDir, cordovaOutDir = null }) {
   if (isVerbose()) logProgress('=> 🔧 Capacitor: transforming web.cordova → build-native/');
-  const ok = await runCapacitorTransforms({ appDir, verbose: isVerbose() });
+  const ok = await runCapacitorTransforms({ appDir, cordovaOutDir, verbose: isVerbose() });
   if (!ok) {
     logError('=> ❌ Capacitor transform failed');
     return false;
@@ -266,14 +277,17 @@ function waitForCordovaBundle(cordovaOutDir, { intervalMs = 100, timeoutMs = 30_
  * @param {Object} opts
  * @param {string} opts.appDir
  * @param {string|null} [opts.platform] 'android' / 'ios' for run, null for build.
+ * @param {string|null} [opts.cordovaOutDir] Explicit web.cordova source dir.
  */
-async function transformAndSync({ appDir, platform = null }) {
-  const cordovaOutDir = path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
+async function transformAndSync({ appDir, platform = null, cordovaOutDir = null }) {
+  const resolvedCordovaOutDir = cordovaOutDir ||
+    path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
+  const displayCordovaOutDir = path.relative(appDir, resolvedCordovaOutDir);
 
-  logVerbose(`[i] Capacitor: waiting for ${CAPACITOR_CORDOVA_OUTPUT_DIR}/program.json`);
-  const ready = await waitForCordovaBundle(cordovaOutDir);
+  logVerbose(`[i] Capacitor: waiting for ${displayCordovaOutDir}/program.json`);
+  const ready = await waitForCordovaBundle(resolvedCordovaOutDir);
   if (!ready) {
-    logError(`Capacitor: timed out waiting for ${CAPACITOR_CORDOVA_OUTPUT_DIR} (30s).`);
+    logError(`Capacitor: timed out waiting for ${displayCordovaOutDir} (30s).`);
     return;
   }
 
@@ -281,7 +295,7 @@ async function transformAndSync({ appDir, platform = null }) {
     writeResolvedConfigSnapshot({ appDir })
   );
 
-  if (!(await runTransform({ appDir }))) return;
+  if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir }))) return;
 
   return runCapSync({ appDir, platform }).catch(err =>
     logError(`Capacitor sync failed: ${err.message}`),

@@ -50,6 +50,15 @@ function resolveWebDir() {
   });
 }
 
+function resolveCordovaOutDir({ appDir, cordovaOutDir }) {
+  if (cordovaOutDir) {
+    return path.isAbsolute(cordovaOutDir)
+      ? cordovaOutDir
+      : path.join(appDir, cordovaOutDir);
+  }
+  return path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
+}
+
 /**
  * Patches a Meteor web.cordova index.html string for Capacitor:
  *   1. Injects WebAppLocalServer no-op right after the <head> tag.
@@ -80,8 +89,8 @@ function patchCordovaIndexHtml(html) {
  * patches it, and writes to webDir.
  * @returns {Promise<boolean>}
  */
-async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir() } = {}) {
-  const cordovaOutDir = path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
+async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null } = {}) {
+  cordovaOutDir = resolveCordovaOutDir({ appDir, cordovaOutDir });
   const programJsonPath = path.join(cordovaOutDir, 'program.json');
   const targetPath = path.join(appDir, webDir, 'index.html');
 
@@ -191,8 +200,8 @@ function copyTreeFiltered(srcDir, dstDir, excludedFiles) {
  *
  * @returns {boolean}
  */
-function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir() } = {}) {
-  const sourceDir = path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
+function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null } = {}) {
+  const sourceDir = resolveCordovaOutDir({ appDir, cordovaOutDir });
   const targetDir = path.join(appDir, webDir);
 
   if (!fs.existsSync(sourceDir)) {
@@ -217,11 +226,12 @@ function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir() 
  *
  * @returns {boolean} True if both succeeded.
  */
-export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), verbose = false } = {}) {
-  const okFiles = syncBundleFiles({ appDir, webDir });
-  const okIndex = await buildIndex({ appDir, webDir });
+export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null, verbose = false } = {}) {
+  const okFiles = syncBundleFiles({ appDir, webDir, cordovaOutDir });
+  const okIndex = await buildIndex({ appDir, webDir, cordovaOutDir });
   if (verbose && okFiles && okIndex) {
-    logInfo(`[i] Capacitor transform applied: ${CAPACITOR_CORDOVA_OUTPUT_DIR} → ${webDir}`);
+    const sourceDir = resolveCordovaOutDir({ appDir, cordovaOutDir });
+    logInfo(`[i] Capacitor transform applied: ${path.relative(appDir, sourceDir)} → ${webDir}`);
   }
   return okFiles && okIndex;
 }

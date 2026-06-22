@@ -1,4 +1,9 @@
-import { getMeteorConfig, getProjectPlatforms } from "../tool-env/meteor-config";
+import {
+  getCurrentBuildOutputContext,
+  getMeteorConfig,
+  getProjectPlatforms,
+  onBuildOutputReady,
+} from "../tool-env/meteor-config";
 
 var compiler = require('./compiler.js');
 var archinfo = require('../utils/archinfo');
@@ -528,6 +533,11 @@ Object.assign(Isopack.prototype, {
 
       // Project platforms from .meteor/platforms (set during prepareProjectForBuild)
       getPlatforms: getProjectPlatforms,
+
+      // Generic build output context for build plugins that need to react
+      // after an app bundle has been written.
+      getBuildOutputContext: getCurrentBuildOutputContext,
+      onBuildOutputReady,
 
       // Share functions to get the dev bundle context
       getDevBundle,

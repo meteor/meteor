@@ -171,6 +171,11 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/core-runtime/package-registry.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
+import {
+  clearCurrentBuildOutputContext,
+  runBuildOutputReadyCallbacks,
+  setCurrentBuildOutputContext,
+} from "../tool-env/meteor-config";
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -3336,11 +3341,21 @@ async function bundle({
     throw new Error('Unrecognized build mode: ' + buildMode);
   }
 
-  var messages = await buildmessage.capture({
-    title: "building the application"
-  }, async function () {
-    var packageSource = new PackageSource();
-    packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
+  var messages;
+  try {
+    setCurrentBuildOutputContext({
+      outputPath,
+      buildMode,
+      minifyMode,
+      serverArch,
+      webArchs,
+    });
+
+    messages = await buildmessage.capture({
+      title: "building the application"
+    }, async function () {
+      var packageSource = new PackageSource();
+      packageSource.initFromAppDir(projectContext, exports.ignoreFiles);
 
     var makeClientTarget = Profile(
       "bundler.bundle..makeClientTarget", async function (app, webArch, options) {
@@ -3548,8 +3563,20 @@ async function bundle({
       }
     }
 
-    success = true;
-  });
+    await runBuildOutputReadyCallbacks({
+      outputPath,
+      buildMode,
+      minifyMode,
+      serverArch,
+      webArchs,
+      starManifest: starResult && starResult.starManifest,
+    });
+
+      success = true;
+    });
+  } finally {
+    clearCurrentBuildOutputContext();
+  }
 
   if (success && messages.hasMessages()) {
     // there were errors
