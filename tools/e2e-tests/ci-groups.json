@@ -28,6 +28,8 @@
         "meteor",
         "meteor/**",
         "packages/meteor-tool/**",
+        "tools/cli/**",
+        "tools/isobuild/**",
         ".github/workflows/e2e-tests.yml",
         "tools/e2e-tests/ci-groups.json",
         "tools/e2e-tests/scripts/resolve-ci-plan.mjs"
@@ -35,8 +37,33 @@
       "select": [{ "group": "all" }]
     },
     {
-      "name": "e2e-infra",
-      "paths": ["tools/e2e-tests/**"],
+      "name": "e2e-app-fixtures",
+      "paths": ["tools/e2e-tests/apps/**"],
+      "select": [{ "kind": "app" }]
+    },
+    {
+      "name": "e2e-examples",
+      "paths": ["tools/e2e-tests/example.test.js"],
+      "select": [{ "id": "examples" }]
+    },
+    {
+      "name": "e2e-skeletons",
+      "paths": ["tools/e2e-tests/skeleton.test.js"],
+      "select": [{ "kind": "skeleton" }]
+    },
+    {
+      "name": "e2e-shared-infra",
+      "paths": [
+        "tools/e2e-tests/helpers.js",
+        "tools/e2e-tests/test-helpers.js",
+        "tools/e2e-tests/assertions.js",
+        "tools/e2e-tests/jest.config.js",
+        "tools/e2e-tests/jest.setup.js",
+        "tools/e2e-tests/package.json",
+        "tools/e2e-tests/package-lock.json",
+        "tools/e2e-tests/scripts/**",
+        "tools/e2e-tests/summary-reporter.js"
+      ],
       "select": [{ "group": "all" }]
     },
     {
@@ -157,7 +184,7 @@
         {
           "id": "tailwind-skeleton",
           "kind": "skeleton",
-          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Tailwind Skeleton\""
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Other / Tailwind Skeleton\""
         }
       ]
     },
