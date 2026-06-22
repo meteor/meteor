@@ -157,10 +157,12 @@ jobs:
         run: npm run install:e2e
 
       - name: Set NPM_LINK_RSPACK=false for release branches
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          echo "Current branch: ${{ github.head_ref || github.ref_name }}"
-          if [[ "${{ github.head_ref || github.ref_name }}" == release-* ]]; then
-            echo "NPM_LINK_RSPACK=false" >> $GITHUB_ENV
+          echo "Current branch: $BRANCH_NAME"
+          if [[ "$BRANCH_NAME" == release-* ]]; then
+            echo "NPM_LINK_RSPACK=false" >> "$GITHUB_ENV"
             echo "::warning::NPM_LINK_RSPACK=false on release branch. E2E tests will install @meteorjs/rspack from npm. Make sure the latest version is published or tests may fail."
           fi
 
@@ -175,14 +177,83 @@ jobs:
         env:
           JEST_ARGS_JSON: ${{ matrix.jestArgsJson }}
         run: |
-          node - <<'NODE' > /tmp/e2e-commands.sh
-          console.log("set -euo pipefail");
+          node - <<'NODE'
+          const { spawnSync } = require("child_process");
+
+          function splitArgs(input) {
+            const tokens = [];
+            let token = "";
+            let quote = null;
+
+            for (let index = 0; index < input.length; index += 1) {
+              const char = input[index];
+
+              if (char === "\\") {
+                const next = input[index + 1];
+                if (quote && (next === quote || next === "\\")) {
+                  token += next;
+                  index += 1;
+                } else if (!quote && next && (/[\s"'\\]/).test(next)) {
+                  token += next;
+                  index += 1;
+                } else {
+                  token += char;
+                }
+                continue;
+              }
+
+              if (quote) {
+                if (char === quote) {
+                  quote = null;
+                } else {
+                  token += char;
+                }
+                continue;
+              }
+
+              if (char === "\"" || char === "'") {
+                quote = char;
+                continue;
+              }
+
+              if (/\s/.test(char)) {
+                if (token) {
+                  tokens.push(token);
+                  token = "";
+                }
+                continue;
+              }
+
+              token += char;
+            }
+
+            if (quote) {
+              throw new Error(`Unclosed ${quote} quote in Jest args: ${input}`);
+            }
+
+            if (token) {
+              tokens.push(token);
+            }
+
+            return tokens;
+          }
+
           const argsList = JSON.parse(process.env.JEST_ARGS_JSON);
           for (const args of argsList) {
-            console.log(`METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- ${args}`);
+            const result = spawnSync("npm", ["run", "test:e2e", "--", ...splitArgs(args)], {
+              env: { ...process.env, METEOR_ALLOW_SUPERUSER: "1" },
+              stdio: "inherit",
+            });
+
+            if (result.error) {
+              throw result.error;
+            }
+
+            if (result.status !== 0) {
+              process.exit(result.status || 1);
+            }
           }
           NODE
-          bash /tmp/e2e-commands.sh
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -206,14 +277,83 @@ jobs:
           JEST_ARGS_JSON: ${{ matrix.jestArgsJson }}
         run: |
           echo "::warning::First attempt failed, retrying..."
-          node - <<'NODE' > /tmp/e2e-commands.sh
-          console.log("set -euo pipefail");
+          node - <<'NODE'
+          const { spawnSync } = require("child_process");
+
+          function splitArgs(input) {
+            const tokens = [];
+            let token = "";
+            let quote = null;
+
+            for (let index = 0; index < input.length; index += 1) {
+              const char = input[index];
+
+              if (char === "\\") {
+                const next = input[index + 1];
+                if (quote && (next === quote || next === "\\")) {
+                  token += next;
+                  index += 1;
+                } else if (!quote && next && (/[\s"'\\]/).test(next)) {
+                  token += next;
+                  index += 1;
+                } else {
+                  token += char;
+                }
+                continue;
+              }
+
+              if (quote) {
+                if (char === quote) {
+                  quote = null;
+                } else {
+                  token += char;
+                }
+                continue;
+              }
+
+              if (char === "\"" || char === "'") {
+                quote = char;
+                continue;
+              }
+
+              if (/\s/.test(char)) {
+                if (token) {
+                  tokens.push(token);
+                  token = "";
+                }
+                continue;
+              }
+
+              token += char;
+            }
+
+            if (quote) {
+              throw new Error(`Unclosed ${quote} quote in Jest args: ${input}`);
+            }
+
+            if (token) {
+              tokens.push(token);
+            }
+
+            return tokens;
+          }
+
           const argsList = JSON.parse(process.env.JEST_ARGS_JSON);
           for (const args of argsList) {
-            console.log(`METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- ${args}`);
+            const result = spawnSync("npm", ["run", "test:e2e", "--", ...splitArgs(args)], {
+              env: { ...process.env, METEOR_ALLOW_SUPERUSER: "1" },
+              stdio: "inherit",
+            });
+
+            if (result.error) {
+              throw result.error;
+            }
+
+            if (result.status !== 0) {
+              process.exit(result.status || 1);
+            }
           }
           NODE
-          bash /tmp/e2e-commands.sh
 
   test-skipped:
     name: ${{ matrix.check }}
