@@ -1,5 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const {
   artifactStem,
   getInitialFlowPathForMode,
@@ -7,7 +9,13 @@ const {
   parseArgs,
   shouldRunUpdatedFlowForMode,
 } = require("./run");
+const { getAppConfig } = require("./app-config");
 const packageJson = require("../package.json");
+const rootPackageJson = require("../../../package.json");
+
+function readFlow(filePath) {
+  return fs.readFileSync(filePath, "utf8");
+}
 
 test("parses --platform=android", () => {
   const args = parseArgs(["--platform=android"]);
@@ -150,4 +158,46 @@ test("native test package exposes default run mode scripts", () => {
     scripts["test:capacitor:ios:run"],
     "node scripts/run.js --platform=ios --app=capacitor-tests"
   );
+});
+
+test("root package exposes explicit Capacitor run mode scripts", () => {
+  const scripts = rootPackageJson.scripts;
+
+  assert.equal(
+    scripts["test:native:capacitor:android:run"],
+    "cd tools/native-tests && npm run test:capacitor:android:run"
+  );
+  assert.equal(
+    scripts["test:native:capacitor:ios:run"],
+    "cd tools/native-tests && npm run test:capacitor:ios:run"
+  );
+});
+
+test("Capacitor HCP flows assert native bridge and reload execution", () => {
+  const app = getAppConfig("capacitor-tests");
+  const initialFlow = readFlow(app.hcpInitialFlowPath);
+  const updatedFlow = readFlow(app.hcpFlowPath);
+
+  assert.match(initialFlow, /WebAppLocalServer native bridge ready/);
+  assert.match(updatedFlow, /HCP check requested/);
+  assert.match(updatedFlow, /HCP update ready/);
+  assert.match(updatedFlow, /HCP reload executed/);
+  assert.match(updatedFlow, /Native client version updated/);
+});
+
+test("Capacitor non-HCP flows assert no-op bridge mode", () => {
+  const app = getAppConfig("capacitor-tests");
+  const flowFiles = [
+    app.flowPath,
+    app.livereloadInitialFlowPath,
+    app.livereloadFlowPath,
+  ];
+
+  for (const flowFile of flowFiles) {
+    assert.match(
+      readFlow(flowFile),
+      /WebAppLocalServer no-op shim ready/,
+      path.basename(flowFile)
+    );
+  }
 });

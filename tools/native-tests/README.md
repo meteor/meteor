@@ -32,8 +32,14 @@ npm run test:native:android       # alias for: npm run test:native -- --platform
 npm run test:native:ios           # alias for: npm run test:native -- --platform=ios
 npm run test:native:capacitor:android
 npm run test:native:capacitor:ios
+npm run test:native:capacitor:android:run    # bundled meteor run + HCP update flow
+npm run test:native:capacitor:ios:run        # bundled meteor run + HCP update flow
 npm run test:native:capacitor:android:build  # production meteor build + Android emulator
 npm run test:native:capacitor:ios:build      # production meteor build + iOS Simulator
+npm run test:native:capacitor:android:livereload
+npm run test:native:capacitor:ios:livereload
+npm run test:native:capacitor:android:hcp    # production build + HCP update flow
+npm run test:native:capacitor:ios:hcp        # production build + HCP update flow
 ```
 
 The generic `npm run test:native -- --platform=<ios|android>` form also works; the
@@ -81,6 +87,10 @@ node scripts/run.js --platform=android --keep-running
 - `Meteor.isCapacitor true`
 - `Capacitor native platform ready`
 - `WebAppLocalServer shim ready`
+- `WebAppLocalServer native bridge ready` or `WebAppLocalServer no-op shim ready`
+- `HCP check requested`
+- `HCP update ready`
+- `HCP reload executed`
 - `__cordova paths adapted`
 
 ## CI
