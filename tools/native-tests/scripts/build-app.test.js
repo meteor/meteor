@@ -6,6 +6,8 @@ const os = require("node:os");
 
 const {
   buildMeteorBuildArgs,
+  buildMeteorNpmInstallArgs,
+  buildLocalCapacitorInstallArgs,
   getCapacitorAndroidDebugApkPath,
   getCapacitorBuildHcpModeForNativeTestMode,
   getCapacitorBuildWebCordovaPath,
@@ -50,6 +52,27 @@ test("buildMeteorBuildArgs builds production ios directory build args", () => {
       "--server",
       "http://192.168.1.10:3000",
       "--platforms=ios",
+    ]
+  );
+});
+
+test("meteor npm install args suppress audit and funding noise", () => {
+  assert.deepEqual(
+    buildMeteorNpmInstallArgs(),
+    ["npm", "install", "--no-audit", "--no-fund"]
+  );
+});
+
+test("local Capacitor install args suppress audit and funding noise", () => {
+  assert.deepEqual(
+    buildLocalCapacitorInstallArgs("/repo/npm-packages/meteor-capacitor"),
+    [
+      "install",
+      "/repo/npm-packages/meteor-capacitor",
+      "--save-dev",
+      "--no-package-lock",
+      "--no-audit",
+      "--no-fund",
     ]
   );
 });

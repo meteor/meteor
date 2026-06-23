@@ -1,6 +1,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { buildNativeRunOptions, resolveLanIp } = require("./server");
+const {
+  buildNativeRunOptions,
+  buildServerRunOptions,
+  resolveLanIp,
+} = require("./server");
 
 test("returns a non-loopback IPv4 address", () => {
   const ip = resolveLanIp();
@@ -38,7 +42,7 @@ test("builds capacitor meteor run command and env for a device target", () => {
     lanIp: "10.0.0.5",
     port: 3210,
     deviceId: "emulator-5554",
-    baseEnv: { EXISTING: "1" },
+    baseEnv: { EXISTING: "1", NO_COLOR: "1" },
     meteorBin: "/repo/meteor",
   });
 
@@ -49,6 +53,8 @@ test("builds capacitor meteor run command and env for a device target", () => {
   assert.equal(options.env.ROOT_URL, "http://10.0.0.5:3210");
   assert.equal(options.env.METEOR_CAPACITOR_LOCAL_IP, "10.0.0.5");
   assert.equal(options.env.METEOR_CAPACITOR_TARGET, "emulator-5554");
+  assert.equal(options.env.DO_NOT_TRACK, "1");
+  assert.equal("NO_COLOR" in options.env, false);
 });
 
 test("passes explicit Capacitor mode into meteor run env", () => {
@@ -64,4 +70,23 @@ test("passes explicit Capacitor mode into meteor run env", () => {
   assert.equal(options.env.METEOR_CAPACITOR_MODE, "livereload");
   assert.equal(options.env.METEOR_CAPACITOR_LOCAL_IP, "10.0.0.6");
   assert.equal(options.env.ROOT_URL, "http://10.0.0.6:3211");
+  assert.equal(options.env.DO_NOT_TRACK, "1");
+});
+
+test("builds local server command with package stats disabled", () => {
+  const options = buildServerRunOptions({
+    lanIp: "10.0.0.7",
+    port: 3212,
+    baseEnv: { EXISTING: "1", NO_COLOR: "1" },
+    meteorBin: "/repo/meteor",
+  });
+
+  assert.equal(options.command, "/repo/meteor");
+  assert.deepEqual(options.args, ["run", "--port", "10.0.0.7:3212"]);
+  assert.equal(options.env.EXISTING, "1");
+  assert.equal(options.env.PORT, "3212");
+  assert.equal(options.env.ROOT_URL, "http://10.0.0.7:3212");
+  assert.equal(options.env.DO_NOT_TRACK, "1");
+  assert.equal("NO_COLOR" in options.env, false);
+  assert.equal(options.url, "http://10.0.0.7:3212");
 });

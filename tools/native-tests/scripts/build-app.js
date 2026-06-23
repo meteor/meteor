@@ -3,10 +3,12 @@ const os = require("node:os");
 const { createHash } = require("node:crypto");
 const fs = require("fs-extra");
 const execa = require("execa");
+const { buildNativeTestEnv } = require("./env");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const METEOR_BIN = path.join(REPO_ROOT, "meteor");
 const CAPACITOR_PACKAGE_DIR = path.join(REPO_ROOT, "npm-packages", "meteor-capacitor");
+const NPM_QUIET_INSTALL_FLAGS = ["--no-audit", "--no-fund"];
 const CAPACITOR_WEB_APP_LOCAL_SERVER_SHIM = [
   "<script type=\"text/javascript\">",
   "var WebAppLocalServer = {",
@@ -94,9 +96,24 @@ async function copyAppSource(sourceDir, appDir) {
   });
 }
 
+function buildMeteorNpmInstallArgs() {
+  return ["npm", "install", ...NPM_QUIET_INSTALL_FLAGS];
+}
+
+function buildLocalCapacitorInstallArgs(packageDir = CAPACITOR_PACKAGE_DIR) {
+  return [
+    "install",
+    packageDir,
+    "--save-dev",
+    "--no-package-lock",
+    ...NPM_QUIET_INSTALL_FLAGS,
+  ];
+}
+
 async function installAppDeps(appDir) {
-  await execa(METEOR_BIN, ["npm", "install"], {
+  await execa(METEOR_BIN, buildMeteorNpmInstallArgs(), {
     cwd: appDir,
+    env: buildNativeTestEnv(),
     stdio: "inherit",
   });
 }
@@ -109,9 +126,10 @@ async function linkLocalCapacitor(appDir) {
 
   await execa(
     "npm",
-    ["install", CAPACITOR_PACKAGE_DIR, "--save-dev", "--no-package-lock"],
+    buildLocalCapacitorInstallArgs(),
     {
       cwd: appDir,
+      env: buildNativeTestEnv(),
       stdio: "inherit",
     }
   );
@@ -221,6 +239,7 @@ function normalizeWebProgramAssetUrls(program, { stripPrefix } = {}) {
 async function addPlatform(appDir, platform) {
   await execa(METEOR_BIN, ["add-platform", platform], {
     cwd: appDir,
+    env: buildNativeTestEnv(),
     stdio: "inherit",
   });
 }
@@ -424,8 +443,7 @@ async function syncCapacitorProductionWebDir({
 async function syncCapacitorNativeProject({ appDir, mobileServerUrl, platform }) {
   await execa("npx", ["cap", "sync", platform], {
     cwd: appDir,
-    env: {
-      ...process.env,
+    env: buildNativeTestEnv(process.env, {
       NODE_ENV: "production",
       ROOT_URL: mobileServerUrl,
       DDP_DEFAULT_CONNECTION_URL: mobileServerUrl,
@@ -435,7 +453,7 @@ async function syncCapacitorNativeProject({ appDir, mobileServerUrl, platform })
       METEOR_BUILD: "true",
       METEOR_NATIVE_ANDROID: platform === "android" ? "true" : "false",
       METEOR_NATIVE_IOS: platform === "ios" ? "true" : "false",
-    },
+    }),
     stdio: "inherit",
   });
 }
@@ -463,7 +481,7 @@ async function prepareCordovaApp({ appConfig, platform, lanIp, port = 3000 }) {
       "--server", mobileServerUrl,
       ...(platform === "android" ? ["--packageType", "apk"] : []),
     ],
-    { cwd: appDir, stdio: "inherit" }
+    { cwd: appDir, env: buildNativeTestEnv(), stdio: "inherit" }
   );
 
   let bundlePath;
@@ -529,6 +547,7 @@ async function compileCapacitorAndroidForEmulator({ appDir }) {
 
   await execa(gradlew, [":app:assembleDebug"], {
     cwd: androidDir,
+    env: buildNativeTestEnv(),
     stdio: "inherit",
   });
 
@@ -598,7 +617,7 @@ async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 300
   await execa(
     METEOR_BIN,
     buildMeteorBuildArgs({ buildDir, mobileServerUrl, platform }),
-    { cwd: appDir, stdio: "inherit" }
+    { cwd: appDir, env: buildNativeTestEnv(), stdio: "inherit" }
   );
 
   await syncCapacitorProductionWebDir({
@@ -673,6 +692,8 @@ async function cleanup(dir) {
 
 module.exports = {
   buildMeteorBuildArgs,
+  buildMeteorNpmInstallArgs,
+  buildLocalCapacitorInstallArgs,
   getCapacitorAndroidDebugApkPath,
   getCapacitorBuildWebCordovaPath,
   getCapacitorBuildCleanupPaths,

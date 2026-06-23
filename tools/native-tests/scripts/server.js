@@ -2,6 +2,7 @@ const os = require("node:os");
 const path = require("node:path");
 const execa = require("execa");
 const waitOn = require("wait-on");
+const { buildNativeTestEnv } = require("./env");
 
 const DEFAULT_PORT = 3000;
 
@@ -36,12 +37,12 @@ function buildNativeRunOptions({
   const repoRoot = path.resolve(__dirname, "..", "..", "..");
   const meteor = meteorBin || path.join(repoRoot, "meteor");
   const url = `http://${lanIp}:${port}`;
-  const env = {
-    ...baseEnv,
+  const env = buildNativeTestEnv(baseEnv, {
+    DO_NOT_TRACK: "1",
     PORT: String(port),
     ROOT_URL: url,
     METEOR_CAPACITOR_LOCAL_IP: lanIp,
-  };
+  });
 
   if (capacitorMode) {
     env.METEOR_CAPACITOR_MODE = capacitorMode;
@@ -59,6 +60,27 @@ function buildNativeRunOptions({
   };
 }
 
+function buildServerRunOptions({
+  lanIp,
+  port = DEFAULT_PORT,
+  baseEnv = process.env,
+  meteorBin,
+} = {}) {
+  const repoRoot = path.resolve(__dirname, "..", "..", "..");
+  const meteor = meteorBin || path.join(repoRoot, "meteor");
+  const url = `http://${lanIp}:${port}`;
+  return {
+    command: meteor,
+    args: ["run", "--port", `${lanIp}:${port}`],
+    env: buildNativeTestEnv(baseEnv, {
+      DO_NOT_TRACK: "1",
+      PORT: String(port),
+      ROOT_URL: url,
+    }),
+    url,
+  };
+}
+
 /**
  * Start `meteor run` for the smoke app on the chosen LAN IP.
  *
@@ -70,15 +92,18 @@ function buildNativeRunOptions({
  * @returns {Promise<{stop: () => Promise<void>, url: string}>}
  */
 async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
-  const repoRoot = path.resolve(__dirname, "..", "..", "..");
-  const meteor = meteorBin || path.join(repoRoot, "meteor");
-  const url = `http://${lanIp}:${port}`;
+  const { command, args, env, url } = buildServerRunOptions({
+    lanIp,
+    port,
+    meteorBin,
+  });
 
   const child = execa(
-    meteor,
-    ["run", "--port", `${lanIp}:${port}`],
+    command,
+    args,
     {
       cwd: appDir,
+      env,
       stdio: "inherit",
       reject: false,
       detached: false,
@@ -145,6 +170,7 @@ async function startNativeRun({
 
 module.exports = {
   buildNativeRunOptions,
+  buildServerRunOptions,
   resolveLanIp,
   startNativeRun,
   startServer,
