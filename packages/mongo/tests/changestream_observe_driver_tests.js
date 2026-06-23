@@ -704,6 +704,111 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - #14460 initial adds deliver a pre-existing doc matched by an ObjectID _id selector',
+  async function (test) {
+    const c = new Mongo.Collection(
+      'changestream_test_objectid_' + Random.id(),
+      { idGeneration: 'MONGO' }
+    );
+
+    const id1 = await c.insertAsync({ name: 'pet-1' });
+    await c.insertAsync({ name: 'pet-2' });
+    test.isTrue(id1 instanceof Mongo.ObjectID, 'MONGO idGeneration should yield an ObjectID');
+
+    const fetched = await c.find({ _id: id1 }).fetchAsync();
+    test.equal(fetched.length, 1, 'fetchAsync should find the doc by ObjectID');
+
+    const added = [];
+    const handle = await c.find({ _id: id1 }).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => added.length > 0);
+    test.equal(added.length, 1, 'initial added should fire for the ObjectID-matched doc');
+    test.isTrue(added[0].id instanceof Mongo.ObjectID, 'delivered id should be an ObjectID');
+    test.equal(added[0].id.toHexString(), id1.toHexString());
+    test.equal(added[0].fields.name, 'pet-1');
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - #14460 initial adds deliver pre-existing docs matched by { _id: { $in: [ObjectID, ...] } }',
+  async function (test) {
+    const c = new Mongo.Collection(
+      'changestream_test_objectid_in_' + Random.id(),
+      { idGeneration: 'MONGO' }
+    );
+
+    const id1 = await c.insertAsync({ name: 'pet-1' });
+    const id2 = await c.insertAsync({ name: 'pet-2' });
+    const id3 = await c.insertAsync({ name: 'pet-3' });
+
+    const selector = { _id: { $in: [id1, id3] } };
+
+    const fetched = await c.find(selector).fetchAsync();
+    test.equal(fetched.length, 2, 'fetchAsync should find both $in docs');
+
+    const added = [];
+    const handle = await c.find(selector).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => added.length >= 2);
+    test.equal(added.length, 2, 'initial added should fire for both $in-matched docs');
+
+    const gotHex = added.map(a => a.id.toHexString()).sort();
+    const wantHex = [id1.toHexString(), id3.toHexString()].sort();
+    test.equal(gotHex, wantHex, 'should deliver exactly the $in-selected docs');
+    test.isFalse(
+      added.some(a => a.id.toHexString() === id2.toHexString()),
+      'a doc outside the $in must not be delivered'
+    );
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - #14460 live update to an ObjectID-selected doc stays in the set (changed, not removed)',
+  async function (test) {
+    const c = new Mongo.Collection(
+      'changestream_test_objectid_live_' + Random.id(),
+      { idGeneration: 'MONGO' }
+    );
+
+    const id1 = await c.insertAsync({ name: 'pet-1', n: 1 });
+
+    const events = [];
+    const handle = await c.find({ _id: { $in: [id1] } }).observeChanges({
+      added(id, fields) { events.push({ type: 'added', id, fields }); },
+      changed(id, fields) { events.push({ type: 'changed', id, fields }); },
+      removed(id) { events.push({ type: 'removed', id }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => events.length > 0);
+    test.equal(events.length, 1, 'initial added for the selected doc');
+    test.equal(events[0].type, 'added');
+    events.length = 0;
+
+    await c.updateAsync(id1, { $set: { n: 2 } });
+    await waitFor(() => events.length > 0);
+    test.equal(events[0].type, 'changed', 'update to a selected doc should emit changed, not removed');
+    test.equal(events[0].fields.n, 2);
+    test.isFalse(
+      events.some(e => e.type === 'removed'),
+      'a selected doc must not be spuriously removed on update'
+    );
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
   'changestream - handles nested documents',
   async function (test) {
     const c = makeCollection();
@@ -1990,7 +2095,7 @@ Tinytest.addAsync(
 // ============================================================================
 
 Tinytest.addAsync(
-  'changestream - _buildPipeline returns correct structure',
+  'changestream - driver subscribes to a shared per-collection change stream',
   async function (test) {
     const c = makeCollection();
 
@@ -2001,15 +2106,157 @@ Tinytest.addAsync(
     test.isTrue(isChangeStreamDriver(handle));
 
     const driver = handle._multiplexer._observeDriver;
-    const pipeline = driver._buildPipeline();
+    const shared = driver._sharedStream;
 
-    // Should be an array
-    test.isTrue(Array.isArray(pipeline));
+    // The cursor lifecycle lives on the shared change stream, not the driver.
+    test.isTrue(!!shared, 'driver should hold a shared change stream');
+    test.isTrue(!!shared._changeStream, 'shared stream should have an open cursor');
+    test.isTrue(shared._drivers.has(driver), 'driver should be registered on the shared stream');
 
-    // If there's a selector, should have a $match stage
-    if (pipeline.length > 0) {
-      test.isTrue(pipeline[0].$match !== undefined);
+    // The owning MongoConnection should track exactly one multiplexer for the
+    // collection.
+    test.equal(
+      shared._mongoHandle._sharedChangeStreams[c._name],
+      shared,
+      'connection registry should hold the shared stream for this collection'
+    );
+
+    handle.stop();
+  }
+);
+
+// ============================================================================
+// CHANGE STREAM FANOUT (shared cursor per collection)
+// ============================================================================
+
+Tinytest.addAsync(
+  'changestream - many distinct selectors share ONE change stream cursor (#14453)',
+  async function (test) {
+    const c = makeCollection();
+    const N = 6;
+    const handles = [];
+    const seen = [];
+
+    // Open N observers, each with a DISTINCT selector on the SAME collection.
+    for (let i = 0; i < N; i++) {
+      const events = [];
+      seen.push(events);
+      // eslint-disable-next-line no-await-in-loop
+      const handle = await c.find({ envId: 'env-' + i }).observeChanges({
+        added: (id, fields) => events.push({ type: 'added', fields }),
+        changed: (id, fields) => events.push({ type: 'changed', fields }),
+        removed: (id) => events.push({ type: 'removed' }),
+      });
+      handles.push(handle);
     }
+
+    test.isTrue(isChangeStreamDriver(handles[0]));
+
+    const drivers = handles.map(h => h._multiplexer._observeDriver);
+    const shared = drivers[0]._sharedStream;
+
+    // All drivers for distinct selectors on one collection share ONE
+    // SharedChangeStream with ONE underlying cursor.
+    for (const d of drivers) {
+      test.equal(d._sharedStream, shared, 'every driver shares the same change stream');
+    }
+    test.equal(shared._drivers.size, N, 'shared stream tracks all N drivers');
+    test.isTrue(!!shared._changeStream, 'exactly one underlying cursor is open');
+    test.equal(
+      Object.keys(shared._mongoHandle._sharedChangeStreams).filter(
+        k => k === c._name
+      ).length,
+      1,
+      'exactly one shared stream registered for the collection'
+    );
+
+    // Functional: a write to env-2 must reach ONLY env-2's observer through the
+    // single shared stream — proving in-process fanout still routes per selector.
+    await c.insertAsync({ envId: 'env-2', payload: 'a' });
+    await waitFor(() => seen[2].some(e => e.type === 'added'), 3000);
+
+    test.isTrue(seen[2].some(e => e.type === 'added'), 'env-2 observer saw its insert');
+    for (let i = 0; i < N; i++) {
+      if (i === 2) continue;
+      test.equal(seen[i].length, 0, `env-${i} observer must not see env-2's write`);
+    }
+
+    handles.forEach(h => h.stop());
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - shared cursor closes only after the last driver stops (#14453)',
+  async function (test) {
+    const c = makeCollection();
+
+    const h1 = await c.find({ envId: 'a' }).observeChanges({ added: function () { } });
+    const h2 = await c.find({ envId: 'b' }).observeChanges({ added: function () { } });
+
+    test.isTrue(isChangeStreamDriver(h1));
+
+    const shared = h1._multiplexer._observeDriver._sharedStream;
+    const mongo = shared._mongoHandle;
+    test.equal(shared._drivers.size, 2, 'both drivers attached to one shared stream');
+
+    // Stopping the first observer must NOT close the shared cursor — the second
+    // observer still needs it.
+    h1.stop();
+    await waitFor(() => shared._drivers.size === 1, 2000);
+    test.equal(shared._drivers.size, 1, 'one driver remains');
+    test.isFalse(shared._stopped, 'shared stream stays open while a driver remains');
+    test.isTrue(!!shared._changeStream, 'cursor still open');
+    test.equal(mongo._sharedChangeStreams[c._name], shared, 'still registered');
+
+    // Stopping the last observer tears the shared stream down and drops it from
+    // the registry, so the server-side cursor is released.
+    h2.stop();
+    await waitFor(() => shared._stopped, 2000);
+    test.isTrue(shared._stopped, 'shared stream stopped after last driver left');
+    test.isTrue(!shared._changeStream, 'cursor closed');
+    test.isUndefined(
+      mongo._sharedChangeStreams[c._name],
+      'shared stream removed from the connection registry'
+    );
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a deliberate restart does not perpetuate a close→reopen loop (#14456)',
+  async function (test) {
+    const c = makeCollection();
+
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    test.isTrue(!!shared._changeStream, 'cursor is open before the restart');
+
+    // Count restarts that fire.
+    let restarts = 0;
+    const origRestart = shared._restart.bind(shared);
+    shared._restart = function () {
+      restarts++;
+      return origRestart();
+    };
+
+    // Trigger one restart; its deliberate close must not cascade into more.
+    shared._scheduleRestart(10);
+
+    // delay defaults to 100 ms — a cascade would fire several in this window.
+    await waitFor(() => restarts > 1, 800);
+
+    test.equal(restarts, 1, 'a single restart must not trigger further restarts');
+    test.isFalse(shared._stopped, 'shared stream stays alive after the restart');
+    test.isTrue(!!shared._changeStream, 'cursor is reopened and stays open');
+
+    // The reopened cursor must still deliver events to its drivers.
+    await c.insertAsync({ name: 'after-restart' });
+    const got = await waitFor(async () => {
+      const found = await c.findOneAsync({ name: 'after-restart' });
+      return !!found;
+    }, 3000);
+    test.isTrue(got, 'collection write succeeds after the restart');
 
     handle.stop();
   }
@@ -2230,11 +2477,16 @@ Tinytest.addAsync(
     const c = makeCollection();
     let tsFirst = null;
     let tsFinal = null;
+    // Snapshot the Timestamp's t/i fields directly — `{ ...timestamp }` only
+    // copies own enumerable properties, which on the BSON Timestamp/Long class
+    // are `low`/`high`/`unsigned`. The `t` and `i` accessors live on the
+    // prototype and would be lost in a spread, leaving an undefined comparison.
+    const snapshotTs = (ts) => (ts == null ? null : { t: ts.t, i: ts.i });
     await withFence(async (f) => {
       await c.insertAsync({ n: 1 });
-      tsFirst = { ...f._csTargetTsByCollection[c._name] };
+      tsFirst = snapshotTs(f._csTargetTsByCollection[c._name]);
       await c.insertAsync({ n: 2 });
-      tsFinal = { ...f._csTargetTsByCollection[c._name] };
+      tsFinal = snapshotTs(f._csTargetTsByCollection[c._name]);
     });
     test.isTrue(isBsonTimestamp(tsFirst) && isBsonTimestamp(tsFinal));
     const firstLessOrEqual = tsFirst.t < tsFinal.t
@@ -2278,7 +2530,7 @@ Tinytest.addAsync(
 
     // Build a fake fence whose target ts is <= _lastProcessedOperationTime.
     // _waitUntilCaughtUp should hit the 'already-caught-up' early exit
-    // without falling back to the (network) _getServerOperationTime call.
+    // and not enqueue a resolver.
     const pastTs = driver._lastProcessedOperationTime;
     const fakeFence = { _csTargetTsByCollection: { [c._name]: pastTs } };
 
@@ -2292,19 +2544,19 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- _waitUntilCaughtUp falls back to server ping when no fence annotation',
+  'changestream- _waitUntilCaughtUp returns immediately when no fence annotation',
   async function (test) {
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
     const driver = handle._multiplexer._observeDriver;
 
-    // Undefined fence → fallback path. Should complete without timing out.
+    // No fence at all → no specific write to wait for, return without waiting.
     const t0 = Date.now();
     await driver._waitUntilCaughtUp(undefined);
     const elapsed = Date.now() - t0;
 
-    test.isTrue(elapsed < 1000, `fallback path should not hit the safety timeout; elapsed=${elapsed}ms`);
+    test.isTrue(elapsed < 250, `no-fence path should return immediately; elapsed=${elapsed}ms`);
     handle.stop();
   }
 );
@@ -2313,8 +2565,10 @@ Tinytest.addAsync(
   'changestream- _waitUntilCaughtUp ignores annotation for a different collection',
   async function (test) {
     // If _waitUntilCaughtUp took ts from another collection, we'd spin
-    // waiting for a clusterTime this driver's stream never observes.
-    // The correct behaviour is to ignore that key and fall back.
+    // forever waiting for a clusterTime this driver's stream never observes
+    // (no safety-valve timeout — the wait is unbounded by design, mirroring
+    // OplogHandle._waitUntilCaughtUp). The correct behaviour is to skip
+    // entirely when our collection isn't in the annotation map.
     const c = makeCollection();
     const handle = await c.find({}).observeChanges({ added: function () { } });
     test.isTrue(isChangeStreamDriver(handle));
@@ -2330,9 +2584,68 @@ Tinytest.addAsync(
     const elapsed = Date.now() - t0;
 
     test.isTrue(
-      elapsed < 1000,
-      `annotation for another collection should be ignored (no timeout); elapsed=${elapsed}ms`
+      elapsed < 250,
+      `annotation for another collection should be ignored; elapsed=${elapsed}ms`
     );
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream- stop() releases a fence waiter parked in _waitUntilCaughtUp (#14452)',
+  async function (test) {
+    // Regression for meteor/meteor#14452. If the driver is stopped while a
+    // write fence is still parked in _waitUntilCaughtUp, the change-stream
+    // event that would advance _lastProcessedOperationTime to targetTs never
+    // arrives (the stream is being closed), so the parked resolver would hang
+    // forever. The fence's onBeforeFire awaits that resolver, so the DDP
+    // method that issued the write never gets its `updated` message and the
+    // client call hangs until timeout. stop() must release the waiter.
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const driver = handle._multiplexer._observeDriver;
+
+    // Seed so _lastProcessedOperationTime is non-null, then build a fence with
+    // a target ts far in the future. The stream will never deliver an event
+    // with clusterTime >= this, so the wait parks a resolver and blocks.
+    // The ts must be a real BSON Timestamp (not a plain {t, i}) — Timestamp's
+    // compare() mishandles plain objects, which would send _waitUntilCaughtUp
+    // down its already-caught-up early return instead of parking.
+    await c.insertAsync({ n: 1 });
+    await waitFor(() => driver._lastProcessedOperationTime !== null, 2000);
+
+    const Timestamp = driver._lastProcessedOperationTime.constructor;
+    const farFutureTs = new Timestamp({ t: Math.floor(Date.now() / 1000) + 3600, i: 1 });
+    const fakeFence = { _csTargetTsByCollection: { [c._name]: farFutureTs } };
+
+    // Park the waiter. Do NOT await — it must not resolve until stop().
+    let resolved = false;
+    const waitPromise = driver
+      ._waitUntilCaughtUp(fakeFence)
+      .then(() => { resolved = true; });
+
+    await waitFor(() => driver._catchingUpResolvers.length === 1, 1000);
+    test.equal(
+      driver._catchingUpResolvers.length,
+      1,
+      'a resolver should be parked while the fence waits for a future ts'
+    );
+    test.isFalse(resolved, 'wait must not resolve before stop');
+
+    // Stop the driver. This must drain the parked resolver rather than leaving
+    // it (and its watchdog) running forever.
+    await driver.stop();
+
+    const released = await waitFor(() => resolved, 3000);
+    test.isTrue(released, 'stop() should release the parked fence waiter (#14452)');
+    test.equal(
+      driver._catchingUpResolvers.length,
+      0,
+      'catching-up resolvers should be drained on stop'
+    );
+
+    await waitPromise;
     handle.stop();
   }
 );
@@ -2360,15 +2673,21 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'changestream- timeout default is 250ms unless overridden',
+  'changestream- waitUntilCaughtUp warn watchdog default is 10s',
   async function (test) {
+    // The previous implementation had a hard safety-valve timeout that
+    // released the wait early; that caused fences to fire before the
+    // change had been delivered to the multiplexer (e.g. client received
+    // `updated` without `changed`). The wait is now unbounded — only a
+    // log-only watchdog at waitUntilCaughtUpWarnMs (default 10s) flags
+    // genuinely stalled streams without masking them.
     const setting = Meteor.settings
       && Meteor.settings.packages
       && Meteor.settings.packages.mongo
       && Meteor.settings.packages.mongo.changeStream
-      && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpTimeoutMs;
-    const effective = setting ?? 250;
-    test.equal(effective, 250, 'pre-fix default of 1000ms should have been lowered to 250ms');
+      && Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpWarnMs;
+    const effective = setting ?? 10000;
+    test.equal(effective, 10000, 'warn watchdog default should be 10s; override via Meteor.settings.packages.mongo.changeStream.waitUntilCaughtUpWarnMs');
   }
 );
 
@@ -2406,6 +2725,114 @@ Tinytest.addAsync(
       2000
     );
     test.isTrue(sawInsert, 'observer should have received the fenced insert');
+    handle.stop();
+  }
+);
+
+// ============================================================================
+// TRANSLATION BOUNDARY TESTS
+//
+// The driver translates native BSON <-> Meteor types exactly once per path:
+// the selector is translated to native types for the snapshot query, and
+// documents are translated back to Meteor types at two boundaries
+// (_sendInitialAdds for the snapshot, _handleChange for live events) before
+// they reach the projection, the matcher or the multiplexer. These tests guard
+// that boundary for special-typed *field values* (not just the _id), on every
+// path a document can take to the client: initial snapshot, live insert and
+// live changed. They fail if any boundary forwards a raw BSON atom.
+// ============================================================================
+
+Tinytest.addAsync(
+  'changestream - translation boundary: ObjectID/Binary fields survive the initial snapshot',
+  async function (test) {
+    const c = new Mongo.Collection('changestream_test_fieldtypes_snap_' + Random.id());
+
+    const ref = new Mongo.ObjectID();
+    const blob = EJSON.newBinary(3);
+    blob[0] = 10; blob[1] = 20; blob[2] = 30;
+
+    await c.insertAsync({ ref, blob, n: 1 });
+
+    const added = [];
+    const handle = await c.find({}).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => added.length > 0);
+    test.equal(added.length, 1, 'initial added should fire');
+
+    const f = added[0].fields;
+    test.isTrue(
+      f.ref instanceof Mongo.ObjectID,
+      'snapshot must deliver an ObjectID field as Mongo.ObjectID, not a native BSON atom'
+    );
+    test.equal(f.ref.toHexString(), ref.toHexString());
+    test.isTrue(EJSON.isBinary(f.blob), 'snapshot must deliver a Binary field as a Meteor binary');
+    test.isTrue(EJSON.equals(f.blob, blob), 'Binary field bytes should round-trip');
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - translation boundary: ObjectID field survives a live insert',
+  async function (test) {
+    const c = new Mongo.Collection('changestream_test_fieldtypes_ins_' + Random.id());
+
+    const added = [];
+    const handle = await c.find({}).observeChanges({
+      added(id, fields) { added.push({ id, fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    const ref = new Mongo.ObjectID();
+    await c.insertAsync({ ref, n: 1 });
+
+    await waitFor(() => added.length > 0);
+    test.equal(added.length, 1, 'live insert should fire added');
+    const f = added[0].fields;
+    test.isTrue(
+      f.ref instanceof Mongo.ObjectID,
+      'live insert must deliver an ObjectID field as Mongo.ObjectID, not a native BSON atom'
+    );
+    test.equal(f.ref.toHexString(), ref.toHexString());
+
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - translation boundary: ObjectID field survives a live changed (diff path)',
+  async function (test) {
+    const c = new Mongo.Collection('changestream_test_fieldtypes_upd_' + Random.id());
+
+    const ref1 = new Mongo.ObjectID();
+    const id = await c.insertAsync({ ref: ref1, n: 1 });
+
+    const events = [];
+    const handle = await c.find({}).observeChanges({
+      added(docId, fields) { events.push({ type: 'added', fields }); },
+      changed(docId, fields) { events.push({ type: 'changed', fields }); },
+    });
+    test.isTrue(isChangeStreamDriver(handle), 'Should be using ChangeStream driver');
+
+    await waitFor(() => events.length > 0);
+    test.equal(events[0].type, 'added', 'initial added for the pre-existing doc');
+    events.length = 0;
+
+    const ref2 = new Mongo.ObjectID();
+    await c.updateAsync(id, { $set: { ref: ref2 } });
+
+    await waitFor(() => events.length > 0);
+    test.equal(events[0].type, 'changed', 'update should emit changed');
+    const f = events[0].fields;
+    test.isTrue(
+      f.ref instanceof Mongo.ObjectID,
+      'live changed must deliver an ObjectID field as Mongo.ObjectID, not a native BSON atom'
+    );
+    test.equal(f.ref.toHexString(), ref2.toHexString(), 'changed should carry the new ObjectID value');
+
     handle.stop();
   }
 );

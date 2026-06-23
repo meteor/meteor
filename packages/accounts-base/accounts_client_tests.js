@@ -99,15 +99,15 @@ Tinytest.addAsync(
   'accounts async - Meteor.loggingIn() is false after login has completed',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
-      Meteor.loginWithPasswordAsync(username, password)
-        .then(async (loginDetails) => {
-          test.isFalse(Meteor.loggingIn());
-          test.isTrue(await Meteor.userAsync());
-          test.equal(loginDetails.type, 'password');
-          test.equal(loginDetails.id, Meteor.userId());
-          test.isTrue(!!loginDetails.token);
-        })
-        .catch(error => test.fail(error.message))
+      (async () => {
+        const loginDetails = await Meteor.loginWithPasswordAsync(username, password);
+        test.isFalse(Meteor.loggingIn());
+        test.isTrue(await Meteor.userAsync());
+        test.equal(loginDetails.type, 'password');
+        test.equal(loginDetails.id, Meteor.userId());
+        test.isTrue(!!loginDetails.token);
+      })()
+        .catch((error) => test.fail(error.message))
         .finally(() => removeTestUser(done));
     });
   }
@@ -591,7 +591,7 @@ Tinytest.addAsync('accounts - should only start subscription when connected', as
 
   acc.callLoginMethod()
 
-  await Meteor._sleepForMs(100);
+  await Meteor._sleepForMs(500);
 
   // The sub call needs to come right after `connect` since this is when `status().connected` gets to be true and
   // not after `connected` as it is based on the socket connection status.
