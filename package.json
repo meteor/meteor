@@ -41,7 +41,7 @@
     "types:compile": "npx tsc --noEmit",
     "types:coverage": "npm run types:compile && type-coverage --at-least 99",
     "types:coverage:table": "npm run types:compile && node -e \"require('typescript-coverage-report/dist/lib/getCoverage').default().then(d=>{process.stdout.write(require('typescript-coverage-report/dist/lib/reporters/text').generate(d,80)+'\\n');process.exit(d.percentage>=80?0:1)})\"",
-    "types:dts-test-coverage": "check-type-test-coverage ./packages"
+    "types:dts-test-coverage": "check-type-test-coverage ./packages --min 90"
   },
   "jshintConfig": {
     "esversion": 11
