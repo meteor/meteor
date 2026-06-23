@@ -977,6 +977,14 @@ function requireWithPrefixes(inputFile, id, prefixes, controlFilePath) {
         presetOrPluginId,
         controlFilePath
       );
+    } else {
+      const notFound = new Error(
+        "Cannot find module '" + id + "' (tried: " +
+          prefixes.map(function (prefix) { return prefix + id; }).join(", ") +
+          ")"
+      );
+      notFound.code = "MODULE_NOT_FOUND";
+      throw notFound;
     }
 
   } else {
