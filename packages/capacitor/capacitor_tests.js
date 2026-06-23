@@ -146,7 +146,7 @@ Tinytest.add('capacitor - server runtime - direct server mode detection', test =
     METEOR_CAPACITOR: 'true',
     METEOR_CAPACITOR_MODE: 'bundled',
   }));
-  test.isTrue(isCapacitorDirectServerMode({
+  test.isFalse(isCapacitorDirectServerMode({
     METEOR_CAPACITOR: 'true',
   }));
   test.isTrue(isCapacitorDirectServerMode({
@@ -443,6 +443,7 @@ Tinytest.add('capacitor - env - platform override is explicit', test => {
   const env = getCapacitorEnv({ platform: 'android' });
 
   test.equal(env.METEOR_CAPACITOR, 'true');
+  test.equal(env.METEOR_CAPACITOR_MODE, 'bundled');
   test.equal(env.METEOR_CAPACITOR_PLATFORM, 'android');
 });
 

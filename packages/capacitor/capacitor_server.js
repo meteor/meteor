@@ -23,7 +23,7 @@ const CORDOVA_JS_STUB = `;(function () {
 
 export function isCapacitorDirectServerMode(env = process.env) {
   return env.METEOR_CAPACITOR === 'true' &&
-    env.METEOR_CAPACITOR_MODE !== 'bundled';
+    env.METEOR_CAPACITOR_MODE === 'livereload';
 }
 
 export function getCordovaJsStub(env = process.env) {

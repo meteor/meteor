@@ -1,6 +1,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { artifactStem, parseArgs } = require("./run");
+const {
+  artifactStem,
+  getInitialFlowPathForMode,
+  getUpdatedFlowPathForMode,
+  parseArgs,
+  shouldRunUpdatedFlowForMode,
+} = require("./run");
+const packageJson = require("../package.json");
 
 test("parses --platform=android", () => {
   const args = parseArgs(["--platform=android"]);
@@ -101,5 +108,46 @@ test("suffixes artifact stem for hcp mode", () => {
   assert.equal(
     artifactStem({ platform: "android", appName: "capacitor-tests", mode: "hcp" }),
     "android-capacitor-tests-hcp"
+  );
+});
+
+test("run mode uses default HCP initial flow", () => {
+  const appConfig = {
+    flowPath: "/flows/base.yaml",
+    hcpInitialFlowPath: "/flows/hcp-initial.yaml",
+    hcpFlowPath: "/flows/hcp.yaml",
+    livereloadInitialFlowPath: "/flows/livereload-initial.yaml",
+    livereloadFlowPath: "/flows/livereload.yaml",
+  };
+
+  assert.equal(getInitialFlowPathForMode("run", appConfig), "/flows/hcp-initial.yaml");
+  assert.equal(getUpdatedFlowPathForMode("run", appConfig), "/flows/hcp.yaml");
+  assert.equal(shouldRunUpdatedFlowForMode("run"), true);
+});
+
+test("build mode keeps non-HCP flow", () => {
+  const appConfig = {
+    flowPath: "/flows/base.yaml",
+    hcpInitialFlowPath: "/flows/hcp-initial.yaml",
+    hcpFlowPath: "/flows/hcp.yaml",
+    livereloadInitialFlowPath: "/flows/livereload-initial.yaml",
+    livereloadFlowPath: "/flows/livereload.yaml",
+  };
+
+  assert.equal(getInitialFlowPathForMode("build", appConfig), "/flows/base.yaml");
+  assert.equal(getUpdatedFlowPathForMode("build", appConfig), null);
+  assert.equal(shouldRunUpdatedFlowForMode("build"), false);
+});
+
+test("native test package exposes default run mode scripts", () => {
+  const scripts = packageJson.scripts;
+
+  assert.equal(
+    scripts["test:capacitor:android:run"],
+    "node scripts/run.js --platform=android --app=capacitor-tests"
+  );
+  assert.equal(
+    scripts["test:capacitor:ios:run"],
+    "node scripts/run.js --platform=ios --app=capacitor-tests"
   );
 });

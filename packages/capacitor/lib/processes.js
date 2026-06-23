@@ -65,8 +65,7 @@ export function getCapacitorEnv({ platform, mode } = {}) {
   const isDev = isMeteorAppDevelopment();
   const isProd = isMeteorAppProduction();
   const webDir = getCapacitorWebDir({ isDevelopment: isDev, isProduction: isProd });
-  const capacitorMode = mode || process.env.METEOR_CAPACITOR_MODE ||
-    (isProd ? 'bundled' : 'development');
+  const capacitorMode = mode || process.env.METEOR_CAPACITOR_MODE || 'bundled';
   return {
     METEOR_CAPACITOR: 'true',
     METEOR_CAPACITOR_MODE: capacitorMode,

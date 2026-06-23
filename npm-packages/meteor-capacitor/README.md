@@ -11,9 +11,7 @@ const { defineConfig } = require('@meteorjs/capacitor');
 module.exports = defineConfig(Meteor => ({
   appId: 'com.example.myapp',
   appName: 'MyApp',
-  server: Meteor.isDevelopment
-    ? { url: `http://${Meteor.localIp}:${Meteor.port}`, cleartext: true }
-    : Meteor.isLivereload
+  server: Meteor.isLivereload
     ? { url: Meteor.rootUrl }
     : undefined,
 }));
@@ -39,6 +37,6 @@ The factory receives a `Meteor` flag object populated from process.env (set by t
 | `Meteor.isCapacitor` / `Meteor.isNative` | Always true here |
 | `Meteor.rootUrl` / `Meteor.localIp` / `Meteor.port` | Connection details for `server.url` |
 | `Meteor.platform` | `'android'` or `'ios'` |
-| `Meteor.mode` | `'development'` / `'livereload'` / `'bundled'` |
+| `Meteor.mode` | `'livereload'` / `'bundled'` |
 | `Meteor.buildContext` | Build root (matches `RSPACK_BUILD_CONTEXT`, e.g. `_build`) |
 | `Meteor.webDir` | Per-env subfolder (`<buildContext>/native-dev`, `native-prod`) |

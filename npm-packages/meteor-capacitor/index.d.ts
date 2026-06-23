@@ -1,7 +1,7 @@
 import type { PluginListenerHandle } from "@capacitor/core";
 
 export interface MeteorCapacitorContext {
-  mode: "development" | "livereload" | "bundled";
+  mode: "livereload" | "bundled";
   isDevelopment: boolean;
   isLivereload: boolean;
   isBundled: boolean;

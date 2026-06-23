@@ -87,6 +87,30 @@ function updatedJunitPath(junitOut) {
   return junitOut.replace(/\.xml$/, "-updated.xml");
 }
 
+function getInitialFlowPathForMode(mode, appConfig) {
+  if (mode === "livereload") {
+    return appConfig.livereloadInitialFlowPath;
+  }
+  if (mode === "run" || mode === "hcp") {
+    return appConfig.hcpInitialFlowPath;
+  }
+  return appConfig.flowPath;
+}
+
+function getUpdatedFlowPathForMode(mode, appConfig) {
+  if (mode === "livereload") {
+    return appConfig.livereloadFlowPath;
+  }
+  if (mode === "run" || mode === "hcp") {
+    return appConfig.hcpFlowPath;
+  }
+  return null;
+}
+
+function shouldRunUpdatedFlowForMode(mode) {
+  return mode === "run" || mode === "livereload" || mode === "hcp";
+}
+
 async function run(argv) {
   let args;
   try {
@@ -117,14 +141,14 @@ async function run(argv) {
     return EXIT_FRAMEWORK;
   }
   if (
-    args.mode === "hcp" &&
+    (args.mode === "run" || args.mode === "hcp") &&
     !(await fs.pathExists(appConfig.hcpInitialFlowPath))
   ) {
     console.error(`Missing HCP initial flow file: ${appConfig.hcpInitialFlowPath}`);
     return EXIT_FRAMEWORK;
   }
   if (
-    args.mode === "hcp" &&
+    (args.mode === "run" || args.mode === "hcp") &&
     !(await fs.pathExists(appConfig.hcpFlowPath))
   ) {
     console.error(`Missing HCP flow file: ${appConfig.hcpFlowPath}`);
@@ -204,11 +228,7 @@ async function run(argv) {
       console.log(`Installed bundle on ${args.platform} device ${sim.deviceId}`);
     }
 
-    const initialFlowPath = args.mode === "livereload"
-      ? appConfig.livereloadInitialFlowPath
-      : args.mode === "hcp"
-        ? appConfig.hcpInitialFlowPath
-        : appConfig.flowPath;
+    const initialFlowPath = getInitialFlowPathForMode(args.mode, appConfig);
 
     const { exitCode } = await runFlow({
       flowPath: initialFlowPath,
@@ -217,22 +237,11 @@ async function run(argv) {
     });
 
     if (exitCode !== 0) return EXIT_FLOW_FAIL;
-    if (args.mode === "livereload") {
+    if (shouldRunUpdatedFlowForMode(args.mode)) {
       await applyLivereloadFixtureChanges(build.appDir);
       await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
       const updated = await runFlow({
-        flowPath: appConfig.livereloadFlowPath,
-        deviceId: sim.deviceId,
-        junitOut: updatedJunitPath(junitOut),
-      });
-      if (updated.exitCode === 0) return EXIT_PASS;
-      return EXIT_FLOW_FAIL;
-    }
-    if (args.mode === "hcp") {
-      await applyLivereloadFixtureChanges(build.appDir);
-      await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
-      const updated = await runFlow({
-        flowPath: appConfig.hcpFlowPath,
+        flowPath: getUpdatedFlowPathForMode(args.mode, appConfig),
         deviceId: sim.deviceId,
         junitOut: updatedJunitPath(junitOut),
       });
@@ -260,8 +269,11 @@ if (require.main === module) {
 
 module.exports = {
   artifactStem,
+  getInitialFlowPathForMode,
+  getUpdatedFlowPathForMode,
   parseArgs,
   run,
+  shouldRunUpdatedFlowForMode,
   EXIT_PASS,
   EXIT_FLOW_FAIL,
   EXIT_INFRA,

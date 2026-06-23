@@ -12,10 +12,11 @@ function asBool(name) {
 
 function detectMode() {
   const explicit = process.env.METEOR_CAPACITOR_MODE;
-  if (explicit) return explicit; // 'development' | 'livereload' | 'bundled'
+  if (explicit === 'livereload') return 'livereload';
+  if (explicit === 'development') return 'livereload';
+  if (explicit === 'bundled') return 'bundled';
   if (asBool('METEOR_CAPACITOR_LIVERELOAD')) return 'livereload';
   if (process.env.NODE_ENV === 'production') return 'bundled';
-  if (process.env.ROOT_URL || process.env.PORT) return 'development';
   return 'bundled';
 }
 

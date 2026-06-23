@@ -44,15 +44,14 @@ function minimalConfig() {
   });
 }
 
-test("development mode defaults server.url to local Meteor run URL", () => {
+test("standalone Meteor run context defaults to bundled mode", () => {
   const config = withEnv({
-    METEOR_CAPACITOR_MODE: "development",
     METEOR_CAPACITOR_LOCAL_IP: "10.0.0.5",
     PORT: "3210",
   }, minimalConfig);
 
-  assert.equal(config.server.url, "http://10.0.0.5:3210/__cordova/");
-  assert.equal(config.server.cleartext, true);
+  assert.equal(config.server.url, undefined);
+  assert.equal(config.server.cleartext, undefined);
   assert.equal(config.server.androidScheme, "http");
 });
 

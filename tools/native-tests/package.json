@@ -5,6 +5,8 @@
   "description": "Maestro flows verifying Meteor's native mobile shell.",
   "scripts": {
     "test": "node scripts/run.js",
+    "test:capacitor:android:run": "node scripts/run.js --platform=android --app=capacitor-tests",
+    "test:capacitor:ios:run": "node scripts/run.js --platform=ios --app=capacitor-tests",
     "test:capacitor:android:build": "node scripts/run.js --platform=android --app=capacitor-tests --mode=build",
     "test:capacitor:ios:build": "node scripts/run.js --platform=ios --app=capacitor-tests --mode=build",
     "test:capacitor:android:livereload": "node scripts/run.js --platform=android --app=capacitor-tests --mode=livereload",
