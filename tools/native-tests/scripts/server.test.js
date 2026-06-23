@@ -42,7 +42,7 @@ test("builds capacitor meteor run command and env for a device target", () => {
     lanIp: "10.0.0.5",
     port: 3210,
     deviceId: "emulator-5554",
-    baseEnv: { EXISTING: "1", NO_COLOR: "1" },
+    baseEnv: { EXISTING: "1", NO_COLOR: "1", FORCE_COLOR: "1" },
     meteorBin: "/repo/meteor",
   });
 
@@ -55,6 +55,7 @@ test("builds capacitor meteor run command and env for a device target", () => {
   assert.equal(options.env.METEOR_CAPACITOR_TARGET, "emulator-5554");
   assert.equal(options.env.DO_NOT_TRACK, "1");
   assert.equal("NO_COLOR" in options.env, false);
+  assert.equal("FORCE_COLOR" in options.env, false);
 });
 
 test("passes explicit Capacitor mode into meteor run env", () => {
@@ -77,7 +78,7 @@ test("builds local server command with package stats disabled", () => {
   const options = buildServerRunOptions({
     lanIp: "10.0.0.7",
     port: 3212,
-    baseEnv: { EXISTING: "1", NO_COLOR: "1" },
+    baseEnv: { EXISTING: "1", NO_COLOR: "1", FORCE_COLOR: "1" },
     meteorBin: "/repo/meteor",
   });
 
@@ -88,5 +89,6 @@ test("builds local server command with package stats disabled", () => {
   assert.equal(options.env.ROOT_URL, "http://10.0.0.7:3212");
   assert.equal(options.env.DO_NOT_TRACK, "1");
   assert.equal("NO_COLOR" in options.env, false);
+  assert.equal("FORCE_COLOR" in options.env, false);
   assert.equal(options.url, "http://10.0.0.7:3212");
 });

@@ -21,6 +21,7 @@ Package.onTest(function (api) {
     'tests/lifecycle_tests.js',
     'tests/meteor_tests.js',
     'tests/npm_tests.js',
+    'tests/process_tests.js',
     'tests/readiness_tests.js',
   ], 'server');
 });

@@ -2,6 +2,17 @@ const { spawn } = require('child_process');
 const net = require('net');
 const { logError } = require('./log');
 
+export function buildProcessEnv(extraEnv = {}) {
+  const env = {
+    ...process.env,
+    ...extraEnv,
+    FORCE_COLOR: '1',
+    TERM: 'xterm-256color',
+  };
+  delete env.NO_COLOR;
+  return env;
+}
+
 /**
  * Spawns a new OS process with the given command and arguments.
  * Streams output with original styling and handles errors and exit events.
@@ -23,7 +34,7 @@ const { logError } = require('./log');
 export function spawnProcess(command, args, options = {}) {
   const stdio = options.stdio || ['pipe', 'pipe', 'pipe'];
   const proc = spawn(command, args, {
-    env: { ...process.env, ...(options.env || {}), FORCE_COLOR: '1', TERM: 'xterm-256color' },
+    env: buildProcessEnv(options.env),
     cwd: options.cwd || process.cwd(),
     stdio,
     detached: options.detached || false,

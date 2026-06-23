@@ -17,6 +17,7 @@ function buildE2EEnv(baseEnv = process.env, overrides = {}) {
     DO_NOT_TRACK: '1',
   };
   delete env.NO_COLOR;
+  delete env.FORCE_COLOR;
   return env;
 }
 
@@ -519,13 +520,20 @@ async function isPortFree(port) {
  * @param {Object} options - Additional options
  * @param {Object} options.execaOptions - Additional options for execa
  * @param {boolean} options.captureOutput - Whether to capture the command's output
+ * @param {boolean} options.logCapturedOutput - Whether captured output should also be echoed to the console
  * @param {boolean} options.checkExitCode - Whether to automatically check the exit code and throw an error if it's not 0
  * @returns {Object} - The meteor process and output lines if capturing output, and processResult if checkExitCode is true
  */
 export async function runMeteorCommand(command, args = [], cwd, options = {}) {
   console.log(`Running Meteor command: ${command} ${args.join(' ')}...`);
 
-  const { captureOutput = false, checkExitCode = false, execaOptions: extraExecaOptions = {}, env = {} } = options;
+  const {
+    captureOutput = false,
+    logCapturedOutput = true,
+    checkExitCode = false,
+    execaOptions: extraExecaOptions = {},
+    env = {}
+  } = options;
 
   const extraEnv = extraExecaOptions.env || {};
   const execaOptions = {
@@ -553,15 +561,17 @@ export async function runMeteorCommand(command, args = [], cwd, options = {}) {
     meteorProcess.stdout.on('data', (data) => {
       const lines = data.toString().split('\n').filter(line => line.trim());
       outputLines.push(...lines);
-      // Still log to console for visibility
-      process.stdout.write(data);
+      if (logCapturedOutput) {
+        process.stdout.write(data);
+      }
     });
 
     meteorProcess.stderr.on('data', (data) => {
       const lines = data.toString().split('\n').filter(line => line.trim());
       outputLines.push(...lines);
-      // Still log to console for visibility
-      process.stderr.write(data);
+      if (logCapturedOutput) {
+        process.stderr.write(data);
+      }
     });
   }
 

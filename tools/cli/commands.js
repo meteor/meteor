@@ -79,9 +79,12 @@ const bash =
  */
 const runLiveCommand = (command, args = []) => {
   return new Promise((resolve, reject) => {
+    const env = { ...process.env, FORCE_COLOR: "1", TERM: "xterm-256color" };
+    delete env.NO_COLOR;
+
     const childProcess = spawn(command, args, {
       shell: true,
-      env: { ...process.env, FORCE_COLOR: "1", TERM: "xterm-256color" },
+      env,
       stdio: "inherit",
     });
 

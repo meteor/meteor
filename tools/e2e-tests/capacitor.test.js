@@ -631,6 +631,7 @@ describe('Capacitor App Web Lifecycle /', () => {
         tempDir,
         {
           captureOutput: true,
+          logCapturedOutput: false,
           env: e2eEnv(),
         }
       );

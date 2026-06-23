@@ -75,6 +75,7 @@ async function compileIosForSimulator({ buildDir, scheme }) {
       "-sdk", "iphonesimulator",
       "-destination", "generic/platform=iOS Simulator",
       "-derivedDataPath", derivedData,
+      "-quiet",
       "build",
     ],
     { stdio: "inherit" }
@@ -575,6 +576,7 @@ async function compileCapacitorIosForSimulator({ appDir }) {
       "-sdk", "iphonesimulator",
       "-destination", "generic/platform=iOS Simulator",
       "-derivedDataPath", derivedData,
+      "-quiet",
       "build",
     ],
     { stdio: "inherit" }

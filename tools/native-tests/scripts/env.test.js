@@ -3,10 +3,11 @@ const assert = require("node:assert/strict");
 
 const { buildNativeTestEnv } = require("./env");
 
-test("buildNativeTestEnv removes NO_COLOR while preserving other env values", () => {
+test("buildNativeTestEnv removes color override conflicts while preserving other env values", () => {
   const env = buildNativeTestEnv({
     EXISTING: "1",
     NO_COLOR: "1",
+    FORCE_COLOR: "1",
   }, {
     PORT: "3000",
   });
@@ -14,6 +15,7 @@ test("buildNativeTestEnv removes NO_COLOR while preserving other env values", ()
   assert.equal(env.EXISTING, "1");
   assert.equal(env.PORT, "3000");
   assert.equal("NO_COLOR" in env, false);
+  assert.equal("FORCE_COLOR" in env, false);
 });
 
 test("buildNativeTestEnv disables package usage stats by default", () => {
