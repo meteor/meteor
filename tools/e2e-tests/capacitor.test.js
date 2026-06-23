@@ -163,12 +163,14 @@ async function assertNoCordovaNativeBuild(outputLines) {
 
 async function assertCapacitorSyncedNativeAssets(appDir, platform) {
   if (platform === 'android') {
-    await assertFileExist(appDir, 'android/app/src/main/assets/public/index.html', { content: 'var WebAppLocalServer' });
+    await assertFileExist(appDir, 'android/app/src/main/assets/public/index.html');
+    await assertFileExist(appDir, 'android/app/src/main/assets/public/program.json');
     await assertFileExist(appDir, 'android/app/src/main/assets/capacitor.config.json');
     return;
   }
 
-  await assertFileExist(appDir, 'ios/App/App/public/index.html', { content: 'var WebAppLocalServer' });
+  await assertFileExist(appDir, 'ios/App/App/public/index.html');
+  await assertFileExist(appDir, 'ios/App/App/public/program.json');
   await assertFileExist(appDir, 'ios/App/App/capacitor.config.json');
 }
 
@@ -189,14 +191,26 @@ async function assertCapacitorWebDir(appDir, mode, platform = 'android', options
   }
   await assertFileExist(appDir, `${webDir}/index.html`);
   await assertFileExist(appDir, `${webDir}/capacitor.config.json`);
-  await assertPathNotExist(appDir, `${webDir}/program.json`);
+  await assertFileExist(appDir, `${webDir}/program.json`);
   await assertPathNotExist(appDir, `${webDir}/body.html`);
   await assertPathNotExist(appDir, `${webDir}/head.html`);
-  await assertFileExist(appDir, `${webDir}/index.html`, { content: 'var WebAppLocalServer' });
   await assertFileExist(appDir, `${webDir}/index.html`, { content: '__meteor_runtime_config__' });
 
   const indexHtml = await fs.readFile(path.join(appDir, webDir, 'index.html'), 'utf8');
+  expect(indexHtml).not.toContain('var WebAppLocalServer');
+  expect(indexHtml).toContain('window.WebAppLocalServer');
+  expect(indexHtml).toContain('CapacitorMeteorWebApp');
   expect(indexHtml).not.toContain('__cordova/');
+
+  const program = await readJson(appDir, `${webDir}/program.json`);
+  for (const resource of program.manifest || []) {
+    if (resource.url) {
+      expect(resource.url).not.toContain('__cordova/');
+    }
+    if (resource.sourceMapUrl) {
+      expect(resource.sourceMapUrl).not.toContain('__cordova/');
+    }
+  }
 
   await assertCapacitorSyncedNativeAssets(appDir, platform);
 
@@ -398,7 +412,11 @@ describe('Capacitor App Web Lifecycle /', () => {
     await clientRebuild;
     await assertNativeReactApp(PORT);
     await assertFileExist(tempDir, '_build/main-dev/client-rspack.js');
-    await assertFileExist(tempDir, '_build/native-dev/index.html', { content: 'var WebAppLocalServer' });
+    await assertFileExist(tempDir, '_build/native-dev/program.json');
+    const nativeDevIndex = await fs.readFile(path.join(tempDir, '_build/native-dev/index.html'), 'utf8');
+    expect(nativeDevIndex).not.toContain('var WebAppLocalServer');
+    expect(nativeDevIndex).toContain('window.WebAppLocalServer');
+    expect(nativeDevIndex).toContain('CapacitorMeteorWebApp');
 
     await appendFileContent(tempDir, 'server/main.js', {
       content: `Meteor.startup(() => console.log("${SERVER_REBUILD_MESSAGE}"));`,

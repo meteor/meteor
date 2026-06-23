@@ -54,6 +54,9 @@ Package.registerBuildPlugin({
   name: 'capacitor',
   sources: [
     'lib/constants.js',
+    'lib/web-program.js',
+    'lib/config.js',
+    'lib/hcp.js',
     'lib/dependencies.js',
     'lib/build-context.js',
     'lib/transforms.js',

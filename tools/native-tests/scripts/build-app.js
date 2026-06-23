@@ -1,5 +1,6 @@
 const path = require("node:path");
 const os = require("node:os");
+const { createHash } = require("node:crypto");
 const fs = require("fs-extra");
 const execa = require("execa");
 
@@ -15,6 +16,27 @@ const CAPACITOR_WEB_APP_LOCAL_SERVER_SHIM = [
   "switchToPendingVersion(callback) { if (typeof callback === \"function\") callback(); },",
   "checkForUpdates(callback) { if (typeof callback === \"function\") callback(); }",
   "};",
+  "</script>",
+].join("");
+const CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE = [
+  "<script type=\"text/javascript\">",
+  "(function() {",
+  "if (window.WebAppLocalServer) return;",
+  "var _P;",
+  "function getPlugin() {",
+  "if (!_P) _P = ((window.Capacitor || {}).Plugins || {}).CapacitorMeteorWebApp;",
+  "if (!_P) console.warn(\"WebAppLocalServer shim: CapacitorMeteorWebApp plugin not available\");",
+  "return _P;",
+  "}",
+  "window.WebAppLocalServer = {",
+  "startupDidComplete(callback) { var P = getPlugin(); if (!P) return; P.startupDidComplete().then(function() { if (callback) callback(); }).catch(function(error) { console.error(\"WebAppLocalServer.startupDidComplete() failed:\", error); }); },",
+  "checkForUpdates(callback) { var P = getPlugin(); if (!P) return; P.checkForUpdates().then(function() { if (callback) callback(); }).catch(function(error) { console.error(\"WebAppLocalServer.checkForUpdates() failed:\", error); }); },",
+  "onNewVersionReady(callback) { var P = getPlugin(); if (!P) return; P.addListener(\"updateAvailable\", function(event) { callback(event.version); }); },",
+  "switchToPendingVersion(callback, errorCallback) { var P = getPlugin(); if (!P) return; P.reload().then(function() { if (callback) callback(); }).catch(function(error) { console.error(\"switchToPendingVersion failed:\", error); if (typeof errorCallback === \"function\") errorCallback(error); }); },",
+  "onError(callback) { var P = getPlugin(); if (!P) return; P.addListener(\"error\", function(event) { var error = new Error(event.message || \"Unknown CapacitorMeteorWebApp error\"); callback(error); }); },",
+  "localFileSystemUrl(_fileUrl) { throw new Error(\"Local filesystem URLs not supported by Capacitor\"); }",
+  "};",
+  "})();",
   "</script>",
 ].join("");
 
@@ -95,6 +117,107 @@ async function linkLocalCapacitor(appDir) {
   );
 }
 
+async function readMeteorAppIdentifier(appDir, env = process.env) {
+  if (env.APP_ID) {
+    return env.APP_ID;
+  }
+
+  const identifierPath = path.join(appDir, ".meteor", ".id");
+  try {
+    const content = await fs.readFile(identifierPath, "utf8");
+    const id = content
+      .split(/\r?\n/)
+      .map((line) => line.replace(/#.*/, "").trim())
+      .find(Boolean);
+
+    if (id) {
+      return id;
+    }
+  } catch {
+    // Created by Meteor project context during build/run; fallback keeps unit
+    // tests and unusual app layouts deterministic.
+  }
+
+  return env.METEOR_APP_ID || "meteor-app";
+}
+
+function hashClientProgram(manifest, includeFilter, runtimeConfig = {}) {
+  const hash = createHash("sha1");
+  hash.update(JSON.stringify(runtimeConfig));
+
+  for (const resource of manifest || []) {
+    if (
+      (resource.where === "client" || resource.where === "internal") &&
+      (!includeFilter || includeFilter(resource.type, resource.replaceable))
+    ) {
+      hash.update(resource.path || "");
+      hash.update(resource.hash || "");
+    }
+  }
+
+  return hash.digest("hex");
+}
+
+function normalizeWebProgramVersions(program, runtimeConfig = {}) {
+  const normalized = { ...program };
+  const manifest = Array.isArray(normalized.manifest) ? normalized.manifest : [];
+  const autoupdateVersion = process.env.AUTOUPDATE_VERSION;
+
+  normalized.version = normalized.version || autoupdateVersion ||
+    hashClientProgram(manifest, null, runtimeConfig);
+  normalized.versionRefreshable = normalized.versionRefreshable || autoupdateVersion ||
+    hashClientProgram(manifest, (type) => type === "css", runtimeConfig);
+  normalized.versionNonRefreshable = normalized.versionNonRefreshable || autoupdateVersion ||
+    hashClientProgram(
+      manifest,
+      (type, replaceable) => type !== "css" && !replaceable,
+      runtimeConfig
+    );
+  normalized.versionReplaceable = normalized.versionReplaceable || autoupdateVersion ||
+    hashClientProgram(
+      manifest,
+      (_type, replaceable) => replaceable,
+      runtimeConfig
+    );
+
+  return normalized;
+}
+
+function stripUrlPrefix(url, prefix) {
+  if (!prefix || typeof url !== "string" || !url.startsWith(prefix)) {
+    return url;
+  }
+
+  return `/${url.slice(prefix.length)}`;
+}
+
+function normalizeWebProgramAssetUrls(program, { stripPrefix } = {}) {
+  const normalized = { ...program };
+  const manifest = Array.isArray(normalized.manifest) ? normalized.manifest : [];
+
+  normalized.manifest = manifest.map((resource) => {
+    if (!resource || typeof resource !== "object") {
+      return resource;
+    }
+
+    let next = resource;
+    for (const key of ["url", "sourceMapUrl"]) {
+      const value = resource[key];
+      const stripped = stripUrlPrefix(value, stripPrefix);
+      if (stripped !== value) {
+        if (next === resource) {
+          next = { ...resource };
+        }
+        next[key] = stripped;
+      }
+    }
+
+    return next;
+  });
+
+  return normalized;
+}
+
 async function addPlatform(appDir, platform) {
   await execa(METEOR_BIN, ["add-platform", platform], {
     cwd: appDir,
@@ -171,9 +294,13 @@ function renderCapacitorBuildIndexHtml({
   appId,
   body,
   head,
+  hcpMode = "webapp",
   mobileServerUrl,
   program,
 }) {
+  program = normalizeWebProgramVersions(
+    normalizeWebProgramAssetUrls(program, { stripPrefix: "/__cordova/" })
+  );
   const manifest = Array.isArray(program.manifest) ? program.manifest : [];
   const rootUrl = mobileServerUrl;
   const parsedUrl = new URL(mobileServerUrl);
@@ -224,7 +351,9 @@ function renderCapacitorBuildIndexHtml({
     "  <meta name=\"viewport\" content=\"user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width, height=device-height, viewport-fit=cover\">",
     "  <meta name=\"msapplication-tap-highlight\" content=\"no\">",
     "  <meta http-equiv=\"Content-Security-Policy\" content=\"default-src * android-webview-video-poster: gap: data: blob: 'unsafe-inline' 'unsafe-eval' ws: wss:;\">",
-    `  ${CAPACITOR_WEB_APP_LOCAL_SERVER_SHIM}`,
+    hcpMode === "webapp"
+      ? `  ${CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE}`
+      : `  ${CAPACITOR_WEB_APP_LOCAL_SERVER_SHIM}`,
     cssTags,
     head,
     "  <script type=\"text/javascript\">",
@@ -239,30 +368,52 @@ function renderCapacitorBuildIndexHtml({
   ].filter(Boolean).join("\n");
 }
 
-async function syncCapacitorProductionWebDir({ appConfig, appDir, buildDir, mobileServerUrl }) {
+function getCapacitorProductionExcludedFiles({ hcpMode = "webapp" } = {}) {
+  const files = ["head.html", "body.html"];
+  return hcpMode === "webapp" ? files : ["program.json", ...files];
+}
+
+async function syncCapacitorProductionWebDir({
+  appConfig,
+  appDir,
+  buildDir,
+  hcpMode = "webapp",
+  mobileServerUrl,
+}) {
   const sourceDir = getCapacitorBuildWebCordovaPath(buildDir);
   const targetDir = getCapacitorNativeProdPath(appDir);
   const programJsonPath = path.join(sourceDir, "program.json");
+  const excludedFiles = getCapacitorProductionExcludedFiles({ hcpMode });
 
   if (!(await fs.pathExists(programJsonPath))) {
     throw new Error(`Meteor build did not produce ${programJsonPath}`);
   }
 
-  const program = await fs.readJson(programJsonPath);
+  const program = normalizeWebProgramVersions(
+    normalizeWebProgramAssetUrls(await fs.readJson(programJsonPath), {
+      stripPrefix: "/__cordova/",
+    })
+  );
   await fs.remove(targetDir);
   await fs.copy(sourceDir, targetDir, {
-    filter: (src) => !["program.json", "head.html", "body.html"].includes(path.basename(src)),
+    filter: (src) => !excludedFiles.includes(path.basename(src)),
   });
+  if (hcpMode === "webapp") {
+    await fs.remove(path.join(targetDir, "program.json"));
+    await fs.writeJson(path.join(targetDir, "program.json"), program, { spaces: 2 });
+  }
   const [head, body] = await Promise.all([
     fs.readFile(path.join(sourceDir, "head.html"), "utf8"),
     fs.readFile(path.join(sourceDir, "body.html"), "utf8"),
   ]);
+  const appId = await readMeteorAppIdentifier(appDir);
   await fs.writeFile(
     path.join(targetDir, "index.html"),
     renderCapacitorBuildIndexHtml({
-      appId: appConfig.appId,
+      appId,
       body,
       head,
+      hcpMode,
       mobileServerUrl,
       program,
     }),
@@ -423,7 +574,11 @@ async function compileCapacitorIosForSimulator({ appDir }) {
   return app;
 }
 
-async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 3000 }) {
+function getCapacitorBuildHcpModeForNativeTestMode(mode) {
+  return mode === "hcp" ? "webapp" : "none";
+}
+
+async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 3000, hcpMode = "none" }) {
   if (platform !== "ios" && platform !== "android") {
     throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -450,6 +605,7 @@ async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 300
     appConfig,
     appDir,
     buildDir,
+    hcpMode,
     mobileServerUrl,
   });
 
@@ -480,8 +636,14 @@ async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 300
 
 async function prepareApp({ appConfig, platform, lanIp, port = 3000, mode = "run" }) {
   if (appConfig.wrapper === "capacitor") {
-    if (mode === "build") {
-      return prepareCapacitorBuildApp({ appConfig, platform, lanIp, port });
+    if (mode === "build" || mode === "hcp") {
+      return prepareCapacitorBuildApp({
+        appConfig,
+        platform,
+        lanIp,
+        port,
+        hcpMode: getCapacitorBuildHcpModeForNativeTestMode(mode),
+      });
     }
     return prepareCapacitorRunApp({ appConfig, platform, lanIp, port });
   }
@@ -514,8 +676,12 @@ module.exports = {
   getCapacitorAndroidDebugApkPath,
   getCapacitorBuildWebCordovaPath,
   getCapacitorBuildCleanupPaths,
+  getCapacitorProductionExcludedFiles,
+  getCapacitorBuildHcpModeForNativeTestMode,
   getCapacitorIosDerivedDataPath,
   getCapacitorIosWorkspacePath,
+  normalizeWebProgramAssetUrls,
+  readMeteorAppIdentifier,
   renderCapacitorBuildIndexHtml,
   prepareApp,
   prepareSmokeApp,

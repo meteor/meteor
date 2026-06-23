@@ -9,7 +9,7 @@ const { bootSimulator } = require("./simulator");
 const { runFlow } = require("./maestro");
 
 const PLATFORMS = new Set(["ios", "android"]);
-const MODES = new Set(["run", "build", "livereload"]);
+const MODES = new Set(["run", "build", "livereload", "hcp"]);
 const JUNIT_DIR = path.resolve(__dirname, "..", "junit");
 const HARD_TIMEOUT_MS = 8 * 60 * 1000;
 const LIVERELOAD_SETTLE_MS = 30_000;
@@ -116,6 +116,20 @@ async function run(argv) {
     console.error(`Missing livereload flow file: ${appConfig.livereloadFlowPath}`);
     return EXIT_FRAMEWORK;
   }
+  if (
+    args.mode === "hcp" &&
+    !(await fs.pathExists(appConfig.hcpInitialFlowPath))
+  ) {
+    console.error(`Missing HCP initial flow file: ${appConfig.hcpInitialFlowPath}`);
+    return EXIT_FRAMEWORK;
+  }
+  if (
+    args.mode === "hcp" &&
+    !(await fs.pathExists(appConfig.hcpFlowPath))
+  ) {
+    console.error(`Missing HCP flow file: ${appConfig.hcpFlowPath}`);
+    return EXIT_FRAMEWORK;
+  }
 
   const maestro = await checkMaestro();
   if (!maestro.ok) {
@@ -166,7 +180,10 @@ async function run(argv) {
     cleanup.push(() => sim.shutdown());
     await sim.uninstall();
 
-    if (appConfig.wrapper === "capacitor" && args.mode !== "build") {
+    if (
+      appConfig.wrapper === "capacitor" &&
+      (args.mode === "run" || args.mode === "livereload")
+    ) {
       const nativeRun = await startNativeRun({
         appDir: build.appDir,
         platform: args.platform,
@@ -189,7 +206,9 @@ async function run(argv) {
 
     const initialFlowPath = args.mode === "livereload"
       ? appConfig.livereloadInitialFlowPath
-      : appConfig.flowPath;
+      : args.mode === "hcp"
+        ? appConfig.hcpInitialFlowPath
+        : appConfig.flowPath;
 
     const { exitCode } = await runFlow({
       flowPath: initialFlowPath,
@@ -203,6 +222,17 @@ async function run(argv) {
       await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
       const updated = await runFlow({
         flowPath: appConfig.livereloadFlowPath,
+        deviceId: sim.deviceId,
+        junitOut: updatedJunitPath(junitOut),
+      });
+      if (updated.exitCode === 0) return EXIT_PASS;
+      return EXIT_FLOW_FAIL;
+    }
+    if (args.mode === "hcp") {
+      await applyLivereloadFixtureChanges(build.appDir);
+      await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
+      const updated = await runFlow({
+        flowPath: appConfig.hcpFlowPath,
         deviceId: sim.deviceId,
         junitOut: updatedJunitPath(junitOut),
       });

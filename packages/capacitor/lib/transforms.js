@@ -20,10 +20,16 @@ const { Boilerplate } = require('meteor/boilerplate-generator');
 
 const {
   CAPACITOR_CORDOVA_OUTPUT_DIR,
-  CAPACITOR_EXCLUDED_FILES,
+  CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE,
   WEB_APP_LOCAL_SERVER_SHIM,
+  getCapacitorExcludedFiles,
   getCapacitorWebDir,
 } = require('./constants');
+const { getCapacitorHcpMode } = require('./hcp');
+const {
+  normalizeWebProgramAssetUrls,
+  normalizeWebProgramVersions,
+} = require('./web-program');
 
 const CORDOVA_ARCH = 'web.cordova';
 
@@ -41,6 +47,29 @@ function detectLocalIp() {
 function resolveRootUrl() {
   if (process.env.ROOT_URL) return process.env.ROOT_URL;
   return `http://${detectLocalIp()}:${getMeteorAppPort()}/`;
+}
+
+function readMeteorAppIdentifier({ appDir = getMeteorAppDir(), env = process.env } = {}) {
+  if (env.APP_ID) {
+    return env.APP_ID;
+  }
+
+  const identifierPath = path.join(appDir, '.meteor', '.id');
+  try {
+    const id = fs.readFileSync(identifierPath, 'utf8')
+      .split(/\r?\n/)
+      .map(line => line.replace(/#.*/, '').trim())
+      .find(Boolean);
+
+    if (id) {
+      return id;
+    }
+  } catch {
+    // The file is created by Meteor project context. Fall through for tests or
+    // nonstandard app layouts.
+  }
+
+  return env.METEOR_APP_ID || 'meteor-app';
 }
 
 function resolveWebDir() {
@@ -67,14 +96,16 @@ function resolveCordovaOutDir({ appDir, cordovaOutDir }) {
  * @param {string} html - Original index.html content.
  * @returns {string} Patched HTML.
  */
-function patchCordovaIndexHtml(html) {
+export function patchCordovaIndexHtml(html, { hcpMode = getCapacitorHcpMode() } = {}) {
   if (typeof html !== 'string' || !html) {
     return html;
   }
 
   let out = html;
 
-  if (!out.includes('var WebAppLocalServer')) {
+  if (hcpMode === 'webapp' && !out.includes('window.WebAppLocalServer')) {
+    out = out.replace(/<head>/i, `<head>\n  ${CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE}`);
+  } else if (hcpMode !== 'webapp' && !out.includes('var WebAppLocalServer')) {
     out = out.replace(/<head>/i, `<head>\n  ${WEB_APP_LOCAL_SERVER_SHIM}`);
   }
 
@@ -89,7 +120,7 @@ function patchCordovaIndexHtml(html) {
  * patches it, and writes to webDir.
  * @returns {Promise<boolean>}
  */
-async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null } = {}) {
+async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null, hcpMode = getCapacitorHcpMode() } = {}) {
   cordovaOutDir = resolveCordovaOutDir({ appDir, cordovaOutDir });
   const programJsonPath = path.join(cordovaOutDir, 'program.json');
   const targetPath = path.join(appDir, webDir, 'index.html');
@@ -108,7 +139,7 @@ async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir()
   }
 
   const rootUrl = resolveRootUrl();
-  const runtimeConfig = {
+  let runtimeConfig = {
     meteorRelease: 'none',
     ROOT_URL: rootUrl,
     ROOT_URL_PATH_PREFIX: '',
@@ -123,10 +154,28 @@ async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir()
         },
       },
     },
-    appId: process.env.METEOR_APP_ID || 'meteor-app',
+    appId: readMeteorAppIdentifier({ appDir }),
     meteorEnv: {
       NODE_ENV: process.env.NODE_ENV || 'development',
       TEST_METADATA: process.env.TEST_METADATA || '{}',
+    },
+  };
+  // Match tools/cordova/builder.js and packages/webapp/webapp_server.js:
+  // client HCP hashes include PUBLIC_SETTINGS overrides, not the full runtime
+  // config generated for the page.
+  program = normalizeWebProgramAssetUrls(program, { stripPrefix: '/__cordova/' });
+  program = normalizeWebProgramVersions(program, {});
+  runtimeConfig = {
+    ...runtimeConfig,
+    autoupdate: {
+      versions: {
+        [CORDOVA_ARCH]: {
+          version: program.version,
+          versionRefreshable: program.versionRefreshable,
+          versionNonRefreshable: program.versionNonRefreshable,
+          versionReplaceable: program.versionReplaceable,
+        },
+      },
     },
   };
 
@@ -147,11 +196,14 @@ async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir()
     return false;
   }
 
-  const patched = patchCordovaIndexHtml(html);
+  const patched = patchCordovaIndexHtml(html, { hcpMode });
 
   try {
     fs.mkdirSync(path.dirname(targetPath), { recursive: true });
     fs.writeFileSync(targetPath, patched, 'utf8');
+    if (hcpMode === 'webapp') {
+      writeJsonFileReplacing(path.join(appDir, webDir, 'program.json'), program);
+    }
   } catch (err) {
     logError(`Capacitor: failed to write ${targetPath}: ${err.message}`);
     return false;
@@ -200,9 +252,10 @@ function copyTreeFiltered(srcDir, dstDir, excludedFiles) {
  *
  * @returns {boolean}
  */
-function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null } = {}) {
+function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null, hcpMode = getCapacitorHcpMode() } = {}) {
   const sourceDir = resolveCordovaOutDir({ appDir, cordovaOutDir });
   const targetDir = path.join(appDir, webDir);
+  const excludedFiles = getCapacitorExcludedFiles(hcpMode);
 
   if (!fs.existsSync(sourceDir)) {
     logError(`Capacitor: ${path.relative(appDir, sourceDir)} not found — has the web.cordova arch been built?`);
@@ -210,13 +263,32 @@ function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir(),
   }
 
   try {
-    copyTreeFiltered(sourceDir, targetDir, CAPACITOR_EXCLUDED_FILES);
+    copyTreeFiltered(sourceDir, targetDir, excludedFiles);
+    if (hcpMode === 'webapp') {
+      normalizeCopiedProgramJson({ targetDir });
+    }
   } catch (err) {
     logError(`Capacitor: failed to sync bundle files: ${err.message}`);
     return false;
   }
 
   return true;
+}
+
+function normalizeCopiedProgramJson({ targetDir }) {
+  const programPath = path.join(targetDir, 'program.json');
+  if (!fs.existsSync(programPath)) return;
+
+  const program = JSON.parse(fs.readFileSync(programPath, 'utf8'));
+  const normalized = normalizeWebProgramVersions(
+    normalizeWebProgramAssetUrls(program, { stripPrefix: '/__cordova/' })
+  );
+  writeJsonFileReplacing(programPath, normalized);
+}
+
+function writeJsonFileReplacing(filePath, data) {
+  fs.rmSync(filePath, { force: true });
+  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
 }
 
 /**
@@ -226,9 +298,9 @@ function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir(),
  *
  * @returns {boolean} True if both succeeded.
  */
-export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null, verbose = false } = {}) {
-  const okFiles = syncBundleFiles({ appDir, webDir, cordovaOutDir });
-  const okIndex = await buildIndex({ appDir, webDir, cordovaOutDir });
+export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDir = resolveWebDir(), cordovaOutDir = null, verbose = false, hcpMode = getCapacitorHcpMode() } = {}) {
+  const okFiles = syncBundleFiles({ appDir, webDir, cordovaOutDir, hcpMode });
+  const okIndex = await buildIndex({ appDir, webDir, cordovaOutDir, hcpMode });
   if (verbose && okFiles && okIndex) {
     const sourceDir = resolveCordovaOutDir({ appDir, cordovaOutDir });
     logInfo(`[i] Capacitor transform applied: ${path.relative(appDir, sourceDir)} → ${webDir}`);
@@ -237,3 +309,4 @@ export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDi
 }
 
 export const _syncBundleFiles = syncBundleFiles;
+export const _readMeteorAppIdentifier = readMeteorAppIdentifier;

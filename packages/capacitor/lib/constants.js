@@ -61,7 +61,7 @@ export const CAPACITOR_CORDOVA_OUTPUT_DIR = `${
 export const CAPACITOR_PLATFORMS = ['android', 'ios'];
 
 export const DEFAULT_CAPACITOR_VERSION = '7.4.3';
-export const DEFAULT_METEOR_CAPACITOR_VERSION = '0.1.0-alpha.0';
+export const DEFAULT_METEOR_CAPACITOR_VERSION = '0.2.0-alpha.0';
 
 export const GLOBAL_STATE_KEYS = {
   CAPACITOR_INSTALLATION_CHECKED: 'capacitor.installationChecked',
@@ -77,7 +77,18 @@ export const GLOBAL_STATE_KEYS = {
 export const WEB_APP_LOCAL_SERVER_SHIM = `<script type="text/javascript">var WebAppLocalServer = { onError() {}, onNewVersionReady() {}, startupDidComplete(callback) { if (typeof callback === "function") callback(); }, switchToPendingVersion(callback) { if (typeof callback === "function") callback(); }, checkForUpdates(callback) { if (typeof callback === "function") callback(); } };</script>`;
 
 /**
- * Files emitted in web.cordova/ that must NOT be copied into the Capacitor
- * webDir (they are Meteor server-side artefacts).
+ * Bridge Cordova's WebAppLocalServer API onto @meteorjs/capacitor's native HCP
+ * plugin so initial bundled assets and downloaded HCP assets expose the same
+ * API.
  */
-export const CAPACITOR_EXCLUDED_FILES = ['program.json', 'body.html', 'head.html'];
+export const CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE = `<script type="text/javascript">(function() { if (window.WebAppLocalServer) return; var _P; function getPlugin() { if (!_P) _P = ((window.Capacitor || {}).Plugins || {}).CapacitorMeteorWebApp; if (!_P) console.warn("WebAppLocalServer shim: CapacitorMeteorWebApp plugin not available"); return _P; } window.WebAppLocalServer = { startupDidComplete(callback) { var P = getPlugin(); if (!P) return; P.startupDidComplete().then(function() { if (callback) callback(); }).catch(function(error) { console.error("WebAppLocalServer.startupDidComplete() failed:", error); }); }, checkForUpdates(callback) { var P = getPlugin(); if (!P) return; P.checkForUpdates().then(function() { if (callback) callback(); }).catch(function(error) { console.error("WebAppLocalServer.checkForUpdates() failed:", error); }); }, onNewVersionReady(callback) { var P = getPlugin(); if (!P) return; P.addListener("updateAvailable", function(event) { callback(event.version); }); }, switchToPendingVersion(callback, errorCallback) { var P = getPlugin(); if (!P) return; P.reload().then(function() { if (callback) callback(); }).catch(function(error) { console.error("switchToPendingVersion failed:", error); if (typeof errorCallback === "function") errorCallback(error); }); }, onError(callback) { var P = getPlugin(); if (!P) return; P.addListener("error", function(event) { var error = new Error(event.message || "Unknown CapacitorMeteorWebApp error"); callback(error); }); }, localFileSystemUrl(_fileUrl) { throw new Error("Local filesystem URLs not supported by Capacitor"); } }; })();</script>`;
+
+/**
+ * Files emitted in web.cordova/ that must NOT be copied into the Capacitor
+ * webDir. HCP webapp mode ships program.json because the native runtime reads
+ * it as the initial bundle manifest.
+ */
+export function getCapacitorExcludedFiles(hcpMode = 'none') {
+  const excluded = ['body.html', 'head.html'];
+  return hcpMode === 'webapp' ? excluded : ['program.json', ...excluded];
+}

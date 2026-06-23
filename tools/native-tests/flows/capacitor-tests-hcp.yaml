@@ -1,0 +1,15 @@
+appId: com.meteor.capacitortests
+---
+- assertVisible: "Welcome to Meteor Capacitor Tests"
+- assertVisible: "Native render ready"
+- assertVisible: "Style preserved"
+- extendedWaitUntil:
+    visible: "Native client version updated"
+    timeout: 120000
+- assertVisible: "Native server version updated"
+- assertVisible: "DDP verified"
+- assertVisible: "window.Capacitor available"
+- assertVisible: "Meteor.isCapacitor true"
+- assertVisible: "Capacitor native platform ready"
+- assertVisible: "WebAppLocalServer shim ready"
+- assertVisible: "__cordova paths served"

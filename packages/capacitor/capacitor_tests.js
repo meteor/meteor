@@ -20,9 +20,19 @@ import {
   _mergeExtraArgsWithEnv,
 } from './lib/processes.js';
 import {
+  getCapacitorHcpMode,
+  isHcpEnabled,
+  shouldShipManifest,
+} from './lib/hcp.js';
+import {
   runCapacitorTransforms,
+  patchCordovaIndexHtml,
   _syncBundleFiles,
+  _readMeteorAppIdentifier,
 } from './lib/transforms.js';
+import {
+  normalizeWebProgramAssetUrls,
+} from './lib/web-program.js';
 import {
   getCordovaJsStub,
   injectWebAppLocalServerShim,
@@ -255,6 +265,7 @@ Tinytest.add('capacitor - transform - preserves app directory asset paths', test
     const ok = _syncBundleFiles({
       appDir: tempDir,
       webDir: '_build/native-dev',
+      hcpMode: 'none',
     });
 
     test.isTrue(ok);
@@ -263,6 +274,142 @@ Tinytest.add('capacitor - transform - preserves app directory asset paths', test
     test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'packages', 'meteor.js')));
     test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'program.json')));
     test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'body.html')));
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+Tinytest.add('capacitor - HCP mode defaults to webapp', test => {
+  test.equal(getCapacitorHcpMode({}), 'webapp');
+  test.isTrue(isHcpEnabled('webapp'));
+  test.isTrue(shouldShipManifest('webapp'));
+});
+
+Tinytest.add('capacitor - HCP mode validates known values', test => {
+  test.equal(getCapacitorHcpMode({ capacitor: { hcp: 'webapp' } }), 'webapp');
+  test.equal(getCapacitorHcpMode({ capacitor: { hcp: 'none' } }), 'none');
+  test.equal(getCapacitorHcpMode({ capacitor: { hcp: true } }), 'webapp');
+  test.equal(getCapacitorHcpMode({ capacitor: { hcp: false } }), 'none');
+  test.equal(getCapacitorHcpMode({ capacitor: { hcp: 'invalid' } }), 'webapp');
+  test.isFalse(isHcpEnabled('none'));
+  test.isFalse(shouldShipManifest('none'));
+});
+
+Tinytest.add('capacitor - HCP webapp mode injects native WebAppLocalServer bridge', test => {
+  const out = patchCordovaIndexHtml('<html><head><title>x</title></head><body src="/__cordova/app.js"></body></html>', {
+    hcpMode: 'webapp',
+  });
+
+  test.notMatches(out, /var WebAppLocalServer/);
+  test.matches(out, /window\.WebAppLocalServer/);
+  test.matches(out, /CapacitorMeteorWebApp/);
+  test.notMatches(out, /__cordova\//);
+});
+
+Tinytest.add('capacitor - HCP none mode keeps build-time WebAppLocalServer shim', test => {
+  const out = patchCordovaIndexHtml('<html><head><title>x</title></head></html>', {
+    hcpMode: 'none',
+  });
+
+  test.matches(out, /var WebAppLocalServer/);
+});
+
+Tinytest.add('capacitor - web program helper strips configured asset URL prefix', test => {
+  const program = normalizeWebProgramAssetUrls({
+    manifest: [
+      {
+        path: 'app.css',
+        url: '/__cordova/app.css?meteor_css_resource=true',
+        sourceMapUrl: '/__cordova/app.css.map',
+      },
+      {
+        path: 'image.png',
+        url: '/images/image.png',
+      },
+    ],
+  }, {
+    stripPrefix: '/__cordova/',
+  });
+
+  test.equal(program.manifest[0].url, '/app.css?meteor_css_resource=true');
+  test.equal(program.manifest[0].sourceMapUrl, '/app.css.map');
+  test.equal(program.manifest[1].url, '/images/image.png');
+});
+
+Tinytest.add('capacitor - transform - reads Meteor app identifier from project metadata', test => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-cap-app-id-'));
+  try {
+    fs.mkdirSync(path.join(tempDir, '.meteor'), { recursive: true });
+    fs.writeFileSync(
+      path.join(tempDir, '.meteor', '.id'),
+      '# comment\n\nabc123.def456\n',
+      'utf8'
+    );
+
+    test.equal(_readMeteorAppIdentifier({
+      appDir: tempDir,
+      env: {},
+    }), 'abc123.def456');
+    test.equal(_readMeteorAppIdentifier({
+      appDir: tempDir,
+      env: { APP_ID: 'from-env' },
+    }), 'from-env');
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+Tinytest.add('capacitor - transform - ships program.json when HCP webapp mode is active', test => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-cap-hcp-sync-'));
+  try {
+    const sourceDir = path.join(tempDir, '.meteor', 'local', 'build', 'programs', 'web.cordova');
+    fs.mkdirSync(sourceDir, { recursive: true });
+    const sourceProgramPath = path.join(sourceDir, 'program.json');
+    fs.writeFileSync(sourceProgramPath, JSON.stringify({
+      format: 'web-program-pre1',
+      manifest: [
+        {
+          where: 'client',
+          type: 'css',
+          path: 'app.css',
+          url: '/__cordova/app.css?meteor_css_resource=true',
+          hash: 'a',
+        },
+        {
+          where: 'client',
+          type: 'js',
+          path: 'app.js',
+          url: '/__cordova/app.js?meteor_js_resource=true',
+          hash: 'b',
+        },
+      ],
+    }), 'utf8');
+    fs.chmodSync(sourceProgramPath, 0o444);
+    fs.writeFileSync(path.join(sourceDir, 'body.html'), '<body></body>', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'head.html'), '<head></head>', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'app.css'), 'body{}', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'app.js'), 'app', 'utf8');
+
+    const ok = _syncBundleFiles({
+      appDir: tempDir,
+      webDir: '_build/native-prod',
+      hcpMode: 'webapp',
+    });
+
+    test.isTrue(ok);
+    const programPath = path.join(tempDir, '_build', 'native-prod', 'program.json');
+    test.isTrue(fs.existsSync(programPath));
+    const program = JSON.parse(fs.readFileSync(programPath, 'utf8'));
+    test.isTrue(typeof program.version === 'string');
+    test.isTrue(typeof program.versionRefreshable === 'string');
+    test.isTrue(typeof program.versionNonRefreshable === 'string');
+    test.isTrue(typeof program.versionReplaceable === 'string');
+    test.equal(program.manifest[0].url, '/app.css?meteor_css_resource=true');
+    test.equal(program.manifest[1].url, '/app.js?meteor_js_resource=true');
+    test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-prod', 'app.css')));
+    test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-prod', 'app.js')));
+    test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-prod', 'body.html')));
+    test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-prod', 'head.html')));
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }

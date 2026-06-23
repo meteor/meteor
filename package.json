@@ -45,6 +45,8 @@
     "test:native:capacitor:android:build": "cd tools/native-tests && npm run test:capacitor:android:build",
     "test:native:capacitor:ios:livereload": "cd tools/native-tests && npm run test:capacitor:ios:livereload",
     "test:native:capacitor:android:livereload": "cd tools/native-tests && npm run test:capacitor:android:livereload",
+    "test:native:capacitor:ios:hcp": "cd tools/native-tests && npm run test:capacitor:ios:hcp",
+    "test:native:capacitor:android:hcp": "cd tools/native-tests && npm run test:capacitor:android:hcp",
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
     "ts-coverage": "typescript-coverage-report",

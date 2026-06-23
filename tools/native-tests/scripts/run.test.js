@@ -24,6 +24,11 @@ test("parses --mode=livereload", () => {
   assert.equal(args.mode, "livereload");
 });
 
+test("parses --mode=hcp", () => {
+  const args = parseArgs(["--platform=android", "--mode=hcp"]);
+  assert.equal(args.mode, "hcp");
+});
+
 test("supports --mode build (space-separated)", () => {
   const args = parseArgs(["--platform=android", "--mode", "build"]);
   assert.equal(args.mode, "build");
@@ -89,5 +94,12 @@ test("suffixes artifact stem for livereload mode", () => {
   assert.equal(
     artifactStem({ platform: "android", appName: "capacitor-tests", mode: "livereload" }),
     "android-capacitor-tests-livereload"
+  );
+});
+
+test("suffixes artifact stem for hcp mode", () => {
+  assert.equal(
+    artifactStem({ platform: "android", appName: "capacitor-tests", mode: "hcp" }),
+    "android-capacitor-tests-hcp"
   );
 });

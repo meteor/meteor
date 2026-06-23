@@ -60,6 +60,7 @@ const {
   isCapacitorBuildOptIn,
   isCapacitorAddPlatformOptIn,
 } = require('./lib/command');
+const { getCapacitorHcpMode } = require('./lib/hcp');
 
 if (isCapacitorOptIn()) {
   await runCapacitorPlugin();
@@ -67,10 +68,13 @@ if (isCapacitorOptIn()) {
 
 async function runCapacitorPlugin() {
   try {
+    const hcpMode = getCapacitorHcpMode();
+
     const context = createMeteorToolContext({
       provider: 'capacitor',
       state: {
         platforms: [],
+        hcpMode,
       },
     });
 
@@ -147,6 +151,7 @@ async function runCapacitorPlugin() {
                 platform: platforms.length === 1 ? platforms[0] : null,
                 cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
                 fatal: true,
+                hcpMode: context.state.hcpMode,
               });
             });
           },
@@ -170,6 +175,7 @@ async function runCapacitorPlugin() {
                 beforeRun: () => transformAndSync({
                   appDir: context.appDir,
                   platform: context.platform,
+                  hcpMode: context.state.hcpMode,
                 }),
                 extraArgs: ['--no-sync'],
               });
@@ -235,9 +241,14 @@ async function withProcessEnv(env, fn) {
  * Runs the cordova→build-native transform. Returns false if the
  * transform itself failed (web.cordova/ exists but transforms threw).
  */
-async function runTransform({ appDir, cordovaOutDir = null }) {
+async function runTransform({ appDir, cordovaOutDir = null, hcpMode = getCapacitorHcpMode() }) {
   if (isVerbose()) logProgress('=> 🔧 Capacitor: transforming web.cordova → build-native/');
-  const ok = await runCapacitorTransforms({ appDir, cordovaOutDir, verbose: isVerbose() });
+  const ok = await runCapacitorTransforms({
+    appDir,
+    cordovaOutDir,
+    verbose: isVerbose(),
+    hcpMode,
+  });
   if (!ok) {
     logError('=> ❌ Capacitor transform failed');
     return false;
@@ -286,6 +297,7 @@ async function transformAndSync({
   platform = null,
   cordovaOutDir = null,
   fatal = false,
+  hcpMode = getCapacitorHcpMode(),
 }) {
   const resolvedCordovaOutDir = cordovaOutDir ||
     path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
@@ -304,7 +316,7 @@ async function transformAndSync({
     writeResolvedConfigSnapshot({ appDir })
   );
 
-  if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir }))) {
+  if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir, hcpMode }))) {
     return handleTransformFailure('Capacitor build sync failed during web.cordova transform.', {
       fatal,
       log: false,

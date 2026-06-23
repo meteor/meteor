@@ -24,6 +24,50 @@ const { buildMeteorContext } = require('./lib/meteor-context');
 const { deepMerge } = require('./lib/merge');
 const { getDefaults, RESERVED_PATHS } = require('./lib/defaults');
 
+const MeteorWebAppError = Object.freeze({
+  DOWNLOAD_FAILED: 'DOWNLOAD_FAILED',
+  VALIDATION_FAILED: 'VALIDATION_FAILED',
+  BLACKLISTED_VERSION: 'BLACKLISTED_VERSION',
+  STARTUP_TIMEOUT: 'STARTUP_TIMEOUT',
+  FILE_SYSTEM_ERROR: 'FILE_SYSTEM_ERROR',
+});
+
+function createWebFallbackPlugin() {
+  return {
+    async startupDidComplete() {},
+    async checkForUpdates() {},
+    async getCurrentVersion() {
+      return { version: 'web' };
+    },
+    async isUpdateAvailable() {
+      return { available: false };
+    },
+    async reload() {
+      if (typeof window !== 'undefined' && window.location) {
+        window.location.reload();
+      }
+    },
+    async addListener() {
+      return { remove() {} };
+    },
+    async removeAllListeners() {},
+  };
+}
+
+function createCapacitorMeteorWebApp() {
+  const fallback = createWebFallbackPlugin();
+  try {
+    const { registerPlugin } = require('@capacitor/core');
+    return registerPlugin('CapacitorMeteorWebApp', {
+      web: () => Promise.resolve(fallback),
+    });
+  } catch (_) {
+    return fallback;
+  }
+}
+
+const CapacitorMeteorWebApp = createCapacitorMeteorWebApp();
+
 function defineConfig(input) {
   const Meteor = buildMeteorContext();
   const userConfig = typeof input === 'function' ? input(Meteor) : input;
@@ -49,5 +93,60 @@ function defineConfig(input) {
   return merged;
 }
 
+async function bootCapacitor({
+  hideSplash = true,
+  defineCustomElements: doDefineCustomElements = true,
+  hcpAutoReload = true,
+} = {}) {
+  let Capacitor;
+  try {
+    ({ Capacitor } = require('@capacitor/core'));
+  } catch (_) {
+    return;
+  }
+
+  if (!Capacitor?.isNativePlatform?.()) {
+    return;
+  }
+
+  const hcpAvailable = typeof Capacitor.isPluginAvailable === 'function'
+    ? Capacitor.isPluginAvailable('CapacitorMeteorWebApp')
+    : true;
+
+  if (hcpAvailable && hcpAutoReload) {
+    try {
+      await CapacitorMeteorWebApp.addListener('updateAvailable', () => {
+        void CapacitorMeteorWebApp.reload();
+      });
+    } catch (err) {
+      console.warn('[bootCapacitor] failed to register updateAvailable listener:', err);
+    }
+  }
+
+  if (hcpAvailable) {
+    await Promise.resolve();
+    try {
+      await CapacitorMeteorWebApp.startupDidComplete();
+    } catch (err) {
+      console.warn('[bootCapacitor] startupDidComplete failed:', err);
+    }
+  }
+
+  if (hideSplash) {
+    try {
+      require('@capacitor/splash-screen').SplashScreen.hide();
+    } catch (_) {}
+  }
+
+  if (doDefineCustomElements && typeof window !== 'undefined') {
+    try {
+      require('@ionic/pwa-elements/loader').defineCustomElements(window);
+    } catch (_) {}
+  }
+}
+
 module.exports = defineConfig;
 module.exports.defineConfig = defineConfig;
+module.exports.CapacitorMeteorWebApp = CapacitorMeteorWebApp;
+module.exports.MeteorWebAppError = MeteorWebAppError;
+module.exports.bootCapacitor = bootCapacitor;

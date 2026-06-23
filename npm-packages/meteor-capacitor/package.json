@@ -1,31 +1,65 @@
 {
   "name": "@meteorjs/capacitor",
-  "version": "0.1.0-alpha.0",
-  "description": "Configuration helpers for using CapacitorJS in Meteor projects",
+  "version": "0.2.0-alpha.0",
+  "description": "CapacitorJS integration and Meteor hot code push runtime for Meteor projects",
   "main": "index.js",
+  "types": "index.d.ts",
   "type": "commonjs",
   "files": [
     "index.js",
-    "lib/"
+    "index.d.ts",
+    "NOTICE",
+    "LICENSES/",
+    "lib/",
+    "src/",
+    "ios/Sources/",
+    "android/src/main/",
+    "android/build.gradle",
+    "Package.swift",
+    "MeteorjsCapacitor.podspec"
   ],
   "exports": {
-    ".": "./index.js"
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.js",
+      "default": "./index.js"
+    }
+  },
+  "license": "MIT",
+  "author": "Meteor Software",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/meteor/meteor.git"
   },
   "scripts": {
     "test": "node --test test/*.test.js",
+    "verify:ios": "xcodebuild -scheme MeteorjsCapacitor -destination generic/platform=iOS",
+    "verify:android": "cd android && ./gradlew clean build test && cd ..",
     "bump": "node ../../scripts/admin/bump-npm-package.js",
     "publish": "npm publish",
     "publish:alpha": "npm publish --tag alpha",
     "publish:beta": "npm publish --tag beta",
     "publish:rc": "npm publish --tag rc"
   },
-  "license": "ISC",
+  "capacitor": {
+    "ios": {
+      "src": "ios"
+    },
+    "android": {
+      "src": "android"
+    }
+  },
   "peerDependencies": {
-    "@capacitor/cli": ">=6.0.0",
-    "@capacitor/core": ">=6.0.0"
+    "@capacitor/cli": ">=7.0.0",
+    "@capacitor/core": ">=7.0.0"
   },
   "peerDependenciesMeta": {
     "@capacitor/cli": { "optional": true },
     "@capacitor/core": { "optional": true }
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3",
+    "@capacitor/ios": "^7.4.3"
   }
 }

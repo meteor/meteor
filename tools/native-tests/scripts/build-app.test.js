@@ -1,14 +1,20 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const path = require("node:path");
+const fs = require("fs-extra");
+const os = require("node:os");
 
 const {
   buildMeteorBuildArgs,
   getCapacitorAndroidDebugApkPath,
+  getCapacitorBuildHcpModeForNativeTestMode,
   getCapacitorBuildWebCordovaPath,
   getCapacitorBuildCleanupPaths,
+  getCapacitorProductionExcludedFiles,
   getCapacitorIosDerivedDataPath,
   getCapacitorIosWorkspacePath,
+  normalizeWebProgramAssetUrls,
+  readMeteorAppIdentifier,
   renderCapacitorBuildIndexHtml,
 } = require("./build-app");
 
@@ -86,6 +92,73 @@ test("capacitor build web.cordova path matches meteor build directory output", (
   );
 });
 
+test("capacitor production sync ships program.json for HCP webapp mode", () => {
+  assert.deepEqual(
+    getCapacitorProductionExcludedFiles({ hcpMode: "webapp" }),
+    ["head.html", "body.html"]
+  );
+});
+
+test("capacitor production sync excludes program.json when HCP is disabled", () => {
+  assert.deepEqual(
+    getCapacitorProductionExcludedFiles({ hcpMode: "none" }),
+    ["program.json", "head.html", "body.html"]
+  );
+});
+
+test("native test build mode keeps HCP disabled", () => {
+  assert.equal(getCapacitorBuildHcpModeForNativeTestMode("build"), "none");
+});
+
+test("native test hcp mode enables webapp HCP", () => {
+  assert.equal(getCapacitorBuildHcpModeForNativeTestMode("hcp"), "webapp");
+});
+
+test("readMeteorAppIdentifier reads Meteor project id file", async () => {
+  const appDir = await fs.mkdtemp(path.join(os.tmpdir(), "meteor-app-id-"));
+  try {
+    await fs.ensureDir(path.join(appDir, ".meteor"));
+    await fs.writeFile(
+      path.join(appDir, ".meteor", ".id"),
+      "# comment\n\nabc123.def456\n",
+      "utf8"
+    );
+
+    assert.equal(await readMeteorAppIdentifier(appDir, {}), "abc123.def456");
+  } finally {
+    await fs.remove(appDir);
+  }
+});
+
+test("readMeteorAppIdentifier prefers APP_ID env", async () => {
+  assert.equal(
+    await readMeteorAppIdentifier("/tmp/missing-app", { APP_ID: "from-env" }),
+    "from-env"
+  );
+});
+
+test("normalizeWebProgramAssetUrls strips a configured URL prefix", () => {
+  const program = normalizeWebProgramAssetUrls({
+    manifest: [
+      {
+        path: "app.css",
+        url: "/__cordova/app.css?meteor_css_resource=true",
+        sourceMapUrl: "/__cordova/app.css.map",
+      },
+      {
+        path: "image.png",
+        url: "/images/image.png",
+      },
+    ],
+  }, {
+    stripPrefix: "/__cordova/",
+  });
+
+  assert.equal(program.manifest[0].url, "/app.css?meteor_css_resource=true");
+  assert.equal(program.manifest[0].sourceMapUrl, "/app.css.map");
+  assert.equal(program.manifest[1].url, "/images/image.png");
+});
+
 test("renderCapacitorBuildIndexHtml adapts meteor build assets for Capacitor", () => {
   const html = renderCapacitorBuildIndexHtml({
     appId: "com.example.native",
@@ -112,6 +185,7 @@ test("renderCapacitorBuildIndexHtml adapts meteor build assets for Capacitor", (
         },
       ],
     },
+    hcpMode: "none",
   });
 
   assert.match(html, /<title>Native head<\/title>/);
@@ -129,4 +203,54 @@ test("renderCapacitorBuildIndexHtml adapts meteor build assets for Capacitor", (
   assert.equal(runtimeConfig.DDP_DEFAULT_CONNECTION_URL, "http://192.168.1.10:3000");
   assert.equal(runtimeConfig.appId, "com.example.native");
   assert.equal(runtimeConfig.autoupdate.versions["web.cordova"].version, "v1");
+});
+
+test("renderCapacitorBuildIndexHtml normalizes raw web.cordova program versions", () => {
+  const html = renderCapacitorBuildIndexHtml({
+    appId: "com.example.native",
+    body: "<main>Native body</main>",
+    head: "<title>Native head</title>",
+    mobileServerUrl: "http://192.168.1.10:3000",
+    hcpMode: "webapp",
+    program: {
+      format: "web-program-pre1",
+      manifest: [
+        {
+          where: "client",
+          path: "app.js",
+          url: "/app.js",
+          type: "js",
+          cacheable: true,
+          hash: "abc123",
+        },
+      ],
+    },
+  });
+
+  const encodedConfig = html.match(
+    /__meteor_runtime_config__ = JSON\.parse\(decodeURIComponent\("([^"]+)"\)\);/
+  )[1];
+  const runtimeConfig = JSON.parse(decodeURIComponent(encodedConfig));
+  const version = runtimeConfig.autoupdate.versions["web.cordova"].version;
+  assert.equal(typeof version, "string");
+  assert.notEqual(version, "");
+});
+
+test("renderCapacitorBuildIndexHtml injects native WebAppLocalServer bridge for HCP webapp mode", () => {
+  const html = renderCapacitorBuildIndexHtml({
+    appId: "com.example.native",
+    body: "<main>Native body</main>",
+    head: "<title>Native head</title>",
+    mobileServerUrl: "http://192.168.1.10:3000",
+    hcpMode: "webapp",
+    program: {
+      version: "v1",
+      manifest: [],
+    },
+  });
+
+  assert.doesNotMatch(html, /var WebAppLocalServer/);
+  assert.match(html, /window\.WebAppLocalServer/);
+  assert.match(html, /CapacitorMeteorWebApp/);
+  assert.doesNotMatch(html, /__cordova\//);
 });
