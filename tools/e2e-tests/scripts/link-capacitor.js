@@ -10,6 +10,7 @@ const execa = require('execa');
 
 const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
 const CAPACITOR_PACKAGE_DIR = path.join(REPO_ROOT, 'npm-packages', 'meteor-capacitor');
+const NPM_QUIET_INSTALL_FLAGS = ['--no-audit', '--no-fund'];
 
 async function linkLocalCapacitor(appDir, { env } = {}) {
   if (process.env.NPM_LINK_CAPACITOR === 'false') {
@@ -27,6 +28,7 @@ async function linkLocalCapacitor(appDir, { env } = {}) {
       CAPACITOR_PACKAGE_DIR,
       '--save-dev',
       '--no-package-lock',
+      ...NPM_QUIET_INSTALL_FLAGS,
     ],
     {
       cwd: appDir,

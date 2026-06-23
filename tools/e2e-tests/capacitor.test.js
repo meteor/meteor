@@ -40,6 +40,7 @@ const PROD_SERVER_REBUILD_MESSAGE = 'capacitor e2e production server rebuild';
 function e2eEnv(extra = {}) {
   return {
     CAPACITOR_BUILD_CONTEXT: '_build',
+    DO_NOT_TRACK: '1',
     METEOR_CAPACITOR_LOCAL_IP: '127.0.0.1',
     PORT: String(PORT),
     RSPACK_DEVSERVER_PORT: String(RSPACK_DEVSERVER_PORT),
@@ -227,20 +228,15 @@ function assertCapacitorConfig(config, mode, platform = 'android') {
   expect(config.plugins.MeteorE2E.isNativeAndroid).toBe(platform === 'android');
   expect(config.plugins.MeteorE2E.isNativeIos).toBe(platform === 'ios');
   expect(config.plugins.MeteorE2E.webDir).toBe(webDir);
-  expect(config.plugins.MeteorE2E.mode).toBe(mode === 'prod' ? 'bundled' : 'development');
+  expect(config.plugins.MeteorE2E.mode).toBe('bundled');
   expect(config.plugins.MeteorE2E.localIp).toBe('127.0.0.1');
   expect(config.plugins.MeteorE2E.port).toBe(String(PORT));
 
-  if (mode === 'prod') {
-    expect(config.server.url).toBeUndefined();
-    expect(config.server.androidScheme).toBe('http');
-    expect(config.server.cleartext).toBe(
-      config.plugins.MeteorE2E.isRun ? true : undefined
-    );
-  } else {
-    expect(config.server.url).toBe(`http://127.0.0.1:${PORT}/__cordova/`);
-    expect(config.server.androidScheme).toBe('http');
-  }
+  expect(config.server.url).toBeUndefined();
+  expect(config.server.androidScheme).toBe('http');
+  expect(config.server.cleartext).toBe(
+    config.plugins.MeteorE2E.isRun ? true : undefined
+  );
 }
 
 async function assertNativeReactApp(port) {
@@ -294,8 +290,8 @@ describe('Capacitor App Web Lifecycle /', () => {
 
     tempDir = (await setupMeteorApp(APP_NAME))?.tempDir;
 
-    await linkLocalRspack(tempDir);
-    await linkLocalCapacitor(tempDir);
+    await linkLocalRspack(tempDir, { env: e2eEnv() });
+    await linkLocalCapacitor(tempDir, { env: e2eEnv() });
 
     const result = await runMeteorCommand('add-platform', ['android'], tempDir, {
       captureOutput: true,
