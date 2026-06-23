@@ -15,3 +15,11 @@ test("buildNativeTestEnv removes NO_COLOR while preserving other env values", ()
   assert.equal(env.PORT, "3000");
   assert.equal("NO_COLOR" in env, false);
 });
+
+test("buildNativeTestEnv disables package usage stats by default", () => {
+  const env = buildNativeTestEnv({
+    DO_NOT_TRACK: "0",
+  });
+
+  assert.equal(env.DO_NOT_TRACK, "1");
+});
