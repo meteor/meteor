@@ -18,6 +18,7 @@
     "@types/node": "^18.16.18",
     "@types/sockjs": "^0.3.36",
     "@types/sockjs-client": "^1.5.4",
+    "check-type-test-coverage": "^1.0.0",
     "expect-type": "^1.3.0",
     "lefthook": "^2.1.4",
     "oxfmt": "^0.42.0",
@@ -39,7 +40,8 @@
     "checkout:pr": "node scripts/checkout-pr.js",
     "types:compile": "npx tsc --noEmit",
     "types:coverage": "npm run types:compile && type-coverage --at-least 99",
-    "types:coverage:table": "npm run types:compile && node -e \"require('typescript-coverage-report/dist/lib/getCoverage').default().then(d=>{process.stdout.write(require('typescript-coverage-report/dist/lib/reporters/text').generate(d,80)+'\\n');process.exit(d.percentage>=80?0:1)})\""
+    "types:coverage:table": "npm run types:compile && node -e \"require('typescript-coverage-report/dist/lib/getCoverage').default().then(d=>{process.stdout.write(require('typescript-coverage-report/dist/lib/reporters/text').generate(d,80)+'\\n');process.exit(d.percentage>=80?0:1)})\"",
+    "types:test-coverage": "check-type-test-coverage ./packages"
   },
   "jshintConfig": {
     "esversion": 11
