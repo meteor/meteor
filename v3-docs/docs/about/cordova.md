@@ -3,152 +3,19 @@ outline:
   level: [2, 3]
 ---
 
-# Cordova
+# Cordova (Legacy mobile)
 
-Meteor allows developers to build mobile applications using web technologies like HTML, CSS, and JavaScript, while also accessing native mobile capabilities. This integration is made with [Apache Cordova](https://cordova.apache.org).
+Cordova is Meteor's legacy mobile integration. It remains documented for existing apps that already use [Apache Cordova](https://cordova.apache.org), while new native mobile work should use [Capacitor (mobile)](./native-stack/capacitor-mobile.md).
 
-Cordova apps run in a web view, which is like a browser without the UI. Different browser engines have varying implementations and support for web standards. This means the web view your app uses can greatly affect its performance and available features. (For details on supported features across browsers and versions, check caniuse.com.)
+Cordova apps run in a web view, which is like a browser without the UI. Different browser engines have varying implementations and support for web standards. This means the web view your app uses can greatly affect its performance and available features. For details on supported features across browsers and versions, check caniuse.com.
 
-There is a [Meteor Cordova guide](/about/cordova) available that offers advanced configuration details for Meteor Cordova projects. Feel free to refer to it while we update the information in the new documentation.
-
-This section will summarize the steps needed to set up your environment for Meteor Cordova development, manage development, and generate native artifacts for store uploads.
+This section summarizes the steps needed to set up your environment for existing Meteor Cordova development, manage development, and generate native artifacts for store uploads.
 
 ## Pre-Installation
 
-Before you begin, make sure your development environment meets the following requirements:
+Before you begin, make sure your development environment has the required Android and iOS platform tooling.
 
-### Android
-
-#### Java
-
-For Android development, Cordova requires the JDK.
-
-``` sh
-# On Debian/Ubuntu:
-sudo apt-get update
-sudo apt-get install openjdk-17-jdk
-
-# On Mac OSX
-brew install openjdk@17
-sudo ln -sfn $(brew --prefix)/opt/openjdk@17/libexec/openjdk.jdk /Library/Java/JavaVirtualMachines/openjdk-17.jdk
-
-# using sdkman
-curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk install java 17
-sdk default java 17
-
-java -version  # Verify installation
-```
-
-Ensure `JAVA_HOME` environment variable is set by adding it to `~/.bashrc` or `~/.zshrc` :
-
-``` sh
-export JAVA_HOME=$(dirname $(dirname $(readlink -f $(which java))))
-export PATH=$JAVA_HOME/bin:$PATH
-```
-
-Run `echo $JAVA_HOME` to check the current Java version. If it's incorrect, manually set the correct path by finding where Java is installed.
-
-##### Windows
-
-To install Java on Windows, [download the Java 17 executable](https://www.oracle.com/java/technologies/javase/jdk17-archive-downloads.html) and run the installer.
-
-Ensure the `JAVA_HOME` environment variable is set globally in your system path:
-
-1. Open System Properties: Press Windows Key + Pause/Break or right-click This PC > Properties.
-2. Click Advanced system settings.
-3. Click the Environment Variables button.
-4. Under System Variables, click New.
-5. Variable Value: Path to your JDK (e.g., C:\Program Files\Java\jdk-17).
-6. Click New and add `%JAVA_HOME%\bin`.
-7. Click OK to save all changes.
-
-Verify the installation in a terminal by running `echo %JAVA_HOME%`.
-
-Alternatively, you can set the environment variable in a terminal each time you work with your Meteor Cordova app:
-
-``` sh
-$env:JAVA_HOME = "C:\Program Files\Java\jdk-17"
-$env:PATH += ";%JAVA_HOME%\bin"
-```
-
-#### Android SDK
-
-For Android builds, you will need the Android SDK. You can install it via [Android Studio](https://developer.android.com/studio).
-
-Once Android Studio is installed, go to **SDK Manager** and install the required SDK packages. The minimum required version is Android SDK 35. Install the `Android SDK Command-line Tools (latest)` as well.
-
-Ensure `ANDROID_HOME` environment variable is set by adding it to `~/.bashrc` or `~/.zshrc` :
-
-```sh
-export ANDROID_HOME=$HOME/Library/Android/sdk
-export ANDROID_SDK_ROOT=${ANDROID_HOME}
-export PATH=$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/tools:$ANDROID_HOME/tools/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$PATH
-```
-
-##### Windows
-
-Ensure `ANDROID_HOME` environment variable are set globally on the system configuration or by setting the envs on the terminal.
-
-``` ps
-$env:ANDROID_HOME = "C:\Users\<USER>\AppData\Local\Android\Sdk"
-$env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
-$env:PATH = "$env:ANDROID_HOME\cmdline-tools\latest\bin;$env:ANDROID_HOME\tools;$env:ANDROID_HOME\tools\bin;$env:ANDROID_HOME\platform-tools;$env:ANDROID_HOME\emulator;$env:PATH"
-```
-
-#### Gradle
-
-If Gradle cannot be found install it with:
-
-```sh
-# On Mac OSX:
-brew install gradle
-
-# On Debian/Ubuntu:
-sudo apt-get install gradle
-
-# using sdkman
-curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk install gradle 8.7
-
-gradle --version  # Verify installation
-```
-
-##### Windows
-
-Install Gradle on your Windows system [by following the official guide](https://gradle.org/install).
-
-Make sure the Gradle path is included in your system's PATH variable.
-
-```ps
-$env:PATH += ";C:\Gradle\gradle-8.10.2\bin"
-```
-
-### iOS
-
-For iOS development, you will need Xcode (macOS only).
-
-Install [Xcode](https://apps.apple.com/us/app/xcode/id497799835?mt=12) from the App Store.
-
-After installing, ensure that the **command-line tools** are installed:
-
-```sh
-xcode-select --install
-```
-
-Once the download and installation are finished, you'll need to accept the license agreement. When you open Xcode for the first time, a dialog will appear with the agreement for you to review and accept. You can then close Xcode. Or use the next command on the command line.
-
-```sh
-sudo xcodebuild -license accept
-```
-
-Also, install CocoaPods, which is needed to manage iOS project dependencies:
-
-```sh
-sudo gem install cocoapods
-```
+> See [**"Native Pre-Installation"**](./native-stack/pre-installation.md) for Android SDK, Java, Gradle, Xcode, CocoaPods, emulator, and simulator setup.
 
 ## Development
 
@@ -180,17 +47,15 @@ meteor run ios
 
 #### Launch a new Android emulator
 
-1. **Open AVD Manager**: Go to **Tools** > **AVD Manager**.
-2. **Create New Device**: Click **Create Virtual Device...**.
-3. **Choose Hardware Profile**: Select a hardware profile and click **Next**.
-4. **Select System Image**: Choose a system image and click **Next**.
-5. **Configure Settings**: Name your AVD and adjust settings, then click **Finish**.
-6. **Launch Emulator**: Click the **green play icon** to start the emulator.
-7. **Run Meteor apps**: Run `meteor run android`. 
+Use Android Studio to create or start Android emulators.
+
+> See [**"Native Pre-Installation"**](./native-stack/pre-installation.md#android-emulators) for emulator setup.
 
 #### Launch a new iOS emulator
 
-In iOS, you can launch simulator by opening Xcode and choose the desired simulator device from the device list at the top.
+Use Xcode to create or start iOS simulators.
+
+> See [**"Native Pre-Installation"**](./native-stack/pre-installation.md#ios-simulators) for simulator setup.
 
 ### Run physical device
 
@@ -212,11 +77,9 @@ Hot Code Push (HCP) lets the client automatically get the latest version when co
 
 For development, enable HCP by starting the application server with the `--mobile-server` option.
 
-- On an emulator,
-  - Run: `meteor run android --mobile-server 10.0.2.2:3000`
+- On an emulator, run `meteor run android --mobile-server 10.0.2.2:3000`.
 
-- On a real device, both the device and server must be on the same network
-  - Run: `meteor run android --mobile-server XXX.XXX.XXX.XXX`, replacing the IP with your local development address (e.g. 192.168.1.4).
+- On a real device, the device and server must be on the same network. Run `meteor run android --mobile-server XXX.XXX.XXX.XXX`, replacing the IP with your local development address, for example `192.168.1.4`.
 
 For production, HCP is enabled automatically when you provide the `--server` option to the [`meteor build` command](../cli/index.md#meteor-build-meteorbuild). For more details on how HCP works with apps already published to production, see [Hot Code Push on mobile](/troubleshooting/hot-code-push).
 
@@ -228,7 +91,7 @@ Once you have set up your Meteor project with Cordova, you may want to run or de
 
 1. Open **Android Studio**
 2. Click on **"Open an existing Android Studio project"**
-3. Navigate to your Meteor project directory:  
+3. Navigate to your Meteor project directory:
    `.meteor/local/cordova-build/platforms/android/`
 4. Open the project
 
@@ -237,7 +100,7 @@ Now you can manage your app with **Android Studio**, including connecting to phy
 #### Open in XCode
 
 1. Open **XCode**
-2. Navigate to the Meteor project directory:  
+2. Navigate to the Meteor project directory:
    `.meteor/local/cordova-build/platforms/ios/`
 3. Open the project or the `.xcworkspace` file
 
@@ -261,7 +124,7 @@ After building your Cordova project with Meteor, you can use **Android Studio** 
 
 1. Open **Android Studio**
 2. Click on **"Open an existing Android Studio project"**
-3. Navigate to your Meteor project directory:  
+3. Navigate to your Meteor project directory:
    `./build-output/android/project`
 4. Open the project
 5. Go to **Build > Generate Signed Bundle / APK**
@@ -272,7 +135,7 @@ After building your Cordova project with Meteor, you can use **Android Studio** 
 #### iOS
 
 1. Open **XCode**
-2. Navigate to the Meteor project directory:  
+2. Navigate to the Meteor project directory:
    `../build-output/ios/project`
 3. Open the project or the `.xcworkspace` file
 4. [Configure Signing in Xcode](https://developer.apple.com/documentation/xcode/sharing-your-teams-signing-certificates)
@@ -294,4 +157,4 @@ You can force Meteor to use the legacy browser code bundle by setting the variab
   }
 ```
 
-Both the App Store and Google Play will only publish new and updated apps for a certain minimum mobile OS version. As of 2025, these minimum OS versions support the  modern browser code bundle. 
+Both the App Store and Google Play will only publish new and updated apps for a certain minimum mobile OS version. As of 2025, these minimum OS versions support the modern browser code bundle.

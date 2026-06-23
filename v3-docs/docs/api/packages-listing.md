@@ -43,6 +43,7 @@
 ### [browser-policy-framing](https://github.com/meteor/meteor/tree/devel/packages/browser-policy-framing) {#browser-policy-framing}
 ### [caching-compiler](https://github.com/meteor/meteor/tree/devel/packages/caching-compiler) {#caching-compiler}
 ### [callback-hook](https://github.com/meteor/meteor/tree/devel/packages/callback-hook) {#callback-hook}
+### [capacitor](https://github.com/meteor/meteor/tree/devel/packages/capacitor) {#capacitor}
 ### [check](https://github.com/meteor/meteor/tree/devel/packages/check) {#check}
 ### [constraint-solver](https://github.com/meteor/meteor/tree/devel/packages/constraint-solver) {#constraint-solver}
 ### [core-runtime](https://github.com/meteor/meteor/tree/devel/packages/core-runtime) {#core-runtime}
@@ -148,6 +149,7 @@
 ### [twitter-config-ui](https://github.com/meteor/meteor/tree/devel/packages/twitter-config-ui) {#twitter-config-ui}
 ### [twitter-oauth](https://github.com/meteor/meteor/tree/devel/packages/twitter-oauth) {#twitter-oauth}
 ### [typescript](https://github.com/meteor/meteor/tree/devel/packages/typescript) {#typescript}
+### [underscore](https://github.com/meteor/meteor/tree/devel/packages/underscore) {#underscore}
 ### [url](https://github.com/meteor/meteor/tree/devel/packages/url) {#url}
 ### [webapp](https://github.com/meteor/meteor/tree/devel/packages/webapp) {#webapp}
 ### [webapp-hashing](https://github.com/meteor/meteor/tree/devel/packages/webapp-hashing) {#webapp-hashing}
