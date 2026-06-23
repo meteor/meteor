@@ -85,7 +85,9 @@ The `defineConfig` helper receives a `Meteor` object with build, platform, and m
 
 The root `capacitor.config.js` file is dynamic, similar to `rspack.config.js`. Keep editing this source file in your app root; Meteor may write a generated `capacitor.config.json` snapshot under `_build/native-*`, but that generated file is not the configuration you maintain.
 
-You can return any option supported by the [Capacitor configuration schema](https://capacitorjs.com/docs/config), including `appId`, `appName`, `plugins`, `ios`, `android`, `server`, `loggingBehavior`, `appendUserAgent`, and other standard Capacitor options.
+Meteor scaffolds a CommonJS `capacitor.config.js` file. If your app already has `capacitor.config.ts`, `capacitor.config.mjs`, `capacitor.config.cjs`, or `capacitor.config.json`, Meteor respects that file instead.
+
+You can return any option supported by the [Capacitor configuration schema](https://capacitorjs.com/docs/v7/config) for the Capacitor version installed in your app, including `appId`, `appName`, `plugins`, `ios`, `android`, `server`, `loggingBehavior`, `appendUserAgent`, and other standard Capacitor options.
 
 `@meteorjs/capacitor` deep-merges your config on top of Meteor defaults. This means nested blocks layer together, so adding a plugin config does not remove Meteor's default `plugins.SplashScreen` values. Meteor also sets `webDir` for the generated native web assets and controls `bundledWebRuntime`; do not set `bundledWebRuntime` yourself.
 
