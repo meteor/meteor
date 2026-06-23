@@ -3,14 +3,23 @@ import type { PluginListenerHandle } from "@capacitor/core";
 export interface MeteorCapacitorContext {
   mode: "livereload" | "bundled";
   isDevelopment: boolean;
+  isProduction: boolean;
+  isDebug: boolean;
+  isVerbose: boolean;
+  isRun: boolean;
+  isBuild: boolean;
+  isCapacitor: boolean;
+  isNative: boolean;
   isLivereload: boolean;
   isBundled: boolean;
-  isAndroid: boolean;
-  isIos: boolean;
+  isNativeAndroid: boolean;
+  isNativeIos: boolean;
+  platform: "android" | "ios" | "";
+  buildContext: string;
   webDir: string;
-  rootUrl?: string;
-  localIp?: string;
-  port?: string;
+  rootUrl: string;
+  localIp: string;
+  port: string;
 }
 
 export interface CapacitorMeteorWebAppPlugin {

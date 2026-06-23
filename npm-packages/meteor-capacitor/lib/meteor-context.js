@@ -44,7 +44,7 @@ function detectLocalIp() {
  */
 function buildMeteorContext() {
   const mode = detectMode();
-  const isProduction = process.env.NODE_ENV === 'production' || mode === 'bundled';
+  const isProduction = process.env.NODE_ENV === 'production';
   const isDevelopment = !isProduction;
   const platform = process.env.METEOR_CAPACITOR_PLATFORM || ''; // 'android' | 'ios' | ''
   const isNativeAndroid = asBool('METEOR_NATIVE_ANDROID') || platform === 'android';

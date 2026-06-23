@@ -99,3 +99,33 @@ test("bundled run mode enables Android cleartext for Meteor DDP", () => {
   assert.equal(config.server.androidScheme, "http");
   assert.equal(config.server.cleartext, true);
 });
+
+test("bundled run mode keeps development flags separate from render mode", () => {
+  const config = withEnv({
+    METEOR_CAPACITOR_MODE: "bundled",
+    METEOR_RUN: "true",
+    NODE_ENV: "development",
+    METEOR_CAPACITOR_WEB_DIR: "_build/native-dev",
+  }, () => defineConfig(Meteor => ({
+    appId: "com.example.app",
+    appName: Meteor.isDevelopment ? "Example Dev" : "Example",
+    context: {
+      isDevelopment: Meteor.isDevelopment,
+      isProduction: Meteor.isProduction,
+      isRun: Meteor.isRun,
+      isBundled: Meteor.isBundled,
+      webDir: Meteor.webDir,
+    },
+  })));
+
+  assert.equal(config.appName, "Example Dev");
+  assert.deepEqual(config.context, {
+    isDevelopment: true,
+    isProduction: false,
+    isRun: true,
+    isBundled: true,
+    webDir: "_build/native-dev",
+  });
+  assert.equal(config.webDir, "_build/native-dev");
+  assert.equal(config.server.url, undefined);
+});

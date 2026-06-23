@@ -81,6 +81,58 @@ Change `appId` before distributing the app. The value must be a valid native app
 
 The `defineConfig` helper receives a `Meteor` object with build, platform, and mode flags. It also applies Meteor defaults for `webDir`, `server`, and `SplashScreen`, while preserving user-defined Capacitor options.
 
+### Customize capacitor.config.js
+
+The root `capacitor.config.js` file is dynamic, similar to `rspack.config.js`. Keep editing this source file in your app root; Meteor may write a generated `capacitor.config.json` snapshot under `_build/native-*`, but that generated file is not the configuration you maintain.
+
+You can return any option supported by the [Capacitor configuration schema](https://capacitorjs.com/docs/config), including `appId`, `appName`, `plugins`, `ios`, `android`, `server`, `loggingBehavior`, `appendUserAgent`, and other standard Capacitor options.
+
+`@meteorjs/capacitor` deep-merges your config on top of Meteor defaults. This means nested blocks layer together, so adding a plugin config does not remove Meteor's default `plugins.SplashScreen` values. Meteor also sets `webDir` for the generated native web assets and controls `bundledWebRuntime`; do not set `bundledWebRuntime` yourself.
+
+``` js
+const { defineConfig } = require('@meteorjs/capacitor');
+
+module.exports = defineConfig(Meteor => ({
+  appId: 'com.example.myapp',
+  appName: Meteor.isDevelopment ? 'MyApp Dev' : 'MyApp',
+  ios: {
+    contentInset: 'always',
+  },
+  android: {
+    allowMixedContent: Meteor.isLivereload,
+  },
+  plugins: {
+    SplashScreen: {
+      launchAutoHide: true,
+      launchShowDuration: Meteor.isDevelopment ? 0 : 500,
+    },
+  },
+}));
+```
+
+The `Meteor` parameter gives the config file the current native build context:
+
+| Flag | Type | Description |
+|---|---|---|
+| `isDevelopment` | boolean | True when the native web assets are being prepared for a development run. |
+| `isProduction` | boolean | True when the native web assets are being prepared for a production build. |
+| `isDebug` | boolean | True when Meteor debug mode is enabled. |
+| `isVerbose` | boolean | True when verbose Meteor logging is enabled. |
+| `isRun` | boolean | True when the command is running through `meteor run`. |
+| `isBuild` | boolean | True when the command is running through `meteor build`. |
+| `isCapacitor` / `isNative` | boolean | Always true inside the Capacitor config helper. |
+| `isNativeAndroid` | boolean | True when the active native platform is Android. |
+| `isNativeIos` | boolean | True when the active native platform is iOS. |
+| `platform` | string | The active platform, usually `android` or `ios`. |
+| `mode` | string | The Capacitor render mode, `bundled` or `livereload`. |
+| `isBundled` | boolean | True when the native app starts from bundled local web assets. |
+| `isLivereload` | boolean | True when the native app loads from the running Meteor server. |
+| `rootUrl` | string | The server URL provided by Meteor, including values from `--mobile-server`. |
+| `localIp` | string | A detected local network address used only when no explicit server URL is available. |
+| `port` | string | The app port, usually `3000` in development. |
+| `buildContext` | string | The build root used for generated native web assets, usually `_build`. |
+| `webDir` | string | The generated web directory synced into Capacitor, such as `_build/native-dev` or `_build/native-prod`. |
+
 ## Project layout
 
 The integration adds or uses these files and folders:
