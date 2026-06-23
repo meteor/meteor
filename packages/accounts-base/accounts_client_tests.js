@@ -398,3 +398,94 @@ Tinytest.addAsync('accounts - should only start subscription when connected', as
 
   cleanup()
 });
+
+Tinytest.addAsync(
+  'accounts - Meteor.loggingIn() is false after login with custom DDP connection',
+  async (test, done) => {
+    // Create a custom DDP connection
+    const customConnection = DDP.connect(Meteor.absoluteUrl());
+    
+    // Create a custom Accounts instance with the custom connection
+    const customAccounts = new AccountsClient({
+      connection: customConnection,
+    });
+
+    // First, create a user on the default connection
+    createUserAndLogout(test, done, async () => {
+      // Now login using the custom connection
+      customAccounts.callLoginMethod({
+        methodName: 'login',
+        methodArguments: [{ user: { username }, password }],
+        userCallback: (error) => {
+          test.isFalse(error);
+          
+          // Wait a bit for the login to complete
+          Meteor.setTimeout(() => {
+            // Verify that loggingIn is false after login completes
+            test.isFalse(customAccounts.loggingIn());
+            
+            // Verify that we got a userId
+            test.isTrue(!!customAccounts.userId());
+            
+            // Cleanup
+            customAccounts.logout(() => {
+              customConnection.disconnect();
+              removeTestUser(done);
+            });
+          }, 100);
+        }
+      });
+      
+      // Immediately after calling login, loggingIn should be true
+      test.isTrue(customAccounts.loggingIn());
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - loginWithPassword works with custom DDP connection',
+  async (test, done) => {
+    // Create a custom DDP connection
+    const customConnection = DDP.connect(Meteor.absoluteUrl());
+    
+    // Create a custom Accounts instance with the custom connection
+    const customAccounts = new AccountsClient({
+      connection: customConnection,
+    });
+
+    // First, create a user on the default connection
+    createUserAndLogout(test, done, () => {
+      // Register the loginWithPassword method on the custom accounts instance
+      customAccounts.registerClientLoginFunction('password', function(username, password, callback) {
+        this.callLoginMethod({
+          methodName: 'login',
+          methodArguments: [{ user: { username }, password }],
+          userCallback: callback
+        });
+      });
+
+      // Now login using the custom connection
+      customAccounts.callLoginFunction('password', username, password, (error) => {
+        test.isFalse(error);
+        
+        // Wait a bit for the login to complete
+        Meteor.setTimeout(() => {
+          // Verify that loggingIn is false after login completes
+          test.isFalse(customAccounts.loggingIn());
+          
+          // Verify that we got a userId
+          test.isTrue(!!customAccounts.userId());
+          
+          // Cleanup
+          customAccounts.logout(() => {
+            customConnection.disconnect();
+            removeTestUser(done);
+          });
+        }, 100);
+      });
+      
+      // Immediately after calling login, loggingIn should be true
+      test.isTrue(customAccounts.loggingIn());
+    });
+  }
+);
