@@ -144,6 +144,20 @@ var identifyBrowser = function(userAgentString) {
 // XXX Refactor as part of implementing real routing.
 WebAppInternals.identifyBrowser = identifyBrowser;
 
+const clientArchDetectors = Object.create(null);
+WebAppInternals.registerClientArchDetector = function(key, detector) {
+  const previousDetector = clientArchDetectors[key];
+
+  if (typeof detector === 'function') {
+    clientArchDetectors[key] = detector;
+  } else {
+    assert.strictEqual(detector, null);
+    delete clientArchDetectors[key];
+  }
+
+  return previousDetector || null;
+};
+
 WebApp.categorizeRequest = function(req) {
   if (req.browser && req.arch && typeof req.modern === 'boolean') {
     // Already categorized.
@@ -183,8 +197,40 @@ WebApp.categorizeRequest = function(req) {
     }
   }
 
-  // TODO Perhaps one day we could infer Cordova clients here, so that we
-  // wouldn't have to use prefixed "/__cordova/..." URLs.
+  for (const key of Object.keys(clientArchDetectors)) {
+    const detector = clientArchDetectors[key];
+    const detected = detector(req, categorized);
+    if (!detected) {
+      continue;
+    }
+
+    const normalized = typeof detected === 'string'
+      ? { arch: detected }
+      : detected;
+    const { arch, path: detectedPath } = normalized;
+
+    if (typeof arch !== 'string') {
+      throw new Error(
+        `WebAppInternals.registerClientArchDetector("${key}") must return null, arch string, or { arch, path }.`
+      );
+    }
+
+    if (!hasOwn.call(WebApp.clientPrograms, arch)) {
+      continue;
+    }
+
+    if (detectedPath !== undefined && typeof detectedPath !== 'string') {
+      throw new Error(
+        `WebAppInternals.registerClientArchDetector("${key}") returned non-string path.`
+      );
+    }
+
+    return Object.assign(categorized, {
+      arch,
+      ...(detectedPath === undefined ? null : { path: detectedPath }),
+    });
+  }
+
   const preferredArchOrder = isModern(browser)
     ? ['web.browser', 'web.browser.legacy']
     : ['web.browser.legacy', 'web.browser'];

@@ -10,6 +10,8 @@ import { WEB_APP_LOCAL_SERVER_SHIM } from './lib/constants.js';
 Meteor.isCapacitor = false;
 
 const BOILERPLATE_CALLBACK_KEY = 'meteor:capacitor:webapp-local-server-shim';
+const CLIENT_ARCH_DETECTOR_KEY = 'meteor:capacitor:client-arch-detector';
+const CAPACITOR_LIVERELOAD_USER_AGENT = 'MeteorCapacitorLivereload';
 const CORDOVA_JS_STUB = `;(function () {
   window.cordova = window.cordova || {};
   window.cordova.platformId = window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : "capacitor";
@@ -24,6 +26,28 @@ const CORDOVA_JS_STUB = `;(function () {
 export function isCapacitorDirectServerMode(env = process.env) {
   return env.METEOR_CAPACITOR === 'true' &&
     env.METEOR_CAPACITOR_MODE === 'livereload';
+}
+
+export function getCapacitorLivereloadUserAgentToken() {
+  return CAPACITOR_LIVERELOAD_USER_AGENT;
+}
+
+export function isCapacitorLivereloadRequest(req, env = process.env) {
+  if (!isCapacitorDirectServerMode(env)) {
+    return false;
+  }
+
+  return String(req?.headers?.['user-agent'] || '')
+    .includes(getCapacitorLivereloadUserAgentToken());
+}
+
+export function detectCapacitorClientArch(req, _categorized, options = {}) {
+  const env = options.env || process.env;
+  if (!isCapacitorLivereloadRequest(req, env)) {
+    return null;
+  }
+
+  return 'web.cordova';
 }
 
 export function getCordovaJsStub(env = process.env) {
@@ -52,6 +76,10 @@ export function injectWebAppLocalServerShim(_request, data, arch, _response, opt
 WebAppInternals.registerBoilerplateDataCallback(
   BOILERPLATE_CALLBACK_KEY,
   injectWebAppLocalServerShim
+);
+WebAppInternals.registerClientArchDetector(
+  CLIENT_ARCH_DETECTOR_KEY,
+  detectCapacitorClientArch
 );
 
 WebApp.rawConnectHandlers.use('/cordova.js', (req, res, next) => {

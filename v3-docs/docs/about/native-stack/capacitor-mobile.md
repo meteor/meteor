@@ -89,7 +89,7 @@ Meteor scaffolds a CommonJS `capacitor.config.js` file. If your app already has 
 
 You can return any option supported by the [Capacitor configuration schema](https://capacitorjs.com/docs/v7/config) for the Capacitor version installed in your app, including `appId`, `appName`, `plugins`, `ios`, `android`, `server`, `loggingBehavior`, `appendUserAgent`, and other standard Capacitor options.
 
-`@meteorjs/capacitor` deep-merges your config on top of Meteor defaults. This means nested blocks layer together, so adding a plugin config does not remove Meteor's default `plugins.SplashScreen` values. Meteor also sets `webDir` for the generated native web assets and controls `bundledWebRuntime`; do not set `bundledWebRuntime` yourself.
+`@meteorjs/capacitor` deep-merges your config on top of Meteor defaults. This means nested blocks layer together, so adding a plugin config does not remove Meteor's default `plugins.SplashScreen` values. In livereload mode, Meteor preserves any `appendUserAgent` value you set and appends its own native marker. Meteor also sets `webDir` for the generated native web assets and controls `bundledWebRuntime`; do not set `bundledWebRuntime` yourself.
 
 ``` js
 const { defineConfig } = require('@meteorjs/capacitor');
@@ -182,6 +182,8 @@ METEOR_CAPACITOR_MODE=livereload meteor run ios
 ```
 
 In this mode, `@meteorjs/capacitor` sets Capacitor's `server.url` to the Meteor server URL. The app reloads from the server instead of starting from the local bundled web directory.
+
+Meteor also appends its own native marker to Capacitor's user agent in livereload mode. That lets Meteor keep serving the `web.cordova` client even after a hard refresh on normal client routes such as `/tasks`, without requiring app-specific router basenames.
 
 For Android emulators or physical devices, make sure the device can reach the Meteor server. Use `--mobile-server` when you need to provide a reachable host:
 

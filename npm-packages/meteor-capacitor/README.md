@@ -94,7 +94,8 @@ Most apps do not need to set `server` manually. Meteor derives the correct defau
 | `plugins.SplashScreen.launchAutoHide` | `true` |
 | `server.androidScheme` | `'http'` |
 | `server.cleartext` | `true` during `meteor run`, or when `Meteor.rootUrl` starts with `http://` |
-| `server.url` in livereload mode | `Meteor.rootUrl` when available, otherwise `http://<Meteor.localIp>:<Meteor.port>` with the path rewritten to `/__cordova/` |
+| `server.url` in livereload mode | `Meteor.rootUrl` when available, otherwise `http://<Meteor.localIp>:<Meteor.port>` |
+| `appendUserAgent` in livereload mode | Preserves any user value and appends Meteor's native marker so refreshes on client routes still resolve as `web.cordova` |
 
 In bundled mode, the default `server` block omits `url`, so Capacitor falls back to loading from `webDir`.
 

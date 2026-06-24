@@ -16,3 +16,10 @@ appId: com.meteor.capacitortests
 - assertVisible: "WebAppLocalServer shim ready"
 - assertVisible: "WebAppLocalServer no-op shim ready"
 - assertVisible: "__cordova paths served"
+- tapOn: "Reload route test"
+- extendedWaitUntil:
+    visible: "Route reload preserved"
+    timeout: 60000
+- extendedWaitUntil:
+    visible: "DDP verified"
+    timeout: 60000

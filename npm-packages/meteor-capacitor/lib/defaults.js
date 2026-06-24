@@ -6,17 +6,13 @@
  * guarantee the integration works.
  */
 
-function toCordovaUrl(baseUrl) {
-  try {
-    const url = new URL(baseUrl);
-    const basePath = url.pathname.replace(/\/$/, '');
-    url.pathname = `${basePath}/__cordova/`;
-    url.search = '';
-    url.hash = '';
-    return url.toString();
-  } catch (_) {
-    return baseUrl;
-  }
+const CAPACITOR_LIVERELOAD_USER_AGENT = 'MeteorCapacitorLivereload';
+
+function appendUserAgentToken(existing, token = CAPACITOR_LIVERELOAD_USER_AGENT) {
+  const current = typeof existing === 'string' ? existing.trim() : '';
+  if (!current) return token;
+  if (current.includes(token)) return current;
+  return `${current} ${token}`;
 }
 
 function getDefaultServer(Meteor) {
@@ -34,7 +30,7 @@ function getDefaultServer(Meteor) {
   const baseUrl = Meteor.isLivereload && Meteor.rootUrl
     ? Meteor.rootUrl
     : `http://${Meteor.localIp}:${Meteor.port}`;
-  const url = toCordovaUrl(baseUrl);
+  const url = baseUrl;
   return {
     ...defaults,
     url,
@@ -60,6 +56,10 @@ function getDefaults(Meteor) {
     defaults.server = server;
   }
 
+  if (Meteor.isLivereload) {
+    defaults.appendUserAgent = appendUserAgentToken();
+  }
+
   return defaults;
 }
 
@@ -70,4 +70,8 @@ function getDefaults(Meteor) {
  */
 const RESERVED_PATHS = ['bundledWebRuntime'];
 
-module.exports = { getDefaults, RESERVED_PATHS };
+module.exports = {
+  appendUserAgentToken,
+  getDefaults,
+  RESERVED_PATHS,
+};

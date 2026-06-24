@@ -13,6 +13,7 @@ const ENV_KEYS = [
   "METEOR_NATIVE_ANDROID",
   "METEOR_NATIVE_IOS",
   "ROOT_URL",
+  "MOBILE_ROOT_URL",
   "PORT",
   "NODE_ENV",
 ];
@@ -62,7 +63,8 @@ test("livereload mode defaults server.url to ROOT_URL", () => {
     PORT: "3210",
   }, minimalConfig);
 
-  assert.equal(config.server.url, "https://staging.example.com/__cordova/");
+  assert.equal(config.server.url, "https://staging.example.com");
+  assert.match(config.appendUserAgent, /\bMeteorCapacitorLivereload\b/);
   assert.equal(config.server.cleartext, undefined);
   assert.equal(config.server.androidScheme, "http");
 });
@@ -74,9 +76,36 @@ test("livereload mode falls back to local Meteor URL when ROOT_URL is absent", (
     PORT: "3211",
   }, minimalConfig);
 
-  assert.equal(config.server.url, "http://10.0.0.6:3211/__cordova/");
+  assert.equal(config.server.url, "http://10.0.0.6:3211");
+  assert.match(config.appendUserAgent, /\bMeteorCapacitorLivereload\b/);
   assert.equal(config.server.cleartext, true);
   assert.equal(config.server.androidScheme, "http");
+});
+
+test("livereload mode preserves user appendUserAgent while enforcing Meteor marker", () => {
+  const config = withEnv({
+    METEOR_CAPACITOR_MODE: "livereload",
+    ROOT_URL: "https://staging.example.com",
+  }, () => defineConfig({
+    appId: "com.example.app",
+    appName: "Example",
+    appendUserAgent: "MyCustomAgent",
+  }));
+
+  assert.equal(config.server.url, "https://staging.example.com");
+  assert.match(config.appendUserAgent, /\bMyCustomAgent\b/);
+  assert.match(config.appendUserAgent, /\bMeteorCapacitorLivereload\b/);
+});
+
+test("livereload mode prefers MOBILE_ROOT_URL over ROOT_URL", () => {
+  const config = withEnv({
+    METEOR_CAPACITOR_MODE: "livereload",
+    ROOT_URL: "http://127.0.0.1:3000",
+    MOBILE_ROOT_URL: "http://10.0.2.2:3000",
+  }, minimalConfig);
+
+  assert.equal(config.server.url, "http://10.0.2.2:3000");
+  assert.match(config.appendUserAgent, /\bMeteorCapacitorLivereload\b/);
 });
 
 test("bundled mode omits server.url by default", () => {

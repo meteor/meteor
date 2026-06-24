@@ -34,8 +34,11 @@ import {
   normalizeWebProgramAssetUrls,
 } from './lib/web-program.js';
 import {
+  detectCapacitorClientArch,
   getCordovaJsStub,
+  getCapacitorLivereloadUserAgentToken,
   injectWebAppLocalServerShim,
+  isCapacitorLivereloadRequest,
   isCapacitorDirectServerMode,
 } from './capacitor_server.js';
 
@@ -187,6 +190,29 @@ Tinytest.add('capacitor - server runtime - direct server mode detection', test =
     METEOR_CAPACITOR: 'true',
     METEOR_CAPACITOR_MODE: 'livereload',
   }));
+});
+
+Tinytest.add('capacitor - server runtime - livereload request marker detection', test => {
+  const req = {
+    headers: {
+      'user-agent': `Example ${getCapacitorLivereloadUserAgentToken()}`,
+    },
+  };
+
+  test.isFalse(isCapacitorLivereloadRequest(req, {
+    METEOR_CAPACITOR: 'true',
+    METEOR_CAPACITOR_MODE: 'bundled',
+  }));
+  test.isTrue(isCapacitorLivereloadRequest(req, {
+    METEOR_CAPACITOR: 'true',
+    METEOR_CAPACITOR_MODE: 'livereload',
+  }));
+  test.equal(detectCapacitorClientArch(req, null, {
+    env: {
+      METEOR_CAPACITOR: 'true',
+      METEOR_CAPACITOR_MODE: 'livereload',
+    },
+  }), 'web.cordova');
 });
 
 Tinytest.add('capacitor - server runtime - injects shim into cordova head', test => {

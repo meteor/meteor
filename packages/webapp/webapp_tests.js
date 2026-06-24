@@ -53,6 +53,21 @@ const asyncGet =
           ? reject(err)
           : resolve(res)
       ));
+
+function ensureTestClientProgram(arch) {
+  if (WebApp.clientPrograms[arch]) {
+    return WebApp.clientPrograms[arch];
+  }
+
+  const browserProgram = WebApp.clientPrograms["web.browser"];
+  return WebApp.clientPrograms[arch] = {
+    format: browserProgram?.format || "web-program-pre1",
+    manifest: browserProgram?.manifest || [],
+    version: browserProgram?.version || "test",
+    PUBLIC_SETTINGS: browserProgram?.PUBLIC_SETTINGS || {},
+  };
+}
+
 Tinytest.addAsync("webapp - content-type header", async function (test) {
   const staticFiles = WebAppInternals.staticFilesByArch["web.browser"];
   const staticFilesKeys = Object.keys(staticFiles);
@@ -171,6 +186,84 @@ Tinytest.addAsync("webapp - agent identification", async function (test) {
   test.equal(specialBrowser.minor, 7);
   test.equal(specialBrowser.patch, 13);
 })
+
+Tinytest.add("webapp - client arch detector maps marked requests to web.cordova", function (test) {
+  const detectorKey = "webapp tests client arch detector";
+  const previousCordovaProgram = WebApp.clientPrograms["web.cordova"];
+
+  ensureTestClientProgram("web.cordova");
+
+  const previousDetector = WebAppInternals.registerClientArchDetector(
+    detectorKey,
+    function (request) {
+      if (String(request.headers["user-agent"] || "").includes("MeteorCapacitorLivereload")) {
+        return "web.cordova";
+      }
+
+      return null;
+    }
+  );
+
+  try {
+    const req = new http.IncomingMessage();
+    req.headers = {
+      "user-agent": "Example MeteorCapacitorLivereload",
+    };
+    req.url = "http://example.com/tasks";
+
+    const categorized = WebApp.categorizeRequest(req);
+    test.equal(categorized.arch, "web.cordova");
+    test.equal(categorized.path, "/tasks");
+  } finally {
+    WebAppInternals.registerClientArchDetector(detectorKey, previousDetector);
+    if (previousCordovaProgram) {
+      WebApp.clientPrograms["web.cordova"] = previousCordovaProgram;
+    } else {
+      delete WebApp.clientPrograms["web.cordova"];
+    }
+  }
+});
+
+Tinytest.add("webapp - explicit __arch prefix wins over client arch detector", function (test) {
+  const detectorKey = "webapp tests path precedence detector";
+  const previousCordovaProgram = WebApp.clientPrograms["web.cordova"];
+  const previousBrowserProgram = WebApp.clientPrograms["web.browser"];
+
+  ensureTestClientProgram("web.cordova");
+  ensureTestClientProgram("web.browser");
+
+  const previousDetector = WebAppInternals.registerClientArchDetector(
+    detectorKey,
+    function () {
+      return "web.cordova";
+    }
+  );
+
+  try {
+    const req = new http.IncomingMessage();
+    req.headers = {
+      "user-agent": "Example MeteorCapacitorLivereload",
+    };
+    req.url = "http://example.com/__browser/tasks";
+
+    const categorized = WebApp.categorizeRequest(req);
+    test.equal(categorized.arch, "web.browser");
+    test.equal(categorized.path, "/tasks");
+  } finally {
+    WebAppInternals.registerClientArchDetector(detectorKey, previousDetector);
+    if (previousCordovaProgram) {
+      WebApp.clientPrograms["web.cordova"] = previousCordovaProgram;
+    } else {
+      delete WebApp.clientPrograms["web.cordova"];
+    }
+
+    if (previousBrowserProgram) {
+      WebApp.clientPrograms["web.browser"] = previousBrowserProgram;
+    } else {
+      delete WebApp.clientPrograms["web.browser"];
+    }
+  }
+});
 
 Tinytest.addAsync(
   "webapp - additional static javascript",

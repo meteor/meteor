@@ -183,6 +183,23 @@ function checkCordovaPaths() {
   }
 }
 
+function checkRouteReloadState() {
+  if (window.location.pathname === "/tasks") {
+    setStatus("route-status", "Route reload preserved");
+  }
+}
+
+function bindRouteReloadButton() {
+  const button = document.getElementById("route-reload-button");
+  if (!button || button.__nativeTestBound) return;
+
+  button.addEventListener("click", () => {
+    window.history.pushState({}, "", "/tasks");
+    window.location.reload();
+  });
+  button.__nativeTestBound = true;
+}
+
 Meteor.startup(() => {
   setStatus("render-status", "Native render ready");
   setStatus("client-version-status", CLIENT_VERSION);
@@ -193,6 +210,8 @@ Meteor.startup(() => {
   checkWebAppLocalServerShim();
   checkHcpTrace();
   checkCordovaPaths();
+  checkRouteReloadState();
+  bindRouteReloadButton();
 
   Meteor.subscribe("nativePing", {
     onReady() {

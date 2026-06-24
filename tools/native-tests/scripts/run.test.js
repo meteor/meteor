@@ -201,3 +201,17 @@ test("Capacitor non-HCP flows assert no-op bridge mode", () => {
     );
   }
 });
+
+test("Capacitor livereload flows verify non-root route reloads", () => {
+  const app = getAppConfig("capacitor-tests");
+  const flowFiles = [
+    app.livereloadInitialFlowPath,
+    app.livereloadFlowPath,
+  ];
+
+  for (const flowFile of flowFiles) {
+    const flow = readFlow(flowFile);
+    assert.match(flow, /Reload route test/, path.basename(flowFile));
+    assert.match(flow, /Route reload preserved/, path.basename(flowFile));
+  }
+});

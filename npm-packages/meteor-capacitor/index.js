@@ -22,7 +22,11 @@
 
 const { buildMeteorContext } = require('./lib/meteor-context');
 const { deepMerge } = require('./lib/merge');
-const { getDefaults, RESERVED_PATHS } = require('./lib/defaults');
+const {
+  appendUserAgentToken,
+  getDefaults,
+  RESERVED_PATHS,
+} = require('./lib/defaults');
 
 const MeteorWebAppError = Object.freeze({
   DOWNLOAD_FAILED: 'DOWNLOAD_FAILED',
@@ -83,6 +87,10 @@ function defineConfig(input) {
       console.warn(`[@meteorjs/capacitor] "${key}" is reserved for Meteor integration; user value ignored.`);
     }
     merged[key] = defaults[key];
+  }
+
+  if (Meteor.isLivereload) {
+    merged.appendUserAgent = appendUserAgentToken(merged.appendUserAgent);
   }
 
   // Drop a falsy `server` so Capacitor falls back to webDir.

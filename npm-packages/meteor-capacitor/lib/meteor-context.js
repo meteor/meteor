@@ -81,7 +81,7 @@ function buildMeteorContext() {
     mode,
     isLivereload: mode === 'livereload',
     isBundled: mode === 'bundled',
-    rootUrl: process.env.ROOT_URL || '',
+    rootUrl: process.env.MOBILE_ROOT_URL || process.env.ROOT_URL || '',
     localIp: detectLocalIp(),
     port: process.env.PORT || '3000',
     // build context paths
