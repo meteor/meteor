@@ -4,7 +4,12 @@ const fs = require("fs-extra");
 const { checkMaestro } = require("./check-maestro");
 const { getAppConfig, DEFAULT_APP } = require("./app-config");
 const { prepareApp, cleanup: cleanupApp } = require("./build-app");
-const { resolveLanIp, startNativeRun, startServer } = require("./server");
+const {
+  resolveLanIp,
+  resolveNativeServerConfig,
+  startNativeRun,
+  startServer,
+} = require("./server");
 const { bootSimulator } = require("./simulator");
 const { runFlow } = require("./maestro");
 
@@ -188,12 +193,19 @@ async function run(argv) {
 
   try {
     const lanIp = resolveLanIp({ prefer: process.env.MAESTRO_IFACE });
+    const serverConfig = resolveNativeServerConfig({
+      platform: args.platform,
+      lanIp,
+    });
     console.log(`Using LAN IP ${lanIp}`);
+    console.log(`Using native bind URL ${serverConfig.bindUrl}`);
+    console.log(`Using native mobile server ${serverConfig.mobileServerUrl}`);
 
     const build = await prepareApp({
       appConfig,
       platform: args.platform,
       lanIp,
+      mobileServerUrl: serverConfig.mobileServerUrl,
       mode: args.mode,
     });
     cleanup.push(() => cleanupApp(build.workDir));
@@ -211,7 +223,9 @@ async function run(argv) {
       const nativeRun = await startNativeRun({
         appDir: build.appDir,
         platform: args.platform,
+        bindHost: serverConfig.bindHost,
         lanIp,
+        mobileServerUrl: serverConfig.mobileServerUrl,
         deviceId: sim.deviceId,
         capacitorMode: args.mode === "livereload" ? "livereload" : "bundled",
       });
@@ -220,7 +234,12 @@ async function run(argv) {
       await sim.waitForInstall();
       console.log(`Capacitor app ${appConfig.appId} installed on ${args.platform} device ${sim.deviceId}`);
     } else {
-      const server = await startServer({ appDir: build.appDir, lanIp });
+      const server = await startServer({
+        appDir: build.appDir,
+        bindHost: serverConfig.bindHost,
+        lanIp,
+        mobileServerUrl: serverConfig.mobileServerUrl,
+      });
       cleanup.push(() => server.stop());
       console.log(`Server up at ${server.url}`);
 

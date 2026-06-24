@@ -59,7 +59,7 @@ const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
  * defineConfig (in @meteorjs/capacitor) reads these to populate the
  * Meteor flag object handed to the user's capacitor.config.js factory.
  */
-export function getCapacitorEnv({ platform, mode } = {}) {
+export function getCapacitorEnv({ platform, mode, mobileServerUrl } = {}) {
   const isAndroid = isMeteorAppNativeAndroid();
   const isIos = isMeteorAppNativeIos();
   const isDev = isMeteorAppDevelopment();
@@ -79,6 +79,10 @@ export function getCapacitorEnv({ platform, mode } = {}) {
     METEOR_NATIVE_ANDROID: isAndroid ? 'true' : 'false',
     METEOR_NATIVE_IOS: isIos ? 'true' : 'false',
     NODE_ENV: isProd ? 'production' : (process.env.NODE_ENV || 'development'),
+    ...(mobileServerUrl ? {
+      MOBILE_ROOT_URL: mobileServerUrl,
+      MOBILE_DDP_URL: mobileServerUrl,
+    } : {}),
   };
 }
 

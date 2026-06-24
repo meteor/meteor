@@ -523,6 +523,16 @@ Tinytest.add('capacitor - env - platform override is explicit', test => {
   test.equal(env.METEOR_CAPACITOR_PLATFORM, 'android');
 });
 
+Tinytest.add('capacitor - env - includes mobile runtime urls when provided', test => {
+  const env = getCapacitorEnv({
+    platform: 'android',
+    mobileServerUrl: 'http://10.0.2.2:3000',
+  });
+
+  test.equal(env.MOBILE_ROOT_URL, 'http://10.0.2.2:3000');
+  test.equal(env.MOBILE_DDP_URL, 'http://10.0.2.2:3000');
+});
+
 Tinytest.addAsync('capacitor - run launch waits for readiness once', async test => {
   clearRunState();
 

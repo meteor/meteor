@@ -152,6 +152,7 @@ async function runCapacitorPlugin() {
                 cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
                 fatal: true,
                 hcpMode: context.state.hcpMode,
+                mobileServerUrl: getContextMobileServerUrl(context),
               });
             });
           },
@@ -176,6 +177,7 @@ async function runCapacitorPlugin() {
                   appDir: context.appDir,
                   platform: context.platform,
                   hcpMode: context.state.hcpMode,
+                  mobileServerUrl: getContextMobileServerUrl(context),
                 }),
                 extraArgs: ['--no-sync'],
               });
@@ -235,6 +237,13 @@ async function withProcessEnv(env, fn) {
       }
     });
   }
+}
+
+function getContextMobileServerUrl(context = {}) {
+  return context?.options?.mobileServerUrl ||
+    context?.options?.['mobile-server'] ||
+    process.env.MOBILE_ROOT_URL ||
+    null;
 }
 
 /**
@@ -298,6 +307,7 @@ async function transformAndSync({
   cordovaOutDir = null,
   fatal = false,
   hcpMode = getCapacitorHcpMode(),
+  mobileServerUrl = null,
 }) {
   const resolvedCordovaOutDir = cordovaOutDir ||
     path.join(appDir, CAPACITOR_CORDOVA_OUTPUT_DIR);
@@ -312,23 +322,25 @@ async function transformAndSync({
     );
   }
 
-  await withProcessEnv(getCapacitorEnv({ platform }), () =>
-    writeResolvedConfigSnapshot({ appDir })
-  );
+  const capacitorEnv = getCapacitorEnv({ platform, mobileServerUrl });
 
-  if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir, hcpMode }))) {
-    return handleTransformFailure('Capacitor build sync failed during web.cordova transform.', {
-      fatal,
-      log: false,
-    });
-  }
+  return withProcessEnv(capacitorEnv, async () => {
+    await writeResolvedConfigSnapshot({ appDir });
 
-  try {
-    await runCapSync({ appDir, platform });
-    return true;
-  } catch (err) {
-    return handleTransformFailure(`Capacitor sync failed: ${err.message}`, { fatal });
-  }
+    if (!(await runTransform({ appDir, cordovaOutDir: resolvedCordovaOutDir, hcpMode }))) {
+      return handleTransformFailure('Capacitor build sync failed during web.cordova transform.', {
+        fatal,
+        log: false,
+      });
+    }
+
+    try {
+      await runCapSync({ appDir, platform });
+      return true;
+    } catch (err) {
+      return handleTransformFailure(`Capacitor sync failed: ${err.message}`, { fatal });
+    }
+  });
 }
 
 function handleTransformFailure(message, { fatal = false, log = true } = {}) {

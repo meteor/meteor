@@ -459,7 +459,13 @@ async function syncCapacitorNativeProject({ appDir, mobileServerUrl, platform })
   });
 }
 
-async function prepareCordovaApp({ appConfig, platform, lanIp, port = 3000 }) {
+async function prepareCordovaApp({
+  appConfig,
+  platform,
+  lanIp,
+  mobileServerUrl = `http://${lanIp}:${port}`,
+  port = 3000,
+}) {
   if (platform !== "ios" && platform !== "android") {
     throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -468,8 +474,6 @@ async function prepareCordovaApp({ appConfig, platform, lanIp, port = 3000 }) {
   const workDir = path.join(os.tmpdir(), `native-${appConfig.name}-${platform}-${runId}`);
   const appDir = path.join(workDir, "app");
   const buildDir = path.join(workDir, "build-out");
-  const mobileServerUrl = `http://${lanIp}:${port}`;
-
   await copyAppSource(appConfig.sourceDir, appDir);
   await installAppDeps(appDir);
   await addPlatform(appDir, platform);
@@ -515,7 +519,13 @@ async function prepareCordovaApp({ appConfig, platform, lanIp, port = 3000 }) {
   };
 }
 
-async function prepareCapacitorRunApp({ appConfig, platform, lanIp, port = 3000 }) {
+async function prepareCapacitorRunApp({
+  appConfig,
+  platform,
+  lanIp,
+  mobileServerUrl = `http://${lanIp}:${port}`,
+  port = 3000,
+}) {
   if (platform !== "ios" && platform !== "android") {
     throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -523,8 +533,6 @@ async function prepareCapacitorRunApp({ appConfig, platform, lanIp, port = 3000 
   const runId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const workDir = path.join(os.tmpdir(), `native-${appConfig.name}-${platform}-${runId}`);
   const appDir = path.join(workDir, "app");
-  const mobileServerUrl = `http://${lanIp}:${port}`;
-
   await copyAppSource(appConfig.sourceDir, appDir);
   await installAppDeps(appDir);
   await linkLocalCapacitor(appDir);
@@ -599,7 +607,14 @@ function getCapacitorBuildHcpModeForNativeTestMode(mode) {
   return mode === "hcp" ? "webapp" : "none";
 }
 
-async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 3000, hcpMode = "none" }) {
+async function prepareCapacitorBuildApp({
+  appConfig,
+  platform,
+  lanIp,
+  mobileServerUrl = `http://${lanIp}:${port}`,
+  port = 3000,
+  hcpMode = "none",
+}) {
   if (platform !== "ios" && platform !== "android") {
     throw new Error(`Unsupported platform: ${platform}`);
   }
@@ -608,8 +623,6 @@ async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 300
   const workDir = path.join(os.tmpdir(), `native-${appConfig.name}-${platform}-build-${runId}`);
   const appDir = path.join(workDir, "app");
   const buildDir = path.join(workDir, "build-out");
-  const mobileServerUrl = `http://${lanIp}:${port}`;
-
   await copyAppSource(appConfig.sourceDir, appDir);
   await installAppDeps(appDir);
   await linkLocalCapacitor(appDir);
@@ -655,21 +668,41 @@ async function prepareCapacitorBuildApp({ appConfig, platform, lanIp, port = 300
   };
 }
 
-async function prepareApp({ appConfig, platform, lanIp, port = 3000, mode = "run" }) {
+async function prepareApp({
+  appConfig,
+  platform,
+  lanIp,
+  mobileServerUrl = `http://${lanIp}:${port}`,
+  port = 3000,
+  mode = "run",
+}) {
   if (appConfig.wrapper === "capacitor") {
     if (mode === "build" || mode === "hcp") {
       return prepareCapacitorBuildApp({
         appConfig,
         platform,
         lanIp,
+        mobileServerUrl,
         port,
         hcpMode: getCapacitorBuildHcpModeForNativeTestMode(mode),
       });
     }
-    return prepareCapacitorRunApp({ appConfig, platform, lanIp, port });
+    return prepareCapacitorRunApp({
+      appConfig,
+      platform,
+      lanIp,
+      mobileServerUrl,
+      port,
+    });
   }
   if (appConfig.wrapper === "cordova") {
-    return prepareCordovaApp({ appConfig, platform, lanIp, port });
+    return prepareCordovaApp({
+      appConfig,
+      platform,
+      lanIp,
+      mobileServerUrl,
+      port,
+    });
   }
   throw new Error(`Unsupported native app wrapper: ${appConfig.wrapper}`);
 }
