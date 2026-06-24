@@ -1,2 +1,0 @@
-// nothing to assert
-export {};
