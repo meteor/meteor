@@ -1,6 +1,6 @@
 {
   "name": "@meteorjs/capacitor",
-  "version": "0.2.0-alpha.0",
+  "version": "0.2.0-alpha.1",
   "description": "CapacitorJS integration and Meteor hot code push runtime for Meteor projects",
   "main": "index.js",
   "types": "index.d.ts",
