@@ -45,8 +45,18 @@ function detectLocalIp() {
 }
 
 function resolveRootUrl() {
+  if (process.env.MOBILE_ROOT_URL) return process.env.MOBILE_ROOT_URL;
   if (process.env.ROOT_URL) return process.env.ROOT_URL;
   return `http://${detectLocalIp()}:${getMeteorAppPort()}/`;
+}
+
+function resolveRootUrlPathPrefix(rootUrl) {
+  try {
+    const pathname = new URL(rootUrl).pathname || '';
+    return pathname.replace(/\/$/, '') || '';
+  } catch (_) {
+    return '';
+  }
 }
 
 function readMeteorAppIdentifier({ appDir = getMeteorAppDir(), env = process.env } = {}) {
@@ -139,11 +149,15 @@ async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir()
   }
 
   const rootUrl = resolveRootUrl();
+  const rootUrlPathPrefix = resolveRootUrlPathPrefix(rootUrl);
   let runtimeConfig = {
     meteorRelease: 'none',
     ROOT_URL: rootUrl,
-    ROOT_URL_PATH_PREFIX: '',
-    DDP_DEFAULT_CONNECTION_URL: process.env.DDP_DEFAULT_CONNECTION_URL || rootUrl,
+    ROOT_URL_PATH_PREFIX: rootUrlPathPrefix,
+    DDP_DEFAULT_CONNECTION_URL:
+      process.env.MOBILE_DDP_URL ||
+      process.env.DDP_DEFAULT_CONNECTION_URL ||
+      rootUrl,
     autoupdate: {
       versions: {
         [CORDOVA_ARCH]: {

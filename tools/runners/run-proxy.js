@@ -1,6 +1,19 @@
 var Anser = require("anser");
 var runLog = require('./run-log.js');
 
+function requireHttpProxy() {
+  var util = require('util');
+  var originalExtend = util._extend;
+  // http-proxy 1.18 captures util._extend at require-time; keep the vendored
+  // dependency quiet on modern Node without suppressing other warnings.
+  util._extend = Object.assign;
+  try {
+    return require('http-proxy');
+  } finally {
+    util._extend = originalExtend;
+  }
+}
+
 // options: listenPort, proxyToPort, proxyToHost,
 // onFailure, ignoredUrls
 var Proxy = function (options) {
@@ -37,7 +50,7 @@ Object.assign(Proxy.prototype, {
 
     var http = require('http');
     var net = require('net');
-    var httpProxy = require('http-proxy');
+    var httpProxy = requireHttpProxy();
 
     self.proxy = httpProxy.createProxyServer({
       // agent is required to handle keep-alive, and http-proxy 1.0 is a little
@@ -189,6 +202,11 @@ Object.assign(Proxy.prototype, {
   _tryHandleConnections: function () {
     var self = this;
 
+    function updateProxyTarget() {
+      self.proxy.options.target =
+        'http://' + self.proxyToHost + ':' + self.proxyToPort;
+    }
+
     function attempt(resOrSocket, fn) {
       try {
         return fn();
@@ -211,9 +229,8 @@ Object.assign(Proxy.prototype, {
       if (self.mode === "errorpage") {
         showErrorPage(c.res);
       } else {
-        attempt(c.res, () => self.proxy.web(c.req, c.res, {
-          target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
-        }));
+        updateProxyTarget();
+        attempt(c.res, () => self.proxy.web(c.req, c.res));
       }
     }
 
@@ -223,9 +240,8 @@ Object.assign(Proxy.prototype, {
       }
 
       var c = self.websocketQueue.shift();
-      attempt(c.socket, () => self.proxy.ws(c.req, c.socket, c.head, {
-        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
-      }));
+      updateProxyTarget();
+      attempt(c.socket, () => self.proxy.ws(c.req, c.socket, c.head));
     }
   },
 

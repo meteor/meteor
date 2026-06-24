@@ -59,6 +59,40 @@ function dependencyByName(name, platforms) {
   return getCapacitorDependenciesForPlatforms(platforms).find(dep => dep.name === name);
 }
 
+function withEnv(overrides, fn) {
+  const previous = {};
+  Object.keys(overrides).forEach(key => {
+    previous[key] = process.env[key];
+    const value = overrides[key];
+    if (value === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = value;
+    }
+  });
+
+  try {
+    return fn();
+  } finally {
+    Object.keys(overrides).forEach(key => {
+      if (previous[key] === undefined) {
+        delete process.env[key];
+      } else {
+        process.env[key] = previous[key];
+      }
+    });
+  }
+}
+
+function readRuntimeConfigFromHtml(html) {
+  const match = html.match(/__meteor_runtime_config__ = JSON\.parse\(decodeURIComponent\((.+?)\)\);/);
+  if (!match) {
+    throw new Error('Could not find __meteor_runtime_config__ in generated index.html');
+  }
+
+  return JSON.parse(decodeURIComponent(JSON.parse(match[1])));
+}
+
 Tinytest.add('capacitor - dependencies - default includes both native platforms', test => {
   const dependencies = dependencyNamesForPlatforms();
 
@@ -434,6 +468,48 @@ Tinytest.addAsync('capacitor - transform - fails when web.cordova program.json i
 
     test.isFalse(ok);
     test.equal(fs.readFileSync(staleIndexPath, 'utf8'), 'stale capacitor output');
+  } finally {
+    fs.rmSync(tempDir, { recursive: true, force: true });
+  }
+});
+
+Tinytest.addAsync('capacitor - transform - prefers mobile runtime URLs like Cordova', async test => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-cap-mobile-root-url-'));
+  try {
+    const sourceDir = path.join(tempDir, 'bundle', 'programs', 'web.cordova');
+    const webDir = '_build/native-prod';
+
+    fs.mkdirSync(sourceDir, { recursive: true });
+    fs.writeFileSync(path.join(sourceDir, 'program.json'), JSON.stringify({
+      format: 'web-program-pre1',
+      manifest: [],
+    }), 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'body.html'), '<body></body>', 'utf8');
+    fs.writeFileSync(path.join(sourceDir, 'head.html'), '<head></head>', 'utf8');
+
+    await withEnv({
+      ROOT_URL: 'http://wrong-host:3000/',
+      MOBILE_ROOT_URL: 'https://mobile.example.com/app/',
+      DDP_DEFAULT_CONNECTION_URL: undefined,
+      MOBILE_DDP_URL: 'ddp://mobile-ddp.example.com/app',
+      PORT: '3000',
+    }, async () => {
+      const ok = await runCapacitorTransforms({
+        appDir: tempDir,
+        webDir,
+        cordovaOutDir: sourceDir,
+        hcpMode: 'webapp',
+      });
+
+      test.isTrue(ok);
+    });
+
+    const html = fs.readFileSync(path.join(tempDir, webDir, 'index.html'), 'utf8');
+    const runtimeConfig = readRuntimeConfigFromHtml(html);
+
+    test.equal(runtimeConfig.ROOT_URL, 'https://mobile.example.com/app/');
+    test.equal(runtimeConfig.ROOT_URL_PATH_PREFIX, '/app');
+    test.equal(runtimeConfig.DDP_DEFAULT_CONNECTION_URL, 'ddp://mobile-ddp.example.com/app');
   } finally {
     fs.rmSync(tempDir, { recursive: true, force: true });
   }
