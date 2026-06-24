@@ -162,6 +162,16 @@ In bundled mode, the native app starts from local web assets. Meteor's Hot Code 
 
 This matches the production shape more closely than direct server loading: the WebView loads local files first, then updates through Meteor's reload flow.
 
+Bundled mode still needs a reachable Meteor server for Hot Code Push. If the native app cannot reach that server, the app still launches from bundled assets, but it will not download updates.
+
+On Android emulator, that usually means passing `--mobile-server 10.0.2.2:3000`:
+
+``` bash
+meteor run android --mobile-server 10.0.2.2:3000
+```
+
+`10.0.2.2` is Android emulator's special alias for the host machine. Meteor cannot infer that alias from your host network interfaces, so explicit `--mobile-server` is expected for this case.
+
 ### Livereload mode
 
 Use livereload mode when you want the native WebView to load directly from the running Meteor server:
@@ -183,11 +193,13 @@ For physical devices, use an address reachable from the same network, such as yo
 
 ### Connection URL detection
 
-Most apps do not need to set the LAN IP manually. In livereload mode, `@meteorjs/capacitor` uses the URL Meteor provides for the native run. Passing `--mobile-server` is the supported way to make that URL explicit when a device needs a specific reachable host.
+Most apps do not need to set the LAN IP manually. In native runs, `@meteorjs/capacitor` uses the URL Meteor provides for the native run. Passing `--mobile-server` is the supported way to make that URL explicit when a device needs a specific reachable host.
 
-When no explicit URL is available, the helper can fall back to a local network address and the current app port. Autodetection can choose the wrong interface when your machine has multiple network adapters, VPNs, Docker networks, or isolated emulator networking. In those cases, pass a reachable URL with `--mobile-server`:
+When no explicit URL is available, the helper can fall back to a local network address and the current app port. Autodetection can choose the wrong interface when your machine has multiple network adapters, VPNs, Docker networks, or isolated emulator networking. Android emulator is separate special case: its reachable host alias is `10.0.2.2`, not your machine's detected LAN IP. In those cases, pass a reachable URL with `--mobile-server`:
 
 ``` bash
+meteor run android --mobile-server 10.0.2.2:3000
+METEOR_CAPACITOR_MODE=livereload meteor run android --mobile-server 10.0.2.2:3000
 METEOR_CAPACITOR_MODE=livereload meteor run android --mobile-server 192.168.1.4:3000
 ```
 
