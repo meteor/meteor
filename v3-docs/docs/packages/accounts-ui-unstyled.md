@@ -30,6 +30,7 @@ Configure the behavior of the <span v-pre>`{{> loginButtons}}`</span> widget. Ba
 - **`requestPermissions`** **Object** — maps an external service to the [permissions](../api/accounts.md#requestpermissions) to request from the user for that service.
 - **`requestOfflineToken`** **Object** — maps an external service to `true` to ask for permission to act on the user's behalf when offline. Currently only supported with Google.
 - **`forceApprovalPrompt`** **Object** — maps an external service to `true` to force the user to approve the app's permissions even if previously approved. Currently only supported with Google.
+- **`passwordlessSignupFields`** **String** — which fields to display in the passwordless user-creation form. One of `'USERNAME_AND_EMAIL'` or `'EMAIL_ONLY'`.
 
 ```js
 import { Accounts } from 'meteor/accounts-base';
@@ -44,6 +45,8 @@ Accounts.ui.config({
 
 Passing an unknown option throws an error (`Accounts.ui.config: Invalid option: ...`).
 
+You can also provide these same options through `Meteor.settings.public.packages['accounts-ui-unstyled']` instead of calling `Accounts.ui.config`.
+
 ## Styling the widgets
 
 Because this package ships no CSS, you add your own. The `{{> loginButtons}}` widget renders a predictable DOM structure with stable ids and classes you can target. The main hooks (from `login_buttons*.html`) are:
@@ -57,6 +60,14 @@ Because this package ships no CSS, you add your own. The `{{> loginButtons}}` wi
 - `.login-display-name` — the logged-in user's name.
 - `.message.error-message` and `.message.info-message` — status/error messages.
 - `.no-services` — shown when no login service is configured.
+
+When password or multiple OAuth services are configured, the widget renders in **dropdown** mode and also shows sign-in/sign-up **forms**. Additional hooks for those:
+
+- `#login-dropdown-list` (with class `.accounts-dialog`) — the dropdown panel; `#login-sign-in-link` and `#login-name-link` (class `.login-link-text`) toggle it.
+- `.login-form.login-password-form` and `.login-form.login-passwordless-form` — the sign-in/sign-up forms.
+- `#login-email`, `#login-password`, `#login-username` — the form inputs.
+- `#signup-link`, `#forgot-password-link`, `#back-to-login-link` — the navigation links inside the form.
+- `.accounts-dialog` — shared class for the dropdown and the configuration/message dialogs.
 
 Add a stylesheet to your app that targets these, for example:
 
