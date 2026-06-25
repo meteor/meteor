@@ -14,7 +14,7 @@ Adding the package automatically implies [`accounts-base`](../api/accounts.md) a
 
 Before users can log in, you must register an application with Facebook and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
 
-If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. When you use `accounts-ui` together with `accounts-facebook`, the package will print a console notice suggesting you also add the matching configuration UI:
+If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
 
 ```bash
 meteor add facebook-config-ui
@@ -52,6 +52,18 @@ Meteor.loginWithFacebook({
 ```
 
 The user's `accessToken` is stored in the `services.facebook` field of their user document, so it can be used later to call the Facebook API on their behalf. The set of supported permission values is defined by Facebook; see [Facebook's permissions reference](https://developers.facebook.com/docs/permissions/reference). For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E).
+
+## Setting up the Facebook app
+
+1. Go to [developers.facebook.com](https://developers.facebook.com/) and create an app with **Facebook Login**.
+2. Copy the **App ID** and **App Secret** — these are the `appId` and `secret` you configure below.
+3. Add your app's OAuth redirect URI to **Valid OAuth Redirect URIs**. Meteor handles the callback at:
+
+   ```
+   <your-root-url>/_oauth/facebook
+   ```
+
+   e.g. `http://localhost:3000/_oauth/facebook` in development and `https://yourapp.com/_oauth/facebook` in production. A mismatch here is the most common cause of login failures.
 
 ## A complete example
 
@@ -108,6 +120,10 @@ const user = Meteor.user(); // reactive on the client
 ```js
 Meteor.logout();
 ```
+
+## What's stored on the user
+
+After login, Facebook profile data is stored under `services.facebook`. The fields actually requested by `facebook-oauth` are: `id`, `email`, `name`, `first_name`, `last_name`, `middle_name`, `name_format`, `picture`, and `short_name`, plus `accessToken` and `expiresAt`. The user's `profile.name` is also set from the Facebook name on account creation. The Graph API version can be set via the `facebook-oauth` package settings (`Meteor.settings.public.packages['facebook-oauth'].apiVersion`).
 
 ## Server behavior
 
