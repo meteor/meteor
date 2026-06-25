@@ -43,6 +43,59 @@ Calling this function starts the OAuth flow with Meteor's developer accounts ser
 
 For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E).
 
+## A complete example
+
+**1. Configure the OAuth credentials** on the server (for example in `server/main.js`). Meteor Developer Accounts use `clientId`/`secret`:
+
+```js
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'meteor-developer' },
+  {
+    $set: {
+      loginStyle: 'popup', // or 'redirect' (use 'redirect' for mobile/Cordova)
+      clientId: 'YOUR_CLIENT_ID',
+      secret: 'YOUR_CLIENT_SECRET',
+    },
+  },
+);
+```
+
+See [OAuth Services Configuration](./service-configuration.md) for the `settings.json` alternative and where to obtain these credentials.
+
+**2. Trigger the login.** With Blaze you can drop in the ready-made widget from [`accounts-ui`](./accounts-ui.md):
+
+```handlebars
+{{> loginButtons}}
+```
+
+Or call the login function directly from your own button — this works with React, Vue, Svelte, plain JS, etc.:
+
+```js
+function signIn() {
+  Meteor.loginWithMeteorDeveloperAccount((error) => {
+    if (error) {
+      // The user closing the popup rejects with Accounts.LoginCancelledError.
+      console.error(error);
+    }
+  });
+}
+```
+
+**3. Read the signed-in user.** After a successful login the profile and token live under `services.meteor-developer`:
+
+```js
+const user = Meteor.user(); // reactive on the client
+// user.services['meteor-developer'].id, .username, .accessToken, ...
+```
+
+**4. Log out:**
+
+```js
+Meteor.logout();
+```
+
 ## Server behavior
 
 On the server, `accounts-meteor-developer` registers the `meteor-developer` OAuth service and, when the `autopublish` package is enabled, publishes the following fields of the service data:
