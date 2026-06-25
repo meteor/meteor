@@ -390,6 +390,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "mobile-experience",
+                link: "/packages/mobile-experience",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
