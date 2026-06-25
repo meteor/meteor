@@ -70,6 +70,62 @@ These option-to-parameter mappings are implemented in `google-oauth`'s client. S
 
 If you call `Accounts.config({ restrictCreationByEmailDomain: 'example.com' })` with a string domain, `accounts-google` automatically adds Google's `hd` login URL parameter so Google's account chooser is scoped to that hosted domain. Note that this only changes Google's UI — `accounts-base` still verifies the user's email address on the server.
 
+## A complete example
+
+**1. Configure the OAuth credentials** on the server (for example in `server/main.js`). Google uses `clientId`/`secret`:
+
+```js
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'google' },
+  {
+    $set: {
+      loginStyle: 'popup', // or 'redirect' (use 'redirect' for mobile/Cordova)
+      clientId: 'YOUR_CLIENT_ID',
+      secret: 'YOUR_CLIENT_SECRET',
+    },
+  },
+);
+```
+
+See [OAuth Services Configuration](./service-configuration.md) for the `settings.json` alternative and where to obtain these credentials.
+
+**2. Trigger the login.** With Blaze you can drop in the ready-made widget from [`accounts-ui`](./accounts-ui.md):
+
+```handlebars
+{{> loginButtons}}
+```
+
+Or call the login function directly from your own button — this works with React, Vue, Svelte, plain JS, etc.:
+
+```js
+function signIn() {
+  Meteor.loginWithGoogle(
+    { requestPermissions: ['profile', 'email'] },
+    (error) => {
+      if (error) {
+        // The user closing the popup rejects with Accounts.LoginCancelledError.
+        console.error(error);
+      }
+    },
+  );
+}
+```
+
+**3. Read the signed-in user.** After a successful login the profile and token live under `services.google`:
+
+```js
+const user = Meteor.user(); // reactive on the client
+// user.services.google.id, user.services.google.accessToken, ...
+```
+
+**4. Log out:**
+
+```js
+Meteor.logout();
+```
+
 ## Server behavior
 
 On the server, `accounts-google` registers the `google` OAuth service and, when the `autopublish` package is enabled, publishes the following fields of the Google service data:
