@@ -29,6 +29,30 @@ After removing `insecure`, client-side writes to a collection are denied unless 
 - define `allow`/`deny` rules on the collection, or
 - perform the writes inside [Meteor Methods](../api/meteor.md#methods) on the server.
 
+### Example: replacing insecure with a Method
+
+The recommended approach in modern Meteor is to keep all writes in [Methods](../api/meteor.md#methods) rather than allowing client-side database calls:
+
+```js
+// server (define on the client too if you want latency compensation)
+import { check } from 'meteor/check';
+
+Meteor.methods({
+  async 'tasks.insert'(text) {
+    check(text, String);
+    if (!this.userId) throw new Meteor.Error('not-authorized');
+    await Tasks.insertAsync({ text, owner: this.userId, createdAt: new Date() });
+  },
+});
+```
+
+```js
+// client
+await Meteor.callAsync('tasks.insert', 'Buy milk');
+```
+
+Keeping `insecure` in a production app is a security risk, because any client could insert, update, or remove arbitrary documents.
+
 ## See also
 
 - `autopublish` — the read-side counterpart for prototyping (publishes all collections to all clients).
