@@ -8,6 +8,10 @@ meteor add autopublish
 
 As of Meteor 3.x, `autopublish` is **not** included in new projects by default; add it explicitly when prototyping.
 
+## Usage
+
+**Adding the package is all you need to do — there is nothing to configure.** `autopublish` exposes no JavaScript API and reads no settings; its mere presence makes the server publish every collection to all connected clients, so you don't write any `Meteor.publish` calls while it is installed. To turn the behavior off, you remove the package (see [Removing it](#removing-it)).
+
 ## How it works
 
 The `autopublish` package contains no code of its own. Its presence is detected by other core packages (such as `ddp-server` and `mongo`), which check for `Package.autopublish` and, when it is present, automatically publish every collection to all clients. This is why simply adding the package is enough — there is no API to call.
