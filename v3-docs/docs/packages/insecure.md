@@ -53,6 +53,8 @@ await Meteor.callAsync('tasks.insert', 'Buy milk');
 
 Keeping `insecure` in a production app is a security risk, because any client could insert, update, or remove arbitrary documents.
 
+> **Important:** `insecure` works **per collection** and only on collections that have **no** `allow`/`deny` rules. Calling `allow()` or `deny()` even once on a collection makes it "restricted" and `insecure` is ignored for that collection — which is exactly how you migrate off it one collection at a time. Also note that `meteor remove insecure` flips every rule-less collection to deny-all at once, so all client writes that relied on it stop working until you've added Methods (or rules) for them.
+
 ## See also
 
 - `autopublish` — the read-side counterpart for prototyping (publishes all collections to all clients).
