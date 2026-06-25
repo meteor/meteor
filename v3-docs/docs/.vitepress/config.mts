@@ -316,6 +316,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
                 text: "roles",
                 link: "/packages/roles",
               },

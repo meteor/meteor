@@ -1,0 +1,57 @@
+# accounts-meteor-developer
+
+The `accounts-meteor-developer` package is the login service that lets users of your app sign in with their [Meteor Developer Account](https://www.meteor.com), using OAuth. It builds on top of [`accounts-base`](../api/accounts.md) and the `meteor-developer-oauth` package, registering the service and exposing a client-side `Meteor.loginWithMeteorDeveloperAccount` helper.
+
+Add it to your project with:
+
+```bash
+meteor add accounts-meteor-developer
+```
+
+Adding the package automatically implies [`accounts-base`](../api/accounts.md) and `meteor-developer-oauth`, so the `Accounts` API and the underlying `MeteorDeveloperAccounts` OAuth helpers become available as well.
+
+## Configuring the service
+
+Before users can log in, you must register an application with Meteor and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
+
+If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. When you use `accounts-ui` together with `accounts-meteor-developer`, the package will print a console notice suggesting you also add the matching configuration UI:
+
+```bash
+meteor add meteor-developer-config-ui
+```
+
+## Logging in
+
+On the client, the package adds the `Meteor.loginWithMeteorDeveloperAccount` function.
+
+```js
+Meteor.loginWithMeteorDeveloperAccount((error) => {
+  if (error) {
+    // handle the login failure
+  } else {
+    // successful login
+  }
+});
+```
+
+### `Meteor.loginWithMeteorDeveloperAccount([options], [callback])`
+
+- `options` **Object** _(optional)_ — options passed through to the underlying OAuth request.
+- `callback` **Function** _(optional)_ — called with a single `error` argument on failure, or with no arguments on success. A callback may be passed as the first argument when no `options` are needed.
+
+Calling this function starts the OAuth flow with Meteor's developer accounts service. Depending on the configured `loginStyle` (`"popup"` or `"redirect"`, set in the service configuration), it either opens a pop-up window or redirects the page to the authorization page. Once the user authorizes the app, the Meteor client logs in to the server with the returned credentials.
+
+For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E).
+
+## Server behavior
+
+On the server, `accounts-meteor-developer` registers the `meteor-developer` OAuth service and, when the `autopublish` package is enabled, publishes the following fields of the service data:
+
+- For the logged-in user: the entire `services.meteor-developer` object (including the access token, which can legitimately be used from the client over HTTPS or on localhost).
+- For other users: `services.meteor-developer.username`, `services.meteor-developer.profile`, and `services.meteor-developer.id`.
+
+## See also
+
+- [Accounts API](../api/accounts.md) — the core `Accounts` and `Meteor.loginWith<ExternalService>` APIs.
+- [OAuth Services Configuration](./service-configuration.md) — configuring OAuth credentials.
+- [accounts-ui](./accounts-ui.md) — drop-in login UI with a configuration wizard.
