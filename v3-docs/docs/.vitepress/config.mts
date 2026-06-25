@@ -390,6 +390,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "force-ssl",
+                link: "/packages/force-ssl",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
