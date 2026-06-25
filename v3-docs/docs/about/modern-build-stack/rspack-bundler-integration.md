@@ -119,16 +119,12 @@ With this flag off, Meteor still detects when a required dependency is missing o
 
 ``` bash
 => ⚠️  Rspack: npm dependencies need attention
-
    This version of Meteor requires the following minimum versions to avoid
    incompatibilities at build or runtime:
-
    • @rspack/core           1.7.1  (not installed)
    • @meteorjs/rspack       2.0.1  (currently 2.0.0)
-
    Automatic install is disabled (`meteor.autoInstallDeps=false`).
    To bring your project in line, run:
-
        meteor npm install --save-dev @rspack/core@1.7.1 @meteorjs/rspack@2.0.1
 ```
 
