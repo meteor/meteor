@@ -316,6 +316,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
                 text: "roles",
                 link: "/packages/roles",
               },
