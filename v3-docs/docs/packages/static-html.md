@@ -38,6 +38,8 @@ Your view framework can then render into the `#root` element.
 
 The usual reason to use `static-html` is to provide a mount point for a client-side framework. Define an empty root element in a `.html` file (as in the example above), then render into it from your JavaScript/JSX:
 
+First install your framework (`meteor npm install react react-dom`). Meteor auto-loads `client/main.jsx` (and other eager files outside `imports/`) as the client entry point.
+
 ```jsx
 // client/main.jsx (React example)
 import React from 'react';
