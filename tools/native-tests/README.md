@@ -86,6 +86,8 @@ node scripts/run.js --platform=android --keep-running
 - `window.Capacitor available`
 - `Meteor.isCapacitor true`
 - `Capacitor native platform ready`
+- `Device plugin ready: native`
+- `App plugin ready: com.meteor.capacitortests`
 - `WebAppLocalServer shim ready`
 - `WebAppLocalServer native bridge ready` or `WebAppLocalServer livereload shim ready`
 - `HCP check requested`

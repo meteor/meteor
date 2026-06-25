@@ -1,3 +1,5 @@
+import { App as CapacitorApp } from "@capacitor/app";
+import { Device } from "@capacitor/device";
 import { Meteor } from "meteor/meteor";
 import { Tracker } from "meteor/tracker";
 
@@ -12,6 +14,24 @@ const HCP_TRACE_KEY = "meteor-capacitor-native-test-hcp-trace";
 function setStatus(id, text) {
   const node = document.getElementById(id);
   if (node) node.textContent = text;
+}
+
+function getErrorMessage(error) {
+  return error?.message || String(error);
+}
+
+function withPluginTimeout(promise, label, timeoutMs = 15000) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = window.setTimeout(
+      () => reject(new Error(`${label} timed out`)),
+      timeoutMs
+    );
+  });
+
+  return Promise.race([promise, timeout]).finally(() => {
+    window.clearTimeout(timeoutId);
+  });
 }
 
 function readHcpTrace() {
@@ -135,6 +155,41 @@ function checkCapacitorNativePlatform() {
   }
 }
 
+async function checkDevicePlugin() {
+  try {
+    const info = await withPluginTimeout(Device.getInfo(), "Device.getInfo");
+    if (info?.platform === "android" || info?.platform === "ios") {
+      setStatus("device-plugin-status", "Device plugin ready: native");
+      setStatus("device-plugin-platform-status", `Device plugin platform: ${info.platform}`);
+    } else {
+      setStatus(
+        "device-plugin-status",
+        `Device plugin unexpected platform: ${info?.platform || "unknown"}`
+      );
+    }
+  } catch (error) {
+    setStatus("device-plugin-status", `Device plugin error: ${getErrorMessage(error)}`);
+  }
+}
+
+async function checkAppPlugin() {
+  try {
+    const info = await withPluginTimeout(CapacitorApp.getInfo(), "App.getInfo");
+    if (info?.id === "com.meteor.capacitortests") {
+      setStatus("app-plugin-status", "App plugin ready: com.meteor.capacitortests");
+    } else {
+      setStatus("app-plugin-status", `App plugin unexpected id: ${info?.id || "unknown"}`);
+    }
+  } catch (error) {
+    setStatus("app-plugin-status", `App plugin error: ${getErrorMessage(error)}`);
+  }
+}
+
+function checkCapacitorPlugins() {
+  checkDevicePlugin();
+  checkAppPlugin();
+}
+
 function checkWebAppLocalServerShim() {
   const shim = window.WebAppLocalServer;
   if (
@@ -207,6 +262,7 @@ Meteor.startup(() => {
   checkWindowCapacitor();
   checkMeteorIsCapacitor();
   checkCapacitorNativePlatform();
+  checkCapacitorPlugins();
   checkWebAppLocalServerShim();
   checkHcpTrace();
   checkCordovaPaths();

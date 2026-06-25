@@ -13,6 +13,12 @@ appId: com.meteor.capacitortests
 - assertVisible: "window.Capacitor available"
 - assertVisible: "Meteor.isCapacitor true"
 - assertVisible: "Capacitor native platform ready"
+- extendedWaitUntil:
+    visible: "Device plugin ready: native"
+    timeout: 60000
+- extendedWaitUntil:
+    visible: "App plugin ready: com.meteor.capacitortests"
+    timeout: 60000
 - assertVisible: "WebAppLocalServer shim ready"
 - assertVisible: "WebAppLocalServer native bridge ready"
 - assertVisible: "__cordova paths served"
