@@ -336,9 +336,9 @@ describe('Capacitor App Web Lifecycle /', () => {
   });
 
   test('"meteor add-platform android" installs deps and creates native context', async () => {
-    expectOutputContains(addPlatformOutput, /Capacitor Dependencies/);
-    expectOutputContains(addPlatformOutput, /Installed Capacitor dependencies/);
-    expectOutputContains(addPlatformOutput, /Capacitor add android|android: added platform/);
+    expectOutputContains(addPlatformOutput, /Capacitor: installing .* npm package/);
+    expectOutputContains(addPlatformOutput, /Capacitor: installed npm packages/);
+    expectOutputContains(addPlatformOutput, /Capacitor: added android platform|android: added platform/);
 
     const packageJson = await readJson(tempDir, 'package.json');
     expect(packageJson.dependencies).toHaveProperty('@capacitor/core');
@@ -365,9 +365,9 @@ describe('Capacitor App Web Lifecycle /', () => {
       env: e2eEnv(),
     });
 
-    expectOutputContains(result.outputLines, /Capacitor Dependencies/);
-    expectOutputContains(result.outputLines, /Installed Capacitor dependencies/);
-    expectOutputContains(result.outputLines, /Capacitor add ios|ios: added platform/);
+    expectOutputContains(result.outputLines, /Capacitor: installing .* npm package/);
+    expectOutputContains(result.outputLines, /Capacitor: installed npm packages/);
+    expectOutputContains(result.outputLines, /Capacitor: added ios platform|ios: added platform/);
 
     const packageJson = await readJson(tempDir, 'package.json');
     expect(packageJson.dependencies).toHaveProperty('@capacitor/core');
@@ -726,8 +726,8 @@ describe('Capacitor App Web Lifecycle /', () => {
     meteorProcess = result.meteorProcess;
 
     await assertNativeReactApp(PORT);
-    expectOutputNotContains(result.outputLines, /Capacitor Dependencies/);
-    expectOutputNotContains(result.outputLines, /Installed Capacitor dependencies/);
+    expectOutputNotContains(result.outputLines, /Capacitor: installing .* npm package/);
+    expectOutputNotContains(result.outputLines, /Capacitor: installed npm packages/);
     await assertFileExist(tempDir, '_build/native-dev/capacitor.config.json');
   });
 });

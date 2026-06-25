@@ -144,11 +144,26 @@ METEOR_CAPACITOR_MODE=livereload meteor run android --mobile-server 10.0.2.2:300
 
 If no explicit URL is available, the helper falls back to `Meteor.localIp` and `Meteor.port`. On machines with multiple interfaces, VPNs, or container networks, `--mobile-server` is the supported way to force the correct address.
 
+Set `METEOR_CAPACITOR_MODE=livereload` when you want Meteor to launch the native app against the running development server.
+
+## Native plugins
+
+Install Capacitor plugins with npm and import them from app code. Meteor runs `cap sync` during native `run`, `build`, and first platform setup, so plugin native project changes are applied through the normal Meteor flow.
+
+```bash
+meteor npm install @capacitor/device
+meteor run android
+```
+
+```js
+import { Device } from '@capacitor/device';
+
+const info = await Device.getInfo();
+```
+
 ## Hot Code Push
 
 Meteor's built-in Hot Code Push is enabled by default in bundled mode:
-
-License note: the native Hot Code Push runtime is MIT licensed and includes code derived from `banjerluke/capacitor-meteor-webapp`; see `NOTICE` and `LICENSES/banjerluke-capacitor-meteor-webapp.txt`.
 
 ```json
 {
@@ -224,3 +239,9 @@ In a plain web environment, the package provides a safe fallback implementation 
 - `BLACKLISTED_VERSION`
 - `STARTUP_TIMEOUT`
 - `FILE_SYSTEM_ERROR`
+
+## License
+
+The native Hot Code Push runtime is MIT licensed and includes code derived from [`banjerluke/capacitor-meteor-webapp`](https://github.com/banjerluke/capacitor-meteor-webapp); see `NOTICE` and `LICENSES/banjerluke-capacitor-meteor-webapp.txt`.
+
+Meteor relies on community projects like this to explore, prove, and refine ideas before they become part of core.

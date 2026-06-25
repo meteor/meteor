@@ -17,12 +17,17 @@ import {
 } from './lib/dependencies.js';
 import {
   getCapacitorEnv,
+  getCapacitorRunMode,
   scheduleCapRunAfterMeteorReady,
   _getCapCommand,
   _ensureCapacitorWebDirIndex,
   _getCapRunArgsFromEnv,
   _mergeExtraArgsWithEnv,
 } from './lib/processes.js';
+import {
+  formatCapacitorConfigError,
+  validateResolvedCapacitorConfig,
+} from './lib/build-context.js';
 import {
   getCapacitorHcpMode,
   isHcpEnabled,
@@ -302,8 +307,9 @@ Tinytest.add('capacitor - server runtime - cordova stub is direct server only', 
     METEOR_CAPACITOR_MODE: 'livereload',
   });
 
-  test.matches(stub, /document\.dispatchEvent\(new Event\("deviceready"\)\)/);
+  test.matches(stub, /deviceready/);
   test.matches(stub, /window\.cordova = window\.cordova \|\| \{\}/);
+  test.matches(stub, /\$RefreshSig\$/);
 });
 
 Tinytest.add('capacitor - cli - prefers the app-local cap binary', test => {
@@ -372,6 +378,10 @@ Tinytest.add('capacitor - transform - preserves app directory asset paths', test
     test.isTrue(ok);
     test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'app', 'global-imports.js')));
     test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'app', 'app.js')));
+    test.matches(
+      fs.readFileSync(path.join(tempDir, '_build', 'native-dev', 'cordova.js'), 'utf8'),
+      /deviceready/
+    );
     test.isTrue(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'packages', 'meteor.js')));
     test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'program.json')));
     test.isFalse(fs.existsSync(path.join(tempDir, '_build', 'native-dev', 'body.html')));
@@ -401,6 +411,7 @@ Tinytest.add('capacitor - HCP webapp mode injects native WebAppLocalServer bridg
     hcpMode: 'webapp',
   });
 
+  test.matches(out, /deviceready/);
   test.notMatches(out, /var WebAppLocalServer/);
   test.matches(out, /window\.WebAppLocalServer/);
   test.matches(out, /CapacitorMeteorWebApp/);
@@ -412,7 +423,9 @@ Tinytest.add('capacitor - HCP none mode keeps build-time WebAppLocalServer shim'
     hcpMode: 'none',
   });
 
+  test.matches(out, /deviceready/);
   test.matches(out, /var WebAppLocalServer/);
+  test.notMatches(out, /emitNewVersionReady/);
 });
 
 Tinytest.add('capacitor - web program helper strips configured asset URL prefix', test => {
@@ -591,6 +604,29 @@ Tinytest.add('capacitor - env - platform override is explicit', test => {
   test.equal(env.METEOR_CAPACITOR_PLATFORM, 'android');
 });
 
+Tinytest.add('capacitor - env - run mode accepts METEOR_CAPACITOR_MODE over legacy fallback', test => {
+  withEnv({
+    METEOR_CAPACITOR_MODE: 'livereload',
+    METEOR_NATIVE_MODE: 'bundled',
+  }, () => {
+    const mode = getCapacitorRunMode();
+    const env = getCapacitorEnv({ platform: 'ios', mode });
+
+    test.equal(mode, 'livereload');
+    test.equal(env.METEOR_CAPACITOR_MODE, 'livereload');
+    test.equal(env.METEOR_NATIVE_MODE, 'livereload');
+  });
+});
+
+Tinytest.add('capacitor - env - run mode rejects invalid values', test => {
+  withEnv({
+    METEOR_CAPACITOR_MODE: 'invalid',
+    METEOR_NATIVE_MODE: undefined,
+  }, () => {
+    test.throws(() => getCapacitorRunMode(), /Invalid Capacitor run mode "invalid" from METEOR_CAPACITOR_MODE/);
+  });
+});
+
 Tinytest.add('capacitor - env - includes mobile runtime urls when provided', test => {
   const env = getCapacitorEnv({
     platform: 'android',
@@ -599,6 +635,30 @@ Tinytest.add('capacitor - env - includes mobile runtime urls when provided', tes
 
   test.equal(env.MOBILE_ROOT_URL, 'http://10.0.2.2:3000');
   test.equal(env.MOBILE_DDP_URL, 'http://10.0.2.2:3000');
+});
+
+Tinytest.add('capacitor - config - formats evaluation failures with next step', test => {
+  const message = formatCapacitorConfigError({
+    appDir: '/tmp/app',
+    configPath: '/tmp/app/capacitor.config.js',
+    error: new Error('Unexpected token'),
+  });
+
+  test.matches(message, /Capacitor config error in capacitor\.config\.js/);
+  test.matches(message, /Unexpected token/);
+  test.matches(message, /defineConfig\(Meteor =>/);
+});
+
+Tinytest.add('capacitor - config - rejects non-object exports', test => {
+  test.throws(() => validateResolvedCapacitorConfig(null, {
+    appDir: '/tmp/app',
+    configPath: '/tmp/app/capacitor.config.js',
+  }), /must export a Capacitor config object/);
+
+  test.throws(() => validateResolvedCapacitorConfig([], {
+    appDir: '/tmp/app',
+    configPath: '/tmp/app/capacitor.config.js',
+  }), /must export a Capacitor config object/);
 });
 
 Tinytest.addAsync('capacitor - run launch waits for readiness once', async test => {
@@ -711,6 +771,9 @@ Tinytest.add('capacitor - run - environment variables mapping', test => {
     // Ensure internal ones are excluded
     process.env.METEOR_CAPACITOR_AUTO_PICK_TARGET = 'true';
     test.isFalse(_getCapRunArgsFromEnv().includes('--auto-pick-target'));
+
+    process.env.METEOR_CAPACITOR_MODE = 'livereload';
+    test.isFalse(_getCapRunArgsFromEnv().includes('--mode=livereload'));
 
     process.env.METEOR_CAPACITOR_SKIP_NATIVE_RUN = 'true';
     test.isFalse(_getCapRunArgsFromEnv().includes('--skip-native-run'));

@@ -11,9 +11,11 @@ In this setup, Meteor produces a native web bundle, transforms it into the Capac
 
 ## Quick start
 
-Add the Capacitor package:
+Create Meteor app, then add Capacitor package:
 
 ``` bash
+meteor create my-mobile-app
+cd my-mobile-app
 meteor add capacitor
 ```
 
@@ -193,6 +195,8 @@ METEOR_CAPACITOR_MODE=livereload meteor run android --mobile-server 10.0.2.2:300
 
 For physical devices, use an address reachable from the same network, such as your development machine's LAN IP.
 
+Set `METEOR_CAPACITOR_MODE=livereload` when you want the native app to load directly from the running Meteor server.
+
 ### Connection URL detection
 
 Most apps do not need to set the LAN IP manually. In native runs, `@meteorjs/capacitor` uses the URL Meteor provides for the native run. Passing `--mobile-server` is the supported way to make that URL explicit when a device needs a specific reachable host.
@@ -234,6 +238,15 @@ Hot Code Push is enabled by default for Capacitor bundled mode.
 ```
 
 You can omit this setting because `"webapp"` is the default. `true` is also accepted and maps to `"webapp"`.
+
+HCP modes:
+
+| Mode | Meaning |
+|---|---|
+| `"webapp"` | Default. Meteor ships `program.json`, injects the native `WebAppLocalServer` bridge, and lets `autoupdate`/`reload` update bundled web assets. |
+| `"none"` | Disables Meteor-managed HCP. Meteor omits `program.json` from the synced Capacitor web directory and installs a no-op compatibility shim. |
+
+Use `"webapp"` when Meteor should own web asset updates. Use `"none"` when the app is intentionally static after install, or when another Capacitor live-update service owns web asset delivery.
 
 ### How HCP works
 
@@ -324,7 +337,22 @@ The `capacitor` package sets `Meteor.isCapacitor` on the client when the app is 
 
 ### Native plugins
 
-Use Capacitor plugins for new native functionality. Native project customization should live in Capacitor configuration and the generated native projects.
+Use Capacitor plugins for new native functionality. Install the plugin with npm, import it from your app code, then run the normal Meteor native command. Meteor runs `cap sync` as part of `meteor run`, `meteor build`, and `meteor add-platform` setup, so plugin native project changes are applied through the Meteor flow.
+
+Example:
+
+``` bash
+meteor npm install @capacitor/device
+meteor run android
+```
+
+``` js
+import { Device } from '@capacitor/device';
+
+const info = await Device.getInfo();
+```
+
+For plugins with native configuration, put the configuration in `capacitor.config.js` under `plugins`. Native project customization should live in Capacitor configuration and the generated `android/` and `ios/` projects.
 
 ### Current scope
 

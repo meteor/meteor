@@ -53,6 +53,31 @@ const PROC_KEYS = {
 };
 
 const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
+const CAPACITOR_RUN_MODES = new Set(['bundled', 'livereload']);
+
+export function getCapacitorRunMode({
+  mode,
+  env = process.env,
+} = {}) {
+  const sourceValue = mode ||
+    env.METEOR_CAPACITOR_MODE ||
+    env.METEOR_NATIVE_MODE ||
+    'bundled';
+  const sourceName = mode ? 'mode'
+    : env.METEOR_CAPACITOR_MODE ? 'METEOR_CAPACITOR_MODE'
+      : env.METEOR_NATIVE_MODE ? 'METEOR_NATIVE_MODE'
+        : 'default';
+  const normalized = String(sourceValue).trim().toLowerCase();
+
+  if (!CAPACITOR_RUN_MODES.has(normalized)) {
+    throw new Error(
+      `Invalid Capacitor run mode "${sourceValue}" from ${sourceName}. ` +
+      'Use "bundled" or "livereload".'
+    );
+  }
+
+  return normalized;
+}
 
 /**
  * Builds the env block injected into every spawned `cap` invocation.
@@ -65,7 +90,7 @@ export function getCapacitorEnv({ platform, mode, mobileServerUrl } = {}) {
   const isDev = isMeteorAppDevelopment();
   const isProd = isMeteorAppProduction();
   const webDir = getCapacitorWebDir({ isDevelopment: isDev, isProduction: isProd });
-  const capacitorMode = mode || process.env.METEOR_CAPACITOR_MODE || 'bundled';
+  const capacitorMode = getCapacitorRunMode({ mode });
   return {
     METEOR_CAPACITOR: 'true',
     METEOR_CAPACITOR_MODE: capacitorMode,
@@ -123,6 +148,23 @@ export function _ensureCapacitorWebDirIndex({
 
 function spawnCap(args, { cwd, label, env, onExit, mode, platform, interactive }) {
   const { command, args: cmdArgs } = _getCapCommand(args, { cwd });
+  const verbose = isVerbose();
+  const stderrLines = [];
+  const logOutput = (data, logger) => {
+    const trimmed = data.replace(/\s+$/, '');
+    if (!trimmed) return;
+    trimmed.split(/\r?\n/).forEach(line => {
+      if (line) logger(`=> ${line}`);
+    });
+  };
+  const rememberStderr = data => {
+    const trimmed = data.replace(/\s+$/, '');
+    if (!trimmed) return;
+    stderrLines.push(...trimmed.split(/\r?\n/).filter(Boolean));
+    if (stderrLines.length > 8) {
+      stderrLines.splice(0, stderrLines.length - 8);
+    }
+  };
   // Interactive commands (cap run's target picker) need the parent's TTY;
   // piped stdio corrupts arrow-key navigation and ANSI cursor moves.
   if (interactive) {
@@ -150,21 +192,17 @@ function spawnCap(args, { cwd, label, env, onExit, mode, platform, interactive }
       ...(env || {}),
     }),
     onStdout: data => {
-      const trimmed = data.replace(/\s+$/, '');
-      if (!trimmed) return;
-      trimmed.split(/\r?\n/).forEach(line => {
-        if (line) logRaw(`=> ${line}`);
-      });
+      if (verbose) logOutput(data, logRaw);
     },
     onStderr: data => {
-      const trimmed = data.replace(/\s+$/, '');
-      if (!trimmed) return;
-      trimmed.split(/\r?\n/).forEach(line => {
-        if (line) logError(`=> ${line}`);
-      });
+      if (verbose) logOutput(data, logError);
+      else rememberStderr(data);
     },
     onError: err => logError(`Capacitor ${label} error: ${err.message}`),
     onExit: code => {
+      if (code !== 0 && !verbose && stderrLines.length) {
+        logError(`=> Capacitor ${label} failed: ${stderrLines[stderrLines.length - 1]}`);
+      }
       if (typeof onExit === 'function') onExit(code);
     },
   });
@@ -189,15 +227,15 @@ function runCapAdd({ appDir = getMeteorAppDir(), platform } = {}) {
   }
 
   return new Promise(resolve => {
-    logProgress(`=> 📱 Capacitor add ${platform} (native project missing — bootstrapping)`);
+    logProgress(`=> Capacitor: adding ${platform} platform`);
     _ensureCapacitorWebDirIndex({ appDir });
     spawnCap(['add', platform], {
       cwd: appDir,
       label: `Add/${platform}`,
       platform,
       onExit: code => {
-        if (code === 0) logSuccess(`=> ✅ Capacitor add ${platform} complete`);
-        else logError(`=> ❌ Capacitor add ${platform} exited with code ${code}`);
+        if (code === 0) logSuccess(`=> Capacitor: added ${platform} platform`);
+        else logError(`=> Capacitor: add ${platform} exited with code ${code}`);
         resolve(code);
       },
     });
@@ -206,7 +244,7 @@ function runCapAdd({ appDir = getMeteorAppDir(), platform } = {}) {
 
 /**
  * `meteor add-platform <platform>` core: runs `npx cap add` if the native
- * dir is missing, no-ops if it exists. cap sync is intentionally skipped —
+ * dir is missing, no-ops if it exists. cap sync is intentionally skipped -
  * meteor run / meteor build handle that via transformAndSync (sync needs a
  * populated webDir that add-platform can't produce on its own).
  * @returns {Promise<number>}
@@ -228,7 +266,7 @@ export async function addNativePlatformIfMissing({ appDir = getMeteorAppDir(), p
 /**
  * Ensures the native project for the currently-targeted platform exists.
  * Resolves the platform from the run-target args (android/ios/*-device).
- * For `meteor build`, no-op (build doesn't care about a specific platform —
+ * For `meteor build`, no-op (build doesn't care about a specific platform -
  * `cap sync` later will scaffold whatever is referenced).
  *
  * @returns {Promise<number>} Exit code.
@@ -247,7 +285,7 @@ export function ensureNativePlatformAdded({ appDir = getMeteorAppDir() } = {}) {
  *
  * @returns {Promise<number>} Exit code.
  */
-export function runCapSync({ appDir = getMeteorAppDir(), platform } = {}) {
+export function runCapSync({ appDir = getMeteorAppDir(), platform, mode } = {}) {
   const existing = getGlobalState(PROC_KEYS.SYNC, null);
   if (existing && isProcessRunning(existing)) {
     if (isVerbose()) {
@@ -257,17 +295,18 @@ export function runCapSync({ appDir = getMeteorAppDir(), platform } = {}) {
   }
 
   return new Promise(resolve => {
-    if (isVerbose()) logProgress('=> 🔄 Capacitor sync');
+    logProgress(`=> Capacitor: syncing${platform ? ` ${platform}` : ''}`);
     const proc = spawnCap(['sync', ...(platform ? [platform] : [])], {
       cwd: appDir,
       label: 'Sync',
       platform,
+      mode,
       onExit: code => {
         setGlobalState(PROC_KEYS.SYNC, null);
         if (code === 0) {
-          if (isVerbose()) logSuccess('=> ✅ Capacitor sync complete');
+          logSuccess(`=> Capacitor: synced${platform ? ` ${platform}` : ''}`);
         } else {
-          logError(`=> ❌ Capacitor sync exited with code ${code}`);
+          logError(`=> Capacitor: sync exited with code ${code}`);
         }
         resolve(code);
       },
@@ -403,7 +442,7 @@ export function _mergeExtraArgsWithEnv(extraArgs = []) {
  *
  * @returns {Object} The spawned process.
  */
-export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = [] }) {
+export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = [], mode }) {
   const existing = getGlobalState(PROC_KEYS.RUN, null);
   if (existing && isProcessRunning(existing)) {
     return existing;
@@ -411,16 +450,17 @@ export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = []
 
   const finalArgs = _mergeExtraArgsWithEnv(extraArgs);
 
-  if (isVerbose()) logProgress(`=> ▶️  Capacitor run ${platform}`);
+  logProgress(`=> Capacitor: launching ${platform}`);
   const proc = spawnCap(['run', platform, ...finalArgs], {
     cwd: appDir,
     label: `Run/${platform}`,
     platform,
+    mode,
     interactive: true,
     onExit: code => {
       setGlobalState(PROC_KEYS.RUN, null);
       if (code !== 0 && isVerbose()) {
-        logError(`=> ❌ Capacitor run exited with code ${code}`);
+        logError(`=> Capacitor: run exited with code ${code}`);
       }
     },
   });
@@ -436,6 +476,7 @@ export function runCapRun({ appDir = getMeteorAppDir(), platform, extraArgs = []
 export function scheduleCapRunAfterMeteorReady({
   appDir = getMeteorAppDir(),
   platform,
+  mode,
   extraArgs = [],
   readinessUrl = getMeteorIndexUrl(),
   waitForReady = waitForMeteorIndexReady,
@@ -455,12 +496,12 @@ export function scheduleCapRunAfterMeteorReady({
 
   (async () => {
     if (isVerbose()) {
-      logProgress(`=> ⏳ Capacitor waiting for Meteor server at ${readinessUrl}`);
+      logProgress(`=> Capacitor: waiting for Meteor server at ${readinessUrl}`);
     }
     const ready = await waitForReady({ url: readinessUrl });
     if (!ready?.ok) {
       setGlobalState(RUN_LAUNCH_STATE_KEY, null);
-      logError(`=> ❌ Capacitor timed out waiting for Meteor server at ${readinessUrl}`);
+      logError(`=> Capacitor: timed out waiting for Meteor server at ${readinessUrl}`);
       return;
     }
 
@@ -482,10 +523,10 @@ export function scheduleCapRunAfterMeteorReady({
       logInfo(`=> Capacitor launching on ${target}${process.env.METEOR_CAPACITOR_TARGET ? '' : ' (auto-picked)'}`);
       runArgs.push(`--target=${target}`);
     }
-    run({ appDir, platform, extraArgs: runArgs });
+    run({ appDir, platform, mode, extraArgs: runArgs });
   })().catch(error => {
     setGlobalState(RUN_LAUNCH_STATE_KEY, null);
-    logError(`=> ❌ Capacitor launch failed: ${error.message}`);
+    logError(`=> Capacitor: launch failed: ${error.message}`);
   });
 
   return true;

@@ -70,12 +70,12 @@ function buildNativeRunOptions({
     METEOR_CAPACITOR_LOCAL_IP: host,
   });
 
-  if (capacitorMode) {
-    env.METEOR_CAPACITOR_MODE = capacitorMode;
-  }
-
   if (deviceId) {
     env.METEOR_CAPACITOR_TARGET = deviceId;
+  }
+
+  if (capacitorMode) {
+    env.METEOR_CAPACITOR_MODE = capacitorMode;
   }
 
   return {

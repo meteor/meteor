@@ -507,7 +507,7 @@ function getHmrCode(config, role) {
     return '';
   }
 
-  if (role === FILE_ROLE.entry && config?.isClient && !config?.isTest) {
+  if (role === FILE_ROLE.entry && config?.isClient && !config?.isTest && !config?.isNative) {
     return `/* Enables HMR */
 if (module.hot) {
   module.hot.accept();

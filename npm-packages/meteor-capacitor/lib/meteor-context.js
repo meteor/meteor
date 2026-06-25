@@ -77,7 +77,7 @@ function buildMeteorContext() {
     isNativeAndroid,
     isNativeIos,
     platform: platform || (isNativeAndroid ? 'android' : isNativeIos ? 'ios' : ''),
-    // capacitor-mode + connection details
+    // capacitor run mode + connection details
     mode,
     isLivereload: mode === 'livereload',
     isBundled: mode === 'bundled',

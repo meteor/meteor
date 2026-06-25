@@ -5,23 +5,16 @@
 
 import { Meteor } from 'meteor/meteor';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
-import { WEB_APP_LOCAL_SERVER_SHIM } from './lib/constants.js';
+import {
+  CORDOVA_JS_STUB,
+  WEB_APP_LOCAL_SERVER_SHIM,
+} from './lib/constants.js';
 
 Meteor.isCapacitor = false;
 
 const BOILERPLATE_CALLBACK_KEY = 'meteor:capacitor:webapp-local-server-shim';
 const CLIENT_ARCH_DETECTOR_KEY = 'meteor:capacitor:client-arch-detector';
 const CAPACITOR_LIVERELOAD_USER_AGENT = 'MeteorCapacitorLivereload';
-const CORDOVA_JS_STUB = `;(function () {
-  window.cordova = window.cordova || {};
-  window.cordova.platformId = window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : "capacitor";
-  window.cordova.plugins = window.cordova.plugins || {};
-  window.cordova.exec = window.cordova.exec || function () {};
-  window.cordova.require = window.cordova.require || function () { return {}; };
-  setTimeout(function () {
-    document.dispatchEvent(new Event("deviceready"));
-  }, 0);
-}());`;
 
 export function isCapacitorDirectServerMode(env = process.env) {
   return env.METEOR_CAPACITOR === 'true' &&

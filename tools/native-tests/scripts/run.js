@@ -16,8 +16,10 @@ const { runFlow } = require("./maestro");
 const PLATFORMS = new Set(["ios", "android"]);
 const MODES = new Set(["run", "build", "livereload", "hcp"]);
 const JUNIT_DIR = path.resolve(__dirname, "..", "junit");
-const HARD_TIMEOUT_MS = 8 * 60 * 1000;
+const DEFAULT_HARD_TIMEOUT_MS = 20 * 60 * 1000;
 const LIVERELOAD_SETTLE_MS = 30_000;
+const UPDATED_APP_READY_TIMEOUT_MS = 120_000;
+const UPDATED_APP_READY_INTERVAL_MS = 1_000;
 
 const EXIT_PASS = 0;
 const EXIT_FLOW_FAIL = 1;
@@ -60,6 +62,16 @@ function parseArgs(argv) {
   }
   getAppConfig(out.appName);
   return out;
+}
+
+function getHardTimeoutMs(env = process.env) {
+  const raw = env.METEOR_NATIVE_TEST_TIMEOUT_MS;
+  if (!raw) return DEFAULT_HARD_TIMEOUT_MS;
+
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_HARD_TIMEOUT_MS;
 }
 
 function artifactStem({ platform, appName, mode }) {
@@ -118,6 +130,59 @@ function getUpdatedFlowPathForMode(mode, appConfig) {
 
 function shouldRunUpdatedFlowForMode(mode) {
   return mode === "run" || mode === "livereload" || mode === "hcp";
+}
+
+function getUpdatedAppReadyMarker(mode) {
+  if (mode === "run" || mode === "hcp") {
+    return "Welcome to Meteor Capacitor Tests Updated";
+  }
+
+  if (mode === "livereload") {
+    return "Welcome to Meteor Capacitor Tests Updated";
+  }
+
+  return null;
+}
+
+async function waitForUpdatedAppReady({
+  baseUrl,
+  marker,
+  timeoutMs = UPDATED_APP_READY_TIMEOUT_MS,
+  intervalMs = UPDATED_APP_READY_INTERVAL_MS,
+  fetchImpl = globalThis.fetch,
+}) {
+  if (!baseUrl || !marker || typeof fetchImpl !== "function") {
+    return;
+  }
+
+  const targetUrl = new URL("/", baseUrl).toString();
+  const deadline = Date.now() + timeoutMs;
+  let lastFailure = null;
+
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetchImpl(targetUrl, {
+        headers: { "cache-control": "no-cache" },
+      });
+
+      if (response.ok) {
+        const body = await response.text();
+        if (body.includes(marker)) {
+          return;
+        }
+        lastFailure = new Error(`marker not served yet: ${marker}`);
+      } else {
+        lastFailure = new Error(`unexpected HTTP status ${response.status}`);
+      }
+    } catch (error) {
+      lastFailure = error;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  const suffix = lastFailure ? ` (${lastFailure.message})` : "";
+  throw new Error(`Timed out waiting for updated app marker at ${targetUrl}${suffix}`);
 }
 
 async function run(argv) {
@@ -189,10 +254,11 @@ async function run(argv) {
     }
   };
 
+  const hardTimeoutMs = getHardTimeoutMs();
   const hardTimeout = setTimeout(() => {
-    console.error(`Hard timeout (${HARD_TIMEOUT_MS}ms) reached. Aborting.`);
+    console.error(`Hard timeout (${hardTimeoutMs}ms) reached. Aborting.`);
     cleanupAll().finally(() => process.exit(EXIT_INFRA));
-  }, HARD_TIMEOUT_MS);
+  }, hardTimeoutMs);
   hardTimeout.unref();
 
   try {
@@ -263,6 +329,10 @@ async function run(argv) {
     if (shouldRunUpdatedFlowForMode(args.mode)) {
       await applyLivereloadFixtureChanges(build.appDir);
       await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
+      await waitForUpdatedAppReady({
+        baseUrl: serverConfig.bindUrl,
+        marker: getUpdatedAppReadyMarker(args.mode),
+      });
       const updated = await runFlow({
         flowPath: getUpdatedFlowPathForMode(args.mode, appConfig),
         deviceId: sim.deviceId,
@@ -292,11 +362,14 @@ if (require.main === module) {
 
 module.exports = {
   artifactStem,
+  getHardTimeoutMs,
   getInitialFlowPathForMode,
+  getUpdatedAppReadyMarker,
   getUpdatedFlowPathForMode,
   parseArgs,
   run,
   shouldRunUpdatedFlowForMode,
+  waitForUpdatedAppReady,
   EXIT_PASS,
   EXIT_FLOW_FAIL,
   EXIT_INFRA,

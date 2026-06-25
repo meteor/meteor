@@ -16,6 +16,23 @@ async function waitForInstall(checkInstalled, timeoutMs = 240_000) {
   throw new Error("Timed out waiting for native app install");
 }
 
+async function waitForAndroidDevice(run = execa) {
+  const wait = await run(
+    "adb",
+    ["wait-for-device"],
+    { reject: false, timeout: BOOT_TIMEOUT_MS }
+  );
+  if (wait.timedOut) {
+    throw new Error(
+      "No Android emulator became visible to adb in 5 min. " +
+      "Start an emulator, then rerun the native test."
+    );
+  }
+  if (wait.exitCode !== 0) {
+    throw new Error(`adb wait-for-device failed with exit code ${wait.exitCode}`);
+  }
+}
+
 async function bootIos({ appId = DEFAULT_APP_ID } = {}) {
   const deviceName = process.env.MAESTRO_IOS_DEVICE || "iPhone 15";
 
@@ -76,7 +93,7 @@ async function bootAndroid({ appId = DEFAULT_APP_ID } = {}) {
   // On CI, reactivecircus/android-emulator-runner@v2 brings the emulator up
   // before our script runs. Locally, the caller must have run `emulator -avd <name>`
   // beforehand. Either way, `adb wait-for-device` is the right ready gate.
-  await execa("adb", ["wait-for-device"]);
+  await waitForAndroidDevice();
 
   const deadline = Date.now() + BOOT_TIMEOUT_MS;
   let booted = false;
@@ -144,4 +161,4 @@ async function bootSimulator(platform, options = {}) {
   throw new Error(`Unsupported platform: ${platform}`);
 }
 
-module.exports = { bootSimulator };
+module.exports = { bootSimulator, waitForAndroidDevice };

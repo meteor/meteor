@@ -112,7 +112,7 @@ export function ensureCapacitorConfigExists() {
  * Capacitor configuration for a Meteor project.
  *
  * defineConfig deep-merges this on top of Meteor defaults
- * (webDir, server.url, plugins.SplashScreen, …) and re-enforces \`bundledWebRuntime: false\`.
+ * (webDir, server.url, plugins.SplashScreen, and others) and re-enforces \`bundledWebRuntime: false\`.
  * Anything set here wins, except RESERVED_PATHS, which warn and are ignored.
  *
  * Typed flags on the \`Meteor\` object include:
@@ -147,6 +147,29 @@ const CAPACITOR_CONFIG_LOOKUP = [
   'capacitor.config.mjs',
   'capacitor.config.json',
 ];
+
+export function formatCapacitorConfigError({ appDir, configPath, error }) {
+  const displayPath = path.relative(appDir, configPath) || path.basename(configPath);
+  return [
+    `Capacitor config error in ${displayPath}: ${error.message}`,
+    'Export a Capacitor config object, or use defineConfig(Meteor => ({ ... })).',
+    'Run with --verbose to see the full stack trace.',
+  ].join('\n');
+}
+
+export function validateResolvedCapacitorConfig(resolved, { appDir, configPath } = {}) {
+  if (!resolved || typeof resolved !== 'object' || Array.isArray(resolved)) {
+    const displayPath = configPath && appDir
+      ? path.relative(appDir, configPath)
+      : 'capacitor.config.js';
+    throw new Error(
+      `${displayPath} must export a Capacitor config object. ` +
+      'Use module.exports = defineConfig(Meteor => ({ ... })).'
+    );
+  }
+
+  return resolved;
+}
 
 /**
  * Loads capacitor.config.{js,cjs,mjs,json}, runs defineConfig, and writes
@@ -185,9 +208,12 @@ export async function writeResolvedConfigSnapshot({ appDir = getMeteorAppDir() }
       resolved = mod && mod.default ? mod.default : mod;
     }
   } catch (error) {
-    logError(`Capacitor: failed to evaluate ${path.relative(appDir, configPath)}: ${error.message}`);
-    return false;
+    const message = formatCapacitorConfigError({ appDir, configPath, error });
+    logError(isVerbose() && error.stack ? error.stack : message);
+    throw new Error(message);
   }
+
+  validateResolvedCapacitorConfig(resolved, { appDir, configPath });
 
   const webDir = getCapacitorWebDir({
     isDevelopment: isMeteorAppDevelopment(),

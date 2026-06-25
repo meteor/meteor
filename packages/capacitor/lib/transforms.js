@@ -1,6 +1,6 @@
 /**
  * @module transforms
- * @description web.cordova/ → Capacitor webDir transforms.
+ * @description web.cordova/ -> Capacitor webDir transforms.
  *   - buildIndex(): compose index.html via boilerplate-generator, patch shim + __cordova/.
  *   - syncBundleFiles(): copy assets, drop server-only files, flatten app/* upward.
  */
@@ -20,8 +20,9 @@ const { Boilerplate } = require('meteor/boilerplate-generator');
 
 const {
   CAPACITOR_CORDOVA_OUTPUT_DIR,
+  CORDOVA_JS_STUB,
   CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE,
-  WEB_APP_LOCAL_SERVER_SHIM,
+  WEB_APP_LOCAL_SERVER_BUNDLED_SHIM,
   getCapacitorExcludedFiles,
   getCapacitorWebDir,
 } = require('./constants');
@@ -114,10 +115,17 @@ export function patchCordovaIndexHtml(html, { hcpMode = getCapacitorHcpMode() } 
 
   let out = html;
 
+  if (!out.includes('document.dispatchEvent(new Event("deviceready"))')) {
+    out = out.replace(
+      /<head>/i,
+      `<head>\n  <script type="text/javascript">${CORDOVA_JS_STUB}</script>`
+    );
+  }
+
   if (hcpMode === 'webapp' && !out.includes('window.WebAppLocalServer')) {
     out = out.replace(/<head>/i, `<head>\n  ${CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE}`);
   } else if (hcpMode !== 'webapp' && !out.includes('var WebAppLocalServer')) {
-    out = out.replace(/<head>/i, `<head>\n  ${WEB_APP_LOCAL_SERVER_SHIM}`);
+    out = out.replace(/<head>/i, `<head>\n  ${WEB_APP_LOCAL_SERVER_BUNDLED_SHIM}`);
   }
 
   out = out.replace(/__cordova\//g, '');
@@ -137,7 +145,7 @@ async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir()
   const targetPath = path.join(appDir, webDir, 'index.html');
 
   if (!fs.existsSync(programJsonPath)) {
-    logError(`Capacitor: ${path.relative(appDir, programJsonPath)} not found — has the web.cordova arch been built?`);
+    logError(`Capacitor: ${path.relative(appDir, programJsonPath)} not found - has the web.cordova arch been built?`);
     return false;
   }
 
@@ -159,6 +167,7 @@ async function buildIndex({ appDir = getMeteorAppDir(), webDir = resolveWebDir()
       process.env.MOBILE_DDP_URL ||
       process.env.DDP_DEFAULT_CONNECTION_URL ||
       rootUrl,
+    PUBLIC_SETTINGS: program.PUBLIC_SETTINGS || {},
     autoupdate: {
       versions: {
         [CORDOVA_ARCH]: {
@@ -260,8 +269,28 @@ function copyTreeFiltered(srcDir, dstDir, excludedFiles) {
   }
 }
 
+function ensureCordovaJsStub({ targetDir }) {
+  const cordovaJsPath = path.join(targetDir, 'cordova.js');
+  let current = '';
+
+  try {
+    current = fs.existsSync(cordovaJsPath)
+      ? fs.readFileSync(cordovaJsPath, 'utf8')
+      : '';
+  } catch (_) {
+    current = '';
+  }
+
+  if (current.trim()) {
+    return;
+  }
+
+  fs.mkdirSync(targetDir, { recursive: true });
+  fs.writeFileSync(cordovaJsPath, CORDOVA_JS_STUB, 'utf8');
+}
+
 /**
- * Copies web.cordova/ → build-native/ minus excluded server-only files.
+ * Copies web.cordova/ -> build-native/ minus excluded server-only files.
  * Keep the app/ directory intact because the generated index references
  * /app/app.js and /app/global-imports.js after __cordova/ path adaptation.
  *
@@ -273,12 +302,13 @@ function syncBundleFiles({ appDir = getMeteorAppDir(), webDir = resolveWebDir(),
   const excludedFiles = getCapacitorExcludedFiles(hcpMode);
 
   if (!fs.existsSync(sourceDir)) {
-    logError(`Capacitor: ${path.relative(appDir, sourceDir)} not found — has the web.cordova arch been built?`);
+    logError(`Capacitor: ${path.relative(appDir, sourceDir)} not found - has the web.cordova arch been built?`);
     return false;
   }
 
   try {
     copyTreeFiltered(sourceDir, targetDir, excludedFiles);
+    ensureCordovaJsStub({ targetDir });
     if (hcpMode === 'webapp') {
       normalizeCopiedProgramJson({ targetDir });
     }
@@ -318,7 +348,7 @@ export async function runCapacitorTransforms({ appDir = getMeteorAppDir(), webDi
   const okIndex = await buildIndex({ appDir, webDir, cordovaOutDir, hcpMode });
   if (verbose && okFiles && okIndex) {
     const sourceDir = resolveCordovaOutDir({ appDir, cordovaOutDir });
-    logInfo(`[i] Capacitor transform applied: ${path.relative(appDir, sourceDir)} → ${webDir}`);
+    logInfo(`[i] Capacitor transform applied: ${path.relative(appDir, sourceDir)} -> ${webDir}`);
   }
   return okFiles && okIndex;
 }

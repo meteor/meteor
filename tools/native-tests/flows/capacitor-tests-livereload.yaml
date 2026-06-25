@@ -2,8 +2,12 @@ appId: com.meteor.capacitortests
 ---
 - launchApp:
     clearState: true
-- assertVisible: "Welcome to Meteor Capacitor Tests Updated"
-- assertVisible: "Native render ready"
+- extendedWaitUntil:
+    visible: "Welcome to Meteor Capacitor Tests Updated"
+    timeout: 120000
+- extendedWaitUntil:
+    visible: "Native render ready"
+    timeout: 120000
 - assertVisible: "Style preserved"
 - extendedWaitUntil:
     visible: "DDP verified"

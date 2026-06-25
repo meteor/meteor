@@ -52,6 +52,7 @@ const {
   addNativePlatformIfMissing,
   cleanup,
   getCapacitorEnv,
+  getCapacitorRunMode,
 } = require('./lib/processes');
 const {
   CAPACITOR_PLATFORMS,
@@ -75,8 +76,10 @@ async function runCapacitorPlugin() {
       state: {
         platforms: [],
         hcpMode,
+        mode: null,
       },
     });
+    context.state.mode = getCapacitorRunMode();
 
     await runToolScenarios({
       context,
@@ -88,6 +91,8 @@ async function runCapacitorPlugin() {
         }
 
         process.env.METEOR_CAPACITOR = 'true';
+        process.env.METEOR_CAPACITOR_MODE = context.state.mode;
+        process.env.METEOR_NATIVE_MODE = context.state.mode;
         // Bypass Cordova's runner when the project has the `capacitor` package.
         // The Meteor CLI now skips Cordova through provider resolution; this
         // assignment covers downstream child processes spawned by the plugin.
@@ -152,6 +157,7 @@ async function runCapacitorPlugin() {
                 cordovaOutDir: getBuildCordovaOutDir(buildOutputContext),
                 fatal: true,
                 hcpMode: context.state.hcpMode,
+                mode: context.state.mode,
                 mobileServerUrl: getContextMobileServerUrl(context),
               });
             });
@@ -176,9 +182,11 @@ async function runCapacitorPlugin() {
                 beforeRun: () => transformAndSync({
                   appDir: context.appDir,
                   platform: context.platform,
+                  mode: context.state.mode,
                   hcpMode: context.state.hcpMode,
                   mobileServerUrl: getContextMobileServerUrl(context),
                 }),
+                mode: context.state.mode,
                 extraArgs: ['--no-sync'],
               });
             }
@@ -247,11 +255,11 @@ function getContextMobileServerUrl(context = {}) {
 }
 
 /**
- * Runs the cordova→build-native transform. Returns false if the
+ * Runs the cordova-to-build-native transform. Returns false if the
  * transform itself failed (web.cordova/ exists but transforms threw).
  */
 async function runTransform({ appDir, cordovaOutDir = null, hcpMode = getCapacitorHcpMode() }) {
-  if (isVerbose()) logProgress('=> 🔧 Capacitor: transforming web.cordova → build-native/');
+  if (isVerbose()) logProgress('=> Capacitor: transforming web.cordova to build-native/');
   const ok = await runCapacitorTransforms({
     appDir,
     cordovaOutDir,
@@ -259,7 +267,7 @@ async function runTransform({ appDir, cordovaOutDir = null, hcpMode = getCapacit
     hcpMode,
   });
   if (!ok) {
-    logError('=> ❌ Capacitor transform failed');
+    logError('=> Capacitor: transform failed');
     return false;
   }
   logVerbose(`[i] Capacitor build-native/ ready at ${path.join(appDir, CAPACITOR_BUILD_CONTEXT)}`);
@@ -307,6 +315,7 @@ async function transformAndSync({
   cordovaOutDir = null,
   fatal = false,
   hcpMode = getCapacitorHcpMode(),
+  mode = getCapacitorRunMode(),
   mobileServerUrl = null,
 }) {
   const resolvedCordovaOutDir = cordovaOutDir ||
@@ -322,7 +331,7 @@ async function transformAndSync({
     );
   }
 
-  const capacitorEnv = getCapacitorEnv({ platform, mobileServerUrl });
+  const capacitorEnv = getCapacitorEnv({ platform, mode, mobileServerUrl });
 
   return withProcessEnv(capacitorEnv, async () => {
     await writeResolvedConfigSnapshot({ appDir });
@@ -335,7 +344,7 @@ async function transformAndSync({
     }
 
     try {
-      await runCapSync({ appDir, platform });
+      await runCapSync({ appDir, platform, mode });
       return true;
     } catch (err) {
       return handleTransformFailure(`Capacitor sync failed: ${err.message}`, { fatal });

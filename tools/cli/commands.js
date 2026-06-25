@@ -1233,7 +1233,6 @@ main.registerCommand({
 
     cmd("meteor");
 
-    Console.info("");
     Console.info(
       "If you are new to Meteor, try some of the learning resources here:"
     );

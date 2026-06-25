@@ -67,7 +67,7 @@ test("builds capacitor meteor run command and env for a device target", () => {
   assert.equal("FORCE_COLOR" in options.env, false);
 });
 
-test("passes explicit Capacitor mode into meteor run env", () => {
+test("passes explicit Capacitor mode through the environment", () => {
   const options = buildNativeRunOptions({
     platform: "ios",
     bindHost: "10.0.0.6",
@@ -78,6 +78,14 @@ test("passes explicit Capacitor mode into meteor run env", () => {
     meteorBin: "/repo/meteor",
   });
 
+  assert.deepEqual(options.args, [
+    "run",
+    "ios",
+    "--port",
+    "10.0.0.6:3211",
+    "--mobile-server",
+    "http://10.0.0.6:3211",
+  ]);
   assert.equal(options.env.METEOR_CAPACITOR_MODE, "livereload");
   assert.equal(options.env.METEOR_CAPACITOR_LOCAL_IP, "10.0.0.6");
   assert.equal(options.env.ROOT_URL, "http://10.0.0.6:3211");

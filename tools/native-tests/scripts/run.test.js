@@ -4,10 +4,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const {
   artifactStem,
+  getHardTimeoutMs,
   getInitialFlowPathForMode,
+  getUpdatedAppReadyMarker,
   getUpdatedFlowPathForMode,
   parseArgs,
   shouldRunUpdatedFlowForMode,
+  waitForUpdatedAppReady,
 } = require("./run");
 const { getAppConfig } = require("./app-config");
 const packageJson = require("../package.json");
@@ -91,6 +94,12 @@ test("throws on invalid app value", () => {
   assert.throws(() => parseArgs(["--platform=android", "--app=missing"]), /Unknown native test app: missing/);
 });
 
+test("native test hard timeout defaults and accepts env override", () => {
+  assert.equal(getHardTimeoutMs({}), 20 * 60 * 1000);
+  assert.equal(getHardTimeoutMs({ METEOR_NATIVE_TEST_TIMEOUT_MS: "12345" }), 12345);
+  assert.equal(getHardTimeoutMs({ METEOR_NATIVE_TEST_TIMEOUT_MS: "bad" }), 20 * 60 * 1000);
+});
+
 test("keeps current artifact stem for run mode", () => {
   assert.equal(
     artifactStem({ platform: "android", appName: "capacitor-tests", mode: "run" }),
@@ -145,6 +154,64 @@ test("build mode keeps non-HCP flow", () => {
   assert.equal(getInitialFlowPathForMode("build", appConfig), "/flows/base.yaml");
   assert.equal(getUpdatedFlowPathForMode("build", appConfig), null);
   assert.equal(shouldRunUpdatedFlowForMode("build"), false);
+});
+
+test("updated app marker is exposed for HCP-backed modes", () => {
+  assert.equal(
+    getUpdatedAppReadyMarker("run"),
+    "Welcome to Meteor Capacitor Tests Updated"
+  );
+  assert.equal(
+    getUpdatedAppReadyMarker("hcp"),
+    "Welcome to Meteor Capacitor Tests Updated"
+  );
+  assert.equal(
+    getUpdatedAppReadyMarker("livereload"),
+    "Welcome to Meteor Capacitor Tests Updated"
+  );
+  assert.equal(getUpdatedAppReadyMarker("build"), null);
+});
+
+test("waits until the updated app marker is served", async () => {
+  let attempts = 0;
+
+  await waitForUpdatedAppReady({
+    baseUrl: "http://127.0.0.1:3000",
+    marker: "Welcome to Meteor Capacitor Tests Updated",
+    intervalMs: 0,
+    timeoutMs: 100,
+    fetchImpl: async () => {
+      attempts += 1;
+      return {
+        ok: true,
+        async text() {
+          return attempts < 2
+            ? "<body>stale</body>"
+            : "<body>Welcome to Meteor Capacitor Tests Updated</body>";
+        },
+      };
+    },
+  });
+
+  assert.equal(attempts, 2);
+});
+
+test("times out when the updated app marker never appears", async () => {
+  await assert.rejects(
+    waitForUpdatedAppReady({
+      baseUrl: "http://127.0.0.1:3000",
+      marker: "Welcome to Meteor Capacitor Tests Updated",
+      intervalMs: 0,
+      timeoutMs: 10,
+      fetchImpl: async () => ({
+        ok: true,
+        async text() {
+          return "<body>stale</body>";
+        },
+      }),
+    }),
+    /Timed out waiting for updated app marker/
+  );
 });
 
 test("native test package exposes default run mode scripts", () => {

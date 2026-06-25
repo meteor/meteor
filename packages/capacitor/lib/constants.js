@@ -107,6 +107,54 @@ export const WEB_APP_LOCAL_SERVER_SHIM = [
   '</script>',
 ].join('');
 
+export const WEB_APP_LOCAL_SERVER_BUNDLED_SHIM = [
+  '<script type="text/javascript">',
+  'var WebAppLocalServer = (function () {',
+  '  var newVersionReadyCallbacks = [];',
+  '  return {',
+  '    onError() {},',
+  '    onNewVersionReady(callback) {',
+  '      if (typeof callback === "function") {',
+  '        newVersionReadyCallbacks.push(callback);',
+  '      }',
+  '    },',
+  '    startupDidComplete(callback) {',
+  '      if (typeof callback === "function") callback();',
+  '    },',
+  '    switchToPendingVersion(callback) {',
+  '      if (typeof callback === "function") callback();',
+  '    },',
+  '    checkForUpdates(callback) {',
+  '      if (typeof callback === "function") callback();',
+  '    }',
+  '  };',
+  '}());',
+  '</script>',
+].join('');
+
+export const CORDOVA_JS_STUB = `;(function () {
+  window.$RefreshReg$ = window.$RefreshReg$ || function () {};
+  window.$RefreshSig$ = window.$RefreshSig$ || function () {
+    return function (type) { return type; };
+  };
+  window.cordova = window.cordova || {};
+  window.cordova.platformId = window.Capacitor && window.Capacitor.getPlatform ? window.Capacitor.getPlatform() : "capacitor";
+  window.cordova.plugins = window.cordova.plugins || {};
+  window.cordova.exec = window.cordova.exec || function () {};
+  window.cordova.require = window.cordova.require || function () { return {}; };
+  function emitDeviceReady() {
+    document.dispatchEvent(new Event("deviceready"));
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    setTimeout(emitDeviceReady, 0);
+  }, false);
+  window.addEventListener("load", function () {
+    setTimeout(emitDeviceReady, 0);
+  }, false);
+  setTimeout(emitDeviceReady, 50);
+  setTimeout(emitDeviceReady, 250);
+}());`;
+
 /**
  * Bridge Cordova's WebAppLocalServer API onto @meteorjs/capacitor's native HCP
  * plugin so initial bundled assets and downloaded HCP assets expose the same

@@ -18,6 +18,8 @@ const {
 } = require('meteor/tools-core/lib/log');
 const {
   getMeteorAppDir,
+  isMeteorAppConfigModernVerbose,
+  isMeteorAppDebug,
   getMeteorAppPackageJson,
 } = require('meteor/tools-core/lib/meteor');
 const {
@@ -50,6 +52,8 @@ const PLATFORM_DEPENDENCIES = {
   android: { name: '@capacitor/android', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
   ios: { name: '@capacitor/ios', version: `^${DEFAULT_CAPACITOR_VERSION}`, dev: false },
 };
+
+const isVerbose = () => isMeteorAppDebug() || isMeteorAppConfigModernVerbose();
 
 export function getCapacitorDependenciesForPlatforms(platforms) {
   const selectedPlatforms = platforms
@@ -89,8 +93,10 @@ export async function ensureCapacitorInstalled({ platforms = null } = {}) {
     return;
   }
 
-  logProgress('=> 📦 Capacitor Dependencies');
-  missing.forEach(dep => logInfo(`   • ${dep.name}@${dep.version}`));
+  logProgress(`=> Capacitor: installing ${missing.length} npm package${missing.length === 1 ? '' : 's'}`);
+  if (isVerbose()) {
+    missing.forEach(dep => logInfo(`   ${dep.name}@${dep.version}`));
+  }
 
   const isYarn = process.env.YARN_ENABLED === 'true';
   const devDeps = missing.filter(d => d.dev).map(d => `${d.name}@${d.version}`);
@@ -110,10 +116,10 @@ export async function ensureCapacitorInstalled({ platforms = null } = {}) {
   }
 
   if (!ok) {
-    logError('=> ❌ Failed to install Capacitor dependencies');
+    logError('=> Capacitor: failed to install npm packages');
     throw new Error('Failed to install Capacitor dependencies. Install them manually and re-run.');
   }
 
-  logSuccess('=> ✅ Installed Capacitor dependencies');
+  logSuccess('=> Capacitor: installed npm packages');
   setGlobalState(GLOBAL_STATE_KEYS.CAPACITOR_INSTALLATION_CHECKED, true);
 }
