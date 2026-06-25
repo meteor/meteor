@@ -19,6 +19,13 @@ Adding `mobile-experience` implies the following packages (verified in `packages
 
 Because this package simply re-exports those two, you can add it instead of adding each one individually. There is no API of its own.
 
+## Configuring the pieces
+
+`mobile-experience` itself has nothing to configure, but the packages it includes do:
+
+- **Status bar:** set preferences in `mobile-config.js`, e.g. `App.setPreference('StatusBarBackgroundColor', '#000000')`.
+- **Launch screen:** set the splash images with `App.launchScreens({...})` in `mobile-config.js`, and use `LaunchScreen.hold()` / `handle.release()` in client code to control when the splash is dismissed.
+
 ## See also
 
 - `mobile-status-bar` — status bar configuration for Cordova apps.
