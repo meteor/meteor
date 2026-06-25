@@ -35,6 +35,8 @@ Template.myUI.onRendered(function () {
 
 `LaunchScreen` is exported by the package (`api.export('LaunchScreen')`), so it is available as a global on the client.
 
+> Two edge cases: if `Template.body` never renders, the launch screen auto-releases after about 6 seconds as a safety net; and calling `LaunchScreen.hold()` **after** the screen has already been hidden throws `"Can't show launch screen once it's hidden"`, so always call `hold()` at the top level of your client code, not asynchronously.
+
 ## Configuring the splash image
 
 This package controls **when** the launch screen is dismissed. The launch (splash) **image** itself is configured in your `mobile-config.js` with `App.launchScreens(...)`, which maps device/size keys to image paths in your app:
@@ -49,6 +51,18 @@ App.launchScreens({
 ```
 
 The keys are device/size identifiers (e.g. `ios_universal`, `ios_universal_3x`, `android_universal`). See the [Cordova guide](../about/cordova.md) for the full list of supported keys and recommended image sizes.
+
+**Dark mode (iOS):** an iOS splash entry can be an object with separate light/dark images:
+
+```js
+App.launchScreens({
+  ios_universal: { src: 'splash/light.png', srcDarkMode: 'splash/dark.png' },
+});
+```
+
+**Android:** the only Android key is `android_universal`, which maps to the Android 12+ animated-icon splash (a `288x288 dp` icon, e.g. a Vector Drawable or PNG) rather than a full-screen image.
+
+Paths are relative to your project root. Unknown keys don't error — they emit a build warning and are passed through. The exact set of iOS keys and their pixel sizes is documented in the `App.launchScreens` API.
 
 ## See also
 
