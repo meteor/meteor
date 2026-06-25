@@ -115,7 +115,7 @@ function buildServerRunOptions({
     env: buildNativeTestEnv(baseEnv, {
       DO_NOT_TRACK: "1",
       PORT: String(port),
-      ROOT_URL: url,
+      ROOT_URL: mobileServerUrl || url,
     }),
     url,
   };
@@ -182,6 +182,7 @@ async function startNativeRun({
   port = DEFAULT_PORT,
   deviceId,
   capacitorMode,
+  baseEnv,
   meteorBin,
 }) {
   const { command, args, env, url } = buildNativeRunOptions({
@@ -192,6 +193,7 @@ async function startNativeRun({
     port,
     deviceId,
     capacitorMode,
+    baseEnv,
     meteorBin,
   });
 

@@ -20,6 +20,7 @@ const DEFAULT_HARD_TIMEOUT_MS = 20 * 60 * 1000;
 const LIVERELOAD_SETTLE_MS = 30_000;
 const UPDATED_APP_READY_TIMEOUT_MS = 120_000;
 const UPDATED_APP_READY_INTERVAL_MS = 1_000;
+const UPDATED_ANDROID_CAPACITOR_SETTLE_MS = 10_000;
 
 const EXIT_PASS = 0;
 const EXIT_FLOW_FAIL = 1;
@@ -144,9 +145,65 @@ function getUpdatedAppReadyMarker(mode) {
   return null;
 }
 
+function getUpdatedAppReadyChecks({ mode, wrapper }) {
+  const marker = getUpdatedAppReadyMarker(mode);
+  if (!marker) {
+    return [];
+  }
+
+  const checks = [{ requestPath: "/", marker }];
+
+  if (
+    wrapper === "capacitor" &&
+    (mode === "run" || mode === "hcp")
+  ) {
+    checks.push({ requestPath: "/__cordova/", marker });
+  }
+
+  return checks;
+}
+
+function shouldWaitForUpdatedCordovaManifest({ mode, wrapper }) {
+  return wrapper === "capacitor" && (mode === "run" || mode === "hcp");
+}
+
+function shouldUseNativeRunBackedServer({ wrapper, mode }) {
+  return wrapper === "capacitor" && (mode === "run" || mode === "livereload" || mode === "hcp");
+}
+
+function shouldRelaunchUpdatedCapacitorApp({ platform, wrapper, mode }) {
+  return (
+    platform === "android" &&
+    wrapper === "capacitor" &&
+    (mode === "run" || mode === "hcp")
+  );
+}
+
+async function readServerText({
+  baseUrl,
+  requestPath = "/",
+  fetchImpl = globalThis.fetch,
+}) {
+  if (!baseUrl || typeof fetchImpl !== "function") {
+    return null;
+  }
+
+  const targetUrl = new URL(requestPath, baseUrl).toString();
+  const response = await fetchImpl(targetUrl, {
+    headers: { "cache-control": "no-cache" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`unexpected HTTP status ${response.status}`);
+  }
+
+  return response.text();
+}
+
 async function waitForUpdatedAppReady({
   baseUrl,
   marker,
+  requestPath = "/",
   timeoutMs = UPDATED_APP_READY_TIMEOUT_MS,
   intervalMs = UPDATED_APP_READY_INTERVAL_MS,
   fetchImpl = globalThis.fetch,
@@ -155,25 +212,21 @@ async function waitForUpdatedAppReady({
     return;
   }
 
-  const targetUrl = new URL("/", baseUrl).toString();
+  const targetUrl = new URL(requestPath, baseUrl).toString();
   const deadline = Date.now() + timeoutMs;
   let lastFailure = null;
 
   while (Date.now() < deadline) {
     try {
-      const response = await fetchImpl(targetUrl, {
-        headers: { "cache-control": "no-cache" },
+      const body = await readServerText({
+        baseUrl,
+        requestPath,
+        fetchImpl,
       });
-
-      if (response.ok) {
-        const body = await response.text();
-        if (body.includes(marker)) {
-          return;
-        }
-        lastFailure = new Error(`marker not served yet: ${marker}`);
-      } else {
-        lastFailure = new Error(`unexpected HTTP status ${response.status}`);
+      if (body.includes(marker)) {
+        return;
       }
+      lastFailure = new Error(`marker not served yet: ${marker}`);
     } catch (error) {
       lastFailure = error;
     }
@@ -183,6 +236,44 @@ async function waitForUpdatedAppReady({
 
   const suffix = lastFailure ? ` (${lastFailure.message})` : "";
   throw new Error(`Timed out waiting for updated app marker at ${targetUrl}${suffix}`);
+}
+
+async function waitForServerTextChange({
+  baseUrl,
+  requestPath = "/",
+  previousText,
+  timeoutMs = UPDATED_APP_READY_TIMEOUT_MS,
+  intervalMs = UPDATED_APP_READY_INTERVAL_MS,
+  fetchImpl = globalThis.fetch,
+}) {
+  if (!baseUrl || typeof fetchImpl !== "function") {
+    return;
+  }
+
+  const targetUrl = new URL(requestPath, baseUrl).toString();
+  const deadline = Date.now() + timeoutMs;
+  let lastFailure = null;
+
+  while (Date.now() < deadline) {
+    try {
+      const body = await readServerText({
+        baseUrl,
+        requestPath,
+        fetchImpl,
+      });
+      if (body !== previousText) {
+        return;
+      }
+      lastFailure = new Error(`response unchanged at ${requestPath}`);
+    } catch (error) {
+      lastFailure = error;
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+
+  const suffix = lastFailure ? ` (${lastFailure.message})` : "";
+  throw new Error(`Timed out waiting for updated server response at ${targetUrl}${suffix}`);
 }
 
 async function run(argv) {
@@ -286,23 +377,32 @@ async function run(argv) {
     cleanup.push(() => sim.shutdown());
     await sim.uninstall();
 
-    if (
-      appConfig.wrapper === "capacitor" &&
-      (args.mode === "run" || args.mode === "livereload")
-    ) {
+    if (shouldUseNativeRunBackedServer({
+      wrapper: appConfig.wrapper,
+      mode: args.mode,
+    })) {
       const nativeRun = await startNativeRun({
         appDir: build.appDir,
         platform: args.platform,
         bindHost: serverConfig.bindHost,
         lanIp,
         mobileServerUrl: serverConfig.mobileServerUrl,
-        deviceId: sim.deviceId,
+        deviceId: args.mode === "hcp" ? undefined : sim.deviceId,
         capacitorMode: args.mode === "livereload" ? "livereload" : "bundled",
+        baseEnv: args.mode === "hcp"
+          ? { ...process.env, METEOR_CAPACITOR_SKIP_NATIVE_RUN: "true" }
+          : process.env,
       });
       cleanup.push(() => nativeRun.stop());
-      console.log(`Native Meteor run up at ${nativeRun.url}`);
-      await sim.waitForInstall();
-      console.log(`Capacitor app ${appConfig.appId} installed on ${args.platform} device ${sim.deviceId}`);
+      if (args.mode === "hcp") {
+        console.log(`Capacitor HCP server up at ${nativeRun.url}`);
+        await sim.install(build.bundlePath);
+        console.log(`Installed bundle on ${args.platform} device ${sim.deviceId}`);
+      } else {
+        console.log(`Native Meteor run up at ${nativeRun.url}`);
+        await sim.waitForInstall();
+        console.log(`Capacitor app ${appConfig.appId} installed on ${args.platform} device ${sim.deviceId}`);
+      }
     } else {
       const server = await startServer({
         appDir: build.appDir,
@@ -323,20 +423,56 @@ async function run(argv) {
       flowPath: initialFlowPath,
       deviceId: sim.deviceId,
       junitOut,
+      platform: args.platform,
+      retries: 1,
     });
 
     if (exitCode !== 0) return EXIT_FLOW_FAIL;
     if (shouldRunUpdatedFlowForMode(args.mode)) {
+      const initialCordovaManifest = shouldWaitForUpdatedCordovaManifest({
+        mode: args.mode,
+        wrapper: appConfig.wrapper,
+      })
+        ? await readServerText({
+          baseUrl: serverConfig.bindUrl,
+          requestPath: "/__cordova/manifest.json",
+        })
+        : null;
+
       await applyLivereloadFixtureChanges(build.appDir);
       await new Promise((resolve) => setTimeout(resolve, LIVERELOAD_SETTLE_MS));
-      await waitForUpdatedAppReady({
-        baseUrl: serverConfig.bindUrl,
-        marker: getUpdatedAppReadyMarker(args.mode),
-      });
+      if (initialCordovaManifest !== null) {
+        await waitForServerTextChange({
+          baseUrl: serverConfig.bindUrl,
+          requestPath: "/__cordova/manifest.json",
+          previousText: initialCordovaManifest,
+        });
+      }
+      for (const check of getUpdatedAppReadyChecks({
+        mode: args.mode,
+        wrapper: appConfig.wrapper,
+      })) {
+        await waitForUpdatedAppReady({
+          baseUrl: serverConfig.bindUrl,
+          ...check,
+        });
+      }
+      if (
+        shouldRelaunchUpdatedCapacitorApp({
+          platform: args.platform,
+          wrapper: appConfig.wrapper,
+          mode: args.mode,
+        })
+      ) {
+        await sim.launch();
+        await new Promise((resolve) => setTimeout(resolve, UPDATED_ANDROID_CAPACITOR_SETTLE_MS));
+      }
       const updated = await runFlow({
         flowPath: getUpdatedFlowPathForMode(args.mode, appConfig),
         deviceId: sim.deviceId,
         junitOut: updatedJunitPath(junitOut),
+        platform: args.platform,
+        retries: 1,
       });
       if (updated.exitCode === 0) return EXIT_PASS;
       return EXIT_FLOW_FAIL;
@@ -363,13 +499,19 @@ if (require.main === module) {
 module.exports = {
   artifactStem,
   getHardTimeoutMs,
+  getUpdatedAppReadyChecks,
   getInitialFlowPathForMode,
   getUpdatedAppReadyMarker,
   getUpdatedFlowPathForMode,
   parseArgs,
+  readServerText,
+  shouldRelaunchUpdatedCapacitorApp,
+  shouldUseNativeRunBackedServer,
   run,
+  shouldWaitForUpdatedCordovaManifest,
   shouldRunUpdatedFlowForMode,
   waitForUpdatedAppReady,
+  waitForServerTextChange,
   EXIT_PASS,
   EXIT_FLOW_FAIL,
   EXIT_INFRA,

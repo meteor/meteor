@@ -74,6 +74,9 @@ async function bootIos({ appId = DEFAULT_APP_ID } = {}) {
         return result.exitCode === 0;
       });
     },
+    async launch() {
+      await execa("xcrun", ["simctl", "launch", udid, appId], { reject: false });
+    },
     async captureLogs(outPath) {
       const { stdout } = await execa(
         "xcrun",
@@ -138,6 +141,41 @@ async function bootAndroid({ appId = DEFAULT_APP_ID } = {}) {
         );
         return stdout.trim().startsWith("package:");
       });
+    },
+    async waitForLaunch() {
+      await waitForInstall(async () => {
+        const { stdout } = await execa(
+          "adb",
+          ["-s", deviceId, "shell", "pidof", appId],
+          { reject: false }
+        );
+        return Boolean(stdout.trim());
+      }, 60_000);
+    },
+    async launch() {
+      await execa(
+        "adb",
+        ["-s", deviceId, "shell", "input", "keyevent", "KEYCODE_WAKEUP"],
+        { reject: false }
+      );
+      await execa(
+        "adb",
+        ["-s", deviceId, "shell", "wm", "dismiss-keyguard"],
+        { reject: false }
+      );
+      await execa(
+        "adb",
+        [
+          "-s", deviceId,
+          "shell",
+          "monkey",
+          "-p", appId,
+          "-c", "android.intent.category.LAUNCHER",
+          "1",
+        ],
+        { reject: false }
+      );
+      await this.waitForLaunch();
     },
     async captureLogs(outPath) {
       const { stdout } = await execa(

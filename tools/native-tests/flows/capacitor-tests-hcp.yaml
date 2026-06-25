@@ -1,5 +1,7 @@
 appId: com.meteor.capacitortests
 ---
+- launchApp:
+    clearState: false
 - extendedWaitUntil:
     visible: "Welcome to Meteor Capacitor Tests Updated"
     timeout: 120000

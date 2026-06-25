@@ -10,6 +10,9 @@ const ddpState = {
 };
 const CLIENT_VERSION = "Native client version initial";
 const HCP_TRACE_KEY = "meteor-capacitor-native-test-hcp-trace";
+const NATIVE_HCP_CHECK_DELAY_MS = 1000;
+let nativeHcpCheckTimer = null;
+let nativeHcpLifecycleBound = false;
 
 function setStatus(id, text) {
   const node = document.getElementById(id);
@@ -63,8 +66,9 @@ function isNativeWebAppLocalServerBridge(shim) {
     shim?.onNewVersionReady,
     shim?.switchToPendingVersion,
   ].map((fn) => {
+    const target = fn?.__nativeTestOriginal || fn;
     try {
-      return Function.prototype.toString.call(fn);
+      return Function.prototype.toString.call(target);
     } catch {
       return "";
     }
@@ -82,6 +86,7 @@ function wrapWebAppLocalServerMethod(shim, methodName, traceKey, mapArgs) {
     return original.apply(this, mapArgs ? mapArgs(args) : args);
   };
   wrapped.__nativeTestWrapped = true;
+  wrapped.__nativeTestOriginal = original;
   shim[methodName] = wrapped;
 }
 
@@ -110,6 +115,50 @@ function instrumentWebAppLocalServer() {
 }
 
 instrumentWebAppLocalServer();
+
+function getNativeHcpShim() {
+  const shim = window.WebAppLocalServer;
+  return isNativeWebAppLocalServerBridge(shim) ? shim : null;
+}
+
+function scheduleNativeHcpCheck(delayMs = NATIVE_HCP_CHECK_DELAY_MS) {
+  const shim = getNativeHcpShim();
+  if (!shim || typeof shim.checkForUpdates !== "function") return;
+
+  if (nativeHcpCheckTimer !== null) {
+    window.clearTimeout(nativeHcpCheckTimer);
+  }
+
+  nativeHcpCheckTimer = window.setTimeout(() => {
+    nativeHcpCheckTimer = null;
+    shim.checkForUpdates(() => {});
+  }, delayMs);
+}
+
+function bindNativeHcpLifecycle() {
+  const shim = getNativeHcpShim();
+  if (!shim || nativeHcpLifecycleBound) return;
+
+  nativeHcpLifecycleBound = true;
+
+  if (typeof shim.onNewVersionReady === "function") {
+    shim.onNewVersionReady(() => {
+      if (typeof shim.switchToPendingVersion === "function") {
+        shim.switchToPendingVersion(() => {});
+      }
+    });
+  }
+
+  if (typeof CapacitorApp?.addListener === "function") {
+    CapacitorApp.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) {
+        scheduleNativeHcpCheck();
+      }
+    });
+  }
+
+  scheduleNativeHcpCheck();
+}
 
 function updateDdpStatus() {
   if (
@@ -264,6 +313,7 @@ Meteor.startup(() => {
   checkCapacitorNativePlatform();
   checkCapacitorPlugins();
   checkWebAppLocalServerShim();
+  bindNativeHcpLifecycle();
   checkHcpTrace();
   checkCordovaPaths();
   checkRouteReloadState();

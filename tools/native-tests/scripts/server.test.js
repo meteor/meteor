@@ -92,6 +92,20 @@ test("passes explicit Capacitor mode through the environment", () => {
   assert.equal(options.env.DO_NOT_TRACK, "1");
 });
 
+test("passes through additional native run environment overrides", () => {
+  const options = buildNativeRunOptions({
+    platform: "android",
+    bindHost: "127.0.0.1",
+    mobileServerUrl: "http://10.0.2.2:3000",
+    port: 3000,
+    baseEnv: { METEOR_CAPACITOR_SKIP_NATIVE_RUN: "true" },
+    meteorBin: "/repo/meteor",
+  });
+
+  assert.equal(options.env.METEOR_CAPACITOR_SKIP_NATIVE_RUN, "true");
+  assert.equal(options.env.ROOT_URL, "http://127.0.0.1:3000");
+});
+
 test("builds local server command with package stats disabled", () => {
   const options = buildServerRunOptions({
     bindHost: "10.0.0.7",
@@ -116,6 +130,19 @@ test("builds local server command with package stats disabled", () => {
   assert.equal("NO_COLOR" in options.env, false);
   assert.equal("FORCE_COLOR" in options.env, false);
   assert.equal(options.url, "http://10.0.0.7:3212");
+});
+
+test("android local server uses mobile server url for ROOT_URL", () => {
+  const options = buildServerRunOptions({
+    bindHost: "127.0.0.1",
+    mobileServerUrl: "http://10.0.2.2:3000",
+    port: 3000,
+    baseEnv: {},
+    meteorBin: "/repo/meteor",
+  });
+
+  assert.equal(options.env.ROOT_URL, "http://10.0.2.2:3000");
+  assert.equal(options.url, "http://127.0.0.1:3000");
 });
 
 test("android emulator server config separates bind host from mobile server url", () => {
