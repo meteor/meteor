@@ -14,7 +14,7 @@ Adding the package automatically implies [`accounts-base`](../api/accounts.md) a
 
 Before users can log in, you must register an OAuth application with GitHub and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
 
-If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. When you use `accounts-ui` together with `accounts-github`, the package will print a console notice suggesting you also add the matching configuration UI:
+If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
 
 ```bash
 meteor add github-config-ui
@@ -52,6 +52,18 @@ Meteor.loginWithGithub({
 ```
 
 When `requestPermissions` is not provided, `accounts-github` requests the `user:email` scope by default, so that the user's email address is available. The user's `accessToken` is stored in the `services.github` field of their user document, so it can be used later to call the GitHub API on their behalf. The set of supported scope values is defined by GitHub; see [GitHub's OAuth scopes reference](https://docs.github.com/en/apps/oauth-apps/building-oauth-apps/scopes-for-oauth-apps). For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E).
+
+## Setting up the GitHub app
+
+1. On GitHub go to **Settings → Developer settings → OAuth Apps → New OAuth App**.
+2. Copy the **Client ID** and generate a **Client Secret** — these are the `clientId` and `secret` you configure below.
+3. Set the **Authorization callback URL**. Meteor handles the callback at:
+
+   ```
+   <your-root-url>/_oauth/github
+   ```
+
+   e.g. `http://localhost:3000/_oauth/github` in development. A mismatch here is the most common cause of login failures.
 
 ## A complete example
 
@@ -108,6 +120,10 @@ const user = Meteor.user(); // reactive on the client
 ```js
 Meteor.logout();
 ```
+
+## What's stored on the user
+
+After login, GitHub profile data is stored under `services.github`: `id`, `email`, `username` (the GitHub login), `name`, `avatar`, `company`, `blog`, `location`, `bio`, `emails`, plus `accessToken` and `expiresAt`. Note that the access token is stored sealed (encrypted) on the server, so you will not see a usable token by reading the document directly. The default `user:email` scope makes the email available, but it can be empty if the account has no accessible email.
 
 ## Server behavior
 
