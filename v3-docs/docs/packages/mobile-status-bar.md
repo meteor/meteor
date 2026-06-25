@@ -6,6 +6,10 @@
 meteor add mobile-status-bar
 ```
 
+## Usage
+
+**Adding the package is enough to get its sensible status-bar defaults — no setup is required.** The package exposes no JavaScript API. Configuration is **optional**: if you want to change the status bar's appearance, set preferences in your `mobile-config.js` file (see [Configuration](#configuration) below). It only has an effect in a native Cordova build.
+
 ## How it works
 
 The package bundles the standard [`cordova-plugin-statusbar`](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md) Cordova plugin with some sensible defaults (verified in `packages/mobile-status-bar/package.js`, which declares `Cordova.depends({ 'cordova-plugin-statusbar': '...' })`). It only takes effect in a native Cordova build.
