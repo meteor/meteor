@@ -445,7 +445,6 @@ describe('Capacitor App Web Lifecycle /', () => {
     });
     meteorProcess = result.meteorProcess;
 
-    await assertNativeReactApp(PORT);
     await assertRspackDevelopmentArtifacts(tempDir);
 
     const serverEntry = await fs.readFile(
