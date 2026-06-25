@@ -390,6 +390,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "facts-ui",
+                link: "/packages/facts-ui",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
