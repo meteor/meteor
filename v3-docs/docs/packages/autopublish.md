@@ -43,6 +43,8 @@ Meteor.subscribe('myTasks');
 
 This sends each client only the documents it should see, instead of the entire database. Keeping `autopublish` in a production app is a security risk because every client receives every collection.
 
+> **Migration caveat:** while `autopublish` is still installed, your manual `Meteor.publish` calls have no real effect — clients still receive everything, and the server logs a warning to that effect. Your publications only start restricting data once you actually **remove** the package.
+
 ## See also
 
 - `insecure` — the write-side counterpart for prototyping (allows all client-side database writes).
