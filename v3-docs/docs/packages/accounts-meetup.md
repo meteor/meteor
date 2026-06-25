@@ -14,7 +14,7 @@ Adding the package automatically implies [`accounts-base`](../api/accounts.md) a
 
 Before users can log in, you must register an OAuth application with Meetup and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
 
-If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. When you use `accounts-ui` together with `accounts-meetup`, the package will print a console notice suggesting you also add the matching configuration UI:
+If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
 
 ```bash
 meteor add meetup-config-ui
@@ -52,6 +52,18 @@ Meteor.loginWithMeetup({
 ```
 
 When `requestPermissions` is not provided, no extra scopes are requested. The user's `accessToken` is stored in the `services.meetup` field of their user document, so it can be used later to call the Meetup API on their behalf. For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E).
+
+## Setting up the Meetup app
+
+1. Register an OAuth consumer in your Meetup account's API/OAuth settings.
+2. Copy the **Client ID** and **Client Secret** — these are the `clientId` and `secret` you configure below.
+3. Register your redirect URI. Meteor handles the callback at:
+
+   ```
+   <your-root-url>/_oauth/meetup
+   ```
+
+   e.g. `http://localhost:3000/_oauth/meetup` in development.
 
 ## A complete example
 
@@ -105,6 +117,10 @@ const user = Meteor.user(); // reactive on the client
 ```js
 Meteor.logout();
 ```
+
+## What's stored on the user
+
+After login, Meetup profile data is stored under `services.meetup`: `id`, `name`, `lang`, `link`, `photo`, `country`, `city`, plus `accessToken` and `expiresAt`. The user's `profile.name` is also set from the Meetup name. Access tokens expire (`expiresAt`); there is no built-in refresh, so don't rely on the stored token long-term.
 
 ## Server behavior
 
