@@ -6,6 +6,10 @@
 meteor add mobile-experience
 ```
 
+## Usage
+
+**Adding the package is all you need to do — there is nothing to configure.** `mobile-experience` exposes no JavaScript API of its own; it just pulls in `mobile-status-bar` and `launch-screen` (see below) so you get their good defaults automatically. Any optional configuration belongs to those individual packages — for example, status-bar preferences are set on `mobile-status-bar` via `mobile-config.js`.
+
 ## What it includes
 
 Adding `mobile-experience` implies the following packages (verified in `packages/mobile-experience/package.js`):
