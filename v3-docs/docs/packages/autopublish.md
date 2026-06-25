@@ -26,6 +26,23 @@ meteor remove autopublish
 
 Then define your own [publications and subscriptions](../api/meteor.md#pubsub) with `Meteor.publish` / `Meteor.subscribe`. Removing `autopublish` is a prerequisite for restricting which documents and fields reach the client.
 
+### Example: replacing autopublish with a publication
+
+```js
+// server
+Meteor.publish('myTasks', function () {
+  if (!this.userId) return this.ready();
+  return Tasks.find({ owner: this.userId });
+});
+```
+
+```js
+// client
+Meteor.subscribe('myTasks');
+```
+
+This sends each client only the documents it should see, instead of the entire database. Keeping `autopublish` in a production app is a security risk because every client receives every collection.
+
 ## See also
 
 - `insecure` — the write-side counterpart for prototyping (allows all client-side database writes).
