@@ -14,7 +14,7 @@ Adding the package automatically implies [`accounts-base`](../api/accounts.md) a
 
 Before users can log in, you must register an OAuth application with Google and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
 
-If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. When you use `accounts-ui` together with `accounts-google`, the package will print a console notice suggesting you also add the matching configuration UI:
+If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
 
 ```bash
 meteor add google-config-ui
@@ -69,6 +69,29 @@ These option-to-parameter mappings are implemented in `google-oauth`'s client. S
 #### Restricting account creation by email domain
 
 If you call `Accounts.config({ restrictCreationByEmailDomain: 'example.com' })` with a string domain, `accounts-google` automatically adds Google's `hd` login URL parameter so Google's account chooser is scoped to that hosted domain. Note that this only changes Google's UI — `accounts-base` still verifies the user's email address on the server.
+
+## Setting up the Google app
+
+1. In the [Google Cloud Console](https://console.cloud.google.com/) go to **APIs & Services → Credentials** and create an **OAuth client ID** of type **Web application**.
+2. Copy the **Client ID** and **Client Secret** — these are the `clientId` and `secret` you configure below.
+3. Add your redirect URI under **Authorized redirect URIs**. Meteor handles the callback at:
+
+   ```
+   <your-root-url>/_oauth/google
+   ```
+
+   e.g. `http://localhost:3000/_oauth/google` in development.
+
+Note: Google always adds the `email` scope to the request, even if you only ask for `profile`.
+
+### Native Google Sign-In on Cordova
+
+On Cordova, `Meteor.loginWithGoogle` uses the native `Google.signIn` flow (web OAuth no longer works inside a WebView). To make it work you additionally need:
+
+- a **separate OAuth client** of type Android and/or iOS in the Google Cloud Console (distinct from the Web `clientId` above), and
+- the matching **reversed client ID** configured for the build (the `google-oauth` package pulls in the Cordova Google Sign-In plugin).
+
+Consult the current Google Sign-In Cordova plugin documentation for the exact per-platform values.
 
 ## A complete example
 
