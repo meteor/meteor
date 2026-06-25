@@ -316,6 +316,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
                 text: "roles",
                 link: "/packages/roles",
               },
