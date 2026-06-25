@@ -269,6 +269,15 @@ async function assertNativeReactApp(port) {
     const context = await page.$eval('[data-testid="native-context"]', el => el.textContent);
     expect(context).toBe('Rspack and Capacitor fixture');
 
+    await page.waitForFunction(() => (
+      document.querySelector('[data-testid="native-device-plugin"]')?.textContent ===
+      'Device plugin ready: web'
+    ));
+    await page.waitForFunction(() => (
+      document.querySelector('[data-testid="native-app-plugin"]')?.textContent ===
+      'App plugin unavailable on web'
+    ));
+
     expect([...consoleErrors, ...pageErrors]).toEqual([]);
   } finally {
     try {
