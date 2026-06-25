@@ -25,6 +25,23 @@ App.setPreference('StatusBarBackgroundColor', '#000000');
 
 For the full list of available preferences and the runtime `StatusBar` plugin API, see the [`cordova-plugin-statusbar` documentation](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md).
 
+### Common preferences
+
+Some of the most frequently used `cordova-plugin-statusbar` preferences:
+
+- `StatusBarOverlaysWebView` — `true`/`false`; whether the web view extends under the status bar.
+- `StatusBarBackgroundColor` — a hex color such as `#000000` for the status bar background.
+- `StatusBarStyle` — `default`, `lightcontent`, `blacktranslucent`, or `blackopaque`.
+
+```js
+// mobile-config.js
+App.setPreference('StatusBarOverlaysWebView', 'false');
+App.setPreference('StatusBarBackgroundColor', '#000000');
+App.setPreference('StatusBarStyle', 'lightcontent');
+```
+
+For the complete list of preferences and the runtime `StatusBar` JavaScript API, refer to the [`cordova-plugin-statusbar` documentation](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md).
+
 ## See also
 
 - `mobile-experience` — umbrella package that includes `mobile-status-bar`.
