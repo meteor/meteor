@@ -101,7 +101,7 @@ By default, Meteor installs or updates them for you on the first run after addin
    Dependencies:
    • @swc/helpers           0.5.17 (new)
 => ✅ Rspack dependencies are up to date
-=> ℹ️  Set `"meteor": { "autoInstallDeps": false }` in package.json to manage them yourself.
+=> ℹ️ Set `"meteor": { "autoInstallDeps": false }` in package.json to manage them yourself.
 ```
 
 If your project already meets every minimum, no log is printed and the build moves on.
