@@ -47,6 +47,13 @@ If your proxy already issues the HTTP→HTTPS redirect itself, you don't need th
 
 > **Note:** `force-ssl` only performs the redirect; it does **not** send an `Strict-Transport-Security` (HSTS) header. If you want HSTS, set it on your proxy or in your own middleware.
 
+## Production gotchas
+
+- **Adding the package forces `Meteor.absoluteUrl()` to be secure.** `force-ssl` sets `Meteor.absoluteUrl.defaultOptions.secure = true`, so all generated absolute URLs become `https://`. Make sure your `ROOT_URL` reflects your real public host.
+- **The proxy must own the `X-Forwarded-Proto` header.** A client could otherwise spoof it to bypass the redirect. Your proxy should always set/overwrite the header rather than passing through a client-supplied value. If the proxy terminates TLS but does **not** forward the proto header, you'll get an infinite HTTP→HTTPS redirect loop.
+- **Non-standard HTTPS ports are dropped.** The redirect strips the port (`host.replace(/:\d+$/, '')`) and always targets the default HTTPS port (443). Serving HTTPS on a custom port will produce a broken redirect.
+- **Verify it works:** an insecure request should return a `302` redirect to the `https://` URL. If you see a redirect loop, the proxy isn't forwarding the proto header correctly.
+
 ## How it works
 
 `force-ssl` runs on the server (it builds on `webapp` and `ddp`) and redirects incoming HTTP requests to HTTPS. To detect whether a connection arrived over HTTPS, it relies on the proxy that terminates SSL in front of your app:
