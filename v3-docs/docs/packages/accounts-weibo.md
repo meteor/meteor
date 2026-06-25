@@ -14,7 +14,7 @@ Adding the package automatically implies [`accounts-base`](../api/accounts.md) a
 
 Before users can log in, you must register an application with Weibo and configure its credentials in your app. This is handled by the [`service-configuration`](./service-configuration.md) package — see the [OAuth Services Configuration](./service-configuration.md) guide for the full setup, including how to provide credentials through `settings.json`.
 
-If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. When you use `accounts-ui` together with `accounts-weibo`, the package will print a console notice suggesting you also add the matching configuration UI:
+If you prefer a step-by-step UI, the [`accounts-ui`](./accounts-ui.md) package presents a guided configuration dialog. If you use `accounts-ui` but have not configured the service through `service-configuration`, the package prints a console notice suggesting you also add the matching configuration UI:
 
 ```bash
 meteor add weibo-config-ui
@@ -42,6 +42,18 @@ Meteor.loginWithWeibo((error) => {
 Calling this function starts the OAuth flow with Weibo. Depending on the configured `loginStyle` (`"popup"` or `"redirect"`, set in the service configuration), it either opens a pop-up window or redirects the page to Weibo's authorization page. Once the user authorizes the app, the Meteor client logs in to the server with the credentials returned by Weibo.
 
 For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E). Note that `requestPermissions` is not currently supported for Weibo.
+
+## Setting up the Weibo app
+
+1. Create an app on the [Weibo Open Platform](https://open.weibo.com/).
+2. Copy the **App Key** and **App Secret** — these map to `clientId` and `secret` below.
+3. Register your redirect URI. Meteor handles the callback at:
+
+   ```
+   <your-root-url>/_oauth/weibo
+   ```
+
+   e.g. `http://localhost:3000/_oauth/weibo` in development.
 
 ## A complete example
 
@@ -95,6 +107,10 @@ const user = Meteor.user(); // reactive on the client
 ```js
 Meteor.logout();
 ```
+
+## What's stored on the user
+
+After login, Weibo profile data is stored under `services.weibo`: `id`, `screenName`, plus `accessToken` and `expiresAt`. The user's `profile.name` is set from the Weibo screen name on account creation.
 
 ## Server behavior
 
