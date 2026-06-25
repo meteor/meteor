@@ -316,6 +316,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-facebook",
+                link: "/packages/accounts-facebook",
+              },
+              {
                 text: "roles",
                 link: "/packages/roles",
               },
