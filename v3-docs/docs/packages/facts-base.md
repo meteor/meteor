@@ -53,6 +53,45 @@ Facts.setUserIdFilter(userId => {
 
 Clears all recorded facts for every package.
 
+## A complete example
+
+Increment a counter from server code and restrict who may read the facts:
+
+```js
+import { Facts } from 'meteor/facts-base';
+
+Meteor.methods({
+  async runJob() {
+    Facts.incrementServerFact('my-app', 'jobs-run', 1);
+    try {
+      // ...do the work...
+    } finally {
+      Facts.incrementServerFact('my-app', 'jobs-run', -1);
+    }
+  },
+});
+
+// Expose the facts only to admins (otherwise, without autopublish, no one
+// can subscribe to them):
+Facts.setUserIdFilter((userId) => {
+  const user = userId && Meteor.users.findOne(userId);
+  return Boolean(user && user.isAdmin);
+});
+```
+
+To display these on the client, add the `facts-ui` package and render its `serverFacts` template.
+
+## Facts published by Meteor itself
+
+Even if you never call `incrementServerFact` yourself, several core packages report facts automatically once `facts-base` is installed. For example, the `mongo` package publishes the following under the `mongo-livedata` package name (verified in `packages/mongo/observe_multiplex.ts` and `packages/mongo/oplog_observe_driver.js`):
+
+- `observe-multiplexers` — number of active observe-multiplexers
+- `observe-handles` — number of active observe handles
+- `observe-drivers-oplog` — number of oplog-based observe drivers
+- `time-spent-in-<phase>-phase` — time spent in each oplog-observe phase
+
+This makes `facts-base` + `facts-ui` a quick way to watch live-query load on a running server.
+
 ## Notes
 
 > The package `README.md` describes `facts-base` as an internal Meteor package. It is documented here because it exports a public `Facts` API that app and package authors can call. The internal helpers prefixed with an underscore (e.g. `Facts._factsByPackage`) are intentionally **not** documented.
