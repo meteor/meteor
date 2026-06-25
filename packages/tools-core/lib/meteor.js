@@ -277,6 +277,26 @@ export function isMeteorAppNative() {
 }
 
 /**
+ * Returns the current native runtime mode when one is declared.
+ * `METEOR_NATIVE_MODE` is the generic opt-in for any native integration, while
+ * `METEOR_CAPACITOR_MODE` remains the existing Capacitor-specific fallback.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {string}
+ */
+export function getMeteorAppNativeMode(env = process.env) {
+  return env.METEOR_NATIVE_MODE || env.METEOR_CAPACITOR_MODE || '';
+}
+
+/**
+ * Checks if the current native run is using direct-server livereload semantics.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {boolean}
+ */
+export function isMeteorAppNativeLivereload(env = process.env) {
+  return isMeteorAppNative() && getMeteorAppNativeMode(env) === 'livereload';
+}
+
+/**
  * Checks if the Meteor application has the `capacitor` package added.
  * Package presence is the source of truth.
  * @returns {boolean}

@@ -64,7 +64,6 @@ const {
   isMeteorAppBuild,
   isMeteorAppUpdate,
   getMeteorInitialAppEntrypoints,
-  getMeteorAppEntrypoints,
   isMeteorAppTest,
   isMeteorAppTestWatch,
   isMeteorAppDevelopment,
@@ -72,6 +71,7 @@ const {
   isMeteorAppDebug,
   isMeteorAppConfigModernVerbose,
   isMeteorAppNative,
+  isMeteorAppNativeLivereload,
   isMeteorBundleVisualizerProject,
 } = require('meteor/tools-core/lib/meteor');
 
@@ -117,7 +117,11 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest() || isMeteorAppUp
     );
   }
 
-  setGlobalState(GLOBAL_STATE_KEYS.INITIAL_ENTRYPONTS, getMeteorAppEntrypoints());
+  // Persist the package.json entrypoints, not the mutable Meteor runtime
+  // config. The runtime config is rewritten to _build/*-meteor.js later in
+  // boot, and caching that here makes server-entry.js self-reference the
+  // generated Meteor wrapper on the next compile.
+  setGlobalState(GLOBAL_STATE_KEYS.INITIAL_ENTRYPONTS, initialEntrypoints);
 
   let isYarnProj = process.env.YARN_ENABLED === 'true';
   // Main entry point - using top-level await
@@ -177,9 +181,15 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
     // Configure Meteor settings for Rspack
     configureMeteorForRspack();
 
-    // Set native mode flag so the server module can skip dev proxy setup
-    if (isMeteorAppNative()) {
+    const useNativeDevServer = isMeteorAppNativeLivereload();
+
+    // Bundled native mode serves static watch output directly from Meteor. In
+    // livereload mode, native clients should use the same dev-server proxy path
+    // as browser development so Rspack HMR/Fast Refresh can reach the WebView.
+    if (isMeteorAppNative() && !useNativeDevServer) {
       process.env.RSPACK_NATIVE = 'true';
+    } else {
+      delete process.env.RSPACK_NATIVE;
     }
 
     // Calculate and set the devServerPort at boot
@@ -234,7 +244,7 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
       } = setupCompilationTracking();
 
       // For 'run' command, start Rspack in appropriate modes with distinct callbacks
-      if (isMeteorAppDevelopment() && !isMeteorAppNative()) {
+      if (isMeteorAppDevelopment() && (!isMeteorAppNative() || useNativeDevServer)) {
         if (initialEntrypoints?.mainClient) {
           startRspackClientServe({ onCompile: onCompileClient });
         }

@@ -72,9 +72,40 @@ export const GLOBAL_STATE_KEYS = {
 /**
  * Inline source of the WebAppLocalServer compatibility shim injected after <head>.
  * Capacitor doesn't ship Cordova's WebAppLocalServer plugin; without this stub
- * Meteor's Cordova bundle throws at boot.
+ * Meteor's Cordova bundle throws at boot. In direct-server livereload mode,
+ * this shim also emits a synthetic update-ready signal so web.cordova clients
+ * still hard-reload when a client bundle version changes.
  */
-export const WEB_APP_LOCAL_SERVER_SHIM = `<script type="text/javascript">var WebAppLocalServer = { onError() {}, onNewVersionReady() {}, startupDidComplete(callback) { if (typeof callback === "function") callback(); }, switchToPendingVersion(callback) { if (typeof callback === "function") callback(); }, checkForUpdates(callback) { if (typeof callback === "function") callback(); } };</script>`;
+export const WEB_APP_LOCAL_SERVER_SHIM = [
+  '<script type="text/javascript">',
+  'var WebAppLocalServer = (function () {',
+  '  var newVersionReadyCallbacks = [];',
+  '  function emitNewVersionReady() {',
+  '    newVersionReadyCallbacks.slice().forEach(function (callback) {',
+  '      callback("direct-server");',
+  '    });',
+  '  }',
+  '  return {',
+  '    onError() {},',
+  '    onNewVersionReady(callback) {',
+  '      if (typeof callback === "function") {',
+  '        newVersionReadyCallbacks.push(callback);',
+  '      }',
+  '    },',
+  '    startupDidComplete(callback) {',
+  '      if (typeof callback === "function") callback();',
+  '    },',
+  '    switchToPendingVersion(callback) {',
+  '      if (typeof callback === "function") callback();',
+  '    },',
+  '    checkForUpdates(callback) {',
+  '      if (typeof callback === "function") callback();',
+  '      setTimeout(emitNewVersionReady, 0);',
+  '    }',
+  '  };',
+  '}());',
+  '</script>',
+].join('');
 
 /**
  * Bridge Cordova's WebAppLocalServer API onto @meteorjs/capacitor's native HCP

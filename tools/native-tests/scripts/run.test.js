@@ -185,7 +185,7 @@ test("Capacitor HCP flows assert native bridge and reload execution", () => {
   assert.match(updatedFlow, /Native client version updated/);
 });
 
-test("Capacitor non-HCP flows assert no-op bridge mode", () => {
+test("Capacitor non-HCP flows assert livereload shim mode", () => {
   const app = getAppConfig("capacitor-tests");
   const flowFiles = [
     app.flowPath,
@@ -196,7 +196,7 @@ test("Capacitor non-HCP flows assert no-op bridge mode", () => {
   for (const flowFile of flowFiles) {
     assert.match(
       readFlow(flowFile),
-      /WebAppLocalServer no-op shim ready/,
+      /WebAppLocalServer livereload shim ready/,
       path.basename(flowFile)
     );
   }

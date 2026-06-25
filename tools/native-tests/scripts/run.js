@@ -78,6 +78,10 @@ async function replaceFileText(file, replacements) {
 async function applyLivereloadFixtureChanges(appDir) {
   await Promise.all([
     replaceFileText(
+      path.join(appDir, "client", "main.html"),
+      [["Welcome to Meteor Capacitor Tests", "Welcome to Meteor Capacitor Tests Updated"]]
+    ),
+    replaceFileText(
       path.join(appDir, "client", "main.js"),
       [["Native client version initial", "Native client version updated"]]
     ),

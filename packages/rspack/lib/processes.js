@@ -29,6 +29,7 @@ const {
   isMeteorAppRun,
   isMeteorAppBuild,
   isMeteorAppNative,
+  getMeteorAppNativeMode,
   isMeteorBlazeProject,
   isMeteorBlazeHotProject,
   getMeteorInitialAppEntrypoints,
@@ -271,6 +272,7 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
     ["isRun", isMeteorAppRun()],
     ["isBuild", isMeteorAppBuild()],
     ["isNative", isMeteorAppNative()],
+    ...((isMeteorAppNative() && [["nativeMode", getMeteorAppNativeMode()]]) || []),
     ["isClient", isClient],
     ["isServer", isServer],
     [
@@ -381,7 +383,15 @@ export function startRspackClientServe(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
-  const { command, args } = getNpxCommand(['rspack', 'serve', '--config', configFile, ...params]);
+  const devServerPort = process.env.RSPACK_DEVSERVER_PORT;
+  const { command, args } = getNpxCommand([
+    'rspack',
+    'serve',
+    '--config',
+    configFile,
+    ...(devServerPort ? ['--port', devServerPort] : []),
+    ...params,
+  ]);
   const newClientProcess = spawnProcess(
     command,
     args, {

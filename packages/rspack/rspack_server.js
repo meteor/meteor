@@ -37,6 +37,12 @@ if (shouldEnableDevHMRProxy) {
   const { shuffleString } = require('meteor/tools-core/lib/string');
   const { createProxyMiddleware } = require('http-proxy-middleware');
 
+  const DEV_ASSET_CACHE_HEADERS = {
+    'Cache-Control': 'no-store, no-cache, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  };
+
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
@@ -56,6 +62,11 @@ if (shouldEnableDevHMRProxy) {
       changeOrigin: true,
       ws: true,
       logLevel: 'debug',
+      onProxyRes(proxyRes) {
+        Object.entries(DEV_ASSET_CACHE_HEADERS).forEach(([key, value]) => {
+          proxyRes.headers[key] = value;
+        });
+      },
     })
   );
 
@@ -73,7 +84,7 @@ if (shouldEnableDevHMRProxy) {
     if (hotUpdate) {
       // Redirect "/something.hot-update.js" → "/__rspack__/something.hot-update.js"
       const target = `/__rspack__/${hotUpdate[1]}`;
-      res.writeHead(307, { Location: target });
+      res.writeHead(307, { Location: target, ...DEV_ASSET_CACHE_HEADERS });
       return res.end();
     }
 
@@ -82,7 +93,7 @@ if (shouldEnableDevHMRProxy) {
     if (bundlesMatch) {
       // Redirect "/bundles/foo.js" → "/__rspack__/build-chunks/foo.js"
       const target = `/__rspack__/${rspackChunksContext}/${bundlesMatch[1]}`;
-      res.writeHead(307, { Location: target });
+      res.writeHead(307, { Location: target, ...DEV_ASSET_CACHE_HEADERS });
       return res.end();
     }
 
@@ -91,7 +102,7 @@ if (shouldEnableDevHMRProxy) {
     if (assetsMatch) {
       // Redirect "/build-assets/foo.js" → "/__rspack__/build-assets/foo.js"
       const target = `/__rspack__/${rspackAssetsContext}/${assetsMatch[1]}`;
-      res.writeHead(307, { Location: target });
+      res.writeHead(307, { Location: target, ...DEV_ASSET_CACHE_HEADERS });
       return res.end();
     }
 

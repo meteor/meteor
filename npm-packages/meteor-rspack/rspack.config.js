@@ -237,6 +237,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestLike = !!Meteor.isTestLike;
   const swcExternalHelpers = !!Meteor.swcExternalHelpers;
   const isNative = !!Meteor.isNative;
+  const isRspackServe = !!Meteor.RSPACK_SERVE;
+  const nativeMode =
+    Meteor.nativeMode ||
+    process.env.METEOR_NATIVE_MODE ||
+    process.env.METEOR_CAPACITOR_MODE ||
+    '';
+  const isNativeLivereload = isNative && nativeMode === 'livereload';
+  const isClientDevServe =
+    isRspackServe && !!Meteor.isRun && !!Meteor.isClient && !Meteor.isTest;
   const devServerPort = Meteor.devServerPort || 8080;
 
   const projectDir = process.cwd();
@@ -309,6 +318,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ? initialCurrentMode === "development"
     : !!Meteor.isDevelopment || !initialIsProd;
   const initialMode = initialIsProd ? "production" : "development";
+  const initialIsDevEnvironment =
+    (isRun && initialIsDev && !isTest && (!isNative || isNativeLivereload)) ||
+    (initialIsDev && isClientDevServe);
 
   // Initialized with pre-load values so helpers work during the first config load;
   // reassigned after load once mode is fully resolved.
@@ -323,7 +335,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isJsxEnabled,
     isTsxEnabled,
     externalHelpers: enableSwcExternalHelpers,
-    isDevEnvironment: isRun && initialIsDev && !isTest && !isNative,
+    isDevEnvironment: initialIsDevEnvironment,
     isClient,
     isAngularEnabled,
   });
@@ -444,7 +456,19 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     console.log("[i] Meteor flags:", Meteor);
   }
 
-  const isDevEnvironment = isRun && isDev && !isTest && !isNative;
+  const isDevEnvironment =
+    (isRun && isDev && !isTest && (!isNative || isNativeLivereload)) ||
+    (isDev && isClientDevServe);
+  if (Meteor.isDebug || Meteor.isVerbose) {
+    console.log("[i] Rspack serve flags:", {
+      isNative,
+      nativeMode,
+      isNativeLivereload,
+      isRspackServe,
+      isClientDevServe,
+      isDevEnvironment,
+    });
+  }
   swcConfigRule = createSwcConfig({
     isTypescriptEnabled,
     isReactEnabled,

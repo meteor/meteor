@@ -424,6 +424,32 @@ describe('Capacitor App Web Lifecycle /', () => {
     expect(meteorProcess.signalCode).toBe(null);
   });
 
+  test('"meteor run android" in livereload mode keeps the server entry pointed at the app server module', async () => {
+    const result = await runMeteorApp(tempDir, PORT, {
+      waitForOutput: /Capacitor native run skipped/,
+      commandOptions: ['android'],
+      env: e2eEnv({
+        METEOR_CAPACITOR_MODE: 'livereload',
+        METEOR_CAPACITOR_SKIP_NATIVE_RUN: '1',
+        METEOR_CAPACITOR_READY_URL: `http://127.0.0.1:${PORT}/`,
+      }),
+    });
+    meteorProcess = result.meteorProcess;
+
+    await assertNativeReactApp(PORT);
+    await assertRspackDevelopmentArtifacts(tempDir);
+
+    const serverEntry = await fs.readFile(
+      path.join(tempDir, '_build/main-dev/server-entry.js'),
+      'utf8'
+    );
+    expect(serverEntry).toContain(`import '../../server/main.js';`);
+    expect(serverEntry).not.toContain(`import '../../_build/main-dev/server-meteor.js';`);
+
+    expect(meteorProcess.exitCode).toBe(null);
+    expect(meteorProcess.signalCode).toBe(null);
+  });
+
   test('"meteor run android --production" serves production web app and prepares Capacitor webDir', async () => {
     const result = await runMeteorApp(tempDir, PORT, {
       waitForOutput: /Capacitor native run skipped/,

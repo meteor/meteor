@@ -1,6 +1,6 @@
 appId: com.meteor.capacitortests
 ---
-- assertVisible: "Welcome to Meteor Capacitor Tests"
+- assertVisible: "Welcome to Meteor Capacitor Tests Updated"
 - assertVisible: "Native render ready"
 - assertVisible: "Style preserved"
 - extendedWaitUntil:

@@ -149,7 +149,7 @@ function checkWebAppLocalServerShim() {
   if (isNativeWebAppLocalServerBridge(shim)) {
     setStatus("webapp-local-server-mode-status", "WebAppLocalServer native bridge ready");
   } else if (shim) {
-    setStatus("webapp-local-server-mode-status", "WebAppLocalServer no-op shim ready");
+    setStatus("webapp-local-server-mode-status", "WebAppLocalServer livereload shim ready");
   }
 }
 

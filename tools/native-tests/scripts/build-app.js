@@ -11,13 +11,20 @@ const CAPACITOR_PACKAGE_DIR = path.join(REPO_ROOT, "npm-packages", "meteor-capac
 const NPM_QUIET_INSTALL_FLAGS = ["--no-audit", "--no-fund"];
 const CAPACITOR_WEB_APP_LOCAL_SERVER_SHIM = [
   "<script type=\"text/javascript\">",
-  "var WebAppLocalServer = {",
+  "var WebAppLocalServer = (function () {",
+  "var newVersionReadyCallbacks = [];",
+  "return {",
   "onError() {},",
-  "onNewVersionReady() {},",
+  "onNewVersionReady(callback) {",
+  "if (typeof callback === \"function\") {",
+  "newVersionReadyCallbacks.push(callback);",
+  "}",
+  "},",
   "startupDidComplete(callback) { if (typeof callback === \"function\") callback(); },",
   "switchToPendingVersion(callback) { if (typeof callback === \"function\") callback(); },",
   "checkForUpdates(callback) { if (typeof callback === \"function\") callback(); }",
   "};",
+  "}());",
   "</script>",
 ].join("");
 const CAPACITOR_WEB_APP_LOCAL_SERVER_BRIDGE = [

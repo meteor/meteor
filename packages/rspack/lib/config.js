@@ -16,6 +16,7 @@ const {
   isMeteorAppRun,
   isMeteorAppBuild,
   isMeteorAppNative,
+  isMeteorAppNativeLivereload,
   isMeteorAppDebug,
   isMeteorAppTest,
   isMeteorAppTestFullApp,
@@ -371,7 +372,11 @@ export function configureMeteorForRspack() {
   ensureModuleFilesExist();
 
   // Write content to module files
-  if (isMeteorAppRun() && isMeteorAppDevelopment() && !isMeteorAppNative()) {
+  if (
+    isMeteorAppRun() &&
+    isMeteorAppDevelopment() &&
+    (!isMeteorAppNative() || isMeteorAppNativeLivereload())
+  ) {
     const customScriptUrl = `/__rspack__/${getBuildFilePath({
       ...env,
       isMain: true,

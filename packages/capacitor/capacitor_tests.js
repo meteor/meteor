@@ -3,7 +3,11 @@ import { setGlobalState } from 'meteor/tools-core/lib/global-state';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import vm from 'vm';
 
+import {
+  WEB_APP_LOCAL_SERVER_SHIM,
+} from './lib/constants.js';
 import {
   isMeteorIndexReadyResponse,
 } from './lib/readiness.js';
@@ -94,6 +98,26 @@ function readRuntimeConfigFromHtml(html) {
   }
 
   return JSON.parse(decodeURIComponent(JSON.parse(match[1])));
+}
+
+function evaluateWebAppLocalServerShim() {
+  const context = {
+    console,
+    setTimeout(callback) {
+      if (typeof callback === 'function') {
+        callback();
+      }
+      return 0;
+    },
+  };
+
+  const source = WEB_APP_LOCAL_SERVER_SHIM
+    .replace(/^<script[^>]*>/i, '')
+    .replace(/<\/script>$/i, '');
+
+  vm.runInNewContext(source, context);
+
+  return context.WebAppLocalServer;
 }
 
 Tinytest.add('capacitor - dependencies - default includes both native platforms', test => {
@@ -248,6 +272,23 @@ Tinytest.add('capacitor - server runtime - skips shim outside direct server mode
 
   test.isFalse(changed);
   test.equal(data.head, '<meta name="app">');
+});
+
+Tinytest.add('capacitor - server runtime - shim emits update ready after checkForUpdates', test => {
+  const shim = evaluateWebAppLocalServerShim();
+  let checkForUpdatesCalls = 0;
+  let updateReadyVersion = null;
+
+  shim.onNewVersionReady((version) => {
+    updateReadyVersion = version;
+  });
+
+  shim.checkForUpdates(() => {
+    checkForUpdatesCalls += 1;
+  });
+
+  test.equal(checkForUpdatesCalls, 1);
+  test.equal(updateReadyVersion, 'direct-server');
 });
 
 Tinytest.add('capacitor - server runtime - cordova stub is direct server only', test => {
@@ -546,6 +587,7 @@ Tinytest.add('capacitor - env - platform override is explicit', test => {
 
   test.equal(env.METEOR_CAPACITOR, 'true');
   test.equal(env.METEOR_CAPACITOR_MODE, 'bundled');
+  test.equal(env.METEOR_NATIVE_MODE, 'bundled');
   test.equal(env.METEOR_CAPACITOR_PLATFORM, 'android');
 });
 

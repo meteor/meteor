@@ -69,6 +69,7 @@ export function getCapacitorEnv({ platform, mode, mobileServerUrl } = {}) {
   return {
     METEOR_CAPACITOR: 'true',
     METEOR_CAPACITOR_MODE: capacitorMode,
+    METEOR_NATIVE_MODE: capacitorMode,
     METEOR_CAPACITOR_PLATFORM: platform || (isAndroid ? 'android' : isIos ? 'ios' : ''),
     METEOR_BUILD_CONTEXT: CAPACITOR_BUILD_CONTEXT,
     METEOR_CAPACITOR_WEB_DIR: webDir,

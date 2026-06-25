@@ -100,7 +100,8 @@ function resolveCordovaOutDir({ appDir, cordovaOutDir }) {
 
 /**
  * Patches a Meteor web.cordova index.html string for Capacitor:
- *   1. Injects WebAppLocalServer no-op right after the <head> tag.
+ *   1. Injects the direct-server WebAppLocalServer compatibility shim right
+ *      after the <head> tag.
  *   2. Strips __cordova/ from every asset URL so they resolve from webDir root.
  *
  * @param {string} html - Original index.html content.
