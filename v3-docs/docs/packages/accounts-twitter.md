@@ -43,6 +43,59 @@ Calling this function starts the OAuth flow with Twitter. Depending on the confi
 
 For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services — including Twitter's `force_login` parameter — see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E). Note that, unlike some other services, `requestPermissions` is not currently supported for Twitter.
 
+## A complete example
+
+**1. Configure the OAuth credentials** on the server (for example in `server/main.js`). Twitter uses `consumerKey`/`secret`:
+
+```js
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'twitter' },
+  {
+    $set: {
+      loginStyle: 'popup', // or 'redirect' (use 'redirect' for mobile/Cordova)
+      consumerKey: 'YOUR_CONSUMER_KEY',
+      secret: 'YOUR_CONSUMER_SECRET',
+    },
+  },
+);
+```
+
+See [OAuth Services Configuration](./service-configuration.md) for the `settings.json` alternative and where to obtain these credentials.
+
+**2. Trigger the login.** With Blaze you can drop in the ready-made widget from [`accounts-ui`](./accounts-ui.md):
+
+```handlebars
+{{> loginButtons}}
+```
+
+Or call the login function directly from your own button — this works with React, Vue, Svelte, plain JS, etc.:
+
+```js
+function signIn() {
+  Meteor.loginWithTwitter((error) => {
+    if (error) {
+      // The user closing the popup rejects with Accounts.LoginCancelledError.
+      console.error(error);
+    }
+  });
+}
+```
+
+**3. Read the signed-in user.** After a successful login the profile lives under `services.twitter`:
+
+```js
+const user = Meteor.user(); // reactive on the client
+// user.services.twitter.id, user.services.twitter.screenName, ...
+```
+
+**4. Log out:**
+
+```js
+Meteor.logout();
+```
+
 ## Server behavior
 
 On the server, `accounts-twitter` registers the `twitter` OAuth service and, when the `autopublish` package is enabled, publishes a fixed set of `services.twitter` fields to all clients (the access token is intentionally **not** published). The published fields are Twitter's whitelisted profile fields plus `id` and `screenName`.
