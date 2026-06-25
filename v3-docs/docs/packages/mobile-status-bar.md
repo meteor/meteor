@@ -12,7 +12,7 @@ meteor add mobile-status-bar
 
 ## How it works
 
-The package bundles the standard [`cordova-plugin-statusbar`](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md) Cordova plugin with some sensible defaults (verified in `packages/mobile-status-bar/package.js`, which declares `Cordova.depends({ 'cordova-plugin-statusbar': '...' })`). It only takes effect in a native Cordova build.
+The package bundles the standard [`cordova-plugin-statusbar`](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md) Cordova plugin (pinned via `Cordova.depends` in `packages/mobile-status-bar/package.js`). It only takes effect in a native Cordova build.
 
 ## Configuration
 
@@ -41,6 +41,16 @@ App.setPreference('StatusBarStyle', 'lightcontent');
 ```
 
 For the complete list of preferences and the runtime `StatusBar` JavaScript API, refer to the [`cordova-plugin-statusbar` documentation](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md).
+
+### Platform-specific preferences
+
+`App.setPreference` accepts an optional third argument to scope a preference to one platform:
+
+```js
+App.setPreference('StatusBarStyle', 'lightcontent', 'ios');
+```
+
+This matters because several status-bar preferences are **iOS-only** (e.g. `StatusBarOverlaysWebView`, `StatusBarStyle`), while `StatusBarBackgroundColor` is the main one that affects Android. Values are passed as **strings** (`'false'`, not `false`). Changes to `mobile-config.js` require a rebuild to take effect.
 
 ## See also
 
