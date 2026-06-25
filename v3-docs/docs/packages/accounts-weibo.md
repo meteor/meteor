@@ -43,6 +43,59 @@ Calling this function starts the OAuth flow with Weibo. Depending on the configu
 
 For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E). Note that `requestPermissions` is not currently supported for Weibo.
 
+## A complete example
+
+**1. Configure the OAuth credentials** on the server (for example in `server/main.js`). Weibo uses `clientId`/`secret`:
+
+```js
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'weibo' },
+  {
+    $set: {
+      loginStyle: 'popup', // or 'redirect' (use 'redirect' for mobile/Cordova)
+      clientId: 'YOUR_CLIENT_ID',
+      secret: 'YOUR_CLIENT_SECRET',
+    },
+  },
+);
+```
+
+See [OAuth Services Configuration](./service-configuration.md) for the `settings.json` alternative and where to obtain these credentials.
+
+**2. Trigger the login.** With Blaze you can drop in the ready-made widget from [`accounts-ui`](./accounts-ui.md):
+
+```handlebars
+{{> loginButtons}}
+```
+
+Or call the login function directly from your own button — this works with React, Vue, Svelte, plain JS, etc.:
+
+```js
+function signIn() {
+  Meteor.loginWithWeibo((error) => {
+    if (error) {
+      // The user closing the popup rejects with Accounts.LoginCancelledError.
+      console.error(error);
+    }
+  });
+}
+```
+
+**3. Read the signed-in user.** After a successful login the profile and token live under `services.weibo`:
+
+```js
+const user = Meteor.user(); // reactive on the client
+// user.services.weibo.id, user.services.weibo.screenName, ...
+```
+
+**4. Log out:**
+
+```js
+Meteor.logout();
+```
+
 ## Server behavior
 
 On the server, `accounts-weibo` registers the `weibo` OAuth service and, when the `autopublish` package is enabled, publishes the following fields of the Weibo service data:
