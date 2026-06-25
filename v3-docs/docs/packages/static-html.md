@@ -34,6 +34,36 @@ Attributes are supported on the `<body>` tag, but **not** on `<head>`. Body attr
 
 Your view framework can then render into the `#root` element.
 
+## Using it with a view framework
+
+The usual reason to use `static-html` is to provide a mount point for a client-side framework. Define an empty root element in a `.html` file (as in the example above), then render into it from your JavaScript/JSX:
+
+```jsx
+// client/main.jsx (React example)
+import React from 'react';
+import { createRoot } from 'react-dom/client';
+import { Meteor } from 'meteor/meteor';
+
+Meteor.startup(() => {
+  const root = createRoot(document.getElementById('root'));
+  root.render(<h1>Hello from React</h1>);
+});
+```
+
+The same pattern works for Vue, Svelte, Solid, or any framework — `static-html` just gets the `#root` element onto the page and your framework takes over from there.
+
+### Body attributes
+
+Attributes on the `<body>` tag are supported (and applied at startup via `Meteor.startup`):
+
+```html
+<body class="my-app" data-theme="dark">
+  <div id="root"></div>
+</body>
+```
+
+Attributes on `<head>` are **not** supported.
+
 ## Notes
 
 - This package is a build-time plugin (it is `devOnly`); it registers a compiler that processes `.html` files at build time. There is no runtime JavaScript API to call.
