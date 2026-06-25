@@ -308,6 +308,10 @@ export default defineConfig({
                 link: "/packages/accounts-ui",
               },
               {
+                text: "accounts-ui-unstyled",
+                link: "/packages/accounts-ui-unstyled",
+              },
+              {
                 text: "accounts-passwordless",
                 link: "/packages/accounts-passwordless",
               },
