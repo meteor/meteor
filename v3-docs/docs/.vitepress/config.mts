@@ -390,6 +390,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "autopublish",
+                link: "/packages/autopublish",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
