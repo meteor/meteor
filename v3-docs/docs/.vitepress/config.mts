@@ -390,6 +390,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "insecure",
+                link: "/packages/insecure",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
