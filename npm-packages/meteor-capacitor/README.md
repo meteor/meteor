@@ -148,6 +148,8 @@ If no explicit URL is available, the helper falls back to `Meteor.localIp` and `
 
 Meteor's built-in Hot Code Push is enabled by default in bundled mode:
 
+License note: the native Hot Code Push runtime is MIT licensed and includes code derived from `banjerluke/capacitor-meteor-webapp`; see `NOTICE` and `LICENSES/banjerluke-capacitor-meteor-webapp.txt`.
+
 ```json
 {
   "meteor": {
