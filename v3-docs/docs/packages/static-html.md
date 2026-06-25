@@ -6,6 +6,10 @@
 meteor add static-html
 ```
 
+## Usage
+
+**Adding the package is all you need to do — there is nothing to configure.** `static-html` exposes no JavaScript API and reads no settings. Once installed, it automatically processes every `.html` file in your app at build time (see [How it works](#how-it-works) and the example below); you just write the `.html` files. The only practical consideration is that `static-html` and `templating` compile the same `.html` files differently, so an app uses one or the other — not both.
+
 ## How it works
 
 The plugin parses all of the `.html` files in your app and looks for top-level tags:
