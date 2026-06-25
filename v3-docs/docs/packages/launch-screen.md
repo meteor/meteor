@@ -35,6 +35,21 @@ Template.myUI.onRendered(function () {
 
 `LaunchScreen` is exported by the package (`api.export('LaunchScreen')`), so it is available as a global on the client.
 
+## Configuring the splash image
+
+This package controls **when** the launch screen is dismissed. The launch (splash) **image** itself is configured in your `mobile-config.js` with `App.launchScreens(...)`, which maps device/size keys to image paths in your app:
+
+```js
+// mobile-config.js
+App.launchScreens({
+  ios_universal: 'splash/ios_universal.png',       // 2732x2732
+  ios_universal_3x: 'splash/ios_universal_3x.png', // 2208x2208
+  android_universal: 'splash/android_universal.png',
+});
+```
+
+The keys are device/size identifiers (e.g. `ios_universal`, `ios_universal_3x`, `android_universal`). See the [Cordova guide](../about/cordova.md) for the full list of supported keys and recommended image sizes.
+
 ## See also
 
 - `mobile-experience` — umbrella package that includes `launch-screen`.
