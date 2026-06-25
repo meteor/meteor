@@ -156,29 +156,40 @@ function padName(name, width) {
   return name + ' '.repeat(width - name.length);
 }
 
-function renderDepBullets(changes) {
-  const width = Math.max(...changes.map((c) => c.name.length)) + 2;
-  return changes.map((c) => {
-    const padded = padName(c.name, width);
-    if (c.status === 'missing') {
-      return `   • ${padded}${c.requiredVersion} (new)`;
-    }
-    if (c.status === 'outdated') {
-      return `   • ${padded}${c.currentVersion || '?'} -> ${c.requiredVersion}`;
-    }
-    return `   • ${padded}${c.requiredVersion}`;
-  });
+function bulletAuto(c, width) {
+  const padded = padName(c.name, width);
+  if (c.status === 'missing') {
+    return `   • ${padded}${c.requiredVersion} (new)`;
+  }
+  if (c.status === 'outdated') {
+    return `   • ${padded}${c.currentVersion || '?'} -> ${c.requiredVersion}`;
+  }
+  return `   • ${padded}${c.requiredVersion}`;
 }
 
-function renderDepBulletsManual(changes) {
-  const width = Math.max(...changes.map((c) => c.name.length)) + 2;
-  return changes.map((c) => {
-    const padded = padName(c.name, width);
-    if (c.status === 'missing') {
-      return `   • ${padded}${c.requiredVersion} (not installed)`;
-    }
-    return `   • ${padded}${c.requiredVersion} (currently ${c.currentVersion || 'unknown'})`;
-  });
+function bulletManual(c, width) {
+  const padded = padName(c.name, width);
+  if (c.status === 'missing') {
+    return `   • ${padded}${c.requiredVersion} (not installed)`;
+  }
+  return `   • ${padded}${c.requiredVersion} (currently ${c.currentVersion || 'unknown'})`;
+}
+
+function groupedBullets(changes, bulletFn) {
+  const dev = changes.filter((c) => c.dev);
+  const regular = changes.filter((c) => !c.dev);
+  const all = [...dev, ...regular];
+  const width = Math.max(...all.map((c) => c.name.length)) + 2;
+  const out = [];
+  if (dev.length > 0) {
+    if (regular.length > 0) out.push(`   Dev dependencies:`);
+    dev.forEach((c) => out.push(bulletFn(c, width)));
+  }
+  if (regular.length > 0) {
+    if (dev.length > 0) out.push(`   Dependencies:`);
+    regular.forEach((c) => out.push(bulletFn(c, width)));
+  }
+  return out;
 }
 
 /**
@@ -198,7 +209,7 @@ export function renderAutoInstallSummary({ packageLabel, changes, docUrl, note }
   if (note) {
     logInfo(`   ${note}`);
   }
-  renderDepBullets(touched).forEach((line) => logInfo(line));
+  groupedBullets(touched, bulletAuto).forEach((line) => logInfo(line));
 }
 
 /**
@@ -233,7 +244,7 @@ export function renderManualInstallInstructions({ packageLabel, changes, yarn = 
   if (note) {
     logWarn(`   ${note}`);
   }
-  renderDepBulletsManual(needed).forEach((line) => logWarn(line));
+  groupedBullets(needed, bulletManual).forEach((line) => logWarn(line));
   logWarn(`   Automatic install is disabled (\`meteor.autoInstallDeps=false\`).`);
   logWarn(`   To bring your project in line, run:`);
 
