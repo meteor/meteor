@@ -6,6 +6,10 @@
 meteor add disable-oplog
 ```
 
+## Usage
+
+**Adding the package is all you need to do — there is nothing to configure.** `disable-oplog` exposes no JavaScript API and reads no settings; its mere presence disables oplog tailing app-wide. To re-enable oplog tailing, remove the package (`meteor remove disable-oplog`).
+
 ## How it works
 
 The `disable-oplog` package contains no code of its own. Its presence is detected by Meteor's MongoDB integration — verified by the `package.js` comment: *"This package is empty; its presence is detected by mongo-livedata."* When the package is added, oplog-based change observation is disabled globally for the app; there is no API to call.
