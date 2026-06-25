@@ -53,6 +53,62 @@ Meteor.loginWithFacebook({
 
 The user's `accessToken` is stored in the `services.facebook` field of their user document, so it can be used later to call the Facebook API on their behalf. The set of supported permission values is defined by Facebook; see [Facebook's permissions reference](https://developers.facebook.com/docs/permissions/reference). For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E).
 
+## A complete example
+
+**1. Configure the OAuth credentials** on the server (for example in `server/main.js`). Facebook uses `appId`/`secret`:
+
+```js
+import { ServiceConfiguration } from 'meteor/service-configuration';
+
+await ServiceConfiguration.configurations.upsertAsync(
+  { service: 'facebook' },
+  {
+    $set: {
+      loginStyle: 'popup', // or 'redirect' (use 'redirect' for mobile/Cordova)
+      appId: 'YOUR_APP_ID',
+      secret: 'YOUR_APP_SECRET',
+    },
+  },
+);
+```
+
+See [OAuth Services Configuration](./service-configuration.md) for the `settings.json` alternative and where to obtain these credentials.
+
+**2. Trigger the login.** With Blaze you can drop in the ready-made widget from [`accounts-ui`](./accounts-ui.md):
+
+```handlebars
+{{> loginButtons}}
+```
+
+Or call the login function directly from your own button — this works with React, Vue, Svelte, plain JS, etc.:
+
+```js
+function signIn() {
+  Meteor.loginWithFacebook(
+    { requestPermissions: ['public_profile', 'email'] },
+    (error) => {
+      if (error) {
+        // The user closing the popup rejects with Accounts.LoginCancelledError.
+        console.error(error);
+      }
+    },
+  );
+}
+```
+
+**3. Read the signed-in user.** After a successful login the profile and token live under `services.facebook`:
+
+```js
+const user = Meteor.user(); // reactive on the client
+// user.services.facebook.id, user.services.facebook.accessToken, ...
+```
+
+**4. Log out:**
+
+```js
+Meteor.logout();
+```
+
 ## Server behavior
 
 On the server, `accounts-facebook` registers the `facebook` OAuth service and, when the `autopublish` package is enabled, publishes the following fields of the Facebook service data:
