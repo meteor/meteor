@@ -18,6 +18,30 @@ Render the `serverFacts` template anywhere in your UI:
 
 The template renders an unordered list with one entry per package; for each package it shows a definition list of every fact name and its current value. It subscribes to the server facts when created and unsubscribes when destroyed.
 
+## A complete example
+
+Assuming the server increments some facts (see `facts-base`), display them in a Blaze app:
+
+```handlebars
+<!-- in one of your templates -->
+{{> serverFacts}}
+```
+
+If you are **not** using Blaze, read the same data directly from the reactive `Facts.server` collection and render it however you like (React, Vue, Svelte, etc.):
+
+```js
+import { Facts } from 'meteor/facts-base';
+
+// make sure the data is being published to this client
+Meteor.subscribe('meteor_facts');
+
+// reactive: one document per package, fields are that package's facts
+const rows = Facts.server.find().fetch();
+// e.g. rows = [{ _id: 'mongo-livedata', 'observe-handles': 3, ... }]
+```
+
+> Remember that whether any facts reach the client is decided on the server by `facts-base` (`Facts.setUserIdFilter` and the presence of `autopublish`). The built-in `serverFacts` template already subscribes to `meteor_facts` for you.
+
 ## The client collection
 
 On the client, `facts-ui` attaches the facts collection to the exported `Facts` object:
