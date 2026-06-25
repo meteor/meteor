@@ -44,6 +44,37 @@ Accounts.ui.config({
 
 Passing an unknown option throws an error (`Accounts.ui.config: Invalid option: ...`).
 
+## Styling the widgets
+
+Because this package ships no CSS, you add your own. The `{{> loginButtons}}` widget renders a predictable DOM structure with stable ids and classes you can target. The main hooks (from `login_buttons*.html`) are:
+
+- `#login-buttons` — the root container; it also gets a `login-buttons-dropdown-align-<align>` class.
+- `.login-button` and `.single-login-button` — the clickable buttons.
+- `#login-buttons-<service>` — the per-service sign-in button, e.g. `#login-buttons-google`, `#login-buttons-facebook`.
+- `.login-image` / `#login-buttons-image-<service>` — the per-service icon slot.
+- `.text-besides-image` — the button label.
+- `#login-buttons-logout` — the "Sign Out" button shown when logged in.
+- `.login-display-name` — the logged-in user's name.
+- `.message.error-message` and `.message.info-message` — status/error messages.
+- `.no-services` — shown when no login service is configured.
+
+Add a stylesheet to your app that targets these, for example:
+
+```css
+#login-buttons .login-button {
+  padding: 8px 12px;
+  border-radius: 6px;
+}
+#login-buttons-google .login-image {
+  background-image: url('/icons/google.svg');
+}
+#login-buttons .error-message {
+  color: #c0392b;
+}
+```
+
+> Tip: if you just want a working default look, use the [`accounts-ui`](./accounts-ui.md) package instead — it is exactly this package plus a default stylesheet (`login_buttons.import.css`). You can also read that file as a starting point for your own theme.
+
 ## See also
 
 - [accounts-ui](./accounts-ui.md) — the styled version of these widgets (this package plus a default stylesheet).
