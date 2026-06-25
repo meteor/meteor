@@ -217,8 +217,7 @@ export function renderAutoInstallSummary({ packageLabel, changes, docUrl, note }
  * Called only after a successful install.
  */
 export function renderAutoInstallFooter({ docUrl } = {}) {
-  logInfo(`ℹ️  Meteor installed these for you because \`meteor.autoInstallDeps\` is enabled.`);
-  logInfo(`   Set \`"meteor": { "autoInstallDeps": false }\` in package.json to manage them yourself.`);
+  logInfo(`ℹ️  Set \`"meteor": { "autoInstallDeps": false }\` in package.json to manage them yourself.`);
   if (docUrl) {
     logInfo(`   See: ${docUrl}`);
   }
@@ -239,21 +238,16 @@ export function renderManualInstallInstructions({ packageLabel, changes, yarn = 
   if (needed.length === 0) return;
 
   logWarn(`=> ⚠️  ${packageLabel}: npm dependencies need attention`);
-  logWarn(`   This version of Meteor requires the following minimum versions to avoid`);
-  logWarn(`   incompatibilities at build or runtime:`);
   if (note) {
     logWarn(`   ${note}`);
   }
   groupedBullets(needed, bulletManual).forEach((line) => logWarn(line));
-  logWarn(`   Automatic install is disabled (\`meteor.autoInstallDeps=false\`).`);
+  logWarn(``);
   logWarn(`   To bring your project in line, run:`);
 
   const { devCommand, regularCommand } = formatInstallCommands({ changes: needed, yarn });
   if (devCommand) logWarn(`       ${devCommand}`);
   if (regularCommand) logWarn(`       ${regularCommand}`);
-
-  logWarn(`   Or re-enable auto-install by removing \`"autoInstallDeps": false\` from`);
-  logWarn(`   your package.json \`"meteor"\` block.`);
   if (docUrl) {
     logWarn(`   See: ${docUrl}`);
   }
