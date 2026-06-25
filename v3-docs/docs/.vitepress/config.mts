@@ -390,6 +390,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "disable-oplog",
+                link: "/packages/disable-oplog",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
