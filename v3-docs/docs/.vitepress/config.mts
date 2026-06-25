@@ -316,6 +316,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
                 text: "roles",
                 link: "/packages/roles",
               },
