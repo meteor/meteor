@@ -470,6 +470,7 @@ var runCommandOptions = {
     'allow-incompatible-update': { type: Boolean },
     'extra-packages': { type: String },
     'exclude-archs': { type: String },
+    'runtime': { type: String },
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -591,10 +592,12 @@ async function doRunCommand(options) {
     appHost: appHost,
     ...normalizeInspectOptions(options),
     settingsFile: options.settings,
+    runtime: options.runtime || 'node',
     buildOptions: {
       minifyMode: options.production ? 'production' : 'development',
       buildMode,
-      webArchs: webArchs
+      webArchs: webArchs,
+      format: options.runtime === 'bun' ? 'esm' : undefined,
     },
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
@@ -1351,7 +1354,8 @@ var buildCommands = {
     headless: { type: Boolean },
     verbose: { type: Boolean, short: "v" },
     'allow-incompatible-update': { type: Boolean },
-    platforms: { type: String }
+    platforms: { type: String },
+    format: { type: String },
   },
   catalogRefresh: new catalog.Refresh.Never()
 };
@@ -1537,6 +1541,13 @@ ${Console.command("meteor build ../output")}`,
     projectContext: projectContext
   });
 
+  // Validate --format option
+  const format = options.format || undefined;
+  if (format && format !== 'esm') {
+    Console.error(`Unknown --format value: "${format}". Valid values: esm`);
+    return 1;
+  }
+
   var bundler = require('../isobuild/bundler.js');
   var bundleResult = await bundler.bundle({
     projectContext: projectContext,
@@ -1551,6 +1562,7 @@ ${Console.command("meteor build ../output")}`,
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
       webArchs,
+      format,
     },
   });
   if (bundleResult.errors) {

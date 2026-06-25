@@ -134,6 +134,7 @@ var AppProcess = function (options) {
   self.onListen = options.onListen;
   self.nodeOptions = options.nodeOptions || [];
   self.inspect = options.inspect;
+  self.runtime = options.runtime || 'node';
   self.settings = options.settings;
   self.testMetadata = options.testMetadata;
   self.autoRestart = options.autoRestart;
@@ -302,42 +303,56 @@ Object.assign(AppProcess.prototype, {
   // Spawn the server process and return the handle from child_process.spawn.
   _spawn: async function () {
     var self = this;
+    var child_process = require('child_process');
+
+    var isBun = self.runtime === 'bun';
 
     // Path conversions
     var entryPoint = files.convertToOSPath(
-      files.pathJoin(self.bundlePath, 'main.js'));
+      files.pathJoin(self.bundlePath, isBun ? 'index.mjs' : 'main.js'));
+
+    // Resolve runtime executable
+    var execPath;
+    if (isBun) {
+      try {
+        execPath = child_process.execSync('which bun', { encoding: 'utf8' }).trim();
+      } catch (e) {
+        throw new Error(
+          'Bun not found. Install it from https://bun.sh and make sure it is in your PATH.'
+        );
+      }
+    } else {
+      execPath = process.execPath;
+    }
 
     // Setting options
     var opts = JSON.parse(JSON.stringify(self.nodeOptions));
 
     if (self.inspect) {
-      // Always use --inspect rather than --inspect-brk, even when
-      // self.inspect.break is true, because --inspect-brk stops at the
-      // very first instruction executed by the child process, which is
-      // too early to set any meaningful breakpoints. Instead, we want to
-      // stop just after server code has loaded but before it begins to
-      // execute. See _computeEnvironment for logic that sets
-      // env.METEOR_INSPECT_BRK in that case.
       opts.push("--inspect=" + self.inspect.port);
     }
 
-    opts.push(`--require=${files.convertToOSPath(files.pathJoin(__dirname, '../node-process-warnings.js'))}`)
+    if (!isBun) {
+      opts.push(`--require=${files.convertToOSPath(files.pathJoin(__dirname, '../node-process-warnings.js'))}`);
+    }
 
     opts.push(entryPoint);
 
-    // Call node
-    var child_process = require('child_process');
-    // setup the 'ipc' pipe if further communication between app and proxy is
-    // expected
-    var child = child_process.spawn(process.execPath, opts, {
+    // Spawn the runtime process
+    // Note: Bun does not support Node's IPC channel, so we use 'pipe' only.
+    var child = child_process.spawn(execPath, opts, {
       env: self._computeEnvironment(),
-      stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+      stdio: isBun
+        ? ['pipe', 'pipe', 'pipe']
+        : ['pipe', 'pipe', 'pipe', 'ipc'],
     });
 
     // Add a child.sendMessage(topic, payload) method to this child
-    // process object.
-    const interProcessMessaging = await loadIsopackage("inter-process-messaging");
-    interProcessMessaging.enable(child);
+    // process object. IPC is not available with Bun.
+    if (!isBun) {
+      const interProcessMessaging = await loadIsopackage("inter-process-messaging");
+      interProcessMessaging.enable(child);
+    }
 
     return child;
   }
@@ -427,6 +442,7 @@ var AppRunner = function (options) {
   self.mongoUrl = options.mongoUrl;
   self.oplogUrl = options.oplogUrl;
   self.buildOptions = options.buildOptions;
+  self.runtime = options.runtime || 'node';
   self.rootUrl = options.rootUrl;
   self.mobileServerUrl = options.mobileServerUrl;
   self.cordovaRunner = options.cordovaRunner;
@@ -807,6 +823,7 @@ Object.assign(AppRunner.prototype, {
         });
       },
       inspect: self.inspect,
+      runtime: self.runtime,
       onListen: function () {
         self.proxy.setMode("proxy");
         if (self.hmrServer) {
@@ -860,13 +877,16 @@ Object.assign(AppRunner.prototype, {
     var serverWatcher;
     var clientWatcher;
 
-    appProcess.proc.onMessage("shell-server", message => {
-      if (message && message.command === "reload") {
-        self._resolvePromise("run", { outcome: "changed" });
-      } else {
-        return Promise.reject("Unsupported shell command: " + message);
-      }
-    });
+    // IPC messaging (not available with Bun runtime)
+    if (appProcess.proc.onMessage) {
+      appProcess.proc.onMessage("shell-server", message => {
+        if (message && message.command === "reload") {
+          self._resolvePromise("run", { outcome: "changed" });
+        } else {
+          return Promise.reject("Unsupported shell command: " + message);
+        }
+      });
+    }
 
     if (self.watchForChanges) {
       serverWatcher = new watch.Watcher({
@@ -906,12 +926,16 @@ Object.assign(AppRunner.prototype, {
     }
 
     function pauseClient(arch) {
-      return appProcess.proc.sendMessage("webapp-pause-client", { arch });
+      if (appProcess.proc.sendMessage) {
+        return appProcess.proc.sendMessage("webapp-pause-client", { arch });
+      }
     }
 
     async function refreshClient(arch) {
+      // IPC not available when running on Bun
+      if (!appProcess.proc.sendMessage) return;
+      // This message will reload the client program and unpause it.
       if (typeof arch === "string") {
-        // This message will reload the client program and unpause it.
         await appProcess.proc.sendMessage("webapp-reload-client", { arch });
       }
       // If arch is not a string, the receiver of this message should
