@@ -28,8 +28,19 @@ Collection.find(selector, {
 
 Disabling the oplog per query is usually preferable to disabling it everywhere. Reach for the `disable-oplog` package only when you genuinely want to turn oplog tailing off for the **entire** app.
 
+## Oplog vs. polling
+
+The tradeoff matters when deciding whether to disable the oplog:
+
+- **Oplog tailing** (the default when an oplog is available) pushes changes to reactive queries almost immediately and with low database load.
+- **Polling** re-runs each reactive query periodically. Reactive updates can therefore lag by up to `pollingIntervalMs` (default **10 seconds**), and app-wide polling multiplies query load across every observer.
+
+So disabling the oplog trades latency and database efficiency for simplicity. The package (app-wide) and the per-query `disableOplog` option **compose**: you can keep oplog tailing on globally and disable it only for specific queries, or install the package and still tune `pollingIntervalMs`/`pollingThrottleMs` per query.
+
+Note that Meteor only uses oplog tailing when an oplog URL is configured (e.g. `MONGO_OPLOG_URL`); without it, Meteor already polls, so you don't need this package just because a deployment has no oplog.
+
 ## When you might use it
 
-Disabling the oplog can be useful in environments where oplog tailing is unavailable or undesirable — for example, when your MongoDB deployment does not expose an oplog, or when you want every reactive query to use polling instead. Because polling is generally less efficient than oplog tailing for high-throughput reactive workloads, only add this package when you specifically need to disable the oplog.
+Disabling the oplog can be useful in environments where oplog tailing is unavailable or undesirable — for example, when you want every reactive query to use polling instead even though an oplog URL is configured. Because polling is generally less efficient than oplog tailing for high-throughput reactive workloads, only add this package when you specifically need to disable the oplog.
 
 > This package is described in its `package.js` and `README.md` as an internal Meteor package. It is documented here because it is added directly to apps (`meteor add disable-oplog`) and has an observable, app-wide effect. It exposes no public JavaScript API.
