@@ -316,6 +316,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
                 text: "roles",
                 link: "/packages/roles",
               },
