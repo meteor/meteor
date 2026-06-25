@@ -207,6 +207,7 @@ React app using both Rspack and Capacitor, with web-only native lifecycle covera
 | `.meteor/platforms` and Capacitor `.gitignore` entries are updated | Init |
 | `meteor run android` includes `web.cordova`, transforms it into `_build/native-dev`, and runs `cap sync` | Run |
 | Native simulator launch is skipped via `METEOR_CAPACITOR_SKIP_NATIVE_RUN` | Run, Prod |
+| Official Capacitor plugin imports and web runtime behavior (`Device.getInfo()` web success, `App.getInfo()` web unavailable) | Run, Prod |
 | Rspack dev artifacts and Capacitor webDir artifacts coexist under `_build` | Run |
 | Client and server rebuilds work during native dev run | Run |
 | `meteor run android --production` prepares `_build/native-prod` and syncs Android assets | Prod |
@@ -273,6 +274,8 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | Package | Reason |
 |---------|--------|
 | `@meteorjs/capacitor` | `defineConfig` API, Meteor native/runtime context, and Capacitor defaults |
+| `@capacitor/device` | Official Capacitor plugin import and web implementation (`Device.getInfo()` returns `platform: "web"`) |
+| `@capacitor/app` | Official Capacitor plugin import and handled web unavailability for `App.getInfo()` |
 
 ### babel (`apps/babel/server/apollo.js`)
 
@@ -347,6 +350,7 @@ Where each feature is tested across apps and skeletons.
 | Service worker precaching (`additionalManifestEntries`) | monorepo | |
 | PWA manifest | monorepo | |
 | Capacitor native web lifecycle | native-react | |
+| Official Capacitor plugin import/runtime behavior | native-react | |
 | `web.cordova` to Capacitor webDir transform | native-react | |
 | Native simulator launch bypass | native-react | |
 | Cordova native build bypass for Capacitor | native-react | |
