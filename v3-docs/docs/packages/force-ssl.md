@@ -22,6 +22,31 @@ A couple of behaviors worth knowing:
 - **Local development is unaffected.** Connections coming entirely over `localhost` are always allowed over plain HTTP, so you don't need HTTPS while developing.
 - **WebSockets are not redirected.** The redirect applies to regular HTTP requests; the package's own source notes it does not handle the WebSocket `upgrade` request.
 
+## Configuring your proxy
+
+Because `force-ssl` decides via the `x-forwarded-proto` / `forwarded` header, the proxy in front of your app must set it. Two common examples:
+
+**nginx:**
+
+```nginx
+location / {
+  proxy_set_header Host $host;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header X-Forwarded-Proto $scheme;   # <-- required by force-ssl
+  proxy_pass http://127.0.0.1:3000;
+}
+```
+
+**HAProxy:**
+
+```
+http-request set-header X-Forwarded-Proto https if { ssl_fc }
+```
+
+If your proxy already issues the HTTP→HTTPS redirect itself, you don't need this package at all.
+
+> **Note:** `force-ssl` only performs the redirect; it does **not** send an `Strict-Transport-Security` (HSTS) header. If you want HSTS, set it on your proxy or in your own middleware.
+
 ## How it works
 
 `force-ssl` runs on the server (it builds on `webapp` and `ddp`) and redirects incoming HTTP requests to HTTPS. To detect whether a connection arrived over HTTPS, it relies on the proxy that terminates SSL in front of your app:
