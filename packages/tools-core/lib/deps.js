@@ -217,7 +217,7 @@ export function renderAutoInstallSummary({ packageLabel, changes, docUrl, note }
  * Called only after a successful install.
  */
 export function renderAutoInstallFooter({ docUrl } = {}) {
-  logInfo(`ℹ️  Set \`"meteor": { "autoInstallDeps": false }\` in package.json to manage them yourself.`);
+  logInfo(`=> ℹ️  Set \`"meteor": { "autoInstallDeps": false }\` in package.json to manage them yourself.`);
   if (docUrl) {
     logInfo(`   See: ${docUrl}`);
   }
