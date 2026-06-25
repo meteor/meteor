@@ -390,6 +390,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "mobile-status-bar",
+                link: "/packages/mobile-status-bar",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
