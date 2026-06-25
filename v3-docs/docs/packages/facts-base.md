@@ -14,7 +14,7 @@ Each fact belongs to a **package** and has a **name** and an integer **value**. 
 
 ## Server API
 
-All of the following are methods on the exported `Facts` object and run on the server.
+All of the following are methods on the exported `Facts` object and run on the server. These methods exist only on the server; calling them on the client throws. Facts are held in memory per server process, so they reset on restart and are not aggregated across multiple instances. `Facts.setUserIdFilter` is evaluated once per subscription at subscribe time, so changing the filter (or a user's role) does not re-filter existing subscriptions.
 
 ### `Facts.incrementServerFact(pkg, fact, increment)`
 
@@ -89,6 +89,12 @@ Even if you never call `incrementServerFact` yourself, several core packages rep
 - `observe-handles` — number of active observe handles
 - `observe-drivers-oplog` — number of oplog-based observe drivers
 - `time-spent-in-<phase>-phase` — time spent in each oplog-observe phase
+
+The `mongo` package also reports `observe-drivers-polling` and `oplog-watchers` under `mongo-livedata`. And the `ddp-server` (livedata) package reports, under the `livedata` package name:
+
+- `sessions` — number of connected DDP sessions
+- `subscriptions` — number of active subscriptions
+- `invalidation-crossbar-listeners` — number of crossbar listeners
 
 This makes `facts-base` + `facts-ui` a quick way to watch live-query load on a running server.
 
