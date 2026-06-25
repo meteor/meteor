@@ -57,6 +57,21 @@ class RequireExternalsPlugin {
     this._funcCount = this._computeNextFuncCount();
   }
 
+  // The *-meteor.js entry's parent dir can transiently vanish during an HMR rebuild
+  // (a server-restart reinitialises the build paths) — a bare writeFileSync then throws
+  // ENOENT and stalls the dev build ("Could not resolve meteor.mainModule …"). Ensure the
+  // dir exists before writing, and never let a transient race crash the build; the next
+  // rebuild regenerates the file.
+  _safeWrite(data) {
+    try {
+      fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+      fs.writeFileSync(this.filePath, data, 'utf-8');
+    } catch (err) {
+      if (err && err.code === 'ENOENT') return;
+      throw err;
+    }
+  }
+
   // Helper method to check if a module name matches the externals or default prefix
   _isExternalModule(name) {
     if (typeof name !== 'string') return false;
@@ -201,7 +216,7 @@ class RequireExternalsPlugin {
         content = content.replace(emptyLastFnRe, '');
 
         // Write the cleaned file back
-        fs.writeFileSync(this.filePath, content, 'utf-8');
+        this._safeWrite(content);
 
         // Re-populate `existing` so the add-diff is accurate
         existing.clear();
@@ -330,9 +345,9 @@ class RequireExternalsPlugin {
         if (existingLastImports.length > 0) {
           const body = existingLastImports.join('\n');
           const fnCode = `\n// (function lastImports() {\n${body}\n// })\n`;
-          fs.writeFileSync(this.filePath, content + fnCode);
+          this._safeWrite(content + fnCode);
         } else {
-          fs.writeFileSync(this.filePath, content);
+          this._safeWrite(content);
         }
       }
       // If lastImports don't exist, add them if needed
@@ -401,7 +416,7 @@ class RequireExternalsPlugin {
             `// (function lastImports() {\n${newBody}// })`
           );
 
-          fs.writeFileSync(this.filePath, updatedContent);
+          this._safeWrite(updatedContent);
         }
       }
     });
@@ -468,11 +483,11 @@ class RequireExternalsPlugin {
       content = fs.readFileSync(this.filePath, 'utf-8');
       if (!content.includes(`typeof globalThis.module === 'undefined'`)) {
         // Prepend so it lives at the very top
-        fs.writeFileSync(this.filePath, content + '\n' + block, 'utf-8');
+        this._safeWrite(content + '\n' + block);
       }
     } else {
       // File doesn’t exist yet: create with just the block
-      fs.writeFileSync(this.filePath, block, 'utf-8');
+      this._safeWrite(block);
     }
   }
 
