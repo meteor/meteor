@@ -1,0 +1,349 @@
+{
+  "labels": {
+    "ci:e2e": {
+      "managed": false,
+      "description": "Run all E2E slices.",
+      "select": [{ "group": "all" }]
+    },
+    "ci:e2e:apps": {
+      "managed": true,
+      "description": "Run app lifecycle and bundling slices.",
+      "select": [{ "kind": "app" }]
+    },
+    "ci:e2e:skeletons": {
+      "managed": true,
+      "description": "Run meteor create skeleton slices.",
+      "select": [{ "kind": "skeleton" }]
+    },
+    "ci:e2e:examples": {
+      "managed": true,
+      "description": "Run example creation slices.",
+      "select": [{ "id": "examples" }]
+    }
+  },
+  "pathRules": [
+    {
+      "name": "core-tool",
+      "paths": [
+        "meteor",
+        "meteor/**",
+        "packages/meteor-tool/**",
+        "tools/cli/**",
+        "tools/isobuild/**",
+        "tools/runners/**",
+        "tools/fs/**",
+        "tools/packaging/**",
+        "tools/tool-env/**",
+        "tools/utils/**",
+        "tools/console/**",
+        "tools/meteor-services/**",
+        ".github/workflows/e2e-tests.yml",
+        "tools/e2e-tests/ci-groups.json",
+        "tools/e2e-tests/scripts/resolve-ci-plan.mjs"
+      ],
+      "select": [{ "group": "all" }]
+    },
+    {
+      "name": "e2e-app-fixtures",
+      "paths": ["tools/e2e-tests/apps/**"],
+      "select": [{ "kind": "app" }]
+    },
+    {
+      "name": "e2e-examples",
+      "paths": ["tools/e2e-tests/example.test.js"],
+      "select": [{ "id": "examples" }]
+    },
+    {
+      "name": "e2e-skeletons",
+      "paths": ["tools/e2e-tests/skeleton.test.js"],
+      "select": [{ "kind": "skeleton" }]
+    },
+    {
+      "name": "e2e-babel-test",
+      "paths": ["tools/e2e-tests/babel.test.js"],
+      "select": [{ "id": "babel-app" }]
+    },
+    {
+      "name": "e2e-blaze-test",
+      "paths": ["tools/e2e-tests/blaze.test.js"],
+      "select": [{ "id": "blaze-app" }]
+    },
+    {
+      "name": "e2e-full-blaze-test",
+      "paths": ["tools/e2e-tests/full-blaze.test.js"],
+      "select": [{ "id": "full-blaze-app" }]
+    },
+    {
+      "name": "e2e-coffeescript-test",
+      "paths": ["tools/e2e-tests/coffeescript.test.js"],
+      "select": [{ "id": "coffeescript-app" }]
+    },
+    {
+      "name": "e2e-monorepo-test",
+      "paths": ["tools/e2e-tests/monorepo.test.js"],
+      "select": [{ "id": "monorepo-app" }]
+    },
+    {
+      "name": "e2e-server-only-test",
+      "paths": ["tools/e2e-tests/server-only.test.js"],
+      "select": [{ "id": "server-only-app" }]
+    },
+    {
+      "name": "e2e-react-test",
+      "paths": ["tools/e2e-tests/react.test.js"],
+      "select": [{ "id": "react-app" }]
+    },
+    {
+      "name": "e2e-react-router-test",
+      "paths": ["tools/e2e-tests/react-router.test.js"],
+      "select": [{ "id": "react-router-app" }]
+    },
+    {
+      "name": "e2e-solid-test",
+      "paths": ["tools/e2e-tests/solid.test.js"],
+      "select": [{ "id": "solid-app" }]
+    },
+    {
+      "name": "e2e-svelte-test",
+      "paths": ["tools/e2e-tests/svelte.test.js"],
+      "select": [{ "id": "svelte-app" }]
+    },
+    {
+      "name": "e2e-typescript-test",
+      "paths": ["tools/e2e-tests/typescript.test.js"],
+      "select": [{ "id": "typescript-app" }]
+    },
+    {
+      "name": "e2e-vue-test",
+      "paths": ["tools/e2e-tests/vue.test.js"],
+      "select": [{ "id": "vue-app" }]
+    },
+    {
+      "name": "e2e-shared-infra",
+      "paths": [
+        "tools/e2e-tests/helpers.js",
+        "tools/e2e-tests/test-helpers.js",
+        "tools/e2e-tests/assertions.js",
+        "tools/e2e-tests/jest.config.js",
+        "tools/e2e-tests/jest.setup.js",
+        "tools/e2e-tests/package.json",
+        "tools/e2e-tests/package-lock.json",
+        "tools/e2e-tests/scripts/**",
+        "tools/e2e-tests/summary-reporter.js"
+      ],
+      "select": [{ "group": "all" }]
+    },
+    {
+      "name": "skeleton-assets",
+      "paths": ["tools/static-assets/skel-**"],
+      "select": [{ "kind": "skeleton" }]
+    }
+  ],
+  "checks": [
+    {
+      "check": "Angular",
+      "slices": [
+        {
+          "id": "angular-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Angular Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Babel",
+      "slices": [
+        {
+          "id": "babel-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=babel.test.js"
+        },
+        {
+          "id": "babel-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Babel Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Blaze",
+      "slices": [
+        {
+          "id": "blaze-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=\"(^|/)blaze\\.test\\.js$\""
+        },
+        {
+          "id": "full-blaze-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=full-blaze.test.js"
+        },
+        {
+          "id": "blaze-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Blaze Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Coffeescript",
+      "slices": [
+        {
+          "id": "coffeescript-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=coffeescript.test.js"
+        },
+        {
+          "id": "coffeescript-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Coffeescript Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Examples",
+      "slices": [
+        {
+          "id": "examples",
+          "kind": "examples",
+          "jestArgs": "--testPathPattern=example.test.js"
+        }
+      ]
+    },
+    {
+      "check": "Monorepo",
+      "slices": [
+        {
+          "id": "monorepo-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=monorepo.test.js"
+        }
+      ]
+    },
+    {
+      "check": "Other",
+      "slices": [
+        {
+          "id": "server-only-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=server-only.test.js"
+        },
+        {
+          "id": "apollo-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Apollo Skeleton\""
+        },
+        {
+          "id": "bare-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Bare Skeleton\""
+        },
+        {
+          "id": "chakra-ui-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"ChakraUI Skeleton\""
+        },
+        {
+          "id": "full-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Full Skeleton\""
+        },
+        {
+          "id": "tailwind-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Other / Tailwind Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "React",
+      "slices": [
+        {
+          "id": "react-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=react.test.js"
+        },
+        {
+          "id": "react-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"React Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "R.Router",
+      "slices": [
+        {
+          "id": "react-router-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=react-router.test.js"
+        }
+      ]
+    },
+    {
+      "check": "Solid",
+      "slices": [
+        {
+          "id": "solid-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=solid.test.js"
+        },
+        {
+          "id": "solid-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Solid Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Svelte",
+      "slices": [
+        {
+          "id": "svelte-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=svelte.test.js"
+        },
+        {
+          "id": "svelte-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Svelte Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Typescript",
+      "slices": [
+        {
+          "id": "typescript-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=typescript.test.js"
+        },
+        {
+          "id": "typescript-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Typescript Skeleton\""
+        },
+        {
+          "id": "typescript-tailwind-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Typescript Tailwind Skeleton\""
+        }
+      ]
+    },
+    {
+      "check": "Vue",
+      "slices": [
+        {
+          "id": "vue-app",
+          "kind": "app",
+          "jestArgs": "--testPathPattern=vue.test.js"
+        },
+        {
+          "id": "vue-skeleton",
+          "kind": "skeleton",
+          "jestArgs": "--testPathPattern=skeleton.test.js -t=\"Vue Skeleton\""
+        }
+      ]
+    }
+  ]
+}

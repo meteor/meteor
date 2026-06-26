@@ -3,7 +3,7 @@
 language: "en-US"
 
 reviews:
-  profile: "chill"                      # community repo — keep it welcoming
+  profile: "chill"                      # community repo, keep it welcoming
   request_changes_workflow: false
   high_level_summary: true
   poem: false                           # serious OSS platform
@@ -19,7 +19,53 @@ reviews:
   related_issues: true
   related_prs: true
   suggested_labels: true
-  auto_apply_labels: false
+  auto_apply_labels: true
+  labeling_instructions:
+    - label: "ci:e2e"
+      instructions: >
+        Apply when the PR broadly affects Meteor E2E CI, Meteor tool behavior,
+        E2E test coverage, or multiple E2E categories, including changes under
+        meteor, meteor/**, packages/meteor-tool/**, tools/cli/**,
+        tools/isobuild/**, shared E2E infrastructure files under
+        tools/e2e-tests/**, or .github/workflows/e2e-tests.yml. This label
+        runs all E2E checks and should be treated as a sticky
+        manual-compatible label. Do not apply for docs-only or unrelated
+        package, frontend, or backend changes unless they affect E2E
+        execution, coverage, fixtures, or Meteor tool behavior.
+    - label: "ci:e2e:apps"
+      instructions: >
+        Apply when the PR affects app lifecycle or bundling checks for existing
+        E2E fixture apps, including tools/e2e-tests/apps/**, generated app
+        startup, hot reload, rebuild behavior, Rspack integration, build
+        output, test mode, production mode, DDP connection smoke checks, or
+        Meteor tool changes likely to affect generated app execution. Do not
+        apply for docs-only or unrelated package, frontend, or backend changes
+        unless they affect app E2E execution, fixtures, or coverage.
+    - label: "ci:e2e:skeletons"
+      instructions: >
+        Apply when the PR affects meteor create skeleton behavior, skeleton
+        source assets under tools/static-assets/skel-**, skeleton creation,
+        skeleton run, test, or build behavior, skeleton package contents, or
+        tools/e2e-tests/skeleton.test.js. Do not apply for docs-only or
+        unrelated package, frontend, or backend changes unless they affect
+        skeleton E2E execution, assets, or coverage.
+    - label: "ci:e2e:examples"
+      instructions: >
+        Apply when the PR affects Meteor example creation, meteor create
+        --list, meteor create --example, meteor create --from, example
+        repository integration, generated example execution, or
+        tools/e2e-tests/example.test.js. Do not apply for docs-only or
+        unrelated package, frontend, or backend changes unless they affect
+        example E2E execution, fixtures, or coverage.
+    - label: "ci:e2e:native"
+      instructions: >
+        Apply when the PR affects native mobile smoke tests, Cordova app build
+        behavior, iOS or Android simulator setup, Maestro flows,
+        tools/native-tests/**, .github/workflows/native.yml, mobile smoke
+        checks, tools/native-tests workflow support, native test stability, or
+        native workflow behavior. Do not apply for docs-only or unrelated
+        package, frontend, or backend changes unless they affect native E2E
+        execution, smoke tests, or coverage.
   suggested_reviewers: true
   auto_assign_reviewers: false
 
@@ -38,7 +84,7 @@ reviews:
       instructions: >
         This is a core Meteor Atmosphere package. Focus on API backwards
         compatibility, DDP/reactivity correctness, and client/server split.
-        Avoid nitpicking style — the codebase has legacy patterns.
+        Avoid nitpicking style, the codebase has legacy patterns.
     - path: "tools/**"
       instructions: >
         This is the Meteor build tool (Isobuild). Be thorough about
@@ -58,7 +104,7 @@ reviews:
 
   auto_review:
     enabled: true
-    drafts: false
+    drafts: true
     auto_incremental_review: true
     auto_pause_after_reviewed_commits: 3
     ignore_title_keywords:
@@ -68,7 +114,7 @@ reviews:
 
   finishing_touches:
     docstrings:
-      enabled: false    # legacy JS — too much noise across 100s of packages
+      enabled: false    # legacy JS, too much noise across 100s of packages
     unit_tests:
       enabled: true
     simplify:
