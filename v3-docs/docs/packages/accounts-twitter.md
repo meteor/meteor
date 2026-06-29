@@ -1,6 +1,6 @@
 # accounts-twitter
 
-The `accounts-twitter` package is the login service that lets users of your app sign in with their Twitter/X account, using OAuth. It builds on top of [`accounts-base`](../api/accounts.md) and the `twitter-oauth` package, registering Twitter as an available login service and exposing a client-side `Meteor.loginWithTwitter` helper.
+The `accounts-twitter` package is the login service that lets users of your app sign in with their Twitter/X account, using OAuth 1.0a. It builds on top of [`accounts-base`](../api/accounts.md) and the `twitter-oauth` package, registering Twitter as an available login service and exposing a client-side `Meteor.loginWithTwitter` helper.
 
 Add it to your project with:
 
@@ -41,7 +41,7 @@ Meteor.loginWithTwitter((error) => {
 
 Calling this function starts the OAuth flow with Twitter. Depending on the configured `loginStyle` (`"popup"` or `"redirect"`, set in the service configuration), it either opens a pop-up window or redirects the page to Twitter's authorization page. Once the user authorizes the app, the Meteor client logs in to the server with the credentials returned by Twitter.
 
-For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services — including Twitter's `force_login` parameter — see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E). Note that, unlike some other services, `requestPermissions` is not currently supported for Twitter.
+For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth login services, see the [Accounts API documentation](../api/accounts.md#Meteor-loginWith%3CExternalService%3E). The `force_login` and `screen_name` options are Twitter-specific (see below). Note that, unlike some other services, `requestPermissions` is not currently supported for Twitter.
 
 ## Setting up the Twitter/X app
 
@@ -51,7 +51,7 @@ For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth
 2. Copy the **Consumer Key (API Key)** and **Consumer Secret** — these are the `consumerKey` and `secret` you configure below.
 3. Set the **Callback URI / Redirect URL**. Meteor handles the callback at:
 
-   ```
+   ```text
    <your-root-url>/_oauth/twitter
    ```
 
@@ -93,7 +93,7 @@ Or call the login function directly from your own button — this works with Rea
 function signIn() {
   Meteor.loginWithTwitter((error) => {
     if (error) {
-      // The user closing the popup rejects with Accounts.LoginCancelledError.
+      // If the user closes the popup, the error is Accounts.LoginCancelledError.
       console.error(error);
     }
   });
@@ -119,7 +119,7 @@ After login, Twitter profile data is stored under `services.twitter`: `id`, `scr
 
 ## Server behavior
 
-On the server, `accounts-twitter` registers the `twitter` OAuth service and, when the `autopublish` package is enabled, publishes a fixed set of `services.twitter` fields to all clients (the access token is intentionally **not** published). The published fields are Twitter's whitelisted profile fields plus `id` and `screenName`.
+On the server, `accounts-twitter` registers the `twitter` OAuth service and, when the `autopublish` package is enabled, publishes a fixed set of `services.twitter` fields to all clients (the access token is intentionally **not** published — not even to the logged-in user). The published fields are Twitter's whitelisted profile fields plus `id` and `screenName`.
 
 ## See also
 
