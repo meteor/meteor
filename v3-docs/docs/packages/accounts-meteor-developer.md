@@ -47,7 +47,7 @@ For the generic `Meteor.loginWith<ExternalService>` behavior shared by all OAuth
 
 Meteor Developer Accounts use the OAuth2 service hosted at `https://www.meteor.com`. You register an application there to obtain a `clientId`/`secret`, and register your redirect URI. Meteor handles the callback at:
 
-```
+```text
 <your-root-url>/_oauth/meteor-developer
 ```
 
@@ -110,7 +110,7 @@ Meteor.logout();
 
 ## What's stored on the user
 
-After login, data is stored under `services.meteor-developer`: `id`, `username`, identity fields, plus `accessToken` and `expiresAt`. The user's `profile.name` is also set from the identity. If credentials aren't configured, the login throws a `ServiceConfiguration.ConfigError`.
+After login, data is stored under `services.meteor-developer`: `id`, `username`, `accessToken`, and `expiresAt` (plus a `refreshToken` when one is returned on first authorization). The user's `profile.name` is also set from the identity. If credentials aren't configured, the login fails with a `ServiceConfiguration.ConfigError` delivered to your callback.
 
 ## Server behavior
 
