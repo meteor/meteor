@@ -43,7 +43,7 @@ Calling this function starts the OAuth flow with Facebook. Depending on the conf
 
 #### Requesting permissions
 
-To request additional permissions from the user, pass an array of scopes in `options.requestPermissions`:
+By default — when `requestPermissions` is omitted — `facebook-oauth` requests the `email` scope. To request additional permissions from the user, pass an array of scopes in `options.requestPermissions`:
 
 ```js
 Meteor.loginWithFacebook({
@@ -59,7 +59,7 @@ The user's `accessToken` is stored in the `services.facebook` field of their use
 2. Copy the **App ID** and **App Secret** — these are the `appId` and `secret` you configure below.
 3. Add your app's OAuth redirect URI to **Valid OAuth Redirect URIs**. Meteor handles the callback at:
 
-   ```
+   ```text
    <your-root-url>/_oauth/facebook
    ```
 
