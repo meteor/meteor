@@ -118,6 +118,14 @@ var getNodeOptionsFromEnvironment = function () {
 // Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl
 // Optional options: onExit, onListen, nodeOptions, settings
 
+// How long to wait, after sending SIGTERM, before escalating to SIGKILL when
+// stopping the app process. An app that registers its own `process.on('SIGTERM')`
+// handler without calling `process.exit()` overrides Node's default "terminate
+// on SIGTERM" behavior; without this escalation such a process would survive a
+// dev-server restart, leak across restarts, and keep holding the port. See
+// https://github.com/meteor/meteor/issues/13490.
+var APP_STOP_SIGKILL_GRACE_MS = 3000;
+
 var AppProcess = function (options) {
   var self = this;
 
@@ -208,9 +216,33 @@ Object.assign(AppProcess.prototype, {
     var self = this;
 
     if (self.proc && self.proc.pid) {
-      self.proc.removeAllListeners('close');
-      self.proc.removeAllListeners('error');
-      self.proc.kill();
+      var proc = self.proc;
+      proc.removeAllListeners('close');
+      proc.removeAllListeners('error');
+      proc.kill();
+
+      // If the app installed its own SIGTERM handler and does not exit in
+      // response, the kill() above (SIGTERM) leaves it running. Escalate to
+      // SIGKILL after a short grace period so the process can't leak across
+      // restarts or keep holding the port. See issue #13490.
+      var pid = proc.pid;
+      var sigkillTimer = setTimeout(function () {
+        try {
+          // Throws if the process is already gone; otherwise force-kill it.
+          process.kill(pid, 0);
+          process.kill(pid, 'SIGKILL');
+        } catch (e) {
+          // Process already exited — nothing to do.
+        }
+      }, APP_STOP_SIGKILL_GRACE_MS);
+      // Don't let this timer keep the tool's event loop alive.
+      if (sigkillTimer.unref) {
+        sigkillTimer.unref();
+      }
+      // If the process exits on its own first, cancel the pending SIGKILL.
+      proc.once('exit', function () {
+        clearTimeout(sigkillTimer);
+      });
     }
     self.proc = null;
 
