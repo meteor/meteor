@@ -8,7 +8,7 @@ Add it to your project with:
 meteor add accounts-github
 ```
 
-Adding the package automatically implies [`accounts-base`](../api/accounts.md) and `github-oauth`, so the `Accounts` API and the underlying `Github` OAuth helpers become available as well.
+Adding the package automatically implies [`accounts-base`](../api/accounts.md) and `github-oauth`, so the `Accounts` API and the underlying `GitHub` OAuth helpers become available as well.
 
 ## Configuring the service
 
@@ -59,7 +59,7 @@ When `requestPermissions` is not provided, `accounts-github` requests the `user:
 2. Copy the **Client ID** and generate a **Client Secret** — these are the `clientId` and `secret` you configure below.
 3. Set the **Authorization callback URL**. Meteor handles the callback at:
 
-   ```
+   ```text
    <your-root-url>/_oauth/github
    ```
 
@@ -123,7 +123,7 @@ Meteor.logout();
 
 ## What's stored on the user
 
-After login, GitHub profile data is stored under `services.github`: `id`, `email`, `username` (the GitHub login), `name`, `avatar`, `company`, `blog`, `location`, `bio`, `emails`, plus `accessToken` and `expiresAt`. Note that the access token is stored sealed (encrypted) on the server, so you will not see a usable token by reading the document directly. The default `user:email` scope makes the email available, but it can be empty if the account has no accessible email.
+After login, GitHub profile data is stored under `services.github`: `id`, `email`, `username` (the GitHub login), `name`, `avatar`, `company`, `blog`, `location`, `bio`, `emails`, plus `accessToken`. GitHub's OAuth access tokens do not expire, so no `expiresAt` is stored. If the [`oauth-encryption`](./oauth-encryption.md) package is configured, the access token is stored sealed (encrypted); otherwise it is stored as plaintext. The default `user:email` scope makes the email available, but it can be empty if the account has no accessible email.
 
 ## Server behavior
 
