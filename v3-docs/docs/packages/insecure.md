@@ -1,6 +1,6 @@
 # insecure
 
-`insecure` allows almost all collection methods — such as `insert`, `update`, and `remove` — to be called directly from the client, without writing any `allow`/`deny` rules. It is meant for **prototyping only**: it lets you build an app quickly without worrying about database permissions, and should be removed as soon as your app needs to restrict database access.
+`insecure` allows client-side `insert`, `update`, and `remove` operations on collections without writing any `allow`/`deny` rules. It is meant for **prototyping only**: it lets you build an app quickly without worrying about database permissions, and should be removed as soon as your app needs to restrict database access.
 
 ```bash
 meteor add insecure
@@ -14,7 +14,7 @@ As of Meteor 3.x, `insecure` is **not** included in new projects by default; add
 
 ## How it works
 
-The `insecure` package contains no code of its own. Its presence is detected by Meteor's MongoDB integration, which — when the package is present — allows client-originated writes to collections that have no explicit `allow`/`deny` rules. This is why simply adding the package is enough; there is no API to call.
+The `insecure` package exposes no JavaScript API of its own. Its presence is detected by Meteor's MongoDB integration, which — when the package is present — allows client-originated writes to collections that have no explicit `allow`/`deny` rules. This is why simply adding the package is enough; there is no API to call.
 
 ## Removing it
 
@@ -53,7 +53,7 @@ await Meteor.callAsync('tasks.insert', 'Buy milk');
 
 Keeping `insecure` in a production app is a security risk, because any client could insert, update, or remove arbitrary documents.
 
-> **Important:** `insecure` works **per collection** and only on collections that have **no** `allow`/`deny` rules. Calling `allow()` or `deny()` even once on a collection makes it "restricted" and `insecure` is ignored for that collection — which is exactly how you migrate off it one collection at a time. Also note that `meteor remove insecure` flips every rule-less collection to deny-all at once, so all client writes that relied on it stop working until you've added Methods (or rules) for them.
+> **Important:** `insecure` works **per collection** and only on collections that have **no** `allow`/`deny` rules. Calling `allow()` or `deny()` even once on a collection makes it "restricted" and `insecure` is ignored for that collection — which is precisely how you migrate off it one collection at a time. Also note that `meteor remove insecure` flips every rule-less collection to deny-all at once, so all client writes that relied on it stop working until you've added Methods (or rules) for them.
 
 ## See also
 
