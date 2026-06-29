@@ -76,13 +76,13 @@ If you call `Accounts.config({ restrictCreationByEmailDomain: 'example.com' })` 
 2. Copy the **Client ID** and **Client Secret** — these are the `clientId` and `secret` you configure below.
 3. Add your redirect URI under **Authorized redirect URIs**. Meteor handles the callback at:
 
-   ```
+   ```text
    <your-root-url>/_oauth/google
    ```
 
    e.g. `http://localhost:3000/_oauth/google` in development.
 
-Note: Google always adds the `email` scope to the request, even if you only ask for `profile`.
+Note: The `google-oauth` package always includes the `email` scope in the request, even if you only ask for `profile`. It is required to obtain the user ID from Google.
 
 ### Native Google Sign-In on Cordova
 
