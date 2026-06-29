@@ -20,7 +20,7 @@ The package defines a Blaze template named `loginButtons`. Render it anywhere in
 {{> loginButtons}}
 ```
 
-Because this package ships no CSS, the buttons appear unstyled until you add your own styles (or use the [`accounts-ui`](./accounts-ui.md) package, which provides a default stylesheet).
+Because this package applies no CSS by default, the buttons appear unstyled until you add your own styles (or use the [`accounts-ui`](./accounts-ui.md) package, which provides a default stylesheet).
 
 ## `Accounts.ui.config(options)`
 
@@ -49,7 +49,7 @@ You can also provide these same options through `Meteor.settings.public.packages
 
 ## Styling the widgets
 
-Because this package ships no CSS, you add your own. The `{{> loginButtons}}` widget renders a predictable DOM structure with stable ids and classes you can target. The main hooks (from `login_buttons*.html`) are:
+Because this package applies no CSS by default, you add your own. The <span v-pre>`{{> loginButtons}}`</span> widget renders a predictable DOM structure with stable ids and classes you can target. The main hooks (from `login_buttons*.html`) are:
 
 - `#login-buttons` — the root container; it also gets a `login-buttons-dropdown-align-<align>` class.
 - `.login-button` and `.single-login-button` — the clickable buttons.
@@ -84,7 +84,7 @@ Add a stylesheet to your app that targets these, for example:
 }
 ```
 
-> Tip: if you just want a working default look, use the [`accounts-ui`](./accounts-ui.md) package instead — it is exactly this package plus a default stylesheet (`login_buttons.import.css`). You can also read that file as a starting point for your own theme.
+> Tip: if you just want a working default look, use the [`accounts-ui`](./accounts-ui.md) package instead — it is exactly this package plus a default stylesheet. This package does ship that stylesheet (`login_buttons.import.css`); it just isn't applied automatically, so you can `@import "{accounts-ui-unstyled}/login_buttons.import.css";` from your own CSS to get the default look, or read it as a starting point for your own theme.
 
 ## See also
 
