@@ -6,7 +6,7 @@
 meteor add facts-base
 ```
 
-The package exports a `Facts` object (`api.export("Facts")`) and runs on the server.
+The package exports a `Facts` object and runs on the server.
 
 ## How facts are stored and published
 
@@ -43,15 +43,17 @@ By default, facts are published to **no** users when `autopublish` is off, and t
 ```js
 import { Facts } from 'meteor/facts-base';
 
-Facts.setUserIdFilter(userId => {
-  const user = Meteor.users.findOne(userId);
-  return user && user.isAdmin;
-});
+// The filter runs synchronously at subscribe time, so it cannot do an
+// async / DB lookup. Decide from data available synchronously, e.g. an
+// allowlist of admin user ids in your settings:
+Facts.setUserIdFilter(userId =>
+  (Meteor.settings.adminUserIds || []).includes(userId)
+);
 ```
 
 ### `Facts.resetServerFacts()`
 
-Clears all recorded facts for every package.
+Clears all recorded facts for every package. It clears the in-memory state but issues no `removed` messages to subscribers, so currently-connected clients keep showing the old facts until they resubscribe.
 
 ## A complete example
 
@@ -73,17 +75,16 @@ Meteor.methods({
 
 // Expose the facts only to admins (otherwise, without autopublish, no one
 // can subscribe to them):
-Facts.setUserIdFilter((userId) => {
-  const user = userId && Meteor.users.findOne(userId);
-  return Boolean(user && user.isAdmin);
-});
+Facts.setUserIdFilter((userId) =>
+  (Meteor.settings.adminUserIds || []).includes(userId)
+);
 ```
 
 To display these on the client, add the `facts-ui` package and render its `serverFacts` template.
 
 ## Facts published by Meteor itself
 
-Even if you never call `incrementServerFact` yourself, several core packages report facts automatically once `facts-base` is installed. For example, the `mongo` package publishes the following under the `mongo-livedata` package name (verified in `packages/mongo/observe_multiplex.ts` and `packages/mongo/oplog_observe_driver.js`):
+Even if you never call `incrementServerFact` yourself, several core packages report facts automatically once `facts-base` is installed. For example, the `mongo` package publishes the following under the `mongo-livedata` package name:
 
 - `observe-multiplexers` — number of active observe-multiplexers
 - `observe-handles` — number of active observe handles
@@ -100,9 +101,9 @@ This makes `facts-base` + `facts-ui` a quick way to watch live-query load on a r
 
 ## Notes
 
-> The package `README.md` describes `facts-base` as an internal Meteor package. It is documented here because it exports a public `Facts` API that app and package authors can call. The internal helpers prefixed with an underscore (e.g. `Facts._factsByPackage`) are intentionally **not** documented.
+Only the public `Facts` API is documented here. Internal helpers prefixed with an underscore (e.g. `Facts._factsByPackage`) are not part of the public API and may change without notice.
 
 ## See also
 
-- `facts-ui` — a client package that subscribes to these facts and renders them with the <span v-pre>`{{> serverFacts}}`</span> template.
-- `autopublish` — when present, changes the default visibility of facts to all users.
+- [`facts-ui`](./facts-ui.md) — a client package that subscribes to these facts and renders them with the <span v-pre>`{{> serverFacts}}`</span> template.
+- [`autopublish`](./autopublish.md) — when present, changes the default visibility of facts to all users.
