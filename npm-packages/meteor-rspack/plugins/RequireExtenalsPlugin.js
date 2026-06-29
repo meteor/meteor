@@ -67,7 +67,12 @@ class RequireExternalsPlugin {
       fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
       fs.writeFileSync(this.filePath, data, 'utf-8');
     } catch (err) {
-      if (err && err.code === 'ENOENT') return;
+      if (err && err.code === 'ENOENT') {
+        // Transient: the build dir was reinitialised mid-rebuild. Don't crash — the next
+        // compile regenerates the file. Warn so the skip is visible when diagnosing HMR.
+        console.warn(`[meteor-rspack] skipped a transient ENOENT writing ${this.filePath}; the next rebuild will regenerate it`);
+        return;
+      }
       throw err;
     }
   }
