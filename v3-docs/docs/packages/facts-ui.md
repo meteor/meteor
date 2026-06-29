@@ -6,7 +6,7 @@
 meteor add facts-ui
 ```
 
-Adding `facts-ui` implies `facts-base` (`api.imply("facts-base")`), so you get the fact-collection machinery as well. The package depends on `templating`, so it is intended for apps that use Blaze.
+Adding `facts-ui` implies `facts-base`, so you get the fact-collection machinery as well. The package depends on `templating`, so it is intended for apps that use Blaze.
 
 ## Displaying the facts
 
@@ -69,10 +69,6 @@ const allPackageFacts = Facts.server.find().fetch();
 
 > Who can see the facts is controlled on the server by `facts-base` (via `Facts.setUserIdFilter` and the presence of `autopublish`). If no facts appear, make sure the current user is permitted to subscribe.
 
-## Notes
-
-> The package `README.md` labels `facts-ui` an internal Meteor package. It is documented here because it provides a public template (<span v-pre>`{{> serverFacts}}`</span>) and the `Facts.server` collection that app authors can use directly.
-
 ## See also
 
-- `facts-base` — collects and publishes the facts that this package displays, and defines the `Facts.incrementServerFact` / `Facts.setUserIdFilter` server API.
+- [`facts-base`](./facts-base.md) — collects and publishes the facts that this package displays, and defines the `Facts.incrementServerFact` / `Facts.setUserIdFilter` server API.
