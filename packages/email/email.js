@@ -5,7 +5,7 @@ import { Hook } from 'meteor/callback-hook';
 import url from 'url';
 import nodemailer from 'nodemailer';
 import wellKnow from 'nodemailer/lib/well-known';
-import { openpgpEncrypt } from 'nodemailer-openpgp';
+import { openpgpEncrypt } from './openpgp-encrypt';
 
 export const Email = {};
 export const EmailTest = {};
@@ -54,9 +54,7 @@ const makeTransport = function (mailUrlString, options) {
   }
 
   const transport = nodemailer.createTransport(url.format(mailUrl));
-  if (options?.encryptionKeys || options?.shouldSign) {
-    transport.use('stream', openpgpEncrypt(options));
-  }
+  transport.use('stream', openpgpEncrypt(options));
   return transport;
 };
 
@@ -106,9 +104,7 @@ const knownHostsTransport = function (settings = undefined, url = undefined, opt
     },
   });
 
-  if (options?.encryptionKeys || options?.shouldSign) {
-    transport.use('stream', openpgpEncrypt(options));
-  }
+  transport.use('stream', openpgpEncrypt(options));
   return transport;
 };
 EmailTest.knowHostsTransport = knownHostsTransport;
