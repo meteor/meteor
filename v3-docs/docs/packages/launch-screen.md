@@ -6,7 +6,7 @@
 meteor add launch-screen
 ```
 
-The package bundles the `cordova-plugin-splashscreen` Cordova plugin (verified in `packages/launch-screen/package.js`) and only has an effect in a native Cordova build.
+The package bundles the `cordova-plugin-splashscreen` Cordova plugin and only has an effect in a native Cordova build.
 
 ## Basic behavior
 
@@ -33,7 +33,7 @@ Template.myUI.onRendered(function () {
 });
 ```
 
-`LaunchScreen` is exported by the package (`api.export('LaunchScreen')`), so it is available as a global on the client.
+`LaunchScreen` is exported by the package, so it is available as a global on the **Cordova** client (guard with `Meteor.isCordova` if the same code also runs on the web).
 
 > Two edge cases: if `Template.body` never renders, the launch screen auto-releases after about 6 seconds as a safety net; and calling `LaunchScreen.hold()` **after** the screen has already been hidden throws `"Can't show launch screen once it's hidden"`, so always call `hold()` at the top level of your client code, not asynchronously.
 
@@ -50,7 +50,7 @@ App.launchScreens({
 });
 ```
 
-The keys are device/size identifiers (e.g. `ios_universal`, `ios_universal_3x`, `android_universal`). See the [Cordova guide](../about/cordova.md) for the full list of supported keys and recommended image sizes.
+The keys are device/size identifiers (e.g. `ios_universal`, `ios_universal_3x`, `android_universal`). See the [`App.launchScreens` API](../api/app.md) for the full list of supported keys and recommended image sizes.
 
 **Dark mode (iOS):** an iOS splash entry can be an object with separate light/dark images:
 
@@ -62,9 +62,9 @@ App.launchScreens({
 
 **Android:** the only Android key is `android_universal`, which maps to the Android 12+ animated-icon splash (a `288x288 dp` icon, e.g. a Vector Drawable or PNG) rather than a full-screen image.
 
-Paths are relative to your project root. Unknown keys don't error — they emit a build warning and are passed through. The exact set of iOS keys and their pixel sizes is documented in the `App.launchScreens` API.
+Paths are relative to your project root. An unrecognized key only emits a build warning and is passed through, but any `android` key whose value isn't a string throws a build error (`Android splash screen path must be a string`) — only iOS entries may be objects (for dark mode). The exact set of iOS keys and their pixel sizes is documented in the [`App.launchScreens` API](../api/app.md).
 
 ## See also
 
-- `mobile-experience` — umbrella package that includes `launch-screen`.
+- [`mobile-experience`](./mobile-experience.md) — umbrella package that includes `launch-screen`.
 - [Cordova](../about/cordova.md) — building mobile apps with Meteor.
