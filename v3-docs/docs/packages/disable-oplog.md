@@ -12,7 +12,7 @@ meteor add disable-oplog
 
 ## How it works
 
-The `disable-oplog` package contains no code of its own. Its presence is detected by Meteor's MongoDB integration — verified by the `package.js` comment: *"This package is empty; its presence is detected by mongo-livedata."* When the package is added, oplog-based change observation is disabled globally for the app; there is no API to call.
+The `disable-oplog` package exposes no JavaScript API of its own. Its presence is detected by Meteor's MongoDB (mongo-livedata) integration: when the package is added, oplog-based change observation is disabled globally for the app, so there is no API to call.
 
 ## A more granular alternative
 
@@ -28,6 +28,8 @@ Collection.find(selector, {
 
 Disabling the oplog per query is usually preferable to disabling it everywhere. Reach for the `disable-oplog` package only when you genuinely want to turn oplog tailing off for the **entire** app.
 
+The polling defaults can also be set app-wide with the `METEOR_POLLING_INTERVAL_MS` and `METEOR_POLLING_THROTTLE_MS` environment variables, instead of passing them per query.
+
 ## Oplog vs. polling
 
 The tradeoff matters when deciding whether to disable the oplog:
@@ -42,5 +44,3 @@ Note that Meteor only uses oplog tailing when an oplog URL is configured (e.g. `
 ## When you might use it
 
 Disabling the oplog can be useful in environments where oplog tailing is unavailable or undesirable — for example, when you want every reactive query to use polling instead even though an oplog URL is configured. Because polling is generally less efficient than oplog tailing for high-throughput reactive workloads, only add this package when you specifically need to disable the oplog.
-
-> This package is described in its `package.js` and `README.md` as an internal Meteor package. It is documented here because it is added directly to apps (`meteor add disable-oplog`) and has an observable, app-wide effect. It exposes no public JavaScript API.
