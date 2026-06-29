@@ -225,15 +225,11 @@ Object.assign(AppProcess.prototype, {
       // response, the kill() above (SIGTERM) leaves it running. Escalate to
       // SIGKILL after a short grace period so the process can't leak across
       // restarts or keep holding the port. See issue #13490.
-      var pid = proc.pid;
       var sigkillTimer = setTimeout(function () {
-        try {
-          // Throws if the process is already gone; otherwise force-kill it.
-          process.kill(pid, 0);
-          process.kill(pid, 'SIGKILL');
-        } catch (e) {
-          // Process already exited — nothing to do.
-        }
+        // Use the child handle rather than process.kill(pid): once the child
+        // has exited and been reaped, proc.kill() is a no-op, so there is no
+        // chance of signalling an unrelated process that reused the pid.
+        proc.kill('SIGKILL');
       }, APP_STOP_SIGKILL_GRACE_MS);
       // Don't let this timer keep the tool's event loop alive.
       if (sigkillTimer.unref) {
