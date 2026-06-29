@@ -8,15 +8,15 @@ meteor add mobile-status-bar
 
 ## Usage
 
-**Adding the package is enough to get its sensible status-bar defaults — no setup is required.** The package exposes no JavaScript API. Configuration is **optional**: if you want to change the status bar's appearance, set preferences in your `mobile-config.js` file (see [Configuration](#configuration) below). It only has an effect in a native Cordova build.
+**Adding the package is enough to get its sensible status-bar defaults — no setup is required.** The package exposes no Meteor API to import (the underlying Cordova plugin still provides a global `StatusBar` object at runtime in native builds). Configuration is **optional**: if you want to change the status bar's appearance, set preferences in your [`mobile-config.js`](../api/app.md) file (see [Configuration](#configuration) below). It only has an effect in a native Cordova build.
 
 ## How it works
 
-The package bundles the standard [`cordova-plugin-statusbar`](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md) Cordova plugin (pinned via `Cordova.depends` in `packages/mobile-status-bar/package.js`). It only takes effect in a native Cordova build.
+The package bundles the standard [`cordova-plugin-statusbar`](https://github.com/apache/cordova-plugin-statusbar/blob/master/doc/index.md) Cordova plugin. It only takes effect in a native Cordova build.
 
 ## Configuration
 
-You set status bar preferences in your app's [`mobile-config.js`](https://docs.meteor.com/api/mobile-config.html) file using `App.setPreference`, for example:
+You set status bar preferences in your app's [`mobile-config.js`](../api/app.md) file using `App.setPreference`, for example:
 
 ```js
 App.setPreference('StatusBarOverlaysWebView', 'false');
@@ -54,5 +54,5 @@ This matters because several status-bar preferences are **iOS-only** (e.g. `Stat
 
 ## See also
 
-- `mobile-experience` — umbrella package that includes `mobile-status-bar`.
+- [`mobile-experience`](./mobile-experience.md) — umbrella package that includes `mobile-status-bar`.
 - [Cordova](../about/cordova.md) — building mobile apps with Meteor.
