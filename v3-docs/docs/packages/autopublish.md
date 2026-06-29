@@ -14,7 +14,7 @@ As of Meteor 3.x, `autopublish` is **not** included in new projects by default; 
 
 ## How it works
 
-The `autopublish` package contains no code of its own. Its presence is detected by other core packages (such as `ddp-server` and `mongo`), which check for `Package.autopublish` and, when it is present, automatically publish every collection to all clients. This is why simply adding the package is enough — there is no API to call.
+The `autopublish` package exposes no JavaScript API of its own. Its presence is detected by the `mongo` package, which — when the package is installed — automatically publishes every collection to all clients. The `ddp-server` package also checks for `autopublish`, but only to **warn** you when you write a manual `Meteor.publish` while it is still installed; it does not publish anything itself. This is why simply adding the package is enough — there is no API to call.
 
 ## Removing it
 
