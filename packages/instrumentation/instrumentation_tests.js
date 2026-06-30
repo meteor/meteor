@@ -1,6 +1,7 @@
 import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 import { Instrumentation } from 'meteor/instrumentation';
+import { makeTestConnection } from 'meteor/test-helpers';
 
 Meteor.methods({
   'instr_test.echo': async (x) => x * 2,
@@ -127,3 +128,66 @@ Tinytest.addAsync('instrumentation - method.error bounds oversized Meteor.Error 
     test.isTrue(err.error.reason.endsWith('…'), 'reason was truncated');
   } finally { a.stop(); }
 });
+
+// A publication whose handler calls this.error(). On the error path the
+// subscription tears down (error → _stopSubscription → _deactivate), which must
+// emit ONE terminal event — publication.error — not also publication.stop.
+Meteor.publish('instr_test.brokenPub', function () {
+  this.error(new Meteor.Error('pub-fail', 'on purpose'));
+});
+
+Tinytest.addAsync(
+  'instrumentation - publication.error is the only terminal event (no duplicate stop)',
+  function (test, onComplete) {
+    const terminal = [];
+    const onErr = Instrumentation.on('publication.error', (e) => {
+      if (e.name === 'instr_test.brokenPub') terminal.push('error');
+    });
+    const onStop = Instrumentation.on('publication.stop', (e) => {
+      if (e.name === 'instr_test.brokenPub') terminal.push('stop');
+    });
+    makeTestConnection(test, (clientConn) => {
+      clientConn.subscribe('instr_test.brokenPub', {
+        onStop: () => {
+          onErr.stop();
+          onStop.stop();
+          // Both server-side emissions ran before the client received the nosub.
+          test.equal(terminal, ['error'], 'single terminal event: error, not error+stop');
+          clientConn.disconnect();
+          onComplete();
+        },
+      });
+    });
+  }
+);
+
+// The mirror of the above: a normal teardown must still emit publication.stop
+// (and never publication.error) — guards the error-path flag from suppressing
+// legitimate stops.
+Meteor.publish('instr_test.okPub', function () {
+  this.stop();
+});
+
+Tinytest.addAsync(
+  'instrumentation - normal teardown emits publication.stop, never error',
+  function (test, onComplete) {
+    const terminal = [];
+    const onErr = Instrumentation.on('publication.error', (e) => {
+      if (e.name === 'instr_test.okPub') terminal.push('error');
+    });
+    const onStop = Instrumentation.on('publication.stop', (e) => {
+      if (e.name === 'instr_test.okPub') terminal.push('stop');
+    });
+    makeTestConnection(test, (clientConn) => {
+      clientConn.subscribe('instr_test.okPub', {
+        onStop: () => {
+          onErr.stop();
+          onStop.stop();
+          test.equal(terminal, ['stop'], 'single terminal event: stop, not error');
+          clientConn.disconnect();
+          onComplete();
+        },
+      });
+    });
+  }
+);
