@@ -20,6 +20,8 @@ Meteor.startup(() => {
     const openedAt = Date.now();
     _emit('ddp.connection.open', {
       connectionId: connection.id,
+      // Raw material only; emitted just when the captureClientAddress policy is
+      // on (gated in events.js). PII, off by default.
       clientAddress: connection.clientAddress,
     });
     connection.onClose(() => {

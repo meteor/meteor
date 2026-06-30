@@ -34,8 +34,9 @@ function envDisabled() {
 
 const config = {
   enabled: !envDisabled(),
-  captureMethodArgs: false,   // false | 'preview'
-  captureMethodResult: false, // false | 'preview'
+  captureMethodArgs: false,    // false | 'preview'
+  captureMethodResult: false,  // false | 'preview'
+  captureClientAddress: false, // include the client IP on ddp.connection.open (PII)
   eventPrefix: '',
 };
 const perMethod = new Map(); // name -> { captureArgs?, captureResult? }
@@ -48,6 +49,7 @@ export function configure(options) {
   if ('enabled' in options) config.enabled = !!options.enabled;
   if ('captureMethodArgs' in options) config.captureMethodArgs = normalizeCapture(options.captureMethodArgs);
   if ('captureMethodResult' in options) config.captureMethodResult = normalizeCapture(options.captureMethodResult);
+  if ('captureClientAddress' in options) config.captureClientAddress = !!options.captureClientAddress;
   if ('eventPrefix' in options) config.eventPrefix = String(options.eventPrefix || '');
 }
 
@@ -58,6 +60,8 @@ export function configureMethod(name, options) {
 }
 
 export const eventPrefix = () => config.eventPrefix;
+
+export const captureClientAddress = () => config.captureClientAddress;
 
 // Resolution order (highest wins): 1. Accounts denylist → nothing · 2. per-method
 // captureArgs/captureResult (still bounded by previewValue) · 3. global 'preview'
