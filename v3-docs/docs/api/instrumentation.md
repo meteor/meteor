@@ -91,8 +91,9 @@ you can correlate them. Beyond the fields above:
   `{ name, message, error, reason }`, where `error`/`reason` come from `Meteor.Error`.
 
 Connection events are lighter — there is no invocation behind them. They carry
-`type`, `eventName`, `ts` and `connectionId`, plus `clientAddress` on open and
-`durationMs` (the connection's lifetime) on close.
+`type`, `eventName`, `ts` and `connectionId`, plus `durationMs` (the connection's
+lifetime) on close. The client IP is **opt-in** — `clientAddress` appears on
+`ddp.connection.open` only after `configure({ captureClientAddress: true })`.
 
 ## Reading the current context
 
@@ -129,6 +130,7 @@ Instrumentation.configure({
   enabled: true,                  // master on/off switch
   captureMethodArgs: 'preview',   // include a bounded preview of args
   captureMethodResult: 'preview', // include a bounded preview of method results
+  captureClientAddress: false,    // include the client IP on ddp.connection.open (PII)
   eventPrefix: 'orders-svc',      // namespace eventName per app/process/container
 });
 ```
@@ -141,6 +143,8 @@ Instrumentation.configure({
   **and publication** events. Off by default.
 - **`captureMethodResult`** — `'preview'` adds a bounded `result` preview to
   `method.end`. Off by default.
+- **`captureClientAddress`** — when `true`, `ddp.connection.open` carries the
+  client IP as `clientAddress`. Off by default, since the IP is personal data.
 - **`eventPrefix`** — prefixes each event's `eventName` (e.g.
   `orders-svc.method.start`). The canonical `type` stays unprefixed so generic
   consumers still match on it.

@@ -191,3 +191,59 @@ Tinytest.addAsync(
     });
   }
 );
+
+// clientAddress is PII (the client IP) and must be opt-in: absent from
+// ddp.connection.open by default, present only after configure({ captureClientAddress: true }).
+Tinytest.addAsync(
+  'instrumentation - clientAddress is absent from connection.open by default',
+  function (test, onComplete) {
+    const opens = [];
+    const off = Instrumentation.on('ddp.connection.open', (e) => opens.push(e));
+    makeTestConnection(test, (clientConn, serverConn) => {
+      off.stop();
+      const ev = opens.find((e) => e.connectionId === serverConn.id);
+      test.isTrue(!!ev, 'ddp.connection.open emitted for the new connection');
+      test.isUndefined(ev.clientAddress, 'clientAddress is not captured unless opted in');
+      clientConn.disconnect();
+      onComplete();
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'instrumentation - clientAddress is captured once opted in',
+  function (test, onComplete) {
+    Instrumentation.configure({ captureClientAddress: true });
+    const opens = [];
+    const off = Instrumentation.on('ddp.connection.open', (e) => opens.push(e));
+    makeTestConnection(test, (clientConn, serverConn) => {
+      off.stop();
+      Instrumentation.configure({ captureClientAddress: false }); // restore default
+      const ev = opens.find((e) => e.connectionId === serverConn.id);
+      test.isTrue(!!ev, 'ddp.connection.open emitted for the new connection');
+      test.equal(typeof ev.clientAddress, 'string', 'clientAddress is a string when opted in');
+      clientConn.disconnect();
+      onComplete();
+    });
+  }
+);
+
+// onListenerError: a configured handler must receive (error, event) when a
+// listener throws — the failure is reported, never propagated to the caller.
+Tinytest.addAsync(
+  'instrumentation - configure({ onListenerError }) receives listener failures',
+  async function (test) {
+    const caught = [];
+    Instrumentation.configure({ onListenerError: (err, event) => caught.push({ err, event }) });
+    const a = Instrumentation.on('method.start', () => { throw new Error('listener kaboom'); });
+    try {
+      await Meteor.callAsync('instr_test.echo', 21);
+      const hit = caught.find((c) => c.event && c.event.name === 'instr_test.echo' && c.event.type === 'method.start');
+      test.isTrue(!!hit, 'onListenerError handler was invoked');
+      test.equal(hit.err.message, 'listener kaboom');
+    } finally {
+      a.stop();
+      Instrumentation.configure({ onListenerError: null }); // restore: no handler
+    }
+  }
+);

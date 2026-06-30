@@ -1,6 +1,6 @@
 import { emit } from './emitter.js';
 import { traceContextFor } from './context.js';
-import { captureArgs, captureResult, eventPrefix, isEnabled } from './policy.js';
+import { captureArgs, captureResult, captureClientAddress, eventPrefix, isEnabled } from './policy.js';
 import { previewError } from './preview.js';
 
 // Builds the public event from the RAW materials the seam hands over (the live
@@ -32,6 +32,8 @@ function methodPayload(type, raw) {
     const result = captureResult(raw.name, raw.result);
     if (result !== undefined) event.result = result;
   }
+  // previewError returns a fresh, bounded plain object (capped strings, no stack,
+  // no .details, never the raw Error reference) — safe to hand to listeners.
   if (type === 'method.error') event.error = previewError(raw.error);
   return event;
 }
@@ -59,7 +61,11 @@ function publicationPayload(type, raw) {
 
 function connectionPayload(type, raw) {
   const event = { ...envelope(type), connectionId: raw.connectionId };
-  if (raw.clientAddress !== undefined) event.clientAddress = raw.clientAddress;
+  // clientAddress is the client IP (PII): only attach it when explicitly opted in,
+  // and only when the transport actually gave us one (a non-empty string).
+  if (captureClientAddress() && typeof raw.clientAddress === 'string' && raw.clientAddress) {
+    event.clientAddress = raw.clientAddress;
+  }
   if (raw.durationMs !== undefined) event.durationMs = raw.durationMs;
   return event;
 }
