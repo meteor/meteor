@@ -121,10 +121,9 @@ var getNodeOptionsFromEnvironment = function () {
 // How long to wait, after sending SIGTERM, before escalating to SIGKILL when
 // stopping the app process. An app that registers its own `process.on('SIGTERM')`
 // handler without calling `process.exit()` overrides Node's default "terminate
-// on SIGTERM" behavior; without this escalation such a process would survive a
-// dev-server restart, leak across restarts, and keep holding the port. See
-// https://github.com/meteor/meteor/issues/13490.
-var APP_STOP_SIGKILL_GRACE_MS = 3000;
+// on SIGTERM" behavior, so SIGTERM alone would leave it running and holding the
+// port; the escalation guarantees the process is gone.
+const APP_STOP_SIGKILL_GRACE_MS = 3000;
 
 var AppProcess = function (options) {
   var self = this;
@@ -216,16 +215,15 @@ Object.assign(AppProcess.prototype, {
     var self = this;
 
     if (self.proc && self.proc.pid) {
-      var proc = self.proc;
+      const proc = self.proc;
       proc.removeAllListeners('close');
       proc.removeAllListeners('error');
       proc.kill();
 
-      // If the app installed its own SIGTERM handler and does not exit in
-      // response, the kill() above (SIGTERM) leaves it running. Escalate to
-      // SIGKILL after a short grace period so the process can't leak across
-      // restarts or keep holding the port. See issue #13490.
-      var sigkillTimer = setTimeout(function () {
+      // The kill() above only sends SIGTERM, which an app can ignore via its
+      // own handler. Escalate to SIGKILL after a short grace period so a
+      // process that refuses to exit can't keep running or holding the port.
+      const sigkillTimer = setTimeout(function () {
         // Use the child handle rather than process.kill(pid): once the child
         // has exited and been reaped, proc.kill() is a no-op, so there is no
         // chance of signalling an unrelated process that reused the pid.
