@@ -1132,7 +1132,7 @@ Object.assign(Subscription.prototype, {
       return;
     this._deactivated = true;
     const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
-    if (Instrumentation) {
+    if (Instrumentation && !this._instrErrored) {
       Instrumentation._emit('publication.stop', {
         subscription: this, name: this._name, args: this._params,
         durationMs: this._instrStartedAt ? Date.now() - this._instrStartedAt : undefined,
@@ -1201,6 +1201,9 @@ Object.assign(Subscription.prototype, {
       return;
     const Instrumentation = Package['instrumentation'] && Package['instrumentation'].Instrumentation;
     if (Instrumentation) {
+      // publication.error is this path's terminal event; flag the imminent
+      // _deactivate() so it doesn't also emit a duplicate publication.stop.
+      self._instrErrored = true;
       Instrumentation._emit('publication.error', {
         subscription: self, name: self._name, args: self._params, error,
         durationMs: self._instrStartedAt ? Date.now() - self._instrStartedAt : undefined,

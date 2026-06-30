@@ -14,7 +14,7 @@ Package.onUse(function (api) {
 });
 
 Package.onTest(function (api) {
-  api.use(['ecmascript', 'tinytest', 'random', 'ddp-server', 'ddp-client', 'mongo'], 'server');
+  api.use(['ecmascript', 'tinytest', 'random', 'ddp-server', 'ddp-client', 'mongo', 'test-helpers'], 'server');
   api.use('instrumentation', 'server');
   api.mainModule('instrumentation_tests.js', 'server');
 });
