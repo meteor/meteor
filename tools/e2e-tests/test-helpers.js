@@ -12,6 +12,7 @@ import {
   isRetryAttempt,
   killMeteorProcess,
   killProcessByPort,
+  killStrayAppProcesses,
   restoreFiles,
   runMeteorApp,
   runMeteorCommand,
@@ -127,6 +128,9 @@ export function testMeteorBundler(options) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
       }
+
+      // Safety net: reap anything the test orphaned before the next one runs.
+      await killStrayAppProcesses();
     });
 
     test(`"meteor run" / should start the app`, async () => {
@@ -361,6 +365,9 @@ export function testMeteorRspackBundler(options) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
       }
+
+      // Safety net: reap anything the test orphaned before the next one runs.
+      await killStrayAppProcesses();
 
       // Restore mutated files regardless of pass/fail — idempotent on green runs,
       // essential on retries.
@@ -1039,6 +1046,9 @@ export function testMeteorSkeleton(options) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
       }
+
+      // Safety net: reap anything the test orphaned before the next one runs.
+      await killStrayAppProcesses();
     });
 
     test(`"meteor create --${skeletonName}" / should create a new Meteor ${skeletonName} app`, async () => {
