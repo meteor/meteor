@@ -425,26 +425,22 @@ export class AccountsClient extends AccountsCommon {
         error = error || new Error(
           `No result from call to ${options.methodName}`
         );
-        try {
-          await loginCallbacks({ error });
-        } finally {
-          this._setLoggingIn(false);
-        }
+        this._setLoggingIn(false);
+        await loginCallbacks({ error });
         return;
       }
       try {
         options.validateResult(result);
       } catch (e) {
-        try {
-          await loginCallbacks({ error: e });
-        } finally {
-          this._setLoggingIn(false);
-        }
+        this._setLoggingIn(false);
+        await loginCallbacks({ error: e });
         return;
       }
 
       // Make the client logged in. (The user data should already be loaded!)
-      this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
+      // When HttpOnly cookies are enabled, wait for the cookie sync before
+      // resolving login completion so downstream auth fetches can rely on it.
+      await this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
 
       // use Tracker to make we sure have a user before calling the callbacks
       Tracker.autorun(async (computation) => {
@@ -453,10 +449,12 @@ export class AccountsClient extends AccountsCommon {
         );
 
         if (user) {
+          // Flip before awaiting userCallback so the caller observes
+          // loggingIn() === false on the microtask after their await.
+          this._setLoggingIn(false);
           try {
             await loginCallbacks({ loginDetails: result });
           } finally {
-            this._setLoggingIn(false);
             computation.stop();
           }
         }
@@ -502,12 +500,12 @@ export class AccountsClient extends AccountsCommon {
     }
   }
 
-  makeClientLoggedIn(userId, token, tokenExpires) {
+  async makeClientLoggedIn(userId, token, tokenExpires) {
     this._storeLoginToken(userId, token, tokenExpires);
     this.connection.setUserId(userId);
     // Sync HttpOnly cookie if enabled
     if (this._useHttpOnlyCookies) {
-      this._setHttpOnlyCookie(token, tokenExpires);
+      await this._setHttpOnlyCookie(token, tokenExpires);
     }
   }
 
