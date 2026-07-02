@@ -601,7 +601,7 @@ export class AccountsServer extends AccountsCommon {
     };
 
     if (result.userId) {
-      attempt.user = this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
+      attempt.user = await this.users.findOneAsync(result.userId, {fields: this._options.defaultFieldSelector});
     }
 
     await this._validateLogin(methodInvocation.connection, attempt);
