@@ -83,6 +83,38 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync(
+  'changestream - positional ($) projection falls back instead of crashing',
+  async function (test) {
+    const c = makeCollection();
+    await c.insertAsync({
+      _id: 'doc1',
+      myArray: [{ foo: 1, val: 'a' }, { foo: 2, val: 'b' }],
+    });
+
+    // A positional ('$') projection cannot be compiled by minimongo, so Change
+    // Streams must report itself unavailable and selection must fall through to
+    // a driver that projects server-side (polling) rather than throwing and
+    // crashing the whole observe/subscription.
+    let handle;
+    try {
+      handle = await c
+        .find({ 'myArray.foo': 1 }, { fields: { 'myArray.$': 1 } })
+        .observeChanges({ added: function () {} });
+    } catch (e) {
+      test.fail('observeChanges threw for a $ projection: ' + e.message);
+      return;
+    }
+
+    test.isFalse(
+      handle._multiplexer._observeDriver._usesChangeStreams === true,
+      'a $ (positional) projection must not use the Change Streams driver'
+    );
+
+    handle.stop();
+  }
+);
+
 // if not using ChangeStreams, skip the rest of the tests
 if (!IS_CHANGESTREAM) {
   console.log('Skipping ChangeStream tests because ChangeStreams are not the active reactivity driver.');
