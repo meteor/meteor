@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '2.4.0-beta350.12',
+  version: '2.4.0',
 });
 
 Npm.depends({
@@ -96,6 +96,7 @@ Package.onUse(function (api) {
       "mongo_common.js",
       "asynchronous_cursor.js",
       "cursor.ts",
+      "shared_change_stream.js",
       "changestream_observe_driver.js",
     ],
     "server"

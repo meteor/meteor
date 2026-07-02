@@ -75,24 +75,56 @@ The `SERVER_WEBSOCKET_COMPRESSION` setting still applies to both transports. If 
 
 ### Combining with session resumption
 
-The DDP [session resumption](/api/meteor#reconnection) feature added in 3.5 is transport-agnostic. Both `sockjs` and `uws` benefit from sessions surviving brief network blips.
+Meteor 3.5 introduced DDP session resumption: when a client reconnects within a configurable grace period, the server restores the existing session instead of creating a new one. Active subscriptions are not re-published, in-flight method calls are replayed, and the connection retains its original `id`. This is transport-agnostic — both `sockjs` and `uws` benefit equally.
+
+#### Enabling and tuning
+
+Session resumption is on by default. You can tune its two parameters in server startup code:
+
+```js
+import { Meteor } from 'meteor/meteor';
+
+// Keep disconnected sessions alive for 30 seconds (default: 15000 ms)
+Meteor.server.options.disconnectGracePeriod = 30000;
+
+// Queue up to 500 messages per disconnected session (default: 100)
+Meteor.server.options.maxMessageQueueLength = 500;
+```
+
+| Option | Default | Effect |
+|--------|---------|--------|
+| `disconnectGracePeriod` | `15000` ms | How long a disconnected session is held before being destroyed |
+| `maxMessageQueueLength` | `100` | Max messages queued per session; session is discarded if exceeded |
+
+To disable resumption entirely set `disconnectGracePeriod` to `0`.
+
+#### Things to know before enabling a longer grace period
+
+- **Load balancers:** The client must reconnect to the *same* physical Meteor instance. Make sure sticky sessions (or IP hash) are configured in your load balancer.
+- **Memory:** Each queued message and live subscription cursor is held in memory for the duration of the grace period. Large `maxMessageQueueLength` values on high-traffic servers can increase memory pressure.
+- **`onConnection` is not called on resume:** If you track presence with `onConnection`/`onClose`, see the [presence tracking pattern](/api/meteor#reconnection) in the API reference.
+- **Hot Code Push is unaffected:** HCP is a graceful disconnect and always initiates a fresh session so clients pick up the new code.
+
+See the full [Reconnection reference](/api/meteor#reconnection) for edge cases and the presence heartbeat pattern.
 
 ### Multi-process and multi-tenant deployments {#multitenancy}
 
-::: danger
-If you run more than one `DDP_TRANSPORT=uws` Meteor process on a single Linux host that shares one kernel network namespace, **you must give every process its own `uws.port` (or `uws.host`)**. Forgetting to do so will fail loudly at startup since Meteor 3.5; in pre-3.5 versions it failed silently and split WebSocket traffic between unrelated processes.
+::: warning
+If you run more than one `DDP_TRANSPORT=uws` Meteor process on a single Linux host that shares one kernel network namespace, **each process must declare its own `uws.port` (or `uws.host`)**. The internal uws listen socket is bound exclusively, so only one process per `(host, port)` tuple can start.
 :::
 
-Unlike `sockjs` — which lives inside the same `http.Server` instance Meteor already binds — `uws` runs a second listening socket on its own internal port (default `127.0.0.1:5001`). WebSocket upgrades to the main HTTP server are proxied into that internal socket via a local TCP connection. This is what lets `uWebSockets.js` work without giving up Meteor's Connect-style middleware on the public port.
+Unlike `sockjs` — which lives inside the same `http.Server` instance Meteor already binds for the public HTTP port — `uws` runs a second listening socket on its own internal port (default `127.0.0.1:5001`). WebSocket upgrades arriving on the public HTTP server are proxied into that internal socket via a local TCP connection. This architecture is what lets `uWebSockets.js` handle WebSocket I/O at native speed without giving up Meteor's Connect-style middleware on the public port.
 
-The proxy step is the operational gotcha. Two Meteor processes in the same kernel network namespace would both default to `127.0.0.1:5001` for their internal uws server. The Linux kernel allows that under `SO_REUSEPORT` and load-balances inbound connections across the two listening sockets at random, so a WebSocket upgrade that arrived on process A's public port can be handed by the kernel to process B's internal listener — and from there process B parses the DDP method, executes it against its own MongoDB connection, and writes to its own database.
+One consequence of that architecture: every Meteor process running `uws` in the same kernel network namespace needs its own internal `(host, port)` tuple. The kernel demuxes incoming connections by destination address, so as long as the tuples are distinct, each process owns its own listen socket and traffic is routed unambiguously.
 
-Real-world deployments that share a kernel netns:
+Deployments that share a kernel netns and therefore need per-process configuration:
 
 - **Multi-tenant containers** under `network_mode: "host"` on Docker / Podman, each with its own database but co-located on one host.
 - **Multi-process horizontal scaling** via PM2, systemd templated services, or `cluster`-style runners on a single VM.
-- **Galaxy / Meteor Cloud co-scheduled pods** when an orchestrator places two pods of one app on the same node.
-- **Local development** with two Meteor projects running `DDP_TRANSPORT=uws` at the same time. The second project silently joins the first project's `SO_REUSEPORT` pool on `127.0.0.1:5001` and DDP traffic mixes between them with no warning.
+- **Co-scheduled pods** when an orchestrator places two pods of one app on the same node.
+- **Local development** with two Meteor projects running `DDP_TRANSPORT=uws` at the same time.
+
+Single-process deployments and orchestrators that give each instance its own kernel netns (the default for Docker bridge networking, Kubernetes pods, etc.) need no extra configuration — the default `127.0.0.1:5001` is fine because only one process binds it.
 
 #### Configure a distinct uws port per process
 
@@ -134,17 +166,58 @@ The full set of settings:
 
 If you cannot avoid running on the same port, use distinct loopback hosts (`127.0.0.2`, `127.0.0.3`, …) — Linux routes all of `127.0.0.0/8` to `lo` by default, so each process binds a distinct `(host, port)` tuple and the kernel demuxes correctly.
 
-#### What happens if you forget
+#### Example: multi-tenant `docker-compose.yml`
 
-Since Meteor 3.5, the internal listen socket is opened with `LIBUS_LISTEN_EXCLUSIVE_PORT`, so the second process trying to bind the default port fails fast at startup:
+A typical multi-process layout running several Meteor 3.5 containers on one Linux host with shared kernel netns (`network_mode: "host"`) declares two distinct values per service: the public `PORT` and an internal `uws.port` inside `METEOR_SETTINGS`. Both are independent and both must be unique across the netns:
+
+```yaml
+services:
+  tenant1:
+    image: my-meteor-app:latest
+    network_mode: "host"
+    environment:
+      - PORT=3039                         # public HTTP port — unique per service
+      - ROOT_URL=https://app1.example.com
+      - DDP_TRANSPORT=uws
+      # Internal uws proxy port — unique per service
+      - METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":5001,"host":"127.0.0.1"}}}}
+      - MONGO_URL=mongodb://…/tenant1
+
+  tenant2:
+    image: my-meteor-app:latest
+    network_mode: "host"
+    environment:
+      - PORT=3040                         # different public port
+      - ROOT_URL=https://app2.example.com
+      - DDP_TRANSPORT=uws
+      - METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":5002,"host":"127.0.0.1"}}}}
+      - MONGO_URL=mongodb://…/tenant2
+
+  # tenant3 -> uws.port 5003, tenant4 -> 5004, etc.
+```
+
+The reverse proxy (NGINX, Caddy, ALB, …) in front of Meteor does not need any change: it keeps talking to each service's public `PORT` exactly as it would for `sockjs`. The internal `uws.port` is never exposed outside the container.
+
+#### Troubleshooting: `failed to listen on 127.0.0.1:5001 (address already in use)`
+
+If two Meteor processes in the same kernel netns both try to bind the same internal uws `(host, port)` tuple — typically because both rely on the default `127.0.0.1:5001` — the second one to start refuses the bind and Meteor throws at startup:
 
 ```text
 Error: uWebSockets.js: failed to listen on 127.0.0.1:5001 (address already in use).
   Another Meteor instance in this network namespace is already bound to this port.
   Set a distinct Meteor.settings.packages["ddp-server"].uws.port (or .host) for each instance.
+    at packages/ddp-server/transports/uws.js:121:17
+    at Object.setup (packages/ddp-server/transports/uws.js:119:14)
+    at new StreamServer (packages/ddp-server/stream_server.js:45:27)
+    …
 ```
 
-In Meteor 3.5-beta releases prior to this fix the same misconfiguration would silently succeed via `SO_REUSEPORT`, with inbound WebSocket frames mix-routed between the two processes. If you operate a deployment that was set up against an earlier beta, audit it with the verification step below before upgrading.
+To resolve, give the failing service its own internal uws port:
+
+- **Recommended**: edit the service's `environment:` block in `docker-compose.yml` (or equivalent in your orchestrator) and add a `METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":<DISTINCT>,"host":"127.0.0.1"}}}}` line; pick a port no other process in the same netns uses, restart.
+- **Alternative**: use `DDP_TRANSPORT=sockjs` on every service that shares the host netns. SockJS does not run a separate internal port and never collides — at the cost of lower DDP throughput.
+
+Either path keeps every service running its own DDP stack with no cross-process traffic mixing.
 
 #### Verifying the internal listen sockets
 
@@ -167,7 +240,6 @@ If you see `2 0100007F:1389`, two processes are sharing the default uws port via
 
 The internal uws port is purely local — it is never exposed to clients. The reverse proxy in front of Meteor (NGINX, Caddy, ALB, Galaxy…) talks to each process's *public* port (`PORT` env var) exactly as it would for `sockjs`. The per-process uws port configuration only matters between the public port and the internal uws server inside the same process.
 
-For an end-to-end walkthrough — reproduction recipe, the two interacting latent bugs the fix addresses, and validation against an unmodified Wekan multi-tenant image — see [`packages/ddp-server/MULTITENANCY-BUG.md`](https://github.com/meteor/meteor/blob/release-3.5/packages/ddp-server/MULTITENANCY-BUG.md) in the Meteor source.
 
 ## Verifying which transport is active
 
@@ -194,6 +266,7 @@ If you are switching an existing app from `sockjs` to `uws`:
 - [ ] Roll out to a subset of traffic first if your load balancer supports it.
 - [ ] Keep `sockjs` available as a rollback (toggle the env var, redeploy).
 - [ ] If multiple Meteor processes will share a host (multi-tenant, multi-process scaling, Galaxy co-scheduling, etc.), set a distinct `Meteor.settings.packages["ddp-server"].uws.port` for each. See [Multi-process and multi-tenant deployments](#multitenancy).
+
 
 ## Reverting to `sockjs`
 
