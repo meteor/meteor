@@ -62,8 +62,8 @@ function publicationPayload(type, raw) {
 function connectionPayload(type, raw) {
   const event = { ...envelope(type), connectionId: raw.connectionId };
   // clientAddress is the client IP (PII): only attach it when explicitly opted in,
-  // and only when the transport actually gave us one (a non-empty string).
-  if (captureClientAddress() && typeof raw.clientAddress === 'string' && raw.clientAddress) {
+  // and only when the transport actually gave us a non-empty value.
+  if (captureClientAddress() && !!raw.clientAddress) {
     event.clientAddress = raw.clientAddress;
   }
   if (raw.durationMs !== undefined) event.durationMs = raw.durationMs;
