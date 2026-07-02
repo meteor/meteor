@@ -10,8 +10,15 @@ on:
 
 jobs:
   test-packages:
+    strategy:
+      fail-fast: false
+      matrix:
+        reactivity_order:
+          - 'changeStreams,polling'
+          - 'oplog,polling'
+    runs-on: oss-vm
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true
     runs-on: oss-vm
     timeout-minutes: 90
@@ -22,7 +29,7 @@ jobs:
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
-
+      METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
     steps:
 
       - name: Checkout repository
@@ -31,6 +38,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
+          node-version: 24.15.0
           submodules: recursive
 
       - name: Expose globally-installed puppeteer to Node.js
@@ -50,7 +58,6 @@ jobs:
           key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-
-
       - name: Run test-in-console suite
         run: |
           export TEST_PACKAGES_EXCLUDE="stylus"
