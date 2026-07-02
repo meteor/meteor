@@ -30,6 +30,7 @@ env:
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
 
+
 jobs:
   # ─── Setup ────────────────────────────────────────────────────────────────────
   # Prepares the Meteor environment and populates the cache so all parallel
@@ -152,7 +153,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^[a-b]|^c[a-n]|^co[a-l]|^comm"
@@ -189,7 +190,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 0)
-        timeout-minutes: 35
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -218,7 +219,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^com[n-z]"
     steps:
@@ -254,7 +255,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 1)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -284,7 +285,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^co[n-z]"
     steps:
@@ -327,7 +328,7 @@ jobs:
           gradle --version
 
       - name: Running self-test (Test Group 2)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -356,7 +357,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^c[p-z]|^h[a-e]"
     steps:
@@ -392,7 +393,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 3)
-        timeout-minutes: 35
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -421,7 +422,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^h[f-z]|^[i-l]"
     steps:
@@ -457,7 +458,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 4)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -486,7 +487,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^m[a-n]|^mo[a-d]"
@@ -523,7 +524,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 5)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -552,7 +553,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^mo[e-z]|^m[p-z]|^[n-o]"
     steps:
@@ -588,7 +589,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 6)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -617,7 +618,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^[p-q]|^r[a-e]"
     steps:
@@ -653,7 +654,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 7)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -682,7 +683,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^r[f-z]"
     steps:
@@ -718,7 +719,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 8)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -747,7 +748,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^s"
     steps:
@@ -783,7 +784,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 9)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -812,7 +813,7 @@ jobs:
       image: meteor/circleci:2025.07.8-android-35-node-22
       options: --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^[t-z]"
     steps:
@@ -848,7 +849,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 10)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited

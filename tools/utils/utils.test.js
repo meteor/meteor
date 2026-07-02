@@ -45,6 +45,7 @@ describe('parseUrl', () => {
     ['localhost', {}, { hostname: 'localhost' }],
     ['localhost:3000', {}, { hostname: 'localhost', port: '3000', protocol: undefined }],
     ['https://ex.com:8080/path', {}, { protocol: 'https', hostname: 'ex.com', port: '8080', pathname: '/path' }],
+    ['http://ex.com/path?q=1', {}, { protocol: 'http', hostname: 'ex.com', pathname: '/path' }],
     ['ex.com:3000', { protocol: 'https' }, { protocol: 'https', hostname: 'ex.com', port: '3000' }],
     ['http://ex.com', { protocol: 'https' }, { protocol: 'http', hostname: 'ex.com' }],
     ['http://ex.com', { port: '9999' }, { protocol: 'http', hostname: 'ex.com', port: '9999' }],
@@ -55,6 +56,21 @@ describe('parseUrl', () => {
 
   test('excludes pathname for root path', () => {
     expect(utils.parseUrl('http://ex.com/').pathname).toBeUndefined();
+  });
+});
+
+describe('formatUrl', () => {
+  test('constructs URL from hostname, protocol and port', () => {
+    expect(utils.formatUrl({ hostname: 'example.com', protocol: 'https', port: '8080' }))
+      .toBe('https://example.com:8080/');
+  });
+  test('includes pathname when provided', () => {
+    expect(utils.formatUrl({ hostname: 'example.com', protocol: 'http', pathname: '/app' }))
+      .toBe('http://example.com/app');
+  });
+  test('defaults to root path when no pathname given', () => {
+    expect(utils.formatUrl({ hostname: 'h.com', protocol: 'http' }))
+      .toBe('http://h.com/');
   });
 });
 
