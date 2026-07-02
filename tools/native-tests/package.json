@@ -1,0 +1,14 @@
+{
+  "name": "meteor-native-tests",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Maestro flows verifying Meteor's native mobile shell (Cordova).",
+  "scripts": {
+    "test": "node scripts/run.js"
+  },
+  "devDependencies": {
+    "execa": "^5.1.1",
+    "fs-extra": "^11.3.1",
+    "wait-on": "^7.0.0"
+  }
+}

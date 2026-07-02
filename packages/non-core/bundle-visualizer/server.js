@@ -36,7 +36,7 @@ function getStatBundles() {
   function readOrNull(file) {
     try {
       return JSON.parse(fsReadFileSync(file, "utf8"));
-    } catch (err) {
+    } catch {
       return null;
     }
   }
@@ -115,7 +115,7 @@ function d3TreeFromStats(stats) {
     .map(name =>
       sizeOrDetail(name
         // Change the "packages/bundle.js" name to "(bundle)"
-        .replace(/^[^\/]+\/(.*)\.js$/, "($1)"),
+        .replace(/^[^/]+\/(.*)\.js$/, "($1)"),
           stats.minifiedBytesByPackage[name]));
 }
 
@@ -152,7 +152,7 @@ function statsMiddleware(request, response) {
 
   sendJSON({
     name: "main",
-    children: statBundles.map((statBundle, index, array) => ({
+    children: statBundles.map((statBundle) => ({
       name: statBundle.arch,
       type: typeBundle,
       children: d3TreeFromStats(statBundle.stats),
