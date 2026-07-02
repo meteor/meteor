@@ -6,7 +6,14 @@ import llmstxt from "vitepress-plugin-llms";
 export default defineConfig({
   title: "Docs",
   description: "Meteor.js Docs",
-  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  head: [
+    ["link", { rel: "icon", href: "/logo.png" }],
+    ["script", {
+      defer: "",
+      "data-domain": "meteor.com",
+      src: "https://plausible.io/js/script.js"
+    }]
+  ],
   lastUpdated: true,
   sitemap: {
     hostname: "https://v3-docs.meteor.com",
@@ -296,6 +303,10 @@ export default defineConfig({
           {
             text: "Accounts and security",
             items: [
+              {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
               {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
@@ -620,6 +631,14 @@ export default defineConfig({
       {
         text: "Performance",
         items: [
+          {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
+          },
           {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",

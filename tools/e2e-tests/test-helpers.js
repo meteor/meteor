@@ -12,6 +12,7 @@ import {
   isRetryAttempt,
   killMeteorProcess,
   killProcessByPort,
+  killStrayAppProcesses,
   restoreFiles,
   runMeteorApp,
   runMeteorCommand,
@@ -127,6 +128,9 @@ export function testMeteorBundler(options) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
       }
+
+      // Safety net: reap anything the test orphaned before the next one runs.
+      await killStrayAppProcesses();
     });
 
     test(`"meteor run" / should start the app`, async () => {
@@ -361,6 +365,9 @@ export function testMeteorRspackBundler(options) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
       }
+
+      // Safety net: reap anything the test orphaned before the next one runs.
+      await killStrayAppProcesses();
 
       // Restore mutated files regardless of pass/fail — idempotent on green runs,
       // essential on retries.
@@ -1039,16 +1046,24 @@ export function testMeteorSkeleton(options) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
       }
+
+      // Safety net: reap anything the test orphaned before the next one runs.
+      await killStrayAppProcesses();
     });
 
     test(`"meteor create --${skeletonName}" / should create a new Meteor ${skeletonName} app`, async () => {
-      // Create a new Meteor app with the specified skeleton
+      // Create a new Meteor app with the specified skeleton.
+      // Track the spawned subprocess on the outer-scope `meteorProcess` so
+      // `afterEach` can kill it if Jest times out the test mid-create — leaving
+      // an orphaned `meteor create` running concurrently with the retry corrupts
+      // the shared npm cache and produces broken symlinks in node_modules.
       const result = await createMeteorApp(skeletonName, skeletonName);
       tempDir = result.tempDir;
-      const newAppMeteorProcess = result.meteorProcess;
+      meteorProcess = result.meteorProcess;
 
       // Wait for the process to complete
-      await newAppMeteorProcess;
+      await meteorProcess;
+      meteorProcess = null;
 
       // Check if the app directory exists
       const appDirExists = await fs.pathExists(tempDir);
@@ -1066,7 +1081,7 @@ export function testMeteorSkeleton(options) {
       if (customAssertions.afterCreate) {
         await customAssertions.afterCreate({ tempDir, packageJsonPath });
       }
-    });
+    }, 360_000);
 
     test(`"meteor run" / should run the ${skeletonName} app`, async () => {
       // Run the newly created app
@@ -1142,11 +1157,14 @@ export function testMeteorSkeleton(options) {
     });
 
     test(`"meteor test --once" / should run tests once for the ${skeletonName} app`, async () => {
-      // Install playwright as a dev dependency
-      console.log("Installing playwright as a dev dependency...");
+      // Install playwright as a dev dependency, pinned to the same version
+      // as the test environment so pre-installed browser binaries are reused.
+      const testPkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'));
+      const playwrightVersion = testPkg.devDependencies.playwright;
+      console.log(`Installing playwright@${playwrightVersion} as a dev dependency...`);
       const repoRoot = path.resolve(process.cwd(), "..", "..");
       const meteorBin = path.join(repoRoot, "meteor");
-      await execa.command(`${meteorBin} npm i --save-dev playwright`, {
+      await execa.command(`${meteorBin} npm i --save-dev playwright@${playwrightVersion}`, {
         cwd: tempDir,
         stdio: "inherit",
         shell: true
@@ -1172,7 +1190,7 @@ export function testMeteorSkeleton(options) {
 
       // Ensure any process on the port is killed
       await killProcessByPort(port);
-    });
+    }, 300_000);
 
     test(`"meteor build" / should build the ${skeletonName} app`, async () => {
       // Build the app
