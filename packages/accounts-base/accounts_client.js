@@ -431,7 +431,9 @@ export class AccountsClient extends AccountsCommon {
       }
 
       // Make the client logged in. (The user data should already be loaded!)
-      this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
+      // When HttpOnly cookies are enabled, wait for the cookie sync before
+      // resolving login completion so downstream auth fetches can rely on it.
+      await this.makeClientLoggedIn(result.id, result.token, result.tokenExpires);
 
       // use Tracker to make we sure have a user before calling the callbacks
       Tracker.autorun(async (computation) => {
@@ -491,12 +493,12 @@ export class AccountsClient extends AccountsCommon {
     }
   }
 
-  makeClientLoggedIn(userId, token, tokenExpires) {
+  async makeClientLoggedIn(userId, token, tokenExpires) {
     this._storeLoginToken(userId, token, tokenExpires);
     this.connection.setUserId(userId);
     // Sync HttpOnly cookie if enabled
     if (this._useHttpOnlyCookies) {
-      this._setHttpOnlyCookie(token, tokenExpires);
+      await this._setHttpOnlyCookie(token, tokenExpires);
     }
   }
 
