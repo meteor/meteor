@@ -1,6 +1,9 @@
 name: Check legacy syntax
 on:
   - pull_request
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check-code-style:
     runs-on: ubuntu-latest

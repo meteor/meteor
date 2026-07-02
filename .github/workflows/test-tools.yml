@@ -29,21 +29,7 @@ env:
   METEOR_MODERN: true
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
-  SELF_HOSTED_MIN_FREE_GB: "20"
-  # actions/github-script is a JavaScript action, so this loader runs on the
-  # runner host even when the job later uses a container.
-  SELF_HOSTED_RUNNER_CLEANUP_LOADER: |
-    const { data } = await github.rest.repos.getContent({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      path: ".github/scripts/run-self-hosted-runner-cleanup.js",
-      ref: context.sha,
-    });
-    const loaderSource = data.content.replace(/\n/g, "");
-    await (await import(`data:text/javascript;base64,${loaderSource}`)).default({
-      github,
-      context,
-    });
+
 
 jobs:
   # ─── Setup ────────────────────────────────────────────────────────────────────
@@ -57,11 +43,6 @@ jobs:
       options: --user root
     timeout-minutes: 75
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -106,11 +87,6 @@ jobs:
     needs: setup
     timeout-minutes: 45
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -182,11 +158,6 @@ jobs:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^[a-b]|^c[a-n]|^co[a-l]|^comm"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -252,11 +223,6 @@ jobs:
     env:
       TEST_GROUP: "^com[n-z]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -323,11 +289,6 @@ jobs:
     env:
       TEST_GROUP: "^co[n-z]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -400,11 +361,6 @@ jobs:
     env:
       TEST_GROUP: "^c[p-z]|^h[a-e]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -470,11 +426,6 @@ jobs:
     env:
       TEST_GROUP: "^h[f-z]|^[i-l]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -541,11 +492,6 @@ jobs:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^m[a-n]|^mo[a-d]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -611,11 +557,6 @@ jobs:
     env:
       TEST_GROUP: "^mo[e-z]|^m[p-z]|^[n-o]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -681,11 +622,6 @@ jobs:
     env:
       TEST_GROUP: "^[p-q]|^r[a-e]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -751,11 +687,6 @@ jobs:
     env:
       TEST_GROUP: "^r[f-z]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -821,11 +752,6 @@ jobs:
     env:
       TEST_GROUP: "^s"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -891,11 +817,6 @@ jobs:
     env:
       TEST_GROUP: "^[t-z]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -961,11 +882,6 @@ jobs:
     env:
       TEST_GROUP: "^[d-g]"
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
-
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
