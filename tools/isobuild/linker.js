@@ -192,16 +192,29 @@ Object.assign(Module.prototype, {
     // Emit each file
     if (haveMeteorInstallOptions) {
       const trees = await self._buildModuleTrees(results, sourceWidth);
-      fileCount = await self._chunkifyModuleTrees(trees, chunks, sourceWidth);
+
+      // The client app bundle runs unwrapped at the top level of a classic
+      // <script> so that bare files keep the global namespace. That would also
+      // expose the module system's `var require = meteorInstall(...)` as a
+      // global identifier. Scope the module-system bootstrap and its eager
+      // require() calls inside an IIFE, while leaving bare files at the top
+      // level. Only the unwrapped app path (global namespace + eager requires)
+      // needs this; package/TLA/server bundles are already function-wrapped.
+      const scopeModuleRequire = self.useGlobalNamespace && self.addEagerRequires;
+
+      const moduleChunks = [];
+      fileCount = await self._chunkifyModuleTrees(trees, moduleChunks, sourceWidth);
 
       // During the full link, code will be added to pass these to the
       // core runtime so it can handle evaluating the modules
       result.eagerModulePaths = [];
       result.mainModulePath = null;
 
+      const bareChunks = [];
+      const eagerRequireChunks = [];
       for (const file of this.files) {
         if (file.bare) {
-          chunks.push('\n', await file.getPrelinkedOutput({
+          bareChunks.push('\n', await file.getPrelinkedOutput({
             sourceWidth
           }));
         } else if (!file.lazy) {
@@ -211,9 +224,21 @@ Object.assign(Module.prototype, {
           }
 
           if (self.addEagerRequires) {
-            chunks.push(`\nrequire(${JSON.stringify(file.absModuleId)});`);
+            eagerRequireChunks.push(`\nrequire(${JSON.stringify(file.absModuleId)});`);
           }
         }
+      }
+
+      if (scopeModuleRequire && fileCount > 0) {
+        // Bare files stay global; the module system is scoped. Bare files run
+        // first, which is safe because app modules cannot define globals for
+        // bare files to consume.
+        chunks.push(bareChunks, '\n(function () {\n', moduleChunks,
+          eagerRequireChunks, '\n}).call(this);\n');
+      } else {
+        // Package/TLA/server bundles (no inline eager requires): preserve the
+        // original order of the module tree followed by any bare files.
+        chunks.push(moduleChunks, bareChunks, eagerRequireChunks);
       }
     } else {
       for (const file of self.files) {
