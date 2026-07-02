@@ -244,7 +244,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   usePreviousWrite(relPath, hash, sanitize) {
     relPath = this._normalizeFilePath(relPath, sanitize);
 
-    if (this.previousWrittenHashes[relPath] === hash) {
+    if (this.previousWrittenHashes[relPath] === hash &&
+        this._previousWriteStillOnDisk(relPath)) {
       this._ensureDirectory(files.pathDirname(relPath));
       this.writtenHashes[relPath] = hash;
       this.usedAsFile[relPath] = true;
@@ -252,6 +253,22 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     }
 
     return false;
+  }
+
+  // An in-place rebuild may only skip recreating a file (or symlink) when it
+  // still exists on disk, so anything removed out of band (e.g. an OS purging
+  // the temp bundle dir) is recreated. Only consulted after a cache match, so
+  // fresh builds pay no extra stat. Uses files.exists rather than the optimistic
+  // stat cache: that cache persists across rebuilds and would report a purged
+  // file as present, whereas files.exists is scoped to the current build.
+  _previousWriteStillOnDisk(relPath) {
+    try {
+      return files.exists(files.pathJoin(this.buildPath, relPath));
+    } catch (e) {
+      // files.exists maps ENOENT to false; any other stat error (e.g. EACCES)
+      // is not evidence the file is gone, so keep the previous skip behavior.
+      return true;
+    }
   }
 
   _normalizeFilePath(relPath, sanitize) {
@@ -318,7 +335,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       hash = hash || sha1(getData());
 
       // Write is called multiple times for assets when they have multiple urls for the same file
-      if (this.previousWrittenHashes[relPath] !== hash && this.writtenHashes[relPath] !== hash) {
+      if (this.writtenHashes[relPath] !== hash &&
+          (this.previousWrittenHashes[relPath] !== hash ||
+            ! this._previousWriteStillOnDisk(relPath))) {
 
         // Builder is used to create build products, which should be read-only;
         // users shouldn't be manually editing automatically generated files and
@@ -670,7 +689,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
       if (symlink && ! (relTo in this.usedAsFile)) {
         this._ensureDirectory(files.pathDirname(relTo));
         const absTo = files.pathResolve(this.buildPath, relTo);
-        if (this.previousCreatedSymlinks[absFrom] !== relTo) {
+        if (this.previousCreatedSymlinks[absFrom] !== relTo ||
+            ! this._previousWriteStillOnDisk(relTo)) {
           await symlinkWithOverwrite(absFrom, absTo);
         }
         this.usedAsFile[relTo] = false;
@@ -797,7 +817,8 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         if (fileStatus && fileStatus.isFile()) {
           const hash = optimisticHashOrNull(thisAbsFrom);
 
-          if (this.previousWrittenHashes[thisRelTo] !== hash) {
+          if (this.previousWrittenHashes[thisRelTo] !== hash ||
+              ! this._previousWriteStillOnDisk(thisRelTo)) {
             const content = optimisticReadFile(thisAbsFrom);
 
             files.writeFile(
