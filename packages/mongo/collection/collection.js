@@ -40,6 +40,16 @@ The default id generation technique is `'STRING'`.
 Mongo.Collection = function Collection(name, options) {
   name = validateCollectionName(name);
 
+  // While an HMR update re-runs a module, reuse an already-registered
+  // collection instead of throwing on the duplicate name, so it (and its live
+  // subscriptions and observers) survives the reload. The existing instance is
+  // returned as-is: options changed in the edited declaration take effect only
+  // after a full reload. _hmrApplying is set only by the hot-module-replacement
+  // client while it re-runs changed modules.
+  if (Meteor._hmrApplying && name && Mongo._collections.has(name)) {
+    return Mongo._collections.get(name);
+  }
+
   options = normalizeOptions(options);
 
   this._makeNewID = ID_GENERATORS[options.idGeneration]?.(name);
