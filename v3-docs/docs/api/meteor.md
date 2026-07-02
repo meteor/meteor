@@ -1023,16 +1023,86 @@ contains the following fields:
   security risk for this transport. For details and alternatives, see
   the [SockJS documentation](https://github.com/sockjs/sockjs-node#authorisation).
 
-> Currently when a client reconnects to the server (such as after
-> temporarily losing its Internet connection), it will get a new
-> connection each time. The `onConnection` callbacks will be called
-> again, and the new connection will have a new connection `id`.
+## Reconnection
 
-> In the future, when client reconnection is fully implemented,
-> reconnecting from the client will reconnect to the same connection on
-> the server: the `onConnection` callback won't be called for that
-> connection again, and the connection will still have the same
-> connection `id`.
+Meteor 3.5+ supports [DDP session resumption](https://github.com/meteor/meteor/pull/14051), allowing clients to automatically resume their previous connection after a temporary network disconnect. When a client reconnects within the grace period, the `onConnection` callback is not called again on the server and the connection retains its original `id`.
+
+This behavior is controlled by the following server options, which you can set globally:
+
+```js
+import { Meteor } from "meteor/meteor";
+
+// Maintain inactive sessions for 30 seconds
+Meteor.server.options.disconnectGracePeriod = 30000;
+
+// Queue up to 500 messages per disconnected session
+Meteor.server.options.maxMessageQueueLength = 500;
+```
+
+### Meteor.server.options.disconnectGracePeriod
+
+Defines how long (in milliseconds) we should maintain a session for after a non-graceful disconnect before destroying it. Sessions that reconnect within this time will be resumed with minimal performance impact. Defaults to `15000`.
+
+### Meteor.server.options.maxMessageQueueLength
+
+Determines how many messages we should queue during a non-graceful disconnect before we destroy the session, to help prevent memory leaks. Defaults to `100`.
+
+### Resume Behavior and Edge Cases
+
+When a session correctly resumes, clients pick up exactly where they left off:
+- **Subscriptions:** Active subscriptions automatically resume without needing to be re-published and clients do not re-send subscription requests.
+- **Method Calls:** Any in-flight method calls that were unacknowledged during the disconnection will be replayed.
+- **Queue Overflow:** If the number of messages emitted while a client is disconnected exceeds `maxMessageQueueLength`, the session is discarded. When the client reconnects, it initiates a fresh session.
+- **Hot Code Push:** HCP is treated as a manual, graceful disconnect. Session resumption is gracefully skipped so clients receive entirely fresh state for the new code.
+- **Load Balancers:** Server stickiness is still important. A client must reconnect to the *same* physical Meteor instance holding its session state within the grace period to resume successfully.
+- **Legacy Migrations:** If your application relied heavily on `onConnection` triggering *every single time* a client socket reconnected after brief hiccups (to handle manual presence tracking or metrics), be aware that `onConnection` is **no longer invoked** during a grace-period resumption.
+
+To explicitly execute logic when a client reconnects (whether it resulted in a successfully resumed session or a completely fresh one), use [`DDP.onReconnect`](#DDP-onReconnect) on the client.
+
+### Presence tracking pattern
+
+Apps that previously counted online users by registering `onConnection` and `onClose` will see fewer events with session resumption — a brief network blip no longer produces a fresh `connectionId`. The recommended pattern is a periodic client-side heartbeat method that updates a `lastSeen` timestamp:
+
+```js
+// server
+import { Meteor } from "meteor/meteor";
+import { Mongo } from "meteor/mongo";
+
+const Presence = new Mongo.Collection("presence");
+
+Meteor.methods({
+  async "presence.heartbeat"() {
+    if (!this.userId) return;
+    await Presence.upsertAsync(
+      { _id: this.userId },
+      { $set: { lastSeen: new Date(), connectionId: this.connection.id } }
+    );
+  },
+});
+
+// A user is "online" if their heartbeat is recent. Tune the threshold to
+// (heartbeat interval + grace period + small buffer).
+Meteor.publish("presence.online", function () {
+  const cutoff = new Date(Date.now() - 45_000);
+  return Presence.find({ lastSeen: { $gte: cutoff } });
+});
+```
+
+```js
+// client
+import { Meteor } from "meteor/meteor";
+
+Meteor.startup(() => {
+  Meteor.subscribe("presence.online");
+
+  // Fire on startup, then every 30 seconds while the tab is open
+  const tick = () => Meteor.callAsync("presence.heartbeat");
+  tick();
+  Meteor.setInterval(tick, 30_000);
+});
+```
+
+This approach is resilient to session resumption: a heartbeat after a brief disconnect still updates `lastSeen`, so the user stays "online" without needing `onConnection` to fire again.
 
 <ApiBox name="DDP.connect"  hasCustomExample/>
 
@@ -1085,7 +1155,27 @@ When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
 
-<ApiBox name="DDP.onReconnect" />
+<ApiBox name="DDP.onReconnect" hasCustomExample/>
+
+```js
+import { DDP } from "meteor/ddp-client";
+
+DDP.onReconnect((connection) => {
+  console.log("Client reconnected!");
+  // Check if session was successfully resumed (Meteor 3.5+)
+  if (connection.sessionResumed) {
+    console.log("Session state preserved, no need to re-fetch custom data.");
+  } else {
+    console.log("A brand new session was established.");
+  }
+});
+```
+
+Registers a callback hook that is invoked on the client whenever the DDP connection successfully re-establishes connectivity with the server. Starting in Meteor 3.5, the callback receives the connection instance which includes a `sessionResumed` boolean. You can use this flag to determine if the client recovered its previous session via the graceful disconnect period, or if the session expired forcing it to restart cleanly.
+
+Callbacks may be async functions. When any reconnect callback returns a promise,
+Meteor waits for those promises to settle before re-sending outstanding method
+messages.
 
 ## Timers { #timers }
 

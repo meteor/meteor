@@ -29,34 +29,50 @@ interval.
 
 Here's an example of defining a rule and adding it into the `DDPRateLimiter`:
 ```js
-// Rate-limit `login` attempts *before* users are authenticated, scoped per
-// client IP. Matchers run synchronously (see the note below), so they may only
-// read values already on the invocation — never the database.
-const loginRateLimit = {
-  type: 'method',
-  name: 'login',
-  // A function matcher must return `true` for the rule to apply. Including
-  // `clientAddress` also scopes the rate-limit bucket per IP address.
-  clientAddress() {
-    return true;
+// Define a rule that matches login attempts by non-admin users.
+const loginRule = {
+  // Synchronous matcher
+  clientAddress(clientAddress) {
+    return clientAddress !== '127.0.0.1';
   },
+  type: 'method',
+  name: 'login'
 };
 
-// Allow at most 5 login attempts every 10 seconds, per IP address.
-DDPRateLimiter.addRule(loginRateLimit, 5, 10000);
-
+// Add the rule, allowing up to 5 messages every 1000 milliseconds.
+DDPRateLimiter.addRule(loginRule, 5, 1000);
 ```
 
-::: warning
-Rule matchers run **synchronously**, and their return value is not awaited. In
-Meteor 3 you therefore cannot read from the database inside a matcher: the
-synchronous `findOne` throws on the server, and switching to `findOneAsync` /
-`await` does not help. Match only on values already on the invocation:
-`type`, `name`, `userId`, `connectionId`, `clientAddress`.
+### Async Matchers
 
-If a rule's logic depends on something like a user's role, perform that check
-**inside the method itself** (where you can `await` a database read) — not in
-the matcher.
+Starting in Meteor 3.5, `DDPRateLimiter` fully supports asynchronous matchers. Your matchers (`userId`, `clientAddress`, `type`, `name`, `connectionId`) can be `async` functions that return a `Promise<boolean>`.
+
+This is incredibly useful for querying the database to perform complex access control logic:
+
+```js
+// Define an async rule matching users who have exhausted their tier limits
+const premiumTierRule = {
+  // Asynchronous matcher evaluating access limits via DB lookup
+  async userId(userId) {
+    if (!userId) return true; // Rate limit unauthenticated paths if shared
+    const user = await Meteor.users.findOneAsync(userId);
+    return user && user.subscriptionTier !== 'premium';
+  },
+  type: 'method',
+  name: 'Users.expensiveOperation'
+};
+
+// Add the rule, allowing up to 2 calls every 60000 milliseconds for non-premium
+DDPRateLimiter.addRule(premiumTierRule, 2, 60000);
+```
+
+> **Performance Note**: While async matchers unlock powerful database checks, keep in mind they are awaited sequentially on the incoming message queue for that connection. Extremely slow database queries in rate limiters can delay message processing. If a matcher `Promise` rejects, the rate limit check will safely fail the invocation as it errors out.
+
+::: tip
+Synchronous matchers still cannot read the database — a synchronous `findOne`
+throws on the Meteor 3 server. If a rule needs a database lookup, use an async
+matcher (see above). Otherwise, match only on values already on the invocation:
+`type`, `name`, `userId`, `connectionId`, `clientAddress`.
 :::
 
 <ApiBox name="DDPRateLimiter.removeRule" />
@@ -74,7 +90,7 @@ Here is an example with a custom error message:
 // Rate-limit a sensitive method called by authenticated users, scoped per user.
 const setupGoogleAuthenticatorRule = {
   // Apply only to logged-in users; `userId` also scopes the bucket per user.
-  // (Matchers are synchronous — no database reads.)
+  // This matcher is synchronous, so it only checks `userId` — no database read.
   userId(userId) {
     return userId != null;
   },
