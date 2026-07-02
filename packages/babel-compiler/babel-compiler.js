@@ -1,4 +1,3 @@
-var semver = Npm.require("semver");
 var JSON5 = Npm.require("json5");
 var SWC = Npm.require("@meteorjs/swc-core");
 const reifyCompile = Npm.require("@meteorjs/reify/lib/compiler").compile;
@@ -42,10 +41,6 @@ BCp.isVerbose = function(config = getMeteorConfig()) {
   }
   return !!this.extraFeatures?.verbose;
 };
-
-// There's no way to tell the current Meteor version, but we can infer
-// whether it's Meteor 1.4.4 or earlier by checking the Node version.
-var isMeteorPre144 = semver.lt(process.version, "4.8.1");
 
 var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
 
@@ -557,19 +552,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       }
 
       return null;
-    }
-
-    if (isMeteorPre144) {
-      // Versions of meteor-tool earlier than 1.4.4 do not understand that
-      // module.importSync is synonymous with the deprecated module.import
-      // and thus fail to register dependencies for importSync calls.
-      // This string replacement may seem a bit hacky, but it will tide us
-      // over until everyone has updated to Meteor 1.4.4.
-      // https://github.com/meteor/meteor/issues/8572
-      result.code = result.code.replace(
-        /\bmodule\.importSync\b/g,
-        "module.import"
-      );
     }
 
     toBeAdded.data = result.code;
