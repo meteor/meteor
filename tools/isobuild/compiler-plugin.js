@@ -21,6 +21,14 @@ import {isTestFilePath} from './test-files.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
+// Preferred order for JavaScript-module extensions when resolving an
+// extensionless import. These are tried before any other (asset) extension —
+// such as ".css" or ".html" — so that `import X from './Foo'` resolves
+// Foo.tsx / Foo.js rather than Foo.css when files share a basename. Extensions
+// not listed here keep their registration order after these.
+const MODULE_IMPORT_EXTENSION_ORDER =
+  [".js", ".json", ".mjs", ".cjs", ".jsx", ".ts", ".tsx"];
+
 // This file implements the new compiler plugins added in Meteor 1.2, which are
 // registered with the Plugin.registerCompiler API.
 //
@@ -1235,9 +1243,30 @@ export class PackageSourceBatch {
       extension = "." + extension;
     }
 
-    if (this.importExtensions.indexOf(extension) < 0) {
-      this.importExtensions.push(extension);
+    if (this.importExtensions.indexOf(extension) >= 0) {
+      return;
     }
+
+    // Insert the extension by its module-resolution rank rather than simply
+    // appending it in (nondeterministic) resource-scan order, so that
+    // JavaScript-module extensions are always resolved before asset
+    // extensions like ".css". Extensions of the same rank keep their
+    // registration order.
+    const rank = ext => {
+      const i = MODULE_IMPORT_EXTENSION_ORDER.indexOf(ext);
+      return i < 0 ? MODULE_IMPORT_EXTENSION_ORDER.length : i;
+    };
+
+    const extRank = rank(extension);
+    let insertAt = this.importExtensions.length;
+    for (let i = 0; i < this.importExtensions.length; i++) {
+      if (rank(this.importExtensions[i]) > extRank) {
+        insertAt = i;
+        break;
+      }
+    }
+
+    this.importExtensions.splice(insertAt, 0, extension);
   }
 
   getResolver(options = {}) {
