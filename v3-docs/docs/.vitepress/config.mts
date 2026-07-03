@@ -320,6 +320,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
+              },
+              {
                 text: "roles",
                 link: "/packages/roles",
               },
