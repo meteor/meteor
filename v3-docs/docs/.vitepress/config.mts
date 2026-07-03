@@ -324,6 +324,10 @@ export default defineConfig({
                 link: "/packages/accounts-github",
               },
               {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
                 text: "accounts-weibo",
                 link: "/packages/accounts-weibo",
               },
