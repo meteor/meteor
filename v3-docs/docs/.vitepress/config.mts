@@ -320,6 +320,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
                 text: "accounts-weibo",
                 link: "/packages/accounts-weibo",
               },
