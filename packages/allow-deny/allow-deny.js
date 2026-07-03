@@ -138,7 +138,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
 
       const isInsert = name => name.includes('insert');
 
-      m[methodName] = function (/* ... */) {
+      m[methodName] = async function (/* ... */) {
         // All the methods do their own validation, instead of using check().
         check(arguments, [Match.Any]);
         const args = Array.from(arguments);
@@ -165,7 +165,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
             if (generatedId !== null) {
               args[0]._id = generatedId;
             }
-            return self._collection[method].apply(self._collection, args);
+            return await self._collection[method].apply(self._collection, args);
           }
 
           // This is the server receiving a method call from the client.
@@ -193,7 +193,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
 
             args.unshift(this.userId);
             isInsert(method) && args.push(generatedId);
-            return self[validatedMethodName].apply(self, args);
+            return await self[validatedMethodName].apply(self, args);
           } else if (self._isInsecure()) {
             if (generatedId !== null) args[0]._id = generatedId;
             // In insecure mode we use the server _collection methods, and these sync methods
@@ -217,7 +217,7 @@ CollectionPrototype._defineMutationMethods = function(options) {
             //     invoke it. Bam, broken DDP connection.  Probably should just
             //     take this whole method and write it three times, invoking
             //     helpers for the common code.
-            return self._collection[syncMethodsMapper[method] || method].apply(self._collection, args);
+            return await self._collection[syncMethodsMapper[method] || method].apply(self._collection, args);
           } else {
             // In secure mode, if we haven't called allow or deny, then nothing
             // is permitted.
@@ -230,6 +230,9 @@ CollectionPrototype._defineMutationMethods = function(options) {
             e.name === 'BulkWriteError' ||
             // for newer versions of MongoDB (https://docs.mongodb.com/drivers/node/current/whats-new/#bulkwriteerror---mongobulkwriteerror)
             e.name === 'MongoBulkWriteError' ||
+            // the driver reports single-document server errors, such as an
+            // E11000 duplicate key, as MongoServerError
+            e.name === 'MongoServerError' ||
             e.name === 'MinimongoError'
           ) {
             throw new Meteor.Error(409, e.toString());
