@@ -1,28 +1,91 @@
-import { DDP } from '../common/namespace.js';
 import { Meteor } from 'meteor/meteor';
-import { loadAsyncStubHelpers } from "./queue_stub_helpers";
+import { DDP } from '../common/namespace.js';
+import { loadAsyncStubHelpers } from './queue_stub_helpers';
+
+const normalizeRuntimePrefix = runtimePrefix => {
+  if (!runtimePrefix) {
+    return '';
+  }
+
+  const withLeadingSlash = runtimePrefix.startsWith('/')
+    ? runtimePrefix
+    : `/${runtimePrefix}`;
+
+  return withLeadingSlash.endsWith('/')
+    ? withLeadingSlash
+    : `${withLeadingSlash}/`;
+};
+
+const extractPathPrefix = (absoluteUrl, runtimeConfig) => {
+  const pathFromAbsoluteUrl = (() => {
+    if (!absoluteUrl) {
+      return '';
+    }
+
+    try {
+      return new URL(absoluteUrl).pathname || '/';
+    } catch {
+      return '';
+    }
+  })();
+  const normalizedRuntimePrefix = normalizeRuntimePrefix(runtimeConfig.ROOT_URL_PATH_PREFIX);
+
+  if (pathFromAbsoluteUrl && pathFromAbsoluteUrl !== '/') {
+    return pathFromAbsoluteUrl.startsWith('/')
+      ? pathFromAbsoluteUrl
+      : `/${pathFromAbsoluteUrl}`;
+  }
+
+  if (normalizedRuntimePrefix) {
+    return normalizedRuntimePrefix;
+  }
+
+  if (pathFromAbsoluteUrl) {
+    return pathFromAbsoluteUrl.startsWith('/')
+      ? pathFromAbsoluteUrl
+      : `/${pathFromAbsoluteUrl}`;
+  }
+
+  return '/';
+};
+
+export const _calculateDDPUrl = ({
+  absoluteUrl,
+  runtimeConfig = Object.create(null),
+  browserHost,
+  browserProtocol,
+}) => {
+  if (runtimeConfig.DDP_DEFAULT_CONNECTION_URL) {
+    return runtimeConfig.DDP_DEFAULT_CONNECTION_URL;
+  }
+
+  const protocol = (absoluteUrl && absoluteUrl.split('//')[0]) || browserProtocol;
+  const pathPrefix = extractPathPrefix(absoluteUrl, runtimeConfig);
+  return `${protocol}//${browserHost}${pathPrefix}`;
+};
+
+const getDDPUrl = () => {
+  const runtimeConfig = typeof __meteor_runtime_config__ !== 'undefined'
+    ? __meteor_runtime_config__
+    : Object.create(null);
+
+  return _calculateDDPUrl({
+    absoluteUrl: Meteor.absoluteUrl(),
+    runtimeConfig,
+    browserHost: window.location.host,
+    browserProtocol: window.location.protocol,
+  });
+};
 
 // Meteor.refresh can be called on the client (if you're in common code) but it
 // only has an effect on the server.
 Meteor.refresh = () => {};
 
-// By default, try to connect back to the same endpoint as the page
-// was served from.
-//
-// XXX We should be doing this a different way. Right now we don't
-// include ROOT_URL_PATH_PREFIX when computing ddpUrl. (We don't
-// include it on the server when computing
-// DDP_DEFAULT_CONNECTION_URL, and we don't include it in our
-// default, '/'.) We get by with this because DDP.connect then
-// forces the URL passed to it to be interpreted relative to the
-// app's deploy path, even if it is absolute. Instead, we should
-// make DDP_DEFAULT_CONNECTION_URL, if set, include the path prefix;
-// make the default ddpUrl be '' rather that '/'; and make
-// _translateUrl in stream_client_common.js not force absolute paths
-// to be treated like relative paths. See also
-// stream_client_common.js #RationalizingRelativeDDPURLs
-const runtimeConfig = typeof __meteor_runtime_config__ !== 'undefined' ? __meteor_runtime_config__ : Object.create(null);
-const ddpUrl = runtimeConfig.DDP_DEFAULT_CONNECTION_URL || '/';
+// By default, connect to the current browser host so mirrored domains
+// establish their websocket connection against the same host users loaded.
+// Keep the protocol and app path from Meteor.absoluteUrl() to preserve
+// force-ssl and deploy-path behavior.
+const ddpUrl = getDDPUrl() || '/';
 
 const retry = new Retry();
 
