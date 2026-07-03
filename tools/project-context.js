@@ -1839,8 +1839,9 @@ export class MeteorConfig {
             },
           }),
         } : this._config;
-    const modernForced = process.env.METEOR_MODERN
-      ? JSON.parse(process.env.METEOR_MODERN)
+    const rawModern = process.env.METEOR_MODERN;
+    const modernForced = rawModern && rawModern !== 'undefined'
+      ? JSON.parse(rawModern)
       : undefined;
     // Reinitialize meteorConfig globally for project context
     // Updates config when package.json changes trigger rebuilds
