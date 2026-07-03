@@ -336,6 +336,10 @@ export default defineConfig({
                 link: "/packages/accounts-meteor-developer",
               },
               {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
                 text: "accounts-weibo",
                 link: "/packages/accounts-weibo",
               },
