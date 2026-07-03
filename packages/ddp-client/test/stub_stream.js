@@ -27,6 +27,10 @@ Object.assign(StubStream.prototype, {
     // no-op
   },
 
+  disconnect: function() {
+    // no-op - for testing Connection.disconnect()
+  },
+
   _lostConnection: function() {
     // no-op
   },
