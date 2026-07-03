@@ -304,6 +304,10 @@ export default defineConfig({
             text: "Accounts and security",
             items: [
               {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
+              {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
               },
@@ -316,8 +320,16 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
                 text: "accounts-google",
                 link: "/packages/accounts-google",
+              },
+              {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
               },
               {
                 text: "roles",
@@ -631,6 +643,14 @@ export default defineConfig({
       {
         text: "Performance",
         items: [
+          {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
+          },
           {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",
