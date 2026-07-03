@@ -332,6 +332,10 @@ export default defineConfig({
                 link: "/packages/accounts-meetup",
               },
               {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
                 text: "accounts-weibo",
                 link: "/packages/accounts-weibo",
               },
