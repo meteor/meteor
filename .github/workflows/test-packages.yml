@@ -6,27 +6,19 @@ on:
       - "packages/**"
       - ".github/workflows/test-packages.yml"
 
-env:
-  SELF_HOSTED_MIN_FREE_GB: "20"
-  # actions/github-script is a JavaScript action, so this loader runs on the
-  # runner host even when the job later uses a container.
-  SELF_HOSTED_RUNNER_CLEANUP_LOADER: |
-    const { data } = await github.rest.repos.getContent({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      path: ".github/scripts/run-self-hosted-runner-cleanup.js",
-      ref: context.sha,
-    });
-    const loaderSource = data.content.replace(/\n/g, "");
-    await (await import(`data:text/javascript;base64,${loaderSource}`)).default({
-      github,
-      context,
-    });
+
 
 jobs:
   test-packages:
+    strategy:
+      fail-fast: false
+      matrix:
+        reactivity_order:
+          - 'changeStreams,polling'
+          - 'oplog,polling'
+    runs-on: oss-vm
     concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true
     runs-on: oss-vm
     timeout-minutes: 90
@@ -37,12 +29,8 @@ jobs:
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
-
+      METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
     steps:
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -50,6 +38,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
+          node-version: 24.15.0
           submodules: recursive
 
       - name: Expose globally-installed puppeteer to Node.js
@@ -69,7 +58,6 @@ jobs:
           key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-meteor-
-
       - name: Run test-in-console suite
         run: |
           export TEST_PACKAGES_EXCLUDE="stylus"
