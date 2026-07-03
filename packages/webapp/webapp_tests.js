@@ -536,6 +536,54 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync(
+  'webapp - skipCompressionWithContentLength setting keeps Content-Length',
+  async function (test) {
+    const arch = 'web.browser';
+    const staticPath = '/skip-compression-test.js';
+    const original =
+      Meteor.settings.packages?.webapp?.skipCompressionWithContentLength;
+
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    if (!Meteor.settings.packages.webapp) Meteor.settings.packages.webapp = {};
+
+    // Large enough to be past the compression module's default threshold.
+    const content = 'console.log("skip-compression-test");\n'.repeat(80);
+    WebAppInternals.staticFilesByArch[arch][staticPath] = {
+      content,
+      absolutePath: '/tmp/mock-skip-compression.js',
+      cacheable: true,
+      hash: 'skip-compression-hash',
+      type: 'js',
+    };
+
+    const reqOpts = { headers: { 'Accept-Encoding': 'gzip' } };
+    try {
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = false;
+      const off = await asyncGet(Meteor.absoluteUrl(staticPath), reqOpts);
+      test.equal(
+        (off.headers['content-encoding'] || '').toLowerCase(),
+        'gzip',
+        'should compress (and drop Content-Length) when the setting is off'
+      );
+
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = true;
+      const on = await asyncGet(Meteor.absoluteUrl(staticPath), reqOpts);
+      test.isFalse(
+        (on.headers['content-encoding'] || '').toLowerCase().includes('gzip'),
+        'should not compress when the setting is on'
+      );
+      test.isTrue(
+        !!on.headers['content-length'],
+        'Content-Length should be preserved when the setting is on'
+      );
+    } finally {
+      delete WebAppInternals.staticFilesByArch[arch][staticPath];
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = original;
+    }
+  }
+);
+
 // Verification: Ensure that a URL containing a specific hash serves the exact same
 // content and headers to all browsers (Modern vs Legacy).
 // This proves that removing 'Vary: User-Agent' is safe because the file content
