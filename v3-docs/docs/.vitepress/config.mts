@@ -328,6 +328,10 @@ export default defineConfig({
                 link: "/packages/accounts-google",
               },
               {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
                 text: "accounts-weibo",
                 link: "/packages/accounts-weibo",
               },
