@@ -4,6 +4,10 @@
 
 The [`accounts-ui`](./accounts-ui.md) package is simply `accounts-ui-unstyled` plus a default stylesheet. If you add `accounts-ui`, you already have everything here; add `accounts-ui-unstyled` instead only when you want to style the widgets yourself.
 
+::: tip This package is for Blaze
+The login widgets are [Blaze](https://www.blazejs.org/) templates rendered with <span v-pre>`{{> loginButtons}}`</span>. If your app uses React, Vue, Svelte, or another view layer, use [`accounts-base`](../api/accounts.md) directly (or a community UI package) instead of this package.
+:::
+
 Add it to your project with:
 
 ```bash
