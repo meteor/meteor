@@ -2,6 +2,7 @@ import isEmpty from 'lodash.isempty';
 import { Meteor } from 'meteor/meteor';
 import { CursorDescription } from './cursor_description';
 import { MongoConnection } from './mongo_connection';
+import { isIgnorableAdminCommand } from './oplog_admin_command';
 
 import { NpmModuleMongodb } from "meteor/npm-mongo";
 const { Long } = NpmModuleMongodb;
@@ -456,6 +457,10 @@ async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
         }
         await handleDoc(handle, op);
       }
+      return;
+    }
+    if (isIgnorableAdminCommand(doc)) {
+      // No db-qualified namespace to map to a collection; safe to skip.
       return;
     }
     throw new Error("Unknown command " + JSON.stringify(doc));
