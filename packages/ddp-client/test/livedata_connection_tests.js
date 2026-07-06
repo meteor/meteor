@@ -2777,6 +2777,34 @@ Tinytest.addAsync('livedata connection - disconnect sends disconnect message', a
     "disconnect() should send a disconnect message to the server");
 });
 
+Tinytest.addAsync(
+  'livedata connection - malformed frames are discarded without crashing',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // parseDDP returns null both for invalid JSON and for valid JSON that
+    // is not an object. Neither may throw out of the message handler.
+    await stream.receive('this is not json');
+    await stream.receive('"a bare string"');
+    await stream.receive('42');
+
+    // The connection still processes real messages afterwards.
+    let callbackFired = false;
+    conn.call('stillAlive', function () {
+      callbackFired = true;
+    });
+    const message = testGotMessage(test, stream, {
+      msg: 'method', method: 'stillAlive', params: [], id: '*'
+    });
+    await stream.receive({ msg: 'result', id: message.id, result: 'ok' });
+    await stream.receive({ msg: 'updated', methods: [message.id] });
+    test.isTrue(callbackFired);
+  }
+);
+
 // XXX also test:
 // - restart on update flag
 // - on_update event
