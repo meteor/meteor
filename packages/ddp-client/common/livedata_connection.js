@@ -17,6 +17,7 @@ import { ConnectionStreamHandlers } from './connection_stream_handlers';
 import { MongoIDMap } from './mongo_id_map';
 import { MessageProcessors } from './message_processors';
 import { DocumentProcessors } from './document_processors';
+import { UpdateBuffer } from './update_buffer';
 
 // @param url {String|Object} URL to Meteor app,
 //   or an object as a test hook (see code)
@@ -205,15 +206,13 @@ export class Connection {
     self._updatesForUnknownStores = {};
     // if we're blocking a migration, the retry func
     self._retryMigrate = null;
-    // Collection name -> array of messages.
-    self._bufferedWrites = {};
-    // When current buffer of updates must be flushed at, in ms timestamp.
-    self._bufferedWritesFlushAt = null;
-    // Timeout handle for the next processing of all pending writes
-    self._bufferedWritesFlushHandle = null;
-
-    self._bufferedWritesInterval = options.bufferedWritesInterval;
-    self._bufferedWritesMaxAge = options.bufferedWritesMaxAge;
+    // Buffers incoming data-message writes per collection and owns the
+    // debounce/max-age flush policy. See update_buffer.js.
+    self._updateBuffer = new UpdateBuffer({
+      interval: options.bufferedWritesInterval,
+      maxAge: options.bufferedWritesMaxAge,
+      flush: () => self._flushBufferedWrites(),
+    });
 
     // metadata for subscriptions.  Map from sub ID to object with keys:
     //   - id
@@ -1153,20 +1152,9 @@ export class Connection {
     return Object.values(invokers).some((invoker) => !!invoker.sentMessage);
   }
 
-  _prepareBuffersToFlush() {
-    const self = this;
-    if (self._bufferedWritesFlushHandle) {
-      clearTimeout(self._bufferedWritesFlushHandle);
-      self._bufferedWritesFlushHandle = null;
-    }
-
-    self._bufferedWritesFlushAt = null;
-    // We need to clear the buffer before passing it to
-    //  performWrites. As there's no guarantee that it
-    //  will exit cleanly.
-    const writes = self._bufferedWrites;
-    self._bufferedWrites = Object.create(null);
-    return writes;
+  // Tests await this to observe completion of a debounce-timer flush.
+  get _liveDataWritesPromise() {
+    return this._updateBuffer.pendingWritesPromise;
   }
 
   /**
@@ -1265,7 +1253,7 @@ export class Connection {
    */
   async _flushBufferedWrites() {
     const self = this;
-    const writes = self._prepareBuffersToFlush();
+    const writes = self._updateBuffer.takeAll();
 
     return Meteor.isClient
       ? self._performWritesClient(writes)

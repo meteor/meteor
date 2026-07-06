@@ -163,46 +163,23 @@ export class MessageProcessors {
       for (const bufferedMessage of Object.values(bufferedMessages)) {
         await this._processOneDataMessage(
           bufferedMessage,
-          self._bufferedWrites
+          self._updateBuffer.writes
         );
       }
       self._messagesBufferedUntilQuiescence = [];
     } else {
-      await this._processOneDataMessage(msg, self._bufferedWrites);
+      await this._processOneDataMessage(msg, self._updateBuffer.writes);
     }
 
-    // Immediately flush writes when:
-    //  1. Buffering is disabled. Or;
-    //  2. any non-(added/changed/removed) message arrives.
+    // The buffer owns the flush policy: immediate when buffering is disabled
+    // or for any non-(added/changed/removed) message, otherwise debounced
+    // and capped by the max-age deadline.
     const standardWrite =
       msg.msg === "added" ||
       msg.msg === "changed" ||
       msg.msg === "removed";
 
-    if (self._bufferedWritesInterval === 0 || !standardWrite) {
-      await self._flushBufferedWrites();
-      return;
-    }
-
-    if (self._bufferedWritesFlushAt === null) {
-      self._bufferedWritesFlushAt =
-        new Date().valueOf() + self._bufferedWritesMaxAge;
-    } else if (self._bufferedWritesFlushAt < new Date().valueOf()) {
-      await self._flushBufferedWrites();
-      return;
-    }
-
-    if (self._bufferedWritesFlushHandle) {
-      clearTimeout(self._bufferedWritesFlushHandle);
-    }
-    self._bufferedWritesFlushHandle = setTimeout(() => {
-      self._liveDataWritesPromise = self._flushBufferedWrites();
-      if (Meteor._isPromise(self._liveDataWritesPromise)) {
-        self._liveDataWritesPromise.finally(
-          () => (self._liveDataWritesPromise = undefined)
-        );
-      }
-    }, self._bufferedWritesInterval);
+    await self._updateBuffer.afterMessage(standardWrite);
   }
 
   /**
@@ -244,7 +221,7 @@ export class MessageProcessors {
     const self = this._connection;
 
     // Lets make sure there are no buffered writes before returning result.
-    if (!isEmpty(self._bufferedWrites)) {
+    if (!self._updateBuffer.isEmpty()) {
       await self._flushBufferedWrites();
     }
 
