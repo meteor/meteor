@@ -2781,3 +2781,33 @@ Tinytest.addAsync('livedata connection - disconnect sends disconnect message', a
 // - restart on update flag
 // - on_update event
 // - reloading when the app changes, including session migration
+
+Tinytest.addAsync(
+  'livedata connection - unsub while disconnected is delivered after reconnect',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    const sub = conn.subscribe('queued-unsub-test');
+    const subMessage = testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'queued-unsub-test', params: []
+    });
+
+    // Stop the subscription while the stream is not connected. The stream
+    // drops data sent in this state, and the registry record is removed, so
+    // nothing would ever re-send the unsub — it must be queued.
+    stream.setStatus('waiting');
+    sub.stop();
+    test.length(stream.sent, 0);
+
+    // On reconnect the queued unsub goes out, after the connect message
+    // (and after any still-registered subscriptions would be re-sent).
+    stream.setStatus('connected');
+    await stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+    testGotMessage(test, stream, { msg: 'unsub', id: subMessage.id });
+    test.length(stream.sent, 0);
+  }
+);

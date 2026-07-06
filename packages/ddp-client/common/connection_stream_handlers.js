@@ -133,6 +133,10 @@ export class ConnectionStreamHandlers {
     // the necessary RTT to know if we successfully reconnected.
     this._connection._callOnReconnectAndSendAppropriateOutstandingMethods();
     this._resendSubscriptions();
+
+    // Deliver messages that were passed to _sendQueued while disconnected
+    // (e.g. 'unsub' messages); the stream would have dropped them.
+    this._connection._flushMessagesQueuedUntilReconnect();
   }
 
   /**
