@@ -26,8 +26,10 @@ export class ConnectionStreamHandlers {
     }
 
     if (msg === null || !msg.msg) {
-      if(!msg || !msg.testMessageOnConnect) {
-        if (Object.keys(msg).length === 1 && msg.server_id) return;
+      if (!msg || !msg.testMessageOnConnect) {
+        // msg is null when parseDDP discarded the frame (invalid JSON, or
+        // JSON that is not an object) — guard before inspecting its keys.
+        if (msg && Object.keys(msg).length === 1 && msg.server_id) return;
         Meteor._debug('discarding invalid livedata message', msg);
       }
       return;
