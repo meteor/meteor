@@ -246,6 +246,11 @@ export class Connection {
       });
     }
 
+    // Messages passed to _sendQueued while the stream was not connected.
+    // The stream drops data sent while disconnected, so these are flushed
+    // once the connection is (re-)established.
+    self._messagesQueuedUntilReconnect = [];
+
     this._streamHandlers = new ConnectionStreamHandlers(this);
 
     const onDisconnect = () => {
@@ -1040,14 +1045,28 @@ export class Connection {
     this._stream.send(DDPCommon.stringifyDDP(obj));
   }
 
-  // Always queues the call before sending the message
-  // Used, for example, on subscription.[id].stop() to make sure a "sub" message is always called before an "unsub" message
+  // Sends the message ordered behind any sends queued by in-flight async
+  // stubs (the second argument to _send routes through the client stub
+  // queue — see queue_stub_helpers.js). If the stream is not connected the
+  // message is held until the connection is (re-)established instead: the
+  // stream drops data sent while disconnected, and e.g. the 'unsub' from
+  // subscription.stop() removes its registry record, so nothing would ever
+  // re-send it.
   // https://github.com/meteor/meteor/issues/13212
-  //
-  // This is part of the actual fix for the rest check:
-  // https://github.com/meteor/meteor/pull/13236
   _sendQueued(obj) {
-    this._send(obj, true);
+    if (this._stream.status().status === 'connected') {
+      this._send(obj, true);
+    } else {
+      this._messagesQueuedUntilReconnect.push(obj);
+    }
+  }
+
+  // Called on stream reset, after subscriptions have been re-sent, so a
+  // queued 'unsub' can never precede its subscription's 'sub'.
+  _flushMessagesQueuedUntilReconnect() {
+    const queued = this._messagesQueuedUntilReconnect;
+    this._messagesQueuedUntilReconnect = [];
+    queued.forEach(obj => this._send(obj, true));
   }
 
   // We detected via DDP-level heartbeats that we've lost the
