@@ -1208,13 +1208,16 @@ Tinytest.addAsync(
   "livedata server - removed() after publication strategy change does not throw",
   async function (test) {
     const { clientConn } = await getTestConnections(test);
-    await new Promise((resolve, reject) => {
-      clientConn.subscribe('livedata_server_test_strategy_flip', {
-        onReady: resolve,
-        onError: reject,
+    try {
+      await new Promise((resolve, reject) => {
+        clientConn.subscribe('livedata_server_test_strategy_flip', {
+          onReady: resolve,
+          onError: reject,
+        });
       });
-    });
-    test.isTrue(true, 'subscription became ready without a handler error');
-    clientConn.disconnect();
+      test.isTrue(true, 'subscription became ready without a handler error');
+    } finally {
+      clientConn.disconnect();
+    }
   }
 );
