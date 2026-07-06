@@ -2821,3 +2821,27 @@ Tinytest.addAsync(
     test.equal(firstStopCalls, 0);
   }
 );
+
+Tinytest.add(
+  'livedata connection - close() stops tracking the connection',
+  function (test) {
+    // Precondition: every already-tracked connection is fully ready, so
+    // this test's connection is the only thing that can flip the answer.
+    test.isTrue(DDP._allSubscriptionsReady());
+
+    // DDP.connect registers in the allConnections registry (the object
+    // form of `url` is the standard test-stream hook).
+    const stream = new StubStream();
+    const conn = DDP.connect(stream);
+
+    // A subscription that never becomes ready makes this connection the
+    // one blocking _allSubscriptionsReady.
+    conn.subscribe('never-ready-tracking-test');
+    test.isFalse(DDP._allSubscriptionsReady());
+
+    // Closing the connection must deregister it — a closed connection can
+    // never become ready and would otherwise be consulted forever.
+    conn.close();
+    test.isTrue(DDP._allSubscriptionsReady());
+  }
+);

@@ -1094,6 +1094,10 @@ export class Connection {
   }
 
   close() {
+    // A closed connection can never reconnect; stop tracking it in
+    // DDP._allConnections (otherwise the registry grows forever and
+    // _allSubscriptionsReady consults dead connections).
+    DDP._removeConnection(this);
     // _permanent is used by the underlying stream to prevent reconnection attempts
     return this.disconnect({ _permanent: true });
   }
