@@ -457,6 +457,7 @@ function refreshRuntimeConfigPublicSettings(arch) {
   }
 
   let changed = false;
+  let failed = false;
 
   const boilerplate = boilerplateByArch[arch];
   if (boilerplate && boilerplate.baseData &&
@@ -473,7 +474,13 @@ function refreshRuntimeConfigPublicSettings(arch) {
       });
       changed = true;
     } catch (e) {
-      // Leave the cached config untouched if it cannot be decoded.
+      // Leave the cached config untouched if it cannot be decoded, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not decode boilerplate ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
     }
   }
 
@@ -485,7 +492,13 @@ function refreshRuntimeConfigPublicSettings(arch) {
       program.meteorRuntimeConfig = JSON.stringify(parsed);
       changed = true;
     } catch (e) {
-      // Leave the cached config untouched if it cannot be parsed.
+      // Leave the cached config untouched if it cannot be parsed, and keep
+      // the snapshot stale so the refresh is retried on the next request.
+      failed = true;
+      Log.debug(
+        'refreshRuntimeConfigPublicSettings: could not parse client program ' +
+        'runtime config for arch ' + arch + ': ' + e
+      );
     }
   }
 
@@ -494,7 +507,12 @@ function refreshRuntimeConfigPublicSettings(arch) {
     // caches they keep are refreshed on this request.
     runtimeConfig.isUpdatedByArch[arch] = true;
   }
-  lastPublicSettingsByArch[arch] = serialized;
+  // Only advance the snapshot when the refresh fully succeeded. If a decode or
+  // parse step threw, leaving the snapshot stale ensures the next request
+  // retries instead of short-circuiting on a value that was never applied.
+  if (!failed) {
+    lastPublicSettingsByArch[arch] = serialized;
+  }
 }
 
 async function getBoilerplateAsync(request, arch, response) {
