@@ -1269,7 +1269,13 @@ Object.assign(Subscription.prototype, {
     if (this._session.server.getPublicationStrategy(collectionName).doAccountingForCollection) {
       // We don't bother to delete sets of things in a collection if the
       // collection is empty.  It could break _removeAllDocuments.
-      this._documents.get(collectionName).delete(id);
+      // The set may not exist: accounting may have been off when the
+      // document was added (publication strategies can change per
+      // collection at runtime), mirroring the null-guard in added().
+      const ids = this._documents.get(collectionName);
+      if (ids != null) {
+        ids.delete(id);
+      }
     }
 
     this._session.removed(this._subscriptionHandle, collectionName, id);
