@@ -1148,3 +1148,32 @@ Tinytest.addAsync(
     delete asyncCleanupTracker[trackerId];
   }
 );
+// A crossbar listen handle's stop() must be idempotent. A second stop()
+// used to decrement the listener count again, silently deleting the
+// collection's remaining listeners once it hit zero (and throwing on any
+// later stop). Observer teardown races make double-stop plausible.
+Tinytest.addAsync(
+  "livedata server - crossbar listen handle stop is idempotent",
+  async function (test) {
+    const crossbar = new DDPServer._Crossbar({});
+    let fired = 0;
+    const handleA = crossbar.listen(
+      { collection: 'crossbar-idempotent-stop' },
+      function () {}
+    );
+    const handleB = crossbar.listen(
+      { collection: 'crossbar-idempotent-stop' },
+      function () {
+        fired++;
+      }
+    );
+
+    handleA.stop();
+    handleA.stop(); // no-op, must not disturb other listeners
+
+    await crossbar.fire({ collection: 'crossbar-idempotent-stop', id: 'x' });
+    test.equal(fired, 1);
+
+    handleB.stop(); // must not throw
+  }
+);
