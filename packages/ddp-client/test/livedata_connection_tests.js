@@ -2781,3 +2781,43 @@ Tinytest.addAsync('livedata connection - disconnect sends disconnect message', a
 // - restart on update flag
 // - on_update event
 // - reloading when the app changes, including session migration
+
+Tinytest.addAsync(
+  'livedata connection - replaced stop callback fires on local stop',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    let firstStopCalls = 0;
+    let secondStopCalls = 0;
+
+    // Initial subscribe, as an autorun's first run would do.
+    const sub = conn.subscribe('replace-stop-test', {
+      onStop() {
+        firstStopCalls++;
+      }
+    });
+    testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'replace-stop-test', params: []
+    });
+
+    // Simulate the autorun rerun reuse path: the record is marked inactive
+    // and a matching subscribe reactivates it, replacing its callbacks.
+    conn._subscriptions[sub.subscriptionId].inactive = true;
+    conn.subscribe('replace-stop-test', {
+      onStop() {
+        secondStopCalls++;
+      }
+    });
+    test.length(stream.sent, 0); // record reused — no second 'sub' message
+
+    // A local stop must fire the record's CURRENT callback, exactly like
+    // the server-initiated stop path (nosub) does — not the callback
+    // captured when the record was first created.
+    sub.stop();
+    test.equal(secondStopCalls, 1);
+    test.equal(firstStopCalls, 0);
+  }
+);
