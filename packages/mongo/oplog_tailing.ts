@@ -438,7 +438,10 @@ export function idForOp(op: OplogEntry): string {
   }
 }
 
-async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
+// Exported so the admin.$cmd handling can be exercised end-to-end in tests
+// (see tests/oplog_admin_command_tests.js); not part of the package's public
+// API.
+export async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
   if (doc.ns === "admin.$cmd") {
     if (doc.o.applyOps) {
       // This was a successful transaction, so we need to apply the
