@@ -1220,3 +1220,33 @@ Tinytest.addAsync(
     }
   }
 );
+Tinytest.addAsync("livedata server - write fence phases", async function (test) {
+  const fence = new DDPServer._WriteFence();
+  test.equal(fence.phase, 'OPEN');
+  test.isFalse(fence.armed);
+  test.isFalse(fence.fired);
+  test.isFalse(fence.retired);
+
+  const write = fence.beginWrite();
+  const armPromise = fence.armAndWait();
+  test.equal(fence.phase, 'ARMED');
+  test.isTrue(fence.armed);
+  test.isFalse(fence.fired);
+
+  await write.committed();
+  await armPromise;
+  test.equal(fence.phase, 'FIRED');
+  test.isTrue(fence.fired);
+  test.isFalse(fence.retired);
+
+  fence.retire();
+  test.equal(fence.phase, 'RETIRED');
+  test.isTrue(fence.retired);
+  test.isTrue(fence.fired);
+
+  // Idempotent retire and no-op late writes, as before.
+  fence.retire();
+  const lateWrite = fence.beginWrite();
+  lateWrite.committed();
+  test.equal(fence.phase, 'RETIRED');
+});
