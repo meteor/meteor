@@ -970,6 +970,110 @@ Tinytest.addAsync(
   }
 );
 
+// Test that send() on a removed session is a safe no-op
+Tinytest.addAsync(
+  "livedata server - DDP resumption: send after session removal is a no-op",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const { clientConn, serverConn } = await getTestConnections(test);
+      const session = Meteor.server.sessions.get(serverConn.id);
+
+      // Unexpected disconnect: session enters its grace period and buffers.
+      clientConn._stream._lostConnection();
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      test.isTrue(
+        Array.isArray(session.messageQueue),
+        "session should buffer messages during the grace period"
+      );
+
+      // Let the grace period expire — the session is removed.
+      await sleep(AFTER_GRACE_PERIOD_MS);
+      test.isFalse(Meteor.server.sessions.has(serverConn.id));
+
+      // The buffer must be gone, and a late send (e.g. a deferred
+      // write-fence callback) must not buffer toward an overflow that
+      // would invoke the nulled _pendingRemoveFunction and throw.
+      test.isNull(session.messageQueue);
+      session.send({ msg: 'added', collection: 'x', id: '1', fields: {} });
+      test.isNull(session.messageQueue);
+    });
+  }
+);
+
+// Test that a server-initiated close during the grace period removes the
+// session immediately instead of silently doing nothing
+Tinytest.addAsync(
+  "livedata server - DDP resumption: connection close during grace period removes session",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const { clientConn, serverConn } = await getTestConnections(test);
+      const sessionId = serverConn.id;
+      const session = Meteor.server.sessions.get(sessionId);
+
+      // Unexpected disconnect: session enters its grace period.
+      clientConn._stream._lostConnection();
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      test.isTrue(
+        Meteor.server.sessions.has(sessionId),
+        "session should be in its grace period"
+      );
+
+      // Server explicitly closes the connection: the session must not
+      // remain resumable.
+      session.connectionHandle.close();
+      test.isFalse(
+        Meteor.server.sessions.has(sessionId),
+        "server-initiated close should remove the session immediately"
+      );
+    });
+  }
+);
+
+// Test that messages buffered during the grace period are delivered on
+// resume, and that the resumed session gets a fresh grace period later
+Tinytest.addAsync(
+  "livedata server - DDP resumption: grace-period messages delivered on resume",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: false });
+      await pollUntil(() => clientConn._lastSessionId);
+      const sessionId = clientConn._lastSessionId;
+      const session = Meteor.server.sessions.get(sessionId);
+
+      // Record raw messages arriving on the client stream.
+      const received = [];
+      clientConn._stream.on('message', raw => received.push(raw));
+
+      // Unexpected disconnect, then buffer a message during the grace period.
+      clientConn._stream._lostConnection();
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      session.send({
+        msg: 'added', collection: 'resume-order', id: 'q1', fields: {}
+      });
+      test.isTrue(Array.isArray(session.messageQueue));
+
+      // Resume.
+      clientConn._stream.reconnect();
+      await pollUntil(() => clientConn.status().connected);
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      test.equal(clientConn._lastSessionId, sessionId,
+        "session should have been resumed");
+
+      // The buffered message reached the client...
+      test.isTrue(
+        received.some(raw => raw.indexOf('"q1"') !== -1),
+        "message buffered during the grace period should be delivered on resume"
+      );
+      // ...the queue is detached...
+      test.isUndefined(session.messageQueue);
+      // ...and no stale flag denies the session its next grace period.
+      test.isFalse(!!session._expectingDisconnect);
+
+      clientConn.disconnect();
+    });
+  }
+);
+
 // ============================================================================
 // Async onStop cleanup tests (memory leak fix)
 // ============================================================================
