@@ -57,5 +57,5 @@ Keeping `insecure` in a production app is a security risk, because any client co
 
 ## See also
 
-- `autopublish` — the read-side counterpart for prototyping (publishes all collections to all clients).
+- [`autopublish`](./autopublish.md) — the read-side counterpart for prototyping (publishes all collections to all clients).
 - [Methods](../api/meteor.md#methods) — the recommended way to perform validated writes after removing `insecure`.
