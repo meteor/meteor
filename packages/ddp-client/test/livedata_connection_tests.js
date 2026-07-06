@@ -2777,6 +2777,50 @@ Tinytest.addAsync('livedata connection - disconnect sends disconnect message', a
     "disconnect() should send a disconnect message to the server");
 });
 
+Tinytest.addAsync(
+  'livedata connection - store beginUpdate receives the real batch size',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // Register a store that records every beginUpdate call. Stores receive
+    // batchSize > 1 (or reset) as the signal to pause observers, so a
+    // batchSize that is always 0 silently disables flicker prevention.
+    const beginUpdateCalls = [];
+    const storeApi = {
+      beginUpdate(batchSize, reset) {
+        beginUpdateCalls.push({ batchSize: batchSize, reset: reset });
+      },
+      update() {},
+      endUpdate() {},
+      saveOriginals() {},
+      retrieveOriginals() {}
+    };
+    if (Meteor.isServer) {
+      await conn.registerStoreServer('batch-test', storeApi);
+    } else {
+      conn.registerStoreClient('batch-test', storeApi);
+    }
+
+    // Three buffered writes for the store...
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '1', fields: { a: 1 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '2', fields: { a: 2 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '3', fields: { a: 3 } });
+    // ...then a non-write message, which forces an immediate flush.
+    await stream.receive({ msg: 'ready', subs: [] });
+
+    // However the flush batched the messages, the batch sizes reported to
+    // beginUpdate must account for all three writes.
+    const total = beginUpdateCalls.reduce(
+      (sum, call) => sum + call.batchSize,
+      0
+    );
+    test.equal(total, 3);
+  }
+);
+
 // XXX also test:
 // - restart on update flag
 // - on_update event
