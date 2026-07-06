@@ -6,7 +6,7 @@
 meteor add autopublish
 ```
 
-As of Meteor 3.x, `autopublish` is **not** included in new projects by default; add it explicitly when prototyping.
+As of Meteor 3.x, `autopublish` is **not** included in new projects by default; add it explicitly when prototyping. Alternatively, scaffold a prototyping project that already includes it (along with [`insecure`](./insecure.md)) by running `meteor create --prototype`.
 
 ## Usage
 
@@ -47,5 +47,5 @@ This sends each client only the documents it should see, instead of the entire d
 
 ## See also
 
-- `insecure` — the write-side counterpart for prototyping (allows all client-side database writes).
+- [`insecure`](./insecure.md) — the write-side counterpart for prototyping (allows all client-side database writes).
 - [Publish and Subscribe](../api/meteor.md#pubsub) — the API to replace `autopublish` with explicit publications.
