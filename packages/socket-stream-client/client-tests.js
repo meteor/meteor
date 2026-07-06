@@ -227,3 +227,31 @@ testAsyncMulti('stream - /websocket is a websocket endpoint', [
     );
   }
 ]);
+// _cleanup runs both when tearing down a live socket and at the top of every
+// (re)connection attempt. Only the former is a disconnection: firing the
+// 'disconnect' event when there was no socket sent consumers a phantom event
+// once per retry cycle (and diverged from the node implementation).
+testAsyncMulti('stream - cleanup without a socket does not fire disconnect', [
+  function(test, expect) {
+    var stream = new ClientStream('/');
+    var disconnectCount = 0;
+    stream.on('disconnect', function() {
+      disconnectCount++;
+    });
+
+    var done = expect(function() {});
+    stream.on(
+      'reset',
+      once(function() {
+        // Connected: a real disconnect closes the socket and fires once.
+        stream.disconnect();
+        test.equal(disconnectCount, 1);
+
+        // A cleanup with no socket must not fire a phantom event.
+        stream._cleanup();
+        test.equal(disconnectCount, 1);
+        done();
+      })
+    );
+  }
+]);
