@@ -1151,10 +1151,12 @@ export class Connection {
     const self = this;
 
     if (self._resetStores || !isEmpty(updates)) {
-      // Start all store updates - keeping original loop structure
-      for (const store of Object.values(self._stores)) {
+      // Start all store updates - keeping original loop structure.
+      // Stores are keyed by name in _stores; the store wrapper object itself
+      // carries no _name property, so the batch size must come from the key.
+      for (const [name, store] of Object.entries(self._stores)) {
         await store.beginUpdate(
-          updates[store._name]?.length || 0,
+          updates[name]?.length || 0,
           self._resetStores
         );
       }
@@ -1202,10 +1204,12 @@ export class Connection {
     const self = this;
 
     if (self._resetStores || !isEmpty(updates)) {
-      // Synchronous store updates for client
-      Object.values(self._stores).forEach(store => {
+      // Synchronous store updates for client. Stores are keyed by name in
+      // _stores; the store wrapper object itself carries no _name property,
+      // so the batch size must come from the key.
+      Object.entries(self._stores).forEach(([name, store]) => {
         store.beginUpdate(
-          updates[store._name]?.length || 0,
+          updates[name]?.length || 0,
           self._resetStores
         );
       });
