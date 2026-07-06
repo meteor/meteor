@@ -255,3 +255,23 @@ testAsyncMulti('stream - cleanup without a socket does not fire disconnect', [
     );
   }
 ]);
+
+// The window 'online' handler calls reconnect() on any non-offline stream,
+// including permanently failed ones. reconnect() must be a true no-op there:
+// it used to decrement retryCount (compensating for a _retryNow that then
+// refused to run), drifting the counter negative on every online event.
+Tinytest.add(
+  'stream - reconnect on a permanently disconnected stream is a no-op',
+  function(test) {
+    var stream = new ClientStream('/');
+    stream.disconnect({ _permanent: true });
+    test.equal(stream.status().status, 'failed');
+
+    var before = stream.status().retryCount;
+    stream.reconnect();
+    stream.reconnect();
+
+    test.equal(stream.status().retryCount, before);
+    test.equal(stream.status().status, 'failed');
+  }
+);
