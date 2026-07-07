@@ -1,0 +1,20 @@
+{
+  "lockfileVersion": 4,
+  "dependencies": {
+    "@noble/hashes": {
+      "version": "2.0.1",
+      "resolved": "https://registry.npmjs.org/@noble/hashes/-/hashes-2.0.1.tgz",
+      "integrity": "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="
+    },
+    "otpauth": {
+      "version": "9.5.0",
+      "resolved": "https://registry.npmjs.org/otpauth/-/otpauth-9.5.0.tgz",
+      "integrity": "sha512-Ldhc6UYl4baR5toGr8nfKC+L/b8/RgHKoIixAebgoNGzUUCET02g04rMEZ2ZsPfeVQhMHcuaOgb28nwMr81zCA=="
+    },
+    "qrcode-svg": {
+      "version": "1.1.0",
+      "resolved": "https://registry.npmjs.org/qrcode-svg/-/qrcode-svg-1.1.0.tgz",
+      "integrity": "sha512-XyQCIXux1zEIA3NPb0AeR8UMYvXZzWEhgdBgBjH9gO7M48H9uoHzviNz8pXw3UzrAcxRRRn9gxHewAVK7bn9qw=="
+    }
+  }
+}
