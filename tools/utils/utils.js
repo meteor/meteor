@@ -81,7 +81,10 @@ exports.parseUrl = function (str, defaults) {
 exports.formatUrl = function (options) {
   let host = options.hostname || '';
   // parseUrl returns bare IPv6 literals (e.g. "::" for "[::]"), but the WHATWG
-  // URL parser only accepts them bracketed. See meteor/meteor#14552.
+  // URL parser only accepts them bracketed. There is no builtin that escapes a
+  // bare IPv6 host for us: the hostname/host setters and the URL constructor all
+  // silently reject an unbracketed IPv6 address, so we bracket it by hand.
+  // See meteor/meteor#14552.
   if (host.includes(':') && !host.startsWith('[')) {
     host = `[${host}]`;
   }
