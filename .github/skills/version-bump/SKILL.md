@@ -93,6 +93,33 @@ For subsequent betas, RCs, and official releases, the base version (`X.Y.Z`) sta
 | **Minor** | New public APIs, new exported functions/methods, new user-facing features or capabilities | New `getUserIdsInRoleAsync` method, new CSS auto-delegation feature, new test assertion methods |
 | **Major** | Breaking changes, removed APIs, renamed exports, changed function signatures | Removed public method, renamed package export, async migration of sync API |
 
+### When NOT to Bump
+
+Some changes don't warrant a version bump at all, even when files in a package change.
+A package should **not** be bumped if its only diff vs `devel` consists of:
+
+- **Lint / formatter changes** — `var → const`, quote style (`'` → `"`), trailing commas,
+  line-wrap reformatting, indentation, semicolons, `function() {` → `function () {`.
+  No behavioral change.
+- **Test-only changes** — additions or refactors of test files (`*-tests.js`,
+  `*-test.js`, `tests.js`, files under `Package.onTest`). Tests don't ship to users.
+- **Comment / JSDoc-only changes** — moved or reformatted comments with no code change.
+
+If, after mentally stripping out these classes of changes, no runtime code change is
+left, **do not bump the package**. The release ships with the package at its current
+stable version.
+
+**Conversely, you MUST bump if any of these are present** alongside lint/test/format:
+
+- A change in a `.js` / `.ts` / `.mjs` file under the package's source (not a test
+  file) that alters control flow, output, or external behavior
+- A change in `Package.describe` `version`, `summary`, dependencies, or exports
+- A change in `Npm.depends()` or `Cordova.depends()` versions
+- A change in a `.d.ts` file that adds/removes/modifies the **public type surface**
+  (a semicolon/quote-only `.d.ts` reformat is still lint-only and does not bump)
+
+When unsure whether a diff is lint-only, **stop and present the diff to the user**.
+
 ### How to Assess Each Package
 
 For each changed package, Claude should analyze the diff to determine the bump magnitude:
