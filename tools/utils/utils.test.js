@@ -73,9 +73,9 @@ describe('formatUrl', () => {
       .toBe('http://h.com/');
   });
 
-  // Regression: parseUrl strips the brackets from IPv6 literals (e.g. "[::]"
-  // becomes "::"), and the WHATWG URL parser rejects a bare IPv6 address, so
-  // formatUrl must re-bracket it rather than emit a broken ROOT_URL.
+  // parseUrl strips the brackets from IPv6 literals (e.g. "[::]" becomes "::"),
+  // and the WHATWG URL parser rejects a bare IPv6 address, so formatUrl must
+  // re-bracket it rather than emit a broken ROOT_URL.
   test('brackets a bare IPv6 "any" host', () => {
     expect(utils.formatUrl({ protocol: 'http', hostname: '::', port: '3005' }))
       .toBe('http://[::]:3005/');
