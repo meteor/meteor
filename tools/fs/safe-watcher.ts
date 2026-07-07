@@ -6,6 +6,17 @@ import { Profile } from "../tool-env/profile";
 import { statOrNull, lstat, toPosixPath, convertToOSPath, pathRelative, watchFile, unwatchFile, pathResolve, pathDirname } from "./files";
 import { getMeteorConfig } from "../tool-env/meteor-config";
 
+const constants = require("constants");
+
+// Both ENOSPC (inotify watch limit reached) and EINTR (interrupted system call)
+// surfaced by the native watcher mean the watch is no longer reliable, so we
+// fall back to polling. Native errors can report the condition via either a
+// string `code` or a numeric `errno`, so we check both.
+function isENOSPCorEINTR(err: any): boolean {
+  return err.code === "ENOSPC" || err.errno === constants.ENOSPC ||
+      err.code === "EINTR" || err.errno === constants.EINTR;
+}
+
 // Register process exit handlers to ensure subscriptions are properly cleaned up
 const registerExitHandlers = () => {
 
@@ -319,8 +330,7 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
               return;
             }
             console.error(`Parcel watcher error on ${osDirPath}:`, err);
-            if (err.code === "ENOSPC" || err.errno === require("constants").ENOSPC ||
-                err.code === "EINTR" || err.errno === require("constants").EINTR) {
+            if (isENOSPCorEINTR(err)) {
               fallbackToPolling();
             }
             watchRoots.delete(dirPath);
@@ -353,8 +363,7 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
       ignoredWatchRoots.add(dirPath);
     } else {
       console.error(`Failed to start watcher for ${osDirPath}:`, e);
-      if (e.code === "ENOSPC" || e.errno === require("constants").ENOSPC ||
-          e.code === "EINTR" || e.errno === require("constants").EINTR) {
+      if (isENOSPCorEINTR(e)) {
         fallbackToPolling();
       }
     }
