@@ -867,6 +867,9 @@ export function runFindHooks(collection, selector, options, coreFind) {
         throw new Error("Cannot use async function as before.find hook");
       }
       const result = hookEntry.fn.call({}, userId, selector, options);
+      if (Meteor._isPromise(result)) {
+        throw new Error("Cannot use async function as before.find hook");
+      }
       if (result === false) return;
     }
   }

@@ -92,6 +92,31 @@ Tinytest.addAsync(
     }
 
     test.isTrue(!!error);
-    test.equal(error.message, "Cannot use async function as before.find hook");
+    if (error) {
+      test.equal(error.message, "Cannot use async function as before.find hook");
+    }
+  }
+);
+
+Tinytest.addAsync(
+  "find - before hook rejects promise-returning functions",
+  async function(test) {
+    const collection = new Mongo.Collection(null);
+
+    collection.before.find(function() {
+      return Promise.resolve(false);
+    });
+
+    let error;
+    try {
+      await collection.find({ start_value: true }).fetchAsync();
+    } catch (caughtError) {
+      error = caughtError;
+    }
+
+    test.isTrue(!!error);
+    if (error) {
+      test.equal(error.message, "Cannot use async function as before.find hook");
+    }
   }
 );
