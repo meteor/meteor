@@ -163,7 +163,12 @@ export namespace Mongo {
     transform(doc?: T): any;
   }
 
-  /** Before-hook registration methods */
+  /**
+   * Before-hook registration methods.
+   * Mutation hooks run for async mutators (`insertAsync`, `updateAsync`,
+   * `removeAsync`, and `upsertAsync`). Legacy sync mutation methods do not run
+   * mutation hooks.
+   */
   interface BeforeHooks<T> {
     /** Register a before.insert hook */
     insert(
@@ -228,7 +233,12 @@ export namespace Mongo {
     ): HookController;
   }
 
-  /** After-hook registration methods */
+  /**
+   * After-hook registration methods.
+   * Mutation hooks run for async mutators (`insertAsync`, `updateAsync`,
+   * `removeAsync`, and `upsertAsync`). Legacy sync mutation methods do not run
+   * mutation hooks.
+   */
   interface AfterHooks<T, U> {
     /** Register an after.insert hook */
     insert(
@@ -716,16 +726,20 @@ export namespace Mongo {
 
     /**
      * Register before-operation hooks. Returning `false` from a before hook aborts the operation.
+     * Mutation hooks run for async mutators; legacy sync mutation methods do not run mutation hooks.
      */
     before: BeforeHooks<T>;
 
     /**
      * Register after-operation hooks. Called after the operation completes.
+     * Mutation hooks run for async mutators; legacy sync mutation methods do not run mutation hooks.
      */
     after: AfterHooks<T, U>;
 
     /**
      * Call collection methods directly, bypassing all hooks.
+     * Sync mutation methods are included for API consistency, but they do not
+     * run mutation hooks even without `direct`.
      */
     direct: DirectMethods<T, U>;
 

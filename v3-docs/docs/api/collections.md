@@ -737,6 +737,12 @@ Meteor exports `CollectionHooks` from `meteor/mongo`, and every
 `Mongo.Collection` instance includes hook registration helpers and direct
 bypass helpers.
 
+Mutation hooks run for the async collection mutators: `insertAsync`,
+`updateAsync`, `removeAsync`, and `upsertAsync`. The legacy sync mutation
+methods `insert`, `update`, `remove`, and `upsert` do not run mutation hooks.
+Query hooks run through `find`, `findOne`, and `findOneAsync` as described
+below.
+
 ```js
 import { Mongo, CollectionHooks } from 'meteor/mongo';
 
@@ -788,6 +794,7 @@ Each registration returns a controller with:
 Notes:
 
 - Returning `false` from a `before.*` hook aborts that operation.
+- Mutation hooks are async-mutator hooks. Use `insertAsync`, `updateAsync`, `removeAsync`, or `upsertAsync` when hook execution is required.
 - `before.find` hooks must be synchronous. `findOneAsync()` can also invoke `before.find`, because when find hooks are present it routes through `Collection.find(...).fetchAsync()`.
 - `after.find` hooks run when async cursor methods such as `fetchAsync()` or `countAsync()` are consumed. `findOneAsync()` can trigger them for the same reason: it may resolve through `Collection.find(...).fetchAsync()` when any `before.find` or `after.find` hooks are registered.
 - There is no `after.upsert`. Upserts fire `after.insert` when they insert and `after.update` when they update.
@@ -837,7 +844,9 @@ Every collection also includes direct helpers that bypass hooks:
 - `collection.direct.upsertAsync(...)`
 - `collection.direct.findOneAsync(...)`
 
-Sync counterparts are available where the sync API exists.
+Sync counterparts are available where the sync API exists. For sync mutation
+methods this is mostly a consistency helper: sync mutation methods do not run
+mutation hooks in the first place.
 
 You can also bypass hooks for a block of work:
 
