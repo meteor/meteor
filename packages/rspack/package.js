@@ -17,7 +17,7 @@ Package.registerBuildPlugin({
 });
 
 Npm.devDepends({
-  'http-proxy-middleware': '3.0.5',
+  'http-proxy-3': '1.22.0',
 });
 
 Package.onUse(function (api) {

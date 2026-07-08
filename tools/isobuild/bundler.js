@@ -1806,8 +1806,13 @@ class ClientTarget extends Target {
 
         // Use a SHA to make this cacheable.
         const sourceMapBaseName = file.hash() + '.map';
-        manifestItem.sourceMapUrl = require('url').resolve(
-          file.url, sourceMapBaseName);
+        // Resolve the source map URL relative to the file's URL by replacing
+        // its last path segment (and dropping any query string). file.url is
+        // always an absolute path starting with "/".
+        const fileUrlPath = file.url.split('?')[0];
+        manifestItem.sourceMapUrl =
+          fileUrlPath.slice(0, fileUrlPath.lastIndexOf('/') + 1) +
+          sourceMapBaseName;
       }
 
       // Set this now, in case we mutated the file's contents.
