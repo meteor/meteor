@@ -80,29 +80,38 @@ Tinytest.addAsync(
 );
 
 if (Meteor.isServer) {
-  Tinytest.add(
+  Tinytest.addAsync(
     "optional-previous - update hook should not prefetch previous, via defaults param variation 1: after.update",
-    function(test) {
+    async function(test) {
       const collection = new Mongo.Collection(null);
+      let called = false;
 
       CollectionHooks.defaults.after.update = { fetchPrevious: false };
 
-      collection.after.update(function(
-        userId,
-        doc,
-        fieldNames,
-        modifier,
-        options
-      ) {
-        if (options && options.test) {
-          test.equal(!!this.previous, false);
-        }
-      });
+      try {
+        collection.after.update(function(
+          userId,
+          doc,
+          fieldNames,
+          modifier,
+          options
+        ) {
+          if (options && options.test) {
+            called = true;
+            test.equal(!!this.previous, false);
+          }
+        });
+      } finally {
+        CollectionHooks.defaults.after.update = {};
+      }
 
-      CollectionHooks.defaults.after.update = {};
-
-      collection.insert({ _id: "test", test: 1 });
-      collection.update({ _id: "test" }, { $set: { test: 1 } }, { test: true });
+      await collection.insertAsync({ _id: "test", test: 1 });
+      await collection.updateAsync(
+        { _id: "test" },
+        { $set: { test: 1 } },
+        { test: true }
+      );
+      test.equal(called, true);
     }
   );
 
