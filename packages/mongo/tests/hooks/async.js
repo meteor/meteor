@@ -1,5 +1,18 @@
+import { Meteor } from 'meteor/meteor'
 import { Mongo } from 'meteor/mongo'
 import { Tinytest } from 'meteor/tinytest'
+
+async function settlesWithin(promise, ms = 200) {
+  return Promise.race([
+    promise.then(
+      value => ({ status: 'fulfilled', value }),
+      reason => ({ status: 'rejected', reason })
+    ),
+    new Promise(resolve => {
+      Meteor.setTimeout(() => resolve({ status: 'timeout' }), ms)
+    })
+  ])
+}
 
 if (Mongo.Collection.prototype.insertAsync) {
   // Before
@@ -17,6 +30,24 @@ if (Mongo.Collection.prototype.insertAsync) {
 
     next()
   })
+
+  if (Meteor.isClient) {
+    Tinytest.addAsync('async - aborted remote insertAsync settles mutator promises', async (test, next) => {
+      const collection = new Mongo.Collection(`hooks_abort_remote_${test.runId()}`)
+
+      collection.before.insert(() => false)
+
+      const promise = collection.insertAsync({ test: true })
+
+      test.isTrue(promise.stubPromise instanceof Promise)
+      test.isTrue(promise.serverPromise instanceof Promise)
+      test.equal(await promise, undefined)
+      test.equal((await settlesWithin(promise.stubPromise)).status, 'fulfilled')
+      test.equal((await settlesWithin(promise.serverPromise)).status, 'fulfilled')
+
+      next()
+    })
+  }
 
   Tinytest.addAsync('async - direct - insertAsync', async (test, next) => {
     const collection = new Mongo.Collection(null)

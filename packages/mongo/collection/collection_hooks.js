@@ -388,6 +388,16 @@ function prepareMutatorPromiseMetadata(collection, promise) {
   mutatorPromiseMetadata.set(promise, promiseMetadata);
 }
 
+function resolveMutatorPromiseMetadata(promise, value) {
+  const promiseMetadata = mutatorPromiseMetadata.get(promise);
+  if (!promiseMetadata) {
+    return;
+  }
+
+  promiseMetadata.stubPromise?.resolve(value);
+  promiseMetadata.serverPromise?.resolve(value);
+}
+
 const TRANSPILER_ASYNC_MARKERS = [
   "regeneratorRuntime",
   "_asyncToGenerator",
@@ -429,7 +439,10 @@ export function runInsertHooks(collection, doc, coreInsert) {
         userId,
         doc
       );
-      if (r === false) return; // abort
+      if (r === false) {
+        resolveMutatorPromiseMetadata(completionPromise, undefined);
+        return; // abort
+      }
     }
 
     mutatorPromise = coreInsert();
@@ -555,7 +568,10 @@ export function runUpdateHooks(
         }
         if (abort) break;
       }
-      if (abort) return 0;
+      if (abort) {
+        resolveMutatorPromiseMetadata(completionPromise, 0);
+        return 0;
+      }
     }
 
     mutatorPromise = coreUpdate();
@@ -645,7 +661,10 @@ export function runRemoveHooks(collection, selector, coreRemove) {
         }
         if (abort) break;
       }
-      if (abort) return 0;
+      if (abort) {
+        resolveMutatorPromiseMetadata(completionPromise, 0);
+        return 0;
+      }
     }
 
     mutatorPromise = coreRemove();
@@ -755,7 +774,11 @@ export function runUpsertHooks(
           modifier,
           options
         );
-        if (r === false) return { numberAffected: 0 };
+        if (r === false) {
+          const abortedResult = { numberAffected: 0 };
+          resolveMutatorPromiseMetadata(completionPromise, abortedResult);
+          return abortedResult;
+        }
       }
     }
 
