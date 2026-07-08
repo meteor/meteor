@@ -40,6 +40,9 @@ Core React integration with custom Meteor local directory.
 | React + JSX environment detection | Run, Prod, Test, Build |
 | Image assets load (generated + public + background) | Run, Prod |
 | `Meteor.disablePlugins` suppresses rspack plugins | Run, Prod, Test, Build |
+| Unplugin transform hook fires on first run (fresh cache) | Init |
+| Unplugin factory created on cached run — #14031 regression | Run |
+| Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 
@@ -54,11 +57,12 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | Compiler output cached in dev (babel.config.js) | Run |
 | 404 page routing (renders "Page Not Found") | Run, Prod |
 | Less stylesheet support (`white-space: break-spaces`) | Run, Prod |
-| Meteor modules config styles (`align-content: center`) | Run, Prod |
+| `meteor.modules` config styles (`align-content: center`) | Run, Prod |
 | Custom HTML meta tags (`theme-color`) | Run, Prod |
 | Default + custom package loading | Run |
 | `resolve.extensions` loading (`.jsx`) | Run |
 | `rspack.config.override.js` custom plugin loading | Run, Test, Build |
+| User-level `devServer.onListening` composed with meteor-rspack default | Run |
 | React + TSX environment detection | Run, Prod, Test, Build |
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
@@ -132,12 +136,15 @@ CoffeeScript language support.
 
 ### vue
 
-Vue.js framework with Tailwind CSS.
+Vue.js framework with Tailwind CSS, CSS auto-delegation, and `meteor.modules` config.
 
 | What is covered | Phase |
 |----------------|-------|
 | Vue single-file components | All |
 | Tailwind CSS styles (`.p-8` padding) | Run, Prod |
+| CSS auto-delegation (`client/main.css` processed by Rspack, not Meteor) | All |
+| `meteor.modules` config preserves `client/meteor.css` for Meteor processing | All |
+| Rspack CSS + Meteor CSS coexistence in same entry folder | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### solid
@@ -160,14 +167,23 @@ Svelte framework integration.
 
 ### monorepo
 
-Monorepo structure with app in subdirectory.
+Monorepo structure with app in subdirectory, service worker, and PWA manifest.
 
 | What is covered | Phase |
 |----------------|-------|
 | Monorepo layout (`app/` subdirectory) | All |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | `rspack.config.override.cjs` custom plugin loading | Run, Test, Build |
-| Static assets in bundle (png, md) | Build |
+| Static assets in bundle (png, md, icon, manifest) | Build |
+| Service worker in production build (`sw.js` found in bundle tree) | Build |
+| Service worker file served (`/sw.js`) | Run |
+| Service worker registers, activates, controls page | Run |
+| Service worker runtime caching (images) | Run |
+| Service worker precaching (`/icon.png` via `additionalManifestEntries`) | Run |
+| Service worker stability (`sw.js` not rewritten on rebuild) | Run |
+| Service worker regenerated on restart (`sw.js` changed between runs) | Run, Prod |
+| PWA manifest linked and fields validated | Run |
+| Meta tags (`theme-color`) | Run |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### server-only
@@ -227,6 +243,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `node:buffer` | `imports/api/links.js` | Node.js built-in via `node:` protocol in shared client/server code — must be ignored on client without errors |
 | `@react-email/components` | `imports/emails/TestEmail.jsx` | JSX-heavy ESM package with many subpath exports |
 
+### react (`apps/react/plugins/demo-unplugin.js`)
+
+| Package | Reason |
+|---------|--------|
+| `unplugin` | Unplugin transform hook integration — validates rspack cache tracks plugin dependency files (#14031) |
+
 ### babel (`apps/babel/server/apollo.js`)
 
 | Package | Reason |
@@ -256,19 +278,21 @@ Where each feature is tested across apps and skeletons.
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
 | Custom SWC config (.ts) | typescript | |
 | Config override file | react-router, monorepo | |
+| User-level `devServer.onListening` composition | react-router | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
 | Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
-| Static asset bundling | react-router, monorepo | |
+| Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
-| Tailwind CSS | vue | tailwind |
+| Tailwind CSS | vue (PostCSS) | tailwind |
 | Image asset loading | react | |
 | 404 routing | react-router | |
-| Meta tags | react-router | |
+| Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
 | TypeScript type checking | typescript | |
 | Meteor.disablePlugins | react | |
+| Unplugin transform with cache (#14031) | react | |
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
@@ -278,6 +302,8 @@ Where each feature is tested across apps and skeletons.
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |
 | `Meteor.extendSwcConfig` (path aliases) | typescript | |
+| CSS auto-delegation (entry folder filtering) | vue | |
+| `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
 | `meteor reset` cleanup | all apps | all skeletons |
 | Skeleton creation | | all 14 skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
@@ -288,3 +314,10 @@ Where each feature is tested across apps and skeletons.
 | `node:` protocol imports | monorepo, typescript | |
 | Untranspiled npm deps (`compileWithRspack`) | monorepo | |
 | Worker resolution (`compileWithMeteor`) | monorepo | |
+| Service worker (Workbox GenerateSW) | monorepo | |
+| Service worker stability (no rewrite on rebuild) | monorepo | |
+| Service worker regenerated on restart | monorepo | |
+| Service worker in production build | monorepo | |
+| Service worker runtime caching (images) | monorepo | |
+| Service worker precaching (`additionalManifestEntries`) | monorepo | |
+| PWA manifest | monorepo | |

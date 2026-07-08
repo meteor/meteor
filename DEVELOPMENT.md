@@ -61,8 +61,37 @@ can run Meteor directly from a Git checkout using these steps:
     > _Tip 2:_ When working with meteor tool, it may be helpful to use the debugger to check what's happening. You can do this using the following flag:
     >
     >        TOOL_NODE_FLAGS="--inspect-brk" mymeteor
-    > 
+    >
     > Then you can use the chrome debugger inside `chrome://inspect`.
+
+### Testing a fork branch
+
+When reviewing a pull request or testing changes from a contributor's fork, use the `checkout-pr.js` script to set up a local branch automatically:
+
+```sh
+# From a PR URL (requires gh CLI or falls back to GitHub API via curl)
+$ npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
+
+# From a user:branch shorthand
+$ npm run checkout:pr -- <user>:<branch>
+
+# From a full fork repo URL and branch name (HTTPS)
+$ npm run checkout:pr -- <fork-repo-url> <branch>
+
+# From a full fork repo URL and branch name (SSH)
+$ npm run checkout:pr -- git@github.com:<user>/<repo>.git <branch>
+```
+
+The script will:
+
+1. Add the fork as a git remote (named after the fork owner) if not already present
+2. Fetch the target branch
+3. Create (or update) a local branch named `fork/<owner>/<branch>`
+4. Print instructions for switching back to your previous branch
+
+For upstream PRs (branches on `meteor/meteor` itself), the script detects the existing `origin` remote and checks out the branch directly without the `fork/` prefix.
+
+If you run the script again for the same fork branch, it will fetch the latest changes and update the local branch.
 
 ### Notes when running from a checkout
 
@@ -218,27 +247,13 @@ PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
 
 ### Continuous integration
 
-Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  These are run by [Circle CI](https://circleci.com/) and defined in the [`circle.yml` file](./circle.yml).  Even more specifically, the tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
+Any time a pull-request is submitted or a commit is pushed directly to the `devel` branch, continuous integration tests will be started automatically by the CI server.  The tests to run and the containers to run them under are defined in the [`/scripts/ci.sh`](scripts/ci.sh) script, which is a script which can run locally to replicate the exact tests.
 
 Not every test which is defined in a test spec is actually ran by the CI server.  Some tests are simply too long-running and some tests are just no longer relevant.  As one particular example, there is a suite of very slow tests grouped into a `slow` designator within the test framework.  These can be executed by adding the `--slow` option to the `self-test` command.
 
 > Please Note: Windows
 >
 > There is not currently a continuous integration system setup for Windows.  Additionally, not all tests are known to work on Windows.  If you're able to take time to improve those tests, it would be greatly appreciated.  Currently, there isn't an official list of known tests which do not run on Windows, but a PR to note those here and get them fixed would be ideal!
-
-#### Running your own CircleCI
-
-Since Meteor is a free, open-source project, you can run tests in the context of your own CircleCI account at no cost (up to the maximum number of containers allowed by them) during development and prior to submitting a pull-request.  For some, this may be quicker or more convenient than running tests on their own workstation.  As an added advantage, when your tests are "green", that status will be immediately shown (as passing) when a pull-request is opened with the official Meteor repository.
-
-To enable CircleCI for your development:
-
-0. Make sure you have an account with [CircleCI](https://circleci.com)
-0. Make sure you have [forked](https://help.github.com/articles/fork-a-repo/) [Meteor](https://github.com/meteor/meteor) into your own GitHub account.
-0. Go to the [Add Projects](https://circleci.com/add-projects) page on CircleCI.
-0. On the left, click on your GitHub username.
-0. On the right, find `meteor`
-0. Click on the "Build project" button next to `meteor`.
-0. Your build will start automatically!
 
 ## Code style
 
@@ -257,3 +272,95 @@ Good commit messages are very important and you should make sure to explain what
 * A commit description which clearly explains the change if it's not super-obvious by the title.  Some description always helps!
 * Reference related issues and pull-requests by number in the description body (e.g. "#9999").
 * Add "Fixes" before the issue number if the addition of that commit fully resolves the issue.
+
+## Release Process
+
+Meteor releases follow a lifecycle: **beta** -> **RC (release candidate)** -> **official**. Releases are prepared on `release-<VERSION>` branches (e.g., `release-3.4.1`) and compared against the `devel` branch.
+
+Three AI skills support this process. They are defined as markdown files under `.github/skills/` and can be used by any AI coding assistant that supports reading project context. Trigger them from any session on a release branch.
+
+### AI Skills for Releases
+
+| Skill | Purpose | Skill File |
+|-------|---------|------------|
+| [changelog](.github/skills/changelog/SKILL.md) | Generate and update changelog entries from merged PRs | `v3-docs/docs/generators/changelog/versions/` |
+| [version-bump](.github/skills/version-bump/SKILL.md) | Bump package versions for beta, RC, or official releases | `packages/*/package.js`, release config files |
+| [docs-gap](.github/skills/docs-gap/SKILL.md) | Identify missing user-facing documentation for release changes | Produces a gap report in `docs/plans/` |
+
+### Preparing a Beta Release
+
+A beta is the first prerelease for a new version. It bumps all changed packages with a `-betaXXX.0` suffix.
+
+**Step 1 — Update the changelog:**
+
+```
+Update the changelog for 3.4.1 from the current branch compared to devel.
+Check all merged PRs and complete with the missing fixes and features.
+```
+
+**Step 2 — Bump versions:**
+
+```
+Apply the version-bump skill for a beta.0 release on this branch against devel.
+```
+
+Claude will analyze each changed package, determine patch vs minor bumps based on the diff, present a table with reasons, and apply after confirmation.
+
+**Step 3 — Check for documentation gaps:**
+
+```
+Run the docs-gap skill to analyze what documentation is missing for this release.
+```
+
+### Preparing an RC Release
+
+An RC transitions beta versions to release candidate. The base version stays the same, only the suffix changes.
+
+**Step 1 — Update the changelog** (same as beta, catches any new PRs merged since the last beta).
+
+**Step 2 — Bump versions:**
+
+```
+Apply the version-bump skill to move from beta to RC on this branch.
+```
+
+### Preparing an Official Release
+
+An official release strips all prerelease suffixes and updates the release config and npm installer.
+
+**Step 1 — Finalize the changelog:**
+
+```
+Finalize the changelog for 3.4.1 — set the release date and replace any
+RC version references with final versions.
+```
+
+**Step 2 — Bump versions:**
+
+```
+Apply the version-bump skill for an official release on this branch.
+```
+
+This is a two-commit process: packages and release config first, npm installer second.
+
+**Step 3 — Verify documentation coverage:**
+
+```
+Run the docs-gap skill and apply any missing documentation for this release.
+```
+
+### Other Useful Prompts
+
+```
+# Separate Rspack improvements from other changes in the changelog
+Update the changelog separating Rspack improvements from other contributions.
+
+# Override a specific package bump magnitude
+The roles package should be a minor bump because it adds getUserIdsInRoleAsync.
+
+# Generate the gap report without applying fixes
+Run the docs-gap skill to produce a gap report only — don't write any docs yet.
+
+# Check which packages changed vs devel
+What packages have changed on this branch compared to devel?
+```

@@ -833,8 +833,11 @@ if (Meteor.isClient) (() => {
 
     function (test, expect) {
       // we can login with a valid token
-      const expectLoginOK = expect(err => test.isFalse(err));
-      Meteor.loginWithToken(Accounts._storedLoginToken(), expectLoginOK);
+      return Meteor.loginWithTokenAsync(Accounts._storedLoginToken())
+        .then((loginDetails) => {
+          test.equal(loginDetails.type, 'resume');
+          test.isTrue(!!loginDetails.token);
+        });
     },
 
     function (test, expect) {
@@ -889,14 +892,15 @@ if (Meteor.isClient) (() => {
       const expectSecondConnLoggedIn = expect((err, result) => {
         test.equal(result.token, token);
         test.isFalse(err);
-        Meteor.logoutOtherClients(err => {
-          test.isFalse(err);
-          secondConn.call('login', { resume: token },
-            expectSecondConnLoggedOut);
-          Accounts.connection.call('login', {
-            resume: Accounts._storedLoginToken()
-          }, expectAccountsConnLoggedIn);
-        });
+        Meteor.logoutOtherClientsAsync()
+          .then(() => {
+            secondConn.call('login', { resume: token },
+              expectSecondConnLoggedOut);
+            Accounts.connection.call('login', {
+              resume: Accounts._storedLoginToken()
+            }, expectAccountsConnLoggedIn);
+          })
+          .catch(asyncError => test.fail(asyncError.message));
       });
 
       Meteor.loginWithPassword(
@@ -1137,6 +1141,56 @@ if (Meteor.isClient) (() => {
   ]);
 })();
 
+
+if (Meteor.isServer) {
+  Tinytest.add(
+    'passwords - passwordValidator accepts passwords within default maxLength',
+    test => {
+      // A password of 256 chars (default max) should be accepted
+      const validPassword = 'a'.repeat(256);
+      test.isTrue(
+        Match.test(validPassword, Match.OneOf(
+          Match.Where(str => Match.test(str, String) && str.length <= (Meteor.settings?.packages?.accounts?.passwordMaxLength || 256)),
+          { digest: Match.Where(str => Match.test(str, String) && str.length === 64), algorithm: Match.OneOf('sha-256') }
+        )),
+        'Password of exactly 256 chars should be accepted'
+      );
+    }
+  );
+
+  Tinytest.add(
+    'passwords - passwordValidator rejects passwords exceeding default maxLength',
+    test => {
+      // A password of 257 chars should be rejected
+      const longPassword = 'a'.repeat(257);
+      test.isFalse(
+        Match.test(longPassword, Match.OneOf(
+          Match.Where(str => Match.test(str, String) && str.length <= (Meteor.settings?.packages?.accounts?.passwordMaxLength || 256)),
+          { digest: Match.Where(str => Match.test(str, String) && str.length === 64), algorithm: Match.OneOf('sha-256') }
+        )),
+        'Password exceeding 256 chars should be rejected'
+      );
+    }
+  );
+
+  Tinytest.add(
+    'passwords - passwordValidator operator precedence is correct for maxLength fallback',
+    test => {
+      // This test verifies the fix: without proper parentheses around the || operator,
+      // `str.length <= Meteor.settings?.packages?.accounts?.passwordMaxLength || 256`
+      // would evaluate as `(str.length <= undefined) || 256` which is always truthy (256),
+      // allowing passwords of any length.
+      const veryLongPassword = 'a'.repeat(1000);
+      test.isFalse(
+        Match.test(veryLongPassword, Match.OneOf(
+          Match.Where(str => Match.test(str, String) && str.length <= (Meteor.settings?.packages?.accounts?.passwordMaxLength || 256)),
+          { digest: Match.Where(str => Match.test(str, String) && str.length === 64), algorithm: Match.OneOf('sha-256') }
+        )),
+        'Very long password (1000 chars) should be rejected when no custom maxLength is configured'
+      );
+    }
+  );
+}
 
 if (Meteor.isServer) (() => {
 

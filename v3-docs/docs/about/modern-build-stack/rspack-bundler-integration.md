@@ -229,7 +229,7 @@ Ensure your app defines these entry files with the correct paths where each modu
 
 Defining entry points improves performance even with the Meteor bundler, as Meteor stops scanning and eagerly loading unnecessary files. For Meteor-Rspack integration, this is required, since it does not support automatic code discovery for efficiency.
 
-In Meteor-Rspack integration, all app code is ignored by Meteor and handled by Rspack. By default, Meteor still processes eagerly CSS and HTML files in the entry folder (e.g. `client/*.[html|css]` in most apps).
+In Meteor-Rspack integration, all app code is ignored by Meteor and handled by Rspack. By default, Meteor still processes eagerly HTML files in the entry folder (e.g. `client/*.html` in most apps). CSS files in the entry folder are automatically delegated to Rspack when a CSS loader is configured, see [CSS](#css) for details. If no CSS loader is present, Meteor handles them as before.
 
 If you need Meteor to handle CSS or HTML files outside the main entry folder, add them to the `modules` field. This field accepts an array of strings, each pointing to a file or folder.
 
@@ -244,6 +244,22 @@ If you need Meteor to handle CSS or HTML files outside the main entry folder, ad
 With this, Meteor will process these files, merge stylesheets, generate the final HTML, and support files a Meteor plugin may use, except for JS or script code now handled by Rspack. You can also process CSS and HTML files directly with Rspack using loaders from imports in your app code, as mentioned in ["CSS, Less and SCSS"](#css-less-and-scss) or ["HtmlRspackPlugin"](#htmlrspackplugin). If you prefer Meteor's loading approach, you can still rely on it.
 
 Keep in mind: compiling styles with the Meteor compilers triggers Meteor HMR, which is slower than Rspack HMR. Migrating to compile styles with Rspack as part of the app code ensures the fastest HMR for style changes in development.
+
+### Server-Only Apps
+
+Meteor-Rspack supports apps without a client entry point. If your app only defines a `server` entry in `meteor.mainModule`, Rspack runs only for the server build and Meteor skips client-side bundling through Rspack.
+
+``` json
+{
+  "meteor": {
+    "mainModule": {
+      "server": "server/main.js"
+    }
+  }
+}
+```
+
+This is useful for API servers, microservices, or background workers that don't serve a client UI. Rspack still handles server-side bundling, including dependency resolution and tree-shaking.
 
 ### Nested Imports
 
@@ -326,6 +342,12 @@ Meteor-Rspack supports React projects out of the box. Just install the `rspack` 
 Learn more in the [official Rspack and React integration guide](https://rspack.rs/guide/tech/react).
 
 > Use `meteor create --react` to start with a preconfigured Rspack React app.
+
+### Preact
+
+If your project uses [Preact](https://preactjs.com/) instead of React, Meteor detects it automatically. When Preact is installed, Meteor skips adding React-specific dependencies (such as `react-refresh`), so your Preact setup is not affected by the Rspack integration.
+
+No additional configuration is needed — just install the `rspack` package as usual and ensure Preact is listed in your `package.json` dependencies.
 
 ### React Compiler
 
@@ -421,6 +443,8 @@ With the Meteor–Rspack integration, `zodern:melte` no longer works. Use the of
 ### CSS
 
 Meteor-Rspack comes with built-in CSS support. You can import any CSS file into your code, and it will be processed and included in your HTML skeleton automatically. In addition, any CSS file placed in the same folder as your Meteor entry point will be processed and added as global styles without the need for explicit imports.
+
+When Rspack is configured with a CSS rule, whether through `postcss-loader`, `type: "css"`, or any other CSS-handling loader, Meteor automatically detects the handled file extensions after Rspack's first compilation and stops processing those files itself. This means you do not need to manually add CSS files to `.meteorignore` or otherwise tell Meteor to skip them. The same automatic delegation applies to Less and SCSS when their respective loaders are configured. If no CSS rule is present in the rspack configuration, Meteor continues to handle stylesheets as it normally would.
 
 ### CSS Modules
 
@@ -529,6 +553,10 @@ module.exports = defineConfig(Meteor => ({
 ```
 
 For more details, check [the official Rspack and SCSS guide](https://rspack.rs/guide/tech/css#sass).
+
+:::tip
+Starting with Meteor 3.4.1, the `meteor create --full` skeleton ships with this exact SCSS + Rspack delegation setup out of the box, so you can use it as a working reference.
+:::
 
 ### Tailwind & PostCSS
 
@@ -788,44 +816,136 @@ This helper provide a shortcut to apply the needed Rspack configuration and safe
 
 ### Service Worker
 
-Rspack lets you use standard plugins to manage Service Workers, such as Workbox, so you don’t need to maintain your own setup. You can follow the Webpack guide for integrating Workbox with [`workbox-webpack-plugin`](https://developer.chrome.com/docs/workbox/modules/workbox-webpack-plugin) (it should be compatible), or try the Rspack-specific version [`@aaroon/workbox-rspack-plugin`](https://github.com/Clarkkkk/workbox-rspack-plugin).
+::: info
+Starting with Meteor 3.4.1
+:::
 
-Whether you use a managed tool or a custom setup, ensure that only the Rspack dev server endpoints are treated as network-only for proper development. Otherwise, you may end up with infinite reload loops that only clear after removing the Service Worker. Skip caching of `__rspack__` endpoints.
+Rspack lets you use standard plugins to manage Service Workers, such as Workbox, so you don't need to maintain your own setup. You can follow the Webpack guide for integrating Workbox with [`workbox-webpack-plugin`](https://developer.chrome.com/docs/workbox/modules/workbox-webpack-plugin).
 
-If you use a custom implementation in your `sw.js`, intercept fetch requests to ignore Rspack contexts like this:
+Here is a recommended `GenerateSW` configuration that works with Meteor's build pipeline:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+const { GenerateSW } = require('workbox-webpack-plugin');
+
+module.exports = defineConfig(Meteor => ({
+  plugins: [
+    Meteor.isClient &&
+      new GenerateSW({
+        swDest: 'sw.js',
+        skipWaiting: true,
+        clientsClaim: true,
+        cleanupOutdatedCaches: true,
+        inlineWorkboxRuntime: true,
+        // Skip precaching for build output, runtime caching handles app bundles
+        exclude: [/./],
+        // Precache static files that should be available offline immediately
+        additionalManifestEntries: [
+          { url: '/icon.png', revision: '1' },
+        ],
+        runtimeCaching: [
+          // Never cache HMR hot-update files
+          {
+            urlPattern: /\.hot-update\./,
+            handler: 'NetworkOnly',
+          },
+          // Navigation requests: network-first with fallback
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'pages',
+              networkTimeoutSeconds: 15,
+            },
+          },
+          // Meteor/Rspack build assets (dev server, asset & chunk contexts)
+          {
+            urlPattern: new RegExp(
+              `(/__rspack__/|/${Meteor.assetsContext}/|/${Meteor.chunksContext}/|[?&](hash|meteor_css_resource|meteor_js_resource)=)`
+            ),
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'bundles',
+              // Meteor serves assets with Vary headers that can cause cache misses
+              matchOptions: { ignoreVary: true },
+            },
+          },
+          // Static assets: scripts, styles, workers
+          {
+            urlPattern: ({ request }) =>
+              request.destination === 'style' ||
+              request.destination === 'script' ||
+              request.destination === 'worker',
+            handler: 'StaleWhileRevalidate',
+            options: { cacheName: 'assets' },
+          },
+          // Images: cache-first for fast repeat loads
+          {
+            urlPattern: /\.(?:png|jpg|jpeg|svg|gif|ico|webp)$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'images',
+              expiration: { maxEntries: 60 },
+              matchOptions: { ignoreVary: true },
+            },
+          },
+        ],
+      }),
+  ].filter(Boolean),
+  // GenerateSW runs per compiler (client + legacy); suppress the warning
+  ignoreWarnings: [/GenerateSW has been called multiple times/],
+}));
+```
+
+Key points:
+- **`exclude: [/./]`** skips precaching for build output, runtime caching rules handle the dynamic app bundles instead. You can still precache other static files (e.g. offline fallback pages, icons) via `additionalManifestEntries`, which are cached during SW installation and available offline immediately.
+- **`.hot-update.` is `NetworkOnly`** so HMR payloads are never served from cache.
+- **`Meteor.assetsContext` and `Meteor.chunksContext`** match the directories Meteor uses for build output, keeping the cache strategy aligned with the build pipeline.
+- **`ignoreWarnings`** silences the expected duplicate-call warning because `GenerateSW` runs once per Rspack compiler (modern + legacy).
+
+If you use a custom `sw.js` instead of Workbox, ensure your fetch handler applies the same principles:
 
 ```js
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
-
   const sameOrigin = url.origin === self.location.origin;
-  // Skip Rspack  devServer
-  if (sameOrigin && url.pathname.includes('/__rspack__/')) {
-    // Never cache ignores and hot updates; hit the network every time
-    event.respondWith(fetch(event.request, { cache: 'no-store' }));
+
+  // Never cache HMR hot-update files
+  if (url.pathname.match(/\.hot-update\./)) {
     return;
   }
 
+  // Skip Meteor build-asset and chunk contexts, always fetch fresh
+  if (sameOrigin && (
+    url.pathname.includes('/build-assets/') ||
+    url.pathname.includes('/build-chunks/')
+  )) {
+    event.respondWith(fetch(request, { cache: 'no-store' }));
+    return;
+  }
+
+  // Your caching strategy for navigation, scripts, styles, images, etc.
   // ...
 });
 ```
 
-When using Workbox, the equivalent with `GenerateSW` might look like this:
+During development, the HMR dev server keeps most build assets in memory for faster rebuilds and reduced disk I/O, and only writes `sw.js` (on the first build only). Subsequent HMR rebuilds skip rewriting `sw.js` on purpose: rewriting it re-registers the service worker and forces a full page reload, which defeats HMR.
+
+This is handled internally by [`Meteor.persistDevFiles`](#persist-dev-files), which controls the Rspack [`devServer.devMiddleware.writeToDisk`](https://rspack.rs/config/dev-server#devserverdevmiddleware) option. If your service worker uses a custom filename (via `swDest` in `GenerateSW`), you also need to register it with `persistDevFiles` so it gets written to disk during development:
 
 ```js
 new GenerateSW({
+  swDest: 'service-worker.js',
   // ...
-  runtimeCaching: [
-    {
-      urlPattern: ({ url }) => url.pathname.includes('/__rspack__/'),
-      handler: 'NetworkOnly',
-    },
-    // ...
-  ],
-  // ...
-})
+}),
 ```
+
+```js
+...Meteor.persistDevFiles({ once: ['service-worker.js'] }),
+```
+
+For more details on strategies and matchers, see the [Persist Dev Files](#persist-dev-files) section.
 
 ### Dev Server
 
@@ -839,6 +959,56 @@ RSPACK_DEVSERVER_PORT=3232 meteor run
 ```
 
 The reason is that the Rspack dev server is handled by the Meteor so it can make both dev server works together, and the info of the port needs to be properly shared via the env.
+
+### Persist Dev Files
+
+::: info
+Starting with Meteor 3.4.1
+:::
+
+During development, the Rspack dev server keeps most build assets in memory for faster rebuilds and reduced disk I/O. Files that are part of the Rspack build output (generated by plugins like `GenerateSW`, `HtmlRspackPlugin`, etc.) live in memory by default. If Meteor's web server needs to serve any of these files directly, they must be explicitly persisted to disk.
+
+This is powered by Rspack's [`devServer.devMiddleware`](https://rspack.rs/config/dev-server#devserverdevmiddleware) option (see also [webpack-dev-middleware#writeToDisk](https://github.com/webpack/webpack-dev-middleware#writetodisk)). Static files in `public/` that are not part of the build output (e.g. images, fonts) are served by Meteor directly and do not need to be listed here.
+
+`Meteor.persistDevFiles` provides a declarative way to control which files are persisted and how often. HTML files are always persisted automatically, as Meteor's web server relies on them to serve the app shell.
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  // Array form: writes on every rebuild (default)
+  ...Meteor.persistDevFiles(['manifest.json']),
+}));
+```
+
+For files that should only be written once per run (e.g. service workers, where rewriting triggers a full page reload), use the `once` strategy:
+
+```js
+...Meteor.persistDevFiles({
+  once: ['sw.js'],              // first build only (avoids SW re-registration)
+  always: ['manifest.json'],    // every rebuild
+})
+```
+
+**Strategies:**
+
+| Strategy | Behavior | Use case |
+|----------|----------|----------|
+| `always` | Written on every build (default) | Manifests, files that should always reflect the latest output |
+| `once` | Written on the first build, skipped on HMR rebuilds | Service workers, files that trigger full reloads when rewritten |
+
+HTML files (`.html`) are always persisted regardless of the matchers provided.
+
+**Matchers** can be strings (matched with `endsWith`), regular expressions, or functions:
+
+```js
+...Meteor.persistDevFiles({
+  once: [/\.worker\.js$/],
+  always: [(filePath) => filePath.includes('/custom/')],
+})
+```
+
+In production, all build outputs are written to disk normally, so this only affects local development.
 
 ### Disable Plugins
 
@@ -966,11 +1136,11 @@ You can combine both solutions: raise the heap limit with `TOOL_NODE_FLAGS` (3.4
 
 Rspack itself has reported plans to optimize persistent cache and overall RAM consumption in [Rspack 2.0](https://rspack.rs/misc/planning/roadmap), which should improve memory behavior in future Meteor-Rspack releases.
 
-### Docker
+### CI & Docker {#docker}
 
-When building or deploying a Meteor-Rspack app inside Docker, you may encounter errors like `Rspack plugin error: Could not find rspack.config.js`. This typically means the NPM dependencies expected by Meteor are not aligned with the Meteor version in use.
+When building or deploying a Meteor-Rspack app in CI or Docker, you may encounter errors like `Could not find rspack.config.js, rspack.config.ts, rspack.config.mjs, or rspack.config.cjs`. This typically means the NPM dependencies expected by Meteor are not aligned with the Meteor version in use.
 
-Each Meteor release requires specific minimum versions of NPM packages like Rspack. If these were not committed after upgrading Meteor locally, the Docker environment won't have them. To fix this, run `meteor update --npm` before `meteor npm install` in your Dockerfile:
+Each Meteor release requires specific minimum versions of NPM packages like Rspack. If these were not committed after upgrading Meteor locally, the CI or Docker environment won't have them. To fix this, run `meteor update --npm` before `meteor npm install` in your Dockerfile or CI pipeline:
 
 ```dockerfile
 RUN (meteor update --npm 2>/dev/null || true) && meteor npm install && meteor build [...]
@@ -978,7 +1148,7 @@ RUN (meteor update --npm 2>/dev/null || true) && meteor npm install && meteor bu
 
 The `(meteor update --npm 2>/dev/null || true)` wrapper is for compatibility. The `--npm` option was introduced in Meteor 3.4. Older versions don't support it and would fail, so redirecting the error and allowing the command to continue ensures the same Docker step works across Meteor versions.
 
-> Keep `meteor update --npm` in the same Docker step as `meteor build` or `meteor deploy`. If you forget to commit and push the NPM bumps locally, this lets the Docker environment apply them on the fly. When using multiple Docker steps, each step is isolated, so NPM bumps won't carry over between steps.
+> Keep `meteor update --npm` in the same Docker step or CI stage as `meteor build` or `meteor deploy`. If you forget to commit and push the NPM bumps locally, this lets the CI or Docker environment apply them on the fly. When using multiple Docker steps or CI stages, each step is isolated, so NPM bumps won't carry over between steps.
 
 ::: info
 To avoid this issue entirely, run `meteor update --npm` locally after upgrading Meteor, or run the app once so the bumps are applied, then commit and push both the Meteor update and the updated NPM dependencies.

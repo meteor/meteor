@@ -1,14 +1,23 @@
 var _ = require('underscore');
 var semver = require('semver');
 var os = require('os');
-var url = require('url');
-
 var archinfo = require('./archinfo');
 var buildmessage = require('./buildmessage.js');
 var files = require('../fs/files');
 var packageVersionParser = require('../packaging/package-version-parser.js');
 
 var utils = exports;
+
+// Cache regex patterns to avoid recompiling them on every function call.
+// This improves performance in hot paths like URL parsing.
+var REGEX_PORT_ONLY = /^[0-9]+$/;
+var REGEX_HAS_SCHEME = /^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//;
+var REGEX_IPV4_ADDRESS = /^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/;
+var REGEX_VALID_EMAIL = /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/;
+var REGEX_FILE_SCHEME = /^file:\/\/.+/;
+var REGEX_URL_WITH_SHA = /^https?:\/\/.*[0-9a-f]{40}/;
+var REGEX_NPM_URL_PROTOCOL = /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//;
+var REGEX_RELEASE_VERSION = /^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/;
 
 // Parses <protocol>://<host>:<port> into an object { protocol: *, host:
 // *, port: * }. The input can also be of the form <host>:<port> or just
@@ -26,22 +35,39 @@ exports.parseUrl = function (str, defaults) {
   var defaultPort = defaults.port || undefined;
   var defaultProtocol = defaults.protocol || undefined;
 
-  if (str.match(/^[0-9]+$/)) { // just a port
+  if (REGEX_PORT_ONLY.test(str)) { // just a port
     return {
       port: str,
       hostname: defaultHostname,
-      protocol: defaultProtocol };
+      protocol: defaultProtocol
+    };
   }
 
+  // Capture any IPv6 address in brackets before new URL() normalizes it
+  // (e.g. "0000:...0001" gets compressed to "::1" by the WHATWG parser).
+  var ipv6Match = str.match(/\[([^\]]+)\]/);
+  var rawIPv6 = ipv6Match ? ipv6Match[1] : null;
+
   var hasScheme = exports.hasScheme(str);
-  const parsed = url.parse(hasScheme ? str : `http://${str}`);
+  if (!hasScheme) {
+    str = "http://" + str;
+  }
+
+  var parsed = new URL(str);
 
   // for consistency remove colon at the end of protocol
-  parsed.protocol = parsed.protocol.replace(/\:$/, '');
+  var parsedProtocol = parsed.protocol.replace(/\:$/, '');
+
+  // WHATWG URL wraps IPv6 in brackets and normalizes the address; use the
+  // raw value extracted above to preserve the original formatting.
+  var hostname = parsed.hostname || defaultHostname;
+  if (hostname && hostname.startsWith('[') && hostname.endsWith(']')) {
+    hostname = rawIPv6 || hostname.slice(1, -1);
+  }
 
   var ret = {
-    protocol: hasScheme ? parsed.protocol : defaultProtocol,
-    hostname: parsed.hostname || defaultHostname,
+    protocol: hasScheme ? parsedProtocol : defaultProtocol,
+    hostname: hostname,
     port: parsed.port || defaultPort
   };
   if (parsed.pathname !== '/' && parsed.pathname) {
@@ -53,9 +79,12 @@ exports.parseUrl = function (str, defaults) {
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
 // the return value of parseUrl.
 exports.formatUrl = function (options) {
-  // For consistency with `Meteor.absoluteUrl`, add a trailing slash to make
-  // this a valid URL
-  return url.format({ ...options, pathname: options.pathname || "/" });
+  const u = new URL('http://placeholder');
+  u.protocol = options.protocol + ':';
+  u.hostname = options.hostname;
+  if (options.port) u.port = options.port;
+  u.pathname = options.pathname || '/';
+  return u.toString();
 };
 
 exports.ipAddress = function () {
@@ -69,7 +98,7 @@ exports.ipAddress = function () {
     .where({ family: "IPv4", internal: false })
     .value();
 
-  if (! addressEntries.length) {
+  if (!addressEntries.length) {
     throw new Error(`Could not find a network interface with a non-internal IPv4 address.`);
   }
 
@@ -82,12 +111,12 @@ ${addressEntries.map(entry => entry.address).join(', ')}`);
 };
 
 exports.hasScheme = function (str) {
-  return !! str.match(/^[A-Za-z][A-Za-z0-9+-\.]*\:\/\//);
+  return REGEX_HAS_SCHEME.test(str);
 };
 
 exports.isIPv4Address = function (str) {
-  return str.match(/^(?:[0-9]{1,3}\.){3}[0-9]{1,3}$/);
-}
+  return REGEX_IPV4_ADDRESS.test(str);
+};
 
 // XXX: Move to e.g. formatters.js?
 // Prints a package list in a nice format.
@@ -117,17 +146,17 @@ exports.getHost = async function (...args) {
     //   scutil --get ComputerName
     // This can contain spaces. See
     // http://osxdaily.com/2012/10/24/set-the-hostname-computer-name-and-bonjour-name-separately-in-os-x/
-    if (! ret) {
+    if (!ret) {
       await attempt("scutil", "--get", "ComputerName");
     }
   }
 
   if (archinfo.matches(archinfo.host(), 'os.osx') ||
-      archinfo.matches(archinfo.host(), 'os.linux')) {
+    archinfo.matches(archinfo.host(), 'os.linux')) {
     // On Unix-like platforms, try passing -s to hostname to strip off
     // the domain name, to reduce the extent to which the output
     // varies with DNS.
-    if (! ret) {
+    if (!ret) {
       await attempt("hostname", "-s");
     }
   }
@@ -135,7 +164,7 @@ exports.getHost = async function (...args) {
   // Try "hostname" on any platform. It should work on
   // Windows. Unknown platforms that have a command called "hostname"
   // that deletes all of your files deserve what the get.
-  if (! ret) {
+  if (!ret) {
     await attempt("hostname");
   }
 
@@ -200,7 +229,7 @@ exports.parsePackageConstraint = function (constraintString, options) {
   try {
     return packageVersionParser.parsePackageConstraint(constraintString);
   } catch (e) {
-    if (! (e.versionParserError && options && options.useBuildmessage)) {
+    if (!(e.versionParserError && options && options.useBuildmessage)) {
       throw e;
     }
     buildmessage.error(e.message, { file: options.buildmessageFile });
@@ -212,7 +241,7 @@ exports.validatePackageName = function (name, options) {
   try {
     return packageVersionParser.validatePackageName(name, options);
   } catch (e) {
-    if (! (e.versionParserError && options && options.useBuildmessage)) {
+    if (!(e.versionParserError && options && options.useBuildmessage)) {
       throw e;
     }
     buildmessage.error(e.message, { file: options.buildmessageFile });
@@ -229,29 +258,29 @@ exports.validatePackageName = function (name, options) {
 exports.parsePackageAndVersion = function (packageAtVersionString, options) {
   var error = null;
   var separatorPos = Math.max(packageAtVersionString.lastIndexOf(' '),
-                              packageAtVersionString.lastIndexOf('@'));
+    packageAtVersionString.lastIndexOf('@'));
   if (separatorPos < 0) {
     error = new Error("Malformed package version: " +
-                      JSON.stringify(packageAtVersionString));
+      JSON.stringify(packageAtVersionString));
   } else {
     var packageName = packageAtVersionString.slice(0, separatorPos);
-    var version = packageAtVersionString.slice(separatorPos+1);
+    var version = packageAtVersionString.slice(separatorPos + 1);
     try {
       packageVersionParser.validatePackageName(packageName);
       // validate the version, ignoring the parsed result:
       packageVersionParser.parse(version);
     } catch (e) {
-      if (! e.versionParserError) {
+      if (!e.versionParserError) {
         throw e;
       }
       error = e;
     }
-    if (! error) {
+    if (!error) {
       return { package: packageName, version: version };
     }
   }
   // `error` holds an Error
-  if (! (options && options.useBuildmessage)) {
+  if (!(options && options.useBuildmessage)) {
     throw error;
   }
   buildmessage.error(error.message, { file: options.buildmessageFile });
@@ -307,13 +336,13 @@ exports.validatePackageNameOrExit = function (packageName, options) {
 // - IP addresses in domains (eg, foo@1.2.3.4 or the IPv6 equivalent)
 // because they're weird and we don't want them in our database.
 exports.validEmail = function (address) {
-  return /^[^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*@([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}$/.test(address);
+  return REGEX_VALID_EMAIL.test(address);
 };
 
 // Like Perl's quotemeta: quotes all regexp metacharacters. See
 //   https://github.com/substack/quotemeta/blob/master/index.js
 exports.quotemeta = function (str) {
-    return String(str).replace(/(\W)/g, '\\$1');
+  return String(str).replace(/(\W)/g, '\\$1');
 };
 
 // Allow a simple way to scale up all timeouts from the command line
@@ -333,7 +362,7 @@ exports.timeoutScaleFactor = timeoutScaleFactor;
 // the prerelease for a given release will sort before it. Because $ sorts
 // before '.', this means that 1.2 will sort before 1.2.3.)
 exports.defaultOrderKeyForReleaseVersion = function (v) {
-  var m = v.match(/^(\d{1,4}(?:\.\d{1,4})*)(?:-([-A-Za-z.]{1,15})(\d{0,4}))?$/);
+  var m = v.match(REGEX_RELEASE_VERSION);
   if (!m) {
     return null;
   }
@@ -401,7 +430,7 @@ exports.isDirectory = function (dir) {
 exports.generateSubsetsOfIncreasingSize = function (total, cb) {
   // We'll throw this if cb ever returns true, which is a simple way to pop us
   // out of our recursion.
-  var Done = function () {};
+  var Done = function () { };
 
   // Generates all subsets of size subsetSize which contain the indices already
   // in chosenIndices (and no indices that are "less than" any of them).
@@ -424,7 +453,7 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
     // trying to produce a sorted list of indices, so if there are already
     // indices, we start with the one after the biggest one we already have.
     var firstIndexToConsider = chosenIndices.length ?
-          chosenIndices[chosenIndices.length - 1] + 1 : 0;
+      chosenIndices[chosenIndices.length - 1] + 1 : 0;
     for (var i = firstIndexToConsider; i < total.length; ++i) {
       var withThisChoice = _.clone(chosenIndices);
       withThisChoice.push(i);
@@ -444,21 +473,21 @@ exports.generateSubsetsOfIncreasingSize = function (total, cb) {
 };
 
 exports.isUrlWithFileScheme = function (x) {
-  return /^file:\/\/.+/.test(x);
+  return REGEX_FILE_SCHEME.test(x);
 };
 
 exports.isUrlWithSha = function (x) {
   // Is a URL with a fixed SHA? We use this for Cordova -- although theoretically we could use
   // a URL like isNpmUrl(), there are a variety of problems with this,
   // see https://github.com/meteor/meteor/pull/5562
-  return /^https?:\/\/.*[0-9a-f]{40}/.test(x);
-}
+  return REGEX_URL_WITH_SHA.test(x);
+};
 
 exports.isNpmUrl = function (x) {
   // These are the various protocols that NPM supports, which we use to download NPM dependencies
   // See https://docs.npmjs.com/files/package.json#git-urls-as-dependencies
   return exports.isUrlWithSha(x) ||
-    /^(git|git\+ssh|git\+http|git\+https|https|http)?:\/\//.test(x);
+    REGEX_NPM_URL_PROTOCOL.test(x);
 };
 
 exports.isPathRelative = function (x) {
@@ -471,21 +500,21 @@ exports.isPathRelative = function (x) {
 //
 // This is talking about NPM/Cordova versions specifically, not Meteor versions.
 // It does not support the wrap number syntax.
-exports.ensureOnlyValidVersions = function (dependencies, {forCordova}) {
+exports.ensureOnlyValidVersions = function (dependencies, { forCordova }) {
   _.each(dependencies, function (version, name) {
     // We want a given version of a smart package (package.js +
     // .npm/npm-shrinkwrap.json) to pin down its dependencies precisely, so we
     // don't want anything too vague. For now, we support semvers and urls that
     // name a specific commit by SHA.
-    if (! exports.isValidVersion(version, {forCordova})) {
+    if (!exports.isValidVersion(version, { forCordova })) {
       throw new Error(
         "Must declare valid version of dependency: " + name + '@' + version);
     }
   });
 };
-exports.isValidVersion = function (version, {forCordova}) {
+exports.isValidVersion = function (version, { forCordova }) {
   return semver.valid(version) || exports.isUrlWithFileScheme(version)
-    || (forCordova ? exports.isUrlWithSha(version): exports.isNpmUrl(version));
+    || (forCordova ? exports.isUrlWithSha(version) : exports.isNpmUrl(version));
 };
 
 exports.execFileSync = function (file, args, opts) {
@@ -524,7 +553,7 @@ exports.execFile = async function (file, args, opts) {
   var { eachline } = require('./eachline');
 
   opts = opts || {};
-  if (! _.has(opts, 'maxBuffer')) {
+  if (!_.has(opts, 'maxBuffer')) {
     opts.maxBuffer = 1024 * 1024 * 10;
   }
 
@@ -551,7 +580,7 @@ exports.execFile = async function (file, args, opts) {
   return new Promise(function (resolve) {
     child_process.execFile(file, args, opts, function (err, stdout, stderr) {
       resolve({
-        success: ! err,
+        success: !err,
         stdout: stdout,
         stderr: stderr
       });
@@ -582,7 +611,7 @@ exports.execFileAsync = function (file, args, opts) {
     return new Promise(function (resolve) {
       child_process.execFile(file, args, opts, function (err, stdout, stderr) {
         resolve({
-          success: ! err,
+          success: !err,
           stdout: stdout,
           stderr: stderr
         });
@@ -661,7 +690,7 @@ Object.assign(exports.ThrottledYield.prototype, {
 // date object and returns a long-form human-readable date (ex: December 9th,
 // 2014) or unknown for null.
 exports.longformDate = function (date) {
-  if (! date) {
+  if (!date) {
     return "Unknown";
   }
   var moment = require('moment');
@@ -683,15 +712,15 @@ exports.sha256 = function (contents) {
 };
 
 exports.sourceMapLength = function (sm) {
-  if (! sm) {
+  if (!sm) {
     return 0;
   }
   // sum the length of sources and the mappings, the size of
   // metadata is ignored, but it is not a big deal
   return sm.mappings.length
-       + (sm.sourcesContent || []).reduce((soFar, current) => {
-         return soFar + (current ? current.length : 0);
-       }, 0);
+    + (sm.sourcesContent || []).reduce((soFar, current) => {
+      return soFar + (current ? current.length : 0);
+    }, 0);
 };
 
 // Find and return the current OS architecture, in "uname -m" format.
@@ -718,8 +747,8 @@ export function architecture() {
     },
     Windows_NT: {
       ia32: process.env.hasOwnProperty('PROCESSOR_ARCHITEW6432')
-              ? 'x86_64'
-              : 'i386',
+        ? 'x86_64'
+        : 'i386',
       x64: 'x86_64'
     }
   };
@@ -746,7 +775,7 @@ export function isEmacs() {
   }
 
   // Prior to v22, Emacs only set EMACS. After v27, it only sets INSIDE_EMACS.
-  emacsDetected = !! (process.env.EMACS === "t" || process.env.INSIDE_EMACS);
+  emacsDetected = !!(process.env.EMACS === "t" || process.env.INSIDE_EMACS);
   return emacsDetected;
 }
 

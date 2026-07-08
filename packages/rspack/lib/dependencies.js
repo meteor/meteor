@@ -202,7 +202,7 @@ export function checkReactInstalled() {
 
   const appDir = getMeteorAppDir();
   // Check if React is a dependency in the project
-  const isReactInstalled = checkNpmDependencyExists('react', { cwd: appDir });
+  const isReactInstalled = checkNpmDependencyExists('react', { cwd: appDir }) && !checkNpmDependencyExists('preact', { cwd: appDir });
 
   if (isReactInstalled) {
     // Set environment variable to indicate React is enabled

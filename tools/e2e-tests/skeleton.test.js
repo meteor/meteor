@@ -217,6 +217,33 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
+    "Typescript Tailwind Skeleton /",
+    testMeteorSkeleton({
+      skeletonName: "typescript-tailwind",
+      port: 3221,
+      filePaths: {
+        client: "client/main.tsx",
+        server: "server/main.ts",
+        test: "tests/main.ts",
+      },
+      customAssertions: {
+        afterCreate({ tempDir }) {
+          if (isCI) {
+            const rspackConfigPath = path.join(tempDir, "rspack.config.ts");
+            // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails
+            let configContent = fs.readFileSync(rspackConfigPath, "utf8");
+            configContent = configContent.replace(
+              /\s*new\s+TsCheckerRspackPlugin\(\)/,
+              ""
+            );
+            fs.writeFileSync(rspackConfigPath, configContent);
+          }
+        },
+      },
+    })
+  );
+
+  describe(
     'Vue Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'vue',

@@ -1,28 +1,43 @@
 import { Meteor } from 'meteor/meteor';
 import { CLIENT_ONLY_METHODS, getAsyncMethodName } from 'meteor/minimongo/constants';
 import { MiniMongoQueryError } from 'meteor/minimongo/common';
+import LocalCollection from 'meteor/minimongo/local_collection';
 import path from 'path';
 import { AsynchronousCursor } from './asynchronous_cursor';
 import { Cursor } from './cursor';
 import { CursorDescription } from './cursor_description';
 import { DocFetcher } from './doc_fetcher';
-import { MongoDB, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
+import { MongoDB, compareOperationTimes, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
 import { ObserveHandle } from './observe_handle';
 import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
+import { ChangeStreamObserveDriver } from './changestream_observe_driver';
+import { SharedChangeStream } from './shared_change_stream';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
 const APP_FOLDER = 'app';
 
 const oplogCollectionWarnings = [];
+const availableDrivers = ['changeStreams', 'oplog', 'polling']
+const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : availableDrivers;
+
+const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
+if (Array.isArray(reactivitySetting)) {
+  for (const method of reactivitySetting) {
+    if (!availableDrivers.includes(method)) {  
+      throw new Error(`Invalid Mongo reactivity method in settings: ${method}`);
+    }
+  }
+}
 
 export const MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
+  self._sharedChangeStreams = {};
   self._onFailoverHook = new Hook;
 
   const userOptions = {
@@ -33,7 +48,6 @@ export const MongoConnection = function (url, options) {
   var mongoOptions = Object.assign({
     ignoreUndefined: true,
   }, userOptions);
-
 
 
   // Internally the oplog connections specify their own maxPoolSize
@@ -89,7 +103,6 @@ export const MongoConnection = function (url, options) {
     self._oplogHandle = new OplogHandle(options.oplogUrl, self.db.databaseName);
     self._docFetcher = new DocFetcher(self);
   }
-
 };
 
 MongoConnection.prototype._close = async function() {
@@ -129,6 +142,23 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
   return self.db.collection(collectionName);
 };
 
+// Shared change stream for a collection, created on first use. It deregisters
+// itself once its last driver detaches, so a later observer opens a fresh one.
+MongoConnection.prototype._acquireSharedChangeStream = function (collectionName) {
+  const self = this;
+  const existing = self._sharedChangeStreams[collectionName];
+  if (existing) {
+    return existing;
+  }
+  const sharedStream = new SharedChangeStream(self, collectionName, function () {
+    if (self._sharedChangeStreams[collectionName] === sharedStream) {
+      delete self._sharedChangeStreams[collectionName];
+    }
+  });
+  self._sharedChangeStreams[collectionName] = sharedStream;
+  return sharedStream;
+};
+
 MongoConnection.prototype.createCappedCollectionAsync = async function (
   collectionName, byteSize, maxDocuments) {
   var self = this;
@@ -155,6 +185,26 @@ MongoConnection.prototype._maybeBeginWrite = function () {
   }
 };
 
+// Record the clusterTime of a write on the current DDP write fence so the
+// ChangeStreamObserveDriver can wait for that exact timestamp instead of
+// polling the server for a "current" time that may not be echoed by the
+// stream until the next heartbeat (~1s).
+//
+// The target is per-collection: each change stream driver watches a single
+// collection and will only observe clusterTimes from events in that
+// collection. A fence may cover writes across multiple collections (e.g.
+// creating a card also writes to activities), so picking a single "max ts"
+// for the whole fence would stall drivers whose collection never sees
+// that specific ts. We therefore keep the max ts per collection.
+function _annotateFenceWithWriteTs(fence, collectionName, writeTs) {
+  if (!fence || !writeTs || !collectionName) return;
+  const map = fence._csTargetTsByCollection = fence._csTargetTsByCollection || {};
+  const prev = map[collectionName];
+  if (!prev || compareOperationTimes(writeTs, prev) > 0) {
+    map[collectionName] = writeTs;
+  }
+}
+
 // Internal interface: adds a callback which is called when the Mongo primary
 // changes. Returns a stop handle.
 MongoConnection.prototype._onFailover = function (callback) {
@@ -179,16 +229,21 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
   var refresh = async function () {
     await Meteor.refresh({collection: collection_name, id: document._id });
   };
+  const session = self.client.startSession();
   return self.rawCollection(collection_name).insertOne(
     replaceTypes(document, replaceMeteorAtomWithMongo),
     {
       safe: true,
+      session,
     }
   ).then(async ({insertedId}) => {
+    _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+    await session.endSession();
     await refresh();
     await write.committed();
     return insertedId;
   }).catch(async e => {
+    try { await session.endSession(); } catch (_) { /* ignore */ }
     await write.committed();
     throw e;
   });
@@ -227,15 +282,26 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
     await self._refresh(collection_name, selector);
   };
 
+  const session = self.client.startSession();
   return self.rawCollection(collection_name)
     .deleteMany(replaceTypes(selector, replaceMeteorAtomWithMongo), {
       safe: true,
+      session,
     })
     .then(async ({ deletedCount }) => {
+      // Only annotate the fence when the operation actually modified data:
+      // a no-op deleteMany (matched no docs) does not generate a change-
+      // stream event, so a ChangeStreamObserveDriver waiting on this ts
+      // would block forever waiting for an event Mongo will never emit.
+      if (deletedCount > 0) {
+        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+      }
+      await session.endSession();
       await refresh();
       await write.committed();
       return transformResult({ result : {modifiedCount : deletedCount} }).numberAffected;
     }).catch(async (err) => {
+      try { await session.endSession(); } catch (_) { /* ignore */ }
       await write.committed();
       throw err;
     });
@@ -254,15 +320,23 @@ MongoConnection.prototype.dropCollectionAsync = async function(collectionName) {
     });
   };
 
+  const session = self.client.startSession();
   return self
     .rawCollection(collectionName)
-    .drop()
+    .drop({ session })
     .then(async result => {
+      // Do NOT annotate the fence here. ChangeStreamObserveDriver's pipeline
+      // only forwards insert/update/replace/delete; mongo emits a `drop`
+      // (and follow-up `invalidate`) event that our $match drops, so a
+      // fence waiter pinned to this clusterTime would block forever waiting
+      // for an event that never reaches the driver.
+      await session.endSession();
       await refresh();
       await write.committed();
       return result;
     })
     .catch(async e => {
+      try { await session.endSession(); } catch (_) { /* ignore */ }
       await write.committed();
       throw e;
     });
@@ -324,7 +398,8 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
   };
 
   var collection = self.rawCollection(collection_name);
-  var mongoOpts = {safe: true};
+  const session = self.client.startSession();
+  var mongoOpts = {safe: true, session};
   // Add support for filtered positional operator
   if (options.arrayFilters !== undefined) mongoOpts.arrayFilters = options.arrayFilters;
   // explictly enumerate options that minimongo supports
@@ -376,8 +451,15 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     // - The id is defined by query or mod we can just add it to the replacement doc
     // - The user did not specify any id preference and the id is a Mongo ObjectId,
     //     then we can just let Mongo generate the id
-    return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options)
+    return await simulateUpsertWithInsertedId(collection, mongoSelector, mongoMod, options, session)
       .then(async result => {
+        // Skip annotation when nothing actually changed — change-stream
+        // observers wait for the exact ts and a no-op upsert produces no
+        // event, so the wait would never resolve.
+        if (result && result.numberAffected) {
+          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        }
+        await session.endSession();
         await refresh();
         await write.committed();
         if (result && ! options._returnObject) {
@@ -385,6 +467,9 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
         } else {
           return result;
         }
+      }).catch(async err => {
+        try { await session.endSession(); } catch (_) { /* ignore */ }
+        throw err;
       });
   } else {
     if (options.upsert && !knownId && options.insertedId && isModify) {
@@ -404,6 +489,15 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
     return collection[updateMethod]
       .bind(collection)(mongoSelector, mongoMod, mongoOpts)
       .then(async result => {
+        // Skip annotation when nothing actually changed: a no-op
+        // updateOne / updateMany / replaceOne does not emit a change-
+        // stream event, so a fence waiter pinned to this ts would block
+        // forever. modifiedCount excludes matched-but-unchanged docs (which
+        // also produce no event), and upsertedCount catches inserts.
+        if (result && (result.modifiedCount > 0 || result.upsertedCount > 0)) {
+          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        }
+        await session.endSession();
         var meteorResult = transformResult({result});
         if (meteorResult && options._returnObject) {
           // If this was an upsertAsync() call, and we ended up
@@ -425,6 +519,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
           return meteorResult.numberAffected;
         }
       }).catch(async (err) => {
+        try { await session.endSession(); } catch (_) { /* ignore */ }
         await write.committed();
         throw err;
       });
@@ -551,7 +646,7 @@ var NUM_OPTIMISTIC_TRIES = 3;
 
 
 
-var simulateUpsertWithInsertedId = async function (collection, selector, mod, options) {
+var simulateUpsertWithInsertedId = async function (collection, selector, mod, options, session) {
   // STRATEGY: First try doing an upsert with a generated ID.
   // If this throws an error about changing the ID on an existing document
   // then without affecting the database, we know we should probably try
@@ -568,11 +663,13 @@ var simulateUpsertWithInsertedId = async function (collection, selector, mod, op
   var insertedId = options.insertedId; // must exist
   var mongoOptsForUpdate = {
     safe: true,
-    multi: options.multi
+    multi: options.multi,
+    session,
   };
   var mongoOptsForInsert = {
     safe: true,
-    upsert: true
+    upsert: true,
+    session,
   };
 
   var replacementWithId = Object.assign(
@@ -691,6 +788,7 @@ MongoConnection.prototype._createAsynchronousCursor = function(
     skip: cursorOptions.skip,
     projection: cursorOptions.fields || cursorOptions.projection,
     readPreference: cursorOptions.readPreference,
+    collation: cursorOptions.collation,
   };
 
   // Do we want a tailable cursor (which only works on capped collections)?
@@ -800,22 +898,96 @@ MongoConnection.prototype.tail = function (cursorDescription, docCallback, timeo
   };
 };
 
-Object.assign(MongoConnection.prototype, {
-  _observeChanges: async function (
+const driverClasses = {
+  changeStreams: ChangeStreamObserveDriver,
+  oplog: OplogObserveDriver,
+  polling: PollingObserveDriver,
+};
+
+function _getConfiguredReactivityOrder () {
+  const reactivitySetting = Meteor.settings?.packages?.mongo?.reactivity;
+  const isArraySetting = Array.isArray(reactivitySetting);
+  const isStringSetting = typeof reactivitySetting === 'string';
+  const hasCustomDriverOrder = isArraySetting || isStringSetting;
+
+  if (reactivitySetting && !hasCustomDriverOrder) {
+    throw new Error('Meteor.settings.packages.mongo.reactivity must be a string or an array of observer drivers');
+  }
+
+  let configuredOrder = DEFAULT_REACTIVITY_ORDER;
+  if (hasCustomDriverOrder) {
+    if (isStringSetting) {
+      configuredOrder = [reactivitySetting];
+    } else {
+      configuredOrder = [];
+      for (const name of reactivitySetting) {
+        if (!configuredOrder.includes(name)) {
+          configuredOrder.push(name);
+        }
+      }
+    }
+  }
+
+  const invalidDriverNames = configuredOrder.filter(name => !driverClasses[name]);
+  if (invalidDriverNames.length) {
+    throw new Error(`Invalid Mongo reactivity driver(s): ${invalidDriverNames.join(', ')}`);
+  }
+
+  if (hasCustomDriverOrder && configuredOrder.length === 0) {
+    throw new Error('Meteor.settings.packages.mongo.reactivity must specify at least one observer driver');
+  }
+
+  return configuredOrder;
+};
+
+MongoConnection.prototype._selectReactivityDriver = async function (configuredOrder, driverChecks) {
+  const availabilityErrors = [];
+  let driverClass;
+  let matcher;
+  let sorter;
+
+  for (const driverName of configuredOrder) {
+    const checker = driverChecks[driverName];
+
+    if (!checker) {
+      availabilityErrors.push(`Unknown driver "${driverName}"`);
+      continue;
+    }
+
+    const result = await checker();
+
+    if (result.available) {
+      matcher = result.matcher;
+      sorter = result.sorter;
+      driverClass = driverClasses[driverName];
+      break;
+    }
+
+    if (result.reason) {
+      availabilityErrors.push(`${driverName}: ${result.reason}`);
+    }
+  }
+
+  return {
+    driverClass,
+    matcher,
+    sorter,
+  };
+};
+
+MongoConnection.prototype._observeChanges = async function (
     cursorDescription, ordered, callbacks, nonMutatingCallbacks) {
-    var self = this;
     const collectionName = cursorDescription.collectionName;
 
     if (cursorDescription.options.tailable) {
-      return self._observeChangesTailable(cursorDescription, ordered, callbacks);
+      return this._observeChangesTailable(cursorDescription, ordered, callbacks);
     }
 
     // You may not filter out _id when observing changes, because the id is a core
     // part of the observeChanges API.
     const fieldsOptions = cursorDescription.options.projection || cursorDescription.options.fields;
-    if (fieldsOptions &&
-      (fieldsOptions._id === 0 ||
-        fieldsOptions._id === false)) {
+    if (fieldsOptions?._id === 0 ||
+        fieldsOptions?._id === false) {
       throw Error("You may not observe a cursor with {fields: {_id: 0}}");
     }
 
@@ -828,15 +1000,15 @@ Object.assign(MongoConnection.prototype, {
     // Find a matching ObserveMultiplexer, or create a new one. This next block is
     // guaranteed to not yield (and it doesn't call anything that can observe a
     // new query), so no other calls to this function can interleave with it.
-    if (observeKey in self._observeMultiplexers) {
-      multiplexer = self._observeMultiplexers[observeKey];
+    if (observeKey in this._observeMultiplexers) {
+      multiplexer = this._observeMultiplexers[observeKey];
     } else {
       firstHandle = true;
       // Create a new ObserveMultiplexer.
       multiplexer = new ObserveMultiplexer({
         ordered: ordered,
-        onStop: function () {
-          delete self._observeMultiplexers[observeKey];
+        onStop: () => {
+          delete this._observeMultiplexers[observeKey];
           return observeDriver.stop();
         }
       });
@@ -847,81 +1019,227 @@ Object.assign(MongoConnection.prototype, {
       nonMutatingCallbacks,
     );
 
-    const oplogOptions = self?._oplogHandle?._oplogOptions || {};
+    const oplogOptions = (this._oplogHandle && this._oplogHandle._oplogOptions) || {};
     const { includeCollections, excludeCollections } = oplogOptions;
     if (firstHandle) {
-
       var matcher, sorter;
-      var canUseOplog = [
-        function () {
-          // At a bare minimum, using the oplog requires us to have an oplog, to
-          // want unordered callbacks, and to not want a callback on the polls
-          // that won't happen.
-          return self._oplogHandle && !ordered &&
-            !callbacks._testOnlyPollCallback;
-        },
-        function () {
-          // We also need to check, if the collection of this Cursor is actually being "watched" by the Oplog handle
-          // if not, we have to fallback to long polling
-          if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
-            if (!oplogCollectionWarnings.includes(collectionName)) {
-              console.warn(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
-              oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+      // Create the collator once and share it across Matcher and Sorter.
+      const collator = cursorDescription.options.collation
+        ? LocalCollection._createCollator(cursorDescription.options.collation)
+        : null;
+      const configuredOrder = _getConfiguredReactivityOrder();
+
+      const driverChecks = {
+        changeStreams: async () => {
+          let localMatcher;
+          const reasons = [];
+
+          if (this._supportsChangeStreams === undefined) {
+            const serverReasons = [];
+
+            try {
+              // Change Streams require MongoDB 6+ and replica set or sharded cluster
+              const admin = this.db.admin();
+              const serverInfo = await admin.serverInfo();
+              const isMasterPromise = admin.command({ isMaster: 1 });
+              const versionString = serverInfo.version || 'unknown';
+              const versionParts = versionString.split('.').map(Number);
+              const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
+
+              // Check MongoDB version (6+)
+              const hasMinVersion = major >= 6;
+
+              if (!hasMinVersion) {
+                serverReasons.push(`Change Streams feature require MongoDB 6+ (current ${versionString})`);
+              } else {
+                // Check if we're running on a replica set or sharded cluster.
+                // `isMaster.ismaster` is true on a standalone too (it only means
+                // the node accepts writes), so it is NOT a replica-set signal:
+                // including it made standalone deployments select Change Streams
+                // and then fail at watch() with "$changeStream is only supported
+                // on replica sets". `setName` is the replica-set signal.
+                const isMaster = await isMasterPromise;
+                const isReplicaSet = Boolean(isMaster.setName || isMaster.secondary);
+                const isSharded = isMaster.msg === 'isdbgrid';
+
+                if (!(isReplicaSet || isSharded)) {
+                  serverReasons.push('Change Streams require a replica set or sharded cluster');
+                }
+              }
+            } catch (error) {
+              Meteor._debug("Error checking Change Stream support:", error);
+              serverReasons.push(`Error checking Change Stream support: ${error.message}`);
             }
-            return false;
+
+            this._changeStreamServerReasons = serverReasons;
+            this._supportsChangeStreams = serverReasons.length === 0;
           }
-          if (includeCollections?.length && !includeCollections.includes(collectionName)) {
-            if (!oplogCollectionWarnings.includes(collectionName)) {
-              console.warn(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
-              oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+
+          if (!this._supportsChangeStreams) {
+            if (this._changeStreamServerReasons?.length) {
+              reasons.push(...this._changeStreamServerReasons);
+            } else {
+              reasons.push('Change Streams not supported by MongoDB deployment');
             }
-            return false;
           }
-          return true;
-        },
-        function () {
-          // We need to be able to compile the selector. Fall back to polling for
-          // some newfangled $selector that minimongo doesn't support yet.
+
+          if (ordered) {
+            reasons.push('Change Streams only supports unordered observeChanges');
+          }
+
+          if (callbacks._testOnlyPollCallback) {
+            reasons.push('Change Streams cannot be used with _testOnlyPollCallback');
+          }
+
+          // Cursors with `skip` or `limit` are not supported. Change streams
+          // emit one event per write across the entire collection, but the
+          // result set of a limit/skip cursor is a moving window — when a doc
+          // outside that window changes it can shift the window, and inferring
+          // that purely from change events would require re-running the
+          // query. Without this fall-back we'd emit added events for any
+          // matching insert anywhere in the collection (regardless of limit),
+          // breaking tests like `livedata server - publish cursor is properly
+          // awaited`. Mirrors OplogObserveDriver.cursorSupported's reasoning.
+          const csOptions = cursorDescription.options || {};
+          if (csOptions.skip || csOptions.limit) {
+            reasons.push('Cursor with skip/limit not supported by Change Streams');
+          }
+
+          // Validate unsupported projections up front so Change Streams can
+          // gracefully fall back, mirroring OplogObserveDriver.cursorSupported.
+          const fields = csOptions.fields || csOptions.projection;
+          if (fields) {
+            try {
+              LocalCollection._checkSupportedProjection(fields);
+            } catch (e) {
+              if (e.name === "MinimongoError") {
+                reasons.push(`Projection not supported by Change Streams: ${e.message}`);
+              } else {
+                throw e;
+              }
+            }
+          }
+
+          if (reasons.length) {
+            return {
+              available: false,
+              reason: reasons.join('; '),
+            };
+          }
+
           try {
-            matcher = new Minimongo.Matcher(cursorDescription.selector);
-            return true;
+            localMatcher = new Minimongo.Matcher(
+              cursorDescription.selector,
+              undefined,
+              collator
+            );
           } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
             if (Meteor.isClient && e instanceof MiniMongoQueryError) {
               throw e;
             }
-            return false;
-          }
-        },
-        function () {
-          // ... and the selector itself needs to support oplog.
-          return OplogObserveDriver.cursorSupported(cursorDescription, matcher);
-        },
-        function () {
-          // And we need to be able to compile the sort, if any.  eg, can't be
-          // {$natural: 1}.
-          if (!cursorDescription.options.sort)
-            return true;
-          try {
-            sorter = new Minimongo.Sorter(cursorDescription.options.sort);
-            return true;
-          } catch (e) {
-            // XXX make all compilation errors MinimongoError or something
-            //     so that this doesn't ignore unrelated exceptions
-            return false;
-          }
-        }
-      ].every(f => f());  // invoke each function and check if all return true
 
-      var driverClass = canUseOplog ? OplogObserveDriver : PollingObserveDriver;
+            return {
+              available: false,
+              reason: `Selector not supported for Change Streams: ${e.message}`,
+            };
+          }
+
+          return {
+            available: true,
+            matcher: localMatcher,
+          };
+        },
+        oplog: () => {
+          const reasons = [];
+          let localMatcher;
+          let localSorter;
+
+          if (!(this._oplogHandle && !ordered && !callbacks._testOnlyPollCallback)) {
+            reasons.push('Oplog tailing not available for this cursor');
+          }
+
+          if (!reasons.length) {
+            if (excludeCollections?.length && excludeCollections.includes(collectionName)) {
+              if (!oplogCollectionWarnings.includes(collectionName)) {
+                Meteor._debug(`Meteor.settings.packages.mongo.oplogExcludeCollections includes the collection ${collectionName} - your subscriptions will only use long polling!`);
+                oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+              }
+              reasons.push('Collection is excluded from oplog tailing');
+            } else if (includeCollections?.length && !includeCollections.includes(collectionName)) {
+              if (!oplogCollectionWarnings.includes(collectionName)) {
+                Meteor._debug(`Meteor.settings.packages.mongo.oplogIncludeCollections does not include the collection ${collectionName} - your subscriptions will only use long polling!`);
+                oplogCollectionWarnings.push(collectionName); // we only want to show the warnings once per collection!
+              }
+              reasons.push('Collection is not included in oplog tailing');
+            }
+          }
+
+          if (!reasons.length) {
+            try {
+              localMatcher = new Minimongo.Matcher(
+                cursorDescription.selector,
+                undefined,
+                collator
+              );
+            } catch (e) {
+              // XXX make all compilation errors MinimongoError or something
+              //     so that this doesn't ignore unrelated exceptions
+              if (Meteor.isClient && e instanceof MiniMongoQueryError) {
+                throw e;
+              }
+              reasons.push(`Selector not supported for oplog: ${e.message}`);
+            }
+          }
+
+          if (!reasons.length && !OplogObserveDriver.cursorSupported(cursorDescription, localMatcher)) {
+            reasons.push('Cursor not supported by oplog');
+          }
+
+          if (!reasons.length && cursorDescription.options.sort) {
+            try {
+              localSorter = new Minimongo.Sorter(
+                cursorDescription.options.sort,
+                collator
+              );
+            } catch (e) {
+              // XXX make all compilation errors MinimongoError or something
+              //     so that this doesn't ignore unrelated exceptions
+              reasons.push('Sort not supported by oplog');
+            }
+          }
+
+          return {
+            available: reasons.length === 0,
+            matcher: localMatcher,
+            sorter: localSorter,
+            reason: reasons.join('; ')
+          };
+        },
+        polling: () => ({ available: true }),
+      };
+
+      let {
+        driverClass,
+        matcher: selectedMatcher,
+        sorter: selectedSorter,
+      } = await this._selectReactivityDriver(configuredOrder, driverChecks);
+
+      // Fallback to polling if no driver is available
+      if (!driverClass) {
+        Meteor._debug('No reactivity driver available for cursor, falling back to polling');
+        driverClass = PollingObserveDriver;
+      }
+
+      matcher = selectedMatcher;
+      sorter = selectedSorter;
+
       observeDriver = new driverClass({
-        cursorDescription: cursorDescription,
-        mongoHandle: self,
-        multiplexer: multiplexer,
-        ordered: ordered,
-        matcher: matcher,  // ignored by polling
-        sorter: sorter,  // ignored by polling
+        cursorDescription,
+        mongoHandle: this,
+        multiplexer,
+        ordered,
+        matcher,  // ignored by polling
+        sorter,  // ignored by polling
         _testOnlyPollCallback: callbacks._testOnlyPollCallback
       });
 
@@ -932,11 +1250,9 @@ Object.assign(MongoConnection.prototype, {
       // This field is only set for use in tests.
       multiplexer._observeDriver = observeDriver;
     }
-    self._observeMultiplexers[observeKey] = multiplexer;
+    this._observeMultiplexers[observeKey] = multiplexer;
     // Blocks until the initial adds have been sent.
     await multiplexer.addHandleAndSendInitialAdds(observeHandle);
 
     return observeHandle;
-  },
-
-});
+  }
