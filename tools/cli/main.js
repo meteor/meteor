@@ -619,8 +619,11 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
-    var parsedUrl = require('url').parse(process.env.ROOT_URL);
-    if (!parsedUrl.host || ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
+    let parsedUrl = null;
+    try {
+      parsedUrl = new URL(process.env.ROOT_URL);
+    } catch (e) {}
+    if (!parsedUrl || !parsedUrl.host || !['http:', 'https:'].includes(parsedUrl.protocol)) {
       Console.error('$ROOT_URL, if specified, must be an URL.');
       process.exit(1);
     }
