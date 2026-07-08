@@ -235,6 +235,38 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  "upsert after.update should respect fetch fields excluding _id",
+  async function(test) {
+    const collection = new Mongo.Collection(null);
+    let called = false;
+
+    collection.after.update(
+      function(userId, doc) {
+        called = true;
+        test.equal(doc.visible, "after");
+        test.isUndefined(doc.hidden);
+        test.equal(this.previous.visible, "before");
+        test.isUndefined(this.previous.hidden);
+      },
+      { fetchPrevious: true, fetchFields: { _id: 0, visible: 1 } }
+    );
+
+    await collection.removeAsync({ test: true });
+    await collection.insertAsync({
+      test: true,
+      visible: "before",
+      hidden: "secret"
+    });
+    await collection.upsertAsync(
+      { test: true },
+      { $set: { visible: "after", hidden: "updated-secret" } }
+    );
+
+    test.equal(called, true);
+  }
+);
+
+Tinytest.addAsync(
   "issue #156 - upsert after.insert should have a correct doc using $set",
   async function(test) {
     const collection = new Mongo.Collection(null);

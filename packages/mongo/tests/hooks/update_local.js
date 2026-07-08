@@ -239,3 +239,36 @@ Tinytest.addAsync(
     })
   }
 )
+
+Tinytest.addAsync(
+  'update - fetchFields excluding _id should still fire after-update hook',
+  async function (test) {
+    const collection = new Mongo.Collection(null)
+    let called = false
+
+    async function start () {
+      collection.after.update(
+        function (userId, doc, fieldNames, modifier) {
+          called = true
+          test.equal(doc.start_value, true)
+          test.equal(doc.another_value, undefined)
+          test.equal(this.previous.start_value, true)
+          test.equal(this.previous.another_value, undefined)
+        },
+        { fetchPrevious: true, fetchFields: { _id: 0, start_value: 1 } }
+      )
+
+      await collection.updateAsync(
+        { start_value: true },
+        { $set: { update_value: true } }
+      )
+
+      test.equal(called, true)
+    }
+
+    await InsecureLogin.ready(async function () {
+      await collection.insertAsync({ start_value: true, another_value: true })
+      await start()
+    })
+  }
+)

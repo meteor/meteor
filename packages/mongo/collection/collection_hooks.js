@@ -127,6 +127,16 @@ function buildHookProjection(collectionOptions, hooks, timing, method) {
   return projection;
 }
 
+function ensureProjectionIncludesId(projection) {
+  if (
+    projection &&
+    Object.prototype.hasOwnProperty.call(projection, "_id") &&
+    !projection._id
+  ) {
+    delete projection._id;
+  }
+}
+
 function shouldFetchPrevious(collectionOptions, hooks, timing, method) {
   return hooks.some(hook => {
     return (
@@ -531,6 +541,7 @@ export function runUpdateHooks(
           )
         );
       }
+      ensureProjectionIncludesId(projection);
       if (Object.keys(projection).length > 0) fetchOptions.fields = projection;
 
       docs = await collection._collection
@@ -588,6 +599,7 @@ export function runUpdateHooks(
         "after",
         "update"
       );
+      ensureProjectionIncludesId(afterProjection);
       if (Object.keys(afterProjection).length > 0)
         afterFetchOptions.fields = afterProjection;
 
@@ -734,6 +746,7 @@ export function runUpsertHooks(
         );
       }
 
+      ensureProjectionIncludesId(beforeProjection);
       if (Object.keys(beforeProjection).length > 0) {
         fetchOptions.fields = beforeProjection;
       }
@@ -820,6 +833,7 @@ export function runUpsertHooks(
           "after",
           "update"
         );
+        ensureProjectionIncludesId(afterProjection);
         if (Object.keys(afterProjection).length > 0) {
           afterFetchOptions.fields = afterProjection;
         }
