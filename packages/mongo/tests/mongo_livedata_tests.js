@@ -10,6 +10,10 @@ var TRANSFORMS = {};
 // We keep track of the collections, so we can refer to them by name
 var COLLECTIONS = {};
 
+// dumb-forcing changeStream tests only into CI
+const DEFAULT_REACTIVITY = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : undefined;
+var IS_OPLOG = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'oplog';
+
 if (Meteor.isServer) {
   Meteor.methods({
     createInsecureCollection: function (name, options) {
@@ -1018,598 +1022,600 @@ const setsEqual = function (a, b) {
   return difference(a, b).length === 0 && difference(b, a).length === 0;
   };
 
-    // This test mainly checks the correctness of oplog code dealing with limited
-    // queries. Compitablity with poll-diff is added as well.
-    Tinytest.addAsync(
-      'mongo-livedata - observe sorted, limited ' + idGeneration,
-      async function(test) {
-        var run = test.runId();
-        var coll = new Mongo.Collection(
-          'observeLimit-' + run,
-          collectionOptions
-        );
+    if (IS_OPLOG) {
+      // This test mainly checks the correctness of oplog code dealing with limited
+      // queries. Compitablity with poll-diff is added as well.
+      Tinytest.addAsync(
+        'mongo-livedata - observe sorted, limited ' + idGeneration,
+        async function(test) {
+          var run = test.runId();
+          var coll = new Mongo.Collection(
+            'observeLimit-' + run,
+            collectionOptions
+          );
 
-        const observer = async function() {
-          var state = {};
-          var output = [];
-          var callbacks = {
-            changed: function(newDoc) {
-              output.push({ changed: newDoc._id });
-              state[newDoc._id] = newDoc;
-            },
-            added: function(newDoc) {
-              output.push({ added: newDoc._id });
-              state[newDoc._id] = newDoc;
-            },
-            removed: function(oldDoc) {
-              output.push({ removed: oldDoc._id });
-              delete state[oldDoc._id];
-            },
+          const observer = async function() {
+            var state = {};
+            var output = [];
+            var callbacks = {
+              changed: function(newDoc) {
+                output.push({ changed: newDoc._id });
+                state[newDoc._id] = newDoc;
+              },
+              added: function(newDoc) {
+                output.push({ added: newDoc._id });
+                state[newDoc._id] = newDoc;
+              },
+              removed: function(oldDoc) {
+                output.push({ removed: oldDoc._id });
+                delete state[oldDoc._id];
+              },
+            };
+            var handle = await coll
+              .find({ foo: 22 }, { sort: { bar: 1 }, limit: 3 })
+              .observe(callbacks);
+
+            return { output: output, handle: handle, state: state };
           };
-          var handle = await coll
-            .find({ foo: 22 }, { sort: { bar: 1 }, limit: 3 })
-            .observe(callbacks);
+          const clearOutput = function(o) {
+            o.output.splice(0, o.output.length);
+          };
 
-          return { output: output, handle: handle, state: state };
-        };
-        const clearOutput = function(o) {
-          o.output.splice(0, o.output.length);
-        };
+          const ins = async function(doc) {
+            let id;
+            await runInFence(async function() {
+              id = await coll.insertAsync(doc);
+            });
+            return id;
+          };
+          const rem = async function(sel) {
+            await runInFence(async function() {
+              await coll.removeAsync(sel);
+            });
+          };
+          const upd = async function(sel, mod, opt) {
+            await runInFence(async function() {
+              await coll.updateAsync(sel, mod, opt);
+            });
+          };
+          // tests '_id' subfields for all documents in oplog buffer
+          var testOplogBufferIds = function(ids) {
+            if (!usesOplog) return;
+            var bufferIds = [];
+            o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(
+              function(x, id) {
+                bufferIds.push(id);
+              }
+            );
 
-        const ins = async function(doc) {
-          let id;
-          await runInFence(async function() {
-            id = await coll.insertAsync(doc);
-          });
-          return id;
-        };
-        const rem = async function(sel) {
-          await runInFence(async function() {
-            await coll.removeAsync(sel);
-          });
-        };
-        const upd = async function(sel, mod, opt) {
-          await runInFence(async function() {
-            await coll.updateAsync(sel, mod, opt);
-          });
-        };
-        // tests '_id' subfields for all documents in oplog buffer
-        var testOplogBufferIds = function(ids) {
-          if (!usesOplog) return;
-          var bufferIds = [];
-          o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(
-            function(x, id) {
-              bufferIds.push(id);
-            }
-          );
+            test.isTrue(
+              setsEqual(ids, bufferIds),
+              'expected: ' + ids + '; got: ' + bufferIds
+            );
+          };
+          const testSafeAppendToBufferFlag = function(expected) {
+            if (!usesOplog) return;
+            test.equal(
+              o.handle._multiplexer._observeDriver._safeAppendToBuffer,
+              expected
+            );
+          };
 
+          // We'll describe our state as follows.  5:1 means "the document with
+          // _id=docId1 and bar=5".  We list documents as
+          //   [ currently published | in the buffer ] outside the buffer
+          // If safeToAppendToBuffer is true, we'll say ]! instead.
+
+          // Insert a doc and start observing.
+          var docId1 = await ins({ foo: 22, bar: 5 });
+          await waitUntilOplogCaughtUp();
+
+          // State: [ 5:1 | ]!
+          var o = await observer();
+          var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
+          // Initial add.
+          test.length(o.output, 1);
+          test.equal(o.output.shift(), { added: docId1 });
+          testSafeAppendToBufferFlag(true);
+
+          // Insert another doc (blocking until observes have fired).
+          // State: [ 5:1 6:2 | ]!
+          var docId2 = await ins({ foo: 22, bar: 6 });
+          // Observed add.
+          test.length(o.output, 1);
+          test.equal(o.output.shift(), { added: docId2 });
+          testSafeAppendToBufferFlag(true);
+
+          var docId3 = await ins({ foo: 22, bar: 3 });
+          // State: [ 3:3 5:1 6:2 | ]!
+          test.length(o.output, 1);
+          test.equal(o.output.shift(), { added: docId3 });
+          testSafeAppendToBufferFlag(true);
+
+          // Add a non-matching document
+          await ins({ foo: 13 });
+          // It shouldn't be added
+          test.length(o.output, 0);
+
+          // Add something that matches but is too big to fit in
+          var docId4 = await ins({ foo: 22, bar: 7 });
+          // State: [ 3:3 5:1 6:2 | 7:4 ]!
+          // It shouldn't be added but should end up in the buffer.
+          test.length(o.output, 0);
+          testOplogBufferIds([docId4]);
+          testSafeAppendToBufferFlag(true);
+
+          // Let's add something small enough to fit in
+          var docId5 = await ins({ foo: 22, bar: -1 });
+          // State: [ -1:5 3:3 5:1 | 6:2 7:4 ]!
+          // We should get an added and a removed events
+          test.length(o.output, 2);
+          // doc 2 was removed from the published set as it is too big to be in
           test.isTrue(
-            setsEqual(ids, bufferIds),
-            'expected: ' + ids + '; got: ' + bufferIds
+            setsEqual(o.output, [{ added: docId5 }, { removed: docId2 }])
           );
-        };
-        const testSafeAppendToBufferFlag = function(expected) {
-          if (!usesOplog) return;
-          test.equal(
-            o.handle._multiplexer._observeDriver._safeAppendToBuffer,
-            expected
+          clearOutput(o);
+          testOplogBufferIds([docId2, docId4]);
+          testSafeAppendToBufferFlag(true);
+
+          // Now remove something and that doc 2 should be right back
+          await rem(docId5);
+          // State: [ 3:3 5:1 6:2 | 7:4 ]!
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual(o.output, [{ removed: docId5 }, { added: docId2 }])
           );
-        };
+          clearOutput(o);
+          testOplogBufferIds([docId4]);
+          testSafeAppendToBufferFlag(true);
 
-        // We'll describe our state as follows.  5:1 means "the document with
-        // _id=docId1 and bar=5".  We list documents as
-        //   [ currently published | in the buffer ] outside the buffer
-        // If safeToAppendToBuffer is true, we'll say ]! instead.
-
-        // Insert a doc and start observing.
-        var docId1 = await ins({ foo: 22, bar: 5 });
-        await waitUntilOplogCaughtUp();
-
-        // State: [ 5:1 | ]!
-        var o = await observer();
-        var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
-        // Initial add.
-        test.length(o.output, 1);
-        test.equal(o.output.shift(), { added: docId1 });
-        testSafeAppendToBufferFlag(true);
-
-        // Insert another doc (blocking until observes have fired).
-        // State: [ 5:1 6:2 | ]!
-        var docId2 = await ins({ foo: 22, bar: 6 });
-        // Observed add.
-        test.length(o.output, 1);
-        test.equal(o.output.shift(), { added: docId2 });
-        testSafeAppendToBufferFlag(true);
-
-        var docId3 = await ins({ foo: 22, bar: 3 });
-        // State: [ 3:3 5:1 6:2 | ]!
-        test.length(o.output, 1);
-        test.equal(o.output.shift(), { added: docId3 });
-        testSafeAppendToBufferFlag(true);
-
-        // Add a non-matching document
-        await ins({ foo: 13 });
-        // It shouldn't be added
-        test.length(o.output, 0);
-
-        // Add something that matches but is too big to fit in
-        var docId4 = await ins({ foo: 22, bar: 7 });
-        // State: [ 3:3 5:1 6:2 | 7:4 ]!
-        // It shouldn't be added but should end up in the buffer.
-        test.length(o.output, 0);
-        testOplogBufferIds([docId4]);
-        testSafeAppendToBufferFlag(true);
-
-        // Let's add something small enough to fit in
-        var docId5 = await ins({ foo: 22, bar: -1 });
-        // State: [ -1:5 3:3 5:1 | 6:2 7:4 ]!
-        // We should get an added and a removed events
-        test.length(o.output, 2);
-        // doc 2 was removed from the published set as it is too big to be in
-        test.isTrue(
-          setsEqual(o.output, [{ added: docId5 }, { removed: docId2 }])
-        );
-        clearOutput(o);
-        testOplogBufferIds([docId2, docId4]);
-        testSafeAppendToBufferFlag(true);
-
-        // Now remove something and that doc 2 should be right back
-        await rem(docId5);
-        // State: [ 3:3 5:1 6:2 | 7:4 ]!
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual(o.output, [{ removed: docId5 }, { added: docId2 }])
-        );
-        clearOutput(o);
-        testOplogBufferIds([docId4]);
-        testSafeAppendToBufferFlag(true);
-
-        // Add some negative numbers overflowing the buffer.
-        // New documents will take the published place, [3 5 6] will take the buffer
-        // and 7 will be outside of the buffer in MongoDB.
-        var docId6 = await ins({ foo: 22, bar: -1 });
-        var docId7 = await ins({ foo: 22, bar: -2 });
-        var docId8 = await ins({ foo: 22, bar: -3 });
-        // State: [ -3:8 -2:7 -1:6 | 3:3 5:1 6:2 ] 7:4
-        test.length(o.output, 6);
-        var expected = [
-          { added: docId6 },
-          { removed: docId2 },
-          { added: docId7 },
-          { removed: docId1 },
-          { added: docId8 },
-          { removed: docId3 },
-        ];
-        test.isTrue(setsEqual(o.output, expected));
-        clearOutput(o);
-        testOplogBufferIds([docId1, docId2, docId3]);
-        testSafeAppendToBufferFlag(false);
-
-        // If we update first 3 docs (increment them by 20), it would be
-        // interesting.
-        await upd({ bar: { $lt: 0 } }, { $inc: { bar: 20 } }, { multi: true });
-        // State: [ 3:3 5:1 6:2 | ] 7:4 17:8 18:7 19:6
-        //   which triggers re-poll leaving us at
-        // State: [ 3:3 5:1 6:2 | 7:4 17:8 18:7 ] 19:6
-
-        // The updated documents can't find their place in published and they can't
-        // be buffered as we are not aware of the situation outside of the buffer.
-        // But since our buffer becomes empty, it will be refilled partially with
-        // updated documents.
-        test.length(o.output, 6);
-        var expectedRemoves = [
-          { removed: docId6 },
-          { removed: docId7 },
-          { removed: docId8 },
-        ];
-        var expectedAdds = [
-          { added: docId3 },
-          { added: docId1 },
-          { added: docId2 },
-        ];
-
-        test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
-        clearOutput(o);
-        testOplogBufferIds([docId4, docId7, docId8]);
-        testSafeAppendToBufferFlag(false);
-
-        // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
-        // schedule a repoll.
-        await rem({ bar: { $lt: 10 } });
-        // State: [ 17:8 18:7 19:6 | ]!
-
-        // XXX the oplog code analyzes the events one by one: one remove after
-        // another. Poll-n-diff code, on the other side, analyzes the batch action
-        // of multiple remove. Because of that difference, expected outputs differ.
-        if (usesOplog) {
-          expectedRemoves = [
-            { removed: docId3 },
-            { removed: docId1 },
-            { removed: docId2 },
-            { removed: docId4 },
-          ];
-          expectedAdds = [
-            { added: docId4 },
-            { added: docId8 },
-            { added: docId7 },
-            { added: docId6 },
-          ];
-
-          test.length(o.output, 8);
-        } else {
-          expectedRemoves = [
-            { removed: docId3 },
-            { removed: docId1 },
-            { removed: docId2 },
-          ];
-          expectedAdds = [
-            { added: docId8 },
-            { added: docId7 },
-            { added: docId6 },
-          ];
-
+          // Add some negative numbers overflowing the buffer.
+          // New documents will take the published place, [3 5 6] will take the buffer
+          // and 7 will be outside of the buffer in MongoDB.
+          var docId6 = await ins({ foo: 22, bar: -1 });
+          var docId7 = await ins({ foo: 22, bar: -2 });
+          var docId8 = await ins({ foo: 22, bar: -3 });
+          // State: [ -3:8 -2:7 -1:6 | 3:3 5:1 6:2 ] 7:4
           test.length(o.output, 6);
-        }
+          var expected = [
+            { added: docId6 },
+            { removed: docId2 },
+            { added: docId7 },
+            { removed: docId1 },
+            { added: docId8 },
+            { removed: docId3 },
+          ];
+          test.isTrue(setsEqual(o.output, expected));
+          clearOutput(o);
+          testOplogBufferIds([docId1, docId2, docId3]);
+          testSafeAppendToBufferFlag(false);
 
-        test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
-        clearOutput(o);
-        testOplogBufferIds([]);
-        testSafeAppendToBufferFlag(true);
+          // If we update first 3 docs (increment them by 20), it would be
+          // interesting.
+          await upd({ bar: { $lt: 0 } }, { $inc: { bar: 20 } }, { multi: true });
+          // State: [ 3:3 5:1 6:2 | ] 7:4 17:8 18:7 19:6
+          //   which triggers re-poll leaving us at
+          // State: [ 3:3 5:1 6:2 | 7:4 17:8 18:7 ] 19:6
 
-        var docId9 = await ins({ foo: 22, bar: 21 });
-        var docId10 = await ins({ foo: 22, bar: 31 });
-        var docId11 = await ins({ foo: 22, bar: 41 });
-        var docId12 = await ins({ foo: 22, bar: 51 });
-        // State: [ 17:8 18:7 19:6 | 21:9 31:10 41:11 ] 51:12
-
-        testOplogBufferIds([docId9, docId10, docId11]);
-        testSafeAppendToBufferFlag(false);
-        test.length(o.output, 0);
-        await upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
-        // State: [ 21:9 22:8 23:7 | 24:6 31:10 41:11 ] 51:12
-        test.length(o.output, 4);
-        test.isTrue(
-          setsEqual(o.output, [
+          // The updated documents can't find their place in published and they can't
+          // be buffered as we are not aware of the situation outside of the buffer.
+          // But since our buffer becomes empty, it will be refilled partially with
+          // updated documents.
+          test.length(o.output, 6);
+          var expectedRemoves = [
             { removed: docId6 },
-            { added: docId9 },
-            { changed: docId7 },
-            { changed: docId8 },
-          ])
-        );
-        clearOutput(o);
-        testOplogBufferIds([docId6, docId10, docId11]);
-        testSafeAppendToBufferFlag(false);
-
-        await rem(docId9);
-        // State: [ 22:8 23:7 24:6 | 31:10 41:11 ] 51:12
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual(o.output, [{ removed: docId9 }, { added: docId6 }])
-        );
-        clearOutput(o);
-        testOplogBufferIds([docId10, docId11]);
-        testSafeAppendToBufferFlag(false);
-
-        await upd(
-          { bar: { $gt: 25 } },
-          { $inc: { bar: -7.5 } },
-          { multi: true }
-        );
-        // State: [ 22:8 23:7 23.5:10 | 24:6 ] 33.5:11 43.5:12
-        // 33.5 doesn't update in-place in buffer, because it the driver is not sure
-        // it can do it: because the buffer does not have the safe append flag set,
-        // for all it knows there is a different doc which is less than 33.5.
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual(o.output, [{ removed: docId6 }, { added: docId10 }])
-        );
-        clearOutput(o);
-        testOplogBufferIds([docId6]);
-        testSafeAppendToBufferFlag(false);
-
-        // Force buffer objects to be moved into published set so we can check them
-        await rem(docId7);
-        await rem(docId8);
-        await rem(docId10);
-
-        // State: [ 24:6 | ] 33.5:11 43.5:12
-        //    triggers repoll
-        // State: [ 24:6 33.5:11 43.5:12 | ]!
-        test.length(o.output, 6);
-        test.isTrue(
-          setsEqual(o.output, [
             { removed: docId7 },
             { removed: docId8 },
-            { removed: docId10 },
-            { added: docId6 },
-            { added: docId11 },
-            { added: docId12 },
-          ])
-        );
+          ];
+          var expectedAdds = [
+            { added: docId3 },
+            { added: docId1 },
+            { added: docId2 },
+          ];
 
-    test.length(Object.keys(o.state), 3);
-    test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 24 });
-    test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
-    test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
-    clearOutput(o);
-    testOplogBufferIds([]);
-    testSafeAppendToBufferFlag(true);
+          test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
+          clearOutput(o);
+          testOplogBufferIds([docId4, docId7, docId8]);
+          testSafeAppendToBufferFlag(false);
 
-        var docId13 = await ins({ foo: 22, bar: 50 });
-        var docId14 = await ins({ foo: 22, bar: 51 });
-        var docId15 = await ins({ foo: 22, bar: 52 });
-        var docId16 = await ins({ foo: 22, bar: 53 });
-        // State: [ 24:6 33.5:11 43.5:12 | 50:13 51:14 52:15 ] 53:16
-        test.length(o.output, 0);
-        testOplogBufferIds([docId13, docId14, docId15]);
-        testSafeAppendToBufferFlag(false);
-        // Update something that's outside the buffer to be in the buffer, writing
-        // only to the sort key.
-        await upd(docId16, { $set: { bar: 10 } });
+          // Remove first 4 docs (3, 1, 2, 4) forcing buffer to become empty and
+          // schedule a repoll.
+          await rem({ bar: { $lt: 10 } });
+          // State: [ 17:8 18:7 19:6 | ]!
 
-        // State: [ 10:16 24:6 33.5:11 | 43.5:12 50:13 51:14 ] 52:15
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual(o.output, [{ removed: docId12 }, { added: docId16 }])
-        );
-        clearOutput(o);
-        testOplogBufferIds([docId12, docId13, docId14]);
-        testSafeAppendToBufferFlag(false);
+          // XXX the oplog code analyzes the events one by one: one remove after
+          // another. Poll-n-diff code, on the other side, analyzes the batch action
+          // of multiple remove. Because of that difference, expected outputs differ.
+          if (usesOplog) {
+            expectedRemoves = [
+              { removed: docId3 },
+              { removed: docId1 },
+              { removed: docId2 },
+              { removed: docId4 },
+            ];
+            expectedAdds = [
+              { added: docId4 },
+              { added: docId8 },
+              { added: docId7 },
+              { added: docId6 },
+            ];
 
-        o.handle.stop();
-      }
-    );
+            test.length(o.output, 8);
+          } else {
+            expectedRemoves = [
+              { removed: docId3 },
+              { removed: docId1 },
+              { removed: docId2 },
+            ];
+            expectedAdds = [
+              { added: docId8 },
+              { added: docId7 },
+              { added: docId6 },
+            ];
 
-    Tinytest.addAsync(
-      'mongo-livedata - observe sorted, limited, sort fields ' + idGeneration,
-      async function(test, onComplete) {
-        var run = test.runId();
-        var coll = new Mongo.Collection(
-          'observeLimit-' + run,
-          collectionOptions
-        );
+            test.length(o.output, 6);
+          }
 
-        var observer = async function() {
-          var state = {};
-          var output = [];
-          var callbacks = {
-            changed: function(newDoc) {
-              output.push({ changed: newDoc._id });
-              state[newDoc._id] = newDoc;
-            },
-            added: function(newDoc) {
-              output.push({ added: newDoc._id });
-              state[newDoc._id] = newDoc;
-            },
-            removed: function(oldDoc) {
-              output.push({ removed: oldDoc._id });
-              delete state[oldDoc._id];
-            },
-          };
-          var handle = await coll
-            .find({}, { sort: { x: 1 }, limit: 2, fields: { y: 1 } })
-            .observe(callbacks);
+          test.isTrue(setsEqual(o.output, expectedAdds.concat(expectedRemoves)));
+          clearOutput(o);
+          testOplogBufferIds([]);
+          testSafeAppendToBufferFlag(true);
 
-          return { output: output, handle: handle, state: state };
-        };
-        var clearOutput = function(o) {
-          o.output.splice(0, o.output.length);
-        };
-        const ins = async function(doc) {
-          let id;
-          await runInFence(async function() {
-            id = await coll.insertAsync(doc);
-          });
-          return id;
-        };
-        const rem = async function(id) {
-          await runInFence(async function() {
-            await coll.removeAsync(id);
-          });
-        };
+          var docId9 = await ins({ foo: 22, bar: 21 });
+          var docId10 = await ins({ foo: 22, bar: 31 });
+          var docId11 = await ins({ foo: 22, bar: 41 });
+          var docId12 = await ins({ foo: 22, bar: 51 });
+          // State: [ 17:8 18:7 19:6 | 21:9 31:10 41:11 ] 51:12
 
-        var o = await observer();
-
-        var docId1 = await ins({ x: 1, y: 1222 });
-        var docId2 = await ins({ x: 5, y: 5222 });
-
-        test.length(o.output, 2);
-        test.equal(o.output, [{ added: docId1 }, { added: docId2 }]);
-        clearOutput(o);
-
-        var docId3 = await ins({ x: 7, y: 7222 });
-        test.length(o.output, 0);
-
-        var docId4 = await ins({ x: -1, y: -1222 });
-
-        // Becomes [docId4 docId1 | docId2 docId3]
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual(o.output, [{ added: docId4 }, { removed: docId2 }])
-        );
-
-    test.equal(Object.keys(o.state).length, 2);
-    test.equal(o.state[docId4], {_id: docId4, y: -1222});
-    test.equal(o.state[docId1], {_id: docId1, y: 1222});
-    clearOutput(o);
-
-        await rem(docId2);
-        // Becomes [docId4 docId1 | docId3]
-        test.length(o.output, 0);
-
-        await rem(docId4);
-        // Becomes [docId1 docId3]
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual(o.output, [{ added: docId3 }, { removed: docId4 }])
-        );
-
-    test.equal(Object.keys(o.state).length, 2);
-    test.equal(o.state[docId3], {_id: docId3, y: 7222});
-    test.equal(o.state[docId1], {_id: docId1, y: 1222});
-    clearOutput(o);
-
-        onComplete();
-      }
-    );
-
-    Tinytest.addAsync(
-      'mongo-livedata - observe sorted, limited, big initial set ' +
-        idGeneration,
-      async function(test) {
-        var run = test.runId();
-        var coll = new Mongo.Collection(
-          'observeLimit-' + run,
-          collectionOptions
-        );
-
-        var observer = async function() {
-          var state = {};
-          var output = [];
-          var callbacks = {
-            changed: function(newDoc) {
-              output.push({ changed: newDoc._id });
-              state[newDoc._id] = newDoc;
-            },
-            added: function(newDoc) {
-              output.push({ added: newDoc._id });
-              state[newDoc._id] = newDoc;
-            },
-            removed: function(oldDoc) {
-              output.push({ removed: oldDoc._id });
-              delete state[oldDoc._id];
-            },
-          };
-          var handle = await coll
-            .find({}, { sort: { x: 1, y: 1 }, limit: 3 })
-            .observe(callbacks);
-
-          return { output: output, handle: handle, state: state };
-        };
-        const clearOutput = function(o) {
-          o.output.splice(0, o.output.length);
-        };
-        const ins = async function(doc) {
-          let id;
-          await runInFence(async function() {
-            id = await coll.insertAsync(doc);
-          });
-          return id;
-        };
-        const rem = async function(id) {
-          await runInFence(async function() {
-            await coll.removeAsync(id);
-          });
-        };
-        // tests '_id' subfields for all documents in oplog buffer
-        var testOplogBufferIds = function(ids) {
-          var bufferIds = [];
-          o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(
-            function(x, id) {
-              bufferIds.push(id);
-            }
+          testOplogBufferIds([docId9, docId10, docId11]);
+          testSafeAppendToBufferFlag(false);
+          test.length(o.output, 0);
+          await upd({ bar: { $lt: 20 } }, { $inc: { bar: 5 } }, { multi: true });
+          // State: [ 21:9 22:8 23:7 | 24:6 31:10 41:11 ] 51:12
+          test.length(o.output, 4);
+          test.isTrue(
+            setsEqual(o.output, [
+              { removed: docId6 },
+              { added: docId9 },
+              { changed: docId7 },
+              { changed: docId8 },
+            ])
           );
+          clearOutput(o);
+          testOplogBufferIds([docId6, docId10, docId11]);
+          testSafeAppendToBufferFlag(false);
+
+          await rem(docId9);
+          // State: [ 22:8 23:7 24:6 | 31:10 41:11 ] 51:12
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual(o.output, [{ removed: docId9 }, { added: docId6 }])
+          );
+          clearOutput(o);
+          testOplogBufferIds([docId10, docId11]);
+          testSafeAppendToBufferFlag(false);
+
+          await upd(
+            { bar: { $gt: 25 } },
+            { $inc: { bar: -7.5 } },
+            { multi: true }
+          );
+          // State: [ 22:8 23:7 23.5:10 | 24:6 ] 33.5:11 43.5:12
+          // 33.5 doesn't update in-place in buffer, because it the driver is not sure
+          // it can do it: because the buffer does not have the safe append flag set,
+          // for all it knows there is a different doc which is less than 33.5.
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual(o.output, [{ removed: docId6 }, { added: docId10 }])
+          );
+          clearOutput(o);
+          testOplogBufferIds([docId6]);
+          testSafeAppendToBufferFlag(false);
+
+          // Force buffer objects to be moved into published set so we can check them
+          await rem(docId7);
+          await rem(docId8);
+          await rem(docId10);
+
+          // State: [ 24:6 | ] 33.5:11 43.5:12
+          //    triggers repoll
+          // State: [ 24:6 33.5:11 43.5:12 | ]!
+          test.length(o.output, 6);
+          test.isTrue(
+            setsEqual(o.output, [
+              { removed: docId7 },
+              { removed: docId8 },
+              { removed: docId10 },
+              { added: docId6 },
+              { added: docId11 },
+              { added: docId12 },
+            ])
+          );
+
+      test.length(Object.keys(o.state), 3);
+      test.equal(o.state[docId6], { _id: docId6, foo: 22, bar: 24 });
+      test.equal(o.state[docId11], { _id: docId11, foo: 22, bar: 33.5 });
+      test.equal(o.state[docId12], { _id: docId12, foo: 22, bar: 43.5 });
+      clearOutput(o);
+      testOplogBufferIds([]);
+      testSafeAppendToBufferFlag(true);
+
+          var docId13 = await ins({ foo: 22, bar: 50 });
+          var docId14 = await ins({ foo: 22, bar: 51 });
+          var docId15 = await ins({ foo: 22, bar: 52 });
+          var docId16 = await ins({ foo: 22, bar: 53 });
+          // State: [ 24:6 33.5:11 43.5:12 | 50:13 51:14 52:15 ] 53:16
+          test.length(o.output, 0);
+          testOplogBufferIds([docId13, docId14, docId15]);
+          testSafeAppendToBufferFlag(false);
+          // Update something that's outside the buffer to be in the buffer, writing
+          // only to the sort key.
+          await upd(docId16, { $set: { bar: 10 } });
+
+          // State: [ 10:16 24:6 33.5:11 | 43.5:12 50:13 51:14 ] 52:15
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual(o.output, [{ removed: docId12 }, { added: docId16 }])
+          );
+          clearOutput(o);
+          testOplogBufferIds([docId12, docId13, docId14]);
+          testSafeAppendToBufferFlag(false);
+
+          o.handle.stop();
+        }
+      );
+
+      Tinytest.addAsync(
+        'mongo-livedata - observe sorted, limited, sort fields ' + idGeneration,
+        async function(test, onComplete) {
+          var run = test.runId();
+          var coll = new Mongo.Collection(
+            'observeLimit-' + run,
+            collectionOptions
+          );
+
+          var observer = async function() {
+            var state = {};
+            var output = [];
+            var callbacks = {
+              changed: function(newDoc) {
+                output.push({ changed: newDoc._id });
+                state[newDoc._id] = newDoc;
+              },
+              added: function(newDoc) {
+                output.push({ added: newDoc._id });
+                state[newDoc._id] = newDoc;
+              },
+              removed: function(oldDoc) {
+                output.push({ removed: oldDoc._id });
+                delete state[oldDoc._id];
+              },
+            };
+            var handle = await coll
+              .find({}, { sort: { x: 1 }, limit: 2, fields: { y: 1 } })
+              .observe(callbacks);
+
+            return { output: output, handle: handle, state: state };
+          };
+          var clearOutput = function(o) {
+            o.output.splice(0, o.output.length);
+          };
+          const ins = async function(doc) {
+            let id;
+            await runInFence(async function() {
+              id = await coll.insertAsync(doc);
+            });
+            return id;
+          };
+          const rem = async function(id) {
+            await runInFence(async function() {
+              await coll.removeAsync(id);
+            });
+          };
+
+          var o = await observer();
+
+          var docId1 = await ins({ x: 1, y: 1222 });
+          var docId2 = await ins({ x: 5, y: 5222 });
+
+          test.length(o.output, 2);
+          test.equal(o.output, [{ added: docId1 }, { added: docId2 }]);
+          clearOutput(o);
+
+          var docId3 = await ins({ x: 7, y: 7222 });
+          test.length(o.output, 0);
+
+          var docId4 = await ins({ x: -1, y: -1222 });
+
+          // Becomes [docId4 docId1 | docId2 docId3]
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual(o.output, [{ added: docId4 }, { removed: docId2 }])
+          );
+
+      test.equal(Object.keys(o.state).length, 2);
+      test.equal(o.state[docId4], {_id: docId4, y: -1222});
+      test.equal(o.state[docId1], {_id: docId1, y: 1222});
+      clearOutput(o);
+
+          await rem(docId2);
+          // Becomes [docId4 docId1 | docId3]
+          test.length(o.output, 0);
+
+          await rem(docId4);
+          // Becomes [docId1 docId3]
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual(o.output, [{ added: docId3 }, { removed: docId4 }])
+          );
+
+      test.equal(Object.keys(o.state).length, 2);
+      test.equal(o.state[docId3], {_id: docId3, y: 7222});
+      test.equal(o.state[docId1], {_id: docId1, y: 1222});
+      clearOutput(o);
+
+          onComplete();
+        }
+      );
+
+      Tinytest.addAsync(
+        'mongo-livedata - observe sorted, limited, big initial set ' +
+          idGeneration,
+        async function(test) {
+          var run = test.runId();
+          var coll = new Mongo.Collection(
+            'observeLimit-' + run,
+            collectionOptions
+          );
+
+          var observer = async function() {
+            var state = {};
+            var output = [];
+            var callbacks = {
+              changed: function(newDoc) {
+                output.push({ changed: newDoc._id });
+                state[newDoc._id] = newDoc;
+              },
+              added: function(newDoc) {
+                output.push({ added: newDoc._id });
+                state[newDoc._id] = newDoc;
+              },
+              removed: function(oldDoc) {
+                output.push({ removed: oldDoc._id });
+                delete state[oldDoc._id];
+              },
+            };
+            var handle = await coll
+              .find({}, { sort: { x: 1, y: 1 }, limit: 3 })
+              .observe(callbacks);
+
+            return { output: output, handle: handle, state: state };
+          };
+          const clearOutput = function(o) {
+            o.output.splice(0, o.output.length);
+          };
+          const ins = async function(doc) {
+            let id;
+            await runInFence(async function() {
+              id = await coll.insertAsync(doc);
+            });
+            return id;
+          };
+          const rem = async function(id) {
+            await runInFence(async function() {
+              await coll.removeAsync(id);
+            });
+          };
+          // tests '_id' subfields for all documents in oplog buffer
+          var testOplogBufferIds = function(ids) {
+            var bufferIds = [];
+            o.handle._multiplexer._observeDriver._unpublishedBuffer.forEach(
+              function(x, id) {
+                bufferIds.push(id);
+              }
+            );
+
+            test.isTrue(
+              setsEqual(ids, bufferIds),
+              'expected: ' + ids + '; got: ' + bufferIds
+            );
+          };
+          var testSafeAppendToBufferFlag = function(expected) {
+            if (expected) {
+              test.isTrue(
+                o.handle._multiplexer._observeDriver._safeAppendToBuffer
+              );
+            } else {
+              test.isFalse(
+                o.handle._multiplexer._observeDriver._safeAppendToBuffer
+              );
+            }
+          };
+
+          var ids = {};
+          let i = 0;
+          for (const x of [2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5]) {
+            ids[i] = await ins({ x, y: i });
+            i++;
+          }
+
+          // Ensure that we are past all the 'i' entries before we run the query, so
+          // that we get the expected phase transitions.
+          await waitUntilOplogCaughtUp();
+
+          var o = await observer();
+          var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
+          //  x: [1 1 2 | 2 3 3] 4 5 5 5  9
+          // id: [2 7 0 | 9 3 8] 1 4 5 10 6
+
+          test.length(o.output, 3);
 
           test.isTrue(
-            setsEqual(ids, bufferIds),
-            'expected: ' + ids + '; got: ' + bufferIds
+            setsEqual(
+              [{ added: ids[2] }, { added: ids[7] }, { added: ids[0] }],
+              o.output
+            )
           );
-        };
-        var testSafeAppendToBufferFlag = function(expected) {
-          if (expected) {
-            test.isTrue(
-              o.handle._multiplexer._observeDriver._safeAppendToBuffer
-            );
-          } else {
-            test.isFalse(
-              o.handle._multiplexer._observeDriver._safeAppendToBuffer
-            );
-          }
-        };
+          usesOplog && testOplogBufferIds([ids[9], ids[3], ids[8]]);
+          usesOplog && testSafeAppendToBufferFlag(false);
+          clearOutput(o);
 
-        var ids = {};
-        let i = 0;
-        for (const x of [2, 4, 1, 3, 5, 5, 9, 1, 3, 2, 5]) {
-          ids[i] = await ins({ x, y: i });
-          i++;
+          await rem(ids[0]);
+          //  x: [1 1 2 | 3 3] 4 5 5 5  9
+          // id: [2 7 9 | 3 8] 1 4 5 10 6
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual([{ removed: ids[0] }, { added: ids[9] }], o.output)
+          );
+          usesOplog && testOplogBufferIds([ids[3], ids[8]]);
+          usesOplog && testSafeAppendToBufferFlag(false);
+          clearOutput(o);
+
+          await rem(ids[7]);
+          //  x: [1 2 3 | 3] 4 5 5 5  9
+          // id: [2 9 3 | 8] 1 4 5 10 6
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual([{ removed: ids[7] }, { added: ids[3] }], o.output)
+          );
+          usesOplog && testOplogBufferIds([ids[8]]);
+          usesOplog && testSafeAppendToBufferFlag(false);
+          clearOutput(o);
+
+          await rem(ids[3]);
+          //  x: [1 2 3 | 4 5 5] 5  9
+          // id: [2 9 8 | 1 4 5] 10 6
+          test.length(o.output, 2);
+          test.isTrue(
+            setsEqual([{ removed: ids[3] }, { added: ids[8] }], o.output)
+          );
+          usesOplog && testOplogBufferIds([ids[1], ids[4], ids[5]]);
+          usesOplog && testSafeAppendToBufferFlag(false);
+          clearOutput(o);
+
+          await rem({ x: { $lt: 4 } });
+          //  x: [4 5 5 | 5  9]
+          // id: [1 4 5 | 10 6]
+          test.length(o.output, 6);
+          test.isTrue(
+            setsEqual(
+              [
+                { removed: ids[2] },
+                { removed: ids[9] },
+                { removed: ids[8] },
+                { added: ids[5] },
+                { added: ids[4] },
+                { added: ids[1] },
+              ],
+              o.output
+            )
+          );
+          usesOplog && testOplogBufferIds([ids[10], ids[6]]);
+          usesOplog && testSafeAppendToBufferFlag(true);
+          clearOutput(o);
         }
-
-        // Ensure that we are past all the 'i' entries before we run the query, so
-        // that we get the expected phase transitions.
-        await waitUntilOplogCaughtUp();
-
-        var o = await observer();
-        var usesOplog = o.handle._multiplexer._observeDriver._usesOplog;
-        //  x: [1 1 2 | 2 3 3] 4 5 5 5  9
-        // id: [2 7 0 | 9 3 8] 1 4 5 10 6
-
-        test.length(o.output, 3);
-
-        test.isTrue(
-          setsEqual(
-            [{ added: ids[2] }, { added: ids[7] }, { added: ids[0] }],
-            o.output
-          )
-        );
-        usesOplog && testOplogBufferIds([ids[9], ids[3], ids[8]]);
-        usesOplog && testSafeAppendToBufferFlag(false);
-        clearOutput(o);
-
-        await rem(ids[0]);
-        //  x: [1 1 2 | 3 3] 4 5 5 5  9
-        // id: [2 7 9 | 3 8] 1 4 5 10 6
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual([{ removed: ids[0] }, { added: ids[9] }], o.output)
-        );
-        usesOplog && testOplogBufferIds([ids[3], ids[8]]);
-        usesOplog && testSafeAppendToBufferFlag(false);
-        clearOutput(o);
-
-        await rem(ids[7]);
-        //  x: [1 2 3 | 3] 4 5 5 5  9
-        // id: [2 9 3 | 8] 1 4 5 10 6
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual([{ removed: ids[7] }, { added: ids[3] }], o.output)
-        );
-        usesOplog && testOplogBufferIds([ids[8]]);
-        usesOplog && testSafeAppendToBufferFlag(false);
-        clearOutput(o);
-
-        await rem(ids[3]);
-        //  x: [1 2 3 | 4 5 5] 5  9
-        // id: [2 9 8 | 1 4 5] 10 6
-        test.length(o.output, 2);
-        test.isTrue(
-          setsEqual([{ removed: ids[3] }, { added: ids[8] }], o.output)
-        );
-        usesOplog && testOplogBufferIds([ids[1], ids[4], ids[5]]);
-        usesOplog && testSafeAppendToBufferFlag(false);
-        clearOutput(o);
-
-        await rem({ x: { $lt: 4 } });
-        //  x: [4 5 5 | 5  9]
-        // id: [1 4 5 | 10 6]
-        test.length(o.output, 6);
-        test.isTrue(
-          setsEqual(
-            [
-              { removed: ids[2] },
-              { removed: ids[9] },
-              { removed: ids[8] },
-              { added: ids[5] },
-              { added: ids[4] },
-              { added: ids[1] },
-            ],
-            o.output
-          )
-        );
-        usesOplog && testOplogBufferIds([ids[10], ids[6]]);
-        usesOplog && testSafeAppendToBufferFlag(true);
-        clearOutput(o);
-      }
-    );
+      );
+    }
   }
 
 
@@ -1775,21 +1781,19 @@ const setsEqual = function (a, b) {
           self.collectionOptions
         );
         let obs;
-        const expectAdd = expect(function(doc) {
-          test.equal(doc.seconds(), 50);
-        });
-        var expectRemove = expect(function(doc) {
-          test.equal(doc.seconds(), 50);
-          obs.stop();
-        });
         const id = await self.coll.insertAsync(
           { d: new Date(1356152390004) },
         );
         test.isTrue(id);
         var cursor = self.coll.find();
         obs = await cursor.observe({
-          added: expectAdd,
-          removed: expectRemove,
+          added: (doc) => {
+            test.equal(doc.seconds(), 50);
+          },
+          removed: function(doc) {
+            test.equal(doc.seconds(), 50);
+            obs.stop();
+          }
         });
         test.equal(await cursor.countAsync(), 1);
         test.equal((await cursor.fetchAsync())[0].seconds(), 50);
@@ -1817,7 +1821,7 @@ const setsEqual = function (a, b) {
         test.isTrue(id);
         self.id1 = id;
 
-        id = await self.coll.insertAsync({ d: new Date(1356152391004) });
+        id = await self.coll.insertAsync({ d: new Date(1356152390004) });
         self.id2 = id;
       },
     ]
@@ -3047,6 +3051,7 @@ async function functionChain2Upsert(test, expect, coll, index) {
   test.equal(o.name, 'foo');
 }
 
+// FLACKY: some times we get timeout when run all tests at same time
 Object.entries({
   collectionInsert: collectionInsert,
   collectionUpsert: collectionUpsert,
@@ -3513,33 +3518,79 @@ if (Meteor.isServer) {
   );
 }
 
-// This is a VERY white-box test.
-Meteor.isServer &&
-  Tinytest.addAsync('mongo-livedata - oplog - _disableOplog', async function(test) {
-    var collName = Random.id();
-    var coll = new Mongo.Collection(collName);
-    if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
-      var observeWithOplog = await coll
-        .find({ x: 5 })
+if (IS_OPLOG) {
+  Meteor.isServer &&
+    Tinytest.addAsync('mongo-livedata - oplog - _disableOplog', async function(test) {
+      var collName = Random.id();
+      var coll = new Mongo.Collection(collName);
+      if (MongoInternals.defaultRemoteCollectionDriver().mongo._oplogHandle) {
+        var observeWithOplog = await coll
+          .find({ x: 5 })
+          .observeChanges({ added: function() {} });
+        test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
+        await observeWithOplog.stop();
+      }
+      var observeWithoutOplog = await coll
+        .find({ x: 6 }, { _disableOplog: true })
         .observeChanges({ added: function() {} });
-      test.isTrue(observeWithOplog._multiplexer._observeDriver._usesOplog);
-      await observeWithOplog.stop();
-    }
-    var observeWithoutOplog = await coll
-      .find({ x: 6 }, { _disableOplog: true })
-      .observeChanges({ added: function() {} });
-    test.isFalse(observeWithoutOplog._multiplexer._observeDriver._usesOplog);
-    await observeWithoutOplog.stop();
-  });
+      test.isFalse(observeWithoutOplog._multiplexer._observeDriver._usesOplog);
+      await observeWithoutOplog.stop();
+    });
 
-Meteor.isServer &&
-  Tinytest.addAsync(
-    'mongo-livedata - oplog - include selector fields',
-    async function(test) {
-      var collName = 'includeSelector' + Random.id();
+  Meteor.isServer && IS_OPLOG &&
+    Tinytest.addAsync(
+      'mongo-livedata - oplog - include selector fields',
+      async function(test) {
+        var collName = 'includeSelector' + Random.id();
+        var coll = new Mongo.Collection(collName);
+
+        var docId = await coll.insertAsync({ a: 1, b: [3, 2], c: 'foo' });
+        test.isTrue(docId);
+
+        // Wait until we've processed the insert oplog entry. (If the insert shows up
+        // during the observeChanges, the bug in question is not consistently
+        // reproduced.) We don't have to do this for polling observe (eg
+        // --disable-oplog).
+        await waitUntilOplogCaughtUp();
+
+        var output = [];
+        var handle = await coll
+          .find({ a: 1, b: 2 }, { fields: { c: 1 } })
+          .observeChanges({
+            added: function(id, fields) {
+              output.push(['added', id, fields]);
+            },
+            changed: function(id, fields) {
+              output.push(['changed', id, fields]);
+            },
+            removed: function(id) {
+              output.push(['removed', id]);
+            },
+          });
+        // Initially should match the document.
+        test.length(output, 1);
+        test.equal(output.shift(), ['added', docId, { c: 'foo' }]);
+
+        // Update in such a way that, if we only knew about the published field 'c'
+        // and the changed field 'b' (but not the field 'a'), we would think it didn't
+        // match any more.  (This is a regression test for a bug that existed because
+        // we used to not use the shared projection in the initial query.)
+        await runInFence(async function() {
+          await coll.updateAsync(docId, { $set: { 'b.0': 2, c: 'bar' } });
+        });
+        test.length(output, 1);
+        test.equal(output.shift(), ['changed', docId, { c: 'bar' }]);
+
+        handle.stop();
+      }
+    );
+
+  Meteor.isServer && IS_OPLOG &&
+    Tinytest.addAsync('mongo-livedata - oplog - transform', async function(test) {
+      var collName = 'oplogTransform' + Random.id();
       var coll = new Mongo.Collection(collName);
 
-      var docId = await coll.insertAsync({ a: 1, b: [3, 2], c: 'foo' });
+      var docId = await coll.insertAsync({ a: 25, x: { x: 5, y: 9 } });
       test.isTrue(docId);
 
       // Wait until we've processed the insert oplog entry. (If the insert shows up
@@ -3548,168 +3599,123 @@ Meteor.isServer &&
       // --disable-oplog).
       await waitUntilOplogCaughtUp();
 
-      var output = [];
-      var handle = await coll
-        .find({ a: 1, b: 2 }, { fields: { c: 1 } })
-        .observeChanges({
-          added: function(id, fields) {
-            output.push(['added', id, fields]);
+      var cursor = coll.find(
+        {},
+        {
+          transform: function(doc) {
+            return doc.x;
           },
-          changed: function(id, fields) {
-            output.push(['changed', id, fields]);
-          },
-          removed: function(id) {
-            output.push(['removed', id]);
-          },
-        });
-      // Initially should match the document.
-      test.length(output, 1);
-      test.equal(output.shift(), ['added', docId, { c: 'foo' }]);
+        }
+      );
 
-      // Update in such a way that, if we only knew about the published field 'c'
-      // and the changed field 'b' (but not the field 'a'), we would think it didn't
-      // match any more.  (This is a regression test for a bug that existed because
-      // we used to not use the shared projection in the initial query.)
-      await runInFence(async function() {
-        await coll.updateAsync(docId, { $set: { 'b.0': 2, c: 'bar' } });
-      });
-      test.length(output, 1);
-      test.equal(output.shift(), ['changed', docId, { c: 'bar' }]);
-
-      handle.stop();
-    }
-  );
-
-Meteor.isServer &&
-  Tinytest.addAsync('mongo-livedata - oplog - transform', async function(test) {
-    var collName = 'oplogTransform' + Random.id();
-    var coll = new Mongo.Collection(collName);
-
-    var docId = await coll.insertAsync({ a: 25, x: { x: 5, y: 9 } });
-    test.isTrue(docId);
-
-    // Wait until we've processed the insert oplog entry. (If the insert shows up
-    // during the observeChanges, the bug in question is not consistently
-    // reproduced.) We don't have to do this for polling observe (eg
-    // --disable-oplog).
-    await waitUntilOplogCaughtUp();
-
-    var cursor = coll.find(
-      {},
-      {
-        transform: function(doc) {
-          return doc.x;
+      var changesOutput = [];
+      var changesHandle = await cursor.observeChanges({
+        added: function(id, fields) {
+          changesOutput.push(['added', fields]);
         },
+      });
+      // We should get untransformed fields via observeChanges.
+      test.length(changesOutput, 1);
+      test.equal(changesOutput.shift(), ['added', { a: 25, x: { x: 5, y: 9 } }]);
+      await changesHandle.stop();
+
+      var transformedOutput = [];
+      var transformedHandle = await cursor.observe({
+        added: function(doc) {
+          transformedOutput.push(['added', doc]);
+        },
+      });
+      test.length(transformedOutput, 1);
+      test.equal(transformedOutput.shift(), ['added', { x: 5, y: 9 }]);
+      await transformedHandle.stop();
+    });
+
+
+  Meteor.isServer && IS_OPLOG &&
+    Tinytest.addAsync('mongo-livedata - oplog - drop collection/db', async function(test) {
+      // This test uses a random database, so it can be dropped without affecting
+      // anything else.
+      var mongodbUri = Npm.require('mongodb-uri');
+      var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
+      parsedUri.database = 'dropDB' + Random.id();
+      var driver = new MongoInternals.RemoteCollectionDriver(
+        mongodbUri.format(parsedUri),
+        {
+          oplogUrl: process.env.MONGO_OPLOG_URL,
+        }
+      );
+
+      var collName = 'dropCollection' + Random.id();
+      var coll = new Mongo.Collection(collName, { _driver: driver });
+
+      var doc1Id = await coll.insertAsync({ a: 'foo', c: 1 });
+      var doc2Id = await coll.insertAsync({ b: 'bar' });
+      var doc3Id = await coll.insertAsync({ a: 'foo', c: 2 });
+      var tmp;
+
+      var output = [];
+      var handle = await coll.find({ a: 'foo' }).observeChanges({
+        added: function(id, fields) {
+          output.push(['added', id, fields]);
+        },
+        changed: function(id) {
+          output.push(['changed']);
+        },
+        removed: function(id) {
+          output.push(['removed', id]);
+        },
+      });
+      test.length(output, 2);
+      // make order consistent
+      if (output.length === 2 && output[0][1] === doc3Id) {
+        tmp = output[0];
+        output[0] = output[1];
+        output[1] = tmp;
       }
-    );
+      test.equal(output.shift(), ['added', doc1Id, { a: 'foo', c: 1 }]);
+      test.equal(output.shift(), ['added', doc3Id, { a: 'foo', c: 2 }]);
 
-    var changesOutput = [];
-    var changesHandle = await cursor.observeChanges({
-      added: function(id, fields) {
-        changesOutput.push(['added', fields]);
-      },
-    });
-    // We should get untransformed fields via observeChanges.
-    test.length(changesOutput, 1);
-    test.equal(changesOutput.shift(), ['added', { a: 25, x: { x: 5, y: 9 } }]);
-    await changesHandle.stop();
+      // Wait until we've processed the insert oplog entry, so that we are in a
+      // steady state (and we don't see the dropped docs because we are FETCHING).
+      await waitUntilOplogCaughtUp();
 
-    var transformedOutput = [];
-    var transformedHandle = await cursor.observe({
-      added: function(doc) {
-        transformedOutput.push(['added', doc]);
-      },
-    });
-    test.length(transformedOutput, 1);
-    test.equal(transformedOutput.shift(), ['added', { x: 5, y: 9 }]);
-    await transformedHandle.stop();
-  });
+      // Drop the collection. Should remove all docs.
+      await runInFence(async function() {
+        await coll.dropCollectionAsync();
+      });
 
-
-Meteor.isServer &&
-  Tinytest.addAsync('mongo-livedata - oplog - drop collection/db', async function(test) {
-    // This test uses a random database, so it can be dropped without affecting
-    // anything else.
-    var mongodbUri = Npm.require('mongodb-uri');
-    var parsedUri = mongodbUri.parse(process.env.MONGO_URL);
-    parsedUri.database = 'dropDB' + Random.id();
-    var driver = new MongoInternals.RemoteCollectionDriver(
-      mongodbUri.format(parsedUri),
-      {
-        oplogUrl: process.env.MONGO_OPLOG_URL,
+      test.length(output, 2);
+      // make order consistent
+      if (output.length === 2 && output[0][1] === doc3Id) {
+        tmp = output[0];
+        output[0] = output[1];
+        output[1] = tmp;
       }
-    );
+      test.equal(output.shift(), ['removed', doc1Id]);
+      test.equal(output.shift(), ['removed', doc3Id]);
 
-    var collName = 'dropCollection' + Random.id();
-    var coll = new Mongo.Collection(collName, { _driver: driver });
+      // Put something back in.
+      var doc4Id;
+      await runInFence(async function() {
+        doc4Id = await coll.insertAsync({ a: 'foo', c: 3 });
+      });
 
-    var doc1Id = await coll.insertAsync({ a: 'foo', c: 1 });
-    var doc2Id = await coll.insertAsync({ b: 'bar' });
-    var doc3Id = await coll.insertAsync({ a: 'foo', c: 2 });
-    var tmp;
+      test.length(output, 1);
+      test.equal(output.shift(), ['added', doc4Id, { a: 'foo', c: 3 }]);
 
-    var output = [];
-    var handle = await coll.find({ a: 'foo' }).observeChanges({
-      added: function(id, fields) {
-        output.push(['added', id, fields]);
-      },
-      changed: function(id) {
-        output.push(['changed']);
-      },
-      removed: function(id) {
-        output.push(['removed', id]);
-      },
+      // XXX: this was intermittently failing for unknown reasons.
+      // Now drop the database. Should remove all docs again.
+      // runInFence(function () {
+      //   driver.mongo.dropDatabase();
+      // });
+      //
+      // test.length(output, 1);
+      // test.equal(output.shift(), ['removed', doc4Id]);
+
+      await handle.stop();
+      driver.mongo.close();
     });
-    test.length(output, 2);
-    // make order consistent
-    if (output.length === 2 && output[0][1] === doc3Id) {
-      tmp = output[0];
-      output[0] = output[1];
-      output[1] = tmp;
-    }
-    test.equal(output.shift(), ['added', doc1Id, { a: 'foo', c: 1 }]);
-    test.equal(output.shift(), ['added', doc3Id, { a: 'foo', c: 2 }]);
-
-    // Wait until we've processed the insert oplog entry, so that we are in a
-    // steady state (and we don't see the dropped docs because we are FETCHING).
-    await waitUntilOplogCaughtUp();
-
-    // Drop the collection. Should remove all docs.
-    await runInFence(async function() {
-      await coll.dropCollectionAsync();
-    });
-
-    test.length(output, 2);
-    // make order consistent
-    if (output.length === 2 && output[0][1] === doc3Id) {
-      tmp = output[0];
-      output[0] = output[1];
-      output[1] = tmp;
-    }
-    test.equal(output.shift(), ['removed', doc1Id]);
-    test.equal(output.shift(), ['removed', doc3Id]);
-
-    // Put something back in.
-    var doc4Id;
-    await runInFence(async function() {
-      doc4Id = await coll.insertAsync({ a: 'foo', c: 3 });
-    });
-
-    test.length(output, 1);
-    test.equal(output.shift(), ['added', doc4Id, { a: 'foo', c: 3 }]);
-
-    // XXX: this was intermittently failing for unknown reasons.
-    // Now drop the database. Should remove all docs again.
-    // runInFence(function () {
-    //   driver.mongo.dropDatabase();
-    // });
-    //
-    // test.length(output, 1);
-    // test.equal(output.shift(), ['removed', doc4Id]);
-
-    await handle.stop();
-    driver.mongo.close();
-  });
+}
 
 var TestCustomType = function (head, tail) {
   // use different field names on the object than in JSON, to ensure we are
@@ -3738,116 +3744,118 @@ EJSON.addType('someCustomType', function (json) {
   return new TestCustomType(json.head, json.tail);
 });
 
-testAsyncMulti('mongo-livedata - oplog - update EJSON', [
-  async function(test, expect) {
-    var self = this;
-    var collectionName = 'ejson' + Random.id();
-    if (Meteor.isClient) {
-      await Meteor.callAsync('createInsecureCollection', collectionName);
-      Meteor.subscribe('c-' + collectionName, expect());
-    }
+if(IS_OPLOG) {
+  testAsyncMulti('mongo-livedata - oplog - update EJSON', [
+    async function(test, expect) {
+      var self = this;
+      var collectionName = 'ejson' + Random.id();
+      if (Meteor.isClient) {
+        await Meteor.callAsync('createInsecureCollection', collectionName);
+        Meteor.subscribe('c-' + collectionName, expect());
+      }
 
-    self.collection = new Mongo.Collection(collectionName);
-    self.date = new Date();
-    self.objId = new Mongo.ObjectID();
+      self.collection = new Mongo.Collection(collectionName);
+      self.date = new Date();
+      self.objId = new Mongo.ObjectID();
 
-    self.id = await self.collection.insertAsync(
-      {
-        d: self.date,
-        oi: self.objId,
-        custom: new TestCustomType('a', 'b'),
-      },
-    );
-  },
-  async function(test, expect) {
-    var self = this;
-    self.changes = [];
-    self.handle = await self.collection.find({}).observeChanges({
-      added: function(id, fields) {
-        self.changes.push(['a', id, fields]);
-      },
-      changed: function(id, fields) {
-        self.changes.push(['c', id, fields]);
-      },
-      removed: function(id) {
-        self.changes.push(['r', id]);
-      },
-    });
-    test.length(self.changes, 1);
-    test.equal(self.changes.shift(), [
-      'a',
-      self.id,
-      { d: self.date, oi: self.objId, custom: new TestCustomType('a', 'b') },
-    ]);
-
-    // First, replace the entire custom object.
-    // (runInFence is useful for the server, using expect() is useful for the
-    // client)
-    await runInFence(async function() {
-      await self.collection.updateAsync(
-        self.id,
+      self.id = await self.collection.insertAsync(
         {
-          $set: { custom: new TestCustomType('a', 'c') },
+          d: self.date,
+          oi: self.objId,
+          custom: new TestCustomType('a', 'b'),
         },
-        { returnServerResultPromise: true }
       );
-    });
-  },
-  async function(test, expect) {
-    var self = this;
-    test.length(self.changes, 1);
-    test.equal(self.changes.shift(), [
-      'c',
-      self.id,
-      { custom: new TestCustomType('a', 'c') },
-    ]);
-
-    // Now, sneakily replace just a piece of it. Meteor won't do this, but
-    // perhaps you are accessing Mongo directly.
-    await runInFence(async function() {
-      await self.collection.updateAsync(
+    },
+    async function(test, expect) {
+      var self = this;
+      self.changes = [];
+      self.handle = await self.collection.find({}).observeChanges({
+        added: function(id, fields) {
+          self.changes.push(['a', id, fields]);
+        },
+        changed: function(id, fields) {
+          self.changes.push(['c', id, fields]);
+        },
+        removed: function(id) {
+          self.changes.push(['r', id]);
+        },
+      });
+      test.length(self.changes, 1);
+      test.equal(self.changes.shift(), [
+        'a',
         self.id,
-        {
-          $set: { 'custom.EJSON$value.EJSONtail': 'd' },
-        },
-        { returnServerResultPromise: true }
-      );
-    });
-  },
-  async function(test, expect) {
-    var self = this;
-    test.length(self.changes, 1);
-    test.equal(self.changes.shift(), [
-      'c',
-      self.id,
-      { custom: new TestCustomType('a', 'd') },
-    ]);
+        { d: self.date, oi: self.objId, custom: new TestCustomType('a', 'b') },
+      ]);
 
-    // Update a date and an ObjectID too.
-    self.date2 = new Date(self.date.valueOf() + 1000);
-    self.objId2 = new Mongo.ObjectID();
-    await runInFence(async function() {
-      await self.collection.updateAsync(
+      // First, replace the entire custom object.
+      // (runInFence is useful for the server, using expect() is useful for the
+      // client)
+      await runInFence(async function() {
+        await self.collection.updateAsync(
+          self.id,
+          {
+            $set: { custom: new TestCustomType('a', 'c') },
+          },
+          { returnServerResultPromise: true }
+        );
+      });
+    },
+    async function(test, expect) {
+      var self = this;
+      test.length(self.changes, 1);
+      test.equal(self.changes.shift(), [
+        'c',
         self.id,
-        {
-          $set: { d: self.date2, oi: self.objId2 },
-        },
-        { returnServerResultPromise: true }
-      );
-    });
-  },
-  function(test, expect) {
-    var self = this;
-    test.length(self.changes, 1);
-    test.equal(self.changes.shift(), [
-      'c',
-      self.id,
-      { d: self.date2, oi: self.objId2 },
-    ]);
+        { custom: new TestCustomType('a', 'c') },
+      ]);
 
-    self.handle.stop();
-  },
-]);
+      // Now, sneakily replace just a piece of it. Meteor won't do this, but
+      // perhaps you are accessing Mongo directly.
+      await runInFence(async function() {
+        await self.collection.updateAsync(
+          self.id,
+          {
+            $set: { 'custom.EJSON$value.EJSONtail': 'd' },
+          },
+          { returnServerResultPromise: true }
+        );
+      });
+    },
+    async function(test, expect) {
+      var self = this;
+      test.length(self.changes, 1);
+      test.equal(self.changes.shift(), [
+        'c',
+        self.id,
+        { custom: new TestCustomType('a', 'd') },
+      ]);
+
+      // Update a date and an ObjectID too.
+      self.date2 = new Date(self.date.valueOf() + 1000);
+      self.objId2 = new Mongo.ObjectID();
+      await runInFence(async function() {
+        await self.collection.updateAsync(
+          self.id,
+          {
+            $set: { d: self.date2, oi: self.objId2 },
+          },
+          { returnServerResultPromise: true }
+        );
+      });
+    },
+    function(test, expect) {
+      var self = this;
+      test.length(self.changes, 1);
+      test.equal(self.changes.shift(), [
+        'c',
+        self.id,
+        { d: self.date2, oi: self.objId2 },
+      ]);
+
+      self.handle.stop();
+    },
+  ]);
+}
 
 
 async function waitUntilOplogCaughtUp() {
@@ -3908,7 +3916,7 @@ testAsyncMulti('mongo-livedata - undefined find options', [
 ]);
 
 // Regression test for #2274.
-Meteor.isServer &&
+Meteor.isServer && IS_OPLOG &&
   testAsyncMulti('mongo-livedata - observe limit bug', [
     async function(test, expect) {
       var self = this;
@@ -4545,24 +4553,24 @@ Meteor.isServer && testAsyncMulti(
         { resolverType: 'stub' }
       );
 
-      let insertId;
-      let observeAddedResolve;
-      const observeAdded = new Promise(resolve => {
-        observeAddedResolve = resolve;
-      });
-      await Collection.find({}).observeChangesAsync({
+      let observerInsertId;
+      let resolveObserver;
+      const observerFired = new Promise((resolve) => { resolveObserver = resolve; });
+
+      const handle = await Collection.find({}).observeChangesAsync({
         async added(_id, fields) {
-          insertId = _id;
-          observeAddedResolve(_id);
+          observerInsertId = _id;
+          resolveObserver();
           throw new Error('Test error in async added observeChangesAsync');
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).then(async (id) => {
-        const observedId = await observeAdded;
-        test.equal(insertId, observedId);
-        test.equal(insertId, id);
-      })
+      // insertAsync resolves normally — observer errors are caught and logged,
+      // not propagated back to the caller (see observe_multiplex `_applyCallback`).
+      const id = await Collection.insertAsync({ foo: { bar: 123 } });
+      await observerFired;
+      test.equal(observerInsertId, id);
+      await handle.stop();
     },
 
     async (test) => {
@@ -4571,24 +4579,22 @@ Meteor.isServer && testAsyncMulti(
         { resolverType: 'stub' }
       );
 
-      let insertId;
-      let observeAddedResolve;
-      const observeAdded = new Promise(resolve => {
-        observeAddedResolve = resolve;
-      });
-      await Collection.find({}).observeChangesAsync({
+      let observerInsertId;
+      let resolveObserver;
+      const observerFired = new Promise((resolve) => { resolveObserver = resolve; });
+
+      const handle = await Collection.find({}).observeChangesAsync({
         added(id) {
-          insertId = id;
-          observeAddedResolve(id);
+          observerInsertId = id;
+          resolveObserver();
           throw new Error('Test error in sync added observeChangesAsync');
         },
       });
 
-      return Collection.insertAsync({ foo: { bar: 123 } }).then(async (id) => {
-        const observedId = await observeAdded;
-        test.equal(insertId, observedId);
-        test.equal(insertId, id);
-      })
+      const id = await Collection.insertAsync({ foo: { bar: 123 } });
+      await observerFired;
+      test.equal(observerInsertId, id);
+      await handle.stop();
     }
   ]
 );
@@ -4676,4 +4682,137 @@ Tinytest.addAsync('mongo-livedata - publish with $geoIntersects returns correct 
   if (Meteor.isClient) {
     onComplete();
   }
+
+
+
+  // ============================================================================
+  // BUG REGRESSION: ObjectID fields with projection
+  // When a cursor uses a projection and a document field contains a MongoDB
+  // ObjectID, the field was being received as a binary blob instead of a
+  // Mongo.ObjectID instance. Root cause: LocalCollection._compileProjection
+  // uses EJSON.clone() on each projected value. EJSON does not know about
+  // MongoDB.ObjectId (a BSON type), so it serialises it to { id: Uint8Array },
+  // which is then not recognised by replaceMongoAtomWithMeteor.
+  // These tests cover all three paths (initial add, insert event, update event)
+  // and run regardless of the active reactivity driver (oplog, changestream, etc).
+  // ============================================================================
+
+  Tinytest.addAsync(
+    'mongo-livedata - projection preserves ObjectID field type on initial add',
+    async function (test) {
+      if (Meteor.isClient) return;
+      const coll = new Mongo.Collection('projObjIdInitial' + Random.id());
+
+      const refId = new Mongo.ObjectID();
+      await coll.insertAsync({ name: 'test', refId });
+
+      const output = [];
+      const handle = await coll.find({}, { fields: { refId: 1 } }).observeChanges({
+        added: function (id, fields) {
+          output.push(fields);
+        },
+      });
+
+      // observeChanges sends initial adds synchronously before returning
+      test.equal(output.length, 1, 'Should receive the initial added callback');
+
+      const receivedRefId = output[0].refId;
+
+      test.isTrue(
+        receivedRefId instanceof Mongo.ObjectID,
+        `refId should be Mongo.ObjectID but got: ${JSON.stringify(receivedRefId)}`
+      );
+      test.equal(
+        receivedRefId.toHexString(),
+        refId.toHexString(),
+        'ObjectID hex value should be preserved'
+      );
+
+      handle.stop();
+    }
+  );
+
+  Tinytest.addAsync(
+    'mongo-livedata - projection preserves ObjectID field type on insert event',
+    async function (test) {
+      if (Meteor.isClient) return;
+      const coll = new Mongo.Collection('projObjIdInsert' + Random.id());
+
+      const output = [];
+      const handle = await coll.find({}, { fields: { refId: 1 } }).observeChanges({
+        added: function (id, fields) {
+          output.push(fields);
+        },
+      });
+
+      const refId = new Mongo.ObjectID();
+      // runInFence guarantees the observer is notified before we check results
+      await runInFence(async function () {
+        await coll.insertAsync({ name: 'test', refId });
+      });
+
+      test.equal(output.length, 1, 'Should receive the added callback');
+
+      const receivedRefId = output[0].refId;
+
+      test.isTrue(
+        receivedRefId instanceof Mongo.ObjectID,
+        `refId should be Mongo.ObjectID but got: ${JSON.stringify(receivedRefId)}`
+      );
+      test.equal(
+        receivedRefId.toHexString(),
+        refId.toHexString(),
+        'ObjectID hex value should be preserved'
+      );
+
+      handle.stop();
+    }
+  );
+
+
+  Tinytest.addAsync(
+    'mongo-livedata - projection preserves ObjectID field type on update event',
+    async function (test) {
+      if (Meteor.isClient) return;
+      const coll = new Mongo.Collection('projObjIdUpdate' + Random.id());
+
+      const firstRefId = new Mongo.ObjectID();
+      const docId = await coll.insertAsync({ name: 'test', refId: firstRefId });
+
+      const added = [];
+      const changed = [];
+      const handle = await coll.find({}, { fields: { refId: 1 } }).observeChanges({
+        added: function (id, fields) {
+          added.push(fields);
+        },
+        changed: function (id, fields) {
+          changed.push(fields);
+        },
+      });
+
+      // Initial add is synchronous
+      test.equal(added.length, 1, 'Should receive the initial added callback');
+
+      const newRefId = new Mongo.ObjectID();
+      await runInFence(async function () {
+        await coll.updateAsync(docId, { $set: { refId: newRefId } });
+      });
+
+      test.equal(changed.length, 1, 'Should receive the changed callback');
+
+      const receivedRefId = changed[0].refId;
+
+      test.isTrue(
+        receivedRefId instanceof Mongo.ObjectID,
+        `Updated refId should be Mongo.ObjectID but got: ${JSON.stringify(receivedRefId)}`
+      );
+      test.equal(
+        receivedRefId.toHexString(),
+        newRefId.toHexString(),
+        'Updated ObjectID hex value should be preserved'
+      );
+
+      handle.stop();
+    }
+  );
 });

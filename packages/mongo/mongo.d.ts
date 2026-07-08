@@ -366,7 +366,7 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = any, U = T>(
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(
       extension: (
         this: Collection<T, U>,
         name: string | null,
@@ -379,7 +379,7 @@ export namespace Mongo {
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = any, U = T>(
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(
       name: string,
       method: (this: Collection<T, U>, ...args: any[]) => any
     ): void;
@@ -841,8 +841,8 @@ export namespace Mongo {
       callbacks: ObserveChangesCallbacks<T>,
       options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Meteor.LiveQueryHandle;
-    [Symbol.iterator](): Iterator<T>;
-    [Symbol.asyncIterator](): AsyncIterator<T>;
+    [Symbol.iterator](): Iterator<U>;
+    [Symbol.asyncIterator](): AsyncIterator<U>;
     /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes
@@ -876,7 +876,7 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = any, U = T>(
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(
       extension: (
         this: Collection<T, U>,
         name: string | null,
@@ -889,7 +889,7 @@ export namespace Mongo {
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = any, U = T>(
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(
       name: string,
       method: (this: Collection<T, U>, ...args: any[]) => any
     ): void;
