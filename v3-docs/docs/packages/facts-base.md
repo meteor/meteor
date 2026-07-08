@@ -105,5 +105,5 @@ Only the public `Facts` API is documented here. Internal helpers prefixed with a
 
 ## See also
 
-- [`facts-ui`](./facts-ui.md) — a client package that subscribes to these facts and renders them with the <span v-pre>`{{> serverFacts}}`</span> template.
-- [`autopublish`](./autopublish.md) — when present, changes the default visibility of facts to all users.
+- [`facts-ui`](https://atmospherejs.com/meteor/facts-ui) — a client package that subscribes to these facts and renders them with the <span v-pre>`{{> serverFacts}}`</span> template.
+- [`autopublish`](https://atmospherejs.com/meteor/autopublish) — when present, changes the default visibility of facts to all users.
