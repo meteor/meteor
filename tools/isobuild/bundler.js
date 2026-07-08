@@ -1806,13 +1806,8 @@ class ClientTarget extends Target {
 
         // Use a SHA to make this cacheable.
         const sourceMapBaseName = file.hash() + '.map';
-        // new URL() can't resolve against a bare-path base, so use a dummy
-        // scheme and strip it back off afterwards (url.resolve() replacement).
-        const resolvedUrl = new URL(
-          sourceMapBaseName, new URL(file.url, 'resolve://'));
-        manifestItem.sourceMapUrl = resolvedUrl.protocol === 'resolve:'
-          ? resolvedUrl.pathname + resolvedUrl.search + resolvedUrl.hash
-          : resolvedUrl.href;
+        manifestItem.sourceMapUrl = require('url').resolve(
+          file.url, sourceMapBaseName);
       }
 
       // Set this now, in case we mutated the file's contents.
