@@ -1,0 +1,36 @@
+meteor-base             # Packages every Meteor app needs to have
+mongo                   # The database Meteor supports right now
+ecmascript              # Enable ECMAScript2015+ syntax in app code
+static-html             # Define static page content in .html files
+tracker                 # Reactive programming primitives
+react-meteor-data       # useTracker, used by the React mount in the harness
+
+standard-minifier-css   # CSS minifier run for production mode
+standard-minifier-js    # JS minifier run for production mode
+es5-shim                # ECMAScript 5 compatibility for older browsers
+shell-server            # Server-side component of the `meteor shell` command
+
+# Accounts under test
+accounts-base
+accounts-password
+accounts-2fa
+accounts-passwordless
+accounts-oauth
+accounts-express
+
+# OAuth provider wrappers under test
+accounts-facebook
+accounts-github
+accounts-google
+accounts-meetup
+accounts-meteor-developer
+accounts-twitter
+accounts-weibo
+
+# Support packages used by accounts
+email
+ddp-rate-limiter
+service-configuration
+oauth
+random
+check

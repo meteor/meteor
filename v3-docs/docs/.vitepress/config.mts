@@ -6,7 +6,14 @@ import llmstxt from "vitepress-plugin-llms";
 export default defineConfig({
   title: "Docs",
   description: "Meteor.js Docs",
-  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  head: [
+    ["link", { rel: "icon", href: "/logo.png" }],
+    ["script", {
+      defer: "",
+      "data-domain": "meteor.com",
+      src: "https://plausible.io/js/script.js"
+    }]
+  ],
   lastUpdated: true,
   sitemap: {
     hostname: "https://v3-docs.meteor.com",
@@ -305,12 +312,40 @@ export default defineConfig({
                 link: "/packages/accounts-ui",
               },
               {
+                text: "accounts-ui-unstyled",
+                link: "/packages/accounts-ui-unstyled",
+              },
+              {
                 text: "accounts-passwordless",
                 link: "/packages/accounts-passwordless",
               },
               {
                 text: "accounts-2fa",
                 link: "/packages/accounts-2fa",
+              },
+              {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
               },
               {
                 text: "roles",
@@ -385,6 +420,10 @@ export default defineConfig({
               {
                 text: "url",
                 link: "/packages/url",
+              },
+              {
+                text: "facts-base",
+                link: "/packages/facts-base",
               },
               {
                 text: "webapp",
@@ -627,6 +666,10 @@ export default defineConfig({
           {
             text: "Change Streams Observer Driver",
             link: "/performance/change-streams-observer-driver",
+          },
+          {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
           },
           {
             text: "Performance Improvements",

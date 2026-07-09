@@ -8,6 +8,9 @@ on:
     paths:
       - 'packages/**'
       - 'npm-packages/meteor-installer/**'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check-code-style:
     runs-on: oss-vm

@@ -6,6 +6,8 @@ on:
       - "packages/**"
       - ".github/workflows/test-packages.yml"
 
+
+
 jobs:
   test-packages:
     strategy:
@@ -18,6 +20,7 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true
+    runs-on: oss-vm
     timeout-minutes: 90
     env:
       CXX: g++-12
@@ -28,6 +31,7 @@ jobs:
       NODE_ENV: CI
       METEOR_REACTIVITY_ORDER: ${{ matrix.reactivity_order }}
     steps:
+
       - name: Checkout repository
         uses: actions/checkout@v4
 

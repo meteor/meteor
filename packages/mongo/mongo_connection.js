@@ -13,6 +13,7 @@ import { OplogObserveDriver } from './oplog_observe_driver';
 import { OPLOG_COLLECTION, OplogHandle } from './oplog_tailing';
 import { PollingObserveDriver } from './polling_observe_driver';
 import { ChangeStreamObserveDriver } from './changestream_observe_driver';
+import { SharedChangeStream } from './shared_change_stream';
 
 const FILE_ASSET_SUFFIX = 'Asset';
 const ASSETS_FOLDER = 'assets';
@@ -35,6 +36,7 @@ export const MongoConnection = function (url, options) {
   var self = this;
   options = options || {};
   self._observeMultiplexers = {};
+  self._sharedChangeStreams = {};
   self._onFailoverHook = new Hook;
 
   const userOptions = {
@@ -137,6 +139,23 @@ MongoConnection.prototype.rawCollection = function (collectionName) {
     throw Error("rawCollection called before Connection created?");
 
   return self.db.collection(collectionName);
+};
+
+// Shared change stream for a collection, created on first use. It deregisters
+// itself once its last driver detaches, so a later observer opens a fresh one.
+MongoConnection.prototype._acquireSharedChangeStream = function (collectionName) {
+  const self = this;
+  const existing = self._sharedChangeStreams[collectionName];
+  if (existing) {
+    return existing;
+  }
+  const sharedStream = new SharedChangeStream(self, collectionName, function () {
+    if (self._sharedChangeStreams[collectionName] === sharedStream) {
+      delete self._sharedChangeStreams[collectionName];
+    }
+  });
+  self._sharedChangeStreams[collectionName] = sharedStream;
+  return sharedStream;
 };
 
 MongoConnection.prototype.createCappedCollectionAsync = async function (
@@ -1018,24 +1037,28 @@ MongoConnection.prototype._observeChanges = async function (
             const serverReasons = [];
 
             try {
-              // Change Streams require MongoDB 3.6+ and replica set or sharded cluster
+              // Change Streams require MongoDB 6+ and replica set or sharded cluster
               const admin = this.db.admin();
               const serverInfo = await admin.serverInfo();
               const isMasterPromise = admin.command({ isMaster: 1 });
               const versionString = serverInfo.version || 'unknown';
               const versionParts = versionString.split('.').map(Number);
               const major = Number.isFinite(versionParts[0]) ? versionParts[0] : 0;
-              const minor = Number.isFinite(versionParts[1]) ? versionParts[1] : 0;
 
-              // Check MongoDB version (3.6+)
-              const hasMinVersion = major > 3 || (major === 3 && minor >= 6);
+              // Check MongoDB version (6+)
+              const hasMinVersion = major >= 6;
 
               if (!hasMinVersion) {
-                serverReasons.push(`Change Streams require MongoDB 3.6+ (current ${versionString})`);
+                serverReasons.push(`Change Streams feature require MongoDB 6+ (current ${versionString})`);
               } else {
-                // Check if we're running on a replica set or sharded cluster
+                // Check if we're running on a replica set or sharded cluster.
+                // `isMaster.ismaster` is true on a standalone too (it only means
+                // the node accepts writes), so it is NOT a replica-set signal:
+                // including it made standalone deployments select Change Streams
+                // and then fail at watch() with "$changeStream is only supported
+                // on replica sets". `setName` is the replica-set signal.
                 const isMaster = await isMasterPromise;
-                const isReplicaSet = Boolean(isMaster.setName || isMaster.ismaster || isMaster.secondary);
+                const isReplicaSet = Boolean(isMaster.setName || isMaster.secondary);
                 const isSharded = isMaster.msg === 'isdbgrid';
 
                 if (!(isReplicaSet || isSharded)) {
