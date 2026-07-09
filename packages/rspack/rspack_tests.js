@@ -1,4 +1,5 @@
 import { discoverRspackFileExtensions } from "./lib/file-extensions";
+import { getBundleLinkContent } from "./lib/module-imports";
 
 Tinytest.add("rspack - file extensions - discovers application extensions", (test) => {
   let globCall;
@@ -76,4 +77,31 @@ Tinytest.add("rspack - file extensions - normalizes generated contexts", (test) 
   test.isTrue(globOptions.ignore.includes("_build/**"));
   test.isTrue(globOptions.ignore.includes("custom/chunks/**"));
   test.equal(globOptions.ignore.length, 7);
+});
+
+// #14561: the client bundle must be served + injected, not imported; the server
+// bundle must still be imported; native clients still import.
+const IMPORT_RE = /import\s+['"]\.\/[^'"]*client-rspack\.js['"]/;
+const SERVED_RE = /served as a static resource and injected as a <script>/;
+
+Tinytest.add("rspack - client bundle is served + injected, not imported", (test) => {
+  const content = getBundleLinkContent({ isClient: true, outputFile: "client-rspack.js" }, "client");
+  test.isFalse(IMPORT_RE.test(content), `expected no client-rspack.js import, got: ${content}`);
+  test.isTrue(SERVED_RE.test(content), `expected serve + inject marker, got: ${content}`);
+});
+
+Tinytest.add("rspack - server bundle is still imported", (test) => {
+  const content = getBundleLinkContent({ isServer: true, outputFile: "server-rspack.js" }, "server");
+  test.isTrue(
+    /import\s+['"]\.\/server-rspack\.js['"]/.test(content),
+    `expected server bundle import, got: ${content}`,
+  );
+});
+
+Tinytest.add("rspack - native client still imports the bundle", (test) => {
+  const content = getBundleLinkContent(
+    { isClient: true, isNative: true, outputFile: "client-rspack.js" },
+    "client",
+  );
+  test.isTrue(IMPORT_RE.test(content), `expected native client to import the bundle, got: ${content}`);
 });

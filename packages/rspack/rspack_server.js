@@ -2,14 +2,18 @@ import { Meteor } from 'meteor/meteor';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
 import path from 'path';
 import {
+  RSPACK_BUILD_CONTEXT,
   RSPACK_CHUNKS_CONTEXT,
   RSPACK_ASSETS_CONTEXT,
   RSPACK_HOT_UPDATE_REGEX,
 } from "./lib/constants";
 
 // Define constants for both development and production
+const rspackBuildContext = process.env.RSPACK_BUILD_CONTEXT || RSPACK_BUILD_CONTEXT;
 const rspackChunksContext = process.env.RSPACK_CHUNKS_CONTEXT || RSPACK_CHUNKS_CONTEXT;
 const rspackAssetsContext = process.env.RSPACK_ASSETS_CONTEXT || RSPACK_ASSETS_CONTEXT;
+
+const RSPACK_BUNDLE_REGEX = /^\/__rspack__\/(.+)$/;
 
 /**
  * Regex pattern for rspack bundles
@@ -209,18 +213,43 @@ WebAppInternals.staticFilesMiddleware = async function(staticFilesByArch, req, r
     const assetsMatch = pathname.match(RSPACK_ASSETS_REGEX);
 
     if (chunksMatch || assetsMatch) {
-      const cwd = process.cwd();
-      const architectures = ["web.browser", "web.browser.legacy", "web.cordova"];
-      WebApp.categorizeRequest(req);
-
       // Try to find the file on disk
       const context = chunksMatch ? rspackChunksContext : rspackAssetsContext;
       const filename = (chunksMatch ? chunksMatch[1] : assetsMatch[1]);
-      const filePath = path.join(cwd, context, filename);
+      const contextRoot = path.resolve(process.cwd(), context);
+      const filePath = path.resolve(contextRoot, filename);
 
-      architectures.forEach(archName => {
-        registerRspackStaticAsset(archName, pathname, filePath);
-      });
+      // Reject path traversal: the resolved file must stay inside the context.
+      // Otherwise `..` segments in the URL could read arbitrary files.
+      if (filePath === contextRoot || filePath.startsWith(contextRoot + path.sep)) {
+        const architectures = ["web.browser", "web.browser.legacy", "web.cordova"];
+        WebApp.categorizeRequest(req);
+
+        architectures.forEach(archName => {
+          registerRspackStaticAsset(archName, pathname, filePath);
+        });
+      }
+    } else if (!shouldEnableDevHMRProxy) {
+      // No dev server proxying /__rspack__/, so serve the built bundle from disk.
+      // URL encodes its path, e.g. /__rspack__/test/client-rspack.js.
+      const bundleMatch = pathname.match(RSPACK_BUNDLE_REGEX);
+      if (bundleMatch) {
+        // Server runs from a different cwd; use the app dir config.js recorded.
+        const baseDir = process.env.RSPACK_APP_DIR || process.cwd();
+        const bundleRoot = path.resolve(baseDir, rspackBuildContext);
+        const filePath = path.resolve(bundleRoot, bundleMatch[1]);
+
+        // Reject path traversal: the resolved file must stay inside the build
+        // context. Otherwise `..` segments in the URL could read arbitrary files.
+        if (filePath === bundleRoot || filePath.startsWith(bundleRoot + path.sep)) {
+          const architectures = ["web.browser", "web.browser.legacy", "web.cordova"];
+          WebApp.categorizeRequest(req);
+
+          architectures.forEach(archName => {
+            registerRspackStaticAsset(archName, pathname, filePath);
+          });
+        }
+      }
     }
   } catch (e) {
     console.error(`Error handling rspack asset: ${e.message}`);

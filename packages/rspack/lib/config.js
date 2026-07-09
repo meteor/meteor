@@ -17,6 +17,7 @@ const {
   isMeteorAppBuild,
   isMeteorAppNative,
   isMeteorAppDebug,
+  isMeteorAppProduction,
   isMeteorAppTest,
   isMeteorAppTestFullApp,
   isMeteorAppConfigModernVerbose,
@@ -364,19 +365,50 @@ export function configureMeteorForRspack() {
   // Ensure module files exist
   ensureModuleFilesExist();
 
-  // Write content to module files
-  if (isMeteorAppRun() && isMeteorAppDevelopment() && !isMeteorAppNative()) {
-    const customScriptUrl = `/__rspack__/${getBuildFilePath({
-      ...env,
-      isMain: true,
-      isClient: true,
-      role: FILE_ROLE.output,
-      onlyFilename: true,
-    })}`;
-    setMeteorAppCustomScriptUrl(customScriptUrl);
+  // Serve + inject the client bundle as a <script> instead of importing it
+  // through Meteor's bundler (#14561). Native has no web server to serve from.
+  if (!isMeteorAppNative()) {
+    let customScriptUrl;
+    if (isMeteorAppRun() && isMeteorAppDevelopment()) {
+      // Dev server serves the bundle at the /__rspack__/ publicPath.
+      customScriptUrl = `/__rspack__/${getBuildFilePath({
+        ...env,
+        isMain: true,
+        isClient: true,
+        role: FILE_ROLE.output,
+        onlyFilename: true,
+      })}`;
+    } else if (
+      isMeteorAppTest() ||
+      isMeteorAppBuild() ||
+      isMeteorAppProduction()
+    ) {
+      // No dev server: Meteor serves the bundle from disk (rspack_server.js),
+      // so encode its build-context-relative path in the URL.
+      const clientOutputPath = isMeteorAppTest()
+        ? getBuildFilePath({
+            isTest: true,
+            isTestModule,
+            isClient: true,
+            role: FILE_ROLE.output,
+          })
+        : getBuildFilePath({
+            isMain: true,
+            ...env,
+            isClient: true,
+            role: FILE_ROLE.output,
+          });
+      customScriptUrl = `/__rspack__/${clientOutputPath}`;
+      // The server runs from a different cwd, so record the app dir for it.
+      process.env.RSPACK_APP_DIR = getMeteorAppDir();
+    }
 
-    if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-      logInfo(`[i] App custom script: ${customScriptUrl}`);
+    if (customScriptUrl) {
+      setMeteorAppCustomScriptUrl(customScriptUrl);
+
+      if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
+        logInfo(`[i] App custom script: ${customScriptUrl}`);
+      }
     }
   }
 }
