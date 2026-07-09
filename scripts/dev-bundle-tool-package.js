@@ -10,7 +10,7 @@ var packageJson = {
   dependencies: {
     // Explicit dependency because we are replacing it with a bundled version
     // and we want to make sure there are no dependencies on a higher version
-    npm: "11.13.0",
+    npm: "11.17.0",
     "node-gyp": "10.2.0",
     "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "2.0.3",
