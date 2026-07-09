@@ -105,5 +105,8 @@
       "curly": "off",
       "sort-imports": "off"
     }
+  },
+  "overrides": {
+    "typescript": "$typescript"
   }
 }
