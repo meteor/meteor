@@ -619,7 +619,7 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
-    var parsedUrl = null;
+    let parsedUrl = null;
     try {
       parsedUrl = new URL(process.env.ROOT_URL);
     } catch (e) {
