@@ -382,9 +382,21 @@ export class ChangeStreamObserveDriver {
     this._writesToCommitWhenReady = [];
 
     if (writes.length > 0) {
-      await this._multiplexer.onFlush(async () => {
+      await this._multiplexer.onFlush(() => {
+        // Commit in a microtask instead of awaiting inside this queue task.
+        // committed() on the fence's last outstanding write fires the fence,
+        // and the fence's onBeforeFire handler re-enters this same multiplexer
+        // queue via onFlush (see _startListening). Awaiting that chain from
+        // inside the current queue task deadlocks the queue: the fire waits on
+        // a task queued behind this one, which can never run. Deferring keeps
+        // the ordering guarantee — commits still start only after the flush
+        // point — without holding the queue while the fence fires.
         for (const write of writes) {
-          await write.committed();
+          Promise.resolve()
+            .then(() => write.committed())
+            .catch((error) => {
+              console.error('ChangeStream deferred write commit failed:', error);
+            });
         }
       });
     }
