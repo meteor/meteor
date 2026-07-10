@@ -200,7 +200,9 @@ function installCompletion(shellType) {
   );
   Console.info(Console.command(`source ${autocompletePath}`));
   Console.info(
-    "Re-run this command after updating your Meteor checkout to refresh the embedded top-level command list."
+    "Note: option and subcommand completions are always resolved dynamically from " +
+    "the running meteor binary. Only re-run this command if new top-level commands " +
+    "were added in a Meteor update and are missing from completion."
   );
 }
 
