@@ -224,12 +224,23 @@ Object.assign(AppProcess.prototype, {
       // own handler. Escalate to SIGKILL after a short grace period so a
       // process that refuses to exit can't keep running or holding the port.
       const sigkillTimer = setTimeout(function () {
+        // We only reach here if the app ignored SIGTERM for the whole grace
+        // period, so surface it — this is exactly the symptom of an app that
+        // keeps running and holds the port across restarts.
+        runLog.log(
+          "App didn't exit " + APP_STOP_SIGKILL_GRACE_MS +
+            "ms after SIGTERM; sending SIGKILL.",
+          { arrow: true });
         // Use the child handle rather than process.kill(pid): once the child
         // has exited and been reaped, proc.kill() is a no-op, so there is no
         // chance of signalling an unrelated process that reused the pid.
         proc.kill('SIGKILL');
       }, APP_STOP_SIGKILL_GRACE_MS);
-      // Don't let this timer keep the tool's event loop alive.
+      // Don't let this timer keep the tool's event loop alive. Because it's
+      // unref'd, the escalation only fires while the tool itself keeps running
+      // — e.g. across a dev restart, where the newly spawned AppProcess keeps
+      // the event loop alive. On a full tool shutdown the tool may exit before
+      // the grace period elapses; that path is unchanged from before this fix.
       if (sigkillTimer.unref) {
         sigkillTimer.unref();
       }
