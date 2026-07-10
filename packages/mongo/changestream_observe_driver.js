@@ -176,6 +176,28 @@ export class ChangeStreamObserveDriver {
 
       if (this._stopped) return;
 
+      // Establish this driver's caught-up floor. The stream subscription is
+      // active now, so every write at or before the server's current
+      // operationTime is either already dispatched to _onChange or will be
+      // reflected in the snapshot read below. Without this floor, a fence
+      // targeting a write that PREDATES this driver waits for a change event
+      // that will never be delivered to it — the canonical case is a
+      // login-style method that writes the collection and then triggers
+      // creation of this observer (setUserId rerunning user publications).
+      // The stream (shared, possibly opened long ago by another observer)
+      // dispatched that event before this driver joined, so on an idle
+      // collection the wait stalls until the next unrelated write.
+      try {
+        const pingRes = await this._mongoHandle.db.command({ ping: 1 });
+        if (pingRes?.operationTime) {
+          this._setLastProcessedOperationTime(pingRes.operationTime);
+        }
+      } catch (e) {
+        // Best-effort: without the floor we only lose the fast-path release.
+      }
+
+      if (this._stopped) return;
+
       // Now read the snapshot. Events that arrived while we were getting
       // here are sitting in _pendingWrites and will be flushed below.
       await this._sendInitialAdds(collection);
