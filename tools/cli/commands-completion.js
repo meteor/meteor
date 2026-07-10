@@ -262,9 +262,23 @@ function getOptionCommand(node, word) {
   return optionCommands[optionCommandName];
 }
 
+const GLOBAL_OPTIONS_TAKING_VALUE = new Set(["release"]);
+
 function isCompletingOptionValue(words, index, command) {
   const previousWord = words[index - 1];
-  if (!previousWord || !previousWord.startsWith("-") || !command) {
+  if (!previousWord || !previousWord.startsWith("-")) {
+    return false;
+  }
+
+  // Check global options that take a value (e.g. --release <version>)
+  if (previousWord.startsWith("--")) {
+    const optionName = previousWord.slice(2);
+    if (GLOBAL_OPTIONS_TAKING_VALUE.has(optionName)) {
+      return true;
+    }
+  }
+
+  if (!command) {
     return false;
   }
 
@@ -510,7 +524,15 @@ function shellCompletionCommand(options) {
     return 0;
   }
 
+  const SUPPORTED_SHELLS = ["bash", "zsh"];
   const shellType = options.shell || detectShell();
+
+  if (!SUPPORTED_SHELLS.includes(shellType)) {
+    Console.error(
+      `Unsupported shell: ${shellType}. Supported shells are: ${SUPPORTED_SHELLS.join(", ")}.`
+    );
+    return 1;
+  }
 
   if (options.install) {
     installCompletion(shellType);

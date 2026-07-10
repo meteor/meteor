@@ -50,10 +50,16 @@ selftest.define("shell-completion", async function () {
   await run.match('compdef _meteor "$alias_name"');
   await run.expectExit(0);
 
-  // Test install/uninstall cycles keep shell rc files clean.
+  // Test install/uninstall cycles keep shell rc files clean (zsh).
   run = s.run("shell-completion", "--install", "--shell", "zsh");
   await run.expectExit(0);
   let zshrc = s.read(".zshrc");
+  assert.strictEqual((zshrc.match(/# Meteor autocompletion/g) || []).length, 1);
+
+  // Double-install must not duplicate the block.
+  run = s.run("shell-completion", "--install", "--shell", "zsh");
+  await run.expectExit(0);
+  zshrc = s.read(".zshrc");
   assert.strictEqual((zshrc.match(/# Meteor autocompletion/g) || []).length, 1);
 
   run = s.run("shell-completion", "--uninstall");
@@ -62,8 +68,35 @@ selftest.define("shell-completion", async function () {
   assert.ok(!zshrc.includes("# Meteor autocompletion"));
   assert.ok(!zshrc.includes("meteor-completion.sh"));
 
+  // Uninstall when nothing is installed must be a safe no-op.
+  run = s.run("shell-completion", "--uninstall");
+  await run.expectExit(0);
+
   run = s.run("shell-completion", "--install", "--shell", "zsh");
   await run.expectExit(0);
   zshrc = s.read(".zshrc");
   assert.strictEqual((zshrc.match(/# Meteor autocompletion/g) || []).length, 1);
+
+  // Test install/uninstall cycle for bash.
+  run = s.run("shell-completion", "--install", "--shell", "bash");
+  await run.expectExit(0);
+  // On non-darwin or when .bashrc exists, completion is written to .bashrc.
+  const bashrc = s.read(".bashrc");
+  assert.strictEqual(
+    (bashrc.match(/# Meteor autocompletion/g) || []).length,
+    1
+  );
+
+  // Double-install must not duplicate the bash block.
+  run = s.run("shell-completion", "--install", "--shell", "bash");
+  await run.expectExit(0);
+  assert.strictEqual(
+    (s.read(".bashrc").match(/# Meteor autocompletion/g) || []).length,
+    1
+  );
+
+  run = s.run("shell-completion", "--uninstall");
+  await run.expectExit(0);
+  assert.ok(!s.read(".bashrc").includes("# Meteor autocompletion"));
+  assert.ok(!s.read(".bashrc").includes("meteor-completion.sh"));
 });

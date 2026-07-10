@@ -22,7 +22,7 @@ _meteor_alias_targets_cli() {
 }
 
 _meteor_complete() {
-  local cur prev words cword
+  local cur
   local -a completion_cmd
   local -a static_top_level_commands=(__METEOR_TOP_LEVEL_COMMANDS__)
   local alias_definition alias_value
@@ -33,12 +33,15 @@ _meteor_complete() {
   _meteor_completion_log "bash start cmd=${meteor_cmd} words=${COMP_WORDS[*]} index=${COMP_CWORD}"
 
   cur="${COMP_WORDS[COMP_CWORD]}"
-  prev="${COMP_WORDS[COMP_CWORD-1]}"
 
   if [ "$COMP_CWORD" -eq 1 ] && [[ "$cur" != -* ]]; then
     local oldifs=$IFS
     IFS=$'\n'
-    COMPREPLY=( $(compgen -W "$(printf '%s\n' "${static_top_level_commands[@]}")" -- "$cur") )
+    local -a _compreply_tmp
+    IFS=$'\n' read -r -d '' -a _compreply_tmp < <(
+      set -f; compgen -W "$(printf '%s\n' "${static_top_level_commands[@]}")" -- "$cur"; printf '\0'
+    )
+    COMPREPLY=("${_compreply_tmp[@]}")
     IFS=$oldifs
     _meteor_completion_log "bash static-top-level count=${#COMPREPLY[@]}"
     return 0
@@ -62,12 +65,21 @@ _meteor_complete() {
   local completions
   completions=$("${completion_cmd[@]}" shell-completion --index "$COMP_CWORD" -- "${COMP_WORDS[@]}" 2>/dev/null)
   completion_status=$?
-  _meteor_completion_log "bash result status=${completion_status} count=$(printf '%s\n' "$completions" | sed '/^$/d' | wc -l | tr -d ' ') output=${completions//$'\n'/,}"
+  if [[ -n "${METEOR_COMPLETION_DEBUG:-}" ]]; then
+    local _debug_count _debug_output
+    _debug_count=$(printf '%s\n' "$completions" | sed '/^$/d' | wc -l | tr -d ' ')
+    _debug_output=${completions//$'\n'/,}
+    _meteor_completion_log "bash result status=${completion_status} count=${_debug_count} output=${_debug_output}"
+  fi
 
   if [ $completion_status -eq 0 ] && [ -n "$completions" ]; then
     local oldifs=$IFS
     IFS=$'\n'
-    COMPREPLY=( $(compgen -W "$completions" -- "$cur") )
+    local -a _compreply_tmp
+    IFS=$'\n' read -r -d '' -a _compreply_tmp < <(
+      set -f; compgen -W "$completions" -- "$cur"; printf '\0'
+    )
+    COMPREPLY=("${_compreply_tmp[@]}")
     IFS=$oldifs
     _meteor_completion_log "bash compreply count=${#COMPREPLY[@]}"
     return 0
@@ -76,7 +88,9 @@ _meteor_complete() {
   return 0
 }
 
-if type complete &>/dev/null; then
+_meteor_register_completions() {
+  local alias_definition alias_name alias_value
+
   complete -o default -o bashdefault -F _meteor_complete meteor mymeteor
 
   while IFS= read -r alias_definition; do
@@ -90,4 +104,8 @@ if type complete &>/dev/null; then
       complete -o default -o bashdefault -F _meteor_complete "$alias_name"
     fi
   done < <(alias -p 2>/dev/null)
+}
+
+if type complete &>/dev/null; then
+  _meteor_register_completions
 fi
