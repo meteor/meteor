@@ -343,6 +343,38 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync(
+  'changestream - nested-object projection falls back to polling',
+  async function (test) {
+    const c = makeCollection();
+    const results = [];
+
+    await c.insertAsync({
+      nested: { a: 1, b: 2 },
+      hidden: true
+    });
+
+    const handle = await c.find({}, { fields: { nested: { a: 1 } } }).observeChanges({
+      added: function (id, fields) {
+        results.push({ id, fields });
+      }
+    });
+
+    const driver = handle._multiplexer._observeDriver;
+    test.isFalse(driver._usesChangeStreams === true, 'Unsupported projection should not use Change Streams');
+    test.isFalse(driver._usesOplog === true, 'Unsupported projection should not use oplog');
+
+    await waitFor(() => results.length > 0);
+
+    test.equal(results.length, 1, 'Initial add should be delivered by fallback driver');
+    test.equal(results[0].fields.nested, { a: 1 });
+    test.isUndefined(results[0].fields.nested.b);
+    test.isUndefined(results[0].fields.hidden);
+
+    handle.stop();
+  }
+);
+
 // ============================================================================
 // SELECTOR / MATCHER FILTERING TESTS
 // ============================================================================
