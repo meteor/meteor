@@ -30,6 +30,7 @@ const {
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
+const { createNativeAddonExternals } = require('./lib/nativeAddonExternals.js');
 
 
 // Safe require that doesn't throw if the module isn't found
@@ -470,6 +471,17 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     /^meteor\/.*/,
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
     ...(isServer ? [/^bcrypt$/] : []),
+    ...(isServer
+      ? [
+          createNativeAddonExternals({
+            onExternalized: (pkgName) => {
+              if (isVerbose) {
+                console.log(`[i] Externalized native addon package: ${pkgName}`);
+              }
+            },
+          }),
+        ]
+      : []),
   ];
   const alias = {
     "/": path.resolve(process.cwd()),
