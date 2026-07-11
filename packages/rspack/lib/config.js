@@ -30,6 +30,7 @@ const {
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
+import { getCodeExtensionsToIgnore } from './extensions';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const { RSPACK_BUILD_CONTEXT, FILE_ROLE } = require('./constants');
@@ -85,7 +86,17 @@ function checkMeteorIgnoreExactEntries(entries) {
  * Gets the list of file extensions to ignore based on project type
  * For Blaze projects, it excludes .html as used by Blaze
  * For Less projects, it excludes .less files
- * For SCSS projects, it excludes .scss files
+ * For SCSS projects, it excludes .scss and .sass files
+ *
+ * Uses a static extension list instead of globbing the whole project tree:
+ * only extensions Meteor has source processors for matter for METEOR_IGNORE
+ * (unhandled files never enter the app source list), and the previous scan
+ * both cost an O(files) walk per config build and inflated METEOR_IGNORE
+ * with dir-times-extension patterns on large projects. The initial list here
+ * only needs to cover what Meteor could claim before rspack's first compile;
+ * applyDelegatedExtensions() still refines entrypoint-folder ignores at
+ * runtime once rspack reports the extensions it actually handles.
+ *
  * @returns {string[]} Array of file extensions to ignore
  */
 function getFileExtensionsToIgnore() {
@@ -95,47 +106,11 @@ function getFileExtensionsToIgnore() {
     return [];
   }
 
-  const allFiles = glob.sync('**/*', {
-    nodir: true,
-    dot: true,
-    ignore: ['node_modules/**', '.meteor/**'],
+  return getCodeExtensionsToIgnore({
+    isBlazeProject: isMeteorBlazeProject(),
+    isLessProject: isMeteorLessProject(),
+    isScssProject: isMeteorScssProject(),
   });
-  const existingExts = Array.from(
-    new Set(allFiles.map(f => path.extname(f).toLowerCase())),
-  );
-
-  // Base extensions to ignore
-  const baseExtensions = [
-    '.ts',
-    '.tsx',
-    '.js',
-    '.jsx',
-    '.mjs',
-    '.cjs',
-    '.json',
-  ];
-
-  // Filter existing extensions based on project type
-  let filteredExts = existingExts;
-
-  // For Blaze projects, exclude .html files
-  if (isMeteorBlazeProject()) {
-    filteredExts = existingExts.filter(ext => ext !== '.html');
-  }
-
-  // Check for Less projects and exclude .less files
-  if (isMeteorLessProject()) {
-    filteredExts = filteredExts.filter(ext => ext !== '.less');
-  }
-
-  // Check for SCSS projects and exclude .scss files
-  if (isMeteorScssProject()) {
-    filteredExts = filteredExts.filter(ext => ext !== '.scss');
-  }
-
-  return Array.from(new Set([...baseExtensions, ...filteredExts])).filter(
-    ext => ext !== '',
-  );
 }
 
 /**
