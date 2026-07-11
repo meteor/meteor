@@ -1547,7 +1547,16 @@ class Target {
   // 'meteor://[emoji]app/', so there is a separate category in Chrome DevTools
   // with the original sources.
   rewriteSourceMaps() {
-    const rewriteSourceMap = function (sm) {
+    const rewriteSourceMap = function rewriteSourceMap(sm) {
+      // Indexed maps ("sections") nest ordinary maps; rewrite those.
+      if (sm.sections) {
+        sm.sections.forEach(function (section) {
+          if (section.map) {
+            rewriteSourceMap(section.map);
+          }
+        });
+        return sm;
+      }
       if (!sm.sources) {
         return sm;
       }

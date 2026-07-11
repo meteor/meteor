@@ -120,6 +120,14 @@ serverJson.load.forEach(function (fileInfo) {
     // source-map-support doesn't ever look at the sourcesContent field, so
     // there's no point in keeping it in memory.
     delete parsedSourceMap.sourcesContent;
+    // Indexed maps ("sections") nest ordinary maps; strip those too.
+    if (parsedSourceMap.sections) {
+      parsedSourceMap.sections.forEach(function (section) {
+        if (section.map) {
+          delete section.map.sourcesContent;
+        }
+      });
+    }
     var url;
     if (fileInfo.sourceMapRoot) {
       // Add the specified root to any root that may be in the file.

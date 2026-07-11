@@ -1,14 +1,32 @@
 // Unit tests for the standalone rspack-bundle emission in the linker
 // (see meteor/meteor#14568). Runs under tools/unit-tests (jest).
 
-jest.mock('source-map', () => ({
-  SourceNode: class SourceNode {
-    constructor() { this.children = []; }
-    toStringWithSourceMap() { return { code: '', map: { toJSON: () => ({}) } }; }
-    toString() { return ''; }
-  },
-  SourceMapConsumer: class SourceMapConsumer { destroy() {} },
-}));
+jest.mock('source-map', () => {
+  function flatten(child) {
+    if (typeof child === 'string') { return child; }
+    if (Array.isArray(child)) { return child.map(flatten).join(''); }
+    if (child && child.children) { return flatten(child.children); }
+    return String(child);
+  }
+  return {
+    SourceNode: class SourceNode {
+      constructor(line, column, source, chunks) {
+        this.children = chunks || [];
+      }
+      toStringWithSourceMap() {
+        const code = flatten(this.children);
+        return {
+          code,
+          map: {
+            toJSON: () => (code ? { version: 3, mappings: 'AAAA', sources: ['seg'] } : { version: 3, mappings: '' }),
+          },
+        };
+      }
+      toString() { return flatten(this.children); }
+    },
+    SourceMapConsumer: class SourceMapConsumer { destroy() {} },
+  };
+});
 
 jest.mock('lru-cache', () => ({
   __esModule: true,
@@ -252,6 +270,83 @@ describe('_buildModuleTrees diversion', () => {
     expect(results).toHaveLength(1);
     expect(results[0].servePath).toBe('/app.js');
     expect([...trees.values()].every(t => Object.keys(t).length === 0)).toBe(true);
+  });
+});
+
+describe('indexed-map composition for server-arch bundles', () => {
+  const linker = require('./linker.js');
+
+  const SERVER_ARCH = 'os.linux.x86_64';
+
+  function serverBundleFile(overrides = {}) {
+    return makeFile(linker, {
+      sourcePath: '_build/main-dev/server-rspack.js',
+      absModuleId: '/_build/main-dev/server-rspack.js',
+      source: 'LINE_ONE();\nLINE_TWO();',
+      sourceMap: { version: 3, mappings: 'BUNDLE_MAPPINGS', sources: ['webpack://x'] },
+      ...overrides,
+    }, SERVER_ARCH);
+  }
+
+  it('gates on server arch + source map + rspack path', () => {
+    const mod = makeModule(linker, SERVER_ARCH);
+    expect(mod._isIndexedMapRspackBundle(serverBundleFile())).toBe(true);
+    expect(mod._isIndexedMapRspackBundle(serverBundleFile({ sourceMap: undefined }))).toBe(false);
+    expect(mod._isIndexedMapRspackBundle(makeFile(linker, {
+      sourcePath: 'server/main.js',
+      absModuleId: '/server/main.js',
+      sourceMap: { version: 3, mappings: 'X' },
+    }, SERVER_ARCH))).toBe(false);
+    // Web archs use the standalone path, not the in-tree indexed path.
+    const webFile = makeFile(linker, {
+      sourcePath: '_build/main-dev/server-rspack.js',
+      absModuleId: '/_build/main-dev/server-rspack.js',
+      sourceMap: { version: 3, mappings: 'X' },
+    }, 'web.browser');
+    expect(mod._isIndexedMapRspackBundle(webFile)).toBe(false);
+  });
+
+  it('splices raw source and aligns section offsets with the emitted lines', () => {
+    const mod = makeModule(linker, SERVER_ARCH);
+    const file = serverBundleFile();
+    const chunks = [
+      'var require = meteorInstall({"_build":{"main-dev":{"server-rspack.js":',
+      { rspackBundleFile: file },
+      '}}},{});\n',
+    ];
+    const result = {};
+    mod._serializeWithIndexedMap(chunks, result);
+
+    // The bundle body appears verbatim.
+    expect(result.source).toContain('LINE_ONE();\nLINE_TWO();');
+    // Structure: prefix segment, closure header, bundle, closure footer, suffix.
+    const lines = result.source.split('\n');
+    const bundleStartLine = lines.indexOf('LINE_ONE();');
+    expect(bundleStartLine).toBeGreaterThan(0);
+
+    expect(result.sourceMap.sections).toBeDefined();
+    const bundleSection = result.sourceMap.sections.find(
+      s => s.map.mappings === 'BUNDLE_MAPPINGS'
+    );
+    expect(bundleSection).toBeDefined();
+    // The section offset must point exactly at the line where the raw
+    // bundle source begins, at column 0.
+    expect(bundleSection.offset).toEqual({ line: bundleStartLine, column: 0 });
+
+    // Section offsets are strictly increasing.
+    const offsets = result.sourceMap.sections.map(s => s.offset.line);
+    expect([...offsets].sort((a, b) => a - b)).toEqual(offsets);
+  });
+
+  it('emits no sections and null map when there are no mappings at all', () => {
+    const mod = makeModule(linker, SERVER_ARCH);
+    const file = serverBundleFile();
+    // Bundle only, no surrounding chunks; give the bundle map but strip
+    // the segment content so only the bundle section exists.
+    const result = {};
+    mod._serializeWithIndexedMap([{ rspackBundleFile: file }], result);
+    expect(result.sourceMap.sections).toHaveLength(1);
+    expect(result.source.endsWith('\n')).toBe(true);
   });
 });
 

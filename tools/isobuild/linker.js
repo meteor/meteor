@@ -235,6 +235,16 @@ Object.assign(Module.prototype, {
       }
     }
 
+    if (chunks.some(chunk => chunk && chunk.rspackBundleFile)) {
+      await Profile.time(
+        'getPrelinkedFiles indexed map compose',
+        function () {
+          self._serializeWithIndexedMap(chunks, result);
+        }
+      );
+      return results;
+    }
+
     var node = new sourcemap.SourceNode(null, null, null, chunks);
 
     await Profile.time(
@@ -356,6 +366,96 @@ Object.assign(Module.prototype, {
     return trees;
   },
 
+  // On server archs the rspack bundle stays inside the combined app.js
+  // (the server target is never minified, and its prelinked structure
+  // feeds the JsImage writer). Historically its multi-MB source map was
+  // re-materialized through SourceMapConsumer/SourceNode on every
+  // rebuild; instead we splice the raw source in and compose the final
+  // map with indexed source-map "sections" (supported by the source-map
+  // library, source-map-support, and the Node inspector).
+  // See meteor/meteor#14568.
+  _isIndexedMapRspackBundle(file) {
+    return !! (
+      file.sourceMap &&
+      file.bundleArch &&
+      file.bundleArch.startsWith("os.") &&
+      rspackHelpers.isRspackOutputFile(file.sourcePath)
+    );
+  },
+
+  // Serialize the chunks array when it contains rspack-bundle
+  // placeholders: SourceNode segments between placeholders are
+  // serialized normally, bundle sources are appended verbatim, and the
+  // combined map is an indexed map whose sections point at each
+  // segment's (or bundle's) starting line.
+  _serializeWithIndexedMap(chunks, result) {
+    const self = this;
+    const pieces = [];
+    const sections = [];
+    let line = 0;
+    let pending = [];
+
+    function countLines(str) {
+      let n = 0;
+      let i = -1;
+      while ((i = str.indexOf("\n", i + 1)) !== -1) {
+        ++n;
+      }
+      return n;
+    }
+
+    // Emit a code piece, making sure it ends at a line start so the
+    // next section's offset can use column 0.
+    function emit(code) {
+      if (!code) {
+        return;
+      }
+      if (code.charAt(code.length - 1) !== "\n") {
+        code += "\n";
+      }
+      pieces.push(code);
+      line += countLines(code);
+    }
+
+    function flushSegment() {
+      if (!pending.length) {
+        return;
+      }
+      const node = new sourcemap.SourceNode(null, null, null, pending);
+      pending = [];
+      const swsm = node.toStringWithSourceMap({
+        file: self.combinedServePath,
+      });
+      const map = swsm.map.toJSON();
+      if (map.mappings) {
+        sections.push({ offset: { line, column: 0 }, map });
+      }
+      emit(swsm.code);
+    }
+
+    for (const chunk of chunks) {
+      if (chunk && chunk.rspackBundleFile) {
+        flushSegment();
+        const file = chunk.rspackBundleFile;
+        emit(file._getClosureHeader());
+        sections.push({
+          offset: { line, column: 0 },
+          map: file.sourceMap,
+        });
+        emit(file.source);
+        emit(file._getClosureFooter());
+      } else {
+        pending.push(chunk);
+      }
+    }
+    flushSegment();
+
+    result.source = pieces.join("");
+    result.sourceMap = sections.length
+      ? { version: 3, file: self.combinedServePath, sections }
+      : null;
+  },
+
   _isStandaloneRspackBundle(file) {
     return !! (
       file.meteorInstallOptions &&
@@ -445,9 +545,17 @@ Object.assign(Module.prototype, {
       } else if (t instanceof File) {
         ++moduleCount;
 
-        chunks.push(await t.getPrelinkedOutput({
-          sourceWidth,
-        }));
+        if (self._isIndexedMapRspackBundle(t)) {
+          // Emit a placeholder instead of materializing the multi-MB
+          // bundle (and its map) into a SourceNode; getPrelinkedFiles
+          // splices the raw source back in and composes the final map
+          // via indexed source-map sections. See meteor/meteor#14568.
+          chunks.push({ rspackBundleFile: t });
+        } else {
+          chunks.push(await t.getPrelinkedOutput({
+            sourceWidth,
+          }));
+        }
       } else if (_.isObject(t)) {
         chunks.push("{");
         const keys = Object.keys(t);
@@ -1118,6 +1226,9 @@ function getFooter ({
   return chunks.join('');
 }
 
+// Exported for unit tests.
+export { wrapWithHeaderAndFooter };
+
 function wrapWithHeaderAndFooter(files, header, footer) {
   // Bias the source map by the length of the header without
   // (fully) parsing and re-serializing it. (We used to do this
@@ -1140,7 +1251,19 @@ function wrapWithHeaderAndFooter(files, header, footer) {
 
     if (file.sourceMap) {
       var sourceMap = file.sourceMap;
-      sourceMap.mappings = headerContent + sourceMap.mappings;
+      if (sourceMap.sections) {
+        // Indexed maps (produced for rspack bundles) are biased by
+        // shifting each section's offset instead of its mappings.
+        sourceMap.sections = sourceMap.sections.map(section => ({
+          ...section,
+          offset: {
+            line: section.offset.line + headerLines,
+            column: section.offset.column,
+          },
+        }));
+      } else {
+        sourceMap.mappings = headerContent + sourceMap.mappings;
+      }
       return {
         source: header + file.source + footer,
         sourcePath: file.sourcePath,

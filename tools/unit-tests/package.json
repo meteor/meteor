@@ -11,6 +11,7 @@
     "@swc/jest": "^0.2.39",
     "jest": "^30.2.0",
     "semver": "^7.7.2",
+    "source-map": "^0.6.1",
     "underscore": "^1.13.7"
   }
 }

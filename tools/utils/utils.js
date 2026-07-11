@@ -715,9 +715,15 @@ exports.sourceMapLength = function (sm) {
   if (!sm) {
     return 0;
   }
+  // Indexed maps ("sections") nest ordinary maps; sum them.
+  if (sm.sections) {
+    return sm.sections.reduce((soFar, section) => {
+      return soFar + exports.sourceMapLength(section.map);
+    }, 0);
+  }
   // sum the length of sources and the mappings, the size of
   // metadata is ignored, but it is not a big deal
-  return sm.mappings.length
+  return (sm.mappings || '').length
     + (sm.sourcesContent || []).reduce((soFar, current) => {
       return soFar + (current ? current.length : 0);
     }, 0);
