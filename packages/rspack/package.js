@@ -30,5 +30,5 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use(['tinytest', 'ecmascript', 'rspack']);
-  api.addFiles(['rspack_tests.js']);
+  api.addFiles(['lib/extensions.js', 'rspack_tests.js']);
 });
