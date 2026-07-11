@@ -135,7 +135,13 @@ function createSwcConfig({
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: 'es2015',
+      // Transpile only as far down as each side actually needs: Meteor 3
+      // servers run Node >= 20 (es2022), and the bundle only reaches modern
+      // web archs (babel-compiler re-compiles it for web.browser.legacy), so
+      // es2017 is a safe floor for the client. Down-levelling everything to
+      // es2015 did materially more work per module for no consumer.
+      // See meteor/meteor#14568.
+      target: isClient ? 'es2017' : 'es2022',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -287,7 +293,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     Meteor.isTsxEnabled || (isTypescriptEnabled && isReactEnabled) || false;
   const isBundleVisualizerEnabled = Meteor.isBundleVisualizerEnabled || false;
   const isAngularEnabled = Meteor.isAngularEnabled || false;
-  const enableSwcExternalHelpers = !isServer && swcExternalHelpers;
+  // Use external SWC helpers on the server too: inlining a copy of each
+  // helper into every module inflated the server bundle that Meteor
+  // re-reads on every rebuild. The helper imports resolve to the app's
+  // @swc/helpers dependency (whose presence swcExternalHelpers already
+  // reflects) and are bundled once. See meteor/meteor#14568.
+  const enableSwcExternalHelpers = swcExternalHelpers;
 
   // Defined here so it can be called both before and after the first config load;
   // without loaded configs it falls through to argv/Meteor flags.
@@ -678,8 +689,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       }),
     ],
     watchOptions,
-    devtool:
-      isDevEnvironment || isNative || isTest
+    // In dev the client bundle is served (with its maps) straight from the
+    // dev server and never consumed by Meteor, so use the eval-based devtool:
+    // it regenerates maps only for changed modules instead of rebuilding the
+    // whole source map on every rebuild. See meteor/meteor#14568.
+    devtool: isDevEnvironment
+      ? "eval-cheap-module-source-map"
+      : isNative || isTest
         ? "source-map"
         : "hidden-source-map",
     ...(isDevEnvironment && {
@@ -804,8 +820,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ...doctorPluginConfig,
     ],
     watchOptions,
-    devtool:
-      isDevEnvironment || isNative || isTest
+    // The server bundle's map IS consumed by Meteor (babel-compiler reads
+    // server-rspack.js.map on every rebuild), so keep a file-based map but
+    // use the line-only "cheap" variant in dev: it is much faster to
+    // generate and much smaller to re-parse, and server stack traces only
+    // need line precision. Tests and native keep full maps.
+    // See meteor/meteor#14568.
+    devtool: isDevEnvironment
+      ? "cheap-module-source-map"
+      : isNative || isTest
         ? "source-map"
         : "hidden-source-map",
     ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&

@@ -9,6 +9,7 @@ import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
+import rspackHelpers from '../tool-env/rspack';
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -331,6 +332,20 @@ Object.assign(Module.prototype, {
 
         addToTree(stubArray, file.absModuleId, tree);
 
+      } else if (this._isStandaloneRspackBundle(file)) {
+        // Rspack output bundles are already fully compiled (and, in
+        // production, already minified by SWC). Folding the multi-MB
+        // bundle into the combined app.js meant re-materializing its
+        // source map on every rebuild and re-minifying the pre-minified
+        // code with the standard minifier. Instead, emit it as its own
+        // prelinked file (before app.js, so its meteorInstall call runs
+        // first) with a *.min.js serve path, which the standard JS
+        // minifier already passes through untouched. The module still
+        // registers into the shared meteorInstall tree, so the entry's
+        // `import './client-rspack.js'` resolves exactly as before.
+        // See meteor/meteor#14568.
+        this._emitStandaloneRspackBundle(file, results);
+
       } else {
         // If the file is not dynamic, then it should be included in the
         // initial bundle, so we add it to the static tree.
@@ -339,6 +354,60 @@ Object.assign(Module.prototype, {
     }
 
     return trees;
+  },
+
+  _isStandaloneRspackBundle(file) {
+    return !! (
+      file.meteorInstallOptions &&
+      file.absModuleId &&
+      file.bundleArch &&
+      file.bundleArch.startsWith("web.") &&
+      // The legacy arch re-compiles the bundle with Babel, so its output
+      // is no longer pre-minified and must keep flowing through the
+      // normal linker + minifier pipeline.
+      file.bundleArch.indexOf("legacy") === -1 &&
+      // With client top-level await enabled, fullLink wraps every
+      // prelinked app file with the runtime header/footer (including the
+      // eager-require footer), which would run requires before app.js
+      // has registered the rest of the module tree. Keep the bundle
+      // inside the combined app.js in that mode.
+      ! enableClientTLA &&
+      rspackHelpers.isRspackOutputFile(file.sourcePath)
+    );
+  },
+
+  _emitStandaloneRspackBundle(file, results) {
+    const segments = file.absModuleId.split("/").filter(Boolean);
+    let treeOpen = "";
+    let treeClose = "";
+    segments.forEach(segment => {
+      treeOpen += "{" + JSON.stringify(segment) + ":";
+      treeClose += "}";
+    });
+    const source =
+      "meteorInstall(" + treeOpen +
+      file._getClosureHeader() + "\n" +
+      file.source + "\n" +
+      file._getClosureFooter() +
+      treeClose + "," +
+      this._stringifyInstallOptions(file.meteorInstallOptions) +
+      ");\n";
+
+    // Derive the serve path from the full module id so distinct bundles
+    // (client/test, different build contexts) never collide with each
+    // other, and it stays inside the build-context namespace the rspack
+    // integration already reserves (and gitignores) in the app.
+    const servePath =
+      "/" + segments.join("/").replace(/\.js$/, ".min.js");
+
+    // Unshift so the registration script comes before the combined
+    // app.js file that requires the module.
+    results.unshift({
+      source,
+      servePath,
+      sourceMap: null,
+      hash: file._inputHash,
+    });
   },
 
   // Take the tree generated in getPrelinkedFiles and populate the chunks

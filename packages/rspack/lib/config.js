@@ -32,7 +32,12 @@ const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 import { getInitialEntrypoints } from './build-context';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
-const { RSPACK_BUILD_CONTEXT, FILE_ROLE } = require('./constants');
+const {
+  RSPACK_BUILD_CONTEXT,
+  RSPACK_ASSETS_CONTEXT,
+  RSPACK_CHUNKS_CONTEXT,
+  FILE_ROLE,
+} = require('./constants');
 
 /**
  * Checks if entries exist in .meteorignore file
@@ -95,10 +100,25 @@ function getFileExtensionsToIgnore() {
     return [];
   }
 
+  // This walk only exists to learn which file extensions occur in the
+  // project directories that Meteor should ignore, so skip the trees whose
+  // extensions can never matter. In particular `dot: true` made the walk
+  // descend into .git (every object file) on every meteor invocation, and
+  // public/, private/ and the rspack output contexts are never part of the
+  // ignored directories this list is applied to. See meteor/meteor#14568.
   const allFiles = glob.sync('**/*', {
     nodir: true,
     dot: true,
-    ignore: ['node_modules/**', '.meteor/**'],
+    ignore: [
+      'node_modules/**',
+      '.meteor/**',
+      '.git/**',
+      'public/**',
+      'private/**',
+      `${RSPACK_BUILD_CONTEXT}/**`,
+      `${RSPACK_ASSETS_CONTEXT}/**`,
+      `${RSPACK_CHUNKS_CONTEXT}/**`,
+    ],
   });
   const existingExts = Array.from(
     new Set(allFiles.map(f => path.extname(f).toLowerCase())),
