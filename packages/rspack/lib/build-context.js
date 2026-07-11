@@ -21,6 +21,7 @@ const {
   isMeteorAppBuild,
   isMeteorBlazeProject,
   isMeteorAppNative,
+  isMeteorAppTest,
   isMeteorAppTestFullApp,
 } = require('meteor/tools-core/lib/meteor');
 
@@ -37,6 +38,8 @@ const {
   RSPACK_BUILD_CONTEXT,
   RSPACK_CHUNKS_CONTEXT,
   RSPACK_ASSETS_CONTEXT,
+  getRspackChunksContext,
+  getRspackAssetsContext,
   GLOBAL_STATE_KEYS,
   FILE_ROLE,
 } = require('./constants');
@@ -84,8 +87,10 @@ export function ensureRspackBuildContextExists() {
 
   const commonBuildEntries = [
     RSPACK_BUILD_CONTEXT,
-    `*/${RSPACK_ASSETS_CONTEXT}`,
-    `*/${RSPACK_CHUNKS_CONTEXT}`,
+    // Trailing glob so the mode-suffixed variants (e.g. build-assets-test,
+    // build-chunks-app-test) are ignored alongside the base directories.
+    `*/${RSPACK_ASSETS_CONTEXT}*`,
+    `*/${RSPACK_CHUNKS_CONTEXT}*`,
     RSPACK_DOCTOR_CONTEXT,
   ];
 
@@ -179,6 +184,15 @@ export function ensureModuleFilesExist() {
       getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
   };
 
+  // All modes' scaffolds are (re)generated on every run so that a later run in
+  // another mode always finds its `*-meteor.js` mainModule file already on
+  // disk. The `*-rspack.js` OUTPUT files are the exception: they receive the
+  // real compiled bundle from Rspack, so once one exists we only leave it be.
+  // Overwriting it with the placeholder here would wipe the live build output
+  // of a concurrent instance in that mode (a dev server + a `meteor test` run
+  // sharing an app directory), leaving it to serve a blank bundle.
+  const isOutputBundleFile = (filename) => filename.endsWith('-rspack.js');
+
   Object.entries(moduleFiles).forEach(([filename, defaultContent]) => {
     // 1. Build full path and ensure directory exists
     const filePath = path.join(appDir, RSPACK_BUILD_CONTEXT, filename);
@@ -194,6 +208,12 @@ export function ensureModuleFilesExist() {
 
     // 2. If the file exists, check its contents
     if (fs.existsSync(filePath)) {
+      // Never overwrite an output bundle that already exists — it may hold a
+      // real (or concurrently building) compiled bundle.
+      if (isOutputBundleFile(filename)) {
+        return;
+      }
+
       let existing;
       try {
         existing = fs.readFileSync(filePath, 'utf8');
@@ -616,9 +636,21 @@ ${importContent}
 }
 
 /**
- * Cleans the build context files of the current environment
- * Removes all build files and directories for the current environment
- * Also cleans _build-* files from public and private folders
+ * Cleans the build context files that belong to the CURRENT mode only.
+ *
+ * A single app directory can host several Meteor instances at once — a common
+ * example is a `meteor run` dev server in one terminal and `meteor test` (or
+ * `meteor test --full-app`) in another. Each instance runs this on startup.
+ * Cleaning every mode's directories here would wipe another instance's live
+ * build output, leaving it serving broken/blank bundles until it rebuilt.
+ *
+ * So we scope the cleanup to the current mode: dev/prod removes only its
+ * `main-*` module directories, the run/prod chunk & asset contexts and the
+ * run/prod client bundle; a test (or full-app test) instance removes only the
+ * `test` module directories and its own mode-suffixed chunk & asset contexts.
+ * The `_build/*` module subdirectories are already mode-named; the
+ * assets/chunks contexts are mode-suffixed (see getRspackChunksContext) so the
+ * two modes never share an on-disk directory.
  * @returns {void}
  */
 export function cleanBuildContextFiles() {
@@ -630,33 +662,39 @@ export function cleanBuildContextFiles() {
     return;
   }
 
-  // Get current environment
-  const env = {
-    ...(isMeteorAppDevelopment() ? { isDevelopment: true } : { isProduction: true }),
-    isNative: isMeteorAppNative(),
-  };
+  const isTest = isMeteorAppTest();
+  const isTestFullApp = isMeteorAppTestFullApp();
 
   try {
-    // Clean main module directories
-    const mainClientPath = path.dirname(path.join(buildContextPath, getBuildFilePath({ isMain: true, isClient: true, ...env })));
-    const mainServerPath = path.dirname(path.join(buildContextPath, getBuildFilePath({ isMain: true, isServer: true, ...env })));
+    // Collect only the module directories owned by the current mode.
+    let modeDirPaths;
+    if (isTest) {
+      modeDirPaths = [
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isTestModule: true }))),
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isClient: true }))),
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isServer: true }))),
+      ];
+    } else {
+      const env = {
+        ...(isMeteorAppDevelopment() ? { isDevelopment: true } : { isProduction: true }),
+        isNative: isMeteorAppNative(),
+      };
+      modeDirPaths = [
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isMain: true, isClient: true, ...env }))),
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isMain: true, isServer: true, ...env }))),
+      ];
+    }
 
-    // Clean test module directories if they exist
-    const testModulePath = path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isTestModule: true })));
-    const testClientPath = path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isClient: true })));
-    const testServerPath = path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isServer: true })));
-
-    // Create a Set to ensure unique directory paths
-    const uniqueDirPaths = new Set([mainClientPath, mainServerPath, testModulePath, testClientPath, testServerPath]);
-
-    // Remove directories if they exist
-    [...uniqueDirPaths].forEach(dirPath => {
+    // Remove directories if they exist (Set dedupes shared paths)
+    [...new Set(modeDirPaths)].forEach(dirPath => {
       if (fs.existsSync(dirPath)) {
         fs.rmSync(dirPath, { recursive: true, force: true });
       }
     });
 
-    // Clean _build-* files from public and private folders
+    // Clean this mode's chunk/asset contexts from public and private folders.
+    const assetsContext = getRspackAssetsContext(isTest, isTestFullApp);
+    const chunksContext = getRspackChunksContext(isTest, isTestFullApp);
     const publicDir = path.join(appDir, 'public');
     const privateDir = path.join(appDir, 'private');
 
@@ -665,21 +703,22 @@ export function cleanBuildContextFiles() {
         try {
           const files = fs.readdirSync(dir);
           files.forEach(file => {
-            if ([RSPACK_ASSETS_CONTEXT, RSPACK_CHUNKS_CONTEXT, RSPACK_DOCTOR_CONTEXT].includes(file)) {
+            if ([assetsContext, chunksContext, RSPACK_DOCTOR_CONTEXT].includes(file)) {
               const filePath = path.join(dir, file);
               fs.rmSync(filePath, { recursive: true, force: true });
             }
           });
 
-          // Also remove client-rspack.js from public directory if it exists
-          if (dir === publicDir) {
+          // The run/prod client bundle belongs to dev/prod mode, so a
+          // test-mode instance must not delete another instance's copy.
+          if (dir === publicDir && !isTest) {
             const clientRspackPath = path.join(dir, 'client-rspack.js');
             if (fs.existsSync(clientRspackPath)) {
               fs.rmSync(clientRspackPath, { force: true });
             }
           }
         } catch (err) {
-          logError(`Failed to clean _build-* files from ${dir}: ${err.message}`);
+          logError(`Failed to clean rspack context files from ${dir}: ${err.message}`);
         }
       }
     });

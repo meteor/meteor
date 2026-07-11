@@ -52,8 +52,8 @@ const {
 
 const {
   GLOBAL_STATE_KEYS,
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
+  getRspackChunksContext,
+  getRspackAssetsContext,
   FILE_ROLE,
 } = require('./constants');
 
@@ -308,8 +308,11 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
       getBuildFilePath({ ...module, ...env, ...side, ...commandRole }),
     ],
     ["buildContext", RSPACK_BUILD_CONTEXT],
-    ["chunksContext", RSPACK_CHUNKS_CONTEXT],
-    ["assetsContext", RSPACK_ASSETS_CONTEXT],
+    // Mode-scoped so concurrent commands on one app dir (e.g. a dev server
+    // plus `meteor test`) write their chunks/assets to separate directories
+    // under public/ instead of overwriting each other.
+    ["chunksContext", getRspackChunksContext(isTest, isTestFullApp)],
+    ["assetsContext", getRspackAssetsContext(isTest, isTestFullApp)],
     ["devServerPort", process.env.RSPACK_DEVSERVER_PORT],
     ["projectConfigPath", projectConfigPath],
     ["configPath", configPath],

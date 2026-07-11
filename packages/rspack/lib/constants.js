@@ -95,6 +95,45 @@ process.env.RSPACK_CHUNKS_CONTEXT = RSPACK_CHUNKS_CONTEXT;
 export const RSPACK_DOCTOR_CONTEXT = '.rsdoctor';
 
 /**
+ * Gets the mode suffix used to isolate build artifacts produced by different
+ * Meteor commands running concurrently on the same app directory (e.g. a dev
+ * server in one terminal and `meteor test` in another). This is a different
+ * isolation axis than the METEOR_LOCAL_DIR suffix baked into the base
+ * context names above: that one separates local directories, this one
+ * separates modes within a single local directory. The two compose.
+ * @param {boolean} isTest - Whether in test mode
+ * @param {boolean} isTestFullApp - Whether in --full-app test mode
+ * @returns {string} '' (run/build), '-test' (test) or '-app-test' (full-app)
+ */
+function getModeSuffix(isTest, isTestFullApp) {
+  if (isTest && isTestFullApp) return '-app-test';
+  if (isTest) return '-test';
+  return '';
+}
+
+/**
+ * Gets the mode-aware Rspack chunks context directory name
+ * (e.g. 'build-chunks', 'build-chunks-test', 'build-chunks-app-test')
+ * @param {boolean} isTest - Whether in test mode
+ * @param {boolean} isTestFullApp - Whether in --full-app test mode
+ * @returns {string} Context directory name
+ */
+export function getRspackChunksContext(isTest = false, isTestFullApp = false) {
+  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}`;
+}
+
+/**
+ * Gets the mode-aware Rspack assets context directory name
+ * (e.g. 'build-assets', 'build-assets-test', 'build-assets-app-test')
+ * @param {boolean} isTest - Whether in test mode
+ * @param {boolean} isTestFullApp - Whether in --full-app test mode
+ * @returns {string} Context directory name
+ */
+export function getRspackAssetsContext(isTest = false, isTestFullApp = false) {
+  return `${RSPACK_ASSETS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}`;
+}
+
+/**
  * Regex pattern for hot update files
  * @constant {RegExp}
  */
