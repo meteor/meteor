@@ -496,6 +496,27 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
 }
 
 /**
+ * Builds the environment for a spawned rspack child process.
+ * Inherits the meteor tool's environment but drops METEOR_IGNORE: it is only
+ * consumed by the meteor tool itself (tools/fs/optimistic.ts), and on large
+ * projects its dir-times-extension ignore patterns can grow to tens of
+ * kilobytes — forwarding it to every rspack child wastes execve arg+env
+ * budget (risking E2BIG on constrained systems) for a variable rspack never
+ * reads.
+ * @param {Object} envs - Extra environment variables for this spawn
+ * @returns {Object} The environment object to pass to spawnProcess
+ */
+function getRspackSpawnEnv(envs) {
+  const parentEnv = { ...process.env };
+  delete parentEnv.METEOR_IGNORE;
+  return inheritMeteorToolNodeFlags({
+    ...parentEnv,
+    ...getNodeBinEnv(),
+    ...envs,
+  });
+}
+
+/**
  * Starts Rspack for client in serve mode
  * @param {Object} options - Options for client serve
  * @param {Function} options.onCompile - Callback function to be called when compilation is complete
@@ -526,7 +547,7 @@ export function startRspackClientServe(options = {}) {
       // group, releasing the devserver port even when npx wouldn't forward
       // SIGTERM/SIGINT on its own.
       detached: process.platform !== 'win32',
-      env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+      env: getRspackSpawnEnv(envs),
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (config && !!config?.devServerUrl) {
@@ -644,7 +665,7 @@ export function startRspackServerWatch(options = {}) {
     cwd: appDir,
     // Detach for the same reason as the client serve process; see comment there.
     detached: process.platform !== 'win32',
-    env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+    env: getRspackSpawnEnv(envs),
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
       if (onCompile && config && (config?.compilationCount || 0) > 0) {
@@ -750,7 +771,7 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
       args,
       {
       cwd: appDir,
-      env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+      env: getRspackSpawnEnv(envs),
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (onCompile && config && (config?.compilationCount || 0) > 0) {
