@@ -32,7 +32,21 @@ Meteor.methods({
         },
       }
     );
-    return await getTokenFromSecret({ selector, secret });
+    return getTokenFromSecret({ selector, secret });
   },
   getTokenFromSecret,
+  async getLoginTokenCount(userId) {
+    const user = await Meteor.users.findOneAsync(userId);
+    return user?.services?.resume?.loginTokens?.length ?? 0;
+  },
+  async pushFakeLoginToken(userId, hashedToken) {
+    await Meteor.users.updateAsync(userId, {
+      $push: {
+        'services.resume.loginTokens': {
+          hashedToken,
+          when: new Date(),
+        },
+      },
+    });
+  },
 });

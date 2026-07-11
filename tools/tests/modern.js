@@ -1,6 +1,6 @@
-var selftest = require("../tool-testing/selftest.js");
+var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
-var files = require("../fs/files");
+var files = require('../fs/files');
 
 // No need for a high value since the asserts already wait long enough to pass tests
 const waitToStart = 5;
@@ -16,7 +16,7 @@ const buildWaitSecs = process.env.CI ? 90 : 60;
 // first attempt.
 async function withEnv(overrides, fn) {
   const saved = Object.fromEntries(
-    Object.keys(overrides).map((k) => [k, process.env[k]])
+    Object.keys(overrides).map(k => [k, process.env[k]])
   );
   Object.assign(process.env, overrides);
   try {
@@ -41,7 +41,7 @@ async function writeModernConfig(s, modernConfig) {
 }
 
 selftest.define("modern build stack - legacy", async function () {
-  await withEnv({ METEOR_MODERN: "false" }, async () => {
+  await withEnv({ METEOR_MODERN: 'false' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -72,7 +72,7 @@ selftest.define("modern build stack - legacy", async function () {
 });
 
 selftest.define("modern build stack", async function () {
-  await withEnv({ METEOR_MODERN: "" }, async () => {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -106,7 +106,7 @@ selftest.define("modern build stack", async function () {
 });
 
 selftest.define("modern build stack - disable transpiler", async function () {
-  await withEnv({ METEOR_MODERN: "" }, async () => {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -138,7 +138,7 @@ selftest.define("modern build stack - disable transpiler", async function () {
 });
 
 selftest.define("modern build stack - disable watcher", async function () {
-  await withEnv({ METEOR_MODERN: "" }, async () => {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -170,7 +170,7 @@ selftest.define("modern build stack - disable watcher", async function () {
 });
 
 selftest.define("modern build stack - disable webArchOnly", async function () {
-  await withEnv({ METEOR_MODERN: "" }, async () => {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -200,210 +200,186 @@ selftest.define("modern build stack - disable webArchOnly", async function () {
   });
 });
 
-selftest.define(
-  "modern build stack - transpiler boolean-like options",
-  async function () {
-    await withEnv(
-      { METEOR_MODERN: "", METEOR_DISABLE_COLORS: "true" },
-      async () => {
-        const s = new Sandbox();
-        await s.init();
+selftest.define("modern build stack - transpiler boolean-like options", async function () {
+  await withEnv({ METEOR_MODERN: '', METEOR_DISABLE_COLORS: 'true' }, async () => {
+    const s = new Sandbox();
+    await s.init();
 
-        s.mkdir("config-package");
-        s.cd("config-package");
+    s.mkdir("config-package");
+    s.cd("config-package");
 
-        s.write(
-          "package.json",
-          JSON.stringify(
-            {
-              name: "config",
-              version: "1.2.3",
-              private: true,
-              main: "index.js",
-            },
-            null,
-            2
-          ) + "\n"
-        );
+    s.write(
+      "package.json",
+      JSON.stringify({
+        name: "config",
+        version: "1.2.3",
+        "private": true,
+        main: "index.js"
+      }, null, 2) + "\n"
+    );
 
-        s.write("index.js", "exports.id = module.id;\n");
+    s.write(
+      "index.js",
+      "exports.id = module.id;\n"
+    );
 
-        s.cd(s.home);
+    s.cd(s.home);
 
-        await s.createApp("modern", "modern");
-        await s.cd("modern");
+    await s.createApp("modern", "modern");
+    await s.cd("modern");
 
-        s.append(
-          "server/main.js",
-          `if (require('config')) {
+    s.append(
+      "server/main.js",
+      `if (require('config')) {
   console.log('Loaded NPM package "config"', require('config').id);
-}`
-        );
+}`);
 
-        await writeModernConfig(s, {
-          transpiler: {
-            verbose: true,
-          },
-        });
+    await writeModernConfig(s, {
+      transpiler: {
+        verbose: true,
+      },
+    });
 
-        const run = s.run();
+    const run = s.run();
 
-        run.waitSecs(waitToStart);
-        await run.match("App running at");
+    run.waitSecs(waitToStart);
+    await run.match("App running at");
 
-        /* check appended NPM package require */
-        await run.match(/Loaded NPM package "config"/, false, true);
+    /* check appended NPM package require */
+    await run.match(/Loaded NPM package "config"/, false, true);
 
-        /* check verbose logs */
-        await run.match(/SWC Custom Config/, false, true);
-        await run.match(/Meteor Config/, false, true);
+    /* check verbose logs */
+    await run.match(/SWC Custom Config/, false, true);
+    await run.match(/Meteor Config/, false, true);
 
-        /* check transpiler options */
-        await run.match(/\[Transpiler] Used SWC.*\(app\)/, false, true);
-        await run.match(/\[Transpiler] Used SWC.*\(package\)/, false, true);
-        run.forbid(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
+    /* check transpiler options */
+    await run.match(/\[Transpiler] Used SWC.*\(app\)/, false, true);
+    await run.match(/\[Transpiler] Used SWC.*\(package\)/, false, true);
+    run.forbid(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
 
-        await writeModernConfig(s, {
-          transpiler: {
-            verbose: true,
-            excludeApp: true,
-          },
-        });
-        await run.match(/\[Transpiler] Used Babel.*\(app\)/, false, true);
+    await writeModernConfig(s, {
+      transpiler: {
+        verbose: true,
+        excludeApp: true,
+      },
+    });
+    await run.match(/\[Transpiler] Used Babel.*\(app\)/, false, true);
 
-        await writeModernConfig(s, {
-          transpiler: {
-            verbose: true,
-            excludePackages: true,
-          },
-        });
-        await run.match(/\[Transpiler] Used Babel.*\(package\)/, false, true);
+    await writeModernConfig(s, {
+      transpiler: {
+        verbose: true,
+        excludePackages: true,
+      },
+    });
+    await run.match(/\[Transpiler] Used Babel.*\(package\)/, false, true);
 
-        await writeConfig(s, {
-          modern: {
-            transpiler: {
-              verbose: true,
-            },
-          },
-          nodeModules: {
-            recompile: {
-              config: true,
-            },
-          },
-        });
-        await run.match(
-          /\[Transpiler] Used SWC.*\(node_modules\)/,
-          false,
-          true
-        );
+    await writeConfig(s, {
+      modern: {
+        transpiler: {
+          verbose: true,
+        },
+      },
+      nodeModules: {
+        recompile: {
+          config: true,
+        },
+      },
+    });
+    await run.match(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
 
-        await run.stop();
-      }
+    await run.stop();
+  });
+});
+
+selftest.define("modern build stack - transpiler string-like options", async function () {
+  await withEnv({ METEOR_MODERN: '', METEOR_DISABLE_COLORS: 'true' }, async () => {
+    const s = new Sandbox();
+    await s.init();
+
+    s.mkdir("config-package");
+    s.cd("config-package");
+
+    s.write(
+      "package.json",
+      JSON.stringify({
+        name: "config",
+        version: "1.2.3",
+        "private": true,
+        main: "index.js"
+      }, null, 2) + "\n"
     );
-  }
-);
 
-selftest.define(
-  "modern build stack - transpiler string-like options",
-  async function () {
-    await withEnv(
-      { METEOR_MODERN: "", METEOR_DISABLE_COLORS: "true" },
-      async () => {
-        const s = new Sandbox();
-        await s.init();
-
-        s.mkdir("config-package");
-        s.cd("config-package");
-
-        s.write(
-          "package.json",
-          JSON.stringify(
-            {
-              name: "config",
-              version: "1.2.3",
-              private: true,
-              main: "index.js",
-            },
-            null,
-            2
-          ) + "\n"
-        );
-
-        s.write("index.js", "exports.id = module.id;\n");
-
-        s.cd(s.home);
-
-        await s.createApp("modern", "modern");
-        await s.cd("modern");
-
-        s.append(
-          "server/main.js",
-          `import { id } from 'config';
-console.log('Loaded NPM package "config"', require('config').id);`
-        );
-
-        await writeModernConfig(s, {
-          transpiler: {
-            verbose: true,
-          },
-        });
-
-        const run = s.run();
-
-        run.waitSecs(waitToStart);
-        await run.match("App running at");
-
-        /* check appended NPM package imported */
-        await run.match(/Loaded NPM package "config"/, false, true);
-
-        /* check verbose logs */
-        await run.match(/SWC Custom Config/, false, true);
-        await run.match(/Meteor Config/, false, true);
-
-        /* check transpiler options */
-        await run.match(/\[Transpiler] Used SWC.*\(app\)/, false, true);
-        await run.match(/\[Transpiler] Used SWC.*\(package\)/, false, true);
-        run.forbid(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
-
-        await writeModernConfig(s, {
-          transpiler: {
-            verbose: true,
-            excludeApp: ["main.js"],
-          },
-        });
-        await run.match(/\[Transpiler] Used Babel.*\(app\)/, false, true);
-
-        await writeModernConfig(s, {
-          transpiler: {
-            verbose: true,
-            excludePackages: ["ejson"],
-          },
-        });
-        await run.match(/\[Transpiler] Used Babel.*\(package\)/, false, true);
-
-        await writeConfig(s, {
-          modern: {
-            transpiler: {
-              verbose: true,
-            },
-          },
-          nodeModules: {
-            recompile: {
-              config: true,
-            },
-          },
-        });
-        await run.match(
-          /\[Transpiler] Used SWC.*\(node_modules\)/,
-          false,
-          true
-        );
-
-        await run.stop();
-      }
+    s.write(
+      "index.js",
+      "exports.id = module.id;\n"
     );
-  }
-);
+
+    s.cd(s.home);
+
+    await s.createApp("modern", "modern");
+    await s.cd("modern");
+
+    s.append(
+      "server/main.js",
+      `import { id } from 'config';
+console.log('Loaded NPM package "config"', require('config').id);`);
+
+    await writeModernConfig(s, {
+      transpiler: {
+        verbose: true,
+      },
+    });
+
+    const run = s.run();
+
+    run.waitSecs(waitToStart);
+    await run.match("App running at");
+
+    /* check appended NPM package imported */
+    await run.match(/Loaded NPM package "config"/, false, true);
+
+    /* check verbose logs */
+    await run.match(/SWC Custom Config/, false, true);
+    await run.match(/Meteor Config/, false, true);
+
+    /* check transpiler options */
+    await run.match(/\[Transpiler] Used SWC.*\(app\)/, false, true);
+    await run.match(/\[Transpiler] Used SWC.*\(package\)/, false, true);
+    run.forbid(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
+
+    await writeModernConfig(s, {
+      transpiler: {
+        verbose: true,
+        excludeApp: ['main.js'],
+      },
+    });
+    await run.match(/\[Transpiler] Used Babel.*\(app\)/, false, true);
+
+    await writeModernConfig(s, {
+      transpiler: {
+        verbose: true,
+        excludePackages: ['ejson'],
+      },
+    });
+    await run.match(/\[Transpiler] Used Babel.*\(package\)/, false, true);
+
+    await writeConfig(s, {
+      modern: {
+        transpiler: {
+          verbose: true,
+        },
+      },
+      nodeModules: {
+        recompile: {
+          config: true,
+        },
+      },
+    });
+    await run.match(/\[Transpiler] Used SWC.*\(node_modules\)/, false, true);
+
+    await run.stop();
+  });
+});
 
 async function writeConfig(s, config) {
   const json = JSON.parse(s.read("package.json"));
@@ -431,83 +407,8 @@ async function writeSwcConfigJs(s, config) {
   s.write("swc.config.js", jsContent);
 }
 
-selftest.define(
-  "modern build stack - transpiler custom .swcrc",
-  async function () {
-    await withEnv({ METEOR_MODERN: "" }, async () => {
-      const s = new Sandbox();
-      await s.init();
-
-      await s.createApp("modern", "modern");
-      await s.cd("modern");
-
-      await writeConfig(s, {
-        modern: true,
-        mainModule: {
-          client: "client/main.js",
-          server: "server/alias.js",
-        },
-      });
-
-      const run = s.run();
-
-      run.waitSecs(waitToStart);
-      await run.match("App running at");
-
-      /* custom .swcrc and alias resolution */
-      await run.match(/alias resolved/, false, true);
-
-      await run.stop();
-    });
-  }
-);
-
-selftest.define(
-  "modern build stack - transpiler custom swc.config.js",
-  async function () {
-    await withEnv({ METEOR_MODERN: "" }, async () => {
-      const s = new Sandbox();
-      await s.init();
-
-      await s.createApp("modern", "modern");
-      await s.cd("modern");
-
-      // Remove the .swcrc file to ensure we're using swc.config.js
-      s.unlink(".swcrc");
-
-      // Write the swc.config.js file with the same configuration
-      await writeSwcConfigJs(s, {
-        jsc: {
-          baseUrl: "./",
-          paths: {
-            "@swcAlias/*": ["swcAlias/*"],
-          },
-        },
-      });
-
-      await writeConfig(s, {
-        modern: true,
-        mainModule: {
-          client: "client/main.js",
-          server: "server/alias.js",
-        },
-      });
-
-      const run = s.run();
-
-      run.waitSecs(waitToStart);
-      await run.match("App running at");
-
-      /* custom swc.config.js and alias resolution */
-      await run.match(/alias resolved/, false, true);
-
-      await run.stop();
-    });
-  }
-);
-
-selftest.define("modern build stack - transpiler files", async function () {
-  await withEnv({ METEOR_MODERN: "true" }, async () => {
+selftest.define("modern build stack - transpiler custom .swcrc", async function () {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -517,8 +418,77 @@ selftest.define("modern build stack - transpiler files", async function () {
     await writeConfig(s, {
       modern: true,
       mainModule: {
-        client: "client/main.js",
-        server: "server/javascript.js",
+        client: 'client/main.js',
+        server: 'server/alias.js',
+      },
+    });
+
+    const run = s.run();
+
+    run.waitSecs(waitToStart);
+    await run.match("App running at");
+
+    /* custom .swcrc and alias resolution */
+    await run.match(/alias resolved/, false, true);
+
+    await run.stop();
+  });
+});
+
+selftest.define("modern build stack - transpiler custom swc.config.js", async function () {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
+    const s = new Sandbox();
+    await s.init();
+
+    await s.createApp("modern", "modern");
+    await s.cd("modern");
+
+    // Remove the .swcrc file to ensure we're using swc.config.js
+    s.unlink(".swcrc");
+
+    // Write the swc.config.js file with the same configuration
+    await writeSwcConfigJs(s, {
+      jsc: {
+        baseUrl: "./",
+        paths: {
+          "@swcAlias/*": ["swcAlias/*"]
+        }
+      }
+    });
+
+    await writeConfig(s, {
+      modern: true,
+      mainModule: {
+        client: 'client/main.js',
+        server: 'server/alias.js',
+      },
+    });
+
+    const run = s.run();
+
+    run.waitSecs(waitToStart);
+    await run.match("App running at");
+
+    /* custom swc.config.js and alias resolution */
+    await run.match(/alias resolved/, false, true);
+
+    await run.stop();
+  });
+});
+
+selftest.define("modern build stack - transpiler files", async function () {
+  await withEnv({ METEOR_MODERN: 'true' }, async () => {
+    const s = new Sandbox();
+    await s.init();
+
+    await s.createApp("modern", "modern");
+    await s.cd("modern");
+
+    await writeConfig(s, {
+      modern: true,
+      mainModule: {
+        client: 'client/main.js',
+        server: 'server/javascript.js',
       },
     });
 
@@ -532,8 +502,8 @@ selftest.define("modern build stack - transpiler files", async function () {
     await writeConfig(s, {
       modern: true,
       mainModule: {
-        client: "client/main.js",
-        server: "server/javascript-component.jsx",
+        client: 'client/main.js',
+        server: 'server/javascript-component.jsx',
       },
     });
     await run.match(/javascript-component\.jsx/, false, true);
@@ -541,8 +511,8 @@ selftest.define("modern build stack - transpiler files", async function () {
     await writeConfig(s, {
       modern: true,
       mainModule: {
-        client: "client/main.js",
-        server: "server/typescript.ts",
+        client: 'client/main.js',
+        server: 'server/typescript.ts',
       },
     });
     await run.match(/typescript\.ts/, false, true);
@@ -550,8 +520,8 @@ selftest.define("modern build stack - transpiler files", async function () {
     await writeConfig(s, {
       modern: true,
       mainModule: {
-        client: "client/main.js",
-        server: "server/typescript-component.tsx",
+        client: 'client/main.js',
+        server: 'server/typescript-component.tsx',
       },
     });
     await run.match(/typescript-component\.tsx/, false, true);
@@ -559,7 +529,7 @@ selftest.define("modern build stack - transpiler files", async function () {
     await writeSwcrcConfig(s, {
       jsc: {
         parser: {
-          syntax: "typescript",
+          syntax: 'typescript',
           tsx: true,
           jsx: true,
         },
@@ -568,8 +538,8 @@ selftest.define("modern build stack - transpiler files", async function () {
     await writeConfig(s, {
       modern: true,
       mainModule: {
-        client: "client/main.js",
-        server: "server/custom-component.js",
+        client: 'client/main.js',
+        server: 'server/custom-component.js',
       },
     });
     await run.match(/custom-component\.js/, false, true);
@@ -579,7 +549,7 @@ selftest.define("modern build stack - transpiler files", async function () {
 });
 
 selftest.define("modern build stack - test terser minifier", async function () {
-  await withEnv({ METEOR_MODERN: "" }, async () => {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -589,7 +559,7 @@ selftest.define("modern build stack - test terser minifier", async function () {
     await s.cd(appName);
 
     await writeConfig(s, {
-      modern: false,
+      modern: false
     });
 
     s.set("NODE_INSPECTOR_IPC", "1");
@@ -609,7 +579,7 @@ selftest.define("modern build stack - test terser minifier", async function () {
 });
 
 selftest.define("modern build stack - test swc minifier", async function () {
-  await withEnv({ METEOR_MODERN: "true" }, async () => {
+  await withEnv({ METEOR_MODERN: 'true' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -621,15 +591,15 @@ selftest.define("modern build stack - test swc minifier", async function () {
     await writeConfig(s, {
       modern: true,
       mainModule: {
-        client: "client/main.js",
-        server: "server/main.js",
+        client: 'client/main.js',
+        server: 'server/main.js',
       },
     });
 
     s.set("NODE_INSPECTOR_IPC", "1");
 
     await writeModernConfig(s, {
-      minifier: true,
+      minifier: true
     });
 
     const runSwc = s.run();
@@ -648,7 +618,7 @@ selftest.define("modern build stack - test swc minifier", async function () {
 });
 
 selftest.define("modern build stack - enable build", async function () {
-  await withEnv({ METEOR_MODERN: "" }, async () => {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
@@ -678,7 +648,7 @@ selftest.define("modern build stack - enable build", async function () {
 });
 
 selftest.define("modern build stack - disable build", async function () {
-  await withEnv({ METEOR_MODERN: "" }, async () => {
+  await withEnv({ METEOR_MODERN: '' }, async () => {
     const s = new Sandbox();
     await s.init();
 
