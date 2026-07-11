@@ -1784,6 +1784,7 @@ Object.assign(Server.prototype, {
     }
 
     var invocation = new DDPCommon.MethodInvocation({
+      name,
       isSimulation: false,
       userId,
       setUserId,
