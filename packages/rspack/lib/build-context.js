@@ -152,6 +152,8 @@ export function ensureModuleFilesExist() {
 
   const moduleFiles = {
     /* Main module files for client and server */
+    [getBuildFilePath({ isMain: true, isClient: true, ...env, role: FILE_ROLE.publicPath })]:
+      getBuildFileContent({ isMain: true, isClient: true, ...env, role: FILE_ROLE.publicPath, ...mainClientFiles }),
     [getBuildFilePath({ isMain: true, isClient: true, ...env, ...commandRole })]:
       getBuildFileContent({ isMain: true, isClient: true, ...env, ...commandRole, ...mainClientFiles }),
     [getBuildFilePath({ isMain: true, isClient: true, ...env, role: FILE_ROLE.entry })]:
@@ -260,6 +262,8 @@ export function getBuildFilePath(config) {
     role = 'meteor';
   } else if ([FILE_ROLE.output].includes(role)) {
     role = 'rspack';
+  } else if ([FILE_ROLE.publicPath].includes(role)) {
+    role = 'public-path';
   }
 
   // 5. Get file extension (default to js)
@@ -396,6 +400,24 @@ ${AUTO_GENERATED_WARNING}
   }
 
   // For main modules (not test mode), use the new templates
+  // Public path files
+  if (role === FILE_ROLE.publicPath) {
+    return `/**
+* @file ${side}-public-path.js
+* @description Sets the Rspack public path from Meteor's runtime configuration
+* --------------------------------------------------------------------------
+* 🌐 Rspack ${sideDisplay} Public Path (${envDisplay})
+* --------------------------------------------------------------------------
+* Imported first by \`${side}-entry.js\` so that chunk, asset and hot-update
+* URLs constructed by the Rspack runtime honor the ROOT_URL path prefix
+* (\`__meteor_runtime_config__.ROOT_URL_PATH_PREFIX\`) when the app is served
+* under a sub-path, e.g. ROOT_URL=https://example.com/live/.
+* See meteor/meteor#14523.
+*
+${AUTO_GENERATED_WARNING}
+*/`;
+  }
+
   // Entry files
   if (role === FILE_ROLE.entry) {
     if (!config?.entryFile) {
@@ -525,6 +547,43 @@ function getImportContent(config, side, role) {
     return '';
   }
 
+  if (role === FILE_ROLE.publicPath) {
+    const isDevServer = config?.isDevelopment && !config?.isNative;
+    if (isDevServer) {
+      return `/* When the app is served under a ROOT_URL path prefix, load chunks,
+   assets and hot updates directly through Meteor's dev-server proxy
+   (mounted at /__rspack__) with the prefix applied. Without a prefix the
+   default public path is kept and the integration's compatibility
+   redirects apply, unchanged. */
+var rootUrlPathPrefix =
+  (typeof __meteor_runtime_config__ !== 'undefined' &&
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX) ||
+  '';
+if (rootUrlPathPrefix) {
+  __webpack_public_path__ = rootUrlPathPrefix + '/__rspack__/';
+}`;
+    }
+    return `/* When the app is served under a ROOT_URL path prefix, prepend the
+   prefix to the public path so chunk and asset URLs constructed at
+   runtime resolve correctly. Absolute (e.g. CDN) public paths and
+   public paths already carrying the prefix are left untouched. */
+var rootUrlPathPrefix =
+  (typeof __meteor_runtime_config__ !== 'undefined' &&
+    __meteor_runtime_config__.ROOT_URL_PATH_PREFIX) ||
+  '';
+if (rootUrlPathPrefix) {
+  var currentPublicPath = __webpack_public_path__;
+  var isRootRelative =
+    currentPublicPath.charAt(0) === '/' && currentPublicPath.charAt(1) !== '/';
+  var isAlreadyPrefixed =
+    currentPublicPath === rootUrlPathPrefix ||
+    currentPublicPath.indexOf(rootUrlPathPrefix + '/') === 0;
+  if (isRootRelative && !isAlreadyPrefixed) {
+    __webpack_public_path__ = rootUrlPathPrefix + currentPublicPath;
+  }
+}`;
+  }
+
   if (role === FILE_ROLE.entry) {
     if (config?.isTest) {
       return `${
@@ -545,6 +604,18 @@ import '../../${config.entryFile}';`
     }
 
     if (config?.entryFile) {
+      if (config?.isClient) {
+        const publicPathFile = getBuildFilePath({
+          isClient: true,
+          role: FILE_ROLE.publicPath,
+          onlyFilename: true,
+        });
+        return `/* Link to 🌐 Rspack Client Public Path (must be imported first) */
+import './${publicPathFile}';
+
+/* Link to 🔌 Meteor ${capitalizeFirstLetter(side)} Entry */
+import '../../${config?.entryFile}';`;
+      }
       return `/* Link to 🔌 Meteor ${capitalizeFirstLetter(side)} Entry */
 import '../../${config?.entryFile}';`;
     }

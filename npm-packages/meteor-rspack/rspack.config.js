@@ -178,12 +178,20 @@ function createRemoteDevServerConfig() {
   if (rootUrl) {
     try {
       const url = new URL(rootUrl);
+      // When ROOT_URL carries a path prefix (e.g. http://localhost:3000/live/),
+      // the HMR websocket must connect through the app origin so it reaches
+      // the /ws proxy Meteor mounts behind the prefix; connecting straight to
+      // the dev server would use the wrong path. See meteor/meteor#14523.
+      const pathPrefix = url.pathname.replace(/\/+$/, '');
+      const webSocketPathname = pathPrefix
+        ? { pathname: `${pathPrefix}/ws` }
+        : {};
       // Detect if it's remote (not localhost or 127.x)
       const isLocal =
         url.hostname.includes('localhost') ||
         url.hostname.startsWith('127.') ||
         url.hostname.endsWith('.local');
-      if (!isLocal) {
+      if (!isLocal || pathPrefix) {
         hostname = url.hostname;
         protocol = url.protocol === 'https:' ? 'wss' : 'ws';
         port = url.port ? Number(url.port) : (url.protocol === 'https:' ? 443 : 80);
@@ -194,6 +202,7 @@ function createRemoteDevServerConfig() {
               hostname,
               port,
               protocol,
+              ...webSocketPathname,
             },
           },
         };

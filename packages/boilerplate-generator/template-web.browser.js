@@ -3,6 +3,21 @@ import template from './template';
 const sri = (sri, mode) =>
   (sri && mode) ? ` integrity="sha512-${sri}" crossorigin="${mode}"` : '';
 
+// Root-relative custom script URLs receive the same ROOT_URL path prefix
+// as every other bundled script. Protocol-relative and absolute URLs pass
+// through untouched, as do URLs that already carry the prefix (apps that
+// worked around meteor/meteor#14523 prefix the env variable themselves).
+const prefixCustomScriptUrl = (url, rootUrlPathPrefix) => {
+  if (!rootUrlPathPrefix ||
+      !url.startsWith('/') ||
+      url.startsWith('//') ||
+      url === rootUrlPathPrefix ||
+      url.startsWith(rootUrlPathPrefix + '/')) {
+    return url;
+  }
+  return rootUrlPathPrefix + url;
+};
+
 export const headTemplate = ({
   css,
   htmlAttributes,
@@ -79,7 +94,10 @@ export const closeTemplate = ({
   )),
   process.env.METEOR_APP_CUSTOM_SCRIPT_URL ?
     template("  <script type=\"text/javascript\" src=\"<%- src %>\"></script>")({
-      src: process.env.METEOR_APP_CUSTOM_SCRIPT_URL
+      src: prefixCustomScriptUrl(
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL,
+        rootUrlPathPrefix
+      )
     })
     : '',
   '',
