@@ -11,11 +11,11 @@ jest.mock('lru-cache', () => ({
     get() { return undefined; }
     set() {}
   },
-}));
+}), { virtual: true });
 
 jest.mock('optimism', () => ({
   wrap: fn => fn,
-}));
+}), { virtual: true });
 
 jest.mock('../utils/buildmessage.js', () => ({
   error: jest.fn(),
