@@ -194,12 +194,18 @@ export function configureMeteorForRspack() {
     extraFoldersToIgnore = [];
   }
 
-  // Skip CSS/HTML files in entrypoint contexts
+  // Skip CSS/HTML files in entrypoint contexts, including nested
+  // subdirectories (`client/**/*.css` also matches `client/a.css`
+  // since `**` matches zero or more directories). See meteor/meteor#14523.
   extraFilesToIgnore = [
     ...extraFilesToIgnore,
     ...initialEntrypointContexts.flatMap(entrypoint => {
-      const cssPattern = `${entrypoint}/*.css`;
-      const htmlPattern = `${entrypoint}/*.html`;
+      const cssPattern = `${entrypoint}/**/*.css`;
+      const htmlPattern = `${entrypoint}/**/*.html`;
+      // Legacy top-level pattern forms, so existing .meteorignore lines
+      // like `client/*.css` keep opting out of the unignore
+      const legacyCssPattern = `${entrypoint}/*.css`;
+      const legacyHtmlPattern = `${entrypoint}/*.html`;
 
       const cssFiles = glob.sync(cssPattern);
       const htmlFiles = glob.sync(htmlPattern);
@@ -207,13 +213,17 @@ export function configureMeteorForRspack() {
       const entriesToCheck = [
         cssPattern,
         htmlPattern,
+        legacyCssPattern,
+        legacyHtmlPattern,
         ...cssFiles,
         ...htmlFiles
       ];
 
       const entryResults = checkMeteorIgnoreExactEntries(entriesToCheck);
-      const hasMatchingCssPattern = entryResults[cssPattern];
-      const hasMatchingHtmlPattern = entryResults[htmlPattern];
+      const hasMatchingCssPattern =
+        entryResults[cssPattern] || entryResults[legacyCssPattern];
+      const hasMatchingHtmlPattern =
+        entryResults[htmlPattern] || entryResults[legacyHtmlPattern];
       const hasAnyCssFileInMeteorIgnore = cssFiles.some(file => entryResults[file]);
       const hasAnyHtmlFileInMeteorIgnore = htmlFiles.some(file => entryResults[file]);
 
@@ -393,8 +403,9 @@ export function configureMeteorForRspack() {
  * Since Meteor awaits rspack compilation before scanning files, these patterns
  * are in place before Meteor processes any application files.
  *
- * Uses gitignore semantics: a later positive pattern (client/*.css) overrides
- * an earlier negation (!client/*.css) that was set in configureMeteorForRspack.
+ * Uses gitignore semantics: a later positive nested pattern (client, then
+ * any subdirectories, then *.css) overrides the matching earlier negation
+ * that was set in configureMeteorForRspack.
  *
  * @param {string[]} extensions - Array of extensions like ['.css', '.less']
  */
@@ -412,8 +423,10 @@ export function applyDelegatedExtensions(extensions) {
   const ignorePatterns = [];
   for (const dir of entrypointContexts) {
     for (const ext of extensions) {
-      // ext comes as '.css', glob needs '*.css'
-      ignorePatterns.push(`${dir}/*${ext}`);
+      // ext comes as '.css'; use a nested-inclusive pattern so delegation
+      // also re-ignores nested files (`**` matches zero or more directories,
+      // so `client/**/*.css` covers `client/a.css` too). meteor/meteor#14523
+      ignorePatterns.push(`${dir}/**/*${ext}`);
     }
   }
 
