@@ -30,14 +30,11 @@ const {
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
-import { discoverRspackFileExtensions } from './file-extensions';
+import { getCodeExtensionsToIgnore } from './extensions';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const {
   RSPACK_BUILD_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_DOCTOR_CONTEXT,
   FILE_ROLE,
 } = require('./constants');
 
@@ -93,6 +90,16 @@ function checkMeteorIgnoreExactEntries(entries) {
  * For Blaze projects, it excludes .html as used by Blaze
  * For Less projects, it excludes .less files
  * For SCSS projects, it excludes .scss and .sass files
+ *
+ * Uses a static extension list instead of globbing the whole project tree:
+ * only extensions Meteor has source processors for matter for METEOR_IGNORE
+ * (unhandled files never enter the app source list), and the previous scan
+ * both cost an O(files) walk per config build and inflated METEOR_IGNORE
+ * with dir-times-extension patterns on large projects. The initial list here
+ * only needs to cover what Meteor could claim before rspack's first compile;
+ * applyDelegatedExtensions() still refines entrypoint-folder ignores at
+ * runtime once rspack reports the extensions it actually handles.
+ *
  * @returns {string[]} Array of file extensions to ignore
  */
 function getFileExtensionsToIgnore() {
@@ -106,16 +113,10 @@ function getFileExtensionsToIgnore() {
     return [];
   }
 
-  return discoverRspackFileExtensions({
-    globSync,
-    cwd: getMeteorAppDir(),
-    generatedContexts: [
-      RSPACK_BUILD_CONTEXT,
-      RSPACK_ASSETS_CONTEXT,
-      RSPACK_CHUNKS_CONTEXT,
-      RSPACK_DOCTOR_CONTEXT,
-    ],
-    compilerExtensions,
+  return getCodeExtensionsToIgnore({
+    isBlazeProject: isMeteorBlazeProject(),
+    isLessProject: isMeteorLessProject(),
+    isScssProject: isMeteorScssProject(),
   });
 }
 

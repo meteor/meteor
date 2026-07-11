@@ -8,6 +8,7 @@ Package.registerBuildPlugin({
   sources: [
     'lib/constants.js',
     'lib/file-extensions.js',
+    'lib/extensions.js',
     'lib/dependencies.js',
     'lib/build-context.js',
     'lib/processes.js',
