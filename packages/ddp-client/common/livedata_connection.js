@@ -485,8 +485,11 @@ export class Connection {
           this.connection._sendQueued({ msg: 'unsub', id: id });
           this.remove();
 
-          if (callbacks.onStop) {
-            callbacks.onStop();
+          // Use the record's current stopCallback — an autorun rerun may
+          // have replaced the one captured when this record was created,
+          // and the server-initiated stop path (nosub) already uses it.
+          if (this.stopCallback) {
+            this.stopCallback();
           }
         }
       };
