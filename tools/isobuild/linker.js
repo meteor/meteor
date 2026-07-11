@@ -523,6 +523,9 @@ Object.assign(Module.prototype, {
 // Insert the given value into the tree by splitting the path and
 // creating/following nested objects properties named by each component of
 // the split path.
+// Exported for unit tests.
+export { Module };
+
 export function addToTree(value, path, tree) {
   const parts = path.split("/");
   const lastIndex = parts.length - 1;
