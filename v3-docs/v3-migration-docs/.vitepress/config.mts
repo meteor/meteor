@@ -5,7 +5,14 @@ export default defineConfig({
   title: "Meteor 3.0 Migration Guide",
   description: "Guide on migrating from Meteor 2.x to Meteor 3.0",
   lang: 'en-US',
-  head: [["link", { rel: "icon", href: "/logo.png" }]],
+  head: [
+    ["link", { rel: "icon", href: "/logo.png" }],
+    ["script", {
+      defer: "",
+      "data-domain": "meteor.com",
+      src: "https://plausible.io/js/script.js"
+    }]
+  ],
   lastUpdated: true,
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
