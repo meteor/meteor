@@ -91,6 +91,9 @@ export function testMeteorBundler(options) {
 
       // Setup the Meteor app
       tempDir = (await setupMeteorApp(appName))?.tempDir;
+      if (!tempDir) {
+        throw new Error(`setupMeteorApp("${appName}") did not return an app directory`);
+      }
 
       // Link local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(tempDir);
@@ -276,6 +279,9 @@ export function testMeteorRspackBundler(options) {
 
       // Setup the Meteor app
       tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+      if (!tempDir) {
+        throw new Error(`setupMeteorApp("${appName}") did not return an app directory`);
+      }
 
       // Wait for a margin
       await wait(WAIT_ON);
