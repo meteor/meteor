@@ -2,7 +2,7 @@ const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = require('@
 const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
-const { merge } = require('webpack-merge');
+const { merge } = require('rspack-merge');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
