@@ -1,194 +1,240 @@
-import { Session } from 'meteor/session';
+import { Session } from "meteor/session";
+import { ReactiveDict } from "meteor/reactive-dict";
 
-Tinytest.add('session - setDefault', function (test) {
-  Session.setDefault('def', "argyle");
-  test.equal(Session.get('def'), "argyle");
-  Session.set('def', "noodle");
-  test.equal(Session.get('def'), "noodle");
-  Session.set('nondef', "potato");
-  test.equal(Session.get('nondef'), "potato");
-  Session.setDefault('nondef', "eggs");
-  test.equal(Session.get('nondef'), "potato");
+Tinytest.add("session - setDefault", function (test) {
+  Session.setDefault("def", "argyle");
+  test.equal(Session.get("def"), "argyle");
+  Session.set("def", "noodle");
+  test.equal(Session.get("def"), "noodle");
+  Session.set("nondef", "potato");
+  test.equal(Session.get("nondef"), "potato");
+  Session.setDefault("nondef", "eggs");
+  test.equal(Session.get("nondef"), "potato");
   // This is so the test passes the next time, after hot code push.  I know it
   // doesn't return it to the completely untouched state, but we don't have
   // Session.clear() yet.  When we do, this should be that.
-  delete Session.keys['def'];
-  delete Session.keys['nondef'];
+  delete Session.keys["def"];
+  delete Session.keys["nondef"];
 });
 
-Tinytest.add('session - get/set/equals types', function (test) {
-  test.equal(Session.get('u'), undefined);
-  test.isTrue(Session.equals('u', undefined));
-  test.isFalse(Session.equals('u', null));
-  test.isFalse(Session.equals('u', 0));
-  test.isFalse(Session.equals('u', ''));
+Tinytest.add("session - get/set/equals types", function (test) {
+  test.equal(Session.get("u"), undefined);
+  test.isTrue(Session.equals("u", undefined));
+  test.isFalse(Session.equals("u", null));
+  test.isFalse(Session.equals("u", 0));
+  test.isFalse(Session.equals("u", ""));
 
-  Session.set('u', undefined);
-  test.equal(Session.get('u'), undefined);
-  test.isTrue(Session.equals('u', undefined));
-  test.isFalse(Session.equals('u', null));
-  test.isFalse(Session.equals('u', 0));
-  test.isFalse(Session.equals('u', ''));
-  test.isFalse(Session.equals('u', 'undefined'));
-  test.isFalse(Session.equals('u', 'null'));
+  Session.set("u", undefined);
+  test.equal(Session.get("u"), undefined);
+  test.isTrue(Session.equals("u", undefined));
+  test.isFalse(Session.equals("u", null));
+  test.isFalse(Session.equals("u", 0));
+  test.isFalse(Session.equals("u", ""));
+  test.isFalse(Session.equals("u", "undefined"));
+  test.isFalse(Session.equals("u", "null"));
 
-  Session.set('n', null);
-  test.equal(Session.get('n'), null);
-  test.isFalse(Session.equals('n', undefined));
-  test.isTrue(Session.equals('n', null));
-  test.isFalse(Session.equals('n', 0));
-  test.isFalse(Session.equals('n', ''));
-  test.isFalse(Session.equals('n', 'undefined'));
-  test.isFalse(Session.equals('n', 'null'));
+  Session.set("n", null);
+  test.equal(Session.get("n"), null);
+  test.isFalse(Session.equals("n", undefined));
+  test.isTrue(Session.equals("n", null));
+  test.isFalse(Session.equals("n", 0));
+  test.isFalse(Session.equals("n", ""));
+  test.isFalse(Session.equals("n", "undefined"));
+  test.isFalse(Session.equals("n", "null"));
 
-  Session.set('t', true);
-  test.equal(Session.get('t'), true);
-  test.isTrue(Session.equals('t', true));
-  test.isFalse(Session.equals('t', false));
-  test.isFalse(Session.equals('t', 1));
-  test.isFalse(Session.equals('t', 'true'));
+  Session.set("t", true);
+  test.equal(Session.get("t"), true);
+  test.isTrue(Session.equals("t", true));
+  test.isFalse(Session.equals("t", false));
+  test.isFalse(Session.equals("t", 1));
+  test.isFalse(Session.equals("t", "true"));
 
-  Session.set('f', false);
-  test.equal(Session.get('f'), false);
-  test.isFalse(Session.equals('f', true));
-  test.isTrue(Session.equals('f', false));
-  test.isFalse(Session.equals('f', 1));
-  test.isFalse(Session.equals('f', 'false'));
+  Session.set("f", false);
+  test.equal(Session.get("f"), false);
+  test.isFalse(Session.equals("f", true));
+  test.isTrue(Session.equals("f", false));
+  test.isFalse(Session.equals("f", 1));
+  test.isFalse(Session.equals("f", "false"));
 
-  Session.set('num', 0);
-  test.equal(Session.get('num'), 0);
-  test.isTrue(Session.equals('num', 0));
-  test.isFalse(Session.equals('num', false));
-  test.isFalse(Session.equals('num', '0'));
-  test.isFalse(Session.equals('num', 1));
+  Session.set("num", 0);
+  test.equal(Session.get("num"), 0);
+  test.isTrue(Session.equals("num", 0));
+  test.isFalse(Session.equals("num", false));
+  test.isFalse(Session.equals("num", "0"));
+  test.isFalse(Session.equals("num", 1));
 
-  Session.set('str', 'true');
-  test.equal(Session.get('str'), 'true');
-  test.isTrue(Session.equals('str', 'true'));
-  test.isFalse(Session.equals('str', true));
+  Session.set("str", "true");
+  test.equal(Session.get("str"), "true");
+  test.isTrue(Session.equals("str", "true"));
+  test.isFalse(Session.equals("str", true));
 
-  Session.set('arr', [1, 2, {a: 1, b: [5, 6]}]);
-  test.equal(Session.get('arr'), [1, 2, {b: [5, 6], a: 1}]);
-  test.isFalse(Session.equals('arr', 1));
-  test.isFalse(Session.equals('arr', '[1,2,{"a":1,"b":[5,6]}]'));
+  Session.set("arr", [1, 2, { a: 1, b: [5, 6] }]);
+  test.equal(Session.get("arr"), [1, 2, { b: [5, 6], a: 1 }]);
+  test.isFalse(Session.equals("arr", 1));
+  test.isFalse(Session.equals("arr", '[1,2,{"a":1,"b":[5,6]}]'));
   test.throws(function () {
-    Session.equals('arr', [1, 2, {a: 1, b: [5, 6]}]);
+    Session.equals("arr", [1, 2, { a: 1, b: [5, 6] }]);
   });
 
-  Session.set('obj', {a: 1, b: [5, 6]});
-  test.equal(Session.get('obj'), {b: [5, 6], a: 1});
-  test.isFalse(Session.equals('obj', 1));
-  test.isFalse(Session.equals('obj', '{"a":1,"b":[5,6]}'));
-  test.throws(function() { Session.equals('obj', {a: 1, b: [5, 6]}); });
+  Session.set("obj", { a: 1, b: [5, 6] });
+  test.equal(Session.get("obj"), { b: [5, 6], a: 1 });
+  test.isFalse(Session.equals("obj", 1));
+  test.isFalse(Session.equals("obj", '{"a":1,"b":[5,6]}'));
+  test.throws(function () {
+    Session.equals("obj", { a: 1, b: [5, 6] });
+  });
 
+  Session.set("date", new Date(1234));
+  test.equal(Session.get("date"), new Date(1234));
+  test.isFalse(Session.equals("date", new Date(3455)));
+  test.isTrue(Session.equals("date", new Date(1234)));
 
-  Session.set('date', new Date(1234));
-  test.equal(Session.get('date'), new Date(1234));
-  test.isFalse(Session.equals('date', new Date(3455)));
-  test.isTrue(Session.equals('date', new Date(1234)));
-
-  Session.set('oid', new Mongo.ObjectID('ffffffffffffffffffffffff'));
-  test.equal(Session.get('oid'),  new Mongo.ObjectID('ffffffffffffffffffffffff'));
-  test.isFalse(Session.equals('oid',  new Mongo.ObjectID('fffffffffffffffffffffffa')));
-  test.isTrue(Session.equals('oid', new Mongo.ObjectID('ffffffffffffffffffffffff')));
+  Session.set("oid", new Mongo.ObjectID("ffffffffffffffffffffffff"));
+  test.equal(Session.get("oid"), new Mongo.ObjectID("ffffffffffffffffffffffff"));
+  test.isFalse(Session.equals("oid", new Mongo.ObjectID("fffffffffffffffffffffffa")));
+  test.isTrue(Session.equals("oid", new Mongo.ObjectID("ffffffffffffffffffffffff")));
 });
 
-Tinytest.add('session - objects are cloned', function (test) {
-  Session.set('frozen-array', [1, 2, 3]);
-  Session.get('frozen-array')[1] = 42;
-  test.equal(Session.get('frozen-array'), [1, 2, 3]);
+Tinytest.add("session - objects are cloned", function (test) {
+  Session.set("frozen-array", [1, 2, 3]);
+  Session.get("frozen-array")[1] = 42;
+  test.equal(Session.get("frozen-array"), [1, 2, 3]);
 
-  Session.set('frozen-object', {a: 1, b: 2});
-  Session.get('frozen-object').a = 43;
-  test.equal(Session.get('frozen-object'), {a: 1, b: 2});
+  Session.set("frozen-object", { a: 1, b: 2 });
+  Session.get("frozen-object").a = 43;
+  test.equal(Session.get("frozen-object"), { a: 1, b: 2 });
 });
 
-Tinytest.add('session - context invalidation for get', function (test) {
-  var xGetExecutions = 0;
+Tinytest.add("session - context invalidation for get", function (test) {
+  let xGetExecutions = 0;
   Tracker.autorun(function () {
     ++xGetExecutions;
-    Session.get('x');
+    Session.get("x");
   });
   test.equal(xGetExecutions, 1);
-  Session.set('x', 1);
+  Session.set("x", 1);
   // Invalidation shouldn't happen until flush time.
   test.equal(xGetExecutions, 1);
   Tracker.flush();
   test.equal(xGetExecutions, 2);
   // Setting to the same value doesn't re-run.
-  Session.set('x', 1);
+  Session.set("x", 1);
   Tracker.flush();
   test.equal(xGetExecutions, 2);
-  Session.set('x', '1');
+  Session.set("x", "1");
   Tracker.flush();
   test.equal(xGetExecutions, 3);
 });
 
-Tinytest.add('session - context invalidation for equals', function (test) {
-  var xEqualsExecutions = 0;
+Tinytest.add("session - context invalidation for equals", function (test) {
+  let xEqualsExecutions = 0;
   Tracker.autorun(function () {
     ++xEqualsExecutions;
-    Session.equals('x', 5);
+    Session.equals("x", 5);
   });
   test.equal(xEqualsExecutions, 1);
-  Session.set('x', 1);
+  Session.set("x", 1);
   Tracker.flush();
   // Changing undefined -> 1 shouldn't affect equals(5).
   test.equal(xEqualsExecutions, 1);
-  Session.set('x', 5);
+  Session.set("x", 5);
   // Invalidation shouldn't happen until flush time.
   test.equal(xEqualsExecutions, 1);
   Tracker.flush();
   test.equal(xEqualsExecutions, 2);
-  Session.set('x', 5);
+  Session.set("x", 5);
   Tracker.flush();
   // Setting to the same value doesn't re-run.
   test.equal(xEqualsExecutions, 2);
-  Session.set('x', '5');
+  Session.set("x", "5");
   test.equal(xEqualsExecutions, 2);
   Tracker.flush();
   test.equal(xEqualsExecutions, 3);
-  Session.set('x', 5);
+  Session.set("x", 5);
   test.equal(xEqualsExecutions, 3);
   Tracker.flush();
   test.equal(xEqualsExecutions, 4);
 });
 
-Tinytest.add(
-  'session - context invalidation for equals with undefined',
-  function (test) {
-    // Make sure the special casing for equals undefined works.
-    var yEqualsExecutions = 0;
-    Tracker.autorun(function () {
-      ++yEqualsExecutions;
-      Session.equals('y', undefined);
-    });
-    test.equal(yEqualsExecutions, 1);
-    Session.set('y', undefined);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 1);
-    Session.set('y', 5);
-    test.equal(yEqualsExecutions, 1);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', 3);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', 'undefined');
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 2);
-    Session.set('y', undefined);
-    test.equal(yEqualsExecutions, 2);
-    Tracker.flush();
-    test.equal(yEqualsExecutions, 3);
+Tinytest.add("session - context invalidation for equals with undefined", function (test) {
+  // Make sure the special casing for equals undefined works.
+  let yEqualsExecutions = 0;
+  Tracker.autorun(function () {
+    ++yEqualsExecutions;
+    Session.equals("y", undefined);
   });
+  test.equal(yEqualsExecutions, 1);
+  Session.set("y", undefined);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 1);
+  Session.set("y", 5);
+  test.equal(yEqualsExecutions, 1);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set("y", 3);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set("y", "undefined");
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 2);
+  Session.set("y", undefined);
+  test.equal(yEqualsExecutions, 2);
+  Tracker.flush();
+  test.equal(yEqualsExecutions, 3);
+});
 
-Tinytest.add('session - parse an object of key/value pairs', function (test) {
-  Session._setObject({fruit: 'apple', vegetable: 'potato'});
+Tinytest.add("session - parse an object of key/value pairs", function (test) {
+  Session._setObject({ fruit: "apple", vegetable: "potato" });
 
-  test.equal(Session.get('fruit'), 'apple');
-  test.equal(Session.get('vegetable'), 'potato');
+  test.equal(Session.get("fruit"), "apple");
+  test.equal(Session.get("vegetable"), "potato");
 
-  delete Session.keys['fruit'];
-  delete Session.keys['vegetable'];
+  delete Session.keys["fruit"];
+  delete Session.keys["vegetable"];
+});
+
+Tinytest.add("session - Session is a ReactiveDict instance", function (test) {
+  test.instanceOf(Session, ReactiveDict);
+});
+
+Tinytest.add("session - _setObject triggers reactive invalidation", function (test) {
+  let runs = 0;
+  let lastFruit;
+  Tracker.autorun(function () {
+    runs++;
+    lastFruit = Session.get("so-fruit");
+  });
+  test.equal(runs, 1);
+  test.equal(lastFruit, undefined);
+
+  Session._setObject({ "so-fruit": "apple", "so-veggie": "potato" });
+  Tracker.flush();
+  test.equal(runs, 2);
+  test.equal(lastFruit, "apple");
+
+  // Setting again with the same value should not re-run.
+  Session._setObject({ "so-fruit": "apple" });
+  Tracker.flush();
+  test.equal(runs, 2);
+
+  delete Session.keys["so-fruit"];
+  delete Session.keys["so-veggie"];
+});
+
+Tinytest.add("session - setDefault on an already-set key does not invalidate", function (test) {
+  Session.set("sd-key", "original");
+  let runs = 0;
+  Tracker.autorun(function () {
+    runs++;
+    Session.get("sd-key");
+  });
+  test.equal(runs, 1);
+
+  // Key already exists — setDefault should be a no-op and NOT invalidate.
+  Session.setDefault("sd-key", "fallback");
+  Tracker.flush();
+  test.equal(runs, 1);
+  test.equal(Session.get("sd-key"), "original");
+
+  delete Session.keys["sd-key"];
 });
