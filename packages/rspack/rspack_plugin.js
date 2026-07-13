@@ -311,10 +311,15 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
           });
         }
 
-        // Wait for first compilation to complete
+        // Wait for first compilation to complete. Only wait for the
+        // sides that were actually started above: waiting for 'server'
+        // when only a client test build is running (or vice versa)
+        // would block forever.
         const waitTarget =
           initialEntrypoints?.testClient && initialEntrypoints?.testServer
             ? 'both'
+            : initialEntrypoints?.testClient
+            ? 'client'
             : 'server';
         await waitForFirstCompilation(
           clientFirstCompile,
