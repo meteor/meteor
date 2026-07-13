@@ -30,7 +30,12 @@ function createTestClientNodePolyfillConfig() {
   );
 
   return {
-    resolve: { fallback },
+    resolve: {
+      alias: {
+        "timers/promises$": require.resolve("isomorphic-timers-promises"),
+      },
+      fallback,
+    },
     plugins: [
       new ProvidePlugin({
         Buffer: [meteorNodeStubs.buffer, "Buffer"],

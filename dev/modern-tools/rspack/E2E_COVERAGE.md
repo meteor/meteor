@@ -51,7 +51,7 @@ Core React integration with custom Meteor local directory.
 | Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
-| Client test Node compatibility (`Buffer`, `buffer`, `crypto`) | Test |
+| Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
 
 ### react-router
 
@@ -255,7 +255,7 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | Package | File | Reason |
 |---------|------|--------|
 | `unplugin` | `plugins/demo-unplugin.js` | Unplugin transform hook integration validates rspack cache tracks plugin dependency files (#14031) |
-| `meteor-node-stubs` (`buffer`, `crypto`) | `tests/main.js` | Browser implementations and global `Buffer` support for client tests |
+| `meteor-node-stubs` (`buffer`, `crypto`) and `isomorphic-timers-promises` | `tests/main.js` | Browser implementations and global `Buffer` support for client tests |
 
 ### babel (`apps/babel/server/apollo.js`)
 
