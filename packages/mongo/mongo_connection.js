@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { CLIENT_ONLY_METHODS, getAsyncMethodName } from 'meteor/minimongo/constants';
 import { MiniMongoQueryError } from 'meteor/minimongo/common';
+import LocalCollection from 'meteor/minimongo/local_collection';
 import path from 'path';
 import { AsynchronousCursor } from './asynchronous_cursor';
 import { Cursor } from './cursor';
@@ -1118,6 +1119,21 @@ MongoConnection.prototype._observeChanges = async function (
           const csOptions = cursorDescription.options || {};
           if (csOptions.skip || csOptions.limit) {
             reasons.push('Cursor with skip/limit not supported by Change Streams');
+          }
+
+          // Validate unsupported projections up front so Change Streams can
+          // gracefully fall back, mirroring OplogObserveDriver.cursorSupported.
+          const fields = csOptions.fields || csOptions.projection;
+          if (fields) {
+            try {
+              LocalCollection._checkSupportedProjection(fields);
+            } catch (e) {
+              if (e.name === "MinimongoError") {
+                reasons.push(`Projection not supported by Change Streams: ${e.message}`);
+              } else {
+                throw e;
+              }
+            }
           }
 
           if (reasons.length) {
