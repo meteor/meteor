@@ -485,8 +485,11 @@ export class Connection {
           this.connection._sendQueued({ msg: 'unsub', id: id });
           this.remove();
 
-          if (callbacks.onStop) {
-            callbacks.onStop();
+          // Use the record's current stopCallback — an autorun rerun may
+          // have replaced the one captured when this record was created,
+          // and the server-initiated stop path (nosub) already uses it.
+          if (this.stopCallback) {
+            this.stopCallback();
           }
         }
       };
@@ -1091,6 +1094,10 @@ export class Connection {
   }
 
   close() {
+    // A closed connection can never reconnect; stop tracking it in
+    // DDP._allConnections (otherwise the registry grows forever and
+    // _allSubscriptionsReady consults dead connections).
+    DDP._removeConnection(this);
     // _permanent is used by the underlying stream to prevent reconnection attempts
     return this.disconnect({ _permanent: true });
   }
