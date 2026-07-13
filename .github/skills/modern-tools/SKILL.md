@@ -173,7 +173,7 @@ Modern bundler integration using Rspack (Rust-based Webpack alternative).
 
 ### Key Dependencies
 
-- `@rspack/core` ^2.0.0
+- `@rspack/core` ^2.1.3
 - `@meteorjs/rspack` ^3.0.0-beta.0 (configuration logic)
 - `@rspack/plugin-react-refresh` ^2.0.0
 - `swc-loader` ^0.2.6
