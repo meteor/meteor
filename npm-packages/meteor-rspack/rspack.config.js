@@ -3,7 +3,6 @@ const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('webpack-merge');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
@@ -30,7 +29,7 @@ const {
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
-
+const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -841,7 +840,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           optimization: {
             splitChunks: false,
           },
-          plugins: [new NodePolyfillPlugin()],
+          ...createTestClientNodePolyfillConfig(),
         }
       : {};
 
