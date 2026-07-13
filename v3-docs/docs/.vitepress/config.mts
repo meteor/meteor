@@ -312,12 +312,40 @@ export default defineConfig({
                 link: "/packages/accounts-ui",
               },
               {
+                text: "accounts-ui-unstyled",
+                link: "/packages/accounts-ui-unstyled",
+              },
+              {
                 text: "accounts-passwordless",
                 link: "/packages/accounts-passwordless",
               },
               {
                 text: "accounts-2fa",
                 link: "/packages/accounts-2fa",
+              },
+              {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
               },
               {
                 text: "roles",
@@ -392,6 +420,10 @@ export default defineConfig({
               {
                 text: "url",
                 link: "/packages/url",
+              },
+              {
+                text: "facts-base",
+                link: "/packages/facts-base",
               },
               {
                 text: "webapp",
