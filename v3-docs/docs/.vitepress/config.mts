@@ -304,8 +304,16 @@ export default defineConfig({
             text: "Accounts and security",
             items: [
               {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
+              {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
+              },
+              {
+                text: "accounts-ui-unstyled",
+                link: "/packages/accounts-ui-unstyled",
               },
               {
                 text: "accounts-passwordless",
@@ -314,6 +322,30 @@ export default defineConfig({
               {
                 text: "accounts-2fa",
                 link: "/packages/accounts-2fa",
+              },
+              {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
               },
               {
                 text: "roles",
@@ -388,6 +420,10 @@ export default defineConfig({
               {
                 text: "url",
                 link: "/packages/url",
+              },
+              {
+                text: "facts-base",
+                link: "/packages/facts-base",
               },
               {
                 text: "webapp",
@@ -627,6 +663,14 @@ export default defineConfig({
       {
         text: "Performance",
         items: [
+          {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
+          },
           {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",

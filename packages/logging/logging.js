@@ -1,4 +1,4 @@
-import { Meteor } from 'meteor/meteor';
+import { Meteor } from "meteor/meteor";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -42,7 +42,7 @@ Log._intercepted = () => {
 // When this is set to 'colored-text', call 'Log.format' before printing.
 // This should be used for logging from within satellite, since there is no
 // other process that will be reading its standard output.
-Log.outputFormat = 'json';
+Log.outputFormat = "json";
 
 // Defaults to true for local development and for backwards compatibility.
 // for cloud environments is interesting to leave it false as most of them have the timestamp in the console.
@@ -50,39 +50,48 @@ Log.outputFormat = 'json';
 Log.showTime = true;
 
 const LEVEL_COLORS = {
-  debug: 'green',
+  debug: "green",
   // leave info as the default color
-  warn: 'magenta',
-  error: 'red'
+  warn: "magenta",
+  error: "red",
 };
 
-const META_COLOR = 'blue';
+const META_COLOR = "blue";
 
 // Default colors cause readability problems on Windows Powershell,
 // switch to bright variants. While still capable of millions of
 // operations per second, the benchmark showed a 25%+ increase in
 // ops per second (on Node 8) by caching "process.platform".
-const isWin32 = typeof process === 'object' && process.platform === 'win32';
+const isWin32 = typeof process === "object" && process.platform === "win32";
 const platformColor = (color) => {
-  if (isWin32 && typeof color === 'string' && !color.endsWith('Bright')) {
+  if (isWin32 && typeof color === "string" && !color.endsWith("Bright")) {
     return `${color}Bright`;
   }
   return color;
 };
 
 // XXX package
-const RESTRICTED_KEYS = ['time', 'timeInexact', 'level', 'file', 'line',
-                        'program', 'originApp', 'satellite', 'stderr'];
+const RESTRICTED_KEYS = [
+  "time",
+  "timeInexact",
+  "level",
+  "file",
+  "line",
+  "program",
+  "originApp",
+  "satellite",
+  "stderr",
+];
 
-const FORMATTED_KEYS = [...RESTRICTED_KEYS, 'app', 'message'];
+const FORMATTED_KEYS = [...RESTRICTED_KEYS, "app", "message"];
 
-const logInBrowser = obj => {
+const logInBrowser = (obj) => {
   const str = Log.format(obj);
 
   // XXX Some levels should be probably be sent to the server
   const level = obj.level;
 
-  if ((typeof console !== 'undefined') && console[level]) {
+  if (typeof console !== "undefined" && console[level]) {
     console[level](str);
   } else {
     // IE doesn't have console.log.apply, it's not a real Object.
@@ -91,7 +100,6 @@ const logInBrowser = obj => {
     if (typeof console.log.apply === "function") {
       // Most browsers
       console.log.apply(console, [str]);
-
     } else if (typeof Function.prototype.bind === "function") {
       // IE9
       const log = Function.prototype.bind.call(console.log, console);
@@ -106,7 +114,7 @@ Log._getCallerDetails = () => {
     // We do NOT use Error.prepareStackTrace here (a V8 extension that gets us a
     // pre-parsed stack) since it's impossible to compose it with the use of
     // Error.prepareStackTrace used on the server for source maps.
-    const err = new Error;
+    const err = new Error();
     const stack = err.stack;
     return stack;
   };
@@ -118,10 +126,10 @@ Log._getCallerDetails = () => {
   // looking for the first line outside the logging package (or an
   // eval if we find that first)
   let line;
-  const lines = stack.split('\n').slice(1);
+  const lines = stack.split("\n").slice(1);
   for (line of lines) {
     if (line.match(/^\s*(at eval \(eval)|(eval:)/)) {
-      return {file: "eval"};
+      return { file: "eval" };
     }
 
     if (!line.match(/packages\/(?:local-test[:_])?logging(?:\/|\.js)/)) {
@@ -140,84 +148,85 @@ Log._getCallerDetails = () => {
   }
 
   // in case the matched block here is line:column
-  details.line = match[2].split(':')[0];
+  details.line = match[2].split(":")[0];
 
   // Possible format: https://foo.bar.com/scripts/file.js?random=foobar
   // XXX: if you can write the following in better way, please do it
   // XXX: what about evals?
-  details.file = match[1].split('/').slice(-1)[0].split('?')[0];
+  details.file = match[1].split("/").slice(-1)[0].split("?")[0];
 
   return details;
 };
 
-['debug', 'info', 'warn', 'error'].forEach((level) => {
- // @param arg {String|Object}
- Log[level] = (arg) => {
-  if (suppress) {
-    suppress--;
-    return;
-  }
-
-  let intercepted = false;
-  if (intercept) {
-    intercept--;
-    intercepted = true;
-  }
-
-  let obj = (arg === Object(arg)
-    && !(arg instanceof RegExp)
-    && !(arg instanceof Date))
-    ? arg
-    : { message: new String(arg).toString() };
-
-  RESTRICTED_KEYS.forEach(key => {
-    if (obj[key]) {
-      throw new Error(`Can't set '${key}' in log message`);
+["debug", "info", "warn", "error"].forEach((level) => {
+  // @param arg {String|Object}
+  Log[level] = (arg) => {
+    if (suppress) {
+      suppress--;
+      return;
     }
-  });
 
-  if (hasOwn.call(obj, 'message') && typeof obj.message !== 'string') {
-    throw new Error("The 'message' field in log objects must be a string");
-  }
+    let intercepted = false;
+    if (intercept) {
+      intercept--;
+      intercepted = true;
+    }
 
-  if (!obj.omitCallerDetails) {
-    obj = { ...Log._getCallerDetails(), ...obj };
-  }
+    let obj =
+      arg === Object(arg) && !(arg instanceof RegExp) && !(arg instanceof Date)
+        ? arg
+        : { message: new String(arg).toString() };
 
-  obj.time = new Date();
-  obj.level = level;
+    RESTRICTED_KEYS.forEach((key) => {
+      if (obj[key]) {
+        throw new Error(`Can't set '${key}' in log message`);
+      }
+    });
 
-  // If we are in production don't write out debug logs.
-  if (level === 'debug' && Meteor.isProduction) {
-    return;
-  }
+    if (hasOwn.call(obj, "message") && typeof obj.message !== "string") {
+      throw new Error("The 'message' field in log objects must be a string");
+    }
 
-  if (intercepted) {
-    interceptedLines.push(EJSON.stringify(obj));
-  } else if (Meteor.isServer) {
-    if (Log.outputFormat === 'colored-text') {
-      console.log(Log.format(obj, {color: true}));
-    } else if (Log.outputFormat === 'json') {
-      console.log(EJSON.stringify(obj));
+    if (!obj.omitCallerDetails) {
+      obj = { ...Log._getCallerDetails(), ...obj };
+    }
+
+    obj.time = new Date();
+    obj.level = level;
+
+    // If we are in production don't write out debug logs.
+    if (level === "debug" && Meteor.isProduction) {
+      return;
+    }
+
+    if (intercepted) {
+      interceptedLines.push(EJSON.stringify(obj));
+    } else if (Meteor.isServer) {
+      if (Log.outputFormat === "colored-text") {
+        console.log(Log.format(obj, { color: true }));
+      } else if (Log.outputFormat === "json") {
+        console.log(EJSON.stringify(obj));
+      } else {
+        throw new Error(`Unknown logging output format: ${Log.outputFormat}`);
+      }
     } else {
-      throw new Error(`Unknown logging output format: ${Log.outputFormat}`);
+      logInBrowser(obj);
     }
-  } else {
-    logInBrowser(obj);
-  }
-};
+  };
 });
-
 
 // tries to parse line as EJSON. returns object if parse is successful, or null if not
 Log.parse = (line) => {
   let obj = null;
-  if (line && line.startsWith('{')) { // might be json generated from calling 'Log'
-    try { obj = EJSON.parse(line); } catch (e) {}
+  if (line && line.startsWith("{")) {
+    // might be json generated from calling 'Log'
+    try {
+      obj = EJSON.parse(line);
+    } catch {}
   }
 
   // XXX should probably check fields other than 'time'
-  if (obj && obj.time && (obj.time instanceof Date)) {
+  if (obj && obj.time && obj.time instanceof Date) {
     return obj;
   } else {
     return null;
@@ -227,51 +236,46 @@ Log.parse = (line) => {
 // formats a log object into colored human and machine-readable text
 Log.format = (obj, options = {}) => {
   obj = { ...obj }; // don't mutate the argument
-  let {
+  const {
     time,
     timeInexact,
-    level = 'info',
+    level = "info",
     file,
     line: lineNumber,
-    app: appName = '',
+    app: appName = "",
     originApp,
-    message = '',
-    program = '',
-    satellite = '',
-    stderr = '',
+    program = "",
+    satellite = "",
+    stderr = "",
   } = obj;
+  let { message = "" } = obj;
 
   if (!(time instanceof Date)) {
     throw new Error("'time' must be a Date object");
   }
 
-  FORMATTED_KEYS.forEach((key) => { delete obj[key]; });
+  FORMATTED_KEYS.forEach((key) => {
+    delete obj[key];
+  });
 
   if (Object.keys(obj).length > 0) {
     if (message) {
-      message += ' ';
+      message += " ";
     }
     message += EJSON.stringify(obj);
   }
 
-  const pad2 = n => n.toString().padStart(2, '0');
-  const pad3 = n => n.toString().padStart(3, '0');
+  const pad2 = (n) => n.toString().padStart(2, "0");
+  const pad3 = (n) => n.toString().padStart(3, "0");
 
-  const dateStamp = time.getFullYear().toString() +
-    pad2(time.getMonth() + 1 /*0-based*/) +
-    pad2(time.getDate());
-  const timeStamp = pad2(time.getHours()) +
-        ':' +
-        pad2(time.getMinutes()) +
-        ':' +
-        pad2(time.getSeconds()) +
-        '.' +
-        pad3(time.getMilliseconds());
+  const dateStamp =
+    time.getFullYear().toString() + pad2(time.getMonth() + 1 /*0-based*/) + pad2(time.getDate());
+  const timeStamp = `${pad2(time.getHours())}:${pad2(time.getMinutes())}:${pad2(time.getSeconds())}.${pad3(time.getMilliseconds())}`;
 
   // eg in San Francisco in June this will be '(-7)'
-  const utcOffsetStr = `(${(-(new Date().getTimezoneOffset() / 60))})`;
+  const utcOffsetStr = `(${-(new Date().getTimezoneOffset() / 60)})`;
 
-  let appInfo = '';
+  let appInfo = "";
   if (appName) {
     appInfo += appName;
   }
@@ -293,30 +297,30 @@ Log.format = (obj, options = {}) => {
     sourceInfoParts.push(lineNumber);
   }
 
-  let sourceInfo = !sourceInfoParts.length ?
-    '' : `(${sourceInfoParts.join(':')}) `;
+  let sourceInfo = !sourceInfoParts.length ? "" : `(${sourceInfoParts.join(":")}) `;
 
-  if (satellite)
-    sourceInfo += `[${satellite}]`;
+  if (satellite) sourceInfo += `[${satellite}]`;
 
-  const stderrIndicator = stderr ? '(STDERR) ' : '';
+  const stderrIndicator = stderr ? "(STDERR) " : "";
 
   const timeString = Log.showTime
-    ? `${dateStamp}-${timeStamp}${utcOffsetStr}${timeInexact ? '? ' : ' '}`
-    : ' ';
-
-
+    ? `${dateStamp}-${timeStamp}${utcOffsetStr}${timeInexact ? "? " : " "}`
+    : " ";
 
   const metaPrefix = [
     level.charAt(0).toUpperCase(),
     timeString,
     appInfo,
     sourceInfo,
-    stderrIndicator].join('');
+    stderrIndicator,
+  ].join("");
 
-
-  return Formatter.prettify(metaPrefix, options.color && platformColor(options.metaColor || META_COLOR)) +
-      Formatter.prettify(message, options.color && platformColor(LEVEL_COLORS[level]));
+  return (
+    Formatter.prettify(
+      metaPrefix,
+      options.color && platformColor(options.metaColor || META_COLOR),
+    ) + Formatter.prettify(message, options.color && platformColor(LEVEL_COLORS[level]))
+  );
 };
 
 // Turn a line of text into a loggable object.
@@ -325,10 +329,10 @@ Log.format = (obj, options = {}) => {
 Log.objFromText = (line, override) => {
   return {
     message: line,
-    level: 'info',
+    level: "info",
     time: new Date(),
     timeInexact: true,
-    ...override
+    ...override,
   };
 };
 
