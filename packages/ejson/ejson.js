@@ -287,25 +287,71 @@ const adjustTypesToJSONValue = obj => {
 
 EJSON._adjustTypesToJSONValue = adjustTypesToJSONValue;
 
+// Copy-on-write recursive EJSON→JSON converter.
+// Only allocates new objects/arrays along paths that actually change,
+// returning the original reference when nothing needs conversion.
+const toJSONValueDeep = value => {
+  // Short-circuit for primitives that toJSONValueHelper can never match.
+  if (value === null || value === undefined
+      || typeof value === 'boolean'
+      || typeof value === 'string'
+      || (typeof value === 'number' && !isInfOrNaN(value))) {
+    return value;
+  }
+
+  // Arrays can't be EJSON atoms, so process them directly.
+  if (Array.isArray(value)) {
+    let result = null;
+    for (let i = 0; i < value.length; i++) {
+      const child = value[i];
+      const converted = toJSONValueDeep(child);
+      if (converted !== child) {
+        result ??= value.slice(0, i);
+        result.push(converted);
+      } else if (result !== null) {
+        result.push(child);
+      }
+    }
+    return result ?? value;
+  }
+
+  // Atom-level conversion (Date, Binary, NaN/Inf, custom types, etc.)
+  const replaced = toJSONValueHelper(value);
+  if (replaced !== undefined) {
+    return replaced;
+  }
+
+  // Plain object: copy-on-write
+  const keys = keysOf(value);
+  let result = null;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const child = value[key];
+    const converted = toJSONValueDeep(child);
+    if (converted !== child) {
+      if (result === null) {
+        result = {};
+        // backfill preceding keys
+        for (let j = 0; j < i; j++) {
+          result[keys[j]] = value[keys[j]];
+        }
+      }
+      result[key] = converted;
+    } else if (result !== null) {
+      result[key] = child;
+    }
+  }
+
+  return result ?? value;
+};
+
 /**
  * @summary Serialize an EJSON-compatible value into its plain JSON
  *          representation.
  * @locus Anywhere
  * @param {EJSON} val A value to serialize to plain JSON.
  */
-EJSON.toJSONValue = item => {
-  const changed = toJSONValueHelper(item);
-  if (changed !== undefined) {
-    return changed;
-  }
-
-  let newItem = item;
-  if (isObject(item)) {
-    newItem = EJSON.clone(item);
-    adjustTypesToJSONValue(newItem);
-  }
-  return newItem;
-};
+EJSON.toJSONValue = item => toJSONValueDeep(item);
 
 // Either return the argument changed to have the non-json
 // rep of itself (the Object version) or the argument itself.
@@ -363,19 +409,63 @@ const adjustTypesFromJSONValue = obj => {
 
 EJSON._adjustTypesFromJSONValue = adjustTypesFromJSONValue;
 
+// Copy-on-write recursive JSON→EJSON converter.
+// Same lazy-allocation strategy as toJSONValueDeep.
+const fromJSONValueDeep = value => {
+  if (value === null || typeof value !== 'object') {
+    return value;
+  }
+
+  // Arrays can't be EJSON-encoded types, so process them directly.
+  if (Array.isArray(value)) {
+    let result = null;
+    for (let i = 0; i < value.length; i++) {
+      const child = value[i];
+      const converted = fromJSONValueDeep(child);
+      if (converted !== child) {
+        result ??= value.slice(0, i);
+        result.push(converted);
+      } else if (result !== null) {
+        result.push(child);
+      }
+    }
+    return result ?? value;
+  }
+
+  // Check if this value itself is a JSON-encoded EJSON type (e.g. {$date: ...})
+  const replaced = fromJSONValueHelper(value);
+  if (replaced !== value) {
+    return replaced;
+  }
+
+  const keys = keysOf(value);
+  let result = null;
+  for (let i = 0; i < keys.length; i++) {
+    const key = keys[i];
+    const child = value[key];
+    const converted = fromJSONValueDeep(child);
+    if (converted !== child) {
+      if (result === null) {
+        result = {};
+        for (let j = 0; j < i; j++) {
+          result[keys[j]] = value[keys[j]];
+        }
+      }
+      result[key] = converted;
+    } else if (result !== null) {
+      result[key] = child;
+    }
+  }
+
+  return result ?? value;
+};
+
 /**
  * @summary Deserialize an EJSON value from its plain JSON representation.
  * @locus Anywhere
  * @param {JSONCompatible} val A value to deserialize into EJSON.
  */
-EJSON.fromJSONValue = item => {
-  let changed = fromJSONValueHelper(item);
-  if (changed === item && isObject(item)) {
-    changed = EJSON.clone(item);
-    adjustTypesFromJSONValue(changed);
-  }
-  return changed;
-};
+EJSON.fromJSONValue = item => fromJSONValueDeep(item);
 
 /**
  * @summary Serialize a value to a string. For EJSON values, the serialization
