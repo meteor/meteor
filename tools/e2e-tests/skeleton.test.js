@@ -133,6 +133,15 @@ describe('Meteor Skeletons /', () => {
           : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         padding: '10px',
       },
+      customAssertions: {
+        afterCreate: async ({ packageJsonPath }) => {
+          const packageJson = JSON.parse(
+            await fs.promises.readFile(packageJsonPath, 'utf8')
+          );
+          expect(packageJson.dependencies.react).toBe('^19.2.0');
+          expect(packageJson.dependencies['react-dom']).toBe('^19.2.0');
+        },
+      },
     }),
   );
 
