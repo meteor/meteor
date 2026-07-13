@@ -844,12 +844,8 @@ Object.assign(PackageSource.prototype, {
           // wrong compiler and aborts the build with a spurious compile error
           // (see spacebars-tests' assets/markdown_basic.html). Gather asset paths
           // across all arches; an explicit asset declaration always wins.
-          const assetRelPaths = new Set();
-          Object.keys(api.files).forEach(fileArch => {
-            (api.files[fileArch].assets || []).forEach(asset => {
-              assetRelPaths.add(asset.relPath);
-            });
-          });
+          const assets = Object.values(api.files).flatMap(files => (files.assets || []).map(asset => asset.relPath));
+          const assetRelPaths = new Set(assets);
 
           self._findSources({
             sourceProcessorSet,
@@ -870,7 +866,7 @@ Object.assign(PackageSource.prototype, {
                 fileOptions.lazy = false;
               }
 
-            } else if (! assetRelPaths.has(relPath)) {
+            } else if (!assetRelPaths.has(relPath)) {
               const fileOptions = Object.create(null);
 
               // Since this file was not explicitly added with
