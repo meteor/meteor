@@ -105,7 +105,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'Other / Full Skeleton /',
+    'Full Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'full',
       port: 3204,
@@ -163,7 +163,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'Other / Tailwind Skeleton /',
+    'Tailwind Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'tailwind',
       port: 3208,
