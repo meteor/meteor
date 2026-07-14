@@ -408,9 +408,6 @@ async function killSingleProcessByPort(port) {
         await execa.command(`kill -9 ${pid} 2>/dev/null`, { shell: true, reject: false });
       }
 
-      // fuser fallback for when lsof/ss miss the socket owner.
-      await execa.command(`fuser -k ${port}/tcp 2>/dev/null`, { shell: true, reject: false });
-
       // Let the OS release the socket before re-checking.
       await new Promise(r => setTimeout(r, 400));
 
@@ -467,7 +464,7 @@ async function findPidsOnPort(port) {
   // talking to the Rspack HMR socket on 18080). Killing those by mistake takes
   // the browser down mid-suite.
   const lsof = await execa.command(
-    `lsof -i :${port} -t -sTCP:LISTEN 2>/dev/null`,
+    `lsof -i :${port} -sTCP:LISTEN -t 2>/dev/null`,
     { shell: true, reject: false }
   );
   for (const line of (lsof.stdout || '').split('\n')) {
