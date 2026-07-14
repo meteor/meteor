@@ -1,6 +1,10 @@
 /**
  * Global state management for Meteor packages.
  * This module provides a way to store and retrieve global state that persists across file changes.
+ *
+ * State lives on `Package.meteor.global.persistentState`. The `meteor`
+ * package's exported `global` object survives build-plugin re-instantiation
+ * on rebuilds, which is what makes this state "persistent".
  */
 
 /**
@@ -20,12 +24,17 @@ export function getGlobalState(key, defaultValue) {
  * @param {any} value - The value to associate with the key.
  */
 export function setGlobalState(key, value) {
-  // Create a namespace for our global state if it doesn't exist
-  if (!Package?.meteor.global.persistentState) {
-    Package.meteor.global.persistentState = {};
+  const meteorGlobal = Package.meteor?.global;
+  if (!meteorGlobal) {
+    return;
   }
 
-  Package.meteor.global.persistentState[key] = value;
+  // Create a namespace for our global state if it doesn't exist
+  if (!meteorGlobal.persistentState) {
+    meteorGlobal.persistentState = {};
+  }
+
+  meteorGlobal.persistentState[key] = value;
 }
 
 /**
@@ -33,12 +42,18 @@ export function setGlobalState(key, value) {
  * @param {string} key - The key to remove.
  */
 export function removeGlobalState(key) {
-  delete Package.meteor.global.persistentState[key];
+  const state = Package.meteor?.global?.persistentState;
+  if (state) {
+    delete state[key];
+  }
 }
 
 /**
  * Clears all keys from the global state.
  */
 export function clearGlobalState() {
-  Package.meteor.global.persistentState = {};
+  const meteorGlobal = Package.meteor?.global;
+  if (meteorGlobal) {
+    meteorGlobal.persistentState = {};
+  }
 }
