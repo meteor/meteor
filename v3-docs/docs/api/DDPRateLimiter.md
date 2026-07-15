@@ -27,23 +27,53 @@ buckets are reset. Buckets are regularly reset after the end of a time
 interval.
 
 
-Here's example of defining a rule and adding it into the `DDPRateLimiter`:
+Here's an example of defining a rule and adding it into the `DDPRateLimiter`:
 ```js
 // Define a rule that matches login attempts by non-admin users.
 const loginRule = {
-  userId(userId) {
-    const user = Meteor.users.findOne(userId);
-    return user && user.type !== 'admin';
+  // Synchronous matcher
+  clientAddress(clientAddress) {
+    return clientAddress !== '127.0.0.1';
   },
-
   type: 'method',
   name: 'login'
 };
 
 // Add the rule, allowing up to 5 messages every 1000 milliseconds.
 DDPRateLimiter.addRule(loginRule, 5, 1000);
-
 ```
+
+### Async Matchers
+
+Starting in Meteor 3.5, `DDPRateLimiter` fully supports asynchronous matchers. Your matchers (`userId`, `clientAddress`, `type`, `name`, `connectionId`) can be `async` functions that return a `Promise<boolean>`.
+
+This is incredibly useful for querying the database to perform complex access control logic:
+
+```js
+// Define an async rule matching users who have exhausted their tier limits
+const premiumTierRule = {
+  // Asynchronous matcher evaluating access limits via DB lookup
+  async userId(userId) {
+    if (!userId) return true; // Rate limit unauthenticated paths if shared
+    const user = await Meteor.users.findOneAsync(userId);
+    return user && user.subscriptionTier !== 'premium';
+  },
+  type: 'method',
+  name: 'Users.expensiveOperation'
+};
+
+// Add the rule, allowing up to 2 calls every 60000 milliseconds for non-premium
+DDPRateLimiter.addRule(premiumTierRule, 2, 60000);
+```
+
+> **Performance Note**: While async matchers unlock powerful database checks, keep in mind they are awaited sequentially on the incoming message queue for that connection. Extremely slow database queries in rate limiters can delay message processing. If a matcher `Promise` rejects, the rate limit check will safely fail the invocation as it errors out.
+
+::: tip
+Synchronous matchers still cannot read the database — a synchronous `findOne`
+throws on the Meteor 3 server. If a rule needs a database lookup, use an async
+matcher (see above). Otherwise, match only on values already on the invocation:
+`type`, `name`, `userId`, `connectionId`, `clientAddress`.
+:::
 
 <ApiBox name="DDPRateLimiter.removeRule" />
 <ApiBox name="DDPRateLimiter.setErrorMessage" />
@@ -57,10 +87,12 @@ default English error message.
 
 Here is an example with a custom error message:
 ```js
+// Rate-limit a sensitive method called by authenticated users, scoped per user.
 const setupGoogleAuthenticatorRule = {
+  // Apply only to logged-in users; `userId` also scopes the bucket per user.
+  // This matcher is synchronous, so it only checks `userId` — no database read.
   userId(userId) {
-    const user = Meteor.users.findOne(userId);
-    return user;
+    return userId != null;
   },
   type: 'method',
   name: 'Users.setupGoogleAuthenticator',
