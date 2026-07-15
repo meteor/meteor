@@ -401,7 +401,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   cacheStrategy = createCacheStrategy(
     mode,
     (Meteor.isClient && "client") || "server",
-    { projectConfigPath, configPath }
+    { projectConfigPath, configPath, buildContext }
   );
 
   // Determine run point
