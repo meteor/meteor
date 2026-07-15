@@ -15,7 +15,7 @@
     "@angular/platform-browser": "^20.0.0",
     "@angular/router": "^20.0.0",
     "@babel/runtime": "^7.23.5",
-    "@swc/helpers": "^0.5.17",
+    "@swc/helpers": "^0.5.23",
     "meteor-node-stubs": "^1.2.12",
     "rxjs": "^7.8.1",
     "zone.js": "^0.15.1"
@@ -33,7 +33,8 @@
     "@rspack/core": "^2.1.3",
     "@rspack/dev-server": "^2.1.0",
     "@types/meteor": "^2.9.9",
-    "typescript": "~5.8.2"
+    "typescript": "~5.8.2",
+    "@swc/core": "^1.15.32"
   },
   "meteor": {
     "mainModule": {
