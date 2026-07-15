@@ -68,6 +68,20 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | Static assets in bundle (png, md) | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
+### assets
+
+Minimal app with a local package testing asset resolution and bundling.
+
+| What is covered | Phase |
+|----------------|-------|
+| Local package loading (`api.addAssets`) | Run, Prod, Test, Build |
+| Server-side package assets (`Assets.getTextAsync`) | Run, Prod |
+| App-private folder assets (`Assets.getTextAsync`) | Run, Prod |
+| Client-side package assets (`fetch('/packages/...`) | Run, Prod |
+| `skipTestClient: true` (ignores client mocha tests) | Test once |
+| Assets skipped by compiler source discovery (#14566) | All |
+| Boot built bundle (`node main.js`) to test assets | Build |
+
 ### blaze
 
 Blaze templating engine integration.
@@ -321,3 +335,9 @@ Where each feature is tested across apps and skeletons.
 | Service worker runtime caching (images) | monorepo | |
 | Service worker precaching (`additionalManifestEntries`) | monorepo | |
 | PWA manifest | monorepo | |
+| Local package loading (`api.addAssets`) | assets | |
+| Server/App-private assets (`Assets.getTextAsync`) | assets | |
+| Client package assets (`fetch`) | assets | |
+| `skipTestClient: true` test helper option | assets | |
+| Assets skipped by compiler source discovery (#14566) | assets | |
+| Boot built bundle (`node main.js`) to test assets | assets | |

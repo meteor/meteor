@@ -50,6 +50,7 @@ jobs:
         category:
           - CLI
           - Angular
+          - Assets
           - Babel
           - Blaze
           - Coffeescript
