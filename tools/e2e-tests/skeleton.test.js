@@ -134,7 +134,8 @@ describe('Meteor Skeletons /', () => {
         padding: '10px',
       },
       customAssertions: {
-        afterCreate: async ({ packageJsonPath }) => {
+        afterCreate: async ({ tempDir }) => {
+          const packageJsonPath = path.join(tempDir, 'package.json');
           const packageJson = JSON.parse(
             await fs.promises.readFile(packageJsonPath, 'utf8')
           );
