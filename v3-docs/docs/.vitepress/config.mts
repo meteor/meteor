@@ -324,6 +324,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-facebook",
+                link: "/packages/accounts-facebook",
+              },
+              {
                 text: "accounts-github",
                 link: "/packages/accounts-github",
               },
