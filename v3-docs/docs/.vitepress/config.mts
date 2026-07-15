@@ -422,6 +422,10 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "disable-oplog",
+                link: "/packages/disable-oplog",
+              },
+              {
                 text: "facts-base",
                 link: "/packages/facts-base",
               },
