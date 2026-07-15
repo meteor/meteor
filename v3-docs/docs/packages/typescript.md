@@ -2,9 +2,18 @@
 
 The `typescript` package lets you write [TypeScript](https://www.typescriptlang.org)
 modules with `.ts` and `.tsx` file extensions in your Meteor apps and
-packages, alongside regular `.js` files. By default, this package is
-pre-installed in the `.meteor/packages` file of all new apps, so most
+packages, alongside regular `.js` files. It registers a compiler plugin in
+Meteor's classic build stack and is what compiles TypeScript in
+TypeScript-enabled Atmosphere packages and in apps built with that stack. By
+default, it is listed in the `.meteor/packages` file of new apps, so most
 projects can start writing TypeScript with no extra setup.
+
+> [!NOTE]
+> This page describes the classic (isobuild) build stack. Apps using the
+> modern build stack transpile `.ts`/`.tsx` with SWC via
+> [Rspack](https://rspack.dev) instead, and this package's compiler plugin is
+> bypassed for app source. The type-checking notes below still apply, since
+> neither stack type-checks at build time.
 
 ## Usage
 
@@ -117,8 +126,8 @@ knowing about:
   above.
 - **Per-module compilation.** Modules are compiled individually with
   TypeScript's `transpileModule`, so features that need cross-file
-  analysis are limited. In particular, `export const enum { … }` is not
-  fully supported, though a plain `const enum { … }` works when confined to
+  analysis are limited. In particular, `export const enum Status { … }` is not
+  fully supported, though a plain `const enum Status { … }` works when confined to
   a single module. If you need whole-program compilation, consider the
   [`adornis:typescript`](https://atmospherejs.com/adornis/typescript)
   community package.
@@ -134,6 +143,6 @@ knowing about:
 
 `.tsx` files are supported out of the box. When [Hot Module Replacement](/packages/hot-module-replacement)
 is enabled (it is in new apps), the `typescript` package also enables
-[React Fast Refresh](/packages/react-meteor-data), so editing a React
-component updates it in place without a full page reload or losing
+[React Fast Refresh](/packages/hot-module-replacement), so editing a React
+component updates it in place without a full-page reload or losing
 component state.
