@@ -9,7 +9,7 @@ Package.describe({
 });
 
 Npm.depends({
-  bcrypt: "5.0.1",
+  bcrypt: "6.0.0",
   argon2: "0.41.1",
   "node-gyp-build": "4.8.4",
 });
