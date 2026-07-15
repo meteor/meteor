@@ -430,6 +430,10 @@ export default defineConfig({
                 link: "/packages/facts-base",
               },
               {
+                text: "insecure",
+                link: "/packages/insecure",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
