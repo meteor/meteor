@@ -442,6 +442,10 @@ export default defineConfig({
                 link: "/packages/static-html",
               },
               {
+                text: "mobile-experience",
+                link: "/packages/mobile-experience",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
