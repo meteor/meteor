@@ -28,7 +28,7 @@ describe("@meteorjs/rspack dependency audit /", () => {
       name: "meteor-rspack-audit-consumer",
       private: true,
       dependencies: {
-        "@meteorjs/rspack": `file:${path.join(tempDir, filename)}`,
+        "@meteorjs/rspack": `file:./${filename}`,
       },
     });
 
