@@ -80,6 +80,10 @@ package:
 meteor add zodern:types
 ```
 
+For a full walkthrough of enabling core-package types — including the
+`tsconfig.json` `paths` setup and running `meteor lint` to generate the
+type definitions — see the [Using core types](/cli/using-core-types) guide.
+
 ## `tsconfig.json`
 
 The plugin **ignores `tsconfig.json`** when compiling — compilation
