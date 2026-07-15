@@ -24,6 +24,7 @@ const VALID_CONFIG_KEYS = [
   'loginTokenExpirationHours',
   'tokenSequenceLength',
   'clientStorage',
+  'useHttpOnlyCookies',
   'ddpUrl',
   'connection',
 ];
@@ -260,7 +261,7 @@ export class AccountsCommon {
     // We need to validate the oauthSecretKey option at the time
     // Accounts.config is called. We also deliberately don't store the
     // oauthSecretKey in Accounts._options.
-    if (Object.prototype.hasOwnProperty.call(options, 'oauthSecretKey')) {
+    if (Object.hasOwn(options, 'oauthSecretKey')) {
       if (Meteor.isClient) {
         throw new Error(
           'The oauthSecretKey option may only be specified on the server'
