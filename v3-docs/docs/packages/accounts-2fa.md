@@ -2,7 +2,11 @@
 
 This package allows you to provide a way for your users to enable 2FA on their accounts, using an authenticator app such as Google Authenticator, or 1Password. When the user is logged in on your app, they will be able to generate a new QR code and read this code on the app they prefer. After that, they'll start receiving their codes. Then, they can finish enabling 2FA on your app, and every time they try to log in to your app, you can redirect them to a place where they can provide a code they received from the authenticator.
 
-To provide codes that are exactly compatible with all other Authenticator apps and services that implements TOTP, this package uses [node-2fa](https://www.npmjs.com/package/node-2fa) which works on top of [notp](https://github.com/guyht/notp), **that** implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), which is based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)).
+To provide codes that are exactly compatible with authenticator apps and services that implement TOTP, this package uses [OTPAuth](https://www.npmjs.com/package/otpauth), which implements TOTP ([RFC 6238](https://www.ietf.org/rfc/rfc6238.txt)) (the Authenticator standard), based on HOTP ([RFC 4226](https://www.ietf.org/rfc/rfc4226.txt)).
+
+:::info Meteor 3.5
+Starting in Meteor 3.5 this package uses [OTPAuth](https://www.npmjs.com/package/otpauth) instead of the previously bundled `node-2fa` library. The generated TOTP codes and the public API are identical — no changes are required in your application code. If you were `require`-ing `node-2fa` directly from a Meteor server file (not via this package), add it as an explicit npm dependency.
+:::
 
 > This package is meant to be used with [`accounts-password`](../api/accounts.md#passwords) or [`accounts-passwordless`](./accounts-passwordless.md), so if you don't have either of those in your project, you'll need to add one of them. In the future, we want to enable the use of this package with other login methods, our oauth methods (Google, GitHub, etc...).
 
@@ -103,22 +107,38 @@ As said at the beginning of this guide, this package is currently working with t
 
 When calling the function `Meteor.loginWithPassword`, if the 2FA is enabled for the user, an error will be returned to the callback, so you can redirect the user to a place where they can provide a code.
 
-As an example:
+Meteor 3.5+ also provides `Meteor.loginWithPasswordAsync`, the promise-based equivalent. Both work identically with 2FA:
 
 ```js
+// Callback style
 <button
   onClick={() => {
     Meteor.loginWithPassword(username, password, (error) => {
       if (error) {
         if (error.error === "no-2fa-code") {
-          // send user to a page or show a component
-          // where they can provide a 2FA code
           setShouldAskCode(true);
           return;
         }
         console.error("Error trying to log in (user without 2fa)", error);
       }
     });
+  }}
+>
+  Login
+</button>
+
+// Async/await style (Meteor 3.5+)
+<button
+  onClick={async () => {
+    try {
+      await Meteor.loginWithPasswordAsync(username, password);
+    } catch (error) {
+      if (error.error === "no-2fa-code") {
+        setShouldAskCode(true);
+      } else {
+        console.error("Error trying to log in (user without 2fa)", error);
+      }
+    }
   }}
 >
   Login

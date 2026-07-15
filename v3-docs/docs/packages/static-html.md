@@ -2,6 +2,10 @@
 
 `static-html` is a build plugin that lets you define static page content in `.html` files. It is an alternative to the `templating` package that does **not** compile Blaze templates — useful when you use React, Angular, Solid, or another view layer and just want some static HTML on the page to render into.
 
+::: tip Already included in most apps
+`static-html` is part of the default package set of every non-Blaze app skeleton (React, Vue, Svelte, Solid, Angular, and the others), so a freshly created app already has it — there is nothing to add. You only need to run the command below if you previously removed it, or you are migrating an app that used the Blaze `templating` package.
+:::
+
 ```bash
 meteor add static-html
 ```
