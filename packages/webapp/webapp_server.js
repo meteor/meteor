@@ -3,7 +3,6 @@ import { readFileSync, chmodSync, chownSync } from 'fs';
 import { createServer } from 'http';
 import { userInfo } from 'os';
 import { join as pathJoin, dirname as pathDirname } from 'path';
-import { parse as parseUrl } from 'url';
 import { createHash } from 'crypto';
 import express from 'express';
 import compress from 'compression';
@@ -19,6 +18,7 @@ import {
 } from './socket_file.js';
 import cluster from 'cluster';
 import { execSync } from 'child_process';
+import { onMessage } from 'meteor/inter-process-messaging';
 
 var SHORT_SOCKET_TIMEOUT = 5 * 1000;
 var LONG_SOCKET_TIMEOUT = 120 * 1000;
@@ -162,7 +162,7 @@ WebApp.categorizeRequest = function(req) {
     modern,
     path,
     arch: WebApp.defaultArch,
-    url: parseUrl(req.url, true),
+    url: { query: Object.fromEntries(new URL(req.url, 'http://localhost').searchParams) },
     dynamicHead: req.dynamicHead,
     dynamicBody: req.dynamicBody,
     headers: req.headers,
@@ -801,8 +801,6 @@ WebAppInternals.parsePort = port => {
   return parsedPort;
 };
 
-import { onMessage } from 'meteor/inter-process-messaging';
-
 onMessage('webapp-pause-client', async ({ arch }) => {
   await WebAppInternals.pauseClient(arch);
 });
@@ -816,7 +814,7 @@ async function runWebAppServer() {
   var syncQueue = new Meteor._AsynchronousQueue();
 
   var getItemPathname = function(itemUrl) {
-    return decodeURIComponent(parseUrl(itemUrl).pathname);
+    return decodeURIComponent(new URL(itemUrl, 'http://localhost').pathname);
   };
 
   WebAppInternals.reloadClientPrograms = async function() {
@@ -1104,7 +1102,7 @@ async function runWebAppServer() {
   // Strip off the path prefix, if it exists.
   app.use(function(request, response, next) {
     const pathPrefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
-    const { pathname, search } = parseUrl(request.url);
+    const { pathname, search } = new URL(request.url, 'http://localhost');
 
     // check if the path in the url starts with the path prefix
     if (pathPrefix) {
@@ -1455,7 +1453,15 @@ async function runWebAppServer() {
         if (unixSocketGroupInfo === null) {
           throw new Error('Invalid UNIX_SOCKET_GROUP name specified');
         }
-        chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        try {
+          chownSync(unixSocketPath, userInfo().uid, unixSocketGroupInfo.gid);
+        } catch (error) {
+          if (error.code === 'EPERM' || error.code === 'EACCES') {
+            console.error(`Skipping UNIX_SOCKET_GROUP change for "${unixSocketGroup}" because current user lacks permission.`);
+          } else {
+            throw error;
+          }
+        }
       }
 
       registerSocketFileCleanup(unixSocketPath);

@@ -6,8 +6,8 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
-const hasOwn = Object.prototype.hasOwnProperty;
 
 /**
  * @summary Constructor for the `Accounts` namespace on the server.
@@ -133,7 +133,11 @@ export class AccountsServer extends AccountsCommon {
       }
       return url.toString();
     };
+
+    // Expose the _CurrentEndpointInvocation
+    this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
   }
+
 
   ///
   /// CURRENT USER
@@ -147,9 +151,15 @@ export class AccountsServer extends AccountsCommon {
     // runs. This is likely not what the user expects. The way to make this work
     // in a method or publish function is to do Meteor.find(this.userId).observe
     // and recompute when the user record changes.
-    const currentInvocation = DDP._CurrentMethodInvocation.get() || DDP._CurrentPublicationInvocation.get();
-    if (!currentInvocation)
-      throw new Error("Meteor.userId can only be invoked in method calls or publications.");
+    const currentInvocation =
+      DDP._CurrentMethodInvocation.get() ||
+      DDP._CurrentPublicationInvocation.get() ||
+      this._CurrentEndpointInvocation.get();
+    if (!currentInvocation) {
+      throw new Error(
+        "Meteor.userId can only be invoked inside a method, publication, or WebApp endpoint."
+      );
+    }
     return currentInvocation.userId;
   }
 
@@ -801,7 +811,7 @@ export class AccountsServer extends AccountsCommon {
 
         if (Package["oauth-encryption"]) {
           const { OAuthEncryption } = Package["oauth-encryption"]
-          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+          if (Object.hasOwn(options, 'secret') && OAuthEncryption.keyIsLoaded())
             options.secret = OAuthEncryption.seal(options.secret);
         }
 
@@ -904,10 +914,8 @@ export class AccountsServer extends AccountsCommon {
   //   - forLoggedInUser {Array} Array of fields published to the logged-in user
   //   - forOtherUsers {Array} Array of fields published to users that aren't logged in
   addAutopublishFields(opts) {
-    this._autopublishFields.loggedInUser.push.apply(
-      this._autopublishFields.loggedInUser, opts.forLoggedInUser);
-    this._autopublishFields.otherUsers.push.apply(
-      this._autopublishFields.otherUsers, opts.forOtherUsers);
+    this._autopublishFields.loggedInUser.push(...(opts.forLoggedInUser || []));
+    this._autopublishFields.otherUsers.push(...(opts.forOtherUsers || []));
   };
 
   // Replaces the fields to be automatically
@@ -1008,7 +1016,7 @@ export class AccountsServer extends AccountsCommon {
   // the observe that we started when we associated the connection with
   // this token.
   _removeTokenFromConnection(connectionId) {
-    if (hasOwn.call(this._userObservesForConnections, connectionId)) {
+    if (Object.hasOwn(this._userObservesForConnections, connectionId)) {
       const observe = this._userObservesForConnections[connectionId];
       if (typeof observe === 'number') {
         // We're in the process of setting up an observe for this connection. We
@@ -1214,13 +1222,13 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // @override from accounts_common.js
-  config(options) {
+  config(...args) {
     // Call the overridden implementation of the method.
-    const superResult = AccountsCommon.prototype.config.apply(this, arguments);
+    const superResult = AccountsCommon.prototype.config.apply(this, args);
 
     // If the user set loginExpirationInDays to null, then we need to clear the
     // timer that periodically expires tokens.
-    if (hasOwn.call(this._options, 'loginExpirationInDays') &&
+    if (Object.hasOwn(this._options, 'loginExpirationInDays') &&
       this._options.loginExpirationInDays === null &&
       this.expireTokenInterval) {
       Meteor.clearInterval(this.expireTokenInterval);
@@ -1377,7 +1385,7 @@ export class AccountsServer extends AccountsCommon {
         "Can't use updateOrCreateUserFromExternalService with internal service "
         + serviceName);
     }
-    if (!hasOwn.call(serviceData, 'id')) {
+    if (!Object.hasOwn(serviceData, 'id')) {
       throw new Error(
         `Service data for service ${serviceName} must include id`);
     }
@@ -1527,7 +1535,7 @@ export class AccountsServer extends AccountsCommon {
   ) {
     // Some tests need the ability to add users with the same case insensitive
     // value, hence the _skipCaseInsensitiveChecksForTest check
-    const skipCheck = Object.prototype.hasOwnProperty.call(
+    const skipCheck = Object.hasOwn(
       this._skipCaseInsensitiveChecksForTest,
       fieldValue
     );
