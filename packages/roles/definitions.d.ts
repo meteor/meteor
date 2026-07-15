@@ -4,8 +4,9 @@
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // Minimum TypeScript Version: 4.1
 
-import { Meteor } from 'meteor/meteor';
-import { Mongo } from 'meteor/mongo';
+import { Meteor } from "meteor/meteor";
+import { Mongo } from "meteor/mongo";
+
 /**
  * Provides functions related to user authorization. Compatible with built-in Meteor accounts packages.
  *
@@ -260,24 +261,24 @@ export declare namespace Roles {
     options?:
       | string
       | {
-        scope?: string;
-        anyScope?: boolean;
-        onlyScoped?: boolean;
-        onlyAssigned?: boolean;
-        fullObjects?: boolean;
-      }
+          scope?: string;
+          anyScope?: boolean;
+          onlyScoped?: boolean;
+          onlyAssigned?: boolean;
+          fullObjects?: boolean;
+        }
   ): string[];
   function getRolesForUserAsync(
     user: string | Meteor.User,
     options?:
       | string
       | {
-        scope?: string;
-        anyScope?: boolean;
-        onlyScoped?: boolean;
-        onlyAssigned?: boolean;
-        fullObjects?: boolean;
-      }
+          scope?: string;
+          anyScope?: boolean;
+          onlyScoped?: boolean;
+          onlyAssigned?: boolean;
+          fullObjects?: boolean;
+        }
   ): Promise<string[]>;
 
   /**
@@ -305,10 +306,10 @@ export declare namespace Roles {
     options?:
       | string
       | {
-        scope?: string;
-        anyScope?: boolean;
-        queryOptions?: QueryOptions;
-      }
+          scope?: string;
+          anyScope?: boolean;
+          queryOptions?: QueryOptions;
+        }
   ): Mongo.Cursor<RoleAssignment>;
 
   /**
@@ -339,11 +340,11 @@ export declare namespace Roles {
     options?:
       | string
       | {
-        scope?: string;
-        anyScope?: boolean;
-        onlyScoped?: boolean;
-        queryOptions?: QueryOptions;
-      },
+          scope?: string;
+          anyScope?: boolean;
+          onlyScoped?: boolean;
+          queryOptions?: QueryOptions;
+        },
     queryOptions?: QueryOptions
   ): Mongo.Cursor<Meteor.User>;
   function getUsersInRoleAsync(
@@ -351,11 +352,11 @@ export declare namespace Roles {
     options?:
       | string
       | {
-        scope?: string;
-        anyScope?: boolean;
-        onlyScoped?: boolean;
-        queryOptions?: QueryOptions;
-      },
+          scope?: string;
+          anyScope?: boolean;
+          onlyScoped?: boolean;
+          queryOptions?: QueryOptions;
+        },
     queryOptions?: QueryOptions
   ): Promise<Mongo.Cursor<Meteor.User>>;
 
