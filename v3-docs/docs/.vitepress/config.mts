@@ -438,6 +438,10 @@ export default defineConfig({
                 link: "/packages/autopublish",
               },
               {
+                text: "static-html",
+                link: "/packages/static-html",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
