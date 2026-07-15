@@ -462,6 +462,10 @@ export default defineConfig({
                 link: "/packages/launch-screen",
               },
               {
+                text: "force-ssl",
+                link: "/packages/force-ssl",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
