@@ -454,6 +454,10 @@ export default defineConfig({
                 link: "/packages/mobile-status-bar",
               },
               {
+                text: "launch-screen",
+                link: "/packages/launch-screen",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
