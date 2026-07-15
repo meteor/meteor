@@ -434,6 +434,10 @@ export default defineConfig({
                 link: "/packages/insecure",
               },
               {
+                text: "autopublish",
+                link: "/packages/autopublish",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
