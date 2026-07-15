@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",
-    "@swc/helpers": "^0.5.17",
+    "@swc/helpers": "^0.5.23",
     "meteor-node-stubs": "^1.2.12"
   },
   "devDependencies": {
@@ -22,7 +22,8 @@
     "svelte": "^5.38.2",
     "svelte-check": "^4.3.1",
     "svelte-loader": "^3.2.4",
-    "svelte-preprocess": "^6.0.3"
+    "svelte-preprocess": "^6.0.3",
+    "@swc/core": "^1.15.32"
   },
   "meteor": {
     "mainModule": {

@@ -11,7 +11,7 @@
     "@apollo/client": "^3.9.2",
     "@apollo/server": "^4.10.0",
     "@babel/runtime": "^7.23.9",
-    "@swc/helpers": "^0.5.17",
+    "@swc/helpers": "^0.5.23",
     "graphql": "^16.8.1",
     "meteor-node-stubs": "^1.2.12",
     "react": "^18.2.0",
@@ -25,7 +25,8 @@
     "@rspack/core": "^2.1.3",
     "@rspack/dev-server": "^2.1.0",
     "@rspack/plugin-react-refresh": "^2.0.0",
-    "react-refresh": "^0.17.0"
+    "react-refresh": "^0.17.0",
+    "@swc/core": "^1.15.32"
   },
   "meteor": {
     "mainModule": {

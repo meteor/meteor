@@ -7,7 +7,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",
-    "@swc/helpers": "^0.5.17",
+    "@swc/helpers": "^0.5.23",
     "jquery": "^3.7.1",
     "meteor-node-stubs": "^1.2.12"
   },
@@ -19,7 +19,8 @@
     "@rspack/dev-server": "^2.1.0",
     "chai": "^4.2.0",
     "sass-embedded": "^1.89.0",
-    "sass-loader": "^16.0.5"
+    "sass-loader": "^16.0.5",
+    "@swc/core": "^1.15.32"
   },
   "meteor": {
     "mainModule": {
