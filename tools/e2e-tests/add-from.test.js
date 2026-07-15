@@ -9,6 +9,7 @@ import {
   runMeteorCommand,
   runMeteorApp,
   killMeteorProcess,
+  killStrayAppProcesses,
   cleanupTempDir,
 } from './helpers';
 
@@ -27,10 +28,40 @@ async function createBaseApp(prefix) {
   return { appName, tempDir };
 }
 
-describe('Other / Add --from /', () => {
+async function copyBaseApp(baseDir, prefix) {
+  const app = tempApp(prefix);
+  await fs.promises.cp(baseDir, app.tempDir, {
+    recursive: true,
+    filter(source) {
+      const relativePath = path.relative(baseDir, source);
+      return relativePath !== 'node_modules' &&
+        !relativePath.startsWith(`node_modules${path.sep}`) &&
+        relativePath !== path.join('.meteor', 'local') &&
+        !relativePath.startsWith(`${path.join('.meteor', 'local')}${path.sep}`);
+    },
+  });
+  return app;
+}
+
+describe('CLI / Add --from /', () => {
+  let baseAppDir;
+
+  beforeAll(async () => {
+    baseAppDir = (await createBaseApp('base')).tempDir;
+  }, 600_000);
+
+  afterEach(async () => {
+    await killStrayAppProcesses();
+  });
+
+  afterAll(async () => {
+    await killStrayAppProcesses();
+    await cleanupTempDir(baseAppDir);
+  });
+
   describe('argument validation', () => {
     it('--from-branch without --from errors', async () => {
-      const { tempDir } = await createBaseApp('vbranch');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'vbranch');
       try {
         await expect(runMeteorCommand(
           'add', ['--from-branch', 'main'], tempDir,
@@ -42,7 +73,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('--from-dir without --from errors', async () => {
-      const { tempDir } = await createBaseApp('vdir');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'vdir');
       try {
         await expect(runMeteorCommand(
           'add', ['--from-dir', 'sub'], tempDir,
@@ -54,7 +85,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('--force without --from errors', async () => {
-      const { tempDir } = await createBaseApp('vforce');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'vforce');
       try {
         await expect(runMeteorCommand(
           'add', ['--force'], tempDir,
@@ -66,7 +97,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('--to without --from errors', async () => {
-      const { tempDir } = await createBaseApp('vto');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'vto');
       try {
         await expect(runMeteorCommand(
           'add', ['--to', 'packages/foo'], tempDir,
@@ -78,7 +109,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('--from rejects positional package args', async () => {
-      const { tempDir } = await createBaseApp('vargs');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'vargs');
       try {
         await expect(runMeteorCommand(
           'add', ['--from', 'owner/repo', 'some-package'], tempDir,
@@ -92,7 +123,7 @@ describe('Other / Add --from /', () => {
 
   describe('cloning', () => {
     it('meteor add --from clones a package from a Git URL', async () => {
-      const { tempDir } = await createBaseApp('url');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'url');
       try {
         await runMeteorCommand(
           'add', [
@@ -109,7 +140,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('meteor add infers --from for GitHub shorthand owner/repo', async () => {
-      const { tempDir } = await createBaseApp('shorthand');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'shorthand');
       try {
         await runMeteorCommand(
           'add', [
@@ -125,7 +156,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('meteor add infers --from for a GitHub tree URL with subdirectory', async () => {
-      const { tempDir } = await createBaseApp('tree');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'tree');
       try {
         // meteor/blaze hosts multiple packages under packages/<name>/package.js;
         // a tree URL with subdir should auto-extract that single package.
@@ -143,7 +174,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('meteor add --from with --from-dir extracts a subdirectory', async () => {
-      const { tempDir } = await createBaseApp('fromdir');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'fromdir');
       try {
         await runMeteorCommand(
           'add', [
@@ -161,7 +192,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('meteor add --from --to writes to a custom destination', async () => {
-      const { tempDir } = await createBaseApp('to');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'to');
       try {
         await runMeteorCommand(
           'add', [
@@ -179,7 +210,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('meteor add --from --force overwrites an existing destination', async () => {
-      const { tempDir } = await createBaseApp('force');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'force');
       try {
         await runMeteorCommand(
           'add', [
@@ -205,7 +236,7 @@ describe('Other / Add --from /', () => {
     });
 
     it('meteor add --from fails for a repo without package.js', async () => {
-      const { tempDir } = await createBaseApp('nopkg');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'nopkg');
       try {
         await expect(runMeteorCommand(
           'add', [
@@ -223,7 +254,7 @@ describe('Other / Add --from /', () => {
     // (hermetic, no network), wire it into .meteor/packages, then run the app
     // and wait for a sentinel log emitted by the package's server module.
     it('app loads a package cloned via --from at startup', async () => {
-      const { appName, tempDir } = tempApp('loadpkg');
+      const { tempDir } = await copyBaseApp(baseAppDir, 'loadpkg');
       const SENTINEL = 'PACKAGE_FROM_SMOKETEST_LOADED';
       const port = 3050;
       let pkgRepoDir;
@@ -250,11 +281,7 @@ describe('Other / Add --from /', () => {
         execFileSync('git', [...gitEnv, 'add', '.'], { cwd: pkgRepoDir });
         execFileSync('git', [...gitEnv, 'commit', '-q', '-m', 'init'], { cwd: pkgRepoDir });
 
-        // 2) Create a runnable Meteor app and install npm deps
-        await runMeteorCommand(
-          'create', [appName, '--bare'], os.tmpdir(),
-          { checkExitCode: true }
-        );
+        // 2) Install npm deps so the copied fixture is runnable
         await execa.command('npm install', {
           cwd: tempDir,
           shell: true,
