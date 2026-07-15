@@ -219,6 +219,8 @@ function executeCommand(command, args, options) {
     const tail = (str, max = 4000) =>
       str.length > max ? `…(truncated)\n${str.slice(-max)}` : str;
 
+    let settled = false;
+
     spawnProcess(command, args, {
       cwd: options.cwd,
       onStdout: (chunk) => {
@@ -230,6 +232,8 @@ function executeCommand(command, args, options) {
         if (options.onStderr) options.onStderr(chunk);
       },
       onExit: (code, signal) => {
+        if (settled) return;
+        settled = true;
         if (code === 0) {
           resolve(true);
           return;
@@ -242,6 +246,8 @@ function executeCommand(command, args, options) {
         resolve(false);
       },
       onError: (err) => {
+        if (settled) return;
+        settled = true;
         logError(`=> Command could not be spawned: ${formatCommand()}`);
         logError(`   ${err && err.message ? err.message : String(err)}`);
         resolve(false);
