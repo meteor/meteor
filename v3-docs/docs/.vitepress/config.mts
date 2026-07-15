@@ -434,6 +434,10 @@ export default defineConfig({
                 link: "/packages/facts-base",
               },
               {
+                text: "facts-ui",
+                link: "/packages/facts-ui",
+              },
+              {
                 text: "insecure",
                 link: "/packages/insecure",
               },
