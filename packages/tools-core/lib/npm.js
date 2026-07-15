@@ -221,8 +221,14 @@ function executeCommand(command, args, options) {
 
     spawnProcess(command, args, {
       cwd: options.cwd,
-      onStdout: (chunk) => { stdoutBuf += chunk; },
-      onStderr: (chunk) => { stderrBuf += chunk; },
+      onStdout: (chunk) => {
+        stdoutBuf = tail(stdoutBuf + chunk);
+        if (options.onStdout) options.onStdout(chunk);
+      },
+      onStderr: (chunk) => {
+        stderrBuf = tail(stderrBuf + chunk);
+        if (options.onStderr) options.onStderr(chunk);
+      },
       onExit: (code, signal) => {
         if (code === 0) {
           resolve(true);
