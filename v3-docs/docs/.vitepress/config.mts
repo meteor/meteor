@@ -438,6 +438,14 @@ export default defineConfig({
                 link: "/packages/autopublish",
               },
               {
+                text: "static-html",
+                link: "/packages/static-html",
+              },
+              {
+                text: "mobile-experience",
+                link: "/packages/mobile-experience",
+              },
+              {
                 text: "mobile-status-bar",
                 link: "/packages/mobile-status-bar",
               },
