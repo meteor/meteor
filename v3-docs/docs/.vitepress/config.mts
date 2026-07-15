@@ -304,8 +304,16 @@ export default defineConfig({
             text: "Accounts and security",
             items: [
               {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
+              {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
+              },
+              {
+                text: "accounts-ui-unstyled",
+                link: "/packages/accounts-ui-unstyled",
               },
               {
                 text: "accounts-passwordless",
@@ -318,6 +326,30 @@ export default defineConfig({
               {
                 text: "accounts-facebook",
                 link: "/packages/accounts-facebook",
+              },
+              {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
               },
               {
                 text: "roles",
@@ -392,6 +424,34 @@ export default defineConfig({
               {
                 text: "url",
                 link: "/packages/url",
+              },
+              {
+                text: "disable-oplog",
+                link: "/packages/disable-oplog",
+              },
+              {
+                text: "facts-base",
+                link: "/packages/facts-base",
+              },
+              {
+                text: "insecure",
+                link: "/packages/insecure",
+              },
+              {
+                text: "autopublish",
+                link: "/packages/autopublish",
+              },
+              {
+                text: "static-html",
+                link: "/packages/static-html",
+              },
+              {
+                text: "mobile-experience",
+                link: "/packages/mobile-experience",
+              },
+              {
+                text: "mobile-status-bar",
+                link: "/packages/mobile-status-bar",
               },
               {
                 text: "webapp",
@@ -631,6 +691,14 @@ export default defineConfig({
       {
         text: "Performance",
         items: [
+          {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
+          },
           {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",

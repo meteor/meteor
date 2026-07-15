@@ -3,6 +3,11 @@ import { MiniMongoQueryError } from 'meteor/minimongo/common';
 var randomId = Random.id();
 var OplogCollection = new Mongo.Collection("oplog-" + randomId);
 
+const DEFAULT_REACTIVITY = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : undefined;
+var IS_OPLOG = DEFAULT_REACTIVITY && DEFAULT_REACTIVITY[0] === 'oplog';
+
+if(!IS_OPLOG) return
+
 Tinytest.addAsync('mongo-livedata - oplog - cursorSupported', async function(
   test
 ) {
