@@ -446,6 +446,10 @@ export default defineConfig({
                 link: "/packages/mobile-experience",
               },
               {
+                text: "mobile-status-bar",
+                link: "/packages/mobile-status-bar",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
