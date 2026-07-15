@@ -52,7 +52,17 @@ if the error persists, please try to install Meteor using `npm`:
 npm install -g meteor --foreground-script
 ```
 
-Make sure you have Node.js v20 or higher installed.
+Make sure you have Node.js v24 or higher installed.
+
+#### Node.js Version Compatibility
+
+Different Meteor versions bundle and require different minimum Node.js active LTS releases:
+
+| Meteor Version | Bundled Node.js Version |
+| -------------- | ----------------------- |
+| Meteor 3.3     | Node.js 20              |
+| Meteor 3.4     | Node.js 22              |
+| Meteor 3.5     | Node.js 24              |
 
 :::
 
