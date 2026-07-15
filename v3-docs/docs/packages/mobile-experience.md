@@ -28,6 +28,6 @@ Because this package simply implies those two packages, you can add it instead o
 
 ## See also
 
-- [`mobile-status-bar`](./mobile-status-bar.md) — status bar configuration for Cordova apps.
-- [`launch-screen`](./launch-screen.md) — control the mobile launch/splash screen.
+- `mobile-status-bar` — status bar configuration for Cordova apps.
+- `launch-screen` — control the mobile launch/splash screen.
 - [Cordova](../about/cordova.md) — building mobile apps with Meteor.
