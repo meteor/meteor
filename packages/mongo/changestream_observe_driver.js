@@ -192,7 +192,8 @@ export class ChangeStreamObserveDriver {
         if (pingRes?.operationTime) {
           this._setLastProcessedOperationTime(pingRes.operationTime);
         }
-      } catch (e) {
+      } catch (error) {
+        Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
         // Best-effort: without the floor we only lose the fast-path release.
       }
 
