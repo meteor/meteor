@@ -558,14 +558,17 @@ export async function runMeteorCommand(command, args = [], cwd, options = {}) {
   let processResult;
   if (checkExitCode) {
     processResult = await new Promise((resolve) => {
-      meteorProcess.on('exit', (code) => {
-        resolve({ code, outputLines });
+      meteorProcess.on('exit', (code, signal) => {
+        resolve({ code, signal, outputLines });
       });
     });
 
     // Check if the command was successful
     if (processResult.code !== 0) {
-      throw new Error(`Meteor command '${command}' failed with code ${processResult.code}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
+      const exitReason = processResult.code === null
+        ? `signal ${processResult.signal || 'unknown'}`
+        : `code ${processResult.code}`;
+      throw new Error(`Meteor command '${command}' failed with ${exitReason}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
     }
   }
 
