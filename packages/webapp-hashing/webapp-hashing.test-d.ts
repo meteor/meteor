@@ -14,12 +14,12 @@ expectTypeOf(WebAppHashing.calculateClientHash).parameter(0).toEqualTypeOf<
     replaceable?: boolean;
   }>
 >();
-expectTypeOf(WebAppHashing.calculateClientHash).parameter(1).toEqualTypeOf<
-  ((type: string, replaceable?: boolean) => boolean) | undefined
->();
-expectTypeOf(WebAppHashing.calculateClientHash).parameter(2).toEqualTypeOf<
-  Record<string, unknown> | undefined
->();
+expectTypeOf(WebAppHashing.calculateClientHash)
+  .parameter(1)
+  .toEqualTypeOf<((type: string, replaceable?: boolean) => boolean) | undefined>();
+expectTypeOf(WebAppHashing.calculateClientHash)
+  .parameter(2)
+  .toEqualTypeOf<Record<string, unknown> | undefined>();
 expectTypeOf(WebAppHashing.calculateClientHash).returns.toBeString();
 
 // calculateCordovaCompatibilityHash

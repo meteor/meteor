@@ -103,7 +103,10 @@ export class SessionCollectionView {
     const docView = this.documents.get(id);
 
     if (!docView) {
-      throw new Error(`Could not find element with id ${id} to change`);
+      // Document was already removed. This can happen in high-concurrency scenarios
+      // where the cache is updated synchronously but callbacks are processed
+      // asynchronously, and a remove was processed before this change.
+      return;
     }
 
     Object.entries(changed).forEach(([key, value]) => {
@@ -121,7 +124,10 @@ export class SessionCollectionView {
     const docView = this.documents.get(id);
 
     if (!docView) {
-      throw new Error(`Removed nonexistent document ${id}`);
+      // Document was already removed. This can happen in high-concurrency scenarios
+      // where the cache is updated synchronously but callbacks are processed
+      // asynchronously, causing duplicate removal attempts.
+      return;
     }
 
     docView.existsIn.delete(subscriptionHandle);

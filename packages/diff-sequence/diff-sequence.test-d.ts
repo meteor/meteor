@@ -69,18 +69,20 @@ expectTypeOf(
   DiffSequence.diffQueryUnorderedChanges<Doc>(new Map(), new Map(), observer),
 ).toBeVoid();
 
-expectTypeOf(
-  DiffSequence.diffQueryOrderedChanges<Doc>([], [], observer),
-).toBeVoid();
+expectTypeOf(DiffSequence.diffQueryOrderedChanges<Doc>([], [], observer)).toBeVoid();
 
 expectTypeOf(
-  DiffSequence.diffObjects<number>({ a: 1 }, { a: 2 }, {
-    both: (key, l, r) => {
-      expectTypeOf(key).toBeString();
-      expectTypeOf(l).toBeNumber();
-      expectTypeOf(r).toBeNumber();
+  DiffSequence.diffObjects<number>(
+    { a: 1 },
+    { a: 2 },
+    {
+      both: (key, l, r) => {
+        expectTypeOf(key).toBeString();
+        expectTypeOf(l).toBeNumber();
+        expectTypeOf(r).toBeNumber();
+      },
     },
-  }),
+  ),
 ).toBeVoid();
 
 expectTypeOf(
@@ -93,10 +95,8 @@ expectTypeOf(
 ).toBeVoid();
 
 type BagDoc = Record<string, unknown>;
-expectTypeOf(
-  DiffSequence.makeChangedFields<BagDoc>({ a: 1 }, { b: 2 }),
-).toEqualTypeOf<Partial<BagDoc>>();
+expectTypeOf(DiffSequence.makeChangedFields<BagDoc>({ a: 1 }, { b: 2 })).toEqualTypeOf<
+  Partial<BagDoc>
+>();
 
-expectTypeOf(
-  DiffSequence.applyChanges<BagDoc>({ a: 1 }, { a: undefined, b: 3 }),
-).toBeVoid();
+expectTypeOf(DiffSequence.applyChanges<BagDoc>({ a: 1 }, { a: undefined, b: 3 })).toBeVoid();

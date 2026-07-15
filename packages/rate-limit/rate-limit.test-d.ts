@@ -30,9 +30,7 @@ expectTypeOf<RateLimiterMatcherValue<string>>().toEqualTypeOf<
 >();
 
 // Matcher defaults to base input
-expectTypeOf<RateLimiterMatcher>().toEqualTypeOf<
-  RateLimiterMatcher<RateLimiterInput>
->();
+expectTypeOf<RateLimiterMatcher>().toEqualTypeOf<RateLimiterMatcher<RateLimiterInput>>();
 
 // Callback shape
 expectTypeOf<RateLimiterCallback>().toEqualTypeOf<
@@ -56,14 +54,9 @@ expectTypeOf(
 interface MyInput extends RateLimiterInput {
   tenant?: string;
 }
-rl.addRule<MyInput>(
-  { tenant: (t) => t === "x" },
-  1,
-  2,
-  (reply) => {
-    expectTypeOf(reply).toEqualTypeOf<RateLimiterCheckResult>();
-  },
-);
+rl.addRule<MyInput>({ tenant: (t) => t === "x" }, 1, 2, (reply) => {
+  expectTypeOf(reply).toEqualTypeOf<RateLimiterCheckResult>();
+});
 
 // check / increment / removeRule
 expectTypeOf(rl.check({ type: "method" })).toEqualTypeOf<RateLimiterCheckResult>();

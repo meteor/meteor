@@ -9,7 +9,7 @@ type LogInput = string | LogJSONInput;
 type formatInput = {
   message: string;
   time: Date;
-  level: 'debug' | 'info' | 'warn' | 'error'
+  level: "debug" | "info" | "warn" | "error";
   timeInexact?: boolean;
   file: string;
   line: number;
@@ -23,7 +23,7 @@ type formatInput = {
 export declare function Log(input: LogInput, ...optionalParams: unknown[]): void;
 
 export declare namespace Log {
-  var outputFormat: 'json' | 'colored-text';
+  var outputFormat: "json" | "colored-text";
   var showTime: boolean;
   function _intercept(count: number): void;
   function _suppress(count: number): void;
@@ -33,13 +33,13 @@ export declare namespace Log {
   function format(object: formatInput, options?: { color?: boolean; metaColor?: string }): string;
   function objFromText(
     line: string,
-    override: Record<string, unknown>
+    override: Record<string, unknown>,
   ): {
-    message: string
-    level: 'info'
-    time: Date
-    timeInexact: true
-  }
+    message: string;
+    level: "info";
+    time: Date;
+    timeInexact: true;
+  };
 
   function debug(input: LogInput, ...optionalParams: unknown[]): void;
   function info(input: LogInput, ...optionalParams: unknown[]): void;

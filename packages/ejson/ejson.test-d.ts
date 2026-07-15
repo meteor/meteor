@@ -1,14 +1,10 @@
 import { expectTypeOf } from "expect-type";
-import type {
-  EJSON,
-  EJSONable,
-  EJSONableCustomType,
-  EJSONableProperty,
-  JSONable,
-} from "./ejson";
+import type { EJSON, EJSONable, EJSONableCustomType, EJSONableProperty, JSONable } from "./ejson";
 import { EJSON as EJSONNs } from "./ejson";
 
-expectTypeOf<EJSONable>().toHaveProperty("x" as string).toEqualTypeOf<EJSONableProperty>();
+expectTypeOf<EJSONable>()
+  .toHaveProperty("x" as string)
+  .toEqualTypeOf<EJSONableProperty>();
 expectTypeOf<EJSONableProperty>().toEqualTypeOf<EJSONableProperty>();
 expectTypeOf<EJSON>().toExtend<EJSONable>();
 expectTypeOf<JSONable>().toHaveProperty("x" as string);
@@ -33,7 +29,7 @@ expectTypeOf(EJSONNs.equals).returns.toBeBoolean();
 expectTypeOf(EJSONNs.fromJSONValue).parameters.toEqualTypeOf<[JSONable]>();
 expectTypeOf(EJSONNs.fromJSONValue).returns.toEqualTypeOf<EJSONableProperty>();
 
-expectTypeOf(EJSONNs.isBinary).parameters.toEqualTypeOf<[Object]>();
+expectTypeOf(EJSONNs.isBinary).parameters.toEqualTypeOf<[object]>();
 expectTypeOf(EJSONNs.newBinary).parameters.toEqualTypeOf<[number]>();
 expectTypeOf(EJSONNs.newBinary).returns.toEqualTypeOf<Uint8Array>();
 

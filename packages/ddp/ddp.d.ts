@@ -11,7 +11,9 @@ export namespace DDP {
     status(): DDPStatus;
     reconnect(): void;
     disconnect(): void;
-    onReconnect(): void;
+    onReconnect(callback: (connection: DDPStatic) => void | Promise<void>): {
+      stop(): void;
+    };
   }
 
   function _allSubscriptionsReady(): boolean;

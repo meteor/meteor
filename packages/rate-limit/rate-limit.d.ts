@@ -1,5 +1,5 @@
 export interface RateLimiterInput {
-  type?: 'method' | 'subscription';
+  type?: "method" | "subscription";
   name?: string;
   userId?: string | null;
   connectionId?: string;
@@ -14,10 +14,7 @@ export interface RateLimiterCheckResult {
   ruleId?: string;
 }
 
-export type RateLimiterMatcherValue<V> =
-  | V
-  | ((value: V) => boolean)
-  | null;
+export type RateLimiterMatcherValue<V> = V | ((value: V) => boolean) | null;
 
 export type RateLimiterMatcher<Input extends RateLimiterInput = RateLimiterInput> = {
   [K in keyof Input]?: RateLimiterMatcherValue<Input[K]>;
@@ -25,7 +22,7 @@ export type RateLimiterMatcher<Input extends RateLimiterInput = RateLimiterInput
 
 export type RateLimiterCallback<Input extends RateLimiterInput = RateLimiterInput> = (
   reply: RateLimiterCheckResult,
-  input: Input
+  input: Input,
 ) => void;
 
 export class RateLimiter {
@@ -43,7 +40,7 @@ export class RateLimiter {
     matcher: RateLimiterMatcher<Input>,
     numRequestsAllowed?: number,
     intervalTime?: number,
-    callback?: RateLimiterCallback<Input>
+    callback?: RateLimiterCallback<Input>,
   ): string;
 
   /**

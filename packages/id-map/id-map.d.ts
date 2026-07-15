@@ -2,10 +2,7 @@
  * A Map-like data structure indexed by Mongo ObjectIDs or other serializable keys.
  */
 export class IdMap<K, V> {
-  constructor(
-    idStringify?: (id: K) => string,
-    idParse?: (str: string) => K
-  );
+  constructor(idStringify?: (id: K) => string, idParse?: (str: string) => K);
 
   /** Get the value associated with an ID. */
   get(id: K): V | undefined;
@@ -35,7 +32,9 @@ export class IdMap<K, V> {
    * Async version of forEach.
    * @param iterator Called with (value, id) for each entry
    */
-  forEachAsync(iterator: (value: V, id: K) => Promise<boolean | void> | boolean | void): Promise<void>;
+  forEachAsync(
+    iterator: (value: V, id: K) => Promise<boolean | void> | boolean | void,
+  ): Promise<void>;
 
   /** Return the number of entries. */
   size(): number;

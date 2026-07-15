@@ -1,30 +1,30 @@
 Package.describe({
-  name: 'rate-limit',
-  version: '1.1.2',
+  name: "rate-limit",
+  version: "1.2.0",
   // Brief, one-line summary of the package.
-  summary: 'An algorithm for rate limiting anything',
+  summary: "An algorithm for rate limiting anything",
   // URL to the Git repository containing the source code for this package.
-  git: '',
+  git: "",
   // By default, Meteor will default to using README.md for documentation.
   // To avoid submitting documentation, set this field to null.
-  documentation: 'README.md',
+  documentation: "README.md",
 });
 
-Package.onUse(function(api) {
-  api.use('random');
-  api.use('ecmascript');
-  api.mainModule('rate-limit.js');
-  api.addAssets('rate-limit.d.ts', 'server');
-  api.export('RateLimiter');
+Package.onUse(function (api) {
+  api.use("random");
+  api.use("ecmascript");
+  api.mainModule("rate-limit.js");
+  api.export("RateLimiter");
+  api.addAssets("rate-limit.d.ts", "server");
 });
 
-Package.onTest(function(api) {
-  api.use('test-helpers', ['client', 'server']);
-  api.use('ecmascript');
-  api.use('random');
-  api.use('ddp-rate-limiter');
-  api.use('tinytest');
-  api.use('rate-limit');
-  api.use('ddp-common');
-  api.mainModule('rate-limit-tests.js');
+Package.onTest(function (api) {
+  api.use("test-helpers", ["client", "server"]);
+  api.use("ecmascript");
+  api.use("random");
+  api.use("ddp-rate-limiter");
+  api.use("tinytest");
+  api.use("rate-limit");
+  api.use("ddp-common");
+  api.mainModule("rate-limit-tests.js");
 });

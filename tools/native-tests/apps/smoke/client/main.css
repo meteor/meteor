@@ -1,0 +1,10 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  padding: 24px;
+  font-size: 20px;
+}
+
+#status,
+#ddp {
+  padding: 8px 0;
+}

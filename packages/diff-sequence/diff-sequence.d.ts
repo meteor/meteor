@@ -36,7 +36,7 @@ export namespace DiffSequence {
     oldResults: T[] | Map<string, T>,
     newResults: T[] | Map<string, T>,
     observer: DiffObserver<T>,
-    options?: DiffOptions<T>
+    options?: DiffOptions<T>,
   ): void;
 
   /**
@@ -46,7 +46,7 @@ export namespace DiffSequence {
     oldResults: Map<string, T>,
     newResults: Map<string, T>,
     observer: DiffObserver<T>,
-    options?: DiffOptions<T>
+    options?: DiffOptions<T>,
   ): void;
 
   /**
@@ -56,7 +56,7 @@ export namespace DiffSequence {
     oldResults: T[],
     newResults: T[],
     observer: DiffObserver<T>,
-    options?: DiffOptions<T>
+    options?: DiffOptions<T>,
   ): void;
 
   /**
@@ -65,7 +65,7 @@ export namespace DiffSequence {
   export function diffObjects<V>(
     left: Record<string, V>,
     right: Record<string, V>,
-    callbacks: ObjectDiffCallbacks<V>
+    callbacks: ObjectDiffCallbacks<V>,
   ): void;
 
   /**
@@ -74,7 +74,7 @@ export namespace DiffSequence {
   export function diffMaps<K, V>(
     left: Map<K, V>,
     right: Map<K, V>,
-    callbacks: MapDiffCallbacks<K, V>
+    callbacks: MapDiffCallbacks<K, V>,
   ): void;
 
   /**
@@ -83,7 +83,7 @@ export namespace DiffSequence {
    */
   export function makeChangedFields<T extends Record<string, unknown>>(
     newDoc: T,
-    oldDoc: T
+    oldDoc: T,
   ): Partial<T>;
 
   /**
@@ -92,6 +92,6 @@ export namespace DiffSequence {
    */
   export function applyChanges<T extends Record<string, unknown>>(
     doc: T,
-    changeFields: Partial<T>
+    changeFields: Partial<T>,
   ): void;
 }

@@ -1,4 +1,5 @@
 import isEmpty from "lodash.isempty";
+import { EJSON } from "meteor/ejson";
 import { ObserveHandle } from "./observe_handle";
 
 interface ObserveMultiplexerOptions {
@@ -148,7 +149,12 @@ export class ObserveMultiplexer {
   }
 
   async onFlush(cb: () => void): Promise<void> {
-    await this._queue.queueTask(async () => {
+    // Use runTask, not queueTask: queueTask returns void so `await` resolves
+    // immediately and the cb runs as fire-and-forget. Callers (e.g.
+    // ChangeStreamObserveDriver.onBeforeFire) rely on `await onFlush(...)`
+    // actually waiting for the cb to commit its write — without this, fences
+    // fire before queued commits run and we lose backpressure.
+    await this._queue.runTask(async () => {
       if (!this._ready())
         throw Error("only call onFlush on a multiplexer that will be ready");
       await cb();
@@ -166,10 +172,15 @@ export class ObserveMultiplexer {
   }
 
   _applyCallback(callbackName: string, args: unknown[]) {
+    // Update cache SYNCHRONOUSLY so it's immediately available for subsequent
+    // operations. This prevents race conditions where an update event arrives
+    // before the insert has been recorded in the cache.
+    this._cache.applyChange[callbackName].apply(null, args);
+
+    // Queue the callback notifications asynchronously
     this._queue.queueTask(async () => {
       if (!this._handles) return;
 
-      await this._cache.applyChange[callbackName].apply(null, args);
       if (
         !this._ready() &&
         callbackName !== "added" &&

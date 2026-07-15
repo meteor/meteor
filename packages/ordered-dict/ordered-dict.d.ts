@@ -48,14 +48,24 @@ export class OrderedDict<K = string, V = unknown> {
    * @param iter Called with (value, key, index)
    * @param context Optional `this` context for the iterator
    */
-  forEach(iter: (value: V, key: K, index: number) => typeof OrderedDict.BREAK | void, context?: unknown): void;
+  forEach(
+    iter: (value: V, key: K, index: number) => typeof OrderedDict.BREAK | void,
+    context?: unknown,
+  ): void;
 
   /**
    * Async iteration in order.
    * @param asyncIter Called with (value, key, index)
    * @param context Optional `this` context for the iterator
    */
-  forEachAsync(asyncIter: (value: V, key: K, index: number) => Promise<typeof OrderedDict.BREAK | void> | typeof OrderedDict.BREAK | void, context?: unknown): Promise<void>;
+  forEachAsync(
+    asyncIter: (
+      value: V,
+      key: K,
+      index: number,
+    ) => Promise<typeof OrderedDict.BREAK | void> | typeof OrderedDict.BREAK | void,
+    context?: unknown,
+  ): Promise<void>;
 
   /** Get the first key, or undefined if empty. */
   first(): K | undefined;

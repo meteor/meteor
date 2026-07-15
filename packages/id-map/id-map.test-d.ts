@@ -4,7 +4,7 @@ import { IdMap } from "./id-map";
 expectTypeOf<typeof IdMap>().toBeConstructibleWith();
 expectTypeOf<typeof IdMap>().toBeConstructibleWith(
   (id: unknown) => String(id),
-  (str: string) => str
+  (str: string) => str,
 );
 
 const map = new IdMap<string, number>();

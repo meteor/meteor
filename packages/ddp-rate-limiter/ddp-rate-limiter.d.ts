@@ -7,11 +7,11 @@ export namespace DDPRateLimiter {
   }
 
   export interface Matcher {
-    type?: string | ((type: 'method' | 'subscription') => boolean) | undefined;
-    name?: string | ((name: string) => boolean) | undefined;
-    userId?: string | ((userId: string | null) => boolean) | undefined;
-    connectionId?: string | ((connectionId: string) => boolean) | undefined;
-    clientAddress?: string | ((clientAddress: string) => boolean) | undefined;
+    type?: string | ((type: 'method' | 'subscription') => boolean) | ((type: 'method' | 'subscription') => Promise<boolean>) | undefined;
+    name?: string | ((name: string) => boolean) | ((name: string) => Promise<boolean>) | undefined;
+    userId?: string | ((userId: string | null) => boolean) | ((userId: string | null) => Promise<boolean>) | undefined;
+    connectionId?: string | ((connectionId: string) => boolean) | ((connectionId: string) => Promise<boolean>) | undefined;
+    clientAddress?: string | ((clientAddress: string) => boolean) | ((clientAddress: string) => Promise<boolean>) | undefined;
   }
 
   /**

@@ -33,17 +33,15 @@ expectTypeOf(Log._getCallerDetails).returns.toEqualTypeOf<{
 }>();
 
 // parse / format / objFromText
-expectTypeOf(Log.parse).parameters.toEqualTypeOf<
-  [Record<string, unknown> | string]
->();
+expectTypeOf(Log.parse).parameters.toEqualTypeOf<[Record<string, unknown> | string]>();
 expectTypeOf(Log.parse).returns.toEqualTypeOf<Record<string, unknown> | null>();
 
-expectTypeOf(Log.format).parameter(1).toEqualTypeOf<{ color?: boolean; metaColor?: string } | undefined>();
+expectTypeOf(Log.format)
+  .parameter(1)
+  .toEqualTypeOf<{ color?: boolean; metaColor?: string } | undefined>();
 expectTypeOf(Log.format).returns.toBeString();
 
-expectTypeOf(Log.objFromText).parameters.toEqualTypeOf<
-  [string, Record<string, unknown>]
->();
+expectTypeOf(Log.objFromText).parameters.toEqualTypeOf<[string, Record<string, unknown>]>();
 expectTypeOf(Log.objFromText).returns.toEqualTypeOf<{
   message: string;
   level: "info";

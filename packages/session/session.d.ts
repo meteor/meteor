@@ -1,4 +1,13 @@
-type SessionValue = string | number | boolean | Record<string, unknown> | unknown[] | Date | Uint8Array | null | undefined;
+type SessionValue =
+  | string
+  | number
+  | boolean
+  | Record<string, unknown>
+  | unknown[]
+  | Date
+  | Uint8Array
+  | null
+  | undefined;
 
 export namespace Session {
   /**

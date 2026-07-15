@@ -21,6 +21,8 @@ expectTypeOf(reg.stop).toEqualTypeOf<() => void>();
 expectTypeOf(hook.clear).returns.toBeVoid();
 expectTypeOf(hook.forEach).parameters.toEqualTypeOf<[(callback: Cb) => boolean | void]>();
 expectTypeOf(hook.forEach).returns.toBeVoid();
-expectTypeOf(hook.forEachAsync).parameters.toEqualTypeOf<[(callback: Cb) => Promise<boolean | void> | boolean | void]>();
+expectTypeOf(hook.forEachAsync).parameters.toEqualTypeOf<
+  [(callback: Cb) => Promise<boolean | void> | boolean | void]
+>();
 expectTypeOf(hook.forEachAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(hook.each).parameters.toEqualTypeOf<[(callback: Cb) => boolean | void]>();

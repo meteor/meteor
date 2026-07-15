@@ -18,7 +18,7 @@ export namespace WebAppHashing {
   export function calculateClientHash(
     manifest: ManifestResource[],
     includeFilter?: (type: string, replaceable?: boolean) => boolean,
-    runtimeConfigOverride?: Record<string, unknown>
+    runtimeConfigOverride?: Record<string, unknown>,
   ): string;
 
   /**
@@ -29,6 +29,6 @@ export namespace WebAppHashing {
    */
   export function calculateCordovaCompatibilityHash(
     platformVersion: string,
-    pluginVersions: Record<string, string>
+    pluginVersions: Record<string, string>,
   ): string;
 }
