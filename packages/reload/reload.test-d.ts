@@ -1,0 +1,11 @@
+import { expectTypeOf } from "expect-type";
+import { Reload } from "./reload";
+
+expectTypeOf(Reload).toBeObject();
+
+expectTypeOf(Reload._onMigrate).toBeFunction();
+expectTypeOf(Reload._migrationData).parameters.toEqualTypeOf<[string]>();
+expectTypeOf(Reload._getData).returns.toEqualTypeOf<Record<string, unknown>>();
+expectTypeOf(Reload._migrate).toBeFunction();
+expectTypeOf(Reload._migrate).returns.toBeVoid();
+expectTypeOf(Reload._reload).returns.toBeVoid();

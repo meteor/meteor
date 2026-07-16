@@ -10,6 +10,7 @@ Npm.depends({
 Package.onUse(function (api) {
   api.use('ecmascript');
   api.mainModule('force_ssl_common.js', 'server');
+  api.addAssets('force-ssl-common.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

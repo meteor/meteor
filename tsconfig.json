@@ -21,6 +21,7 @@
       "meteor/ddp": ["./packages/ddp/ddp.d.ts"],
       "meteor/ejson": ["./packages/ejson/ejson.d.ts"],
       "meteor/check": ["./packages/check/check.d.ts"],
+      "meteor/facts-base": ["./packages/facts-base/facts-base.d.ts"],
       "meteor/tracker": ["./packages/tracker/tracker.d.ts"],
       "meteor/random": ["./packages/random/random.d.ts"],
       "meteor/accounts-base": ["./packages/accounts-base/accounts-base.d.ts"],
