@@ -122,7 +122,45 @@ Keep these concerns in each application unless they are intentionally identical:
 
 Use relative imports inside the shared package. An absolute app import such as `/imports/api/payments` assumes every consuming app has the same directory and defeats the package boundary.
 
-Symbolic links can also expose a shared directory to both apps, but local packages are more explicit, work across operating systems, and make accidental client/server imports easier to avoid. Do not link one app's entire `imports` directory into the other app.
+#### Share selected files with symbolic links
+
+Symbolic links are an alternative when both apps need the same small directory without a package boundary. For example, both apps can expose a repository-level `shared` directory at the same path:
+
+```text
+store/
+  apps/
+    customer/imports/shared -> ../../../shared
+    admin/imports/shared -> ../../../shared
+  shared/
+    orders.js
+    validation.js
+```
+
+From the `store` repository root on macOS or Linux, create the directory and links with:
+
+```bash
+mkdir shared
+ln -s ../../../shared apps/customer/imports/shared
+ln -s ../../../shared apps/admin/imports/shared
+```
+
+On Windows, run the equivalent commands in Command Prompt:
+
+```bat
+mkdir shared
+cd apps\customer\imports
+mklink /D shared ..\..\..\shared
+cd ..\..\admin\imports
+mklink /D shared ..\..\..\shared
+```
+
+Code in either app can now import a shared file from `/imports/shared/orders.js`. Keep the link targets inside the repository and include them in deployment checkouts so the links do not become dangling.
+
+::: warning
+Link only the selected stable directory. Do not link one app's entire `imports` directory into the other app; that couples their client, server, and startup code and can expose files to the wrong build target.
+
+Creating symbolic links on Windows may require Developer Mode or an elevated Command Prompt, and Git must be configured to check out symbolic links. Use a local package or npm workspace when every development and deployment environment cannot preserve them.
+:::
 
 ## Keep each app's server API separate
 
