@@ -328,6 +328,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-facebook",
+                link: "/packages/accounts-facebook",
+              },
+              {
                 text: "accounts-github",
                 link: "/packages/accounts-github",
               },
@@ -426,8 +430,44 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "disable-oplog",
+                link: "/packages/disable-oplog",
+              },
+              {
                 text: "facts-base",
                 link: "/packages/facts-base",
+              },
+              {
+                text: "facts-ui",
+                link: "/packages/facts-ui",
+              },
+              {
+                text: "insecure",
+                link: "/packages/insecure",
+              },
+              {
+                text: "autopublish",
+                link: "/packages/autopublish",
+              },
+              {
+                text: "static-html",
+                link: "/packages/static-html",
+              },
+              {
+                text: "mobile-experience",
+                link: "/packages/mobile-experience",
+              },
+              {
+                text: "mobile-status-bar",
+                link: "/packages/mobile-status-bar",
+              },
+              {
+                text: "launch-screen",
+                link: "/packages/launch-screen",
+              },
+              {
+                text: "force-ssl",
+                link: "/packages/force-ssl",
               },
               {
                 text: "webapp",
@@ -453,6 +493,10 @@ export default defineConfig({
               {
                 text: "react-meteor-data",
                 link: "/packages/react-meteor-data",
+              },
+              {
+                text: "typescript",
+                link: "/packages/typescript",
               },
             ]
           },
