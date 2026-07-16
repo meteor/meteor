@@ -1196,10 +1196,9 @@ Meteor.publish('livedata_server_test_strategy_flip', function () {
     );
     this.removed(collection, 'doc1');
   } finally {
-    Meteor.server.setPublicationStrategy(
-      collection,
-      DDPServer.publicationStrategies.SERVER_MERGE
-    );
+    // Fully restore global state: remove the per-collection override rather
+    // than leaving an explicit (if default-equivalent) entry behind.
+    delete Meteor.server._publicationStrategies[collection];
   }
   this.ready();
 });
