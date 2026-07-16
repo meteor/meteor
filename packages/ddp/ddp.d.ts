@@ -66,4 +66,57 @@ export namespace DDPCommon {
      */
     connection: Meteor.Connection;
   }
+
+  /** Supported DDP protocol versions, newest first. */
+  const SUPPORTED_DDP_VERSIONS: string[];
+
+  /** Parse a raw DDP wire string into a message object, or `null` if invalid. */
+  function parseDDP(stringMessage: string): Record<string, unknown> | null;
+
+  /** Serialize a DDP message object to its wire string. */
+  function stringifyDDP(msg: Record<string, unknown>): string;
+
+  /** Derive the deterministic random seed used by a method stub. */
+  function makeRpcSeed(enclosing: MethodInvocation, methodName: string): unknown;
+
+  /** Options for constructing a `Heartbeat`. */
+  interface HeartbeatOptions {
+    heartbeatInterval: number;
+    heartbeatTimeout: number;
+    onTimeout: () => void;
+    sendPing: () => void;
+  }
+
+  /** Client/server heartbeat used to detect dropped DDP connections. */
+  interface Heartbeat {
+    new (options: HeartbeatOptions): Heartbeat;
+    /** Begin sending pings and watching for timeouts. */
+    start(): void;
+    /** Stop all heartbeat timers. */
+    stop(): void;
+    /** Reset the timeout timer after any message is received. */
+    messageReceived(): void;
+  }
+
+  /** A deterministic, seeded source of `Random` generators. */
+  interface RandomStream {
+    new (options: { seed?: string | string[] }): RandomStream;
+  }
+}
+
+export namespace DDPServer {
+  /** How a publication reconciles documents across overlapping subscriptions. */
+  interface PublicationStrategy {
+    useDummyDocumentView: boolean;
+    useCollectionView: boolean;
+    doAccountingForCollection: boolean;
+  }
+
+  /** The built-in publication strategies, passed to `setPublicationStrategy`. */
+  var publicationStrategies: {
+    SERVER_MERGE: PublicationStrategy;
+    NO_MERGE_NO_HISTORY: PublicationStrategy;
+    NO_MERGE: PublicationStrategy;
+    NO_MERGE_MULTI: PublicationStrategy;
+  };
 }
