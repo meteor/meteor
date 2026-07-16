@@ -284,6 +284,8 @@ CSS and HTML files outside special directories are loaded on the client only and
 
 If you are writing a sufficiently complex system, there can come a time where it makes sense to split your code up into multiple applications. For example you may want to create a separate application for the administration UI (rather than checking permissions all through the admin part of your site, you can check once), or separate the code for the mobile and desktop versions of your app.
 
+For a practical admin/customer setup with shared collections and selected files, see [Sharing Code and Data Between Meteor Apps](/tutorials/multiple-meteor-apps/).
+
 Another very common use case is splitting a worker process away from your main application so that expensive jobs do not impact the user experience of your visitors by locking up a single web server.
 
 There are some advantages of splitting your application in this way:
@@ -303,6 +305,8 @@ The primary challenge is properly sharing code between the different application
 If you want to create Meteor applications with separate code, you'll have some modules that you'd like to share between them. If those modules are something the wider world could use, you should consider [publishing them to a package system](../../packages/#writing-atmosphere-packages), either npm or Atmosphere, depending on whether the code is Meteor-specific or otherwise.
 
 If the code is private, or of no interest to others, it typically makes sense to include the same module in both applications (you *can* do this with [private npm modules](https://docs.npmjs.com/about-private-packages)). There are several ways to do this:
+
+- keep Meteor-specific code in a local package that both apps load through [`METEOR_PACKAGE_DIRS`](/cli/environment-variables#meteor-package-dirs).
 
 - a straightforward approach is to include the common code as a [git submodule](https://git-scm.com/book/en/v2/Git-Tools-Submodules) of both applications.
 
@@ -353,5 +357,4 @@ accounts2.loginWithToken(token);
 
 You can see a proof of concept of this architecture in an [example repository](https://github.com/tmeasday/multi-app-accounts).
 
-
-Another pattern is to have another app which acts as identity provider for your apps. The [leaonline:oauth2-server](https://atmospherejs.com/leaonline/oauth2-server) package can be used to create an OAuth2 server in one Meteor app, and then other apps can use the standard `accounts-oauth` packages to authenticate users against it.
+Browser single sign-on between separate app origins is a separate concern. See [Accounts and authorization](/tutorials/multiple-meteor-apps/#accounts-and-authorization) for the security boundaries in an admin/customer setup.
