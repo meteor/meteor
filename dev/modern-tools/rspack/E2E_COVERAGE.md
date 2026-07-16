@@ -207,18 +207,19 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | Skeleton | Port | Language | Extra coverage |
 |----------|------|----------|----------------|
 | angular | 3213 | TypeScript | |
-| apollo | 3201 | JSX | |
-| babel | 3212 | JSX | |
+| apollo | 3201 | JSX | React 19.2 dependencies |
+| babel | 3212 | JSX | React 19.2 dependencies |
 | bare | 3219 | JS | No title/style checks, no client tests, skip build cache check |
 | blaze | 3202 | JS | |
-| chakra-ui | 3203 | JSX | No body style checks (custom UI library) |
-| coffeescript | 3211 | CoffeeScript | |
+| chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
+| coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
 | full | 3204 | JS | `imports/api/` test structure |
 | react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | TypeScript | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | CI: removes TsCheckerRspackPlugin |
+| tailwind | 3208 | TypeScript | React 19.2 dependencies; Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; CI: removes TsCheckerRspackPlugin |
+| typescript-tailwind | 3221 | TypeScript | React 19.2 dependencies and type definitions; CI: removes TsCheckerRspackPlugin |
 | vue | 3210 | JS | |
 
 ---
@@ -293,7 +294,7 @@ Where each feature is tested across apps and skeletons.
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
 | React Compiler through built-in SWC | react | |
-| React 19.2 | react | react |
+| React 19.2 | react | apollo, babel, chakra-ui, coffeescript, react, tailwind, typescript, typescript-tailwind |
 | Automatic JSX runtime | react | react |
 | TypeScript type checking | typescript | |
 | Meteor.disablePlugins | react | |
