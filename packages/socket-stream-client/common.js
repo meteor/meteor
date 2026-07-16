@@ -161,7 +161,8 @@ export class StreamClientCommon {
     }
 
     this._retry.clear();
-    this.currentStatus.retryCount -= 1; // don't count manual retries
+    // don't count manual retries
+    this._setStatus({ retryCount: this.currentStatus.retryCount - 1 });
     this._retryNow();
   }
 
