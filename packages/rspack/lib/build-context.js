@@ -610,9 +610,11 @@ import '../../${config?.entryFile}';`;
         })
       );
 
+      // Bracket notation keeps the Node require out of the standalone import
+      // patterns managed by RequireExternalsPlugin.
       return `/* Load the server Rspack bundle with Node at runtime so Meteor does not link it */
 const __rspackServerBundlePath = ${JSON.stringify(serverBundlePath)};
-const __rspackModule = Npm.require('module');
+const __rspackModule = Npm['require']('module');
 const __rspackServerRequire = __rspackModule.createRequire(__rspackServerBundlePath);
 const __rspackMeteorRequire = require;
 const __rspackServerModule = new __rspackModule(__rspackServerBundlePath);
