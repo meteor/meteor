@@ -12,6 +12,21 @@ import { testMeteorSkeleton } from './test-helpers';
 
 const isCI = process.env.GITHUB_ACTIONS === 'true';
 
+async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
+  const packageJsonPath = path.join(tempDir, 'package.json');
+  const packageJson = JSON.parse(
+    await fs.promises.readFile(packageJsonPath, 'utf8')
+  );
+
+  expect(packageJson.dependencies.react).toBe('^19.2.0');
+  expect(packageJson.dependencies['react-dom']).toBe('^19.2.0');
+
+  if (includeTypes) {
+    expect(packageJson.devDependencies['@types/react']).toBe('^19.2.0');
+    expect(packageJson.devDependencies['@types/react-dom']).toBe('^19.2.0');
+  }
+}
+
 describe('Meteor Skeletons /', () => {
   describe(
     'Angular Skeleton /',
@@ -36,6 +51,9 @@ describe('Meteor Skeletons /', () => {
         server: 'server/main.js',
         test: 'tests/main.js',
       },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
@@ -48,6 +66,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.jsx',
         server: 'server/main.js',
         test: 'tests/main.js',
+      },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
       },
     }),
   );
@@ -88,6 +109,9 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.js',
       },
       checkBodyStyles: false,
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
@@ -100,6 +124,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.coffee',
         server: 'server/main.coffee',
         test: 'tests/main.coffee',
+      },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
       },
     }),
   );
@@ -134,14 +161,7 @@ describe('Meteor Skeletons /', () => {
         padding: '10px',
       },
       customAssertions: {
-        afterCreate: async ({ tempDir }) => {
-          const packageJsonPath = path.join(tempDir, 'package.json');
-          const packageJson = JSON.parse(
-            await fs.promises.readFile(packageJsonPath, 'utf8')
-          );
-          expect(packageJson.dependencies.react).toBe('^19.2.0');
-          expect(packageJson.dependencies['react-dom']).toBe('^19.2.0');
-        },
+        afterCreate: assertReact19Dependencies,
       },
     }),
   );
@@ -183,6 +203,7 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.ts',
       },
       customAssertions: {
+        afterCreate: assertReact19Dependencies,
         afterRun: async () => {
           // Verify Tailwind styles for '.bg-gray-100' element
           await assertStyles('.bg-gray-100', {
@@ -210,7 +231,9 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.ts',
       },
       customAssertions: {
-        afterCreate({ tempDir }) {
+        async afterCreate({ tempDir }) {
+          await assertReact19Dependencies({ tempDir }, true);
+
           if (isCI) {
             const rspackConfigPath = path.join(tempDir, 'rspack.config.ts');
             // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails
@@ -237,7 +260,9 @@ describe('Meteor Skeletons /', () => {
         test: "tests/main.ts",
       },
       customAssertions: {
-        afterCreate({ tempDir }) {
+        async afterCreate({ tempDir }) {
+          await assertReact19Dependencies({ tempDir }, true);
+
           if (isCI) {
             const rspackConfigPath = path.join(tempDir, "rspack.config.ts");
             // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails

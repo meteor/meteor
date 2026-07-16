@@ -8,14 +8,14 @@
     "visualize": "meteor --production --extra-packages bundle-visualizer"
   },
   "dependencies": {
-    "@apollo/client": "^3.9.2",
+    "@apollo/client": "^3.14.1",
     "@apollo/server": "^4.10.0",
     "@babel/runtime": "^7.23.9",
     "@swc/helpers": "^0.5.23",
     "graphql": "^16.8.1",
     "meteor-node-stubs": "^1.2.12",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@graphql-tools/webpack-loader": "^7.0.0",

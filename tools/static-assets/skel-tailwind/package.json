@@ -12,8 +12,8 @@
     "@swc/helpers": "^0.5.23",
     "autoprefixer": "^10.4.4",
     "meteor-node-stubs": "^1.2.12",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.0",

@@ -13,8 +13,8 @@
     "@swc/helpers": "^0.5.23",
     "autoprefixer": "^10.4.4",
     "meteor-node-stubs": "^1.2.12",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@meteorjs/rspack": "^3.0.0-beta.0",
@@ -28,8 +28,8 @@
     "@types/meteor": "^2.9.9",
     "@types/mocha": "^8.2.3",
     "@types/node": "^22.10.6",
-    "@types/react": "^18.2.5",
-    "@types/react-dom": "^18.2.4",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.1.1",
     "react-refresh": "^0.17.0",
