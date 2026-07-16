@@ -601,28 +601,35 @@ import '../../${config?.entryFile}';`;
       !config?.isTest &&
       !config?.isNative
     ) {
-      const serverBundlePath = `${RSPACK_BUILD_CONTEXT}/${getBuildFilePath({
-        ...config,
-        role: FILE_ROLE.output,
-      })}`;
+      const serverBundlePath = path.resolve(
+        getMeteorAppDir(),
+        RSPACK_BUILD_CONTEXT,
+        getBuildFilePath({
+          ...config,
+          role: FILE_ROLE.output,
+        })
+      );
 
       return `/* Load the server Rspack bundle with Node at runtime so Meteor does not link it */
-const __rspackServerBundlePath = Npm.require('path').resolve(__meteor_bootstrap__.serverDir, '..', '..', '..', '..', '..', ${JSON.stringify(serverBundlePath)});
+const __rspackServerBundlePath = ${JSON.stringify(serverBundlePath)};
 const __rspackModule = Npm.require('module');
 const __rspackServerRequire = __rspackModule.createRequire(__rspackServerBundlePath);
 const __rspackMeteorRequire = require;
-const __rspackOriginalRequire = __rspackModule.prototype.require;
-delete __rspackServerRequire.cache[__rspackServerBundlePath];
-__rspackModule.prototype.require = function(request) {
+const __rspackServerModule = new __rspackModule(__rspackServerBundlePath);
+const __rspackNodeRequire = __rspackServerModule.require.bind(__rspackServerModule);
+__rspackServerModule.require = function(request) {
   if (typeof request === 'string' && request.startsWith('meteor/')) {
     return __rspackMeteorRequire(request);
   }
-  return __rspackOriginalRequire.apply(this, arguments);
+  return __rspackNodeRequire(request);
 };
+delete __rspackServerRequire.cache[__rspackServerBundlePath];
+__rspackServerRequire.cache[__rspackServerBundlePath] = __rspackServerModule;
 try {
-  __rspackServerRequire(__rspackServerBundlePath);
-} finally {
-  __rspackModule.prototype.require = __rspackOriginalRequire;
+  __rspackServerModule.load(__rspackServerBundlePath);
+} catch (error) {
+  delete __rspackServerRequire.cache[__rspackServerBundlePath];
+  throw error;
 }
 /* rspack-server-build-id:initial */`;
     }

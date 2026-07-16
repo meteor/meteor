@@ -196,6 +196,17 @@ Server-only app (no client entry point).
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
 
+### Focused server runtime regressions
+
+`rspack-server-runtime.test.js` reuses isolated temporary copies of the
+`server-only` fixture without modifying its normal lifecycle coverage.
+
+| What is covered | Phase |
+|----------------|-------|
+| Absolute external `METEOR_LOCAL_DIR` outside the app | Run |
+| Development server bundle stays outside Meteor's linked `app.js` payload | Run |
+| Delayed server import of a previously unused Meteor package | Run |
+
 ---
 
 ## Skeletons
@@ -281,7 +292,7 @@ Where each feature is tested across apps and skeletons.
 | User-level `devServer.onListening` composition | react-router | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
-| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
+| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
 | Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
@@ -296,6 +307,8 @@ Where each feature is tested across apps and skeletons.
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
+| Server bundle excluded from Meteor linker payload | server-only regression | |
+| Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router | |
 | Module rules override | babel | |
