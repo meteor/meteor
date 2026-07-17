@@ -2,6 +2,7 @@ import isEmpty from 'lodash.isempty';
 import { Meteor } from 'meteor/meteor';
 import { CursorDescription } from './cursor_description';
 import { MongoConnection } from './mongo_connection';
+import { replicaSetOplogError } from './oplog_replica_set_error';
 
 import { NpmModuleMongodb } from "meteor/npm-mongo";
 const { Long } = NpmModuleMongodb;
@@ -325,8 +326,9 @@ export class OplogHandle {
         .admin()
         .command({ ismaster: 1 });
 
-      if (!(isMasterDoc && isMasterDoc.setName)) {
-        throw new Error("$MONGO_OPLOG_URL must be set to the 'local' database of a Mongo replica set");
+      const oplogError = replicaSetOplogError(isMasterDoc);
+      if (oplogError) {
+        throw new Error(oplogError);
       }
 
       const lastOplogEntry = await this._oplogLastEntryConnection.findOneAsync(

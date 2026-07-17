@@ -75,6 +75,15 @@ function shouldCompress(req, res) {
     return false;
   }
 
+  if (
+    Meteor.settings.packages?.webapp?.skipCompressionWithContentLength &&
+    res.getHeader('Content-Length')
+  ) {
+    // Leave responses that already declare a Content-Length uncompressed, so the
+    // header survives (compressing switches them to chunked and removes it).
+    return false;
+  }
+
   // fallback to standard filter function
   return compress.filter(req, res);
 }
