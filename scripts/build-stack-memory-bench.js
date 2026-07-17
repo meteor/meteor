@@ -189,10 +189,22 @@ function getRSS(pid) {
 
 function getFDCount(pid) {
   try {
-    const output = execSync(`ls /proc/${pid}/fd | wc -l`, { stdio: ['pipe', 'pipe', 'ignore'] }).toString().trim();
-    return parseInt(output, 10);
-  } catch (e) {
-    return 0;
+    return fs.readdirSync(path.join('/proc', String(pid), 'fd')).length;
+  } catch {
+    if (process.platform === 'win32') {
+      return 0;
+    }
+
+    try {
+      const output = execFileSync(
+        'lsof',
+        ['-n', '-P', '-p', String(pid), '-F', 'f'],
+        { stdio: ['pipe', 'pipe', 'ignore'] },
+      ).toString();
+      return output.split('\n').filter(line => /^f\d+/.test(line)).length;
+    } catch {
+      return 0;
+    }
   }
 }
 
@@ -403,29 +415,47 @@ async function waitForPortsToClose(ports, timeoutMs) {
   return false;
 }
 
-function findHeapSnapshotsSince(markMs) {
+function findHeapSnapshotsInDirectory(dir, markMs) {
   const snapshots = [];
+  const directories = [{ path: dir, depth: 0 }];
 
-  for (const dir of snapshotSearchDirs()) {
+  while (directories.length) {
+    const { path: currentDir, depth } = directories.pop();
+    let entries;
+
     try {
-      const output = execSync(`find ${JSON.stringify(dir)} -maxdepth 2 -name '*.heapsnapshot' -printf '%T@ %p\n'`, {
-        stdio: ['pipe', 'pipe', 'ignore']
-      }).toString();
+      entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
 
-      output
-        .split('\n')
-        .filter(Boolean)
-        .forEach((line) => {
-          const firstSpace = line.indexOf(' ');
-          if (firstSpace === -1) return;
-          const ts = parseFloat(line.slice(0, firstSpace));
-          const filePath = line.slice(firstSpace + 1);
-          if (Number.isFinite(ts) && ts * 1000 >= markMs) {
-            snapshots.push(filePath);
-          }
-        });
-    } catch (e) {}
+    for (const entry of entries) {
+      const filePath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        if (depth < 1) {
+          directories.push({ path: filePath, depth: depth + 1 });
+        }
+        continue;
+      }
+
+      if (!entry.isFile() || !entry.name.endsWith('.heapsnapshot')) {
+        continue;
+      }
+
+      const mtimeMs = getMtimeMs(filePath);
+      if (mtimeMs !== null && mtimeMs >= markMs) {
+        snapshots.push(filePath);
+      }
+    }
   }
+
+  return snapshots;
+}
+
+function findHeapSnapshotsSince(markMs) {
+  const snapshots = snapshotSearchDirs().flatMap(dir =>
+    findHeapSnapshotsInDirectory(dir, markMs),
+  );
 
   return [...new Set(snapshots)];
 }
