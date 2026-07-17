@@ -3,16 +3,16 @@ name: E2E Tests
 on:
   pull_request:
     paths:
-      - 'meteor'
-      - 'tools/e2e-tests/**'
-      - 'packages/rspack/**'
-      - 'packages/tools-core/**'
-      - 'packages/babel-compiler/**'
-      - 'packages/meteor-tool/**'
-      - 'npm-packages/meteor-rspack/**'
-      - 'tools/isobuild/**'
-      - 'tools/static-assets/skel-**'
-      - '.github/workflows/e2e-tests.yml'
+      - "meteor"
+      - "tools/e2e-tests/**"
+      - "packages/rspack/**"
+      - "packages/tools-core/**"
+      - "packages/babel-compiler/**"
+      - "packages/meteor-tool/**"
+      - "npm-packages/meteor-rspack/**"
+      - "tools/isobuild/**"
+      - "tools/static-assets/skel-**"
+      - ".github/workflows/e2e-tests.yml"
 
 concurrency:
   group: meteor-e2e-tests-${{ github.ref }}
@@ -26,6 +26,7 @@ env:
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
 
+
 jobs:
   test:
     name: ${{ matrix.category }}
@@ -33,7 +34,11 @@ jobs:
     timeout-minutes: 60
     container:
       image: node:22-bookworm
-      options: --cpus 6 --memory 16g --security-opt seccomp=unconfined
+      options: >-
+        --cpus 6
+        --memory 16g
+        --security-opt seccomp=unconfined
+        -v /var/run/docker.sock:/var/run/docker.sock
 
     strategy:
       fail-fast: false
@@ -44,6 +49,8 @@ jobs:
           - Babel
           - Blaze
           - Coffeescript
+          - Full Skeleton
+          - Tailwind Skeleton
           - Examples
           - Monorepo
           - Other
@@ -55,6 +62,25 @@ jobs:
           - Vue
 
     steps:
+      - name: Install Docker CLI
+        run: |
+          # Install a current docker CLI from Docker's official repo. Debian
+          # bookworm's `docker.io` is 20.10 (API 1.41), which the self-hosted
+          # host daemon (Docker 29+, minimum API 1.44) rejects with
+          # "client version 1.41 is too old. Minimum supported API version is 1.44".
+          apt-get update
+          apt-get install -y ca-certificates curl
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
+            > /etc/apt/sources.list.d/docker.list
+          apt-get update
+          apt-get install -y docker-ce-cli
+          docker version
+          docker ps
+          docker system df
+
       - name: Checkout code
         uses: actions/checkout@v6
 
@@ -104,6 +130,21 @@ jobs:
         continue-on-error: true
         timeout-minutes: 15
         run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+
+      - name: Clean up before retry
+        if: steps.test-run.outcome == 'failure'
+        run: |
+          # First attempt and retry share this container; a hard timeout can
+          # orphan processes (EADDRINUSE) and temp dirs. The retry recreates
+          # each app fresh, so only container leftovers need clearing.
+          echo "Cleaning up after the failed attempt..."
+          pkill -9 -f 'meteortest-' || true
+          # Detached bundler/db children may not carry the temp path in argv.
+          pkill -9 -f mongod || true
+          pkill -9 -f rspack || true
+          rm -rf /tmp/meteortest-* /tmp/meteor-build-* || true
+          sleep 3
+          echo "Cleanup done."
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'

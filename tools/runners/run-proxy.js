@@ -38,7 +38,7 @@ Object.assign(Proxy.prototype, {
 
     var http = require('http');
     var net = require('net');
-    var httpProxy = require('http-proxy');
+    var httpProxy = require('http-proxy-3');
 
     self.proxyAgent = new http.Agent({ maxSockets: 100 });
     self.proxy = httpProxy.createProxyServer({
