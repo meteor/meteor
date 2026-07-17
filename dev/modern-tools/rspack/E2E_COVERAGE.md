@@ -228,8 +228,9 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | react | 3205 | JSX | Custom body styles (Inter font, padding) |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | TypeScript | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | CI: removes TsCheckerRspackPlugin |
+| tailwind | 3208 | JSX | Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | TypeScript 7; native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript-tailwind | 3221 | TypeScript | TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
 ---
@@ -303,7 +304,7 @@ Where each feature is tested across apps and skeletons.
 | 404 routing | react-router | |
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
-| TypeScript type checking | typescript | |
+| TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
 | Meteor.disablePlugins | react | |
 | Unplugin transform with cache (#14031) | react | |
 | Custom package dirs | react-router | |

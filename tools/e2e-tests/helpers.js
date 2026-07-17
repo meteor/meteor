@@ -684,6 +684,7 @@ export async function resetPlaywrightPage() {
  * @param {number} options.timeout - Maximum time to wait in milliseconds
  * @param {number} options.checkInterval - Interval between checks in milliseconds
  * @param {boolean} options.negate - If true, wait until the pattern is NOT found in any output line
+ * @param {number} options.startIndex - Only inspect output added at or after this index
  * @returns {Promise<string>} - A promise that resolves with the matched line
  */
 export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
@@ -691,6 +692,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
   const checkInterval = options.checkInterval || 100; // Check every 100ms by default
   const negate = options.negate || false; // Default is to check for presence, not absence
   const meteorProcess = options.meteorProcess || null;
+  const startIndex = options.startIndex || 0;
 
   console.log(`Waiting for output ${negate ? 'NOT ' : ''}matching: ${pattern}`);
 
@@ -714,6 +716,8 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
 
     // Function to check for the pattern in the output lines
     const checkForPattern = () => {
+      const relevantOutputLines = outputLines.slice(startIndex);
+
       // Check if we've exceeded the timeout
       if (Date.now() - startTime > timeout) {
         // In negate mode the wait can only fail because some line matched.
@@ -721,7 +725,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
         // bare timeout.
         let detail = '';
         if (negate) {
-          const offending = outputLines.filter(lineMatches);
+          const offending = relevantOutputLines.filter(lineMatches);
           detail = `\nOffending line(s):\n${offending.slice(-20).join('\n')}`;
         }
         reject(new Error(
@@ -733,8 +737,8 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
       if (negate) {
         // In negation mode, we need to check all lines and make sure none match
         // If we've processed all lines and none match, we can resolve
-        if (outputLines.length > 0) {
-          if (!outputLines.some(lineMatches)) {
+        if (relevantOutputLines.length > 0) {
+          if (!relevantOutputLines.some(lineMatches)) {
             console.log(`Confirmed no output matching: ${pattern}`);
             resolve(null);
             return;
@@ -742,7 +746,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
         }
       } else {
         // Check each line for the pattern (original behavior)
-        for (const line of outputLines) {
+        for (const line of relevantOutputLines) {
           if (typeof pattern === 'string' && line.includes(pattern)) {
             console.log(`Found output matching string: ${pattern}`);
             resolve(line);
