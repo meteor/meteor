@@ -113,6 +113,8 @@ Meteor.startup(async () => {
 });
 ```
 
+:::
+
 <ApiBox name="Meteor.deferProd" hasCustomExample />
 
 This helper function allows you to defer the execution of a function only in production environments.
@@ -136,6 +138,8 @@ Meteor.startup(async () => {
   }
 });
 ```
+
+:::
 
 <ApiBox name="Meteor.absoluteUrl" />
 <ApiBox name="Meteor.settings" />
@@ -438,22 +442,44 @@ then `error` will be the exception object. Otherwise, `error` will be
 Meteor.call('foo', 1, 2, (error, result) => { ... });
 ```
 
-If you do not pass a callback on the server, the method invocation will
-block until the method is complete. It will eventually return the
-return value of the method, or it will throw an exception if the method
-threw an exception. (Possibly mapped to 500 Server Error if the
-exception happened remotely and it was not a `Meteor.Error` exception.)
+The behavior of `Meteor.call` depends on whether the method runs **locally** or
+over a **DDP connection**.
+
+**On the server (local, in-process).** On the server, `Meteor.call` (and
+`Meteor.callAsync` / `Meteor.apply` / `Meteor.applyAsync`) is bound to
+`Meteor.server` and runs the method **directly in the same process**. It does
+not open a DDP connection and nothing goes over the wire. The invocation has
+`this.isSimulation === false`, and no stub runs.
+
+With no callback, it returns a `Promise`; `await` it, or preferably use
+[`Meteor.callAsync`](#Meteor-callAsync), to get the return value. If the method
+throws, the promise rejects with **the actual error**. A local server call does
+not sanitize non-`Meteor.Error` exceptions to
+`Meteor.Error(500, "Internal server error")`.
 
 ```js
-// Synchronous call
-const result = Meteor.call("foo", 1, 2);
+// Server: runs the `foo` method locally, in-process.
+const result = await Meteor.callAsync("foo", 1, 2);
 ```
 
-On the client, if you do not pass a callback and you are not inside a
-stub, `call` will return `undefined`, and you will have no way to get
-the return value of the method. That is because the client doesn't have
-fibers, so there is not actually any way it can block on the remote
-execution of a method.
+**Over a DDP connection (remote).** A DDP client connection — whether it is the
+browser client's default connection or a connection opened on the server with
+[`DDP.connect`](#DDP-connect) — sends the call over DDP to that connection's
+server, which runs the method there. A non-`Meteor.Error` thrown by the remote
+method is sanitized to `Meteor.Error(500, "Internal server error")` before it
+reaches the caller.
+
+On the browser client, if you don't pass a callback and aren't inside a stub,
+`call` returns `undefined`; there is no way to block on the remote round trip.
+Use [`Meteor.callAsync`](#Meteor-callAsync), or pass a callback, to get the
+result.
+
+::: warning
+A DDP connection opened on the **server** with `DDP.connect` does not serialize
+method calls the way the browser client does. If the remote methods have stubs,
+don't invoke several of them concurrently. `await` each call before starting the
+next, otherwise their stub simulations can interleave.
+:::
 
 Finally, if you are inside a stub on the client and call another
 method, the other method is not executed (no RPC is generated, nothing
@@ -480,7 +506,7 @@ Use `Meteor.call` only to call methods that do not have a stub, or have a sync s
 
 <ApiBox name="Meteor.callAsync" />
 
-`Meteor.callAsync` is just like `Meteor.call`, except that it'll return a promise that you need to solve to get the server result. Along with the promise returned by `callAsync`, you can also handle `stubPromise` and `serverPromise` for managing client-side simulation and server response.
+`Meteor.callAsync` is just like `Meteor.call`, except that it returns a `Promise` that resolves to the server result. That returned promise also carries two extra properties — `stubPromise` and `serverPromise` — so you can handle the client-side simulation and the server response separately.
 
 The following sections guide you in understanding these promises and how to manage them effectively.
 
@@ -491,7 +517,7 @@ try {
   await Meteor.callAsync("greetUser", "John");
   // 🟢 Server ended with success
 } catch (e) {
-  console.error("Error:", error.reason); // 🔴 Server ended with error
+  console.error("Error:", e.reason); // 🔴 Server ended with error
 }
 
 Greetings.findOne({ name: "John" }); // 🗑️ Data is NOT available
@@ -520,7 +546,7 @@ try {
   await serverPromise;
   // 🟢 Server ended with success
 } catch (e) {
-  console.error("Error:", error.reason); // 🔴 Server ended with error
+  console.error("Error:", e.reason); // 🔴 Server ended with error
 }
 
 Greetings.findOne({ name: "John" }); // 🗑️ Data is NOT available
@@ -593,7 +619,7 @@ Meteor.publish("rooms", function () {
   return Rooms.find(
     {},
     {
-      fields: { secretInfo: 0 },
+      projection: { secretInfo: 0 },
     }
   );
 });
@@ -607,7 +633,7 @@ Meteor.publish("adminSecretInfo", function () {
   return Rooms.find(
     { admin: this.userId },
     {
-      fields: { secretInfo: 1 },
+      projection: { secretInfo: 1 },
     }
   );
 });
@@ -620,7 +646,7 @@ Meteor.publish("roomAndMessages", function (roomId) {
     Rooms.find(
       { _id: roomId },
       {
-        fields: { secretInfo: 0 },
+        projection: { secretInfo: 0 },
       }
     ),
     Messages.find({ roomId }),
@@ -664,7 +690,7 @@ Meteor.publish("countsByRoom", function (roomId) {
   // `observeChanges` only returns after the initial `added` callbacks have run.
   // Until then, we don't want to send a lot of `changed` messages—hence
   // tracking the `initializing` state.
-  const handle = Messages.find({ roomId }).observeChanges({
+  const handle = SecretData.find({ roomId }).observeChanges({
     added: (id) => {
       count += 1;
 
@@ -724,6 +750,8 @@ const roomCount = Counts.findOne(Session.get("roomId")).count;
 console.log(`Current room has ${roomCount} messages.`);
 ```
 
+:::
+
 ::: warning
 
 Meteor will emit a warning message if you call `Meteor.publish` in a
@@ -748,6 +776,8 @@ function is rerun with the new value, assuming it didn't throw an error at the p
 
 If you call [`observe`](./collections.md#Mongo-Cursor-observe) or [`observeChanges`](./collections.md#Mongo-Cursor-observeChanges) in your
 publish handler, this is the place to stop the observes.
+
+As of Meteor 3.4.1, `onStop` callbacks can be `async` functions. The server awaits all async `onStop` callbacks before completing session cleanup, which prevents resource leaks from unawaited asynchronous teardown logic.
 
 <ApiBox name="Subscription#error" />
 <ApiBox name="Subscription#stop" />
@@ -920,9 +950,9 @@ Status object has the following fields:
   to connect and waiting to try to reconnect) and `offline` (user has disconnected the connection).
 - `retryCount` - _*Number*_: The number of times the client has tried to reconnect since the
   connection was lost. 0 when connected.
-- `retryTime` - _*Number or undefined*_: The estimated time of the next reconnection attempt. To turn this
-  into an interval until the next reconnection, This key will be set only when `status` is `waiting`.
-  You canuse this snippet:
+- `retryTime` - _*Number or undefined*_: The estimated time of the next reconnection attempt. This key is
+  set only when `status` is `waiting`. To turn it into an interval until the next reconnection, you can
+  use this snippet:
   ```js
   retryTime - new Date().getTime();
   ```
@@ -993,16 +1023,86 @@ contains the following fields:
   security risk for this transport. For details and alternatives, see
   the [SockJS documentation](https://github.com/sockjs/sockjs-node#authorisation).
 
-> Currently when a client reconnects to the server (such as after
-> temporarily losing its Internet connection), it will get a new
-> connection each time. The `onConnection` callbacks will be called
-> again, and the new connection will have a new connection `id`.
+## Reconnection
 
-> In the future, when client reconnection is fully implemented,
-> reconnecting from the client will reconnect to the same connection on
-> the server: the `onConnection` callback won't be called for that
-> connection again, and the connection will still have the same
-> connection `id`.
+Meteor 3.5+ supports [DDP session resumption](https://github.com/meteor/meteor/pull/14051), allowing clients to automatically resume their previous connection after a temporary network disconnect. When a client reconnects within the grace period, the `onConnection` callback is not called again on the server and the connection retains its original `id`.
+
+This behavior is controlled by the following server options, which you can set globally:
+
+```js
+import { Meteor } from "meteor/meteor";
+
+// Maintain inactive sessions for 30 seconds
+Meteor.server.options.disconnectGracePeriod = 30000;
+
+// Queue up to 500 messages per disconnected session
+Meteor.server.options.maxMessageQueueLength = 500;
+```
+
+### Meteor.server.options.disconnectGracePeriod
+
+Defines how long (in milliseconds) we should maintain a session for after a non-graceful disconnect before destroying it. Sessions that reconnect within this time will be resumed with minimal performance impact. Defaults to `15000`.
+
+### Meteor.server.options.maxMessageQueueLength
+
+Determines how many messages we should queue during a non-graceful disconnect before we destroy the session, to help prevent memory leaks. Defaults to `100`.
+
+### Resume Behavior and Edge Cases
+
+When a session correctly resumes, clients pick up exactly where they left off:
+- **Subscriptions:** Active subscriptions automatically resume without needing to be re-published and clients do not re-send subscription requests.
+- **Method Calls:** Any in-flight method calls that were unacknowledged during the disconnection will be replayed.
+- **Queue Overflow:** If the number of messages emitted while a client is disconnected exceeds `maxMessageQueueLength`, the session is discarded. When the client reconnects, it initiates a fresh session.
+- **Hot Code Push:** HCP is treated as a manual, graceful disconnect. Session resumption is gracefully skipped so clients receive entirely fresh state for the new code.
+- **Load Balancers:** Server stickiness is still important. A client must reconnect to the *same* physical Meteor instance holding its session state within the grace period to resume successfully.
+- **Legacy Migrations:** If your application relied heavily on `onConnection` triggering *every single time* a client socket reconnected after brief hiccups (to handle manual presence tracking or metrics), be aware that `onConnection` is **no longer invoked** during a grace-period resumption.
+
+To explicitly execute logic when a client reconnects (whether it resulted in a successfully resumed session or a completely fresh one), use [`DDP.onReconnect`](#DDP-onReconnect) on the client.
+
+### Presence tracking pattern
+
+Apps that previously counted online users by registering `onConnection` and `onClose` will see fewer events with session resumption — a brief network blip no longer produces a fresh `connectionId`. The recommended pattern is a periodic client-side heartbeat method that updates a `lastSeen` timestamp:
+
+```js
+// server
+import { Meteor } from "meteor/meteor";
+import { Mongo } from "meteor/mongo";
+
+const Presence = new Mongo.Collection("presence");
+
+Meteor.methods({
+  async "presence.heartbeat"() {
+    if (!this.userId) return;
+    await Presence.upsertAsync(
+      { _id: this.userId },
+      { $set: { lastSeen: new Date(), connectionId: this.connection.id } }
+    );
+  },
+});
+
+// A user is "online" if their heartbeat is recent. Tune the threshold to
+// (heartbeat interval + grace period + small buffer).
+Meteor.publish("presence.online", function () {
+  const cutoff = new Date(Date.now() - 45_000);
+  return Presence.find({ lastSeen: { $gte: cutoff } });
+});
+```
+
+```js
+// client
+import { Meteor } from "meteor/meteor";
+
+Meteor.startup(() => {
+  Meteor.subscribe("presence.online");
+
+  // Fire on startup, then every 30 seconds while the tab is open
+  const tick = () => Meteor.callAsync("presence.heartbeat");
+  tick();
+  Meteor.setInterval(tick, 30_000);
+});
+```
+
+This approach is resilient to session resumption: a heartbeat after a brief disconnect still updates `lastSeen`, so the user stays "online" without needing `onConnection` to fire again.
 
 <ApiBox name="DDP.connect"  hasCustomExample/>
 
@@ -1010,7 +1110,7 @@ contains the following fields:
 import { DDP } from "meteor/ddp-client";
 import { Mongo } from "meteor/mongo";
 import { Meteor } from "meteor/meteor";
-const options = {...};
+const options = { /* ... */ };
 
 const otherServer = DDP.connect("http://example.com", options);
 
@@ -1018,7 +1118,7 @@ otherServer.call("foo.from.other.server", 1, 2, function (err, result) {
   // ...
 });
 
-Metepr.call("foo.from.this.server", 1, 2, function (err, result) {
+Meteor.call("foo.from.this.server", 1, 2, function (err, result) {
   // ...
 });
 const remoteColl = new Mongo.Collection("collectionName", { connection: otherServer });
@@ -1055,20 +1155,39 @@ When you call `Meteor.subscribe`, `Meteor.status`, `Meteor.call`, and
 `Meteor.apply`, you are using a connection back to that default
 server.
 
-<ApiBox name="DDP.onReconnect" />
+<ApiBox name="DDP.onReconnect" hasCustomExample/>
+
+```js
+import { DDP } from "meteor/ddp-client";
+
+DDP.onReconnect((connection) => {
+  console.log("Client reconnected!");
+  // Check if session was successfully resumed (Meteor 3.5+)
+  if (connection.sessionResumed) {
+    console.log("Session state preserved, no need to re-fetch custom data.");
+  } else {
+    console.log("A brand new session was established.");
+  }
+});
+```
+
+Registers a callback hook that is invoked on the client whenever the DDP connection successfully re-establishes connectivity with the server. Starting in Meteor 3.5, the callback receives the connection instance which includes a `sessionResumed` boolean. You can use this flag to determine if the client recovered its previous session via the graceful disconnect period, or if the session expired forcing it to restart cleanly.
+
+Callbacks may be async functions. When any reconnect callback returns a promise,
+Meteor waits for those promises to settle before re-sending outstanding method
+messages.
 
 ## Timers { #timers }
 
-Meteor uses global environment variables
-to keep track of things like the current request's user. To make sure
-these variables have the right values, you need to use
-`Meteor.setTimeout` instead of `setTimeout` and `Meteor.setInterval`
-instead of `setInterval`.
+Meteor maintains contextual values — such as the current request's
+[user](#Meteor-userId) — across asynchronous boundaries using
+[AsyncLocalStorage](#envs). To keep that context available inside a
+timer callback, use `Meteor.setTimeout` instead of `setTimeout` and
+`Meteor.setInterval` instead of `setInterval`.
 
-These functions work just like their native JavaScript equivalents.
-If you call the native function, you'll get an error stating that Meteor
-code must always run within a Fiber, and advising to use
-`Meteor.bindEnvironment`.
+These functions work just like their native JavaScript equivalents. You
+can also preserve Meteor's context in any callback by wrapping it with
+[`Meteor.bindEnvironment`](#Meteor-bindEnvironment).
 
 <ApiBox name="Meteor.setTimeout" />
 
@@ -1081,7 +1200,7 @@ Returns a handle that can be used by `Meteor.clearInterval`.
 <ApiBox name="Meteor.clearTimeout" />
 <ApiBox name="Meteor.clearInterval" />
 
-## Enviroment variables {#envs}
+## Environment variables {#envs}
 
 Meteor implements `Meteor.EnvironmentVariable` with AsyncLocalStorage, which allows for maintaining context across asynchronous boundaries. `Meteor.EnvironmentVariable` works with `Meteor.bindEnvironment`, promises, and many other Meteor API's to preserve the context in async code. Some examples of how it is used in Meteor are to store the current user in methods, and record which arguments have been checked when using `audit-argument-checks`.
 

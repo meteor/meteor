@@ -1602,6 +1602,11 @@ export class PackageSourceBatch {
         return;
       }
 
+      if (id.startsWith("#")) {
+        // CSS fragment identifiers are not JS modules.
+        return;
+      }
+
       if (id in serverLibPackages &&
           archinfo.matches(info.bundleArch, "os")) {
         // Packages in dev_bundle/server-lib/node_modules can always be
