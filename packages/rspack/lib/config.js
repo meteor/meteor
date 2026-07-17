@@ -30,9 +30,16 @@ const {
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
+import { discoverRspackFileExtensions } from './file-extensions';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
-const { RSPACK_BUILD_CONTEXT, FILE_ROLE } = require('./constants');
+const {
+  RSPACK_BUILD_CONTEXT,
+  RSPACK_ASSETS_CONTEXT,
+  RSPACK_CHUNKS_CONTEXT,
+  RSPACK_DOCTOR_CONTEXT,
+  FILE_ROLE,
+} = require('./constants');
 
 /**
  * Checks if entries exist in .meteorignore file
@@ -85,62 +92,31 @@ function checkMeteorIgnoreExactEntries(entries) {
  * Gets the list of file extensions to ignore based on project type
  * For Blaze projects, it excludes .html as used by Blaze
  * For Less projects, it excludes .less files
- * For SCSS projects, it excludes .scss files
+ * For SCSS projects, it excludes .scss and .sass files
  * @returns {string[]} Array of file extensions to ignore
  */
 function getFileExtensionsToIgnore() {
-  const isAnyCompilerProject =
-    isMeteorBlazeProject() || isMeteorLessProject() || isMeteorScssProject();
+  const compilerExtensions = [
+    ...(isMeteorBlazeProject() ? ['.html'] : []),
+    ...(isMeteorLessProject() ? ['.less'] : []),
+    ...(isMeteorScssProject() ? ['.scss', '.sass'] : []),
+  ];
+  const isAnyCompilerProject = compilerExtensions.length > 0;
   if (!isAnyCompilerProject) {
     return [];
   }
 
-  // Base extensions that Rspack handles and Meteor should ignore
-  const extensionsToIgnore = [
-    '.ts',
-    '.tsx',
-    '.js',
-    '.jsx',
-    '.mjs',
-    '.cjs',
-    '.json',
-    '.css',
-    '.png',
-    '.jpg',
-    '.jpeg',
-    '.gif',
-    '.svg',
-    '.webp',
-    '.woff',
-    '.woff2',
-    '.eot',
-    '.ttf',
-    '.otf',
-  ];
-
-  let filteredExts = extensionsToIgnore;
-
-  // If the project uses a specific Meteor compiler, we must NOT ignore its files
-  // so that Meteor's compiler can still process them (e.g. Blaze templates).
-  
-  if (isMeteorBlazeProject()) {
-    // Keep .html for Meteor
-    filteredExts = filteredExts.filter(ext => ext !== '.html');
-  }
-
-  if (isMeteorLessProject()) {
-    // Keep .less for Meteor
-    filteredExts = filteredExts.filter(ext => ext !== '.less');
-  }
-
-  if (isMeteorScssProject()) {
-    // Keep .scss/.sass for Meteor
-    filteredExts = filteredExts.filter(ext => ext !== '.scss' && ext !== '.sass');
-  }
-
-  return Array.from(new Set(filteredExts)).filter(
-    ext => ext !== '',
-  );
+  return discoverRspackFileExtensions({
+    globSync: glob.sync,
+    cwd: getMeteorAppDir(),
+    generatedContexts: [
+      RSPACK_BUILD_CONTEXT,
+      RSPACK_ASSETS_CONTEXT,
+      RSPACK_CHUNKS_CONTEXT,
+      RSPACK_DOCTOR_CONTEXT,
+    ],
+    compilerExtensions,
+  });
 }
 
 /**
