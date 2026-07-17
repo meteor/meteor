@@ -198,7 +198,7 @@ Server-only app (no client entry point).
 
 ### Focused server runtime regressions
 
-`rspack-server-runtime.test.js` reuses isolated temporary copies of the
+`server-runtime.test.js` reuses isolated temporary copies of the
 `server-only` fixture without modifying its normal lifecycle coverage.
 
 | What is covered | Phase |
@@ -206,6 +206,8 @@ Server-only app (no client entry point).
 | Absolute external `METEOR_LOCAL_DIR` outside the app | Run |
 | Development server bundle stays outside Meteor's linked `app.js` payload | Run |
 | Delayed server import of a previously unused Meteor package | Run |
+| CommonJS development server bundle under a `type: module` app | Run |
+| Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
 
 ---
 
