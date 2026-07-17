@@ -600,7 +600,7 @@ async function runVariant(name, config, options = {}) {
 
         const stats = getTreeStats(child.pid);
         const touchedInfo = touchPath ? formatMtime(touchPath) : '(none)';
-        const serverRspackPath = path.join(CONFIG.APP_PATH, '_build/main-dev/server-rspack.js');
+        const serverRspackPath = path.join(CONFIG.APP_PATH, '_build/main-dev/server-rspack.cjs');
         const localServerPath = path.join(getLocalDirPath(CONFIG.APP_PATH), 'build/main.js');
 
         console.error(`\nTimeout waiting ${CONFIG.CYCLE_TIMEOUT}ms for ${reason}.`);
@@ -629,7 +629,7 @@ async function runVariant(name, config, options = {}) {
       await new Promise(r => setTimeout(r, CONFIG.SETTLE_TIME));
 
       const stats = getTreeStats(child.pid);
-      const serverJsPath = path.join(CONFIG.APP_PATH, '_build/main-dev/server-rspack.js');
+      const serverJsPath = path.join(CONFIG.APP_PATH, '_build/main-dev/server-rspack.cjs');
       
       const entry = {
         cycle,
