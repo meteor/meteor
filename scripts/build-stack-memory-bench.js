@@ -531,14 +531,20 @@ async function runVariant(name, config, options = {}) {
     const packages = fs.readFileSync(path.join(CONFIG.APP_PATH, '.meteor/packages'), 'utf8');
     if (packages.includes('rspack')) {
       console.log('Removing rspack package for legacy test...');
-      execSync(`${CONFIG.METEOR_PATH} remove rspack`, { cwd: CONFIG.APP_PATH });
+      execFileSync(CONFIG.METEOR_PATH, ['remove', 'rspack'], {
+        cwd: CONFIG.APP_PATH,
+        stdio: 'inherit',
+      });
     }
   } else if (name !== 'none') {
     // Ensure rspack is present
     const packages = fs.readFileSync(path.join(CONFIG.APP_PATH, '.meteor/packages'), 'utf8');
     if (!packages.includes('rspack')) {
       console.log('Adding rspack package...');
-      execSync(`${CONFIG.METEOR_PATH} add rspack`, { cwd: CONFIG.APP_PATH });
+      execFileSync(CONFIG.METEOR_PATH, ['add', 'rspack'], {
+        cwd: CONFIG.APP_PATH,
+        stdio: 'inherit',
+      });
     }
     // Update package.json with config
     const pkgPath = path.join(CONFIG.APP_PATH, 'package.json');
@@ -550,7 +556,10 @@ async function runVariant(name, config, options = {}) {
 
   if (!CONFIG.SKIP_RESET) {
     console.log('Resetting meteor...');
-    execSync(`${CONFIG.METEOR_PATH} reset`, { cwd: CONFIG.APP_PATH });
+    execFileSync(CONFIG.METEOR_PATH, ['reset'], {
+      cwd: CONFIG.APP_PATH,
+      stdio: 'inherit',
+    });
   }
 
   console.log('Starting meteor...');
