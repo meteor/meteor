@@ -572,7 +572,8 @@ async function runVariant(name, config, options = {}) {
   });
 
   let results = [];
-  let cycle = 0;
+  let sample = 0;
+  let rebuilds = 0;
   let isReady = false;
   let isFinished = false;
   let waitTimer = null;
@@ -623,8 +624,8 @@ async function runVariant(name, config, options = {}) {
         clearTimeout(waitTimer);
         waitTimer = null;
       }
-      cycle++;
-      console.log(`Cycle ${cycle}/${maxCycles} ready.`);
+      sample++;
+      console.log(`Sample ${sample} ready after ${rebuilds}/${maxCycles} rebuilds.`);
       
       await new Promise(r => setTimeout(r, CONFIG.SETTLE_TIME));
 
@@ -632,7 +633,7 @@ async function runVariant(name, config, options = {}) {
       const serverJsPath = path.join(CONFIG.APP_PATH, '_build/main-dev/server-rspack.cjs');
       
       const entry = {
-        cycle,
+        cycle: sample,
         timestamp: new Date().toISOString(),
         totalRSS: Math.round(stats.totalRSS / 1024), 
         toolRSS: Math.round(stats.toolRSS / 1024),   
@@ -656,7 +657,7 @@ async function runVariant(name, config, options = {}) {
       console.log(`  RSS Total: ${entry.totalRSS} MB, Tool: ${entry.toolRSS} MB, App: ${entry.appRSS} MB, Other: ${entry.otherRSS} MB, FDs: ${entry.toolFDs}, Procs: ${stats.count}`);
 
       if (onCycle) {
-        const outcome = await onCycle({ entry, results, cycle, child });
+        const outcome = await onCycle({ entry, results, cycle: sample, child });
         if (outcome && outcome.stop) {
           if (outcome.reason) {
             console.log(`Stopping variant early: ${outcome.reason}`);
@@ -666,13 +667,14 @@ async function runVariant(name, config, options = {}) {
         }
       }
 
-      if (cycle < maxCycles) {
+      if (rebuilds < maxCycles) {
+        rebuilds++;
         isReady = false;
         const mainPath = path.join(CONFIG.APP_PATH, CONFIG.TOUCH_FILE);
         if (fs.existsSync(mainPath)) {
           fs.appendFileSync(mainPath, `\n// ${Date.now()}`);
           scheduleWaitTimeout({
-            reason: `cycle ${cycle + 1} readiness after touching ${CONFIG.TOUCH_FILE}`,
+            reason: `rebuild ${rebuilds}/${maxCycles} readiness after touching ${CONFIG.TOUCH_FILE}`,
             touchPath: mainPath,
           });
         } else {
@@ -714,7 +716,7 @@ async function runVariant(name, config, options = {}) {
         clearTimeout(waitTimer);
         waitTimer = null;
       }
-      if (cycle < maxCycles) {
+      if (rebuilds < maxCycles) {
         console.log(`Meteor process exited prematurely (code ${code})`);
         resolve(results);
       }
