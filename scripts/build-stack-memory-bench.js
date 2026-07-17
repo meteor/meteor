@@ -584,28 +584,39 @@ async function runVariant(name, config, options = {}) {
 
   const restoreTouchedFile = () => {
     if (!originalTouchedFile) {
-      return;
+      return null;
     }
 
     try {
       fs.writeFileSync(originalTouchedFile.path, originalTouchedFile.content);
+      return null;
     } catch (error) {
       console.error(`Failed to restore ${originalTouchedFile.path}: ${error.message}`);
+      return error;
     }
   };
 
-  return new Promise((resolve) => {
-    const finishVariant = () => {
+  return new Promise((resolve, reject) => {
+    const finishVariant = (failure = null) => {
       if (isFinished) return;
       isFinished = true;
       if (waitTimer) {
         clearTimeout(waitTimer);
         waitTimer = null;
       }
-      stopProcessTree(child.pid).finally(() => {
-        restoreTouchedFile();
-        resolve({ results, metadata });
-      });
+      stopProcessTree(child.pid)
+        .catch(error => {
+          failure ||= error;
+        })
+        .then(() => {
+          const restoreFailure = restoreTouchedFile();
+          failure ||= restoreFailure;
+          if (failure) {
+            reject(failure);
+            return;
+          }
+          resolve({ results, metadata });
+        });
     };
 
     const scheduleWaitTimeout = ({ reason, touchPath = null }) => {
@@ -702,7 +713,7 @@ async function runVariant(name, config, options = {}) {
             fs.appendFileSync(mainPath, `\n// ${Date.now()}`);
           } catch (error) {
             console.error(`Failed to update ${mainPath}: ${error.message}`);
-            finishVariant();
+            finishVariant(error);
             return;
           }
           scheduleWaitTimeout({
@@ -729,7 +740,10 @@ async function runVariant(name, config, options = {}) {
       }
       if (readyRegex.test(readinessOutput)) {
         readinessOutput = '';
-        onReady();
+        onReady().catch(error => {
+          console.error(`Failed to process readiness: ${error.message}`);
+          finishVariant(error);
+        });
       }
     });
 
