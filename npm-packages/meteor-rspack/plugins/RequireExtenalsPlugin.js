@@ -16,6 +16,11 @@ const toPosix = (p) => p.replace(/\\/g, '/');
 const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const buildStandaloneRequireRegex = (pkg) =>
   new RegExp(`^\\s*require\\('${escapeRegExp(pkg)}'\\);?.*(\\r?\\n)?`, 'gm');
+const buildStandaloneImportRegex = (pkg) =>
+  new RegExp(
+    `^[\\t ]*import[\\t ]+'${escapeRegExp(pkg)}';?[^\\r\\n]*(?:\\r?\\n|$)`,
+    'gm'
+  );
 const STANDALONE_REQUIRE_REGEX = /^\s*require\('([^']+)'\)/gm;
 const STANDALONE_IMPORT_REGEX = /^\s*import\s+'([^']+)'/gm;
 
@@ -178,15 +183,17 @@ class RequireExternalsPlugin {
         }
       }
 
-      // 2b) Remove any requires that are no longer in `current`
+      // 2b) Remove any dependencies that are no longer in `current`
       const toRemove = [...existing].filter(p => !current.has(p));
       if (toRemove.length) {
         let content = fs.readFileSync(this.filePath, 'utf-8');
 
-        // Strip stale require(...) lines
+        // Strip stale require(...) and import lines
         for (const pkg of toRemove) {
-          const re = buildStandaloneRequireRegex(pkg);
-          content = content.replace(re, '');
+          const requireRe = buildStandaloneRequireRegex(pkg);
+          const importRe = buildStandaloneImportRegex(pkg);
+          content = content.replace(requireRe, '');
+          content = content.replace(importRe, '');
         }
 
         // Strip out any now-empty helper functions:
