@@ -572,12 +572,27 @@ async function runVariant(name, config, options = {}) {
   });
 
   let results = [];
+  let metadata = {};
+  let originalTouchedFile = null;
   let sample = 0;
   let rebuilds = 0;
   let isReady = false;
   let isFinished = false;
   let waitTimer = null;
   let lastOutput = '';
+  let readinessOutput = '';
+
+  const restoreTouchedFile = () => {
+    if (!originalTouchedFile) {
+      return;
+    }
+
+    try {
+      fs.writeFileSync(originalTouchedFile.path, originalTouchedFile.content);
+    } catch (error) {
+      console.error(`Failed to restore ${originalTouchedFile.path}: ${error.message}`);
+    }
+  };
 
   return new Promise((resolve) => {
     const finishVariant = () => {
@@ -588,7 +603,8 @@ async function runVariant(name, config, options = {}) {
         waitTimer = null;
       }
       stopProcessTree(child.pid).finally(() => {
-        resolve(results);
+        restoreTouchedFile();
+        resolve({ results, metadata });
       });
     };
 
@@ -658,7 +674,10 @@ async function runVariant(name, config, options = {}) {
 
       if (onCycle) {
         const outcome = await onCycle({ entry, results, cycle: sample, child });
-        if (outcome && outcome.stop) {
+        if (outcome?.extra) {
+          metadata = { ...metadata, ...outcome.extra };
+        }
+        if (outcome?.stop) {
           if (outcome.reason) {
             console.log(`Stopping variant early: ${outcome.reason}`);
           }
@@ -670,9 +689,22 @@ async function runVariant(name, config, options = {}) {
       if (rebuilds < maxCycles) {
         rebuilds++;
         isReady = false;
+        readinessOutput = '';
         const mainPath = path.join(CONFIG.APP_PATH, CONFIG.TOUCH_FILE);
         if (fs.existsSync(mainPath)) {
-          fs.appendFileSync(mainPath, `\n// ${Date.now()}`);
+          try {
+            if (!originalTouchedFile) {
+              originalTouchedFile = {
+                path: mainPath,
+                content: fs.readFileSync(mainPath),
+              };
+            }
+            fs.appendFileSync(mainPath, `\n// ${Date.now()}`);
+          } catch (error) {
+            console.error(`Failed to update ${mainPath}: ${error.message}`);
+            finishVariant();
+            return;
+          }
           scheduleWaitTimeout({
             reason: `rebuild ${rebuilds}/${maxCycles} readiness after touching ${CONFIG.TOUCH_FILE}`,
             touchPath: mainPath,
@@ -690,11 +722,13 @@ async function runVariant(name, config, options = {}) {
     child.stdout.on('data', (data) => {
       const str = data.toString();
       process.stdout.write(str);
+      readinessOutput = `${readinessOutput}${str}`.slice(-64 * 1024);
       const trimmed = str.trim();
       if (trimmed) {
         lastOutput = trimmed.split('\n').pop();
       }
-      if (readyRegex.test(str)) {
+      if (readyRegex.test(readinessOutput)) {
+        readinessOutput = '';
         onReady();
       }
     });
@@ -716,9 +750,9 @@ async function runVariant(name, config, options = {}) {
         clearTimeout(waitTimer);
         waitTimer = null;
       }
-      if (rebuilds < maxCycles) {
+      if (sample < maxCycles + 1) {
         console.log(`Meteor process exited prematurely (code ${code})`);
-        resolve(results);
+        finishVariant();
       }
     });
 
@@ -884,7 +918,7 @@ async function runLeakHarness() {
     throw new Error(`Unknown LEAK_VARIANT "${CONFIG.LEAK_VARIANT}". Expected one of: ${matrix.map(item => item.name).join(', ')}`);
   }
 
-  const results = await runVariant(variant.name, variant.config, {
+  const { results, metadata } = await runVariant(variant.name, variant.config, {
     maxCycles: CONFIG.LEAK_MAX_CYCLES,
     onCycle: async ({ entry, child, cycle }) => {
       const toolRss = entry.toolRSS;
@@ -939,6 +973,8 @@ async function runLeakHarness() {
     maxCycles: CONFIG.LEAK_MAX_CYCLES,
     touchFile: CONFIG.TOUCH_FILE,
     toolNodeFlags: CONFIG.TOOL_NODE_FLAGS,
+    snapshot: metadata.snapshot ?? null,
+    thresholdReached: metadata.thresholdReached ?? false,
     results,
     summary: stats,
     issueStyle: stats && stats.rebuilds > 0
@@ -992,7 +1028,8 @@ async function main() {
   const activeMatrix = getActiveMatrix();
 
   for (const item of activeMatrix) {
-    allResults[item.name] = await runVariant(item.name, item.config);
+    const { results } = await runVariant(item.name, item.config);
+    allResults[item.name] = results;
     summary[item.name] = analyzeResults(allResults[item.name]);
   }
 
