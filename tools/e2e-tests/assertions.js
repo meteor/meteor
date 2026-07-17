@@ -6,6 +6,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import { chromium } from 'playwright';
 
+let fallbackBrowser;
+
 async function getPlaywrightPage() {
   if (typeof page !== 'undefined' && !page.isClosed()) {
     return page;
@@ -18,10 +20,18 @@ async function getPlaywrightPage() {
 
   // Fallback only: recover a usable page after the shared Jest Playwright
   // browser/page has already been closed during test teardown.
-  global.browser = await chromium.launch({ headless: true });
+  fallbackBrowser = await chromium.launch({ headless: true });
+  global.browser = fallbackBrowser;
   global.page = await global.browser.newPage();
   return global.page;
 }
+
+afterAll(async () => {
+  if (fallbackBrowser?.isConnected()) {
+    await fallbackBrowser.close();
+  }
+  fallbackBrowser = null;
+});
 
 /**
  * Helper function to assert that a Meteor app is running correctly
