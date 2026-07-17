@@ -426,7 +426,7 @@ Tinytest.addAsync("webapp - parse url queries", async function (test) {
   ];
   let i = 0;
   for await (const queriesTestCase of queriesTestCases) {
-    const resp = await asyncGet(`${Meteor.absoluteUrl()}/queries?${queriesTestCase}`);
+    const resp = await asyncGet(Meteor.absoluteUrl(`/queries?${queriesTestCase}`));
     const queryParsed = JSON.parse(resp.content);
     test.equal(queryParsed, queryResults[i]);
     i++;
@@ -532,6 +532,54 @@ Tinytest.addAsync(
     } finally {
       delete WebAppInternals.staticFilesByArch[arch][unhashedJs];
       Meteor.settings.packages.webapp.includeVaryUserAgent = originalSettings;
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'webapp - skipCompressionWithContentLength setting keeps Content-Length',
+  async function (test) {
+    const arch = 'web.browser';
+    const staticPath = '/skip-compression-test.js';
+    const original =
+      Meteor.settings.packages?.webapp?.skipCompressionWithContentLength;
+
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    if (!Meteor.settings.packages.webapp) Meteor.settings.packages.webapp = {};
+
+    // Large enough to be past the compression module's default threshold.
+    const content = 'console.log("skip-compression-test");\n'.repeat(80);
+    WebAppInternals.staticFilesByArch[arch][staticPath] = {
+      content,
+      absolutePath: '/tmp/mock-skip-compression.js',
+      cacheable: true,
+      hash: 'skip-compression-hash',
+      type: 'js',
+    };
+
+    const reqOpts = { headers: { 'Accept-Encoding': 'gzip' } };
+    try {
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = false;
+      const off = await asyncGet(Meteor.absoluteUrl(staticPath), reqOpts);
+      test.equal(
+        (off.headers['content-encoding'] || '').toLowerCase(),
+        'gzip',
+        'should compress (and drop Content-Length) when the setting is off'
+      );
+
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = true;
+      const on = await asyncGet(Meteor.absoluteUrl(staticPath), reqOpts);
+      test.isFalse(
+        (on.headers['content-encoding'] || '').toLowerCase().includes('gzip'),
+        'should not compress when the setting is on'
+      );
+      test.isTrue(
+        !!on.headers['content-length'],
+        'Content-Length should be preserved when the setting is on'
+      );
+    } finally {
+      delete WebAppInternals.staticFilesByArch[arch][staticPath];
+      Meteor.settings.packages.webapp.skipCompressionWithContentLength = original;
     }
   }
 );
