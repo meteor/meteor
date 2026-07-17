@@ -274,6 +274,8 @@ export function configureMeteorForRspack() {
       ? [
           `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js`,
           `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js.map`,
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.cjs`,
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.cjs.map`,
         ]
       : [];
   const filesToIgnore = [
