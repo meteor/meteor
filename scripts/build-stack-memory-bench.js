@@ -39,6 +39,30 @@ const CONFIG = {
   READY_PATTERN: process.env.READY_PATTERN || 'App running at|Meteor server restarted at',
 };
 
+if (CONFIG.MODE === 'leak') {
+  const heapSnapshotSignalMatches = [
+    ...CONFIG.TOOL_NODE_FLAGS.matchAll(
+      /(?:^|\s)--heapsnapshot-signal(?:=([^\s]*)|\s+([^\s]+))/g,
+    ),
+  ];
+  const configuredHeapSnapshotSignals = heapSnapshotSignalMatches.map(
+    ([, equalsValue, separateValue]) => equalsValue ?? separateValue,
+  );
+  const incompatibleHeapSnapshotSignal = configuredHeapSnapshotSignals.find(
+    signal => signal !== CONFIG.HEAPSNAPSHOT_SIGNAL,
+  );
+
+  if (incompatibleHeapSnapshotSignal !== undefined) {
+    throw new Error(
+      `TOOL_NODE_FLAGS sets --heapsnapshot-signal=${incompatibleHeapSnapshotSignal}, but HEAPSNAPSHOT_SIGNAL is ${CONFIG.HEAPSNAPSHOT_SIGNAL}.`,
+    );
+  }
+
+  if (!configuredHeapSnapshotSignals.length) {
+    CONFIG.TOOL_NODE_FLAGS += ` --heapsnapshot-signal=${CONFIG.HEAPSNAPSHOT_SIGNAL}`;
+  }
+}
+
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`
 Meteor Build Stack Memory Benchmark
