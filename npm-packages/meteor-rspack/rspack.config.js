@@ -689,13 +689,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       }),
     ],
     watchOptions,
-    // In dev the client bundle is served (with its maps) straight from the
-    // dev server and never consumed by Meteor, so use the eval-based devtool:
-    // it regenerates maps only for changed modules instead of rebuilding the
-    // whole source map on every rebuild. See meteor/meteor#14568.
-    devtool: isDevEnvironment
-      ? "eval-cheap-module-source-map"
-      : isNative || isTest
+    devtool:
+      isDevEnvironment || isNative || isTest
         ? "source-map"
         : "hidden-source-map",
     ...(isDevEnvironment && {
@@ -820,15 +815,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ...doctorPluginConfig,
     ],
     watchOptions,
-    // The server bundle's map IS consumed by Meteor (babel-compiler reads
-    // server-rspack.js.map on every rebuild), so keep a file-based map but
-    // use the line-only "cheap" variant in dev: it is much faster to
-    // generate and much smaller to re-parse, and server stack traces only
-    // need line precision. Tests and native keep full maps.
-    // See meteor/meteor#14568.
-    devtool: isDevEnvironment
-      ? "cheap-module-source-map"
-      : isNative || isTest
+    devtool:
+      isDevEnvironment || isNative || isTest
         ? "source-map"
         : "hidden-source-map",
     ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
