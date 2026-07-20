@@ -5,7 +5,10 @@ Two profilers live in the Meteor codebase: the built-in `METEOR_PROFILE` instrum
 End-user docs for `meteor profile` live at [`v3-docs/docs/cli/index.md#meteorprofile`](../../../v3-docs/docs/cli/index.md). The Meteor tool's internal profiler is documented in [`tools/PERFORMANCE.md`](../../../tools/PERFORMANCE.md).
 
 - [**What the profiler is for**](#what-the-profiler-is-for): `METEOR_PROFILE` vs `meteor profile`, when to use each.
-- [**Common maintenance tasks**](#common-maintenance-tasks): updating the `meteor profile` script and validating changes.
+- [**Common maintenance tasks**](#common-maintenance-tasks)
+  - [Updating the `meteor profile` Script](#updating-the-meteor-profile-script)
+  - [Validating Profiler Changes](#validating-profiler-changes)
+  - [Debugging Notes](#debugging-notes)
 
 ## What the profiler is for
 

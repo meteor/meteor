@@ -7,7 +7,9 @@ The end-user view is documented in [`v3-docs/docs/about/modern-build-stack/meteo
 - [**Why SWC**](#why-swc): goals of the SWC integration.
 - [**SWC integration and modules**](#swc-integration-and-modules): packages involved, `@swc/core` vs `@meteorjs/swc-core`, debugging notes.
 - [**Test coverage**](#test-coverage): legacy self-test vs modern E2E, when to run which.
-- [**Common maintenance tasks**](#common-maintenance-tasks): bumping the SWC dependencies safely.
+- [**Common maintenance tasks**](#common-maintenance-tasks)
+  - [Stage 1: Publish the New Wrapper (`@meteorjs/swc-core`)](#stage-1-publish-the-new-wrapper-meteorjsswc-core)
+  - [Stage 2: Roll the Wrapper into Meteor Core](#stage-2-roll-the-wrapper-into-meteor-core)
 
 ## Why SWC
 
@@ -132,6 +134,8 @@ Run the self-tests and the E2E suite to ensure transpilation and bundling paths 
 ```bash
 meteor self-test --file modern.js
 meteor self-test --file compiler-plugins.js
+
+# Tip: Run `npm run install:e2e` first if the E2E suite fails to start
 npm run test:e2e
 ```
 

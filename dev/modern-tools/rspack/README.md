@@ -7,7 +7,11 @@ End-user documentation is at [`v3-docs/docs/about/modern-build-stack/rspack-bund
 - [**Why Rspack**](#why-rspack): goals of the Rspack integration.
 - [**Rspack integration and modules**](#rspack-integration-and-modules): the Atmosphere package and the npm package, file-by-file responsibilities, and how Rspack fits next to Meteor's own bundler.
 - [**E2E testing**](#e2e-testing): strategy, how to add a new test app, what to verify.
-- [**Common maintenance tasks**](#common-maintenance-tasks): linking `@meteorjs/rspack` locally, upgrading Rspack, and benchmarking rebuild memory.
+- [**Common maintenance tasks**](#common-maintenance-tasks)
+  - [Iterating on `@meteorjs/rspack` (NPM Package)](#iterating-on-meteorjsrspack-npm-package)
+  - [Upgrading Rspack Core Dependencies](#upgrading-rspack-core-dependencies)
+  - [Publishing the Packages](#publishing-the-packages)
+  - [Benchmark rebuild memory](#benchmark-rebuild-memory)
 
 ## Why Rspack
 
@@ -135,6 +139,8 @@ meteor run
 
 After verifying changes manually, always run the E2E suite to ensure broader compatibility is intact before committing:
 ```bash
+# Tip: If the test suite complains about missing dependencies,
+# run `npm run install:e2e` from the repo root first.
 npm run test:e2e
 ```
 
@@ -160,6 +166,7 @@ npm install
 **3. Verify Compatibility**
 Run the full E2E suite from the repository root:
 ```bash
+# Tip: Run `npm run install:e2e` first if encountering missing dependency errors
 npm run test:e2e
 ```
 *Look out for breaking changes in Rspack's release notes around:*
@@ -174,8 +181,9 @@ Whenever there are modifications in `npm-packages/meteor-rspack` or `packages/rs
 
 **For a Beta Release:**
 ```bash
-# 1. Publish the NPM package as a beta
+# 1. Bump the NPM package version and publish as beta
 cd npm-packages/meteor-rspack
+npm run bump -- patch --beta   # use patch, minor, or major depending on the change
 npm run publish:beta
 
 # 2. Bump the Atmosphere package version (e.g., to 1.0.0-beta.1)
@@ -186,7 +194,7 @@ npm run publish:beta
 ```bash
 # 1. Bump the NPM package version and publish
 cd npm-packages/meteor-rspack
-npm run bump
+npm run bump -- patch          # use patch, minor, or major depending on the change
 npm publish
 
 # 2. Bump the Atmosphere package version (e.g., to 1.0.0)
