@@ -59,8 +59,14 @@ Object.assign(DDPServer._Crossbar.prototype, {
         self.factPackage, self.factName, 1);
     }
 
+    var stopped = false;
     return {
       stop: function () {
+        // Idempotent: a second stop() used to decrement the count (and the
+        // server fact) again — silently dropping the collection's remaining
+        // listeners when the count hit zero, then throwing on later stops.
+        if (stopped) return;
+        stopped = true;
         if (self.factName && Package['facts-base']) {
           Package['facts-base'].Facts.incrementServerFact(
             self.factPackage, self.factName, -1);
