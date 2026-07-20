@@ -2,7 +2,7 @@
  * @module config
  * @description Functions for configuring Meteor for Rspack
  */
-import { glob } from 'glob';
+import { sync as globSync } from 'glob';
 import path from 'path';
 import fs from 'fs';
 
@@ -182,8 +182,8 @@ export function configureMeteorForRspack() {
       const cssPattern = `${entrypoint}/*.css`;
       const htmlPattern = `${entrypoint}/*.html`;
 
-      const cssFiles = glob.sync(cssPattern);
-      const htmlFiles = glob.sync(htmlPattern);
+      const cssFiles = globSync(cssPattern);
+      const htmlFiles = globSync(htmlPattern);
 
       const entriesToCheck = [
         cssPattern,

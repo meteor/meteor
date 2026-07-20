@@ -94,11 +94,15 @@ export class ClientStream extends StreamClientCommon {
       this.socket.onmessage = this.socket.onclose = this.socket.onerror = this.socket.onheartbeat = () => {};
       this.socket.close();
       this.socket = null;
-    }
 
-    this.forEachCallback('disconnect', callback => {
-      callback(maybeError);
-    });
+      // Only fire disconnect callbacks when there was a socket to close,
+      // matching the node implementation. _cleanup also runs at the top of
+      // every (re)connection attempt, and firing here with no socket sent a
+      // phantom 'disconnect' event to consumers once per retry cycle.
+      this.forEachCallback('disconnect', callback => {
+        callback(maybeError);
+      });
+    }
   }
 
   _clearConnectionAndHeartbeatTimers() {
