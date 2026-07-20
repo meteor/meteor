@@ -468,8 +468,8 @@ export class ChangeStreamObserveDriver {
     if (this._stopped) return;
 
     // The fence's write path stamps the exact clusterTime of each write on
-    // fence._csTargetTsByCollection[collectionName] (see
-    // mongo_connection._annotateFenceWithWriteTs). Wait specifically for
+    // fence._csTargetTsByCollection[fenceWriteTsKey(connectionId, collectionName)]
+    // (see mongo_connection._annotateFenceWithWriteTs). Wait specifically for
     // that ts. The fence must be passed explicitly because fence.fire()
     // runs outside the AsyncLocalStorage context where _getCurrentFence()
     // would find it.
