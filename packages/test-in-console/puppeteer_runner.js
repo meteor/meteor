@@ -10,6 +10,15 @@ try {
 
 let testNumber = 0;
 
+// The suite is driven entirely by console output from the page: if the app
+// server dies (e.g. an uncaught exception), `isDone` never flips and the poll
+// loop below would otherwise spin until the CI job's own timeout — burning a
+// runner for over an hour and reporting nothing useful. Bail out after a
+// stretch of total silence instead, naming the test that was in flight.
+const STALL_TIMEOUT_MS = Number(process.env.TEST_STALL_TIMEOUT_MIN || 10) * 60 * 1000;
+
+let lastOutputAt = Date.now();
+
 async function runNextUrl(browser) {
   const page = await browser.newPage();
 
@@ -18,7 +27,7 @@ async function runNextUrl(browser) {
   // });
 
   page.on("console", async (msg) => {
-    // if the test is running for too long without any output to the console (10 minutes)
+    lastOutputAt = Date.now();
     const text = msg.text();
     if (text.includes("Permissions policy violation")) {
       return;
@@ -77,11 +86,53 @@ async function runNextUrl(browser) {
         process.exit(0);
       }
     } else {
+      const idleMs = Date.now() - lastOutputAt;
+      if (idleMs > STALL_TIMEOUT_MS) {
+        await reportStall(page, idleMs);
+        await browser.close().catch(() => {});
+        process.exit(1);
+      }
       setTimeout(poll, 1000);
     }
   }
 
+  // Start the clock here, not at module load: everything before this point
+  // (build, app boot, page load) legitimately produces no page output.
+  lastOutputAt = Date.now();
+
   await poll();
+}
+
+/**
+ * Print why the run is being abandoned, naming whatever test was still in
+ * flight. Reading it is best-effort: if the app server is what died, these
+ * evaluations will fail too, and that in itself is worth reporting.
+ *
+ * @param page
+ * @param idleMs how long the page has produced no output
+ */
+async function reportStall(page, idleMs) {
+  const idle =
+    idleMs < 60000 ? `${Math.round(idleMs / 1000)}s` : `${Math.round(idleMs / 60000)}min`;
+  console.log(`\nNo test output for ${idle} — treating the run as stalled.`);
+
+  try {
+    const clientTest = await page.evaluate(() => __Tinytest._getCurrentRunningTestOnClient());
+    console.log(`Client test in flight: ${clientTest || "(none)"}`);
+  } catch (e) {
+    console.log(`Could not read the client test: ${e.message}`);
+  }
+
+  try {
+    const serverTest = await page.evaluate(
+      async () => await __Tinytest._getCurrentRunningTestOnServer(),
+    );
+    console.log(`Server test in flight: ${serverTest || "(none)"}`);
+  } catch (e) {
+    console.log(`Could not read the server test (the app server may have died): ${e.message}`);
+  }
+
+  console.log("Raise TEST_STALL_TIMEOUT_MIN if a legitimately slow test needs longer.");
 }
 
 /**
