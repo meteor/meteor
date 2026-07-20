@@ -121,7 +121,7 @@ export function stopProcess(proc, options = {}) {
  * @param {string} signal - The signal name (e.g. 'SIGTERM', 'SIGKILL')
  * @returns {void}
  */
-function sendSignal(proc, signal) {
+export function sendSignal(proc, signal) {
   if (proc.meteorDetached && process.platform !== 'win32') {
     try {
       process.kill(-proc.pid, signal);

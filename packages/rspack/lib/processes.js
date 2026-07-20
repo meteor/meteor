@@ -9,6 +9,7 @@ import path from "path";
 const {
   spawnProcess,
   stopProcess,
+  sendSignal,
   isProcessRunning
 } = require('meteor/tools-core/lib/process');
 
@@ -684,9 +685,6 @@ export function cleanupSync() {
     const proc = getGlobalState(key, null);
     if (!proc || !proc.pid || !isProcessRunning(proc)) continue;
 
-    if (proc.meteorDetached && process.platform !== 'win32') {
-      try { process.kill(-proc.pid, 'SIGTERM'); continue; } catch (e) {}
-    }
-    try { proc.kill('SIGTERM'); } catch (e) {}
+    sendSignal(proc, 'SIGTERM');
   }
 }
