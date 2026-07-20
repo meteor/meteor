@@ -72,16 +72,6 @@ Rspack is our Rust-based Webpack-compatible bundler integration. The `rspack` At
 - 📊 **Check E2E Coverage:** [`rspack/E2E_COVERAGE.md`](rspack/E2E_COVERAGE.md)
 - 🧠 **Benchmark Memory:** [`rspack/MEMORY_BENCHMARK.md`](rspack/MEMORY_BENCHMARK.md)
 
-### Quick Start: Memory Benchmarking
-
-To run the Rspack memory benchmark locally and analyze retention across `meteor-tool` and child processes:
-
-```bash
-# Run the baseline memory benchmark against a local app
-APP_PATH=/path/to/your-app \
-TOUCH_FILE=server/main.js \
-node scripts/build-stack-memory-bench.js
-```
 
 ---
 

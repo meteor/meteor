@@ -8,8 +8,7 @@ The end-user view is documented in [`v3-docs/docs/about/modern-build-stack/meteo
 - [**SWC integration and modules**](#swc-integration-and-modules): packages involved, `@swc/core` vs `@meteorjs/swc-core`, debugging notes.
 - [**Test coverage**](#test-coverage): legacy self-test vs modern E2E, when to run which.
 - [**Common maintenance tasks**](#common-maintenance-tasks)
-  - [Stage 1: Publish the New Wrapper (`@meteorjs/swc-core`)](#stage-1-publish-the-new-wrapper-meteorjsswc-core)
-  - [Stage 2: Roll the Wrapper into Meteor Core](#stage-2-roll-the-wrapper-into-meteor-core)
+  - [Bumping the SWC Dependencies](#bumping-the-swc-dependencies)
 
 ## Why SWC
 
@@ -72,7 +71,9 @@ When to run which:
 This section covers the typical workflows for bumping the SWC dependencies safely. 
 Publishing a new `@meteorjs/swc-core` wrapper and rolling it into Meteor core are two stages of a single task. Do not split them; both must advance together so the tool path and the bundler path agree on syntax support.
 
-### Stage 1: Publish the New Wrapper (`@meteorjs/swc-core`)
+### Bumping the SWC Dependencies
+
+#### Stage 1: Publish the New Wrapper (`@meteorjs/swc-core`)
 
 The wrapper package lives in the [`meteor/meteor-package-install-swc`](https://github.com/meteor/meteor-package-install-swc) repository.
 
@@ -101,7 +102,7 @@ npm publish --access public
 npm view @meteorjs/swc-core version
 ```
 
-### Stage 2: Roll the Wrapper into Meteor Core
+#### Stage 2: Roll the Wrapper into Meteor Core
 
 Once the wrapper is live on npm, update the `meteor/meteor` codebase to consume it.
 
