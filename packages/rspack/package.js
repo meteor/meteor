@@ -18,7 +18,10 @@ Package.registerBuildPlugin({
 });
 
 Npm.devDepends({
-  'http-proxy-middleware': '3.0.5',
+  // Maintained, drop-in replacement for the unmaintained http-proxy that
+  // http-proxy-middleware relied on, which used the deprecated util._extend and
+  // legacy url.parse APIs (meteor/meteor#13491).
+  'http-proxy-3': '1.22.0',
 });
 
 Package.onUse(function (api) {
