@@ -67,44 +67,73 @@ When to run which:
 
 ## Common maintenance tasks
 
-### Bump `@meteorjs/swc-core` (wrapper publish + Meteor core rollout)
+This section covers the typical workflows for bumping the SWC dependencies safely. 
+Publishing a new `@meteorjs/swc-core` wrapper and rolling it into Meteor core are two stages of a single task. Do not split them; both must advance together so the tool path and the bundler path agree on syntax support.
 
-Publishing a new `@meteorjs/swc-core` and consuming it from `meteor/meteor` is one task with two stages. Do not split them: the wrapper must hit npm before the core repo can pull the new version, and the bundler-side `@swc/core` range in `meteor-rspack` must move in the same change so the tool path (`@meteorjs/swc-core`) and the bundler path (`@swc/core` via `swc-loader`) agree on syntax support.
+### Stage 1: Publish the New Wrapper (`@meteorjs/swc-core`)
 
-Before starting, read the relevant commit history once:
+The wrapper package lives in the [`meteor/meteor-package-install-swc`](https://github.com/meteor/meteor-package-install-swc) repository.
 
-- `meteor-package-install-swc`: last few release commits (e.g. `4dc9ae27`, `f9b089c9`, `02bd3b41`) show the canonical diff shape.
-- `meteor/meteor`: `git log -- packages/babel-compiler/package.js packages/standard-minifier-js/package.js npm-packages/meteor-rspack/package.json` explains why the wrapper exists and how the peer dependency is structured.
+**Steps to publish:**
 
-#### Stage 1: publish a new wrapper version from `meteor-package-install-swc`
+```bash
+# 1. Clone or pull the latest wrapper repository
+git clone https://github.com/meteor/meteor-package-install-swc
+cd meteor-package-install-swc
 
-Repo: [`meteor/meteor-package-install-swc`](https://github.com/meteor/meteor-package-install-swc). Thin wrapper, four meaningful files:
+# 2. Update the wrapper configuration
+# - Open `install.js` and update the `@swc/core` version in the inline `dependencies` block.
+# - Open `package.json` and set `"version"` to match the new SWC version exactly.
 
-- `package.json`: published name (`@meteorjs/swc-core`), version, `postinstall` runs `install.js`.
-- `install.js`: writes inline `package.json` into `./.swc/` pinning `@swc/core` to a version, then `npm install` inside that folder so npm picks the right platform-specific optional dependency.
-- `index.js`: re-exports `./.swc/node_modules/@swc/core/index.js`.
-- `package-lock.json`: lockfile for the publisher's own dev install.
+# 3. Regenerate the lockfile and verify
+npm install
+rm -rf .swc node_modules
+npm install
+node -e "require('./index.js')" # Must load without throwing
 
-Wrapper version equals wrapped `@swc/core` version (e.g. `@meteorjs/swc-core@1.15.3` pins `@swc/core@1.15.3`). Commits before `4dc9ae27` used a different scheme; current rule is to keep them equal.
+# 4. Commit and Publish (requires @meteorjs npm org publish rights)
+git commit -am "bump @swc/core version to <version>"
+npm publish --access public
 
-Steps (requires publish rights on the `@meteorjs` npm scope):
+# 5. Verify the publish succeeded
+npm view @meteorjs/swc-core version
+```
 
-1. `git pull` the repo. Change pinned `@swc/core` version in the inline `dependencies` block in `install.js`.
-2. Set `version` in `package.json` to the same SWC version.
-3. `npm install` at repo root to regenerate `package-lock.json`. Commit `install.js` + `package.json` + `package-lock.json` together (see `4dc9ae27` for the canonical diff).
-4. Local sanity check: `rm -rf .swc node_modules && npm install` should fetch the new `@swc/core` and create `./.swc/node_modules/@swc/core/index.js`. `node -e "require('./index.js')"` must load without throwing.
-5. Commit (`bump @swc/core version to <version>`), push, then `npm publish --access public` from the repo root. `--access public` is required because the package is under the scoped `@meteorjs` org.
-6. Verify with `npm view @meteorjs/swc-core version`.
+### Stage 2: Roll the Wrapper into Meteor Core
 
-#### Stage 2: roll the new wrapper into `meteor/meteor`
+Once the wrapper is live on npm, update the `meteor/meteor` codebase to consume it.
 
-Direct consumers of `@meteorjs/swc-core`: `packages/babel-compiler` (top-level `Npm.depends`) and `packages/standard-minifier-js` (plugin `Npm.depends`). Direct consumer of `@swc/core`: `npm-packages/meteor-rspack`. No other call sites today (verify with `grep -rn '@meteorjs/swc-core' packages npm-packages` and `grep -rn '"@swc/core"' packages npm-packages`).
+**Steps to update Meteor core:**
 
-Steps:
+**1. Update the Core Packages**
+Update the `@meteorjs/swc-core` version string in these files:
+- `packages/babel-compiler/package.js` (top-level `Npm.depends`)
+- `packages/standard-minifier-js/package.js` (plugin `Npm.depends`)
 
-1. Update `@meteorjs/swc-core` to the new wrapper version in `packages/babel-compiler/package.js` and `packages/standard-minifier-js/package.js`.
-2. Refresh `npm-shrinkwrap.json` in both locations. Either run `meteor npm install` inside `packages/babel-compiler/.npm/package/` and `packages/standard-minifier-js/.npm/plugin/minifyStdJS/`, or let Meteor regenerate them on a clean local build. Commit whichever files actually changed.
-3. Update the `@swc/core` range in `npm-packages/meteor-rspack/package.json` (`peerDependencies` and `devDependencies`). Minimum must not be older than the wrapper's pinned SWC version. Run `npm install` inside `npm-packages/meteor-rspack/` to refresh its `package-lock.json`.
-4. If any new SWC option is being threaded through, update `compileWithSwc` and the `.swcrc` / `swc.config.{js,ts}` resolver in `packages/babel-compiler/babel-compiler.js`, the loader defaults in `npm-packages/meteor-rspack/lib/meteorRspackConfigFactory.js` and `meteorRspackHelpers.js`, and the config parser in `npm-packages/meteor-rspack/lib/swc.js`.
-5. Run the test suites listed in [Test coverage](#test-coverage). Required: `meteor self-test --file modern.js`, `meteor self-test --file compiler-plugins.js`, and the Rspack E2E `typescript` app under `tools/e2e-tests/`.
-6. Bump Atmosphere package versions per the [`version-bump`](../../../.github/skills/version-bump/SKILL.md) skill. `babel-compiler` and `standard-minifier-js` change because they consume the new wrapper; downstream packages are re-released automatically by the version-bump tool.
+**2. Update the Bundler Integration (NPM Package)**
+Bump the `@swc/core` peer dependency range in `npm-packages/meteor-rspack/package.json`.
+
+```bash
+# Refresh the lockfiles
+cd packages/babel-compiler/.npm/package && meteor npm install
+cd ../../../../packages/standard-minifier-js/.npm/plugin/minifyStdJS && meteor npm install
+cd ../../../../../npm-packages/meteor-rspack && npm install
+```
+
+**3. Update Option Resolvers (If SWC API Changed)**
+If new SWC options are required, update:
+- `compileWithSwc` and the resolver in `packages/babel-compiler/babel-compiler.js`
+- Loader defaults in `npm-packages/meteor-rspack/lib/meteorRspackConfigFactory.js` (and `meteorRspackHelpers.js`)
+- Config parser in `npm-packages/meteor-rspack/lib/swc.js`
+
+**4. Verify Compatibility via Tests**
+Run the self-tests and the E2E suite to ensure transpilation and bundling paths are intact:
+
+```bash
+meteor self-test --file modern.js
+meteor self-test --file compiler-plugins.js
+npm run test:e2e
+```
+
+**5. Bump Atmosphere Package Versions**
+Use the [`version-bump`](../../../.github/skills/version-bump/SKILL.md) skill to bump `babel-compiler` and `standard-minifier-js`. Downstream packages will re-release automatically.

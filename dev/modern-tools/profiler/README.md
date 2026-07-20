@@ -18,57 +18,56 @@ Use `METEOR_PROFILE` to find out *where* time is being spent; use `meteor profil
 
 ## Common maintenance tasks
 
-### Update the `meteor profile` script
+This section covers updating the `meteor profile` script and validating changes locally.
 
-The CLI lives in `tools/cli/commands.js`. Two functions matter:
+### Updating the `meteor profile` Script
 
-- `setupBenchmarkSuite(profilingPath)` at the top of the `meteor profile` flow. It clones the `meteor/performance` repository (sparse, `scripts/` only) into `<app>/node_modules/.cache/meteor/performance/scripts`. The clone uses a pinned branch:
+The CLI implementation lives in `tools/cli/commands.js`. Updates are typically needed when the upstream `meteor/performance` repository ships a new tag or changes its monitoring script API.
 
-  ```js
-  const repoUrl = "https://github.com/meteor/performance";
-  const branch  = "v3.4.0";
-  ```
+**Steps to update:**
 
-  Bump that `branch` constant when a new tag of the performance repo ships. Both the tar-based and the plain-`git clone` fallbacks use the same constant, so updating it once is enough.
+**1. Update the Pinned Performance Branch**
+Locate `setupBenchmarkSuite` in `tools/cli/commands.js`. Change the `branch` constant to match the newly tagged release.
 
-- `doBenchmarkCommand(options)` invokes `scripts/monitor-bundler.sh <projectDir> <timestamp> <meteor-options>` with `METEOR_BUNDLE_SIZE`, `METEOR_BUNDLE_SIZE_ONLY`, and `METEOR_BUNDLE_BUILD` env vars derived from the `--size`, `--size-only`, and `--build` CLI flags. If the performance repo renames its script or its env contract, mirror the change here.
+```javascript
+// tools/cli/commands.js
+const repoUrl = "https://github.com/meteor/performance";
+const branch  = "v3.5.0"; // Bump this branch tag
+```
 
-The `meteor profile` command itself is registered just below, at `main.registerCommand({ name: 'profile', ... }, doBenchmarkCommand)`. Options are merged from `buildCommands.options` and `runCommandOptions.options`, so most `meteor run` and `meteor build` flags pass through transparently.
+**2. Synchronize CLI Arguments (If Needed)**
+If new flags were added upstream (e.g., `--client-size`), locate `doBenchmarkCommand` and map the new flag into the `meteorSizeEnvs` environment variables.
 
-#### When the script needs updating
+### Validating Profiler Changes
 
-- The pinned branch in `meteor/performance` has a new tag with metric changes worth picking up.
-- A new sub-flag is added (for example, a separate `--client-size`). Add it to the `options:` block and forward it through `meteorSizeEnvs` / `meteorOptions`.
-- A breaking change in the underlying `monitor-bundler.sh` contract requires a new env var or argument.
+The profiler is not covered by automated E2E tests, so manual verification is required.
 
-#### Validating that the profiler still works after changes
+**Steps to validate:**
 
-The profiler is not exercised by self-test or E2E; validate manually:
+```bash
+# 1. Prepare a sandbox environment (e.g., an E2E test fixture)
+cd tools/e2e-tests/apps/react
 
-1. Pick a test app. Any of `tools/e2e-tests/apps/*` or a fresh `meteor create` works.
-2. Run a fresh sandbox so the benchmark cache is cloned from scratch:
+# 2. Clear the old performance script cache to force a fresh clone
+rm -rf node_modules/.cache/meteor/performance
 
-   ```bash
-   rm -rf node_modules/.cache/meteor/performance
-   meteor profile
-   ```
+# 3. Verify the default profile run
+meteor profile
 
-   The output should include "Meteor profiling suite cloned to: ...", followed by the monitor running through the build.
-3. Run with each flag and confirm the expected metric prints:
+# 4. Verify specific benchmarking flags
+meteor profile --build
+meteor profile --size
+meteor profile --size-only
 
-   ```bash
-   meteor profile --build
-   meteor profile --size
-   meteor profile --size-only
-   ```
+# 5. Verify timeouts (ensure it propagates successfully)
+METEOR_IDLE_TIMEOUT=120 meteor profile
+```
 
-4. Try a long build with `METEOR_IDLE_TIMEOUT=120` to confirm the timeout option still propagates.
-5. If the change touched the clone path, delete the cache directory and run again to confirm both the tar path and the `git clone` fallback still produce a usable `scripts/` directory. (Force the fallback by temporarily renaming `tar` on `PATH`.)
+*Note:* If you modified the cloning logic in `setupBenchmarkSuite`, temporarily rename your system's `tar` binary to verify that the plain `git clone` fallback logic also works seamlessly.
 
-#### Debugging notes
+### Debugging Notes
 
-- The profiler is unsupported on Windows; `doBenchmarkCommand` throws early. WSL is the workaround.
-- The clone fails fast if `git --version` is below 2.25. The script uses `git sparse-checkout` which requires that minimum.
-- The cache directory is per-app (`<projectDir>/node_modules/.cache/meteor/performance`). If the suite scripts ever drift between projects, that is where to clean up.
-- The performance repo's branch is pinned by tag (`v3.4.0` at time of writing). Avoid pointing at `main`, since unreviewed changes in the benchmark suite will silently affect every contributor's results.
-- For deeper investigations, combine `meteor profile` with `METEOR_PROFILE=1 meteor run` (run separately): the first gives the end-to-end metric, the second points at the hot spots inside the tool.
+- **Unsupported Systems:** The profiler throws early on Windows natively. Use WSL as a workaround.
+- **Git Requirements:** The script requires `git >= 2.25` to utilize `sparse-checkout`.
+- **Target Branching:** Always pin the `branch` constant to a specific tag (e.g., `v3.4.0`), never `main`, to prevent unreviewed upstream changes from bleeding into all contributor environments.
+- **Deep Profiling:** Combine `meteor profile` with `METEOR_PROFILE=1 meteor run` to get both the end-to-end benchmark timing and a deep trace of where time is spent inside the tool itself.

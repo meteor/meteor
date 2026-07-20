@@ -2,12 +2,12 @@
 
 Rspack is the Rust-based, Webpack-compatible bundler that handles app source compilation, HMR, and asset emission for Meteor apps that opt in via `meteor add rspack`. Meteor itself still owns package compilation, the dev server lifecycle, and the runtime program manifest; this document covers the integration layer between the two.
 
-End-user documentation is at [`v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md`](../../../v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md). The E2E coverage matrix is at [`E2E_COVERAGE.md`](E2E_COVERAGE.md).
+End-user documentation is at [`v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md`](../../../v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md). The E2E coverage matrix is at [`E2E_COVERAGE.md`](E2E_COVERAGE.md). The memory benchmark guide is at [`MEMORY_BENCHMARK.md`](MEMORY_BENCHMARK.md).
 
 - [**Why Rspack**](#why-rspack): goals of the Rspack integration.
 - [**Rspack integration and modules**](#rspack-integration-and-modules): the Atmosphere package and the npm package, file-by-file responsibilities, and how Rspack fits next to Meteor's own bundler.
 - [**E2E testing**](#e2e-testing): strategy, how to add a new test app, what to verify.
-- [**Common maintenance tasks**](#common-maintenance-tasks): linking `@meteorjs/rspack` locally and upgrading Rspack.
+- [**Common maintenance tasks**](#common-maintenance-tasks): linking `@meteorjs/rspack` locally, upgrading Rspack, and benchmarking rebuild memory.
 
 ## Why Rspack
 
@@ -111,42 +111,88 @@ The Rspack integration is exercised by the Jest + Playwright suite in `tools/e2e
 
 ## Common maintenance tasks
 
-### Link `@meteorjs/rspack` to a local app
+This section covers the typical workflows for iterating on the Rspack integration, upgrading its core dependencies, and publishing changes.
 
-When iterating on the npm package (default config, helpers, plugins), linking it into a sandbox app is the fastest feedback loop. The `tools/e2e-tests/apps/*` fixtures and the standard skeletons under `tools/static-assets/skel-*` are good targets.
+### Iterating on `@meteorjs/rspack` (NPM Package)
 
-Steps:
+The `@meteorjs/rspack` npm package (`npm-packages/meteor-rspack/`) provides the default Rspack configuration. When making changes here, you need to link it to a local app to verify your modifications. The easiest targets are the E2E test fixtures (`tools/e2e-tests/apps/*`) or standard skeletons.
+
+**Steps to test local changes:**
 
 ```bash
-# In the meteor-rspack package
+# 1. Build and link the local NPM package
 cd npm-packages/meteor-rspack
 npm link
 
-# In the target app
+# 2. Go to your target app and link the package
 cd /path/to/target-app
 meteor add rspack          # if not already added
 meteor npm link @meteorjs/rspack
 meteor run
 ```
 
-Notes:
+*Note:* The Atmosphere package's auto-install flow may try to install a newer version of `@meteorjs/rspack` from the registry. To make your local link stick, set `"meteor": { "autoInstallDeps": false }` in the app's `package.json`.
 
-- The Rspack Atmosphere package's auto-install flow may try to install a newer version of `@meteorjs/rspack`. Set `meteor.autoInstallDeps` to `false` in the app's `package.json` to make the link stick.
-- Local plugin files referenced from the app's `rspack.config.js` are parsed via `lib/localDependenciesHelpers.js` and added to the persistent cache's `buildDependencies`. If a change to a local plugin is not reflected after a rebuild, run `meteor reset`.
+After verifying changes manually, always run the E2E suite to ensure broader compatibility is intact before committing:
+```bash
+npm run test:e2e
+```
 
-### Upgrade Rspack to verify compatibility
+### Upgrading Rspack Core Dependencies
 
-This covers bumping `@rspack/core`, `@rspack/plugin-react-refresh`, `swc-loader`, and `@rsdoctor/rspack-plugin`. The default versions are declared in `packages/rspack/lib/constants.js` (`DEFAULT_RSPACK_VERSION` and friends) and as `peerDependencies` / `devDependencies` in `npm-packages/meteor-rspack/package.json`.
+When a new version of Rspack is released, you must bump the core dependencies: `@rspack/core`, `@rspack/plugin-react-refresh`, `swc-loader`, and `@rsdoctor/rspack-plugin`.
 
-Expected process:
+**1. Update the Constants (Atmosphere Package)**
+Modify the default versions in `packages/rspack/lib/constants.js`. For example, change `DEFAULT_RSPACK_VERSION` to the new target version:
+```javascript
+// packages/rspack/lib/constants.js
+const DEFAULT_RSPACK_VERSION = '1.0.0-beta.1'; 
+```
 
-1. Bump versions in `packages/rspack/lib/constants.js` and `npm-packages/meteor-rspack/package.json` together. Keep `peerDependencies` ranges as broad as the new minimum allows.
-2. Run `npm install` inside `npm-packages/meteor-rspack/` to refresh `package-lock.json`.
-3. Run the full E2E suite: `npm run test:e2e` from the repo root. At minimum confirm `react`, `react-router`, `typescript`, `blaze`, `monorepo`, and the skeletons pass.
-4. Check Rspack's release notes for breaking changes in:
-   - Module resolution (especially around `exports` conditions, ESM, `node:` protocol).
-   - Persistent FS cache layout, since user apps may carry stale caches across the bump.
-   - HMR client wiring (the `__rspack__` script tag, dev server URL).
-   - SWC loader options if SWC was bumped at the same time; see [`../swc/README.md`](../swc/README.md).
-5. If a regression appears, the safest rollback is to revert the constants and the `package.json` bumps and rerun the failing E2E target with `npm run test:e2e -- --testPathPattern <name>` to confirm. Apps can opt out of the new version with `meteor reset` followed by manually pinning `@meteorjs/rspack` and `@rspack/core` in `package.json` until a fix lands.
-6. When ready to ship, follow the [`version-bump`](../../../.github/skills/version-bump/SKILL.md) skill for the Atmosphere package and use `npm run bump` / `npm run publish:beta` in `npm-packages/meteor-rspack/` for the npm side.
+**2. Update the Package Configuration (NPM Package)**
+Bump the versions in the `peerDependencies` and `devDependencies` inside `npm-packages/meteor-rspack/package.json`. Keep `peerDependencies` ranges as broad as the new minimum allows.
+```bash
+# Refresh the lockfile after bumping package.json
+cd npm-packages/meteor-rspack
+npm install
+```
+
+**3. Verify Compatibility**
+Run the full E2E suite from the repository root:
+```bash
+npm run test:e2e
+```
+*Look out for breaking changes in Rspack's release notes around:*
+- Module resolution (especially `exports` conditions, ESM, `node:` protocol).
+- Persistent FS cache layouts, as user apps may carry stale caches.
+- HMR client wiring (the `__rspack__` script tag, dev server URL).
+- SWC loader options (see [`../swc/README.md`](../swc/README.md)).
+
+### Publishing the Packages
+
+Whenever there are modifications in `npm-packages/meteor-rspack` or `packages/rspack`, you must publish the new versions. The NPM package is always published *first*, followed by the Atmosphere package bump.
+
+**For a Beta Release:**
+```bash
+# 1. Publish the NPM package as a beta
+cd npm-packages/meteor-rspack
+npm run publish:beta
+
+# 2. Bump the Atmosphere package version (e.g., to 1.0.0-beta.1)
+# See the version-bump skill for detailed instructions.
+```
+
+**For an Official Release:**
+```bash
+# 1. Bump the NPM package version and publish
+cd npm-packages/meteor-rspack
+npm run bump
+npm publish
+
+# 2. Bump the Atmosphere package version (e.g., to 1.0.0)
+# See the version-bump skill for detailed instructions.
+```
+
+### Benchmark rebuild memory
+
+For investigating rebuild memory issues or analyzing process-tree memory retention (`meteor-tool`, app server, Rspack/TypeScript child processes), see [`MEMORY_BENCHMARK.md`](MEMORY_BENCHMARK.md) for instructions on running `scripts/build-stack-memory-bench.js` and capturing heap snapshots.
