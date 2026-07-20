@@ -84,4 +84,5 @@ Package.onTest(function (api) {
   api.addFiles("crossbar_tests.js", ["server"]);
   api.addFiles("raw_websocket_tests.js", "server");
   api.addFiles("transports/uws_tests.js", "server");
+  api.addFiles("transports/sockjs_tests.js", "server");
 });
