@@ -107,7 +107,7 @@ function getFileExtensionsToIgnore() {
   }
 
   return discoverRspackFileExtensions({
-    globSync: glob.sync,
+    globSync,
     cwd: getMeteorAppDir(),
     generatedContexts: [
       RSPACK_BUILD_CONTEXT,
