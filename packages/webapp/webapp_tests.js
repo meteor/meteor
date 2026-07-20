@@ -483,7 +483,7 @@ Tinytest.addAsync("webapp - parse url queries", async function (test) {
   ];
   let i = 0;
   for await (const queriesTestCase of queriesTestCases) {
-    const resp = await asyncGet(`${Meteor.absoluteUrl()}/queries?${queriesTestCase}`);
+    const resp = await asyncGet(Meteor.absoluteUrl(`/queries?${queriesTestCase}`));
     const queryParsed = JSON.parse(resp.content);
     test.equal(queryParsed, queryResults[i]);
     i++;
