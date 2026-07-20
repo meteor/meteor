@@ -6,7 +6,7 @@ import { AsynchronousCursor } from './asynchronous_cursor';
 import { Cursor } from './cursor';
 import { CursorDescription } from './cursor_description';
 import { DocFetcher } from './doc_fetcher';
-import { MongoDB, compareOperationTimes, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
+import { MongoDB, compareOperationTimes, fenceWriteTsKey, replaceMeteorAtomWithMongo, replaceTypes, transformResult } from './mongo_common';
 import { ObserveHandle } from './observe_handle';
 import { ObserveMultiplexer } from './observe_multiplex';
 import { OplogObserveDriver } from './oplog_observe_driver';
@@ -20,6 +20,11 @@ const ASSETS_FOLDER = 'assets';
 const APP_FOLDER = 'app';
 
 const oplogCollectionWarnings = [];
+
+// Distinguishes MongoConnection instances from each other so a write fence can
+// record which connection a write went to (see fenceWriteTsKey). A process-local
+// counter is enough: the ids never leave the process.
+let nextCsConnectionId = 1;
 const availableDrivers = ['changeStreams', 'oplog', 'polling']
 const DEFAULT_REACTIVITY_ORDER = process.env.METEOR_REACTIVITY_ORDER ? process.env.METEOR_REACTIVITY_ORDER.split(',') : availableDrivers;
 
@@ -38,6 +43,10 @@ export const MongoConnection = function (url, options) {
   self._observeMultiplexers = {};
   self._sharedChangeStreams = {};
   self._onFailoverHook = new Hook;
+  // Identifies this connection when annotating a write fence with the
+  // clusterTime of a write, so drivers on other connections that happen to
+  // watch a same-named collection don't pick it up (meteor/meteor#14600).
+  self._csConnectionId = `mc${nextCsConnectionId++}`;
 
   const userOptions = {
     ...(Mongo._connectionOptions || {}),
@@ -195,12 +204,17 @@ MongoConnection.prototype._maybeBeginWrite = function () {
 // creating a card also writes to activities), so picking a single "max ts"
 // for the whole fence would stall drivers whose collection never sees
 // that specific ts. We therefore keep the max ts per collection.
-function _annotateFenceWithWriteTs(fence, collectionName, writeTs) {
-  if (!fence || !writeTs || !collectionName) return;
+//
+// It is also per-connection: see fenceWriteTsKey. A single fence can span
+// writes to several MongoConnections, and clusterTimes from different clusters
+// are not comparable, so the connection has to be part of the key.
+function _annotateFenceWithWriteTs(fence, connection, collectionName, writeTs) {
+  if (!fence || !writeTs || !collectionName || !connection) return;
   const map = fence._csTargetTsByCollection = fence._csTargetTsByCollection || {};
-  const prev = map[collectionName];
+  const key = fenceWriteTsKey(connection._csConnectionId, collectionName);
+  const prev = map[key];
   if (!prev || compareOperationTimes(writeTs, prev) > 0) {
-    map[collectionName] = writeTs;
+    map[key] = writeTs;
   }
 }
 
@@ -236,7 +250,7 @@ MongoConnection.prototype.insertAsync = async function (collection_name, documen
       session,
     }
   ).then(async ({insertedId}) => {
-    _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+    _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), self, collection_name, session.operationTime);
     await session.endSession();
     await refresh();
     await write.committed();
@@ -293,7 +307,7 @@ MongoConnection.prototype.removeAsync = async function (collection_name, selecto
       // stream event, so a ChangeStreamObserveDriver waiting on this ts
       // would block forever waiting for an event Mongo will never emit.
       if (deletedCount > 0) {
-        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+        _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), self, collection_name, session.operationTime);
       }
       await session.endSession();
       await refresh();
@@ -456,7 +470,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
         // observers wait for the exact ts and a no-op upsert produces no
         // event, so the wait would never resolve.
         if (result && result.numberAffected) {
-          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), self, collection_name, session.operationTime);
         }
         await session.endSession();
         await refresh();
@@ -494,7 +508,7 @@ MongoConnection.prototype.updateAsync = async function (collection_name, selecto
         // forever. modifiedCount excludes matched-but-unchanged docs (which
         // also produce no event), and upsertedCount catches inserts.
         if (result && (result.modifiedCount > 0 || result.upsertedCount > 0)) {
-          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), collection_name, session.operationTime);
+          _annotateFenceWithWriteTs(DDPServer._getCurrentFence(), self, collection_name, session.operationTime);
         }
         await session.endSession();
         var meteorResult = transformResult({result});
