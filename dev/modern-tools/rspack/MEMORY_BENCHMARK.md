@@ -24,18 +24,18 @@ Clone the fixture beside the Meteor checkout and install its dependencies:
 
 ```bash
 git clone https://github.com/nachocodoner/meteor-large-app \
-  /home/freak2geek/meteor/meteor-large-app
+  /path/to/meteor-large-app
 
-cd /home/freak2geek/meteor/meteor-large-app/blaze
+cd /path/to/meteor-large-app/blaze
 meteor npm install
 ```
 
 From the Meteor checkout, run the default comparison:
 
 ```bash
-cd /home/freak2geek/meteor/meteor
+cd /path/to/meteor
 
-APP_PATH=/home/freak2geek/meteor/meteor-large-app/blaze \
+APP_PATH=/path/to/meteor-large-app/blaze \
 TOUCH_FILE=server/main.js \
 node scripts/build-stack-memory-bench.js
 ```
@@ -83,7 +83,7 @@ write a heap snapshot and saves `leak-report.json` with the measurements and
 snapshot path.
 
 ```bash
-APP_PATH=/home/freak2geek/meteor/meteor-large-app/blaze \
+APP_PATH=/path/to/meteor-large-app/blaze \
 TOUCH_FILE=server/main.js \
 MODE=leak \
 LEAK_VARIANT=baseline \
@@ -96,6 +96,19 @@ node scripts/build-stack-memory-bench.js
 `leak` mode adds the heap-snapshot signal when it is not already present in
 `TOOL_NODE_FLAGS`. It captures the Meteor tool process, not a Rspack or
 TypeScript child process, so use it when `toolRSS` is the growing metric.
+
+## Validate against the installed Meteor release
+
+After identifying a result with the local checkout, repeat the same matrix
+workload against the installed Meteor release. This separates a checkout-only
+change from behavior that is present in the release you are comparing.
+
+```bash
+USE_GLOBAL=true \
+APP_PATH=/path/to/meteor-large-app/blaze \
+TOUCH_FILE=server/main.js \
+node scripts/build-stack-memory-bench.js
+```
 
 ## Useful options
 
@@ -117,6 +130,5 @@ For every option and its default, run:
 node scripts/build-stack-memory-bench.js --help
 ```
 
-To validate a fix, repeat the same workload with the local checkout and with
-`USE_GLOBAL=true`. Then run it against a smaller application to make sure the
+Then run the same workload against a smaller application to make sure the
 change does not trade a large-app improvement for a regression elsewhere.
