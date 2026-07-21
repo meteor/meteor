@@ -52,6 +52,7 @@ Core React integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
+| Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
 
 ### react-router
 
