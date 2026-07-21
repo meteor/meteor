@@ -1069,8 +1069,6 @@ Meteor-Rspack supports different ways to share code across projects in monorepo 
 
 There are two primary approaches for sharing code, which fundamentally differ in how files are resolved: sharing by package name or sharing by file location.
 
-![Symlink Approaches](https://github.com/user-attachments/assets/2f1ddcef-3d15-4ce7-b478-dcdd7479bab4)
-
 #### Workspace Setups (Share a package by name)
 
 This is the standard model used by package managers like npm, pnpm, and Yarn workspaces. It allows you to share versioned packages—each with its own `package.json`, name, and entry in a root manifest—and resolve them by package name through `node_modules`.
@@ -1096,6 +1094,8 @@ module.exports = defineConfig(Meteor => ({
 ```
 
 With this setting, Rspack will resolve imports using the symlink location rather than the real target path, preserving the expected context.
+
+[See this diagram for a detailed comparison between both approaches](https://github.com/user-attachments/assets/2f1ddcef-3d15-4ce7-b478-dcdd7479bab4).
 
 ## Benefits
 
