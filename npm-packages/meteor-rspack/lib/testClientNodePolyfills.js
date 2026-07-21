@@ -2,9 +2,16 @@ const { ProvidePlugin } = require("@rspack/core");
 
 let meteorNodeStubs;
 try {
-  meteorNodeStubs = require("meteor-node-stubs");
+  const stubPath = require.resolve("meteor-node-stubs", { paths: [process.cwd()] });
+  meteorNodeStubs = require(stubPath);
 } catch (e) {
-  // It's optional. If not installed, meteorNodeStubs remains undefined.
+  if (e.code !== 'MODULE_NOT_FOUND') throw e;
+  try {
+    meteorNodeStubs = require("meteor-node-stubs");
+  } catch (fallbackError) {
+    if (fallbackError.code !== 'MODULE_NOT_FOUND') throw fallbackError;
+    // It's optional. If not installed, meteorNodeStubs remains undefined.
+  }
 }
 
 const TEST_CLIENT_NODE_POLYFILLS = [
