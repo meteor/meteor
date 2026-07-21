@@ -1,5 +1,11 @@
 const { ProvidePlugin } = require("@rspack/core");
-const meteorNodeStubs = require("meteor-node-stubs");
+
+let meteorNodeStubs;
+try {
+  meteorNodeStubs = require("meteor-node-stubs");
+} catch (e) {
+  // It's optional. If not installed, meteorNodeStubs remains undefined.
+}
 
 const TEST_CLIENT_NODE_POLYFILLS = [
   "assert",
@@ -26,8 +32,18 @@ const TEST_CLIENT_NODE_POLYFILLS = [
 
 function createTestClientNodePolyfillConfig() {
   const fallback = Object.fromEntries(
-    TEST_CLIENT_NODE_POLYFILLS.map((name) => [name, meteorNodeStubs[name] ?? false]),
+    TEST_CLIENT_NODE_POLYFILLS.map((name) => [name, meteorNodeStubs?.[name] ?? false]),
   );
+
+  const plugins = [];
+  
+  if (meteorNodeStubs?.buffer) {
+    plugins.push(
+      new ProvidePlugin({
+        Buffer: [meteorNodeStubs.buffer, "Buffer"],
+      })
+    );
+  }
 
   return {
     resolve: {
@@ -36,11 +52,7 @@ function createTestClientNodePolyfillConfig() {
       },
       fallback,
     },
-    plugins: [
-      new ProvidePlugin({
-        Buffer: [meteorNodeStubs.buffer, "Buffer"],
-      }),
-    ],
+    plugins,
   };
 }
 
