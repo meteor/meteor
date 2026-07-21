@@ -2777,7 +2777,173 @@ Tinytest.addAsync('livedata connection - disconnect sends disconnect message', a
     "disconnect() should send a disconnect message to the server");
 });
 
+Tinytest.addAsync(
+  'livedata connection - store beginUpdate receives the real batch size',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // Register a store that records every beginUpdate call. Stores receive
+    // batchSize > 1 (or reset) as the signal to pause observers, so a
+    // batchSize that is always 0 silently disables flicker prevention.
+    const beginUpdateCalls = [];
+    const storeApi = {
+      beginUpdate(batchSize, reset) {
+        beginUpdateCalls.push({ batchSize: batchSize, reset: reset });
+      },
+      update() {},
+      endUpdate() {},
+      saveOriginals() {},
+      retrieveOriginals() {}
+    };
+    if (Meteor.isServer) {
+      await conn.registerStoreServer('batch-test', storeApi);
+    } else {
+      conn.registerStoreClient('batch-test', storeApi);
+    }
+
+    // Three buffered writes for the store...
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '1', fields: { a: 1 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '2', fields: { a: 2 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '3', fields: { a: 3 } });
+    // ...then a non-write message, which forces an immediate flush.
+    await stream.receive({ msg: 'ready', subs: [] });
+
+    // However the flush batched the messages, the batch sizes reported to
+    // beginUpdate must account for all three writes.
+    const total = beginUpdateCalls.reduce(
+      (sum, call) => sum + call.batchSize,
+      0
+    );
+    test.equal(total, 3);
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - malformed frames are discarded without crashing',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // parseDDP returns null both for invalid JSON and for valid JSON that
+    // is not an object. Neither may throw out of the message handler.
+    await stream.receive('this is not json');
+    await stream.receive('"a bare string"');
+    await stream.receive('42');
+
+    // The connection still processes real messages afterwards.
+    let callbackFired = false;
+    conn.call('stillAlive', function () {
+      callbackFired = true;
+    });
+    const message = testGotMessage(test, stream, {
+      msg: 'method', method: 'stillAlive', params: [], id: '*'
+    });
+    await stream.receive({ msg: 'result', id: message.id, result: 'ok' });
+    await stream.receive({ msg: 'updated', methods: [message.id] });
+    test.isTrue(callbackFired);
+  }
+);
+
 // XXX also test:
 // - restart on update flag
 // - on_update event
 // - reloading when the app changes, including session migration
+
+Tinytest.addAsync(
+  'livedata connection - replaced stop callback fires on local stop',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    let firstStopCalls = 0;
+    let secondStopCalls = 0;
+
+    // Initial subscribe, as an autorun's first run would do.
+    const sub = conn.subscribe('replace-stop-test', {
+      onStop() {
+        firstStopCalls++;
+      }
+    });
+    testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'replace-stop-test', params: []
+    });
+
+    // Simulate the autorun rerun reuse path: the record is marked inactive
+    // and a matching subscribe reactivates it, replacing its callbacks.
+    conn._subscriptions[sub.subscriptionId].inactive = true;
+    conn.subscribe('replace-stop-test', {
+      onStop() {
+        secondStopCalls++;
+      }
+    });
+    test.length(stream.sent, 0); // record reused — no second 'sub' message
+
+    // A local stop must fire the record's CURRENT callback, exactly like
+    // the server-initiated stop path (nosub) does — not the callback
+    // captured when the record was first created.
+    sub.stop();
+    test.equal(secondStopCalls, 1);
+    test.equal(firstStopCalls, 0);
+  }
+);
+
+Tinytest.add(
+  'livedata connection - close() stops tracking the connection',
+  function (test) {
+    // Precondition: every already-tracked connection is fully ready, so
+    // this test's connection is the only thing that can flip the answer.
+    test.isTrue(DDP._allSubscriptionsReady());
+
+    // DDP.connect registers in the allConnections registry (the object
+    // form of `url` is the standard test-stream hook).
+    const stream = new StubStream();
+    const conn = DDP.connect(stream);
+
+    // A subscription that never becomes ready makes this connection the
+    // one blocking _allSubscriptionsReady.
+    conn.subscribe('never-ready-tracking-test');
+    test.isFalse(DDP._allSubscriptionsReady());
+
+    // Closing the connection must deregister it — a closed connection can
+    // never become ready and would otherwise be consulted forever.
+    conn.close();
+    test.isTrue(DDP._allSubscriptionsReady());
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - unsub while disconnected is delivered after reconnect',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    const sub = conn.subscribe('queued-unsub-test');
+    const subMessage = testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'queued-unsub-test', params: []
+    });
+
+    // Stop the subscription while the stream is not connected. The stream
+    // drops data sent in this state, and the registry record is removed, so
+    // nothing would ever re-send the unsub — it must be queued.
+    stream.setStatus('waiting');
+    sub.stop();
+    test.length(stream.sent, 0);
+
+    // On reconnect the queued unsub goes out, after the connect message
+    // (and after any still-registered subscriptions would be re-sent).
+    stream.setStatus('connected');
+    await stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+    testGotMessage(test, stream, { msg: 'unsub', id: subMessage.id });
+    test.length(stream.sent, 0);
+  }
+);
