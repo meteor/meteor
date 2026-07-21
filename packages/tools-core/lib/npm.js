@@ -53,10 +53,21 @@ export function getMeteorCommandPath(
   meteorInstallation = process.env.METEOR_INSTALLATION,
   platform = process.platform,
 ) {
-  if (platform === 'win32' && typeof meteorInstallation === 'string' && meteorInstallation) {
-    const meteorCommandPath = path.join(meteorInstallation, 'meteor.bat');
-    if (fs.existsSync(meteorCommandPath)) {
-      return meteorCommandPath;
+  if (platform === 'win32') {
+    if (typeof meteorInstallation === 'string' && meteorInstallation) {
+      const meteorCommandPath = path.join(meteorInstallation, 'meteor.bat');
+      if (fs.existsSync(meteorCommandPath)) {
+        return meteorCommandPath;
+      }
+    }
+    
+    // Precheck if meteor.bat exists in PATH
+    const pathEnv = process.env.PATH || process.env.Path || '';
+    const pathDirs = pathEnv.split(path.delimiter);
+    for (const dir of pathDirs) {
+      if (dir && fs.existsSync(path.join(dir, 'meteor.bat'))) {
+        return 'meteor.bat';
+      }
     }
   }
 
