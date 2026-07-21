@@ -1065,7 +1065,7 @@ For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR
 
 ### Symlinks and Monorepos
 
-Meteor-Rspack supports different ways to share code across projects in monorepo setups, depending on how you link and consume dependencies. 
+Meteor-Rspack supports different ways to share code across projects in monorepo setups, depending on how you link and consume dependencies.
 
 There are two primary approaches for sharing code, which fundamentally differ in how files are resolved: sharing by package name or sharing by file location.
 
@@ -1085,7 +1085,7 @@ Future versions of Meteor will introduce native support for scaffolding monorepo
 
 This approach involves sharing individual files or directories at specific paths without promoting them to full packages. It provides a file-granular sharing mechanism with less ceremony: no manifests, names, or versioning. When you symlink to a shared module, the import context is preserved within the symlink path, where consumers expect it, instead of being replaced with the real filesystem path.
 
-Because Rspack defaults to package-style resolution, it assumes the workspace model and resolves symlinks to their real path. To preserve the app-local source symlink semantics, you need to configure Rspack to retain the symlinked path. 
+Because Rspack defaults to package-style resolution, it assumes the workspace model and resolves symlinks to their real path. To preserve the app-local source symlink semantics, you need to configure Rspack to retain the symlinked path.
 
 You can achieve this by setting `resolve.symlinks: false` in your `rspack.config.js`:
 
