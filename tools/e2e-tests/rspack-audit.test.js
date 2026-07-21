@@ -5,7 +5,7 @@ import path from "path";
 
 const RSPACK_PACKAGE_DIR = path.resolve(__dirname, "../../npm-packages/meteor-rspack");
 
-describe("@meteorjs/rspack dependency audit /", () => {
+describe("Regressions / @meteorjs/rspack dependency audit /", () => {
   let tempDir;
 
   beforeAll(async () => {
