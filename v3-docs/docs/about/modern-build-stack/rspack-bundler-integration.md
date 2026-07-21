@@ -1063,6 +1063,40 @@ PORT=3001 METEOR_LOCAL_DIR=.meteor/local-2 meteor run
 
 For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR`](../../cli/environment-variables.md#meteor_local_dir) documentation.
 
+### Symlinks and Monorepos
+
+Meteor-Rspack supports different ways to share code across projects in monorepo setups, depending on how you link and consume dependencies. 
+
+There are two primary approaches for sharing code, which fundamentally differ in how files are resolved: sharing by package name or sharing by file location.
+
+![Symlink Approaches](https://github.com/user-attachments/assets/2f1ddcef-3d15-4ce7-b478-dcdd7479bab4)
+
+#### Workspace Setups (Share a package by name)
+
+This is the standard model used by package managers like npm, pnpm, and Yarn workspaces. It allows you to share versioned packages—each with its own `package.json`, name, and entry in a root manifest—and resolve them by package name through `node_modules`.
+
+Rspack defaults are oriented toward supporting this pattern out of the box, as it gives bundlers an explicit dependency graph to reason about, which powers caching, affected-detection, and other build optimizations.
+
+#### App-Local Source Symlinks (Share a file by location)
+
+This approach involves sharing individual files or directories at specific paths without promoting them to full packages. It provides a file-granular sharing mechanism with less ceremony: no manifests, names, or versioning. When you symlink to a shared module, the import context is preserved within the symlink path, where consumers expect it, instead of being replaced with the real filesystem path.
+
+Because Rspack defaults to package-style resolution, it assumes the workspace model and resolves symlinks to their real path. To preserve the app-local source symlink semantics, you need to configure Rspack to retain the symlinked path. 
+
+You can achieve this by setting `resolve.symlinks: false` in your `rspack.config.js`:
+
+```javascript
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  resolve: {
+    symlinks: false
+  }
+}));
+```
+
+With this setting, Rspack will resolve imports using the symlink location rather than the real target path, preserving the expected context.
+
 ## Benefits
 
 Meteor–Rspack integration sends your app code to Rspack to use modern bundler features. Meteor then uses Rspack’s output to handle Meteor-specific tasks (like Atmosphere package compilation) and create the final bundle.
