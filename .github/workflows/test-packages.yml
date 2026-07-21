@@ -47,7 +47,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.npm

@@ -35,7 +35,7 @@ jobs:
           node-version: 24.15.0
 
       - name: Restore caches
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.npm
