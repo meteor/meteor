@@ -1075,6 +1075,12 @@ This is the standard model used by package managers like npm, pnpm, and Yarn wor
 
 Rspack defaults are oriented toward supporting this pattern out of the box, as it gives bundlers an explicit dependency graph to reason about, which powers caching, affected-detection, and other build optimizations.
 
+For a practical example, you can explore this [pnpm monorepo skeleton](https://github.com/nachocodoner/meteor-pnpm-skeleton) demonstrating how to set up Meteor within a pnpm workspace.
+
+:::warning
+Future versions of Meteor will introduce native support for scaffolding monorepo setups (such as pnpm workspaces) directly via `meteor create` skeletons.
+:::
+
 #### App-Local Source Symlinks (Share a file by location)
 
 This approach involves sharing individual files or directories at specific paths without promoting them to full packages. It provides a file-granular sharing mechanism with less ceremony: no manifests, names, or versioning. When you symlink to a shared module, the import context is preserved within the symlink path, where consumers expect it, instead of being replaced with the real filesystem path.
