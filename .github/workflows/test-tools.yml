@@ -47,7 +47,7 @@ jobs:
     timeout-minutes: 75
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -94,7 +94,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -168,7 +168,7 @@ jobs:
       TEST_GROUP: "^[a-b]|^c[a-n]|^co[a-l]|^comm"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -236,7 +236,7 @@ jobs:
       TEST_GROUP: "^com[n-z]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -305,7 +305,7 @@ jobs:
       TEST_GROUP: "^co[n-z]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -380,7 +380,7 @@ jobs:
       TEST_GROUP: "^c[p-z]|^h[a-e]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -448,7 +448,7 @@ jobs:
       TEST_GROUP: "^h[f-z]|^[i-l]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -517,7 +517,7 @@ jobs:
       TEST_GROUP: "^m[a-n]|^mo[a-d]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -585,7 +585,7 @@ jobs:
       TEST_GROUP: "^mo[e-z]|^m[p-z]|^[n-o]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -653,7 +653,7 @@ jobs:
       TEST_GROUP: "^[p-q]|^r[a-e]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -721,7 +721,7 @@ jobs:
       TEST_GROUP: "^r[f-z]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -789,7 +789,7 @@ jobs:
       TEST_GROUP: "^s"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -857,7 +857,7 @@ jobs:
       TEST_GROUP: "^[t-z]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -925,7 +925,7 @@ jobs:
       TEST_GROUP: "^[d-g]"
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
