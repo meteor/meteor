@@ -212,6 +212,19 @@ export function getConfigFilePath() {
  */
 export function getRspackCliPath() {
   const appDir = getMeteorAppDir();
+
+  try {
+    // Dynamically resolve the exact bin path defined by the package
+    const pkgPath = require.resolve('@rspack/cli/package.json', { paths: [appDir] });
+    const pkg = require(pkgPath);
+    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.rspack;
+    if (bin) {
+      return path.join(path.dirname(pkgPath), bin);
+    }
+  } catch (err) {
+    // Fall through to hardcoded fallback if package.json isn't exported
+  }
+
   const candidatePaths = [
     path.join(appDir, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
   ];
