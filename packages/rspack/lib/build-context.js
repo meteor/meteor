@@ -658,18 +658,12 @@ try {
 // In Blaze, import happens last so HTML files preload first`;
     }
     if (config?.isServer && !config?.isNative) {
-      // Register the rspack bundle as an async dep via reify's runtime API; meteor#14395.
+      // Register the rspack bundle as an async dep; meteor#14395.
+      // Meteor's Reify Babel plugin automatically detects Top-Level Await
+      // and securely wraps this file with `module.wrapAsync(...)` under the hood.
       return `${linkBanner}
 var __rspackBundle = require('./${config?.outputFile || ''}');
-module.wrapAsync(async function (_module, __reifyWaitForDeps__, __reifyAsyncResult__) {
-  __reifyWaitForDeps__();
-  try {
-    await Promise.resolve(__rspackBundle);
-  } catch (err) {
-    return __reifyAsyncResult__(err);
-  }
-  __reifyAsyncResult__();
-}, { self: this, async: true });`;
+await Promise.resolve(__rspackBundle);`;
     }
     return `${linkBanner}
 import './${config?.outputFile || ''}';`;
