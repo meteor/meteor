@@ -17,7 +17,30 @@ let testNumber = 0;
 // stretch of total silence instead, naming the test that was in flight.
 const STALL_TIMEOUT_MS = Number(process.env.TEST_STALL_TIMEOUT_MIN || 10) * 60 * 1000;
 
+// The stall diagnostics query the app through DDP (`Meteor.callAsync`), which is
+// exactly what may never settle when the app server has died — the situation the
+// stall timeout exists to escape. Cap each diagnostic so a hung call can't wedge
+// the handler and re-strand the runner.
+const STALL_DIAGNOSTIC_TIMEOUT_MS = 5000;
+
 let lastOutputAt = Date.now();
+
+/**
+ * Race a promise against a timeout so a hung diagnostic call can't block the
+ * stall handler forever. Rejects with a labelled error if `ms` elapses first.
+ *
+ * @param promise
+ * @param ms
+ * @param label
+ * @return {Promise<*>}
+ */
+function withTimeout(promise, ms, label) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
 
 async function runNextUrl(browser) {
   const page = await browser.newPage();
@@ -88,9 +111,15 @@ async function runNextUrl(browser) {
     } else {
       const idleMs = Date.now() - lastOutputAt;
       if (idleMs > STALL_TIMEOUT_MS) {
-        await reportStall(page, idleMs);
-        await browser.close().catch(() => {});
-        process.exit(1);
+        // reportStall is best-effort; the browser cleanup and non-zero exit must
+        // happen regardless of whether the diagnostics resolve, hang, or throw.
+        try {
+          await reportStall(page, idleMs);
+        } finally {
+          await browser.close().catch(() => {});
+          process.exit(1);
+        }
+        return;
       }
       setTimeout(poll, 1000);
     }
@@ -117,15 +146,21 @@ async function reportStall(page, idleMs) {
   console.log(`\nNo test output for ${idle} — treating the run as stalled.`);
 
   try {
-    const clientTest = await page.evaluate(() => __Tinytest._getCurrentRunningTestOnClient());
+    const clientTest = await withTimeout(
+      page.evaluate(() => __Tinytest._getCurrentRunningTestOnClient()),
+      STALL_DIAGNOSTIC_TIMEOUT_MS,
+      "client test lookup",
+    );
     console.log(`Client test in flight: ${clientTest || "(none)"}`);
   } catch (e) {
     console.log(`Could not read the client test: ${e.message}`);
   }
 
   try {
-    const serverTest = await page.evaluate(
-      async () => await __Tinytest._getCurrentRunningTestOnServer(),
+    const serverTest = await withTimeout(
+      page.evaluate(async () => await __Tinytest._getCurrentRunningTestOnServer()),
+      STALL_DIAGNOSTIC_TIMEOUT_MS,
+      "server test lookup",
     );
     console.log(`Server test in flight: ${serverTest || "(none)"}`);
   } catch (e) {
