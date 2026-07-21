@@ -6,7 +6,7 @@ import { DDPServer } from 'meteor/ddp-server';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
 import { replaceTypes, replaceMongoAtomWithMeteor, replaceMeteorAtomWithMongo } from './mongo_common';
-import { compareOperationTimes } from './mongo_common';
+import { compareOperationTimes, fenceWriteTsKey } from './mongo_common';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
 
@@ -468,8 +468,8 @@ export class ChangeStreamObserveDriver {
     if (this._stopped) return;
 
     // The fence's write path stamps the exact clusterTime of each write on
-    // fence._csTargetTsByCollection[collectionName] (see
-    // mongo_connection._annotateFenceWithWriteTs). Wait specifically for
+    // fence._csTargetTsByCollection[fenceWriteTsKey(connectionId, collectionName)]
+    // (see mongo_connection._annotateFenceWithWriteTs). Wait specifically for
     // that ts. The fence must be passed explicitly because fence.fire()
     // runs outside the AsyncLocalStorage context where _getCurrentFence()
     // would find it.
@@ -480,10 +480,22 @@ export class ChangeStreamObserveDriver {
     // server's clock advances with replication heartbeats, but our stream
     // only sees events emitted on this collection, so the wait would never
     // resolve under the previous (no-timeout) regime.
+    //
+    // The lookup is scoped to our own connection as well as our collection.
+    // The crossbar notifies every driver listening on a collection *name*, so
+    // an app with a second MongoConnection (e.g. a RemoteCollectionDriver onto
+    // another cluster) that happens to use the same name lands us here on a
+    // fence carrying only that other connection's write. Its clusterTime comes
+    // from a different cluster and our stream will never emit an event at or
+    // past it, so matching on name alone parks this wait forever and hangs the
+    // method that issued the write (meteor/meteor#14600).
     const fence = fenceOverride || DDPServer._getCurrentFence();
     const { collectionName } = this._cursorDescription;
     const { _csTargetTsByCollection } = fence || {};
-    const targetTs = _csTargetTsByCollection && collectionName ? _csTargetTsByCollection[collectionName] : undefined;
+    const connectionId = this._mongoHandle?._csConnectionId;
+    const targetTs = _csTargetTsByCollection && collectionName && connectionId
+      ? _csTargetTsByCollection[fenceWriteTsKey(connectionId, collectionName)]
+      : undefined;
 
     if (!targetTs) {
       return;
