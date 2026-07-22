@@ -3,6 +3,26 @@ const net = require('net');
 const { logError } = require('./log');
 
 /**
+ * Determines whether a spawned command should run through a shell.
+ *
+ * On Windows, batch launchers such as .cmd and .bat require a shell, while
+ * direct executables should avoid shell parsing so argument boundaries are
+ * preserved.
+ *
+ * @param {string} command - The command to evaluate
+ * @param {Object} [options] - Spawn options
+ * @param {boolean} [options.shell] - Explicit shell override
+ * @returns {boolean} True if the command should run through a shell
+ */
+export function shouldUseShell(command, options = {}) {
+  if (typeof options.shell === 'boolean') {
+    return options.shell;
+  }
+
+  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+}
+
+/**
  * Spawns a new OS process with the given command and arguments.
  * Streams output with original styling and handles errors and exit events.
  * Always preserves raw output formatting (colors, progress bars, etc.) and
@@ -26,7 +46,7 @@ export function spawnProcess(command, args, options = {}) {
     cwd: options.cwd || process.cwd(),
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: options.detached || false,
-    ...(process.platform === 'win32' && { shell: true }),
+    shell: shouldUseShell(command, options),
   });
 
   // Add a reference to track if the process is running
