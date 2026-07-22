@@ -34,6 +34,10 @@ export class ChangeStreamObserveDriver {
     this._resolveTimeout = null;
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
+    // While a history-lost resync runs, this holds the set of ids that live
+    // events touched concurrently so the resync can let those events win instead
+    // of racing them (see _resyncAfterHistoryLost / _flushPendingWrites).
+    this._resyncLiveTouched = null;
 
     // Projection function similar to oplog driver.
     //
@@ -245,7 +249,7 @@ export class ChangeStreamObserveDriver {
         // projection and the multiplexer only ever see Meteor types — the same
         // boundary _handleChange establishes for live change events.
         const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
-        const id = typeof doc._id !== 'string' ? new MongoID.ObjectID(doc._id.toHexString()) : doc._id;
+        const id = this._deriveMeteorId(doc);
         const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
         this._sendMultiplexerAdded(id, projectedDoc);
         docCount++;
@@ -357,6 +361,13 @@ export class ChangeStreamObserveDriver {
         try {
           const { operationType, id, fullDocument, fullDocumentBeforeChange, change } = callbackData;
 
+          // While a history-lost resync is running, a live event is authoritative
+          // for any id it touches — record it so the resync leaves that id alone
+          // (it must not re-add a live-deleted doc nor remove a live-inserted one).
+          if (this._resyncLiveTouched) {
+            this._resyncLiveTouched.add(MongoID.idStringify(id));
+          }
+
           switch (operationType) {
             case 'insert':
               this._handleInsert(id, fullDocument);
@@ -388,6 +399,15 @@ export class ChangeStreamObserveDriver {
         }
       });
     }
+  }
+
+  // A raw doc translated by replaceMongoAtomWithMeteor carries either a string
+  // _id or a MongoID.ObjectID; normalize it to the id type the multiplexer keys
+  // on, matching how the live change path derives ids.
+  _deriveMeteorId(doc) {
+    return typeof doc._id !== 'string'
+      ? new MongoID.ObjectID(doc._id.toHexString())
+      : doc._id;
   }
 
   _handleInsert(id, doc) {
@@ -465,9 +485,15 @@ export class ChangeStreamObserveDriver {
   // Reconcile our result set with the current collection contents after the
   // shared change stream lost its resume history: events during the lost window
   // were never delivered, so the multiplexer cache may hold stale documents.
-  // The live-event handlers are all cache-guarded, so reusing them here means a
-  // document concurrently redelivered by the reopened cursor is reconciled once
-  // rather than double-emitted.
+  //
+  // The reopened cursor is already live by the time we run, so live events flow
+  // into this same driver concurrently. Two rules keep that safe:
+  //   1. Live events win. Any id a live event touches while we run is recorded in
+  //      _resyncLiveTouched (see _flushPendingWrites) and left untouched here, so
+  //      a doc inserted live after our query snapshot is never spuriously removed,
+  //      and a doc deleted live is never re-added as a phantom.
+  //   2. For everything else the live-event handlers are cache-guarded, so a doc
+  //      the reopened cursor happens to redeliver is reconciled once, not twice.
   async _resyncAfterHistoryLost() {
     if (this._stopped || !this._isReady) return;
 
@@ -478,35 +504,66 @@ export class ChangeStreamObserveDriver {
       this._cursorDescription.selector || {},
       replaceMeteorAtomWithMongo
     );
-    const options = { ...this._cursorDescription.options };
+    // Fetch FULL documents: _handleInsert re-runs the matcher, which needs every
+    // selector field, so a server-side projection that stripped one would wrongly
+    // reject a genuinely matching doc (the live path never has this problem — it
+    // matches the full fullDocument). Field filtering still happens locally via
+    // _projectionFn. sort/skip/limit are irrelevant to this unordered, whole-
+    // result reconciliation (skip/limit never reach a change-stream cursor).
+    const {
+      projection, fields, sort, limit, skip,
+      ...options
+    } = this._cursorDescription.options || {};
 
-    // Re-add or update every currently-matching document, tracking which ids
-    // are still present so the rest can be removed below.
-    const present = new Set();
-    const cursor = collection.find(selector, options);
-    for await (const rawDoc of cursor) {
-      if (this._stopped) return;
-      const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
-      const id = typeof doc._id !== 'string'
-        ? new MongoID.ObjectID(doc._id.toHexString())
-        : doc._id;
-      present.add(MongoID.idStringify(id));
-      this._handleInsert(id, doc);
-    }
-
-    if (this._stopped) return;
-
-    // Anything still cached but no longer returned by the query left the result
-    // set while the stream was disconnected — emit the removals.
-    const removedIds = [];
-    this._multiplexer._cache?.docs.forEach((cachedDoc, cachedId) => {
-      if (!present.has(MongoID.idStringify(cachedId))) {
-        removedIds.push(cachedId);
+    // Publish the live-touched set for the duration of the resync so concurrent
+    // live events (applied via _flushPendingWrites) win over our snapshot.
+    const liveTouched = new Set();
+    this._resyncLiveTouched = liveTouched;
+    try {
+      // Re-add or update every currently-matching document, tracking which ids
+      // are still present so the rest can be removed below.
+      const present = new Set();
+      const cursor = collection.find(selector, options);
+      for await (const rawDoc of cursor) {
+        if (this._stopped) return;
+        const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
+        const id = this._deriveMeteorId(doc);
+        const idStr = MongoID.idStringify(id);
+        present.add(idStr);
+        if (liveTouched.has(idStr)) continue;
+        try {
+          this._handleInsert(id, doc);
+        } catch (error) {
+          console.error(`[ChangeStream ${this._id}] resync add failed:`, error);
+        }
       }
-    });
-    for (const id of removedIds) {
+
       if (this._stopped) return;
-      this._handleDelete(id);
+
+      // Anything still cached but no longer returned by the query left the result
+      // set while the stream was disconnected — emit the removals. Skip ids a
+      // live event already reconciled during the resync.
+      const removedIds = [];
+      this._multiplexer?._cache?.docs?.forEach?.((cachedDoc, cachedId) => {
+        const idStr = MongoID.idStringify(cachedId);
+        if (!present.has(idStr) && !liveTouched.has(idStr)) {
+          removedIds.push(cachedId);
+        }
+      });
+      for (const id of removedIds) {
+        if (this._stopped) return;
+        try {
+          this._handleDelete(id);
+        } catch (error) {
+          console.error(`[ChangeStream ${this._id}] resync remove failed:`, error);
+        }
+      }
+    } finally {
+      // Only clear if still ours: a re-entrant resync should not happen (drivers
+      // are resynced serially), but guard anyway so we never null a newer set.
+      if (this._resyncLiveTouched === liveTouched) {
+        this._resyncLiveTouched = null;
+      }
     }
   }
 
