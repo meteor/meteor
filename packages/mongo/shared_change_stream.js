@@ -29,6 +29,9 @@ export class SharedChangeStream {
     // racing a second cursor.
     this._startPromise = null;
     this._restartTimer = null;
+    // Set when a restart is triggered by a non-resumable error so the reopened
+    // stream reconciles its drivers with the collection (see _restart).
+    this._historyLost = false;
   }
 
   get size() {
@@ -117,6 +120,16 @@ export class SharedChangeStream {
         resumeTokenPresent: !!this._resumeToken,
         error,
       });
+      // A non-resumable error means the resume token is no longer in the oplog,
+      // so watch() reopens but every getMore fails with the same error again —
+      // an endless error→restart loop that re-sends the dead token. Drop the
+      // token so the restart falls back to startAtOperationTime (now), and flag
+      // the stream so the reopened cursor reconciles its drivers: events in the
+      // lost window were never delivered.
+      if (this._isNonResumableError(error)) {
+        this._resumeToken = null;
+        this._historyLost = true;
+      }
       this._scheduleRestart(
         Meteor?.settings?.packages?.mongo?.changeStream?.delay?.error || 100
       );
@@ -161,6 +174,28 @@ export class SharedChangeStream {
     }
   }
 
+  // A change stream is non-resumable when the resume point has aged out of the
+  // oplog (ChangeStreamHistoryLost, code 286) or the driver otherwise tags the
+  // error NonResumableChangeStreamError. Resuming from the stored token can
+  // never succeed again, so the caller must restart from a fresh start time.
+  _isNonResumableError(error) {
+    if (!error) return false;
+    if (error.code === 286 || error.codeName === 'ChangeStreamHistoryLost') {
+      return true;
+    }
+    const label = 'NonResumableChangeStreamError';
+    if (typeof error.hasErrorLabel === 'function' && error.hasErrorLabel(label)) {
+      return true;
+    }
+    if (error.errorLabelSet && typeof error.errorLabelSet.has === 'function') {
+      return error.errorLabelSet.has(label);
+    }
+    if (Array.isArray(error.errorLabels)) {
+      return error.errorLabels.includes(label);
+    }
+    return false;
+  }
+
   _scheduleRestart(delayMs) {
     if (this._stopped || this._restartTimer) return;
     this._restartTimer = setTimeout(() => {
@@ -183,6 +218,14 @@ export class SharedChangeStream {
       if (this._stopped) return;
       // Reopen via the shared guard so a mid-restart subscriber awaits it too.
       await this._ensureOpen();
+      // The reopened cursor starts at "now", so bring each driver's result set
+      // back in sync with the collection for the events it never received. Only
+      // clear the flag once the reopen succeeds, so a failed reopen that
+      // reschedules still reconciles on the retry.
+      if (this._historyLost && !this._stopped) {
+        this._historyLost = false;
+        await this._resyncDrivers();
+      }
       console.error('ChangeStream restart done:', {
         collectionName: this._collectionName,
         driverCount: this._drivers.size,
@@ -196,6 +239,25 @@ export class SharedChangeStream {
       this._scheduleRestart(
         Meteor?.settings?.packages?.mongo?.changeStream?.delay?.error || 100
       );
+    }
+  }
+
+  // Reconcile every attached driver with the collection after a non-resumable
+  // gap. Best-effort and isolated per driver: a failed reconcile is logged, not
+  // rethrown, so it can never wedge or re-loop the stream that just recovered.
+  async _resyncDrivers() {
+    for (const driver of [...this._drivers]) {
+      if (this._stopped) return;
+      if (driver._stopped) continue;
+      try {
+        await driver._resyncAfterHistoryLost();
+      } catch (error) {
+        console.error('ChangeStream resync after history loss failed:', {
+          collectionName: this._collectionName,
+          driverId: driver._id,
+          error,
+        });
+      }
     }
   }
 

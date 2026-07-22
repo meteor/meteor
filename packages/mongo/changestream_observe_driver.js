@@ -462,6 +462,54 @@ export class ChangeStreamObserveDriver {
     }
   }
 
+  // Reconcile our result set with the current collection contents after the
+  // shared change stream lost its resume history: events during the lost window
+  // were never delivered, so the multiplexer cache may hold stale documents.
+  // The live-event handlers are all cache-guarded, so reusing them here means a
+  // document concurrently redelivered by the reopened cursor is reconciled once
+  // rather than double-emitted.
+  async _resyncAfterHistoryLost() {
+    if (this._stopped || !this._isReady) return;
+
+    const collection = this._mongoHandle.rawCollection(
+      this._cursorDescription.collectionName
+    );
+    const selector = replaceTypes(
+      this._cursorDescription.selector || {},
+      replaceMeteorAtomWithMongo
+    );
+    const options = { ...this._cursorDescription.options };
+
+    // Re-add or update every currently-matching document, tracking which ids
+    // are still present so the rest can be removed below.
+    const present = new Set();
+    const cursor = collection.find(selector, options);
+    for await (const rawDoc of cursor) {
+      if (this._stopped) return;
+      const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
+      const id = typeof doc._id !== 'string'
+        ? new MongoID.ObjectID(doc._id.toHexString())
+        : doc._id;
+      present.add(MongoID.idStringify(id));
+      this._handleInsert(id, doc);
+    }
+
+    if (this._stopped) return;
+
+    // Anything still cached but no longer returned by the query left the result
+    // set while the stream was disconnected — emit the removals.
+    const removedIds = [];
+    this._multiplexer._cache?.docs.forEach((cachedDoc, cachedId) => {
+      if (!present.has(MongoID.idStringify(cachedId))) {
+        removedIds.push(cachedId);
+      }
+    });
+    for (const id of removedIds) {
+      if (this._stopped) return;
+      this._handleDelete(id);
+    }
+  }
+
   async _waitUntilCaughtUp(fenceOverride) {
     // Wait until our change stream has processed events up to the
     // server's current operation time. Mirrors oplog's wait logic.
