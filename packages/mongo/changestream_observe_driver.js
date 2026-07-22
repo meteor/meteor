@@ -176,6 +176,29 @@ export class ChangeStreamObserveDriver {
 
       if (this._stopped) return;
 
+      // Establish this driver's caught-up floor. The stream subscription is
+      // active now, so every write at or before the server's current
+      // operationTime is either already dispatched to _onChange or will be
+      // reflected in the snapshot read below. Without this floor, a fence
+      // targeting a write that PREDATES this driver waits for a change event
+      // that will never be delivered to it — the canonical case is a
+      // login-style method that writes the collection and then triggers
+      // creation of this observer (setUserId rerunning user publications).
+      // The stream (shared, possibly opened long ago by another observer)
+      // dispatched that event before this driver joined, so on an idle
+      // collection the wait stalls until the next unrelated write.
+      try {
+        const pingRes = await this._mongoHandle.db.command({ ping: 1 });
+        if (pingRes?.operationTime) {
+          this._setLastProcessedOperationTime(pingRes.operationTime);
+        }
+      } catch (error) {
+        Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
+        // Best-effort: without the floor we only lose the fast-path release.
+      }
+
+      if (this._stopped) return;
+
       // Now read the snapshot. Events that arrived while we were getting
       // here are sitting in _pendingWrites and will be flushed below.
       await this._sendInitialAdds(collection);
@@ -382,9 +405,21 @@ export class ChangeStreamObserveDriver {
     this._writesToCommitWhenReady = [];
 
     if (writes.length > 0) {
-      await this._multiplexer.onFlush(async () => {
+      await this._multiplexer.onFlush(() => {
+        // Commit in a microtask instead of awaiting inside this queue task.
+        // committed() on the fence's last outstanding write fires the fence,
+        // and the fence's onBeforeFire handler re-enters this same multiplexer
+        // queue via onFlush (see _startListening). Awaiting that chain from
+        // inside the current queue task deadlocks the queue: the fire waits on
+        // a task queued behind this one, which can never run. Deferring keeps
+        // the ordering guarantee — commits still start only after the flush
+        // point — without holding the queue while the fence fires.
         for (const write of writes) {
-          await write.committed();
+          Promise.resolve()
+            .then(() => write.committed())
+            .catch((error) => {
+              console.error('ChangeStream deferred write commit failed:', error);
+            });
         }
       });
     }
