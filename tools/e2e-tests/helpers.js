@@ -617,25 +617,39 @@ export async function createMeteorApp(appName, example, options = {}) {
  * @returns {Promise<void>}
  */
 export async function cleanupTempDir(tempDir) {
-  if (tempDir) {
-    try {
-      rimraf.sync(tempDir, { disableGlob: true, maxRetries: 5, retryDelay: 500 });
-      console.log(`Removed temporary directory: ${tempDir}`);
-    } catch (err) {
-      // Implement async removal as a fallback
-      return new Promise((resolve, reject) => {
-        rimraf(tempDir, { disableGlob: true, maxRetries: 5, retryDelay: 500 }, (error) => {
-          if (error) {
-            console.error(`Async removal also failed: ${error}`);
-            reject(error);
-          } else {
-            console.log(`Removed temporary directory: ${tempDir}`);
-            resolve();
-          }
-        });
-      });
+  if (!tempDir) return;
+
+  try {
+    fs.rmSync(tempDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 500
+    });
+
+    if (fs.existsSync(tempDir)) {
+      throw new Error("cleanup failed after rmSync");
     }
+
+  } catch (err) {
+  console.warn(`rmSync failed, falling back to rimraf: ${err.message}`);
+
+  await new Promise((resolve, reject) => {
+    rimraf(tempDir, { maxRetries: 5, retryDelay: 500 }, (error) => {
+      if (error) {
+        console.error(`Async removal also failed: ${error}`);
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+
+  if (fs.existsSync(tempDir)) {
+    throw new Error("cleanup failed even after fallback");
   }
+}
+console.log(`Removed temporary directory: ${tempDir}`);
 }
 
 /**
