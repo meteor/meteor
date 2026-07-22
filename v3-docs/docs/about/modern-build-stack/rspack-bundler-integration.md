@@ -119,20 +119,17 @@ This file defines dynamic configurations, so you return the config from a resolv
 const { defineConfig } = require('@meteorjs/rspack');
 const { rspack } = require('@rspack/core');
 const HtmlRspackPlugin = require('html-rspack-plugin');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 /**
  * Example: Using different plugins for client and server builds
  *
  * - For client: Load Lodash automatically with ProvidePlugin
- * - For server: Add Node.js polyfills with NodePolyfillPlugin
  * - For both: Add progress plugin
  */
 module.exports = defineConfig(Meteor => {
   return {
     plugins: [
       Meteor.isClient && new rspack.ProvidePlugin({ _: 'lodash' }),
-      Meteor.isServer && new NodePolyfillPlugin(),
       new rspack.ProgressPlugin()
     ].filter(Boolean),
   };
@@ -801,8 +798,6 @@ This Rspack cache is enabled by default in persistent mode. If you [encounter is
 
 ```javascript
 const { defineConfig } = require('@meteorjs/rspack');
-const { rspack } = require('@rspack/core');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 module.exports = defineConfig(Meteor => ({
   // Disable cache, or use 'memory' to switch to in-memory cache
