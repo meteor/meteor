@@ -196,6 +196,28 @@ export async function assertFileExist(tempDir, filePath, options = {}) {
 }
 
 /**
+ * Helper function to assert that a path is a symbolic link and optionally
+ * points to the expected target.
+ * @param {string} basePath - Base directory path
+ * @param {string} relPath - Relative path from basePath to the symlink
+ * @param {Object} options - Additional options
+ * @param {string} options.target - Expected readlink target
+ * @returns {Promise<void>}
+ */
+export async function assertSymlink(basePath, relPath, options = {}) {
+  const { target } = options;
+  const fullPath = path.join(basePath, relPath);
+  const stat = await fs.lstat(fullPath);
+
+  expect(stat.isSymbolicLink()).toBe(true);
+
+  if (target) {
+    const actualTarget = await fs.readlink(fullPath);
+    expect(actualTarget).toBe(target);
+  }
+}
+
+/**
  * Helper function to assert that a path does NOT exist
  * Retries until the path is gone or the timeout is exceeded
  * @param {string} basePath - Base directory path
