@@ -6,7 +6,7 @@ import { DDPServer } from 'meteor/ddp-server';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
 import { replaceTypes, replaceMongoAtomWithMeteor, replaceMeteorAtomWithMongo } from './mongo_common';
-import { compareOperationTimes } from './mongo_common';
+import { compareOperationTimes, fenceWriteTsKey } from './mongo_common';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
 
@@ -173,6 +173,29 @@ export class ChangeStreamObserveDriver {
         this._cursorDescription.collectionName
       );
       await this._sharedStream.addDriver(this);
+
+      if (this._stopped) return;
+
+      // Establish this driver's caught-up floor. The stream subscription is
+      // active now, so every write at or before the server's current
+      // operationTime is either already dispatched to _onChange or will be
+      // reflected in the snapshot read below. Without this floor, a fence
+      // targeting a write that PREDATES this driver waits for a change event
+      // that will never be delivered to it — the canonical case is a
+      // login-style method that writes the collection and then triggers
+      // creation of this observer (setUserId rerunning user publications).
+      // The stream (shared, possibly opened long ago by another observer)
+      // dispatched that event before this driver joined, so on an idle
+      // collection the wait stalls until the next unrelated write.
+      try {
+        const pingRes = await this._mongoHandle.db.command({ ping: 1 });
+        if (pingRes?.operationTime) {
+          this._setLastProcessedOperationTime(pingRes.operationTime);
+        }
+      } catch (error) {
+        Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
+        // Best-effort: without the floor we only lose the fast-path release.
+      }
 
       if (this._stopped) return;
 
@@ -382,9 +405,21 @@ export class ChangeStreamObserveDriver {
     this._writesToCommitWhenReady = [];
 
     if (writes.length > 0) {
-      await this._multiplexer.onFlush(async () => {
+      await this._multiplexer.onFlush(() => {
+        // Commit in a microtask instead of awaiting inside this queue task.
+        // committed() on the fence's last outstanding write fires the fence,
+        // and the fence's onBeforeFire handler re-enters this same multiplexer
+        // queue via onFlush (see _startListening). Awaiting that chain from
+        // inside the current queue task deadlocks the queue: the fire waits on
+        // a task queued behind this one, which can never run. Deferring keeps
+        // the ordering guarantee — commits still start only after the flush
+        // point — without holding the queue while the fence fires.
         for (const write of writes) {
-          await write.committed();
+          Promise.resolve()
+            .then(() => write.committed())
+            .catch((error) => {
+              console.error('ChangeStream deferred write commit failed:', error);
+            });
         }
       });
     }
@@ -468,8 +503,8 @@ export class ChangeStreamObserveDriver {
     if (this._stopped) return;
 
     // The fence's write path stamps the exact clusterTime of each write on
-    // fence._csTargetTsByCollection[collectionName] (see
-    // mongo_connection._annotateFenceWithWriteTs). Wait specifically for
+    // fence._csTargetTsByCollection[fenceWriteTsKey(connectionId, collectionName)]
+    // (see mongo_connection._annotateFenceWithWriteTs). Wait specifically for
     // that ts. The fence must be passed explicitly because fence.fire()
     // runs outside the AsyncLocalStorage context where _getCurrentFence()
     // would find it.
@@ -480,10 +515,22 @@ export class ChangeStreamObserveDriver {
     // server's clock advances with replication heartbeats, but our stream
     // only sees events emitted on this collection, so the wait would never
     // resolve under the previous (no-timeout) regime.
+    //
+    // The lookup is scoped to our own connection as well as our collection.
+    // The crossbar notifies every driver listening on a collection *name*, so
+    // an app with a second MongoConnection (e.g. a RemoteCollectionDriver onto
+    // another cluster) that happens to use the same name lands us here on a
+    // fence carrying only that other connection's write. Its clusterTime comes
+    // from a different cluster and our stream will never emit an event at or
+    // past it, so matching on name alone parks this wait forever and hangs the
+    // method that issued the write (meteor/meteor#14600).
     const fence = fenceOverride || DDPServer._getCurrentFence();
     const { collectionName } = this._cursorDescription;
     const { _csTargetTsByCollection } = fence || {};
-    const targetTs = _csTargetTsByCollection && collectionName ? _csTargetTsByCollection[collectionName] : undefined;
+    const connectionId = this._mongoHandle?._csConnectionId;
+    const targetTs = _csTargetTsByCollection && collectionName && connectionId
+      ? _csTargetTsByCollection[fenceWriteTsKey(connectionId, collectionName)]
+      : undefined;
 
     if (!targetTs) {
       return;

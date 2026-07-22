@@ -318,6 +318,42 @@ Tinytest.addAsync(
   }
 );
 
+// Regression test for #13489: mutating Meteor.settings.public (which mutates
+// __meteor_runtime_config__.PUBLIC_SETTINGS) after the boilerplate has been
+// generated and cached at startup should still be reflected for clients that
+// connect afterwards.
+Tinytest.addAsync(
+  "webapp - runtime updates to public settings reach new clients",
+  async function (test) {
+    const original = __meteor_runtime_config__.PUBLIC_SETTINGS;
+    __meteor_runtime_config__.PUBLIC_SETTINGS = {
+      ...(original || {}),
+      webappRuntimePublicSetting: "set-after-startup",
+    };
+
+    try {
+      const req = new http.IncomingMessage();
+      req.url = "http://example.com";
+      req.browser = { name: "headless" };
+
+      const { stream } = await WebAppInternals.getBoilerplate(
+        req,
+        "web.browser"
+      );
+      const html = await streamToString(stream);
+
+      test.isTrue(
+        html.indexOf("webappRuntimePublicSetting") >= 0 &&
+          html.indexOf("set-after-startup") >= 0,
+        "boilerplate served to a new client should include public settings " +
+          "that were set after startup"
+      );
+    } finally {
+      __meteor_runtime_config__.PUBLIC_SETTINGS = original;
+    }
+  }
+);
+
 // Support 'named pipes' (strings) as ports for support of Windows Server /
 // Azure deployments
 Tinytest.add(

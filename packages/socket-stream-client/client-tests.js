@@ -275,3 +275,27 @@ Tinytest.add(
     test.equal(stream.status().status, 'failed');
   }
 );
+
+// The 100s legacy watchdog detects missing SockJS heartbeat frames. Native
+// WebSocket transports have no such frames, so arming it there guarantees a
+// healthy-but-quiet connection (DDP heartbeats disabled) is killed after
+// 100s of silence.
+Tinytest.add(
+  'stream - legacy heartbeat watchdog only arms on the sockjs transport',
+  function(test) {
+    let stream = new ClientStream('/');
+    try {
+      // Simulate a message arriving on a native-WebSocket stream.
+      stream._transport = 'websocket';
+      stream._heartbeat_received();
+      test.isFalse(!!stream.heartbeatTimer);
+
+      // The sockjs transport keeps its watchdog.
+      stream._transport = 'sockjs';
+      stream._heartbeat_received();
+      test.isTrue(!!stream.heartbeatTimer);
+    } finally {
+      stream.disconnect();
+    }
+  }
+);

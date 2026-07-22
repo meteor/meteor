@@ -22,6 +22,12 @@ Every app and skeleton goes through these phases (unless skipped):
 
 Default assertions on every run phase: build artifacts exist, page title matches, body styles render, `__rspack__` script tag is present.
 
+### Package dependency regression
+
+| What is covered | Test |
+|-----------------|------|
+| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+
 ---
 
 ## Apps
@@ -46,6 +52,7 @@ Core React integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
 | Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
 
 ### react-router
@@ -245,11 +252,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `node:buffer` | `imports/api/links.js` | Node.js built-in via `node:` protocol in shared client/server code — must be ignored on client without errors |
 | `@react-email/components` | `imports/emails/TestEmail.jsx` | JSX-heavy ESM package with many subpath exports |
 
-### react (`apps/react/plugins/demo-unplugin.js`)
+### react (`apps/react/`)
 
-| Package | Reason |
-|---------|--------|
-| `unplugin` | Unplugin transform hook integration — validates rspack cache tracks plugin dependency files (#14031) |
+| Package | File | Reason |
+|---------|------|--------|
+| `unplugin` | `plugins/demo-unplugin.js` | Unplugin transform hook integration validates rspack cache tracks plugin dependency files (#14031) |
+| `meteor-node-stubs` (`buffer`, `crypto`) and `isomorphic-timers-promises` | `tests/main.js` | Browser implementations and global `Buffer` support for client tests |
 
 ### babel (`apps/babel/server/apollo.js`)
 

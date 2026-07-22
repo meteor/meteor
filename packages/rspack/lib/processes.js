@@ -203,6 +203,83 @@ export function getConfigFilePath() {
 }
 
 /**
+ * Gets the resolved Rspack CLI entrypoint path.
+ *
+ * This bypasses platform-specific npx wrappers so arguments such as config
+ * paths with spaces are passed directly to Node without shell re-parsing.
+ *
+ * @returns {string} The path to @rspack/cli/bin/rspack.js
+ * @throws {Error} If the Rspack CLI entrypoint cannot be found
+ */
+export function getRspackCliPath() {
+  const appDir = getMeteorAppDir();
+
+  try {
+    // Dynamically resolve the exact bin path defined by the package
+    const pkgPath = require.resolve('@rspack/cli/package.json', { paths: [appDir] });
+    const pkg = require(pkgPath);
+    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.rspack;
+    if (bin) {
+      return path.join(path.dirname(pkgPath), bin);
+    }
+  } catch (err) {
+    // Fall through to hardcoded fallback if package.json isn't exported
+  }
+
+  const candidatePaths = [
+    path.join(appDir, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+  ];
+
+  const monorepoPath = getMonorepoPath();
+  if (monorepoPath) {
+    candidatePaths.push(
+      path.join(monorepoPath, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+    );
+  }
+
+  for (const candidatePath of candidatePaths) {
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  throw new Error(
+    'Could not find @rspack/cli/bin/rspack.js. Try running `meteor npm install` to ensure rspack is available.'
+  );
+}
+
+/**
+ * Determines whether Rspack should bypass the npx wrapper.
+ *
+ * This is only needed on Windows when one of the CLI arguments contains
+ * whitespace, which is where the wrapper path parsing breaks.
+ *
+ * @param {string[]} args - Arguments intended for the Rspack CLI
+ * @param {string} [platform=process.platform] - Platform to resolve for
+ * @returns {boolean} True if the npx wrapper should be bypassed
+ */
+export function shouldBypassRspackNpx(args, platform = process.platform) {
+  return platform === 'win32' && args.some((arg) => /\s/.test(arg));
+}
+
+/**
+ * Gets the command and arguments used to launch the Rspack CLI.
+ *
+ * @param {string[]} args - Arguments to pass to the Rspack CLI
+ * @returns {{ command: string, args: string[] }} The command and argument list
+ */
+export function getRspackCliCommand(args) {
+  if (shouldBypassRspackNpx(args)) {
+    return {
+      command: process.execPath,
+      args: [getRspackCliPath(), ...args],
+    };
+  }
+
+  return getNpxCommand(['rspack', ...args]);
+}
+
+/**
  * Gets the appropriate Rspack environment variables and command line arguments
  * @param {Object} options - Options for environment variables
  * @param {boolean} options.isClient - Whether this is for client-side build
@@ -382,7 +459,7 @@ export function startRspackClientServe(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
-  const { command, args } = getNpxCommand(['rspack', 'serve', '--config', configFile, ...params]);
+  const { command, args } = getRspackCliCommand(['serve', '--config', configFile, ...params]);
   const newClientProcess = spawnProcess(
     command,
     args, {
@@ -489,7 +566,7 @@ export function startRspackServerWatch(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: false, isServer: true });
-  const { command, args } = getNpxCommand(['rspack', 'build', '--watch', '--config', configFile, ...params]);
+  const { command, args } = getRspackCliCommand(['build', '--watch', '--config', configFile, ...params]);
   const newServerProcess = spawnProcess(
     command,
     args, {
@@ -574,14 +651,13 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
   return new Promise((resolve, reject) => {
     const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule, isTestLike });
     const rspackArgs = [
-      'rspack',
       'build',
       '--config',
       configFile,
       ...(watch && ['--watch']) || [],
       ...params,
     ].filter(Boolean);
-    const { command, args } = getNpxCommand(rspackArgs);
+    const { command, args } = getRspackCliCommand(rspackArgs);
     spawnProcess(
       command,
       args,

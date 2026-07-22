@@ -2439,6 +2439,13 @@ const isBsonTimestamp = (ts) =>
   ts != null && typeof ts === 'object'
   && typeof ts.t === 'number' && typeof ts.i === 'number';
 
+// Write timestamps are recorded on the fence per (connection, collection) —
+// see fenceWriteTsKey in mongo_common.js. Tests that read or fabricate the
+// annotation map have to build the same composite key.
+const defaultMongo = () => MongoInternals.defaultRemoteCollectionDriver().mongo;
+const fenceKey = (collectionName, connection) =>
+  `${(connection || defaultMongo())._csConnectionId}\u0000${collectionName}`;
+
 Tinytest.addAsync(
   'changestream - insertAsync annotates fence with per-collection ts',
   async function (test) {
@@ -2449,8 +2456,8 @@ Tinytest.addAsync(
       snapshot = f._csTargetTsByCollection && { ...f._csTargetTsByCollection };
     });
     test.isTrue(snapshot !== null, 'fence should have been annotated during the fn');
-    test.isTrue(snapshot[c._name] !== undefined, 'map should contain the collection name key');
-    test.isTrue(isBsonTimestamp(snapshot[c._name]), 'annotation value should be a BSON Timestamp');
+    test.isTrue(snapshot[fenceKey(c._name)] !== undefined, 'map should contain the (connection, collection) key');
+    test.isTrue(isBsonTimestamp(snapshot[fenceKey(c._name)]), 'annotation value should be a BSON Timestamp');
     test.isTrue(fence.fired, 'fence should have fired');
   }
 );
@@ -2466,7 +2473,7 @@ Tinytest.addAsync(
       snapshot = f._csTargetTsByCollection && { ...f._csTargetTsByCollection };
     });
     test.isTrue(snapshot !== null);
-    test.isTrue(isBsonTimestamp(snapshot[c._name]), 'update should annotate with a Timestamp');
+    test.isTrue(isBsonTimestamp(snapshot[fenceKey(c._name)]), 'update should annotate with a Timestamp');
   }
 );
 
@@ -2481,7 +2488,7 @@ Tinytest.addAsync(
       snapshot = f._csTargetTsByCollection && { ...f._csTargetTsByCollection };
     });
     test.isTrue(snapshot !== null);
-    test.isTrue(isBsonTimestamp(snapshot[c._name]), 'remove should annotate with a Timestamp');
+    test.isTrue(isBsonTimestamp(snapshot[fenceKey(c._name)]), 'remove should annotate with a Timestamp');
   }
 );
 
@@ -2497,8 +2504,8 @@ Tinytest.addAsync(
       snapshot = f._csTargetTsByCollection && { ...f._csTargetTsByCollection };
     });
     test.isTrue(snapshot !== null);
-    test.isTrue(isBsonTimestamp(snapshot[a._name]), 'collection A should be annotated');
-    test.isTrue(isBsonTimestamp(snapshot[b._name]), 'collection B should be annotated');
+    test.isTrue(isBsonTimestamp(snapshot[fenceKey(a._name)]), 'collection A should be annotated');
+    test.isTrue(isBsonTimestamp(snapshot[fenceKey(b._name)]), 'collection B should be annotated');
     test.notEqual(a._name, b._name, 'sanity: distinct collection names');
   }
 );
@@ -2516,9 +2523,9 @@ Tinytest.addAsync(
     const snapshotTs = (ts) => (ts == null ? null : { t: ts.t, i: ts.i });
     await withFence(async (f) => {
       await c.insertAsync({ n: 1 });
-      tsFirst = snapshotTs(f._csTargetTsByCollection[c._name]);
+      tsFirst = snapshotTs(f._csTargetTsByCollection[fenceKey(c._name)]);
       await c.insertAsync({ n: 2 });
-      tsFinal = snapshotTs(f._csTargetTsByCollection[c._name]);
+      tsFinal = snapshotTs(f._csTargetTsByCollection[fenceKey(c._name)]);
     });
     test.isTrue(isBsonTimestamp(tsFirst) && isBsonTimestamp(tsFinal));
     const firstLessOrEqual = tsFirst.t < tsFinal.t
@@ -2564,7 +2571,7 @@ Tinytest.addAsync(
     // _waitUntilCaughtUp should hit the 'already-caught-up' early exit
     // and not enqueue a resolver.
     const pastTs = driver._lastProcessedOperationTime;
-    const fakeFence = { _csTargetTsByCollection: { [c._name]: pastTs } };
+    const fakeFence = { _csTargetTsByCollection: { [fenceKey(c._name)]: pastTs } };
 
     const t0 = Date.now();
     await driver._waitUntilCaughtUp(fakeFence);
@@ -2608,7 +2615,7 @@ Tinytest.addAsync(
 
     const farFutureTs = { t: Math.floor(Date.now() / 1000) + 3600, i: 1 };
     const strayFence = {
-      _csTargetTsByCollection: { ['not_' + c._name]: farFutureTs },
+      _csTargetTsByCollection: { [fenceKey('not_' + c._name)]: farFutureTs },
     };
 
     const t0 = Date.now();
@@ -2620,6 +2627,137 @@ Tinytest.addAsync(
       `annotation for another collection should be ignored; elapsed=${elapsed}ms`
     );
     handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream- _waitUntilCaughtUp ignores annotation from another connection (#14600)',
+  async function (test) {
+    // Regression for meteor/meteor#14600. An app can hold more than one
+    // MongoConnection — a second MongoInternals.RemoteCollectionDriver onto a
+    // different cluster is the common case — and those connections routinely
+    // use the same collection names. The crossbar notifies every driver
+    // listening on a collection *name*, so a write on the other connection
+    // lands this driver in _waitUntilCaughtUp with a fence that only carries
+    // that connection's timestamp. Its clusterTime comes from a cluster this
+    // driver's stream never observes, so keying on the name alone parked the
+    // wait forever and hung the method that issued the write.
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const driver = handle._multiplexer._observeDriver;
+
+    // Same collection name, but recorded against a connection that is not ours.
+    const farFutureTs = { t: Math.floor(Date.now() / 1000) + 3600, i: 1 };
+    const otherConnection = { _csConnectionId: 'mc_other_connection' };
+    const foreignFence = {
+      _csTargetTsByCollection: {
+        [fenceKey(c._name, otherConnection)]: farFutureTs,
+      },
+    };
+
+    // Race the wait: before the fix this never resolves, and awaiting it
+    // directly would hang the whole suite instead of failing.
+    const t0 = Date.now();
+    const raced = await Promise.race([
+      driver._waitUntilCaughtUp(foreignFence).then(() => 'resolved'),
+      new Promise(r => setTimeout(() => r('timed-out'), 2000)),
+    ]);
+    const elapsed = Date.now() - t0;
+
+    test.equal(
+      raced, 'resolved',
+      'a foreign connection\'s annotation must not park this driver\'s wait'
+    );
+    test.isTrue(
+      elapsed < 250,
+      `foreign-connection annotation should be ignored; elapsed=${elapsed}ms`
+    );
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream- _waitUntilCaughtUp still waits for its own connection (#14600)',
+  async function (test) {
+    // Guards the other side of the #14600 fix: scoping the lookup by
+    // connection must not turn every wait into a no-op. An annotation recorded
+    // against *our* connection for *our* collection still has to park the wait
+    // until the stream reaches it — releasing early is what #14452 was about
+    // (the fence fires before the change is applied and the client sees
+    // `updated` with no preceding `added`/`changed`/`removed`).
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const driver = handle._multiplexer._observeDriver;
+
+    const farFutureTs = { t: Math.floor(Date.now() / 1000) + 3600, i: 1 };
+    const ownFence = {
+      _csTargetTsByCollection: { [fenceKey(c._name)]: farFutureTs },
+    };
+
+    const raced = await Promise.race([
+      driver._waitUntilCaughtUp(ownFence).then(() => 'resolved'),
+      new Promise(r => setTimeout(() => r('still-waiting'), 500)),
+    ]);
+
+    test.equal(
+      raced, 'still-waiting',
+      'a ts for our own connection and collection must still block the wait'
+    );
+
+    // stop() drains the parked resolver so the pending wait above doesn't
+    // outlive the test (see the #14452 test below).
+    handle.stop();
+  }
+);
+
+Tinytest.addAsync(
+  'changestream- a second connection annotates its own fence key (#14600)',
+  async function (test) {
+    // End-to-end counterpart of the two tests above, with a real second
+    // MongoConnection rather than a hand-built fence: writing the same
+    // collection name through each connection must produce two distinct
+    // entries, so neither driver can pick up the other's clusterTime.
+    const collectionName = 'changestream_test_' + Random.id();
+    const primary = defaultMongo();
+    const secondary = new MongoInternals.RemoteCollectionDriver(
+      process.env.MONGO_URL
+    );
+
+    test.notEqual(
+      primary._csConnectionId, secondary.mongo._csConnectionId,
+      'each MongoConnection should get its own id'
+    );
+
+    const primaryCollection = new Mongo.Collection(collectionName);
+    const secondaryCollection = new Mongo.Collection(collectionName, {
+      _driver: secondary,
+      _suppressSameNameError: true,
+    });
+
+    let snapshot = null;
+    await withFence(async (f) => {
+      await primaryCollection.insertAsync({ via: 'primary' });
+      await secondaryCollection.insertAsync({ via: 'secondary' });
+      snapshot = f._csTargetTsByCollection && { ...f._csTargetTsByCollection };
+    });
+
+    test.isTrue(snapshot !== null, 'fence should have been annotated');
+    test.isTrue(
+      isBsonTimestamp(snapshot[fenceKey(collectionName, primary)]),
+      'the primary connection should have its own entry'
+    );
+    test.isTrue(
+      isBsonTimestamp(snapshot[fenceKey(collectionName, secondary.mongo)]),
+      'the secondary connection should have a separate entry'
+    );
+    test.equal(
+      Object.keys(snapshot).length, 2,
+      'same collection name on two connections should not share one entry'
+    );
+
+    await secondary.mongo.close();
   }
 );
 
@@ -2649,7 +2787,7 @@ Tinytest.addAsync(
 
     const Timestamp = driver._lastProcessedOperationTime.constructor;
     const farFutureTs = new Timestamp({ t: Math.floor(Date.now() / 1000) + 3600, i: 1 });
-    const fakeFence = { _csTargetTsByCollection: { [c._name]: farFutureTs } };
+    const fakeFence = { _csTargetTsByCollection: { [fenceKey(c._name)]: farFutureTs } };
 
     // Park the waiter. Do NOT await — it must not resolve until stop().
     let resolved = false;

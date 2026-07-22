@@ -1177,3 +1177,46 @@ Tinytest.addAsync(
     handleB.stop(); // must not throw
   }
 );
+
+// added() lazily creates the per-collection accounting Set; removed() read it
+// unguarded. Publication strategies can change per collection at runtime, so
+// an add under a no-accounting strategy followed by a remove under an
+// accounting one threw a TypeError out of the publish handler.
+Meteor.publish('livedata_server_test_strategy_flip', function () {
+  const collection = 'strategy-flip-collection';
+  Meteor.server.setPublicationStrategy(
+    collection,
+    DDPServer.publicationStrategies.NO_MERGE_NO_HISTORY
+  );
+  try {
+    this.added(collection, 'doc1', { a: 1 });
+    Meteor.server.setPublicationStrategy(
+      collection,
+      DDPServer.publicationStrategies.SERVER_MERGE
+    );
+    this.removed(collection, 'doc1');
+  } finally {
+    // Fully restore global state: remove the per-collection override rather
+    // than leaving an explicit (if default-equivalent) entry behind.
+    delete Meteor.server._publicationStrategies[collection];
+  }
+  this.ready();
+});
+
+Tinytest.addAsync(
+  "livedata server - removed() after publication strategy change does not throw",
+  async function (test) {
+    const { clientConn } = await getTestConnections(test);
+    try {
+      await new Promise((resolve, reject) => {
+        clientConn.subscribe('livedata_server_test_strategy_flip', {
+          onReady: resolve,
+          onError: reject,
+        });
+      });
+      test.isTrue(true, 'subscription became ready without a handler error');
+    } finally {
+      clientConn.disconnect();
+    }
+  }
+);
