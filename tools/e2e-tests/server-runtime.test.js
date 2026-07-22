@@ -18,6 +18,7 @@ const ABSOLUTE_LOCAL_PORTS = [3130, 18130];
 const DELAYED_IMPORT_PORTS = [3131, 18131];
 const ES_MODULE_APP_PORTS = [3132, 18132];
 const DEBUGGING_PORTS = [3133, 18133, 9233];
+const ASSETS_GLOBAL_PORTS = [3134, 18134];
 
 async function getInspectorWebSocketUrl(port, timeout = 90000) {
   const deadline = Date.now() + timeout;
@@ -251,6 +252,65 @@ describe('Regressions / Server Runtime /', () => {
         ports: ABSOLUTE_LOCAL_PORTS,
       });
       await fs.remove(meteorLocalDir);
+    }
+  });
+
+  test('exposes the Assets and Npm globals to server bundle code', async () => {
+    let tempDir;
+    let meteorProcess;
+
+    try {
+      tempDir = await prepareServerOnlyApp(ASSETS_GLOBAL_PORTS);
+
+      await fs.outputFile(
+        path.join(tempDir, 'private', 'assets-fixture.txt'),
+        'assets fixture content'
+      );
+      await fs.writeFile(
+        path.join(tempDir, 'server', 'main.js'),
+        `const nodePath = Npm.require('path');
+
+const absolutePath = Assets.absoluteFilePath('assets-fixture.txt');
+
+Assets.getTextAsync('assets-fixture.txt')
+  .then(text => {
+    console.log(
+      \`assets fixture read: \${text} from \${nodePath.basename(absolutePath)}\`
+    );
+  })
+  .catch(error => {
+    console.error(\`assets fixture failed: \${error.message}\`);
+  });
+`
+      );
+
+      const result = await runMeteorCommand(
+        'run',
+        ['--port', String(ASSETS_GLOBAL_PORTS[0])],
+        tempDir,
+        {
+          captureOutput: true,
+          env: {
+            RSPACK_DEVSERVER_PORT: String(ASSETS_GLOBAL_PORTS[1]),
+          },
+        }
+      );
+      meteorProcess = result.meteorProcess;
+
+      const assetsResult = await waitForMeteorOutput(
+        result.outputLines,
+        /assets fixture (?:read|failed)|(?:Assets|Npm) is not defined|Your application is crashing/,
+        { timeout: 90000, meteorProcess }
+      );
+      expect(assetsResult).toContain(
+        'assets fixture read: assets fixture content from assets-fixture.txt'
+      );
+    } finally {
+      await cleanupRegressionApp({
+        tempDir,
+        meteorProcess,
+        ports: ASSETS_GLOBAL_PORTS,
+      });
     }
   });
 
