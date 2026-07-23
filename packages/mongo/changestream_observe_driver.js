@@ -361,13 +361,6 @@ export class ChangeStreamObserveDriver {
         try {
           const { operationType, id, fullDocument, fullDocumentBeforeChange, change } = callbackData;
 
-          // While a history-lost resync is running, a live event is authoritative
-          // for any id it touches — record it so the resync leaves that id alone
-          // (it must not re-add a live-deleted doc nor remove a live-inserted one).
-          if (this._resyncLiveTouched) {
-            this._resyncLiveTouched.add(MongoID.idStringify(id));
-          }
-
           switch (operationType) {
             case 'insert':
               this._handleInsert(id, fullDocument);
@@ -379,6 +372,15 @@ export class ChangeStreamObserveDriver {
             case 'delete':
               this._handleDelete(id, change);
               break;
+          }
+
+          // While a history-lost resync is running, a live event is authoritative
+          // for any id it SUCCESSFULLY applied — record it AFTER the handler so
+          // the resync leaves that id alone (it must not re-add a live-deleted doc
+          // nor remove a live-inserted one). Recording only on success means a
+          // handler that threw still lets the resync perform the corrective pass.
+          if (this._resyncLiveTouched) {
+            this._resyncLiveTouched.add(MongoID.idStringify(id));
           }
         } catch (error) {
           console.error(`[ChangeStream ${this._id}] Error processing callback:`, error);
@@ -403,9 +405,11 @@ export class ChangeStreamObserveDriver {
 
   // A raw doc translated by replaceMongoAtomWithMeteor carries either a string
   // _id or a MongoID.ObjectID; normalize it to the id type the multiplexer keys
-  // on, matching how the live change path derives ids.
+  // on. Mirrors how the live change path (_handleChange) derives ids: only wrap
+  // when the id actually exposes toHexString, so a string (or any other id type)
+  // passes through untouched instead of throwing.
   _deriveMeteorId(doc) {
-    return typeof doc._id !== 'string'
+    return typeof doc._id?.toHexString === 'function'
       ? new MongoID.ObjectID(doc._id.toHexString())
       : doc._id;
   }
@@ -526,12 +530,14 @@ export class ChangeStreamObserveDriver {
       const cursor = collection.find(selector, options);
       for await (const rawDoc of cursor) {
         if (this._stopped) return;
-        const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
-        const id = this._deriveMeteorId(doc);
-        const idStr = MongoID.idStringify(id);
-        present.add(idStr);
-        if (liveTouched.has(idStr)) continue;
+        // Whole body guarded: a single malformed doc (bad id / translation) must
+        // skip itself, not abort the reconciliation and leave removals unrun.
         try {
+          const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
+          const id = this._deriveMeteorId(doc);
+          const idStr = MongoID.idStringify(id);
+          present.add(idStr);
+          if (liveTouched.has(idStr)) continue;
           this._handleInsert(id, doc);
         } catch (error) {
           console.error(`[ChangeStream ${this._id}] resync add failed:`, error);
