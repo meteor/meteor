@@ -213,6 +213,7 @@ Server-only app (no client entry point).
 | What is covered | Phase |
 |----------------|-------|
 | Absolute external `METEOR_LOCAL_DIR` outside the app | Run |
+| `Assets` and `Npm` wrapper globals visible to server bundle code | Run |
 | Development server bundle stays outside Meteor's linked `app.js` payload | Run |
 | Delayed server import of a previously unused Meteor package | Run |
 | CommonJS development server bundle under a `type: module` app | Run |
@@ -322,6 +323,7 @@ Where each feature is tested across apps and skeletons.
 | Server-only (no client) | server-only | |
 | Rspack process cleanup | react | |
 | Server bundle excluded from Meteor linker payload | server-only regression | |
+| `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router | |

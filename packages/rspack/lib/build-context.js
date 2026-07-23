@@ -639,6 +639,10 @@ __rspackServerModule.require = function(request) {
 };
 delete __rspackServerRequire.cache[__rspackServerBundlePath];
 __rspackServerRequire.cache[__rspackServerBundlePath] = __rspackServerModule;
+/* Node compiles the bundle outside Meteor's boot wrapper, so the
+ * wrapper-scoped server globals must be bridged through globalThis */
+globalThis.Npm = Npm;
+globalThis.Assets = Assets;
 try {
   __rspackServerModule.load(__rspackServerBundlePath);
 } catch (error) {
