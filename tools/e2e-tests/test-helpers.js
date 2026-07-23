@@ -64,6 +64,22 @@ async function linkLocalRspack(appDir) {
   await _linkLocalRspack(appDir);
 }
 
+export async function setupMeteorRspackApp({
+  appName,
+  isMonorepo = false,
+} = {}) {
+  const tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+
+  await runMeteorCommand("add", ["rspack"], appDir, {
+    checkExitCode: true,
+  });
+
+  await linkLocalRspack(appDir);
+
+  return { tempDir, appDir };
+}
+
 /**
  * Helper function to set up and run tests for the Meteor Bundler
  * @param {Object} options - Options for the test
