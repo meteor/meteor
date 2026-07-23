@@ -2593,7 +2593,47 @@ Tinytest.addAsync(
       // A delivered event means the reopened stream is healthy: reset the count.
       shared._onChange({ _id: { _data: 'tok' } });
       test.equal(shared._restartFailures, 0, 'a delivered event resets the failure count');
+
+      // Reopening a fresh cursor clears the per-cursor failure flag, so the next
+      // cursor's failure is counted again (without this reset, one failure would
+      // arm _failureCounted forever and later failures would stop backing off).
+      shared._noteFailure();
+      test.isTrue(shared._failureCounted, 'failure flag set after counting a failure');
+      await shared._closeStream();
+      await shared._ensureOpen();
+      test.isFalse(shared._failureCounted, 'reopening a fresh cursor clears the per-cursor failure flag');
     } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a restart requested while one is in flight coalesces instead of running a second reopen (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+
+    let reopened = false;
+    const origEnsureOpen = shared._ensureOpen;
+    try {
+      // Simulate a restart already in flight. A re-entrant _restart must NOT run a
+      // second close/reopen (which would race two resyncs on the same drivers) —
+      // it records the request so the in-flight restart re-runs once it settles.
+      shared._ensureOpen = function () { reopened = true; return origEnsureOpen.call(this); };
+      shared._restarting = true;
+      shared._restartRequested = false;
+
+      await shared._restart();
+
+      test.isTrue(shared._restartRequested, 're-entrant restart is coalesced into a follow-up request');
+      test.isFalse(reopened, 're-entrant restart does not run a second reopen');
+    } finally {
+      shared._restarting = false;
+      shared._restartRequested = false;
+      shared._ensureOpen = origEnsureOpen;
       handle.stop();
     }
   }
