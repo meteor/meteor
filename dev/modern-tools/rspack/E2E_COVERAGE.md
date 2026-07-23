@@ -205,6 +205,19 @@ Server-only app (no client entry point).
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
 
+### Focused server runtime regressions
+
+`server-runtime.test.js` reuses isolated temporary copies of the
+`server-only` fixture without modifying its normal lifecycle coverage.
+
+| What is covered | Phase |
+|----------------|-------|
+| Absolute external `METEOR_LOCAL_DIR` outside the app | Run |
+| Development server bundle stays outside Meteor's linked `app.js` payload | Run |
+| Delayed server import of a previously unused Meteor package | Run |
+| CommonJS development server bundle under a `type: module` app | Run |
+| Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
+
 ---
 
 ## Skeletons
@@ -224,8 +237,9 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | react | 3205 | JSX | Custom body styles (Inter font, padding) |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | TypeScript | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | CI: removes TsCheckerRspackPlugin |
+| tailwind | 3208 | JSX | Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | TypeScript 7; native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript-tailwind | 3221 | TypeScript | TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
 ---
@@ -291,7 +305,7 @@ Where each feature is tested across apps and skeletons.
 | User-level `devServer.onListening` composition | react-router | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
-| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
+| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
 | Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
@@ -300,13 +314,15 @@ Where each feature is tested across apps and skeletons.
 | 404 routing | react-router | |
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
-| TypeScript type checking | typescript | |
+| TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
 | Meteor.disablePlugins | react | |
 | Unplugin transform with cache (#14031) | react | |
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
 | Rspack process cleanup | react | |
+| Server bundle excluded from Meteor linker payload | server-only regression | |
+| Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router | |
 | Module rules override | babel | |

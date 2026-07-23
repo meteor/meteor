@@ -14,6 +14,7 @@ import {
   killProcessByPort,
   killStrayAppProcesses,
   restoreFiles,
+  resetPlaywrightPage,
   runMeteorApp,
   runMeteorCommand,
   runMeteorTests,
@@ -150,6 +151,8 @@ export function testMeteorBundler(options) {
     });
 
     afterEach(async () => {
+      await resetPlaywrightPage();
+
       if (meteorProcess) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
@@ -398,6 +401,8 @@ export function testMeteorRspackBundler(options) {
     });
 
     afterEach(async () => {
+      await resetPlaywrightPage();
+
       if (meteorProcess) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
@@ -436,7 +441,7 @@ export function testMeteorRspackBundler(options) {
         await assertFileExist(appDir, `${buildDir}/main-dev/client-meteor.js`);
       }
       await assertFileExist(appDir, `${buildDir}/main-dev/server-entry.js`);
-      await assertFileExist(appDir, `${buildDir}/main-dev/server-rspack.js`);
+      await assertFileExist(appDir, `${buildDir}/main-dev/server-rspack.cjs`);
       await assertFileExist(appDir, `${buildDir}/main-dev/server-meteor.js`);
 
       // node_modules/.cache is rspack scratch — must not leak into the server bundle.
@@ -1087,6 +1092,8 @@ export function testMeteorSkeleton(options) {
     });
 
     afterEach(async () => {
+      await resetPlaywrightPage();
+
       // Kill the meteor process directly if it's still running.
       // This prevents port leaks when a test assertion fails mid-run.
       if (meteorProcess) {
