@@ -2295,6 +2295,383 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - a non-resumable history-lost error clears the resume token and recovers instead of looping (#14604)',
+  async function (test) {
+    const c = makeCollection();
+
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const streamBefore = shared._changeStream;
+    test.isTrue(!!streamBefore, 'cursor is open before the error');
+
+    // Pretend the stream advanced past some events so a stale resume token is
+    // stored — the state that arms the loop once that token ages out of the
+    // oplog.
+    shared._resumeToken = { _data: 'stale-token' };
+
+    // Count restarts to prove the error triggers exactly one, not a cascade.
+    let restarts = 0;
+    const origRestart = shared._restart.bind(shared);
+    shared._restart = function () {
+      restarts++;
+      return origRestart();
+    };
+
+    let handle2;
+    try {
+      // Emit the exact server error that arms the loop: ChangeStreamHistoryLost.
+      const historyLost = Object.assign(
+        new Error('Resume of change stream was not possible'),
+        { code: 286, codeName: 'ChangeStreamHistoryLost' }
+      );
+      historyLost.errorLabels = ['NonResumableChangeStreamError'];
+      streamBefore.emit('error', historyLost);
+
+      // The token must be dropped so the pending restart falls back to
+      // startAtOperationTime instead of re-sending the dead token forever.
+      await waitFor(() => shared._resumeToken === null, 1000);
+      test.equal(shared._resumeToken, null, 'stale resume token cleared on history loss');
+      test.isTrue(shared._historyLost, 'stream flagged to reconcile drivers after history loss');
+
+      // The single scheduled restart reopens a fresh cursor and settles — the
+      // hallmark of the fix is that it does NOT keep restarting.
+      await waitFor(
+        () => shared._changeStream && shared._changeStream !== streamBefore,
+        3000
+      );
+      test.equal(restarts, 1, 'exactly one restart fires, not a loop');
+      test.isTrue(!!shared._changeStream, 'a fresh cursor is open after recovery');
+      test.isFalse(shared._stopped, 'shared stream stays alive');
+
+      // Reactivity still works after recovery.
+      const results = [];
+      handle2 = await c.find({}).observeChanges({
+        added: (id, fields) => results.push(fields),
+      });
+      await c.insertAsync({ name: 'after-recovery' });
+      await waitFor(() => results.some(r => r.name === 'after-recovery'), 3000);
+      test.isTrue(
+        results.some(r => r.name === 'after-recovery'),
+        'change events flow again after the stream recovers'
+      );
+    } finally {
+      // Restore the patched method and tear down, even if an assertion above threw.
+      delete shared._restart;
+      handle.stop();
+      if (handle2) handle2.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - resync after history loss reconciles inserts, updates and removals missed during the gap (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const keepId = await c.insertAsync({ name: 'keep', v: 1 });
+    const removeId = await c.insertAsync({ name: 'remove-me', v: 1 });
+
+    const events = [];
+    const handle = await c.find({}).observeChanges({
+      added: (id, fields) => events.push({ type: 'added', id, fields }),
+      changed: (id, fields) => events.push({ type: 'changed', id, fields }),
+      removed: (id) => events.push({ type: 'removed', id }),
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    await waitFor(() => events.length >= 2, 3000);
+    events.length = 0;
+
+    const driver = handle._multiplexer._observeDriver;
+    const shared = driver._sharedStream;
+
+    // Simulate the lost window: detach from the shared stream so live events are
+    // NOT delivered, then mutate the collection out of band via the raw driver.
+    shared._drivers.delete(driver);
+    try {
+      const raw = driver._mongoHandle.rawCollection(c._name);
+      await raw.insertOne({ _id: 'missed-insert', name: 'new', v: 1 });
+      await raw.updateOne({ _id: keepId }, { $set: { v: 2 } });
+      await raw.deleteOne({ _id: removeId });
+
+      // Give any (suppressed) live delivery a chance — nothing should arrive.
+      await new Promise(r => setTimeout(r, 200));
+      test.equal(events.length, 0, 'no events delivered while the driver is detached');
+
+      // Reconcile against the current collection contents.
+      await driver._resyncAfterHistoryLost();
+      await waitFor(() => events.length >= 3, 3000);
+
+      const added = events.filter(e => e.type === 'added');
+      const changed = events.filter(e => e.type === 'changed');
+      const removed = events.filter(e => e.type === 'removed');
+
+      test.isTrue(
+        added.some(e => e.fields.name === 'new'),
+        'a document inserted during the gap is reconciled as added'
+      );
+      test.isTrue(
+        changed.some(e => e.fields.v === 2),
+        'a document updated during the gap is reconciled as changed'
+      );
+      test.equal(removed.length, 1, 'a document removed during the gap is reconciled as removed');
+    } finally {
+      shared._drivers.add(driver);
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - resync fetches full documents so a projected cursor still matches its selector (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    await c.insertAsync({ _id: 'a', group: 'g1', label: 'first' });
+
+    const events = [];
+    // Selector filters on `group`, but the projection ships only `label`. The
+    // resync must fetch the FULL doc so the matcher (which needs `group`) still
+    // accepts it — otherwise the server-projected doc is silently dropped.
+    const handle = await c
+      .find({ group: 'g1' }, { fields: { label: 1 } })
+      .observeChanges({
+        added: (id, fields) => events.push({ type: 'added', id, fields }),
+        changed: (id, fields) => events.push({ type: 'changed', id, fields }),
+        removed: (id) => events.push({ type: 'removed', id }),
+      });
+    test.isTrue(isChangeStreamDriver(handle));
+    await waitFor(() => events.some(e => e.type === 'added' && e.id === 'a'), 3000);
+    events.length = 0;
+
+    const driver = handle._multiplexer._observeDriver;
+    const shared = driver._sharedStream;
+
+    // Simulate the lost window: detach and insert a matching doc out of band.
+    shared._drivers.delete(driver);
+    const raw = driver._mongoHandle.rawCollection(c._name);
+    await raw.insertOne({ _id: 'b', group: 'g1', label: 'second' });
+
+    try {
+      await driver._resyncAfterHistoryLost();
+      await waitFor(() => events.some(e => e.type === 'added' && e.id === 'b'), 3000);
+
+      const addedB = events.find(e => e.type === 'added' && e.id === 'b');
+      test.isTrue(
+        !!addedB,
+        'a matching doc inserted during the gap is reconciled even though the ' +
+        'cursor projects out the selector field'
+      );
+      if (addedB) {
+        test.equal(addedB.fields.label, 'second', 'projected field is delivered');
+        test.isUndefined(addedB.fields.group, 'projected-out field is not delivered');
+      }
+    } finally {
+      shared._drivers.add(driver);
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a resumable (network) error keeps the resume token and does not force a resync (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const streamBefore = shared._changeStream;
+    const token = { _data: 'live-token' };
+    shared._resumeToken = token;
+
+    try {
+      // Model the MongoNetworkError the driver re-emits after its OWN internal
+      // resume gave up (e.g. a >30s partition): it exposes hasErrorLabel() but
+      // carries NO ResumableChangeStreamError label and is not code 286/280. It
+      // must NOT clear the still-valid token or force a full-collection resync —
+      // resuming via startAfter will succeed once the topology recovers. Token
+      // handling runs synchronously in the 'error' handler, so assert immediately.
+      const networkErr = Object.assign(new Error('connection reset by peer'), {
+        hasErrorLabel: () => false,
+      });
+      streamBefore.emit('error', networkErr);
+
+      test.equal(shared._resumeToken, token, 'resume token preserved on a resumable network error');
+      test.isFalse(shared._historyLost, 'history-lost not flagged for a resumable error');
+    } finally {
+      // Stop before the restart timer reopens with the preserved token.
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a fatal (280) change-stream error is non-resumable and clears the token (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+    const streamBefore = shared._changeStream;
+    shared._resumeToken = { _data: 'stale-token' };
+
+    try {
+      // ChangeStreamFatalError (280) is genuinely non-resumable: the server
+      // declared the stream unusable, so the token must be dropped and drivers
+      // reconciled — same recovery path as ChangeStreamHistoryLost (286).
+      const fatal = Object.assign(new Error('change stream fatal'), {
+        code: 280, codeName: 'ChangeStreamFatalError',
+      });
+      streamBefore.emit('error', fatal);
+
+      test.equal(shared._resumeToken, null, 'token cleared on a fatal (280) error');
+      test.isTrue(shared._historyLost, 'history-lost flagged on a fatal (280) error');
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a live event applied during a resync is recorded so the resync leaves that id alone (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const keepId = await c.insertAsync({ name: 'keep' });
+
+    const handle = await c.find({}).observeChanges({
+      added: function () { }, changed: function () { }, removed: function () { },
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    const driver = handle._multiplexer._observeDriver;
+
+    try {
+      // Reproduce the state _resyncAfterHistoryLost sets up (a live-touched set
+      // published for the duration of the reconcile), then apply a live delete of
+      // an id that is in the cache. _flushPendingWrites must record the id AFTER
+      // applying it, so a concurrent resync knows to leave it alone.
+      driver._resyncLiveTouched = new Set();
+      driver._pendingWrites = [{ operationType: 'delete', id: keepId, change: {} }];
+      await driver._flushPendingWrites();
+
+      test.equal(
+        driver._resyncLiveTouched.size, 1,
+        'the live-applied event recorded exactly one live-touched id'
+      );
+    } finally {
+      driver._resyncLiveTouched = null;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a live event whose apply throws during a resync is NOT recorded as live-touched (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    await c.insertAsync({ name: 'keep' });
+
+    const handle = await c.find({}).observeChanges({
+      added: function () { }, changed: function () { }, removed: function () { },
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    const driver = handle._multiplexer._observeDriver;
+
+    try {
+      // Recording happens only AFTER a successful apply: an event whose handler
+      // throws must stay UN-recorded so the resync's corrective pass still runs
+      // for that id. (This is the assertion that distinguishes after-apply from
+      // the pre-fix record-before-apply behavior.)
+      driver._handleInsert = () => { throw new Error('boom'); };
+      driver._resyncLiveTouched = new Set();
+      driver._pendingWrites = [{ operationType: 'insert', id: 'x', fullDocument: { _id: 'x' } }];
+      await driver._flushPendingWrites();
+
+      test.equal(
+        driver._resyncLiveTouched.size, 0,
+        'an event whose handler threw is not recorded as live-touched'
+      );
+    } finally {
+      delete driver._handleInsert;
+      driver._resyncLiveTouched = null;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - restart backoff grows with consecutive failures, de-dupes error+close, and resets on a delivered event (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+
+    try {
+      // Delay grows as base * 2^(failures-1), clamped at 5000ms.
+      shared._restartFailures = 1; test.equal(shared._restartDelay(100), 100);
+      shared._restartFailures = 2; test.equal(shared._restartDelay(100), 200);
+      shared._restartFailures = 4; test.equal(shared._restartDelay(100), 800);
+      shared._restartFailures = 99; test.equal(shared._restartDelay(100), 5000);
+
+      // The driver emits both 'error' and 'close' for one failure; _noteFailure
+      // must count that single cursor failure once, not twice.
+      shared._restartFailures = 0;
+      shared._failureCounted = false;
+      shared._noteFailure();
+      shared._noteFailure();
+      test.equal(shared._restartFailures, 1, 'error+close for one cursor counts a single failure');
+
+      // A delivered event means the reopened stream is healthy: reset the count.
+      shared._onChange({ _id: { _data: 'tok' } });
+      test.equal(shared._restartFailures, 0, 'a delivered event resets the failure count');
+
+      // Reopening a fresh cursor clears the per-cursor failure flag, so the next
+      // cursor's failure is counted again (without this reset, one failure would
+      // arm _failureCounted forever and later failures would stop backing off).
+      shared._noteFailure();
+      test.isTrue(shared._failureCounted, 'failure flag set after counting a failure');
+      await shared._closeStream();
+      await shared._ensureOpen();
+      test.isFalse(shared._failureCounted, 'reopening a fresh cursor clears the per-cursor failure flag');
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - a restart requested while one is in flight coalesces instead of running a second reopen (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+
+    let reopened = false;
+    const origEnsureOpen = shared._ensureOpen;
+    try {
+      // Simulate a restart already in flight. A re-entrant _restart must NOT run a
+      // second close/reopen (which would race two resyncs on the same drivers) —
+      // it records the request so the in-flight restart re-runs once it settles.
+      shared._ensureOpen = function () { reopened = true; return origEnsureOpen.call(this); };
+      shared._restarting = true;
+      shared._restartRequested = false;
+
+      await shared._restart();
+
+      test.isTrue(shared._restartRequested, 're-entrant restart is coalesced into a follow-up request');
+      test.isFalse(reopened, 're-entrant restart does not run a second reopen');
+    } finally {
+      shared._restarting = false;
+      shared._restartRequested = false;
+      shared._ensureOpen = origEnsureOpen;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - _projectionFn works correctly',
   async function (test) {
     const c = makeCollection();
