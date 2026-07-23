@@ -41,9 +41,13 @@ export class SharedChangeStream {
     // follow-up run via _restartRequested instead.
     this._restarting = false;
     this._restartRequested = false;
-    // Consecutive failed reopens; grows the retry delay so a persistently broken
+    // Consecutive failures; grows the retry delay so a persistently broken
     // stream (e.g. mid-shutdown) backs off instead of spinning ~10x/sec.
     this._restartFailures = 0;
+    // Whether the CURRENT cursor's failure has already been counted. The driver
+    // emits both 'error' and 'close' for one failure, so this de-dupes the count;
+    // reset in _open for each fresh cursor.
+    this._failureCounted = false;
   }
 
   get size() {
@@ -118,6 +122,8 @@ export class SharedChangeStream {
 
     const changeStream = collection.watch([], changeStreamOptions);
     this._changeStream = changeStream;
+    // Fresh cursor: its failure (if any) has not been counted yet.
+    this._failureCounted = false;
 
     changeStream.on('change', Meteor.bindEnvironment((change) => {
       this._onChange(change);
@@ -142,7 +148,7 @@ export class SharedChangeStream {
         this._resumeToken = null;
         this._historyLost = true;
       }
-      this._restartFailures += 1;
+      this._noteFailure();
       this._scheduleRestart(this._restartDelay(
         Meteor?.settings?.packages?.mongo?.changeStream?.delay?.error || 100
       ));
@@ -157,7 +163,7 @@ export class SharedChangeStream {
         driverCount: this._drivers.size,
         resumeTokenPresent: !!this._resumeToken,
       });
-      this._restartFailures += 1;
+      this._noteFailure();
       this._scheduleRestart(this._restartDelay(
         Meteor?.settings?.packages?.mongo?.changeStream?.delay?.close || 100
       ));
@@ -220,6 +226,17 @@ export class SharedChangeStream {
         this._restart();
       }
     }, delayMs);
+  }
+
+  // Count a failure of the current cursor at most once, even though the driver
+  // emits both 'error' and 'close' for a single failure. Reset per cursor in
+  // _open. (A failed REOPEN is counted directly in _restart's catch — no cursor
+  // was created there, so this flag doesn't apply.)
+  _noteFailure() {
+    if (!this._failureCounted) {
+      this._failureCounted = true;
+      this._restartFailures += 1;
+    }
   }
 
   // Exponential backoff for consecutive errors/failed reopens so a stream that

@@ -2534,6 +2534,72 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - a live event whose apply throws during a resync is NOT recorded as live-touched (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    await c.insertAsync({ name: 'keep' });
+
+    const handle = await c.find({}).observeChanges({
+      added: function () { }, changed: function () { }, removed: function () { },
+    });
+    test.isTrue(isChangeStreamDriver(handle));
+    const driver = handle._multiplexer._observeDriver;
+
+    try {
+      // Recording happens only AFTER a successful apply: an event whose handler
+      // throws must stay UN-recorded so the resync's corrective pass still runs
+      // for that id. (This is the assertion that distinguishes after-apply from
+      // the pre-fix record-before-apply behavior.)
+      driver._handleInsert = () => { throw new Error('boom'); };
+      driver._resyncLiveTouched = new Set();
+      driver._pendingWrites = [{ operationType: 'insert', id: 'x', fullDocument: { _id: 'x' } }];
+      await driver._flushPendingWrites();
+
+      test.equal(
+        driver._resyncLiveTouched.size, 0,
+        'an event whose handler threw is not recorded as live-touched'
+      );
+    } finally {
+      delete driver._handleInsert;
+      driver._resyncLiveTouched = null;
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - restart backoff grows with consecutive failures, de-dupes error+close, and resets on a delivered event (#14604)',
+  async function (test) {
+    const c = makeCollection();
+    const handle = await c.find({}).observeChanges({ added: function () { } });
+    test.isTrue(isChangeStreamDriver(handle));
+    const shared = handle._multiplexer._observeDriver._sharedStream;
+
+    try {
+      // Delay grows as base * 2^(failures-1), clamped at 5000ms.
+      shared._restartFailures = 1; test.equal(shared._restartDelay(100), 100);
+      shared._restartFailures = 2; test.equal(shared._restartDelay(100), 200);
+      shared._restartFailures = 4; test.equal(shared._restartDelay(100), 800);
+      shared._restartFailures = 99; test.equal(shared._restartDelay(100), 5000);
+
+      // The driver emits both 'error' and 'close' for one failure; _noteFailure
+      // must count that single cursor failure once, not twice.
+      shared._restartFailures = 0;
+      shared._failureCounted = false;
+      shared._noteFailure();
+      shared._noteFailure();
+      test.equal(shared._restartFailures, 1, 'error+close for one cursor counts a single failure');
+
+      // A delivered event means the reopened stream is healthy: reset the count.
+      shared._onChange({ _id: { _data: 'tok' } });
+      test.equal(shared._restartFailures, 0, 'a delivered event resets the failure count');
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - _projectionFn works correctly',
   async function (test) {
     const c = makeCollection();
