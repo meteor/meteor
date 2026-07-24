@@ -1,12 +1,13 @@
 Package.describe({
   summary: "Integrate rspack into the Meteor lifecycle to run the bundler independently",
-  version: '1.1.0',
+  version: '1.2.0-beta351.0',
 });
 
 Package.registerBuildPlugin({
   name: 'rspack',
   sources: [
     'lib/constants.js',
+    'lib/file-extensions.js',
     'lib/dependencies.js',
     'lib/build-context.js',
     'lib/processes.js',
@@ -32,5 +33,5 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use(['tinytest', 'ecmascript', 'rspack']);
-  api.addFiles(['rspack_tests.js']);
+  api.mainModule('rspack_tests.js', 'server');
 });
