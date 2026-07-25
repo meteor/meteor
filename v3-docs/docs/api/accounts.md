@@ -35,6 +35,41 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
 }
 ```
 
+### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
+
+Meteor 3.3 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+
+1. On the server, call `Accounts.config` during startup and set both options:
+
+   ```ts
+   import { Accounts } from "meteor/accounts-base";
+   import { Meteor } from "meteor/meteor";
+
+   Meteor.startup(() => {
+     Accounts.config({
+       clientStorage: "none",
+       useHttpOnlyCookies: true,
+     });
+   });
+   ```
+
+2. Surface the same flags to the client via settings so the browser-side Accounts instance starts with the right defaults:
+
+   ```json
+   {
+     "public": {
+       "packages": {
+         "accounts": {
+           "clientStorage": "none",
+           "useHttpOnlyCookies": true
+         }
+       }
+     }
+   }
+   ```
+
+After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
+
 <ApiBox name="Meteor.user" hasCustomExample/>
 
 Retrieves the user record for the current user from
@@ -125,7 +160,7 @@ treats the following fields specially:
 Like all [Mongo.Collection](./collections.md)s, you can access all
 documents on the server, but only those specifically published by the server are
 available on the client. You can also use all Collection methods, for instance
-`Meteor.users.remove` on the server to delete a user.
+`Meteor.users.removeAsync` on the server to delete a user.
 
 By default, the current user's `username`, `emails` and `profile` are
 published to the client. You can publish additional fields for the
@@ -184,15 +219,52 @@ animation while the login request is being processed.
 
 <ApiBox name="Meteor.logout" />
 
+<ApiBox name="Meteor.logoutAsync" />
+
 <ApiBox name="Meteor.logoutAllClients" />
 
+<ApiBox name="Meteor.logoutAllClientsAsync" />
+
+Available since Meteor 3.5. Logs the current user out of *every* device, including the browser where the call originated. Useful for "sign out everywhere" actions in security settings:
+
+```js
+import { Meteor } from "meteor/meteor";
+
+await Meteor.logoutAllClientsAsync();
+```
+
+Compare with `Meteor.logoutOtherClients` below, which keeps the calling browser logged in.
+
 <ApiBox name="Meteor.logoutOtherClients" />
+
+<ApiBox name="Meteor.logoutOtherClientsAsync" />
 
 For example, when called in a user's browser, connections in that browser
 remain logged in, but any other browsers or DDP clients logged in as that user
 will be logged out.
 
 <ApiBox name="Meteor.loginWithPassword" />
+
+<ApiBox name="Meteor.loginWithPasswordAsync" />
+
+Available since Meteor 3.5. The promise-returning counterpart to `Meteor.loginWithPassword`. Use it inside `async` functions where `await` reads more naturally than a callback. The login attempt info object that the callback would have received is the resolved value of the promise; failures reject with the same `Error` you would have seen on the callback's first argument.
+
+```js
+import { Meteor } from "meteor/meteor";
+
+try {
+  const loginDetails = await Meteor.loginWithPasswordAsync("alice@example.com", "hunter2");
+  console.log("Logged in via", loginDetails.type);
+} catch (error) {
+  if (error.error === "no-2fa-code") {
+    // prompt the user for their 2FA code, then call loginWithPasswordAnd2faCode
+  } else {
+    console.error("Login failed:", error);
+  }
+}
+```
+
+This function is provided by the `accounts-password` package and accepts the same arguments and produces the same errors as `Meteor.loginWithPassword`.
 
 If there are multiple users with a username or email only differing in case, a case sensitive match is required. Although `createUser` won't let you create users with ambiguous usernames or emails, this could happen with existing databases or if you modify the users collection directly.
 
@@ -208,6 +280,8 @@ This function is provided by the `accounts-password` package. See the
 [Passwords](#passwords) section below.
 
 <ApiBox name="Meteor.loginWithToken" />
+
+<ApiBox name="Meteor.loginWithTokenAsync" />
 
 Logs the user in using a valid Meteor login token (also called a resume token). This is typically used to restore a user's session across browser reloads, between tabs, or across DDP connections (such as in multi-server setups).
 
@@ -235,6 +309,21 @@ Meteor.loginWithToken(token, (error) => {
 - If the token is invalid, expired, or revoked, the callback will be called with an error and the user will not be logged in.
 - This method is used internally by Meteor to automatically restore login state on page reload and across tabs.
 - Can be used with custom DDP connections to authenticate across multiple Meteor servers sharing the same database.
+
+Available since Meteor 3.5, `Meteor.loginWithTokenAsync` is the promise-returning counterpart. Use it from `async` functions instead of passing a callback:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+import { Meteor } from "meteor/meteor";
+
+const token = Accounts._storedLoginToken();
+try {
+  await Meteor.loginWithTokenAsync(token);
+  console.log("Session restored");
+} catch (error) {
+  console.error("Token login failed:", error);
+}
+```
 
 <ApiBox name="Meteor.loginWith<ExternalService>" />
 
@@ -292,11 +381,11 @@ First, add the service configuration package:
 meteor add service-configuration
 ```
 
-Then, inside the server of your app (this example is for the Weebo service), import `ServiceConfiguration`:
+Then, inside the server of your app (this example is for the Weibo service), import `ServiceConfiguration`:
 
 ```js
 import { ServiceConfiguration } from "meteor/service-configuration";
-ServiceConfiguration.configurations.upsertAsync(
+await ServiceConfiguration.configurations.upsertAsync(
   { service: "weibo" },
   {
     $set: {
@@ -465,10 +554,56 @@ client, the callback argument is an object containing a single `error`
 property set to the `Error`-object which was received from the failed login
 attempt.
 
+On the client, callbacks passed to `onLogin` and `onLoginFailure` can be
+async functions. They will be awaited before proceeding.
+This can affect when login, logout, and reconnect flows are considered complete,
+including when `Meteor.loggingIn()` and `Meteor.loggingOut()` return to `false`.
+
+::: warning
+Async client-side login hooks are awaited sequentially before the originating call resolves. A slow `await` inside `onLogin` (e.g. a network round-trip to your analytics backend) will visibly delay the user's login. Keep client hooks fast or fire-and-forget the slow work:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+
+Accounts.onLogin(async ({ user }) => {
+  // OK: a quick local enrichment
+  await Meteor.callAsync("profile.touchLastSeen");
+
+  // Don't block the login on slow work — fire-and-forget instead
+  void fetch("/analytics/login", {
+    method: "POST",
+    body: JSON.stringify({ userId: user._id }),
+  });
+});
+```
+:::
+
+Example — async client hooks for audit logging:
+
+```js
+import { Accounts } from "meteor/accounts-base";
+
+const loginHandle = Accounts.onLogin(async ({ user }) => {
+  await Meteor.callAsync("audit.recordLogin", { userId: user._id });
+});
+
+const failureHandle = Accounts.onLoginFailure(async ({ error }) => {
+  await Meteor.callAsync("audit.recordLoginFailure", {
+    reason: error.reason,
+  });
+});
+
+// Both registrations return a handle with a stop() method.
+// Call stop() when the hook is no longer needed (e.g. on component unmount).
+```
+
 <ApiBox name="AccountsCommon#onLogout" instanceName="accountsCommon" hasCustomExample/>
 
 On the server, the `func` callback receives a single argument with the object below. On the
-client, no arguments are passed.
+client, no arguments are passed. On the client, callbacks can be async functions and will be awaited.
+
+Like `onLogin` and `onLoginFailure`, this function returns an object with a
+single method, `stop`. Calling `stop()` unregisters the callback.
 
 ```js
 import { AccountsCommon } from "meteor/accounts-base";
@@ -510,6 +645,8 @@ available only on the client:
 <ApiBox name="AccountsClient#loggingIn" instanceName="accountsClient"/>
 
 <ApiBox name="AccountsClient#logout" instanceName="accountsClient"/>
+
+<ApiBox name="AccountsClient#logoutAllClients" instanceName="accountsClient"/>
 
 <ApiBox name="AccountsClient#logoutOtherClients" instanceName="accountsClient"/>
 
@@ -556,7 +693,7 @@ created but the connection will not be logged in as that user.
 <ApiBox name="AccountsServer#onCreateUser" instanceName="accountsServer" hasCustomExample/>
 
 Use this when you need to do more than simply accept or reject new user
-creation. With this function you can programatically control the
+creation. With this function you can programmatically control the
 contents of new user documents.
 
 The function you pass will be called with two arguments: `options` and
@@ -740,7 +877,7 @@ accountsServer.setAdditionalFindUserOnExternalLogin(
     // serviceData: Object
     //   The data returned by the service oauth request.
     // options: Object
-    //   An optional arugment passed down from the oauth service that may contain
+    //   An optional argument passed down from the oauth service that may contain
     //   additional user profile information. As the data in `options` comes from an
     //   external source, make sure you validate any values you read from it.
   }
@@ -760,14 +897,13 @@ Example:
 // allow them to sign in with the Meteor.loginWithGoogle method later, without
 // creating a new user.
 Accounts.setAdditionalFindUserOnExternalLogin(
-  ({ serviceName, serviceData }) => {
-    if (serviceName === "google") {
-      // Note: Consider security implications. If someone other than the owner
-      // gains access to the account on the third-party service they could use
-      // the e-mail set there to access the account on your app.
-      // Most often this is not an issue, but as a developer you should be aware
-      // of how bad actors could play.
-      return Accounts.findUserByEmail(serviceData.email);
+  async ({ serviceName, serviceData }) => {
+    // Only link accounts when the provider returns an email.
+    if (serviceName === "google" && serviceData.email) {
+      // Security: linking by email lets anyone who controls that email at the
+      // external provider sign in as this Meteor user. Only do this for
+      // providers that verify email ownership.
+      return await Accounts.findUserByEmail(serviceData.email);
     }
   }
 );
@@ -808,7 +944,7 @@ address verification and password recovery emails.
 
 ### Password encryption and security
 
-Starting from `accounts-passwords:4.0.0`, you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
+Starting from `accounts-password:4.0.0`, you can choose which algorithm is used by the Meteor server to store passwords : either [bcrypt](http://en.wikipedia.org/wiki/Bcrypt) or
 [Argon2](http://en.wikipedia.org/wiki/Argon2) algorithm. Both are robust and contribute to
 protect against embarrassing password leaks if the server's database is
 compromised.
@@ -848,7 +984,7 @@ Accounts.config({
 
 **Configuring `argon2` parameters**
 
-One enabled, the `accounts-password` package allows customization of Argon2's parameters. The configurable options include:
+Once enabled, the `accounts-password` package allows customization of Argon2's parameters. The configurable options include:
 
 - `type`: `argon2id` (provides a blend of resistance against GPU and side-channel attacks)
 - `timeCost` (default: 2) – This controls the computational cost of the hashing process, affecting both the security level and performance.
@@ -882,7 +1018,7 @@ To add password support to your application, run this command in your terminal:
 meteor add accounts-password
 ```
 
-> In addition to configuring the [`email`](./email.md) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails!
+> In addition to configuring the [`email`](./email.md) package's `MAIL_URL`, it is critical that you set proper values (specifically the `from` address) in [`Accounts.emailTemplates`](#Accounts-emailTemplates) to ensure proper delivery of e-mails! Starting in Meteor 3.5, leaving the `from` address unconfigured will generate a server console warning to alert you of potential silent email delivery failures.
 
 You can construct your own user interface using the
 functions below, or use the [`accounts-ui` package](../packages/accounts-ui.md) to
@@ -894,7 +1030,7 @@ On the client, this function logs in as the newly created user on
 successful completion. On the server, it returns the newly created user
 id.
 
-On the client, you must pass `password` and at least one of `username` or `email` &mdash; enough information for the user to be able to log in again later. If there are existing users with a username or email only differing in case, `createUser` will fail. The callback's `error.reason` will be `'Username already exists.'` or `'Email already exists.'` In the latter case, the user can then either [login](accounts.html#Meteor-loginWithPassword) or [reset their password](#Accounts-resetPassword).
+On the client, you must pass `password` and at least one of `username` or `email` &mdash; enough information for the user to be able to log in again later. If there are existing users with a username or email only differing in case, `createUser` will fail. The callback's `error.reason` will be `'Username already exists.'` or `'Email already exists.'` In the latter case, the user can then either [login](#Meteor-loginWithPassword) or [reset their password](#Accounts-resetPassword).
 
 On the server, you do not need to specify `password`, but the user will not be able to log in until it has a password (eg, set with [`Accounts.setPasswordAsync`](#Accounts-setPasswordAsync)). To create an account without a password on the server and still let the user pick their own password, call `createUser` with the `email` option and then call [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail). This will send the user an email with a link to set their initial password.
 
@@ -1169,7 +1305,7 @@ Set the fields of the object by assigning to them:
 - `from`: (**required**) A `String` with an [RFC5322](http://tools.ietf.org/html/rfc5322) From
   address. By default, the email is sent from `no-reply@example.com`. **If you
   want e-mails to send correctly, this should be changed to your own domain
-  as most e-mail providers will reject mail sent from `example.com`.**
+  as most e-mail providers will reject mail sent from `example.com`.** Starting in Meteor 3.5, failing to configure a valid custom `from` address will result in a prominent server console warning to help prevent silent email failures in production.
 - `siteName`: The public name of your application. Defaults to the DNS name of
   the application (eg: `awesome.meteor.com`).
 - `headers`: An `Object` for custom email headers as described in
