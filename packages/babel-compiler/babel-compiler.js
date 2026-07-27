@@ -16,19 +16,19 @@ function requireCompilerDependency(name) {
   }
 }
 
-var SWC = null;
+let SWC = null;
 function getSWC() {
   return SWC || (SWC = requireCompilerDependency("@meteorjs/swc-core"));
 }
 
-var reifyCompile = null;
+let reifyCompile = null;
 function getReifyCompile() {
   return reifyCompile ||
     (reifyCompile =
       requireCompilerDependency("@meteorjs/reify/lib/compiler").compile);
 }
 
-var reifyAcornParse = null;
+let reifyAcornParse = null;
 function getReifyAcornParse() {
   return reifyAcornParse ||
     (reifyAcornParse =
