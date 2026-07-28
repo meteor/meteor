@@ -17,11 +17,12 @@ export function getMeteorAppDir() {
 
 /**
  * Reads and parses the package.json file of the Meteor application.
+ * @param {string} [cwd] The directory containing the application's package.json file.
  * @returns {Object} The parsed content of the package.json file.
  */
-export function getMeteorAppPackageJson() {
+export function getMeteorAppPackageJson(cwd = getMeteorAppDir()) {
   return JSON.parse(
-    fs.readFileSync(`${getMeteorAppDir()}/package.json`, 'utf-8')
+    fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')
   );
 }
 
@@ -62,10 +63,15 @@ export function isMeteorAppConfigModernVerbose() {
 
 /**
  * Retrieves the auto install deps flag from the app's package.json.
- * @returns {Boolean|*}
+ * @param {Object} [options]
+ * @param {string} [options.cwd] Read configuration from this directory.
+ * @returns {boolean}
  */
-export function hasMeteorAppConfigAutoInstallDeps() {
-  const { autoInstallDeps = true } = getMeteorAppConfig() || {};
+export function hasMeteorAppConfigAutoInstallDeps(options = {}) {
+  const config = options.cwd
+    ? getMeteorAppPackageJson(options.cwd)?.meteor
+    : getMeteorAppConfig();
+  const { autoInstallDeps = true } = config || {};
   return !!autoInstallDeps;
 }
 

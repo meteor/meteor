@@ -65,7 +65,7 @@ function readCurrentVersion(name, cwd) {
 /**
  * Detects which dependencies are missing or below the minimum supported version.
  *
- * @param {Array<{name: string, version: string, semverCondition?: string, dev?: boolean, existenceOnly?: boolean}>} dependencies
+ * @param {Array<{name: string, version: string, semverCondition?: string, dev: boolean, existenceOnly?: boolean}>} dependencies
  * @param {Object} [options]
  * @param {string} [options.cwd] - Defaults to the Meteor app directory.
  * @returns {Array<{name: string, status: 'ok'|'missing'|'outdated', requiredVersion: string, currentVersion: ?string, dev: boolean, existenceOnly: boolean}>}
@@ -74,7 +74,13 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
   const cwd = options.cwd || getMeteorAppDir();
 
   return dependencies.map((dep) => {
-    const dev = dep.dev !== false;
+    if (typeof dep.dev !== 'boolean') {
+      throw new Error(
+        `Dependency descriptor for ${dep.name} must set dev to true or false`,
+      );
+    }
+
+    const dev = dep.dev;
     const existenceOnly = !!dep.existenceOnly;
     const exists = checkNpmDependencyExists(dep.name, { cwd });
 

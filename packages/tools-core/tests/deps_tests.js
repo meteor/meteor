@@ -102,7 +102,7 @@ Tinytest.add(
   function (test) {
     withTempApp(null, (cwd) => {
       const out = detectMissingOrOutdatedDeps(
-        [{ name: 'foo', version: '1.0.0' }],
+        [{ name: 'foo', version: '1.0.0', dev: false }],
         { cwd },
       );
       test.equal(out[0].status, 'missing');
@@ -183,8 +183,26 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  'tools-core - detectMissingOrOutdatedDeps - dependency type is required',
+  function (test) {
+    withTempApp({ name: 'app' }, (cwd) => {
+      test.throws(
+        () => detectMissingOrOutdatedDeps(
+          [{ name: 'foo', version: '1.0.0' }],
+          { cwd },
+        ),
+        /must set dev to true or false/,
+      );
+    });
+  },
+);
+
+Tinytest.add(
   'tools-core - hasMeteorAppConfigAutoInstallDeps default is true',
   function (test) {
     test.isTrue(typeof hasMeteorAppConfigAutoInstallDeps === 'function');
+    withTempApp({ name: 'app' }, (cwd) => {
+      test.isTrue(hasMeteorAppConfigAutoInstallDeps({ cwd }));
+    });
   },
 );
