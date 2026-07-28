@@ -1771,6 +1771,7 @@ class ClientTarget extends Target {
     // Build up a manifest of all resources served via HTTP.
     const manifest = [];
     await eachResource(async (file, type) => {
+      const isDynamic = file.targetPath.startsWith("dynamic/");
       const manifestItem = {
         path: file.targetPath,
         where: "client",
@@ -1780,19 +1781,14 @@ class ClientTarget extends Target {
         replaceable: file.replaceable
       };
 
-      // writeFile() (below) strips //# sourceMappingURL / //# sourceURL comments from
-      // non-asset, non-dynamic client files before writing them (removeSourceMappingURLs,
-      // added for #9894). Bake that strip into the file's contents *now*, before its
-      // size/hash/sri are read, so the manifest describes the bytes actually written and
-      // served. Otherwise size/hash/sri (and the SRI / integrity= attribute) describe the
-      // pre-strip contents and never match the served file — e.g. packages/modules.js under
-      // @meteorjs/rspack, which ships un-minified with per-module //# sourceURL= comments,
-      // ends up off by exactly the stripped bytes (#10710).
-      if (type !== 'asset' && ! file.targetPath.startsWith("dynamic/")) {
+      // writeFile() (below) strips //# sourceMappingURL / //# sourceURL
+      // comments from non-asset client files before writing them. Apply that
+      // strip before reading size/hash/sri so the manifest describes the bytes
+      // actually written and served (#10710).
+      if (type !== 'asset') {
         const original = file.contents();
         const stripped = removeSourceMappingURLs(original);
-        if (stripped !== original &&
-            (stripped.length !== original.length || ! stripped.equals(original))) {
+        if (stripped !== original && ! stripped.equals(original)) {
           file.setContents(stripped);
         }
       }
@@ -1827,12 +1823,22 @@ class ClientTarget extends Target {
           file.url, sourceMapBaseName);
       }
 
+      if (isDynamic && manifestItem.sourceMapUrl) {
+        const url = (process.env.ROOT_URL || "") + manifestItem.sourceMapUrl;
+        const contentsWithSourceMapUrl =
+          addSourceMappingURL(file.contents(), url);
+
+        if (! contentsWithSourceMapUrl.equals(file.contents())) {
+          file.setContents(contentsWithSourceMapUrl);
+        }
+      }
+
       // Set this now, in case we mutated the file's contents.
       manifestItem.size = file.size();
       manifestItem.hash = file.hash();
       manifestItem.sri = file.sri();
 
-      if (! file.targetPath.startsWith("dynamic/")) {
+      if (! isDynamic) {
         await writeFile(file, builder, {
           leaveSourceMapUrls: type === 'asset'
         });
@@ -1859,8 +1865,10 @@ class ClientTarget extends Target {
         // source maps can be very large), but rather include a normal URL
         // referring to the source map (as a comment), so that it can be
         // loaded from the web server when needed.
+        // The source map URL was added before the manifest fields were
+        // computed, so preserve those exact bytes when writing the file.
         await writeFile(file, builder, {
-          sourceMapUrl: manifestItem.sourceMapUrl,
+          leaveSourceMapUrls: true,
         });
 
         manifest.push({
