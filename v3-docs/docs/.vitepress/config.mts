@@ -63,6 +63,10 @@ export default defineConfig({
                 link: "/tutorials/application-structure/index",
                 text: "Application structure",
               },
+              {
+                link: "/tutorials/multiple-meteor-apps/index",
+                text: "Multiple Meteor apps",
+              },
             ],
           },
         ],
@@ -616,6 +620,10 @@ export default defineConfig({
           {
             link: "/tutorials/application-structure/index",
             text: "Application structure",
+          },
+          {
+            link: "/tutorials/multiple-meteor-apps/index",
+            text: "Multiple Meteor apps",
           },
           {
             text: "Build System",
