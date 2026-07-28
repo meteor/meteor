@@ -442,23 +442,18 @@ export class OplogHandle {
 }
 
 export function idForOp(op: OplogEntry): string {
-  let id: string | Record<string, unknown> | undefined;
+  // NOTE: keep the original runtime behavior (return `_id` verbatim, and let a
+  // missing `o2` throw the natural TypeError). The `as string`/`!` assertions are
+  // compile-time only — do NOT narrow at runtime (e.g. JSON.stringify objects or
+  // throw on non-strings), that would change the IdMap keys the oplog driver uses.
   if (op.op === 'd' || op.op === 'i') {
-    id = op.o._id;
+    return op.o._id as string;
   } else if (op.op === 'u') {
-    id = op.o2 ? op.o2._id : undefined;
+    return op.o2!._id as string;
   } else if (op.op === 'c') {
     throw Error("Operator 'c' doesn't supply an object with id: " + JSON.stringify(op));
   } else {
     throw Error("Unknown op: " + JSON.stringify(op));
-  }
-
-  if (typeof id === 'string') {
-    return id;
-  } else if (id != null && typeof id === 'object') {
-    return JSON.stringify(id);
-  } else {
-    throw Error("Missing id for op: " + JSON.stringify(op));
   }
 }
 

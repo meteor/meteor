@@ -110,7 +110,7 @@ export class PollingObserveDriver {
 
     await this._unthrottledEnsurePollIsScheduled();
 
-    (Package['facts-base'] as { Facts?: { incrementServerFact: (pkg: string, fact: string, val: number) => void } } | undefined)?.Facts?.incrementServerFact(
+    (Package['facts-base'] as { Facts: { incrementServerFact: (pkg: string, fact: string, val: number) => void } } | undefined)?.Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", 1);
   }
 
@@ -206,7 +206,7 @@ export class PollingObserveDriver {
       await w.committed();
     }
 
-    (Package['facts-base'] as { Facts?: { incrementServerFact: (pkg: string, fact: string, val: number) => void } } | undefined)?.Facts?.incrementServerFact(
+    (Package['facts-base'] as { Facts: { incrementServerFact: (pkg: string, fact: string, val: number) => void } } | undefined)?.Facts.incrementServerFact(
       "mongo-livedata", "observe-drivers-polling", -1);
   }
 }
