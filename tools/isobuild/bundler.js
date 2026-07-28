@@ -149,8 +149,6 @@
 // wait until later.
 
 var assert = require('assert');
-var _ = require('underscore');
-
 var compiler = require('./compiler.js');
 var PackageSource = require('./package-source.js');
 import Builder from './builder.js';
@@ -419,7 +417,7 @@ class NodeModulesDirectory {
       // .npm/package/node_modules directories, which are non-local.
       add({ local: false }, node_modules);
     } else if (node_modules) {
-      _.each(node_modules, add);
+      Object.entries(node_modules).forEach(([key, val]) => add(val, key));
     }
 
     if (rebuildBinaries) {
@@ -753,7 +751,7 @@ class File {
 
   // note: this assets object may be shared among multiple files!
   setAssets(assets) {
-    if (!_.isEmpty(assets)) {
+    if (assets && Object.keys(assets).length > 0) {
       this.assets = assets;
     }
   }
@@ -973,7 +971,7 @@ class Target {
       const usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
       this.usedPackages = {};  // Map from package name to true;
       const addToGetsUsed = async function (unibuild) {
-        if (_.has(usedUnibuilds, unibuild.id)) {
+        if (unibuild.id in usedUnibuilds) {
           return;
         }
         usedUnibuilds[unibuild.id] = unibuild;
@@ -1015,7 +1013,7 @@ class Target {
       // dependencies.
 
       // What unibuilds have not yet been added to this.unibuilds?
-      const needed = _.clone(usedUnibuilds);  // Map from unibuild.id to Unibuild.
+      const needed = {...usedUnibuilds};  // Map from unibuild.id to Unibuild.
       // Unibuilds that we are in the process of adding; used to detect circular
       // ordered dependencies.
       const onStack = {};  // Map from unibuild.id to true.
@@ -1024,7 +1022,7 @@ class Target {
       // this.unibuilds, then adds unibuild itself.
       const add = async function (unibuild) {
         // If this has already been added, there's nothing to do.
-        if (!_.has(needed, unibuild.id)) {
+        if (!(unibuild.id in needed)) {
           return;
         }
 
@@ -1199,7 +1197,7 @@ class Target {
       const unibuild = sourceBatch.unibuild;
 
       if (this.cordovaDependencies) {
-        _.each(unibuild.pkg.cordovaDependencies, (version, name) => {
+        Object.entries(unibuild.pkg.cordovaDependencies || {}).forEach(([name, version]) => {
           this._addCordovaDependency(
               name,
               version,
@@ -1324,7 +1322,7 @@ class Target {
               f.setAssets(unibuildAssets);
             }
 
-            _.each(unibuild.nodeModulesDirectories, nmd => {
+            Object.values(unibuild.nodeModulesDirectories).forEach(nmd => {
               addNodeModulesDirToObject(nmd, this.nodeModulesDirectories);
               addNodeModulesDirToObject(nmd, f.nodeModulesDirectories);
             });
@@ -1610,7 +1608,7 @@ class Target {
     if (override) {
       this._overrideCordovaDependencyVersion(scoped, id, name, version);
     } else {
-      if (_.has(this.cordovaDependencies, id)) {
+      if (id in this.cordovaDependencies) {
         const existingVersion = this.cordovaDependencies[id];
 
         if (existingVersion === version) { return; }
@@ -1633,7 +1631,7 @@ class Target {
       return;
     }
 
-    _.each(this.cordovaPluginsFile.getPluginVersions(), (version, name) => {
+    Object.entries(this.cordovaPluginsFile.getPluginVersions()).forEach(([name, version]) => {
       this._addCordovaDependency(
         name, version, true /* override any existing version */);
     });
@@ -1660,7 +1658,7 @@ class Target {
   // would be 'os'.
   mostCompatibleArch() {
     return archinfo.leastSpecificDescription(
-      _.pluck(this.unibuilds, 'arch').filter(
+      this.unibuilds.map(u => u.arch).filter(
         arch => archinfo.matches(this.arch, arch)
       )
     );
@@ -1683,7 +1681,7 @@ class Target {
 // shared by test and non-test packages, this logic prefers the non-test
 // nmd object when possible. Returns true iff the given nmd was added.
 function addNodeModulesDirToObject(nmd, obj) {
-  if (_.has(obj, nmd.sourcePath)) {
+  if (nmd.sourcePath in obj) {
     const old = obj[nmd.sourcePath];
     // If the old NodeModulesDirectory object is not a test package, or
     // the new one is a test package, keep the old one.
@@ -1897,14 +1895,18 @@ class ClientTarget extends Target {
       const { WebAppHashing } = await loadIsopackage('webapp-hashing');
 
       const cordovaCompatibilityVersions =
-        _.object(_.map(CORDOVA_PLATFORM_VERSIONS, (version, platform) => {
+        Object.fromEntries(Object.entries(CORDOVA_PLATFORM_VERSIONS).map(([platform, version]) => {
 
           const pluginsExcludedFromCompatibilityHash = (process.env.METEOR_CORDOVA_COMPAT_VERSION_EXCLUDE || '')
             .split(',');
 
           const cordovaDependencies = Object.assign(
             Object.create(null),
-            _.omit(this.cordovaDependencies, pluginsExcludedFromCompatibilityHash)
+            Object.fromEntries(
+              Object.entries(this.cordovaDependencies || {}).filter(
+                ([key]) => !pluginsExcludedFromCompatibilityHash.includes(key)
+              )
+            )
           );
 
           const hash = process.env[`METEOR_CORDOVA_COMPAT_VERSION_${platform.toUpperCase()}`] ||
@@ -1952,7 +1954,7 @@ async function minifyCssFiles (files, {
     }
   });
 
-  return _.flatten(sources.map((source) => {
+  return sources.flatMap((source) => {
     return source._minifiedFiles.map((file) => {
       const newFile = new File({
         info: 'minified css',
@@ -1973,7 +1975,7 @@ async function minifyCssFiles (files, {
 
       return newFile;
     });
-  }));
+  });
 }
 
 const { createHash } = require("crypto");
@@ -2100,7 +2102,7 @@ class JsImage {
         callback(err, result);
       };
 
-      if (!assets || !_.has(assets, assetPath)) {
+      if (!assets || !(assetPath in assets)) {
         _callback(new Error("Unknown asset: " + assetPath));
       } else {
         var buffer = assets[assetPath];
@@ -2115,8 +2117,8 @@ class JsImage {
 
     const nodeModulesDirsByPackageName = new Map;
 
-    _.each(self.jsToLoad, item => {
-      _.each(item.nodeModulesDirectories, nmd => {
+    self.jsToLoad.forEach(item => {
+      Object.values(item.nodeModulesDirectories || {}).forEach(nmd => {
         if (nmd.local) {
           // Consider only non-local node_modules directories for build
           // plugins.
@@ -2216,7 +2218,7 @@ class JsImage {
               }
             }
 
-            let found = _.some(item.nodeModulesDirectories, nmd => {
+            let found = Object.values(item.nodeModulesDirectories || {}).some(nmd => {
               // Npm.require doesn't consider local node_modules
               // directories.
               return ! nmd.local && tryLookup(nmd.sourcePath, name);
@@ -2239,7 +2241,7 @@ class JsImage {
               const nmdSourcePaths =
                   nodeModulesDirsByPackageName.get(bindings.Plugin.name);
               if (Array.isArray(nmdSourcePaths)) {
-                found = _.some(nmdSourcePaths, sourcePath => {
+                found = nmdSourcePaths.some(sourcePath => {
                   return tryLookup(sourcePath, name);
                 });
               }
@@ -2383,7 +2385,7 @@ class JsImage {
         const relativePath = parts.slice(start).join("/");
         let fullPath;
 
-        _.some(dirs, dir => {
+        dirs.some(dir => {
           const osPath = files.convertToOSPath(
             files.pathJoin(dir, relativePath));
 
@@ -2423,7 +2425,7 @@ class JsImage {
     // paths are no longer just "preferred"; they are the final paths
     // that we will use
     var nodeModulesDirectories = Object.create(null);
-    _.each(self.nodeModulesDirectories || [], function (nmd) {
+    Object.values(self.nodeModulesDirectories || {}).forEach(function (nmd) {
       // We need to find the actual file system location for the node modules
       // this JS Image uses, so that we can add it to nodeModulesDirectories
       var modulesPhysicalLocation;
@@ -2535,7 +2537,7 @@ class JsImage {
           { data: sourceBuffer }
       );
 
-      if (!_.isEmpty(item.assets)) {
+      if (item.assets && Object.keys(item.assets).length > 0) {
         // For package code, static assets go inside a directory inside
         // assets/packages specific to this package. Application assets (e.g. those
         // inside private/) go in assets/app/.
@@ -2552,7 +2554,7 @@ class JsImage {
         loadItem.assets = {};
         for (const [relPath, data] of Object.entries(item.assets)) {
           var sha = watch.sha1(data);
-          if (_.has(assetFilesBySha, sha)) {
+          if (sha in assetFilesBySha) {
             loadItem.assets[relPath] = assetFilesBySha[sha];
           } else {
             loadItem.assets[relPath] = assetFilesBySha[sha] =
@@ -2710,9 +2712,9 @@ class JsImage {
         loadItem.sourceMapRoot = item.sourceMapRoot;
       }
 
-      if (!_.isEmpty(item.assets)) {
+      if (item.assets && Object.keys(item.assets).length > 0) {
         loadItem.assets = {};
-        _.each(item.assets, function (filename, relPath) {
+        Object.entries(item.assets).forEach(function ([relPath, filename]) {
           loadItem.assets[relPath] = files.readFile(files.pathJoin(dir, filename));
         });
       }
@@ -2747,7 +2749,7 @@ class JsImageTarget extends Target {
     var self = this;
     var ret = new JsImage;
 
-    _.each(self.js, function (file) {
+    self.js.forEach(function (file) {
       ret.jsToLoad.push({
         targetPath: file.targetPath,
         source: file.contents().toString('utf8'),
@@ -3148,7 +3150,7 @@ Find out more about Meteor at meteor.com.
     // Merge the WatchSet of everything that went into the bundle.
     const clientWatchSet = new watch.WatchSet();
     const serverWatchSet = new watch.WatchSet();
-    const dependencySources = [builder].concat(_.values(targets));
+    const dependencySources = [builder].concat(Object.values(targets));
     dependencySources.forEach(s => {
       if (s instanceof ClientTarget) {
         clientWatchSet.merge(s.getWatchSet());
@@ -3299,9 +3301,8 @@ async function bundle({
   var webArchs;
   if (buildOptions.webArchs) {
     // Don't attempt to build web.cordova when platforms have been removed
-    webArchs = _.intersection(
-      buildOptions.webArchs,
-      projectContext.platformList.getWebArchs());
+    const availableArchs = projectContext.platformList.getWebArchs();
+    webArchs = buildOptions.webArchs.filter(a => availableArchs.includes(a));
   } else {
     webArchs = projectContext.platformList.getWebArchs();
   }
