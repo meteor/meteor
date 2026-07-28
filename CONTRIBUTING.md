@@ -16,7 +16,7 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Contributing to documentation](CONTRIBUTING.md#documentation)
 - [Finding work](CONTRIBUTING.md#finding-work)
 - [Submitting pull requests](CONTRIBUTING.md#making-changes-to-meteor-core)
-- [Reviewing pull requests](CONTRIBUTING.md#reviewer)
+- [Reviewing pull requests](CONTRIBUTING.md#core-committer)
 - [Maintaining a community package](CONTRIBUTING.md#community-package-maintainer)
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://forums.meteor.com/c/meetups) and events and helping to moderate our [forums](https://forums.meteor.com/).
@@ -37,18 +37,14 @@ If in doubt about the best way to implement something, please create additional 
 
 Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
 
-#### Reviewer
+#### Core Committer
 
-Reviewers are members of the community who help with Pull Requests reviews.
+Core Committers are community members who help maintain Meteor: they review pull requests and triage issues. They hold triage permissions on meteor/meteor — labeling, assigning, and managing issues and PRs within the areas they know best. See [GOVERNANCE.md](GOVERNANCE.md) for the full role description.
 
-Current Reviewers:
-- [meteor](https://github.com/meteor/meteor)
-  - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
-  - [@henriquealbert](https://github.com/henriquealbert)
-  - [@aquinoit](https://github.com/aquinoit)
-  - [@Grubba27](https://github.com/Grubba27)
-  - [@italojs](https://github.com/italojs)
-  - [@nachocodoner](https://github.com/nachocodoner)
+Anyone can open a pull request nominating a person for the Core Committer program; the community — and in particular the other Core Committers — approves or rejects the nomination. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
+
+Current Core Committers:
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
 - [@zodern](https://github.com/zodern)
 - [@radekmie](https://github.com/radekmie)
@@ -61,22 +57,16 @@ To quickly check out a PR branch from a fork for local testing, see the [Testing
 npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
 ```
 
-#### Core Committer
+#### Technical Steering Committee (TSC)
 
-The contributors with commit access to meteor/meteor are employees of Meteor Software LP or community members who have distinguished themselves in other contribution areas or members of partner companies. If you want to become a core committer, please start writing PRs.
+The TSC is the governing body responsible for major, long-term decisions about Meteor — architectural direction, breaking changes, and project-wide policies. TSC members hold commit access to meteor/meteor, and publishing official Meteor releases is their exclusive domain. The TSC is composed of Meteor Software employees and is **not** open to community nomination. See [GOVERNANCE.md](GOVERNANCE.md) for details.
 
-Anyone can open a pull request nominating a person for the Core Committer program; the community — and in particular the other Core Committers — approves or rejects the nomination. See [GOVERNANCE.md](GOVERNANCE.md) for the full process. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
-
-Current Core Team:
-- [meteor](https://github.com/meteor/meteor)
-  - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
-  - [@henriquealbert](https://github.com/henriquealbert)
-  - [@Grubba27](https://github.com/Grubba27)
-  - [@italojs](https://github.com/italojs)
-  - [@nachocodoner](https://github.com/nachocodoner)
-- [@StorytellerCZ](https://github.com/StorytellerCZ)
-- [@zodern](https://github.com/zodern)
-- [@radekmie](https://github.com/radekmie)
+Current TSC:
+- [@henriquealbert](https://github.com/henriquealbert)
+- [@Grubba27](https://github.com/Grubba27)
+- [@italojs](https://github.com/italojs)
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@aquinoit](https://github.com/aquinoit)
 
 ### Tracking project work
 
