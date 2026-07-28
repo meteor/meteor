@@ -26,3 +26,12 @@ test("builds Cordova iOS 8 simulator app with fixed App scheme", () => {
     ]
   );
 });
+
+test("builds Cordova iOS 7 simulator app with workspace scheme", () => {
+  const args = buildIosSimulatorArgs({
+    workspace: "/tmp/project/MeteorSmoke.xcworkspace",
+    derivedData: "/tmp/build/derived-data",
+  });
+
+  assert.equal(args[args.indexOf("-scheme") + 1], "MeteorSmoke");
+});

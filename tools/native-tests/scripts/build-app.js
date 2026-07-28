@@ -28,9 +28,10 @@ async function findFirst(dir, regex) {
 }
 
 function buildIosSimulatorArgs({ workspace, derivedData }) {
+  const scheme = path.basename(workspace, ".xcworkspace");
   return [
     "-workspace", workspace,
-    "-scheme", "App",
+    "-scheme", scheme,
     "-configuration", "Debug",
     "-sdk", "iphonesimulator",
     "-destination", "generic/platform=iOS Simulator",
