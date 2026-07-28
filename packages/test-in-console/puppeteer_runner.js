@@ -50,11 +50,13 @@ async function runNextUrl(browser) {
   // });
 
   page.on("console", async (msg) => {
-    lastOutputAt = Date.now();
     const text = msg.text();
     if (text.includes("Permissions policy violation")) {
+      // Ignored warnings must not count as activity, or a page that spams them
+      // would reset the stall clock forever and defeat the timeout.
       return;
     }
+    lastOutputAt = Date.now();
     if (text) console.log(text);
     else {
       testNumber++;
@@ -97,6 +99,7 @@ async function runNextUrl(browser) {
       const failCount = await getFailCount(page);
       console.log(`Tests complete with ${failCount} failures`);
       console.log(`Tests complete with ${await getPassCount(page)} passes`);
+      clearInterval(stallInterval);
       if (failCount > 0) {
         const failed = await getFailed(page);
         failed.map((f) => console.log(`${f.name} failed: ${f.info}`));
@@ -109,18 +112,6 @@ async function runNextUrl(browser) {
         process.exit(0);
       }
     } else {
-      const idleMs = Date.now() - lastOutputAt;
-      if (idleMs > STALL_TIMEOUT_MS) {
-        // reportStall is best-effort; the browser cleanup and non-zero exit must
-        // happen regardless of whether the diagnostics resolve, hang, or throw.
-        try {
-          await reportStall(page, idleMs);
-        } finally {
-          await browser.close().catch(() => {});
-          process.exit(1);
-        }
-        return;
-      }
       setTimeout(poll, 1000);
     }
   }
@@ -128,6 +119,31 @@ async function runNextUrl(browser) {
   // Start the clock here, not at module load: everything before this point
   // (build, app boot, page load) legitimately produces no page output.
   lastOutputAt = Date.now();
+
+  // Stall detection runs on its own timer, independent of `poll`. If the client
+  // event loop is blocked (e.g. an infinite loop in a test), `poll`'s
+  // `await isDone(page)` hangs too — so a check living inside `poll` would never
+  // fire. A standalone interval keeps ticking regardless of what the page does.
+  let handlingStall = false;
+  const stallInterval = setInterval(async () => {
+    if (handlingStall) return;
+    const idleMs = Date.now() - lastOutputAt;
+    if (idleMs <= STALL_TIMEOUT_MS) return;
+    handlingStall = true;
+    clearInterval(stallInterval);
+    // reportStall is best-effort; the browser cleanup and non-zero exit must
+    // happen regardless of whether the diagnostics resolve, hang, or throw.
+    try {
+      await reportStall(page, idleMs);
+    } finally {
+      // Cap the shutdown too: a dead app server can wedge browser.close(), and
+      // the exit must not depend on it.
+      await withTimeout(browser.close(), STALL_DIAGNOSTIC_TIMEOUT_MS, "browser shutdown").catch(
+        () => {},
+      );
+      process.exit(1);
+    }
+  }, 1000);
 
   await poll();
 }
