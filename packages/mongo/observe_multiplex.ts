@@ -252,7 +252,10 @@ export class ObserveMultiplexer {
     await Promise.allSettled(addPromises).then((p) => {
       p.forEach((result) => {
         if (result.status === "rejected") {
-          console.error(`Error in adds for handle: ${String(result.reason)}`);
+          // Keep template-literal interpolation (not String(...)): the two differ
+          // only when result.reason is a Symbol — the literal throws (ToString),
+          // String() does not. Preserving devel behavior (types-only PR).
+          console.error(`Error in adds for handle: ${result.reason}`);
         }
       });
     });
