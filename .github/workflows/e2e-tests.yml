@@ -65,7 +65,6 @@ jobs:
           - Regressions
           - Solid
           - Svelte
-          - tla
           - Typescript
           - Vue
 

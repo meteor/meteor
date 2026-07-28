@@ -7,7 +7,7 @@ import {
 
 const { linkLocalRspack } = require('./scripts/link-rspack');
 
-describe('tla /', () => {
+describe('Regressions / tla /', () => {
   const port = 3145;
   let tempDir;
 
