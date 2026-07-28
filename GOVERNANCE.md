@@ -1,124 +1,118 @@
 # MeteorJS Governance
 
-This document describes how the Meteor project is organized, how decisions are made, and how contributors can grow into Core Committers. It works alongside [CONTRIBUTING.md](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md), which covers the day-to-day contribution process.
+This document explains how the Meteor project is organized, who does what, and how decisions get made. It goes together with [CONTRIBUTING.md](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md), which covers the day-to-day of contributing.
 
 ## Why this document exists
 
-Meteor has always depended on its community. But as the project grows, informal processes don't scale. This document makes the path from Contributor to Core Committer explicit, public, and achievable.
+Meteor has always run on its community. As the project grows, doing things informally stops working. This document writes down the roles and the path from Contributor to Core Committer so it's clear and open to everyone.
 
-## Areas of Specialization
+## Roles
 
-Each contributor will have one or more areas of specialization. This ensures that the development, code reviews, and maintenance of the Meteor ecosystem are guided by focused expertise. Specialized areas include domains such as Accounts, DDP, MongoDB, Reactivity, and the Build System, among others. Core Committers and TSC members are recognized for their specific domains of expertise.
+### Contributor
 
-## Tiers
+Anyone who opens pull requests, comments on issues, helps in the forum, writes docs, or joins a discussion. There's no process to become a Contributor — you just start. Every Core Committer began here.
 
-### 1. Contributor
+### Community Package Maintainer
 
-Anyone who opens pull requests, reviews issues, helps in the forum, writes docs, or participates in community discussions. No formal process required. This is where every Core Committer started.
+People who maintain community packages that matter to the Meteor ecosystem. They don't work in the core repo, but their packages shape how developers use Meteor every day. They're listed in [CONTRIBUTING.md](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md).
 
-### 2. Community Package Maintainer
+### Core Committer
 
-Developers who maintain community packages that are relevant to the Meteor ecosystem. They're not part of the core repo, but their work directly shapes how developers experience Meteor. Recognized contributors at this level are listed in the [CONTRIBUTING.md](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md) file.
+Core Committers are trusted community members who help keep Meteor moving. They review pull requests and triage issues — labeling, assigning, and helping move contributions toward merge. They don't merge or publish releases themselves; that stays with the TSC.
 
-### 3. Core Committer
+**What Core Committers get a say in**
 
-The active front line of Meteor development. Core Committers have direct repo access and triage permissions within their domain — they can label, assign, and manage issues and PRs, and shepherd contributions toward merge. They're invited to alignment meetings and trusted with early visibility into the roadmap.
+Core Committers are close to the code and to users, so their voice carries weight:
 
-This is the most prestigious role in the Meteor community. It carries real responsibility and real autonomy.
+- They help shape the roadmap for the coming years — what to prioritize, what to postpone, what to drop.
+- They can be brought into private discussions before a decision is opened to the wider community.
+- They have a say in how this document and the project's processes change over time.
 
-**How to become a Core Committer:**
+**What we ask in return**
 
-1. Anyone can open a pull request nominating a person for the Core Committer program. There's no minimum tenure or fixed contribution period — the nomination stands on the person's work and on community support.
-2. The nomination is public and open to community input on the GitHub repository.
-3. The community — and in particular the other Core Committers — is who approves or rejects the nomination.
-4. Once approved, the nomination is documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
+Core Committers are **not** required to work on the roadmap. You work on what you think matters most. We only ask one thing: pick at least one **front** and give it attention. A front can be a roadmap item, a package, or another repo under the Meteor organization (for example `performance` or Blaze).
 
-New packages entering the core start under an **experimental flag**. This gives the committer standing in front of it time to iterate, gather feedback, and prove stability before the package becomes official. The experimental stage has no fixed deadline, but the expectation is that packages move toward stable with clear milestones.
+Picking a front is voluntary — you choose where to put your name, and no one is forced onto anything. It doesn't mean you can only work on that; you can take breaks and work on other things too. It just means the community knows this is something you're looking after.
 
-**Responsibilities:**
+**Responsibilities**
 
-- Stand in front of at least one front of your choosing — a roadmap item, or another package/area/repository of the Meteor organization (e.g. the `performance` repo or Blaze). This is voluntary: you pick the front, and you're free to work on other things too.
-- Review and triage PRs within their domain.
-- Keep their area maintained and documented.
-- Uphold the [Meteor Code of Conduct](https://github.com/meteor/meteor/blob/devel/CODE_OF_CONDUCT.md).
+- Review and triage pull requests and issues.
+- Give attention to at least one front of your choosing.
+- Follow the [Meteor Code of Conduct](https://github.com/meteor/meteor/blob/devel/CODE_OF_CONDUCT.md).
 
-## Bennefits and trade-off
+> Being a Core Committer is **not a job**. There's no contract, no pay, and no employer relationship with Meteor Software or anyone else. Core Committers are independent open-source contributors who are trusted with triage rights. Everything here is a community expectation, not a work obligation.
 
-One thing worth calling out explicitly: with this document, **Core Committers gain more weight in shaping the project**, and in return take on one light commitment — standing in front of at least one front of their choosing.
+### Technical Steering Committee (TSC)
 
-On the influence side, Core Committers will have a stronger voice in:
+The TSC makes the big, long-term calls: architectural direction, breaking changes, and project-wide policies.
 
-- **Roadmap discussions** — what we prioritize, what we defer, what we cut. Core Committers are the people closest to the code and to users; their input should weigh more than a drive-by opinion.
-- **Future governance evolutions** — changes to this document, new tiers, new areas, adjustments to the nomination process. The people who carry the project should be the people deciding how it's run.
+The TSC is made up of Meteor Software employees, who are accountable for the project long-term. You **cannot** be nominated into the TSC by a pull request.
 
-On the accountability side, the expectation is lighter than it might sound: **Core Committers are not required to align their contributions with the roadmap**. You're free to work on what you find most valuable. What we do ask is that every Core Committer stands in front of **at least one front**. This doesn't mean you can only work on that front — it means you give it special attention as the area you chose to stand in front of. Signing up for a front is **voluntary**: each Core Committer chooses where to put their name, and no one is forced to attach their name to any specific front. The front can be a roadmap item or another area of the Meteor organization — for example the `performance` repository, Blaze, or any of the other projects under the Meteor umbrella.
+What the TSC can do:
 
-This is the trade we're proposing: more say in the direction, and a light commitment to give special attention to at least one front you choose.
+- Access private repositories in the Meteor organization.
+- Publish official Meteor releases. This stays the exclusive domain of Meteor Software.
 
-> **Important:** being a Core Committer is **not an employment relationship** with the Meteor brand, Meteor Software, or any company in the ecosystem. Core Committers are independent open-source contributors who are recognized for their work and trusted with triage rights in their domain. There is no contract, no compensation, and no employer/employee tie implied by the role. The expectations described here are community expectations, not labor obligations.
+What the TSC is responsible for:
 
-### 4. Technical Steering Committee (TSC)
+- Setting and keeping the long-term roadmap.
+- Making the final call on major changes when Core Committers can't reach agreement.
+- Approving changes to this document.
+- Representing Meteor in the wider open-source world.
 
-The TSC is the governing body responsible for major, long-term decisions about the Meteor project. This includes architectural direction, breaking changes, project-wide policies, and anything that significantly affects the ecosystem.
+### Alumni
 
-The TSC is **not open to community nominations**. Unlike the Core Committer program, you cannot be nominated into the TSC by a pull request. The TSC is composed of Meteor Software employees, who hold organizational accountability for the project and its long-term stewardship.
+Core Committers who stop contributing move to Alumni after 12 months of inactivity. It's automatic — no vote, no drama. Reviewing PRs and joining discussions still counts as contributing, so this is only for people who've truly stepped away.
 
-**Access and permissions:**
+Alumni keep their recognition and stay listed on the Meteor website. They can still review PRs and share opinions. They just don't hold triage rights or a vote anymore. If an Alumnus wants to come back, they go through the same nomination as anyone else.
 
-- Access to private repositories within the Meteor organization.
-- Permission to publish official Meteor releases.
+## How to become a Core Committer
 
-**Responsibilities:**
+1. Anyone can open a pull request nominating someone for the Core Committer program. There's no minimum time or set number of contributions — the nomination stands on the person's work and on community support.
+2. The nomination is public, on the GitHub repository.
+3. The community — and especially the current Core Committers — decides whether to accept it.
+4. Once accepted, it's recorded at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
 
-- Set and maintain the long-term technical roadmap.
-- Make final decisions on major architectural changes, breaking changes, and new core features when consensus among Core Committers cannot be reached.
-- Approve changes to this governance document.
-- Represent the Meteor project in the broader open-source ecosystem.
-
-### 5. Alumni
-
-Core Committers who are no longer actively contributing move to Alumni status. This happens automatically after 12 months of inactivity. No vote, no drama, just an honest reflection of where things are.
-
-Alumni keep their recognition. They're listed on the Meteor website with their contribution history, and they can still review PRs and share opinions. They just no longer hold active triage permissions or voting rights.
-
-If an Alumnus wants to return as an active Core Committer, the same nomination process applies.
+New packages entering core start behind an **experimental flag**. This gives the person looking after it time to iterate and prove it's stable before it becomes official. There's no fixed deadline, but the goal is to move toward stable.
 
 ## Current TSC Members
 
 | Name | Role |
 |------|------|
-| @fredmaiaarantes | Meteor Software |
 | @henriquealbert | Meteor Software |
 | @Grubba27 | Meteor Software |
 | @italojs | Meteor Software |
 | @nachocodoner | Meteor Software |
-| @aquinoit | Meteor Software |
 
 ## Current Core Committers
 
-| Name | Area |
-|------|------|
-|TBD|TBD|
-
+| Name |
+|------|
+| @fredmaiaarantes |
+| @StorytellerCZ |
+| @zodern |
+| @radekmie |
 
 ## Alumni
 
-These are people who shaped Meteor and earned permanent recognition for their work. Alumni are listed publicly on the Meteor website with their contribution history.
+People who shaped Meteor and earned lasting recognition for it. Alumni are listed on the Meteor website with their contribution history.
 
 Currently no members.
 
 ## Decision-making
 
-Day-to-day decisions within a front belong to the Core Committer standing in front of it. Larger decisions that affect Meteor core, including breaking changes, new experimental packages, and changes to this document, require consensus among active Core Committers.
+Who decides depends on how big the change is:
 
-If consensus can't be reached, the TSC acts as the tiebreaker.
+- **Small change in one front** — the Core Committer responsible for that front decides. For example: which PRs to move forward, or which issues come first.
+- **Change to Meteor core** — for example a breaking change, a new experimental package, or a change to this document. The active Core Committers decide together.
+- **No agreement from the Core committers or community?** — the TSC decides.
+
+Two things are always the TSC's call: the long-term roadmap and publishing official releases.
 
 ## Removing a Core Committer
 
-A Core Committer can be removed by a two-thirds majority vote among active Core Committers for a serious violation of the Code of Conduct. This has never happened. The process exists to make expectations clear, not because we expect to use it.
+A Core Committer can be removed by a two-thirds vote of the active Core Committers, for a serious Code of Conduct violation. This has never happened. The rule exists to be clear about expectations, not because we expect to use it.
 
 ## Changing this document
 
-Anyone can propose changes to this document via a pull request. Changes require consensus among active Core Committers and approval from the TSC before merging.
-
-
+Anyone can propose changes with a pull request. Changes need agreement among active Core Committers and approval from the TSC before merging.
