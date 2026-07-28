@@ -618,6 +618,31 @@ Tinytest.addAsync('livedata server - stopping a handle should preserve its conte
   cleanup();
 });
 
+Tinytest.addAsync(
+  'livedata server - Session.close() nulls socket so deferred send() is safe',
+  async function (test) {
+    const { clientConn, serverConn } = await getTestConnections(test);
+
+    // Fish the Session object out of the server's session map
+    const session = Meteor.server.sessions.get(serverConn.id);
+    test.isTrue(!!session, 'session should exist');
+    test.isTrue(!!session.socket, 'socket should exist before close');
+
+    // Close the session (simulates what happens on WebSocket close)
+    session.close();
+
+    // The fix: socket is now null after close
+    test.isNull(session.socket);
+
+    // send() after close should be a silent no-op, not a throw.
+    // Before the fix, this would write to a CLOSING WebSocket and throw.
+    // If send() throws here, the test fails automatically.
+    session.send({ msg: 'ping' });
+
+    clientConn.disconnect();
+  }
+);
+
 function getTestConnections(test) {
   return new Promise((resolve, reject) => {
     makeTestConnection(test, (clientConn, serverConn) => {

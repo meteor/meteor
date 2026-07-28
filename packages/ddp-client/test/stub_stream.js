@@ -60,6 +60,15 @@ Object.assign(StubStream.prototype, {
     }
   },
 
+  disconnect: async function() {
+    const self = this;
+    if (self.callbacks['disconnect']) {
+      for (const cb of self.callbacks['disconnect']) {
+        await cb();
+      }
+    }
+  },
+
   // Provide a tag to detect stub streams.
   // We don't log heartbeat failures on stub streams, for example.
   _isStub: true,

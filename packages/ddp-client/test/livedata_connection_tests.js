@@ -1,5 +1,5 @@
 import has from 'lodash.has';
-import identity from 'lodash.identity'
+import identity from 'lodash.identity';
 import FakeTimers from '@sinonjs/fake-timers';
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
@@ -2560,6 +2560,114 @@ if (Meteor.isClient) {
     }
   );
 }
+
+Tinytest.addAsync(
+  'livedata connection - disconnect aborts outstanding methods when retry is false',
+  async function(test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream, { retry: false });
+
+    await startAndConnect(test, stream);
+
+    // Case A: method with no result yet
+    let callbackAError = null;
+    let callbackAResult = null;
+    conn.call('methodA', function(err, result) {
+      callbackAError = err;
+      callbackAResult = result;
+    });
+    const messageA = testGotMessage(test, stream, {
+      msg: 'method', method: 'methodA', params: [], id: '*'
+    });
+
+    // Case B: method that received updated but not result
+    let callbackBError = null;
+    let callbackBResult = null;
+    conn.call('methodB', function(err, result) {
+      callbackBError = err;
+      callbackBResult = result;
+    });
+    const messageB = testGotMessage(test, stream, {
+      msg: 'method', method: 'methodB', params: [], id: '*'
+    });
+
+    // Case C: method that received result but not updated
+    let callbackCError = null;
+    let callbackCResult = null;
+    conn.call('methodC', function(err, result) {
+      callbackCError = err;
+      callbackCResult = result;
+    });
+    const messageC = testGotMessage(test, stream, {
+      msg: 'method', method: 'methodC', params: [], id: '*'
+    });
+
+    // Deliver updated for methodB only (no 'result' message)
+    await stream.receive({
+      msg: 'updated', methods: [messageB.id]
+    });
+
+    // Deliver result for methodC only (no 'updated' message)
+    await stream.receive({
+      msg: 'result', id: messageC.id, result: 'the-value'
+    });
+
+    // Neither callback should have fired yet (each waiting for the other half)
+    test.isNull(callbackBError);
+    test.isNull(callbackBResult);
+    test.isNull(callbackCError);
+    test.isNull(callbackCResult);
+
+    // Disconnect — should abort all outstanding invokers
+    await stream.disconnect();
+
+    // Case A: callback fires with disconnected error, no result to preserve
+    test.instanceOf(callbackAError, Meteor.Error);
+    test.equal(callbackAError.error, 'disconnected');
+    test.isUndefined(callbackAResult);
+
+    // Case B: callback fires with disconnected error, no result to preserve
+    test.instanceOf(callbackBError, Meteor.Error);
+    test.equal(callbackBError.error, 'disconnected');
+    test.isUndefined(callbackBResult);
+
+    // Case C: callback fires with disconnected error (use onResultReceived
+    // if you need the result before write confirmation)
+    test.instanceOf(callbackCError, Meteor.Error);
+    test.equal(callbackCError.error, 'disconnected');
+    test.isUndefined(callbackCResult);
+
+    // All invokers should be cleaned up
+    test.equal(Object.keys(conn._methodInvokers).length, 0);
+    test.equal(conn._outstandingMethodBlocks.length, 0);
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - disconnect does NOT abort methods when retry is true',
+  async function(test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream, { retry: true });
+
+    await startAndConnect(test, stream);
+
+    // Call a method
+    let callbackFired = false;
+    conn.call('retryMethod', function(err, result) {
+      callbackFired = true;
+    });
+    testGotMessage(test, stream, {
+      msg: 'method', method: 'retryMethod', params: [], id: '*'
+    });
+
+    // Disconnect — should NOT abort because retry is true
+    await stream.disconnect();
+
+    // Callback should NOT have fired — invoker is kept alive for reconnect
+    test.isFalse(callbackFired);
+    test.equal(Object.keys(conn._methodInvokers).length, 1);
+  }
+);
 
 if (Meteor.isClient) {
   Tinytest.addAsync(
