@@ -22,6 +22,16 @@ function resolveLanIp({ interfaces = os.networkInterfaces(), prefer } = {}) {
   return flat[0].address;
 }
 
+function buildServerArgs({ lanIp, port }) {
+  return [
+    "run",
+    "--port",
+    `${lanIp}:${port}`,
+    "--mobile-server",
+    `http://${lanIp}:${port}`,
+  ];
+}
+
 /**
  * Start `meteor run` for the smoke app on the chosen LAN IP.
  *
@@ -39,7 +49,7 @@ async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
 
   const child = execa(
     meteor,
-    ["run", "--port", `${lanIp}:${port}`],
+    buildServerArgs({ lanIp, port }),
     {
       cwd: appDir,
       stdio: "inherit",
@@ -62,4 +72,4 @@ async function startServer({ appDir, lanIp, port = 3000, meteorBin }) {
   };
 }
 
-module.exports = { resolveLanIp, startServer };
+module.exports = { buildServerArgs, resolveLanIp, startServer };

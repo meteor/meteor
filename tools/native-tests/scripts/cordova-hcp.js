@@ -71,6 +71,7 @@ async function waitForCordovaManifestChange({
   intervalMs = DEFAULT_INTERVAL_MS,
   fetchImpl = globalThis.fetch,
 }) {
+  const manifestUrl = new URL(MANIFEST_PATH, baseUrl).toString();
   const deadline = Date.now() + timeoutMs;
   let lastError;
 
@@ -90,7 +91,8 @@ async function waitForCordovaManifestChange({
 
   const detail = lastError ? `: ${lastError.message}` : "";
   throw new Error(
-    `Timed out waiting for Cordova manifest to change from ${previousVersion}${detail}`
+    `Timed out waiting for Cordova manifest ${manifestUrl} to change from ` +
+      `${previousVersion}${detail}`
   );
 }
 

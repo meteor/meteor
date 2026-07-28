@@ -150,6 +150,6 @@ test("times out while Cordova manifest version remains unchanged", async () => {
         },
       }),
     }),
-    /initial-v1/
+    /__cordova\/manifest\.json.*initial-v1/
   );
 });
