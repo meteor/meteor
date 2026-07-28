@@ -211,7 +211,11 @@ export class ObserveMultiplexer {
             );
           });
         }
-        handle.initialAddsSent.then(() => result);
+        // Do NOT return `result` here: chaining `.then(() => result)` would make
+        // this floating promise adopt result's rejection, producing an unhandled
+        // rejection that crashes the process. result's errors are already handled
+        // by the .catch above; this only sequences work after the initial adds.
+        handle.initialAddsSent.then(() => {});
       }
     });
   }
