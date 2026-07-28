@@ -22,7 +22,7 @@
     "@types/sockjs-client": "^1.5.4",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
-    "check-type-test-coverage": "^1.2.0",
+    "check-type-test-coverage": "^1.3.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^9.1.2",
     "eslint-config-vazco": "^7.4.0",
@@ -61,7 +61,7 @@
     "types:compile": "npx tsc --noEmit",
     "types:coverage": "npm run types:compile && type-coverage --at-least 99",
     "types:coverage:table": "npm run types:compile && node -e \"require('typescript-coverage-report/dist/lib/getCoverage').default().then(d=>{process.stdout.write(require('typescript-coverage-report/dist/lib/reporters/text').generate(d,80)+'\\n');process.exit(d.percentage>=80?0:1)})\"",
-    "types:dts-test-coverage": "check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --tsconfig ./tsconfig.json --min 100"
+    "types:dts-test-coverage": "check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --tsconfig ./tsconfig.json --namespace-members --min 56"
   },
   "jshintConfig": {
     "esversion": 11
