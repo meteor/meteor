@@ -254,6 +254,7 @@ export function renderManualInstallInstructions({ packageLabel, changes, yarn = 
   const { devCommand, regularCommand } = formatInstallCommands({ changes: needed, yarn });
   if (devCommand) logWarn(`       ${devCommand}`);
   if (regularCommand) logWarn(`       ${regularCommand}`);
+  logInfo(`=> ℹ️ Set \`"meteor": { "autoInstallDeps": true }\` in package.json to manage them automatically.`);
   if (docUrl) {
     logWarn(`   See: ${docUrl}`);
   }
@@ -318,7 +319,7 @@ export async function ensurePackageDependencies(params = {}) {
     Package?.meteor?.global?.currentCommand?.name === 'update' &&
     Package?.meteor?.global?.currentCommand?.options?.npm === true;
 
-  const autoInstall = isUpdateNpm || hasMeteorAppConfigAutoInstallDeps();
+  const autoInstall = isUpdateNpm || hasMeteorAppConfigAutoInstallDeps({ cwd });
 
   if (!autoInstall) {
     renderManualInstallInstructions({
