@@ -81,6 +81,14 @@ selftest.define("bundler-npm", ["slow", "net", "checkout"], function () {
   return runOldTest('test-bundler-npm.js');
 });
 
+selftest.define("bundler-devonly", ["checkout"], function () {
+  return runOldTest('test-bundler-devonly.js');
+});
+
+selftest.define("bundler-devdepends", ["checkout"], function () {
+  return runOldTest('test-bundler-devdepends.js');
+});
+
 // This last one's is a shell script!
 // XXX pardon the hacky glue to make it work with a sandbox
 

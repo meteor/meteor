@@ -138,6 +138,13 @@ function shouldIgnorePath(absPath: string): boolean {
   const cwd = toPosixPath(process.cwd());
   const isWithinCwd = absPath.startsWith(cwd);
 
+  // TODO(modern): Review support for .meteor/local/modern
+  // to hold intermediate bundler results. dot contexts are
+  // hidden and commonly ignored by tools that scan directories
+  if (isWithinCwd && absPath.includes(`.meteor/local/modern`)) {
+    return false;
+  }
+
   if (isWithinCwd && absPath.includes(`${cwd}/.meteor/local`)) {
     return true;
   }
@@ -295,7 +302,7 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
   const cwd = toPosixPath(process.cwd());
   const isWithinCwd = dirPath.startsWith(cwd);
   const ignPrefix = isWithinCwd ? "" : "**/";
-  const ignorePatterns = [`${ignPrefix}node_modules/**`, `${ignPrefix}.meteor/local/**`];
+  const ignorePatterns = [`${ignPrefix}node_modules/**`, `${ignPrefix}.meteor/local/!(modern)`];
   try {
     watchRoots.add(dirPath);
     const subscription = await ParcelWatcher.subscribe(
@@ -305,9 +312,13 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
             if (/Events were dropped/.test(err.message)) {
               return;
             }
+            if (/RootResolveError/.test(err.message) || /failed to resolve root/.test(err.message)) {
+              console.warn(`Parcel watcher root resolve error on ${osDirPath}, ignoring: ${err.message}`);
+              ignoredWatchRoots.add(dirPath);
+              watchRoots.delete(dirPath);
+              return;
+            }
             console.error(`Parcel watcher error on ${osDirPath}:`, err);
-            // Only disable native watching for critical errors (like ENOSPC).
-            // @ts-ignore
             if (err.code === "ENOSPC" || err.errno === require("constants").ENOSPC) {
               fallbackToPolling();
             }
@@ -333,9 +344,11 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
         (e.code === "ENOTDIR" ||
             /Not a directory/.test(e.message) ||
             e.code === "EBADF" ||
-            /Bad file descriptor/.test(e.message))
+            /Bad file descriptor/.test(e.message) ||
+            /RootResolveError/.test(e.message) ||
+            /failed to resolve root/.test(e.message))
     ) {
-      console.warn(`Skipping watcher for ${osDirPath}: not a directory`);
+      console.warn(`Skipping watcher for ${osDirPath}: ${e.message || 'not watchable'}`);
       ignoredWatchRoots.add(dirPath);
     } else {
       console.error(`Failed to start watcher for ${osDirPath}:`, e);

@@ -1,18 +1,12 @@
 import crypto from 'crypto';
-import { Meteor } from 'meteor/meteor';
+import { Meteor } from 'meteor/meteor'
+import { check, Match } from 'meteor/check';
 import {
   AccountsCommon,
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
-
-const hasOwn = Object.prototype.hasOwnProperty;
-
-// XXX maybe this belongs in the check package
-const NonEmptyString = Match.Where(x => {
-  check(x, String);
-  return x.length > 0;
-});
+export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
 
 /**
@@ -89,6 +83,25 @@ export class AccountsServer extends AccountsCommon {
       return Meteor._isPromise(value) ? await value : value;
     };
 
+    /**
+     * @summary Object containing functions that generate URLs for account-related emails.
+     * Override these to customize URLs in emails sent by
+     * [`Accounts.sendResetPasswordEmail`](#Accounts-sendResetPasswordEmail),
+     * [`Accounts.sendEnrollmentEmail`](#Accounts-sendEnrollmentEmail), and
+     * [`Accounts.sendVerificationEmail`](#Accounts-sendVerificationEmail).
+     *
+     * By default, URLs use hash fragments (e.g., `#/reset-password/:token`) for security:
+     * hash fragments are not sent to the server in HTTP requests, preventing tokens from
+     * appearing in server logs or referrer headers.
+     * @locus Server
+     * @memberof Accounts
+     * @name urls
+     * @type {Object}
+     * @property {Function} resetPassword - `(token, extraParams) => string` - Generates password reset URL.
+     * @property {Function} verifyEmail - `(token, extraParams) => string` - Generates email verification URL.
+     * @property {Function} enrollAccount - `(token, extraParams) => string` - Generates account enrollment URL.
+     * @property {Function} loginToken - `(selector, token, extraParams) => string` - Generates login token URL.
+     */
     this.urls = {
       resetPassword: (token, extraParams) => this.buildEmailUrl(`#/reset-password/${token}`, extraParams),
       verifyEmail: (token, extraParams) => this.buildEmailUrl(`#/verify-email/${token}`, extraParams),
@@ -99,6 +112,16 @@ export class AccountsServer extends AccountsCommon {
 
     this.addDefaultRateLimit();
 
+    /**
+     * @summary Builds a URL for account-related emails by combining the app's
+     * root URL with a path and optional extra parameters.
+     * @locus Server
+     * @memberof Accounts
+     * @name buildEmailUrl
+     * @param {String} path - The path to append to the root URL (e.g., `#/reset-password/TOKEN`).
+     * @param {Object} [extraParams={}] - Additional query parameters to include in the URL.
+     * @returns {String} The complete URL.
+     */
     this.buildEmailUrl = (path, extraParams = {}) => {
       const url = new URL(Meteor.absoluteUrl(path));
       const params = Object.entries(extraParams);
@@ -110,7 +133,11 @@ export class AccountsServer extends AccountsCommon {
       }
       return url.toString();
     };
+
+    // Expose the _CurrentEndpointInvocation
+    this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
   }
+
 
   ///
   /// CURRENT USER
@@ -124,9 +151,15 @@ export class AccountsServer extends AccountsCommon {
     // runs. This is likely not what the user expects. The way to make this work
     // in a method or publish function is to do Meteor.find(this.userId).observe
     // and recompute when the user record changes.
-    const currentInvocation = DDP._CurrentMethodInvocation.get() || DDP._CurrentPublicationInvocation.get();
-    if (!currentInvocation)
-      throw new Error("Meteor.userId can only be invoked in method calls or publications.");
+    const currentInvocation =
+      DDP._CurrentMethodInvocation.get() ||
+      DDP._CurrentPublicationInvocation.get() ||
+      this._CurrentEndpointInvocation.get();
+    if (!currentInvocation) {
+      throw new Error(
+        "Meteor.userId can only be invoked inside a method, publication, or WebApp endpoint."
+      );
+    }
     return currentInvocation.userId;
   }
 
@@ -537,7 +570,7 @@ export class AccountsServer extends AccountsCommon {
     type,
     fn
   ) {
-    return await this._attemptLogin(
+    return this._attemptLogin(
       methodInvocation,
       methodName,
       methodArgs,
@@ -668,7 +701,6 @@ export class AccountsServer extends AccountsCommon {
     // this variable is available in their scope.
     const accounts = this;
 
-
     // This object will be populated with methods and then passed to
     // accounts._server.methods further below.
     const methods = {};
@@ -685,7 +717,7 @@ export class AccountsServer extends AccountsCommon {
       const result = await accounts._runLoginHandlers(this, options);
       //console.log({result});
 
-      return await accounts._attemptLogin(this, "login", arguments, result);
+      return accounts._attemptLogin(this, "login", arguments, result);
     };
 
     methods.logout = async function () {
@@ -695,6 +727,17 @@ export class AccountsServer extends AccountsCommon {
        await accounts.destroyToken(this.userId, token);
       }
       await accounts._successfulLogout(this.connection, this.userId);
+      await this.setUserId(null);
+    };
+
+    // Logs out the current user and closes all the connections
+    // associated with the user.
+    //
+    methods.logoutAllClients = async function() {
+      const logoutUserId = this.userId;
+      accounts._setLoginToken(logoutUserId, this.connection, null);
+      accounts._clearAllLoginTokens(logoutUserId);
+      await accounts._successfulLogout(this.connection, logoutUserId);
       await this.setUserId(null);
     };
 
@@ -727,7 +770,7 @@ export class AccountsServer extends AccountsCommon {
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
       await accounts._insertLoginToken(this.userId, newStampedToken);
-      return await accounts._loginUser(this, this.userId, newStampedToken);
+      return accounts._loginUser(this, this.userId, newStampedToken);
     };
 
     // Removes all tokens except the token associated with the current
@@ -768,7 +811,7 @@ export class AccountsServer extends AccountsCommon {
 
         if (Package["oauth-encryption"]) {
           const { OAuthEncryption } = Package["oauth-encryption"]
-          if (hasOwn.call(options, 'secret') && OAuthEncryption.keyIsLoaded())
+          if (Object.hasOwn(options, 'secret') && OAuthEncryption.keyIsLoaded())
             options.secret = OAuthEncryption.seal(options.secret);
         }
 
@@ -871,10 +914,8 @@ export class AccountsServer extends AccountsCommon {
   //   - forLoggedInUser {Array} Array of fields published to the logged-in user
   //   - forOtherUsers {Array} Array of fields published to users that aren't logged in
   addAutopublishFields(opts) {
-    this._autopublishFields.loggedInUser.push.apply(
-      this._autopublishFields.loggedInUser, opts.forLoggedInUser);
-    this._autopublishFields.otherUsers.push.apply(
-      this._autopublishFields.otherUsers, opts.forOtherUsers);
+    this._autopublishFields.loggedInUser.push(...(opts.forLoggedInUser || []));
+    this._autopublishFields.otherUsers.push(...(opts.forOtherUsers || []));
   };
 
   // Replaces the fields to be automatically
@@ -961,8 +1002,8 @@ export class AccountsServer extends AccountsCommon {
   _clearAllLoginTokens(userId) {
     this.users.updateAsync(userId, {
       $set: {
-        'services.resume.loginTokens': []
-      }
+        'services.resume.loginTokens': [],
+      },
     });
   };
 
@@ -975,7 +1016,7 @@ export class AccountsServer extends AccountsCommon {
   // the observe that we started when we associated the connection with
   // this token.
   _removeTokenFromConnection(connectionId) {
-    if (hasOwn.call(this._userObservesForConnections, connectionId)) {
+    if (Object.hasOwn(this._userObservesForConnections, connectionId)) {
       const observe = this._userObservesForConnections[connectionId];
       if (typeof observe === 'number') {
         // We're in the process of setting up an observe for this connection. We
@@ -1181,13 +1222,13 @@ export class AccountsServer extends AccountsCommon {
   };
 
   // @override from accounts_common.js
-  config(options) {
+  config(...args) {
     // Call the overridden implementation of the method.
-    const superResult = AccountsCommon.prototype.config.apply(this, arguments);
+    const superResult = AccountsCommon.prototype.config.apply(this, args);
 
     // If the user set loginExpirationInDays to null, then we need to clear the
     // timer that periodically expires tokens.
-    if (hasOwn.call(this._options, 'loginExpirationInDays') &&
+    if (Object.hasOwn(this._options, 'loginExpirationInDays') &&
       this._options.loginExpirationInDays === null &&
       this.expireTokenInterval) {
       Meteor.clearInterval(this.expireTokenInterval);
@@ -1344,7 +1385,7 @@ export class AccountsServer extends AccountsCommon {
         "Can't use updateOrCreateUserFromExternalService with internal service "
         + serviceName);
     }
-    if (!hasOwn.call(serviceData, 'id')) {
+    if (!Object.hasOwn(serviceData, 'id')) {
       throw new Error(
         `Service data for service ${serviceName} must include id`);
     }
@@ -1494,7 +1535,7 @@ export class AccountsServer extends AccountsCommon {
   ) {
     // Some tests need the ability to add users with the same case insensitive
     // value, hence the _skipCaseInsensitiveChecksForTest check
-    const skipCheck = Object.prototype.hasOwnProperty.call(
+    const skipCheck = Object.hasOwn(
       this._skipCaseInsensitiveChecksForTest,
       fieldValue
     );
@@ -1565,9 +1606,9 @@ export class AccountsServer extends AccountsCommon {
 
   _userQueryValidator = Match.Where(user => {
     check(user, {
-      id: Match.Optional(NonEmptyString),
-      username: Match.Optional(NonEmptyString),
-      email: Match.Optional(NonEmptyString)
+      id: Match.Optional(Match.NonEmptyString),
+      username: Match.Optional(Match.NonEmptyString),
+      email: Match.Optional(Match.NonEmptyString)
     });
     if (Object.keys(user).length !== 1)
       throw new Match.Error("User property must have exactly one field");
@@ -1647,13 +1688,13 @@ const defaultResumeLoginHandler = async (accounts, options) => {
   // {hashedToken, when} for a hashed token or {token, when} for an
   // unhashed token.
   let oldUnhashedStyleToken;
-  let token = await user.services.resume.loginTokens.find(token =>
+  let token = user.services.resume.loginTokens.find(token =>
     token.hashedToken === hashedToken
   );
   if (token) {
     oldUnhashedStyleToken = false;
   } else {
-     token = await user.services.resume.loginTokens.find(token =>
+    token = user.services.resume.loginTokens.find(token =>
       token.token === options.resume
     );
     oldUnhashedStyleToken = true;

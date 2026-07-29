@@ -2,6 +2,10 @@ var showRequireProfile = ('METEOR_PROFILE_REQUIRE' in process.env);
 if (showRequireProfile) {
   require('../tool-env/profile-require.js').start();
 }
+const { initMeteorConfig } = require('../tool-env/meteor-config');
+
+// Initialize meteorConfig globally
+initMeteorConfig();
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -287,15 +291,11 @@ main.captureAndExit = async function (header, title, f) {
 
 // NB: files required up to this point may not define commands
 
-const { initMeteorConfig } = require('../tool-env/meteor-config');
 require('./commands.js');
 require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
 require('./commands-aliases.js');
-
-// Initialize meteorConfig globally
-initMeteorConfig();
 
 ///////////////////////////////////////////////////////////////////////////////
 // Record all the top-level commands as JSON
@@ -846,18 +846,11 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         "However, if you are running this command in a build process (CI, etc.), or you are absolutely sure you know what you are doing,",
         "set the METEOR_ALLOW_SUPERUSER environment variable or pass --allow-superuser to proceed."
       );
-    }
 
-    Console.info("");
-    Console.info(
-      "Even with METEOR_ALLOW_SUPERUSER or --allow-superuser, permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as a normal user.",
-      "If you need to fix your permissions, run the following command from the root of your project:"
-    );
-    Console.info("");
-    Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
-    Console.info("");
+      Console.info("");
+      Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
+      Console.info("");
 
-    if (! allowSuperuser) {
       process.exit(1);
     }
   }
