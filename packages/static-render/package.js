@@ -6,13 +6,19 @@ Package.describe({
 });
 
 Package.onUse(function (api) {
+  // Server-only: the package ships no client code. `htmljs` and `tracker` are
+  // not referenced here — blaze already implies htmljs and pulls tracker in
+  // itself.
+  //
+  // Note that `Template` is not imported from a declared dependency: the
+  // registry is exported by templating-runtime, and this package reads it off
+  // the app's global, which exists by the time discovery runs in a startup
+  // hook. render() therefore checks `typeof Template` before using it.
   api.use([
     'ecmascript',
     'webapp',
     'blaze',
-    'htmljs',
-    'tracker',
-  ]);
+  ], 'server');
 
   // Weak so that adding this package never forces flow-router-extra into an
   // app that does not use it. Route discovery is the only source of routes
