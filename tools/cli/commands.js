@@ -2022,11 +2022,7 @@ main.registerCommand({
 });
 
 async function deployCommand(options, { rawOptions }) {
-  const site = options.args[0];
-
-  if (options.delete) {
-    return await deploy.deleteApp(site);
-  }
+  let site = options.args[0];
 
   if (options.password) {
     Console.error(
@@ -2035,6 +2031,94 @@ async function deployCommand(options, { rawOptions }) {
         "that only you (and people you designate) can access them. See the " +
         Console.command("'meteor authorized'") + " command.");
     return 1;
+  }
+
+  if (! site && ! options['build-only']) {
+    // Deleting is destructive, so we never offer a guess: naming the site is
+    // always the user's job, interactive terminal or not.
+    if (options.delete) {
+      Console.error("Error: site is required to delete.");
+      return 1;
+    }
+
+    if (! Console.isInteractive() || ! process.stdin.isTTY) {
+      Console.error("Error deploying application: site is required.");
+      return 1;
+    }
+
+    let sites = [];
+    let loggedIn = auth.isLoggedIn();
+    if (! loggedIn && ! options["deploy-token"]) {
+      Console.info(
+        "You must be logged in to deploy, just enter your email address.");
+      Console.info();
+      const isRegistered = await auth.registerOrLogIn();
+      if (! isRegistered) {
+        return 1;
+      }
+      loggedIn = true;
+    }
+
+    if (loggedIn) {
+      try {
+        sites = await deploy.getSitesList();
+      } catch (err) {
+        // Couldn't reach Galaxy: fall through and just ask for a site name.
+      }
+    }
+
+    // Inquirer paints its own prompts, so the progress display has to stand
+    // down until we're done asking.
+    Console.enableProgressDisplay(false);
+    try {
+      const prompt = inquirer.createPromptModule();
+
+      if (sites && sites.length > 0) {
+        const answers = await prompt([
+          {
+            type: "list",
+            name: "site",
+            message: "Which site do you want to deploy to?",
+            choices: [
+              // A null value falls through to the free-text prompt below,
+              // and can't collide with a real hostname.
+              { name: "+ Deploy to a new site...", value: null },
+              new inquirer.Separator(),
+              ...sites
+            ]
+          }
+        ]);
+        site = answers.site;
+      }
+
+      if (! site) {
+        const answers = await prompt([
+          {
+            type: "input",
+            name: "site",
+            message: "Enter the site name (e.g. myapp.meteorapp.com):",
+          }
+        ]);
+        site = answers.site.trim();
+      }
+    } catch (err) {
+      // A closed pipe or Ctrl-C during the prompt is a plain exit, not a crash.
+      if (err && (err.isTtyError || err.name === 'ExitPromptError')) {
+        return 1;
+      }
+      throw err;
+    } finally {
+      Console.enableProgressDisplay(true);
+    }
+
+    if (! site) {
+      Console.error("Error: site name is required.");
+      return 1;
+    }
+  }
+
+  if (options.delete) {
+    return await deploy.deleteApp(site);
   }
 
   const loggedIn = auth.isLoggedIn();

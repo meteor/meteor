@@ -914,6 +914,26 @@ export async function listSites() {
   return 0;
 };
 
+export async function getSitesList() {
+  var result = await deployRpc({
+    method: "GET",
+    operation: "authorized-apps",
+    promptIfAuthFails: false,
+    expectPayload: ["sites"]
+  });
+
+  if (result.errorMessage) {
+    return null;
+  }
+
+  if (! result.payload ||
+      ! result.payload.sites ||
+      ! result.payload.sites.length) {
+    return [];
+  }
+  return result.payload.sites.sort();
+};
+
 // Given a hostname, add "http://" or "https://" as
 // appropriate. (localhost gets http; anything else is always https.)
 function addScheme(hostOrURL) {
