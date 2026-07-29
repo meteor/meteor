@@ -29,3 +29,13 @@ Package.onUse(function (api) {
   api.export('StaticRender', 'server');
   api.addFiles('static-render-server.js', 'server');
 });
+
+Package.onTest(function (api) {
+  api.use([
+    'ecmascript',
+    'tinytest',
+    'static-render',
+  ], 'server');
+
+  api.addFiles('static-render-tests.js', 'server');
+});
