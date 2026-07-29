@@ -374,11 +374,15 @@ StaticRender = {
 
 const NON_APP_PATH_EXT = /\.(js|css|map|png|jpe?g|svg|gif|ico|woff2?|ttf|eot|webp|avif)$/i;
 
-WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next) {
-  if (!_ready) return next();
+/**
+ * Attach pre-rendered markup to the request, if any applies. Plain `return`
+ * means "nothing to inject" — the caller always continues the chain.
+ */
+async function injectPreRendered(req) {
+  if (!_ready) return;
 
   // Only handle page-serving methods — skip DDP/methods/API calls.
-  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  if (req.method !== 'GET' && req.method !== 'HEAD') return;
 
   const path = req.url.split('?')[0];
 
@@ -391,7 +395,7 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
     path.startsWith('/merged-stylesheets') ||
     NON_APP_PATH_EXT.test(path)
   ) {
-    return next();
+    return;
   }
 
   // 1. Try SSG cache first (fast path)
@@ -402,7 +406,7 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
     if (cached.head) {
       req.dynamicHead = (req.dynamicHead || '') + cached.head;
     }
-    return next();
+    return;
   }
 
   // 2. Try SSR routes (render on-the-fly with fresh data).
@@ -426,10 +430,22 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
         console.warn(`[StaticRender] SSR error for "${path}": ${e.message}`);
         // Fall through to normal client-side rendering
       }
-      return next();
     }
   }
+}
 
+WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next) {
+  // Nothing here may reject. WebApp.connectHandlers is an Express 5 sub-app,
+  // and Express 5 forwards a rejected handler promise to next(err) — which
+  // skips the boilerplate handler and serves a 500 instead of the app shell.
+  // Pre-rendering is an enhancement: on any failure, fall through silently.
+  try {
+    await injectPreRendered(req);
+  } catch (e) {
+    console.warn(
+      `[StaticRender] Skipped pre-render for "${req.url}": ${e.reason || e.message}`
+    );
+  }
   next();
 });
 
