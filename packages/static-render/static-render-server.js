@@ -359,6 +359,13 @@ StaticRender = {
             const params = typeof pathInfo === 'string' ? {} : (pathInfo.params || {});
             await this._renderAndCache(route, path, params);
           }
+        } else if (/[:*]/.test(route.pathDef)) {
+          console.warn(
+            `[StaticRender] SSG route "${route.pathDef}" has dynamic segments but no ` +
+            'staticPaths(). Caching it under the literal pattern would produce a key ' +
+            'no request can match — add staticPaths() to enumerate the paths to ' +
+            'pre-render, or use static: \'ssr\'.'
+          );
         } else {
           await this._renderAndCache(route, route.pathDef, {});
         }
@@ -387,6 +394,27 @@ StaticRender = {
 const NON_APP_PATH_EXT = /\.(js|css|map|png|jpe?g|svg|gif|ico|woff2?|ttf|eot|webp|avif)$/i;
 
 /**
+ * Decode a request path one segment at a time. Cache keys come from
+ * staticPaths() output or pathDef, which are written decoded, while req.url is
+ * percent-encoded — so "/blog/caf%C3%A9" has to become "/blog/café" to match.
+ * Decoding the whole path at once would turn an encoded %2F into a separator
+ * and change the route structure, so each segment is decoded on its own, and a
+ * segment that is not valid encoding is left as-is rather than throwing.
+ */
+function decodePathSegments(path) {
+  return path
+    .split('/')
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch (e) {
+        return segment;
+      }
+    })
+    .join('/');
+}
+
+/**
  * Attach pre-rendered markup to the request, if any applies. Plain `return`
  * means "nothing to inject" — the caller always continues the chain.
  */
@@ -396,7 +424,7 @@ async function injectPreRendered(req) {
   // Only handle page-serving methods — skip DDP/methods/API calls.
   if (req.method !== 'GET' && req.method !== 'HEAD') return;
 
-  const path = req.url.split('?')[0];
+  const path = decodePathSegments(req.url.split('?')[0]);
 
   // Early-skip for well-known non-app paths to avoid unnecessary work
   // (the Meteor boilerplate handler doesn't run on these either).
