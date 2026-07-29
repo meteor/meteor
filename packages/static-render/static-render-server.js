@@ -57,6 +57,19 @@ StaticRender = {
    * @returns {{ html: String, error: Object|null }}
    */
   render(templateName, data, context) {
+    // `Template` is only exported to the server by Blaze 3.1+ (meteor/blaze#507).
+    // On older Blaze the identifier does not exist at all, so reading it would
+    // throw a ReferenceError instead of degrading — check before touching it.
+    if (typeof Template === 'undefined') {
+      const msg = 'Blaze does not expose the Template registry on the server. ' +
+        'Server rendering requires Blaze 3.1+; pages are served without pre-rendered content.';
+      console.warn(`[StaticRender] ${msg}`);
+      return {
+        html: `<!-- [StaticRender] ${msg} -->`,
+        error: { template: templateName, path: context?.path, message: msg },
+      };
+    }
+
     const tmpl = Template[templateName];
     if (!tmpl) {
       const msg = `Template "${templateName}" not found on server. ` +
