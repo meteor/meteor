@@ -2,7 +2,7 @@
 
 Pre-render Blaze routes as HTML on the server, for SEO and social link previews. Supports two modes:
 
-- **SSG** (Static Site Generation): rendered once at server startup, cached permanently
+- **SSG** (Static Site Generation): rendered once at server startup, kept in memory until invalidated, regenerated, or the process restarts
 - **SSR** (Server-Side Rendering): rendered at each request with fresh data from MongoDB
 
 Pre-rendered HTML is injected into the Meteor boilerplate via `req.dynamicBody` and `req.dynamicHead`, so your client-side app still loads and takes over normally.
@@ -33,7 +33,9 @@ FlowRouter.route('/products/:slug', {
   },
   async staticHead(params) {
     const p = await Products.findOneAsync({ slug: params.slug });
-    return `<title>${p.title} — $${p.price}</title>`;
+    if (!p) return '<title>Not found</title>';
+    // staticHead output is injected verbatim — escape anything from the DB.
+    return `<title>${esc(p.title)} — $${esc(p.price)}</title>`;
   },
 });
 ```
@@ -44,6 +46,13 @@ Templates must be imported from `server/main.js`:
 import '../imports/ui/templates.html';
 import '../lib/routes.js';
 ```
+
+Pre-rendered `<head>` output is **appended** after your app's own `<head>`, so an
+app with a static `<title>` will serve two and browsers use the first. Remove the
+static `<title>` from apps that set titles per route. Helpers must be
+synchronous, only the named template is rendered (not your layout), and an
+unknown record still returns 200 — see the [full documentation](https://v3-docs.meteor.com/packages/static-render) for the
+complete list of constraints.
 
 Client-side cleanup (remove pre-rendered content when Blaze takes over):
 

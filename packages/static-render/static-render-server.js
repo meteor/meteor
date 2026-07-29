@@ -2,7 +2,7 @@
  * StaticRender — Pre-render Blaze routes for SEO.
  *
  * Two modes:
- *   static: 'ssg' — rendered once at startup, cached permanently (about, CGU)
+ *   static: 'ssg' — rendered once at startup, kept in memory until invalidated
  *   static: 'ssr' — rendered at each request with fresh data from MongoDB (products, articles)
  *
  * Both inject HTML into the Meteor boilerplate via dynamicBody/dynamicHead so that
