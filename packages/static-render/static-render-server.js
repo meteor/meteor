@@ -20,6 +20,15 @@ let _ready = false;
 // Server-side stubs for client-only APIs
 // ---------------------------------------------------------------------------
 
+/**
+ * Neutralise comment delimiters so a diagnostic can never break out of the
+ * <!-- --> wrapper it is emitted into. Error messages can carry request-derived
+ * text, and a "-->" inside one would inject markup into the served page.
+ */
+function commentSafe(text) {
+  return String(text).replace(/--+/g, '-');
+}
+
 const ssgError = (api, suggestion) => function () {
   throw new Meteor.Error(
     'ssg-client-only-api',
@@ -65,7 +74,7 @@ StaticRender = {
         'Server rendering requires Blaze 3.1+; pages are served without pre-rendered content.';
       console.warn(`[StaticRender] ${msg}`);
       return {
-        html: `<!-- [StaticRender] ${msg} -->`,
+        html: `<!-- [StaticRender] ${commentSafe(msg)} -->`,
         error: { template: templateName, path: context?.path, message: msg },
       };
     }
@@ -76,7 +85,7 @@ StaticRender = {
         'Make sure the template is defined in a .html file loaded by both client and server.';
       console.warn(`[StaticRender] ${msg}`);
       return {
-        html: `<!-- [StaticRender] ${msg} -->`,
+        html: `<!-- [StaticRender] ${commentSafe(msg)} -->`,
         error: { template: templateName, path: context?.path, message: msg },
       };
     }
@@ -96,7 +105,7 @@ StaticRender = {
         '  This page will be served without pre-rendered content.'
       );
       return {
-        html: `<!-- [StaticRender] Error in "${templateName}": ${msg} -->`,
+        html: `<!-- [StaticRender] Error in "${commentSafe(templateName)}": ${commentSafe(msg)} -->`,
         error: { template: templateName, path: context?.path, message: msg },
       };
     }
