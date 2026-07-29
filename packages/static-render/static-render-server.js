@@ -213,9 +213,20 @@ StaticRender = {
    * Render a route and store the result in the SSG cache.
    */
   async _renderAndCache(route, path, params) {
-    const data = route.options.staticData
-      ? await route.options.staticData(params)
-      : undefined;
+    let data;
+    if (route.options.staticData) {
+      try {
+        data = await route.options.staticData(params);
+      } catch (e) {
+        const message = `staticData() failed: ${e.reason || e.message}`;
+        console.warn(
+          `[StaticRender] ${message} for "${path}" — this page will be served ` +
+          'without pre-rendered content.'
+        );
+        _errors.push({ template: route.options.template, path, message });
+        return;
+      }
+    }
 
     const context = { path };
     const { html: body, error } = this.render(route.options.template, data, context);
@@ -243,9 +254,18 @@ StaticRender = {
    * on long-running servers. _errors reflects only SSG/build diagnostics.
    */
   async _renderSSR(route, path, params) {
-    const data = route.options.staticData
-      ? await route.options.staticData(params)
-      : undefined;
+    let data;
+    if (route.options.staticData) {
+      try {
+        data = await route.options.staticData(params);
+      } catch (e) {
+        console.warn(
+          `[StaticRender] staticData() failed for "${path}": ${e.reason || e.message} — ` +
+          'serving without pre-rendered content.'
+        );
+        return null;
+      }
+    }
 
     const context = { path };
     const { html: body } = this.render(route.options.template, data, context);
@@ -277,40 +297,67 @@ StaticRender = {
     if (routes.length === 0) return;
 
     for (const route of routes) {
-      if (!route.options.static || !route.options.template) continue;
+      // One failing route must never take the whole pre-render pass — and with
+      // it the server boot — down with it.
+      try {
+        if (!route.options.static || !route.options.template) continue;
 
-      const mode = route.options.static; // 'ssg', 'ssr', or true (legacy → treat as 'ssg')
+        const mode = route.options.static; // 'ssg', 'ssr', or true (legacy → treat as 'ssg')
 
-      if (mode === 'ssr') {
-        // SSR routes: register for on-the-fly rendering at request time
-        _ssrRoutes.set(route.pathDef, route);
-        continue;
-      }
-
-      // SSG routes: pre-render at startup
-      if (route.options.staticPaths) {
-        let paths;
-        try {
-          paths = await route.options.staticPaths();
-        } catch (e) {
-          console.warn(
-            `[StaticRender] Error in staticPaths for route "${route.pathDef}": ${e.message}`
-          );
-          _errors.push({
-            template: route.options.template,
-            path: route.pathDef,
-            message: `staticPaths() failed: ${e.message}`,
-          });
+        if (mode === 'ssr') {
+          // SSR routes: register for on-the-fly rendering at request time
+          _ssrRoutes.set(route.pathDef, route);
           continue;
         }
 
-        for (const pathInfo of paths) {
-          const path = typeof pathInfo === 'string' ? pathInfo : pathInfo.path;
-          const params = typeof pathInfo === 'string' ? {} : (pathInfo.params || {});
-          await this._renderAndCache(route, path, params);
+        // SSG routes: pre-render at startup
+        if (route.options.staticPaths) {
+          let paths;
+          try {
+            paths = await route.options.staticPaths();
+          } catch (e) {
+            console.warn(
+              `[StaticRender] Error in staticPaths for route "${route.pathDef}": ${e.message}`
+            );
+            _errors.push({
+              template: route.options.template,
+              path: route.pathDef,
+              message: `staticPaths() failed: ${e.message}`,
+            });
+            continue;
+          }
+
+          if (!Array.isArray(paths)) {
+            console.warn(
+              `[StaticRender] staticPaths() for "${route.pathDef}" must return an array, ` +
+              `got ${typeof paths} — skipping this route.`
+            );
+            continue;
+          }
+
+          for (const pathInfo of paths) {
+            const path = typeof pathInfo === 'string' ? pathInfo : pathInfo?.path;
+            if (!path) {
+              console.warn(
+                `[StaticRender] staticPaths() for "${route.pathDef}" returned an entry ` +
+                'without a path — skipping it.'
+              );
+              continue;
+            }
+            const params = typeof pathInfo === 'string' ? {} : (pathInfo.params || {});
+            await this._renderAndCache(route, path, params);
+          }
+        } else {
+          await this._renderAndCache(route, route.pathDef, {});
         }
-      } else {
-        await this._renderAndCache(route, route.pathDef, {});
+      } catch (e) {
+        const message = e.reason || e.message;
+        console.warn(`[StaticRender] Failed to process route "${route.pathDef}": ${message}`);
+        _errors.push({
+          template: route.options?.template,
+          path: route.pathDef,
+          message,
+        });
       }
     }
   },
@@ -364,13 +411,16 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
     const routeInfo = StaticRender._findSSRRouteForPath(path);
     if (routeInfo) {
       try {
-        const { body, head } = await StaticRender._renderSSR(
+        const rendered = await StaticRender._renderSSR(
           routeInfo.route, path, routeInfo.params
         );
-        req.dynamicBody = (req.dynamicBody || '') +
-          '<div data-static-render="ssr">' + body + '</div>';
-        if (head) {
-          req.dynamicHead = (req.dynamicHead || '') + head;
+        // null means staticData() failed — serve the plain shell instead.
+        if (rendered) {
+          req.dynamicBody = (req.dynamicBody || '') +
+            '<div data-static-render="ssr">' + rendered.body + '</div>';
+          if (rendered.head) {
+            req.dynamicHead = (req.dynamicHead || '') + rendered.head;
+          }
         }
       } catch (e) {
         console.warn(`[StaticRender] SSR error for "${path}": ${e.message}`);
@@ -388,7 +438,14 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
 // ---------------------------------------------------------------------------
 
 Meteor.startup(async function () {
-  await StaticRender._discoverAndRender();
+  // A rejection here would reach boot.js's top-level catch, which calls
+  // process.exit(1) — pre-rendering must never be able to stop the server
+  // from starting.
+  try {
+    await StaticRender._discoverAndRender();
+  } catch (e) {
+    console.warn(`[StaticRender] Route discovery failed: ${e.reason || e.message}`);
+  }
   _ready = true;
   StaticRender._ready = true;
 
