@@ -57,6 +57,7 @@ StaticRender = {
   _ssrRoutes,
   _errors,
   _ready: false,
+  _decodePath: decodePathSegments,
 
   /**
    * Render a Blaze template to an HTML string.
@@ -415,7 +416,9 @@ function decodePathSegments(path) {
     .split('/')
     .map((segment) => {
       try {
-        return decodeURIComponent(segment);
+        // Re-escape any separator produced by decoding (%2F) so a crafted URL
+        // cannot decode into a different path structure than it was sent as.
+        return decodeURIComponent(segment).replace(/\//g, '%2F');
       } catch (e) {
         return segment;
       }
