@@ -53,7 +53,7 @@ Meteor.startup(() => {
 });
 ```
 
-See the [full documentation](https://docs.meteor.com/api/static-render.html) for the complete API, template restrictions, and integration details.
+See the [full documentation](https://v3-docs.meteor.com/packages/static-render) for the complete API, template restrictions, and integration details.
 
 ## Prerequisites
 
