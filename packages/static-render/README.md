@@ -59,4 +59,7 @@ See the [full documentation](https://docs.meteor.com/api/static-render.html) for
 
 - Meteor 3.4+
 - Blaze 3.1.x+ (for server-side template availability)
-- `ostrio:flow-router-extra` (weak dependency — routes are auto-discovered from it)
+- `ostrio:flow-router-extra` — **required**. Routes are discovered from the FlowRouter
+  route table; without it StaticRender registers no routes and renders nothing. The
+  dependency is declared weak so adding this package never pulls a router into an app
+  that does not use one. For router-free setups, call `Blaze.toHTML()` directly.
