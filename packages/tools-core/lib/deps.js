@@ -254,7 +254,7 @@ export function renderManualInstallInstructions({ packageLabel, changes, yarn = 
   const { devCommand, regularCommand } = formatInstallCommands({ changes: needed, yarn });
   if (devCommand) logWarn(`       ${devCommand}`);
   if (regularCommand) logWarn(`       ${regularCommand}`);
-  logInfo(`=> ℹ️ Set \`"meteor": { "autoInstallDeps": true }\` in package.json to manage them automatically.`);
+  logWarn(`=> ℹ️  Set \`"meteor": { "autoInstallDeps": true }\` in package.json to manage them automatically.`);
   if (docUrl) {
     logWarn(`   See: ${docUrl}`);
   }

@@ -9,7 +9,9 @@ These helpers will be useful to integrate a modern bundler like Rspack and a nat
 Atmosphere packages that need the host app to install (or stay above a minimum
 version of) one or more npm packages can use the shared engine in
 `lib/deps.js`. The engine handles both `meteor.autoInstallDeps=true` (default)
-and `meteor.autoInstallDeps=false` paths, so consumers ship only data.
+and `meteor.autoInstallDeps=false` paths, so consumers ship only data. When
+automatic installation is disabled, the warning includes both the manual
+install command and the setting to re-enable automatic management.
 
 ```js
 const { ensurePackageDependencies } = require('meteor/tools-core/lib/deps');

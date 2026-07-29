@@ -131,9 +131,10 @@ With this flag off, Meteor still detects when a required dependency is missing o
    To bring your project in line, run:
        meteor npm install --save-dev @rspack/core@1.7.1 @meteorjs/rspack@2.0.1
        meteor npm install --save @swc/helpers@0.5.17
+=> ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
 ```
 
-If you ignore the warning, the build continues and fails with the underlying module-not-found error. Re-enable auto-install at any time by removing `autoInstallDeps` from your `meteor` block.
+If you ignore the warning, the build continues and fails with the underlying module-not-found error. To re-enable auto-install, use the setting shown in the warning, or remove `autoInstallDeps` from your `meteor` block.
 
 If your CI or Docker pipeline reports missing NPM dependencies after disabling auto-install, see [CI & Docker](#docker) for the recommended commit-and-push flow.
 
