@@ -302,7 +302,19 @@ StaticRender = {
       try {
         if (!route.options.static || !route.options.template) continue;
 
-        const mode = route.options.static; // 'ssg', 'ssr', or true (legacy → treat as 'ssg')
+        const mode = route.options.static;
+
+        // Only the two documented modes are accepted. Previously any truthy
+        // value fell through to SSG, so `static: true` was pre-rendered here
+        // while regenerate() — which matches on 'ssg' exactly — silently found
+        // nothing for it.
+        if (mode !== 'ssg' && mode !== 'ssr') {
+          console.warn(
+            `[StaticRender] Route "${route.pathDef}" has static: ${JSON.stringify(mode)}, ` +
+            "expected 'ssg' or 'ssr' — skipping it."
+          );
+          continue;
+        }
 
         if (mode === 'ssr') {
           // SSR routes: register for on-the-fly rendering at request time
