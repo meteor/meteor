@@ -465,7 +465,13 @@ WebApp.connectHandlers.use(async function staticRenderMiddleware(req, res, next)
 // Startup — discover routes, pre-render SSG pages, register SSR routes.
 // ---------------------------------------------------------------------------
 
-Meteor.startup(async function () {
+// This package loads before app code, so its startup callback is queued before
+// the app's. Registering the real work from inside a first callback appends it
+// after every callback queued so far — boot.js drains startupHooks with a
+// shift() loop and documents that hooks added during the drain run at the end.
+// Without this, discovery would snapshot the route table before routes declared
+// in the app's own Meteor.startup exist, and pre-render against unseeded data.
+async function discoverAndReport() {
   // A rejection here would reach boot.js's top-level catch, which calls
   // process.exit(1) — pre-rendering must never be able to stop the server
   // from starting.
@@ -479,6 +485,14 @@ Meteor.startup(async function () {
 
   const ssgCount = cache.size;
   const ssrCount = _ssrRoutes.size;
+
+  if (ssgCount === 0 && ssrCount === 0 && _errors.length === 0) {
+    console.log(
+      '[StaticRender] No routes with a static option were found. Add ' +
+      "static: 'ssg' or static: 'ssr' to a FlowRouter route to pre-render it."
+    );
+    return;
+  }
 
   if (ssgCount > 0 || ssrCount > 0 || _errors.length > 0) {
     const parts = [];
@@ -497,4 +511,8 @@ Meteor.startup(async function () {
       }
     }
   }
+}
+
+Meteor.startup(function () {
+  Meteor.startup(discoverAndReport);
 });
