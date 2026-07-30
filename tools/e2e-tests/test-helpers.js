@@ -49,6 +49,13 @@ if (!npmLinkLocalRspack) {
 
 const WAIT_ON = isCI ? 2000 : 500;
 
+// The setup beforeAll hooks below do a full `meteor create` + npm install + rspack
+// build, which on a loaded CI runner can exceed Jest's per-test testTimeout (240s on
+// CI, from jest.config.js). The hook then dies at exactly 240000ms and the test
+// bodies never run. Give the setup hooks their own, larger budget; individual test
+// bodies keep the tighter testTimeout.
+const SETUP_HOOK_TIMEOUT_MS = isCI ? 600_000 : 300_000;
+
 const { linkLocalRspack: _linkLocalRspack } = require('./scripts/link-rspack');
 
 async function linkLocalRspack(appDir) {
@@ -91,10 +98,13 @@ export function testMeteorBundler(options) {
 
       // Setup the Meteor app
       tempDir = (await setupMeteorApp(appName))?.tempDir;
+      if (!tempDir) {
+        throw new Error(`setupMeteorApp("${appName}") did not return an app directory`);
+      }
 
       // Link local meteor-rspack so the app picks up the latest dev version
       await linkLocalRspack(tempDir);
-    });
+    }, SETUP_HOOK_TIMEOUT_MS);
 
     afterAll(async () => {
       // Clean up the temporary directory
@@ -276,6 +286,9 @@ export function testMeteorRspackBundler(options) {
 
       // Setup the Meteor app
       tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+      if (!tempDir) {
+        throw new Error(`setupMeteorApp("${appName}") did not return an app directory`);
+      }
 
       // Wait for a margin
       await wait(WAIT_ON);
@@ -326,7 +339,7 @@ export function testMeteorRspackBundler(options) {
 
       // Ensure any process on the port is killed
       await killProcessByPort([port, devServerPortStr]);
-    });
+    }, SETUP_HOOK_TIMEOUT_MS);
 
     afterAll(async () => {
       // Clean up the temporary directory
@@ -1006,7 +1019,7 @@ export function testMeteorSkeleton(options) {
 
       // Ensure any process on the port is killed
       await killProcessByPort(port);
-    });
+    }, SETUP_HOOK_TIMEOUT_MS);
 
     afterAll(async () => {
       // Clean up the temporary directory

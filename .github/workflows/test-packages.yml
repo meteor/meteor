@@ -20,7 +20,6 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true
-    runs-on: oss-vm
     timeout-minutes: 90
     env:
       CXX: g++-12
