@@ -41,3 +41,10 @@ you pass `--driver-package test-in-node`. No `SERVER_NODE_OPTIONS` needed.
 Standard `node:test`: `describe`/`it`, `node:assert/strict`, async tests, `it.skip`,
 `it.todo`, nested suites — all from Node core, zero extra dependencies. The runner
 reports a compact pass/fail/skip/todo summary and exits non-zero if any test fails.
+
+## Node version note
+
+The driver relies on `node:test`'s `test:complete` event (Node ≥ 20.13). Inside
+Meteor this is always satisfied — the server runs on the release's dev-bundle
+Node (24.x on devel, 22.x on the 3.5 line). The floor only matters if you load
+`driver.js` in plain Node during development.
