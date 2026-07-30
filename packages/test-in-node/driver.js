@@ -5,7 +5,14 @@
 // reporter has seen every enqueued item complete. No debounce, no stdout parsing, no beforeExit.
 //
 // CommonJS on purpose: loadable directly by Node (for pure-Node smoke tests) AND by isobuild.
-const { after } = require('node:test');
+const { after, test } = require('node:test');
+
+// Guarantees the completion barrier is always reachable: with ZERO registered
+// tests, node:test's root after() never fires while the server keeps the event
+// loop alive (HTTP + Mongo), so a package with no node:test tests would hang
+// forever. This sentinel makes every run finalize deterministically; it is
+// excluded from the reported tallies (see onEvent).
+const SENTINEL_NAME = 'test-in-node · completion sentinel';
 
 const c = {
   green: s => `\x1b[32m${s}\x1b[0m`, red: s => `\x1b[31m${s}\x1b[0m`,
@@ -39,6 +46,7 @@ state.onEvent = function (event) {
     case 'test:complete':              // terminal for EVERY outcome → completed never stalls
       state.completed++;
       if (isSuite(d)) { state.suites++; break; }  // suites carry details.passed too — exclude
+      if (d.name === SENTINEL_NAME) break;        // barrier bookkeeping only — not a real test
       state.tests++;                              //   them from the pass/fail tally (no double-count)
       if (d.skip) state.skipped++;                // NB: skipped/todo also have details.passed:true,
       else if (d.todo) state.todo++;              //     so skip/todo MUST be checked before passed.
@@ -50,6 +58,7 @@ state.onEvent = function (event) {
 };
 
 after(() => { state.rootAfterReached = true; maybeFinalize(); });
+test(SENTINEL_NAME, () => {});
 
 // Drain events the reporter buffered before onEvent existed (reporter attaches at process
 // start; this driver arrives later via the bundle). Synchronous — no event interleaves.
