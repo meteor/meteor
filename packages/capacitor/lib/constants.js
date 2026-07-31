@@ -60,6 +60,13 @@ export const CAPACITOR_CORDOVA_OUTPUT_DIR = `${
 
 export const CAPACITOR_PLATFORMS = ['android', 'ios'];
 
+export function getCapacitorIgnoreCandidates() {
+  return Array.from(new Set([
+    ...getCapacitorWebDirCandidates(),
+    ...CAPACITOR_PLATFORMS,
+  ]));
+}
+
 export const DEFAULT_CAPACITOR_VERSION = '7.4.3';
 export const DEFAULT_METEOR_CAPACITOR_VERSION = '0.2.0-alpha.1';
 

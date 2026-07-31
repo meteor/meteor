@@ -6,6 +6,7 @@ import path from 'path';
 import vm from 'vm';
 
 import {
+  getCapacitorIgnoreCandidates,
   WEB_APP_LOCAL_SERVER_SHIM,
 } from './lib/constants.js';
 import {
@@ -124,6 +125,14 @@ function evaluateWebAppLocalServerShim() {
 
   return context.WebAppLocalServer;
 }
+
+Tinytest.add('capacitor - ignore candidates include native project directories', test => {
+  const candidates = getCapacitorIgnoreCandidates();
+
+  test.isTrue(candidates.includes('android'));
+  test.isTrue(candidates.includes('ios'));
+  test.equal(new Set(candidates).size, candidates.length);
+});
 
 Tinytest.add('capacitor - dependencies - default includes both native platforms', test => {
   const dependencies = dependencyNamesForPlatforms();

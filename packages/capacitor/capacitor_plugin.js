@@ -36,7 +36,7 @@ const { isYarnProject } = require('meteor/tools-core/lib/npm');
 const {
   CAPACITOR_BUILD_CONTEXT,
   CAPACITOR_CORDOVA_OUTPUT_DIR,
-  getCapacitorWebDirCandidates,
+  getCapacitorIgnoreCandidates,
 } = require('./lib/constants');
 const { ensureCapacitorInstalled } = require('./lib/dependencies');
 const {
@@ -98,10 +98,9 @@ async function runCapacitorPlugin() {
         // assignment covers downstream child processes spawned by the plugin.
         process.env.METEOR_CORDOVA_DISABLE = 'true';
 
-        // Skip native webDirs at isobuild scan time. Scoped to native-*
-        // subdirs so rspack's main-* outputs under the same _build/ root
-        // stay visible.
-        setMeteorAppIgnore(getCapacitorWebDirCandidates().join(' '));
+        // Skip generated native webDirs and platform projects at isobuild scan
+        // time. Keep rspack's main-* outputs under the same _build/ root visible.
+        setMeteorAppIgnore(getCapacitorIgnoreCandidates().join(' '));
 
         if (hasMeteorAppConfigAutoInstallDeps()) {
           // Top-level await: build plugins are evaluated as ESM with TLA enabled.

@@ -7,6 +7,10 @@ outline:
 
 Capacitor integration lets a Meteor app run inside native Android and iOS projects using [CapacitorJS](https://capacitorjs.com). Meteor still owns the web build. Capacitor owns the native shell.
 
+:::warning
+Meteor's Capacitor integration is experimental and under active development. Its commands, configuration, native project setup, Hot Code Push behavior, and supported package versions can change before stable release. Evaluate it carefully before using it in production.
+:::
+
 In this setup, Meteor produces a native web bundle, transforms it into the Capacitor web directory, and syncs it into the Android or iOS project. This keeps compatibility with Meteor's mobile runtime while moving the native project lifecycle to Capacitor.
 
 ## Quick start

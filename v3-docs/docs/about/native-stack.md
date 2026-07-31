@@ -7,6 +7,10 @@ outline:
 
 **Meteor's native stack** helps you ship web applications inside native mobile shells while keeping Meteor's build, reload, and deployment model.
 
+:::warning
+Capacitor integration is experimental and under active development. Its commands, configuration, native project setup, Hot Code Push behavior, and supported package versions can change before stable release. Evaluate it carefully before using it in production.
+:::
+
 **The native stack includes:**
 
 1. **Capacitor (mobile).** Capacitor wraps your Meteor web bundle in native iOS and Android projects. Meteor prepares a native web bundle, syncs it into Capacitor, and keeps Hot Code Push available through a native runtime.
