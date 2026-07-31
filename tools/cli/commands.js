@@ -198,6 +198,12 @@ export function parseServerOptionsForRunCommand(options, runTargets) {
   return { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort };
 }
 
+export function setRunCommandMobileServerUrl(parsedMobileServerUrl) {
+  const mobileServerUrl = utils.formatUrl(parsedMobileServerUrl);
+  global.currentCommand.mobileServerUrl = mobileServerUrl;
+  return mobileServerUrl;
+}
+
 function parsePortOption(portOption) {
   let parsedServerUrl = utils.parseUrl(portOption);
 
@@ -530,6 +536,8 @@ async function doRunCommand(options) {
 
   const { parsedServerUrl, parsedMobileServerUrl, parsedCordovaServerPort } =
     parseServerOptionsForRunCommand(options, initiallyKnownRunTargets);
+  const mobileServerUrl =
+    setRunCommandMobileServerUrl(parsedMobileServerUrl);
 
   var includePackages = [];
   if (options['extra-packages']) {
@@ -655,7 +663,7 @@ async function doRunCommand(options) {
         // TODO -> Have to change CordovaProject constructor here.
         const cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
-          mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+          mobileServerUrl,
           cordovaServerPort: parsedCordovaServerPort,
           buildMode
         });
@@ -688,7 +696,7 @@ async function doRunCommand(options) {
     rootUrl: process.env.ROOT_URL,
     mongoUrl: process.env.MONGO_URL,
     oplogUrl: process.env.MONGO_OPLOG_URL,
-    mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+    mobileServerUrl,
     cordovaServerPort: parsedCordovaServerPort,
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,

@@ -27,6 +27,26 @@ Tinytest.add('tools-core - lifecycle - context keeps provider state', function (
   test.equal(context.state, state);
 });
 
+Tinytest.add('tools-core - lifecycle - context exposes derived mobile server url', function (test) {
+  const meteorGlobal = Package.meteor.global;
+  const previousCommand = meteorGlobal.currentCommand;
+
+  try {
+    meteorGlobal.currentCommand = {
+      name: 'run',
+      options: { 'mobile-server': 'raw.example:3000' },
+      mobileServerUrl: 'http://canonical.example:3000/',
+    };
+
+    const context = createMeteorToolContext();
+
+    test.equal(context.mobileServerUrl, 'http://canonical.example:3000/');
+    test.equal(context.options['mobile-server'], 'raw.example:3000');
+  } finally {
+    meteorGlobal.currentCommand = previousCommand;
+  }
+});
+
 Tinytest.addAsync('tools-core - lifecycle - scenario run receives context', async function (test) {
   const calls = [];
   const context = createMeteorToolContext({

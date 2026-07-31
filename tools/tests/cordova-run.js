@@ -1,6 +1,9 @@
 import selftest from '../tool-testing/selftest.js';
 import utils from '../utils/utils.js';
-import { parseServerOptionsForRunCommand } from '../cli/commands.js';
+import {
+  parseServerOptionsForRunCommand,
+  setRunCommandMobileServerUrl,
+} from '../cli/commands.js';
 
 function expectedDetectedMobileServerUrl(port) {
   let hostname;
@@ -67,4 +70,22 @@ selftest.define('get mobile server argument for meteor run', ['cordova'], async 
     port: "example.com:3000",
     "cordova-server-port": "12500"
   }).parsedCordovaServerPort, 12500);
+
+  const previousCommand = global.currentCommand;
+  try {
+    global.currentCommand = { name: 'run', options: {} };
+    const mobileServerUrl = setRunCommandMobileServerUrl({
+      protocol: 'http',
+      hostname: 'localhost',
+      port: '3000',
+    });
+
+    await selftest.expectEqual(mobileServerUrl, 'http://localhost:3000/');
+    await selftest.expectEqual(
+      global.currentCommand.mobileServerUrl,
+      'http://localhost:3000/',
+    );
+  } finally {
+    global.currentCommand = previousCommand;
+  }
 });

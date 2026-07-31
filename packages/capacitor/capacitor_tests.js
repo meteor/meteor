@@ -26,6 +26,9 @@ import {
   _mergeExtraArgsWithEnv,
 } from './lib/processes.js';
 import {
+  getContextMobileServerUrl,
+} from './lib/mobile-server.js';
+import {
   formatCapacitorConfigError,
   validateResolvedCapacitorConfig,
 } from './lib/build-context.js';
@@ -664,6 +667,27 @@ Tinytest.add('capacitor - env - normalizes bare mobile runtime urls', test => {
 
   test.equal(env.MOBILE_ROOT_URL, 'http://10.0.2.2:3000');
   test.equal(env.MOBILE_DDP_URL, 'http://10.0.2.2:3000');
+});
+
+Tinytest.add('capacitor - mobile server - canonical context wins', test => {
+  withEnv({ MOBILE_ROOT_URL: 'http://env.example:3000' }, () => {
+    test.equal(getContextMobileServerUrl({
+      mobileServerUrl: 'http://canonical.example:3000/',
+      options: {
+        mobileServerUrl: 'http://legacy.example:3000',
+        'mobile-server': 'raw.example:3000',
+      },
+    }), 'http://canonical.example:3000/');
+  });
+});
+
+Tinytest.add('capacitor - mobile server - keeps non-run fallbacks', test => {
+  withEnv({ MOBILE_ROOT_URL: 'http://env.example:3000' }, () => {
+    test.equal(getContextMobileServerUrl({
+      options: { 'mobile-server': 'raw.example:3000' },
+    }), 'raw.example:3000');
+    test.equal(getContextMobileServerUrl(), 'http://env.example:3000');
+  });
 });
 
 Tinytest.add('capacitor - config - formats evaluation failures with next step', test => {

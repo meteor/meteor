@@ -32,6 +32,7 @@ export function createMeteorToolContext(overrides = {}) {
     appDir: getMeteorAppDir(),
     command: currentCommand.name,
     options: currentCommand.options || {},
+    mobileServerUrl: currentCommand.mobileServerUrl || null,
     provider: undefined,
     platform: getNativePlatform(),
     isRun: isMeteorAppRun(),

@@ -55,6 +55,9 @@ const {
   getCapacitorRunMode,
 } = require('./lib/processes');
 const {
+  getContextMobileServerUrl,
+} = require('./lib/mobile-server');
+const {
   CAPACITOR_PLATFORMS,
   isCapacitorOptIn,
   isCapacitorRunOptIn,
@@ -244,13 +247,6 @@ async function withProcessEnv(env, fn) {
       }
     });
   }
-}
-
-function getContextMobileServerUrl(context = {}) {
-  return context?.options?.mobileServerUrl ||
-    context?.options?.['mobile-server'] ||
-    process.env.MOBILE_ROOT_URL ||
-    null;
 }
 
 /**
