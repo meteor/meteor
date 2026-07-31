@@ -55,6 +55,17 @@ const PROC_KEYS = {
 const RUN_LAUNCH_STATE_KEY = 'capacitor.run.launchScheduled';
 const CAPACITOR_RUN_MODES = new Set(['bundled', 'livereload']);
 
+export function normalizeMobileServerUrl(value) {
+  if (!value) return null;
+
+  const normalized = String(value).trim();
+  if (!normalized) return null;
+
+  return /^[a-z][a-z\d+.-]*:\/\//i.test(normalized)
+    ? normalized
+    : `http://${normalized}`;
+}
+
 export function getCapacitorRunMode({
   mode,
   env = process.env,
@@ -91,6 +102,7 @@ export function getCapacitorEnv({ platform, mode, mobileServerUrl } = {}) {
   const isProd = isMeteorAppProduction();
   const webDir = getCapacitorWebDir({ isDevelopment: isDev, isProduction: isProd });
   const capacitorMode = getCapacitorRunMode({ mode });
+  const normalizedMobileServerUrl = normalizeMobileServerUrl(mobileServerUrl);
   return {
     METEOR_CAPACITOR: 'true',
     METEOR_CAPACITOR_MODE: capacitorMode,
@@ -105,9 +117,9 @@ export function getCapacitorEnv({ platform, mode, mobileServerUrl } = {}) {
     METEOR_NATIVE_ANDROID: isAndroid ? 'true' : 'false',
     METEOR_NATIVE_IOS: isIos ? 'true' : 'false',
     NODE_ENV: isProd ? 'production' : (process.env.NODE_ENV || 'development'),
-    ...(mobileServerUrl ? {
-      MOBILE_ROOT_URL: mobileServerUrl,
-      MOBILE_DDP_URL: mobileServerUrl,
+    ...(normalizedMobileServerUrl ? {
+      MOBILE_ROOT_URL: normalizedMobileServerUrl,
+      MOBILE_DDP_URL: normalizedMobileServerUrl,
     } : {}),
   };
 }

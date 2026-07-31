@@ -646,6 +646,26 @@ Tinytest.add('capacitor - env - includes mobile runtime urls when provided', tes
   test.equal(env.MOBILE_DDP_URL, 'http://10.0.2.2:3000');
 });
 
+Tinytest.add('capacitor - env - preserves explicit https mobile runtime urls', test => {
+  const env = getCapacitorEnv({
+    platform: 'ios',
+    mobileServerUrl: 'https://mobile.example.com',
+  });
+
+  test.equal(env.MOBILE_ROOT_URL, 'https://mobile.example.com');
+  test.equal(env.MOBILE_DDP_URL, 'https://mobile.example.com');
+});
+
+Tinytest.add('capacitor - env - normalizes bare mobile runtime urls', test => {
+  const env = getCapacitorEnv({
+    platform: 'android',
+    mobileServerUrl: '10.0.2.2:3000',
+  });
+
+  test.equal(env.MOBILE_ROOT_URL, 'http://10.0.2.2:3000');
+  test.equal(env.MOBILE_DDP_URL, 'http://10.0.2.2:3000');
+});
+
 Tinytest.add('capacitor - config - formats evaluation failures with next step', test => {
   const message = formatCapacitorConfigError({
     appDir: '/tmp/app',

@@ -139,8 +139,10 @@ METEOR_CAPACITOR_MODE=livereload meteor run ios
 When a device or emulator needs an explicit reachable host, pass `--mobile-server`:
 
 ```bash
-METEOR_CAPACITOR_MODE=livereload meteor run android --mobile-server 10.0.2.2:3000
+METEOR_CAPACITOR_MODE=livereload meteor run android --mobile-server http://10.0.2.2:3000
 ```
+
+Bare `host:port` values remain supported and are normalized to HTTP, but a full URL keeps the intended protocol clear.
 
 If no explicit URL is available, the helper falls back to `Meteor.localIp` and `Meteor.port`. On machines with multiple interfaces, VPNs, or container networks, `--mobile-server` is the supported way to force the correct address.
 
