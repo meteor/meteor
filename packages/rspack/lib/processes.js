@@ -245,7 +245,18 @@ export function getRspackCliPath() {
     );
   }
 
-  for (const candidatePath of candidatePaths) {
+  // Walk up from the app directory so hoisted installs are still found when the
+  // parent holding node_modules carries no monorepo marker. Nearest ancestor
+  // wins, and the loop stops at the filesystem root.
+  let currentDir = path.dirname(appDir);
+  while (currentDir !== path.dirname(currentDir)) {
+    candidatePaths.push(
+      path.join(currentDir, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+    );
+    currentDir = path.dirname(currentDir);
+  }
+
+  for (const candidatePath of new Set(candidatePaths)) {
     if (fs.existsSync(candidatePath)) {
       return candidatePath;
     }
