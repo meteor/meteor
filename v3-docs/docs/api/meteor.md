@@ -1050,7 +1050,7 @@ Determines how many messages we should queue during a non-graceful disconnect be
 ### Resume Behavior and Edge Cases
 
 When a session correctly resumes, clients pick up exactly where they left off:
-- **Subscriptions:** Active subscriptions automatically resume without needing to be re-published and clients do not re-send subscription requests.
+- **Subscriptions:** Clients optimistically re-send their subscription requests on every reconnect, before knowing whether the resume succeeded. On a resumed session the server ignores these duplicates — active subscriptions stay live, publish handlers are not re-run, and the client keeps its local data instead of resetting its stores.
 - **Method Calls:** Any in-flight method calls that were unacknowledged during the disconnection will be replayed.
 - **Queue Overflow:** If the number of messages emitted while a client is disconnected exceeds `maxMessageQueueLength`, the session is discarded. When the client reconnects, it initiates a fresh session.
 - **Hot Code Push:** HCP is treated as a manual, graceful disconnect. Session resumption is gracefully skipped so clients receive entirely fresh state for the new code.

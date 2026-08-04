@@ -1294,8 +1294,9 @@ Object.assign(Subscription.prototype, {
 Server = function (options = {}) {
   var self = this;
 
-  // The default heartbeat interval is 30 seconds on the server and 35
-  // seconds on the client.  Since the client doesn't need to send a
+  // The server's default heartbeat interval (below) is deliberately
+  // shorter than the client's default (see ddp-client's
+  // livedata_connection.js).  Since the client doesn't need to send a
   // ping as long as it is receiving pings, this means that pings
   // normally go from the server to the client.
   //
