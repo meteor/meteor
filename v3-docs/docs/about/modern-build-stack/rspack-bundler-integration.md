@@ -443,9 +443,9 @@ With the Meteor–Rspack integration, `zodern:melte` no longer works. Use the of
 
 ### CSS
 
-Meteor-Rspack comes with built-in CSS support. You can import any CSS file into your code, and it will be processed and included in your HTML skeleton automatically. In addition, any CSS file placed in the same folder as your Meteor entry point will be processed and added as global styles without the need for explicit imports.
+Meteor-Rspack comes with built-in CSS support. CSS imported into the Rspack module graph is processed and included in the generated HTML automatically. Unimported CSS in or below the client entry folder remains available to Meteor's eager CSS compiler, including stylesheets in nested directories.
 
-When Rspack is configured with a CSS rule, whether through `postcss-loader`, `type: "css"`, or any other CSS-handling loader, Meteor automatically detects the handled file extensions after Rspack's first compilation and stops processing those files itself. This means you do not need to manually add CSS files to `.meteorignore` or otherwise tell Meteor to skip them. The same automatic delegation applies to Less and SCSS when their respective loaders are configured. If no CSS rule is present in the rspack configuration, Meteor continues to handle stylesheets as it normally would.
+When Rspack is configured with a CSS rule, whether through `postcss-loader`, `type: "css"`, or another CSS loader, Meteor delegates the exact entry-folder stylesheets that Rspack compiled. It does not delegate every file with the same extension. This prevents duplicate compilation while preserving Meteor's eager loading behavior for unimported stylesheets. Explicit `meteor.modules` entries and later `.meteorignore` rules keep their normal precedence. The same ownership rules apply to Less and SCSS when both a Meteor compiler package and a matching Rspack loader are present.
 
 ### CSS Modules
 
@@ -489,7 +489,7 @@ For more details, check [the official Rspack CSS Modules guide](https://rspack.r
 
 ### Less
 
-Less support is available in Meteor-Rspack. You need to replace the existing [Meteor `less` package](https://github.com/meteor/meteor/tree/master/packages/non-core/less) or similar with the Rspack configuration.
+Less support is available in Meteor-Rspack. You can replace the existing [Meteor `less` package](https://github.com/meteor/meteor/tree/master/packages/non-core/less) with a Rspack configuration, or keep it for unimported entry-folder stylesheets. Imported Less files compiled by Rspack are delegated automatically so Meteor does not compile them twice.
 
 #### Install
 
@@ -521,7 +521,7 @@ For details, check [the official Rspack and Less guide](https://rspack.rs/guide/
 
 ### SCSS
 
-SCSS support is available in Meteor-Rspack. You need to replace the existing Meteor [`fourseven:scss`package](https://github.com/Meteor-Community-Packages/meteor-scss) or similar with the Rspack configuration.
+SCSS support is available in Meteor-Rspack. You can replace the existing Meteor [`fourseven:scss` package](https://github.com/Meteor-Community-Packages/meteor-scss) with a Rspack configuration, or keep it for unimported entry-folder stylesheets. Imported SCSS files compiled by Rspack are delegated automatically so Meteor does not compile them twice.
 
 #### Install
 

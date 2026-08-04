@@ -185,6 +185,8 @@ export function testMeteorBundler(options) {
  * @param {boolean} options.testBundleVisualizer - Whether to run tests with bundle-visualizer in production mode (default: false)
  * @param {boolean} options.skipClient - Whether to skip client-specific assertions (default: false)
  * @param {boolean} options.skipTestClient - Whether to skip client-side tests (default: false)
+ * @param {string[]} options.additionalMutableFilePaths - Extra fixture files
+ * changed by custom assertions and restored after each test
  * @param {string[]} options.checkBundleFilePaths - Array of file paths to check for existence in the bundle
  * @param {Function} options.beforeAllBehavior - Additional behavior to run in beforeAll
  * @param {Function} options.afterAllBehavior - Additional behavior to run in afterAll
@@ -248,6 +250,8 @@ export function testMeteorRspackBundler(options) {
     skipClient = false,
     // Whether to skip client-side tests
     skipTestClient = false,
+    // Extra fixture files that custom assertions mutate during a test
+    additionalMutableFilePaths = [],
     // Skip isDevelopment/isProduction/isRun/isTest/isBuild verbose output checks
     skipEnvCheck = false,
     // URL path where the app is served, for example '/live/'.
@@ -272,6 +276,7 @@ export function testMeteorRspackBundler(options) {
       filePaths.test,
       filePaths.testClient,
       filePaths.testServer,
+      ...additionalMutableFilePaths,
     ].filter(Boolean);
 
     beforeAll(async () => {

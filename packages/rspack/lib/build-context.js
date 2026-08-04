@@ -20,7 +20,6 @@ const {
   isMeteorAppRun,
   isMeteorAppBuild,
   isMeteorBlazeProject,
-  isMeteorHtmlProject,
   isMeteorAppNative,
   isMeteorAppTestFullApp,
   getMeteorToolsRequire,
@@ -672,7 +671,12 @@ export function findNestedMeteorHtmlFiles(entryFile) {
 }
 
 function getMeteorHtmlImports(config) {
-  if (!config?.isClient || config?.isTest || !isMeteorHtmlProject()) {
+  // Blaze templates compile to JavaScript modules that must be imported to
+  // preserve eager loading below a custom main-module directory. Files
+  // compiled by static-html are non-JavaScript resources and remain eager
+  // without generated imports. Importing them would reference modules they
+  // do not produce.
+  if (!config?.isClient || config?.isTest || !isMeteorBlazeProject()) {
     return '';
   }
 

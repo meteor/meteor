@@ -1,11 +1,19 @@
 import { waitForMeteorOutput } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { assertBodyStyles, assertMetaTags } from "./assertions";
+import {
+  assertBodyStyles,
+  assertConsoleEval,
+  assertMeteorStylesheetOwnership,
+  assertMetaTags,
+} from "./assertions";
 import fs from 'fs-extra';
 import path from 'path';
 
 const NATIVE_FALSE_POSITIVE_MARKER =
   'RSPACK_NATIVE_FALSE_POSITIVE_BUNDLED';
+const RSPACK_LESS_MARKER = '--rspack-owned-nested-less';
+const METEOR_LESS_MARKER = '--meteor-owned-nested-less';
+const IGNORED_LESS_MARKER = '--meteorignore-excluded-less';
 
 describe('R.Router App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -36,7 +44,7 @@ describe('R.Router App Bundling /', () => {
       afterInit: async ({ result }) => {
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
       },
-      afterRun: async ({ result, port }) => {
+      afterRun: async ({ result, port, tempDir }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
         // Do not assert babel.config.js output is absent on the second run:
         // rspack persistent-cache reuse across separate `meteor run`
@@ -47,6 +55,7 @@ describe('R.Router App Bundling /', () => {
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
+        await assertNestedLessOwnership(tempDir);
         // Meteor modules config
         await assertBodyStyles({
           'align-content': 'center',
@@ -78,7 +87,7 @@ describe('R.Router App Bundling /', () => {
         // Check for HMR output as enabled by default
         await waitForMeteorOutput(allConsoleLogs, /.*HMR.*Updated modules:.*/);
       },
-      afterRunProduction: async ({ result, port }) => {
+      afterRunProduction: async ({ result, port, tempDir }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForMeteorOutput(result.outputLines, /.*bcrypt runtime hash \$2.*/);
         await waitForMeteorOutput(
@@ -91,6 +100,7 @@ describe('R.Router App Bundling /', () => {
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
+        await assertNestedLessOwnership(tempDir);
         // Meteor modules config
         await assertBodyStyles({
           'align-content': 'center',
@@ -221,4 +231,28 @@ async function directoryContains(directory, needle) {
   }
 
   return false;
+}
+
+async function assertNestedLessOwnership(tempDir) {
+  await assertConsoleEval(
+    `(() => {
+      const styles = getComputedStyle(document.body);
+      return {
+        rspack: styles.getPropertyValue('${RSPACK_LESS_MARKER}').trim(),
+        meteor: styles.getPropertyValue('${METEOR_LESS_MARKER}').trim(),
+        ignored: styles.getPropertyValue('${IGNORED_LESS_MARKER}').trim(),
+      };
+    })()`,
+    {
+      rspack: 'rspack-owned',
+      meteor: 'meteor-owned',
+      ignored: '',
+    }
+  );
+
+  await assertMeteorStylesheetOwnership(tempDir, {
+    meteorOwned: [METEOR_LESS_MARKER],
+    rspackOwned: [RSPACK_LESS_MARKER],
+    ignored: [IGNORED_LESS_MARKER],
+  });
 }
