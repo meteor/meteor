@@ -2033,21 +2033,33 @@ async function deployCommand(options, { rawOptions }) {
     return 1;
   }
 
-  if (! site && ! options['build-only']) {
-    // Deleting is destructive, so we never offer a guess: naming the site is
-    // always the user's job, interactive terminal or not.
-    if (options.delete) {
-      Console.error("Error: site is required to delete.");
-      return 1;
-    }
+  // Deleting is destructive, so we never offer a guess: naming the site is
+  // always the user's job, interactive terminal or not. Checked before the
+  // build-only carve-out below so `--delete --build-only` can't slip past it.
+  if (options.delete && ! site) {
+    Console.error("Error: site is required to delete.");
+    return 1;
+  }
 
-    if (! Console.isInteractive() || ! process.stdin.isTTY) {
+  // "First time" for the registration message at the end of the deploy means
+  // "was not logged in when the command started" -- capture it before any
+  // interactive login below muddies the water.
+  const wasLoggedIn = auth.isLoggedIn();
+
+  if (! site && ! options['build-only']) {
+    // Self-tests drive these prompts through pipes, where stdin has no TTY;
+    // METEOR_FORCE_INTERACTIVE lets the harness opt in to the prompts anyway
+    // (same spirit as METEOR_PRETTY_OUTPUT / METEOR_HEADLESS in console.js).
+    const stdinIsInteractive = process.stdin.isTTY ||
+      (process.env.METEOR_FORCE_INTERACTIVE &&
+        process.env.METEOR_FORCE_INTERACTIVE !== '0');
+    if (! Console.isInteractive() || ! stdinIsInteractive) {
       Console.error("Error deploying application: site is required.");
       return 1;
     }
 
     let sites = [];
-    let loggedIn = auth.isLoggedIn();
+    let loggedIn = wasLoggedIn;
     if (! loggedIn && ! options["deploy-token"]) {
       Console.info(
         "You must be logged in to deploy, just enter your email address.");
@@ -2060,15 +2072,14 @@ async function deployCommand(options, { rawOptions }) {
     }
 
     if (loggedIn) {
-      try {
-        sites = await deploy.getSitesList();
-      } catch (err) {
-        // Couldn't reach Galaxy: fall through and just ask for a site name.
-      }
+      // Returns null when Galaxy can't be reached (deployRpc reports errors
+      // as values, it doesn't throw); we fall through to the free-text prompt.
+      sites = await deploy.getSitesList();
     }
 
     // Inquirer paints its own prompts, so the progress display has to stand
-    // down until we're done asking.
+    // down until we're done asking. (main.js enables it for every command, so
+    // unconditionally re-enabling in the finally restores the prior state.)
     Console.enableProgressDisplay(false);
     try {
       const prompt = inquirer.createPromptModule();
@@ -2097,23 +2108,15 @@ async function deployCommand(options, { rawOptions }) {
             type: "input",
             name: "site",
             message: "Enter the site name (e.g. myapp.meteorapp.com):",
+            validate(input) {
+              return input.trim() ? true : "Please enter a site name.";
+            }
           }
         ]);
         site = answers.site.trim();
       }
-    } catch (err) {
-      // A closed pipe or Ctrl-C during the prompt is a plain exit, not a crash.
-      if (err && (err.isTtyError || err.name === 'ExitPromptError')) {
-        return 1;
-      }
-      throw err;
     } finally {
       Console.enableProgressDisplay(true);
-    }
-
-    if (! site) {
-      Console.error("Error: site name is required.");
-      return 1;
     }
   }
 
@@ -2201,7 +2204,9 @@ async function deployCommand(options, { rawOptions }) {
       // If the user was already logged in at the beginning of the
       // deploy, then they've already been prompted to set a password
       // at least once before, so we use a slightly different message.
-      firstTime: !loggedIn
+      // (wasLoggedIn, not loggedIn: the interactive site prompt may have
+      // logged them in between the start of the command and here.)
+      firstTime: ! wasLoggedIn
     });
   }
 

@@ -914,11 +914,13 @@ export async function listSites() {
   return 0;
 };
 
+// Like listSites, but returns the sites as a sorted array instead of
+// printing them: null if the RPC failed (deployRpc reports errors as
+// values rather than throwing), [] if the account has no sites.
 export async function getSitesList() {
   var result = await deployRpc({
     method: "GET",
     operation: "authorized-apps",
-    promptIfAuthFails: false,
     expectPayload: ["sites"]
   });
 
