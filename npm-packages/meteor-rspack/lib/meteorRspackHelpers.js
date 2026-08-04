@@ -2,6 +2,111 @@ const path = require("path");
 const { prepareMeteorRspackConfig } = require("./meteorRspackConfigFactory");
 const { builtinModules } = require("module");
 
+const NATIVE_ADDON_EXTERNALIZATION_CONFIG =
+  "meteor.nativeAddonExternalization";
+
+function normalizeNativeAddonConditions(conditions, optionName) {
+  if (!Array.isArray(conditions)) {
+    throw new TypeError(`${optionName} must be an array`);
+  }
+
+  const normalized = conditions.flat().filter(Boolean);
+  for (const condition of normalized) {
+    if (
+      typeof condition !== "string" &&
+      typeof condition !== "function" &&
+      !(condition instanceof RegExp)
+    ) {
+      throw new TypeError(
+        `${optionName} entries must be strings, regular expressions, or functions`
+      );
+    }
+  }
+  return normalized;
+}
+
+/**
+ * Configure automatic server-side native addon externalization.
+ *
+ * @param {{ enabled?: boolean; forceBundle?: Array<string|RegExp|Function> }} [options]
+ * @returns {Record<string, object>} config fragment with native addon options
+ */
+function configureNativeAddonExternalization(options = {}) {
+  if (!options || typeof options !== "object" || Array.isArray(options)) {
+    throw new TypeError(
+      "configureNativeAddonExternalization: options must be an object"
+    );
+  }
+
+  const supportedOptions = new Set(["enabled", "forceBundle"]);
+  for (const option of Object.keys(options)) {
+    if (!supportedOptions.has(option)) {
+      throw new TypeError(
+        `configureNativeAddonExternalization: unknown option "${option}"`
+      );
+    }
+  }
+
+  const config = {};
+  if (Object.hasOwn(options, "enabled")) {
+    if (typeof options.enabled !== "boolean") {
+      throw new TypeError(
+        "configureNativeAddonExternalization: enabled must be a boolean"
+      );
+    }
+    config.enabled = options.enabled;
+  }
+  if (Object.hasOwn(options, "forceBundle")) {
+    config.forceBundle = normalizeNativeAddonConditions(
+      options.forceBundle,
+      "configureNativeAddonExternalization: forceBundle"
+    );
+  }
+
+  return prepareMeteorRspackConfig({
+    [NATIVE_ADDON_EXTERNALIZATION_CONFIG]: config,
+  });
+}
+
+/**
+ * Resolve and remove native addon integration markers before returning the
+ * final configuration to Rspack. Later configs override `enabled`, while
+ * `forceBundle` conditions compose in config order.
+ *
+ * @param {...Object} configs
+ * @returns {{ enabled: boolean; forceBundle: Array<string|RegExp|Function> }}
+ */
+function consumeNativeAddonExternalizationConfig(...configs) {
+  const result = { enabled: true, forceBundle: [] };
+
+  for (const config of configs) {
+    if (!config || typeof config !== "object") continue;
+    const options = config[NATIVE_ADDON_EXTERNALIZATION_CONFIG];
+    if (!options) continue;
+
+    if (Object.hasOwn(options, "enabled")) {
+      if (typeof options.enabled !== "boolean") {
+        throw new TypeError(
+          "configureNativeAddonExternalization: enabled must be a boolean"
+        );
+      }
+      result.enabled = options.enabled;
+    }
+    if (Object.hasOwn(options, "forceBundle")) {
+      result.forceBundle.push(
+        ...normalizeNativeAddonConditions(
+          options.forceBundle,
+          "configureNativeAddonExternalization: forceBundle"
+        )
+      );
+    }
+
+    delete config[NATIVE_ADDON_EXTERNALIZATION_CONFIG];
+  }
+
+  return result;
+}
+
 /**
  * Wrap externals for Meteor runtime (marks deps as externals).
  * Usage: compileWithMeteor(["sharp", "vimeo", "fs"])
@@ -42,6 +147,11 @@ function compileWithRspack(deps, { options = {} } = {}) {
           options,
         },
       ],
+    },
+    [NATIVE_ADDON_EXTERNALIZATION_CONFIG]: {
+      // A dependency explicitly forced through Rspack must take precedence
+      // over automatic native-addon detection.
+      forceBundle: deps.flat().filter(Boolean),
     },
   });
 }
@@ -337,8 +447,11 @@ function outputMeteorRspack(data) {
 }
 
 module.exports = {
+  NATIVE_ADDON_EXTERNALIZATION_CONFIG,
   compileWithMeteor,
   compileWithRspack,
+  configureNativeAddonExternalization,
+  consumeNativeAddonExternalizationConfig,
   setCache,
   splitVendorChunk,
   extendSwcConfig,

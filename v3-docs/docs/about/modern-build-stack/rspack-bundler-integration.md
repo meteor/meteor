@@ -155,6 +155,7 @@ You can use flags to control the final configuration based on the environment. T
 | `HtmlRspackPlugin`  | function | Custom HtmlRspackPlugin function for extending the config                                                                         |
 | `compileWithMeteor` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Meteor                         |
 | `compileWithRspack` | function | Forces given npm deps ([Condition](https://rspack.rs/config/module#condition)[]) to be compiled by Rspack                         |
+| `configureNativeAddonExternalization` | function | Configures automatic server-side native addon externalization and its package-specific overrides                    |
 | `setCache`          | function | Enables or disables cache. Accepts true (persistent, default), false, or 'memory'                                                 |
 | `splitVendorChunk`  | function | Splits vendor libraries so they are automatically served from a separate chunk                                                    |
 | `extendSwcConfig`   | function | Smart-merges custom options into Meteor's default [SWC loader configuration](https://rspack.rs/guide/features/builtin-swc-loader#options), applying only to app code |
@@ -229,7 +230,7 @@ Ensure your app defines these entry files with the correct paths where each modu
 
 Defining entry points improves performance even with the Meteor bundler, as Meteor stops scanning and eagerly loading unnecessary files. For Meteor-Rspack integration, this is required, since it does not support automatic code discovery for efficiency.
 
-In Meteor-Rspack integration, all app code is ignored by Meteor and handled by Rspack. By default, Meteor still processes eagerly HTML files in the entry folder (e.g. `client/*.html` in most apps). CSS files in the entry folder are automatically delegated to Rspack when a CSS loader is configured, see [CSS](#css) for details. If no CSS loader is present, Meteor handles them as before.
+In Meteor-Rspack integration, all app code is ignored by Meteor and handled by Rspack. By default, Meteor still processes eager HTML files recursively below the entry folder, including files such as `client/main.html` and `client/widgets/card.html`. CSS files are delegated to Rspack only when they are part of its module graph and a matching CSS loader is configured. Unimported stylesheets remain available to Meteor's eager compiler. Explicitly configured `meteor.modules` entries remain included, unless a later `.meteorignore` rule excludes them. As elsewhere in Meteor, the last matching ignore rule takes precedence.
 
 If you need Meteor to handle CSS or HTML files outside the main entry folder, add them to the `modules` field. This field accepts an array of strings, each pointing to a file or folder.
 
@@ -617,6 +618,7 @@ You can still use HTML files near your Meteor client entry point to define custo
 **Meteor.compileWithRspack(deps: [Condition](https://rspack.rs/config/module#condition)[], options?: [SwcLoaderOptions](https://v0.rspack.dev/guide/features/builtin-swc-loader#options))**
 
 This helper forces **Rspack (via SWC and custom loaders)** to parse and transpile specific npm dependencies during the build.
+It takes precedence over automatic native addon detection for the selected dependencies.
 
 Use this when a dependency:
 
@@ -639,13 +641,15 @@ module.exports = defineConfig(Meteor => ({
 
 **Meteor.compileWithMeteor(deps: [Condition](https://rspack.rs/config/module#condition)[])**
 
-This helper marks specific npm dependencies as externals, meaning they are skipped by Rspack and instead handled by Meteor/Node at runtime.
+This helper marks specific npm dependencies as externals, meaning they are skipped by Rspack and instead handled by Meteor/Node at runtime. Meteor automatically applies this treatment to installed packages that contain native addon binaries or use common native runtime loaders. Manual configuration remains available for packages with unusual loading behavior or native code that cannot be detected from the installed package.
 
 Use this when a dependency:
 
 * Contains native or binary code (e.g. sharp)
 * Belongs to a Meteor Atmosphere package that maintains internal state
 * Comes precompiled or is large enough to run better outside the bundle
+
+Native dependencies are included in production server bundles through Meteor's npm dependency handling. Install production dependencies as described by the generated bundle's `README`, use the Node version named there, and build native binaries for the deployment operating system and architecture.
 
 ```js
 const { defineConfig } = require('@meteorjs/rspack');
@@ -655,6 +659,51 @@ module.exports = defineConfig(Meteor => ({
   ...(Meteor.isServer ? Meteor.compileWithMeteor(['sharp']) : {}),
 }));
 ```
+
+### Configuring native addon externalization
+
+**Meteor.configureNativeAddonExternalization(options)**
+
+Native addon detection is heuristic. Meteor checks installed server packages for indicators such as `binding.gyp`, `gypfile: true`, compiled `.node` files, and common native runtime loaders. A package can contain one of these indicators while exposing a JavaScript-only entry point that should still be processed by Rspack.
+
+For the common package-specific case, use `compileWithRspack`. This forces the selected dependency through Rspack and bypasses automatic externalization:
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  ...(Meteor.isServer
+    ? Meteor.compileWithRspack(['false-positive-package'])
+    : {}),
+}));
+```
+
+If you already provide a custom loader and only need to override native detection, use `forceBundle`:
+
+```js
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.configureNativeAddonExternalization({
+    forceBundle: ['false-positive-package'],
+  }),
+}));
+```
+
+To disable automatic native addon externalization for every server dependency:
+
+```js
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.configureNativeAddonExternalization({
+    enabled: false,
+  }),
+}));
+```
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | `true` | Enables automatic native addon detection for server builds |
+| `forceBundle` | [Condition](https://rspack.rs/config/module#condition)[] | `[]` | Packages or resolved paths that must remain in the Rspack compilation |
+
+Disabling externalization does not teach Rspack how to parse a `.node` binary. If the selected code imports a binary directly, provide an appropriate Rspack loader or another strategy for copying and loading that binary. Verify production bundles from a clean deployment directory because forced bundles can have different runtime and platform requirements.
 
 ---
 

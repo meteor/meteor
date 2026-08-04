@@ -13,15 +13,14 @@ const path = require('path');
  * externalize them as commonjs.
  */
 
-// Dependencies that only appear in packages that compile or load native code.
-const NATIVE_INDICATOR_DEPENDENCIES = [
+// Runtime loaders that strongly indicate a package can load native code.
+// Header-only build dependencies such as nan and node-addon-api are excluded
+// because their presence alone does not make the consuming package native.
+const NATIVE_RUNTIME_LOADER_DEPENDENCIES = [
   'bindings',
   'node-gyp-build',
-  'prebuild-install',
   'node-pre-gyp',
   '@mapbox/node-pre-gyp',
-  'nan',
-  'node-addon-api',
 ];
 
 /**
@@ -36,6 +35,56 @@ function getPackageName(request) {
     return parts.length >= 2 && parts[1] ? `${parts[0]}/${parts[1]}` : null;
   }
   return parts[0] || null;
+}
+
+function isPathWithin(candidate, parent) {
+  if (!candidate || !parent) return false;
+  const relative = path.relative(parent, candidate);
+  return (
+    relative === '' ||
+    (!relative.startsWith('..') && !path.isAbsolute(relative))
+  );
+}
+
+/**
+ * Determine whether an installed package request was explicitly forced back
+ * through Rspack. Conditions follow Rspack's string, RegExp, and function
+ * matching forms and are checked against both resolved paths and specifiers.
+ * @param {Array<string|RegExp|Function>} conditions
+ * @param {{ request: string; packageName: string; packageDir: string; resourcePath?: string }} details
+ * @returns {boolean}
+ */
+function shouldForceBundle(conditions, details) {
+  if (!conditions.length) return false;
+
+  const { request, packageName, packageDir, resourcePath } = details;
+  const pathCandidates = [...new Set([resourcePath, packageDir].filter(Boolean))];
+  const candidates = [...pathCandidates, request, packageName];
+
+  return conditions.some((condition) => {
+    if (typeof condition === 'string') {
+      if (
+        condition === packageName ||
+        request === condition ||
+        request.startsWith(`${condition}/`)
+      ) {
+        return true;
+      }
+      return pathCandidates.some((candidate) =>
+        isPathWithin(candidate, condition)
+      );
+    }
+    if (condition instanceof RegExp) {
+      return candidates.some((candidate) => {
+        condition.lastIndex = 0;
+        return condition.test(candidate);
+      });
+    }
+    if (typeof condition === 'function') {
+      return candidates.some((candidate) => condition(candidate));
+    }
+    return false;
+  });
 }
 
 /**
@@ -71,17 +120,47 @@ function findPackageDir(context, packageName) {
 }
 
 /**
- * Check whether a directory contains any `*.node` file (shallow readdir).
+ * Check whether a directory contains a `*.node` file.
  * @param {string} dir - Directory to scan
+ * @param {Object} [options]
+ * @param {boolean} [options.recursive=false] - Scan child directories
+ * @param {number} [options.maxEntries=10000] - Bound synchronous work
  * @returns {boolean}
  */
-function hasDotNodeFile(dir) {
-  try {
-    return fs.readdirSync(dir).some((entry) => entry.endsWith('.node'));
-  } catch (error) {
-    // Missing or unreadable directory: treat as no .node files
-    return false;
+function hasDotNodeFile(dir, options = {}) {
+  const { recursive = false, maxEntries = 10000 } = options;
+  const pending = [dir];
+  let visitedEntries = 0;
+
+  while (pending.length > 0 && visitedEntries < maxEntries) {
+    const currentDir = pending.pop();
+    let entries;
+    try {
+      entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    } catch (error) {
+      continue;
+    }
+
+    for (const entry of entries) {
+      visitedEntries += 1;
+      if (entry.isFile() && entry.name.endsWith('.node')) {
+        return true;
+      }
+      if (
+        recursive &&
+        entry.isDirectory() &&
+        entry.name !== 'node_modules' &&
+        entry.name !== '.git'
+      ) {
+        pending.push(path.join(currentDir, entry.name));
+      }
+      if (visitedEntries >= maxEntries) {
+        break;
+      }
+    }
   }
+
+  return false;
 }
 
 /**
@@ -95,13 +174,7 @@ function isNativeAddonPackage(packageDir) {
     if (fs.existsSync(path.join(packageDir, 'binding.gyp'))) {
       return true;
     }
-    if (fs.existsSync(path.join(packageDir, 'prebuilds'))) {
-      return true;
-    }
-    if (hasDotNodeFile(packageDir)) {
-      return true;
-    }
-    if (hasDotNodeFile(path.join(packageDir, 'build', 'Release'))) {
+    if (hasDotNodeFile(packageDir, { recursive: true })) {
       return true;
     }
 
@@ -111,8 +184,11 @@ function isNativeAddonPackage(packageDir) {
     if (pkgJson.gypfile === true) {
       return true;
     }
-    const dependencies = pkgJson.dependencies || {};
-    if (NATIVE_INDICATOR_DEPENDENCIES.some((dep) => dependencies[dep])) {
+    const dependencies = {
+      ...(pkgJson.dependencies || {}),
+      ...(pkgJson.optionalDependencies || {}),
+    };
+    if (NATIVE_RUNTIME_LOADER_DEPENDENCIES.some((dep) => dependencies[dep])) {
       return true;
     }
   } catch (error) {
@@ -126,13 +202,13 @@ function isNativeAddonPackage(packageDir) {
  * Convert an absolute path inside a node_modules tree into the bare
  * specifier that resolves to it at runtime (`.../node_modules/@scope/pkg/a.node`
  * -> `@scope/pkg/a.node`). Returns null when the path is not inside
- * node_modules — such a path cannot be required portably from a bundle
+ * node_modules. Such a path cannot be required portably from a bundle
  * built on another machine.
  * @param {string} absolutePath - Absolute path to convert
  * @returns {string|null} - Bare specifier or null
  */
 function toBareSpecifier(absolutePath) {
-  const parts = absolutePath.split(path.sep);
+  const parts = absolutePath.split(/[\\/]+/);
   const idx = parts.lastIndexOf('node_modules');
   if (idx === -1 || idx === parts.length - 1) {
     return null;
@@ -149,10 +225,17 @@ function toBareSpecifier(absolutePath) {
  * @returns {Function} - Externals function `(data, callback)`
  */
 function createNativeAddonExternals(options = {}) {
+  if (
+    options.forceBundle != null &&
+    !Array.isArray(options.forceBundle)
+  ) {
+    throw new TypeError('forceBundle must be an array');
+  }
+  const forceBundle = options.forceBundle || [];
   // Native-or-not verdict keyed by resolved package directory
   const verdictByDir = new Map();
   // Located package directory (or null) keyed by issuer context + package
-  // name — resolution is context dependent (workspaces, nested
+  // name. Resolution is context dependent (workspaces, nested
   // node_modules), so misses must not be cached globally by name alone
   const dirByContextName = new Map();
   // Packages already reported through onExternalized
@@ -176,6 +259,10 @@ function createNativeAddonExternals(options = {}) {
       return callback();
     }
 
+    if (options.enabled === false) {
+      return callback();
+    }
+
     // Meteor packages are handled by another external
     if (request.startsWith('meteor/')) {
       return callback();
@@ -184,16 +271,43 @@ function createNativeAddonExternals(options = {}) {
     // Direct requests for compiled addon binaries are externalized as bare
     // specifiers: rspack cannot parse them, and node_modules exists on disk
     // at server runtime. Absolute build-machine paths must never be emitted
-    // into the bundle — they break as soon as the bundle is deployed to
+    // into the bundle because they break as soon as the bundle is deployed to
     // another path or machine.
     if (request.endsWith('.node')) {
-      if (request.startsWith('.') || path.isAbsolute(request)) {
-        const absolutePath = path.isAbsolute(request)
+      const isRelativeOrAbsolute =
+        request.startsWith('.') || path.isAbsolute(request);
+      const absolutePath = isRelativeOrAbsolute
+        ? path.isAbsolute(request)
           ? request
           : context
           ? path.resolve(context, request)
-          : null;
-        const bareSpecifier = absolutePath && toBareSpecifier(absolutePath);
+          : null
+        : null;
+      const bareSpecifier = absolutePath
+        ? toBareSpecifier(absolutePath)
+        : request;
+      const packageName = bareSpecifier && getPackageName(bareSpecifier);
+      const packageDir = packageName
+        ? findPackageDir(context, packageName)
+        : null;
+
+      if (
+        packageName &&
+        packageDir &&
+        shouldForceBundle(forceBundle, {
+          request: bareSpecifier,
+          packageName,
+          packageDir,
+          resourcePath: absolutePath || path.join(
+            packageDir,
+            bareSpecifier.slice(packageName.length).replace(/^\/+/, '')
+          ),
+        })
+      ) {
+        return callback();
+      }
+
+      if (isRelativeOrAbsolute) {
         if (bareSpecifier) {
           reportExternalized(bareSpecifier);
           return callback(null, 'commonjs ' + bareSpecifier);
@@ -234,6 +348,20 @@ function createNativeAddonExternals(options = {}) {
       return callback();
     }
 
+    const packageSubpath = request
+      .slice(packageName.length)
+      .replace(/^\/+/, '');
+    if (
+      shouldForceBundle(forceBundle, {
+        request,
+        packageName,
+        packageDir,
+        resourcePath: path.join(packageDir, packageSubpath),
+      })
+    ) {
+      return callback();
+    }
+
     let isNative;
     if (verdictByDir.has(packageDir)) {
       isNative = verdictByDir.get(packageDir);
@@ -254,4 +382,9 @@ function createNativeAddonExternals(options = {}) {
 
 module.exports = {
   createNativeAddonExternals,
+  getPackageName,
+  hasDotNodeFile,
+  isNativeAddonPackage,
+  shouldForceBundle,
+  toBareSpecifier,
 };

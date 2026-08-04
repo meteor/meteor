@@ -17,6 +17,7 @@
     "react-compiler-runtime": "^19.1.0-rc.2",
     "react-dom": "^18.3.1",
     "react-router-dom": "^7.0.0",
+    "rspack-native-false-positive": "file:./fixtures/rspack-native-false-positive",
     "s3mini": "^0.4.0"
   },
   "devDependencies": {

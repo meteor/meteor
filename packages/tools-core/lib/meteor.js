@@ -437,6 +437,14 @@ export function isMeteorBlazeProject() {
 }
 
 /**
+ * Checks if the application uses a Meteor HTML compiler.
+ * @returns {boolean} True for Blaze templates or static HTML applications.
+ */
+export function isMeteorHtmlProject() {
+  return isMeteorBlazeProject() || getMeteorAppPackages().includes('static-html');
+}
+
+/**
  * Checks if the Meteor application is a Blaze Hot project.
  * @returns {boolean} True if the application is a Blaze Hot project, false otherwise.
  */

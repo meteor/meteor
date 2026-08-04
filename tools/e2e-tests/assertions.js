@@ -16,7 +16,11 @@ import { wait } from "./helpers";
  */
 export async function assertMeteorApp(port, options = {}) {
   // Extract options with default values
-  const { title: inTitle, h1: inH1 = "Welcome to Meteor!" } = options;
+  const {
+    title: inTitle,
+    h1: inH1 = "Welcome to Meteor!",
+    pathPrefix = '',
+  } = options;
 
   // Collect browser errors and failed HTTP responses to diagnose failures
   const consoleErrors = [];
@@ -32,7 +36,7 @@ export async function assertMeteorApp(port, options = {}) {
   });
 
   // Navigate to the app
-  await page.goto(`http://localhost:${port}`);
+  await page.goto(`http://localhost:${port}${pathPrefix}`);
 
   // Check the title if specified
   if (inTitle) {
@@ -109,9 +113,9 @@ export async function assertMeteorReactApp(port, options = {}) {
  * @param {number} port - Port where the app is running
  * @returns {Promise<void>}
  */
-export async function assertRspackScriptTag(port, shoudlExist = true) {
+export async function assertRspackScriptTag(port, shoudlExist = true, options = {}) {
   // Navigate to the app
-  await page.goto(`http://localhost:${port}`);
+  await page.goto(`http://localhost:${port}${options.pathPrefix || ''}`);
 
   // Get all script tags
   const scriptTags = await page.$$eval('script', scripts => 

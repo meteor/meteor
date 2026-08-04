@@ -13,6 +13,13 @@ export interface MeteorRspackConfig extends _RspackConfig {
   };
 }
 
+export interface NativeAddonExternalizationOptions {
+  /** Enable automatic native addon detection for server builds. */
+  enabled?: boolean;
+  /** Packages or resolved paths that must remain in the Rspack compilation. */
+  forceBundle?: RuleSetConditions;
+}
+
 type MeteorEnv = Record<string, any> & {
   isDevelopment: boolean;
   isProduction: boolean;
@@ -47,6 +54,15 @@ type MeteorEnv = Record<string, any> & {
    * @example ...Meteor.compileWithRspack(['grubba-rpc', 'zod'])
    */
   compileWithRspack: (deps: RuleSetConditions, options?: SwcLoaderOptions) => Record<string, object>;
+  /**
+   * Configure automatic server-side native addon externalization.
+   * @param options - Detection and package-specific override options
+   * @returns A Meteor-Rspack config fragment
+   * @example ...Meteor.configureNativeAddonExternalization({ forceBundle: ['package'] })
+   */
+  configureNativeAddonExternalization: (
+    options?: NativeAddonExternalizationOptions
+  ) => Record<string, object>;
   /**
    * Enable or disable Rspack cache config.
    * @param enabled - Whether to enable caching

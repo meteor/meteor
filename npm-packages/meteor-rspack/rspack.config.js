@@ -10,12 +10,18 @@ const { getMeteorAppSwcConfig } = require('./lib/swc.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
-const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
+const {
+  MeteorRspackOutputPlugin,
+  extractDelegatedExtensions,
+  extractDelegatedFiles,
+} = require('./plugins/MeteorRspackOutputPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
   compileWithMeteor,
   compileWithRspack,
+  configureNativeAddonExternalization,
+  consumeNativeAddonExternalizationConfig,
   setCache,
   splitVendorChunk,
   extendSwcConfig,
@@ -345,6 +351,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     compileWithRspack(deps, {
       options: mergeSplitOverlap(Meteor.swcConfigOptions, options),
     });
+  Meteor.configureNativeAddonExternalization = (options = {}) =>
+    configureNativeAddonExternalization(options);
   Meteor.setCache = (enabled) =>
     setCache(!!enabled, enabled === "memory" ? undefined : cacheStrategy);
   Meteor.splitVendorChunk = () => splitVendorChunk();
@@ -470,18 +478,6 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const externals = [
     /^meteor\/.*/,
     ...(isReactEnabled ? [/^react$/, /^react-dom$/] : []),
-    ...(isServer ? [/^bcrypt$/] : []),
-    ...(isServer
-      ? [
-          createNativeAddonExternals({
-            onExternalized: (pkgName) => {
-              if (isVerbose) {
-                console.log(`[i] Externalized native addon package: ${pkgName}`);
-              }
-            },
-          }),
-        ]
-      : []),
   ];
   const alias = {
     "/": path.resolve(process.cwd()),
@@ -875,6 +871,25 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       argv
     ));
   }
+
+  const nativeAddonExternalization =
+    consumeNativeAddonExternalizationConfig(
+      nextUserConfig,
+      nextOverrideConfig
+    );
+  if (isServer && nativeAddonExternalization.enabled) {
+    externals.push(
+      createNativeAddonExternals({
+        forceBundle: nativeAddonExternalization.forceBundle,
+        onExternalized: (pkgName) => {
+          if (isVerbose) {
+            console.log(`[i] Externalized native addon package: ${pkgName}`);
+          }
+        },
+      })
+    );
+  }
+
   let statsOverrided = false;
   let config = isClient ? clientConfig : serverConfig;
   if (nextUserConfig) {
@@ -948,6 +963,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       isRebuild,
       ...(!isRebuild && compiler && {
         delegatedExtensions: extractDelegatedExtensions(stats, compiler),
+        delegatedFiles: extractDelegatedFiles(stats, compiler),
       }),
     }),
   });

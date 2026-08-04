@@ -20,7 +20,7 @@ const {
   isMeteorAppTest,
   isMeteorAppTestFullApp,
   isMeteorAppConfigModernVerbose,
-  isMeteorBlazeProject,
+  isMeteorHtmlProject,
   isMeteorLessProject,
   isMeteorScssProject,
   getMeteorEnvPackageDirs,
@@ -35,50 +35,25 @@ const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const { RSPACK_BUILD_CONTEXT, FILE_ROLE } = require('./constants');
 
 /**
- * Checks if entries exist in .meteorignore file
- * @param {string[]} entries - Entries to check
- * @returns {Object} Results with entry keys and boolean values
+ * Reads root .meteorignore entries in their original order.
+ * Reappending these entries after integration-generated negations preserves
+ * the user's ignore precedence.
+ * @returns {string[]} Parsed ignore entries
  */
-function checkMeteorIgnoreExactEntries(entries) {
+function getMeteorIgnoreEntries() {
   const meteorIgnorePath = path.join(getMeteorAppDir(), '.meteorignore');
-  const results = {};
-
-  // Initialize results object with false for each entry
-  entries.forEach(entry => {
-    results[entry] = false;
-  });
-
-  // Check if .meteorignore file exists
   if (!fs.existsSync(meteorIgnorePath)) {
-    return results;
+    return [];
   }
 
-  // Read the .meteorignore file
   try {
-    const content = fs.readFileSync(meteorIgnorePath, 'utf8');
-    const lines = content.split('\n');
-
-    // Check each line against all entries
-    lines.forEach(line => {
-      // Skip empty lines and comments
-      if (!line.trim() || line.trim().startsWith('#')) {
-        return;
-      }
-
-      const trimmedLine = line.trim();
-
-      // Check for exact matches
-      entries.forEach(entry => {
-        if (trimmedLine === entry) {
-          results[entry] = true;
-        }
-      });
-    });
+    return fs.readFileSync(meteorIgnorePath, 'utf8')
+      .split(/\r?\n/)
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith('#'));
   } catch (error) {
-    // If there's an error reading the file, return the initialized results
+    return [];
   }
-
-  return results;
 }
 
 /**
@@ -90,7 +65,7 @@ function checkMeteorIgnoreExactEntries(entries) {
  */
 function getFileExtensionsToIgnore() {
   const isAnyCompilerProject =
-    isMeteorBlazeProject() || isMeteorLessProject() || isMeteorScssProject();
+    isMeteorHtmlProject() || isMeteorLessProject() || isMeteorScssProject();
   if (!isAnyCompilerProject) {
     return [];
   }
@@ -119,7 +94,7 @@ function getFileExtensionsToIgnore() {
   let filteredExts = existingExts;
 
   // For Blaze projects, exclude .html files
-  if (isMeteorBlazeProject()) {
+  if (isMeteorHtmlProject()) {
     filteredExts = existingExts.filter(ext => ext !== '.html');
   }
 
@@ -147,6 +122,7 @@ function getFileExtensionsToIgnore() {
 export function configureMeteorForRspack() {
   const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
+  const meteorIgnoreEntries = getMeteorIgnoreEntries();
 
   // Ignore node_modules to prevent Meteor from processing them
   const projectRootFilesAndFolders = getMeteorAppFilesAndFolders({
@@ -194,68 +170,18 @@ export function configureMeteorForRspack() {
     extraFoldersToIgnore = [];
   }
 
-  // Skip CSS/HTML files in entrypoint contexts, including nested
-  // subdirectories (`client/**/*.css` also matches `client/a.css`
-  // since `**` matches zero or more directories). See meteor/meteor#14523.
+  // Keep CSS/HTML files in entrypoint contexts visible to Meteor unless the
+  // later Rspack compilation reports an exact stylesheet it owns. Meteor's
+  // ignore matcher needs separate zero-depth and nested patterns.
   extraFilesToIgnore = [
     ...extraFilesToIgnore,
     ...initialEntrypointContexts.flatMap(entrypoint => {
-      const cssPattern = `${entrypoint}/**/*.css`;
-      const htmlPattern = `${entrypoint}/**/*.html`;
-      // Legacy top-level pattern forms, so existing .meteorignore lines
-      // like `client/*.css` keep opting out of the unignore
-      const legacyCssPattern = `${entrypoint}/*.css`;
-      const legacyHtmlPattern = `${entrypoint}/*.html`;
-
-      const cssFiles = glob.sync(cssPattern);
-      const htmlFiles = glob.sync(htmlPattern);
-
-      const entriesToCheck = [
-        cssPattern,
-        htmlPattern,
-        legacyCssPattern,
-        legacyHtmlPattern,
-        ...cssFiles,
-        ...htmlFiles
+      return [
+        `!${entrypoint}/*.html`,
+        `!${entrypoint}/**/*.html`,
+        `!${entrypoint}/*.css`,
+        `!${entrypoint}/**/*.css`,
       ];
-
-      const entryResults = checkMeteorIgnoreExactEntries(entriesToCheck);
-      const hasMatchingCssPattern =
-        entryResults[cssPattern] || entryResults[legacyCssPattern];
-      const hasMatchingHtmlPattern =
-        entryResults[htmlPattern] || entryResults[legacyHtmlPattern];
-      const hasAnyCssFileInMeteorIgnore = cssFiles.some(file => entryResults[file]);
-      const hasAnyHtmlFileInMeteorIgnore = htmlFiles.some(file => entryResults[file]);
-
-      const result = [];
-
-      // Handle HTML files
-      if (hasAnyHtmlFileInMeteorIgnore) {
-        // Add individual HTML files that are not in meteorignore
-        htmlFiles.forEach(file => {
-          if (!entryResults[file]) {
-            result.push(`!${file}`);
-          }
-        });
-      } else if (!hasMatchingHtmlPattern) {
-        // Skip HTML pattern if not in meteorignore
-        result.push(`!${htmlPattern}`);
-      }
-
-      // Handle CSS files
-      if (hasAnyCssFileInMeteorIgnore) {
-        // Add individual CSS files that are not in meteorignore
-        cssFiles.forEach(file => {
-          if (!entryResults[file]) {
-            result.push(`!${file}`);
-          }
-        });
-      } else if (!hasMatchingCssPattern) {
-        // Skip CSS pattern if not in meteorignore
-        result.push(`!${cssPattern}`);
-      }
-
-      return result;
     }),
   ];
 
@@ -305,7 +231,7 @@ export function configureMeteorForRspack() {
   );
   const meteorAppIgnores = `${foldersToIgnore.join(' ')} ${filesToIgnore.join(
     ' ',
-  )} ${unignoredFilesAndFolders.join(' ')}`.trim();
+  )} ${unignoredFilesAndFolders.join(' ')} ${meteorIgnoreEntries.join(' ')}`.trim();
   setMeteorAppIgnore(meteorAppIgnores);
 
   if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
@@ -423,28 +349,68 @@ export function applyDelegatedExtensions(extensions) {
   const ignorePatterns = [];
   for (const dir of entrypointContexts) {
     for (const ext of extensions) {
-      // ext comes as '.css'; use a nested-inclusive pattern so delegation
-      // also re-ignores nested files (`**` matches zero or more directories,
-      // so `client/**/*.css` covers `client/a.css` too). meteor/meteor#14523
-      ignorePatterns.push(`${dir}/**/*${ext}`);
+      // Older @meteorjs/rspack versions report extensions rather than exact
+      // compiled files. Keep the legacy top-level behavior in that case so
+      // unimported nested files remain available to Meteor's eager compilers.
+      ignorePatterns.push(`${dir}/*${ext}`);
     }
   }
 
   if (ignorePatterns.length > 0) {
-    // Re-append meteor.modules unignore patterns after the delegation ignores
-    // so they take precedence (gitignore semantics: last match wins)
+    // Re-append explicit modules, then user ignore rules. The user's final
+    // .meteorignore match keeps the same precedence it has without Rspack.
     const meteorAppConfig = getMeteorAppConfig();
+    const meteorIgnoreEntries = getMeteorIgnoreEntries();
     const unignoredFilesAndFolders = buildUnignorePatterns(
       meteorAppConfig?.modules || [],
       { skipLevel: 1 },
     );
 
     setMeteorAppIgnore(
-      [...ignorePatterns, ...unignoredFilesAndFolders].join(' ')
+      [
+        ...ignorePatterns,
+        ...unignoredFilesAndFolders,
+        ...meteorIgnoreEntries,
+      ].join(' ')
     );
 
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
       logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE}`);
     }
+  }
+}
+
+/**
+ * Delegates only entry-folder files that Rspack actually compiled.
+ * Unimported nested HTML and stylesheet files stay visible to Meteor, while
+ * imported files are not compiled a second time by Meteor plugins.
+ *
+ * @param {string[]} files - App-relative POSIX paths compiled by Rspack
+ */
+export function applyDelegatedFiles(files) {
+  if (!Array.isArray(files) || files.length === 0) return;
+
+  const ignorePatterns = files
+    .map(file => file.replace(/\\/g, '/').replace(/^\.\//, ''))
+    .filter(file => file && !file.startsWith('../') && !path.isAbsolute(file));
+  if (ignorePatterns.length === 0) return;
+
+  const meteorAppConfig = getMeteorAppConfig();
+  const meteorIgnoreEntries = getMeteorIgnoreEntries();
+  const unignoredFilesAndFolders = buildUnignorePatterns(
+    meteorAppConfig?.modules || [],
+    { skipLevel: 1 },
+  );
+
+  setMeteorAppIgnore(
+    [
+      ...ignorePatterns,
+      ...unignoredFilesAndFolders,
+      ...meteorIgnoreEntries,
+    ].join(' ')
+  );
+
+  if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
+    logInfo(`[i] Rspack delegated files: ${ignorePatterns.join(', ')}`);
   }
 }

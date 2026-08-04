@@ -15,10 +15,13 @@ const rspackAssetsContext = process.env.RSPACK_ASSETS_CONTEXT || RSPACK_ASSETS_C
 // ROOT_URL path prefix (e.g. "/live" for ROOT_URL=https://example.com/live/).
 // Every URL the integration constructs must carry it, consistent with every
 // other URL Meteor emits. See meteor/meteor#14523.
-const rootUrlPathPrefix =
+const configuredRootUrlPathPrefix =
   (typeof __meteor_runtime_config__ !== 'undefined' &&
     __meteor_runtime_config__.ROOT_URL_PATH_PREFIX) ||
   '';
+const rootUrlPathPrefix = configuredRootUrlPathPrefix === '/'
+  ? ''
+  : configuredRootUrlPathPrefix.replace(/\/+$/, '');
 
 /**
  * Escape a string for literal use inside a RegExp
@@ -57,45 +60,45 @@ if (shouldEnableDevHMRProxy) {
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
-  // Proxy HMR websocket upgrade requests
-  const hmrWebSocketProxy = createProxyMiddleware( {
+  // WebSocket upgrades bypass Connect middleware. Handle the Rspack endpoint
+  // explicitly and disable automatic upgrade listeners on both proxies. If
+  // more than one proxy handles the same socket, frames become corrupted.
+  const hmrWebSocketProxy = createProxyMiddleware({
     target,
-    ws: true,
-    logLevel: 'debug'
+    changeOrigin: true,
+    ws: false,
+    logLevel: 'debug',
   });
-  WebApp.connectHandlers.use('/ws', hmrWebSocketProxy);
+  const hmrWebSocketPath = `${rootUrlPathPrefix}/ws`;
+  WebApp.httpServer.on('upgrade', (req, socket, head) => {
+    const parsedRequestUrl = new URL(req.url, 'http://localhost');
+    if (parsedRequestUrl.pathname !== hmrWebSocketPath) {
+      return;
+    }
 
-  if (rootUrlPathPrefix) {
-    // Websocket upgrade requests bypass the Express middleware chain, so the
-    // ROOT_URL path prefix is never stripped from them and the '/ws' mount
-    // above cannot match. Proxy prefixed HMR websocket upgrades explicitly.
-    // See meteor/meteor#14523.
-    const prefixedWsPath = `${rootUrlPathPrefix}/ws`;
-    WebApp.httpServer.on('upgrade', (req, socket, head) => {
-      if (
-        req.url === prefixedWsPath ||
-        req.url.startsWith(`${prefixedWsPath}?`) ||
-        req.url.startsWith(`${prefixedWsPath}/`)
-      ) {
-        req.url = req.url.slice(rootUrlPathPrefix.length);
-        hmrWebSocketProxy.upgrade(req, socket, head);
-      }
-    });
-  }
+    const originalUrl = req.url;
+    req.url = req.url.slice(rootUrlPathPrefix.length) || '/ws';
+    hmrWebSocketProxy.upgrade(req, socket, head);
+    req.url = originalUrl;
+  });
 
   // Proxy all dev asset requests under the rspack prefix
   WebApp.connectHandlers.use('/__rspack__',
     createProxyMiddleware({
       target,
       changeOrigin: true,
-      ws: true,
+      ws: false,
       logLevel: 'debug',
     })
   );
 
   WebApp.rawConnectHandlers.use((req, res, next) => {
+    const parsedRequestUrl = parseUrl(req.url);
+    const pathname = parsedRequestUrl.pathname;
+    const search = parsedRequestUrl.search || '';
+
     // If this request is already under /__rspack__/, don't redirect it again.
-    if (req.url.startsWith('/__rspack__/')) {
+    if (pathname.startsWith('/__rspack__/')) {
       return next();
     }
 
@@ -103,30 +106,30 @@ if (shouldEnableDevHMRProxy) {
     //    e.g. "/main.ce385971e9f19307.hot-update.js"
     //         "/ui_pages_tasks_tasks-page_jsx.ce385971e9f19307.hot-update.js"
     //         "/foo/bar/baz.1234abcd.hot-update.json"
-    const hotUpdate = req.url.match(RSPACK_HOT_UPDATE_REGEX);
+    const hotUpdate = pathname.match(RSPACK_HOT_UPDATE_REGEX);
     if (hotUpdate) {
       // Redirect "/something.hot-update.js" → "/__rspack__/something.hot-update.js"
       // (with the ROOT_URL path prefix applied, so the redirected request
       // reaches the proxy mounted under the prefix — see meteor/meteor#14523)
-      const target = `${rootUrlPathPrefix}/__rspack__/${hotUpdate[1]}`;
+      const target = `${rootUrlPathPrefix}/__rspack__/${hotUpdate[1]}${search}`;
       res.writeHead(307, { Location: target });
       return res.end();
     }
 
     // 2) match "/build-chunks/<anything>"
-    const bundlesMatch = req.url.match(RSPACK_CHUNKS_REGEX);
+    const bundlesMatch = pathname.match(RSPACK_CHUNKS_REGEX);
     if (bundlesMatch) {
       // Redirect "/bundles/foo.js" → "/__rspack__/build-chunks/foo.js"
-      const target = `${rootUrlPathPrefix}/__rspack__/${rspackChunksContext}/${bundlesMatch[1]}`;
+      const target = `${rootUrlPathPrefix}/__rspack__/${rspackChunksContext}/${bundlesMatch[1]}${search}`;
       res.writeHead(307, { Location: target });
       return res.end();
     }
 
     // 3) match "/build-assets/<anything>"
-    const assetsMatch = req.url.match(RSPACK_ASSETS_REGEX);
+    const assetsMatch = pathname.match(RSPACK_ASSETS_REGEX);
     if (assetsMatch) {
       // Redirect "/build-assets/foo.js" → "/__rspack__/build-assets/foo.js"
-      const target = `${rootUrlPathPrefix}/__rspack__/${rspackAssetsContext}/${assetsMatch[1]}`;
+      const target = `${rootUrlPathPrefix}/__rspack__/${rspackAssetsContext}/${assetsMatch[1]}${search}`;
       res.writeHead(307, { Location: target });
       return res.end();
     }

@@ -45,6 +45,9 @@ Core React integration with custom Meteor local directory.
 | Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
+| `ROOT_URL=/live/` prefixes scripts, styles, images, and dynamic chunks | Run, Prod |
+| Chunk, asset, and queried hot-update compatibility redirects preserve the prefix | Run |
+| Dynamic import chunk loads through the runtime public path | Run, Prod |
 
 ### react-router
 
@@ -66,6 +69,7 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | React + TSX environment detection | Run, Prod, Test, Build |
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
+| Native bcrypt executes after installation in the generated deployment bundle | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### blaze
@@ -76,6 +80,9 @@ Blaze templating engine integration.
 |----------------|-------|
 | Blaze environment detection (`isBlazeEnabled`) | Run, Prod, Test, Build |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
+| Unimported Blaze templates at one and two nested levels compile and render | Run, Prod |
+| Unimported CSS at one and two nested levels is emitted and applied | Run, Prod |
+| `.meteorignore` excludes nested HTML and CSS from eager Meteor processing | Run, Prod |
 
 ### full-blaze
 
@@ -231,7 +238,7 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 |---------|--------|
 | `s3mini` | ESM-only package (no CJS fallback) |
 | `@modelcontextprotocol/sdk/client/streamableHttp.js` | ESM subpath export (deep path into ESM package) |
-| `bcrypt` | Native Node.js bindings (compiled C++ addon) |
+| `bcrypt` | Automatically detected native addon that is externalized and executed at runtime without manual externals |
 | `puppeteer` | Large ESM-compatible package with complex dependency tree (`server/browser-tests/browser.app-test.js`) |
 
 ### monorepo (`apps/monorepo/app/`)
@@ -273,6 +280,9 @@ Where each feature is tested across apps and skeletons.
 | Feature | Apps | Skeletons |
 |---------|------|-----------|
 | HMR (dev) | react, react-router, babel, coffeescript, vue, solid, svelte, monorepo, typescript | |
+| `ROOT_URL` path-prefix routing | react | |
+| Dynamic chunk public path | react | |
+| Compatibility redirects with query strings | react | |
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
@@ -303,6 +313,8 @@ Where each feature is tested across apps and skeletons.
 | Portable build (no isDev/isProd defines) | typescript | |
 | `Meteor.extendSwcConfig` (path aliases) | typescript | |
 | CSS auto-delegation (entry folder filtering) | vue | |
+| Nested eager Blaze templates | blaze | |
+| Nested eager CSS | blaze | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
 | `meteor reset` cleanup | all apps | all skeletons |
 | Skeleton creation | | all 14 skeletons |
@@ -311,6 +323,7 @@ Where each feature is tested across apps and skeletons.
 | ESM-only packages | react-router, monorepo, babel | |
 | ESM subpath exports | react-router, babel | |
 | Native bindings (C++ addon) | react-router | |
+| Native detection false-positive override (`compileWithRspack`) | react-router | |
 | `node:` protocol imports | monorepo, typescript | |
 | Untranspiled npm deps (`compileWithRspack`) | monorepo | |
 | Worker resolution (`compileWithMeteor`) | monorepo | |
@@ -321,3 +334,9 @@ Where each feature is tested across apps and skeletons.
 | Service worker runtime caching (images) | monorepo | |
 | Service worker precaching (`additionalManifestEntries`) | monorepo | |
 | PWA manifest | monorepo | |
+
+### Pending regression signal
+
+`rspack-root-url.test.js` also asserts that the Rspack WebSocket connects through `/live/ws` and that a client edit completes HMR below a `ROOT_URL` prefix. That assertion currently fails because no Rspack WebSocket is opened, so prefixed HMR is not listed as covered above. Keep this test as the acceptance signal for the remaining fix.
+
+The React Router fixture includes a JavaScript-only package with a `binding.gyp` native detection marker. It forces that package through `Meteor.compileWithRspack`, executes it in development and production, and verifies that its source marker is present in the generated server bundle. This proves that the helper changes bundling behavior rather than only changing detector output.

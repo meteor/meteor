@@ -87,6 +87,29 @@ Tinytest.addAsync(
       );
       test.isFalse(/src="\/prefix\/prefix\//.test(html));
 
+      // Query strings and fragments do not defeat the prefix boundary check
+      for (const suffix of ['?cache=1', '#fragment']) {
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL = `/prefix${suffix}`;
+        html = await generateHTMLForArch('web.browser', false, {
+          rootUrlPathPrefix: '/prefix',
+        });
+        test.matches(html, new RegExp(`src="/prefix\\${suffix[0]}`));
+        test.isFalse(/src="\/prefix\/prefix/.test(html));
+      }
+
+      // Protocol-relative and relative URLs are owned by the caller
+      for (const customUrl of [
+        '//cdn.example.com/client-rspack.js',
+        'client-rspack.js',
+        './client-rspack.js',
+      ]) {
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL = customUrl;
+        html = await generateHTMLForArch('web.browser', false, {
+          rootUrlPathPrefix: '/prefix',
+        });
+        test.isTrue(html.includes(`src="${customUrl}"`));
+      }
+
       // Absolute URLs pass through untouched
       process.env.METEOR_APP_CUSTOM_SCRIPT_URL =
         'https://cdn.example.com/client-rspack.js';

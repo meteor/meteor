@@ -8,11 +8,16 @@ const sri = (sri, mode) =>
 // through untouched, as do URLs that already carry the prefix (apps that
 // worked around meteor/meteor#14523 prefix the env variable themselves).
 const prefixCustomScriptUrl = (url, rootUrlPathPrefix) => {
+  const isAlreadyPrefixed =
+    url === rootUrlPathPrefix ||
+    url.startsWith(rootUrlPathPrefix + '/') ||
+    url.startsWith(rootUrlPathPrefix + '?') ||
+    url.startsWith(rootUrlPathPrefix + '#');
+
   if (!rootUrlPathPrefix ||
       !url.startsWith('/') ||
       url.startsWith('//') ||
-      url === rootUrlPathPrefix ||
-      url.startsWith(rootUrlPathPrefix + '/')) {
+      isAlreadyPrefixed) {
     return url;
   }
   return rootUrlPathPrefix + url;

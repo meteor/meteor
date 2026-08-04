@@ -250,6 +250,10 @@ export function testMeteorRspackBundler(options) {
     skipTestClient = false,
     // Skip isDevelopment/isProduction/isRun/isTest/isBuild verbose output checks
     skipEnvCheck = false,
+    // URL path where the app is served, for example '/live/'.
+    urlPathPrefix = '',
+    // Execute the built bundle from its deployment directory after npm install.
+    runBuiltBundle = false,
   } = options;
   const devServerPortStr = String(devServerPort);
 
@@ -319,6 +323,7 @@ export function testMeteorRspackBundler(options) {
         waitForOutput: "=> App running at",
         isMonorepo,
         env: { ...env, ...(env.meteorRun || {}) },
+        waitOnPath: urlPathPrefix,
       });
       meteorProcess = result.meteorProcess;
 
@@ -397,6 +402,7 @@ export function testMeteorRspackBundler(options) {
         isMonorepo,
         skipWaitOn: skipClient,
         env: { ...env, ...(env.meteorRun || {}) },
+        waitOnPath: urlPathPrefix,
       });
       meteorProcess = result.meteorProcess;
 
@@ -404,6 +410,17 @@ export function testMeteorRspackBundler(options) {
       await wait(WAIT_ON);
 
       // Assert that the app files exists
+      const webSocketUrls = [];
+      const browserMessages = [];
+      const recordWebSocket = socket => webSocketUrls.push(socket.url());
+      const recordBrowserMessage = message => browserMessages.push(message.text());
+      const recordPageError = error => browserMessages.push(error.message);
+      if (customAssertions && customAssertions.afterRun) {
+        page.on('websocket', recordWebSocket);
+        page.on('console', recordBrowserMessage);
+        page.on('pageerror', recordPageError);
+      }
+
       if (!skipClient) {
         await assertFileExist(appDir, `${buildDir}/main-dev/client-entry.js`);
         await assertFileExist(appDir, `${buildDir}/main-dev/client-rspack.js`);
@@ -418,10 +435,15 @@ export function testMeteorRspackBundler(options) {
 
       if (!skipClient) {
         // Assert that the Meteor app is running correctly
-        await assertMeteorReactApp(port, { title: appName });
+        await assertMeteorReactApp(port, {
+          title: appName,
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the app is using Rspack
-        await assertRspackScriptTag(port, true);
+        await assertRspackScriptTag(port, true, {
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the body has the expected CSS styles
         await assertBodyStyles({
@@ -432,7 +454,20 @@ export function testMeteorRspackBundler(options) {
 
       // Run custom assertions if provided
       if (customAssertions && customAssertions.afterRun) {
-        await customAssertions.afterRun({ tempDir, port, meteorProcess, result });
+        try {
+          await customAssertions.afterRun({
+            tempDir,
+            port,
+            meteorProcess,
+            result,
+            webSocketUrls,
+            browserMessages,
+          });
+        } finally {
+          page.removeListener('websocket', recordWebSocket);
+          page.removeListener('console', recordBrowserMessage);
+          page.removeListener('pageerror', recordPageError);
+        }
       }
 
       // Update the client code
@@ -497,6 +532,7 @@ export function testMeteorRspackBundler(options) {
         isMonorepo,
         skipWaitOn: skipClient,
         env: { ...env, ...(env.meteorRunProduction || {}) },
+        waitOnPath: urlPathPrefix,
       });
       meteorProcess = result.meteorProcess;
 
@@ -521,10 +557,15 @@ export function testMeteorRspackBundler(options) {
 
       if (!skipClient) {
         // Assert that the Meteor app is running correctly
-        await assertMeteorReactApp(port, { title: appName });
+        await assertMeteorReactApp(port, {
+          title: appName,
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the app is using Rspack
-        await assertRspackScriptTag(port, false);
+        await assertRspackScriptTag(port, false, {
+          pathPrefix: urlPathPrefix,
+        });
 
         // Assert that the body has the expected CSS styles
         await assertBodyStyles({
@@ -804,6 +845,7 @@ export function testMeteorRspackBundler(options) {
         );
       }
 
+      let bundleRuntime = null;
       try {
         // Assert that the build output directory exists
         const buildDirExists = await fs.pathExists(buildOutputDir);
@@ -835,6 +877,33 @@ export function testMeteorRspackBundler(options) {
         // Check if the npm install command was successful
         expect(npmInstallResult.exitCode).toBe(0);
 
+        if (runBuiltBundle) {
+          const bundleDir = path.join(buildOutputDir, 'bundle');
+          const outputLines = [];
+          const bundleProcess = execa(process.execPath, ['main.js'], {
+            cwd: bundleDir,
+            env: {
+              ...process.env,
+              PORT: String(port),
+              ROOT_URL: `http://localhost:${port}`,
+              MONGO_URL: 'mongodb://127.0.0.1:27017/rspack-e2e-built',
+            },
+            stdio: ['ignore', 'pipe', 'pipe'],
+          });
+          const collectOutput = data => {
+            outputLines.push(
+              ...data.toString().split('\n').filter(line => line.trim())
+            );
+          };
+          bundleProcess.stdout.on('data', collectOutput);
+          bundleProcess.stderr.on('data', collectOutput);
+          bundleRuntime = {
+            bundleProcess,
+            outputLines,
+            completion: bundleProcess.catch(() => {}),
+          };
+        }
+
         // Check for the existence of specified file paths in the bundle
         const fileCheckResults = {};
         if (checkBundleFilePaths.length > 0) {
@@ -858,9 +927,19 @@ export function testMeteorRspackBundler(options) {
 
         // Run custom assertions if provided
         if (customAssertions && customAssertions.afterBuild) {
-          await customAssertions.afterBuild({ tempDir, buildOutputDir, result, fileCheckResults });
+          await customAssertions.afterBuild({
+            tempDir,
+            buildOutputDir,
+            result,
+            fileCheckResults,
+            bundleRuntime,
+          });
         }
       } finally {
+        if (bundleRuntime?.bundleProcess) {
+          bundleRuntime.bundleProcess.kill('SIGTERM');
+          await bundleRuntime.completion;
+        }
         // Clean up the build output directory
         await cleanupTempDir(buildOutputDir);
       }

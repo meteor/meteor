@@ -15,6 +15,7 @@ describe('BasicBlaze App Bundling /', () => {
     customAssertions: {
       afterRun: async ({ result }) => {
         await waitForBlazeEnvs(result.outputLines);
+        await assertNestedBlazeFiles();
       },
       afterRunRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR to not be enabled as incompatible with Blaze
@@ -22,6 +23,7 @@ describe('BasicBlaze App Bundling /', () => {
       },
       afterRunProduction: async ({ result }) => {
         await waitForBlazeEnvs(result.outputLines);
+        await assertNestedBlazeFiles();
       },
       afterRunProductionRebuildClient: async ({ allConsoleLogs }) => {
         // Check for HMR to not be enabled as incompatible with Blaze
@@ -54,4 +56,30 @@ export async function waitForBlazeEnvs(outputLines, options = {}) {
     /.*isBlazeEnabled:.*true.*/,
     options
   );
+}
+
+async function assertNestedBlazeFiles() {
+  await page.waitForSelector('.nested-widget');
+  await page.waitForSelector('.deeply-nested-widget');
+
+  const styles = await page.evaluate(() => ({
+    nestedColor: getComputedStyle(
+      document.querySelector('.nested-widget')
+    ).color,
+    deepBorderWidth: getComputedStyle(
+      document.querySelector('.deeply-nested-widget')
+    ).borderTopWidth,
+    ignoredOutlineStyle: getComputedStyle(
+      document.querySelector('.meteorignore-sentinel')
+    ).outlineStyle,
+    ignoredTemplatePresent:
+      typeof Template.ignoredByMeteorIgnore !== 'undefined',
+  }));
+
+  expect(styles).toEqual({
+    nestedColor: 'rgb(0, 128, 0)',
+    deepBorderWidth: '7px',
+    ignoredOutlineStyle: 'none',
+    ignoredTemplatePresent: false,
+  });
 }
