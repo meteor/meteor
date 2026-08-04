@@ -12,8 +12,6 @@ import path from 'path';
 const NATIVE_FALSE_POSITIVE_MARKER =
   'RSPACK_NATIVE_FALSE_POSITIVE_BUNDLED';
 const RSPACK_LESS_MARKER = '--rspack-owned-nested-less';
-const METEOR_LESS_MARKER = '--meteor-owned-nested-less';
-const IGNORED_LESS_MARKER = '--meteorignore-excluded-less';
 
 describe('R.Router App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -55,7 +53,7 @@ describe('R.Router App Bundling /', () => {
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
-        await assertNestedLessOwnership(tempDir);
+        await assertNestedRspackLessOwnership(tempDir);
         // Meteor modules config
         await assertBodyStyles({
           'align-content': 'center',
@@ -100,7 +98,7 @@ describe('R.Router App Bundling /', () => {
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
-        await assertNestedLessOwnership(tempDir);
+        await assertNestedRspackLessOwnership(tempDir);
         // Meteor modules config
         await assertBodyStyles({
           'align-content': 'center',
@@ -233,26 +231,16 @@ async function directoryContains(directory, needle) {
   return false;
 }
 
-async function assertNestedLessOwnership(tempDir) {
+async function assertNestedRspackLessOwnership(tempDir) {
   await assertConsoleEval(
     `(() => {
       const styles = getComputedStyle(document.body);
-      return {
-        rspack: styles.getPropertyValue('${RSPACK_LESS_MARKER}').trim(),
-        meteor: styles.getPropertyValue('${METEOR_LESS_MARKER}').trim(),
-        ignored: styles.getPropertyValue('${IGNORED_LESS_MARKER}').trim(),
-      };
+      return styles.getPropertyValue('${RSPACK_LESS_MARKER}').trim();
     })()`,
-    {
-      rspack: 'rspack-owned',
-      meteor: 'meteor-owned',
-      ignored: '',
-    }
+    'rspack-owned'
   );
 
   await assertMeteorStylesheetOwnership(tempDir, {
-    meteorOwned: [METEOR_LESS_MARKER],
     rspackOwned: [RSPACK_LESS_MARKER],
-    ignored: [IGNORED_LESS_MARKER],
   });
 }

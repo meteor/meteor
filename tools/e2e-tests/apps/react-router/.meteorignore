@@ -14,6 +14,3 @@ tests/ignored/*.temp-ignored.app-test.js
 tests/ignored/integration/*-ignored.app-test.js
 tests/ignored/test-*-ignored.app-test.js
 !important.app-test.js
-
-# Stylesheet ownership fixture
-client/styles/ignored.less

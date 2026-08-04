@@ -59,9 +59,8 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | `babel-plugin-react-compiler` integration | Init, Prod, Build |
 | Compiler output cached in dev (babel.config.js) | Run |
 | 404 page routing (renders "Page Not Found") | Run, Prod |
-| Less stylesheet support (`white-space: break-spaces`) | Run, Prod |
-| Imported nested Less is Rspack-owned while unimported nested Less remains Meteor-owned | Run, Prod |
-| `.meteorignore` excludes nested Less from both runtime output and Meteor's merged stylesheet | Run, Prod |
+| Less stylesheet support through Rspack without the Meteor `less` package (`white-space: break-spaces`) | Run, Prod |
+| Imported nested Less is Rspack-owned and absent from Meteor's merged stylesheet | Run, Prod |
 | `meteor.modules` config styles (`align-content: center`) | Run, Prod |
 | Custom HTML meta tags (`theme-color`) | Run, Prod |
 | Default + custom package loading | Run |
@@ -94,6 +93,8 @@ Full Blaze app (with `imports/` structure for tests).
 |----------------|-------|
 | Blaze environment detection | Run, Prod, Test, Build |
 | `imports/api/` test path structure | Test |
+| Unimported nested Less is emitted by the existing Meteor `less` compiler | Run, Prod |
+| `.meteorignore` excludes nested Less from runtime output and Meteor's merged stylesheet | Run, Prod |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 
 ### typescript
@@ -301,7 +302,7 @@ Where each feature is tested across apps and skeletons.
 | Custom asset/chunk context dirs | typescript | |
 | Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
 | Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
-| Less styles and exact nested ownership | react-router | |
+| Less styles and exact nested ownership | react-router (Rspack), full-blaze (Meteor) | |
 | SCSS styles and exact nested ownership | typescript | |
 | Tailwind CSS | vue (PostCSS) | tailwind |
 | Image asset loading | react | |
@@ -324,7 +325,7 @@ Where each feature is tested across apps and skeletons.
 | Deep custom client entrypoint | vue | |
 | Nested eager static HTML | vue | |
 | Nested eager Blaze templates | blaze | |
-| Nested eager stylesheets | blaze (CSS), react-router (Less), typescript (SCSS), vue (CSS) | |
+| Nested eager stylesheets | blaze (CSS), full-blaze (Less), typescript (SCSS), vue (CSS) | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
 | `meteor reset` cleanup | all apps | all skeletons |
 | Skeleton creation | | all 14 skeletons |

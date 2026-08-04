@@ -16,7 +16,6 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 hot-module-replacement  # Update client in development without reloading the page
-less                    # Compile unimported Less files through Meteor
 
 
 static-html             # Define static page content in .html files
