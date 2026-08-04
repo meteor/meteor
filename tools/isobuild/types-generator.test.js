@@ -439,6 +439,101 @@ describe("sub-path modules (issue #10)", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Files that already contain their own declare module (zodern:types style)
+// ---------------------------------------------------------------------------
+
+describe("pre-declared modules are used verbatim", () => {
+  const PRE_DECLARED = [
+    "declare module 'meteor/zodern:relay' {",
+    "  export function createMethod(config: any): any;",
+    "}",
+  ].join("\n");
+
+  test("does not double-wrap a file that already has declare module", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "relay.d.ts",
+      resources: [makeResource("relay.d.ts", PRE_DECLARED)],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ "zodern:relay": isopack }),
+      packageMap: makePackageMap(["zodern:relay"]),
+      projectLocalDir: PROJECT_LOCAL,
+    });
+    const perPkg = writtenContentAt(`${PKGS_DIR}/zodern_relay.d.ts`);
+    // content is emitted verbatim…
+    expect(perPkg).toBe(`${PRE_DECLARED}\n`);
+    // …and in particular NOT nested inside another declare module
+    expect(perPkg.match(/declare module/g)).toHaveLength(1);
+  });
+
+  test('double-quoted declare module ("meteor/pkg") is also detected', async () => {
+    const content = 'declare module "meteor/pkg" {\n  export const x: number;\n}';
+    const isopack = makeIsopack({
+      typesEntry: "pkg.d.ts",
+      resources: [makeResource("pkg.d.ts", content)],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectLocalDir: PROJECT_LOCAL,
+    });
+    const perPkg = writtenContentAt(`${PKGS_DIR}/pkg.d.ts`);
+    expect(perPkg.match(/declare module/g)).toHaveLength(1);
+  });
+
+  test("sub-path module files with their own declare module are used verbatim", async () => {
+    const sub = [
+      "declare module 'meteor/pkg/sub' {",
+      "  export const y: string;",
+      "}",
+    ].join("\n");
+    const isopack = makeIsopack({
+      typesEntry: "main.d.ts",
+      typesModules: { sub: "sub.d.ts" },
+      resources: [
+        makeResource("main.d.ts", "export declare const x: number;"),
+        makeResource("sub.d.ts", sub),
+      ],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectLocalDir: PROJECT_LOCAL,
+    });
+    // plain main file is wrapped…
+    expect(writtenContentAt(`${PKGS_DIR}/pkg.d.ts`)).toContain(
+      "declare module 'meteor/pkg'"
+    );
+    // …while the pre-declared sub-path file is passed through unchanged
+    expect(writtenContentAt(`${PKGS_DIR}/pkg__sub.d.ts`)).toBe(`${sub}\n`);
+  });
+
+  test("wraps files with top-level namespaces and non-relative imports", async () => {
+    const content = [
+      "import { Mongo } from 'meteor/mongo';",
+      "export namespace Random {",
+      "  function id(numberOfChars?: number): string;",
+      "}",
+    ].join("\n");
+    const isopack = makeIsopack({
+      typesEntry: "random.d.ts",
+      resources: [makeResource("random.d.ts", content)],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ random: isopack }),
+      packageMap: makePackageMap(["random"]),
+      projectLocalDir: PROJECT_LOCAL,
+    });
+    const perPkg = writtenContentAt(`${PKGS_DIR}/random.d.ts`);
+    // namespaces and non-relative imports are valid inside an ambient module
+    // block, so these files ARE wrapped
+    expect(perPkg).toContain("declare module 'meteor/random'");
+    expect(perPkg).toContain("import { Mongo } from 'meteor/mongo';");
+    expect(perPkg).toContain("export namespace Random {");
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Package name normalization
 // ---------------------------------------------------------------------------
 

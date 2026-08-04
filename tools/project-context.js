@@ -1052,12 +1052,16 @@ Object.assign(ProjectContext.prototype, {
           projectLocalDir: self.projectLocalDir,
         });
       } catch (err) {
-        // Type generation is best-effort; a failure here should never break
-        // a build.  Log the error but continue.
+        // Type generation only produces editor/tsc support files under
+        // .meteor/local/types; it contributes nothing to the app bundle, so
+        // a failure here must never abort a build that would otherwise
+        // succeed.  Warn so the user knows types may be stale, and dump the
+        // full stack in verbose mode (--verbose) for diagnosis.
         Console.warn(
           '[types] Failed to generate package type declarations: ' +
           ((err && err.message) || String(err))
         );
+        Console.debug((err && err.stack) || String(err));
       }
     }
 

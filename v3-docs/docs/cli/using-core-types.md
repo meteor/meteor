@@ -99,7 +99,9 @@ by adding a `jsconfig.json` to the project root. Meteor detects **either**
 `tsconfig.json` or `jsconfig.json` and generates the types accordingly.
 
 Apps created with `meteor create` (without `--typescript`) already include a
-`jsconfig.json` with the right configuration.
+`jsconfig.json` with the right configuration. The exception is
+`meteor create --bare`, which stays true to its minimal philosophy and ships
+no `jsconfig.json` — add one yourself (see below) if you want typed imports.
 
 For existing JavaScript apps, add a `jsconfig.json`:
 

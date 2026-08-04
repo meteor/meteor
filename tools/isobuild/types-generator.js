@@ -260,9 +260,36 @@ function generatePackagesDeclaration(entries) {
 }
 
 /**
- * Wrap the content of a raw .d.ts file inside a `declare module` block so
- * that it can be included via a triple-slash reference without triggering the
- * "relative import in ambient module" TypeScript error.
+ * Matches a top-level ambient module declaration such as
+ * `declare module 'meteor/random' {` or `declare module "foo";`.
+ * Anchored to the start of a line so occurrences inside comments that are
+ * indented, or inside nested blocks, are unlikely to match.
+ */
+const DECLARE_MODULE_RE = /^\s*declare\s+module\s+['"]/m;
+
+/**
+ * True when a .d.ts file already contains its own ambient module
+ * declaration(s).  Packages written for zodern:types typically ship files
+ * like `declare module 'meteor/pkg' { … }`; those must be used verbatim,
+ * because ambient module declarations cannot be nested — wrapping them in
+ * another `declare module` block would be a TypeScript syntax error.
+ */
+function hasOwnModuleDeclaration(body) {
+  return DECLARE_MODULE_RE.test(body);
+}
+
+/**
+ * Produce the final content for a per-package declaration file.
+ *
+ * If the source file already declares its own ambient module(s) (the
+ * zodern:types convention), it is emitted verbatim.  Otherwise the file is
+ * assumed to be a plain module-style declaration file (top-level
+ * imports/exports, like `accounts-base.d.ts`, or exported namespaces, like
+ * `random.d.ts`) and is wrapped in a `declare module` block.  Both exported
+ * namespaces and non-relative `import` statements are valid inside an
+ * ambient module block, so wrapping is safe for those files; only relative
+ * imports are not, and those cannot resolve from a generated location
+ * anyway.
  *
  * @param {string} meteorModuleName  e.g. 'meteor/random' or 'meteor/rmd/hooks'
  * @param {Buffer|string} content    raw declaration file content
@@ -272,6 +299,11 @@ function wrapDeclareModule(meteorModuleName, content) {
   const body = (
     Buffer.isBuffer(content) ? content.toString("utf8") : content
   ).trim();
+
+  if (hasOwnModuleDeclaration(body)) {
+    return `${body}\n`;
+  }
+
   const indented = body
     .split("\n")
     .map((line) => (line.length ? "  " + line : ""))

@@ -442,7 +442,7 @@ export class PackageAPI {
    *   Example: `{ suspense: 'suspense.d.ts' }`.
    */
   types(typesEntry, options = {}) {
-    if (this._typesEntry !== null) {
+    if (this._typesEntry != null) {
       buildmessage.error('api.types() may only be called once per package.',
         { useMyCaller: true });
       return;
@@ -470,11 +470,13 @@ export class PackageAPI {
     this._typesEntry = typesEntry;
     this._typesModules = (options && options.modules) || null;
 
-    // Register the .d.ts files as assets in both client and server so they
-    // are included in the isopack regardless of whether the package is
-    // client-only, server-only, or universal.  The types generator reads all
-    // unibuilds and deduplicates by path, so having the same .d.ts in both
-    // arches is harmless.
+    // Register the .d.ts files as server-only assets.  Every package is
+    // compiled for the os arch (even client-only packages), so the types
+    // generator — which reads resources straight from the isopack cache —
+    // always finds them there.  They must NOT be client assets: web-arch
+    // assets are given a public URL and served with the app bundle, and
+    // minification does not strip assets, so client .d.ts files would ship
+    // to production browsers.
     const filesToAdd = [typesEntry];
     if (this._typesModules) {
       for (const [name, modulePath] of Object.entries(this._typesModules)) {
@@ -488,7 +490,7 @@ export class PackageAPI {
         filesToAdd.push(modulePath);
       }
     }
-    this._addFiles('assets', filesToAdd, ['server', 'client']);
+    this._addFiles('assets', filesToAdd, ['server']);
   }
 
   /**
