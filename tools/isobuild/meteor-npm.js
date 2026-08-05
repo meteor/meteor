@@ -33,7 +33,7 @@ var meteorNpm = exports;
 
 // change this will recreate the npm-shrinkwrap.json file
 // and install all dependencies from scratch
-const LOCK_FILE_VERSION = 4;
+const LOCK_FILE_VERSION = 5;
 
 // Expose the version of npm in use from the dev bundle.
 meteorNpm.npmVersion = "10.1.0";
@@ -724,29 +724,41 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
       'npm-shrinkwrap.json'
     );
 
-    // Starting from Npm 8, it's expected to have
-    // node_modules/<package> for the package name
-    const mappedDependencies = Object.entries(
-      preservedShrinkwrap.dependencies
-    ).reduce((acc, [name, info]) => {
-      return {
+    // Legacy shrinkwraps lack the `requires` graph; keep their old behaviour.
+    const topLevelEntries = Object.values(preservedShrinkwrap.dependencies);
+    const hasRequiresGraph = topLevelEntries.some(info => info && info.requires);
+
+    let tempLockfileJson;
+    if (hasRequiresGraph) {
+      const packages = {
+        "": { dependencies: npmDependencies },
+      };
+      flattenDepsToPackages(preservedShrinkwrap.dependencies, packages);
+      tempLockfileJson = JSON.stringify(
+        {
+          lockfileVersion: LOCK_FILE_VERSION,
+          packages,
+        },
+        null,
+        2
+      );
+    } else {
+      const mappedDependencies = Object.entries(
+        preservedShrinkwrap.dependencies
+      ).reduce((acc, [name, info]) => ({
         ...acc,
         [`node_modules/${name}`]: info,
-      };
-    }, {});
-
-    // There are some unchanged packages here. Install from shrinkwrap.
-    files.writeFile(
-      newShrinkwrapFile,
-      JSON.stringify(
+      }), {});
+      tempLockfileJson = JSON.stringify(
         {
           ...preservedShrinkwrap,
           dependencies: mappedDependencies,
         },
         null,
         2
-      )
-    );
+      );
+    }
+    files.writeFile(newShrinkwrapFile, tempLockfileJson);
 
     const newPackageJsonFile = files.pathJoin(
       newPackageNpmDir,
@@ -1008,6 +1020,9 @@ function getInstalledDependenciesTreeFromPackageLock({
       version: pkg.version,
       resolved: pkg.resolved,
       integrity: pkg.integrity,
+      // `requires` keeps the package.json deps ranges so a later rebuild can
+      // reconstruct the dep graph and pin transitives.
+      ...(pkg.dependencies ? { requires: { ...pkg.dependencies } } : {}),
       ...(hasDependencies ? { dependencies: deps } : {}),
     };
   });
@@ -1093,6 +1108,34 @@ function getShrinkwrappedDependenciesTree(dir) {
   shrinkwrap.lockfileVersion = LOCK_FILE_VERSION;
   return shrinkwrap;
 };
+
+function flattenDepsToPackages(deps, packages) {
+  if (!deps) return;
+  for (const [name, info] of Object.entries(deps)) {
+    if (!info) continue;
+    const entry = {};
+    if (info.version != null) entry.version = info.version;
+    if (info.resolved != null) entry.resolved = info.resolved;
+    if (info.integrity != null) entry.integrity = info.integrity;
+    // Set per-entry `dependencies` so npm walks the graph. Prefer `requires`;
+    // fall back to ranges derived from the nested subtree for legacy entries.
+    if (info.requires) {
+      entry.dependencies = { ...info.requires };
+    } else if (info.dependencies) {
+      const childDeps = {};
+      for (const [childName, childInfo] of Object.entries(info.dependencies)) {
+        if (childInfo && childInfo.version != null) {
+          childDeps[childName] = childInfo.version;
+        }
+      }
+      if (Object.keys(childDeps).length > 0) {
+        entry.dependencies = childDeps;
+      }
+    }
+    packages[`node_modules/${name}`] = entry;
+    flattenDepsToPackages(info.dependencies, packages);
+  }
+}
 
 // Maps a "dependency object" (a thing you find in `npm ls --json` or
 // npm-shrinkwrap.json with keys like "version" and "from") to the
