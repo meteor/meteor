@@ -1,0 +1,2 @@
+Rspack 2.1.8
+Rstest 0.11.6

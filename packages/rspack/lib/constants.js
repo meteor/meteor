@@ -5,7 +5,7 @@
 
 import path from 'path';
 
-export const DEFAULT_RSPACK_VERSION = '2.1.3';
+export const DEFAULT_RSPACK_VERSION = '2.1.8';
 
 export const DEFAULT_RSPACK_DEV_SERVER_VERSION = '2.1.0';
 

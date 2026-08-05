@@ -1020,6 +1020,10 @@ Object.assign(AppRunner.prototype, {
     var firstRun = true;
 
     while (true) {
+      if (self.testMetadata?.rstestWatch) {
+        self.testMetadata.rstestGeneration =
+          Number(self.testMetadata.rstestGeneration || 0) + 1;
+      }
       var runResult = await self._runOnce({
         onListen: function () {
           if (! self.noRestartBanner && ! firstRun) {

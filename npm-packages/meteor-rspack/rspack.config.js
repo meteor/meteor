@@ -5,8 +5,8 @@ const path = require('path');
 const { merge } = require('rspack-merge');
 const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
-const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
-const { getMeteorAppSwcConfig } = require('./lib/swc.js');
+const { mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
+const { createMeteorSwcRule } = require('./config.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
@@ -112,60 +112,6 @@ function createCacheStrategy(
 }
 
 // SWC loader rule (JSX/JS)
-function createSwcConfig({
-  isTypescriptEnabled,
-  isReactEnabled,
-  isJsxEnabled,
-  isTsxEnabled,
-  externalHelpers,
-  isDevEnvironment,
-  isClient,
-  isAngularEnabled,
-}) {
-  const defaultConfig = {
-    jsc: {
-      baseUrl: process.cwd(),
-      paths: { '/*': ['*', '/*'] },
-      parser: {
-        syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
-        ...(isTsxEnabled && { tsx: true }),
-        ...(isJsxEnabled && { jsx: true }),
-        ...(isAngularEnabled && { decorators: true }),
-      },
-      target: 'es2015',
-      ...(isReactEnabled && {
-        transform: {
-          react: {
-            development: isDevEnvironment,
-            ...(isClient && { refresh: isDevEnvironment }),
-          },
-        },
-      }),
-      externalHelpers,
-    },
-  };
-
-  // Swcrc config not customizable
-  const omitPaths = [
-    'jsc.target',
-  ];
-  // Define warning function
-  const warningFn = path => {
-    console.warn(
-      `[.swcrc] Ignored custom "${path}" — reserved for Meteor-Rspack integration.`,
-    );
-  };
-  const customConfig = getMeteorAppSwcConfig() || {};
-  const cleanedCustomConfig = cleanOmittedPaths(customConfig, { omitPaths, warningFn });
-  const swcConfig = merge(defaultConfig, cleanedCustomConfig);
-  return {
-    test: /\.(?:[mc]?js|jsx|[mc]?ts|tsx)$/i,
-    exclude: /node_modules|\.meteor\/local/,
-    loader: "builtin:swc-loader",
-    options: swcConfig,
-  };
-}
-
 function createRemoteDevServerConfig() {
   const rootUrl = process.env.ROOT_URL;
   let hostname;
@@ -272,6 +218,28 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestModule = !!Meteor.isTestModule;
   const isTestEager = !!Meteor.isTestEager;
   const isTestFullApp = !!Meteor.isTestFullApp;
+  const isRstestTest = isTest && Meteor.testRunner === 'rstest';
+  const compatibilityIgnoreEntries = isRstestTest
+    ? ['**/tests/legacy/**']
+    : isTest ? ['**/tests/rstest/runtime/**'] : [];
+  const rstestRuntimeClientRoot = path.resolve(
+    projectDir,
+    'tests/rstest/runtime/client',
+  );
+  const rstestRuntimeServerRoot = path.resolve(
+    projectDir,
+    'tests/rstest/runtime/server',
+  );
+  let rstestRuntimeFiles;
+  if (isRstestTest && Meteor.rstestRuntimeManifest) {
+    try {
+      rstestRuntimeFiles = JSON.parse(
+        fs.readFileSync(Meteor.rstestRuntimeManifest, 'utf8'),
+      );
+    } catch {
+      throw new Error('[Meteor Rstest] Invalid runtime file inventory from Meteor CLI.');
+    }
+  }
   const isProfile = !!Meteor.isProfile;
   const isVerbose = !!Meteor.isVerbose;
   const configPath = Meteor.configPath;
@@ -314,7 +282,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     (Meteor.isClient && "client") || "server",
     { projectConfigPath, configPath, buildContext }
   );
-  let swcConfigRule = createSwcConfig({
+  let swcConfigRule = createMeteorSwcRule({
+    root: projectDir,
     isTypescriptEnabled,
     isReactEnabled,
     isJsxEnabled,
@@ -442,7 +411,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   }
 
   const isDevEnvironment = isRun && isDev && !isTest && !isNative;
-  swcConfigRule = createSwcConfig({
+  swcConfigRule = createMeteorSwcRule({
+    root: projectDir,
     isTypescriptEnabled,
     isReactEnabled,
     isJsxEnabled,
@@ -530,24 +500,30 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     : { stats: "errors-warnings", infrastructureLogging: { level: "warn" } };
 
   const clientEntry =
-    isClient && isTest && isTestEager && isTestFullApp
+    isClient && isTest && (isTestEager || isRstestTest) && isTestFullApp
       ? generateEagerTestFile({
-          isAppTest: true,
+          // Rstest runtime roots own ordinary *.test.* files even during a
+          // full-app run. Full-app controls the extra app entry independently.
+          isAppTest: !isRstestTest,
           projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeClientRoot : projectDir,
+          includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           buildContext,
-          ignoreEntries: ["**/server/**"],
+          ignoreEntries: ["**/server/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
           prefix: "client",
           extraEntry: path.resolve(process.cwd(), Meteor.mainClientEntry),
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
-      : isClient && isTest && isTestEager
+      : isClient && isTest && (isTestEager || isRstestTest)
       ? generateEagerTestFile({
           isAppTest: false,
           isClient: true,
           projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeClientRoot : projectDir,
+          includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           buildContext,
-          ignoreEntries: ["**/server/**"],
+          ignoreEntries: ["**/server/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
           prefix: "client",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
@@ -711,22 +687,26 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   };
 
   const serverEntry =
-    isServer && isTest && isTestEager && isTestFullApp
+    isServer && isTest && (isTestEager || isRstestTest) && isTestFullApp
       ? generateEagerTestFile({
-          isAppTest: true,
+          isAppTest: !isRstestTest,
           projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeServerRoot : projectDir,
+          includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           buildContext,
-          ignoreEntries: ["**/client/**"],
+          ignoreEntries: ["**/client/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
           prefix: "server",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
-      : isServer && isTest && isTestEager
+      : isServer && isTest && (isTestEager || isRstestTest)
       ? generateEagerTestFile({
           isAppTest: false,
           projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeServerRoot : projectDir,
+          includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           buildContext,
-          ignoreEntries: ["**/client/**"],
+          ignoreEntries: ["**/client/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
           prefix: "server",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),

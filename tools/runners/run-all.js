@@ -11,6 +11,8 @@ const crypto = require('crypto');
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;
+const RstestBrowser = require('./run-rstest-browser.js').RstestBrowser;
+const RstestExternal = require('./run-rstest-external.js').RstestExternal;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const HMRServer = require('./run-hmr').HMRServer;
@@ -41,6 +43,12 @@ class Runner {
           rootUrl,
           selenium,
           seleniumBrowser,
+          rstestBrowser,
+          rstestBrowserName,
+          rstestExternal,
+          rstestExternalArgs,
+          rstestExternalResultPath,
+          rstestProcessHandle,
           noReleaseCheck,
           cordovaServerPort,
     ...optionsForAppRunner
@@ -169,6 +177,27 @@ class Runner {
         browser: seleniumBrowser
       });
     }
+    self.rstestBrowser = rstestBrowser
+      ? new RstestBrowser({
+          appDir: self.projectContext._projectDirForLocalPackages ||
+            self.projectContext.projectDir,
+          url: self.rootUrl,
+          browser: rstestBrowserName || 'chromium',
+          token: self.options.testMetadata && self.options.testMetadata.rstestToken,
+        })
+      : null;
+    self.rstestExternal = rstestExternal
+      ? new RstestExternal({
+          appDir: self.projectContext._projectDirForLocalPackages ||
+            self.projectContext.projectDir,
+          url: self.rootUrl,
+          args: rstestExternalArgs,
+          resultPath: rstestExternalResultPath,
+          token: self.options.testMetadata && self.options.testMetadata.rstestToken,
+          generation: self.options.testMetadata &&
+            Number(self.options.testMetadata.rstestGeneration || 1),
+        })
+      : null;
   }
   // XXX leave a pidfile and check if we are already running
   async start() {
@@ -247,6 +276,19 @@ class Runner {
         runLog.log("Started Selenium.", { arrow: true });
       }
     }
+    if (self.rstestBrowser && !self.stopped) {
+      await buildmessage.enterJob({ title: 'starting Meteor Rstest browser' }, async function () {
+        return self.rstestBrowser.start();
+      });
+      if (!self.quiet && !self.stopped) {
+        runLog.log('Started Meteor Rstest browser.', { arrow: true });
+      }
+    }
+    if (self.rstestExternal && !self.stopped) {
+      await buildmessage.enterJob({ title: 'running external Rstest projects' }, async function () {
+        return self.rstestExternal.start();
+      });
+    }
 
     // XXX It'd be nice to (cosmetically) handle failure better. Right
     // now we overwrite the "starting foo..." message with the
@@ -276,6 +318,8 @@ class Runner {
     await self.mongoRunner && self.mongoRunner.stop();
     await self.appRunner.stop();
     await (self.selenium && self.selenium.stop());
+    await (self.rstestBrowser && self.rstestBrowser.stop());
+    await (self.rstestExternal && self.rstestExternal.stop());
     // XXX does calling this 'finish' still make sense now that runLog is a
     // singleton?
     runLog.finish();
@@ -410,11 +454,27 @@ exports.run = async function (options) {
 
   var runner = new Runner(runOptions);
   await runner.init();
+  if (runOptions.rstestProcessHandle) {
+    runOptions.rstestProcessHandle.completion.then(code => {
+      if (!runner.stopped) {
+        Console.error(`[Meteor Rstest] Native watcher exited with status ${code}.`);
+        return runOptions.onFailure();
+      }
+    }, error => {
+      if (!runner.stopped) {
+        Console.error(error && error.stack || error);
+        return runOptions.onFailure();
+      }
+    });
+  }
   // don't wait this on to finish
   if (runOptions.open) {
     await runner.start();
   } else {
-    setTimeout(() => runner.start(), 0);
+    runner.start().catch(error => {
+      Console.error(error && error.stack || error);
+      return runOptions.onFailure();
+    });
   }
   onBuilt && onBuilt();
   var result = await promise;

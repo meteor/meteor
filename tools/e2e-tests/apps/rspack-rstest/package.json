@@ -1,0 +1,20 @@
+{
+  "name": "rspack-rstest-e2e",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "test": "meteor test --once --exclude-archs web.browser"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.28.4",
+    "@meteorjs/rspack": "^3.0.0-beta.0",
+    "meteor-node-stubs": "^1.2.12"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "modern": true
+  }
+}

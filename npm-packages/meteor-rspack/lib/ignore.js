@@ -132,8 +132,42 @@ function createIgnoreRegex(globPatterns) {
   return new RegExp(combinedPattern);
 }
 
+/**
+ * Creates an ignore regex whose matches are scoped below a project root.
+ * Rspack evaluates ContextModule `exclude` expressions against absolute
+ * resource paths, so an unscoped glob for a `private` directory can otherwise
+ * match `/private/.../<app>` and exclude every file in an app on macOS.
+ */
+function createProjectIgnoreRegex(projectDir, globPatterns) {
+  if (!Array.isArray(globPatterns) || globPatterns.length === 0) {
+    throw new Error('globPatterns must be a non-empty array');
+  }
+
+  const escapeRegex = value => value.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+  const projectRoot = escapeRegex(projectDir.replace(/\\/g, '/').replace(/\/$/, ''));
+  const DOUBLE_ASTERISK_PLACEHOLDER = '__DOUBLE_ASTERISK__';
+  const patterns = globPatterns
+    .filter(pattern => !pattern.startsWith('!'))
+    .map(pattern => {
+      const normalized = pattern.replace(/\\/g, '/').replace(/^\//, '');
+      const matchesAtAnyDepth = normalized.startsWith('**/');
+      let relativePattern = matchesAtAnyDepth ? normalized.slice(3) : normalized;
+      relativePattern = relativePattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
+      relativePattern = relativePattern.replace(/\*\*/g, DOUBLE_ASTERISK_PLACEHOLDER);
+      relativePattern = relativePattern.replace(/\*/g, '[^/]*');
+      relativePattern = relativePattern.replace(
+        new RegExp(DOUBLE_ASTERISK_PLACEHOLDER, 'g'),
+        '.*',
+      );
+      return `^${projectRoot}/${matchesAtAnyDepth ? '(?:.*/)?' : ''}${relativePattern}`;
+    });
+
+  return patterns.length > 0 ? new RegExp(patterns.join('|')) : /^$/;
+}
+
 module.exports = {
   createIgnoreRegex,
+  createProjectIgnoreRegex,
   getMeteorIgnoreEntries,
   createIgnoreGlobConfig,
 };

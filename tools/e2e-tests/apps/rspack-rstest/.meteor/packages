@@ -1,0 +1,7 @@
+meteor-base
+mongo
+ecmascript
+typescript
+shell-server
+rspack
+rstest

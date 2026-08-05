@@ -715,16 +715,37 @@ Options:
                     --extra-packages "package-name1, package-name2@1.2.3")
   --driver-package  Test driver package to use to run tests and display results.
                     For example: --driver-package meteortesting:mocha
+  --test-runner     Select the test engine explicitly (`rstest` or `driver`).
+                    For package tests, Meteor selects from each selected
+                    Package.onTest unibuild's strong test-engine dependency.
+  --config          Path to Rstest config. Package runtime plans currently use
+                    validated testTimeout and hookTimeout values.
+  --test-name-pattern
+                    Run Rstest cases whose full names match the pattern.
+  --browser         Browser used by the Meteor client executor.
+  --server-only     Run only server-side Rstest projects.
+  --client-only     Run only client-side Rstest projects.
+
+Rstest package-test beta safety: homogeneous Rstest selections run through one
+Meteor/Isobuild harness. Mixed Rstest and Tinytest/Mocha selections fail with
+exact split commands; they are never reported as an empty pass. Native worker
+options such as --project, --test-file, coverage, snapshots, sharding, and
+changed-file selection are rejected for package runtime tests until their
+semantics can be preserved.
 
 >>> test
 Test the application
-Usage: meteor test --driver-package <driver> [options]
-       meteor test --full-app --driver-package <driver> [options]
+Usage: meteor test [options]
+       meteor test --full-app [options]
 
-Runs tests against the application.
-Will start a temporary app based on a test driver (specified with
---driver-package: http://guide.meteor.com/testing.html#driver-packages) which
-handles the task of running tests and displaying the results in the browser.
+Runs tests against the application. When the app uses the `rstest` Atmosphere
+package, Meteor runs Rstest automatically while retaining Meteor's application,
+package, MongoDB, server, and browser lifecycle. Otherwise Meteor starts a
+temporary app based on the test driver specified with --driver-package.
+
+Use --driver-package to preserve an existing Tinytest or Mocha driver exactly.
+Use --test-runner driver, or set `meteor.testRunner` to `driver` in package.json,
+to opt out of automatic Rstest selection.
 
 In normal 'meteor test' mode, no files in your application are eagerly loaded,
 aside from test files (files named *.test[s].* or *.spec[s].* placed anywhere
@@ -806,6 +827,26 @@ Options:
   --driver-package  Name of the optional test driver package to use to run
                     tests and display results. For example:
                     --driver-package practicalmeteor:mocha
+  --test-runner     Select the test engine explicitly (`rstest` or `driver`).
+                    Normally Meteor selects Rstest when the app uses the
+                    `rstest` package.
+  --config          Path to the Rstest config file.
+  --project         Run a named Rstest project.
+  --test-file       Run a specific Rstest test file.
+  --test-name-pattern
+                    Run Rstest cases whose full names match the pattern.
+  --browser         Browser used by Rstest Browser Mode.
+  --coverage        Enable Rstest coverage.
+  --update-snapshots, -u
+                    Update Rstest snapshots.
+  --shard           Run one pure-project Rstest shard (for example, `1/4`;
+                    requires --once; unsupported for Meteor-runtime projects).
+  --changed         Run pure Rstest tests affected by uncommitted changes
+                    (requires --once; unsupported for Meteor-runtime projects).
+  --changed-since   Run tests affected by changes since a Git ref (requires
+                    --once; unsupported for Meteor-runtime projects).
+  --server-only     Run only server-side Rstest projects.
+  --client-only     Run only client-side Rstest projects.
   --exclude-archs   Don't create test bundles for certain web architectures
                     (comma separated, for example:
                     --exclude-archs "web.browser.legacy, web.cordova")

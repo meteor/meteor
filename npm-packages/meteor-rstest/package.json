@@ -1,0 +1,41 @@
+{
+  "name": "@meteorjs/rstest",
+  "version": "0.1.0-beta.0",
+  "description": "Rstest coordinator and configuration integration for Meteor",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "require": "./index.js",
+      "default": "./index.js"
+    },
+    "./playwright": {
+      "types": "./playwright.d.ts",
+      "require": "./playwright.js",
+      "default": "./playwright.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "type": "commonjs",
+  "bin": {
+    "meteor-rstest": "bin/meteor-rstest.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@rstest/adapter-rspack": "0.11.6",
+    "@rstest/browser": "0.11.6",
+    "@rstest/core": "0.11.6",
+    "@rstest/playwright": "0.11.6",
+    "jsdom": "29.1.1",
+    "playwright": "1.59.0"
+  },
+  "peerDependencies": {
+    "@meteorjs/rspack": ">=3.0.0-beta.0",
+    "@rspack/cli": "2.1.8",
+    "@rspack/core": "2.1.8"
+  }
+}

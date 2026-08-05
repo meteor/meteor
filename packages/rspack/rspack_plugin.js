@@ -326,7 +326,15 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
 
         // When testModule is specified as a single file or not specified
       } else {
-        if (initialEntrypoints?.testModule) {
+        const isEagerTestDiscovery = !initialEntrypoints?.testModule;
+        const isRstestRuntime = isEagerTestDiscovery &&
+          global.testCommandMetadata?.testRunner === 'rstest' &&
+          global.testCommandMetadata?.rstestRuntime;
+        const buildClient = !isRstestRuntime ||
+          Boolean(global.testCommandMetadata?.rstestClient);
+        const buildServer = !isRstestRuntime ||
+          Boolean(global.testCommandMetadata?.rstestServer);
+        if (buildClient && (initialEntrypoints?.testModule || isEagerTestDiscovery)) {
           runRspackBuild({
             isTest: true,
             isTestModule: true,
@@ -337,17 +345,23 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
             label: 'Test',
           });
         }
-        runRspackBuild({
-          isTest: true,
-          isTestModule: true,
-          isClient: false,
-          isServer: true,
-          watch: isMeteorAppTestWatch(),
-          onCompile: onCompileServer,
-          label: 'Test',
-        });
+        if (buildServer) {
+          runRspackBuild({
+            isTest: true,
+            isTestModule: true,
+            isClient: false,
+            isServer: true,
+            watch: isMeteorAppTestWatch(),
+            onCompile: onCompileServer,
+            label: 'Test',
+          });
+        }
 
-        const waitTarget = initialEntrypoints?.testModule ? 'both' : 'server';
+        const waitTarget = buildClient && buildServer
+          ? 'both'
+          : buildClient
+            ? 'client'
+            : 'server';
         await waitForFirstCompilation(
           clientFirstCompile,
           serverFirstCompile,

@@ -6,9 +6,9 @@ const vm = require('vm');
  * @param {string} file - The name of the SWC configuration file (default: '.swcrc')
  * @returns {Object|undefined} The parsed SWC configuration or undefined if an error occurs
  */
-function getMeteorAppSwcrc(file = '.swcrc') {
+function getMeteorAppSwcrc(file = '.swcrc', root = process.cwd()) {
   try {
-    const filePath = `${process.cwd()}/${file}`;
+    const filePath = `${root}/${file}`;
     if (file.endsWith('.js') || file.endsWith('.ts')) {
       let content = fs.readFileSync(filePath, 'utf-8');
       
@@ -71,21 +71,21 @@ function getMeteorAppSwcrc(file = '.swcrc') {
  * If the configuration has a baseUrl property, it will be set to process.cwd().
  * @returns {Object|undefined} The SWC configuration or undefined if no configuration exists
  */
-function getMeteorAppSwcConfig() {
-  const hasSwcRc = fs.existsSync(`${process.cwd()}/.swcrc`);
-  const hasSwcJs = !hasSwcRc && fs.existsSync(`${process.cwd()}/swc.config.js`);
-  const hasSwcTs = !hasSwcRc && !hasSwcJs && fs.existsSync(`${process.cwd()}/swc.config.ts`);
+function getMeteorAppSwcConfig(root = process.cwd()) {
+  const hasSwcRc = fs.existsSync(`${root}/.swcrc`);
+  const hasSwcJs = !hasSwcRc && fs.existsSync(`${root}/swc.config.js`);
+  const hasSwcTs = !hasSwcRc && !hasSwcJs && fs.existsSync(`${root}/swc.config.ts`);
 
   if (!hasSwcRc && !hasSwcJs && !hasSwcTs) {
     return undefined;
   }
 
   const swcFile = hasSwcTs ? 'swc.config.ts' : hasSwcJs ? 'swc.config.js' : '.swcrc';
-  const config = getMeteorAppSwcrc(swcFile);
+  const config = getMeteorAppSwcrc(swcFile, root);
 
   // Set baseUrl to process.cwd() if it exists
   if (config?.jsc && config.jsc.baseUrl) {
-    config.jsc.baseUrl = process.cwd();
+    config.jsc.baseUrl = root;
   }
 
   return config;

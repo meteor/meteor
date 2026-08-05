@@ -263,6 +263,14 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
     ["isVerbose", isMeteorAppConfigModernVerbose()],
     ...((isProfile && [["isProfile", isMeteorAppProfile()]]) || []),
     ["isTest", isTest],
+    ...((isTest && global.testCommandMetadata?.testRunner && [[
+      "testRunner",
+      global.testCommandMetadata.testRunner,
+    ]]) || []),
+    ...((isTest && global.testCommandMetadata?.rstestRuntimeManifest && [[
+      "rstestRuntimeManifest",
+      global.testCommandMetadata.rstestRuntimeManifest,
+    ]]) || []),
     ...(isTestLike ? [["isTestLike", isTestLike || isTest]] : []),
     ...((isTestLike && isTestFullApp && [["isTestFullApp", isTestFullApp]]) ||
       []),
