@@ -6,7 +6,7 @@ const {
   createLocalModernToolsLinkPlan,
 } = require('./link-modern-tools.js');
 
-test('local mirror links Rspack into Rstest before linking both into app', () => {
+test('local mirror persists Rspack and Rstest specs in app package metadata', () => {
   const repoRoot = path.resolve('/repo');
   const appDir = path.resolve('/app');
   const plan = createLocalModernToolsLinkPlan({
@@ -68,7 +68,7 @@ test('local mirror links Rspack into Rstest before linking both into app', () =>
       command: 'npm',
       args: [
         'install',
-        '--no-save',
+        '--save',
         '--no-package-lock',
         '--install-links=false',
         path.join(repoRoot, 'npm-packages/meteor-rspack'),
@@ -101,7 +101,7 @@ test('Rspack-only mirror never installs or links Rstest', () => {
     {
       command: 'npm',
       args: [
-        'install', '--no-save', '--no-package-lock', '--install-links=false',
+        'install', '--save', '--no-package-lock', '--install-links=false',
         path.join(repoRoot, 'npm-packages/meteor-rspack'),
       ],
       cwd: appDir,

@@ -92,9 +92,11 @@ class Runner {
       ignoredUrls: [HMRPath]
     });
 
-    await buildmessage.capture(async function () {
-      await self.projectContext.resolveConstraints();
-    });
+    if (!self.projectContext.packageMap) {
+      await buildmessage.capture(async function () {
+        await self.projectContext.resolveConstraints();
+      });
+    }
 
     const packageMap = self.projectContext.packageMap;
     const hasMongoDevServerPackage =

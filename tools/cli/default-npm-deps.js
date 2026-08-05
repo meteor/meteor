@@ -16,19 +16,35 @@ export async function install(appDir, options) {
     ? null
     : readFile(packageJsonPath, "utf8");
   const additionalDevDependencies = options?.additionalDevDependencies || {};
-  const needTemporaryMutation = needTempPackageJson ||
-    Object.keys(additionalDevDependencies).length > 0;
+  const persistDefaultDependencies = options?.persistDefaultDependencies === true;
+  const persistMeteorConfig = options?.persistMeteorConfig;
+  const persistPackageJson = persistDefaultDependencies || Boolean(persistMeteorConfig);
+  const needPackageJsonMutation = needTempPackageJson ||
+    Object.keys(additionalDevDependencies).length > 0 ||
+    persistPackageJson;
 
-  if (needTemporaryMutation) {
+  if (needPackageJsonMutation) {
     // NOTE we need skel-minimal to pull in jQuery which right now is required for Blaze
     const { dependencies } = require("../static-assets/skel-blaze/package.json");
     const packageJson = originalPackageJson
       ? JSON.parse(originalPackageJson)
-      : { dependencies };
+      : {};
+    if (needTempPackageJson || persistDefaultDependencies) {
+      packageJson.dependencies = {
+        ...dependencies,
+        ...packageJson.dependencies,
+      };
+    }
     packageJson.devDependencies = {
       ...packageJson.devDependencies,
       ...additionalDevDependencies,
     };
+    if (persistMeteorConfig) {
+      packageJson.meteor = {
+        ...packageJson.meteor,
+        ...persistMeteorConfig,
+      };
+    }
 
     writeFile(
       packageJsonPath,
@@ -58,10 +74,10 @@ export async function install(appDir, options) {
       return true;
     });
   } finally {
-    if (needTemporaryMutation) {
+    if (needPackageJsonMutation && !persistPackageJson) {
       if (originalPackageJson == null) {
         unlink(packageJsonPath);
-      } else {
+      } else if (originalPackageJson != null) {
         writeFile(packageJsonPath, originalPackageJson, "utf8");
       }
     }

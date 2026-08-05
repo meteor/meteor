@@ -69,7 +69,7 @@ function createLocalModernToolsLinkPlan({
       command: 'npm',
       args: [
         'install',
-        '--no-save',
+        '--save',
         '--no-package-lock',
         '--install-links=false',
         rspackDir,

@@ -33,6 +33,51 @@ function selectRstestLanes(projects) {
   };
 }
 
+function configureRstestRuntimeMetadata({
+  metadata,
+  options,
+  webArchs,
+  createToken = () => require('node:crypto').randomBytes(24).toString('base64url'),
+}) {
+  const isRstest = metadata.testRunner === 'rstest';
+  const hasDesktopBrowser = webArchs.some(arch =>
+    arch === 'web.browser' || arch === 'web.browser.legacy'
+  );
+  const shouldRunRstestClient = Boolean(isRstest &&
+    !options['server-only'] &&
+    hasDesktopBrowser &&
+    (options['test-packages'] ||
+      (options.rstestRunRuntime &&
+        (options.rstestHasRuntimeClient || options['client-only']))));
+  const shouldRunRstestExternal = isRstest && Boolean(options.rstestHasExternal);
+  const requiresDesktopBrowser = isRstest && !options['server-only'] && (
+    options['test-packages'] ||
+    (options.rstestRunRuntime && Boolean(options.rstestHasRuntimeClient)) ||
+    shouldRunRstestExternal
+  );
+
+  if (isRstest) {
+    metadata.rstestToken ||= createToken();
+    metadata.rstestTestTimeout ??= 30000;
+    metadata.rstestHookTimeout ??= 10000;
+    metadata.rstestServer = !options['client-only'] &&
+      (options['test-packages'] ||
+        (options.rstestRunRuntime && Boolean(options.rstestHasRuntimeServer)));
+    metadata.rstestClient = shouldRunRstestClient;
+    metadata.rstestRuntime = Boolean(
+      options['test-packages'] || options.rstestRunRuntime
+    );
+    metadata.rstestExternal = shouldRunRstestExternal;
+  }
+
+  return {
+    hasDesktopBrowser,
+    requiresDesktopBrowser,
+    shouldRunRstestClient,
+    shouldRunRstestExternal,
+  };
+}
+
 function inspectAppRstestCapability(appDir) {
   if (!appDir) {
     return { hasRstestPackage: false, hasRstestConfig: false, packageJsonMeteor: {} };
@@ -283,6 +328,25 @@ function resolveRstestBin(appDir) {
   return path.join(path.dirname(packageJson), 'bin', 'meteor-rstest.js');
 }
 
+async function initializeRstestBuildPlugins(projectContext, {
+  enterJob = (_packageName, operation) => operation(),
+} = {}) {
+  await projectContext.buildLocalPackages();
+  for (const packageName of ['rspack', 'rstest-tooling']) {
+    const isopack = projectContext.isopackCache.getIsopack(packageName);
+    if (!isopack || typeof isopack.ensurePluginsInitialized !== 'function') {
+      const error = new Error(
+        `[Meteor Rstest] Required Atmosphere package ${packageName} did not provide its build plugin.`
+      );
+      error.code = packageName === 'rspack'
+        ? 'METEOR_RSPACK_PLUGIN_MISSING'
+        : 'METEOR_RSTEST_PLUGIN_MISSING';
+      throw error;
+    }
+    await enterJob(packageName, () => isopack.ensurePluginsInitialized());
+  }
+}
+
 function startRstestProcess({
   appDir,
   packageRoot = appDir,
@@ -371,6 +435,8 @@ function runRstestProcess(options) {
 module.exports = {
   buildRstestArgs,
   collectCompatibilityFiles,
+  configureRstestRuntimeMetadata,
+  initializeRstestBuildPlugins,
   inspectAppRstestCapability,
   resolveRstestBin,
   runRstestProcess,

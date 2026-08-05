@@ -66,6 +66,7 @@ const {
   getMeteorInitialAppEntrypoints,
   getMeteorAppEntrypoints,
   isMeteorAppTest,
+  isMeteorPackagesTest,
   isMeteorAppTestWatch,
   isMeteorAppDevelopment,
   isMeteorAppProduction,
@@ -73,6 +74,7 @@ const {
   isMeteorAppConfigModernVerbose,
   isMeteorAppNative,
   isMeteorBundleVisualizerProject,
+  hasMeteorAppConfigAutoInstallDeps,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -86,11 +88,46 @@ const {
   getYarnCommand,
   isYarnProject,
 } = require('meteor/tools-core/lib/npm');
-const { hasMeteorAppConfigAutoInstallDeps } = require("../tools-core/lib/meteor");
+
+const isSelectedRstest = process.env.METEOR_TEST_RUNNER === 'rstest';
+const isRstestPackageTest = isSelectedRstest && isMeteorPackagesTest();
+const isRstestDependencyOnlyAppTest = isSelectedRstest &&
+  isMeteorAppTest() &&
+  !global.testCommandMetadata?.rstestRuntime &&
+  !global.testCommandMetadata?.rstestExternal;
+const isRstestDependencyOnly = isRstestPackageTest ||
+  isRstestDependencyOnlyAppTest;
+const shouldRunRspackAppLifecycle = isMeteorAppRun() ||
+  isMeteorAppBuild() ||
+  isMeteorAppUpdate() ||
+  (isMeteorAppTest() && !isRstestDependencyOnlyAppTest);
+const shouldRunRspackCompilerLifecycle = isMeteorAppRun() ||
+  isMeteorAppBuild() ||
+  (isMeteorAppTest() && !isRstestDependencyOnlyAppTest);
+
+// Pure Rstest projects and `meteor test-packages` still need the Rspack npm
+// toolchain, but they do not compile an application through this build plugin.
+// Runtime and external projects continue through the normal Rspack lifecycle.
+if (isRstestDependencyOnly) {
+  try {
+    if (process.env.YARN_ENABLED === undefined) {
+      const dependencyRoot = process.env.METEOR_RSPACK_NPM_ROOT || process.cwd();
+      process.env.YARN_ENABLED = isYarnProject({ cwd: dependencyRoot })
+        ? 'true'
+        : 'false';
+    }
+    if (hasMeteorAppConfigAutoInstallDeps()) {
+      await ensureRspackInstalled();
+    }
+  } catch (error) {
+    logError(`Rspack plugin error: ${error.message}`);
+    throw error;
+  }
+}
 
 // Get entry points from Meteor configuration
 let initialEntrypoints;
-if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest() || isMeteorAppUpdate()) {
+if (shouldRunRspackAppLifecycle) {
   initialEntrypoints = getMeteorInitialAppEntrypoints();
 
   // Check if mainClient and mainServer exist
@@ -160,7 +197,7 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest() || isMeteorAppUp
   }
 }
 
-if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
+if (shouldRunRspackCompilerLifecycle) {
   try {
     // Check if Angular is installed
     checkAngularInstalled();

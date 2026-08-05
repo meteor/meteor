@@ -22,6 +22,7 @@ const {
 const {
   isMeteorAppUpdate,
   getMeteorAppDir,
+  getMeteorAppPackageJson,
 } = require('meteor/tools-core/lib/meteor');
 const {
   checkNpmDependencyExists,
@@ -40,6 +41,26 @@ const {
   GLOBAL_STATE_KEYS,
 } = require('./constants');
 
+function isLocalDependencySpec(spec) {
+  return typeof spec === 'string' &&
+    /^(?:file:|link:|workspace:|\.{1,2}[\\/]|[\\/])/.test(spec);
+}
+
+function getDependencyInstallSpec(dependency, appDir) {
+  if (dependency.spec && dependency.spec !== dependency.version) {
+    return dependency.spec;
+  }
+  const packageJson = getMeteorAppPackageJson(appDir);
+  const declaredSpec = packageJson && [
+    'dependencies',
+    'devDependencies',
+    'optionalDependencies',
+  ].map(section => packageJson[section]?.[dependency.name]).find(Boolean);
+  return isLocalDependencySpec(declaredSpec)
+    ? declaredSpec
+    : dependency.spec || dependency.version;
+}
+
 /**
  * Generic function to ensure dependencies are installed with correct versions
  * @param {Object[]} dependencies - Array of dependency objects with name, version, and semverCondition
@@ -54,21 +75,28 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
     return;
   }
 
-  const appDir = getMeteorAppDir();
+  const appDir = process.env.METEOR_RSPACK_NPM_ROOT || getMeteorAppDir();
 
   // Filter dependencies that need to be installed (missing or wrong version)
   const allDepsToInstall = dependencies.filter(dep =>
-    !checkNpmDependencyExists(dep.name, { cwd: appDir }) ||
+    !checkNpmDependencyExists(dep.name, {
+      cwd: appDir,
+      checkNodeModules: true,
+      nodeModulesOnly: true,
+    }) ||
     !checkNpmDependencyVersion(dep.name, {
       cwd: appDir,
       versionRequirement: dep.version,
       semverCondition: dep.semverCondition || 'gte',
       existenceOnly: dep.existenceOnly,
+      checkNodeModules: true,
     })
   );
 
   // Format dependencies for installation
-  const dependencyStrings = allDepsToInstall.map(dep => `${dep.name}@${dep.version}`);
+  const dependencyStrings = allDepsToInstall.map(dep =>
+    `${dep.name}@${getDependencyInstallSpec(dep, appDir)}`
+  );
 
   if (allDepsToInstall.length > 0) {
     let devDepsSuccess = true;
@@ -90,7 +118,9 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
     // Install dev dependencies
     const devDepsToInstall = allDepsToInstall.filter(dep => dep.dev === true || dep.dev == null);
     if (devDepsToInstall.length > 0) {
-      devDepsStrings = devDepsToInstall.map(dep => `${dep.name}@${dep.version}`);
+      devDepsStrings = devDepsToInstall.map(dep =>
+        `${dep.name}@${getDependencyInstallSpec(dep, appDir)}`
+      );
 
       // Log progress for dev dependencies
       logProgress(
@@ -102,6 +132,7 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       devDepsSuccess = await installNpmDependency(devDepsStrings, {
         cwd: appDir,
         dev: true,
+        includeDevDependencies: true,
         yarn: isYarnProj,
       });
     }
@@ -109,7 +140,9 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
     // Install regular dependencies
     const regularDepsToInstall = allDepsToInstall.filter(dep => dep.dev === false);
     if (regularDepsToInstall.length > 0) {
-      regularDepsStrings = regularDepsToInstall.map(dep => `${dep.name}@${dep.version}`);
+      regularDepsStrings = regularDepsToInstall.map(dep =>
+        `${dep.name}@${getDependencyInstallSpec(dep, appDir)}`
+      );
 
       // Log progress for regular dependencies
       logProgress(
@@ -121,6 +154,7 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       regularDepsSuccess = await installNpmDependency(regularDepsStrings, {
         cwd: appDir,
         dev: false,
+        includeDevDependencies: true,
         yarn: isYarnProj,
       });
     }
@@ -135,14 +169,14 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       if (!devDepsSuccess && devDepsStrings.length > 0) {
         const devInstallCommand = isYarnProj 
           ? `yarn add --dev ${devDepsStrings.join(' ').trim()}`
-          : `meteor npm install -D ${devDepsStrings.join(' ').trim()}`;
+          : `meteor npm install -D --production=false ${devDepsStrings.join(' ').trim()}`;
         logError(`   For dev dependencies, run: ${devInstallCommand}`);
       }
 
       if (!regularDepsSuccess && regularDepsStrings.length > 0) {
         const regularInstallCommand = isYarnProj 
           ? `yarn add ${regularDepsStrings.join(' ').trim()}`
-          : `meteor npm install ${regularDepsStrings.join(' ').trim()}`;
+          : `meteor npm install --production=false ${regularDepsStrings.join(' ').trim()}`;
         logError(`   For regular dependencies, run: ${regularInstallCommand}`);
       }
 
@@ -182,7 +216,13 @@ export async function ensureRspackInstalled() {
     { name: '@rspack/cli', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
     { name: '@rspack/core', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
     { name: '@rspack/dev-server', version: DEFAULT_RSPACK_DEV_SERVER_VERSION, semverCondition: 'gte', dev: true },
-    { name: '@meteorjs/rspack', version: DEFAULT_METEOR_RSPACK_VERSION, semverCondition: 'gte', dev: true },
+    {
+      name: '@meteorjs/rspack',
+      version: DEFAULT_METEOR_RSPACK_VERSION,
+      spec: process.env.METEOR_RSPACK_NPM_SPEC || DEFAULT_METEOR_RSPACK_VERSION,
+      semverCondition: 'gte',
+      dev: true,
+    },
     { name: '@swc/core', version: DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION, semverCondition: 'gte', dev: true },
     { name: '@swc/helpers', version: DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION, semverCondition: 'gte', dev: false },
     { name: '@rsdoctor/rspack-plugin', version: DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION, semverCondition: 'gte', dev: true },

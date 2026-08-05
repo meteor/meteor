@@ -2358,6 +2358,10 @@ async function doTestCommand(options) {
   } = require('./test-runners/rstest-process.js');
   const { resolveTestRunner } = require('./test-runners/resolve.js');
   const appCapability = inspectAppRstestCapability(options.appDir);
+  const packageTestAutoInstallPolicy = testRunnerCommand === 'test-packages' &&
+    Object.hasOwn(appCapability.packageJsonMeteor, 'autoInstallDeps')
+    ? { autoInstallDeps: appCapability.packageJsonMeteor.autoInstallDeps }
+    : null;
   let testRunnerSelection;
   try {
     testRunnerSelection = resolveTestRunner({
@@ -2426,6 +2430,10 @@ async function doTestCommand(options) {
   if (!testRunnerAppDir) {
     testRunnerAppDir = files.mkdtemp('meteor-test-run');
   }
+
+  let runAppRstestNativePhase;
+  let appRstestNativeOnly = false;
+  let runPackageRstestNativePhase;
 
   if (testRunnerSelection.engine === 'driver' && options.test) {
     const { scanNativeRstestRoots } = require('./test-runners/rstest-process.js');
@@ -2724,44 +2732,47 @@ async function doTestCommand(options) {
       options.rstestHasExternal = true;
     }
 
-    if (shouldRunNative) {
-      if (options.once || !needsRuntime) {
-        const code = await runRstestProcess({ appDir: options.appDir, args: rstestArgs });
-        if (code === 0 && needsRuntime) applyRuntimeSettings();
-        if (code !== 0 || (!needsRuntime && !needsExternal)) return code;
-      } else {
-        options.rstestProcessHandle = startRstestProcess({
+    runAppRstestNativePhase = async () => {
+      if (shouldRunNative) {
+        if (options.once || !needsRuntime) {
+          const code = await runRstestProcess({ appDir: options.appDir, args: rstestArgs });
+          if (code === 0 && needsRuntime) applyRuntimeSettings();
+          if (code !== 0) return code;
+        } else {
+          options.rstestProcessHandle = startRstestProcess({
+            appDir: options.appDir,
+            args: rstestArgs,
+          });
+          await waitForRuntimeSettings(options.rstestProcessHandle);
+        }
+      } else if (needsRuntime) {
+        const planCode = await runRstestProcess({
           appDir: options.appDir,
-          args: rstestArgs,
+          args: buildRstestArgs({
+            appDir: options.appDir,
+            localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
+            once: true,
+            fullApp: options['full-app'],
+            server: !options['client-only'],
+            client: !options['server-only'],
+            command: 'test',
+            config: options.config,
+            runtimePlanOutput: runtimeSettingsPath,
+            runtimeSettingsGeneration,
+            architectures: [
+              ...(!options['client-only'] ? [archinfo.host()] : []),
+              ...(!options['server-only'] ? ['web.browser'] : []),
+            ],
+            phase: 'native',
+          }),
         });
-        await waitForRuntimeSettings(options.rstestProcessHandle);
+        if (planCode !== 0) return planCode;
+        applyRuntimeSettings();
       }
-    } else if (needsRuntime) {
-      const planCode = await runRstestProcess({
-        appDir: options.appDir,
-        args: buildRstestArgs({
-          appDir: options.appDir,
-          localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
-          once: true,
-          fullApp: options['full-app'],
-          server: !options['client-only'],
-          client: !options['server-only'],
-          command: 'test',
-          config: options.config,
-          runtimePlanOutput: runtimeSettingsPath,
-          runtimeSettingsGeneration,
-          architectures: [
-            ...(!options['client-only'] ? [archinfo.host()] : []),
-            ...(!options['server-only'] ? ['web.browser'] : []),
-          ],
-          phase: 'native',
-        }),
-      });
-      if (planCode !== 0) return planCode;
-      applyRuntimeSettings();
-    }
+      return 0;
+    };
 
-    if (!needsRuntime && !needsExternal) return 0;
+    appRstestNativeOnly = !needsRuntime && !needsExternal;
 
     global.testCommandMetadata.rstestWatch = !options.once;
     global.testCommandMetadata.rstestGeneration = 1;
@@ -2804,7 +2815,12 @@ async function doTestCommand(options) {
 
     try {
       const { install } = require("./default-npm-deps.js");
-      await install(testRunnerAppDir);
+      await install(testRunnerAppDir, packageTestAutoInstallPolicy && {
+        // ProjectContext rebinds build-plugin Meteor config to this generated
+        // harness. Carry only the source app's explicit install policy; source
+        // entrypoints and other app config do not belong in package tests.
+        persistMeteorConfig: packageTestAutoInstallPolicy,
+      });
     } catch (error) {
       if (error.code === 'EACCES' && options['test-app-path']) {
         Console.error(
@@ -2914,28 +2930,19 @@ async function doTestCommand(options) {
         );
         return 1;
       }
+      const { install } = require("./default-npm-deps.js");
+      const installed = await install(testRunnerAppDir, {
+        // Rstest and Rspack append their npm toolchains through Atmosphere
+        // build plugins. Persist Meteor defaults so npm cannot prune required
+        // runtime dependencies from this generated harness.
+        persistDefaultDependencies: true,
+      });
+      if (!installed || buildmessage.jobHasMessages()) return 1;
       const {
         buildRstestArgs,
         runRstestProcess,
       } = require('./test-runners/rstest-process.js');
       const rstestConfigRoot = options.appDir || process.cwd();
-      let rstestPackageRoot = options.appDir;
-      if (!rstestPackageRoot) {
-        const localRstestSpec = process.env.METEOR_RSTEST_NPM_SPEC;
-        const localRspackSpec = process.env.METEOR_RSPACK_NPM_SPEC;
-        const { install } = require('./default-npm-deps.js');
-        const installed = await install(testRunnerAppDir, {
-          includeDevDependencies: true,
-          additionalDevDependencies: {
-            '@meteorjs/rstest': localRstestSpec || '0.1.0-beta.0',
-            '@meteorjs/rspack': localRspackSpec || '3.0.0-beta.0',
-            '@rspack/core': '2.1.8',
-            '@rspack/cli': '2.1.8',
-          },
-        });
-        if (!installed) return 1;
-        rstestPackageRoot = testRunnerAppDir;
-      }
       const runtimePlanPath = files.pathJoin(
         testRunnerAppDir,
         '.meteor',
@@ -2943,27 +2950,30 @@ async function doTestCommand(options) {
         'rstest',
         'package-runtime-plan.json',
       );
-      const planCode = await runRstestProcess({
-        appDir: rstestConfigRoot,
-        packageRoot: rstestPackageRoot,
-        args: buildRstestArgs({
+      runPackageRstestNativePhase = async () => {
+        const planCode = await runRstestProcess({
           appDir: rstestConfigRoot,
-          localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
-          harnessRoot: testRunnerAppDir,
-          once: true,
-          server: !options['client-only'],
-          client: !options['server-only'],
-          command: 'test-packages',
-          config: options.config,
-          phase: 'native',
-          runtimePlanOutput: runtimePlanPath,
-          architectures: packageTestArchitectures,
-        }),
-      });
-      if (planCode !== 0) return planCode;
-      const runtimePlan = JSON.parse(files.readFile(runtimePlanPath, 'utf8'));
-      global.testCommandMetadata.rstestTestTimeout = runtimePlan.testTimeout;
-      global.testCommandMetadata.rstestHookTimeout = runtimePlan.hookTimeout;
+          packageRoot: testRunnerAppDir,
+          args: buildRstestArgs({
+            appDir: rstestConfigRoot,
+            localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
+            harnessRoot: testRunnerAppDir,
+            once: true,
+            server: !options['client-only'],
+            client: !options['server-only'],
+            command: 'test-packages',
+            config: options.config,
+            phase: 'native',
+            runtimePlanOutput: runtimePlanPath,
+            architectures: packageTestArchitectures,
+          }),
+        });
+        if (planCode !== 0) return planCode;
+        const runtimePlan = JSON.parse(files.readFile(runtimePlanPath, 'utf8'));
+        global.testCommandMetadata.rstestTestTimeout = runtimePlan.testTimeout;
+        global.testCommandMetadata.rstestHookTimeout = runtimePlan.hookTimeout;
+        return 0;
+      };
     }
     global.testCommandMetadata.driverPackage = options['driver-package'];
     if (testRunnerSelection.engine === 'rstest') {
@@ -3042,6 +3052,54 @@ async function doTestCommand(options) {
     });
   } else {
     throw new Error("Unexpected: neither test-packages nor test");
+  }
+
+  process.env.METEOR_TEST_RUNNER = testRunnerSelection.engine;
+  if (testRunnerSelection.engine === 'rstest') {
+    const rstestNpmRoot = options['test-packages']
+      ? testRunnerAppDir
+      : options.appDir || projectContext.projectDir;
+    process.env.METEOR_RSTEST_NPM_ROOT = rstestNpmRoot;
+    process.env.METEOR_RSPACK_NPM_ROOT = rstestNpmRoot;
+    const {
+      configureRstestRuntimeMetadata,
+      initializeRstestBuildPlugins,
+    } = require('./test-runners/rstest-process.js');
+    const rstestWebArchs = getTestWebArchs(projectContext, options);
+    const rstestSelection = configureRstestRuntimeMetadata({
+      metadata: global.testCommandMetadata,
+      options,
+      webArchs: rstestWebArchs,
+    });
+    if (rstestSelection.requiresDesktopBrowser &&
+        !rstestSelection.hasDesktopBrowser) {
+      Console.error(
+        '[Meteor Rstest] Selected client tests require web.browser or web.browser.legacy. ' +
+        'Cordova/mobile Rstest transport is not implemented; no tests were executed.'
+      );
+      return 1;
+    }
+    await main.captureAndExit(
+      '=> Errors while preparing Rstest dependencies:',
+      async function () {
+        await initializeRstestBuildPlugins(projectContext, {
+          enterJob: (packageName, operation) => buildmessage.enterJob(
+            `initializing ${packageName} build plugin`,
+            operation,
+          ),
+        });
+      },
+    );
+    if (buildmessage.jobHasMessages()) return 1;
+
+    if (runPackageRstestNativePhase) {
+      const code = await runPackageRstestNativePhase();
+      if (code !== 0) return code;
+    }
+    if (runAppRstestNativePhase) {
+      const code = await runAppRstestNativePhase();
+      if (code !== 0 || appRstestNativeOnly) return code;
+    }
   }
 
   // The rest of the projectContext preparation process will happen inside the
@@ -3143,66 +3201,47 @@ var getTestPackageNames = async function (projectContext, packageNames) {
   return testPackages;
 };
 
+function getTestWebArchs(projectContext, options) {
+  if (options.testRunnerWebArchs) return [...options.testRunnerWebArchs];
+  const webArchs = projectContext.platformList.getWebArchs();
+  if (options.cordovaRunner) webArchs.push('web.cordova');
+  return filterWebArchs(
+    webArchs,
+    options['exclude-archs'],
+    projectContext.appDirectory,
+    options,
+  );
+}
+
 var runTestAppForPackages = async function (projectContext, options) {
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development'
   };
   buildOptions.buildMode = "test";
-  let webArchs = options.testRunnerWebArchs;
-  if (!webArchs) {
-    webArchs = projectContext.platformList.getWebArchs();
-    if (options.cordovaRunner) webArchs.push("web.cordova");
-    webArchs = filterWebArchs(
-      webArchs,
-      options['exclude-archs'],
-      projectContext.appDirectory,
-      options,
-    );
-  }
-  buildOptions.webArchs = webArchs;
+  buildOptions.webArchs = getTestWebArchs(projectContext, options);
   // Set the webArchs to include for compilation later
   global.includedWebArchs = buildOptions.webArchs;
 
-  const isRstest = global.testCommandMetadata.testRunner === 'rstest';
-  const hasDesktopBrowser = buildOptions.webArchs.some(arch =>
-    arch === 'web.browser' || arch === 'web.browser.legacy'
-  );
-  const shouldRunRstestClient = isRstest &&
-    !options['server-only'] &&
-    hasDesktopBrowser &&
-    (options['test-packages'] ||
-      (options.rstestRunRuntime && (options.rstestHasRuntimeClient || options['client-only'])));
-  const shouldRunRstestExternal = isRstest && Boolean(options.rstestHasExternal);
-  const requiresRstestDesktop = isRstest && !options['server-only'] && (
-    options['test-packages'] ||
-    (options.rstestRunRuntime && Boolean(options.rstestHasRuntimeClient)) ||
-    shouldRunRstestExternal
-  );
-  if (requiresRstestDesktop && !hasDesktopBrowser) {
+  const {
+    configureRstestRuntimeMetadata,
+  } = require('./test-runners/rstest-process.js');
+  const {
+    hasDesktopBrowser,
+    requiresDesktopBrowser,
+    shouldRunRstestClient,
+    shouldRunRstestExternal,
+  } = configureRstestRuntimeMetadata({
+    metadata: global.testCommandMetadata,
+    options,
+    webArchs: buildOptions.webArchs,
+  });
+  if (requiresDesktopBrowser && !hasDesktopBrowser) {
     Console.error(
       '[Meteor Rstest] Selected client tests require web.browser or web.browser.legacy. ' +
       'Cordova/mobile Rstest transport is not implemented; no tests were executed.'
     );
     return 1;
   }
-  if (isRstest) {
-    if (!global.testCommandMetadata.rstestToken) {
-      global.testCommandMetadata.rstestToken = require('crypto')
-        .randomBytes(24)
-        .toString('base64url');
-    }
-    global.testCommandMetadata.rstestTestTimeout ??= 30000;
-    global.testCommandMetadata.rstestHookTimeout ??= 10000;
-    global.testCommandMetadata.rstestServer = !options['client-only'] &&
-      (options['test-packages'] ||
-        (options.rstestRunRuntime && Boolean(options.rstestHasRuntimeServer)));
-    global.testCommandMetadata.rstestClient = shouldRunRstestClient;
-    global.testCommandMetadata.rstestRuntime = Boolean(
-      options['test-packages'] || options.rstestRunRuntime
-    );
-    global.testCommandMetadata.rstestExternal = shouldRunRstestExternal;
-  }
-
   if (options.deploy) {
     // Run the constraint solver and build local packages.
     await main.captureAndExit("=> Errors while initializing project:", function () {

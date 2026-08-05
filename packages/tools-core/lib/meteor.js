@@ -19,9 +19,9 @@ export function getMeteorAppDir() {
  * Reads and parses the package.json file of the Meteor application.
  * @returns {Object} The parsed content of the package.json file.
  */
-export function getMeteorAppPackageJson() {
+export function getMeteorAppPackageJson(appDir = getMeteorAppDir()) {
   return JSON.parse(
-    fs.readFileSync(`${getMeteorAppDir()}/package.json`, 'utf-8')
+    fs.readFileSync(`${appDir}/package.json`, 'utf-8')
   );
 }
 

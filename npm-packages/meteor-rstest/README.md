@@ -12,12 +12,18 @@ Mode, Playwright fixtures, filtering, reporting, and exit status.
 
 ```sh
 meteor add rstest
-meteor npm install --save-dev \
-  @meteorjs/rspack@3.0.0-beta.0 \
-  @meteorjs/rstest@0.1.0-beta.0 \
-  @rspack/cli@2.1.8 \
-  @rspack/core@2.1.8
 ```
+
+That command is sufficient. Before Rstest launches, Atmosphere `rspack`
+installs its compiler-side npm dependencies and internal Atmosphere
+`rstest-tooling` installs exact Rstest-side dev dependencies. The two manifests
+do not duplicate ownership: Rspack versions remain controlled by `rspack`,
+while Rstest, jsdom, and Playwright versions remain controlled by
+`rstest-tooling`.
+
+To manage npm dependencies yourself, set `meteor.autoInstallDeps` to `false` in
+`package.json`. In that mode install both sets explicitly; missing coordinator
+or compiler packages fail before any test is reported as passing.
 
 Adding `rstest` makes `meteor test` select Rstest. `meteor test-packages`
 selects Rstest only when every selected test unibuild for active architectures
@@ -131,9 +137,11 @@ package ownership also fails with exact split commands until real compatibility
 executors can share one harness.
 
 Outside an application, `meteor test-packages /absolute/package/path`
-bootstraps exact compatible coordinator/Rspack npm packages into its temporary
-harness. Source-checkout E2E uses `METEOR_RSTEST_NPM_SPEC` and
-`METEOR_RSPACK_NPM_SPEC` only to mirror unpublished local package directories.
+bootstraps compatible compiler dependencies through Atmosphere `rspack` and
+exact coordinator dependencies through `rstest-tooling` into its temporary
+harness. Source-checkout E2E persists local `file:` specs for both unpublished
+npm packages; `METEOR_RSTEST_NPM_SPEC` and `METEOR_RSPACK_NPM_SPEC` are internal
+mirror overrides, not user configuration.
 
 Snapshots and coverage are native Rstest services for pure, DOM, Browser Mode,
 and external projects. Meteor-runtime projects currently provide assertions,

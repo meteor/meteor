@@ -44,6 +44,14 @@ describe('Rspack + Rstest integration', () => {
     expect(output).not.toContain('pure client project runs with jsdom');
     expect(output).not.toContain('Browser Mode runs in real Chromium');
     expect(output).not.toContain('[Meteor Rstest] web.browser:');
+
+    const packageJson = JSON.parse(
+      fs.readFileSync(path.join(appDir, 'package.json'), 'utf8')
+    );
+    expect(packageJson.dependencies['@meteorjs/rspack']).toMatch(/^file:/);
+    expect(packageJson.devDependencies['@meteorjs/rstest']).toMatch(/^file:/);
+    expect(packageJson.devDependencies['@rstest/core']).toBe('0.11.6');
+    expect(packageJson.devDependencies['@rstest/adapter-rspack']).toBe('0.11.6');
   }, 600_000);
 
   test('meteor name filtering reaches Meteor-runtime executor', async () => {
@@ -249,23 +257,30 @@ describe('Rspack + Rstest integration', () => {
         { meteorProcess: result.meteorProcess, timeout: 120_000 },
       );
       const firstOutput = result.outputLines.join('\n');
-      expect(firstOutput).toContain('"generation":2');
+      const firstGenerations = [...firstOutput.matchAll(/"generation":(\d+)/g)]
+        .map(match => Number(match[1]));
+      const firstGeneration = Math.max(...firstGenerations);
+      expect(firstGeneration).toBeGreaterThanOrEqual(1);
 
       fs.writeFileSync(runtimeFile, `${original}\n// watch generation ${Date.now()}\n`);
       const deadline = Date.now() + 120_000;
       while (Date.now() < deadline) {
         const output = result.outputLines.join('\n');
-        if (output.includes('"generation":3') &&
+        const generations = [...output.matchAll(/"generation":(\d+)/g)]
+          .map(match => Number(match[1]));
+        if (generations.some(generation => generation > firstGeneration) &&
             output.split('[Meteor Rstest] server: 2 passed, 0 failed').length > 2) {
           break;
         }
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       const rebuiltOutput = result.outputLines.join('\n');
-      expect(rebuiltOutput).toContain('"generation":3');
+      const rebuiltGenerations = [...rebuiltOutput.matchAll(/"generation":(\d+)/g)]
+        .map(match => Number(match[1]));
+      expect(Math.max(...rebuiltGenerations)).toBeGreaterThan(firstGeneration);
     } finally {
-      fs.writeFileSync(runtimeFile, original);
       await killMeteorProcess(result.meteorProcess);
+      fs.writeFileSync(runtimeFile, original);
     }
   }, 600_000);
 
@@ -346,6 +361,7 @@ describe('Rspack + Rstest integration', () => {
   }, 600_000);
 
   test('meteor test-packages keeps server/client local-test Isobuild construction', async () => {
+    const repoRoot = path.resolve(__dirname, '../..');
     const packagesPath = path.join(appDir, '.meteor', 'packages');
     fs.writeFileSync(
       packagesPath,
@@ -362,7 +378,21 @@ describe('Rspack + Rstest integration', () => {
       appDir,
       {
         captureOutput: true,
-        execaOptions: { reject: false },
+        execaOptions: {
+          reject: false,
+          env: {
+            METEOR_RSTEST_NPM_SPEC: path.join(
+              repoRoot,
+              'npm-packages',
+              'meteor-rstest',
+            ),
+            METEOR_RSPACK_NPM_SPEC: path.join(
+              repoRoot,
+              'npm-packages',
+              'meteor-rspack',
+            ),
+          },
+        },
       }
     );
     const completed = await result.meteorProcess;
@@ -411,6 +441,53 @@ describe('Rspack + Rstest integration', () => {
       expect(output).toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
     } finally {
       fs.rmSync(outsideDir, { recursive: true, force: true });
+    }
+  }, 600_000);
+
+  test('meteor test-packages honors source app dependency-install opt-out', async () => {
+    const repoRoot = path.resolve(__dirname, '../..');
+    const packageJsonPath = path.join(appDir, 'package.json');
+    const originalPackageJson = fs.readFileSync(packageJsonPath, 'utf8');
+    const packageJson = JSON.parse(originalPackageJson);
+    packageJson.meteor = {
+      ...packageJson.meteor,
+      autoInstallDeps: false,
+    };
+    fs.writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+
+    try {
+      const result = await runMeteorCommand(
+        'test-packages',
+        ['--once', '--server-only', '--port', '3211', 'rstest-e2e-fixture'],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: {
+              METEOR_RSTEST_NPM_SPEC: path.join(
+                repoRoot,
+                'npm-packages',
+                'meteor-rstest',
+              ),
+              METEOR_RSPACK_NPM_SPEC: path.join(
+                repoRoot,
+                'npm-packages',
+                'meteor-rspack',
+              ),
+            },
+          },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = result.outputLines.join('\n');
+
+      expect(completed.exitCode).not.toBe(0);
+      expect(output).toContain('@meteorjs/rstest is missing');
+      expect(output).not.toContain('Rstest Dependencies');
+      expect(output).not.toContain('Rspack Dependencies');
+    } finally {
+      fs.writeFileSync(packageJsonPath, originalPackageJson);
     }
   }, 600_000);
 

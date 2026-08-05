@@ -8,7 +8,7 @@ Package.describe({
 
 Package.onUse(function (api) {
   api.versionsFrom('3.0');
-  api.use(['ecmascript', 'meteor', 'rspack']);
+  api.use(['ecmascript', 'meteor', 'rspack', 'rstest-tooling']);
   api.use('webapp', 'server');
   api.mainModule('server/main.js', 'server');
   api.mainModule('client/main.js', 'client');

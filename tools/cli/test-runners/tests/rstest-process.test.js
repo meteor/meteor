@@ -6,6 +6,8 @@ const test = require('node:test');
 
 const {
   buildRstestArgs,
+  configureRstestRuntimeMetadata,
+  initializeRstestBuildPlugins,
   inspectAppRstestCapability,
   scanNativeRstestRoots,
   selectRstestInventory,
@@ -18,6 +20,78 @@ function createApp() {
   fs.mkdirSync(path.join(appRoot, '.meteor'), { recursive: true });
   return appRoot;
 }
+
+test('Rstest and Rspack build plugins initialize after local package build and before caller continues', async () => {
+  const order = [];
+  const projectContext = {
+    async buildLocalPackages() {
+      order.push('build-local-packages');
+    },
+    isopackCache: {
+      getIsopack(name) {
+        order.push(`resolve-${name}`);
+        return {
+          async ensurePluginsInitialized() {
+            order.push(`initialize-${name}`);
+          },
+        };
+      },
+    },
+  };
+
+  await initializeRstestBuildPlugins(projectContext, {
+    enterJob: async (packageName, operation) => {
+      order.push(`enter-${packageName}`);
+      await operation();
+    },
+  });
+  order.push('launch-rstest');
+
+  assert.deepEqual(order, [
+    'build-local-packages',
+    'resolve-rspack',
+    'enter-rspack',
+    'initialize-rspack',
+    'resolve-rstest-tooling',
+    'enter-rstest-tooling',
+    'initialize-rstest-tooling',
+    'launch-rstest',
+  ]);
+});
+
+test('Rstest runtime metadata is complete before build plugin initialization', () => {
+  const metadata = { testRunner: 'rstest' };
+
+  const selection = configureRstestRuntimeMetadata({
+    metadata,
+    options: {
+      rstestRunRuntime: true,
+      rstestHasRuntimeServer: true,
+      rstestHasRuntimeClient: false,
+      rstestHasExternal: false,
+      once: true,
+    },
+    webArchs: ['web.browser'],
+    createToken: () => 'test-token',
+  });
+
+  assert.deepEqual(selection, {
+    hasDesktopBrowser: true,
+    requiresDesktopBrowser: false,
+    shouldRunRstestClient: false,
+    shouldRunRstestExternal: false,
+  });
+  assert.deepEqual(metadata, {
+    testRunner: 'rstest',
+    rstestToken: 'test-token',
+    rstestTestTimeout: 30000,
+    rstestHookTimeout: 10000,
+    rstestServer: true,
+    rstestClient: false,
+    rstestRuntime: true,
+    rstestExternal: false,
+  });
+});
 
 test('app capability inspection reads direct Atmosphere constraint and package opt-out', t => {
   const appRoot = createApp();
