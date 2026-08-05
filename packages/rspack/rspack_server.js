@@ -40,22 +40,37 @@ if (shouldEnableDevHMRProxy) {
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
+  // Log upstream proxy errors so failures (CI or otherwise) show the actual
+  // Node error code (ECONNREFUSED / ETIMEDOUT / ECONNRESET / …) instead of
+  // only the 504 the browser sees. v3 of http-proxy-middleware expects the
+  // handler under options.on.error; the legacy onError is silently ignored.
+  const makeErrorHandler = (scope) => (err, req) => {
+    console.error(
+      `[rspack-proxy:${scope}] upstream error ${err.code || err.message} for ${req.method} ${req.url} -> ${target}`
+    );
+  };
+
   // Proxy HMR websocket upgrade requests
   WebApp.connectHandlers.use('/ws',
-    createProxyMiddleware( {
+    createProxyMiddleware({
       target,
       ws: true,
-      logLevel: 'debug'
+      on: { error: makeErrorHandler('ws') },
     })
   );
 
-  // Proxy all dev asset requests under the rspack prefix
+  // Proxy all dev asset requests under the rspack prefix.
+  // Strip /__rspack__/ before forwarding so the dev server receives
+  // root-relative paths (e.g. /client-rspack.js). This is required because
+  // some framework integrations (e.g. @nx/angular-rspack) override
+  // output.publicPath, so the dev server may not serve files under /__rspack__/.
   WebApp.connectHandlers.use('/__rspack__',
     createProxyMiddleware({
       target,
       changeOrigin: true,
       ws: true,
-      logLevel: 'debug',
+      pathRewrite: { '^/__rspack__': '' },
+      on: { error: makeErrorHandler('assets') },
     })
   );
 
