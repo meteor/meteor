@@ -12,20 +12,12 @@ const findUserWithOptions = async ({ selector }) => {
   if (!selector) {
     Accounts._handleError('A selector is necessary');
   }
-  const { email, id, ...rest } = selector;
-  return Meteor.users.findOneAsync(
-    {
-      ...rest,
-      ...(id && { _id: id }),
-      ...(email && { 'emails.address': email })
+  return Accounts._findUserByQuery(selector, {
+    fields: {
+      services: 1,
+      emails: 1,
     },
-    {
-      fields: {
-        services: 1,
-        emails: 1,
-      },
-    }
-  );
+  });
 };
 // Handler to login with an ott.
 Accounts.registerLoginHandler('passwordless', async options => {
@@ -114,7 +106,13 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
+  requestLoginTokenForUser: async args => {
+    check(args, {
+      selector: Accounts._userQueryValidator,
+      userData: Match.Optional(Object),
+      options: Match.Optional(Object),
+    });
+    const { selector, userData, options = {} } = args;
     let user = await Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
