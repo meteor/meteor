@@ -1,6 +1,17 @@
 import { waitForMeteorOutput } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { assertBodyStyles, assertMetaTags } from "./assertions";
+import {
+  assertBodyStyles,
+  assertConsoleEval,
+  assertMeteorStylesheetOwnership,
+  assertMetaTags,
+} from "./assertions";
+import fs from 'fs-extra';
+import path from 'path';
+
+const NATIVE_FALSE_POSITIVE_MARKER =
+  'RSPACK_NATIVE_FALSE_POSITIVE_BUNDLED';
+const RSPACK_LESS_MARKER = '--rspack-owned-nested-less';
 
 describe('R.Router App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -12,6 +23,7 @@ describe('R.Router App Bundling /', () => {
       test: 'tests/main.app-test.js',
     },
     testFullApp: true,
+    runBuiltBundle: true,
     checkBundleFilePaths: [
       'programs/web.browser/app/1x1.png',
       'programs/web.browser/app/images/1x1.png',
@@ -30,7 +42,7 @@ describe('R.Router App Bundling /', () => {
       afterInit: async ({ result }) => {
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
       },
-      afterRun: async ({ result, port }) => {
+      afterRun: async ({ result, port, tempDir }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
         // Do not assert babel.config.js output is absent on the second run:
         // rspack persistent-cache reuse across separate `meteor run`
@@ -41,6 +53,7 @@ describe('R.Router App Bundling /', () => {
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
+        await assertNestedRspackLessOwnership(tempDir);
         // Meteor modules config
         await assertBodyStyles({
           'align-content': 'center',
@@ -55,6 +68,11 @@ describe('R.Router App Bundling /', () => {
         await waitForMeteorOutput(result.outputLines, /.*custom-package loaded.*/);
         // resolve.extensions loading
         await waitForMeteorOutput(result.outputLines, /.*first\.jsx loaded.*/);
+        await waitForMeteorOutput(result.outputLines, /.*bcrypt runtime hash \$2.*/);
+        await waitForMeteorOutput(
+          result.outputLines,
+          new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
+        );
         // Check custom plugin gets loaded from rspack.config.override.js file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
         // User-level devServer.onListening composes with meteor-rspack's
@@ -67,14 +85,20 @@ describe('R.Router App Bundling /', () => {
         // Check for HMR output as enabled by default
         await waitForMeteorOutput(allConsoleLogs, /.*HMR.*Updated modules:.*/);
       },
-      afterRunProduction: async ({ result, port }) => {
+      afterRunProduction: async ({ result, port, tempDir }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
+        await waitForMeteorOutput(result.outputLines, /.*bcrypt runtime hash \$2.*/);
+        await waitForMeteorOutput(
+          result.outputLines,
+          new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
+        );
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
         await assert404Page(port, { isProductionMode: true });
         // Less styles support
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
+        await assertNestedRspackLessOwnership(tempDir);
         // Meteor modules config
         await assertBodyStyles({
           'align-content': 'center',
@@ -90,14 +114,43 @@ describe('R.Router App Bundling /', () => {
       },
       afterTest: async ({ result }) => {
         await waitForReactEnvs(result.outputLines);
+        await waitForMeteorOutput(result.outputLines, /.*bcrypt runtime hash \$2.*/);
+        await waitForMeteorOutput(
+          result.outputLines,
+          new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
+        );
         // Check custom plugin gets loaded from rspack.config.override.js file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
       },
       afterTestOnce: async ({ result }) => {
         await waitForReactEnvs(result.outputLines);
+        await waitForMeteorOutput(result.outputLines, /.*bcrypt runtime hash \$2.*/);
+        await waitForMeteorOutput(
+          result.outputLines,
+          new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
+        );
       },
-      afterBuild: async ({ result }) => {
+      afterBuild: async ({ buildOutputDir, result, bundleRuntime }) => {
         await waitForReactEnvs(result.outputLines, { isTsxEnabled: true });
+        await waitForMeteorOutput(
+          bundleRuntime.outputLines,
+          /.*bcrypt runtime hash \$2.*/
+        );
+        await waitForMeteorOutput(
+          bundleRuntime.outputLines,
+          new RegExp(NATIVE_FALSE_POSITIVE_MARKER)
+        );
+        expect(
+          await directoryContains(
+            path.join(
+              buildOutputDir,
+              'bundle',
+              'programs',
+              'server'
+            ),
+            NATIVE_FALSE_POSITIVE_MARKER
+          )
+        ).toBe(true);
         await waitForMeteorOutput(result.outputLines, /.*babel-plugin-react-compiler.*/);
         // Check custom plugin gets loaded from rspack.config.override.js file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
@@ -155,4 +208,39 @@ async function assert404Page(port, options = {}) {
   expect(paragraphText).toBe('The page you are looking for does not exist.');
 
   console.log(`✅ 404 page test passed${modeText ? ' ' + modeText : ''}`);
+}
+
+async function directoryContains(directory, needle) {
+  if (!(await fs.pathExists(directory))) return false;
+
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+  for (const entry of entries) {
+    if (entry.isDirectory() && entry.name === 'node_modules') continue;
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (await directoryContains(entryPath, needle)) return true;
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith('.js') &&
+      (await fs.readFile(entryPath, 'utf8')).includes(needle)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function assertNestedRspackLessOwnership(tempDir) {
+  await assertConsoleEval(
+    `(() => {
+      const styles = getComputedStyle(document.body);
+      return styles.getPropertyValue('${RSPACK_LESS_MARKER}').trim();
+    })()`,
+    'rspack-owned'
+  );
+
+  await assertMeteorStylesheetOwnership(tempDir, {
+    rspackOwned: [RSPACK_LESS_MARKER],
+  });
 }

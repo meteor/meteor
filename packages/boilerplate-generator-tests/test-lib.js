@@ -7,7 +7,7 @@ function streamToString (stream) {
   })
 }
 
-export async function generateHTMLForArch(arch, includeHead) {
+export async function generateHTMLForArch(arch, includeHead, extraData = {}) {
   // Use a dummy manifest. None of these paths will be read from the filesystem, but css / js should be handled differently
   const manifest = [
     {
@@ -59,7 +59,8 @@ export async function generateHTMLForArch(arch, includeHead) {
       bundledJsCssUrlRewriteHook,
       inlineScriptsAllowed,
       inline,
-      head
+      head,
+      ...extraData,
     },
   });
 

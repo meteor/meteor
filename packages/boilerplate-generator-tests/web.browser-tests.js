@@ -58,6 +58,88 @@ Tinytest.addAsync(
   }
 );
 
+// https://github.com/meteor/meteor/issues/14523
+Tinytest.addAsync(
+  "boilerplate-generator-tests - web.browser - custom script URL receives " +
+    "the ROOT_URL path prefix",
+  async function (test) {
+    const originalUrl = process.env.METEOR_APP_CUSTOM_SCRIPT_URL;
+    try {
+      // Root-relative URLs are prefixed like every other bundled script
+      process.env.METEOR_APP_CUSTOM_SCRIPT_URL = '/__rspack__/client-rspack.js';
+      let html = await generateHTMLForArch('web.browser', false, {
+        rootUrlPathPrefix: '/prefix',
+      });
+      test.matches(
+        html,
+        /<script[^<>]*src="\/prefix\/__rspack__\/client-rspack\.js">/
+      );
+
+      // URLs already carrying the prefix are not prefixed twice
+      process.env.METEOR_APP_CUSTOM_SCRIPT_URL =
+        '/prefix/__rspack__/client-rspack.js';
+      html = await generateHTMLForArch('web.browser', false, {
+        rootUrlPathPrefix: '/prefix',
+      });
+      test.matches(
+        html,
+        /<script[^<>]*src="\/prefix\/__rspack__\/client-rspack\.js">/
+      );
+      test.isFalse(/src="\/prefix\/prefix\//.test(html));
+
+      // Query strings and fragments do not defeat the prefix boundary check
+      for (const suffix of ['?cache=1', '#fragment']) {
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL = `/prefix${suffix}`;
+        html = await generateHTMLForArch('web.browser', false, {
+          rootUrlPathPrefix: '/prefix',
+        });
+        test.matches(html, new RegExp(`src="/prefix\\${suffix[0]}`));
+        test.isFalse(/src="\/prefix\/prefix/.test(html));
+      }
+
+      // Protocol-relative and relative URLs are owned by the caller
+      for (const customUrl of [
+        '//cdn.example.com/client-rspack.js',
+        'client-rspack.js',
+        './client-rspack.js',
+      ]) {
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL = customUrl;
+        html = await generateHTMLForArch('web.browser', false, {
+          rootUrlPathPrefix: '/prefix',
+        });
+        test.isTrue(html.includes(`src="${customUrl}"`));
+      }
+
+      // Absolute URLs pass through untouched
+      process.env.METEOR_APP_CUSTOM_SCRIPT_URL =
+        'https://cdn.example.com/client-rspack.js';
+      html = await generateHTMLForArch('web.browser', false, {
+        rootUrlPathPrefix: '/prefix',
+      });
+      test.matches(
+        html,
+        /<script[^<>]*src="https:\/\/cdn\.example\.com\/client-rspack\.js">/
+      );
+
+      // Without a prefix the URL is emitted verbatim
+      process.env.METEOR_APP_CUSTOM_SCRIPT_URL = '/__rspack__/client-rspack.js';
+      html = await generateHTMLForArch('web.browser', false, {
+        rootUrlPathPrefix: '',
+      });
+      test.matches(
+        html,
+        /<script[^<>]*src="\/__rspack__\/client-rspack\.js">/
+      );
+    } finally {
+      if (originalUrl === undefined) {
+        delete process.env.METEOR_APP_CUSTOM_SCRIPT_URL;
+      } else {
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL = originalUrl;
+      }
+    }
+  }
+);
+
 // https://github.com/meteor/meteor/issues/9149
 Tinytest.addAsync(
   "boilerplate-generator-tests - web.browser - properly render boilerplate " +

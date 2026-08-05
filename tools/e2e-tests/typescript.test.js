@@ -2,11 +2,19 @@ import {
   waitForMeteorOutput,
 } from "./helpers";
 import { testMeteorRspackBundler } from './test-helpers';
-import { assertBodyStyles, assertFileExist } from "./assertions";
+import {
+  assertBodyStyles,
+  assertConsoleEval,
+  assertFileExist,
+  assertMeteorStylesheetOwnership,
+} from "./assertions";
 import path from "path";
 import fs from "fs";
 
 const isCI = process.env.GITHUB_ACTIONS === 'true';
+const RSPACK_SCSS_MARKER = '--rspack-owned-nested-scss';
+const METEOR_SCSS_MARKER = '--meteor-owned-nested-scss';
+const IGNORED_SCSS_MARKER = '--meteorignore-excluded-scss';
 
 describe('TypeScript App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -40,6 +48,7 @@ describe('TypeScript App Bundling /', () => {
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
+        await assertNestedScssOwnership(tempDir);
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForTypeScriptErrorFree(result.outputLines);
         await assertFileExist(tempDir, ".meteor/local/types");
@@ -59,11 +68,12 @@ describe('TypeScript App Bundling /', () => {
         // Check for HMR output as enabled by default
         await waitForMeteorOutput(allConsoleLogs, /.*HMR.*Updated modules:.*/);
       },
-      afterRunProduction: async ({ result }) => {
+      afterRunProduction: async ({ result, tempDir }) => {
         // SCSS styles support
         await assertBodyStyles({
           'white-space': 'break-spaces',
         });
+        await assertNestedScssOwnership(tempDir);
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
         // Portable build: Meteor.isDevelopment and Meteor.isProduction must not be defined
         await waitForMeteorOutput(
@@ -151,4 +161,28 @@ export async function waitForTypeScriptErrorFree(outputLines, options = {}) {
     options
   );
   console.log(`Custom Plugin usage: ts-checker-rspack-plugin`);
+}
+
+async function assertNestedScssOwnership(tempDir) {
+  await assertConsoleEval(
+    `(() => {
+      const styles = getComputedStyle(document.body);
+      return {
+        rspack: styles.getPropertyValue('${RSPACK_SCSS_MARKER}').trim(),
+        meteor: styles.getPropertyValue('${METEOR_SCSS_MARKER}').trim(),
+        ignored: styles.getPropertyValue('${IGNORED_SCSS_MARKER}').trim(),
+      };
+    })()`,
+    {
+      rspack: 'rspack-owned',
+      meteor: 'meteor-owned',
+      ignored: '',
+    }
+  );
+
+  await assertMeteorStylesheetOwnership(tempDir, {
+    meteorOwned: [METEOR_SCSS_MARKER],
+    rspackOwned: [RSPACK_SCSS_MARKER],
+    ignored: [IGNORED_SCSS_MARKER],
+  });
 }

@@ -91,10 +91,27 @@ class RequireExternalsPlugin {
   }
 
   // Helper method to extract package name from module name
-  _extractPackageName(name) {
+  _extractPackageName(name, matchInfo = this._isExternalModule(name)) {
+    if (matchInfo.type === 'externals') {
+      const module = this.externalsMeta?.get(matchInfo.value);
+      const relativeRequest = module?.relativeRequest || matchInfo.value;
+      return path.posix.normalize(
+        `${this.backRoot}${toPosix(relativeRequest)}`
+      );
+    }
+
     let pkg = name.slice(this._defaultExternalPrefix.length);
-    if (pkg.startsWith('"') && pkg.endsWith('"')) pkg = pkg.slice(1, -1);
-    const depInfo = path.parse(name);
+    pkg = pkg.replace(
+      /^(?:commonjs2?|commonjs-module|commonjs-static|node-commonjs)\s+/,
+      ''
+    );
+    if (pkg.startsWith('"') && pkg.endsWith('"')) {
+      try {
+        pkg = JSON.parse(pkg);
+      } catch (error) {
+        pkg = pkg.slice(1, -1);
+      }
+    }
     // If the extracted package name is a path, use the path as is
     if (
       pkg &&
@@ -102,14 +119,13 @@ class RequireExternalsPlugin {
         pkg.startsWith('./') ||
         pkg.startsWith('.\\') ||
         pkg.startsWith('../') ||
-        pkg.startsWith('..\\') ||
-        !!depInfo.ext)
+        pkg.startsWith('..\\'))
     ) {
-      const module = this.externalsMeta.get(pkg);
+      const module = this.externalsMeta?.get(pkg);
       if (module) {
         return `${this.backRoot}${toPosix(module.relativeRequest)}`;
       }
-      return `${this.backRoot}${toPosix(name)}`;
+      return path.posix.normalize(`${this.backRoot}${toPosix(pkg)}`);
     }
 
     return pkg;

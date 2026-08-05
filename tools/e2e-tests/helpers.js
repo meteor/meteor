@@ -82,6 +82,7 @@ export async function clearBuildArtifacts(appDir) {
  * @param {string} appName - Name of the app in the apps directory
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
+ * @param {string} options.waitOnPath - URL path used by the readiness probe
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
@@ -235,7 +236,7 @@ export async function runMeteorApp(tempDir, port, options = {}) {
   if (!options.skipWaitOn) {
     console.log(`Waiting for app to be available on port ${port}...`);
     await waitOn({
-      resources: [`http-get://localhost:${port}`],
+      resources: [`http-get://localhost:${port}${options.waitOnPath || ''}`],
       timeout: process.env.CI ? 300000 : 90000
     });
   }
