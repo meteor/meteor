@@ -497,17 +497,22 @@ class RequireExternalsPlugin {
 
   _readExistingRequires() {
     const existing = new Set();
+    // Generated Rspack bridge imports are not managed externals. Relative
+    // imports such as Blaze HTML files still belong to this plugin.
+    const isRspackBridgeImport = (modulePath) =>
+      typeof modulePath === 'string' &&
+      /(?:^|[/\\])[^/\\]*-rspack\.(?:js|cjs)$/.test(modulePath);
     try {
       const content = fs.readFileSync(this.filePath, 'utf-8');
       // Check for require statements
       let match;
       while ((match = STANDALONE_REQUIRE_REGEX.exec(content)) !== null) {
-        existing.add(match[1]);
+        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
       }
 
       // Also check for import statements (used in the new format)
       while ((match = STANDALONE_IMPORT_REGEX.exec(content)) !== null) {
-        existing.add(match[1]);
+        if (!isRspackBridgeImport(match[1])) existing.add(match[1]);
       }
     } catch {
       // ignore if file missing or unreadable
