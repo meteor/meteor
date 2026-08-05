@@ -1,4 +1,4 @@
-import { EJSONable } from 'meteor/ejson';
+import { EJSONable } from "meteor/ejson";
 
 export namespace Session {
   /**

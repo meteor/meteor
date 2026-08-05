@@ -10,12 +10,10 @@
 
 <div align="center">
 
-[![Travis CI Status](https://api.travis-ci.com/meteor/meteor.svg?branch=devel)](https://app.travis-ci.com/github/meteor/meteor)
-[![CircleCI Status](https://circleci.com/gh/meteor/meteor.svg?style=svg)](https://app.circleci.com/pipelines/github/meteor/meteor?branch=devel)
-[![built with Meteor](https://img.shields.io/badge/Meteor-3.2.2-green?logo=meteor&logoColor=white)](https://meteor.com)
-![node-current](https://img.shields.io/node/v/meteor)
-![Discord](https://img.shields.io/discord/1247973371040239676)
-![Twitter Follow](https://img.shields.io/twitter/follow/meteorjs?style=social)
+[![built with Meteor](https://img.shields.io/badge/Meteor-3.4.1-green?logo=meteor&logoColor=white)](https://meteor.com)
+[![node-current](https://img.shields.io/badge/node-%3E%3D22-green?logo=nodedotjs&logoColor=white)](https://nodejs.org/en/download)
+[![Discord](https://img.shields.io/discord/1247973371040239676)](https://discord.com/invite/hZkTCaVjmT)
+[![Twitter Follow](https://img.shields.io/twitter/follow/meteorjs?style=social)](https://x.com/meteorjs)
 
 </div>
 
@@ -53,10 +51,12 @@ Use the same code whether you’re developing for web, iOS, Android, or desktop 
 
 How about trying a tutorial to get started with your favorite technology?
 
-| [<img align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://docs.meteor.com/tutorials/react/) |
+| [<img alt="React logo" align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg"> React](https://docs.meteor.com/tutorials/react/) |
 | - |
-| [<img align="left" width="25" src="https://progsoft.net/images/blaze-css-icon-3e80acb3996047afd09f1150f53fcd78e98c1e1b.png"> Blaze](https://blaze-tutorial.meteor.com/) |
-| [<img align="left" width="25" src="https://vuejs.org/images/logo.png"> Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html) |
+| [<img alt="Blaze logo" align="left" width="25" src="https://progsoft.net/images/blaze-css-icon-3e80acb3996047afd09f1150f53fcd78e98c1e1b.png"> Blaze](https://docs.meteor.com/tutorials/blaze/) |
+| [<img alt="Vue logo" align="left" width="25" src="https://vuejs.org/images/logo.png"> Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html) |
+| [<img alt="Svelte logo" align="left" width="25" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1b/Svelte_Logo.svg/1280px-Svelte_Logo.svg.png?_=20191219133350">  Svelte](https://docs.meteor.com/tutorials/svelte/) |
+| [<img alt="Solid logo" align="left" width="25" src="https://www.solidjs.com/img/logo/without-wordmark/logo.svg"> Solid](https://docs.meteor.com/tutorials/solid/) |
 
 # 🚀 Quick Start
 
@@ -65,7 +65,7 @@ On your platform, use this line:
 ```shell
 > npx meteor
 ```
- 
+
 🚀 To create a project:
 
 ```shell
@@ -79,11 +79,47 @@ cd my-app
 meteor
 ```
 
+# 💖 Sponsors
+
+Meteor is made possible by our amazing sponsors. Support the project and get your logo here by visiting our [Sponsorship page](https://www.meteor.com/sponsorship).
+
+### 🌟 Supernova Sponsors
+
+<table>
+  <tr>
+    <td align="center" valign="middle" width="50%">
+      <a href="https://galaxycloud.app/" target="_blank">
+        <img alt="Galaxy" src="v3-docs/assets/galaxy-logo.png" height="60">
+      </a>
+    </td>
+    <td align="center" valign="middle" width="50%">
+      <a href="https://inputlogic.com/" target="_blank">
+        <img alt="InputLogic" src="v3-docs/assets/inputlogic-logo.jpg" height="60">
+      </a>
+    </td>
+  </tr>
+</table>
+
+### 🌌 Nebula Sponsors
+
+<table>
+  <tr>
+    <td align="center" valign="middle" width="50%">
+      <a href="https://www.coderabbit.ai/" target="_blank">
+        <img alt="CodeRabbit" src="v3-docs/assets/coderabbit-logo.svg" height="45">
+      </a>
+    </td>
+  </tr>
+</table>
+
+<hr>
+
 # 🧱 Developer Resources
 
 **Building an application with Meteor?**
 
 * Deploy on [Galaxy](https://galaxycloud.app)
+* Find packages on [Atmosphere](https://atmospherejs.com/)
 * Discuss on [Forums](https://forums.meteor.com/)
 * Join the [Meteor Discord](https://discord.gg/hZkTCaVjmT)
 
