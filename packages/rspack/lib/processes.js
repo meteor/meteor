@@ -215,12 +215,20 @@ export function getRspackCliPath() {
   const appDir = getMeteorAppDir();
 
   try {
-    // Dynamically resolve the exact bin path defined by the package
+    // Dynamically resolve the exact bin path defined by the package.
+    // Meteor's module system ignores the `paths` option and resolves unknown
+    // top-level ids to themselves, so only an absolute path that exists on
+    // disk can be trusted here.
     const pkgPath = require.resolve('@rspack/cli/package.json', { paths: [appDir] });
-    const pkg = require(pkgPath);
-    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.rspack;
-    if (bin) {
-      return path.join(path.dirname(pkgPath), bin);
+    if (path.isAbsolute(pkgPath)) {
+      const pkg = require(pkgPath);
+      const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.rspack;
+      if (bin) {
+        const binPath = path.join(path.dirname(pkgPath), bin);
+        if (fs.existsSync(binPath)) {
+          return binPath;
+        }
+      }
     }
   } catch (err) {
     // Fall through to hardcoded fallback if package.json isn't exported
@@ -237,7 +245,18 @@ export function getRspackCliPath() {
     );
   }
 
-  for (const candidatePath of candidatePaths) {
+  // Walk up from the app directory so hoisted installs are still found when the
+  // parent holding node_modules carries no monorepo marker. Nearest ancestor
+  // wins, and the loop stops at the filesystem root.
+  let currentDir = path.dirname(appDir);
+  while (currentDir !== path.dirname(currentDir)) {
+    candidatePaths.push(
+      path.join(currentDir, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+    );
+    currentDir = path.dirname(currentDir);
+  }
+
+  for (const candidatePath of new Set(candidatePaths)) {
     if (fs.existsSync(candidatePath)) {
       return candidatePath;
     }
