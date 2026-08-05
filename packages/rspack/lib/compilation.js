@@ -17,7 +17,10 @@ const {
 } = require('meteor/tools-core/lib/global-state');
 
 const { applyDelegatedExtensions } = require('./config');
-const { bumpServerRuntimeBuildId } = require('./build-context');
+const {
+  bumpClientRuntimeBuildId,
+  bumpServerRuntimeBuildId,
+} = require('./build-context');
 
 // Helper function to format milliseconds with comma separators
 function formatMilliseconds(ms) {
@@ -128,6 +131,10 @@ export function setupCompilationTracking() {
 
   // Define separate onCompile callbacks for client and server
   const onCompileClient = (data, config) => {
+    if (config?.isRebuild && !config?.hasErrors) {
+      bumpClientRuntimeBuildId();
+    }
+
     // Resolve the promise if it's the first compilation
     const clientState = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_FIRST_COMPILE, clientFirstCompile);
     if (!clientState?.resolved) {

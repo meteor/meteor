@@ -219,6 +219,15 @@ Server-only app (no client entry point).
 | CommonJS development server bundle under a `type: module` app | Run |
 | Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
 
+### tla
+
+Minimal top-level await fixture.
+
+| What is covered | Phase |
+|----------------|-------|
+| `meteor test --full-app --once` waits for macrotask top-level await before running server app tests | Test once |
+| Exit-code-zero `0 passing` regression is rejected by explicit `1 passing` assertion | Test once |
+
 ---
 
 ## Skeletons
@@ -326,7 +335,8 @@ Where each feature is tested across apps and skeletons.
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo | |
-| Full-app test mode | react-router | |
+| Full-app test mode | react-router, tla | |
+| Top-level await in full-app tests | tla | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |
