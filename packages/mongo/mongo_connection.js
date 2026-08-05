@@ -1104,6 +1104,27 @@ MongoConnection.prototype._observeChanges = async function (
             reasons.push('Cursor with skip/limit not supported by Change Streams');
           }
 
+          // If a fields projection is given, it must be one minimongo can
+          // compile client-side. A positional ('$') projection cannot be, so
+          // report Change Streams as unavailable rather than letting the driver
+          // constructor throw (which crashes the whole subscription). Selection
+          // then falls through to polling, which projects server-side in
+          // MongoDB. Mirrors OplogObserveDriver.cursorSupported.
+          const csFields = csOptions.projection || csOptions.fields;
+          if (csFields) {
+            try {
+              LocalCollection._checkSupportedProjection(csFields);
+            } catch (e) {
+              if (e.name === 'MinimongoError') {
+                reasons.push(
+                  `Projection not supported for Change Streams: ${e.message}`
+                );
+              } else {
+                throw e;
+              }
+            }
+          }
+
           if (reasons.length) {
             return {
               available: false,
