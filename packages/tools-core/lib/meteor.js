@@ -191,11 +191,36 @@ export function setMeteorAppEntrypoints({
 
 /**
  * Sets patterns to be ignored by the Meteor application in the environment variable.
- * Appends the new ignore pattern to any existing ones.
+ * Appends new patterns while deduplicating by keeping the last occurrence of
+ * each exact pattern. This preserves gitignore-style "last match wins"
+ * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
  */
 export function setMeteorAppIgnore(ignore) {
-  process.env.METEOR_IGNORE = `${process.env.METEOR_IGNORE || ''} ${ignore}`.trim();
+  const currentPatterns = (process.env.METEOR_IGNORE || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const newPatterns = ignore.trim().split(/\s+/).filter(Boolean);
+
+  if (newPatterns.length === 0) {
+    return;
+  }
+
+  const combinedPatterns = [...currentPatterns, ...newPatterns];
+  const seenPatterns = new Set();
+  const dedupedPatterns = [];
+
+  for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
+    const pattern = combinedPatterns[index];
+
+    if (!seenPatterns.has(pattern)) {
+      seenPatterns.add(pattern);
+      dedupedPatterns.push(pattern);
+    }
+  }
+
+  process.env.METEOR_IGNORE = dedupedPatterns.reverse().join(' ');
 }
 
 /**
