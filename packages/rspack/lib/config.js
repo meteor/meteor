@@ -2,7 +2,7 @@
  * @module config
  * @description Functions for configuring Meteor for Rspack
  */
-import { glob } from 'glob';
+import { sync as globSync } from 'glob';
 import path from 'path';
 import fs from 'fs';
 
@@ -30,9 +30,16 @@ const {
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
+import { discoverRspackFileExtensions } from './file-extensions';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
-const { RSPACK_BUILD_CONTEXT, FILE_ROLE } = require('./constants');
+const {
+  RSPACK_BUILD_CONTEXT,
+  RSPACK_ASSETS_CONTEXT,
+  RSPACK_CHUNKS_CONTEXT,
+  RSPACK_DOCTOR_CONTEXT,
+  FILE_ROLE,
+} = require('./constants');
 
 /**
  * Checks if entries exist in .meteorignore file
@@ -85,57 +92,31 @@ function checkMeteorIgnoreExactEntries(entries) {
  * Gets the list of file extensions to ignore based on project type
  * For Blaze projects, it excludes .html as used by Blaze
  * For Less projects, it excludes .less files
- * For SCSS projects, it excludes .scss files
+ * For SCSS projects, it excludes .scss and .sass files
  * @returns {string[]} Array of file extensions to ignore
  */
 function getFileExtensionsToIgnore() {
-  const isAnyCompilerProject =
-    isMeteorBlazeProject() || isMeteorLessProject() || isMeteorScssProject();
+  const compilerExtensions = [
+    ...(isMeteorBlazeProject() ? ['.html'] : []),
+    ...(isMeteorLessProject() ? ['.less'] : []),
+    ...(isMeteorScssProject() ? ['.scss', '.sass'] : []),
+  ];
+  const isAnyCompilerProject = compilerExtensions.length > 0;
   if (!isAnyCompilerProject) {
     return [];
   }
 
-  const allFiles = glob.sync('**/*', {
-    nodir: true,
-    dot: true,
-    ignore: ['node_modules/**', '.meteor/**'],
+  return discoverRspackFileExtensions({
+    globSync,
+    cwd: getMeteorAppDir(),
+    generatedContexts: [
+      RSPACK_BUILD_CONTEXT,
+      RSPACK_ASSETS_CONTEXT,
+      RSPACK_CHUNKS_CONTEXT,
+      RSPACK_DOCTOR_CONTEXT,
+    ],
+    compilerExtensions,
   });
-  const existingExts = Array.from(
-    new Set(allFiles.map(f => path.extname(f).toLowerCase())),
-  );
-
-  // Base extensions to ignore
-  const baseExtensions = [
-    '.ts',
-    '.tsx',
-    '.js',
-    '.jsx',
-    '.mjs',
-    '.cjs',
-    '.json',
-  ];
-
-  // Filter existing extensions based on project type
-  let filteredExts = existingExts;
-
-  // For Blaze projects, exclude .html files
-  if (isMeteorBlazeProject()) {
-    filteredExts = existingExts.filter(ext => ext !== '.html');
-  }
-
-  // Check for Less projects and exclude .less files
-  if (isMeteorLessProject()) {
-    filteredExts = filteredExts.filter(ext => ext !== '.less');
-  }
-
-  // Check for SCSS projects and exclude .scss files
-  if (isMeteorScssProject()) {
-    filteredExts = filteredExts.filter(ext => ext !== '.scss');
-  }
-
-  return Array.from(new Set([...baseExtensions, ...filteredExts])).filter(
-    ext => ext !== '',
-  );
 }
 
 /**
@@ -201,8 +182,8 @@ export function configureMeteorForRspack() {
       const cssPattern = `${entrypoint}/*.css`;
       const htmlPattern = `${entrypoint}/*.html`;
 
-      const cssFiles = glob.sync(cssPattern);
-      const htmlFiles = glob.sync(htmlPattern);
+      const cssFiles = globSync(cssPattern);
+      const htmlFiles = globSync(htmlPattern);
 
       const entriesToCheck = [
         cssPattern,
@@ -288,7 +269,20 @@ export function configureMeteorForRspack() {
         ].includes(file),
     ),
   ];
-  const filesToIgnore = [...rootFilesToIgnore, ...extraFilesToIgnore];
+  const rspackOutputFilesToIgnore =
+    isMeteorAppDevelopment() && isMeteorAppRun() && !isMeteorAppNative()
+      ? [
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js`,
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.js.map`,
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.cjs`,
+          `${RSPACK_BUILD_CONTEXT}/**/*-rspack.cjs.map`,
+        ]
+      : [];
+  const filesToIgnore = [
+    ...rootFilesToIgnore,
+    ...extraFilesToIgnore,
+    ...rspackOutputFilesToIgnore,
+  ];
   const unignoredFilesAndFolders = buildUnignorePatterns(
     meteorAppConfig?.modules || [],
     { skipLevel: 1 },

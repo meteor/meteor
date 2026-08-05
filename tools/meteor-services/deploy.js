@@ -333,16 +333,19 @@ function canonicalizeSite(site) {
     url = 'http://' + url;
   }
 
-  var parsed = require('url').parse(url);
+  let parsed = null;
+  try {
+    parsed = new URL(url);
+  } catch (e) {}
 
-  if (! parsed.hostname) {
+  if (! parsed || ! parsed.hostname) {
     Console.info(
       "Please specify a domain to connect to, such as www.example.com or " +
       "http://www.example.com/");
     return false;
   }
 
-  if (parsed.pathname != '/' || parsed.hash || parsed.query) {
+  if (parsed.pathname !== '/' || parsed.hash || parsed.search) {
     Console.info(
       "Sorry, Meteor does not yet support specific path URLs, such as " +
       Console.url("http://www.example.com/blog") + " .  Please specify the root of a domain.");
