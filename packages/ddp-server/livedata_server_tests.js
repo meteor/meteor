@@ -878,8 +878,12 @@ Tinytest.addAsync(
       // Reconnect
       clientConn.reconnect();
 
-      // Wait for reconnection with timeout
+      // Wait for reconnection with timeout. The stream reports 'connected' at
+      // socket open, one RTT before the DDP 'connected' message updates
+      // _lastSessionId — wait for the handshake to land, like the
+      // count-mismatch test below does.
       await pollUntil(() => clientConn.status().connected);
+      await sleep(WITHIN_GRACE_PERIOD_MS);
 
       // Should have a NEW session (not resumed, because we gracefully disconnected)
       test.notEqual(
