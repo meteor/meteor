@@ -17,6 +17,7 @@ import {
 var colonConverter = require('../utils/colon-converter.js');
 var utils = require('../utils/utils.js');
 var buildPluginModule = require('./build-plugin.js');
+var testRunnerPlugin = require('./test-runner-plugin.js');
 var Console = require('../console/console.js').Console;
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
@@ -24,6 +25,7 @@ import { Unibuild } from "./unibuild.js";
 import rspackHelpers from "../tool-env/rspack";
 import { getCurrentNodeBinDir, getDevBundle } from "../fs/files";
 import { runLogInstance } from "../runners/run-log";
+var testRunnerContext = require('../tool-env/test-runner-context.js');
 
 var rejectBadPath = function (p) {
   if (p.match(/\.\./)) {
@@ -69,6 +71,10 @@ var Isopack = function () {
   // build process: introduce a new source processor (compiler, minifier,
   // linter)
   self.plugins = {};
+
+  // Test-runner providers registered by build plugins defined in this package.
+  // Factories stay lazy until command-level provider selection completes.
+  self.testRunnerProviders = [];
 
   self.cordovaDependencies = {};
 
@@ -520,6 +526,14 @@ Object.assign(Isopack.prototype, {
      */
     var Plugin = {
       name: pluginName,
+
+      registerTestRunner: testRunnerPlugin.createRegisterTestRunner({
+        isopack,
+        buildmessage,
+      }),
+
+      getTestRunnerBuildOptions:
+        testRunnerContext.getTestRunnerBuildOptions,
 
       // Share the meteorConfig object as part of plugin API
       getMeteorConfig: getMeteorConfig,

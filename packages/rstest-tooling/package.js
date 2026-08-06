@@ -5,6 +5,10 @@ Package.describe({
   documentation: null,
 });
 
+Package.onUse(function (api) {
+  api.use('isobuild:test-runner-plugin@1.0.0');
+});
+
 Package.registerBuildPlugin({
   name: 'rstest',
   sources: [
