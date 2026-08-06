@@ -62,8 +62,16 @@ selftest.define('regressions - linker cache cleanup (#14642)', async function() 
       await run.match('Client modified -- refreshing');
     }
 
-    files = fs.readdirSync(cacheDir);
-    const afterCount = files.filter(f => f.endsWith('.cache')).length;
+    let afterCount;
+    const deadline = Date.now() + 10000;
+    do {
+      files = fs.readdirSync(cacheDir);
+      afterCount = files.filter(f => f.endsWith('.cache')).length;
+      if (afterCount <= beforeCount + 2) {
+        break;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    } while (Date.now() < deadline);
 
     // If the cache isn't being cleaned up, it would grow exactly by 5
     if (afterCount > beforeCount + 2) {
