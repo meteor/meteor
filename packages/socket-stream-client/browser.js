@@ -64,29 +64,7 @@ export class ClientStream extends StreamClientCommon {
     this.rawUrl = url;
   }
 
-  _connected() {
-    if (this.connectionTimer) {
-      clearTimeout(this.connectionTimer);
-      this.connectionTimer = null;
-    }
-
-    if (this.currentStatus.connected) {
-      // already connected. do nothing. this probably shouldn't happen.
-      return;
-    }
-
-    // update status
-    this.currentStatus.status = 'connected';
-    this.currentStatus.connected = true;
-    this.currentStatus.retryCount = 0;
-    this.statusChanged();
-
-    // fire resets. This must come after status change so that clients
-    // can call send from within a reset callback.
-    this.forEachCallback('reset', callback => {
-      callback();
-    });
-  }
+  // The CONNECTED transition itself lives in StreamClientCommon._connected.
 
   _cleanup(maybeError) {
     this._clearConnectionAndHeartbeatTimers();
@@ -105,11 +83,15 @@ export class ClientStream extends StreamClientCommon {
     }
   }
 
-  _clearConnectionAndHeartbeatTimers() {
+  _clearConnectionTimer() {
     if (this.connectionTimer) {
       clearTimeout(this.connectionTimer);
       this.connectionTimer = null;
     }
+  }
+
+  _clearConnectionAndHeartbeatTimers() {
+    this._clearConnectionTimer();
     if (this.heartbeatTimer) {
       clearTimeout(this.heartbeatTimer);
       this.heartbeatTimer = null;
@@ -219,7 +201,7 @@ export class ClientStream extends StreamClientCommon {
       this._heartbeat_received();
     };
 
-    if (this.connectionTimer) clearTimeout(this.connectionTimer);
+    this._clearConnectionTimer();
     this.connectionTimer = setTimeout(() => {
       this._lostConnection(
         new this.ConnectionError("DDP connection timed out")

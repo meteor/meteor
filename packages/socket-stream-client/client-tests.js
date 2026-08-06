@@ -299,3 +299,23 @@ Tinytest.add(
     }
   }
 );
+// The status object is managed by a single transition helper in
+// StreamClientCommon: statuses come from one enum, transient fields
+// (retryTime, reason) are added and removed with their statuses, and the
+// object is mutated in place so a reference from status() stays current.
+Tinytest.add('stream - status transitions are centralized', function(test) {
+  test.equal(ClientStream.STATUSES.CONNECTED, 'connected');
+
+  var stream = new ClientStream('/');
+  var statusObj = stream.status();
+  test.isFalse(stream.isForcedToDisconnect());
+
+  stream.disconnect({ _permanent: true, _error: 'version negotiation failed' });
+
+  test.isTrue(stream.isForcedToDisconnect());
+  // In-place mutation: the earlier reference observes the transition.
+  test.equal(statusObj.status, 'failed');
+  test.equal(statusObj.reason, 'version negotiation failed');
+  test.isFalse('retryTime' in statusObj);
+  test.equal(statusObj.retryCount, 0);
+});

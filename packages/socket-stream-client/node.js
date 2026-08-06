@@ -69,19 +69,8 @@ export class ClientStream extends StreamClientCommon {
       throw new Error('Two parallel connections?');
     }
 
-    this._clearConnectionTimer();
-
-    // update status
-    this.currentStatus.status = 'connected';
-    this.currentStatus.connected = true;
-    this.currentStatus.retryCount = 0;
-    this.statusChanged();
-
-    // fire resets. This must come after status change so that clients
-    // can call send from within a reset callback.
-    this.forEachCallback('reset', callback => {
-      callback();
-    });
+    // The CONNECTED transition itself lives in StreamClientCommon.
+    this._connected();
   }
 
   _cleanup(maybeError) {
