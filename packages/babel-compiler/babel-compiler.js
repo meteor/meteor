@@ -346,7 +346,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       var swcOptions = {
         jsc: {
-          ...(!isLegacyWebArch && { target: 'es2015' }),
+          ...(!isLegacyWebArch && { target: isNodeTarget ? 'es2022' : 'es2015' }),
           parser: {
             syntax: isTypescriptSyntax ? 'typescript' : 'ecmascript',
             jsx: hasJSXSupport,
@@ -443,10 +443,17 @@ BCp.processOneFileForTarget = function (inputFile, source) {
                 transpConfig?.excludePackages || [],
               )));
 
+        // Segregate cache by target/arch: server (es2022), modern web (es2015),
+        // and legacy web (env.targets) all produce different SWC output. Without
+        // this, whichever arch compiles first poisons the cache for the others.
+        const swcTarget = isLegacyWebArch
+          ? 'legacy'
+          : (isNodeTarget ? 'es2022' : 'es2015');
+
         const cacheKey = [
           toBeAdded.hash,
           lastModifiedSwcConfigTime,
-          isLegacyWebArch ? 'legacy' : '',
+          swcTarget,
           hasSwcHelpersAvailable,
         ]
           .filter(Boolean)
