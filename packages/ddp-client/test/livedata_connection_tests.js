@@ -2947,3 +2947,37 @@ Tinytest.addAsync(
     test.length(stream.sent, 0);
   }
 );
+
+Tinytest.addAsync(
+  'livedata connection - update buffer owns the flush policy',
+  async function (test) {
+    const stream = new StubStream();
+    // The suite-wide newConnection helper disables batching
+    // (bufferedWritesInterval: 0); this test needs the real policy.
+    const conn = newConnection(stream, {
+      bufferedWritesInterval: 5,
+      bufferedWritesMaxAge: 500
+    });
+
+    await startAndConnect(test, stream);
+
+    const buffer = conn._updateBuffer;
+    test.isTrue(!!buffer);
+    test.isTrue(buffer.isEmpty());
+
+    // A batched write is debounced: the buffer holds it...
+    buffer.writes['buffer-policy-test'] = [{ msg: 'added' }];
+    await buffer.afterMessage(true);
+    test.isFalse(buffer.isEmpty());
+
+    // ...and a non-batched message flushes everything immediately.
+    await buffer.afterMessage(false);
+    test.isTrue(buffer.isEmpty());
+
+    // takeAll claims the pending writes atomically.
+    buffer.writes['buffer-policy-test-2'] = [{ msg: 'added' }];
+    const taken = buffer.takeAll();
+    test.equal(Object.keys(taken), ['buffer-policy-test-2']);
+    test.isTrue(buffer.isEmpty());
+  }
+);
