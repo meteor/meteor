@@ -31,7 +31,10 @@ jobs:
     timeout-minutes: 60
     container:
       image: node:22-bookworm
-      options: --cpus 6 --memory 16g --security-opt seccomp=unconfined
+      # --init runs tini as PID 1 so orphaned processes get reaped. Without it
+      # the container's PID 1 is `tail -f /dev/null`, which never calls wait(),
+      # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
+      options: --init --cpus 6 --memory 16g --security-opt seccomp=unconfined
 
     steps:
       - name: Checkout code
