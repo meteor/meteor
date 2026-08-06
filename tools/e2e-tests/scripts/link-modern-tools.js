@@ -15,6 +15,28 @@ function readRspackVersion(repoRoot = REPO_ROOT) {
   return match[1];
 }
 
+function createLocalPackageLinkPlan({ destinationRoot, packageSpecs }) {
+  return Object.entries(packageSpecs || {}).map(([name, spec]) => {
+    if (!spec || typeof spec.source !== 'string') {
+      throw new Error(`Local npm package ${name} must specify a source path`);
+    }
+    if (spec.save !== 'dev' && spec.save !== 'prod') {
+      throw new Error(`Local npm package ${name} must specify save as dev or prod`);
+    }
+    return {
+      command: 'npm',
+      args: [
+        'install',
+        spec.save === 'dev' ? '--save-dev' : '--save',
+        '--no-package-lock',
+        '--install-links=false',
+        spec.source,
+      ],
+      cwd: destinationRoot,
+    };
+  });
+}
+
 function createLocalModernToolsLinkPlan({
   repoRoot = REPO_ROOT,
   appDir,
@@ -38,17 +60,20 @@ function createLocalModernToolsLinkPlan({
       cwd: rstestDir,
     },
   ] : [];
-  const persistAppRstest = includeRstest ? [{
-    command: 'npm',
-    args: [
-      'install',
-      '--save-dev',
-      '--no-package-lock',
-      '--install-links=false',
-      rstestDir,
-    ],
-    cwd: appDir,
-  }] : [];
+  const persistAppRstest = includeRstest
+    ? createLocalPackageLinkPlan({
+      destinationRoot: appDir,
+      packageSpecs: {
+        '@meteorjs/rstest': { source: rstestDir, save: 'dev' },
+      },
+    })
+    : [];
+  const persistAppRspack = createLocalPackageLinkPlan({
+    destinationRoot: appDir,
+    packageSpecs: {
+      '@meteorjs/rspack': { source: rspackDir, save: 'prod' },
+    },
+  });
   return [
     { command: meteor, args: ['update', '--npm'], cwd: appDir },
     {
@@ -65,17 +90,7 @@ function createLocalModernToolsLinkPlan({
     ...prepareRstest,
     { command: 'npm', args: ['install', 'ignore-loader', '--save'], cwd: appDir },
     ...persistAppRstest,
-    {
-      command: 'npm',
-      args: [
-        'install',
-        '--save',
-        '--no-package-lock',
-        '--install-links=false',
-        rspackDir,
-      ],
-      cwd: appDir,
-    },
+    ...persistAppRspack,
   ];
 }
 
@@ -100,6 +115,7 @@ async function linkLocalModernTools(appDir, { env, includeRstest = true } = {}) 
 module.exports = {
   CONSTANTS_PATH,
   REPO_ROOT,
+  createLocalPackageLinkPlan,
   createLocalModernToolsLinkPlan,
   linkLocalModernTools,
   readRspackVersion,

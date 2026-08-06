@@ -45,8 +45,27 @@ Persistent selection uses `package.json`:
 }
 ```
 
-Use `"driver"` together with the existing `--driver-package` option to opt out.
+Use `"meteor.testRunner": "driver"` as the persistent provider opt-out, then
+select a concrete runtime driver with the existing `--driver-package` option.
 An explicit `--driver-package` always wins.
+
+## Driver packages versus test-runner providers
+
+| Concern | Driver package | Test-runner provider |
+| --- | --- | --- |
+| Runs in | Generated Meteor test app | Meteor tool process |
+| Host decision | Assumes Meteor host already exists | Selects native-only or Meteor-host execution before build |
+| Compilation | Meteor/Isobuild completes before the driver runs | Runs native compilation or requests a Meteor host, with immutable package-scoped compiler options |
+| Lifecycle | Runtime hooks and reporting | Validation, process/browser supervision, watch generations, exit propagation, cleanup |
+| Examples | `test-in-browser`, `meteortesting:mocha` | Rstest provider from `rstest-tooling` |
+
+`--driver-package <name>` always selects the runtime-driver route.
+`--test-runner <provider-id>` is an advanced provider override; normal Rstest
+usage needs neither because adding `rstest` activates its provider. One command
+uses one provider or driver. Reusing `--driver-package` for tool-side providers
+would overload established package-inclusion semantics and would still require
+the provider lifecycle underneath. `driver` is policy vocabulary, not a
+provider id accepted by `--test-runner`.
 
 ## Test ownership
 
@@ -119,6 +138,10 @@ meteor test --once --shard 1/4
 meteor test --once --changed-since main
 meteor test --once --full-app --project meteor-e2e
 ```
+
+`--project` and `--test-file` may be repeated. Provider options are
+capability-qualified: a selected provider must reject unsupported combinations
+before dependency installation or compilation.
 
 Arguments after `--` pass to native Rstest. `--shard`, `--changed`, and
 `--changed-since` require `--once` and pure native projects; Meteor-runtime

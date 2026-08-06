@@ -35,3 +35,17 @@ export async function runTests() {
   });
   return result;
 }
+
+let started = false;
+
+export function start() {
+  if (started) return;
+  started = true;
+  Meteor.startup(() => {
+    runTests().catch(error => {
+      console.error(error && error.stack || error);
+    });
+  });
+}
+
+start();

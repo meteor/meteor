@@ -6,15 +6,44 @@ import {
   waitForMeteorOutput,
 } from './helpers';
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 
 const { linkLocalModernTools } = require('./scripts/link-modern-tools.js');
 
+async function reservePortBlock(size) {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const base = 20_000 + Math.floor(Math.random() * 20_000);
+    const servers = [];
+    try {
+      for (let offset = 0; offset < size; offset += 1) {
+        const server = net.createServer();
+        await new Promise((resolve, reject) => {
+          server.once('error', reject);
+          server.listen(base + offset, '127.0.0.1', resolve);
+        });
+        servers.push(server);
+      }
+      return base;
+    } catch {
+      // Try another contiguous range after releasing this partial reservation.
+    } finally {
+      await Promise.all(servers.map(server =>
+        new Promise(resolve => server.close(resolve))
+      ));
+    }
+  }
+  throw new Error('Unable to reserve ports for Rspack + Rstest E2E tests.');
+}
+
 describe('Rspack + Rstest integration', () => {
   let appDir;
+  let portBase;
+  const testPort = oldPort => String(portBase + (Number(oldPort) - 3195) * 2);
 
   beforeAll(async () => {
+    portBase = await reservePortBlock(33);
     appDir = (await setupMeteorApp('rspack-rstest')).tempDir;
     await linkLocalModernTools(appDir);
   }, 600_000);
@@ -26,7 +55,7 @@ describe('Rspack + Rstest integration', () => {
   test('meteor test automatically runs pure and Meteor-runtime projects', async () => {
     const result = await runMeteorCommand(
       'test',
-      ['--once', '--server-only', '--port', '3195'],
+      ['--once', '--server-only', '--port', testPort(3195)],
       appDir,
       {
         captureOutput: true,
@@ -64,7 +93,7 @@ describe('Rspack + Rstest integration', () => {
         '--test-name-pattern',
         '^Meteor runtime project resolves Atmosphere packages$',
         '--port',
-        '3200',
+        testPort(3200),
       ],
       appDir,
       {
@@ -91,7 +120,7 @@ describe('Rspack + Rstest integration', () => {
         '--test-file',
         'mongo.test.js',
         '--port',
-        '3203',
+        testPort(3203),
       ],
       appDir,
       {
@@ -110,9 +139,9 @@ describe('Rspack + Rstest integration', () => {
 
   test('explicit empty or invalid Rstest selections fail instead of passing zero tests', async () => {
     for (const args of [
-      ['--once', '--project', 'meteor-runtime-client', '--server-only', '--port', '3204'],
-      ['--once', '--test-file', 'missing.test.js', '--port', '3205'],
-      ['--once', '--project', 'meteor-e2e', '--port', '3206'],
+      ['--once', '--project', 'meteor-runtime-client', '--server-only', '--port', testPort(3204)],
+      ['--once', '--test-file', 'missing.test.js', '--port', testPort(3205)],
+      ['--once', '--project', 'meteor-e2e', '--port', testPort(3206)],
       [
         '--once',
         '--project',
@@ -121,7 +150,7 @@ describe('Rspack + Rstest integration', () => {
         '--exclude-archs',
         'web.browser,web.browser.legacy,web.cordova',
         '--port',
-        '3208',
+        testPort(3208),
       ],
     ]) {
       const result = await runMeteorCommand('test', args, appDir, {
@@ -155,14 +184,14 @@ describe('Rspack + Rstest integration', () => {
     const output = result.outputLines.join('\n');
 
     expect(completed.exitCode).toBe(0);
-    expect(output).toContain('Browser Mode runs in real Chromium with locator and snapshot support');
+    expect(output).toContain('tests/rstest/browser/dom.test.js');
     expect(output).not.toContain('=> Started MongoDB.');
   }, 600_000);
 
   test('meteor client-only runs jsdom, Browser Mode, and real Meteor client executor', async () => {
     const result = await runMeteorCommand(
       'test',
-      ['--once', '--client-only', '--port', '3197'],
+      ['--once', '--client-only', '--port', testPort(3197)],
       appDir,
       {
         captureOutput: true,
@@ -173,11 +202,11 @@ describe('Rspack + Rstest integration', () => {
     const output = result.outputLines.join('\n');
 
     expect(completed.exitCode).toBe(0);
-    expect(output).toContain('pure client project runs with jsdom');
-    expect(output).toContain('Browser Mode runs in real Chromium');
+    expect(output).toContain('tests/rstest/pure/client/dom.test.js');
+    expect(output).toContain('tests/rstest/browser/dom.test.js');
     expect(output).toContain('Meteor client executor resolves Atmosphere runtime in real browser');
     expect(output).toContain('[Meteor Rstest] web.browser: 1 passed, 0 failed');
-    expect(output).not.toContain('pure Rstest uses Meteor-generated context');
+    expect(output).not.toContain('tests/rstest/pure/server/math.test.js');
     expect(output).not.toContain('[Meteor Rstest] server:');
   }, 600_000);
 
@@ -190,7 +219,7 @@ describe('Rspack + Rstest integration', () => {
         '--project',
         'meteor-e2e',
         '--port',
-        '3198',
+        testPort(3198),
       ],
       appDir,
       {
@@ -215,7 +244,7 @@ describe('Rspack + Rstest integration', () => {
         '--project',
         'meteor-runtime-server',
         '--port',
-        '3201',
+        testPort(3201),
       ],
       appDir,
       {
@@ -243,7 +272,7 @@ describe('Rspack + Rstest integration', () => {
     const original = fs.readFileSync(runtimeFile, 'utf8');
     const result = await runMeteorCommand(
       'test',
-      ['--project', 'meteor-runtime-server', '--port', '3209'],
+      ['--project', 'meteor-runtime-server', '--port', testPort(3209)],
       appDir,
       {
         captureOutput: true,
@@ -262,7 +291,18 @@ describe('Rspack + Rstest integration', () => {
       const firstGeneration = Math.max(...firstGenerations);
       expect(firstGeneration).toBeGreaterThanOrEqual(1);
 
-      fs.writeFileSync(runtimeFile, `${original}\n// watch generation ${Date.now()}\n`);
+      await waitForMeteorOutput(
+        result.outputLines,
+        '=> App running at',
+        { meteorProcess: result.meteorProcess, timeout: 30_000 },
+      );
+
+      const watchedSource = original.replace(
+        'Meteor runtime project resolves Atmosphere packages',
+        `Meteor runtime project resolves Atmosphere packages ${Date.now()}`,
+      );
+      expect(watchedSource).not.toBe(original);
+      fs.writeFileSync(runtimeFile, watchedSource);
       const deadline = Date.now() + 120_000;
       while (Date.now() < deadline) {
         const output = result.outputLines.join('\n');
@@ -309,7 +349,7 @@ describe('Rspack + Rstest integration', () => {
           '--test-file',
           'intentional-failure.test.js',
           '--port',
-          '3210',
+          testPort(3210),
         ],
         appDir,
         {
@@ -336,7 +376,7 @@ describe('Rspack + Rstest integration', () => {
         '--driver-package',
         'meteortesting:mocha',
         '--port',
-        '3199',
+        testPort(3199),
       ],
       appDir,
       {
@@ -372,7 +412,7 @@ describe('Rspack + Rstest integration', () => {
       [
         '--once',
         '--port',
-        '3196',
+        testPort(3196),
         'rstest-e2e-fixture',
       ],
       appDir,
@@ -412,7 +452,7 @@ describe('Rspack + Rstest integration', () => {
       const packageDir = path.join(appDir, 'packages', 'rstest-e2e-fixture');
       const result = await runMeteorCommand(
         'test-packages',
-        ['--once', '--server-only', '--port', '3207', packageDir],
+        ['--once', '--server-only', '--port', testPort(3207), packageDir],
         outsideDir,
         {
           captureOutput: true,
@@ -458,7 +498,7 @@ describe('Rspack + Rstest integration', () => {
     try {
       const result = await runMeteorCommand(
         'test-packages',
-        ['--once', '--server-only', '--port', '3211', 'rstest-e2e-fixture'],
+        ['--once', '--server-only', '--port', testPort(3211), 'rstest-e2e-fixture'],
         appDir,
         {
           captureOutput: true,
@@ -497,7 +537,7 @@ describe('Rspack + Rstest integration', () => {
       [
         '--once',
         '--port',
-        '3202',
+        testPort(3202),
         'rstest-e2e-fixture',
         'tinytest-e2e-fixture',
       ],
@@ -511,9 +551,47 @@ describe('Rspack + Rstest integration', () => {
     const output = result.outputLines.join('\n');
 
     expect(completed.exitCode).not.toBe(0);
-    expect(output).toContain('Mixed Rstest and legacy package tests');
+    expect(output).toContain('Selected package tests are owned by different test runner engines');
     expect(output).toContain('local-test:rstest-e2e-fixture');
     expect(output).toContain('local-test:tinytest-e2e-fixture');
     expect(output).not.toContain('0 passed');
+  }, 600_000);
+
+  test('meteor test-packages rejects Rstest and Tinytest inside one package', async () => {
+    const result = await runMeteorCommand(
+      'test-packages',
+      [
+        '--once',
+        '--port',
+        testPort(3202),
+        'rstest-tinytest-e2e-fixture',
+      ],
+      appDir,
+      {
+        captureOutput: true,
+        execaOptions: { reject: false },
+      }
+    );
+    const completed = await result.meteorProcess;
+    const output = result.outputLines.join('\n');
+    const normalizedOutput = output.replace(/\s+/g, ' ');
+
+    expect(completed.exitCode).not.toBe(0);
+    expect(normalizedOutput).toContain('local-test:rstest-tinytest-e2e-fixture');
+    expect(normalizedOutput).toContain('test runner "rstest"');
+    expect(normalizedOutput).toContain('test package "tinytest"');
+    expect(normalizedOutput).toContain(
+      'Migrate or remove tests using "tinytest"'
+    );
+    expect(normalizedOutput).toContain(
+      'meteor test-packages rstest-tinytest-e2e-fixture`'
+    );
+    expect(normalizedOutput).toContain(
+      'meteor test-packages rstest-tinytest-e2e-fixture ' +
+        '--driver-package test-in-browser`'
+    );
+    expect(normalizedOutput).not.toContain('Rstest Dependencies');
+    expect(normalizedOutput).not.toContain('[Meteor Rstest]');
+    expect(normalizedOutput).not.toContain('0 passed');
   }, 600_000);
 });

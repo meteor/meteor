@@ -255,6 +255,12 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
 
   const configPath = getConfigFilePath();
   const projectConfigPath = getCustomConfigFilePath();
+  const testRunnerBuildOptions = Plugin.getTestRunnerBuildOptions() || {};
+  const testRunnerContext = testRunnerBuildOptions.context || {};
+  const testRunnerMetadata = global.testCommandMetadata?.testRunner;
+  const testRunnerId = typeof testRunnerMetadata === 'object'
+    ? testRunnerMetadata.id
+    : testRunnerMetadata;
 
   const pairs = [
     ["isDevelopment", isMeteorAppDevelopment()],
@@ -263,13 +269,10 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
     ["isVerbose", isMeteorAppConfigModernVerbose()],
     ...((isProfile && [["isProfile", isMeteorAppProfile()]]) || []),
     ["isTest", isTest],
-    ...((isTest && global.testCommandMetadata?.testRunner && [[
-      "testRunner",
-      global.testCommandMetadata.testRunner,
-    ]]) || []),
-    ...((isTest && global.testCommandMetadata?.rstestRuntimeManifest && [[
-      "rstestRuntimeManifest",
-      global.testCommandMetadata.rstestRuntimeManifest,
+    ...((isTest && testRunnerId && [["testRunner", testRunnerId]]) || []),
+    ...((isTest && Object.keys(testRunnerContext).length > 0 && [[
+      "testRunnerContext",
+      JSON.stringify(testRunnerContext),
     ]]) || []),
     ...(isTestLike ? [["isTestLike", isTestLike || isTest]] : []),
     ...((isTestLike && isTestFullApp && [["isTestFullApp", isTestFullApp]]) ||

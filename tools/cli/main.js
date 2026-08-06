@@ -74,6 +74,12 @@ function Command(options) {
     if (! _.has(value, 'type')) {
       value.type = String;
     }
+    if (Array.isArray(value.type) &&
+        (value.type.length !== 1 ||
+         value.type[0] !== String)) {
+      throw new Error(options.name + ": " + key +
+                      " repeatable option type must be [String]");
+    }
     if (_.has(value, 'default') && _.has(value, 'required')) {
       throw new Error(options.name + ": " + key + " can't be both optional " +
                       "and required");
@@ -162,9 +168,9 @@ function SpringboardToSpecificRelease(fullReleaseName, msg) {
 //   whatever value you passed for minArgs; use Infinity for unlimited)
 // - catalogRefresh: strategy object specifying when to refresh the catalog.
 // - options: map from long option name to:
-//   - type: String, Number, or Boolean. default is String. a future
-//     version could support [String] and [Number] to allow the option to
-//     be passed more than once, but we don't do that yet.
+//   - type: String, Number, Boolean, or [String]. default is String.
+//     Array types allow the option to be passed more than once and preserve
+//     the values in command-line order.
 //   - short: single character short alias (eg, 'p' for 'port', to do -p 3000)
 //   - default: value to use if none supplied
 //   - required: true if required (incompatible with 'default')
@@ -1331,53 +1337,52 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
       values = values.concat(rawOptions["-" + optionInfo.short]);
     }
 
-    if (values.length > 1) {
-      // in the future, we could support multiple values, but we don't
-      // for now since no command needs it
+    var repeatable = Array.isArray(optionInfo.type);
+    var optionType = repeatable ? optionInfo.type[0] : optionInfo.type;
+    if (values.length > 1 && ! repeatable) {
       Console.error(
         Console.command(commandName) + ": can only take one " +
           Console.command(helpfulOptionName) + " option.");
       Console.error(tryHelpMessage);
 
       process.exit(1);
-    } else if (values.length === 1) {
-      // OK, they provided exactly one value. Check its type and add
-      // to the output.
-      var value = values[0];
-      if (value === null) {
-        // This option requires a value and they didn't give it one
-        // (it was the last word on the command line).
-        Console.error(
-          Console.command(commandName) + ": the " +
-            Console.command(helpfulOptionName) + " option needs a value.");
-        Console.error(tryHelpMessage);
-
-        process.exit(1);
-      } else if (optionInfo.type === Number) {
-        if (! value.match(/^[0-9]+$/)) {
-          Console.error(
-            Console.command(commandName) + ": " +
-              Console.command(helpfulOptionName) + " must be a number.");
-          Console.error(tryHelpMessage);
-          process.exit(1);
-        }
-        value = parseInt(value);
-      } else if (optionInfo.type === Boolean) {
-        if (!value) {
+    } else if (values.length >= 1) {
+      var parsedValues = values.map(function (value) {
+        if (value === null) {
+          // This option requires a value and they didn't give it one
+          // (it was the last word on the command line).
           Console.error(
             Console.command(commandName) + ": the " +
-              Console.command(helpfulOptionName) + " " +
-              "option does not need a value.");
+              Console.command(helpfulOptionName) + " option needs a value.");
           Console.error(tryHelpMessage);
+
           process.exit(1);
+        } else if (optionType === Number) {
+          if (! value.match(/^[0-9]+$/)) {
+            Console.error(
+              Console.command(commandName) + ": " +
+                Console.command(helpfulOptionName) + " must be a number.");
+            Console.error(tryHelpMessage);
+            process.exit(1);
+          }
+          return parseInt(value);
+        } else if (optionType === Boolean) {
+          if (!value) {
+            Console.error(
+              Console.command(commandName) + ": the " +
+                Console.command(helpfulOptionName) + " " +
+                "option does not need a value.");
+            Console.error(tryHelpMessage);
+            process.exit(1);
+          }
+          return true;
+        } else if (optionType === String) {
+          return value;
+        } else {
+          throw new Error("unknown option type?");
         }
-        value = true;
-      } else if (optionInfo.type === String) {
-        // nothing to do, 'value' needs no parsing or validation
-      } else {
-        throw new Error("unknown option type?");
-      }
-      options[optionName] = value;
+      });
+      options[optionName] = repeatable ? parsedValues : parsedValues[0];
 
       // Remove from the list of input arguments so that later we can
       // detect unrecognized arguments.

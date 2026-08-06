@@ -1,7 +1,7 @@
 Package.describe({
   name: 'rstest-tooling',
   version: '0.1.0-beta.0',
-  summary: 'Build-time npm dependency bootstrap for Meteor Rstest',
+  summary: 'Build-time test runner provider for Meteor Rstest',
   documentation: null,
 });
 
@@ -10,10 +10,16 @@ Package.onUse(function (api) {
 });
 
 Package.registerBuildPlugin({
-  name: 'rstest',
+  name: 'rstestTestRunnerProvider',
   sources: [
     'lib/constants.js',
     'lib/dependencies.js',
+    'provider/errors.js',
+    'provider/inventory.js',
+    'provider/process.js',
+    'provider/browser.js',
+    'provider/external.js',
+    'provider/provider.js',
     'rstest_plugin.js',
   ],
   use: ['modules@0.8.2', 'ecmascript', 'tools-core'],

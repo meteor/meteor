@@ -1,5 +1,8 @@
 const TEST_RUNNER_FEATURE = 'isobuild:test-runner-plugin';
 const TEST_RUNNER_API_VERSION = 1;
+const {
+  normalizeIncompatiblePackages,
+} = require('../../isobuild/test-runner-plugin.js');
 
 function runnerError(code, message) {
   const error = new Error(message);
@@ -62,7 +65,27 @@ class TestRunnerProviderRegistry {
           `Test runner provider id "${registration.id}" is registered more than once.`
         );
       }
-      this._byId.set(registration.id, Object.freeze({ ...definition }));
+      let incompatiblePackages;
+      try {
+        incompatiblePackages = normalizeIncompatiblePackages(
+          registration.incompatiblePackages
+        );
+      } catch (error) {
+        throw runnerError(
+          'METEOR_TEST_RUNNER_INVALID_PROVIDER',
+          `Test runner provider "${registration.id}" ${error.message}.`
+        );
+      }
+      const normalizedRegistration = Object.freeze({
+        ...registration,
+        ...(incompatiblePackages === undefined ? {} : {
+          incompatiblePackages,
+        }),
+      });
+      this._byId.set(registration.id, Object.freeze({
+        ...definition,
+        registration: normalizedRegistration,
+      }));
     }
   }
 
@@ -94,6 +117,33 @@ function providerSelection(definition, source) {
     source,
     definition,
   });
+}
+
+function packageCommandName(name) {
+  return name.replace(/^local-test:/, '');
+}
+
+function assertNoPackageConflicts(definition, testPackages, architectures) {
+  const incompatiblePackages =
+    definition.registration.incompatiblePackages || [];
+  for (const entry of testPackages) {
+    const conflict = incompatiblePackages.find(({ name }) =>
+      hasStrongOrderedDependency(entry.version, [name], architectures)
+    );
+    if (!conflict) continue;
+
+    const packageName = packageCommandName(entry.name);
+    throw runnerError(
+      'METEOR_TEST_RUNNER_PACKAGE_CONFLICT',
+      `Selected package tests "${entry.name}" activate test runner ` +
+        `"${definition.registration.id}" but also depend on incompatible ` +
+        `test package "${conflict.name}". Migrate or remove tests using ` +
+        `"${conflict.name}", remove that dependency, then run ` +
+        `\`meteor test-packages ${packageName}\`; to run legacy tests now, use ` +
+        `\`meteor test-packages ${packageName} --driver-package ` +
+        `${conflict.driverPackage}\`.`
+    );
+  }
 }
 
 function selectedPolicy({ explicitTestRunner, envTestRunner, packageJsonMeteor }) {
@@ -150,6 +200,11 @@ function resolveFromRegistry({
             `${unclaimed.map(entry => entry.name).join(', ')}.`
         );
       }
+      assertNoPackageConflicts(
+        definition,
+        testPackages,
+        architectures
+      );
     }
     return providerSelection(definition, source);
   }
@@ -204,12 +259,21 @@ function resolveFromRegistry({
     claim.providers[0].registration.id
   ));
   if (claimed.length !== claims.length || ids.size !== 1) {
+    const ownership = claims.map(claim => claim.providers.length === 1
+      ? `${claim.name} (${claim.providers[0].registration.id})`
+      : `${claim.name} (driver)`
+    ).join(', ');
     throw runnerError(
       'METEOR_TEST_RUNNER_MIXED_PACKAGES',
       'Selected package tests are owned by different test runner engines. ' +
-        'Run each engine group separately.'
+        `Ownership: ${ownership}. Run each engine group separately.`
     );
   }
+  assertNoPackageConflicts(
+    claimed[0].providers[0],
+    testPackages,
+    architectures
+  );
   return providerSelection(
     claimed[0].providers[0],
     'selected-package-metadata'
@@ -218,6 +282,13 @@ function resolveFromRegistry({
 
 async function resolveTestRunnerProvider(options) {
   const policy = selectedPolicy(options);
+  if (policy && policy[0] === 'driver' && policy[1] === '--test-runner') {
+    throw runnerError(
+      'METEOR_TEST_RUNNER_DRIVER_OPTION',
+      '--test-runner selects a registered test-runner provider. ' +
+        'Use --driver-package <name> to select the Meteor driver route.'
+    );
+  }
   if (options.driverPackage) {
     if (policy && policy[0] !== 'driver') {
       throw runnerError(
@@ -230,6 +301,9 @@ async function resolveTestRunnerProvider(options) {
       '--driver-package',
       options.driverPackage
     );
+  }
+  if (policy && policy[0] === 'driver') {
+    return driverSelection(options.command, policy[1]);
   }
 
   const definitions = await options.discoverProviders();

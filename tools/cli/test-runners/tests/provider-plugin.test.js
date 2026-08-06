@@ -56,6 +56,17 @@ test('registration rejects malformed descriptors and factories', () => {
     [makeRegistration({ apiVersion: 2 }), () => ({}), /apiVersion 1/],
     [makeRegistration({ activationPackages: [] }), () => ({}), /activationPackages/],
     [makeRegistration({ activationPackages: [''] }), () => ({}), /activationPackages/],
+    [makeRegistration({ incompatiblePackages: {} }), () => ({}), /incompatiblePackages.*array/],
+    [makeRegistration({ incompatiblePackages: [null] }), () => ({}), /incompatiblePackages.*name/],
+    [makeRegistration({
+      incompatiblePackages: [{ name: 'legacy:test-runtime', driverPackage: '' }],
+    }), () => ({}), /incompatiblePackages.*driverPackage/],
+    [makeRegistration({
+      incompatiblePackages: [
+        { name: 'legacy:test-runtime', driverPackage: 'legacy:driver' },
+        { name: 'legacy:test-runtime', driverPackage: 'other:driver' },
+      ],
+    }), () => ({}), /incompatiblePackages.*unique names/],
     [makeRegistration(), null, /factory function/],
   ];
 
@@ -70,7 +81,12 @@ test('registration rejects malformed descriptors and factories', () => {
 test('registration stores one immutable lazy provider definition', () => {
   const harness = makeHarness();
   let factoryCalls = 0;
-  const registration = makeRegistration();
+  const registration = makeRegistration({
+    incompatiblePackages: [{
+      name: 'legacy:test-runtime',
+      driverPackage: 'legacy:driver',
+    }],
+  });
   const factory = () => {
     factoryCalls += 1;
     return {};
@@ -78,6 +94,11 @@ test('registration stores one immutable lazy provider definition', () => {
 
   harness.register(registration, factory);
   registration.activationPackages.push('late:mutation');
+  registration.incompatiblePackages[0].driverPackage = 'late:driver';
+  registration.incompatiblePackages.push({
+    name: 'late:test-runtime',
+    driverPackage: 'late:driver',
+  });
 
   assert.equal(factoryCalls, 0);
   assert.equal(harness.errors.length, 0);
@@ -86,9 +107,19 @@ test('registration stores one immutable lazy provider definition', () => {
     id: 'example',
     apiVersion: 1,
     activationPackages: ['example:test-runtime'],
+    incompatiblePackages: [{
+      name: 'legacy:test-runtime',
+      driverPackage: 'legacy:driver',
+    }],
   });
   assert.equal(Object.isFrozen(
     harness.isopack.testRunnerProviders[0].registration.activationPackages
+  ), true);
+  assert.equal(Object.isFrozen(
+    harness.isopack.testRunnerProviders[0].registration.incompatiblePackages
+  ), true);
+  assert.equal(Object.isFrozen(
+    harness.isopack.testRunnerProviders[0].registration.incompatiblePackages[0]
   ), true);
   assert.equal(harness.isopack.testRunnerProviders[0].factory, factory);
 });

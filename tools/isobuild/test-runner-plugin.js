@@ -7,6 +7,38 @@ function report(buildmessage, message) {
   });
 }
 
+function normalizeIncompatiblePackages(incompatiblePackages) {
+  if (incompatiblePackages === undefined) return undefined;
+  if (!Array.isArray(incompatiblePackages)) {
+    throw new TypeError('incompatiblePackages must be an array');
+  }
+
+  const names = new Set();
+  return Object.freeze(incompatiblePackages.map(entry => {
+    if (!entry || typeof entry.name !== 'string' || entry.name.length === 0) {
+      throw new TypeError(
+        'incompatiblePackages entries must specify a non-empty name'
+      );
+    }
+    if (typeof entry.driverPackage !== 'string' ||
+        entry.driverPackage.length === 0) {
+      throw new TypeError(
+        `incompatiblePackages entry "${entry.name}" must specify a non-empty driverPackage`
+      );
+    }
+    if (names.has(entry.name)) {
+      throw new TypeError(
+        `incompatiblePackages must use unique names; duplicate "${entry.name}"`
+      );
+    }
+    names.add(entry.name);
+    return Object.freeze({
+      name: entry.name,
+      driverPackage: entry.driverPackage,
+    });
+  }));
+}
+
 function createRegisterTestRunner({ isopack, buildmessage }) {
   return function registerTestRunner(registration, factory) {
     if (!isopack.featureEnabled(TEST_RUNNER_FEATURE)) {
@@ -22,7 +54,12 @@ function createRegisterTestRunner({ isopack, buildmessage }) {
       return;
     }
 
-    const { id, apiVersion, activationPackages } = registration;
+    const {
+      id,
+      apiVersion,
+      activationPackages,
+      incompatiblePackages,
+    } = registration;
     if (typeof id !== 'string' || id.length === 0) {
       report(buildmessage, 'must specify a non-empty id');
       return;
@@ -40,6 +77,15 @@ function createRegisterTestRunner({ isopack, buildmessage }) {
       report(buildmessage, 'must specify non-empty activationPackages');
       return;
     }
+    let normalizedIncompatiblePackages;
+    try {
+      normalizedIncompatiblePackages = normalizeIncompatiblePackages(
+        incompatiblePackages
+      );
+    } catch (error) {
+      report(buildmessage, error.message);
+      return;
+    }
     if (typeof factory !== 'function') {
       report(buildmessage, 'must specify a factory function');
       return;
@@ -55,6 +101,9 @@ function createRegisterTestRunner({ isopack, buildmessage }) {
       id,
       apiVersion,
       activationPackages: Object.freeze([...new Set(activationPackages)]),
+      ...(normalizedIncompatiblePackages === undefined ? {} : {
+        incompatiblePackages: normalizedIncompatiblePackages,
+      }),
     });
     isopack.testRunnerProviders.push(Object.freeze({
       registration: frozenRegistration,
@@ -67,4 +116,5 @@ module.exports = {
   TEST_RUNNER_API_VERSION,
   TEST_RUNNER_FEATURE,
   createRegisterTestRunner,
+  normalizeIncompatiblePackages,
 };

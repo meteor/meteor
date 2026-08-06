@@ -1,6 +1,6 @@
 const {
   startRstestProcess,
-} = require('../cli/test-runners/rstest-process.js');
+} = require('./process.js');
 const fs = require('node:fs');
 
 function structuredResultFromReport(report, code) {

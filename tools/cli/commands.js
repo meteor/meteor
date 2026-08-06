@@ -2256,11 +2256,11 @@ testCommandOptions = {
     // Undocumented flag to use a different test driver.
     'driver-package': { type: String },
 
-    // Select Meteor's test engine policy. Explicit --driver-package still wins.
+    // Generic test-runner provider selection and provider-owned options.
     'test-runner': { type: String },
     config: { type: String },
-    project: { type: String },
-    'test-file': { type: String },
+    project: { type: [String] },
+    'test-file': { type: [String] },
     'test-name-pattern': { type: String },
     browser: { type: String },
     coverage: { type: Boolean },
@@ -2332,15 +2332,60 @@ main.registerCommand(Object.assign(
   return doTestCommand(options);
 });
 
+function readTestRunnerPackageConfig(appDir) {
+  if (!appDir) return {};
+  try {
+    return JSON.parse(
+      files.readFile(files.pathJoin(appDir, 'package.json'), 'utf8')
+    ).meteor || {};
+  } catch {
+    return {};
+  }
+}
+
+async function collectTestRunnerPackageRecords(projectContext) {
+  const records = [];
+  await projectContext.packageMap.eachPackage(async (name, info) => {
+    const version = await projectContext.projectCatalog.getVersion(
+      name,
+      info.version
+    );
+    if (version) records.push({ name, version });
+  });
+  return records;
+}
+
+function normalizeTestRunnerOptions(options) {
+  return {
+    once: Boolean(options.once),
+    fullApp: Boolean(options['full-app']),
+    serverOnly: Boolean(options['server-only']),
+    clientOnly: Boolean(options['client-only']),
+    config: options.config || null,
+    project: [].concat(options.project || []).filter(Boolean),
+    testFile: [].concat(options['test-file'] || []).filter(Boolean),
+    testNamePattern: options['test-name-pattern'] ||
+      (options.filter && options.filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) ||
+      null,
+    browser: options.browser || null,
+    coverage: Boolean(options.coverage),
+    updateSnapshots: Boolean(options['update-snapshots']),
+    shard: options.shard || null,
+    changed: Boolean(options.changed),
+    changedSince: options['changed-since'] || null,
+    passthrough: [...options.args],
+  };
+}
+
+function updateTestRunnerMetadata(selection, payload) {
+  global.testCommandMetadata.testRunner = {
+    id: selection.id,
+    apiVersion: selection.definition.registration.apiVersion,
+    payload: { ...payload },
+  };
+}
+
 async function doTestCommand(options) {
-  if (options['server-only'] && options['client-only']) {
-    Console.error('[Meteor Rstest] --server-only conflicts with --client-only.');
-    return 1;
-  }
-  if (!options.once && (options.shard || options.changed || options['changed-since'])) {
-    Console.error('[Meteor Rstest] --shard and --changed require --once.');
-    return 1;
-  }
   if (options.filter) {
     process.env.TINYTEST_FILTER = options.filter;
   }
@@ -2351,43 +2396,6 @@ async function doTestCommand(options) {
   // As long as the Meteor CLI runs a single command as part of each
   // process, this should be safe.
   global.testCommandMetadata = {};
-
-  const testRunnerCommand = options['test-packages'] ? 'test-packages' : 'test';
-  const {
-    inspectAppRstestCapability,
-  } = require('./test-runners/rstest-process.js');
-  const { resolveTestRunner } = require('./test-runners/resolve.js');
-  const appCapability = inspectAppRstestCapability(options.appDir);
-  const packageTestAutoInstallPolicy = testRunnerCommand === 'test-packages' &&
-    Object.hasOwn(appCapability.packageJsonMeteor, 'autoInstallDeps')
-    ? { autoInstallDeps: appCapability.packageJsonMeteor.autoInstallDeps }
-    : null;
-  let testRunnerSelection;
-  try {
-    testRunnerSelection = resolveTestRunner({
-      command: testRunnerCommand,
-      explicitTestRunner: options['test-runner'],
-      driverPackage: options['driver-package'],
-      envTestRunner: process.env.METEOR_TEST_RUNNER,
-      packageJsonMeteor: appCapability.packageJsonMeteor,
-      hasRstestPackage: appCapability.hasRstestPackage,
-    });
-  } catch (error) {
-    Console.error(error.message);
-    return 1;
-  }
-
-  const shouldDeferPackageDefault =
-    testRunnerCommand === 'test-packages' &&
-    testRunnerSelection.source === 'legacy-default';
-  if (!shouldDeferPackageDefault && testRunnerSelection.driverPackage) {
-    options['driver-package'] = testRunnerSelection.driverPackage;
-  }
-  global.testCommandMetadata.testRunner = testRunnerSelection.engine;
-  global.testCommandMetadata.rstestTestNamePattern =
-    options['test-name-pattern'] ||
-    (options.filter && options.filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) ||
-    null;
 
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
@@ -2431,352 +2439,25 @@ async function doTestCommand(options) {
     testRunnerAppDir = files.mkdtemp('meteor-test-run');
   }
 
-  let runAppRstestNativePhase;
-  let appRstestNativeOnly = false;
-  let runPackageRstestNativePhase;
-
-  if (testRunnerSelection.engine === 'driver' && options.test) {
-    const { scanNativeRstestRoots } = require('./test-runners/rstest-process.js');
-    const nativeRoots = scanNativeRstestRoots(options.appDir, {
-      fullApp: options['full-app'],
-    });
-    const skippedRstestFiles = nativeRoots.pureFiles.length +
-      nativeRoots.runtimeFiles.length + nativeRoots.externalFiles.length;
-    if (skippedRstestFiles > 0) {
-      Console.warn(
-        `[Meteor Rstest] Explicit driver route will not execute ${skippedRstestFiles} ` +
-        'Rstest-owned test file(s) under tests/rstest. Run without --driver-package to execute them.'
-      );
-    }
-  }
-
-  if (testRunnerSelection.engine === 'rstest' && options.test) {
-    const {
-      buildRstestArgs,
-      runRstestProcess,
-      scanNativeRstestRoots,
-      selectRstestInventory,
-      selectRstestLanes,
-      startRstestProcess,
-    } = require('./test-runners/rstest-process.js');
-    const nativeRoots = scanNativeRstestRoots(options.appDir, {
-      fullApp: options['full-app'],
-    });
-    const explicitlySelectedProjects = options.project ? [options.project] : [];
-    const clientProjects = new Set([
-      'meteor-pure-client', 'meteor-browser', 'meteor-runtime-client', 'meteor-e2e',
-    ]);
-    const serverProjects = new Set([
-      'meteor-pure-server', 'meteor-runtime-server', 'meteor-e2e',
-    ]);
-    if (options['server-only'] &&
-        explicitlySelectedProjects.some(project => clientProjects.has(project)) ||
-        options['client-only'] &&
-        explicitlySelectedProjects.some(project => serverProjects.has(project))) {
-      Console.error(
-        `[Meteor Rstest] --project ${explicitlySelectedProjects.join(', ')} conflicts with ` +
-        `${options['server-only'] ? '--server-only' : '--client-only'}.`
-      );
-      return 1;
-    }
-    const laneProjects = explicitlySelectedProjects.length > 0
-      ? explicitlySelectedProjects
-      : options['server-only']
-        ? ['meteor-pure-server', 'meteor-runtime-server']
-        : options['client-only']
-          ? ['meteor-pure-client', 'meteor-browser', 'meteor-runtime-client']
-          : [];
-    const selectedInventory = selectRstestInventory({
-      appDir: options.appDir,
-      roots: nativeRoots,
-      projects: laneProjects,
-      testFile: options['test-file'],
-    });
-    const explicitlyRequestsExternal = explicitlySelectedProjects.includes('meteor-e2e') ||
-      Boolean(options['test-file'] && selectedInventory.externalFiles.length > 0);
-    if (explicitlyRequestsExternal && !options['full-app']) {
-      Console.error(
-        '[Meteor Rstest] meteor-e2e requires --full-app so Meteor owns a complete app lifecycle.'
-      );
-      return 1;
-    }
-    if (!options['full-app']) selectedInventory.externalFiles = [];
-    const selectedOwnedCount = selectedInventory.pureFiles.length +
-      selectedInventory.runtimeFiles.length + selectedInventory.externalFiles.length;
-    const hasUnknownProject = selectedInventory.unknownProjects.length > 0;
-
-    if (explicitlySelectedProjects.length > 0 &&
-        !hasUnknownProject && selectedOwnedCount === 0) {
-      Console.error(
-        `[Meteor Rstest] Project ${explicitlySelectedProjects.join(', ')} has no matching tests. ` +
-        'Nothing was executed.'
-      );
-      return 1;
-    }
-    if (options['test-file'] && selectedOwnedCount === 0 && !hasUnknownProject &&
-        !(selectedInventory.compatibilityFiles.length > 0 &&
-          appCapability.hasRstestConfig)) {
-      if (selectedInventory.compatibilityFiles.length > 0) {
-        Console.error(
-          `[Meteor Rstest] --test-file ${options['test-file']} is compatibility-owned. ` +
-          'Run it with its real --driver-package.'
-        );
-      } else {
-        Console.error(
-          `[Meteor Rstest] --test-file ${options['test-file']} matched no selected Rstest test. ` +
-          'Nothing was executed.'
-        );
-      }
-      return 1;
-    }
-    if (selectedOwnedCount === 0 && !hasUnknownProject &&
-        !appCapability.hasRstestConfig && nativeRoots.legacyFiles.length > 0) {
-      Console.error(
-        `[Meteor Rstest] Found ${nativeRoots.legacyFiles.length} existing Meteor test file(s), ` +
-        'but no tests in tests/rstest. Nothing was executed. Run with your existing ' +
-        '--driver-package, or migrate a test into a tests/rstest ownership root.'
-      );
-      return 1;
-    }
-    if (nativeRoots.legacyFiles.length > 0) {
-      if (appCapability.hasRstestConfig) {
-        Console.warn(
-          `[Meteor Rstest] ${nativeRoots.legacyFiles.length} test file(s) outside Meteor-owned roots ` +
-          'are delegated to rstest.config projects; unmatched files remain on their existing driver route.'
-        );
-      } else {
-        Console.warn(
-          `[Meteor Rstest] ${nativeRoots.legacyFiles.length} compatibility test file(s) remain on the real driver route. ` +
-          'Run with --driver-package meteortesting:mocha (or your existing driver) to execute them.'
-        );
-      }
-    }
-    options.rstestHasRuntimeClient = selectedInventory.runtimeFiles.some(filePath =>
-        /[\\/]runtime[\\/]client[\\/]/.test(filePath)
-      );
-    options.rstestHasRuntimeServer = selectedInventory.runtimeFiles.some(filePath =>
-        /[\\/]runtime[\\/]server[\\/]/.test(filePath)
-      );
-    if (options['test-file'] && selectedInventory.runtimeFiles.length > 0) {
-      const manifestPath = files.pathJoin(
-        testRunnerAppDir,
-        '.meteor',
-        'local',
-        'rstest',
-        'runtime-files.json',
-      );
-      files.mkdir_p(files.pathDirname(manifestPath));
-      files.writeFile(manifestPath, JSON.stringify(selectedInventory.runtimeFiles));
-      global.testCommandMetadata.rstestRuntimeManifest = manifestPath;
-    } else {
-      global.testCommandMetadata.rstestRuntimeManifest = null;
-    }
-    const rstestLanes = selectRstestLanes(laneProjects);
-    const nativeProjects = explicitlySelectedProjects.filter(
-      project => !project.startsWith('meteor-runtime-') && project !== 'meteor-e2e'
-    );
-    let nativeServer = !options['client-only'];
-    let nativeClient = !options['server-only'];
-    if (!options['server-only'] && !options['client-only'] && nativeProjects.length > 0) {
-      if (nativeProjects.every(project => project === 'meteor-pure-server')) {
-        nativeServer = true;
-        nativeClient = false;
-      } else if (nativeProjects.every(project =>
-        project === 'meteor-pure-client' || project === 'meteor-browser'
-      )) {
-        nativeServer = false;
-        nativeClient = true;
-      }
-    }
-    const needsRuntime = rstestLanes.runtime && selectedInventory.runtimeFiles.length > 0;
-    const needsExternal = rstestLanes.external && selectedInventory.externalFiles.length > 0;
-    if (needsRuntime && (options.shard || options.changed || options['changed-since'])) {
-      Console.error(
-        '[Meteor Rstest] --shard and --changed are not supported for Meteor-runtime ' +
-        'projects yet. Select only pure Rstest projects, or omit these options.'
-      );
-      return 1;
-    }
-    const shouldRunNative = rstestLanes.native && (
-      !options['test-file'] ||
-      selectedInventory.pureFiles.length > 0 ||
-      (appCapability.hasRstestConfig &&
-        selectedInventory.compatibilityFiles.length > 0) ||
-      hasUnknownProject
-    );
-    options.rstestRunRuntime = needsRuntime;
-    if (needsExternal && !options.once) {
-      Console.error('[Meteor Rstest] External E2E projects currently require --once.');
-      return 1;
-    }
-    const testNamePattern = options['test-name-pattern'] ||
-      (options.filter && options.filter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
-    const runtimeSettingsPath = needsRuntime
-      ? files.pathJoin(
-        testRunnerAppDir,
-        '.meteor',
-        'local',
-        'rstest',
-        'app-runtime-settings.json',
-      )
-      : null;
-    const runtimeSettingsGeneration = needsRuntime
-      ? require('crypto').randomBytes(16).toString('hex')
-      : null;
-    if (runtimeSettingsPath) {
-      try {
-        files.unlink(runtimeSettingsPath);
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
-      }
-    }
-    const applyRuntimeSettings = () => {
-      const settings = JSON.parse(files.readFile(runtimeSettingsPath, 'utf8'));
-      if (settings.schemaVersion !== 1 ||
-          settings.generation !== runtimeSettingsGeneration) {
-        const error = new Error('[Meteor Rstest] Ignored stale runtime settings payload.');
-        error.code = 'METEOR_RSTEST_STALE_SETTINGS';
-        throw error;
-      }
-      global.testCommandMetadata.rstestTestTimeout = settings.testTimeout;
-      global.testCommandMetadata.rstestHookTimeout = settings.hookTimeout;
-    };
-    const waitForRuntimeSettings = async processHandle => {
-      const deadline = Date.now() + 30000;
-      while (Date.now() < deadline) {
-        try {
-          applyRuntimeSettings();
-          return;
-        } catch {}
-        const state = await Promise.race([
-          new Promise(resolve => setTimeout(() => resolve(null), 50)),
-          processHandle.completion.then(code => ({ code }), error => ({ error })),
-        ]);
-        if (state && state.error) throw state.error;
-        if (state && state.code !== 0) {
-          throw new Error(
-            `[Meteor Rstest] Native watcher exited with status ${state.code} before loading config.`
-          );
-        }
-      }
-      throw new Error('[Meteor Rstest] Timed out waiting for runtime settings from rstest.config.');
-    };
-    const rstestArgs = buildRstestArgs({
-      appDir: options.appDir,
-      localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
-      once: options.once,
-      fullApp: options['full-app'],
-      server: nativeServer,
-      client: nativeClient,
-      command: 'test',
-      config: options.config,
-      project: nativeProjects,
-      testFile: options['test-file'],
-      testNamePattern,
-      browser: options.browser,
-      coverage: options.coverage,
-      updateSnapshots: options['update-snapshots'],
-      shard: options.shard,
-      changed: options.changed,
-      changedSince: options['changed-since'],
-      passWithNoTests: !options.project && !options['test-file'] &&
-        (needsRuntime || needsExternal),
-      runtimeSettingsOutput: runtimeSettingsPath,
-      runtimeSettingsGeneration,
-      architectures: [
-        ...(nativeServer ? [archinfo.host()] : []),
-        ...(nativeClient ? ['web.browser'] : []),
-      ],
-      phase: 'native',
-      passthrough: options.args,
-    });
-
-    if (needsExternal) {
-      options.rstestExternalResultPath = files.pathJoin(
-        testRunnerAppDir,
-        '.meteor',
-        'local',
-        'rstest',
-        'external-result.json',
-      );
-      try {
-        files.unlink(options.rstestExternalResultPath);
-      } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
-      }
-      options.rstestExternalArgs = buildRstestArgs({
-        appDir: options.appDir,
-        localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
-        once: true,
-        fullApp: true,
-        server: !options['client-only'],
-        client: !options['server-only'],
-        command: 'test',
-        config: options.config,
-        project: 'meteor-e2e',
-        testFile: options['test-file'],
-        testNamePattern,
-        coverage: options.coverage,
-        updateSnapshots: options['update-snapshots'],
-        shard: options.shard,
-        changed: options.changed,
-        changedSince: options['changed-since'],
-        resultOutput: options.rstestExternalResultPath,
-        phase: 'external',
-        architectures: [
-          ...(!options['client-only'] ? [archinfo.host()] : []),
-          ...(!options['server-only'] ? ['web.browser'] : []),
-        ],
-        passthrough: options.args,
-      });
-      options.rstestHasExternal = true;
-    }
-
-    runAppRstestNativePhase = async () => {
-      if (shouldRunNative) {
-        if (options.once || !needsRuntime) {
-          const code = await runRstestProcess({ appDir: options.appDir, args: rstestArgs });
-          if (code === 0 && needsRuntime) applyRuntimeSettings();
-          if (code !== 0) return code;
-        } else {
-          options.rstestProcessHandle = startRstestProcess({
-            appDir: options.appDir,
-            args: rstestArgs,
-          });
-          await waitForRuntimeSettings(options.rstestProcessHandle);
-        }
-      } else if (needsRuntime) {
-        const planCode = await runRstestProcess({
-          appDir: options.appDir,
-          args: buildRstestArgs({
-            appDir: options.appDir,
-            localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
-            once: true,
-            fullApp: options['full-app'],
-            server: !options['client-only'],
-            client: !options['server-only'],
-            command: 'test',
-            config: options.config,
-            runtimePlanOutput: runtimeSettingsPath,
-            runtimeSettingsGeneration,
-            architectures: [
-              ...(!options['client-only'] ? [archinfo.host()] : []),
-              ...(!options['server-only'] ? ['web.browser'] : []),
-            ],
-            phase: 'native',
-          }),
-        });
-        if (planCode !== 0) return planCode;
-        applyRuntimeSettings();
-      }
-      return 0;
-    };
-
-    appRstestNativeOnly = !needsRuntime && !needsExternal;
-
-    global.testCommandMetadata.rstestWatch = !options.once;
-    global.testCommandMetadata.rstestGeneration = 1;
-  }
+  const testRunnerCommand = options['test-packages']
+    ? 'test-packages'
+    : 'test';
+  const sourceAppDir = options.appDir || process.cwd();
+  const packageJsonMeteor = readTestRunnerPackageConfig(sourceAppDir);
+  const { createHarnessNpmService } = require('./test-runners/harness-npm.js');
+  const testRunnerNpm = createHarnessNpmService({
+    root: options['test-packages'] ? testRunnerAppDir : sourceAppDir,
+    autoInstall: packageJsonMeteor.autoInstallDeps !== false,
+  });
+  let testRunnerSelection;
+  let testRunnerSession;
+  let testRunnerPlan;
+  let testRunnerProcess;
+  let updateTestRunnerMetadataPayload;
+  let selectedTestPackages = [];
+  let testRunnerConstraintsResolved = false;
+  const defaultPackageTestDriver = 'test-in-browser';
+  let defaultPackageTestDriverAdded = false;
 
   // Download packages for our architecture, and for the deploy server's
   // architecture if we're deploying.
@@ -2812,29 +2493,6 @@ async function doTestCommand(options) {
   if (options["test-packages"]) {
     projectContextOptions.projectDir = testRunnerAppDir;
     projectContextOptions.projectDirForLocalPackages = options.appDir;
-
-    try {
-      const { install } = require("./default-npm-deps.js");
-      await install(testRunnerAppDir, packageTestAutoInstallPolicy && {
-        // ProjectContext rebinds build-plugin Meteor config to this generated
-        // harness. Carry only the source app's explicit install policy; source
-        // entrypoints and other app config do not belong in package tests.
-        persistMeteorConfig: packageTestAutoInstallPolicy,
-      });
-    } catch (error) {
-      if (error.code === 'EACCES' && options['test-app-path']) {
-        Console.error(
-          'The specified --test-app-path directory of ' +
-          `"${testRunnerAppDir}" exists, but the current user does not have ` +
-          `read/write permission in it.`
-        );
-      }
-      throw error;
-    }
-
-    if (buildmessage.jobHasMessages()) {
-      return;
-    }
 
     // Find any packages mentioned by a path instead of a package name. We will
     // load them explicitly into the catalog.
@@ -2878,116 +2536,19 @@ async function doTestCommand(options) {
       });
     }
 
-    const { resolvePackageTestRunner } = require('./test-runners/resolve.js');
-    const selectedPackages = [];
     for (const packageName of packagesToAdd) {
-      const version = await projectContext.localCatalog.getLatestVersion(packageName);
-      selectedPackages.push({ name: packageName, version });
-    }
-    let packageWebArchs = projectContext.platformList.getWebArchs();
-    if (options.cordovaRunner) packageWebArchs.push('web.cordova');
-    packageWebArchs = filterWebArchs(
-      packageWebArchs,
-      options['exclude-archs'],
-      projectContext.appDirectory,
-      options,
-    );
-    options.testRunnerWebArchs = packageWebArchs;
-    const packageTestArchitectures = [
-      ...(!options['client-only'] ? [archinfo.host()] : []),
-      ...(!options['server-only'] ? packageWebArchs : []),
-    ];
-    try {
-      testRunnerSelection = resolvePackageTestRunner({
-        selection: testRunnerSelection,
-        packages: selectedPackages,
-        architectures: packageTestArchitectures,
+      selectedTestPackages.push({
+        name: packageName,
+        version: await projectContext.localCatalog.getLatestVersion(packageName),
       });
-    } catch (error) {
-      Console.error(error.message);
-      return 1;
     }
-    if (testRunnerSelection.warning) {
-      Console.warn(testRunnerSelection.warning);
-    }
-    options['driver-package'] = testRunnerSelection.driverPackage;
-    global.testCommandMetadata.testRunner = testRunnerSelection.engine;
-    if (testRunnerSelection.engine === 'rstest') {
-      const unsupported = [
-        ['--project', options.project],
-        ['--test-file', options['test-file']],
-        ['--coverage', options.coverage],
-        ['--update-snapshots', options['update-snapshots']],
-        ['--shard', options.shard],
-        ['--changed', options.changed],
-        ['--changed-since', options['changed-since']],
-      ].filter(([, value]) => value);
-      if (unsupported.length > 0) {
-        Console.error(
-          '[Meteor Rstest] meteor test-packages does not yet support ' +
-          `${unsupported.map(([name]) => name).join(', ')}. ` +
-          'No package tests were executed.'
-        );
-        return 1;
-      }
-      const { install } = require("./default-npm-deps.js");
-      const installed = await install(testRunnerAppDir, {
-        // Rstest and Rspack append their npm toolchains through Atmosphere
-        // build plugins. Persist Meteor defaults so npm cannot prune required
-        // runtime dependencies from this generated harness.
-        persistDefaultDependencies: true,
-      });
-      if (!installed || buildmessage.jobHasMessages()) return 1;
-      const {
-        buildRstestArgs,
-        runRstestProcess,
-      } = require('./test-runners/rstest-process.js');
-      const rstestConfigRoot = options.appDir || process.cwd();
-      const runtimePlanPath = files.pathJoin(
-        testRunnerAppDir,
-        '.meteor',
-        'local',
-        'rstest',
-        'package-runtime-plan.json',
-      );
-      runPackageRstestNativePhase = async () => {
-        const planCode = await runRstestProcess({
-          appDir: rstestConfigRoot,
-          packageRoot: testRunnerAppDir,
-          args: buildRstestArgs({
-            appDir: rstestConfigRoot,
-            localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
-            harnessRoot: testRunnerAppDir,
-            once: true,
-            server: !options['client-only'],
-            client: !options['server-only'],
-            command: 'test-packages',
-            config: options.config,
-            phase: 'native',
-            runtimePlanOutput: runtimePlanPath,
-            architectures: packageTestArchitectures,
-          }),
-        });
-        if (planCode !== 0) return planCode;
-        const runtimePlan = JSON.parse(files.readFile(runtimePlanPath, 'utf8'));
-        global.testCommandMetadata.rstestTestTimeout = runtimePlan.testTimeout;
-        global.testCommandMetadata.rstestHookTimeout = runtimePlan.hookTimeout;
-        return 0;
-      };
-    }
-    global.testCommandMetadata.driverPackage = options['driver-package'];
-    if (testRunnerSelection.engine === 'rstest') {
-      global.testCommandMetadata.rstestWatch = !options.once;
-      global.testCommandMetadata.rstestGeneration = 1;
-    }
-
-    // Use the driver package if running `meteor test-packages`. For
-    // `meteor test`, the driver package is expected to already
-    // have been added to the app.
-    packagesToAdd.unshift(global.testCommandMetadata.driverPackage);
 
     // Also, add `autoupdate` so that you don't have to manually refresh the tests
     packagesToAdd.unshift("autoupdate");
+    if (!options['driver-package']) {
+      packagesToAdd.push(defaultPackageTestDriver);
+      defaultPackageTestDriverAdded = true;
+    }
 
     var constraintsToAdd = _.map(packagesToAdd, function (p) {
       return utils.parsePackageConstraint(p);
@@ -3005,12 +2566,6 @@ async function doTestCommand(options) {
     // projectContext.reset.
     await projectContext.projectConstraintsFile.writeIfModified();
   } else if (options["test"]) {
-    if (!options['driver-package']) {
-      throw new Error("You must specify a driver package with --driver-package");
-    }
-
-    global.testCommandMetadata.driverPackage = options['driver-package'];
-
     global.testCommandMetadata.isAppTest = options['full-app'];
     global.testCommandMetadata.isTest = !global.testCommandMetadata.isAppTest;
 
@@ -3054,51 +2609,190 @@ async function doTestCommand(options) {
     throw new Error("Unexpected: neither test-packages nor test");
   }
 
-  process.env.METEOR_TEST_RUNNER = testRunnerSelection.engine;
-  if (testRunnerSelection.engine === 'rstest') {
-    const rstestNpmRoot = options['test-packages']
-      ? testRunnerAppDir
-      : options.appDir || projectContext.projectDir;
-    process.env.METEOR_RSTEST_NPM_ROOT = rstestNpmRoot;
-    process.env.METEOR_RSPACK_NPM_ROOT = rstestNpmRoot;
-    const {
-      configureRstestRuntimeMetadata,
-      initializeRstestBuildPlugins,
-    } = require('./test-runners/rstest-process.js');
-    const rstestWebArchs = getTestWebArchs(projectContext, options);
-    const rstestSelection = configureRstestRuntimeMetadata({
-      metadata: global.testCommandMetadata,
-      options,
-      webArchs: rstestWebArchs,
-    });
-    if (rstestSelection.requiresDesktopBrowser &&
-        !rstestSelection.hasDesktopBrowser) {
-      Console.error(
-        '[Meteor Rstest] Selected client tests require web.browser or web.browser.legacy. ' +
-        'Cordova/mobile Rstest transport is not implemented; no tests were executed.'
+  const {
+    discoverTestRunnerProviders,
+    resolveTestRunnerProvider,
+  } = require('./test-runners/provider-registry.js');
+  try {
+    const requestedTestRunner = options['test-runner'] ??
+      process.env.METEOR_TEST_RUNNER ??
+      packageJsonMeteor.testRunner;
+    if (options['driver-package'] || requestedTestRunner === 'driver') {
+      testRunnerSelection = await resolveTestRunnerProvider({
+        command: testRunnerCommand,
+        driverPackage: options['driver-package'],
+        explicitTestRunner: options['test-runner'],
+        envTestRunner: process.env.METEOR_TEST_RUNNER,
+        packageJsonMeteor,
+        discoverProviders: async () => {
+          throw new Error('driver selection must bypass provider discovery');
+        },
+      });
+    } else {
+      let providerDefinitions = [];
+      let packageRecords = [];
+      await main.captureAndExit(
+        '=> Errors while discovering test runner providers:',
+        async function () {
+          await projectContext.resolveConstraints();
+          testRunnerConstraintsResolved = true;
+          packageRecords = await collectTestRunnerPackageRecords(projectContext);
+          providerDefinitions = await discoverTestRunnerProviders({
+            projectContext,
+            packageRecords,
+            architectures: serverArchitectures,
+          });
+        }
       );
+      if (buildmessage.jobHasMessages()) return 1;
+      const appPackageNames = packageRecords.map(record => record.name);
+      const packageWebArchs = filterWebArchs(
+        projectContext.platformList.getWebArchs(),
+        options['exclude-archs'],
+        projectContext.appDirectory,
+        options,
+      );
+      const testArchitectures = [
+        ...(!options['client-only'] ? [archinfo.host()] : []),
+        ...(!options['server-only'] ? packageWebArchs : []),
+      ];
+      testRunnerSelection = await resolveTestRunnerProvider({
+        command: testRunnerCommand,
+        explicitTestRunner: options['test-runner'],
+        envTestRunner: process.env.METEOR_TEST_RUNNER,
+        packageJsonMeteor,
+        appPackageNames,
+        testPackages: selectedTestPackages,
+        architectures: testArchitectures,
+        discoverProviders: async () => providerDefinitions,
+      });
+    }
+  } catch (error) {
+    Console.error(error.message);
+    return 1;
+  }
+
+  if (testRunnerSelection.engine === 'driver') {
+    options['driver-package'] = testRunnerSelection.driverPackage;
+    if (options.test && !options['driver-package']) {
+      throw new Error('You must specify a driver package with --driver-package');
+    }
+    global.testCommandMetadata.driverPackage = options['driver-package'];
+
+    if (options['test-packages']) {
+      try {
+        await testRunnerNpm.ensureHarnessManifest({ retain: false });
+        await testRunnerNpm.restoreIfTemporary();
+      } catch (error) {
+        if (error.code === 'EACCES' && options['test-app-path']) {
+          Console.error(
+            'The specified --test-app-path directory of ' +
+            `"${testRunnerAppDir}" exists, but current user lacks read/write permission.`
+          );
+        }
+        throw error;
+      }
+      if (!projectContext.projectConstraintsFile.getConstraint(
+        options['driver-package']
+      )) {
+        projectContext.projectConstraintsFile.addConstraints([
+          utils.parsePackageConstraint(options['driver-package']),
+        ]);
+        await projectContext.projectConstraintsFile.writeIfModified();
+      }
+      if (!testRunnerConstraintsResolved) {
+        projectContext.reset();
+        await main.captureAndExit(
+          '=> Errors while setting up tests:',
+          () => projectContext.initializeCatalog()
+        );
+      }
+    }
+  } else {
+    if (options['test-packages'] && defaultPackageTestDriverAdded) {
+      projectContext.projectConstraintsFile.removePackages([
+        defaultPackageTestDriver,
+      ]);
+      await projectContext.projectConstraintsFile.writeIfModified();
+      projectContext.reset();
+      await main.captureAndExit(
+        '=> Errors while setting up tests:',
+        async () => {
+          await projectContext.initializeCatalog();
+          await projectContext.resolveConstraints();
+        }
+      );
+    }
+    const {
+      createProviderSession,
+      createTestRunnerContext,
+    } = require('./test-runners/provider-contract.js');
+    const testRunnerWebArchs = filterWebArchs(
+      projectContext.platformList.getWebArchs(),
+      options['exclude-archs'],
+      projectContext.appDirectory,
+      options,
+    );
+    const providerContextData = createTestRunnerContext({
+      command: testRunnerCommand,
+      appDir: sourceAppDir,
+      harnessRoot: testRunnerAppDir,
+      localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
+      architectures: [
+        ...(!options['client-only'] ? [archinfo.host()] : []),
+        ...(!options['server-only'] ? testRunnerWebArchs : []),
+      ],
+      webArchs: testRunnerWebArchs,
+      options: normalizeTestRunnerOptions(options),
+    });
+    const providerContext = Object.freeze({
+      ...providerContextData,
+      npm: testRunnerNpm,
+    });
+    try {
+      const provider = testRunnerSelection.definition.factory(providerContext);
+      testRunnerSession = createProviderSession({
+        registration: testRunnerSelection.definition.registration,
+        provider,
+        context: providerContext,
+      });
+      testRunnerPlan = await testRunnerSession.prepare();
+    } catch (error) {
+      Console.error(error.message);
       return 1;
     }
-    await main.captureAndExit(
-      '=> Errors while preparing Rstest dependencies:',
-      async function () {
-        await initializeRstestBuildPlugins(projectContext, {
-          enterJob: (packageName, operation) => buildmessage.enterJob(
-            `initializing ${packageName} build plugin`,
-            operation,
-          ),
-        });
-      },
-    );
-    if (buildmessage.jobHasMessages()) return 1;
+    updateTestRunnerMetadata(testRunnerSelection, testRunnerPlan.metadata || {});
+    const { setTestRunnerContext } = require('../tool-env/test-runner-context.js');
+    setTestRunnerContext({
+      providerId: testRunnerSelection.id,
+      buildPluginOptions: testRunnerPlan.buildPluginOptions || {},
+    });
+    process.env.METEOR_TEST_RUNNER = testRunnerSelection.id;
 
-    if (runPackageRstestNativePhase) {
-      const code = await runPackageRstestNativePhase();
-      if (code !== 0) return code;
+    const updateMetadata = updateTestRunnerMetadataPayload = payload =>
+      updateTestRunnerMetadata(testRunnerSelection, payload);
+    let preHost;
+    try {
+      preHost = await testRunnerSession.startBeforeHost({ updateMetadata });
+    } catch (error) {
+      Console.error(error.message);
+      await testRunnerSession.stop();
+      require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+      return 1;
     }
-    if (runAppRstestNativePhase) {
-      const code = await runAppRstestNativePhase();
-      if (code !== 0 || appRstestNativeOnly) return code;
+    if (preHost && preHost.exitCode && preHost.exitCode !== 0) {
+      await testRunnerSession.stop();
+      require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+      return preHost.exitCode;
+    }
+    testRunnerProcess = preHost && preHost.process;
+    if (testRunnerPlan.mode === 'native-only') {
+      const code = testRunnerProcess
+        ? await testRunnerProcess.completion
+        : preHost && preHost.exitCode || 0;
+      await testRunnerSession.stop();
+      require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+      return code;
     }
   }
 
@@ -3133,16 +2827,24 @@ async function doTestCommand(options) {
   }
 
   options.cordovaRunner = cordovaRunner;
+  options.testRunnerSession = testRunnerSession;
+  options.testRunnerProcess = testRunnerProcess;
+  options.updateTestRunnerMetadata = updateTestRunnerMetadataPayload;
 
-  return await runTestAppForPackages(projectContext, Object.assign(
-    options,
-    {
-      mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
-      cordovaServerPort: parsedCordovaServerPort,
-      proxyPort: parsedServerUrl.port,
-      proxyHost: parsedServerUrl.hostname,
-    }
-  ));
+  try {
+    return await runTestAppForPackages(projectContext, Object.assign(
+      options,
+      {
+        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+        cordovaServerPort: parsedCordovaServerPort,
+        proxyPort: parsedServerUrl.port,
+        proxyHost: parsedServerUrl.hostname,
+      }
+    ));
+  } finally {
+    if (testRunnerSession) await testRunnerSession.stop();
+    require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+  }
 }
 
 // Returns the "local-test:*" package names for the given package names (or for
@@ -3201,47 +2903,19 @@ var getTestPackageNames = async function (projectContext, packageNames) {
   return testPackages;
 };
 
-function getTestWebArchs(projectContext, options) {
-  if (options.testRunnerWebArchs) return [...options.testRunnerWebArchs];
-  const webArchs = projectContext.platformList.getWebArchs();
-  if (options.cordovaRunner) webArchs.push('web.cordova');
-  return filterWebArchs(
-    webArchs,
-    options['exclude-archs'],
-    projectContext.appDirectory,
-    options,
-  );
-}
-
 var runTestAppForPackages = async function (projectContext, options) {
   var buildOptions = {
     minifyMode: options.production ? 'production' : 'development'
   };
   buildOptions.buildMode = "test";
-  buildOptions.webArchs = getTestWebArchs(projectContext, options);
+  let webArchs = projectContext.platformList.getWebArchs();
+  if (options.cordovaRunner) {
+    webArchs.push("web.cordova");
+  }
+  buildOptions.webArchs = filterWebArchs(webArchs, options['exclude-archs'], projectContext.appDirectory, options);
   // Set the webArchs to include for compilation later
   global.includedWebArchs = buildOptions.webArchs;
 
-  const {
-    configureRstestRuntimeMetadata,
-  } = require('./test-runners/rstest-process.js');
-  const {
-    hasDesktopBrowser,
-    requiresDesktopBrowser,
-    shouldRunRstestClient,
-    shouldRunRstestExternal,
-  } = configureRstestRuntimeMetadata({
-    metadata: global.testCommandMetadata,
-    options,
-    webArchs: buildOptions.webArchs,
-  });
-  if (requiresDesktopBrowser && !hasDesktopBrowser) {
-    Console.error(
-      '[Meteor Rstest] Selected client tests require web.browser or web.browser.legacy. ' +
-      'Cordova/mobile Rstest transport is not implemented; no tests were executed.'
-    );
-    return 1;
-  }
   if (options.deploy) {
     // Run the constraint solver and build local packages.
     await main.captureAndExit("=> Errors while initializing project:", function () {
@@ -3260,8 +2934,7 @@ var runTestAppForPackages = async function (projectContext, options) {
     });
   } else {
     var runAll = require('../runners/run-all.js');
-    try {
-      return await runAll.run({
+    return runAll.run({
       projectContext: projectContext,
       proxyPort: options.proxyPort,
       proxyHost: options.proxyHost,
@@ -3280,12 +2953,9 @@ var runTestAppForPackages = async function (projectContext, options) {
       recordPackageUsage: false,
       selenium: options.selenium,
       seleniumBrowser: options['selenium-browser'],
-      rstestBrowser: shouldRunRstestClient,
-      rstestBrowserName: options.browser,
-      rstestExternal: shouldRunRstestExternal,
-      rstestExternalArgs: options.rstestExternalArgs,
-      rstestExternalResultPath: options.rstestExternalResultPath,
-      rstestProcessHandle: options.rstestProcessHandle,
+      testRunnerSession: options.testRunnerSession,
+      testRunnerProcess: options.testRunnerProcess,
+      updateTestRunnerMetadata: options.updateTestRunnerMetadata,
       cordovaRunner: options.cordovaRunner,
       // On the first run, we shouldn't display the delta between "no packages
       // in the temp app" and "all the packages we're testing". If we make
@@ -3302,12 +2972,7 @@ var runTestAppForPackages = async function (projectContext, options) {
           }
         }
       }
-      });
-    } finally {
-      if (options.rstestProcessHandle) {
-        await options.rstestProcessHandle.stop();
-      }
-    }
+    });
   }
 };
 
@@ -4081,7 +3746,8 @@ main.registerCommand({
     port: { type: Number, short: "p", default: DEFAULT_PORT },
     url: { type: Boolean, short: "U" },
     'delete': { type: Boolean, short: "D" },
-    changed: { type: Boolean }
+    changed: { type: Boolean },
+    repeatable: { type: [String] }
   },
   maxArgs: 2,
   hidden: true,
@@ -4102,6 +3768,9 @@ main.registerCommand({
   }
   if (options['delete']) {
     Console.info('delete');
+  }
+  if (options.repeatable) {
+    Console.info(p('repeatable'));
   }
 });
 

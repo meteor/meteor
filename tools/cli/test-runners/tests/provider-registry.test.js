@@ -7,13 +7,18 @@ const {
   resolveTestRunnerProvider,
 } = require('../provider-registry.js');
 
-function definition(id, activationPackages = [`${id}:runtime`]) {
+function definition(
+  id,
+  activationPackages = [`${id}:runtime`],
+  registration = {}
+) {
   return {
     packageName: `${id}:tooling`,
     registration: {
       id,
       apiVersion: 1,
       activationPackages,
+      ...registration,
     },
     factory: context => ({
       async validate() {},
@@ -29,6 +34,15 @@ function dependency(name, overrides = {}) {
     dependencies: {
       [name]: { references: [{ arch: 'os', ...overrides }] },
     },
+  };
+}
+
+function dependencies(entries) {
+  return {
+    dependencies: Object.fromEntries(entries.map(([name, overrides = {}]) => [
+      name,
+      { references: [{ arch: 'os', ...overrides }] },
+    ])),
   };
 }
 
@@ -50,6 +64,36 @@ test('explicit driver package bypasses provider discovery', async () => {
     source: '--driver-package',
   });
   assert.equal(discoveries, 0);
+});
+
+test('explicit driver policy bypasses provider discovery', async () => {
+  let discoveries = 0;
+  const selected = await resolveTestRunnerProvider({
+    command: 'test-packages',
+    packageJsonMeteor: { testRunner: 'driver' },
+    discoverProviders: async () => {
+      discoveries += 1;
+      return [definition('example')];
+    },
+  });
+
+  assert.equal(selected.id, 'driver');
+  assert.equal(selected.source, 'package.json#meteor.testRunner');
+  assert.equal(discoveries, 0);
+});
+
+test('CLI test-runner selector accepts providers, not driver packages', async () => {
+  await assert.rejects(resolveTestRunnerProvider({
+    command: 'test',
+    explicitTestRunner: 'driver',
+    discoverProviders: async () => {
+      throw new Error('driver policy must fail before provider discovery');
+    },
+  }), error => {
+    assert.equal(error.code, 'METEOR_TEST_RUNNER_DRIVER_OPTION');
+    assert.match(error.message, /--driver-package/);
+    return true;
+  });
 });
 
 test('selector precedence chooses explicit, environment, then package config', async () => {
@@ -130,7 +174,78 @@ test('package provider must claim every selected package', async () => {
     testPackages: [claimed, unclaimed],
     architectures: ['os.osx.arm64'],
     discoverProviders: async () => providers,
-  }), error => error.code === 'METEOR_TEST_RUNNER_MIXED_PACKAGES');
+  }), error => {
+    assert.equal(error.code, 'METEOR_TEST_RUNNER_MIXED_PACKAGES');
+    assert.match(error.message, /local-test:one/);
+    assert.match(error.message, /local-test:two/);
+    return true;
+  });
+});
+
+test('provider-declared package conflicts fail before selecting one package', async () => {
+  const provider = definition('example', undefined, {
+    incompatiblePackages: [{
+      name: 'legacy:test-runtime',
+      driverPackage: 'legacy:driver',
+    }],
+  });
+  const selectedPackage = {
+    name: 'local-test:one',
+    version: dependencies([
+      ['example:runtime'],
+      ['legacy:test-runtime'],
+    ]),
+  };
+
+  for (const selector of [{}, { explicitTestRunner: 'example' }]) {
+    await assert.rejects(resolveTestRunnerProvider({
+      command: 'test-packages',
+      testPackages: [selectedPackage],
+      architectures: ['os.osx.arm64'],
+      discoverProviders: async () => [provider],
+      ...selector,
+    }), error => {
+      assert.equal(error.code, 'METEOR_TEST_RUNNER_PACKAGE_CONFLICT');
+      assert.match(error.message, /local-test:one/);
+      assert.match(error.message, /legacy:test-runtime/);
+      assert.match(error.message, /Migrate or remove tests using/);
+      assert.match(error.message, /meteor test-packages one/);
+      assert.match(
+        error.message,
+        /meteor test-packages one --driver-package legacy:driver/
+      );
+      return true;
+    });
+  }
+});
+
+test('weak, unordered, and non-applicable conflicts do not reject provider ownership', async () => {
+  const provider = definition('example', undefined, {
+    incompatiblePackages: [{
+      name: 'legacy:test-runtime',
+      driverPackage: 'legacy:driver',
+    }],
+  });
+
+  for (const conflictReference of [
+    { weak: true },
+    { unordered: true },
+    { arch: 'web.browser' },
+  ]) {
+    const selected = await resolveTestRunnerProvider({
+      command: 'test-packages',
+      testPackages: [{
+        name: 'local-test:one',
+        version: dependencies([
+          ['example:runtime'],
+          ['legacy:test-runtime', conflictReference],
+        ]),
+      }],
+      architectures: ['os.osx.arm64'],
+      discoverProviders: async () => [provider],
+    });
+    assert.equal(selected.id, 'example');
+  }
 });
 
 test('weak, unordered, and non-applicable dependencies do not activate provider', async () => {

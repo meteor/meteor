@@ -1,14 +1,28 @@
+const fs = require('node:fs');
+const path = require('node:path');
 const { createRequire } = require('node:module');
 
 function loadAppPlaywright(appDir) {
-  let packageJson;
-  try {
+  const directPackageJson = path.join(
+    appDir,
+    'node_modules',
+    '@meteorjs',
+    'rstest',
+    'package.json'
+  );
+  let packageJson = fs.existsSync(directPackageJson)
+    ? directPackageJson
+    : null;
+  if (!packageJson) try {
     packageJson = require.resolve('@meteorjs/rstest/package.json', {
       paths: [appDir],
     });
   } catch {
+    packageJson = null;
+  }
+  if (!packageJson || !path.isAbsolute(packageJson) || !fs.existsSync(packageJson)) {
     throw new Error(
-      '[Meteor Rstest] Cannot launch Meteor client tests because @meteorjs/rstest is missing. ' +
+      '[Meteor Rstest] @meteorjs/rstest is missing; cannot launch client tests. ' +
       'Run meteor npm install --save-dev @meteorjs/rstest@0.1.0-beta.0.',
     );
   }
@@ -22,7 +36,7 @@ class RstestBrowser {
     browser = 'chromium',
     headless = true,
     loadPlaywright = loadAppPlaywright,
-    log = message => require('./run-log.js').log(message),
+    log = message => console.log(message),
     token,
   }) {
     this.appDir = appDir;

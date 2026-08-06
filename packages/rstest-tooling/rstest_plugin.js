@@ -1,29 +1,21 @@
 /**
  * @module rstest_plugin
- * @description Rstest dependency bootstrap for Meteor test commands
+ * @description Rstest test-runner provider registration
  */
 
 const {
-  ensureRstestInstalled,
-  shouldEnsureRstestDependencies,
-} = require('./lib/dependencies.js');
-const {
-  hasMeteorAppConfigAutoInstallDeps,
-  isMeteorAppTest,
-  isMeteorPackagesTest,
-} = require('meteor/tools-core/lib/meteor');
-const { logError } = require('meteor/tools-core/lib/log');
+  RstestTestRunnerProvider,
+} = require('./provider/provider.js');
 
-if (shouldEnsureRstestDependencies({
-  testRunner: process.env.METEOR_TEST_RUNNER,
-  isAppTestCommand: isMeteorAppTest(),
-  isPackagesTestCommand: isMeteorPackagesTest(),
-  autoInstallDeps: hasMeteorAppConfigAutoInstallDeps(),
-})) {
-  try {
-    await ensureRstestInstalled();
-  } catch (error) {
-    logError(`Rstest plugin error: ${error.message}`);
-    throw error;
-  }
-}
+Plugin.registerTestRunner({
+  id: 'rstest',
+  apiVersion: 1,
+  activationPackages: ['rstest'],
+  incompatiblePackages: [{
+    name: 'tinytest',
+    driverPackage: 'test-in-browser',
+  }, {
+    name: 'meteortesting:mocha',
+    driverPackage: 'meteortesting:mocha',
+  }],
+}, context => new RstestTestRunnerProvider(context));

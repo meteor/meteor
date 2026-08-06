@@ -107,7 +107,26 @@ export const test = api.test;
 
 function testMetadata() {
   try {
-    return JSON.parse(process.env.TEST_METADATA || '{}');
+    const metadata = JSON.parse(process.env.TEST_METADATA || '{}');
+    if (metadata.testRunner && typeof metadata.testRunner === 'object' &&
+        metadata.testRunner.id === 'rstest') {
+      const payload = metadata.testRunner.payload || {};
+      return {
+        ...metadata,
+        testRunner: metadata.testRunner.id,
+        rstestGeneration: payload.generation,
+        rstestTestNamePattern: payload.testNamePattern,
+        rstestTestTimeout: payload.testTimeout,
+        rstestHookTimeout: payload.hookTimeout,
+        rstestToken: payload.token,
+        rstestServer: payload.server,
+        rstestClient: payload.client,
+        rstestRuntime: payload.runtime,
+        rstestExternal: payload.external,
+        rstestWatch: payload.watch,
+      };
+    }
+    return metadata;
   } catch {
     return {};
   }
@@ -174,3 +193,5 @@ export function start() {
     });
   });
 }
+
+start();

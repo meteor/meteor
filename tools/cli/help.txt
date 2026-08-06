@@ -673,6 +673,13 @@ directories, and core packages in that order). You can test any number
 of packages simultaneously. If you don't specify any package names
 then all available packages will be tested.
 
+Atmosphere packages may register a test-runner provider. When every selected
+test package is claimed by the same provider, Meteor selects it automatically.
+A driver package runs inside a generated Meteor test app. A test-runner
+provider runs inside the Meteor tool and may choose native-only execution or a
+Meteor-hosted test app. Use --test-runner only to select a registered provider
+explicitly; use --driver-package to select a runtime driver package.
+
 Open the test dashboard in your browser to run the tests and see the
 results. By default the URL is localhost:3000 but that can be changed
 with --port.
@@ -715,37 +722,25 @@ Options:
                     --extra-packages "package-name1, package-name2@1.2.3")
   --driver-package  Test driver package to use to run tests and display results.
                     For example: --driver-package meteortesting:mocha
-  --test-runner     Select the test engine explicitly (`rstest` or `driver`).
-                    For package tests, Meteor selects from each selected
-                    Package.onTest unibuild's strong test-engine dependency.
-  --config          Path to Rstest config. Package runtime plans currently use
-                    validated testTimeout and hookTimeout values.
-  --test-name-pattern
-                    Run Rstest cases whose full names match the pattern.
-  --browser         Browser used by the Meteor client executor.
-  --server-only     Run only server-side Rstest projects.
-  --client-only     Run only client-side Rstest projects.
-
-Rstest package-test beta safety: homogeneous Rstest selections run through one
-Meteor/Isobuild harness. Mixed Rstest and Tinytest/Mocha selections fail with
-exact split commands; they are never reported as an empty pass. Native worker
-options such as --project, --test-file, coverage, snapshots, sharding, and
-changed-file selection are rejected for package runtime tests until their
-semantics can be preserved.
+  --test-runner     Advanced override selecting a registered tool-side
+                    test-runner provider. Providers normally activate
+                    automatically. Use --driver-package for runtime drivers.
+  --server-only     Run only server-side tests supported by the selected runner.
+  --client-only     Run only client-side tests supported by the selected runner.
 
 >>> test
 Test the application
-Usage: meteor test [options]
-       meteor test --full-app [options]
+Usage: meteor test [--test-runner <id> | --driver-package <driver>] [options]
+       meteor test --full-app [--test-runner <id> | --driver-package <driver>] [options]
 
-Runs tests against the application. When the app uses the `rstest` Atmosphere
-package, Meteor runs Rstest automatically while retaining Meteor's application,
-package, MongoDB, server, and browser lifecycle. Otherwise Meteor starts a
-temporary app based on the test driver specified with --driver-package.
-
-Use --driver-package to preserve an existing Tinytest or Mocha driver exactly.
-Use --test-runner driver, or set `meteor.testRunner` to `driver` in package.json,
-to opt out of automatic Rstest selection.
+Runs tests against the application.
+Atmosphere packages may register a test-runner provider. Meteor discovers and
+selects an activated provider automatically. Providers run inside the Meteor
+tool and may choose native-only execution or request a Meteor-hosted test app.
+Driver packages instead run inside an already constructed Meteor test app.
+Use --test-runner as an advanced registered-provider override, or
+--driver-package to select the established runtime-driver route
+(http://guide.meteor.com/testing.html#driver-packages).
 
 In normal 'meteor test' mode, no files in your application are eagerly loaded,
 aside from test files (files named *.test[s].* or *.spec[s].* placed anywhere
@@ -827,26 +822,23 @@ Options:
   --driver-package  Name of the optional test driver package to use to run
                     tests and display results. For example:
                     --driver-package practicalmeteor:mocha
-  --test-runner     Select the test engine explicitly (`rstest` or `driver`).
-                    Normally Meteor selects Rstest when the app uses the
-                    `rstest` package.
-  --config          Path to the Rstest config file.
-  --project         Run a named Rstest project.
-  --test-file       Run a specific Rstest test file.
+  --test-runner     Advanced override selecting a registered tool-side
+                    test-runner provider. Providers normally activate
+                    automatically. Use --driver-package for runtime drivers.
+  --config          Provider configuration file.
+  --project         Provider project to run. May be repeated.
+  --test-file       Test-file filter. May be repeated.
   --test-name-pattern
-                    Run Rstest cases whose full names match the pattern.
-  --browser         Browser used by Rstest Browser Mode.
-  --coverage        Enable Rstest coverage.
+                    Test-name regular expression.
+  --browser         Browser selected by a provider with browser support.
+  --coverage        Enable provider coverage support.
   --update-snapshots, -u
-                    Update Rstest snapshots.
-  --shard           Run one pure-project Rstest shard (for example, `1/4`;
-                    requires --once; unsupported for Meteor-runtime projects).
-  --changed         Run pure Rstest tests affected by uncommitted changes
-                    (requires --once; unsupported for Meteor-runtime projects).
-  --changed-since   Run tests affected by changes since a Git ref (requires
-                    --once; unsupported for Meteor-runtime projects).
-  --server-only     Run only server-side Rstest projects.
-  --client-only     Run only client-side Rstest projects.
+                    Update snapshots through the selected provider.
+  --shard           Provider shard in current/total form.
+  --changed         Run tests affected by changed files.
+  --changed-since   Revision used as the changed-test baseline.
+  --server-only     Run only server-side tests supported by the selected runner.
+  --client-only     Run only client-side tests supported by the selected runner.
   --exclude-archs   Don't create test bundles for certain web architectures
                     (comma separated, for example:
                     --exclude-archs "web.browser.legacy, web.cordova")

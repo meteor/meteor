@@ -66,15 +66,14 @@ const {
   getMeteorInitialAppEntrypoints,
   getMeteorAppEntrypoints,
   isMeteorAppTest,
-  isMeteorPackagesTest,
   isMeteorAppTestWatch,
   isMeteorAppDevelopment,
   isMeteorAppProduction,
   isMeteorAppDebug,
   isMeteorAppConfigModernVerbose,
+  hasMeteorAppConfigAutoInstallDeps,
   isMeteorAppNative,
   isMeteorBundleVisualizerProject,
-  hasMeteorAppConfigAutoInstallDeps,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -88,37 +87,22 @@ const {
   getYarnCommand,
   isYarnProject,
 } = require('meteor/tools-core/lib/npm');
-
-const isSelectedRstest = process.env.METEOR_TEST_RUNNER === 'rstest';
-const isRstestPackageTest = isSelectedRstest && isMeteorPackagesTest();
-const isRstestDependencyOnlyAppTest = isSelectedRstest &&
-  isMeteorAppTest() &&
-  !global.testCommandMetadata?.rstestRuntime &&
-  !global.testCommandMetadata?.rstestExternal;
-const isRstestDependencyOnly = isRstestPackageTest ||
-  isRstestDependencyOnlyAppTest;
+const testRunnerBuildOptions = Plugin.getTestRunnerBuildOptions() || {};
+const isTestRunnerDependencyOnly =
+  testRunnerBuildOptions.lifecycle === 'dependencies-only';
+const shouldAutoInstallDependencies = testRunnerBuildOptions.autoInstall !== false &&
+  hasMeteorAppConfigAutoInstallDeps();
 const shouldRunRspackAppLifecycle = isMeteorAppRun() ||
   isMeteorAppBuild() ||
   isMeteorAppUpdate() ||
-  (isMeteorAppTest() && !isRstestDependencyOnlyAppTest);
+  isMeteorAppTest() && !isTestRunnerDependencyOnly;
 const shouldRunRspackCompilerLifecycle = isMeteorAppRun() ||
   isMeteorAppBuild() ||
-  (isMeteorAppTest() && !isRstestDependencyOnlyAppTest);
+  isMeteorAppTest() && !isTestRunnerDependencyOnly;
 
-// Pure Rstest projects and `meteor test-packages` still need the Rspack npm
-// toolchain, but they do not compile an application through this build plugin.
-// Runtime and external projects continue through the normal Rspack lifecycle.
-if (isRstestDependencyOnly) {
+if (isMeteorAppTest() && isTestRunnerDependencyOnly) {
   try {
-    if (process.env.YARN_ENABLED === undefined) {
-      const dependencyRoot = process.env.METEOR_RSPACK_NPM_ROOT || process.cwd();
-      process.env.YARN_ENABLED = isYarnProject({ cwd: dependencyRoot })
-        ? 'true'
-        : 'false';
-    }
-    if (hasMeteorAppConfigAutoInstallDeps()) {
-      await ensureRspackInstalled();
-    }
+    if (shouldAutoInstallDependencies) await ensureRspackInstalled();
   } catch (error) {
     logError(`Rspack plugin error: ${error.message}`);
     throw error;
@@ -179,7 +163,7 @@ if (shouldRunRspackAppLifecycle) {
     }
 
     // Auto install deps (by default enabled)
-    if (hasMeteorAppConfigAutoInstallDeps()) {
+    if (shouldAutoInstallDependencies) {
       // Ensure Rspack is installed
       await ensureRspackInstalled();
     }
@@ -187,7 +171,7 @@ if (shouldRunRspackAppLifecycle) {
     // Check if Rspack React is installed
     if (checkReactInstalled()) {
       // Auto install deps (by default enabled)
-      if (hasMeteorAppConfigAutoInstallDeps()) {
+      if (shouldAutoInstallDependencies) {
         await ensureRspackReactInstalled();
       }
     }
@@ -363,15 +347,15 @@ if (shouldRunRspackCompilerLifecycle) {
 
         // When testModule is specified as a single file or not specified
       } else {
-        const isEagerTestDiscovery = !initialEntrypoints?.testModule;
-        const isRstestRuntime = isEagerTestDiscovery &&
-          global.testCommandMetadata?.testRunner === 'rstest' &&
-          global.testCommandMetadata?.rstestRuntime;
-        const buildClient = !isRstestRuntime ||
-          Boolean(global.testCommandMetadata?.rstestClient);
-        const buildServer = !isRstestRuntime ||
-          Boolean(global.testCommandMetadata?.rstestServer);
-        if (buildClient && (initialEntrypoints?.testModule || isEagerTestDiscovery)) {
+        const providerTargets = !initialEntrypoints?.testModule &&
+          testRunnerBuildOptions.targets;
+        const buildClient = Boolean(initialEntrypoints?.testModule) ||
+          Boolean(providerTargets && providerTargets.client);
+        const buildServer = Boolean(initialEntrypoints?.testModule) ||
+          (providerTargets
+            ? Boolean(providerTargets.server)
+            : true);
+        if (buildClient) {
           runRspackBuild({
             isTest: true,
             isTestModule: true,

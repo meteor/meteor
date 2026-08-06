@@ -532,8 +532,9 @@ Object.assign(Isopack.prototype, {
         buildmessage,
       }),
 
-      getTestRunnerBuildOptions:
-        testRunnerContext.getTestRunnerBuildOptions,
+      getTestRunnerBuildOptions() {
+        return testRunnerContext.getTestRunnerBuildOptions(isopack.name);
+      },
 
       // Share the meteorConfig object as part of plugin API
       getMeteorConfig: getMeteorConfig,

@@ -92,6 +92,22 @@ var splitQuotedArgs = exports.splitQuotedArgs = function (s) {
   return args;
 };
 
+// Target builders are only reusable as part of their completed site archive.
+// If the archive disappeared (for example, while a watch-mode process is
+// shutting down), retaining an individual target builder makes its output path
+// incompatible with the next archive builder's temporary output path.
+var reusableBuildersForBundle = exports.reusableBuildersForBundle = function (
+  builders,
+  bundleRootExists,
+) {
+  if (Object.keys(builders).length === 0 ||
+      builders.star && bundleRootExists) {
+    return builders;
+  }
+
+  return Object.create(null);
+};
+
 var getNodeOptionsFromEnvironment = function () {
   return splitQuotedArgs(process.env.SERVER_NODE_OPTIONS || "");
 };
@@ -432,6 +448,8 @@ var AppRunner = function (options) {
   self.cordovaRunner = options.cordovaRunner;
   self.settingsFile = options.settingsFile;
   self.testMetadata = options.testMetadata;
+  self.testRunnerSession = options.testRunnerSession;
+  self.updateTestRunnerMetadata = options.updateTestRunnerMetadata;
   self.inspect = options.inspect;
   self.proxy = options.proxy;
   self.autoRestart = !options.once;
@@ -652,6 +670,11 @@ Object.assign(AppRunner.prototype, {
           projectContext: self.projectContext
         });
       }
+
+      self.builders = reusableBuildersForBundle(
+        self.builders,
+        files.exists(bundlePath),
+      );
 
       var bundleResult = await Profile.run((firstRun?"B":"Reb")+"uild App", async () =>
         bundler.bundle({
@@ -1020,19 +1043,31 @@ Object.assign(AppRunner.prototype, {
     var firstRun = true;
 
     while (true) {
-      if (self.testMetadata?.rstestWatch) {
-        self.testMetadata.rstestGeneration =
-          Number(self.testMetadata.rstestGeneration || 0) + 1;
-      }
-      var runResult = await self._runOnce({
-        onListen: function () {
-          if (! self.noRestartBanner && ! firstRun) {
-            runLog.logRestart(self);
-            Console.enableProgressDisplay(false);
+      let runResult;
+      if (self.testRunnerSession) {
+        try {
+          await self.testRunnerSession.beforeAppRun({
+            updateMetadata: self.updateTestRunnerMetadata,
+          });
+        } catch (error) {
+          Console.error(error && error.stack || error);
+          if (error && error.cleanupError) {
+            Console.error(error.cleanupError.stack || error.cleanupError);
           }
-        },
-        firstRun: firstRun
-      });
+          runResult = { outcome: 'test-runner-failure' };
+        }
+      }
+      if (!runResult) {
+        runResult = await self._runOnce({
+          onListen: function () {
+            if (! self.noRestartBanner && ! firstRun) {
+              runLog.logRestart(self);
+              Console.enableProgressDisplay(false);
+            }
+          },
+          firstRun: firstRun
+        });
+      }
       firstRun = false;
 
       var wantExit = self.onRunEnd ? !(await self.onRunEnd(runResult)) : false;

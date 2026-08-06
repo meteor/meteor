@@ -98,6 +98,18 @@ function createProviderSession({ registration, provider, context }) {
       await provider.stop();
     }
   };
+  const stopAfterFailure = async error => {
+    try {
+      await stop();
+    } catch (cleanupError) {
+      if (error && (typeof error === 'object' || typeof error === 'function')) {
+        try {
+          error.cleanupError = cleanupError;
+        } catch {}
+      }
+    }
+    throw error;
+  };
 
   const session = {
     registration,
@@ -110,8 +122,7 @@ function createProviderSession({ registration, provider, context }) {
             await provider.validate(context);
             return validateTestExecutionPlan(await provider.prepare(context));
           } catch (error) {
-            await stop();
-            throw error;
+            return stopAfterFailure(error);
           }
         })();
       }
@@ -127,20 +138,27 @@ function createProviderSession({ registration, provider, context }) {
           await provider.startBeforeHost(executionContext)
         );
       } catch (error) {
-        await stop();
-        throw error;
+        return stopAfterFailure(error);
       }
     },
 
     async beforeAppRun(appGenerationContext) {
       if (typeof provider.beforeAppRun === 'function') {
-        return provider.beforeAppRun(appGenerationContext);
+        try {
+          return await provider.beforeAppRun(appGenerationContext);
+        } catch (error) {
+          return stopAfterFailure(error);
+        }
       }
     },
 
     async startHost(hostContext) {
       if (typeof provider.startHost === 'function') {
-        return provider.startHost(hostContext);
+        try {
+          return await provider.startHost(hostContext);
+        } catch (error) {
+          return stopAfterFailure(error);
+        }
       }
     },
 

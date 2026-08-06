@@ -120,3 +120,60 @@ test('provider session rejects malformed pre-host process handles', async () => 
   await session.prepare();
   await assert.rejects(session.startBeforeHost({}), /process\.stop/);
 });
+
+test('provider session cleans up failed generation and host hooks', async () => {
+  for (const hook of ['beforeAppRun', 'startHost']) {
+    const expected = new Error(`${hook} failed`);
+    expected.code = `EXAMPLE_${hook.toUpperCase()}`;
+    let stops = 0;
+    const session = createProviderSession({
+      registration: registration(),
+      provider: {
+        async validate() {},
+        async prepare() {
+          return { mode: 'meteor-host' };
+        },
+        async [hook]() {
+          throw expected;
+        },
+        async stop() {
+          stops += 1;
+        },
+      },
+      context: createTestRunnerContext({ command: 'test' }),
+    });
+
+    await session.prepare();
+    await assert.rejects(session[hook]({}), error => error === expected);
+    assert.equal(stops, 1);
+  }
+});
+
+test('provider cleanup failure never masks original lifecycle error', async () => {
+  const expected = new Error('host failed');
+  expected.code = 'EXAMPLE_HOST';
+  const cleanupError = new Error('cleanup failed');
+  const session = createProviderSession({
+    registration: registration(),
+    provider: {
+      async validate() {},
+      async prepare() {
+        return { mode: 'meteor-host' };
+      },
+      async startHost() {
+        throw expected;
+      },
+      async stop() {
+        throw cleanupError;
+      },
+    },
+    context: createTestRunnerContext({ command: 'test' }),
+  });
+
+  await session.prepare();
+  await assert.rejects(session.startHost({}), error => {
+    assert.equal(error, expected);
+    assert.equal(error.cleanupError, cleanupError);
+    return true;
+  });
+});

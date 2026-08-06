@@ -3,8 +3,34 @@ const path = require('node:path');
 const test = require('node:test');
 
 const {
+  createLocalPackageLinkPlan,
   createLocalModernToolsLinkPlan,
 } = require('./link-modern-tools.js');
+
+test('local package linker accepts arbitrary package specs without name inference', () => {
+  assert.deepEqual(createLocalPackageLinkPlan({
+    destinationRoot: '/app',
+    packageSpecs: {
+      '@example/runner': { source: '/repo/runner', save: 'dev' },
+      '@example/compiler': { source: '/repo/compiler', save: 'prod' },
+    },
+  }), [
+    {
+      command: 'npm',
+      args: [
+        'install', '--save-dev', '--no-package-lock', '--install-links=false', '/repo/runner',
+      ],
+      cwd: '/app',
+    },
+    {
+      command: 'npm',
+      args: [
+        'install', '--save', '--no-package-lock', '--install-links=false', '/repo/compiler',
+      ],
+      cwd: '/app',
+    },
+  ]);
+});
 
 test('local mirror persists Rspack and Rstest specs in app package metadata', () => {
   const repoRoot = path.resolve('/repo');

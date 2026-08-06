@@ -11,8 +11,6 @@ const crypto = require('crypto');
 
 const Proxy = require('./run-proxy.js').Proxy;
 const Selenium = require('./run-selenium.js').Selenium;
-const RstestBrowser = require('./run-rstest-browser.js').RstestBrowser;
-const RstestExternal = require('./run-rstest-external.js').RstestExternal;
 const AppRunner = require('./run-app.js').AppRunner;
 const MongoRunner = require('./run-mongo.js').MongoRunner;
 const HMRServer = require('./run-hmr').HMRServer;
@@ -43,12 +41,6 @@ class Runner {
           rootUrl,
           selenium,
           seleniumBrowser,
-          rstestBrowser,
-          rstestBrowserName,
-          rstestExternal,
-          rstestExternalArgs,
-          rstestExternalResultPath,
-          rstestProcessHandle,
           noReleaseCheck,
           cordovaServerPort,
     ...optionsForAppRunner
@@ -179,27 +171,6 @@ class Runner {
         browser: seleniumBrowser
       });
     }
-    self.rstestBrowser = rstestBrowser
-      ? new RstestBrowser({
-          appDir: self.projectContext._projectDirForLocalPackages ||
-            self.projectContext.projectDir,
-          url: self.rootUrl,
-          browser: rstestBrowserName || 'chromium',
-          token: self.options.testMetadata && self.options.testMetadata.rstestToken,
-        })
-      : null;
-    self.rstestExternal = rstestExternal
-      ? new RstestExternal({
-          appDir: self.projectContext._projectDirForLocalPackages ||
-            self.projectContext.projectDir,
-          url: self.rootUrl,
-          args: rstestExternalArgs,
-          resultPath: rstestExternalResultPath,
-          token: self.options.testMetadata && self.options.testMetadata.rstestToken,
-          generation: self.options.testMetadata &&
-            Number(self.options.testMetadata.rstestGeneration || 1),
-        })
-      : null;
   }
   // XXX leave a pidfile and check if we are already running
   async start() {
@@ -278,18 +249,20 @@ class Runner {
         runLog.log("Started Selenium.", { arrow: true });
       }
     }
-    if (self.rstestBrowser && !self.stopped) {
-      await buildmessage.enterJob({ title: 'starting Meteor Rstest browser' }, async function () {
-        return self.rstestBrowser.start();
-      });
-      if (!self.quiet && !self.stopped) {
-        runLog.log('Started Meteor Rstest browser.', { arrow: true });
+    if (self.options.testRunnerSession && !self.stopped) {
+      try {
+        await buildmessage.enterJob({ title: 'starting test runner provider' }, async function () {
+          return self.options.testRunnerSession.startHost({
+            url: self.rootUrl,
+            log: message => runLog.log(message),
+            updateMetadata: self.options.updateTestRunnerMetadata,
+          });
+        });
+      } catch (error) {
+        Console.error(error && error.stack || error);
+        await self.options.onFailure();
+        return;
       }
-    }
-    if (self.rstestExternal && !self.stopped) {
-      await buildmessage.enterJob({ title: 'running external Rstest projects' }, async function () {
-        return self.rstestExternal.start();
-      });
     }
 
     // XXX It'd be nice to (cosmetically) handle failure better. Right
@@ -315,16 +288,31 @@ class Runner {
     }
 
     self.stopped = true;
-    await self.proxy.stop();
-    await self.updater.stop();
-    await self.mongoRunner && self.mongoRunner.stop();
-    await self.appRunner.stop();
-    await (self.selenium && self.selenium.stop());
-    await (self.rstestBrowser && self.rstestBrowser.stop());
-    await (self.rstestExternal && self.rstestExternal.stop());
-    // XXX does calling this 'finish' still make sense now that runLog is a
-    // singleton?
-    runLog.finish();
+    if (self.options.testRunnerSession) {
+      let firstError;
+      const stopResource = async callback => {
+        try {
+          await callback();
+        } catch (error) {
+          firstError ||= error;
+        }
+      };
+      await stopResource(() => self.options.testRunnerSession.stop());
+      await stopResource(() => self.selenium && self.selenium.stop());
+      await stopResource(() => self.appRunner.stop());
+      await stopResource(() => self.mongoRunner && self.mongoRunner.stop());
+      await stopResource(() => self.updater.stop());
+      await stopResource(() => self.proxy.stop());
+      runLog.finish();
+      if (firstError) throw firstError;
+    } else {
+      await self.proxy.stop();
+      await self.updater.stop();
+      await self.mongoRunner && self.mongoRunner.stop();
+      await self.appRunner.stop();
+      await (self.selenium && self.selenium.stop());
+      runLog.finish();
+    }
   }
 
   // Call this whenever you want to regenerate the app's port (if it is not
@@ -395,19 +383,32 @@ exports.run = async function (options) {
   var once = runOptions.once;
   var onBuilt = runOptions.onBuilt;
 
+  var failureInProgress = false;
   var promise = new Promise(function (resolve) {
     runOptions.onFailure = async function () {
+      if (failureInProgress) {
+        return;
+      }
+      failureInProgress = true;
       // Ensure that runner stops now. You might think this is unnecessary
       // because the runner is stopped immediately after promise.await(), but if
       // the failure happens while runner.start() is still running, we want the
       // rest of start to stop, and it's not like resolve() magically makes
       // us jump to a promise.await() that hasn't happened yet!.
-      await runner.stop();
+      try {
+        await runner.stop();
+      } catch (error) {
+        Console.error(error && error.stack || error);
+      }
       resolve({ outcome: 'failure' });
     };
 
     runOptions.onRunEnd = function (result) {
+      if (failureInProgress) {
+        return false;
+      }
       if (once ||
+          result.outcome === "test-runner-failure" ||
           result.outcome === "conflicting-versions" ||
           result.outcome === "wrong-release" ||
           result.outcome === "outdated-cordova-platforms" ||
@@ -456,10 +457,10 @@ exports.run = async function (options) {
 
   var runner = new Runner(runOptions);
   await runner.init();
-  if (runOptions.rstestProcessHandle) {
-    runOptions.rstestProcessHandle.completion.then(code => {
+  if (runOptions.testRunnerProcess) {
+    runOptions.testRunnerProcess.completion.then(code => {
       if (!runner.stopped) {
-        Console.error(`[Meteor Rstest] Native watcher exited with status ${code}.`);
+        Console.error(`Test runner provider process exited with status ${code}.`);
         return runOptions.onFailure();
       }
     }, error => {
@@ -473,14 +474,22 @@ exports.run = async function (options) {
   if (runOptions.open) {
     await runner.start();
   } else {
-    runner.start().catch(error => {
-      Console.error(error && error.stack || error);
-      return runOptions.onFailure();
-    });
+    setTimeout(() => {
+      runner.start().catch(error => {
+        Console.error(error && error.stack || error);
+        return runOptions.onFailure();
+      });
+    }, 0);
   }
   onBuilt && onBuilt();
   var result = await promise;
-  await runner.stop();
+  let stopError;
+  try {
+    await runner.stop();
+  } catch (error) {
+    stopError = error;
+    Console.error(error && error.stack || error);
+  }
 
   if (result.outcome === "conflicting-versions") {
     Console.error(
@@ -525,7 +534,9 @@ exports.run = async function (options) {
     return 254;
   }
 
-  if (result.outcome === "failure" ||
+  if (stopError ||
+      result.outcome === "failure" ||
+      result.outcome === "test-runner-failure" ||
       (result.outcome === "terminated" &&
        result.signal === undefined && result.code === undefined)) {
     // Fatal problem with something other than the app process. An

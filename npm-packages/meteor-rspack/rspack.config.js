@@ -219,6 +219,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestEager = !!Meteor.isTestEager;
   const isTestFullApp = !!Meteor.isTestFullApp;
   const isRstestTest = isTest && Meteor.testRunner === 'rstest';
+  let testRunnerContext = {};
+  try {
+    testRunnerContext = JSON.parse(Meteor.testRunnerContext || '{}');
+  } catch {
+    throw new Error('[Meteor Rspack] Invalid test runner build context.');
+  }
   const compatibilityIgnoreEntries = isRstestTest
     ? ['**/tests/legacy/**']
     : isTest ? ['**/tests/rstest/runtime/**'] : [];
@@ -231,10 +237,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     'tests/rstest/runtime/server',
   );
   let rstestRuntimeFiles;
-  if (isRstestTest && Meteor.rstestRuntimeManifest) {
+  if (isRstestTest && testRunnerContext.runtimeManifest) {
     try {
       rstestRuntimeFiles = JSON.parse(
-        fs.readFileSync(Meteor.rstestRuntimeManifest, 'utf8'),
+        fs.readFileSync(testRunnerContext.runtimeManifest, 'utf8'),
       );
     } catch {
       throw new Error('[Meteor Rstest] Invalid runtime file inventory from Meteor CLI.');

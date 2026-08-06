@@ -7,7 +7,7 @@ const test = require('node:test');
 const {
   RstestExternal,
   structuredResultFromReport,
-} = require('../../../runners/run-rstest-external.js');
+} = require('../provider/external.js');
 
 function createReport(t, tests = [{
   name: 'external case',

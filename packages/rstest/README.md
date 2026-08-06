@@ -4,7 +4,7 @@ Test-only capability and Meteor-runtime executor for `@meteorjs/rstest`.
 
 Adding `rstest` selects Rstest for `meteor test` and for selected
 `meteor test-packages` whose `Package.onTest` metadata has a strong `rstest`
-dependency. Explicit `--driver-package`, `--test-runner driver`, or
+dependency. Explicit `--driver-package` or persistent
 `meteor.testRunner: "driver"` keeps the established driver route.
 The test-only package has strong Atmosphere dependencies on `rspack` and the
 internal build-time-only `rstest-tooling` support package. This preserves the
@@ -22,6 +22,27 @@ manually.
 Automatic package selection is architecture-aware and requires homogeneous
 ownership. Mixed Rstest/Tinytest/Mocha selections fail before compilation with
 separate commands; unknown/custom drivers require explicit `--driver-package`.
+
+## Driver packages and test-runner providers
+
+A driver package runs inside an already built Meteor test application. It
+expects Meteor/Isobuild compilation, server/client runtime, and the normal
+Meteor host lifecycle. `test-in-browser` and `meteortesting:mocha` follow this
+model.
+
+A test-runner provider runs inside the Meteor tool before host construction.
+It can select native-only execution or request a Meteor host, supervise native
+processes and browsers, pass immutable options to compiler plugins, propagate
+exit status, and clean up all owned resources. Rstest needs this earlier
+boundary so pure, Browser Mode, snapshot, and Playwright projects retain native
+Rstest/Rspack behavior while runtime projects still execute inside a real
+Meteor program.
+
+Normal commands rely on automatic provider activation. `--test-runner <id>`
+is an advanced explicit provider override. It does not select driver packages;
+use `--driver-package <name>` for that route. The `driver` value is reserved
+for persistent `meteor.testRunner` opt-out policy, not as a `--test-runner`
+provider id. Only one provider or driver owns one command invocation.
 
 Pure, DOM, Browser Mode, snapshot, coverage, and Playwright tests use native
 Rstest APIs under `tests/rstest/pure`, `tests/rstest/browser`, and
