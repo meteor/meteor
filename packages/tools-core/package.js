@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Helpers for managing modern tools in Meteor",
-  version: '1.1.0',
+  version: '1.2.0',
   devOnly: true,
 });
 
@@ -18,5 +18,6 @@ Package.onTest(function (api) {
   // This structure allows easy addition of tests for other lib/ categories
   api.addFiles([
     'tests/meteor_tests.js',
+    'tests/global_state_tests.js',
   ], 'server');
 });
