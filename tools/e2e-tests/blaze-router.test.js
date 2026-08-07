@@ -13,8 +13,8 @@ const CLIENT_BUNDLE_IMPORT = "import './client-rspack.js';";
 const BLAZE_HTML_IMPORT = /^import ['"].*\.html['"];$/m;
 const CLIENT_BOOT_MARKER = '__CLIENT_BOOTED__';
 
-// Adapted from the issue #14561 reproduction:
-// https://github.com/miamagana/meteor-rspack-fullapp-repro/tree/blaze-fullapp-14561
+// Adapted from the issue #14561 reproduction
+// client bundle loads before Blaze HTML imports
 async function assertTestClientImportOrder(tempDir) {
   const wrapperPath = path.join(tempDir, '_build/test/client-meteor.js');
   await assertFileExist(tempDir, '_build/test/client-meteor.js', {
