@@ -104,6 +104,8 @@ export namespace DDPCommon {
   }
 }
 
-// DDPServer lives in the ddp-server package (api.export("DDPServer", "server"))
-// and is re-exported here so `import { DDPServer } from "meteor/ddp"` keeps working.
-export * from 'meteor/ddp-server';
+// DDPServer is owned by the ddp-server package; re-export it by name so
+// `import { DDPServer } from "meteor/ddp"` keeps working (export * does not
+// cross zodern:types export= wrappers, a named re-export does).
+import { DDPServer } from 'meteor/ddp-server';
+export { DDPServer };
