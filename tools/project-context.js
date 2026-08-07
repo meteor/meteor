@@ -376,8 +376,9 @@ Object.assign(ProjectContext.prototype, {
       }
 
       // Provider discovery happens after constraint resolution but before the
-      // full app build. Build only candidate provider packages now, then reuse
-      // the same cache when the normal build stage runs.
+      // provider can publish build-plugin context. Compile provider plugins in
+      // isolation so candidate runtime dependencies cannot initialize their
+      // compiler plugins too early.
       if (!this.isopackCache) {
         await this._completeStagesThrough(STAGE.DOWNLOAD_MISSING_PACKAGES);
         if (buildmessage.jobHasMessages()) {
@@ -386,14 +387,16 @@ Object.assign(ProjectContext.prototype, {
         await this._ensureIsopackCache();
       }
 
+      let isopacks = [];
       await buildmessage.enterJob('loading test runner provider plugins', async () => {
-        await this.isopackCache.buildLocalPackages(names);
-        for (const name of names) {
-          await this.isopackCache.getIsopack(name).ensurePluginsInitialized();
+        isopacks = await this.isopackCache
+          .buildTestRunnerProviderPackages(names);
+        for (const isopack of isopacks) {
+          await isopack.ensurePluginsInitialized();
         }
       });
 
-      return names.map(name => this.isopackCache.getIsopack(name));
+      return isopacks;
     });
   },
   /**

@@ -2,6 +2,12 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 
+if (Plugin.registerCompiler !== undefined ||
+    Plugin.registerMinifier !== undefined ||
+    Plugin.registerLinter !== undefined) {
+  throw new Error('Test-runner plugins must not receive build-plugin APIs.');
+}
+
 function modeFor(context) {
   try {
     const packageJson = JSON.parse(
@@ -56,6 +62,9 @@ Plugin.registerTestRunner({
           ? 'meteor-host'
           : 'native-only',
         metadata: { mode },
+        buildPluginOptions: {
+          'fake-provider-compiler': { ready: true },
+        },
       };
     },
     startBeforeHost() {

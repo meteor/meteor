@@ -6,14 +6,17 @@ Adding `rstest` selects Rstest for `meteor test` and for selected
 `meteor test-packages` whose `Package.onTest` metadata has a strong `rstest`
 dependency. Explicit `--driver-package` or persistent
 `meteor.testRunner: "driver"` keeps the established driver route.
-The test-only package has strong Atmosphere dependencies on `rspack` and the
-internal build-time-only `rstest-tooling` support package. This preserves the
-existing `rspack` + `@meteorjs/rspack` lifecycle split while keeping build
-plugins out of a `testOnly` package, which Meteor does not allow.
+The test-only package has a strong Atmosphere dependency on `rspack` and owns
+its tool-host provider under `tooling/`. Meteor compiles that provider through
+the narrow `Package.registerTestRunnerPlugin` API; provider code never enters
+the application runtime bundle and ordinary build plugins remain forbidden in
+`testOnly` packages. This mirrors the existing `rspack` +
+`@meteorjs/rspack` lifecycle split without a second Atmosphere package.
 
-Both Atmosphere packages install their npm side automatically before native
-Rstest starts. `rspack` owns `@meteorjs/rspack`, Rspack, and SWC dependencies;
-`rstest-tooling` owns `@meteorjs/rstest`, `@rstest/*`, jsdom, and Playwright.
+Both Modern Tools capabilities install their npm side automatically before
+native Rstest starts. `rspack` owns `@meteorjs/rspack`, Rspack, and SWC
+dependencies; `rstest/tooling` owns `@meteorjs/rstest`, `@rstest/*`, jsdom, and
+Playwright.
 This avoids duplicate manifests and keeps compiler versions under the existing
 Rspack package. Set `meteor.autoInstallDeps` to `false` in `package.json` to
 disable all Modern Tools dependency installation and manage these packages
@@ -76,7 +79,8 @@ explicit dependency injection. Unmigrated Mocha/Tinytest files remain on their
 real driver route so callback `done`, Mocha `this`, hooks, reporters, and custom
 driver behavior are never approximated.
 
-Package integration note: `api.use('rspack')` and
-`api.use('rstest-tooling')` are intentionally strong dependencies. Use
-`Package['name']` only when integrating an optional weak dependency at runtime;
-it is not an availability check needed for these required packages.
+Package integration note: `rstest` uses `rspack` and
+`isobuild:test-runner-plugin` as intentional strong dependencies. Consumers
+only add or `api.use('rstest')`; its runtime and tool-host provider are one
+capability. Use `Package['name']` only when integrating an optional weak
+dependency at runtime, not as an availability check for these required parts.

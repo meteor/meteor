@@ -15,11 +15,10 @@ meteor add rstest
 ```
 
 That command is sufficient. Before Rstest launches, Atmosphere `rspack`
-installs its compiler-side npm dependencies and internal Atmosphere
-`rstest-tooling` installs exact Rstest-side dev dependencies. The two manifests
-do not duplicate ownership: Rspack versions remain controlled by `rspack`,
-while Rstest, Istanbul coverage, jsdom, and Playwright versions remain controlled by
-`rstest-tooling`.
+installs its compiler-side npm dependencies and `rstest/tooling` installs exact
+Rstest-side dev dependencies. The two manifests do not duplicate ownership:
+Rspack versions remain controlled by `rspack`, while Rstest, Istanbul coverage,
+jsdom, and Playwright versions remain controlled by `rstest`.
 
 To manage npm dependencies yourself, set `meteor.autoInstallDeps` to `false` in
 `package.json`. In that mode install both sets explicitly; missing coordinator
@@ -57,7 +56,7 @@ An explicit `--driver-package` always wins.
 | Host decision | Assumes Meteor host already exists | Selects native-only or Meteor-host execution before build |
 | Compilation | Meteor/Isobuild completes before the driver runs | Runs native compilation or requests a Meteor host, with immutable package-scoped compiler options |
 | Lifecycle | Runtime hooks and reporting | Validation, process/browser supervision, watch generations, exit propagation, cleanup |
-| Examples | `test-in-browser`, `meteortesting:mocha` | Rstest provider from `rstest-tooling` |
+| Examples | `test-in-browser`, `meteortesting:mocha` | Provider owned by test-only `rstest` |
 
 `--driver-package <name>` always selects the runtime-driver route.
 `--test-runner <provider-id>` is an advanced provider override; normal Rstest
@@ -161,7 +160,7 @@ executors can share one harness.
 
 Outside an application, `meteor test-packages /absolute/package/path`
 bootstraps compatible compiler dependencies through Atmosphere `rspack` and
-exact coordinator dependencies through `rstest-tooling` into its temporary
+exact coordinator dependencies through `rstest/tooling` into its temporary
 harness. Source-checkout E2E persists local `file:` specs for both unpublished
 npm packages; `METEOR_RSTEST_NPM_SPEC` and `METEOR_RSPACK_NPM_SPEC` are internal
 mirror overrides, not user configuration.
@@ -196,7 +195,7 @@ meteor test --once --project meteor-pure-server --update-snapshots
 ```
 
 Native Istanbul coverage is also available through the Meteor command. The
-`rstest-tooling` package installs the exact `@rstest/coverage-istanbul` version;
+`rstest` package tooling installs the exact `@rstest/coverage-istanbul` version;
 applications do not need a separate install:
 
 ```sh

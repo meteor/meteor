@@ -213,7 +213,7 @@ test('provider cleanup stops resources once in reverse start order', async t => 
 
 test('build plugin registers lazy provider without environment install checks', () => {
   const registrations = [];
-  const pluginPath = require.resolve('../rstest_plugin.js');
+  const pluginPath = require.resolve('../plugin.js');
   delete require.cache[pluginPath];
   global.Plugin = {
     registerTestRunner(registration, factory) {

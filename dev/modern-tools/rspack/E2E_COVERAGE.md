@@ -213,6 +213,7 @@ Verified coverage:
 | What is covered | Scenario |
 |----------------|----------|
 | `meteor test` automatically selects Rstest from the Atmosphere capability | Pure/runtime server |
+| One test-only `rstest` package owns runtime plus isolated `tooling/` provider; no second Atmosphere support package is required | Fixture init, automatic selection, runtime |
 | Local npm mirror installs `@meteorjs/rspack` inside `@meteorjs/rstest`, then persists both app links without global npm state | Fixture init |
 | Atmosphere-owned bootstrap installs exact `@rstest/coverage-istanbul` with the other Rstest dev dependencies | Fixture init, native coverage |
 | Dynamic `@meteorjs/rstest.defineConfig(context)` receives command, roots, server/client selection, and architecture data | Pure server/client |

@@ -1,5 +1,5 @@
 /**
- * @module rstest_plugin
+ * @module rstest/tooling/plugin
  * @description Rstest test-runner provider registration
  */
 

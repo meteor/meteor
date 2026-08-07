@@ -77,6 +77,66 @@ export class IsopackCache {
     }
   }
 
+  async buildTestRunnerProviderPackages(packageNames) {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    if (self.cacheDir) {
+      files.mkdir_p(self.cacheDir);
+    }
+
+    const providers = [];
+    var onStack = {};
+    for (const name of packageNames) {
+      const packageInfo = self._packageMap.getInfo(name);
+      if (!packageInfo) {
+        throw Error("Depend on unknown package " + name + "?");
+      }
+
+      if (packageInfo.kind === 'versioned') {
+        if (!self._tropohouse) {
+          throw Error("Can't load versioned packages without a tropohouse!");
+        }
+        const provider = new isopackModule.Isopack();
+        await provider.initFromPath(
+          name,
+          self._tropohouse.packagePath(name, packageInfo.version),
+          { pluginCacheDir: null }
+        );
+        providers.push(provider);
+        continue;
+      }
+
+      if (packageInfo.kind !== 'local') {
+        throw Error("unknown packageInfo kind?");
+      }
+
+      const packageSource = packageInfo.packageSource;
+      const dependencies =
+        packageSource.getPackagesToLoadBeforeTestRunnerPlugins(self._packageMap);
+      for (const dependency of dependencies) {
+        await self._ensurePackageLoaded(dependency, onStack);
+      }
+      if (buildmessage.jobHasMessages()) {
+        providers.push(new isopackModule.Isopack());
+        continue;
+      }
+
+      const provider = await compiler.compile(packageSource, {
+        packageMap: self._packageMap,
+        isopackCache: self,
+        includeCordovaUnibuild: false,
+        includePluginProviderPackageMap: false,
+        pluginCacheDir: null,
+        testRunnerProviderOnly: true,
+      });
+      self.allLoadedLocalPackagesWatchSet.merge(provider.getMergedWatchSet());
+      providers.push(provider);
+    }
+
+    return providers;
+  }
+
   async wipeCachedPackages(packages) {
     var self = this;
     if (packages) {

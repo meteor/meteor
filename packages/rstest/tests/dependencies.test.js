@@ -6,7 +6,7 @@ const {
   getRstestDependencies,
   ensureRstestInstalled,
   shouldEnsureRstestDependencies,
-} = require('../../rstest-tooling/lib/dependencies.js');
+} = require('../tooling/lib/dependencies.js');
 const meteorRstestPackage = require('../../../npm-packages/meteor-rstest/package.json');
 
 const EXPECTED_DEPENDENCIES = [

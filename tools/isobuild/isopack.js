@@ -519,6 +519,21 @@ Object.assign(Isopack.prototype, {
   _makePluginApi: function (pluginName) {
     var isopack = this;
 
+    const registerTestRunner = testRunnerPlugin.createRegisterTestRunner({
+      isopack,
+      buildmessage,
+    });
+
+    // Build plugins remain forbidden in testOnly packages. Any plugin present
+    // there was registered through Package.registerTestRunnerPlugin, so expose
+    // only provider registration and prevent accidental compiler/minifier use.
+    if (isopack.testOnly) {
+      return {
+        name: pluginName,
+        registerTestRunner,
+      };
+    }
+
     /**
      * @global
      * @namespace Plugin
@@ -527,10 +542,7 @@ Object.assign(Isopack.prototype, {
     var Plugin = {
       name: pluginName,
 
-      registerTestRunner: testRunnerPlugin.createRegisterTestRunner({
-        isopack,
-        buildmessage,
-      }),
+      registerTestRunner,
 
       getTestRunnerBuildOptions() {
         return testRunnerContext.getTestRunnerBuildOptions(isopack.name);

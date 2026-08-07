@@ -34,7 +34,7 @@ var compiler = exports;
 // dependencies. (At least for now, packages only used in target creation (eg
 // minifiers) don't require you to update BUILT_BY, though you will need to quit
 // and rerun "meteor run".)
-compiler.BUILT_BY = 'meteor/34';
+compiler.BUILT_BY = 'meteor/35';
 
 // This is a list of all possible architectures that a build can target. (Client
 // is expanded into 'web.browser' and 'web.cordova')
@@ -59,8 +59,16 @@ compiler.compile = Profile(function (packageSource, options) {
 
   var pluginProviderPackageNames = {};
 
-  for (const info of Object.values(packageSource.pluginInfo)) {
-    // build plugins
+  const pluginInfo = options.testRunnerProviderOnly
+    ? packageSource.testOnly
+      ? packageSource.testRunnerPluginInfo
+      : packageSource.pluginInfo
+    : {
+      ...packageSource.pluginInfo,
+      ...packageSource.testRunnerPluginInfo,
+    };
+  for (const info of Object.values(pluginInfo)) {
+    // build and test-runner provider plugins
     await buildmessage.enterJob({
       title: "building plugin `" + info.name +
           "` in package `" + packageSource.name + "`",
@@ -191,7 +199,9 @@ compiler.compile = Profile(function (packageSource, options) {
     isobuildFeatures
   });
 
-  for (const architecture of packageSource.architectures) {
+  for (const architecture of options.testRunnerProviderOnly
+    ? []
+    : packageSource.architectures) {
     if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       continue;
     }
