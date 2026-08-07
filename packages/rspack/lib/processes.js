@@ -9,6 +9,7 @@ import path from "path";
 const {
   spawnProcess,
   stopProcess,
+  sendSignal,
   isProcessRunning
 } = require('meteor/tools-core/lib/process');
 
@@ -238,6 +239,102 @@ export function getConfigFilePath() {
 }
 
 /**
+ * Gets the resolved Rspack CLI entrypoint path.
+ *
+ * This bypasses platform-specific npx wrappers so arguments such as config
+ * paths with spaces are passed directly to Node without shell re-parsing.
+ *
+ * @returns {string} The path to @rspack/cli/bin/rspack.js
+ * @throws {Error} If the Rspack CLI entrypoint cannot be found
+ */
+export function getRspackCliPath() {
+  const appDir = getMeteorAppDir();
+
+  try {
+    // Dynamically resolve the exact bin path defined by the package.
+    // Meteor's module system ignores the `paths` option and resolves unknown
+    // top-level ids to themselves, so only an absolute path that exists on
+    // disk can be trusted here.
+    const pkgPath = require.resolve('@rspack/cli/package.json', { paths: [appDir] });
+    if (path.isAbsolute(pkgPath)) {
+      const pkg = require(pkgPath);
+      const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.rspack;
+      if (bin) {
+        const binPath = path.join(path.dirname(pkgPath), bin);
+        if (fs.existsSync(binPath)) {
+          return binPath;
+        }
+      }
+    }
+  } catch (err) {
+    // Fall through to hardcoded fallback if package.json isn't exported
+  }
+
+  const candidatePaths = [
+    path.join(appDir, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+  ];
+
+  const monorepoPath = getMonorepoPath();
+  if (monorepoPath) {
+    candidatePaths.push(
+      path.join(monorepoPath, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+    );
+  }
+
+  // Walk up from the app directory so hoisted installs are still found when the
+  // parent holding node_modules carries no monorepo marker. Nearest ancestor
+  // wins, and the loop stops at the filesystem root.
+  let currentDir = path.dirname(appDir);
+  while (currentDir !== path.dirname(currentDir)) {
+    candidatePaths.push(
+      path.join(currentDir, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+    );
+    currentDir = path.dirname(currentDir);
+  }
+
+  for (const candidatePath of new Set(candidatePaths)) {
+    if (fs.existsSync(candidatePath)) {
+      return candidatePath;
+    }
+  }
+
+  throw new Error(
+    'Could not find @rspack/cli/bin/rspack.js. Try running `meteor npm install` to ensure rspack is available.'
+  );
+}
+
+/**
+ * Determines whether Rspack should bypass the npx wrapper.
+ *
+ * This is only needed on Windows when one of the CLI arguments contains
+ * whitespace, which is where the wrapper path parsing breaks.
+ *
+ * @param {string[]} args - Arguments intended for the Rspack CLI
+ * @param {string} [platform=process.platform] - Platform to resolve for
+ * @returns {boolean} True if the npx wrapper should be bypassed
+ */
+export function shouldBypassRspackNpx(args, platform = process.platform) {
+  return platform === 'win32' && args.some((arg) => /\s/.test(arg));
+}
+
+/**
+ * Gets the command and arguments used to launch the Rspack CLI.
+ *
+ * @param {string[]} args - Arguments to pass to the Rspack CLI
+ * @returns {{ command: string, args: string[] }} The command and argument list
+ */
+export function getRspackCliCommand(args) {
+  if (shouldBypassRspackNpx(args)) {
+    return {
+      command: process.execPath,
+      args: [getRspackCliPath(), ...args],
+    };
+  }
+
+  return getNpxCommand(['rspack', ...args]);
+}
+
+/**
  * Gets the appropriate Rspack environment variables and command line arguments
  * @param {Object} options - Options for environment variables
  * @param {boolean} options.isClient - Whether this is for client-side build
@@ -417,12 +514,18 @@ export function startRspackClientServe(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
-  const { command, args } = getNpxCommand(['rspack', 'serve', '--config', configFile, ...params]);
+  const { command, args } = getRspackCliCommand(['serve', '--config', configFile, ...params]);
   const sawPanic = createPanicDetector();
+
   const newClientProcess = spawnProcess(
     command,
     args, {
       cwd: appDir,
+      // Detach so the npx wrapper and the rspack devserver share a process
+      // group separate from meteor-tool. stopProcess can then signal the whole
+      // group, releasing the devserver port even when npx wouldn't forward
+      // SIGTERM/SIGINT on its own.
+      detached: process.platform !== 'win32',
       env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
@@ -532,12 +635,15 @@ export function startRspackServerWatch(options = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: false, isServer: true });
-  const { command, args } = getNpxCommand(['rspack', 'build', '--watch', '--config', configFile, ...params]);
+  const { command, args } = getRspackCliCommand(['build', '--watch', '--config', configFile, ...params]);
   const sawPanic = createPanicDetector();
+
   const newServerProcess = spawnProcess(
     command,
     args, {
     cwd: appDir,
+    // Detach for the same reason as the client serve process; see comment there.
+    detached: process.platform !== 'win32',
     env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
@@ -632,14 +738,13 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
   const buildPromise = new Promise((resolve, reject) => {
     const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule, isTestLike });
     const rspackArgs = [
-      'rspack',
       'build',
       '--config',
       configFile,
       ...(watch && ['--watch']) || [],
       ...params,
     ].filter(Boolean);
-    const { command, args } = getNpxCommand(rspackArgs);
+    const { command, args } = getRspackCliCommand(rspackArgs);
     spawnProcess(
       command,
       args,
@@ -739,19 +844,36 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
 
 /**
  * Cleans up processes when the plugin is stopped
- * Stops any running client and server processes and clears their global state
+ * Stops any running client and server processes and clears their global state.
+ * Awaits both stops in parallel so the parent waits for the rspack devserver
+ * to release its port before exiting on SIGTERM/SIGHUP/SIGINT.
+ * @returns {Promise<void>}
+ */
+export async function cleanup() {
+  const clientProcess = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
+  const serverProcess = getGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+
+  setGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
+  setGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+
+  await Promise.all([
+    clientProcess ? stopProcess(clientProcess) : Promise.resolve(),
+    serverProcess ? stopProcess(serverProcess) : Promise.resolve(),
+  ]);
+}
+
+/**
+ * Synchronous best-effort variant for signal handlers. Sends SIGTERM to each
+ * rspack child's process group on POSIX (so the npx wrapper and the rspack
+ * binary it spawned both receive it) so the devserver port is released even
+ * if the parent terminates before the async cleanup awaits resolve.
  * @returns {void}
  */
-export function cleanup() {
-  const clientProcess = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
-  if (clientProcess) {
-    stopProcess(clientProcess);
-    setGlobalState(GLOBAL_STATE_KEYS.CLIENT_PROCESS, null);
-  }
+export function cleanupSync() {
+  for (const key of [GLOBAL_STATE_KEYS.CLIENT_PROCESS, GLOBAL_STATE_KEYS.SERVER_PROCESS]) {
+    const proc = getGlobalState(key, null);
+    if (!proc || !proc.pid || !isProcessRunning(proc)) continue;
 
-  const serverProcess = getGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
-  if (serverProcess) {
-    stopProcess(serverProcess);
-    setGlobalState(GLOBAL_STATE_KEYS.SERVER_PROCESS, null);
+    sendSignal(proc, 'SIGTERM');
   }
 }
