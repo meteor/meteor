@@ -115,6 +115,7 @@ TypeScript with SCSS, type checking, `.ts` rspack config, and `.ts` SWC config.
 | `.meteor/local/types` directory generated | Run |
 | Separate client/server test files | Test |
 | CI: removes TsCheckerRspackPlugin (resource limits) | Init |
+| Persistent cache dependency scanner parses TypeScript configs without errors | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### babel
@@ -296,7 +297,7 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | Package | Reason |
 |---------|--------|
 | `node:module` (`createRequire`) | Node.js built-in in a `.ts` config file — tests CJS interop via `createRequire(import.meta.url)` in an ESM context |
-| `@swc/core` | Type-only import (`import type { Config }`) — provides typings for `swc.config.ts`, stripped at compile time |
+| `@swc/core`, `@rspack/core` | Type-only import (`import type { Config }`, `import type { Configuration }`) — provides typings for configs, verifies the cache dependency scanner correctly parses TS syntax |
 
 ---
 
