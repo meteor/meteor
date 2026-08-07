@@ -51,6 +51,8 @@ Package.onUse(function (api) {
   api.use("callback-hook", "server");
   api.export("DDPServer", "server");
 
+  api.addAssets("ddp-server.d.ts", "server");
+
   api.addFiles("transports/raw_connection.js", "server");
   api.addFiles("transports/sockjs.js", "server");
   api.addFiles("transports/uws.js", "server");

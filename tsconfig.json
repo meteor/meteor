@@ -19,6 +19,7 @@
       "meteor/meteor": ["./packages/meteor/meteor.d.ts"],
       "meteor/mongo": ["./packages/mongo/mongo.d.ts"],
       "meteor/ddp": ["./packages/ddp/ddp.d.ts"],
+      "meteor/ddp-server": ["./packages/ddp-server/ddp-server.d.ts"],
       "meteor/ejson": ["./packages/ejson/ejson.d.ts"],
       "meteor/check": ["./packages/check/check.d.ts"],
       "meteor/facts-base": ["./packages/facts-base/facts-base.d.ts"],
