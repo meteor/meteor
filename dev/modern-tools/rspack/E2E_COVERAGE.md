@@ -214,9 +214,11 @@ Verified coverage:
 |----------------|----------|
 | `meteor test` automatically selects Rstest from the Atmosphere capability | Pure/runtime server |
 | Local npm mirror installs `@meteorjs/rspack` inside `@meteorjs/rstest`, then persists both app links without global npm state | Fixture init |
+| Atmosphere-owned bootstrap installs exact `@rstest/coverage-istanbul` with the other Rstest dev dependencies | Fixture init, native coverage |
 | Dynamic `@meteorjs/rstest.defineConfig(context)` receives command, roots, server/client selection, and architecture data | Pure server/client |
 | Native Rstest uses `@rstest/adapter-rspack` with shared SWC, aliases/fallbacks, CSS/assets, Meteor compile-time defines, and compatible `tools.rspack` composition | Pure server/client, Browser Mode, unit characterization |
-| Inline, committed external, and committed file snapshots | Pure server |
+| Inline, committed external, and committed file snapshots; mismatch exits nonzero, `--update-snapshots` rewrites the temporary snapshot, and a clean rerun passes | Pure server, snapshot update |
+| `--coverage` instruments imported Rspack source and writes a parsed Istanbul JSON report | Pure server, native coverage |
 | jsdom client project | Client-only |
 | Real Chromium Browser Mode with semantic locators, a real click/state update, auto-waiting assertions, and an inline DOM snapshot | Browser project, client-only |
 | Meteor-runtime server resolves `meteor/*`, Atmosphere packages, and MongoDB | Server runtime |
@@ -364,6 +366,8 @@ Where each feature is tested across apps and skeletons.
 | Rstest Browser Mode locators, interaction, and snapshots (Chromium) | rspack-rstest | |
 | Rstest Playwright full-app E2E | rspack-rstest | |
 | Rstest snapshots (inline, external, file) | rspack-rstest | |
+| Rstest snapshot mismatch/update/recheck lifecycle | rspack-rstest | |
+| Rstest native Istanbul coverage report | rspack-rstest | |
 | Meteor-runtime Rstest server/client | rspack-rstest | |
 | Rstest runtime name filtering | rspack-rstest | |
 | Atmosphere package and MongoDB runtime resolution | rspack-rstest | |

@@ -81,6 +81,124 @@ describe('Rspack + Rstest integration', () => {
     expect(packageJson.devDependencies['@meteorjs/rstest']).toMatch(/^file:/);
     expect(packageJson.devDependencies['@rstest/core']).toBe('0.11.6');
     expect(packageJson.devDependencies['@rstest/adapter-rspack']).toBe('0.11.6');
+    expect(packageJson.devDependencies['@rstest/coverage-istanbul']).toBe('0.11.6');
+  }, 600_000);
+
+  test('meteor update-snapshots repairs a native Rstest mismatch', async () => {
+    const testFile = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'pure',
+      'server',
+      'math.test.js',
+    );
+    const snapshotFile = path.join(
+      path.dirname(testFile),
+      '__snapshots__',
+      'math.test.js.snap',
+    );
+    const originalTest = fs.readFileSync(testFile, 'utf8');
+    const originalSnapshot = fs.readFileSync(snapshotFile, 'utf8');
+    const changedTest = originalTest.replace(
+      '@rspack/core@2.1.8',
+      '@rspack/core@2.1.8-updated',
+    );
+    expect(changedTest).not.toBe(originalTest);
+    fs.writeFileSync(testFile, changedTest);
+
+    const args = [
+      '--once',
+      '--server-only',
+      '--project',
+      'meteor-pure-server',
+      '--test-file',
+      'tests/rstest/pure/server/math.test.js',
+    ];
+    const runSnapshotCommand = async extraArgs => {
+      const result = await runMeteorCommand(
+        'test',
+        [...args, ...extraArgs],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: { reject: false },
+        },
+      );
+      return {
+        completed: await result.meteorProcess,
+        output: result.outputLines.join('\n'),
+      };
+    };
+
+    try {
+      const mismatch = await runSnapshotCommand([]);
+      expect(mismatch.completed.exitCode).not.toBe(0);
+      expect(mismatch.output).toContain('tests/rstest/pure/server/math.test.js');
+      expect(fs.readFileSync(snapshotFile, 'utf8')).toBe(originalSnapshot);
+
+      const update = await runSnapshotCommand(['--update-snapshots']);
+      expect(update.completed.exitCode).toBe(0);
+      const updatedSnapshot = fs.readFileSync(snapshotFile, 'utf8');
+      expect(updatedSnapshot).not.toBe(originalSnapshot);
+      expect(updatedSnapshot).toContain('@rspack/core@2.1.8-updated');
+
+      const verified = await runSnapshotCommand([]);
+      expect(verified.completed.exitCode).toBe(0);
+    } finally {
+      fs.writeFileSync(testFile, originalTest);
+      fs.writeFileSync(snapshotFile, originalSnapshot);
+    }
+  }, 600_000);
+
+  test('meteor coverage writes an Istanbul report for native Rspack source', async () => {
+    const coverageDir = path.join(
+      appDir,
+      '.meteor',
+      'local',
+      'rstest',
+      'e2e-coverage',
+    );
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-pure-server',
+          '--test-file',
+          'tests/rstest/pure/server/math.test.js',
+          '--coverage',
+          '--',
+          '--coverage.reporters',
+          'json',
+          '--coverage.reportsDirectory',
+          coverageDir,
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: { reject: false },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const reportFile = path.join(coverageDir, 'coverage-final.json');
+
+      expect(completed.exitCode).toBe(0);
+      expect(fs.existsSync(reportFile)).toBe(true);
+      const report = JSON.parse(fs.readFileSync(reportFile, 'utf8'));
+      const target = Object.entries(report).find(([file]) =>
+        file.replaceAll('\\', '/').endsWith(
+          '/tests/rstest/pure/server/coverage-target.js'
+        )
+      );
+      expect(target).toBeDefined();
+      expect(Object.values(target[1].s).some(count => count > 0)).toBe(true);
+      expect(Object.values(target[1].f).some(count => count > 0)).toBe(true);
+    } finally {
+      fs.rmSync(coverageDir, { recursive: true, force: true });
+    }
   }, 600_000);
 
   test('meteor name filtering reaches Meteor-runtime executor', async () => {

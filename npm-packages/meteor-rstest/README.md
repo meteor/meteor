@@ -18,7 +18,7 @@ That command is sufficient. Before Rstest launches, Atmosphere `rspack`
 installs its compiler-side npm dependencies and internal Atmosphere
 `rstest-tooling` installs exact Rstest-side dev dependencies. The two manifests
 do not duplicate ownership: Rspack versions remain controlled by `rspack`,
-while Rstest, jsdom, and Playwright versions remain controlled by
+while Rstest, Istanbul coverage, jsdom, and Playwright versions remain controlled by
 `rstest-tooling`.
 
 To manage npm dependencies yourself, set `meteor.autoInstallDeps` to `false` in
@@ -166,10 +166,48 @@ harness. Source-checkout E2E persists local `file:` specs for both unpublished
 npm packages; `METEOR_RSTEST_NPM_SPEC` and `METEOR_RSPACK_NPM_SPEC` are internal
 mirror overrides, not user configuration.
 
-Snapshots and coverage are native Rstest services for pure, DOM, Browser Mode,
-and external projects. Meteor-runtime projects currently provide assertions,
-hooks, filtering, structured results, and architecture aggregation; they do not
-pretend to support Rstest worker-only mocking or snapshot internals.
+## Snapshots and coverage
+
+Snapshots use native Rstest APIs in pure, DOM, Browser Mode, and external
+projects. Inline, committed `.snap`, and standalone file snapshots need no
+Meteor-specific adapter:
+
+```js
+import { expect, test } from '@rstest/core';
+
+test('records stable toolchain output', async () => {
+  expect({ compiler: 'rspack', runner: 'rstest' }).toMatchSnapshot('toolchain');
+  expect(['client', 'server']).toMatchInlineSnapshot(`
+    [
+      "client",
+      "server",
+    ]
+  `);
+  await expect('<main>Meteor</main>').toMatchFileSnapshot(
+    '../snapshots/app.html',
+  );
+});
+```
+
+Review a mismatch, then update selected native snapshots through Meteor:
+
+```sh
+meteor test --once --project meteor-pure-server --update-snapshots
+```
+
+Native Istanbul coverage is also available through the Meteor command. The
+`rstest-tooling` package installs the exact `@rstest/coverage-istanbul` version;
+applications do not need a separate install:
+
+```sh
+meteor test --once --project meteor-pure-server --coverage
+```
+
+Use native Rstest `coverage` configuration for reporters, include/exclude
+patterns, and report paths. Meteor-runtime projects currently provide
+assertions, hooks, filtering, structured results, and architecture aggregation;
+they do not claim native Rstest snapshots, coverage, worker-only mocking, or
+snapshot internals.
 
 ## Playwright fixture
 

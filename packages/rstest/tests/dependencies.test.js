@@ -14,6 +14,7 @@ const EXPECTED_DEPENDENCIES = [
   ['@rstest/core', '0.11.6'],
   ['@rstest/adapter-rspack', '0.11.6'],
   ['@rstest/browser', '0.11.6'],
+  ['@rstest/coverage-istanbul', '0.11.6'],
   ['@rstest/playwright', '0.11.6'],
   ['jsdom', '29.1.1'],
   ['playwright', '1.59.0'],
