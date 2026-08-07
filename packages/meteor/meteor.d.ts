@@ -431,48 +431,10 @@ export namespace Meteor {
     loginStyle?: string | undefined;
   }
 
-  function loginWithMeteorDeveloperAccount(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithFacebook(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithGithub(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithGoogle(
-    options?: Meteor.LoginWithExternalServiceOptions & {
-      /** Google login accepts additional login parameters based on
-       * https://developers.google.com/identity/openid-connect/openid-connect#authenticationuriparameters.
-       * However, there's only one parameter that must be set directly; all
-       * others can be set using Meteor's standard OAuth login parameters */
-      loginUrlParameters?: {
-        include_granted_scopes: boolean;
-      };
-    },
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithMeetup(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithTwitter(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithWeibo(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  // The OAuth login helpers (loginWithFacebook/Github/Google/Meetup/
+  // MeteorDeveloperAccount/Twitter/Weibo) are contributed by their own
+  // accounts-<service> packages via `declare module "meteor/meteor"`
+  // augmentation, so they only type when that package is installed.
 
   function loginWithPassword(
     user: { username: string } | { email: string } | { id: string } | string,
