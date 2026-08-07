@@ -80,13 +80,9 @@ expectTypeOf(Meteor.publish).toBeFunction();
 
 // --- Login ---
 expectTypeOf<Meteor.LoginWithExternalServiceOptions>().toBeObject();
-expectTypeOf(Meteor.loginWithMeteorDeveloperAccount).toBeFunction();
-expectTypeOf(Meteor.loginWithFacebook).toBeFunction();
-expectTypeOf(Meteor.loginWithGithub).toBeFunction();
-expectTypeOf(Meteor.loginWithGoogle).toBeFunction();
-expectTypeOf(Meteor.loginWithMeetup).toBeFunction();
-expectTypeOf(Meteor.loginWithTwitter).toBeFunction();
-expectTypeOf(Meteor.loginWithWeibo).toBeFunction();
+// OAuth login helpers (loginWithFacebook/Github/Google/Meetup/
+// MeteorDeveloperAccount/Twitter/Weibo) are owned by their accounts-<service>
+// packages and asserted in those packages' .test-d.ts.
 expectTypeOf(Meteor.loginWithPassword).toBeFunction();
 expectTypeOf(Meteor.loginWithToken).toBeFunction();
 expectTypeOf(Meteor.loginWithPasswordAsync).toBeFunction();
