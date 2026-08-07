@@ -17,3 +17,6 @@ expectTypeOf(Random.hexString).returns.toBeString();
 
 expectTypeOf(Random.choice<number>([1, 2, 3])).toEqualTypeOf<number | undefined>();
 expectTypeOf(Random.choice("abc")).toBeString();
+
+// --- choice (bare reference for coverage)
+expectTypeOf(Random.choice).toBeFunction();

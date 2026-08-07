@@ -44,6 +44,13 @@ expectTypeOf(Match.Where<string>((v): v is string => typeof v === "string"))
   .toEqualTypeOf<Match.Matcher<string>>();
 expectTypeOf(Match.Where((v) => !!v)).toEqualTypeOf<Match.Matcher<unknown>>();
 
+// Bare references for Maybe / Optional / ObjectIncluding / OneOf / Where
+expectTypeOf(Match.Maybe).toBeFunction();
+expectTypeOf(Match.Optional).toBeFunction();
+expectTypeOf(Match.ObjectIncluding).toBeFunction();
+expectTypeOf(Match.OneOf).toBeFunction();
+expectTypeOf(Match.Where).toBeFunction();
+
 // Match.test
 const val: unknown = 0;
 if (Match.test(val, String)) {

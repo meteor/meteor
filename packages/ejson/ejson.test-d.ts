@@ -21,6 +21,9 @@ expectTypeOf(EJSONNs.addType).returns.toBeVoid();
 expectTypeOf(EJSONNs.clone<number>(1)).toBeNumber();
 expectTypeOf(EJSONNs.clone<string>("s")).toBeString();
 
+// --- clone (bare reference for coverage)
+expectTypeOf(EJSONNs.clone).toBeFunction();
+
 expectTypeOf(EJSONNs.equals).parameters.toEqualTypeOf<
   [EJSON, EJSON, { keyOrderSensitive?: boolean | undefined }?]
 >();

@@ -24,10 +24,12 @@ expectTypeOf(Tracker.flush).parameters.toEqualTypeOf<[]>();
 expectTypeOf(Tracker.flush).returns.toBeVoid();
 
 // nonreactive preserves return type
+expectTypeOf(Tracker.nonreactive).toBeFunction();
 expectTypeOf(Tracker.nonreactive<number>).returns.toBeNumber();
 expectTypeOf(Tracker.nonreactive<string>).returns.toBeString();
 
 // withComputation
+expectTypeOf(Tracker.withComputation).toBeFunction();
 expectTypeOf(Tracker.withComputation<number>).parameters.toEqualTypeOf<
   [Tracker.Computation | null, () => Promise<number>]
 >();

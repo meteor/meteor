@@ -91,3 +91,26 @@ expectTypeOf(oid.equals(new Mongo.ObjectID())).toBeBoolean();
 expectTypeOf(MongoInternals).toHaveProperty("defaultRemoteCollectionDriver");
 expectTypeOf(MongoInternals.defaultRemoteCollectionDriver).returns.toHaveProperty("mongo");
 expectTypeOf(MongoInternals.NpmModules.mongodb.version).toBeString();
+
+// --- Type aliases ---
+expectTypeOf<Mongo.Modifier<Doc>>().toEqualTypeOf<NpmModuleMongodb.UpdateFilter<Doc>>();
+expectTypeOf<Mongo.DispatchTransform<null, Doc, Doc>>().toEqualTypeOf<Doc>();
+
+// --- Option / callback interfaces ---
+expectTypeOf<Mongo.CollectionOptions<Doc>>().toBeObject();
+expectTypeOf<Mongo.CursorStatic>().toBeObject();
+expectTypeOf<Mongo.ObserveCallbacks<Doc>>().toBeObject();
+expectTypeOf<Mongo.ObserveChangesCallbacks<Doc>>().toBeObject();
+expectTypeOf<Mongo.AllowDenyOptions<Doc>>().toBeObject();
+
+// --- ObjectID statics ---
+expectTypeOf(Mongo.ObjectID).toBeConstructibleWith();
+expectTypeOf<Mongo.ObjectIDStatic>().toBeObject();
+
+// --- Collection Extensions ---
+expectTypeOf<Mongo.CollectionExtensions>().toBeObject();
+expectTypeOf(Mongo.setConnectionOptions).toBeFunction();
+
+// --- MongoInternals ---
+expectTypeOf<MongoInternals.MongoConnection>().toBeObject();
+expectTypeOf(MongoInternals.NpmModules).toBeObject();

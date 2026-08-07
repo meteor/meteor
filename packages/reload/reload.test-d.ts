@@ -9,3 +9,6 @@ expectTypeOf(Reload._getData).returns.toEqualTypeOf<Record<string, unknown>>();
 expectTypeOf(Reload._migrate).toBeFunction();
 expectTypeOf(Reload._migrate).returns.toBeVoid();
 expectTypeOf(Reload._reload).returns.toBeVoid();
+
+// --- MigrationCallback (type)
+expectTypeOf<Reload.MigrationCallback>().toEqualTypeOf<(retry: () => void) => [boolean, unknown?]>();
