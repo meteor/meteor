@@ -1,6 +1,7 @@
 import { expectTypeOf } from "expect-type";
 import { Roles } from "./definitions";
 import { Meteor } from "meteor/meteor";
+import { Mongo } from "meteor/mongo";
 import type { RolesCollection, RoleAssignmentsCollection } from "./definitions";
 
 expectTypeOf(Roles).toBeObject();
@@ -15,51 +16,43 @@ expectTypeOf(Meteor.roleAssignment).toBeObject();
 expectTypeOf(Roles.GLOBAL_GROUP).toBeNull();
 expectTypeOf(Roles.subscription).toBeObject();
 
-// --- User <-> role assignment functions
-expectTypeOf(Roles.addUsersToRoles).toBeFunction();
-expectTypeOf(Roles.addUsersToRolesAsync).toBeFunction();
-expectTypeOf(Roles.removeUsersFromRoles).toBeFunction();
-expectTypeOf(Roles.removeUsersFromRolesAsync).toBeFunction();
-expectTypeOf(Roles.setUserRoles).toBeFunction();
-expectTypeOf(Roles.setUserRolesAsync).toBeFunction();
-expectTypeOf(Roles.userIsInRole).toBeFunction();
-expectTypeOf(Roles.userIsInRoleAsync).toBeFunction();
-
-// --- Role CRUD functions
-expectTypeOf(Roles.createRole).toBeFunction();
-expectTypeOf(Roles.createRoleAsync).toBeFunction();
-expectTypeOf(Roles.deleteRole).toBeFunction();
-expectTypeOf(Roles.deleteRoleAsync).toBeFunction();
-expectTypeOf(Roles.renameRole).toBeFunction();
-expectTypeOf(Roles.renameRoleAsync).toBeFunction();
-
-// --- Role hierarchy functions
-expectTypeOf(Roles.addRolesToParent).toBeFunction();
-expectTypeOf(Roles.addRolesToParentAsync).toBeFunction();
-expectTypeOf(Roles.removeRolesFromParent).toBeFunction();
-expectTypeOf(Roles.removeRolesFromParentAsync).toBeFunction();
-expectTypeOf(Roles.isParentOf).toBeFunction();
-expectTypeOf(Roles.isParentOfAsync).toBeFunction();
-
-// --- Query / retrieval functions
-expectTypeOf(Roles.getAllRoles).toBeFunction();
-expectTypeOf(Roles.getGroupsForUser).toBeFunction();
-expectTypeOf(Roles.getGroupsForUserAsync).toBeFunction();
-expectTypeOf(Roles.getScopesForUser).toBeFunction();
-expectTypeOf(Roles.getScopesForUserAsync).toBeFunction();
-expectTypeOf(Roles.getRolesForUser).toBeFunction();
-expectTypeOf(Roles.getRolesForUserAsync).toBeFunction();
-expectTypeOf(Roles.getUserAssignmentsForRole).toBeFunction();
-expectTypeOf(Roles.getUsersInRole).toBeFunction();
-expectTypeOf(Roles.getUsersInRoleAsync).toBeFunction();
-expectTypeOf(Roles.getUserIdsInRole).toBeFunction();
-expectTypeOf(Roles.getUserIdsInRoleAsync).toBeFunction();
-
-// --- Scope functions
-expectTypeOf(Roles.renameScope).toBeFunction();
-expectTypeOf(Roles.renameScopeAsync).toBeFunction();
-expectTypeOf(Roles.removeScope).toBeFunction();
-expectTypeOf(Roles.removeScopeAsync).toBeFunction();
+// --- Functions: exact return types (strong assertions catch signature drift)
+expectTypeOf(Roles.addUsersToRoles).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.addUsersToRolesAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.removeUsersFromRoles).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.removeUsersFromRolesAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.setUserRoles).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.setUserRolesAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.userIsInRole).returns.toEqualTypeOf<boolean>();
+expectTypeOf(Roles.userIsInRoleAsync).returns.toEqualTypeOf<Promise<boolean>>();
+expectTypeOf(Roles.createRole).returns.toEqualTypeOf<string | null>();
+expectTypeOf(Roles.createRoleAsync).returns.toEqualTypeOf<Promise<string | null>>();
+expectTypeOf(Roles.deleteRole).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.deleteRoleAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.renameRole).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.renameRoleAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.addRolesToParent).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.addRolesToParentAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.removeRolesFromParent).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.removeRolesFromParentAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.isParentOf).returns.toEqualTypeOf<boolean>();
+expectTypeOf(Roles.isParentOfAsync).returns.toEqualTypeOf<Promise<boolean>>();
+expectTypeOf(Roles.getAllRoles).returns.toEqualTypeOf<Mongo.Cursor<Roles.Role>>();
+expectTypeOf(Roles.getGroupsForUser).returns.toEqualTypeOf<string[]>();
+expectTypeOf(Roles.getGroupsForUserAsync).returns.toEqualTypeOf<Promise<string[]>>();
+expectTypeOf(Roles.getScopesForUser).returns.toEqualTypeOf<string[]>();
+expectTypeOf(Roles.getScopesForUserAsync).returns.toEqualTypeOf<Promise<string[]>>();
+expectTypeOf(Roles.getRolesForUser).returns.toEqualTypeOf<string[]>();
+expectTypeOf(Roles.getRolesForUserAsync).returns.toEqualTypeOf<Promise<string[]>>();
+expectTypeOf(Roles.getUserAssignmentsForRole).returns.toEqualTypeOf<Mongo.Cursor<Roles.RoleAssignment>>();
+expectTypeOf(Roles.getUsersInRole).returns.toEqualTypeOf<Mongo.Cursor<Meteor.User>>();
+expectTypeOf(Roles.getUsersInRoleAsync).returns.toEqualTypeOf<Promise<Mongo.Cursor<Meteor.User>>>();
+expectTypeOf(Roles.getUserIdsInRole).returns.toEqualTypeOf<string[]>();
+expectTypeOf(Roles.getUserIdsInRoleAsync).returns.toEqualTypeOf<Promise<string[]>>();
+expectTypeOf(Roles.renameScope).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.renameScopeAsync).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Roles.removeScope).returns.toEqualTypeOf<void>();
+expectTypeOf(Roles.removeScopeAsync).returns.toEqualTypeOf<Promise<void>>();
 
 // --- Interfaces
 expectTypeOf<Roles.Role>().toBeObject();
