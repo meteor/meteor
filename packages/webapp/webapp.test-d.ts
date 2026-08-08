@@ -33,7 +33,7 @@ expectTypeOf<WebApp.RuntimeConfigHookCallback>().toBeFunction();
 
 // --- WebAppInternals consts ---
 expectTypeOf(WebAppInternals.NpmModules).toBeObject();
-expectTypeOf(WebAppInternals.staticFiles).toBeObject();
+expectTypeOf(WebAppInternals.staticFilesByArch).toBeObject();
 expectTypeOf(WebAppInternals.additionalStaticJs).toBeObject();
 
 // --- WebAppInternals functions (exact return types) ---

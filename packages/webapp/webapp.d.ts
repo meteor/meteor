@@ -101,7 +101,7 @@ export declare namespace WebAppInternals {
   function parsePort(port: string | number): string | number;
   function reloadClientPrograms(): Promise<void>;
   function generateBoilerplate(): Promise<void>;
-  var staticFiles: StaticFiles;
+  var staticFilesByArch: { [arch: string]: StaticFiles };
   function inlineScriptsAllowed(): boolean;
   function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): Promise<void>;
 

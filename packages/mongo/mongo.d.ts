@@ -108,14 +108,9 @@ export namespace Mongo {
       options?: CollectionOptions<T, U>
     ): Collection<T, U>;
 
-    /**
-     * Retrieve a previously defined Mongo.Collection instance by its name. The collection must already have been defined with `new Mongo.Collection(name, ...)`.
-     * Plain MongoDB collections are not available by this method.
-     * @param name The name of the collection instance.
-     */
-    getCollection<
-        TCollection extends Collection<NpmModuleMongodb.Document> | undefined = Collection<NpmModuleMongodb.Document> | undefined
-    >(name: string): TCollection;
+    // NOTE: getCollection is NOT a static on the Collection constructor at
+    // runtime — it lives on the Mongo namespace object (see `Mongo.getCollection`
+    // below). It was previously declared here as a phantom static.
 
     // Collection Extensions API
     /**

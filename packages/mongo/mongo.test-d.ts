@@ -78,8 +78,7 @@ expectTypeOf(Mongo.Collection.getStaticMethods).returns.toEqualTypeOf<
 >();
 expectTypeOf(Mongo.Collection.clearExtensions).returns.toBeVoid();
 
-// Static getters
-expectTypeOf(Mongo.Collection.getCollection).toBeFunction();
+// getCollection lives on the Mongo namespace (not as a Collection static)
 expectTypeOf(Mongo.getCollection).toBeFunction();
 
 // ObjectID
