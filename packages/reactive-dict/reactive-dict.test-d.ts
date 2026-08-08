@@ -23,7 +23,7 @@ expectTypeOf(dict.get<"name">).returns.toEqualTypeOf<string | undefined>();
 
 expectTypeOf(dict.equals).toBeFunction();
 expectTypeOf(dict.equals<"count">).parameters.toEqualTypeOf<
-  ["count", string | number | boolean | undefined | null]
+  ["count", string | number | boolean | undefined | null | Date]
 >();
 expectTypeOf(dict.equals<"count">).returns.toBeBoolean();
 

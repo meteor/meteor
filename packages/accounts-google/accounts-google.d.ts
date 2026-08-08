@@ -9,7 +9,8 @@ declare module 'meteor/meteor' {
          * However, there's only one parameter that must be set directly; all
          * others can be set using Meteor's standard OAuth login parameters */
         loginUrlParameters?: {
-          include_granted_scopes: boolean;
+          include_granted_scopes?: boolean;
+          [key: string]: unknown;
         };
       },
       callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void

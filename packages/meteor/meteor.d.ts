@@ -20,8 +20,6 @@ export namespace Meteor {
    */
   var release: string;
 
-  var meteorRelease: string;
-
   interface ErrorConstructor {
     new (...args: unknown[]): Error;
     errorType: string;

@@ -41,6 +41,8 @@ export class MaxHeap<V = number> {
 export class MinHeap<V = number> extends MaxHeap<V> {
   /** Id of the minimum element, or `null` if empty. */
   minElementId(): string | null;
+  /** Not supported on a MinHeap — always throws. */
+  maxElementId(): never;
 }
 
 /** A heap exposing both extremes. */

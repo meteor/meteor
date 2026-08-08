@@ -12,7 +12,6 @@ expectTypeOf(Meteor.isCordova).toBeBoolean();
 expectTypeOf(Meteor.isServer).toBeBoolean();
 expectTypeOf(Meteor.isProduction).toBeBoolean();
 expectTypeOf(Meteor.release).toBeString();
-expectTypeOf(Meteor.meteorRelease).toBeString();
 expectTypeOf(Meteor.isDevelopment).toBeBoolean();
 expectTypeOf(Meteor.isModern).toBeBoolean();
 expectTypeOf(Meteor.gitCommitHash).not.toBeAny();
