@@ -162,7 +162,11 @@ export namespace Meteor {
    * @param methods Dictionary whose keys are method names and values are functions.
    */
   function methods(methods: {
-    [key: string]: (this: MethodThisType, ...args: (EJSONable | EJSONableProperty)[]) =>
+    // Handlers may declare concretely-typed parameters (e.g. `(id: string)`).
+    // Using `any[]` (rather than `(EJSONable | EJSONableProperty)[]`) keeps that
+    // ergonomic under strictFunctionTypes; DDP still requires EJSON-serializable
+    // arguments at the call site.
+    [key: string]: (this: MethodThisType, ...args: any[]) =>
       EJSONable | EJSONableProperty | void | Promise<EJSONable | EJSONableProperty | void>;
   }): void;
 
