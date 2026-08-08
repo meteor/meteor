@@ -5,11 +5,11 @@ import {
   type Configuration,
 } from "./service-configuration";
 
-// Configuration shape
-expectTypeOf<Configuration>().toEqualTypeOf<{
-  appId: string;
-  secret: string;
-}>();
+// Configuration models a stored service-config document: `service` is mandatory,
+// `_id` optional, plus arbitrary service-specific keys.
+expectTypeOf<Configuration["service"]>().toEqualTypeOf<string>();
+expectTypeOf<Configuration["someArbitraryServiceKey"]>().toEqualTypeOf<unknown>();
+expectTypeOf<Configuration>().toExtend<{ service: string }>();
 
 // ServiceConfiguration namespace object
 expectTypeOf(ServiceConfiguration).toBeObject();

@@ -41,8 +41,8 @@ expectTypeOf(Log.format)
   .toEqualTypeOf<{ color?: boolean; metaColor?: string } | undefined>();
 expectTypeOf(Log.format).returns.toBeString();
 
-expectTypeOf(Log.objFromText).parameters.toEqualTypeOf<[string, Record<string, unknown>]>();
-expectTypeOf(Log.objFromText).returns.toEqualTypeOf<{
+expectTypeOf(Log.objFromText).parameters.toEqualTypeOf<[string, Record<string, unknown>?]>();
+expectTypeOf(Log.objFromText).returns.toExtend<{
   message: string;
   level: "info";
   time: Date;

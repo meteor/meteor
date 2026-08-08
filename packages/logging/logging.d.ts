@@ -33,13 +33,13 @@ export declare namespace Log {
   function format(object: formatInput, options?: { color?: boolean; metaColor?: string }): string;
   function objFromText(
     line: string,
-    override: Record<string, unknown>,
+    override?: Record<string, unknown>,
   ): {
     message: string;
     level: "info";
     time: Date;
     timeInexact: true;
-  };
+  } & Record<string, unknown>;
 
   function debug(input: LogInput, ...optionalParams: unknown[]): void;
   function info(input: LogInput, ...optionalParams: unknown[]): void;
