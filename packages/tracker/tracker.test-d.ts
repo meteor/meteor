@@ -31,9 +31,9 @@ expectTypeOf(Tracker.nonreactive<string>).returns.toBeString();
 // withComputation
 expectTypeOf(Tracker.withComputation).toBeFunction();
 expectTypeOf(Tracker.withComputation<number>).parameters.toEqualTypeOf<
-  [Tracker.Computation | null, () => Promise<number>]
+  [Tracker.Computation | null, () => number]
 >();
-expectTypeOf(Tracker.withComputation<number>).returns.toEqualTypeOf<Promise<number>>();
+expectTypeOf(Tracker.withComputation<number>).returns.toEqualTypeOf<number>();
 
 // onInvalidate (top-level)
 expectTypeOf(Tracker.onInvalidate).parameters.toEqualTypeOf<

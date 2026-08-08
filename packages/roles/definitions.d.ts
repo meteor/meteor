@@ -28,7 +28,7 @@ export declare namespace Roles {
    * @static
    * @final
    */
-  var GLOBAL_GROUP: string;
+  var GLOBAL_GROUP: null;
 
   /**
    * Subscription handle for the currently logged in user's permissions.
@@ -88,11 +88,11 @@ export declare namespace Roles {
   function createRole(
     roleName: string,
     options?: { unlessExists: boolean }
-  ): string;
+  ): string | null;
   function createRoleAsync(
     roleName: string,
     options?: { unlessExists: boolean }
-  ): Promise<string>;
+  ): Promise<string | null>;
 
   /**
    * Delete an existing role.

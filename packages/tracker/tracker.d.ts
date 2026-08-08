@@ -120,8 +120,8 @@ export namespace Tracker {
    */
   function withComputation<T>(
     computation: Computation | null,
-    func: () => Promise<T>
-  ): Promise<T>;
+    func: () => T
+  ): T;
 
   /**
    * Process all reactive updates immediately and ensure that all invalidated computations are rerun.

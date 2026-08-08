@@ -16,8 +16,11 @@ export namespace Reload {
   /** The raw serialized migration data from sessionStorage (JSON string), or null. */
   export function _getData(): string | null;
 
-  /** Attempt to migrate; `tryReload` is the retry callback handed to migration handlers. */
-  export function _migrate(tryReload: () => void, options?: { immediateMigration?: boolean }): void;
+  /**
+   * Attempt to migrate; `tryReload` is the retry callback handed to migration
+   * handlers. Returns `false` if some provider isn't ready yet, `true` if migrated.
+   */
+  export function _migrate(tryReload: () => void, options?: { immediateMigration?: boolean }): boolean;
 
   /** Reload the client program, running migration handlers first. */
   export function _reload(options?: { immediateMigration?: boolean }): void;

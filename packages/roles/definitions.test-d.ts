@@ -12,7 +12,7 @@ expectTypeOf(Meteor.roles).toBeObject();
 expectTypeOf(Meteor.roleAssignment).toBeObject();
 
 // --- Constants / vars
-expectTypeOf(Roles.GLOBAL_GROUP).toBeString();
+expectTypeOf(Roles.GLOBAL_GROUP).toBeNull();
 expectTypeOf(Roles.subscription).toBeObject();
 
 // --- User <-> role assignment functions
