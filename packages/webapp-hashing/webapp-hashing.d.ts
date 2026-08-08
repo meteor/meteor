@@ -17,7 +17,7 @@ export namespace WebAppHashing {
    */
   export function calculateClientHash(
     manifest: ManifestResource[],
-    includeFilter?: (type: string, replaceable?: boolean) => boolean,
+    includeFilter?: ((type: string, replaceable?: boolean) => boolean) | null,
     runtimeConfigOverride?: Record<string, unknown>,
   ): string;
 

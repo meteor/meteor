@@ -16,7 +16,7 @@ expectTypeOf(WebAppHashing.calculateClientHash).parameter(0).toEqualTypeOf<
 >();
 expectTypeOf(WebAppHashing.calculateClientHash)
   .parameter(1)
-  .toEqualTypeOf<((type: string, replaceable?: boolean) => boolean) | undefined>();
+  .toEqualTypeOf<((type: string, replaceable?: boolean) => boolean) | null | undefined>();
 expectTypeOf(WebAppHashing.calculateClientHash)
   .parameter(2)
   .toEqualTypeOf<Record<string, unknown> | undefined>();

@@ -36,3 +36,8 @@ onPageLoad((sink) => {
   expectTypeOf(sink).toEqualTypeOf<Sink>();
   return 42;
 });
+
+// onPageLoad carries static members (remove / clear / chain)
+expectTypeOf(onPageLoad.remove).toBeFunction();
+expectTypeOf(onPageLoad.clear).returns.toBeVoid();
+expectTypeOf(onPageLoad.chain).returns.toEqualTypeOf<Promise<void>>();

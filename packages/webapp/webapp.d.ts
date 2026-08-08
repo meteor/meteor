@@ -78,9 +78,9 @@ export declare namespace WebAppInternals {
   };
   function identifyBrowser(userAgentString: string): {
     name: string;
-    major: string;
-    minor: string;
-    patch: string;
+    major: number;
+    minor: number;
+    patch: number;
   };
   function registerBoilerplateDataCallback(
     key: string,

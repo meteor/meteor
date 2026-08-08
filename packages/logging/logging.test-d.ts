@@ -33,7 +33,7 @@ expectTypeOf(Log._getCallerDetails).returns.toEqualTypeOf<{
 }>();
 
 // parse / format / objFromText
-expectTypeOf(Log.parse).parameters.toEqualTypeOf<[Record<string, unknown> | string]>();
+expectTypeOf(Log.parse).parameters.toEqualTypeOf<[string]>();
 expectTypeOf(Log.parse).returns.toEqualTypeOf<Record<string, unknown> | null>();
 
 expectTypeOf(Log.format)
