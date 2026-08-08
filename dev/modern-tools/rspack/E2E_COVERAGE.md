@@ -22,6 +22,12 @@ Every app and skeleton goes through these phases (unless skipped):
 
 Default assertions on every run phase: build artifacts exist, page title matches, body styles render, `__rspack__` script tag is present.
 
+### Package dependency regression
+
+| What is covered | Test |
+|-----------------|------|
+| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+
 ---
 
 ## Apps
@@ -45,6 +51,9 @@ Core React integration with custom Meteor local directory.
 | Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
+| Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
+| Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
 
 ### react-router
 
@@ -196,6 +205,20 @@ Server-only app (no client entry point).
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
 
+### Focused server runtime regressions
+
+`server-runtime.test.js` reuses isolated temporary copies of the
+`server-only` fixture without modifying its normal lifecycle coverage.
+
+| What is covered | Phase |
+|----------------|-------|
+| Absolute external `METEOR_LOCAL_DIR` outside the app | Run |
+| `Assets` and `Npm` wrapper globals visible to server bundle code | Run |
+| Development server bundle stays outside Meteor's linked `app.js` payload | Run |
+| Delayed server import of a previously unused Meteor package | Run |
+| CommonJS development server bundle under a `type: module` app | Run |
+| Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
+
 ---
 
 ## Skeletons
@@ -215,8 +238,9 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | react | 3205 | JSX | Custom body styles (Inter font, padding) |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | TypeScript | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | CI: removes TsCheckerRspackPlugin |
+| tailwind | 3208 | JSX | Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | TypeScript 7; native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript-tailwind | 3221 | TypeScript | TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
 ---
@@ -243,11 +267,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `node:buffer` | `imports/api/links.js` | Node.js built-in via `node:` protocol in shared client/server code — must be ignored on client without errors |
 | `@react-email/components` | `imports/emails/TestEmail.jsx` | JSX-heavy ESM package with many subpath exports |
 
-### react (`apps/react/plugins/demo-unplugin.js`)
+### react (`apps/react/`)
 
-| Package | Reason |
-|---------|--------|
-| `unplugin` | Unplugin transform hook integration — validates rspack cache tracks plugin dependency files (#14031) |
+| Package | File | Reason |
+|---------|------|--------|
+| `unplugin` | `plugins/demo-unplugin.js` | Unplugin transform hook integration validates rspack cache tracks plugin dependency files (#14031) |
+| `meteor-node-stubs` (`buffer`, `crypto`) and `isomorphic-timers-promises` | `tests/main.js` | Browser implementations and global `Buffer` support for client tests |
 
 ### babel (`apps/babel/server/apollo.js`)
 
@@ -281,7 +306,7 @@ Where each feature is tested across apps and skeletons.
 | User-level `devServer.onListening` composition | react-router | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
-| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
+| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
 | Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
@@ -290,12 +315,16 @@ Where each feature is tested across apps and skeletons.
 | 404 routing | react-router | |
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
-| TypeScript type checking | typescript | |
+| TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
 | Meteor.disablePlugins | react | |
 | Unplugin transform with cache (#14031) | react | |
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
+| Rspack process cleanup | react | |
+| Server bundle excluded from Meteor linker payload | server-only regression | |
+| `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
+| Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router | |
 | Module rules override | babel | |

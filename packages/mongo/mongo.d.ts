@@ -1030,7 +1030,7 @@ export namespace Mongo {
   }
 }
 
-export declare module MongoInternals {
+export declare namespace MongoInternals {
   interface MongoConnection {
     db: NpmModuleMongodb.Db;
     client: NpmModuleMongodb.MongoClient;
