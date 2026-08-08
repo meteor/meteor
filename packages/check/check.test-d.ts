@@ -48,8 +48,25 @@ expectTypeOf(Match.Where((v) => !!v)).toEqualTypeOf<Match.Matcher<unknown>>();
 expectTypeOf(Match.Maybe).toBeFunction();
 expectTypeOf(Match.Optional).toBeFunction();
 expectTypeOf(Match.ObjectIncluding).toBeFunction();
+expectTypeOf(Match.ObjectWithValues).toBeFunction();
 expectTypeOf(Match.OneOf).toBeFunction();
 expectTypeOf(Match.Where).toBeFunction();
+
+// ObjectWithValues — object whose values all match the pattern
+expectTypeOf(Match.ObjectWithValues(String)).toEqualTypeOf<
+  Match.Matcher<{ [key: string]: string }>
+>();
+
+// Match.Error — constructable error thrown by check(), with a `.path`
+expectTypeOf(new Match.Error("x")).toMatchTypeOf<Error>();
+expectTypeOf(new Match.Error("x").path).toEqualTypeOf<string>();
+try {
+  /* noop */
+} catch (e) {
+  if (e instanceof Match.Error) {
+    expectTypeOf(e.path).toEqualTypeOf<string>();
+  }
+}
 
 // Match.test
 const val: unknown = 0;

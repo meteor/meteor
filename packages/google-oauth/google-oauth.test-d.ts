@@ -6,8 +6,8 @@ expectTypeOf(Google).toBeObject();
 expectTypeOf(Google.requestCredential).toBeFunction();
 expectTypeOf(Google.requestCredential).returns.toBeVoid();
 
-expectTypeOf(Google.retrieveCredential).parameters.toEqualTypeOf<[string, string]>();
-expectTypeOf(Google.retrieveCredential).returns.toBeObject();
+expectTypeOf(Google.retrieveCredential).parameters.toEqualTypeOf<[string, string?]>();
+expectTypeOf(Google.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();
 
 expectTypeOf(Google.signIn).toBeFunction();
 expectTypeOf(Google.signOut).returns.toEqualTypeOf<Promise<void>>();

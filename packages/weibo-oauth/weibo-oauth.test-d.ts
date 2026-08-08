@@ -6,5 +6,5 @@ expectTypeOf(Weibo).toBeObject();
 expectTypeOf(Weibo.requestCredential).toBeFunction();
 expectTypeOf(Weibo.requestCredential).returns.toBeVoid();
 
-expectTypeOf(Weibo.retrieveCredential).parameters.toEqualTypeOf<[string, string]>();
-expectTypeOf(Weibo.retrieveCredential).returns.toBeObject();
+expectTypeOf(Weibo.retrieveCredential).parameters.toEqualTypeOf<[string, string?]>();
+expectTypeOf(Weibo.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();

@@ -7,6 +7,6 @@ expectTypeOf(MeteorDeveloperAccounts.requestCredential).toBeFunction();
 expectTypeOf(MeteorDeveloperAccounts.requestCredential).returns.toBeVoid();
 
 expectTypeOf(MeteorDeveloperAccounts.retrieveCredential).parameters.toEqualTypeOf<
-  [string, string]
+  [string, string?]
 >();
-expectTypeOf(MeteorDeveloperAccounts.retrieveCredential).returns.toBeObject();
+expectTypeOf(MeteorDeveloperAccounts.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();

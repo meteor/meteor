@@ -38,8 +38,8 @@ export namespace Twitter {
    */
   export function retrieveCredential(
     credentialToken: string,
-    credentialSecret: string
-  ): OAuthCredential;
+    credentialSecret?: string
+  ): Promise<OAuthCredential | undefined>;
 
   /** Query parameters allowed on Twitter's `authenticate` endpoint. */
   export const validParamsAuthenticate: string[];

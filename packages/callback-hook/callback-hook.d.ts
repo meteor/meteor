@@ -32,6 +32,15 @@ export class Hook<T extends (...args: any[]) => any = (...args: any[]) => any> {
   /** Clear all registered callbacks. */
   clear(): void;
 
+  /** The number of callbacks currently registered. */
+  size(): number;
+
+  /** A snapshot of the registered (wrapped) callbacks as a new array. */
+  asArray(): T[];
+
+  /** Replace the registered callbacks with the given array. Throws if not an array. */
+  fromArray(callbacks: T[]): void;
+
   /**
    * For each registered callback, call the passed iterator function with the callback.
    * The iteration is stopped if the iterator function returns a falsy value or throws.
@@ -49,4 +58,7 @@ export class Hook<T extends (...args: any[]) => any = (...args: any[]) => any> {
    * @deprecated Use forEach instead
    */
   each(iterator: (callback: T) => boolean | void): void;
+
+  /** Iterate the registered callbacks (`for...of` / spread). */
+  [Symbol.iterator](): IterableIterator<T>;
 }

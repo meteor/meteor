@@ -46,8 +46,8 @@ export namespace Google {
    */
   export function retrieveCredential(
     credentialToken: string,
-    credentialSecret: string
-  ): OAuthCredential;
+    credentialSecret?: string
+  ): Promise<OAuthCredential | undefined>;
 
   /**
    * (Cordova) Sign in using the native Google Sign-In SDK.

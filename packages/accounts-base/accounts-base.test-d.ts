@@ -57,7 +57,10 @@ expectTypeOf(Accounts.loggingOut).toBeFunction();
 expectTypeOf(Accounts.logout).toBeFunction();
 expectTypeOf(Accounts.logoutAsync).toBeFunction();
 expectTypeOf(Accounts.logoutAllClients).toBeFunction();
+// logoutAllClients does not return the promise chain at runtime -> void (unlike its Async sibling)
+expectTypeOf(Accounts.logoutAllClients).returns.toBeVoid();
 expectTypeOf(Accounts.logoutAllClientsAsync).toBeFunction();
+expectTypeOf(Accounts.logoutAllClientsAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Accounts.logoutOtherClients).toBeFunction();
 expectTypeOf(Accounts.logoutOtherClientsAsync).toBeFunction();
 
@@ -84,6 +87,8 @@ expectTypeOf(Accounts.sendVerificationEmail).toBeFunction();
 expectTypeOf(Accounts.setUsername).toBeFunction();
 expectTypeOf(Accounts.setPasswordAsync).toBeFunction();
 expectTypeOf(Accounts.validateNewUser).toBeFunction();
+// validateNewUser just pushes a hook -> void, not boolean
+expectTypeOf(Accounts.validateNewUser).returns.toBeVoid();
 expectTypeOf(Accounts.validateLoginAttempt).toBeFunction();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts>().toBeObject();
 expectTypeOf(Accounts.onLogout).toBeFunction();

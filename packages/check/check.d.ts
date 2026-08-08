@@ -54,6 +54,11 @@ export namespace Match {
     dico: T
   ): Matcher<PatternMatch<T>>;
 
+  /** Matches an Object all of whose values match the given pattern. */
+  function ObjectWithValues<T extends Pattern>(
+    pattern: T
+  ): Matcher<{ [key: string]: PatternMatch<T> }>;
+
   /** Matches any value that matches at least one of the provided patterns. */
   function OneOf<T extends Pattern[]>(
     ...patterns: T
@@ -67,6 +72,22 @@ export namespace Match {
   function Where(condition: (val: unknown) => boolean): Matcher<unknown>;
 
   var NonEmptyString: Matcher<string>;
+
+  /**
+   * The error thrown by `check` and `Match.test` when a value doesn't match a
+   * pattern. Use `catch (e) { if (e instanceof Match.Error) { e.path } }`.
+   */
+  interface Error extends globalThis.Error {
+    /** Path of the value that failed to match (e.g. `"field.subField"`). */
+    path: string;
+    /** A sanitized, user-facing error safe to send over the wire. */
+    sanitizedError: globalThis.Error;
+  }
+  var Error: {
+    new (msg: string): Match.Error;
+    (msg: string): Match.Error;
+  };
+
   /**
    * Returns true if the value matches the pattern.
    * @param value The value to check

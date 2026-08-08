@@ -38,8 +38,8 @@ export namespace Facebook {
    */
   export function retrieveCredential(
     credentialToken: string,
-    credentialSecret: string
-  ): OAuthCredential;
+    credentialSecret?: string
+  ): Promise<OAuthCredential | undefined>;
 
   /**
    * (Server) Build a service-data object directly from a Facebook access

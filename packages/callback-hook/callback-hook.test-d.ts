@@ -26,3 +26,13 @@ expectTypeOf(hook.forEachAsync).parameters.toEqualTypeOf<
 >();
 expectTypeOf(hook.forEachAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(hook.each).parameters.toEqualTypeOf<[(callback: Cb) => boolean | void]>();
+
+expectTypeOf(hook.size).returns.toEqualTypeOf<number>();
+expectTypeOf(hook.asArray()).toEqualTypeOf<Cb[]>();
+expectTypeOf(hook.fromArray).parameters.toEqualTypeOf<[Cb[]]>();
+expectTypeOf(hook.fromArray).returns.toBeVoid();
+expectTypeOf(hook[Symbol.iterator]()).toEqualTypeOf<IterableIterator<Cb>>();
+// Hook is iterable (for...of / spread) yielding the callback type
+for (const cb of hook) {
+  expectTypeOf(cb).toEqualTypeOf<Cb>();
+}

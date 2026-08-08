@@ -38,6 +38,6 @@ export namespace MeteorDeveloperAccounts {
    */
   export function retrieveCredential(
     credentialToken: string,
-    credentialSecret: string
-  ): OAuthCredential;
+    credentialSecret?: string
+  ): Promise<OAuthCredential | undefined>;
 }

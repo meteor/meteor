@@ -92,11 +92,11 @@ export namespace Accounts {
     passwordEnrollTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
     bcryptRounds?: number | undefined;
-    argon2Enabled?: string | false;
+    argon2Enabled?: boolean | undefined;
     argon2Type?: string | undefined;
-    argon2TimeCost: number | undefined;
-    argon2MemoryCost: number | undefined;
-    argon2Parallelism: number | undefined;
+    argon2TimeCost?: number | undefined;
+    argon2MemoryCost?: number | undefined;
+    argon2Parallelism?: number | undefined;
     defaultFieldSelector?: { [key: string]: 0 | 1 } | undefined;
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
@@ -169,7 +169,7 @@ export namespace Accounts {
 
   function logoutAllClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): Promise<void>;
+  ): void;
 
   function logoutAllClientsAsync(): Promise<void>;
 
@@ -275,7 +275,7 @@ export namespace Accounts {
     options?: { logout?: boolean | undefined }
   ): Promise<void>;
 
-  function validateNewUser(func: (user: Meteor.User) => boolean): boolean;
+  function validateNewUser(func: (user: Meteor.User) => boolean): void;
 
   function validateLoginAttempt(
     func: (attempt: IValidateLoginAttemptCbOpts) => boolean | Promise<boolean>
