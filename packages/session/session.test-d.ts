@@ -34,5 +34,7 @@ expectTypeOf(Session.set).toBeCallableWith("k", [1, 2, 3]);
 expectTypeOf(Session.set).toBeCallableWith({ s: "v", n: 1, b: true, x: null });
 expectTypeOf(Session.set).returns.toBeVoid();
 
-expectTypeOf(Session.setDefault).parameters.toEqualTypeOf<[string, SessionValue]>();
+// setDefault mirrors set: (key, value) and (object) forms
+expectTypeOf(Session.setDefault).toBeCallableWith("k", "v");
+expectTypeOf(Session.setDefault).toBeCallableWith({ s: "v", n: 1, b: true, x: null });
 expectTypeOf(Session.setDefault).returns.toBeVoid();

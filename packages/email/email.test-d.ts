@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { Email, MailComposer } from "./email";
+import { Email } from "./email";
 import type {
   MailComposerOptions,
   MailComposerStatic,
@@ -7,7 +7,8 @@ import type {
 } from "./email";
 
 expectTypeOf(Email).toBeObject();
-expectTypeOf(MailComposer).toMatchTypeOf<MailComposerStatic>();
+// MailComposer is a type only (not a runtime export of meteor/email).
+expectTypeOf<MailComposerStatic>().toBeObject();
 expectTypeOf<MailComposerOptions>().toBeObject();
 expectTypeOf<MailComposerType>().toBeObject();
 
@@ -20,4 +21,9 @@ expectTypeOf<Email.CustomEmailOptions>().not.toBeAny();
 expectTypeOf(Email.send).toBeFunction();
 expectTypeOf(Email.sendAsync).toBeFunction();
 expectTypeOf(Email.hookSend).toBeFunction();
-expectTypeOf(Email.customTransport).toBeFunction();
+// hookSend returns an unregister handle
+expectTypeOf(Email.hookSend).returns.toMatchTypeOf<{ stop: () => void }>();
+// customTransport is a settable, optionally-undefined property
+expectTypeOf(Email.customTransport).toEqualTypeOf<
+  ((options: Email.CustomEmailOptions) => unknown) | undefined
+>();

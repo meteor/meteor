@@ -54,4 +54,5 @@ export namespace Session {
    * @param value The new value for `key`
    */
   function setDefault(key: string, value: SessionValue): void;
+  function setDefault(object: Record<string, SessionValue>): void;
 }

@@ -10,7 +10,8 @@ export class OrderedDict<K = string, V = unknown> {
    * @param stringify Optional key stringification function
    * @param entries Optional initial [key, value] pairs
    */
-  constructor(stringify?: (key: K) => string, ...entries: [K, V][]);
+  constructor(...entries: [K, V][]);
+  constructor(stringify: (key: K) => string, ...entries: [K, V][]);
 
   /** Check if the dictionary is empty. */
   empty(): boolean;

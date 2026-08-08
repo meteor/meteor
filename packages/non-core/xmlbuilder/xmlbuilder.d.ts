@@ -9,5 +9,4 @@ interface XmlBuilderElement {
 
 export const XmlBuilder: {
   create(name: string, options?: object): XmlBuilderElement;
-  begin(): XmlBuilderElement;
 };

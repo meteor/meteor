@@ -26,7 +26,16 @@ export namespace DDPRateLimiter {
     matcher: Matcher,
     numRequests?: number,
     timeInterval?: number,
-    callback?: (result: RateLimitResult) => void
+    callback?: (
+      result: RateLimitResult,
+      input: {
+        type?: string;
+        name?: string;
+        userId?: string | null;
+        connectionId?: string;
+        clientAddress?: string;
+      }
+    ) => void
   ): string;
 
   /**

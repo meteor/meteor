@@ -27,7 +27,17 @@ expectTypeOf(DDPRateLimiter.addRule).parameter(0).toEqualTypeOf<
 expectTypeOf(DDPRateLimiter.addRule).parameter(1).toEqualTypeOf<number | undefined>();
 expectTypeOf(DDPRateLimiter.addRule).parameter(2).toEqualTypeOf<number | undefined>();
 expectTypeOf(DDPRateLimiter.addRule).parameter(3).toEqualTypeOf<
-  ((result: DDPRateLimiter.RateLimitResult) => void) | undefined
+  | ((
+      result: DDPRateLimiter.RateLimitResult,
+      input: {
+        type?: string;
+        name?: string;
+        userId?: string | null;
+        connectionId?: string;
+        clientAddress?: string;
+      }
+    ) => void)
+  | undefined
 >();
 expectTypeOf(DDPRateLimiter.addRule).returns.toBeString();
 

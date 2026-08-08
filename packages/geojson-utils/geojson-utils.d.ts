@@ -30,8 +30,8 @@ export namespace GeoJSON {
   export function numberToDegree(radians: number): number;
   /** Great-circle distance between two points, in kilometres. */
   export function pointDistance(pt1: Geometry, pt2: Geometry): number;
-  /** Whether `point` lies inside the given bounding box. */
-  export function pointInBoundingBox(point: Geometry, bounds: Geometry): boolean;
+  /** Whether `point` lies inside the given bounding box `[[minLat,minLng],[maxLat,maxLng]]`. */
+  export function pointInBoundingBox(point: Geometry, bounds: number[][]): boolean;
   /** Whether `point` lies inside `polygon`. */
   export function pointInPolygon(point: Geometry, polygon: Geometry): boolean;
   /** Centroid of a rectangle geometry. */
