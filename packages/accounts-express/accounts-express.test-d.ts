@@ -7,11 +7,16 @@ import type { MeteorFetchOptions, AuthMiddlewareOptions } from "./accounts-expre
 // Own top-level surface.
 expectTypeOf<MeteorFetchOptions>().toBeObject();
 expectTypeOf<AuthMiddlewareOptions>().toBeObject();
-expectTypeOf(createAuthMiddleware).toBeFunction();
-expectTypeOf(fetch).toBeFunction();
-expectTypeOf(createAuthFetch).toBeFunction();
-expectTypeOf(handleFetch).toBeFunction();
+// createAuthMiddleware/createAuthFetch return functions; the fetch helpers resolve to Response.
+expectTypeOf(createAuthMiddleware).returns.toMatchTypeOf<
+  (req: any, res: any, next: () => void) => Promise<void>
+>();
+expectTypeOf(createAuthFetch).returns.toMatchTypeOf<
+  (url: string | Request, options?: MeteorFetchOptions) => Promise<Response>
+>();
+expectTypeOf(fetch).returns.toEqualTypeOf<Promise<Response>>();
+expectTypeOf(handleFetch).returns.toEqualTypeOf<Promise<Response>>();
 
 // Members it augments onto other modules.
-expectTypeOf(Meteor.fetch).toBeFunction();
-expectTypeOf(meteorFetch).toBeFunction();
+expectTypeOf(Meteor.fetch).returns.toEqualTypeOf<Promise<Response>>();
+expectTypeOf(meteorFetch).returns.toEqualTypeOf<Promise<Response>>();
