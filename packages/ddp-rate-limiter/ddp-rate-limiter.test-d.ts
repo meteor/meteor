@@ -11,13 +11,13 @@ expectTypeOf<DDPRateLimiter.RateLimitResult>().toEqualTypeOf<{
   ruleId: string;
 }>();
 
-// Matcher: each field is string | (sync or async predicate) | undefined
+// Matcher: each field is string | (sync or async predicate) | null | undefined
 expectTypeOf<DDPRateLimiter.Matcher>().toEqualTypeOf<{
-  type?: string | ((type: "method" | "subscription") => boolean) | ((type: "method" | "subscription") => Promise<boolean>) | undefined;
-  name?: string | ((name: string) => boolean) | ((name: string) => Promise<boolean>) | undefined;
-  userId?: string | ((userId: string | null) => boolean) | ((userId: string | null) => Promise<boolean>) | undefined;
-  connectionId?: string | ((connectionId: string) => boolean) | ((connectionId: string) => Promise<boolean>) | undefined;
-  clientAddress?: string | ((clientAddress: string) => boolean) | ((clientAddress: string) => Promise<boolean>) | undefined;
+  type?: string | ((type: "method" | "subscription") => boolean) | ((type: "method" | "subscription") => Promise<boolean>) | null | undefined;
+  name?: string | ((name: string) => boolean) | ((name: string) => Promise<boolean>) | null | undefined;
+  userId?: string | ((userId: string | null) => boolean) | ((userId: string | null) => Promise<boolean>) | null | undefined;
+  connectionId?: string | ((connectionId: string) => boolean) | ((connectionId: string) => Promise<boolean>) | null | undefined;
+  clientAddress?: string | ((clientAddress: string) => boolean) | ((clientAddress: string) => Promise<boolean>) | null | undefined;
 }>();
 
 // addRule
