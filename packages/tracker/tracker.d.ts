@@ -24,6 +24,17 @@ export namespace Tracker {
      * Invalidates this computation so that it will be rerun.
      */
     invalidate(): void;
+    /** Rerun this computation's function now. */
+    run(): void;
+    /** Flush pending reactive updates for this computation. */
+    flush(): void;
+    /** Await this computation's first run (delegates to `firstRunPromise`). */
+    then(
+      onResolved?: (value: unknown) => unknown,
+      onRejected?: (reason: unknown) => unknown
+    ): Promise<unknown>;
+    /** Await this computation's first run, handling rejection. */
+    catch(onRejected?: (reason: unknown) => unknown): Promise<unknown>;
     /**
      * True if this computation has been invalidated (and not yet rerun), or if it has been stopped.
      */
