@@ -126,10 +126,9 @@ export namespace Meteor {
     reason?: string | undefined;
     details?: string | undefined;
   }
-  var TypedError: TypedErrorStatic;
-  interface TypedErrorStatic {
-    new (message: string, errorType: string): TypedError;
-  }
+  // NOTE: Meteor.TypedError is a TYPE only. There is no runtime `Meteor.TypedError`
+  // value/constructor (it is never assigned anywhere); the interface exists so
+  // error callbacks can be typed `error?: ... | Meteor.TypedError`.
   interface TypedError extends global_Error {
     message: string;
     errorType: string;

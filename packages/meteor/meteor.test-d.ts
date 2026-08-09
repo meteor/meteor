@@ -24,8 +24,8 @@ expectTypeOf<Meteor.ErrorConstructor>().toBeObject();
 expectTypeOf(Meteor.makeErrorType).toBeFunction();
 expectTypeOf(Meteor.Error).not.toBeAny();
 expectTypeOf<Meteor.ErrorStatic>().toBeObject();
-expectTypeOf(Meteor.TypedError).not.toBeAny();
-expectTypeOf<Meteor.TypedErrorStatic>().toBeObject();
+// TypedError is a type only (no runtime value); assert it as a type.
+expectTypeOf<Meteor.TypedError>().toBeObject();
 
 // --- Settings ---
 expectTypeOf<Meteor.Settings>().toBeObject();

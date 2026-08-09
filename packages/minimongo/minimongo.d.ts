@@ -127,7 +127,7 @@ export class Matcher<T = Record<string, unknown>> {
 }
 
 export class Sorter<T = Record<string, unknown>> {
-  constructor(spec: Mongo.SortSpecifier, options?: { matcher?: Matcher<T> });
+  constructor(spec: Mongo.SortSpecifier, collation?: object);
 
   getComparator(options?: { distances?: Map<string, number> }): (a: T, b: T) => number;
 
