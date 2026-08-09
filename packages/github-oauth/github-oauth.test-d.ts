@@ -6,5 +6,5 @@ expectTypeOf(Github).toBeObject();
 expectTypeOf(Github.requestCredential).toBeFunction();
 expectTypeOf(Github.requestCredential).returns.toBeVoid();
 
-expectTypeOf(Github.retrieveCredential).parameters.toEqualTypeOf<[string, string?]>();
+expectTypeOf(Github.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Github.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();

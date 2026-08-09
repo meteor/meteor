@@ -6,5 +6,5 @@ expectTypeOf(Meetup).toBeObject();
 expectTypeOf(Meetup.requestCredential).toBeFunction();
 expectTypeOf(Meetup.requestCredential).returns.toBeVoid();
 
-expectTypeOf(Meetup.retrieveCredential).parameters.toEqualTypeOf<[string, string?]>();
+expectTypeOf(Meetup.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Meetup.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();

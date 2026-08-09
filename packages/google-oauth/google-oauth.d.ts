@@ -46,7 +46,7 @@ export namespace Google {
    */
   export function retrieveCredential(
     credentialToken: string,
-    credentialSecret?: string
+    credentialSecret?: string | null
   ): Promise<OAuthCredential | undefined>;
 
   /**

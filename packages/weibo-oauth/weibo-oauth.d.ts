@@ -38,6 +38,6 @@ export namespace Weibo {
    */
   export function retrieveCredential(
     credentialToken: string,
-    credentialSecret?: string
+    credentialSecret?: string | null
   ): Promise<OAuthCredential | undefined>;
 }

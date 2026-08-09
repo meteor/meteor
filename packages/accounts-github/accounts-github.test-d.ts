@@ -4,6 +4,5 @@ import { Meteor } from "meteor/meteor";
 // accounts-github's only surface is augmenting Meteor with the loginWithGithub login helper.
 expectTypeOf(Meteor.loginWithGithub).toBeFunction();
 expectTypeOf(Meteor.loginWithGithub).returns.toBeVoid();
-expectTypeOf(Meteor.loginWithGithub).parameter(0).toEqualTypeOf<
-  Parameters<typeof Meteor.loginWithGithub>[0]
->();
+// both call shapes are accepted: (callback) and (options, callback)
+expectTypeOf(Meteor.loginWithGithub).toBeCallableWith(() => {});
