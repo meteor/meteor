@@ -95,6 +95,9 @@ export namespace Tracker {
    */
   function afterFlush(callback: () => void): void;
 
+  /** Whether a flush is currently in progress. */
+  function inFlush(): boolean;
+
   /**
    * Run a function now and rerun it later whenever its dependencies
    * change. Returns a Computation object that can be used to stop or observe the

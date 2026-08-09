@@ -53,6 +53,18 @@ export class RateLimiter {
    */
   increment<Input extends RateLimiterInput = RateLimiterInput>(input: Input): void;
 
+  /** Check the given rules against an input (lower-level than `check`). */
+  checkRules<Input extends RateLimiterInput = RateLimiterInput>(
+    rules: unknown[],
+    input: Input,
+  ): RateLimiterCheckResult;
+
+  /** Increment counters for every rule in `rules` that matches this input. */
+  incrementRules<Input extends RateLimiterInput = RateLimiterInput>(
+    rules: unknown[],
+    input: Input,
+  ): void;
+
   /**
    * Removes a rule by its id. Returns true when the rule existed and was removed.
    */

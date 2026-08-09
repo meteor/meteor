@@ -7,12 +7,12 @@ type LogJSONInput = {
 type LogInput = string | LogJSONInput;
 
 type formatInput = {
-  message: string;
-  time: Date;
-  level: "debug" | "info" | "warn" | "error";
+  message?: string;
+  time?: Date;
+  level?: "debug" | "info" | "warn" | "error";
   timeInexact?: boolean;
-  file: string;
-  line: number;
+  file?: string;
+  line?: number;
   app?: string;
   originApp?: string;
   program?: string;

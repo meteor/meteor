@@ -18,7 +18,7 @@ export namespace Meteor {
    * `Meteor.release` is a string containing the name of the release with which the project was built (for example, `"1.2.3"`). It is `undefined` if the project was built using a git checkout
    * of Meteor.
    */
-  var release: string;
+  var release: string | undefined;
 
   interface ErrorConstructor {
     new (...args: unknown[]): Error;

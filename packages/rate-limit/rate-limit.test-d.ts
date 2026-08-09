@@ -64,3 +64,7 @@ expectTypeOf(rl.increment).parameter(0).toMatchTypeOf<RateLimiterInput>();
 expectTypeOf(rl.increment({ name: "x" })).toBeVoid();
 expectTypeOf(rl.removeRule).parameters.toEqualTypeOf<[string]>();
 expectTypeOf(rl.removeRule("id")).toBeBoolean();
+
+// --- checkRules / incrementRules (added)
+expectTypeOf(rl.checkRules([], { type: "method" })).toEqualTypeOf<RateLimiterCheckResult>();
+expectTypeOf(rl.incrementRules([], { type: "method" })).toBeVoid();

@@ -63,3 +63,5 @@ expectTypeOf<Tracker.Dependency["depend"]>().parameters.toEqualTypeOf<
 >();
 expectTypeOf<Tracker.Dependency["depend"]>().returns.toBeBoolean();
 expectTypeOf<Tracker.Dependency["hasDependents"]>().returns.toBeBoolean();
+
+expectTypeOf(Tracker.inFlush).returns.toBeBoolean();

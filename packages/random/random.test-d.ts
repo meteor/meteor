@@ -20,3 +20,8 @@ expectTypeOf(Random.choice("abc")).toBeString();
 
 // --- choice (bare reference for coverage)
 expectTypeOf(Random.choice).toBeFunction();
+
+// --- insecure generator + createWithSeeds (added)
+expectTypeOf<Random.RandomGenerator>().toBeObject();
+expectTypeOf(Random.insecure).toEqualTypeOf<Random.RandomGenerator>();
+expectTypeOf(Random.createWithSeeds).returns.toEqualTypeOf<Random.RandomGenerator>();

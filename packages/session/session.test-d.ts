@@ -15,7 +15,7 @@ type SessionValue =
   | undefined;
 
 expectTypeOf(Session.equals).parameters.toEqualTypeOf<
-  [string, string | number | boolean | null | undefined]
+  [string, string | number | boolean | null | undefined | Date]
 >();
 expectTypeOf(Session.equals).returns.toBeBoolean();
 
