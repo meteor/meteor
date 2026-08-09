@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   createProviderSession,
   createTestRunnerContext,
+  normalizeTestRunnerVerbose,
   validateTestExecutionPlan,
 } = require('../provider-contract.js');
 
@@ -36,6 +37,21 @@ test('context is copied, deeply frozen, and rejects non-JSON values', () => {
   const cyclic = {};
   cyclic.self = cyclic;
   assert.throws(() => createTestRunnerContext(cyclic), /JSON-safe/);
+});
+
+test('test-runner verbosity normalizes supported Meteor package config forms', () => {
+  assert.equal(normalizeTestRunnerVerbose({}), false);
+  assert.equal(normalizeTestRunnerVerbose({}, true), true);
+  assert.equal(normalizeTestRunnerVerbose({ verbose: false }, true), true);
+  assert.equal(normalizeTestRunnerVerbose({ verbose: true }), true);
+  assert.equal(normalizeTestRunnerVerbose({ modern: { verbose: true } }), true);
+  assert.equal(normalizeTestRunnerVerbose({
+    modern: { transpiler: { verbose: true } },
+  }), true);
+  assert.equal(normalizeTestRunnerVerbose({
+    verbose: false,
+    modern: { verbose: false, transpiler: { verbose: false } },
+  }), false);
 });
 
 test('execution plan accepts only supported mode and JSON-safe opaque data', () => {

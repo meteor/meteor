@@ -246,6 +246,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       throw new Error('[Meteor Rstest] Invalid runtime file inventory from Meteor CLI.');
     }
   }
+  const rstestTestFileRegistration = isRstestTest ? {
+    module: 'meteor/rstest',
+    exportName: '__registerTestFile',
+  } : undefined;
   const isProfile = !!Meteor.isProfile;
   const isVerbose = !!Meteor.isVerbose;
   const configPath = Meteor.configPath;
@@ -362,6 +366,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ? currentMode === "development"
     : !!Meteor.isDevelopment || !isProd;
   const mode = isProd ? "production" : "development";
+  // Runtime workers share public/private source roots, while the Atmosphere
+  // plugin cleans each worker's exact, isolated build contexts before Rspack.
+  const shouldCleanOutput = isProd && !process.env.METEOR_TEST_WORKER_ID;
   const isPortableBuild = !!(
     nextUserConfig?.["meteor.enablePortableBuild"] ||
     nextOverrideConfig?.["meteor.enablePortableBuild"]
@@ -514,6 +521,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeClientRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/server/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
@@ -528,6 +536,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeClientRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/server/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
@@ -606,7 +615,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       cssChunkFilename: `${chunksContext}/[id]${
         isProd ? ".[contenthash]" : ""
       }.css`,
-      ...(isProd && { clean: { keep: keepOutsideBuild() } }),
+      ...(shouldCleanOutput && {
+        clean: { keep: keepOutsideBuild() },
+      }),
     },
     optimization: {
       usedExports: true,
@@ -699,6 +710,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeServerRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/client/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
@@ -711,6 +723,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeServerRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/client/**", ...compatibilityIgnoreEntries],
           meteorIgnoreEntries,
@@ -733,7 +746,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       library: { type: "commonjs2" },
       chunkFilename: `${chunksContext}/[id]${isProd ? ".[chunkhash]" : ""}.js`,
       assetModuleFilename,
-      ...(isProd && { clean: { keep: keepOutsideBuild() } }),
+      ...(shouldCleanOutput && {
+        clean: { keep: keepOutsideBuild() },
+      }),
     },
     optimization: {
       usedExports: true,

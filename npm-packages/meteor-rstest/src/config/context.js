@@ -35,6 +35,7 @@ function createMeteorRstestContext(input = {}) {
     localDir: input.localDir || path.join(appRoot, '.meteor', 'local'),
     command: input.command === 'test-packages' ? 'test-packages' : 'test',
     once: Boolean(input.once),
+    verbose: Boolean(input.verbose),
     fullApp: Boolean(input.fullApp),
     packageTests: Boolean(input.packageTests),
     phase: input.phase === 'external' ? 'external' : 'native',

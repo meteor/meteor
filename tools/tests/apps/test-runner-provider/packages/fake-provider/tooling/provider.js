@@ -46,6 +46,7 @@ Plugin.registerTestRunner({
 }, context => {
   event('factory');
   const mode = modeFor(context);
+  const isRuntimeWorker = mode === 'workers' && context.worker;
   return {
     validate() {
       event('validate');
@@ -58,7 +59,8 @@ Plugin.registerTestRunner({
     prepare() {
       event('prepare');
       return {
-        mode: mode === 'host' || mode === 'host-error' || mode === 'before-error'
+        mode: mode === 'host' || mode === 'host-error' ||
+          mode === 'before-error' || isRuntimeWorker
           ? 'meteor-host'
           : 'native-only',
         metadata: { mode },
@@ -69,6 +71,26 @@ Plugin.registerTestRunner({
     },
     startBeforeHost() {
       event('start-before-host');
+      if (mode === 'workers' && !isRuntimeWorker) {
+        const workerCount = context.options.runtimeWorkers;
+        event(`workers-start ${workerCount}`);
+        const hosts = Array.from({ length: workerCount }, (_, index) => ({
+          id: `worker-${index + 1}`,
+          payload: { ordinal: index + 1 },
+        }));
+        const workers = context.meteorHosts.start(hosts);
+        return {
+          process: {
+            completion: workers.completion.then(result => {
+              event(`worker-results ${result.workers.map(
+                worker => `${worker.id}:${worker.code}`
+              ).join(',')}`);
+              return result.workers.find(worker => worker.code !== 0)?.code || 0;
+            }),
+            stop: signal => workers.stop(signal),
+          },
+        };
+      }
       return { exitCode: mode === 'native-fail' ? 7 : 0 };
     },
     beforeAppRun() {
@@ -78,7 +100,7 @@ Plugin.registerTestRunner({
       }
     },
     async startHost({ url }) {
-      event('start-host');
+      event(isRuntimeWorker ? `worker-${context.worker.id}-start-host` : 'start-host');
       if (mode === 'host-error') {
         throw new Error('Fake provider host failed after app startup.');
       }

@@ -18,6 +18,11 @@ const {
 const { RstestBrowser } = require('./browser.js');
 const { RstestExternal } = require('./external.js');
 const { rstestError } = require('./errors.js');
+const {
+  aggregateRstestWorkerResults,
+  createRstestHostDescriptors,
+  validateRstestWorkerPayload,
+} = require('./workers.js');
 
 const CLIENT_PROJECTS = new Set([
   'meteor-pure-client',
@@ -54,6 +59,19 @@ function selectedCount(inventory) {
     inventory.externalFiles.length;
 }
 
+function requestsVerboseReporter(args = []) {
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = String(args[index]);
+    const inline = /^--reporters?=(.+)$/.exec(argument);
+    if (inline && inline[1] === 'verbose') return true;
+    if (/^--reporters?$/.test(argument) &&
+        String(args[index + 1]) === 'verbose') {
+      return true;
+    }
+  }
+  return false;
+}
+
 class RstestTestRunnerProvider {
   constructor(context, services = {}) {
     this.context = context;
@@ -66,6 +84,9 @@ class RstestTestRunnerProvider {
       startRstestProcess,
       Browser: RstestBrowser,
       External: RstestExternal,
+      aggregateRstestWorkerResults,
+      createRstestHostDescriptors,
+      validateRstestWorkerPayload,
       warn: message => console.warn(message),
       ...services,
     };
@@ -74,6 +95,10 @@ class RstestTestRunnerProvider {
     this.plan = null;
     this.stopped = false;
     this.generation = 1;
+    this.verbose = Boolean(context.verbose);
+    this.reportVerbose = this.verbose || requestsVerboseReporter(
+      context.options.passthrough
+    );
   }
 
   async validate() {
@@ -195,7 +220,8 @@ class RstestTestRunnerProvider {
           'but no tests under tests/rstest.'
       );
     }
-    if (roots.legacyFiles.length > 0) {
+    if (!this.context.worker && roots.legacyFiles.length > 0 &&
+        this.verbose) {
       this.services.warn(capability.hasRstestConfig
         ? `[Meteor Rstest] ${roots.legacyFiles.length} test file(s) outside ` +
           'Meteor-owned roots are delegated to rstest.config projects.'
@@ -218,8 +244,38 @@ class RstestTestRunnerProvider {
         nativeServer = false;
       }
     }
-    const needsRuntime = lanes.runtime && inventory.runtimeFiles.length > 0;
-    const needsExternal = lanes.external && inventory.externalFiles.length > 0;
+    let needsRuntime = lanes.runtime && inventory.runtimeFiles.length > 0;
+    let needsExternal = lanes.external && inventory.externalFiles.length > 0;
+    let shouldRunNative = lanes.native && (
+      options.testFile.length === 0 ||
+      inventory.pureFiles.length > 0 ||
+      capability.hasRstestConfig && inventory.compatibilityFiles.length > 0 ||
+      hasUnknownProject
+    );
+    if (this.context.worker) {
+      this.workerPayload = this.services.validateRstestWorkerPayload({
+        appDir,
+        worker: this.context.worker,
+      });
+      const selectedRuntimeFiles = new Set(inventory.runtimeFiles.map(file =>
+        fs.realpathSync(file)
+      ));
+      const unselected = this.workerPayload.runtimeFiles.find(
+        file => !selectedRuntimeFiles.has(file)
+      );
+      if (unselected) {
+        throw rstestError(
+          'METEOR_RSTEST_WORKER_FILE_SELECTION',
+          `Worker file is outside parent command selection: ${unselected}`
+        );
+      }
+      inventory.pureFiles = [];
+      inventory.runtimeFiles = [...this.workerPayload.runtimeFiles];
+      inventory.externalFiles = [];
+      needsRuntime = true;
+      needsExternal = false;
+      shouldRunNative = false;
+    }
     if (needsRuntime && (options.shard || options.changed || options.changedSince)) {
       throw rstestError(
         'METEOR_RSTEST_RUNTIME_OPTION_UNSUPPORTED',
@@ -232,17 +288,18 @@ class RstestTestRunnerProvider {
         'External E2E projects require --once.'
       );
     }
+    if (!this.context.worker && options.runtimeWorkers > 1 && !needsRuntime) {
+      throw rstestError(
+        'METEOR_RSTEST_RUNTIME_WORKERS_EMPTY',
+        '--runtime-workers requires selected tests/rstest/runtime/server files.'
+      );
+    }
     this.selection = {
       capability,
       inventory,
       needsRuntime,
       needsExternal,
-      shouldRunNative: lanes.native && (
-        options.testFile.length === 0 ||
-        inventory.pureFiles.length > 0 ||
-        capability.hasRstestConfig && inventory.compatibilityFiles.length > 0 ||
-        hasUnknownProject
-      ),
+      shouldRunNative,
       nativeProjects,
       nativeServer,
       nativeClient,
@@ -253,10 +310,20 @@ class RstestTestRunnerProvider {
     if (this.plan) return this.plan;
     if (!this.selection) await this.validate();
 
-    const { command, appDir, harnessRoot, localDir, architectures, options, npm } =
-      this.context;
+    const {
+      command,
+      appDir,
+      harnessRoot,
+      localDir,
+      architectures,
+      options,
+      npm,
+      worker,
+    } = this.context;
+    const verbose = this.verbose;
+    const reportVerbose = this.reportVerbose;
     if (command === 'test-packages') await npm.ensureHarnessManifest();
-    if (npm.autoInstall) {
+    if (!worker && npm.autoInstall) {
       await this.services.ensureRstestInstalled({
         env: { ...process.env, METEOR_RSTEST_NPM_ROOT: npm.root },
       });
@@ -266,18 +333,24 @@ class RstestTestRunnerProvider {
     const token = crypto.randomBytes(24).toString('base64url');
     const runtimeDir = path.join(localDir, 'rstest');
     fs.mkdirSync(runtimeDir, { recursive: true });
-    this.runtimeSettingsPath = selection.needsRuntime
-      ? path.join(runtimeDir, command === 'test-packages'
-        ? 'package-runtime-plan.json'
-        : 'app-runtime-settings.json')
-      : null;
-    this.runtimeSettingsGeneration = selection.needsRuntime
-      ? crypto.randomBytes(16).toString('hex')
-      : null;
-    if (this.runtimeSettingsPath) removeIfPresent(this.runtimeSettingsPath);
+    this.runtimeSettingsPath = worker
+      ? this.workerPayload.runtimeSettingsPath
+      : selection.needsRuntime
+        ? path.join(runtimeDir, command === 'test-packages'
+          ? 'package-runtime-plan.json'
+          : 'app-runtime-settings.json')
+        : null;
+    this.runtimeSettingsGeneration = worker
+      ? this.workerPayload.generation
+      : selection.needsRuntime
+        ? crypto.randomBytes(16).toString('hex')
+        : null;
+    if (!worker && this.runtimeSettingsPath) {
+      removeIfPresent(this.runtimeSettingsPath);
+    }
 
-    this.runtimeManifest = null;
-    if (command === 'test' && options.testFile.length > 0 &&
+    this.runtimeManifest = worker ? this.workerPayload.runtimeManifest : null;
+    if (!worker && command === 'test' && options.testFile.length > 0 &&
         selection.inventory.runtimeFiles.length > 0) {
       this.runtimeManifest = path.join(runtimeDir, 'runtime-files.json');
       fs.writeFileSync(
@@ -285,7 +358,7 @@ class RstestTestRunnerProvider {
         JSON.stringify(selection.inventory.runtimeFiles)
       );
     }
-    this.externalResultPath = selection.needsExternal
+    this.externalResultPath = !worker && selection.needsExternal
       ? path.join(runtimeDir, 'external-result.json')
       : null;
     if (this.externalResultPath) removeIfPresent(this.externalResultPath);
@@ -294,6 +367,7 @@ class RstestTestRunnerProvider {
       appDir,
       localDir,
       once: options.once,
+      verbose,
       fullApp: options.fullApp,
       server: selection.nativeServer,
       client: selection.nativeClient,
@@ -406,6 +480,8 @@ class RstestTestRunnerProvider {
       command,
       generation: this.generation,
       watch: !options.once,
+      verbose,
+      reportVerbose,
       testNamePattern: options.testNamePattern || null,
       testTimeout: 30000,
       hookTimeout: 10000,
@@ -415,13 +491,39 @@ class RstestTestRunnerProvider {
       runtime: selection.needsRuntime,
       external: selection.needsExternal,
       runtimeManifest: this.runtimeManifest,
+      worker: worker ? {
+        id: worker.id,
+        index: worker.index,
+        total: worker.total,
+        generation: this.workerPayload.generation,
+        resultPath: this.workerPayload.resultPath,
+      } : null,
     };
+    this.workerHostPlan = null;
+    if (!worker && options.runtimeWorkers > 1 && selection.needsRuntime) {
+      this.workerHostPlan = this.services.createRstestHostDescriptors({
+        appDir,
+        localDir,
+        files: selection.inventory.runtimeFiles,
+        requestedWorkers: options.runtimeWorkers,
+        generation: this.runtimeSettingsGeneration,
+        runtimeSettingsPath: this.runtimeSettingsPath,
+      });
+      if (this.workerHostPlan.actualWorkers < options.runtimeWorkers) {
+        this.services.warn(
+          `[Meteor Rstest] --runtime-workers capped from ${options.runtimeWorkers} ` +
+          `to ${this.workerHostPlan.actualWorkers} selected runtime file(s).`
+        );
+      }
+    }
     const dependencyOnly = command === 'test-packages' ||
       !selection.needsRuntime && !selection.needsExternal;
     const buildClient = client || selection.needsExternal && !options.serverOnly;
     const buildServer = server || selection.needsExternal && !options.clientOnly;
     this.plan = {
-      mode: selection.needsRuntime || selection.needsExternal
+      mode: this.workerHostPlan
+        ? 'native-only'
+        : selection.needsRuntime || selection.needsExternal
         ? 'meteor-host'
         : 'native-only',
       metadata: this.metadata,
@@ -489,6 +591,10 @@ class RstestTestRunnerProvider {
   async startBeforeHost({ updateMetadata }) {
     const { command, appDir, harnessRoot, options } = this.context;
     const selection = this.selection;
+    if (this.context.worker) {
+      this._readRuntimeSettings(updateMetadata);
+      return { exitCode: 0 };
+    }
     if (command === 'test-packages') {
       const handle = this.services.startRstestProcess({
         appDir,
@@ -498,6 +604,35 @@ class RstestTestRunnerProvider {
       const code = await handle.completion;
       if (code === 0) this._readRuntimeSettings(updateMetadata);
       return { exitCode: code };
+    }
+
+    if (this.workerHostPlan) {
+      const args = selection.shouldRunNative
+        ? this.nativeArgs
+        : this.runtimePlanArgs;
+      const native = this.services.startRstestProcess({ appDir, args });
+      const code = await native.completion;
+      if (code !== 0) return { exitCode: code };
+      this._readRuntimeSettings(updateMetadata);
+
+      const workers = this.context.meteorHosts.start(
+        this.workerHostPlan.descriptors
+      );
+      this.resources.push(workers);
+      return {
+        process: {
+          completion: workers.completion.then(outcome => {
+            const aggregate = this.services.aggregateRstestWorkerResults({
+              descriptors: this.workerHostPlan.descriptors,
+              outcome,
+              verbose: this.metadata.reportVerbose,
+            });
+            this.workerAggregate = aggregate;
+            return aggregate.exitCode;
+          }),
+          stop: signal => workers.stop(signal),
+        },
+      };
     }
 
     if (selection.shouldRunNative) {

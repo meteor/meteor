@@ -223,6 +223,14 @@ Verified coverage:
 | jsdom client project | Client-only |
 | Real Chromium Browser Mode with semantic locators, a real click/state update, auto-waiting assertions, and an inline DOM snapshot | Browser project, client-only |
 | Meteor-runtime server resolves `meteor/*`, Atmosphere packages, and MongoDB | Server runtime |
+| `--runtime-workers 2` evaluates Rstest planning once, prepares Meteor packages once, partitions exact server files, and starts two isolated Rspack/Meteor hosts on deterministic proxy/Mongo port pairs | Runtime worker pool |
+| Two hosts insert the same `_id` into the same named collection, proving distinct local Mongo databases; worker IDs and prefixed output identify each process | Runtime worker isolation |
+| Worker results aggregate in stable order; two passes exit `0`, while one transported assertion failure preserves its sibling and exits `1` | Runtime worker aggregation |
+| Default Meteor-runtime output reports each app-relative runtime file with colored Rstest-style status/count rows and `Test Files`/`Tests` totals; passing case names, reporter-added worker labels, and machine frames stay hidden, while failures retain name/message/stack | Runtime server/client/filter/failure |
+| Client executor submits without browser-console duplication; external E2E remains owned by native Rstest reporting | Client-only, full-app E2E |
+| `meteor test --verbose` (or persistent `meteor.verbose`) adds runtime case rows/durations, worker attribution, provider diagnostics, and generation-bound `[Meteor-Rstest]` frames | Runtime watch |
+| Native `-- --reporters=verbose` adds case rows/durations and parallel worker attribution without enabling provider diagnostics or `[Meteor-Rstest]` frames | Runtime server failure and worker failure |
+| Runtime-worker children emit no result summary; parent prints one per-file aggregate for success or sibling-preserving failure without adding worker labels unless verbose | Runtime worker pool |
 | `--server-only` and `--client-only` exclude opposite native/runtime sides | Side selection |
 | `--test-name-pattern` reaches the Meteor-runtime executor and reports filtered cases as skipped | Runtime filter |
 | `--test-file` emits an exact runtime manifest and compiles only matching Meteor files | Runtime file filter |
@@ -238,7 +246,7 @@ Verified coverage:
 | Separate Rstest-owned and Tinytest-owned packages in one command fail nonzero before build; no partial or empty pass | Package ownership |
 | One package declaring both Rstest and Tinytest fails before provider installation/build, names both registries, and prints exact Rstest-migration and legacy-driver commands | Same-package migration safety |
 | Missing files, empty generated projects, project/side conflicts, and E2E without full-app fail nonzero | Selection safety |
-| Server/client/external results aggregate through versioned machine frames and determine process exit | Runtime and E2E |
+| Server/client/external results aggregate through authenticated versioned transports and determine process exit; diagnostic machine frames are verbose-only | Runtime and E2E |
 | External JSON reporting preserves real Rstest case names, counts, durations, and errors | Full-app E2E |
 | Runtime watch rebuild increments transport generation and reruns changed runtime tests once | Runtime watch |
 | Transported runtime assertion failure retains case name and exits nonzero | Runtime failure |
@@ -252,6 +260,7 @@ Deliberate non-claims keep this fixture focused:
 | Firefox/WebKit Browser Mode matrix | Chromium proves Browser Mode integration; upstream browser matrix belongs to Rstest/Playwright |
 | React/Vue/Svelte component matrices under Rstest | Existing framework apps cover Rspack integration; this fixture covers engine and Meteor lifecycle boundaries |
 | Runtime coverage, runtime snapshots, hoisted mocking, and sharding | Native Rstest may own these features; Meteor-runtime executor does not claim them yet |
+| Client/browser, watch, full-app, package-test, driver, and external-Mongo runtime worker pools | Initial `--runtime-workers` slice requires `meteor test --once --server-only` and keeps all other routes unchanged |
 | `web.browser.legacy` and `web.cordova` runtime execution | Current executor contract covers server and `web.browser` |
 | Visual screenshot baselines | DOM snapshots and real interaction are covered without platform-sensitive image baselines |
 
@@ -372,6 +381,7 @@ Where each feature is tested across apps and skeletons.
 | Meteor-runtime Rstest server/client | rspack-rstest | |
 | Rstest runtime name filtering | rspack-rstest | |
 | Atmosphere package and MongoDB runtime resolution | rspack-rstest | |
+| Isolated multi-host Meteor runtime workers and result aggregation | rspack-rstest | |
 | `test-packages` Rstest capability and test-only unibuilds | rspack-rstest | |
 | Explicit real-Mocha compatibility route | rspack-rstest | |
 | Full-app ordinary Rstest runtime discovery | rspack-rstest | |
@@ -379,6 +389,7 @@ Where each feature is tested across apps and skeletons.
 | Empty-selection and mixed-package false-green guards | rspack-rstest | |
 | Same-package provider/legacy-registry conflict diagnostics | rspack-rstest | |
 | Rstest dependency auto-install opt-out | rspack-rstest | |
+| Per-file Rstest-style Meteor runtime reporting and `meteor.verbose` worker diagnostics | rspack-rstest | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |

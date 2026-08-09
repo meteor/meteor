@@ -28,6 +28,56 @@ test('runtime registry preserves nested suite hooks and async case order', async
   assert.equal(result.cases[0].status, 'pass');
 });
 
+test('runtime registry attributes registered cases to their source file', async () => {
+  const registry = createRegistry();
+
+  registry.registerTestFile(
+    'tests/rstest/runtime/server/mongo.test.js',
+    () => {
+      registry.describe('Mongo integration', () => {
+        registry.test('inserts document', () => {});
+      });
+    },
+  );
+  registry.test('outside registered file', () => {});
+
+  const result = await registry.run();
+  const registered = result.cases.find(
+    item => item.fullName === 'Mongo integration > inserts document',
+  );
+  const outside = result.cases.find(
+    item => item.fullName === 'outside registered file',
+  );
+
+  assert.equal(
+    registered.testPath,
+    'tests/rstest/runtime/server/mongo.test.js',
+  );
+  assert.equal('testPath' in outside, false);
+});
+
+test('runtime registry attributes hook failures to their source file', async () => {
+  const registry = createRegistry();
+
+  registry.registerTestFile(
+    'tests/rstest/runtime/server/setup.test.js',
+    () => {
+      registry.beforeAll(() => {
+        throw new Error('file setup failed');
+      });
+      registry.test('blocked by setup', () => {});
+    },
+  );
+
+  const result = await registry.run();
+  const hookFailure = result.cases.find(item => item.name === '<beforeAll>');
+
+  assert.equal(
+    hookFailure.testPath,
+    'tests/rstest/runtime/server/setup.test.js',
+  );
+});
+
 test('runtime registry returns serializable failures without stopping later cases', async () => {
   const registry = createRegistry();
   registry.test('fails', () => registry.expect('meteor').toBe('rstest'));

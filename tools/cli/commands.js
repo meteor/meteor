@@ -2270,6 +2270,7 @@ testCommandOptions = {
     'changed-since': { type: String },
     'server-only': { type: Boolean },
     'client-only': { type: Boolean },
+    'runtime-workers': { type: Number, default: 1 },
 
     // Sets the path of where the temp app should be created
     'test-app-path': { type: String },
@@ -2332,6 +2333,33 @@ main.registerCommand(Object.assign(
   return doTestCommand(options);
 });
 
+main.registerCommand({
+  name: 'test-runner-worker',
+  hidden: true,
+  requiresApp: true,
+  minArgs: 1,
+  maxArgs: 1,
+  catalogRefresh: new catalog.Refresh.Never(),
+}, function (options) {
+  const {
+    readWorkerContext,
+  } = require('./test-runners/meteor-hosts.js');
+  const workerContext = readWorkerContext(files.pathResolve(options.args[0]));
+  const workerOptions = {
+    ...workerContext.commandOptions,
+    appDir: options.appDir,
+    args: [...(workerContext.commandOptions.args || [])],
+    port: String(workerContext.port),
+    test: true,
+    'test-packages': false,
+    'test-app-path': workerContext.testAppPath,
+    'test-runner': workerContext.providerId,
+    'runtime-workers': 1,
+    __testRunnerWorker: workerContext.worker,
+  };
+  return doTestCommand(workerOptions);
+});
+
 function readTestRunnerPackageConfig(appDir) {
   if (!appDir) return {};
   try {
@@ -2373,6 +2401,7 @@ function normalizeTestRunnerOptions(options) {
     shard: options.shard || null,
     changed: Boolean(options.changed),
     changedSince: options['changed-since'] || null,
+    runtimeWorkers: options['runtime-workers'],
     passthrough: [...options.args],
   };
 }
@@ -2385,7 +2414,42 @@ function updateTestRunnerMetadata(selection, payload) {
   };
 }
 
+async function seedTestAppLocalCache({ sourceLocalDir, targetLocalDir }) {
+  async function seed(allowSymlink, name) {
+    const source = files.pathJoin(sourceLocalDir, name);
+    const target = files.pathJoin(targetLocalDir, name);
+
+    files.mkdir_p(source);
+    files.mkdir_p(files.pathDirname(target));
+    if (allowSymlink) {
+      // Windows can create junction links without administrator privileges
+      // because both paths refer to directories.
+      files.symlink(source, target, 'junction');
+    } else {
+      await files.cp_r(source, target, { preserveSymlinks: true });
+    }
+  }
+
+  await seed(false, 'build');
+  await seed(true, 'bundler-cache');
+  await seed(true, 'isopacks');
+  await seed(true, 'plugin-cache');
+  await seed(true, 'shell');
+}
+
 async function doTestCommand(options) {
+  // Internal test-runner orchestration can re-enter this implementation through
+  // a hidden command. Keep downstream build integrations on the public command
+  // identity they already understand.
+  global.currentCommand = {
+    name: options['test-packages'] ? 'test-packages' : 'test',
+    options,
+  };
+  // Build plugins can add process-wide environment defaults while Meteor
+  // prepares this command. Child hosts must inherit the caller's environment,
+  // not those later side effects.
+  const testWorkerBaseEnv = { ...process.env };
+
   if (options.filter) {
     process.env.TINYTEST_FILTER = options.filter;
   }
@@ -2401,6 +2465,27 @@ async function doTestCommand(options) {
   if (options.headless) {
     Console.setHeadless(true);
   }
+
+  const testRunnerCommand = options['test-packages']
+    ? 'test-packages'
+    : 'test';
+  const {
+    normalizeRuntimeWorkers,
+    validateRuntimeWorkerCommand,
+  } = require('./test-runners/meteor-hosts.js');
+  let runtimeWorkers;
+  try {
+    runtimeWorkers = normalizeRuntimeWorkers(options['runtime-workers']);
+    validateRuntimeWorkerCommand({
+      runtimeWorkers,
+      command: testRunnerCommand,
+      options,
+    });
+  } catch (error) {
+    Console.error(error.message);
+    return 1;
+  }
+  options['runtime-workers'] = runtimeWorkers;
 
   const runTargets = parseRunTargets(_.intersection(
     Object.keys(options), ['ios', 'ios-device', 'android', 'android-device']));
@@ -2439,9 +2524,6 @@ async function doTestCommand(options) {
     testRunnerAppDir = files.mkdtemp('meteor-test-run');
   }
 
-  const testRunnerCommand = options['test-packages']
-    ? 'test-packages'
-    : 'test';
   const sourceAppDir = options.appDir || process.cwd();
   const packageJsonMeteor = readTestRunnerPackageConfig(sourceAppDir);
   const { createHarnessNpmService } = require('./test-runners/harness-npm.js');
@@ -2572,32 +2654,14 @@ async function doTestCommand(options) {
     projectContextOptions.projectDir = options.appDir;
     projectContextOptions.projectLocalDir = files.pathJoin(testRunnerAppDir, '.meteor', 'local');
 
-    // Copy the existing build and isopacks to speed up the initial start
-    async function copyDirIntoTestRunnerApp(allowSymlink, ...parts) {
-      // Depending on whether the user has run `meteor run` or other commands, they
-      // may or may not exist yet
-      const appDirPath = files.pathJoin(options.appDir, ...parts);
-      const testDirPath = files.pathJoin(testRunnerAppDir, ...parts);
-
-      files.mkdir_p(appDirPath);
-      files.mkdir_p(files.pathDirname(testDirPath));
-
-      if (allowSymlink) {
-        // Windows can create junction links without administrator
-        // privileges since both paths refer to directories.
-        files.symlink(appDirPath, testDirPath, "junction");
-      } else {
-        await files.cp_r(appDirPath, testDirPath, {
-          preserveSymlinks: true
-        });
-      }
+    if (options.__testRunnerWorker) {
+      files.mkdir_p(projectContextOptions.projectLocalDir, 0o700);
+    } else {
+      await seedTestAppLocalCache({
+        sourceLocalDir: files.pathJoin(options.appDir, '.meteor', 'local'),
+        targetLocalDir: projectContextOptions.projectLocalDir,
+      });
     }
-
-    await copyDirIntoTestRunnerApp(false, '.meteor', 'local', 'build');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'bundler-cache');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'isopacks');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'plugin-cache');
-    await copyDirIntoTestRunnerApp(true, '.meteor', 'local', 'shell');
 
     projectContext = new projectContextModule.ProjectContext(projectContextOptions);
 
@@ -2673,6 +2737,13 @@ async function doTestCommand(options) {
   }
 
   if (testRunnerSelection.engine === 'driver') {
+    if (runtimeWorkers > 1) {
+      Console.error(
+        '--runtime-workers requires a tool-side test-runner provider; ' +
+        'driver packages keep the existing single Meteor host.'
+      );
+      return 1;
+    }
     options['driver-package'] = testRunnerSelection.driverPackage;
     if (options.test && !options['driver-package']) {
       throw new Error('You must specify a driver package with --driver-package');
@@ -2726,6 +2797,7 @@ async function doTestCommand(options) {
     const {
       createProviderSession,
       createTestRunnerContext,
+      normalizeTestRunnerVerbose,
     } = require('./test-runners/provider-contract.js');
     const testRunnerWebArchs = filterWebArchs(
       projectContext.platformList.getWebArchs(),
@@ -2737,17 +2809,40 @@ async function doTestCommand(options) {
       command: testRunnerCommand,
       appDir: sourceAppDir,
       harnessRoot: testRunnerAppDir,
-      localDir: files.pathJoin(testRunnerAppDir, '.meteor', 'local'),
+      localDir: projectContext.projectLocalDir,
+      verbose: normalizeTestRunnerVerbose(packageJsonMeteor, options.verbose),
       architectures: [
         ...(!options['client-only'] ? [archinfo.host()] : []),
         ...(!options['server-only'] ? testRunnerWebArchs : []),
       ],
       webArchs: testRunnerWebArchs,
       options: normalizeTestRunnerOptions(options),
+      worker: options.__testRunnerWorker || null,
+    });
+    const {
+      createMeteorTestHostService,
+      serializeTestWorkerOptions,
+    } = require('./test-runners/meteor-hosts.js');
+    const meteorHosts = createMeteorTestHostService({
+      appDir: sourceAppDir,
+      harnessRoot: testRunnerAppDir,
+      basePort: Number(parsedServerUrl.port),
+      providerId: testRunnerSelection.id,
+      commandOptions: serializeTestWorkerOptions(options),
+      env: testWorkerBaseEnv,
+      prepare: () => main.captureAndExit(
+        '=> Errors while preparing Meteor test workers:',
+        () => projectContext.prepareProjectForBuild()
+      ),
+      prepareWorker: ({ projectLocalDir }) => seedTestAppLocalCache({
+        sourceLocalDir: projectContext.projectLocalDir,
+        targetLocalDir: projectLocalDir,
+      }),
     });
     const providerContext = Object.freeze({
       ...providerContextData,
       npm: testRunnerNpm,
+      meteorHosts,
     });
     try {
       const provider = testRunnerSelection.definition.factory(providerContext);

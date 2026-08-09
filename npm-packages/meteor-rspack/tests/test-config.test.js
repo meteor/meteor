@@ -149,3 +149,69 @@ test('Rstest runtime eager entry can compile an exact CLI-selected file', t => {
   assert.equal(content.includes('selected\\.test\\.js'), true);
   assert.equal(content.includes('unselected.test.js'), false);
 });
+
+test('Rstest runtime eager entry registers app-relative source files', t => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-runtime-register-'));
+  t.after(() => fs.rmSync(projectRoot, { recursive: true, force: true }));
+  const runtimeRoot = path.join(projectRoot, 'tests/rstest/runtime/server');
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+
+  const generated = generateEagerTestFile({
+    isAppTest: false,
+    projectDir: projectRoot,
+    discoveryRoot: runtimeRoot,
+    buildContext: '_build',
+    testFileRegistration: {
+      module: 'meteor/rstest',
+      exportName: '__registerTestFile',
+    },
+  });
+  const content = fs.readFileSync(generated, 'utf8');
+
+  assert.match(
+    content,
+    /import \{ __registerTestFile as __meteorRegisterTestFile \} from "meteor\/rstest";/,
+  );
+  assert.match(
+    content,
+    /const __meteorTestFileRoot = "tests\/rstest\/runtime\/server";/,
+  );
+  assert.match(content, /__meteorRegisterTestFile\(/);
+  assert.match(content, /\(\) => ctx\(file\)/);
+  assert.match(content, /mode: 'sync'/);
+});
+
+test('ordinary Meteor eager entry does not register Rstest source files', t => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-runtime-plain-'));
+  t.after(() => fs.rmSync(projectRoot, { recursive: true, force: true }));
+  fs.mkdirSync(projectRoot, { recursive: true });
+
+  const generated = generateEagerTestFile({
+    isAppTest: false,
+    projectDir: projectRoot,
+    buildContext: '_build',
+  });
+  const content = fs.readFileSync(generated, 'utf8');
+
+  assert.doesNotMatch(content, /__meteorRegisterTestFile/);
+  assert.match(content, /\.forEach\(ctx\)/);
+  assert.match(content, /mode: 'eager'/);
+});
+
+test('eager entry follows isolated Meteor local directory', t => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-local-'));
+  t.after(() => fs.rmSync(projectRoot, { recursive: true, force: true }));
+  const localDir = path.join(projectRoot, '.meteor', 'local-server-2');
+
+  const generated = generateEagerTestFile({
+    isAppTest: false,
+    projectDir: projectRoot,
+    localDir,
+    buildContext: '_build-local-server-2',
+  });
+
+  assert.equal(
+    generated,
+    path.join(localDir, 'test', 'eager-tests.mjs'),
+  );
+});

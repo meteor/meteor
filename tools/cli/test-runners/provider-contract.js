@@ -14,6 +14,15 @@ function createTestRunnerContext(input) {
   return cloneJsonSafe(input, 'test runner context');
 }
 
+function normalizeTestRunnerVerbose(meteorConfig = {}, commandVerbose = false) {
+  return Boolean(
+    commandVerbose || meteorConfig.verbose ||
+    meteorConfig.modern && meteorConfig.modern.verbose ||
+    meteorConfig.modern && meteorConfig.modern.transpiler &&
+      meteorConfig.modern.transpiler.verbose
+  );
+}
+
 function validateRecord(value, path) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw contractError(`${path} must be an object`);
@@ -171,5 +180,6 @@ function createProviderSession({ registration, provider, context }) {
 module.exports = {
   createProviderSession,
   createTestRunnerContext,
+  normalizeTestRunnerVerbose,
   validateTestExecutionPlan,
 };

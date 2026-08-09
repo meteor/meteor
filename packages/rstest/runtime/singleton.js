@@ -10,5 +10,6 @@ module.exports = {
   beforeEach: registry.beforeEach,
   describe: registry.describe,
   expect: registry.expect,
+  registerTestFile: registry.registerTestFile,
   test: registry.test,
 };

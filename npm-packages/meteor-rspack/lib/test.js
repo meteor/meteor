@@ -17,7 +17,10 @@ const toPosix = (p) => p.replace(/\\/g, '/');
  * @param {string} options.projectDir - The project directory
  * @param {string} [options.discoveryRoot] - Root scanned by the eager context
  * @param {string[]} [options.includeFiles] - Exact files allowed under discoveryRoot
+ * @param {{module: string, exportName: string}} [options.testFileRegistration]
+ *        Optional module API wrapping each discovered test-file evaluation
  * @param {string} options.buildContext - The build context
+ * @param {string} [options.localDir] - Meteor local directory
  * @param {string[]} options.ignoreEntries - Array of ignore patterns
  * @param {string[]} options.meteorIgnoreEntries - Array of meteor ignore patterns
  * @param {string} options.extraEntry - Extra entry to load
@@ -28,14 +31,16 @@ const generateEagerTestFile = ({
   projectDir,
   discoveryRoot = projectDir,
   includeFiles,
+  testFileRegistration,
   buildContext,
+  localDir = process.env.METEOR_LOCAL_DIR || '.meteor/local',
   ignoreEntries: inIgnoreEntries = [],
   meteorIgnoreEntries: inMeteorIgnoreEntries = [],
   prefix: inPrefix = '',
   extraEntry,
   globalImportPath,
 }) => {
-  const distDir = path.resolve(projectDir, ".meteor/local/test");
+  const distDir = path.resolve(projectDir, localDir, 'test');
   if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
   }
@@ -70,6 +75,9 @@ const generateEagerTestFile = ({
     : `${prefix}eager-tests.mjs`;
   const filePath = path.resolve(distDir, filename);
   const resolvedDiscoveryRoot = path.resolve(discoveryRoot);
+  const relativeDiscoveryRoot = toPosix(
+    path.relative(projectDir, resolvedDiscoveryRoot),
+  );
   const includedRelativeFiles = includeFiles && includeFiles
     .map(filePath => path.relative(resolvedDiscoveryRoot, filePath))
     .filter(relative => relative && !relative.startsWith(`..${path.sep}`))
@@ -82,12 +90,24 @@ const generateEagerTestFile = ({
       ? "/\\.app-(?:test|spec)s?\\.[^.]+$/"
       : "/\\.(?:test|spec)s?\\.[^.]+$/";
 
+  const registrationIteration = testFileRegistration
+    ? `.forEach((file) => __meteorRegisterTestFile(
+    [__meteorTestFileRoot, file.replace(/^\\.\\//, '')].filter(Boolean).join('/'),
+    () => ctx(file),
+  ))`
+    : '.forEach(ctx)';
+  const registrationImport = testFileRegistration
+    ? `import { ${testFileRegistration.exportName} as __meteorRegisterTestFile } from ${JSON.stringify(testFileRegistration.module)};\n`
+    : '';
+  const registrationRoot = testFileRegistration
+    ? `const __meteorTestFileRoot = ${JSON.stringify(relativeDiscoveryRoot)};\n`
+    : '';
   const discoveryContent = fs.existsSync(resolvedDiscoveryRoot) ? `{
   const ctx = import.meta.webpackContext('${toPosix(resolvedDiscoveryRoot)}', {
     recursive: true,
     regExp: ${regExp},
     exclude: ${excludeFoldersRegex.toString()},
-    mode: 'eager',
+    mode: ${testFileRegistration ? "'sync'" : "'eager'"},
   });
   ctx.keys().filter((k) => {
     ${
@@ -96,7 +116,7 @@ const generateEagerTestFile = ({
     return !MeteorIgnoreRegex.test(k);`
         : "return true;"
     }
-  }).forEach(ctx);
+  })${registrationIteration};
 }` : '';
   const extraContent = extraEntry ? `{
   const extra = import.meta.webpackContext('${toPosix(path.dirname(
@@ -108,13 +128,14 @@ const generateEagerTestFile = ({
   });
   extra.keys().forEach(extra);
 }` : '';
-  const content = `${
+  const content = `${registrationImport}${
     globalImportPath ? `import '${toPosix(globalImportPath)}';\n\n` : ""
   }${
     excludeMeteorIgnoreRegex
       ? `const MeteorIgnoreRegex = ${excludeMeteorIgnoreRegex.toString()};`
       : ""
   }
+${registrationRoot}
 ${discoveryContent}
 ${extraContent}`;
 

@@ -7,6 +7,7 @@ function buildRstestArgs({
   localDir,
   harnessRoot,
   once,
+  verbose,
   fullApp,
   server,
   client,
@@ -44,6 +45,7 @@ function buildRstestArgs({
   const args = ['--cwd', appDir, '--local-dir', localDir];
   if (harnessRoot) args.push('--harness-root', harnessRoot);
   if (once) args.push('--once');
+  if (verbose) args.push('--verbose');
   if (fullApp) args.push('--full-app');
   if (server && client === false) args.push('--server-only');
   if (client && server === false) args.push('--client-only');

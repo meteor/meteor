@@ -8,6 +8,7 @@ export interface MeteorRstestContext {
   readonly localDir: string;
   readonly command: 'test' | 'test-packages';
   readonly once: boolean;
+  readonly verbose: boolean;
   readonly fullApp: boolean;
   readonly packageTests: boolean;
   readonly phase: 'native' | 'external';

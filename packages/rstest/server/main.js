@@ -7,7 +7,11 @@ const {
   mergeArchitectureResults,
   validateResult,
 } = require('../runtime/coordinator.js');
-const { formatResultFrame, formatSummary } = require('../runtime/reporter.js');
+const {
+  formatResultFrame,
+  formatRuntimeReport,
+} = require('../runtime/reporter.js');
+const { writeWorkerResult } = require('./worker-result.js');
 
 const clientResultGate = createResultGate({ timeoutMs: 600000 });
 const externalResultGate = createResultGate({ timeoutMs: 600000 });
@@ -104,6 +108,7 @@ export const beforeEach = api.beforeEach;
 export const describe = api.describe;
 export const expect = api.expect;
 export const test = api.test;
+export const __registerTestFile = api.registerTestFile;
 
 function testMetadata() {
   try {
@@ -124,6 +129,9 @@ function testMetadata() {
         rstestRuntime: payload.runtime,
         rstestExternal: payload.external,
         rstestWatch: payload.watch,
+        rstestVerbose: payload.verbose,
+        rstestReportVerbose: payload.reportVerbose ?? payload.verbose,
+        rstestWorker: payload.worker,
       };
     }
     return metadata;
@@ -136,6 +144,7 @@ async function executeTests() {
   const metadata = testMetadata();
   const generation = Number(metadata.rstestGeneration || 1);
   const results = [];
+  const runtimeResults = [];
 
   if (metadata.rstestServer !== false) {
     const serverResult = await api.registry.run({
@@ -143,9 +152,9 @@ async function executeTests() {
       testTimeout: Number(metadata.rstestTestTimeout || 30000),
       hookTimeout: Number(metadata.rstestHookTimeout || 10000),
     });
-    results.push({ architecture: 'server', result: serverResult });
-    console.log(formatResultFrame({ architecture: 'server', generation, result: serverResult }));
-    console.log(formatSummary({ architecture: 'server', result: serverResult }));
+    const entry = { architecture: 'server', result: serverResult };
+    results.push(entry);
+    runtimeResults.push(entry);
   }
 
   if (metadata.rstestClient) {
@@ -155,9 +164,9 @@ async function executeTests() {
     } catch (error) {
       clientResult = timeoutResult(error, 'Meteor client executor result');
     }
-    results.push({ architecture: 'web.browser', result: clientResult });
-    console.log(formatResultFrame({ architecture: 'web.browser', generation, result: clientResult }));
-    console.log(formatSummary({ architecture: 'web.browser', result: clientResult }));
+    const entry = { architecture: 'web.browser', result: clientResult };
+    results.push(entry);
+    runtimeResults.push(entry);
   }
 
   if (metadata.rstestExternal) {
@@ -168,13 +177,28 @@ async function executeTests() {
       externalResult = timeoutResult(error, 'External Rstest project result');
     }
     results.push({ architecture: 'external', result: externalResult });
-    console.log(formatResultFrame({ architecture: 'external', generation, result: externalResult }));
-    console.log(formatSummary({ architecture: 'external', result: externalResult }));
   }
 
   const result = mergeArchitectureResults(results);
-  if (results.length > 1) {
-    console.log(formatSummary({ architecture: 'all', result }));
+
+  if (metadata.rstestWorker) {
+    writeWorkerResult({ worker: metadata.rstestWorker, result });
+  } else {
+    if (metadata.rstestVerbose) {
+      for (const entry of results) {
+        console.log(formatResultFrame({
+          architecture: entry.architecture,
+          generation,
+          result: entry.result,
+        }));
+      }
+    }
+    const report = formatRuntimeReport({
+      entries: runtimeResults,
+      verbose: metadata.rstestReportVerbose,
+      colors: !process.env.METEOR_DISABLE_COLORS && !process.env.NO_COLOR,
+    });
+    if (report) console.log(report);
   }
 
   if (!metadata.rstestWatch) {

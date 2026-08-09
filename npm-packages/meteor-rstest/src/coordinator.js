@@ -255,6 +255,9 @@ async function finalizeRstestConfig({ context, userConfig = {}, inlineConfig = {
 
   return {
     ...merged,
+    ...(merged.reporters === undefined && context.verbose && {
+      reporters: 'verbose',
+    }),
     root: context.appRoot,
     projects,
     passWithNoTests: merged.passWithNoTests ?? false,

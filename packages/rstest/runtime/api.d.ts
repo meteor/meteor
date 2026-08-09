@@ -10,6 +10,7 @@ export interface RuntimeTestResult {
   cases: Array<{
     name: string;
     fullName: string;
+    testPath?: string;
     status: 'pass' | 'fail' | 'skip' | 'todo';
     duration?: number;
     errors?: Array<{ name: string; message: string; stack: string }>;

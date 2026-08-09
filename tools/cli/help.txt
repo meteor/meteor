@@ -727,7 +727,6 @@ Options:
                     automatically. Use --driver-package for runtime drivers.
   --server-only     Run only server-side tests supported by the selected runner.
   --client-only     Run only client-side tests supported by the selected runner.
-
 >>> test
 Test the application
 Usage: meteor test [--test-runner <id> | --driver-package <driver>] [options]
@@ -839,6 +838,9 @@ Options:
   --changed-since   Revision used as the changed-test baseline.
   --server-only     Run only server-side tests supported by the selected runner.
   --client-only     Run only client-side tests supported by the selected runner.
+  --runtime-workers <n>
+                    Run server-only provider tests in isolated Meteor hosts.
+                    Requires --once and a supporting test-runner provider.
   --exclude-archs   Don't create test bundles for certain web architectures
                     (comma separated, for example:
                     --exclude-archs "web.browser.legacy, web.cordova")

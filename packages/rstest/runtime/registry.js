@@ -171,11 +171,16 @@ function serializeError(error) {
   };
 }
 
-function createSuite(name, parent = null, mode = 'run') {
+function testPathFields(testPath) {
+  return testPath ? { testPath } : {};
+}
+
+function createSuite(name, parent = null, mode = 'run', testPath) {
   return {
     name,
     parent,
     mode,
+    ...testPathFields(testPath),
     suites: [],
     cases: [],
     hooks: { beforeAll: [], afterAll: [], beforeEach: [], afterEach: [] },
@@ -185,9 +190,20 @@ function createSuite(name, parent = null, mode = 'run') {
 function createRegistry() {
   const root = createSuite('');
   let currentSuite = root;
+  let currentTestPath;
+
+  function registerTestFile(testPath, load) {
+    const previousTestPath = currentTestPath;
+    currentTestPath = testPath;
+    try {
+      return load();
+    } finally {
+      currentTestPath = previousTestPath;
+    }
+  }
 
   function describe(name, define, mode = 'run') {
-    const suite = createSuite(name, currentSuite, mode);
+    const suite = createSuite(name, currentSuite, mode, currentTestPath);
     currentSuite.suites.push(suite);
     const previous = currentSuite;
     currentSuite = suite;
@@ -199,7 +215,12 @@ function createRegistry() {
   }
 
   function registerCase(name, fn, mode = 'run') {
-    currentSuite.cases.push({ name, fn, mode });
+    currentSuite.cases.push({
+      name,
+      fn,
+      mode,
+      ...testPathFields(currentTestPath),
+    });
   }
 
   function test(name, fn) {
@@ -212,7 +233,10 @@ function createRegistry() {
   describe.skip = (name, define) => describe(name, define, 'skip');
 
   function hook(name, callback) {
-    currentSuite.hooks[name].push(callback);
+    currentSuite.hooks[name].push({
+      callback,
+      ...testPathFields(currentTestPath),
+    });
   }
 
   function suitePath(suite) {
@@ -270,13 +294,30 @@ function createRegistry() {
     if (testNamePattern) {
       testNamePattern.lastIndex = 0;
       if (!testNamePattern.test(fullName)) {
-        return { name: item.name, fullName, status: 'skip' };
+        return {
+          name: item.name,
+          fullName,
+          status: 'skip',
+          ...testPathFields(item.testPath),
+        };
       }
     }
     if (suiteSkipped || item.mode === 'skip' || onlyMode && item.mode !== 'only') {
-      return { name: item.name, fullName, status: 'skip' };
+      return {
+        name: item.name,
+        fullName,
+        status: 'skip',
+        ...testPathFields(item.testPath),
+      };
     }
-    if (item.mode === 'todo') return { name: item.name, fullName, status: 'todo' };
+    if (item.mode === 'todo') {
+      return {
+        name: item.name,
+        fullName,
+        status: 'todo',
+        ...testPathFields(item.testPath),
+      };
+    }
 
     const parents = ancestors(suite);
     const beforeEachHooks = parents.flatMap(parent => parent.hooks.beforeEach);
@@ -284,16 +325,16 @@ function createRegistry() {
     const startedAt = Date.now();
     const errors = [];
     try {
-      for (const callback of beforeEachHooks) {
-        await withTimeout(callback, hookTimeout, `beforeEach for ${fullName}`);
+      for (const hook of beforeEachHooks) {
+        await withTimeout(hook.callback, hookTimeout, `beforeEach for ${fullName}`);
       }
       await withTimeout(item.fn, testTimeout, fullName);
     } catch (error) {
       errors.push(serializeError(error));
     } finally {
-      for (const callback of afterEachHooks) {
+      for (const hook of afterEachHooks) {
         try {
-          await withTimeout(callback, hookTimeout, `afterEach for ${fullName}`);
+          await withTimeout(hook.callback, hookTimeout, `afterEach for ${fullName}`);
         } catch (error) {
           errors.push(serializeError(error));
         }
@@ -304,6 +345,7 @@ function createRegistry() {
       fullName,
       status: errors.length ? 'fail' : 'pass',
       duration: Date.now() - startedAt,
+      ...testPathFields(item.testPath),
       ...(errors.length ? { errors } : {}),
     };
   }
@@ -326,15 +368,16 @@ function createRegistry() {
     );
     let beforeAllFailed = false;
     if (shouldRunHooks) {
-      for (const callback of suite.hooks.beforeAll) {
+      for (const hook of suite.hooks.beforeAll) {
         try {
-          await withTimeout(callback, hookTimeout, `beforeAll for ${suitePath(suite).join(' > ') || '<root>'}`);
+          await withTimeout(hook.callback, hookTimeout, `beforeAll for ${suitePath(suite).join(' > ') || '<root>'}`);
         } catch (error) {
           beforeAllFailed = true;
           cases.push({
             name: '<beforeAll>',
             fullName: `${suitePath(suite).join(' > ') || '<root>'} > <beforeAll>`,
             status: 'fail',
+            ...testPathFields(hook.testPath || suite.testPath),
             errors: [serializeError(error)],
           });
           break;
@@ -364,14 +407,15 @@ function createRegistry() {
       );
     }
     if (shouldRunHooks) {
-      for (const callback of suite.hooks.afterAll) {
+      for (const hook of suite.hooks.afterAll) {
         try {
-          await withTimeout(callback, hookTimeout, `afterAll for ${suitePath(suite).join(' > ') || '<root>'}`);
+          await withTimeout(hook.callback, hookTimeout, `afterAll for ${suitePath(suite).join(' > ') || '<root>'}`);
         } catch (error) {
           cases.push({
             name: '<afterAll>',
             fullName: `${suitePath(suite).join(' > ') || '<root>'} > <afterAll>`,
             status: 'fail',
+            ...testPathFields(hook.testPath || suite.testPath),
             errors: [serializeError(error)],
           });
         }
@@ -416,6 +460,7 @@ function createRegistry() {
     beforeEach: callback => hook('beforeEach', callback),
     describe,
     expect: value => createMatchers(value),
+    registerTestFile,
     run,
     test,
   };

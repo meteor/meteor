@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   createResultGate,
   mergeArchitectureResults,
+  validateResult,
 } = require('./coordinator.js');
 
 function result({ passed = 0, failed = 0, skipped = 0, todo = 0 } = {}) {
@@ -59,4 +60,24 @@ test('architecture result merge fails defensively when nothing executed', () => 
   assert.equal(result.ok, false);
   assert.equal(result.stats.failed, 1);
   assert.match(result.cases[0].error.message, /No supported test architecture/);
+});
+
+test('result protocol accepts valid source files and rejects malformed paths', () => {
+  const valid = result({ passed: 1 });
+  valid.cases.push({
+    name: 'server case',
+    fullName: 'server case',
+    status: 'pass',
+    testPath: 'tests/rstest/runtime/server/mongo.test.js',
+  });
+
+  assert.equal(validateResult(valid), true);
+  assert.equal(validateResult({
+    ...valid,
+    cases: [{ ...valid.cases[0], testPath: '' }],
+  }), false);
+  assert.equal(validateResult({
+    ...valid,
+    cases: [{ ...valid.cases[0], testPath: 42 }],
+  }), false);
 });

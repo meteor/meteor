@@ -64,7 +64,7 @@ test('dynamic Meteor config receives context once through native Rstest CLI', t 
       module.exports = defineConfig(context => {
         fs.appendFileSync(
           ${JSON.stringify(marker)},
-          [context.command, context.server, context.client, context.architectures.join(',')].join('|') + '\\n'
+          [context.command, context.server, context.client, context.verbose, context.architectures.join(',')].join('|') + '\\n'
         );
         return { globals: true };
       });
@@ -75,10 +75,14 @@ test('dynamic Meteor config receives context once through native Rstest CLI', t 
     fs.rmSync(marker, { force: true });
   });
 
-  const result = run(appRoot, ['--server-only', '--architecture', 'os.test.x86_64']);
+  const result = run(appRoot, [
+    '--verbose',
+    '--server-only',
+    '--architecture', 'os.test.x86_64',
+  ]);
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
-  assert.equal(fs.readFileSync(marker, 'utf8'), 'test|true|false|os.test.x86_64\n');
+  assert.equal(fs.readFileSync(marker, 'utf8'), 'test|true|false|true|os.test.x86_64\n');
 });
 
 test('package runtime plan evaluates dynamic config once with distinct harness root', t => {

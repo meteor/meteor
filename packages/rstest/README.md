@@ -79,6 +79,88 @@ explicit dependency injection. Unmigrated Mocha/Tinytest files remain on their
 real driver route so callback `done`, Mocha `this`, hooks, reporters, and custom
 driver behavior are never approximated.
 
+## Runtime reporting and verbosity
+
+Native projects keep Rstest's configured reporters. Meteor-backed server and
+client projects use one compact Rstest-style report over the runtime transport
+result. Rspack tags each loaded runtime module with its app-relative test path,
+so default output prints one row per runtime file plus `Test Files` and `Tests`
+totals, like Rstest's default reporter. Passing case names, reporter-added
+worker labels, and machine frames stay hidden by default; skipped/todo-only
+files retain their status, while failures always include case name, message, and stack. Browser
+results are submitted to the server and printed once, and runtime-worker
+children stay silent while the parent prints one aggregate.
+
+Runtime discovery uses a synchronous Rspack context only for this registration
+boundary. Ordinary Meteor eager test discovery remains unchanged. Rspack's
+`eager` context call is promise-based, so it cannot safely hold one scoped file
+identity while multiple modules register concurrently.
+
+Use `meteor test --verbose` or top-level `meteor.verbose` to see passing runtime
+cases, durations, runtime-worker attribution, compatibility delegation, and
+`[Meteor-Rstest]` protocol frames. The generic test-runner context normalizes
+the same top-level and `meteor.modern` verbosity forms used by Modern Tools,
+including outside-app `test-packages` where no application `package.json`
+exists:
+
+```json
+{
+  "meteor": {
+    "verbose": true
+  }
+}
+```
+
+Rstest's native reporter flag also projects verbose presentation into Meteor
+runtime output, including the parallel parent aggregate, without enabling
+Meteor diagnostics or machine frames:
+
+```bash
+meteor test --once --server-only --runtime-workers 4 -- --reporters=verbose
+```
+
+`--reporter=verbose` is an equivalent Rstest alias. Other native reporters keep
+their native-project behavior; Meteor runtime does not emulate JSON, JUnit,
+blob, dot, or custom reporter event streams.
+
+Rstest 0.11.6 does not publicly export its built-in reporter implementations;
+its public custom reporter API also expects native file/suite events that the
+Meteor runtime registry does not fabricate. Importing private Rstest bundles
+would be version-layout coupling. The runtime formatter is therefore small and
+dependency-free, while native phases continue using real Rstest reporter code.
+`METEOR_DISABLE_COLORS` and `NO_COLOR` disable its ANSI styles.
+
+## Meteor runtime workers
+
+Server runtime files can use multiple real Meteor hosts without leaving the
+normal CLI:
+
+```sh
+meteor test --once --server-only \
+  --project meteor-runtime-server --runtime-workers 4
+```
+
+Rstest evaluates configuration and its native planning phase once, then sorts
+selected `tests/rstest/runtime/server/**` files and assigns non-empty
+round-robin partitions. Meteor prepares local packages once and seeds its
+existing caches into worker harnesses. Every worker still builds its assigned
+Rspack entry and owns a distinct Meteor local directory, Rspack context, proxy
+port, Mongo port/database, process group, and result file. Requested workers
+are capped to selected file count.
+
+Results retain source file, test names, worker identity, and errors and are
+aggregated after all siblings finish. Default reporting exposes files, not
+worker processes; verbose case rows append `[server-N]` for imbalance and
+host-specific failure diagnosis. Assertion failure in one host does not cancel
+others. Missing or invalid worker results are infrastructure failures, while
+signals take highest exit precedence.
+
+This option is intentionally narrower than native Rstest file workers and CI
+sharding. Values above `1` currently require `meteor test --once
+--server-only`; watch, client/browser, full-app, `test-packages`, driver
+packages, external Mongo/ROOT URLs, Cordova, deploy, and inspect modes are
+rejected. Value `1` remains the established single-host path.
+
 Package integration note: `rstest` uses `rspack` and
 `isobuild:test-runner-plugin` as intentional strong dependencies. Consumers
 only add or `api.use('rstest')`; its runtime and tool-host provider are one

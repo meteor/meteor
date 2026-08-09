@@ -21,6 +21,7 @@ function parseArgs(argv) {
   const parsed = {
     cwd: process.cwd(),
     once: false,
+    verbose: false,
     command: 'test',
     configPath: null,
     fullApp: false,
@@ -65,6 +66,8 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === '--once') {
       parsed.once = true;
+    } else if (arg === '--verbose') {
+      parsed.verbose = true;
     } else if (arg === '--full-app') {
       parsed.fullApp = true;
     } else if (arg === '--package-tests') {
@@ -157,6 +160,7 @@ async function main() {
     localDir,
     command: parsed.command,
     once: parsed.once,
+    verbose: parsed.verbose,
     fullApp: parsed.fullApp,
     packageTests: parsed.packageTests,
     phase: parsed.phase,

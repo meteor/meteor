@@ -79,7 +79,11 @@ function validateResult(result) {
   }
   const statuses = new Set(['pass', 'fail', 'skip', 'todo']);
   if (result.cases.some(item => !item || typeof item.name !== 'string' ||
-      !statuses.has(item.status))) {
+      !statuses.has(item.status) || item.testPath !== undefined && (
+        typeof item.testPath !== 'string' || item.testPath.length === 0 ||
+        /^(?:[A-Za-z]:)?\//.test(item.testPath) || item.testPath.includes('\\') ||
+        item.testPath.split('/').includes('..')
+      ))) {
     return false;
   }
   const counted = result.stats.passed + result.stats.failed +

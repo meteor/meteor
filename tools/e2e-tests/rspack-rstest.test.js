@@ -12,6 +12,15 @@ import path from 'node:path';
 
 const { linkLocalModernTools } = require('./scripts/link-modern-tools.js');
 
+const ANSI_PATTERN = new RegExp(
+  `${String.fromCharCode(27)}\\[[0-9;]*m`,
+  'g',
+);
+
+function stripAnsi(value) {
+  return value.replace(ANSI_PATTERN, '');
+}
+
 async function reservePortBlock(size) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const base = 20_000 + Math.floor(Math.random() * 20_000);
@@ -43,7 +52,7 @@ describe('Rspack + Rstest integration', () => {
   const testPort = oldPort => String(portBase + (Number(oldPort) - 3195) * 2);
 
   beforeAll(async () => {
-    portBase = await reservePortBlock(33);
+    portBase = await reservePortBlock(38);
     appDir = (await setupMeteorApp('rspack-rstest')).tempDir;
     await linkLocalModernTools(appDir);
   }, 600_000);
@@ -63,16 +72,23 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
     expect(output).toContain('pure Rstest uses Meteor-generated context');
     expect(output).toContain('pure Rstest supports inline snapshots');
-    expect(output).toContain('[Meteor Rstest] server: 2 passed, 0 failed');
-    expect(output).toContain('Meteor runtime project resolves Atmosphere packages');
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+    );
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/sentinel.test.js (1)'
+    );
+    expect(output).not.toContain('Meteor runtime project resolves Atmosphere packages');
+    expect(output).not.toContain('[Meteor-Rstest]');
+    expect(output).not.toContain('outside Meteor-owned roots are delegated');
     expect(output).not.toContain('pure client project runs with jsdom');
     expect(output).not.toContain('Browser Mode runs in real Chromium');
-    expect(output).not.toContain('[Meteor Rstest] web.browser:');
+    expect(output).not.toContain('Meteor runtime · web.browser');
 
     const packageJson = JSON.parse(
       fs.readFileSync(path.join(appDir, 'package.json'), 'utf8')
@@ -220,12 +236,19 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
-    expect(output).toContain('[Meteor Rstest] server: 1 passed, 0 failed, 1 skipped');
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+    );
+    expect(output).toContain(
+      '- tests/rstest/runtime/server/sentinel.test.js (1)'
+    );
+    expect(output).toContain('Test Files  1 passed | 1 skipped (2)');
+    expect(output).toContain('1 passed | 1 skipped (2)');
     expect(output).not.toContain('Started Meteor Rstest browser');
-    expect(output).not.toContain('[Meteor Rstest] web.browser:');
+    expect(output).not.toContain('Meteor runtime · web.browser');
   }, 600_000);
 
   test('meteor test-file filters Meteor-runtime compilation exactly', async () => {
@@ -247,13 +270,100 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
-    expect(output).toContain('Meteor runtime project resolves Atmosphere packages');
-    expect(output).toContain('[Meteor Rstest] server: 1 passed, 0 failed, 0 skipped');
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+    );
     expect(output).not.toContain('Meteor runtime name filter leaves this sentinel unselected');
   }, 600_000);
+
+  test('meteor runtime workers isolate Mongo and aggregate sibling results', async () => {
+    const peerFile = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'runtime',
+      'server',
+      'mongo-worker-peer.test.js',
+    );
+    const originalPeer = fs.readFileSync(peerFile, 'utf8');
+    const args = [
+      '--once',
+      '--server-only',
+      '--project',
+      'meteor-runtime-server',
+      '--test-file',
+      'mongo.test.js',
+      '--test-file',
+      'mongo-worker-peer.test.js',
+      '--runtime-workers',
+      '2',
+      '--port',
+      testPort(3212),
+    ];
+    const runPool = async (extraArgs = []) => {
+      const result = await runMeteorCommand('test', [...args, ...extraArgs], appDir, {
+        captureOutput: true,
+        execaOptions: { reject: false },
+      });
+      return {
+        completed: await result.meteorProcess,
+        output: stripAnsi(result.outputLines.join('\n')),
+      };
+    };
+
+    try {
+      const passed = await runPool();
+      const base = Number(testPort(3212));
+      expect(passed.completed.exitCode).toBe(0);
+      expect(passed.output).toContain(
+        `[test worker 1/2] proxy=${base} mongo=${base + 1} id=server-1`
+      );
+      expect(passed.output).toContain(
+        `[test worker 2/2] proxy=${base + 2} mongo=${base + 3} id=server-2`
+      );
+      expect(passed.output).toContain('[Meteor Rstest fixture] worker=server-1');
+      expect(passed.output).toContain('[Meteor Rstest fixture] worker=server-2');
+      expect(passed.output).toContain(
+        '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+      );
+      expect(passed.output).toContain(
+        '✓ tests/rstest/runtime/server/mongo-worker-peer.test.js (1)'
+      );
+      expect(passed.output).toContain('Test Files  2 passed');
+      expect(passed.output).not.toMatch(/\(\d+ms\) \[server-[12]\]/);
+      expect(passed.output).not.toContain('Meteor runtime · 2 workers');
+      expect(passed.output).not.toContain('Meteor runtime · server');
+
+      const failingPeer = originalPeer.replace(
+        'expect(document.workerId).toBe(workerId);',
+        "expect(document.workerId).toBe('intentional-worker-failure');",
+      );
+      expect(failingPeer).not.toBe(originalPeer);
+      fs.writeFileSync(peerFile, failingPeer);
+      const failed = await runPool(['--', '--reporters=verbose']);
+      expect(failed.completed.exitCode).toBe(1);
+      expect(failed.output).toContain(
+        'Meteor runtime worker peer owns an isolated Mongo database'
+      );
+      expect(failed.output).toContain(
+        '× tests/rstest/runtime/server/mongo-worker-peer.test.js (1)'
+      );
+      expect(failed.output).toContain(
+        '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+      );
+      expect(failed.output).toContain('1 failed | 1 passed (2)');
+      expect(failed.output).not.toContain('Meteor runtime · 2 workers');
+      expect(failed.output).not.toContain('[Meteor-Rstest]');
+      expect(failed.output).toMatch(
+        /× Meteor runtime worker peer owns an isolated Mongo database \(\d+ms\) \[server-[12]\]/
+      );
+    } finally {
+      fs.writeFileSync(peerFile, originalPeer);
+    }
+  }, 900_000);
 
   test('explicit empty or invalid Rstest selections fail instead of passing zero tests', async () => {
     for (const args of [
@@ -299,7 +409,7 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
     expect(output).toContain('tests/rstest/browser/dom.test.js');
@@ -317,15 +427,22 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
     expect(output).toContain('tests/rstest/pure/client/dom.test.js');
     expect(output).toContain('tests/rstest/browser/dom.test.js');
-    expect(output).toContain('Meteor client executor resolves Atmosphere runtime in real browser');
-    expect(output).toContain('[Meteor Rstest] web.browser: 1 passed, 0 failed');
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/client/meteor.test.js (1)'
+    );
+    expect(
+      output.match(/✓ tests\/rstest\/runtime\/client\/meteor\.test\.js \(1\)/g)
+    ).toHaveLength(1);
+    expect(output).not.toContain(
+      'Meteor client executor resolves Atmosphere runtime in real browser'
+    );
     expect(output).not.toContain('tests/rstest/pure/server/math.test.js');
-    expect(output).not.toContain('[Meteor Rstest] server:');
+    expect(output).not.toContain('Meteor runtime · server');
   }, 600_000);
 
   test('meteor full-app runs external E2E through Rstest Playwright fixture', async () => {
@@ -346,11 +463,12 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
     expect(output).toContain('full-app Rstest Playwright drives Meteor-owned app lifecycle');
-    expect(output).toContain('[Meteor Rstest] external: 1 passed, 0 failed');
+    expect(output).not.toContain('[Meteor-Rstest]');
+    expect(output).not.toContain('Meteor runtime · external');
   }, 600_000);
 
   test('meteor full-app keeps ordinary Rstest runtime tests in Meteor bundle', async () => {
@@ -371,11 +489,15 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
-    expect(output).toContain('Meteor runtime project resolves Atmosphere packages');
-    expect(output).toContain('[Meteor Rstest] server: 2 passed, 0 failed');
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+    );
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/sentinel.test.js (1)'
+    );
   }, 600_000);
 
   test('meteor watch rebuilds runtime tests with a new transport generation', async () => {
@@ -390,7 +512,13 @@ describe('Rspack + Rstest integration', () => {
     const original = fs.readFileSync(runtimeFile, 'utf8');
     const result = await runMeteorCommand(
       'test',
-      ['--project', 'meteor-runtime-server', '--port', testPort(3209)],
+      [
+        '--verbose',
+        '--project',
+        'meteor-runtime-server',
+        '--port',
+        testPort(3209),
+      ],
       appDir,
       {
         captureOutput: true,
@@ -400,10 +528,15 @@ describe('Rspack + Rstest integration', () => {
     try {
       await waitForMeteorOutput(
         result.outputLines,
-        '[Meteor Rstest] server: 2 passed, 0 failed',
+        '✓ tests/rstest/runtime/server/mongo.test.js (1)',
         { meteorProcess: result.meteorProcess, timeout: 120_000 },
       );
-      const firstOutput = result.outputLines.join('\n');
+      const firstOutput = stripAnsi(result.outputLines.join('\n'));
+      expect(firstOutput).toContain('[Meteor-Rstest]');
+      expect(firstOutput).toContain('outside Meteor-owned roots are delegated');
+      expect(firstOutput).toContain(
+        'Meteor runtime project resolves Atmosphere packages'
+      );
       const firstGenerations = [...firstOutput.matchAll(/"generation":(\d+)/g)]
         .map(match => Number(match[1]));
       const firstGeneration = Math.max(...firstGenerations);
@@ -423,16 +556,18 @@ describe('Rspack + Rstest integration', () => {
       fs.writeFileSync(runtimeFile, watchedSource);
       const deadline = Date.now() + 120_000;
       while (Date.now() < deadline) {
-        const output = result.outputLines.join('\n');
+        const output = stripAnsi(result.outputLines.join('\n'));
         const generations = [...output.matchAll(/"generation":(\d+)/g)]
           .map(match => Number(match[1]));
         if (generations.some(generation => generation > firstGeneration) &&
-            output.split('[Meteor Rstest] server: 2 passed, 0 failed').length > 2) {
+            output.split(
+              '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+            ).length > 2) {
           break;
         }
         await new Promise(resolve => setTimeout(resolve, 100));
       }
-      const rebuiltOutput = result.outputLines.join('\n');
+      const rebuiltOutput = stripAnsi(result.outputLines.join('\n'));
       const rebuiltGenerations = [...rebuiltOutput.matchAll(/"generation":(\d+)/g)]
         .map(match => Number(match[1]));
       expect(Math.max(...rebuiltGenerations)).toBeGreaterThan(firstGeneration);
@@ -468,6 +603,8 @@ describe('Rspack + Rstest integration', () => {
           'intentional-failure.test.js',
           '--port',
           testPort(3210),
+          '--',
+          '--reporters=verbose',
         ],
         appDir,
         {
@@ -476,11 +613,21 @@ describe('Rspack + Rstest integration', () => {
         }
       );
       const completed = await result.meteorProcess;
-      const output = result.outputLines.join('\n');
+      const output = stripAnsi(result.outputLines.join('\n'));
 
       expect(completed.exitCode).not.toBe(0);
       expect(output).toContain('intentional transported runtime failure');
-      expect(output).toContain('[Meteor Rstest] server: 0 passed, 1 failed');
+      expect(output).toContain(
+        'Expected {"compiler":"rspack"} to equal {"compiler":"other"}'
+      );
+      expect(output).toContain(
+        '× tests/rstest/runtime/server/intentional-failure.test.js (1)'
+      );
+      expect(output).toContain('1 failed');
+      expect(output).toMatch(
+        /× intentional transported runtime failure \(\d+ms\)/
+      );
+      expect(output).not.toContain('[Meteor-Rstest]');
     } finally {
       fs.rmSync(failureFile, { force: true });
     }
@@ -511,7 +658,7 @@ describe('Rspack + Rstest integration', () => {
       { meteorProcess: result.meteorProcess, timeout: 120_000 },
     );
     await killMeteorProcess(result.meteorProcess);
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(output).toContain('preserves callback done and Mocha this.timeout semantics');
     expect(output).toContain('keeps unmigrated files outside tests/legacy on real Mocha');
@@ -554,13 +701,13 @@ describe('Rspack + Rstest integration', () => {
       }
     );
     const completed = await result.meteorProcess;
-    const output = result.outputLines.join('\n');
+    const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
-    expect(output).toContain('[Meteor Rstest] server: 1 passed, 0 failed');
-    expect(output).toContain('[Meteor Rstest] web.browser: 2 passed, 0 failed');
-    expect(output).toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
-    expect(output).toContain('Package.onTest client executor runs in Meteor browser');
+    expect(output).toContain('✓ Meteor runtime · server (1)');
+    expect(output).toContain('✓ Meteor runtime · web.browser (2)');
+    expect(output).not.toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
+    expect(output).not.toContain('Package.onTest client executor runs in Meteor browser');
   }, 600_000);
 
   test('meteor test-packages bootstraps Rstest outside any Meteor app', async () => {
@@ -592,11 +739,11 @@ describe('Rspack + Rstest integration', () => {
         }
       );
       const completed = await result.meteorProcess;
-      const output = result.outputLines.join('\n');
+      const output = stripAnsi(result.outputLines.join('\n'));
 
       expect(completed.exitCode).toBe(0);
-      expect(output).toContain('[Meteor Rstest] server: 1 passed, 0 failed');
-      expect(output).toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
+      expect(output).toContain('✓ Meteor runtime · server (1)');
+      expect(output).not.toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
     } finally {
       fs.rmSync(outsideDir, { recursive: true, force: true });
     }

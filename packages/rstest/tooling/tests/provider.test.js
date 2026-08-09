@@ -28,6 +28,7 @@ function createContext(t, overrides = {}) {
       clientOnly: false,
       project: [],
       testFile: [],
+      runtimeWorkers: 1,
       passthrough: [],
     },
     npm: {
@@ -35,7 +36,48 @@ function createContext(t, overrides = {}) {
       autoInstall: true,
       async ensureHarnessManifest() {},
     },
+    worker: null,
+    meteorHosts: {
+      start() {
+        throw new Error('Unexpected Meteor host pool start.');
+      },
+    },
     ...overrides,
+  };
+}
+
+function writeRuntimeFiles(appDir, names) {
+  return names.map(name => {
+    const filename = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'runtime',
+      'server',
+      name
+    );
+    fs.mkdirSync(path.dirname(filename), { recursive: true });
+    fs.writeFileSync(filename, '');
+    return filename;
+  });
+}
+
+function settingsWriter(calls) {
+  return ({ args }) => {
+    calls.push(args);
+    const outputFlag = args.includes('--runtime-plan-output')
+      ? '--runtime-plan-output'
+      : '--runtime-settings-output';
+    const output = args[args.indexOf(outputFlag) + 1];
+    const generation = args[args.indexOf('--runtime-settings-generation') + 1];
+    fs.mkdirSync(path.dirname(output), { recursive: true });
+    fs.writeFileSync(output, JSON.stringify({
+      schemaVersion: 1,
+      generation,
+      testTimeout: 45000,
+      hookTimeout: 15000,
+    }));
+    return { completion: Promise.resolve(0), async stop() {} };
   };
 }
 
@@ -90,6 +132,113 @@ test('pure tests prepare native-only plan with opaque Rspack options', async t =
   );
 });
 
+test('normalized Meteor verbosity reaches runtime metadata and Rstest wrapper', async t => {
+  const context = createContext(t);
+  context.verbose = true;
+  const testFile = path.join(
+    context.appDir,
+    'tests/rstest/pure/server/verbose.test.js'
+  );
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(testFile, '');
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(plan.metadata.verbose, true);
+  assert.ok(provider.nativeArgs.includes('--verbose'));
+});
+
+test('native verbose reporter enables runtime detail without Meteor diagnostics', async t => {
+  const forms = [
+    ['--reporters=verbose'],
+    ['--reporter=verbose'],
+    ['--reporters', 'verbose'],
+    ['--reporter', 'verbose'],
+  ];
+
+  for (const passthrough of forms) {
+    const context = createContext(t);
+    context.options.passthrough = passthrough;
+    const testFile = path.join(
+      context.appDir,
+      'tests/rstest/pure/server/verbose-reporter.test.js'
+    );
+    fs.mkdirSync(path.dirname(testFile), { recursive: true });
+    fs.writeFileSync(testFile, '');
+    const provider = new RstestTestRunnerProvider(context, {
+      async ensureRstestInstalled() {},
+    });
+
+    await provider.validate();
+    const plan = await provider.prepare();
+
+    assert.equal(plan.metadata.verbose, false, passthrough.join(' '));
+    assert.equal(plan.metadata.reportVerbose, true, passthrough.join(' '));
+    assert.equal(provider.nativeArgs.includes('--verbose'), false);
+    assert.deepEqual(
+      provider.nativeArgs.slice(-passthrough.length),
+      passthrough
+    );
+  }
+});
+
+test('non-verbose native reporter keeps runtime report compact', async t => {
+  const context = createContext(t);
+  context.options.passthrough = ['--reporters=dot'];
+  const testFile = path.join(
+    context.appDir,
+    'tests/rstest/pure/server/dot-reporter.test.js'
+  );
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(testFile, '');
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(plan.metadata.verbose, false);
+  assert.equal(plan.metadata.reportVerbose, false);
+});
+
+test('compatibility delegation diagnostics are verbose-only', async t => {
+  async function validate(verbose) {
+    const context = createContext(t);
+    context.verbose = verbose;
+    const nativeFile = path.join(
+      context.appDir,
+      'tests/rstest/pure/server/native.test.js'
+    );
+    const legacyFile = path.join(context.appDir, 'imports/legacy.test.js');
+    fs.mkdirSync(path.dirname(nativeFile), { recursive: true });
+    fs.mkdirSync(path.dirname(legacyFile), { recursive: true });
+    fs.writeFileSync(nativeFile, '');
+    fs.writeFileSync(legacyFile, '');
+    const warnings = [];
+    const provider = new RstestTestRunnerProvider(context, {
+      async ensureRstestInstalled() {},
+      warn(message) { warnings.push(message); },
+    });
+
+    await provider.validate();
+    await provider.prepare();
+    return { provider, warnings };
+  }
+
+  const quiet = await validate(false);
+  assert.deepEqual(quiet.warnings, []);
+
+  const verbose = await validate(true);
+  assert.equal(verbose.warnings.length, 1);
+  assert.match(verbose.warnings[0], /compatibility test file/);
+  assert.equal(verbose.provider.metadata.verbose, true);
+});
+
 test('runtime-only selection uses config plan without leaking runtime filters to native Rstest', async t => {
   const context = createContext(t);
   context.architectures = ['os.test', 'web.browser', 'web.browser.legacy'];
@@ -117,6 +266,123 @@ test('runtime-only selection uses config plan without leaking runtime filters to
     argumentValues(provider.runtimePlanArgs, '--architecture'),
     ['os.test', 'web.browser']
   );
+});
+
+test('runtime worker parent evaluates config once then starts deterministic hosts', async t => {
+  const calls = [];
+  const started = [];
+  const aggregateCalls = [];
+  const context = createContext(t);
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  context.options.runtimeWorkers = 2;
+  context.verbose = false;
+  context.options.passthrough = ['--reporters=verbose'];
+  writeRuntimeFiles(context.appDir, ['b.test.js', 'a.test.js']);
+  context.meteorHosts = {
+    start(descriptors) {
+      started.push(descriptors);
+      return {
+        completion: Promise.resolve({
+          workers: descriptors.map((host, index) => ({
+            id: host.id,
+            index,
+            total: descriptors.length,
+            code: 0,
+            signal: null,
+            stdout: '',
+            stderr: '',
+          })),
+        }),
+        async stop() {},
+      };
+    },
+  };
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    aggregateRstestWorkerResults(options) {
+      aggregateCalls.push(options);
+      return { exitCode: 0 };
+    },
+    startRstestProcess: settingsWriter(calls),
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+  assert.equal(plan.mode, 'native-only');
+  assert.equal(plan.metadata.verbose, false);
+  assert.equal(plan.metadata.reportVerbose, true);
+
+  const preHost = await provider.startBeforeHost({ updateMetadata() {} });
+  assert.equal(await preHost.process.completion, 0);
+  assert.equal(calls.length, 1);
+  assert.equal(started.length, 1);
+  assert.deepEqual(started[0].map(host => host.id), ['server-1', 'server-2']);
+  assert.match(started[0][0].payload.runtimeFiles[0], /a\.test\.js$/);
+  assert.match(started[0][1].payload.runtimeFiles[0], /b\.test\.js$/);
+  assert.equal(aggregateCalls.length, 1);
+  assert.equal(aggregateCalls[0].verbose, true);
+});
+
+test('runtime worker child reuses parent settings and skips native Rstest', async t => {
+  const context = createContext(t);
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  const [runtimeFile] = writeRuntimeFiles(context.appDir, ['worker.test.js']);
+  const generation = '1234567890abcdef1234567890abcdef';
+  const workersRoot = path.join(context.localDir, 'rstest', 'workers');
+  fs.mkdirSync(workersRoot, { recursive: true });
+  const runtimeSettingsPath = path.join(
+    context.localDir,
+    'rstest',
+    'app-runtime-settings.json'
+  );
+  fs.writeFileSync(runtimeSettingsPath, JSON.stringify({
+    schemaVersion: 1,
+    generation,
+    testTimeout: 45000,
+    hookTimeout: 15000,
+  }));
+  const runtimeManifest = path.join(workersRoot, 'server-1-files.json');
+  fs.writeFileSync(runtimeManifest, JSON.stringify([runtimeFile]));
+  context.worker = {
+    id: 'server-1',
+    index: 0,
+    total: 1,
+    payload: {
+      schemaVersion: 1,
+      generation,
+      runtimeFiles: [runtimeFile],
+      runtimeManifest,
+      runtimeSettingsPath,
+      resultPath: path.join(workersRoot, 'server-1-result.json'),
+    },
+  };
+  let installs = 0;
+  let starts = 0;
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() { installs += 1; },
+    startRstestProcess() { starts += 1; },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+  assert.equal(plan.mode, 'meteor-host');
+  assert.equal(
+    plan.buildPluginOptions.rspack.context.runtimeManifest,
+    runtimeManifest
+  );
+  assert.equal(plan.metadata.worker.resultPath, context.worker.payload.resultPath);
+
+  const updates = [];
+  const preHost = await provider.startBeforeHost({
+    updateMetadata(metadata) { updates.push({ ...metadata }); },
+  });
+  assert.equal(preHost.exitCode, 0);
+  assert.equal(plan.metadata.testTimeout, 45000);
+  assert.equal(installs, 0);
+  assert.equal(starts, 0);
+  assert.equal(updates.length, 1);
 });
 
 test('native client project receives one canonical Meteor browser architecture', async t => {

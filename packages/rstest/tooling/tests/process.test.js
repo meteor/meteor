@@ -21,6 +21,7 @@ test('Meteor-owned options map to wrapper CLI while Rstest arguments stay native
     appDir: '/app',
     localDir: '/harness/.meteor/local',
     once: true,
+    verbose: true,
     fullApp: false,
     server: true,
     client: false,
@@ -34,6 +35,7 @@ test('Meteor-owned options map to wrapper CLI while Rstest arguments stay native
     '--cwd', '/app',
     '--local-dir', '/harness/.meteor/local',
     '--once',
+    '--verbose',
     '--server-only',
     '--command', 'test',
     '--config', 'config/rstest.js',
@@ -42,6 +44,29 @@ test('Meteor-owned options map to wrapper CLI while Rstest arguments stay native
     '--test-file', 'tests/b.test.js',
     '--test-name-pattern', '^works$',
     '--', '--coverage', '--retry', '2',
+  ]);
+});
+
+test('Meteor verbosity remains wrapper-owned and opt-in', () => {
+  const base = {
+    appDir: '/app',
+    localDir: '/harness/.meteor/local',
+    command: 'test',
+    passthrough: ['--reporters=dot'],
+  };
+
+  assert.deepEqual(buildRstestArgs({ ...base, verbose: false }), [
+    '--cwd', '/app',
+    '--local-dir', '/harness/.meteor/local',
+    '--command', 'test',
+    '--', '--reporters=dot',
+  ]);
+  assert.deepEqual(buildRstestArgs({ ...base, verbose: true }), [
+    '--cwd', '/app',
+    '--local-dir', '/harness/.meteor/local',
+    '--verbose',
+    '--command', 'test',
+    '--', '--reporters=dot',
   ]);
 });
 
@@ -112,11 +137,11 @@ test('supervised Rstest process resolves app-local binary and stops its group on
   }));
   fs.writeFileSync(path.join(packageRoot, 'bin/meteor-rstest.js'), `
     const fs = require('node:fs');
-    fs.appendFileSync(${JSON.stringify(marker)}, 'started\\n');
     process.on('SIGTERM', () => {
       fs.appendFileSync(${JSON.stringify(marker)}, 'stopped\\n');
       process.exit(0);
     });
+    fs.appendFileSync(${JSON.stringify(marker)}, 'started\\n');
     setInterval(() => {}, 1000);
   `);
   t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));

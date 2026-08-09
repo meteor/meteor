@@ -106,6 +106,9 @@ module.exports = defineConfig(context => ({
 Context fields are typed in `index.d.ts`: command, run/watch mode, full-app and
 package-test flags, native/external phase, client/server selection,
 architectures, application/config/harness roots, and Meteor local directory.
+The context also exposes normalized `verbose`; it is true for top-level
+`meteor.verbose`, `meteor.modern.verbose`, or
+`meteor.modern.transpiler.verbose`.
 Factory configs must run through `meteor test`; standalone Rstest cannot supply
 this context. Native object configuration remains portable.
 
@@ -135,6 +138,7 @@ meteor test --once --coverage
 meteor test --once --update-snapshots
 meteor test --once --shard 1/4
 meteor test --once --changed-since main
+meteor test --once --server-only --project meteor-runtime-server --runtime-workers 4
 meteor test --once --full-app --project meteor-e2e
 ```
 
@@ -148,6 +152,68 @@ projects reject them until runtime scheduling supports equivalent semantics.
 External E2E currently requires `--once`.
 External E2E is collected only with `--full-app`; explicitly selecting
 `meteor-e2e` without it fails.
+
+`--runtime-workers N` is separate from native Rstest workers and `--shard`.
+For `N > 1`, current support is limited to `meteor test --once --server-only`
+and selected `tests/rstest/runtime/server/**` files. Parent Rstest config/native
+planning and Meteor local-package preparation run once. Files are sorted and
+partitioned deterministically; each non-empty partition gets an isolated
+Meteor harness, Rspack build context, proxy/Mongo port pair, local database,
+and generation-bound result. Sibling assertion failures remain visible in one
+stable aggregate. Client/browser, watch, full-app, package tests, drivers, and
+external Mongo/ROOT URLs reject this option instead of silently falling back.
+The default value `1` preserves the existing single-host lifecycle.
+
+## Reporting and verbosity
+
+Native projects use native Rstest reporters exactly as configured. Meteor
+runtime projects cannot feed their smaller structured result directly into
+those reporters: Rstest 0.11.6 does not export built-in reporter classes, and
+its experimental custom reporter API requires native file/suite events. Meteor
+therefore formats runtime results with the same compact checks, failures, and
+aligned totals without importing private Rstest bundle paths.
+
+Default output prints one row per app-relative server/browser runtime test file
+with Rstest-style `Test Files` and `Tests` totals. It hides passing case rows,
+reporter-added worker labels, and `[Meteor-Rstest]` transport frames, while
+always retaining full failure details. Client browsers submit results without printing a second copy.
+Runtime-worker hosts write results silently; the parent prints one aggregate.
+
+Enable detailed native and Meteor-runtime reporting, plus Meteor/provider
+diagnostics, with the existing Meteor command flag:
+
+```bash
+meteor test --verbose
+```
+
+Package config provides the persistent equivalent:
+
+```json
+{
+  "meteor": {
+    "verbose": true
+  }
+}
+```
+
+This adds passing case names and durations, runtime-worker attribution,
+protocol frames, and provider diagnostics. User-configured native `reporters`
+remain authoritative; Meteor selects Rstest's native verbose reporter only
+when no reporter was configured. `METEOR_DISABLE_COLORS` and `NO_COLOR`
+disable runtime ANSI styling.
+
+For detailed reporter rows without Meteor diagnostics, pass Rstest's native
+reporter option after Meteor's `--` separator:
+
+```bash
+meteor test --once --server-only --runtime-workers 4 -- --reporters=verbose
+```
+
+`--reporter=verbose` and split flag/value forms work too. Native projects use
+the requested Rstest reporter directly. Meteor runtime and parallel parent
+aggregation project only verbose row detail; they do not enable provider
+diagnostics or `[Meteor-Rstest]` frames. Other reporter types are not emulated
+for Meteor-runtime results.
 
 For `meteor test-packages`, dynamic config evaluates once with
 `context.command === "test-packages"`, `packageTests === true`, and distinct

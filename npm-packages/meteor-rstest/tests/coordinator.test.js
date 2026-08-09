@@ -154,6 +154,30 @@ test('coordinator constrains generated projects to requested Meteor side', async
   ]);
 });
 
+test('Meteor verbosity selects native verbose reporter without overriding user reporters', async t => {
+  const appRoot = createFixture(`test('works', () => expect(true).toBe(true));`);
+  t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
+  const context = createMeteorRstestContext({
+    appRoot,
+    once: true,
+    verbose: true,
+  });
+
+  const generatedDefault = await finalizeRstestConfig({ context });
+  const explicitDot = await finalizeRstestConfig({
+    context,
+    userConfig: { reporters: 'dot' },
+  });
+  const explicitTuple = await finalizeRstestConfig({
+    context,
+    userConfig: { reporters: [['default', { summary: false }]] },
+  });
+
+  assert.equal(generatedDefault.reporters, 'verbose');
+  assert.equal(explicitDot.reporters, 'dot');
+  assert.deepEqual(explicitTuple.reporters, [['default', { summary: false }]]);
+});
+
 test('coordinator rejects direct Meteor imports from pure project discovery', async t => {
   const appRoot = createFixture(`
     import { Mongo } from 'meteor/mongo';

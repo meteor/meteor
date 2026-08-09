@@ -50,6 +50,32 @@ selftest.define('test-runner-providers - native and host lifecycle', async () =>
   await run.expectExit(0);
 });
 
+selftest.define('test-runner-providers - runtime workers', async () => {
+  const sandbox = await createProviderApp();
+  sandbox.write('package.json', packageJson('workers'));
+
+  const run = sandbox.run(
+    'test',
+    '--once',
+    '--server-only',
+    '--runtime-workers',
+    '2',
+    '--port',
+    '3720'
+  );
+  run.waitSecs(300);
+  await run.match('[fake-provider] workers-start 2');
+  await run.match('[test worker 1/2] proxy=3720 mongo=3721 id=worker-1');
+  await run.match('[test worker 2/2] proxy=3722 mongo=3723 id=worker-2');
+  run.waitSecs(300);
+  await run.expectExit(0);
+  selftest.expectTrue(
+    run.getMatcherFullBuffer().includes(
+      '[fake-provider] worker-results worker-1:0,worker-2:0'
+    )
+  );
+});
+
 selftest.define('test-runner-providers - errors and driver bypass', async () => {
   const sandbox = await createProviderApp();
 
