@@ -11,6 +11,21 @@ try {
 
 const COOKIE_NAME = 'meteor_login_token';
 
+// The expected payload is a small JSON object carrying a login token, so
+// anything beyond a few KB cannot be a valid request.
+const MAX_JSON_BODY_BYTES = 4096;
+
+// The HttpOnly cookie flow is opt-in. Checked per request (instead of at
+// module load) because Accounts.config typically runs inside Meteor.startup,
+// after these handlers are registered. When disabled, the handlers fall
+// through so the routes behave as if they were never mounted.
+function httpOnlyCookiesEnabled() {
+  return !!(
+    Accounts?._options?.useHttpOnlyCookies ||
+    Meteor.settings?.public?.packages?.accounts?.useHttpOnlyCookies
+  );
+}
+
 function parseCookies(req) {
   const header = req.headers && req.headers.cookie;
   const cookies = {};
@@ -43,18 +58,38 @@ function serializeCookie(name, value, options = {}) {
   return parts.join('; ');
 }
 
+// Resolves with the parsed body, or null when the body exceeds
+// MAX_JSON_BODY_BYTES (checked against Content-Length up front and again
+// while streaming, so chunked requests cannot bypass the limit).
 async function readJson(req) {
+  const contentLength = parseInt(req.headers['content-length'], 10);
+  if (contentLength > MAX_JSON_BODY_BYTES) return null;
   return await new Promise((resolve) => {
     let data = '';
+    let settled = false;
+    const settle = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
     req.setEncoding('utf8');
-    req.on('data', (chunk) => { data += chunk; });
-    req.on('end', () => {
-      try {
-        resolve(JSON.parse(data || '{}'));
-      } catch (_e) {
-        resolve({});
+    req.on('data', (chunk) => {
+      if (settled) return;
+      data += chunk;
+      if (data.length > MAX_JSON_BODY_BYTES) {
+        data = '';
+        req.pause();
+        settle(null);
       }
     });
+    req.on('end', () => {
+      try {
+        settle(JSON.parse(data || '{}'));
+      } catch (_e) {
+        settle({});
+      }
+    });
+    req.on('error', () => settle(null));
   });
 }
 
@@ -71,11 +106,15 @@ function sendJson(res, code, body) {
 // Body: { token: string, tokenExpires?: string|number }
 WebApp.handlers.use(async (req, res, next) => {
   if (!req.url.startsWith(COOKIE_BASE_PATH + '/set')) return next();
+  if (!httpOnlyCookiesEnabled()) return next();
   if (req.method !== 'POST') {
     res.writeHead(405);
     return res.end();
   }
   const body = await readJson(req);
+  if (body === null) {
+    return sendJson(res, 413, { error: 'body_too_large' });
+  }
   const token = body && body.token;
   if (!token || typeof token !== 'string') {
     return sendJson(res, 400, { error: 'invalid_token' });
@@ -115,6 +154,7 @@ WebApp.handlers.use(async (req, res, next) => {
 // Returns { token, tokenExpires, id } if cookie is valid
 WebApp.handlers.use(async (req, res, next) => {
   if (!req.url.startsWith(COOKIE_BASE_PATH + '/refresh')) return next();
+  if (!httpOnlyCookiesEnabled()) return next();
   if (req.method !== 'GET') {
     res.writeHead(405);
     return res.end();
@@ -145,6 +185,7 @@ WebApp.handlers.use(async (req, res, next) => {
 // POST /_accounts/cookie/clear
 WebApp.handlers.use(async (req, res, next) => {
   if (!req.url.startsWith(COOKIE_BASE_PATH + '/clear')) return next();
+  if (!httpOnlyCookiesEnabled()) return next();
   if (req.method !== 'POST') {
     res.writeHead(405);
     return res.end();

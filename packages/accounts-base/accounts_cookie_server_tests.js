@@ -4,6 +4,10 @@ if (Meteor.isServer) {
   const SET_PATH = '/_accounts/cookie/set';
   const CLEAR_PATH = '/_accounts/cookie/clear';
 
+  // The cookie endpoints only answer when the HttpOnly cookie flow is
+  // enabled, so turn it on for this test app.
+  Accounts.config({ useHttpOnlyCookies: true });
+
   // Utility: simple HTTP request using Node's http/https depending on absoluteUrl
   const request = async (method, path, { headers, body } = {}) => {
     const url = Meteor.absoluteUrl(path.replace(/^\//,''));
@@ -187,11 +191,49 @@ if (Meteor.isServer) {
     done();
   });
 
-  Tinytest.addAsync('accounts cookie - set accepts long token (current behavior)', async (test, done) => {
+  Tinytest.addAsync('accounts cookie - set rejects oversized body with 413', async (test, done) => {
     const longToken = Array(5000).fill('a').join('');
-    // Expect 200 with current implementation (no length enforcement)
     const res = await request('POST', SET_PATH, { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: longToken }) });
-    test.equal(res.status, 200);
+    test.equal(res.status, 413);
+    test.equal(res.json && res.json.error, 'body_too_large');
+    done();
+  });
+
+  Tinytest.addAsync('accounts cookie - set rejects oversized Content-Length up front', async (test, done) => {
+    const longToken = Array(5000).fill('a').join('');
+    const body = JSON.stringify({ token: longToken });
+    const res = await request('POST', SET_PATH, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(body)
+      },
+      body
+    });
+    test.equal(res.status, 413);
+    test.equal(res.json && res.json.error, 'body_too_large');
+    done();
+  });
+
+  Tinytest.addAsync('accounts cookie - endpoints fall through when feature disabled', async (test, done) => {
+    const saved = Accounts._options.useHttpOnlyCookies;
+    Accounts._options.useHttpOnlyCookies = false;
+    try {
+      const setRes = await request('POST', SET_PATH, {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: 'whatever' })
+      });
+      test.isUndefined(setRes.headers['set-cookie'], 'set: no cookie when disabled');
+      test.isTrue(!setRes.json || setRes.json.ok !== true, 'set: not handled when disabled');
+
+      const refreshRes = await request('GET', REFRESH_PATH);
+      test.isTrue(refreshRes.status !== 204, 'refresh: not handled when disabled');
+
+      const clearRes = await request('POST', CLEAR_PATH);
+      test.isUndefined(clearRes.headers['set-cookie'], 'clear: no cookie when disabled');
+      test.isTrue(!clearRes.json || clearRes.json.ok !== true, 'clear: not handled when disabled');
+    } finally {
+      Accounts._options.useHttpOnlyCookies = saved;
+    }
     done();
   });
 }
