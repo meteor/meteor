@@ -1,4 +1,0 @@
-interface:
-  display_name: "Sync Modern Tool Versions"
-  short_description: "Synchronize modern-tool package and dependency versions"
-  default_prompt: "Use $sync-modern-tool-versions to upgrade a modern-tool dependency and verify every version reference is synchronized."
