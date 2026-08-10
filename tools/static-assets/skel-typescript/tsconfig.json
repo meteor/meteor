@@ -22,19 +22,15 @@
     "noFallthroughCasesInSwitch": false,
 
     /* Module Resolution Options */
-    "baseUrl": ".",
     "paths": {
       /* Support absolute /imports/* with a leading '/' */
-      "/*": ["*"],
+      "/*": ["./*"],
       /* Prefer the type declarations generated from the app's actual Meteor
        * packages (via zodern:types, written on `meteor lint`/`meteor run`);
        * fall back to @types/meteor before the first build has generated them. */
-      "meteor/*": [
-        ".meteor/local/types/packages.d.ts",
-        "node_modules/@types/meteor/*"
-      ]
+      "meteor/*": ["./.meteor/local/types/packages.d.ts", "./node_modules/@types/meteor/*"]
     },
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "types": ["node", "mocha"],
     "esModuleInterop": true,
