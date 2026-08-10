@@ -1,4 +1,4 @@
-import { expect, test } from '@meteorjs/rstest/playwright';
+import { expect, test } from '@rstest/playwright';
 
 test('full-app Rstest Playwright drives Meteor-owned app lifecycle', async ({ page }) => {
   const baseUrl = process.env.METEOR_RSTEST_BASE_URL;

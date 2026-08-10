@@ -206,7 +206,7 @@ test('non-verbose native reporter keeps runtime report compact', async t => {
   assert.equal(plan.metadata.reportVerbose, false);
 });
 
-test('compatibility delegation diagnostics are verbose-only', async t => {
+test('compatibility ownership routing stays silent at every verbosity', async t => {
   async function validate(verbose) {
     const context = createContext(t);
     context.verbose = verbose;
@@ -234,8 +234,7 @@ test('compatibility delegation diagnostics are verbose-only', async t => {
   assert.deepEqual(quiet.warnings, []);
 
   const verbose = await validate(true);
-  assert.equal(verbose.warnings.length, 1);
-  assert.match(verbose.warnings[0], /compatibility test file/);
+  assert.deepEqual(verbose.warnings, []);
   assert.equal(verbose.provider.metadata.verbose, true);
 });
 
@@ -393,8 +392,12 @@ test('native client project receives one canonical Meteor browser architecture',
   const browserFile = path.join(context.appDir, 'tests/rstest/browser/dom.test.js');
   fs.mkdirSync(path.dirname(browserFile), { recursive: true });
   fs.writeFileSync(browserFile, '');
+  const validations = [];
   const provider = new RstestTestRunnerProvider(context, {
     async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities(options) {
+      validations.push(options);
+    },
   });
 
   await provider.validate();
@@ -404,6 +407,9 @@ test('native client project receives one canonical Meteor browser architecture',
     argumentValues(provider.nativeArgs, '--architecture'),
     ['web.browser']
   );
+  assert.equal(validations.length, 1);
+  assert.equal(validations[0].appDir, context.appDir);
+  assert.deepEqual(validations[0].capabilities, ['browser']);
 });
 
 test('runtime tests prepare Meteor-host plan and package harness first', async t => {
@@ -430,12 +436,17 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
     async ensureRstestInstalled() {
       order.push('dependencies');
     },
+    assertRstestOptionalCapabilities({ appDir, capabilities }) {
+      order.push('optional');
+      assert.equal(appDir, context.appDir);
+      assert.deepEqual(capabilities, ['meteor-client']);
+    },
   });
 
   await provider.validate();
   const plan = await provider.prepare();
 
-  assert.deepEqual(order, ['manifest', 'dependencies']);
+  assert.deepEqual(order, ['manifest', 'dependencies', 'optional']);
   assert.equal(plan.mode, 'meteor-host');
   assert.equal(plan.metadata.runtime, true);
   assert.equal(plan.metadata.command, 'test-packages');

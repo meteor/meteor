@@ -10,6 +10,10 @@ function formatResultFrame({ architecture, generation = 1, result }) {
   })}`;
 }
 
+function shouldEmitResultFrames(env = process.env) {
+  return env?.METEOR_RSTEST_DEBUG === '1';
+}
+
 function createStyles(colors) {
   const style = (code, value) => (
     colors ? `\u001b[${code}m${value}\u001b[0m` : value
@@ -208,4 +212,5 @@ module.exports = {
   formatResultFrame,
   formatRuntimeReport,
   PROTOCOL_VERSION,
+  shouldEmitResultFrames,
 };

@@ -215,7 +215,8 @@ Verified coverage:
 | `meteor test` automatically selects Rstest from the Atmosphere capability | Pure/runtime server |
 | One test-only `rstest` package owns runtime plus isolated `tooling/` provider; no second Atmosphere support package is required | Fixture init, automatic selection, runtime |
 | Local npm mirror installs `@meteorjs/rspack` inside `@meteorjs/rstest`, then persists both app links without global npm state | Fixture init |
-| Atmosphere-owned bootstrap installs exact `@rstest/coverage-istanbul` with the other Rstest dev dependencies | Fixture init, native coverage |
+| Atmosphere-owned bootstrap installs only `@meteorjs/rstest`, `@rstest/core`, and `@rstest/adapter-rspack`; fixture explicitly owns jsdom, Browser Mode, coverage, and Playwright dependencies | Fixture init, all optional lanes |
+| Optional capability preflight resolves dependencies from project, never installs them, and provides npm/browser installation guidance when selected capability is missing | Unit characterization, fixture dependency policy |
 | Dynamic `@meteorjs/rstest.defineConfig(context)` receives command, roots, server/client selection, and architecture data | Pure server/client |
 | Native Rstest uses `@rstest/adapter-rspack` with shared SWC, aliases/fallbacks, CSS/assets, Meteor compile-time defines, and compatible `tools.rspack` composition | Pure server/client, Browser Mode, unit characterization |
 | Inline, committed external, and committed file snapshots; mismatch exits nonzero, `--update-snapshots` rewrites the temporary snapshot, and a clean rerun passes | Pure server, snapshot update |
@@ -228,15 +229,16 @@ Verified coverage:
 | Worker results aggregate in stable order; two passes exit `0`, while one transported assertion failure preserves its sibling and exits `1` | Runtime worker aggregation |
 | Default Meteor-runtime output reports each app-relative runtime file with colored Rstest-style status/count rows and `Test Files`/`Tests` totals; passing case names, reporter-added worker labels, and machine frames stay hidden, while failures retain name/message/stack | Runtime server/client/filter/failure |
 | Client executor submits without browser-console duplication; external E2E remains owned by native Rstest reporting | Client-only, full-app E2E |
-| `meteor test --verbose` (or persistent `meteor.verbose`) adds runtime case rows/durations, worker attribution, provider diagnostics, and generation-bound `[Meteor-Rstest]` frames | Runtime watch |
-| Native `-- --reporters=verbose` adds case rows/durations and parallel worker attribution without enabling provider diagnostics or `[Meteor-Rstest]` frames | Runtime server failure and worker failure |
+| `meteor test --verbose` (or persistent `meteor.verbose`) adds runtime case rows/durations and worker attribution while ownership routing and raw protocol JSON stay hidden | Runtime watch |
+| Native `-- --reporters=verbose` adds case rows/durations and parallel worker attribution without generic Meteor diagnostics, Rstest ownership chatter, or `[Meteor-Rstest]` frames | Runtime server failure and worker failure |
+| Exact `METEOR_RSTEST_DEBUG=1` opt-in exposes generation-bound `[Meteor-Rstest]` frames for protocol diagnosis | Runtime debug |
 | Runtime-worker children emit no result summary; parent prints one per-file aggregate for success or sibling-preserving failure without adding worker labels unless verbose | Runtime worker pool |
 | `--server-only` and `--client-only` exclude opposite native/runtime sides | Side selection |
 | `--test-name-pattern` reaches the Meteor-runtime executor and reports filtered cases as skipped | Runtime filter |
 | `--test-file` emits an exact runtime manifest and compiles only matching Meteor files | Runtime file filter |
 | Meteor-runtime client runs inside the real Meteor browser and returns versioned results | Client-only |
 | Client runtime with no supported desktop architecture fails instead of passing an empty result | Selection safety |
-| Full-app external E2E uses `@meteorjs/rstest/playwright` against Meteor-owned lifecycle | Full-app E2E |
+| Full-app external E2E imports project-owned `@rstest/playwright` directly against Meteor-owned lifecycle | Full-app E2E |
 | Full-app Meteor runtime keeps ordinary `*.test.*` discovery while loading app entry | Full-app runtime |
 | Explicit `--driver-package meteortesting:mocha` preserves callback `done` and Mocha `this.timeout` semantics | Driver compatibility |
 | `meteor test-packages` auto-selects from strong `Package.onTest` dependency metadata | Package tests |
@@ -246,9 +248,9 @@ Verified coverage:
 | Separate Rstest-owned and Tinytest-owned packages in one command fail nonzero before build; no partial or empty pass | Package ownership |
 | One package declaring both Rstest and Tinytest fails before provider installation/build, names both registries, and prints exact Rstest-migration and legacy-driver commands | Same-package migration safety |
 | Missing files, empty generated projects, project/side conflicts, and E2E without full-app fail nonzero | Selection safety |
-| Server/client/external results aggregate through authenticated versioned transports and determine process exit; diagnostic machine frames are verbose-only | Runtime and E2E |
+| Server/client/external results aggregate through authenticated versioned transports and determine process exit; diagnostic machine frames are debug-only | Runtime and E2E |
 | External JSON reporting preserves real Rstest case names, counts, durations, and errors | Full-app E2E |
-| Runtime watch rebuild increments transport generation and reruns changed runtime tests once | Runtime watch |
+| Runtime watch rebuild reruns changed runtime tests once without leaking transport payloads | Runtime watch |
 | Transported runtime assertion failure retains case name and exits nonzero | Runtime failure |
 | Native Rstest roots are excluded from Meteor eager discovery; runtime roots are excluded from native Rstest discovery | All |
 

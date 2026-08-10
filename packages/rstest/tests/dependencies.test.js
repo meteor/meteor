@@ -13,14 +13,9 @@ const EXPECTED_DEPENDENCIES = [
   ['@meteorjs/rstest', '0.1.0-beta.0'],
   ['@rstest/core', '0.11.6'],
   ['@rstest/adapter-rspack', '0.11.6'],
-  ['@rstest/browser', '0.11.6'],
-  ['@rstest/coverage-istanbul', '0.11.6'],
-  ['@rstest/playwright', '0.11.6'],
-  ['jsdom', '29.1.1'],
-  ['playwright', '1.59.0'],
 ];
 
-test('Rstest dependency manifest owns exact Rstest dependencies without duplicating Rspack', () => {
+test('Rstest dependency manifest installs only required coordinator dependencies', () => {
   const dependencies = getRstestDependencies({});
 
   assert.deepEqual(
@@ -45,6 +40,29 @@ test('Atmosphere dependency manifest stays aligned with @meteorjs/rstest metadat
 
   assert.equal(coordinator.version, meteorRstestPackage.version);
   assert.deepEqual(runtimeDependencies, meteorRstestPackage.dependencies);
+});
+
+test('optional Rstest capabilities remain project-owned', () => {
+  const baselineNames = new Set(
+    getRstestDependencies({}).map(({ name }) => name),
+  );
+
+  for (const optionalName of [
+    '@rstest/browser',
+    '@rstest/coverage-istanbul',
+    '@rstest/coverage-v8',
+    '@rstest/playwright',
+    'happy-dom',
+    'jsdom',
+    'playwright',
+  ]) {
+    assert.equal(baselineNames.has(optionalName), false, optionalName);
+    assert.equal(
+      Object.hasOwn(meteorRstestPackage.dependencies, optionalName),
+      false,
+      optionalName,
+    );
+  }
 });
 
 test('Rstest dependency manifest preserves local unpublished npm specs', () => {

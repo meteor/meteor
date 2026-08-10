@@ -13,14 +13,21 @@ the application runtime bundle and ordinary build plugins remain forbidden in
 `testOnly` packages. This mirrors the existing `rspack` +
 `@meteorjs/rspack` lifecycle split without a second Atmosphere package.
 
-Both Modern Tools capabilities install their npm side automatically before
-native Rstest starts. `rspack` owns `@meteorjs/rspack`, Rspack, and SWC
-dependencies; `rstest/tooling` owns `@meteorjs/rstest`, `@rstest/*`, jsdom, and
-Playwright.
-This avoids duplicate manifests and keeps compiler versions under the existing
-Rspack package. Set `meteor.autoInstallDeps` to `false` in `package.json` to
-disable all Modern Tools dependency installation and manage these packages
-manually.
+Both Modern Tools capabilities install their required npm side automatically
+before native Rstest starts. `rspack` owns `@meteorjs/rspack`, Rspack, and SWC;
+`rstest/tooling` owns only `@meteorjs/rstest`, `@rstest/core`, and
+`@rstest/adapter-rspack`. This baseline covers Node unit tests, snapshots,
+reporters, native workers/sharding, and Meteor server-runtime tests.
+
+Optional upstream features stay project-owned. `meteor-pure-client` requires
+`jsdom`; Browser Mode requires `@rstest/browser` plus `playwright`; Meteor
+client-runtime tests require `playwright`; external E2E requires
+`@rstest/playwright` plus `playwright`; coverage requires the selected
+`@rstest/coverage-*` provider. Selection validates these packages and prints an
+install command, but never mutates the project to add them. Browser binaries
+also remain an explicit `npx playwright install <browser>` step. Set
+`meteor.autoInstallDeps` to `false` to disable required Modern Tools dependency
+installation too.
 
 Automatic package selection is architecture-aware and requires homogeneous
 ownership. Mixed Rstest/Tinytest/Mocha selections fail before compilation with
@@ -66,6 +73,19 @@ architectures, and globals. Atmosphere packages remain external to native
 Rspack output and resolve from the real Meteor program; they are not bundled as
 ordinary npm modules.
 
+For example, a project using every generated optional lane can install:
+
+```sh
+meteor npm install --save-dev \
+  jsdom @rstest/browser @rstest/coverage-istanbul \
+  @rstest/playwright playwright
+npx playwright install chromium
+```
+
+Keep optional `@rstest/*` package versions compatible with installed
+`@rstest/core`. Framework-specific Browser Mode adapters, Testing Library, and
+custom reporters follow same project-owned rule.
+
 Supported runtime API: `describe`, `test`, `test.skip`, `test.todo`,
 `test.only`, `beforeAll`, `afterAll`, `beforeEach`, `afterEach`, and the matcher
 subset declared in `runtime/api.d.ts`. Async cases, promise matchers, and Meteor
@@ -97,8 +117,9 @@ boundary. Ordinary Meteor eager test discovery remains unchanged. Rspack's
 identity while multiple modules register concurrently.
 
 Use `meteor test --verbose` or top-level `meteor.verbose` to see passing runtime
-cases, durations, runtime-worker attribution, compatibility delegation, and
-`[Meteor-Rstest]` protocol frames. The generic test-runner context normalizes
+cases, durations, runtime-worker attribution, and generic Meteor tool
+diagnostics. Rstest ownership routing stays silent, and raw `[Meteor-Rstest]`
+protocol JSON remains hidden. The generic test-runner context normalizes
 the same top-level and `meteor.modern` verbosity forms used by Modern Tools,
 including outside-app `test-packages` where no application `package.json`
 exists:
@@ -113,7 +134,7 @@ exists:
 
 Rstest's native reporter flag also projects verbose presentation into Meteor
 runtime output, including the parallel parent aggregate, without enabling
-Meteor diagnostics or machine frames:
+Meteor diagnostics, Rstest ownership chatter, or machine frames:
 
 ```bash
 meteor test --once --server-only --runtime-workers 4 -- --reporters=verbose
@@ -122,6 +143,10 @@ meteor test --once --server-only --runtime-workers 4 -- --reporters=verbose
 `--reporter=verbose` is an equivalent Rstest alias. Other native reporters keep
 their native-project behavior; Meteor runtime does not emulate JSON, JUnit,
 blob, dot, or custom reporter event streams.
+
+For integration protocol troubleshooting only, set
+`METEOR_RSTEST_DEBUG=1`. This exposes raw generation-bound result frames and is
+independent from user-facing Meteor and reporter verbosity.
 
 Rstest 0.11.6 does not publicly export its built-in reporter implementations;
 its public custom reporter API also expects native file/suite events that the

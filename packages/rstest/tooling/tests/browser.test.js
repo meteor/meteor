@@ -6,17 +6,12 @@ const test = require('node:test');
 
 const { loadAppPlaywright, RstestBrowser } = require('../provider/browser.js');
 
-test('app-local Playwright resolves through installed Rstest package root', t => {
+test('project-owned Playwright resolves without coordinator dependency ownership', t => {
   const appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-browser-'));
   t.after(() => fs.rmSync(appDir, { recursive: true, force: true }));
-  const rstestDir = path.join(appDir, 'node_modules/@meteorjs/rstest');
   const playwrightDir = path.join(appDir, 'node_modules/playwright');
-  fs.mkdirSync(rstestDir, { recursive: true });
   fs.mkdirSync(playwrightDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(rstestDir, 'package.json'),
-    JSON.stringify({ name: '@meteorjs/rstest', version: '0.0.0-test' })
-  );
+  fs.writeFileSync(path.join(appDir, 'package.json'), '{}\n');
   fs.writeFileSync(
     path.join(playwrightDir, 'package.json'),
     JSON.stringify({ name: 'playwright', version: '0.0.0-test', main: 'index.js' })
@@ -24,6 +19,20 @@ test('app-local Playwright resolves through installed Rstest package root', t =>
   fs.writeFileSync(path.join(playwrightDir, 'index.js'), 'module.exports = { local: true };');
 
   assert.deepEqual(loadAppPlaywright(appDir), { local: true });
+});
+
+test('missing project Playwright reports opt-in install guidance', t => {
+  const appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-browser-'));
+  t.after(() => fs.rmSync(appDir, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(appDir, 'package.json'), '{}\n');
+
+  assert.throws(() => loadAppPlaywright(appDir), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_OPTIONAL_DEPENDENCY_MISSING');
+    assert.match(error.message, /project-owned Playwright/);
+    assert.match(error.message, /meteor npm install --save-dev playwright/);
+    assert.match(error.message, /npx playwright install chromium/);
+    return true;
+  });
 });
 
 test('Meteor Rstest browser opens app with app-local Playwright and closes once', async () => {

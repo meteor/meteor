@@ -14,15 +14,38 @@ Mode, Playwright fixtures, filtering, reporting, and exit status.
 meteor add rstest
 ```
 
-That command is sufficient. Before Rstest launches, Atmosphere `rspack`
-installs its compiler-side npm dependencies and `rstest/tooling` installs exact
-Rstest-side dev dependencies. The two manifests do not duplicate ownership:
-Rspack versions remain controlled by `rspack`, while Rstest, Istanbul coverage,
-jsdom, and Playwright versions remain controlled by `rstest`.
+That command supplies required integration baseline. Before Rstest launches,
+Atmosphere `rspack` installs its compiler-side npm dependencies and
+`rstest/tooling` installs `@meteorjs/rstest`, `@rstest/core`, and
+`@rstest/adapter-rspack`. This is sufficient for Node unit tests, snapshots,
+native reporters/workers/sharding, and Meteor server-runtime tests.
 
-To manage npm dependencies yourself, set `meteor.autoInstallDeps` to `false` in
-`package.json`. In that mode install both sets explicitly; missing coordinator
-or compiler packages fail before any test is reported as passing.
+Optional Rstest capabilities remain explicit project choices:
+
+| Selected capability | Project dependency |
+| --- | --- |
+| `meteor-pure-client` generated jsdom project | `jsdom` |
+| `meteor-browser` Browser Mode | `@rstest/browser`, `playwright`, selected browser binary |
+| `meteor-runtime-client` or client package tests | `playwright`, selected browser binary |
+| `meteor-e2e` | `@rstest/playwright`, `playwright`, selected browser binary |
+| Istanbul coverage | `@rstest/coverage-istanbul` |
+| V8 coverage | `@rstest/coverage-v8` |
+
+For example:
+
+```sh
+meteor npm install --save-dev jsdom @rstest/browser playwright
+npx playwright install chromium
+```
+
+Selected optional capability is validated before launch. Meteor prints an
+actionable install command but does not silently add optional dependencies or
+download browser binaries. Keep optional `@rstest/*` package versions
+compatible with installed `@rstest/core`.
+
+To manage required npm dependencies yourself too, set `meteor.autoInstallDeps`
+to `false` in `package.json`. Missing coordinator or compiler packages fail
+before any test is reported as passing.
 
 Adding `rstest` makes `meteor test` select Rstest. `meteor test-packages`
 selects Rstest only when every selected test unibuild for active architectures
@@ -196,11 +219,11 @@ Package config provides the persistent equivalent:
 }
 ```
 
-This adds passing case names and durations, runtime-worker attribution,
-protocol frames, and provider diagnostics. User-configured native `reporters`
-remain authoritative; Meteor selects Rstest's native verbose reporter only
-when no reporter was configured. `METEOR_DISABLE_COLORS` and `NO_COLOR`
-disable runtime ANSI styling.
+This adds passing case names and durations, runtime-worker attribution, and
+generic Meteor tool diagnostics. Rstest ownership routing and raw protocol JSON
+stay hidden. User-configured native `reporters` remain authoritative; Meteor
+selects Rstest's native verbose reporter only when no reporter was configured.
+`METEOR_DISABLE_COLORS` and `NO_COLOR` disable runtime ANSI styling.
 
 For detailed reporter rows without Meteor diagnostics, pass Rstest's native
 reporter option after Meteor's `--` separator:
@@ -212,8 +235,13 @@ meteor test --once --server-only --runtime-workers 4 -- --reporters=verbose
 `--reporter=verbose` and split flag/value forms work too. Native projects use
 the requested Rstest reporter directly. Meteor runtime and parallel parent
 aggregation project only verbose row detail; they do not enable provider
-diagnostics or `[Meteor-Rstest]` frames. Other reporter types are not emulated
-for Meteor-runtime results.
+diagnostics, ownership chatter, or `[Meteor-Rstest]` frames. This is preferred
+when detailed test output should remain free of generic Meteor verbose logs.
+Other reporter types are not emulated for Meteor-runtime results.
+
+Set `METEOR_RSTEST_DEBUG=1` only when diagnosing integration transport. It
+exposes raw generation-bound `[Meteor-Rstest]` result frames independently from
+normal Meteor and reporter verbosity.
 
 For `meteor test-packages`, dynamic config evaluates once with
 `context.command === "test-packages"`, `packageTests === true`, and distinct
@@ -260,26 +288,27 @@ Review a mismatch, then update selected native snapshots through Meteor:
 meteor test --once --project meteor-pure-server --update-snapshots
 ```
 
-Native Istanbul coverage is also available through the Meteor command. The
-`rstest` package tooling installs the exact `@rstest/coverage-istanbul` version;
-applications do not need a separate install:
+Native coverage is available through the Meteor command after project installs
+its chosen provider:
 
 ```sh
+meteor npm install --save-dev @rstest/coverage-istanbul
 meteor test --once --project meteor-pure-server --coverage
 ```
 
-Use native Rstest `coverage` configuration for reporters, include/exclude
-patterns, and report paths. Meteor-runtime projects currently provide
+Use native Rstest `coverage` configuration to select Istanbul or V8 and define
+reporters, include/exclude patterns, and report paths. Meteor-runtime projects currently provide
 assertions, hooks, filtering, structured results, and architecture aggregation;
 they do not claim native Rstest snapshots, coverage, worker-only mocking, or
 snapshot internals.
 
 ## Playwright fixture
 
-Use the re-export matching this package's pinned Rstest version:
+Install and import Rstest's upstream fixture directly. Meteor owns application
+lifecycle and exposes its URL; project owns E2E library and browser runtime:
 
 ```js
-const { test, expect } = require('@meteorjs/rstest/playwright');
+const { test, expect } = require('@rstest/playwright');
 
 test('Meteor app is ready', async ({ page }) => {
   await page.goto(process.env.METEOR_RSTEST_BASE_URL);

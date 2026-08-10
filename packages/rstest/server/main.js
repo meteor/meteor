@@ -10,6 +10,7 @@ const {
 const {
   formatResultFrame,
   formatRuntimeReport,
+  shouldEmitResultFrames,
 } = require('../runtime/reporter.js');
 const { writeWorkerResult } = require('./worker-result.js');
 
@@ -129,7 +130,6 @@ function testMetadata() {
         rstestRuntime: payload.runtime,
         rstestExternal: payload.external,
         rstestWatch: payload.watch,
-        rstestVerbose: payload.verbose,
         rstestReportVerbose: payload.reportVerbose ?? payload.verbose,
         rstestWorker: payload.worker,
       };
@@ -184,7 +184,7 @@ async function executeTests() {
   if (metadata.rstestWorker) {
     writeWorkerResult({ worker: metadata.rstestWorker, result });
   } else {
-    if (metadata.rstestVerbose) {
+    if (shouldEmitResultFrames()) {
       for (const entry of results) {
         console.log(formatResultFrame({
           architecture: entry.architecture,

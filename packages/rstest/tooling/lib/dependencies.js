@@ -6,8 +6,6 @@
 const {
   DEFAULT_METEOR_RSTEST_VERSION,
   DEFAULT_RSTEST_VERSION,
-  DEFAULT_METEOR_RSTEST_JSDOM_VERSION,
-  DEFAULT_METEOR_RSTEST_PLAYWRIGHT_VERSION,
   GLOBAL_STATE_KEYS,
 } = require('./constants.js');
 
@@ -20,11 +18,6 @@ function getRstestDependencies(env = process.env) {
     },
     { name: '@rstest/core', version: DEFAULT_RSTEST_VERSION },
     { name: '@rstest/adapter-rspack', version: DEFAULT_RSTEST_VERSION },
-    { name: '@rstest/browser', version: DEFAULT_RSTEST_VERSION },
-    { name: '@rstest/coverage-istanbul', version: DEFAULT_RSTEST_VERSION },
-    { name: '@rstest/playwright', version: DEFAULT_RSTEST_VERSION },
-    { name: 'jsdom', version: DEFAULT_METEOR_RSTEST_JSDOM_VERSION },
-    { name: 'playwright', version: DEFAULT_METEOR_RSTEST_PLAYWRIGHT_VERSION },
   ].map(dependency => ({
     ...dependency,
     spec: dependency.spec || dependency.version,

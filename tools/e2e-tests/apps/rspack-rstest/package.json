@@ -10,6 +10,13 @@
     "@meteorjs/rspack": "^3.0.0-beta.0",
     "meteor-node-stubs": "^1.2.12"
   },
+  "devDependencies": {
+    "@rstest/browser": "0.11.6",
+    "@rstest/coverage-istanbul": "0.11.6",
+    "@rstest/playwright": "0.11.6",
+    "jsdom": "29.1.1",
+    "playwright": "1.59.0"
+  },
   "meteor": {
     "mainModule": {
       "client": "client/main.js",

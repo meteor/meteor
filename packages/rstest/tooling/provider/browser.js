@@ -1,32 +1,21 @@
-const fs = require('node:fs');
 const path = require('node:path');
 const { createRequire } = require('node:module');
 
 function loadAppPlaywright(appDir) {
-  const directPackageJson = path.join(
-    appDir,
-    'node_modules',
-    '@meteorjs',
-    'rstest',
-    'package.json'
-  );
-  let packageJson = fs.existsSync(directPackageJson)
-    ? directPackageJson
-    : null;
-  if (!packageJson) try {
-    packageJson = require.resolve('@meteorjs/rstest/package.json', {
-      paths: [appDir],
-    });
+  const projectRequire = createRequire(path.join(appDir, 'package.json'));
+  let playwrightPath;
+  try {
+    playwrightPath = projectRequire.resolve('playwright');
   } catch {
-    packageJson = null;
-  }
-  if (!packageJson || !path.isAbsolute(packageJson) || !fs.existsSync(packageJson)) {
-    throw new Error(
-      '[Meteor Rstest] @meteorjs/rstest is missing; cannot launch client tests. ' +
-      'Run meteor npm install --save-dev @meteorjs/rstest@0.1.0-beta.0.',
+    const error = new Error(
+      '[Meteor Rstest] Client tests require project-owned Playwright. ' +
+      'Run meteor npm install --save-dev playwright, then ' +
+      'npx playwright install chromium.'
     );
+    error.code = 'METEOR_RSTEST_OPTIONAL_DEPENDENCY_MISSING';
+    throw error;
   }
-  return createRequire(packageJson)('playwright');
+  return projectRequire(playwrightPath);
 }
 
 class RstestBrowser {

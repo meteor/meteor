@@ -10,11 +10,6 @@
       "require": "./index.js",
       "default": "./index.js"
     },
-    "./playwright": {
-      "types": "./playwright.d.ts",
-      "require": "./playwright.js",
-      "default": "./playwright.js"
-    },
     "./package.json": "./package.json"
   },
   "type": "commonjs",
@@ -27,12 +22,7 @@
   "license": "MIT",
   "dependencies": {
     "@rstest/adapter-rspack": "0.11.6",
-    "@rstest/browser": "0.11.6",
-    "@rstest/core": "0.11.6",
-    "@rstest/coverage-istanbul": "0.11.6",
-    "@rstest/playwright": "0.11.6",
-    "jsdom": "29.1.1",
-    "playwright": "1.59.0"
+    "@rstest/core": "0.11.6"
   },
   "peerDependencies": {
     "@meteorjs/rspack": ">=3.0.0-beta.0",

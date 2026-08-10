@@ -22,6 +22,7 @@ Package.registerTestRunnerPlugin({
     'tooling/lib/dependencies.js',
     'tooling/provider/errors.js',
     'tooling/provider/inventory.js',
+    'tooling/provider/capabilities.js',
     'tooling/provider/process.js',
     'tooling/provider/browser.js',
     'tooling/provider/external.js',

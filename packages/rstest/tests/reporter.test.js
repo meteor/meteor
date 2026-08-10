@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   formatResultFrame,
   formatRuntimeReport,
+  shouldEmitResultFrames,
 } = require('../runtime/reporter.js');
 const { validateResult } = require('../runtime/coordinator.js');
 
@@ -63,6 +64,13 @@ test('runtime reporter preserves stable machine result frame', () => {
     architecture: 'server',
     result: runtimeResult,
   });
+});
+
+test('runtime result frames require exact protocol debug opt-in', () => {
+  assert.equal(shouldEmitResultFrames({}), false);
+  assert.equal(shouldEmitResultFrames({ METEOR_RSTEST_DEBUG: '' }), false);
+  assert.equal(shouldEmitResultFrames({ METEOR_RSTEST_DEBUG: 'true' }), false);
+  assert.equal(shouldEmitResultFrames({ METEOR_RSTEST_DEBUG: '1' }), true);
 });
 
 test('default runtime report matches Rstest file and total layout', () => {

@@ -6,6 +6,10 @@ const {
   ensureRstestInstalled,
 } = require('../lib/dependencies.js');
 const {
+  assertRstestOptionalCapabilities,
+  selectRstestOptionalCapabilities,
+} = require('./capabilities.js');
+const {
   inspectAppRstestCapability,
   scanNativeRstestRoots,
   selectRstestInventory,
@@ -77,6 +81,8 @@ class RstestTestRunnerProvider {
     this.context = context;
     this.services = {
       ensureRstestInstalled,
+      assertRstestOptionalCapabilities,
+      selectRstestOptionalCapabilities,
       inspectAppRstestCapability,
       scanNativeRstestRoots,
       selectRstestInventory,
@@ -220,15 +226,6 @@ class RstestTestRunnerProvider {
           'but no tests under tests/rstest.'
       );
     }
-    if (!this.context.worker && roots.legacyFiles.length > 0 &&
-        this.verbose) {
-      this.services.warn(capability.hasRstestConfig
-        ? `[Meteor Rstest] ${roots.legacyFiles.length} test file(s) outside ` +
-          'Meteor-owned roots are delegated to rstest.config projects.'
-        : `[Meteor Rstest] ${roots.legacyFiles.length} compatibility test file(s) ` +
-          'remain on their existing driver route.');
-    }
-
     const lanes = this.services.selectRstestLanes(laneProjects);
     const nativeProjects = explicitProjects.filter(name =>
       !name.startsWith('meteor-runtime-') && name !== 'meteor-e2e'
@@ -330,6 +327,18 @@ class RstestTestRunnerProvider {
     }
 
     const selection = this.selection;
+    if (!worker) {
+      const capabilities = this.services.selectRstestOptionalCapabilities({
+        command,
+        inventory: selection.inventory,
+        coverage: options.coverage,
+        client: selection.nativeClient,
+      });
+      this.services.assertRstestOptionalCapabilities({
+        appDir,
+        capabilities,
+      });
+    }
     const token = crypto.randomBytes(24).toString('base64url');
     const runtimeDir = path.join(localDir, 'rstest');
     fs.mkdirSync(runtimeDir, { recursive: true });
@@ -677,7 +686,7 @@ class RstestTestRunnerProvider {
   async startHost({ url, log }) {
     if (this.metadata.client) {
       const browser = new this.services.Browser({
-        appDir: this.context.npm.root,
+        appDir: this.context.appDir,
         url,
         browser: this.context.options.browser || 'chromium',
         token: this.metadata.token,

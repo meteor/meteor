@@ -93,11 +93,19 @@ describe('Rspack + Rstest integration', () => {
     const packageJson = JSON.parse(
       fs.readFileSync(path.join(appDir, 'package.json'), 'utf8')
     );
+    const rstestPackageJson = JSON.parse(fs.readFileSync(
+      require.resolve('@meteorjs/rstest/package.json', { paths: [appDir] }),
+      'utf8',
+    ));
     expect(packageJson.dependencies['@meteorjs/rspack']).toMatch(/^file:/);
     expect(packageJson.devDependencies['@meteorjs/rstest']).toMatch(/^file:/);
-    expect(packageJson.devDependencies['@rstest/core']).toBe('0.11.6');
-    expect(packageJson.devDependencies['@rstest/adapter-rspack']).toBe('0.11.6');
+    expect(rstestPackageJson.dependencies['@rstest/core']).toBe('0.11.6');
+    expect(rstestPackageJson.dependencies['@rstest/adapter-rspack']).toBe('0.11.6');
+    expect(packageJson.devDependencies['@rstest/browser']).toBe('0.11.6');
     expect(packageJson.devDependencies['@rstest/coverage-istanbul']).toBe('0.11.6');
+    expect(packageJson.devDependencies['@rstest/playwright']).toBe('0.11.6');
+    expect(packageJson.devDependencies.jsdom).toBe('29.1.1');
+    expect(packageJson.devDependencies.playwright).toBe('1.59.0');
   }, 600_000);
 
   test('meteor update-snapshots repairs a native Rstest mismatch', async () => {
@@ -445,7 +453,7 @@ describe('Rspack + Rstest integration', () => {
     expect(output).not.toContain('Meteor runtime · server');
   }, 600_000);
 
-  test('meteor full-app runs external E2E through Rstest Playwright fixture', async () => {
+  test('meteor full-app runs external E2E through project-owned Rstest Playwright fixture', async () => {
     const result = await runMeteorCommand(
       'test',
       [
@@ -500,7 +508,7 @@ describe('Rspack + Rstest integration', () => {
     );
   }, 600_000);
 
-  test('meteor watch rebuilds runtime tests with a new transport generation', async () => {
+  test('meteor verbose watch reruns runtime tests without protocol JSON', async () => {
     const runtimeFile = path.join(
       appDir,
       'tests',
@@ -532,15 +540,11 @@ describe('Rspack + Rstest integration', () => {
         { meteorProcess: result.meteorProcess, timeout: 120_000 },
       );
       const firstOutput = stripAnsi(result.outputLines.join('\n'));
-      expect(firstOutput).toContain('[Meteor-Rstest]');
-      expect(firstOutput).toContain('outside Meteor-owned roots are delegated');
+      expect(firstOutput).not.toContain('[Meteor-Rstest]');
+      expect(firstOutput).not.toContain('outside Meteor-owned roots are delegated');
       expect(firstOutput).toContain(
         'Meteor runtime project resolves Atmosphere packages'
       );
-      const firstGenerations = [...firstOutput.matchAll(/"generation":(\d+)/g)]
-        .map(match => Number(match[1]));
-      const firstGeneration = Math.max(...firstGenerations);
-      expect(firstGeneration).toBeGreaterThanOrEqual(1);
 
       await waitForMeteorOutput(
         result.outputLines,
@@ -557,24 +561,57 @@ describe('Rspack + Rstest integration', () => {
       const deadline = Date.now() + 120_000;
       while (Date.now() < deadline) {
         const output = stripAnsi(result.outputLines.join('\n'));
-        const generations = [...output.matchAll(/"generation":(\d+)/g)]
-          .map(match => Number(match[1]));
-        if (generations.some(generation => generation > firstGeneration) &&
-            output.split(
-              '✓ tests/rstest/runtime/server/mongo.test.js (1)'
-            ).length > 2) {
+        if (output.split(
+          '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+        ).length > 2) {
           break;
         }
         await new Promise(resolve => setTimeout(resolve, 100));
       }
       const rebuiltOutput = stripAnsi(result.outputLines.join('\n'));
-      const rebuiltGenerations = [...rebuiltOutput.matchAll(/"generation":(\d+)/g)]
-        .map(match => Number(match[1]));
-      expect(Math.max(...rebuiltGenerations)).toBeGreaterThan(firstGeneration);
+      expect(rebuiltOutput.split(
+        '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+      ).length).toBeGreaterThan(2);
+      expect(rebuiltOutput).not.toContain('[Meteor-Rstest]');
     } finally {
       await killMeteorProcess(result.meteorProcess);
       fs.writeFileSync(runtimeFile, original);
     }
+  }, 600_000);
+
+  test('protocol JSON requires explicit Rstest debug environment', async () => {
+    const result = await runMeteorCommand(
+      'test',
+      [
+        '--once',
+        '--verbose',
+        '--project',
+        'meteor-runtime-server',
+        '--port',
+        testPort(3209),
+      ],
+      appDir,
+      {
+        captureOutput: true,
+        execaOptions: {
+          reject: false,
+          env: { METEOR_RSTEST_DEBUG: '1' },
+        },
+      }
+    );
+    const completed = await result.meteorProcess;
+    const output = stripAnsi(result.outputLines.join('\n'));
+
+    expect(completed.exitCode).toBe(0);
+    expect(output).toMatch(
+      /\[Meteor-Rstest\] {"type":"result","protocolVersion":1,"generation":1/
+    );
+    expect(output).toContain(
+      'Meteor runtime project resolves Atmosphere packages'
+    );
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+    );
   }, 600_000);
 
   test('Meteor-runtime assertion failures retain names and return nonzero', async () => {
@@ -668,38 +705,51 @@ describe('Rspack + Rstest integration', () => {
   test('meteor test-packages keeps server/client local-test Isobuild construction', async () => {
     const repoRoot = path.resolve(__dirname, '../..');
     const packagesPath = path.join(appDir, '.meteor', 'packages');
+    const sourceDependencyRoot = path.join(
+      appDir,
+      'node_modules',
+      '@babel',
+      'runtime',
+    );
+    const sourceDependencyHelpers = path.join(sourceDependencyRoot, 'helpers');
+    fs.rmSync(path.join(sourceDependencyRoot, '.meteor-portable-2.json'), {
+      force: true,
+    });
+    expect(fs.lstatSync(sourceDependencyHelpers).isSymbolicLink()).toBe(false);
     fs.writeFileSync(
       packagesPath,
       fs.readFileSync(packagesPath, 'utf8').replace(/^rstest(?:@[^\n]+)?\n/m, ''),
     );
-    const result = await runMeteorCommand(
+    const packageEnv = {
+      METEOR_RSTEST_NPM_SPEC: path.join(
+        repoRoot,
+        'npm-packages',
+        'meteor-rstest',
+      ),
+      METEOR_RSPACK_NPM_SPEC: path.join(
+        repoRoot,
+        'npm-packages',
+        'meteor-rspack',
+      ),
+    };
+    const runPackageTests = args => runMeteorCommand(
       'test-packages',
-      [
-        '--once',
-        '--port',
-        testPort(3196),
-        'rstest-e2e-fixture',
-      ],
+      args,
       appDir,
       {
         captureOutput: true,
         execaOptions: {
           reject: false,
-          env: {
-            METEOR_RSTEST_NPM_SPEC: path.join(
-              repoRoot,
-              'npm-packages',
-              'meteor-rstest',
-            ),
-            METEOR_RSPACK_NPM_SPEC: path.join(
-              repoRoot,
-              'npm-packages',
-              'meteor-rspack',
-            ),
-          },
+          env: packageEnv,
         },
-      }
+      },
     );
+    const result = await runPackageTests([
+      '--once',
+      '--port',
+      testPort(3196),
+      'rstest-e2e-fixture',
+    ]);
     const completed = await result.meteorProcess;
     const output = stripAnsi(result.outputLines.join('\n'));
 
@@ -708,6 +758,21 @@ describe('Rspack + Rstest integration', () => {
     expect(output).toContain('✓ Meteor runtime · web.browser (2)');
     expect(output).not.toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
     expect(output).not.toContain('Package.onTest client executor runs in Meteor browser');
+
+    expect(fs.lstatSync(sourceDependencyHelpers).isSymbolicLink()).toBe(false);
+
+    const repeated = await runPackageTests([
+      '--once',
+      '--server-only',
+      '--port',
+      testPort(3213),
+      'rstest-e2e-fixture',
+    ]);
+    const repeatedCompleted = await repeated.meteorProcess;
+    const repeatedOutput = stripAnsi(repeated.outputLines.join('\n'));
+
+    expect(repeatedCompleted.exitCode).toBe(0);
+    expect(repeatedOutput).toContain('✓ Meteor runtime · server (1)');
   }, 600_000);
 
   test('meteor test-packages bootstraps Rstest outside any Meteor app', async () => {
