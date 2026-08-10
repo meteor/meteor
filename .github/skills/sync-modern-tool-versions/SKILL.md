@@ -38,6 +38,10 @@ git diff <base>..<head> -- '**/package.json' '**/package-lock.json' \
 Do not assume `@meteorjs/rspack`, `@rspack/core`, `@rspack/cli`, and the
 `rspack` Atmosphere package share a version scheme.
 
+When `version-bump` selected an npm package version, consume that target without
+incrementing it. If publishable npm package changes have no selected target,
+return to `version-bump` for magnitude analysis before synchronizing references.
+
 ### 2. Find active references
 
 Search for the dependency name, old version, constant, and version consumer.
