@@ -619,8 +619,14 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
-    var parsedUrl = require('url').parse(process.env.ROOT_URL);
-    if (!parsedUrl.host || ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
+    let parsedUrl = null;
+    try {
+      parsedUrl = new URL(process.env.ROOT_URL);
+    } catch (e) {
+      // Not a parseable URL; handled by the check below.
+    }
+    if (!parsedUrl || !parsedUrl.host ||
+        ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
       Console.error('$ROOT_URL, if specified, must be an URL.');
       process.exit(1);
     }
@@ -846,18 +852,11 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
         "However, if you are running this command in a build process (CI, etc.), or you are absolutely sure you know what you are doing,",
         "set the METEOR_ALLOW_SUPERUSER environment variable or pass --allow-superuser to proceed."
       );
-    }
 
-    Console.info("");
-    Console.info(
-      "Even with METEOR_ALLOW_SUPERUSER or --allow-superuser, permissions in your app directory will be incorrect if you ever attempt to perform any Meteor tasks as a normal user.",
-      "If you need to fix your permissions, run the following command from the root of your project:"
-    );
-    Console.info("");
-    Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
-    Console.info("");
+      Console.info("");
+      Console.info(Console.command("  sudo chown -Rh <username> .meteor/local"));
+      Console.info("");
 
-    if (! allowSuperuser) {
       process.exit(1);
     }
   }

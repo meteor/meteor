@@ -279,6 +279,26 @@ if (Meteor.isClient) {
     var restrictedCollectionForClientIdTest = defineCollection(
       "collection-restrictedForClientIdTest");
 
+    // CI diagnostic: wrap each block with entry/exit/elapsed logs so timeouts
+    // surface which specific block is stuck. Removed once flakiness is solved.
+    var traceBlocks = function (testName, funcs) {
+      return funcs.map(function (fn, idx) {
+        return async function (test, expect) {
+          var label = '[allow-tests] ' + testName + ' block#' + idx;
+          var startedAt = Date.now();
+          console.log(label + ' enter');
+          try {
+            var result = await fn.call(this, test, expect);
+            console.log(label + ' exit ok in ' + (Date.now() - startedAt) + 'ms');
+            return result;
+          } catch (err) {
+            console.log(label + ' exit threw in ' + (Date.now() - startedAt) + 'ms', err && err.message);
+            throw err;
+          }
+        };
+      });
+    };
+
     // test that if allow is called once then the collection is
     // restricted, and that other mutations aren't allowed
     testAsyncMulti('collection - partial allow, ' + idGeneration, [
@@ -399,7 +419,7 @@ if (Meteor.isClient) {
     ]);
 
     (function() {
-      testAsyncMulti('collection - restricted factories ' + idGeneration, [
+      testAsyncMulti('collection - restricted factories ' + idGeneration, traceBlocks('restricted factories ' + idGeneration, [
         async function(test, expect) {
           await restrictedCollectionWithTransform.callClearMethod();
           test.equal(
@@ -520,10 +540,10 @@ if (Meteor.isClient) {
               })
             );
         },
-      ]);
+      ]));
     })();
 
-    testAsyncMulti('collection - insecure, ' + idGeneration, [
+    testAsyncMulti('collection - insecure, ' + idGeneration, traceBlocks('insecure, ' + idGeneration, [
       async function(test, expect) {
         await insecureCollection.callClearMethod();
         test.equal(await insecureCollection.find().countAsync(), 0);
@@ -547,9 +567,9 @@ if (Meteor.isClient) {
         test.equal(await insecureCollection.find(id).countAsync(), 1);
         test.equal((await insecureCollection.findOneAsync(id)).foo, 'bar');
       },
-    ]);
+    ]));
 
-    testAsyncMulti('collection - locked down, ' + idGeneration, [
+    testAsyncMulti('collection - locked down, ' + idGeneration, traceBlocks('locked down, ' + idGeneration, [
       async function(test, expect) {
         await lockedDownCollection.callClearMethod();
         test.equal(await lockedDownCollection.find().countAsync(), 0);
@@ -567,12 +587,12 @@ if (Meteor.isClient) {
             test.equal(await lockedDownCollection.find().countAsync(), 0);
           });
       },
-    ]);
+    ]));
 
     (function() {
       var collection = restrictedCollectionForUpdateOptionsTest;
       var id1, id2;
-      testAsyncMulti('collection - update options, ' + idGeneration, [
+      testAsyncMulti('collection - update options, ' + idGeneration, traceBlocks('update options, ' + idGeneration, [
         // init
         async function(test, expect) {
           await collection.callClearMethod().then(async function() {
@@ -729,7 +749,7 @@ if (Meteor.isClient) {
             );
           });
         },
-      ]);
+      ]));
     })();
 
 
@@ -737,7 +757,7 @@ if (Meteor.isClient) {
       function(collection) {
         var canUpdateId, canRemoveId;
 
-        testAsyncMulti('collection - ' + collection.unnoncedName, [
+        testAsyncMulti('collection - ' + collection.unnoncedName, traceBlocks(collection.unnoncedName, [
           // init
           async function(test, expect) {
             await collection.callClearMethod().then(async function() {
@@ -1027,12 +1047,12 @@ if (Meteor.isClient) {
               test.equal(await collection.find().countAsync(), 0);
             });
           },
-        ]);
+        ]));
       }
     );
     testAsyncMulti(
       'collection - allow/deny transform must return object, ' + idGeneration,
-      [
+      traceBlocks('allow/deny transform must return object, ' + idGeneration, [
         async function(test, expect) {
           await restrictedCollectionForInvalidTransformTest
             .insertAsync({}, { returnServerResultPromise: true })
@@ -1040,12 +1060,12 @@ if (Meteor.isClient) {
               test.isTrue(err);
             });
         },
-      ]
+      ])
     );
     testAsyncMulti(
       'collection - restricted collection allows client-side id, ' +
       idGeneration,
-      [
+      traceBlocks('restricted collection allows client-side id, ' + idGeneration, [
         async function(test, expect) {
           var self = this;
           self.id = Random.id();
@@ -1061,7 +1081,7 @@ if (Meteor.isClient) {
               );
             });
         },
-      ]
+      ])
     );
   });  // end idGeneration loop
 }  // end if isClient

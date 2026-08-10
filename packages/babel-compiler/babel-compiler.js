@@ -1,4 +1,3 @@
-var semver = Npm.require("semver");
 var JSON5 = Npm.require("json5");
 var SWC = Npm.require("@meteorjs/swc-core");
 const reifyCompile = Npm.require("@meteorjs/reify/lib/compiler").compile;
@@ -42,10 +41,6 @@ BCp.isVerbose = function(config = getMeteorConfig()) {
   }
   return !!this.extraFeatures?.verbose;
 };
-
-// There's no way to tell the current Meteor version, but we can infer
-// whether it's Meteor 1.4.4 or earlier by checking the Node version.
-var isMeteorPre144 = semver.lt(process.version, "4.8.1");
 
 var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
 
@@ -101,17 +96,18 @@ let lastModifiedSwcConfigTime;
 BCp.initializeMeteorAppSwcrc = function () {
   const hasSwcRc = fs.existsSync(`${getMeteorAppDir()}/.swcrc`);
   const hasSwcJs = !hasSwcRc && fs.existsSync(`${getMeteorAppDir()}/swc.config.js`);
-  if (!lastModifiedSwcConfig && !hasSwcRc && !hasSwcJs) {
+  const hasSwcTs = !hasSwcRc && !hasSwcJs && fs.existsSync(`${getMeteorAppDir()}/swc.config.ts`);
+  if (!lastModifiedSwcConfig && !hasSwcRc && !hasSwcJs && !hasSwcTs) {
     return;
   }
-  const swcFile = hasSwcJs ? 'swc.config.js' : '.swcrc';
+  const swcFile = hasSwcTs ? 'swc.config.ts' : hasSwcJs ? 'swc.config.js' : '.swcrc';
   const filePath = `${getMeteorAppDir()}/${swcFile}`;
   const fileStats = fs.statSync(filePath);
   const fileModTime = fileStats?.mtime?.getTime();
 
   let currentLastModifiedConfigTime;
-  if (hasSwcJs) {
-    // For dynamic JS files, first get the resolved configuration
+  if (hasSwcJs || hasSwcTs) {
+    // For dynamic JS/TS files, first get the resolved configuration
     const resolvedConfig = lastModifiedSwcConfigTime?.includes(`${fileModTime}`)
       ? lastModifiedSwcConfig || getMeteorAppSwcrc(swcFile)
       : getMeteorAppSwcrc(swcFile);
@@ -350,7 +346,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       var swcOptions = {
         jsc: {
-          ...(!isLegacyWebArch && { target: 'es2015' }),
+          ...(!isLegacyWebArch && { target: isNodeTarget ? 'es2022' : 'es2015' }),
           parser: {
             syntax: isTypescriptSyntax ? 'typescript' : 'ecmascript',
             jsx: hasJSXSupport,
@@ -447,10 +443,17 @@ BCp.processOneFileForTarget = function (inputFile, source) {
                 transpConfig?.excludePackages || [],
               )));
 
+        // Segregate cache by target/arch: server (es2022), modern web (es2015),
+        // and legacy web (env.targets) all produce different SWC output. Without
+        // this, whichever arch compiles first poisons the cache for the others.
+        const swcTarget = isLegacyWebArch
+          ? 'legacy'
+          : (isNodeTarget ? 'es2022' : 'es2015');
+
         const cacheKey = [
           toBeAdded.hash,
           lastModifiedSwcConfigTime,
-          isLegacyWebArch ? 'legacy' : '',
+          swcTarget,
           hasSwcHelpersAvailable,
         ]
           .filter(Boolean)
@@ -549,19 +552,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       }
 
       return null;
-    }
-
-    if (isMeteorPre144) {
-      // Versions of meteor-tool earlier than 1.4.4 do not understand that
-      // module.importSync is synonymous with the deprecated module.import
-      // and thus fail to register dependencies for importSync calls.
-      // This string replacement may seem a bit hacky, but it will tide us
-      // over until everyone has updated to Meteor 1.4.4.
-      // https://github.com/meteor/meteor/issues/8572
-      result.code = result.code.replace(
-        /\bmodule\.importSync\b/g,
-        "module.import"
-      );
     }
 
     toBeAdded.data = result.code;
@@ -1073,8 +1063,37 @@ function getMeteorAppPackageJson() {
 function getMeteorAppSwcrc(file = '.swcrc') {
   try {
     const filePath = `${getMeteorAppDir()}/${file}`;
-    if (file.endsWith('.js')) {
+    if (file.endsWith('.js') || file.endsWith('.ts')) {
       let content = fs.readFileSync(filePath, 'utf-8');
+      
+      if (file.endsWith('.ts')) {
+        try {
+          const swc = require('@meteorjs/swc-core');
+          const result = swc.transformSync(content, {
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+              },
+              target: 'es2015',
+            },
+          });
+          content = result.code;
+        } catch (swcError) {
+          content = content
+            .replace(/import\s+type\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+['"][^'"]+['"];?/g, '')
+            .replace(/export\s+default\s+/, 'module.exports = ')
+            .replace(/export\s+/g, '')
+            .replace(/:\s*\w+(\[\])?(\s*=)/g, '$2')
+            .replace(/\(([^)]*?):\s*\w+(\[\])?\)/g, '($1)')
+            .replace(/\):\s*\w+(\[\])?\s*\{/g, ') {')
+            .replace(/interface\s+\w+\s*\{[^}]*\}/g, '')
+            .replace(/type\s+\w+\s*=\s*[^;]+;/g, '')
+            .replace(/as\s+\w+(\[\])?/g, '');
+        }
+      }
+      
       // Check if the content uses ES module syntax (export default)
       if (content.includes('export default')) {
         // Transform ES module syntax to CommonJS
@@ -1091,7 +1110,9 @@ function getMeteorAppSwcrc(file = '.swcrc') {
         })()
       `);
       const context = vm.createContext({ process });
-      return script.runInContext(context);
+      const result = script.runInContext(context);
+      // Handle CJS interop wrapper (e.g. { __esModule: true, default: config })
+      return result && result.__esModule && result.default ? result.default : result;
     } else {
       // For .swcrc and other JSON files, parse as JSON
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));

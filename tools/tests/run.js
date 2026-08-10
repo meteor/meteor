@@ -463,12 +463,12 @@ selftest.define("'meteor run --port' accepts/rejects proper values", async funct
 
   run = s.run("run", "--port", "3500");
   run.waitSecs(30);
-  await run.match('App running at: http://localhost:3500/');
+  await run.match('App running at http://localhost:3500/');
   await run.stop();
 
   run = s.run("run", "--port", "127.0.0.1:3500");
   run.waitSecs(30);
-  await run.match('App running at: http://127.0.0.1:3500/');
+  await run.match('App running at http://127.0.0.1:3500/');
   await run.stop();
 });
 
@@ -491,7 +491,7 @@ selftest.define("update package during run", async function () {
 
     var runRun = s.run();
     runRun.waitSecs(3);
-    await runRun.match("App running at:");
+    await runRun.match("App running at");
 
     var updateRun = s.run("update", "glasser:package-for-selftest");
     await updateRun.match(

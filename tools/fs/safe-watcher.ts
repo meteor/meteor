@@ -6,6 +6,17 @@ import { Profile } from "../tool-env/profile";
 import { statOrNull, lstat, toPosixPath, convertToOSPath, pathRelative, watchFile, unwatchFile, pathResolve, pathDirname } from "./files";
 import { getMeteorConfig } from "../tool-env/meteor-config";
 
+const constants = require("constants");
+
+// Both ENOSPC (inotify watch limit reached) and EINTR (interrupted system call)
+// surfaced by the native watcher mean the watch is no longer reliable, so we
+// fall back to polling. Native errors can report the condition via either a
+// string `code` or a numeric `errno`, so we check both.
+function isENOSPCorEINTR(err: any): boolean {
+  return err.code === "ENOSPC" || err.errno === constants.ENOSPC ||
+      err.code === "EINTR" || err.errno === constants.EINTR;
+}
+
 // Register process exit handlers to ensure subscriptions are properly cleaned up
 const registerExitHandlers = () => {
 
@@ -312,10 +323,14 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
             if (/Events were dropped/.test(err.message)) {
               return;
             }
+            if (/RootResolveError/.test(err.message) || /failed to resolve root/.test(err.message)) {
+              console.warn(`Parcel watcher root resolve error on ${osDirPath}, ignoring: ${err.message}`);
+              ignoredWatchRoots.add(dirPath);
+              watchRoots.delete(dirPath);
+              return;
+            }
             console.error(`Parcel watcher error on ${osDirPath}:`, err);
-            // Only disable native watching for critical errors (like ENOSPC).
-            // @ts-ignore
-            if (err.code === "ENOSPC" || err.errno === require("constants").ENOSPC) {
+            if (isENOSPCorEINTR(err)) {
               fallbackToPolling();
             }
             watchRoots.delete(dirPath);
@@ -340,13 +355,15 @@ async function ensureWatchRoot(dirPath: string): Promise<void> {
         (e.code === "ENOTDIR" ||
             /Not a directory/.test(e.message) ||
             e.code === "EBADF" ||
-            /Bad file descriptor/.test(e.message))
+            /Bad file descriptor/.test(e.message) ||
+            /RootResolveError/.test(e.message) ||
+            /failed to resolve root/.test(e.message))
     ) {
-      console.warn(`Skipping watcher for ${osDirPath}: not a directory`);
+      console.warn(`Skipping watcher for ${osDirPath}: ${e.message || 'not watchable'}`);
       ignoredWatchRoots.add(dirPath);
     } else {
       console.error(`Failed to start watcher for ${osDirPath}:`, e);
-      if (e.code === "ENOSPC" || e.errno === require("constants").ENOSPC) {
+      if (isENOSPCorEINTR(e)) {
         fallbackToPolling();
       }
     }

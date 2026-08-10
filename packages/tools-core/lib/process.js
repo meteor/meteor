@@ -1,5 +1,26 @@
 const { spawn } = require('child_process');
 const net = require('net');
+const { logError } = require('./log');
+
+/**
+ * Determines whether a spawned command should run through a shell.
+ *
+ * On Windows, batch launchers such as .cmd and .bat require a shell, while
+ * direct executables should avoid shell parsing so argument boundaries are
+ * preserved.
+ *
+ * @param {string} command - The command to evaluate
+ * @param {Object} [options] - Spawn options
+ * @param {boolean} [options.shell] - Explicit shell override
+ * @returns {boolean} True if the command should run through a shell
+ */
+export function shouldUseShell(command, options = {}) {
+  if (typeof options.shell === 'boolean') {
+    return options.shell;
+  }
+
+  return process.platform === 'win32' && /\.(cmd|bat)$/i.test(command);
+}
 
 /**
  * Spawns a new OS process with the given command and arguments.
@@ -25,8 +46,14 @@ export function spawnProcess(command, args, options = {}) {
     cwd: options.cwd || process.cwd(),
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: options.detached || false,
-    ...(process.platform === 'win32' && { shell: true }),
+    shell: shouldUseShell(command, options),
   });
+
+  // Track detached spawns so stopProcess can signal the whole process group.
+  // POSIX-only: kernels deliver `proc.kill(signal)` to the immediate child PID,
+  // but wrappers like npx don't reliably forward that signal to the real binary
+  // they exec'd, leaving the grandchild (e.g. rspack devserver) holding ports.
+  proc.meteorDetached = options.detached === true;
 
   // Add a reference to track if the process is running
   proc.isRunning = true;
@@ -55,7 +82,7 @@ export function spawnProcess(command, args, options = {}) {
   proc.on('error', (err) => {
     proc.isRunning = false;
     if (options.onError) options.onError(err);
-    else console.error(`Process error: ${err.message}`);
+    else logError(`=> Process error: ${err.message}`);
   });
 
   // This happens sometimes when we write to stdin after the app
@@ -88,7 +115,7 @@ export function stopProcess(proc, options = {}) {
     // Set a timeout to force kill if the process doesn't exit gracefully
     const forceKillTimeout = setTimeout(() => {
       if (isProcessRunning(proc)) {
-        proc.kill('SIGKILL');
+        sendSignal(proc, 'SIGKILL');
       }
     }, timeout);
 
@@ -100,8 +127,34 @@ export function stopProcess(proc, options = {}) {
     });
 
     // Send the signal to terminate the process
-    proc.kill(signal);
+    sendSignal(proc, signal);
   });
+}
+
+/**
+ * Sends a signal to a child process. For detached children on POSIX, signals
+ * the whole process group (negative PID) so wrappers like npx propagate the
+ * signal to the real binary they spawned. Falls back to a direct PID signal
+ * if the group signal fails or on Windows.
+ *
+ * @param {Object} proc - The child process to signal
+ * @param {string} signal - The signal name (e.g. 'SIGTERM', 'SIGKILL')
+ * @returns {void}
+ */
+export function sendSignal(proc, signal) {
+  if (proc.meteorDetached && process.platform !== 'win32') {
+    try {
+      process.kill(-proc.pid, signal);
+      return;
+    } catch (e) {
+      // ESRCH means group is already gone; otherwise fall through to direct kill.
+    }
+  }
+  try {
+    proc.kill(signal);
+  } catch (e) {
+    // Best-effort: child may have already exited.
+  }
 }
 
 /**
