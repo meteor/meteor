@@ -18,14 +18,22 @@ function connect(client) {
 
 if (process.env.MONGO_URL && (/^mongodb(\+srv)?:\/\//.test(process.env.MONGO_URL))) {
   try {
-    connect(new MongoClient(process.env.MONGO_URL, {
-      tls: true,
-      tlsAllowInvalidCertificates: true,
-    })).then(client => {
+    // No TLS overrides here: the connection string carries its own TLS
+    // semantics (mongodb+srv implies TLS), and forcing tls with
+    // tlsAllowInvalidCertificates would both break plaintext deployments
+    // and skip certificate validation.
+    connect(new MongoClient(process.env.MONGO_URL)).then(client => {
       if (client) client.close();
     });
   } catch (e) {
-    console.warn('Invalid MongoDB connection string in MONGO_URL:', process.env.MONGO_URL);
+    // The URL may embed credentials (user:password@), so never log it raw.
+    // Redacts everything up to the first "@" — over-redacting a credential-less
+    // URL is fine here, leaking a password is not.
+    const redactedUrl = process.env.MONGO_URL.replace(
+      /(mongodb(?:\+srv)?:\/\/)[^@]+@/,
+      '$1***:***@'
+    );
+    console.warn('Invalid MongoDB connection string in MONGO_URL:', redactedUrl);
   }
 }
 
