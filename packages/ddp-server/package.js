@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '3.2.0',
+  version: '3.2.1-patch',
   documentation: null,
 });
 
