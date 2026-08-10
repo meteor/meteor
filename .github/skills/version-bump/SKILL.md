@@ -1,6 +1,6 @@
 ---
 name: version-bump
-description: Use when bumping Meteor package versions for beta, RC, or official releases. Covers the two version schemes (meteor-tool vs all other packages), the update-semver automation tool, manual files the tool does not handle, modern-tool npm package semver analysis and dependency verification, and the full lifecycle from beta through official release. Applies to packages/*/package.js, scripts/admin/, npm-packages/meteor-installer/, modern-tool npm packages, and .meteor/versions in test apps.
+description: Use when bumping Meteor package versions for beta, RC, or official releases. Covers the two version schemes (meteor-tool vs all other packages), the update-semver automation tool, manual files the tool does not handle, modern-tool npm package semver analysis, the official installer gate, and the full lifecycle from beta through official release. Applies to packages/*/package.js, scripts/admin/, npm-packages/meteor-installer/, modern-tool npm packages, and .meteor/versions in test apps.
 ---
 
 # Meteor Version Bump Rules
@@ -430,36 +430,27 @@ Only `test-apps/`, not `tools/tests/apps/` or `tools/e2e-tests/apps/`. Strip pre
 - Update the **Bumped Meteor Packages** section with final versions (no prerelease suffixes)
 - Update `v3-docs/docs/history.md` with the full release entry
 
-### Commit 2: npm installer
+### Commit 2: npm installer, required final gate
 
-This is a **separate commit** after the packages commit.
+Prepare a separate installer commit after the packages commit. The official
+release is incomplete until these values agree:
 
-#### Step 1: Update installer config
+| File | Required value |
+|------|----------------|
+| `config.js` `METEOR_LATEST_VERSION` | `X.Y` for `X.Y.0`; full `X.Y.Z` for patches |
+| `package.json` `version` | Full npm semver `X.Y.Z` |
+| `package-lock.json` top-level and root versions | Same full npm semver `X.Y.Z` |
 
-Edit `npm-packages/meteor-installer/config.js`:
+Regenerate the lockfile from `npm-packages/meteor-installer/`:
 
-```js
-const METEOR_LATEST_VERSION = 'X.Y';
+```bash
+npm install --package-lock-only
+node ../../.github/skills/version-bump/scripts/audit-meteor-installer-version.mjs
 ```
 
-- For `.0` releases: short form without patch (e.g., `'3.4'`)
-- For patch releases: full version (e.g., `'3.4.1'`, `'3.3.2'`)
-
-#### Step 2: Update installer package.json
-
-Edit `npm-packages/meteor-installer/package.json`:
-
-```json
-{
-  "version": "X.Y.Z"
-}
-```
-
-Full semver form required by npm (e.g., `"3.4.0"`, `"3.4.1"`).
-
-#### Step 3: Update package-lock.json
-
-Run `npm install` in `npm-packages/meteor-installer/` to regenerate the lock file, or manually update the version field.
+Do not publish the `meteor` npm package or complete the official release while
+the audit fails. Published npm versions are immutable, so this cannot be fixed
+by republishing the same version.
 
 ---
 
@@ -494,6 +485,4 @@ Run `npm install` in `npm-packages/meteor-installer/` to regenerate the lock fil
 - [ ] Finalize changelog (set date, replace RC versions with final)
 - [ ] Update `v3-docs/docs/history.md`
 - [ ] If modern-tool npm package code or dependency versions changed, complete its bump analysis and `sync-modern-tool-versions`; resolve audit failures
-- [ ] **Separate commit:** Update `npm-packages/meteor-installer/config.js` (`'X.Y'`)
-- [ ] **Separate commit:** Update `npm-packages/meteor-installer/package.json` (`"X.Y.0"`)
-- [ ] **Separate commit:** Update `npm-packages/meteor-installer/package-lock.json`
+- [ ] **Required separate installer commit:** Synchronize config, package, and lockfile versions; pass `audit-meteor-installer-version.mjs`
