@@ -9,8 +9,8 @@
       "/*": ["*"], // support absolute /imports/* with a leading '/'
       // support Meteor/Atmospehere packages, required by zodern:types
       "meteor/*": [
-        "node_modules/@types/meteor/*",
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/local/types/packages.d.ts",
+        "node_modules/@types/meteor/*"
       ]
     },
     "preserveSymlinks": true, // required by zodern:types

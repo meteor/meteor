@@ -16,8 +16,8 @@
        ".meteor/local/types/node_modules/package-types/react-meteor-data/package/os/suspense/react-meteor-data.d.ts"
       ],
       "meteor/*": [
-        "node_modules/@types/meteor/*",
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/local/types/packages.d.ts",
+        "node_modules/@types/meteor/*"
       ]
     },
     "types": ["meteor", "mocha"]
