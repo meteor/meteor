@@ -41,6 +41,10 @@ jobs:
         shell: powershell
         run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
 
+      - name: Enable Git Symlinks
+        shell: powershell
+        run: git config --global core.symlinks true
+
       - name: Checkout code
         uses: actions/checkout@v4
 

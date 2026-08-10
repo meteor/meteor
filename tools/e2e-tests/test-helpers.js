@@ -14,6 +14,7 @@ import {
   killProcessByPort,
   killStrayAppProcesses,
   restoreFiles,
+  resetPlaywrightPage,
   runMeteorApp,
   runMeteorCommand,
   runMeteorTests,
@@ -61,6 +62,22 @@ const { linkLocalRspack: _linkLocalRspack } = require('./scripts/link-rspack');
 async function linkLocalRspack(appDir) {
   if (!npmLinkLocalRspack) return;
   await _linkLocalRspack(appDir);
+}
+
+export async function setupMeteorRspackApp({
+  appName,
+  isMonorepo = false,
+} = {}) {
+  const tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+
+  await runMeteorCommand("add", ["rspack"], appDir, {
+    checkExitCode: true,
+  });
+
+  await linkLocalRspack(appDir);
+
+  return { tempDir, appDir };
 }
 
 /**
@@ -134,6 +151,8 @@ export function testMeteorBundler(options) {
     });
 
     afterEach(async () => {
+      await resetPlaywrightPage();
+
       if (meteorProcess) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
@@ -183,6 +202,9 @@ export function testMeteorBundler(options) {
  * @param {boolean} options.verbose - Whether to enable verbose output (default: true)
  * @param {boolean} options.testFullApp - Whether to run tests with the --full-app flag (default: false)
  * @param {boolean} options.testBundleVisualizer - Whether to run tests with bundle-visualizer in production mode (default: false)
+ * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
+ * @param {boolean} options.mongoWatchdog - Whether to fail fast when local MongoDB does not start
+ * @param {string|RegExp|Array<string|RegExp>} options.failOnOutput - Output pattern(s) that should fail startup waits immediately
  * @param {boolean} options.skipClient - Whether to skip client-specific assertions (default: false)
  * @param {boolean} options.skipTestClient - Whether to skip client-side tests (default: false)
  * @param {string[]} options.checkBundleFilePaths - Array of file paths to check for existence in the bundle
@@ -228,6 +250,9 @@ export function testMeteorRspackBundler(options) {
     testFullApp = false,
     // Option to test with bundle-visualizer in production mode
     testBundleVisualizer = false,
+    preserveFixtureSymlinks = false,
+    mongoWatchdog = true,
+    failOnOutput,
     // Array of file paths to check for existence in the bundle
     checkBundleFilePaths = [],
     // Additional behavior for beforeAll and afterAll
@@ -285,7 +310,7 @@ export function testMeteorRspackBundler(options) {
       await killProcessByPort([port, devServerPortStr]);
 
       // Setup the Meteor app
-      tempDir = (await setupMeteorApp(appName, { isMonorepo }))?.tempDir;
+      tempDir = (await setupMeteorApp(appName, { isMonorepo, preserveFixtureSymlinks }))?.tempDir;
       if (!tempDir) {
         throw new Error(`setupMeteorApp("${appName}") did not return an app directory`);
       }
@@ -318,6 +343,8 @@ export function testMeteorRspackBundler(options) {
       const result = await runMeteorApp(tempDir, port, {
         waitForOutput: "=> App running at",
         isMonorepo,
+        mongoWatchdog,
+        failOnOutput,
         env: { ...env, ...(env.meteorRun || {}) },
       });
       meteorProcess = result.meteorProcess;
@@ -374,6 +401,8 @@ export function testMeteorRspackBundler(options) {
     });
 
     afterEach(async () => {
+      await resetPlaywrightPage();
+
       if (meteorProcess) {
         await killMeteorProcess(meteorProcess);
         meteorProcess = null;
@@ -396,6 +425,8 @@ export function testMeteorRspackBundler(options) {
         waitForOutput: "=> App running at",
         isMonorepo,
         skipWaitOn: skipClient,
+        mongoWatchdog,
+        failOnOutput,
         env: { ...env, ...(env.meteorRun || {}) },
       });
       meteorProcess = result.meteorProcess;
@@ -410,7 +441,7 @@ export function testMeteorRspackBundler(options) {
         await assertFileExist(appDir, `${buildDir}/main-dev/client-meteor.js`);
       }
       await assertFileExist(appDir, `${buildDir}/main-dev/server-entry.js`);
-      await assertFileExist(appDir, `${buildDir}/main-dev/server-rspack.js`);
+      await assertFileExist(appDir, `${buildDir}/main-dev/server-rspack.cjs`);
       await assertFileExist(appDir, `${buildDir}/main-dev/server-meteor.js`);
 
       // node_modules/.cache is rspack scratch — must not leak into the server bundle.
@@ -496,6 +527,8 @@ export function testMeteorRspackBundler(options) {
         commandOptions: ['--production'],
         isMonorepo,
         skipWaitOn: skipClient,
+        mongoWatchdog,
+        failOnOutput,
         env: { ...env, ...(env.meteorRunProduction || {}) },
       });
       meteorProcess = result.meteorProcess;
@@ -660,6 +693,8 @@ export function testMeteorRspackBundler(options) {
         checkTestResults: false,
         isMonorepo,
         testClient: !skipTestClient,
+        mongoWatchdog,
+        failOnOutput,
         env: { ...env, ...(env.meteorTest || {}) },
       });
       meteorProcess = result.meteorProcess;
@@ -747,6 +782,8 @@ export function testMeteorRspackBundler(options) {
         checkTestResults: true,
         isMonorepo,
         testClient: !skipTestClient,
+        mongoWatchdog,
+        failOnOutput,
         env: { ...env, ...(env.meteorTestOnce || {}) },
       });
 
@@ -883,6 +920,8 @@ export function testMeteorRspackBundler(options) {
           waitForOutput: "=> App running at",
           isMonorepo,
           skipWaitOn: skipClient,
+          mongoWatchdog,
+          failOnOutput,
           env: { ...env, ...(env.meteorRun || {}) },
         });
         await killMeteorProcess(seedResult.meteorProcess);
@@ -1004,6 +1043,7 @@ export function testMeteorSkeleton(options) {
   return () => {
     let meteorProcess;
     let tempDir;
+    let appReady = false;
     let previousRspackDevServerPort;
 
     beforeAll(async () => {
@@ -1044,15 +1084,31 @@ export function testMeteorSkeleton(options) {
       // Ensure any process on the port is killed
       await killProcessByPort([port, devServerPortStr]);
 
+      const currentTestName = expect.getState().currentTestName || '';
+      const isCreateTest = currentTestName.includes(`"meteor create --${skeletonName}"`);
+
       // On retry, purge caches left by the failing attempt so the next one
       // recompiles from scratch. Skip when tempDir isn't set yet (e.g. retry
       // of the "meteor create" test, which allocates its own tempDir).
       if (isRetryAttempt() && tempDir) {
-        await clearBuildArtifacts(tempDir);
+        if (isCreateTest && !appReady) {
+          await cleanupTempDir(tempDir);
+          tempDir = undefined;
+        } else {
+          await clearBuildArtifacts(tempDir);
+        }
+      }
+
+      if (!isCreateTest && !appReady) {
+        throw new Error(
+          `Cannot run the ${skeletonName} skeleton test because meteor create did not complete successfully.`
+        );
       }
     });
 
     afterEach(async () => {
+      await resetPlaywrightPage();
+
       // Kill the meteor process directly if it's still running.
       // This prevents port leaks when a test assertion fails mid-run.
       if (meteorProcess) {
@@ -1065,6 +1121,8 @@ export function testMeteorSkeleton(options) {
     });
 
     test(`"meteor create --${skeletonName}" / should create a new Meteor ${skeletonName} app`, async () => {
+      if (appReady) return;
+
       // Create a new Meteor app with the specified skeleton.
       // Track the spawned subprocess on the outer-scope `meteorProcess` so
       // `afterEach` can kill it if Jest times out the test mid-create — leaving
@@ -1094,6 +1152,8 @@ export function testMeteorSkeleton(options) {
       if (customAssertions.afterCreate) {
         await customAssertions.afterCreate({ tempDir, packageJsonPath });
       }
+
+      appReady = true;
     }, 360_000);
 
     test(`"meteor run" / should run the ${skeletonName} app`, async () => {
@@ -1172,15 +1232,15 @@ export function testMeteorSkeleton(options) {
     test(`"meteor test --once" / should run tests once for the ${skeletonName} app`, async () => {
       // Install playwright as a dev dependency, pinned to the same version
       // as the test environment so pre-installed browser binaries are reused.
-      const testPkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'));
-      const playwrightVersion = testPkg.devDependencies.playwright;
+      const playwrightVersion = require('playwright/package.json').version;
       console.log(`Installing playwright@${playwrightVersion} as a dev dependency...`);
       const repoRoot = path.resolve(process.cwd(), "..", "..");
       const meteorBin = path.join(repoRoot, "meteor");
-      await execa.command(`${meteorBin} npm i --save-dev playwright@${playwrightVersion}`, {
+      await execa(meteorBin, [
+        'npm', 'i', '--save-dev', '--save-exact', `playwright@${playwrightVersion}`
+      ], {
         cwd: tempDir,
-        stdio: "inherit",
-        shell: true
+        stdio: "inherit"
       });
       await linkLocalRspack(tempDir);
 
