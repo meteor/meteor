@@ -65,26 +65,30 @@ async function readJson(req) {
   const contentLength = parseInt(req.headers['content-length'], 10);
   if (contentLength > MAX_JSON_BODY_BYTES) return null;
   return await new Promise((resolve) => {
-    let data = '';
+    // Accumulate raw buffers so the limit counts UTF-8 bytes; string length
+    // would undercount multi-byte characters.
+    const chunks = [];
+    let receivedBytes = 0;
     let settled = false;
     const settle = (value) => {
       if (settled) return;
       settled = true;
       resolve(value);
     };
-    req.setEncoding('utf8');
     req.on('data', (chunk) => {
       if (settled) return;
-      data += chunk;
-      if (data.length > MAX_JSON_BODY_BYTES) {
-        data = '';
+      receivedBytes += chunk.length;
+      if (receivedBytes > MAX_JSON_BODY_BYTES) {
+        chunks.length = 0;
         req.pause();
         settle(null);
+        return;
       }
+      chunks.push(chunk);
     });
     req.on('end', () => {
       try {
-        settle(JSON.parse(data || '{}'));
+        settle(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
       } catch (_e) {
         settle({});
       }

@@ -214,6 +214,16 @@ if (Meteor.isServer) {
     done();
   });
 
+  Tinytest.addAsync('accounts cookie - set counts body limit in bytes, not string length', async (test, done) => {
+    // 1700 three-byte characters: 1712 UTF-16 code units (under 4096) but
+    // 5112 UTF-8 bytes (over the limit)
+    const multiByteToken = Array(1700).fill('一').join('');
+    const res = await request('POST', SET_PATH, { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token: multiByteToken }) });
+    test.equal(res.status, 413);
+    test.equal(res.json && res.json.error, 'body_too_large');
+    done();
+  });
+
   Tinytest.addAsync('accounts cookie - endpoints fall through when feature disabled', async (test, done) => {
     const saved = Accounts._options.useHttpOnlyCookies;
     Accounts._options.useHttpOnlyCookies = false;
@@ -225,8 +235,12 @@ if (Meteor.isServer) {
       test.isUndefined(setRes.headers['set-cookie'], 'set: no cookie when disabled');
       test.isTrue(!setRes.json || setRes.json.ok !== true, 'set: not handled when disabled');
 
+      // Every response from the refresh handler is application/json, so a
+      // non-JSON response proves the request fell through to the app stack.
       const refreshRes = await request('GET', REFRESH_PATH);
       test.isTrue(refreshRes.status !== 204, 'refresh: not handled when disabled');
+      const refreshType = (refreshRes.headers['content-type'] || '');
+      test.isFalse(refreshType.includes('application/json'), 'refresh: no JSON response when disabled');
 
       const clearRes = await request('POST', CLEAR_PATH);
       test.isUndefined(clearRes.headers['set-cookie'], 'clear: no cookie when disabled');
