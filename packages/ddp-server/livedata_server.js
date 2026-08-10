@@ -81,11 +81,16 @@ var Session = function (server, version, socket, options) {
   var self = this;
   self.id = Random.id();
 
+  // how many messages we've actually sent (not queued to send) excluding ping/pong
+  // we'll use this to detect mismatch of data on reconnect.
+  self.sentCount = 0;
+
   self.server = server;
   self.version = version;
 
   self.initialized = false;
   self.socket = socket;
+  self.options = options;
 
   // Set to null when the session is destroyed. Multiple places below
   // use this to determine if the session is alive or not.
@@ -134,6 +139,15 @@ var Session = function (server, version, socket, options) {
   self.connectionHandle = {
     id: self.id,
     close: function () {
+      // Server-initiated close should not be resumable
+      self._expectingDisconnect = true;
+      if (self._isClosing && self._pendingRemoveFunction) {
+        // close() already ran and the session is sitting in its resumption
+        // grace period; terminate it now instead of silently doing nothing.
+        Meteor.clearTimeout(self._removeTimeoutHandle);
+        self._pendingRemoveFunction();
+        return;
+      }
       self.close();
     },
     onClose: function (fn) {
@@ -174,6 +188,8 @@ var Session = function (server, version, socket, options) {
   Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
     "livedata", "sessions", 1);
 };
+
+const ignoredMsgsForSessionOutOfDateCheck = ['ping', 'pong'];
 
 Object.assign(Session.prototype, {
   sendReady: function (subscriptionIds) {
@@ -269,77 +285,103 @@ Object.assign(Session.prototype, {
   },
 
   startUniversalSubs: function () {
-    var self = this;
+    const self = this;
     // Make a shallow copy of the set of universal handlers and start them. If
     // additional universal publishers start while we're running them (due to
     // yielding), they will run separately as part of Server.publish.
-    var handlers = [...self.server.universal_publish_handlers];
-    handlers.forEach(function (handler) {
+    for (const handler of [...self.server.universal_publish_handlers]) {
       self._startSubscription(handler);
-    });
+    }
+  },
+
+  // Stop heartbeat if running
+  _stopHeartbeat: function () {
+    if (this.heartbeat) {
+      this.heartbeat.stop();
+      this.heartbeat = null;
+    }
   },
 
   // Destroy this session and unregister it at the server.
   close: function () {
-    var self = this;
+    const self = this;
 
     // Destroy this session, even if it's not registered at the
     // server. Stop all processing and tear everything down. If a socket
     // was attached, close it.
 
-    // Already destroyed.
-    if (! self.inQueue)
+    // Already closing or closed - prevent multiple close() calls
+    if (self._isClosing) {
       return;
+    }
+    self._isClosing = true;
 
-    // Drop the merge box data immediately.
-    self.inQueue = null;
-    self.collectionViews = new Map();
-
-    if (self.heartbeat) {
-      self.heartbeat.stop();
-      self.heartbeat = null;
+    if (self._removeTimeoutHandle) {
+      Meteor.clearTimeout(self._removeTimeoutHandle);
+      self._removeTimeoutHandle = null;
     }
 
     if (self.socket) {
       self.socket.close();
       self.socket._meteorSession = null;
+      self.socket = null;
     }
 
-    Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
-      "livedata", "sessions", -1);
+    // Stop heartbeat immediately - we don't need it during the grace period
+    // since we have no socket to send pings on anyway.
+    self._stopHeartbeat();
 
-    Meteor.defer(function () {
-      // Stop callbacks can yield, so we defer this on close.
-      // sub._isDeactivated() detects that we set inQueue to null and
-      // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
-      self._deactivateAllSubscriptions();
+    self.server._removeSession(self, () => {
+      Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
+        "livedata", "sessions", -1);
 
-      // Defer calling the close callbacks, so that the caller closing
-      // the session isn't waiting for all the callbacks to complete.
-      self._closeCallbacks.forEach(function (callback) {
-        callback();
+      self.inQueue = null;
+      self.collectionViews = new Map();
+
+      self._stopHeartbeat();
+
+      Meteor.defer(function () {
+        // stop callbacks can yield, so we defer this on close.
+        // sub._isDeactivated() detects that we set inQueue to null and
+        // treats it as semi-deactivated (it will ignore incoming callbacks, etc).
+        self._deactivateAllSubscriptions();
+
+        // Defer calling the close callbacks, so that the caller closing
+        // the session isn't waiting for all the callbacks to complete.
+        self._closeCallbacks.forEach(callback => {
+          callback();
+        });
       });
     });
-
-    // Unregister the session.
-    self.server._removeSession(self);
   },
 
   // Send a message (doing nothing if no socket is connected right now).
   // It should be a JSON object (it will be stringified).
   send: function (msg) {
     const self = this;
+    const isIgnoredMsg = ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg);
+    if (self.messageQueue && !isIgnoredMsg) {
+      self.messageQueue.push(msg);
+      if (self.messageQueue.length > self.options.maxMessageQueueLength) {
+        Meteor.clearTimeout(self._removeTimeoutHandle);
+        self._pendingRemoveFunction();
+      }
+      return;
+    }
     if (self.socket) {
       if (Meteor._printSentDDP)
         Meteor._debug("Sent DDP", DDPCommon.stringifyDDP(msg));
+      if (!isIgnoredMsg) {
+        self.sentCount++;
+      }
       self.socket.send(DDPCommon.stringifyDDP(msg));
     }
   },
 
   // Send a connection error.
   sendError: function (reason, offendingMessage) {
-    var self = this;
-    var msg = {msg: 'error', reason: reason};
+    const self = this;
+    const msg = {msg: 'error', reason: reason};
     if (offendingMessage)
       msg.offendingMessage = offendingMessage;
     self.send(msg);
@@ -379,7 +421,7 @@ Object.assign(Session.prototype, {
     // the client is still alive.
     if (self.heartbeat) {
       self.heartbeat.messageReceived();
-    };
+    }
 
     if (self.version !== 'pre1' && msg_in.msg === 'ping') {
       if (self._respondToPings)
@@ -389,6 +431,11 @@ Object.assign(Session.prototype, {
     if (self.version !== 'pre1' && msg_in.msg === 'pong') {
       // Since everything is a pong, there is nothing to do
       return;
+    }
+
+    if (msg_in.msg === 'disconnect') {
+      // Pre-empt the queue - a disconnect is imminent.
+      return self.protocol_handlers.disconnect.call(self, msg_in, () => {});
     }
 
     self.inQueue.push(msg_in);
@@ -444,6 +491,9 @@ Object.assign(Session.prototype, {
   },
 
   protocol_handlers: {
+    disconnect: function(msg) {
+      this._expectingDisconnect = true;
+    },
     sub: async function (msg, unblock) {
       var self = this;
 
@@ -1261,6 +1311,19 @@ Server = function (options = {}) {
     // For testing, allow responding to pings to be disabled.
     respondToPings: true,
     defaultPublicationStrategy: publicationStrategies.SERVER_MERGE,
+    /**
+     * @summary How many messages should we queue during a non-graceful disconnect before we destroy the session, to help prevent memory leaks.
+     * @type {Number}
+     * @locus Server
+     */
+    maxMessageQueueLength: 100,
+    /**
+     * @summary How long we should maintain a session for after a non-graceful disconnect before killing it
+     *          sessions that reconnect within this time will be resumed with minimal performance impact.
+     * @type {Number}
+     * @locus Server
+     */
+    disconnectGracePeriod: 15000,
     ...options,
   };
 
@@ -1430,16 +1493,70 @@ Object.assign(Server.prototype, {
       return;
     }
 
-    // Yay, version matches! Create a new session.
+    // Yay, version matches! Resume existing session if possible, otherwise create a new one.
     // Note: Troposphere depends on the ability to mutate
     // Meteor.server.options.heartbeatTimeout! This is a hack, but it's life.
-    socket._meteorSession = new Session(self, version, socket, self.options);
-    self.sessions.set(socket._meteorSession.id, socket._meteorSession);
-    self.onConnectionHook.each(function (callback) {
-      if (socket._meteorSession)
-        callback(socket._meteorSession.connectionHandle);
-      return true;
-    });
+    const existingSession = self.sessions.get(msg.session);
+
+    // we've found a session with:
+    // the right ID
+    // a matching sent/received count
+    // was disconnected and hasn't been reconnected to yet.
+    if (existingSession && existingSession.sentCount === msg.receivedCount &&
+        existingSession._removeTimeoutHandle && !existingSession._expectingDisconnect) {
+      Meteor.clearTimeout(existingSession._removeTimeoutHandle);
+      existingSession._removeTimeoutHandle = undefined;
+      existingSession._pendingRemoveFunction = undefined;
+      existingSession._isClosing = false; // Reset so session can be closed again later
+      existingSession._expectingDisconnect = undefined;
+      socket._meteorSession = existingSession;
+      const messageQueue = existingSession.messageQueue;
+      existingSession.messageQueue = undefined;
+      existingSession.socket = socket;
+
+      // Restart heartbeat for the resumed session
+      if (existingSession.version !== 'pre1' && self.options.heartbeatInterval !== 0) {
+        socket.setWebsocketTimeout(0);
+        existingSession.heartbeat = new DDPCommon.Heartbeat({
+          heartbeatInterval: self.options.heartbeatInterval,
+          heartbeatTimeout: self.options.heartbeatTimeout,
+          onTimeout: function () {
+            existingSession.close();
+          },
+          sendPing: function () {
+            existingSession.send({msg: 'ping'});
+          }
+        });
+        existingSession.heartbeat.start();
+      }
+
+      // Send connected message so client can restart heartbeat and confirm resumption
+      existingSession.send({ msg: 'connected', session: existingSession.id });
+      // Flush the messages buffered during the grace period synchronously,
+      // before anything else (e.g. a live observe callback) can send on the
+      // reattached socket — deferring the flush would let newer messages
+      // jump ahead of older buffered ones and break DDP's ordering.
+      if (messageQueue) {
+        messageQueue.forEach(msg => existingSession.send(msg));
+      }
+      // Note: onConnectionHook is NOT called on session resume - the connection
+      // is considered to be the same logical connection as before.
+    }
+    else {
+      // immediately remove the old session since we're out of date.
+      if (existingSession && existingSession._pendingRemoveFunction) {
+        Meteor.clearTimeout(existingSession._removeTimeoutHandle);
+        existingSession._pendingRemoveFunction();
+      }
+      socket._meteorSession = new Session(self, version, socket, self.options);
+      self.sessions.set(socket._meteorSession.id, socket._meteorSession);
+
+      self.onConnectionHook.each(function (callback) {
+        if (socket._meteorSession)
+          callback(socket._meteorSession.connectionHandle);
+        return true;
+      });
+    }
   },
   /**
    * Register a publish handler function.
@@ -1529,9 +1646,36 @@ Object.assign(Server.prototype, {
     }
   },
 
-  _removeSession: function (session) {
+  _removeSession: function (session, callback = () => {}) {
     var self = this;
-    self.sessions.delete(session.id);
+    const sessionRemoveFunction = () => {
+      // Guard against being called multiple times (e.g., from both overflow and timeout)
+      if (!self.sessions.has(session.id)) {
+        return;
+      }
+      // Clear timeout handle if it exists to prevent double execution
+      if (session._removeTimeoutHandle) {
+        Meteor.clearTimeout(session._removeTimeoutHandle);
+        session._removeTimeoutHandle = null;
+      }
+      session._pendingRemoveFunction = null;
+      // Stop buffering: with the queue gone, send() falls through to the
+      // (null) socket and becomes a no-op. Leaving the queue in place would
+      // buffer into a removed session until overflow invoked the
+      // now-nulled _pendingRemoveFunction and threw.
+      session.messageQueue = null;
+      self.sessions.delete(session.id);
+      callback();
+    };
+    if (session._expectingDisconnect) {
+      return sessionRemoveFunction();
+    }
+    session.messageQueue = [];
+    session._pendingRemoveFunction = sessionRemoveFunction;
+    if (session._removeTimeoutHandle) {
+      Meteor.clearTimeout(session._removeTimeoutHandle);
+    }
+    session._removeTimeoutHandle = Meteor.setTimeout(sessionRemoveFunction, self.options.disconnectGracePeriod);
   },
 
   /**

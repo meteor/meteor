@@ -26,11 +26,18 @@ export class ConnectionStreamHandlers {
     }
 
     if (msg === null || !msg.msg) {
-      if(!msg || !msg.testMessageOnConnect) {
-        if (Object.keys(msg).length === 1 && msg.server_id) return;
+      if (!msg || !msg.testMessageOnConnect) {
+        // msg is null when parseDDP discarded the frame (invalid JSON, or
+        // JSON that is not an object) — guard before inspecting its keys.
+        if (msg && Object.keys(msg).length === 1 && msg.server_id) return;
         Meteor._debug('discarding invalid livedata message', msg);
       }
       return;
+    }
+
+    // Track received message count for session resumption (excluding ping/pong)
+    if (!this._connection._ignoredMsgsForSessionOutOfDateCheck.includes(msg.msg)) {
+      this._connection._receivedCount++;
     }
 
     // Important: This was missing from previous version
@@ -128,6 +135,10 @@ export class ConnectionStreamHandlers {
     // the necessary RTT to know if we successfully reconnected.
     this._connection._callOnReconnectAndSendAppropriateOutstandingMethods();
     this._resendSubscriptions();
+
+    // Deliver messages that were passed to _sendQueued while disconnected
+    // (e.g. 'unsub' messages); the stream would have dropped them.
+    this._connection._flushMessagesQueuedUntilReconnect();
   }
 
   /**
@@ -139,6 +150,7 @@ export class ConnectionStreamHandlers {
     const msg = { msg: 'connect' };
     if (this._connection._lastSessionId) {
       msg.session = this._connection._lastSessionId;
+      msg.receivedCount = this._connection._receivedCount;
     }
     msg.version = this._connection._versionSuggestion || this._connection._supportedDDPVersions[0];
     this._connection._versionSuggestion = msg.version;
