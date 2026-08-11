@@ -227,6 +227,7 @@ Server-only app (no client entry point).
 | No client bundle (client skipped) | All |
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
+| Server Rspack process exits before first compilation and Meteor fails promptly | Run |
 
 ### Focused server runtime regressions
 
@@ -357,6 +358,7 @@ Where each feature is tested across apps and skeletons.
 | Server bundle excluded from Meteor linker payload | server-only regression | |
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
+| First-compilation process failure | server-only | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router, blaze-router, tla | |
 | Blaze router compatibility | blaze-router (Galvanized Iron Router routes, controllers, hooks, and layout), full-blaze (FlowRouter Extra) | |
