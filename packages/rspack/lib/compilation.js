@@ -60,7 +60,7 @@ export function failFirstCompilation(side, detail) {
     `Rspack ${side} process ${detail} before completing its first ` +
     `compilation. Review the Rspack error output above for the underlying ` +
     `cause. If the process was interrupted while writing its cache, remove ` +
-    `node_modules/.cache/rspack and run again.`
+    `node_modules/.cache/rspack or run "meteor reset", then run again.`
   ));
 }
 
