@@ -444,7 +444,7 @@ release is incomplete until these values agree:
 Regenerate the lockfile from `npm-packages/meteor-installer/`:
 
 ```bash
-npm install --package-lock-only
+npm install --package-lock-only --ignore-scripts
 node ../../.github/skills/version-bump/scripts/audit-meteor-installer-version.mjs
 ```
 

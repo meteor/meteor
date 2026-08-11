@@ -26,9 +26,9 @@ function requireEqual(label, actual, expected) {
   }
 }
 
-if (officialRelease.official !== true) {
-  errors.push('official release config must set "official" to true');
-}
+requireEqual('official release track', officialRelease.track, 'METEOR');
+requireEqual('official release flag', officialRelease.official, true);
+requireEqual('installer package name', installerPackage.name, 'meteor');
 
 const versionMatch = officialRelease.version?.match(/^(\d+)\.(\d+)(?:\.(\d+))?$/);
 if (!versionMatch) {
