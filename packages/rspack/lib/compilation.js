@@ -58,8 +58,9 @@ export function failFirstCompilation(side, detail) {
   state.rejected = true;
   state.reject(new Error(
     `Rspack ${side} process ${detail} before completing its first ` +
-    `compilation. A corrupted Rspack cache can cause this; try deleting ` +
-    `node_modules/.cache/rspack and running again.`
+    `compilation. Review the Rspack error output above for the underlying ` +
+    `cause. If the process was interrupted while writing its cache, remove ` +
+    `node_modules/.cache/rspack and run again.`
   ));
 }
 

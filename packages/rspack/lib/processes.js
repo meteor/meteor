@@ -595,7 +595,7 @@ export function startRspackClientServe(options = {}) {
       onExit: (code, signal) => {
         failFirstCompilation(
           'client',
-          `exited unexpectedly (code ${code}, signal ${signal})`
+          `exited unexpectedly (${signal ? `signal ${signal}` : `code ${code}`})`
         );
       },
       onError: (err) => {
@@ -693,7 +693,7 @@ export function startRspackServerWatch(options = {}) {
     onExit: (code, signal) => {
       failFirstCompilation(
         'server',
-        `exited unexpectedly (code ${code}, signal ${signal})`
+        `exited unexpectedly (${signal ? `signal ${signal}` : `code ${code}`})`
       );
     },
     onError: (err) => {
@@ -804,7 +804,7 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
         // successful compilation.
         failFirstCompilation(
           endpoint.toLowerCase(),
-          `exited (code ${code}, signal ${signal})`
+          `exited (${signal ? `signal ${signal}` : `code ${code}`})`
         );
         if (code === 0) {
           resolve();

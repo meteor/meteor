@@ -64,11 +64,16 @@ describe('Regressions / Rspack first-compilation failures /', () => {
     meteorProcess.catch(() => {});
 
     const exit = await waitForProcessExit(meteorProcess, EXIT_TIMEOUT_MS);
+    const output = result.outputLines.join('\n');
 
     expect(exit).not.toBeNull();
     expect(exit.code).not.toBe(0);
-    expect(result.outputLines.join('\n')).toMatch(
+    expect(output).toMatch(
       /Rspack server process exited unexpectedly.*before completing its first compilation/
     );
+    expect(output).toContain(
+      'Review the Rspack error output above for the underlying cause.'
+    );
+    expect(output).not.toContain('signal null');
   });
 });
