@@ -497,7 +497,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...(isProd && {
+      ...((isProd || (isTest && isClient)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),

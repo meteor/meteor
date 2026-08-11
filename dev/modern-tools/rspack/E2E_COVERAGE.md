@@ -86,14 +86,36 @@ Blaze templating engine integration.
 | Blaze environment detection (`isBlazeEnabled`) | Run, Prod, Test, Build |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 
+### blaze-router
+
+Focused Blaze and Galvanized Iron Router fixture that exercises the standard E2E lifecycle and reproduces the `meteor test --full-app` regression in [issue #14561](https://github.com/meteor/meteor/issues/14561). It keeps templates and styles in top-level client files; nested eager HTML/CSS coverage remains scoped to [PR #14637](https://github.com/meteor/meteor/pull/14637). FlowRouter Extra remains covered by the existing `full-blaze` fixture because the two routers are alternatives and should not share one runtime app.
+
+| What is covered | Phase |
+|----------------|-------|
+| Shared app lifecycle, including initialization, client/server rebuilds, build, and cache reset | All |
+| Full-app test mode (`--full-app`) with separate client and server test modules | Test, Test once |
+| Generated test client wrapper imports the Rspack bundle after eager Blaze HTML imports | Test, Test once |
+| Rspack client boot marker and rendered Blaze template | Run, Prod, Test |
+| Galvanized Iron Router named route matrix registration | Run, Prod, Test, Test once |
+| Shared Blaze layout and route rendering | Run, Prod, Test |
+| Client-side link navigation preserves the page instance | Run, Prod, Test |
+| ES-module `RouteController` registry with path, query, and hash parameters | Run, Prod, Test |
+| Dynamic deep-link reload and browser history restore the controller route | Run, Prod, Test |
+| Route-scoped `onBeforeAction` hook and template data context | Run, Prod, Test |
+| Programmatic navigation renders the configured not-found template | Run, Prod, Test |
+| Client-side app test executes instead of reporting a false zero-test success | Test once |
+| Rspack client boot marker is packaged in the deployable browser program | Build |
+
 ### full-blaze
 
-Full Blaze app (with `imports/` structure for tests).
+Full Blaze app with an `imports/` structure and regular `meteor test` coverage. It validates FlowRouter Extra during normal application runs, but does not reproduce issue #14561 because it does not use `--full-app`; that scenario remains additive in `blaze-router`.
 
 | What is covered | Phase |
 |----------------|-------|
 | Blaze environment detection | Run, Prod, Test, Build |
 | `imports/api/` test path structure | Test |
+| Regular test mode (`meteor test`, without `--full-app`) | Test, Test once |
+| FlowRouter Extra route renders the Blaze home template | Run, Prod |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 
 ### typescript
@@ -322,7 +344,7 @@ Where each feature is tested across apps and skeletons.
 | SCSS styles | typescript | |
 | Tailwind CSS | vue (PostCSS) | tailwind |
 | Image asset loading | react | |
-| 404 routing | react-router | |
+| 404 routing | react-router, blaze-router | |
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
 | TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
@@ -336,7 +358,8 @@ Where each feature is tested across apps and skeletons.
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo | |
-| Full-app test mode | react-router, tla | |
+| Full-app test mode | react-router, blaze-router, tla | |
+| Blaze router compatibility | blaze-router (Galvanized Iron Router routes, controllers, hooks, and layout), full-blaze (FlowRouter Extra) | |
 | Top-level await in full-app tests | tla | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
