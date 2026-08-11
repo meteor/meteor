@@ -163,7 +163,7 @@ Learn how we use GitHub labels [here](LABELS.md)
 
 ## Documentation
 
-If you'd like to contribute to Meteor's documentation, head over to https://docs.meteor.com/about/contributing.html for guidelines.
+If you'd like to contribute to Meteor's documentation, head over to https://docs.meteor.com/community/contributing.html for guidelines.
 
 ## Blaze
 
