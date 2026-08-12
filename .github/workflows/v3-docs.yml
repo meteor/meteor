@@ -1,0 +1,35 @@
+name: V3 Docs
+
+on:
+  push:
+    paths:
+      - 'v3-docs/docs/**'
+      - '.github/workflows/v3-docs.yml'
+  pull_request:
+    paths:
+      - 'v3-docs/docs/**'
+      - '.github/workflows/v3-docs.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v3-docs/docs
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: v3-docs/docs/package-lock.json
+      - run: npm ci
+      - run: npm run test:links
+      - run: npm run docs:build
