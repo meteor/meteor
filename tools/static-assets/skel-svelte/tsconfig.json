@@ -3,8 +3,8 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true, // to be able to import eg meteor/mongo
     "baseUrl": ".", // required by "paths"
-    "module": "esNext", // required by "preserveValueImports"
-    "moduleResolution": "node", // required by zodern:types (not documented)
+    "module": "esNext",
+    "moduleResolution": "bundler",
     "paths": {
       "/*": ["*"], // support absolute /imports/* with a leading '/'
       // support Meteor/Atmospehere packages, required by zodern:types
@@ -14,7 +14,7 @@
       ]
     },
     "preserveSymlinks": true, // required by zodern:types
-    "preserveValueImports": true // otherwise TS will remove imported components
+    "verbatimModuleSyntax": true // otherwise TS will remove imported components
   },
   "exclude": ["./.meteor/**", "!./.meteor/local/types", "./packages/**"] // this may solve VS Code Svelte plugin warnings
 }

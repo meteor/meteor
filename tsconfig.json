@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "module": "commonjs",
+    "module": "preserve",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -10,11 +10,8 @@
     "noEmit": true,
     "allowJs": true,
     "checkJs": false,
-    "moduleResolution": "node",
-    "typeRoots": [
-      "./node_modules/@types",
-      "./types"
-    ],
+    "moduleResolution": "bundler",
+    "types": ["node"],
     "paths": {
       "meteor/meteor": ["./packages/meteor/meteor.d.ts"],
       "meteor/mongo": ["./packages/mongo/mongo.d.ts"],
