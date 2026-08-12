@@ -24,6 +24,8 @@ export default defineConfig({
     checkThemeLinks({
       themeConfig: siteConfig.site.themeConfig,
       pages: siteConfig.pages,
+      // Remove after https://github.com/meteor/meteor/pull/14660 lands.
+      ignoredRoutes: ["/packages/underscore"],
     });
   },
   themeConfig: {
@@ -402,6 +404,10 @@ export default defineConfig({
               {
                 text: "logging",
                 link: "/packages/logging",
+              },
+              {
+                text: "underscore",
+                link: "/packages/underscore",
               },
               {
                 text: "autoupdate",

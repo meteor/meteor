@@ -33,8 +33,14 @@ function normalizeRoute(path) {
     .replace(/\/$/, "");
 }
 
-export function checkThemeLinks({ themeConfig, pages, siteOrigin = "https://docs.meteor.com" }) {
+export function checkThemeLinks({
+  themeConfig,
+  pages,
+  siteOrigin = "https://docs.meteor.com",
+  ignoredRoutes = [],
+}) {
   const pageRoutes = new Set(pages.map(normalizeRoute));
+  const ignored = new Set(ignoredRoutes.map(normalizeRoute));
   const origin = new URL(siteOrigin).origin;
   const failures = [];
   let checkedLinks = 0;
@@ -61,7 +67,7 @@ export function checkThemeLinks({ themeConfig, pages, siteOrigin = "https://docs
       continue;
     }
 
-    if (!pageRoutes.has(route)) {
+    if (!pageRoutes.has(route) && !ignored.has(route)) {
       failures.push(`${location}: ${link} does not match a documentation page`);
     }
   }
