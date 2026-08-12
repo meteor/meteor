@@ -1857,6 +1857,9 @@ function defaultValidateNewUserHook(user) {
 }
 
 const setupUsersCollection = async users => {
+  // Keep Meteor.users secure even when the insecure package is installed.
+  users.deny({});
+
   /// DEFAULT INDEXES ON USERS
   await users.createIndexAsync('username', { unique: true, sparse: true });
   await users.createIndexAsync('emails.address', { unique: true, sparse: true });

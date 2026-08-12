@@ -149,6 +149,16 @@ more information is published for the currently logged in user,
 including access tokens. This allows making API calls directly from
 the client for services that allow this.
 
+Users are by default allowed to specify their own `profile` field with
+[`Accounts.createUser`](#accounts_createuser) and modify it with
+`Meteor.users.update`. To allow users to edit additional fields, use
+[`Meteor.users.allow`](#allow). To forbid users from making any modifications to
+their user document:
+
+```js
+Meteor.users.deny({ update: () => true });
+```
+
 {% apibox "Meteor.loggingIn" %}
 
 For example, [the `accounts-ui` package](#accountsui) uses this to display an
