@@ -30,14 +30,11 @@ const {
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
-import { discoverRspackFileExtensions } from './file-extensions';
+import { getRspackFileExtensionsToIgnore } from './file-extensions';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const {
   RSPACK_BUILD_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_DOCTOR_CONTEXT,
   FILE_ROLE,
 } = require('./constants');
 
@@ -89,34 +86,22 @@ function checkMeteorIgnoreExactEntries(entries) {
 }
 
 /**
- * Gets the list of file extensions to ignore based on project type
- * For Blaze projects, it excludes .html as used by Blaze
- * For Less projects, it excludes .less files
- * For SCSS projects, it excludes .scss and .sass files
+ * Gets the bounded list of extensions owned by the default Rspack integration.
+ * This path is needed when Meteor compiler inputs prevent ignoring entire app
+ * directories. Optional loader formats stay visible to Meteor and can be
+ * delegated after Rspack's first compilation.
  * @returns {string[]} Array of file extensions to ignore
  */
 function getFileExtensionsToIgnore() {
-  const compilerExtensions = [
-    ...(isMeteorBlazeProject() ? ['.html'] : []),
-    ...(isMeteorLessProject() ? ['.less'] : []),
-    ...(isMeteorScssProject() ? ['.scss', '.sass'] : []),
-  ];
-  const isAnyCompilerProject = compilerExtensions.length > 0;
-  if (!isAnyCompilerProject) {
+  if (
+    !isMeteorBlazeProject() &&
+    !isMeteorLessProject() &&
+    !isMeteorScssProject()
+  ) {
     return [];
   }
 
-  return discoverRspackFileExtensions({
-    globSync,
-    cwd: getMeteorAppDir(),
-    generatedContexts: [
-      RSPACK_BUILD_CONTEXT,
-      RSPACK_ASSETS_CONTEXT,
-      RSPACK_CHUNKS_CONTEXT,
-      RSPACK_DOCTOR_CONTEXT,
-    ],
-    compilerExtensions,
-  });
+  return getRspackFileExtensionsToIgnore();
 }
 
 /**
