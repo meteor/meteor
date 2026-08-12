@@ -227,13 +227,24 @@ function findAllDtsResources(isopack) {
  * so the name is safe as a filename on all platforms (including Windows,
  * where colons are forbidden in file names).
  *
+ * Literal underscores are escaped first ('_' → '_u') so the mapping is
+ * injective: without the escape, module keys 'a/b' and 'a__b' would both
+ * normalize to 'a__b' and silently overwrite each other's file.  Package
+ * names can never contain '_' or '/' (they are validated to [a-z0-9:.-]),
+ * so their normalized filenames are unaffected by the escape.
+ *
  * Examples:
  *   'random'              → 'random'
  *   'accounts-base'       → 'accounts-base'
  *   'author:package'      → 'author_package'
+ *   'sub/path'            → 'sub__path'
+ *   'a__b'                → 'a_u_ub'
  */
 function normalizePackageName(name) {
-  return name.replace(/:/g, "_").replace(/\//g, "__");
+  return name
+    .replace(/_/g, "_u")
+    .replace(/:/g, "_")
+    .replace(/\//g, "__");
 }
 
 /**

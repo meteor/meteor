@@ -559,6 +559,39 @@ describe("package name normalization", () => {
       '/// <reference path="./packages/author_package.d.ts" />'
     );
   });
+
+  test("colliding module keys (`a/b` vs `a__b`) map to distinct filenames", async () => {
+    const SLASH = "export declare const fromSlash: number;";
+    const UNDERSCORE = "export declare const fromUnderscore: number;";
+    const isopack = makeIsopack({
+      typesEntry: "main.d.ts",
+      typesModules: { "a/b": "slash.d.ts", a__b: "underscore.d.ts" },
+      resources: [
+        makeResource("main.d.ts", "export declare const main: number;"),
+        makeResource("slash.d.ts", SLASH),
+        makeResource("underscore.d.ts", UNDERSCORE),
+      ],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectLocalDir: PROJECT_LOCAL,
+    });
+    // '/' maps to '__' while literal '_' escapes to '_u', so the two keys
+    // can no longer overwrite each other's file
+    const slashPkg = writtenContentAt(`${PKGS_DIR}/pkg__a__b.d.ts`);
+    expect(slashPkg).toContain("declare module 'meteor/pkg/a/b'");
+    expect(slashPkg).toContain(SLASH);
+    const underscorePkg = writtenContentAt(`${PKGS_DIR}/pkg__a_u_ub.d.ts`);
+    expect(underscorePkg).toContain("declare module 'meteor/pkg/a__b'");
+    expect(underscorePkg).toContain(UNDERSCORE);
+    // barrel references both distinct files
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain('/// <reference path="./packages/pkg__a__b.d.ts" />');
+    expect(dts).toContain(
+      '/// <reference path="./packages/pkg__a_u_ub.d.ts" />'
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
