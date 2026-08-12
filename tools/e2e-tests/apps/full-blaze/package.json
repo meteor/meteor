@@ -20,6 +20,6 @@
   },
   "devDependencies": {
     "chai": "^4.2.0",
-    "playwright": "^1.54.2"
+    "playwright": "1.59.0"
   }
 }

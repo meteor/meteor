@@ -3,14 +3,13 @@ const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('webpack-merge');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
 const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
-const { MeteorRspackOutputPlugin } = require('./plugins/MeteorRspackOutputPlugin.js');
+const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
@@ -19,13 +18,18 @@ const {
   setCache,
   splitVendorChunk,
   extendSwcConfig,
+  replaceSwcConfig,
   makeWebNodeBuiltinsAlias,
   disablePlugins,
   outputMeteorRspack,
   enablePortableBuild,
+  persistDevFiles,
+  createPersistCallback,
 } = require('./lib/meteorRspackHelpers.js');
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
+const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
+const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -59,6 +63,8 @@ function createCacheStrategy(
   const hasSwcrcConfig = fs.existsSync(swcrcPath);
   const swcJsPath = path.join(process.cwd(), 'swc.config.js');
   const hasSwcJsConfig = fs.existsSync(swcJsPath);
+  const swcTsPath = path.join(process.cwd(), 'swc.config.ts');
+  const hasSwcTsConfig = fs.existsSync(swcTsPath);
   const postcssConfigPath = path.join(process.cwd(), 'postcss.config.js');
   const hasPostcssConfig = fs.existsSync(postcssConfigPath);
   const packageLockPath = path.join(process.cwd(), 'package-lock.json');
@@ -66,15 +72,22 @@ function createCacheStrategy(
   const yarnLockPath = path.join(process.cwd(), 'yarn.lock');
   const hasYarnLock = fs.existsSync(yarnLockPath);
 
+  // Extract local dependencies from project config (e.g., plugin files)
+  const localDependencies = projectConfigPath 
+    ? extractLocalDependencies(projectConfigPath) 
+    : [];
+
   // Build dependencies array
   const buildDependencies = [
     ...(projectConfigPath ? [projectConfigPath] : []),
     ...(configPath ? [configPath] : []),
+    ...localDependencies,
     ...(hasTsconfig ? [tsconfigPath] : []),
     ...(hasBabelRcConfig ? [babelRcConfig] : []),
     ...(hasBabelJsConfig ? [babelJsConfig] : []),
     ...(hasSwcrcConfig ? [swcrcPath] : []),
     ...(hasSwcJsConfig ? [swcJsPath] : []),
+    ...(hasSwcTsConfig ? [swcTsPath] : []),
     ...(hasPostcssConfig ? [postcssConfigPath] : []),
     ...(hasPackageLock ? [packageLockPath] : []),
     ...(hasYarnLock ? [yarnLockPath] : []),
@@ -113,15 +126,13 @@ function createSwcConfig({
 }) {
   const defaultConfig = {
     jsc: {
-      baseUrl: process.cwd(),
-      paths: { '/*': ['*', '/*'] },
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
         ...(isTsxEnabled && { tsx: true }),
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: 'es2015',
+      target: isClient ? 'es2015' : 'es2022',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -325,13 +336,18 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     setCache(!!enabled, enabled === "memory" ? undefined : cacheStrategy);
   Meteor.splitVendorChunk = () => splitVendorChunk();
   Meteor.extendSwcConfig = (customSwcConfig) =>
-    extendSwcConfig(customSwcConfig);
+    extendSwcConfig(
+      mergeSplitOverlap(Meteor.swcConfigOptions, customSwcConfig)
+    );
+  Meteor.replaceSwcConfig = (customSwcConfig) =>
+    replaceSwcConfig(customSwcConfig);
   Meteor.extendConfig = (...configs) => mergeSplitOverlap(...configs);
   Meteor.disablePlugins = (matchers) =>
     prepareMeteorRspackConfig({
       disablePlugins: matchers,
     });
   Meteor.enablePortableBuild = () => enablePortableBuild();
+  Meteor.persistDevFiles = (matchers) => persistDevFiles(matchers);
 
   // Add HtmlRspackPlugin function to Meteor
   Meteor.HtmlRspackPlugin = (options = {}) => {
@@ -400,13 +416,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const clientOutputDir = path.resolve(projectDir, "public");
   const serverOutputDir = path.resolve(projectDir, "private");
 
+
   // Get Meteor ignore entries
   const meteorIgnoreEntries = getMeteorIgnoreEntries(projectDir);
 
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    "**/dist/**",
+    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
@@ -542,6 +559,43 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
   const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
+
+  // Default onListening provided by meteor-rspack. Kept as a named
+  // reference so we can detect a user-supplied override after merge
+  // and compose (run default first, then user's).
+  const meteorDefaultOnListening = function (devServer) {
+    if (!devServer) return;
+    const { host, port } = devServer.options;
+    const protocol =
+      devServer.options.server?.type === "https" ? "https" : "http";
+    const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
+    outputMeteorRspack({ devServerUrl });
+
+    // Windows-only: webpack-dev-server tracks accepted sockets
+    // but doesn't attach 'error'. On Windows, teardown of a
+    // closed proxy connection sends RST, producing an unhandled
+    // ECONNRESET that crashes the dev server. Unix peers send
+    // FIN and never hit this.
+    if (process.platform === "win32") {
+      const server = devServer.server;
+      if (!server || server.__meteorRspackErrorGuard) return;
+      server.__meteorRspackErrorGuard = true;
+
+      server.on("connection", (socket) => {
+        if (!socket || socket.__meteorRspackGuarded) return;
+        socket.__meteorRspackGuarded = true;
+        socket.on("error", (err) => {
+          if (err && err.code === "ECONNRESET") return;
+          console.warn(
+            `[meteor-rspack] dev server socket error: ${
+              err && (err.code || err.message)
+            }`
+          );
+        });
+      });
+    }
+  };
+
   // Base client config
   let clientConfig = {
     name: clientNameConfig,
@@ -593,7 +647,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...extraRules,
       ],
     },
-    resolve: { extensions, alias, fallback },
+    resolve: { extensions, alias, fallback, roots: [path.resolve(projectDir)] },
     externals,
     plugins: [
       ...[
@@ -634,17 +688,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(Meteor.isBlazeEnabled && { hot: false }),
         port: devServerPort,
         devMiddleware: {
-          writeToDisk: (filePath) =>
-            /\.(html)$/.test(filePath) && !filePath.includes(".hot-update."),
+          writeToDisk: createPersistCallback({ once: ['sw.js'], always: ['.html'] }),
         },
-        onListening(devServer) {
-          if (!devServer) return;
-          const { host, port } = devServer.options;
-          const protocol =
-            devServer.options.server?.type === "https" ? "https" : "http";
-          const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
-          outputMeteorRspack({ devServerUrl });
-        },
+        onListening: meteorDefaultOnListening,
       },
     }),
     ...merge(cacheStrategy, { experiments: { css: true } }),
@@ -697,7 +743,22 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       runtimeChunk: false,
     },
     module: {
-      rules: [swcConfigRule, ...extraRules],
+      rules: [
+        swcConfigRule,
+        // Mirror the client rule: ignore .html so rspack doesn't try to
+        // parse them as JavaScript. Meteor's template compiler handles
+        // .html files separately, and RequireExternalsPlugin below wires
+        // the imports to Meteor's module system.
+        ...(Meteor.isBlazeEnabled
+          ? [
+              {
+                test: /\.html$/i,
+                loader: 'ignore-loader',
+              },
+            ]
+          : []),
+        ...extraRules,
+      ],
       parser: {
         javascript: {
           // Dynamic imports on the server are treated as bundled in the same chunk
@@ -710,6 +771,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       alias,
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
+      roots: [path.resolve(projectDir)],
     },
     externals,
     externalsPresets: { node: true },
@@ -777,7 +839,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           optimization: {
             splitChunks: false,
           },
-          plugins: [new NodePolyfillPlugin()],
+          ...createTestClientNodePolyfillConfig(),
         }
       : {};
 
@@ -809,6 +871,23 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     }
   }
 
+  // If the user or an override replaced devServer.onListening, compose
+  // so our default runs first (attaches the Windows socket guard and
+  // reports the dev server URL) and the user's hook runs second.
+  if (isClient && config.devServer) {
+    const finalOnListening = config.devServer.onListening;
+    if (
+      typeof finalOnListening === "function" &&
+      finalOnListening !== meteorDefaultOnListening
+    ) {
+      const userOnListening = finalOnListening;
+      config.devServer.onListening = function (devServer) {
+        meteorDefaultOnListening(devServer);
+        userOnListening(devServer);
+      };
+    }
+  }
+
   const shouldDisablePlugins = config?.disablePlugins != null;
   if (shouldDisablePlugins) {
     config = disablePlugins(config, config.disablePlugins);
@@ -817,9 +896,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   delete config["meteor.enablePortableBuild"];
 
-  // if (Meteor.isDebug || Meteor.isVerbose) {
+  if (Meteor.isDebug || Meteor.isVerbose) {
   console.log("Config:", inspect(config, { depth: null, colors: true }));
-  // }
+  }
 
   // Check if lazyCompilation is enabled and warn the user
   if (
@@ -835,7 +914,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
-    getData: (stats, { isRebuild, compilationCount }) => ({
+    getData: (stats, { isRebuild, compilationCount, compiler }) => ({
       name: config.name,
       mode: config.mode,
       hasErrors: stats.hasErrors(),
@@ -844,6 +923,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       statsOverrided,
       compilationCount,
       isRebuild,
+      ...(!isRebuild && compiler && {
+        delegatedExtensions: extractDelegatedExtensions(stats, compiler),
+      }),
     }),
   });
   config.plugins = [meteorRspackOutputPlugin, ...(config.plugins || [])];

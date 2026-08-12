@@ -22,6 +22,12 @@ Every app and skeleton goes through these phases (unless skipped):
 
 Default assertions on every run phase: build artifacts exist, page title matches, body styles render, `__rspack__` script tag is present.
 
+### Package dependency regression
+
+| What is covered | Test |
+|-----------------|------|
+| Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+
 ---
 
 ## Apps
@@ -40,8 +46,14 @@ Core React integration with custom Meteor local directory.
 | React + JSX environment detection | Run, Prod, Test, Build |
 | Image assets load (generated + public + background) | Run, Prod |
 | `Meteor.disablePlugins` suppresses rspack plugins | Run, Prod, Test, Build |
+| Unplugin transform hook fires on first run (fresh cache) | Init |
+| Unplugin factory created on cached run — #14031 regression | Run |
+| Unplugin transform + buildDependencies tracking in production | Prod |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
+| Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
+| Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
+| Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |
 
 ### react-router
 
@@ -54,11 +66,12 @@ Full-featured React Router app with custom packages, Less, and advanced rspack c
 | Compiler output cached in dev (babel.config.js) | Run |
 | 404 page routing (renders "Page Not Found") | Run, Prod |
 | Less stylesheet support (`white-space: break-spaces`) | Run, Prod |
-| Meteor modules config styles (`align-content: center`) | Run, Prod |
+| `meteor.modules` config styles (`align-content: center`) | Run, Prod |
 | Custom HTML meta tags (`theme-color`) | Run, Prod |
 | Default + custom package loading | Run |
 | `resolve.extensions` loading (`.jsx`) | Run |
 | `rspack.config.override.js` custom plugin loading | Run, Test, Build |
+| User-level `devServer.onListening` composed with meteor-rspack default | Run |
 | React + TSX environment detection | Run, Prod, Test, Build |
 | Full-app test mode (`--full-app`) | Test |
 | Static assets in bundle (png, md) | Build |
@@ -85,16 +98,19 @@ Full Blaze app (with `imports/` structure for tests).
 
 ### typescript
 
-TypeScript with SCSS, type checking, and `.ts` rspack config.
+TypeScript with SCSS, type checking, `.ts` rspack config, and `.ts` SWC config.
 
 | What is covered | Phase |
 |----------------|-------|
 | TypeScript rspack config (`rspack.config.ts`) | All |
+| TypeScript SWC config (`swc.config.ts`) with automatic JSX runtime | All |
+| `@swc/core` type-only import for SWC config typings | All |
 | Custom build dir (`build`) | All |
 | Custom asset/chunk context dirs (`assets`, `chunks`) | All |
 | SCSS styles support (`white-space: break-spaces`) | Run, Prod |
 | TypeScript + TSX environment detection | Run, Prod, Test, Build |
 | Portable build (Meteor.isDevelopment/isProduction not defined) | Run, Prod, Build |
+| `Meteor.extendSwcConfig` with path aliases (`@ui/*`, `@api/*`) | All |
 | `TsCheckerRspackPlugin` type checking (no errors) | Run |
 | `.meteor/local/types` directory generated | Run |
 | Separate client/server test files | Test |
@@ -129,12 +145,15 @@ CoffeeScript language support.
 
 ### vue
 
-Vue.js framework with Tailwind CSS.
+Vue.js framework with Tailwind CSS, CSS auto-delegation, and `meteor.modules` config.
 
 | What is covered | Phase |
 |----------------|-------|
 | Vue single-file components | All |
 | Tailwind CSS styles (`.p-8` padding) | Run, Prod |
+| CSS auto-delegation (`client/main.css` processed by Rspack, not Meteor) | All |
+| `meteor.modules` config preserves `client/meteor.css` for Meteor processing | All |
+| Rspack CSS + Meteor CSS coexistence in same entry folder | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### solid
@@ -157,14 +176,23 @@ Svelte framework integration.
 
 ### monorepo
 
-Monorepo structure with app in subdirectory.
+Monorepo structure with app in subdirectory, service worker, and PWA manifest.
 
 | What is covered | Phase |
 |----------------|-------|
 | Monorepo layout (`app/` subdirectory) | All |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | `rspack.config.override.cjs` custom plugin loading | Run, Test, Build |
-| Static assets in bundle (png, md) | Build |
+| Static assets in bundle (png, md, icon, manifest) | Build |
+| Service worker in production build (`sw.js` found in bundle tree) | Build |
+| Service worker file served (`/sw.js`) | Run |
+| Service worker registers, activates, controls page | Run |
+| Service worker runtime caching (images) | Run |
+| Service worker precaching (`/icon.png` via `additionalManifestEntries`) | Run |
+| Service worker stability (`sw.js` not rewritten on rebuild) | Run |
+| Service worker regenerated on restart (`sw.js` changed between runs) | Run, Prod |
+| PWA manifest linked and fields validated | Run |
+| Meta tags (`theme-color`) | Run |
 | HMR works in dev, disabled in prod | Run, Prod |
 
 ### server-only
@@ -176,6 +204,20 @@ Server-only app (no client entry point).
 | No client bundle (client skipped) | All |
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
+
+### Focused server runtime regressions
+
+`server-runtime.test.js` reuses isolated temporary copies of the
+`server-only` fixture without modifying its normal lifecycle coverage.
+
+| What is covered | Phase |
+|----------------|-------|
+| Absolute external `METEOR_LOCAL_DIR` outside the app | Run |
+| `Assets` and `Npm` wrapper globals visible to server bundle code | Run |
+| Development server bundle stays outside Meteor's linked `app.js` payload | Run |
+| Delayed server import of a previously unused Meteor package | Run |
+| CommonJS development server bundle under a `type: module` app | Run |
+| Node Inspector attach, pauses, breakpoint, source map, and mapped stack | Run |
 
 ---
 
@@ -196,8 +238,9 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | react | 3205 | JSX | Custom body styles (Inter font, padding) |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | TypeScript | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | CI: removes TsCheckerRspackPlugin |
+| tailwind | 3208 | JSX | Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | TypeScript 7; native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript-tailwind | 3221 | TypeScript | TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
 ---
@@ -224,6 +267,13 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `node:buffer` | `imports/api/links.js` | Node.js built-in via `node:` protocol in shared client/server code — must be ignored on client without errors |
 | `@react-email/components` | `imports/emails/TestEmail.jsx` | JSX-heavy ESM package with many subpath exports |
 
+### react (`apps/react/`)
+
+| Package | File | Reason |
+|---------|------|--------|
+| `unplugin` | `plugins/demo-unplugin.js` | Unplugin transform hook integration validates rspack cache tracks plugin dependency files (#14031) |
+| `meteor-node-stubs` (`buffer`, `crypto`) and `isomorphic-timers-promises` | `tests/main.js` | Browser implementations and global `Buffer` support for client tests |
+
 ### babel (`apps/babel/server/apollo.js`)
 
 | Package | Reason |
@@ -232,11 +282,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | `@apollo/server/express4` | ESM subpath export (middleware from deep path) |
 | `graphql` | Peer dependency, dual CJS/ESM package |
 
-### typescript (`apps/typescript/rspack.config.ts`)
+### typescript (`apps/typescript/rspack.config.ts`, `apps/typescript/swc.config.ts`)
 
 | Package | Reason |
 |---------|--------|
 | `node:module` (`createRequire`) | Node.js built-in in a `.ts` config file — tests CJS interop via `createRequire(import.meta.url)` in an ESM context |
+| `@swc/core` | Type-only import (`import type { Config }`) — provides typings for `swc.config.ts`, stripped at compile time |
 
 ---
 
@@ -250,28 +301,38 @@ Where each feature is tested across apps and skeletons.
 | HMR disabled (prod) | all apps with HMR | |
 | HMR incompatible | blaze, full-blaze | |
 | Custom rspack config | react (.cjs), react-router, babel (.mjs), monorepo (.cjs), typescript (.ts) | |
+| Custom SWC config (.ts) | typescript | |
 | Config override file | react-router, monorepo | |
+| User-level `devServer.onListening` composition | react-router | |
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
-| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS) | |
-| Static asset bundling | react-router, monorepo | |
+| Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
+| Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |
-| Tailwind CSS | vue | tailwind |
+| Tailwind CSS | vue (PostCSS) | tailwind |
 | Image asset loading | react | |
 | 404 routing | react-router | |
-| Meta tags | react-router | |
+| Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
-| TypeScript type checking | typescript | |
+| TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
 | Meteor.disablePlugins | react | |
+| Unplugin transform with cache (#14031) | react | |
 | Custom package dirs | react-router | |
 | CoffeeScript compilation | coffeescript | coffeescript |
 | Server-only (no client) | server-only | |
+| Rspack process cleanup | react | |
+| Server bundle excluded from Meteor linker payload | server-only regression | |
+| `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
+| Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
 | Portable build (no isDev/isProd defines) | typescript | |
+| `Meteor.extendSwcConfig` (path aliases) | typescript | |
+| CSS auto-delegation (entry folder filtering) | vue | |
+| `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
 | `meteor reset` cleanup | all apps | all skeletons |
 | Skeleton creation | | all 14 skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
@@ -282,3 +343,10 @@ Where each feature is tested across apps and skeletons.
 | `node:` protocol imports | monorepo, typescript | |
 | Untranspiled npm deps (`compileWithRspack`) | monorepo | |
 | Worker resolution (`compileWithMeteor`) | monorepo | |
+| Service worker (Workbox GenerateSW) | monorepo | |
+| Service worker stability (no rewrite on rebuild) | monorepo | |
+| Service worker regenerated on restart | monorepo | |
+| Service worker in production build | monorepo | |
+| Service worker runtime caching (images) | monorepo | |
+| Service worker precaching (`additionalManifestEntries`) | monorepo | |
+| PWA manifest | monorepo | |

@@ -1,6 +1,7 @@
 const { defineConfig } = require('@meteorjs/rspack');
 const path = require('path');
 const CustomConsoleLogPlugin = require("./plugins/CustomConsoleLogPlugin");
+const { demoRspackPlugin } = require("./plugins/demo-unplugin");
 
 /**
  * Rspack configuration for Meteor projects.
@@ -39,6 +40,6 @@ module.exports = defineConfig(Meteor => {
         },
       ],
     },
-    plugins: [new CustomConsoleLogPlugin()],
+    plugins: [new CustomConsoleLogPlugin(), demoRspackPlugin()],
   };
 });

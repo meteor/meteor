@@ -13,16 +13,87 @@ import { closeAllWatchers } from "../fs/safe-watcher";
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { eachline } from "../utils/eachline";
 
-// Parse out s as if it were a bash command line.
-var bashParse = function (s) {
-  if (s.search("\"") !== -1 || s.search("'") !== -1) {
-    throw new Error("Meteor cannot currently handle quoted SERVER_NODE_OPTIONS");
+// Minimal shell-like splitter for SERVER_NODE_OPTIONS.
+// Handles single/double quotes and backslash escapes so that values like
+// --flag="hello world" or --require='/path/with spaces/f.js' are kept as
+// single tokens.  This is NOT a full bash parser — it only covers the
+// quoting subset needed for Node CLI flags.
+var splitQuotedArgs = exports.splitQuotedArgs = function (s) {
+  const args = [];
+  let current = '';
+  let inDouble = false;
+  let inSingle = false;
+  let escaped = false;
+  let hasQuotes = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+
+    // Backslash: escape next char only when it precedes a meaningful
+    // character (space, quote, or another backslash). This preserves
+    // Windows-style paths like C:\temp\my-file.js.
+    if (ch === '\\' && !inSingle && i + 1 < s.length) {
+      const next = s[i + 1];
+      if (inDouble) {
+        // Inside double quotes, only \" and \\ are escape sequences
+        if (next === '"' || next === '\\') {
+          escaped = true;
+          continue;
+        }
+      } else {
+        // Outside quotes, escape spaces, quotes, and backslashes
+        if (next === ' ' || next === '"' || next === "'" || next === '\\') {
+          escaped = true;
+          continue;
+        }
+      }
+    }
+
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      hasQuotes = true;
+      continue;
+    }
+
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      hasQuotes = true;
+      continue;
+    }
+
+    if (/\s/.test(ch) && !inDouble && !inSingle) {
+      if (current || hasQuotes) {
+        args.push(current);
+        current = '';
+        hasQuotes = false;
+      }
+      continue;
+    }
+
+    current += ch;
   }
-  return s.split(/\s+/).filter(Boolean);
+
+  if (current || hasQuotes) {
+    args.push(current);
+  }
+
+  if (inDouble || inSingle) {
+    throw new Error(
+      "Unterminated quote in SERVER_NODE_OPTIONS: " + s
+    );
+  }
+
+  return args;
 };
 
 var getNodeOptionsFromEnvironment = function () {
-  return bashParse(process.env.SERVER_NODE_OPTIONS || "");
+  return splitQuotedArgs(process.env.SERVER_NODE_OPTIONS || "");
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -46,6 +117,13 @@ var getNodeOptionsFromEnvironment = function () {
 //
 // Required options: bundlePath, port, rootUrl, mongoUrl, oplogUrl
 // Optional options: onExit, onListen, nodeOptions, settings
+
+// How long to wait, after sending SIGTERM, before escalating to SIGKILL when
+// stopping the app process. An app that registers its own `process.on('SIGTERM')`
+// handler without calling `process.exit()` overrides Node's default "terminate
+// on SIGTERM" behavior, so SIGTERM alone would leave it running and holding the
+// port; the escalation guarantees the process is gone.
+const APP_STOP_SIGKILL_GRACE_MS = 3000;
 
 var AppProcess = function (options) {
   var self = this;
@@ -137,9 +215,39 @@ Object.assign(AppProcess.prototype, {
     var self = this;
 
     if (self.proc && self.proc.pid) {
-      self.proc.removeAllListeners('close');
-      self.proc.removeAllListeners('error');
-      self.proc.kill();
+      const proc = self.proc;
+      proc.removeAllListeners('close');
+      proc.removeAllListeners('error');
+      proc.kill();
+
+      // The kill() above only sends SIGTERM, which an app can ignore via its
+      // own handler. Escalate to SIGKILL after a short grace period so a
+      // process that refuses to exit can't keep running or holding the port.
+      const sigkillTimer = setTimeout(function () {
+        // We only reach here if the app ignored SIGTERM for the whole grace
+        // period, so surface it — this is exactly the symptom of an app that
+        // keeps running and holds the port across restarts.
+        runLog.log(
+          "App didn't exit " + APP_STOP_SIGKILL_GRACE_MS +
+            "ms after SIGTERM; sending SIGKILL.",
+          { arrow: true });
+        // Use the child handle rather than process.kill(pid): once the child
+        // has exited and been reaped, proc.kill() is a no-op, so there is no
+        // chance of signalling an unrelated process that reused the pid.
+        proc.kill('SIGKILL');
+      }, APP_STOP_SIGKILL_GRACE_MS);
+      // Don't let this timer keep the tool's event loop alive. Because it's
+      // unref'd, the escalation only fires while the tool itself keeps running
+      // — e.g. across a dev restart, where the newly spawned AppProcess keeps
+      // the event loop alive. On a full tool shutdown the tool may exit before
+      // the grace period elapses; that path is unchanged from before this fix.
+      if (sigkillTimer.unref) {
+        sigkillTimer.unref();
+      }
+      // If the process exits on its own first, cancel the pending SIGKILL.
+      proc.once('exit', function () {
+        clearTimeout(sigkillTimer);
+      });
     }
     self.proc = null;
 

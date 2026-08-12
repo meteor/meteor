@@ -38,6 +38,7 @@ const {
   startRspackServerWatch,
   runRspackBuild,
   cleanup,
+  cleanupSync,
   calculateDevServerPort,
   calculateRsdoctorClientPort,
   calculateRsdoctorServerPort,
@@ -177,6 +178,11 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
     // Configure Meteor settings for Rspack
     configureMeteorForRspack();
 
+    // Set native mode flag so the server module can skip dev proxy setup
+    if (isMeteorAppNative()) {
+      process.env.RSPACK_NATIVE = 'true';
+    }
+
     // Calculate and set the devServerPort at boot
     if (!process.env.RSPACK_DEVSERVER_PORT) {
       process.env.RSPACK_DEVSERVER_PORT = calculateDevServerPort();
@@ -209,11 +215,24 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
       }
     }
 
-    // Register cleanup handler
-    process.on('exit', cleanup);
-    process.on('SIGINT', () => {
-      cleanup();
-      process.exit();
+    // Register cleanup handlers. SIGTERM is forwarded by orchestrators (Docker,
+    // supervisord, IDE stop buttons) only to the meteor parent. Without an
+    // explicit handler the rspack child orphans and keeps holding the devserver
+    // port. cleanupSync runs first inside each signal handler so the group
+    // signal goes out synchronously, before tool-env's once-handler re-raises
+    // the signal and the parent terminates. The async cleanup that follows
+    // waits for graceful close when there's time, and re-raises afterward.
+    process.on('exit', cleanupSync);
+    ['SIGINT', 'SIGTERM', 'SIGHUP'].forEach((sig) => {
+      process.once(sig, async () => {
+        cleanupSync();
+        try {
+          await cleanup();
+        } catch (e) {
+          // Best-effort: never block termination on a cleanup error.
+        }
+        process.kill(process.pid, sig);
+      });
     });
 
     // When running `meteor run` command

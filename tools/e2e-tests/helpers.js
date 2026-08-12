@@ -10,15 +10,83 @@ const REPO_ROOT = path.resolve(__dirname, '../..');
 const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
 
 /**
+ * Returns true when the current Jest test is a retry attempt.
+ */
+export function isRetryAttempt() {
+  return Boolean(globalThis.__e2eIsRetryAttempt);
+}
+
+/**
+ * Snapshot file contents so they can be restored after a test mutates them.
+ * @param {string} baseDir - Base directory for relative paths
+ * @param {string[]} relPaths - Relative paths to snapshot
+ * @returns {Promise<Map<string, {content: string|null, existed: boolean}>>}
+ */
+export async function snapshotFiles(baseDir, relPaths = []) {
+  const snapshot = new Map();
+  for (const relPath of relPaths) {
+    if (!relPath) continue;
+    const fullPath = path.join(baseDir, relPath);
+    if (await fs.pathExists(fullPath)) {
+      const content = await fs.readFile(fullPath, 'utf8');
+      snapshot.set(fullPath, { content, existed: true });
+    } else {
+      snapshot.set(fullPath, { content: null, existed: false });
+    }
+  }
+  return snapshot;
+}
+
+/**
+ * Restore files captured by snapshotFiles to their original state.
+ * @param {Map<string, {content: string|null, existed: boolean}>} snapshot
+ */
+export async function restoreFiles(snapshot) {
+  if (!snapshot || snapshot.size === 0) return;
+  for (const [fullPath, entry] of snapshot.entries()) {
+    if (entry.existed) {
+      await fs.writeFile(fullPath, entry.content, 'utf8');
+    } else if (await fs.pathExists(fullPath)) {
+      await fs.remove(fullPath);
+    }
+  }
+}
+
+/**
+ * Remove build artifacts and caches under a Meteor app directory.
+ * @param {string} appDir - Directory containing the Meteor app
+ */
+export async function clearBuildArtifacts(appDir) {
+  if (!appDir) return;
+  const targets = [
+    '_build',
+    '.meteor/local/build',
+    '.meteor/local/bundler-cache',
+    '.meteor/local/plugin-cache',
+    'node_modules/.cache/rspack',
+    'node_modules/.cache/meteor',
+  ];
+  for (const target of targets) {
+    const fullPath = path.join(appDir, target);
+    try {
+      await fs.remove(fullPath);
+    } catch (err) {
+      console.log(`Could not remove ${fullPath}: ${err.message}`);
+    }
+  }
+}
+
+/**
  * Helper function to set up a Meteor app in a temporary directory
  * Copies the app and runs npm install
  * @param {string} appName - Name of the app in the apps directory
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
+ * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
-  const { isMonorepo = false } = options;
+  const { isMonorepo = false, preserveFixtureSymlinks = false } = options;
 
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -37,7 +105,7 @@ export async function setupMeteorApp(appName, options = {}) {
 
     // Use fs-extra's copy method with recursive option
     await fs.copy(sourceAppDir, tempDir, {
-      dereference: true,
+      dereference: !preserveFixtureSymlinks,
       preserveTimestamps: true,
       overwrite: true
     });
@@ -72,6 +140,69 @@ export async function setupMeteorApp(appName, options = {}) {
   }
 
   return { tempDir };
+}
+
+/**
+ * Waits for `pattern`, but fails fast (~90s) if MongoDB never starts: a hung
+ * `mongod` otherwise burns the full 240s output wait silently. Skipped when an
+ * external Mongo is set, since Meteor starts no local instance then.
+ * @private
+ */
+async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, meteorProcess, env) {
+  const mainWait = waitForMeteorOutput(
+    outputLines,
+    pattern,
+    { ...options, meteorProcess }
+  );
+  const failPatterns = Array.isArray(options.failOnOutput)
+    ? options.failOnOutput
+    : options.failOnOutput
+    ? [options.failOnOutput]
+    : [];
+  const failWaits = failPatterns.map((failPattern) =>
+    waitForMeteorOutput(
+      outputLines,
+      failPattern,
+      { ...options, meteorProcess }
+    )
+      .then((line) => {
+        throw new Error(
+          `Meteor output matched fail pattern ${failPattern}:\n${line}`
+        );
+      })
+      .catch((err) => {
+        if (/Timeout waiting for output|process exited/i.test(err.message)) {
+          return new Promise(() => {});
+        }
+        throw err;
+      })
+  );
+  mainWait.catch(() => {});
+
+  const usesExternalMongo = !!(env.MONGO_URL || process.env.MONGO_URL);
+  if (options.mongoWatchdog === false || usesExternalMongo) {
+    await Promise.race([mainWait, ...failWaits]);
+    return mainWait;
+  }
+
+  const mongoTimeout = options.mongoTimeout || (process.env.CI ? 90000 : 45000);
+  const mongoWait = waitForMeteorOutput(
+    outputLines,
+    '=> Started MongoDB.',
+    { timeout: mongoTimeout, meteorProcess }
+  ).catch((err) => {
+    // A process exit isn't a Mongo fault; reframe only a genuine timeout.
+    if (/process exited/i.test(err.message)) throw err;
+    throw new Error(
+      `MongoDB did not start within ${mongoTimeout}ms; likely a stale ` +
+      `mongod or lock file on the (reused) CI container. (${err.message})`
+    );
+  });
+
+  // Mark the Mongo watchdog handled so the race's loser can't reject unhandled later.
+  mongoWait.catch(() => {});
+  await Promise.race([mainWait, mongoWait, ...failWaits]);
+  return mainWait;
 }
 
 /**
@@ -116,10 +247,12 @@ export async function runMeteorApp(tempDir, port, options = {}) {
 
   // If a specific output pattern is requested, wait for it
   if (options.waitForOutput) {
-    await waitForMeteorOutput(
+    await waitForOutputWithMongoWatchdog(
       outputLines,
       options.waitForOutput,
-      options
+      options,
+      meteorProcess,
+      env
     );
   }
 
@@ -128,7 +261,7 @@ export async function runMeteorApp(tempDir, port, options = {}) {
     console.log(`Waiting for app to be available on port ${port}...`);
     await waitOn({
       resources: [`http-get://localhost:${port}`],
-      timeout: 90000
+      timeout: process.env.CI ? 300000 : 90000
     });
   }
 
@@ -136,18 +269,97 @@ export async function runMeteorApp(tempDir, port, options = {}) {
 }
 
 /**
- * Helper function to kill a Meteor process
+ * Resolves true if the process exits within the timeout.
+ * @private
+ */
+function waitForProcessExit(proc, timeoutMs) {
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    proc.once('exit', () => finish(true));
+    // execa subprocess is also a promise; covers an exit before this listener.
+    if (typeof proc.then === 'function') {
+      proc.then(() => finish(true), () => finish(true));
+    }
+  });
+}
+
+/**
+ * Kills a Meteor process. SIGTERM first so its shutdown hooks run (the rspack
+ * plugin's handler releases the dev server port); SIGKILL only as a fallback.
  * @param {Object} meteorProcess - The Meteor process to kill
+ * @param {Object} [options]
+ * @param {number} [options.graceMs=12000] - Time to wait for a graceful exit
  * @returns {Promise<void>}
  */
-export async function killMeteorProcess(meteorProcess) {
-  if (meteorProcess) {
-    try {
-      await meteorProcess.kill('SIGKILL');
-      console.log('Successfully killed meteor process');
-    } catch (err) {
-      console.log(`Error killing meteor process: ${err.message}`);
-    }
+export async function killMeteorProcess(meteorProcess, options = {}) {
+  if (!meteorProcess) return;
+
+  const { graceMs = 12000 } = options;
+
+  // Already exited (signalled exits set signalCode, not exitCode).
+  if (meteorProcess.exitCode != null || meteorProcess.signalCode != null) {
+    return;
+  }
+
+  // Swallow the rejection a signalled exit produces on the execa promise.
+  if (typeof meteorProcess.catch === 'function') {
+    meteorProcess.catch(() => {});
+  }
+
+  let exitedCleanly = false;
+  try {
+    meteorProcess.kill('SIGTERM');
+    exitedCleanly = await waitForProcessExit(meteorProcess, graceMs);
+  } catch (err) {
+    console.log(`Error sending SIGTERM to meteor process: ${err.message}`);
+  }
+
+  if (exitedCleanly) {
+    console.log('Meteor process exited gracefully after SIGTERM');
+    return;
+  }
+
+  try {
+    meteorProcess.kill('SIGKILL');
+    console.log('Force-killed meteor process with SIGKILL');
+  } catch (err) {
+    console.log(`Error killing meteor process: ${err.message}`);
+  }
+}
+
+// Live Meteor processes from runMeteorCommand, so the sweep can reap one even
+// when a test timed out before capturing its handle.
+const activeMeteorProcesses = new Set();
+
+/**
+ * Safety net: kills anything an e2e test left running. Stops tracked Meteor
+ * processes, then sweeps detached descendants (rspack dev server, mongod) by
+ * the "meteortest-" temp dir in their argv. The "[-]" stops the sweep matching
+ * its own command.
+ * @returns {Promise<void>}
+ */
+export async function killStrayAppProcesses() {
+  const tracked = [...activeMeteorProcesses];
+  await Promise.all(
+    tracked.map((proc) => killMeteorProcess(proc, { graceMs: 8000 }))
+  );
+
+  if (process.platform === 'win32') return;
+  try {
+    await execa.command(
+      `ps -eo pid=,args= | grep -E 'meteortest[-]' | awk '{print $1}' | xargs -r kill -9`,
+      { shell: true, reject: false }
+    );
+  } catch (err) {
+    // Best-effort cleanup; never fail a test because the sweep errored.
+    console.log(`Error sweeping stray app processes: ${err.message}`);
   }
 }
 
@@ -179,30 +391,135 @@ export async function killProcessByPort(port) {
  */
 async function killSingleProcessByPort(port) {
   try {
-    // Different commands based on OS
-    const command = process.platform === 'win32'
-      ? `FOR /F "tokens=5" %a in ('netstat -ano ^| find "LISTENING" ^| find ":${port}"') do taskkill /F /PID %a`
-      : `lsof -i :${port} -t | grep -v ^${process.pid}$ | xargs -r kill -9`;
-
     console.log(`Killing process on port ${port}...`);
-    try {
-      // Use { reject: false } to prevent execa from throwing on non-zero exit codes
-      const result = await execa.command(command, { shell: true, reject: false });
-      if (result.failed) {
-        // It's okay if this fails because there might not be a process on that port
-        console.log(`No process found on port ${port} or command returned non-zero exit code`);
-      } else {
-        console.log(`Successfully killed process on port ${port}`);
-      }
-    } catch (err) {
-      // This catch block will only be reached for operational errors, not for command failures
-      console.log(`Error executing kill command: ${err.message}`);
+
+    if (process.platform === 'win32') {
+      const command = `FOR /F "tokens=5" %a in ('netstat -ano ^| find "LISTENING" ^| find ":${port}"') do taskkill /F /PID %a`;
+      await execa.command(command, { shell: true, reject: false });
+      console.log(`Successfully ensured no process is running on port ${port}`);
+      return;
     }
-    console.log(`Successfully ensured no process is running on port ${port}`);
+
+    // Kill whatever listens on this port, retrying until the socket is verified
+    // free — claiming success without checking lets an orphan survive.
+    const maxAttempts = 5;
+    let portFree = false;
+
+    // Resolved once so a group kill can never signal the group Jest runs in.
+    const ownGroupId = await getOwnProcessGroupId();
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const pids = await findPidsOnPort(port);
+
+      // Fast path: nothing holds the port (common in beforeEach).
+      if (pids.length === 0 && await isPortFree(port)) {
+        portFree = true;
+        break;
+      }
+
+      for (const pid of pids) {
+        // Kill the process group too, so a detached child (the rspack dev
+        // server) dies with it. Skipped unless our own group is known and
+        // differs, so it can't take down Jest; the PID kill alone frees the
+        // socket regardless.
+        const pgidResult = await execa.command(
+          `ps -o pgid= -p ${pid} 2>/dev/null`,
+          { shell: true, reject: false }
+        );
+        const pgid = (pgidResult.stdout || '').trim();
+        if (/^\d+$/.test(pgid) && ownGroupId && pgid !== ownGroupId) {
+          await execa.command(`kill -9 -${pgid} 2>/dev/null`, { shell: true, reject: false });
+        }
+        await execa.command(`kill -9 ${pid} 2>/dev/null`, { shell: true, reject: false });
+      }
+
+      // fuser fallback for when lsof/ss miss the socket owner.
+      await execa.command(`fuser -k ${port}/tcp 2>/dev/null`, { shell: true, reject: false });
+
+      // Let the OS release the socket before re-checking.
+      await new Promise(r => setTimeout(r, 400));
+
+      if (await isPortFree(port)) {
+        portFree = true;
+        break;
+      }
+    }
+
+    if (portFree) {
+      console.log(`Successfully ensured no process is running on port ${port}`);
+    } else {
+      console.warn(`Warning: port ${port} is still in use after ${maxAttempts} kill attempts`);
+    }
   } catch (error) {
-    // This should never be reached with the inner try/catch, but keeping as a safety net
     console.error(`Error killing process on port ${port}:`, error);
   }
+}
+
+/**
+ * Process group id of the test runner, read from `ps` (Node has no API) and
+ * cached. Null if unknown, in which case callers must skip group kills.
+ * @returns {Promise<string|null>}
+ * @private
+ */
+let ownProcessGroupIdPromise;
+function getOwnProcessGroupId() {
+  if (!ownProcessGroupIdPromise) {
+    ownProcessGroupIdPromise = (async () => {
+      if (process.platform === 'win32') return null;
+      const result = await execa.command(
+        `ps -o pgid= -p ${process.pid} 2>/dev/null`,
+        { shell: true, reject: false }
+      );
+      const pgid = (result.stdout || '').trim();
+      return /^\d+$/.test(pgid) ? pgid : null;
+    })();
+  }
+  return ownProcessGroupIdPromise;
+}
+
+/**
+ * PIDs listening on a port, via lsof and ss merged (minimal images may lack
+ * one). The test runner's own PID is never returned.
+ * @param {number} port - The port to inspect
+ * @returns {Promise<string[]>}
+ * @private
+ */
+async function findPidsOnPort(port) {
+  const pids = new Set();
+
+  const lsof = await execa.command(
+    `lsof -i :${port} -t 2>/dev/null`,
+    { shell: true, reject: false }
+  );
+  for (const line of (lsof.stdout || '').split('\n')) {
+    const pid = line.trim();
+    if (/^\d+$/.test(pid)) pids.add(pid);
+  }
+
+  const ss = await execa.command(
+    `ss -tlnp sport = :${port} 2>/dev/null`,
+    { shell: true, reject: false }
+  );
+  const pidPattern = /pid=(\d+)/g;
+  let match;
+  while ((match = pidPattern.exec(ss.stdout || '')) !== null) {
+    pids.add(match[1]);
+  }
+
+  pids.delete(String(process.pid));
+  return [...pids];
+}
+
+/**
+ * Resolves true if nothing is listening on the port.
+ * @private
+ */
+async function isPortFree(port) {
+  const check = await execa.command(
+    `ss -tln sport = :${port} 2>/dev/null | grep -i listen | head -1`,
+    { shell: true, reject: false }
+  );
+  return !check.stdout || check.stdout.trim() === '';
 }
 
 /**
@@ -238,6 +555,10 @@ export async function runMeteorCommand(command, args = [], cwd, options = {}) {
   }
 
   const meteorProcess = execa(METEOR_EXECUTABLE, [command, ...args], execaOptions);
+
+  // Track so the sweep can reap it if a test times out before grabbing it.
+  activeMeteorProcesses.add(meteorProcess);
+  meteorProcess.once('exit', () => activeMeteorProcesses.delete(meteorProcess));
 
   // If we're capturing output, set up the output collection
   let outputLines = [];
@@ -358,6 +679,29 @@ export async function wait(ms) {
 }
 
 /**
+ * Navigates the shared Playwright page away from the app under test so late
+ * client callbacks do not leak into the next test after the app process dies.
+ * @returns {Promise<void>}
+ */
+export async function resetPlaywrightPage() {
+  if (typeof page === 'undefined') {
+    return;
+  }
+
+  try {
+    if (!page.isClosed()) {
+      await page.goto('about:blank', {
+        waitUntil: 'load',
+        timeout: 3000,
+      });
+    }
+  } catch {
+    // Best effort only. Some tests never navigate the page, and it may already
+    // be tearing down if the browser crashed or the test aborted.
+  }
+}
+
+/**
  * Helper function to wait for specific output from a Meteor process
  * @param {string[]} outputLines - Array that will be populated with output lines
  * @param {string|RegExp} pattern - String or RegExp pattern to wait for
@@ -365,40 +709,61 @@ export async function wait(ms) {
  * @param {number} options.timeout - Maximum time to wait in milliseconds
  * @param {number} options.checkInterval - Interval between checks in milliseconds
  * @param {boolean} options.negate - If true, wait until the pattern is NOT found in any output line
+ * @param {number} options.startIndex - Only inspect output added at or after this index
  * @returns {Promise<string>} - A promise that resolves with the matched line
  */
 export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
-  const timeout = options.timeout || 90000; // Default 1 minute timeout
+  const timeout = options.timeout || (process.env.CI ? 240000 : 90000); // Default 90s locally, 240s on CI
   const checkInterval = options.checkInterval || 100; // Check every 100ms by default
   const negate = options.negate || false; // Default is to check for presence, not absence
+  const meteorProcess = options.meteorProcess || null;
+  const startIndex = options.startIndex || 0;
 
   console.log(`Waiting for output ${negate ? 'NOT ' : ''}matching: ${pattern}`);
 
   const startTime = Date.now();
 
   return new Promise((resolve, reject) => {
+    let processExited = false;
+    let processExitCode = null;
+
+    // If we have access to the meteor process, watch for unexpected exits
+    if (meteorProcess) {
+      meteorProcess.on('exit', (code) => {
+        processExited = true;
+        processExitCode = code;
+      });
+    }
+
+    const lineMatches = (line) =>
+      (typeof pattern === 'string' && line.includes(pattern)) ||
+      (pattern instanceof RegExp && pattern.test(line));
+
     // Function to check for the pattern in the output lines
     const checkForPattern = () => {
+      const relevantOutputLines = outputLines.slice(startIndex);
+
       // Check if we've exceeded the timeout
       if (Date.now() - startTime > timeout) {
-        reject(new Error(`Timeout waiting for output ${negate ? 'NOT ' : ''}matching: ${pattern}`));
+        // In negate mode the wait can only fail because some line matched.
+        // Surface those lines so the failure is diagnosable instead of a
+        // bare timeout.
+        let detail = '';
+        if (negate) {
+          const offending = relevantOutputLines.filter(lineMatches);
+          detail = `\nOffending line(s):\n${offending.slice(-20).join('\n')}`;
+        }
+        reject(new Error(
+          `Timeout waiting for output ${negate ? 'NOT ' : ''}matching: ${pattern}${detail}`
+        ));
         return;
       }
 
       if (negate) {
         // In negation mode, we need to check all lines and make sure none match
         // If we've processed all lines and none match, we can resolve
-        if (outputLines.length > 0) {
-          let allLinesPass = true;
-          for (const line of outputLines) {
-            const matches = (typeof pattern === 'string' && line.includes(pattern)) || 
-                           (pattern instanceof RegExp && pattern.test(line));
-            if (matches) {
-              allLinesPass = false;
-              break;
-            }
-          }
-          if (allLinesPass) {
+        if (relevantOutputLines.length > 0) {
+          if (!relevantOutputLines.some(lineMatches)) {
             console.log(`Confirmed no output matching: ${pattern}`);
             resolve(null);
             return;
@@ -406,7 +771,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
         }
       } else {
         // Check each line for the pattern (original behavior)
-        for (const line of outputLines) {
+        for (const line of relevantOutputLines) {
           if (typeof pattern === 'string' && line.includes(pattern)) {
             console.log(`Found output matching string: ${pattern}`);
             resolve(line);
@@ -417,6 +782,16 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
             return;
           }
         }
+      }
+
+      // Fail fast if the meteor process exited before we found the expected output.
+      // Checked after pattern matching so we don't miss output that arrived before the exit event.
+      if (processExited && !negate) {
+        reject(new Error(
+          `Meteor process exited with code ${processExitCode} before output matching: ${pattern}\n` +
+          `Last output:\n${outputLines.slice(-20).join('\n')}`
+        ));
+        return;
       }
 
       // If we didn't find a match, check again after the interval
@@ -573,10 +948,12 @@ export async function runMeteorTests(tempDir, port, options = {}) {
 
   // If a specific output pattern is requested, wait for it
   if (options.waitForOutput) {
-    await waitForMeteorOutput(
+    await waitForOutputWithMongoWatchdog(
       outputLines,
       options.waitForOutput,
-      options
+      options,
+      meteorProcess,
+      env
     );
   }
 
@@ -595,7 +972,7 @@ export async function runMeteorTests(tempDir, port, options = {}) {
  * @returns {Promise<string|{message: string, allLogs: string[]}>} - Returns the matching message or an object with message and allLogs if returnAllLogs is true
  */
 export async function waitForPlaywrightConsole(pattern, options = {}) {
-  const timeout = options.timeout || 30000; // Default 30 seconds timeout
+  const timeout = options.timeout || (process.env.CI ? 90000 : 30000); // Default 30s locally, 90s on CI
   const checkInterval = options.checkInterval || 100; // Check every 100ms by default
   const negate = options.negate || false; // Default is to check for presence, not absence
   const returnAllLogs = options.returnAllLogs || false; // Default is to return just the matching message

@@ -1,4 +1,3 @@
-import React from 'react';
 import './Global.scss';
 import { Hello } from './Hello';
 import { Info } from './Info';
