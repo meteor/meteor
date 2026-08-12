@@ -227,3 +227,75 @@ testAsyncMulti('stream - /websocket is a websocket endpoint', [
     );
   }
 ]);
+// _cleanup runs both when tearing down a live socket and at the top of every
+// (re)connection attempt. Only the former is a disconnection: firing the
+// 'disconnect' event when there was no socket sent consumers a phantom event
+// once per retry cycle (and diverged from the node implementation).
+testAsyncMulti('stream - cleanup without a socket does not fire disconnect', [
+  function(test, expect) {
+    var stream = new ClientStream('/');
+    var disconnectCount = 0;
+    stream.on('disconnect', function() {
+      disconnectCount++;
+    });
+
+    var done = expect(function() {});
+    stream.on(
+      'reset',
+      once(function() {
+        // Connected: a real disconnect closes the socket and fires once.
+        stream.disconnect();
+        test.equal(disconnectCount, 1);
+
+        // A cleanup with no socket must not fire a phantom event.
+        stream._cleanup();
+        test.equal(disconnectCount, 1);
+        done();
+      })
+    );
+  }
+]);
+
+// The window 'online' handler calls reconnect() on any non-offline stream,
+// including permanently failed ones. reconnect() must be a true no-op there:
+// it used to decrement retryCount (compensating for a _retryNow that then
+// refused to run), drifting the counter negative on every online event.
+Tinytest.add(
+  'stream - reconnect on a permanently disconnected stream is a no-op',
+  function(test) {
+    var stream = new ClientStream('/');
+    stream.disconnect({ _permanent: true });
+    test.equal(stream.status().status, 'failed');
+
+    var before = stream.status().retryCount;
+    stream.reconnect();
+    stream.reconnect();
+
+    test.equal(stream.status().retryCount, before);
+    test.equal(stream.status().status, 'failed');
+  }
+);
+
+// The 100s legacy watchdog detects missing SockJS heartbeat frames. Native
+// WebSocket transports have no such frames, so arming it there guarantees a
+// healthy-but-quiet connection (DDP heartbeats disabled) is killed after
+// 100s of silence.
+Tinytest.add(
+  'stream - legacy heartbeat watchdog only arms on the sockjs transport',
+  function(test) {
+    let stream = new ClientStream('/');
+    try {
+      // Simulate a message arriving on a native-WebSocket stream.
+      stream._transport = 'websocket';
+      stream._heartbeat_received();
+      test.isFalse(!!stream.heartbeatTimer);
+
+      // The sockjs transport keeps its watchdog.
+      stream._transport = 'sockjs';
+      stream._heartbeat_received();
+      test.isTrue(!!stream.heartbeatTimer);
+    } finally {
+      stream.disconnect();
+    }
+  }
+);
