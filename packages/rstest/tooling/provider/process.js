@@ -116,7 +116,11 @@ function startRstestProcess({
   const ownsProcessGroup = process.platform !== 'win32';
   const child = spawn(process.execPath, [bin, ...args], {
     cwd: appDir,
-    env: { ...env, FORCE_COLOR: env.FORCE_COLOR || '1' },
+    env: {
+      ...env,
+      NODE_ENV: 'test',
+      FORCE_COLOR: env.FORCE_COLOR || '1',
+    },
     stdio,
     detached: ownsProcessGroup,
   });

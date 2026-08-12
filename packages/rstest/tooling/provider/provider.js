@@ -494,6 +494,7 @@ class RstestTestRunnerProvider {
       testNamePattern: options.testNamePattern || null,
       testTimeout: 30000,
       hookTimeout: 10000,
+      maxConcurrency: 5,
       token,
       server,
       client,
@@ -529,12 +530,14 @@ class RstestTestRunnerProvider {
       !selection.needsRuntime && !selection.needsExternal;
     const buildClient = client || selection.needsExternal && !options.serverOnly;
     const buildServer = server || selection.needsExternal && !options.clientOnly;
-    this.plan = {
-      mode: this.workerHostPlan
+    const mode = this.workerHostPlan
         ? 'native-only'
         : selection.needsRuntime || selection.needsExternal
         ? 'meteor-host'
-        : 'native-only',
+        : 'native-only';
+    this.plan = {
+      mode,
+      ...(mode === 'meteor-host' && { driverPackage: 'rstest' }),
       metadata: this.metadata,
       buildPluginOptions: {
         rspack: {
@@ -569,6 +572,7 @@ class RstestTestRunnerProvider {
     }
     this.metadata.testTimeout = settings.testTimeout;
     this.metadata.hookTimeout = settings.hookTimeout;
+    this.metadata.maxConcurrency = settings.maxConcurrency;
     updateMetadata(this.metadata);
   }
 

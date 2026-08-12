@@ -99,7 +99,7 @@ test('package runtime plan evaluates dynamic config once with distinct harness r
           ${JSON.stringify(marker)},
           [context.command, context.packageTests, context.harnessRoot].join('|') + '\\n'
         );
-        return { testTimeout: 4321, hookTimeout: 1234 };
+        return { testTimeout: 4321, hookTimeout: 1234, maxConcurrency: 3 };
       });
     `,
   });
@@ -126,6 +126,7 @@ test('package runtime plan evaluates dynamic config once with distinct harness r
     generation: null,
     testTimeout: 4321,
     hookTimeout: 1234,
+    maxConcurrency: 3,
   });
 });
 
@@ -133,7 +134,7 @@ test('native run writes generation-bound runtime settings atomically', t => {
   const output = path.join(os.tmpdir(), `meteor-rstest-settings-${process.pid}-${Date.now()}.json`);
   const appRoot = createApp({
     source: "test('settings run', () => expect(true).toBe(true));",
-    configSource: 'module.exports = { globals: true, testTimeout: 9876, hookTimeout: 2345 };',
+    configSource: 'module.exports = { globals: true, testTimeout: 9876, hookTimeout: 2345, maxConcurrency: 7 };',
   });
   t.after(() => {
     fs.rmSync(appRoot, { recursive: true, force: true });
@@ -151,5 +152,6 @@ test('native run writes generation-bound runtime settings atomically', t => {
     generation: 'generation-7',
     testTimeout: 9876,
     hookTimeout: 2345,
+    maxConcurrency: 7,
   });
 });

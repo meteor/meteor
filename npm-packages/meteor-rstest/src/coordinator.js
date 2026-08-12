@@ -265,7 +265,7 @@ async function finalizeRstestConfig({ context, userConfig = {}, inlineConfig = {
 }
 
 function runtimeSettingsFromConfig(config) {
-  const normalize = (value, fallback, field) => {
+  const normalizeTimeout = (value, fallback, field) => {
     if (value === undefined) return fallback;
     if (!Number.isSafeInteger(value) || value <= 0 || value > 3600000) {
       throw configError(
@@ -275,9 +275,20 @@ function runtimeSettingsFromConfig(config) {
     }
     return value;
   };
+  const normalizeMaxConcurrency = value => {
+    if (value === undefined) return 5;
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw configError(
+        'METEOR_RSTEST_INVALID_MAX_CONCURRENCY',
+        'maxConcurrency must be a positive integer.'
+      );
+    }
+    return value;
+  };
   return {
-    testTimeout: normalize(config.testTimeout, 30000, 'testTimeout'),
-    hookTimeout: normalize(config.hookTimeout, 10000, 'hookTimeout'),
+    testTimeout: normalizeTimeout(config.testTimeout, 30000, 'testTimeout'),
+    hookTimeout: normalizeTimeout(config.hookTimeout, 10000, 'hookTimeout'),
+    maxConcurrency: normalizeMaxConcurrency(config.maxConcurrency),
   };
 }
 

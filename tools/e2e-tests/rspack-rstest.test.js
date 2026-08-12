@@ -78,7 +78,13 @@ describe('Rspack + Rstest integration', () => {
     expect(output).toContain('pure Rstest uses Meteor-generated context');
     expect(output).toContain('pure Rstest supports inline snapshots');
     expect(output).toContain(
+      'pure Rstest hoists module mocks through Meteor Rspack config'
+    );
+    expect(output).toContain(
       '✓ tests/rstest/runtime/server/mongo.test.js (1)'
+    );
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/concurrency.test.js (4)'
     );
     expect(output).toContain(
       '✓ tests/rstest/runtime/server/sentinel.test.js (1)'
@@ -106,6 +112,44 @@ describe('Rspack + Rstest integration', () => {
     expect(packageJson.devDependencies['@rstest/playwright']).toBe('0.11.6');
     expect(packageJson.devDependencies.jsdom).toBe('29.1.1');
     expect(packageJson.devDependencies.playwright).toBe('1.59.0');
+  }, 600_000);
+
+  test('native and Meteor-runtime suites honor concurrent scheduling and limits', async () => {
+    const result = await runMeteorCommand(
+      'test',
+      [
+        '--once',
+        '--server-only',
+        '--project',
+        'meteor-pure-server',
+        '--project',
+        'meteor-runtime-server',
+        '--test-file',
+        'concurrency.test.js',
+        '--port',
+        testPort(3214),
+        '--',
+        '--reporters=verbose',
+      ],
+      appDir,
+      {
+        captureOutput: true,
+        execaOptions: { reject: false },
+      }
+    );
+    const completed = await result.meteorProcess;
+    const output = stripAnsi(result.outputLines.join('\n'));
+
+    expect(completed.exitCode).toBe(0);
+    expect(output).toContain('native Rstest concurrent suite > alpha');
+    expect(output).toContain('native Rstest concurrent suite > gamma');
+    expect(output).toContain('waits for native concurrent cases');
+    expect(output).toContain('Meteor runtime concurrent suite > alpha');
+    expect(output).toContain('Meteor runtime concurrent suite > gamma');
+    expect(output).toContain('waits for shared-runtime concurrent cases');
+    expect(output).toContain(
+      '✓ tests/rstest/runtime/server/concurrency.test.js (4)'
+    );
   }, 600_000);
 
   test('meteor update-snapshots repairs a native Rstest mismatch', async () => {
@@ -253,8 +297,11 @@ describe('Rspack + Rstest integration', () => {
     expect(output).toContain(
       '- tests/rstest/runtime/server/sentinel.test.js (1)'
     );
-    expect(output).toContain('Test Files  1 passed | 1 skipped (2)');
-    expect(output).toContain('1 passed | 1 skipped (2)');
+    expect(output).toContain(
+      '- tests/rstest/runtime/server/concurrency.test.js (4)'
+    );
+    expect(output).toContain('Test Files  1 passed | 2 skipped (3)');
+    expect(output).toContain('1 passed | 5 skipped (6)');
     expect(output).not.toContain('Started Meteor Rstest browser');
     expect(output).not.toContain('Meteor runtime · web.browser');
   }, 600_000);

@@ -28,6 +28,158 @@ test('runtime registry preserves nested suite hooks and async case order', async
   assert.equal(result.cases[0].status, 'pass');
 });
 
+test('runtime registry runs concurrent cases before a sequential barrier', async () => {
+  const registry = createRegistry();
+  const events = [];
+  let active = 0;
+  let maxActive = 0;
+  let started = 0;
+  let release;
+  const bothStarted = new Promise(resolve => {
+    release = resolve;
+  });
+
+  const concurrentCase = name => registry.test.concurrent(name, async () => {
+    active += 1;
+    maxActive = Math.max(maxActive, active);
+    events.push(`${name}:start`);
+    started += 1;
+    if (started === 2) release();
+    await bothStarted;
+    events.push(`${name}:end`);
+    active -= 1;
+  });
+
+  concurrentCase('first');
+  concurrentCase('second');
+  registry.test.sequential('barrier', () => {
+    assert.equal(active, 0);
+    events.push('barrier');
+  });
+
+  const result = await registry.run({ testTimeout: 100 });
+
+  assert.equal(result.ok, true);
+  assert.equal(maxActive, 2);
+  assert.deepEqual(events.slice(0, 2).sort(), ['first:start', 'second:start']);
+  assert.equal(events.at(-1), 'barrier');
+  assert.deepEqual(result.cases.map(item => item.name), [
+    'first',
+    'second',
+    'barrier',
+  ]);
+});
+
+test('concurrent suites inherit scheduling while explicit sequential cases wait', async () => {
+  const registry = createRegistry();
+  const hookCounts = {
+    beforeAll: 0,
+    beforeEach: 0,
+    afterEach: 0,
+    afterAll: 0,
+  };
+  let active = 0;
+  let started = 0;
+  let release;
+  const bothStarted = new Promise(resolve => {
+    release = resolve;
+  });
+
+  registry.describe.concurrent('shared Meteor runtime', () => {
+    registry.beforeAll(() => {
+      hookCounts.beforeAll += 1;
+    });
+    registry.beforeEach(() => {
+      hookCounts.beforeEach += 1;
+    });
+    registry.afterEach(() => {
+      hookCounts.afterEach += 1;
+    });
+    registry.afterAll(() => {
+      hookCounts.afterAll += 1;
+    });
+    for (const name of ['alpha', 'beta']) {
+      registry.test(name, async () => {
+        active += 1;
+        started += 1;
+        if (started === 2) release();
+        await bothStarted;
+        active -= 1;
+      });
+    }
+    registry.test.sequential('observes completed concurrent cases', () => {
+      assert.equal(active, 0);
+    });
+  });
+
+  const result = await registry.run({ testTimeout: 100 });
+
+  assert.equal(result.ok, true);
+  assert.equal(started, 2);
+  assert.deepEqual(hookCounts, {
+    beforeAll: 1,
+    beforeEach: 3,
+    afterEach: 3,
+    afterAll: 1,
+  });
+  assert.deepEqual(result.cases.map(item => item.name), [
+    'alpha',
+    'beta',
+    'observes completed concurrent cases',
+  ]);
+});
+
+test('runtime maxConcurrency bounds concurrent cases and keeps failures isolated', async () => {
+  const registry = createRegistry();
+  const releases = [];
+  let active = 0;
+  let maxActive = 0;
+  let started = 0;
+
+  for (let index = 0; index < 4; index += 1) {
+    registry.test.concurrent(`case ${index + 1}`, async () => {
+      started += 1;
+      active += 1;
+      maxActive = Math.max(maxActive, active);
+      await new Promise(resolve => {
+        releases[index] = resolve;
+      });
+      active -= 1;
+      if (index === 2) throw new Error('isolated concurrent failure');
+    });
+  }
+
+  const runPromise = registry.run({
+    maxConcurrency: 2,
+    testTimeout: 1000,
+  });
+  for (let attempt = 0; attempt < 20 && started < 2; attempt += 1) {
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.equal(started, 2);
+  assert.equal(maxActive, 2);
+  releases[0]();
+  releases[1]();
+  for (let attempt = 0; attempt < 20 && started < 4; attempt += 1) {
+    await new Promise(resolve => setImmediate(resolve));
+  }
+  assert.equal(started, 4);
+  assert.equal(maxActive, 2);
+  releases[2]();
+  releases[3]();
+
+  const result = await runPromise;
+
+  assert.equal(result.ok, false);
+  assert.deepEqual(result.cases.map(item => item.status), [
+    'pass',
+    'pass',
+    'fail',
+    'pass',
+  ]);
+  assert.match(result.cases[2].errors[0].message, /isolated concurrent failure/);
+});
+
 test('runtime registry attributes registered cases to their source file', async () => {
   const registry = createRegistry();
 

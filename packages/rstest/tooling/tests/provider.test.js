@@ -76,6 +76,7 @@ function settingsWriter(calls) {
       generation,
       testTimeout: 45000,
       hookTimeout: 15000,
+      maxConcurrency: 2,
     }));
     return { completion: Promise.resolve(0), async stop() {} };
   };
@@ -123,6 +124,7 @@ test('pure tests prepare native-only plan with opaque Rspack options', async t =
 
   assert.deepEqual(order, ['dependencies']);
   assert.equal(plan.mode, 'native-only');
+  assert.equal('driverPackage' in plan, false);
   assert.equal(plan.metadata.runtime, false);
   assert.equal(plan.buildPluginOptions.rspack.lifecycle, 'dependencies-only');
   assert.equal(plan.buildPluginOptions.rspack.context.runtime, false);
@@ -257,6 +259,7 @@ test('runtime-only selection uses config plan without leaking runtime filters to
   const plan = await provider.prepare();
 
   assert.equal(plan.mode, 'meteor-host');
+  assert.equal(plan.driverPackage, 'rstest');
   assert.ok(provider.runtimePlanArgs.includes('--once'));
   assert.ok(provider.runtimePlanArgs.includes('--runtime-plan-output'));
   assert.equal(provider.runtimePlanArgs.includes('--project'), false);
@@ -341,6 +344,7 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
     generation,
     testTimeout: 45000,
     hookTimeout: 15000,
+    maxConcurrency: 2,
   }));
   const runtimeManifest = path.join(workersRoot, 'server-1-files.json');
   fs.writeFileSync(runtimeManifest, JSON.stringify([runtimeFile]));
@@ -379,6 +383,7 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
   });
   assert.equal(preHost.exitCode, 0);
   assert.equal(plan.metadata.testTimeout, 45000);
+  assert.equal(plan.metadata.maxConcurrency, 2);
   assert.equal(installs, 0);
   assert.equal(starts, 0);
   assert.equal(updates.length, 1);
@@ -448,6 +453,7 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
 
   assert.deepEqual(order, ['manifest', 'dependencies', 'optional']);
   assert.equal(plan.mode, 'meteor-host');
+  assert.equal(plan.driverPackage, 'rstest');
   assert.equal(plan.metadata.runtime, true);
   assert.equal(plan.metadata.command, 'test-packages');
 });

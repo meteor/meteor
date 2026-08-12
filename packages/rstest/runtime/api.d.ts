@@ -39,12 +39,19 @@ export interface RuntimeTestFunction {
   skip(name: string, callback?: () => unknown): void;
   todo(name: string): void;
   only(name: string, callback: () => unknown | Promise<unknown>): void;
+  readonly concurrent: RuntimeTestFunction;
+  readonly sequential: RuntimeTestFunction;
+}
+
+export interface RuntimeDescribeFunction {
+  (name: string, callback: () => void): void;
+  readonly concurrent: RuntimeDescribeFunction;
+  readonly sequential: RuntimeDescribeFunction;
+  readonly skip: RuntimeDescribeFunction;
 }
 
 export const test: RuntimeTestFunction;
-export const describe: ((name: string, callback: () => void) => void) & {
-  skip(name: string, callback: () => void): void;
-};
+export const describe: RuntimeDescribeFunction;
 export const expect: (value: unknown) => RuntimeMatchers;
 export const beforeAll: (callback: () => unknown | Promise<unknown>) => void;
 export const afterAll: (callback: () => unknown | Promise<unknown>) => void;

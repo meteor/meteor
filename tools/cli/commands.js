@@ -2857,6 +2857,10 @@ async function doTestCommand(options) {
       return 1;
     }
     updateTestRunnerMetadata(testRunnerSelection, testRunnerPlan.metadata || {});
+    if (testRunnerPlan.driverPackage) {
+      global.testCommandMetadata.driverPackage =
+        testRunnerPlan.driverPackage;
+    }
     const { setTestRunnerContext } = require('../tool-env/test-runner-context.js');
     setTestRunnerContext({
       providerId: testRunnerSelection.id,

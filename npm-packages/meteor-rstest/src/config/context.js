@@ -1,7 +1,16 @@
 const { AsyncLocalStorage } = require('node:async_hooks');
 const path = require('node:path');
 
-const contextStorage = new AsyncLocalStorage();
+const CONTEXT_STORAGE = Symbol.for('@meteorjs/rstest/context-storage/v1');
+if (!globalThis[CONTEXT_STORAGE]) {
+  Object.defineProperty(globalThis, CONTEXT_STORAGE, {
+    value: new AsyncLocalStorage(),
+    configurable: false,
+    enumerable: false,
+    writable: false,
+  });
+}
+const contextStorage = globalThis[CONTEXT_STORAGE];
 const ROOT_FIELDS = ['appRoot', 'configRoot', 'harnessRoot', 'localDir'];
 
 function invalidContext(message) {

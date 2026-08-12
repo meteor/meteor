@@ -12,7 +12,10 @@ Package.onUse(function (api) {
   api.use('webapp', 'server');
   api.mainModule('server/main.js', 'server');
   api.mainModule('client/main.js', 'client');
-  api.addAssets('runtime/api.d.ts', 'server');
+  api.addAssets([
+    'runtime/api.d.ts',
+    'package-types.json',
+  ], 'server');
 });
 
 Package.registerTestRunnerPlugin({

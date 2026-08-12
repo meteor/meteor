@@ -175,16 +175,56 @@ function testPathFields(testPath) {
   return testPath ? { testPath } : {};
 }
 
-function createSuite(name, parent = null, mode = 'run', testPath) {
+function schedulingFor(parent, { concurrent = false, sequential = false } = {}) {
+  if (concurrent) return { concurrent: true, sequential: false };
+  if (sequential) return { concurrent: false, sequential: true };
+  if (parent?.concurrent) return { concurrent: true, sequential: false };
+  if (parent?.sequential) return { concurrent: false, sequential: true };
+  return { concurrent: false, sequential: false };
+}
+
+function createSuite(
+  name,
+  parent = null,
+  mode = 'run',
+  testPath,
+  scheduling,
+) {
   return {
+    type: 'suite',
     name,
     parent,
     mode,
+    ...schedulingFor(parent, scheduling),
     ...testPathFields(testPath),
+    tasks: [],
     suites: [],
     cases: [],
     hooks: { beforeAll: [], afterAll: [], beforeEach: [], afterEach: [] },
   };
+}
+
+function createConcurrencyLimit(maxConcurrency) {
+  let active = 0;
+  const queue = [];
+
+  const startNext = () => {
+    if (active >= maxConcurrency || queue.length === 0) return;
+    active += 1;
+    const { callback, resolve, reject } = queue.shift();
+    Promise.resolve()
+      .then(callback)
+      .then(resolve, reject)
+      .finally(() => {
+        active -= 1;
+        startNext();
+      });
+  };
+
+  return callback => new Promise((resolve, reject) => {
+    queue.push({ callback, resolve, reject });
+    startNext();
+  });
 }
 
 function createRegistry() {
@@ -202,35 +242,99 @@ function createRegistry() {
     }
   }
 
-  function describe(name, define, mode = 'run') {
-    const suite = createSuite(name, currentSuite, mode, currentTestPath);
+  function registerSuite(name, define, {
+    mode = 'run',
+    concurrent = false,
+    sequential = false,
+  } = {}) {
+    const suite = createSuite(name, currentSuite, mode, currentTestPath, {
+      concurrent,
+      sequential,
+    });
     currentSuite.suites.push(suite);
+    currentSuite.tasks.push(suite);
     const previous = currentSuite;
     currentSuite = suite;
     try {
-      define();
+      define?.();
     } finally {
       currentSuite = previous;
     }
   }
 
-  function registerCase(name, fn, mode = 'run') {
-    currentSuite.cases.push({
+  function registerCase(name, fn, {
+    mode = 'run',
+    concurrent = false,
+    sequential = false,
+  } = {}) {
+    const item = {
+      type: 'case',
       name,
       fn,
       mode,
+      ...schedulingFor(currentSuite, { concurrent, sequential }),
       ...testPathFields(currentTestPath),
+    };
+    currentSuite.cases.push(item);
+    currentSuite.tasks.push(item);
+  }
+
+  function createTestApi(modifiers = {}) {
+    const api = (name, fn) => registerCase(name, fn, modifiers);
+    Object.defineProperties(api, {
+      concurrent: {
+        get: () => createTestApi({
+          ...modifiers,
+          concurrent: true,
+          sequential: false,
+        }),
+      },
+      sequential: {
+        get: () => createTestApi({
+          ...modifiers,
+          concurrent: false,
+          sequential: true,
+        }),
+      },
+      only: {
+        get: () => createTestApi({ ...modifiers, mode: 'only' }),
+      },
+      skip: {
+        get: () => createTestApi({ ...modifiers, mode: 'skip' }),
+      },
+      todo: {
+        get: () => createTestApi({ ...modifiers, mode: 'todo' }),
+      },
     });
+    return api;
   }
 
-  function test(name, fn) {
-    registerCase(name, fn, 'run');
+  function createDescribeApi(modifiers = {}) {
+    const api = (name, define) => registerSuite(name, define, modifiers);
+    Object.defineProperties(api, {
+      concurrent: {
+        get: () => createDescribeApi({
+          ...modifiers,
+          concurrent: true,
+          sequential: false,
+        }),
+      },
+      sequential: {
+        get: () => createDescribeApi({
+          ...modifiers,
+          concurrent: false,
+          sequential: true,
+        }),
+      },
+      skip: {
+        get: () => createDescribeApi({ ...modifiers, mode: 'skip' }),
+      },
+    });
+    return api;
   }
-  test.skip = (name, fn) => registerCase(name, fn, 'skip');
-  test.todo = name => registerCase(name, null, 'todo');
-  test.only = (name, fn) => registerCase(name, fn, 'only');
 
-  describe.skip = (name, define) => describe(name, define, 'skip');
+  const test = createTestApi();
+  const describe = createDescribeApi();
 
   function hook(name, callback) {
     currentSuite.hooks[name].push({
@@ -352,13 +456,14 @@ function createRegistry() {
 
   async function runSuite(
     suite,
-    cases,
     onlyMode,
     testNamePattern,
     testTimeout,
     hookTimeout,
+    limitConcurrency,
     parentSkipped = false,
   ) {
+    const cases = [];
     const suiteSkipped = parentSkipped || suite.mode === 'skip';
     const shouldRunHooks = suiteWillRun(
       suite,
@@ -384,27 +489,43 @@ function createRegistry() {
         }
       }
     }
-    for (const item of suite.cases) {
-      cases.push(await runCase(
+    const runTask = task => {
+      if (task.type === 'suite') {
+        return runSuite(
+          task,
+          onlyMode,
+          testNamePattern,
+          testTimeout,
+          hookTimeout,
+          limitConcurrency,
+          suiteSkipped || beforeAllFailed,
+        );
+      }
+      const execute = () => runCase(
         suite,
-        item,
+        task,
         onlyMode,
         testNamePattern,
         suiteSkipped || beforeAllFailed,
         testTimeout,
         hookTimeout,
-      ));
-    }
-    for (const child of suite.suites) {
-      await runSuite(
-        child,
-        cases,
-        onlyMode,
-        testNamePattern,
-        testTimeout,
-        hookTimeout,
-        suiteSkipped || beforeAllFailed,
       );
+      return task.concurrent
+        ? limitConcurrency(execute).then(result => [result])
+        : execute().then(result => [result]);
+    };
+
+    const tasks = [...suite.tasks];
+    while (tasks.length > 0) {
+      const task = tasks.shift();
+      if (task.concurrent) {
+        const batch = [task];
+        while (tasks[0]?.concurrent) batch.push(tasks.shift());
+        const results = await Promise.all(batch.map(runTask));
+        cases.push(...results.flat());
+      } else {
+        cases.push(...await runTask(task));
+      }
     }
     if (shouldRunHooks) {
       for (const hook of suite.hooks.afterAll) {
@@ -421,20 +542,30 @@ function createRegistry() {
         }
       }
     }
+    return cases;
   }
 
   async function run({
     testNamePattern,
     testTimeout = 30000,
     hookTimeout = 10000,
+    maxConcurrency = 5,
   } = {}) {
-    const cases = [];
+    let cases = [];
     const onlyMode = hasOnly(root);
     const namePattern = testNamePattern instanceof RegExp
       ? testNamePattern
       : testNamePattern ? new RegExp(String(testNamePattern)) : null;
     try {
-      await runSuite(root, cases, onlyMode, namePattern, testTimeout, hookTimeout);
+      const limitConcurrency = createConcurrencyLimit(maxConcurrency);
+      cases = await runSuite(
+        root,
+        onlyMode,
+        namePattern,
+        testTimeout,
+        hookTimeout,
+        limitConcurrency,
+      );
     } catch (error) {
       cases.push({
         name: '<suite hook>',

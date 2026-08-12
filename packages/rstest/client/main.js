@@ -11,7 +11,15 @@ export const expect = api.expect;
 export const test = api.test;
 export const __registerTestFile = api.registerTestFile;
 
-export async function runTests() {
+let runPromise;
+
+export function runTests() {
+  if (runPromise) return runPromise;
+  runPromise = executeTests();
+  return runPromise;
+}
+
+async function executeTests() {
   const metadata = await Meteor.callAsync('rstest/getMetadata');
   if (!metadata || metadata.protocolVersion !== 1) {
     throw new Error('[Meteor Rstest] Invalid runtime metadata protocol payload.');
@@ -20,6 +28,7 @@ export async function runTests() {
     testNamePattern: metadata.testNamePattern,
     testTimeout: metadata.testTimeout,
     hookTimeout: metadata.hookTimeout,
+    maxConcurrency: metadata.maxConcurrency,
   });
   await Meteor.callAsync('rstest/submitClientResult', {
     protocolVersion: 1,
@@ -41,5 +50,3 @@ export function start() {
     });
   });
 }
-
-start();

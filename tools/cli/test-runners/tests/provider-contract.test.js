@@ -57,10 +57,12 @@ test('test-runner verbosity normalizes supported Meteor package config forms', (
 test('execution plan accepts only supported mode and JSON-safe opaque data', () => {
   assert.deepEqual(validateTestExecutionPlan({
     mode: 'meteor-host',
+    driverPackage: 'example:runtime',
     metadata: { generation: 1 },
     buildPluginOptions: { rspack: { testMode: 'runtime' } },
   }), {
     mode: 'meteor-host',
+    driverPackage: 'example:runtime',
     metadata: { generation: 1 },
     buildPluginOptions: { rspack: { testMode: 'runtime' } },
   });
@@ -76,6 +78,20 @@ test('execution plan accepts only supported mode and JSON-safe opaque data', () 
       buildPluginOptions: { rspack: 'runtime' },
     }),
     /buildPluginOptions\.rspack/
+  );
+  assert.throws(
+    () => validateTestExecutionPlan({
+      mode: 'native-only',
+      driverPackage: 'example:runtime',
+    }),
+    /driverPackage.*meteor-host/
+  );
+  assert.throws(
+    () => validateTestExecutionPlan({
+      mode: 'meteor-host',
+      driverPackage: '',
+    }),
+    /driverPackage.*non-empty string/
   );
 });
 

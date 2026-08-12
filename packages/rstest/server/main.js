@@ -47,6 +47,7 @@ if (isRstestActive) Meteor.methods({
       testNamePattern: metadata.rstestTestNamePattern || null,
       testTimeout: Number(metadata.rstestTestTimeout || 30000),
       hookTimeout: Number(metadata.rstestHookTimeout || 10000),
+      maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
     };
   },
   'rstest/submitClientResult'(payload) {
@@ -124,6 +125,7 @@ function testMetadata() {
         rstestTestNamePattern: payload.testNamePattern,
         rstestTestTimeout: payload.testTimeout,
         rstestHookTimeout: payload.hookTimeout,
+        rstestMaxConcurrency: payload.maxConcurrency,
         rstestToken: payload.token,
         rstestServer: payload.server,
         rstestClient: payload.client,
@@ -151,6 +153,7 @@ async function executeTests() {
       testNamePattern: metadata.rstestTestNamePattern,
       testTimeout: Number(metadata.rstestTestTimeout || 30000),
       hookTimeout: Number(metadata.rstestHookTimeout || 10000),
+      maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
     });
     const entry = { architecture: 'server', result: serverResult };
     results.push(entry);
@@ -208,14 +211,18 @@ async function executeTests() {
   return result;
 }
 
+let started = false;
+
 export function start() {
-  if (!isRstestActive) return;
-  Meteor.defer(() => {
+  if (!isRstestActive || started) return;
+  started = true;
+  // meteor/test_environment invokes driver start from its own startup hook.
+  // Queue execution once more so every hook already waiting, including async
+  // application and package initialization, settles before tests begin.
+  Meteor.startup(() => {
     executeTests().catch(error => {
       console.error(error && error.stack || error);
       process.exit(1);
     });
   });
 }
-
-start();

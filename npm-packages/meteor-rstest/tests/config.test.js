@@ -1,7 +1,13 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 
 const { defineConfig } = require('../index.js');
+const {
+  runtimeSettingsFromConfig,
+} = require('../src/coordinator.js');
 const {
   createMeteorRstestContext,
   withMeteorRstestContext,
@@ -29,6 +35,27 @@ test('object config remains directly usable by native Rstest', () => {
   assert.equal(defineConfig(config), config);
 });
 
+test('Meteor runtime settings preserve native maxConcurrency defaults and validation', () => {
+  assert.deepEqual(runtimeSettingsFromConfig({}), {
+    testTimeout: 30000,
+    hookTimeout: 10000,
+    maxConcurrency: 5,
+  });
+  assert.deepEqual(runtimeSettingsFromConfig({ maxConcurrency: 3 }), {
+    testTimeout: 30000,
+    hookTimeout: 10000,
+    maxConcurrency: 3,
+  });
+  assert.throws(
+    () => runtimeSettingsFromConfig({ maxConcurrency: 0 }),
+    error => {
+      assert.equal(error.code, 'METEOR_RSTEST_INVALID_MAX_CONCURRENCY');
+      assert.match(error.message, /positive integer/);
+      return true;
+    },
+  );
+});
+
 test('Meteor config factory receives immutable normalized context once', async () => {
   let calls = 0;
   const config = defineConfig(async context => {
@@ -53,6 +80,25 @@ test('Meteor config factory receives immutable normalized context once', async (
 
   assert.deepEqual(resolved, { test: { name: 'custom' } });
   assert.equal(calls, 1);
+});
+
+test('Meteor context crosses separately installed coordinator copies', async t => {
+  const duplicateRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-context-'));
+  const duplicatePath = path.join(duplicateRoot, 'context.js');
+  fs.copyFileSync(
+    path.resolve(__dirname, '../src/config/context.js'),
+    duplicatePath,
+  );
+  t.after(() => fs.rmSync(duplicateRoot, { recursive: true, force: true }));
+
+  const duplicateContext = require(duplicatePath);
+  const config = defineConfig(context => ({ command: context.command }));
+  const resolved = await duplicateContext.withMeteorRstestContext(
+    makeContext({ command: 'test-packages' }),
+    () => config(),
+  );
+
+  assert.deepEqual(resolved, { command: 'test-packages' });
 });
 
 test('Meteor context normalizes verbosity to a frozen boolean', () => {

@@ -41,6 +41,18 @@ function validateTestExecutionPlan(plan) {
   }
 
   const normalized = { mode: plan.mode };
+  if (plan.driverPackage !== undefined) {
+    if (plan.mode !== 'meteor-host') {
+      throw contractError(
+        'driverPackage is only valid for a meteor-host execution plan'
+      );
+    }
+    if (typeof plan.driverPackage !== 'string' ||
+        plan.driverPackage.trim().length === 0) {
+      throw contractError('driverPackage must be a non-empty string');
+    }
+    normalized.driverPackage = plan.driverPackage.trim();
+  }
   if (plan.metadata !== undefined) {
     normalized.metadata = validateRecord(plan.metadata, 'metadata');
   }

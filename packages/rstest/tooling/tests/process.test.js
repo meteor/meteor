@@ -161,3 +161,38 @@ test('supervised Rstest process resolves app-local binary and stops its group on
   assert.equal(await processHandle.completion, 0);
   assert.equal(fs.readFileSync(marker, 'utf8'), 'started\nstopped\n');
 });
+
+test('supervised Rstest process owns test-mode NODE_ENV', async t => {
+  const appRoot = createApp();
+  const packageRoot = path.join(appRoot, 'node_modules/@meteorjs/rstest');
+  const marker = path.join(appRoot, 'environment.json');
+  fs.mkdirSync(path.join(packageRoot, 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(packageRoot, 'package.json'), JSON.stringify({
+    name: '@meteorjs/rstest',
+    version: '0.0.0-test',
+  }));
+  fs.writeFileSync(path.join(packageRoot, 'bin/meteor-rstest.js'), `
+    require('node:fs').writeFileSync(${JSON.stringify(marker)}, JSON.stringify({
+      nodeEnv: process.env.NODE_ENV,
+      meteorTestRunner: process.env.METEOR_TEST_RUNNER,
+    }));
+  `);
+  t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
+
+  const processHandle = startRstestProcess({
+    appDir: appRoot,
+    args: [],
+    env: {
+      ...process.env,
+      NODE_ENV: 'production',
+      METEOR_TEST_RUNNER: 'rstest',
+    },
+    stdio: 'ignore',
+  });
+
+  assert.equal(await processHandle.completion, 0);
+  assert.deepEqual(JSON.parse(fs.readFileSync(marker, 'utf8')), {
+    nodeEnv: 'test',
+    meteorTestRunner: 'rstest',
+  });
+});
