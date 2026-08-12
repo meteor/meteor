@@ -113,6 +113,8 @@ function getFileExtensionsToIgnore() {
 export function configureMeteorForRspack() {
   const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
+  const isTest = isMeteorAppTest();
+  const isTestFullApp = isMeteorAppTestFullApp();
 
   // Ignore node_modules to prevent Meteor from processing them
   const projectRootFilesAndFolders = getMeteorAppFilesAndFolders({
@@ -215,11 +217,20 @@ export function configureMeteorForRspack() {
     }),
   ];
 
-  const testIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+  const normalTestIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
     getBuildFilePath({
       isTest: true,
     }),
   )}/**`;
+  const fullAppTestIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+    getBuildFilePath({
+      isTest: true,
+      isTestFullApp: true,
+    }),
+  )}/**`;
+  const testIgnorePaths = isTest
+    ? [isTestFullApp ? normalTestIgnorePath : fullAppTestIgnorePath]
+    : [normalTestIgnorePath, fullAppTestIgnorePath];
   const otherMainIgnorePath =
     (isMeteorAppDevelopment() &&
       `${RSPACK_BUILD_CONTEXT}/${path.dirname(
@@ -235,10 +246,8 @@ export function configureMeteorForRspack() {
       }),
     )}/**`;
   const foldersToIgnore = [
-    ...((isMeteorAppTest() && [otherMainIgnorePath]) || [
-      testIgnorePath,
-      otherMainIgnorePath,
-    ]),
+    ...testIgnorePaths,
+    otherMainIgnorePath,
     'node_modules/**',
     ...extraFoldersToIgnore,
   ].filter(Boolean);
@@ -308,6 +317,7 @@ export function configureMeteorForRspack() {
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
   const testClientModule = getBuildFilePath({
     isTest: true,
+    isTestFullApp,
     ...env,
     ...commandRole,
     isTestModule,
@@ -315,6 +325,7 @@ export function configureMeteorForRspack() {
   });
   const testServerModule = getBuildFilePath({
     isTest: true,
+    isTestFullApp,
     ...env,
     ...commandRole,
     isTestModule,
@@ -332,7 +343,7 @@ export function configureMeteorForRspack() {
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }),
   };
-  if (isMeteorAppTestFullApp()) {
+  if (isTestFullApp) {
     appEntrypoints = {
       ...appEntrypoints,
       mainClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,

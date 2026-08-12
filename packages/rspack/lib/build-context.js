@@ -148,17 +148,17 @@ export function ensureModuleFilesExist() {
     initialEntrypoints.testClient == null &&
     initialEntrypoints.testServer == null;
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
+  const isTestFullApp = isMeteorAppTestFullApp();
   const testClientFiles = {
     entryFile: initialEntrypoints.testClient || '',
-    outputFile: getBuildFilePath({ isTest: true, isTestModule, isClient: true, role: FILE_ROLE.output, onlyFilename: true }),
+    outputFile: getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isClient: true, role: FILE_ROLE.output, onlyFilename: true }),
     mainEntryFile: mainClientFiles.entryFile,
   };
   const testServerFiles = {
     entryFile: initialEntrypoints.testServer || '',
-    outputFile: getBuildFilePath({ isTest: true, isTestModule, isServer: true, role: FILE_ROLE.output, onlyFilename: true }),
+    outputFile: getBuildFilePath({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output, onlyFilename: true }),
     mainEntryFile: mainServerFiles.entryFile,
   };
-  const isTestFullApp = isMeteorAppTestFullApp();
 
   const moduleFiles = {
     /* Main module files for client and server */
@@ -189,14 +189,15 @@ export function ensureModuleFilesExist() {
       getBuildFileContent({ isTest: true, isTestFullApp, isTestModule, isServer: true, role: FILE_ROLE.output, ...testServerFiles }),
   };
 
-  // All modes' scaffolds are (re)generated on every run so that a later run in
-  // another mode always finds its `*-meteor.js` mainModule file already on
-  // disk. The `*-rspack.js` OUTPUT files are the exception: they receive the
-  // real compiled bundle from Rspack, so once one exists we only leave it be.
+  // Main and current test-mode scaffolds are regenerated on every run so their
+  // `*-meteor.js` mainModule files are available on disk. Rspack output bundles
+  // are the exception: they receive the real compiled bundle from Rspack, so
+  // once one exists we only leave it be.
   // Overwriting it with the placeholder here would wipe the live build output
   // of a concurrent instance in that mode (a dev server + a `meteor test` run
   // sharing an app directory), leaving it to serve a blank bundle.
-  const isOutputBundleFile = (filename) => filename.endsWith('-rspack.js');
+  const isOutputBundleFile = (filename) =>
+    filename.endsWith('-rspack.js') || filename.endsWith('-rspack.cjs');
 
   Object.entries(moduleFiles).forEach(([filename, defaultContent]) => {
     // 1. Build full path and ensure directory exists
@@ -328,7 +329,7 @@ export function getBuildFilePath(config) {
   // Determine the module part (directory name)
   let module = '';
   if (config?.isTest) {
-    module = 'test';
+    module = config?.isTestFullApp ? 'app-test' : 'test';
   } else if (config?.isMain) {
     module = 'main';
   }
@@ -401,7 +402,7 @@ function getBanner(config, side, env, module, role) {
   });
 
   // For test mode, use the existing banners
-  if (module === 'test') {
+  if (config?.isTest) {
     // Test file banners
     if (role === FILE_ROLE.entry) {
       if (!config?.entryFile) {
@@ -800,8 +801,8 @@ ${importContent}
  * So we scope the cleanup to the current mode: dev/prod removes only its
  * `main-*` module directories, the run/prod chunk & asset contexts and the
  * run/prod client bundle; a test (or full-app test) instance removes only the
- * `test` module directories and its own mode-suffixed chunk & asset contexts.
- * The `_build/*` module subdirectories are already mode-named; the
+ * test-mode module directory and its own mode-suffixed chunk & asset contexts.
+ * The `_build/*` module subdirectories are mode-named; the
  * assets/chunks contexts are mode-suffixed (see getRspackChunksContext) so the
  * two modes never share an on-disk directory.
  * @returns {void}
@@ -823,9 +824,9 @@ export function cleanBuildContextFiles() {
     let modeDirPaths;
     if (isTest) {
       modeDirPaths = [
-        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isTestModule: true }))),
-        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isClient: true }))),
-        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isServer: true }))),
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isTestFullApp, isTestModule: true }))),
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isTestFullApp, isClient: true }))),
+        path.dirname(path.join(buildContextPath, getBuildFilePath({ isTest: true, isTestFullApp, isServer: true }))),
       ];
     } else {
       const env = {

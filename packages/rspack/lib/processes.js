@@ -375,7 +375,9 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
   const isTestFullApp = isMeteorAppTestFullApp();
 
-  const module = isTest ? { isTest: true } : { isMain: true };
+  const module = isTest
+    ? { isTest: true, isTestFullApp }
+    : { isMain: true };
   const env = isMeteorAppDevelopment()
     ? { isDevelopment: true }
     : { isProduction: true };
