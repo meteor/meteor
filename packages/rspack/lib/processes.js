@@ -75,6 +75,25 @@ import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
 // Rspack's native code prints this marker when it aborts, e.g. when its
 // persistent cache was corrupted by a previous hard kill mid-write.
 const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
+const RSPACK_UNSET_ENV = ['METEOR_IGNORE'];
+
+/**
+ * Builds the environment passed to Rspack child processes. METEOR_IGNORE is
+ * consumed by meteor-tool, not Rspack, so it is omitted here and explicitly
+ * removed again by spawnProcess after the parent environment is merged.
+ * @param {Object} envs - Rspack-specific environment variables
+ * @returns {Object} Environment variables for spawnProcess
+ */
+function getRspackSpawnEnv(envs) {
+  const parentEnv = { ...process.env };
+  delete parentEnv.METEOR_IGNORE;
+
+  return inheritMeteorToolNodeFlags({
+    ...parentEnv,
+    ...getNodeBinEnv(),
+    ...envs,
+  });
+}
 
 /**
  * Creates a chunk-split-safe detector for the Rspack panic marker.
@@ -496,27 +515,6 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
 }
 
 /**
- * Builds the environment for a spawned rspack child process.
- * Inherits the meteor tool's environment but drops METEOR_IGNORE: it is only
- * consumed by the meteor tool itself (tools/fs/optimistic.ts), and on large
- * projects its dir-times-extension ignore patterns can grow to tens of
- * kilobytes — forwarding it to every rspack child wastes execve arg+env
- * budget (risking E2BIG on constrained systems) for a variable rspack never
- * reads.
- * @param {Object} envs - Extra environment variables for this spawn
- * @returns {Object} The environment object to pass to spawnProcess
- */
-function getRspackSpawnEnv(envs) {
-  const parentEnv = { ...process.env };
-  delete parentEnv.METEOR_IGNORE;
-  return inheritMeteorToolNodeFlags({
-    ...parentEnv,
-    ...getNodeBinEnv(),
-    ...envs,
-  });
-}
-
-/**
  * Starts Rspack for client in serve mode
  * @param {Object} options - Options for client serve
  * @param {Function} options.onCompile - Callback function to be called when compilation is complete
@@ -548,6 +546,7 @@ export function startRspackClientServe(options = {}) {
       // SIGTERM/SIGINT on its own.
       detached: process.platform !== 'win32',
       env: getRspackSpawnEnv(envs),
+      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (config && !!config?.devServerUrl) {
@@ -666,6 +665,7 @@ export function startRspackServerWatch(options = {}) {
     // Detach for the same reason as the client serve process; see comment there.
     detached: process.platform !== 'win32',
     env: getRspackSpawnEnv(envs),
+    unsetEnv: RSPACK_UNSET_ENV,
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
       if (onCompile && config && (config?.compilationCount || 0) > 0) {
@@ -772,6 +772,7 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
       {
       cwd: appDir,
       env: getRspackSpawnEnv(envs),
+      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (onCompile && config && (config?.compilationCount || 0) > 0) {

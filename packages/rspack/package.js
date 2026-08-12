@@ -8,7 +8,6 @@ Package.registerBuildPlugin({
   sources: [
     'lib/constants.js',
     'lib/file-extensions.js',
-    'lib/extensions.js',
     'lib/dependencies.js',
     'lib/build-context.js',
     'lib/processes.js',
@@ -34,5 +33,5 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use(['tinytest', 'ecmascript', 'rspack']);
-  api.addFiles(['lib/extensions.js', 'rspack_tests.js'], 'server');
+  api.mainModule('rspack_tests.js', 'server');
 });
