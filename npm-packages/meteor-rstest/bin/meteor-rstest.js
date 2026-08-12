@@ -31,6 +31,9 @@ function parseArgs(argv) {
     runtimeSettingsOutput: null,
     runtimeSettingsGeneration: null,
     resultOutput: null,
+    classifyCandidates: null,
+    classificationOutput: null,
+    routingManifest: null,
     architectures: [],
     client: true,
     server: true,
@@ -84,6 +87,15 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === '--result-output') {
       parsed.resultOutput = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--classify-candidates') {
+      parsed.classifyCandidates = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--classification-output') {
+      parsed.classificationOutput = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--routing-manifest') {
+      parsed.routingManifest = takeValue(argv, index, arg);
       index += 1;
     } else if (arg === '--architecture') {
       parsed.architectures.push(takeValue(argv, index, arg));
@@ -166,8 +178,38 @@ async function main() {
     phase: parsed.phase,
     client: parsed.client,
     server: parsed.server,
+    routingManifest: parsed.routingManifest
+      ? path.resolve(parsed.routingManifest)
+      : null,
     architectures: parsed.architectures.length > 0 ? parsed.architectures : undefined,
   });
+  if (parsed.classifyCandidates || parsed.classificationOutput) {
+    if (!parsed.classifyCandidates || !parsed.classificationOutput) {
+      throw new Error(
+        '[Meteor Rstest] --classify-candidates and --classification-output must be used together.'
+      );
+    }
+    const candidates = JSON.parse(fs.readFileSync(
+      path.resolve(parsed.classifyCandidates),
+      'utf8',
+    ));
+    if (!Array.isArray(candidates) || candidates.some(file => typeof file !== 'string')) {
+      throw new Error('[Meteor Rstest] Invalid classification candidate manifest.');
+    }
+    const { classifyRstestCandidates } = require('../src/routing/classifier.js');
+    const manifest = await classifyRstestCandidates({
+      appRoot: cwd,
+      candidates,
+      server: parsed.server,
+      client: parsed.client,
+    });
+    const outputPath = path.resolve(parsed.classificationOutput);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    const temporaryPath = `${outputPath}.${process.pid}.tmp`;
+    fs.writeFileSync(temporaryPath, JSON.stringify(manifest));
+    fs.renameSync(temporaryPath, outputPath);
+    return;
+  }
   if (parsed.runtimePlanOutput) {
     const {
       finalizeRstestConfig,

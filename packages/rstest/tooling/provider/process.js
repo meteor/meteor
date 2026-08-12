@@ -27,6 +27,9 @@ function buildRstestArgs({
   runtimeSettingsOutput,
   runtimeSettingsGeneration,
   resultOutput,
+  candidateManifest,
+  classificationOutput,
+  routingManifest,
   architectures,
   phase,
   passthrough,
@@ -71,6 +74,9 @@ function buildRstestArgs({
     args.push('--runtime-settings-generation', runtimeSettingsGeneration);
   }
   if (resultOutput) args.push('--result-output', resultOutput);
+  if (candidateManifest) args.push('--classify-candidates', candidateManifest);
+  if (classificationOutput) args.push('--classification-output', classificationOutput);
+  if (routingManifest) args.push('--routing-manifest', routingManifest);
   for (const architecture of [].concat(architectures || [])) {
     args.push('--architecture', architecture);
   }

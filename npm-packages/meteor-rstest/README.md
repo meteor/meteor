@@ -84,7 +84,9 @@ An explicit `--driver-package` always wins.
 `--driver-package <name>` always selects the runtime-driver route.
 `--test-runner <provider-id>` is an advanced provider override; normal Rstest
 usage needs neither because adding `rstest` activates its provider. One command
-uses one provider or driver. Reusing `--driver-package` for tool-side providers
+has one outer provider or explicit driver owner. Provider-owned Meteor hosts
+may reuse established driver startup contract internally; Rstest uses its
+Atmosphere package for that runtime adapter. Reusing `--driver-package` for tool-side providers
 would overload established package-inclusion semantics and would still require
 the provider lifecycle underneath. `driver` is policy vocabulary, not a
 provider id accepted by `--test-runner`.
@@ -119,6 +121,7 @@ module.exports = defineConfig(context => ({
   globals: true,
   retry: process.env.CI ? 2 : 0,
   testTimeout: context.fullApp ? 30_000 : 10_000,
+  maxConcurrency: 5,
   env: {
     METEOR_TEST_COMMAND: context.command,
     METEOR_TEST_ARCHITECTURES: context.architectures.join(','),
@@ -135,12 +138,61 @@ The context also exposes normalized `verbose`; it is true for top-level
 Factory configs must run through `meteor test`; standalone Rstest cannot supply
 this context. Native object configuration remains portable.
 
+Native and Meteor-runtime suites both support `test.concurrent` and
+`describe.concurrent`, bounded by `maxConcurrency` (default `5`). Runtime cases
+remain serial unless opted in, share their Meteor host and Mongo database, and
+can use `.sequential` as an ordering barrier. `--runtime-workers` stays the
+separate file-level mechanism for isolated Meteor hosts and databases.
+
+Pure projects retain upstream Rstest module mocking. Use `rs.mock`, `rs.fn`,
+and `rs.spyOn` directly from `@rstest/core`; Meteor's supervised Rstest process
+owns `NODE_ENV=test` so hoisting remains enabled even though Meteor CLI itself
+runs with a production environment.
+
 Meteor generates protected projects named `meteor-pure-server`,
 `meteor-pure-client`, `meteor-browser`, `meteor-runtime-server`,
 `meteor-runtime-client`, and `meteor-e2e`. Inline user projects remain supported
-when they use distinct names and explicit roots disjoint from every
-`tests/rstest` ownership root. Current beta rejects string/glob project entries
-until upstream expansion can be ownership-audited safely.
+with distinct names. Legacy root-only plans require disjoint project roots;
+import-aware plans exclude Meteor's exact owned files from overlapping app-root
+projects. Current beta rejects string/glob project entries until upstream
+expansion can be ownership-audited safely.
+
+### Import-aware routing
+
+Rstest tests do not need a routing directory. With the Rstest provider active,
+Meteor discovers ordinary `*.test.*` and `*.spec.*` candidates and asks one
+Rspack dependency graph to classify direct and transitive imports:
+
+| Resolved signal | Execution |
+|---|---|
+| `@rstest/core` | Native Rstest, Node by default |
+| `@rstest/browser` | Native Rstest Browser Mode |
+| `@rstest/playwright` | External E2E against the Meteor app URL |
+| `meteor/rstest`, or an Rstest-owned graph reaching `meteor/*` | Runtime adapter inside a real Meteor host |
+
+Static dynamic imports and CommonJS `require` participate. Type-only imports do
+not. Existing `tests/rstest/**` roots remain compatible ownership hints, while
+`tests/legacy/**` remains driver-owned. Unmarked files with no Rstest signal stay
+available to user-defined Rstest projects or legacy test routes.
+
+Fallback-only filename markers provide explicit ownership for globals or
+resolve environments and architectures that imports cannot distinguish:
+
+```text
+math.rstest.test.ts
+math.native.rstest.test.ts
+counter.dom.rstest.test.tsx
+items.server.meteor.rstest.test.ts
+subscription.client.meteor.rstest.test.ts
+counter.browser.rstest.test.tsx
+login.e2e.rstest.test.ts
+```
+
+Markers cannot force real `meteor/*`, Browser Mode, or Playwright dependencies
+into an incompatible runtime. Meteor reports that conflict before test startup.
+`--project`, `--test-file`, `--server-only`, and `--client-only` still narrow the
+inferred exact-file manifest. Dynamic `rstest.config` evaluation remains once per
+test generation and is not executed during dependency classification.
 
 Pure projects reuse `@meteorjs/rspack` SWC/`.swcrc`, resolution aliases and
 fallbacks, CSS and static-asset rules, Meteor compile-time side/test defines,
@@ -245,8 +297,8 @@ normal Meteor and reporter verbosity.
 
 For `meteor test-packages`, dynamic config evaluates once with
 `context.command === "test-packages"`, `packageTests === true`, and distinct
-application/harness roots. `testTimeout` and `hookTimeout` configure bounded
-Meteor runtime cases. Name filtering, browser choice, and side selection work.
+application/harness roots. `testTimeout`, `hookTimeout`, and `maxConcurrency`
+configure bounded Meteor runtime cases. Name filtering, browser choice, and side selection work.
 Worker-only project/file, coverage, snapshot-update, shard, and changed-file
 options fail before build instead of being ignored. Mixed Rstest and legacy
 package ownership also fails with exact split commands until real compatibility
@@ -301,6 +353,26 @@ reporters, include/exclude patterns, and report paths. Meteor-runtime projects c
 assertions, hooks, filtering, structured results, and architecture aggregation;
 they do not claim native Rstest snapshots, coverage, worker-only mocking, or
 snapshot internals.
+
+Native module mocking needs no Meteor adapter:
+
+```js
+import { expect, rs, test } from '@rstest/core';
+import { loadDeck } from './deck.js';
+
+rs.mock('./deck.js', () => ({
+  loadDeck: rs.fn(() => ['meteor', 'rspack']),
+}));
+
+test('uses a hoisted app-module mock', () => {
+  expect(loadDeck()).toEqual(['meteor', 'rspack']);
+});
+```
+
+Runtime tests should keep Meteor, Atmosphere, DDP, and Mongo real. Projects may
+add ordinary test-double libraries such as Sinon for spies or stubs around
+their own boundaries, but `@meteorjs/rstest` does not install one and does not
+translate it into Rstest module mocking.
 
 ## Playwright fixture
 

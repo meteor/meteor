@@ -11,6 +11,7 @@ const {
 } = require('./capabilities.js');
 const {
   inspectAppRstestCapability,
+  scanRstestCandidates,
   scanNativeRstestRoots,
   selectRstestInventory,
   selectRstestLanes,
@@ -38,6 +39,10 @@ const SERVER_PROJECTS = new Set([
   'meteor-pure-server',
   'meteor-runtime-server',
   'meteor-e2e',
+]);
+const GENERATED_PROJECTS = new Set([
+  ...CLIENT_PROJECTS,
+  ...SERVER_PROJECTS,
 ]);
 const PACKAGE_UNSUPPORTED_OPTIONS = [
   ['project', '--project'],
@@ -84,6 +89,7 @@ class RstestTestRunnerProvider {
       assertRstestOptionalCapabilities,
       selectRstestOptionalCapabilities,
       inspectAppRstestCapability,
+      scanRstestCandidates,
       scanNativeRstestRoots,
       selectRstestInventory,
       selectRstestLanes,
@@ -105,6 +111,9 @@ class RstestTestRunnerProvider {
     this.reportVerbose = this.verbose || requestsVerboseReporter(
       context.options.passthrough
     );
+    this.smartCandidates = [];
+    this.routingManifest = null;
+    this.classification = null;
   }
 
   async validate() {
@@ -168,6 +177,9 @@ class RstestTestRunnerProvider {
     const roots = this.services.scanNativeRstestRoots(appDir, {
       fullApp: options.fullApp,
     });
+    const candidateInventory = this.services.scanRstestCandidates(appDir, {
+      fullApp: options.fullApp,
+    });
     const explicitProjects = options.project;
     if (options.serverOnly && explicitProjects.some(name => CLIENT_PROJECTS.has(name)) ||
         options.clientOnly && explicitProjects.some(name => SERVER_PROJECTS.has(name))) {
@@ -190,6 +202,14 @@ class RstestTestRunnerProvider {
       projects: laneProjects,
       testFile: options.testFile,
     });
+    const selectedCompatibility = new Set(inventory.compatibilityFiles);
+    const usesGeneratedProject = explicitProjects.length === 0 ||
+      explicitProjects.some(project => GENERATED_PROJECTS.has(project));
+    this.smartCandidates = usesGeneratedProject
+      ? candidateInventory.candidateFiles.filter(file =>
+        selectedCompatibility.has(file)
+      )
+      : [];
     const explicitlyRequestsExternal = explicitProjects.includes('meteor-e2e') ||
       Boolean(options.testFile.length > 0 && inventory.externalFiles.length > 0);
     if (explicitlyRequestsExternal && !options.fullApp) {
@@ -201,13 +221,15 @@ class RstestTestRunnerProvider {
     if (!options.fullApp) inventory.externalFiles = [];
     const count = selectedCount(inventory);
     const hasUnknownProject = inventory.unknownProjects.length > 0;
-    if (explicitProjects.length > 0 && !hasUnknownProject && count === 0) {
+    if (explicitProjects.length > 0 && !hasUnknownProject && count === 0 &&
+        this.smartCandidates.length === 0) {
       throw rstestError(
         'METEOR_RSTEST_EMPTY_PROJECT',
         `Project ${explicitProjects.join(', ')} has no matching tests.`
       );
     }
-    if (options.testFile.length > 0 && count === 0 && !hasUnknownProject &&
+    if (options.testFile.length > 0 && count === 0 &&
+        this.smartCandidates.length === 0 && !hasUnknownProject &&
         !(inventory.compatibilityFiles.length > 0 && capability.hasRstestConfig)) {
       throw rstestError(
         inventory.compatibilityFiles.length > 0
@@ -218,7 +240,7 @@ class RstestTestRunnerProvider {
           : `--test-file ${options.testFile.join(', ')} matched no selected test.`
       );
     }
-    if (count === 0 && !hasUnknownProject &&
+    if (count === 0 && this.smartCandidates.length === 0 && !hasUnknownProject &&
         !capability.hasRstestConfig && roots.legacyFiles.length > 0) {
       throw rstestError(
         'METEOR_RSTEST_NO_OWNED_TESTS',
@@ -254,9 +276,10 @@ class RstestTestRunnerProvider {
         appDir,
         worker: this.context.worker,
       });
-      const selectedRuntimeFiles = new Set(inventory.runtimeFiles.map(file =>
-        fs.realpathSync(file)
-      ));
+      const selectedRuntimeFiles = new Set([
+        ...inventory.runtimeFiles,
+        ...candidateInventory.candidateFiles,
+      ].map(file => fs.realpathSync(file)));
       const unselected = this.workerPayload.runtimeFiles.find(
         file => !selectedRuntimeFiles.has(file)
       );
@@ -285,7 +308,8 @@ class RstestTestRunnerProvider {
         'External E2E projects require --once.'
       );
     }
-    if (!this.context.worker && options.runtimeWorkers > 1 && !needsRuntime) {
+    if (!this.context.worker && options.runtimeWorkers > 1 && !needsRuntime &&
+        this.smartCandidates.length === 0) {
       throw rstestError(
         'METEOR_RSTEST_RUNTIME_WORKERS_EMPTY',
         '--runtime-workers requires selected tests/rstest/runtime/server files.'
@@ -301,6 +325,161 @@ class RstestTestRunnerProvider {
       nativeServer,
       nativeClient,
     };
+  }
+
+  async _classifySmartCandidates(runtimeDir) {
+    const { appDir, localDir, npm, options } = this.context;
+    if (typeof this.services.classifyRstestCandidates === 'function') {
+      return this.services.classifyRstestCandidates({
+        appRoot: appDir,
+        candidates: this.smartCandidates,
+        server: !options.clientOnly,
+        client: !options.serverOnly,
+      });
+    }
+    const candidateManifest = path.join(runtimeDir, 'classification-candidates.json');
+    const classificationOutput = path.join(runtimeDir, 'classification.json');
+    fs.writeFileSync(candidateManifest, JSON.stringify(this.smartCandidates));
+    removeIfPresent(classificationOutput);
+    const process = this.services.startRstestProcess({
+      appDir,
+      packageRoot: npm.root,
+      args: buildRstestArgs({
+        appDir,
+        localDir,
+        once: true,
+        command: 'test',
+        server: !options.clientOnly,
+        client: !options.serverOnly,
+        candidateManifest,
+        classificationOutput,
+      }),
+    });
+    const code = await process.completion;
+    if (code !== 0) {
+      throw rstestError(
+        'METEOR_RSTEST_CLASSIFICATION_FAILED',
+        `Rstest dependency classification exited with status ${code}.`,
+      );
+    }
+    return JSON.parse(fs.readFileSync(classificationOutput, 'utf8'));
+  }
+
+  _applySmartClassification(classification, runtimeDir) {
+    const { options } = this.context;
+    const selection = this.selection;
+    const inventory = selection.inventory;
+    const arrays = [
+      'nativeNodeFiles', 'nativeDomFiles', 'browserFiles',
+      'runtimeServerFiles', 'runtimeClientFiles', 'externalFiles', 'legacyFiles',
+    ];
+    if (!classification || classification.schemaVersion !== 1 ||
+        arrays.some(field => !Array.isArray(classification[field]))) {
+      throw rstestError(
+        'METEOR_RSTEST_INVALID_CLASSIFICATION',
+        'Rstest dependency classification returned an invalid manifest.',
+      );
+    }
+    const oldNode = inventory.pureFiles.filter(file =>
+      /[\\/]tests[\\/]rstest[\\/]pure[\\/]server[\\/]/.test(file)
+    );
+    const oldDom = inventory.pureFiles.filter(file =>
+      /[\\/]tests[\\/]rstest[\\/]pure[\\/]client[\\/]/.test(file)
+    );
+    const oldBrowser = inventory.pureFiles.filter(file =>
+      /[\\/]tests[\\/]rstest[\\/]browser[\\/]/.test(file)
+    );
+    const oldRuntimeServer = inventory.runtimeFiles.filter(file =>
+      /[\\/]tests[\\/]rstest[\\/]runtime[\\/]server[\\/]/.test(file)
+    );
+    const oldRuntimeClient = inventory.runtimeFiles.filter(file =>
+      /[\\/]tests[\\/]rstest[\\/]runtime[\\/]client[\\/]/.test(file)
+    );
+    const selectedProjects = new Set(options.project);
+    const accepts = project => selectedProjects.size === 0 ||
+      selectedProjects.has(project);
+    const unique = values => [...new Set(values.map(file => path.resolve(file)))].sort();
+    const routing = {
+      schemaVersion: 1,
+      nativeNodeFiles: accepts('meteor-pure-server') && !options.clientOnly
+        ? unique([...oldNode, ...classification.nativeNodeFiles]) : [],
+      nativeDomFiles: accepts('meteor-pure-client') && !options.serverOnly
+        ? unique([...oldDom, ...classification.nativeDomFiles]) : [],
+      browserFiles: accepts('meteor-browser') && !options.serverOnly
+        ? unique([...oldBrowser, ...classification.browserFiles]) : [],
+      runtimeServerFiles: accepts('meteor-runtime-server') && !options.clientOnly
+        ? unique([...oldRuntimeServer, ...classification.runtimeServerFiles]) : [],
+      runtimeClientFiles: accepts('meteor-runtime-client') && !options.serverOnly
+        ? unique([...oldRuntimeClient, ...classification.runtimeClientFiles]) : [],
+      externalFiles: accepts('meteor-e2e')
+        ? unique([...inventory.externalFiles, ...classification.externalFiles]) : [],
+      legacyFiles: unique(classification.legacyFiles),
+    };
+    this.routingManifest = path.join(runtimeDir, 'routing-manifest.json');
+    fs.writeFileSync(this.routingManifest, JSON.stringify(routing));
+    this.classification = routing;
+
+    inventory.pureFiles = unique([
+      ...routing.nativeNodeFiles,
+      ...routing.nativeDomFiles,
+      ...routing.browserFiles,
+    ]);
+    inventory.runtimeFiles = unique([
+      ...routing.runtimeServerFiles,
+      ...routing.runtimeClientFiles,
+    ]);
+    inventory.externalFiles = [...routing.externalFiles];
+    selection.needsRuntime = inventory.runtimeFiles.length > 0;
+    selection.needsExternal = options.fullApp && inventory.externalFiles.length > 0;
+    const delegatesToUserConfig = options.project.length === 0 &&
+      selection.capability.hasRstestConfig &&
+      routing.legacyFiles.length > 0;
+    selection.shouldRunNative = inventory.pureFiles.length > 0 ||
+      inventory.unknownProjects.length > 0 || delegatesToUserConfig;
+    selection.nativeServer = !options.clientOnly && routing.nativeNodeFiles.length > 0;
+    selection.nativeClient = !options.serverOnly && (
+      routing.nativeDomFiles.length > 0 || routing.browserFiles.length > 0
+    );
+    if (options.project.length === 0) {
+      selection.nativeProjects = [
+        ...(routing.nativeNodeFiles.length > 0 ? ['meteor-pure-server'] : []),
+        ...(routing.nativeDomFiles.length > 0 ? ['meteor-pure-client'] : []),
+        ...(routing.browserFiles.length > 0 ? ['meteor-browser'] : []),
+      ];
+    }
+    if (inventory.externalFiles.length > 0 && !options.fullApp) {
+      throw rstestError(
+        'METEOR_RSTEST_FULL_APP_REQUIRED',
+        'Rstest E2E tests require --full-app.',
+      );
+    }
+    if (inventory.pureFiles.length === 0 && inventory.runtimeFiles.length === 0 &&
+        inventory.externalFiles.length === 0 &&
+        inventory.unknownProjects.length === 0 && !delegatesToUserConfig) {
+      throw rstestError(
+        'METEOR_RSTEST_NO_OWNED_TESTS',
+        `Found ${routing.legacyFiles.length} existing test file(s), but none are Rstest-owned.`,
+      );
+    }
+    if (selection.needsRuntime &&
+        (options.shard || options.changed || options.changedSince)) {
+      throw rstestError(
+        'METEOR_RSTEST_RUNTIME_OPTION_UNSUPPORTED',
+        '--shard and --changed are not supported for Meteor-runtime projects.',
+      );
+    }
+    if (options.runtimeWorkers > 1 && !selection.needsRuntime) {
+      throw rstestError(
+        'METEOR_RSTEST_RUNTIME_WORKERS_EMPTY',
+        '--runtime-workers requires selected Meteor-runtime tests.',
+      );
+    }
+    if (selection.needsExternal && !options.once) {
+      throw rstestError(
+        'METEOR_RSTEST_EXTERNAL_ONCE_REQUIRED',
+        'External E2E projects require --once.',
+      );
+    }
   }
 
   async prepare() {
@@ -326,7 +505,15 @@ class RstestTestRunnerProvider {
       });
     }
 
+    const runtimeDir = path.join(localDir, 'rstest');
+    fs.mkdirSync(runtimeDir, { recursive: true });
     const selection = this.selection;
+    if (!worker && this.smartCandidates.length > 0) {
+      this._applySmartClassification(
+        await this._classifySmartCandidates(runtimeDir),
+        runtimeDir,
+      );
+    }
     if (!worker) {
       const capabilities = this.services.selectRstestOptionalCapabilities({
         command,
@@ -340,8 +527,6 @@ class RstestTestRunnerProvider {
       });
     }
     const token = crypto.randomBytes(24).toString('base64url');
-    const runtimeDir = path.join(localDir, 'rstest');
-    fs.mkdirSync(runtimeDir, { recursive: true });
     this.runtimeSettingsPath = worker
       ? this.workerPayload.runtimeSettingsPath
       : selection.needsRuntime
@@ -359,12 +544,16 @@ class RstestTestRunnerProvider {
     }
 
     this.runtimeManifest = worker ? this.workerPayload.runtimeManifest : null;
-    if (!worker && command === 'test' && options.testFile.length > 0 &&
+    if (!worker && command === 'test' &&
         selection.inventory.runtimeFiles.length > 0) {
       this.runtimeManifest = path.join(runtimeDir, 'runtime-files.json');
       fs.writeFileSync(
         this.runtimeManifest,
-        JSON.stringify(selection.inventory.runtimeFiles)
+        JSON.stringify(this.classification ? {
+          schemaVersion: 2,
+          serverFiles: this.classification.runtimeServerFiles,
+          clientFiles: this.classification.runtimeClientFiles,
+        } : selection.inventory.runtimeFiles)
       );
     }
     this.externalResultPath = !worker && selection.needsExternal
@@ -390,6 +579,7 @@ class RstestTestRunnerProvider {
       changed: options.changed,
       changedSince: options.changedSince,
       phase: 'native',
+      routingManifest: this.routingManifest,
       passthrough: options.passthrough,
     };
     const serverArchitecture = architectures.find(architecture =>
@@ -408,7 +598,9 @@ class RstestTestRunnerProvider {
       ...commonArgs,
       harnessRoot: command === 'test-packages' ? harnessRoot : undefined,
       project: command === 'test' ? selection.nativeProjects : [],
-      testFile: command === 'test' ? options.testFile : [],
+      testFile: command === 'test' && !this.routingManifest
+        ? options.testFile
+        : [],
       passWithNoTests: command === 'test' &&
         options.project.length === 0 && options.testFile.length === 0 &&
         (selection.needsRuntime || selection.needsExternal),
@@ -444,6 +636,7 @@ class RstestTestRunnerProvider {
           client: !options.serverOnly,
         }),
         phase: 'native',
+        routingManifest: this.routingManifest,
       })
       : null;
     this.externalArgs = selection.needsExternal
@@ -451,9 +644,10 @@ class RstestTestRunnerProvider {
         ...commonArgs,
         once: true,
         project: 'meteor-e2e',
-        testFile: options.testFile,
+        testFile: this.routingManifest ? [] : options.testFile,
         resultOutput: this.externalResultPath,
         phase: 'external',
+        routingManifest: this.routingManifest,
         architectures: selectedArchitectures({
           server: !options.clientOnly,
           client: !options.serverOnly,
@@ -464,12 +658,20 @@ class RstestTestRunnerProvider {
     const hasDesktopBrowser = this.context.webArchs.some(arch =>
       arch === 'web.browser' || arch === 'web.browser.legacy'
     );
-    const runtimeClient = selection.inventory.runtimeFiles.some(file =>
-      /[\\/]runtime[\\/]client[\\/]/.test(file)
-    );
-    const runtimeServer = selection.inventory.runtimeFiles.some(file =>
-      /[\\/]runtime[\\/]server[\\/]/.test(file)
-    );
+    const runtimeClient = worker
+      ? false
+      : this.classification
+        ? this.classification.runtimeClientFiles.length > 0
+        : selection.inventory.runtimeFiles.some(file =>
+          /[\\/]runtime[\\/]client[\\/]/.test(file)
+        );
+    const runtimeServer = worker
+      ? this.workerPayload.runtimeFiles.length > 0
+      : this.classification
+        ? this.classification.runtimeServerFiles.length > 0
+        : selection.inventory.runtimeFiles.some(file =>
+          /[\\/]runtime[\\/]server[\\/]/.test(file)
+        );
     const client = !options.serverOnly && hasDesktopBrowser && (
       command === 'test-packages' || selection.needsRuntime && runtimeClient
     );

@@ -81,7 +81,18 @@ async function createPureProject(project, context, sharedConfig) {
       }
     }
   };
-  visit(project.root);
+  if (project.include) {
+    for (const relativeFile of project.include) {
+      const filePath = path.resolve(project.root, relativeFile);
+      assertPureSource({
+        filePath,
+        source: fs.readFileSync(filePath, 'utf8'),
+        aliases,
+      });
+    }
+  } else {
+    visit(project.root);
+  }
   const projection = createTestRspackConfig({
     root: context.appRoot,
     target: isClient ? 'web' : 'node',
@@ -143,7 +154,7 @@ async function createPureProject(project, context, sharedConfig) {
     ...sharedProjectConfig,
     name: project.name,
     root: project.root,
-    include: ['**/*.{test,spec}.?(c|m)[jt]s?(x)'],
+    include: project.include || ['**/*.{test,spec}.?(c|m)[jt]s?(x)'],
     testEnvironment: isClient ? 'jsdom' : 'node',
     tools: {
       ...sharedConfig.tools,
@@ -223,20 +234,44 @@ async function finalizeRstestConfig({ context, userConfig = {}, inlineConfig = {
     }
   }
 
-  const plan = createGeneratedProjects({ appRoot: context.appRoot });
-  const meteorOwnedRoots = plan.map(project => project.root);
-  for (const project of userProjects) {
-    if (!project) continue;
-    const projectRoot = path.resolve(context.appRoot, project.root || context.appRoot);
-    const ownedRoot = meteorOwnedRoots.find(root =>
-      pathContains(root, projectRoot) || pathContains(projectRoot, root)
+  const plan = createGeneratedProjects({
+    appRoot: context.appRoot,
+    routingManifest: context.routingManifest,
+  });
+  let finalizedUserProjects = userProjects;
+  if (context.routingManifest) {
+    const meteorOwnedFiles = plan.flatMap(project =>
+      (project.include || []).map(file => path.resolve(project.root, file))
     );
-    if (ownedRoot) {
-      throw configError(
-        'METEOR_RSTEST_PROJECT_ROOT_CONFLICT',
-        `Project "${project.name || '<unnamed>'}" root ${JSON.stringify(projectRoot)} overlaps ` +
-        `Meteor-owned root ${JSON.stringify(ownedRoot)}. Configure an explicit disjoint root.`
+    finalizedUserProjects = userProjects.map(project => {
+      if (!project) return project;
+      const projectRoot = path.resolve(
+        context.appRoot,
+        project.root || context.appRoot,
       );
+      const excludes = meteorOwnedFiles
+        .filter(file => pathContains(projectRoot, file))
+        .map(file => path.relative(projectRoot, file).split(path.sep).join('/'));
+      return excludes.length > 0 ? {
+        ...project,
+        exclude: [...new Set([...project.exclude || [], ...excludes])],
+      } : project;
+    });
+  } else {
+    const meteorOwnedRoots = plan.map(project => project.root);
+    for (const project of userProjects) {
+      if (!project) continue;
+      const projectRoot = path.resolve(context.appRoot, project.root || context.appRoot);
+      const ownedRoot = meteorOwnedRoots.find(root =>
+        pathContains(root, projectRoot) || pathContains(projectRoot, root)
+      );
+      if (ownedRoot) {
+        throw configError(
+          'METEOR_RSTEST_PROJECT_ROOT_CONFLICT',
+          `Project "${project.name || '<unnamed>'}" root ${JSON.stringify(projectRoot)} overlaps ` +
+          `Meteor-owned root ${JSON.stringify(ownedRoot)}. Configure an explicit disjoint root.`
+        );
+      }
     }
   }
   const generated = [];
@@ -250,8 +285,20 @@ async function finalizeRstestConfig({ context, userConfig = {}, inlineConfig = {
     generated.push(await createPureProject(project, context, merged));
   }
 
-  const projects = context.packageTests ? [] : [...generated, ...userProjects];
+  const projects = context.packageTests
+    ? []
+    : [...generated, ...finalizedUserProjects];
   assertProjectNames(projects);
+
+  const usesTopLevelProject = Boolean(
+    context.routingManifest &&
+    !context.packageTests &&
+    generated.length === 0 &&
+    userProjects.length === 0
+  );
+  const topLevelOwnedFiles = usesTopLevelProject
+    ? plan.flatMap(project => project.include || [])
+    : [];
 
   return {
     ...merged,
@@ -259,7 +306,12 @@ async function finalizeRstestConfig({ context, userConfig = {}, inlineConfig = {
       reporters: 'verbose',
     }),
     root: context.appRoot,
-    projects,
+    ...(usesTopLevelProject ? {
+      exclude: [...new Set([
+        ...merged.exclude || [],
+        ...topLevelOwnedFiles,
+      ])],
+    } : { projects }),
     passWithNoTests: merged.passWithNoTests ?? false,
   };
 }

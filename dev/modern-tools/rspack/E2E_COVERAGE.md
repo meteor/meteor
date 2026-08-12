@@ -205,25 +205,31 @@ fixtures, this app uses a dedicated command matrix rather than the common
 run/build lifecycle helper.
 
 - Fixture: `tools/e2e-tests/apps/rspack-rstest/`
-- Suite: `tools/e2e-tests/rspack-rstest.test.js`
-- Focused run: `tools/e2e-tests/node_modules/.bin/jest --config tools/e2e-tests/jest.config.js --runInBand --no-watchman tools/e2e-tests/rspack-rstest.test.js`
+- Suite: `tools/e2e-tests/rstest.test.js`
+- Focused run: `tools/e2e-tests/node_modules/.bin/jest --config tools/e2e-tests/jest.config.js --runInBand --no-watchman tools/e2e-tests/rstest.test.js`
 
 Verified coverage:
 
 | What is covered | Scenario |
 |----------------|----------|
 | `meteor test` automatically selects Rstest from the Atmosphere capability | Pure/runtime server |
+| One Rspack dependency graph routes colocated tests by direct/transitive `@rstest/*` and `meteor/*` signals; global APIs and server-only Mongo use filename opt-ins without directory ownership | Smart-routing fixture lane |
+| Exact routing manifests keep native Rstest selection, Meteor server/client eager entries, and user config projects disjoint; incompatible runtime markers fail before execution | Unit characterization, smart-routing fixture lane |
 | One test-only `rstest` package owns runtime plus isolated `tooling/` provider; no second Atmosphere support package is required | Fixture init, automatic selection, runtime |
-| Local npm mirror installs `@meteorjs/rspack` inside `@meteorjs/rstest`, then persists both app links without global npm state | Fixture init |
+| Local npm mirror packs `@meteorjs/rspack` and `@meteorjs/rstest` as regular app installs without global npm state or source-tree dependency leakage | Fixture init |
 | Atmosphere-owned bootstrap installs only `@meteorjs/rstest`, `@rstest/core`, and `@rstest/adapter-rspack`; fixture explicitly owns jsdom, Browser Mode, coverage, and Playwright dependencies | Fixture init, all optional lanes |
 | Optional capability preflight resolves dependencies from project, never installs them, and provides npm/browser installation guidance when selected capability is missing | Unit characterization, fixture dependency policy |
 | Dynamic `@meteorjs/rstest.defineConfig(context)` receives command, roots, server/client selection, and architecture data | Pure server/client |
 | Native Rstest uses `@rstest/adapter-rspack` with shared SWC, aliases/fallbacks, CSS/assets, Meteor compile-time defines, and compatible `tools.rspack` composition | Pure server/client, Browser Mode, unit characterization |
+| Native `rs.mock` hoisting and `rs.fn` use upstream Rstest under Meteor's projected Rspack config; supervised Rstest owns `NODE_ENV=test` instead of inheriting Meteor CLI's production environment | Pure server, process characterization |
 | Inline, committed external, and committed file snapshots; mismatch exits nonzero, `--update-snapshots` rewrites the temporary snapshot, and a clean rerun passes | Pure server, snapshot update |
 | `--coverage` instruments imported Rspack source and writes a parsed Istanbul JSON report | Pure server, native coverage |
 | jsdom client project | Client-only |
 | Real Chromium Browser Mode with semantic locators, a real click/state update, auto-waiting assertions, and an inline DOM snapshot | Browser project, client-only |
 | Meteor-runtime server resolves `meteor/*`, Atmosphere packages, and MongoDB | Server runtime |
+| Tool-side provider selects Atmosphere `rstest` as its host driver adapter, so async server startup hooks settle before tests and `Meteor.isPackageTest` remains true | Runtime/package lifecycle |
+| Native `describe.concurrent` and Meteor-runtime `describe.concurrent` overlap cases, honor inherited scheduling, stop at config-derived `maxConcurrency: 2`, and wait at explicit `.sequential` barriers | Native/runtime concurrency |
+| Meteor-runtime concurrent cases retain one real Meteor process/database while hooks and structured results remain suite-owned and declaration-ordered | Runtime concurrency |
 | `--runtime-workers 2` evaluates Rstest planning once, prepares Meteor packages once, partitions exact server files, and starts two isolated Rspack/Meteor hosts on deterministic proxy/Mongo port pairs | Runtime worker pool |
 | Two hosts insert the same `_id` into the same named collection, proving distinct local Mongo databases; worker IDs and prefixed output identify each process | Runtime worker isolation |
 | Worker results aggregate in stable order; two passes exit `0`, while one transported assertion failure preserves its sibling and exits `1` | Runtime worker aggregation |
@@ -250,6 +256,7 @@ Verified coverage:
 | Missing files, empty generated projects, project/side conflicts, and E2E without full-app fail nonzero | Selection safety |
 | Server/client/external results aggregate through authenticated versioned transports and determine process exit; diagnostic machine frames are debug-only | Runtime and E2E |
 | External JSON reporting preserves real Rstest case names, counts, durations, and errors | Full-app E2E |
+| Native Rstest watch stays supervised by Meteor and reruns a changed selected file without leaking protocol payloads | Native watch |
 | Runtime watch rebuild reruns changed runtime tests once without leaking transport payloads | Runtime watch |
 | Transported runtime assertion failure retains case name and exits nonzero | Runtime failure |
 | Native Rstest roots are excluded from Meteor eager discovery; runtime roots are excluded from native Rstest discovery | All |
@@ -261,7 +268,7 @@ Deliberate non-claims keep this fixture focused:
 | Running Tinytest or Mocha cases through Rstest | Legacy registries keep their real driver semantics; no compatibility adapter or merged result stream is claimed |
 | Firefox/WebKit Browser Mode matrix | Chromium proves Browser Mode integration; upstream browser matrix belongs to Rstest/Playwright |
 | React/Vue/Svelte component matrices under Rstest | Existing framework apps cover Rspack integration; this fixture covers engine and Meteor lifecycle boundaries |
-| Runtime coverage, runtime snapshots, hoisted mocking, and sharding | Native Rstest may own these features; Meteor-runtime executor does not claim them yet |
+| Runtime coverage, runtime snapshots, runtime module-mock hoisting, and runtime sharding | Native Rstest owns these features where applicable; Meteor-runtime executor does not claim them yet |
 | Client/browser, watch, full-app, package-test, driver, and external-Mongo runtime worker pools | Initial `--runtime-workers` slice requires `meteor test --once --server-only` and keeps all other routes unchanged |
 | `web.browser.legacy` and `web.cordova` runtime execution | Current executor contract covers server and `web.browser` |
 | Visual screenshot baselines | DOM snapshots and real interaction are covered without platform-sensitive image baselines |

@@ -227,3 +227,75 @@ test('coordinator rejects project and root forms that bypass Meteor ownership', 
     return true;
   });
 });
+
+test('smart routing owns exact files while preserving app-root user projects', async t => {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-smart-'));
+  t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
+  const ownedFile = path.join(appRoot, 'imports/math.rstest.test.js');
+  const routingManifest = path.join(appRoot, '.meteor/local/rstest/routes.json');
+  fs.mkdirSync(path.dirname(ownedFile), { recursive: true });
+  fs.mkdirSync(path.dirname(routingManifest), { recursive: true });
+  fs.writeFileSync(ownedFile, `test('smart', () => expect(true).toBe(true));`);
+  fs.writeFileSync(routingManifest, JSON.stringify({
+    schemaVersion: 1,
+    nativeNodeFiles: [ownedFile],
+    nativeDomFiles: [],
+    browserFiles: [],
+    runtimeServerFiles: [],
+    runtimeClientFiles: [],
+    externalFiles: [],
+    legacyFiles: [],
+  }));
+
+  const config = await finalizeRstestConfig({
+    context: createMeteorRstestContext({
+      appRoot,
+      once: true,
+      routingManifest,
+    }),
+    userConfig: {
+      projects: [{ name: 'custom', root: appRoot, include: ['**/*.test.js'] }],
+    },
+  });
+
+  const generated = config.projects.find(project =>
+    project.name === 'meteor-pure-server'
+  );
+  const custom = config.projects.find(project => project.name === 'custom');
+  assert.deepEqual(generated.include, ['imports/math.rstest.test.js']);
+  assert.ok(custom.exclude.includes('imports/math.rstest.test.js'));
+});
+
+test('smart routing preserves top-level config for otherwise unowned tests', async t => {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-top-level-'));
+  t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
+  const runtimeFile = path.join(appRoot, 'imports/items.meteor.rstest.test.js');
+  const legacyFile = path.join(appRoot, 'imports/config-owned.test.js');
+  const routingManifest = path.join(appRoot, '.meteor/local/rstest/routes.json');
+  fs.mkdirSync(path.dirname(runtimeFile), { recursive: true });
+  fs.mkdirSync(path.dirname(routingManifest), { recursive: true });
+  fs.writeFileSync(runtimeFile, '');
+  fs.writeFileSync(legacyFile, '');
+  fs.writeFileSync(routingManifest, JSON.stringify({
+    schemaVersion: 1,
+    nativeNodeFiles: [],
+    nativeDomFiles: [],
+    browserFiles: [],
+    runtimeServerFiles: [runtimeFile],
+    runtimeClientFiles: [],
+    externalFiles: [],
+    legacyFiles: [legacyFile],
+  }));
+
+  const config = await finalizeRstestConfig({
+    context: createMeteorRstestContext({
+      appRoot,
+      once: true,
+      routingManifest,
+    }),
+    userConfig: { include: ['imports/config-owned.test.js'], globals: true },
+  });
+
+  assert.equal(config.projects, undefined);
+  assert.ok(config.exclude.includes('imports/items.meteor.rstest.test.js'));
+});

@@ -12,6 +12,7 @@ const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js')
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
 const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
 const { generateEagerTestFile } = require("./lib/test.js");
+const { readRstestRuntimeInventory } = require('./lib/rstest.js');
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
   compileWithMeteor,
@@ -228,23 +229,19 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const compatibilityIgnoreEntries = isRstestTest
     ? ['**/tests/legacy/**']
     : isTest ? ['**/tests/rstest/runtime/**'] : [];
-  const rstestRuntimeClientRoot = path.resolve(
+  let rstestRuntimeRoot = path.resolve(
     projectDir,
-    'tests/rstest/runtime/client',
-  );
-  const rstestRuntimeServerRoot = path.resolve(
-    projectDir,
-    'tests/rstest/runtime/server',
+    `tests/rstest/runtime/${isClient ? 'client' : 'server'}`,
   );
   let rstestRuntimeFiles;
   if (isRstestTest && testRunnerContext.runtimeManifest) {
-    try {
-      rstestRuntimeFiles = JSON.parse(
-        fs.readFileSync(testRunnerContext.runtimeManifest, 'utf8'),
-      );
-    } catch {
-      throw new Error('[Meteor Rstest] Invalid runtime file inventory from Meteor CLI.');
-    }
+    const inventory = readRstestRuntimeInventory({
+      manifest: testRunnerContext.runtimeManifest,
+      projectDir,
+      client: isClient,
+    });
+    rstestRuntimeRoot = inventory.discoveryRoot;
+    rstestRuntimeFiles = inventory.files;
   }
   const rstestTestFileRegistration = isRstestTest ? {
     module: 'meteor/rstest',
@@ -519,7 +516,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           // full-app run. Full-app controls the extra app entry independently.
           isAppTest: !isRstestTest,
           projectDir,
-          discoveryRoot: isRstestTest ? rstestRuntimeClientRoot : projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,
@@ -534,7 +531,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           isAppTest: false,
           isClient: true,
           projectDir,
-          discoveryRoot: isRstestTest ? rstestRuntimeClientRoot : projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,
@@ -708,7 +705,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? generateEagerTestFile({
           isAppTest: !isRstestTest,
           projectDir,
-          discoveryRoot: isRstestTest ? rstestRuntimeServerRoot : projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,
@@ -721,7 +718,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? generateEagerTestFile({
           isAppTest: false,
           projectDir,
-          discoveryRoot: isRstestTest ? rstestRuntimeServerRoot : projectDir,
+          discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,

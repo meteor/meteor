@@ -110,6 +110,22 @@ test('Meteor context normalizes verbosity to a frozen boolean', () => {
   assert.ok(Object.isFrozen(verbose));
 });
 
+test('Meteor context preserves an absolute routing manifest', () => {
+  const context = makeContext({
+    routingManifest: '/tmp/meteor-local/rstest/routing.json',
+  });
+
+  assert.equal(
+    context.routingManifest,
+    '/tmp/meteor-local/rstest/routing.json',
+  );
+  assert.ok(Object.isFrozen(context));
+  assert.throws(
+    () => makeContext({ routingManifest: 'relative/routing.json' }),
+    /routingManifest must be an absolute path/,
+  );
+});
+
 test('Meteor context factory fails clearly when called by standalone Rstest', () => {
   const config = defineConfig(() => ({}));
 

@@ -1,4 +1,6 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = require('node:test');
 
@@ -29,6 +31,47 @@ test('generated projects keep compiler ownership explicit', () => {
     projects.find(project => project.name === 'meteor-runtime-server').root,
     path.join(appRoot, 'tests/rstest/runtime/server')
   );
+});
+
+test('routing manifest generates exact-file projects outside legacy roots', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-routes-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const nativeFile = path.join(root, 'imports/math.test.ts');
+  const runtimeFile = path.join(root, 'imports/items.server.meteor.rstest.test.ts');
+  const manifestPath = path.join(root, '.meteor/local/rstest/routing.json');
+  fs.mkdirSync(path.dirname(manifestPath), { recursive: true });
+  fs.writeFileSync(manifestPath, JSON.stringify({
+    schemaVersion: 1,
+    nativeNodeFiles: [nativeFile],
+    nativeDomFiles: [],
+    browserFiles: [],
+    runtimeServerFiles: [runtimeFile],
+    runtimeClientFiles: [],
+    externalFiles: [],
+    legacyFiles: [],
+  }));
+
+  const projects = createGeneratedProjects({
+    appRoot: root,
+    routingManifest: manifestPath,
+  });
+
+  assert.deepEqual(projects.map(project => ({
+    name: project.name,
+    root: project.root,
+    include: project.include,
+  })), [
+    {
+      name: 'meteor-pure-server',
+      root,
+      include: ['imports/math.test.ts'],
+    },
+    {
+      name: 'meteor-runtime-server',
+      root,
+      include: ['imports/items.server.meteor.rstest.test.ts'],
+    },
+  ]);
 });
 
 test('file classification never silently moves native roots between compilers', () => {

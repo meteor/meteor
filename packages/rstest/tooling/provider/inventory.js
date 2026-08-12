@@ -74,7 +74,8 @@ function collectTestFiles(root) {
 }
 
 function collectCompatibilityFiles(appDir, { fullApp = false } = {}) {
-  const matcher = fullApp ? APP_TEST_FILE : RSTEST_FILE;
+  const matches = filename => RSTEST_FILE.test(filename) ||
+    fullApp && APP_TEST_FILE.test(filename);
   const files = [];
   const visit = directory => {
     if (!fs.existsSync(directory)) return;
@@ -88,7 +89,7 @@ function collectCompatibilityFiles(appDir, { fullApp = false } = {}) {
       }
       const filePath = path.join(directory, entry.name);
       if (entry.isDirectory()) visit(filePath);
-      else if (entry.isFile() && matcher.test(entry.name)) files.push(filePath);
+      else if (entry.isFile() && matches(entry.name)) files.push(filePath);
     }
   };
   visit(appDir);
@@ -109,6 +110,35 @@ function collectCompatibilityFiles(appDir, { fullApp = false } = {}) {
   return [...new Set(files)]
     .filter(filePath => !filePath.startsWith(nativeRoot))
     .sort();
+}
+
+function scanRstestCandidates(appDir, { fullApp = false } = {}) {
+  const matches = filename => RSTEST_FILE.test(filename) ||
+    fullApp && APP_TEST_FILE.test(filename);
+  const candidateFiles = [];
+  const legacyRootFiles = [];
+  const legacyRoot = path.join(appDir, 'tests', 'legacy') + path.sep;
+  const visit = directory => {
+    if (!fs.existsSync(directory)) return;
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.isDirectory() && (
+        COMPATIBILITY_IGNORED_DIRS.has(entry.name) ||
+        entry.name.startsWith('build-assets') ||
+        entry.name.startsWith('build-chunks')
+      )) continue;
+      const filePath = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(filePath);
+      else if (entry.isFile() && matches(entry.name)) {
+        if (filePath.startsWith(legacyRoot)) legacyRootFiles.push(filePath);
+        else candidateFiles.push(filePath);
+      }
+    }
+  };
+  visit(appDir);
+  return {
+    candidateFiles: [...new Set(candidateFiles)].sort(),
+    legacyRootFiles: [...new Set(legacyRootFiles)].sort(),
+  };
 }
 
 function scanNativeRstestRoots(appDir, { fullApp = false } = {}) {
@@ -196,6 +226,7 @@ function selectRstestInventory({ appDir, roots, projects, testFile }) {
 module.exports = {
   collectCompatibilityFiles,
   inspectAppRstestCapability,
+  scanRstestCandidates,
   scanNativeRstestRoots,
   selectRstestInventory,
   selectRstestLanes,

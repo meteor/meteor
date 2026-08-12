@@ -85,6 +85,24 @@ test('architecture selection is forwarded to dynamic Rstest config context', () 
   ]);
 });
 
+test('classification and routing manifests stay wrapper-owned', () => {
+  assert.deepEqual(buildRstestArgs({
+    appDir: '/app',
+    localDir: '/local',
+    command: 'test',
+    candidateManifest: '/local/rstest/candidates.json',
+    classificationOutput: '/local/rstest/classification.json',
+    routingManifest: '/local/rstest/routes.json',
+  }), [
+    '--cwd', '/app',
+    '--local-dir', '/local',
+    '--command', 'test',
+    '--classify-candidates', '/local/rstest/candidates.json',
+    '--classification-output', '/local/rstest/classification.json',
+    '--routing-manifest', '/local/rstest/routes.json',
+  ]);
+});
+
 test('native passthrough cannot replace Meteor-owned config or project plan', () => {
   for (const argument of [
     '--config=other.js', '-c=other.js', '--root', '--project=other',

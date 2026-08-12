@@ -37,13 +37,6 @@ function canonicalRuntimeServerFiles({ appDir, files }) {
     );
   }
   const realAppDir = fs.realpathSync(appDir);
-  const serverRoot = path.join(
-    realAppDir,
-    'tests',
-    'rstest',
-    'runtime',
-    'server'
-  );
   const seen = new Set();
   const normalized = files.map(file => {
     if (typeof file !== 'string' || !path.isAbsolute(file)) {
@@ -61,10 +54,10 @@ function canonicalRuntimeServerFiles({ appDir, files }) {
         `Runtime worker file does not exist: ${file}`
       );
     }
-    if (!inside(serverRoot, canonical)) {
+    if (!inside(realAppDir, canonical)) {
       throw workerError(
         'METEOR_RSTEST_WORKER_FILE',
-        `Runtime worker file must be under tests/rstest/runtime/server: ${file}`
+        `Runtime worker file must be inside Meteor app root: ${file}`
       );
     }
     if (seen.has(canonical)) {
@@ -155,7 +148,11 @@ function createRstestHostDescriptors({
     const id = `server-${index + 1}`;
     const runtimeManifest = path.join(workersRoot, `${id}-files.json`);
     const resultPath = path.join(workersRoot, `${id}-result.json`);
-    writePrivateJson(runtimeManifest, runtimeFiles);
+    writePrivateJson(runtimeManifest, {
+      schemaVersion: 2,
+      serverFiles: runtimeFiles,
+      clientFiles: [],
+    });
     removeIfPresent(resultPath);
     return Object.freeze({
       id,
@@ -238,10 +235,16 @@ function validateRstestWorkerPayload({ appDir, worker }) {
   }
   let manifestFiles;
   try {
-    manifestFiles = canonicalRuntimeServerFiles({
-      appDir,
-      files: JSON.parse(fs.readFileSync(runtimeManifest, 'utf8')),
-    });
+    const parsedManifest = JSON.parse(fs.readFileSync(runtimeManifest, 'utf8'));
+    const files = Array.isArray(parsedManifest)
+      ? parsedManifest
+      : parsedManifest && parsedManifest.schemaVersion === 2 &&
+          Array.isArray(parsedManifest.serverFiles) &&
+          Array.isArray(parsedManifest.clientFiles) &&
+          parsedManifest.clientFiles.length === 0
+        ? parsedManifest.serverFiles
+        : null;
+    manifestFiles = canonicalRuntimeServerFiles({ appDir, files });
   } catch (error) {
     throw workerError(
       'METEOR_RSTEST_WORKER_MANIFEST',

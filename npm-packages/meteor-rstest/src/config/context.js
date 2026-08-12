@@ -50,6 +50,7 @@ function createMeteorRstestContext(input = {}) {
     phase: input.phase === 'external' ? 'external' : 'native',
     client: input.client !== false,
     server: input.server !== false,
+    routingManifest: input.routingManifest || null,
     architectures: Array.from(input.architectures || [
       ...(input.server === false ? [] : ['server']),
       ...(input.client === false ? [] : ['web.browser']),
@@ -61,6 +62,13 @@ function createMeteorRstestContext(input = {}) {
       throw invalidContext(`${field} must be an absolute path`);
     }
     normalized[field] = path.normalize(normalized[field]);
+  }
+
+  if (normalized.routingManifest) {
+    if (!path.isAbsolute(normalized.routingManifest)) {
+      throw invalidContext('routingManifest must be an absolute path');
+    }
+    normalized.routingManifest = path.normalize(normalized.routingManifest);
   }
 
   return deepFreeze(normalized);

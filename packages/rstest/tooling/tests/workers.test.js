@@ -120,17 +120,19 @@ test('runtime files partition deterministically and cap to non-empty hosts', t =
   }).length, 3);
 });
 
-test('runtime partition rejects empty, duplicate, outside, and client files', t => {
+test('runtime partition accepts classified colocated files and rejects outside app', t => {
   const appDir = createApp(t);
   const serverFile = writeFile(
     appDir,
     'tests/rstest/runtime/server/server.test.js'
   );
-  const clientFile = writeFile(
+  const colocatedFile = writeFile(
     appDir,
-    'tests/rstest/runtime/client/client.test.js'
+    'imports/items.server.meteor.rstest.test.js',
   );
-  const outsideFile = writeFile(appDir, 'imports/outside.test.js');
+  const outsideRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-outside-'));
+  t.after(() => fs.rmSync(outsideRoot, { recursive: true, force: true }));
+  const outsideFile = writeFile(outsideRoot, 'outside.test.js');
 
   assert.throws(() => partitionRuntimeFiles({
     appDir,
@@ -146,12 +148,14 @@ test('runtime partition rejects empty, duplicate, outside, and client files', t 
     appDir,
     files: [outsideFile],
     requestedWorkers: 2,
-  }), /runtime\/server/);
-  assert.throws(() => partitionRuntimeFiles({
+  }), /app root/);
+  assert.deepEqual(partitionRuntimeFiles({
     appDir,
-    files: [clientFile],
+    files: [serverFile, colocatedFile],
     requestedWorkers: 2,
-  }), /runtime\/server/);
+  }).flat().sort(), [serverFile, colocatedFile].map(file =>
+    fs.realpathSync(file)
+  ).sort());
 });
 
 test('host descriptors write private manifests and stable result paths', t => {
@@ -180,7 +184,11 @@ test('host descriptors write private manifests and stable result paths', t => {
   assert.deepEqual(plan.descriptors.map(host => host.id), ['server-1', 'server-2']);
   assert.deepEqual(
     JSON.parse(fs.readFileSync(plan.descriptors[0].payload.runtimeManifest)),
-    [fs.realpathSync(files[1])]
+    {
+      schemaVersion: 2,
+      serverFiles: [fs.realpathSync(files[1])],
+      clientFiles: [],
+    }
   );
   if (process.platform !== 'win32') {
     assert.equal(

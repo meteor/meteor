@@ -46,15 +46,24 @@ async function reservePortBlock(size) {
   throw new Error('Unable to reserve ports for Rspack + Rstest E2E tests.');
 }
 
-describe('Rspack + Rstest integration', () => {
+describe('Meteor + Rstest integration', () => {
   let appDir;
   let portBase;
+  let smartFixtureSource;
+  let smartFixtureTarget;
   const testPort = oldPort => String(portBase + (Number(oldPort) - 3195) * 2);
 
   beforeAll(async () => {
     portBase = await reservePortBlock(38);
     appDir = (await setupMeteorApp('rspack-rstest')).tempDir;
     await linkLocalModernTools(appDir);
+    smartFixtureTarget = path.join(appDir, 'imports', 'rstest');
+    smartFixtureSource = path.join(
+      appDir,
+      '.meteor',
+      'smart-routing-fixtures',
+    );
+    fs.renameSync(smartFixtureTarget, smartFixtureSource);
   }, 600_000);
 
   afterAll(async () => {
@@ -64,7 +73,14 @@ describe('Rspack + Rstest integration', () => {
   test('meteor test automatically runs pure and Meteor-runtime projects', async () => {
     const result = await runMeteorCommand(
       'test',
-      ['--once', '--server-only', '--port', testPort(3195)],
+      [
+        '--once',
+        '--server-only',
+        '--port',
+        testPort(3195),
+        '--',
+        '--reporters=verbose',
+      ],
       appDir,
       {
         captureOutput: true,
@@ -89,7 +105,6 @@ describe('Rspack + Rstest integration', () => {
     expect(output).toContain(
       '✓ tests/rstest/runtime/server/sentinel.test.js (1)'
     );
-    expect(output).not.toContain('Meteor runtime project resolves Atmosphere packages');
     expect(output).not.toContain('[Meteor-Rstest]');
     expect(output).not.toContain('outside Meteor-owned roots are delegated');
     expect(output).not.toContain('pure client project runs with jsdom');
@@ -112,6 +127,55 @@ describe('Rspack + Rstest integration', () => {
     expect(packageJson.devDependencies['@rstest/playwright']).toBe('0.11.6');
     expect(packageJson.devDependencies.jsdom).toBe('29.1.1');
     expect(packageJson.devDependencies.playwright).toBe('1.59.0');
+  }, 600_000);
+
+  test('smart routing infers colocated tests and honors filename opt-ins', async () => {
+    fs.cpSync(smartFixtureSource, smartFixtureTarget, { recursive: true });
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--test-file',
+          'imports/rstest/*.test.js',
+          '--port',
+          testPort(3213),
+          '--',
+          '--reporters=verbose',
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: { reject: false },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(0);
+      expect(output).toContain(
+        'colocated @rstest/core import selects native Rstest',
+      );
+      expect(output).toContain(
+        'rstest filename marker supports global test APIs',
+      );
+      expect(output).toContain(
+        'colocated transitive meteor import selects real Meteor host',
+      );
+      expect(output).toContain(
+        'server Meteor filename marker runs against real Mongo',
+      );
+      expect(output).toContain(
+        '✓ imports/rstest/automatic-runtime.test.js (1)',
+      );
+      expect(output).toContain(
+        '✓ imports/rstest/mongo.server.meteor.rstest.test.js (1)',
+      );
+      expect(output).not.toContain('existing Meteor test discovery compatibility');
+    } finally {
+      fs.rmSync(smartFixtureTarget, { recursive: true, force: true });
+    }
   }, 600_000);
 
   test('native and Meteor-runtime suites honor concurrent scheduling and limits', async () => {
@@ -555,6 +619,67 @@ describe('Rspack + Rstest integration', () => {
     );
   }, 600_000);
 
+  test('meteor native watch reruns a changed Rstest file', async () => {
+    const nativeFile = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'pure',
+      'server',
+      'math.test.js',
+    );
+    const original = fs.readFileSync(nativeFile, 'utf8');
+    const initialName = 'pure Rstest uses Meteor-generated context';
+    const watchedName = `native Rstest watch reruns changed test ${Date.now()}`;
+    const watchedSource = original.replace(initialName, watchedName);
+    expect(watchedSource).not.toBe(original);
+
+    const result = await runMeteorCommand(
+      'test',
+      [
+        '--verbose',
+        '--server-only',
+        '--project',
+        'meteor-pure-server',
+        '--test-file',
+        'tests/rstest/pure/server/math.test.js',
+        '--port',
+        testPort(3209),
+        '--',
+        '--reporters=verbose',
+      ],
+      appDir,
+      {
+        captureOutput: true,
+        execaOptions: { reject: false },
+      }
+    );
+    try {
+      await waitForMeteorOutput(
+        result.outputLines,
+        initialName,
+        { meteorProcess: result.meteorProcess, timeout: 120_000 },
+      );
+
+      fs.writeFileSync(nativeFile, watchedSource);
+      await waitForMeteorOutput(
+        result.outputLines,
+        watchedName,
+        { meteorProcess: result.meteorProcess, timeout: 120_000 },
+      );
+
+      const output = stripAnsi(result.outputLines.join('\n'));
+      expect(output).toContain(watchedName);
+      expect(output.split(
+        '✓ tests/rstest/pure/server/math.test.js (5)'
+      ).length).toBeGreaterThan(2);
+      expect(output).not.toContain('[Meteor-Rstest]');
+    } finally {
+      await killMeteorProcess(result.meteorProcess);
+      fs.writeFileSync(nativeFile, original);
+    }
+  }, 600_000);
+
   test('meteor verbose watch reruns runtime tests without protocol JSON', async () => {
     const runtimeFile = path.join(
       appDir,
@@ -724,6 +849,10 @@ describe('Rspack + Rstest integration', () => {
         '--once',
         '--driver-package',
         'meteortesting:mocha',
+        '--test-file',
+        'tests/legacy/mocha.tests.js',
+        '--test-file',
+        'imports/api/existing-format.tests.js',
         '--port',
         testPort(3199),
       ],

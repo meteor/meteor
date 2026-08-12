@@ -134,6 +134,140 @@ test('pure tests prepare native-only plan with opaque Rspack options', async t =
   );
 });
 
+test('colocated smart candidates classify after dependency bootstrap and drive host plan', async t => {
+  const context = createContext(t);
+  context.options.testFile = ['imports/*.test.js'];
+  const nativeFile = path.join(context.appDir, 'imports/math.test.js');
+  const runtimeFile = path.join(context.appDir, 'imports/items.test.js');
+  fs.mkdirSync(path.dirname(nativeFile), { recursive: true });
+  fs.writeFileSync(nativeFile, "import { test } from '@rstest/core';");
+  fs.writeFileSync(runtimeFile, "import { test } from 'meteor/rstest';");
+  const order = [];
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {
+      order.push('dependencies');
+    },
+    async classifyRstestCandidates({ candidates }) {
+      order.push('classification');
+      assert.deepEqual(candidates, [runtimeFile, nativeFile]);
+      return {
+        schemaVersion: 1,
+        nativeNodeFiles: [nativeFile],
+        nativeDomFiles: [],
+        browserFiles: [],
+        runtimeServerFiles: [runtimeFile],
+        runtimeClientFiles: [runtimeFile],
+        externalFiles: [],
+        legacyFiles: [],
+        files: [],
+      };
+    },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.deepEqual(order, ['dependencies', 'classification']);
+  assert.equal(plan.mode, 'meteor-host');
+  assert.equal(plan.driverPackage, 'rstest');
+  assert.deepEqual(provider.selection.inventory.pureFiles, [nativeFile]);
+  assert.deepEqual(provider.selection.inventory.runtimeFiles, [runtimeFile]);
+  assert.ok(provider.nativeArgs.includes('--routing-manifest'));
+  assert.equal(provider.nativeArgs.includes('--test-file'), false);
+  assert.deepEqual(JSON.parse(fs.readFileSync(provider.runtimeManifest, 'utf8')), {
+    schemaVersion: 2,
+    serverFiles: [runtimeFile],
+    clientFiles: [runtimeFile],
+  });
+});
+
+test('explicit custom projects stay owned by user config without smart classification', async t => {
+  const context = createContext(t);
+  context.options.project = ['custom-project'];
+  const file = path.join(context.appDir, 'imports/custom.test.js');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, "import { test } from 'custom-test-engine';");
+  let classifications = 0;
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    async classifyRstestCandidates() { classifications += 1; },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(classifications, 0);
+  assert.equal(plan.mode, 'native-only');
+  assert.deepEqual(provider.selection.nativeProjects, ['custom-project']);
+});
+
+test('unmarked globals can remain owned by an explicit Rstest config', async t => {
+  const context = createContext(t);
+  const file = path.join(context.appDir, 'imports/config-owned.test.js');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, "test('config owned', () => {});");
+  fs.writeFileSync(path.join(context.appDir, 'rstest.config.js'), 'module.exports = {};');
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    async classifyRstestCandidates() {
+      return {
+        schemaVersion: 1,
+        nativeNodeFiles: [],
+        nativeDomFiles: [],
+        browserFiles: [],
+        runtimeServerFiles: [],
+        runtimeClientFiles: [],
+        externalFiles: [],
+        legacyFiles: [file],
+        files: [],
+      };
+    },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(plan.mode, 'native-only');
+  assert.equal(provider.selection.shouldRunNative, true);
+});
+
+test('explicit generated runtime project never delegates legacy files to user config', async t => {
+  const context = createContext(t);
+  context.options.project = ['meteor-runtime-server'];
+  const runtimeFile = path.join(
+    context.appDir,
+    'tests/rstest/runtime/server/items.test.js',
+  );
+  const legacyFile = path.join(context.appDir, 'imports/config-owned.test.js');
+  for (const file of [runtimeFile, legacyFile]) {
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, '');
+  }
+  fs.writeFileSync(path.join(context.appDir, 'rstest.config.js'), 'module.exports = {};');
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    async classifyRstestCandidates() {
+      return {
+        schemaVersion: 1,
+        nativeNodeFiles: [],
+        nativeDomFiles: [],
+        browserFiles: [],
+        runtimeServerFiles: [runtimeFile],
+        runtimeClientFiles: [],
+        externalFiles: [],
+        legacyFiles: [legacyFile],
+        files: [],
+      };
+    },
+  });
+
+  await provider.validate();
+  await provider.prepare();
+
+  assert.equal(provider.selection.shouldRunNative, false);
+  assert.ok(provider.runtimePlanArgs);
+});
+
 test('normalized Meteor verbosity reaches runtime metadata and Rstest wrapper', async t => {
   const context = createContext(t);
   context.verbose = true;
@@ -224,6 +358,19 @@ test('compatibility ownership routing stays silent at every verbosity', async t 
     const warnings = [];
     const provider = new RstestTestRunnerProvider(context, {
       async ensureRstestInstalled() {},
+      async classifyRstestCandidates() {
+        return {
+          schemaVersion: 1,
+          nativeNodeFiles: [],
+          nativeDomFiles: [],
+          browserFiles: [],
+          runtimeServerFiles: [],
+          runtimeClientFiles: [],
+          externalFiles: [],
+          legacyFiles: [legacyFile],
+          files: [],
+        };
+      },
       warn(message) { warnings.push(message); },
     });
 
@@ -330,7 +477,12 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
   const context = createContext(t);
   context.options.serverOnly = true;
   context.options.project = ['meteor-runtime-server'];
-  const [runtimeFile] = writeRuntimeFiles(context.appDir, ['worker.test.js']);
+  const runtimeFile = path.join(
+    context.appDir,
+    'imports/worker.server.meteor.rstest.test.js',
+  );
+  fs.mkdirSync(path.dirname(runtimeFile), { recursive: true });
+  fs.writeFileSync(runtimeFile, "import { test } from 'meteor/rstest';");
   const generation = '1234567890abcdef1234567890abcdef';
   const workersRoot = path.join(context.localDir, 'rstest', 'workers');
   fs.mkdirSync(workersRoot, { recursive: true });
@@ -371,10 +523,17 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
   await provider.validate();
   const plan = await provider.prepare();
   assert.equal(plan.mode, 'meteor-host');
+  assert.deepEqual(plan.buildPluginOptions.rspack.targets, {
+    client: false,
+    server: true,
+  });
   assert.equal(
     plan.buildPluginOptions.rspack.context.runtimeManifest,
     runtimeManifest
   );
+  assert.deepEqual(JSON.parse(fs.readFileSync(runtimeManifest, 'utf8')), [
+    runtimeFile,
+  ]);
   assert.equal(plan.metadata.worker.resultPath, context.worker.payload.resultPath);
 
   const updates = [];

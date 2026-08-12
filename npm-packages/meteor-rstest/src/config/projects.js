@@ -1,3 +1,4 @@
+const fs = require('node:fs');
 const path = require('node:path');
 
 const ROOTS = [
@@ -9,7 +10,63 @@ const ROOTS = [
   ['meteor-e2e', 'e2e', 'rstest', 'node'],
 ];
 
-function createGeneratedProjects({ appRoot }) {
+const ROUTED_ROOTS = [
+  ['meteor-pure-server', 'nativeNodeFiles', 'rstest', 'node'],
+  ['meteor-pure-client', 'nativeDomFiles', 'rstest', 'jsdom'],
+  ['meteor-browser', 'browserFiles', 'rstest', 'browser'],
+  ['meteor-runtime-server', 'runtimeServerFiles', 'meteor', 'node'],
+  ['meteor-runtime-client', 'runtimeClientFiles', 'meteor', 'meteor-client'],
+  ['meteor-e2e', 'externalFiles', 'rstest', 'node'],
+];
+
+function routingError(message) {
+  const error = new Error(`[Meteor Rstest] Invalid routing manifest: ${message}`);
+  error.code = 'METEOR_RSTEST_INVALID_ROUTING_MANIFEST';
+  return error;
+}
+
+function appRelativeFile(file, appRoot) {
+  if (typeof file !== 'string' || !path.isAbsolute(file)) {
+    throw routingError('test files must be absolute paths');
+  }
+  const relative = path.relative(appRoot, file);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    throw routingError(`${file} is outside Meteor app root`);
+  }
+  return relative.split(path.sep).join('/');
+}
+
+function readRoutingManifest(routingManifest, appRoot) {
+  let parsed;
+  try {
+    parsed = JSON.parse(fs.readFileSync(routingManifest, 'utf8'));
+  } catch {
+    throw routingError(`cannot read ${routingManifest}`);
+  }
+  if (!parsed || parsed.schemaVersion !== 1 || ROUTED_ROOTS.some(
+    ([, field]) => !Array.isArray(parsed[field])
+  )) {
+    throw routingError('expected schemaVersion 1 and all routing arrays');
+  }
+  return parsed;
+}
+
+function createGeneratedProjects({ appRoot, routingManifest = null }) {
+  if (routingManifest) {
+    const routing = readRoutingManifest(routingManifest, appRoot);
+    return ROUTED_ROOTS.flatMap(([name, field, compiler, environment]) => {
+      const include = [...new Set(routing[field].map(file =>
+        appRelativeFile(file, appRoot)
+      ))].sort();
+      return include.length > 0 ? [{
+        name,
+        root: appRoot,
+        include,
+        test: { environment },
+        meteor: { compiler },
+      }] : [];
+    });
+  }
   return ROOTS.map(([name, root, compiler, environment]) => ({
     name,
     root: path.join(appRoot, 'tests', 'rstest', root),
@@ -65,4 +122,5 @@ module.exports = {
   classifyTestFile,
   createGeneratedProjects,
   directMeteorRequests,
+  readRoutingManifest,
 };

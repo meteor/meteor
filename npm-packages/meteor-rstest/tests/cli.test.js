@@ -155,3 +155,30 @@ test('native run writes generation-bound runtime settings atomically', t => {
     maxConcurrency: 7,
   });
 });
+
+test('classification CLI writes routing manifest without evaluating user config', t => {
+  const marker = path.join(os.tmpdir(), `meteor-rstest-classify-config-${process.pid}-${Date.now()}.txt`);
+  const candidates = path.join(os.tmpdir(), `meteor-rstest-candidates-${process.pid}-${Date.now()}.json`);
+  const output = path.join(os.tmpdir(), `meteor-rstest-classification-${process.pid}-${Date.now()}.json`);
+  const appRoot = createApp({
+    source: "test('classification only', () => expect(true).toBe(true));",
+    configSource: `require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'evaluated'); module.exports = { globals: true };`,
+  });
+  const testFile = path.join(appRoot, 'tests/rstest/pure/server/cli.test.js');
+  fs.writeFileSync(candidates, JSON.stringify([testFile]));
+  t.after(() => {
+    fs.rmSync(appRoot, { recursive: true, force: true });
+    fs.rmSync(marker, { force: true });
+    fs.rmSync(candidates, { force: true });
+    fs.rmSync(output, { force: true });
+  });
+
+  const result = run(appRoot, [
+    '--classify-candidates', candidates,
+    '--classification-output', output,
+  ]);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(fs.existsSync(marker), false);
+  assert.deepEqual(JSON.parse(fs.readFileSync(output, 'utf8')).nativeNodeFiles, [testFile]);
+});

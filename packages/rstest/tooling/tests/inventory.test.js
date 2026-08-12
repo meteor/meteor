@@ -6,6 +6,7 @@ const test = require('node:test');
 
 const {
   inspectAppRstestCapability,
+  scanRstestCandidates,
   scanNativeRstestRoots,
   selectRstestInventory,
   selectRstestLanes,
@@ -108,6 +109,46 @@ test('native root scan separates pure Rstest and Meteor runtime work', t => {
     legacyFiles: [
       path.join(appRoot, 'imports/api/existing.tests.js'),
       path.join(appRoot, 'tests/legacy/mocha.tests.js'),
+    ],
+  });
+});
+
+test('candidate scan finds colocated tests without assigning execution by directory', t => {
+  const appRoot = createApp();
+  t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
+  for (const file of [
+    'imports/api/math.test.js',
+    'imports/api/login.app-test.js',
+    'imports/api/items.rstest.test.ts',
+    'tests/rstest/runtime/server/existing.test.js',
+    'tests/legacy/mocha.test.js',
+    'node_modules/ignored.test.js',
+    '.meteor/local/ignored.test.js',
+  ]) {
+    const absolute = path.join(appRoot, file);
+    fs.mkdirSync(path.dirname(absolute), { recursive: true });
+    fs.writeFileSync(absolute, '');
+  }
+
+  assert.deepEqual(scanRstestCandidates(appRoot), {
+    candidateFiles: [
+      path.join(appRoot, 'imports/api/items.rstest.test.ts'),
+      path.join(appRoot, 'imports/api/math.test.js'),
+      path.join(appRoot, 'tests/rstest/runtime/server/existing.test.js'),
+    ],
+    legacyRootFiles: [
+      path.join(appRoot, 'tests/legacy/mocha.test.js'),
+    ],
+  });
+  assert.deepEqual(scanRstestCandidates(appRoot, { fullApp: true }), {
+    candidateFiles: [
+      path.join(appRoot, 'imports/api/items.rstest.test.ts'),
+      path.join(appRoot, 'imports/api/login.app-test.js'),
+      path.join(appRoot, 'imports/api/math.test.js'),
+      path.join(appRoot, 'tests/rstest/runtime/server/existing.test.js'),
+    ],
+    legacyRootFiles: [
+      path.join(appRoot, 'tests/legacy/mocha.test.js'),
     ],
   });
 });

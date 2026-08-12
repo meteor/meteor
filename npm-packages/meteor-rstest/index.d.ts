@@ -14,6 +14,7 @@ export interface MeteorRstestContext {
   readonly phase: 'native' | 'external';
   readonly client: boolean;
   readonly server: boolean;
+  readonly routingManifest: string | null;
   readonly architectures: readonly string[];
 }
 
