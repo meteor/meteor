@@ -2,7 +2,7 @@
   "compilerOptions": {
     /* Basic Options */
     "target": "es2018",
-    "module": "es2015",
+    "module": "preserve",
     "lib": ["esnext"],
     "allowJs": true,
     "checkJs": false,
@@ -21,7 +21,7 @@
     "noFallthroughCasesInSwitch": false,
 
     /* Module Resolution Options */
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "types": ["node"],
     "esModuleInterop": true,
     "preserveSymlinks": true,
