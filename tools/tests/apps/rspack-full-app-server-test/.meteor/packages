@@ -1,0 +1,13 @@
+# Minimal app used by Meteor self-tests to validate rspack test modes.
+
+meteor
+webapp
+modules
+ecmascript
+mongo
+
+# Console-driven test driver (local core package, no browser required)
+test-in-console
+
+# Enable rspack build plugin
+rspack
