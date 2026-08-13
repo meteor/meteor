@@ -629,7 +629,19 @@ from Cordova project`, async () => {
         pathWithoutScheme
       );
     }
-    return fileURLToPath(pluginPath);
+
+    // Meteor historically treated file:// as a removable prefix. Prefer an
+    // existing raw path so older plugin specs with reserved URL characters
+    // keep working, while still decoding properly encoded absolute URLs.
+    if (files.exists(pathWithoutScheme)) {
+      return pathWithoutScheme;
+    }
+
+    try {
+      return fileURLToPath(pluginPath);
+    } catch {
+      return pathWithoutScheme;
+    }
   }
 
   async addPlugin(id, version, config = {}, options = {}) {
