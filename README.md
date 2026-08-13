@@ -79,6 +79,41 @@ cd my-app
 meteor
 ```
 
+# 💖 Sponsors
+
+Meteor is made possible by our amazing sponsors. Support the project and get your logo here by visiting our [Sponsorship page](https://www.meteor.com/sponsorship).
+
+### 🌟 Supernova Sponsors
+
+<table>
+  <tr>
+    <td align="center" valign="middle" width="50%">
+      <a href="https://galaxycloud.app/" target="_blank">
+        <img alt="Galaxy" src="v3-docs/assets/galaxy-logo.png" height="60">
+      </a>
+    </td>
+    <td align="center" valign="middle" width="50%">
+      <a href="https://inputlogic.com/" target="_blank">
+        <img alt="InputLogic" src="v3-docs/assets/inputlogic-logo.jpg" height="60">
+      </a>
+    </td>
+  </tr>
+</table>
+
+### 🌌 Nebula Sponsors
+
+<table>
+  <tr>
+    <td align="center" valign="middle" width="50%">
+      <a href="https://www.coderabbit.ai/" target="_blank">
+        <img alt="CodeRabbit" src="v3-docs/assets/coderabbit-logo.svg" height="45">
+      </a>
+    </td>
+  </tr>
+</table>
+
+<hr>
+
 # 🧱 Developer Resources
 
 **Building an application with Meteor?**
