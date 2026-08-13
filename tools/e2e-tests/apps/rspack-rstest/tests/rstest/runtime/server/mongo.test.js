@@ -1,6 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
 import { expect, test } from 'meteor/rstest';
+import { runtimeValue } from './runtime-value.js';
 
 test('Meteor runtime project resolves Atmosphere packages', async () => {
   expect(Meteor.isTest || Meteor.isAppTest).toBe(true);
@@ -15,7 +16,7 @@ test('Meteor runtime project resolves Atmosphere packages', async () => {
   const id = await collection.insertAsync({
     ...(workerId ? { _id: 'shared-runtime-worker-id' } : {}),
     workerId: workerId || 'singular',
-    value: 42,
+    value: runtimeValue,
   });
   const document = await collection.findOneAsync(id);
   expect(document.value).toBe(42);

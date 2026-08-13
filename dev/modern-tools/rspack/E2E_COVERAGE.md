@@ -256,8 +256,8 @@ Verified coverage:
 | Missing files, empty generated projects, project/side conflicts, and E2E without full-app fail nonzero | Selection safety |
 | Server/client/external results aggregate through authenticated versioned transports and determine process exit; diagnostic machine frames are debug-only | Runtime and E2E |
 | External JSON reporting preserves real Rstest case names, counts, durations, and errors | Full-app E2E |
-| Native Rstest watch stays supervised by Meteor and reruns a changed selected file without leaking protocol payloads | Native watch |
-| Runtime watch rebuild reruns changed runtime tests once without leaking transport payloads | Runtime watch |
+| Native Rstest watch stays supervised by Meteor and recovers after an imported dependency fails and is fixed | Native watch |
+| Runtime watch rebuild follows imported dependency changes, reports a failure, and recovers after the dependency is fixed without leaking transport payloads | Runtime watch |
 | Transported runtime assertion failure retains case name and exits nonzero | Runtime failure |
 | Native Rstest roots are excluded from Meteor eager discovery; runtime roots are excluded from native Rstest discovery | All |
 
@@ -270,6 +270,7 @@ Deliberate non-claims keep this fixture focused:
 | React/Vue/Svelte component matrices under Rstest | Existing framework apps cover Rspack integration; this fixture covers engine and Meteor lifecycle boundaries |
 | Runtime coverage, runtime snapshots, runtime module-mock hoisting, and runtime sharding | Native Rstest owns these features where applicable; Meteor-runtime executor does not claim them yet |
 | Client/browser, watch, full-app, package-test, driver, and external-Mongo runtime worker pools | Initial `--runtime-workers` slice requires `meteor test --once --server-only` and keeps all other routes unchanged |
+| Adding, renaming, or removing test files during one native watch process | Current Rstest 0.11 collection does not rediscover changed test inventory; restart `meteor test` after inventory or ownership changes |
 | `web.browser.legacy` and `web.cordova` runtime execution | Current executor contract covers server and `web.browser` |
 | Visual screenshot baselines | DOM snapshots and real interaction are covered without platform-sensitive image baselines |
 

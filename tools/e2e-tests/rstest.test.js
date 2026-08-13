@@ -619,7 +619,7 @@ describe('Meteor + Rstest integration', () => {
     );
   }, 600_000);
 
-  test('meteor native watch reruns a changed Rstest file', async () => {
+  test('meteor native watch recovers after an imported dependency failure', async () => {
     const nativeFile = path.join(
       appDir,
       'tests',
@@ -628,11 +628,21 @@ describe('Meteor + Rstest integration', () => {
       'server',
       'math.test.js',
     );
-    const original = fs.readFileSync(nativeFile, 'utf8');
-    const initialName = 'pure Rstest uses Meteor-generated context';
-    const watchedName = `native Rstest watch reruns changed test ${Date.now()}`;
-    const watchedSource = original.replace(initialName, watchedName);
-    expect(watchedSource).not.toBe(original);
+    const dependencyFile = path.join(
+      path.dirname(nativeFile),
+      'coverage-target.js',
+    );
+    const originalTest = fs.readFileSync(nativeFile, 'utf8');
+    const originalDependency = fs.readFileSync(dependencyFile, 'utf8');
+    const initialName = 'pure Rstest coverage instruments imported Rspack source';
+    const recoveryName = `native Rstest watch recovers after dependency fix ${Date.now()}`;
+    const failingDependency = originalDependency.replace(
+      "return 'Rspack + Rstest';",
+      "return 'watch-induced failure';",
+    );
+    const recoveryTest = originalTest.replace(initialName, recoveryName);
+    expect(failingDependency).not.toBe(originalDependency);
+    expect(recoveryTest).not.toBe(originalTest);
 
     const result = await runMeteorCommand(
       'test',
@@ -661,26 +671,33 @@ describe('Meteor + Rstest integration', () => {
         { meteorProcess: result.meteorProcess, timeout: 120_000 },
       );
 
-      fs.writeFileSync(nativeFile, watchedSource);
+      fs.writeFileSync(dependencyFile, failingDependency);
       await waitForMeteorOutput(
         result.outputLines,
-        watchedName,
+        `✗ ${initialName}`,
+        { meteorProcess: result.meteorProcess, timeout: 120_000 },
+      );
+
+      fs.writeFileSync(dependencyFile, originalDependency);
+      fs.writeFileSync(nativeFile, recoveryTest);
+      await waitForMeteorOutput(
+        result.outputLines,
+        recoveryName,
         { meteorProcess: result.meteorProcess, timeout: 120_000 },
       );
 
       const output = stripAnsi(result.outputLines.join('\n'));
-      expect(output).toContain(watchedName);
-      expect(output.split(
-        '✓ tests/rstest/pure/server/math.test.js (5)'
-      ).length).toBeGreaterThan(2);
+      expect(output).toContain(`✗ ${initialName}`);
+      expect(output).toContain(`✓ ${recoveryName}`);
       expect(output).not.toContain('[Meteor-Rstest]');
     } finally {
       await killMeteorProcess(result.meteorProcess);
-      fs.writeFileSync(nativeFile, original);
+      fs.writeFileSync(nativeFile, originalTest);
+      fs.writeFileSync(dependencyFile, originalDependency);
     }
   }, 600_000);
 
-  test('meteor verbose watch reruns runtime tests without protocol JSON', async () => {
+  test('meteor verbose watch recovers after a runtime dependency failure', async () => {
     const runtimeFile = path.join(
       appDir,
       'tests',
@@ -689,7 +706,15 @@ describe('Meteor + Rstest integration', () => {
       'server',
       'mongo.test.js',
     );
-    const original = fs.readFileSync(runtimeFile, 'utf8');
+    const dependencyFile = path.join(path.dirname(runtimeFile), 'runtime-value.js');
+    const originalTest = fs.readFileSync(runtimeFile, 'utf8');
+    const originalDependency = fs.readFileSync(dependencyFile, 'utf8');
+    const initialName = 'Meteor runtime project resolves Atmosphere packages';
+    const recoveryName = `Meteor runtime watch recovers after dependency fix ${Date.now()}`;
+    const failingDependency = originalDependency.replace('42', '41');
+    const recoveryTest = originalTest.replace(initialName, recoveryName);
+    expect(failingDependency).not.toBe(originalDependency);
+    expect(recoveryTest).not.toBe(originalTest);
     const result = await runMeteorCommand(
       'test',
       [
@@ -714,9 +739,7 @@ describe('Meteor + Rstest integration', () => {
       const firstOutput = stripAnsi(result.outputLines.join('\n'));
       expect(firstOutput).not.toContain('[Meteor-Rstest]');
       expect(firstOutput).not.toContain('outside Meteor-owned roots are delegated');
-      expect(firstOutput).toContain(
-        'Meteor runtime project resolves Atmosphere packages'
-      );
+      expect(firstOutput).toContain(initialName);
 
       await waitForMeteorOutput(
         result.outputLines,
@@ -724,30 +747,29 @@ describe('Meteor + Rstest integration', () => {
         { meteorProcess: result.meteorProcess, timeout: 30_000 },
       );
 
-      const watchedSource = original.replace(
-        'Meteor runtime project resolves Atmosphere packages',
-        `Meteor runtime project resolves Atmosphere packages ${Date.now()}`,
+      fs.writeFileSync(dependencyFile, failingDependency);
+      await waitForMeteorOutput(
+        result.outputLines,
+        `× ${initialName}`,
+        { meteorProcess: result.meteorProcess, timeout: 120_000 },
       );
-      expect(watchedSource).not.toBe(original);
-      fs.writeFileSync(runtimeFile, watchedSource);
-      const deadline = Date.now() + 120_000;
-      while (Date.now() < deadline) {
-        const output = stripAnsi(result.outputLines.join('\n'));
-        if (output.split(
-          '✓ tests/rstest/runtime/server/mongo.test.js (1)'
-        ).length > 2) {
-          break;
-        }
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
+
+      fs.writeFileSync(dependencyFile, originalDependency);
+      fs.writeFileSync(runtimeFile, recoveryTest);
+      await waitForMeteorOutput(
+        result.outputLines,
+        recoveryName,
+        { meteorProcess: result.meteorProcess, timeout: 120_000 },
+      );
+
       const rebuiltOutput = stripAnsi(result.outputLines.join('\n'));
-      expect(rebuiltOutput.split(
-        '✓ tests/rstest/runtime/server/mongo.test.js (1)'
-      ).length).toBeGreaterThan(2);
+      expect(rebuiltOutput).toContain(`× ${initialName}`);
+      expect(rebuiltOutput).toContain(`✓ ${recoveryName}`);
       expect(rebuiltOutput).not.toContain('[Meteor-Rstest]');
     } finally {
       await killMeteorProcess(result.meteorProcess);
-      fs.writeFileSync(runtimeFile, original);
+      fs.writeFileSync(runtimeFile, originalTest);
+      fs.writeFileSync(dependencyFile, originalDependency);
     }
   }, 600_000);
 
