@@ -2,7 +2,6 @@ var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files');
 import { pathToFileURL } from 'url';
-import PluginInfoProvider from 'cordova-common/src/PluginInfo/PluginInfoProvider.js';
 var _ = require('underscore');
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
@@ -10,17 +9,19 @@ var _ = require('underscore');
 //
 // sand: a sandbox, that has the main app directory as its cwd.
 var getCordovaPluginsList = async function(sand) {
-  var provider = new PluginInfoProvider();
-  var pluginsDir = files.pathJoin(
+  var androidJsonPath = files.pathJoin(
     sand.cwd,
     '.meteor',
     'local',
     'cordova-build',
-    'plugins'
+    'plugins',
+    'android.json'
   );
-  return provider.getAllWithinSearchPath(files.convertToOSPath(pluginsDir))
-    .map(function (plugin) { return plugin.id; })
-    .sort();
+  if (!files.exists(androidJsonPath)) {
+    return [];
+  }
+  var metadata = JSON.parse(files.readFile(androidJsonPath, 'utf8'));
+  return Object.keys(metadata.installed_plugins || {}).sort();
 }
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
