@@ -16,6 +16,13 @@ function connect(client) {
   })
 }
 
+function redactMongoUrl(mongoUrl) {
+  return mongoUrl.replace(
+    /(mongodb(?:\+srv)?:\/\/)[\s\S]*@/,
+    '$1***:***@'
+  );
+}
+
 if (process.env.MONGO_URL && (/^mongodb(\+srv)?:\/\//.test(process.env.MONGO_URL))) {
   try {
     // No TLS overrides here: the connection string carries its own TLS
@@ -27,15 +34,14 @@ if (process.env.MONGO_URL && (/^mongodb(\+srv)?:\/\//.test(process.env.MONGO_URL
     });
   } catch (e) {
     // The URL may embed credentials (user:password@), so never log it raw.
-    // Redacts everything up to the first "@" — over-redacting a credential-less
+    // Redacts everything up to the final "@" — over-redacting a credential-less
     // URL is fine here, leaking a password is not.
-    const redactedUrl = process.env.MONGO_URL.replace(
-      /(mongodb(?:\+srv)?:\/\/)[^@]+@/,
-      '$1***:***@'
-    );
+    const redactedUrl = redactMongoUrl(process.env.MONGO_URL);
     console.warn('Invalid MongoDB connection string in MONGO_URL:', redactedUrl);
   }
 }
+
+NpmMongoTest = { redactMongoUrl };
 
 const useLegacyMongo = !!Package['npm-mongo-legacy']
 const oldNoDeprecationValue = process.noDeprecation;
