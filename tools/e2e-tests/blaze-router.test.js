@@ -16,8 +16,8 @@ const CLIENT_BOOT_MARKER = '__CLIENT_BOOTED__';
 // Adapted from the issue #14561 reproduction
 // client bundle loads before Blaze HTML imports
 async function assertTestClientImportOrder(tempDir) {
-  const wrapperPath = path.join(tempDir, '_build/test/client-meteor.js');
-  await assertFileExist(tempDir, '_build/test/client-meteor.js', {
+  const wrapperPath = path.join(tempDir, '_build/app-test/client-meteor.js');
+  await assertFileExist(tempDir, '_build/app-test/client-meteor.js', {
     content: CLIENT_BUNDLE_IMPORT,
   });
 

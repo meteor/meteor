@@ -105,6 +105,9 @@ Focused Blaze and Galvanized Iron Router fixture that exercises the standard E2E
 | Programmatic navigation renders the configured not-found template | Run, Prod, Test |
 | Client-side app test executes instead of reporting a false zero-test success | Test once |
 | Rspack client boot marker is packaged in the deployable browser program | Build |
+| Concurrent development and full-app test commands preserve the development `.cjs` bundle | Run, Test |
+| Normal and full-app tests use isolated `_build/test` and `_build/app-test` module directories in both startup orders | Test |
+| Full-app tests build and execute the app client with no `testModule` or a server-only `testModule` | Test |
 
 ### full-blaze
 
@@ -361,6 +364,8 @@ Where each feature is tested across apps and skeletons.
 | First-compilation process failure | server-only | |
 | Monorepo layout | monorepo | |
 | Full-app test mode | react-router, blaze-router, tla | |
+| Concurrent Rspack mode isolation | blaze-router | |
+| Full-app client without a client test module | blaze-router | |
 | Blaze router compatibility | blaze-router (Galvanized Iron Router routes, controllers, hooks, and layout), full-blaze (FlowRouter Extra) | |
 | Top-level await in full-app tests | tla | |
 | Module rules override | babel | |

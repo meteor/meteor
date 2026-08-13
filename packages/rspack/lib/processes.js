@@ -53,8 +53,8 @@ const {
 
 const {
   GLOBAL_STATE_KEYS,
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
+  getRspackChunksContext,
+  getRspackAssetsContext,
   FILE_ROLE,
 } = require('./constants');
 
@@ -75,6 +75,25 @@ import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
 // Rspack's native code prints this marker when it aborts, e.g. when its
 // persistent cache was corrupted by a previous hard kill mid-write.
 const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
+const RSPACK_UNSET_ENV = ['METEOR_IGNORE'];
+
+/**
+ * Builds the environment passed to Rspack child processes. METEOR_IGNORE is
+ * consumed by meteor-tool, not Rspack, so it is omitted here and explicitly
+ * removed again by spawnProcess after the parent environment is merged.
+ * @param {Object} envs - Rspack-specific environment variables
+ * @returns {Object} Environment variables for spawnProcess
+ */
+function getRspackSpawnEnv(envs) {
+  const parentEnv = { ...process.env };
+  delete parentEnv.METEOR_IGNORE;
+
+  return inheritMeteorToolNodeFlags({
+    ...parentEnv,
+    ...getNodeBinEnv(),
+    ...envs,
+  });
+}
 
 /**
  * Creates a chunk-split-safe detector for the Rspack panic marker.
@@ -356,7 +375,9 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
   const isTestFullApp = isMeteorAppTestFullApp();
 
-  const module = isTest ? { isTest: true } : { isMain: true };
+  const module = isTest
+    ? { isTest: true, isTestFullApp }
+    : { isMain: true };
   const env = isMeteorAppDevelopment()
     ? { isDevelopment: true }
     : { isProduction: true };
@@ -441,8 +462,11 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
       getBuildFilePath({ ...module, ...env, ...side, ...commandRole }),
     ],
     ["buildContext", RSPACK_BUILD_CONTEXT],
-    ["chunksContext", RSPACK_CHUNKS_CONTEXT],
-    ["assetsContext", RSPACK_ASSETS_CONTEXT],
+    // Mode-scoped so concurrent commands on one app dir (e.g. a dev server
+    // plus `meteor test`) write their chunks/assets to separate directories
+    // under public/ instead of overwriting each other.
+    ["chunksContext", getRspackChunksContext(isTest, isTestFullApp)],
+    ["assetsContext", getRspackAssetsContext(isTest, isTestFullApp)],
     ["devServerPort", process.env.RSPACK_DEVSERVER_PORT],
     ["projectConfigPath", projectConfigPath],
     ["configPath", configPath],
@@ -526,7 +550,8 @@ export function startRspackClientServe(options = {}) {
       // group, releasing the devserver port even when npx wouldn't forward
       // SIGTERM/SIGINT on its own.
       detached: process.platform !== 'win32',
-      env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+      env: getRspackSpawnEnv(envs),
+      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (config && !!config?.devServerUrl) {
@@ -644,7 +669,8 @@ export function startRspackServerWatch(options = {}) {
     cwd: appDir,
     // Detach for the same reason as the client serve process; see comment there.
     detached: process.platform !== 'win32',
-    env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+    env: getRspackSpawnEnv(envs),
+    unsetEnv: RSPACK_UNSET_ENV,
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
       if (onCompile && config && (config?.compilationCount || 0) > 0) {
@@ -750,7 +776,8 @@ export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTes
       args,
       {
       cwd: appDir,
-      env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+      env: getRspackSpawnEnv(envs),
+      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (onCompile && config && (config?.compilationCount || 0) > 0) {
