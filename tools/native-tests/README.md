@@ -10,9 +10,10 @@ contaminate the dev bundle's `node_modules`.
 
 ## Local usage
 
-Prerequisites: Node 20+, Maestro CLI, Xcode (for iOS), Android SDK + emulator
-(for Android). Cordova Android 15 requires Android API 36 and Build Tools
-36.0.0. Install the latter with `sdkmanager 'build-tools;36.0.0'` if needed.
+Prerequisites: Node 20.17.0+, Maestro CLI, Xcode (for iOS), Android SDK +
+emulator (for Android). Cordova Android 15 requires Android SDK Platform 36
+and Build Tools 36.0.0. Install the latter with
+`sdkmanager 'build-tools;36.0.0'` if needed.
 On a fresh checkout:
 
 ```sh

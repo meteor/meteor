@@ -2,6 +2,7 @@ var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
 var files = require('../fs/files');
 import { execFileAsync } from '../utils/processes';
+import { pathToFileURL } from 'url';
 var _ = require('underscore');
 
 // Given a sandbox, that has the app as its currend cwd, read the versions file
@@ -357,12 +358,15 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   run = await addPlatform(s, 'android');
 
   var
-    pluginPath          = '../cordova-local-plugin',
+    pluginPath          = '../cordova local #100%',
     pluginSource        = "packages/empty-cordova-plugin/plugin",
     androidPluginSource = ".meteor/local/cordova-build/platforms/android/src";
+  const pluginUrl = pathToFileURL(files.convertToOSPath(
+    files.pathResolve(s.cwd, pluginPath)
+  )).href;
 
 
-  // Copy fake cordova plugin to ../cordova-local-plugin
+  // Copy fake Cordova plugin to a path requiring file URL encoding.
   s.mkdir(pluginPath);
   s.cp(pluginSource + '/plugin.xml', pluginPath + '/plugin.xml');
   s.mkdir(pluginPath + '/www');
@@ -375,7 +379,7 @@ selftest.define("meteor reinstalls only local cordova plugins on consecutive bui
   );
 
   // Add the local cordova plugin
-  run = s.run("add", "cordova:com.cordova.empty@file://../cordova-local-plugin");
+  run = s.run("add", `cordova:com.cordova.empty@${pluginUrl}`);
   await run.match("Added Cordova plugin com.cordova.empty");
   await run.expectExit(0);
 

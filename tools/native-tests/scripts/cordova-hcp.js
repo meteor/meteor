@@ -44,10 +44,12 @@ async function applyCordovaFixtureUpdate(appDir) {
 async function readCordovaManifest({
   baseUrl,
   fetchImpl = globalThis.fetch,
+  signal,
 }) {
   const url = new URL(MANIFEST_PATH, baseUrl).toString();
   const response = await fetchImpl(url, {
     headers: { "cache-control": "no-cache" },
+    signal,
   });
   if (!response.ok) {
     throw new Error(
@@ -76,17 +78,45 @@ async function waitForCordovaManifestChange({
   let lastError;
 
   while (Date.now() < deadline) {
+    const remainingMs = deadline - Date.now();
+    const abortController = new AbortController();
+    const timeoutError = new Error("request timed out");
+    let requestTimeout;
+
     try {
-      const result = await readCordovaManifest({ baseUrl, fetchImpl });
+      const timeoutPromise = new Promise((_, reject) => {
+        requestTimeout = setTimeout(() => {
+          reject(timeoutError);
+          abortController.abort(timeoutError);
+        }, remainingMs);
+      });
+      const result = await Promise.race([
+        readCordovaManifest({
+          baseUrl,
+          fetchImpl,
+          signal: abortController.signal,
+        }),
+        timeoutPromise,
+      ]);
       if (result.version !== previousVersion) {
         return result;
       }
       lastError = new Error(`version remains ${previousVersion}`);
     } catch (error) {
       lastError = error;
+      if (error === timeoutError) {
+        break;
+      }
+    } finally {
+      clearTimeout(requestTimeout);
     }
 
-    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    const remainingAfterRequestMs = deadline - Date.now();
+    if (remainingAfterRequestMs > 0) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(intervalMs, remainingAfterRequestMs))
+      );
+    }
   }
 
   const detail = lastError ? `: ${lastError.message}` : "";
