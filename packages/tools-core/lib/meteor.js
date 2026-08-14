@@ -80,11 +80,16 @@ export function hasMeteorAppConfigAutoInstallDeps() {
  */
 export function getMeteorAppEntrypoints() {
   const meteorConfig = getMeteorAppConfig();
+  const testModule = meteorConfig?.testModule;
+  const sharedTestModule = typeof testModule === "string"
+    ? testModule
+    : undefined;
+
   return {
     mainClient: meteorConfig?.mainModule?.client,
     mainServer: meteorConfig?.mainModule?.server,
-    testClient: meteorConfig?.testModule?.client || meteorConfig?.testModule,
-    testServer: meteorConfig?.testModule?.server || meteorConfig?.testModule,
+    testClient: testModule?.client || sharedTestModule,
+    testServer: testModule?.server || sharedTestModule,
   };
 }
 
