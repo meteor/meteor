@@ -397,10 +397,6 @@ export default defineConfig({
                 link: "/packages/logging",
               },
               {
-                text: "underscore",
-                link: "/packages/underscore",
-              },
-              {
                 text: "autoupdate",
                 link: "/packages/autoupdate",
               },
