@@ -224,6 +224,53 @@ if (Meteor.isServer) {
     done();
   });
 
+  Tinytest.addAsync('accounts cookie - set closes the connection after 413 on an unfinished chunked body', async (test, done) => {
+    const { URL } = Npm.require('url');
+    const u = new URL(Meteor.absoluteUrl(SET_PATH.replace(/^\//, '')));
+    const httpLib = Npm.require(u.protocol === 'https:' ? 'https' : 'http');
+    const result = await new Promise((resolve) => {
+      const req = httpLib.request({
+        protocol: u.protocol,
+        hostname: u.hostname,
+        port: u.port,
+        path: u.pathname,
+        method: 'POST',
+        // No Content-Length: the body is sent chunked, so the server can only
+        // detect the overflow while streaming.
+        headers: { 'Content-Type': 'application/json' },
+      }, (res) => {
+        let data = '';
+        res.setEncoding('utf8');
+        res.on('data', (chunk) => data += chunk);
+        const socketClosed = new Promise((resolveClose) => {
+          res.socket.once('close', () => resolveClose(true));
+        });
+        res.on('end', async () => {
+          // Regression (#14657 review): the server used to answer 413 but
+          // leave the paused request holding the keep-alive socket open.
+          const closed = await Promise.race([
+            socketClosed,
+            new Promise((resolveClose) => setTimeout(() => resolveClose(false), 5000)),
+          ]);
+          resolve({ status: res.statusCode, headers: res.headers, body: data, closed });
+        });
+      });
+      // The server tears the socket down mid-upload; the client-side error
+      // that produces is expected, not a test failure.
+      req.on('error', () => {});
+      // Stream past the limit and never call req.end(), like an upload that
+      // is arbitrarily large or never finishes.
+      req.write(Array(5000).fill('a').join(''));
+    });
+    test.equal(result.status, 413);
+    let json;
+    try { json = JSON.parse(result.body); } catch (_e) {}
+    test.equal(json && json.error, 'body_too_large');
+    test.equal(result.headers.connection, 'close');
+    test.isTrue(result.closed, 'socket closed after 413');
+    done();
+  });
+
   Tinytest.addAsync('accounts cookie - endpoints fall through when feature disabled', async (test, done) => {
     const saved = Accounts._options.useHttpOnlyCookies;
     Accounts._options.useHttpOnlyCookies = false;

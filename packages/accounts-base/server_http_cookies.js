@@ -117,6 +117,10 @@ WebApp.handlers.use(async (req, res, next) => {
   }
   const body = await readJson(req);
   if (body === null) {
+    // The client may still be streaming an arbitrarily large (or endless)
+    // body that we stopped consuming, so close the connection instead of
+    // leaving the paused request holding the keep-alive socket open.
+    res.setHeader('Connection', 'close');
     return sendJson(res, 413, { error: 'body_too_large' });
   }
   const token = body && body.token;
