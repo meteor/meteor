@@ -67,6 +67,12 @@ var Isopack = function () {
   // Optional sub-path module type declarations (set via api.types() modules option).
   self.typesModules = null;
 
+  // The directory this isopack was loaded from (initFromPath) or saved to by
+  // the IsopackCache after a fresh build.  Null for isopacks that only exist
+  // in memory.  Used by the types generator to locate files inside the
+  // on-disk isopack, such as npm/node_modules.
+  self.isopackPath = null;
+
   // Unibuilds, an array of class Unibuild.
   self.unibuilds = [];
 
@@ -866,6 +872,12 @@ Object.assign(Isopack.prototype, {
     if (options.pluginCacheDir) {
       self.pluginCacheDir = options.pluginCacheDir;
     }
+
+    // Remember where this isopack lives on disk.  We deliberately record the
+    // path as given (in the tropohouse this is a symlink that is swapped when
+    // more unibuilds are merged in), so consumers always see the current
+    // contents.
+    self.isopackPath = dir;
 
     await self._loadUnibuildsFromPath(name, dir, options);
   }),

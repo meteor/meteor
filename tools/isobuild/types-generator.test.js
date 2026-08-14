@@ -6,17 +6,29 @@
  * Each test uses in-memory fake isopacks / packageMaps so there is no
  * filesystem or build-system dependency.  The `../fs/files` module is mocked
  * so we can assert on what was written without touching the real disk.
+ * Symlinks are recorded in a Map (link path -> target) exposed as
+ * `files.__symlinks`.
  */
 
-jest.mock("../fs/files", () => ({
-  pathJoin: (...args) => args.join("/"),
-  mkdir_p: jest.fn(),
-  // Throw by default (file does not exist yet) – individual tests may override.
-  readFile: jest.fn(() => {
-    throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
-  }),
-  writeFile: jest.fn(),
-}));
+jest.mock("../fs/files", () => {
+  // Note: this factory is hoisted by Jest, so all state lives inside it.
+  const symlinks = new Map();
+  return {
+    __symlinks: symlinks,
+    pathJoin: (...args) => args.join("/"),
+    convertToOSPath: (p) => p,
+    mkdir_p: jest.fn(),
+    readFile: jest.fn(),
+    writeFile: jest.fn(),
+    exists: jest.fn(),
+    readdir: jest.fn(),
+    unlink: jest.fn(),
+    rm_recursive: jest.fn(),
+    lstat: jest.fn(),
+    readlink: jest.fn(),
+    symlinkWithOverwrite: jest.fn(),
+  };
+});
 
 jest.mock("../console/console.js", () => ({
   Console: { debug: jest.fn(), warn: jest.fn() },
@@ -29,6 +41,10 @@ const files = require("../fs/files");
 // Test helpers
 // ---------------------------------------------------------------------------
 
+function enoent() {
+  return Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+}
+
 /** Create a fake isopack resource with the given path and text content. */
 function makeResource(path, content) {
   return { path, type: "asset", data: Buffer.from(content, "utf8") };
@@ -40,13 +56,15 @@ function makeResource(path, content) {
  * @param {string|null}  opts.typesEntry    - value for isopack.typesEntry
  * @param {Object|null}  opts.typesModules  - value for isopack.typesModules
  * @param {Array}        opts.resources     - flat list of resources placed in one unibuild
+ * @param {string|null}  opts.isopackPath   - fake on-disk root of the isopack
  */
 function makeIsopack({
   typesEntry = null,
   typesModules = null,
   resources = [],
+  isopackPath = null,
 } = {}) {
-  return { typesEntry, typesModules, unibuilds: [{ resources }] };
+  return { typesEntry, typesModules, unibuilds: [{ resources }], isopackPath };
 }
 
 /** Create a fake packageMap that iterates over the given names in order. */
@@ -86,9 +104,31 @@ const PACKAGES_DTS = `${TYPES_DIR}/packages.d.ts`;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  files.__symlinks.clear();
   // By default, pretend every file is new (readFile throws ENOENT).
   files.readFile.mockImplementation(() => {
-    throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+    throw enoent();
+  });
+  // No npm/node_modules directories exist unless a test says so.
+  files.exists.mockImplementation(() => false);
+  // Directories are empty unless a test says otherwise.
+  files.readdir.mockImplementation(() => []);
+  // lstat/readlink/symlinkWithOverwrite/rm_recursive act on the symlink map.
+  files.lstat.mockImplementation((p) => {
+    if (files.__symlinks.has(p)) return { isSymbolicLink: () => true };
+    throw enoent();
+  });
+  files.readlink.mockImplementation((p) => {
+    if (!files.__symlinks.has(p)) {
+      throw Object.assign(new Error("EINVAL"), { code: "EINVAL" });
+    }
+    return files.__symlinks.get(p);
+  });
+  files.symlinkWithOverwrite.mockImplementation(async (source, target) => {
+    files.__symlinks.set(target, source);
+  });
+  files.rm_recursive.mockImplementation(async (p) => {
+    files.__symlinks.delete(p);
   });
 });
 
@@ -104,6 +144,20 @@ describe("directory setup", () => {
       projectMeteorDir: PROJECT_METEOR,
     });
     expect(files.mkdir_p).toHaveBeenCalledWith(PKGS_DIR);
+  });
+
+  test("creates one directory per package with types", async () => {
+    await generateTypes({
+      isopackCache: makeIsopackCache({
+        random: makeIsopack({
+          typesEntry: "random.d.ts",
+          resources: [makeResource("random.d.ts", "export const x: number;")],
+        }),
+      }),
+      packageMap: makePackageMap(["random"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+    expect(files.mkdir_p).toHaveBeenCalledWith(`${PKGS_DIR}/random`);
   });
 
   test("writes a .gitignore that ignores the whole types dir", async () => {
@@ -165,7 +219,7 @@ describe("skipping packages", () => {
 describe("priority 1 – api.types() / isopack.typesEntry", () => {
   const CONTENT = "export declare const Random: { id(): string };";
 
-  test("writes the per-package .d.ts file wrapped in declare module", async () => {
+  test("writes the per-package index.d.ts wrapped in declare module", async () => {
     await generateTypes({
       isopackCache: makeIsopackCache({
         random: makeIsopack({
@@ -176,7 +230,7 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
       packageMap: makePackageMap(["random"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const perPkg = writtenContentAt(`${PKGS_DIR}/random.d.ts`);
+    const perPkg = writtenContentAt(`${PKGS_DIR}/random/index.d.ts`);
     expect(perPkg).toContain("declare module 'meteor/random'");
     expect(perPkg).toContain(CONTENT);
   });
@@ -193,7 +247,9 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
       projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
-    expect(dts).toContain('/// <reference path="./packages/random.d.ts" />');
+    expect(dts).toContain(
+      '/// <reference path="./packages/random/index.d.ts" />'
+    );
     // barrel must NOT use relative re-exports inside declare module
     expect(dts).not.toContain("export * from");
   });
@@ -216,13 +272,17 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
       projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
-    expect(dts).toContain('/// <reference path="./packages/random.d.ts" />');
-    expect(dts).toContain('/// <reference path="./packages/tracker.d.ts" />');
+    expect(dts).toContain(
+      '/// <reference path="./packages/random/index.d.ts" />'
+    );
+    expect(dts).toContain(
+      '/// <reference path="./packages/tracker/index.d.ts" />'
+    );
     // per-package files carry the declare module wrappers
-    expect(writtenContentAt(`${PKGS_DIR}/random.d.ts`)).toContain(
+    expect(writtenContentAt(`${PKGS_DIR}/random/index.d.ts`)).toContain(
       "declare module 'meteor/random'"
     );
-    expect(writtenContentAt(`${PKGS_DIR}/tracker.d.ts`)).toContain(
+    expect(writtenContentAt(`${PKGS_DIR}/tracker/index.d.ts`)).toContain(
       "declare module 'meteor/tracker'"
     );
   });
@@ -248,12 +308,14 @@ describe("priority 2 – package-types.json", () => {
       packageMap: makePackageMap(["react-meteor-data"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const perPkg = writtenContentAt(`${PKGS_DIR}/react-meteor-data.d.ts`);
+    const perPkg = writtenContentAt(
+      `${PKGS_DIR}/react-meteor-data/index.d.ts`
+    );
     expect(perPkg).toContain("declare module 'meteor/react-meteor-data'");
     expect(perPkg).toContain(CONTENT);
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/index.d.ts" />'
     );
   });
 
@@ -309,13 +371,13 @@ describe("priority 2 – package-types.json", () => {
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/index.d.ts" />'
     );
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data__suspense.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/suspense.d.ts" />'
     );
     const suspensePkg = writtenContentAt(
-      `${PKGS_DIR}/react-meteor-data__suspense.d.ts`
+      `${PKGS_DIR}/react-meteor-data/suspense.d.ts`
     );
     expect(suspensePkg).toContain(
       "declare module 'meteor/react-meteor-data/suspense'"
@@ -340,10 +402,12 @@ describe("priority 3 – auto-detect single .d.ts", () => {
       packageMap: makePackageMap(["tracker"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const perPkg = writtenContentAt(`${PKGS_DIR}/tracker.d.ts`);
+    const perPkg = writtenContentAt(`${PKGS_DIR}/tracker/index.d.ts`);
     expect(perPkg).toContain("declare module 'meteor/tracker'");
     const dts = writtenContentAt(PACKAGES_DTS);
-    expect(dts).toContain('/// <reference path="./packages/tracker.d.ts" />');
+    expect(dts).toContain(
+      '/// <reference path="./packages/tracker/index.d.ts" />'
+    );
   });
 
   test("does NOT auto-detect when there are multiple .d.ts resources", async () => {
@@ -386,11 +450,13 @@ describe("sub-path modules (issue #10)", () => {
       packageMap: makePackageMap(["react-meteor-data"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const mainPkg = writtenContentAt(`${PKGS_DIR}/react-meteor-data.d.ts`);
+    const mainPkg = writtenContentAt(
+      `${PKGS_DIR}/react-meteor-data/index.d.ts`
+    );
     expect(mainPkg).toContain("declare module 'meteor/react-meteor-data'");
     expect(mainPkg).toContain(MAIN);
     const subPkg = writtenContentAt(
-      `${PKGS_DIR}/react-meteor-data__suspense.d.ts`
+      `${PKGS_DIR}/react-meteor-data/suspense.d.ts`
     );
     expect(subPkg).toContain(
       "declare module 'meteor/react-meteor-data/suspense'"
@@ -414,10 +480,10 @@ describe("sub-path modules (issue #10)", () => {
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/index.d.ts" />'
     );
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data__suspense.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/suspense.d.ts" />'
     );
     // must NOT have relative re-exports inside declare module blocks
     expect(dts).not.toContain("export * from");
@@ -442,14 +508,37 @@ describe("sub-path modules (issue #10)", () => {
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data__hooks.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/hooks.d.ts" />'
     );
     const hooksPkg = writtenContentAt(
-      `${PKGS_DIR}/react-meteor-data__hooks.d.ts`
+      `${PKGS_DIR}/react-meteor-data/hooks.d.ts`
     );
     expect(hooksPkg).toContain(
       "declare module 'meteor/react-meteor-data/hooks'"
     );
+  });
+
+  test('a sub-path module named "index" is skipped instead of clobbering index.d.ts', async () => {
+    const isopack = makeIsopack({
+      typesEntry: "main.d.ts",
+      typesModules: { index: "sub-index.d.ts" },
+      resources: [
+        makeResource("main.d.ts", MAIN),
+        makeResource("sub-index.d.ts", "export declare const clash: 1;"),
+      ],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+    const mainPkg = writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`);
+    // main entry survives untouched…
+    expect(mainPkg).toContain("declare module 'meteor/pkg'");
+    expect(mainPkg).not.toContain("meteor/pkg/index");
+    // …and the colliding sub-module is not referenced by the barrel
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).not.toContain("meteor/pkg/index");
   });
 });
 
@@ -474,7 +563,7 @@ describe("pre-declared modules are used verbatim", () => {
       packageMap: makePackageMap(["zodern:relay"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const perPkg = writtenContentAt(`${PKGS_DIR}/zodern_relay.d.ts`);
+    const perPkg = writtenContentAt(`${PKGS_DIR}/zodern_relay/index.d.ts`);
     // content is emitted verbatim…
     expect(perPkg).toBe(`${PRE_DECLARED}\n`);
     // …and in particular NOT nested inside another declare module
@@ -492,7 +581,7 @@ describe("pre-declared modules are used verbatim", () => {
       packageMap: makePackageMap(["pkg"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const perPkg = writtenContentAt(`${PKGS_DIR}/pkg.d.ts`);
+    const perPkg = writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`);
     expect(perPkg.match(/declare module/g)).toHaveLength(1);
   });
 
@@ -516,11 +605,11 @@ describe("pre-declared modules are used verbatim", () => {
       projectMeteorDir: PROJECT_METEOR,
     });
     // plain main file is wrapped…
-    expect(writtenContentAt(`${PKGS_DIR}/pkg.d.ts`)).toContain(
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toContain(
       "declare module 'meteor/pkg'"
     );
     // …while the pre-declared sub-path file is passed through unchanged
-    expect(writtenContentAt(`${PKGS_DIR}/pkg__sub.d.ts`)).toBe(`${sub}\n`);
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/sub.d.ts`)).toBe(`${sub}\n`);
   });
 
   test("wraps files with top-level namespaces and non-relative imports", async () => {
@@ -539,7 +628,7 @@ describe("pre-declared modules are used verbatim", () => {
       packageMap: makePackageMap(["random"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const perPkg = writtenContentAt(`${PKGS_DIR}/random.d.ts`);
+    const perPkg = writtenContentAt(`${PKGS_DIR}/random/index.d.ts`);
     // namespaces and non-relative imports are valid inside an ambient module
     // block, so these files ARE wrapped
     expect(perPkg).toContain("declare module 'meteor/random'");
@@ -553,7 +642,7 @@ describe("pre-declared modules are used verbatim", () => {
 // ---------------------------------------------------------------------------
 
 describe("package name normalization", () => {
-  test("replaces `:` with `_` in filenames (colon-based author:package names)", async () => {
+  test("replaces `:` with `_` in directory names (colon-based author:package names)", async () => {
     const content = "export declare const x: number;";
     const isopack = makeIsopack({
       typesEntry: "types.d.ts",
@@ -564,14 +653,14 @@ describe("package name normalization", () => {
       packageMap: makePackageMap(["author:package"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    // filename uses underscore, but declare module preserves the original colon-name
-    const perPkg = writtenContentAt(`${PKGS_DIR}/author_package.d.ts`);
+    // directory uses underscore, but declare module preserves the original colon-name
+    const perPkg = writtenContentAt(`${PKGS_DIR}/author_package/index.d.ts`);
     expect(perPkg).toContain("declare module 'meteor/author:package'");
     expect(perPkg).toContain(content);
-    // barrel references by normalized filename
+    // barrel references by normalized directory name
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
-      '/// <reference path="./packages/author_package.d.ts" />'
+      '/// <reference path="./packages/author_package/index.d.ts" />'
     );
   });
 
@@ -594,17 +683,182 @@ describe("package name normalization", () => {
     });
     // '/' maps to '__' while literal '_' escapes to '_u', so the two keys
     // can no longer overwrite each other's file
-    const slashPkg = writtenContentAt(`${PKGS_DIR}/pkg__a__b.d.ts`);
+    const slashPkg = writtenContentAt(`${PKGS_DIR}/pkg/a__b.d.ts`);
     expect(slashPkg).toContain("declare module 'meteor/pkg/a/b'");
     expect(slashPkg).toContain(SLASH);
-    const underscorePkg = writtenContentAt(`${PKGS_DIR}/pkg__a_u_ub.d.ts`);
+    const underscorePkg = writtenContentAt(`${PKGS_DIR}/pkg/a_u_ub.d.ts`);
     expect(underscorePkg).toContain("declare module 'meteor/pkg/a__b'");
     expect(underscorePkg).toContain(UNDERSCORE);
     // barrel references both distinct files
     const dts = writtenContentAt(PACKAGES_DTS);
-    expect(dts).toContain('/// <reference path="./packages/pkg__a__b.d.ts" />');
     expect(dts).toContain(
-      '/// <reference path="./packages/pkg__a_u_ub.d.ts" />'
+      '/// <reference path="./packages/pkg/a__b.d.ts" />'
+    );
+    expect(dts).toContain(
+      '/// <reference path="./packages/pkg/a_u_ub.d.ts" />'
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// npm deps symlink
+// ---------------------------------------------------------------------------
+
+describe("npm deps symlink", () => {
+  const CONTENT = "export declare const Random: { id(): string };";
+  const ISOPACK_ROOT = "/home/user/.meteor/packages/random/1.0.0";
+  const NPM_DIR = `${ISOPACK_ROOT}/npm/node_modules`;
+  const LINK = `${PKGS_DIR}/random/node_modules`;
+
+  function randomIsopack({ isopackPath = ISOPACK_ROOT } = {}) {
+    return makeIsopack({
+      typesEntry: "random.d.ts",
+      resources: [makeResource("random.d.ts", CONTENT)],
+      isopackPath,
+    });
+  }
+
+  async function run(isopack) {
+    await generateTypes({
+      isopackCache: makeIsopackCache({ random: isopack }),
+      packageMap: makePackageMap(["random"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+  }
+
+  test("creates node_modules symlink when the isopack has npm/node_modules", async () => {
+    files.exists.mockImplementation((p) => p === NPM_DIR);
+    await run(randomIsopack());
+    expect(files.symlinkWithOverwrite).toHaveBeenCalledWith(NPM_DIR, LINK);
+    expect(files.__symlinks.get(LINK)).toBe(NPM_DIR);
+  });
+
+  test("skips the symlink when the isopack has no npm/node_modules", async () => {
+    // files.exists stays false for every path
+    await run(randomIsopack());
+    expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
+  });
+
+  test("skips the symlink when the isopack does not know its on-disk root", async () => {
+    files.exists.mockImplementation(() => true);
+    await run(randomIsopack({ isopackPath: null }));
+    expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
+  });
+
+  test("leaves an existing symlink with the correct target alone", async () => {
+    files.exists.mockImplementation((p) => p === NPM_DIR);
+    files.__symlinks.set(LINK, NPM_DIR);
+    await run(randomIsopack());
+    expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
+    expect(files.__symlinks.get(LINK)).toBe(NPM_DIR);
+  });
+
+  test("replaces a symlink pointing at the wrong target", async () => {
+    files.exists.mockImplementation((p) => p === NPM_DIR);
+    files.__symlinks.set(LINK, "/somewhere/else/npm/node_modules");
+    await run(randomIsopack());
+    expect(files.symlinkWithOverwrite).toHaveBeenCalledWith(NPM_DIR, LINK);
+    expect(files.__symlinks.get(LINK)).toBe(NPM_DIR);
+  });
+
+  test("replaces a non-symlink occupying the node_modules path", async () => {
+    files.exists.mockImplementation((p) => p === NPM_DIR);
+    // A real directory (not a symlink) sits where the link should go.
+    files.lstat.mockImplementation((p) => {
+      if (p === LINK) return { isSymbolicLink: () => false };
+      throw enoent();
+    });
+    await run(randomIsopack());
+    expect(files.symlinkWithOverwrite).toHaveBeenCalledWith(NPM_DIR, LINK);
+  });
+
+  test("removes a leftover link when the package no longer bundles npm deps", async () => {
+    // The link exists from a previous run, but npm/node_modules is gone.
+    files.__symlinks.set(LINK, NPM_DIR);
+    await run(randomIsopack());
+    expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
+    expect(files.rm_recursive).toHaveBeenCalledWith(LINK);
+    expect(files.__symlinks.has(LINK)).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Stale output cleanup
+// ---------------------------------------------------------------------------
+
+describe("stale output cleanup", () => {
+  const CONTENT = "export declare const Random: { id(): string };";
+
+  function randomIsopack() {
+    return makeIsopack({
+      typesEntry: "random.d.ts",
+      resources: [makeResource("random.d.ts", CONTENT)],
+    });
+  }
+
+  async function run(isopacks, names) {
+    await generateTypes({
+      isopackCache: makeIsopackCache(isopacks),
+      packageMap: makePackageMap(names),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+  }
+
+  test("removes package directories for packages no longer in the map", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["random", "old-pkg"];
+      if (p === `${PKGS_DIR}/random`) return ["index.d.ts"];
+      return [];
+    });
+    await run({ random: randomIsopack() }, ["random"]);
+    expect(files.rm_recursive).toHaveBeenCalledWith(`${PKGS_DIR}/old-pkg`);
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(`${PKGS_DIR}/random`);
+  });
+
+  test("removes the directory of a package that lost its types", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["random"];
+      return [];
+    });
+    // random is still in the package map but no longer ships types
+    await run({ random: makeIsopack() }, ["random"]);
+    expect(files.rm_recursive).toHaveBeenCalledWith(`${PKGS_DIR}/random`);
+  });
+
+  test("removes old flat-layout .d.ts files directly under packages/", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) {
+        return ["random", "random.d.ts", "react-meteor-data__suspense.d.ts"];
+      }
+      if (p === `${PKGS_DIR}/random`) return ["index.d.ts"];
+      return [];
+    });
+    await run({ random: randomIsopack() }, ["random"]);
+    expect(files.unlink).toHaveBeenCalledWith(`${PKGS_DIR}/random.d.ts`);
+    expect(files.unlink).toHaveBeenCalledWith(
+      `${PKGS_DIR}/react-meteor-data__suspense.d.ts`
+    );
+    // the new-layout directory must survive the migration
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(`${PKGS_DIR}/random`);
+  });
+
+  test("prunes dropped files inside a kept package dir but keeps current output", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["random"];
+      if (p === `${PKGS_DIR}/random`) {
+        return ["index.d.ts", "dropped-module.d.ts", "node_modules"];
+      }
+      return [];
+    });
+    await run({ random: randomIsopack() }, ["random"]);
+    expect(files.rm_recursive).toHaveBeenCalledWith(
+      `${PKGS_DIR}/random/dropped-module.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${PKGS_DIR}/random/index.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${PKGS_DIR}/random/node_modules`
     );
   });
 });
@@ -624,8 +878,10 @@ describe("writeIfChanged", () => {
     // already having the wrapped content so the write is skipped.
     const wrappedContent = `declare module 'meteor/random' {\n  ${content}\n}\n`;
     files.readFile.mockImplementation((p) => {
-      if (p === `${PKGS_DIR}/random.d.ts`) return Buffer.from(wrappedContent);
-      throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      if (p === `${PKGS_DIR}/random/index.d.ts`) {
+        return Buffer.from(wrappedContent);
+      }
+      throw enoent();
     });
     await generateTypes({
       isopackCache: makeIsopackCache({ random: isopack }),
@@ -633,7 +889,7 @@ describe("writeIfChanged", () => {
       projectMeteorDir: PROJECT_METEOR,
     });
     const perPkgWrites = files.writeFile.mock.calls.filter(
-      (c) => c[0] === `${PKGS_DIR}/random.d.ts`
+      (c) => c[0] === `${PKGS_DIR}/random/index.d.ts`
     );
     expect(perPkgWrites).toHaveLength(0);
   });
@@ -648,15 +904,17 @@ describe("writeIfChanged", () => {
     // Simulate disk having the wrapped OLD content
     const wrappedOld = `declare module 'meteor/random' {\n  ${oldContent}\n}\n`;
     files.readFile.mockImplementation((p) => {
-      if (p === `${PKGS_DIR}/random.d.ts`) return Buffer.from(wrappedOld);
-      throw Object.assign(new Error("ENOENT"), { code: "ENOENT" });
+      if (p === `${PKGS_DIR}/random/index.d.ts`) {
+        return Buffer.from(wrappedOld);
+      }
+      throw enoent();
     });
     await generateTypes({
       isopackCache: makeIsopackCache({ random: isopack }),
       packageMap: makePackageMap(["random"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    const written = writtenContentAt(`${PKGS_DIR}/random.d.ts`);
+    const written = writtenContentAt(`${PKGS_DIR}/random/index.d.ts`);
     expect(written).toContain("declare module 'meteor/random'");
     expect(written).toContain(newContent);
   });

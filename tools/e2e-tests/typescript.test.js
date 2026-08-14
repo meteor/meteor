@@ -12,9 +12,9 @@ const isCI = process.env.GITHUB_ACTIONS === 'true';
 async function assertGeneratedTypes(tempDir) {
   await assertFileExist(tempDir, '.meteor/types');
   await assertFileExist(tempDir, '.meteor/types/packages.d.ts', {
-    content: '/// <reference path="./packages/random.d.ts" />',
+    content: '/// <reference path="./packages/random/index.d.ts" />',
   });
-  await assertFileExist(tempDir, '.meteor/types/packages/random.d.ts', {
+  await assertFileExist(tempDir, '.meteor/types/packages/random/index.d.ts', {
     content: "declare module 'meteor/random'",
   });
 }

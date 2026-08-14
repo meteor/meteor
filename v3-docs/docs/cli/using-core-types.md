@@ -14,21 +14,32 @@ writes type declaration files to `.meteor/types/`:
 ├── .gitignore                 ← written by the generator; keeps the folder untracked
 ├── packages.d.ts              ← barrel file with /// <reference> directives
 └── packages/
-    ├── random.d.ts            ← each file wraps its exports in declare module
-    ├── accounts-base.d.ts
-    ├── react-meteor-data.d.ts
-    └── …one file per package that ships types
+    ├── random/                ← one directory per package that ships types
+    │   └── index.d.ts         ← wraps the package's exports in declare module
+    ├── accounts-base/
+    │   ├── index.d.ts
+    │   └── node_modules       ← symlink to the package's bundled npm deps
+    └── react-meteor-data/
+        ├── index.d.ts
+        ├── suspense.d.ts      ← one extra file per sub-path module
+        └── node_modules
 ```
 
-`packages.d.ts` is a single barrel file of `/// <reference path="…" />` directives,
-one per package. Each per-package file under `packages/` wraps its exports
-in a `declare module 'meteor/package-name' { … }` block so TypeScript can
-resolve imports like:
+`packages.d.ts` is a single barrel file of `/// <reference path="…" />` directives.
+Each package gets its own directory under `packages/`, whose `index.d.ts` wraps
+the package's exports in a `declare module 'meteor/package-name' { … }` block so
+TypeScript can resolve imports like:
 
 ```ts
 import { Random } from "meteor/random";
 import { Accounts } from "meteor/accounts-base";
 ```
+
+When a package bundles its own npm dependencies, its directory also contains a
+`node_modules` symlink pointing at the npm packages shipped inside the built
+package (its isopack). Because the declaration files sit right next to that
+symlink, TypeScript's normal Node-style resolution finds the npm types the
+package's declarations import — with no extra configuration.
 
 The generator also writes a `.gitignore` inside `.meteor/types/`, so the
 generated files stay out of version control without any changes to your
@@ -98,8 +109,10 @@ directories, as shown above, is fine.
 
 ::: tip No `preserveSymlinks` needed
 Older guides recommended `"preserveSymlinks": true` for `zodern:types`. This is
-no longer required because the native type generator writes real files rather
-than symlinks.
+no longer required: the generated `.d.ts` files are real files, so TypeScript
+never reaches them *through* a symlink. Only each package's `node_modules`
+directory is a symlink, and ordinary resolution follows directory symlinks just
+fine.
 :::
 
 After running `meteor types` once, or starting the app with `meteor run`,
@@ -160,11 +173,11 @@ import { useTracker } from "meteor/react-meteor-data";
 import { useTracker } from "meteor/react-meteor-data/suspense";
 ```
 
-When a package declares sub-path modules, Meteor generates separate
-`.d.ts` files for each sub-path (e.g. `react-meteor-data__suspense.d.ts`)
-and adds the corresponding `/// <reference>` entry to `packages.d.ts`
-automatically. Each sub-path file wraps its exports in a
-`declare module 'meteor/pkg/sub-path'` block.
+When a package declares sub-path modules, Meteor generates a separate
+`.d.ts` file for each sub-path inside the package's directory (e.g.
+`packages/react-meteor-data/suspense.d.ts`) and adds the corresponding
+`/// <reference>` entry to `packages.d.ts` automatically. Each sub-path file
+wraps its exports in a `declare module 'meteor/pkg/sub-path'` block.
 
 ## Bundling Types in Your Own Package
 

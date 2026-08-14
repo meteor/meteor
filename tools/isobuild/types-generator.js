@@ -5,6 +5,24 @@
  * resolve `import { X } from 'meteor/package-name'` and sub-path imports like
  * `import { Y } from 'meteor/package-name/sub-path'`.
  *
+ * Output layout (one directory per package):
+ *
+ *   .meteor/types/
+ *     .gitignore
+ *     packages.d.ts                    (barrel of /// <reference> directives)
+ *     packages/
+ *       <normalizedName>/
+ *         index.d.ts                   (main module declaration)
+ *         <normalizedModuleKey>.d.ts   (one per sub-path module)
+ *         node_modules -> <isopackRoot>/npm/node_modules   (only when it exists)
+ *
+ * The node_modules symlink lets TypeScript resolve `import ... from
+ * 'some-npm-pkg'` statements inside a package's declaration files against the
+ * npm dependencies bundled with that package's isopack.  The generated .d.ts
+ * files are real files (not reached through a symlink), so normal Node-style
+ * resolution walks up from them and follows the sibling node_modules symlink —
+ * no `preserveSymlinks` compiler option is needed.
+ *
  * Priority order for resolving a package's type entry:
  *   1. isopack.typesEntry  (set via api.types() in package.js)
  *   2. package-types.json  resource in the isopack
@@ -19,6 +37,8 @@ import { Console } from "../console/console.js";
 const TYPES_DIR = "types";
 const PACKAGES_SUBDIR = "packages";
 const PACKAGES_DTS = "packages.d.ts";
+const MAIN_DTS = "index.d.ts";
+const NPM_LINK_NAME = "node_modules";
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -68,24 +88,26 @@ export async function generateTypes({
 
     const info = findTypesInfo(isopack, name);
     if (!info) return;
-
-    const normalizedName = normalizePackageName(name);
-
-    // Write main .d.ts
-    const mainFileName = `${normalizedName}.d.ts`;
-    const mainAbsPath = files.pathJoin(packagesTypesDir, mainFileName);
-    if (info.data) {
-      const wrappedMain = wrapDeclareModule(`meteor/${name}`, info.data);
-      writeIfChanged(mainAbsPath, Buffer.from(wrappedMain, "utf8"));
-    } else {
+    if (!info.data) {
       // No content found – skip this package
       return;
     }
 
+    const normalizedName = normalizePackageName(name);
+    const packageDir = files.pathJoin(packagesTypesDir, normalizedName);
+    files.mkdir_p(packageDir);
+
+    // Write main .d.ts
+    const wrappedMain = wrapDeclareModule(`meteor/${name}`, info.data);
+    writeIfChanged(
+      files.pathJoin(packageDir, MAIN_DTS),
+      Buffer.from(wrappedMain, "utf8")
+    );
+
     const entry = {
       name,
       normalizedName,
-      mainRelPath: `${PACKAGES_SUBDIR}/${mainFileName}`,
+      mainRelPath: `${PACKAGES_SUBDIR}/${normalizedName}/${MAIN_DTS}`,
       subModules: [],
     };
 
@@ -93,10 +115,17 @@ export async function generateTypes({
     if (info.modules) {
       for (const [moduleName, moduleData] of Object.entries(info.modules)) {
         if (!moduleData) continue;
-        const moduleFileName = `${normalizedName}__${normalizePackageName(
-          moduleName
-        )}.d.ts`;
-        const moduleAbsPath = files.pathJoin(packagesTypesDir, moduleFileName);
+        const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
+        if (moduleFileName === MAIN_DTS) {
+          // A sub-path module literally named "index" would collide with the
+          // package's own entry file.  Degenerate case; skip it.
+          Console.debug(
+            `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
+              `filename collides with ${MAIN_DTS}`
+          );
+          continue;
+        }
+        const moduleAbsPath = files.pathJoin(packageDir, moduleFileName);
         const wrappedModule = wrapDeclareModule(
           `meteor/${name}/${moduleName}`,
           moduleData
@@ -104,13 +133,20 @@ export async function generateTypes({
         writeIfChanged(moduleAbsPath, Buffer.from(wrappedModule, "utf8"));
         entry.subModules.push({
           name: moduleName,
-          relPath: `${PACKAGES_SUBDIR}/${moduleFileName}`,
+          fileName: moduleFileName,
+          relPath: `${PACKAGES_SUBDIR}/${normalizedName}/${moduleFileName}`,
         });
       }
     }
 
+    // Make the package's bundled npm dependencies resolvable from its
+    // declaration files.
+    await ensureNpmDepsSymlink(isopack, packageDir, name);
+
     entries.push(entry);
   });
+
+  await removeStaleOutput(packagesTypesDir, entries);
 
   const declaration = generatePackagesDeclaration(entries);
   writeIfChanged(
@@ -122,6 +158,145 @@ export async function generateTypes({
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Normalize a symlink target for comparison, mirroring the normalization in
+ * files.symlinkWithOverwrite (OS-specific separators, no trailing slash).
+ */
+function normalizeLinkTarget(p) {
+  return files.convertToOSPath(p).replace(/[\/\\]+$/, "");
+}
+
+/**
+ * Describe what currently exists at a would-be symlink path.
+ * Returns { exists: boolean, target: string|null } where target is non-null
+ * only when the path is a symlink.
+ */
+function readLinkStatus(linkPath) {
+  let st;
+  try {
+    st = files.lstat(linkPath);
+  } catch (_) {
+    return { exists: false, target: null };
+  }
+  if (!st.isSymbolicLink()) {
+    return { exists: true, target: null };
+  }
+  try {
+    return { exists: true, target: files.readlink(linkPath) };
+  } catch (_) {
+    return { exists: true, target: null };
+  }
+}
+
+/**
+ * Create (or fix up) the `node_modules` symlink inside a generated package
+ * directory, pointing at the isopack's bundled npm dependencies
+ * (`<isopackRoot>/npm/node_modules`).  files.symlinkWithOverwrite creates a
+ * junction-style directory link on Windows, which does not require admin
+ * rights, and replaces an existing wrong-target link, file, or directory.
+ *
+ * isopack.isopackPath is recorded by the IsopackCache when the isopack is
+ * loaded from disk (versioned packages from the tropohouse, up-to-date local
+ * packages from .meteor/local/isopacks) or saved after a fresh build — which
+ * happens during the build stage, before type generation runs.  If it is
+ * missing (e.g. a cache with no cacheDir), the symlink is simply skipped.
+ */
+async function ensureNpmDepsSymlink(isopack, packageDir, name) {
+  const linkPath = files.pathJoin(packageDir, NPM_LINK_NAME);
+  const isopackRoot = isopack.isopackPath;
+  const npmDir =
+    isopackRoot && files.pathJoin(isopackRoot, "npm", "node_modules");
+
+  const existing = readLinkStatus(linkPath);
+
+  if (!npmDir || !files.exists(npmDir)) {
+    // This package bundles no npm dependencies: remove a leftover link so it
+    // cannot dangle.
+    if (existing.exists) {
+      await files.rm_recursive(linkPath);
+      Console.debug(`[types] Removed stale npm deps link for "${name}"`);
+    }
+    return;
+  }
+
+  if (
+    existing.target !== null &&
+    normalizeLinkTarget(existing.target) === normalizeLinkTarget(npmDir)
+  ) {
+    // Already points at the right place.
+    return;
+  }
+
+  await files.symlinkWithOverwrite(npmDir, linkPath);
+  Console.debug(
+    existing.exists
+      ? `[types] Replaced npm deps link for "${name}" -> ${npmDir}`
+      : `[types] Linked npm deps for "${name}" -> ${npmDir}`
+  );
+}
+
+/**
+ * Remove output that no longer corresponds to the current set of packages:
+ *
+ *  - package directories under packages/ for packages that disappeared (or
+ *    lost their types),
+ *  - stale files inside kept package directories (e.g. a dropped sub-path
+ *    module),
+ *  - flat `<name>.d.ts` files directly under packages/ left behind by the
+ *    pre-directory layout (one-time migration).
+ */
+async function removeStaleOutput(packagesTypesDir, entries) {
+  const expectedByDir = new Map();
+  for (const entry of entries) {
+    const keep = new Set([MAIN_DTS, NPM_LINK_NAME]);
+    for (const sub of entry.subModules) {
+      keep.add(sub.fileName);
+    }
+    expectedByDir.set(entry.normalizedName, keep);
+  }
+
+  let dirEntries;
+  try {
+    dirEntries = files.readdir(packagesTypesDir);
+  } catch (_) {
+    return;
+  }
+
+  for (const entryName of dirEntries) {
+    const absPath = files.pathJoin(packagesTypesDir, entryName);
+
+    const keep = expectedByDir.get(entryName);
+    if (keep) {
+      // Current package: prune files we no longer generate.
+      let inner;
+      try {
+        inner = files.readdir(absPath);
+      } catch (_) {
+        continue;
+      }
+      for (const fileName of inner) {
+        if (!keep.has(fileName)) {
+          await files.rm_recursive(files.pathJoin(absPath, fileName));
+          Console.debug(
+            `[types] Removed stale file ${entryName}/${fileName}`
+          );
+        }
+      }
+      continue;
+    }
+
+    if (entryName.endsWith(".d.ts")) {
+      // Flat file from the previous layout.
+      files.unlink(absPath);
+      Console.debug(`[types] Removed old flat-layout file ${entryName}`);
+    } else {
+      // Directory (or stray file) for a package that is gone.
+      await files.rm_recursive(absPath);
+      Console.debug(`[types] Removed stale package dir ${entryName}`);
+    }
+  }
+}
 
 /**
  * Find type information for an isopack.
