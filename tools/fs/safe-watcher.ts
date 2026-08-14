@@ -156,16 +156,24 @@ if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
 // watchLibrary.watch if available.
 const changedPaths = new Set;
 
-function getPackageWarehouseRoot(): string | null {
-  if (process.env.METEOR_WAREHOUSE_DIR) {
-    return pathJoin(toPosixPath(process.env.METEOR_WAREHOUSE_DIR), "packages");
+function getPackageWarehouseRoots(): string[] {
+  let warehouseRoot = process.env.METEOR_WAREHOUSE_DIR
+    ? toPosixPath(process.env.METEOR_WAREHOUSE_DIR)
+    : null;
+
+  if (!warehouseRoot) {
+    const baseDir = inCheckout() ? getCurrentToolsDir() : getHomeDir();
+    if (!baseDir) {
+      return [];
+    }
+    warehouseRoot = pathJoin(toPosixPath(baseDir), ".meteor");
   }
 
-  const baseDir = inCheckout() ? getCurrentToolsDir() : getHomeDir();
-  return baseDir ? pathJoin(toPosixPath(baseDir), ".meteor", "packages") : null;
+  return [
+    pathJoin(warehouseRoot, "packages"),
+    pathJoin(warehouseRoot, "packages-from-server"),
+  ];
 }
-
-const packageWarehouseRoot = getPackageWarehouseRoot();
 
 function shouldIgnorePath(absPath: string): boolean {
   const posixPath = toPosixPath(absPath);
@@ -188,7 +196,7 @@ function shouldIgnorePath(absPath: string): boolean {
   // Downloaded package versions are installed atomically and immutable. Watching
   // their contents creates hundreds of native subscriptions without enabling a
   // development workflow; package selection changes are watched in the app.
-  if (packageWarehouseRoot) {
+  for (const packageWarehouseRoot of getPackageWarehouseRoots()) {
     const relativeToWarehouse = pathRelative(packageWarehouseRoot, posixPath);
     if (relativeToWarehouse === "" ||
         (!relativeToWarehouse.startsWith("..") && !relativeToWarehouse.startsWith("/"))) {
