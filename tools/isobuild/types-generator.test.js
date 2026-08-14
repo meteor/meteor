@@ -16,6 +16,11 @@ jest.mock("../fs/files", () => {
   return {
     __symlinks: symlinks,
     pathJoin: (...args) => args.join("/"),
+    pathDirname: (p) => {
+      const parts = p.split("/");
+      parts.pop();
+      return parts.join("/") || ".";
+    },
     convertToOSPath: (p) => p,
     mkdir_p: jest.fn(),
     readFile: jest.fn(),
@@ -54,17 +59,25 @@ function makeResource(path, content) {
  * Create a minimal fake isopack.
  * @param {Object} opts
  * @param {string|null}  opts.typesEntry    - value for isopack.typesEntry
+ * @param {string|null}  opts.typesDir     - value for isopack.typesDir
  * @param {Object|null}  opts.typesModules  - value for isopack.typesModules
  * @param {Array}        opts.resources     - flat list of resources placed in one unibuild
  * @param {string|null}  opts.isopackPath   - fake on-disk root of the isopack
  */
 function makeIsopack({
   typesEntry = null,
+  typesDir = null,
   typesModules = null,
   resources = [],
   isopackPath = null,
 } = {}) {
-  return { typesEntry, typesModules, unibuilds: [{ resources }], isopackPath };
+  return {
+    typesEntry,
+    typesDir,
+    typesModules,
+    unibuilds: [{ resources }],
+    isopackPath,
+  };
 }
 
 /** Create a fake packageMap that iterates over the given names in order. */
@@ -539,6 +552,263 @@ describe("sub-path modules (issue #10)", () => {
     // …and the colliding sub-module is not referenced by the barrel
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/pkg/index");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Directory mode (api.types('dist-types/'))
+// ---------------------------------------------------------------------------
+
+describe("directory mode – isopack.typesDir", () => {
+  // Relative import between the copied files proves they must be shipped
+  // verbatim: relative specifiers are invalid inside declare-module blocks.
+  const MAIN =
+    "import { useFind } from '../client/hooks';\n" +
+    "export declare function useTracker<T>(fn: () => T): T;\n";
+  const HOOKS = "export declare function useFind(): any;\n";
+  const HOOKS_MAP = '{"version":3,"file":"hooks.d.ts"}';
+
+  const RMD_DIR = `${PKGS_DIR}/react-meteor-data`;
+
+  const MAIN_STUB =
+    "declare module 'meteor/react-meteor-data' {\n" +
+    "  import exports = require('meteor-package-types/react-meteor-data/dist-types/server/main');\n" +
+    "  export = exports;\n" +
+    "}\n";
+
+  const HOOKS_STUB =
+    "declare module 'meteor/react-meteor-data/hooks' {\n" +
+    "  import exports = require('meteor-package-types/react-meteor-data/dist-types/client/hooks');\n" +
+    "  export = exports;\n" +
+    "}\n";
+
+  const TYPES_NM_DIR = `${TYPES_DIR}/node_modules`;
+  const PKG_TYPES_LINK = `${TYPES_NM_DIR}/meteor-package-types`;
+
+  function rmdIsopack() {
+    return makeIsopack({
+      typesDir: "dist-types",
+      typesEntry: "dist-types/server/main.d.ts",
+      typesModules: { hooks: "dist-types/client/hooks.d.ts" },
+      resources: [
+        makeResource("dist-types/server/main.d.ts", MAIN),
+        makeResource("dist-types/client/hooks.d.ts", HOOKS),
+        makeResource("dist-types/client/hooks.d.ts.map", HOOKS_MAP),
+      ],
+    });
+  }
+
+  async function run(isopacks, names) {
+    await generateTypes({
+      isopackCache: makeIsopackCache(isopacks),
+      packageMap: makePackageMap(names),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+  }
+
+  test("copies the declaration folder verbatim, preserving the tree", async () => {
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    // exact contents, no declare-module wrapping, original relative paths
+    expect(writtenContentAt(`${RMD_DIR}/dist-types/server/main.d.ts`)).toBe(
+      MAIN
+    );
+    expect(writtenContentAt(`${RMD_DIR}/dist-types/client/hooks.d.ts`)).toBe(
+      HOOKS
+    );
+    // .d.ts.map files ride along
+    expect(
+      writtenContentAt(`${RMD_DIR}/dist-types/client/hooks.d.ts.map`)
+    ).toBe(HOOKS_MAP);
+    // nested directories are created
+    expect(files.mkdir_p).toHaveBeenCalledWith(`${RMD_DIR}/dist-types/server`);
+    expect(files.mkdir_p).toHaveBeenCalledWith(`${RMD_DIR}/dist-types/client`);
+  });
+
+  test("writes a bare-specifier stub as index.d.ts (exact content)", async () => {
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    expect(writtenContentAt(`${RMD_DIR}/index.d.ts`)).toBe(MAIN_STUB);
+  });
+
+  test("writes a bare-specifier stub per sub-path module (exact content)", async () => {
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    expect(writtenContentAt(`${RMD_DIR}/hooks.d.ts`)).toBe(HOOKS_STUB);
+  });
+
+  test("packages.d.ts references the stubs, not the copied tree", async () => {
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain(
+      '/// <reference path="./packages/react-meteor-data/index.d.ts" />'
+    );
+    expect(dts).toContain(
+      '/// <reference path="./packages/react-meteor-data/hooks.d.ts" />'
+    );
+    // the entry has no ambient declare-module blocks of its own, so the
+    // copied tree is reached only through the stubs
+    expect(dts).not.toContain("dist-types");
+  });
+
+  test("creates the meteor-package-types symlink at the types root", async () => {
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    expect(files.mkdir_p).toHaveBeenCalledWith(TYPES_NM_DIR);
+    expect(files.symlinkWithOverwrite).toHaveBeenCalledWith(
+      PKGS_DIR,
+      PKG_TYPES_LINK
+    );
+    expect(files.__symlinks.get(PKG_TYPES_LINK)).toBe(PKGS_DIR);
+  });
+
+  test("leaves an existing meteor-package-types symlink alone (idempotent)", async () => {
+    files.__symlinks.set(PKG_TYPES_LINK, PKGS_DIR);
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
+    expect(files.__symlinks.get(PKG_TYPES_LINK)).toBe(PKGS_DIR);
+  });
+
+  test("replaces a meteor-package-types symlink pointing at the wrong target", async () => {
+    files.__symlinks.set(PKG_TYPES_LINK, "/somewhere/else/packages");
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    expect(files.symlinkWithOverwrite).toHaveBeenCalledWith(
+      PKGS_DIR,
+      PKG_TYPES_LINK
+    );
+    expect(files.__symlinks.get(PKG_TYPES_LINK)).toBe(PKGS_DIR);
+  });
+
+  test("does not create the symlink when no package uses directory mode", async () => {
+    await run(
+      {
+        random: makeIsopack({
+          typesEntry: "random.d.ts",
+          resources: [makeResource("random.d.ts", "export const x: 1;")],
+        }),
+      },
+      ["random"]
+    );
+    expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
+  });
+
+  test("stale cleanup keeps the copied folder and prunes dropped stubs", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["react-meteor-data"];
+      if (p === RMD_DIR) {
+        return [
+          "index.d.ts",
+          "hooks.d.ts",
+          "dist-types",
+          "dropped-module.d.ts",
+          "node_modules",
+        ];
+      }
+      return [];
+    });
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    expect(files.rm_recursive).toHaveBeenCalledWith(
+      `${RMD_DIR}/dropped-module.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/index.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/hooks.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/node_modules`
+    );
+  });
+
+  test("removes a stale copied folder after switching to single-file mode", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["pkg"];
+      if (p === `${PKGS_DIR}/pkg`) return ["index.d.ts", "dist-types"];
+      return [];
+    });
+    await run(
+      {
+        pkg: makeIsopack({
+          typesEntry: "pkg.d.ts",
+          resources: [makeResource("pkg.d.ts", "export const x: 1;")],
+        }),
+      },
+      ["pkg"]
+    );
+    expect(files.rm_recursive).toHaveBeenCalledWith(
+      `${PKGS_DIR}/pkg/dist-types`
+    );
+  });
+
+  test("colon-named package: stub specifier uses the normalized name", async () => {
+    const isopack = makeIsopack({
+      typesDir: "dist-types",
+      typesEntry: "dist-types/index.d.ts",
+      resources: [
+        makeResource("dist-types/index.d.ts", "export const x: 1;\n"),
+      ],
+    });
+    await run({ "author:package": isopack }, ["author:package"]);
+    expect(writtenContentAt(`${PKGS_DIR}/author_package/index.d.ts`)).toBe(
+      "declare module 'meteor/author:package' {\n" +
+        "  import exports = require('meteor-package-types/author_package/dist-types/index');\n" +
+        "  export = exports;\n" +
+        "}\n"
+    );
+  });
+
+  test("entry with its own declare-module blocks gets an extra barrel reference", async () => {
+    const AMBIENT =
+      "declare module 'meteor/pkg' {\n  export const x: number;\n}\n";
+    const isopack = makeIsopack({
+      typesDir: "dist-types",
+      typesEntry: "dist-types/index.d.ts",
+      resources: [makeResource("dist-types/index.d.ts", AMBIENT)],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    // the copied file stays verbatim and the stub is still written…
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/dist-types/index.d.ts`)).toBe(
+      AMBIENT
+    );
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toContain(
+      "import exports = require('meteor-package-types/pkg/dist-types/index');"
+    );
+    // …and the barrel references BOTH the stub and the file itself, so the
+    // file's own ambient declare-module blocks are loaded.
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain('/// <reference path="./packages/pkg/index.d.ts" />');
+    expect(dts).toContain(
+      '/// <reference path="./packages/pkg/dist-types/index.d.ts" />'
+    );
+  });
+
+  test("skips the package when the entry is not among the folder's files", async () => {
+    const isopack = makeIsopack({
+      typesDir: "dist-types",
+      typesEntry: "dist-types/missing.d.ts",
+      resources: [
+        makeResource("dist-types/other.d.ts", "export const x: 1;\n"),
+      ],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    expect(writtenContentAt(PACKAGES_DTS)).not.toContain("meteor/pkg");
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBeNull();
+  });
+
+  test("skips a sub-path module whose file is not in the folder", async () => {
+    const isopack = makeIsopack({
+      typesDir: "dist-types",
+      typesEntry: "dist-types/index.d.ts",
+      typesModules: { ghost: "dist-types/ghost.d.ts" },
+      resources: [
+        makeResource("dist-types/index.d.ts", "export const x: 1;\n"),
+      ],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain('/// <reference path="./packages/pkg/index.d.ts" />');
+    expect(dts).not.toContain("ghost");
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/ghost.d.ts`)).toBeNull();
   });
 });
 

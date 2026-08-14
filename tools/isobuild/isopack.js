@@ -64,6 +64,11 @@ var Isopack = function () {
   // TypeScript type declarations entry point (set via api.types() or package-types.json).
   self.typesEntry = null;
 
+  // Directory of TypeScript declaration files (set via the directory form
+  // of api.types()).  Null in single-file mode.  When set, typesEntry and
+  // typesModules values are full package-root-relative paths inside it.
+  self.typesDir = null;
+
   // Optional sub-path module type declarations (set via api.types() modules option).
   self.typesModules = null;
 
@@ -285,6 +290,7 @@ Object.assign(Isopack.prototype, {
     self.testOnly = options.testOnly;
     self.devOnly = options.devOnly;
     self.typesEntry = options.typesEntry || null;
+    self.typesDir = options.typesDir || null;
     self.typesModules = options.typesModules || null;
     self.pluginCacheDir = options.pluginCacheDir || null;
     self.isobuildFeatures = options.isobuildFeatures;
@@ -946,6 +952,7 @@ Object.assign(Isopack.prototype, {
       self.testOnly = !!mainJson.testOnly;
       self.devOnly = !!mainJson.devOnly;
       self.typesEntry = mainJson.typesEntry || null;
+      self.typesDir = mainJson.typesDir || null;
       self.typesModules = mainJson.typesModules || null;
     }
     for (const pluginMeta of mainJson.plugins) {
@@ -1103,6 +1110,9 @@ Object.assign(Isopack.prototype, {
       }
       if (self.typesEntry) {
         mainJson.typesEntry = self.typesEntry;
+      }
+      if (self.typesDir) {
+        mainJson.typesDir = self.typesDir;
       }
       if (self.typesModules) {
         mainJson.typesModules = self.typesModules;
@@ -1269,6 +1279,7 @@ Object.assign(Isopack.prototype, {
       if (writeLegacyBuilds) {
         mainLegacyJson = _.clone(mainJson);
         delete mainLegacyJson.typesEntry;
+        delete mainLegacyJson.typesDir;
         delete mainLegacyJson.typesModules;
         mainLegacyJson.builds = [];
 

@@ -13,16 +13,19 @@ writes type declaration files to `.meteor/types/`:
 .meteor/types/
 ├── .gitignore                 ← written by the generator; keeps the folder untracked
 ├── packages.d.ts              ← barrel file with /// <reference> directives
-└── packages/
-    ├── random/                ← one directory per package that ships types
-    │   └── index.d.ts         ← wraps the package's exports in declare module
-    ├── accounts-base/
-    │   ├── index.d.ts
-    │   └── node_modules       ← symlink to the package's bundled npm deps
-    └── react-meteor-data/
-        ├── index.d.ts
-        ├── suspense.d.ts      ← one extra file per sub-path module
-        └── node_modules
+├── packages/
+│   ├── random/                ← one directory per package that ships types
+│   │   └── index.d.ts         ← wraps the package's exports in declare module
+│   ├── accounts-base/
+│   │   ├── index.d.ts
+│   │   └── node_modules       ← symlink to the package's bundled npm deps
+│   └── react-meteor-data/
+│       ├── index.d.ts
+│       ├── suspense.d.ts      ← one extra file per sub-path module
+│       └── node_modules
+└── node_modules/
+    └── meteor-package-types   ← symlink to ../packages (bridge for packages
+                                  that bundle a whole folder of declarations)
 ```
 
 `packages.d.ts` is a single barrel file of `/// <reference path="…" />` directives.
@@ -40,6 +43,16 @@ When a package bundles its own npm dependencies, its directory also contains a
 package (its isopack). Because the declaration files sit right next to that
 symlink, TypeScript's normal Node-style resolution finds the npm types the
 package's declarations import — with no extra configuration.
+
+When a package bundles a whole directory of declaration files (the directory
+form of `api.types()`, e.g. `api.types('dist-types/')`), that folder is copied
+verbatim into the package's directory — so its files keep their relative
+imports — and `index.d.ts` becomes a small stub that re-exports the folder's
+entry file through the `meteor-package-types` symlink at the types root. The
+symlink points back at the `packages/` directory, letting the stub use a bare
+import specifier (relative specifiers are not allowed inside a
+`declare module` block) that Node-style resolution follows automatically. It
+is only created when at least one installed package ships types this way.
 
 The generator also writes a `.gitignore` inside `.meteor/types/`, so the
 generated files stay out of version control without any changes to your

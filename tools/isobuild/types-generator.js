@@ -12,9 +12,16 @@
  *     packages.d.ts                    (barrel of /// <reference> directives)
  *     packages/
  *       <normalizedName>/
- *         index.d.ts                   (main module declaration)
+ *         index.d.ts                   (main module declaration, or a
+ *                                       bare-specifier stub in directory mode)
  *         <normalizedModuleKey>.d.ts   (one per sub-path module)
+ *         <typesDir>/                  (directory mode only: verbatim copy of
+ *                                       the package's declaration folder,
+ *                                       tree preserved, under its original name)
  *         node_modules -> <isopackRoot>/npm/node_modules   (only when it exists)
+ *     node_modules/
+ *       meteor-package-types -> ../packages   (only when a package uses
+ *                                              directory mode)
  *
  * The node_modules symlink lets TypeScript resolve `import ... from
  * 'some-npm-pkg'` statements inside a package's declaration files against the
@@ -23,8 +30,21 @@
  * resolution walks up from them and follows the sibling node_modules symlink —
  * no `preserveSymlinks` compiler option is needed.
  *
+ * Directory mode (api.types('dist-types/')): the folder's declaration files
+ * reference each other with relative imports, which are forbidden inside an
+ * ambient `declare module` block — so they cannot be wrapped.  Instead the
+ * folder is copied verbatim and the `meteor/...` module ids are bridged with
+ * stubs whose BARE specifier (valid in ambient blocks) resolves node-style
+ * through the meteor-package-types symlink at the types root:
+ *
+ *   declare module 'meteor/react-meteor-data' {
+ *     import exports = require('meteor-package-types/react-meteor-data/dist-types/server/main');
+ *     export = exports;
+ *   }
+ *
  * Priority order for resolving a package's type entry:
- *   1. isopack.typesEntry  (set via api.types() in package.js)
+ *   1. isopack.typesDir + typesEntry  (directory form of api.types())
+ *      or isopack.typesEntry alone    (single-file api.types())
  *   2. package-types.json  resource in the isopack
  *   3. A single .d.ts resource in the isopack
  */
@@ -39,6 +59,7 @@ const PACKAGES_SUBDIR = "packages";
 const PACKAGES_DTS = "packages.d.ts";
 const MAIN_DTS = "index.d.ts";
 const NPM_LINK_NAME = "node_modules";
+const PACKAGE_TYPES_LINK_NAME = "meteor-package-types";
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -70,8 +91,13 @@ export async function generateTypes({
     Buffer.from("*\n", "utf8")
   );
 
-  // Collect entries: { name, normalizedName, dtsPath (relative to typesDir) }
+  // Collect entries: { name, normalizedName, mainRelPath, subModules,
+  // keepNames, extraRefs }
   const entries = [];
+
+  // Whether any package used the directory form of api.types(): the stubs
+  // of those packages resolve through the meteor-package-types symlink.
+  let needsPackageTypesLink = false;
 
   await packageMap.eachPackage(async (name) => {
     let isopack;
@@ -88,7 +114,7 @@ export async function generateTypes({
 
     const info = findTypesInfo(isopack, name);
     if (!info) return;
-    if (!info.data) {
+    if (info.mode !== "dir" && !info.data) {
       // No content found – skip this package
       return;
     }
@@ -97,46 +123,24 @@ export async function generateTypes({
     const packageDir = files.pathJoin(packagesTypesDir, normalizedName);
     files.mkdir_p(packageDir);
 
-    // Write main .d.ts
-    const wrappedMain = wrapDeclareModule(`meteor/${name}`, info.data);
-    writeIfChanged(
-      files.pathJoin(packageDir, MAIN_DTS),
-      Buffer.from(wrappedMain, "utf8")
-    );
-
     const entry = {
       name,
       normalizedName,
       mainRelPath: `${PACKAGES_SUBDIR}/${normalizedName}/${MAIN_DTS}`,
       subModules: [],
+      // Extra names inside packageDir that removeStaleOutput must keep
+      // (directory mode: the copied declaration folder).
+      keepNames: [],
+      // Extra /// <reference> paths for packages.d.ts (directory mode:
+      // an entry file carrying its own ambient declare-module blocks).
+      extraRefs: [],
     };
 
-    // Write sub-path module .d.ts files (issue #10 fix)
-    if (info.modules) {
-      for (const [moduleName, moduleData] of Object.entries(info.modules)) {
-        if (!moduleData) continue;
-        const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
-        if (moduleFileName === MAIN_DTS) {
-          // A sub-path module literally named "index" would collide with the
-          // package's own entry file.  Degenerate case; skip it.
-          Console.debug(
-            `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
-              `filename collides with ${MAIN_DTS}`
-          );
-          continue;
-        }
-        const moduleAbsPath = files.pathJoin(packageDir, moduleFileName);
-        const wrappedModule = wrapDeclareModule(
-          `meteor/${name}/${moduleName}`,
-          moduleData
-        );
-        writeIfChanged(moduleAbsPath, Buffer.from(wrappedModule, "utf8"));
-        entry.subModules.push({
-          name: moduleName,
-          fileName: moduleFileName,
-          relPath: `${PACKAGES_SUBDIR}/${normalizedName}/${moduleFileName}`,
-        });
-      }
+    if (info.mode === "dir") {
+      needsPackageTypesLink = true;
+      writeTypesDirPackage({ name, normalizedName, packageDir, info, entry });
+    } else {
+      writeSingleFilePackage({ name, packageDir, info, entry });
     }
 
     // Make the package's bundled npm dependencies resolvable from its
@@ -145,6 +149,10 @@ export async function generateTypes({
 
     entries.push(entry);
   });
+
+  if (needsPackageTypesLink) {
+    await ensurePackageTypesLink(typesDir, packagesTypesDir);
+  }
 
   await removeStaleOutput(packagesTypesDir, entries);
 
@@ -158,6 +166,168 @@ export async function generateTypes({
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+/**
+ * Write the output for a single-file package (api.types('foo.d.ts'),
+ * package-types.json, or the auto-detected single .d.ts): the entry file —
+ * and each sub-path module file — wrapped in a `declare module 'meteor/…'`
+ * block (unless it already declares its own ambient modules).
+ */
+function writeSingleFilePackage({ name, packageDir, info, entry }) {
+  // Write main .d.ts
+  const wrappedMain = wrapDeclareModule(`meteor/${name}`, info.data);
+  writeIfChanged(
+    files.pathJoin(packageDir, MAIN_DTS),
+    Buffer.from(wrappedMain, "utf8")
+  );
+
+  // Write sub-path module .d.ts files (issue #10 fix)
+  if (info.modules) {
+    for (const [moduleName, moduleData] of Object.entries(info.modules)) {
+      if (!moduleData) continue;
+      const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
+      if (moduleFileName === MAIN_DTS) {
+        // A sub-path module literally named "index" would collide with the
+        // package's own entry file.  Degenerate case; skip it.
+        Console.debug(
+          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
+            `filename collides with ${MAIN_DTS}`
+        );
+        continue;
+      }
+      const moduleAbsPath = files.pathJoin(packageDir, moduleFileName);
+      const wrappedModule = wrapDeclareModule(
+        `meteor/${name}/${moduleName}`,
+        moduleData
+      );
+      writeIfChanged(moduleAbsPath, Buffer.from(wrappedModule, "utf8"));
+      entry.subModules.push({
+        name: moduleName,
+        fileName: moduleFileName,
+        relPath: `${PACKAGES_SUBDIR}/${entry.normalizedName}/${moduleFileName}`,
+      });
+    }
+  }
+}
+
+/**
+ * Write the output for a directory-mode package (api.types('dist-types/')):
+ * the declaration folder is copied verbatim — tree preserved, from the
+ * isopack's asset resource Buffers, NOT from the on-disk isopack, whose
+ * generated filenames are mangled — under the package's output directory,
+ * and the `meteor/...` module ids are bridged with bare-specifier stubs:
+ *
+ *   packages/<normalizedName>/
+ *     index.d.ts            (stub: declare module 'meteor/<name>')
+ *     <module>.d.ts         (stub per sub-path module)
+ *     <typesDir>/…          (verbatim copy of the declaration folder, kept
+ *                            under its original name so a root index.d.ts
+ *                            inside it cannot collide with the stub)
+ *
+ * Relative specifiers are invalid inside an ambient module declaration, but
+ * bare specifiers are not: `require('meteor-package-types/…')` resolves
+ * node-style through the symlink created by ensurePackageTypesLink.  The
+ * copied files are real files reached without wrapping, so their internal
+ * relative imports resolve naturally.
+ */
+function writeTypesDirPackage({ name, normalizedName, packageDir, info, entry }) {
+  const filePaths = new Set();
+  for (const resource of info.files) {
+    const relPath = normalizeResourcePath(resource.path);
+    filePaths.add(relPath);
+    const absPath = files.pathJoin(packageDir, relPath);
+    files.mkdir_p(files.pathDirname(absPath));
+    writeIfChanged(absPath, resource.data);
+  }
+
+  // removeStaleOutput must not delete the copied folder.
+  entry.keepNames.push(info.dir.split("/")[0]);
+
+  // Stub for the main module.  The specifier uses the NORMALIZED package
+  // name (a ':' cannot appear in a Windows path); 'meteor/author:pkg'
+  // appears only in the declare-module id.  Extensionless so resolution
+  // finds the .d.ts under node10/node16/bundler alike.
+  const entryNoExt = info.entry.replace(/\.d\.ts$/, "");
+  writeIfChanged(
+    files.pathJoin(packageDir, MAIN_DTS),
+    Buffer.from(
+      makeBareSpecifierStub(
+        `meteor/${name}`,
+        `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${entryNoExt}`
+      ),
+      "utf8"
+    )
+  );
+
+  // If the entry file carries its own ambient `declare module` blocks,
+  // those only load when the file itself is referenced — the stub's
+  // require() does not surface them.  Reference it from packages.d.ts too.
+  const entryResource = info.files.find(
+    (resource) => normalizeResourcePath(resource.path) === info.entry
+  );
+  if (
+    entryResource &&
+    hasOwnModuleDeclaration(entryResource.data.toString("utf8"))
+  ) {
+    entry.extraRefs.push(`${PACKAGES_SUBDIR}/${normalizedName}/${info.entry}`);
+  }
+
+  // Stubs for sub-path modules.
+  if (info.modules) {
+    for (const [moduleName, modulePath] of Object.entries(info.modules)) {
+      const normalizedModulePath = normalizeResourcePath(modulePath);
+      if (!filePaths.has(normalizedModulePath)) {
+        Console.debug(
+          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
+            `"${modulePath}" is not among the package's declaration files`
+        );
+        continue;
+      }
+      const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
+      if (moduleFileName === MAIN_DTS) {
+        // A sub-path module literally named "index" would collide with the
+        // package's stub.  Degenerate case; skip it.
+        Console.debug(
+          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
+            `filename collides with ${MAIN_DTS}`
+        );
+        continue;
+      }
+      const moduleNoExt = normalizedModulePath.replace(/\.d\.ts$/, "");
+      writeIfChanged(
+        files.pathJoin(packageDir, moduleFileName),
+        Buffer.from(
+          makeBareSpecifierStub(
+            `meteor/${name}/${moduleName}`,
+            `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${moduleNoExt}`
+          ),
+          "utf8"
+        )
+      );
+      entry.subModules.push({
+        name: moduleName,
+        fileName: moduleFileName,
+        relPath: `${PACKAGES_SUBDIR}/${normalizedName}/${moduleFileName}`,
+      });
+    }
+  }
+}
+
+/**
+ * A stub that exposes a real declaration file (reached through the
+ * meteor-package-types symlink) under a `meteor/...` module id.
+ * `import exports = require(...)` + `export = exports` mirrors the target
+ * module's shape exactly (default export included) regardless of
+ * esModuleInterop.
+ */
+function makeBareSpecifierStub(meteorModuleName, bareSpecifier) {
+  return (
+    `declare module '${meteorModuleName}' {\n` +
+    `  import exports = require('${bareSpecifier}');\n` +
+    `  export = exports;\n` +
+    `}\n`
+  );
+}
 
 /**
  * Normalize a symlink target for comparison, mirroring the normalization in
@@ -237,6 +407,36 @@ async function ensureNpmDepsSymlink(isopack, packageDir, name) {
 }
 
 /**
+ * Create (or fix up) the `.meteor/types/node_modules/meteor-package-types`
+ * symlink pointing at the sibling `packages/` directory.  Node-style
+ * resolution of the bare `meteor-package-types/<pkg>/…` specifiers in the
+ * directory-mode stubs walks up from packages/<pkg>/ and finds this link,
+ * which turns the packages tree into a synthetic npm package — the same
+ * battle-tested mechanism zodern:types shipped with.  Idempotent, with the
+ * same readLinkStatus/symlinkWithOverwrite treatment as the npm deps link.
+ */
+async function ensurePackageTypesLink(typesDir, packagesTypesDir) {
+  const nodeModulesDir = files.pathJoin(typesDir, NPM_LINK_NAME);
+  files.mkdir_p(nodeModulesDir);
+  const linkPath = files.pathJoin(nodeModulesDir, PACKAGE_TYPES_LINK_NAME);
+
+  const existing = readLinkStatus(linkPath);
+  if (
+    existing.target !== null &&
+    normalizeLinkTarget(existing.target) ===
+      normalizeLinkTarget(packagesTypesDir)
+  ) {
+    // Already points at the right place.
+    return;
+  }
+
+  await files.symlinkWithOverwrite(packagesTypesDir, linkPath);
+  Console.debug(
+    `[types] Linked ${PACKAGE_TYPES_LINK_NAME} -> ${packagesTypesDir}`
+  );
+}
+
+/**
  * Remove output that no longer corresponds to the current set of packages:
  *
  *  - package directories under packages/ for packages that disappeared (or
@@ -252,6 +452,10 @@ async function removeStaleOutput(packagesTypesDir, entries) {
     const keep = new Set([MAIN_DTS, NPM_LINK_NAME]);
     for (const sub of entry.subModules) {
       keep.add(sub.fileName);
+    }
+    // Directory mode: the copied declaration folder must survive.
+    for (const keepName of entry.keepNames || []) {
+      keep.add(keepName);
     }
     expectedByDir.set(entry.normalizedName, keep);
   }
@@ -303,6 +507,40 @@ async function removeStaleOutput(packagesTypesDir, entries) {
  * Returns { data: Buffer, modules: Map<string, Buffer|null>|null } or null.
  */
 function findTypesInfo(isopack, name) {
+  // Priority 1 (directory form): api.types('dir/') was called – typesDir is
+  // set on the isopack and the declaration files are asset resources under
+  // it.  typesEntry/typesModules hold full package-root-relative paths.
+  if (isopack.typesDir) {
+    const dir = normalizeResourcePath(isopack.typesDir).replace(/\/+$/, "");
+    const entry = isopack.typesEntry
+      ? normalizeResourcePath(isopack.typesEntry)
+      : null;
+    const fileResources = findAssetResourcesUnder(isopack, `${dir}/`);
+    if (!entry || fileResources.length === 0) {
+      Console.debug(
+        `[types] Skipping "${name}": no declaration files found under "${dir}/"`
+      );
+      return null;
+    }
+    if (
+      !fileResources.some(
+        (resource) => normalizeResourcePath(resource.path) === entry
+      )
+    ) {
+      Console.debug(
+        `[types] Skipping "${name}": types entry "${entry}" not found under "${dir}/"`
+      );
+      return null;
+    }
+    return {
+      mode: "dir",
+      dir,
+      entry,
+      files: fileResources,
+      modules: isopack.typesModules || null,
+    };
+  }
+
   // Priority 1: api.types() was called – typesEntry is set on the isopack
   if (isopack.typesEntry) {
     const data = findResourceData(isopack, isopack.typesEntry);
@@ -391,6 +629,33 @@ function findResourceData(isopack, resourcePath) {
 }
 
 /**
+ * Find all asset resources whose (normalized) path lies inside the given
+ * directory prefix (which must end with '/'), deduped by path across
+ * unibuilds.  Directory-mode declaration files are registered as server
+ * (os) arch assets, but scanning every unibuild keeps this robust.
+ */
+function findAssetResourcesUnder(isopack, dirPrefix) {
+  const seen = new Set();
+  const results = [];
+  for (const unibuild of isopack.unibuilds) {
+    for (const resource of unibuild.resources) {
+      const path = resource.path && normalizeResourcePath(resource.path);
+      if (
+        resource.type === "asset" &&
+        path &&
+        path.startsWith(dirPrefix) &&
+        resource.data instanceof Buffer &&
+        !seen.has(path)
+      ) {
+        seen.add(path);
+        results.push(resource);
+      }
+    }
+  }
+  return results;
+}
+
+/**
  * Find all .d.ts resources in the isopack (deduped by path).
  */
 function findAllDtsResources(isopack) {
@@ -454,6 +719,13 @@ function generatePackagesDeclaration(entries) {
     content += `/// <reference path="./${entry.mainRelPath}" />\n`;
     for (const sub of entry.subModules) {
       content += `/// <reference path="./${sub.relPath}" />\n`;
+    }
+    // Directory mode: an entry file with its own ambient declare-module
+    // blocks is additionally referenced directly, because those blocks only
+    // load when the file itself is part of the program — the stub's
+    // require() alone does not pull them in.
+    for (const extraRef of entry.extraRefs || []) {
+      content += `/// <reference path="./${extraRef}" />\n`;
     }
   }
 
