@@ -27,6 +27,7 @@ jest.mock("../fs/files", () => {
     writeFile: jest.fn(),
     exists: jest.fn(),
     readdir: jest.fn(),
+    readdirWithTypes: jest.fn(),
     unlink: jest.fn(),
     rm_recursive: jest.fn(),
     lstat: jest.fn(),
@@ -41,6 +42,7 @@ jest.mock("../console/console.js", () => ({
 
 const { generateTypes } = require("./types-generator");
 const files = require("../fs/files");
+const { Console } = require("../console/console.js");
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -110,6 +112,15 @@ function writtenContentAt(path) {
   return call ? call[1].toString("utf8") : null;
 }
 
+/** Create a fake fs.Dirent for the readdirWithTypes mock. */
+function dirent(name, isDir = false) {
+  return {
+    name,
+    isDirectory: () => !!isDir,
+    isSymbolicLink: () => false,
+  };
+}
+
 // Reusable paths derived from a fake project .meteor dir
 const PROJECT_METEOR = "/proj/.meteor";
 const TYPES_DIR = `${PROJECT_METEOR}/types`;
@@ -131,6 +142,7 @@ beforeEach(() => {
   files.exists.mockImplementation(() => false);
   // Directories are empty unless a test says otherwise.
   files.readdir.mockImplementation(() => []);
+  files.readdirWithTypes.mockImplementation(() => []);
   // lstat/readlink/symlinkWithOverwrite/rm_recursive act on the symlink map.
   files.lstat.mockImplementation((p) => {
     if (files.__symlinks.has(p)) return { isSymbolicLink: () => true };
@@ -187,6 +199,21 @@ describe("directory setup", () => {
       projectMeteorDir: PROJECT_METEOR,
     });
     expect(writtenContentAt(`${TYPES_DIR}/.gitignore`)).toBe("*\n");
+  });
+
+  test("writes a package.json pinning the tree to CommonJS classification", async () => {
+    // Without it, moduleResolution node16/nodenext in an app with
+    // "type": "module" would classify the generated stubs and copied
+    // trees as ESM (export = errors, unresolvable extensionless
+    // relative imports).
+    await generateTypes({
+      isopackCache: makeIsopackCache({}),
+      packageMap: makePackageMap([]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+    expect(writtenContentAt(`${TYPES_DIR}/package.json`)).toBe(
+      '{\n  "type": "commonjs"\n}\n'
+    );
   });
 });
 
@@ -725,6 +752,68 @@ describe("directory mode – isopack.typesDir", () => {
     );
   });
 
+  test("prunes stale files nested inside the copied folder, keeping current ones", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["react-meteor-data"];
+      if (p === RMD_DIR) return ["index.d.ts", "hooks.d.ts", "dist-types"];
+      return [];
+    });
+    files.readdirWithTypes.mockImplementation((p) => {
+      if (p === `${RMD_DIR}/dist-types`) {
+        return [
+          dirent("server", true),
+          dirent("client", true),
+          dirent("legacy", true),
+        ];
+      }
+      if (p === `${RMD_DIR}/dist-types/server`) {
+        return [dirent("main.d.ts")];
+      }
+      if (p === `${RMD_DIR}/dist-types/client`) {
+        return [
+          dirent("hooks.d.ts"),
+          dirent("hooks.d.ts.map"),
+          dirent("stale.d.ts"),
+        ];
+      }
+      if (p === `${RMD_DIR}/dist-types/legacy`) {
+        return [dirent("old.d.ts")];
+      }
+      return [];
+    });
+    await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
+    // files that vanished from the isopack are unlinked…
+    expect(files.unlink).toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/client/stale.d.ts`
+    );
+    expect(files.unlink).toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/legacy/old.d.ts`
+    );
+    // …directories left empty by the pruning are removed…
+    expect(files.rm_recursive).toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/legacy`
+    );
+    // …and current files plus their directories survive.
+    expect(files.unlink).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/server/main.d.ts`
+    );
+    expect(files.unlink).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/client/hooks.d.ts`
+    );
+    expect(files.unlink).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/client/hooks.d.ts.map`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/server`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${RMD_DIR}/dist-types/client`
+    );
+  });
+
   test("removes a stale copied folder after switching to single-file mode", async () => {
     files.readdir.mockImplementation((p) => {
       if (p === PKGS_DIR) return ["pkg"];
@@ -762,7 +851,7 @@ describe("directory mode – isopack.typesDir", () => {
     );
   });
 
-  test("entry with its own declare-module blocks gets an extra barrel reference", async () => {
+  test("entry with its own declare-module blocks gets a reference shim, not a stub", async () => {
     const AMBIENT =
       "declare module 'meteor/pkg' {\n  export const x: number;\n}\n";
     const isopack = makeIsopack({
@@ -771,20 +860,49 @@ describe("directory mode – isopack.typesDir", () => {
       resources: [makeResource("dist-types/index.d.ts", AMBIENT)],
     });
     await run({ pkg: isopack }, ["pkg"]);
-    // the copied file stays verbatim and the stub is still written…
+    // the copied file stays verbatim…
     expect(writtenContentAt(`${PKGS_DIR}/pkg/dist-types/index.d.ts`)).toBe(
       AMBIENT
     );
+    // …and index.d.ts is a triple-slash reference shim: an ambient-only
+    // file is a script, so a require() stub cannot resolve it (TS2306),
+    // and the stub's `export =` would merge into the same ambient module
+    // id and clobber the entry's real exports (TS2305 on every import).
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBe(
+      '/// <reference path="./dist-types/index.d.ts" />\n'
+    );
+    // the barrel references only the shim — the shim loads the ambient
+    // file transitively, so no extra dist-types reference is needed.
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain('/// <reference path="./packages/pkg/index.d.ts" />');
+    expect(dts).not.toContain("dist-types");
+  });
+
+  test("sub-path module file with its own declare-module blocks gets a reference shim", async () => {
+    const AMBIENT_SUB =
+      "declare module 'meteor/pkg/hooks' {\n" +
+      "  export function useThing(): number;\n" +
+      "}\n";
+    const isopack = makeIsopack({
+      typesDir: "dist-types",
+      typesEntry: "dist-types/index.d.ts",
+      typesModules: { hooks: "dist-types/hooks.d.ts" },
+      resources: [
+        makeResource("dist-types/index.d.ts", "export const x: 1;\n"),
+        makeResource("dist-types/hooks.d.ts", AMBIENT_SUB),
+      ],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    // plain entry keeps the require() stub…
     expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toContain(
       "import exports = require('meteor-package-types/pkg/dist-types/index');"
     );
-    // …and the barrel references BOTH the stub and the file itself, so the
-    // file's own ambient declare-module blocks are loaded.
-    const dts = writtenContentAt(PACKAGES_DTS);
-    expect(dts).toContain('/// <reference path="./packages/pkg/index.d.ts" />');
-    expect(dts).toContain(
-      '/// <reference path="./packages/pkg/dist-types/index.d.ts" />'
+    // …while the ambient sub-path module file gets the reference shim
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/hooks.d.ts`)).toBe(
+      '/// <reference path="./dist-types/hooks.d.ts" />\n'
     );
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain('/// <reference path="./packages/pkg/hooks.d.ts" />');
   });
 
   test("skips the package when the entry is not among the folder's files", async () => {
@@ -870,16 +988,35 @@ describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
     });
   }
 
-  test("copies the TypeScript sources verbatim under src/, tree preserved", async () => {
+  test("copies the TypeScript sources under src/ with a @ts-nocheck banner, tree preserved", async () => {
     await run({ "my-package": tsIsopack() }, ["my-package"]);
-    expect(writtenContentAt(`${PKG_DIR}/src/index.ts`)).toBe(INDEX_TS);
-    expect(writtenContentAt(`${PKG_DIR}/src/lib/helper.ts`)).toBe(HELPER_TS);
-    expect(writtenContentAt(`${PKG_DIR}/src/client/hooks.ts`)).toBe(HOOKS_TS);
-    // declaration-file assets are copied too (sources may import them)
+    // implementation sources get the banner: they are type-checked with
+    // the consuming APP's compiler flags (skipLibCheck only exempts
+    // .d.ts), so package internals must not fail the app's typecheck
+    expect(writtenContentAt(`${PKG_DIR}/src/index.ts`)).toBe(
+      `// @ts-nocheck\n${INDEX_TS}`
+    );
+    expect(writtenContentAt(`${PKG_DIR}/src/lib/helper.ts`)).toBe(
+      `// @ts-nocheck\n${HELPER_TS}`
+    );
+    expect(writtenContentAt(`${PKG_DIR}/src/client/hooks.ts`)).toBe(
+      `// @ts-nocheck\n${HOOKS_TS}`
+    );
+    // declaration-file assets are copied VERBATIM (skipLibCheck covers them)
     expect(writtenContentAt(`${PKG_DIR}/src/ambient.d.ts`)).toBe(AMBIENT_DTS);
     // nested directories are created
     expect(files.mkdir_p).toHaveBeenCalledWith(`${PKG_DIR}/src/lib`);
     expect(files.mkdir_p).toHaveBeenCalledWith(`${PKG_DIR}/src/client`);
+  });
+
+  test("does not double-prefix a source that already starts with @ts-nocheck", async () => {
+    const NOCHECKED = "// @ts-nocheck\nexport const x = 1;\n";
+    const isopack = makeIsopack({
+      typesEntry: "index.ts",
+      resources: [makeSourceResource("index.ts", NOCHECKED)],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/src/index.ts`)).toBe(NOCHECKED);
   });
 
   test("does not copy non-TypeScript resources", async () => {
@@ -975,6 +1112,48 @@ describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
     );
   });
 
+  test("prunes stale files nested inside src/, keeping current sources", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["my-package"];
+      if (p === PKG_DIR) return ["index.d.ts", "hooks.d.ts", "src"];
+      return [];
+    });
+    files.readdirWithTypes.mockImplementation((p) => {
+      if (p === `${PKG_DIR}/src`) {
+        return [
+          dirent("index.ts"),
+          dirent("ambient.d.ts"),
+          dirent("stale.ts"),
+          dirent("lib", true),
+          dirent("client", true),
+        ];
+      }
+      if (p === `${PKG_DIR}/src/lib`) {
+        return [dirent("helper.ts")];
+      }
+      if (p === `${PKG_DIR}/src/client`) {
+        return [dirent("hooks.ts"), dirent("removed.tsx")];
+      }
+      return [];
+    });
+    await run({ "my-package": tsIsopack() }, ["my-package"]);
+    expect(files.unlink).toHaveBeenCalledWith(`${PKG_DIR}/src/stale.ts`);
+    expect(files.unlink).toHaveBeenCalledWith(
+      `${PKG_DIR}/src/client/removed.tsx`
+    );
+    expect(files.unlink).not.toHaveBeenCalledWith(`${PKG_DIR}/src/index.ts`);
+    expect(files.unlink).not.toHaveBeenCalledWith(
+      `${PKG_DIR}/src/lib/helper.ts`
+    );
+    expect(files.unlink).not.toHaveBeenCalledWith(
+      `${PKG_DIR}/src/client/hooks.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(`${PKG_DIR}/src`);
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${PKG_DIR}/src/client`
+    );
+  });
+
   test("skips the package when the entry is not among its TypeScript sources", async () => {
     const isopack = makeIsopack({
       typesEntry: "missing.ts",
@@ -985,6 +1164,11 @@ describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
     expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBeNull();
     // nothing was copied either
     expect(writtenContentAt(`${PKGS_DIR}/pkg/src/other.ts`)).toBeNull();
+    // the skip is a visible warning (publish succeeds for this
+    // misconfiguration, so a silent debug line would hide the divergence)
+    expect(Console.warn).toHaveBeenCalledWith(
+      expect.stringContaining('api.types("missing.ts")')
+    );
   });
 
   test("skips a sub-path module whose file is not among the sources", async () => {

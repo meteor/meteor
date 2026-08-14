@@ -31,7 +31,12 @@
  * npm dependencies bundled with that package's isopack.  The generated .d.ts
  * files are real files (not reached through a symlink), so normal Node-style
  * resolution walks up from them and follows the sibling node_modules symlink —
- * no `preserveSymlinks` compiler option is needed.
+ * no `preserveSymlinks` compiler option is needed for that first hop.  (One
+ * known limitation: TypeScript realpaths the resolved bundled dep into the
+ * isopack, so imports inside THAT dep's typings of packages not bundled with
+ * the isopack — peer deps like react, app-only @types — cannot reach the
+ * app's node_modules for published/tropohouse packages unless the app sets
+ * preserveSymlinks: true; see the using-core-types docs.)
  *
  * Directory mode (api.types('dist-types/')): the folder's declaration files
  * reference each other with relative imports, which are forbidden inside an
@@ -121,8 +126,21 @@ export async function generateTypes({
     Buffer.from("*\n", "utf8")
   );
 
+  // Pin the whole generated tree to CommonJS module-format classification.
+  // Without this, moduleResolution node16/nodenext classifies every
+  // generated file by the NEAREST package.json — the app's own — so an app
+  // with `"type": "module"` would see the stubs' `export =` and the copied
+  // trees' extensionless relative imports as ESM errors (or, with
+  // skipLibCheck, silently degrade the imported types to `any`).  The
+  // copied trees can only contain .ts/.tsx/.d.ts/.d.ts.map files, so this
+  // manifest can never be shadowed by package content.
+  writeIfChanged(
+    files.pathJoin(typesDir, "package.json"),
+    Buffer.from('{\n  "type": "commonjs"\n}\n', "utf8")
+  );
+
   // Collect entries: { name, normalizedName, mainRelPath, subModules,
-  // keepNames, extraRefs }
+  // keepNames, copiedFiles }
   const entries = [];
 
   // Whether any package used the directory or .ts form of api.types(): the
@@ -161,9 +179,10 @@ export async function generateTypes({
       // Extra names inside packageDir that removeStaleOutput must keep
       // (directory mode: the copied declaration folder).
       keepNames: [],
-      // Extra /// <reference> paths for packages.d.ts (directory mode:
-      // an entry file carrying its own ambient declare-module blocks).
-      extraRefs: [],
+      // packageDir-relative paths of every file written into a copied
+      // tree (directory/ts-src modes); removeStaleOutput prunes files
+      // inside the kept trees that are not in this set.
+      copiedFiles: null,
     };
 
     if (info.mode === "dir") {
@@ -273,39 +292,41 @@ function writeTypesDirPackage({ name, normalizedName, packageDir, info, entry })
     writeIfChanged(absPath, resource.data);
   }
 
-  // removeStaleOutput must not delete the copied folder.
+  // removeStaleOutput must not delete the copied folder — but it prunes
+  // files inside it that are no longer among the package's declarations.
   entry.keepNames.push(info.dir.split("/")[0]);
+  entry.copiedFiles = filePaths;
 
   // Stub for the main module.  The specifier uses the NORMALIZED package
   // name (a ':' cannot appear in a Windows path); 'meteor/author:pkg'
   // appears only in the declare-module id.  Extensionless so resolution
   // finds the .d.ts under node10/node16/bundler alike.
+  //
+  // When the entry file carries its own ambient `declare module` blocks
+  // (the zodern:types convention), it is a script, not a module: the
+  // stub's require() cannot resolve it (TS2306), and the stub's
+  // `export =` would merge into the same ambient module id and clobber
+  // the entry's real exports (TS2305 on every app-side import).  Such an
+  // entry gets a triple-slash reference shim instead — the referenced
+  // file loads verbatim and its own declare-module blocks provide the
+  // `meteor/...` module ids, mirroring writeSingleFilePackage's verbatim
+  // path.
   const entryNoExt = info.entry.replace(/\.d\.ts$/, "");
   writeIfChanged(
     files.pathJoin(packageDir, MAIN_DTS),
     Buffer.from(
-      makeBareSpecifierStub(
-        `meteor/${name}`,
-        `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${entryNoExt}`
-      ),
+      isAmbientResource(info.files, info.entry)
+        ? makeReferenceShim(info.entry)
+        : makeBareSpecifierStub(
+            `meteor/${name}`,
+            `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${entryNoExt}`
+          ),
       "utf8"
     )
   );
 
-  // If the entry file carries its own ambient `declare module` blocks,
-  // those only load when the file itself is referenced — the stub's
-  // require() does not surface them.  Reference it from packages.d.ts too.
-  const entryResource = info.files.find(
-    (resource) => normalizeResourcePath(resource.path) === info.entry
-  );
-  if (
-    entryResource &&
-    hasOwnModuleDeclaration(entryResource.data.toString("utf8"))
-  ) {
-    entry.extraRefs.push(`${PACKAGES_SUBDIR}/${normalizedName}/${info.entry}`);
-  }
-
-  // Stubs for sub-path modules.
+  // Stubs for sub-path modules (reference shims when the module file
+  // declares its own ambient modules — same rule as the entry).
   if (info.modules) {
     for (const [moduleName, modulePath] of Object.entries(info.modules)) {
       const normalizedModulePath = normalizeResourcePath(modulePath);
@@ -330,10 +351,12 @@ function writeTypesDirPackage({ name, normalizedName, packageDir, info, entry })
       writeIfChanged(
         files.pathJoin(packageDir, moduleFileName),
         Buffer.from(
-          makeBareSpecifierStub(
-            `meteor/${name}/${moduleName}`,
-            `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${moduleNoExt}`
-          ),
+          isAmbientResource(info.files, normalizedModulePath)
+            ? makeReferenceShim(normalizedModulePath)
+            : makeBareSpecifierStub(
+                `meteor/${name}/${moduleName}`,
+                `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${moduleNoExt}`
+              ),
           "utf8"
         )
       );
@@ -344,6 +367,29 @@ function writeTypesDirPackage({ name, normalizedName, packageDir, info, entry })
       });
     }
   }
+}
+
+/**
+ * True when the resource at `relPath` (already normalized) exists among
+ * `resources` and carries its own ambient `declare module` blocks.
+ */
+function isAmbientResource(resources, relPath) {
+  const resource = resources.find(
+    (r) => normalizeResourcePath(r.path) === relPath
+  );
+  return !!resource && hasOwnModuleDeclaration(resource.data.toString("utf8"));
+}
+
+/**
+ * A shim that loads a copied declaration file verbatim: used instead of the
+ * bare-specifier stub when the target file declares its own ambient
+ * modules (an ambient-only .d.ts is a script — not a module — so it cannot
+ * be require()d, and its declare-module blocks only load when the file
+ * itself is part of the program).  The path is relative to the shim's own
+ * location in packages/<normalizedName>/.
+ */
+function makeReferenceShim(relPath) {
+  return `/// <reference path="./${relPath}" />\n`;
 }
 
 /**
@@ -368,16 +414,20 @@ function writeTypesDirPackage({ name, normalizedName, packageDir, info, entry })
  */
 function writeTsSourcePackage({ name, normalizedName, packageDir, info, entry }) {
   const filePaths = new Set();
+  const copiedFiles = new Set();
   for (const resource of info.files) {
     const relPath = normalizeResourcePath(resource.path);
     filePaths.add(relPath);
+    copiedFiles.add(`${SRC_SUBDIR}/${relPath}`);
     const absPath = files.pathJoin(packageDir, SRC_SUBDIR, relPath);
     files.mkdir_p(files.pathDirname(absPath));
-    writeIfChanged(absPath, resource.data);
+    writeIfChanged(absPath, withTsNocheckBanner(relPath, resource.data));
   }
 
-  // removeStaleOutput must not delete the copied sources.
+  // removeStaleOutput must not delete the copied sources — but it prunes
+  // files inside src/ that are no longer among the package's sources.
   entry.keepNames.push(SRC_SUBDIR);
+  entry.copiedFiles = copiedFiles;
 
   // Stub for the main module.  The specifier uses the NORMALIZED package
   // name (a ':' cannot appear in a Windows path) and strips only the
@@ -443,6 +493,42 @@ function writeTsSourcePackage({ name, normalizedName, packageDir, info, entry })
  */
 function stripTypeScriptExtension(p) {
   return p.replace(/\.tsx?$/, "");
+}
+
+// The copied .ts/.tsx implementation sources are type-checked as part of
+// the consuming APP's program with the APP's compiler flags — skipLibCheck
+// only exempts .d.ts files — so a package that is clean under its own
+// (possibly laxer) tsconfig could fail every consumer's typecheck (e.g.
+// noUnusedLocals).  A leading `// @ts-nocheck` suppresses semantic
+// diagnostics inside the copied file while its exports still carry full
+// inferred types to consumers.
+const TS_NOCHECK_BANNER = "// @ts-nocheck\n";
+const TS_NOCHECK_RE = /^\/\/\s*@ts-nocheck/;
+
+/**
+ * Prepend `// @ts-nocheck` to a copied implementation source (.ts/.tsx but
+ * not .d.ts).  Declaration files are returned verbatim — skipLibCheck
+ * already governs those.  A leading UTF-8 BOM is stripped so the directive
+ * stays on line 1, and files that already start with the directive are
+ * left alone.
+ */
+function withTsNocheckBanner(relPath, data) {
+  if (!isTypeScriptSourceEntry(relPath)) {
+    return data;
+  }
+  let body = data;
+  if (
+    body.length >= 3 &&
+    body[0] === 0xef &&
+    body[1] === 0xbb &&
+    body[2] === 0xbf
+  ) {
+    body = body.slice(3);
+  }
+  if (TS_NOCHECK_RE.test(body.toString("utf8", 0, Math.min(body.length, 32)))) {
+    return body;
+  }
+  return Buffer.concat([Buffer.from(TS_NOCHECK_BANNER, "utf8"), body]);
 }
 
 /**
@@ -575,6 +661,9 @@ async function ensurePackageTypesLink(typesDir, packagesTypesDir) {
  *    lost their types),
  *  - stale files inside kept package directories (e.g. a dropped sub-path
  *    module),
+ *  - stale files inside the copied dir/ts-src trees (declarations or
+ *    sources that vanished from the current isopack), plus directories
+ *    left empty by that pruning,
  *  - flat `<name>.d.ts` files directly under packages/ left behind by the
  *    pre-directory layout (one-time migration).
  */
@@ -585,11 +674,17 @@ async function removeStaleOutput(packagesTypesDir, entries) {
     for (const sub of entry.subModules) {
       keep.add(sub.fileName);
     }
-    // Directory mode: the copied declaration folder must survive.
-    for (const keepName of entry.keepNames || []) {
+    // Directory/ts-src mode: the copied tree must survive (its contents
+    // are pruned recursively below).
+    const copiedTrees = new Set(entry.keepNames || []);
+    for (const keepName of copiedTrees) {
       keep.add(keepName);
     }
-    expectedByDir.set(entry.normalizedName, keep);
+    expectedByDir.set(entry.normalizedName, {
+      keep,
+      copiedTrees,
+      copiedFiles: entry.copiedFiles || new Set(),
+    });
   }
 
   let dirEntries;
@@ -602,8 +697,8 @@ async function removeStaleOutput(packagesTypesDir, entries) {
   for (const entryName of dirEntries) {
     const absPath = files.pathJoin(packagesTypesDir, entryName);
 
-    const keep = expectedByDir.get(entryName);
-    if (keep) {
+    const expected = expectedByDir.get(entryName);
+    if (expected) {
       // Current package: prune files we no longer generate.
       let inner;
       try {
@@ -612,10 +707,20 @@ async function removeStaleOutput(packagesTypesDir, entries) {
         continue;
       }
       for (const fileName of inner) {
-        if (!keep.has(fileName)) {
+        if (!expected.keep.has(fileName)) {
           await files.rm_recursive(files.pathJoin(absPath, fileName));
           Console.debug(
             `[types] Removed stale file ${entryName}/${fileName}`
+          );
+        } else if (expected.copiedTrees.has(fileName)) {
+          // Copied dir/ts-src tree: the writers only add/overwrite the
+          // current isopack's files, so anything else in the tree is a
+          // leftover from a previous package version.
+          await pruneCopiedTree(
+            entryName,
+            absPath,
+            fileName,
+            expected.copiedFiles
           );
         }
       }
@@ -632,6 +737,52 @@ async function removeStaleOutput(packagesTypesDir, entries) {
       Console.debug(`[types] Removed stale package dir ${entryName}`);
     }
   }
+}
+
+/**
+ * Recursively prune a copied tree (directory mode's declaration folder or
+ * ts-src mode's src/) under packages/<pkg>/: unlink files whose
+ * packageDir-relative path is not among the paths written for the current
+ * isopack, and remove directories left empty by the pruning.  Never
+ * follows symlinks (a symlink dirent reports isDirectory() === false).
+ * Returns the number of surviving entries so callers can drop emptied
+ * directories; the tree root itself is always kept.
+ */
+async function pruneCopiedTree(pkgName, packageDir, relDir, copiedFiles) {
+  const absDir = files.pathJoin(packageDir, relDir);
+  let dirents;
+  try {
+    dirents = files.readdirWithTypes(absDir);
+  } catch (_) {
+    return 0;
+  }
+  let surviving = 0;
+  for (const dirent of dirents) {
+    const relPath = `${relDir}/${dirent.name}`;
+    const absPath = files.pathJoin(absDir, dirent.name);
+    if (dirent.isDirectory()) {
+      const kept = await pruneCopiedTree(
+        pkgName,
+        packageDir,
+        relPath,
+        copiedFiles
+      );
+      if (kept === 0) {
+        await files.rm_recursive(absPath);
+        Console.debug(
+          `[types] Removed stale directory ${pkgName}/${relPath}`
+        );
+      } else {
+        surviving += 1;
+      }
+    } else if (!copiedFiles.has(relPath)) {
+      files.unlink(absPath);
+      Console.debug(`[types] Removed stale file ${pkgName}/${relPath}`);
+    } else {
+      surviving += 1;
+    }
+  }
+  return surviving;
 }
 
 /**
@@ -687,9 +838,15 @@ function findTypesInfo(isopack, name) {
         (resource) => normalizeResourcePath(resource.path) === entry
       )
     ) {
-      Console.debug(
-        `[types] Skipping "${name}": types entry "${entry}" is not among ` +
-          "the package's TypeScript sources"
+      // A warning, not debug: `meteor publish` only checks that the entry
+      // exists on disk, so this misconfiguration publishes fine while
+      // every local consumer silently gets no types — make the skip
+      // visible so the author can tell why.
+      Console.warn(
+        `[types] Package "${name}" declares api.types("${entry}") but the ` +
+          "entry is not one of its compiled sources (add it with " +
+          "api.mainModule() or api.addFiles()); skipping type generation " +
+          "for it."
       );
       return null;
     }
@@ -911,13 +1068,6 @@ function generatePackagesDeclaration(entries) {
     content += `/// <reference path="./${entry.mainRelPath}" />\n`;
     for (const sub of entry.subModules) {
       content += `/// <reference path="./${sub.relPath}" />\n`;
-    }
-    // Directory mode: an entry file with its own ambient declare-module
-    // blocks is additionally referenced directly, because those blocks only
-    // load when the file itself is part of the program — the stub's
-    // require() alone does not pull them in.
-    for (const extraRef of entry.extraRefs || []) {
-      content += `/// <reference path="./${extraRef}" />\n`;
     }
   }
 

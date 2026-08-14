@@ -419,6 +419,22 @@ Object.assign(ProjectContext.prototype, {
     return this.getProjectLocalDirectory("shell");
   },
 
+  // Force the given local package to be recompiled by the next
+  // _buildLocalPackages, wiping its cached isopack (and plugin cache)
+  // first.  Used by `meteor publish` after the tsc types rewrite mutates a
+  // package's in-memory PackageSource: nothing in the on-disk isopack
+  // buildinfo reflects that rewrite, so the ordinary up-to-date check
+  // would otherwise reuse a stale isopack built from the pre-rewrite
+  // source.
+  forceRebuildPackage: function (packageName) {
+    var self = this;
+    if (self._forceRebuildPackages === true) {
+      return;
+    }
+    self._forceRebuildPackages =
+      (self._forceRebuildPackages || []).concat([packageName]);
+  },
+
   // You can call this manually (that is, the public version without
   // an `_`) if you want to do some work before resolving constraints,
   // or you can let prepareProjectForBuild do it for you.
@@ -1048,9 +1064,12 @@ Object.assign(ProjectContext.prototype, {
     const hasJsConfig = files.exists(files.pathJoin(self.projectDir, 'jsconfig.json'));
 
     if ((hasTsConfig || hasJsConfig) && self.isopackCache && self.packageMap) {
-      if (self.packageMap.getInfo('zodern:types')) {
+      if (self.projectConstraintsFile.getConstraint('zodern:types')) {
         // Running both generators would rewrite the declarations on every
-        // build and confuse users; defer to zodern:types while installed.
+        // build and confuse users; defer to zodern:types while the app
+        // lists it directly.  A transitive zodern:types (e.g. via
+        // react-meteor-data) never lints the app, so it generates nothing
+        // and native generation can proceed.
         self.typesGenerationSkipped = true;
         Console.warn(
           '[types] zodern:types detected; skipping built-in type ' +

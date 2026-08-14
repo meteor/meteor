@@ -241,12 +241,15 @@ var TYPES_BUILD_DIR = '.types-build';
 // fetches it through the package map), so the published isopack carries
 // plain directory-mode metadata — consumers never see the .ts entry.
 //
-// tsc resolution order: the package's own node_modules/.bin/tsc wins, so
+// tsc resolution order: the package's own node_modules/typescript wins, so
 // authors can pin their compiler; otherwise the TypeScript bundled with
-// Meteor's dev bundle is run with Meteor's own node — no typescript
-// dependency is required at all.  A tsconfig.json in the package directory
-// is respected (-p ./); without one, tsc compiles the entry file with its
-// defaults.
+// Meteor's dev bundle is used — no typescript dependency is required at
+// all.  Either way the compiler runs as lib/tsc.js executed with Meteor's
+// own node, never through the extensionless node_modules/.bin/tsc shim
+// (a POSIX shell script that Windows could only run via cmd.exe PATHEXT
+// resolution).  A tsconfig.json in the package directory is respected
+// (-p ./); without one, tsc compiles the entry file and the typesModules
+// files with its defaults.
 //
 // Returns 0 on success; on failure prints tsc's output and returns 1.
 var generateTypeScriptDeclarations = async function (packageSource, packageDir) {
@@ -262,19 +265,16 @@ var generateTypeScriptDeclarations = async function (packageSource, packageDir) 
     return 1;
   }
 
-  var command;
-  var args;
-  var localTsc = files.pathJoin(packageDir, 'node_modules', '.bin', 'tsc');
-  if (files.exists(localTsc)) {
-    command = files.convertToOSPath(localTsc);
-    args = [];
-  } else {
-    command = files.convertToOSPath(
-      files.pathJoin(files.getCurrentNodeBinDir(), 'node'));
-    args = [files.convertToOSPath(files.pathJoin(
-      files.getDevBundle(),
-      'lib', 'node_modules', 'typescript', 'lib', 'tsc.js'))];
-  }
+  var command = files.convertToOSPath(
+    files.pathJoin(files.getCurrentNodeBinDir(), 'node'));
+  var localTscJs = files.pathJoin(
+    packageDir, 'node_modules', 'typescript', 'lib', 'tsc.js');
+  var args = [files.convertToOSPath(
+    files.exists(localTscJs)
+      ? localTscJs
+      : files.pathJoin(
+          files.getDevBundle(),
+          'lib', 'node_modules', 'typescript', 'lib', 'tsc.js'))];
 
   // Start from a clean output directory so declarations of files deleted
   // since a previous publish attempt cannot leak into this one.
@@ -285,17 +285,37 @@ var generateTypeScriptDeclarations = async function (packageSource, packageDir) 
     '--emitDeclarationOnly',
     '--noEmit', 'false',
     '--declarationDir', TYPES_BUILD_DIR,
+    // Pin TypeScript's incremental state inside the directory that was
+    // just cleared: with "incremental"/"composite" in the author's
+    // tsconfig, a stale tsconfig.tsbuildinfo at the package root would
+    // otherwise make tsc skip re-emitting declarations it believes are
+    // current — silently publishing a partial (or empty) .types-build.
+    // Inert when the author uses no incremental compilation.
+    '--tsBuildInfoFile', TYPES_BUILD_DIR + '/.tsbuildinfo',
     '--rootDir', './'
   );
   if (files.exists(files.pathJoin(packageDir, 'tsconfig.json'))) {
     // Respect the author's compiler configuration.
     args.push('-p', './');
   } else {
+    // Without a tsconfig, tsc compiles only the files it is given (plus
+    // their import closure).  Sub-path module files are by design not
+    // imported by the entry, so they must be passed explicitly or their
+    // declarations would never be emitted.
     args.push(entry);
+    _.each(packageSource.typesModules || {}, function (modulePath) {
+      args.push(modulePath.replace(/^\.\//, ''));
+    });
   }
 
   try {
-    await execFileAsync(command, args, { cwd: packageDir });
+    // waitForClose so tsc's stdout/stderr are fully drained before the
+    // diagnostics below are captured — settling on 'exit' can truncate a
+    // large compile-error dump.
+    await execFileAsync(command, args, {
+      cwd: packageDir,
+      waitForClose: true
+    });
   } catch (err) {
     Console.error(
       'tsc failed to generate type declarations for ' +
@@ -316,13 +336,38 @@ var generateTypeScriptDeclarations = async function (packageSource, packageDir) 
       sourcePath.replace(/^\.\//, '').replace(/\.tsx?$/, '') + '.d.ts';
   };
 
-  packageSource.typesDir = TYPES_BUILD_DIR;
-  packageSource.typesEntry = toDeclarationPath(entry);
+  // Verify that every declaration the rewrite will point at was actually
+  // emitted — e.g. an author tsconfig whose include/files misses a module
+  // file would otherwise publish metadata pointing at nonexistent
+  // declarations, and consumers would silently lose those types.
+  var missing = [];
+  var checkEmitted = function (label, sourcePath) {
+    var declPath = toDeclarationPath(sourcePath);
+    if (! files.exists(files.pathJoin(packageDir, declPath))) {
+      missing.push(label + " ('" + sourcePath + "' -> '" + declPath + "')");
+    }
+    return declPath;
+  };
+  var rewrittenEntry = checkEmitted('entry', entry);
+  var rewrittenModules = null;
   if (packageSource.typesModules) {
-    var rewrittenModules = {};
+    rewrittenModules = {};
     _.each(packageSource.typesModules, function (modulePath, moduleName) {
-      rewrittenModules[moduleName] = toDeclarationPath(modulePath);
+      rewrittenModules[moduleName] =
+        checkEmitted('modules.' + moduleName, modulePath);
     });
+  }
+  if (missing.length) {
+    Console.error(
+      'api.types(): tsc did not emit declarations for: ' +
+      missing.join(', ') + '. If the package has a tsconfig.json, make ' +
+      'sure its "include"/"files" covers these files.');
+    return 1;
+  }
+
+  packageSource.typesDir = TYPES_BUILD_DIR;
+  packageSource.typesEntry = rewrittenEntry;
+  if (rewrittenModules) {
     packageSource.typesModules = rewrittenModules;
   }
 
@@ -510,6 +555,15 @@ main.registerCommand({
     if (typesExit !== 0) {
       return typesExit;
     }
+    // The rewrite above only mutates the in-memory PackageSource, and the
+    // isopack cached in .meteor/local/isopacks may have been built from
+    // the pre-rewrite (ts-src) source by a prior `meteor run`.  Nothing in
+    // isopack-buildinfo.json reflects the rewrite — the .types-build
+    // dot-directory is excluded from every watched directory listing — so
+    // the up-to-date check would happily republish the stale ts-src
+    // isopack.  Force a recompile of this package so the build below
+    // always stamps the rewritten directory-mode metadata.
+    projectContext.forceRebuildPackage(packageName);
   }
 
   // Make sure that both the package and its test (if any) are actually built.
@@ -772,6 +826,24 @@ main.registerCommand({
   });
   projectContext.projectConstraintsFile.addConstraints(
     [utils.parsePackageConstraint(name + "@=" + versionString)]);
+
+  // Same tsc seam as `publish`: the source tarball's package.js still says
+  // api.types('index.ts'), so without this the arch build would be
+  // published with ts-src metadata and no declaration assets — a state
+  // published packages must never be in.  Springboarding guarantees the
+  // same release (hence the same dev-bundle tsc) as the original publish.
+  var archPackageSource = projectContext.localCatalog.getPackageSource(name);
+  if (archPackageSource &&
+      isTypeScriptSourceEntry(archPackageSource.typesEntry) &&
+      ! archPackageSource.typesDir) {
+    var typesExit = await generateTypeScriptDeclarations(
+      archPackageSource, packageDir);
+    if (typesExit !== 0) {
+      return typesExit;
+    }
+    projectContext.forceRebuildPackage(name);
+  }
+
   await main.captureAndExit("=> Errors while initializing project:", async function () {
     await projectContext.prepareProjectForBuild();
   });

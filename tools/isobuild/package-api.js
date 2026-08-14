@@ -592,7 +592,7 @@ export class PackageAPI {
     // directory path relative to the package root, e.g. 'dist-types'.
     const dir = typesEntry.replace(/\/+$/, '').replace(/^\.\//, '');
     if (!dir || dir.startsWith('/') ||
-        dir.split('/').some(seg => seg === '..' || seg === '')) {
+        dir.split('/').some(seg => seg === '..' || seg === '.' || seg === '')) {
       return `api.types(): "${typesEntry}" is not a valid directory path inside the package.`;
     }
 
@@ -606,7 +606,7 @@ export class PackageAPI {
       }
       const rel = p.replace(/^\.\//, '');
       if (rel.startsWith('/') ||
-          rel.split('/').some(seg => seg === '..' || seg === '')) {
+          rel.split('/').some(seg => seg === '..' || seg === '.' || seg === '')) {
         return {
           error: `api.types(): ${label} ("${p}") must stay inside the "${dir}/" directory.`,
         };

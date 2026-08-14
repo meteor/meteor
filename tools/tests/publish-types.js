@@ -40,4 +40,23 @@ selftest.define('publish TypeScript-authored package types', async function () {
   selftest.expectTrue(!!mainJson);
   await selftest.expectEqual(mainJson.typesDir, '.types-build');
   await selftest.expectEqual(mainJson.typesEntry, '.types-build/index.d.ts');
+
+  // Publishing again with a warm isopack cache must behave identically:
+  // publish force-rebuilds the package after the tsc rewrite (the cached
+  // isopack could have been built from the pre-rewrite ts-src source, and
+  // nothing in its buildinfo reflects the rewrite), so the second run also
+  // regenerates and stamps directory-mode metadata.
+  const rerun = s.run('publish');
+  rerun.waitSecs(180);
+  await rerun.match('[types] Generated declarations for ts-types-package with tsc');
+  await rerun.matchErr(/Would publish the package at this point/);
+  await rerun.expectExit(0);
+
+  const isopackJsonAgain = s.read(
+    '../../.meteor/local/isopacks/ts-types-package/isopack.json');
+  selftest.expectTrue(isopackJsonAgain !== null);
+  const mainJsonAgain = JSON.parse(isopackJsonAgain)['isopack-2'];
+  selftest.expectTrue(!!mainJsonAgain);
+  await selftest.expectEqual(mainJsonAgain.typesDir, '.types-build');
+  await selftest.expectEqual(mainJsonAgain.typesEntry, '.types-build/index.d.ts');
 });

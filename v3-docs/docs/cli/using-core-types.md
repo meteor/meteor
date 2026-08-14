@@ -120,12 +120,28 @@ types in `.meteor/types`. Excluding the heavyweight `.meteor/local` cache
 directories, as shown above, is fine.
 :::
 
-::: tip No `preserveSymlinks` needed
+::: tip `preserveSymlinks` is usually not needed
 Older guides recommended `"preserveSymlinks": true` for `zodern:types`. This is
-no longer required: the generated `.d.ts` files are real files, so TypeScript
-never reaches them *through* a symlink. Only each package's `node_modules`
-directory is a symlink, and ordinary resolution follows directory symlinks just
-fine.
+usually no longer required: the generated `.d.ts` files are real files, so
+TypeScript never reaches them *through* a symlink. Only each package's
+`node_modules` directory is a symlink, and ordinary resolution follows
+directory symlinks just fine.
+:::
+
+::: warning Limitation: peer dependencies of a package's bundled npm deps
+The per-package `node_modules` symlink points into the built package's own
+bundled dependencies — for published packages, a directory under
+`~/.meteor/packages/…`, outside your app. By default TypeScript resolves that
+symlink to its real path, so when a bundled dependency's *own* typings import
+a package that is **not** bundled with the Meteor package — typically a peer
+dependency such as `react`, or an `@types/*` package that only your app
+installs — the lookup walks up from the package store and can never reach your
+app's `node_modules`. With `"skipLibCheck": true` this fails silently: the
+affected types just degrade to `any`; with it off you see
+`TS2307: Cannot find module …` errors located inside `~/.meteor/packages/…`.
+If you hit this, add `"preserveSymlinks": true` to your `tsconfig.json` —
+resolution then stays inside your app tree, so those imports resolve against
+your app's `node_modules`.
 :::
 
 After running `meteor types` once, or starting the app with `meteor run`,
