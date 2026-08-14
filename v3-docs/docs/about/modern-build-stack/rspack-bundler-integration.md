@@ -1058,6 +1058,13 @@ PORT=3001 METEOR_LOCAL_DIR=.meteor/local-2 meteor run
 
 For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR`](../../cli/environment-variables.md#meteor_local_dir) documentation.
 
+Rspack also separates command-mode output within each build context. Development,
+normal test, and full-app test builds use distinct module directories such as
+`_build/main-dev`, `_build/test`, and `_build/app-test`. This prevents one mode's
+Rspack cleanup from deleting another mode's build artifacts. This isolation does
+not require `METEOR_LOCAL_DIR`. Set it only when each process also needs separate
+Meteor build caches and local state.
+
 ### Symlinks and Monorepos
 
 Meteor-Rspack supports different ways to share code across projects in monorepo setups, depending on how you link and consume dependencies.

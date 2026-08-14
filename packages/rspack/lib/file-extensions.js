@@ -1,6 +1,13 @@
-import path from "path";
-
-const BASE_RSPACK_EXTENSIONS = [
+/**
+ * Extensions owned by the default Rspack integration when Meteor must retain
+ * selected compiler inputs instead of ignoring whole application directories.
+ *
+ * Keep this list bounded to formats Rspack handles without an optional custom
+ * loader. Meteor only scans files matched by an active source processor, so
+ * enumerating every extension present on disk adds ignore patterns without
+ * removing work from Meteor.
+ */
+export const RSPACK_EXTENSIONS_TO_IGNORE = [
   ".ts",
   ".tsx",
   ".mts",
@@ -11,66 +18,17 @@ const BASE_RSPACK_EXTENSIONS = [
   ".cjs",
   ".json",
   ".wasm",
+  ".css",
 ];
-
-const EXTENSION_SCAN_IGNORES = [
-  "node_modules/**",
-  ".meteor/**",
-  ".git/**",
-  "public/**",
-  "private/**",
-];
-
-function normalizeContext(context) {
-  return context
-    ?.replace(/\\/g, "/")
-    .replace(/^\.\/+/, "")
-    .replace(/\/+$/, "");
-}
 
 /**
- * Discovers extensions that Rspack should own without scanning generated or
- * non-source directories. The baseline covers files added after startup.
+ * Returns a fresh, deterministic extension list without inspecting the app.
+ * Optional formats such as HTML, Less, Sass, Stylus, CoffeeScript, Vue, and
+ * Svelte remain available to their Meteor compilers unless Rspack delegates
+ * them after its first compilation.
  *
- * @param {Object} options
- * @param {Function} options.globSync - Synchronous glob implementation
- * @param {string} options.cwd - Meteor application directory
- * @param {string[]} options.generatedContexts - Generated Rspack directories
- * @param {string[]} options.compilerExtensions - Extensions owned by Meteor
  * @returns {string[]} Extensions that Meteor should ignore
  */
-export function discoverRspackFileExtensions({
-  globSync,
-  cwd,
-  generatedContexts = [],
-  compilerExtensions = [],
-}) {
-  const ignore = Array.from(
-    new Set([
-      ...EXTENSION_SCAN_IGNORES,
-      ...generatedContexts
-        .map(normalizeContext)
-        .filter(Boolean)
-        .map((context) => `${context}/**`),
-    ]),
-  );
-  const files = globSync("**/*", {
-    cwd,
-    nodir: true,
-    dot: true,
-    ignore,
-  });
-  const meteorCompilerExtensions = new Set(
-    compilerExtensions.map((extension) => extension.toLowerCase()),
-  );
-  const extensions = new Set(BASE_RSPACK_EXTENSIONS);
-
-  for (const file of files) {
-    const extension = path.extname(file).toLowerCase();
-    if (extension) {
-      extensions.add(extension);
-    }
-  }
-
-  return Array.from(extensions).filter((extension) => !meteorCompilerExtensions.has(extension));
+export function getRspackFileExtensionsToIgnore() {
+  return [...RSPACK_EXTENSIONS_TO_IGNORE];
 }
