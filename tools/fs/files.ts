@@ -360,9 +360,10 @@ export const rm_recursive = Profile("files.rm_recursive", async (path: string) =
 
 export const rm_recursive_deferred = Profile("files.rm_recursive_deferred", async (path: string) => {
   // If the path contains wildcards, we can't rename it.
-  // Just delete it asynchronously in the background.
+  // Delete it asynchronously, but wait for the glob to finish before the
+  // caller can create a new path that would also match it.
   if (path.includes('*') || path.includes('?')) {
-    rm_recursive_async(path).catch(e => {
+    await rm_recursive_async(path).catch(e => {
       console.error(`Error removing paths ${path}:`, e);
     });
     return;

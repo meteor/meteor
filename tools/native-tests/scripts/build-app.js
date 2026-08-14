@@ -2,9 +2,17 @@ const path = require("node:path");
 const os = require("node:os");
 const fs = require("fs-extra");
 const execa = require("execa");
+const {
+  configureLocalMeteorWebappPlugin,
+} = require("./cordova-plugin-override");
 
 const REPO_ROOT = path.resolve(__dirname, "..", "..", "..");
 const METEOR_BIN = path.join(REPO_ROOT, "meteor");
+const METEOR_WEBAPP_PLUGIN_DIR = path.join(
+  REPO_ROOT,
+  "npm-packages",
+  "cordova-plugin-meteor-webapp"
+);
 const SMOKE_SRC = path.resolve(__dirname, "..", "apps", "smoke");
 
 /**
@@ -19,6 +27,19 @@ async function findFirst(dir, regex) {
   return null;
 }
 
+function buildIosSimulatorArgs({ workspace, derivedData }) {
+  const scheme = path.basename(workspace, ".xcworkspace");
+  return [
+    "-workspace", workspace,
+    "-scheme", scheme,
+    "-configuration", "Debug",
+    "-sdk", "iphonesimulator",
+    "-destination", "generic/platform=iOS Simulator",
+    "-derivedDataPath", derivedData,
+    "build",
+  ];
+}
+
 async function compileIosForSimulator({ buildDir }) {
   // `meteor build` produces an Xcode project under <buildDir>/ios/project/.
   // For Maestro to install on the Simulator, we need a compiled .app, so we
@@ -31,18 +52,9 @@ async function compileIosForSimulator({ buildDir }) {
   if (!workspace) {
     throw new Error(`No .xcworkspace found in ${projectDir}`);
   }
-  // Scheme name matches App.info({ name }) in mobile-config.js (MeteorSmoke).
   await execa(
     "xcodebuild",
-    [
-      "-workspace", workspace,
-      "-scheme", "MeteorSmoke",
-      "-configuration", "Debug",
-      "-sdk", "iphonesimulator",
-      "-destination", "generic/platform=iOS Simulator",
-      "-derivedDataPath", derivedData,
-      "build",
-    ],
+    buildIosSimulatorArgs({ workspace, derivedData }),
     { stdio: "inherit" }
   );
 
@@ -78,6 +90,10 @@ async function prepareSmokeApp({ platform, lanIp, port = 3000 }) {
 
   await fs.copy(SMOKE_SRC, appDir, {
     filter: (src) => !src.includes(path.join(".meteor", "local")),
+  });
+  await configureLocalMeteorWebappPlugin({
+    appDir,
+    pluginDir: METEOR_WEBAPP_PLUGIN_DIR,
   });
 
   await execa(METEOR_BIN, ["npm", "install"], {
@@ -132,4 +148,4 @@ async function cleanup(dir) {
   await fs.remove(dir).catch(() => {});
 }
 
-module.exports = { prepareSmokeApp, cleanup };
+module.exports = { buildIosSimulatorArgs, prepareSmokeApp, cleanup };

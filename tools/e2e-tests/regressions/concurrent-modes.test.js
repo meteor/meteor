@@ -117,6 +117,7 @@ describe('Regressions / Rspack concurrent modes /', () => {
     testProcess = testResult.meteorProcess;
 
     expect(appProcess.exitCode).toBeNull();
+    expect(appProcess.signalCode).toBeNull();
     expect(await readBundle(appDir, developmentBundlePath))
       .toBe(developmentBundle);
     expect(await fs.pathExists(
