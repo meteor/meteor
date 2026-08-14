@@ -13,15 +13,18 @@
  *     packages/
  *       <normalizedName>/
  *         index.d.ts                   (main module declaration, or a
- *                                       bare-specifier stub in directory mode)
+ *                                       bare-specifier stub in directory and
+ *                                       ts-src modes)
  *         <normalizedModuleKey>.d.ts   (one per sub-path module)
  *         <typesDir>/                  (directory mode only: verbatim copy of
  *                                       the package's declaration folder,
  *                                       tree preserved, under its original name)
+ *         src/                         (ts-src mode only: verbatim copy of the
+ *                                       package's TypeScript sources)
  *         node_modules -> <isopackRoot>/npm/node_modules   (only when it exists)
  *     node_modules/
  *       meteor-package-types -> ../packages   (only when a package uses
- *                                              directory mode)
+ *                                              directory or ts-src mode)
  *
  * The node_modules symlink lets TypeScript resolve `import ... from
  * 'some-npm-pkg'` statements inside a package's declaration files against the
@@ -42,9 +45,23 @@
  *     export = exports;
  *   }
  *
+ * ts-src mode (api.types('index.ts'), a TypeScript-AUTHORED package): during
+ * local development there are no declaration files at all — `meteor publish`
+ * generates them with tsc and rewrites the package to directory mode, but a
+ * locally used package is consumed straight from its sources.  The package's
+ * TypeScript source resources are copied verbatim under src/ (tree
+ * preserved) and bridged with the same bare-specifier stubs as directory
+ * mode; the extensionless require resolves to .ts/.tsx, which TypeScript
+ * type-checks fine for implementation files:
+ *
+ *   declare module 'meteor/my-package' {
+ *     import exports = require('meteor-package-types/my-package/src/index');
+ *     export = exports;
+ *   }
+ *
  * Priority order for resolving a package's type entry:
  *   1. isopack.typesDir + typesEntry  (directory form of api.types())
- *      or isopack.typesEntry alone    (single-file api.types())
+ *      or isopack.typesEntry alone    (single-file or .ts form of api.types())
  *   2. package-types.json  resource in the isopack
  *   3. A single .d.ts resource in the isopack
  */
@@ -60,6 +77,19 @@ const PACKAGES_DTS = "packages.d.ts";
 const MAIN_DTS = "index.d.ts";
 const NPM_LINK_NAME = "node_modules";
 const PACKAGE_TYPES_LINK_NAME = "meteor-package-types";
+// ts-src mode: the package's TypeScript sources are copied under this
+// subdirectory of the per-package output dir.
+const SRC_SUBDIR = "src";
+
+/**
+ * True for a TypeScript SOURCE entry (.ts/.tsx but not .d.ts) — the marker
+ * of a TypeScript-authored package (api.types('index.ts')).  Shared with
+ * the publish command, which generates real declarations from such an entry
+ * with tsc before building.
+ */
+export function isTypeScriptSourceEntry(p) {
+  return typeof p === "string" && /\.tsx?$/.test(p) && !p.endsWith(".d.ts");
+}
 
 // ---------------------------------------------------------------------------
 // Public API
@@ -95,8 +125,8 @@ export async function generateTypes({
   // keepNames, extraRefs }
   const entries = [];
 
-  // Whether any package used the directory form of api.types(): the stubs
-  // of those packages resolve through the meteor-package-types symlink.
+  // Whether any package used the directory or .ts form of api.types(): the
+  // stubs of those packages resolve through the meteor-package-types symlink.
   let needsPackageTypesLink = false;
 
   await packageMap.eachPackage(async (name) => {
@@ -114,7 +144,7 @@ export async function generateTypes({
 
     const info = findTypesInfo(isopack, name);
     if (!info) return;
-    if (info.mode !== "dir" && !info.data) {
+    if (!info.mode && !info.data) {
       // No content found – skip this package
       return;
     }
@@ -139,6 +169,9 @@ export async function generateTypes({
     if (info.mode === "dir") {
       needsPackageTypesLink = true;
       writeTypesDirPackage({ name, normalizedName, packageDir, info, entry });
+    } else if (info.mode === "ts-src") {
+      needsPackageTypesLink = true;
+      writeTsSourcePackage({ name, normalizedName, packageDir, info, entry });
     } else {
       writeSingleFilePackage({ name, packageDir, info, entry });
     }
@@ -311,6 +344,105 @@ function writeTypesDirPackage({ name, normalizedName, packageDir, info, entry })
       });
     }
   }
+}
+
+/**
+ * Write the output for a TypeScript-authored package (api.types('index.ts')):
+ * the package ships no declaration files during local development, so its
+ * TypeScript source resources — collected from the isopack Buffers, original
+ * relPaths preserved — are copied verbatim under src/ and the `meteor/...`
+ * module ids are bridged with the same bare-specifier stubs as directory
+ * mode:
+ *
+ *   packages/<normalizedName>/
+ *     index.d.ts            (stub: declare module 'meteor/<name>')
+ *     <module>.d.ts         (stub per sub-path module)
+ *     src/…                 (verbatim copy of the .ts/.tsx/.d.ts sources)
+ *
+ * The stub's require() is extensionless, so TypeScript resolves it to the
+ * copied .ts/.tsx file and type-checks the implementation directly (the
+ * zodern:types precedent).  `meteor publish` never produces this mode: it
+ * generates real declarations with tsc and rewrites the package to
+ * directory mode before building, so published packages are consumed as
+ * plain declaration folders.
+ */
+function writeTsSourcePackage({ name, normalizedName, packageDir, info, entry }) {
+  const filePaths = new Set();
+  for (const resource of info.files) {
+    const relPath = normalizeResourcePath(resource.path);
+    filePaths.add(relPath);
+    const absPath = files.pathJoin(packageDir, SRC_SUBDIR, relPath);
+    files.mkdir_p(files.pathDirname(absPath));
+    writeIfChanged(absPath, resource.data);
+  }
+
+  // removeStaleOutput must not delete the copied sources.
+  entry.keepNames.push(SRC_SUBDIR);
+
+  // Stub for the main module.  The specifier uses the NORMALIZED package
+  // name (a ':' cannot appear in a Windows path) and strips only the
+  // trailing .ts/.tsx extension, so resolution finds the copied source.
+  const entryNoExt = stripTypeScriptExtension(info.entry);
+  writeIfChanged(
+    files.pathJoin(packageDir, MAIN_DTS),
+    Buffer.from(
+      makeBareSpecifierStub(
+        `meteor/${name}`,
+        `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${SRC_SUBDIR}/${entryNoExt}`
+      ),
+      "utf8"
+    )
+  );
+
+  // Stubs for sub-path modules.
+  if (info.modules) {
+    for (const [moduleName, modulePath] of Object.entries(info.modules)) {
+      const normalizedModulePath = normalizeResourcePath(modulePath);
+      if (!filePaths.has(normalizedModulePath)) {
+        Console.debug(
+          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
+            `"${modulePath}" is not among the package's TypeScript sources`
+        );
+        continue;
+      }
+      const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
+      if (moduleFileName === MAIN_DTS) {
+        // A sub-path module literally named "index" would collide with the
+        // package's stub.  Degenerate case; skip it.
+        Console.debug(
+          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
+            `filename collides with ${MAIN_DTS}`
+        );
+        continue;
+      }
+      const moduleNoExt = stripTypeScriptExtension(normalizedModulePath);
+      writeIfChanged(
+        files.pathJoin(packageDir, moduleFileName),
+        Buffer.from(
+          makeBareSpecifierStub(
+            `meteor/${name}/${moduleName}`,
+            `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${SRC_SUBDIR}/${moduleNoExt}`
+          ),
+          "utf8"
+        )
+      );
+      entry.subModules.push({
+        name: moduleName,
+        fileName: moduleFileName,
+        relPath: `${PACKAGES_SUBDIR}/${normalizedName}/${moduleFileName}`,
+      });
+    }
+  }
+}
+
+/**
+ * Strip exactly one trailing TypeScript extension (.ts or .tsx — which also
+ * covers a trailing .d.ts, whose remaining `.d` re-resolves to the same
+ * file).  Anchored to the end of the string: a `.ts` occurring mid-path
+ * (e.g. `a.ts.helpers/b.ts`) is never touched.
+ */
+function stripTypeScriptExtension(p) {
+  return p.replace(/\.tsx?$/, "");
 }
 
 /**
@@ -541,6 +673,34 @@ function findTypesInfo(isopack, name) {
     };
   }
 
+  // Priority 1 (TypeScript-authored form): api.types('index.ts') was called
+  // with a .ts/.tsx source entry.  During local development the package has
+  // no declaration files at all, so its TypeScript source resources are
+  // consumed directly (copied under src/ and reached through bare-specifier
+  // stubs).  `meteor publish` never produces an isopack in this state: it
+  // runs tsc and rewrites the package to directory mode before building.
+  if (isTypeScriptSourceEntry(isopack.typesEntry) && !isopack.typesDir) {
+    const entry = normalizeResourcePath(isopack.typesEntry);
+    const fileResources = findTypeScriptSourceResources(isopack);
+    if (
+      !fileResources.some(
+        (resource) => normalizeResourcePath(resource.path) === entry
+      )
+    ) {
+      Console.debug(
+        `[types] Skipping "${name}": types entry "${entry}" is not among ` +
+          "the package's TypeScript sources"
+      );
+      return null;
+    }
+    return {
+      mode: "ts-src",
+      entry,
+      files: fileResources,
+      modules: isopack.typesModules || null,
+    };
+  }
+
   // Priority 1: api.types() was called – typesEntry is set on the isopack
   if (isopack.typesEntry) {
     const data = findResourceData(isopack, isopack.typesEntry);
@@ -644,6 +804,38 @@ function findAssetResourcesUnder(isopack, dirPrefix) {
         resource.type === "asset" &&
         path &&
         path.startsWith(dirPrefix) &&
+        resource.data instanceof Buffer &&
+        !seen.has(path)
+      ) {
+        seen.add(path);
+        results.push(resource);
+      }
+    }
+  }
+  return results;
+}
+
+/**
+ * Find all TypeScript file resources (.ts/.tsx, which includes .d.ts) of the
+ * isopack, deduped by path across unibuilds.  Both source resources (the
+ * compiled .ts/.tsx files) and asset resources (declaration files an author
+ * may have registered) are collected: declaration files can be imported by
+ * the sources, so they must ride along for the copied tree to type-check.
+ * TypeScript-authored entries are registered as compiled sources, which are
+ * present on the os unibuild for server code — but scanning every unibuild
+ * keeps this robust (and picks up client-only sources), mirroring
+ * findAssetResourcesUnder.
+ */
+function findTypeScriptSourceResources(isopack) {
+  const seen = new Set();
+  const results = [];
+  for (const unibuild of isopack.unibuilds) {
+    for (const resource of unibuild.resources) {
+      const path = resource.path && normalizeResourcePath(resource.path);
+      if (
+        (resource.type === "source" || resource.type === "asset") &&
+        path &&
+        /\.tsx?$/.test(path) &&
         resource.data instanceof Buffer &&
         !seen.has(path)
       ) {

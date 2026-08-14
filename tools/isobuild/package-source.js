@@ -1037,6 +1037,10 @@ Object.assign(PackageSource.prototype, {
 
       const contents = this._readAndWatchDirectory(dir, watchSet, {
         include: [/\.d\.ts$/, /\.d\.ts\.map$/, /\/$/],
+        // Must be present (not just absent-and-implied): WatchSet.toJSON
+        // serializes every directory entry's exclude list when the isopack
+        // is saved to the cache.
+        exclude: [],
       });
 
       contents.forEach(item => {

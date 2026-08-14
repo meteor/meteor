@@ -49,6 +49,15 @@ function toArchArray(arch) {
   return arch;
 }
 
+// True for a TypeScript SOURCE path (.ts/.tsx but not .d.ts) — the marker
+// of a TypeScript-authored api.types() entry.  Mirrors
+// isTypeScriptSourceEntry in types-generator.js, which cannot be imported
+// here without giving this deliberately filesystem-free module a dependency
+// on the generator.
+function isTypeScriptSourcePath(p) {
+  return typeof p === 'string' && /\.tsx?$/.test(p) && !p.endsWith('.d.ts');
+}
+
 // Iterates over the list of target archs and calls f(arch) for all archs
 // that match an element of self.allarchs.
 function forAllMatchingArchs (archs, f) {
@@ -444,7 +453,13 @@ export class PackageAPI {
    *   In directory mode every `.d.ts` (and `.d.ts.map`) file under the
    *   directory is bundled with the package, tree structure preserved.
    *   A `.ts`/`.tsx` entry (instead of `.d.ts`) marks the package as
-   *   TypeScript-authored; its declarations are generated at publish time.
+   *   TypeScript-authored: the entry must be one of the package's compiled
+   *   sources (e.g. its `api.mainModule`), local development type-checks
+   *   against the sources directly, and `meteor publish` generates real
+   *   declaration files from them with tsc right before the build.  In that
+   *   mode `options.modules` values must also be `.ts`/`.tsx` sources, and
+   *   none of the files are registered as assets (they are already source
+   *   resources).
    * @param {Object} [options]
    * @param {String} [options.entry] Directory mode only: the declaration
    *   file (relative to the directory) that types
@@ -509,6 +524,34 @@ export class PackageAPI {
 
     this._typesEntry = typesEntry;
     this._typesModules = (options && options.modules) || null;
+
+    // A .ts/.tsx entry (not .d.ts) marks the package as TypeScript-authored:
+    // the entry is one of the package's compiled sources, and `meteor
+    // publish` generates real .d.ts declarations from it with tsc right
+    // before the build.  Nothing is registered as an asset in this mode —
+    // the entry is already a source resource of the compiled package
+    // (registering it twice would duplicate resources), and
+    // options.modules values must likewise be .ts/.tsx sources: a
+    // hand-written .d.ts mixed in here is rejected, because
+    // `tsc --emitDeclarationOnly` does not re-emit declaration inputs, so
+    // it would have no publish-time story.
+    if (isTypeScriptSourcePath(typesEntry)) {
+      if (this._typesModules) {
+        for (const [name, modulePath] of Object.entries(this._typesModules)) {
+          if (typeof modulePath !== 'string' || !modulePath.trim() ||
+              !isTypeScriptSourcePath(modulePath)) {
+            buildmessage.error(
+              `api.types(): options.modules.${name} must be a .ts/.tsx ` +
+                'source path when the types entry is a TypeScript source ' +
+                'file.',
+              { useMyCaller: true }
+            );
+            return;
+          }
+        }
+      }
+      return;
+    }
 
     // Register the .d.ts files as server-only assets.  Every package is
     // compiled for the os arch (even client-only packages), so the types

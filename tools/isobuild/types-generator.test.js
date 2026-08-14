@@ -55,6 +55,11 @@ function makeResource(path, content) {
   return { path, type: "asset", data: Buffer.from(content, "utf8") };
 }
 
+/** Create a fake isopack SOURCE resource (a compiled .ts/.tsx file). */
+function makeSourceResource(path, content) {
+  return { path, type: "source", data: Buffer.from(content, "utf8") };
+}
+
 /**
  * Create a minimal fake isopack.
  * @param {Object} opts
@@ -809,6 +814,224 @@ describe("directory mode – isopack.typesDir", () => {
     expect(dts).toContain('/// <reference path="./packages/pkg/index.d.ts" />');
     expect(dts).not.toContain("ghost");
     expect(writtenContentAt(`${PKGS_DIR}/pkg/ghost.d.ts`)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ts-src mode (api.types('index.ts') — TypeScript-authored packages)
+// ---------------------------------------------------------------------------
+
+describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
+  const INDEX_TS =
+    "import { helper } from './lib/helper';\n" +
+    "export const x: number = helper();\n";
+  const HELPER_TS = "export function helper(): number { return 1; }\n";
+  const AMBIENT_DTS = "declare const AmbientThing: string;\n";
+  const HOOKS_TS = "export function useThing(): number { return 2; }\n";
+
+  const PKG_DIR = `${PKGS_DIR}/my-package`;
+  const TYPES_NM_DIR = `${TYPES_DIR}/node_modules`;
+  const PKG_TYPES_LINK = `${TYPES_NM_DIR}/meteor-package-types`;
+
+  const MAIN_STUB =
+    "declare module 'meteor/my-package' {\n" +
+    "  import exports = require('meteor-package-types/my-package/src/index');\n" +
+    "  export = exports;\n" +
+    "}\n";
+
+  const HOOKS_STUB =
+    "declare module 'meteor/my-package/hooks' {\n" +
+    "  import exports = require('meteor-package-types/my-package/src/client/hooks');\n" +
+    "  export = exports;\n" +
+    "}\n";
+
+  function tsIsopack() {
+    return makeIsopack({
+      typesEntry: "index.ts",
+      typesModules: { hooks: "client/hooks.ts" },
+      resources: [
+        makeSourceResource("index.ts", INDEX_TS),
+        makeSourceResource("lib/helper.ts", HELPER_TS),
+        makeSourceResource("client/hooks.ts", HOOKS_TS),
+        // a registered declaration-file asset rides along
+        makeResource("ambient.d.ts", AMBIENT_DTS),
+        // non-TypeScript resources must NOT be copied
+        makeSourceResource("plain.js", "exports.y = 1;\n"),
+        makeResource("logo.png", "not-really-a-png"),
+      ],
+    });
+  }
+
+  async function run(isopacks, names) {
+    await generateTypes({
+      isopackCache: makeIsopackCache(isopacks),
+      packageMap: makePackageMap(names),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+  }
+
+  test("copies the TypeScript sources verbatim under src/, tree preserved", async () => {
+    await run({ "my-package": tsIsopack() }, ["my-package"]);
+    expect(writtenContentAt(`${PKG_DIR}/src/index.ts`)).toBe(INDEX_TS);
+    expect(writtenContentAt(`${PKG_DIR}/src/lib/helper.ts`)).toBe(HELPER_TS);
+    expect(writtenContentAt(`${PKG_DIR}/src/client/hooks.ts`)).toBe(HOOKS_TS);
+    // declaration-file assets are copied too (sources may import them)
+    expect(writtenContentAt(`${PKG_DIR}/src/ambient.d.ts`)).toBe(AMBIENT_DTS);
+    // nested directories are created
+    expect(files.mkdir_p).toHaveBeenCalledWith(`${PKG_DIR}/src/lib`);
+    expect(files.mkdir_p).toHaveBeenCalledWith(`${PKG_DIR}/src/client`);
+  });
+
+  test("does not copy non-TypeScript resources", async () => {
+    await run({ "my-package": tsIsopack() }, ["my-package"]);
+    expect(writtenContentAt(`${PKG_DIR}/src/plain.js`)).toBeNull();
+    expect(writtenContentAt(`${PKG_DIR}/src/logo.png`)).toBeNull();
+  });
+
+  test("writes an extensionless bare-specifier stub as index.d.ts (exact content)", async () => {
+    await run({ "my-package": tsIsopack() }, ["my-package"]);
+    expect(writtenContentAt(`${PKG_DIR}/index.d.ts`)).toBe(MAIN_STUB);
+  });
+
+  test("writes a stub per sub-path module, pointing at the copied source", async () => {
+    await run({ "my-package": tsIsopack() }, ["my-package"]);
+    expect(writtenContentAt(`${PKG_DIR}/hooks.d.ts`)).toBe(HOOKS_STUB);
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain(
+      '/// <reference path="./packages/my-package/index.d.ts" />'
+    );
+    expect(dts).toContain(
+      '/// <reference path="./packages/my-package/hooks.d.ts" />'
+    );
+  });
+
+  test("a .tsx entry strips only the trailing extension", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "ui/main.tsx",
+      resources: [
+        makeSourceResource("ui/main.tsx", "export const el: any = null;\n"),
+      ],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBe(
+      "declare module 'meteor/pkg' {\n" +
+        "  import exports = require('meteor-package-types/pkg/src/ui/main');\n" +
+        "  export = exports;\n" +
+        "}\n"
+    );
+  });
+
+  test("colon-named package: stub specifier uses the normalized name", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "index.ts",
+      resources: [makeSourceResource("index.ts", "export const x = 1;\n")],
+    });
+    await run({ "author:package": isopack }, ["author:package"]);
+    expect(writtenContentAt(`${PKGS_DIR}/author_package/index.d.ts`)).toBe(
+      "declare module 'meteor/author:package' {\n" +
+        "  import exports = require('meteor-package-types/author_package/src/index');\n" +
+        "  export = exports;\n" +
+        "}\n"
+    );
+  });
+
+  test("creates the meteor-package-types symlink at the types root", async () => {
+    await run({ "my-package": tsIsopack() }, ["my-package"]);
+    expect(files.mkdir_p).toHaveBeenCalledWith(TYPES_NM_DIR);
+    expect(files.symlinkWithOverwrite).toHaveBeenCalledWith(
+      PKGS_DIR,
+      PKG_TYPES_LINK
+    );
+    expect(files.__symlinks.get(PKG_TYPES_LINK)).toBe(PKGS_DIR);
+  });
+
+  test("stale cleanup keeps src/ and the stubs, prunes dropped files", async () => {
+    files.readdir.mockImplementation((p) => {
+      if (p === PKGS_DIR) return ["my-package"];
+      if (p === PKG_DIR) {
+        return [
+          "index.d.ts",
+          "hooks.d.ts",
+          "src",
+          "dropped-module.d.ts",
+          "node_modules",
+        ];
+      }
+      return [];
+    });
+    await run({ "my-package": tsIsopack() }, ["my-package"]);
+    expect(files.rm_recursive).toHaveBeenCalledWith(
+      `${PKG_DIR}/dropped-module.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(`${PKG_DIR}/src`);
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${PKG_DIR}/index.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${PKG_DIR}/hooks.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(
+      `${PKG_DIR}/node_modules`
+    );
+  });
+
+  test("skips the package when the entry is not among its TypeScript sources", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "missing.ts",
+      resources: [makeSourceResource("other.ts", "export const x = 1;\n")],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    expect(writtenContentAt(PACKAGES_DTS)).not.toContain("meteor/pkg");
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBeNull();
+    // nothing was copied either
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/src/other.ts`)).toBeNull();
+  });
+
+  test("skips a sub-path module whose file is not among the sources", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "index.ts",
+      typesModules: { ghost: "ghost.ts" },
+      resources: [makeSourceResource("index.ts", "export const x = 1;\n")],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain('/// <reference path="./packages/pkg/index.d.ts" />');
+    expect(dts).not.toContain("ghost");
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/ghost.d.ts`)).toBeNull();
+  });
+
+  test("a .d.ts typesEntry is NOT treated as ts-src (single-file mode wins)", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "types.d.ts",
+      resources: [makeResource("types.d.ts", "export declare const x: 1;")],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    // wrapped single-file output, no src/ copy, no symlink
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toContain(
+      "declare module 'meteor/pkg'"
+    );
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/src/types.d.ts`)).toBeNull();
+    expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
+  });
+
+  test("typesDir takes precedence over a .ts entry (publish-rewritten package)", async () => {
+    // After `meteor publish` rewrites a TS-authored package, typesDir is set
+    // and typesEntry points at generated declarations — plain directory mode.
+    const isopack = makeIsopack({
+      typesDir: ".types-build",
+      typesEntry: ".types-build/index.d.ts",
+      resources: [
+        makeResource(".types-build/index.d.ts", "export declare const x: 1;\n"),
+      ],
+    });
+    await run({ pkg: isopack }, ["pkg"]);
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBe(
+      "declare module 'meteor/pkg' {\n" +
+        "  import exports = require('meteor-package-types/pkg/.types-build/index');\n" +
+        "  export = exports;\n" +
+        "}\n"
+    );
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/src/index.d.ts`)).toBeNull();
   });
 });
 
