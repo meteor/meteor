@@ -3,7 +3,21 @@ import ParcelWatcher from "@parcel/watcher";
 import { watch as watchLegacy, addWatchRoot as addWatchRootLegacy, closeAllWatchers as closeAllWatchersLegacy } from './safe-watcher-legacy';
 
 import { Profile } from "../tool-env/profile";
-import { statOrNull, lstat, toPosixPath, convertToOSPath, pathRelative, watchFile, unwatchFile, pathResolve, pathDirname } from "./files";
+import {
+  statOrNull,
+  lstat,
+  toPosixPath,
+  convertToOSPath,
+  pathRelative,
+  watchFile,
+  unwatchFile,
+  pathResolve,
+  pathDirname,
+  pathJoin,
+  getHomeDir,
+  getCurrentToolsDir,
+  inCheckout
+} from "./files";
 import { getMeteorConfig } from "../tool-env/meteor-config";
 
 const constants = require("constants");
@@ -142,6 +156,17 @@ if (process.env.METEOR_WATCH_PRIORITIZE_CHANGED &&
 // watchLibrary.watch if available.
 const changedPaths = new Set;
 
+function getPackageWarehouseRoot(): string | null {
+  if (process.env.METEOR_WAREHOUSE_DIR) {
+    return pathJoin(toPosixPath(process.env.METEOR_WAREHOUSE_DIR), "packages");
+  }
+
+  const baseDir = inCheckout() ? getCurrentToolsDir() : getHomeDir();
+  return baseDir ? pathJoin(toPosixPath(baseDir), ".meteor", "packages") : null;
+}
+
+const packageWarehouseRoot = getPackageWarehouseRoot();
+
 function shouldIgnorePath(absPath: string): boolean {
   const posixPath = toPosixPath(absPath);
   const parts = posixPath.split('/');
@@ -158,6 +183,17 @@ function shouldIgnorePath(absPath: string): boolean {
 
   if (isWithinCwd && absPath.includes(`${cwd}/.meteor/local`)) {
     return true;
+  }
+
+  // Downloaded package versions are installed atomically and immutable. Watching
+  // their contents creates hundreds of native subscriptions without enabling a
+  // development workflow; package selection changes are watched in the app.
+  if (packageWarehouseRoot) {
+    const relativeToWarehouse = pathRelative(packageWarehouseRoot, posixPath);
+    if (relativeToWarehouse === "" ||
+        (!relativeToWarehouse.startsWith("..") && !relativeToWarehouse.startsWith("/"))) {
+      return true;
+    }
   }
 
   // Check for .meteor: allow the .meteor directory itself,
