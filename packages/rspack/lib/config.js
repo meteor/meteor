@@ -246,6 +246,16 @@ export function configureMeteorForRspack() {
       }),
     )}/**`;
   const foldersToIgnore = [
+    // Cross-process isolation: a single app directory can host several Meteor
+    // instances at once (a dev server, a `meteor test` daemon, an E2E run),
+    // each with its own RSPACK_BUILD_CONTEXT (_build, _build-daemon,
+    // _build-local-upstream-3.5.2, ...). Ignore every build context here, then
+    // re-include only our own below; otherwise each instance watches the
+    // others' output writes and treats them as source edits, looping on
+    // spurious "Client modified -- refreshing" rebuilds.
+    '_build/**',
+    '_build-*/**',
+    `!${RSPACK_BUILD_CONTEXT}/**`,
     ...testIgnorePaths,
     otherMainIgnorePath,
     'node_modules/**',

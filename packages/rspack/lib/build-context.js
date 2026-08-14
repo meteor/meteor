@@ -724,7 +724,7 @@ try {
       return `${linkBanner}
 // In Blaze, import happens last so HTML files preload first${clientRuntimeBuildId}`;
     }
-    if (config?.isServer && !config?.isNative) {
+    if (config?.isServer && !config?.isNative && !config?.isTest) {
       // Register the rspack bundle as an async dep; meteor#14395.
       // Meteor's Reify Babel plugin automatically detects Top-Level Await
       // and securely wraps this file with `module.wrapAsync(...)` under the hood.
