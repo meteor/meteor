@@ -172,7 +172,7 @@ Object.assign(RunLog.prototype, {
     });
   },
 
-  logClientRestart: function () {
+  logClientRestart: function (changedPath) {
     var self = this;
 
     if (self.consecutiveClientRestartMessages) {
@@ -187,6 +187,9 @@ Object.assign(RunLog.prototype, {
     }
 
     var message = "=> Client modified -- refreshing";
+    if (changedPath && Console.verbose) {
+      message += " [" + changedPath + "]";
+    }
     if (self.consecutiveClientRestartMessages > 1) {
       message += " (x" + self.consecutiveClientRestartMessages + ")";
     }

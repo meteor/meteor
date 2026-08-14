@@ -565,7 +565,9 @@ export function startRspackClientServe(options = {}) {
             !config?.hasErrors &&
             config?.isRebuild
           ) {
-            getRunLog()?.logClientRestart();
+            getRunLog()?.logClientRestart(
+              "[rspack-hmr] " + (config?.name || "")
+            );
           }
         }
         if (!cleanedData) return;
