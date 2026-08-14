@@ -52,10 +52,11 @@ downloadReleaseCandidateNode() {
 # Try each strategy in the following order:
 extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode || downloadReleaseCandidateNode
 
-# Download MongoDB from mongodb.com. On Linux we use the official builds
-# targeted at Ubuntu 22.04, the oldest ones MongoDB still publishes for both
-# x86_64 and aarch64. If a 32-bit Linux is used, download a 32-bit legacy
-# version instead.
+# Download MongoDB from mongodb.com. On Linux we use official builds chosen for
+# the lowest practical glibc baseline: x86_64 uses the rhel93 build (glibc 2.34,
+# keeping RHEL 9 / Amazon Linux 2023 and similar distros working), and aarch64
+# uses ubuntu2204 (the oldest official aarch64 build MongoDB publishes). If a
+# 32-bit Linux is used, download a 32-bit legacy version instead.
 MONGO_VERSION=$MONGO_VERSION_64BIT
 
 if [ $ARCH = "i686" ] && [ $OS = "linux" ]; then
@@ -69,6 +70,8 @@ esac
 
 if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
   MONGO_NAME="mongodb-macos-arm64-${MONGO_VERSION}"
+elif [ $OS = "linux" ] && [ "$ARCH" = "x86_64" ] ; then
+  MONGO_NAME="mongodb-linux-x86_64-rhel93-${MONGO_VERSION}"
 elif [ $OS = "linux" ] && [ "$ARCH" != "i686" ] ; then
   MONGO_NAME="mongodb-linux-${ARCH}-ubuntu2204-${MONGO_VERSION}"
 else
