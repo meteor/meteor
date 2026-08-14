@@ -1681,12 +1681,7 @@ main.registerCommand({
   maxArgs: 0,
   requiresApp: true,
   options: {
-    'allow-incompatible-update': { type: Boolean },
-
-    // This option has never done anything, but we are keeping it for
-    // backwards compatibility since it existed for 7 years before adding
-    // the correctly named option
-    'allow-incompatible-updates': { type: Boolean }
+    'allow-incompatible-update': { type: Boolean }
   },
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
@@ -1710,6 +1705,18 @@ main.registerCommand({
     '=> Errors prevented type generation:',
     async () => await projectContext.prepareProjectForBuild()
   );
+
+  if (projectContext.typesGenerationFailed) {
+    console.log(red`=> Failed to generate package type declarations.`);
+    return 1;
+  }
+
+  if (projectContext.typesGenerationSkipped) {
+    // Deliberate no-op (zodern:types owns type generation); must not
+    // break `meteor types && meteor run` pipelines.
+    Console.info('=> Skipped type generation because zodern:types is installed.');
+    return 0;
+  }
 
   console.log(green`=> Generated package type declarations.`);
   return 0;

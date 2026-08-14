@@ -1127,7 +1127,7 @@ meteor types [options]
 This command:
 
 - Builds local packages as needed
-- Generates `.meteor/local/types/` for projects with a `tsconfig.json` or `jsconfig.json`
+- Generates `.meteor/types/` for projects with a `tsconfig.json` or `jsconfig.json`
 - Skips linting and bundling so it can be used before running `tsc` in CI
 
 ::: tip CI Integration

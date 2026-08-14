@@ -18,6 +18,10 @@ jest.mock("../fs/files", () => ({
   writeFile: jest.fn(),
 }));
 
+jest.mock("../console/console.js", () => ({
+  Console: { debug: jest.fn(), warn: jest.fn() },
+}));
+
 const { generateTypes } = require("./types-generator");
 const files = require("../fs/files");
 
@@ -70,9 +74,9 @@ function writtenContentAt(path) {
   return call ? call[1].toString("utf8") : null;
 }
 
-// Reusable paths derived from a fake project local dir
-const PROJECT_LOCAL = "/proj/.meteor/local";
-const TYPES_DIR = `${PROJECT_LOCAL}/types`;
+// Reusable paths derived from a fake project .meteor dir
+const PROJECT_METEOR = "/proj/.meteor";
+const TYPES_DIR = `${PROJECT_METEOR}/types`;
 const PKGS_DIR = `${TYPES_DIR}/packages`;
 const PACKAGES_DTS = `${TYPES_DIR}/packages.d.ts`;
 
@@ -97,9 +101,20 @@ describe("directory setup", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({}),
       packageMap: makePackageMap([]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     expect(files.mkdir_p).toHaveBeenCalledWith(PKGS_DIR);
+  });
+
+  test("writes a .gitignore that ignores the whole types dir", async () => {
+    // .meteor/.gitignore in apps only ignores `local`, so the generated
+    // output needs its own .gitignore to stay untracked.
+    await generateTypes({
+      isopackCache: makeIsopackCache({}),
+      packageMap: makePackageMap([]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+    expect(writtenContentAt(`${TYPES_DIR}/.gitignore`)).toBe("*\n");
   });
 });
 
@@ -112,7 +127,7 @@ describe("skipping packages", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({}), // empty
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/random");
@@ -122,7 +137,7 @@ describe("skipping packages", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ random: makeIsopack() }),
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/random");
@@ -136,7 +151,7 @@ describe("skipping packages", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ random: isopack }),
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/random");
@@ -159,7 +174,7 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
         }),
       }),
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const perPkg = writtenContentAt(`${PKGS_DIR}/random.d.ts`);
     expect(perPkg).toContain("declare module 'meteor/random'");
@@ -175,7 +190,7 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
         }),
       }),
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain('/// <reference path="./packages/random.d.ts" />');
@@ -198,7 +213,7 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
         }),
       }),
       packageMap: makePackageMap(["random", "tracker"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain('/// <reference path="./packages/random.d.ts" />');
@@ -231,7 +246,7 @@ describe("priority 2 – package-types.json", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "react-meteor-data": isopack }),
       packageMap: makePackageMap(["react-meteor-data"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const perPkg = writtenContentAt(`${PKGS_DIR}/react-meteor-data.d.ts`);
     expect(perPkg).toContain("declare module 'meteor/react-meteor-data'");
@@ -249,7 +264,7 @@ describe("priority 2 – package-types.json", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ pkg: isopack }),
       packageMap: makePackageMap(["pkg"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/pkg");
@@ -262,7 +277,7 @@ describe("priority 2 – package-types.json", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ pkg: isopack }),
       packageMap: makePackageMap(["pkg"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/pkg");
@@ -290,7 +305,7 @@ describe("priority 2 – package-types.json", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "react-meteor-data": isopack }),
       packageMap: makePackageMap(["react-meteor-data"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
@@ -323,7 +338,7 @@ describe("priority 3 – auto-detect single .d.ts", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ tracker: isopack }),
       packageMap: makePackageMap(["tracker"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const perPkg = writtenContentAt(`${PKGS_DIR}/tracker.d.ts`);
     expect(perPkg).toContain("declare module 'meteor/tracker'");
@@ -341,7 +356,7 @@ describe("priority 3 – auto-detect single .d.ts", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "some-pkg": isopack }),
       packageMap: makePackageMap(["some-pkg"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).not.toContain("meteor/some-pkg");
@@ -369,7 +384,7 @@ describe("sub-path modules (issue #10)", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "react-meteor-data": isopack }),
       packageMap: makePackageMap(["react-meteor-data"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const mainPkg = writtenContentAt(`${PKGS_DIR}/react-meteor-data.d.ts`);
     expect(mainPkg).toContain("declare module 'meteor/react-meteor-data'");
@@ -395,7 +410,7 @@ describe("sub-path modules (issue #10)", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "react-meteor-data": isopack }),
       packageMap: makePackageMap(["react-meteor-data"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
@@ -423,7 +438,7 @@ describe("sub-path modules (issue #10)", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "react-meteor-data": isopack }),
       packageMap: makePackageMap(["react-meteor-data"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
@@ -457,7 +472,7 @@ describe("pre-declared modules are used verbatim", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "zodern:relay": isopack }),
       packageMap: makePackageMap(["zodern:relay"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const perPkg = writtenContentAt(`${PKGS_DIR}/zodern_relay.d.ts`);
     // content is emitted verbatim…
@@ -475,7 +490,7 @@ describe("pre-declared modules are used verbatim", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ pkg: isopack }),
       packageMap: makePackageMap(["pkg"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const perPkg = writtenContentAt(`${PKGS_DIR}/pkg.d.ts`);
     expect(perPkg.match(/declare module/g)).toHaveLength(1);
@@ -498,7 +513,7 @@ describe("pre-declared modules are used verbatim", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ pkg: isopack }),
       packageMap: makePackageMap(["pkg"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     // plain main file is wrapped…
     expect(writtenContentAt(`${PKGS_DIR}/pkg.d.ts`)).toContain(
@@ -522,7 +537,7 @@ describe("pre-declared modules are used verbatim", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ random: isopack }),
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const perPkg = writtenContentAt(`${PKGS_DIR}/random.d.ts`);
     // namespaces and non-relative imports are valid inside an ambient module
@@ -547,7 +562,7 @@ describe("package name normalization", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ "author:package": isopack }),
       packageMap: makePackageMap(["author:package"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     // filename uses underscore, but declare module preserves the original colon-name
     const perPkg = writtenContentAt(`${PKGS_DIR}/author_package.d.ts`);
@@ -575,7 +590,7 @@ describe("package name normalization", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ pkg: isopack }),
       packageMap: makePackageMap(["pkg"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     // '/' maps to '__' while literal '_' escapes to '_u', so the two keys
     // can no longer overwrite each other's file
@@ -615,7 +630,7 @@ describe("writeIfChanged", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ random: isopack }),
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const perPkgWrites = files.writeFile.mock.calls.filter(
       (c) => c[0] === `${PKGS_DIR}/random.d.ts`
@@ -639,7 +654,7 @@ describe("writeIfChanged", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({ random: isopack }),
       packageMap: makePackageMap(["random"]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const written = writtenContentAt(`${PKGS_DIR}/random.d.ts`);
     expect(written).toContain("declare module 'meteor/random'");
@@ -656,7 +671,7 @@ describe("packages.d.ts output", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({}),
       packageMap: makePackageMap([]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain("auto-generated by Meteor");
@@ -666,7 +681,7 @@ describe("packages.d.ts output", () => {
     await generateTypes({
       isopackCache: makeIsopackCache({}),
       packageMap: makePackageMap([]),
-      projectLocalDir: PROJECT_LOCAL,
+      projectMeteorDir: PROJECT_METEOR,
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toBeTruthy();

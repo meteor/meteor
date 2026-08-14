@@ -7,10 +7,11 @@ manual steps are required.
 ## How It Works
 
 During every build, Meteor scans the compiled packages in your project and
-writes type declaration files to `.meteor/local/types/`:
+writes type declaration files to `.meteor/types/`:
 
 ```text
-.meteor/local/types/
+.meteor/types/
+├── .gitignore                 ← written by the generator; keeps the folder untracked
 ├── packages.d.ts              ← barrel file with /// <reference> directives
 └── packages/
     ├── random.d.ts            ← each file wraps its exports in declare module
@@ -29,6 +30,10 @@ import { Random } from "meteor/random";
 import { Accounts } from "meteor/accounts-base";
 ```
 
+The generator also writes a `.gitignore` inside `.meteor/types/`, so the
+generated files stay out of version control without any changes to your
+project's own `.gitignore`.
+
 ## Setup
 
 ### New TypeScript apps
@@ -39,10 +44,11 @@ the generated `tsconfig.json` already has the correct `paths` configuration:
 ```json
 {
   "compilerOptions": {
+    "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        ".meteor/local/types/packages.d.ts",
-        "node_modules/@types/meteor/*"
+        "./.meteor/types/packages.d.ts",
+        "./node_modules/@types/meteor/*"
       ]
     }
   }
@@ -54,17 +60,18 @@ packages that have not yet bundled their own types.
 
 ### Existing TypeScript apps
 
-Update your `tsconfig.json` `paths` entry so that `.meteor/local/types/packages.d.ts`
+Update your `tsconfig.json` `paths` entry so that `.meteor/types/packages.d.ts`
 comes **before** `@types/meteor`:
 
 ```json
 {
   "compilerOptions": {
     "baseUrl": ".",
+    "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        ".meteor/local/types/packages.d.ts",
-        "node_modules/@types/meteor/*"
+        "./.meteor/types/packages.d.ts",
+        "./node_modules/@types/meteor/*"
       ]
     }
   },
@@ -76,10 +83,17 @@ comes **before** `@types/meteor`:
 }
 ```
 
-::: warning Important: `exclude` must not block `.meteor/local/types`
-Do **not** add `./.meteor/**` to `exclude` — that would prevent TypeScript from
-reading the generated `packages.d.ts` file. Exclude only the heavyweight isopack
-cache directories as shown above.
+`"skipLibCheck": true` is recommended. The generated declaration files can pull
+in types from npm packages that live inside a Meteor package's own
+`node_modules`, and your app may have another copy of the same package — with
+lib check enabled, TypeScript reports duplicate-identifier errors when it
+checks both copies. `skipLibCheck` skips type-checking of `.d.ts` files, which
+avoids that noise.
+
+::: warning Important: `exclude` must not block `.meteor/types`
+Do **not** add `./.meteor/**` to `exclude` — that would hide the generated
+types in `.meteor/types`. Excluding the heavyweight `.meteor/local` cache
+directories, as shown above, is fine.
 :::
 
 ::: tip No `preserveSymlinks` needed
@@ -111,7 +125,7 @@ For existing JavaScript apps, add a `jsconfig.json`:
     "baseUrl": ".",
     "paths": {
       "/*": ["*"],
-      "meteor/*": [".meteor/local/types/packages.d.ts"]
+      "meteor/*": [".meteor/types/packages.d.ts"]
     },
     "moduleResolution": "node",
     "resolveJsonModule": true

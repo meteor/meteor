@@ -7,10 +7,10 @@
     "moduleResolution": "node",
     "paths": {
       "/*": ["*"], // support absolute /imports/* with a leading '/'
-      // Meteor's built-in type generator writes .meteor/local/types/packages.d.ts
+      // Meteor's built-in type generator writes .meteor/types/packages.d.ts
       // automatically on every build. @types/meteor is kept as a fallback.
       "meteor/*": [
-        ".meteor/local/types/packages.d.ts",
+        ".meteor/types/packages.d.ts",
         "node_modules/@types/meteor/*"
       ]
     },

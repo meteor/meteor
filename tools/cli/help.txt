@@ -453,7 +453,7 @@ Options:
 Generate package type declarations for this project.
 Usage: meteor types
 
-Build local packages and generate `.meteor/local/types/` for projects that
+Build local packages and generate `.meteor/types/` for projects that
 have a `tsconfig.json` or `jsconfig.json`. This command skips linting and
 bundling, which makes it useful for CI workflows that only need generated
 Meteor package declarations before running `tsc`.

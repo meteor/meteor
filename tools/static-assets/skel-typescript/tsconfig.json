@@ -26,11 +26,11 @@
       /* Support absolute /imports/* with a leading '/' */
       "/*": ["./*"],
       /* Pull in type declarations for Meteor packages.
-         Meteor's built-in type generator writes .meteor/local/types/packages.d.ts
+         Meteor's built-in type generator writes .meteor/types/packages.d.ts
          automatically on every build. @types/meteor is kept as a fallback for
          packages whose types are not yet bundled. */
       "meteor/*": [
-        "./.meteor/local/types/packages.d.ts",
+        "./.meteor/types/packages.d.ts",
         "./node_modules/@types/meteor/*"
       ]
     },
@@ -38,7 +38,6 @@
     "resolveJsonModule": true,
     "types": ["node", "mocha"],
     "esModuleInterop": true,
-    "preserveSymlinks": true,
     "skipLibCheck": true
   },
   "exclude": [

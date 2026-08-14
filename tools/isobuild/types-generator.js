@@ -1,7 +1,7 @@
 /**
  * types-generator.js
  *
- * Generates .meteor/local/types/packages.d.ts so that TypeScript apps can
+ * Generates .meteor/types/packages.d.ts so that TypeScript apps can
  * resolve `import { X } from 'meteor/package-name'` and sub-path imports like
  * `import { Y } from 'meteor/package-name/sub-path'`.
  *
@@ -14,6 +14,7 @@
 "use strict";
 
 import * as files from "../fs/files";
+import { Console } from "../console/console.js";
 
 const TYPES_DIR = "types";
 const PACKAGES_SUBDIR = "packages";
@@ -25,22 +26,29 @@ const PACKAGES_DTS = "packages.d.ts";
 
 /**
  * Generate type declarations for all packages in the app and write them to
- * .meteor/local/types/.
+ * .meteor/types/.
  *
  * @param {Object} options
  * @param {Object} options.isopackCache  - The IsopackCache (fully built)
  * @param {Object} options.packageMap    - The PackageMap
- * @param {string} options.projectLocalDir - e.g. /app/.meteor/local
+ * @param {string} options.projectMeteorDir - e.g. /app/.meteor
  */
 export async function generateTypes({
   isopackCache,
   packageMap,
-  projectLocalDir,
+  projectMeteorDir,
 }) {
-  const typesDir = files.pathJoin(projectLocalDir, TYPES_DIR);
+  const typesDir = files.pathJoin(projectMeteorDir, TYPES_DIR);
   const packagesTypesDir = files.pathJoin(typesDir, PACKAGES_SUBDIR);
 
   files.mkdir_p(packagesTypesDir);
+
+  // Keep the generated output untracked in every app: `.meteor/.gitignore`
+  // only ignores `local`, so the types dir needs its own .gitignore.
+  writeIfChanged(
+    files.pathJoin(typesDir, ".gitignore"),
+    Buffer.from("*\n", "utf8")
+  );
 
   // Collect entries: { name, normalizedName, dtsPath (relative to typesDir) }
   const entries = [];
@@ -50,11 +58,15 @@ export async function generateTypes({
     try {
       isopack = isopackCache.getIsopack(name);
     } catch (_) {
-      // Package not yet built / not available – skip silently
+      // Defensive: in the normal build pipeline every mapped package has been
+      // built before this stage runs, so this should be unreachable — but
+      // generateTypes must not let one unloadable package (e.g. from a
+      // subset-built cache) kill types for every other package.
+      Console.debug(`[types] Skipping "${name}": isopack not available`);
       return;
     }
 
-    const info = findTypesInfo(isopack);
+    const info = findTypesInfo(isopack, name);
     if (!info) return;
 
     const normalizedName = normalizePackageName(name);
@@ -115,7 +127,7 @@ export async function generateTypes({
  * Find type information for an isopack.
  * Returns { data: Buffer, modules: Map<string, Buffer|null>|null } or null.
  */
-function findTypesInfo(isopack) {
+function findTypesInfo(isopack, name) {
   // Priority 1: api.types() was called – typesEntry is set on the isopack
   if (isopack.typesEntry) {
     const data = findResourceData(isopack, isopack.typesEntry);
@@ -140,7 +152,10 @@ function findTypesInfo(isopack) {
     let config;
     try {
       config = JSON.parse(packageTypesResource.data.toString("utf8"));
-    } catch (_) {
+    } catch (err) {
+      Console.debug(
+        `[types] Ignoring malformed package-types.json in package "${name}": ${err.message}`
+      );
       config = null;
     }
     if (config && config.typesEntry) {

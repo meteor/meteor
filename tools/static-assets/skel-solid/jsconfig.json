@@ -4,7 +4,7 @@
     "paths": {
       "/*": ["*"],
       "meteor/*": [
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/types/packages.d.ts"
       ]
     },
     "moduleResolution": "node",
