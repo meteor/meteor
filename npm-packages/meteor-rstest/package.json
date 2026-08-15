@@ -10,6 +10,10 @@
       "require": "./index.js",
       "default": "./index.js"
     },
+    "./runtime": {
+      "types": "./runtime/index.d.ts",
+      "default": "./runtime/index.mjs"
+    },
     "./package.json": "./package.json"
   },
   "type": "commonjs",
