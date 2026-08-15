@@ -23,6 +23,7 @@ const {
   disablePlugins,
   outputMeteorRspack,
   formatDevServerHost,
+  getRsdoctorPort,
   enablePortableBuild,
   persistDevFiles,
   createPersistCallback,
@@ -508,15 +509,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const rsdoctorModule = isBundleVisualizerEnabled
     ? safeRequire("@rsdoctor/rspack-plugin")
     : null;
-  const rsdoctorPort = isClient
-    ? Meteor.rsdoctorClientPort
-    : Meteor.rsdoctorServerPort;
+  const rsdoctorPort = getRsdoctorPort(
+    isClient,
+    Meteor.rsdoctorClientPort,
+    Meteor.rsdoctorServerPort,
+  );
   const doctorPluginConfig =
     isRun && isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
       ? [
-          new rsdoctorModule.RsdoctorRspackPlugin({
-            ...(rsdoctorPort && { port: parseInt(rsdoctorPort, 10) }),
-          }),
+          new rsdoctorModule.RsdoctorRspackPlugin({ port: rsdoctorPort }),
         ]
       : [];
   const bannerPluginConfig = !isBuild

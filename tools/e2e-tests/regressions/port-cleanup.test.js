@@ -9,7 +9,10 @@ import {
 } from '../helpers';
 import { assertMeteorReactApp } from '../assertions';
 import { setupMeteorRspackApp } from '../test-helpers';
-import { formatDevServerHost } from '../../../npm-packages/meteor-rspack/lib/meteorRspackHelpers';
+import {
+  formatDevServerHost,
+  getRsdoctorPort,
+} from '../../../npm-packages/meteor-rspack/lib/meteorRspackHelpers';
 
 describe("Rspack dev-server URL /", () => {
   test.each([
@@ -21,6 +24,18 @@ describe("Rspack dev-server URL /", () => {
     const formattedHost = formatDevServerHost(host);
     expect(formattedHost).toBe(expected);
     expect(new URL(`http://${formattedHost}:49152`).port).toBe("49152");
+  });
+});
+
+describe("Rsdoctor port selection /", () => {
+  test("keeps automatic client and server ports distinct", () => {
+    expect(getRsdoctorPort(true)).toBe(8888);
+    expect(getRsdoctorPort(false)).toBe(8889);
+  });
+
+  test("preserves configured client and server ports", () => {
+    expect(getRsdoctorPort(true, "9100", "9200")).toBe(9100);
+    expect(getRsdoctorPort(false, "9100", "9200")).toBe(9200);
   });
 });
 

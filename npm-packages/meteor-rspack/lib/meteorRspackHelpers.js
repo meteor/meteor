@@ -340,6 +340,11 @@ function formatDevServerHost(host) {
   return value.includes(":") && !value.startsWith("[") ? `[${value}]` : value;
 }
 
+function getRsdoctorPort(isClient, clientPort, serverPort) {
+  const configuredPort = isClient ? clientPort : serverPort;
+  return parseInt(configuredPort || (isClient ? "8888" : "8889"), 10);
+}
+
 module.exports = {
   compileWithMeteor,
   compileWithRspack,
@@ -351,6 +356,7 @@ module.exports = {
   disablePlugins,
   outputMeteorRspack,
   formatDevServerHost,
+  getRsdoctorPort,
   enablePortableBuild,
   persistDevFiles,
   createPersistCallback,
