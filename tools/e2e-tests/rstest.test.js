@@ -129,6 +129,61 @@ describe('Meteor + Rstest integration', () => {
     expect(packageJson.devDependencies.playwright).toBe('1.59.0');
   }, 600_000);
 
+  test('embeds upstream Rstest API in Meteor server', async () => {
+    const fixture = path.join(
+      appDir,
+      'fixtures',
+      'upstream-api.test.js.txt',
+    );
+    const target = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'runtime',
+      'server',
+      'upstream-api.test.js',
+    );
+    fs.copyFileSync(fixture, target);
+
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-runtime-server',
+          '--test-file',
+          'upstream-api.test.js',
+          '--port',
+          testPort(3215),
+          '--',
+          '--reporters=verbose',
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: { reject: false },
+          env: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(0);
+      expect(output).toContain('upstream case 1');
+      expect(output).toContain('upstream case 2');
+      expect(output).toContain('uses upstream fixture context');
+      expect(output).toContain(
+        '✓ tests/rstest/runtime/server/upstream-api.test.js (3)',
+      );
+      expect(output).not.toContain('[Meteor-Rstest]');
+      expect(output).not.toContain("Rstest API 'test' is not registered");
+    } finally {
+      fs.rmSync(target, { force: true });
+    }
+  }, 600_000);
+
   test('smart routing infers colocated tests and honors filename opt-ins', async () => {
     fs.cpSync(smartFixtureSource, smartFixtureTarget, { recursive: true });
     try {
