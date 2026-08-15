@@ -83,7 +83,13 @@ function requestsVerboseReporter(args = []) {
 
 class RstestTestRunnerProvider {
   constructor(context, services = {}) {
+    const {
+      environment = process.env,
+      ...serviceOverrides
+    } = services;
     this.context = context;
+    this.environment = environment;
+    this.upstreamRuntime = environment.METEOR_RSTEST_UPSTREAM_RUNTIME === '1';
     this.services = {
       ensureRstestInstalled,
       assertRstestOptionalCapabilities,
@@ -100,7 +106,7 @@ class RstestTestRunnerProvider {
       createRstestHostDescriptors,
       validateRstestWorkerPayload,
       warn: message => console.warn(message),
-      ...services,
+      ...serviceOverrides,
     };
     this.resources = [];
     this.selection = null;
@@ -122,6 +128,20 @@ class RstestTestRunnerProvider {
       throw rstestError(
         'METEOR_RSTEST_CONFLICTING_SIDES',
         '--server-only conflicts with --client-only.'
+      );
+    }
+    if (this.upstreamRuntime && (
+      command !== 'test' ||
+      !options.once ||
+      !options.serverOnly ||
+      options.clientOnly ||
+      options.fullApp ||
+      options.runtimeWorkers !== 1
+    )) {
+      throw rstestError(
+        'METEOR_RSTEST_UPSTREAM_SPIKE_UNSUPPORTED',
+        'Upstream runtime spike requires meteor test --once --server-only ' +
+          'with one runtime worker and without --full-app.'
       );
     }
     if (!options.once && (options.shard || options.changed || options.changedSince)) {
@@ -689,6 +709,7 @@ class RstestTestRunnerProvider {
 
     this.metadata = {
       command,
+      appRoot: appDir,
       generation: this.generation,
       watch: !options.once,
       verbose,
@@ -701,6 +722,7 @@ class RstestTestRunnerProvider {
       server,
       client,
       runtime: selection.needsRuntime,
+      upstreamRuntime: this.upstreamRuntime,
       external: selection.needsExternal,
       runtimeManifest: this.runtimeManifest,
       worker: worker ? {
@@ -750,6 +772,7 @@ class RstestTestRunnerProvider {
           }),
           context: {
             runtime: selection.needsRuntime,
+            upstreamRuntime: this.upstreamRuntime,
             external: selection.needsExternal,
             server,
             client,

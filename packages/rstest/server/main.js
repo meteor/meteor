@@ -13,6 +13,9 @@ const {
   shouldEmitResultFrames,
 } = require('../runtime/reporter.js');
 const { writeWorkerResult } = require('./worker-result.js');
+const {
+  executeUpstreamServerTests,
+} = require('./upstream-runtime.js');
 
 const clientResultGate = createResultGate({ timeoutMs: 600000 });
 const externalResultGate = createResultGate({ timeoutMs: 600000 });
@@ -112,6 +115,7 @@ export const expect = api.expect;
 export const test = api.test;
 export const __registerTestFile = api.registerTestFile;
 export const __registerTestFileLoader = api.registerTestFileLoader;
+export const __setRstestRuntimeFactory = api.setRstestRuntimeFactory;
 
 function testMetadata() {
   try {
@@ -123,6 +127,7 @@ function testMetadata() {
         ...metadata,
         testRunner: metadata.testRunner.id,
         rstestGeneration: payload.generation,
+        rstestAppRoot: payload.appRoot,
         rstestTestNamePattern: payload.testNamePattern,
         rstestTestTimeout: payload.testTimeout,
         rstestHookTimeout: payload.hookTimeout,
@@ -131,6 +136,7 @@ function testMetadata() {
         rstestServer: payload.server,
         rstestClient: payload.client,
         rstestRuntime: payload.runtime,
+        rstestUpstreamRuntime: payload.upstreamRuntime,
         rstestExternal: payload.external,
         rstestWatch: payload.watch,
         rstestReportVerbose: payload.reportVerbose ?? payload.verbose,
@@ -150,12 +156,23 @@ async function executeTests() {
   const runtimeResults = [];
 
   if (metadata.rstestServer !== false) {
-    const serverResult = await api.registry.run({
+    const runtimeOptions = {
       testNamePattern: metadata.rstestTestNamePattern,
       testTimeout: Number(metadata.rstestTestTimeout || 30000),
       hookTimeout: Number(metadata.rstestHookTimeout || 10000),
       maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
-    });
+    };
+    const serverResult = metadata.rstestUpstreamRuntime
+      ? await executeUpstreamServerTests({
+          loaders: api.takeTestFileLoaders(),
+          createRuntime: api.getRstestRuntimeFactory(),
+          metadata: {
+            appRoot: metadata.rstestAppRoot,
+            generation,
+            ...runtimeOptions,
+          },
+        })
+      : await api.registry.run(runtimeOptions);
     const entry = { architecture: 'server', result: serverResult };
     results.push(entry);
     runtimeResults.push(entry);

@@ -21,8 +21,48 @@ const createRstestTestFileRegistration = ({
     exportName: upstreamRuntime
       ? '__registerTestFileLoader'
       : '__registerTestFile',
-    mode: upstreamRuntime ? 'lazy' : 'sync',
+    mode: 'sync',
+    ...(upstreamRuntime && {
+      runtimeFactory: {
+        module: '@meteorjs/rstest/runtime',
+        exportName: 'createMeteorRstestFileRuntime',
+        registrationExportName: '__setRstestRuntimeFactory',
+      },
+    }),
   };
+};
+
+const createRstestRuntimeAlias = ({
+  upstreamRuntime,
+  projectDir,
+  npmRoot,
+  resolveModule = require.resolve,
+}) => {
+  if (!upstreamRuntime) return undefined;
+  const searchPaths = [npmRoot, projectDir].filter(Boolean);
+  const runtimePath = resolveModule(
+    '@rstest/core/internal/browser-runtime',
+    { paths: searchPaths },
+  );
+  return { '@rstest/core$': runtimePath };
+};
+
+const enforceRstestRuntimeAlias = (config, alias) => {
+  if (!alias) return config;
+  config.resolve ||= {};
+  config.resolve.alias = {
+    ...(config.resolve.alias || {}),
+    ...alias,
+  };
+  return config;
+};
+
+const enforceRstestRuntimeOptimization = (config, upstreamRuntime) => {
+  if (!upstreamRuntime) return config;
+  config.optimization ||= {};
+  config.optimization.usedExports = false;
+  config.optimization.minimize = false;
+  return config;
 };
 
 /**
@@ -32,7 +72,7 @@ const createRstestTestFileRegistration = ({
  * @param {string} options.projectDir - The project directory
  * @param {string} [options.discoveryRoot] - Root scanned by the eager context
  * @param {string[]} [options.includeFiles] - Exact files allowed under discoveryRoot
- * @param {{module: string, exportName: string, mode?: 'sync'|'lazy'}} [options.testFileRegistration]
+ * @param {{module: string, exportName: string, mode?: 'sync'|'lazy', runtimeFactory?: {module: string, exportName: string, registrationExportName: string}}} [options.testFileRegistration]
  *        Optional module API wrapping each discovered test-file evaluation
  * @param {string} options.buildContext - The build context
  * @param {string} [options.localDir] - Meteor local directory
@@ -58,6 +98,9 @@ const generateEagerTestFile = ({
   const registrationMode = testFileRegistration?.mode || 'sync';
   if (testFileRegistration && !['sync', 'lazy'].includes(registrationMode)) {
     throw new Error(`Unsupported test file registration mode: ${registrationMode}`);
+  }
+  if (registrationMode === 'lazy' && !testFileRegistration.runtimeFactory) {
+    throw new Error('Lazy test file registration requires a runtime factory.');
   }
   const distDir = path.resolve(projectDir, localDir, 'test');
   if (!fs.existsSync(distDir)) {
@@ -115,8 +158,17 @@ const generateEagerTestFile = ({
     () => ctx(file),
   ))`
     : '.forEach(ctx)';
+  const runtimeFactory = testFileRegistration?.runtimeFactory;
   const registrationImport = testFileRegistration
-    ? `import { ${testFileRegistration.exportName} as __meteorRegisterTestFile } from ${JSON.stringify(testFileRegistration.module)};\n`
+    ? `import { ${testFileRegistration.exportName} as __meteorRegisterTestFile${
+      runtimeFactory
+        ? `, ${runtimeFactory.registrationExportName} as __meteorSetRstestRuntimeFactory`
+        : ''
+    } } from ${JSON.stringify(testFileRegistration.module)};\n${
+      runtimeFactory
+        ? `import { ${runtimeFactory.exportName} as __meteorCreateRstestRuntime } from ${JSON.stringify(runtimeFactory.module)};\n__meteorSetRstestRuntimeFactory(__meteorCreateRstestRuntime);\n`
+        : ''
+    }`
     : '';
   const registrationRoot = testFileRegistration
     ? `const __meteorTestFileRoot = ${JSON.stringify(relativeDiscoveryRoot)};\n`
@@ -163,6 +215,9 @@ ${extraContent}`;
 };
 
 module.exports = {
+  createRstestRuntimeAlias,
   createRstestTestFileRegistration,
+  enforceRstestRuntimeAlias,
+  enforceRstestRuntimeOptimization,
   generateEagerTestFile,
 };

@@ -16,6 +16,7 @@ function assertTestPath(testPath) {
 
 function createFileLoaderRegistry() {
   const loaders = new Map();
+  let runtimeFactory;
 
   return {
     register(testPath, load) {
@@ -37,6 +38,23 @@ function createFileLoaderRegistry() {
         .map(([testPath, load]) => ({ testPath, load }));
       loaders.clear();
       return entries;
+    },
+
+    setRuntimeFactory(factory) {
+      if (typeof factory !== 'function') {
+        throw new TypeError('[Meteor Rstest] Runtime factory must be a function.');
+      }
+      if (runtimeFactory && runtimeFactory !== factory) {
+        throw new Error('[Meteor Rstest] Upstream runtime factory is already registered.');
+      }
+      runtimeFactory = factory;
+    },
+
+    getRuntimeFactory() {
+      if (!runtimeFactory) {
+        throw new Error('[Meteor Rstest] Upstream runtime factory was not registered.');
+      }
+      return runtimeFactory;
     },
   };
 }

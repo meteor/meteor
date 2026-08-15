@@ -11,6 +11,7 @@ export const expect = api.expect;
 export const test = api.test;
 export const __registerTestFile = api.registerTestFile;
 export const __registerTestFileLoader = api.registerTestFileLoader;
+export const __setRstestRuntimeFactory = api.setRstestRuntimeFactory;
 
 let runPromise;
 

@@ -6,7 +6,10 @@ const test = require('node:test');
 
 const { createTestRspackConfig } = require('../config.js');
 const {
+  createRstestRuntimeAlias,
   createRstestTestFileRegistration,
+  enforceRstestRuntimeAlias,
+  enforceRstestRuntimeOptimization,
   generateEagerTestFile,
 } = require('../lib/test.js');
 
@@ -184,7 +187,7 @@ test('Rstest runtime eager entry registers app-relative source files', t => {
   assert.match(content, /mode: 'sync'/);
 });
 
-test('Rstest upstream runtime entry registers lazy app-relative loaders', t => {
+test('Rstest upstream runtime entry registers deferred app-relative loaders', t => {
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-runtime-lazy-'));
   t.after(() => fs.rmSync(projectRoot, { recursive: true, force: true }));
   const runtimeRoot = path.join(projectRoot, 'tests/rstest/runtime/server');
@@ -198,21 +201,34 @@ test('Rstest upstream runtime entry registers lazy app-relative loaders', t => {
     testFileRegistration: {
       module: 'meteor/rstest',
       exportName: '__registerTestFileLoader',
-      mode: 'lazy',
+      mode: 'sync',
+      runtimeFactory: {
+        module: '@meteorjs/rstest/runtime',
+        exportName: 'createMeteorRstestFileRuntime',
+        registrationExportName: '__setRstestRuntimeFactory',
+      },
     },
   });
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.match(
     content,
-    /import \{ __registerTestFileLoader as __meteorRegisterTestFile \} from "meteor\/rstest";/,
+    /import \{ __registerTestFileLoader as __meteorRegisterTestFile, __setRstestRuntimeFactory as __meteorSetRstestRuntimeFactory \} from "meteor\/rstest";/,
+  );
+  assert.match(
+    content,
+    /import \{ createMeteorRstestFileRuntime as __meteorCreateRstestRuntime \} from "@meteorjs\/rstest\/runtime";/,
+  );
+  assert.match(
+    content,
+    /__meteorSetRstestRuntimeFactory\(__meteorCreateRstestRuntime\);/,
   );
   assert.match(content, /__meteorRegisterTestFile\(/);
   assert.match(content, /\(\) => ctx\(file\)/);
-  assert.match(content, /mode: 'lazy'/);
+  assert.match(content, /mode: 'sync'/);
 });
 
-test('Rstest spike flag selects lazy loader registration only for Rstest builds', () => {
+test('Rstest spike flag selects deferred loader registration only for Rstest builds', () => {
   assert.deepEqual(
     createRstestTestFileRegistration({
       isRstestTest: true,
@@ -221,7 +237,12 @@ test('Rstest spike flag selects lazy loader registration only for Rstest builds'
     {
       module: 'meteor/rstest',
       exportName: '__registerTestFileLoader',
-      mode: 'lazy',
+      mode: 'sync',
+      runtimeFactory: {
+        module: '@meteorjs/rstest/runtime',
+        exportName: 'createMeteorRstestFileRuntime',
+        registrationExportName: '__setRstestRuntimeFactory',
+      },
     },
   );
   assert.deepEqual(
@@ -242,6 +263,42 @@ test('Rstest spike flag selects lazy loader registration only for Rstest builds'
     }),
     undefined,
   );
+});
+
+test('Rstest upstream runtime alias resolves from harness and overrides user alias', () => {
+  const resolutions = [];
+  const alias = createRstestRuntimeAlias({
+    upstreamRuntime: true,
+    projectDir: '/meteor-app',
+    npmRoot: '/meteor-harness',
+    resolveModule(request, options) {
+      resolutions.push({ request, options });
+      return '/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js';
+    },
+  });
+
+  assert.deepEqual(resolutions, [{
+    request: '@rstest/core/internal/browser-runtime',
+    options: { paths: ['/meteor-harness', '/meteor-app'] },
+  }]);
+  assert.deepEqual(alias, {
+    '@rstest/core$': '/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js',
+  });
+
+  const config = { resolve: { alias: { '@rstest/core$': '/user/wrong.js' } } };
+  enforceRstestRuntimeAlias(config, alias);
+  assert.deepEqual(config.resolve.alias, alias);
+  assert.equal(createRstestRuntimeAlias({ upstreamRuntime: false }), undefined);
+
+  const optimized = {
+    optimization: { usedExports: true, minimize: true, sideEffects: true },
+  };
+  enforceRstestRuntimeOptimization(optimized, true);
+  assert.deepEqual(optimized.optimization, {
+    usedExports: false,
+    minimize: false,
+    sideEffects: true,
+  });
 });
 
 test('ordinary Meteor eager entry does not register Rstest source files', t => {

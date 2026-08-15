@@ -51,3 +51,15 @@ test('file loader registry rejects duplicate and unsafe test paths', () => {
     /loader must be a function/,
   );
 });
+
+test('file loader registry exposes one bundle-owned runtime factory', () => {
+  const registry = createFileLoaderRegistry();
+  const factory = async () => {};
+
+  registry.setRuntimeFactory(factory);
+  assert.equal(registry.getRuntimeFactory(), factory);
+  assert.throws(
+    () => registry.setRuntimeFactory(async () => {}),
+    /runtime factory is already registered/,
+  );
+});

@@ -12,8 +12,10 @@ module.exports = {
   beforeEach: registry.beforeEach,
   describe: registry.describe,
   expect: registry.expect,
+  getRstestRuntimeFactory: fileLoaders.getRuntimeFactory,
   registerTestFileLoader: fileLoaders.register,
   registerTestFile: registry.registerTestFile,
   takeTestFileLoaders: fileLoaders.take,
+  setRstestRuntimeFactory: fileLoaders.setRuntimeFactory,
   test: registry.test,
 };

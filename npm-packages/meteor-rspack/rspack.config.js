@@ -12,7 +12,10 @@ const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js')
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
 const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
 const {
+  createRstestRuntimeAlias,
   createRstestTestFileRegistration,
+  enforceRstestRuntimeAlias,
+  enforceRstestRuntimeOptimization,
   generateEagerTestFile,
 } = require("./lib/test.js");
 const { readRstestRuntimeInventory } = require('./lib/rstest.js');
@@ -229,6 +232,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   } catch {
     throw new Error('[Meteor Rspack] Invalid test runner build context.');
   }
+  const upstreamRstestRuntime = isRstestTest &&
+    testRunnerContext.upstreamRuntime === true;
   const compatibilityIgnoreEntries = isRstestTest
     ? ['**/tests/legacy/**']
     : isTest ? ['**/tests/rstest/runtime/**'] : [];
@@ -248,7 +253,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   }
   const rstestTestFileRegistration = createRstestTestFileRegistration({
     isRstestTest,
-    environment: process.env,
+    environment: upstreamRstestRuntime
+      ? { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' }
+      : {},
+  });
+  const rstestRuntimeAlias = createRstestRuntimeAlias({
+    upstreamRuntime: upstreamRstestRuntime,
+    projectDir,
+    npmRoot: testRunnerContext.npmRoot,
   });
   const isProfile = !!Meteor.isProfile;
   const isVerbose = !!Meteor.isVerbose;
@@ -620,7 +632,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       }),
     },
     optimization: {
-      usedExports: true,
+      // Rstest browser-runtime is itself a prebundle. Its vendor entry
+      // registers opaque numeric modules through a private runtime side effect,
+      // which a second tree-shaking pass cannot see.
+      usedExports: !upstreamRstestRuntime,
       splitChunks: { chunks: "async" },
     },
     module: {
@@ -751,7 +766,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       }),
     },
     optimization: {
-      usedExports: true,
+      // Preserve opaque module registrations in Rstest's nested prebundle.
+      usedExports: !upstreamRstestRuntime,
       splitChunks: false,
       runtimeChunk: false,
     },
@@ -896,6 +912,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       statsOverrided = true;
     }
   }
+
+  enforceRstestRuntimeAlias(config, rstestRuntimeAlias);
+  enforceRstestRuntimeOptimization(config, upstreamRstestRuntime);
 
   // If the user or an override replaced devServer.onListening, compose
   // so our default runs first (attaches the Windows socket guard and

@@ -104,6 +104,34 @@ test('validation rejects conflicting sides before dependency installation', asyn
   assert.equal(installs, 0);
 });
 
+test('upstream runtime spike is constrained and reaches host/build metadata', async t => {
+  const context = createContext(t);
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  writeRuntimeFiles(context.appDir, ['upstream.test.js']);
+  const provider = new RstestTestRunnerProvider(context, {
+    environment: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
+    async ensureRstestInstalled() {},
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(plan.metadata.upstreamRuntime, true);
+  assert.equal(plan.metadata.appRoot, context.appDir);
+  assert.equal(plan.buildPluginOptions.rspack.context.upstreamRuntime, true);
+
+  const unsupportedContext = createContext(t);
+  unsupportedContext.options.serverOnly = false;
+  const unsupported = new RstestTestRunnerProvider(unsupportedContext, {
+    environment: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
+  });
+  await assert.rejects(unsupported.validate(), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_UPSTREAM_SPIKE_UNSUPPORTED');
+    return true;
+  });
+});
+
 test('pure tests prepare native-only plan with opaque Rspack options', async t => {
   const context = createContext(t);
   const testFile = path.join(
