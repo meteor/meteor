@@ -6,8 +6,8 @@
  *
  * Steps:
  *   1. Run `meteor update --npm` in the app
- *   2. Install the matching @rspack/core and @rspack/cli versions into the
- *      local meteor-rspack package (read from packages/rspack/lib/constants.js)
+ *   2. Install the matching Rspack and Rsdoctor versions into the local
+ *      meteor-rspack package (read from packages/rspack/lib/constants.js)
  *   3. Install `ignore-loader` in the app
  *   4. `npm link` the local meteor-rspack into the app
  *
@@ -49,17 +49,25 @@ async function linkLocalRspack(appDir, { env } = {}) {
     /DEFAULT_RSPACK_VERSION\s*=\s*['"]([^'"]+)['"]/
   );
   const rspackVersion = rspackVersionMatch?.[1];
-  if (rspackVersion) {
-    console.log(`Installing @rspack/core@${rspackVersion} and @rspack/cli@${rspackVersion}...`);
+  const rsdoctorVersion = constantsContent.match(
+    /DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION\s*=\s*['"]([^'"]+)['"]/
+  )?.[1];
+  const localDependencies = [
+    ...(rspackVersion
+      ? [`@rspack/core@${rspackVersion}`, `@rspack/cli@${rspackVersion}`]
+      : []),
+    ...(rsdoctorVersion
+      ? [
+          `@rsdoctor/rspack-plugin@${rsdoctorVersion}`,
+          `@rsdoctor/core@${rsdoctorVersion}`,
+        ]
+      : []),
+  ];
+  if (localDependencies.length > 0) {
+    console.log(`Installing ${localDependencies.join(' and ')}...`);
     await execa(
       'npm',
-      [
-        'install',
-        `@rspack/core@${rspackVersion}`,
-        `@rspack/cli@${rspackVersion}`,
-        '--no-save',
-        '--no-package-lock',
-      ],
+      ['install', ...localDependencies, '--no-save', '--no-package-lock'],
       { cwd: RSPACK_PACKAGE_DIR }
     );
   }
