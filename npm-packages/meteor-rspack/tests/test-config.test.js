@@ -5,7 +5,10 @@ const os = require('node:os');
 const test = require('node:test');
 
 const { createTestRspackConfig } = require('../config.js');
-const { generateEagerTestFile } = require('../lib/test.js');
+const {
+  createRstestTestFileRegistration,
+  generateEagerTestFile,
+} = require('../lib/test.js');
 
 test('server test projection uses same Rspack SWC and resolver language', () => {
   const root = path.resolve('/tmp/meteor-rspack-projection');
@@ -179,6 +182,66 @@ test('Rstest runtime eager entry registers app-relative source files', t => {
   assert.match(content, /__meteorRegisterTestFile\(/);
   assert.match(content, /\(\) => ctx\(file\)/);
   assert.match(content, /mode: 'sync'/);
+});
+
+test('Rstest upstream runtime entry registers lazy app-relative loaders', t => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-runtime-lazy-'));
+  t.after(() => fs.rmSync(projectRoot, { recursive: true, force: true }));
+  const runtimeRoot = path.join(projectRoot, 'tests/rstest/runtime/server');
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+
+  const generated = generateEagerTestFile({
+    isAppTest: false,
+    projectDir: projectRoot,
+    discoveryRoot: runtimeRoot,
+    buildContext: '_build',
+    testFileRegistration: {
+      module: 'meteor/rstest',
+      exportName: '__registerTestFileLoader',
+      mode: 'lazy',
+    },
+  });
+  const content = fs.readFileSync(generated, 'utf8');
+
+  assert.match(
+    content,
+    /import \{ __registerTestFileLoader as __meteorRegisterTestFile \} from "meteor\/rstest";/,
+  );
+  assert.match(content, /__meteorRegisterTestFile\(/);
+  assert.match(content, /\(\) => ctx\(file\)/);
+  assert.match(content, /mode: 'lazy'/);
+});
+
+test('Rstest spike flag selects lazy loader registration only for Rstest builds', () => {
+  assert.deepEqual(
+    createRstestTestFileRegistration({
+      isRstestTest: true,
+      environment: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
+    }),
+    {
+      module: 'meteor/rstest',
+      exportName: '__registerTestFileLoader',
+      mode: 'lazy',
+    },
+  );
+  assert.deepEqual(
+    createRstestTestFileRegistration({
+      isRstestTest: true,
+      environment: {},
+    }),
+    {
+      module: 'meteor/rstest',
+      exportName: '__registerTestFile',
+      mode: 'sync',
+    },
+  );
+  assert.equal(
+    createRstestTestFileRegistration({
+      isRstestTest: false,
+      environment: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
+    }),
+    undefined,
+  );
 });
 
 test('ordinary Meteor eager entry does not register Rstest source files', t => {

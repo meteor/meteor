@@ -111,6 +111,7 @@ export const describe = api.describe;
 export const expect = api.expect;
 export const test = api.test;
 export const __registerTestFile = api.registerTestFile;
+export const __registerTestFileLoader = api.registerTestFileLoader;
 
 function testMetadata() {
   try {

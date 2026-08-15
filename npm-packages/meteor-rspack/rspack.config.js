@@ -11,7 +11,10 @@ const HtmlRspackPlugin = require('./plugins/HtmlRspackPlugin.js');
 const { RequireExternalsPlugin } = require('./plugins/RequireExtenalsPlugin.js');
 const { AssetExternalsPlugin } = require('./plugins/AssetExternalsPlugin.js');
 const { MeteorRspackOutputPlugin, extractDelegatedExtensions } = require('./plugins/MeteorRspackOutputPlugin.js');
-const { generateEagerTestFile } = require("./lib/test.js");
+const {
+  createRstestTestFileRegistration,
+  generateEagerTestFile,
+} = require("./lib/test.js");
 const { readRstestRuntimeInventory } = require('./lib/rstest.js');
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
@@ -243,10 +246,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     rstestRuntimeRoot = inventory.discoveryRoot;
     rstestRuntimeFiles = inventory.files;
   }
-  const rstestTestFileRegistration = isRstestTest ? {
-    module: 'meteor/rstest',
-    exportName: '__registerTestFile',
-  } : undefined;
+  const rstestTestFileRegistration = createRstestTestFileRegistration({
+    isRstestTest,
+    environment: process.env,
+  });
   const isProfile = !!Meteor.isProfile;
   const isVerbose = !!Meteor.isVerbose;
   const configPath = Meteor.configPath;

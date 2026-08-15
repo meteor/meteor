@@ -1,6 +1,8 @@
 const { createRegistry } = require('./registry.js');
+const { createFileLoaderRegistry } = require('./file-loaders.js');
 
 const registry = createRegistry();
+const fileLoaders = createFileLoaderRegistry();
 
 module.exports = {
   registry,
@@ -10,6 +12,8 @@ module.exports = {
   beforeEach: registry.beforeEach,
   describe: registry.describe,
   expect: registry.expect,
+  registerTestFileLoader: fileLoaders.register,
   registerTestFile: registry.registerTestFile,
+  takeTestFileLoaders: fileLoaders.take,
   test: registry.test,
 };

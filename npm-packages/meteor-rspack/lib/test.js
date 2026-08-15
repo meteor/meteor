@@ -10,6 +10,21 @@ const {
 // Module identifiers in bundled JS must use '/' regardless of OS.
 const toPosix = (p) => p.replace(/\\/g, '/');
 
+const createRstestTestFileRegistration = ({
+  isRstestTest,
+  environment = process.env,
+}) => {
+  if (!isRstestTest) return undefined;
+  const upstreamRuntime = environment.METEOR_RSTEST_UPSTREAM_RUNTIME === '1';
+  return {
+    module: 'meteor/rstest',
+    exportName: upstreamRuntime
+      ? '__registerTestFileLoader'
+      : '__registerTestFile',
+    mode: upstreamRuntime ? 'lazy' : 'sync',
+  };
+};
+
 /**
  * Generates eager test files dynamically
  * @param {Object} options - Options for generating the test file
@@ -17,7 +32,7 @@ const toPosix = (p) => p.replace(/\\/g, '/');
  * @param {string} options.projectDir - The project directory
  * @param {string} [options.discoveryRoot] - Root scanned by the eager context
  * @param {string[]} [options.includeFiles] - Exact files allowed under discoveryRoot
- * @param {{module: string, exportName: string}} [options.testFileRegistration]
+ * @param {{module: string, exportName: string, mode?: 'sync'|'lazy'}} [options.testFileRegistration]
  *        Optional module API wrapping each discovered test-file evaluation
  * @param {string} options.buildContext - The build context
  * @param {string} [options.localDir] - Meteor local directory
@@ -40,6 +55,10 @@ const generateEagerTestFile = ({
   extraEntry,
   globalImportPath,
 }) => {
+  const registrationMode = testFileRegistration?.mode || 'sync';
+  if (testFileRegistration && !['sync', 'lazy'].includes(registrationMode)) {
+    throw new Error(`Unsupported test file registration mode: ${registrationMode}`);
+  }
   const distDir = path.resolve(projectDir, localDir, 'test');
   if (!fs.existsSync(distDir)) {
     fs.mkdirSync(distDir, { recursive: true });
@@ -107,7 +126,7 @@ const generateEagerTestFile = ({
     recursive: true,
     regExp: ${regExp},
     exclude: ${excludeFoldersRegex.toString()},
-    mode: ${testFileRegistration ? "'sync'" : "'eager'"},
+    mode: ${testFileRegistration ? `'${registrationMode}'` : "'eager'"},
   });
   ctx.keys().filter((k) => {
     ${
@@ -144,5 +163,6 @@ ${extraContent}`;
 };
 
 module.exports = {
+  createRstestTestFileRegistration,
   generateEagerTestFile,
 };
