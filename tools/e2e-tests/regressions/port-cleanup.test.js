@@ -9,6 +9,20 @@ import {
 } from '../helpers';
 import { assertMeteorReactApp } from '../assertions';
 import { setupMeteorRspackApp } from '../test-helpers';
+import { formatDevServerHost } from '../../../npm-packages/meteor-rspack/lib/meteorRspackHelpers';
+
+describe("Rspack dev-server URL /", () => {
+  test.each([
+    ["::", "[::]"],
+    ["::1", "[::1]"],
+    ["127.0.0.1", "127.0.0.1"],
+    ["localhost", "localhost"],
+  ])("formats host %s as %s", (host, expected) => {
+    const formattedHost = formatDevServerHost(host);
+    expect(formattedHost).toBe(expected);
+    expect(new URL(`http://${formattedHost}:49152`).port).toBe("49152");
+  });
+});
 
 function isPortAvailable(port) {
   return new Promise((resolve) => {

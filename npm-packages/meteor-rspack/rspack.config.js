@@ -22,6 +22,7 @@ const {
   makeWebNodeBuiltinsAlias,
   disablePlugins,
   outputMeteorRspack,
+  formatDevServerHost,
   enablePortableBuild,
   persistDevFiles,
   createPersistCallback,
@@ -195,7 +196,7 @@ function createRemoteDevServerConfig() {
           },
         };
       }
-    } catch (err) {
+    } catch {
       console.warn(`Invalid ROOT_URL "${rootUrl}", falling back to localhost`);
     }
   }
@@ -207,7 +208,7 @@ function createRemoteDevServerConfig() {
 // Keep files outside of build folders
 function keepOutsideBuild() {
   return (p) => {
-    const normalized = '/' + path.normalize(p).replaceAll(path.sep, '/').replace(/^\/+/, '');
+    const normalized = `/${path.normalize(p).replaceAll(path.sep, '/').replace(/^\/+/, '')}`;
     const isInBuildRoot = /\/build(\/|$)/.test(normalized);
     const isInBuildStar = /\/build-[^/]+(\/|$)/.test(normalized);
     return !(isInBuildRoot || isInBuildStar);
@@ -507,13 +508,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const rsdoctorModule = isBundleVisualizerEnabled
     ? safeRequire("@rsdoctor/rspack-plugin")
     : null;
+  const rsdoctorPort = isClient
+    ? Meteor.rsdoctorClientPort
+    : Meteor.rsdoctorServerPort;
   const doctorPluginConfig =
     isRun && isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
       ? [
           new rsdoctorModule.RsdoctorRspackPlugin({
-            port: isClient
-              ? parseInt(Meteor.rsdoctorClientPort || "8888", 10)
-              : parseInt(Meteor.rsdoctorServerPort || "8889", 10),
+            ...(rsdoctorPort && { port: parseInt(rsdoctorPort, 10) }),
           }),
         ]
       : [];
@@ -571,7 +573,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     if (address && typeof address !== "string") {
       const protocol =
         devServer.options.server?.type === "https" ? "https" : "http";
-      devServerUrl = `${protocol}://${host || "localhost"}:${address.port}`;
+      devServerUrl = `${protocol}://${formatDevServerHost(host)}:${address.port}`;
       outputMeteorRspack({ devServerUrl });
     }
 
@@ -601,7 +603,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   };
 
   // Base client config
-  let clientConfig = {
+  const clientConfig = {
     name: clientNameConfig,
     target: "web",
     mode,
@@ -728,7 +730,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       : path.resolve(projectDir, buildContext, entryPath);
   const serverNameConfig = `[${(isTest && "test-") || ""}server-rspack]`;
   // Base server config
-  let serverConfig = {
+  const serverConfig = {
     name: serverNameConfig,
     target: "node",
     mode,
