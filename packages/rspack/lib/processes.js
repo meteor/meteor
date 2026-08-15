@@ -71,6 +71,22 @@ import {
 } from "./logging";
 import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
 
+function recordRsdoctorPorts(config) {
+  const ports = [
+    ["rsdoctorClientPort", "RSDOCTOR_CLIENT_PORT", "client"],
+    ["rsdoctorServerPort", "RSDOCTOR_SERVER_PORT", "server"],
+  ];
+
+  for (const [configKey, envKey, label] of ports) {
+    const port = config?.[configKey];
+    if (!port) continue;
+    process.env[envKey] = String(port);
+    logRaw(
+      `=> Started Rsdoctor ${label} analyzer at http://localhost:${port}/`,
+    );
+  }
+}
+
 /**
  * Helper function to check for a file with different extensions in order of priority
  * @param {string} basePath - The base directory path (without 'rspack.config' and extension)
@@ -175,7 +191,7 @@ export function getRspackCliPath() {
     if (bin) {
       return path.join(path.dirname(pkgPath), bin);
     }
-  } catch (err) {
+  } catch {
     // Fall through to hardcoded fallback if package.json isn't exported
   }
 
@@ -431,6 +447,7 @@ export function startRspackClientServe(options = {}) {
       env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
+        recordRsdoctorPorts(config);
         if (config?.devServerUrl) {
           process.env.RSPACK_DEVSERVER_PORT = new URL(config.devServerUrl).port;
           logHmrServerStarted(config);
@@ -536,6 +553,7 @@ export function startRspackServerWatch(options = {}) {
     env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
+      recordRsdoctorPorts(config);
       if (onCompile && config && (config?.compilationCount || 0) > 0) {
         onCompile(cleanedData, config);
       }
@@ -626,6 +644,7 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
       env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
+        recordRsdoctorPorts(config);
         if (onCompile && config && (config?.compilationCount || 0) > 0) {
           onCompile(cleanedData, config);
         }

@@ -69,7 +69,7 @@ function extractDelegatedExtensions(stats, compiler) {
         if (folder) entryFolders.add(folder);
       }
     }
-  } catch (e) {
+  } catch {
     // If we can't read package.json, fall back to config-only
     return Array.from(configured);
   }
@@ -106,18 +106,21 @@ class MeteorRspackOutputPlugin {
       typeof options.getData === 'function'
         ? options.getData
         : () => options.data || {};
+    this.waitFor =
+      typeof options.waitFor === 'function' ? options.waitFor : null;
   }
 
   apply(compiler) {
     // Hook into the 'done' event which fires after each compilation completes
-    compiler.hooks.done.tap(this.pluginName, stats => {
+    compiler.hooks.done.tapPromise(this.pluginName, async stats => {
+      await this.waitFor?.();
       this.compilationCount++;
       const data = {
         ...(this.getData(stats, {
           compilationCount: this.compilationCount,
           isRebuild: this.compilationCount > 1,
           compiler,
-        }) || {}),
+        })),
       };
       outputMeteorRspack(data);
     });

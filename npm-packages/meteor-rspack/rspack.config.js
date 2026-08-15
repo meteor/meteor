@@ -23,7 +23,6 @@ const {
   disablePlugins,
   outputMeteorRspack,
   formatDevServerHost,
-  getRsdoctorPort,
   enablePortableBuild,
   persistDevFiles,
   createPersistCallback,
@@ -509,17 +508,18 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const rsdoctorModule = isBundleVisualizerEnabled
     ? safeRequire("@rsdoctor/rspack-plugin")
     : null;
-  const rsdoctorPort = getRsdoctorPort(
-    isClient,
-    Meteor.rsdoctorClientPort,
-    Meteor.rsdoctorServerPort,
-  );
-  const doctorPluginConfig =
+  const configuredRsdoctorPort = isClient
+    ? Meteor.rsdoctorClientPort
+    : Meteor.rsdoctorServerPort;
+  const rsdoctorPlugin =
     isRun && isBundleVisualizerEnabled && rsdoctorModule?.RsdoctorRspackPlugin
-      ? [
-          new rsdoctorModule.RsdoctorRspackPlugin({ port: rsdoctorPort }),
-        ]
-      : [];
+      ? new rsdoctorModule.RsdoctorRspackPlugin({
+          ...(configuredRsdoctorPort && {
+            port: parseInt(configuredRsdoctorPort, 10),
+          }),
+        })
+      : null;
+  const doctorPluginConfig = rsdoctorPlugin ? [rsdoctorPlugin] : [];
   const bannerPluginConfig = !isBuild
     ? [
         new BannerPlugin({
@@ -919,8 +919,16 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     );
   }
 
+  const activeRsdoctorPlugin =
+    isDevEnvironment &&
+    !rsdoctorPlugin?.options.disableClientServer &&
+    config.plugins?.includes(rsdoctorPlugin)
+      ? rsdoctorPlugin
+      : null;
+
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
+    waitFor: () => activeRsdoctorPlugin?._bootstrapTask,
     getData: (stats, { isRebuild, compilationCount, compiler }) => ({
       name: config.name,
       mode: config.mode,
@@ -930,6 +938,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       statsOverrided,
       compilationCount,
       isRebuild,
+      ...(!isRebuild &&
+        activeRsdoctorPlugin && {
+          [isClient ? "rsdoctorClientPort" : "rsdoctorServerPort"]:
+            activeRsdoctorPlugin.sdk.server.port,
+        }),
       ...(devServerUrl && { devServerUrl }),
       ...(!isRebuild && compiler && {
         delegatedExtensions: extractDelegatedExtensions(stats, compiler),

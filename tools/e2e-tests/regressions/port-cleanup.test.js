@@ -6,13 +6,11 @@ import {
   killStrayAppProcesses,
   runMeteorApp,
   wait,
+  waitForMeteorOutput,
 } from '../helpers';
 import { assertMeteorReactApp } from '../assertions';
 import { setupMeteorRspackApp } from '../test-helpers';
-import {
-  formatDevServerHost,
-  getRsdoctorPort,
-} from '../../../npm-packages/meteor-rspack/lib/meteorRspackHelpers';
+import { formatDevServerHost } from '../../../npm-packages/meteor-rspack/lib/meteorRspackHelpers';
 
 describe("Rspack dev-server URL /", () => {
   test.each([
@@ -24,18 +22,6 @@ describe("Rspack dev-server URL /", () => {
     const formattedHost = formatDevServerHost(host);
     expect(formattedHost).toBe(expected);
     expect(new URL(`http://${formattedHost}:49152`).port).toBe("49152");
-  });
-});
-
-describe("Rsdoctor port selection /", () => {
-  test("keeps automatic client and server ports distinct", () => {
-    expect(getRsdoctorPort(true)).toBe(8888);
-    expect(getRsdoctorPort(false)).toBe(8889);
-  });
-
-  test("preserves configured client and server ports", () => {
-    expect(getRsdoctorPort(true, "9100", "9200")).toBe(9100);
-    expect(getRsdoctorPort(false, "9100", "9200")).toBe(9200);
   });
 });
 
@@ -53,6 +39,15 @@ function isPortAvailable(port) {
 
     server.listen(port);
   });
+}
+
+async function isUrlReachable(port) {
+  try {
+    await fetch(`http://127.0.0.1:${port}/`);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function listenOnPort(port) {
@@ -88,14 +83,26 @@ async function waitForPortState(predicate, { timeout = 5000, interval = 100 } = 
   }
 }
 
+async function stopMeteorAndAssertPortsReleased(meteorProcess, ports) {
+  const exitPromise = waitForProcessExit(meteorProcess);
+  meteorProcess.kill("SIGTERM");
+  await exitPromise;
+  await Promise.all(
+    ports.map((port) => waitForPortState(() => isPortAvailable(port))),
+  );
+}
+
 describe("Regressions / PortCleanup /", () => {
   const port = 3146;
   const rspackPort = 18146;
   // origin/devel derives 8091 as 8077 + the digit sum of app port 3146.
   const oldDerivedRspackPort = 8091;
+  const configuredRsdoctorPorts = [19100, 19200];
+  const occupiedRsdoctorPort = 19300;
   let tempDir;
   let meteorProcess;
   let occupiedPortServer;
+  let rsdoctorPorts;
 
   beforeAll(async () => {
     ({ tempDir } = await setupMeteorRspackApp({ appName: "react" }));
@@ -105,14 +112,28 @@ describe("Regressions / PortCleanup /", () => {
     await killMeteorProcess(meteorProcess);
     await closeServer(occupiedPortServer);
     await killStrayAppProcesses();
-    await killProcessByPort([port, rspackPort, oldDerivedRspackPort]);
+    await killProcessByPort([
+      port,
+      rspackPort,
+      oldDerivedRspackPort,
+      ...configuredRsdoctorPorts,
+      occupiedRsdoctorPort,
+      ...(rsdoctorPorts || []),
+    ]);
     await cleanupTempDir(tempDir);
   });
 
   beforeEach(async () => {
     meteorProcess = null;
     occupiedPortServer = null;
-    await killProcessByPort([port, rspackPort, oldDerivedRspackPort]);
+    rsdoctorPorts = [];
+    await killProcessByPort([
+      port,
+      rspackPort,
+      oldDerivedRspackPort,
+      ...configuredRsdoctorPorts,
+      occupiedRsdoctorPort,
+    ]);
   });
 
   afterEach(async () => {
@@ -121,7 +142,14 @@ describe("Regressions / PortCleanup /", () => {
     await closeServer(occupiedPortServer);
     occupiedPortServer = null;
     await killStrayAppProcesses();
-    await killProcessByPort([port, rspackPort, oldDerivedRspackPort]);
+    await killProcessByPort([
+      port,
+      rspackPort,
+      oldDerivedRspackPort,
+      ...configuredRsdoctorPorts,
+      occupiedRsdoctorPort,
+      ...rsdoctorPorts,
+    ]);
   });
 
   test("releases rspack port after SIGTERM", async () => {
@@ -148,6 +176,89 @@ describe("Regressions / PortCleanup /", () => {
       timeout: 5000,
       interval: 100,
     });
+  });
+
+  // REGRESSION: Meteor guessed Rsdoctor ports, so cleanup could target the wrong process.
+  test("reports Rsdoctor fallback ports and releases them", async () => {
+    occupiedPortServer = await listenOnPort(occupiedRsdoctorPort);
+    const result = await runMeteorApp(tempDir, port, {
+      commandOptions: ["--extra-packages", "bundle-visualizer"],
+      env: {
+        CI: "",
+        RSDOCTOR_CLIENT_PORT: String(occupiedRsdoctorPort),
+        RSDOCTOR_SERVER_PORT: "",
+      },
+      waitForOutput: /=> Started Rsdoctor (client|server) analyzer at /,
+      failOnOutput: /EADDRINUSE/,
+      timeout: 30000,
+    });
+
+    meteorProcess = result.meteorProcess;
+    await Promise.all([
+      waitForMeteorOutput(
+        result.outputLines,
+        /=> Started Rsdoctor client analyzer at http:\/\/localhost:\d+\//,
+        { meteorProcess, timeout: 30000 },
+      ),
+      waitForMeteorOutput(
+        result.outputLines,
+        /=> Started Rsdoctor server analyzer at http:\/\/localhost:\d+\//,
+        { meteorProcess, timeout: 30000 },
+      ),
+    ]);
+
+    rsdoctorPorts = result.outputLines.flatMap((line) => {
+      const match = line.match(
+        /=> Started Rsdoctor (?:client|server) analyzer at http:\/\/localhost:(\d+)\//,
+      );
+      return match ? [Number(match[1])] : [];
+    });
+
+    expect(rsdoctorPorts).toHaveLength(2);
+    expect(new Set(rsdoctorPorts).size).toBe(2);
+    expect(rsdoctorPorts).not.toContain(occupiedRsdoctorPort);
+    await Promise.all(
+      rsdoctorPorts.map((rsdoctorPort) =>
+        waitForPortState(() => isUrlReachable(rsdoctorPort)),
+      ),
+    );
+    await stopMeteorAndAssertPortsReleased(meteorProcess, rsdoctorPorts);
+    meteorProcess = null;
+  });
+
+  test("preserves configured Rsdoctor ports", async () => {
+    const [clientPort, serverPort] = configuredRsdoctorPorts;
+    const result = await runMeteorApp(tempDir, port, {
+      commandOptions: ["--extra-packages", "bundle-visualizer"],
+      env: {
+        CI: "",
+        RSDOCTOR_CLIENT_PORT: String(clientPort),
+        RSDOCTOR_SERVER_PORT: String(serverPort),
+      },
+      waitForOutput: /=> Started Rsdoctor (client|server) analyzer at /,
+      failOnOutput: /EADDRINUSE/,
+      timeout: 30000,
+    });
+
+    meteorProcess = result.meteorProcess;
+    await Promise.all([
+      waitForMeteorOutput(
+        result.outputLines,
+        `=> Started Rsdoctor client analyzer at http://localhost:${clientPort}/`,
+        { meteorProcess, timeout: 30000 },
+      ),
+      waitForMeteorOutput(
+        result.outputLines,
+        `=> Started Rsdoctor server analyzer at http://localhost:${serverPort}/`,
+        { meteorProcess, timeout: 30000 },
+      ),
+    ]);
+
+    await Promise.all(
+      configuredRsdoctorPorts.map((rsdoctorPort) =>
+        waitForPortState(() => isUrlReachable(rsdoctorPort)),
+      ),
+    );
   });
 
   test("starts on a different HMR port when the derived port is occupied", async () => {
