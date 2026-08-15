@@ -234,7 +234,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestLike = !!Meteor.isTestLike;
   const swcExternalHelpers = !!Meteor.swcExternalHelpers;
   const isNative = !!Meteor.isNative;
-  const devServerPort = Meteor.devServerPort || 8080;
+  const devServerPort = Meteor.devServerPort || "auto";
 
   const projectDir = process.cwd();
   const projectConfigPath =
@@ -559,17 +559,21 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
   const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
+  let devServerUrl;
 
   // Default onListening provided by meteor-rspack. Kept as a named
   // reference so we can detect a user-supplied override after merge
   // and compose (run default first, then user's).
   const meteorDefaultOnListening = function (devServer) {
     if (!devServer) return;
-    const { host, port } = devServer.options;
-    const protocol =
-      devServer.options.server?.type === "https" ? "https" : "http";
-    const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
-    outputMeteorRspack({ devServerUrl });
+    const { host } = devServer.options;
+    const address = devServer.server?.address();
+    if (address && typeof address !== "string") {
+      const protocol =
+        devServer.options.server?.type === "https" ? "https" : "http";
+      devServerUrl = `${protocol}://${host || "localhost"}:${address.port}`;
+      outputMeteorRspack({ devServerUrl });
+    }
 
     // Windows-only: webpack-dev-server tracks accepted sockets
     // but doesn't attach 'error'. On Windows, teardown of a
@@ -923,6 +927,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       statsOverrided,
       compilationCount,
       isRebuild,
+      ...(devServerUrl && { devServerUrl }),
       ...(!isRebuild && compiler && {
         delegatedExtensions: extractDelegatedExtensions(stats, compiler),
       }),
