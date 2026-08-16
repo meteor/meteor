@@ -31,6 +31,10 @@ function parseArgs(argv) {
     runtimeSettingsOutput: null,
     runtimeSettingsGeneration: null,
     resultOutput: null,
+    coveragePlanOutput: null,
+    coverageGeneration: null,
+    coverageArtifact: null,
+    coverageEnabled: false,
     classifyCandidates: null,
     classificationOutput: null,
     routingManifest: null,
@@ -88,6 +92,18 @@ function parseArgs(argv) {
     } else if (arg === '--result-output') {
       parsed.resultOutput = takeValue(argv, index, arg);
       index += 1;
+    } else if (arg === '--coverage-plan-output') {
+      parsed.coveragePlanOutput = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--coverage-generation') {
+      parsed.coverageGeneration = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--coverage-artifact') {
+      parsed.coverageArtifact = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--coverage') {
+      parsed.coverageEnabled = true;
+      parsed.forwarded.push(arg);
     } else if (arg === '--classify-candidates') {
       parsed.classifyCandidates = takeValue(argv, index, arg);
       index += 1;
@@ -134,6 +150,12 @@ function writeGeneratedConfig({
   runtimeSettingsOutput,
   runtimeSettingsGeneration,
   resultOutput,
+  coveragePlanOutput,
+  coverageGeneration,
+  coverageArtifact,
+  cliCoverageEnabled,
+  deferNativeReport,
+  hasMeteorRuntime,
 }) {
   const stateDir = path.join(context.localDir, 'rstest');
   const generatedPath = path.join(stateDir, 'rstest.generated.config.cjs');
@@ -147,6 +169,12 @@ function writeGeneratedConfig({
       runtimeSettingsOutput,
       runtimeSettingsGeneration,
       resultOutput,
+      coveragePlanOutput,
+      coverageGeneration,
+      coverageArtifact,
+      cliCoverageEnabled,
+      deferNativeReport,
+      hasMeteorRuntime,
     }, null, 2)});`,
     '',
   ].join('\n');
@@ -216,14 +244,33 @@ async function main() {
       loadUserConfig,
       runtimeSettingsFromConfig,
     } = require('../src/coordinator.js');
+    const { coveragePlanFromConfig } = require('../src/coverage/plan.js');
     const userConfig = await loadUserConfig({ context, configPath });
     const config = await finalizeRstestConfig({ context, userConfig });
     const outputPath = path.resolve(parsed.runtimePlanOutput);
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    const coveragePlan = parsed.coveragePlanOutput || parsed.coverageGeneration || parsed.coverageArtifact || parsed.coverageEnabled
+      ? coveragePlanFromConfig(config, {
+        cliEnabled: parsed.coverageEnabled,
+        generation: parsed.coverageGeneration,
+        root: context.appRoot,
+        artifactRoot: path.dirname(
+          parsed.coverageArtifact || parsed.coveragePlanOutput || path.join(context.localDir, 'rstest', 'coverage', parsed.coverageGeneration || 'native'),
+        ),
+        hasMeteorRuntime: true,
+      })
+      : null;
+    if (parsed.coveragePlanOutput) {
+      const coveragePlanOutput = path.resolve(parsed.coveragePlanOutput);
+      fs.mkdirSync(path.dirname(coveragePlanOutput), { recursive: true });
+      const temporaryCoveragePlan = `${coveragePlanOutput}.${process.pid}.tmp`;
+      fs.writeFileSync(temporaryCoveragePlan, JSON.stringify(coveragePlan));
+      fs.renameSync(temporaryCoveragePlan, coveragePlanOutput);
+    }
     const output = {
       schemaVersion: 1,
       generation: parsed.runtimeSettingsGeneration,
-      ...runtimeSettingsFromConfig(config),
+      ...runtimeSettingsFromConfig(config, { coverage: coveragePlan }),
     };
     const temporaryPath = `${outputPath}.${process.pid}.tmp`;
     fs.writeFileSync(temporaryPath, JSON.stringify(output));
@@ -238,6 +285,12 @@ async function main() {
       : null,
     runtimeSettingsGeneration: parsed.runtimeSettingsGeneration,
     resultOutput: parsed.resultOutput ? path.resolve(parsed.resultOutput) : null,
+    coveragePlanOutput: parsed.coveragePlanOutput ? path.resolve(parsed.coveragePlanOutput) : null,
+    coverageGeneration: parsed.coverageGeneration,
+    coverageArtifact: parsed.coverageArtifact ? path.resolve(parsed.coverageArtifact) : null,
+    cliCoverageEnabled: parsed.coverageEnabled,
+    deferNativeReport: Boolean(parsed.coverageArtifact),
+    hasMeteorRuntime: parsed.phase === 'external' || Boolean(parsed.coverageArtifact),
   });
 
   process.chdir(cwd);

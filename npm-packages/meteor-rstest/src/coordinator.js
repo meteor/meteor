@@ -316,7 +316,7 @@ async function finalizeRstestConfig({ context, userConfig = {}, inlineConfig = {
   };
 }
 
-function runtimeSettingsFromConfig(config) {
+function runtimeSettingsFromConfig(config, { coverage } = {}) {
   const normalizeTimeout = (value, fallback, field) => {
     if (value === undefined) return fallback;
     if (!Number.isSafeInteger(value) || value <= 0 || value > 3600000) {
@@ -437,6 +437,7 @@ function runtimeSettingsFromConfig(config) {
     printConsoleTrace: normalizeBoolean('printConsoleTrace', false),
     includeTaskLocation: normalizeBoolean('includeTaskLocation', false),
     setupFiles: normalizeSetupFiles(config.setupFiles),
+    ...(coverage && { coverage }),
   };
 }
 

@@ -186,6 +186,53 @@ test('native run writes generation-bound runtime settings atomically', t => {
   });
 });
 
+test('native run writes its generation-bound coverage plan before Meteor compilation', t => {
+  const planOutput = path.join(os.tmpdir(), `meteor-rstest-coverage-plan-${process.pid}-${Date.now()}.json`);
+  const settingsOutput = path.join(os.tmpdir(), `meteor-rstest-coverage-settings-${process.pid}-${Date.now()}.json`);
+  const artifact = path.join(os.tmpdir(), `meteor-rstest-coverage-artifact-${process.pid}-${Date.now()}.json`);
+  const appRoot = createApp({
+    source: "test('coverage plan', () => expect(true).toBe(true));",
+    configSource: "module.exports = { coverage: { enabled: true, provider: 'istanbul', exclude: ['**/*.test.js'] } };",
+  });
+  t.after(() => {
+    fs.rmSync(appRoot, { recursive: true, force: true });
+    fs.rmSync(planOutput, { force: true });
+    fs.rmSync(settingsOutput, { force: true });
+  });
+
+  const result = run(appRoot, [
+    '--runtime-plan-output', settingsOutput,
+    '--coverage',
+    '--coverage-plan-output', planOutput,
+    '--coverage-generation', 'generation-8',
+    '--coverage-artifact', artifact,
+  ]);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.deepEqual(JSON.parse(fs.readFileSync(planOutput, 'utf8')), {
+    schemaVersion: 1,
+    generation: 'generation-8',
+    enabled: true,
+    provider: 'istanbul',
+    root: appRoot,
+    include: [],
+    exclude: ['**/*.test.js'],
+    allowExternal: false,
+    artifactRoot: path.dirname(artifact),
+  });
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')).coverage, {
+    schemaVersion: 1,
+    generation: 'generation-8',
+    enabled: true,
+    provider: 'istanbul',
+    root: appRoot,
+    include: [],
+    exclude: ['**/*.test.js'],
+    allowExternal: false,
+    artifactRoot: path.dirname(artifact),
+  });
+});
+
 test('classification CLI writes routing manifest without evaluating user config', t => {
   const marker = path.join(os.tmpdir(), `meteor-rstest-classify-config-${process.pid}-${Date.now()}.txt`);
   const candidates = path.join(os.tmpdir(), `meteor-rstest-candidates-${process.pid}-${Date.now()}.json`);

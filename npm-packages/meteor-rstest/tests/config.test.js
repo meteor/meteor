@@ -9,6 +9,12 @@ const {
   runtimeSettingsFromConfig,
 } = require('../src/coordinator.js');
 const {
+  createGeneratedConfig,
+} = require('../src/generated-config.js');
+const {
+  MeteorCoverageCaptureReporter,
+} = require('../src/coverage/reporter.js');
+const {
   createMeteorRstestContext,
   withMeteorRstestContext,
 } = require('../src/config/context.js');
@@ -112,6 +118,103 @@ test('Meteor runtime settings project serializable upstream semantics and valida
     () => runtimeSettingsFromConfig({ root, setupFiles: ['./missing.js'] }),
     error => error.code === 'METEOR_RSTEST_SETUP_FILE_NOT_FOUND',
   );
+});
+
+test('mixed coverage writes a runtime plan and defers only native coverage finalization', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-coverage-config-'));
+  const configPath = path.join(root, 'rstest.config.js');
+  const planOutput = path.join(root, 'coverage-plan.json');
+  const settingsOutput = path.join(root, 'runtime-settings.json');
+  const artifactPath = path.join(root, 'artifacts', 'native.json');
+  fs.writeFileSync(configPath, `module.exports = {
+    reporters: 'dot',
+    coverage: {
+      enabled: true,
+      provider: 'istanbul',
+      include: ['imports/**/*.js'],
+      reporters: ['text'],
+      thresholds: { lines: 100 },
+      clean: true,
+    },
+  };`);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const config = await createGeneratedConfig({
+    context: makeContext({ appRoot: root, configRoot: root, localDir: path.join(root, '.meteor', 'local') }),
+    configPath,
+    runtimeSettingsOutput: settingsOutput,
+    runtimeSettingsGeneration: 'generation-5',
+    coveragePlanOutput: planOutput,
+    coverageGeneration: 'generation-5',
+    coverageArtifact: artifactPath,
+    cliCoverageEnabled: true,
+    deferNativeReport: true,
+  })();
+
+  assert.deepEqual(JSON.parse(fs.readFileSync(planOutput, 'utf8')), {
+    schemaVersion: 1,
+    generation: 'generation-5',
+    enabled: true,
+    provider: 'istanbul',
+    root,
+    include: ['imports/**/*.js'],
+    exclude: [],
+    allowExternal: false,
+    artifactRoot: path.dirname(artifactPath),
+  });
+  assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')).coverage, {
+    schemaVersion: 1,
+    generation: 'generation-5',
+    enabled: true,
+    provider: 'istanbul',
+    root,
+    include: ['imports/**/*.js'],
+    exclude: [],
+    allowExternal: false,
+    artifactRoot: path.dirname(artifactPath),
+  });
+  assert.equal(config.reporters[0], 'dot');
+  assert.ok(config.reporters[1] instanceof MeteorCoverageCaptureReporter);
+  assert.deepEqual(config.coverage.reporters, []);
+  assert.equal(config.coverage.thresholds, undefined);
+  assert.deepEqual(config.coverage.include, []);
+  assert.equal(config.coverage.clean, false);
+});
+
+test('native-only coverage leaves upstream reporters and coverage settings untouched', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-native-coverage-'));
+  const configPath = path.join(root, 'rstest.config.js');
+  fs.writeFileSync(configPath, `module.exports = {
+    reporters: 'dot',
+    coverage: {
+      enabled: true,
+      provider: 'v8',
+      include: ['imports/**/*.js'],
+      reporters: ['text'],
+      thresholds: { lines: 100 },
+      clean: true,
+    },
+  };`);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const config = await createGeneratedConfig({
+    context: makeContext({ appRoot: root, configRoot: root, localDir: path.join(root, '.meteor', 'local') }),
+    configPath,
+    coverageGeneration: 'generation-6',
+    cliCoverageEnabled: true,
+    deferNativeReport: false,
+    hasMeteorRuntime: false,
+  })();
+
+  assert.equal(config.reporters, 'dot');
+  assert.deepEqual(config.coverage, {
+    enabled: true,
+    provider: 'v8',
+    include: ['imports/**/*.js'],
+    reporters: ['text'],
+    thresholds: { lines: 100 },
+    clean: true,
+  });
 });
 
 test('Meteor config factory receives immutable normalized context once', async () => {
