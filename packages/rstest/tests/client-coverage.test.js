@@ -38,7 +38,7 @@ async function listen(t, handler) {
   return `http://127.0.0.1:${server.address().port}`;
 }
 
-test('client fully commits a cloned host map before submitting its test result', async t => {
+test('client submits its test result then fully commits a cloned host map', async t => {
   const receiver = createCoverageFrameGate({ generation, token, producer: 'client' });
   let committed;
   const origin = await listen(t, async (request, response) => {
@@ -53,6 +53,7 @@ test('client fully commits a cloned host map before submitting its test result',
   const globalObject = { __coverage__: coverageMap(3) };
   const result = { ok: true };
   let submitted;
+  const events = [];
 
   await completeClientRun({
     coverage: {
@@ -63,18 +64,23 @@ test('client fully commits a cloned host map before submitting its test result',
     },
     token,
     globalObject,
-    fetchImpl: (url, options) => fetch(url, {
-      ...options,
-      headers: { ...options.headers, origin },
-    }),
+    fetchImpl: (url, options) => {
+      events.push('coverage');
+      return fetch(url, {
+        ...options,
+        headers: { ...options.headers, origin },
+      });
+    },
     result,
     async submitResult(value) {
-      assert.equal(committed.coverage['/app/imports/client.js'].s[0], 3);
+      events.push('result');
       submitted = value;
     },
   });
 
   assert.equal(submitted, result);
+  assert.equal(events[0], 'result');
+  assert.equal(committed.coverage['/app/imports/client.js'].s[0], 3);
   assert.equal(globalObject.__coverage__['/app/imports/client.js'].s[0], 3);
 });
 
@@ -93,4 +99,41 @@ test('disabled client coverage performs no request or host-global access', async
 
   assert.deepEqual(outcome, { submitted: false });
   assert.equal(requests, 0);
+});
+
+test('failed client result is submitted before malformed or rejected coverage surfaces', async t => {
+  const failedResult = {
+    ok: false,
+    stats: { total: 1, passed: 0, failed: 1, skipped: 0, todo: 0 },
+    cases: [{ name: 'client assertion', status: 'fail' }],
+  };
+
+  await t.test('malformed host map', async () => {
+    const submitted = [];
+    await assert.rejects(completeClientRun({
+      coverage: { enabled: true, generation, token, endpoint: '/coverage' },
+      token,
+      result: failedResult,
+      globalObject: { __coverage__: { malformed: true } },
+      async fetchImpl() { throw new Error('fetch should not run'); },
+      async submitResult(value) { submitted.push(value); },
+    }), /Coverage/);
+    assert.deepEqual(submitted, [failedResult]);
+  });
+
+  await t.test('rejected upload', async () => {
+    const events = [];
+    await assert.rejects(completeClientRun({
+      coverage: { enabled: true, generation, token, endpoint: '/coverage' },
+      token,
+      result: failedResult,
+      globalObject: { __coverage__: coverageMap() },
+      async fetchImpl() {
+        events.push('coverage');
+        return { ok: false, status: 409, async json() { return {}; } };
+      },
+      async submitResult() { events.push('result'); },
+    }), /rejected/);
+    assert.deepEqual(events, ['result', 'coverage']);
+  });
 });

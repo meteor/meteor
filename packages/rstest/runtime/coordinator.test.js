@@ -4,6 +4,7 @@ const test = require('node:test');
 const {
   createResultGate,
   mergeArchitectureResults,
+  settleResultAndInfrastructure,
   validateResult,
 } = require('./coordinator.js');
 
@@ -60,6 +61,37 @@ test('architecture result merge fails defensively when nothing executed', () => 
   assert.equal(result.ok, false);
   assert.equal(result.stats.failed, 1);
   assert.match(result.cases[0].error.message, /No supported test architecture/);
+});
+
+test('known test failure is retained ahead of rejected coverage infrastructure', async () => {
+  const failed = result({ failed: 1 });
+  failed.cases.push({
+    name: 'assertion remains visible',
+    fullName: 'assertion remains visible',
+    status: 'fail',
+  });
+
+  const settled = await settleResultAndInfrastructure({
+    waitForResult: async () => failed,
+    waitForInfrastructure: async () => {
+      const error = new Error('coverage commit was rejected');
+      error.code = 'METEOR_RSTEST_COVERAGE_REJECTED';
+      throw error;
+    },
+    resultFailureName: 'Meteor client executor result',
+    infrastructureFailureName: 'Meteor client coverage',
+  });
+  const merged = mergeArchitectureResults([
+    { architecture: 'web.browser', result: settled.result },
+    { architecture: 'coverage-client', result: settled.infrastructureFailure },
+  ]);
+
+  assert.equal(merged.ok, false);
+  assert.deepEqual(merged.cases.map(item => item.name), [
+    'assertion remains visible',
+    'Meteor client coverage',
+  ]);
+  assert.match(merged.cases[1].error.message, /coverage commit was rejected/);
 });
 
 test('result protocol accepts valid source files and rejects malformed paths', () => {

@@ -68,6 +68,48 @@ function mergeArchitectureResults(entries) {
   return { ok, stats, cases };
 }
 
+function failureResult(error, name) {
+  const failure = error instanceof Error ? error : new Error(String(error));
+  return {
+    ok: false,
+    stats: { total: 1, passed: 0, failed: 1, skipped: 0, todo: 0 },
+    cases: [{
+      name,
+      fullName: name,
+      status: 'fail',
+      duration: 0,
+      error: {
+        name: failure.name,
+        message: failure.message,
+        stack: failure.stack,
+      },
+    }],
+  };
+}
+
+async function settleResultAndInfrastructure({
+  waitForResult,
+  waitForInfrastructure,
+  resultFailureName,
+  infrastructureFailureName,
+}) {
+  let result;
+  try {
+    result = await waitForResult();
+  } catch (error) {
+    result = failureResult(error, resultFailureName);
+  }
+  let infrastructureFailure = null;
+  if (waitForInfrastructure) {
+    try {
+      await waitForInfrastructure();
+    } catch (error) {
+      infrastructureFailure = failureResult(error, infrastructureFailureName);
+    }
+  }
+  return { result, infrastructureFailure };
+}
+
 function validateResult(result) {
   if (!result || typeof result !== 'object' || typeof result.ok !== 'boolean' ||
       !result.stats || typeof result.stats !== 'object' || !Array.isArray(result.cases)) {
@@ -92,4 +134,10 @@ function validateResult(result) {
     result.ok === (result.stats.failed === 0);
 }
 
-module.exports = { createResultGate, mergeArchitectureResults, validateResult };
+module.exports = {
+  createResultGate,
+  failureResult,
+  mergeArchitectureResults,
+  settleResultAndInfrastructure,
+  validateResult,
+};

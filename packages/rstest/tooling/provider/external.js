@@ -130,35 +130,55 @@ class RstestExternal {
       this.handle = null;
     }
 
-    if (this.coverageGeneration) await this._submitCoverageShards();
-
+    const failures = [];
     let report = {};
+    let result;
     try {
       report = JSON.parse(fs.readFileSync(this.resultPath, 'utf8'));
     } catch (error) {
       if (code === 0) {
-        throw new Error(
+        failures.push(new Error(
           `[Meteor Rstest] External Rstest result file is missing or invalid: ${error.message}`
-        );
+        ));
       }
     }
-    const result = structuredResultFromReport(report, code);
-    const endpoint = endpointUrl(this.url, 'external');
-    const response = await this.fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-meteor-rstest-token': this.token,
-      },
-      body: JSON.stringify({
-        protocolVersion: 1,
-        generation: this.generation,
-        result,
-      }),
-    });
-    if (!response.ok) {
-      throw new Error(
-        `[Meteor Rstest] External result endpoint returned HTTP ${response.status}.`,
+    if (failures.length === 0 || code !== 0) {
+      result = structuredResultFromReport(report, code);
+      try {
+        const endpoint = endpointUrl(this.url, 'external');
+        const response = await this.fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            'x-meteor-rstest-token': this.token,
+          },
+          body: JSON.stringify({
+            protocolVersion: 1,
+            generation: this.generation,
+            result,
+          }),
+        });
+        if (!response.ok) {
+          throw new Error(
+            `[Meteor Rstest] External result endpoint returned HTTP ${response.status}.`,
+          );
+        }
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    if (this.coverageGeneration) {
+      try {
+        await this._submitCoverageShards();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    if (failures.length === 1) throw failures[0];
+    if (failures.length > 1) {
+      throw new AggregateError(
+        failures,
+        '[Meteor Rstest] External result and coverage submission failed.',
       );
     }
   }

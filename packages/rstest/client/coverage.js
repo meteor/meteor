@@ -90,13 +90,29 @@ async function completeClientRun({
   globalObject = globalThis,
   fetchImpl,
 }) {
-  await submitClientCoverage({
-    coverage,
-    token,
-    globalObject,
-    ...(fetchImpl ? { fetchImpl } : {}),
-  });
-  await submitResult(result);
+  const failures = [];
+  try {
+    await submitResult(result);
+  } catch (error) {
+    failures.push(error);
+  }
+  try {
+    await submitClientCoverage({
+      coverage,
+      token,
+      globalObject,
+      ...(fetchImpl ? { fetchImpl } : {}),
+    });
+  } catch (error) {
+    failures.push(error);
+  }
+  if (failures.length === 1) throw failures[0];
+  if (failures.length > 1) {
+    throw new AggregateError(
+      failures,
+      '[Meteor Rstest] Client result and coverage submission both failed.',
+    );
+  }
   return result;
 }
 

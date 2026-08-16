@@ -4,7 +4,9 @@ import { WebApp } from 'meteor/webapp';
 const api = require('../runtime/singleton.js');
 const {
   createResultGate,
+  failureResult,
   mergeArchitectureResults,
+  settleResultAndInfrastructure,
   validateResult,
 } = require('../runtime/coordinator.js');
 const {
@@ -45,24 +47,6 @@ const coverageLifecycle = isRstestActive
     worker: activeMetadata.rstestWorker,
   })
   : null;
-
-function timeoutResult(error, name) {
-  return {
-    ok: false,
-    stats: { total: 1, passed: 0, failed: 1, skipped: 0, todo: 0 },
-    cases: [{
-      name,
-      fullName: name,
-      status: 'fail',
-      duration: 0,
-      error: {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      },
-    }],
-  };
-}
 
 if (isRstestActive) Meteor.methods({
   'rstest/getMetadata'() {
@@ -304,6 +288,13 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
   const generation = Number(metadata.rstestGeneration || 1);
   const results = [];
   const runtimeResults = [];
+  const coverageFailures = [];
+  const retainCoverageFailure = (error, name, architecture) => {
+    coverageFailures.push({
+      architecture,
+      result: failureResult(error, name),
+    });
+  };
 
   if (metadata.rstestRuntimeServer) {
     const options = serverRuntimeOptions(metadata, generation);
@@ -314,55 +305,92 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
     results.push(entry);
     runtimeResults.push(entry);
     if (coverageLifecycle && coverageLifecycle.enabled && !metadata.rstestWorker) {
-      coverageLifecycle.captureServer();
+      try {
+        coverageLifecycle.captureServer();
+      } catch (error) {
+        retainCoverageFailure(error, 'Meteor server coverage', 'coverage-server');
+      }
     }
   } else if (coverageLifecycle && coverageLifecycle.enabled &&
       metadata.rstestCoverageServer !== false) {
-    coverageLifecycle.captureServer();
-  }
-
-  if (coverageLifecycle && metadata.rstestCoverageClient) {
-    await coverageLifecycle.waitForClient();
+    try {
+      coverageLifecycle.captureServer();
+    } catch (error) {
+      retainCoverageFailure(error, 'Meteor server coverage', 'coverage-server');
+    }
   }
 
   if (metadata.rstestRuntimeClient) {
-    let clientResult;
-    try {
-      clientResult = await clientResultGate.wait();
-    } catch (error) {
-      clientResult = timeoutResult(error, 'Meteor client executor result');
-    }
+    const settled = await settleResultAndInfrastructure({
+      waitForResult: () => clientResultGate.wait(),
+      waitForInfrastructure: coverageLifecycle && metadata.rstestCoverageClient
+        ? () => coverageLifecycle.waitForClient()
+        : null,
+      resultFailureName: 'Meteor client executor result',
+      infrastructureFailureName: 'Meteor client coverage',
+    });
+    const clientResult = settled.result;
     const entry = { architecture: 'web.browser', result: clientResult };
     results.push(entry);
     runtimeResults.push(entry);
+    if (settled.infrastructureFailure) {
+      coverageFailures.push({
+        architecture: 'coverage-client',
+        result: settled.infrastructureFailure,
+      });
+    }
+  } else if (coverageLifecycle && metadata.rstestCoverageClient) {
+    try {
+      await coverageLifecycle.waitForClient();
+    } catch (error) {
+      retainCoverageFailure(error, 'Meteor client coverage', 'coverage-client');
+    }
   }
 
   if (metadata.rstestExternal) {
-    let externalResult;
-    try {
-      if (coverageLifecycle) await coverageLifecycle.waitForExternal();
-      externalResult = await externalResultGate.wait();
-    } catch (error) {
-      externalResult = timeoutResult(error, 'External Rstest project result');
-    }
+    const settled = await settleResultAndInfrastructure({
+      waitForResult: () => externalResultGate.wait(),
+      waitForInfrastructure: coverageLifecycle
+        ? () => coverageLifecycle.waitForExternal()
+        : null,
+      resultFailureName: 'External Rstest project result',
+      infrastructureFailureName: 'External browser coverage',
+    });
+    const externalResult = settled.result;
     results.push({ architecture: 'external', result: externalResult });
+    if (settled.infrastructureFailure) {
+      coverageFailures.push({
+        architecture: 'coverage-external',
+        result: settled.infrastructureFailure,
+      });
+    }
   }
 
   if (metadata.rstestWorkerGate) await workerCompletionGate.wait();
 
-  const result = mergeArchitectureResults(results);
-
   if (metadata.rstestWorker) {
+    let workerCoverage;
+    if (metadata.rstestWorker.coveragePath) {
+      try {
+        workerCoverage = cloneCoverageMap(globalThis.__coverage__);
+      } catch (error) {
+        workerCoverage = {};
+        retainCoverageFailure(error, 'Meteor worker coverage', 'coverage-worker');
+      }
+    }
+    const result = mergeArchitectureResults([...results, ...coverageFailures]);
     writeWorkerResult({
       worker: metadata.rstestWorker,
       result,
       ...(metadata.rstestWorker.coveragePath && {
-        coverage: cloneCoverageMap(globalThis.__coverage__),
+        coverage: workerCoverage,
       }),
     });
   } else {
+    const resultEntries = [...results, ...coverageFailures];
+    const result = mergeArchitectureResults(resultEntries);
     if (shouldEmitResultFrames()) {
-      for (const entry of results) {
+      for (const entry of resultEntries) {
         console.log(formatResultFrame({
           architecture: entry.architecture,
           generation,
@@ -376,8 +404,13 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
       colors: !process.env.METEOR_DISABLE_COLORS && !process.env.NO_COLOR,
     });
     if (report) console.log(report);
+    if (!metadata.rstestWatch) {
+      const exitCode = result.ok ? 0 : 1;
+      Meteor.defer(() => process.exit(exitCode));
+    }
+    return result;
   }
-
+  const result = mergeArchitectureResults([...results, ...coverageFailures]);
   if (!metadata.rstestWatch) {
     const exitCode = result.ok ? 0 : 1;
     Meteor.defer(() => process.exit(exitCode));

@@ -209,7 +209,7 @@ test('external coverage support resolves from the explicit project package root'
   assert.equal(runner._coverageSupport().owner, 'project-package-root');
 });
 
-test('parallel external files merge shards into one commit before result', async t => {
+test('parallel external files preserve result then merge shards into one commit', async t => {
   const inheritedCoverageToken = process.env.METEOR_RSTEST_COVERAGE_TOKEN;
   process.env.METEOR_RSTEST_COVERAGE_TOKEN = 'must-not-reach-child';
   t.after(() => {
@@ -323,10 +323,10 @@ test('parallel external files merge shards into one commit before result', async
   assert.equal(commitCount, 1);
   assert.equal(childCompleted, true);
   assert.deepEqual(events, [
+    'result',
     'coverage:begin',
     'coverage:chunk',
     'coverage:commit',
-    'result',
   ]);
   assert.equal(artifact.coverage['/app/imports/shared.js'].s[0], 4);
   assert.equal(artifact.coverage['/app/imports/first.js'].s[0], 2);
@@ -338,7 +338,7 @@ test('parallel external files merge shards into one commit before result', async
   assert.equal('METEOR_RSTEST_COVERAGE_TOKEN' in childEnv, false);
 });
 
-test('external coverage upload waits for child completion and precedes result', async t => {
+test('external result and coverage upload both wait for child completion', async t => {
   const resultPath = createReport(t);
   const coverageRoot = path.join(path.dirname(resultPath), coverageGeneration);
   const coverageShardDirectory = path.join(coverageRoot, 'e2e-shards');
@@ -392,10 +392,10 @@ test('external coverage upload waits for child completion and precedes result', 
   await running;
 
   assert.deepEqual(calls, [
-    'http://localhost:3100/__meteor__/rstest/coverage',
-    'http://localhost:3100/__meteor__/rstest/coverage',
-    'http://localhost:3100/__meteor__/rstest/coverage',
     'http://localhost:3100/__meteor__/rstest/external',
+    'http://localhost:3100/__meteor__/rstest/coverage',
+    'http://localhost:3100/__meteor__/rstest/coverage',
+    'http://localhost:3100/__meteor__/rstest/coverage',
   ]);
 });
 
@@ -444,7 +444,7 @@ test('external result endpoint preserves ROOT_URL path prefix', async t => {
   assert.equal('METEOR_RSTEST_COVERAGE_SHARD_DIR' in childEnv, false);
 });
 
-test('external coverage fails deterministically without shards or posting a result', async t => {
+test('external coverage fails deterministically without shards after posting its result', async t => {
   let posted = false;
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-empty-shards-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -474,8 +474,59 @@ test('external coverage fails deterministically without shards or posting a resu
     runner.start(),
     /produced no Playwright coverage shards/,
   );
-  assert.equal(posted, false);
+  assert.equal(posted, true);
   assert.equal(fs.existsSync(coverageShardDirectory), false);
+});
+
+test('failed external result is posted before rejected coverage infrastructure surfaces', async t => {
+  const resultPath = createReport(t, [{
+    name: 'external assertion',
+    fullName: 'suite > external assertion',
+    status: 'fail',
+    errors: [{ name: 'AssertionError', message: 'expected true to be false' }],
+  }]);
+  const root = path.dirname(resultPath);
+  const coverageShardDirectory = path.join(root, coverageGeneration, 'e2e-shards');
+  await coverageSupport.writeCoverageShard({
+    directory: coverageShardDirectory,
+    generation: coverageGeneration,
+    shardId: '44444444444444444444444444444444',
+    coverage: { '/app/external.js': fileCoverage('/app/external.js', 1) },
+  });
+  const events = [];
+  const runner = new RstestExternal({
+    appDir: '/app',
+    url: 'http://localhost:3100/',
+    args: [],
+    token: 'secret',
+    generation: 2,
+    coverageGeneration,
+    coverageArtifactPath: path.join(root, coverageGeneration, 'e2e.json'),
+    coverageShardDirectory,
+    coverageSupport,
+    resultPath,
+    startProcess() {
+      return { completion: Promise.resolve(1), stop() {} };
+    },
+    async fetch(url, options) {
+      if (url.endsWith('/external')) {
+        events.push('result');
+        const payload = JSON.parse(options.body);
+        assert.equal(payload.result.ok, false);
+        assert.equal(payload.result.cases[0].name, 'external assertion');
+        return { ok: true, status: 200 };
+      }
+      events.push('coverage');
+      return {
+        ok: false,
+        status: 409,
+        async json() { return { error: 'coverage rejected' }; },
+      };
+    },
+  });
+
+  await assert.rejects(runner.start(), /coverage rejected/);
+  assert.deepEqual(events, ['result', 'coverage']);
 });
 
 test('external JSON report preserves failed cases and errors', () => {
