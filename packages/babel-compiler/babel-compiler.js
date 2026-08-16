@@ -216,6 +216,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
   }
 
   var packageName = inputFile.getPackageName();
+  var testRunnerTransforms = BabelTestRunnerTransforms.forInput(inputFile);
   var inputFilePath = inputFile.getPathInPackage();
   var outputFilePath = inputFilePath;
   var fileOptions = inputFile.getFileOptions();
@@ -315,6 +316,10 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         sourceHash: toBeAdded.hash,
       },
     };
+    if (testRunnerTransforms) {
+      cacheOptions.cacheDeps.testRunnerTransforms =
+        testRunnerTransforms.cacheFingerprint;
+    }
 
     const filename = packageName
       ? `packages/${packageName}/${inputFilePath}`
@@ -333,6 +338,14 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       if (this.modifyConfig) {
         this.modifyConfig(babelOptions, inputFile);
+      }
+
+      if (testRunnerTransforms) {
+        BabelTestRunnerTransforms.apply(
+          babelOptions,
+          'babel',
+          testRunnerTransforms,
+        );
       }
 
       return babelOptions;
@@ -406,6 +419,14 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         swcOptions.jsc.baseUrl = path.resolve(process.cwd(), swcOptions.jsc.baseUrl);
       }
 
+      if (testRunnerTransforms) {
+        BabelTestRunnerTransforms.apply(
+          swcOptions,
+          'swc',
+          testRunnerTransforms,
+        );
+      }
+
       return swcOptions;
     };
 
@@ -448,6 +469,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
           lastModifiedSwcConfigTime,
           isLegacyWebArch ? 'legacy' : '',
           hasSwcHelpersAvailable,
+          testRunnerTransforms && testRunnerTransforms.cacheFingerprint,
         ]
           .filter(Boolean)
           .join('-');
