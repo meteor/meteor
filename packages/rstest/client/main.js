@@ -5,6 +5,7 @@ const { executeUpstreamTests } = require('../runtime/upstream-runtime.js');
 const {
   createMeteorClientSnapshotEnvironment,
 } = require('./snapshot-environment.js');
+const { completeClientRun } = require('./coverage.js');
 
 export const __registerTestFileLoader = api.registerTestFileLoader;
 export const __setRstestRuntimeFactory = api.setRstestRuntimeFactory;
@@ -46,11 +47,16 @@ async function executeTests() {
       ...runtimeOptions,
     },
   });
-  await Meteor.callAsync('rstest/submitClientResult', {
-    protocolVersion: 1,
-    generation: metadata.generation,
+  await completeClientRun({
+    coverage: metadata.coverage,
     token: globalThis.__METEOR_RSTEST_TOKEN__,
     result,
+    submitResult: submittedResult => Meteor.callAsync('rstest/submitClientResult', {
+      protocolVersion: 1,
+      generation: metadata.generation,
+      token: globalThis.__METEOR_RSTEST_TOKEN__,
+      result: submittedResult,
+    }),
   });
   return result;
 }

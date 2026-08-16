@@ -901,19 +901,23 @@ class RstestTestRunnerProvider {
     const mixedCoverage = !worker && options.coverage === true && (
       selection.needsRuntime || selection.needsExternal
     );
-    this.coverageGeneration = mixedCoverage
-      ? crypto.randomBytes(16).toString('hex')
-      : null;
+    this.coverageGeneration = worker
+      ? this.workerPayload.coverageGeneration || null
+      : mixedCoverage
+        ? crypto.randomBytes(16).toString('hex')
+        : null;
     this.coverageRoot = this.coverageGeneration
-      ? path.join(runtimeDir, 'coverage', this.coverageGeneration)
+      ? worker
+        ? path.dirname(this.workerPayload.coveragePath)
+        : path.join(runtimeDir, 'coverage', this.coverageGeneration)
       : null;
     this.coveragePlanPath = this.coverageRoot
       ? path.join(this.coverageRoot, 'plan.json')
       : null;
-    this.coverageManifestPath = this.coverageRoot
+    this.coverageManifestPath = this.coverageRoot && !worker
       ? path.join(this.coverageRoot, 'manifest.json')
       : null;
-    this.coverageNativeArtifactPath = this.coverageRoot &&
+    this.coverageNativeArtifactPath = !worker && this.coverageRoot &&
       selection.shouldRunNative
       ? path.join(this.coverageRoot, 'native.json')
       : null;
@@ -1131,6 +1135,10 @@ class RstestTestRunnerProvider {
         total: worker.total,
         generation: this.workerPayload.generation,
         resultPath: this.workerPayload.resultPath,
+        ...(this.workerPayload.coveragePath && {
+          coveragePath: this.workerPayload.coveragePath,
+          coverageGeneration: this.workerPayload.coverageGeneration,
+        }),
       } : null,
     };
     this.workerHostPlan = null;
@@ -1142,6 +1150,7 @@ class RstestTestRunnerProvider {
         requestedWorkers: options.runtimeWorkers,
         generation: this.runtimeSettingsGeneration,
         runtimeSettingsPath: this.runtimeSettingsPath,
+        coverageRoot: this.coverageRoot || undefined,
       });
       if (this.workerHostPlan.actualWorkers < options.runtimeWorkers) {
         this.services.warn(
@@ -1158,12 +1167,19 @@ class RstestTestRunnerProvider {
           path: this.coverageNativeArtifactPath,
         });
       }
-      if (this.workerHostPlan) {
+      if (worker) {
+        if (this.workerPayload.coveragePath) {
+          this.coverageArtifacts.push({
+            producer: `worker-${worker.id}`,
+            path: this.workerPayload.coveragePath,
+          });
+        }
+      } else if (this.workerHostPlan) {
         for (const descriptor of this.workerHostPlan.descriptors) {
           const producer = `worker-${descriptor.id}`;
           this.coverageArtifacts.push({
             producer,
-            path: path.join(this.coverageRoot, `${producer}.json`),
+            path: descriptor.payload.coveragePath,
           });
         }
       } else {

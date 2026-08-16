@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const { validateResult } = require('../runtime/coordinator.js');
+const { writeCoverageArtifact } = require('./coverage.js');
 
 const GENERATION_PATTERN = /^[a-f0-9]{32,128}$/i;
 const WORKER_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
@@ -32,15 +33,54 @@ function validateWorker(worker) {
   if (path.basename(worker.resultPath) !== `${worker.id}-result.json`) {
     throw resultError('Worker result path does not match worker identity.');
   }
+  const hasCoveragePath = worker.coveragePath !== undefined;
+  const hasCoverageGeneration = worker.coverageGeneration !== undefined;
+  if (hasCoveragePath !== hasCoverageGeneration) {
+    throw resultError('Worker coverage path and generation must be provided together.');
+  }
+  if (hasCoveragePath) {
+    if (typeof worker.coveragePath !== 'string' ||
+        !path.isAbsolute(worker.coveragePath)) {
+      throw resultError('Worker coverage path must be absolute.');
+    }
+    if (typeof worker.coverageGeneration !== 'string' ||
+        !GENERATION_PATTERN.test(worker.coverageGeneration) ||
+        path.basename(path.dirname(worker.coveragePath)) !==
+          worker.coverageGeneration) {
+      throw resultError('Worker coverage generation is invalid.');
+    }
+    if (path.basename(worker.coveragePath) !== `worker-${worker.id}.json`) {
+      throw resultError('Worker coverage path does not match worker identity.');
+    }
+  }
 }
 
-function writeWorkerResult({ worker, result }) {
+function writeWorkerResult({ worker, result, coverage }) {
   validateWorker(worker);
   if (!validateResult(result)) {
     throw resultError('Worker result payload is invalid.');
   }
+  if (worker.coveragePath && coverage === undefined) {
+    throw resultError('Worker coverage map is required.');
+  }
+  if (!worker.coveragePath && coverage !== undefined) {
+    throw resultError('Coverage-disabled worker does not expect coverage.');
+  }
   if (fs.existsSync(worker.resultPath)) {
     throw resultError(`Worker result already exists: ${worker.resultPath}`);
+  }
+
+  if (worker.coveragePath) {
+    writeCoverageArtifact({
+      outputPath: worker.coveragePath,
+      expectedPath: worker.coveragePath,
+      artifact: {
+        schemaVersion: 1,
+        generation: worker.coverageGeneration,
+        producer: `worker-${worker.id}`,
+        coverage,
+      },
+    });
   }
 
   const payload = {

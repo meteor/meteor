@@ -14,6 +14,10 @@ const {
 } = require('../runtime/reporter.js');
 const { writeWorkerResult } = require('./worker-result.js');
 const {
+  cloneCoverageMap,
+  createServerCoverageLifecycle,
+} = require('./coverage.js');
+const {
   createUpstreamServerExecution,
   executeUpstreamServerTests,
 } = require('./upstream-runtime.js');
@@ -31,6 +35,13 @@ const isRstestActive = activeMetadata.testRunner === 'rstest' &&
   (!activeMetadata.driverPackage || activeMetadata.driverPackage === 'rstest');
 const runtimeSnapshotEnvironment = isRstestActive && activeMetadata.rstestAppRoot
   ? createMeteorSnapshotEnvironment({ appRoot: activeMetadata.rstestAppRoot })
+  : null;
+const coverageLifecycle = isRstestActive
+  ? createServerCoverageLifecycle({
+    coverage: activeMetadata.rstestCoverage,
+    expectsClient: activeMetadata.rstestClient,
+    worker: activeMetadata.rstestWorker,
+  })
   : null;
 
 function timeoutResult(error, name) {
@@ -65,6 +76,7 @@ if (isRstestActive) Meteor.methods({
       hookTimeout: Number(metadata.rstestHookTimeout || 10000),
       maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
       runtimeConfig: metadata.rstestRuntimeConfig || {},
+      coverage: metadata.rstestCoverage,
     };
   },
   'rstest/submitClientResult'(payload) {
@@ -157,6 +169,13 @@ if (isRstestActive) Meteor.methods({
   },
 });
 
+if (isRstestActive && coverageLifecycle && coverageLifecycle.handler) {
+  WebApp.connectHandlers.use(
+    '/__meteor__/rstest/coverage',
+    coverageLifecycle.handler,
+  );
+}
+
 if (isRstestActive) WebApp.connectHandlers.use('/__meteor__/rstest/external', (request, response, next) => {
   if (request.method !== 'POST') return next();
   let body = '';
@@ -222,6 +241,7 @@ function testMetadata() {
         rstestWatch: payload.watch,
         rstestReportVerbose: payload.reportVerbose ?? payload.verbose,
         rstestWorker: payload.worker,
+        rstestCoverage: payload.coverage,
       };
     }
     return metadata;
@@ -266,11 +286,15 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
     const entry = { architecture: 'server', result: serverResult };
     results.push(entry);
     runtimeResults.push(entry);
+    if (coverageLifecycle && coverageLifecycle.enabled && !metadata.rstestWorker) {
+      coverageLifecycle.captureServer();
+    }
   }
 
   if (metadata.rstestClient) {
     let clientResult;
     try {
+      if (coverageLifecycle) await coverageLifecycle.waitForClient();
       clientResult = await clientResultGate.wait();
     } catch (error) {
       clientResult = timeoutResult(error, 'Meteor client executor result');
@@ -293,7 +317,13 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
   const result = mergeArchitectureResults(results);
 
   if (metadata.rstestWorker) {
-    writeWorkerResult({ worker: metadata.rstestWorker, result });
+    writeWorkerResult({
+      worker: metadata.rstestWorker,
+      result,
+      ...(metadata.rstestWorker.coveragePath && {
+        coverage: cloneCoverageMap(globalThis.__coverage__),
+      }),
+    });
   } else {
     if (shouldEmitResultFrames()) {
       for (const entry of results) {

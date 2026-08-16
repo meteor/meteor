@@ -201,6 +201,92 @@ test('host descriptors write private manifests and stable result paths', t => {
     'server-1-result.json'
   );
   assert.equal(fs.existsSync(plan.descriptors[0].payload.resultPath), false);
+  assert.equal('coveragePath' in plan.descriptors[0].payload, false);
+});
+
+test('coverage-enabled host descriptors bind each worker to one artifact', t => {
+  const appDir = createApp(t);
+  const files = [
+    writeFile(appDir, 'tests/rstest/runtime/server/b.test.js'),
+    writeFile(appDir, 'tests/rstest/runtime/server/a.test.js'),
+  ];
+  const localDir = path.join(appDir, '.meteor', 'local');
+  const coverageGeneration = 'abcdef1234567890abcdef1234567890';
+  const coverageRoot = path.join(
+    localDir,
+    'rstest',
+    'coverage',
+    coverageGeneration,
+  );
+  const plan = createRstestHostDescriptors({
+    appDir,
+    localDir,
+    files,
+    requestedWorkers: 2,
+    generation: '1234567890abcdef1234567890abcdef',
+    runtimeSettingsPath: path.join(
+      localDir,
+      'rstest',
+      'app-runtime-settings.json',
+    ),
+    coverageRoot,
+  });
+  fs.writeFileSync(
+    path.join(localDir, 'rstest', 'app-runtime-settings.json'),
+    JSON.stringify({
+      schemaVersion: 1,
+      generation: '1234567890abcdef1234567890abcdef',
+      coverage: {
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'istanbul',
+        generation: coverageGeneration,
+        artifactRoot: coverageRoot,
+      },
+    }),
+  );
+
+  assert.deepEqual(plan.descriptors.map(descriptor =>
+    path.relative(coverageRoot, descriptor.payload.coveragePath)
+  ), ['worker-server-1.json', 'worker-server-2.json']);
+  assert.equal(fs.existsSync(plan.descriptors[0].payload.coveragePath), false);
+
+  const worker = {
+    id: plan.descriptors[0].id,
+    index: 0,
+    total: 2,
+    payload: plan.descriptors[0].payload,
+  };
+  assert.equal(
+    validateRstestWorkerPayload({ appDir, worker }).coverageGeneration,
+    coverageGeneration,
+  );
+  assert.throws(() => validateRstestWorkerPayload({
+    appDir,
+    worker: {
+      ...worker,
+      payload: {
+        ...worker.payload,
+        coveragePath: path.join(coverageRoot, 'server-1.json'),
+      },
+    },
+  }), /coverage path/);
+  assert.throws(() => validateRstestWorkerPayload({
+    appDir,
+    worker: {
+      ...worker,
+      payload: {
+        ...worker.payload,
+        coveragePath: path.join(
+          localDir,
+          'rstest',
+          'coverage',
+          '1234567890abcdef1234567890abcdef',
+          'worker-server-1.json',
+        ),
+      },
+    },
+  }), /coverage path/);
 });
 
 test('worker payload validates generation, identity paths, and manifest contents', t => {

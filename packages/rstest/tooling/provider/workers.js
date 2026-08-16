@@ -133,6 +133,7 @@ function createRstestHostDescriptors({
   requestedWorkers,
   generation,
   runtimeSettingsPath,
+  coverageRoot,
 }) {
   if (!path.isAbsolute(localDir || '') ||
       !path.isAbsolute(runtimeSettingsPath || '')) {
@@ -142,6 +143,19 @@ function createRstestHostDescriptors({
     );
   }
   assertGeneration(generation);
+  let normalizedCoverageRoot;
+  if (coverageRoot !== undefined) {
+    if (typeof coverageRoot !== 'string' || !path.isAbsolute(coverageRoot) ||
+        path.dirname(path.resolve(coverageRoot)) !==
+          path.join(path.resolve(localDir), 'rstest', 'coverage')) {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_PATH',
+        'Runtime worker coverage root is invalid.'
+      );
+    }
+    normalizedCoverageRoot = path.resolve(coverageRoot);
+    assertGeneration(path.basename(normalizedCoverageRoot));
+  }
   const partitions = partitionRuntimeFiles({ appDir, files, requestedWorkers });
   const workersRoot = path.join(localDir, 'rstest', 'workers');
   const descriptors = partitions.map((runtimeFiles, index) => {
@@ -163,6 +177,12 @@ function createRstestHostDescriptors({
         runtimeManifest,
         runtimeSettingsPath,
         resultPath,
+        ...(normalizedCoverageRoot && {
+          coveragePath: path.join(
+            normalizedCoverageRoot,
+            `worker-${id}.json`,
+          ),
+        }),
       }),
     });
   });
@@ -233,6 +253,48 @@ function validateRstestWorkerPayload({ appDir, worker }) {
       'Runtime worker coordination paths do not share one root.'
     );
   }
+  let coveragePath;
+  let coverageGeneration;
+  if (payload.coveragePath !== undefined) {
+    coveragePath = validateCoordinationPath(payload.coveragePath, 'coverage');
+    const coverageRoot = path.dirname(coveragePath);
+    coverageGeneration = path.basename(coverageRoot);
+    if (path.basename(coveragePath) !== `worker-${worker.id}.json` ||
+        path.dirname(coverageRoot) !== path.join(coordinationRoot, 'coverage')) {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_PATH',
+        'Runtime worker coverage path does not match worker identity and root.'
+      );
+    }
+    try {
+      assertGeneration(coverageGeneration);
+    } catch {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_PATH',
+        'Runtime worker coverage path has an invalid generation.'
+      );
+    }
+    let coveragePlan;
+    try {
+      coveragePlan = JSON.parse(
+        fs.readFileSync(runtimeSettingsPath, 'utf8')
+      ).coverage;
+    } catch (error) {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_PATH',
+        `Runtime worker coverage settings are invalid: ${error.message}`
+      );
+    }
+    if (!coveragePlan || coveragePlan.schemaVersion !== 1 ||
+        coveragePlan.enabled !== true || coveragePlan.provider !== 'istanbul' ||
+        coveragePlan.generation !== coverageGeneration ||
+        path.resolve(coveragePlan.artifactRoot || '') !== coverageRoot) {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_PATH',
+        'Runtime worker coverage path does not match the enabled generation.'
+      );
+    }
+  }
   let manifestFiles;
   try {
     const parsedManifest = JSON.parse(fs.readFileSync(runtimeManifest, 'utf8'));
@@ -264,6 +326,7 @@ function validateRstestWorkerPayload({ appDir, worker }) {
     runtimeManifest,
     runtimeSettingsPath,
     resultPath,
+    ...(coveragePath && { coveragePath, coverageGeneration }),
   });
 }
 

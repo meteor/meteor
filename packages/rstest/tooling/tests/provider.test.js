@@ -560,6 +560,53 @@ test('runtime worker parent evaluates config once then starts deterministic host
   assert.equal(aggregateCalls[0].verbose, true);
 });
 
+test('coverage-enabled worker parent declares the exact descriptor artifacts', async t => {
+  const context = createContext(t);
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  context.options.runtimeWorkers = 2;
+  context.options.coverage = true;
+  writeRuntimeFiles(context.appDir, ['b.test.js', 'a.test.js']);
+  const started = [];
+  context.meteorHosts = {
+    start(descriptors) {
+      started.push(descriptors);
+      return {
+        completion: Promise.resolve({ workers: [] }),
+        async stop() {},
+      };
+    },
+  };
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    resolveRstestCoverageInstrumentation() {
+      return {
+        swcPlugin: '/integration/coverage.wasm',
+        babelPlugin: '/integration/istanbul.js',
+      };
+    },
+    aggregateRstestWorkerResults() { return { exitCode: 0 }; },
+    startRstestProcess({ args }) {
+      writeCoverageSettings({ args, context });
+      return { completion: Promise.resolve(0), async stop() {} };
+    },
+  });
+
+  await provider.validate();
+  await provider.prepare();
+  assert.deepEqual(
+    provider.workerHostPlan.descriptors.map(item => item.payload.coveragePath),
+    provider.coverageArtifacts.map(item => item.path),
+  );
+  assert.deepEqual(
+    provider.coverageArtifacts.map(item => item.producer),
+    ['worker-server-1', 'worker-server-2'],
+  );
+  await provider.startBeforeHost({ updateMetadata() {} });
+  assert.equal(started.length, 1);
+});
+
 test('runtime worker child reuses parent settings and skips native Rstest', async t => {
   const context = createContext(t);
   context.options.serverOnly = true;
@@ -571,6 +618,13 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
   fs.mkdirSync(path.dirname(runtimeFile), { recursive: true });
   fs.writeFileSync(runtimeFile, "import { test } from '@rstest/core'; import 'meteor/mongo';");
   const generation = '1234567890abcdef1234567890abcdef';
+  const coverageGeneration = 'abcdef1234567890abcdef1234567890';
+  const coverageRoot = path.join(
+    context.localDir,
+    'rstest',
+    'coverage',
+    coverageGeneration,
+  );
   const workersRoot = path.join(context.localDir, 'rstest', 'workers');
   fs.mkdirSync(workersRoot, { recursive: true });
   const runtimeSettingsPath = path.join(
@@ -587,6 +641,17 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
     retry: 2,
     clearMocks: true,
     env: { FEATURE: 'enabled' },
+    coverage: {
+      schemaVersion: 1,
+      generation: coverageGeneration,
+      enabled: true,
+      provider: 'istanbul',
+      root: context.appDir,
+      include: [],
+      exclude: [],
+      allowExternal: false,
+      artifactRoot: coverageRoot,
+    },
   }));
   const runtimeManifest = path.join(workersRoot, 'server-1-files.json');
   fs.writeFileSync(runtimeManifest, JSON.stringify([runtimeFile]));
@@ -601,6 +666,7 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
       runtimeManifest,
       runtimeSettingsPath,
       resultPath: path.join(workersRoot, 'server-1-result.json'),
+      coveragePath: path.join(coverageRoot, 'worker-server-1.json'),
     },
   };
   let installs = 0;
@@ -629,6 +695,7 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
     runtimeFile,
   ]);
   assert.equal(plan.metadata.worker.resultPath, context.worker.payload.resultPath);
+  assert.equal(plan.metadata.worker.coveragePath, context.worker.payload.coveragePath);
 
   const updates = [];
   const preHost = await provider.startBeforeHost({
@@ -640,6 +707,11 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
   assert.equal(plan.metadata.runtimeConfig.retry, 2);
   assert.equal(plan.metadata.runtimeConfig.clearMocks, true);
   assert.deepEqual(plan.metadata.runtimeConfig.env, { FEATURE: 'enabled' });
+  assert.equal(plan.metadata.coverage.generation, coverageGeneration);
+  assert.equal(
+    plan.metadata.coverage.artifacts['worker-server-1'],
+    context.worker.payload.coveragePath,
+  );
   assert.equal(installs, 0);
   assert.equal(starts, 0);
   assert.equal(updates.length, 1);
