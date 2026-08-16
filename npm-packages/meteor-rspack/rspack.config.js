@@ -20,10 +20,13 @@ const {
   generateEagerTestFile,
 } = require("./lib/test.js");
 const {
+  applyRstestCoverageToSwcRule,
   hasTypescriptRstestInputs,
   isRstestRuntimeBuild,
+  readRstestCoveragePlan,
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
+  resolveRstestCoverageSwcPlugin,
 } = require('./lib/rstest.js');
 const {
   createMeteorRstestPlugins,
@@ -464,6 +467,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   }
 
   const isDevEnvironment = isRun && isDev && !isTest && !isNative;
+  const rstestCoveragePlan = testRunnerContext.coveragePlanPath
+    ? readRstestCoveragePlan(testRunnerContext.coveragePlanPath, {
+      generation: testRunnerContext.coverageGeneration,
+    })
+    : null;
+  const rstestCoverageSwcPlugin = rstestCoveragePlan?.enabled
+    ? resolveRstestCoverageSwcPlugin({ npmRoot: testRunnerContext.npmRoot })
+    : null;
   swcConfigRule = createMeteorSwcRule({
     root: projectDir,
     isTypescriptEnabled,
@@ -474,6 +485,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     isDevEnvironment,
     isClient,
     isAngularEnabled,
+  });
+  applyRstestCoverageToSwcRule(swcConfigRule, {
+    plan: rstestCoveragePlan,
+    pluginPath: rstestCoverageSwcPlugin,
   });
   Meteor.swcConfigOptions = swcConfigRule.options;
 

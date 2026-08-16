@@ -3,10 +3,12 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const childProcess = require('node:child_process');
+const crypto = require('node:crypto');
 const test = require('node:test');
 
 const {
   getPackageHarnessDevDependencies,
+  resolveRstestCoverageInstrumentation,
   RstestTestRunnerProvider,
   writePrivateJsonAtomic,
 } = require('../provider/provider.js');
@@ -18,6 +20,21 @@ test('package harness pins configured local Rspack npm package', () => {
     '@meteorjs/rspack': '/repo/npm-packages/meteor-rspack',
   });
   assert.deepEqual(getPackageHarnessDevDependencies({}), {});
+});
+
+test('coverage instrumentation resolves from the coordinator dependency context', () => {
+  const npmRoot = path.resolve(__dirname, '../../../../npm-packages/meteor-rstest');
+
+  const instrumentation = resolveRstestCoverageInstrumentation(npmRoot);
+
+  assert.match(
+    instrumentation.swcPlugin,
+    /swc-plugin-coverage-instrument.*\.wasm$/,
+  );
+  assert.match(
+    instrumentation.babelPlugin,
+    /babel-plugin-istanbul/,
+  );
 });
 
 function createContext(t, overrides = {}) {
@@ -809,6 +826,89 @@ test('package command accepts coverage for unified finalization', async t => {
   assert.equal(provider.selection.needsRuntime, true);
 });
 
+test('runtime coverage exposes its plan to Rspack and exact local package transforms', async t => {
+  const context = createContext(t);
+  const cardsRoot = path.join(context.appDir, 'packages', 'cards');
+  fs.mkdirSync(cardsRoot, { recursive: true });
+  context.localPackages = [{ name: 'cards', sourceRoot: cardsRoot }];
+  context.packageTests = [{ name: 'local-test:cards', sourceRoot: cardsRoot }];
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  context.options.coverage = true;
+  writeRuntimeFiles(context.appDir, ['instrumented.test.js']);
+  const swcPlugin = '/integration/swc-plugin-coverage-instrument.wasm';
+  const babelPlugin = '/integration/babel-plugin-istanbul.js';
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    resolveRstestCoverageInstrumentation() {
+      return { swcPlugin, babelPlugin };
+    },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(
+    plan.buildPluginOptions.rspack.context.coveragePlanPath,
+    provider.coveragePlanPath,
+  );
+  assert.equal(
+    plan.buildPluginOptions.rspack.context.coverageGeneration,
+    provider.coverageGeneration,
+  );
+  assert.deepEqual(plan.buildPluginOptions['babel-compiler'].sourceTransforms, {
+    packageRoots: {
+      cards: cardsRoot,
+      'local-test:cards': cardsRoot,
+    },
+    includePackages: ['cards', 'local-test:cards'],
+    swcPlugins: [[swcPlugin, {}]],
+    babelPlugins: [[babelPlugin, { cwd: context.appDir }]],
+    cacheKey: crypto.createHash('sha256')
+      .update(JSON.stringify({
+        schemaVersion: 1,
+        generation: provider.coverageGeneration,
+        planPath: provider.coveragePlanPath,
+      }))
+      .digest('hex'),
+  });
+});
+
+test('full-app coverage instruments the app even without Meteor-runtime test files', async t => {
+  const context = createContext(t);
+  context.options.fullApp = true;
+  context.options.project = ['meteor-e2e'];
+  context.options.coverage = true;
+  const testFile = path.join(context.appDir, 'tests/rstest/e2e/app.test.js');
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(testFile, "import { test } from '@rstest/core';\n");
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    resolveRstestCoverageInstrumentation() {
+      return {
+        swcPlugin: '/integration/coverage.wasm',
+        babelPlugin: '/integration/istanbul.js',
+      };
+    },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(plan.metadata.runtime, false);
+  assert.equal(plan.metadata.external, true);
+  assert.equal(
+    plan.buildPluginOptions.rspack.context.coveragePlanPath,
+    provider.coveragePlanPath,
+  );
+  assert.equal(
+    plan.buildPluginOptions.rspack.context.coverageGeneration,
+    provider.coverageGeneration,
+  );
+});
+
 test('mixed coverage finalizes one generation manifest and preserves exit precedence', async t => {
   async function runFinalizer(testExitCode) {
     const context = createContext(t);
@@ -821,6 +921,12 @@ test('mixed coverage finalizes one generation manifest and preserves exit preced
     const provider = new RstestTestRunnerProvider(context, {
       async ensureRstestInstalled() {},
       assertRstestOptionalCapabilities() {},
+      resolveRstestCoverageInstrumentation() {
+        return {
+          swcPlugin: '/integration/coverage.wasm',
+          babelPlugin: '/integration/istanbul.js',
+        };
+      },
       startRstestProcess({ args }) {
         calls.push(args);
         const finalizerIndex = args.indexOf('--coverage-finalize-manifest');
@@ -920,12 +1026,14 @@ test('mixed runs allocate coverage paths only when coverage was requested', asyn
   });
 
   await provider.validate();
-  await provider.prepare();
+  const plan = await provider.prepare();
 
   assert.equal(provider.coverageGeneration, null);
   assert.equal(provider.coverageRoot, null);
   assert.equal(provider.runtimePlanArgs.includes('--coverage-plan-output'), false);
   assert.equal(provider.runtimePlanArgs.includes('--coverage-generation'), false);
+  assert.equal('coveragePlanPath' in plan.buildPluginOptions.rspack.context, false);
+  assert.equal('babel-compiler' in plan.buildPluginOptions, false);
 });
 
 test('requested mixed coverage fails completion when its plan is missing', async t => {

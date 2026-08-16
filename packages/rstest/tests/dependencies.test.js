@@ -29,7 +29,7 @@ test('Rstest dependency manifest installs only required coordinator dependencies
   ));
 });
 
-test('Atmosphere dependency manifest stays aligned with @meteorjs/rstest metadata', () => {
+test('Atmosphere dependency manifest stays aligned with upstream coordinator pins', () => {
   const dependencies = getRstestDependencies({});
   const coordinator = dependencies.find(({ name }) => name === '@meteorjs/rstest');
   const runtimeDependencies = Object.fromEntries(
@@ -39,7 +39,21 @@ test('Atmosphere dependency manifest stays aligned with @meteorjs/rstest metadat
   );
 
   assert.equal(coordinator.version, meteorRstestPackage.version);
-  assert.deepEqual(runtimeDependencies, meteorRstestPackage.dependencies);
+  assert.deepEqual(runtimeDependencies, {
+    '@rstest/core': meteorRstestPackage.dependencies['@rstest/core'],
+    '@rstest/adapter-rspack':
+      meteorRstestPackage.dependencies['@rstest/adapter-rspack'],
+  });
+});
+
+test('coordinator owns the exact Istanbul instrumentation dependencies', () => {
+  assert.deepEqual({
+    coverage: meteorRstestPackage.dependencies['@rstest/coverage-istanbul'],
+    babel: meteorRstestPackage.dependencies['babel-plugin-istanbul'],
+  }, {
+    coverage: '0.11.6',
+    babel: '7.0.1',
+  });
 });
 
 test('optional Rstest capabilities remain project-owned', () => {
@@ -49,7 +63,6 @@ test('optional Rstest capabilities remain project-owned', () => {
 
   for (const optionalName of [
     '@rstest/browser',
-    '@rstest/coverage-istanbul',
     '@rstest/coverage-v8',
     '@rstest/playwright',
     'happy-dom',

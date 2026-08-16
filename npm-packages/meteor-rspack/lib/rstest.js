@@ -1,5 +1,10 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const {
+  applyRstestCoverageToSwcRule,
+  readRstestCoveragePlan,
+  resolveRstestCoverageSwcPlugin,
+} = require('./rstest-coverage.js');
 
 function hasTypescriptRstestInputs({ files = [], setupFiles = [] } = {}) {
   return [...files, ...setupFiles].some(file =>
@@ -77,8 +82,11 @@ function readRstestRuntimeSettings(filename) {
 }
 
 module.exports = {
+  applyRstestCoverageToSwcRule,
   hasTypescriptRstestInputs,
   isRstestRuntimeBuild,
+  readRstestCoveragePlan,
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
+  resolveRstestCoverageSwcPlugin,
 };

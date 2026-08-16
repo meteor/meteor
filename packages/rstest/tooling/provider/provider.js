@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const childProcess = require('node:child_process');
+const { createRequire } = require('node:module');
 
 const {
   ensureRstestInstalled,
@@ -398,6 +399,34 @@ function requestsVerboseReporter(args = []) {
   return false;
 }
 
+function resolveRstestCoverageInstrumentation(npmRoot) {
+  const appRequire = createRequire(path.join(path.resolve(npmRoot), 'package.json'));
+  const coordinatorEntry = appRequire.resolve('@meteorjs/rstest');
+  const coordinatorRequire = createRequire(coordinatorEntry);
+  const coverageProviderEntry = coordinatorRequire.resolve(
+    '@rstest/coverage-istanbul',
+  );
+  return {
+    swcPlugin: createRequire(coverageProviderEntry).resolve(
+      'swc-plugin-coverage-instrument',
+    ),
+    babelPlugin: coordinatorRequire.resolve('babel-plugin-istanbul'),
+  };
+}
+
+function collectLocalPackageTransforms(localPackages, packageTests) {
+  const packageRoots = {};
+  const includePackages = [];
+  for (const entry of [...localPackages || [], ...packageTests || []]) {
+    if (!entry || typeof entry.name !== 'string' ||
+        !path.isAbsolute(entry.sourceRoot || '') ||
+        Object.hasOwn(packageRoots, entry.name)) continue;
+    packageRoots[entry.name] = entry.sourceRoot;
+    includePackages.push(entry.name);
+  }
+  return { packageRoots, includePackages };
+}
+
 class RstestTestRunnerProvider {
   constructor(context, services = {}) {
     this.context = context;
@@ -417,6 +446,7 @@ class RstestTestRunnerProvider {
       aggregateRstestWorkerResults,
       createRstestHostDescriptors,
       validateRstestWorkerPayload,
+      resolveRstestCoverageInstrumentation,
       env: process.env,
       warn: message => console.warn(message),
       ...services,
@@ -1164,6 +1194,54 @@ class RstestTestRunnerProvider {
         : selection.needsRuntime || selection.needsExternal
         ? 'meteor-host'
         : 'native-only';
+    const buildPluginOptions = {
+      rspack: {
+        autoInstall: npm.autoInstall,
+        lifecycle: dependencyOnly ? 'dependencies-only' : 'runtime',
+        ...(command === 'test-packages' && { projectRoot: harnessRoot }),
+        ...(!dependencyOnly && {
+          targets: { client: buildClient, server: buildServer },
+        }),
+        context: {
+          testRunner: 'rstest',
+          runtime: selection.needsRuntime,
+          upstreamRuntime: this.upstreamRuntime,
+          external: selection.needsExternal,
+          server,
+          client,
+          runtimeManifest: this.runtimeManifest,
+          runtimeSettingsPath: this.runtimeSettingsPath,
+          npmRoot: npm.root,
+          ...(this.coveragePlanPath && {
+            coveragePlanPath: this.coveragePlanPath,
+            coverageGeneration: this.coverageGeneration,
+          }),
+        },
+      },
+    };
+    if (this.coveragePlanPath) {
+      const transforms = collectLocalPackageTransforms(
+        this.context.localPackages,
+        this.context.packageTests,
+      );
+      if (transforms.includePackages.length > 0) {
+        const { swcPlugin, babelPlugin } =
+          this.services.resolveRstestCoverageInstrumentation(npm.root);
+        const cacheKey = crypto.createHash('sha256').update(JSON.stringify({
+          schemaVersion: 1,
+          generation: this.coverageGeneration,
+          planPath: this.coveragePlanPath,
+        })).digest('hex');
+        buildPluginOptions['babel-compiler'] = {
+          sourceTransforms: {
+            ...transforms,
+            swcPlugins: [[swcPlugin, {}]],
+            babelPlugins: [[babelPlugin, { cwd: appDir }]],
+            cacheKey,
+          },
+        };
+      }
+    }
     this.plan = {
       mode,
       ...(mode === 'meteor-host' && { driverPackage: 'rstest' }),
@@ -1172,27 +1250,7 @@ class RstestTestRunnerProvider {
         refreshProjectMetadata: true,
       }),
       metadata: this.metadata,
-      buildPluginOptions: {
-        rspack: {
-          autoInstall: npm.autoInstall,
-          lifecycle: dependencyOnly ? 'dependencies-only' : 'runtime',
-          ...(command === 'test-packages' && { projectRoot: harnessRoot }),
-          ...(!dependencyOnly && {
-            targets: { client: buildClient, server: buildServer },
-          }),
-          context: {
-            testRunner: 'rstest',
-            runtime: selection.needsRuntime,
-            upstreamRuntime: this.upstreamRuntime,
-            external: selection.needsExternal,
-            server,
-            client,
-            runtimeManifest: this.runtimeManifest,
-            runtimeSettingsPath: this.runtimeSettingsPath,
-            npmRoot: npm.root,
-          },
-        },
-      },
+      buildPluginOptions,
     };
     return this.plan;
   }
@@ -1473,7 +1531,9 @@ class RstestTestRunnerProvider {
 }
 
 module.exports = {
+  collectLocalPackageTransforms,
   getPackageHarnessDevDependencies,
+  resolveRstestCoverageInstrumentation,
   RstestTestRunnerProvider,
   writePrivateJsonAtomic,
 };
