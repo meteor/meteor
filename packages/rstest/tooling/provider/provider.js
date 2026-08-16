@@ -419,6 +419,7 @@ function collectLocalPackageTransforms(localPackages, packageTests) {
   const includePackages = [];
   for (const entry of [...localPackages || [], ...packageTests || []]) {
     if (!entry || typeof entry.name !== 'string' ||
+        entry.sourceKind === 'checkout' ||
         !path.isAbsolute(entry.sourceRoot || '') ||
         Object.hasOwn(packageRoots, entry.name)) continue;
     packageRoots[entry.name] = entry.sourceRoot;

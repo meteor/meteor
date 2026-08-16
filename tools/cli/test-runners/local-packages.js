@@ -1,5 +1,23 @@
-async function collectTestRunnerLocalPackages(localCatalog, files) {
+function pathIsWithin(root, candidate, files) {
+  const relative = files.pathRelative(root, candidate);
+  return relative === '' || (
+    !files.pathIsAbsolute(relative) &&
+    relative !== '..' &&
+    !relative.startsWith('../') &&
+    !relative.startsWith('..\\')
+  );
+}
+
+async function collectTestRunnerLocalPackages(
+  localCatalog,
+  files,
+  { checkoutPackageRoots = [], selectedPackageNames = [] } = {}
+) {
   const localPackages = [];
+  const resolvedCheckoutRoots = checkoutPackageRoots.map(root =>
+    files.pathResolve(root)
+  );
+  const selectedNames = new Set(selectedPackageNames);
   const packageNames = await localCatalog.getAllPackageNames();
   for (const name of packageNames) {
     const packageSource = localCatalog.getPackageSource(name);
@@ -10,7 +28,13 @@ async function collectTestRunnerLocalPackages(localCatalog, files) {
     if (!files.exists(sourceRoot)) {
       continue;
     }
-    localPackages.push({ name, sourceRoot });
+    let sourceKind = resolvedCheckoutRoots.some(root =>
+      pathIsWithin(root, sourceRoot, files)
+    ) ? 'checkout' : 'project';
+    if (selectedNames.has(name)) {
+      sourceKind = 'test-target';
+    }
+    localPackages.push({ name, sourceRoot, sourceKind });
   }
   return localPackages.sort((left, right) =>
     left.name.localeCompare(right.name)

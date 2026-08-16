@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
 const test = global.test || require('node:test');
 
@@ -166,9 +167,15 @@ test('command test-runner context is deeply frozen, scoped, and JSON-safe', () =
   );
 });
 
-test('provider fixture receives resolved, sorted physical local package entries', async () => {
+test('provider fixture receives sorted physical package entries with source provenance', async t => {
   const harness = makeHarness();
   const repositoryRoot = path.resolve(__dirname, '../../../..');
+  const temporaryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-provider-packages-'));
+  t.after(() => fs.rmSync(temporaryRoot, { recursive: true, force: true }));
+  const appPackageRoot = path.join(temporaryRoot, 'app', 'packages', 'cards');
+  const externalPackageRoot = path.join(temporaryRoot, 'external', 'notes');
+  fs.mkdirSync(appPackageRoot, { recursive: true });
+  fs.mkdirSync(externalPackageRoot, { recursive: true });
   const meteorRoot = path.join(repositoryRoot, 'packages/meteor');
   const trackerRoot = path.join(repositoryRoot, 'packages/tracker');
   const missingRoot = path.join(repositoryRoot, 'packages/not-present');
@@ -180,10 +187,12 @@ test('provider fixture receives resolved, sorted physical local package entries'
 
   const localCatalog = {
     async getAllPackageNames() {
-      return ['tracker', 'missing', 'meteor'];
+      return ['tracker', 'notes', 'missing', 'meteor', 'cards'];
     },
     getPackageSource(name) {
       return {
+        cards: { sourceRoot: appPackageRoot },
+        notes: { sourceRoot: externalPackageRoot },
         tracker: { sourceRoot: path.relative(process.cwd(), trackerRoot) },
         missing: { sourceRoot: path.relative(process.cwd(), missingRoot) },
         meteor: { sourceRoot: path.relative(process.cwd(), meteorRoot) },
@@ -194,14 +203,21 @@ test('provider fixture receives resolved, sorted physical local package entries'
     command: 'test-packages',
     localPackages: await collectTestRunnerLocalPackages(localCatalog, {
       exists: fs.existsSync,
+      pathIsAbsolute: path.isAbsolute,
+      pathRelative: path.relative,
       pathResolve: path.resolve,
+    }, {
+      checkoutPackageRoots: [path.join(repositoryRoot, 'packages')],
+      selectedPackageNames: ['tracker'],
     }),
   });
   harness.isopack.testRunnerProviders[0].factory(context);
 
   assert.deepEqual(receivedContext.localPackages, [
-    { name: 'meteor', sourceRoot: meteorRoot },
-    { name: 'tracker', sourceRoot: trackerRoot },
+    { name: 'cards', sourceRoot: appPackageRoot, sourceKind: 'project' },
+    { name: 'meteor', sourceRoot: meteorRoot, sourceKind: 'checkout' },
+    { name: 'notes', sourceRoot: externalPackageRoot, sourceKind: 'project' },
+    { name: 'tracker', sourceRoot: trackerRoot, sourceKind: 'test-target' },
   ]);
   assert.equal(Object.isFrozen(receivedContext.localPackages), true);
 });

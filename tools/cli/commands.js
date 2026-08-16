@@ -2811,13 +2811,23 @@ async function doTestCommand(options) {
       projectContext.appDirectory,
       options,
     );
+    const selectedTestPackageNames = selectedTestPackages.flatMap(entry => [
+      entry.name,
+      entry.name.replace(/^local-test:/, ''),
+    ]);
     const providerContextData = createTestRunnerContext({
       command: testRunnerCommand,
       appDir: sourceAppDir,
       harnessRoot: testRunnerAppDir,
       localPackages: await collectTestRunnerLocalPackages(
         projectContext.localCatalog,
-        files
+        files,
+        {
+          checkoutPackageRoots: files.inCheckout()
+            ? [files.pathJoin(files.getCurrentToolsDir(), 'packages')]
+            : [],
+          selectedPackageNames: selectedTestPackageNames,
+        }
       ),
       packageTests: selectedTestPackages.map(entry => {
         const packageSource = projectContext.localCatalog.getPackageSource(
@@ -2826,6 +2836,7 @@ async function doTestCommand(options) {
         return {
           name: entry.name,
           sourceRoot: packageSource && packageSource.sourceRoot,
+          sourceKind: 'test-target',
         };
       }),
       localDir: projectContext.projectLocalDir,

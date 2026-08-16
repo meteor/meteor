@@ -829,9 +829,27 @@ test('package command accepts coverage for unified finalization', async t => {
 test('runtime coverage exposes its plan to Rspack and exact local package transforms', async t => {
   const context = createContext(t);
   const cardsRoot = path.join(context.appDir, 'packages', 'cards');
+  const externalRoot = fs.mkdtempSync(
+    path.join(os.tmpdir(), 'meteor-rstest-external-package-')
+  );
+  t.after(() => fs.rmSync(externalRoot, { recursive: true, force: true }));
+  const notesRoot = path.join(externalRoot, 'notes');
+  const checkoutRoot = path.resolve(__dirname, '../../../..');
+  const meteorRoot = path.join(checkoutRoot, 'packages', 'meteor');
+  const trackerRoot = path.join(checkoutRoot, 'packages', 'tracker');
   fs.mkdirSync(cardsRoot, { recursive: true });
-  context.localPackages = [{ name: 'cards', sourceRoot: cardsRoot }];
-  context.packageTests = [{ name: 'local-test:cards', sourceRoot: cardsRoot }];
+  fs.mkdirSync(notesRoot, { recursive: true });
+  context.localPackages = [
+    { name: 'cards', sourceRoot: cardsRoot, sourceKind: 'project' },
+    { name: 'meteor', sourceRoot: meteorRoot, sourceKind: 'checkout' },
+    { name: 'notes', sourceRoot: notesRoot, sourceKind: 'project' },
+    { name: 'tracker', sourceRoot: trackerRoot, sourceKind: 'test-target' },
+  ];
+  context.packageTests = [{
+    name: 'local-test:tracker',
+    sourceRoot: trackerRoot,
+    sourceKind: 'test-target',
+  }];
   context.options.serverOnly = true;
   context.options.project = ['meteor-runtime-server'];
   context.options.coverage = true;
@@ -860,9 +878,11 @@ test('runtime coverage exposes its plan to Rspack and exact local package transf
   assert.deepEqual(plan.buildPluginOptions['babel-compiler'].sourceTransforms, {
     packageRoots: {
       cards: cardsRoot,
-      'local-test:cards': cardsRoot,
+      notes: notesRoot,
+      tracker: trackerRoot,
+      'local-test:tracker': trackerRoot,
     },
-    includePackages: ['cards', 'local-test:cards'],
+    includePackages: ['cards', 'notes', 'tracker', 'local-test:tracker'],
     swcPlugins: [[swcPlugin, {}]],
     babelPlugins: [[babelPlugin, { cwd: context.appDir }]],
     cacheKey: crypto.createHash('sha256')
