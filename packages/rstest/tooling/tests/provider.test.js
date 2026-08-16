@@ -691,6 +691,7 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
   await provider.validate();
   const plan = await provider.prepare();
   assert.equal(plan.mode, 'meteor-host');
+  assert.equal(plan.hostTestMode, 'test');
   assert.deepEqual(plan.buildPluginOptions.rspack.targets, {
     client: false,
     server: true,

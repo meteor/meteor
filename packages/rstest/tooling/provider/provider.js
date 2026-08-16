@@ -1317,7 +1317,8 @@ class RstestTestRunnerProvider {
     this.plan = {
       mode,
       ...(mode === 'meteor-host' && command === 'test' && {
-        hostTestMode: selection.needsExternal
+        hostTestMode: worker ? 'test'
+          : selection.needsExternal
           ? this.workerHostPlan ? 'app-test'
             : selection.needsRuntime ? 'mixed' : 'app-test'
           : 'test',
