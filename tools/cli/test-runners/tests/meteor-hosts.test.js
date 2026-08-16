@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const { spawn } = require('node:child_process');
 const test = require('node:test');
 
 const {
@@ -313,4 +314,201 @@ test('Meteor host service stops active siblings after spawn failure', async t =>
   ]);
   await assert.rejects(handle.completion, /spawn failed/);
   assert.deepEqual(stopped, [['one', 'SIGTERM']]);
+});
+
+test('Meteor host service bounds pipe drain after a worker exit', async t => {
+  const root = tempRoot(t);
+  const processGroups = new Set();
+  const stopped = [];
+  t.after(() => {
+    for (const pid of processGroups) {
+      try { process.kill(-pid, 'SIGKILL'); } catch {}
+    }
+  });
+  const service = createMeteorTestHostService({
+    appDir: root,
+    harnessRoot: path.join(root, 'coordinator'),
+    basePort: 4500,
+    providerId: 'fake',
+    commandOptions: { once: true, 'server-only': true, args: [] },
+    workerDrainTimeoutMs: 25,
+    workerExecutionTimeoutMs: 2000,
+    workerStopTimeoutMs: 100,
+    isPortAvailable: async () => true,
+    write() {},
+    spawnWorker(options) {
+      const child = spawn(process.execPath, ['-e', String.raw`
+        const { spawn } = require('node:child_process');
+        const descendant = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 10000)'], {
+          stdio: ['ignore', 'inherit', 'inherit'],
+        });
+        descendant.unref();
+      `], {
+        detached: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+      processGroups.add(child.pid);
+      child.stdout.on('data', options.onStdout);
+      child.stderr.on('data', options.onStderr);
+      const started = new Promise((resolve, reject) => {
+        child.once('spawn', resolve);
+        child.once('error', reject);
+      });
+      const exited = new Promise((resolve, reject) => {
+        child.once('exit', (code, signal) => resolve({ code, signal }));
+        child.once('error', reject);
+      });
+      const completion = new Promise((resolve, reject) => {
+        child.once('close', (code, signal) => resolve({ code, signal }));
+        child.once('error', reject);
+      });
+      return {
+        started,
+        exited,
+        completion,
+        async stop(signal) {
+          stopped.push([options.worker.id, signal]);
+          try { process.kill(-child.pid, signal); } catch {}
+          return completion;
+        },
+      };
+    },
+  });
+
+  const handle = service.start([{ id: 'one', payload: {} }]);
+  const result = await Promise.race([
+    handle.completion,
+    new Promise(resolve => setTimeout(() => resolve('test-timeout'), 1000)),
+  ]);
+
+  assert.notEqual(result, 'test-timeout');
+  assert.equal(result.workers[0].code, null);
+  assert.equal(result.workers[0].signal, null);
+  assert.equal(
+    result.workers[0].error.code,
+    'METEOR_TEST_WORKER_DRAIN_TIMEOUT'
+  );
+  assert.match(result.workers[0].error.message, /one.*pipe drain/i);
+  assert.deepEqual(stopped, [['one', 'SIGTERM']]);
+});
+
+test('Meteor host service bounds execution and stops every active worker', async t => {
+  const root = tempRoot(t);
+  const stopped = [];
+  const service = createMeteorTestHostService({
+    appDir: root,
+    harnessRoot: path.join(root, 'coordinator'),
+    basePort: 4600,
+    providerId: 'fake',
+    commandOptions: { once: true, 'server-only': true, args: [] },
+    workerExecutionTimeoutMs: 25,
+    workerStopTimeoutMs: 25,
+    isPortAvailable: async () => true,
+    write() {},
+    spawnWorker(options) {
+      return {
+        started: Promise.resolve(),
+        exited: new Promise(() => {}),
+        completion: new Promise(() => {}),
+        stop(signal) {
+          stopped.push([options.worker.id, signal]);
+          return new Promise(() => {});
+        },
+      };
+    },
+  });
+
+  const handle = service.start([
+    { id: 'one', payload: {} },
+    { id: 'two', payload: {} },
+  ]);
+  const result = await Promise.race([
+    handle.completion,
+    new Promise(resolve => setTimeout(() => resolve('test-timeout'), 1000)),
+  ]);
+
+  assert.notEqual(result, 'test-timeout');
+  assert.deepEqual(
+    result.workers.map(worker => worker.error.code),
+    [
+      'METEOR_TEST_WORKER_EXECUTION_TIMEOUT',
+      'METEOR_TEST_WORKER_EXECUTION_TIMEOUT',
+    ]
+  );
+  assert.deepEqual(stopped.sort(), [
+    ['one', 'SIGKILL'],
+    ['one', 'SIGTERM'],
+    ['two', 'SIGKILL'],
+    ['two', 'SIGTERM'],
+  ]);
+});
+
+test('Meteor host service bounds worker process startup', async t => {
+  const root = tempRoot(t);
+  const stopped = [];
+  const service = createMeteorTestHostService({
+    appDir: root,
+    harnessRoot: path.join(root, 'coordinator'),
+    basePort: 4700,
+    providerId: 'fake',
+    commandOptions: { once: true, 'server-only': true, args: [] },
+    workerStartupTimeoutMs: 25,
+    workerExecutionTimeoutMs: 2000,
+    workerStopTimeoutMs: 25,
+    isPortAvailable: async () => true,
+    write() {},
+    spawnWorker(options) {
+      return {
+        started: new Promise(() => {}),
+        exited: Promise.resolve({ code: 0, signal: null }),
+        completion: Promise.resolve({ code: 0, signal: null }),
+        async stop(signal) {
+          stopped.push([options.worker.id, signal]);
+        },
+      };
+    },
+  });
+
+  const result = await service.start([
+    { id: 'one', payload: {} },
+  ]).completion;
+
+  assert.equal(
+    result.workers[0].error.code,
+    'METEOR_TEST_WORKER_STARTUP_TIMEOUT'
+  );
+  assert.deepEqual(stopped, [['one', 'SIGTERM']]);
+});
+
+test('Meteor host service bounds coordinator preparation before spawning', async t => {
+  const root = tempRoot(t);
+  let spawned = false;
+  const service = createMeteorTestHostService({
+    appDir: root,
+    harnessRoot: path.join(root, 'coordinator'),
+    basePort: 4800,
+    providerId: 'fake',
+    commandOptions: { once: true, 'server-only': true, args: [] },
+    workerPreparationTimeoutMs: 25,
+    prepare: () => new Promise(() => {}),
+    isPortAvailable: async () => true,
+    write() {},
+    spawnWorker() {
+      spawned = true;
+      throw new Error('must not spawn');
+    },
+  });
+
+  const result = await Promise.race([
+    service.start([{ id: 'one', payload: {} }]).completion.then(
+      () => 'resolved',
+      error => error
+    ),
+    new Promise(resolve => setTimeout(() => resolve('test-timeout'), 1000)),
+  ]);
+
+  assert.notEqual(result, 'test-timeout');
+  assert.equal(result.code, 'METEOR_TEST_WORKER_PREPARATION_TIMEOUT');
+  assert.match(result.message, /preparation exceeded 25ms/i);
+  assert.equal(spawned, false);
 });

@@ -462,7 +462,15 @@ function aggregateRstestWorkerResults({
       messages.push(`[Meteor Rstest] Worker ${descriptor.id} has no process status.`);
     } else {
       statuses.delete(descriptor.id);
-      if (status.signal) {
+      if (status.error && typeof status.error === 'object' &&
+          typeof status.error.code === 'string' &&
+          typeof status.error.message === 'string') {
+        infrastructureFailure = true;
+        messages.push(
+          `[Meteor Rstest] Worker ${descriptor.id} infrastructure failure ` +
+          `${status.error.code}: ${status.error.message}`
+        );
+      } else if (status.signal) {
         signalFailure = true;
         messages.push(
           `[Meteor Rstest] Worker ${descriptor.id} exited on ${status.signal}.`

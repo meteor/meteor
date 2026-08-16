@@ -1263,7 +1263,9 @@ class RstestTestRunnerProvider {
         });
       }
     }
-    const dependencyOnly = !selection.needsRuntime && !selection.needsExternal;
+    const dependencyOnly =
+      !selection.needsRuntime && !selection.needsExternal ||
+      dedicatedRuntimeHosts && !selection.needsExternal;
     const buildClient = client || selection.needsExternal && !options.serverOnly;
     const buildServer = server || selection.needsExternal && !options.clientOnly;
     const mode = this.workerHostPlan

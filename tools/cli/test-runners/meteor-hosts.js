@@ -9,6 +9,11 @@ const {
 
 const WORKER_CONTEXT_SCHEMA_VERSION = 1;
 const HOST_ID_PATTERN = /^[a-z0-9][a-z0-9._-]*$/i;
+const WORKER_STARTUP_TIMEOUT_MS = 30_000;
+const WORKER_PREPARATION_TIMEOUT_MS = 5 * 60_000;
+const WORKER_EXECUTION_TIMEOUT_MS = 10 * 60_000;
+const WORKER_DRAIN_TIMEOUT_MS = 2_000;
+const WORKER_STOP_TIMEOUT_MS = 5_000;
 const TEST_WORKER_OPTION_KEYS = Object.freeze([
   'once',
   'production',
@@ -278,6 +283,40 @@ function createLineWriter({ worker, channel, write, capture }) {
   };
 }
 
+function waitForWorkerStage(promise, timeoutMs) {
+  let timeoutId;
+  return Promise.race([
+    Promise.resolve(promise).then(
+      value => ({ state: 'resolved', value }),
+      error => ({ state: 'rejected', error })
+    ),
+    new Promise(resolve => {
+      timeoutId = setTimeout(() => resolve({ state: 'timeout' }), timeoutMs);
+    }),
+  ]).finally(() => clearTimeout(timeoutId));
+}
+
+function workerLifecycleError(worker, phase, timeoutMs, cause) {
+  const phaseLabel = phase === 'drain' ? 'pipe drain' : phase;
+  const code = `METEOR_TEST_WORKER_${phase.toUpperCase()}_${
+    cause ? 'FAILED' : 'TIMEOUT'
+  }`;
+  const detail = cause && cause.message ? `: ${cause.message}` : '';
+  return Object.freeze({
+    code,
+    message: cause
+      ? `Meteor test worker ${worker.id} ${phaseLabel} failed${detail}`
+      : `Meteor test worker ${worker.id} ${phaseLabel} exceeded ${timeoutMs}ms.`,
+  });
+}
+
+function workerLifecycleException(worker, phase, timeoutMs, cause) {
+  const detail = workerLifecycleError(worker, phase, timeoutMs, cause);
+  const error = new Error(detail.message);
+  error.code = detail.code;
+  return error;
+}
+
 function spawnMeteorWorker({
   appDir,
   contextFile,
@@ -285,6 +324,7 @@ function spawnMeteorWorker({
   onStdout,
   onStderr,
   env = process.env,
+  stopTimeoutMs = WORKER_STOP_TIMEOUT_MS,
 }) {
   const files = require('../../fs/files');
   const meteorScript = process.platform === 'win32' ? 'meteor.bat' : 'meteor';
@@ -310,17 +350,29 @@ function spawnMeteorWorker({
   child.stdout.on('data', onStdout);
   child.stderr.on('data', onStderr);
 
-  let settled = false;
+  let closed = false;
   let stopped = false;
-  const completion = new Promise((resolve, reject) => {
+  const processError = new Promise((resolve, reject) => {
     child.once('error', reject);
+  });
+  const started = Promise.race([
+    new Promise(resolve => child.once('spawn', resolve)),
+    processError,
+  ]);
+  const exited = Promise.race([
+    new Promise(resolve => {
+      child.once('exit', (code, signal) => resolve({ code, signal }));
+    }),
+    processError,
+  ]);
+  const completion = Promise.race([new Promise(resolve => {
     child.once('close', (code, signal) => {
-      settled = true;
+      closed = true;
       resolve({ code, signal });
     });
-  });
+  }), processError]);
   const terminate = signal => {
-    if (settled) return;
+    if (closed) return;
     if (process.platform === 'win32' && child.pid) {
       const args = ['/pid', String(child.pid), '/t'];
       if (signal === 'SIGKILL') args.push('/f');
@@ -339,25 +391,28 @@ function spawnMeteorWorker({
   };
 
   return {
+    started,
+    exited,
     completion,
     async stop(signal = 'SIGTERM') {
-      if (stopped || settled) return completion;
+      if (closed) return completion;
+      if (stopped) return completion;
       stopped = true;
       terminate(signal);
-      let timeoutId;
-      const timedOut = await Promise.race([
-        completion.then(() => false, () => false),
-        new Promise(resolve => {
-          timeoutId = setTimeout(() => resolve(true), 5000);
-          timeoutId.unref?.();
-        }),
-      ]);
-      clearTimeout(timeoutId);
-      if (timedOut && !settled) {
-        terminate('SIGKILL');
-        await completion.catch(() => {});
+      const stoppedGracefully = await waitForWorkerStage(
+        completion,
+        stopTimeoutMs
+      );
+      if (stoppedGracefully.state === 'resolved') {
+        return stoppedGracefully.value;
       }
-      return completion;
+      if (stoppedGracefully.state === 'rejected') return undefined;
+      if (stoppedGracefully.state === 'timeout' && !closed) {
+        terminate('SIGKILL');
+        const forced = await waitForWorkerStage(completion, stopTimeoutMs);
+        return forced.state === 'resolved' ? forced.value : undefined;
+      }
+      return undefined;
     },
   };
 }
@@ -373,6 +428,11 @@ function createMeteorTestHostService({
   prepareWorker = async () => {},
   spawnWorker = spawnMeteorWorker,
   isPortAvailable = defaultIsPortAvailable,
+  workerPreparationTimeoutMs = WORKER_PREPARATION_TIMEOUT_MS,
+  workerStartupTimeoutMs = WORKER_STARTUP_TIMEOUT_MS,
+  workerExecutionTimeoutMs = WORKER_EXECUTION_TIMEOUT_MS,
+  workerDrainTimeoutMs = WORKER_DRAIN_TIMEOUT_MS,
+  workerStopTimeoutMs = WORKER_STOP_TIMEOUT_MS,
   write = (line, channel) => {
     (channel === 'stderr' ? process.stderr : process.stdout).write(line);
   },
@@ -386,18 +446,90 @@ function createMeteorTestHostService({
       const hosts = validateHostRequest(hostInput);
       const active = new Map();
       let finished = false;
+      let stopping = null;
       const stopAll = async (signal = 'SIGTERM') => {
-        await Promise.all([...active.values()].map(handle =>
-          handle.stop(signal).catch(() => {})
-        ));
+        if (stopping) return stopping;
+        stopping = Promise.all([...active.values()].map(async entry => {
+          const stop = Promise.resolve()
+            .then(() => entry.handle.stop(signal))
+            .catch(() => undefined);
+          const result = await waitForWorkerStage(stop, workerStopTimeoutMs);
+          if (result.state === 'timeout' && signal !== 'SIGKILL') {
+            Promise.resolve()
+              .then(() => entry.handle.stop('SIGKILL'))
+              .catch(() => undefined);
+          }
+        })).finally(() => {
+          stopping = null;
+        });
+        return stopping;
+      };
+      const monitorWorker = async ({ worker, handle }) => {
+        const fail = async (phase, timeoutMs, cause) => {
+          const error = workerLifecycleError(worker, phase, timeoutMs, cause);
+          await stopAll('SIGTERM');
+          return { code: null, signal: null, error };
+        };
+
+        if (handle.started) {
+          const startup = await waitForWorkerStage(
+            handle.started,
+            workerStartupTimeoutMs
+          );
+          if (startup.state === 'timeout') {
+            return fail('startup', workerStartupTimeoutMs);
+          }
+          if (startup.state === 'rejected') {
+            return fail('startup', workerStartupTimeoutMs, startup.error);
+          }
+        }
+
+        const hasExitStage = Boolean(handle.exited);
+        const execution = await waitForWorkerStage(
+          hasExitStage ? handle.exited : handle.completion,
+          workerExecutionTimeoutMs
+        );
+        if (execution.state === 'timeout') {
+          return fail('execution', workerExecutionTimeoutMs);
+        }
+        if (execution.state === 'rejected') {
+          return fail('execution', workerExecutionTimeoutMs, execution.error);
+        }
+        if (!hasExitStage) return execution.value;
+
+        const drain = await waitForWorkerStage(
+          handle.completion,
+          workerDrainTimeoutMs
+        );
+        if (drain.state === 'timeout') {
+          return fail('drain', workerDrainTimeoutMs);
+        }
+        if (drain.state === 'rejected') {
+          return fail('drain', workerDrainTimeoutMs, drain.error);
+        }
+        return drain.value;
+      };
+      const preparationDeadline = Date.now() + workerPreparationTimeoutMs;
+      const waitForPreparation = async operation => {
+        const remaining = Math.max(0, preparationDeadline - Date.now());
+        const result = await waitForWorkerStage(operation, remaining);
+        if (result.state === 'timeout') {
+          throw workerLifecycleException(
+            { id: 'coordinator' },
+            'preparation',
+            workerPreparationTimeoutMs
+          );
+        }
+        if (result.state === 'rejected') throw result.error;
+        return result.value;
       };
       const completion = (async () => {
-        await prepare();
-        const pairs = await allocateWorkerPortPairs({
+        await waitForPreparation(Promise.resolve().then(() => prepare()));
+        const pairs = await waitForPreparation(allocateWorkerPortPairs({
           basePort: requestedBasePort,
           count: hosts.length,
           isPortAvailable,
-        });
+        }));
         const contextRoot = path.join(
           harnessRoot,
           '.meteor',
@@ -420,11 +552,11 @@ function createMeteorTestHostService({
               '.meteor',
               `local-${host.id}`
             );
-            await prepareWorker({
+            await waitForPreparation(Promise.resolve().then(() => prepareWorker({
               worker,
               testAppPath,
               projectLocalDir,
-            });
+            })));
             const contextFile = writeWorkerContext({
               root: contextRoot,
               providerId,
@@ -458,6 +590,7 @@ function createMeteorTestHostService({
               worker,
               proxyPort: pair.proxyPort,
               mongoPort: pair.mongoPort,
+              stopTimeoutMs: workerStopTimeoutMs,
               env: {
                 ...env,
                 METEOR_LOCAL_DIR: projectLocalDir,
@@ -469,12 +602,11 @@ function createMeteorTestHostService({
                 typeof processHandle.stop !== 'function') {
               throw new Error(`Meteor worker ${host.id} returned invalid process handle.`);
             }
-            active.set(host.id, processHandle);
-            tasks.push(processHandle.completion.then(status => {
-              stdoutWriter.flush();
-              stderrWriter.flush();
-              active.delete(host.id);
-              return {
+            active.set(host.id, { handle: processHandle });
+            tasks.push(monitorWorker({
+              worker,
+              handle: processHandle,
+            }).then(status => ({
                 id: host.id,
                 index,
                 total: hosts.length,
@@ -484,8 +616,12 @@ function createMeteorTestHostService({
                 signal: status && status.signal || null,
                 stdout: stdout.join(''),
                 stderr: stderr.join(''),
-              };
-            }));
+                ...(status && status.error && { error: status.error }),
+              })).finally(() => {
+                stdoutWriter.flush();
+                stderrWriter.flush();
+                active.delete(host.id);
+              }));
           }
           const workers = await Promise.all(tasks);
           workers.sort((left, right) => left.index - right.index);

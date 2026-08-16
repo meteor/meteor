@@ -558,6 +558,8 @@ test('runtime worker parent evaluates config once then starts deterministic host
   await provider.validate();
   const plan = await provider.prepare();
   assert.equal(plan.mode, 'native-only');
+  assert.equal(plan.buildPluginOptions.rspack.lifecycle, 'dependencies-only');
+  assert.equal(plan.buildPluginOptions.rspack.context.runtime, false);
   assert.equal(plan.metadata.verbose, false);
   assert.equal(plan.metadata.reportVerbose, true);
 

@@ -1,6 +1,7 @@
 import {
   cleanupTempDir,
   killMeteorProcess,
+  killStrayAppProcesses,
   runMeteorCommand,
   setupMeteorApp,
   waitForMeteorOutput,
@@ -76,6 +77,7 @@ describe('Meteor + Rstest integration', () => {
   let portBase;
   let smartFixtureSource;
   let smartFixtureTarget;
+  const activeWorkerCommands = new Set();
   const testPort = oldPort => String(portBase + (Number(oldPort) - 3195) * 2);
 
   beforeAll(async () => {
@@ -93,6 +95,14 @@ describe('Meteor + Rstest integration', () => {
 
   afterAll(async () => {
     await cleanupTempDir(appDir);
+  });
+
+  afterEach(async () => {
+    if (activeWorkerCommands.size === 0) return;
+    const commands = [...activeWorkerCommands];
+    activeWorkerCommands.clear();
+    await Promise.all(commands.map(command => killMeteorProcess(command)));
+    await killStrayAppProcesses();
   });
 
   test('meteor test automatically runs pure and Meteor-runtime projects', async () => {
@@ -814,10 +824,15 @@ describe('Meteor + Rstest integration', () => {
         captureOutput: true,
         execaOptions: { reject: false },
       });
-      return {
-        completed: await result.meteorProcess,
-        output: stripAnsi(result.outputLines.join('\n')),
-      };
+      activeWorkerCommands.add(result.meteorProcess);
+      try {
+        return {
+          completed: await result.meteorProcess,
+          output: stripAnsi(result.outputLines.join('\n')),
+        };
+      } finally {
+        activeWorkerCommands.delete(result.meteorProcess);
+      }
     };
 
     try {
@@ -900,7 +915,13 @@ describe('Meteor + Rstest integration', () => {
           },
         },
       );
-      const completed = await result.meteorProcess;
+      activeWorkerCommands.add(result.meteorProcess);
+      let completed;
+      try {
+        completed = await result.meteorProcess;
+      } finally {
+        activeWorkerCommands.delete(result.meteorProcess);
+      }
       const output = stripAnsi(result.outputLines.join('\n'));
 
       expect(completed.exitCode).toBe(0);

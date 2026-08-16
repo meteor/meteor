@@ -436,6 +436,30 @@ test('worker aggregation applies signal and infrastructure precedence', t => {
   }).exitCode, 255);
 });
 
+test('worker aggregation preserves host lifecycle infrastructure details', t => {
+  const fixture = resultFixture(t);
+  fixture.statuses[0] = {
+    id: 'server-1',
+    code: null,
+    signal: null,
+    error: {
+      code: 'METEOR_TEST_WORKER_EXECUTION_TIMEOUT',
+      message: 'Meteor test worker server-1 execution exceeded 25ms.',
+    },
+  };
+  const aggregate = aggregateRstestWorkerResults({
+    descriptors: fixture.plan.descriptors,
+    outcome: { workers: fixture.statuses },
+    log() {},
+  });
+
+  assert.equal(aggregate.exitCode, 254);
+  assert.match(
+    aggregate.result.cases.find(item => item.worker === 'server-1').error.message,
+    /server-1 execution exceeded 25ms/
+  );
+});
+
 test('worker aggregation rejects stale and inconsistent result payloads', t => {
   const fixture = resultFixture(t);
   fixture.write(0, result({ passed: 1 }));
