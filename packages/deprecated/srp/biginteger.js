@@ -1007,6 +1007,7 @@ function barrettRevert(x) { return x; }
 
 // x = x mod m (HAC 14.42)
 function barrettReduce(x) {
+  if (x.s < 0) { throw Error("Barrett reduction on negative input"); }
   x.drShiftTo(this.m.t-1,this.r2);
   if(x.t > this.m.t+1) { x.t = this.m.t+1; x.clamp(); }
   this.mu.multiplyUpperTo(this.r2,this.m.t+1,this.q3);
