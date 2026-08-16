@@ -211,7 +211,7 @@ test('finalizer admits physical external sources only when allowExternal is enab
   assert.equal(fake.calls.reports.length, 1);
 });
 
-test('reportOnFailure controls the one clean/report pass without replacing test failure', async t => {
+test('reportOnFailure controls finalization for a failed worker-effective test exit', async t => {
   for (const reportOnFailure of [false, true]) {
     const fixture = createFixture(t);
     const reportsDirectory = path.join(fixture.appRoot, 'coverage');
@@ -230,7 +230,7 @@ test('reportOnFailure controls the one clean/report pass without replacing test 
         appRoot: fixture.appRoot,
         localPackages: [],
         artifacts,
-        testExitCode: 2,
+        testExitCode: 1,
       },
       config: {
         coverage: {

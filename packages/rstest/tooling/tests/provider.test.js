@@ -1213,7 +1213,7 @@ test('mixed coverage finalizes one generation manifest and preserves exit preced
 });
 
 test('coverage completion preserves a failed deferred worker when finalization succeeds', async t => {
-  async function completeWithWorkerFailure({ reportOnFailure, outerExitCode }) {
+  async function completeWithWorkerFailure(outerExitCode) {
     const context = createContext(t);
     context.options.fullApp = true;
     context.options.project = [
@@ -1289,15 +1289,9 @@ test('coverage completion preserves a failed deferred worker when finalization s
     return result;
   }
 
-  for (const reportOnFailure of [false, true]) {
-    assert.deepEqual(
-      await completeWithWorkerFailure({ reportOnFailure, outerExitCode: 0 }),
-      { exitCode: 1 },
-      `reportOnFailure=${reportOnFailure}`,
-    );
-  }
+  assert.deepEqual(await completeWithWorkerFailure(0), { exitCode: 1 });
   assert.equal(
-    await completeWithWorkerFailure({ reportOnFailure: false, outerExitCode: 2 }),
+    await completeWithWorkerFailure(2),
     undefined,
   );
 });

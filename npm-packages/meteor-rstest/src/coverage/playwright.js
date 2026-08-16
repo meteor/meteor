@@ -410,45 +410,80 @@ function createPlaywrightCoverageCollector({
   let nextPageId = 1;
   let submitPromise;
   let shardPromise;
+  let releasePromise;
   const bindingName = `__meteorRstestCoverage_${String(generation || 'collector')}_` +
     crypto.randomBytes(8).toString('hex');
   const browserScripts = createBrowserCaptureScripts(bindingName);
 
-  function releaseBrowserInstrumentation() {
-    for (const [page, restoration] of pageRestorations) {
-      if (page.close === restoration.wrappedClose) {
-        page.close = restoration.originalClose;
+  async function disposePlaywrightResources(resources) {
+    const errors = [];
+    for (const resource of resources) {
+      if (!resource) continue;
+      try {
+        if (typeof resource.dispose === 'function') {
+          await resource.dispose();
+        } else if (typeof Symbol.asyncDispose === 'symbol' &&
+                   typeof resource[Symbol.asyncDispose] === 'function') {
+          await resource[Symbol.asyncDispose]();
+        }
+      } catch (error) {
+        errors.push(error);
       }
     }
-    pageRestorations.clear();
-    for (const [context, restoration] of contextRestorations) {
-      if (context.newPage === restoration.wrappedNewPage) {
-        context.newPage = restoration.originalNewPage;
-      }
-      if (context.close === restoration.wrappedClose) {
-        context.close = restoration.originalClose;
-      }
-      if (restoration.pageListener) {
-        if (typeof context.off === 'function') {
-          context.off('page', restoration.pageListener);
-        } else if (typeof context.removeListener === 'function') {
-          context.removeListener('page', restoration.pageListener);
+    if (errors.length === 1) throw errors[0];
+    if (errors.length > 1) {
+      throw new AggregateError(
+        errors,
+        '[Meteor Rstest] Failed to dispose Playwright coverage resources.',
+      );
+    }
+  }
+
+  function releaseBrowserInstrumentation() {
+    if (releasePromise) return releasePromise;
+    releasePromise = (async () => {
+      const disposableResources = [];
+      for (const [page, restoration] of pageRestorations) {
+        if (page.close === restoration.wrappedClose) {
+          page.close = restoration.originalClose;
         }
       }
-    }
-    contextRestorations.clear();
-    for (const [browser, restoration] of browserRestorations) {
-      if (browser.newContext === restoration.wrappedNewContext) {
-        browser.newContext = restoration.originalNewContext;
+      pageRestorations.clear();
+      for (const [context, restoration] of contextRestorations) {
+        if (context.newPage === restoration.wrappedNewPage) {
+          context.newPage = restoration.originalNewPage;
+        }
+        if (context.close === restoration.wrappedClose) {
+          context.close = restoration.originalClose;
+        }
+        if (restoration.pageListener) {
+          if (typeof context.off === 'function') {
+            context.off('page', restoration.pageListener);
+          } else if (typeof context.removeListener === 'function') {
+            context.removeListener('page', restoration.pageListener);
+          }
+        }
+        disposableResources.push(
+          restoration.initScriptDisposable,
+          restoration.bindingDisposable,
+        );
       }
-      if (browser.close === restoration.wrappedClose) {
-        browser.close = restoration.originalClose;
+      contextRestorations.clear();
+      for (const [browser, restoration] of browserRestorations) {
+        if (browser.newContext === restoration.wrappedNewContext) {
+          browser.newContext = restoration.originalNewContext;
+        }
+        if (browser.close === restoration.wrappedClose) {
+          browser.close = restoration.originalClose;
+        }
       }
-    }
-    browserRestorations.clear();
-    trackedPages.clear();
-    pendingTracking.clear();
-    trackingErrors.length = 0;
+      browserRestorations.clear();
+      trackedPages.clear();
+      pendingTracking.clear();
+      trackingErrors.length = 0;
+      await disposePlaywrightResources(disposableResources);
+    })();
+    return releasePromise;
   }
 
   function pageId(page) {
@@ -504,55 +539,71 @@ function createPlaywrightCoverageCollector({
   async function trackContext(context) {
     if (!context || trackedContexts.has(context)) return;
     trackedContexts.add(context);
-    await context.exposeBinding(bindingName, (source, snapshot) => {
-      const page = source && source.page;
-      if (!page) throw coverageError('Playwright coverage binding omitted its page.');
-      recordSnapshot(page, snapshot);
-    });
-    await context.addInitScript(browserScripts.install);
+    let bindingDisposable;
+    let initScriptDisposable;
+    try {
+      bindingDisposable = await context.exposeBinding(bindingName, (source, snapshot) => {
+        const page = source && source.page;
+        if (!page) throw coverageError('Playwright coverage binding omitted its page.');
+        recordSnapshot(page, snapshot);
+      });
+      initScriptDisposable = await context.addInitScript(browserScripts.install);
 
-    const originalNewPage = context.newPage;
-    let wrappedNewPage;
-    if (typeof originalNewPage === 'function') {
-      wrappedNewPage = async function meteorRstestCoverageNewPage(...args) {
-        const page = await Reflect.apply(originalNewPage, this, args);
-        await trackPage(page);
-        return page;
-      };
-      context.newPage = wrappedNewPage;
-    }
-    const originalClose = context.close;
-    let wrappedClose;
-    if (typeof originalClose === 'function') {
-      wrappedClose = async function meteorRstestCoverageContextClose(...args) {
-        for (const page of context.pages()) await capturePage(page);
-        return Reflect.apply(originalClose, this, args);
-      };
-      context.close = wrappedClose;
-    }
-    let pageListener;
-    if (typeof context.on === 'function') {
-      pageListener = page => {
-        const tracking = trackPage(page);
-        pendingTracking.add(tracking);
-        tracking.then(
-          () => pendingTracking.delete(tracking),
-          error => {
-            pendingTracking.delete(tracking);
-            trackingErrors.push(error);
-          },
+      const originalNewPage = context.newPage;
+      let wrappedNewPage;
+      if (typeof originalNewPage === 'function') {
+        wrappedNewPage = async function meteorRstestCoverageNewPage(...args) {
+          const page = await Reflect.apply(originalNewPage, this, args);
+          await trackPage(page);
+          return page;
+        };
+        context.newPage = wrappedNewPage;
+      }
+      const originalClose = context.close;
+      let wrappedClose;
+      if (typeof originalClose === 'function') {
+        wrappedClose = async function meteorRstestCoverageContextClose(...args) {
+          for (const page of context.pages()) await capturePage(page);
+          return Reflect.apply(originalClose, this, args);
+        };
+        context.close = wrappedClose;
+      }
+      let pageListener;
+      if (typeof context.on === 'function') {
+        pageListener = page => {
+          const tracking = trackPage(page);
+          pendingTracking.add(tracking);
+          tracking.then(
+            () => pendingTracking.delete(tracking),
+            error => {
+              pendingTracking.delete(tracking);
+              trackingErrors.push(error);
+            },
+          );
+        };
+        context.on('page', pageListener);
+      }
+      contextRestorations.set(context, {
+        bindingDisposable,
+        initScriptDisposable,
+        originalClose,
+        originalNewPage,
+        pageListener,
+        wrappedClose,
+        wrappedNewPage,
+      });
+      for (const page of context.pages()) await trackPage(page);
+    } catch (error) {
+      try {
+        await disposePlaywrightResources([initScriptDisposable, bindingDisposable]);
+      } catch (disposeError) {
+        throw new AggregateError(
+          [error, disposeError],
+          '[Meteor Rstest] Failed to install Playwright coverage capture.',
         );
-      };
-      context.on('page', pageListener);
+      }
+      throw error;
     }
-    contextRestorations.set(context, {
-      originalClose,
-      originalNewPage,
-      pageListener,
-      wrappedClose,
-      wrappedNewPage,
-    });
-    for (const page of context.pages()) await trackPage(page);
   }
 
   async function trackBrowser(browser) {
@@ -648,7 +699,7 @@ function createPlaywrightCoverageCollector({
         }
         return { submitted: true };
       } finally {
-        releaseBrowserInstrumentation();
+        await releaseBrowserInstrumentation();
       }
     })();
     return submitPromise;
@@ -666,7 +717,7 @@ function createPlaywrightCoverageCollector({
           ...(shardId ? { shardId } : {}),
         });
       } finally {
-        releaseBrowserInstrumentation();
+        await releaseBrowserInstrumentation();
       }
     })();
     return shardPromise;

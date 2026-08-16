@@ -146,6 +146,7 @@ class FakePage extends EventEmitter {
   async navigate(documentId, coverageMap) {
     const binding = [...this._context.bindings.values()][0];
     assert.equal(typeof binding, 'function', 'navigation requires installed binding');
+    assert.equal(this._context.bindings.size, 1, 'navigation requires one current binding');
     assert.equal(this._context.initScripts.length, 1, 'navigation requires init script');
     await binding({ page: this, context: this._context }, structuredClone(this.document));
     this.document = { documentId, coverage: coverageMap };
@@ -178,10 +179,36 @@ class FakeContext extends EventEmitter {
   async exposeBinding(name, callback) {
     if (this.bindings.has(name)) throw new Error(`Binding ${name} already exists`);
     this.bindings.set(name, callback);
+    const context = this;
+    let disposed = false;
+    return {
+      async dispose() {
+        if (disposed) return;
+        disposed = true;
+        if (context.bindings.get(name) === callback) context.bindings.delete(name);
+      },
+      async [Symbol.asyncDispose]() {
+        await this.dispose();
+      },
+    };
   }
 
   async addInitScript(callback, argument) {
-    this.initScripts.push({ callback, argument });
+    const resource = { callback, argument };
+    this.initScripts.push(resource);
+    const context = this;
+    let disposed = false;
+    return {
+      async dispose() {
+        if (disposed) return;
+        disposed = true;
+        const index = context.initScripts.indexOf(resource);
+        if (index !== -1) context.initScripts.splice(index, 1);
+      },
+      async [Symbol.asyncDispose]() {
+        await this.dispose();
+      },
+    };
   }
 
   async newPage(documentId = `document-${this._pages.length + 1}`, coverageMap = {}) {
@@ -481,16 +508,33 @@ test('collector teardown restores persistent page and context instrumentation', 
   assert.equal(persistent.context.close, originalContextClose);
   assert.equal(persistent.page.close, originalPageClose);
   assert.equal(persistent.context.listenerCount('page'), 0);
+  assert.equal(persistent.context.bindings.size, 0);
+  assert.equal(persistent.context.initScripts.length, 0);
 
   const secondCollector = createPlaywrightCoverageCollector({ enabled: true, generation });
   await secondCollector.install(persistent);
-  persistent.page.document.coverage = coverage('/app/imports/persistent-page.js', 7);
-  await persistent.page.close();
+  await persistent.page.navigate(
+    'persistent-page-document',
+    coverage('/app/imports/persistent-page.js', 7),
+  );
+  await persistent.context.newPage(
+    'persistent-page-child',
+    coverage('/app/imports/persistent-child.js', 5),
+  );
+  await secondCollector.captureRemaining();
 
   assert.equal(firstCollector.mergedCoverage()['/app/imports/page.js'].s[0], 1);
   assert.equal(
+    firstCollector.mergedCoverage()['/app/imports/persistent-page.js'],
+    undefined,
+  );
+  assert.equal(
     secondCollector.mergedCoverage()['/app/imports/persistent-page.js'].s[0],
     7,
+  );
+  assert.equal(
+    secondCollector.mergedCoverage()['/app/imports/persistent-child.js'].s[0],
+    5,
   );
   await secondCollector.writeShard({
     directory,
