@@ -53,6 +53,7 @@ const PACKAGE_UNSUPPORTED_OPTIONS = [
   ['changedSince', '--changed-since'],
 ];
 const RSTEST_TEST_FILE = /\.(?:test|spec)s?\.(?:[cm]?[jt]sx?)$/i;
+const MAX_PRIVATE_JSON_BYTES = 64 * 1024 * 1024;
 const RUNTIME_SETTING_DEFAULTS = Object.freeze({
   testTimeout: 30000,
   hookTimeout: 10000,
@@ -83,14 +84,49 @@ function removeIfPresent(filename) {
 }
 
 function writePrivateJsonAtomic(filename, value) {
-  if (fs.existsSync(filename)) {
+  const assertNoSymlinkParents = (target, allowMissing) => {
+    const absolute = path.resolve(target);
+    const parsed = path.parse(absolute);
+    let current = parsed.root;
+    const components = absolute.slice(parsed.root.length).split(path.sep).filter(Boolean);
+    for (let index = 0; index < components.length; index += 1) {
+      current = path.join(current, components[index]);
+      let stat;
+      try {
+        stat = fs.lstatSync(current);
+      } catch (error) {
+        if (allowMissing && error.code === 'ENOENT') return;
+        throw error;
+      }
+      if (stat.isSymbolicLink()) {
+        if (path.dirname(current) === parsed.root) {
+          current = fs.realpathSync(current);
+          continue;
+        }
+        throw rstestError(
+          'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+          `Coverage manifest path contains a symbolic link: ${current}`,
+        );
+      }
+      if (index < components.length - 1 && !stat.isDirectory()) {
+        throw rstestError(
+          'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+          `Coverage manifest parent is not a directory: ${current}`,
+        );
+      }
+    }
+  };
+  const serialized = JSON.stringify(value);
+  if (Buffer.byteLength(serialized) > MAX_PRIVATE_JSON_BYTES) {
     throw rstestError(
-      'METEOR_RSTEST_COVERAGE_REPLAY',
-      `Coverage manifest path was already used: ${filename}`,
+      'METEOR_RSTEST_COVERAGE_OVERSIZED',
+      'Coverage manifest exceeds the 64 MiB limit.',
     );
   }
   const directory = path.dirname(filename);
+  assertNoSymlinkParents(directory, true);
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  assertNoSymlinkParents(directory, false);
   fs.chmodSync(directory, 0o700);
   const temporary = path.join(
     directory,
@@ -99,12 +135,24 @@ function writePrivateJsonAtomic(filename, value) {
   let descriptor;
   try {
     descriptor = fs.openSync(temporary, 'wx', 0o600);
-    fs.writeFileSync(descriptor, JSON.stringify(value));
+    fs.writeFileSync(descriptor, serialized);
     fs.fsyncSync(descriptor);
+    fs.fchmodSync(descriptor, 0o600);
     fs.closeSync(descriptor);
     descriptor = undefined;
-    fs.renameSync(temporary, filename);
-    fs.chmodSync(filename, 0o600);
+    assertNoSymlinkParents(directory, false);
+    try {
+      fs.linkSync(temporary, filename);
+    } catch (error) {
+      if (error.code === 'EEXIST') {
+        throw rstestError(
+          'METEOR_RSTEST_COVERAGE_REPLAY',
+          `Coverage manifest path was already used: ${filename}`,
+        );
+      }
+      throw error;
+    }
+    fs.unlinkSync(temporary);
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
     try { fs.rmSync(temporary, { force: true }); } catch {}
@@ -662,7 +710,7 @@ class RstestTestRunnerProvider {
         capabilities,
       });
     }
-    const mixedCoverage = !worker && (
+    const mixedCoverage = !worker && options.coverage === true && (
       selection.needsRuntime || selection.needsExternal
     );
     this.coverageGeneration = mixedCoverage
@@ -1179,7 +1227,10 @@ class RstestTestRunnerProvider {
   _loadCoveragePlanForCompletion() {
     if (this.coveragePlan) return this.coveragePlan;
     if (!this.coveragePlanPath || !fs.existsSync(this.coveragePlanPath)) {
-      return null;
+      throw rstestError(
+        'METEOR_RSTEST_STALE_COVERAGE_PLAN',
+        'Coverage plan is missing, malformed, or stale.',
+      );
     }
     let coverage;
     try {
@@ -1195,47 +1246,50 @@ class RstestTestRunnerProvider {
   }
 
   async _completeCoverageRun({ exitCode }) {
-    if (this.context.worker || !this.coverageGeneration ||
-        !this._loadCoveragePlanForCompletion()) {
-      return undefined;
-    }
-    const localPackages = [];
-    const names = new Set();
-    for (const entry of [
-      ...this.context.localPackages || [],
-      ...this.context.packageTests || [],
-    ]) {
-      if (!entry || typeof entry.name !== 'string' || names.has(entry.name) ||
-          typeof entry.sourceRoot !== 'string') continue;
-      names.add(entry.name);
-      localPackages.push({
-        name: entry.name,
-        sourceRoot: entry.sourceRoot,
+    if (this.context.worker || !this.coverageGeneration) return undefined;
+    try {
+      this._loadCoveragePlanForCompletion();
+      const localPackages = [];
+      const names = new Set();
+      for (const entry of [
+        ...this.context.localPackages || [],
+        ...this.context.packageTests || [],
+      ]) {
+        if (!entry || typeof entry.name !== 'string' || names.has(entry.name) ||
+            typeof entry.sourceRoot !== 'string') continue;
+        names.add(entry.name);
+        localPackages.push({
+          name: entry.name,
+          sourceRoot: entry.sourceRoot,
+        });
+      }
+      writePrivateJsonAtomic(this.coverageManifestPath, {
+        schemaVersion: 1,
+        generation: this.coverageGeneration,
+        appRoot: this.context.npm.root,
+        localPackages,
+        artifacts: this.coverageArtifacts,
+        testExitCode: exitCode,
       });
-    }
-    writePrivateJsonAtomic(this.coverageManifestPath, {
-      schemaVersion: 1,
-      generation: this.coverageGeneration,
-      appRoot: this.context.npm.root,
-      localPackages,
-      artifacts: this.coverageArtifacts,
-      testExitCode: exitCode,
-    });
-    const handle = this.services.startRstestProcess({
-      appDir: this.context.appDir,
-      packageRoot: this.context.npm.root,
-      args: buildRstestArgs({
+      const handle = this.services.startRstestProcess({
         appDir: this.context.appDir,
-        localDir: this.context.localDir,
-        command: this.context.command,
-        config: this.context.options.config,
-        coverageFinalizeManifest: this.coverageManifestPath,
-      }),
-    });
-    const finalizerExitCode = await handle.completion;
-    return finalizerExitCode !== 0 && exitCode === 0
-      ? { exitCode: 1 }
-      : undefined;
+        packageRoot: this.context.npm.root,
+        args: buildRstestArgs({
+          appDir: this.context.appDir,
+          localDir: this.context.localDir,
+          command: this.context.command,
+          config: this.context.options.config,
+          coverageFinalizeManifest: this.coverageManifestPath,
+        }),
+      });
+      const finalizerExitCode = await handle.completion;
+      if (finalizerExitCode === 0) return undefined;
+    } catch (error) {
+      this.services.warn(
+        `[Meteor Rstest] Coverage finalization failed: ${error.message}`
+      );
+    }
+    return exitCode === 0 ? { exitCode: 1 } : undefined;
   }
 
   completeRun(context) {
@@ -1264,4 +1318,5 @@ class RstestTestRunnerProvider {
 module.exports = {
   getPackageHarnessDevDependencies,
   RstestTestRunnerProvider,
+  writePrivateJsonAtomic,
 };

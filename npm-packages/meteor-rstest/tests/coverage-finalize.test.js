@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { spawnSync } = require('node:child_process');
+const childProcess = require('node:child_process');
 const test = require('node:test');
 
 const { finalizeCoverage } = require('../src/coverage/finalize.js');
@@ -43,6 +43,7 @@ function createFixture(t) {
     external: path.join(root, 'external.js'),
   };
   for (const filename of Object.values(files)) {
+    fs.mkdirSync(path.dirname(filename), { recursive: true });
     fs.writeFileSync(filename, 'export const value = 1;\n');
   }
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -210,6 +211,9 @@ test('finalizer enforces positive, negative, glob, and per-file thresholds', asy
     [{ statements: -1 }, 1],
     [{ 'src/low.js': { lines: 1 } }, 1],
     [{ 'src/*.js': { lines: 40, perFile: true } }, 1],
+    [{ lines: 30, perFile: true }, 1],
+    [{ statements: -2, perFile: true }, 1],
+    [{ statements: -3, perFile: true }, 0],
     [{ lines: 30, statements: -3 }, 0],
   ];
 
@@ -284,7 +288,7 @@ test('coverage finalizer CLI consumes only its explicit manifest', t => {
   );
   const bin = path.resolve(__dirname, '../bin/meteor-rstest.js');
 
-  const result = spawnSync(process.execPath, [
+  const result = childProcess.spawnSync(process.execPath, [
     bin,
     '--cwd', fixture.appRoot,
     '--once',
@@ -367,4 +371,260 @@ test('finalizer never cleans its generation artifact directory', async t => {
     return true;
   });
   assert.equal(fs.existsSync(artifacts[0].path), true);
+});
+
+test('finalizer rejects a reports directory reached through a symlink parent', async t => {
+  const fixture = createFixture(t);
+  const outside = path.join(fixture.root, 'outside');
+  const reportsDirectory = path.join(fixture.appRoot, 'linked', 'coverage');
+  fs.mkdirSync(path.join(outside, 'coverage'), { recursive: true });
+  const sentinel = path.join(outside, 'coverage', 'sentinel.txt');
+  fs.writeFileSync(sentinel, 'keep');
+  fs.symlinkSync(outside, path.join(fixture.appRoot, 'linked'));
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+
+  await assert.rejects(finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    async loadCoverageProvider() { return providerFake().provider; },
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE');
+    return true;
+  });
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'keep');
+});
+
+test('finalizer resists parent substitution between cleanup validation and deletion', async t => {
+  const fixture = createFixture(t);
+  const reportsParent = path.join(fixture.appRoot, 'build');
+  const originalParent = path.join(fixture.appRoot, 'build-original');
+  const reportsDirectory = path.join(reportsParent, 'coverage');
+  const outside = path.join(fixture.root, 'outside');
+  const outsideReports = path.join(outside, 'coverage');
+  fs.mkdirSync(reportsDirectory, { recursive: true });
+  fs.mkdirSync(outsideReports, { recursive: true });
+  fs.writeFileSync(path.join(reportsDirectory, 'stale.txt'), 'stale');
+  const sentinel = path.join(outsideReports, 'sentinel.txt');
+  fs.writeFileSync(sentinel, 'keep');
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+  const originalRm = fs.rmSync;
+  const originalSpawn = childProcess.spawnSync;
+  let substituted = false;
+  const substituteParent = () => {
+    if (substituted) return;
+    substituted = true;
+    fs.renameSync(reportsParent, originalParent);
+    fs.symlinkSync(outside, reportsParent);
+  };
+  fs.rmSync = function patchedRm(filename, ...args) {
+    if (path.resolve(filename) === path.resolve(reportsDirectory)) {
+      substituteParent();
+    }
+    return originalRm.call(this, filename, ...args);
+  };
+  childProcess.spawnSync = function patchedSpawn(...args) {
+    if (args[2] && args[2].cwd &&
+        fs.realpathSync(args[2].cwd) === fs.realpathSync(reportsDirectory)) {
+      substituteParent();
+    }
+    return originalSpawn.apply(this, args);
+  };
+  t.after(() => {
+    fs.rmSync = originalRm;
+    childProcess.spawnSync = originalSpawn;
+  });
+
+  await assert.rejects(finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    async loadCoverageProvider() { return providerFake().provider; },
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE');
+    return true;
+  });
+  assert.equal(substituted, true);
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'keep');
+});
+
+test('finalizer rejects coordinated substitution while pinning the cleanup directory', async t => {
+  const fixture = createFixture(t);
+  const reportsParent = path.join(fixture.appRoot, 'build');
+  const originalParent = path.join(fixture.appRoot, 'build-original');
+  const reportsDirectory = path.join(reportsParent, 'coverage');
+  const outside = path.join(fixture.root, 'outside');
+  const outsideReports = path.join(outside, 'coverage');
+  fs.mkdirSync(reportsDirectory, { recursive: true });
+  fs.mkdirSync(outsideReports, { recursive: true });
+  const sentinel = path.join(outsideReports, 'sentinel.txt');
+  fs.writeFileSync(sentinel, 'keep');
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+  const originalOpen = fs.openSync;
+  const originalSpawn = childProcess.spawnSync;
+  let pinnedOutside = false;
+  const redirect = () => {
+    fs.renameSync(reportsParent, originalParent);
+    fs.symlinkSync(outside, reportsParent);
+  };
+  const restore = () => {
+    fs.unlinkSync(reportsParent);
+    fs.renameSync(originalParent, reportsParent);
+  };
+  fs.openSync = function patchedOpen(filename, ...args) {
+    if (!pinnedOutside && typeof filename === 'string' &&
+        path.basename(filename) === 'coverage' &&
+        path.basename(path.dirname(filename)) === 'build') {
+      redirect();
+      const descriptor = originalOpen.call(this, filename, ...args);
+      restore();
+      pinnedOutside = true;
+      return descriptor;
+    }
+    return originalOpen.call(this, filename, ...args);
+  };
+  childProcess.spawnSync = function patchedSpawn(...args) {
+    if (pinnedOutside && args[2] && args[2].cwd) redirect();
+    return originalSpawn.apply(this, args);
+  };
+  t.after(() => {
+    fs.openSync = originalOpen;
+    childProcess.spawnSync = originalSpawn;
+  });
+
+  await assert.rejects(finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    async loadCoverageProvider() { return providerFake().provider; },
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE');
+    return true;
+  });
+  assert.equal(pinnedOutside, true);
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'keep');
+});
+
+test('custom empty excludes retain mandatory dependency and test-file exclusions', async t => {
+  const fixture = createFixture(t);
+  Object.assign(fixture.files, {
+    dependency: path.join(
+      fixture.appRoot,
+      'node_modules',
+      'dependency',
+      'index.js',
+    ),
+    testHelper: path.join(fixture.appRoot, 'src', '__tests__', 'helper.js'),
+    mockHelper: path.join(fixture.appRoot, 'src', '__mocks__', 'helper.js'),
+    declaration: path.join(fixture.appRoot, 'src', 'types.d.ts'),
+  });
+  for (const filename of [
+    fixture.files.dependency,
+    fixture.files.testHelper,
+    fixture.files.mockHelper,
+    fixture.files.declaration,
+  ]) {
+    fs.mkdirSync(path.dirname(filename), { recursive: true });
+    fs.writeFileSync(filename, 'export const value = 1;\n');
+  }
+  const coverage = Object.fromEntries([
+    fixture.files.included,
+    fixture.files.dependency,
+    fixture.files.testHelper,
+    fixture.files.mockHelper,
+    fixture.files.declaration,
+  ].map(filename => [filename, fileCoverage(filename, [1])]));
+  const artifacts = [writeArtifact(fixture, 'server', coverage)];
+
+  const result = await finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { exclude: [], clean: false, reporters: [] } },
+    async loadCoverageProvider() { return providerFake().provider; },
+  });
+
+  assert.deepEqual(result.files, [fs.realpathSync(fixture.files.included)]);
+});
+
+test('safe cleanup unlinks report symlinks without traversing their targets', async t => {
+  const fixture = createFixture(t);
+  const reportsDirectory = path.join(fixture.appRoot, 'coverage');
+  const outside = path.join(fixture.root, 'outside');
+  fs.mkdirSync(reportsDirectory);
+  fs.mkdirSync(outside);
+  const sentinel = path.join(outside, 'sentinel.txt');
+  fs.writeFileSync(sentinel, 'keep');
+  fs.symlinkSync(outside, path.join(reportsDirectory, 'linked-output'));
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+
+  await finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    async loadCoverageProvider() { return providerFake().provider; },
+  });
+
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'keep');
+  assert.equal(fs.existsSync(path.join(reportsDirectory, 'linked-output')), false);
+});
+
+test('safe cleanup accepts a new report directory under the canonical app root', async t => {
+  const fixture = createFixture(t);
+  const reportsDirectory = path.join(fixture.appRoot, 'new-coverage');
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+
+  const result = await finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    async loadCoverageProvider() { return providerFake().provider; },
+  });
+
+  assert.equal(result.exitCode, 0);
 });

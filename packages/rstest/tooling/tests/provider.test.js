@@ -7,6 +7,7 @@ const test = require('node:test');
 const {
   getPackageHarnessDevDependencies,
   RstestTestRunnerProvider,
+  writePrivateJsonAtomic,
 } = require('../provider/provider.js');
 
 test('package harness pins configured local Rspack npm package', () => {
@@ -99,6 +100,40 @@ function settingsWriter(calls) {
 
 function argumentValues(args, flag) {
   return args.flatMap((value, index) => value === flag ? [args[index + 1]] : []);
+}
+
+function writeCoverageSettings({ args, context }) {
+  const settingsFlag = args.includes('--runtime-plan-output')
+    ? '--runtime-plan-output'
+    : '--runtime-settings-output';
+  const settingsPath = args[args.indexOf(settingsFlag) + 1];
+  const settingsGeneration = args[
+    args.indexOf('--runtime-settings-generation') + 1
+  ];
+  const coveragePlanPath = args[args.indexOf('--coverage-plan-output') + 1];
+  const coverageGeneration = args[args.indexOf('--coverage-generation') + 1];
+  const artifactRoot = path.dirname(coveragePlanPath);
+  fs.mkdirSync(artifactRoot, { recursive: true });
+  const coverage = {
+    schemaVersion: 1,
+    generation: coverageGeneration,
+    enabled: true,
+    provider: 'istanbul',
+    root: context.appDir,
+    include: [],
+    exclude: [],
+    allowExternal: false,
+    artifactRoot,
+  };
+  fs.writeFileSync(coveragePlanPath, JSON.stringify(coverage));
+  fs.writeFileSync(settingsPath, JSON.stringify({
+    schemaVersion: 1,
+    generation: settingsGeneration,
+    testTimeout: 30000,
+    hookTimeout: 10000,
+    maxConcurrency: 5,
+    coverage,
+  }));
 }
 
 test('validation rejects conflicting sides before dependency installation', async t => {
@@ -870,6 +905,146 @@ test('mixed coverage finalizes one generation manifest and preserves exit preced
     first: undefined,
     second: undefined,
   });
+});
+
+test('mixed runs allocate coverage paths only when coverage was requested', async t => {
+  const context = createContext(t);
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  context.options.coverage = false;
+  writeRuntimeFiles(context.appDir, ['without-coverage.test.js']);
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+  });
+
+  await provider.validate();
+  await provider.prepare();
+
+  assert.equal(provider.coverageGeneration, null);
+  assert.equal(provider.coverageRoot, null);
+  assert.equal(provider.runtimePlanArgs.includes('--coverage-plan-output'), false);
+  assert.equal(provider.runtimePlanArgs.includes('--coverage-generation'), false);
+});
+
+test('requested mixed coverage fails completion when its plan is missing', async t => {
+  const context = createContext(t);
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  context.options.coverage = true;
+  writeRuntimeFiles(context.appDir, ['missing-plan.test.js']);
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    startRstestProcess: settingsWriter([]),
+    warn() {},
+  });
+
+  await provider.validate();
+  await provider.prepare();
+  assert.equal((await provider.startBeforeHost({ updateMetadata() {} })).exitCode, 0);
+  assert.deepEqual(await provider.completeRun({
+    exitCode: 0,
+    outcome: 'completed',
+  }), { exitCode: 1 });
+});
+
+test('finalizer startup and completion errors preserve the original test exit', async t => {
+  async function completeWithFailure(mode, testExitCode) {
+    const context = createContext(t);
+    context.options.serverOnly = true;
+    context.options.project = ['meteor-runtime-server'];
+    context.options.coverage = true;
+    writeRuntimeFiles(context.appDir, [`${mode}-${testExitCode}.test.js`]);
+    const provider = new RstestTestRunnerProvider(context, {
+      async ensureRstestInstalled() {},
+      assertRstestOptionalCapabilities() {},
+      warn() {},
+      startRstestProcess({ args }) {
+        if (args.includes('--coverage-finalize-manifest')) {
+          if (mode === 'startup') throw new Error('finalizer startup failed');
+          return {
+            completion: Promise.reject(new Error('finalizer completion failed')),
+            async stop() {},
+          };
+        }
+        writeCoverageSettings({ args, context });
+        return { completion: Promise.resolve(0), async stop() {} };
+      },
+    });
+    await provider.validate();
+    await provider.prepare();
+    assert.equal((await provider.startBeforeHost({ updateMetadata() {} })).exitCode, 0);
+    return provider.completeRun({
+      exitCode: testExitCode,
+      outcome: testExitCode === 0 ? 'completed' : 'failed',
+    });
+  }
+
+  for (const mode of ['startup', 'completion']) {
+    assert.deepEqual(await completeWithFailure(mode, 0), { exitCode: 1 });
+    assert.equal(await completeWithFailure(mode, 2), undefined);
+  }
+});
+
+test('private manifest writer rejects payloads above 64 MiB', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-manifest-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const filename = path.join(root, 'generation', 'manifest.json');
+  const oversized = 'x'.repeat(64 * 1024 * 1024);
+
+  assert.throws(() => writePrivateJsonAtomic(filename, { oversized }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_OVERSIZED');
+    return true;
+  });
+  assert.equal(fs.existsSync(filename), false);
+});
+
+test('private manifest writer rejects symlink parents and raced destinations', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-manifest-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const outside = path.join(root, 'outside');
+  const linked = path.join(root, 'linked');
+  fs.mkdirSync(outside);
+  fs.symlinkSync(outside, linked);
+  assert.throws(() => writePrivateJsonAtomic(
+    path.join(linked, 'generation', 'manifest.json'),
+    { schemaVersion: 1 },
+  ), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH');
+    return true;
+  });
+
+  const filename = path.join(root, 'generation', 'manifest.json');
+  const sentinel = '{"sentinel":true}';
+  const originalRename = fs.renameSync;
+  const originalLink = fs.linkSync;
+  const raceDestination = (oldPath, newPath, operation) => {
+    if (path.resolve(newPath) === path.resolve(filename) &&
+        !fs.existsSync(filename)) {
+      fs.writeFileSync(filename, sentinel);
+    }
+    return operation(oldPath, newPath);
+  };
+  fs.renameSync = (oldPath, newPath) => raceDestination(
+    oldPath,
+    newPath,
+    originalRename,
+  );
+  fs.linkSync = (oldPath, newPath) => raceDestination(
+    oldPath,
+    newPath,
+    originalLink,
+  );
+  t.after(() => {
+    fs.renameSync = originalRename;
+    fs.linkSync = originalLink;
+  });
+  assert.throws(() => writePrivateJsonAtomic(filename, { schemaVersion: 1 }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_REPLAY');
+    return true;
+  });
+  assert.equal(fs.readFileSync(filename, 'utf8'), sentinel);
 });
 
 test('native-only coverage remains on the upstream Rstest lifecycle', async t => {

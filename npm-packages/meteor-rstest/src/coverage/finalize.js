@@ -1,10 +1,14 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const childProcess = require('node:child_process');
 const { createRequire } = require('node:module');
 const { pathToFileURL } = require('node:url');
 const picomatch = require('picomatch');
 
-const { readCoverageArtifact } = require('./artifact.js');
+const {
+  assertNoSymlinkComponents,
+  readCoverageArtifact,
+} = require('./artifact.js');
 const { canonicalizeCoverageMaps } = require('./paths.js');
 
 const THRESHOLD_KEYS = ['lines', 'functions', 'statements', 'branches'];
@@ -60,7 +64,7 @@ function normalizeCoverageConfig(config, appRoot) {
     enabled: true,
     include: input.include,
     changed: input.changed,
-    exclude: input.exclude === undefined ? DEFAULT_EXCLUDE : [...input.exclude],
+    exclude: [...DEFAULT_EXCLUDE, ...(input.exclude || [])],
     provider: 'istanbul',
     reporters: input.reporters === undefined
       ? ['text', 'html', 'clover', 'json']
@@ -181,15 +185,47 @@ function contains(parent, child) {
   );
 }
 
+function canonicalizePotentialPath(filename) {
+  let existing = path.resolve(filename);
+  const missing = [];
+  while (!fs.existsSync(existing)) {
+    const parent = path.dirname(existing);
+    if (parent === existing) break;
+    missing.unshift(path.basename(existing));
+    existing = parent;
+  }
+  return path.join(fs.realpathSync(existing), ...missing);
+}
+
 function assertSafeReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
-  const resolved = path.resolve(reportsDirectory);
+  const canonicalAppRoot = fs.realpathSync(appRoot);
+  assertNoSymlinkComponents(canonicalAppRoot);
+  assertNoSymlinkComponents(artifactRoot);
+  const canonicalArtifactRoot = fs.realpathSync(artifactRoot);
+  try {
+    assertNoSymlinkComponents(reportsDirectory, { allowMissing: true });
+  } catch (error) {
+    if (error.code === 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH') {
+      throw finalizerError(
+        'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+        `Refusing to clean symlinked coverage reports directory: ${reportsDirectory}`,
+      );
+    }
+    throw error;
+  }
+  const configuredTarget = path.join(
+    canonicalizePotentialPath(path.dirname(reportsDirectory)),
+    path.basename(reportsDirectory),
+  );
+  const resolved = fs.existsSync(reportsDirectory)
+    ? fs.realpathSync(reportsDirectory)
+    : configuredTarget;
   const root = path.parse(resolved).root;
-  const relativeToApp = path.relative(resolved, path.resolve(appRoot));
-  if (resolved === root || relativeToApp === '' || (
-    relativeToApp !== '..' &&
-    !relativeToApp.startsWith(`..${path.sep}`) &&
-    !path.isAbsolute(relativeToApp)
-  ) || contains(resolved, artifactRoot) || contains(artifactRoot, resolved)) {
+  if (resolved !== configuredTarget || resolved === root ||
+      resolved === canonicalAppRoot ||
+      !contains(canonicalAppRoot, resolved) ||
+      contains(resolved, canonicalArtifactRoot) ||
+      contains(canonicalArtifactRoot, resolved)) {
     throw finalizerError(
       'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
       `Refusing to clean unsafe coverage reports directory: ${resolved}`,
@@ -198,13 +234,94 @@ function assertSafeReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
   return resolved;
 }
 
+const CLEAN_DIRECTORY_SCRIPT = `
+  const fs = require('node:fs');
+  const expectedDevice = BigInt(process.argv[1]);
+  const expectedInode = BigInt(process.argv[2]);
+  const flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY |
+    fs.constants.O_NOFOLLOW;
+  const descriptor = fs.openSync('.', flags);
+  try {
+    const stat = fs.fstatSync(descriptor, { bigint: true });
+    if (!stat.isDirectory() || stat.dev !== expectedDevice ||
+        stat.ino !== expectedInode) process.exit(73);
+    for (const entry of fs.readdirSync('.')) {
+      fs.rmSync(entry, { recursive: true, force: false });
+    }
+  } finally {
+    fs.closeSync(descriptor);
+  }
+`;
+
 function cleanReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
   const safeDirectory = assertSafeReportsDirectory(
     reportsDirectory,
     appRoot,
     artifactRoot,
   );
-  fs.rmSync(safeDirectory, { recursive: true, force: true });
+  if (!fs.existsSync(safeDirectory)) return;
+  if (!Number.isInteger(fs.constants.O_NOFOLLOW) ||
+      fs.constants.O_NOFOLLOW === 0 ||
+      !Number.isInteger(fs.constants.O_DIRECTORY)) {
+    throw finalizerError(
+      'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+      'This platform cannot pin a no-follow coverage reports directory.',
+    );
+  }
+  const flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY |
+    fs.constants.O_NOFOLLOW;
+  let descriptor;
+  try {
+    descriptor = fs.openSync(safeDirectory, flags);
+  } catch (error) {
+    throw finalizerError(
+      'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+      `Could not pin coverage reports directory: ${error.message}`,
+    );
+  }
+  try {
+    const stat = fs.fstatSync(descriptor, { bigint: true });
+    if (!stat.isDirectory()) {
+      throw finalizerError(
+        'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+        `Coverage reports path is not a directory: ${safeDirectory}`,
+      );
+    }
+    assertNoSymlinkComponents(safeDirectory);
+    let verificationDescriptor;
+    try {
+      verificationDescriptor = fs.openSync(safeDirectory, flags);
+      const verification = fs.fstatSync(verificationDescriptor, { bigint: true });
+      if (!verification.isDirectory() || verification.dev !== stat.dev ||
+          verification.ino !== stat.ino) {
+        throw finalizerError(
+          'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+          'Coverage reports directory changed while it was being pinned.',
+        );
+      }
+    } finally {
+      if (verificationDescriptor !== undefined) {
+        fs.closeSync(verificationDescriptor);
+      }
+    }
+    const result = childProcess.spawnSync(process.execPath, [
+      '-e',
+      CLEAN_DIRECTORY_SCRIPT,
+      stat.dev.toString(),
+      stat.ino.toString(),
+    ], {
+      cwd: safeDirectory,
+      encoding: 'utf8',
+    });
+    if (result.error || result.status !== 0) {
+      throw finalizerError(
+        'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+        'Coverage reports directory changed during safe cleanup.',
+      );
+    }
+  } finally {
+    fs.closeSync(descriptor);
+  }
 }
 
 function percent(covered, total) {
@@ -250,20 +367,35 @@ function evaluateThresholds({ coverageMap, thresholds, appRoot }) {
   }
   const failures = [];
   const files = coverageMap.files();
-  const globalSummary = coverageMap.getCoverageSummary();
-  for (const metric of THRESHOLD_KEYS) {
-    if (thresholds[metric] === undefined) continue;
-    const failure = checkThresholdValue({
-      metric,
-      group: 'global',
-      actual: globalSummary[metric],
-      expected: thresholds[metric],
-    });
-    if (failure) failures.push(failure);
+  if (thresholds.perFile !== undefined &&
+      typeof thresholds.perFile !== 'boolean') {
+    throw finalizerError(
+      'METEOR_RSTEST_INVALID_COVERAGE_CONFIG',
+      'coverage.thresholds.perFile must be a boolean.',
+    );
+  }
+  const globalSummaries = thresholds.perFile
+    ? files.map(filename => ({
+      file: slash(path.relative(appRoot, filename)),
+      summary: coverageMap.fileCoverageFor(filename).toSummary(),
+    }))
+    : [{ file: '', summary: coverageMap.getCoverageSummary() }];
+  for (const { file, summary } of globalSummaries) {
+    for (const metric of THRESHOLD_KEYS) {
+      if (thresholds[metric] === undefined) continue;
+      const failure = checkThresholdValue({
+        metric,
+        group: 'global',
+        actual: summary[metric],
+        expected: thresholds[metric],
+        file,
+      });
+      if (failure) failures.push(failure);
+    }
   }
 
   for (const [glob, rule] of Object.entries(thresholds)) {
-    if (THRESHOLD_KEYS.includes(glob)) continue;
+    if (THRESHOLD_KEYS.includes(glob) || glob === 'perFile') continue;
     if (!rule || typeof rule !== 'object' || Array.isArray(rule) ||
         rule.perFile !== undefined && typeof rule.perFile !== 'boolean') {
       throw finalizerError(
