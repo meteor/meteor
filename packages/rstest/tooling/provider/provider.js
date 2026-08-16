@@ -47,7 +47,6 @@ const GENERATED_PROJECTS = new Set([
 const PACKAGE_UNSUPPORTED_OPTIONS = [
   ['project', '--project'],
   ['testFile', '--test-file'],
-  ['coverage', '--coverage'],
   ['updateSnapshots', '--update-snapshots'],
   ['shard', '--shard'],
   ['changed', '--changed'],
@@ -80,6 +79,35 @@ function removeIfPresent(filename) {
     fs.unlinkSync(filename);
   } catch (error) {
     if (error.code !== 'ENOENT') throw error;
+  }
+}
+
+function writePrivateJsonAtomic(filename, value) {
+  if (fs.existsSync(filename)) {
+    throw rstestError(
+      'METEOR_RSTEST_COVERAGE_REPLAY',
+      `Coverage manifest path was already used: ${filename}`,
+    );
+  }
+  const directory = path.dirname(filename);
+  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
+  fs.chmodSync(directory, 0o700);
+  const temporary = path.join(
+    directory,
+    `.${path.basename(filename)}.${process.pid}.${Date.now()}.tmp`,
+  );
+  let descriptor;
+  try {
+    descriptor = fs.openSync(temporary, 'wx', 0o600);
+    fs.writeFileSync(descriptor, JSON.stringify(value));
+    fs.fsyncSync(descriptor);
+    fs.closeSync(descriptor);
+    descriptor = undefined;
+    fs.renameSync(temporary, filename);
+    fs.chmodSync(filename, 0o600);
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+    try { fs.rmSync(temporary, { force: true }); } catch {}
   }
 }
 
@@ -200,6 +228,7 @@ class RstestTestRunnerProvider {
     this.smartCandidates = [];
     this.routingManifest = null;
     this.classification = null;
+    this.completionPromise = null;
   }
 
   async validate() {
@@ -633,17 +662,40 @@ class RstestTestRunnerProvider {
         capabilities,
       });
     }
+    const mixedCoverage = !worker && (
+      selection.needsRuntime || selection.needsExternal
+    );
+    this.coverageGeneration = mixedCoverage
+      ? crypto.randomBytes(16).toString('hex')
+      : null;
+    this.coverageRoot = this.coverageGeneration
+      ? path.join(runtimeDir, 'coverage', this.coverageGeneration)
+      : null;
+    this.coveragePlanPath = this.coverageRoot
+      ? path.join(this.coverageRoot, 'plan.json')
+      : null;
+    this.coverageManifestPath = this.coverageRoot
+      ? path.join(this.coverageRoot, 'manifest.json')
+      : null;
+    this.coverageNativeArtifactPath = this.coverageRoot &&
+      selection.shouldRunNative
+      ? path.join(this.coverageRoot, 'native.json')
+      : null;
+    if (this.coverageRoot) {
+      fs.mkdirSync(this.coverageRoot, { recursive: true, mode: 0o700 });
+      fs.chmodSync(this.coverageRoot, 0o700);
+    }
     const token = crypto.randomBytes(24).toString('base64url');
     this.runtimeSettingsPath = worker
       ? this.workerPayload.runtimeSettingsPath
-      : selection.needsRuntime
+      : selection.needsRuntime || selection.needsExternal
         ? path.join(runtimeDir, command === 'test-packages'
           ? 'package-runtime-plan.json'
           : 'app-runtime-settings.json')
         : null;
     this.runtimeSettingsGeneration = worker
       ? this.workerPayload.generation
-      : selection.needsRuntime
+      : selection.needsRuntime || selection.needsExternal
         ? crypto.randomBytes(16).toString('hex')
         : null;
     if (!worker && this.runtimeSettingsPath) {
@@ -702,6 +754,9 @@ class RstestTestRunnerProvider {
       changedSince: options.changedSince,
       phase: 'native',
       routingManifest: this.routingManifest,
+      coveragePlanOutput: this.coveragePlanPath,
+      coverageGeneration: this.coverageGeneration,
+      coverageArtifact: this.coverageNativeArtifactPath,
       passthrough: options.passthrough,
     };
     const serverArchitecture = architectures.find(architecture =>
@@ -740,7 +795,8 @@ class RstestTestRunnerProvider {
         client: selection.nativeClient,
       }),
     });
-    this.runtimePlanArgs = command === 'test' && selection.needsRuntime &&
+    this.runtimePlanArgs = command === 'test' &&
+      (selection.needsRuntime || selection.needsExternal) &&
       !selection.shouldRunNative
       ? buildRstestArgs({
         appDir,
@@ -759,6 +815,8 @@ class RstestTestRunnerProvider {
         }),
         phase: 'native',
         routingManifest: this.routingManifest,
+        coveragePlanOutput: this.coveragePlanPath,
+        coverageGeneration: this.coverageGeneration,
       })
       : null;
     this.externalArgs = selection.needsExternal
@@ -795,10 +853,12 @@ class RstestTestRunnerProvider {
           /[\\/]runtime[\\/]server[\\/]/.test(file)
         );
     const client = !options.serverOnly && hasDesktopBrowser && (
-      command === 'test-packages' || selection.needsRuntime && runtimeClient
+      command === 'test-packages' || selection.needsRuntime && runtimeClient ||
+      selection.needsExternal
     );
     const server = !options.clientOnly && (
-      command === 'test-packages' || selection.needsRuntime && runtimeServer
+      command === 'test-packages' || selection.needsRuntime && runtimeServer ||
+      selection.needsExternal
     );
     if (!hasDesktopBrowser && !options.serverOnly &&
         (command === 'test-packages' || selection.needsRuntime && runtimeClient ||
@@ -852,6 +912,43 @@ class RstestTestRunnerProvider {
           `[Meteor Rstest] --runtime-workers capped from ${options.runtimeWorkers} ` +
           `to ${this.workerHostPlan.actualWorkers} selected runtime file(s).`
         );
+      }
+    }
+    this.coverageArtifacts = [];
+    if (this.coverageRoot) {
+      if (this.coverageNativeArtifactPath) {
+        this.coverageArtifacts.push({
+          producer: 'native',
+          path: this.coverageNativeArtifactPath,
+        });
+      }
+      if (this.workerHostPlan) {
+        for (const descriptor of this.workerHostPlan.descriptors) {
+          const producer = `worker-${descriptor.id}`;
+          this.coverageArtifacts.push({
+            producer,
+            path: path.join(this.coverageRoot, `${producer}.json`),
+          });
+        }
+      } else {
+        if (server) {
+          this.coverageArtifacts.push({
+            producer: 'server',
+            path: path.join(this.coverageRoot, 'server.json'),
+          });
+        }
+        if (client) {
+          this.coverageArtifacts.push({
+            producer: 'client',
+            path: path.join(this.coverageRoot, 'client.json'),
+          });
+        }
+      }
+      if (selection.needsExternal) {
+        this.coverageArtifacts.push({
+          producer: 'e2e',
+          path: path.join(this.coverageRoot, 'e2e.json'),
+        });
       }
     }
     const dependencyOnly = !selection.needsRuntime && !selection.needsExternal;
@@ -914,7 +1011,32 @@ class RstestTestRunnerProvider {
     this.metadata.testTimeout = this.metadata.runtimeConfig.testTimeout;
     this.metadata.hookTimeout = this.metadata.runtimeConfig.hookTimeout;
     this.metadata.maxConcurrency = this.metadata.runtimeConfig.maxConcurrency;
+    if (settings.coverage !== undefined) {
+      this._setCoveragePlan(settings.coverage);
+    }
     updateMetadata(this.metadata);
+  }
+
+  _setCoveragePlan(coverage) {
+    if (!coverage || coverage.schemaVersion !== 1 || coverage.enabled !== true ||
+        coverage.provider !== 'istanbul' ||
+        coverage.generation !== this.coverageGeneration ||
+        path.resolve(coverage.artifactRoot || '') !== this.coverageRoot) {
+      throw rstestError(
+        'METEOR_RSTEST_STALE_COVERAGE_PLAN',
+        'Ignored an invalid or stale coverage plan.',
+      );
+    }
+    this.coveragePlan = coverage;
+    this.metadata.coverage = {
+      ...coverage,
+      token: this.metadata.token,
+      endpoint: '/__meteor__/rstest/coverage',
+      artifacts: Object.fromEntries(this.coverageArtifacts.map(artifact => [
+        artifact.producer,
+        artifact.path,
+      ])),
+    };
   }
 
   async _waitForRuntimeSettings(processHandle, updateMetadata) {
@@ -996,7 +1118,7 @@ class RstestTestRunnerProvider {
       });
       if (options.once) {
         const code = await handle.completion;
-        if (code === 0 && selection.needsRuntime) {
+        if (code === 0 && (selection.needsRuntime || selection.needsExternal)) {
           this._readRuntimeSettings(updateMetadata);
         }
         return { exitCode: code };
@@ -1008,7 +1130,7 @@ class RstestTestRunnerProvider {
       return { process: handle };
     }
 
-    if (selection.needsRuntime) {
+    if (selection.needsRuntime || selection.needsExternal) {
       const handle = this.services.startRstestProcess({
         appDir,
         args: this.runtimePlanArgs,
@@ -1052,6 +1174,75 @@ class RstestTestRunnerProvider {
       this.resources.push(external);
       await external.start();
     }
+  }
+
+  _loadCoveragePlanForCompletion() {
+    if (this.coveragePlan) return this.coveragePlan;
+    if (!this.coveragePlanPath || !fs.existsSync(this.coveragePlanPath)) {
+      return null;
+    }
+    let coverage;
+    try {
+      coverage = JSON.parse(fs.readFileSync(this.coveragePlanPath, 'utf8'));
+    } catch {
+      throw rstestError(
+        'METEOR_RSTEST_STALE_COVERAGE_PLAN',
+        'Coverage plan is missing, malformed, or stale.',
+      );
+    }
+    this._setCoveragePlan(coverage);
+    return coverage;
+  }
+
+  async _completeCoverageRun({ exitCode }) {
+    if (this.context.worker || !this.coverageGeneration ||
+        !this._loadCoveragePlanForCompletion()) {
+      return undefined;
+    }
+    const localPackages = [];
+    const names = new Set();
+    for (const entry of [
+      ...this.context.localPackages || [],
+      ...this.context.packageTests || [],
+    ]) {
+      if (!entry || typeof entry.name !== 'string' || names.has(entry.name) ||
+          typeof entry.sourceRoot !== 'string') continue;
+      names.add(entry.name);
+      localPackages.push({
+        name: entry.name,
+        sourceRoot: entry.sourceRoot,
+      });
+    }
+    writePrivateJsonAtomic(this.coverageManifestPath, {
+      schemaVersion: 1,
+      generation: this.coverageGeneration,
+      appRoot: this.context.npm.root,
+      localPackages,
+      artifacts: this.coverageArtifacts,
+      testExitCode: exitCode,
+    });
+    const handle = this.services.startRstestProcess({
+      appDir: this.context.appDir,
+      packageRoot: this.context.npm.root,
+      args: buildRstestArgs({
+        appDir: this.context.appDir,
+        localDir: this.context.localDir,
+        command: this.context.command,
+        config: this.context.options.config,
+        coverageFinalizeManifest: this.coverageManifestPath,
+      }),
+    });
+    const finalizerExitCode = await handle.completion;
+    return finalizerExitCode !== 0 && exitCode === 0
+      ? { exitCode: 1 }
+      : undefined;
+  }
+
+  completeRun(context) {
+    if (!this.completionPromise) {
+      this.completionPromise = this._completeCoverageRun(context);
+    }
+    return this.completionPromise;
   }
 
   async stop() {

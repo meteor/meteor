@@ -28,6 +28,7 @@ function createContext(t, overrides = {}) {
     command: 'test',
     appDir,
     harnessRoot: appDir,
+    localPackages: [],
     packageTests: [],
     localDir: path.join(appDir, '.meteor', 'local'),
     architectures: ['os.test'],
@@ -753,6 +754,174 @@ test('auto-install opt-out never invokes dependency installer', async t => {
   const plan = await provider.prepare();
   assert.equal(installs, 0);
   assert.equal(plan.buildPluginOptions.rspack.autoInstall, false);
+});
+
+test('package command accepts coverage for unified finalization', async t => {
+  const context = createContext(t, { command: 'test-packages' });
+  const packageTestFile = path.join(context.appDir, 'package-fixture.tests.js');
+  fs.writeFileSync(packageTestFile, "import { test } from '@rstest/core';\n");
+  context.packageTests = [{
+    name: 'local-test:package-fixture',
+    sourceRoot: context.appDir,
+  }];
+  context.options.coverage = true;
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+  });
+
+  await provider.validate();
+  assert.equal(provider.selection.needsRuntime, true);
+});
+
+test('mixed coverage finalizes one generation manifest and preserves exit precedence', async t => {
+  async function runFinalizer(testExitCode) {
+    const context = createContext(t);
+    context.localPackages = [{ name: 'fixture', sourceRoot: context.appDir }];
+    context.options.serverOnly = true;
+    context.options.project = ['meteor-runtime-server'];
+    context.options.coverage = true;
+    writeRuntimeFiles(context.appDir, ['coverage.test.js']);
+    const calls = [];
+    const provider = new RstestTestRunnerProvider(context, {
+      async ensureRstestInstalled() {},
+      assertRstestOptionalCapabilities() {},
+      startRstestProcess({ args }) {
+        calls.push(args);
+        const finalizerIndex = args.indexOf('--coverage-finalize-manifest');
+        if (finalizerIndex !== -1) {
+          return {
+            completion: Promise.resolve(1),
+            async stop() {},
+          };
+        }
+        const settingsFlag = args.includes('--runtime-plan-output')
+          ? '--runtime-plan-output'
+          : '--runtime-settings-output';
+        const settingsPath = args[args.indexOf(settingsFlag) + 1];
+        const settingsGeneration = args[
+          args.indexOf('--runtime-settings-generation') + 1
+        ];
+        const coveragePlanPath = args[args.indexOf('--coverage-plan-output') + 1];
+        const coverageGeneration = args[args.indexOf('--coverage-generation') + 1];
+        const artifactRoot = path.dirname(coveragePlanPath);
+        fs.mkdirSync(artifactRoot, { recursive: true });
+        const coverage = {
+          schemaVersion: 1,
+          generation: coverageGeneration,
+          enabled: true,
+          provider: 'istanbul',
+          root: context.appDir,
+          include: [],
+          exclude: [],
+          allowExternal: false,
+          artifactRoot,
+        };
+        fs.writeFileSync(coveragePlanPath, JSON.stringify(coverage));
+        fs.writeFileSync(settingsPath, JSON.stringify({
+          schemaVersion: 1,
+          generation: settingsGeneration,
+          testTimeout: 30000,
+          hookTimeout: 10000,
+          maxConcurrency: 5,
+          coverage,
+        }));
+        return {
+          completion: Promise.resolve(0),
+          async stop() {},
+        };
+      },
+    });
+
+    await provider.validate();
+    await provider.prepare();
+    assert.equal(fs.statSync(provider.coverageRoot).mode & 0o777, 0o700);
+    const preHost = await provider.startBeforeHost({ updateMetadata() {} });
+    assert.equal(preHost.exitCode, 0);
+    const completion = { exitCode: testExitCode, outcome: testExitCode ? 'failed' : 'completed' };
+    const [first, second] = await Promise.all([
+      provider.completeRun(completion),
+      provider.completeRun(completion),
+    ]);
+    const finalizerCalls = calls.filter(args =>
+      args.includes('--coverage-finalize-manifest')
+    );
+    assert.equal(finalizerCalls.length, 1);
+    const manifestPath = finalizerCalls[0][
+      finalizerCalls[0].indexOf('--coverage-finalize-manifest') + 1
+    ];
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    assert.equal(fs.statSync(manifestPath).mode & 0o777, 0o600);
+    assert.equal(manifest.schemaVersion, 1);
+    assert.equal(manifest.appRoot, context.appDir);
+    assert.deepEqual(manifest.localPackages, context.localPackages);
+    assert.equal(manifest.testExitCode, testExitCode);
+    assert.deepEqual(manifest.artifacts.map(artifact => artifact.producer), [
+      'server',
+    ]);
+    assert.equal(path.basename(path.dirname(manifest.artifacts[0].path)), manifest.generation);
+    return { first, second };
+  }
+
+  assert.deepEqual(await runFinalizer(0), {
+    first: { exitCode: 1 },
+    second: { exitCode: 1 },
+  });
+  assert.deepEqual(await runFinalizer(2), {
+    first: undefined,
+    second: undefined,
+  });
+});
+
+test('native-only coverage remains on the upstream Rstest lifecycle', async t => {
+  const context = createContext(t);
+  context.options.coverage = true;
+  const testFile = path.join(
+    context.appDir,
+    'tests/rstest/pure/server/native-coverage.test.js',
+  );
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(testFile, '');
+  const calls = [];
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    startRstestProcess({ args }) {
+      calls.push(args);
+      return { completion: Promise.resolve(0), async stop() {} };
+    },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+  assert.equal(plan.mode, 'native-only');
+  assert.ok(provider.nativeArgs.includes('--coverage'));
+  assert.equal(provider.nativeArgs.includes('--coverage-artifact'), false);
+  assert.equal(await provider.completeRun({ exitCode: 0, outcome: 'completed' }), undefined);
+  assert.equal(calls.length, 0);
+});
+
+test('full-app coverage declares server, client, and E2E artifacts before host start', async t => {
+  const context = createContext(t);
+  context.options.fullApp = true;
+  context.options.project = ['meteor-e2e'];
+  context.options.coverage = true;
+  const testFile = path.join(context.appDir, 'tests/rstest/e2e/app.test.js');
+  fs.mkdirSync(path.dirname(testFile), { recursive: true });
+  fs.writeFileSync(testFile, "import { test } from '@rstest/core';\n");
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+  });
+
+  await provider.validate();
+  await provider.prepare();
+
+  assert.ok(provider.runtimePlanArgs.includes('--coverage-plan-output'));
+  assert.deepEqual(provider.coverageArtifacts.map(artifact => artifact.producer), [
+    'server',
+    'client',
+    'e2e',
+  ]);
 });
 
 test('provider cleanup stops resources once in reverse start order', async t => {

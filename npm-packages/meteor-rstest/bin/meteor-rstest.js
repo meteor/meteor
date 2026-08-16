@@ -34,6 +34,7 @@ function parseArgs(argv) {
     coveragePlanOutput: null,
     coverageGeneration: null,
     coverageArtifact: null,
+    coverageFinalizeManifest: null,
     coverageEnabled: false,
     classifyCandidates: null,
     classificationOutput: null,
@@ -100,6 +101,9 @@ function parseArgs(argv) {
       index += 1;
     } else if (arg === '--coverage-artifact') {
       parsed.coverageArtifact = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--coverage-finalize-manifest') {
+      parsed.coverageFinalizeManifest = takeValue(argv, index, arg);
       index += 1;
     } else if (arg === '--coverage') {
       parsed.coverageEnabled = true;
@@ -211,6 +215,20 @@ async function main() {
       : null,
     architectures: parsed.architectures.length > 0 ? parsed.architectures : undefined,
   });
+  if (parsed.coverageFinalizeManifest) {
+    const manifestPath = path.resolve(parsed.coverageFinalizeManifest);
+    const { readCoverageManifest } = require('../src/coverage/artifact.js');
+    const { finalizeCoverage } = require('../src/coverage/finalize.js');
+    const { loadUserConfig } = require('../src/coordinator.js');
+    const manifest = readCoverageManifest({
+      filePath: manifestPath,
+      expectedPath: manifestPath,
+    });
+    const config = await loadUserConfig({ context, configPath });
+    const result = await finalizeCoverage({ manifest, config });
+    process.exitCode = result.exitCode;
+    return;
+  }
   if (parsed.classifyCandidates || parsed.classificationOutput) {
     if (!parsed.classifyCandidates || !parsed.classificationOutput) {
       throw new Error(

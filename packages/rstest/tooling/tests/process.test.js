@@ -103,6 +103,26 @@ test('classification and routing manifests stay wrapper-owned', () => {
   ]);
 });
 
+test('coverage artifact and finalizer paths stay explicit wrapper-owned arguments', () => {
+  assert.deepEqual(buildRstestArgs({
+    appDir: '/app',
+    localDir: '/local',
+    command: 'test',
+    coveragePlanOutput: '/local/rstest/coverage/g1/plan.json',
+    coverageGeneration: 'g1',
+    coverageArtifact: '/local/rstest/coverage/g1/native.json',
+    coverageFinalizeManifest: '/local/rstest/coverage/g1/manifest.json',
+  }), [
+    '--cwd', '/app',
+    '--local-dir', '/local',
+    '--command', 'test',
+    '--coverage-plan-output', '/local/rstest/coverage/g1/plan.json',
+    '--coverage-generation', 'g1',
+    '--coverage-artifact', '/local/rstest/coverage/g1/native.json',
+    '--coverage-finalize-manifest', '/local/rstest/coverage/g1/manifest.json',
+  ]);
+});
+
 test('native passthrough cannot replace Meteor-owned config or project plan', () => {
   for (const argument of [
     '--config=other.js', '-c=other.js', '--root', '--project=other',

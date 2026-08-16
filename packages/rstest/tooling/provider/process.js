@@ -30,6 +30,10 @@ function buildRstestArgs({
   candidateManifest,
   classificationOutput,
   routingManifest,
+  coveragePlanOutput,
+  coverageGeneration,
+  coverageArtifact,
+  coverageFinalizeManifest,
   architectures,
   phase,
   passthrough,
@@ -54,6 +58,12 @@ function buildRstestArgs({
   if (client && server === false) args.push('--client-only');
   if (command === 'test-packages') args.push('--package-tests');
   args.push('--command', command);
+  if (coveragePlanOutput) args.push('--coverage-plan-output', coveragePlanOutput);
+  if (coverageGeneration) args.push('--coverage-generation', coverageGeneration);
+  if (coverageArtifact) args.push('--coverage-artifact', coverageArtifact);
+  if (coverageFinalizeManifest) {
+    args.push('--coverage-finalize-manifest', coverageFinalizeManifest);
+  }
   if (phase) args.push('--phase', phase);
   if (config) args.push('--config', config);
   for (const name of [].concat(project || [])) args.push('--project', name);
