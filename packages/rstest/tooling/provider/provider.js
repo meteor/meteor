@@ -1154,6 +1154,7 @@ class RstestTestRunnerProvider {
       runtime: selection.needsRuntime,
       upstreamRuntime: this.upstreamRuntime,
       external: selection.needsExternal,
+      workerGate: Boolean(dedicatedRuntimeHosts && selection.needsExternal),
       runtimeManifest: this.runtimeManifest,
       worker: worker ? {
         id: worker.id,
@@ -1545,7 +1546,24 @@ class RstestTestRunnerProvider {
       this.resources.push(external);
       await external.start();
     }
-    if (this.startDeferredWorkers) this.startDeferredWorkers();
+    if (this.startDeferredWorkers) {
+      const worker = this.startDeferredWorkers();
+      await worker.completion;
+      const endpoint = new URL('__meteor__/rstest/worker-complete', `${url.replace(/\/$/, '')}/`);
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'x-meteor-rstest-token': this.metadata.token,
+          'x-meteor-rstest-generation': String(this.metadata.generation),
+        },
+      });
+      if (!response.ok) {
+        throw rstestError(
+          'METEOR_RSTEST_WORKER_GATE',
+          `Runtime worker completion endpoint returned HTTP ${response.status}.`,
+        );
+      }
+    }
   }
 
   _loadCoveragePlanForCompletion() {

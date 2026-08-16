@@ -30,6 +30,7 @@ const {
 
 const clientResultGate = createResultGate({ timeoutMs: 600000 });
 const externalResultGate = createResultGate({ timeoutMs: 600000 });
+const workerCompletionGate = createResultGate({ timeoutMs: 600000 });
 const activeMetadata = testMetadata();
 const isRstestActive = activeMetadata.testRunner === 'rstest' &&
   (!activeMetadata.driverPackage || activeMetadata.driverPackage === 'rstest');
@@ -78,6 +79,7 @@ if (isRstestActive) Meteor.methods({
       maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
       runtimeConfig: metadata.rstestRuntimeConfig || {},
       coverage: metadata.rstestCoverage,
+      workerGate: Boolean(metadata.rstestWorkerGate),
     };
   },
   'rstest/submitClientResult'(payload) {
@@ -213,6 +215,25 @@ if (isRstestActive) WebApp.connectHandlers.use('/__meteor__/rstest/external', (r
   });
 });
 
+if (isRstestActive) WebApp.connectHandlers.use('/__meteor__/rstest/worker-complete', (request, response, next) => {
+  if (request.method !== 'POST') return next();
+  const metadata = testMetadata();
+  try {
+    const requestToken = request.headers['x-meteor-rstest-token'];
+    const generation = Number(request.headers['x-meteor-rstest-generation']);
+    if (requestToken !== metadata.rstestToken ||
+        generation !== Number(metadata.rstestGeneration || 1) ||
+        !workerCompletionGate.submit({ accepted: true })) {
+      throw new Error('Invalid or replayed runtime worker completion signal.');
+    }
+    response.writeHead(200, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ accepted: true, protocolVersion: 1 }));
+  } catch (error) {
+    response.writeHead(400, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ error: error.message }));
+  }
+});
+
 export const __registerTestFileLoader = api.registerTestFileLoader;
 export const __setRstestRuntimeFactory = api.setRstestRuntimeFactory;
 
@@ -243,6 +264,7 @@ function testMetadata() {
         rstestRuntime: payload.runtime,
         rstestUpstreamRuntime: payload.upstreamRuntime,
         rstestExternal: payload.external,
+        rstestWorkerGate: payload.workerGate,
         rstestWatch: payload.watch,
         rstestReportVerbose: payload.reportVerbose ?? payload.verbose,
         rstestWorker: payload.worker,
@@ -325,6 +347,8 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
     }
     results.push({ architecture: 'external', result: externalResult });
   }
+
+  if (metadata.rstestWorkerGate) await workerCompletionGate.wait();
 
   const result = mergeArchitectureResults(results);
 
