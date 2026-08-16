@@ -5,11 +5,73 @@ const path = require('node:path');
 const test = require('node:test');
 
 const {
+  getRstestCacheVersion,
+  getRstestMeteorTestFlags,
   hasTypescriptRstestInputs,
   isRstestRuntimeBuild,
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
+  shouldCleanRstestOutput,
 } = require('../lib/rstest.js');
+
+test('Rstest cache version separates coverage and runtime environment changes', () => {
+  const base = {
+    testRunnerContext: { testRunner: 'rstest' },
+    runtimeSettings: { env: { SENTINEL: '' } },
+  };
+  const disabled = getRstestCacheVersion(base);
+  const covered = getRstestCacheVersion({
+    ...base,
+    testRunnerContext: {
+      ...base.testRunnerContext,
+      coverageGeneration: 'abcdef1234567890',
+    },
+  });
+  const changedEnvironment = getRstestCacheVersion({
+    ...base,
+    runtimeSettings: { env: { SENTINEL: 'true' } },
+  });
+
+  assert.notEqual(disabled, covered);
+  assert.notEqual(disabled, changedEnvironment);
+  assert.equal(getRstestCacheVersion({ testRunnerContext: {} }), null);
+});
+
+test('Rstest test builds clean stale output outside isolated workers', () => {
+  assert.equal(shouldCleanRstestOutput({
+    isProd: false,
+    isRstestTest: true,
+    isWorker: false,
+  }), true);
+  assert.equal(shouldCleanRstestOutput({
+    isProd: false,
+    isRstestTest: true,
+    isWorker: true,
+  }), false);
+  assert.equal(shouldCleanRstestOutput({
+    isProd: true,
+    isRstestTest: false,
+    isWorker: false,
+  }), true);
+});
+
+test('mixed runtime and full-app builds expose both Meteor test flags', () => {
+  assert.deepEqual(getRstestMeteorTestFlags({
+    isTestLike: true,
+    isTestFullApp: true,
+    isRstestTest: true,
+  }), { isTest: true, isAppTest: true });
+  assert.deepEqual(getRstestMeteorTestFlags({
+    isTestLike: true,
+    isTestFullApp: true,
+    isRstestTest: false,
+  }), { isTest: false, isAppTest: true });
+  assert.deepEqual(getRstestMeteorTestFlags({
+    isTestLike: true,
+    isTestFullApp: false,
+    isRstestTest: true,
+  }), { isTest: true, isAppTest: false });
+});
 
 test('Rstest runtime build accepts runner identity from provider context', () => {
   assert.equal(isRstestRuntimeBuild({

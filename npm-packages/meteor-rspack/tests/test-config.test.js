@@ -321,16 +321,26 @@ test('Rstest upstream runtime alias resolves from harness and overrides user ali
     npmRoot: '/meteor-harness',
     resolveModule(request, options) {
       resolutions.push({ request, options });
-      return '/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js';
+      return request === '@meteorjs/rstest/runtime'
+        ? '/meteor-harness/node_modules/@meteorjs/rstest/src/runtime/index.js'
+        : '/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js';
     },
   });
 
-  assert.deepEqual(resolutions, [{
-    request: '@rstest/core/internal/browser-runtime',
-    options: { paths: ['/meteor-harness', '/meteor-app'] },
-  }]);
+  assert.deepEqual(resolutions, [
+    {
+      request: '@rstest/core/internal/browser-runtime',
+      options: { paths: ['/meteor-harness', '/meteor-app'] },
+    },
+    {
+      request: '@meteorjs/rstest/runtime',
+      options: { paths: ['/meteor-harness', '/meteor-app'] },
+    },
+  ]);
   assert.deepEqual(alias, {
     '@rstest/core$': '/meteor-harness/node_modules/@rstest/core/dist/browser-runtime/index.js',
+    '@meteorjs/rstest/runtime$':
+      '/meteor-harness/node_modules/@meteorjs/rstest/src/runtime/index.js',
   });
 
   const config = { resolve: { alias: { '@rstest/core$': '/user/wrong.js' } } };

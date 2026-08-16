@@ -7,6 +7,7 @@ var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile').Profile;
+var testRunnerContext = require('../tool-env/test-runner-context.js');
 import { requestGarbageCollection } from "../utils/gc.js";
 
 export class IsopackCache {
@@ -371,7 +372,7 @@ export class IsopackCache {
     buildmessage.assertInCapture();
     await buildmessage.enterJob("building package " + name, async function () {
       var isopack;
-      if (previousIsopack && await self._checkUpToDatePreloaded(previousIsopack)) {
+      if (previousIsopack && await self._checkUpToDatePreloaded(name, previousIsopack)) {
         isopack = previousIsopack;
         // We don't need to call self._lintLocalPackage here, because
         // lintingMessages is saved on the isopack.
@@ -384,7 +385,7 @@ export class IsopackCache {
         // Do we have an up-to-date package on disk?
         var isopackBuildInfoJson = self.cacheDir && files.readJSONOrNull(
           self._isopackBuildInfoPath(name));
-        var upToDate = await self._checkUpToDate(isopackBuildInfoJson);
+        var upToDate = await self._checkUpToDate(name, isopackBuildInfoJson);
 
         if (upToDate) {
           // Reuse existing plugin cache dir
@@ -422,6 +423,8 @@ export class IsopackCache {
             includePluginProviderPackageMap: true,
             pluginCacheDir: pluginCacheDir
           });
+          isopack.testRunnerBuildOptionsFingerprint =
+            testRunnerContext.getTestRunnerBuildOptionsFingerprint(name);
           // Accept the compiler's result, even if there were errors (since it
           // at least will have a useful WatchSet and will allow us to keep
           // going and compile other packages that depend on this one). However,
@@ -467,7 +470,7 @@ export class IsopackCache {
     }
   }
 
-  _checkUpToDate(isopackBuildInfoJson) {
+  _checkUpToDate(name, isopackBuildInfoJson) {
     var self = this;
     // If there isn't an isopack-buildinfo.json file, then we definitely aren't
     // up to date!
@@ -479,6 +482,10 @@ export class IsopackCache {
     // not up to date.
     if (self._includeCordovaUnibuild !==
         isopackBuildInfoJson.includeCordovaUnibuild) {
+      return false;
+    }
+    if ((isopackBuildInfoJson.testRunnerBuildOptionsFingerprint || null) !==
+        testRunnerContext.getTestRunnerBuildOptionsFingerprint(name)) {
       return false;
     }
 
@@ -504,12 +511,16 @@ export class IsopackCache {
     return watch.isUpToDate(watchSet);
   }
 
-  _checkUpToDatePreloaded(previousIsopack) {
+  _checkUpToDatePreloaded(name, previousIsopack) {
     var self = this;
 
     // If we include Cordova but this Isopack doesn't, or via versa, then we're
     // not up to date.
     if (self._includeCordovaUnibuild !== previousIsopack.hasCordovaUnibuild()) {
+      return false;
+    }
+    if (previousIsopack.testRunnerBuildOptionsFingerprint !==
+        testRunnerContext.getTestRunnerBuildOptionsFingerprint(name)) {
       return false;
     }
 

@@ -1,11 +1,10 @@
-import { createRequire } from 'node:module';
-import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import playwrightCoverage from './playwright.js';
 
-const projectRequire = createRequire(path.join(process.cwd(), 'package.json'));
-const playwrightEntry = projectRequire.resolve('@rstest/playwright');
+const playwrightEntry = playwrightCoverage.resolveProjectPlaywrightEntry(
+  process.cwd(),
+);
 const {
   afterAll,
   afterEach,

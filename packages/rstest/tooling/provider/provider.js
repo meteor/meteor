@@ -379,11 +379,19 @@ function createPackageRuntimeMirrors({ harnessRoot, files, packageTests }) {
   });
 }
 
-function getPackageHarnessDevDependencies(env = process.env) {
+function getPackageHarnessDevDependencies(
+  env = process.env,
+  { coverage = false } = {},
+) {
   const spec = env.METEOR_RSPACK_NPM_SPEC;
-  return typeof spec === 'string' && spec.trim()
-    ? { '@meteorjs/rspack': spec }
-    : {};
+  return {
+    ...(typeof spec === 'string' && spec.trim() && {
+      '@meteorjs/rspack': spec,
+    }),
+    ...(coverage && {
+      '@rstest/coverage-istanbul': '0.11.6',
+    }),
+  };
 }
 
 function requestsVerboseReporter(args = []) {
@@ -862,6 +870,7 @@ class RstestTestRunnerProvider {
       await npm.ensureHarnessManifest({
         additionalDevDependencies: getPackageHarnessDevDependencies(
           this.services.env,
+          { coverage: options.coverage },
         ),
         persistMeteorConfig: {
           mainModule: {
@@ -918,7 +927,7 @@ class RstestTestRunnerProvider {
       ? path.join(this.coverageRoot, 'manifest.json')
       : null;
     this.coverageNativeArtifactPath = !worker && this.coverageRoot &&
-      selection.shouldRunNative
+      command !== 'test-packages' && selection.shouldRunNative
       ? path.join(this.coverageRoot, 'native.json')
       : null;
     if (this.coverageRoot) {
@@ -996,7 +1005,6 @@ class RstestTestRunnerProvider {
       routingManifest: this.routingManifest,
       coveragePlanOutput: this.coveragePlanPath,
       coverageGeneration: this.coverageGeneration,
-      coverageArtifact: this.coverageNativeArtifactPath,
       passthrough: options.passthrough,
     };
     const serverArchitecture = architectures.find(architecture =>
@@ -1013,6 +1021,7 @@ class RstestTestRunnerProvider {
     ];
     this.nativeArgs = buildRstestArgs({
       ...commonArgs,
+      coverageArtifact: this.coverageNativeArtifactPath,
       harnessRoot: command === 'test-packages' ? harnessRoot : undefined,
       project: command === 'test' ? selection.nativeProjects : [],
       testFile: command === 'test' && !this.routingManifest
@@ -1055,6 +1064,7 @@ class RstestTestRunnerProvider {
         }),
         phase: 'native',
         routingManifest: this.routingManifest,
+        coverage: options.coverage,
         coveragePlanOutput: this.coveragePlanPath,
         coverageGeneration: this.coverageGeneration,
       })
@@ -1080,6 +1090,8 @@ class RstestTestRunnerProvider {
     );
     const runtimeClient = worker
       ? false
+      : command === 'test-packages'
+        ? !options.serverOnly
       : this.classification
         ? this.classification.runtimeClientFiles.length > 0
         : selection.inventory.runtimeFiles.some(file =>
@@ -1087,6 +1099,8 @@ class RstestTestRunnerProvider {
         );
     const runtimeServer = worker
       ? this.workerPayload.runtimeFiles.length > 0
+      : command === 'test-packages'
+        ? !options.clientOnly
       : this.classification
         ? this.classification.runtimeServerFiles.length > 0
         : selection.inventory.runtimeFiles.some(file =>
@@ -1125,6 +1139,8 @@ class RstestTestRunnerProvider {
       token,
       server,
       client,
+      runtimeServer,
+      runtimeClient,
       runtime: selection.needsRuntime,
       upstreamRuntime: this.upstreamRuntime,
       external: selection.needsExternal,
@@ -1261,6 +1277,11 @@ class RstestTestRunnerProvider {
     }
     this.plan = {
       mode,
+      ...(mode === 'meteor-host' && command === 'test' && {
+        hostTestMode: selection.needsExternal
+          ? selection.needsRuntime ? 'mixed' : 'app-test'
+          : 'test',
+      }),
       ...(mode === 'meteor-host' && { driverPackage: 'rstest' }),
       ...(command === 'test-packages' && {
         harnessPackages: ['ecmascript'],
@@ -1431,7 +1452,7 @@ class RstestTestRunnerProvider {
   }
 
   async startHost({ url, log }) {
-    if (this.metadata.client) {
+    if (this.metadata.runtimeClient) {
       const browser = new this.services.Browser({
         appDir: this.context.appDir,
         url,
@@ -1448,6 +1469,7 @@ class RstestTestRunnerProvider {
       );
       const external = new this.services.External({
         appDir: this.context.appDir,
+        packageRoot: this.context.npm.root,
         url,
         args: this.externalArgs,
         resultPath: this.externalResultPath,

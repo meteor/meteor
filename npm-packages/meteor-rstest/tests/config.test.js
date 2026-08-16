@@ -189,13 +189,12 @@ test('generated external Istanbul coverage appends the Playwright setup exactly 
     __dirname,
     '../src/coverage/playwright-setup.mjs',
   );
+  const e2eTest = path.join(root, 'tests', 'rstest', 'e2e', 'app.test.js');
+  fs.mkdirSync(path.dirname(e2eTest), { recursive: true });
+  fs.writeFileSync(e2eTest, '');
   fs.writeFileSync(userSetup, '');
   fs.writeFileSync(configPath, `module.exports = {
-    setupFiles: [
-      ${JSON.stringify(userSetup)},
-      ${JSON.stringify(integrationSetup)},
-      ${JSON.stringify(integrationSetup)},
-    ],
+    setupFiles: [${JSON.stringify(userSetup)}],
     coverage: { enabled: true, provider: 'istanbul' },
   };`);
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -217,6 +216,14 @@ test('generated external Istanbul coverage appends the Playwright setup exactly 
   const second = await createGeneratedConfig(input)();
   assert.deepEqual(first.setupFiles, [userSetup, integrationSetup]);
   assert.deepEqual(second.setupFiles, [userSetup, integrationSetup]);
+  assert.deepEqual(
+    first.projects.find(project => project.name === 'meteor-e2e').setupFiles,
+    [userSetup, integrationSetup],
+  );
+  assert.deepEqual(
+    second.projects.find(project => project.name === 'meteor-e2e').setupFiles,
+    [userSetup, integrationSetup],
+  );
 });
 
 test('disabled coverage ignores wrapper plan and artifact options', async t => {

@@ -3,6 +3,7 @@ const {
 } = require('./process.js');
 const fs = require('node:fs');
 const path = require('node:path');
+const { createRequire } = require('node:module');
 const {
   serializeCoverageFrames,
 } = require('../../runtime/coverage-protocol.js');
@@ -68,6 +69,7 @@ function structuredResultFromReport(report, code) {
 class RstestExternal {
   constructor({
     appDir,
+    packageRoot = appDir,
     url,
     args,
     startProcess = startRstestProcess,
@@ -81,6 +83,7 @@ class RstestExternal {
     coverageSupport,
   }) {
     this.appDir = appDir;
+    this.packageRoot = packageRoot;
     this.url = url;
     this.args = args;
     this.startProcess = startProcess;
@@ -162,10 +165,12 @@ class RstestExternal {
 
   _coverageSupport() {
     if (this.coverageSupport) return this.coverageSupport;
-    const packageJson = require.resolve('@meteorjs/rstest/package.json', {
-      paths: [this.appDir],
-    });
-    return require(path.join(
+    const projectRequire = createRequire(path.join(
+      this.packageRoot,
+      'package.json',
+    ));
+    const packageJson = projectRequire.resolve('@meteorjs/rstest/package.json');
+    return projectRequire(path.join(
       path.dirname(packageJson),
       'src/coverage/playwright.js',
     ));

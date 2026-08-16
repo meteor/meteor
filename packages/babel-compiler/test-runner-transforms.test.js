@@ -192,8 +192,10 @@ test('leaves options unchanged when no transform is selected', () => {
 
 test('exposes selector and applicator through the build-plugin global', () => {
   const previousPlugin = globalThis.Plugin;
+  let requestedBuildPlugin;
   globalThis.Plugin = {
-    getTestRunnerBuildOptions() {
+    getTestRunnerBuildOptions(buildPlugin) {
+      requestedBuildPlugin = buildPlugin;
       return { sourceTransforms: sourceTransforms() };
     },
   };
@@ -207,6 +209,7 @@ test('exposes selector and applicator through the build-plugin global', () => {
     const options = { plugins: [] };
     globalThis.BabelTestRunnerTransforms.apply(options, 'babel', transform);
 
+    assert.equal(requestedBuildPlugin, 'babel-compiler');
     assert.equal(transform.packageRoot, '/workspace/packages/cards');
     assert.deepEqual(options.plugins, [[
       '/plugins/instrument.js',

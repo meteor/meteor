@@ -29,7 +29,8 @@ const shardWorkerScript = String.raw`
     const page = {
       async close() {},
       async evaluate(callback) {
-        if (callback.name === 'readBrowserCoverage') {
+        if (callback.name === 'readBrowserCoverage' ||
+            typeof callback === 'string' && !callback.includes('addEventListener')) {
           return {
             documentId: process.env.METEOR_RSTEST_TEST_SHARD_ID,
             coverage,
@@ -165,6 +166,47 @@ test('external Rstest run targets ready Meteor app and submits structured result
   assert.equal(payload.generation, 7);
   assert.equal(payload.result.ok, true);
   assert.equal(payload.result.cases[0].fullName, 'suite > external case');
+});
+
+test('external coverage support resolves from the explicit project package root', t => {
+  const packageRoot = fs.mkdtempSync(path.join(
+    os.tmpdir(),
+    'meteor-rstest-project-support-',
+  ));
+  const appDir = fs.mkdtempSync(path.join(
+    os.tmpdir(),
+    'meteor-rstest-source-app-',
+  ));
+  t.after(() => fs.rmSync(packageRoot, { recursive: true, force: true }));
+  t.after(() => fs.rmSync(appDir, { recursive: true, force: true }));
+  const coordinatorRoot = path.join(
+    packageRoot,
+    'node_modules',
+    '@meteorjs',
+    'rstest',
+  );
+  fs.mkdirSync(path.join(coordinatorRoot, 'src', 'coverage'), {
+    recursive: true,
+  });
+  fs.writeFileSync(path.join(coordinatorRoot, 'package.json'), JSON.stringify({
+    name: '@meteorjs/rstest',
+    version: '0.0.0-test',
+  }));
+  fs.writeFileSync(
+    path.join(coordinatorRoot, 'src', 'coverage', 'playwright.js'),
+    "module.exports = { owner: 'project-package-root' };\n",
+  );
+
+  const runner = new RstestExternal({
+    appDir,
+    packageRoot,
+    url: 'http://localhost:3100/',
+    args: [],
+    token: 'token',
+    resultPath: path.join(packageRoot, 'result.json'),
+  });
+
+  assert.equal(runner._coverageSupport().owner, 'project-package-root');
 });
 
 test('parallel external files merge shards into one commit before result', async t => {

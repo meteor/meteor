@@ -1,4 +1,5 @@
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const path = require('node:path');
 const {
   applyRstestCoverageToSwcRule,
@@ -22,6 +23,33 @@ function isRstestRuntimeBuild({
   return runner === 'rstest' && (
     runtime === true || (runtime === undefined && Boolean(isTest))
   );
+}
+
+function getRstestMeteorTestFlags({
+  isTestLike,
+  isTestFullApp,
+  isRstestTest,
+} = {}) {
+  return {
+    isTest: Boolean(isTestLike && (!isTestFullApp || isRstestTest)),
+    isAppTest: Boolean(isTestLike && isTestFullApp),
+  };
+}
+
+function getRstestCacheVersion({
+  testRunnerContext = {},
+  runtimeSettings = null,
+} = {}) {
+  if (testRunnerContext.testRunner !== 'rstest') return null;
+  return crypto.createHash('sha256').update(JSON.stringify({
+    schemaVersion: 1,
+    coverageGeneration: testRunnerContext.coverageGeneration || null,
+    runtimeSettings,
+  })).digest('hex');
+}
+
+function shouldCleanRstestOutput({ isProd, isRstestTest, isWorker } = {}) {
+  return Boolean((isProd || isRstestTest) && !isWorker);
 }
 
 function readRstestRuntimeInventory({ manifest, projectDir, client }) {
@@ -83,10 +111,13 @@ function readRstestRuntimeSettings(filename) {
 
 module.exports = {
   applyRstestCoverageToSwcRule,
+  getRstestCacheVersion,
+  getRstestMeteorTestFlags,
   hasTypescriptRstestInputs,
   isRstestRuntimeBuild,
   readRstestCoveragePlan,
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
   resolveRstestCoverageSwcPlugin,
+  shouldCleanRstestOutput,
 };

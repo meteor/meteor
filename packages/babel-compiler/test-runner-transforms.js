@@ -177,7 +177,7 @@
         typeof Plugin.getTestRunnerBuildOptions !== 'function') {
       return null;
     }
-    const buildOptions = Plugin.getTestRunnerBuildOptions();
+    const buildOptions = Plugin.getTestRunnerBuildOptions('babel-compiler');
     return selectTestSourceTransforms({
       packageName: inputFile.getPackageName(),
       options: buildOptions && buildOptions.sourceTransforms,

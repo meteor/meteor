@@ -224,6 +224,9 @@ Verified coverage:
 | Native `rs.mock` hoisting and `rs.fn` use upstream Rstest under Meteor's projected Rspack config; supervised Rstest owns `NODE_ENV=test` instead of inheriting Meteor CLI's production environment | Pure server, process characterization |
 | Inline, committed external, and committed file snapshots; mismatch exits nonzero, `--update-snapshots` rewrites the temporary snapshot, and a clean rerun passes | Pure server, snapshot update |
 | `--coverage` instruments imported Rspack source and writes a parsed Istanbul JSON report | Pure server, native coverage |
+| One Istanbul report merges positive counters from native Rspack, Meteor-runtime server/client, a local Atmosphere package, and the project-owned Playwright full-app page | Unified coverage, test once |
+| Coverage remains one report with `--runtime-workers 2`; `test-packages --once --coverage` attributes the physical local package source | Runtime-worker/package coverage, test once |
+| Passing and impossible thresholds preserve exit precedence; `reportOnFailure` writes the report, while coverage-disabled hosts expose neither report nor sentinel | Coverage policy, test once |
 | jsdom client project | Client-only |
 | Real Chromium Browser Mode with semantic locators, a real click/state update, auto-waiting assertions, and an inline DOM snapshot | Browser project, client-only |
 | Meteor-runtime server resolves `meteor/*`, Atmosphere packages, and MongoDB | Server runtime |
@@ -268,7 +271,7 @@ Deliberate non-claims keep this fixture focused:
 | Running Tinytest or Mocha cases through Rstest | Legacy registries keep their real driver semantics; no compatibility adapter or merged result stream is claimed |
 | Firefox/WebKit Browser Mode matrix | Chromium proves Browser Mode integration; upstream browser matrix belongs to Rstest/Playwright |
 | React/Vue/Svelte component matrices under Rstest | Existing framework apps cover Rspack integration; this fixture covers engine and Meteor lifecycle boundaries |
-| Runtime coverage, runtime snapshots, runtime module-mock hoisting, and runtime sharding | Native Rstest owns these features where applicable; Meteor-runtime executor does not claim them yet |
+| Runtime snapshots, runtime module-mock hoisting, and general runtime sharding | Coverage is proven across two server workers; the remaining features are not claimed yet |
 | Client/browser, watch, full-app, package-test, driver, and external-Mongo runtime worker pools | Initial `--runtime-workers` slice requires `meteor test --once --server-only` and keeps all other routes unchanged |
 | Adding, renaming, or removing test files during one native watch process | Current Rstest 0.11 collection does not rediscover changed test inventory; restart `meteor test` after inventory or ownership changes |
 | `web.browser.legacy` and `web.cordova` runtime execution | Current executor contract covers server and `web.browser` |
@@ -388,6 +391,7 @@ Where each feature is tested across apps and skeletons.
 | Rstest snapshots (inline, external, file) | rspack-rstest | |
 | Rstest snapshot mismatch/update/recheck lifecycle | rspack-rstest | |
 | Rstest native Istanbul coverage report | rspack-rstest | |
+| Unified Rstest Istanbul coverage across native, Meteor server/client, Atmosphere package, worker, and Playwright full-app lanes | rspack-rstest | |
 | Meteor-runtime Rstest server/client | rspack-rstest | |
 | Rstest runtime name filtering | rspack-rstest | |
 | Atmosphere package and MongoDB runtime resolution | rspack-rstest | |

@@ -7,6 +7,7 @@ Package.registerBuildPlugin({
   name: 'rspack',
   sources: [
     'lib/constants.js',
+    'lib/build-context-files.js',
     'lib/dependencies.js',
     'lib/build-context.js',
     'lib/processes.js',

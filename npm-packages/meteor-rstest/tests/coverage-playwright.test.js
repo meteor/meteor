@@ -8,8 +8,10 @@ const vm = require('node:vm');
 
 const {
   cleanupCoverageShardDirectory,
+  createBrowserCaptureScripts,
   createPlaywrightCoverageCollector,
   readCoverageShards,
+  resolveProjectPlaywrightEntry,
   writeCoverageShard,
 } = require('../src/coverage/playwright.js');
 const {
@@ -17,6 +19,48 @@ const {
 } = require('../../../packages/rstest/runtime/coverage-protocol.js');
 
 const generation = 'abcdef1234567890abcdef1234567890';
+
+test('browser coverage scripts execute without Node closure state', () => {
+  const snapshots = [];
+  const listeners = {};
+  const browserGlobal = {
+    __coverage__: coverage('/app/imports/browser-script.js', 6),
+    addEventListener(name, callback) { listeners[name] = callback; },
+    crypto: { randomUUID: () => 'browser-document' },
+    sendCoverage(snapshot) { snapshots.push(snapshot); },
+  };
+  const scripts = createBrowserCaptureScripts('sendCoverage');
+
+  vm.runInNewContext(scripts.install, browserGlobal);
+  listeners.pagehide();
+  const current = vm.runInNewContext(scripts.read, browserGlobal);
+
+  assert.equal(snapshots[0].documentId, 'browser-document');
+  assert.equal(snapshots[0].coverage['/app/imports/browser-script.js'].s[0], 6);
+  assert.equal(current.documentId, 'browser-document');
+  assert.equal(current.coverage['/app/imports/browser-script.js'].s[0], 6);
+});
+
+test('Playwright setup resolves the project-owned ESM import entry', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-playwright-entry-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const packageRoot = path.join(root, 'node_modules', '@rstest', 'playwright');
+  fs.mkdirSync(path.join(packageRoot, 'dist'), { recursive: true });
+  fs.writeFileSync(path.join(packageRoot, 'package.json'), JSON.stringify({
+    name: '@rstest/playwright',
+    type: 'module',
+    exports: {
+      '.': { import: './dist/index.js' },
+      './package.json': { default: './package.json' },
+    },
+  }));
+  fs.writeFileSync(path.join(packageRoot, 'dist', 'index.js'), 'export {};\n');
+
+  assert.equal(
+    fs.realpathSync(resolveProjectPlaywrightEntry(root)),
+    fs.realpathSync(path.join(packageRoot, 'dist', 'index.js')),
+  );
+});
 
 function fileCoverage(filename, hits) {
   return {
@@ -73,7 +117,9 @@ class FakePage extends EventEmitter {
     if (this.closed) throw new Error('Target page has been closed');
     this.browserGlobal.__coverage__ = structuredClone(this.document.coverage);
     return vm.runInNewContext(
-      `(${callback.toString()})(${JSON.stringify(argument)})`,
+      typeof callback === 'string'
+        ? callback
+        : `(${callback.toString()})(${JSON.stringify(argument)})`,
       this.browserGlobal,
     );
   }

@@ -21,6 +21,31 @@ function stripAnsi(value) {
   return value.replace(ANSI_PATTERN, '');
 }
 
+function createCoverageDirectory() {
+  return fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-coverage-'));
+}
+
+function readCoverageReport(coverageDir) {
+  const reportFile = path.join(coverageDir, 'coverage-final.json');
+  expect(fs.existsSync(reportFile)).toBe(true);
+  expect(fs.readdirSync(coverageDir).sort()).toEqual(['coverage-final.json']);
+  return JSON.parse(fs.readFileSync(reportFile, 'utf8'));
+}
+
+function expectCoveredSources(report, expectedSources) {
+  for (const suffix of expectedSources) {
+    const entry = Object.entries(report).find(([file]) =>
+      file.replaceAll('\\', '/').endsWith(suffix)
+    );
+    if (!entry) {
+      throw new Error(
+        `Coverage report is missing ${suffix}; sources: ${Object.keys(report).join(', ')}`
+      );
+    }
+    expect(Object.values(entry[1].s).some(value => value > 0)).toBe(true);
+  }
+}
+
 async function reservePortBlock(size) {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const base = 20_000 + Math.floor(Math.random() * 20_000);
@@ -490,6 +515,210 @@ describe('Meteor + Rstest integration', () => {
     }
   }, 600_000);
 
+  test('meteor coverage merges native, runtime, package, and full-app browser lanes once', async () => {
+    const coverageDir = createCoverageDirectory();
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--full-app',
+          '--project',
+          'meteor-pure-server',
+          '--project',
+          'meteor-runtime-server',
+          '--project',
+          'meteor-runtime-client',
+          '--project',
+          'meteor-e2e',
+          '--coverage',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: { METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir },
+          },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(0);
+      expect(output).toContain('✓ tests/rstest/pure/server/math.test.js (5)');
+      expect(output).toContain('✓ tests/rstest/runtime/server/mongo.test.js (1)');
+      expect(output).toContain('✓ tests/rstest/runtime/client/meteor.test.js (1)');
+      expect(output).toContain('full-app Rstest Playwright drives Meteor-owned app lifecycle');
+
+      const report = readCoverageReport(coverageDir);
+      expectCoveredSources(report, [
+        '/tests/rstest/pure/server/coverage-target.js',
+        '/imports/coverage/server-target.js',
+        '/imports/coverage/client-target.js',
+        '/packages/rstest-e2e-fixture/fixture.js',
+      ]);
+    } finally {
+      fs.rmSync(coverageDir, { recursive: true, force: true });
+    }
+  }, 900_000);
+
+  test('meteor coverage applies passing and impossible thresholds once', async () => {
+    const runThreshold = async threshold => {
+      const coverageDir = createCoverageDirectory();
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-runtime-server',
+          '--test-file',
+          'mongo.test.js',
+          '--coverage',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: {
+              METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir,
+              METEOR_RSTEST_E2E_LINES_THRESHOLD: String(threshold),
+            },
+          },
+        },
+      );
+      return {
+        completed: await result.meteorProcess,
+        coverageDir,
+        output: stripAnsi(result.outputLines.join('\n')),
+      };
+    };
+
+    const passing = await runThreshold(1);
+    try {
+      expect(passing.completed.exitCode).toBe(0);
+      readCoverageReport(passing.coverageDir);
+    } finally {
+      fs.rmSync(passing.coverageDir, { recursive: true, force: true });
+    }
+
+    const impossible = await runThreshold(101);
+    try {
+      expect(impossible.completed.exitCode).toBe(1);
+      expect(impossible.output).toContain('does not meet 101%');
+      readCoverageReport(impossible.coverageDir);
+    } finally {
+      fs.rmSync(impossible.coverageDir, { recursive: true, force: true });
+    }
+  }, 900_000);
+
+  test('reportOnFailure writes coverage while preserving the test failure', async () => {
+    const coverageDir = createCoverageDirectory();
+    const testFile = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'runtime',
+      'server',
+      'mongo.test.js',
+    );
+    const originalTest = fs.readFileSync(testFile, 'utf8');
+    const failingTest = originalTest.replace(
+      'expect(document.value).toBe(42);',
+      'expect(document.value).toBe(404);',
+    );
+    expect(failingTest).not.toBe(originalTest);
+    fs.writeFileSync(testFile, failingTest);
+
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-runtime-server',
+          '--test-file',
+          'mongo.test.js',
+          '--coverage',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: {
+              METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir,
+              METEOR_RSTEST_E2E_LINES_THRESHOLD: '101',
+              METEOR_RSTEST_E2E_REPORT_ON_FAILURE: 'true',
+            },
+          },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(1);
+      expect(output).toContain('Meteor runtime project resolves Atmosphere packages');
+      expect(output).toContain('expected 42 to be 404');
+      expect(output).toContain('does not meet 101%');
+      readCoverageReport(coverageDir);
+    } finally {
+      fs.writeFileSync(testFile, originalTest);
+      fs.rmSync(coverageDir, { recursive: true, force: true });
+    }
+  }, 600_000);
+
+  test('coverage-disabled Meteor hosts expose no sentinel or report', async () => {
+    const coverageDir = createCoverageDirectory();
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--project',
+          'meteor-runtime-server',
+          '--project',
+          'meteor-runtime-client',
+          '--test-file',
+          'mongo.test.js',
+          '--test-file',
+          'meteor.test.js',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: {
+              METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir,
+              METEOR_RSTEST_EXPECT_NO_COVERAGE: 'true',
+            },
+          },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(0);
+      expect(output).toContain('✓ tests/rstest/runtime/server/mongo.test.js (1)');
+      expect(output).toContain('✓ tests/rstest/runtime/client/meteor.test.js (1)');
+      expect(fs.readdirSync(coverageDir)).toEqual([]);
+    } finally {
+      fs.rmSync(coverageDir, { recursive: true, force: true });
+    }
+  }, 600_000);
+
   test('meteor name filtering reaches Meteor-runtime executor', async () => {
     const result = await runMeteorCommand(
       'test',
@@ -521,8 +750,8 @@ describe('Meteor + Rstest integration', () => {
     expect(output).toContain(
       '- tests/rstest/runtime/server/concurrency.test.js (4)'
     );
-    expect(output).toContain('Test Files  1 passed | 2 skipped (3)');
-    expect(output).toContain('1 passed | 5 skipped (6)');
+    expect(output).toContain('Test Files  1 passed | 3 skipped (4)');
+    expect(output).toContain('1 passed | 6 skipped (7)');
     expect(output).not.toContain('Started Meteor Rstest browser');
     expect(output).not.toContain('Meteor runtime · web.browser');
   }, 600_000);
@@ -638,6 +867,48 @@ describe('Meteor + Rstest integration', () => {
       );
     } finally {
       fs.writeFileSync(peerFile, originalPeer);
+    }
+  }, 900_000);
+
+  test('meteor runtime workers merge one final coverage report', async () => {
+    const coverageDir = createCoverageDirectory();
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-runtime-server',
+          '--test-file',
+          'mongo.test.js',
+          '--test-file',
+          'mongo-worker-peer.test.js',
+          '--runtime-workers',
+          '2',
+          '--coverage',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: { METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir },
+          },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(0);
+      expect(output).toContain('[Meteor Rstest fixture] worker=server-1');
+      expect(output).toContain('[Meteor Rstest fixture] worker=server-2');
+      const report = readCoverageReport(coverageDir);
+      expectCoveredSources(report, ['/imports/coverage/server-target.js']);
+    } finally {
+      fs.rmSync(coverageDir, { recursive: true, force: true });
     }
   }, 900_000);
 
@@ -1130,6 +1401,65 @@ describe('Meteor + Rstest integration', () => {
     expect(repeatedOutput).toContain(
       '✓ rstest-e2e-fixture/fixture.tests.js (1)'
     );
+  }, 600_000);
+
+  test('meteor test-packages coverage reports the physical local package source', async () => {
+    const coverageDir = createCoverageDirectory();
+    const repoRoot = path.resolve(__dirname, '../..');
+    try {
+      const result = await runMeteorCommand(
+        'test-packages',
+        [
+          '--once',
+          '--coverage',
+          '--port',
+          testPort(3217),
+          'rstest-e2e-fixture',
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: {
+              METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir,
+              METEOR_RSTEST_NPM_SPEC: path.join(
+                repoRoot,
+                'npm-packages',
+                'meteor-rstest',
+              ),
+              METEOR_RSPACK_NPM_SPEC: path.join(
+                repoRoot,
+                'npm-packages',
+                'meteor-rspack',
+              ),
+            },
+          },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(0);
+      expect(output).toContain('✓ rstest-e2e-fixture/fixture.tests.js (1)');
+      expect(output).toContain('✓ rstest-e2e-fixture/fixture.tests.js (2)');
+      const report = readCoverageReport(coverageDir);
+      const target = Object.entries(report).find(([file]) =>
+        file.replaceAll('\\', '/').endsWith(
+          '/packages/rstest-e2e-fixture/fixture.js'
+        )
+      );
+      expect(target).toBeDefined();
+      expect(fs.realpathSync(target[0])).toBe(fs.realpathSync(path.join(
+        appDir,
+        'packages',
+        'rstest-e2e-fixture',
+        'fixture.js',
+      )));
+      expect(Object.values(target[1].s).some(value => value > 0)).toBe(true);
+    } finally {
+      fs.rmSync(coverageDir, { recursive: true, force: true });
+    }
   }, 600_000);
 
   test('meteor test-packages bootstraps Rstest outside any Meteor app', async () => {

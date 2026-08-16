@@ -3,6 +3,7 @@ const {
 } = require('../../tool-env/test-runner-context.js');
 
 const VALID_PLAN_MODES = new Set(['native-only', 'meteor-host']);
+const VALID_HOST_TEST_MODES = new Set(['test', 'app-test', 'mixed']);
 const VALID_COMPLETION_OUTCOMES = new Set(['completed', 'failed', 'aborted']);
 
 function contractError(message) {
@@ -42,6 +43,15 @@ function validateTestExecutionPlan(plan) {
   }
 
   const normalized = { mode: plan.mode };
+  if (plan.hostTestMode !== undefined) {
+    if (plan.mode !== 'meteor-host' ||
+        !VALID_HOST_TEST_MODES.has(plan.hostTestMode)) {
+      throw contractError(
+        'hostTestMode must be "test", "app-test", or "mixed" for a meteor-host execution plan'
+      );
+    }
+    normalized.hostTestMode = plan.hostTestMode;
+  }
   if (plan.driverPackage !== undefined) {
     if (plan.mode !== 'meteor-host') {
       throw contractError(
@@ -92,6 +102,15 @@ function validateTestExecutionPlan(plan) {
     normalized.buildPluginOptions = options;
   }
   return Object.freeze(normalized);
+}
+
+function applyTestExecutionHostMode(testMetadata, hostTestMode) {
+  if (hostTestMode === undefined) return;
+  if (!VALID_HOST_TEST_MODES.has(hostTestMode)) {
+    throw contractError('hostTestMode is invalid');
+  }
+  testMetadata.isTest = hostTestMode === 'test' || hostTestMode === 'mixed';
+  testMetadata.isAppTest = hostTestMode === 'app-test' || hostTestMode === 'mixed';
 }
 
 function validatePreHostResult(result) {
@@ -265,6 +284,7 @@ function createProviderSession({ registration, provider, context }) {
 }
 
 module.exports = {
+  applyTestExecutionHostMode,
   createProviderSession,
   createTestRunnerContext,
   normalizeTestRunnerVerbose,

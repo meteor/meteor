@@ -8,4 +8,10 @@ test('full-app Rstest Playwright drives Meteor-owned app lifecycle', async ({ pa
   await expect(page).toHaveTitle(/rspack-rstest-e2e/i);
   await expect(page.getByRole('heading', { name: 'Meteor Rstest E2E' })).toBeVisible();
   await expect(page.getByTestId('runtime')).toHaveText('Meteor client ready');
+  await expect(page.getByTestId('client-coverage')).toHaveText(
+    'Meteor client coverage target'
+  );
+  await expect(page.getByTestId('package-coverage')).toHaveText(
+    'Meteor package coverage target (client)'
+  );
 });

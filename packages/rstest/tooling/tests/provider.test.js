@@ -19,6 +19,9 @@ test('package harness pins configured local Rspack npm package', () => {
   }), {
     '@meteorjs/rspack': '/repo/npm-packages/meteor-rspack',
   });
+  assert.deepEqual(getPackageHarnessDevDependencies({}, { coverage: true }), {
+    '@rstest/coverage-istanbul': '0.11.6',
+  });
   assert.deepEqual(getPackageHarnessDevDependencies({}), {});
 });
 
@@ -479,6 +482,7 @@ test('runtime-only selection uses config plan without leaking runtime filters to
   context.architectures = ['os.test', 'web.browser', 'web.browser.legacy'];
   context.options.project = ['meteor-runtime-server'];
   context.options.testFile = ['mongo.test.js'];
+  context.options.coverage = true;
   const runtimeFile = path.join(
     context.appDir,
     'tests/rstest/runtime/server/mongo.test.js'
@@ -487,6 +491,13 @@ test('runtime-only selection uses config plan without leaking runtime filters to
   fs.writeFileSync(runtimeFile, '');
   const provider = new RstestTestRunnerProvider(context, {
     async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    resolveRstestCoverageInstrumentation() {
+      return {
+        swcPlugin: '/integration/coverage.wasm',
+        babelPlugin: '/integration/istanbul.js',
+      };
+    },
   });
 
   await provider.validate();
@@ -496,6 +507,7 @@ test('runtime-only selection uses config plan without leaking runtime filters to
   assert.equal(plan.driverPackage, 'rstest');
   assert.ok(provider.runtimePlanArgs.includes('--once'));
   assert.ok(provider.runtimePlanArgs.includes('--runtime-plan-output'));
+  assert.ok(provider.runtimePlanArgs.includes('--coverage'));
   assert.equal(provider.runtimePlanArgs.includes('--project'), false);
   assert.equal(provider.runtimePlanArgs.includes('--test-file'), false);
   assert.deepEqual(
@@ -747,6 +759,7 @@ test('native client project receives one canonical Meteor browser architecture',
 
 test('runtime tests prepare Meteor-host plan and package harness first', async t => {
   const order = [];
+  let browserStarts = 0;
   let manifestOptions;
   const context = createContext(t, {
     command: 'test-packages',
@@ -783,6 +796,11 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
     async ensureRstestInstalled() {
       order.push('dependencies');
     },
+    Browser: class {
+      async start() {
+        browserStarts += 1;
+      }
+    },
     assertRstestOptionalCapabilities({ appDir, capabilities }) {
       order.push('optional');
       assert.equal(appDir, context.appDir);
@@ -795,8 +813,11 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
 
   assert.deepEqual(order, ['manifest', 'dependencies', 'optional']);
   assert.equal(plan.mode, 'meteor-host');
+  assert.equal(plan.hostTestMode, undefined);
   assert.equal(plan.driverPackage, 'rstest');
   assert.equal(plan.metadata.runtime, true);
+  assert.equal(plan.metadata.runtimeServer, true);
+  assert.equal(plan.metadata.runtimeClient, true);
   assert.equal(plan.metadata.command, 'test-packages');
   assert.deepEqual(plan.harnessPackages, ['ecmascript']);
   assert.equal(plan.refreshProjectMetadata, true);
@@ -858,6 +879,8 @@ test('runtime tests prepare Meteor-host plan and package harness first', async t
     fs.existsSync(path.join(context.harnessRoot, '_build/test/client-meteor.js')),
     true,
   );
+  await provider.startHost({ url: 'http://localhost:3000', log() {} });
+  assert.equal(browserStarts, 1);
 });
 
 test('auto-install opt-out never invokes dependency installer', async t => {
@@ -892,10 +915,19 @@ test('package command accepts coverage for unified finalization', async t => {
   context.options.coverage = true;
   const provider = new RstestTestRunnerProvider(context, {
     async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    resolveRstestCoverageInstrumentation() {
+      return {
+        swcPlugin: '/integration/coverage.wasm',
+        babelPlugin: '/integration/istanbul.js',
+      };
+    },
   });
 
   await provider.validate();
   assert.equal(provider.selection.needsRuntime, true);
+  await provider.prepare();
+  assert.equal(provider.nativeArgs.includes('--coverage-artifact'), false);
 });
 
 test('runtime coverage exposes its plan to Rspack and exact local package transforms', async t => {
@@ -991,6 +1023,12 @@ test('full-app coverage instruments the app even without Meteor-runtime test fil
 
   assert.equal(plan.metadata.runtime, false);
   assert.equal(plan.metadata.external, true);
+  assert.equal(plan.metadata.runtimeServer, false);
+  assert.equal(plan.metadata.runtimeClient, false);
+  assert.deepEqual(plan.buildPluginOptions.rspack.targets, {
+    client: true,
+    server: true,
+  });
   assert.equal(
     plan.buildPluginOptions.rspack.context.coveragePlanPath,
     provider.coveragePlanPath,
@@ -999,6 +1037,55 @@ test('full-app coverage instruments the app even without Meteor-runtime test fil
     plan.buildPluginOptions.rspack.context.coverageGeneration,
     provider.coverageGeneration,
   );
+});
+
+test('runtime client and full-app projects request a mixed Meteor test host', async t => {
+  const context = createContext(t);
+  context.options.fullApp = true;
+  context.options.project = [
+    'meteor-pure-server',
+    'meteor-runtime-client',
+    'meteor-e2e',
+  ];
+  context.options.coverage = true;
+  const runtimeFile = path.join(
+    context.appDir,
+    'tests/rstest/runtime/client/meteor.test.js',
+  );
+  const externalFile = path.join(
+    context.appDir,
+    'tests/rstest/e2e/app.test.js',
+  );
+  const nativeFile = path.join(
+    context.appDir,
+    'tests/rstest/pure/server/native.test.js',
+  );
+  fs.mkdirSync(path.dirname(nativeFile), { recursive: true });
+  fs.mkdirSync(path.dirname(runtimeFile), { recursive: true });
+  fs.mkdirSync(path.dirname(externalFile), { recursive: true });
+  fs.writeFileSync(runtimeFile, "import { test } from '@rstest/core';\n");
+  fs.writeFileSync(externalFile, "import { test } from '@rstest/core';\n");
+  fs.writeFileSync(nativeFile, "import { test } from '@rstest/core';\n");
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    assertRstestOptionalCapabilities() {},
+    resolveRstestCoverageInstrumentation() {
+      return {
+        swcPlugin: '/integration/coverage.wasm',
+        babelPlugin: '/integration/istanbul.js',
+      };
+    },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(plan.mode, 'meteor-host');
+  assert.equal(plan.hostTestMode, 'mixed');
+  assert.equal(plan.metadata.runtime, true);
+  assert.equal(plan.metadata.external, true);
+  assert.ok(provider.nativeArgs.includes('--coverage-artifact'));
+  assert.equal(provider.externalArgs.includes('--coverage-artifact'), false);
 });
 
 test('mixed coverage finalizes one generation manifest and preserves exit precedence', async t => {
@@ -1346,6 +1433,7 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
   fs.mkdirSync(path.dirname(testFile), { recursive: true });
   fs.writeFileSync(testFile, "import { test } from '@rstest/core';\n");
   let externalOptions;
+  let browserStarts = 0;
   const provider = new RstestTestRunnerProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
@@ -1354,7 +1442,7 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
       return { completion: Promise.resolve(0), async stop() {} };
     },
     Browser: class {
-      async start() {}
+      async start() { browserStarts += 1; }
       async stop() {}
     },
     External: class {
@@ -1368,6 +1456,7 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
   await provider.prepare();
 
   assert.ok(provider.runtimePlanArgs.includes('--coverage-plan-output'));
+  assert.equal(provider.externalArgs.includes('--coverage-artifact'), false);
   assert.deepEqual(provider.coverageArtifacts.map(artifact => artifact.producer), [
     'server',
     'client',
@@ -1375,6 +1464,7 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
   ]);
   await provider.startBeforeHost({ updateMetadata() {} });
   await provider.startHost({ url: 'http://localhost:3100/', log() {} });
+  assert.equal(browserStarts, 0);
   assert.equal(externalOptions.coverageGeneration, provider.coverageGeneration);
   assert.equal(
     externalOptions.coverageArtifactPath,
@@ -1384,6 +1474,7 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
     externalOptions.coverageShardDirectory,
     path.join(provider.coverageRoot, 'e2e-shards'),
   );
+  assert.equal(externalOptions.packageRoot, context.npm.root);
 });
 
 test('provider cleanup stops resources once in reverse start order', async t => {

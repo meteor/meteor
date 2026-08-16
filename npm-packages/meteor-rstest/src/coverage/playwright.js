@@ -24,6 +24,22 @@ function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function resolveProjectPlaywrightEntry(projectRoot) {
+  const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
+  const packageJsonPath = projectRequire.resolve('@rstest/playwright/package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
+  const rootExport = packageJson.exports && packageJson.exports['.'];
+  const importEntry = typeof rootExport === 'string'
+    ? rootExport
+    : rootExport && rootExport.import;
+  if (typeof importEntry !== 'string') {
+    throw coverageError(
+      'Project-owned @rstest/playwright does not expose an ESM import entry.',
+    );
+  }
+  return path.resolve(path.dirname(packageJsonPath), importEntry);
+}
+
 function sameIdentity(left, right) {
   return left.dev === right.dev && left.ino === right.ino;
 }
@@ -190,14 +206,16 @@ function cleanupCoverageShardDirectory({ directory, generation }) {
   fs.rmdirSync(directory);
 }
 
-function installBrowserCapture({ bindingName }) {
+function createBrowserCaptureScripts(bindingName) {
+  const install = `(() => {
+  const bindingName = ${JSON.stringify(bindingName)};
   const documentIdKey = '__meteorRstestCoverageDocumentId';
   const captureInstalledKey = '__meteorRstestCoverageCaptureInstalled';
   if (!globalThis[documentIdKey]) {
     const random = globalThis.crypto &&
       typeof globalThis.crypto.randomUUID === 'function'
       ? globalThis.crypto.randomUUID()
-      : `${Date.now()}-${Math.random()}`;
+      : String(Date.now()) + '-' + String(Math.random());
     Object.defineProperty(globalThis, documentIdKey, {
       configurable: false,
       enumerable: false,
@@ -216,13 +234,15 @@ function installBrowserCapture({ bindingName }) {
   });
   globalThis.addEventListener('pagehide', capture, { capture: true });
   globalThis.addEventListener('beforeunload', capture, { capture: true });
-}
+})()`;
 
-function readBrowserCoverage() {
+  const read = `(() => {
   return {
     documentId: globalThis.__meteorRstestCoverageDocumentId,
     coverage: globalThis.__coverage__ || {},
   };
+})()`;
+  return { install, read };
 }
 
 function serializeCoverageFrames({ generation, token, producer, coverage }) {
@@ -299,6 +319,7 @@ function createPlaywrightCoverageCollector({
   let shardPromise;
   const bindingName = `__meteorRstestCoverage_${String(generation || 'collector')}_` +
     crypto.randomBytes(8).toString('hex');
+  const browserScripts = createBrowserCaptureScripts(bindingName);
 
   function releaseBrowserInstrumentation() {
     for (const [browser, restoration] of browserRestorations) {
@@ -332,7 +353,7 @@ function createPlaywrightCoverageCollector({
         typeof page.isClosed === 'function' && page.isClosed()) {
       return { captured: false };
     }
-    const snapshot = await page.evaluate(readBrowserCoverage);
+    const snapshot = await page.evaluate(browserScripts.read);
     recordSnapshot(page, snapshot);
     return { captured: true };
   }
@@ -352,7 +373,7 @@ function createPlaywrightCoverageCollector({
         }
         if (typeof page.evaluate === 'function' &&
             !(typeof page.isClosed === 'function' && page.isClosed())) {
-          await page.evaluate(installBrowserCapture, { bindingName });
+          await page.evaluate(browserScripts.install);
         }
       })());
     }
@@ -367,7 +388,7 @@ function createPlaywrightCoverageCollector({
       if (!page) throw coverageError('Playwright coverage binding omitted its page.');
       recordSnapshot(page, snapshot);
     });
-    await context.addInitScript(installBrowserCapture, { bindingName });
+    await context.addInitScript(browserScripts.install);
 
     const originalNewPage = context.newPage;
     if (typeof originalNewPage === 'function') {
@@ -528,7 +549,9 @@ function createPlaywrightCoverageCollector({
 
 module.exports = {
   cleanupCoverageShardDirectory,
+  createBrowserCaptureScripts,
   createPlaywrightCoverageCollector,
   readCoverageShards,
+  resolveProjectPlaywrightEntry,
   writeCoverageShard,
 };

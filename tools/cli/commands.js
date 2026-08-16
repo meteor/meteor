@@ -2420,28 +2420,9 @@ function updateTestRunnerMetadata(selection, payload) {
   };
 }
 
-async function seedTestAppLocalCache({ sourceLocalDir, targetLocalDir }) {
-  async function seed(allowSymlink, name) {
-    const source = files.pathJoin(sourceLocalDir, name);
-    const target = files.pathJoin(targetLocalDir, name);
-
-    files.mkdir_p(source);
-    files.mkdir_p(files.pathDirname(target));
-    if (allowSymlink) {
-      // Windows can create junction links without administrator privileges
-      // because both paths refer to directories.
-      files.symlink(source, target, 'junction');
-    } else {
-      await files.cp_r(source, target, { preserveSymlinks: true });
-    }
-  }
-
-  await seed(false, 'build');
-  await seed(true, 'bundler-cache');
-  await seed(true, 'isopacks');
-  await seed(true, 'plugin-cache');
-  await seed(true, 'shell');
-}
+const {
+  seedTestAppLocalCache,
+} = require('./test-runners/seed-test-app-cache.js');
 
 async function doTestCommand(options) {
   // Internal test-runner orchestration can re-enter this implementation through
@@ -2664,6 +2645,7 @@ async function doTestCommand(options) {
       files.mkdir_p(projectContextOptions.projectLocalDir, 0o700);
     } else {
       await seedTestAppLocalCache({
+        files,
         sourceLocalDir: files.pathJoin(options.appDir, '.meteor', 'local'),
         targetLocalDir: projectContextOptions.projectLocalDir,
       });
@@ -2801,6 +2783,7 @@ async function doTestCommand(options) {
       );
     }
     const {
+      applyTestExecutionHostMode,
       createProviderSession,
       createTestRunnerContext,
       normalizeTestRunnerVerbose,
@@ -2865,8 +2848,10 @@ async function doTestCommand(options) {
         () => projectContext.prepareProjectForBuild()
       ),
       prepareWorker: ({ projectLocalDir }) => seedTestAppLocalCache({
+        files,
         sourceLocalDir: projectContext.projectLocalDir,
         targetLocalDir: projectLocalDir,
+        isolateBuildPluginState: true,
       }),
     });
     const providerContext = Object.freeze({
@@ -2887,6 +2872,10 @@ async function doTestCommand(options) {
       return 1;
     }
     updateTestRunnerMetadata(testRunnerSelection, testRunnerPlan.metadata || {});
+    applyTestExecutionHostMode(
+      global.testCommandMetadata,
+      testRunnerPlan.hostTestMode,
+    );
     if (testRunnerPlan.driverPackage) {
       global.testCommandMetadata.driverPackage =
         testRunnerPlan.driverPackage;

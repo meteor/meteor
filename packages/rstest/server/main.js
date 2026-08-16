@@ -236,6 +236,8 @@ function testMetadata() {
         rstestToken: payload.token,
         rstestServer: payload.server,
         rstestClient: payload.client,
+        rstestRuntimeServer: payload.runtimeServer,
+        rstestRuntimeClient: payload.runtimeClient,
         rstestRuntime: payload.runtime,
         rstestUpstreamRuntime: payload.upstreamRuntime,
         rstestExternal: payload.external,
@@ -279,7 +281,7 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
   const results = [];
   const runtimeResults = [];
 
-  if (metadata.rstestServer !== false) {
+  if (metadata.rstestRuntimeServer) {
     const options = serverRuntimeOptions(metadata, generation);
     const serverResult = preparedServerResult !== undefined
       ? preparedServerResult
@@ -290,12 +292,18 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
     if (coverageLifecycle && coverageLifecycle.enabled && !metadata.rstestWorker) {
       coverageLifecycle.captureServer();
     }
+  } else if (coverageLifecycle && coverageLifecycle.enabled &&
+      metadata.rstestServer !== false) {
+    coverageLifecycle.captureServer();
   }
 
-  if (metadata.rstestClient) {
+  if (coverageLifecycle && metadata.rstestClient) {
+    await coverageLifecycle.waitForClient();
+  }
+
+  if (metadata.rstestRuntimeClient) {
     let clientResult;
     try {
-      if (coverageLifecycle) await coverageLifecycle.waitForClient();
       clientResult = await clientResultGate.wait();
     } catch (error) {
       clientResult = timeoutResult(error, 'Meteor client executor result');
@@ -396,7 +404,7 @@ export function start() {
   if (!isRstestActive || started) return;
   started = true;
   const metadata = testMetadata();
-  if (metadata.rstestServer !== false) {
+  if (metadata.rstestRuntimeServer) {
     startUpstreamServerLifecycle().catch(failRun);
     return;
   }

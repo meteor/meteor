@@ -74,15 +74,20 @@ function createGeneratedConfig({
         coveragePlan && coveragePlan.enabled &&
         coveragePlan.provider === 'istanbul') {
       const setupFile = path.resolve(__dirname, 'coverage/playwright-setup.mjs');
-      const existing = config.setupFiles == null
-        ? []
-        : Array.isArray(config.setupFiles)
-          ? config.setupFiles
-          : [config.setupFiles];
-      config.setupFiles = [
-        ...existing.filter(item => item !== setupFile),
-        setupFile,
-      ];
+      const appendSetupFile = value => {
+        const existing = value == null
+          ? []
+          : Array.isArray(value)
+            ? value
+            : [value];
+        return [...existing.filter(item => item !== setupFile), setupFile];
+      };
+      config.setupFiles = appendSetupFile(config.setupFiles);
+      config.projects = (config.projects || []).map(project =>
+        project && project.name === 'meteor-e2e'
+          ? { ...project, setupFiles: appendSetupFile(project.setupFiles) }
+          : project
+      );
     }
     if (resultOutput) {
       const existing = config.reporters == null

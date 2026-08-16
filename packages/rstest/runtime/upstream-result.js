@@ -21,6 +21,38 @@ function assertTestPath(testPath) {
   }
 }
 
+function normalizeError(error) {
+  if (!error || typeof error !== 'object' || error.name !== 'AssertionError' ||
+      !Object.prototype.hasOwnProperty.call(error, 'actual') ||
+      !Object.prototype.hasOwnProperty.call(error, 'expected')) {
+    return error;
+  }
+  try {
+    const serializeValue = value => {
+      if (typeof value !== 'string') return JSON.stringify(value);
+      const serialized = value
+        .trim()
+        .replace(/\bObject\s+(?=\{)/g, '')
+        .replace(/\bArray\s+(?=\[)/g, '')
+        .replace(/,\s*([}\]])/g, '$1');
+      try {
+        return JSON.stringify(JSON.parse(serialized));
+      } catch {
+        return JSON.stringify(value);
+      }
+    };
+    const actual = serializeValue(error.actual);
+    const expected = serializeValue(error.expected);
+    if (actual === undefined || expected === undefined) return error;
+    return {
+      ...error,
+      message: `Expected ${actual} to equal ${expected}`,
+    };
+  } catch {
+    return error;
+  }
+}
+
 function normalizeCase(upstreamCase, fileTestPath) {
   if (!upstreamCase || typeof upstreamCase !== 'object') {
     throw new TypeError('[Meteor Rstest] Upstream case must be an object.');
@@ -60,7 +92,7 @@ function normalizeCase(upstreamCase, fileTestPath) {
     ...(upstreamCase.meta === undefined ? {} : { meta: upstreamCase.meta }),
     ...(upstreamCase.errors === undefined
       ? {}
-      : { errors: upstreamCase.errors }),
+      : { errors: upstreamCase.errors.map(normalizeError) }),
   };
 }
 

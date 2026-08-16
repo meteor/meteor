@@ -75,6 +75,7 @@ var Isopack = function () {
   // Test-runner providers registered by build plugins defined in this package.
   // Factories stay lazy until command-level provider selection completes.
   self.testRunnerProviders = [];
+  self.testRunnerBuildOptionsFingerprint = null;
 
   self.cordovaDependencies = {};
 
@@ -544,8 +545,8 @@ Object.assign(Isopack.prototype, {
 
       registerTestRunner,
 
-      getTestRunnerBuildOptions() {
-        return testRunnerContext.getTestRunnerBuildOptions(isopack.name);
+      getTestRunnerBuildOptions(buildPluginName = isopack.name) {
+        return testRunnerContext.getTestRunnerBuildOptions(buildPluginName);
       },
 
       // Share the meteorConfig object as part of plugin API
@@ -937,6 +938,8 @@ Object.assign(Isopack.prototype, {
       // isopackBuildInfoJson), so no need to merge.)
       self.pluginWatchSet = watch.WatchSet.fromJSON(
         options.isopackBuildInfoJson.pluginDependencies);
+      self.testRunnerBuildOptionsFingerprint =
+        options.isopackBuildInfoJson.testRunnerBuildOptionsFingerprint;
     }
 
     // If we are loading multiple isopacks, only take this stuff from the
@@ -1118,6 +1121,8 @@ Object.assign(Isopack.prototype, {
       if (includeIsopackBuildInfo) {
         isopackBuildInfoJson = {
           builtBy: compiler.BUILT_BY,
+          testRunnerBuildOptionsFingerprint:
+            self.testRunnerBuildOptionsFingerprint,
           unibuildDependencies: {},
           // pluginDependencies defines a WatchSet that any package that could
           // use this package as a plugin needs to watch. So it always contains

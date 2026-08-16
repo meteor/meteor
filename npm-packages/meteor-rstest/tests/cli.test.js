@@ -233,6 +233,52 @@ test('native run writes its generation-bound coverage plan before Meteor compila
   });
 });
 
+test('mixed native run persists imported source coverage before Meteor host start', t => {
+  const settingsOutput = path.join(
+    os.tmpdir(),
+    `meteor-rstest-native-settings-${process.pid}-${Date.now()}.json`,
+  );
+  const artifact = path.join(
+    os.tmpdir(),
+    `meteor-rstest-native-artifact-${process.pid}-${Date.now()}.json`,
+  );
+  const appRoot = createApp({
+    source: "import { answer } from '../../../../imports/answer.js'; test('native capture', () => expect(answer()).toBe(42));",
+    configSource: "module.exports = { globals: true, coverage: { enabled: true, provider: 'istanbul', include: ['imports/**/*.js'], exclude: ['**/*.test.js'] } };",
+  });
+  fs.mkdirSync(path.join(appRoot, 'imports'), { recursive: true });
+  fs.writeFileSync(
+    path.join(appRoot, 'imports/answer.js'),
+    'export function answer() { return 42; }\n',
+  );
+  fs.symlinkSync(
+    path.join(packageRoot, 'node_modules'),
+    path.join(appRoot, 'node_modules'),
+    'junction',
+  );
+  t.after(() => {
+    fs.rmSync(appRoot, { recursive: true, force: true });
+    fs.rmSync(settingsOutput, { force: true });
+    fs.rmSync(artifact, { force: true });
+  });
+
+  const result = run(appRoot, [
+    '--runtime-settings-output', settingsOutput,
+    '--runtime-settings-generation', 'generation-native-capture',
+    '--coverage',
+    '--coverage-generation', 'generation-native-capture',
+    '--coverage-artifact', artifact,
+  ]);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const nativeArtifact = JSON.parse(fs.readFileSync(artifact, 'utf8'));
+  const answerCoverage = Object.entries(nativeArtifact.coverage).find(([file]) =>
+    file.replaceAll('\\', '/').endsWith('/imports/answer.js')
+  );
+  assert.ok(answerCoverage);
+  assert.ok(Object.values(answerCoverage[1].s).some(count => count > 0));
+});
+
 test('disabled coverage ignores wrapper plan and artifact options', t => {
   const planOutput = path.join(os.tmpdir(), `meteor-rstest-disabled-plan-${process.pid}-${Date.now()}.json`);
   const settingsOutput = path.join(os.tmpdir(), `meteor-rstest-disabled-settings-${process.pid}-${Date.now()}.json`);

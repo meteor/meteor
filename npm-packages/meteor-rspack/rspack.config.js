@@ -21,12 +21,15 @@ const {
 } = require("./lib/test.js");
 const {
   applyRstestCoverageToSwcRule,
+  getRstestCacheVersion,
+  getRstestMeteorTestFlags,
   hasTypescriptRstestInputs,
   isRstestRuntimeBuild,
   readRstestCoveragePlan,
   readRstestRuntimeInventory,
   readRstestRuntimeSettings,
   resolveRstestCoverageSwcPlugin,
+  shouldCleanRstestOutput,
 } = require('./lib/rstest.js');
 const {
   createMeteorRstestPlugins,
@@ -71,7 +74,7 @@ function safeRequire(moduleName) {
 function createCacheStrategy(
   mode,
   side,
-  { projectConfigPath, configPath, buildContext } = {},
+  { projectConfigPath, configPath, buildContext, version } = {},
 ) {
   // Check for configuration files
   const tsconfigPath = path.join(process.cwd(), 'tsconfig.json');
@@ -116,7 +119,9 @@ function createCacheStrategy(
 
   return {
     cache: {
-      version: `cache-${mode}${(side && `-${side}`) || ""}`,
+      version: `cache-${mode}${(side && `-${side}`) || ""}${
+        version ? `-${version}` : ''
+      }`,
       type: "persistent",
       storage: {
         type: "filesystem",
@@ -249,6 +254,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     testRunnerContext,
     isTest,
   });
+  const meteorTestFlags = getRstestMeteorTestFlags({
+    isTestLike,
+    isTestFullApp,
+    isRstestTest,
+  });
   const upstreamRstestRuntime = isRstestTest;
   const compatibilityIgnoreEntries = isRstestTest
     ? ['**/tests/legacy/**']
@@ -260,6 +270,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   let rstestRuntimeFiles;
   let rstestTestFileRoot;
   let rstestSetupFiles = [];
+  let rstestRuntimeSettings = null;
   if (isRstestTest && testRunnerContext.runtimeManifest) {
     const inventory = readRstestRuntimeInventory({
       manifest: testRunnerContext.runtimeManifest,
@@ -271,10 +282,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     rstestTestFileRoot = inventory.testFileRoot;
   }
   if (isRstestTest && testRunnerContext.runtimeSettingsPath) {
-    rstestSetupFiles = readRstestRuntimeSettings(
+    rstestRuntimeSettings = readRstestRuntimeSettings(
       testRunnerContext.runtimeSettingsPath,
-    ).setupFiles;
+    );
+    rstestSetupFiles = rstestRuntimeSettings.setupFiles;
   }
+  const rstestCacheVersion = getRstestCacheVersion({
+    testRunnerContext,
+    runtimeSettings: rstestRuntimeSettings,
+  });
   const rstestTestFileRegistration = createRstestTestFileRegistration({
     isRstestTest,
   });
@@ -333,7 +349,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   let cacheStrategy = createCacheStrategy(
     initialMode,
     (Meteor.isClient && "client") || "server",
-    { projectConfigPath, configPath, buildContext }
+    { projectConfigPath, configPath, buildContext, version: rstestCacheVersion }
   );
   let swcConfigRule = createMeteorSwcRule({
     root: projectDir,
@@ -411,7 +427,11 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const mode = isProd ? "production" : "development";
   // Runtime workers share public/private source roots, while the Atmosphere
   // plugin cleans each worker's exact, isolated build contexts before Rspack.
-  const shouldCleanOutput = isProd && !process.env.METEOR_TEST_WORKER_ID;
+  const shouldCleanOutput = shouldCleanRstestOutput({
+    isProd,
+    isRstestTest,
+    isWorker: Boolean(process.env.METEOR_TEST_WORKER_ID),
+  });
   const isPortableBuild = !!(
     nextUserConfig?.["meteor.enablePortableBuild"] ||
     nextOverrideConfig?.["meteor.enablePortableBuild"]
@@ -426,7 +446,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   cacheStrategy = createCacheStrategy(
     mode,
     (Meteor.isClient && "client") || "server",
-    { projectConfigPath, configPath, buildContext }
+    { projectConfigPath, configPath, buildContext, version: rstestCacheVersion }
   );
 
   // Determine run point
@@ -724,8 +744,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       new DefinePlugin({
         "Meteor.isClient": JSON.stringify(true),
         "Meteor.isServer": JSON.stringify(false),
-        "Meteor.isTest": JSON.stringify(isTestLike && !isTestFullApp),
-        "Meteor.isAppTest": JSON.stringify(isTestLike && isTestFullApp),
+        "Meteor.isTest": JSON.stringify(meteorTestFlags.isTest),
+        "Meteor.isAppTest": JSON.stringify(meteorTestFlags.isAppTest),
         ...(!isPortableBuild && {
           "Meteor.isDevelopment": JSON.stringify(isDev),
           "Meteor.isProduction": JSON.stringify(isProd),
@@ -861,8 +881,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       new DefinePlugin(
         isTest && (isTestModule || isTestEager)
           ? {
-              "Meteor.isTest": JSON.stringify(isTest && !isTestFullApp),
-              "Meteor.isAppTest": JSON.stringify(isTest && isTestFullApp),
+              "Meteor.isTest": JSON.stringify(meteorTestFlags.isTest),
+              "Meteor.isAppTest": JSON.stringify(meteorTestFlags.isAppTest),
               ...(!isPortableBuild && {
                 "Meteor.isDevelopment": JSON.stringify(isDev),
               }),
@@ -870,8 +890,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           : {
               "Meteor.isClient": JSON.stringify(false),
               "Meteor.isServer": JSON.stringify(true),
-              "Meteor.isTest": JSON.stringify(isTestLike && !isTestFullApp),
-              "Meteor.isAppTest": JSON.stringify(isTestLike && isTestFullApp),
+              "Meteor.isTest": JSON.stringify(meteorTestFlags.isTest),
+              "Meteor.isAppTest": JSON.stringify(meteorTestFlags.isAppTest),
               ...(!isPortableBuild && {
                 "Meteor.isDevelopment": JSON.stringify(isDev),
                 "Meteor.isProduction": JSON.stringify(isProd),

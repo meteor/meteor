@@ -38,7 +38,14 @@ const createRstestRuntimeAlias = ({
     '@rstest/core/internal/browser-runtime',
     { paths: searchPaths },
   );
-  return { '@rstest/core$': runtimePath };
+  const meteorRuntimePath = resolveModule(
+    '@meteorjs/rstest/runtime',
+    { paths: searchPaths },
+  );
+  return {
+    '@rstest/core$': runtimePath,
+    '@meteorjs/rstest/runtime$': meteorRuntimePath,
+  };
 };
 
 const enforceRstestRuntimeAlias = (config, alias) => {

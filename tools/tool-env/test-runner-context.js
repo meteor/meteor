@@ -1,4 +1,5 @@
 let currentContext = null;
+const crypto = require('node:crypto');
 
 function cloneJsonSafe(value, path = 'test runner context', seen = new Set()) {
   if (value === null || typeof value === 'string' || typeof value === 'boolean') {
@@ -45,6 +46,24 @@ function getTestRunnerBuildOptions(packageName) {
     : undefined;
 }
 
+function getTestRunnerBuildOptionsFingerprint(packageName) {
+  const buildPluginOptions = currentContext && currentContext.buildPluginOptions || {};
+  const options = {};
+  for (const [buildPluginName, pluginOptions] of Object.entries(buildPluginOptions)) {
+    const ownsOptions = buildPluginName === packageName;
+    const transformsPackage = pluginOptions && pluginOptions.sourceTransforms &&
+      Array.isArray(pluginOptions.sourceTransforms.includePackages) &&
+      pluginOptions.sourceTransforms.includePackages.includes(packageName);
+    if (ownsOptions || transformsPackage) {
+      options[buildPluginName] = pluginOptions;
+    }
+  }
+  if (Object.keys(options).length === 0) return null;
+  return crypto.createHash('sha256')
+    .update(JSON.stringify(options))
+    .digest('hex');
+}
+
 function clearTestRunnerContext() {
   currentContext = null;
 }
@@ -53,5 +72,6 @@ module.exports = {
   cloneJsonSafe,
   clearTestRunnerContext,
   getTestRunnerBuildOptions,
+  getTestRunnerBuildOptionsFingerprint,
   setTestRunnerContext,
 };

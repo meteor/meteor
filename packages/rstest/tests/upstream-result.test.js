@@ -108,3 +108,24 @@ test('upstream result normalizer rejects malformed results before transport', ()
     /safe app-relative POSIX path/,
   );
 });
+
+test('upstream result normalizer keeps the canonical equality assertion message', () => {
+  const result = normalizeUpstreamFileResults([{
+    testPath: 'imports/failure.test.js',
+    results: [{
+      name: 'compares objects',
+      status: 'fail',
+      errors: [{
+        name: 'AssertionError',
+        message: "expected { compiler: 'rspack' } to deeply equal { compiler: 'other' }",
+        actual: 'Object {\n  "compiler": "rspack",\n}',
+        expected: 'Object {\n  "compiler": "other",\n}',
+      }],
+    }],
+  }]);
+
+  assert.equal(
+    result.cases[0].errors[0].message,
+    'Expected {"compiler":"rspack"} to equal {"compiler":"other"}',
+  );
+});

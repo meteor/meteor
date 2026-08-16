@@ -5,3 +5,4 @@ typescript
 shell-server
 rspack
 rstest
+rstest-e2e-fixture

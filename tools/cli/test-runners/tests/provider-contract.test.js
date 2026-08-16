@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+  applyTestExecutionHostMode,
   createProviderSession,
   createTestRunnerContext,
   normalizeTestRunnerVerbose,
@@ -57,6 +58,7 @@ test('test-runner verbosity normalizes supported Meteor package config forms', (
 test('execution plan accepts only supported mode and JSON-safe opaque data', () => {
   assert.deepEqual(validateTestExecutionPlan({
     mode: 'meteor-host',
+    hostTestMode: 'mixed',
     driverPackage: 'example:runtime',
     harnessPackages: ['modules'],
     refreshProjectMetadata: true,
@@ -64,6 +66,7 @@ test('execution plan accepts only supported mode and JSON-safe opaque data', () 
     buildPluginOptions: { rspack: { testMode: 'runtime' } },
   }), {
     mode: 'meteor-host',
+    hostTestMode: 'mixed',
     driverPackage: 'example:runtime',
     harnessPackages: ['modules'],
     refreshProjectMetadata: true,
@@ -75,6 +78,17 @@ test('execution plan accepts only supported mode and JSON-safe opaque data', () 
   assert.throws(
     () => validateTestExecutionPlan({ mode: 'native-only', metadata: { fn() {} } }),
     /JSON-safe/
+  );
+
+  const mixedMetadata = {};
+  applyTestExecutionHostMode(mixedMetadata, 'mixed');
+  assert.deepEqual(mixedMetadata, { isTest: true, isAppTest: true });
+  assert.throws(
+    () => validateTestExecutionPlan({
+      mode: 'meteor-host',
+      hostTestMode: 'invalid',
+    }),
+    /hostTestMode/
   );
   assert.throws(
     () => validateTestExecutionPlan({
