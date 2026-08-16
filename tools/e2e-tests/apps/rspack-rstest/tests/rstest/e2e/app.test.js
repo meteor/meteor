@@ -14,4 +14,8 @@ test('full-app Rstest Playwright drives Meteor-owned app lifecycle', async ({ pa
   await expect(page.getByTestId('package-coverage')).toHaveText(
     'Meteor package coverage target (client)'
   );
+  await page.getByRole('button', { name: 'Load E2E target' }).click();
+  await expect(page.getByTestId('e2e-coverage-result')).toHaveText(
+    'Playwright-only coverage target'
+  );
 });

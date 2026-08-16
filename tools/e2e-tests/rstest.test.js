@@ -558,6 +558,7 @@ describe('Meteor + Rstest integration', () => {
         '/tests/rstest/pure/server/coverage-target.js',
         '/imports/coverage/server-target.js',
         '/imports/coverage/client-target.js',
+        '/imports/coverage/e2e-interaction-target.js',
         '/packages/rstest-e2e-fixture/fixture.js',
       ]);
     } finally {

@@ -27,6 +27,30 @@ function normalizeError(error) {
       !Object.prototype.hasOwnProperty.call(error, 'expected')) {
     return error;
   }
+  const equalityOperators = new Set([
+    '==',
+    '===',
+    'deepequal',
+    'deepstrictequal',
+    'eql',
+    'equal',
+    'equals',
+    'strictequal',
+    'tobe',
+    'toequal',
+    'tostrictequal',
+  ]);
+  if (error.operator !== undefined) {
+    if (typeof error.operator !== 'string' ||
+        !equalityOperators.has(error.operator.toLowerCase())) {
+      return error;
+    }
+  } else if (typeof error.message !== 'string' || !(
+    /\bto (?:deeply |strictly )?equal\b/i.test(error.message) ||
+    /\bObject\.is equality\b/i.test(error.message)
+  )) {
+    return error;
+  }
   try {
     const serializeValue = value => {
       if (typeof value !== 'string') return JSON.stringify(value);

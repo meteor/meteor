@@ -129,3 +129,23 @@ test('upstream result normalizer keeps the canonical equality assertion message'
     'Expected {"compiler":"rspack"} to equal {"compiler":"other"}',
   );
 });
+
+test('upstream result normalizer preserves non-equality assertion messages', () => {
+  const message = "expected 'Rspack' to contain 'Webpack'";
+  const result = normalizeUpstreamFileResults([{
+    testPath: 'imports/failure.test.js',
+    results: [{
+      name: 'contains text',
+      status: 'fail',
+      errors: [{
+        name: 'AssertionError',
+        operator: 'contains',
+        message,
+        actual: 'Rspack',
+        expected: 'Webpack',
+      }],
+    }],
+  }]);
+
+  assert.equal(result.cases[0].errors[0].message, message);
+});

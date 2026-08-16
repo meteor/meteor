@@ -224,7 +224,7 @@ Verified coverage:
 | Native `rs.mock` hoisting and `rs.fn` use upstream Rstest under Meteor's projected Rspack config; supervised Rstest owns `NODE_ENV=test` instead of inheriting Meteor CLI's production environment | Pure server, process characterization |
 | Inline, committed external, and committed file snapshots; mismatch exits nonzero, `--update-snapshots` rewrites the temporary snapshot, and a clean rerun passes | Pure server, snapshot update |
 | `--coverage` instruments imported Rspack source and writes a parsed Istanbul JSON report | Pure server, native coverage |
-| One Istanbul report merges positive counters from native Rspack, Meteor-runtime server/client, a local Atmosphere package, and the project-owned Playwright full-app page | Unified coverage, test once |
+| One Istanbul report merges positive counters from native Rspack, Meteor-runtime server/client, a local Atmosphere package, and a Playwright-only click-triggered dynamic import on the full-app page | Unified coverage, test once |
 | Coverage remains one report with `--runtime-workers 2`; `test-packages --once --coverage` attributes the physical local package source | Runtime-worker/package coverage, test once |
 | Passing and impossible thresholds preserve exit precedence; `reportOnFailure` writes the report, while coverage-disabled hosts expose neither report nor sentinel | Coverage policy, test once |
 | jsdom client project | Client-only |

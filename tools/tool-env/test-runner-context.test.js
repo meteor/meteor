@@ -4,8 +4,31 @@ const test = require('node:test');
 const {
   clearTestRunnerContext,
   getTestRunnerBuildOptionsFingerprint,
+  sameTestRunnerBuildOptionsFingerprint,
   setTestRunnerContext,
 } = require('./test-runner-context.js');
+
+test('legacy preloaded Isopack fingerprint reuses disabled ordinary builds', t => {
+  t.after(clearTestRunnerContext);
+  clearTestRunnerContext();
+
+  assert.equal(typeof sameTestRunnerBuildOptionsFingerprint, 'function');
+  assert.equal(
+    sameTestRunnerBuildOptionsFingerprint(undefined, 'legacy-package'),
+    true,
+  );
+
+  setTestRunnerContext({
+    providerId: 'rstest',
+    buildPluginOptions: {
+      'legacy-package': { coverageGeneration: 'generation-a' },
+    },
+  });
+  assert.equal(
+    sameTestRunnerBuildOptionsFingerprint(undefined, 'legacy-package'),
+    false,
+  );
+});
 
 test('test-runner build fingerprint separates coverage generations and disabled builds', t => {
   t.after(clearTestRunnerContext);

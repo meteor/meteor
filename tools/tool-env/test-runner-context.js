@@ -64,6 +64,11 @@ function getTestRunnerBuildOptionsFingerprint(packageName) {
     .digest('hex');
 }
 
+function sameTestRunnerBuildOptionsFingerprint(cachedFingerprint, packageName) {
+  return (cachedFingerprint ?? null) ===
+    getTestRunnerBuildOptionsFingerprint(packageName);
+}
+
 function clearTestRunnerContext() {
   currentContext = null;
 }
@@ -73,5 +78,6 @@ module.exports = {
   clearTestRunnerContext,
   getTestRunnerBuildOptions,
   getTestRunnerBuildOptionsFingerprint,
+  sameTestRunnerBuildOptionsFingerprint,
   setTestRunnerContext,
 };

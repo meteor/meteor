@@ -484,8 +484,10 @@ export class IsopackCache {
         isopackBuildInfoJson.includeCordovaUnibuild) {
       return false;
     }
-    if ((isopackBuildInfoJson.testRunnerBuildOptionsFingerprint || null) !==
-        testRunnerContext.getTestRunnerBuildOptionsFingerprint(name)) {
+    if (!testRunnerContext.sameTestRunnerBuildOptionsFingerprint(
+      isopackBuildInfoJson.testRunnerBuildOptionsFingerprint,
+      name,
+    )) {
       return false;
     }
 
@@ -519,8 +521,10 @@ export class IsopackCache {
     if (self._includeCordovaUnibuild !== previousIsopack.hasCordovaUnibuild()) {
       return false;
     }
-    if (previousIsopack.testRunnerBuildOptionsFingerprint !==
-        testRunnerContext.getTestRunnerBuildOptionsFingerprint(name)) {
+    if (!testRunnerContext.sameTestRunnerBuildOptionsFingerprint(
+      previousIsopack.testRunnerBuildOptionsFingerprint,
+      name,
+    )) {
       return false;
     }
 
