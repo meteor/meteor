@@ -16,6 +16,28 @@ const MongoRunner = require('./run-mongo.js').MongoRunner;
 const HMRServer = require('./run-hmr').HMRServer;
 const Updater = require('./run-updater').Updater;
 
+function combineTestRunnerExitCode(executionExitCode, completionResult) {
+  if (executionExitCode === 0 && completionResult?.exitCode !== undefined) {
+    return completionResult.exitCode;
+  }
+  return executionExitCode;
+}
+
+function completionContextForRunResult(result, once) {
+  if (once && result.outcome === 'terminated') {
+    if (result.signal) {
+      return { exitCode: 255, outcome: 'aborted' };
+    }
+    if (typeof result.code === 'number') {
+      return {
+        exitCode: result.code,
+        outcome: result.code === 0 ? 'completed' : 'failed',
+      };
+    }
+  }
+  return { exitCode: 254, outcome: 'failed' };
+}
+
 class Runner {
   constructor(options) {
     const self = this;
@@ -483,6 +505,18 @@ exports.run = async function (options) {
   }
   onBuilt && onBuilt();
   var result = await promise;
+  let completionResult;
+  let completionError;
+  if (runOptions.testRunnerSession) {
+    try {
+      completionResult = await runOptions.testRunnerSession.completeRun(
+        completionContextForRunResult(result, once)
+      );
+    } catch (error) {
+      completionError = error;
+      Console.error(error && error.stack || error);
+    }
+  }
   let stopError;
   try {
     await runner.stop();
@@ -534,7 +568,7 @@ exports.run = async function (options) {
     return 254;
   }
 
-  if (stopError ||
+  if (completionError || stopError ||
       result.outcome === "failure" ||
       result.outcome === "test-runner-failure" ||
       (result.outcome === "terminated" &&
@@ -557,7 +591,7 @@ exports.run = async function (options) {
     } else if (typeof result.code === "number") {
       // We used to print 'Your application is exiting' here, but that
       // seems unnecessarily chatty? once mode is otherwise silent
-      return result.code;
+      return combineTestRunnerExitCode(result.code, completionResult);
     } else {
       // If there is neither a code nor a signal, it means that we
       // failed to start the process. We logged the reason. Probably a
@@ -568,3 +602,5 @@ exports.run = async function (options) {
 
   throw new Error("unexpected outcome " + result.outcome);
 };
+
+exports.combineTestRunnerExitCode = combineTestRunnerExitCode;

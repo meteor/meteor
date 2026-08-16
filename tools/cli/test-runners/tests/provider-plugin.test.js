@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const path = require('node:path');
 const test = require('node:test');
 
 const {
@@ -9,6 +10,9 @@ const {
   getTestRunnerBuildOptions,
   setTestRunnerContext,
 } = require('../../../tool-env/test-runner-context.js');
+const {
+  createTestRunnerContext,
+} = require('../provider-contract.js');
 
 function makeRegistration(overrides = {}) {
   return {
@@ -156,4 +160,26 @@ test('command test-runner context is deeply frozen, scoped, and JSON-safe', () =
     () => setTestRunnerContext({ buildPluginOptions: { rspack: { fn() {} } } }),
     /JSON-safe/
   );
+});
+
+test('provider fixture receives sorted physical local package entries', () => {
+  const harness = makeHarness();
+  let receivedContext;
+  harness.register(makeRegistration(), context => {
+    receivedContext = context;
+    return {};
+  });
+
+  const localPackages = [
+    { name: 'meteor', sourceRoot: path.resolve(__dirname, '../../../../packages/meteor') },
+    { name: 'tracker', sourceRoot: path.resolve(__dirname, '../../../../packages/tracker') },
+  ];
+  const context = createTestRunnerContext({
+    command: 'test-packages',
+    localPackages,
+  });
+  harness.isopack.testRunnerProviders[0].factory(context);
+
+  assert.deepEqual(receivedContext.localPackages, localPackages);
+  assert.equal(Object.isFrozen(receivedContext.localPackages), true);
 });

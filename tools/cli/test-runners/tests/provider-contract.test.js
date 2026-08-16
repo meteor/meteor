@@ -152,6 +152,102 @@ test('provider session prepares plan and preserves provider error identity', asy
   assert.equal(stops, 1);
 });
 
+test('provider completion returns one validated exit override before cleanup', async () => {
+  const calls = [];
+  const session = createProviderSession({
+    registration: registration(),
+    context: createTestRunnerContext({ command: 'test' }),
+    provider: {
+      async validate() {},
+      async prepare() { return { mode: 'meteor-host' }; },
+      async completeRun(context) {
+        calls.push(['complete', context]);
+        return { exitCode: 1 };
+      },
+      async stop() { calls.push(['stop']); },
+    },
+  });
+
+  await session.prepare();
+  assert.deepEqual(await session.completeRun({ exitCode: 0, outcome: 'completed' }), {
+    exitCode: 1,
+  });
+  assert.deepEqual(await session.completeRun({ exitCode: 0, outcome: 'completed' }), {
+    exitCode: 1,
+  });
+  await session.stop();
+  assert.deepEqual(calls, [
+    ['complete', { exitCode: 0, outcome: 'completed' }],
+    ['stop'],
+  ]);
+});
+
+test('provider completion validates context and exit override', async () => {
+  let completions = 0;
+  let stops = 0;
+  const session = createProviderSession({
+    registration: registration(),
+    context: createTestRunnerContext({ command: 'test' }),
+    provider: {
+      async validate() {},
+      async prepare() { return { mode: 'native-only' }; },
+      async completeRun() {
+        completions += 1;
+        return { exitCode: -1 };
+      },
+      async stop() { stops += 1; },
+    },
+  });
+
+  await session.prepare();
+  await assert.rejects(
+    session.completeRun({ exitCode: 0, outcome: 'unknown' }),
+    /outcome/
+  );
+  assert.equal(completions, 0);
+  assert.equal(stops, 1);
+});
+
+test('provider completion preserves provider error identity and rejects negative overrides', async () => {
+  const expected = new Error('completion failed');
+  let stopCalls = 0;
+  const session = createProviderSession({
+    registration: registration(),
+    context: createTestRunnerContext({ command: 'test' }),
+    provider: {
+      async validate() {},
+      async prepare() { return { mode: 'native-only' }; },
+      async completeRun({ outcome }) {
+        if (outcome === 'failed') throw expected;
+        return { exitCode: -1 };
+      },
+      async stop() { stopCalls += 1; },
+    },
+  });
+
+  await session.prepare();
+  await assert.rejects(
+    session.completeRun({ exitCode: 0, outcome: 'failed' }),
+    error => error === expected
+  );
+  assert.equal(stopCalls, 1);
+
+  const invalidResultSession = createProviderSession({
+    registration: registration(),
+    context: createTestRunnerContext({ command: 'test' }),
+    provider: {
+      async validate() {},
+      async prepare() { return { mode: 'native-only' }; },
+      async completeRun() { return { exitCode: -1 }; },
+    },
+  });
+  await invalidResultSession.prepare();
+  await assert.rejects(
+    invalidResultSession.completeRun({ exitCode: 0, outcome: 'completed' }),
+    /exitCode.*non-negative integer/
+  );
+});
+
 test('provider session rejects malformed pre-host process handles', async () => {
   const session = createProviderSession({
     registration: registration(),

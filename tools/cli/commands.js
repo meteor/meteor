@@ -2383,6 +2383,25 @@ async function collectTestRunnerPackageRecords(projectContext) {
   return records;
 }
 
+async function collectTestRunnerLocalPackages(projectContext) {
+  const localPackages = [];
+  const packageNames = await projectContext.localCatalog.getAllPackageNames();
+  for (const name of packageNames) {
+    const packageSource = projectContext.localCatalog.getPackageSource(name);
+    if (!packageSource || !packageSource.sourceRoot) {
+      continue;
+    }
+    const sourceRoot = files.pathResolve(packageSource.sourceRoot);
+    if (!files.exists(sourceRoot)) {
+      continue;
+    }
+    localPackages.push({ name, sourceRoot });
+  }
+  return localPackages.sort((left, right) =>
+    left.name.localeCompare(right.name)
+  );
+}
+
 function normalizeTestRunnerOptions(options) {
   return {
     once: Boolean(options.once),
@@ -2809,6 +2828,7 @@ async function doTestCommand(options) {
       command: testRunnerCommand,
       appDir: sourceAppDir,
       harnessRoot: testRunnerAppDir,
+      localPackages: await collectTestRunnerLocalPackages(projectContext),
       packageTests: selectedTestPackages.map(entry => {
         const packageSource = projectContext.localCatalog.getPackageSource(
           entry.name
@@ -2921,9 +2941,21 @@ async function doTestCommand(options) {
       const code = testRunnerProcess
         ? await testRunnerProcess.completion
         : preHost && preHost.exitCode || 0;
-      await testRunnerSession.stop();
-      require('../tool-env/test-runner-context.js').clearTestRunnerContext();
-      return code;
+      try {
+        const completionResult = await testRunnerSession.completeRun({
+          exitCode: code,
+          outcome: code === 0 ? 'completed' : 'failed',
+        });
+        return code === 0 && completionResult?.exitCode !== undefined
+          ? completionResult.exitCode
+          : code;
+      } catch (error) {
+        Console.error(error.message);
+        return 1;
+      } finally {
+        await testRunnerSession.stop();
+        require('../tool-env/test-runner-context.js').clearTestRunnerContext();
+      }
     }
   }
 

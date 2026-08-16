@@ -3,6 +3,7 @@ const {
 } = require('../../tool-env/test-runner-context.js');
 
 const VALID_PLAN_MODES = new Set(['native-only', 'meteor-host']);
+const VALID_COMPLETION_OUTCOMES = new Set(['completed', 'failed', 'aborted']);
 
 function contractError(message) {
   const error = new Error(message);
@@ -119,6 +120,42 @@ function validatePreHostResult(result) {
   return Object.freeze({ ...result });
 }
 
+function validateCompletionContext(context) {
+  if (!context || typeof context !== 'object' || Array.isArray(context)) {
+    throw contractError('test runner completion context must be an object');
+  }
+  if (!Number.isInteger(context.exitCode) || context.exitCode < 0) {
+    throw contractError(
+      'test runner completion context exitCode must be a non-negative integer'
+    );
+  }
+  if (!VALID_COMPLETION_OUTCOMES.has(context.outcome)) {
+    throw contractError(
+      'test runner completion context outcome must be "completed", "failed", or "aborted"'
+    );
+  }
+  return Object.freeze(cloneJsonSafe({
+    exitCode: context.exitCode,
+    outcome: context.outcome,
+  }, 'test runner completion context'));
+}
+
+function validateCompletionResult(result) {
+  if (result === undefined) {
+    return undefined;
+  }
+  if (!result || typeof result !== 'object' || Array.isArray(result)) {
+    throw contractError('completeRun result must be an object');
+  }
+  if (result.exitCode !== undefined &&
+      (!Number.isInteger(result.exitCode) || result.exitCode < 0)) {
+    throw contractError('completeRun exitCode must be a non-negative integer');
+  }
+  return Object.freeze({
+    ...(result.exitCode === undefined ? {} : { exitCode: result.exitCode }),
+  });
+}
+
 function createProviderSession({ registration, provider, context }) {
   for (const method of ['validate', 'prepare']) {
     if (!provider || typeof provider[method] !== 'function') {
@@ -130,6 +167,7 @@ function createProviderSession({ registration, provider, context }) {
 
   let stopped = false;
   let planPromise = null;
+  let completionPromise = null;
   const stop = async () => {
     if (stopped) {
       return;
@@ -201,6 +239,23 @@ function createProviderSession({ registration, provider, context }) {
           return stopAfterFailure(error);
         }
       }
+    },
+
+    async completeRun(completionContext) {
+      if (!completionPromise) {
+        completionPromise = (async () => {
+          try {
+            const context = validateCompletionContext(completionContext);
+            if (typeof provider.completeRun !== 'function') {
+              return undefined;
+            }
+            return validateCompletionResult(await provider.completeRun(context));
+          } catch (error) {
+            return stopAfterFailure(error);
+          }
+        })();
+      }
+      return completionPromise;
     },
 
     stop,
