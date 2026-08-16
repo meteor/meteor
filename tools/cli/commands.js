@@ -2361,6 +2361,10 @@ main.registerCommand({
     'test-app-path': workerContext.testAppPath,
     'test-runner': workerContext.providerId,
     'runtime-workers': 1,
+    // A delegated runtime host always runs the test driver. The parent may be
+    // a full-app host, but carrying that flag here would start application
+    // entry points in the worker's test-only client bundle.
+    'full-app': false,
     __testRunnerWorker: workerContext.worker,
   };
   return doTestCommand(workerOptions);
