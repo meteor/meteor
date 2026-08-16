@@ -9,6 +9,12 @@ var auth = require('../meteor-services/auth.js');
 var config = require('../meteor-services/config.js');
 var runLog = require('../runners/run-log.js');
 var utils = require('../utils/utils.js');
+const {
+  collectTestRunnerLocalPackages,
+} = require('./test-runners/local-packages.js');
+const {
+  completeNativeOnlyTestRunner,
+} = require('./test-runners/native-completion.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
@@ -2383,25 +2389,6 @@ async function collectTestRunnerPackageRecords(projectContext) {
   return records;
 }
 
-async function collectTestRunnerLocalPackages(projectContext) {
-  const localPackages = [];
-  const packageNames = await projectContext.localCatalog.getAllPackageNames();
-  for (const name of packageNames) {
-    const packageSource = projectContext.localCatalog.getPackageSource(name);
-    if (!packageSource || !packageSource.sourceRoot) {
-      continue;
-    }
-    const sourceRoot = files.pathResolve(packageSource.sourceRoot);
-    if (!files.exists(sourceRoot)) {
-      continue;
-    }
-    localPackages.push({ name, sourceRoot });
-  }
-  return localPackages.sort((left, right) =>
-    left.name.localeCompare(right.name)
-  );
-}
-
 function normalizeTestRunnerOptions(options) {
   return {
     once: Boolean(options.once),
@@ -2828,7 +2815,10 @@ async function doTestCommand(options) {
       command: testRunnerCommand,
       appDir: sourceAppDir,
       harnessRoot: testRunnerAppDir,
-      localPackages: await collectTestRunnerLocalPackages(projectContext),
+      localPackages: await collectTestRunnerLocalPackages(
+        projectContext.localCatalog,
+        files
+      ),
       packageTests: selectedTestPackages.map(entry => {
         const packageSource = projectContext.localCatalog.getPackageSource(
           entry.name
@@ -2942,19 +2932,15 @@ async function doTestCommand(options) {
         ? await testRunnerProcess.completion
         : preHost && preHost.exitCode || 0;
       try {
-        const completionResult = await testRunnerSession.completeRun({
+        return await completeNativeOnlyTestRunner({
+          session: testRunnerSession,
           exitCode: code,
-          outcome: code === 0 ? 'completed' : 'failed',
+          clearContext: () =>
+            require('../tool-env/test-runner-context.js').clearTestRunnerContext(),
         });
-        return code === 0 && completionResult?.exitCode !== undefined
-          ? completionResult.exitCode
-          : code;
       } catch (error) {
         Console.error(error.message);
         return 1;
-      } finally {
-        await testRunnerSession.stop();
-        require('../tool-env/test-runner-context.js').clearTestRunnerContext();
       }
     }
   }

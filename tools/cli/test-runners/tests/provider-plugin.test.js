@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 
@@ -13,6 +14,9 @@ const {
 const {
   createTestRunnerContext,
 } = require('../provider-contract.js');
+const {
+  collectTestRunnerLocalPackages,
+} = require('../local-packages.js');
 
 function makeRegistration(overrides = {}) {
   return {
@@ -162,7 +166,7 @@ test('command test-runner context is deeply frozen, scoped, and JSON-safe', () =
   );
 });
 
-test('provider fixture receives sorted physical local package entries', () => {
+test('provider fixture receives resolved, sorted physical local package entries', async () => {
   const harness = makeHarness();
   let receivedContext;
   harness.register(makeRegistration(), context => {
@@ -170,16 +174,30 @@ test('provider fixture receives sorted physical local package entries', () => {
     return {};
   });
 
-  const localPackages = [
-    { name: 'meteor', sourceRoot: path.resolve(__dirname, '../../../../packages/meteor') },
-    { name: 'tracker', sourceRoot: path.resolve(__dirname, '../../../../packages/tracker') },
-  ];
+  const localCatalog = {
+    async getAllPackageNames() {
+      return ['tracker', 'missing', 'meteor'];
+    },
+    getPackageSource(name) {
+      return {
+        tracker: { sourceRoot: 'packages/tracker' },
+        missing: { sourceRoot: 'packages/not-present' },
+        meteor: { sourceRoot: 'packages/meteor' },
+      }[name];
+    },
+  };
   const context = createTestRunnerContext({
     command: 'test-packages',
-    localPackages,
+    localPackages: await collectTestRunnerLocalPackages(localCatalog, {
+      exists: fs.existsSync,
+      pathResolve: path.resolve,
+    }),
   });
   harness.isopack.testRunnerProviders[0].factory(context);
 
-  assert.deepEqual(receivedContext.localPackages, localPackages);
+  assert.deepEqual(receivedContext.localPackages, [
+    { name: 'meteor', sourceRoot: path.resolve('packages/meteor') },
+    { name: 'tracker', sourceRoot: path.resolve('packages/tracker') },
+  ]);
   assert.equal(Object.isFrozen(receivedContext.localPackages), true);
 });
