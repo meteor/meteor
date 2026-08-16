@@ -181,6 +181,44 @@ test('mixed coverage writes a runtime plan and defers only native coverage final
   assert.equal(config.coverage.clean, false);
 });
 
+test('generated external Istanbul coverage appends the Playwright setup exactly once', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-external-config-'));
+  const configPath = path.join(root, 'rstest.config.js');
+  const userSetup = path.join(root, 'user-setup.mjs');
+  const integrationSetup = path.resolve(
+    __dirname,
+    '../src/coverage/playwright-setup.mjs',
+  );
+  fs.writeFileSync(userSetup, '');
+  fs.writeFileSync(configPath, `module.exports = {
+    setupFiles: [
+      ${JSON.stringify(userSetup)},
+      ${JSON.stringify(integrationSetup)},
+      ${JSON.stringify(integrationSetup)},
+    ],
+    coverage: { enabled: true, provider: 'istanbul' },
+  };`);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const input = {
+    context: makeContext({
+      appRoot: root,
+      configRoot: root,
+      localDir: path.join(root, '.meteor', 'local'),
+      phase: 'external',
+      fullApp: true,
+    }),
+    configPath,
+    coverageGeneration: 'abcdef1234567890abcdef1234567890',
+    cliCoverageEnabled: true,
+    hasMeteorRuntime: true,
+  };
+
+  const first = await createGeneratedConfig(input)();
+  const second = await createGeneratedConfig(input)();
+  assert.deepEqual(first.setupFiles, [userSetup, integrationSetup]);
+  assert.deepEqual(second.setupFiles, [userSetup, integrationSetup]);
+});
+
 test('disabled coverage ignores wrapper plan and artifact options', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-disabled-coverage-'));
   const configPath = path.join(root, 'rstest.config.js');
@@ -212,6 +250,7 @@ test('disabled coverage ignores wrapper plan and artifact options', async t => {
   assert.equal(config.reporters, 'dot');
   assert.equal(config.coverage.enabled, false);
   assert.equal(config.coverage.provider, 'istanbul');
+  assert.equal(config.setupFiles, undefined);
 });
 
 test('native-only coverage leaves upstream reporters and coverage settings untouched', async t => {
@@ -248,6 +287,7 @@ test('native-only coverage leaves upstream reporters and coverage settings untou
     thresholds: { lines: 100 },
     clean: true,
   });
+  assert.equal(config.setupFiles, undefined);
 });
 
 test('Meteor config factory receives immutable normalized context once', async () => {

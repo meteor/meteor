@@ -57,6 +57,9 @@ class RstestExternal {
     token,
     generation = 1,
     resultPath,
+    coverageGeneration,
+    coverageArtifactPath,
+    coverageWaitTimeoutMs = 30000,
   }) {
     this.appDir = appDir;
     this.url = url;
@@ -66,6 +69,9 @@ class RstestExternal {
     this.token = token;
     this.generation = generation;
     this.resultPath = resultPath;
+    this.coverageGeneration = coverageGeneration;
+    this.coverageArtifactPath = coverageArtifactPath;
+    this.coverageWaitTimeoutMs = coverageWaitTimeoutMs;
     this.handle = null;
   }
 
@@ -74,6 +80,11 @@ class RstestExternal {
     const env = {
       ...process.env,
       METEOR_RSTEST_BASE_URL: this.url,
+      ...(this.coverageGeneration ? {
+        METEOR_RSTEST_COVERAGE_GENERATION: this.coverageGeneration,
+        METEOR_RSTEST_COVERAGE_PRODUCER: 'e2e',
+        METEOR_RSTEST_COVERAGE_TOKEN: this.token,
+      } : {}),
     };
     this.handle = this.startProcess({
       appDir: this.appDir,
@@ -87,6 +98,8 @@ class RstestExternal {
     } finally {
       this.handle = null;
     }
+
+    if (this.coverageGeneration) await this._waitForCoverageArtifact();
 
     let report = {};
     try {
@@ -119,6 +132,18 @@ class RstestExternal {
         `[Meteor Rstest] External result endpoint returned HTTP ${response.status}.`,
       );
     }
+  }
+
+  async _waitForCoverageArtifact() {
+    const deadline = Date.now() + this.coverageWaitTimeoutMs;
+    while (Date.now() <= deadline) {
+      if (this.coverageArtifactPath && fs.existsSync(this.coverageArtifactPath)) return;
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    throw new Error(
+      `[Meteor Rstest] External coverage upload did not commit after ` +
+      `${this.coverageWaitTimeoutMs}ms.`,
+    );
   }
 
   async stop() {

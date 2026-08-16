@@ -356,6 +356,7 @@ function validateCoverageMetadata(coverage) {
 function createServerCoverageLifecycle({
   coverage,
   expectsClient = false,
+  expectsExternal = false,
   worker = null,
   globalObject = globalThis,
   timeoutMs = 600000,
@@ -366,57 +367,66 @@ function createServerCoverageLifecycle({
       handler: null,
       captureServer: () => ({ captured: false }),
       waitForClient: async () => undefined,
+      waitForExternal: async () => undefined,
     };
   }
   validateCoverageMetadata(coverage);
-  const clientExpected = expectsClient && Boolean(coverage.artifacts.client);
-  const clientDeferred = clientExpected ? createDeferred() : null;
-  let clientWaitTimer;
-  let clientSettled = false;
-  let clientCommitted = false;
-  let clientGate;
-  if (clientExpected) {
-    clientGate = createCoverageFrameGate({
-      generation: coverage.generation,
-      token: coverage.token,
-      producer: 'client',
+  const producers = new Map();
+  for (const [producer, expected] of [
+    ['client', expectsClient],
+    ['e2e', expectsExternal],
+  ]) {
+    if (!expected) continue;
+    if (!coverage.artifacts[producer]) {
+      throw coverageError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Expected coverage artifact descriptor for ${producer} is missing.`,
+      );
+    }
+    producers.set(producer, {
+      producer,
+      deferred: createDeferred(),
+      waitTimer: undefined,
+      settled: false,
+      committed: false,
+      gate: createCoverageFrameGate({
+        generation: coverage.generation,
+        token: coverage.token,
+        producer,
+      }),
     });
   }
 
-  function clearClientWaitTimer() {
-    if (!clientWaitTimer) return;
-    clearTimeout(clientWaitTimer);
-    clientWaitTimer = undefined;
+  function clearWaitTimer(state) {
+    if (!state.waitTimer) return;
+    clearTimeout(state.waitTimer);
+    state.waitTimer = undefined;
   }
 
-  function failClient(error) {
-    if (clientSettled) return;
-    clientSettled = true;
-    clearClientWaitTimer();
-    clientDeferred.reject(error);
+  function failProducer(state, error) {
+    if (!state || state.settled) return;
+    state.settled = true;
+    clearWaitTimer(state);
+    state.deferred.reject(error);
   }
 
-  function completeClient(artifact) {
-    if (clientSettled) return;
-    clientCommitted = true;
-    clientSettled = true;
-    clearClientWaitTimer();
-    clientDeferred.resolve(artifact);
+  function failPending(error) {
+    for (const state of producers.values()) failProducer(state, error);
   }
 
-  const handler = clientExpected ? (request, response, next = () => {}) => {
+  function completeProducer(state, artifact) {
+    if (state.settled) return;
+    state.committed = true;
+    state.settled = true;
+    clearWaitTimer(state);
+    state.deferred.resolve(artifact);
+  }
+
+  const handler = producers.size > 0 ? (request, response, next = () => {}) => {
     if (request.method !== 'POST') return next();
     if (!requestIsSameOrigin(request) ||
         !safeTokenEqual(request.headers['x-meteor-rstest-token'], coverage.token)) {
       sendJson(response, 403, { error: 'Coverage request is not authorized.' });
-      return;
-    }
-    if (clientSettled) {
-      sendJson(response, 409, {
-        error: clientCommitted
-          ? 'Coverage producer has already committed.'
-          : 'Coverage producer has already failed.',
-      });
       return;
     }
     const contentType = String(request.headers['content-type'] || '').split(';', 1)[0];
@@ -425,7 +435,7 @@ function createServerCoverageLifecycle({
         'METEOR_RSTEST_COVERAGE_CONTENT_TYPE',
         'Coverage request must be JSON.',
       );
-      failClient(error);
+      failPending(error);
       sendJson(response, 415, { error: error.message });
       return;
     }
@@ -447,31 +457,63 @@ function createServerCoverageLifecycle({
           'METEOR_RSTEST_COVERAGE_OVERSIZED',
           'Coverage frame exceeds the request limit.',
         );
-        failClient(error);
+        failPending(error);
         sendJson(response, 413, { error: error.message });
         return;
       }
+      let state;
       try {
         const frame = JSON.parse(Buffer.concat(chunks).toString('utf8'));
-        const accepted = clientGate.submit(frame);
+        state = producers.get(frame && frame.producer);
+        if (!state) {
+          throw coverageError(
+            'METEOR_RSTEST_COVERAGE_AUTH',
+            'Coverage frame producer is not expected.',
+          );
+        }
+        if (state.settled) {
+          sendJson(response, 409, {
+            error: state.committed
+              ? 'Coverage producer has already committed.'
+              : 'Coverage producer has already failed.',
+          });
+          return;
+        }
+        const accepted = state.gate.submit(frame);
         if (accepted.committed) {
-          const artifact = clientGate.commit();
+          const artifact = state.gate.commit();
           writeCoverageArtifact({
-            outputPath: coverage.artifacts.client,
-            expectedPath: coverage.artifacts.client,
+            outputPath: coverage.artifacts[state.producer],
+            expectedPath: coverage.artifacts[state.producer],
             artifact,
           });
-          completeClient(artifact);
+          completeProducer(state, artifact);
         }
         sendJson(response, 200, accepted);
       } catch (error) {
         const replay = error.code === 'METEOR_RSTEST_COVERAGE_REPLAY';
-        failClient(error);
+        if (state) failProducer(state, error);
+        else failPending(error);
         sendJson(response, replay ? 409 : 400, { error: error.message });
       }
     });
-    request.on('error', failClient);
+    request.on('error', failPending);
   } : null;
+
+  function waitForProducer(producer) {
+    const state = producers.get(producer);
+    if (!state) return Promise.resolve();
+    if (!state.settled && !state.waitTimer) {
+      const label = producer === 'client' ? 'Meteor client' : 'external e2e';
+      state.waitTimer = setTimeout(() => {
+        failProducer(state, coverageError(
+          'METEOR_RSTEST_COVERAGE_TIMEOUT',
+          `Did not receive ${label} coverage commit after ${timeoutMs}ms.`,
+        ));
+      }, timeoutMs);
+    }
+    return state.deferred.promise;
+  }
 
   return {
     enabled: true,
@@ -495,16 +537,10 @@ function createServerCoverageLifecycle({
       return { captured: true, artifact };
     },
     waitForClient() {
-      if (!clientDeferred) return Promise.resolve();
-      if (!clientSettled && !clientWaitTimer) {
-        clientWaitTimer = setTimeout(() => {
-          failClient(coverageError(
-            'METEOR_RSTEST_COVERAGE_TIMEOUT',
-            `Did not receive Meteor client coverage commit after ${timeoutMs}ms.`,
-          ));
-        }, timeoutMs);
-      }
-      return clientDeferred.promise;
+      return waitForProducer('client');
+    },
+    waitForExternal() {
+      return waitForProducer('e2e');
     },
   };
 }

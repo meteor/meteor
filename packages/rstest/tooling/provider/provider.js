@@ -1443,6 +1443,9 @@ class RstestTestRunnerProvider {
       await browser.start();
     }
     if (this.metadata.external) {
+      const externalCoverageArtifact = this.coverageArtifacts.find(
+        artifact => artifact.producer === 'e2e',
+      );
       const external = new this.services.External({
         appDir: this.context.appDir,
         url,
@@ -1450,6 +1453,10 @@ class RstestTestRunnerProvider {
         resultPath: this.externalResultPath,
         token: this.metadata.token,
         generation: this.generation,
+        ...(this.metadata.coverage && externalCoverageArtifact ? {
+          coverageGeneration: this.metadata.coverage.generation,
+          coverageArtifactPath: externalCoverageArtifact.path,
+        } : {}),
       });
       this.resources.push(external);
       await external.start();

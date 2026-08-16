@@ -1345,9 +1345,23 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
   const testFile = path.join(context.appDir, 'tests/rstest/e2e/app.test.js');
   fs.mkdirSync(path.dirname(testFile), { recursive: true });
   fs.writeFileSync(testFile, "import { test } from '@rstest/core';\n");
+  let externalOptions;
   const provider = new RstestTestRunnerProvider(context, {
     async ensureRstestInstalled() {},
     assertRstestOptionalCapabilities() {},
+    startRstestProcess(options) {
+      writeCoverageSettings({ args: options.args, context });
+      return { completion: Promise.resolve(0), async stop() {} };
+    },
+    Browser: class {
+      async start() {}
+      async stop() {}
+    },
+    External: class {
+      constructor(options) { externalOptions = options; }
+      async start() {}
+      async stop() {}
+    },
   });
 
   await provider.validate();
@@ -1359,6 +1373,13 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
     'client',
     'e2e',
   ]);
+  await provider.startBeforeHost({ updateMetadata() {} });
+  await provider.startHost({ url: 'http://localhost:3100/', log() {} });
+  assert.equal(externalOptions.coverageGeneration, provider.coverageGeneration);
+  assert.equal(
+    externalOptions.coverageArtifactPath,
+    path.join(provider.coverageRoot, 'e2e.json'),
+  );
 });
 
 test('provider cleanup stops resources once in reverse start order', async t => {

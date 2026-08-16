@@ -40,6 +40,7 @@ const coverageLifecycle = isRstestActive
   ? createServerCoverageLifecycle({
     coverage: activeMetadata.rstestCoverage,
     expectsClient: activeMetadata.rstestClient,
+    expectsExternal: activeMetadata.rstestExternal,
     worker: activeMetadata.rstestWorker,
   })
   : null;
@@ -307,6 +308,7 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
   if (metadata.rstestExternal) {
     let externalResult;
     try {
+      if (coverageLifecycle) await coverageLifecycle.waitForExternal();
       externalResult = await externalResultGate.wait();
     } catch (error) {
       externalResult = timeoutResult(error, 'External Rstest project result');

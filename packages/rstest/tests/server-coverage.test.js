@@ -160,6 +160,53 @@ test('endpoint publishes client artifact only after authenticated commit', async
   }
 });
 
+test('endpoint publishes and waits for the external e2e producer identity', async t => {
+  const coverage = fixture(t);
+  coverage.artifacts.e2e = path.join(coverage.artifactRoot, 'e2e.json');
+  const lifecycle = createServerCoverageLifecycle({
+    coverage,
+    expectsClient: true,
+    expectsExternal: true,
+    globalObject: { __coverage__: {} },
+  });
+  assert.equal(typeof lifecycle.handler, 'function');
+  const server = http.createServer(lifecycle.handler);
+  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
+  t.after(() => new Promise(resolve => server.close(resolve)));
+  const port = server.address().port;
+  const origin = `http://127.0.0.1:${port}`;
+  const frames = serializeCoverageFrames({
+    generation,
+    token,
+    producer: 'e2e',
+    coverage: coverageMap('/app/imports/e2e-page.js', 5),
+  });
+
+  for (const frame of frames) {
+    assert.equal((await post({ port, frame, origin })).status, 200);
+  }
+  await lifecycle.waitForExternal();
+
+  const artifact = JSON.parse(fs.readFileSync(coverage.artifacts.e2e, 'utf8'));
+  assert.equal(artifact.producer, 'e2e');
+  assert.equal(artifact.coverage['/app/imports/e2e-page.js'].s[0], 5);
+
+  const clientFrames = serializeCoverageFrames({
+    generation,
+    token,
+    producer: 'client',
+    coverage: coverageMap('/app/imports/runtime-client.js', 3),
+  });
+  for (const frame of clientFrames) {
+    assert.equal((await post({ port, frame, origin })).status, 200);
+  }
+  await lifecycle.waitForClient();
+  const clientArtifact = JSON.parse(
+    fs.readFileSync(coverage.artifacts.client, 'utf8'),
+  );
+  assert.equal(clientArtifact.coverage['/app/imports/runtime-client.js'].s[0], 3);
+});
+
 test('endpoint rejects cross-origin, wrong-token, and replay requests', async t => {
   const coverage = fixture(t);
   const lifecycle = createServerCoverageLifecycle({
@@ -315,6 +362,17 @@ test('disabled server coverage registers no handler and performs no writes', t =
   assert.equal(lifecycle.handler, null);
   assert.deepEqual(lifecycle.captureServer(), { captured: false });
   assert.equal(fs.existsSync(coverage.artifacts.server), false);
+});
+
+test('expected HTTP producers require their declared artifact paths', t => {
+  assert.throws(
+    () => createServerCoverageLifecycle({
+      coverage: fixture(t),
+      expectsExternal: true,
+      globalObject: { __coverage__: {} },
+    }),
+    error => error.code === 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+  );
 });
 
 test('missing expected client commit rejects the coverage wait', async t => {

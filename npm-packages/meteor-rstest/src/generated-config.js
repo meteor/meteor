@@ -70,6 +70,20 @@ function createGeneratedConfig({
         generation: coveragePlan.generation,
       })];
     }
+    if (context.phase === 'external' && context.fullApp &&
+        coveragePlan && coveragePlan.enabled &&
+        coveragePlan.provider === 'istanbul') {
+      const setupFile = path.resolve(__dirname, 'coverage/playwright-setup.mjs');
+      const existing = config.setupFiles == null
+        ? []
+        : Array.isArray(config.setupFiles)
+          ? config.setupFiles
+          : [config.setupFiles];
+      config.setupFiles = [
+        ...existing.filter(item => item !== setupFile),
+        setupFile,
+      ];
+    }
     if (resultOutput) {
       const existing = config.reporters == null
         ? ['default']
