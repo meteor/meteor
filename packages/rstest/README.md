@@ -124,11 +124,11 @@ remain owned by Isobuild and the live Meteor host, and attempted replacement
 fails with an explicit error. `rs.fn` and `rs.spyOn` work without replacing
 Meteor, MongoDB, DDP, or other host services.
 
-Host execution intentionally differs from a native Rstest worker. Runtime
-coverage, native file workers/sharding/changed-file selection, worker module
-isolation/reset, and native reporter event streams are not available in the
-embedded lane. Browser Mode and Playwright keep their dedicated native lanes.
-Use `--runtime-workers` when separate Meteor processes/databases are needed.
+Host execution intentionally differs from a native Rstest worker. Native file
+workers/sharding/changed-file selection, worker module isolation/reset, and
+native reporter event streams are not available in the embedded lane. Browser
+Mode and Playwright keep their dedicated native lanes. Use
+`--runtime-workers` when separate Meteor processes/databases are needed.
 Unmigrated Mocha/Tinytest files remain on their real driver route so callback
 `done`, Mocha `this`, and custom driver behavior are never approximated.
 
@@ -231,3 +231,36 @@ Package integration note: `rstest` uses `rspack` and
 only add or `api.use('rstest')`; its runtime and tool-host provider are one
 capability. Use `Package['name']` only when integrating an optional weak
 dependency at runtime, not as an availability check for these required parts.
+
+## Coverage
+
+Coverage keeps the standard Rstest API and configuration. After installing
+`@rstest/coverage-istanbul`, use the normal `coverage` options and select the
+desired execution lanes:
+
+```sh
+meteor test --once --coverage
+meteor test --once --coverage --runtime-workers 2
+meteor test-packages --once --coverage my-package
+meteor test --once --full-app --coverage --project meteor-e2e
+```
+
+Any selected Meteor lane uses one Istanbul report across native projects, real
+Meteor server/client hosts and runtime workers, standard local Atmosphere
+packages, package tests, and Rstest-fixture-owned full-app Playwright pages.
+`include`/`exclude`, reporters, report directory, thresholds, and
+`reportOnFailure` retain their usual meanings: thresholds evaluate the merged
+report and `reportOnFailure` controls reporting when tests fail. With coverage
+disabled, this integration is a no-op.
+
+Native-only coverage remains upstream Rstest behavior, including Istanbul or
+V8. A run that includes a Meteor host supports Istanbul only; V8 coverage in a
+Meteor host is deferred. Standard local packages compiled through `ecmascript`
+or `typescript` are included under their physical source paths, with no Meteor
+or Atmosphere package mocking. Meteor, MongoDB, DDP, and browser execution stay
+real.
+
+Coverage does not yet aggregate Meteor watch generations, synthesize zero-hit
+records for included sources that no selected host loaded, or cover sources
+compiled by a custom compiler. Playwright pages launched outside Rstest's
+fixtures are also outside this collection boundary.

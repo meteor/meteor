@@ -348,20 +348,42 @@ Review a mismatch, then update selected native snapshots through Meteor:
 meteor test --once --project meteor-pure-server --update-snapshots
 ```
 
-Native coverage is available through the Meteor command after project installs
-its chosen provider:
+Coverage uses the ordinary upstream Rstest configuration and imports. Install
+the Istanbul provider, then select the lanes that should contribute to one
+report:
 
 ```sh
 meteor npm install --save-dev @rstest/coverage-istanbul
-meteor test --once --project meteor-pure-server --coverage
+meteor test --once --coverage
+meteor test --once --coverage --runtime-workers 2
+meteor test-packages --once --coverage my-package
+meteor test --once --full-app --coverage --project meteor-e2e
 ```
 
-Use native Rstest `coverage` configuration to select Istanbul or V8 and define
-reporters, include/exclude patterns, and report paths. Meteor-runtime projects
-support upstream snapshot assertions backed by a Meteor-owned persistent
-snapshot environment. Snapshot writes require `--update-snapshots`. Runtime
-coverage remains unavailable because code executes in a long-lived Meteor host,
-not a native instrumented Rstest worker.
+With `coverage.enabled` or `--coverage`, a run that includes Meteor projects
+produces one Istanbul report across selected native Rstest projects, real
+Meteor server/client hosts and runtime workers, standard local Atmosphere
+packages, package tests, and full-app pages created through Rstest's Playwright
+fixtures. The same upstream `coverage` options control reporters, report
+directory, include/exclude filtering, thresholds, and `reportOnFailure`.
+Threshold failures apply to the combined report; `reportOnFailure` still
+controls whether a report is written after test failures. When coverage is
+disabled, the integration adds no coverage work.
+
+Native-only runs keep upstream coverage behavior unchanged, including the V8
+provider. Mixed or Meteor-hosted coverage requires Istanbul; V8 collection
+inside a Meteor host is not available. Loaded local packages using Meteor's
+standard `ecmascript` or `typescript` compiler path are supported and retain
+their physical source paths in the report. This does not mock Meteor,
+Atmosphere packages, MongoDB, DDP, or the browser host.
+
+The current boundary is intentionally narrower in a few places: reports do
+not aggregate across Meteor watch generations; explicitly included but untested
+source files do not receive synthetic zero-hit entries; local sources compiled
+by custom compilers are deferred; and independently launched Playwright
+browsers are outside collection. Meteor-runtime projects support upstream
+snapshot assertions backed by a Meteor-owned persistent snapshot environment.
+Snapshot writes require `--update-snapshots`.
 
 Module mocking uses the same API in native and Meteor-runtime projects:
 
@@ -386,9 +408,9 @@ Meteor, Atmosphere, DDP, and Mongo continue running.
 Embedded runtime keeps upstream suite/test declarations, parameterization,
 `test.extend` fixtures, hooks, context, matchers, promise assertions, retry,
 repeats, fake timers, spies/stubs, `waitUntil`, snapshots, name filtering, and
-globals. Native worker isolation/reset, file sharding/changed selection,
-coverage, and native reporter event streams remain native-only. Use
-`--runtime-workers` for isolated Meteor processes and databases.
+globals. Native worker isolation/reset, file sharding/changed selection, and
+native reporter event streams remain native-only. Use `--runtime-workers` for
+isolated Meteor processes and databases.
 
 ## Playwright fixture
 
