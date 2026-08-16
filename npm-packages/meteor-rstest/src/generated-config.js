@@ -73,6 +73,12 @@ function createGeneratedConfig({
     if (context.phase === 'external' && context.fullApp &&
         coveragePlan && coveragePlan.enabled &&
         coveragePlan.provider === 'istanbul') {
+      config.coverage = {
+        ...config.coverage,
+        reporters: [],
+        thresholds: undefined,
+        clean: false,
+      };
       const setupFile = path.resolve(__dirname, 'coverage/playwright-setup.mjs');
       const appendSetupFile = value => {
         const existing = value == null
