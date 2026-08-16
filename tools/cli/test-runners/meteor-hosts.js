@@ -379,7 +379,7 @@ function createMeteorTestHostService({
 }) {
   let currentHandle = null;
   return Object.freeze({
-    start(hostInput) {
+    start(hostInput, { basePort: requestedBasePort = basePort } = {}) {
       if (currentHandle) {
         throw new Error('Meteor test host service is already running.');
       }
@@ -394,7 +394,7 @@ function createMeteorTestHostService({
       const completion = (async () => {
         await prepare();
         const pairs = await allocateWorkerPortPairs({
-          basePort,
+          basePort: requestedBasePort,
           count: hosts.length,
           isPortAvailable,
         });

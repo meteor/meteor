@@ -163,3 +163,28 @@ test('gate rejects malformed Istanbul file coverage', () => {
     error => error.code === 'METEOR_RSTEST_COVERAGE_MAP_INVALID',
   );
 });
+
+test('gate accepts SWC anonymous-function declaration sentinels', () => {
+  const filename = '/app/imports/methods.ts';
+  const artifact = submitAll(gate(), frames({ coverage: {
+    [filename]: {
+      ...fileCoverage(filename),
+      fnMap: {
+        0: {
+          name: 'anonymous',
+          decl: {
+            start: { line: 0, column: 0 },
+            end: { line: 0, column: 0 },
+          },
+          loc: {
+            start: { line: 10, column: 2 },
+            end: { line: 12, column: 3 },
+          },
+        },
+      },
+      f: { 0: 1 },
+    },
+  } }));
+
+  assert.equal(artifact.coverage[filename].f[0], 1);
+});

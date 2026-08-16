@@ -214,8 +214,8 @@ test('generated external Istanbul coverage appends the Playwright setup exactly 
 
   const first = await createGeneratedConfig(input)();
   const second = await createGeneratedConfig(input)();
-  assert.deepEqual(first.setupFiles, [userSetup, integrationSetup]);
-  assert.deepEqual(second.setupFiles, [userSetup, integrationSetup]);
+  assert.deepEqual(first.setupFiles, [userSetup]);
+  assert.deepEqual(second.setupFiles, [userSetup]);
   assert.deepEqual(
     first.projects.find(project => project.name === 'meteor-e2e').setupFiles,
     [userSetup, integrationSetup],

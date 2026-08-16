@@ -23,14 +23,14 @@ function inside(parent, child) {
   );
 }
 
-function canonicalRuntimeServerFiles({ appDir, files }) {
+function canonicalRuntimeFiles({ appDir, files, allowEmpty = false }) {
   if (!path.isAbsolute(appDir || '')) {
     throw workerError(
       'METEOR_RSTEST_WORKER_APP_ROOT',
       'Runtime worker app root must be absolute.'
     );
   }
-  if (!Array.isArray(files) || files.length === 0) {
+  if (!Array.isArray(files) || !allowEmpty && files.length === 0) {
     throw workerError(
       'METEOR_RSTEST_WORKER_EMPTY',
       'Runtime workers require at least one runtime-server file.'
@@ -84,7 +84,7 @@ function partitionRuntimeFiles({ appDir, files, requestedWorkers }) {
       'Runtime worker count must be a positive integer.'
     );
   }
-  const normalized = canonicalRuntimeServerFiles({ appDir, files });
+  const normalized = canonicalRuntimeFiles({ appDir, files });
   const count = Math.min(requestedWorkers, normalized.length);
   const partitions = Array.from({ length: count }, () => []);
   normalized.forEach((file, index) => {
@@ -130,6 +130,7 @@ function createRstestHostDescriptors({
   appDir,
   localDir,
   files,
+  clientFiles = [],
   requestedWorkers,
   generation,
   runtimeSettingsPath,
@@ -156,7 +157,25 @@ function createRstestHostDescriptors({
     normalizedCoverageRoot = path.resolve(coverageRoot);
     assertGeneration(path.basename(normalizedCoverageRoot));
   }
-  const partitions = partitionRuntimeFiles({ appDir, files, requestedWorkers });
+  const normalizedFiles = canonicalRuntimeFiles({ appDir, files });
+  const normalizedClientFiles = new Set(canonicalRuntimeFiles({
+    appDir,
+    files: clientFiles,
+    allowEmpty: true,
+  }));
+  for (const clientFile of normalizedClientFiles) {
+    if (!normalizedFiles.includes(clientFile)) {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_FILE',
+        'Runtime worker client file is outside the selected runtime files.'
+      );
+    }
+  }
+  const partitions = partitionRuntimeFiles({
+    appDir,
+    files: normalizedFiles,
+    requestedWorkers,
+  });
   const workersRoot = path.join(localDir, 'rstest', 'workers');
   const descriptors = partitions.map((runtimeFiles, index) => {
     const id = `server-${index + 1}`;
@@ -164,8 +183,8 @@ function createRstestHostDescriptors({
     const resultPath = path.join(workersRoot, `${id}-result.json`);
     writePrivateJson(runtimeManifest, {
       schemaVersion: 2,
-      serverFiles: runtimeFiles,
-      clientFiles: [],
+      serverFiles: runtimeFiles.filter(file => !normalizedClientFiles.has(file)),
+      clientFiles: runtimeFiles.filter(file => normalizedClientFiles.has(file)),
     });
     removeIfPresent(resultPath);
     return Object.freeze({
@@ -220,7 +239,7 @@ function validateRstestWorkerPayload({ appDir, worker }) {
     );
   }
   assertGeneration(payload.generation);
-  const runtimeFiles = canonicalRuntimeServerFiles({
+  const runtimeFiles = canonicalRuntimeFiles({
     appDir,
     files: payload.runtimeFiles,
   });
@@ -296,17 +315,46 @@ function validateRstestWorkerPayload({ appDir, worker }) {
     }
   }
   let manifestFiles;
+  let serverFiles;
+  let clientFiles;
   try {
     const parsedManifest = JSON.parse(fs.readFileSync(runtimeManifest, 'utf8'));
-    const files = Array.isArray(parsedManifest)
-      ? parsedManifest
-      : parsedManifest && parsedManifest.schemaVersion === 2 &&
-          Array.isArray(parsedManifest.serverFiles) &&
-          Array.isArray(parsedManifest.clientFiles) &&
-          parsedManifest.clientFiles.length === 0
-        ? parsedManifest.serverFiles
-        : null;
-    manifestFiles = canonicalRuntimeServerFiles({ appDir, files });
+    if (Array.isArray(parsedManifest)) {
+      serverFiles = canonicalRuntimeFiles({ appDir, files: parsedManifest });
+      clientFiles = [];
+    } else if (parsedManifest && parsedManifest.schemaVersion === 2 &&
+        Array.isArray(parsedManifest.serverFiles) &&
+        Array.isArray(parsedManifest.clientFiles)) {
+      serverFiles = canonicalRuntimeFiles({
+        appDir,
+        files: parsedManifest.serverFiles,
+        allowEmpty: true,
+      });
+      clientFiles = canonicalRuntimeFiles({
+        appDir,
+        files: parsedManifest.clientFiles,
+        allowEmpty: true,
+      });
+      if (serverFiles.length === 0 && clientFiles.length === 0) {
+        throw workerError(
+          'METEOR_RSTEST_WORKER_EMPTY',
+          'Runtime worker manifest has no runtime files.'
+        );
+      }
+    } else {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_MANIFEST',
+        'Runtime worker manifest schema is invalid.'
+      );
+    }
+    const unique = new Set([...serverFiles, ...clientFiles]);
+    if (unique.size !== serverFiles.length + clientFiles.length) {
+      throw workerError(
+        'METEOR_RSTEST_WORKER_MANIFEST',
+        'Runtime worker manifest assigns one file to multiple architectures.'
+      );
+    }
+    manifestFiles = [...unique].sort();
   } catch (error) {
     throw workerError(
       'METEOR_RSTEST_WORKER_MANIFEST',
@@ -323,6 +371,8 @@ function validateRstestWorkerPayload({ appDir, worker }) {
     schemaVersion: WORKER_PAYLOAD_SCHEMA_VERSION,
     generation: payload.generation,
     runtimeFiles: Object.freeze(runtimeFiles),
+    serverFiles: Object.freeze(serverFiles),
+    clientFiles: Object.freeze(clientFiles),
     runtimeManifest,
     runtimeSettingsPath,
     resultPath,

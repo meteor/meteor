@@ -1039,7 +1039,7 @@ test('full-app coverage instruments the app even without Meteor-runtime test fil
   );
 });
 
-test('runtime client and full-app projects request a mixed Meteor test host', async t => {
+test('full-app runtime coverage separates an app-test host from the client worker', async t => {
   const context = createContext(t);
   context.options.fullApp = true;
   context.options.project = [
@@ -1081,9 +1081,19 @@ test('runtime client and full-app projects request a mixed Meteor test host', as
   const plan = await provider.prepare();
 
   assert.equal(plan.mode, 'meteor-host');
-  assert.equal(plan.hostTestMode, 'mixed');
+  assert.equal(plan.hostTestMode, 'app-test');
   assert.equal(plan.metadata.runtime, true);
+  assert.equal(plan.metadata.runtimeClient, false);
+  assert.equal(plan.metadata.runtimeServer, false);
   assert.equal(plan.metadata.external, true);
+  assert.equal(provider.workerHostPlan.actualWorkers, 1);
+  assert.deepEqual(
+    JSON.parse(fs.readFileSync(
+      provider.workerHostPlan.descriptors[0].payload.runtimeManifest,
+      'utf8',
+    )).clientFiles,
+    [fs.realpathSync(runtimeFile)],
+  );
   assert.ok(provider.nativeArgs.includes('--coverage-artifact'));
   assert.equal(provider.externalArgs.includes('--coverage-artifact'), false);
 });

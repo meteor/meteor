@@ -13,6 +13,7 @@ const MAX_COVERAGE_BYTES = 64 * 1024 * 1024;
 const GENERATION_PATTERN = /^[a-f0-9]{32,128}$/i;
 const PRODUCER_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const SHARD_ID_PATTERN = /^[a-f0-9]{32}$/;
+const browserTypeInterceptions = new WeakMap();
 
 function coverageError(message) {
   const error = new Error(`[Meteor Rstest] ${message}`);
@@ -38,6 +39,96 @@ function resolveProjectPlaywrightEntry(projectRoot) {
     );
   }
   return path.resolve(path.dirname(packageJsonPath), importEntry);
+}
+
+function resolveProjectPlaywrightModuleEntry(projectRoot) {
+  const projectRequire = createRequire(path.join(projectRoot, 'package.json'));
+  try {
+    return projectRequire.resolve('playwright');
+  } catch {
+    throw coverageError('Project-owned playwright browser module is unavailable.');
+  }
+}
+
+function installFixturelessPlaywrightCoverageLifecycle({
+  playwright,
+  collector,
+  afterEach,
+  afterAll,
+  directory,
+}) {
+  if (!collector || typeof collector.install !== 'function' ||
+      typeof collector.captureRemaining !== 'function' ||
+      typeof collector.writeShard !== 'function' ||
+      typeof afterEach !== 'function' || typeof afterAll !== 'function') {
+    throw coverageError('Playwright coverage lifecycle is invalid.');
+  }
+  const restore = interceptPlaywrightBrowserTypes({ playwright, collector });
+  afterEach(async () => {
+    await collector.captureRemaining();
+  });
+  afterAll(async () => {
+    try {
+      await collector.writeShard({ directory });
+    } finally {
+      restore();
+    }
+  });
+  return restore;
+}
+
+function interceptPlaywrightBrowserTypes({ playwright, collector }) {
+  if (!playwright || (typeof playwright !== 'object' &&
+      typeof playwright !== 'function')) {
+    throw coverageError('Project-owned playwright browser module is invalid.');
+  }
+  const methods = ['launch', 'connect', 'connectOverCDP', 'launchPersistentContext'];
+  const browserTypes = [...new Set(['chromium', 'firefox', 'webkit'].map(name =>
+    playwright[name]
+  ).filter(value => value && (typeof value === 'object' || typeof value === 'function')))];
+  const patches = [];
+  for (const browserType of browserTypes) {
+    const existing = browserTypeInterceptions.get(browserType);
+    if (existing) {
+      if (existing.collector !== collector) {
+        throw coverageError('Playwright browser coverage interception is already active.');
+      }
+      continue;
+    }
+    for (const method of methods) {
+      if (typeof browserType[method] === 'function') {
+        patches.push({ browserType, method, original: browserType[method] });
+      }
+    }
+  }
+  const restoration = () => {
+    for (const patch of patches) {
+      if (patch.browserType[patch.method] === patch.wrapped) {
+        patch.browserType[patch.method] = patch.original;
+      }
+      if (browserTypeInterceptions.get(patch.browserType) === state) {
+        browserTypeInterceptions.delete(patch.browserType);
+      }
+    }
+  };
+  const state = { collector, restoration };
+  for (const patch of patches) {
+    patch.wrapped = async function meteorRstestCoverageBrowserTypeMethod(...args) {
+      const result = await Reflect.apply(patch.original, this, args);
+      if (patch.method === 'launchPersistentContext') {
+        const browser = result && typeof result.browser === 'function'
+          ? result.browser()
+          : undefined;
+        await collector.install({ browser, context: result });
+      } else {
+        await collector.install({ browser: result });
+      }
+      return result;
+    };
+    patch.browserType[patch.method] = patch.wrapped;
+    browserTypeInterceptions.set(patch.browserType, state);
+  }
+  return restoration;
 }
 
 function sameIdentity(left, right) {
@@ -551,7 +642,10 @@ module.exports = {
   cleanupCoverageShardDirectory,
   createBrowserCaptureScripts,
   createPlaywrightCoverageCollector,
+  installFixturelessPlaywrightCoverageLifecycle,
+  interceptPlaywrightBrowserTypes,
   readCoverageShards,
   resolveProjectPlaywrightEntry,
+  resolveProjectPlaywrightModuleEntry,
   writeCoverageShard,
 };

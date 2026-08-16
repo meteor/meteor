@@ -141,14 +141,6 @@ function isGeneratedOrTestFile(filename, roots) {
     /(?:^|\/)playwright-setup\.mjs$/.test(slash(filename));
 }
 
-function shapeSignature(fileCoverage) {
-  return JSON.stringify({
-    statementMap: fileCoverage.statementMap,
-    fnMap: fileCoverage.fnMap,
-    branchMap: fileCoverage.branchMap,
-  });
-}
-
 function canonicalizeCoverageMaps(coverageMaps, {
   appRoot,
   localPackages = [],
@@ -157,7 +149,6 @@ function canonicalizeCoverageMaps(coverageMaps, {
   allowExternal = false,
 }) {
   const roots = normalizeRoots({ appRoot, localPackages });
-  const signatures = new Map();
   const maps = [];
   const files = new Set();
   for (const coverage of coverageMaps) {
@@ -195,15 +186,6 @@ function canonicalizeCoverageMaps(coverageMaps, {
           exclude.length > 0 && matchPatterns(filename, exclude, roots)) {
         continue;
       }
-      const signature = shapeSignature(fileCoverage);
-      const previous = signatures.get(filename);
-      if (previous !== undefined && previous !== signature) {
-        throw pathError(
-          'METEOR_RSTEST_COVERAGE_MAP_CONFLICT',
-          `Coverage maps disagree about source locations for ${filename}.`,
-        );
-      }
-      signatures.set(filename, signature);
       canonicalMap[filename] = { ...fileCoverage, path: filename };
       files.add(filename);
     }

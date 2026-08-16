@@ -1088,8 +1088,14 @@ class RstestTestRunnerProvider {
     const hasDesktopBrowser = this.context.webArchs.some(arch =>
       arch === 'web.browser' || arch === 'web.browser.legacy'
     );
+    const dedicatedRuntimeHosts = !worker && selection.needsRuntime && (
+      options.runtimeWorkers > 1 ||
+      options.runtimeWorkers === 1 && selection.needsExternal
+    );
     const runtimeClient = worker
-      ? false
+      ? this.workerPayload.clientFiles.length > 0
+      : dedicatedRuntimeHosts
+        ? false
       : command === 'test-packages'
         ? !options.serverOnly
       : this.classification
@@ -1098,7 +1104,9 @@ class RstestTestRunnerProvider {
           /[\\/]runtime[\\/]client[\\/]/.test(file)
         );
     const runtimeServer = worker
-      ? this.workerPayload.runtimeFiles.length > 0
+      ? this.workerPayload.serverFiles.length > 0
+      : dedicatedRuntimeHosts
+        ? false
       : command === 'test-packages'
         ? !options.clientOnly
       : this.classification
@@ -1141,6 +1149,7 @@ class RstestTestRunnerProvider {
       client,
       runtimeServer,
       runtimeClient,
+      coverageClient: dedicatedRuntimeHosts ? false : client,
       runtime: selection.needsRuntime,
       upstreamRuntime: this.upstreamRuntime,
       external: selection.needsExternal,
@@ -1158,11 +1167,16 @@ class RstestTestRunnerProvider {
       } : null,
     };
     this.workerHostPlan = null;
-    if (!worker && options.runtimeWorkers > 1 && selection.needsRuntime) {
+    if (dedicatedRuntimeHosts) {
       this.workerHostPlan = this.services.createRstestHostDescriptors({
         appDir,
         localDir,
         files: selection.inventory.runtimeFiles,
+        clientFiles: this.classification
+          ? this.classification.runtimeClientFiles
+          : selection.inventory.runtimeFiles.filter(file =>
+            /[\\/]runtime[\\/]client[\\/]/.test(file)
+          ),
         requestedWorkers: options.runtimeWorkers,
         generation: this.runtimeSettingsGeneration,
         runtimeSettingsPath: this.runtimeSettingsPath,
@@ -1223,7 +1237,7 @@ class RstestTestRunnerProvider {
     const buildClient = client || selection.needsExternal && !options.serverOnly;
     const buildServer = server || selection.needsExternal && !options.clientOnly;
     const mode = this.workerHostPlan
-        ? 'native-only'
+        ? selection.needsExternal ? 'meteor-host' : 'native-only'
         : selection.needsRuntime || selection.needsExternal
         ? 'meteor-host'
         : 'native-only';
@@ -1279,7 +1293,8 @@ class RstestTestRunnerProvider {
       mode,
       ...(mode === 'meteor-host' && command === 'test' && {
         hostTestMode: selection.needsExternal
-          ? selection.needsRuntime ? 'mixed' : 'app-test'
+          ? this.workerHostPlan ? 'app-test'
+            : selection.needsRuntime ? 'mixed' : 'app-test'
           : 'test',
       }),
       ...(mode === 'meteor-host' && { driverPackage: 'rstest' }),
@@ -1392,12 +1407,13 @@ class RstestTestRunnerProvider {
       if (code !== 0) return { exitCode: code };
       this._readRuntimeSettings(updateMetadata);
 
-      const workers = this.context.meteorHosts.start(
-        this.workerHostPlan.descriptors
-      );
-      this.resources.push(workers);
-      return {
-        process: {
+      const startWorkers = () => {
+        const workers = this.context.meteorHosts.start(
+          this.workerHostPlan.descriptors,
+          selection.needsExternal ? { basePort: this.context.basePort + 2 } : undefined,
+        );
+        this.resources.push(workers);
+        return {
           completion: workers.completion.then(outcome => {
             const aggregate = this.services.aggregateRstestWorkerResults({
               descriptors: this.workerHostPlan.descriptors,
@@ -1408,8 +1424,33 @@ class RstestTestRunnerProvider {
             return aggregate.exitCode;
           }),
           stop: signal => workers.stop(signal),
-        },
+        };
       };
+      if (selection.needsExternal) {
+        let workerProcess;
+        let resolveCompletion;
+        let rejectCompletion;
+        const completion = new Promise((resolve, reject) => {
+          resolveCompletion = resolve;
+          rejectCompletion = reject;
+        });
+        this.startDeferredWorkers = () => {
+          if (workerProcess) return workerProcess;
+          workerProcess = startWorkers();
+          workerProcess.completion.then(resolveCompletion, rejectCompletion);
+          return workerProcess;
+        };
+        return {
+          process: {
+            completion,
+            async stop(signal) {
+              if (workerProcess) return workerProcess.stop(signal);
+              resolveCompletion(0);
+            },
+          },
+        };
+      }
+      return { process: startWorkers() };
     }
 
     if (selection.shouldRunNative) {
@@ -1452,6 +1493,7 @@ class RstestTestRunnerProvider {
   }
 
   async startHost({ url, log }) {
+    if (this.startDeferredWorkers) this.startDeferredWorkers();
     if (this.metadata.runtimeClient) {
       const browser = new this.services.Browser({
         appDir: this.context.appDir,

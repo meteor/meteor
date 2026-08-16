@@ -135,6 +135,21 @@ function assertLocation(value, field, filename) {
   }
 }
 
+function isUnknownFunctionDeclarationLocation(value) {
+  return value && typeof value === 'object' && !Array.isArray(value) &&
+    value.start && typeof value.start === 'object' && !Array.isArray(value.start) &&
+    value.end && typeof value.end === 'object' && !Array.isArray(value.end) &&
+    value.start.line === 0 && value.start.column === 0 &&
+    value.end.line === 0 && value.end.column === 0;
+}
+
+function assertFunctionDeclarationLocation(value, field, filename) {
+  // swc-plugin-coverage-instrument uses this sentinel when an anonymous
+  // object-method declaration has no source declaration span.
+  if (isUnknownFunctionDeclarationLocation(value)) return;
+  assertLocation(value, field, filename);
+}
+
 function assertAlignedKeys(map, counters, field, filename) {
   const mapKeys = Object.keys(map).sort();
   const counterKeys = Object.keys(counters).sort();
@@ -164,7 +179,7 @@ function assertFileCoverageStructure(fileCoverage, filename) {
         `Coverage function ${id} for ${filename} is invalid.`,
       );
     }
-    assertLocation(entry.decl, `function ${id} declaration`, filename);
+    assertFunctionDeclarationLocation(entry.decl, `function ${id} declaration`, filename);
     assertLocation(entry.loc, `function ${id}`, filename);
   }
   for (const [id, entry] of Object.entries(fileCoverage.branchMap)) {

@@ -82,7 +82,6 @@ function createGeneratedConfig({
             : [value];
         return [...existing.filter(item => item !== setupFile), setupFile];
       };
-      config.setupFiles = appendSetupFile(config.setupFiles);
       config.projects = (config.projects || []).map(project =>
         project && project.name === 'meteor-e2e'
           ? { ...project, setupFiles: appendSetupFile(project.setupFiles) }

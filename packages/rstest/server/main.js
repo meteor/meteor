@@ -39,7 +39,7 @@ const runtimeSnapshotEnvironment = isRstestActive && activeMetadata.rstestAppRoo
 const coverageLifecycle = isRstestActive
   ? createServerCoverageLifecycle({
     coverage: activeMetadata.rstestCoverage,
-    expectsClient: activeMetadata.rstestClient,
+    expectsClient: activeMetadata.rstestCoverageClient,
     expectsExternal: activeMetadata.rstestExternal,
     worker: activeMetadata.rstestWorker,
   })
@@ -236,6 +236,7 @@ function testMetadata() {
         rstestToken: payload.token,
         rstestServer: payload.server,
         rstestClient: payload.client,
+        rstestCoverageClient: payload.coverageClient,
         rstestRuntimeServer: payload.runtimeServer,
         rstestRuntimeClient: payload.runtimeClient,
         rstestRuntime: payload.runtime,
@@ -297,7 +298,7 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
     coverageLifecycle.captureServer();
   }
 
-  if (coverageLifecycle && metadata.rstestClient) {
+  if (coverageLifecycle && metadata.rstestCoverageClient) {
     await coverageLifecycle.waitForClient();
   }
 

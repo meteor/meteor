@@ -135,7 +135,7 @@ test('canonical maps filter exclusions, generated files, tests, and denied exter
   assert.deepEqual(allowed.files, [fixture.externalFile]);
 });
 
-test('canonical maps reject internal path disagreement and conflicting source maps', t => {
+test('canonical maps reject internal path disagreement while preserving compiler variants', t => {
   const fixture = createFixture(t);
   assert.throws(() => canonicalizeCoverageMaps([{
     [fixture.appFile]: fileCoverage(fixture.packageFile),
@@ -147,15 +147,14 @@ test('canonical maps reject internal path disagreement and conflicting source ma
     return true;
   });
 
-  assert.throws(() => canonicalizeCoverageMaps([{
+  const canonical = canonicalizeCoverageMaps([{
     [fixture.appFile]: fileCoverage(fixture.appFile, 8),
   }, {
     [fixture.symlink]: fileCoverage(fixture.symlink, 12),
   }], {
     appRoot: fixture.appRoot,
     localPackages: fixture.localPackages,
-  }), error => {
-    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_MAP_CONFLICT');
-    return true;
   });
+  assert.equal(canonical.maps.length, 2);
+  assert.deepEqual(canonical.files, [fixture.appFile]);
 });

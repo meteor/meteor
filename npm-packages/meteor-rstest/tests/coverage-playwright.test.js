@@ -10,8 +10,10 @@ const {
   cleanupCoverageShardDirectory,
   createBrowserCaptureScripts,
   createPlaywrightCoverageCollector,
+  installFixturelessPlaywrightCoverageLifecycle,
   readCoverageShards,
   resolveProjectPlaywrightEntry,
+  resolveProjectPlaywrightModuleEntry,
   writeCoverageShard,
 } = require('../src/coverage/playwright.js');
 const {
@@ -59,6 +61,23 @@ test('Playwright setup resolves the project-owned ESM import entry', t => {
   assert.equal(
     fs.realpathSync(resolveProjectPlaywrightEntry(root)),
     fs.realpathSync(path.join(packageRoot, 'dist', 'index.js')),
+  );
+});
+
+test('Playwright setup resolves the project-owned browser module entry', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-playwright-module-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const packageRoot = path.join(root, 'node_modules', 'playwright');
+  fs.mkdirSync(packageRoot, { recursive: true });
+  fs.writeFileSync(path.join(packageRoot, 'package.json'), JSON.stringify({
+    name: 'playwright',
+    main: './index.js',
+  }));
+  fs.writeFileSync(path.join(packageRoot, 'index.js'), 'module.exports = {};\n');
+
+  assert.equal(
+    fs.realpathSync(resolveProjectPlaywrightModuleEntry(root)),
+    fs.realpathSync(path.join(packageRoot, 'index.js')),
   );
 });
 
@@ -208,6 +227,27 @@ class FakeBrowser {
   }
 }
 
+class FakeBrowserType {
+  constructor() {
+    this.calls = [];
+  }
+
+  async launch() {
+    this.calls.push('launch');
+    return new FakeBrowser();
+  }
+
+  async connect() {
+    this.calls.push('connect');
+    return new FakeBrowser();
+  }
+
+  async connectOverCDP() {
+    this.calls.push('connectOverCDP');
+    return new FakeBrowser();
+  }
+}
+
 function fixture() {
   const browser = new FakeBrowser();
   const context = new FakeContext(browser);
@@ -223,7 +263,7 @@ function fixture() {
 
 test('Playwright collector tracks primary and additional pages across navigation and close', async () => {
   const primary = fixture();
-  const collector = createPlaywrightCoverageCollector({ enabled: true });
+  const collector = createPlaywrightCoverageCollector({ enabled: true, generation });
   await collector.install(primary);
 
   await primary.page.navigate(
@@ -267,6 +307,51 @@ test('Playwright collector captures every context before fixture browser close',
     collector.mergedCoverage()['/app/imports/browser-close.js'].s[0],
     8,
   );
+});
+
+test('fixtureless lifecycle tracks browsers for direct and extended Playwright tests', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-fixtureless-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const lifecycle = { afterEach: [], afterAll: [] };
+  const directTest = {
+    afterEach(callback) { lifecycle.afterEach.push(callback); },
+    afterAll(callback) { lifecycle.afterAll.push(callback); },
+    extend() { return { ...this, extend: this.extend }; },
+  };
+  const extendedTest = directTest.extend({ account: async () => {} });
+  const browserTypes = [new FakeBrowserType(), new FakeBrowserType(), new FakeBrowserType()];
+  const collector = createPlaywrightCoverageCollector({ enabled: true, generation });
+
+  installFixturelessPlaywrightCoverageLifecycle({
+    playwright: {
+      chromium: browserTypes[0],
+      firefox: browserTypes[1],
+      webkit: browserTypes[2],
+    },
+    collector,
+    afterEach: extendedTest.afterEach,
+    afterAll: extendedTest.afterAll,
+    directory,
+  });
+
+  assert.deepEqual(lifecycle.afterEach.map(callback => callback.length), [0]);
+  assert.deepEqual(lifecycle.afterAll.map(callback => callback.length), [0]);
+  for (const browserType of browserTypes) {
+    const browser = await browserType.launch();
+    const context = await browser.newContext();
+    await context.newPage(
+      `page-${browserType.calls[0]}`,
+      coverage(`/app/imports/${browserType.calls[0]}.js`, 1),
+    );
+  }
+  await lifecycle.afterEach[0]();
+  await lifecycle.afterAll[0]();
+
+  const shard = readCoverageShards({ directory, generation });
+  assert.equal(shard.shards, 1);
+  assert.equal(Object.keys(shard.coverage).length, 1);
+  assert.deepEqual(browserTypes.map(type => type.calls), [['launch'], ['launch'], ['launch']]);
 });
 
 test('parallel Playwright files write durable shards that merge once', async t => {

@@ -626,3 +626,41 @@ test('artifact validation rejects malformed locations and counter-map misalignme
     });
   }
 });
+
+test('artifact validation accepts SWC anonymous-function declaration sentinels', t => {
+  const root = createRoot(t);
+  const outputPath = path.join(root, 'artifact.json');
+  const source = path.join(root, 'methods.ts');
+  const artifact = {
+    schemaVersion: 1,
+    generation: 'generation',
+    producer: 'server',
+    coverage: {
+      [source]: {
+        ...fileCoverage(source),
+        fnMap: {
+          0: {
+            name: 'anonymous',
+            decl: {
+              start: { line: 0, column: 0 },
+              end: { line: 0, column: 0 },
+            },
+            loc: {
+              start: { line: 10, column: 2 },
+              end: { line: 12, column: 3 },
+            },
+          },
+        },
+        f: { 0: 1 },
+      },
+    },
+  };
+
+  fs.writeFileSync(outputPath, JSON.stringify(artifact));
+  assert.deepEqual(readCoverageArtifact({
+    filePath: outputPath,
+    expectedPath: outputPath,
+    generation: 'generation',
+    producer: 'server',
+  }), artifact);
+});

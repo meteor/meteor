@@ -132,6 +132,52 @@ test('finalizer merges two real Istanbul maps then filters and reports once', as
   assert.equal(fs.existsSync(path.join(reportsDirectory, 'stale.txt')), false);
 });
 
+test('finalizer merges compiler-variant maps for one canonical source', async t => {
+  const fixture = createFixture(t);
+  const artifacts = [
+    writeArtifact(fixture, 'server', {
+      [fixture.files.included]: fileCoverage(fixture.files.included, [2]),
+    }),
+    writeArtifact(fixture, 'client', {
+      [fixture.files.included]: {
+        path: fixture.files.included,
+        statementMap: {
+          7: {
+            start: { line: 2, column: 0 },
+            end: { line: 2, column: 12 },
+          },
+        },
+        fnMap: {},
+        branchMap: {},
+        s: { 7: 3 },
+        f: {},
+        b: {},
+      },
+    }),
+  ];
+  const fake = providerFake();
+
+  const result = await finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { enabled: true, provider: 'istanbul' } },
+    async loadCoverageProvider() { return fake.provider; },
+  });
+
+  const included = fs.realpathSync(fixture.files.included);
+  assert.deepEqual(result, { exitCode: 0, files: [included] });
+  assert.equal(fake.calls.reports.length, 1);
+  const merged = fake.calls.reports[0][included];
+  assert.deepEqual(Object.values(merged.s).sort((left, right) => left - right), [2, 3]);
+  assert.equal(Object.keys(merged.statementMap).length, 2);
+});
+
 test('finalizer admits physical external sources only when allowExternal is enabled', async t => {
   const fixture = createFixture(t);
   const artifacts = [writeArtifact(fixture, 'server', {

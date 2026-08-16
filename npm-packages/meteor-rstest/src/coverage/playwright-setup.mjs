@@ -5,11 +5,15 @@ import playwrightCoverage from './playwright.js';
 const playwrightEntry = playwrightCoverage.resolveProjectPlaywrightEntry(
   process.cwd(),
 );
+const playwrightModuleEntry = playwrightCoverage.resolveProjectPlaywrightModuleEntry(
+  process.cwd(),
+);
 const {
   afterAll,
   afterEach,
-  beforeEach,
 } = await import(pathToFileURL(playwrightEntry).href);
+const playwrightModule = await import(pathToFileURL(playwrightModuleEntry).href);
+const playwright = playwrightModule.default || playwrightModule;
 
 const collector = playwrightCoverage.createPlaywrightCoverageCollector({
   enabled: true,
@@ -17,16 +21,10 @@ const collector = playwrightCoverage.createPlaywrightCoverageCollector({
   producer: process.env.METEOR_RSTEST_COVERAGE_PRODUCER,
 });
 
-beforeEach(async ({ browser, context, page }) => {
-  await collector.install({ browser, context, page });
-});
-
-afterEach(async () => {
-  await collector.captureRemaining();
-});
-
-afterAll(async () => {
-  await collector.writeShard({
-    directory: process.env.METEOR_RSTEST_COVERAGE_SHARD_DIR,
-  });
+playwrightCoverage.installFixturelessPlaywrightCoverageLifecycle({
+  playwright,
+  collector,
+  afterEach,
+  afterAll,
+  directory: process.env.METEOR_RSTEST_COVERAGE_SHARD_DIR,
 });

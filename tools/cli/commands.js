@@ -2823,6 +2823,7 @@ async function doTestCommand(options) {
         };
       }),
       localDir: projectContext.projectLocalDir,
+      basePort: Number(parsedServerUrl.port),
       verbose: normalizeTestRunnerVerbose(packageJsonMeteor, options.verbose),
       architectures: [
         ...(!options['client-only'] ? [archinfo.host()] : []),
