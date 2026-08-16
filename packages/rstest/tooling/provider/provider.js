@@ -1513,7 +1513,6 @@ class RstestTestRunnerProvider {
   }
 
   async startHost({ url, log }) {
-    if (this.startDeferredWorkers) this.startDeferredWorkers();
     if (this.metadata.runtimeClient) {
       const browser = new this.services.Browser({
         appDir: this.context.appDir,
@@ -1546,6 +1545,7 @@ class RstestTestRunnerProvider {
       this.resources.push(external);
       await external.start();
     }
+    if (this.startDeferredWorkers) this.startDeferredWorkers();
   }
 
   _loadCoveragePlanForCompletion() {
@@ -1570,11 +1570,14 @@ class RstestTestRunnerProvider {
   }
 
   async _completeCoverageRun({ exitCode }) {
-    if (this.context.worker || !this.coverageGeneration) return undefined;
+    if (this.context.worker) return undefined;
     try {
       if (this.deferredWorkerCompletion) {
         const workerExitCode = await this.deferredWorkerCompletion;
         if (exitCode === 0 && workerExitCode !== 0) exitCode = workerExitCode;
+      }
+      if (!this.coverageGeneration) {
+        return exitCode === 0 ? undefined : { exitCode };
       }
       this._loadCoveragePlanForCompletion();
       const localPackages = [];
