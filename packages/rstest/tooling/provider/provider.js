@@ -1,6 +1,7 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const childProcess = require('node:child_process');
 
 const {
   ensureRstestInstalled,
@@ -83,39 +84,191 @@ function removeIfPresent(filename) {
   }
 }
 
-function writePrivateJsonAtomic(filename, value) {
-  const assertNoSymlinkParents = (target, allowMissing) => {
-    const absolute = path.resolve(target);
-    const parsed = path.parse(absolute);
-    let current = parsed.root;
-    const components = absolute.slice(parsed.root.length).split(path.sep).filter(Boolean);
-    for (let index = 0; index < components.length; index += 1) {
-      current = path.join(current, components[index]);
-      let stat;
-      try {
-        stat = fs.lstatSync(current);
-      } catch (error) {
-        if (allowMissing && error.code === 'ENOENT') return;
-        throw error;
-      }
-      if (stat.isSymbolicLink()) {
-        if (path.dirname(current) === parsed.root) {
-          current = fs.realpathSync(current);
-          continue;
-        }
-        throw rstestError(
-          'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-          `Coverage manifest path contains a symbolic link: ${current}`,
-        );
-      }
-      if (index < components.length - 1 && !stat.isDirectory()) {
-        throw rstestError(
-          'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
-          `Coverage manifest parent is not a directory: ${current}`,
-        );
-      }
+function assertNoSymlinkParents(target, allowMissing) {
+  const absolute = path.resolve(target);
+  const parsed = path.parse(absolute);
+  let current = parsed.root;
+  const components = absolute.slice(parsed.root.length).split(path.sep).filter(Boolean);
+  for (let index = 0; index < components.length; index += 1) {
+    current = path.join(current, components[index]);
+    let stat;
+    try {
+      stat = fs.lstatSync(current);
+    } catch (error) {
+      if (allowMissing && error.code === 'ENOENT') return;
+      throw error;
     }
-  };
+    if (stat.isSymbolicLink()) {
+      if (path.dirname(current) === parsed.root) {
+        current = fs.realpathSync(current);
+        continue;
+      }
+      throw rstestError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Coverage manifest path contains a symbolic link: ${current}`,
+      );
+    }
+    if (index < components.length - 1 && !stat.isDirectory()) {
+      throw rstestError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Coverage manifest parent is not a directory: ${current}`,
+      );
+    }
+  }
+}
+
+function samePrivateIdentity(left, right) {
+  return left.dev === right.dev && left.ino === right.ino;
+}
+
+function openPrivateDirectory(directory) {
+  assertNoSymlinkParents(directory, false);
+  if (!Number.isInteger(fs.constants.O_DIRECTORY)) {
+    const stat = fs.lstatSync(directory, { bigint: true });
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      throw rstestError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Coverage manifest parent identity changed: ${directory}`,
+      );
+    }
+    assertNoSymlinkParents(directory, false);
+    const verification = fs.lstatSync(directory, { bigint: true });
+    if (!samePrivateIdentity(stat, verification)) {
+      throw rstestError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Coverage manifest parent identity changed: ${directory}`,
+      );
+    }
+    return { descriptor: undefined, stat };
+  }
+  let flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY;
+  if (Number.isInteger(fs.constants.O_NOFOLLOW) && fs.constants.O_NOFOLLOW) {
+    flags |= fs.constants.O_NOFOLLOW;
+  }
+  const descriptor = fs.openSync(directory, flags);
+  try {
+    const stat = fs.fstatSync(descriptor, { bigint: true });
+    const pathStat = fs.lstatSync(directory, { bigint: true });
+    if (!stat.isDirectory() || pathStat.isSymbolicLink() ||
+        !pathStat.isDirectory() || !samePrivateIdentity(stat, pathStat)) {
+      throw rstestError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Coverage manifest parent identity changed: ${directory}`,
+      );
+    }
+    return { descriptor, stat };
+  } catch (error) {
+    fs.closeSync(descriptor);
+    throw error;
+  }
+}
+
+function verifyPrivateDirectory(directory, expected) {
+  const current = openPrivateDirectory(directory);
+  try {
+    if (!samePrivateIdentity(current.stat, expected)) {
+      throw rstestError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Coverage manifest parent identity changed: ${directory}`,
+      );
+    }
+  } finally {
+    if (current.descriptor !== undefined) fs.closeSync(current.descriptor);
+  }
+}
+
+function assertPrivateFileIdentity(filename, expected) {
+  let stat;
+  try {
+    stat = fs.lstatSync(filename, { bigint: true });
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      throw rstestError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        `Coverage manifest path changed: ${filename}`,
+      );
+    }
+    throw error;
+  }
+  if (!stat.isFile() || stat.isSymbolicLink() ||
+      !samePrivateIdentity(stat, expected)) {
+    throw rstestError(
+      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+      `Coverage manifest path identity changed: ${filename}`,
+    );
+  }
+}
+
+const PUBLISH_PRIVATE_JSON_SCRIPT = `
+  const fs = require('node:fs');
+  const expectedDevice = BigInt(process.argv[1]);
+  const expectedInode = BigInt(process.argv[2]);
+  const source = process.argv[3];
+  const destination = process.argv[4];
+  let descriptor;
+  try {
+    let parent;
+    if (Number.isInteger(fs.constants.O_DIRECTORY)) {
+      let flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY;
+      if (Number.isInteger(fs.constants.O_NOFOLLOW) && fs.constants.O_NOFOLLOW) {
+        flags |= fs.constants.O_NOFOLLOW;
+      }
+      descriptor = fs.openSync('.', flags);
+      parent = fs.fstatSync(descriptor, { bigint: true });
+    } else {
+      parent = fs.lstatSync('.', { bigint: true });
+    }
+    if (!parent.isDirectory() || parent.dev !== expectedDevice ||
+        parent.ino !== expectedInode) process.exit(73);
+    const sourceStat = fs.lstatSync(source, { bigint: true });
+    if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) process.exit(73);
+    try {
+      fs.linkSync(source, destination);
+    } catch (error) {
+      if (error.code === 'EEXIST') process.exit(74);
+      throw error;
+    }
+    const destinationStat = fs.lstatSync(destination, { bigint: true });
+    if (!destinationStat.isFile() || destinationStat.isSymbolicLink() ||
+        destinationStat.dev !== sourceStat.dev ||
+        destinationStat.ino !== sourceStat.ino) {
+      try {
+        const current = fs.lstatSync(destination, { bigint: true });
+        if (current.dev === sourceStat.dev && current.ino === sourceStat.ino) {
+          fs.unlinkSync(destination);
+        }
+      } catch {}
+      process.exit(73);
+    }
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+`;
+
+function publishPrivateJson(directory, temporary, filename, parentStat) {
+  const result = childProcess.spawnSync(process.execPath, [
+    '-e',
+    PUBLISH_PRIVATE_JSON_SCRIPT,
+    parentStat.dev.toString(),
+    parentStat.ino.toString(),
+    path.basename(temporary),
+    path.basename(filename),
+  ], { cwd: directory, encoding: 'utf8' });
+  if (result.status === 74) {
+    throw rstestError(
+      'METEOR_RSTEST_COVERAGE_REPLAY',
+      `Coverage manifest path was already used: ${filename}`,
+    );
+  }
+  if (result.error || result.status !== 0) {
+    throw rstestError(
+      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+      'Coverage manifest parent changed during atomic publication.',
+    );
+  }
+}
+
+function writePrivateJsonAtomic(filename, value) {
   const serialized = JSON.stringify(value);
   if (Buffer.byteLength(serialized) > MAX_PRIVATE_JSON_BYTES) {
     throw rstestError(
@@ -128,34 +281,38 @@ function writePrivateJsonAtomic(filename, value) {
   fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
   assertNoSymlinkParents(directory, false);
   fs.chmodSync(directory, 0o700);
+  const parent = openPrivateDirectory(directory);
   const temporary = path.join(
     directory,
     `.${path.basename(filename)}.${process.pid}.${Date.now()}.tmp`,
   );
   let descriptor;
+  let temporaryStat;
   try {
     descriptor = fs.openSync(temporary, 'wx', 0o600);
+    temporaryStat = fs.fstatSync(descriptor, { bigint: true });
+    verifyPrivateDirectory(directory, parent.stat);
+    assertPrivateFileIdentity(temporary, temporaryStat);
     fs.writeFileSync(descriptor, serialized);
     fs.fsyncSync(descriptor);
     fs.fchmodSync(descriptor, 0o600);
-    fs.closeSync(descriptor);
-    descriptor = undefined;
     assertNoSymlinkParents(directory, false);
-    try {
-      fs.linkSync(temporary, filename);
-    } catch (error) {
-      if (error.code === 'EEXIST') {
-        throw rstestError(
-          'METEOR_RSTEST_COVERAGE_REPLAY',
-          `Coverage manifest path was already used: ${filename}`,
-        );
-      }
-      throw error;
-    }
+    publishPrivateJson(directory, temporary, filename, parent.stat);
+    verifyPrivateDirectory(directory, parent.stat);
+    assertPrivateFileIdentity(temporary, temporaryStat);
+    assertPrivateFileIdentity(filename, temporaryStat);
     fs.unlinkSync(temporary);
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
-    try { fs.rmSync(temporary, { force: true }); } catch {}
+    if (parent.descriptor !== undefined) fs.closeSync(parent.descriptor);
+    try {
+      const current = fs.lstatSync(temporary, { bigint: true });
+      if (temporaryStat && samePrivateIdentity(current, temporaryStat)) {
+        fs.unlinkSync(temporary);
+      }
+    } catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+    }
   }
 }
 

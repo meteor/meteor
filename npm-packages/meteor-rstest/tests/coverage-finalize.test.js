@@ -628,3 +628,130 @@ test('safe cleanup accepts a new report directory under the canonical app root',
 
   assert.equal(result.exitCode, 0);
 });
+
+test('safe cleanup supports identity fallback when no-follow flags are unavailable', async t => {
+  const fixture = createFixture(t);
+  const reportsDirectory = path.join(fixture.appRoot, 'coverage');
+  fs.mkdirSync(reportsDirectory);
+  const stale = path.join(reportsDirectory, 'stale.txt');
+  fs.writeFileSync(stale, 'stale');
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+  const originalOpen = fs.openSync;
+  fs.openSync = function rejectNoFollow(filename, flags, ...args) {
+    if (typeof flags === 'number' && fs.constants.O_NOFOLLOW &&
+        (flags & fs.constants.O_NOFOLLOW) !== 0) {
+      const error = new Error('simulated unsupported directory flags');
+      error.code = 'EINVAL';
+      throw error;
+    }
+    return originalOpen.call(this, filename, flags, ...args);
+  };
+  t.after(() => { fs.openSync = originalOpen; });
+
+  const result = await finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    fileSystemCapabilities: { noFollow: false, directory: false },
+    async loadCoverageProvider() { return providerFake().provider; },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(fs.existsSync(stale), false);
+});
+
+test('no-flag cleanup fallback still rejects a reparse-style parent link', async t => {
+  const fixture = createFixture(t);
+  const outside = path.join(fixture.root, 'outside');
+  const reportsDirectory = path.join(fixture.appRoot, 'linked', 'coverage');
+  fs.mkdirSync(path.join(outside, 'coverage'), { recursive: true });
+  const sentinel = path.join(outside, 'coverage', 'sentinel.txt');
+  fs.writeFileSync(sentinel, 'keep');
+  fs.symlinkSync(outside, path.join(fixture.appRoot, 'linked'));
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+
+  await assert.rejects(finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    fileSystemCapabilities: { noFollow: false, directory: false },
+    async loadCoverageProvider() { return providerFake().provider; },
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE');
+    return true;
+  });
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'keep');
+});
+
+test('safe cleanup permits an explicit non-overlapping external report directory', async t => {
+  const fixture = createFixture(t);
+  const reportsDirectory = path.join(fixture.root, 'external-reports');
+  fs.mkdirSync(reportsDirectory);
+  const stale = path.join(reportsDirectory, 'stale.txt');
+  fs.writeFileSync(stale, 'stale');
+  const artifacts = [writeArtifact(fixture, 'server', {
+    [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+  })];
+
+  const result = await finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: fixture.appRoot,
+      localPackages: [],
+      artifacts,
+      testExitCode: 0,
+    },
+    config: { coverage: { clean: true, reportsDirectory } },
+    async loadCoverageProvider() { return providerFake().provider; },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.equal(fs.existsSync(stale), false);
+});
+
+test('explicit external cleanup still rejects app and artifact overlap', async t => {
+  for (const overlap of ['app', 'artifact']) {
+    const fixture = createFixture(t);
+    const reportsDirectory = overlap === 'app'
+      ? fixture.root
+      : fixture.artifactRoot;
+    const artifacts = [writeArtifact(fixture, 'server', {
+      [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
+    })];
+
+    await assert.rejects(finalizeCoverage({
+      manifest: {
+        schemaVersion: 1,
+        generation: fixture.generation,
+        appRoot: fixture.appRoot,
+        localPackages: [],
+        artifacts,
+        testExitCode: 0,
+      },
+      config: { coverage: { clean: true, reportsDirectory } },
+      async loadCoverageProvider() { return providerFake().provider; },
+    }), error => {
+      assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE');
+      return true;
+    });
+    assert.equal(fs.existsSync(artifacts[0].path), true);
+    assert.equal(fs.existsSync(fixture.files.included), true);
+  }
+});

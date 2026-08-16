@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const childProcess = require('node:child_process');
 const test = require('node:test');
 
 const {
@@ -1019,6 +1020,7 @@ test('private manifest writer rejects symlink parents and raced destinations', t
   const sentinel = '{"sentinel":true}';
   const originalRename = fs.renameSync;
   const originalLink = fs.linkSync;
+  const originalSpawn = childProcess.spawnSync;
   const raceDestination = (oldPath, newPath, operation) => {
     if (path.resolve(newPath) === path.resolve(filename) &&
         !fs.existsSync(filename)) {
@@ -1036,15 +1038,75 @@ test('private manifest writer rejects symlink parents and raced destinations', t
     newPath,
     originalLink,
   );
+  childProcess.spawnSync = function patchedSpawn(...args) {
+    if (args[2] && args[2].cwd && !fs.existsSync(filename)) {
+      fs.writeFileSync(filename, sentinel);
+    }
+    return originalSpawn.apply(this, args);
+  };
   t.after(() => {
     fs.renameSync = originalRename;
     fs.linkSync = originalLink;
+    childProcess.spawnSync = originalSpawn;
   });
   assert.throws(() => writePrivateJsonAtomic(filename, { schemaVersion: 1 }), error => {
     assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_REPLAY');
     return true;
   });
   assert.equal(fs.readFileSync(filename, 'utf8'), sentinel);
+});
+
+test('private manifest publication rejects a coordinated parent swap', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-manifest-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const generationRoot = path.join(root, 'generation');
+  const originalRoot = path.join(root, 'generation-original');
+  const outsideRoot = path.join(root, 'outside');
+  const filename = path.join(generationRoot, 'manifest.json');
+  fs.mkdirSync(outsideRoot);
+  const originalLink = fs.linkSync;
+  const originalSpawn = childProcess.spawnSync;
+  let swapped = false;
+  const redirect = () => {
+    swapped = true;
+    fs.renameSync(generationRoot, originalRoot);
+    fs.symlinkSync(outsideRoot, generationRoot);
+  };
+  const restore = () => {
+    fs.unlinkSync(generationRoot);
+    fs.renameSync(originalRoot, generationRoot);
+  };
+  fs.linkSync = function patchedLink(oldPath, newPath) {
+    if (path.resolve(newPath) === path.resolve(filename)) {
+      originalLink(oldPath, path.join(outsideRoot, path.basename(oldPath)));
+      redirect();
+      const result = originalLink(oldPath, newPath);
+      restore();
+      return result;
+    }
+    return originalLink(oldPath, newPath);
+  };
+  childProcess.spawnSync = function patchedSpawn(...args) {
+    if (args[2] && args[2].cwd && !swapped) {
+      redirect();
+      const result = originalSpawn.apply(this, args);
+      restore();
+      return result;
+    }
+    return originalSpawn.apply(this, args);
+  };
+  t.after(() => {
+    fs.linkSync = originalLink;
+    childProcess.spawnSync = originalSpawn;
+  });
+
+  assert.throws(() => writePrivateJsonAtomic(filename, { schemaVersion: 1 }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH');
+    return true;
+  });
+  assert.equal(swapped, true);
+  assert.equal(fs.existsSync(filename), false);
+  assert.equal(fs.existsSync(path.join(outsideRoot, 'manifest.json')), false);
 });
 
 test('native-only coverage remains on the upstream Rstest lifecycle', async t => {

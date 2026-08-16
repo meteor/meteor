@@ -70,6 +70,9 @@ function normalizeCoverageConfig(config, appRoot) {
       ? ['text', 'html', 'clover', 'json']
       : [...input.reporters],
     reportsDirectory,
+    explicitAbsoluteReportsDirectory:
+      typeof input.reportsDirectory === 'string' &&
+      path.isAbsolute(input.reportsDirectory),
     clean: input.clean ?? true,
     thresholds: input.thresholds,
     reportOnFailure: input.reportOnFailure ?? false,
@@ -197,7 +200,12 @@ function canonicalizePotentialPath(filename) {
   return path.join(fs.realpathSync(existing), ...missing);
 }
 
-function assertSafeReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
+function assertSafeReportsDirectory(
+  reportsDirectory,
+  appRoot,
+  artifactRoot,
+  { allowExternal = false } = {},
+) {
   const canonicalAppRoot = fs.realpathSync(appRoot);
   assertNoSymlinkComponents(canonicalAppRoot);
   assertNoSymlinkComponents(artifactRoot);
@@ -222,8 +230,8 @@ function assertSafeReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
     : configuredTarget;
   const root = path.parse(resolved).root;
   if (resolved !== configuredTarget || resolved === root ||
-      resolved === canonicalAppRoot ||
-      !contains(canonicalAppRoot, resolved) ||
+      contains(resolved, canonicalAppRoot) ||
+      (!contains(canonicalAppRoot, resolved) && !allowExternal) ||
       contains(resolved, canonicalArtifactRoot) ||
       contains(canonicalArtifactRoot, resolved)) {
     throw finalizerError(
@@ -238,70 +246,110 @@ const CLEAN_DIRECTORY_SCRIPT = `
   const fs = require('node:fs');
   const expectedDevice = BigInt(process.argv[1]);
   const expectedInode = BigInt(process.argv[2]);
-  const flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY |
-    fs.constants.O_NOFOLLOW;
-  const descriptor = fs.openSync('.', flags);
+  const useDirectoryOpen = process.argv[3] === '1';
+  const useNoFollow = process.argv[4] === '1';
+  let descriptor;
   try {
-    const stat = fs.fstatSync(descriptor, { bigint: true });
+    let stat;
+    if (useDirectoryOpen && Number.isInteger(fs.constants.O_DIRECTORY)) {
+      let flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY;
+      if (useNoFollow && Number.isInteger(fs.constants.O_NOFOLLOW) &&
+          fs.constants.O_NOFOLLOW) {
+        flags |= fs.constants.O_NOFOLLOW;
+      }
+      descriptor = fs.openSync('.', flags);
+      stat = fs.fstatSync(descriptor, { bigint: true });
+    } else {
+      stat = fs.lstatSync('.', { bigint: true });
+    }
     if (!stat.isDirectory() || stat.dev !== expectedDevice ||
         stat.ino !== expectedInode) process.exit(73);
     for (const entry of fs.readdirSync('.')) {
       fs.rmSync(entry, { recursive: true, force: false });
     }
   } finally {
-    fs.closeSync(descriptor);
+    if (descriptor !== undefined) fs.closeSync(descriptor);
   }
 `;
 
-function cleanReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
+function normalizeFileSystemCapabilities(capabilities = {}) {
+  return {
+    noFollow: capabilities.noFollow ?? (
+      Number.isInteger(fs.constants.O_NOFOLLOW) &&
+      fs.constants.O_NOFOLLOW !== 0
+    ),
+    directory: capabilities.directory ??
+      Number.isInteger(fs.constants.O_DIRECTORY),
+  };
+}
+
+function openCleanDirectory(directory, capabilities) {
+  if (!capabilities.directory) {
+    const stat = fs.lstatSync(directory, { bigint: true });
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      throw finalizerError(
+        'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+        `Coverage reports path is not a directory: ${directory}`,
+      );
+    }
+    return { descriptor: undefined, stat };
+  }
+  let flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY;
+  if (capabilities.noFollow) flags |= fs.constants.O_NOFOLLOW;
+  const descriptor = fs.openSync(directory, flags);
+  const stat = fs.fstatSync(descriptor, { bigint: true });
+  if (!stat.isDirectory()) {
+    fs.closeSync(descriptor);
+    throw finalizerError(
+      'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
+      `Coverage reports path is not a directory: ${directory}`,
+    );
+  }
+  return { descriptor, stat };
+}
+
+function cleanReportsDirectory(
+  reportsDirectory,
+  appRoot,
+  artifactRoot,
+  { allowExternal = false, fileSystemCapabilities } = {},
+) {
   const safeDirectory = assertSafeReportsDirectory(
     reportsDirectory,
     appRoot,
     artifactRoot,
+    { allowExternal },
   );
   if (!fs.existsSync(safeDirectory)) return;
-  if (!Number.isInteger(fs.constants.O_NOFOLLOW) ||
-      fs.constants.O_NOFOLLOW === 0 ||
-      !Number.isInteger(fs.constants.O_DIRECTORY)) {
-    throw finalizerError(
-      'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
-      'This platform cannot pin a no-follow coverage reports directory.',
-    );
-  }
-  const flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY |
-    fs.constants.O_NOFOLLOW;
-  let descriptor;
+  const capabilities = normalizeFileSystemCapabilities(fileSystemCapabilities);
+  let pinned;
   try {
-    descriptor = fs.openSync(safeDirectory, flags);
+    pinned = openCleanDirectory(safeDirectory, capabilities);
   } catch (error) {
+    if (error.code === 'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE') {
+      throw error;
+    }
     throw finalizerError(
       'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
       `Could not pin coverage reports directory: ${error.message}`,
     );
   }
   try {
-    const stat = fs.fstatSync(descriptor, { bigint: true });
-    if (!stat.isDirectory()) {
-      throw finalizerError(
-        'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
-        `Coverage reports path is not a directory: ${safeDirectory}`,
-      );
-    }
+    const stat = pinned.stat;
     assertNoSymlinkComponents(safeDirectory);
-    let verificationDescriptor;
+    let verification;
     try {
-      verificationDescriptor = fs.openSync(safeDirectory, flags);
-      const verification = fs.fstatSync(verificationDescriptor, { bigint: true });
-      if (!verification.isDirectory() || verification.dev !== stat.dev ||
-          verification.ino !== stat.ino) {
+      verification = openCleanDirectory(safeDirectory, capabilities);
+      if (verification.stat.dev !== stat.dev ||
+          verification.stat.ino !== stat.ino) {
         throw finalizerError(
           'METEOR_RSTEST_COVERAGE_REPORT_DIRECTORY_UNSAFE',
           'Coverage reports directory changed while it was being pinned.',
         );
       }
     } finally {
-      if (verificationDescriptor !== undefined) {
-        fs.closeSync(verificationDescriptor);
+      if (verification?.descriptor !== undefined) {
+        fs.closeSync(verification.descriptor);
       }
     }
     const result = childProcess.spawnSync(process.execPath, [
@@ -309,6 +357,8 @@ function cleanReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
       CLEAN_DIRECTORY_SCRIPT,
       stat.dev.toString(),
       stat.ino.toString(),
+      capabilities.directory ? '1' : '0',
+      capabilities.noFollow ? '1' : '0',
     ], {
       cwd: safeDirectory,
       encoding: 'utf8',
@@ -320,7 +370,7 @@ function cleanReportsDirectory(reportsDirectory, appRoot, artifactRoot) {
       );
     }
   } finally {
-    fs.closeSync(descriptor);
+    if (pinned.descriptor !== undefined) fs.closeSync(pinned.descriptor);
   }
 }
 
@@ -444,6 +494,7 @@ async function finalizeCoverage({
   config,
   loadCoverageProvider = loadAppCoverageProvider,
   onThresholdFailure = message => console.error(`[Meteor Rstest] ${message}`),
+  fileSystemCapabilities,
 }) {
   const manifest = validateManifest(manifestInput);
   claimCoverageGeneration(manifest);
@@ -455,6 +506,7 @@ async function finalizeCoverage({
     generation: manifest.generation,
     producer: artifact.producer,
     consumed,
+    fileSystemCapabilities,
   }));
   const canonical = canonicalizeCoverageMaps(
     artifacts.map(artifact => artifact.coverage),
@@ -490,6 +542,10 @@ async function finalizeCoverage({
       coverageOptions.reportsDirectory,
       manifest.appRoot,
       path.dirname(path.resolve(manifest.artifacts[0].path)),
+      {
+        allowExternal: coverageOptions.explicitAbsoluteReportsDirectory,
+        fileSystemCapabilities,
+      },
     );
   }
   await provider.generateReports(coverageMap);

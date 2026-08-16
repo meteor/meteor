@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
+const childProcess = require('node:child_process');
 const test = require('node:test');
 
 const {
@@ -185,7 +186,7 @@ test('artifact reader rejects a symlink substituted at an expected path', t => {
   });
 });
 
-test('artifact reader keeps reading the opened descriptor after path substitution', t => {
+test('artifact reader rejects final-path substitution after descriptor open', t => {
   const root = createRoot(t);
   const source = path.join(root, 'source.js');
   const expectedPath = path.join(root, 'generation', 'server.json');
@@ -228,14 +229,119 @@ test('artifact reader keeps reading the opened descriptor after path substitutio
     fs.readFileSync = originalReadFile;
   });
 
-  const artifact = readCoverageArtifact({
+  assert.throws(() => readCoverageArtifact({
     filePath: expectedPath,
     expectedPath,
     generation: 'generation',
     producer: 'server',
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH');
+    return true;
   });
   assert.equal(substituted, true);
-  assert.equal(artifact.generation, 'generation');
+});
+
+test('artifact reader rejects a coordinated parent swap at descriptor open', t => {
+  const root = createRoot(t);
+  const generationRoot = path.join(root, 'generation');
+  const originalRoot = path.join(root, 'generation-original');
+  const outsideRoot = path.join(root, 'outside');
+  const expectedPath = path.join(generationRoot, 'server.json');
+  const source = path.join(root, 'source.js');
+  fs.mkdirSync(generationRoot);
+  fs.mkdirSync(outsideRoot);
+  fs.writeFileSync(expectedPath, JSON.stringify({
+    schemaVersion: 1,
+    generation: 'generation',
+    producer: 'server',
+    coverage: { [source]: fileCoverage(source) },
+  }));
+  fs.writeFileSync(path.join(outsideRoot, 'server.json'), JSON.stringify({
+    schemaVersion: 1,
+    generation: 'generation',
+    producer: 'server',
+    coverage: {
+      [source]: { ...fileCoverage(source), s: { 0: 99 } },
+    },
+  }));
+  const originalOpen = fs.openSync;
+  let swapped = false;
+  fs.openSync = function patchedOpen(filename, ...args) {
+    if (!swapped && path.resolve(String(filename)) === path.resolve(expectedPath)) {
+      swapped = true;
+      fs.renameSync(generationRoot, originalRoot);
+      fs.symlinkSync(outsideRoot, generationRoot);
+      const descriptor = originalOpen.call(this, filename, ...args);
+      fs.unlinkSync(generationRoot);
+      fs.renameSync(originalRoot, generationRoot);
+      return descriptor;
+    }
+    return originalOpen.call(this, filename, ...args);
+  };
+  t.after(() => { fs.openSync = originalOpen; });
+
+  assert.throws(() => readCoverageArtifact({
+    filePath: expectedPath,
+    expectedPath,
+    generation: 'generation',
+    producer: 'server',
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH');
+    return true;
+  });
+  assert.equal(swapped, true);
+});
+
+test('artifact descriptor fallback stays safe without no-follow directory flags', t => {
+  const root = createRoot(t);
+  const outputPath = path.join(root, 'generation', 'server.json');
+  const source = path.join(root, 'source.js');
+  const originalOpen = fs.openSync;
+  fs.openSync = function rejectNoFollow(filename, flags, ...args) {
+    if (typeof flags === 'number' && fs.constants.O_NOFOLLOW &&
+        (flags & fs.constants.O_NOFOLLOW) !== 0) {
+      const error = new Error('simulated unsupported O_NOFOLLOW');
+      error.code = 'EINVAL';
+      throw error;
+    }
+    return originalOpen.call(this, filename, flags, ...args);
+  };
+  t.after(() => { fs.openSync = originalOpen; });
+  writeCoverageArtifact({
+    outputPath,
+    expectedPath: outputPath,
+    artifact: {
+      schemaVersion: 1,
+      generation: 'generation',
+      producer: 'server',
+      coverage: { [source]: fileCoverage(source) },
+    },
+    fileSystemCapabilities: { noFollow: false, directory: false },
+  });
+
+  const artifact = readCoverageArtifact({
+    filePath: outputPath,
+    expectedPath: outputPath,
+    generation: 'generation',
+    producer: 'server',
+    fileSystemCapabilities: { noFollow: false, directory: false },
+  });
+  assert.equal(artifact.coverage[source].s[0], 1);
+
+  const replacement = path.join(root, 'replacement.json');
+  fs.writeFileSync(replacement, fs.readFileSync(outputPath));
+  fs.unlinkSync(outputPath);
+  fs.symlinkSync(replacement, outputPath);
+  assert.throws(() => readCoverageArtifact({
+    filePath: outputPath,
+    expectedPath: outputPath,
+    generation: 'generation',
+    producer: 'server',
+    fileSystemCapabilities: { noFollow: false, directory: false },
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH');
+    return true;
+  });
 });
 
 test('artifact writer atomically refuses a destination created at publication', t => {
@@ -244,6 +350,7 @@ test('artifact writer atomically refuses a destination created at publication', 
   const source = path.join(root, 'source.js');
   const originalRename = fs.renameSync;
   const originalLink = fs.linkSync;
+  const originalSpawn = childProcess.spawnSync;
   const sentinel = '{"sentinel":true}';
   const raceDestination = (oldPath, newPath, operation) => {
     if (path.resolve(newPath) === path.resolve(outputPath) &&
@@ -262,9 +369,16 @@ test('artifact writer atomically refuses a destination created at publication', 
     newPath,
     originalLink,
   );
+  childProcess.spawnSync = function patchedSpawn(...args) {
+    if (args[2] && args[2].cwd && !fs.existsSync(outputPath)) {
+      fs.writeFileSync(outputPath, sentinel);
+    }
+    return originalSpawn.apply(this, args);
+  };
   t.after(() => {
     fs.renameSync = originalRename;
     fs.linkSync = originalLink;
+    childProcess.spawnSync = originalSpawn;
   });
 
   assert.throws(() => writeCoverageArtifact({
@@ -281,6 +395,68 @@ test('artifact writer atomically refuses a destination created at publication', 
     return true;
   });
   assert.equal(fs.readFileSync(outputPath, 'utf8'), sentinel);
+});
+
+test('artifact publication rejects a coordinated parent swap', t => {
+  const root = createRoot(t);
+  const generationRoot = path.join(root, 'generation');
+  const originalRoot = path.join(root, 'generation-original');
+  const outsideRoot = path.join(root, 'outside');
+  const outputPath = path.join(generationRoot, 'server.json');
+  const source = path.join(root, 'source.js');
+  fs.mkdirSync(outsideRoot);
+  const originalLink = fs.linkSync;
+  const originalSpawn = childProcess.spawnSync;
+  let swapped = false;
+  const redirect = () => {
+    swapped = true;
+    fs.renameSync(generationRoot, originalRoot);
+    fs.symlinkSync(outsideRoot, generationRoot);
+  };
+  const restore = () => {
+    fs.unlinkSync(generationRoot);
+    fs.renameSync(originalRoot, generationRoot);
+  };
+  fs.linkSync = function patchedLink(oldPath, newPath) {
+    if (path.resolve(newPath) === path.resolve(outputPath)) {
+      originalLink(oldPath, path.join(outsideRoot, path.basename(oldPath)));
+      redirect();
+      const result = originalLink(oldPath, newPath);
+      restore();
+      return result;
+    }
+    return originalLink(oldPath, newPath);
+  };
+  childProcess.spawnSync = function patchedSpawn(...args) {
+    if (args[2] && args[2].cwd && !swapped) {
+      redirect();
+      const result = originalSpawn.apply(this, args);
+      restore();
+      return result;
+    }
+    return originalSpawn.apply(this, args);
+  };
+  t.after(() => {
+    fs.linkSync = originalLink;
+    childProcess.spawnSync = originalSpawn;
+  });
+
+  assert.throws(() => writeCoverageArtifact({
+    outputPath,
+    expectedPath: outputPath,
+    artifact: {
+      schemaVersion: 1,
+      generation: 'generation',
+      producer: 'server',
+      coverage: { [source]: fileCoverage(source) },
+    },
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH');
+    return true;
+  });
+  assert.equal(swapped, true);
+  assert.equal(fs.existsSync(outputPath), false);
+  assert.equal(fs.existsSync(path.join(outsideRoot, 'server.json')), false);
 });
 
 test('artifact IO rejects symlinked parent components', t => {
@@ -335,7 +511,7 @@ test('manifest reader uses no-follow bounded descriptor IO', t => {
   });
 });
 
-test('manifest reader keeps reading the opened descriptor after path substitution', t => {
+test('manifest reader rejects final-path substitution after descriptor open', t => {
   const root = createRoot(t);
   const manifestPath = path.join(root, 'manifest.json');
   const movedPath = path.join(root, 'manifest-original.json');
@@ -366,10 +542,13 @@ test('manifest reader keeps reading the opened descriptor after path substitutio
     fs.readFileSync = originalReadFile;
   });
 
-  assert.deepEqual(readCoverageManifest({
+  assert.throws(() => readCoverageManifest({
     filePath: manifestPath,
     expectedPath: manifestPath,
-  }), { generation: 'current' });
+  }), error => {
+    assert.equal(error.code, 'METEOR_RSTEST_COVERAGE_PATH_MISMATCH');
+    return true;
+  });
   assert.equal(substituted, true);
 });
 
