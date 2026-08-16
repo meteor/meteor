@@ -2,6 +2,24 @@ const {
   startRstestProcess,
 } = require('./process.js');
 const fs = require('node:fs');
+const path = require('node:path');
+const {
+  serializeCoverageFrames,
+} = require('../../runtime/coverage-protocol.js');
+
+function endpointUrl(url, endpoint) {
+  const baseUrl = new URL(url);
+  baseUrl.pathname = `${baseUrl.pathname.replace(/\/$/, '')}/`;
+  return new URL(`__meteor__/rstest/${endpoint}`, baseUrl).href;
+}
+
+async function responseMessage(response) {
+  try {
+    const payload = await response.json();
+    if (payload && typeof payload.error === 'string') return payload.error;
+  } catch {}
+  return `HTTP ${response && response.status}`;
+}
 
 function structuredResultFromReport(report, code) {
   const cases = [];
@@ -59,7 +77,8 @@ class RstestExternal {
     resultPath,
     coverageGeneration,
     coverageArtifactPath,
-    coverageWaitTimeoutMs = 30000,
+    coverageShardDirectory,
+    coverageSupport,
   }) {
     this.appDir = appDir;
     this.url = url;
@@ -71,7 +90,8 @@ class RstestExternal {
     this.resultPath = resultPath;
     this.coverageGeneration = coverageGeneration;
     this.coverageArtifactPath = coverageArtifactPath;
-    this.coverageWaitTimeoutMs = coverageWaitTimeoutMs;
+    this.coverageShardDirectory = coverageShardDirectory;
+    this.coverageSupport = coverageSupport;
     this.handle = null;
   }
 
@@ -83,9 +103,10 @@ class RstestExternal {
       ...(this.coverageGeneration ? {
         METEOR_RSTEST_COVERAGE_GENERATION: this.coverageGeneration,
         METEOR_RSTEST_COVERAGE_PRODUCER: 'e2e',
-        METEOR_RSTEST_COVERAGE_TOKEN: this.token,
+        METEOR_RSTEST_COVERAGE_SHARD_DIR: this.coverageShardDirectory,
       } : {}),
     };
+    if (this.coverageGeneration) delete env.METEOR_RSTEST_COVERAGE_TOKEN;
     this.handle = this.startProcess({
       appDir: this.appDir,
       args: this.args,
@@ -99,7 +120,7 @@ class RstestExternal {
       this.handle = null;
     }
 
-    if (this.coverageGeneration) await this._waitForCoverageArtifact();
+    if (this.coverageGeneration) await this._submitCoverageShards();
 
     let report = {};
     try {
@@ -112,9 +133,7 @@ class RstestExternal {
       }
     }
     const result = structuredResultFromReport(report, code);
-    const baseUrl = new URL(this.url);
-    baseUrl.pathname = `${baseUrl.pathname.replace(/\/$/, '')}/`;
-    const endpoint = new URL('__meteor__/rstest/external', baseUrl).href;
+    const endpoint = endpointUrl(this.url, 'external');
     const response = await this.fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -134,16 +153,63 @@ class RstestExternal {
     }
   }
 
-  async _waitForCoverageArtifact() {
-    const deadline = Date.now() + this.coverageWaitTimeoutMs;
-    while (Date.now() <= deadline) {
-      if (this.coverageArtifactPath && fs.existsSync(this.coverageArtifactPath)) return;
-      await new Promise(resolve => setTimeout(resolve, 20));
+  _coverageSupport() {
+    if (this.coverageSupport) return this.coverageSupport;
+    const packageJson = require.resolve('@meteorjs/rstest/package.json', {
+      paths: [this.appDir],
+    });
+    return require(path.join(
+      path.dirname(packageJson),
+      'src/coverage/playwright.js',
+    ));
+  }
+
+  async _submitCoverageShards() {
+    if (!this.coverageShardDirectory) {
+      throw new Error('[Meteor Rstest] Playwright coverage shard directory is missing.');
     }
-    throw new Error(
-      `[Meteor Rstest] External coverage upload did not commit after ` +
-      `${this.coverageWaitTimeoutMs}ms.`,
-    );
+    const support = this._coverageSupport();
+    try {
+      const { coverage } = support.readCoverageShards({
+        directory: this.coverageShardDirectory,
+        generation: this.coverageGeneration,
+      });
+      const endpoint = endpointUrl(this.url, 'coverage');
+      const origin = new URL(endpoint).origin;
+      const frames = serializeCoverageFrames({
+        generation: this.coverageGeneration,
+        token: this.token,
+        producer: 'e2e',
+        coverage,
+      });
+      for (const frame of frames) {
+        const response = await this.fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'content-type': 'application/json',
+            origin,
+            'x-meteor-rstest-token': this.token,
+          },
+          body: JSON.stringify(frame),
+        });
+        if (!response.ok) {
+          throw new Error(
+            `[Meteor Rstest] External coverage endpoint rejected a ${frame.type} ` +
+            `frame: ${await responseMessage(response)}.`,
+          );
+        }
+      }
+      if (this.coverageArtifactPath && !fs.existsSync(this.coverageArtifactPath)) {
+        throw new Error(
+          '[Meteor Rstest] External coverage commit did not create its artifact.',
+        );
+      }
+    } finally {
+      support.cleanupCoverageShardDirectory({
+        directory: this.coverageShardDirectory,
+        generation: this.coverageGeneration,
+      });
+    }
   }
 
   async stop() {

@@ -217,6 +217,11 @@ test('generated external Istanbul coverage appends the Playwright setup exactly 
   const second = await createGeneratedConfig(input)();
   assert.deepEqual(first.setupFiles, [userSetup, integrationSetup]);
   assert.deepEqual(second.setupFiles, [userSetup, integrationSetup]);
+  const setupSource = fs.readFileSync(integrationSetup, 'utf8');
+  assert.match(setupSource, /collector\.writeShard/);
+  assert.match(setupSource, /METEOR_RSTEST_COVERAGE_SHARD_DIR/);
+  assert.doesNotMatch(setupSource, /collector\.submit/);
+  assert.doesNotMatch(setupSource, /METEOR_RSTEST_COVERAGE_TOKEN/);
 });
 
 test('disabled coverage ignores wrapper plan and artifact options', async t => {

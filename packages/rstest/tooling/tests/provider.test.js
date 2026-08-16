@@ -1380,6 +1380,10 @@ test('full-app coverage declares server, client, and E2E artifacts before host s
     externalOptions.coverageArtifactPath,
     path.join(provider.coverageRoot, 'e2e.json'),
   );
+  assert.equal(
+    externalOptions.coverageShardDirectory,
+    path.join(provider.coverageRoot, 'e2e-shards'),
+  );
 });
 
 test('provider cleanup stops resources once in reverse start order', async t => {

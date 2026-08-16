@@ -1456,6 +1456,7 @@ class RstestTestRunnerProvider {
         ...(this.metadata.coverage && externalCoverageArtifact ? {
           coverageGeneration: this.metadata.coverage.generation,
           coverageArtifactPath: externalCoverageArtifact.path,
+          coverageShardDirectory: path.join(this.coverageRoot, 'e2e-shards'),
         } : {}),
       });
       this.resources.push(external);

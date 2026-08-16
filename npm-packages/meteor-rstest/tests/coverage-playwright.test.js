@@ -1,10 +1,16 @@
 const assert = require('node:assert/strict');
 const { EventEmitter } = require('node:events');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
 
 const {
+  cleanupCoverageShardDirectory,
   createPlaywrightCoverageCollector,
+  readCoverageShards,
+  writeCoverageShard,
 } = require('../src/coverage/playwright.js');
 const {
   createCoverageFrameGate,
@@ -123,6 +129,9 @@ class FakeContext extends EventEmitter {
   async close() {
     this.closed = true;
     for (const page of this._pages) page.closed = true;
+    this._browser._contexts = this._browser._contexts.filter(
+      context => context !== this,
+    );
   }
 }
 
@@ -143,6 +152,13 @@ class FakeBrowser {
     const context = new FakeContext(this);
     this._contexts.push(context);
     return context;
+  }
+
+  async close() {
+    for (const context of this._contexts) {
+      context.closed = true;
+      for (const page of context.pages()) page.closed = true;
+    }
   }
 }
 
@@ -193,6 +209,127 @@ test('Playwright collector replaces repeated cumulative snapshots from one docum
   assert.equal(collector.mergedCoverage()['/app/imports/page.js'].s[0], 7);
 });
 
+test('Playwright collector captures every context before fixture browser close', async () => {
+  const primary = fixture();
+  const collector = createPlaywrightCoverageCollector({ enabled: true });
+  await collector.install(primary);
+  primary.page.document.coverage = coverage('/app/imports/browser-close.js', 8);
+
+  await primary.browser.close();
+
+  assert.equal(
+    collector.mergedCoverage()['/app/imports/browser-close.js'].s[0],
+    8,
+  );
+});
+
+test('parallel Playwright files write durable shards that merge once', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-e2e-shards-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  await Promise.all([
+    writeCoverageShard({
+      directory,
+      generation,
+      shardId: '11111111111111111111111111111111',
+      coverage: {
+        ...coverage('/app/imports/shared.js', 1),
+        ...coverage('/app/imports/first-file.js', 2),
+      },
+    }),
+    writeCoverageShard({
+      directory,
+      generation,
+      shardId: '22222222222222222222222222222222',
+      coverage: {
+        ...coverage('/app/imports/shared.js', 3),
+        ...coverage('/app/imports/second-file.js', 4),
+      },
+    }),
+  ]);
+
+  const firstShard = path.join(directory, '11111111111111111111111111111111.json');
+  const originalFirstShard = fs.readFileSync(firstShard, 'utf8');
+  await assert.rejects(
+    writeCoverageShard({
+      directory,
+      generation,
+      shardId: '11111111111111111111111111111111',
+      coverage: coverage('/app/imports/replayed.js', 99),
+    }),
+    /identity was replayed/,
+  );
+  assert.equal(fs.readFileSync(firstShard, 'utf8'), originalFirstShard);
+  await assert.rejects(
+    writeCoverageShard({
+      directory: path.join(root, 'wrong-generation', 'e2e-shards'),
+      generation,
+      coverage: {},
+    }),
+    /shard directory is invalid/,
+  );
+
+  const result = readCoverageShards({ directory, generation });
+  assert.equal(result.shards, 2);
+  assert.equal(result.coverage['/app/imports/shared.js'].s[0], 4);
+  assert.equal(result.coverage['/app/imports/first-file.js'].s[0], 2);
+  assert.equal(result.coverage['/app/imports/second-file.js'].s[0], 4);
+  assert.ok(fs.readdirSync(directory).every(filename => filename.endsWith('.json')));
+  if (process.platform !== 'win32') {
+    assert.equal(fs.statSync(directory).mode & 0o777, 0o700);
+    assert.ok(fs.readdirSync(directory).every(filename =>
+      (fs.statSync(path.join(directory, filename)).mode & 0o777) === 0o600
+    ));
+  }
+
+  cleanupCoverageShardDirectory({ directory, generation });
+  assert.equal(fs.existsSync(directory), false);
+  assert.equal(fs.existsSync(path.dirname(directory)), true);
+});
+
+test('sequential Playwright files release shared browser instrumentation', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-e2e-worker-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const first = fixture();
+  const firstCollector = createPlaywrightCoverageCollector({
+    enabled: true,
+    generation,
+  });
+  await firstCollector.install(first);
+  await firstCollector.writeShard({
+    directory,
+    shardId: '33333333333333333333333333333333',
+  });
+  await first.context.close();
+
+  const secondCollector = createPlaywrightCoverageCollector({
+    enabled: true,
+    generation,
+  });
+  await secondCollector.install({ browser: first.browser });
+  const secondContext = await first.browser.newContext();
+  assert.equal(secondContext.bindings.size, 1);
+  const secondPage = await secondContext.newPage(
+    'second-file-document',
+    coverage('/app/imports/second-worker-file.js', 5),
+  );
+  await secondCollector.install({
+    browser: first.browser,
+    context: secondContext,
+    page: secondPage,
+  });
+  await secondCollector.writeShard({
+    directory,
+    shardId: '44444444444444444444444444444444',
+  });
+
+  const merged = readCoverageShards({ directory, generation }).coverage;
+  assert.equal(merged['/app/imports/page.js'].s[0], 1);
+  assert.equal(merged['/app/imports/second-worker-file.js'].s[0], 5);
+});
+
 test('Playwright collector submits one authenticated committed e2e artifact', async () => {
   const primary = fixture();
   const requests = [];
@@ -235,6 +372,7 @@ test('Playwright collector submits one authenticated committed e2e artifact', as
 test('disabled Playwright coverage installs and submits nothing', async () => {
   const primary = fixture();
   const originalNewContext = primary.browser.newContext;
+  const originalBrowserClose = primary.browser.close;
   const originalNewPage = primary.context.newPage;
   const originalClose = primary.page.close;
   const collector = createPlaywrightCoverageCollector({
@@ -246,7 +384,11 @@ test('disabled Playwright coverage installs and submits nothing', async () => {
 
   assert.deepEqual(await collector.install(primary), { installed: false });
   assert.deepEqual(await collector.submit(), { submitted: false });
+  assert.deepEqual(await collector.writeShard({ directory: '/must-not-exist' }), {
+    written: false,
+  });
   assert.equal(primary.browser.newContext, originalNewContext);
+  assert.equal(primary.browser.close, originalBrowserClose);
   assert.equal(primary.context.newPage, originalNewPage);
   assert.equal(primary.page.close, originalClose);
   assert.equal(primary.context.bindings.size, 0);

@@ -14,10 +14,8 @@ const {
 
 const collector = playwrightCoverage.createPlaywrightCoverageCollector({
   enabled: true,
-  baseUrl: process.env.METEOR_RSTEST_BASE_URL,
   generation: process.env.METEOR_RSTEST_COVERAGE_GENERATION,
   producer: process.env.METEOR_RSTEST_COVERAGE_PRODUCER,
-  token: process.env.METEOR_RSTEST_COVERAGE_TOKEN,
 });
 
 beforeEach(async ({ browser, context, page }) => {
@@ -29,5 +27,7 @@ afterEach(async () => {
 });
 
 afterAll(async () => {
-  await collector.submit();
+  await collector.writeShard({
+    directory: process.env.METEOR_RSTEST_COVERAGE_SHARD_DIR,
+  });
 });
