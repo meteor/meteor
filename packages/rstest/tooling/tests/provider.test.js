@@ -1085,6 +1085,8 @@ test('full-app runtime coverage separates an app-test host from the client worke
   assert.equal(plan.metadata.runtime, true);
   assert.equal(plan.metadata.runtimeClient, false);
   assert.equal(plan.metadata.runtimeServer, false);
+  assert.equal(plan.metadata.coverageServer, true);
+  assert.equal(plan.metadata.coverageClient, false);
   assert.equal(plan.metadata.external, true);
   assert.equal(provider.workerHostPlan.actualWorkers, 1);
   assert.deepEqual(
@@ -1093,6 +1095,10 @@ test('full-app runtime coverage separates an app-test host from the client worke
       'utf8',
     )).clientFiles,
     [fs.realpathSync(runtimeFile)],
+  );
+  assert.deepEqual(
+    provider.coverageArtifacts.map(artifact => artifact.producer),
+    ['native', 'server', 'worker-server-1', 'e2e'],
   );
   assert.ok(provider.nativeArgs.includes('--coverage-artifact'));
   assert.equal(provider.externalArgs.includes('--coverage-artifact'), false);

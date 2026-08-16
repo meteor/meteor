@@ -236,6 +236,7 @@ function testMetadata() {
         rstestToken: payload.token,
         rstestServer: payload.server,
         rstestClient: payload.client,
+        rstestCoverageServer: payload.coverageServer,
         rstestCoverageClient: payload.coverageClient,
         rstestRuntimeServer: payload.runtimeServer,
         rstestRuntimeClient: payload.runtimeClient,
@@ -294,7 +295,7 @@ async function executeTests({ serverResult: preparedServerResult } = {}) {
       coverageLifecycle.captureServer();
     }
   } else if (coverageLifecycle && coverageLifecycle.enabled &&
-      metadata.rstestServer !== false) {
+      metadata.rstestCoverageServer !== false) {
     coverageLifecycle.captureServer();
   }
 

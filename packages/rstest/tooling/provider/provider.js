@@ -1149,6 +1149,7 @@ class RstestTestRunnerProvider {
       client,
       runtimeServer,
       runtimeClient,
+      coverageServer: server,
       coverageClient: dedicatedRuntimeHosts ? false : client,
       runtime: selection.needsRuntime,
       upstreamRuntime: this.upstreamRuntime,
@@ -1205,6 +1206,12 @@ class RstestTestRunnerProvider {
           });
         }
       } else if (this.workerHostPlan) {
+        if (selection.needsExternal && server) {
+          this.coverageArtifacts.push({
+            producer: 'server',
+            path: path.join(this.coverageRoot, 'server.json'),
+          });
+        }
         for (const descriptor of this.workerHostPlan.descriptors) {
           const producer = `worker-${descriptor.id}`;
           this.coverageArtifacts.push({
@@ -1437,18 +1444,12 @@ class RstestTestRunnerProvider {
         this.startDeferredWorkers = () => {
           if (workerProcess) return workerProcess;
           workerProcess = startWorkers();
+          this.deferredWorkerProcess = workerProcess;
           workerProcess.completion.then(resolveCompletion, rejectCompletion);
           return workerProcess;
         };
-        return {
-          process: {
-            completion,
-            async stop(signal) {
-              if (workerProcess) return workerProcess.stop(signal);
-              resolveCompletion(0);
-            },
-          },
-        };
+        this.deferredWorkerCompletion = completion;
+        return {};
       }
       return { process: startWorkers() };
     }
@@ -1552,6 +1553,10 @@ class RstestTestRunnerProvider {
   async _completeCoverageRun({ exitCode }) {
     if (this.context.worker || !this.coverageGeneration) return undefined;
     try {
+      if (this.deferredWorkerCompletion) {
+        const workerExitCode = await this.deferredWorkerCompletion;
+        if (exitCode === 0 && workerExitCode !== 0) exitCode = workerExitCode;
+      }
       this._loadCoveragePlanForCompletion();
       const localPackages = [];
       const names = new Set();
