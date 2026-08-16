@@ -46,7 +46,7 @@ function createGeneratedConfig({
         hasMeteorRuntime: Boolean(hasMeteorRuntime || deferNativeReport),
       })
       : null;
-    if (coveragePlanOutput) {
+    if (coveragePlanOutput && coveragePlan.enabled) {
       fs.mkdirSync(path.dirname(coveragePlanOutput), { recursive: true });
       const temporaryPath = `${coveragePlanOutput}.${process.pid}.tmp`;
       fs.writeFileSync(temporaryPath, JSON.stringify(coveragePlan));
@@ -84,7 +84,9 @@ function createGeneratedConfig({
       fs.writeFileSync(temporaryPath, JSON.stringify({
         schemaVersion: 1,
         generation: runtimeSettingsGeneration,
-        ...runtimeSettingsFromConfig(config, { coverage: coveragePlan }),
+        ...runtimeSettingsFromConfig(config, {
+          coverage: coveragePlan && coveragePlan.enabled ? coveragePlan : null,
+        }),
       }));
       fs.renameSync(temporaryPath, runtimeSettingsOutput);
     }

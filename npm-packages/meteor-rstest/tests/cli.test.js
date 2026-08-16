@@ -233,6 +233,34 @@ test('native run writes its generation-bound coverage plan before Meteor compila
   });
 });
 
+test('disabled coverage ignores wrapper plan and artifact options', t => {
+  const planOutput = path.join(os.tmpdir(), `meteor-rstest-disabled-plan-${process.pid}-${Date.now()}.json`);
+  const settingsOutput = path.join(os.tmpdir(), `meteor-rstest-disabled-settings-${process.pid}-${Date.now()}.json`);
+  const artifact = path.join(os.tmpdir(), `meteor-rstest-disabled-artifact-${process.pid}-${Date.now()}.json`);
+  const appRoot = createApp({
+    source: "test('disabled coverage plan', () => expect(true).toBe(true));",
+    configSource: "module.exports = { coverage: { enabled: false, provider: 'istanbul' } };",
+  });
+  t.after(() => {
+    fs.rmSync(appRoot, { recursive: true, force: true });
+    fs.rmSync(planOutput, { force: true });
+    fs.rmSync(settingsOutput, { force: true });
+    fs.rmSync(artifact, { force: true });
+  });
+
+  const result = run(appRoot, [
+    '--runtime-plan-output', settingsOutput,
+    '--coverage-plan-output', planOutput,
+    '--coverage-generation', 'generation-disabled',
+    '--coverage-artifact', artifact,
+  ]);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.equal(fs.existsSync(planOutput), false);
+  assert.equal(fs.existsSync(artifact), false);
+  assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')), 'coverage'), false);
+});
+
 test('classification CLI writes routing manifest without evaluating user config', t => {
   const marker = path.join(os.tmpdir(), `meteor-rstest-classify-config-${process.pid}-${Date.now()}.txt`);
   const candidates = path.join(os.tmpdir(), `meteor-rstest-candidates-${process.pid}-${Date.now()}.json`);

@@ -260,7 +260,7 @@ async function main() {
         hasMeteorRuntime: true,
       })
       : null;
-    if (parsed.coveragePlanOutput) {
+    if (parsed.coveragePlanOutput && coveragePlan.enabled) {
       const coveragePlanOutput = path.resolve(parsed.coveragePlanOutput);
       fs.mkdirSync(path.dirname(coveragePlanOutput), { recursive: true });
       const temporaryCoveragePlan = `${coveragePlanOutput}.${process.pid}.tmp`;
@@ -270,7 +270,9 @@ async function main() {
     const output = {
       schemaVersion: 1,
       generation: parsed.runtimeSettingsGeneration,
-      ...runtimeSettingsFromConfig(config, { coverage: coveragePlan }),
+      ...runtimeSettingsFromConfig(config, {
+        coverage: coveragePlan && coveragePlan.enabled ? coveragePlan : null,
+      }),
     };
     const temporaryPath = `${outputPath}.${process.pid}.tmp`;
     fs.writeFileSync(temporaryPath, JSON.stringify(output));

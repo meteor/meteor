@@ -181,6 +181,39 @@ test('mixed coverage writes a runtime plan and defers only native coverage final
   assert.equal(config.coverage.clean, false);
 });
 
+test('disabled coverage ignores wrapper plan and artifact options', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-disabled-coverage-'));
+  const configPath = path.join(root, 'rstest.config.js');
+  const planOutput = path.join(root, 'coverage-plan.json');
+  const settingsOutput = path.join(root, 'runtime-settings.json');
+  const artifactPath = path.join(root, 'artifacts', 'native.json');
+  fs.writeFileSync(configPath, `module.exports = {
+    reporters: 'dot',
+    coverage: { enabled: false, provider: 'istanbul' },
+  };`);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const config = await createGeneratedConfig({
+    context: makeContext({ appRoot: root, configRoot: root, localDir: path.join(root, '.meteor', 'local') }),
+    configPath,
+    runtimeSettingsOutput: settingsOutput,
+    runtimeSettingsGeneration: 'generation-disabled',
+    coveragePlanOutput: planOutput,
+    coverageGeneration: 'generation-disabled',
+    coverageArtifact: artifactPath,
+    cliCoverageEnabled: false,
+    deferNativeReport: true,
+    hasMeteorRuntime: true,
+  })();
+
+  assert.equal(fs.existsSync(planOutput), false);
+  assert.equal(fs.existsSync(artifactPath), false);
+  assert.equal(Object.hasOwn(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')), 'coverage'), false);
+  assert.equal(config.reporters, 'dot');
+  assert.equal(config.coverage.enabled, false);
+  assert.equal(config.coverage.provider, 'istanbul');
+});
+
 test('native-only coverage leaves upstream reporters and coverage settings untouched', async t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-native-coverage-'));
   const configPath = path.join(root, 'rstest.config.js');
