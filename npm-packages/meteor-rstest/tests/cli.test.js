@@ -219,6 +219,18 @@ test('native run writes its generation-bound coverage plan before Meteor compila
     exclude: ['**/*.test.js'],
     allowExternal: false,
     artifactRoot: path.dirname(artifact),
+    policy: {
+      schemaVersion: 1,
+      enabled: true,
+      provider: 'istanbul',
+      reporters: ['text', 'html', 'clover', 'json'],
+      reportsDirectory: 'coverage',
+      include: [],
+      exclude: ['**/*.test.js'],
+      reportOnFailure: false,
+      clean: true,
+      allowExternal: false,
+    },
   });
   assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')).coverage, {
     schemaVersion: 1,
@@ -230,7 +242,78 @@ test('native run writes its generation-bound coverage plan before Meteor compila
     exclude: ['**/*.test.js'],
     allowExternal: false,
     artifactRoot: path.dirname(artifact),
+    policy: {
+      schemaVersion: 1,
+      enabled: true,
+      provider: 'istanbul',
+      reporters: ['text', 'html', 'clover', 'json'],
+      reportsDirectory: 'coverage',
+      include: [],
+      exclude: ['**/*.test.js'],
+      reportOnFailure: false,
+      clean: true,
+      allowExternal: false,
+    },
   });
+});
+
+test('coverage preflight activates config-only Istanbul before Meteor build', t => {
+  const output = path.join(
+    os.tmpdir(),
+    `meteor-rstest-coverage-preflight-${process.pid}-${Date.now()}.json`,
+  );
+  const appRoot = createApp({
+    source: "test('preflight must not execute tests', () => expect(false).toBe(true));",
+    configSource: `module.exports = { coverage: {
+      enabled: true,
+      provider: 'istanbul',
+      include: ['imports/**/*.js'],
+      reporters: ['text'],
+    } };`,
+  });
+  t.after(() => {
+    fs.rmSync(appRoot, { recursive: true, force: true });
+    fs.rmSync(output, { force: true });
+  });
+
+  const result = run(appRoot, ['--coverage-preflight-output', output]);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.deepEqual(JSON.parse(fs.readFileSync(output, 'utf8')), {
+    schemaVersion: 1,
+    enabled: true,
+    provider: 'istanbul',
+    reporters: ['text'],
+    reportsDirectory: 'coverage',
+    include: ['imports/**/*.js'],
+    exclude: [],
+    reportOnFailure: false,
+    clean: true,
+    allowExternal: false,
+  });
+  assert.doesNotMatch(result.stdout + result.stderr, /preflight must not execute tests/);
+});
+
+test('coverage preflight rejects config-only V8 for a Meteor lane', t => {
+  const output = path.join(
+    os.tmpdir(),
+    `meteor-rstest-v8-preflight-${process.pid}-${Date.now()}.json`,
+  );
+  const appRoot = createApp({
+    source: "test('v8 preflight must not execute tests', () => expect(false).toBe(true));",
+    configSource: "module.exports = { coverage: { enabled: true, provider: 'v8' } };",
+  });
+  t.after(() => {
+    fs.rmSync(appRoot, { recursive: true, force: true });
+    fs.rmSync(output, { force: true });
+  });
+
+  const result = run(appRoot, ['--coverage-preflight-output', output]);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Meteor-hosted coverage requires the Istanbul provider/);
+  assert.equal(fs.existsSync(output), false);
+  assert.doesNotMatch(result.stdout + result.stderr, /v8 preflight must not execute tests/);
 });
 
 test('mixed native run persists imported source coverage before Meteor host start', t => {

@@ -34,6 +34,8 @@ function buildRstestArgs({
   coverageGeneration,
   coverageArtifact,
   coverageFinalizeManifest,
+  coveragePreflightOutput,
+  coveragePolicy,
   architectures,
   phase,
   passthrough,
@@ -64,6 +66,10 @@ function buildRstestArgs({
   if (coverageFinalizeManifest) {
     args.push('--coverage-finalize-manifest', coverageFinalizeManifest);
   }
+  if (coveragePreflightOutput) {
+    args.push('--coverage-preflight-output', coveragePreflightOutput);
+  }
+  if (coveragePolicy) args.push('--coverage-policy', coveragePolicy);
   if (phase) args.push('--phase', phase);
   if (config) args.push('--config', config);
   for (const name of [].concat(project || [])) args.push('--project', name);

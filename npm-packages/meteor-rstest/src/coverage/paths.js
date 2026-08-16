@@ -118,11 +118,21 @@ function packageLogicalPaths(filename, roots) {
   return candidates;
 }
 
-function matchPatterns(filename, patterns, roots) {
-  const candidates = [slash(filename), ...packageLogicalPaths(filename, roots)];
-  if (contains(roots.appRoot, filename)) {
-    candidates.push(slash(path.relative(roots.appRoot, filename)));
+function coveragePathCandidates(filename, options) {
+  const roots = options.packages instanceof Map ? options : normalizeRoots(options);
+  const canonicalFilename = realpathIfPresent(filename);
+  const candidates = [
+    slash(canonicalFilename),
+    ...packageLogicalPaths(canonicalFilename, roots),
+  ];
+  if (contains(roots.appRoot, canonicalFilename)) {
+    candidates.push(slash(path.relative(roots.appRoot, canonicalFilename)));
   }
+  return candidates;
+}
+
+function matchPatterns(filename, patterns, roots) {
+  const candidates = coveragePathCandidates(filename, roots);
   return patterns.some(pattern => {
     const matches = picomatch(pattern.replaceAll('\\', '/'), { dot: true });
     return candidates.some(candidate => matches(candidate));
@@ -197,4 +207,5 @@ function canonicalizeCoverageMaps(coverageMaps, {
 module.exports = {
   canonicalizeCoverageMaps,
   canonicalizeCoveragePath,
+  coveragePathCandidates,
 };

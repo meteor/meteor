@@ -576,6 +576,76 @@ describe('Meteor + Rstest integration', () => {
     }
   }, 900_000);
 
+  test('config-only Meteor coverage activates Istanbul and rejects V8 before build', async () => {
+    const coverageDir = createCoverageDirectory();
+    try {
+      const istanbul = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-runtime-server',
+          '--test-file',
+          'mongo.test.js',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: {
+              METEOR_RSTEST_E2E_CONFIG_COVERAGE_PROVIDER: 'istanbul',
+              METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir,
+            },
+          },
+        },
+      );
+      const istanbulCompleted = await istanbul.meteorProcess;
+      expect(istanbulCompleted.exitCode).toBe(0);
+      expectCoveredSources(readCoverageReport(coverageDir), [
+        '/imports/coverage/server-target.js',
+      ]);
+
+      const v8 = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-runtime-server',
+          '--test-file',
+          'mongo.test.js',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: {
+            reject: false,
+            env: {
+              METEOR_RSTEST_E2E_CONFIG_COVERAGE_PROVIDER: 'v8',
+            },
+          },
+        },
+      );
+      const v8Completed = await v8.meteorProcess;
+      const v8Output = stripAnsi(v8.outputLines.join('\n'));
+      expect(v8Completed.exitCode).toBe(1);
+      expect(v8Output).toContain(
+        'Meteor-hosted coverage requires the Istanbul provider',
+      );
+      expect(v8Output).not.toContain(
+        'Meteor runtime project resolves Atmosphere packages',
+      );
+    } finally {
+      fs.rmSync(coverageDir, { recursive: true, force: true });
+    }
+  }, 900_000);
+
   test('meteor coverage applies passing and impossible thresholds once', async () => {
     const runThreshold = async threshold => {
       const coverageDir = createCoverageDirectory();

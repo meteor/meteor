@@ -35,6 +35,8 @@ function parseArgs(argv) {
     coverageGeneration: null,
     coverageArtifact: null,
     coverageFinalizeManifest: null,
+    coveragePreflightOutput: null,
+    coveragePolicyPath: null,
     coverageEnabled: false,
     classifyCandidates: null,
     classificationOutput: null,
@@ -105,6 +107,12 @@ function parseArgs(argv) {
     } else if (arg === '--coverage-finalize-manifest') {
       parsed.coverageFinalizeManifest = takeValue(argv, index, arg);
       index += 1;
+    } else if (arg === '--coverage-preflight-output') {
+      parsed.coveragePreflightOutput = takeValue(argv, index, arg);
+      index += 1;
+    } else if (arg === '--coverage-policy') {
+      parsed.coveragePolicyPath = takeValue(argv, index, arg);
+      index += 1;
     } else if (arg === '--coverage') {
       parsed.coverageEnabled = true;
       parsed.forwarded.push(arg);
@@ -158,6 +166,8 @@ function writeGeneratedConfig({
   coverageGeneration,
   coverageArtifact,
   cliCoverageEnabled,
+  coverageCliArgs,
+  coveragePolicy,
   deferNativeReport,
   hasMeteorRuntime,
 }) {
@@ -177,6 +187,8 @@ function writeGeneratedConfig({
       coverageGeneration,
       coverageArtifact,
       cliCoverageEnabled,
+      coverageCliArgs,
+      coveragePolicy,
       deferNativeReport,
       hasMeteorRuntime,
     }, null, 2)});`,
@@ -215,18 +227,43 @@ async function main() {
       : null,
     architectures: parsed.architectures.length > 0 ? parsed.architectures : undefined,
   });
+  const coveragePolicy = parsed.coveragePolicyPath
+    ? JSON.parse(fs.readFileSync(path.resolve(parsed.coveragePolicyPath), 'utf8'))
+    : null;
   if (parsed.coverageFinalizeManifest) {
     const manifestPath = path.resolve(parsed.coverageFinalizeManifest);
     const { readCoverageManifest } = require('../src/coverage/artifact.js');
     const { finalizeCoverage } = require('../src/coverage/finalize.js');
-    const { loadUserConfig } = require('../src/coordinator.js');
     const manifest = readCoverageManifest({
       filePath: manifestPath,
       expectedPath: manifestPath,
     });
-    const config = await loadUserConfig({ context, configPath });
+    let config;
+    if (manifest.coveragePolicy) {
+      config = { coverage: manifest.coveragePolicy };
+    } else {
+      const { loadUserConfig } = require('../src/coordinator.js');
+      config = await loadUserConfig({ context, configPath });
+    }
     const result = await finalizeCoverage({ manifest, config });
     process.exitCode = result.exitCode;
+    return;
+  }
+  if (parsed.coveragePreflightOutput) {
+    const { loadUserConfig, finalizeRstestConfig } = require('../src/coordinator.js');
+    const { coveragePolicyFromConfig } = require('../src/coverage/plan.js');
+    const userConfig = await loadUserConfig({ context, configPath });
+    const config = await finalizeRstestConfig({ context, userConfig });
+    const policy = coveragePolicyFromConfig(config, {
+      cliEnabled: parsed.coverageEnabled,
+      cliArgs: parsed.forwarded,
+      hasMeteorRuntime: true,
+    });
+    const outputPath = path.resolve(parsed.coveragePreflightOutput);
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    const temporaryPath = `${outputPath}.${process.pid}.tmp`;
+    fs.writeFileSync(temporaryPath, JSON.stringify(policy));
+    fs.renameSync(temporaryPath, outputPath);
     return;
   }
   if (parsed.classifyCandidates || parsed.classificationOutput) {
@@ -267,9 +304,15 @@ async function main() {
     const config = await finalizeRstestConfig({ context, userConfig });
     const outputPath = path.resolve(parsed.runtimePlanOutput);
     fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-    const coveragePlan = parsed.coveragePlanOutput || parsed.coverageGeneration || parsed.coverageArtifact || parsed.coverageEnabled
-      ? coveragePlanFromConfig(config, {
+    const coveragePlan = parsed.coveragePlanOutput || parsed.coverageGeneration || parsed.coverageArtifact || parsed.coverageEnabled || coveragePolicy?.enabled
+      ? coveragePlanFromConfig(coveragePolicy ? {
+        ...config,
+        coverage: Object.fromEntries(Object.entries(coveragePolicy).filter(
+          ([key]) => key !== 'schemaVersion'
+        )),
+      } : config, {
         cliEnabled: parsed.coverageEnabled,
+        cliArgs: coveragePolicy ? [] : parsed.forwarded,
         generation: parsed.coverageGeneration,
         root: context.appRoot,
         artifactRoot: path.dirname(
@@ -309,12 +352,19 @@ async function main() {
     coverageGeneration: parsed.coverageGeneration,
     coverageArtifact: parsed.coverageArtifact ? path.resolve(parsed.coverageArtifact) : null,
     cliCoverageEnabled: parsed.coverageEnabled,
+    coverageCliArgs: parsed.forwarded,
+    coveragePolicy,
     deferNativeReport: Boolean(parsed.coverageArtifact),
     hasMeteorRuntime: parsed.phase === 'external' || Boolean(parsed.coverageArtifact),
   });
 
   process.chdir(cwd);
   const { runCLI } = await import('@rstest/core');
+  const suppressPartialCoverage = Boolean(parsed.coverageArtifact) ||
+    parsed.phase === 'external';
+  const forwarded = suppressPartialCoverage
+    ? require('../src/coverage/plan.js').stripCoverageCliArgs(parsed.forwarded)
+    : parsed.forwarded;
   runCLI({
     argv: [
       process.execPath,
@@ -322,7 +372,7 @@ async function main() {
       parsed.once ? 'run' : 'watch',
       '--config',
       generatedConfig,
-      ...parsed.forwarded,
+      ...forwarded,
     ],
   });
 }

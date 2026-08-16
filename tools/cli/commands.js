@@ -2802,28 +2802,36 @@ async function doTestCommand(options) {
       entry.name,
       entry.name.replace(/^local-test:/, ''),
     ]);
+    const testRunnerLocalPackages = await collectTestRunnerLocalPackages(
+      projectContext.localCatalog,
+      files,
+      {
+        checkoutPackageRoots: files.inCheckout()
+          ? [files.pathJoin(files.getCurrentToolsDir(), 'packages')]
+          : [],
+        selectedPackageNames: selectedTestPackageNames,
+        packageCatalog: projectContext.projectCatalog,
+      }
+    );
+    const localPackageByName = new Map(testRunnerLocalPackages.map(entry => [
+      entry.name,
+      entry,
+    ]));
     const providerContextData = createTestRunnerContext({
       command: testRunnerCommand,
       appDir: sourceAppDir,
       harnessRoot: testRunnerAppDir,
-      localPackages: await collectTestRunnerLocalPackages(
-        projectContext.localCatalog,
-        files,
-        {
-          checkoutPackageRoots: files.inCheckout()
-            ? [files.pathJoin(files.getCurrentToolsDir(), 'packages')]
-            : [],
-          selectedPackageNames: selectedTestPackageNames,
-        }
-      ),
+      localPackages: testRunnerLocalPackages,
       packageTests: selectedTestPackages.map(entry => {
         const packageSource = projectContext.localCatalog.getPackageSource(
           entry.name
         );
+        const inventory = localPackageByName.get(entry.name);
         return {
           name: entry.name,
           sourceRoot: packageSource && packageSource.sourceRoot,
           sourceKind: 'test-target',
+          sourceProcessors: inventory && inventory.sourceProcessors || [],
         };
       }),
       localDir: projectContext.projectLocalDir,

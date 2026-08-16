@@ -161,6 +161,19 @@ test('mixed coverage writes a runtime plan and defers only native coverage final
     exclude: [],
     allowExternal: false,
     artifactRoot: path.dirname(artifactPath),
+    policy: {
+      schemaVersion: 1,
+      enabled: true,
+      provider: 'istanbul',
+      reporters: ['text'],
+      thresholds: { lines: 100 },
+      reportsDirectory: 'coverage',
+      include: ['imports/**/*.js'],
+      exclude: [],
+      reportOnFailure: false,
+      clean: true,
+      allowExternal: false,
+    },
   });
   assert.deepEqual(JSON.parse(fs.readFileSync(settingsOutput, 'utf8')).coverage, {
     schemaVersion: 1,
@@ -172,6 +185,19 @@ test('mixed coverage writes a runtime plan and defers only native coverage final
     exclude: [],
     allowExternal: false,
     artifactRoot: path.dirname(artifactPath),
+    policy: {
+      schemaVersion: 1,
+      enabled: true,
+      provider: 'istanbul',
+      reporters: ['text'],
+      thresholds: { lines: 100 },
+      reportsDirectory: 'coverage',
+      include: ['imports/**/*.js'],
+      exclude: [],
+      reportOnFailure: false,
+      clean: true,
+      allowExternal: false,
+    },
   });
   assert.equal(config.reporters[0], 'dot');
   assert.ok(config.reporters[1] instanceof MeteorCoverageCaptureReporter);
@@ -227,6 +253,68 @@ test('generated external Istanbul coverage appends the Playwright setup exactly 
     second.projects.find(project => project.name === 'meteor-e2e').setupFiles,
     [userSetup, integrationSetup],
   );
+});
+
+test('deferred mixed phases use one canonical CLI coverage policy', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-policy-config-'));
+  const configPath = path.join(root, 'rstest.config.js');
+  const planOutput = path.join(root, 'plan.json');
+  const artifactPath = path.join(root, 'artifacts', 'native.json');
+  fs.writeFileSync(configPath, `module.exports = { coverage: {
+    enabled: false,
+    provider: 'v8',
+    reporters: ['html'],
+    thresholds: { lines: 1 },
+    reportsDirectory: 'config-coverage',
+    include: ['config/**/*.js'],
+    exclude: ['config-excluded/**'],
+    reportOnFailure: false,
+  } };`);
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+
+  const config = await createGeneratedConfig({
+    context: makeContext({
+      appRoot: root,
+      configRoot: root,
+      localDir: path.join(root, '.meteor', 'local'),
+    }),
+    configPath,
+    coveragePlanOutput: planOutput,
+    coverageGeneration: 'canonical-generation',
+    coverageArtifact: artifactPath,
+    cliCoverageEnabled: false,
+    coverageCliArgs: [
+      '--coverage.enabled',
+      '--coverage.provider=istanbul',
+      '--coverage.reporters=text',
+      '--coverage.thresholds.lines=97',
+      '--coverage.reportsDirectory=cli-coverage',
+      '--coverage.include=imports/**/*.js',
+      '--coverage.exclude=**/generated/**',
+      '--coverage.reportOnFailure',
+    ],
+    deferNativeReport: true,
+    hasMeteorRuntime: true,
+  })();
+  const plan = JSON.parse(fs.readFileSync(planOutput, 'utf8'));
+
+  assert.deepEqual(plan.policy, {
+    schemaVersion: 1,
+    enabled: true,
+    provider: 'istanbul',
+    reporters: ['text'],
+    thresholds: { lines: 97 },
+    reportsDirectory: 'cli-coverage',
+    include: ['imports/**/*.js'],
+    exclude: ['**/generated/**'],
+    reportOnFailure: true,
+    clean: true,
+    allowExternal: false,
+  });
+  assert.deepEqual(config.coverage.reporters, []);
+  assert.equal(config.coverage.thresholds, undefined);
+  assert.deepEqual(config.coverage.include, []);
+  assert.equal(config.coverage.clean, false);
 });
 
 test('disabled coverage ignores wrapper plan and artifact options', async t => {

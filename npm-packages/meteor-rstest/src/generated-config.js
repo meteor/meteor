@@ -7,6 +7,7 @@ const {
   runtimeSettingsFromConfig,
 } = require('./coordinator.js');
 const {
+  coveragePolicyFromConfig,
   coveragePlanFromConfig,
 } = require('./coverage/plan.js');
 const {
@@ -25,6 +26,8 @@ function createGeneratedConfig({
   coverageGeneration,
   coverageArtifact,
   cliCoverageEnabled,
+  coverageCliArgs,
+  coveragePolicy: coveragePolicyInput,
   deferNativeReport,
   hasMeteorRuntime,
 }) {
@@ -32,12 +35,19 @@ function createGeneratedConfig({
     const context = createMeteorRstestContext(contextInput);
     const userConfig = await loadUserConfig({ context, configPath });
     const config = await finalizeRstestConfig({ context, userConfig });
+    const coveragePolicy = coveragePolicyInput || coveragePolicyFromConfig(config, {
+      cliEnabled: cliCoverageEnabled,
+      cliArgs: coverageCliArgs,
+      hasMeteorRuntime: Boolean(hasMeteorRuntime || deferNativeReport),
+    });
+    const { schemaVersion: _policySchemaVersion, ...effectiveCoverage } =
+      coveragePolicy;
     const hasCoveragePlan = Boolean(
-      coveragePlanOutput || coverageGeneration || coverageArtifact || cliCoverageEnabled,
+      coveragePlanOutput || coverageGeneration || coverageArtifact ||
+      cliCoverageEnabled || coveragePolicy.enabled,
     );
     const coveragePlan = hasCoveragePlan
-      ? coveragePlanFromConfig(config, {
-        cliEnabled: cliCoverageEnabled,
+      ? coveragePlanFromConfig({ ...config, coverage: effectiveCoverage }, {
         generation: coverageGeneration,
         root: context.appRoot,
         artifactRoot: path.dirname(
@@ -54,7 +64,7 @@ function createGeneratedConfig({
     }
     if (deferNativeReport && coveragePlan.enabled) {
       config.coverage = {
-        ...config.coverage,
+        ...effectiveCoverage,
         reporters: [],
         thresholds: undefined,
         include: [],
@@ -74,7 +84,7 @@ function createGeneratedConfig({
         coveragePlan && coveragePlan.enabled &&
         coveragePlan.provider === 'istanbul') {
       config.coverage = {
-        ...config.coverage,
+        ...effectiveCoverage,
         reporters: [],
         thresholds: undefined,
         clean: false,

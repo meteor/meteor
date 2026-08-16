@@ -4,6 +4,8 @@ const path = require('node:path');
 module.exports = defineConfig(context => {
   const reportsDirectory = process.env.METEOR_RSTEST_E2E_COVERAGE_DIR;
   const linesThreshold = process.env.METEOR_RSTEST_E2E_LINES_THRESHOLD;
+  const configCoverageProvider =
+    process.env.METEOR_RSTEST_E2E_CONFIG_COVERAGE_PROVIDER;
 
   return {
     globals: true,
@@ -25,9 +27,10 @@ module.exports = defineConfig(context => {
       METEOR_RSTEST_EXPECT_NO_COVERAGE:
         process.env.METEOR_RSTEST_EXPECT_NO_COVERAGE || '',
     },
-    ...(reportsDirectory && {
+    ...((reportsDirectory || configCoverageProvider) && {
       coverage: {
-        provider: 'istanbul',
+        ...(configCoverageProvider && { enabled: true }),
+        provider: configCoverageProvider || 'istanbul',
         include: [
           'tests/rstest/pure/server/coverage-target.js',
           'imports/coverage/*.js',
@@ -35,7 +38,7 @@ module.exports = defineConfig(context => {
         ],
         exclude: ['**/*.test.*'],
         reporters: ['json'],
-        reportsDirectory,
+        ...(reportsDirectory && { reportsDirectory }),
         ...(linesThreshold && {
           thresholds: { lines: Number(linesThreshold) },
         }),

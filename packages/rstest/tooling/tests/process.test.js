@@ -112,6 +112,8 @@ test('coverage artifact and finalizer paths stay explicit wrapper-owned argument
     coverageGeneration: 'g1',
     coverageArtifact: '/local/rstest/coverage/g1/native.json',
     coverageFinalizeManifest: '/local/rstest/coverage/g1/manifest.json',
+    coveragePreflightOutput: '/local/rstest/coverage-policy.json',
+    coveragePolicy: '/local/rstest/coverage-policy.json',
   }), [
     '--cwd', '/app',
     '--local-dir', '/local',
@@ -120,6 +122,8 @@ test('coverage artifact and finalizer paths stay explicit wrapper-owned argument
     '--coverage-generation', 'g1',
     '--coverage-artifact', '/local/rstest/coverage/g1/native.json',
     '--coverage-finalize-manifest', '/local/rstest/coverage/g1/manifest.json',
+    '--coverage-preflight-output', '/local/rstest/coverage-policy.json',
+    '--coverage-policy', '/local/rstest/coverage-policy.json',
   ]);
 });
 

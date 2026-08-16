@@ -2,7 +2,9 @@ const assert = require('node:assert/strict');
 const test = require('node:test');
 
 const {
+  coveragePolicyFromConfig,
   coveragePlanFromConfig,
+  stripCoverageCliArgs,
 } = require('../src/coverage/plan.js');
 
 const options = {
@@ -24,6 +26,18 @@ test('projects enabled Istanbul coverage into the JSON-safe Meteor plan', () => 
     exclude: [],
     allowExternal: false,
     artifactRoot: '/app/.meteor/local/rstest/coverage/g1',
+    policy: {
+      schemaVersion: 1,
+      enabled: true,
+      provider: 'istanbul',
+      reporters: ['text', 'html', 'clover', 'json'],
+      reportsDirectory: 'coverage',
+      include: [],
+      exclude: [],
+      reportOnFailure: false,
+      clean: true,
+      allowExternal: false,
+    },
   });
 });
 
@@ -45,6 +59,18 @@ test('uses config coverage.enabled without requiring the CLI flag', () => {
     exclude: ['**/*.test.js'],
     allowExternal: true,
     artifactRoot: '/app/.meteor/local/rstest/coverage/g1',
+    policy: {
+      schemaVersion: 1,
+      enabled: true,
+      provider: 'istanbul',
+      reporters: ['text', 'html', 'clover', 'json'],
+      reportsDirectory: 'coverage',
+      include: ['imports/**/*.js'],
+      exclude: ['**/*.test.js'],
+      reportOnFailure: false,
+      clean: true,
+      allowExternal: true,
+    },
   });
 });
 
@@ -87,5 +113,62 @@ test('produces an inert plan when coverage is disabled', () => {
     exclude: [],
     allowExternal: false,
     artifactRoot: '/app/.meteor/local/rstest/coverage/g1',
+    policy: {
+      schemaVersion: 1,
+      enabled: false,
+      provider: 'v8',
+      reporters: ['text', 'html', 'clover', 'json'],
+      reportsDirectory: 'coverage',
+      include: [],
+      exclude: [],
+      reportOnFailure: false,
+      clean: true,
+      allowExternal: false,
+    },
   });
+});
+
+test('canonical coverage policy applies every upstream CLI override once', () => {
+  const cliArgs = [
+    '--coverage.enabled',
+    '--coverage.provider=istanbul',
+    '--coverage.reporters', 'text',
+    '--coverage.reporters=json',
+    '--coverage.thresholds.lines=91',
+    '--coverage.reportsDirectory', 'cli-coverage',
+    '--coverage.include=imports/cli/**/*.js',
+    '--coverage.exclude', '**/generated/**',
+    '--coverage.reportOnFailure',
+    '--retry', '2',
+  ];
+  const policy = coveragePolicyFromConfig({
+    coverage: {
+      enabled: false,
+      provider: 'v8',
+      reporters: ['html'],
+      thresholds: { lines: 5 },
+      reportsDirectory: 'config-coverage',
+      include: ['imports/config/**/*.js'],
+      exclude: ['**/config-generated/**'],
+      reportOnFailure: false,
+    },
+  }, {
+    cliArgs,
+    hasMeteorRuntime: true,
+  });
+
+  assert.deepEqual(policy, {
+    schemaVersion: 1,
+    enabled: true,
+    provider: 'istanbul',
+    reporters: ['text', 'json'],
+    thresholds: { lines: 91 },
+    reportsDirectory: 'cli-coverage',
+    include: ['imports/cli/**/*.js'],
+    exclude: ['**/generated/**'],
+    reportOnFailure: true,
+    clean: true,
+    allowExternal: false,
+  });
+  assert.deepEqual(stripCoverageCliArgs(cliArgs), ['--retry', '2']);
 });

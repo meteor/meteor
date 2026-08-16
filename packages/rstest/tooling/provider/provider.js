@@ -422,18 +422,68 @@ function resolveRstestCoverageInstrumentation(npmRoot) {
   };
 }
 
-function collectLocalPackageTransforms(localPackages, packageTests) {
+function collectLocalPackageTransforms(
+  localPackages,
+  packageTests,
+  { warn = () => {} } = {},
+) {
   const packageRoots = {};
   const includePackages = [];
+  const selectedNames = new Set([
+    ...localPackages || [],
+    ...packageTests || [],
+  ].filter(entry => entry && (
+    entry.sourceKind === 'test-target' ||
+    (packageTests || []).includes(entry)
+  )).map(entry => entry.name));
+  const supportedProcessors = new Set(['ecmascript', 'typescript']);
+  const seen = new Set();
   for (const entry of [...localPackages || [], ...packageTests || []]) {
     if (!entry || typeof entry.name !== 'string' ||
         entry.sourceKind === 'checkout' ||
         !path.isAbsolute(entry.sourceRoot || '') ||
-        Object.hasOwn(packageRoots, entry.name)) continue;
+        seen.has(entry.name)) continue;
+    seen.add(entry.name);
+    const unsupported = [...new Set(
+      Array.isArray(entry.sourceProcessors)
+        ? entry.sourceProcessors.filter(processor =>
+          typeof processor === 'string' && !supportedProcessors.has(processor)
+        )
+        : [],
+    )].sort();
+    if (unsupported.length > 0) {
+      if (selectedNames.has(entry.name)) {
+        warn(
+          `[Meteor Rstest] Coverage skips selected package ${entry.name}: ` +
+          `custom source processor${unsupported.length === 1 ? '' : 's'} ` +
+          `${unsupported.join(', ')} ${unsupported.length === 1 ? 'is' : 'are'} ` +
+          'unsupported; only ecmascript and typescript are instrumented.'
+        );
+      }
+      continue;
+    }
     packageRoots[entry.name] = entry.sourceRoot;
     includePackages.push(entry.name);
   }
   return { packageRoots, includePackages };
+}
+
+function validateCoveragePolicy(policy) {
+  if (!policy || typeof policy !== 'object' || Array.isArray(policy) ||
+      policy.schemaVersion !== 1 || typeof policy.enabled !== 'boolean' ||
+      (policy.provider !== 'istanbul' && policy.provider !== 'v8') ||
+      !Array.isArray(policy.reporters) ||
+      typeof policy.reportsDirectory !== 'string' ||
+      !Array.isArray(policy.include) || !Array.isArray(policy.exclude) ||
+      typeof policy.reportOnFailure !== 'boolean' ||
+      typeof policy.clean !== 'boolean' ||
+      typeof policy.allowExternal !== 'boolean') {
+    throw rstestError(
+      'METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID',
+      'Coverage preflight returned an invalid policy.',
+    );
+  }
+  return policy;
 }
 
 class RstestTestRunnerProvider {
@@ -895,11 +945,64 @@ class RstestTestRunnerProvider {
         runtimeDir,
       );
     }
+    this.coveragePolicy = null;
+    this.coveragePolicyPath = null;
+    const hasCoveragePassthrough = options.passthrough.some(argument =>
+      /^--(?:no-)?coverage(?:\.|=|$)/.test(String(argument))
+    );
+    const needsCoveragePreflight = !worker && options.coverage !== true &&
+      (selection.needsRuntime || selection.needsExternal) &&
+      (selection.capability.hasRstestConfig || hasCoveragePassthrough);
+    if (needsCoveragePreflight) {
+      this.coveragePolicyPath = path.join(runtimeDir, 'coverage-policy.json');
+      removeIfPresent(this.coveragePolicyPath);
+      const preflight = this.services.startRstestProcess({
+        appDir,
+        packageRoot: npm.root,
+        args: buildRstestArgs({
+          appDir,
+          localDir,
+          harnessRoot: command === 'test-packages' ? harnessRoot : undefined,
+          once: options.once,
+          verbose,
+          fullApp: options.fullApp,
+          server: !options.clientOnly,
+          client: !options.serverOnly,
+          command,
+          config: options.config,
+          coverage: options.coverage,
+          coveragePreflightOutput: this.coveragePolicyPath,
+          routingManifest: this.routingManifest,
+          architectures,
+          passthrough: options.passthrough,
+        }),
+      });
+      const preflightCode = await preflight.completion;
+      if (preflightCode !== 0) {
+        throw rstestError(
+          'METEOR_RSTEST_COVERAGE_PREFLIGHT_FAILED',
+          `Coverage preflight exited with status ${preflightCode}.`,
+        );
+      }
+      try {
+        this.coveragePolicy = validateCoveragePolicy(JSON.parse(
+          fs.readFileSync(this.coveragePolicyPath, 'utf8'),
+        ));
+      } catch (error) {
+        if (error.code === 'METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID') throw error;
+        throw rstestError(
+          'METEOR_RSTEST_COVERAGE_PREFLIGHT_INVALID',
+          'Coverage preflight output is missing or malformed.',
+        );
+      }
+    }
+    const effectiveCoverage = options.coverage === true ||
+      this.coveragePolicy?.enabled === true;
     if (!worker) {
       const capabilities = this.services.selectRstestOptionalCapabilities({
         command,
         inventory: selection.inventory,
-        coverage: options.coverage,
+        coverage: effectiveCoverage,
         client: selection.nativeClient,
       });
       this.services.assertRstestOptionalCapabilities({
@@ -907,7 +1010,7 @@ class RstestTestRunnerProvider {
         capabilities,
       });
     }
-    const mixedCoverage = !worker && options.coverage === true && (
+    const mixedCoverage = !worker && effectiveCoverage && (
       selection.needsRuntime || selection.needsExternal
     );
     this.coverageGeneration = worker
@@ -1005,6 +1108,7 @@ class RstestTestRunnerProvider {
       routingManifest: this.routingManifest,
       coveragePlanOutput: this.coveragePlanPath,
       coverageGeneration: this.coverageGeneration,
+      coveragePolicy: this.coveragePolicyPath,
       passthrough: options.passthrough,
     };
     const serverArchitecture = architectures.find(architecture =>
@@ -1067,6 +1171,8 @@ class RstestTestRunnerProvider {
         coverage: options.coverage,
         coveragePlanOutput: this.coveragePlanPath,
         coverageGeneration: this.coverageGeneration,
+        coveragePolicy: this.coveragePolicyPath,
+        passthrough: options.passthrough,
       })
       : null;
     this.externalArgs = selection.needsExternal
@@ -1302,6 +1408,7 @@ class RstestTestRunnerProvider {
       const transforms = collectLocalPackageTransforms(
         this.context.localPackages,
         this.context.packageTests,
+        { warn: this.services.warn },
       );
       if (transforms.includePackages.length > 0) {
         const { swcPlugin, babelPlugin } =
@@ -1367,10 +1474,18 @@ class RstestTestRunnerProvider {
   }
 
   _setCoveragePlan(coverage) {
+    let coveragePolicy;
+    try {
+      coveragePolicy = validateCoveragePolicy(coverage?.policy);
+    } catch {
+      coveragePolicy = null;
+    }
     if (!coverage || coverage.schemaVersion !== 1 || coverage.enabled !== true ||
         coverage.provider !== 'istanbul' ||
         coverage.generation !== this.coverageGeneration ||
-        path.resolve(coverage.artifactRoot || '') !== this.coverageRoot) {
+        path.resolve(coverage.artifactRoot || '') !== this.coverageRoot ||
+        coveragePolicy?.enabled !== true ||
+        coveragePolicy.provider !== 'istanbul') {
       throw rstestError(
         'METEOR_RSTEST_STALE_COVERAGE_PLAN',
         'Ignored an invalid or stale coverage plan.',
@@ -1599,7 +1714,7 @@ class RstestTestRunnerProvider {
       if (!this.coverageGeneration) {
         return effectiveExitCode === 0 ? undefined : { exitCode: effectiveExitCode };
       }
-      this._loadCoveragePlanForCompletion();
+      const coveragePlan = this._loadCoveragePlanForCompletion();
       const localPackages = [];
       const names = new Set();
       for (const entry of [
@@ -1617,7 +1732,9 @@ class RstestTestRunnerProvider {
       writePrivateJsonAtomic(this.coverageManifestPath, {
         schemaVersion: 1,
         generation: this.coverageGeneration,
-        appRoot: this.context.npm.root,
+        appRoot: this.context.appDir,
+        providerRoot: this.context.npm.root,
+        coveragePolicy: coveragePlan.policy,
         localPackages,
         artifacts: this.coverageArtifacts,
         testExitCode: effectiveExitCode,

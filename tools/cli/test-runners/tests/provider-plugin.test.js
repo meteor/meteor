@@ -214,10 +214,72 @@ test('provider fixture receives sorted physical package entries with source prov
   harness.isopack.testRunnerProviders[0].factory(context);
 
   assert.deepEqual(receivedContext.localPackages, [
-    { name: 'cards', sourceRoot: appPackageRoot, sourceKind: 'project' },
-    { name: 'meteor', sourceRoot: meteorRoot, sourceKind: 'checkout' },
-    { name: 'notes', sourceRoot: externalPackageRoot, sourceKind: 'project' },
-    { name: 'tracker', sourceRoot: trackerRoot, sourceKind: 'test-target' },
+    { name: 'cards', sourceRoot: appPackageRoot, sourceKind: 'project', sourceProcessors: [] },
+    { name: 'meteor', sourceRoot: meteorRoot, sourceKind: 'checkout', sourceProcessors: [] },
+    { name: 'notes', sourceRoot: externalPackageRoot, sourceKind: 'project', sourceProcessors: [] },
+    { name: 'tracker', sourceRoot: trackerRoot, sourceKind: 'test-target', sourceProcessors: [] },
   ]);
   assert.equal(Object.isFrozen(receivedContext.localPackages), true);
+});
+
+test('local package inventory projects generic source-processor provenance', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-provider-processors-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  for (const name of ['standard', 'custom']) {
+    fs.mkdirSync(path.join(root, name), { recursive: true });
+  }
+  const sources = {
+    standard: {
+      sourceRoot: path.join(root, 'standard'),
+      architectures: [{ uses: [
+        { package: 'typescript' },
+        { package: 'ecmascript' },
+        { package: 'mongo' },
+      ] }],
+    },
+    custom: {
+      sourceRoot: path.join(root, 'custom'),
+      architectures: [
+        { uses: [{ package: 'custom-compiler' }, { package: 'ecmascript' }] },
+        { uses: [{ package: 'custom-compiler' }] },
+      ],
+    },
+  };
+  const localCatalog = {
+    async getAllPackageNames() { return Object.keys(sources); },
+    getPackageSource(name) { return sources[name]; },
+  };
+  const packageCatalog = {
+    async getLatestVersion(name) {
+      return {
+        containsPlugins: [
+          'typescript',
+          'ecmascript',
+          'custom-compiler',
+        ].includes(name),
+      };
+    },
+  };
+
+  const inventory = await collectTestRunnerLocalPackages(localCatalog, {
+    exists: fs.existsSync,
+    pathIsAbsolute: path.isAbsolute,
+    pathRelative: path.relative,
+    pathResolve: path.resolve,
+  }, {
+    packageCatalog,
+    selectedPackageNames: ['custom'],
+  });
+
+  assert.deepEqual(inventory, [{
+    name: 'custom',
+    sourceRoot: path.join(root, 'custom'),
+    sourceKind: 'test-target',
+    sourceProcessors: ['custom-compiler', 'ecmascript'],
+  }, {
+    name: 'standard',
+    sourceRoot: path.join(root, 'standard'),
+    sourceKind: 'project',
+    sourceProcessors: ['ecmascript', 'typescript'],
+  }]);
 });

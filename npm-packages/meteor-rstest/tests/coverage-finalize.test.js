@@ -309,15 +309,31 @@ test('coverage finalizer CLI consumes only its explicit manifest', t => {
     [fixture.files.included]: fileCoverage(fixture.files.included, [1]),
   });
   const manifestPath = path.join(fixture.artifactRoot, 'manifest.json');
+  const configMarker = path.join(fixture.root, 'finalizer-config-evaluated.txt');
   fs.writeFileSync(manifestPath, JSON.stringify({
     schemaVersion: 1,
     generation: fixture.generation,
     appRoot: fixture.appRoot,
+    providerRoot: fixture.appRoot,
+    coveragePolicy: {
+      schemaVersion: 1,
+      enabled: true,
+      provider: 'istanbul',
+      reporters: [],
+      reportsDirectory: 'coverage',
+      include: [],
+      exclude: [],
+      reportOnFailure: false,
+      clean: false,
+      thresholds: { lines: 100 },
+      allowExternal: false,
+    },
     localPackages: [],
     artifacts: [artifact],
     testExitCode: 0,
   }), { mode: 0o600 });
   fs.writeFileSync(path.join(fixture.appRoot, 'rstest.config.js'), `
+    require('node:fs').writeFileSync(${JSON.stringify(configMarker)}, 'evaluated');
     module.exports = {
       coverage: {
         enabled: true,
@@ -347,6 +363,59 @@ test('coverage finalizer CLI consumes only its explicit manifest', t => {
 
   assert.equal(result.status, 0, result.stderr || result.stdout);
   assert.doesNotMatch(result.stdout, /Test Files|Tests /);
+  assert.equal(fs.existsSync(configMarker), false);
+});
+
+test('finalizer resolves provider from harness and thresholds physical package from source root', async t => {
+  const fixture = createFixture(t);
+  const sourceRoot = fixture.root;
+  const providerRoot = path.join(fixture.root, 'package-harness');
+  const packageRoot = path.join(sourceRoot, 'packages', 'physical-package');
+  const source = path.join(packageRoot, 'source.js');
+  fs.mkdirSync(providerRoot, { recursive: true });
+  fs.writeFileSync(path.join(providerRoot, 'package.json'), '{}\n');
+  fs.mkdirSync(packageRoot, { recursive: true });
+  fs.writeFileSync(source, 'export const covered = true;\n');
+  const artifact = writeArtifact(fixture, 'package', {
+    [source]: fileCoverage(source, [1]),
+  });
+  const fake = providerFake();
+  const loads = [];
+
+  const result = await finalizeCoverage({
+    manifest: {
+      schemaVersion: 1,
+      generation: fixture.generation,
+      appRoot: sourceRoot,
+      providerRoot,
+      coveragePolicy: {
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'istanbul',
+        reporters: [],
+        reportsDirectory: 'coverage',
+        include: ['packages/**/*.js'],
+        exclude: [],
+        reportOnFailure: false,
+        clean: false,
+        thresholds: { 'packages/physical-package/**/*.js': { lines: 100 } },
+        allowExternal: false,
+      },
+      localPackages: [{ name: 'physical-package', sourceRoot: packageRoot }],
+      artifacts: [artifact],
+      testExitCode: 0,
+    },
+    async loadCoverageProvider(options) {
+      loads.push(options);
+      return fake.provider;
+    },
+  });
+
+  assert.equal(result.exitCode, 0);
+  assert.deepEqual(result.files, [fs.realpathSync(source)]);
+  assert.equal(loads[0].root, providerRoot);
+  assert.equal(loads[0].options.reportsDirectory, path.join(sourceRoot, 'coverage'));
+  assert.equal(fake.calls.reports.length, 1);
 });
 
 test('finalizer rejects replay of a consumed generation', async t => {

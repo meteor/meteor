@@ -9,7 +9,10 @@ const {
   assertNoSymlinkComponents,
   readCoverageArtifact,
 } = require('./artifact.js');
-const { canonicalizeCoverageMaps } = require('./paths.js');
+const {
+  canonicalizeCoverageMaps,
+  coveragePathCandidates,
+} = require('./paths.js');
 
 const THRESHOLD_KEYS = ['lines', 'functions', 'statements', 'branches'];
 const DEFAULT_EXCLUDE = [
@@ -86,6 +89,16 @@ function validateManifest(manifest) {
       typeof manifest.generation !== 'string' ||
       !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(manifest.generation) ||
       typeof manifest.appRoot !== 'string' || !path.isAbsolute(manifest.appRoot) ||
+      manifest.providerRoot !== undefined && (
+        typeof manifest.providerRoot !== 'string' ||
+        !path.isAbsolute(manifest.providerRoot)
+      ) ||
+      manifest.coveragePolicy !== undefined && (
+        !manifest.coveragePolicy ||
+        typeof manifest.coveragePolicy !== 'object' ||
+        Array.isArray(manifest.coveragePolicy) ||
+        manifest.coveragePolicy.schemaVersion !== 1
+      ) ||
       !Array.isArray(manifest.localPackages) ||
       !Array.isArray(manifest.artifacts) || manifest.artifacts.length === 0 ||
       !Number.isInteger(manifest.testExitCode) || manifest.testExitCode < 0) {
@@ -407,7 +420,12 @@ function checkThresholdValue({ metric, group, actual, expected, file }) {
     : `${location}${metric} coverage ${actual.pct}% does not meet ${expected}% for ${group}`;
 }
 
-function evaluateThresholds({ coverageMap, thresholds, appRoot }) {
+function evaluateThresholds({
+  coverageMap,
+  thresholds,
+  appRoot,
+  localPackages = [],
+}) {
   if (thresholds === undefined) return [];
   if (!thresholds || typeof thresholds !== 'object' || Array.isArray(thresholds)) {
     throw finalizerError(
@@ -453,9 +471,11 @@ function evaluateThresholds({ coverageMap, thresholds, appRoot }) {
         `Coverage threshold rule ${glob} must be an object.`,
       );
     }
-    const matches = picomatch(glob);
+    const matches = picomatch(glob.replaceAll('\\', '/'), { dot: true });
     const matchedFiles = files.filter(filename =>
-      matches(slash(path.relative(appRoot, filename)))
+      coveragePathCandidates(filename, { appRoot, localPackages }).some(
+        candidate => matches(candidate),
+      )
     );
     if (matchedFiles.length === 0) {
       failures.push(`coverage data for ${glob} was not found`);
@@ -498,7 +518,10 @@ async function finalizeCoverage({
 }) {
   const manifest = validateManifest(manifestInput);
   claimCoverageGeneration(manifest);
-  const coverageOptions = normalizeCoverageConfig(config, manifest.appRoot);
+  const coverageConfig = manifest.coveragePolicy
+    ? { coverage: manifest.coveragePolicy }
+    : config;
+  const coverageOptions = normalizeCoverageConfig(coverageConfig, manifest.appRoot);
   const consumed = new Set();
   const artifacts = manifest.artifacts.map(artifact => readCoverageArtifact({
     filePath: artifact.path,
@@ -520,7 +543,7 @@ async function finalizeCoverage({
   );
   const provider = await loadCoverageProvider({
     options: coverageOptions,
-    root: manifest.appRoot,
+    root: manifest.providerRoot || manifest.appRoot,
   });
   if (!provider || typeof provider.createCoverageMap !== 'function' ||
       typeof provider.generateReports !== 'function') {
@@ -553,6 +576,7 @@ async function finalizeCoverage({
     coverageMap,
     thresholds: coverageOptions.thresholds,
     appRoot: manifest.appRoot,
+    localPackages: manifest.localPackages,
   });
   if (failures.length > 0) onThresholdFailure(failures.join('\n'));
   return {

@@ -40,6 +40,57 @@ test('coverage instrumentation resolves from the coordinator dependency context'
   );
 });
 
+test('package transforms warn once and exclude selected custom compiler sources', () => {
+  const warnings = [];
+  const standardRoot = path.resolve('/packages/standard');
+  const typescriptRoot = path.resolve('/packages/typescript');
+  const customRoot = path.resolve('/packages/custom');
+  const unselectedRoot = path.resolve('/packages/unselected');
+  const transforms = require('../provider/provider.js').collectLocalPackageTransforms([
+    {
+      name: 'standard',
+      sourceRoot: standardRoot,
+      sourceKind: 'test-target',
+      sourceProcessors: ['ecmascript'],
+    },
+    {
+      name: 'typescript',
+      sourceRoot: typescriptRoot,
+      sourceKind: 'test-target',
+      sourceProcessors: ['typescript', 'ecmascript'],
+    },
+    {
+      name: 'custom',
+      sourceRoot: customRoot,
+      sourceKind: 'test-target',
+      sourceProcessors: ['custom-compiler', 'custom-compiler'],
+    },
+    {
+      name: 'unselected',
+      sourceRoot: unselectedRoot,
+      sourceKind: 'project',
+      sourceProcessors: ['another-compiler'],
+    },
+  ], [{
+    name: 'custom',
+    sourceRoot: customRoot,
+    sourceKind: 'test-target',
+    sourceProcessors: ['custom-compiler'],
+  }], { warn: message => warnings.push(message) });
+
+  assert.deepEqual(transforms, {
+    packageRoots: {
+      standard: standardRoot,
+      typescript: typescriptRoot,
+    },
+    includePackages: ['standard', 'typescript'],
+  });
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /custom/);
+  assert.match(warnings[0], /custom-compiler/);
+  assert.doesNotMatch(warnings[0], /unselected/);
+});
+
 function createContext(t, overrides = {}) {
   const appDir = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-provider-'));
   t.after(() => fs.rmSync(appDir, { recursive: true, force: true }));
@@ -123,6 +174,22 @@ function argumentValues(args, flag) {
   return args.flatMap((value, index) => value === flag ? [args[index + 1]] : []);
 }
 
+function coveragePolicy(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    enabled: true,
+    provider: 'istanbul',
+    reporters: ['text', 'html', 'clover', 'json'],
+    reportsDirectory: 'coverage',
+    include: [],
+    exclude: [],
+    reportOnFailure: false,
+    clean: true,
+    allowExternal: false,
+    ...overrides,
+  };
+}
+
 function writeCoverageSettings({ args, context }) {
   const settingsFlag = args.includes('--runtime-plan-output')
     ? '--runtime-plan-output'
@@ -145,6 +212,7 @@ function writeCoverageSettings({ args, context }) {
     exclude: [],
     allowExternal: false,
     artifactRoot,
+    policy: coveragePolicy(),
   };
   fs.writeFileSync(coveragePlanPath, JSON.stringify(coverage));
   fs.writeFileSync(settingsPath, JSON.stringify({
@@ -348,6 +416,14 @@ test('explicit generated runtime project never delegates legacy files to user co
         legacyFiles: [legacyFile],
         files: [],
       };
+    },
+    startRstestProcess({ args }) {
+      const output = args[args.indexOf('--coverage-preflight-output') + 1];
+      fs.mkdirSync(path.dirname(output), { recursive: true });
+      fs.writeFileSync(output, JSON.stringify(coveragePolicy({
+        enabled: false,
+      })));
+      return { completion: Promise.resolve(0), async stop() {} };
     },
   });
 
@@ -665,6 +741,7 @@ test('runtime worker child reuses parent settings and skips native Rstest', asyn
       exclude: [],
       allowExternal: false,
       artifactRoot: coverageRoot,
+      policy: coveragePolicy(),
     },
   }));
   const runtimeManifest = path.join(workersRoot, 'server-1-files.json');
@@ -1002,6 +1079,70 @@ test('runtime coverage exposes its plan to Rspack and exact local package transf
   });
 });
 
+test('config-only coverage preflight allocates Meteor instrumentation before build', async t => {
+  const context = createContext(t);
+  context.options.serverOnly = true;
+  context.options.project = ['meteor-runtime-server'];
+  writeRuntimeFiles(context.appDir, ['config-coverage.test.js']);
+  fs.writeFileSync(
+    path.join(context.appDir, 'rstest.config.js'),
+    "module.exports = { coverage: { enabled: true, provider: 'istanbul' } };\n",
+  );
+  context.localPackages = [{
+    name: 'app-package',
+    sourceRoot: path.join(context.appDir, 'packages', 'app-package'),
+    sourceKind: 'app',
+  }];
+  const calls = [];
+  const capabilities = [];
+  const provider = new RstestTestRunnerProvider(context, {
+    async ensureRstestInstalled() {},
+    selectRstestOptionalCapabilities(options) {
+      capabilities.push(options.coverage);
+      return options.coverage ? ['coverage'] : [];
+    },
+    assertRstestOptionalCapabilities() {},
+    resolveRstestCoverageInstrumentation() {
+      return { swcPlugin: '/coverage.wasm', babelPlugin: '/istanbul.js' };
+    },
+    startRstestProcess({ args }) {
+      calls.push(args);
+      const flag = args.indexOf('--coverage-preflight-output');
+      assert.notEqual(flag, -1);
+      const output = args[flag + 1];
+      fs.mkdirSync(path.dirname(output), { recursive: true });
+      fs.writeFileSync(output, JSON.stringify({
+        schemaVersion: 1,
+        enabled: true,
+        provider: 'istanbul',
+        reporters: ['text'],
+        reportsDirectory: 'coverage',
+        include: [],
+        exclude: [],
+        reportOnFailure: false,
+        clean: true,
+        allowExternal: false,
+      }));
+      return { completion: Promise.resolve(0), async stop() {} };
+    },
+  });
+
+  await provider.validate();
+  const plan = await provider.prepare();
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(capabilities, [true]);
+  assert.match(provider.coverageGeneration, /^[a-f0-9]{32}$/);
+  assert.equal(
+    plan.buildPluginOptions.rspack.context.coveragePlanPath,
+    provider.coveragePlanPath,
+  );
+  assert.deepEqual(
+    plan.buildPluginOptions['babel-compiler'].sourceTransforms.includePackages,
+    ['app-package'],
+  );
+});
+
 test('full-app coverage instruments the app even without Meteor-runtime test files', async t => {
   const context = createContext(t);
   context.options.fullApp = true;
@@ -1157,6 +1298,7 @@ test('mixed coverage finalizes one generation manifest and preserves exit preced
           exclude: [],
           allowExternal: false,
           artifactRoot,
+          policy: coveragePolicy(),
         };
         fs.writeFileSync(coveragePlanPath, JSON.stringify(coverage));
         fs.writeFileSync(settingsPath, JSON.stringify({
@@ -1195,6 +1337,8 @@ test('mixed coverage finalizes one generation manifest and preserves exit preced
     assert.equal(fs.statSync(manifestPath).mode & 0o777, 0o600);
     assert.equal(manifest.schemaVersion, 1);
     assert.equal(manifest.appRoot, context.appDir);
+    assert.equal(manifest.providerRoot, context.npm.root);
+    assert.deepEqual(manifest.coveragePolicy, coveragePolicy());
     assert.deepEqual(manifest.localPackages, context.localPackages);
     assert.equal(manifest.testExitCode, testExitCode);
     assert.deepEqual(manifest.artifacts.map(artifact => artifact.producer), [
