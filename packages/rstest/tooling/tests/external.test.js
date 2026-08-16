@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { spawn } = require('node:child_process');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -14,6 +15,84 @@ const {
 } = require('../../runtime/coverage-protocol.js');
 
 const coverageGeneration = 'abcdef1234567890abcdef1234567890';
+const shardWorkerScript = String.raw`
+  const fs = require('node:fs');
+  const support = require(process.argv[1]);
+  const wait = delay => new Promise(resolve => setTimeout(resolve, delay));
+  (async () => {
+    fs.writeFileSync(process.env.METEOR_RSTEST_TEST_READY, '', { flag: 'wx' });
+    while (!fs.existsSync(process.env.METEOR_RSTEST_TEST_BARRIER)) await wait(5);
+    const coverage = JSON.parse(Buffer.from(
+      process.env.METEOR_RSTEST_TEST_COVERAGE,
+      'base64',
+    ).toString('utf8'));
+    const page = {
+      async close() {},
+      async evaluate(callback) {
+        if (callback.name === 'readBrowserCoverage') {
+          return {
+            documentId: process.env.METEOR_RSTEST_TEST_SHARD_ID,
+            coverage,
+          };
+        }
+      },
+      isClosed() { return false; },
+    };
+    const context = {
+      async addInitScript() {},
+      async close() {},
+      async exposeBinding() {},
+      async newPage() { return page; },
+      on() {},
+      pages() { return [page]; },
+    };
+    const browser = {
+      async close() {},
+      contexts() { return [context]; },
+      async newContext() { return context; },
+    };
+    const collector = support.createPlaywrightCoverageCollector({
+      enabled: true,
+      generation: process.env.METEOR_RSTEST_COVERAGE_GENERATION,
+    });
+    await collector.install({ browser, context, page });
+    await collector.writeShard({
+      directory: process.env.METEOR_RSTEST_COVERAGE_SHARD_DIR,
+      shardId: process.env.METEOR_RSTEST_TEST_SHARD_ID,
+    });
+  })().catch(error => {
+    process.stderr.write(error.stack || String(error));
+    process.exitCode = 1;
+  });
+`;
+
+function startShardWorker({ env, supportPath, shardId, coverage, ready, barrier }) {
+  const child = spawn(process.execPath, ['-e', shardWorkerScript, supportPath], {
+    env: {
+      ...env,
+      METEOR_RSTEST_TEST_BARRIER: barrier,
+      METEOR_RSTEST_TEST_COVERAGE: Buffer.from(JSON.stringify(coverage)).toString('base64'),
+      METEOR_RSTEST_TEST_READY: ready,
+      METEOR_RSTEST_TEST_SHARD_ID: shardId,
+    },
+    stdio: ['ignore', 'ignore', 'pipe'],
+  });
+  let stderr = '';
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  const completion = new Promise((resolve, reject) => {
+    child.once('error', reject);
+    child.once('close', code => resolve({ code, stderr }));
+  });
+  return { child, completion };
+}
+
+async function waitForPaths(paths, timeoutMs = 5000) {
+  const deadline = Date.now() + timeoutMs;
+  while (!paths.every(filename => fs.existsSync(filename))) {
+    if (Date.now() > deadline) throw new Error('Timed out waiting for shard workers.');
+    await new Promise(resolve => setTimeout(resolve, 5));
+  }
+}
 
 function fileCoverage(filename, hits) {
   return {
@@ -103,26 +182,11 @@ test('parallel external files merge shards into one commit before result', async
   const coverageRoot = path.join(root, coverageGeneration);
   const coverageShardDirectory = path.join(coverageRoot, 'e2e-shards');
   const coverageArtifactPath = path.join(coverageRoot, 'e2e.json');
-  await Promise.all([
-    coverageSupport.writeCoverageShard({
-      directory: coverageShardDirectory,
-      generation: coverageGeneration,
-      shardId: '11111111111111111111111111111111',
-      coverage: {
-        '/app/imports/shared.js': fileCoverage('/app/imports/shared.js', 1),
-        '/app/imports/first.js': fileCoverage('/app/imports/first.js', 2),
-      },
-    }),
-    coverageSupport.writeCoverageShard({
-      directory: coverageShardDirectory,
-      generation: coverageGeneration,
-      shardId: '22222222222222222222222222222222',
-      coverage: {
-        '/app/imports/shared.js': fileCoverage('/app/imports/shared.js', 3),
-        '/app/imports/second.js': fileCoverage('/app/imports/second.js', 4),
-      },
-    }),
-  ]);
+  const supportPath = require.resolve(
+    '../../../../npm-packages/meteor-rstest/src/coverage/playwright.js',
+  );
+  const barrier = path.join(root, 'release-workers');
+  const ready = [path.join(root, 'worker-one-ready'), path.join(root, 'worker-two-ready')];
   const gate = createCoverageFrameGate({
     generation: coverageGeneration,
     token: 'coverage-token',
@@ -132,6 +196,13 @@ test('parallel external files merge shards into one commit before result', async
   let childEnv;
   let artifact;
   let commitCount = 0;
+  let childCompleted = false;
+  let workers = [];
+  t.after(() => {
+    for (const worker of workers) {
+      if (worker.child.exitCode === null) worker.child.kill();
+    }
+  });
   const runner = new RstestExternal({
     appDir: '/app',
     url: 'http://localhost:3100/',
@@ -143,13 +214,52 @@ test('parallel external files merge shards into one commit before result', async
     coverageArtifactPath,
     coverageShardDirectory,
     coverageSupport,
-    coverageWaitTimeoutMs: 5,
     startProcess({ env }) {
       childEnv = env;
-      return { completion: Promise.resolve(0), stop() {} };
+      workers = [
+        startShardWorker({
+          env,
+          supportPath,
+          shardId: '11111111111111111111111111111111',
+          coverage: {
+            '/app/imports/shared.js': fileCoverage('/app/imports/shared.js', 1),
+            '/app/imports/first.js': fileCoverage('/app/imports/first.js', 2),
+          },
+          ready: ready[0],
+          barrier,
+        }),
+        startShardWorker({
+          env,
+          supportPath,
+          shardId: '22222222222222222222222222222222',
+          coverage: {
+            '/app/imports/shared.js': fileCoverage('/app/imports/shared.js', 3),
+            '/app/imports/second.js': fileCoverage('/app/imports/second.js', 4),
+          },
+          ready: ready[1],
+          barrier,
+        }),
+      ];
+      const completion = (async () => {
+        await waitForPaths(ready);
+        assert.equal(fs.existsSync(coverageShardDirectory), false);
+        fs.writeFileSync(barrier, 'release');
+        const results = await Promise.all(workers.map(worker => worker.completion));
+        assert.deepEqual(results.map(result => result.code), [0, 0],
+          results.map(result => result.stderr).join('\n'));
+        childCompleted = true;
+        return 0;
+      })();
+      return {
+        completion,
+        stop() {
+          for (const worker of workers) worker.child.kill();
+        },
+      };
     },
     async fetch(url, options) {
       if (url.endsWith('/coverage')) {
+        assert.equal(childCompleted, true);
         assert.equal(options.headers.origin, 'http://localhost:3100');
         const frame = JSON.parse(options.body);
         events.push(`coverage:${frame.type}`);
@@ -169,6 +279,7 @@ test('parallel external files merge shards into one commit before result', async
   await runner.start();
 
   assert.equal(commitCount, 1);
+  assert.equal(childCompleted, true);
   assert.deepEqual(events, [
     'coverage:begin',
     'coverage:chunk',
@@ -247,6 +358,22 @@ test('external coverage upload waits for child completion and precedes result', 
 });
 
 test('external result endpoint preserves ROOT_URL path prefix', async t => {
+  const ownedCoverageEnv = [
+    'METEOR_RSTEST_COVERAGE_TOKEN',
+    'METEOR_RSTEST_COVERAGE_GENERATION',
+    'METEOR_RSTEST_COVERAGE_PRODUCER',
+    'METEOR_RSTEST_COVERAGE_SHARD_DIR',
+  ];
+  const previousCoverageEnv = Object.fromEntries(
+    ownedCoverageEnv.map(name => [name, process.env[name]]),
+  );
+  for (const name of ownedCoverageEnv) process.env[name] = `stale-${name}`;
+  t.after(() => {
+    for (const name of ownedCoverageEnv) {
+      if (previousCoverageEnv[name] === undefined) delete process.env[name];
+      else process.env[name] = previousCoverageEnv[name];
+    }
+  });
   let submittedUrl;
   let childEnv;
   const runner = new RstestExternal({
@@ -272,6 +399,7 @@ test('external result endpoint preserves ROOT_URL path prefix', async t => {
   assert.equal('METEOR_RSTEST_COVERAGE_TOKEN' in childEnv, false);
   assert.equal('METEOR_RSTEST_COVERAGE_GENERATION' in childEnv, false);
   assert.equal('METEOR_RSTEST_COVERAGE_PRODUCER' in childEnv, false);
+  assert.equal('METEOR_RSTEST_COVERAGE_SHARD_DIR' in childEnv, false);
 });
 
 test('external coverage fails deterministically without shards or posting a result', async t => {

@@ -100,13 +100,20 @@ class RstestExternal {
     const env = {
       ...process.env,
       METEOR_RSTEST_BASE_URL: this.url,
-      ...(this.coverageGeneration ? {
+    };
+    for (const name of [
+      'METEOR_RSTEST_COVERAGE_TOKEN',
+      'METEOR_RSTEST_COVERAGE_GENERATION',
+      'METEOR_RSTEST_COVERAGE_PRODUCER',
+      'METEOR_RSTEST_COVERAGE_SHARD_DIR',
+    ]) delete env[name];
+    if (this.coverageGeneration) {
+      Object.assign(env, {
         METEOR_RSTEST_COVERAGE_GENERATION: this.coverageGeneration,
         METEOR_RSTEST_COVERAGE_PRODUCER: 'e2e',
         METEOR_RSTEST_COVERAGE_SHARD_DIR: this.coverageShardDirectory,
-      } : {}),
-    };
-    if (this.coverageGeneration) delete env.METEOR_RSTEST_COVERAGE_TOKEN;
+      });
+    }
     this.handle = this.startProcess({
       appDir: this.appDir,
       args: this.args,
