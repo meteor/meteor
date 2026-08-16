@@ -62,8 +62,12 @@ const PUBLISH_FILE_SCRIPT = `
   const fs = require('node:fs');
   const expectedDevice = BigInt(process.argv[1]);
   const expectedInode = BigInt(process.argv[2]);
-  const source = process.argv[3];
-  const destination = process.argv[4];
+  const expectedSourceDevice = BigInt(process.argv[3]);
+  const expectedSourceInode = BigInt(process.argv[4]);
+  const source = process.argv[5];
+  const destination = process.argv[6];
+  const sameIdentity = (left, right) =>
+    left.dev === right.dev && left.ino === right.ino;
   let flags = fs.constants.O_RDONLY;
   if (Number.isInteger(fs.constants.O_DIRECTORY)) flags |= fs.constants.O_DIRECTORY;
   if (Number.isInteger(fs.constants.O_NOFOLLOW) && fs.constants.O_NOFOLLOW) {
@@ -76,7 +80,9 @@ const PUBLISH_FILE_SCRIPT = `
     if (!parent.isDirectory() || parent.dev !== expectedDevice ||
         parent.ino !== expectedInode) process.exit(73);
     const sourceStat = fs.lstatSync(source, { bigint: true });
-    if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) process.exit(73);
+    if (!sourceStat.isFile() || sourceStat.isSymbolicLink() ||
+        sourceStat.dev !== expectedSourceDevice ||
+        sourceStat.ino !== expectedSourceInode) process.exit(73);
     try {
       fs.linkSync(source, destination);
     } catch (error) {
@@ -85,19 +91,39 @@ const PUBLISH_FILE_SCRIPT = `
     }
     const destinationStat = fs.lstatSync(destination, { bigint: true });
     if (!destinationStat.isFile() || destinationStat.isSymbolicLink() ||
-        destinationStat.dev !== sourceStat.dev ||
-        destinationStat.ino !== sourceStat.ino) process.exit(73);
+        !sameIdentity(destinationStat, sourceStat)) {
+      // A successful link followed by an identity mismatch means the source
+      // pathname raced. Remove only when both current names still prove they
+      // reference the same unexpected inode installed by this link.
+      try {
+        const currentSource = fs.lstatSync(source, { bigint: true });
+        const currentDestination = fs.lstatSync(destination, { bigint: true });
+        if (sameIdentity(currentSource, destinationStat) &&
+            sameIdentity(currentDestination, destinationStat)) {
+          fs.unlinkSync(destination);
+        }
+      } catch {}
+      process.exit(73);
+    }
   } finally {
     if (descriptor !== undefined) fs.closeSync(descriptor);
   }
 `;
 
-function publishPinnedFile({ directory, temporaryPath, outputPath, parentStat }) {
+function publishPinnedFile({
+  directory,
+  temporaryPath,
+  outputPath,
+  parentStat,
+  temporaryStat,
+}) {
   const result = childProcess.spawnSync(process.execPath, [
     '-e',
     PUBLISH_FILE_SCRIPT,
     parentStat.dev.toString(),
     parentStat.ino.toString(),
+    temporaryStat.dev.toString(),
+    temporaryStat.ino.toString(),
     path.basename(temporaryPath),
     path.basename(outputPath),
   ], {
@@ -202,7 +228,13 @@ function writeCoverageArtifact({ outputPath, expectedPath, artifact }) {
         'Coverage artifact parent changed during publication.',
       );
     }
-    publishPinnedFile({ directory, temporaryPath, outputPath, parentStat });
+    publishPinnedFile({
+      directory,
+      temporaryPath,
+      outputPath,
+      parentStat,
+      temporaryStat,
+    });
     assertNoSymlinkComponents(directory);
     const publishedParent = fs.statSync(fs.realpathSync(directory), { bigint: true });
     if (fs.realpathSync(directory) !== parentRealPath ||
@@ -341,6 +373,7 @@ function createServerCoverageLifecycle({
   const clientDeferred = clientExpected ? createDeferred() : null;
   let clientWaitTimer;
   let clientSettled = false;
+  let clientCommitted = false;
   let clientGate;
   if (clientExpected) {
     clientGate = createCoverageFrameGate({
@@ -350,6 +383,27 @@ function createServerCoverageLifecycle({
     });
   }
 
+  function clearClientWaitTimer() {
+    if (!clientWaitTimer) return;
+    clearTimeout(clientWaitTimer);
+    clientWaitTimer = undefined;
+  }
+
+  function failClient(error) {
+    if (clientSettled) return;
+    clientSettled = true;
+    clearClientWaitTimer();
+    clientDeferred.reject(error);
+  }
+
+  function completeClient(artifact) {
+    if (clientSettled) return;
+    clientCommitted = true;
+    clientSettled = true;
+    clearClientWaitTimer();
+    clientDeferred.resolve(artifact);
+  }
+
   const handler = clientExpected ? (request, response, next = () => {}) => {
     if (request.method !== 'POST') return next();
     if (!requestIsSameOrigin(request) ||
@@ -357,9 +411,22 @@ function createServerCoverageLifecycle({
       sendJson(response, 403, { error: 'Coverage request is not authorized.' });
       return;
     }
+    if (clientSettled) {
+      sendJson(response, 409, {
+        error: clientCommitted
+          ? 'Coverage producer has already committed.'
+          : 'Coverage producer has already failed.',
+      });
+      return;
+    }
     const contentType = String(request.headers['content-type'] || '').split(';', 1)[0];
     if (contentType !== 'application/json') {
-      sendJson(response, 415, { error: 'Coverage request must be JSON.' });
+      const error = coverageError(
+        'METEOR_RSTEST_COVERAGE_CONTENT_TYPE',
+        'Coverage request must be JSON.',
+      );
+      failClient(error);
+      sendJson(response, 415, { error: error.message });
       return;
     }
     const chunks = [];
@@ -376,7 +443,12 @@ function createServerCoverageLifecycle({
     });
     request.on('end', () => {
       if (oversized) {
-        sendJson(response, 413, { error: 'Coverage frame exceeds the request limit.' });
+        const error = coverageError(
+          'METEOR_RSTEST_COVERAGE_OVERSIZED',
+          'Coverage frame exceeds the request limit.',
+        );
+        failClient(error);
+        sendJson(response, 413, { error: error.message });
         return;
       }
       try {
@@ -389,24 +461,16 @@ function createServerCoverageLifecycle({
             expectedPath: coverage.artifacts.client,
             artifact,
           });
-          if (clientWaitTimer) clearTimeout(clientWaitTimer);
-          clientSettled = true;
-          clientDeferred.resolve(artifact);
+          completeClient(artifact);
         }
         sendJson(response, 200, accepted);
       } catch (error) {
         const replay = error.code === 'METEOR_RSTEST_COVERAGE_REPLAY';
-        if (!replay) {
-          clientSettled = true;
-          clientDeferred.reject(error);
-        }
+        failClient(error);
         sendJson(response, replay ? 409 : 400, { error: error.message });
       }
     });
-    request.on('error', error => {
-      clientSettled = true;
-      clientDeferred.reject(error);
-    });
+    request.on('error', failClient);
   } : null;
 
   return {
@@ -434,8 +498,7 @@ function createServerCoverageLifecycle({
       if (!clientDeferred) return Promise.resolve();
       if (!clientSettled && !clientWaitTimer) {
         clientWaitTimer = setTimeout(() => {
-          clientSettled = true;
-          clientDeferred.reject(coverageError(
+          failClient(coverageError(
             'METEOR_RSTEST_COVERAGE_TIMEOUT',
             `Did not receive Meteor client coverage commit after ${timeoutMs}ms.`,
           ));
