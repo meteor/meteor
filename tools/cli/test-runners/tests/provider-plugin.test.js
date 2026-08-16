@@ -1,7 +1,7 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
-const test = require('node:test');
+const test = global.test || require('node:test');
 
 const {
   createRegisterTestRunner,
@@ -168,6 +168,10 @@ test('command test-runner context is deeply frozen, scoped, and JSON-safe', () =
 
 test('provider fixture receives resolved, sorted physical local package entries', async () => {
   const harness = makeHarness();
+  const repositoryRoot = path.resolve(__dirname, '../../../..');
+  const meteorRoot = path.join(repositoryRoot, 'packages/meteor');
+  const trackerRoot = path.join(repositoryRoot, 'packages/tracker');
+  const missingRoot = path.join(repositoryRoot, 'packages/not-present');
   let receivedContext;
   harness.register(makeRegistration(), context => {
     receivedContext = context;
@@ -180,9 +184,9 @@ test('provider fixture receives resolved, sorted physical local package entries'
     },
     getPackageSource(name) {
       return {
-        tracker: { sourceRoot: 'packages/tracker' },
-        missing: { sourceRoot: 'packages/not-present' },
-        meteor: { sourceRoot: 'packages/meteor' },
+        tracker: { sourceRoot: path.relative(process.cwd(), trackerRoot) },
+        missing: { sourceRoot: path.relative(process.cwd(), missingRoot) },
+        meteor: { sourceRoot: path.relative(process.cwd(), meteorRoot) },
       }[name];
     },
   };
@@ -196,8 +200,8 @@ test('provider fixture receives resolved, sorted physical local package entries'
   harness.isopack.testRunnerProviders[0].factory(context);
 
   assert.deepEqual(receivedContext.localPackages, [
-    { name: 'meteor', sourceRoot: path.resolve('packages/meteor') },
-    { name: 'tracker', sourceRoot: path.resolve('packages/tracker') },
+    { name: 'meteor', sourceRoot: meteorRoot },
+    { name: 'tracker', sourceRoot: trackerRoot },
   ]);
   assert.equal(Object.isFrozen(receivedContext.localPackages), true);
 });
