@@ -1098,7 +1098,7 @@ test('full-app runtime coverage separates an app-test host from the client worke
   );
   assert.deepEqual(
     provider.coverageArtifacts.map(artifact => artifact.producer),
-    ['native', 'server', 'worker-server-1', 'e2e'],
+    ['native', 'server', 'worker-server-1', 'client', 'e2e'],
   );
   assert.ok(provider.nativeArgs.includes('--coverage-artifact'));
   assert.equal(provider.externalArgs.includes('--coverage-artifact'), false);

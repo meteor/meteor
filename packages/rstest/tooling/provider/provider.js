@@ -1205,6 +1205,12 @@ class RstestTestRunnerProvider {
             path: this.workerPayload.coveragePath,
           });
         }
+        if (this.workerPayload.clientFiles.length > 0) {
+          this.coverageArtifacts.push({
+            producer: 'client',
+            path: path.join(this.coverageRoot, 'client.json'),
+          });
+        }
       } else if (this.workerHostPlan) {
         if (selection.needsExternal && server) {
           this.coverageArtifacts.push({
@@ -1217,6 +1223,18 @@ class RstestTestRunnerProvider {
           this.coverageArtifacts.push({
             producer,
             path: descriptor.payload.coveragePath,
+          });
+        }
+        if (this.workerHostPlan.descriptors.some(descriptor => {
+          const manifest = JSON.parse(fs.readFileSync(
+            descriptor.payload.runtimeManifest,
+            'utf8',
+          ));
+          return Array.isArray(manifest.clientFiles) && manifest.clientFiles.length > 0;
+        })) {
+          this.coverageArtifacts.push({
+            producer: 'client',
+            path: path.join(this.coverageRoot, 'client.json'),
           });
         }
       } else {
