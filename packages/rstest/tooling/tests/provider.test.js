@@ -1024,6 +1024,8 @@ test('full-app coverage instruments the app even without Meteor-runtime test fil
 
   assert.equal(plan.metadata.runtime, false);
   assert.equal(plan.metadata.external, true);
+  assert.equal(plan.buildPluginOptions.rspack.context.runtime, false);
+  assert.equal(plan.buildPluginOptions.rspack.context.runtimeManifest, null);
   assert.equal(plan.metadata.runtimeServer, false);
   assert.equal(plan.metadata.runtimeClient, false);
   assert.deepEqual(plan.buildPluginOptions.rspack.targets, {
@@ -1083,7 +1085,7 @@ test('full-app runtime coverage separates an app-test host from the client worke
 
   assert.equal(plan.mode, 'meteor-host');
   assert.equal(plan.hostTestMode, 'app-test');
-  assert.equal(plan.metadata.runtime, true);
+  assert.equal(plan.metadata.runtime, false);
   assert.equal(plan.metadata.runtimeClient, false);
   assert.equal(plan.metadata.runtimeServer, false);
   assert.equal(plan.metadata.coverageServer, true);

@@ -1191,6 +1191,10 @@ class RstestTestRunnerProvider {
         );
       }
     }
+    if (dedicatedRuntimeHosts) {
+      this.runtimeManifest = null;
+      this.metadata.runtime = false;
+    }
     this.coverageArtifacts = [];
     if (this.coverageRoot) {
       if (this.coverageNativeArtifactPath) {
@@ -1277,7 +1281,7 @@ class RstestTestRunnerProvider {
         }),
         context: {
           testRunner: 'rstest',
-          runtime: selection.needsRuntime,
+          runtime: dedicatedRuntimeHosts ? false : selection.needsRuntime,
           upstreamRuntime: this.upstreamRuntime,
           external: selection.needsExternal,
           server,
