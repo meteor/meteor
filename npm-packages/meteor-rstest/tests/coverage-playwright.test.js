@@ -461,6 +461,44 @@ test('sequential Playwright files release shared browser instrumentation', async
   assert.equal(merged['/app/imports/second-worker-file.js'].s[0], 5);
 });
 
+test('collector teardown restores persistent page and context instrumentation', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-e2e-persistent-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const persistent = fixture();
+  const originalContextNewPage = persistent.context.newPage;
+  const originalContextClose = persistent.context.close;
+  const originalPageClose = persistent.page.close;
+
+  const firstCollector = createPlaywrightCoverageCollector({ enabled: true, generation });
+  await firstCollector.install(persistent);
+  await firstCollector.writeShard({
+    directory,
+    shardId: '55555555555555555555555555555555',
+  });
+
+  assert.equal(persistent.context.newPage, originalContextNewPage);
+  assert.equal(persistent.context.close, originalContextClose);
+  assert.equal(persistent.page.close, originalPageClose);
+  assert.equal(persistent.context.listenerCount('page'), 0);
+
+  const secondCollector = createPlaywrightCoverageCollector({ enabled: true, generation });
+  await secondCollector.install(persistent);
+  persistent.page.document.coverage = coverage('/app/imports/persistent-page.js', 7);
+  await persistent.page.close();
+
+  assert.equal(firstCollector.mergedCoverage()['/app/imports/page.js'].s[0], 1);
+  assert.equal(
+    secondCollector.mergedCoverage()['/app/imports/persistent-page.js'].s[0],
+    7,
+  );
+  await secondCollector.writeShard({
+    directory,
+    shardId: '66666666666666666666666666666666',
+  });
+  assert.equal(persistent.context.listenerCount('page'), 0);
+});
+
 test('Playwright collector submits one authenticated committed e2e artifact', async () => {
   const primary = fixture();
   const requests = [];

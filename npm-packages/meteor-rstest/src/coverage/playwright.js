@@ -399,7 +399,9 @@ function createPlaywrightCoverageCollector({
   const trackedBrowsers = new WeakSet();
   const browserRestorations = new Map();
   const trackedContexts = new WeakSet();
+  const contextRestorations = new Map();
   const trackedPages = new Set();
+  const pageRestorations = new Map();
   const pageTracking = new WeakMap();
   const pendingTracking = new Set();
   const trackingErrors = [];
@@ -413,6 +415,28 @@ function createPlaywrightCoverageCollector({
   const browserScripts = createBrowserCaptureScripts(bindingName);
 
   function releaseBrowserInstrumentation() {
+    for (const [page, restoration] of pageRestorations) {
+      if (page.close === restoration.wrappedClose) {
+        page.close = restoration.originalClose;
+      }
+    }
+    pageRestorations.clear();
+    for (const [context, restoration] of contextRestorations) {
+      if (context.newPage === restoration.wrappedNewPage) {
+        context.newPage = restoration.originalNewPage;
+      }
+      if (context.close === restoration.wrappedClose) {
+        context.close = restoration.originalClose;
+      }
+      if (restoration.pageListener) {
+        if (typeof context.off === 'function') {
+          context.off('page', restoration.pageListener);
+        } else if (typeof context.removeListener === 'function') {
+          context.removeListener('page', restoration.pageListener);
+        }
+      }
+    }
+    contextRestorations.clear();
     for (const [browser, restoration] of browserRestorations) {
       if (browser.newContext === restoration.wrappedNewContext) {
         browser.newContext = restoration.originalNewContext;
@@ -422,6 +446,9 @@ function createPlaywrightCoverageCollector({
       }
     }
     browserRestorations.clear();
+    trackedPages.clear();
+    pendingTracking.clear();
+    trackingErrors.length = 0;
   }
 
   function pageId(page) {
@@ -456,12 +483,15 @@ function createPlaywrightCoverageCollector({
         trackedPages.add(page);
         pageId(page);
         const originalClose = page.close;
+        let wrappedClose;
         if (typeof originalClose === 'function') {
-          page.close = async function meteorRstestCoveragePageClose(...args) {
+          wrappedClose = async function meteorRstestCoveragePageClose(...args) {
             await capturePage(page);
             return Reflect.apply(originalClose, this, args);
           };
+          page.close = wrappedClose;
         }
+        pageRestorations.set(page, { originalClose, wrappedClose });
         if (typeof page.evaluate === 'function' &&
             !(typeof page.isClosed === 'function' && page.isClosed())) {
           await page.evaluate(browserScripts.install);
@@ -482,22 +512,27 @@ function createPlaywrightCoverageCollector({
     await context.addInitScript(browserScripts.install);
 
     const originalNewPage = context.newPage;
+    let wrappedNewPage;
     if (typeof originalNewPage === 'function') {
-      context.newPage = async function meteorRstestCoverageNewPage(...args) {
+      wrappedNewPage = async function meteorRstestCoverageNewPage(...args) {
         const page = await Reflect.apply(originalNewPage, this, args);
         await trackPage(page);
         return page;
       };
+      context.newPage = wrappedNewPage;
     }
     const originalClose = context.close;
+    let wrappedClose;
     if (typeof originalClose === 'function') {
-      context.close = async function meteorRstestCoverageContextClose(...args) {
+      wrappedClose = async function meteorRstestCoverageContextClose(...args) {
         for (const page of context.pages()) await capturePage(page);
         return Reflect.apply(originalClose, this, args);
       };
+      context.close = wrappedClose;
     }
+    let pageListener;
     if (typeof context.on === 'function') {
-      context.on('page', page => {
+      pageListener = page => {
         const tracking = trackPage(page);
         pendingTracking.add(tracking);
         tracking.then(
@@ -507,8 +542,16 @@ function createPlaywrightCoverageCollector({
             trackingErrors.push(error);
           },
         );
-      });
+      };
+      context.on('page', pageListener);
     }
+    contextRestorations.set(context, {
+      originalClose,
+      originalNewPage,
+      pageListener,
+      wrappedClose,
+      wrappedNewPage,
+    });
     for (const page of context.pages()) await trackPage(page);
   }
 

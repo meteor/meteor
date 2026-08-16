@@ -1459,20 +1459,12 @@ class RstestTestRunnerProvider {
       };
       if (selection.needsExternal) {
         let workerProcess;
-        let resolveCompletion;
-        let rejectCompletion;
-        const completion = new Promise((resolve, reject) => {
-          resolveCompletion = resolve;
-          rejectCompletion = reject;
-        });
         this.startDeferredWorkers = () => {
           if (workerProcess) return workerProcess;
           workerProcess = startWorkers();
-          this.deferredWorkerProcess = workerProcess;
-          workerProcess.completion.then(resolveCompletion, rejectCompletion);
+          this.deferredWorkerCompletion = workerProcess.completion;
           return workerProcess;
         };
-        this.deferredWorkerCompletion = completion;
         return {};
       }
       return { process: startWorkers() };
@@ -1593,13 +1585,17 @@ class RstestTestRunnerProvider {
 
   async _completeCoverageRun({ exitCode }) {
     if (this.context.worker) return undefined;
+    const outerExitCode = exitCode;
+    let effectiveExitCode = exitCode;
     try {
       if (this.deferredWorkerCompletion) {
         const workerExitCode = await this.deferredWorkerCompletion;
-        if (exitCode === 0 && workerExitCode !== 0) exitCode = workerExitCode;
+        if (outerExitCode === 0 && workerExitCode !== 0) {
+          effectiveExitCode = workerExitCode;
+        }
       }
       if (!this.coverageGeneration) {
-        return exitCode === 0 ? undefined : { exitCode };
+        return effectiveExitCode === 0 ? undefined : { exitCode: effectiveExitCode };
       }
       this._loadCoveragePlanForCompletion();
       const localPackages = [];
@@ -1622,7 +1618,7 @@ class RstestTestRunnerProvider {
         appRoot: this.context.npm.root,
         localPackages,
         artifacts: this.coverageArtifacts,
-        testExitCode: exitCode,
+        testExitCode: effectiveExitCode,
       });
       const handle = this.services.startRstestProcess({
         appDir: this.context.appDir,
@@ -1636,13 +1632,19 @@ class RstestTestRunnerProvider {
         }),
       });
       const finalizerExitCode = await handle.completion;
-      if (finalizerExitCode === 0) return undefined;
+      if (finalizerExitCode === 0) {
+        return outerExitCode === 0 && effectiveExitCode !== 0
+          ? { exitCode: effectiveExitCode }
+          : undefined;
+      }
     } catch (error) {
       this.services.warn(
         `[Meteor Rstest] Coverage finalization failed: ${error.message}`
       );
     }
-    return exitCode === 0 ? { exitCode: 1 } : undefined;
+    return outerExitCode === 0
+      ? { exitCode: effectiveExitCode || 1 }
+      : undefined;
   }
 
   completeRun(context) {

@@ -1212,6 +1212,173 @@ test('mixed coverage finalizes one generation manifest and preserves exit preced
   });
 });
 
+test('coverage completion preserves a failed deferred worker when finalization succeeds', async t => {
+  async function completeWithWorkerFailure({ reportOnFailure, outerExitCode }) {
+    const context = createContext(t);
+    context.options.fullApp = true;
+    context.options.project = [
+      'meteor-runtime-server',
+      'meteor-runtime-client',
+      'meteor-e2e',
+    ];
+    context.options.coverage = true;
+    context.options.runtimeWorkers = 1;
+    const runtimeServer = writeRuntimeFiles(context.appDir, ['worker-failure.test.js'])[0];
+    const runtimeClient = path.join(
+      context.appDir,
+      'tests/rstest/runtime/client/worker-failure.test.js',
+    );
+    const external = path.join(
+      context.appDir,
+      'tests/rstest/e2e/worker-failure.test.js',
+    );
+    fs.mkdirSync(path.dirname(runtimeClient), { recursive: true });
+    fs.mkdirSync(path.dirname(external), { recursive: true });
+    fs.writeFileSync(runtimeClient, "import { test } from '@rstest/core';\n");
+    fs.writeFileSync(external, "import { test } from '@rstest/core';\n");
+    let finalizerManifest;
+    context.meteorHosts = {
+      start(descriptors) {
+        return {
+          completion: Promise.resolve({
+            workers: descriptors.map((descriptor, index) => ({
+              id: descriptor.id,
+              index,
+              total: descriptors.length,
+              code: 1,
+              signal: null,
+              stdout: '',
+              stderr: '',
+            })),
+          }),
+          async stop() {},
+        };
+      },
+    };
+    const provider = new RstestTestRunnerProvider(context, {
+      async ensureRstestInstalled() {},
+      assertRstestOptionalCapabilities() {},
+      resolveRstestCoverageInstrumentation() {
+        return {
+          swcPlugin: '/integration/coverage.wasm',
+          babelPlugin: '/integration/istanbul.js',
+        };
+      },
+      aggregateRstestWorkerResults() { return { exitCode: 1 }; },
+      startRstestProcess({ args }) {
+        if (args.includes('--coverage-finalize-manifest')) {
+          const manifestPath = args[args.indexOf('--coverage-finalize-manifest') + 1];
+          finalizerManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+          return { completion: Promise.resolve(0), async stop() {} };
+        }
+        writeCoverageSettings({ args, context });
+        return { completion: Promise.resolve(0), async stop() {} };
+      },
+    });
+
+    await provider.validate();
+    await provider.prepare();
+    await provider.startBeforeHost({ updateMetadata() {} });
+    const worker = provider.startDeferredWorkers();
+    await worker.completion;
+    const result = await provider.completeRun({
+      exitCode: outerExitCode,
+      outcome: outerExitCode === 0 ? 'completed' : 'failed',
+    });
+    assert.equal(finalizerManifest.testExitCode, outerExitCode || 1);
+    return result;
+  }
+
+  for (const reportOnFailure of [false, true]) {
+    assert.deepEqual(
+      await completeWithWorkerFailure({ reportOnFailure, outerExitCode: 0 }),
+      { exitCode: 1 },
+      `reportOnFailure=${reportOnFailure}`,
+    );
+  }
+  assert.equal(
+    await completeWithWorkerFailure({ reportOnFailure: false, outerExitCode: 2 }),
+    undefined,
+  );
+});
+
+test('coverage completion does not await a worker that was never started', async t => {
+  async function createDeferredWorkerProvider() {
+    const context = createContext(t);
+    context.options.fullApp = true;
+    context.options.project = [
+      'meteor-runtime-server',
+      'meteor-runtime-client',
+      'meteor-e2e',
+    ];
+    context.options.coverage = true;
+    const runtimeServer = writeRuntimeFiles(context.appDir, ['never-started.test.js'])[0];
+    const runtimeClient = path.join(
+      context.appDir,
+      'tests/rstest/runtime/client/never-started.test.js',
+    );
+    const external = path.join(
+      context.appDir,
+      'tests/rstest/e2e/never-started.test.js',
+    );
+    fs.mkdirSync(path.dirname(runtimeClient), { recursive: true });
+    fs.mkdirSync(path.dirname(external), { recursive: true });
+    fs.writeFileSync(runtimeClient, "import { test } from '@rstest/core';\n");
+    fs.writeFileSync(external, "import { test } from '@rstest/core';\n");
+    const provider = new RstestTestRunnerProvider(context, {
+      async ensureRstestInstalled() {},
+      assertRstestOptionalCapabilities() {},
+      resolveRstestCoverageInstrumentation() {
+        return {
+          swcPlugin: '/integration/coverage.wasm',
+          babelPlugin: '/integration/istanbul.js',
+        };
+      },
+      startRstestProcess({ args }) {
+        if (args.includes('--coverage-finalize-manifest')) {
+          return { completion: Promise.resolve(0), async stop() {} };
+        }
+        writeCoverageSettings({ args, context });
+        return { completion: Promise.resolve(0), async stop() {} };
+      },
+    });
+    await provider.validate();
+    await provider.prepare();
+    await provider.startBeforeHost({ updateMetadata() {} });
+    return provider;
+  }
+
+  async function resolvesWithoutTimeout(promise) {
+    const timeout = Symbol('timed out');
+    const result = await Promise.race([
+      promise,
+      new Promise(resolve => setTimeout(() => resolve(timeout), 100)),
+    ]);
+    assert.notEqual(result, timeout, 'completion must not wait for an unstarted worker');
+    return result;
+  }
+
+  const mainFailure = await createDeferredWorkerProvider();
+  assert.equal(
+    await resolvesWithoutTimeout(mainFailure.completeRun({ exitCode: 1, outcome: 'failed' })),
+    undefined,
+  );
+
+  const externalFailure = await createDeferredWorkerProvider();
+  externalFailure.services.External = class {
+    async start() { throw new Error('external startup failed'); }
+    async stop() {}
+  };
+  await assert.rejects(
+    externalFailure.startHost({ url: 'http://localhost:3000/', log() {} }),
+    /external startup failed/,
+  );
+  assert.equal(
+    await resolvesWithoutTimeout(externalFailure.completeRun({ exitCode: 1, outcome: 'failed' })),
+    undefined,
+  );
+});
+
 test('mixed runs allocate coverage paths only when coverage was requested', async t => {
   const context = createContext(t);
   context.options.serverOnly = true;
