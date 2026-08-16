@@ -80,6 +80,32 @@ test('rejects selected transforms with relative package or plugin paths', () => 
   }), null);
 });
 
+test('selects Windows absolute package and plugin paths without accepting drive-relative paths', () => {
+  const selected = selectTestSourceTransforms({
+    packageName: 'local:cards',
+    options: sourceTransforms({
+      packageRoots: { 'local:cards': 'C:\\workspace\\packages\\cards' },
+      swcPlugins: [[
+        'C:\\plugins\\coverage.wasm',
+        { unstableExclude: ['**/*.test.js'] },
+      ]],
+      babelPlugins: [['C:\\plugins\\instrument.js', { cwd: 'C:\\workspace' }]],
+    }),
+  });
+
+  assert.equal(selected.packageRoot, 'C:\\workspace\\packages\\cards');
+  assert.deepEqual(selected.babelPlugins, [[
+    'C:\\plugins\\instrument.js',
+    { cwd: 'C:\\workspace' },
+  ]]);
+  assert.equal(selectTestSourceTransforms({
+    packageName: 'local:cards',
+    options: sourceTransforms({
+      packageRoots: { 'local:cards': 'C:workspace\\packages\\cards' },
+    }),
+  }), null);
+});
+
 test('rejects selected transforms with non-JSON plugin options', () => {
   assert.equal(selectTestSourceTransforms({
     packageName: 'local:cards',

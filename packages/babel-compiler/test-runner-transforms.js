@@ -57,11 +57,23 @@
     ).join(',')}}`;
   }
 
-  function getCrypto() {
+  function getNodeModule(name) {
     if (typeof Npm !== 'undefined') {
-      return Npm.require('crypto');
+      return Npm.require(name);
     }
-    return require('crypto');
+    return require(name);
+  }
+
+  function getCrypto() {
+    return getNodeModule('crypto');
+  }
+
+  function isAbsolutePath(value) {
+    if (typeof value !== 'string') {
+      return false;
+    }
+    const path = getNodeModule('path');
+    return path.isAbsolute(value) || path.win32.isAbsolute(value);
   }
 
   function fingerprint(value) {
@@ -80,7 +92,7 @@
     const seen = new Set();
     for (const plugin of plugins) {
       if (!Array.isArray(plugin) || plugin.length !== 2 ||
-          typeof plugin[0] !== 'string' || !plugin[0].startsWith('/') ||
+          !isAbsolutePath(plugin[0]) ||
           !isJsonSafe(plugin[1])) {
         return null;
       }
@@ -104,7 +116,7 @@
     }
 
     const packageRoot = options.packageRoots[packageName];
-    if (typeof packageRoot !== 'string' || !packageRoot.startsWith('/') ||
+    if (!isAbsolutePath(packageRoot) ||
         typeof options.cacheKey !== 'string') {
       return null;
     }
