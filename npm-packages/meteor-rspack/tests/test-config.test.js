@@ -6,6 +6,11 @@ const test = require('node:test');
 
 const { createTestRspackConfig } = require('../config.js');
 const {
+  appendMeteorModuleMockGuard,
+  createMeteorRstestPlugins,
+  enforceMeteorRstestPlugins,
+} = require('../lib/rstest-runtime.js');
+const {
   createRstestRuntimeAlias,
   createRstestTestFileRegistration,
   enforceRstestRuntimeAlias,
@@ -122,6 +127,7 @@ test('Rstest runtime eager entry scans only its deterministic Meteor root', t =>
     isAppTest: false,
     projectDir: projectRoot,
     discoveryRoot: runtimeRoot,
+    testFileRoot: '',
     buildContext: '_build',
   });
   const content = fs.readFileSync(generated, 'utf8');
@@ -169,14 +175,14 @@ test('Rstest runtime eager entry registers app-relative source files', t => {
     buildContext: '_build',
     testFileRegistration: {
       module: 'meteor/rstest',
-      exportName: '__registerTestFile',
+      exportName: '__registerTestFileLoader',
     },
   });
   const content = fs.readFileSync(generated, 'utf8');
 
   assert.match(
     content,
-    /import \{ __registerTestFile as __meteorRegisterTestFile \} from "meteor\/rstest";/,
+    /import \{ __registerTestFileLoader as __meteorRegisterTestFile \} from "meteor\/rstest";/,
   );
   assert.match(
     content,
@@ -185,6 +191,61 @@ test('Rstest runtime eager entry registers app-relative source files', t => {
   assert.match(content, /__meteorRegisterTestFile\(/);
   assert.match(content, /\(\) => ctx\(file\)/);
   assert.match(content, /mode: 'sync'/);
+});
+
+test('Rstest package entry registers files relative to external discovery root', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-package-register-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const projectRoot = path.join(root, 'source-app');
+  const runtimeRoot = path.join(root, 'package-runtime');
+  fs.mkdirSync(projectRoot, { recursive: true });
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+
+  const generated = generateEagerTestFile({
+    isAppTest: false,
+    projectDir: projectRoot,
+    discoveryRoot: runtimeRoot,
+    buildContext: '_build',
+    testFileRegistration: {
+      module: 'meteor/rstest',
+      exportName: '__registerTestFileLoader',
+    },
+  });
+  const content = fs.readFileSync(generated, 'utf8');
+
+  assert.match(content, /const __meteorTestFileRoot = "";/);
+  assert.doesNotMatch(content, /__meteorTestFileRoot = "\.\./);
+});
+
+test('Rstest runtime entry loads isolated setup modules before each test file', t => {
+  const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rspack-runtime-setup-'));
+  t.after(() => fs.rmSync(projectRoot, { recursive: true, force: true }));
+  const runtimeRoot = path.join(projectRoot, 'tests/rstest/runtime/server');
+  const setupFile = path.join(projectRoot, 'tests/setup.js');
+  const first = path.join(runtimeRoot, 'first.test.js');
+  const second = path.join(runtimeRoot, 'second.test.js');
+  fs.mkdirSync(runtimeRoot, { recursive: true });
+  fs.mkdirSync(path.dirname(setupFile), { recursive: true });
+  fs.writeFileSync(setupFile, '');
+
+  const generated = generateEagerTestFile({
+    isAppTest: false,
+    projectDir: projectRoot,
+    discoveryRoot: runtimeRoot,
+    includeFiles: [first, second],
+    setupFiles: [setupFile],
+    buildContext: '_build',
+    testFileRegistration: {
+      module: 'meteor/rstest',
+      exportName: '__registerTestFileLoader',
+    },
+  });
+  const content = fs.readFileSync(generated, 'utf8');
+
+  assert.match(content, /meteor-rstest-setup=first\.test\.js%3A0/);
+  assert.match(content, /meteor-rstest-setup=second\.test\.js%3A0/);
+  assert.match(content, /pending\.then\(loadSetup\)/);
+  assert.match(content, /\.then\(\(\) => ctx\(file\)\)/);
 });
 
 test('Rstest upstream runtime entry registers deferred app-relative loaders', t => {
@@ -228,11 +289,10 @@ test('Rstest upstream runtime entry registers deferred app-relative loaders', t 
   assert.match(content, /mode: 'sync'/);
 });
 
-test('Rstest spike flag selects deferred loader registration only for Rstest builds', () => {
+test('unified Rstest runtime selects deferred loader registration only for Rstest builds', () => {
   assert.deepEqual(
     createRstestTestFileRegistration({
       isRstestTest: true,
-      environment: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
     }),
     {
       module: 'meteor/rstest',
@@ -245,21 +305,9 @@ test('Rstest spike flag selects deferred loader registration only for Rstest bui
       },
     },
   );
-  assert.deepEqual(
-    createRstestTestFileRegistration({
-      isRstestTest: true,
-      environment: {},
-    }),
-    {
-      module: 'meteor/rstest',
-      exportName: '__registerTestFile',
-      mode: 'sync',
-    },
-  );
   assert.equal(
     createRstestTestFileRegistration({
       isRstestTest: false,
-      environment: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
     }),
     undefined,
   );
@@ -297,8 +345,55 @@ test('Rstest upstream runtime alias resolves from harness and overrides user ali
   assert.deepEqual(optimized.optimization, {
     usedExports: false,
     minimize: false,
+    concatenateModules: false,
     sideEffects: true,
   });
+  assert.equal(optimized.mode, 'development');
+});
+
+test('Meteor Rstest compiler plugins preserve upstream transforms after user config', () => {
+  class RstestPlugin {
+    constructor(options) {
+      this.options = options;
+    }
+  }
+  const plugins = createMeteorRstestPlugins({
+    upstreamRuntime: true,
+    projectDir: '/meteor-app',
+    runtimeCodePath: '/rstest/mockRuntimeCode.js',
+    rspack: { experiments: { RstestPlugin } },
+  });
+
+  assert.equal(plugins.length, 2);
+  assert.deepEqual(plugins[0].options, {
+    injectModulePathName: true,
+    importMetaPathName: true,
+    hoistMockModule: true,
+    manualMockRoot: '/meteor-app/__mocks__',
+  });
+  assert.equal(plugins[1].runtimeCodePath, '/rstest/mockRuntimeCode.js');
+
+  const config = { plugins: [{ constructor: { name: 'UserPlugin' } }] };
+  enforceMeteorRstestPlugins(config, plugins);
+  enforceMeteorRstestPlugins(config, plugins);
+  assert.deepEqual(config.plugins, [
+    { constructor: { name: 'UserPlugin' } },
+    ...plugins,
+  ]);
+  assert.deepEqual(
+    createMeteorRstestPlugins({ upstreamRuntime: false }),
+    [],
+  );
+});
+
+test('Meteor Rstest mock runtime blocks Meteor-owned module replacement', () => {
+  const runtime = appendMeteorModuleMockGuard('UPSTREAM_RUNTIME');
+
+  assert.match(runtime, /UPSTREAM_RUNTIME/);
+  assert.match(runtime, /METEOR_RSTEST_ATMOSPHERE_MOCK_UNSUPPORTED/);
+  assert.match(runtime, /meteor\\\//);
+  assert.match(runtime, /rstest_mock/);
+  assert.match(runtime, /rstest_import_actual/);
 });
 
 test('ordinary Meteor eager entry does not register Rstest source files', t => {

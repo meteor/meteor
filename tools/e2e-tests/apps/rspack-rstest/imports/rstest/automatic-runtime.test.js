@@ -1,4 +1,4 @@
-import { expect, test } from 'meteor/rstest';
+import { expect, test } from '@rstest/core';
 import { runtimeContext } from './runtime-context.js';
 
 test('colocated transitive meteor import selects real Meteor host', () => {

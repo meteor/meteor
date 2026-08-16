@@ -5,8 +5,44 @@ const path = require('node:path');
 const test = require('node:test');
 
 const {
+  hasTypescriptRstestInputs,
+  isRstestRuntimeBuild,
   readRstestRuntimeInventory,
+  readRstestRuntimeSettings,
 } = require('../lib/rstest.js');
+
+test('Rstest runtime build accepts runner identity from provider context', () => {
+  assert.equal(isRstestRuntimeBuild({
+    testRunner: undefined,
+    testRunnerContext: { testRunner: 'rstest', runtime: true },
+    isTest: true,
+  }), true);
+  assert.equal(isRstestRuntimeBuild({
+    testRunner: undefined,
+    testRunnerContext: { runtime: true },
+    isTest: true,
+  }), false);
+  assert.equal(isRstestRuntimeBuild({
+    testRunner: 'rstest',
+    testRunnerContext: { testRunner: 'rstest', runtime: false },
+    isTest: true,
+  }), false);
+});
+
+test('Rstest runtime infers TypeScript from selected tests and setup files', () => {
+  assert.equal(hasTypescriptRstestInputs({
+    files: ['/runtime/package.tests.ts'],
+    setupFiles: [],
+  }), true);
+  assert.equal(hasTypescriptRstestInputs({
+    files: ['/runtime/package.tests.js'],
+    setupFiles: ['/runtime/setup.tsx'],
+  }), true);
+  assert.equal(hasTypescriptRstestInputs({
+    files: ['/runtime/package.tests.js'],
+    setupFiles: ['/runtime/setup.mjs'],
+  }), false);
+});
 
 test('versioned runtime inventory selects exact files per architecture', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-runtime-'));
@@ -32,6 +68,28 @@ test('versioned runtime inventory selects exact files per architecture', t => {
   }), { discoveryRoot: root, files: [clientFile] });
 });
 
+test('runtime settings expose only absolute setup files to Rspack', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-settings-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const setupFile = path.join(root, 'setup.js');
+  const settings = path.join(root, 'settings.json');
+  fs.writeFileSync(setupFile, '');
+  fs.writeFileSync(settings, JSON.stringify({
+    schemaVersion: 1,
+    setupFiles: [setupFile],
+  }));
+
+  assert.deepEqual(readRstestRuntimeSettings(settings).setupFiles, [setupFile]);
+  fs.writeFileSync(settings, JSON.stringify({
+    schemaVersion: 1,
+    setupFiles: ['./setup.js'],
+  }));
+  assert.throws(
+    () => readRstestRuntimeSettings(settings),
+    /Invalid runtime settings/,
+  );
+});
+
 test('legacy runtime inventory keeps legacy discovery root', t => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-runtime-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
@@ -47,4 +105,27 @@ test('legacy runtime inventory keeps legacy discovery root', t => {
     discoveryRoot: path.join(root, 'tests/rstest/runtime/server'),
     files: [file],
   });
+});
+
+test('versioned package inventory can declare generated discovery root', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-runtime-'));
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  const projectDir = path.join(root, 'source-app');
+  const discoveryRoot = path.join(root, 'package-runtime');
+  const manifest = path.join(root, 'runtime.json');
+  const serverFile = path.join(discoveryRoot, 'package.test.mjs');
+  fs.mkdirSync(discoveryRoot, { recursive: true });
+  fs.writeFileSync(manifest, JSON.stringify({
+    schemaVersion: 2,
+    discoveryRoot,
+    testFileRoot: '',
+    serverFiles: [serverFile],
+    clientFiles: [serverFile],
+  }));
+
+  assert.deepEqual(readRstestRuntimeInventory({
+    manifest,
+    projectDir,
+    client: false,
+  }), { discoveryRoot, files: [serverFile], testFileRoot: '' });
 });

@@ -53,6 +53,27 @@ const PACKAGE_UNSUPPORTED_OPTIONS = [
   ['changed', '--changed'],
   ['changedSince', '--changed-since'],
 ];
+const RSTEST_TEST_FILE = /\.(?:test|spec)s?\.(?:[cm]?[jt]sx?)$/i;
+const RUNTIME_SETTING_DEFAULTS = Object.freeze({
+  testTimeout: 30000,
+  hookTimeout: 10000,
+  maxConcurrency: 5,
+  retry: 0,
+  globals: false,
+  clearMocks: false,
+  resetMocks: false,
+  restoreMocks: false,
+  unstubEnvs: false,
+  unstubGlobals: false,
+  expect: {},
+  snapshotFormat: {},
+  env: {},
+  silent: false,
+  disableConsoleIntercept: true,
+  printConsoleTrace: false,
+  includeTaskLocation: false,
+  setupFiles: [],
+});
 
 function removeIfPresent(filename) {
   try {
@@ -66,6 +87,69 @@ function selectedCount(inventory) {
   return inventory.pureFiles.length +
     inventory.runtimeFiles.length +
     inventory.externalFiles.length;
+}
+
+function collectPackageRstestFiles(packageTests = []) {
+  const files = [];
+  const visit = directory => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '.npm' ||
+          entry.name === '.git') continue;
+      const file = path.join(directory, entry.name);
+      if (entry.isDirectory()) visit(file);
+      else if (entry.isFile() && RSTEST_TEST_FILE.test(entry.name)) {
+        files.push(file);
+      }
+    }
+  };
+  for (const packageTest of packageTests) {
+    if (!packageTest || typeof packageTest.sourceRoot !== 'string' ||
+        !path.isAbsolute(packageTest.sourceRoot) ||
+        !fs.existsSync(packageTest.sourceRoot)) continue;
+    visit(packageTest.sourceRoot);
+  }
+  return [...new Set(files.map(file => path.resolve(file)))].sort();
+}
+
+function createPackageRuntimeMirrors({ harnessRoot, files, packageTests }) {
+  const root = path.join(harnessRoot, '.rstest-package-runtime');
+  fs.mkdirSync(root, { recursive: true });
+  const buildRoot = path.join(harnessRoot, '_build', 'test');
+  fs.mkdirSync(buildRoot, { recursive: true });
+  for (const side of ['client', 'server']) {
+    const wrapper = path.join(buildRoot, `${side}-meteor.js`);
+    if (!fs.existsSync(wrapper)) fs.writeFileSync(wrapper, '\n');
+  }
+  return files.map((source, index) => {
+    const owner = packageTests
+      .filter(packageTest => {
+        if (!packageTest || typeof packageTest.sourceRoot !== 'string') return false;
+        const relative = path.relative(packageTest.sourceRoot, source);
+        return relative !== '' && relative !== '..' &&
+          !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
+      })
+      .sort((left, right) => right.sourceRoot.length - left.sourceRoot.length)[0];
+    const packageName = owner
+      ? owner.name.replace(/^local-test:/, '').replace(/[^A-Za-z0-9_.-]/g, '-')
+      : `package-${String(index).padStart(4, '0')}`;
+    const relative = owner
+      ? path.relative(owner.sourceRoot, source)
+      : path.basename(source);
+    const mirror = path.join(root, packageName, relative);
+    fs.mkdirSync(path.dirname(mirror), { recursive: true });
+    fs.writeFileSync(
+      mirror,
+      `import ${JSON.stringify(source.split(path.sep).join('/'))};\n`,
+    );
+    return mirror;
+  });
+}
+
+function getPackageHarnessDevDependencies(env = process.env) {
+  const spec = env.METEOR_RSPACK_NPM_SPEC;
+  return typeof spec === 'string' && spec.trim()
+    ? { '@meteorjs/rspack': spec }
+    : {};
 }
 
 function requestsVerboseReporter(args = []) {
@@ -83,13 +167,8 @@ function requestsVerboseReporter(args = []) {
 
 class RstestTestRunnerProvider {
   constructor(context, services = {}) {
-    const {
-      environment = process.env,
-      ...serviceOverrides
-    } = services;
     this.context = context;
-    this.environment = environment;
-    this.upstreamRuntime = environment.METEOR_RSTEST_UPSTREAM_RUNTIME === '1';
+    this.upstreamRuntime = true;
     this.services = {
       ensureRstestInstalled,
       assertRstestOptionalCapabilities,
@@ -105,8 +184,9 @@ class RstestTestRunnerProvider {
       aggregateRstestWorkerResults,
       createRstestHostDescriptors,
       validateRstestWorkerPayload,
+      env: process.env,
       warn: message => console.warn(message),
-      ...serviceOverrides,
+      ...services,
     };
     this.resources = [];
     this.selection = null;
@@ -128,20 +208,6 @@ class RstestTestRunnerProvider {
       throw rstestError(
         'METEOR_RSTEST_CONFLICTING_SIDES',
         '--server-only conflicts with --client-only.'
-      );
-    }
-    if (this.upstreamRuntime && (
-      command !== 'test' ||
-      !options.once ||
-      !options.serverOnly ||
-      options.clientOnly ||
-      options.fullApp ||
-      options.runtimeWorkers !== 1
-    )) {
-      throw rstestError(
-        'METEOR_RSTEST_UPSTREAM_SPIKE_UNSUPPORTED',
-        'Upstream runtime spike requires meteor test --once --server-only ' +
-          'with one runtime worker and without --full-app.'
       );
     }
     if (!options.once && (options.shard || options.changed || options.changedSince)) {
@@ -174,11 +240,20 @@ class RstestTestRunnerProvider {
           ).join(', ')}.`
         );
       }
+      const runtimeFiles = collectPackageRstestFiles(
+        this.context.packageTests,
+      );
+      if (runtimeFiles.length === 0) {
+        throw rstestError(
+          'METEOR_RSTEST_PACKAGE_TESTS_NOT_FOUND',
+          'Selected Rstest packages contain no *.test.*, *.tests.*, *.spec.*, or *.specs.* files.'
+        );
+      }
       this.selection = {
         capability: { hasRstestConfig: false },
         inventory: {
           pureFiles: [],
-          runtimeFiles: ['package-tests'],
+          runtimeFiles,
           externalFiles: [],
           compatibilityFiles: [],
           unknownProjects: [],
@@ -518,7 +593,19 @@ class RstestTestRunnerProvider {
     } = this.context;
     const verbose = this.verbose;
     const reportVerbose = this.reportVerbose;
-    if (command === 'test-packages') await npm.ensureHarnessManifest();
+    if (command === 'test-packages') {
+      await npm.ensureHarnessManifest({
+        additionalDevDependencies: getPackageHarnessDevDependencies(
+          this.services.env,
+        ),
+        persistMeteorConfig: {
+          mainModule: {
+            client: '_build/test/client-meteor.js',
+            server: '_build/test/server-meteor.js',
+          },
+        },
+      });
+    }
     if (!worker && npm.autoInstall) {
       await this.services.ensureRstestInstalled({
         env: { ...process.env, METEOR_RSTEST_NPM_ROOT: npm.root },
@@ -564,6 +651,21 @@ class RstestTestRunnerProvider {
     }
 
     this.runtimeManifest = worker ? this.workerPayload.runtimeManifest : null;
+    if (!worker && command === 'test-packages') {
+      const packageRuntimeFiles = createPackageRuntimeMirrors({
+        harnessRoot,
+        files: selection.inventory.runtimeFiles,
+        packageTests: this.context.packageTests,
+      });
+      this.runtimeManifest = path.join(runtimeDir, 'package-runtime-files.json');
+      fs.writeFileSync(this.runtimeManifest, JSON.stringify({
+        schemaVersion: 2,
+        discoveryRoot: path.join(harnessRoot, '.rstest-package-runtime'),
+        testFileRoot: '',
+        serverFiles: packageRuntimeFiles,
+        clientFiles: packageRuntimeFiles,
+      }));
+    }
     if (!worker && command === 'test' &&
         selection.inventory.runtimeFiles.length > 0) {
       this.runtimeManifest = path.join(runtimeDir, 'runtime-files.json');
@@ -715,9 +817,11 @@ class RstestTestRunnerProvider {
       verbose,
       reportVerbose,
       testNamePattern: options.testNamePattern || null,
-      testTimeout: 30000,
-      hookTimeout: 10000,
-      maxConcurrency: 5,
+      updateSnapshot: options.updateSnapshots ? 'all' : 'none',
+      testTimeout: RUNTIME_SETTING_DEFAULTS.testTimeout,
+      hookTimeout: RUNTIME_SETTING_DEFAULTS.hookTimeout,
+      maxConcurrency: RUNTIME_SETTING_DEFAULTS.maxConcurrency,
+      runtimeConfig: { ...RUNTIME_SETTING_DEFAULTS },
       token,
       server,
       client,
@@ -750,8 +854,7 @@ class RstestTestRunnerProvider {
         );
       }
     }
-    const dependencyOnly = command === 'test-packages' ||
-      !selection.needsRuntime && !selection.needsExternal;
+    const dependencyOnly = !selection.needsRuntime && !selection.needsExternal;
     const buildClient = client || selection.needsExternal && !options.serverOnly;
     const buildServer = server || selection.needsExternal && !options.clientOnly;
     const mode = this.workerHostPlan
@@ -762,21 +865,28 @@ class RstestTestRunnerProvider {
     this.plan = {
       mode,
       ...(mode === 'meteor-host' && { driverPackage: 'rstest' }),
+      ...(command === 'test-packages' && {
+        harnessPackages: ['ecmascript'],
+        refreshProjectMetadata: true,
+      }),
       metadata: this.metadata,
       buildPluginOptions: {
         rspack: {
           autoInstall: npm.autoInstall,
           lifecycle: dependencyOnly ? 'dependencies-only' : 'runtime',
+          ...(command === 'test-packages' && { projectRoot: harnessRoot }),
           ...(!dependencyOnly && {
             targets: { client: buildClient, server: buildServer },
           }),
           context: {
+            testRunner: 'rstest',
             runtime: selection.needsRuntime,
             upstreamRuntime: this.upstreamRuntime,
             external: selection.needsExternal,
             server,
             client,
             runtimeManifest: this.runtimeManifest,
+            runtimeSettingsPath: this.runtimeSettingsPath,
             npmRoot: npm.root,
           },
         },
@@ -795,9 +905,15 @@ class RstestTestRunnerProvider {
         'Ignored stale runtime settings payload.'
       );
     }
-    this.metadata.testTimeout = settings.testTimeout;
-    this.metadata.hookTimeout = settings.hookTimeout;
-    this.metadata.maxConcurrency = settings.maxConcurrency;
+    this.metadata.runtimeConfig = Object.fromEntries(
+      Object.entries(RUNTIME_SETTING_DEFAULTS).map(([field, fallback]) => [
+        field,
+        settings[field] === undefined ? fallback : settings[field],
+      ])
+    );
+    this.metadata.testTimeout = this.metadata.runtimeConfig.testTimeout;
+    this.metadata.hookTimeout = this.metadata.runtimeConfig.hookTimeout;
+    this.metadata.maxConcurrency = this.metadata.runtimeConfig.maxConcurrency;
     updateMetadata(this.metadata);
   }
 
@@ -954,4 +1070,7 @@ class RstestTestRunnerProvider {
   }
 }
 
-module.exports = { RstestTestRunnerProvider };
+module.exports = {
+  getPackageHarnessDevDependencies,
+  RstestTestRunnerProvider,
+};

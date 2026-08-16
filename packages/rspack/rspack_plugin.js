@@ -90,15 +90,24 @@ const {
 const testRunnerBuildOptions = Plugin.getTestRunnerBuildOptions() || {};
 const isTestRunnerDependencyOnly =
   testRunnerBuildOptions.lifecycle === 'dependencies-only';
+const isTestRunnerRuntime = testRunnerBuildOptions.lifecycle === 'runtime' &&
+  testRunnerBuildOptions.context?.runtime === true;
+if (isTestRunnerRuntime && testRunnerBuildOptions.projectRoot) {
+  process.env.METEOR_RSPACK_PROJECT_ROOT =
+    testRunnerBuildOptions.projectRoot;
+  process.env.METEOR_RSTEST_PACKAGE_HOST = '1';
+}
 const shouldAutoInstallDependencies = testRunnerBuildOptions.autoInstall !== false &&
   hasMeteorAppConfigAutoInstallDeps();
 const shouldRunRspackAppLifecycle = isMeteorAppRun() ||
   isMeteorAppBuild() ||
   isMeteorAppUpdate() ||
-  isMeteorAppTest() && !isTestRunnerDependencyOnly;
+  isMeteorAppTest() && !isTestRunnerDependencyOnly ||
+  isTestRunnerRuntime;
 const shouldRunRspackCompilerLifecycle = isMeteorAppRun() ||
   isMeteorAppBuild() ||
-  isMeteorAppTest() && !isTestRunnerDependencyOnly;
+  isMeteorAppTest() && !isTestRunnerDependencyOnly ||
+  isTestRunnerRuntime;
 
 if (isMeteorAppTest() && isTestRunnerDependencyOnly) {
   try {
@@ -115,7 +124,7 @@ if (shouldRunRspackAppLifecycle) {
   initialEntrypoints = getMeteorInitialAppEntrypoints();
 
   // Check if mainClient and mainServer exist
-  if (!initialEntrypoints?.mainServer) {
+  if (!initialEntrypoints?.mainServer && !isTestRunnerRuntime) {
     logError(`\n┌─────────────────────────────────────────────────`);
     logError(`│ ❌ Missing Required Entry Points`);
     logError(`└─────────────────────────────────────────────────`);
@@ -157,7 +166,8 @@ if (shouldRunRspackAppLifecycle) {
     }
 
     // Clean build context files only if they haven't been cleaned yet
-    if (!getGlobalState(GLOBAL_STATE_KEYS.BUILD_CONTEXT_FILES_CLEANED)) {
+    if (!isTestRunnerRuntime &&
+        !getGlobalState(GLOBAL_STATE_KEYS.BUILD_CONTEXT_FILES_CLEANED)) {
       cleanBuildContextFiles();
       setGlobalState(GLOBAL_STATE_KEYS.BUILD_CONTEXT_FILES_CLEANED, true);
     }
@@ -295,7 +305,7 @@ if (shouldRunRspackCompilerLifecycle) {
       );
 
       // When running `meteor test` command
-    } else if (isMeteorAppTest()) {
+    } else if (isMeteorAppTest() || isTestRunnerRuntime) {
       const initialEntrypoints = getMeteorInitialAppEntrypoints();
 
       // Setup compilation tracking and callbacks

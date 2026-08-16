@@ -35,16 +35,62 @@ test('object config remains directly usable by native Rstest', () => {
   assert.equal(defineConfig(config), config);
 });
 
-test('Meteor runtime settings preserve native maxConcurrency defaults and validation', () => {
+test('Meteor runtime settings project serializable upstream semantics and validation', t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-config-'));
+  const setupFile = path.join(root, 'support', 'setup.js');
+  fs.mkdirSync(path.dirname(setupFile), { recursive: true });
+  fs.writeFileSync(setupFile, '');
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   assert.deepEqual(runtimeSettingsFromConfig({}), {
     testTimeout: 30000,
     hookTimeout: 10000,
     maxConcurrency: 5,
+    retry: 0,
+    globals: false,
+    clearMocks: false,
+    resetMocks: false,
+    restoreMocks: false,
+    unstubEnvs: false,
+    unstubGlobals: false,
+    expect: {},
+    snapshotFormat: {},
+    env: {},
+    silent: false,
+    disableConsoleIntercept: true,
+    printConsoleTrace: false,
+    includeTaskLocation: false,
+    setupFiles: [],
   });
-  assert.deepEqual(runtimeSettingsFromConfig({ maxConcurrency: 3 }), {
+  assert.deepEqual(runtimeSettingsFromConfig({
+    root,
+    setupFiles: ['<rootDir>/support/setup.js'],
+    maxConcurrency: 3,
+    retry: 2,
+    globals: true,
+    clearMocks: true,
+    expect: { poll: { interval: 10 } },
+    snapshotFormat: { printBasicPrototype: false },
+    env: { FEATURE: 'enabled' },
+    disableConsoleIntercept: false,
+  }), {
     testTimeout: 30000,
     hookTimeout: 10000,
     maxConcurrency: 3,
+    retry: 2,
+    globals: true,
+    clearMocks: true,
+    resetMocks: false,
+    restoreMocks: false,
+    unstubEnvs: false,
+    unstubGlobals: false,
+    expect: { poll: { interval: 10 } },
+    snapshotFormat: { printBasicPrototype: false },
+    env: { FEATURE: 'enabled' },
+    silent: false,
+    disableConsoleIntercept: false,
+    printConsoleTrace: false,
+    includeTaskLocation: false,
+    setupFiles: [setupFile],
   });
   assert.throws(
     () => runtimeSettingsFromConfig({ maxConcurrency: 0 }),
@@ -53,6 +99,18 @@ test('Meteor runtime settings preserve native maxConcurrency defaults and valida
       assert.match(error.message, /positive integer/);
       return true;
     },
+  );
+  assert.throws(
+    () => runtimeSettingsFromConfig({ retry: -1 }),
+    error => error.code === 'METEOR_RSTEST_INVALID_RETRY',
+  );
+  assert.throws(
+    () => runtimeSettingsFromConfig({ expect: { plugin() {} } }),
+    error => error.code === 'METEOR_RSTEST_RUNTIME_CONFIG_NOT_SERIALIZABLE',
+  );
+  assert.throws(
+    () => runtimeSettingsFromConfig({ root, setupFiles: ['./missing.js'] }),
+    error => error.code === 'METEOR_RSTEST_SETUP_FILE_NOT_FOUND',
   );
 });
 

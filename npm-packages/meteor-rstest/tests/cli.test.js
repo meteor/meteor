@@ -127,6 +127,21 @@ test('package runtime plan evaluates dynamic config once with distinct harness r
     testTimeout: 4321,
     hookTimeout: 1234,
     maxConcurrency: 3,
+    retry: 0,
+    globals: false,
+    clearMocks: false,
+    resetMocks: false,
+    restoreMocks: false,
+    unstubEnvs: false,
+    unstubGlobals: false,
+    expect: {},
+    snapshotFormat: {},
+    env: {},
+    silent: false,
+    disableConsoleIntercept: true,
+    printConsoleTrace: false,
+    includeTaskLocation: false,
+    setupFiles: [],
   });
 });
 
@@ -153,6 +168,21 @@ test('native run writes generation-bound runtime settings atomically', t => {
     testTimeout: 9876,
     hookTimeout: 2345,
     maxConcurrency: 7,
+    retry: 0,
+    globals: true,
+    clearMocks: false,
+    resetMocks: false,
+    restoreMocks: false,
+    unstubEnvs: false,
+    unstubGlobals: false,
+    expect: {},
+    snapshotFormat: {},
+    env: {},
+    silent: false,
+    disableConsoleIntercept: true,
+    printConsoleTrace: false,
+    includeTaskLocation: false,
+    setupFiles: [],
   });
 });
 

@@ -14,14 +14,24 @@ const {
 } = require('../runtime/reporter.js');
 const { writeWorkerResult } = require('./worker-result.js');
 const {
+  createUpstreamServerExecution,
   executeUpstreamServerTests,
 } = require('./upstream-runtime.js');
+const {
+  createLazyRuntimeFactory,
+} = require('../runtime/upstream-runtime.js');
+const {
+  createMeteorSnapshotEnvironment,
+} = require('./snapshot-environment.js');
 
 const clientResultGate = createResultGate({ timeoutMs: 600000 });
 const externalResultGate = createResultGate({ timeoutMs: 600000 });
 const activeMetadata = testMetadata();
 const isRstestActive = activeMetadata.testRunner === 'rstest' &&
   (!activeMetadata.driverPackage || activeMetadata.driverPackage === 'rstest');
+const runtimeSnapshotEnvironment = isRstestActive && activeMetadata.rstestAppRoot
+  ? createMeteorSnapshotEnvironment({ appRoot: activeMetadata.rstestAppRoot })
+  : null;
 
 function timeoutResult(error, name) {
   return {
@@ -46,11 +56,15 @@ if (isRstestActive) Meteor.methods({
     const metadata = testMetadata();
     return {
       protocolVersion: 1,
+      appRoot: metadata.rstestAppRoot || '/',
       generation: Number(metadata.rstestGeneration || 1),
+      upstreamRuntime: Boolean(metadata.rstestUpstreamRuntime),
       testNamePattern: metadata.rstestTestNamePattern || null,
+      updateSnapshot: metadata.rstestUpdateSnapshot || 'none',
       testTimeout: Number(metadata.rstestTestTimeout || 30000),
       hookTimeout: Number(metadata.rstestHookTimeout || 10000),
       maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
+      runtimeConfig: metadata.rstestRuntimeConfig || {},
     };
   },
   'rstest/submitClientResult'(payload) {
@@ -67,6 +81,79 @@ if (isRstestActive) Meteor.methods({
       throw new Meteor.Error('RSTEST_RESULT_REPLAY', '[Meteor Rstest] Client result already submitted.');
     }
     return { accepted: true, protocolVersion: 1 };
+  },
+  async 'rstest/snapshot'(payload) {
+    const metadata = testMetadata();
+    if (!runtimeSnapshotEnvironment || !payload ||
+        payload.protocolVersion !== 1 ||
+        payload.generation !== Number(metadata.rstestGeneration || 1) ||
+        payload.token !== metadata.rstestToken) {
+      throw new Meteor.Error(
+        'RSTEST_PROTOCOL_MISMATCH',
+        '[Meteor Rstest] Invalid snapshot protocol payload.',
+      );
+    }
+    const operation = payload.operation;
+    const assertString = (value, name, maxLength = 16 * 1024) => {
+      if (typeof value !== 'string' || value.length === 0 ||
+          value.length > maxLength) {
+        throw new Meteor.Error(
+          'RSTEST_SNAPSHOT_PAYLOAD',
+          `[Meteor Rstest] Invalid snapshot ${name}.`,
+        );
+      }
+      return value;
+    };
+    try {
+      if (operation === 'resolvePath') {
+        return await runtimeSnapshotEnvironment.resolvePath(
+          assertString(payload.filepath, 'filepath'),
+        );
+      }
+      if (operation === 'resolveRawPath') {
+        return await runtimeSnapshotEnvironment.resolveRawPath(
+          assertString(payload.testPath, 'testPath'),
+          assertString(payload.rawPath, 'rawPath'),
+        );
+      }
+      if (operation === 'read') {
+        const content = await runtimeSnapshotEnvironment.readSnapshotFile(
+          assertString(payload.filepath, 'filepath'),
+        );
+        if (content && content.length > 4 * 1024 * 1024) {
+          throw new Meteor.Error(
+            'RSTEST_SNAPSHOT_PAYLOAD',
+            '[Meteor Rstest] Snapshot file exceeds 4 MiB.',
+          );
+        }
+        return content;
+      }
+      if (operation === 'save' || operation === 'remove') {
+        if (metadata.rstestUpdateSnapshot === 'none') {
+          throw new Meteor.Error(
+            'RSTEST_SNAPSHOT_UPDATE_DISABLED',
+            '[Meteor Rstest] Snapshot updates require --update-snapshots.',
+          );
+        }
+        const filepath = assertString(payload.filepath, 'filepath');
+        if (operation === 'save') {
+          await runtimeSnapshotEnvironment.saveSnapshotFile(
+            filepath,
+            assertString(payload.snapshot, 'contents', 4 * 1024 * 1024),
+          );
+        } else {
+          await runtimeSnapshotEnvironment.removeSnapshotFile(filepath);
+        }
+        return null;
+      }
+      throw new Meteor.Error(
+        'RSTEST_SNAPSHOT_PAYLOAD',
+        '[Meteor Rstest] Unsupported snapshot operation.',
+      );
+    } catch (error) {
+      if (error instanceof Meteor.Error) throw error;
+      throw new Meteor.Error('RSTEST_SNAPSHOT_IO', error.message);
+    }
   },
 });
 
@@ -106,14 +193,6 @@ if (isRstestActive) WebApp.connectHandlers.use('/__meteor__/rstest/external', (r
   });
 });
 
-export const afterAll = api.afterAll;
-export const afterEach = api.afterEach;
-export const beforeAll = api.beforeAll;
-export const beforeEach = api.beforeEach;
-export const describe = api.describe;
-export const expect = api.expect;
-export const test = api.test;
-export const __registerTestFile = api.registerTestFile;
 export const __registerTestFileLoader = api.registerTestFileLoader;
 export const __setRstestRuntimeFactory = api.setRstestRuntimeFactory;
 
@@ -129,9 +208,11 @@ function testMetadata() {
         rstestGeneration: payload.generation,
         rstestAppRoot: payload.appRoot,
         rstestTestNamePattern: payload.testNamePattern,
+        rstestUpdateSnapshot: payload.updateSnapshot,
         rstestTestTimeout: payload.testTimeout,
         rstestHookTimeout: payload.hookTimeout,
         rstestMaxConcurrency: payload.maxConcurrency,
+        rstestRuntimeConfig: payload.runtimeConfig,
         rstestToken: payload.token,
         rstestServer: payload.server,
         rstestClient: payload.client,
@@ -149,30 +230,39 @@ function testMetadata() {
   }
 }
 
-async function executeTests() {
+function serverRuntimeOptions(metadata, generation) {
+  const runtimeConfig = metadata.rstestRuntimeConfig || {
+    testTimeout: Number(metadata.rstestTestTimeout || 30000),
+    hookTimeout: Number(metadata.rstestHookTimeout || 10000),
+    maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
+  };
+  return {
+    getLoaders: api.takeTestFileLoaders,
+    // Rspack runtime bundle registers factory while Meteor package startup is
+    // still settling. Resolve it only when executor collects first test file.
+    createRuntime: createLazyRuntimeFactory(api.getRstestRuntimeFactory),
+    snapshotEnvironment: runtimeSnapshotEnvironment,
+    metadata: {
+      ...runtimeConfig,
+      appRoot: metadata.rstestAppRoot,
+      generation,
+      testNamePattern: metadata.rstestTestNamePattern,
+      updateSnapshot: metadata.rstestUpdateSnapshot || 'none',
+    },
+  };
+}
+
+async function executeTests({ serverResult: preparedServerResult } = {}) {
   const metadata = testMetadata();
   const generation = Number(metadata.rstestGeneration || 1);
   const results = [];
   const runtimeResults = [];
 
   if (metadata.rstestServer !== false) {
-    const runtimeOptions = {
-      testNamePattern: metadata.rstestTestNamePattern,
-      testTimeout: Number(metadata.rstestTestTimeout || 30000),
-      hookTimeout: Number(metadata.rstestHookTimeout || 10000),
-      maxConcurrency: Number(metadata.rstestMaxConcurrency || 5),
-    };
-    const serverResult = metadata.rstestUpstreamRuntime
-      ? await executeUpstreamServerTests({
-          loaders: api.takeTestFileLoaders(),
-          createRuntime: api.getRstestRuntimeFactory(),
-          metadata: {
-            appRoot: metadata.rstestAppRoot,
-            generation,
-            ...runtimeOptions,
-          },
-        })
-      : await api.registry.run(runtimeOptions);
+    const options = serverRuntimeOptions(metadata, generation);
+    const serverResult = preparedServerResult !== undefined
+      ? preparedServerResult
+      : await executeUpstreamServerTests(options);
     const entry = { architecture: 'server', result: serverResult };
     results.push(entry);
     runtimeResults.push(entry);
@@ -231,16 +321,57 @@ async function executeTests() {
 
 let started = false;
 
+function failRun(error) {
+  console.error(error && error.stack || error);
+  process.exit(1);
+}
+
+async function startUpstreamServerLifecycle() {
+  // Package-test hosts can start while Rspack still compiles generated test
+  // entry. Never report an empty success or exit before compile failure lands.
+  await api.waitUntilRstestRuntimeReady();
+  const metadata = testMetadata();
+  const generation = Number(metadata.rstestGeneration || 1);
+  const execution = createUpstreamServerExecution(
+    serverRuntimeOptions(metadata, generation),
+  );
+
+  const collectNext = async () => {
+    if (!execution.hasNext()) {
+      // Client result arrives only after server finishes startup and browser
+      // can connect, so cross-architecture aggregation must continue outside
+      // startup hook promise chain.
+      executeTests({ serverResult: execution.result() }).catch(failRun);
+      return;
+    }
+    await execution.collectNext();
+    // Test-module evaluation can register real async Meteor.startup hooks.
+    // Queue test execution behind those hooks, then collect next isolated file.
+    Meteor.startup(async () => {
+      try {
+        await execution.runNext();
+        Meteor.startup(() => collectNext().catch(failRun));
+      } catch (error) {
+        failRun(error);
+      }
+    });
+  };
+
+  Meteor.startup(() => collectNext().catch(failRun));
+}
+
 export function start() {
   if (!isRstestActive || started) return;
   started = true;
+  const metadata = testMetadata();
+  if (metadata.rstestServer !== false) {
+    startUpstreamServerLifecycle().catch(failRun);
+    return;
+  }
   // meteor/test_environment invokes driver start from its own startup hook.
   // Queue execution once more so every hook already waiting, including async
   // application and package initialization, settles before tests begin.
   Meteor.startup(() => {
-    executeTests().catch(error => {
-      console.error(error && error.stack || error);
-      process.exit(1);
-    });
+    executeTests().catch(failRun);
   });
 }

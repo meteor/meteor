@@ -1,5 +1,5 @@
 import { Mongo } from 'meteor/mongo';
-import { expect, test } from 'meteor/rstest';
+import { expect, test } from '@rstest/core';
 
 if (process.env.METEOR_TEST_WORKER_TOTAL) {
   test('Meteor runtime worker peer owns an isolated Mongo database', async () => {

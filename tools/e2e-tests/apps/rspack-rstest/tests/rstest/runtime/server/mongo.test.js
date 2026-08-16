@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
-import { expect, test } from 'meteor/rstest';
+import { expect, test } from '@rstest/core';
 import { runtimeValue } from './runtime-value.js';
 
 test('Meteor runtime project resolves Atmosphere packages', async () => {

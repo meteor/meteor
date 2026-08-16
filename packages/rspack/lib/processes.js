@@ -159,8 +159,13 @@ export function getCustomConfigFilePath(basePath = getMeteorAppDir()) {
  * @throws {Error} If no valid config file is found
  */
 export function getConfigFilePath() {
-  // Check if the config file exists at the current path with any of the supported extensions
-  const defaultConfigBasePath = path.join(process.cwd(), 'node_modules/@meteorjs/rspack');
+  // Test-runner package hosts can execute from a source directory outside the
+  // generated Meteor harness. Resolve dependencies from Meteor's selected
+  // project root, which defaults to cwd for ordinary app runs.
+  const defaultConfigBasePath = path.join(
+    getMeteorAppDir(),
+    'node_modules/@meteorjs/rspack',
+  );
   const defaultConfigPath = getCustomConfigFilePath(defaultConfigBasePath);
   if (defaultConfigPath) {
     return defaultConfigPath;

@@ -337,10 +337,106 @@ function runtimeSettingsFromConfig(config) {
     }
     return value;
   };
+  const normalizeRetry = value => {
+    if (value === undefined) return 0;
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw configError(
+        'METEOR_RSTEST_INVALID_RETRY',
+        'retry must be a non-negative integer.'
+      );
+    }
+    return value;
+  };
+  const normalizeBoolean = (field, fallback) => {
+    const value = config[field];
+    if (value === undefined) return fallback;
+    if (typeof value !== 'boolean') {
+      throw configError(
+        'METEOR_RSTEST_INVALID_RUNTIME_CONFIG',
+        `${field} must be a boolean for Meteor-runtime tests.`
+      );
+    }
+    return value;
+  };
+  const cloneJsonValue = (field, fallback) => {
+    const value = config[field];
+    if (value === undefined) return fallback;
+    const seen = new Set();
+    const validate = current => {
+      if (current === null || typeof current === 'string' ||
+          typeof current === 'boolean') return;
+      if (typeof current === 'number' && Number.isFinite(current)) return;
+      if (typeof current !== 'object') {
+        throw new TypeError();
+      }
+      if (seen.has(current)) throw new TypeError();
+      seen.add(current);
+      if (Array.isArray(current)) {
+        current.forEach(validate);
+      } else {
+        const prototype = Object.getPrototypeOf(current);
+        if (prototype !== Object.prototype && prototype !== null) {
+          throw new TypeError();
+        }
+        Object.values(current).forEach(validate);
+      }
+      seen.delete(current);
+    };
+    try {
+      validate(value);
+      return JSON.parse(JSON.stringify(value));
+    } catch {
+      throw configError(
+        'METEOR_RSTEST_RUNTIME_CONFIG_NOT_SERIALIZABLE',
+        `${field} must contain only JSON-serializable values for Meteor-runtime tests.`
+      );
+    }
+  };
+  const normalizeSetupFiles = value => {
+    if (value === undefined) return [];
+    const entries = Array.isArray(value) ? value : [value];
+    const root = path.resolve(config.root || process.cwd());
+    return entries.map(entry => {
+      if (typeof entry !== 'string' || entry.length === 0) {
+        throw configError(
+          'METEOR_RSTEST_INVALID_SETUP_FILE',
+          'setupFiles must contain non-empty module paths.'
+        );
+      }
+      const formatted = entry.replaceAll('<rootDir>', root);
+      const candidate = path.isAbsolute(formatted)
+        ? formatted
+        : path.resolve(root, formatted);
+      if (fs.existsSync(candidate)) return candidate;
+      try {
+        return require.resolve(formatted, { paths: [root] });
+      } catch {
+        throw configError(
+          'METEOR_RSTEST_SETUP_FILE_NOT_FOUND',
+          `Setup file ${JSON.stringify(entry)} cannot be resolved from ${JSON.stringify(root)}.`
+        );
+      }
+    });
+  };
   return {
     testTimeout: normalizeTimeout(config.testTimeout, 30000, 'testTimeout'),
     hookTimeout: normalizeTimeout(config.hookTimeout, 10000, 'hookTimeout'),
     maxConcurrency: normalizeMaxConcurrency(config.maxConcurrency),
+    retry: normalizeRetry(config.retry),
+    globals: normalizeBoolean('globals', false),
+    clearMocks: normalizeBoolean('clearMocks', false),
+    resetMocks: normalizeBoolean('resetMocks', false),
+    restoreMocks: normalizeBoolean('restoreMocks', false),
+    unstubEnvs: normalizeBoolean('unstubEnvs', false),
+    unstubGlobals: normalizeBoolean('unstubGlobals', false),
+    expect: cloneJsonValue('expect', {}),
+    snapshotFormat: cloneJsonValue('snapshotFormat', {}),
+    env: cloneJsonValue('env', {}),
+    silent: normalizeBoolean('silent', false),
+    disableConsoleIntercept: normalizeBoolean('disableConsoleIntercept', true),
+    printConsoleTrace: normalizeBoolean('printConsoleTrace', false),
+    includeTaskLocation: normalizeBoolean('includeTaskLocation', false),
+    setupFiles: normalizeSetupFiles(config.setupFiles),
   };
 }
 

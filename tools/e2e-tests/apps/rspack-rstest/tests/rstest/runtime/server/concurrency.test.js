@@ -1,5 +1,5 @@
 import { Meteor } from 'meteor/meteor';
-import { describe, expect, test } from 'meteor/rstest';
+import { describe, expect, test } from '@rstest/core';
 
 let active = 0;
 let started = 0;

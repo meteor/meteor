@@ -53,6 +53,26 @@ function validateTestExecutionPlan(plan) {
     }
     normalized.driverPackage = plan.driverPackage.trim();
   }
+  if (plan.harnessPackages !== undefined) {
+    if (plan.mode !== 'meteor-host') {
+      throw contractError(
+        'harnessPackages is only valid for a meteor-host execution plan'
+      );
+    }
+    if (!Array.isArray(plan.harnessPackages) ||
+        plan.harnessPackages.some(name =>
+          typeof name !== 'string' || name.trim().length === 0
+        )) {
+      throw contractError('harnessPackages must contain non-empty strings');
+    }
+    normalized.harnessPackages = plan.harnessPackages.map(name => name.trim());
+  }
+  if (plan.refreshProjectMetadata !== undefined) {
+    if (typeof plan.refreshProjectMetadata !== 'boolean') {
+      throw contractError('refreshProjectMetadata must be a boolean');
+    }
+    normalized.refreshProjectMetadata = plan.refreshProjectMetadata;
+  }
   if (plan.metadata !== undefined) {
     normalized.metadata = validateRecord(plan.metadata, 'metadata');
   }

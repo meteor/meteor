@@ -58,11 +58,15 @@ test('execution plan accepts only supported mode and JSON-safe opaque data', () 
   assert.deepEqual(validateTestExecutionPlan({
     mode: 'meteor-host',
     driverPackage: 'example:runtime',
+    harnessPackages: ['modules'],
+    refreshProjectMetadata: true,
     metadata: { generation: 1 },
     buildPluginOptions: { rspack: { testMode: 'runtime' } },
   }), {
     mode: 'meteor-host',
     driverPackage: 'example:runtime',
+    harnessPackages: ['modules'],
+    refreshProjectMetadata: true,
     metadata: { generation: 1 },
     buildPluginOptions: { rspack: { testMode: 'runtime' } },
   });
@@ -92,6 +96,20 @@ test('execution plan accepts only supported mode and JSON-safe opaque data', () 
       driverPackage: '',
     }),
     /driverPackage.*non-empty string/
+  );
+  assert.throws(
+    () => validateTestExecutionPlan({
+      mode: 'meteor-host',
+      refreshProjectMetadata: 'yes',
+    }),
+    /refreshProjectMetadata.*boolean/
+  );
+  assert.throws(
+    () => validateTestExecutionPlan({
+      mode: 'meteor-host',
+      harnessPackages: ['modules', ''],
+    }),
+    /harnessPackages.*non-empty strings/
   );
 });
 

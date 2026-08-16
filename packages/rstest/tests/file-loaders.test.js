@@ -52,14 +52,37 @@ test('file loader registry rejects duplicate and unsafe test paths', () => {
   );
 });
 
-test('file loader registry exposes one bundle-owned runtime factory', () => {
+test('file loader registry exposes latest bundle-owned runtime factory', () => {
   const registry = createFileLoaderRegistry();
   const factory = async () => {};
+  const rebuiltFactory = async () => {};
 
   registry.setRuntimeFactory(factory);
   assert.equal(registry.getRuntimeFactory(), factory);
-  assert.throws(
-    () => registry.setRuntimeFactory(async () => {}),
-    /runtime factory is already registered/,
+  registry.setRuntimeFactory(rebuiltFactory);
+  assert.equal(registry.getRuntimeFactory(), rebuiltFactory);
+});
+
+test('file loader registry waits for bundle factory and at least one loader', async () => {
+  const registry = createFileLoaderRegistry();
+  let ready = false;
+  const waiting = registry.waitUntilReady({ timeoutMs: 100 }).then(() => {
+    ready = true;
+  });
+
+  registry.register('imports/runtime.test.js', async () => {});
+  await Promise.resolve();
+  assert.equal(ready, false);
+
+  registry.setRuntimeFactory(async () => {});
+  await waiting;
+  assert.equal(ready, true);
+});
+
+test('file loader registry reports bundle readiness timeout', async () => {
+  const registry = createFileLoaderRegistry();
+  await assert.rejects(
+    registry.waitUntilReady({ timeoutMs: 1 }),
+    /runtime bundle did not register/,
   );
 });

@@ -12,7 +12,7 @@ const toPosix = (p) => p.replace(/\\/g, '/');
  * @returns {string} The absolute path to the Meteor application directory.
  */
 export function getMeteorAppDir() {
-  return process.cwd();
+  return process.env.METEOR_RSPACK_PROJECT_ROOT || process.cwd();
 }
 
 /**

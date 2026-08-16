@@ -1,6 +1,7 @@
 import {
   createBrowserTaskContext,
   createRstestRuntime,
+  globalApis,
   setRealTimers,
 } from '@rstest/core/internal/browser-runtime';
 
@@ -25,34 +26,42 @@ function createMemorySnapshotEnvironment() {
 }
 
 function createRuntimeConfig(options) {
+  const expectConfig = options.expect || {};
   return {
     testTimeout: options.testTimeout,
     testNamePattern: options.testNamePattern,
-    globals: false,
+    globals: options.globals ?? false,
     passWithNoTests: true,
     retry: options.retry,
-    clearMocks: false,
-    resetMocks: false,
-    restoreMocks: false,
-    unstubEnvs: false,
-    unstubGlobals: false,
+    clearMocks: options.clearMocks ?? false,
+    resetMocks: options.resetMocks ?? false,
+    restoreMocks: options.restoreMocks ?? false,
+    unstubEnvs: options.unstubEnvs ?? false,
+    unstubGlobals: options.unstubGlobals ?? false,
     maxConcurrency: options.maxConcurrency,
-    printConsoleTrace: false,
-    disableConsoleIntercept: true,
     testEnvironment: { name: 'node', options: {} },
     federation: false,
     isolate: true,
     hookTimeout: options.hookTimeout,
     coverage: { enabled: false },
-    snapshotFormat: {},
-    expect: { poll: { interval: 50, timeout: options.testTimeout } },
-    env: {},
+    snapshotFormat: options.snapshotFormat || {},
+    expect: {
+      ...expectConfig,
+      poll: {
+        interval: 50,
+        timeout: options.testTimeout,
+        ...(expectConfig.poll || {}),
+      },
+    },
+    env: options.env || {},
     logHeapUsage: false,
     detectAsyncLeaks: false,
     bail: 0,
     chaiConfig: {},
-    includeTaskLocation: false,
-    silent: false,
+    includeTaskLocation: options.includeTaskLocation ?? false,
+    silent: options.silent ?? false,
+    disableConsoleIntercept: options.disableConsoleIntercept ?? true,
+    printConsoleTrace: options.printConsoleTrace ?? false,
   };
 }
 
@@ -79,17 +88,32 @@ function assertOptions(options) {
   if (options.testTimeout === 0 || options.hookTimeout === 0 || options.maxConcurrency === 0) {
     throw new TypeError('Meteor Rstest runtime timeouts and concurrency must be positive');
   }
+  if (options.updateSnapshot !== undefined &&
+      !['none', 'new', 'all'].includes(options.updateSnapshot)) {
+    throw new TypeError('Meteor Rstest runtime updateSnapshot must be none, new, or all');
+  }
 }
 
 export async function createMeteorRstestFileRuntime(options) {
   assertOptions(options);
   setRealTimers();
+  const originalEnv = new Map();
+  for (const [key, value] of Object.entries(options.env || {})) {
+    originalEnv.set(key, {
+      exists: Object.prototype.hasOwnProperty.call(process.env, key),
+      value: process.env[key],
+    });
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  }
   const hadPreviousApi = Object.prototype.hasOwnProperty.call(
     globalThis,
     'RSTEST_API',
   );
   const previousApi = globalThis.RSTEST_API;
-  const snapshotEnvironment = createMemorySnapshotEnvironment();
+  const snapshotEnvironment = options.snapshotEnvironment ||
+    createMemorySnapshotEnvironment();
+  const snapshotFormat = options.snapshotFormat || {};
   const workerState = {
     rootPath: options.rootPath,
     projectRoot: options.projectRoot,
@@ -102,19 +126,29 @@ export async function createMeteorRstestFileRuntime(options) {
     testPath: options.testPath,
     distPath: options.testPath,
     snapshotOptions: {
-      updateSnapshot: 'none',
+      updateSnapshot: options.updateSnapshot || 'none',
       snapshotEnvironment,
-      snapshotFormat: {},
+      snapshotFormat,
     },
   };
   const { api, runner } = await createRstestRuntime(workerState, {
     taskContext: createBrowserTaskContext(),
   });
+  const originalGlobals = new Map();
+  if (options.globals) {
+    for (const key of globalApis) {
+      originalGlobals.set(key, {
+        exists: Object.prototype.hasOwnProperty.call(globalThis, key),
+        value: globalThis[key],
+      });
+      globalThis[key] = api[key];
+    }
+  }
   let collected = false;
   let disposed = false;
 
   return {
-    async collectAndRun(load) {
+    async collect(load) {
       if (disposed) {
         throw new Error('Meteor Rstest file runtime is disposed');
       }
@@ -126,6 +160,15 @@ export async function createMeteorRstestFileRuntime(options) {
       }
       collected = true;
       await load();
+    },
+
+    async run() {
+      if (disposed) {
+        throw new Error('Meteor Rstest file runtime is disposed');
+      }
+      if (!collected) {
+        throw new Error('Meteor Rstest file runtime must collect before run');
+      }
 
       let failedTests = 0;
       return runner.runTests(
@@ -140,6 +183,11 @@ export async function createMeteorRstestFileRuntime(options) {
         },
         api,
       );
+    },
+
+    async collectAndRun(load) {
+      await this.collect(load);
+      return this.run();
     },
 
     async dispose() {
@@ -160,6 +208,15 @@ export async function createMeteorRstestFileRuntime(options) {
         } catch (error) {
           cleanupError ||= error;
         }
+      }
+
+      for (const [key, original] of originalGlobals) {
+        if (original.exists) globalThis[key] = original.value;
+        else delete globalThis[key];
+      }
+      for (const [key, original] of originalEnv) {
+        if (original.exists) process.env[key] = original.value;
+        else delete process.env[key];
       }
 
       if (globalThis.RSTEST_API === api) {

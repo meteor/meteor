@@ -164,7 +164,6 @@ describe('Meteor + Rstest integration', () => {
         {
           captureOutput: true,
           execaOptions: { reject: false },
-          env: { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' },
         },
       );
       const completed = await result.meteorProcess;
@@ -173,12 +172,58 @@ describe('Meteor + Rstest integration', () => {
       expect(completed.exitCode).toBe(0);
       expect(output).toContain('upstream case 1');
       expect(output).toContain('upstream case 2');
-      expect(output).toContain('uses upstream fixture context');
+      expect(output).toContain('upstream fixture');
       expect(output).toContain(
         '✓ tests/rstest/runtime/server/upstream-api.test.js (3)',
       );
       expect(output).not.toContain('[Meteor-Rstest]');
       expect(output).not.toContain("Rstest API 'test' is not registered");
+    } finally {
+      fs.rmSync(target, { force: true });
+    }
+  }, 600_000);
+
+  test('rejects attempts to mock Meteor-owned modules', async () => {
+    const fixture = path.join(
+      appDir,
+      'fixtures',
+      'unsupported-atmosphere-mock.test.js.txt',
+    );
+    const target = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'runtime',
+      'server',
+      'unsupported-atmosphere-mock.test.js',
+    );
+    fs.copyFileSync(fixture, target);
+
+    try {
+      const result = await runMeteorCommand(
+        'test',
+        [
+          '--once',
+          '--server-only',
+          '--project',
+          'meteor-runtime-server',
+          '--test-file',
+          'unsupported-atmosphere-mock.test.js',
+          '--port',
+          testPort(3217),
+        ],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: { reject: false },
+        },
+      );
+      const completed = await result.meteorProcess;
+      const output = stripAnsi(result.outputLines.join('\n'));
+
+      expect(completed.exitCode).toBe(1);
+      expect(output).toContain('Cannot mock Meteor-owned module "meteor/mongo"');
+      expect(output).toContain('Use dependency injection');
     } finally {
       fs.rmSync(target, { force: true });
     }
@@ -335,6 +380,63 @@ describe('Meteor + Rstest integration', () => {
     } finally {
       fs.writeFileSync(testFile, originalTest);
       fs.writeFileSync(snapshotFile, originalSnapshot);
+    }
+  }, 600_000);
+
+  test('meteor update-snapshots repairs a Meteor-runtime mismatch', async () => {
+    const snapshotFile = path.join(
+      appDir,
+      'tests',
+      'rstest',
+      'runtime',
+      'server',
+      '__snapshots__',
+      'snapshot.test.js.snap',
+    );
+    const expectedSnapshot = fs.readFileSync(snapshotFile, 'utf8');
+    const staleSnapshot = expectedSnapshot.replace(
+      'meteor-server',
+      'stale-host',
+    );
+    expect(staleSnapshot).not.toBe(expectedSnapshot);
+    fs.writeFileSync(snapshotFile, staleSnapshot);
+    const args = [
+      '--once',
+      '--server-only',
+      '--project',
+      'meteor-runtime-server',
+      '--test-file',
+      'snapshot.test.js',
+      '--port',
+      testPort(3216),
+    ];
+    const runSnapshotCommand = async extraArgs => {
+      const result = await runMeteorCommand(
+        'test',
+        [...args, ...extraArgs],
+        appDir,
+        {
+          captureOutput: true,
+          execaOptions: { reject: false },
+        },
+      );
+      return {
+        completed: await result.meteorProcess,
+        output: stripAnsi(result.outputLines.join('\n')),
+      };
+    };
+
+    try {
+      const mismatch = await runSnapshotCommand([]);
+      expect(mismatch.completed.exitCode).toBe(1);
+      expect(mismatch.output).toContain('Meteor runtime supports committed snapshots');
+      expect(fs.readFileSync(snapshotFile, 'utf8')).toBe(staleSnapshot);
+
+      const update = await runSnapshotCommand(['--update-snapshots']);
+      expect(update.completed.exitCode).toBe(0);
+      expect(fs.readFileSync(snapshotFile, 'utf8')).toBe(expectedSnapshot);
+    } finally {
+      fs.writeFileSync(snapshotFile, expectedSnapshot);
     }
   }, 600_000);
 
@@ -873,7 +975,7 @@ describe('Meteor + Rstest integration', () => {
       'intentional-failure.test.js',
     );
     fs.writeFileSync(failureFile, `
-      import { expect, test } from 'meteor/rstest';
+      import { expect, test } from '@rstest/core';
       test('intentional transported runtime failure', () => {
         expect({ compiler: 'rspack' }).toEqual({ compiler: 'other' });
       });
@@ -1007,8 +1109,8 @@ describe('Meteor + Rstest integration', () => {
     const output = stripAnsi(result.outputLines.join('\n'));
 
     expect(completed.exitCode).toBe(0);
-    expect(output).toContain('✓ Meteor runtime · server (1)');
-    expect(output).toContain('✓ Meteor runtime · web.browser (2)');
+    expect(output).toContain('✓ rstest-e2e-fixture/fixture.tests.js (1)');
+    expect(output).toContain('✓ rstest-e2e-fixture/fixture.tests.js (2)');
     expect(output).not.toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
     expect(output).not.toContain('Package.onTest client executor runs in Meteor browser');
 
@@ -1025,7 +1127,9 @@ describe('Meteor + Rstest integration', () => {
     const repeatedOutput = stripAnsi(repeated.outputLines.join('\n'));
 
     expect(repeatedCompleted.exitCode).toBe(0);
-    expect(repeatedOutput).toContain('✓ Meteor runtime · server (1)');
+    expect(repeatedOutput).toContain(
+      '✓ rstest-e2e-fixture/fixture.tests.js (1)'
+    );
   }, 600_000);
 
   test('meteor test-packages bootstraps Rstest outside any Meteor app', async () => {
@@ -1060,7 +1164,7 @@ describe('Meteor + Rstest integration', () => {
       const output = stripAnsi(result.outputLines.join('\n'));
 
       expect(completed.exitCode).toBe(0);
-      expect(output).toContain('✓ Meteor runtime · server (1)');
+      expect(output).toContain('✓ rstest-e2e-fixture/fixture.tests.js (1)');
       expect(output).not.toContain('Package.onTest keeps Isobuild and Atmosphere resolution');
     } finally {
       fs.rmSync(outsideDir, { recursive: true, force: true });

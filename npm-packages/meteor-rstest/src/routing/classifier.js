@@ -71,8 +71,15 @@ async function classifyRstestCandidates({
     const hasPlaywright = signal(requests, '@rstest/playwright');
     const hasMeteorApi = signal(requests, 'meteor/rstest');
     const hasMeteor = requests.some(item => /^meteor\//.test(item.request));
+    if (hasMeteorApi) {
+      throw routingError(
+        'RSTEST_LEGACY_RUNTIME_API',
+        file,
+        'meteor/rstest test declarations were removed; import them from @rstest/core.',
+      );
+    }
     const owned = marker.owned || rootHint || hasCore || hasBrowser ||
-      hasPlaywright || hasMeteorApi;
+      hasPlaywright;
     if (!owned) {
       manifest.legacyFiles.push(file);
       continue;

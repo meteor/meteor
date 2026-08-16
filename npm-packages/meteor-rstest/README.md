@@ -105,8 +105,9 @@ provider id accepted by `--test-runner`.
 
 Pure projects intentionally do not emulate `meteor/*` resolution. Move tests
 requiring Meteor globals, Atmosphere exports, DDP, WebApp, package test-only
-unibuilds, or MongoDB into a runtime root and import the runtime API from
-`meteor/rstest`.
+unibuilds, or MongoDB into a runtime root. Keep importing test APIs from
+`@rstest/core`; importing real `meteor/*` dependencies selects the embedded
+Meteor runtime.
 
 ## Dynamic configuration
 
@@ -144,10 +145,12 @@ remain serial unless opted in, share their Meteor host and Mongo database, and
 can use `.sequential` as an ordering barrier. `--runtime-workers` stays the
 separate file-level mechanism for isolated Meteor hosts and databases.
 
-Pure projects retain upstream Rstest module mocking. Use `rs.mock`, `rs.fn`,
-and `rs.spyOn` directly from `@rstest/core`; Meteor's supervised Rstest process
-owns `NODE_ENV=test` so hoisting remains enabled even though Meteor CLI itself
-runs with a production environment.
+All projects use `rs.mock`, `rs.fn`, and `rs.spyOn` directly from
+`@rstest/core`. Meteor's supervised Rstest process owns `NODE_ENV=test` so
+hoisting remains enabled even though Meteor CLI itself runs with a production
+environment. In Meteor-runtime projects, Rspack may mock application and npm
+modules, but replacement of `meteor/*` and Atmosphere packages is rejected so
+Meteor, MongoDB, DDP, and package exports stay real.
 
 Meteor generates protected projects named `meteor-pure-server`,
 `meteor-pure-client`, `meteor-browser`, `meteor-runtime-server`,
@@ -168,7 +171,7 @@ Rspack dependency graph to classify direct and transitive imports:
 | `@rstest/core` | Native Rstest, Node by default |
 | `@rstest/browser` | Native Rstest Browser Mode |
 | `@rstest/playwright` | External E2E against the Meteor app URL |
-| `meteor/rstest`, or an Rstest-owned graph reaching `meteor/*` | Runtime adapter inside a real Meteor host |
+| An Rstest-owned graph reaching `meteor/*` | Upstream Rstest file runtime inside a real Meteor host |
 
 Static dynamic imports and CommonJS `require` participate. Type-only imports do
 not. Existing `tests/rstest/**` roots remain compatible ownership hints, while
@@ -304,6 +307,11 @@ options fail before build instead of being ignored. Mixed Rstest and legacy
 package ownership also fails with exact split commands until real compatibility
 executors can share one harness.
 
+Top-level `setupFiles` are loaded before each test file in native and embedded
+projects. Keep shared setup environment-neutral. Import Meteor-only setup from
+runtime test files so native Node, jsdom, Browser Mode, and E2E projects do not
+evaluate Meteor modules.
+
 Outside an application, `meteor test-packages /absolute/package/path`
 bootstraps compatible compiler dependencies through Atmosphere `rspack` and
 exact coordinator dependencies through `rstest/tooling` into its temporary
@@ -349,12 +357,13 @@ meteor test --once --project meteor-pure-server --coverage
 ```
 
 Use native Rstest `coverage` configuration to select Istanbul or V8 and define
-reporters, include/exclude patterns, and report paths. Meteor-runtime projects currently provide
-assertions, hooks, filtering, structured results, and architecture aggregation;
-they do not claim native Rstest snapshots, coverage, worker-only mocking, or
-snapshot internals.
+reporters, include/exclude patterns, and report paths. Meteor-runtime projects
+support upstream snapshot assertions backed by a Meteor-owned persistent
+snapshot environment. Snapshot writes require `--update-snapshots`. Runtime
+coverage remains unavailable because code executes in a long-lived Meteor host,
+not a native instrumented Rstest worker.
 
-Native module mocking needs no Meteor adapter:
+Module mocking uses the same API in native and Meteor-runtime projects:
 
 ```js
 import { expect, rs, test } from '@rstest/core';
@@ -369,10 +378,17 @@ test('uses a hoisted app-module mock', () => {
 });
 ```
 
-Runtime tests should keep Meteor, Atmosphere, DDP, and Mongo real. Projects may
-add ordinary test-double libraries such as Sinon for spies or stubs around
-their own boundaries, but `@meteorjs/rstest` does not install one and does not
-translate it into Rstest module mocking.
+Runtime `rs.mock` is limited to application and npm modules in the Rspack graph.
+`rs.mock('meteor/...')` and Atmosphere package replacement fail explicitly.
+`rs.fn` and `rs.spyOn` remain available for application boundaries while real
+Meteor, Atmosphere, DDP, and Mongo continue running.
+
+Embedded runtime keeps upstream suite/test declarations, parameterization,
+`test.extend` fixtures, hooks, context, matchers, promise assertions, retry,
+repeats, fake timers, spies/stubs, `waitUntil`, snapshots, name filtering, and
+globals. Native worker isolation/reset, file sharding/changed selection,
+coverage, and native reporter event streams remain native-only. Use
+`--runtime-workers` for isolated Meteor processes and databases.
 
 ## Playwright fixture
 

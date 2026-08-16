@@ -1,0 +1,8 @@
+// Rstest Snapshot v1
+
+exports[`Meteor runtime supports committed snapshots 1`] = `
+{
+  "api": "@rstest/core",
+  "host": "meteor-server",
+}
+`;

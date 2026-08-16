@@ -28,6 +28,7 @@ function formatMilliseconds(ms) {
  * @returns {Object} Object containing compilation tracking state and callbacks
  */
 export function setupCompilationTracking() {
+  delete process.env.RSPACK_FIRST_COMPILATION_COMPLETE;
   // Initialize global state for first compilation tracking
   const clientFirstCompile = {
     resolved: false,
@@ -223,9 +224,10 @@ export async function waitForFirstCompilation(
       break;
     case 'both':
     default:
-      if (!clientState?.resolved && !serverState?.resolved) {
-        await Promise.all([clientFirstCompilePromise, serverFirstCompilePromise]);
-      }
+      await Promise.all([
+        ...(!clientState?.resolved ? [clientFirstCompilePromise] : []),
+        ...(!serverState?.resolved ? [serverFirstCompilePromise] : []),
+      ]);
       break;
   }
 

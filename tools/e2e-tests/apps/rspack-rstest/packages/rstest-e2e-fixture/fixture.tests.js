@@ -1,6 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
-import { expect, test } from 'meteor/rstest';
+import { expect, test } from '@rstest/core';
 import { packageValue } from 'meteor/rstest-e2e-fixture';
 
 let asyncStartupComplete = Meteor.isClient;

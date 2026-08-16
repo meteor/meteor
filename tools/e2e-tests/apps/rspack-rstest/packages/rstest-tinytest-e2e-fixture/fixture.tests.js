@@ -1,4 +1,4 @@
-import { expect, test as rstestTest } from 'meteor/rstest';
+import { expect, test as rstestTest } from '@rstest/core';
 
 rstestTest('same-package Rstest registry remains explicit', () => {
   expect(21 * 2).toBe(42);

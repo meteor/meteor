@@ -1,4 +1,5 @@
-const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = require('@rspack/core');
+const rspack = require('@rspack/core');
+const { DefinePlugin, BannerPlugin, NormalModuleReplacementPlugin } = rspack;
 const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
@@ -18,7 +19,16 @@ const {
   enforceRstestRuntimeOptimization,
   generateEagerTestFile,
 } = require("./lib/test.js");
-const { readRstestRuntimeInventory } = require('./lib/rstest.js');
+const {
+  hasTypescriptRstestInputs,
+  isRstestRuntimeBuild,
+  readRstestRuntimeInventory,
+  readRstestRuntimeSettings,
+} = require('./lib/rstest.js');
+const {
+  createMeteorRstestPlugins,
+  enforceMeteorRstestPlugins,
+} = require('./lib/rstest-runtime.js');
 const { getMeteorIgnoreEntries, createIgnoreGlobConfig } = require("./lib/ignore");
 const {
   compileWithMeteor,
@@ -225,15 +235,18 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const isTestModule = !!Meteor.isTestModule;
   const isTestEager = !!Meteor.isTestEager;
   const isTestFullApp = !!Meteor.isTestFullApp;
-  const isRstestTest = isTest && Meteor.testRunner === 'rstest';
   let testRunnerContext = {};
   try {
     testRunnerContext = JSON.parse(Meteor.testRunnerContext || '{}');
   } catch {
     throw new Error('[Meteor Rspack] Invalid test runner build context.');
   }
-  const upstreamRstestRuntime = isRstestTest &&
-    testRunnerContext.upstreamRuntime === true;
+  const isRstestTest = isRstestRuntimeBuild({
+    testRunner: Meteor.testRunner,
+    testRunnerContext,
+    isTest,
+  });
+  const upstreamRstestRuntime = isRstestTest;
   const compatibilityIgnoreEntries = isRstestTest
     ? ['**/tests/legacy/**']
     : isTest ? ['**/tests/rstest/runtime/**'] : [];
@@ -242,6 +255,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     `tests/rstest/runtime/${isClient ? 'client' : 'server'}`,
   );
   let rstestRuntimeFiles;
+  let rstestTestFileRoot;
+  let rstestSetupFiles = [];
   if (isRstestTest && testRunnerContext.runtimeManifest) {
     const inventory = readRstestRuntimeInventory({
       manifest: testRunnerContext.runtimeManifest,
@@ -250,24 +265,37 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     });
     rstestRuntimeRoot = inventory.discoveryRoot;
     rstestRuntimeFiles = inventory.files;
+    rstestTestFileRoot = inventory.testFileRoot;
+  }
+  if (isRstestTest && testRunnerContext.runtimeSettingsPath) {
+    rstestSetupFiles = readRstestRuntimeSettings(
+      testRunnerContext.runtimeSettingsPath,
+    ).setupFiles;
   }
   const rstestTestFileRegistration = createRstestTestFileRegistration({
     isRstestTest,
-    environment: upstreamRstestRuntime
-      ? { METEOR_RSTEST_UPSTREAM_RUNTIME: '1' }
-      : {},
   });
   const rstestRuntimeAlias = createRstestRuntimeAlias({
     upstreamRuntime: upstreamRstestRuntime,
     projectDir,
     npmRoot: testRunnerContext.npmRoot,
   });
+  const meteorRstestPlugins = createMeteorRstestPlugins({
+    upstreamRuntime: upstreamRstestRuntime,
+    projectDir,
+    npmRoot: testRunnerContext.npmRoot,
+    rspack,
+  });
   const isProfile = !!Meteor.isProfile;
   const isVerbose = !!Meteor.isVerbose;
   const configPath = Meteor.configPath;
   const testEntry = Meteor.testEntry;
 
-  const isTypescriptEnabled = Meteor.isTypescriptEnabled || false;
+  const isTypescriptEnabled = Meteor.isTypescriptEnabled ||
+    isRstestTest && hasTypescriptRstestInputs({
+      files: rstestRuntimeFiles,
+      setupFiles: rstestSetupFiles,
+    });
   const isJsxEnabled =
     Meteor.isJsxEnabled || (!isTypescriptEnabled && isReactEnabled) || false;
   const isTsxEnabled =
@@ -525,14 +553,16 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     : { stats: "errors-warnings", infrastructureLogging: { level: "warn" } };
 
   const clientEntry =
-    isClient && isTest && (isTestEager || isRstestTest) && isTestFullApp
+    isClient && (isTest && isTestEager || isRstestTest) && isTestFullApp
       ? generateEagerTestFile({
           // Rstest runtime roots own ordinary *.test.* files even during a
           // full-app run. Full-app controls the extra app entry independently.
           isAppTest: !isRstestTest,
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
+          testFileRoot: isRstestTest ? rstestTestFileRoot : undefined,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          setupFiles: isRstestTest ? rstestSetupFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/server/**", ...compatibilityIgnoreEntries],
@@ -541,13 +571,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           extraEntry: path.resolve(process.cwd(), Meteor.mainClientEntry),
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
-      : isClient && isTest && (isTestEager || isRstestTest)
+      : isClient && (isTest && isTestEager || isRstestTest)
       ? generateEagerTestFile({
           isAppTest: false,
           isClient: true,
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
+          testFileRoot: isRstestTest ? rstestTestFileRoot : undefined,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          setupFiles: isRstestTest ? rstestSetupFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/server/**", ...compatibilityIgnoreEntries],
@@ -719,12 +751,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   };
 
   const serverEntry =
-    isServer && isTest && (isTestEager || isRstestTest) && isTestFullApp
+    isServer && (isTest && isTestEager || isRstestTest) && isTestFullApp
       ? generateEagerTestFile({
           isAppTest: !isRstestTest,
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
+          testFileRoot: isRstestTest ? rstestTestFileRoot : undefined,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          setupFiles: isRstestTest ? rstestSetupFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/client/**", ...compatibilityIgnoreEntries],
@@ -732,12 +766,14 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           prefix: "server",
           globalImportPath: path.resolve(projectDir, buildContext, entryPath),
         })
-      : isServer && isTest && (isTestEager || isRstestTest)
+      : isServer && (isTest && isTestEager || isRstestTest)
       ? generateEagerTestFile({
           isAppTest: false,
           projectDir,
           discoveryRoot: isRstestTest ? rstestRuntimeRoot : projectDir,
+          testFileRoot: isRstestTest ? rstestTestFileRoot : undefined,
           includeFiles: isRstestTest ? rstestRuntimeFiles : undefined,
+          setupFiles: isRstestTest ? rstestSetupFiles : undefined,
           testFileRegistration: rstestTestFileRegistration,
           buildContext,
           ignoreEntries: ["**/client/**", ...compatibilityIgnoreEntries],
@@ -938,6 +974,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     config = disablePlugins(config, config.disablePlugins);
     delete config.disablePlugins;
   }
+
+  enforceMeteorRstestPlugins(config, meteorRstestPlugins);
 
   delete config["meteor.enablePortableBuild"];
 

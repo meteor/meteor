@@ -2,6 +2,7 @@ const { defineConfig } = require('@meteorjs/rstest');
 
 module.exports = defineConfig(context => ({
   globals: true,
+  setupFiles: ['<rootDir>/tests/rstest/runtime/setup.js'],
   testTimeout: 30000,
   maxConcurrency: 2,
   env: {

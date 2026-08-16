@@ -29,6 +29,8 @@ import {
 } from "../fs/files";
 import rspackHelpers from "../tool-env/rspack";
 
+const { rstestRuntimeShimFor } = require('./rstest-runtime-alias.js');
+
 const { SourceNode, SourceMapConsumer } = require("source-map");
 
 const {
@@ -1297,6 +1299,16 @@ export default class ImportScanner {
     } catch (e: any) {
       if (e.code !== "ENOENT") throw e;
       return null;
+    }
+
+    const runtimeShim = rstestRuntimeShimFor({
+      absPath,
+      testRunner: process.env.METEOR_TEST_RUNNER,
+    });
+    if (runtimeShim) {
+      info.dataString = runtimeShim;
+      info.data = Buffer.from(runtimeShim, "utf8");
+      info.hash = sha1(info.data);
     }
 
     const dataString = info.dataString;

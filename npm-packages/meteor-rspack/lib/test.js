@@ -12,23 +12,17 @@ const toPosix = (p) => p.replace(/\\/g, '/');
 
 const createRstestTestFileRegistration = ({
   isRstestTest,
-  environment = process.env,
 }) => {
   if (!isRstestTest) return undefined;
-  const upstreamRuntime = environment.METEOR_RSTEST_UPSTREAM_RUNTIME === '1';
   return {
     module: 'meteor/rstest',
-    exportName: upstreamRuntime
-      ? '__registerTestFileLoader'
-      : '__registerTestFile',
+    exportName: '__registerTestFileLoader',
     mode: 'sync',
-    ...(upstreamRuntime && {
-      runtimeFactory: {
-        module: '@meteorjs/rstest/runtime',
-        exportName: 'createMeteorRstestFileRuntime',
-        registrationExportName: '__setRstestRuntimeFactory',
-      },
-    }),
+    runtimeFactory: {
+      module: '@meteorjs/rstest/runtime',
+      exportName: 'createMeteorRstestFileRuntime',
+      registrationExportName: '__setRstestRuntimeFactory',
+    },
   };
 };
 
@@ -59,9 +53,16 @@ const enforceRstestRuntimeAlias = (config, alias) => {
 
 const enforceRstestRuntimeOptimization = (config, upstreamRuntime) => {
   if (!upstreamRuntime) return config;
+  // Meteor test hosts expose development variants of shared npm modules.
+  // Keep embedded Rstest modules on same condition set; mixing production
+  // react-dom with host-owned development React breaks shared internals.
+  config.mode = 'development';
   config.optimization ||= {};
   config.optimization.usedExports = false;
   config.optimization.minimize = false;
+  // Rstest hoists module mocks ahead of imports inside each test module.
+  // Scope hoisting would move bundled imports above that transformed call.
+  config.optimization.concatenateModules = false;
   return config;
 };
 
@@ -71,7 +72,9 @@ const enforceRstestRuntimeOptimization = (config, upstreamRuntime) => {
  * @param {boolean} options.isAppTest - Whether this is an app test
  * @param {string} options.projectDir - The project directory
  * @param {string} [options.discoveryRoot] - Root scanned by the eager context
+ * @param {string} [options.testFileRoot] - Logical prefix used in reported test IDs
  * @param {string[]} [options.includeFiles] - Exact files allowed under discoveryRoot
+ * @param {string[]} [options.setupFiles] - Runtime setup modules loaded once per test file
  * @param {{module: string, exportName: string, mode?: 'sync'|'lazy', runtimeFactory?: {module: string, exportName: string, registrationExportName: string}}} [options.testFileRegistration]
  *        Optional module API wrapping each discovered test-file evaluation
  * @param {string} options.buildContext - The build context
@@ -85,7 +88,9 @@ const generateEagerTestFile = ({
   isAppTest,
   projectDir,
   discoveryRoot = projectDir,
+  testFileRoot,
   includeFiles,
+  setupFiles = [],
   testFileRegistration,
   buildContext,
   localDir = process.env.METEOR_LOCAL_DIR || '.meteor/local',
@@ -137,9 +142,21 @@ const generateEagerTestFile = ({
     : `${prefix}eager-tests.mjs`;
   const filePath = path.resolve(distDir, filename);
   const resolvedDiscoveryRoot = path.resolve(discoveryRoot);
-  const relativeDiscoveryRoot = toPosix(
-    path.relative(projectDir, resolvedDiscoveryRoot),
-  );
+  if (testFileRoot !== undefined && (
+    typeof testFileRoot !== 'string' ||
+    path.isAbsolute(testFileRoot) ||
+    testFileRoot.split(/[\\/]/).includes('..')
+  )) {
+    throw new Error('Rstest testFileRoot must be a project-relative path.');
+  }
+  const relativeDiscoveryPath = path.relative(projectDir, resolvedDiscoveryRoot);
+  const relativeDiscoveryRoot = testFileRoot === undefined
+    ? relativeDiscoveryPath === '..' ||
+      relativeDiscoveryPath.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relativeDiscoveryPath)
+      ? ''
+      : toPosix(relativeDiscoveryPath)
+    : toPosix(testFileRoot);
   const includedRelativeFiles = includeFiles && includeFiles
     .map(filePath => path.relative(resolvedDiscoveryRoot, filePath))
     .filter(relative => relative && !relative.startsWith(`..${path.sep}`))
@@ -155,7 +172,10 @@ const generateEagerTestFile = ({
   const registrationIteration = testFileRegistration
     ? `.forEach((file) => __meteorRegisterTestFile(
     [__meteorTestFileRoot, file.replace(/^\\.\\//, '')].filter(Boolean).join('/'),
-    () => ctx(file),
+    () => (__meteorRstestSetupLoaders[file] || []).reduce(
+      (pending, loadSetup) => pending.then(loadSetup),
+      Promise.resolve(),
+    ).then(() => ctx(file)),
   ))`
     : '.forEach(ctx)';
   const runtimeFactory = testFileRegistration?.runtimeFactory;
@@ -172,6 +192,21 @@ const generateEagerTestFile = ({
     : '';
   const registrationRoot = testFileRegistration
     ? `const __meteorTestFileRoot = ${JSON.stringify(relativeDiscoveryRoot)};\n`
+    : '';
+  const setupLoaderEntries = testFileRegistration && includeFiles
+    ? includeFiles.map(testFile => {
+      const relative = toPosix(path.relative(resolvedDiscoveryRoot, testFile));
+      const key = `./${relative}`;
+      const loaders = setupFiles.map((setupFile, index) => {
+        const query = encodeURIComponent(`${relative}:${index}`);
+        const request = `${toPosix(setupFile)}?meteor-rstest-setup=${query}`;
+        return `() => import(/* webpackMode: "eager" */ ${JSON.stringify(request)})`;
+      });
+      return `${JSON.stringify(key)}: [${loaders.join(', ')}]`;
+    })
+    : [];
+  const setupLoaderMap = testFileRegistration
+    ? `const __meteorRstestSetupLoaders = {${setupLoaderEntries.join(',')}};\n`
     : '';
   const discoveryContent = fs.existsSync(resolvedDiscoveryRoot) ? `{
   const ctx = import.meta.webpackContext('${toPosix(resolvedDiscoveryRoot)}', {
@@ -206,7 +241,7 @@ const generateEagerTestFile = ({
       ? `const MeteorIgnoreRegex = ${excludeMeteorIgnoreRegex.toString()};`
       : ""
   }
-${registrationRoot}
+${registrationRoot}${setupLoaderMap}
 ${discoveryContent}
 ${extraContent}`;
 

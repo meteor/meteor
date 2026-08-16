@@ -123,7 +123,7 @@ test('resolved imports and filename hints produce exact smart routing manifest',
   write(appRoot, 'domain/items.js', "import 'meteor/mongo'; export const count = 1;");
   const native = write(appRoot, 'imports/math.test.js', "import { test } from '@rstest/core'; test('math', () => {});");
   const wrapped = write(appRoot, 'imports/wrapped.test.js', "import { test } from '../support/test-api.js'; test('wrapped', () => {});");
-  const runtime = write(appRoot, 'imports/items.test.js', "import { test } from 'meteor/rstest'; import '../domain/items.js'; test('items', () => {});");
+  const runtime = write(appRoot, 'imports/items.test.js', "import { test } from '@rstest/core'; import '../domain/items.js'; test('items', () => {});");
   const browser = write(appRoot, 'imports/counter.test.js', "import { test } from '@rstest/browser'; test('counter', () => {});");
   const e2e = write(appRoot, 'imports/login.test.js', "import { test } from '@rstest/playwright'; test('login', () => {});");
   const globalNative = write(appRoot, 'imports/global.native.rstest.test.js', "test('global', () => {});");
@@ -170,5 +170,21 @@ test('filename hints cannot force real dependencies into incompatible runtimes',
     () => classifyRstestCandidates({ appRoot, candidates: [externalMeteor] }),
     error => error.code === 'RSTEST_ROUTING_CONFLICT' &&
       /external.*meteor|meteor.*external/i.test(error.message),
+  );
+});
+
+test('legacy meteor/rstest declaration imports fail with migration guidance', async t => {
+  const appRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-legacy-api-'));
+  t.after(() => fs.rmSync(appRoot, { recursive: true, force: true }));
+  const legacyApi = write(
+    appRoot,
+    'imports/legacy-api.test.js',
+    "import { test } from 'meteor/rstest'; test('legacy', () => {});",
+  );
+
+  await assert.rejects(
+    () => classifyRstestCandidates({ appRoot, candidates: [legacyApi] }),
+    error => error.code === 'RSTEST_LEGACY_RUNTIME_API' &&
+      /@rstest\/core/.test(error.message),
   );
 });

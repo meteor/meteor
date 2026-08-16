@@ -147,6 +147,8 @@ function getFileExtensionsToIgnore() {
 export function configureMeteorForRspack() {
   const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
+  const isRstestPackageHost =
+    process.env.METEOR_RSTEST_PACKAGE_HOST === '1';
 
   // Ignore node_modules to prevent Meteor from processing them
   const projectRootFilesAndFolders = getMeteorAppFilesAndFolders({
@@ -268,11 +270,20 @@ export function configureMeteorForRspack() {
         isDevelopment: true,
       }),
     )}/**`;
+  const activeMainIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+    getBuildFilePath({
+      isMain: true,
+      ...(isMeteorAppDevelopment()
+        ? { isDevelopment: true }
+        : { isProduction: true }),
+    }),
+  )}/**`;
   const foldersToIgnore = [
-    ...((isMeteorAppTest() && [otherMainIgnorePath]) || [
-      testIgnorePath,
-      otherMainIgnorePath,
-    ]),
+    ...(isRstestPackageHost
+      ? [activeMainIgnorePath, otherMainIgnorePath]
+      : isMeteorAppTest()
+        ? [otherMainIgnorePath]
+        : [testIgnorePath, otherMainIgnorePath]),
     'node_modules/**',
     ...extraFoldersToIgnore,
   ].filter(Boolean);
@@ -353,7 +364,7 @@ export function configureMeteorForRspack() {
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }),
   };
-  if (isMeteorAppTestFullApp()) {
+  if (isMeteorAppTestFullApp() || isRstestPackageHost) {
     appEntrypoints = {
       ...appEntrypoints,
       mainClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,

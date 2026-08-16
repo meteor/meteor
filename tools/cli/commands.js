@@ -2809,6 +2809,15 @@ async function doTestCommand(options) {
       command: testRunnerCommand,
       appDir: sourceAppDir,
       harnessRoot: testRunnerAppDir,
+      packageTests: selectedTestPackages.map(entry => {
+        const packageSource = projectContext.localCatalog.getPackageSource(
+          entry.name
+        );
+        return {
+          name: entry.name,
+          sourceRoot: packageSource && packageSource.sourceRoot,
+        };
+      }),
       localDir: projectContext.projectLocalDir,
       verbose: normalizeTestRunnerVerbose(packageJsonMeteor, options.verbose),
       architectures: [
@@ -2867,6 +2876,29 @@ async function doTestCommand(options) {
       buildPluginOptions: testRunnerPlan.buildPluginOptions || {},
     });
     process.env.METEOR_TEST_RUNNER = testRunnerSelection.id;
+    let harnessPackagesChanged = false;
+    if (options['test-packages'] && testRunnerPlan.harnessPackages?.length) {
+      const constraints = testRunnerPlan.harnessPackages
+        .filter(packageName =>
+          !projectContext.projectConstraintsFile.getConstraint(packageName)
+        )
+        .map(packageName => utils.parsePackageConstraint(packageName));
+      if (constraints.length > 0) {
+        projectContext.projectConstraintsFile.addConstraints(constraints);
+        await projectContext.projectConstraintsFile.writeIfModified();
+        harnessPackagesChanged = true;
+      }
+    }
+    if (testRunnerPlan.refreshProjectMetadata || harnessPackagesChanged) {
+      projectContext.reset();
+      await main.captureAndExit(
+        '=> Errors while refreshing test host metadata:',
+        async () => {
+          await projectContext.initializeCatalog();
+          await projectContext.resolveConstraints();
+        }
+      );
+    }
 
     const updateMetadata = updateTestRunnerMetadataPayload = payload =>
       updateTestRunnerMetadata(testRunnerSelection, payload);

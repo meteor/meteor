@@ -621,11 +621,19 @@ class ResourceSlot {
   _isLazy(options, isJavaScript) {
     let lazy = this._getOption("lazy", options);
 
+    const packageName = this.packageSourceBatch.unibuild.pkg.name;
+    if (process.env.METEOR_TEST_RUNNER === "rstest" &&
+        /^local-test[:_]/.test(packageName || "")) {
+      // Rstest package tests are evaluated by the generated Rspack loader
+      // after the upstream runtime is installed in the real Meteor host.
+      return true;
+    }
+
     if (typeof lazy === "boolean") {
       return lazy;
     }
 
-    const isApp = ! this.packageSourceBatch.unibuild.pkg.name;
+    const isApp = ! packageName;
     if (! isApp) {
       // Meteor package files must be explicitly added by api.addFiles or
       // api.mainModule, and are implicitly eager unless specified
