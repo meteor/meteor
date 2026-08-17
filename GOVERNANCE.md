@@ -6,6 +6,15 @@ This document explains how the Meteor project is organized, who does what, and h
 
 Meteor has always run on its community. As the project grows, doing things informally stops working. This document writes down the roles and the path from Contributor to Core Maintainer so it's clear and open to everyone.
 
+## Meteor Software's role
+
+Meteor is owned and led by [Meteor Software](https://www.meteor.com/), with meaningful community participation — it is not an independent, foundation-run project. Spelling that out avoids confusion later:
+
+- The TSC is composed of Meteor Software employees and acts on behalf of the company. Meteor Software holds final authority over the project, exercised through the TSC.
+- Official releases, the long-term roadmap, and this governance model stay under Meteor Software's control.
+- The community decides day-to-day matters on its own: triage, reviews, priorities within a front, and recommendations on core changes (see [Decision-making](#decision-making)).
+- When company and community priorities differ, the TSC makes the call and normally documents the reasoning publicly.
+
 ## Roles
 
 ### Contributor
