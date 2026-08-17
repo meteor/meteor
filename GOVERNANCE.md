@@ -70,10 +70,11 @@ Alumni keep their recognition and stay listed on the Meteor website. They can st
 
 ## How to become a Core Maintainer
 
-1. Anyone can open a pull request nominating someone for the Core Maintainer program. There's no minimum time or set number of contributions — the nomination stands on the person's work and on community support.
-2. The nomination is public, on the GitHub repository.
-3. The community — and especially the current Core Maintainers — decides whether to accept it.
-4. Once accepted, it's recorded at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
+1. Anyone can open a pull request nominating someone for the Core Maintainer program — self-nominations included. There's no minimum time or set number of contributions — the nomination stands on the person's work and on community support.
+2. The nomination is public, on the GitHub repository, and stays open for at least 14 days so existing Core Maintainers and the wider community can give feedback.
+3. It needs explicit support from at least two active Core Maintainers or TSC members.
+4. The TSC approves and merges the nomination. Permissions are only granted after that approval.
+5. Once accepted, it's recorded at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
 
 New packages entering core start behind an **experimental flag**. This gives the person looking after it time to iterate and prove it's stable before it becomes official. There's no fixed deadline, but the goal is to move toward stable.
 
@@ -112,9 +113,11 @@ Two things are always the TSC's call: the long-term roadmap and publishing offic
 
 **Votes.** When this document calls for a vote of the active Core Maintainers, the vote stays open for at least seven days, and thresholds (like the two-thirds removal vote) are counted over the votes cast — abstentions and non-responses don't count toward either side. Anyone directly involved in the matter being voted on recuses themselves.
 
-## Removing a Core Maintainer
+## Suspending or removing a Core Maintainer
 
-A Core Maintainer can be removed by a two-thirds vote of the active Core Maintainers, for a serious Code of Conduct violation. This has never happened. The rule exists to be clear about expectations, not because we expect to use it.
+**Suspension.** The TSC can suspend a Core Maintainer's permissions immediately when trust can no longer safely be assumed — for example a compromised account or a credible security concern. A suspension is followed by a documented review with the person involved; it either lifts the suspension or starts the removal process. Suspension is a safety measure, not a punishment.
+
+**Removal.** A Core Maintainer can be removed by a two-thirds vote of the active Core Maintainers, for a serious Code of Conduct violation. This has never happened. The rule exists to be clear about expectations, not because we expect to use it.
 
 ## Changing this document
 
