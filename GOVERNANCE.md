@@ -14,7 +14,7 @@ Anyone who opens pull requests, comments on issues, helps in the forum, writes d
 
 ### Community Package Maintainer
 
-People who maintain community packages that matter to the Meteor ecosystem. They don't work in the core repo, but their packages shape how developers use Meteor every day. They're listed in [CONTRIBUTING.md](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md).
+People who maintain community packages that matter to the Meteor ecosystem. They don't work in the core repo, but their packages shape how developers use Meteor every day. They're listed on the [contributors page](https://docs.meteor.com/community/contributors.html).
 
 ### Core Maintainer
 
@@ -78,29 +78,9 @@ Alumni keep their recognition and stay listed on the Meteor website. They can st
 
 New packages entering core start behind an **experimental flag**. This gives the person looking after it time to iterate and prove it's stable before it becomes official. There's no fixed deadline, but the goal is to move toward stable.
 
-## Current TSC Members
+## Who holds these roles
 
-| Name | Role |
-|------|------|
-| @henriquealbert | Meteor Software |
-| @Grubba27 | Meteor Software |
-| @italojs | Meteor Software |
-| @nachocodoner | Meteor Software |
-
-## Current Core Maintainers
-
-| Name |
-|------|
-| @fredmaiaarantes |
-| @StorytellerCZ |
-| @zodern |
-| @radekmie |
-
-## Alumni
-
-People who shaped Meteor and earned lasting recognition for it. Alumni are listed on the Meteor website with their contribution history.
-
-Currently no members.
+The canonical list of current TSC members, Core Maintainers, Community Package Maintainers, and Alumni lives on the [contributors page](https://docs.meteor.com/community/contributors.html). This document defines the roles and their authority; that page records who holds them. Membership changes are made by pull request against that page, following the processes described here.
 
 ## Decision-making
 
