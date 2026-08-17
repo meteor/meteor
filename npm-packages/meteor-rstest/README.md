@@ -364,7 +364,9 @@ With `coverage.enabled` or `--coverage`, a run that includes Meteor projects
 produces one Istanbul report across selected native Rstest projects, real
 Meteor server/client hosts and runtime workers, standard local Atmosphere
 packages, package tests, and full-app pages created through Rstest's Playwright
-fixtures. The same upstream `coverage` options control reporters, report
+project. This includes fixture browsers and direct launches through the
+project-owned `playwright` module while the selected `meteor-e2e` project is
+running. The same upstream `coverage` options control reporters, report
 directory, include/exclude filtering, thresholds, and `reportOnFailure`.
 Threshold failures apply to the combined report; `reportOnFailure` still
 controls whether a report is written after test failures. When coverage is
@@ -380,8 +382,9 @@ Atmosphere packages, MongoDB, DDP, or the browser host.
 The current boundary is intentionally narrower in a few places: reports do
 not aggregate across Meteor watch generations; explicitly included but untested
 source files do not receive synthetic zero-hit entries; local sources compiled
-by custom compilers are deferred; and independently launched Playwright
-browsers are outside collection. Meteor-runtime projects support upstream
+by custom compilers are deferred; and Playwright browsers launched in another
+process or outside the selected Rstest project are outside collection.
+Meteor-runtime projects support upstream
 snapshot assertions backed by a Meteor-owned persistent snapshot environment.
 Snapshot writes require `--update-snapshots`.
 

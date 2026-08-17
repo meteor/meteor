@@ -248,6 +248,8 @@ meteor test --once --full-app --coverage --project meteor-e2e
 Any selected Meteor lane uses one Istanbul report across native projects, real
 Meteor server/client hosts and runtime workers, standard local Atmosphere
 packages, package tests, and Rstest-fixture-owned full-app Playwright pages.
+Collection also covers direct launches through the project-owned `playwright`
+module while the selected `meteor-e2e` project is running.
 `include`/`exclude`, reporters, report directory, thresholds, and
 `reportOnFailure` retain their usual meanings: thresholds evaluate the merged
 report and `reportOnFailure` controls reporting when tests fail. With coverage
@@ -262,5 +264,5 @@ real.
 
 Coverage does not yet aggregate Meteor watch generations, synthesize zero-hit
 records for included sources that no selected host loaded, or cover sources
-compiled by a custom compiler. Playwright pages launched outside Rstest's
-fixtures are also outside this collection boundary.
+compiled by a custom compiler. Playwright pages launched in another process or
+outside the selected Rstest project are also outside this collection boundary.
