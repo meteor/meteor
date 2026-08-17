@@ -20,6 +20,7 @@ const coreMaintainers = [
   { login: 'StorytellerCZ', avatar_url: 'https://github.com/StorytellerCZ.png', html_url: 'https://github.com/StorytellerCZ', contributions: 0 },
   { login: 'zodern', avatar_url: 'https://github.com/zodern.png', html_url: 'https://github.com/zodern', contributions: 0 },
   { login: 'fredmaiaarantes', avatar_url: 'https://github.com/fredmaiaarantes.png', html_url: 'https://github.com/fredmaiaarantes', contributions: 0 },
+  { login: 'jankapunkt', avatar_url: 'https://github.com/jankapunkt.png', html_url: 'https://github.com/jankapunkt', contributions: 0 },
 ]
 </script>
 
