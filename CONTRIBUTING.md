@@ -41,7 +41,7 @@ Here are descriptions of the existing project roles, along with the current cont
 
 Core Maintainers are community members who help maintain Meteor: they review pull requests and triage issues. They hold triage permissions on meteor/meteor — labeling, assigning, and managing issues and PRs within the areas they know best. See [GOVERNANCE.md](GOVERNANCE.md) for the full role description.
 
-Anyone can open a pull request nominating a person for the Core Maintainer program; the community — and in particular the other Core Maintainers — approves or rejects the nomination. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
+Anyone can open a pull request nominating a person for the Core Maintainer program; existing Core Maintainers and the community give feedback, and the TSC approves the nomination — see [GOVERNANCE.md](GOVERNANCE.md) for the process. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
 
 Current Core Maintainers:
 - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
