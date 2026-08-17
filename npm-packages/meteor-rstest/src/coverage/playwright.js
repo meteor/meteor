@@ -2,6 +2,12 @@ const { createRequire } = require('node:module');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
+const {
+  cleanupCoverageFilesDirectory,
+  pinCoverageDirectory,
+  readCoverageArtifact,
+  writeCoverageArtifact,
+} = require('./artifact.js');
 
 const coverageProviderRequire = createRequire(
   require.resolve('@rstest/coverage-istanbul'),
@@ -131,33 +137,6 @@ function interceptPlaywrightBrowserTypes({ playwright, collector }) {
   return restoration;
 }
 
-function sameIdentity(left, right) {
-  return left.dev === right.dev && left.ino === right.ino;
-}
-
-function assertNoSymlinkComponents(filename, { allowMissing = false } = {}) {
-  const absolute = path.resolve(filename);
-  const parsed = path.parse(absolute);
-  let current = parsed.root;
-  for (const component of absolute.slice(parsed.root.length).split(path.sep).filter(Boolean)) {
-    current = path.join(current, component);
-    let stat;
-    try {
-      stat = fs.lstatSync(current);
-    } catch (error) {
-      if (allowMissing && error.code === 'ENOENT') return;
-      throw error;
-    }
-    if (stat.isSymbolicLink()) {
-      if (path.dirname(current) === parsed.root) {
-        current = fs.realpathSync(current);
-        continue;
-      }
-      throw coverageError(`Coverage shard path contains a symlink: ${current}.`);
-    }
-  }
-}
-
 function assertShardDirectory({ directory, generation }) {
   if (!path.isAbsolute(directory || '') ||
       !GENERATION_PATTERN.test(generation || '') ||
@@ -167,21 +146,14 @@ function assertShardDirectory({ directory, generation }) {
   }
 }
 
-function createShardDirectory({ directory, generation }) {
-  assertShardDirectory({ directory, generation });
-  assertNoSymlinkComponents(directory, { allowMissing: true });
-  fs.mkdirSync(directory, { recursive: true, mode: 0o700 });
-  assertNoSymlinkComponents(directory);
-  fs.chmodSync(directory, 0o700);
-}
-
 async function writeCoverageShard({
   directory,
   generation,
   coverage,
   shardId = crypto.randomBytes(16).toString('hex'),
+  fileSystemCapabilities,
 }) {
-  createShardDirectory({ directory, generation });
+  assertShardDirectory({ directory, generation });
   if (!SHARD_ID_PATTERN.test(shardId || '')) {
     throw coverageError('Playwright coverage shard identity is invalid.');
   }
@@ -193,88 +165,61 @@ async function writeCoverageShard({
     shardId,
     coverage: normalized,
   };
-  const serialized = JSON.stringify(artifact);
-  if (Buffer.byteLength(serialized) > MAX_COVERAGE_BYTES) {
-    throw coverageError('Playwright coverage shard exceeds the 64 MiB limit.');
-  }
   const outputPath = path.join(directory, `${shardId}.json`);
-  const temporaryPath = path.join(
-    directory,
-    `.${shardId}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`,
-  );
-  let descriptor;
   try {
-    let flags = fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL;
-    if (Number.isInteger(fs.constants.O_NOFOLLOW) && fs.constants.O_NOFOLLOW) {
-      flags |= fs.constants.O_NOFOLLOW;
+    writeCoverageArtifact({
+      outputPath,
+      expectedPath: outputPath,
+      artifact,
+      fileSystemCapabilities,
+    });
+  } catch (error) {
+    if (error.code === 'METEOR_RSTEST_COVERAGE_REPLAY') {
+      throw coverageError('Playwright coverage shard identity was replayed.');
     }
-    descriptor = fs.openSync(temporaryPath, flags, 0o600);
-    fs.writeFileSync(descriptor, serialized, 'utf8');
-    fs.fsyncSync(descriptor);
-    fs.fchmodSync(descriptor, 0o600);
-    fs.closeSync(descriptor);
-    descriptor = undefined;
-    assertNoSymlinkComponents(directory);
-    try {
-      fs.linkSync(temporaryPath, outputPath);
-    } catch (error) {
-      if (error.code === 'EEXIST') {
-        throw coverageError('Playwright coverage shard identity was replayed.');
-      }
-      throw error;
-    }
-    fs.unlinkSync(temporaryPath);
-    const directoryDescriptor = fs.openSync(directory, fs.constants.O_RDONLY);
-    try { fs.fsyncSync(directoryDescriptor); } finally { fs.closeSync(directoryDescriptor); }
-  } finally {
-    if (descriptor !== undefined) fs.closeSync(descriptor);
-    try { fs.unlinkSync(temporaryPath); } catch (error) {
-      if (error.code !== 'ENOENT') throw error;
-    }
+    throw error;
   }
   return { written: true, path: outputPath, shardId };
 }
 
-function readCoverageShards({ directory, generation }) {
+function readCoverageShards({
+  directory,
+  generation,
+  fileSystemCapabilities,
+}) {
   assertShardDirectory({ directory, generation });
-  assertNoSymlinkComponents(directory);
+  const pinned = pinCoverageDirectory({ directory, fileSystemCapabilities });
   const merged = createCoverageMap({});
   let shards = 0;
-  for (const filename of fs.readdirSync(directory).sort()) {
-    const match = /^([a-f0-9]{32})\.json$/.exec(filename);
-    if (!match) throw coverageError('Playwright coverage shard filename is invalid.');
-    const shardId = match[1];
-    const filePath = path.join(directory, filename);
-    let flags = fs.constants.O_RDONLY;
-    if (Number.isInteger(fs.constants.O_NOFOLLOW) && fs.constants.O_NOFOLLOW) {
-      flags |= fs.constants.O_NOFOLLOW;
-    }
-    const descriptor = fs.openSync(filePath, flags);
-    try {
-      const opened = fs.fstatSync(descriptor, { bigint: true });
-      if (!opened.isFile() || opened.size > BigInt(MAX_COVERAGE_BYTES)) {
-        throw coverageError('Playwright coverage shard is not a bounded regular file.');
+  try {
+    const filenames = fs.readdirSync(directory).sort();
+    pinned.verify();
+    const consumed = new Set();
+    for (const filename of filenames) {
+      const match = /^([a-f0-9]{32})\.json$/.exec(filename);
+      if (!match) {
+        throw coverageError('Playwright coverage shard filename is invalid.');
       }
-      const serialized = fs.readFileSync(descriptor, 'utf8');
-      const current = fs.lstatSync(filePath, { bigint: true });
-      if (current.isSymbolicLink() || !current.isFile() ||
-          !sameIdentity(opened, current)) {
-        throw coverageError('Playwright coverage shard changed while being read.');
-      }
-      let artifact;
-      try { artifact = JSON.parse(serialized); } catch {
-        throw coverageError('Playwright coverage shard is not valid JSON.');
-      }
-      if (!artifact || artifact.schemaVersion !== 1 ||
-          artifact.generation !== generation || artifact.producer !== 'e2e' ||
-          artifact.shardId !== shardId) {
+      const shardId = match[1];
+      const filePath = path.join(directory, filename);
+      const artifact = readCoverageArtifact({
+        filePath,
+        expectedPath: filePath,
+        generation,
+        producer: 'e2e',
+        consumed,
+        fileSystemCapabilities,
+        expectedParentStat: pinned.stat,
+      });
+      if (artifact.shardId !== shardId) {
         throw coverageError('Playwright coverage shard schema is invalid or stale.');
       }
-      merged.merge(createCoverageMap(artifact.coverage));
+      merged.merge(artifact.coverage);
       shards += 1;
-    } finally {
-      fs.closeSync(descriptor);
+      pinned.verify();
     }
+  } finally {
+    pinned.close();
   }
   if (shards === 0) {
     throw coverageError('External Rstest produced no Playwright coverage shards.');
@@ -282,19 +227,17 @@ function readCoverageShards({ directory, generation }) {
   return { coverage: merged.toJSON(), shards };
 }
 
-function cleanupCoverageShardDirectory({ directory, generation }) {
+function cleanupCoverageShardDirectory({
+  directory,
+  generation,
+  fileSystemCapabilities,
+}) {
   assertShardDirectory({ directory, generation });
-  if (!fs.existsSync(directory)) return;
-  assertNoSymlinkComponents(directory);
-  for (const filename of fs.readdirSync(directory)) {
-    const filePath = path.join(directory, filename);
-    const stat = fs.lstatSync(filePath);
-    if (stat.isDirectory()) {
-      throw coverageError('Playwright coverage shard directory contains a nested directory.');
-    }
-    fs.unlinkSync(filePath);
-  }
-  fs.rmdirSync(directory);
+  return cleanupCoverageFilesDirectory({
+    directory,
+    entryPattern: /^[a-f0-9]{32}\.json$/,
+    fileSystemCapabilities,
+  });
 }
 
 function createBrowserCaptureScripts(bindingName) {
@@ -511,6 +454,23 @@ function createPlaywrightCoverageCollector({
     return { captured: true };
   }
 
+  function releasePageInstrumentation(page) {
+    const restoration = pageRestorations.get(page);
+    if (restoration && page.close === restoration.wrappedClose) {
+      page.close = restoration.originalClose;
+    }
+    pageRestorations.delete(page);
+    trackedPages.delete(page);
+    pageTracking.delete(page);
+  }
+
+  function releasePageAfterClose(page, closeCompleted) {
+    if (closeCompleted ||
+        typeof page.isClosed === 'function' && page.isClosed()) {
+      releasePageInstrumentation(page);
+    }
+  }
+
   async function trackPage(page) {
     if (!page) return;
     if (!pageTracking.has(page)) {
@@ -521,8 +481,15 @@ function createPlaywrightCoverageCollector({
         let wrappedClose;
         if (typeof originalClose === 'function') {
           wrappedClose = async function meteorRstestCoveragePageClose(...args) {
-            await capturePage(page);
-            return Reflect.apply(originalClose, this, args);
+            let closeCompleted = false;
+            try {
+              await capturePage(page);
+              const result = await Reflect.apply(originalClose, this, args);
+              closeCompleted = true;
+              return result;
+            } finally {
+              releasePageAfterClose(page, closeCompleted);
+            }
           };
           page.close = wrappedClose;
         }
@@ -563,8 +530,18 @@ function createPlaywrightCoverageCollector({
       let wrappedClose;
       if (typeof originalClose === 'function') {
         wrappedClose = async function meteorRstestCoverageContextClose(...args) {
-          for (const page of context.pages()) await capturePage(page);
-          return Reflect.apply(originalClose, this, args);
+          const pages = context.pages();
+          let closeCompleted = false;
+          try {
+            for (const page of pages) await capturePage(page);
+            const result = await Reflect.apply(originalClose, this, args);
+            closeCompleted = true;
+            return result;
+          } finally {
+            for (const page of pages) {
+              releasePageAfterClose(page, closeCompleted);
+            }
+          }
         };
         context.close = wrappedClose;
       }
@@ -623,10 +600,18 @@ function createPlaywrightCoverageCollector({
     let wrappedClose;
     if (typeof originalClose === 'function') {
       wrappedClose = async function meteorRstestCoverageBrowserClose(...args) {
-        for (const context of browser.contexts()) {
-          for (const page of context.pages()) await capturePage(page);
+        const pages = browser.contexts().flatMap(context => context.pages());
+        let closeCompleted = false;
+        try {
+          for (const page of pages) await capturePage(page);
+          const result = await Reflect.apply(originalClose, this, args);
+          closeCompleted = true;
+          return result;
+        } finally {
+          for (const page of pages) {
+            releasePageAfterClose(page, closeCompleted);
+          }
         }
-        return Reflect.apply(originalClose, this, args);
       };
       browser.close = wrappedClose;
     }

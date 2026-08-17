@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const childProcess = require('node:child_process');
 const { EventEmitter } = require('node:events');
 const fs = require('node:fs');
 const os = require('node:os');
@@ -302,12 +303,32 @@ test('Playwright collector tracks primary and additional pages across navigation
     'additional-document-1',
     coverage('/app/imports/popup.js', 4),
   );
+  assert.notEqual(additionalPage.close, FakePage.prototype.close);
   await additionalPage.close();
+  assert.equal(additionalPage.close, FakePage.prototype.close);
+  const evaluateCallsAfterClose = additionalPage.evaluateCalls;
   await collector.captureRemaining();
+  assert.equal(additionalPage.evaluateCalls, evaluateCallsAfterClose);
 
   const merged = collector.mergedCoverage();
   assert.equal(merged['/app/imports/page.js'].s[0], 3);
   assert.equal(merged['/app/imports/popup.js'].s[0], 4);
+});
+
+test('Playwright collector retains an open page when close fails', async () => {
+  const primary = fixture();
+  const failedClose = async () => { throw new Error('close failed'); };
+  primary.page.close = failedClose;
+  const collector = createPlaywrightCoverageCollector({ enabled: true, generation });
+  await collector.install(primary);
+  const wrappedClose = primary.page.close;
+
+  await assert.rejects(primary.page.close(), /close failed/);
+  assert.equal(primary.page.isClosed(), false);
+  assert.equal(primary.page.close, wrappedClose);
+  const priorCalls = primary.page.evaluateCalls;
+  await collector.captureRemaining();
+  assert.ok(primary.page.evaluateCalls > priorCalls);
 });
 
 test('Playwright collector replaces repeated cumulative snapshots from one document', async () => {
@@ -444,6 +465,212 @@ test('parallel Playwright files write durable shards that merge once', async t =
   cleanupCoverageShardDirectory({ directory, generation });
   assert.equal(fs.existsSync(directory), false);
   assert.equal(fs.existsSync(path.dirname(directory)), true);
+});
+
+test('Playwright shard publication binds the temporary source inode', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-shard-source-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  const shardId = '77777777777777777777777777777777';
+  const outputPath = path.join(directory, `${shardId}.json`);
+  const originalSpawn = childProcess.spawnSync;
+  let swapped = false;
+  t.after(() => {
+    childProcess.spawnSync = originalSpawn;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  childProcess.spawnSync = function patchedSpawn(command, args, options) {
+    if (!swapped && path.resolve(options?.cwd || '') === path.resolve(directory)) {
+      const temporaryName = args.find(argument =>
+        typeof argument === 'string' && argument.endsWith('.tmp')
+      );
+      assert.ok(temporaryName);
+      const temporaryPath = path.join(directory, temporaryName);
+      const originalPath = `${temporaryPath}.original`;
+      fs.renameSync(temporaryPath, originalPath);
+      fs.writeFileSync(temporaryPath, JSON.stringify({ attacker: true }), { mode: 0o600 });
+      swapped = true;
+      const result = originalSpawn.call(this, command, args, options);
+      fs.unlinkSync(temporaryPath);
+      fs.renameSync(originalPath, temporaryPath);
+      return result;
+    }
+    return originalSpawn.call(this, command, args, options);
+  };
+
+  await assert.rejects(writeCoverageShard({
+    directory,
+    generation,
+    shardId,
+    coverage: coverage('/app/imports/source-race.js', 1),
+  }), /changed during atomic publication|path changed/i);
+  assert.equal(swapped, true);
+  assert.equal(fs.existsSync(outputPath), false);
+});
+
+test('Playwright shard publication rejects a coordinated parent swap', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-shard-parent-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  const movedDirectory = `${directory}-original`;
+  const outside = path.join(root, 'outside');
+  const shardId = '88888888888888888888888888888888';
+  const originalSpawn = childProcess.spawnSync;
+  let swapped = false;
+  fs.mkdirSync(outside, { recursive: true });
+  t.after(() => {
+    childProcess.spawnSync = originalSpawn;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  childProcess.spawnSync = function patchedSpawn(command, args, options) {
+    if (!swapped && path.resolve(options?.cwd || '') === path.resolve(directory)) {
+      fs.renameSync(directory, movedDirectory);
+      fs.symlinkSync(outside, directory);
+      swapped = true;
+      const result = originalSpawn.call(this, command, args, options);
+      fs.unlinkSync(directory);
+      fs.renameSync(movedDirectory, directory);
+      return result;
+    }
+    return originalSpawn.call(this, command, args, options);
+  };
+
+  await assert.rejects(writeCoverageShard({
+    directory,
+    generation,
+    shardId,
+    coverage: coverage('/app/imports/parent-race.js', 1),
+  }), /changed during atomic publication|parent changed/i);
+  assert.equal(swapped, true);
+  assert.equal(fs.existsSync(path.join(outside, `${shardId}.json`)), false);
+});
+
+test('Playwright shard reader rejects a substituted directory', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-shard-read-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  const movedDirectory = `${directory}-original`;
+  const outside = path.join(root, 'outside');
+  const shardId = '99999999999999999999999999999999';
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  await writeCoverageShard({
+    directory,
+    generation,
+    shardId,
+    coverage: coverage('/app/imports/original.js', 1),
+  });
+  fs.mkdirSync(outside);
+  fs.writeFileSync(path.join(outside, `${shardId}.json`), JSON.stringify({
+    schemaVersion: 1,
+    generation,
+    producer: 'e2e',
+    shardId,
+    coverage: coverage('/app/imports/injected.js', 99),
+  }));
+  const originalReaddir = fs.readdirSync;
+  let swapped = false;
+  fs.readdirSync = function patchedReaddir(filename, ...args) {
+    if (!swapped && path.resolve(String(filename)) === path.resolve(directory)) {
+      fs.renameSync(directory, movedDirectory);
+      fs.symlinkSync(outside, directory);
+      swapped = true;
+    }
+    return originalReaddir.call(this, filename, ...args);
+  };
+  t.after(() => {
+    fs.readdirSync = originalReaddir;
+    if (fs.existsSync(directory) && fs.lstatSync(directory).isSymbolicLink()) {
+      fs.unlinkSync(directory);
+      fs.renameSync(movedDirectory, directory);
+    }
+  });
+
+  assert.throws(
+    () => readCoverageShards({ directory, generation }),
+    /identity changed|symbolic-link|symlink/i,
+  );
+  assert.equal(swapped, true);
+});
+
+test('Playwright shard cleanup rejects a substituted directory without deleting it', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-shard-clean-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  const movedDirectory = `${directory}-original`;
+  const outside = path.join(root, 'outside');
+  const shardId = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  const sentinel = path.join(outside, 'sentinel.txt');
+  const originalSpawn = childProcess.spawnSync;
+  let swapped = false;
+  t.after(() => {
+    childProcess.spawnSync = originalSpawn;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  await writeCoverageShard({
+    directory,
+    generation,
+    shardId,
+    coverage: coverage('/app/imports/cleanup.js', 1),
+  });
+  fs.mkdirSync(outside);
+  fs.writeFileSync(sentinel, 'preserve');
+  childProcess.spawnSync = function patchedSpawn(command, args, options) {
+    if (!swapped && path.resolve(options?.cwd || '') === path.resolve(directory)) {
+      fs.renameSync(directory, movedDirectory);
+      fs.symlinkSync(outside, directory);
+      swapped = true;
+      const result = originalSpawn.call(this, command, args, options);
+      fs.unlinkSync(directory);
+      fs.renameSync(movedDirectory, directory);
+      return result;
+    }
+    return originalSpawn.call(this, command, args, options);
+  };
+
+  assert.throws(
+    () => cleanupCoverageShardDirectory({ directory, generation }),
+    /changed during safe cleanup|identity changed/i,
+  );
+  assert.equal(swapped, true);
+  assert.equal(fs.readFileSync(sentinel, 'utf8'), 'preserve');
+});
+
+test('Playwright shard IO fallback avoids unsupported no-follow directory flags', async t => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'meteor-rstest-shard-fallback-'));
+  const directory = path.join(root, generation, 'e2e-shards');
+  const capabilities = { noFollow: false, directory: false };
+  const originalOpen = fs.openSync;
+  t.after(() => {
+    fs.openSync = originalOpen;
+    fs.rmSync(root, { recursive: true, force: true });
+  });
+  fs.openSync = function rejectUnsupportedFlags(filename, flags, ...args) {
+    if (typeof flags === 'number' && (
+      fs.constants.O_NOFOLLOW && (flags & fs.constants.O_NOFOLLOW) !== 0 ||
+      fs.constants.O_DIRECTORY && (flags & fs.constants.O_DIRECTORY) !== 0
+    )) {
+      const error = new Error('simulated unsupported descriptor flag');
+      error.code = 'EINVAL';
+      throw error;
+    }
+    return originalOpen.call(this, filename, flags, ...args);
+  };
+
+  await writeCoverageShard({
+    directory,
+    generation,
+    shardId: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+    coverage: coverage('/app/imports/fallback.js', 2),
+    fileSystemCapabilities: capabilities,
+  });
+  const result = readCoverageShards({
+    directory,
+    generation,
+    fileSystemCapabilities: capabilities,
+  });
+  assert.equal(result.coverage['/app/imports/fallback.js'].s[0], 2);
+  cleanupCoverageShardDirectory({
+    directory,
+    generation,
+    fileSystemCapabilities: capabilities,
+  });
+  assert.equal(fs.existsSync(directory), false);
 });
 
 test('sequential Playwright files release shared browser instrumentation', async t => {

@@ -156,14 +156,41 @@ function verifyPinnedDirectory(directory, expected, capabilities) {
   }
 }
 
+function pinCoverageDirectory({ directory, fileSystemCapabilities }) {
+  const capabilities = normalizeFileSystemCapabilities(fileSystemCapabilities);
+  const pinned = openPinnedDirectory(directory, capabilities);
+  let closed = false;
+  return {
+    stat: pinned.stat,
+    verify() {
+      if (closed) {
+        throw artifactError(
+          'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+          'Coverage directory pin is already closed.',
+        );
+      }
+      verifyPinnedDirectory(directory, pinned.stat, capabilities);
+    },
+    close() {
+      if (closed) return;
+      closed = true;
+      if (pinned.descriptor !== undefined) fs.closeSync(pinned.descriptor);
+    },
+  };
+}
+
 const PUBLISH_FILE_SCRIPT = `
   const fs = require('node:fs');
   const expectedDevice = BigInt(process.argv[1]);
   const expectedInode = BigInt(process.argv[2]);
-  const source = process.argv[3];
-  const destination = process.argv[4];
-  const useDirectoryOpen = process.argv[5] === '1';
-  const useNoFollow = process.argv[6] === '1';
+  const expectedSourceDevice = BigInt(process.argv[3]);
+  const expectedSourceInode = BigInt(process.argv[4]);
+  const source = process.argv[5];
+  const destination = process.argv[6];
+  const useDirectoryOpen = process.argv[7] === '1';
+  const useNoFollow = process.argv[8] === '1';
+  const sameIdentity = (left, right) =>
+    left.dev === right.dev && left.ino === right.ino;
   let descriptor;
   try {
     let parent;
@@ -181,7 +208,9 @@ const PUBLISH_FILE_SCRIPT = `
     if (!parent.isDirectory() || parent.dev !== expectedDevice ||
         parent.ino !== expectedInode) process.exit(73);
     const sourceStat = fs.lstatSync(source, { bigint: true });
-    if (!sourceStat.isFile() || sourceStat.isSymbolicLink()) process.exit(73);
+    if (!sourceStat.isFile() || sourceStat.isSymbolicLink() ||
+        sourceStat.dev !== expectedSourceDevice ||
+        sourceStat.ino !== expectedSourceInode) process.exit(73);
     try {
       fs.linkSync(source, destination);
     } catch (error) {
@@ -190,11 +219,12 @@ const PUBLISH_FILE_SCRIPT = `
     }
     const destinationStat = fs.lstatSync(destination, { bigint: true });
     if (!destinationStat.isFile() || destinationStat.isSymbolicLink() ||
-        destinationStat.dev !== sourceStat.dev ||
-        destinationStat.ino !== sourceStat.ino) {
+        !sameIdentity(destinationStat, sourceStat)) {
       try {
-        const current = fs.lstatSync(destination, { bigint: true });
-        if (current.dev === sourceStat.dev && current.ino === sourceStat.ino) {
+        const currentSource = fs.lstatSync(source, { bigint: true });
+        const currentDestination = fs.lstatSync(destination, { bigint: true });
+        if (sameIdentity(currentSource, destinationStat) &&
+            sameIdentity(currentDestination, destinationStat)) {
           fs.unlinkSync(destination);
         }
       } catch {}
@@ -210,6 +240,7 @@ function publishPinnedFile({
   temporaryPath,
   outputPath,
   parentStat,
+  temporaryStat,
   capabilities,
 }) {
   const result = childProcess.spawnSync(process.execPath, [
@@ -217,6 +248,8 @@ function publishPinnedFile({
     PUBLISH_FILE_SCRIPT,
     parentStat.dev.toString(),
     parentStat.ino.toString(),
+    temporaryStat.dev.toString(),
+    temporaryStat.ino.toString(),
     path.basename(temporaryPath),
     path.basename(outputPath),
     capabilities.directory ? '1' : '0',
@@ -239,6 +272,99 @@ function publishPinnedFile({
   }
 }
 
+const CLEAN_FILES_DIRECTORY_SCRIPT = `
+  const fs = require('node:fs');
+  const expectedDevice = BigInt(process.argv[1]);
+  const expectedInode = BigInt(process.argv[2]);
+  const pattern = new RegExp(process.argv[3], process.argv[4]);
+  const useDirectoryOpen = process.argv[5] === '1';
+  const useNoFollow = process.argv[6] === '1';
+  let descriptor;
+  try {
+    let directory;
+    if (useDirectoryOpen && Number.isInteger(fs.constants.O_DIRECTORY)) {
+      let flags = fs.constants.O_RDONLY | fs.constants.O_DIRECTORY;
+      if (useNoFollow && Number.isInteger(fs.constants.O_NOFOLLOW) &&
+          fs.constants.O_NOFOLLOW) {
+        flags |= fs.constants.O_NOFOLLOW;
+      }
+      descriptor = fs.openSync('.', flags);
+      directory = fs.fstatSync(descriptor, { bigint: true });
+    } else {
+      directory = fs.lstatSync('.', { bigint: true });
+    }
+    if (!directory.isDirectory() || directory.dev !== expectedDevice ||
+        directory.ino !== expectedInode) process.exit(73);
+    const entries = fs.readdirSync('.');
+    for (const entry of entries) {
+      pattern.lastIndex = 0;
+      const stat = fs.lstatSync(entry, { bigint: true });
+      if (!pattern.test(entry) || !stat.isFile() || stat.isSymbolicLink()) {
+        process.exit(73);
+      }
+    }
+    for (const entry of entries) fs.unlinkSync(entry);
+  } finally {
+    if (descriptor !== undefined) fs.closeSync(descriptor);
+  }
+`;
+
+function cleanupCoverageFilesDirectory({
+  directory,
+  entryPattern,
+  fileSystemCapabilities,
+}) {
+  if (!path.isAbsolute(directory || '') || !(entryPattern instanceof RegExp)) {
+    throw artifactError(
+      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+      'Coverage cleanup directory or entry pattern is invalid.',
+    );
+  }
+  const capabilities = normalizeFileSystemCapabilities(fileSystemCapabilities);
+  let pinned;
+  try {
+    pinned = openPinnedDirectory(directory, capabilities);
+  } catch (error) {
+    if (error.code === 'ENOENT') return false;
+    throw error;
+  }
+  try {
+    verifyPinnedDirectory(directory, pinned.stat, capabilities);
+    const result = childProcess.spawnSync(process.execPath, [
+      '-e',
+      CLEAN_FILES_DIRECTORY_SCRIPT,
+      pinned.stat.dev.toString(),
+      pinned.stat.ino.toString(),
+      entryPattern.source,
+      entryPattern.flags,
+      capabilities.directory ? '1' : '0',
+      capabilities.noFollow ? '1' : '0',
+    ], {
+      cwd: directory,
+      encoding: 'utf8',
+    });
+    if (result.error || result.status !== 0) {
+      throw artifactError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        'Coverage directory changed during safe cleanup.',
+      );
+    }
+    verifyPinnedDirectory(directory, pinned.stat, capabilities);
+    if (fs.readdirSync(directory).length !== 0) {
+      throw artifactError(
+        'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+        'Coverage directory changed during safe cleanup.',
+      );
+    }
+  } finally {
+    if (pinned.descriptor !== undefined) fs.closeSync(pinned.descriptor);
+  }
+  assertNoSymlinkComponents(directory);
+  assertPathIdentity(directory, pinned.stat, { directory: true });
+  fs.rmdirSync(directory);
+  return true;
+}
+
 function readBoundedDescriptor(descriptor, label) {
   const chunks = [];
   let total = 0;
@@ -258,7 +384,12 @@ function readBoundedDescriptor(descriptor, label) {
   }
 }
 
-function openBoundedRegularFile(filePath, label, capabilitiesInput) {
+function openBoundedRegularFile(
+  filePath,
+  label,
+  capabilitiesInput,
+  expectedParentStat,
+) {
   const capabilities = normalizeFileSystemCapabilities(capabilitiesInput);
   try {
     assertNoSymlinkComponents(filePath);
@@ -285,6 +416,13 @@ function openBoundedRegularFile(filePath, label, capabilitiesInput) {
     throw error;
   }
   let descriptor;
+  if (expectedParentStat && !sameIdentity(parent.stat, expectedParentStat)) {
+    if (parent.descriptor !== undefined) fs.closeSync(parent.descriptor);
+    throw artifactError(
+      'METEOR_RSTEST_COVERAGE_PATH_MISMATCH',
+      `Coverage parent identity changed: ${directory}`,
+    );
+  }
   try {
     descriptor = fs.openSync(
       filePath,
@@ -556,6 +694,7 @@ function writeCoverageArtifact({
       temporaryPath,
       outputPath,
       parentStat: parent.stat,
+      temporaryStat,
       capabilities,
     });
     verifyPinnedDirectory(directory, parent.stat, capabilities);
@@ -583,6 +722,7 @@ function readCoverageArtifact({
   producer,
   consumed = new Set(),
   fileSystemCapabilities,
+  expectedParentStat,
 }) {
   assertExactPath(filePath, expectedPath);
   const canonicalPath = path.resolve(filePath);
@@ -598,6 +738,7 @@ function readCoverageArtifact({
       canonicalPath,
       'Coverage artifact',
       fileSystemCapabilities,
+      expectedParentStat,
     ));
   } catch (error) {
     if (error.code && error.code.startsWith('METEOR_RSTEST_')) throw error;
@@ -636,6 +777,8 @@ module.exports = {
   MAX_COVERAGE_ARTIFACT_BYTES,
   assertNoSymlinkComponents,
   assertCoverageMap,
+  cleanupCoverageFilesDirectory,
+  pinCoverageDirectory,
   readCoverageArtifact,
   readCoverageManifest,
   validateCoverageArtifact,
