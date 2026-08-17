@@ -64,6 +64,8 @@ What the TSC is responsible for:
 
 Core Maintainers who stop contributing move to Alumni after 12 months of inactivity. It's automatic — no vote, no drama. Reviewing PRs and joining discussions still counts as contributing, so this is only for people who've truly stepped away.
 
+Put simply: a Core Maintainer is **active** until they move to Alumni. Wherever this document says "active Core Maintainers", it means everyone currently listed as a Core Maintainer who hasn't moved to Alumni.
+
 Alumni keep their recognition and stay listed on the Meteor website. They can still review PRs and share opinions. They just don't hold triage rights or a vote anymore. If an Alumnus wants to come back, they go through the same nomination as anyone else.
 
 ## How to become a Core Maintainer
@@ -107,6 +109,8 @@ Who decides depends on how big the change is:
 - **Change to Meteor core** — for example a breaking change, a new experimental package, or a change to this document. The active Core Maintainers deliberate and make a recommendation; the TSC makes the final call. When the TSC decides against the recommendation, it normally documents the reasoning publicly.
 
 Two things are always the TSC's call: the long-term roadmap and publishing official releases.
+
+**Votes.** When this document calls for a vote of the active Core Maintainers, the vote stays open for at least seven days, and thresholds (like the two-thirds removal vote) are counted over the votes cast — abstentions and non-responses don't count toward either side. Anyone directly involved in the matter being voted on recuses themselves.
 
 ## Removing a Core Maintainer
 
