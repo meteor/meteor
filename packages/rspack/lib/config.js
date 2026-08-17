@@ -253,9 +253,10 @@ export function configureMeteorForRspack() {
     // re-include only our own below; otherwise each instance watches the
     // others' output writes and treats them as source edits, looping on
     // spurious "Client modified -- refreshing" rebuilds.
-    '_build/**',
-    '_build-*/**',
-    `!${RSPACK_BUILD_CONTEXT}/**`,
+    '/_build',
+    '/_build-*',
+    `!/${RSPACK_BUILD_CONTEXT}`,
+    `!/${RSPACK_BUILD_CONTEXT}/**`,
     ...testIgnorePaths,
     otherMainIgnorePath,
     'node_modules/**',

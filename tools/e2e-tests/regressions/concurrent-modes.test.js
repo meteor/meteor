@@ -160,7 +160,7 @@ describe('Regressions / Rspack concurrent modes /', () => {
     )).toBe(true);
   });
 
-  test('ignores Rspack output written by another Meteor process', async () => {
+  test('ignores new output directories in another Rspack context', async () => {
     const appResult = await runMeteorApp(appDir, APP_PORT, {
       waitForOutput: '=> App running at',
       env: getSeparateContextEnv(PRIMARY_LOCAL_DIR, APP_RSPACK_PORT),
@@ -181,14 +181,19 @@ describe('Regressions / Rspack concurrent modes /', () => {
     );
     expect(await fs.pathExists(otherProcessBundle)).toBe(true);
 
-    // Ignore startup churn, then make one controlled write in the other
-    // process's completed build context. The development process must not
-    // treat this generated output as a source change.
+    // Startup metadata and discovery of a new root directory can legitimately
+    // restart the app. Once both processes settle, create a new output
+    // directory inside the other process's context. Without directory-level
+    // isolation, Meteor descends into that context and rebuilds.
     await waitForOutputToSettle(appResult.outputLines);
     const outputStart = appResult.outputLines.length;
-    await fs.appendFile(
-      otherProcessBundle,
-      '\n// cross-process watcher probe\n',
+    const newProcessBundle = path.join(
+      appDir,
+      '_build-local-secondary/watcher-probe/client-rspack.js',
+    );
+    await fs.outputFile(
+      newProcessBundle,
+      '// cross-process watcher probe\n',
       'utf8',
     );
     await new Promise(resolve => setTimeout(resolve, 2000));
