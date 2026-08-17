@@ -103,6 +103,15 @@ Two things are always the TSC's call: the long-term roadmap and publishing offic
 **Votes.** When this document calls for a vote of the active Core Maintainers, the vote stays open for at least seven days, and thresholds (like the two-thirds removal vote) are counted over the votes cast — abstentions and non-responses don't count toward either side. Anyone directly involved in the matter being voted on recuses themselves.
 
 **Roadmap input.** The roadmap is the TSC's call, but active Core Maintainers have a defined advisory role in it: the TSC and the active Core Maintainers hold a regular roadmap discussion before major updates go public, and a short summary of that discussion is published. People who triage issues and talk to users every week see things a high-level roadmap misses — this is where that input lands, instead of scattered comments and DMs.
+
+## Communication channels
+
+GitHub is the durable record: issues, pull requests and discussions are where decisions live. The [community Discord](https://discord.gg/hZkTCaVjmT) is where coordination happens:
+
+- **Public channels** for contributor and maintainer coordination — asking "is anyone already on this?", "does this fit what's planned?", "who knows this part?", "does anyone have time to review it soon?".
+- **A private channel** for active Core Maintainers and the TSC — moderation and Code of Conduct situations, security issues, possibly compromised accounts, release coordination, and checking who actually has capacity.
+
+Private is for coordination, capacity, and genuinely sensitive things — not the place where normal technical decisions quietly disappear. When a private discussion produces a technical, roadmap, or governance decision, the result and the reasoning come back to GitHub, unless there's a real security, privacy, or moderation reason not to.
 ## Suspending or removing a Core Maintainer
 
 **Suspension.** The TSC can suspend a Core Maintainer's permissions immediately when trust can no longer safely be assumed — for example a compromised account or a credible security concern. A suspension is followed by a documented review with the person involved; it either lifts the suspension or starts the removal process. Suspension is a safety measure, not a punishment.
