@@ -102,6 +102,7 @@ Two things are always the TSC's call: the long-term roadmap and publishing offic
 
 **Votes.** When this document calls for a vote of the active Core Maintainers, the vote stays open for at least seven days, and thresholds (like the two-thirds removal vote) are counted over the votes cast — abstentions and non-responses don't count toward either side. Anyone directly involved in the matter being voted on recuses themselves.
 
+**Roadmap input.** The roadmap is the TSC's call, but active Core Maintainers have a defined advisory role in it: the TSC and the active Core Maintainers hold a regular roadmap discussion before major updates go public, and a short summary of that discussion is published. People who triage issues and talk to users every week see things a high-level roadmap misses — this is where that input lands, instead of scattered comments and DMs.
 ## Suspending or removing a Core Maintainer
 
 **Suspension.** The TSC can suspend a Core Maintainer's permissions immediately when trust can no longer safely be assumed — for example a compromised account or a credible security concern. A suspension is followed by a documented review with the person involved; it either lifts the suspension or starts the removal process. Suspension is a safety measure, not a punishment.
