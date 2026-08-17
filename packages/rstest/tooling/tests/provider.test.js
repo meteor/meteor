@@ -51,19 +51,19 @@ test('package transforms warn once and exclude selected custom compiler sources'
       name: 'standard',
       sourceRoot: standardRoot,
       sourceKind: 'test-target',
-      sourceProcessors: ['ecmascript'],
+      sourceProcessors: ['ecmascript', 'meteor'],
     },
     {
       name: 'typescript',
       sourceRoot: typescriptRoot,
       sourceKind: 'test-target',
-      sourceProcessors: ['typescript', 'ecmascript'],
+      sourceProcessors: ['typescript', 'ecmascript', 'meteor'],
     },
     {
       name: 'custom',
       sourceRoot: customRoot,
       sourceKind: 'test-target',
-      sourceProcessors: ['custom-compiler', 'custom-compiler'],
+      sourceProcessors: ['custom-compiler', 'custom-compiler', 'meteor'],
     },
     {
       name: 'unselected',
@@ -75,7 +75,7 @@ test('package transforms warn once and exclude selected custom compiler sources'
     name: 'custom',
     sourceRoot: customRoot,
     sourceKind: 'test-target',
-    sourceProcessors: ['custom-compiler'],
+    sourceProcessors: ['custom-compiler', 'meteor'],
   }], { warn: message => warnings.push(message) });
 
   assert.deepEqual(transforms, {

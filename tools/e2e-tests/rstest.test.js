@@ -544,13 +544,22 @@ describe('Meteor + Rstest integration', () => {
           '--coverage',
           '--port',
           testPort(3217),
+          '--',
+          '--coverage.reporters=text',
+          '--coverage.reporters=json',
+          `--coverage.reportsDirectory=${coverageDir}`,
+          '--coverage.include=tests/rstest/pure/server/coverage-target.js',
+          '--coverage.include=imports/coverage/*.js',
+          '--coverage.include=packages/rstest-e2e-fixture/fixture.js',
+          '--coverage.exclude=**/*.test.*',
+          '--coverage.thresholds.lines=1',
+          '--coverage.reportOnFailure',
         ],
         appDir,
         {
           captureOutput: true,
           execaOptions: {
             reject: false,
-            env: { METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir },
           },
         },
       );
@@ -562,6 +571,7 @@ describe('Meteor + Rstest integration', () => {
       expect(output).toContain('✓ tests/rstest/runtime/server/mongo.test.js (1)');
       expect(output).toContain('✓ tests/rstest/runtime/client/meteor.test.js (1)');
       expect(output).toContain('full-app Rstest Playwright drives Meteor-owned app lifecycle');
+      expect(output.match(/All files/g)).toHaveLength(1);
 
       const report = readCoverageReport(coverageDir);
       expectCoveredSources(report, [
@@ -1496,8 +1506,9 @@ describe('Meteor + Rstest integration', () => {
   }, 600_000);
 
   test('meteor test-packages coverage reports the physical local package source', async () => {
-    const coverageDir = createCoverageDirectory();
+    const coverageDir = path.join(appDir, 'coverage');
     const repoRoot = path.resolve(__dirname, '../..');
+    fs.rmSync(coverageDir, { recursive: true, force: true });
     try {
       const result = await runMeteorCommand(
         'test-packages',
@@ -1514,7 +1525,8 @@ describe('Meteor + Rstest integration', () => {
           execaOptions: {
             reject: false,
             env: {
-              METEOR_RSTEST_E2E_COVERAGE_DIR: coverageDir,
+              METEOR_RSTEST_E2E_CONFIG_COVERAGE_PROVIDER: 'istanbul',
+              METEOR_RSTEST_E2E_PACKAGE_LINES_THRESHOLD: '1',
               METEOR_RSTEST_NPM_SPEC: path.join(
                 repoRoot,
                 'npm-packages',

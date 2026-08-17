@@ -107,6 +107,11 @@ function serializeTestWorkerOptions(options) {
   for (const key of TEST_WORKER_OPTION_KEYS) {
     if (options[key] !== undefined) serialized[key] = options[key];
   }
+  if (Array.isArray(serialized.project) && serialized.project.length > 0) {
+    serialized.project = serialized.project.filter(project =>
+      String(project).startsWith('meteor-runtime-')
+    );
+  }
   return cloneJsonSafe(serialized, 'worker.commandOptions');
 }
 

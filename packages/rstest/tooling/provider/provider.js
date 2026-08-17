@@ -436,7 +436,7 @@ function collectLocalPackageTransforms(
     entry.sourceKind === 'test-target' ||
     (packageTests || []).includes(entry)
   )).map(entry => entry.name));
-  const supportedProcessors = new Set(['ecmascript', 'typescript']);
+  const supportedProcessors = new Set(['ecmascript', 'typescript', 'meteor']);
   const seen = new Set();
   for (const entry of [...localPackages || [], ...packageTests || []]) {
     if (!entry || typeof entry.name !== 'string' ||

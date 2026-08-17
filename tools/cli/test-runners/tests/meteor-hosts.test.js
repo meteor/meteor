@@ -91,7 +91,12 @@ test('worker option serializer preserves allowlisted command behavior only', () 
   const result = serializeTestWorkerOptions({
     once: true,
     'server-only': true,
-    project: ['meteor-runtime-server'],
+    project: [
+      'meteor-pure-server',
+      'meteor-runtime-server',
+      'meteor-runtime-client',
+      'meteor-e2e',
+    ],
     'test-file': ['a.test.js'],
     settings: '/app/settings.json',
     args: ['--reporter=dot'],
@@ -104,7 +109,7 @@ test('worker option serializer preserves allowlisted command behavior only', () 
   assert.deepEqual(result, {
     once: true,
     'server-only': true,
-    project: ['meteor-runtime-server'],
+    project: ['meteor-runtime-server', 'meteor-runtime-client'],
     'test-file': ['a.test.js'],
     settings: '/app/settings.json',
     args: ['--reporter=dot'],

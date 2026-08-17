@@ -4,6 +4,8 @@ const path = require('node:path');
 module.exports = defineConfig(context => {
   const reportsDirectory = process.env.METEOR_RSTEST_E2E_COVERAGE_DIR;
   const linesThreshold = process.env.METEOR_RSTEST_E2E_LINES_THRESHOLD;
+  const packageLinesThreshold =
+    process.env.METEOR_RSTEST_E2E_PACKAGE_LINES_THRESHOLD;
   const configCoverageProvider =
     process.env.METEOR_RSTEST_E2E_CONFIG_COVERAGE_PROVIDER;
 
@@ -39,8 +41,15 @@ module.exports = defineConfig(context => {
         exclude: ['**/*.test.*'],
         reporters: ['json'],
         ...(reportsDirectory && { reportsDirectory }),
-        ...(linesThreshold && {
-          thresholds: { lines: Number(linesThreshold) },
+        ...((linesThreshold || packageLinesThreshold) && {
+          thresholds: {
+            ...(linesThreshold && { lines: Number(linesThreshold) }),
+            ...(packageLinesThreshold && {
+              'packages/rstest-e2e-fixture/**/*.js': {
+                lines: Number(packageLinesThreshold),
+              },
+            }),
+          },
         }),
         reportOnFailure:
           process.env.METEOR_RSTEST_E2E_REPORT_ON_FAILURE === 'true',
