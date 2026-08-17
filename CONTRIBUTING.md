@@ -16,7 +16,7 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Contributing to documentation](CONTRIBUTING.md#documentation)
 - [Finding work](CONTRIBUTING.md#finding-work)
 - [Submitting pull requests](CONTRIBUTING.md#making-changes-to-meteor-core)
-- [Reviewing pull requests](CONTRIBUTING.md#core-committer)
+- [Reviewing pull requests](CONTRIBUTING.md#core-maintainer)
 - [Maintaining a community package](CONTRIBUTING.md#community-package-maintainer)
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://forums.meteor.com/c/meetups) and events and helping to moderate our [forums](https://forums.meteor.com/).
@@ -31,19 +31,19 @@ We curate specific issues that would make great pull requests for community cont
 
 Any issue that does not have the `ready` label still requires discussion on implementation details, but input and positive commentary are welcome! Any pull request opened on an issue that is not `confirmed` is still welcome. However, the pull request is more likely to be sent back for reworking than a `ready` issue.  
 
-If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [core committers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-committer), and they will help you to find something interesting to work on.
+If in doubt about the best way to implement something, please create additional conversation on the issue. You can also reach one of the [Core Maintainers](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md#core-maintainer), and they will help you to find something interesting to work on.
 
 ### Project roles
 
 Here are descriptions of the existing project roles, along with the current contributors taking on those roles today.
 
-#### Core Committer
+#### Core Maintainer
 
-Core Committers are community members who help maintain Meteor: they review pull requests and triage issues. They hold triage permissions on meteor/meteor — labeling, assigning, and managing issues and PRs within the areas they know best. See [GOVERNANCE.md](GOVERNANCE.md) for the full role description.
+Core Maintainers are community members who help maintain Meteor: they review pull requests and triage issues. They hold triage permissions on meteor/meteor — labeling, assigning, and managing issues and PRs within the areas they know best. See [GOVERNANCE.md](GOVERNANCE.md) for the full role description.
 
-Anyone can open a pull request nominating a person for the Core Committer program; the community — and in particular the other Core Committers — approves or rejects the nomination. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
+Anyone can open a pull request nominating a person for the Core Maintainer program; the community — and in particular the other Core Maintainers — approves or rejects the nomination. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
 
-Current Core Committers:
+Current Core Maintainers:
 - [@fredmaiaarantes](https://github.com/fredmaiaarantes)
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
 - [@zodern](https://github.com/zodern)
@@ -207,7 +207,7 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://docs.meteor.com/about/roadmap.html). Start by creating a well specified Discussion [here](https://github.com/meteor/meteor/discussions).
 
-Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a core contributor prioritizing your feature by flagging it with the `ready` label.
+Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a Core Maintainer prioritizing your feature by flagging it with the `ready` label.
 
 Split features up into smaller, logically separate chunks. It is unlikely that large and complicated PRs will be merged.
 
