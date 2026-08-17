@@ -724,6 +724,13 @@ try {
       return `${linkBanner}
 // In Blaze, import happens last so HTML files preload first${clientRuntimeBuildId}`;
     }
+    if (config?.isServer && !config?.isNative && config?.isTest) {
+      // Keep the dependency visible to Meteor's linker, but retain the
+      // explicit wait for the Promise exported by a server bundle with TLA.
+      return `${linkBanner}
+import __rspackBundle from './${config?.outputFile || ''}';
+await Promise.resolve(__rspackBundle);`;
+    }
     if (config?.isServer && !config?.isNative) {
       // Register the rspack bundle as an async dep; meteor#14395.
       // Meteor's Reify Babel plugin automatically detects Top-Level Await
