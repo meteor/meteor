@@ -17,7 +17,7 @@ There are many ways to contribute to the Meteor Project. Here’s a list of tech
 - [Finding work](CONTRIBUTING.md#finding-work)
 - [Submitting pull requests](CONTRIBUTING.md#making-changes-to-meteor-core)
 - [Reviewing pull requests](CONTRIBUTING.md#core-maintainer)
-- [Maintaining a community package](CONTRIBUTING.md#community-package-maintainer)
+- [Maintaining a community package](GOVERNANCE.md#community-package-maintainer)
 
 There are also several ways to contribute to the Meteor Project outside of GitHub, like organizing or speaking at [Meetups](https://forums.meteor.com/c/meetups) and events and helping to moderate our [forums](https://forums.meteor.com/).
 
@@ -43,11 +43,7 @@ Core Maintainers are community members who help maintain Meteor: they review pul
 
 Anyone can open a pull request nominating a person for the Core Maintainer program; existing Core Maintainers and the community give feedback, and the TSC approves the nomination — see [GOVERNANCE.md](GOVERNANCE.md) for the process. Approved nominations are documented at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
 
-Current Core Maintainers:
-- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
-- [@StorytellerCZ](https://github.com/StorytellerCZ)
-- [@zodern](https://github.com/zodern)
-- [@radekmie](https://github.com/radekmie)
+The current Core Maintainers are listed on the [contributors page](https://docs.meteor.com/community/contributors.html).
 
 ##### Testing a contributor's branch locally
 
@@ -61,12 +57,7 @@ npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
 
 The TSC is the governing body responsible for major, long-term decisions about Meteor — architectural direction, breaking changes, and project-wide policies. TSC members hold commit access to meteor/meteor, and publishing official Meteor releases is their exclusive domain. The TSC is composed of Meteor Software employees and is **not** open to community nomination. See [GOVERNANCE.md](GOVERNANCE.md) for details.
 
-Current TSC:
-- [@henriquealbert](https://github.com/henriquealbert)
-- [@Grubba27](https://github.com/Grubba27)
-- [@italojs](https://github.com/italojs)
-- [@nachocodoner](https://github.com/nachocodoner)
-- [@aquinoit](https://github.com/aquinoit)
+The current TSC members are listed on the [contributors page](https://docs.meteor.com/community/contributors.html).
 
 ### Tracking project work
 
