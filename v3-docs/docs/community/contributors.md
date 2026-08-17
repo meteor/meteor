@@ -24,9 +24,9 @@ const coreMaintainers = [
 
 # Contributors
 
-## Technical Committee
+## Technical Steering Committee (TSC)
 
-The Technical Committee is responsible for the direction and governance of the Meteor project.
+The Technical Steering Committee (TSC) is responsible for the direction and governance of the Meteor project.
 
 <Contributors :contributors="technicalCommittee" :show-contributions="false" />
 

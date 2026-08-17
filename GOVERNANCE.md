@@ -4,25 +4,25 @@ This document explains how the Meteor project is organized, who does what, and h
 
 ## Why this document exists
 
-Meteor has always run on its community. As the project grows, doing things informally stops working. This document writes down the roles and the path from Contributor to Core Committer so it's clear and open to everyone.
+Meteor has always run on its community. As the project grows, doing things informally stops working. This document writes down the roles and the path from Contributor to Core Maintainer so it's clear and open to everyone.
 
 ## Roles
 
 ### Contributor
 
-Anyone who opens pull requests, comments on issues, helps in the forum, writes docs, or joins a discussion. There's no process to become a Contributor — you just start. Every Core Committer began here.
+Anyone who opens pull requests, comments on issues, helps in the forum, writes docs, or joins a discussion. There's no process to become a Contributor — you just start. Every Core Maintainer began here.
 
 ### Community Package Maintainer
 
 People who maintain community packages that matter to the Meteor ecosystem. They don't work in the core repo, but their packages shape how developers use Meteor every day. They're listed in [CONTRIBUTING.md](https://github.com/meteor/meteor/blob/devel/CONTRIBUTING.md).
 
-### Core Committer
+### Core Maintainer
 
-Core Committers are trusted community members who help keep Meteor moving. They review pull requests and triage issues — labeling, assigning, and helping move contributions toward merge. They don't merge or publish releases themselves; that stays with the TSC.
+Core Maintainers are trusted community members who help keep Meteor moving. They review pull requests and triage issues — labeling, assigning, and helping move contributions toward merge. They don't merge or publish releases themselves; that stays with the TSC.
 
-**What Core Committers get a say in**
+**What Core Maintainers get a say in**
 
-Core Committers are close to the code and to users, so their voice carries weight:
+Core Maintainers are close to the code and to users, so their voice carries weight:
 
 - They help shape the roadmap for the coming years — what to prioritize, what to postpone, what to drop.
 - They can be brought into private discussions before a decision is opened to the wider community.
@@ -30,7 +30,7 @@ Core Committers are close to the code and to users, so their voice carries weigh
 
 **What we ask in return**
 
-Core Committers are **not** required to work on the roadmap. You work on what you think matters most. We only ask one thing: pick at least one **front** and give it attention. A front can be a roadmap item, a package, or another repo under the Meteor organization (for example `performance` or Blaze).
+Core Maintainers are **not** required to work on the roadmap. You work on what you think matters most. We only ask one thing: pick at least one **front** and give it attention. A front can be a roadmap item, a package, or another repo under the Meteor organization (for example `performance` or Blaze).
 
 Picking a front is voluntary — you choose where to put your name, and no one is forced onto anything. It doesn't mean you can only work on that; you can take breaks and work on other things too. It just means the community knows this is something you're looking after.
 
@@ -40,7 +40,7 @@ Picking a front is voluntary — you choose where to put your name, and no one i
 - Give attention to at least one front of your choosing.
 - Follow the [Meteor Code of Conduct](https://github.com/meteor/meteor/blob/devel/CODE_OF_CONDUCT.md).
 
-> Being a Core Committer is **not a job**. There's no contract, no pay, and no employer relationship with Meteor Software or anyone else. Core Committers are independent open-source contributors who are trusted with triage rights. Everything here is a community expectation, not a work obligation.
+> Being a Core Maintainer is **not a job**. There's no contract, no pay, and no employer relationship with Meteor Software or anyone else. Core Maintainers are independent open-source contributors who are trusted with triage rights. Everything here is a community expectation, not a work obligation.
 
 ### Technical Steering Committee (TSC)
 
@@ -56,21 +56,21 @@ What the TSC can do:
 What the TSC is responsible for:
 
 - Setting and keeping the long-term roadmap.
-- Making the final call on major changes when Core Committers can't reach agreement.
+- Making the final call on major changes when Core Maintainers can't reach agreement.
 - Approving changes to this document.
 - Representing Meteor in the wider open-source world.
 
 ### Alumni
 
-Core Committers who stop contributing move to Alumni after 12 months of inactivity. It's automatic — no vote, no drama. Reviewing PRs and joining discussions still counts as contributing, so this is only for people who've truly stepped away.
+Core Maintainers who stop contributing move to Alumni after 12 months of inactivity. It's automatic — no vote, no drama. Reviewing PRs and joining discussions still counts as contributing, so this is only for people who've truly stepped away.
 
 Alumni keep their recognition and stay listed on the Meteor website. They can still review PRs and share opinions. They just don't hold triage rights or a vote anymore. If an Alumnus wants to come back, they go through the same nomination as anyone else.
 
-## How to become a Core Committer
+## How to become a Core Maintainer
 
-1. Anyone can open a pull request nominating someone for the Core Committer program. There's no minimum time or set number of contributions — the nomination stands on the person's work and on community support.
+1. Anyone can open a pull request nominating someone for the Core Maintainer program. There's no minimum time or set number of contributions — the nomination stands on the person's work and on community support.
 2. The nomination is public, on the GitHub repository.
-3. The community — and especially the current Core Committers — decides whether to accept it.
+3. The community — and especially the current Core Maintainers — decides whether to accept it.
 4. Once accepted, it's recorded at [docs.meteor.com/community/contributors.html](https://docs.meteor.com/community/contributors.html).
 
 New packages entering core start behind an **experimental flag**. This gives the person looking after it time to iterate and prove it's stable before it becomes official. There's no fixed deadline, but the goal is to move toward stable.
@@ -84,7 +84,7 @@ New packages entering core start behind an **experimental flag**. This gives the
 | @italojs | Meteor Software |
 | @nachocodoner | Meteor Software |
 
-## Current Core Committers
+## Current Core Maintainers
 
 | Name |
 |------|
@@ -103,16 +103,16 @@ Currently no members.
 
 Who decides depends on how big the change is:
 
-- **Small change in one front** — the Core Committer responsible for that front decides. For example: which PRs to move forward, or which issues come first.
-- **Change to Meteor core** — for example a breaking change, a new experimental package, or a change to this document. The active Core Committers decide together.
-- **No agreement from the Core committers or community?** — the TSC decides.
+- **Small change in one front** — the Core Maintainer responsible for that front decides. For example: which PRs to move forward, or which issues come first.
+- **Change to Meteor core** — for example a breaking change, a new experimental package, or a change to this document. The active Core Maintainers decide together.
+- **No agreement from the Core Maintainers or community?** — the TSC decides.
 
 Two things are always the TSC's call: the long-term roadmap and publishing official releases.
 
-## Removing a Core Committer
+## Removing a Core Maintainer
 
-A Core Committer can be removed by a two-thirds vote of the active Core Committers, for a serious Code of Conduct violation. This has never happened. The rule exists to be clear about expectations, not because we expect to use it.
+A Core Maintainer can be removed by a two-thirds vote of the active Core Maintainers, for a serious Code of Conduct violation. This has never happened. The rule exists to be clear about expectations, not because we expect to use it.
 
 ## Changing this document
 
-Anyone can propose changes with a pull request. Changes need agreement among active Core Committers and approval from the TSC before merging.
+Anyone can propose changes with a pull request. Changes need agreement among active Core Maintainers and approval from the TSC before merging.
