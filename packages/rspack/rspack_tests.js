@@ -64,12 +64,11 @@ Tinytest.add("rspack - file extensions - returns a fresh deterministic list", (t
 });
 
 Tinytest.add(
-  "rspack - build-context - test-mode server link uses import, not require+await",
+  "rspack - build-context - test-mode server imports and awaits its bundle",
   function (test) {
     // When isTest + isServer + isDevelopment + role=run, the server-meteor.js
-    // scaffold must use `import` (not `var __rspackBundle = require()`) so
-    // the Meteor linker does not strip the require line. The local fork uses
-    // this pattern and has been verified with 1,600+ app-spec tests.
+    // scaffold must keep the dependency visible to Meteor's linker and wait
+    // for the Promise exported by a bundle with TLA.
     var content = getBuildFileContent({
       isTest: true,
       isTestFullApp: true,
@@ -80,13 +79,44 @@ Tinytest.add(
     });
 
     test.isTrue(
-      content.includes("import './server-rspack.js'"),
-      "test-mode server link must use import, not require+await"
+      content.includes(
+        "import __rspackBundle from './server-rspack.js'",
+      ),
+      "test-mode server link must import the Rspack bundle",
     );
 
     test.isFalse(
       content.includes("var __rspackBundle = require"),
-      "test-mode server link must not use the require+await pattern (it gets stripped by the linker)"
+      "test-mode server link must not use the require+await pattern (it gets stripped by the linker)",
     );
-  }
+    test.isTrue(
+      content.includes("await Promise.resolve(__rspackBundle)"),
+      "test-mode server must wait for the async Rspack bundle",
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - production server preserves require+await for TLA",
+  function (test) {
+    var content = getBuildFileContent({
+      isTest: false,
+      isServer: true,
+      isProduction: true,
+      role: FILE_ROLE.run,
+      entryFile: "server/main.js",
+      outputFile: "server-rspack.js",
+    });
+
+    test.isTrue(
+      content.includes(
+        "var __rspackBundle = require('./server-rspack.js')",
+      ),
+      "production server must keep registering its Rspack bundle as an async dependency",
+    );
+    test.isTrue(
+      content.includes("await Promise.resolve(__rspackBundle)"),
+      "production server must wait for the async Rspack bundle",
+    );
+  },
 );

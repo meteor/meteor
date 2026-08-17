@@ -33,8 +33,36 @@ function getModeEnv(localDir, rspackPort) {
   };
 }
 
+function getSeparateContextEnv(localDir, rspackPort) {
+  return {
+    METEOR_LOCAL_DIR: localDir,
+    RSPACK_DEVSERVER_PORT: String(rspackPort),
+  };
+}
+
 async function readBundle(appDir, relativePath) {
   return fs.readFile(path.join(appDir, relativePath), 'utf8');
+}
+
+async function waitForOutputToSettle(outputLines, {
+  quietMs = 2000,
+  timeout = 30000,
+} = {}) {
+  const startedAt = Date.now();
+  let lastLength = outputLines.length;
+  let lastChangeAt = Date.now();
+
+  while (Date.now() - startedAt < timeout) {
+    await new Promise(resolve => setTimeout(resolve, 100));
+    if (outputLines.length !== lastLength) {
+      lastLength = outputLines.length;
+      lastChangeAt = Date.now();
+    } else if (Date.now() - lastChangeAt >= quietMs) {
+      return;
+    }
+  }
+
+  throw new Error('Meteor output did not settle before the watcher probe');
 }
 
 describe('Regressions / Rspack concurrent modes /', () => {
@@ -51,9 +79,16 @@ describe('Regressions / Rspack concurrent modes /', () => {
 
     const packagesPath = path.join(appDir, '.meteor', 'packages');
     const packages = await fs.readFile(packagesPath, 'utf8');
+    const packagesWithoutMongo = packages.replace(
+      /^mongo(?:@[^\s]+)?\s*\n/m,
+      '',
+    );
+    // Keep both Meteor processes on one package solution. If the driver is
+    // transient, run and test repeatedly rewrite .meteor/versions and obscure
+    // the Rspack watcher behavior this suite is meant to exercise.
     await fs.writeFile(
       packagesPath,
-      packages.replace(/^mongo(?:@[^\s]+)?\s*\n/m, ''),
+      `${packagesWithoutMongo.trimEnd()}\nmeteortesting:mocha\n`,
       'utf8',
     );
     basePackageConfig = await fs.readJson(path.join(appDir, 'package.json'));
@@ -123,6 +158,44 @@ describe('Regressions / Rspack concurrent modes /', () => {
     expect(await fs.pathExists(
       path.join(appDir, '_build/app-test/client-rspack.js')
     )).toBe(true);
+  });
+
+  test('ignores Rspack output written by another Meteor process', async () => {
+    const appResult = await runMeteorApp(appDir, APP_PORT, {
+      waitForOutput: '=> App running at',
+      env: getSeparateContextEnv(PRIMARY_LOCAL_DIR, APP_RSPACK_PORT),
+    });
+    appProcess = appResult.meteorProcess;
+
+    const testResult = await runMeteorTests(appDir, TEST_PORT, {
+      waitForOutput: '=> App running at',
+      commandOptions: ['--full-app'],
+      testClient: true,
+      env: getSeparateContextEnv(SECONDARY_LOCAL_DIR, TEST_RSPACK_PORT),
+    });
+    testProcess = testResult.meteorProcess;
+
+    const otherProcessBundle = path.join(
+      appDir,
+      '_build-local-secondary/app-test/client-rspack.js',
+    );
+    expect(await fs.pathExists(otherProcessBundle)).toBe(true);
+
+    // Ignore startup churn, then make one controlled write in the other
+    // process's completed build context. The development process must not
+    // treat this generated output as a source change.
+    await waitForOutputToSettle(appResult.outputLines);
+    const outputStart = appResult.outputLines.length;
+    await fs.appendFile(
+      otherProcessBundle,
+      '\n// cross-process watcher probe\n',
+      'utf8',
+    );
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    expect(appResult.outputLines.slice(outputStart).join('\n')).not.toMatch(
+      /=> (?:Client|Server) modified/,
+    );
   });
 
   test('isolates normal-test and full-app-test module directories', async () => {
