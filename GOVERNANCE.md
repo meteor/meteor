@@ -56,7 +56,7 @@ What the TSC can do:
 What the TSC is responsible for:
 
 - Setting and keeping the long-term roadmap.
-- Making the final call on major changes when Core Maintainers can't reach agreement.
+- Making the final call on major changes, informed by the Core Maintainers' recommendation.
 - Approving changes to this document.
 - Representing Meteor in the wider open-source world.
 
@@ -103,9 +103,8 @@ Currently no members.
 
 Who decides depends on how big the change is:
 
-- **Small change in one front** — the Core Maintainer responsible for that front decides. For example: which PRs to move forward, or which issues come first.
-- **Change to Meteor core** — for example a breaking change, a new experimental package, or a change to this document. The active Core Maintainers decide together.
-- **No agreement from the Core Maintainers or community?** — the TSC decides.
+- **Small change in one front** — the Core Maintainer looking after that front decides. For example: which PRs to move forward, or which issues come first.
+- **Change to Meteor core** — for example a breaking change, a new experimental package, or a change to this document. The active Core Maintainers deliberate and make a recommendation; the TSC makes the final call. When the TSC decides against the recommendation, it normally documents the reasoning publicly.
 
 Two things are always the TSC's call: the long-term roadmap and publishing official releases.
 
