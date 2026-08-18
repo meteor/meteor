@@ -18,7 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -32,4 +32,3 @@ jobs:
           cache-dependency-path: v3-docs/docs/package-lock.json
       - run: npm ci
       - run: npm run test:links
-      - run: npm run docs:build

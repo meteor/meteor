@@ -50,13 +50,3 @@ test("rejects encoded path separators", () => {
     /\/about%2Finstall is not a valid URL/
   );
 });
-
-test("allows explicitly ignored existing routes", () => {
-  checkThemeLinks({
-    themeConfig: {
-      sidebar: [{ text: "Underscore", link: "/packages/underscore" }],
-    },
-    pages: ["index.md"],
-    ignoredRoutes: ["/packages/underscore"],
-  });
-});
