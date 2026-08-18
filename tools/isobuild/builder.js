@@ -53,6 +53,21 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
 const TRANSIENT_SCRATCH_REGEX =
   /^\.(?:temp-[0-9a-z]+(?:\.old-\d+)?|.*-garbage-[0-9a-z]+)$/;
 
+// Meteor only ever creates those directly inside a node_modules directory
+// (or a node_modules/@scope directory), so the location is part of the
+// check: a package-owned lookalike deeper in the tree (e.g.
+// node_modules/example/.temp-cache) is preserved.
+function isTransientScratchDir(absPath) {
+  if (! TRANSIENT_SCRATCH_REGEX.test(files.pathBasename(absPath))) {
+    return false;
+  }
+  let parent = files.pathDirname(absPath);
+  if (files.pathBasename(parent).startsWith("@")) {
+    parent = files.pathDirname(parent);
+  }
+  return files.pathBasename(parent) === "node_modules";
+}
+
 
 // Options:
 //  - outputPath: Required. Path to the directory that will hold the
@@ -565,10 +580,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return this._copyDirectory(Object.assign({}, options, {
       filter: (absPath, isDirectory) => {
         if (isDirectory && absPath === rootCache) return false;
-        if (isDirectory &&
-            TRANSIENT_SCRATCH_REGEX.test(files.pathBasename(absPath))) {
-          return false;
-        }
+        if (isDirectory && isTransientScratchDir(absPath)) return false;
         return userFilter ? userFilter(absPath, isDirectory) : true;
       },
     }));
@@ -576,6 +588,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
   _ensureAllNonPackageDirectories(absFromDir, relToDir, skipPath) {
     if (skipPath && absFromDir === skipPath) return;
+    if (isTransientScratchDir(absFromDir)) return;
 
     const dirStat = optimisticStatOrNull(absFromDir);
     if (! (dirStat && dirStat.isDirectory())) {
