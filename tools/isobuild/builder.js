@@ -47,6 +47,12 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
   (process.platform !== 'win32') &&
   ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
 
+// Scratch directories created inside node_modules by meteorNpm.
+// rebuildIfNonPortable, rm_recursive_deferred and renameDirAlmostAtomically;
+// never legitimate bundle content.
+const TRANSIENT_SCRATCH_REGEX =
+  /^\.(?:temp-[0-9a-z]+(?:\.old-\d+)?|.*-garbage-[0-9a-z]+)$/;
+
 
 // Options:
 //  - outputPath: Required. Path to the directory that will hold the
@@ -559,6 +565,10 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return this._copyDirectory(Object.assign({}, options, {
       filter: (absPath, isDirectory) => {
         if (isDirectory && absPath === rootCache) return false;
+        if (isDirectory &&
+            TRANSIENT_SCRATCH_REGEX.test(files.pathBasename(absPath))) {
+          return false;
+        }
         return userFilter ? userFilter(absPath, isDirectory) : true;
       },
     }));
@@ -776,8 +786,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // Symbolic links pointing to relative external paths are less
           // portable than absolute links, so getExternalPath() is
           // preferred if it returns a path.
-          const linkSource = getExternalPath() ||
-              files.readlink(thisAbsFrom);
+          let linkSource;
+          try {
+            linkSource = getExternalPath() ||
+                files.readlink(thisAbsFrom);
+          } catch (e) {
+            // Entry deleted between readdir and readlink; skip it.
+            if (e.code === "ENOENT") continue;
+            throw e;
+          }
 
           const linkTarget =
               files.pathResolve(this.buildPath, thisRelTo);
