@@ -8,6 +8,12 @@
 cd $(dirname $0)/../..
 export METEOR_HOME=`pwd`
 
+# Make sure the dev_bundle matches the checked-out BUNDLE_VERSION before
+# probing it for puppeteer: a cached dev_bundle from another branch passes the
+# probe and is then replaced mid-run by the first real meteor invocation,
+# taking its puppeteer install with it.
+./meteor --version >/dev/null 2>&1 || true
+
 # Install puppeteer into dev_bundle only when it is not already available globally
 # (e.g. on oss-vm, where puppeteer@23.6.0 is pre-installed via system npm and
 # NODE_PATH is set to $(npm root -g) by the CI workflow).
