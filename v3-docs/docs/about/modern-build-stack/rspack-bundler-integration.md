@@ -162,7 +162,9 @@ Refer to the [Migration Topics](#migration-topics) section for more details on o
 
 ## Custom `rspack.config.js`
 
-Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.mjs` or `rspack.config.cjs` if you prefer strict ESM or CommonJS formats.
+Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.ts`, `rspack.config.mjs`, or `rspack.config.cjs` if you prefer TypeScript, strict ESM, or CommonJS formats.
+
+The configuration file and the relative local modules it references through `import`, dynamic `import()`, re-exports, or `require()` are tracked as Rspack build dependencies. Changing one of these files invalidates the persistent cache so the next build uses the updated configuration.
 
 This file defines dynamic configurations, so you return the config from a resolved function.
 

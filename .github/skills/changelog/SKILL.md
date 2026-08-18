@@ -1,6 +1,6 @@
 ---
 name: changelog
-description: Use for writing, reviewing, editing, or generating Meteor release changelog entries. Defines canonical file locations, naming rules, required section structure, formatting conventions, PR-based generation workflow (with gh CLI and web fallback), incremental updates, and common entry patterns. Applies to files under v3-docs/docs/generators/changelog/versions/.
+description: Use for writing, reviewing, editing, or generating Meteor release changelog entries. Defines canonical file locations, naming rules, required section structure, formatting conventions, release-diff and milestone reconciliation, contributor and reporter attribution, PR-based generation workflow, incremental updates, and common entry patterns. Applies to files under v3-docs/docs/generators/changelog/versions/.
 ---
 
 # Meteor Changelog Rules
@@ -179,6 +179,13 @@ meteor update --release <VERSION>
   `[@user](https://github.com/user)`
 * Forum users:
   `[@user](https://forums.meteor.com/u/user/summary)`
+* Credit shipped PR authors and preserved source contributors first
+* Credit substantive reviewers and PR participants next
+* Credit issue reporters, reproduction authors, diagnosticians, and production
+  confirmation contributors after them
+* Deduplicate each person and keep them in the highest applicable group
+* Do not credit bots, automation, or administrative-only participation
+* Do not require an evidence link in Highlights to credit a qualifying person
 * Use `N/A` if none
 
 ---
@@ -248,14 +255,81 @@ https://api.github.com/repos/meteor/meteor/pulls?base=release-<VERSION>&state=cl
 
 Filter results to only merged PRs (`merged_at` is not null).
 
+### Build the Release Scope and Attribution Inventory
+
+Do not treat the base-branch PR list as exhaustive. Reconcile four evidence sets
+before drafting or updating Highlights:
+
+1. The `devel...release-<VERSION>` diff and commit history, which determine what
+   actually ships.
+2. Merged PRs whose base is `release-<VERSION>`, which are the primary entry points.
+3. Every open and closed item in the release milestone, which can reveal reports,
+   reproductions, pending work, and PRs merged through another base branch.
+4. Linked issues and recursively referenced source, continuation, replacement, or
+   superseded PRs found in PR bodies, issue bodies, comments, reviews, and commits.
+
+Resolve the milestone and list all its items:
+
+```bash
+MILESTONE_NUMBER="$(gh api --paginate \
+  'repos/meteor/meteor/milestones?state=all&per_page=100' \
+  --jq '.[] | select((.title == "Release <VERSION>") or (.title == "<VERSION>")) | .number')"
+
+gh api --paginate \
+  "repos/meteor/meteor/issues?milestone=${MILESTONE_NUMBER}&state=all&per_page=100" \
+  --jq '.[] | {number, title, state, author: .user.login, is_pr: has("pull_request"), url: .html_url}'
+```
+
+If no milestone exists, record that fact and continue with the other evidence sets.
+Do not create or change a milestone as part of changelog generation.
+
+For every candidate PR and recursively linked source PR, inspect full context:
+
+```bash
+gh pr view <PR_NUMBER> --repo meteor/meteor \
+  --json number,title,author,body,url,files,comments,reviews,closingIssuesReferences,commits
+
+gh issue view <ISSUE_NUMBER> --repo meteor/meteor \
+  --json number,title,author,body,url,state,comments
+```
+
+Follow explicit links and relationship language such as `Fixes`, `Closes`, `Related`,
+`Continues`, `Replaces`, `Supersedes`, `based on`, and statements that original
+commits or authorship were preserved. Continue until every shipped change has an
+origin and every directly related report has been checked.
+
+Create and show two review artifacts before editing the changelog:
+
+* **Scope discrepancy table:** classify each item as shipped, attribution-only,
+  excluded with a reason, or unresolved/deferred. Include base-only, milestone-only,
+  linked-source-only, and diff-only items. A milestone entry is discovery evidence,
+  not proof that code shipped.
+* **Attribution ledger:** list each human GitHub handle, role, and supporting PR or
+  issue. Cover shipped PR authors, preserved source contributors, substantive
+  reviewers and PR participants, issue reporters, reproduction authors, root-cause
+  diagnosticians, and independent production confirmations.
+
+Require an explicit user decision for unresolved milestone items before finalizing
+the changelog. Do not put unresolved or deferred work in Highlights. Exclude bots,
+automation accounts, administrative-only participation, and comments that do not
+materially contribute to the shipped change.
+
+Keep the evidence inventory separate from the public changelog. It supports scope
+decisions and attribution, but it is not changelog content. In Highlights, link the
+primary implementation or consolidation PRs. Add an issue or source PR only when it
+materially helps users understand the impact, migration, or origin and the entry stays
+concise. Do not copy the full issue and source-PR trace into Highlights merely to
+justify Special thanks.
+
 ### Incremental Updates
 
 When the changelog file already exists with content:
 
 1. Parse existing Highlights for PR numbers (extract from `PR#NNNN` links)
 2. Compare fetched PRs against the existing set
-3. **Skip PRs already present** — only process newly detected PRs
-4. Append new entries to the appropriate sections without duplicating existing ones
+3. Skip duplicate Highlight entries for PRs already present
+4. Re-audit existing entries for linked source PRs, issues, and missing attribution
+5. Append new entries to the appropriate sections without duplicating existing ones
 
 ### Categorization Signals
 
@@ -335,3 +409,10 @@ Scan PR title, body, labels, and phrases such as:
 * Proper bullet and link formats
 * No YAML frontmatter
 * PR links point to `meteor/meteor`
+* Release diff, base-branch PRs, and all milestone items reconciled
+* Recursively linked source PRs and issues traced
+* Scope discrepancy table and attribution ledger reviewed by the user
+* Every direct issue reporter and substantive reproduction or diagnosis contributor credited
+* Open milestone items explicitly included or deferred
+* Bots and administrative-only participants excluded
+* Highlights stay concise and link issues or source PRs only when useful to readers
