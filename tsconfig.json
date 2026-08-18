@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "es2020",
-    "module": "commonjs",
+    "module": "preserve",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -10,7 +10,7 @@
     "noEmit": true,
     "allowJs": true,
     "checkJs": false,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "typeRoots": [
       "./node_modules/@types",
       "./types"
