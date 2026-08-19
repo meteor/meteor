@@ -86,6 +86,7 @@ jobs:
         id: discover
         run: |
           ./meteor self-test \
+            --force-online \
             --list-json-out /tmp/tests.json \
             --exclude "$SELF_TEST_EXCLUDE" \
             --without-tag "custom-warehouse" \
@@ -240,6 +241,7 @@ jobs:
           mkdir -p tmp/results/junit
           ulimit -c unlimited
           ./meteor self-test \
+            --force-online \
             --file "$TEST_FILE_REGEX" \
             --retries "$METEOR_SELF_TEST_RETRIES" \
             --exclude "$SELF_TEST_EXCLUDE" \

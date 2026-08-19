@@ -1,7 +1,21 @@
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const path = require('node:path');
 const test = require('node:test');
 
 const { buildMatrix } = require('./build-test-matrix.js');
+
+const workflow = fs.readFileSync(
+  path.join(__dirname, '../../.github/workflows/test-tools.yml'),
+  'utf8',
+);
+
+function workflowStep(name) {
+  const start = workflow.indexOf(`      - name: ${name}\n`);
+  assert.notEqual(start, -1, `missing workflow step: ${name}`);
+  const next = workflow.indexOf('\n      - name:', start + 1);
+  return workflow.slice(start, next === -1 ? workflow.length : next);
+}
 
 test('groups tests by file and builds literal anchored selectors', () => {
   const matrix = buildMatrix([
@@ -47,4 +61,14 @@ test('rejects malformed test records before they reach workflow expressions', ()
     () => buildMatrix([{ file: 'line\nbreak', name: 'bad', tags: [] }]),
     /invalid file/,
   );
+});
+
+test('discovery and matrix execution require the same online test set', () => {
+  const discovery = workflowStep('Discover tests and build matrix');
+  const execution = workflowStep('Running self-test');
+
+  for (const step of [discovery, execution]) {
+    assert.match(step, /--force-online/);
+    assert.match(step, /--exclude "\$SELF_TEST_EXCLUDE"/);
+  }
 });
