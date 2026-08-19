@@ -59,6 +59,10 @@ import { randomToken } from '../utils/utils.js';
 import { Tropohouse } from '../packaging/tropohouse.js';
 import { PackageMap } from '../packaging/package-map.js';
 import { capture, enterJob } from '../utils/buildmessage.js';
+import {
+  getPreparedAppCacheEntry,
+  applyPreparedAppCacheEntry,
+} from './prepared-app-cache.js';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -185,6 +189,31 @@ export default class Sandbox {
   async createApp(to, template, options) {
     options = options || {};
     const absoluteTo = files.pathJoin(this.cwd, to);
+
+    // Only a normal checkout sandbox with no caller-specific release,
+    // prepare-app opt-out, or custom environment can share a prepared snapshot.
+    // Unsupported shapes use the original path below without changing their
+    // behavior.
+    const usePreparedCache =
+      !this.warehouse && !options.release && !options.dontPrepareApp &&
+      Object.keys(this.env).length === 0 &&
+      files.containsPath(this.root, absoluteTo);
+    if (usePreparedCache) {
+      const cacheEntry = await getPreparedAppCacheEntry({
+        template,
+        releaseName: releaseCurrent.isProperRelease() ? releaseCurrent.name : null,
+        upgradersToAppend: allUpgraders(),
+        execPath: this.execPath,
+        env: this._makeEnv(),
+      });
+      if (cacheEntry && await applyPreparedAppCacheEntry({
+        cacheEntry,
+        destAppDir: absoluteTo,
+      })) {
+        return;
+      }
+    }
+
     const absoluteFrom = files.pathJoin(
       files.convertToStandardPath(__dirname),
       '..', 'tests', 'apps', template
