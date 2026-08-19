@@ -57,8 +57,8 @@ jobs:
         # so --get-ready skips the slow `./meteor npm install -g puppeteer` step.
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
-        id: meteor-cache
+      - name: Restore dev bundle cache
+        id: dev-bundle-cache
         uses: actions/cache@v4
         with:
           path: |
@@ -66,11 +66,20 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        id: package-npm-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Prepare Meteor
         # Run on every workflow so the package catalog at .meteor/package-metadata
@@ -101,7 +110,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -109,11 +118,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -175,7 +192,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -183,11 +200,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -243,7 +268,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -251,11 +276,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -317,7 +350,7 @@ jobs:
         # This mirrors what CircleCI does: export PATH="/home/circleci/.sdkman/candidates/gradle/8.7/bin:${PATH}"
         run: echo "/home/circleci/.sdkman/candidates/gradle/8.7/bin" >> "$GITHUB_PATH"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -325,11 +358,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -387,7 +428,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -395,11 +436,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -455,7 +504,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -463,11 +512,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -524,7 +581,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -532,11 +589,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -592,7 +657,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -600,11 +665,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -660,7 +733,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -668,11 +741,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -728,7 +809,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -736,11 +817,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -796,7 +885,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -804,11 +893,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -864,7 +961,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -872,11 +969,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -932,7 +1037,7 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
-      - name: Restore caches
+      - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
           path: |
@@ -940,11 +1045,19 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            packages/**/.npm
-          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-tools-
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
