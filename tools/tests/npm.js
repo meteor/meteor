@@ -1,5 +1,6 @@
 import selftest from '../tool-testing/selftest.js';
 import files from '../fs/files';
+import buildmessage from '../utils/buildmessage.js';
 import {
   canReuseNpmShrinkwrap,
   declaredSpecMatchesInstalledVersion,
@@ -24,6 +25,22 @@ selftest.define("npm - git dependency cache decisions", () => {
   const resolvedTree = {
     dependencies: {
       "uWebSockets.js": { version: "20.66.0" },
+    },
+  };
+  const sameSourceTree = {
+    dependencies: {
+      "uWebSockets.js": {
+        version:
+          "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef",
+      },
+    },
+  };
+  const differentSourceTree = {
+    dependencies: {
+      "uWebSockets.js": {
+        version:
+          "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#fedcba9876543210",
+      },
     },
   };
 
@@ -60,6 +77,15 @@ selftest.define("npm - git dependency cache decisions", () => {
     declaredTree,
     resolvedTree,
     resolvedTree,
+    sameSourceTree,
+    sameSourceTree,
+  ));
+  selftest.expectFalse(npmDependencyCacheIsCurrent(
+    declaredTree,
+    resolvedTree,
+    resolvedTree,
+    sameSourceTree,
+    differentSourceTree,
   ));
   selftest.expectTrue(canReuseNpmShrinkwrap(
     declaredTree,
@@ -84,10 +110,22 @@ selftest.define("npm - git dependency cache decisions", () => {
 });
 
 selftest.define("npm - git dependency cache uses installed version", async () => {
+  const installedResolved =
+    "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef";
+
+  selftest.expectTrue(await updateGitDependencyCache(installedResolved));
+  selftest.expectFalse(await updateGitDependencyCache(
+    "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#fedcba9876543210",
+  ));
+});
+
+async function updateGitDependencyCache(shrinkwrapResolved) {
   const packageNpmDir = files.mkdtemp();
   const nodeModulesDir = files.pathJoin(packageNpmDir, "node_modules");
   const declaredVersion =
     "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0";
+  const installedResolved =
+    "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef";
 
   files.mkdir(nodeModulesDir);
   files.writeFile(
@@ -100,8 +138,7 @@ selftest.define("npm - git dependency cache uses installed version", async () =>
       packages: {
         "node_modules/uWebSockets.js": {
           version: "20.66.0",
-          resolved:
-            "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef",
+          resolved: installedResolved,
         },
       },
     }),
@@ -111,7 +148,10 @@ selftest.define("npm - git dependency cache uses installed version", async () =>
     JSON.stringify({
       lockfileVersion: 4,
       dependencies: {
-        "uWebSockets.js": { version: "20.66.0" },
+        "uWebSockets.js": {
+          version: "20.66.0",
+          resolved: shrinkwrapResolved,
+        },
       },
     }),
   );
@@ -123,17 +163,21 @@ selftest.define("npm - git dependency cache uses installed version", async () =>
   };
 
   try {
-    selftest.expectTrue(await meteorNpm.updateDependencies(
-      "test-package",
-      packageNpmDir,
-      { "uWebSockets.js": declaredVersion },
-      true,
-    ));
+    let updated;
+    await buildmessage.capture({ title: "npm cache test" }, async () => {
+      updated = await meteorNpm.updateDependencies(
+        "test-package",
+        packageNpmDir,
+        { "uWebSockets.js": declaredVersion },
+        true,
+      );
+    });
+    return updated;
   } finally {
     childProcess.execFile = originalExecFile;
     files.rm_recursive(packageNpmDir);
   }
-});
+}
 
 selftest.define("npm", ["net"], async () => {
   const s = new Sandbox({ fakeMongo: true });

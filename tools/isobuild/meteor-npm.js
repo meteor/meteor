@@ -678,11 +678,17 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   }
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
+  const resolvedInstalledTree =
+    minimizeDependencyTree(installedDependenciesTree, true);
+  const resolvedShrinkwrapTree =
+    minimizeDependencyTree(shrinkwrappedDependenciesTree, true);
 
   if (npmDependencyCacheIsCurrent(
         npmTree,
         minInstalledTree,
         minShrinkwrapTree,
+        resolvedInstalledTree,
+        resolvedShrinkwrapTree,
       )) {
     return;
   }
@@ -814,9 +820,11 @@ export function npmDependencyCacheIsCurrent(
   npmTree,
   minInstalledTree,
   minShrinkwrapTree,
+  resolvedInstalledTree = minInstalledTree,
+  resolvedShrinkwrapTree = minShrinkwrapTree,
 ) {
   return declaredDependenciesMatchResolvedTree(npmTree, minInstalledTree) &&
-    isSubtreeOf(minShrinkwrapTree, minInstalledTree);
+    isSubtreeOf(resolvedShrinkwrapTree, resolvedInstalledTree);
 }
 
 export function canReuseNpmShrinkwrap(npmTree, minShrinkwrapTree) {
@@ -1291,10 +1299,13 @@ function shrinkwrap(dir) {
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
 // from npm ls --json) to just the versions we want. Returns an object that does
 // not share state with its input
-function minimizeDependencyTree(tree) {
+function minimizeDependencyTree(tree, preferResolved = false) {
   function minimizeModule(module) {
-    // Prefer the installed semver over a resolved Git URL with a commit hash.
+    // Prefer the installed semver for declared dependency comparisons, but
+    // preserve resolved URLs when comparing installed and shrinkwrapped trees.
     var version =
+      (preferResolved && module.resolved &&
+        ! isUrlFromRegistry(module.resolved) && module.resolved) ||
       module.version ||
       (module.resolved && ! isUrlFromRegistry(module.resolved) && module.resolved) ||
       (utils.isNpmUrl(module.from) && module.from);
