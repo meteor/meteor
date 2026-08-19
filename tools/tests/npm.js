@@ -4,6 +4,7 @@ import {
   batchInstallNpmModules,
   installNpmModule,
 } from '../isobuild/meteor-npm.js';
+import { prefetchNpmDependencies } from '../isobuild/isopack-cache.js';
 
 const Sandbox = selftest.Sandbox;
 
@@ -37,6 +38,24 @@ selftest.define("npm - batch install invokes npm once", async () => {
     childProcess.execFile = originalExecFile;
     files.rm_recursive(dir);
   }
+});
+
+selftest.define("npm - prefetch deduplicates directories", async () => {
+  const packageMap = { _map: {
+    first: { kind: 'local', packageSource: { name: 'first', npmCacheDirectory: '/a', npmDependencies: { a: '1' } } },
+    twin: { kind: 'local', packageSource: { name: 'twin', npmCacheDirectory: '/a', npmDependencies: { a: '1' } } },
+    second: { kind: 'local', packageSource: { name: 'second', npmCacheDirectory: '/b', npmDependencies: { b: '1' } } },
+  }};
+  const calls = [];
+  let inFlight = 0;
+  let maxInFlight = 0;
+  await prefetchNpmDependencies(packageMap, async (name, dir) => {
+    calls.push(dir); inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
+    await Promise.resolve(); inFlight--;
+    if (dir === '/b') throw new Error('expected');
+  }, { maxConcurrency: 2 });
+  selftest.expectEqual(calls.sort(), ['/a', '/b']);
+  selftest.expectTrue(maxInFlight <= 2);
 });
 
 selftest.define("npm", ["net"], async () => {

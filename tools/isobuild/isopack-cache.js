@@ -11,6 +11,32 @@ var meteorNpm = require('./meteor-npm.js');
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 
+export async function prefetchNpmDependencies(packageMap, updateDependencies,
+  { maxConcurrency = 8 } = {}) {
+  const byDir = new Map();
+  const enqueue = (name, dir, deps) => {
+    if (!dir || _.isEmpty(deps) || byDir.has(dir)) return;
+    byDir.set(dir, { name, dir, deps });
+  };
+  for (const [, info] of Object.entries(packageMap._map)) {
+    if (info.kind !== 'local' || !info.packageSource) continue;
+    const source = info.packageSource;
+    enqueue(source.name, source.npmCacheDirectory, source.npmDependencies);
+    enqueue(source.name, source.npmDevCacheDirectory, source.npmDevDependencies);
+  }
+  const tasks = Array.from(byDir.values());
+  if (!tasks.length) return;
+  const concurrency = Math.max(1, Math.min(maxConcurrency, 8, tasks.length));
+  let cursor = 0;
+  await Promise.all(Array.from({ length: concurrency }, async () => {
+    while (cursor < tasks.length) {
+      const { name, dir, deps } = tasks[cursor++];
+      try { await updateDependencies(name, dir, deps, true); }
+      catch (error) { console.error(`[prefetch] ${name} failed:`, error); }
+    }
+  }));
+}
+
 export class IsopackCache {
   constructor(options) {
     var self = this;
@@ -84,33 +110,7 @@ export class IsopackCache {
   }
 
   async _prefetchNpmDependencies() {
-    const byDir = new Map();
-    const enqueue = (name, dir, deps) => {
-      if (! dir || _.isEmpty(deps) || byDir.has(dir)) return;
-      byDir.set(dir, { name, dir, deps });
-    };
-
-    for (const [, info] of Object.entries(this._packageMap._map)) {
-      if (info.kind !== 'local' || ! info.packageSource) continue;
-      const source = info.packageSource;
-      enqueue(source.name, source.npmCacheDirectory, source.npmDependencies);
-      enqueue(source.name, source.npmDevCacheDirectory, source.npmDevDependencies);
-    }
-
-    const tasks = Array.from(byDir.values());
-    if (tasks.length === 0) return;
-    const concurrency = Math.max(1, Math.min(os.cpus().length, 8, tasks.length));
-    let cursor = 0;
-    await Promise.all(Array.from({ length: concurrency }, async () => {
-      while (cursor < tasks.length) {
-        const { name, dir, deps } = tasks[cursor++];
-        try {
-          await meteorNpm.updateDependencies(name, dir, deps, true);
-        } catch (error) {
-          console.error(`[prefetch] ${name} failed:`, (error && error.stack) || error);
-        }
-      }
-    }));
+    return prefetchNpmDependencies(this._packageMap, meteorNpm.updateDependencies);
   }
 
   async wipeCachedPackages(packages) {
