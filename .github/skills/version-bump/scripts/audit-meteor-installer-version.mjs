@@ -30,7 +30,9 @@ requireEqual('official release track', officialRelease.track, 'METEOR');
 requireEqual('official release flag', officialRelease.official, true);
 requireEqual('installer package name', installerPackage.name, 'meteor');
 
-const versionMatch = officialRelease.version?.match(/^(\d+)\.(\d+)(?:\.(\d+))?$/);
+const versionMatch = officialRelease.version?.match(
+  /^(0|[1-9]\d*)\.(0|[1-9]\d*)(?:\.(0|[1-9]\d*))?$/,
+);
 if (!versionMatch) {
   errors.push(`official release version is not stable semver: ${officialRelease.version}`);
 } else {
