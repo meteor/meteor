@@ -16,7 +16,6 @@ const execFileAsync = promisify(execFile);
 const CACHE_DIRECTORY_NAME = 'meteor-selftest-prepared-app-cache';
 const CACHE_DIR_ENV = 'METEOR_SELFTEST_PREPARED_APP_CACHE_DIR';
 const DISABLE_ENV = 'METEOR_DISABLE_PREPARED_APP_CACHE';
-const DIAGNOSTIC_ENV = 'METEOR_SELFTEST_PREPARED_APP_CACHE_DIAGNOSTICS';
 const READY_MARKER = '.meteor-selftest-cache-ready';
 const METADATA_FILE = '.meteor-selftest-cache-metadata.json';
 const SNAPSHOT_DIRECTORY = 'app';
@@ -51,20 +50,6 @@ const PREPARE_ENV_NAMES = new Set([
 ]);
 
 export const isDisabled = () => Boolean(process.env[DISABLE_ENV]);
-
-// This opt-in is used only while investigating cache eligibility on an
-// unfamiliar runner. Keep diagnostic output to stable reason labels, never
-// paths or environment values.
-function unavailable(reason) {
-  diagnostic(reason);
-  return null;
-}
-
-function diagnostic(reason) {
-  if (process.env[DIAGNOSTIC_ENV] === '1') {
-    console.error(`prepared-app-cache: unavailable (${reason})`);
-  }
-}
 
 // Preparation is affected by these deterministic inputs. `NPM_CONFIG_*`
 // options cover npm install/rebuild behavior. Harness output such as
@@ -344,32 +329,33 @@ function materializeSnapshot(sourceRoot, destinationRoot, allowedRoots) {
 // within bounded memory.
 async function computeSourceFingerprint(toolsDir) {
   const hash = createHash('sha256');
+  // The Actions checkout action records safe.directory in its own temporary
+  // HOME. The self-test runs in the container with a different HOME, so trust
+  // only this canonical checkout for the read-only fingerprint commands.
+  const safeGitArgs = [
+    '-c',
+    `safe.directory=${files.convertToOSPath(toolsDir)}`,
+  ];
   try {
-    const { stdout: head } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+    const { stdout: head } = await execFileAsync('git', [
+      ...safeGitArgs,
+      'rev-parse',
+      'HEAD',
+    ], {
       cwd: files.convertToOSPath(toolsDir),
     });
     hash.update(`HEAD:${head.trim()}\n`);
-  } catch {
-    diagnostic('source-head');
-    return null;
-  }
 
-  try {
     const { stdout: diff } = await execFileAsync(
       'git',
-      ['diff', '--binary', '--no-ext-diff', '--no-renames', 'HEAD'],
+      [...safeGitArgs, 'diff', '--binary', '--no-ext-diff', '--no-renames', 'HEAD'],
       { cwd: files.convertToOSPath(toolsDir), maxBuffer: SOURCE_FINGERPRINT_MAX_BYTES },
     );
     hash.update(diff);
-  } catch {
-    diagnostic('source-diff');
-    return null;
-  }
 
-  try {
     const { stdout: untracked } = await execFileAsync(
       'git',
-      ['ls-files', '--others', '--exclude-standard', '-z'],
+      [...safeGitArgs, 'ls-files', '--others', '--exclude-standard', '-z'],
       { cwd: files.convertToOSPath(toolsDir), maxBuffer: SOURCE_FINGERPRINT_MAX_BYTES },
     );
     for (const relativePath of untracked.split('\0')) {
@@ -378,14 +364,12 @@ async function computeSourceFingerprint(toolsDir) {
       const stat = lstatOrNull(absolutePath);
       if (!isContainedPath(toolsDir, absolutePath) || !stat?.isFile() ||
           stat.isSymbolicLink() || stat.size > SOURCE_FINGERPRINT_MAX_BYTES) {
-        diagnostic('source-untracked-entry');
         return null;
       }
       hash.update(`${relativePath}\0`);
       hash.update(files.readFile(absolutePath));
     }
   } catch {
-    diagnostic('source-untracked');
     return null;
   }
   return hash.digest('hex').slice(0, 16);
@@ -779,28 +763,28 @@ async function warmCacheEntry({
 export async function getPreparedAppCacheEntry({
   template, releaseName = null, upgradersToAppend = [], execPath, env = {},
 }) {
-  if (isDisabled()) return unavailable('disabled');
-  if (!files.inCheckout()) return unavailable('not-checkout');
+  if (isDisabled()) return null;
+  if (!files.inCheckout()) return null;
   if (typeof template !== 'string' ||
       !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(template)) {
-    return unavailable('invalid-template');
+    return null;
   }
   const environmentFingerprint = computeEnvironmentFingerprint(env);
-  if (!environmentFingerprint) return unavailable('environment');
+  if (!environmentFingerprint) return null;
 
   const toolsDir = files.realpath(files.getCurrentToolsDir());
   const templatesDir = files.pathJoin(toolsDir, 'tools', 'tests', 'apps');
   const templatePath = files.pathResolve(templatesDir, template);
   if (!isContainedPath(templatesDir, templatePath) || !isDirectory(templatePath)) {
-    return unavailable('template');
+    return null;
   }
-  if (!templateAllowsCache(templatePath)) return unavailable('template-policy');
+  if (!templateAllowsCache(templatePath)) return null;
 
   const sourceFingerprint = await computeSourceFingerprint(toolsDir);
-  if (!sourceFingerprint) return unavailable('source-fingerprint');
+  if (!sourceFingerprint) return null;
 
   const root = makeCacheRoot();
-  if (!root) return unavailable('cache-root');
+  if (!root) return null;
   const cacheKey = createHash('sha256').update(JSON.stringify({
     version: CACHE_FORMAT_VERSION,
     source: sourceFingerprint,
