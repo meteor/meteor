@@ -1,11 +1,33 @@
 import selftest from '../tool-testing/selftest.js';
 import files from '../fs/files';
-import { installNpmModule } from '../isobuild/meteor-npm.js';
+import {
+  declaredSpecMatchesInstalledVersion,
+  installNpmModule,
+} from '../isobuild/meteor-npm.js';
 
 const Sandbox = selftest.Sandbox;
 
 const MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
+
+selftest.define("npm - git dependency cache version matching", () => {
+  selftest.expectTrue(declaredSpecMatchesInstalledVersion(
+    "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0",
+    "20.66.0",
+  ));
+  selftest.expectFalse(declaredSpecMatchesInstalledVersion(
+    "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0",
+    "20.66.1",
+  ));
+  selftest.expectFalse(declaredSpecMatchesInstalledVersion(
+    "git+https://github.com/uNetworking/uWebSockets.js.git#main",
+    "20.66.0",
+  ));
+  selftest.expectFalse(declaredSpecMatchesInstalledVersion(
+    "https://github.com/uNetworking/uWebSockets.js/archive/v20.66.0.tar.gz",
+    "20.66.0",
+  ));
+});
 
 selftest.define("npm", ["net"], async () => {
   const s = new Sandbox({ fakeMongo: true });

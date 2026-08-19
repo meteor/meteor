@@ -679,7 +679,11 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
 
-  if (isSubtreeOf(npmTree, minInstalledTree) &&
+  if (isSubtreeOf(
+        npmTree,
+        minInstalledTree,
+        declaredSpecMatchesInstalledVersion,
+      ) &&
       isSubtreeOf(minShrinkwrapTree, minInstalledTree)) {
     return;
   }
@@ -696,7 +700,11 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     // If there are no npmDependencies, make sure nothing is installed.
     preservedShrinkwrap = { dependencies: {} };
 
-  } else if (isSubtreeOf(npmTree, minShrinkwrapTree)) {
+  } else if (isSubtreeOf(
+    npmTree,
+    minShrinkwrapTree,
+    declaredSpecMatchesInstalledVersion,
+  )) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
     preservedShrinkwrap = shrinkwrappedDependenciesTree;
@@ -772,6 +780,18 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   await completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
+
+export function declaredSpecMatchesInstalledVersion(declared, installed) {
+  if (typeof declared !== "string" || typeof installed !== "string") {
+    return false;
+  }
+
+  if (! declared.startsWith("git+https://") || ! parse(installed)) {
+    return false;
+  }
+
+  return declared.endsWith(`#v${installed}`);
+}
 
 function isSubtreeOf(subsetTree, supersetTree, predicate) {
   if (subsetTree === supersetTree) {
