@@ -21,6 +21,7 @@ const METADATA_FILE = '.meteor-selftest-cache-metadata.json';
 const SNAPSHOT_DIRECTORY = 'app';
 const CACHE_FORMAT_VERSION = 3;
 const PREPARE_TIMEOUT_MS = 15 * 60 * 1000;
+const SOURCE_FINGERPRINT_MAX_BYTES = 16 * 1024 * 1024;
 const STAGING_NAME_RE = /^\.staging-[0-9]+-[a-f0-9]{32}$/;
 const CACHE_KEY_RE = /^[a-f0-9]{24}$/;
 const SKIP_GUARD_EXTENSIONS = new Set(['.wt', '.wiredtiger', '.bson']);
@@ -321,6 +322,10 @@ function materializeSnapshot(sourceRoot, destinationRoot, allowedRoots) {
   copyEntry(canonicalSourceRoot, destinationRoot);
 }
 
+// Preparation invokes the checkout launcher and can consume repository-root
+// inputs, so dirty tracked and untracked state is scoped to the whole checkout.
+// Refuse caching rather than use a coarse fingerprint when it cannot be read
+// within bounded memory.
 async function computeSourceFingerprint(toolsDir) {
   const hash = createHash('sha256');
   try {
@@ -331,29 +336,29 @@ async function computeSourceFingerprint(toolsDir) {
 
     const { stdout: diff } = await execFileAsync(
       'git',
-      ['diff', '--binary', '--no-ext-diff', '--no-renames', 'HEAD', '--', 'tools', 'packages'],
-      { cwd: files.convertToOSPath(toolsDir), maxBuffer: 16 * 1024 * 1024 },
+      ['diff', '--binary', '--no-ext-diff', '--no-renames', 'HEAD'],
+      { cwd: files.convertToOSPath(toolsDir), maxBuffer: SOURCE_FINGERPRINT_MAX_BYTES },
     );
     hash.update(diff);
 
     const { stdout: untracked } = await execFileAsync(
       'git',
-      ['ls-files', '--others', '--exclude-standard', '-z', '--', 'tools', 'packages'],
-      { cwd: files.convertToOSPath(toolsDir), maxBuffer: 16 * 1024 * 1024 },
+      ['ls-files', '--others', '--exclude-standard', '-z'],
+      { cwd: files.convertToOSPath(toolsDir), maxBuffer: SOURCE_FINGERPRINT_MAX_BYTES },
     );
     for (const relativePath of untracked.split('\0')) {
       if (!relativePath) continue;
       const absolutePath = files.pathResolve(toolsDir, relativePath);
-      if (!isContainedPath(toolsDir, absolutePath) || !isRegularFile(absolutePath)) {
-        hash.update(`UNSAFE:${relativePath}\n`);
-        continue;
+      const stat = lstatOrNull(absolutePath);
+      if (!isContainedPath(toolsDir, absolutePath) || !stat?.isFile() ||
+          stat.isSymbolicLink() || stat.size > SOURCE_FINGERPRINT_MAX_BYTES) {
+        return null;
       }
       hash.update(`${relativePath}\0`);
       hash.update(files.readFile(absolutePath));
     }
   } catch {
-    const stat = files.statOrNull(toolsDir);
-    hash.update(`MTIME:${stat?.mtimeMs ?? 0}\n`);
+    return null;
   }
   return hash.digest('hex').slice(0, 16);
 }
@@ -576,6 +581,13 @@ async function removeStagingDirectory(root, stagingDir) {
   }
 }
 
+async function removeClaimedCacheDirectory(root, cacheDir) {
+  if (!isDirectChild(root, cacheDir, CACHE_KEY_RE)) return;
+  const stat = lstatOrNull(cacheDir);
+  if (!stat?.isDirectory() || stat.isSymbolicLink()) return;
+  await files.rm_recursive(cacheDir);
+}
+
 async function runPrepareApp({ execPath, cwd, env }) {
   await execFileAsync(files.convertToOSPath(execPath), ['--prepare-app'], {
     cwd: files.convertToOSPath(cwd),
@@ -603,9 +615,10 @@ async function warmCacheEntry({
     );
   }
 
-  const preparationStagingDir = createStagingDirectory(root);
+  let preparationStagingDir = null;
   let snapshotStagingDir = null;
   try {
+    preparationStagingDir = createStagingDirectory(root);
     await files.cp_r(templatePath, preparationStagingDir, {
       ignore: [/^local$/],
       preserveSymlinks: true,
@@ -650,14 +663,21 @@ async function warmCacheEntry({
       environmentFingerprint,
     })}\n`);
     await files.writeFileAtomically(paths.readyPath, '');
-    return validatedCacheEntry(
+    const entry = validatedCacheEntry(
       root, cacheKey, producerToolsDir, environmentFingerprint,
     );
+    if (!entry) {
+      await removeClaimedCacheDirectory(root, paths.cacheDir);
+    }
+    return entry;
   } catch (error) {
-    await removeStagingDirectory(root, preparationStagingDir).catch(() => {});
+    if (preparationStagingDir) {
+      await removeStagingDirectory(root, preparationStagingDir).catch(() => {});
+    }
     if (snapshotStagingDir) {
       await removeStagingDirectory(root, snapshotStagingDir).catch(() => {});
     }
+    await removeClaimedCacheDirectory(root, paths.cacheDir).catch(() => {});
     throw error;
   }
 }
@@ -680,11 +700,14 @@ export async function getPreparedAppCacheEntry({
   }
   if (!templateAllowsCache(templatePath)) return null;
 
+  const sourceFingerprint = await computeSourceFingerprint(toolsDir);
+  if (!sourceFingerprint) return null;
+
   const root = makeCacheRoot();
   if (!root) return null;
   const cacheKey = createHash('sha256').update(JSON.stringify({
     version: CACHE_FORMAT_VERSION,
-    source: await computeSourceFingerprint(toolsDir),
+    source: sourceFingerprint,
     checkout: toolsDir,
     environment: environmentFingerprint,
     template: computeTemplateFingerprint(templatePath),

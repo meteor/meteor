@@ -51,6 +51,21 @@ selftest.define('prepared-app-cache roundtrip', async function () {
   if (savedNodeEnv === undefined) process.env.NODE_ENV = 'development';
   try {
     await withTempCacheRoot(async (cacheRoot) => {
+      const failedWarmSandbox = new Sandbox();
+      await failedWarmSandbox.init();
+      let failedWarmDidThrow = false;
+      try {
+        await getPreparedAppCacheEntry({
+          template: 'standard-app',
+          execPath: files.pathJoin(failedWarmSandbox.root, 'missing-meteor'),
+          env: failedWarmSandbox._makeEnv(),
+        });
+      } catch {
+        failedWarmDidThrow = true;
+      }
+      selftest.expectTrue(failedWarmDidThrow);
+      await selftest.expectEqual(files.readdirNoDots(cacheRoot).length, 0);
+
       const firstSandbox = new Sandbox();
       await firstSandbox.init();
       await firstSandbox.createApp('app1', 'standard-app');
@@ -86,6 +101,27 @@ selftest.define('prepared-app-cache roundtrip', async function () {
         env: cacheEnv,
       });
       selftest.expectTrue(Boolean(activeCacheEntry));
+
+      const sourceProbePath = files.pathJoin(
+        files.getCurrentToolsDir(),
+        `prepared-app-cache-source-probe-${process.pid}.txt`,
+      );
+      files.writeFile(sourceProbePath, 'source fingerprint probe', 'utf8');
+      let sourceProbeDidThrow = false;
+      try {
+        await getPreparedAppCacheEntry({
+          template: 'standard-app',
+          execPath: files.pathJoin(secondSandbox.root, 'missing-meteor'),
+          env: cacheEnv,
+        });
+      } catch {
+        sourceProbeDidThrow = true;
+      } finally {
+        files.unlink(sourceProbePath);
+      }
+      selftest.expectTrue(sourceProbeDidThrow);
+      await selftest.expectEqual(files.readdirNoDots(cacheRoot).length, 1);
+
       const activeMetadata = JSON.parse(files.readFile(
         files.pathJoin(activeCacheEntry.root, activeCacheEntry.cacheKey, METADATA_FILE),
         'utf8',
