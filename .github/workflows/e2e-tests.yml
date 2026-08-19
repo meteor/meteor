@@ -1,5 +1,8 @@
 name: E2E Tests
 
+# Temporary baseline run for the CI performance PR series; this branch is not
+# intended to merge into devel.
+
 on:
   pull_request:
     paths:
