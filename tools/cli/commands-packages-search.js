@@ -136,11 +136,10 @@ function renderChoiceLabel(pkg, termWidth, installed) {
   const description = (pkg.latestVersion && pkg.latestVersion.description) || '';
   const isInstalled = installed && installed.has(pkg.name);
   const NAME_COL = 34;
-  const displayName = isInstalled ? chalk.green(pad(pkg.name, NAME_COL)) : (
-    pkg.name.length > NAME_COL
-      ? pkg.name.slice(0, NAME_COL - 1) + '...'
-      : pad(pkg.name, NAME_COL)
-  );
+  const fittedName = pkg.name.length > NAME_COL
+    ? pkg.name.slice(0, NAME_COL - 3) + '...'
+    : pad(pkg.name, NAME_COL);
+  const displayName = isInstalled ? chalk.green(fittedName) : fittedName;
   const separator = chalk.dim(' │ ');
   const installedTag = isInstalled ? chalk.green(' [installed]') : '';
   const ageSuffix = pkg._ageLabel
@@ -151,8 +150,7 @@ function renderChoiceLabel(pkg, termWidth, installed) {
     : '';
   // Suffixes contain ANSI escapes, so budget against visible widths only.
   // The trailing -8 reserves space for checkbox-plus's "[ ] " prefix.
-  const visibleFixed = Math.min(pkg.name.length, NAME_COL)
-    + Math.max(0, NAME_COL - pkg.name.length)
+  const visibleFixed = NAME_COL
     + 3
     + (isInstalled ? ' [installed]'.length : 0)
     + (pkg._ageLabel ? (' (' + pkg._ageLabel + ')').length : 0)
@@ -442,11 +440,13 @@ async function fetchReadmePreview(versionRecord) {
 // page.
 function atmosphereUrlForPackage(name) {
   if (!name) return null;
+  const baseUrl = (config.getAtmosphereUrl() || 'https://atmospherejs.com')
+    .replace(/\/+$/, '');
   const idx = name.indexOf(':');
   if (idx > 0) {
-    return 'https://atmospherejs.com/' + name.slice(0, idx) + '/' + name.slice(idx + 1);
+    return baseUrl + '/' + name.slice(0, idx) + '/' + name.slice(idx + 1);
   }
-  return 'https://atmospherejs.com/meteor/' + name;
+  return baseUrl + '/meteor/' + name;
 }
 
 function formatReadmePreview(body) {
@@ -653,34 +653,38 @@ exports.runInteractivePackageSearch = async function (opts) {
 
   let conn;
   try {
-    conn = await authClient.openServiceConnection(url);
-  } catch (err) {
-    debugLog('connect failed after ' + (Date.now() - connectStart) + 'ms');
-    throw new Error(
-      'Could not connect to Atmosphere at ' + url + ': '
-      + (err && err.message ? err.message : err)
-    );
-  }
-  debugLog('connected in ' + (Date.now() - connectStart) + 'ms');
-
-  let mostUsed = [];
-  try {
-    const t0 = Date.now();
-    mostUsed = await fetchMostUsed(conn);
-    debugLog('mostUsed ready count=' + mostUsed.length + ' took=' + (Date.now() - t0) + 'ms');
-  } catch (err) {
-    debugLog('mostUsed err=' + (err && err.message ? err.message : err));
-  }
-
-  try {
-    return await runSearchPrompt(conn, opts.initialQuery, opts.installed, mostUsed);
-  } catch (err) {
-    if (err && (err.isTtyError || err.name === 'ExitPromptError')) {
-      throw new MeteorSearchAbortedError();
+    try {
+      conn = await authClient.openServiceConnection(url);
+    } catch (err) {
+      debugLog('connect failed after ' + (Date.now() - connectStart) + 'ms');
+      throw new Error(
+        'Could not connect to Atmosphere at ' + url + ': '
+        + (err && err.message ? err.message : err)
+      );
     }
-    throw err;
+    debugLog('connected in ' + (Date.now() - connectStart) + 'ms');
+
+    let mostUsed = [];
+    try {
+      const t0 = Date.now();
+      mostUsed = await fetchMostUsed(conn);
+      debugLog('mostUsed ready count=' + mostUsed.length + ' took=' + (Date.now() - t0) + 'ms');
+    } catch (err) {
+      debugLog('mostUsed err=' + (err && err.message ? err.message : err));
+    }
+
+    try {
+      return await runSearchPrompt(conn, opts.initialQuery, opts.installed, mostUsed);
+    } catch (err) {
+      if (err && (err.isTtyError || err.name === 'ExitPromptError')) {
+        throw new MeteorSearchAbortedError();
+      }
+      throw err;
+    }
   } finally {
-    try { conn.close(); } catch (_e) {}
+    if (conn) {
+      try { conn.close(); } catch (_e) {}
+    }
     Console.enableProgressDisplay(true);
   }
 };
