@@ -30,7 +30,7 @@ jest.mock("../packaging/catalog/catalog.js", () => ({
 
 jest.mock("../fs/files", () => ({
   pathRelative: (from, to) => to.replace(/^\.\//, ""),
-  convertToPosixPath: (p) => p,
+  convertToPosixPath: (p) => p.replace(/\\\\/g, "/"),
 }));
 
 const buildmessage = require("../utils/buildmessage.js");
@@ -42,6 +42,18 @@ function makeApi() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+});
+
+describe("api.types() input validation", () => {
+  test("rejects a non-string path without throwing", () => {
+    const api = makeApi();
+
+    expect(() => api.types(null)).not.toThrow();
+    expect(buildmessage.error).toHaveBeenCalledWith(
+      expect.stringContaining("requires a non-empty path"),
+      expect.anything()
+    );
+  });
 });
 
 describe("api.types() directory-path validation", () => {
@@ -128,6 +140,34 @@ describe("api.types() directory-mode entry/modules validation", () => {
       entry: "./server/main.d.ts",
       modules: { hooks: "./client/hooks.d.ts" },
     });
+    expect(buildmessage.error).not.toHaveBeenCalled();
+    expect(api._typesDir).toBe("dist-types");
+    expect(api._typesEntry).toBe("dist-types/server/main.d.ts");
+    expect(api._typesModules).toEqual({
+      hooks: "dist-types/client/hooks.d.ts",
+    });
+  });
+});
+
+describe("api.types() Windows paths", () => {
+  test("normalizes declaration entry and module paths", () => {
+    const api = makeApi();
+    api.types("types\\\\index.d.ts", {
+      modules: { sub: "types\\\\sub.d.ts" },
+    });
+
+    expect(buildmessage.error).not.toHaveBeenCalled();
+    expect(api._typesEntry).toBe("types/index.d.ts");
+    expect(api._typesModules).toEqual({ sub: "types/sub.d.ts" });
+  });
+
+  test("recognizes a trailing backslash as directory mode", () => {
+    const api = makeApi();
+    api.types("dist-types\\\\", {
+      entry: ".\\\\server\\\\main.d.ts",
+      modules: { hooks: ".\\\\client\\\\hooks.d.ts" },
+    });
+
     expect(buildmessage.error).not.toHaveBeenCalled();
     expect(api._typesDir).toBe("dist-types");
     expect(api._typesEntry).toBe("dist-types/server/main.d.ts");

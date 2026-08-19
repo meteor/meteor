@@ -58,6 +58,10 @@ function isTypeScriptSourcePath(p) {
   return typeof p === 'string' && /\.tsx?$/.test(p) && !p.endsWith('.d.ts');
 }
 
+function normalizeTypePath(p) {
+  return convertToPosixPath(p, true).replace(/^\.\//, '');
+}
+
 // Iterates over the list of target archs and calls f(arch) for all archs
 // that match an element of self.allarchs.
 function forAllMatchingArchs (archs, f) {
@@ -489,6 +493,8 @@ export class PackageAPI {
       return;
     }
 
+    const normalizedTypesEntry = convertToPosixPath(typesEntry, true);
+
     if (options.modules !== undefined && (
       typeof options.modules !== 'object' || options.modules === null ||
       Array.isArray(options.modules)
@@ -505,13 +511,15 @@ export class PackageAPI {
     // touch the filesystem, and the directory may not even exist yet when
     // package.js is evaluated (`meteor publish` generates it right before
     // the build).
-    if (typesEntry.endsWith('/')) {
-      const error = this._typesDirectoryMode(typesEntry, options);
+    if (normalizedTypesEntry.endsWith('/')) {
+      const error = this._typesDirectoryMode(normalizedTypesEntry, options);
       if (error) {
         buildmessage.error(error, { useMyCaller: true });
       }
       return;
     }
+
+    typesEntry = normalizeTypePath(normalizedTypesEntry);
 
     if (options.entry !== undefined) {
       buildmessage.error(
@@ -523,7 +531,7 @@ export class PackageAPI {
     }
 
     this._typesEntry = typesEntry;
-    this._typesModules = (options && options.modules) || null;
+    this._typesModules = options.modules ? { ...options.modules } : null;
 
     // A .ts/.tsx entry (not .d.ts) marks the package as TypeScript-authored:
     // the entry is one of the package's compiled sources, and `meteor
@@ -548,6 +556,7 @@ export class PackageAPI {
             );
             return;
           }
+          this._typesModules[name] = normalizeTypePath(modulePath);
         }
       }
       return;
@@ -570,7 +579,9 @@ export class PackageAPI {
           );
           return;
         }
-        filesToAdd.push(modulePath);
+        const normalizedModulePath = normalizeTypePath(modulePath);
+        this._typesModules[name] = normalizedModulePath;
+        filesToAdd.push(normalizedModulePath);
       }
     }
     this._addFiles('assets', filesToAdd, ['server']);
@@ -604,7 +615,7 @@ export class PackageAPI {
           error: `api.types(): ${label} must be a non-empty path relative to "${dir}/".`,
         };
       }
-      const rel = p.replace(/^\.\//, '');
+      const rel = normalizeTypePath(p);
       if (rel.startsWith('/') ||
           rel.split('/').some(seg => seg === '..' || seg === '.' || seg === '')) {
         return {
