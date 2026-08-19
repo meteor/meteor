@@ -34,8 +34,10 @@ export async function prefetchNpmDependencies(packageMap, updateDependencies,
   await Promise.all(Array.from({ length: concurrency }, async () => {
     while (cursor < tasks.length) {
       const { name, dir, deps } = tasks[cursor++];
-      try { await updateDependencies(name, dir, deps, true); }
-      catch (error) { console.error(`[prefetch] ${name} failed:`, error); }
+      await buildmessage.capture({ title: `prefetch ${name}` }, async () => {
+        try { await updateDependencies(name, dir, deps, true); }
+        catch (error) {}
+      });
     }
   }));
 }
@@ -95,9 +97,11 @@ export class IsopackCache {
       files.mkdir_p(self.cacheDir);
     }
 
-    await Profile.time('IsopackCache prefetch npm dependencies', async () => {
-      await self._prefetchNpmDependencies();
-    });
+    if (!rootPackageNames) {
+      await Profile.time('IsopackCache prefetch npm dependencies', async () => {
+        await self._prefetchNpmDependencies();
+      });
+    }
 
     var onStack = {};
     if (rootPackageNames) {
