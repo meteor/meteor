@@ -2898,6 +2898,8 @@ main.registerCommand({
     headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
+    // Write the filtered test list as JSON for machine consumers.
+    'list-json-out': { type: String },
     file: { type: String },
     exclude: { type: String },
     // Skip tests w/ this tag
@@ -2981,6 +2983,23 @@ main.registerCommand({
       fileRegexp: fileRegexp,
       'without-tag': options['without-tag'],
       'with-tag': options['with-tag']
+    });
+
+    return 0;
+  }
+
+  if (options['list-json-out']) {
+    await selftest.listTestsJson({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      galaxyOnly: options.galaxy,
+      testRegexp: testRegexp,
+      fileRegexp: fileRegexp,
+      excludeRegexp: excludeRegexp,
+      'without-tag': options['without-tag'],
+      'with-tag': options['with-tag'],
+      outFile: options['list-json-out'],
     });
 
     return 0;
