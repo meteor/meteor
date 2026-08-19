@@ -5,7 +5,7 @@ import {
   batchInstallNpmModules,
   installNpmModule,
 } from '../isobuild/meteor-npm.js';
-import { prefetchNpmDependencies } from '../isobuild/isopack-cache.js';
+import { IsopackCache, prefetchNpmDependencies } from '../isobuild/isopack-cache.js';
 
 const Sandbox = selftest.Sandbox;
 
@@ -50,19 +50,37 @@ selftest.define("npm - prefetch deduplicates directories", async () => {
   const calls = [];
   let inFlight = 0;
   let maxInFlight = 0;
+  let releaseBarrier;
+  const barrier = new Promise(resolve => releaseBarrier = resolve);
   let outer;
   outer = await buildmessage.capture({ title: 'outer' }, async () => {
   await prefetchNpmDependencies(packageMap, async (name, dir) => {
     calls.push(dir); inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
-    await Promise.resolve(); inFlight--;
+    if (inFlight === 2) releaseBarrier();
+    await barrier; inFlight--;
     if (dir === '/b') buildmessage.error('expected');
     return false;
   }, { maxConcurrency: 2 });
   buildmessage.error('outside');
   });
   selftest.expectEqual(calls.sort(), ['/a', '/b']);
-  selftest.expectTrue(maxInFlight <= 2);
+  selftest.expectEqual(maxInFlight, 2);
   selftest.expectTrue(outer.hasMessages());
+  selftest.expectTrue(outer.formatMessages().includes('outside'));
+  selftest.expectFalse(outer.formatMessages().includes('expected'));
+});
+
+selftest.define("npm - subset package builds skip prefetch", async () => {
+  const cache = new IsopackCache({ packageMap: {}, tropohouse: null });
+  let prefetched = 0;
+  const loaded = [];
+  cache._prefetchNpmDependencies = async () => { prefetched++; };
+  cache._ensurePackageLoaded = async name => { loaded.push(name); };
+  await buildmessage.capture({ title: 'subset' }, async () => {
+    await cache.buildLocalPackages(['one']);
+  });
+  selftest.expectEqual(prefetched, 0);
+  selftest.expectEqual(loaded, ['one']);
 });
 
 selftest.define("npm", ["net"], async () => {
