@@ -177,7 +177,21 @@ npm run test:e2e
 
 ### Publishing the Packages
 
-Whenever there are modifications in `npm-packages/meteor-rspack` or `packages/rspack`, you must publish the new versions. The NPM package is always published *first*, followed by the Atmosphere package bump.
+When `npm-packages/meteor-rspack` has publishable changes, bump and publish the
+NPM package first, then synchronize and bump the Atmosphere package. If only
+`packages/rspack` changes, only the Atmosphere package needs a new version.
+
+When bumping `@meteorjs/rspack`, also update
+`DEFAULT_METEOR_RSPACK_VERSION` in `packages/rspack/lib/constants.js` to the
+same version before publishing. The Atmosphere package uses this constant to
+auto-install `@meteorjs/rspack` in applications, so leaving it behind can make
+new apps install an older or beta release. Use a beta version in the constant
+only when publishing that beta release.
+
+Use the `sync-modern-tool-versions` skill to discover and verify the matching
+lockfile, skeleton, E2E fixture, constant, and active documentation references.
+If `version-bump` already set the approved NPM package version, skip
+`npm run bump`; that command increments the current version each time it runs.
 
 **For a Beta Release:**
 ```bash
