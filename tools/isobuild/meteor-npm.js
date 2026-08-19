@@ -1293,14 +1293,11 @@ function shrinkwrap(dir) {
 // not share state with its input
 function minimizeDependencyTree(tree) {
   function minimizeModule(module) {
-    var version;
-    if (module.resolved && ! isUrlFromRegistry(module.resolved)) {
-      version = module.resolved;
-    } else if (utils.isNpmUrl(module.from)) {
-      version = module.from;
-    } else {
-      version = module.version;
-    }
+    // Prefer the installed semver over a resolved Git URL with a commit hash.
+    var version =
+      module.version ||
+      (module.resolved && ! isUrlFromRegistry(module.resolved) && module.resolved) ||
+      (utils.isNpmUrl(module.from) && module.from);
     var minimized = {version: version};
 
     if (module.dependencies) {

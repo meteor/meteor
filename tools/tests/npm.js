@@ -6,6 +6,7 @@ import {
   installNpmModule,
   npmDependencyCacheIsCurrent,
 } from '../isobuild/meteor-npm.js';
+import * as meteorNpm from '../isobuild/meteor-npm.js';
 
 const Sandbox = selftest.Sandbox;
 
@@ -80,6 +81,58 @@ selftest.define("npm - git dependency cache decisions", () => {
     malformedDeclaredTree,
     resolvedTree,
   ));
+});
+
+selftest.define("npm - git dependency cache uses installed version", async () => {
+  const packageNpmDir = files.mkdtemp();
+  const nodeModulesDir = files.pathJoin(packageNpmDir, "node_modules");
+  const declaredVersion =
+    "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0";
+
+  files.mkdir(nodeModulesDir);
+  files.writeFile(
+    files.pathJoin(nodeModulesDir, ".node_version"),
+    `${process.version.replace(/\.(\d+)$/, ".*")}\n`,
+  );
+  files.writeFile(
+    files.pathJoin(nodeModulesDir, ".package-lock.json"),
+    JSON.stringify({
+      packages: {
+        "node_modules/uWebSockets.js": {
+          version: "20.66.0",
+          resolved:
+            "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef",
+        },
+      },
+    }),
+  );
+  files.writeFile(
+    files.pathJoin(packageNpmDir, "npm-shrinkwrap.json"),
+    JSON.stringify({
+      lockfileVersion: 4,
+      dependencies: {
+        "uWebSockets.js": { version: "20.66.0" },
+      },
+    }),
+  );
+
+  const childProcess = require("child_process");
+  const originalExecFile = childProcess.execFile;
+  childProcess.execFile = (...args) => {
+    args[args.length - 1](new Error("npm install should not run"), "", "");
+  };
+
+  try {
+    selftest.expectTrue(await meteorNpm.updateDependencies(
+      "test-package",
+      packageNpmDir,
+      { "uWebSockets.js": declaredVersion },
+      true,
+    ));
+  } finally {
+    childProcess.execFile = originalExecFile;
+    files.rm_recursive(packageNpmDir);
+  }
 });
 
 selftest.define("npm", ["net"], async () => {
