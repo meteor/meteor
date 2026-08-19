@@ -1,8 +1,10 @@
 import selftest from '../tool-testing/selftest.js';
 import files from '../fs/files';
 import {
+  canReuseNpmShrinkwrap,
   declaredSpecMatchesInstalledVersion,
   installNpmModule,
+  npmDependencyCacheIsCurrent,
 } from '../isobuild/meteor-npm.js';
 
 const Sandbox = selftest.Sandbox;
@@ -10,7 +12,20 @@ const Sandbox = selftest.Sandbox;
 const MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
-selftest.define("npm - git dependency cache version matching", () => {
+selftest.define("npm - git dependency cache decisions", () => {
+  const declaredTree = {
+    dependencies: {
+      "uWebSockets.js": {
+        version: "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0",
+      },
+    },
+  };
+  const resolvedTree = {
+    dependencies: {
+      "uWebSockets.js": { version: "20.66.0" },
+    },
+  };
+
   selftest.expectTrue(declaredSpecMatchesInstalledVersion(
     "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0",
     "20.66.0",
@@ -26,6 +41,44 @@ selftest.define("npm - git dependency cache version matching", () => {
   selftest.expectFalse(declaredSpecMatchesInstalledVersion(
     "https://github.com/uNetworking/uWebSockets.js/archive/v20.66.0.tar.gz",
     "20.66.0",
+  ));
+  selftest.expectFalse(declaredSpecMatchesInstalledVersion(
+    "git+https://github.com/uNetworking/uWebSockets.js.git#main#v20.66.0",
+    "20.66.0",
+  ));
+  selftest.expectFalse(declaredSpecMatchesInstalledVersion(
+    "git+https://github.com/uNetworking/uWebSockets.js.git#vv20.66.0",
+    "v20.66.0",
+  ));
+  selftest.expectFalse(declaredSpecMatchesInstalledVersion(
+    "git+https://#v20.66.0",
+    "20.66.0",
+  ));
+
+  selftest.expectTrue(npmDependencyCacheIsCurrent(
+    declaredTree,
+    resolvedTree,
+    resolvedTree,
+  ));
+  selftest.expectTrue(canReuseNpmShrinkwrap(
+    declaredTree,
+    resolvedTree,
+  ));
+  const malformedDeclaredTree = {
+    dependencies: {
+      "uWebSockets.js": {
+        version: "git+https://github.com/uNetworking/uWebSockets.js.git#main#v20.66.0",
+      },
+    },
+  };
+  selftest.expectFalse(npmDependencyCacheIsCurrent(
+    malformedDeclaredTree,
+    resolvedTree,
+    resolvedTree,
+  ));
+  selftest.expectFalse(canReuseNpmShrinkwrap(
+    malformedDeclaredTree,
+    resolvedTree,
   ));
 });
 
