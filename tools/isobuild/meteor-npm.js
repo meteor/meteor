@@ -887,7 +887,20 @@ async function batchInstallNpmModules(dependencies, dir) {
       recordLastRebuildVersions(pkgDir);
     }
   }
+  checkNodeModulesForColons(dir);
 };
+
+function checkNodeModulesForColons(dir) {
+  if (process.platform === "win32") return;
+  const paths = files.findPathsWithRegex(".", new RegExp(":"), {
+    cwd: files.pathJoin(dir, "node_modules"),
+  });
+  if (! paths.length) return;
+  buildmessage.error(
+    "Some filenames in installed npm modules have invalid characters.\n" +
+    paths.slice(0, 10).join("\n"));
+  throw new NpmFailure();
+}
 
 var createNodeVersion = function (newPackageNpmDir) {
   files.writeFile(

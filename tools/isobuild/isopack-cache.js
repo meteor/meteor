@@ -66,7 +66,9 @@ export class IsopackCache {
       files.mkdir_p(self.cacheDir);
     }
 
-    await self._prefetchNpmDependencies();
+    await Profile.time('IsopackCache prefetch npm dependencies', async () => {
+      await self._prefetchNpmDependencies();
+    });
 
     var onStack = {};
     if (rootPackageNames) {
@@ -96,6 +98,7 @@ export class IsopackCache {
     }
 
     const tasks = Array.from(byDir.values());
+    if (tasks.length === 0) return;
     const concurrency = Math.max(1, Math.min(os.cpus().length, 8, tasks.length));
     let cursor = 0;
     await Promise.all(Array.from({ length: concurrency }, async () => {
