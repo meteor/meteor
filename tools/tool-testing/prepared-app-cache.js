@@ -16,6 +16,7 @@ const execFileAsync = promisify(execFile);
 const CACHE_DIRECTORY_NAME = 'meteor-selftest-prepared-app-cache';
 const CACHE_DIR_ENV = 'METEOR_SELFTEST_PREPARED_APP_CACHE_DIR';
 const DISABLE_ENV = 'METEOR_DISABLE_PREPARED_APP_CACHE';
+const DIAGNOSTIC_ENV = 'METEOR_SELFTEST_PREPARED_APP_CACHE_DIAGNOSTICS';
 const READY_MARKER = '.meteor-selftest-cache-ready';
 const METADATA_FILE = '.meteor-selftest-cache-metadata.json';
 const SNAPSHOT_DIRECTORY = 'app';
@@ -50,6 +51,16 @@ const PREPARE_ENV_NAMES = new Set([
 ]);
 
 export const isDisabled = () => Boolean(process.env[DISABLE_ENV]);
+
+// This opt-in is used only while investigating cache eligibility on an
+// unfamiliar runner. Keep diagnostic output to stable reason labels, never
+// paths or environment values.
+function unavailable(reason) {
+  if (process.env[DIAGNOSTIC_ENV] === '1') {
+    console.error(`prepared-app-cache: unavailable (${reason})`);
+  }
+  return null;
+}
 
 // Preparation is affected by these deterministic inputs. `NPM_CONFIG_*`
 // options cover npm install/rebuild behavior. Harness output such as
@@ -752,26 +763,28 @@ async function warmCacheEntry({
 export async function getPreparedAppCacheEntry({
   template, releaseName = null, upgradersToAppend = [], execPath, env = {},
 }) {
-  if (isDisabled() || !files.inCheckout() ||
-      typeof template !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(template)) {
-    return null;
+  if (isDisabled()) return unavailable('disabled');
+  if (!files.inCheckout()) return unavailable('not-checkout');
+  if (typeof template !== 'string' ||
+      !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(template)) {
+    return unavailable('invalid-template');
   }
   const environmentFingerprint = computeEnvironmentFingerprint(env);
-  if (!environmentFingerprint) return null;
+  if (!environmentFingerprint) return unavailable('environment');
 
   const toolsDir = files.realpath(files.getCurrentToolsDir());
   const templatesDir = files.pathJoin(toolsDir, 'tools', 'tests', 'apps');
   const templatePath = files.pathResolve(templatesDir, template);
   if (!isContainedPath(templatesDir, templatePath) || !isDirectory(templatePath)) {
-    return null;
+    return unavailable('template');
   }
-  if (!templateAllowsCache(templatePath)) return null;
+  if (!templateAllowsCache(templatePath)) return unavailable('template-policy');
 
   const sourceFingerprint = await computeSourceFingerprint(toolsDir);
-  if (!sourceFingerprint) return null;
+  if (!sourceFingerprint) return unavailable('source-fingerprint');
 
   const root = makeCacheRoot();
-  if (!root) return null;
+  if (!root) return unavailable('cache-root');
   const cacheKey = createHash('sha256').update(JSON.stringify({
     version: CACHE_FORMAT_VERSION,
     source: sourceFingerprint,

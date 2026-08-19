@@ -29,6 +29,9 @@ env:
   METEOR_MODERN: true
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
+  # Temporary, stable-reason diagnostics for prepared-app cache eligibility.
+  # Remove after the current CI investigation identifies the runner condition.
+  METEOR_SELFTEST_PREPARED_APP_CACHE_DIAGNOSTICS: 1
 
 
 jobs:
