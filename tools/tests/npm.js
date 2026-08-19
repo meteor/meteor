@@ -130,7 +130,7 @@ async function updateGitDependencyCache(shrinkwrapResolved) {
   files.mkdir(nodeModulesDir);
   files.writeFile(
     files.pathJoin(nodeModulesDir, ".node_version"),
-    `${process.version.replace(/\.(\d+)$/, ".*")}\n`,
+    `${process.version.slice(0, process.version.lastIndexOf(".") + 1)}*\n`,
   );
   files.writeFile(
     files.pathJoin(nodeModulesDir, ".package-lock.json"),
