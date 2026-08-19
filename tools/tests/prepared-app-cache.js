@@ -31,121 +31,181 @@ async function withTempCacheRoot(fn) {
   }
 }
 
+function snapshotHasNoSymlinks(root) {
+  const pending = [root];
+  while (pending.length > 0) {
+    const current = pending.pop();
+    const stat = files.lstat(current);
+    if (stat.isSymbolicLink()) return false;
+    if (stat.isDirectory()) {
+      for (const entry of files.readdir(current)) {
+        pending.push(files.pathJoin(current, entry));
+      }
+    }
+  }
+  return true;
+}
+
 selftest.define('prepared-app-cache roundtrip', async function () {
-  await withTempCacheRoot(async (cacheRoot) => {
-    const firstSandbox = new Sandbox();
-    await firstSandbox.init();
-    await firstSandbox.createApp('app1', 'modern');
+  const savedNodeEnv = process.env.NODE_ENV;
+  if (savedNodeEnv === undefined) process.env.NODE_ENV = 'development';
+  try {
+    await withTempCacheRoot(async (cacheRoot) => {
+      const firstSandbox = new Sandbox();
+      await firstSandbox.init();
+      await firstSandbox.createApp('app1', 'standard-app');
+      const entries = files.readdirNoDots(cacheRoot);
+      await selftest.expectEqual(entries.length, 1);
+      const cacheEntryDir = files.pathJoin(cacheRoot, entries[0]);
+      const markerPath = files.pathJoin(cacheEntryDir, READY_MARKER);
+      const metadataPath = files.pathJoin(cacheEntryDir, METADATA_FILE);
+      selftest.expectTrue(files.exists(markerPath));
+      selftest.expectTrue(files.exists(metadataPath));
 
-    const entries = files.readdirNoDots(cacheRoot);
-    await selftest.expectEqual(entries.length, 1);
-    const cacheEntryDir = files.pathJoin(cacheRoot, entries[0]);
-    const markerPath = files.pathJoin(cacheEntryDir, READY_MARKER);
-    const metadataPath = files.pathJoin(cacheEntryDir, METADATA_FILE);
-    selftest.expectTrue(files.exists(markerPath));
-    selftest.expectTrue(files.exists(metadataPath));
+      const metadata = JSON.parse(files.readFile(metadataPath, 'utf8'));
+      await selftest.expectEqual(metadata.version, 3);
+      await selftest.expectEqual(metadata.cacheKey, entries[0]);
+      await selftest.expectEqual(
+        metadata.producerToolsDir,
+        files.realpath(files.getCurrentToolsDir()),
+      );
+      selftest.expectTrue(typeof metadata.environmentFingerprint === 'string');
+      selftest.expectTrue(typeof metadata.sentinelPath === 'string');
 
-    const metadata = JSON.parse(files.readFile(metadataPath, 'utf8'));
-    await selftest.expectEqual(metadata.version, 1);
-    await selftest.expectEqual(metadata.cacheKey, entries[0]);
-    await selftest.expectEqual(
-      metadata.producerToolsDir,
-      files.realpath(files.getCurrentToolsDir()),
-    );
-    selftest.expectTrue(typeof metadata.sentinelPath === 'string');
+      const snapshotDir = files.pathJoin(cacheEntryDir, SNAPSHOT_DIRECTORY);
+      selftest.expectTrue(snapshotHasNoSymlinks(snapshotDir));
 
-    const beforeMarkerStat = files.statOrNull(markerPath);
-
-    const secondSandbox = new Sandbox();
-    await secondSandbox.init();
-    secondSandbox.execPath = files.pathJoin(secondSandbox.root, 'missing-meteor');
-    await secondSandbox.createApp('app2', 'modern');
-
-    const afterMarkerStat = files.statOrNull(markerPath);
-    await selftest.expectEqual(afterMarkerStat?.mtimeMs, beforeMarkerStat?.mtimeMs);
-
-    // A process-level override can affect preparation, so it must not reuse
-    // the standard snapshot created without that override.
-    const savedModern = process.env.METEOR_MODERN;
-    process.env.METEOR_MODERN = 'legacy';
-    const modernOverrideSandbox = new Sandbox();
-    await modernOverrideSandbox.init();
-    modernOverrideSandbox.execPath = files.pathJoin(
-      modernOverrideSandbox.root,
-      'missing-meteor',
-    );
-    let modernOverrideDidThrow = false;
-    try {
-      await modernOverrideSandbox.createApp('app3', 'modern');
-    } catch {
-      modernOverrideDidThrow = true;
-    } finally {
-      if (savedModern === undefined) {
-        delete process.env.METEOR_MODERN;
-      } else {
-        process.env.METEOR_MODERN = savedModern;
-      }
-    }
-    selftest.expectTrue(modernOverrideDidThrow);
-
-    const app2Dir = files.pathJoin(secondSandbox.cwd, 'app2');
-    const localDir = files.pathJoin(app2Dir, '.meteor', 'local');
-    selftest.expectTrue(files.exists(localDir));
-    selftest.expectFalse(files.exists(files.pathJoin(app2Dir, READY_MARKER)));
-    selftest.expectFalse(files.exists(files.pathJoin(app2Dir, METADATA_FILE)));
-
-    const isopacksDir = files.pathJoin(localDir, 'isopacks');
-    if (files.exists(isopacksDir)) {
-      for (const pkg of files.readdirNoDots(isopacksDir)) {
-        const buildInfoPath = files.pathJoin(
-          isopacksDir, pkg, 'isopack-buildinfo.json',
-        );
-        if (!files.exists(buildInfoPath)) continue;
-        const contents = files.readFile(buildInfoPath, 'utf8');
-        selftest.expectFalse(contents.includes(metadata.sentinelPath));
-      }
-    }
-
-    const snapshotDir = files.pathJoin(cacheEntryDir, SNAPSHOT_DIRECTORY);
-    const staleFile = files.pathJoin(
-      snapshotDir,
-      '.meteor',
-      'local',
-      'prepared-app-cache-stale.json',
-    );
-    files.writeFile(staleFile, metadata.sentinelPath, 'utf8');
-    const staleDestRoot = files.mkdtemp('prepared-app-cache-stale-dest');
-    const staleDest = files.pathJoin(staleDestRoot, 'app');
-    let staleResult;
-    try {
-      staleResult = await applyPreparedAppCacheEntry({
-        cacheEntry: { root: cacheRoot, cacheKey: entries[0] },
-        destAppDir: staleDest,
-        destRoot: staleDestRoot,
+      const secondSandbox = new Sandbox();
+      await secondSandbox.init();
+      secondSandbox.execPath = files.pathJoin(secondSandbox.root, 'missing-meteor');
+      await secondSandbox.createApp('app2', 'standard-app');
+      const cacheEnv = secondSandbox._makeEnv();
+      const activeCacheEntry = await getPreparedAppCacheEntry({
+        template: 'standard-app',
+        execPath: secondSandbox.execPath,
+        env: cacheEnv,
       });
-    } catch {
-      staleResult = 'threw';
-    }
-    await selftest.expectEqual(staleResult, false);
-    selftest.expectFalse(files.exists(staleDest));
-    await files.rm_recursive(staleDestRoot);
-    files.unlink(staleFile);
+      selftest.expectTrue(Boolean(activeCacheEntry));
+      const activeMetadata = JSON.parse(files.readFile(
+        files.pathJoin(activeCacheEntry.root, activeCacheEntry.cacheKey, METADATA_FILE),
+        'utf8',
+      ));
+      const activeSnapshotDir = files.pathJoin(
+        activeCacheEntry.root,
+        activeCacheEntry.cacheKey,
+        SNAPSHOT_DIRECTORY,
+      );
 
-    const unsafeTarget = files.pathJoin(cacheEntryDir, 'unsafe-target');
-    const unsafeLink = files.pathJoin(snapshotDir, 'unsafe-link');
-    files.writeFile(unsafeTarget, 'cache data must not contain symlinks', 'utf8');
-    files.symlink('../unsafe-target', unsafeLink);
-    const symlinkDestRoot = files.mkdtemp('prepared-app-cache-symlink-dest');
-    const symlinkDest = files.pathJoin(symlinkDestRoot, 'app');
-    const symlinkResult = await applyPreparedAppCacheEntry({
-      cacheEntry: { root: cacheRoot, cacheKey: entries[0] },
-      destAppDir: symlinkDest,
-      destRoot: symlinkDestRoot,
+      // A process-level override can affect preparation. It must create a
+      // separate cache partition, which a later sandbox can then reuse.
+      const savedModern = process.env.METEOR_MODERN;
+      process.env.METEOR_MODERN = savedModern === 'true' ? 'false' : 'true';
+      const modernOverrideSandbox = new Sandbox();
+      await modernOverrideSandbox.init();
+      try {
+        const entriesBeforeModernOverride = files.readdirNoDots(cacheRoot).length;
+        await modernOverrideSandbox.createApp('app4', 'standard-app');
+        const entriesWithModernOverride = files.readdirNoDots(cacheRoot);
+        selftest.expectTrue(entriesWithModernOverride.length > entriesBeforeModernOverride);
+
+        const modernReuseSandbox = new Sandbox();
+        await modernReuseSandbox.init();
+        modernReuseSandbox.execPath = files.pathJoin(
+          modernReuseSandbox.root,
+          'missing-meteor',
+        );
+        await modernReuseSandbox.createApp('app5', 'standard-app');
+      } finally {
+        if (savedModern === undefined) {
+          delete process.env.METEOR_MODERN;
+        } else {
+          process.env.METEOR_MODERN = savedModern;
+        }
+      }
+
+      const app2Dir = files.pathJoin(secondSandbox.cwd, 'app2');
+      const localDir = files.pathJoin(app2Dir, '.meteor', 'local');
+      selftest.expectTrue(files.exists(localDir));
+      selftest.expectFalse(files.exists(files.pathJoin(app2Dir, READY_MARKER)));
+      selftest.expectFalse(files.exists(files.pathJoin(app2Dir, METADATA_FILE)));
+
+      const isopacksDir = files.pathJoin(localDir, 'isopacks');
+      if (files.exists(isopacksDir)) {
+        for (const pkg of files.readdirNoDots(isopacksDir)) {
+          const buildInfoPath = files.pathJoin(
+            isopacksDir, pkg, 'isopack-buildinfo.json',
+          );
+          if (!files.exists(buildInfoPath)) continue;
+          const contents = files.readFile(buildInfoPath, 'utf8');
+          selftest.expectFalse(contents.includes(activeMetadata.sentinelPath));
+        }
+      }
+
+      const staleFile = files.pathJoin(
+        activeSnapshotDir,
+        '.meteor',
+        'local',
+        'prepared-app-cache-stale.json',
+      );
+      files.writeFile(staleFile, activeMetadata.sentinelPath, 'utf8');
+      const staleDestRoot = files.mkdtemp('prepared-app-cache-stale-dest');
+      const staleDest = files.pathJoin(staleDestRoot, 'app');
+      let staleResult;
+      try {
+        staleResult = await applyPreparedAppCacheEntry({
+          cacheEntry: activeCacheEntry,
+          destAppDir: staleDest,
+          destRoot: staleDestRoot,
+          env: cacheEnv,
+        });
+      } catch {
+        staleResult = 'threw';
+      }
+      await selftest.expectEqual(staleResult, false);
+      selftest.expectFalse(files.exists(staleDest));
+      await files.rm_recursive(staleDestRoot);
+      files.unlink(staleFile);
+
+      const outsideDestRoot = files.mkdtemp('prepared-app-cache-outside-dest');
+      const symlinkedDestRoot = files.mkdtemp('prepared-app-cache-symlinked-dest');
+      const symlinkedDest = files.pathJoin(symlinkedDestRoot, 'link', 'app');
+      files.symlink(outsideDestRoot, files.pathJoin(symlinkedDestRoot, 'link'));
+      const symlinkedDestResult = await applyPreparedAppCacheEntry({
+        cacheEntry: activeCacheEntry,
+        destAppDir: symlinkedDest,
+        destRoot: symlinkedDestRoot,
+        env: cacheEnv,
+      });
+      await selftest.expectEqual(symlinkedDestResult, false);
+      selftest.expectFalse(files.exists(files.pathJoin(outsideDestRoot, 'app')));
+      await files.rm_recursive(symlinkedDestRoot);
+      await files.rm_recursive(outsideDestRoot);
+
+      const unsafeTarget = files.pathJoin(
+        activeCacheEntry.root, activeCacheEntry.cacheKey, 'unsafe-target',
+      );
+      const unsafeLink = files.pathJoin(activeSnapshotDir, 'unsafe-link');
+      files.writeFile(unsafeTarget, 'cache data must not contain symlinks', 'utf8');
+      files.symlink('../unsafe-target', unsafeLink);
+      const symlinkDestRoot = files.mkdtemp('prepared-app-cache-symlink-dest');
+      const symlinkDest = files.pathJoin(symlinkDestRoot, 'app');
+      const symlinkResult = await applyPreparedAppCacheEntry({
+        cacheEntry: activeCacheEntry,
+        destAppDir: symlinkDest,
+        destRoot: symlinkDestRoot,
+        env: cacheEnv,
+      });
+      await selftest.expectEqual(symlinkResult, false);
+      selftest.expectFalse(files.exists(symlinkDest));
+      await files.rm_recursive(symlinkDestRoot);
     });
-    await selftest.expectEqual(symlinkResult, false);
-    selftest.expectFalse(files.exists(symlinkDest));
-    await files.rm_recursive(symlinkDestRoot);
-  });
+  } finally {
+    if (savedNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = savedNodeEnv;
+    }
+  }
 });
 
 selftest.define('prepared-app-cache rejects unsafe cache roots', async function () {
@@ -157,7 +217,7 @@ selftest.define('prepared-app-cache rejects unsafe cache roots', async function 
       let didThrow = false;
       try {
         result = await getPreparedAppCacheEntry({
-          template: 'modern',
+          template: 'standard-app',
           execPath: missingMeteor,
         });
       } catch {
@@ -168,5 +228,16 @@ selftest.define('prepared-app-cache rejects unsafe cache roots', async function 
     } finally {
       files.chmod(cacheRoot, 0o700);
     }
+  });
+});
+
+selftest.define('prepared-app-cache bypasses local file dependency templates', async function () {
+  await withTempCacheRoot(async (cacheRoot) => {
+    const result = await getPreparedAppCacheEntry({
+      template: 'modern',
+      execPath: files.pathJoin(cacheRoot, 'missing-meteor'),
+    });
+    await selftest.expectEqual(result, null);
+    await selftest.expectEqual(files.readdirNoDots(cacheRoot).length, 0);
   });
 });

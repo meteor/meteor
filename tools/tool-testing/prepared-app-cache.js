@@ -19,13 +19,67 @@ const DISABLE_ENV = 'METEOR_DISABLE_PREPARED_APP_CACHE';
 const READY_MARKER = '.meteor-selftest-cache-ready';
 const METADATA_FILE = '.meteor-selftest-cache-metadata.json';
 const SNAPSHOT_DIRECTORY = 'app';
-const CACHE_FORMAT_VERSION = 1;
+const CACHE_FORMAT_VERSION = 3;
 const PREPARE_TIMEOUT_MS = 15 * 60 * 1000;
 const STAGING_NAME_RE = /^\.staging-[0-9]+-[a-f0-9]{32}$/;
 const CACHE_KEY_RE = /^[a-f0-9]{24}$/;
 const SKIP_GUARD_EXTENSIONS = new Set(['.wt', '.wiredtiger', '.bson']);
+const PREPARE_ENV_NAMES = new Set([
+  'BABEL_ENV',
+  'METEOR_DEBUG_BUILD',
+  'METEOR_DISABLE_OPTIMISTIC_CACHING',
+  'METEOR_FORCE_EXCLUDE_ARCHS',
+  'METEOR_FORCE_INCLUDE_ARCHS',
+  'METEOR_LOCAL_DIR',
+  'METEOR_MODERN',
+  'METEOR_NPM_REBUILD_FLAGS',
+  'METEOR_NO_RELEASE_CHECK',
+  'METEOR_OFFLINE_CATALOG',
+  'METEOR_PACKAGE_DIRS',
+  'METEOR_PACKAGE_SERVER_URL',
+  'METEOR_PROFILE',
+  'METEOR_REIFY_CACHE_DIR',
+  'METEOR_SKIP_NPM_REBUILD',
+  'METEOR_TOOL_ENABLE_REIFY_RUNTIME_CACHE',
+  'NODE_ENV',
+  'NODE_OPTIONS',
+  'SELF_TEST_TOOL_NODE_FLAGS',
+  'TOOL_NODE_FLAGS',
+]);
 
 export const isDisabled = () => Boolean(process.env[DISABLE_ENV]);
+
+// Preparation is affected by these deterministic inputs. `NPM_CONFIG_*`
+// options cover npm install/rebuild behavior. Harness output such as
+// TEST_METADATA and the sandbox-specific METEOR_SESSION_FILE are deliberately
+// excluded. Keep values out of metadata and logs: this digest is only a cache
+// partition key.
+function computeEnvironmentFingerprint(env) {
+  if (!env || typeof env !== 'object') return null;
+  const effective = new Map();
+  for (const [name, value] of Object.entries(process.env)) {
+    if ((PREPARE_ENV_NAMES.has(name) ||
+         name.toUpperCase().startsWith('NPM_CONFIG_')) && value !== undefined) {
+      effective.set(name, String(value));
+    }
+  }
+  for (const [name, value] of Object.entries(env)) {
+    if (!PREPARE_ENV_NAMES.has(name) &&
+        !name.toUpperCase().startsWith('NPM_CONFIG_')) continue;
+    if (value === undefined) {
+      effective.delete(name);
+    } else {
+      effective.set(name, String(value));
+    }
+  }
+
+  const hash = createHash('sha256');
+  for (const [name, value] of [...effective.entries()].sort(([a], [b]) =>
+    a.localeCompare(b))) {
+    hash.update(`${name.length}:${name}${value.length}:${value}\0`);
+  }
+  return hash.digest('hex').slice(0, 24);
+}
 
 function lstatOrNull(path) {
   try {
@@ -46,6 +100,14 @@ function isDirectory(path) {
 function isRegularFile(path) {
   const stat = lstatOrNull(path);
   return Boolean(stat?.isFile() && !stat.isSymbolicLink());
+}
+
+function isPrivateDirectory(path) {
+  const stat = lstatOrNull(path);
+  if (!stat?.isDirectory() || stat.isSymbolicLink() || (stat.mode & 0o077) !== 0) {
+    return false;
+  }
+  return typeof process.getuid !== 'function' || stat.uid === process.getuid();
 }
 
 function isContainedPath(parent, child) {
@@ -69,6 +131,18 @@ function resolveAbsolutePath(value) {
   return files.pathResolve(standardPath);
 }
 
+function userCacheNamespace() {
+  let identity = 'unknown';
+  try {
+    identity = os.userInfo().username || identity;
+  } catch {
+    if (typeof process.getuid === 'function') {
+      identity = String(process.getuid());
+    }
+  }
+  return `user-${createHash('sha256').update(identity).digest('hex').slice(0, 24)}`;
+}
+
 // Descend from a canonical temporary directory one component at a time. This
 // prevents the optional test hook from creating a cache through a symlink that
 // points outside the temporary-directory boundary.
@@ -78,7 +152,7 @@ function makeCacheRoot() {
   );
   const configuredRoot = process.env[CACHE_DIR_ENV]
     ? resolveAbsolutePath(process.env[CACHE_DIR_ENV])
-    : files.pathJoin(tempRoot, CACHE_DIRECTORY_NAME);
+    : files.pathJoin(tempRoot, CACHE_DIRECTORY_NAME, userCacheNamespace());
 
   if (!configuredRoot || !isContainedPath(tempRoot, configuredRoot)) {
     return null;
@@ -97,7 +171,7 @@ function makeCacheRoot() {
     const next = files.pathJoin(current, part);
     const stat = lstatOrNull(next);
     if (stat) {
-      if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      if (!isPrivateDirectory(next)) {
         return null;
       }
     } else {
@@ -106,7 +180,7 @@ function makeCacheRoot() {
       } catch (error) {
         if (error?.code !== 'EEXIST') throw error;
       }
-      if (!isDirectory(next)) {
+      if (!isPrivateDirectory(next)) {
         return null;
       }
     }
@@ -114,7 +188,9 @@ function makeCacheRoot() {
   }
 
   const realRoot = files.realpath(current);
-  return isContainedPath(tempRoot, realRoot) ? realRoot : null;
+  return isContainedPath(tempRoot, realRoot) && isPrivateDirectory(realRoot)
+    ? realRoot
+    : null;
 }
 
 function safelyWalk(root, visit, shouldSkip = () => false) {
@@ -140,6 +216,111 @@ function safelyWalk(root, visit, shouldSkip = () => false) {
   }
 }
 
+function snapshotIsSafe(snapshotDir) {
+  const pending = [''];
+  while (pending.length > 0) {
+    const relativePath = pending.pop();
+    const absolutePath = relativePath
+      ? files.pathJoin(snapshotDir, relativePath)
+      : snapshotDir;
+    const stat = lstatOrNull(absolutePath);
+    if (!stat || stat.isSymbolicLink()) return false;
+    if (stat.isDirectory()) {
+      for (const entry of files.readdir(absolutePath)) {
+        pending.push(relativePath
+          ? files.pathJoin(relativePath, entry)
+          : entry);
+      }
+    } else if (!stat.isFile()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// `npm install` commonly creates .bin symlinks. Cache snapshots deliberately
+// forbid symlinks, so materialize only links that resolve inside the private
+// preparation directory or the producer checkout. This prevents a snapshot
+// from capturing arbitrary files reached through a link, and
+// `activeDirectories` rejects link cycles.
+function materializeSnapshot(sourceRoot, destinationRoot, allowedRoots) {
+  const canonicalSourceRoot = files.realpath(sourceRoot);
+  if (!isDirectory(canonicalSourceRoot)) {
+    throw new Error('prepared-app-cache source snapshot is not a directory');
+  }
+  const canonicalAllowedRoots = allowedRoots.map(root => files.realpath(root));
+  const isAllowedSourcePath = sourcePath =>
+    canonicalAllowedRoots.some(root => isContainedPath(root, sourcePath));
+
+  const activeDirectories = new Set();
+  const copyEntry = (sourcePath, destinationPath) => {
+    let resolvedSource = sourcePath;
+    let stat = lstatOrNull(sourcePath);
+    if (!stat) {
+      throw new Error('prepared-app-cache source snapshot entry disappeared');
+    }
+    if (stat.isSymbolicLink()) {
+      const linkTarget = files.readlink(sourcePath);
+      const unresolvedTarget = files.pathResolve(
+        files.pathDirname(sourcePath),
+        linkTarget,
+      );
+      if (!isAllowedSourcePath(unresolvedTarget)) {
+        throw new Error(
+          `prepared-app-cache source snapshot link escapes allowed roots: ${
+            sourcePath} -> ${linkTarget}`,
+        );
+      }
+      try {
+        resolvedSource = files.realpath(sourcePath);
+      } catch (error) {
+        throw new Error(
+          `prepared-app-cache source snapshot has a broken link: ${
+            linkTarget} (${error?.code || 'unknown'})`,
+        );
+      }
+      if (!isAllowedSourcePath(resolvedSource)) {
+        throw new Error(
+          `prepared-app-cache source snapshot link escapes allowed roots: ${
+            sourcePath} -> ${resolvedSource}`,
+        );
+      }
+      stat = lstatOrNull(resolvedSource);
+      if (!stat || stat.isSymbolicLink()) {
+        throw new Error('prepared-app-cache source snapshot link is invalid');
+      }
+    }
+
+    if (stat.isDirectory()) {
+      const canonicalDirectory = files.realpath(resolvedSource);
+      if (!isAllowedSourcePath(canonicalDirectory) ||
+          activeDirectories.has(canonicalDirectory)) {
+        throw new Error('prepared-app-cache source snapshot has a directory cycle');
+      }
+      activeDirectories.add(canonicalDirectory);
+      try {
+        files.mkdir_p(destinationPath, 0o700);
+        for (const entry of files.readdir(resolvedSource)) {
+          copyEntry(
+            files.pathJoin(resolvedSource, entry),
+            files.pathJoin(destinationPath, entry),
+          );
+        }
+      } finally {
+        activeDirectories.delete(canonicalDirectory);
+      }
+      return;
+    }
+
+    if (!stat.isFile()) {
+      throw new Error('prepared-app-cache source snapshot has an unsupported entry');
+    }
+    files.copyFile(resolvedSource, destinationPath);
+  };
+
+  copyEntry(canonicalSourceRoot, destinationRoot);
+}
+
 async function computeSourceFingerprint(toolsDir) {
   const hash = createHash('sha256');
   try {
@@ -148,18 +329,27 @@ async function computeSourceFingerprint(toolsDir) {
     });
     hash.update(`HEAD:${head.trim()}\n`);
 
-    const { stdout: status } = await execFileAsync(
+    const { stdout: diff } = await execFileAsync(
       'git',
-      ['status', '--porcelain', '--', 'tools', 'packages'],
+      ['diff', '--binary', '--no-ext-diff', '--no-renames', 'HEAD', '--', 'tools', 'packages'],
       { cwd: files.convertToOSPath(toolsDir), maxBuffer: 16 * 1024 * 1024 },
     );
-    for (const line of status.split('\n')) {
-      if (!line) continue;
-      const relativePath = line.slice(3).replace(/^"(.*)"$/, '$1');
+    hash.update(diff);
+
+    const { stdout: untracked } = await execFileAsync(
+      'git',
+      ['ls-files', '--others', '--exclude-standard', '-z', '--', 'tools', 'packages'],
+      { cwd: files.convertToOSPath(toolsDir), maxBuffer: 16 * 1024 * 1024 },
+    );
+    for (const relativePath of untracked.split('\0')) {
+      if (!relativePath) continue;
       const absolutePath = files.pathResolve(toolsDir, relativePath);
-      if (!isContainedPath(toolsDir, absolutePath)) continue;
-      const stat = files.statOrNull(absolutePath);
-      hash.update(`${relativePath}:${stat?.size ?? 'missing'}:${stat?.mtimeMs ?? ''}\n`);
+      if (!isContainedPath(toolsDir, absolutePath) || !isRegularFile(absolutePath)) {
+        hash.update(`UNSAFE:${relativePath}\n`);
+        continue;
+      }
+      hash.update(`${relativePath}\0`);
+      hash.update(files.readFile(absolutePath));
     }
   } catch {
     const stat = files.statOrNull(toolsDir);
@@ -176,6 +366,29 @@ function computeTemplateFingerprint(templatePath) {
     hash.update('\n');
   }, relativePath => relativePath === '.meteor/local');
   return hash.digest('hex').slice(0, 16);
+}
+
+// A local file dependency is represented by npm as a symlink. Some tests
+// intentionally create its target after createApp (for example modern's
+// config-package), so a snapshot without symlinks cannot preserve its meaning.
+// Bypass the cache for every local file dependency rather than weaken that
+// snapshot boundary.
+function templateAllowsCache(templatePath) {
+  const manifestPath = files.pathJoin(templatePath, 'package.json');
+  if (!isRegularFile(manifestPath)) return true;
+  let manifest;
+  try {
+    manifest = JSON.parse(files.readFile(manifestPath, 'utf8'));
+  } catch {
+    return false;
+  }
+  return ![
+    manifest.dependencies,
+    manifest.devDependencies,
+    manifest.optionalDependencies,
+  ].some(dependencies => dependencies && typeof dependencies === 'object' &&
+    Object.values(dependencies).some(specifier =>
+      typeof specifier === 'string' && specifier.startsWith('file:')));
 }
 
 function swapPathPrefix(value, fromPrefix, toPrefix) {
@@ -208,7 +421,7 @@ function rewriteStrings(value, fromPrefix, toPrefix) {
   return value;
 }
 
-function rewriteJsonFile(path, fromPrefix, toPrefix) {
+function rewriteJsonFile(path, pathRewrites) {
   if (!isRegularFile(path)) return;
   let json;
   try {
@@ -216,10 +429,13 @@ function rewriteJsonFile(path, fromPrefix, toPrefix) {
   } catch {
     return;
   }
-  files.writeFile(path, `${JSON.stringify(rewriteStrings(json, fromPrefix, toPrefix))}\n`, 'utf8');
+  for (const { fromPrefix, toPrefix } of pathRewrites) {
+    json = rewriteStrings(json, fromPrefix, toPrefix);
+  }
+  files.writeFile(path, `${JSON.stringify(json)}\n`, 'utf8');
 }
 
-function rewriteCachedPaths(destinationAppDir, sentinelPath) {
+function rewriteCachedPaths(destinationAppDir, pathRewrites) {
   const localDir = files.pathJoin(destinationAppDir, '.meteor', 'local');
   if (!isDirectory(localDir)) return;
 
@@ -230,8 +446,7 @@ function rewriteCachedPaths(destinationAppDir, sentinelPath) {
       if (!isDirectory(packageDir)) continue;
       rewriteJsonFile(
         files.pathJoin(packageDir, 'isopack-buildinfo.json'),
-        sentinelPath,
-        destinationAppDir,
+        pathRewrites,
       );
     }
   }
@@ -245,8 +460,7 @@ function rewriteCachedPaths(destinationAppDir, sentinelPath) {
         if (entry.endsWith('.json')) {
           rewriteJsonFile(
             files.pathJoin(pluginLocalDir, entry),
-            sentinelPath,
-            destinationAppDir,
+            pathRewrites,
           );
         }
       }
@@ -260,7 +474,8 @@ function rewriteCachedPaths(destinationAppDir, sentinelPath) {
       return;
     }
     try {
-      if (files.readFile(absolutePath, 'utf8').includes(sentinelPath)) {
+      if (pathRewrites.some(({ fromPrefix }) =>
+        files.readFile(absolutePath, 'utf8').includes(fromPrefix))) {
         offenders.push(relativePath);
       }
     } catch {
@@ -286,11 +501,13 @@ function cacheEntryPaths(root, cacheKey) {
   };
 }
 
-function validatedCacheEntry(root, cacheKey) {
+function validatedCacheEntry(
+  root, cacheKey, expectedToolsDir, expectedEnvironmentFingerprint,
+) {
   const paths = cacheEntryPaths(root, cacheKey);
   if (!paths || !isDirectory(paths.cacheDir) ||
       !isRegularFile(paths.readyPath) || !isRegularFile(paths.metadataPath) ||
-      !isDirectory(paths.snapshotDir)) {
+      !isDirectory(paths.snapshotDir) || !snapshotIsSafe(paths.snapshotDir)) {
     return null;
   }
 
@@ -304,6 +521,8 @@ function validatedCacheEntry(root, cacheKey) {
       metadata.version !== CACHE_FORMAT_VERSION ||
       metadata.cacheKey !== cacheKey ||
       metadata.snapshotDirectory !== SNAPSHOT_DIRECTORY ||
+      typeof metadata.producerToolsDir !== 'string' ||
+      typeof metadata.environmentFingerprint !== 'string' ||
       typeof metadata.sentinelPath !== 'string') {
     return null;
   }
@@ -312,7 +531,21 @@ function validatedCacheEntry(root, cacheKey) {
   if (!sentinelPath || !isDirectChild(root, sentinelPath, STAGING_NAME_RE)) {
     return null;
   }
-  return { ...paths, root, cacheKey, sentinelPath };
+  const producerToolsDir = resolveAbsolutePath(metadata.producerToolsDir);
+  if (!producerToolsDir ||
+      (expectedToolsDir && producerToolsDir !== expectedToolsDir) ||
+      (expectedEnvironmentFingerprint &&
+       metadata.environmentFingerprint !== expectedEnvironmentFingerprint)) {
+    return null;
+  }
+  return {
+    ...paths,
+    root,
+    cacheKey,
+    sentinelPath,
+    producerToolsDir,
+    environmentFingerprint: metadata.environmentFingerprint,
+  };
 }
 
 function createStagingDirectory(root) {
@@ -357,6 +590,7 @@ async function runPrepareApp({ execPath, cwd, env }) {
 
 async function warmCacheEntry({
   root, cacheKey, templatePath, releaseName, upgradersToAppend, execPath, env,
+  producerToolsDir, environmentFingerprint,
 }) {
   const paths = cacheEntryPaths(root, cacheKey);
   if (!paths) return null;
@@ -364,45 +598,66 @@ async function warmCacheEntry({
     files.mkdir(paths.cacheDir, 0o700);
   } catch (error) {
     if (error?.code !== 'EEXIST') throw error;
-    return validatedCacheEntry(root, cacheKey);
+    return validatedCacheEntry(
+      root, cacheKey, producerToolsDir, environmentFingerprint,
+    );
   }
 
-  const stagingDir = createStagingDirectory(root);
+  const preparationStagingDir = createStagingDirectory(root);
+  let snapshotStagingDir = null;
   try {
-    await files.cp_r(templatePath, stagingDir, {
+    await files.cp_r(templatePath, preparationStagingDir, {
       ignore: [/^local$/],
       preserveSymlinks: true,
     });
 
     if (releaseName) {
       files.writeFile(
-        files.pathJoin(stagingDir, '.meteor', 'release'),
+        files.pathJoin(preparationStagingDir, '.meteor', 'release'),
         releaseName,
         'utf8',
       );
     }
 
-    const upgradersFile = new FinishedUpgraders({ projectDir: stagingDir });
+    const upgradersFile = new FinishedUpgraders({ projectDir: preparationStagingDir });
     if (upgradersFile.readUpgraders().length === 0 && upgradersToAppend.length) {
       upgradersFile.appendUpgraders(upgradersToAppend);
     }
-    await defaultNpmDeps.install(stagingDir);
-    await runPrepareApp({ execPath, cwd: stagingDir, env });
+    await defaultNpmDeps.install(preparationStagingDir);
+    await runPrepareApp({ execPath, cwd: preparationStagingDir, env });
+
+    snapshotStagingDir = createStagingDirectory(root);
+    materializeSnapshot(preparationStagingDir, snapshotStagingDir, [
+      preparationStagingDir,
+      producerToolsDir,
+    ]);
+    if (!snapshotIsSafe(snapshotStagingDir)) {
+      throw new Error('prepared-app-cache materialized an unsafe snapshot');
+    }
 
     // The cache key directory is claimed before warming, while the complete
     // snapshot stays invisible in an unrelated staging directory. Promotion
     // is one rename, and the ready marker is written only after it succeeds.
-    await files.rename(stagingDir, paths.snapshotDir);
+    await removeStagingDirectory(root, preparationStagingDir);
+    await files.rename(snapshotStagingDir, paths.snapshotDir);
+    snapshotStagingDir = null;
     await files.writeFileAtomically(paths.metadataPath, `${JSON.stringify({
       version: CACHE_FORMAT_VERSION,
       cacheKey,
       snapshotDirectory: SNAPSHOT_DIRECTORY,
-      sentinelPath: stagingDir,
+      sentinelPath: preparationStagingDir,
+      producerToolsDir,
+      environmentFingerprint,
     })}\n`);
     await files.writeFileAtomically(paths.readyPath, '');
-    return validatedCacheEntry(root, cacheKey);
+    return validatedCacheEntry(
+      root, cacheKey, producerToolsDir, environmentFingerprint,
+    );
   } catch (error) {
-    await removeStagingDirectory(root, stagingDir).catch(() => {});
+    await removeStagingDirectory(root, preparationStagingDir).catch(() => {});
+    if (snapshotStagingDir) {
+      await removeStagingDirectory(root, snapshotStagingDir).catch(() => {});
+    }
     throw error;
   }
 }
@@ -414,25 +669,31 @@ export async function getPreparedAppCacheEntry({
       typeof template !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(template)) {
     return null;
   }
+  const environmentFingerprint = computeEnvironmentFingerprint(env);
+  if (!environmentFingerprint) return null;
 
-  const toolsDir = files.getCurrentToolsDir();
+  const toolsDir = files.realpath(files.getCurrentToolsDir());
   const templatesDir = files.pathJoin(toolsDir, 'tools', 'tests', 'apps');
   const templatePath = files.pathResolve(templatesDir, template);
   if (!isContainedPath(templatesDir, templatePath) || !isDirectory(templatePath)) {
     return null;
   }
+  if (!templateAllowsCache(templatePath)) return null;
 
   const root = makeCacheRoot();
   if (!root) return null;
   const cacheKey = createHash('sha256').update(JSON.stringify({
     version: CACHE_FORMAT_VERSION,
     source: await computeSourceFingerprint(toolsDir),
+    checkout: toolsDir,
+    environment: environmentFingerprint,
     template: computeTemplateFingerprint(templatePath),
     templateName: template,
     releaseName: releaseName || null,
   })).digest('hex').slice(0, 24);
-
-  return validatedCacheEntry(root, cacheKey) || await warmCacheEntry({
+  return validatedCacheEntry(
+    root, cacheKey, toolsDir, environmentFingerprint,
+  ) || await warmCacheEntry({
     root,
     cacheKey,
     templatePath,
@@ -440,17 +701,101 @@ export async function getPreparedAppCacheEntry({
     upgradersToAppend,
     execPath,
     env,
+    producerToolsDir: toolsDir,
+    environmentFingerprint,
   });
 }
 
-export async function applyPreparedAppCacheEntry({ cacheEntry, destAppDir }) {
-  if (!cacheEntry || !resolveAbsolutePath(destAppDir)) return false;
-  const verifiedEntry = validatedCacheEntry(cacheEntry.root, cacheEntry.cacheKey);
-  if (!verifiedEntry) return false;
+async function removePartialDestination(destRoot, destAppDir) {
+  const root = resolveAbsolutePath(destRoot);
+  const destination = resolveAbsolutePath(destAppDir);
+  if (!root || !destination || root === destination ||
+      !isContainedPath(root, destination)) {
+    return;
+  }
+  const stat = lstatOrNull(destination);
+  if (!stat) return;
+  if (stat.isDirectory() && !stat.isSymbolicLink()) {
+    await files.rm_recursive(destination);
+  } else {
+    files.unlink(destination);
+  }
+}
 
-  await files.cp_r(verifiedEntry.snapshotDir, destAppDir, {
-    preserveSymlinks: true,
-  });
-  rewriteCachedPaths(destAppDir, verifiedEntry.sentinelPath);
-  return true;
+function resolveSafeDestination(destRoot, destAppDir) {
+  const root = resolveAbsolutePath(destRoot);
+  const destination = resolveAbsolutePath(destAppDir);
+  if (!root || !destination || root === destination ||
+      !isContainedPath(root, destination) || !isDirectory(root)) {
+    return null;
+  }
+
+  const destinationParent = files.pathDirname(destination);
+  if (!isDirectory(destinationParent) || lstatOrNull(destination)) {
+    return null;
+  }
+  const canonicalRoot = files.realpath(root);
+  const canonicalParent = files.realpath(destinationParent);
+  const canonicalDestination = files.pathJoin(
+    canonicalParent,
+    files.pathBasename(destination),
+  );
+  if (canonicalRoot === canonicalDestination ||
+      !isContainedPath(canonicalRoot, canonicalParent) ||
+      !isContainedPath(canonicalRoot, canonicalDestination)) {
+    return null;
+  }
+  return { root: canonicalRoot, destination: canonicalDestination };
+}
+
+export async function applyPreparedAppCacheEntry({
+  cacheEntry, destAppDir, destRoot, env = {},
+}) {
+  const expectedCacheRoot = makeCacheRoot();
+  const cacheRoot = cacheEntry && typeof cacheEntry.root === 'string'
+    ? resolveAbsolutePath(cacheEntry.root)
+    : null;
+  const safeDestination = resolveSafeDestination(destRoot, destAppDir);
+  if (!cacheEntry || typeof cacheEntry.root !== 'string' ||
+      typeof cacheEntry.cacheKey !== 'string' || !cacheRoot ||
+      cacheRoot !== expectedCacheRoot || !safeDestination) {
+    return false;
+  }
+  const { root, destination } = safeDestination;
+
+  let copyStarted = false;
+  try {
+    const consumerToolsDir = files.realpath(files.getCurrentToolsDir());
+    const environmentFingerprint = computeEnvironmentFingerprint(env);
+    if (!environmentFingerprint) return false;
+    const verifiedEntry = validatedCacheEntry(
+      cacheEntry.root,
+      cacheEntry.cacheKey,
+      consumerToolsDir,
+      environmentFingerprint,
+    );
+    if (!verifiedEntry) return false;
+
+    copyStarted = true;
+    await files.cp_r(verifiedEntry.snapshotDir, destination, {
+      preserveSymlinks: true,
+    });
+    const pathRewrites = [{
+      fromPrefix: verifiedEntry.sentinelPath,
+      toPrefix: destination,
+    }];
+    if (verifiedEntry.producerToolsDir !== consumerToolsDir) {
+      pathRewrites.push({
+        fromPrefix: verifiedEntry.producerToolsDir,
+        toPrefix: consumerToolsDir,
+      });
+    }
+    rewriteCachedPaths(destination, pathRewrites);
+    return true;
+  } catch {
+    if (copyStarted) {
+      await removePartialDestination(root, destination).catch(() => {});
+    }
+    return false;
+  }
 }

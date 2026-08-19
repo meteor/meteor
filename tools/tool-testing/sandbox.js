@@ -192,23 +192,33 @@ export default class Sandbox {
 
     // Only a normal checkout sandbox with no caller-specific release,
     // prepare-app opt-out, or custom environment can share a prepared snapshot.
-    // Unsupported shapes use the original path below without changing their
-    // behavior.
+    // Process-level environment is partitioned by the cache key; caller-provided
+    // sandbox environment remains an unsupported shape.
     const usePreparedCache =
       !this.warehouse && !options.release && !options.dontPrepareApp &&
       Object.keys(this.env).length === 0 &&
+      absoluteTo !== this.cwd &&
       files.containsPath(this.root, absoluteTo);
     if (usePreparedCache) {
-      const cacheEntry = await getPreparedAppCacheEntry({
-        template,
-        releaseName: releaseCurrent.isProperRelease() ? releaseCurrent.name : null,
-        upgradersToAppend: allUpgraders(),
-        execPath: this.execPath,
-        env: this._makeEnv(),
-      });
+      let cacheEntry = null;
+      const prepareEnv = this._makeEnv();
+      try {
+        cacheEntry = await getPreparedAppCacheEntry({
+          template,
+          releaseName: releaseCurrent.isProperRelease() ? releaseCurrent.name : null,
+          upgradersToAppend: allUpgraders(),
+          execPath: this.execPath,
+          env: prepareEnv,
+        });
+      } catch {
+        // A corrupt or inaccessible local cache must not block the baseline
+        // self-test setup path.
+      }
       if (cacheEntry && await applyPreparedAppCacheEntry({
         cacheEntry,
         destAppDir: absoluteTo,
+        destRoot: this.root,
+        env: prepareEnv,
       })) {
         return;
       }
