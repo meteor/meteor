@@ -21,7 +21,6 @@ const METADATA_FILE = '.meteor-selftest-cache-metadata.json';
 const SNAPSHOT_DIRECTORY = 'app';
 const CACHE_FORMAT_VERSION = 3;
 const PREPARE_TIMEOUT_MS = 15 * 60 * 1000;
-const STALE_ENTRY_LEASE_MS = PREPARE_TIMEOUT_MS + 5 * 60 * 1000;
 const SOURCE_FINGERPRINT_MAX_BYTES = 16 * 1024 * 1024;
 const STAGING_NAME_RE = /^\.staging-[0-9]+-[a-f0-9]{32}$/;
 const CACHE_KEY_RE = /^[a-f0-9]{24}$/;
@@ -590,16 +589,14 @@ async function removeClaimedCacheDirectory(root, cacheDir) {
   await files.rm_recursive(cacheDir);
 }
 
-function staleEntryCanBeReclaimed(paths) {
+function invalidReadyEntryCanBeReclaimed(paths) {
   const cacheStat = lstatOrNull(paths.cacheDir);
   if (!cacheStat?.isDirectory() || cacheStat.isSymbolicLink()) return false;
 
-  // A ready marker is written last, so a regular marker on an entry that
-  // failed validation cannot belong to an active warmer. An incomplete claim
-  // has no marker and is left alone until it exceeds the preparation lease.
-  const readyStat = lstatOrNull(paths.readyPath);
-  if (readyStat?.isFile() && !readyStat.isSymbolicLink()) return true;
-  return !readyStat && Date.now() - cacheStat.mtimeMs > STALE_ENTRY_LEASE_MS;
+  // A regular ready marker is written last. If the entry then failed
+  // validation, it cannot belong to an active warmer. Never reclaim an
+  // unready claim automatically: preparation may still be running.
+  return isRegularFile(paths.readyPath);
 }
 
 function makeQuarantinePath(root, cacheKey) {
@@ -619,8 +616,8 @@ async function removeQuarantineDirectory(root, quarantinePath) {
   return true;
 }
 
-async function reclaimStaleCacheEntry(root, paths, cacheKey) {
-  if (!staleEntryCanBeReclaimed(paths)) return false;
+async function reclaimInvalidReadyEntry(root, paths, cacheKey) {
+  if (!invalidReadyEntryCanBeReclaimed(paths)) return false;
 
   // Rename first so no racing caller can mistake the old entry for its own,
   // then delete only the controlled direct-child quarantine directory.
@@ -669,7 +666,7 @@ async function warmCacheEntry({
       root, cacheKey, producerToolsDir, environmentFingerprint,
     );
     if (entry || !allowReclaim ||
-        !await reclaimStaleCacheEntry(root, paths, cacheKey)) {
+        !await reclaimInvalidReadyEntry(root, paths, cacheKey)) {
       return entry;
     }
     return warmCacheEntry({

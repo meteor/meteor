@@ -3,6 +3,7 @@
 // copying the valid snapshot warmed by the first sandbox.
 
 const selftest = require('../tool-testing/selftest.js');
+const fs = require('fs');
 const Sandbox = selftest.Sandbox;
 const files = require('../fs/files');
 const {
@@ -121,6 +122,29 @@ selftest.define('prepared-app-cache roundtrip', async function () {
       }
       selftest.expectTrue(sourceProbeDidThrow);
       await selftest.expectEqual(files.readdirNoDots(cacheRoot).length, 1);
+
+      files.unlink(activeCacheEntry.readyPath);
+      const expiredLease = new Date(Date.now() - 60 * 60 * 1000);
+      fs.utimesSync(
+        files.convertToOSPath(activeCacheEntry.cacheDir),
+        expiredLease,
+        expiredLease,
+      );
+      let incompleteEntry;
+      let incompleteDidThrow = false;
+      try {
+        incompleteEntry = await getPreparedAppCacheEntry({
+          template: 'standard-app',
+          execPath: files.pathJoin(secondSandbox.root, 'missing-meteor'),
+          env: cacheEnv,
+        });
+      } catch {
+        incompleteDidThrow = true;
+      }
+      selftest.expectFalse(incompleteDidThrow);
+      await selftest.expectEqual(incompleteEntry, null);
+      selftest.expectTrue(files.exists(activeCacheEntry.cacheDir));
+      files.writeFile(activeCacheEntry.readyPath, '', 'utf8');
 
       files.writeFile(activeCacheEntry.metadataPath, 'corrupt metadata', 'utf8');
       activeCacheEntry = await getPreparedAppCacheEntry({
