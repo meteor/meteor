@@ -56,10 +56,14 @@ export const isDisabled = () => Boolean(process.env[DISABLE_ENV]);
 // unfamiliar runner. Keep diagnostic output to stable reason labels, never
 // paths or environment values.
 function unavailable(reason) {
+  diagnostic(reason);
+  return null;
+}
+
+function diagnostic(reason) {
   if (process.env[DIAGNOSTIC_ENV] === '1') {
     console.error(`prepared-app-cache: unavailable (${reason})`);
   }
-  return null;
 }
 
 // Preparation is affected by these deterministic inputs. `NPM_CONFIG_*`
@@ -345,14 +349,24 @@ async function computeSourceFingerprint(toolsDir) {
       cwd: files.convertToOSPath(toolsDir),
     });
     hash.update(`HEAD:${head.trim()}\n`);
+  } catch {
+    diagnostic('source-head');
+    return null;
+  }
 
+  try {
     const { stdout: diff } = await execFileAsync(
       'git',
       ['diff', '--binary', '--no-ext-diff', '--no-renames', 'HEAD'],
       { cwd: files.convertToOSPath(toolsDir), maxBuffer: SOURCE_FINGERPRINT_MAX_BYTES },
     );
     hash.update(diff);
+  } catch {
+    diagnostic('source-diff');
+    return null;
+  }
 
+  try {
     const { stdout: untracked } = await execFileAsync(
       'git',
       ['ls-files', '--others', '--exclude-standard', '-z'],
@@ -364,12 +378,14 @@ async function computeSourceFingerprint(toolsDir) {
       const stat = lstatOrNull(absolutePath);
       if (!isContainedPath(toolsDir, absolutePath) || !stat?.isFile() ||
           stat.isSymbolicLink() || stat.size > SOURCE_FINGERPRINT_MAX_BYTES) {
+        diagnostic('source-untracked-entry');
         return null;
       }
       hash.update(`${relativePath}\0`);
       hash.update(files.readFile(absolutePath));
     }
   } catch {
+    diagnostic('source-untracked');
     return null;
   }
   return hash.digest('hex').slice(0, 16);
