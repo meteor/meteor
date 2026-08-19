@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var os = require('os');
 
 var buildmessage = require('../utils/buildmessage.js');
 var compiler = require('./compiler.js');
@@ -6,6 +7,7 @@ var files = require('../fs/files');
 var isopackModule = require('./isopack.js');
 var watch = require('../fs/watch');
 var colonConverter = require('../utils/colon-converter.js');
+var meteorNpm = require('./meteor-npm.js');
 var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 
@@ -64,6 +66,8 @@ export class IsopackCache {
       files.mkdir_p(self.cacheDir);
     }
 
+    await self._prefetchNpmDependencies();
+
     var onStack = {};
     if (rootPackageNames) {
       for (const name of rootPackageNames) {
@@ -75,6 +79,35 @@ export class IsopackCache {
         await requestGarbageCollection();
       });
     }
+  }
+
+  async _prefetchNpmDependencies() {
+    const byDir = new Map();
+    const enqueue = (name, dir, deps) => {
+      if (! dir || _.isEmpty(deps) || byDir.has(dir)) return;
+      byDir.set(dir, { name, dir, deps });
+    };
+
+    for (const [, info] of Object.entries(this._packageMap._map)) {
+      if (info.kind !== 'local' || ! info.packageSource) continue;
+      const source = info.packageSource;
+      enqueue(source.name, source.npmCacheDirectory, source.npmDependencies);
+      enqueue(source.name, source.npmDevCacheDirectory, source.npmDevDependencies);
+    }
+
+    const tasks = Array.from(byDir.values());
+    const concurrency = Math.max(1, Math.min(os.cpus().length, 8, tasks.length));
+    let cursor = 0;
+    await Promise.all(Array.from({ length: concurrency }, async () => {
+      while (cursor < tasks.length) {
+        const { name, dir, deps } = tasks[cursor++];
+        try {
+          await meteorNpm.updateDependencies(name, dir, deps, true);
+        } catch (error) {
+          console.error(`[prefetch] ${name} failed:`, (error && error.stack) || error);
+        }
+      }
+    }));
   }
 
   async wipeCachedPackages(packages) {

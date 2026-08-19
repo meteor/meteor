@@ -1,11 +1,43 @@
 import selftest from '../tool-testing/selftest.js';
 import files from '../fs/files';
-import { installNpmModule } from '../isobuild/meteor-npm.js';
+import {
+  batchInstallNpmModules,
+  installNpmModule,
+} from '../isobuild/meteor-npm.js';
 
 const Sandbox = selftest.Sandbox;
 
 const MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
+
+selftest.define("npm - batch install invokes npm once", async () => {
+  const dir = files.mkdtemp();
+  const nodeModules = files.pathJoin(dir, "node_modules");
+  files.mkdir(nodeModules);
+  for (const name of ["one", "two"]) {
+    files.mkdir(files.pathJoin(nodeModules, name));
+    files.writeFile(
+      files.pathJoin(nodeModules, name, "package.json"),
+      JSON.stringify({ name, version: "1.0.0" }),
+    );
+  }
+
+  const childProcess = require("child_process");
+  const originalExecFile = childProcess.execFile;
+  const calls = [];
+  childProcess.execFile = (...args) => {
+    calls.push(args[1]);
+    args[args.length - 1](null, "", "");
+  };
+
+  try {
+    await batchInstallNpmModules({ one: "1.0.0", two: "2.0.0" }, dir);
+    selftest.expectEqual(calls, [["install", "one@1.0.0", "two@2.0.0"]]);
+  } finally {
+    childProcess.execFile = originalExecFile;
+    files.rm_recursive(dir);
+  }
+});
 
 selftest.define("npm", ["net"], async () => {
   const s = new Sandbox({ fakeMongo: true });
