@@ -99,13 +99,9 @@ selftest.define("npm", ["net"], async () => {
   for (const i of [1,2]) {
     run = s.run("--once", "--raw-logs");
     await run.tellMongo(MONGO_LISTENING);
-    if (i === 1) {
-      run.waitSecs(30);
-      // use match instead of read because on a built release we can
-      // also get an update message here.
-      await run.match(
-          "npm-test: updating npm dependencies -- meteor-test-executable...\n");
-    }
+    // get-ready prefetch may install this package before the Run starts, so
+    // installation logging is not a stable assertion here. The executable's
+    // output below remains the behavior this regression test protects.
     run.waitSecs(15);
     await run.match("null; From shell script\n");
     await run.expectExit(0);
