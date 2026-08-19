@@ -26,7 +26,10 @@ export async function prefetchNpmDependencies(packageMap, updateDependencies,
   }
   const tasks = Array.from(byDir.values());
   if (!tasks.length) return;
-  const concurrency = Math.max(1, Math.min(maxConcurrency, 8, tasks.length));
+  const concurrency = Math.max(
+    1,
+    Math.min(maxConcurrency, os.cpus().length, 8, tasks.length),
+  );
   let cursor = 0;
   await Promise.all(Array.from({ length: concurrency }, async () => {
     while (cursor < tasks.length) {
