@@ -687,3 +687,35 @@ selftest.define("compiler plugins - addAssets", async () => {
 
   await run.stop();
 });
+
+// Regression test for issue #10366: a lazily-compiled file (under imports/)
+// whose compilation fails used to have its error silently swallowed -- the
+// build succeeded and the only symptom was a runtime "Cannot find module"
+// error when the file was imported. Now the deferred compile error is surfaced
+// and fails the build when the file is actually imported, while unimported
+// broken lazy files remain harmless.
+selftest.define("compiler plugins - lazy compile error is reported", async () => {
+  const s = new Sandbox();
+  await s.init();
+
+  await s.createApp("myapp", "compiler-plugin-lazy-error");
+  s.cd("myapp");
+
+  // The default client/main.js imports the broken lazy file, so the deferred
+  // compile error must fail the build instead of being swallowed.
+  let run = s.run("--once");
+  run.waitSecs(60);
+  await run.matchErr("Build failed");
+  await run.matchErr("imports/broken.bork:1: BorkCompiler: simulated compile error");
+  // 254 is the exit code meteor uses under --once when the app cannot start
+  // (here, because the build failed).
+  await run.expectExit(254);
+
+  // If the broken lazy file is NOT imported, the build must still succeed:
+  // unimported broken lazy files stay harmless (the error stays deferred).
+  s.write("client/main.js", "require('/imports/ok.bork');\n");
+  run = s.run("--once");
+  run.waitSecs(60);
+  await run.match("BORK_APP_STARTED");
+  await run.expectExit(0);
+});

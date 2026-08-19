@@ -1,4 +1,3 @@
-import { parse as urlParse } from 'url';
 import {
   pathJoin,
   getCurrentToolsDir,
@@ -37,7 +36,7 @@ export function getBuildFarmUrl() {
 }
 
 export function getBuildFarmDomain() {
-  return urlParse(getBuildFarmUrl()).host;
+  return new URL(getBuildFarmUrl()).host;
 }
 
 // URL for the DDP interface to the package server, typically
@@ -48,7 +47,7 @@ export function getPackageServerUrl() {
 }
 
 export function getPackageServerDomain() {
-  return urlParse(getPackageServerUrl()).host;
+  return new URL(getPackageServerUrl()).host;
 }
 
 // URL for the DDP interface to Atmosphere (the community package
@@ -64,7 +63,7 @@ export function getPackageStatsServerUrl() {
 }
 
 export function getPackageStatsServerDomain() {
-  return urlParse(getPackageStatsServerUrl()).host;
+  return new URL(getPackageStatsServerUrl()).host;
 }
 
 // Note: this is NOT guaranteed to return a distinct prefix for every

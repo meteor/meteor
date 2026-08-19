@@ -11,6 +11,8 @@ on:
       - "packages/meteor-tool/**"
       - "npm-packages/meteor-rspack/**"
       - "tools/isobuild/**"
+      - "scripts/dev-bundle-tool-package.js"
+      - "tools/fs/safe-watcher.ts"
       - "tools/static-assets/skel-**"
       - ".github/workflows/e2e-tests.yml"
 
@@ -20,26 +22,15 @@ concurrency:
 
 env:
   TOOL_NODE_FLAGS: "--max_old_space_size=12288"
+  # Generated apps run Playwright in child processes whose HOME can differ
+  # from the Actions shell. Keep all browser installs in one explicit path.
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
-  SELF_HOSTED_MIN_FREE_GB: "20"
-  # actions/github-script is a JavaScript action, so this loader runs on the
-  # runner host even when the job later uses a container.
-  SELF_HOSTED_RUNNER_CLEANUP_LOADER: |
-    const { data } = await github.rest.repos.getContent({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      path: ".github/scripts/run-self-hosted-runner-cleanup.js",
-      ref: context.sha,
-    });
-    const loaderSource = data.content.replace(/\n/g, "");
-    await (await import(`data:text/javascript;base64,${loaderSource}`)).default({
-      github,
-      context,
-    });
+
 
 jobs:
   test:
@@ -48,7 +39,11 @@ jobs:
     timeout-minutes: 60
     container:
       image: node:22-bookworm
+      # --init runs tini as PID 1 so orphaned processes get reaped. Without it
+      # the container's PID 1 is `tail -f /dev/null`, which never calls wait(),
+      # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
       options: >-
+        --init
         --cpus 6
         --memory 16g
         --security-opt seccomp=unconfined
@@ -59,15 +54,19 @@ jobs:
       max-parallel: 4
       matrix:
         category:
+          - CLI
           - Angular
           - Babel
           - Blaze
           - Coffeescript
+          - Full Skeleton
+          - Tailwind Skeleton
           - Examples
           - Monorepo
           - Other
           - React
           - R.Router
+          - Regressions
           - Solid
           - Svelte
           - Typescript
@@ -76,16 +75,22 @@ jobs:
     steps:
       - name: Install Docker CLI
         run: |
+          # Install a current docker CLI from Docker's official repo. Debian
+          # bookworm's `docker.io` is 20.10 (API 1.41), which the self-hosted
+          # host daemon (Docker 29+, minimum API 1.44) rejects with
+          # "client version 1.41 is too old. Minimum supported API version is 1.44".
           apt-get update
-          apt-get install -y docker.io
+          apt-get install -y ca-certificates curl
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
+            > /etc/apt/sources.list.d/docker.list
+          apt-get update
+          apt-get install -y docker-ce-cli
           docker version
           docker ps
           docker system df
-
-      - name: Clean self-hosted runner
-        uses: actions/github-script@v7
-        with:
-          script: ${{ env.SELF_HOSTED_RUNNER_CLEANUP_LOADER }}
 
       - name: Checkout code
         uses: actions/checkout@v6
@@ -96,7 +101,7 @@ jobs:
         with:
           path: |
             /root/.npm
-            /root/.cache/ms-playwright
+            ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
             dev_bundle
             .babel-cache
             .meteor
@@ -106,17 +111,12 @@ jobs:
           restore-keys: |
             e2e-${{ runner.os }}-
 
-      - name: Install Playwright browsers
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium chromium-headless-shell
-
-      - name: Install Playwright system dependencies
-        run: npx playwright install-deps chromium
-
       - name: Install deps
         run: npm install
 
       - name: Install test deps
+        # This installs the browsers and system dependencies using the exact
+        # Playwright version declared by tools/e2e-tests/package.json.
         run: npm run install:e2e
 
       - name: Set NPM_LINK_RSPACK=false for release branches
@@ -134,7 +134,7 @@ jobs:
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
 
       - name: Clean up before retry
@@ -154,7 +154,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 20
+        timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
           METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
