@@ -34,7 +34,7 @@ selftest.define("npm - batch install invokes npm once", async () => {
 
   try {
     await batchInstallNpmModules({ one: "1.0.0", two: "2.0.0" }, dir);
-    selftest.expectEqual(calls, [["install", "one@1.0.0", "two@2.0.0"]]);
+    await selftest.expectEqual(calls, [["install", "one@1.0.0", "two@2.0.0"]]);
   } finally {
     childProcess.execFile = originalExecFile;
     files.rm_recursive(dir);
@@ -63,8 +63,8 @@ selftest.define("npm - prefetch deduplicates directories", async () => {
   }, { maxConcurrency: 2 });
   buildmessage.error('outside');
   });
-  selftest.expectEqual(calls.sort(), ['/a', '/b']);
-  selftest.expectEqual(maxInFlight, 2);
+  await selftest.expectEqual(calls.sort(), ['/a', '/b']);
+  await selftest.expectEqual(maxInFlight, 2);
   selftest.expectTrue(outer.hasMessages());
   selftest.expectTrue(outer.formatMessages().includes('outside'));
   selftest.expectFalse(outer.formatMessages().includes('expected'));
@@ -79,8 +79,8 @@ selftest.define("npm - subset package builds skip prefetch", async () => {
   await buildmessage.capture({ title: 'subset' }, async () => {
     await cache.buildLocalPackages(['one']);
   });
-  selftest.expectEqual(prefetched, 0);
-  selftest.expectEqual(loaded, ['one']);
+  await selftest.expectEqual(prefetched, 0);
+  await selftest.expectEqual(loaded, ['one']);
 });
 
 selftest.define("npm", ["net"], async () => {
