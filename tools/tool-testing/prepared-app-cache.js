@@ -21,9 +21,11 @@ const METADATA_FILE = '.meteor-selftest-cache-metadata.json';
 const SNAPSHOT_DIRECTORY = 'app';
 const CACHE_FORMAT_VERSION = 3;
 const PREPARE_TIMEOUT_MS = 15 * 60 * 1000;
+const STALE_ENTRY_LEASE_MS = PREPARE_TIMEOUT_MS + 5 * 60 * 1000;
 const SOURCE_FINGERPRINT_MAX_BYTES = 16 * 1024 * 1024;
 const STAGING_NAME_RE = /^\.staging-[0-9]+-[a-f0-9]{32}$/;
 const CACHE_KEY_RE = /^[a-f0-9]{24}$/;
+const QUARANTINE_NAME_RE = /^\.quarantine-[a-f0-9]{24}-[0-9]+-[a-f0-9]{32}$/;
 const SKIP_GUARD_EXTENSIONS = new Set(['.wt', '.wiredtiger', '.bson']);
 const PREPARE_ENV_NAMES = new Set([
   'BABEL_ENV',
@@ -588,6 +590,59 @@ async function removeClaimedCacheDirectory(root, cacheDir) {
   await files.rm_recursive(cacheDir);
 }
 
+function staleEntryCanBeReclaimed(paths) {
+  const cacheStat = lstatOrNull(paths.cacheDir);
+  if (!cacheStat?.isDirectory() || cacheStat.isSymbolicLink()) return false;
+
+  // A ready marker is written last, so a regular marker on an entry that
+  // failed validation cannot belong to an active warmer. An incomplete claim
+  // has no marker and is left alone until it exceeds the preparation lease.
+  const readyStat = lstatOrNull(paths.readyPath);
+  if (readyStat?.isFile() && !readyStat.isSymbolicLink()) return true;
+  return !readyStat && Date.now() - cacheStat.mtimeMs > STALE_ENTRY_LEASE_MS;
+}
+
+function makeQuarantinePath(root, cacheKey) {
+  const quarantineName = `.quarantine-${cacheKey}-${process.pid}-${
+    randomBytes(16).toString('hex')}`;
+  const quarantinePath = files.pathJoin(root, quarantineName);
+  return isDirectChild(root, quarantinePath, QUARANTINE_NAME_RE)
+    ? quarantinePath
+    : null;
+}
+
+async function removeQuarantineDirectory(root, quarantinePath) {
+  if (!isDirectChild(root, quarantinePath, QUARANTINE_NAME_RE)) return false;
+  const stat = lstatOrNull(quarantinePath);
+  if (!stat?.isDirectory() || stat.isSymbolicLink()) return false;
+  await files.rm_recursive(quarantinePath);
+  return true;
+}
+
+async function reclaimStaleCacheEntry(root, paths, cacheKey) {
+  if (!staleEntryCanBeReclaimed(paths)) return false;
+
+  // Rename first so no racing caller can mistake the old entry for its own,
+  // then delete only the controlled direct-child quarantine directory.
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const quarantinePath = makeQuarantinePath(root, cacheKey);
+    if (!quarantinePath || lstatOrNull(quarantinePath)) continue;
+    try {
+      await files.rename(paths.cacheDir, quarantinePath);
+    } catch (error) {
+      if (error?.code === 'ENOENT') return false;
+      if (error?.code === 'EEXIST' || error?.code === 'ENOTEMPTY') continue;
+      return false;
+    }
+    try {
+      return await removeQuarantineDirectory(root, quarantinePath);
+    } catch {
+      return false;
+    }
+  }
+  return false;
+}
+
 async function runPrepareApp({ execPath, cwd, env }) {
   await execFileAsync(files.convertToOSPath(execPath), ['--prepare-app'], {
     cwd: files.convertToOSPath(cwd),
@@ -603,16 +658,31 @@ async function runPrepareApp({ execPath, cwd, env }) {
 async function warmCacheEntry({
   root, cacheKey, templatePath, releaseName, upgradersToAppend, execPath, env,
   producerToolsDir, environmentFingerprint,
-}) {
+}, allowReclaim = true) {
   const paths = cacheEntryPaths(root, cacheKey);
   if (!paths) return null;
   try {
     files.mkdir(paths.cacheDir, 0o700);
   } catch (error) {
     if (error?.code !== 'EEXIST') throw error;
-    return validatedCacheEntry(
+    const entry = validatedCacheEntry(
       root, cacheKey, producerToolsDir, environmentFingerprint,
     );
+    if (entry || !allowReclaim ||
+        !await reclaimStaleCacheEntry(root, paths, cacheKey)) {
+      return entry;
+    }
+    return warmCacheEntry({
+      root,
+      cacheKey,
+      templatePath,
+      releaseName,
+      upgradersToAppend,
+      execPath,
+      env,
+      producerToolsDir,
+      environmentFingerprint,
+    }, false);
   }
 
   let preparationStagingDir = null;

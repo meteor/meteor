@@ -95,7 +95,7 @@ selftest.define('prepared-app-cache roundtrip', async function () {
       secondSandbox.execPath = files.pathJoin(secondSandbox.root, 'missing-meteor');
       await secondSandbox.createApp('app2', 'standard-app');
       const cacheEnv = secondSandbox._makeEnv();
-      const activeCacheEntry = await getPreparedAppCacheEntry({
+      let activeCacheEntry = await getPreparedAppCacheEntry({
         template: 'standard-app',
         execPath: secondSandbox.execPath,
         env: cacheEnv,
@@ -121,6 +121,15 @@ selftest.define('prepared-app-cache roundtrip', async function () {
       }
       selftest.expectTrue(sourceProbeDidThrow);
       await selftest.expectEqual(files.readdirNoDots(cacheRoot).length, 1);
+
+      files.writeFile(activeCacheEntry.metadataPath, 'corrupt metadata', 'utf8');
+      activeCacheEntry = await getPreparedAppCacheEntry({
+        template: 'standard-app',
+        execPath: firstSandbox.execPath,
+        env: cacheEnv,
+      });
+      selftest.expectTrue(Boolean(activeCacheEntry));
+      selftest.expectTrue(files.exists(activeCacheEntry.readyPath));
 
       const activeMetadata = JSON.parse(files.readFile(
         files.pathJoin(activeCacheEntry.root, activeCacheEntry.cacheKey, METADATA_FILE),
