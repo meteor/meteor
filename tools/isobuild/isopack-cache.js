@@ -12,7 +12,7 @@ var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 
 export async function prefetchNpmDependencies(packageMap, updateDependencies,
-  { maxConcurrency = 8 } = {}) {
+  { maxConcurrency = 8, cpuCount = os.cpus().length } = {}) {
   const byDir = new Map();
   const enqueue = (name, dir, deps) => {
     if (!dir || _.isEmpty(deps) || byDir.has(dir)) return;
@@ -28,7 +28,7 @@ export async function prefetchNpmDependencies(packageMap, updateDependencies,
   if (!tasks.length) return;
   const concurrency = Math.max(
     1,
-    Math.min(maxConcurrency, os.cpus().length, 8, tasks.length),
+    Math.min(maxConcurrency, cpuCount, 8, tasks.length),
   );
   let cursor = 0;
   await buildmessage.capture({ title: 'prefetch npm dependencies' }, async () => {

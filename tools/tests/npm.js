@@ -60,7 +60,7 @@ selftest.define("npm - prefetch deduplicates directories", async () => {
     await barrier; inFlight--;
     if (dir === '/b') buildmessage.error('expected');
     return false;
-  }, { maxConcurrency: 2 });
+  }, { maxConcurrency: 2, cpuCount: 2 });
   buildmessage.error('outside');
   });
   await selftest.expectEqual(calls.sort(), ['/a', '/b']);
