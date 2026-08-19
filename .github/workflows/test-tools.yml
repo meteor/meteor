@@ -9,7 +9,7 @@ on:
       - "meteor.bat"
       - ".github/workflows/test-tools.yml"
       - "scripts/ci/build-test-matrix.js"
-      - "scripts/ci/build-test-matrix.test.js"
+      - "scripts/ci/build-test-matrix.node-test.js"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -82,11 +82,13 @@ jobs:
         timeout-minutes: 65
         run: ./meteor --get-ready
 
+      - name: Validate test matrix generator
+        run: node --test scripts/ci/build-test-matrix.node-test.js
+
       - name: Discover tests and build matrix
         id: discover
         run: |
           ./meteor self-test \
-            --force-online \
             --list-json-out /tmp/tests.json \
             --exclude "$SELF_TEST_EXCLUDE" \
             --without-tag "custom-warehouse" \
@@ -241,7 +243,6 @@ jobs:
           mkdir -p tmp/results/junit
           ulimit -c unlimited
           ./meteor self-test \
-            --force-online \
             --file "$TEST_FILE_REGEX" \
             --retries "$METEOR_SELF_TEST_RETRIES" \
             --exclude "$SELF_TEST_EXCLUDE" \

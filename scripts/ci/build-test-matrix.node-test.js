@@ -17,6 +17,11 @@ function workflowStep(name) {
   return workflow.slice(start, next === -1 ? workflow.length : next);
 }
 
+test('setup runs the node test outside Jest discovery', () => {
+  const setup = workflowStep('Validate test matrix generator');
+  assert.match(setup, /node --test scripts\/ci\/build-test-matrix\.node-test\.js/);
+});
+
 test('groups tests by file and builds literal anchored selectors', () => {
   const matrix = buildMatrix([
     { file: 'ordinary', name: 'first test', tags: [] },
@@ -63,12 +68,12 @@ test('rejects malformed test records before they reach workflow expressions', ()
   );
 });
 
-test('discovery and matrix execution require the same online test set', () => {
+test('discovery and matrix execution keep the default offline policy', () => {
   const discovery = workflowStep('Discover tests and build matrix');
   const execution = workflowStep('Running self-test');
 
   for (const step of [discovery, execution]) {
-    assert.match(step, /--force-online/);
+    assert.doesNotMatch(step, /--force-online/);
     assert.match(step, /--exclude "\$SELF_TEST_EXCLUDE"/);
   }
 });
