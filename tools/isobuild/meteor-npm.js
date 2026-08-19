@@ -896,9 +896,13 @@ function checkNodeModulesForColons(dir) {
     cwd: files.pathJoin(dir, "node_modules"),
   });
   if (! paths.length) return;
+  const firstTen = paths.slice(0, 10);
+  if (paths.length > 10) {
+    firstTen.push(`... ${paths.length - 10} paths omitted.`);
+  }
   buildmessage.error(
-    "Some filenames in installed npm modules have invalid characters.\n" +
-    paths.slice(0, 10).join("\n"));
+    "Some filenames in installed npm modules have colons, ':', which won't work on Windows:\n" +
+    firstTen.join("\n"));
   throw new NpmFailure();
 }
 
