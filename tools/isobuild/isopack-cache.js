@@ -31,15 +31,15 @@ export async function prefetchNpmDependencies(packageMap, updateDependencies,
     Math.min(maxConcurrency, os.cpus().length, 8, tasks.length),
   );
   let cursor = 0;
-  await Promise.all(Array.from({ length: concurrency }, async () => {
-    while (cursor < tasks.length) {
-      const { name, dir, deps } = tasks[cursor++];
-      await buildmessage.capture({ title: `prefetch ${name}` }, async () => {
+  await buildmessage.capture({ title: 'prefetch npm dependencies' }, async () => {
+    await Promise.all(Array.from({ length: concurrency }, async () => {
+      while (cursor < tasks.length) {
+        const { name, dir, deps } = tasks[cursor++];
         try { await updateDependencies(name, dir, deps, true); }
         catch (error) {}
-      });
-    }
-  }));
+      }
+    }));
+  });
 }
 
 export class IsopackCache {

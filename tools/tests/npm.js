@@ -1,5 +1,6 @@
 import selftest from '../tool-testing/selftest.js';
 import files from '../fs/files';
+import buildmessage from '../utils/buildmessage.js';
 import {
   batchInstallNpmModules,
   installNpmModule,
@@ -49,13 +50,19 @@ selftest.define("npm - prefetch deduplicates directories", async () => {
   const calls = [];
   let inFlight = 0;
   let maxInFlight = 0;
+  let outer;
+  outer = await buildmessage.capture({ title: 'outer' }, async () => {
   await prefetchNpmDependencies(packageMap, async (name, dir) => {
     calls.push(dir); inFlight++; maxInFlight = Math.max(maxInFlight, inFlight);
     await Promise.resolve(); inFlight--;
-    if (dir === '/b') throw new Error('expected');
+    if (dir === '/b') buildmessage.error('expected');
+    return false;
   }, { maxConcurrency: 2 });
+  buildmessage.error('outside');
+  });
   selftest.expectEqual(calls.sort(), ['/a', '/b']);
   selftest.expectTrue(maxInFlight <= 2);
+  selftest.expectTrue(outer.hasMessages());
 });
 
 selftest.define("npm", ["net"], async () => {
