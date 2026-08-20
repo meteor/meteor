@@ -26,8 +26,8 @@ env:
   METEOR_MODERN: true
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
-  BENCHMARK_LABEL: p83-base-2
-  COMMIT_SHA: 5cafdbc20f5afe5ec82430700d046f7f6ce2b2fe
+  BENCHMARK_LABEL: p83-pr-2
+  COMMIT_SHA: 1d0a3f01744a750446425b4fa5bee1cc31c83e3e
 
 permissions:
   contents: read
