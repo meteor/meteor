@@ -1,0 +1,76 @@
+name: CI Prepare Benchmark
+
+# Temporary, manual-only benchmark for the CI performance PR series. It checks
+# out an exact commit and intentionally does not restore a cache so each run
+# measures the same cold `meteor --get-ready` path.
+run-name: Prepare benchmark ${{ inputs.benchmark_label }} (${{ inputs.commit_sha }})
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_sha:
+        description: Exact lowercase 40-character Git commit SHA to benchmark
+        required: true
+        type: string
+      benchmark_label:
+        description: Lowercase label used to identify this benchmark run
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-prepare-benchmark-${{ inputs.benchmark_label }}
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    name: Prepare Meteor (controlled cache miss)
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --init --user root
+    timeout-minutes: 75
+    steps:
+      - name: Validate benchmark inputs
+        env:
+          BENCHMARK_LABEL: ${{ inputs.benchmark_label }}
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "commit_sha must be a lowercase 40-character SHA" >&2
+            exit 1
+          }
+          [[ "$BENCHMARK_LABEL" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || {
+            echo "benchmark_label must be lowercase letters, digits, or hyphens" >&2
+            exit 1
+          }
+
+      - name: Checkout benchmark commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit_sha }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Prepare Meteor
+        timeout-minutes: 65
+        run: ./meteor --get-ready
+
+      - name: Record benchmark configuration
+        env:
+          BENCHMARK_LABEL: ${{ inputs.benchmark_label }}
+          COMMIT_SHA: ${{ inputs.commit_sha }}
+        run: |
+          {
+            echo "### Controlled cache-miss benchmark"
+            echo "- Label: \`$BENCHMARK_LABEL\`"
+            echo "- Commit: \`$COMMIT_SHA\`"
+            echo "- Cache restore: disabled"
+          } >> "$GITHUB_STEP_SUMMARY"
