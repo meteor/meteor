@@ -886,6 +886,10 @@ Adds packages to your Meteor project.
 ```bash
 meteor add [package1] [package2] ...
 meteor add package@version
+meteor add                    # interactive Atmosphere search
+meteor add --search <query>   # interactive search pre-filled with <query>
+meteor add <url|user/repo>    # clone and add a package from Git
+meteor add --from <url|user/repo>
 ```
 
 **Version Constraints:**
@@ -896,6 +900,30 @@ meteor add package@version
 **Notes:**
 - By convention, community packages include the maintainer's name (e.g., `iron:router`)
 - To remove a version constraint, run `meteor add package` without specifying a version
+
+### Interactive search {#meteor-add-interactive}
+
+Run `meteor add` without any package names to open an interactive search against the [Atmosphere](https://atmospherejs.com/) community package directory. Type to search Atmosphere, use the arrow keys to highlight a package, press Space to toggle, and press Enter to add the selected packages to your project.
+
+With no query typed, the picker shows two starter sections: a small curated **Core recommended** list of core Meteor packages (accounts, email, check, typescript, rspack, roles, react-meteor-data) followed by **Top community-maintained packages**, drawn once from Atmosphere via the `packages/mostUsed` subscription, filtered to community packages updated within the last 24 months, and capped at 10. Entries already present in the curated list are not repeated.
+
+Results are reordered to favor up-to-date packages. Anything published in the last 24 months keeps its original Atmosphere relevance ranking; older packages are pushed below them. Each row shows when its latest version was published (for example `4mo ago`, `3y ago`) so the freshness signal is visible at a glance.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the package description, latest version, last-updated date, maintainers, and git URL. The panel uses the same local catalog data as `meteor show` and dismisses on the next keypress.
+
+Pass `--search <query>` to skip straight to results for a given query:
+
+```bash
+meteor add --search blaze
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names and Git-clone options; pass either a search query, package names, or a Git source.
+:::
+
+::: tip Non-interactive search
+For scripted searches, use [`meteor search`](#meteorsearch), which prints results to stdout and accepts a regular expression.
+:::
 
 ### Clone a Package from a Git Repository
 
@@ -951,12 +979,30 @@ Removes a package previously added to your Meteor project.
 **Usage:**
 ```bash
 meteor remove [package1] [package2] ...
+meteor remove                    # interactive picker over installed packages
+meteor remove --search <query>   # picker pre-filtered by <query>
 ```
 
 **Notes:**
 - For a list of currently used packages, run `meteor list`
 - This removes the package entirely (to only remove version constraints, use [`meteor add`](#meteor-add))
 - Transitive dependencies aren't automatically downgraded unless necessary
+
+### Interactive picker {#meteor-remove-interactive}
+
+Run `meteor remove` without any package names to open an interactive picker listing the packages currently in `.meteor/packages`. Type to filter the list, use the arrow keys to highlight a package, press Space to toggle, and press Enter to remove the selected packages.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the description, latest version, last-updated date, and maintainers of the highlighted package, useful for double-checking what you're about to remove.
+
+Pass `--search <query>` to open the picker pre-filtered:
+
+```bash
+meteor remove --search accounts
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names; pass either a query or package names, not both.
+:::
 
 ## meteor list {#meteor-list}
 

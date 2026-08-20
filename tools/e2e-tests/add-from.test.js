@@ -119,6 +119,21 @@ describe('CLI / Add --from /', () => {
         await cleanupTempDir(tempDir);
       }
     });
+
+    it('--search rejects Git clone options', async () => {
+      const { tempDir } = await copyBaseApp(baseAppDir, 'vsearch');
+      try {
+        await expect(runMeteorCommand(
+          'add', [
+            '--search', 'accounts',
+            '--from', 'owner/repo',
+          ], tempDir,
+          { captureOutput: true, checkExitCode: true }
+        )).rejects.toThrow();
+      } finally {
+        await cleanupTempDir(tempDir);
+      }
+    });
   });
 
   describe('cloning', () => {

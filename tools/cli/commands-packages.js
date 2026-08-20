@@ -2188,6 +2188,7 @@ main.registerCommand({
   name: 'add',
   options: {
     "allow-incompatible-update": { type: Boolean },
+    "search": { type: String },
     "from": { type: String },
     "from-branch": { type: String },
     "from-dir": { type: String },
@@ -2209,7 +2210,18 @@ main.registerCommand({
     options.args = [];
   }
 
-  // --from flow: clone a package from a git repository
+  if (
+    options.search &&
+    (options.from || options['from-branch'] || options['from-dir'] ||
+      options.to || options.force)
+  ) {
+    Console.error(
+      'meteor add: cannot combine --search with Git clone options.'
+    );
+    return 1;
+  }
+
+  // --from flow: clone a package from a Git repository
   if (options['from-branch'] && !options.from) {
     Console.error('--from-branch requires --from to specify the source repository.');
     return 1;
@@ -2337,10 +2349,40 @@ main.registerCommand({
     options.args = [clonedPackageName];
   }
 
-  // When --from is not used, require at least one package name
-  if (!options.args || options.args.length === 0) {
-    Console.error('You must specify at least one package, or use --from to clone from git.');
-    throw new main.ShowUsage();
+  if (!options.from && (options.args.length === 0 || options.search)) {
+    if (options.args.length > 0 && options.search) {
+      Console.error(
+        "meteor add: cannot combine --search with positional package names."
+      );
+      return 1;
+    }
+    if (!Console.isInteractive() || !process.stdin.isTTY) {
+      Console.error(
+        options.search
+          ? "meteor add --search requires an interactive terminal."
+          : "meteor add requires at least one package name in non-interactive mode."
+      );
+      return 1;
+    }
+    var search = require('./commands-packages-search.js');
+    var picked;
+    try {
+      picked = await search.runInteractivePackageSearch({
+        initialQuery: options.search,
+        installed: search.readInstalledPackageNames(options.appDir)
+      });
+    } catch (err) {
+      if (err instanceof search.MeteorSearchAbortedError) {
+        return 1;
+      }
+      Console.error("Package search failed: " + (err && err.message ? err.message : err));
+      return 1;
+    }
+    if (!picked || picked.length === 0) {
+      Console.info("No packages selected.");
+      return 0;
+    }
+    options.args = picked;
   }
 
   var projectContext = new projectContextModule.ProjectContext({
@@ -2544,13 +2586,59 @@ main.registerCommand({
 main.registerCommand({
   name: 'remove',
   options: {
-    "allow-incompatible-update": { type: Boolean }
+    "allow-incompatible-update": { type: Boolean },
+    "search": { type: String }
   },
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
+  if (options.args.length === 0 || options.search) {
+    if (options.args.length > 0 && options.search) {
+      Console.error(
+        "meteor remove: cannot combine --search with positional package names."
+      );
+      return 1;
+    }
+    if (!Console.isInteractive() || !process.stdin.isTTY) {
+      Console.error(
+        options.search
+          ? "meteor remove --search requires an interactive terminal."
+          : "meteor remove requires at least one package name in non-interactive mode."
+      );
+      return 1;
+    }
+    var search = require('./commands-packages-search.js');
+    var removeSearch = require('./commands-packages-remove-search.js');
+    var installed = search.readInstalledPackageNames(options.appDir);
+    if (installed.size === 0) {
+      Console.info("No packages installed.");
+      return 0;
+    }
+    var picked;
+    try {
+      picked = await removeSearch.runInteractiveRemoveSelection({
+        installed: installed,
+        initialQuery: options.search
+      });
+    } catch (err) {
+      if (err instanceof search.MeteorSearchAbortedError) {
+        return 1;
+      }
+      Console.error(
+        "Package selection failed: "
+        + (err && err.message ? err.message : err)
+      );
+      return 1;
+    }
+    if (!picked || picked.length === 0) {
+      Console.info("No packages selected.");
+      return 0;
+    }
+    options.args = picked;
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
