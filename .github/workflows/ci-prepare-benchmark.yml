@@ -3,9 +3,11 @@ name: CI Prepare Benchmark
 # Temporary benchmark for the CI performance PR series. The GitHub Actions API
 # only dispatches manual workflows that already exist on the default branch, so
 # this benchmark is intentionally triggered by a change to this file on its
-# temporary branch. It checks out an exact commit and intentionally does not
-# restore a cache so each run measures the same cold `meteor --get-ready` path.
-run-name: CI prepare benchmark
+# temporary branch. This version executes the current Test Tools cache policies
+# against fixed commits, base first and candidate second, while avoiding a cache
+# save. A cache hit therefore exercises the same restore path as CI without
+# mutating the shared cache entries during a measurement.
+run-name: CI cache-restore benchmark (${{ github.sha }})
 
 on:
   push:
@@ -26,8 +28,9 @@ env:
   METEOR_MODERN: true
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
-  BENCHMARK_LABEL: p83-pr-3
-  COMMIT_SHA: 1d0a3f01744a750446425b4fa5bee1cc31c83e3e
+  BENCHMARK_LABEL: p82-pair-1
+  BASE_SHA: 5cafdbc20f5afe5ec82430700d046f7f6ce2b2fe
+  CANDIDATE_SHA: 73a60434dd368561eb58241e4e7444277b131498
 
 permissions:
   contents: read
@@ -37,8 +40,8 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  prepare:
-    name: Prepare Meteor (controlled cache miss)
+  base:
+    name: Base — Prepare Meteor (combined cache)
     runs-on: oss-vm
     container:
       image: meteor/circleci:2025.07.8-android-35-node-22
@@ -48,7 +51,7 @@ jobs:
       - name: Validate benchmark inputs
         env:
           BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
-          COMMIT_SHA: ${{ env.COMMIT_SHA }}
+          COMMIT_SHA: ${{ env.BASE_SHA }}
         shell: bash
         run: |
           set -euo pipefail
@@ -61,7 +64,7 @@ jobs:
             exit 1
           }
 
-      - name: Checkout benchmark commit
+      - name: Checkout base commit
         uses: actions/checkout@v4
         with:
           ref: ${{ env.COMMIT_SHA }}
@@ -71,6 +74,21 @@ jobs:
       - name: Expose globally-installed puppeteer to Node.js
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
+      - name: Restore combined cache
+        id: meteor-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
       - name: Prepare Meteor
         timeout-minutes: 65
         run: ./meteor --get-ready
@@ -78,11 +96,90 @@ jobs:
       - name: Record benchmark configuration
         env:
           BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
-          COMMIT_SHA: ${{ env.COMMIT_SHA }}
+          COMMIT_SHA: ${{ env.BASE_SHA }}
+          CACHE_HIT: ${{ steps.meteor-cache.outputs.cache-hit }}
         run: |
           {
-            echo "### Controlled cache-miss benchmark"
+            echo "### Controlled cache-restore benchmark: base"
             echo "- Label: \`$BENCHMARK_LABEL\`"
             echo "- Commit: \`$COMMIT_SHA\`"
-            echo "- Cache restore: disabled"
+            echo "- Cache hit: \`$CACHE_HIT\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  candidate:
+    name: PR #14682 — Prepare Meteor (split caches)
+    needs: base
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --init --user root
+    timeout-minutes: 75
+    steps:
+      - name: Validate benchmark inputs
+        env:
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.CANDIDATE_SHA }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "commit_sha must be a lowercase 40-character SHA" >&2
+            exit 1
+          }
+          [[ "$BENCHMARK_LABEL" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || {
+            echo "benchmark_label must be lowercase letters, digits, or hyphens" >&2
+            exit 1
+          }
+
+      - name: Checkout candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore dev bundle cache
+        id: dev-bundle-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json', 'tools/package-lock.json', 'tools/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-meteor-tools-
+            ${{ runner.os }}-node-24-meteor-
+
+      - name: Restore package npm cache
+        id: package-npm-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            packages/**/.npm
+          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/npm-shrinkwrap.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-pkg-npm-
+
+      - name: Prepare Meteor
+        timeout-minutes: 65
+        run: ./meteor --get-ready
+
+      - name: Record benchmark configuration
+        env:
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.CANDIDATE_SHA }}
+          DEV_BUNDLE_CACHE_HIT: ${{ steps.dev-bundle-cache.outputs.cache-hit }}
+          PACKAGE_NPM_CACHE_HIT: ${{ steps.package-npm-cache.outputs.cache-hit }}
+        run: |
+          {
+            echo "### Controlled cache-restore benchmark: PR #14682"
+            echo "- Label: \`$BENCHMARK_LABEL\`"
+            echo "- Commit: \`$COMMIT_SHA\`"
+            echo "- Dev bundle cache hit: \`$DEV_BUNDLE_CACHE_HIT\`"
+            echo "- Package npm cache hit: \`$PACKAGE_NPM_CACHE_HIT\`"
           } >> "$GITHUB_STEP_SUMMARY"
