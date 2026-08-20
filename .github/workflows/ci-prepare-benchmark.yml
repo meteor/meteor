@@ -1,27 +1,28 @@
 name: CI Prepare Benchmark
 
-# Temporary, manual-only benchmark for the CI performance PR series. It checks
-# out an exact commit and intentionally does not restore a cache so each run
-# measures the same cold `meteor --get-ready` path.
-run-name: Prepare benchmark ${{ inputs.benchmark_label }} (${{ inputs.commit_sha }})
+# Temporary benchmark for the CI performance PR series. The GitHub Actions API
+# only dispatches manual workflows that already exist on the default branch, so
+# this benchmark is intentionally triggered by a change to this file on its
+# temporary branch. It checks out an exact commit and intentionally does not
+# restore a cache so each run measures the same cold `meteor --get-ready` path.
+run-name: CI prepare benchmark
 
 on:
-  workflow_dispatch:
-    inputs:
-      commit_sha:
-        description: Exact lowercase 40-character Git commit SHA to benchmark
-        required: true
-        type: string
-      benchmark_label:
-        description: Lowercase label used to identify this benchmark run
-        required: true
-        type: string
+  push:
+    branches:
+      - codex/ci-benchmark-devel
+    paths:
+      - ".github/workflows/ci-prepare-benchmark.yml"
+
+env:
+  BENCHMARK_LABEL: p83-base-1
+  COMMIT_SHA: 5cafdbc20f5afe5ec82430700d046f7f6ce2b2fe
 
 permissions:
   contents: read
 
 concurrency:
-  group: ci-prepare-benchmark-${{ inputs.benchmark_label }}
+  group: ci-prepare-benchmark
   cancel-in-progress: false
 
 jobs:
@@ -35,8 +36,8 @@ jobs:
     steps:
       - name: Validate benchmark inputs
         env:
-          BENCHMARK_LABEL: ${{ inputs.benchmark_label }}
-          COMMIT_SHA: ${{ inputs.commit_sha }}
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.COMMIT_SHA }}
         shell: bash
         run: |
           set -euo pipefail
@@ -52,7 +53,7 @@ jobs:
       - name: Checkout benchmark commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.commit_sha }}
+          ref: ${{ env.COMMIT_SHA }}
           submodules: recursive
           persist-credentials: false
 
@@ -65,8 +66,8 @@ jobs:
 
       - name: Record benchmark configuration
         env:
-          BENCHMARK_LABEL: ${{ inputs.benchmark_label }}
-          COMMIT_SHA: ${{ inputs.commit_sha }}
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.COMMIT_SHA }}
         run: |
           {
             echo "### Controlled cache-miss benchmark"
