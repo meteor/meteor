@@ -4,9 +4,9 @@ name: CI Prepare Benchmark
 # only dispatches manual workflows that already exist on the default branch, so
 # this benchmark is intentionally triggered by a change to this file on its
 # temporary branch. This version executes the current Test Tools cache policies
-# against fixed commits, base first and candidate second, while avoiding a cache
-# save. A cache hit therefore exercises the same restore path as CI without
-# mutating the shared cache entries during a measurement.
+# against fixed commits, base first and candidate second. Its first run seeds
+# the caches within this branch's GitHub Actions cache scope; later runs are the
+# measured warm-cache samples and record the same cache-hit behavior as CI.
 run-name: CI cache-restore benchmark (${{ github.sha }})
 
 on:
@@ -28,7 +28,7 @@ env:
   METEOR_MODERN: true
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
-  BENCHMARK_LABEL: p82-pair-2
+  BENCHMARK_LABEL: p82-warmup
   BASE_SHA: 5cafdbc20f5afe5ec82430700d046f7f6ce2b2fe
   CANDIDATE_SHA: 73a60434dd368561eb58241e4e7444277b131498
 
@@ -76,7 +76,7 @@ jobs:
 
       - name: Restore combined cache
         id: meteor-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache@v4
         with:
           path: |
             ~/.npm
@@ -143,7 +143,7 @@ jobs:
 
       - name: Restore dev bundle cache
         id: dev-bundle-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache@v4
         with:
           path: |
             ~/.npm
@@ -157,7 +157,7 @@ jobs:
 
       - name: Restore package npm cache
         id: package-npm-cache
-        uses: actions/cache/restore@v4
+        uses: actions/cache@v4
         with:
           path: |
             packages/**/.npm
