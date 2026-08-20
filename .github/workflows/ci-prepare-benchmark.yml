@@ -15,6 +15,17 @@ on:
       - ".github/workflows/ci-prepare-benchmark.yml"
 
 env:
+  # Keep this benchmark aligned with the Test Tools setup job.
+  TIMEOUT_SCALE_FACTOR: 8
+  METEOR_SELF_TEST_RETRIES: 2
+  METEOR_HEADLESS: true
+  METEOR_PRETTY_OUTPUT: 0
+  METEOR_SAVE_TMPDIRS: 1
+  SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
+  SELF_TEST_TOOL_NODE_FLAGS: " "
+  METEOR_MODERN: true
+  CXX: g++-12
+  METEOR_ALLOW_SUPERUSER: 1
   BENCHMARK_LABEL: p83-base-1
   COMMIT_SHA: 5cafdbc20f5afe5ec82430700d046f7f6ce2b2fe
 
