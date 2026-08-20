@@ -12,7 +12,13 @@ var Profile = require('../tool-env/profile').Profile;
 import { requestGarbageCollection } from "../utils/gc.js";
 
 export async function prefetchNpmDependencies(packageMap, updateDependencies,
-  { maxConcurrency = 8, cpuCount = os.cpus().length } = {}) {
+  {
+    maxConcurrency = 8,
+    cpuCount = os.cpus().length,
+    platform = process.platform,
+  } = {}) {
+  if (platform === 'win32') return;
+
   const byDir = new Map();
   const enqueue = (name, dir, deps) => {
     if (!dir || _.isEmpty(deps) || byDir.has(dir)) return;

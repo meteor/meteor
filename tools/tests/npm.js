@@ -70,6 +70,26 @@ selftest.define("npm - prefetch deduplicates directories", async () => {
   selftest.expectFalse(outer.formatMessages().includes('expected'));
 });
 
+selftest.define("npm - prefetch skips speculative work on Windows", async () => {
+  const packageMap = { _map: {
+    first: {
+      kind: 'local',
+      packageSource: {
+        name: 'first',
+        npmCacheDirectory: '/a',
+        npmDependencies: { a: '1' },
+      },
+    },
+  }};
+  let calls = 0;
+
+  await prefetchNpmDependencies(packageMap, async () => {
+    calls += 1;
+  }, { platform: 'win32' });
+
+  await selftest.expectEqual(calls, 0);
+});
+
 selftest.define("npm - subset package builds skip prefetch", async () => {
   const cache = new IsopackCache({ packageMap: {}, tropohouse: null });
   let prefetched = 0;
