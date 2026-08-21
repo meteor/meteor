@@ -1,0 +1,192 @@
+name: CI npm Git cache benchmark
+
+# Temporary, controlled benchmark for PR #14681. It exercises the exact
+# Test Tools Group 6 self-test command at the base and candidate commits,
+# restoring the same combined cache policy used by that CI job.
+run-name: CI npm Git cache benchmark (${{ github.sha }})
+
+on:
+  push:
+    branches:
+      - codex/ci-benchmark-devel
+    paths:
+      - ".github/workflows/ci-npm-git-cache-benchmark.yml"
+
+env:
+  TIMEOUT_SCALE_FACTOR: 8
+  METEOR_SELF_TEST_RETRIES: 2
+  METEOR_HEADLESS: true
+  METEOR_PRETTY_OUTPUT: 0
+  METEOR_SAVE_TMPDIRS: 1
+  SELF_TEST_EXCLUDE: "add debugOnly and prodOnly packages"
+  SELF_TEST_TOOL_NODE_FLAGS: " "
+  METEOR_MODERN: true
+  CXX: g++-12
+  METEOR_ALLOW_SUPERUSER: 1
+  TEST_GROUP: "^mo[e-z]|^m[p-z]|^[n-o]"
+  BENCHMARK_LABEL: p81-pair-4
+  BASE_SHA: 5cafdbc20f5afe5ec82430700d046f7f6ce2b2fe
+  CANDIDATE_SHA: e15aa2cadfa19c2f9c1a19c677d2b4dc2264a4ae
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-npm-git-cache-benchmark
+  cancel-in-progress: false
+
+jobs:
+  base:
+    name: "Base — Test Group 6"
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --init --user root
+    timeout-minutes: 55
+    steps:
+      - name: Validate benchmark inputs
+        env:
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.BASE_SHA }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "commit_sha must be a lowercase 40-character SHA" >&2
+            exit 1
+          }
+          [[ "$BENCHMARK_LABEL" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || {
+            echo "benchmark_label must be lowercase letters, digits, or hyphens" >&2
+            exit 1
+          }
+
+      - name: Checkout base commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BASE_SHA }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore CI cache
+        id: meteor-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Running self-test (Test Group 6)
+        timeout-minutes: 55
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/6.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Record benchmark configuration
+        env:
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.BASE_SHA }}
+          CACHE_HIT: ${{ steps.meteor-cache.outputs.cache-hit }}
+        run: |
+          {
+            echo "### Controlled npm Git cache benchmark: base"
+            echo "- Label: \`$BENCHMARK_LABEL\`"
+            echo "- Commit: \`$COMMIT_SHA\`"
+            echo "- Cache hit: \`$CACHE_HIT\`"
+            echo "- Test Group: \`$TEST_GROUP\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  candidate:
+    name: "PR #14681 — Test Group 6"
+    needs: base
+    runs-on: oss-vm
+    container:
+      image: meteor/circleci:2025.07.8-android-35-node-22
+      options: --init --user root
+    timeout-minutes: 55
+    steps:
+      - name: Validate benchmark inputs
+        env:
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.CANDIDATE_SHA }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT_SHA" =~ ^[0-9a-f]{40}$ ]] || {
+            echo "commit_sha must be a lowercase 40-character SHA" >&2
+            exit 1
+          }
+          [[ "$BENCHMARK_LABEL" =~ ^[a-z0-9][a-z0-9-]{0,63}$ ]] || {
+            echo "benchmark_label must be lowercase letters, digits, or hyphens" >&2
+            exit 1
+          }
+
+      - name: Checkout candidate commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.CANDIDATE_SHA }}
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Expose globally-installed puppeteer to Node.js
+        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
+
+      - name: Restore CI cache
+        id: meteor-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            packages/**/.npm
+          key: ${{ runner.os }}-meteor-tools-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-meteor-tools-
+            ${{ runner.os }}-meteor-
+
+      - name: Running self-test (Test Group 6)
+        timeout-minutes: 55
+        run: |
+          mkdir -p tmp/results/junit
+          ulimit -c unlimited
+          echo "Test group pattern: $TEST_GROUP"
+          ./meteor self-test \
+            "$TEST_GROUP" \
+            --retries "$METEOR_SELF_TEST_RETRIES" \
+            --exclude "$SELF_TEST_EXCLUDE" \
+            --headless \
+            --junit ./tmp/results/junit/6.xml \
+            --without-tag "custom-warehouse"
+
+      - name: Record benchmark configuration
+        env:
+          BENCHMARK_LABEL: ${{ env.BENCHMARK_LABEL }}
+          COMMIT_SHA: ${{ env.CANDIDATE_SHA }}
+          CACHE_HIT: ${{ steps.meteor-cache.outputs.cache-hit }}
+        run: |
+          {
+            echo "### Controlled npm Git cache benchmark: PR #14681"
+            echo "- Label: \`$BENCHMARK_LABEL\`"
+            echo "- Commit: \`$COMMIT_SHA\`"
+            echo "- Cache hit: \`$CACHE_HIT\`"
+            echo "- Test Group: \`$TEST_GROUP\`"
+          } >> "$GITHUB_STEP_SUMMARY"
