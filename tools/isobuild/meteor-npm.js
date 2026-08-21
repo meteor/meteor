@@ -708,6 +708,7 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   } else if (canReuseNpmShrinkwrap(
     npmTree,
     minShrinkwrapTree,
+    resolvedShrinkwrapTree,
   )) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
@@ -805,15 +806,54 @@ export function declaredSpecMatchesInstalledVersion(declared, installed) {
   }
 }
 
+function gitRepositoryIdentity(spec) {
+  try {
+    const url = new URL(spec);
+    if (! ["git+https:", "git+ssh:"].includes(url.protocol) ||
+        ! url.hostname) {
+      return null;
+    }
+
+    let pathname = url.pathname;
+    while (pathname.endsWith("/")) {
+      pathname = pathname.slice(0, -1);
+    }
+    if (pathname.endsWith(".git")) {
+      pathname = pathname.slice(0, -4);
+    }
+    if (! pathname || pathname === "/") {
+      return null;
+    }
+
+    return `${url.hostname.toLowerCase()}:${url.port}:${pathname}${url.search}`;
+  } catch {
+    return null;
+  }
+}
+
 function declaredDependenciesMatchResolvedTree(
   declaredTree,
+  installedTree,
   resolvedTree,
 ) {
-  return isSubtreeOf(
-    declaredTree,
-    resolvedTree,
-    declaredSpecMatchesInstalledVersion,
-  );
+  if (declaredTree === installedTree) {
+    return true;
+  }
+
+  if (_.isObject(declaredTree)) {
+    return _.isObject(installedTree) && _.isObject(resolvedTree) &&
+      _.every(declaredTree, (value, key) =>
+        declaredDependenciesMatchResolvedTree(
+          value,
+          installedTree[key],
+          resolvedTree[key],
+        ));
+  }
+
+  const declaredRepository = gitRepositoryIdentity(declaredTree);
+  return declaredSpecMatchesInstalledVersion(declaredTree, installedTree) &&
+    declaredRepository !== null &&
+    declaredRepository === gitRepositoryIdentity(resolvedTree);
 }
 
 export function npmDependencyCacheIsCurrent(
@@ -823,12 +863,24 @@ export function npmDependencyCacheIsCurrent(
   resolvedInstalledTree = minInstalledTree,
   resolvedShrinkwrapTree = minShrinkwrapTree,
 ) {
-  return declaredDependenciesMatchResolvedTree(npmTree, minInstalledTree) &&
+  return declaredDependenciesMatchResolvedTree(
+    npmTree,
+    minInstalledTree,
+    resolvedInstalledTree,
+  ) &&
     isSubtreeOf(resolvedShrinkwrapTree, resolvedInstalledTree);
 }
 
-export function canReuseNpmShrinkwrap(npmTree, minShrinkwrapTree) {
-  return declaredDependenciesMatchResolvedTree(npmTree, minShrinkwrapTree);
+export function canReuseNpmShrinkwrap(
+  npmTree,
+  minShrinkwrapTree,
+  resolvedShrinkwrapTree = minShrinkwrapTree,
+) {
+  return declaredDependenciesMatchResolvedTree(
+    npmTree,
+    minShrinkwrapTree,
+    resolvedShrinkwrapTree,
+  );
 }
 
 function isSubtreeOf(subsetTree, supersetTree, predicate) {

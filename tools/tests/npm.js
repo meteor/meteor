@@ -43,6 +43,28 @@ selftest.define("npm - git dependency cache decisions", () => {
       },
     },
   };
+  const differentRepositoryTree = {
+    dependencies: {
+      "uWebSockets.js": {
+        version:
+          "git+https://github.com/uNetworking/different-uWebSockets.js.git#v20.66.0",
+      },
+    },
+  };
+  const pathlessRepositoryTree = {
+    dependencies: {
+      "uWebSockets.js": {
+        version: "git+https://github.com#v20.66.0",
+      },
+    },
+  };
+  const pathlessResolvedSourceTree = {
+    dependencies: {
+      "uWebSockets.js": {
+        version: "git+ssh://git@github.com#0123456789abcdef",
+      },
+    },
+  };
 
   selftest.expectTrue(declaredSpecMatchesInstalledVersion(
     "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0",
@@ -87,9 +109,34 @@ selftest.define("npm - git dependency cache decisions", () => {
     sameSourceTree,
     differentSourceTree,
   ));
+  selftest.expectFalse(npmDependencyCacheIsCurrent(
+    differentRepositoryTree,
+    resolvedTree,
+    resolvedTree,
+    sameSourceTree,
+    sameSourceTree,
+  ));
+  selftest.expectFalse(npmDependencyCacheIsCurrent(
+    pathlessRepositoryTree,
+    resolvedTree,
+    resolvedTree,
+    pathlessResolvedSourceTree,
+    pathlessResolvedSourceTree,
+  ));
   selftest.expectTrue(canReuseNpmShrinkwrap(
     declaredTree,
     resolvedTree,
+    sameSourceTree,
+  ));
+  selftest.expectFalse(canReuseNpmShrinkwrap(
+    differentRepositoryTree,
+    resolvedTree,
+    sameSourceTree,
+  ));
+  selftest.expectFalse(canReuseNpmShrinkwrap(
+    pathlessRepositoryTree,
+    resolvedTree,
+    pathlessResolvedSourceTree,
   ));
   const malformedDeclaredTree = {
     dependencies: {
