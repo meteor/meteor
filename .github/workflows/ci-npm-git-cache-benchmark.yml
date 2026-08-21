@@ -24,7 +24,7 @@ env:
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
   TEST_GROUP: "^mo[e-z]|^m[p-z]|^[n-o]"
-  BENCHMARK_LABEL: p81-pair-4
+  BENCHMARK_LABEL: p81-pair-5
   BASE_SHA: 5cafdbc20f5afe5ec82430700d046f7f6ce2b2fe
   CANDIDATE_SHA: e15aa2cadfa19c2f9c1a19c677d2b4dc2264a4ae
 
