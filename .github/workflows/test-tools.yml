@@ -1,4 +1,5 @@
 name: Test Tools
+# Temporary controlled benchmark trigger: base-2
 
 on:
   pull_request:
