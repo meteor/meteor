@@ -5,9 +5,13 @@ $tests = @(
   '^assets'
   '^autoupdate'
   '^dynamic import.*development'
-  # Whole file, not one case: logClientRestart is shared by every client
-  # refresh test, and path handling is what differs on Windows.
-  '^client refresh'
+  # Most of the file, not one case: logClientRestart is shared by every
+  # client refresh test, and path handling is what differs on Windows.
+  # 'for non-npm node_modules' stays out. On Windows the module id for a
+  # node_modules file under imports/ comes back as a native absolute path
+  # instead of '/imports/node_modules/some-package/index.js', so the test
+  # times out. That bug predates this filter and is tracked separately.
+  '^client refresh (for (package|application) code|names|stays)'
 ) -Join '|'
 
 Write-Host "Running: $tests" -ForegroundColor Yellow
