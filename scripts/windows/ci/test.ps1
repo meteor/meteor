@@ -5,7 +5,9 @@ $tests = @(
   '^assets'
   '^autoupdate'
   '^dynamic import.*development'
-  'client refresh for application code'
+  # Whole file, not one case: logClientRestart is shared by every client
+  # refresh test, and path handling is what differs on Windows.
+  '^client refresh'
 ) -Join '|'
 
 Write-Host "Running: $tests" -ForegroundColor Yellow

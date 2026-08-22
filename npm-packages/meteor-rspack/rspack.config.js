@@ -936,6 +936,13 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       statsOverrided,
       compilationCount,
       isRebuild,
+      // Which source files caused this rebuild, so Meteor can name them in the
+      // "Client modified -- refreshing" line. A Set cannot survive
+      // JSON.stringify, and the payload is one console line, so send a capped
+      // array. Undefined outside watch mode, and cleared when watching stops.
+      ...(isRebuild && compiler?.modifiedFiles && {
+        modifiedFiles: Array.from(compiler.modifiedFiles).slice(0, 10),
+      }),
       ...(!isRebuild && compiler && {
         delegatedExtensions: extractDelegatedExtensions(stats, compiler),
       }),

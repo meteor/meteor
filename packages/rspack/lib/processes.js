@@ -77,6 +77,23 @@ import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
 const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
 const RSPACK_UNSET_ENV = ['METEOR_IGNORE'];
 
+// Renders the rebuild's source files for the "Client modified -- refreshing"
+// line. Rspack reports absolute paths; show them app-relative so they read the
+// same as the classic watcher's. Returns undefined when rspack sent nothing,
+// which keeps the message bare rather than printing an empty bracket.
+function formatChangedFiles(modifiedFiles) {
+  if (!Array.isArray(modifiedFiles) || modifiedFiles.length === 0) {
+    return undefined;
+  }
+  const appDir = getMeteorAppDir();
+  const relative = modifiedFiles.map((filePath) =>
+    appDir && filePath.startsWith(appDir)
+      ? filePath.slice(appDir.length).replace(/^[\\/]+/, "")
+      : filePath
+  );
+  return relative.join(", ");
+}
+
 /**
  * Builds the environment passed to Rspack child processes. METEOR_IGNORE is
  * consumed by meteor-tool, not Rspack, so it is omitted here and explicitly
@@ -566,7 +583,9 @@ export function startRspackClientServe(options = {}) {
             config?.isRebuild
           ) {
             getRunLog()?.logClientRestart(
-              "[rspack-hmr] " + (config?.name || "")
+              shouldLogVerbose()
+                ? formatChangedFiles(config?.modifiedFiles)
+                : undefined
             );
           }
         }

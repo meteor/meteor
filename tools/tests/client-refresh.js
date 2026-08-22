@@ -45,6 +45,64 @@ selftest.define("client refresh for non-npm node_modules", () => testHelper({
   },
 }));
 
+selftest.define("client refresh names the changed file when verbose", async () => {
+  const s = new selftest.Sandbox();
+  await s.init();
+
+  await s.createApp("myapp", "client-refresh");
+  s.cd("myapp");
+
+  // METEOR_PROFILE is one of the two switches runLog.logClientRestart honours;
+  // the other is meteor.verbose / meteor.modern.verbose in package.json.
+  s.set("METEOR_PROFILE", "1");
+
+  const run = s.run();
+  await run.match("Started proxy");
+  run.waitSecs(30);
+
+  await run.match("/imports/both.js 0");
+  await run.match("/server/main.js 0");
+
+  // The point of the flag: say which file caused the refresh, not just that one
+  // happened. The watcher reports an absolute path, so match on the tail.
+  increment(s, "client/main.js");
+  await run.match(/Client modified -- refreshing.*client\/main\.js/);
+
+  await run.stop();
+});
+
+selftest.define("client refresh stays quiet without a verbose switch", async () => {
+  const s = new selftest.Sandbox();
+  await s.init();
+
+  await s.createApp("myapp", "client-refresh");
+  s.cd("myapp");
+
+  // Must be unset, not "0": the repo reads METEOR_PROFILE with `!!`, so the
+  // string "0" is truthy and would switch verbose ON. See profile.ts and
+  // isMeteorAppProfile() in packages/tools-core/lib/meteor.js.
+  s.unset("METEOR_PROFILE");
+
+  const run = s.run();
+  await run.match("Started proxy");
+  run.waitSecs(30);
+
+  await run.match("/imports/both.js 0");
+  await run.match("/server/main.js 0");
+
+  // Default feedback must stay minimal: the bare line, no path appended. Guards
+  // the default that nachocodoner asked us to protect.
+  increment(s, "client/main.js");
+  await run.match("Client modified -- refreshing");
+  selftest.expectFalse(
+    /Client modified -- refreshing.*client\/main\.js/.test(
+      run.getMatcherFullBuffer()
+    )
+  );
+
+  await run.stop();
+});
+
 async function testHelper(pathsAndIds) {
   const s = new selftest.Sandbox();
   await s.init();

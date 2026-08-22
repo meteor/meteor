@@ -1,5 +1,6 @@
 var Console = require('../console/console.js').Console;
 var fiberHelpers = require('../utils/fiber-helpers.js');
+var getMeteorConfig = require('../tool-env/meteor-config.js').getMeteorConfig;
 
 // runLog is primarily used by the parts of the tool which run apps locally. It
 // writes to standard output (and standard error, if rawLogs is set), and allows
@@ -48,6 +49,14 @@ var RunLog = function () {
   // length.
   self.temporaryMessageLength = null;
 };
+
+// True when the app opts into verbose build feedback, via METEOR_PROFILE or
+// `meteor.verbose` / `meteor.modern.verbose` in package.json. meteor-config.js
+// normalises both package.json spellings onto `modern.verbose`.
+function isVerboseLoggingEnabled() {
+  return !!process.env.METEOR_PROFILE ||
+    !!getMeteorConfig()?.modern?.verbose;
+}
 
 Object.assign(RunLog.prototype, {
   _record: function (msg) {
@@ -187,7 +196,10 @@ Object.assign(RunLog.prototype, {
     }
 
     var message = "=> Client modified -- refreshing";
-    if (changedPath && Console.verbose) {
+    // Not gated on `--verbose`: that flag drops the whole log threshold, so it
+    // already floods. This mirrors shouldLogVerbose() in
+    // packages/rspack/lib/logging.js so both bundler paths honour one switch.
+    if (changedPath && isVerboseLoggingEnabled()) {
       message += " [" + changedPath + "]";
     }
     if (self.consecutiveClientRestartMessages > 1) {
