@@ -483,11 +483,17 @@ export function testMeteorRspackBundler(options) {
         // path used to report its compiler name here, which is a constant and
         // identical on every rebuild, so it never told you what you touched.
         // Verbose output is already on: beforeAll sets meteor.modern.verbose.
+        //
+        // Match the base name, not filePaths.client. Meteor prints the path
+        // relative to the app, while filePaths.client is relative to the repo
+        // root, and the two differ in a monorepo: 'app/client/main.jsx' here
+        // versus 'client/main.jsx' in the output.
         if (verbose) {
+          const changedFileName = filePaths.client.split("/").pop();
           await waitForMeteorOutput(
             result.outputLines,
             new RegExp(
-              `Client modified -- refreshing.*${escapeForRegExp(filePaths.client)}`
+              `Client modified -- refreshing.*${escapeForRegExp(changedFileName)}`
             )
           );
         }
