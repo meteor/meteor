@@ -254,6 +254,7 @@ Minimal top-level await fixture.
 |----------------|-------|
 | `meteor test --full-app --once` waits for macrotask top-level await before running server app tests | Test once |
 | Exit-code-zero `0 passing` regression is rejected by explicit `1 passing` assertion | Test once |
+| Absolute project paths containing a `private` segment still discover eager tests ([#14688](https://github.com/meteor/meteor/issues/14688)) | Test once |
 
 ---
 
