@@ -4,6 +4,10 @@ import os from 'os';
 
 import { runMeteorCommand, cleanupTempDir } from './helpers';
 
+const METEOR_EXAMPLES_BRANCH = process.env.METEOR_EXAMPLES_BRANCH || 'main';
+const METEOR_EXAMPLES_TREE_URL =
+  `https://github.com/meteor/examples/tree/${encodeURIComponent(METEOR_EXAMPLES_BRANCH)}`;
+
 function tempApp(prefix) {
   const suffix = Math.random().toString(36).substring(2, 10);
   const appName = `meteortest-${prefix}-${suffix}`;
@@ -32,6 +36,23 @@ describe('Examples /', () => {
     }
   });
 
+  it('meteor create --example uses METEOR_EXAMPLES_BRANCH for internal examples', async () => {
+    const { appName, tempDir } = tempApp('example-branch');
+    try {
+      await runMeteorCommand(
+        'create', ['--example', 'tic-tac-toe', appName], os.tmpdir(),
+        {
+          checkExitCode: true,
+          env: { METEOR_EXAMPLES_BRANCH: 'codex/typescript-7-examples' },
+        }
+      );
+      expect(fs.readFileSync(path.join(tempDir, '.meteor', 'packages'), 'utf8'))
+        .toContain('typescript@7.0.2');
+    } finally {
+      await cleanupTempDir(tempDir);
+    }
+  });
+
   it('meteor create infers --from for an external URL', async () => {
     const { appName, tempDir } = tempApp('from');
     try {
@@ -51,7 +72,7 @@ describe('Examples /', () => {
       await runMeteorCommand(
         'create', [
           '--from', 'https://github.com/meteor/examples',
-          '--from-branch', 'main',
+          '--from-branch', METEOR_EXAMPLES_BRANCH,
           '--from-dir', 'parties',
           appName
         ], os.tmpdir(),
@@ -101,7 +122,7 @@ describe('Examples /', () => {
     try {
       await runMeteorCommand(
         'create', [
-          '--from', 'https://github.com/meteor/examples/tree/main/parties',
+          '--from', `${METEOR_EXAMPLES_TREE_URL}/parties`,
           appName
         ], os.tmpdir(),
         { checkExitCode: true }
