@@ -17,12 +17,12 @@
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^1.1.0-beta.35",
+    "@meteorjs/rspack": "^2.2.0-beta.0",
     "@rsdoctor/rspack-plugin": "^1.5.7",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
-    "@swc/core": "^1.15.18",
     "@rspack/plugin-react-refresh": "^1.4.3",
+    "@swc/core": "^1.15.18",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/meteor": "^2.9.9",
     "@types/mocha": "^8.2.3",
@@ -33,8 +33,8 @@
     "postcss-loader": "^8.1.1",
     "react-refresh": "^0.17.0",
     "tailwindcss": "^4.1.12",
-    "ts-checker-rspack-plugin": "^1.1.5",
-    "typescript": "^5.9.3"
+    "ts-checker-rspack-plugin": "^1.5.2",
+    "typescript": "^7.0.2"
   },
   "meteor": {
     "mainModule": {

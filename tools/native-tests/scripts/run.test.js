@@ -1,6 +1,6 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { parseArgs } = require("./run");
+const { parseArgs, updatedJunitPath } = require("./run");
 
 test("parses --platform=android", () => {
   const args = parseArgs(["--platform=android"]);
@@ -25,4 +25,11 @@ test("throws on missing --platform", () => {
 
 test("throws on invalid platform value", () => {
   assert.throws(() => parseArgs(["--platform=windows"]), /unsupported platform/i);
+});
+
+test("uses a distinct JUnit artifact for updated HCP assertions", () => {
+  assert.equal(
+    updatedJunitPath("/tmp/junit/ios-launch.xml"),
+    "/tmp/junit/ios-hcp-updated.xml"
+  );
 });

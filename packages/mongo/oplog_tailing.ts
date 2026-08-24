@@ -2,6 +2,8 @@ import isEmpty from 'lodash.isempty';
 import { Meteor } from 'meteor/meteor';
 import { CursorDescription } from './cursor_description';
 import { MongoConnection } from './mongo_connection';
+import { isIgnorableAdminCommand } from './oplog_admin_command';
+import { replicaSetOplogError } from './oplog_replica_set_error';
 
 import { NpmModuleMongodb } from "meteor/npm-mongo";
 const { Long } = NpmModuleMongodb;
@@ -325,8 +327,9 @@ export class OplogHandle {
         .admin()
         .command({ ismaster: 1 });
 
-      if (!(isMasterDoc && isMasterDoc.setName)) {
-        throw new Error("$MONGO_OPLOG_URL must be set to the 'local' database of a Mongo replica set");
+      const oplogError = replicaSetOplogError(isMasterDoc);
+      if (oplogError) {
+        throw new Error(oplogError);
       }
 
       const lastOplogEntry = await this._oplogLastEntryConnection.findOneAsync(
@@ -437,7 +440,10 @@ export function idForOp(op: OplogEntry): string {
   }
 }
 
-async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
+// Exported so the admin.$cmd handling can be exercised end-to-end in tests
+// (see tests/oplog_admin_command_tests.js); not part of the package's public
+// API.
+export async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
   if (doc.ns === "admin.$cmd") {
     if (doc.o.applyOps) {
       // This was a successful transaction, so we need to apply the
@@ -456,6 +462,10 @@ async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
         }
         await handleDoc(handle, op);
       }
+      return;
+    }
+    if (isIgnorableAdminCommand(doc)) {
+      // No db-qualified namespace to map to a collection; safe to skip.
       return;
     }
     throw new Error("Unknown command " + JSON.stringify(doc));

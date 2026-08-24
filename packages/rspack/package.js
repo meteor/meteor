@@ -1,12 +1,13 @@
 Package.describe({
   summary: "Integrate rspack into the Meteor lifecycle to run the bundler independently",
-  version: '1.1.0',
+  version: '1.3.0-beta352.0',
 });
 
 Package.registerBuildPlugin({
   name: 'rspack',
   sources: [
     'lib/constants.js',
+    'lib/file-extensions.js',
     'lib/dependencies.js',
     'lib/build-context.js',
     'lib/processes.js',
@@ -17,7 +18,10 @@ Package.registerBuildPlugin({
 });
 
 Npm.devDepends({
-  'http-proxy-middleware': '3.0.5',
+  // Maintained, drop-in replacement for the unmaintained http-proxy that
+  // http-proxy-middleware relied on, which used the deprecated util._extend and
+  // legacy url.parse APIs (meteor/meteor#13491).
+  'http-proxy-3': '1.22.0',
 });
 
 Package.onUse(function (api) {
@@ -29,5 +33,5 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   api.use(['tinytest', 'ecmascript', 'rspack']);
-  api.addFiles(['rspack_tests.js']);
+  api.mainModule('rspack_tests.js', 'server');
 });
