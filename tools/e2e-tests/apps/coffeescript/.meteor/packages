@@ -19,5 +19,5 @@ hot-module-replacement  # Update client in development without reloading the pag
 
 
 static-html             # Define static page content in .html files
-react-meteor-data       # React higher-order component for reactively tracking Meteor data
+react-meteor-data@4.1.0-beta.1 # React higher-order component for reactively tracking Meteor data
 coffeescript            # Enable CoffeeScript syntax in .coffee files
