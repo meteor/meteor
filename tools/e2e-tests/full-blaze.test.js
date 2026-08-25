@@ -10,7 +10,7 @@ describe('Full Blaze App Bundling /', () => {
     filePaths: { 
       client: 'client/main.js', 
       server: 'server/main.js',
-      test: 'imports/api/links/methods.tests.js'
+      test: 'tests/main.js'
     },
     customAssertions: {
       afterRun: async ({ result }) => {

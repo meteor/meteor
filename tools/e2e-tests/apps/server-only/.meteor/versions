@@ -61,6 +61,6 @@ static-html@1.5.0
 static-html-tools@1.0.0
 tools-core@1.0.0
 tracker@1.3.4
-typescript@5.9.3
+typescript@7.0.2
 webapp@2.1.0
 webapp-hashing@1.1.2
