@@ -81,17 +81,14 @@ or locally:
 ```
 :::
 
-To get types for Meteor core packages (`meteor/meteor`, `meteor/mongo`, …)
-working in your editor, add the community [`zodern:types`](https://github.com/zodern/meteor-types)
-package:
-
-```bash
-meteor add zodern:types
-```
+Types for Meteor core packages (`meteor/meteor`, `meteor/mongo`, …) are
+generated automatically — Meteor writes type declarations for all installed
+packages to `.meteor/types/` on every `meteor run` or `meteor build`, no
+extra package required.
 
 For a full walkthrough of enabling core-package types — including the
-`tsconfig.json` `paths` setup and running `meteor lint` to generate the
-type definitions — see the [Using core types](/cli/using-core-types) guide.
+`tsconfig.json` `paths` setup and the `meteor types` command — see the
+[Using core types](/cli/using-core-types) guide.
 
 ## `tsconfig.json`
 
@@ -99,7 +96,7 @@ The plugin **ignores `tsconfig.json`** when compiling — compilation
 options are kept intentionally simple. You should still keep a
 `tsconfig.json` in your project root to configure your editor and the
 standalone `tsc` type checker. A typical starting point that also wires up
-Meteor core-package types (via `zodern:types`) looks like:
+the auto-generated Meteor package types looks like:
 
 ```json [tsconfig.json]
 {
@@ -109,9 +106,12 @@ Meteor core-package types (via `zodern:types`) looks like:
     "moduleResolution": "node",
     "strict": true,
     "esModuleInterop": true,
-    "preserveSymlinks": true,
+    "skipLibCheck": true,
     "paths": {
-      "meteor/*": [".meteor/local/types/packages.d.ts"]
+      "meteor/*": [
+        "./.meteor/types/packages.d.ts",
+        "./node_modules/@types/meteor/*"
+      ]
     }
   }
 }

@@ -186,20 +186,29 @@ It is necessary to configure the TypeScript compiler with a `tsconfig.json` file
     "noFallthroughCasesInSwitch": false,
     "baseUrl": ".",
     "paths": {
-      "/*": ["*"]
+      "/*": ["*"],
+      "meteor/*": [
+        "./.meteor/types/packages.d.ts",
+        "./node_modules/@types/meteor/*"
+      ]
     },
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "types": ["node", "mocha"],
     "esModuleInterop": true,
-    "preserveSymlinks": true
+    "skipLibCheck": true
   },
   "exclude": [
-    "./.meteor/**",
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
     "./packages/**"
   ]
 }
 ```
+
+The `meteor/*` paths entry points at the type declarations Meteor generates
+automatically in `.meteor/types/` — see the
+[Using core types](/cli/using-core-types) guide for details.
 
 If you want to add TypeScript from the point of project creation, you can run the create command with the --typescript flag:
 

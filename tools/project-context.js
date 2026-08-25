@@ -1,4 +1,5 @@
 import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config";
+import { generateTypes } from './isobuild/types-generator.js';
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -137,7 +138,8 @@ var STAGE = {
   INITIALIZE_CATALOG: '_resolveConstraints',
   RESOLVE_CONSTRAINTS: '_downloadMissingPackages',
   DOWNLOAD_MISSING_PACKAGES: '_buildLocalPackages',
-  BUILD_LOCAL_PACKAGES: '_saveChangedMetadata',
+  BUILD_LOCAL_PACKAGES: '_generateTypes',
+  GENERATE_TYPES: '_saveChangedMetadata',
   SAVE_CHANGED_METADATA: 'DONE'
 };
 
@@ -415,6 +417,22 @@ Object.assign(ProjectContext.prototype, {
 
   getMeteorShellDirectory: function(projectDir) {
     return this.getProjectLocalDirectory("shell");
+  },
+
+  // Force the given local package to be recompiled by the next
+  // _buildLocalPackages, wiping its cached isopack (and plugin cache)
+  // first.  Used by `meteor publish` after the tsc types rewrite mutates a
+  // package's in-memory PackageSource: nothing in the on-disk isopack
+  // buildinfo reflects that rewrite, so the ordinary up-to-date check
+  // would otherwise reuse a stale isopack built from the pre-rewrite
+  // source.
+  forceRebuildPackage: function (packageName) {
+    var self = this;
+    if (self._forceRebuildPackages === true) {
+      return;
+    }
+    self._forceRebuildPackages =
+      (self._forceRebuildPackages || []).concat([packageName]);
   },
 
   // You can call this manually (that is, the public version without
@@ -1028,6 +1046,60 @@ Object.assign(ProjectContext.prototype, {
       return await self.isopackCache.buildLocalPackages();
     });
     self._completedStage = STAGE.BUILD_LOCAL_PACKAGES;
+  }),
+
+  _generateTypes: Profile('_generateTypes', async function () {
+    var self = this;
+    buildmessage.assertInCapture();
+
+    self.typesGenerationFailed = false;
+    self.typesGenerationSkipped = false;
+
+    // Generate types for any project that has a tsconfig.json OR a
+    // jsconfig.json.  JavaScript projects with a jsconfig.json get the
+    // same Meteor-import IntelliSense as TypeScript projects.
+    // Each check is a single stat() call, so apps without either file
+    // have zero overhead.
+    const hasTsConfig = files.exists(files.pathJoin(self.projectDir, 'tsconfig.json'));
+    const hasJsConfig = files.exists(files.pathJoin(self.projectDir, 'jsconfig.json'));
+
+    if ((hasTsConfig || hasJsConfig) && self.isopackCache && self.packageMap) {
+      if (self.projectConstraintsFile.getConstraint('zodern:types')) {
+        // Running both generators would rewrite the declarations on every
+        // build and confuse users; defer to zodern:types while the app
+        // lists it directly.  A transitive zodern:types (e.g. via
+        // react-meteor-data) never lints the app, so it generates nothing
+        // and native generation can proceed.
+        self.typesGenerationSkipped = true;
+        Console.warn(
+          '[types] zodern:types detected; skipping built-in type ' +
+          'generation. Run "meteor remove zodern:types" to use ' +
+          'Meteor\'s built-in generator.'
+        );
+      } else {
+        try {
+          await generateTypes({
+            isopackCache: self.isopackCache,
+            packageMap: self.packageMap,
+            projectMeteorDir: files.pathJoin(self.projectDir, '.meteor'),
+          });
+        } catch (err) {
+          // Type generation only produces editor/tsc support files under
+          // .meteor/types; it contributes nothing to the app bundle, so
+          // a failure here must never abort a build that would otherwise
+          // succeed.  Warn so the user knows types may be stale, and dump
+          // the full stack in verbose mode (--verbose) for diagnosis.
+          self.typesGenerationFailed = true;
+          Console.warn(
+            '[types] Failed to generate package type declarations: ' +
+            ((err && err.message) || String(err))
+          );
+          Console.debug((err && err.stack) || String(err));
+        }
+      }
+    }
+
+    self._completedStage = STAGE.GENERATE_TYPES;
   }),
 
   _saveChangedMetadata: Profile('_saveChangedMetadata', async function () {
