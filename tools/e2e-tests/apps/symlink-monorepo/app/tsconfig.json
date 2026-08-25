@@ -13,18 +13,19 @@
     "resolveJsonModule": true,
     "types": ["node", "mocha"],
     "esModuleInterop": true,
-    "preserveSymlinks": true,
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
       "meteor/*": [
-        "node_modules/@types/meteor/*",
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/types/packages.d.ts",
+        "node_modules/@types/meteor/*"
       ]
     }
   },
   "exclude": [
-    "./.meteor/**",
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
+    "./packages/**",
     "./_build/**",
     "./public/build-assets/**",
     "./public/build-chunks/**"

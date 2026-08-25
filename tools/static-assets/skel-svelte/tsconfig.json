@@ -4,17 +4,21 @@
     "allowSyntheticDefaultImports": true, // to be able to import eg meteor/mongo
     "baseUrl": ".", // required by "paths"
     "module": "esNext", // required by "preserveValueImports"
-    "moduleResolution": "node", // required by zodern:types (not documented)
+    "moduleResolution": "node",
     "paths": {
       "/*": ["*"], // support absolute /imports/* with a leading '/'
-      // support Meteor/Atmospehere packages, required by zodern:types
+      // Meteor's built-in type generator writes .meteor/types/packages.d.ts
+      // automatically on every build. @types/meteor is kept as a fallback.
       "meteor/*": [
-        "node_modules/@types/meteor/*",
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/types/packages.d.ts",
+        "node_modules/@types/meteor/*"
       ]
     },
-    "preserveSymlinks": true, // required by zodern:types
     "preserveValueImports": true // otherwise TS will remove imported components
   },
-  "exclude": ["./.meteor/**", "!./.meteor/local/types", "./packages/**"] // this may solve VS Code Svelte plugin warnings
+  "exclude": [
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
+    "./packages/**"
+  ]
 }
