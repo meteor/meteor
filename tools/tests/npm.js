@@ -60,7 +60,7 @@ selftest.define("npm - prefetch deduplicates directories", async () => {
     await barrier; inFlight--;
     if (dir === '/b') buildmessage.error('expected');
     return false;
-  }, { maxConcurrency: 2, cpuCount: 2 });
+  }, { platform: 'darwin', maxConcurrency: 2, cpuCount: 2 });
   buildmessage.error('outside');
   });
   await selftest.expectEqual(calls.sort(), ['/a', '/b']);
@@ -80,14 +80,33 @@ selftest.define("npm - prefetch runs speculative work on Windows", async () => {
         npmDependencies: { a: '1' },
       },
     },
+    second: {
+      kind: 'local',
+      packageSource: {
+        name: 'second',
+        npmCacheDirectory: '/b',
+        npmDependencies: { b: '1' },
+      },
+    },
   }};
   const calls = [];
+  let inFlight = 0;
+  let maxInFlight = 0;
 
   await prefetchNpmDependencies(packageMap, async (...args) => {
     calls.push(args);
-  }, { platform: 'win32', maxConcurrency: 1, cpuCount: 1 });
+    inFlight += 1;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    await new Promise(resolve => setTimeout(resolve, 0));
+    inFlight -= 1;
+  }, { platform: 'win32', maxConcurrency: 2, cpuCount: 2 });
 
-  await selftest.expectEqual(calls, [["first", "/a", { a: "1" }, true]]);
+  calls.sort((left, right) => left[1].localeCompare(right[1]));
+  await selftest.expectEqual(calls, [
+    ["first", "/a", { a: "1" }, true],
+    ["second", "/b", { b: "1" }, true],
+  ]);
+  await selftest.expectEqual(maxInFlight, 1);
 });
 
 selftest.define("npm - subset package builds skip prefetch", async () => {

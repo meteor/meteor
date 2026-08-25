@@ -15,6 +15,7 @@ export async function prefetchNpmDependencies(packageMap, updateDependencies,
   {
     maxConcurrency = 8,
     cpuCount = os.cpus().length,
+    platform = process.platform,
   } = {}) {
   const byDir = new Map();
   const enqueue = (name, dir, deps) => {
@@ -29,9 +30,10 @@ export async function prefetchNpmDependencies(packageMap, updateDependencies,
   }
   const tasks = Array.from(byDir.values());
   if (!tasks.length) return;
+  const platformMaxConcurrency = platform === 'win32' ? 1 : 8;
   const concurrency = Math.max(
     1,
-    Math.min(maxConcurrency, cpuCount, 8, tasks.length),
+    Math.min(maxConcurrency, cpuCount, platformMaxConcurrency, tasks.length),
   );
   let cursor = 0;
   await buildmessage.capture({ title: 'prefetch npm dependencies' }, async () => {
