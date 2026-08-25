@@ -4,6 +4,20 @@ import os from 'os';
 
 import { runMeteorCommand, cleanupTempDir } from './helpers';
 
+const METEOR_EXAMPLES_BRANCH = process.env.METEOR_EXAMPLES_BRANCH || 'main';
+const METEOR_EXAMPLES_TREE_URL =
+  `https://github.com/meteor/examples/tree/${encodeURIComponent(METEOR_EXAMPLES_BRANCH)}`;
+const SIMPLETASKS_REPOSITORY_URL = 'https://github.com/fredmaiaarantes/simpletasks';
+const METEOR_SIMPLETASKS_BRANCH = process.env.METEOR_SIMPLETASKS_BRANCH;
+const SIMPLETASKS_SOURCE_URL = METEOR_SIMPLETASKS_BRANCH
+  ? `${SIMPLETASKS_REPOSITORY_URL}/tree/${encodeURIComponent(METEOR_SIMPLETASKS_BRANCH)}`
+  : SIMPLETASKS_REPOSITORY_URL;
+const METEOR3_REACT_REPOSITORY_URL = 'https://github.com/meteor/meteor3-react';
+const METEOR_METEOR3_REACT_BRANCH =
+  process.env.METEOR_METEOR3_REACT_BRANCH || '3.4-rspack';
+const METEOR3_REACT_TREE_URL =
+  `${METEOR3_REACT_REPOSITORY_URL}/tree/${encodeURIComponent(METEOR_METEOR3_REACT_BRANCH)}`;
+
 function tempApp(prefix) {
   const suffix = Math.random().toString(36).substring(2, 10);
   const appName = `meteortest-${prefix}-${suffix}`;
@@ -32,14 +46,35 @@ describe('Examples /', () => {
     }
   });
 
-  it('meteor create infers --from for an external URL', async () => {
+  it('meteor create --example uses METEOR_EXAMPLES_BRANCH for internal examples', async () => {
+    const { appName, tempDir } = tempApp('example-branch');
+    try {
+      await runMeteorCommand(
+        'create', ['--example', 'tic-tac-toe', appName], os.tmpdir(),
+        {
+          checkExitCode: true,
+          env: { METEOR_EXAMPLES_BRANCH: 'codex/typescript-7-examples' },
+        }
+      );
+      expect(fs.readFileSync(path.join(tempDir, '.meteor', 'packages'), 'utf8'))
+        .toContain('typescript@7.0.2');
+    } finally {
+      await cleanupTempDir(tempDir);
+    }
+  });
+
+  it('meteor create uses the configured Simpletasks branch', async () => {
     const { appName, tempDir } = tempApp('from');
     try {
       await runMeteorCommand(
-        'create', [appName, 'https://github.com/fredmaiaarantes/simpletasks'], os.tmpdir(),
+        'create', [appName, SIMPLETASKS_SOURCE_URL], os.tmpdir(),
         { checkExitCode: true }
       );
       expect(fs.existsSync(path.join(tempDir, '.meteor'))).toBe(true);
+      if (METEOR_SIMPLETASKS_BRANCH) {
+        expect(fs.readFileSync(path.join(tempDir, '.meteor', 'versions'), 'utf8'))
+          .toContain('typescript@7.0.2');
+      }
     } finally {
       await cleanupTempDir(tempDir);
     }
@@ -51,7 +86,7 @@ describe('Examples /', () => {
       await runMeteorCommand(
         'create', [
           '--from', 'https://github.com/meteor/examples',
-          '--from-branch', 'main',
+          '--from-branch', METEOR_EXAMPLES_BRANCH,
           '--from-dir', 'parties',
           appName
         ], os.tmpdir(),
@@ -85,12 +120,16 @@ describe('Examples /', () => {
     try {
       await runMeteorCommand(
         'create', [
-          '--from', 'https://github.com/meteor/meteor3-react/tree/3.4-rspack',
+          '--from', METEOR3_REACT_TREE_URL,
           appName
         ], os.tmpdir(),
         { checkExitCode: true }
       );
       expect(fs.existsSync(path.join(tempDir, '.meteor'))).toBe(true);
+      if (process.env.METEOR_METEOR3_REACT_BRANCH) {
+        expect(fs.readFileSync(path.join(tempDir, '.meteor', 'versions'), 'utf8'))
+          .toContain('typescript@7.0.2');
+      }
     } finally {
       await cleanupTempDir(tempDir);
     }
@@ -101,7 +140,7 @@ describe('Examples /', () => {
     try {
       await runMeteorCommand(
         'create', [
-          '--from', 'https://github.com/meteor/examples/tree/main/parties',
+          '--from', `${METEOR_EXAMPLES_TREE_URL}/parties`,
           appName
         ], os.tmpdir(),
         { checkExitCode: true }
@@ -119,12 +158,16 @@ describe('Examples /', () => {
       await runMeteorCommand(
         'create', [
           '--from', 'https://github.com/meteor/meteor3-react/tree/3.4-rspack',
-          '--from-branch', '3.4-rspack',
+          '--from-branch', METEOR_METEOR3_REACT_BRANCH,
           appName
         ], os.tmpdir(),
         { checkExitCode: true }
       );
       expect(fs.existsSync(path.join(tempDir, '.meteor'))).toBe(true);
+      if (process.env.METEOR_METEOR3_REACT_BRANCH) {
+        expect(fs.readFileSync(path.join(tempDir, '.meteor', 'versions'), 'utf8'))
+          .toContain('typescript@7.0.2');
+      }
     } finally {
       await cleanupTempDir(tempDir);
     }
