@@ -50,6 +50,11 @@ if (!npmLinkLocalRspack) {
 
 const WAIT_ON = isCI ? 2000 : 500;
 
+// Source paths carry dots and slashes; match them literally, not as regex.
+function escapeForRegExp(str) {
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // The setup beforeAll hooks below do a full `meteor create` + npm install + rspack
 // build, which on a loaded CI runner can exceed Jest's per-test testTimeout (240s on
 // CI, from jest.config.js). The hook then dies at exactly 240000ms and the test
@@ -284,6 +289,7 @@ export function testMeteorRspackBundler(options) {
     let appDir;
     let previousRspackDevServerPort;
     let fileSnapshot;
+    const testBuildDir = `${buildDir}/${testFullApp ? 'app-test' : 'test'}`;
 
     // Paths the rspack bundler generator mutates via appendFileContent. Snapshotted
     // in beforeEach and restored in afterEach so retries see pristine source files.
@@ -472,6 +478,25 @@ export function testMeteorRspackBundler(options) {
           content: customUpdates.devClient(customMessages.devClient),
         });
         const consoleLogs = await waitForPlaywrightConsole(customMessages.devClient, { returnAllLogs: true });
+
+        // The refresh line must name the file that actually changed. The rspack
+        // path used to report its compiler name here, which is a constant and
+        // identical on every rebuild, so it never told you what you touched.
+        // Verbose output is already on: beforeAll sets meteor.modern.verbose.
+        //
+        // Match the base name, not filePaths.client. Meteor prints the path
+        // relative to the app, while filePaths.client is relative to the repo
+        // root, and the two differ in a monorepo: 'app/client/main.jsx' here
+        // versus 'client/main.jsx' in the output.
+        if (verbose) {
+          const changedFileName = filePaths.client.split("/").pop();
+          await waitForMeteorOutput(
+            result.outputLines,
+            new RegExp(
+              `Client modified -- refreshing.*${escapeForRegExp(changedFileName)}`
+            )
+          );
+        }
 
         // Run custom assertions if provided
         if (customAssertions && customAssertions.afterRunRebuildClient) {
@@ -706,13 +731,13 @@ export function testMeteorRspackBundler(options) {
 
       // Assert that the app files exists
       if (!skipClient) {
-        await assertFileExist(appDir, `${buildDir}/test/client-entry.js`);
-        await assertFileExist(appDir, `${buildDir}/test/client-rspack.js`);
-        await assertFileExist(appDir, `${buildDir}/test/client-meteor.js`);
+        await assertFileExist(appDir, `${testBuildDir}/client-entry.js`);
+        await assertFileExist(appDir, `${testBuildDir}/client-rspack.js`);
+        await assertFileExist(appDir, `${testBuildDir}/client-meteor.js`);
       }
-      await assertFileExist(appDir, `${buildDir}/test/server-entry.js`);
-      await assertFileExist(appDir, `${buildDir}/test/server-rspack.js`);
-      await assertFileExist(appDir, `${buildDir}/test/server-meteor.js`);
+      await assertFileExist(appDir, `${testBuildDir}/server-entry.js`);
+      await assertFileExist(appDir, `${testBuildDir}/server-rspack.js`);
+      await assertFileExist(appDir, `${testBuildDir}/server-meteor.js`);
 
       // Run custom assertions if provided
       if (customAssertions && customAssertions.afterTest) {
@@ -791,12 +816,12 @@ export function testMeteorRspackBundler(options) {
       await wait(WAIT_ON);
 
       // Assert that the app files exists
-      await assertFileExist(appDir, `${buildDir}/test/client-entry.js`);
-      await assertFileExist(appDir, `${buildDir}/test/client-rspack.js`);
-      await assertFileExist(appDir, `${buildDir}/test/client-meteor.js`);
-      await assertFileExist(appDir, `${buildDir}/test/server-entry.js`);
-      await assertFileExist(appDir, `${buildDir}/test/server-rspack.js`);
-      await assertFileExist(appDir, `${buildDir}/test/server-meteor.js`);
+      await assertFileExist(appDir, `${testBuildDir}/client-entry.js`);
+      await assertFileExist(appDir, `${testBuildDir}/client-rspack.js`);
+      await assertFileExist(appDir, `${testBuildDir}/client-meteor.js`);
+      await assertFileExist(appDir, `${testBuildDir}/server-entry.js`);
+      await assertFileExist(appDir, `${testBuildDir}/server-rspack.js`);
+      await assertFileExist(appDir, `${testBuildDir}/server-meteor.js`);
 
       if (verbose && !skipEnvCheck) {
         await waitForMeteorOutput(

@@ -1,0 +1,21 @@
+appId: com.meteor.smoke
+---
+- extendedWaitUntil:
+    visible: "Welcome to Meteor Cordova Tests Updated"
+    timeout: 120000
+- extendedWaitUntil:
+    visible: "Native render ready"
+    timeout: 120000
+- assertVisible: "Style preserved"
+- extendedWaitUntil:
+    visible: "Native client version updated"
+    timeout: 120000
+- assertVisible: "Native server version updated"
+- assertVisible: "DDP verified"
+- assertVisible: "window.cordova available"
+- assertVisible: "Cordova native platform ready"
+- assertVisible: "WebAppLocalServer ready"
+- assertVisible: "__cordova paths served"
+- assertVisible: "Route reload preserved"
+- assertVisible: "HCP check requested"
+- assertVisible: "HCP reload executed"
