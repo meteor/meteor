@@ -20,4 +20,4 @@ ecmascript              # Enable ECMAScript2015+ syntax in app code
 typescript              # Enable TypeScript syntax in .ts and .tsx modules
 shell-server            # Server-side component of the `meteor shell` command
 less
-ostrio:flow-router-extra # FlowRouter is a very simple router for Meteor
+ostrio:flow-router-extra@3.16.0-beta.0 # FlowRouter is a very simple router for Meteor

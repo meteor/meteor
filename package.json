@@ -32,12 +32,10 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
     "prettier": "^3.8.1",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "lefthook": "^2.1.4",
     "oxfmt": "^0.42.0",
-    "oxlint": "^1.57.0",
-    "type-coverage": "^2.29.7",
-    "typescript-coverage-report": "^1.1.1"
+    "oxlint": "^1.57.0"
   },
   "scripts": {
     "fmt": "oxfmt --ignore-path .fmtignore .",
@@ -56,8 +54,8 @@
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "test:self-hosted-runner-cleanup": "node --test scripts/ci/__tests__/self-hosted-runner-cleanup.node-test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
-    "ts-coverage": "typescript-coverage-report",
-    "ts-coverage:ci": "type-coverage --at-least 80"
+    "ts-coverage": "npm exec --yes --package=typescript@5.9.3 --package=react@18.3.1 --package=react-dom@18.3.1 --package=semantic-ui-react@2.1.5 --package=typescript-coverage-report@1.1.1 -- typescript-coverage-report",
+    "ts-coverage:ci": "npm exec --yes --package=typescript@6.0.3 --package=type-coverage@2.30.1 -- type-coverage --at-least 80"
   },
   "jshintConfig": {
     "esversion": 11
@@ -105,5 +103,8 @@
       "curly": "off",
       "sort-imports": "off"
     }
+  },
+  "overrides": {
+    "typescript": "$typescript"
   }
 }
