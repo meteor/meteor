@@ -15,10 +15,7 @@ export async function prefetchNpmDependencies(packageMap, updateDependencies,
   {
     maxConcurrency = 8,
     cpuCount = os.cpus().length,
-    platform = process.platform,
   } = {}) {
-  if (platform === 'win32') return;
-
   const byDir = new Map();
   const enqueue = (name, dir, deps) => {
     if (!dir || _.isEmpty(deps) || byDir.has(dir)) return;

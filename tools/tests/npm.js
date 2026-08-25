@@ -70,7 +70,7 @@ selftest.define("npm - prefetch deduplicates directories", async () => {
   selftest.expectFalse(outer.formatMessages().includes('expected'));
 });
 
-selftest.define("npm - prefetch skips speculative work on Windows", async () => {
+selftest.define("npm - prefetch runs speculative work on Windows", async () => {
   const packageMap = { _map: {
     first: {
       kind: 'local',
@@ -81,13 +81,13 @@ selftest.define("npm - prefetch skips speculative work on Windows", async () => 
       },
     },
   }};
-  let calls = 0;
+  const calls = [];
 
-  await prefetchNpmDependencies(packageMap, async () => {
-    calls += 1;
-  }, { platform: 'win32' });
+  await prefetchNpmDependencies(packageMap, async (...args) => {
+    calls.push(args);
+  }, { platform: 'win32', maxConcurrency: 1, cpuCount: 1 });
 
-  await selftest.expectEqual(calls, 0);
+  await selftest.expectEqual(calls, [["first", "/a", { a: "1" }, true]]);
 });
 
 selftest.define("npm - subset package builds skip prefetch", async () => {
