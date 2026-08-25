@@ -1721,6 +1721,55 @@ https://guide.meteor.com/cordova.html#submitting-android
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// types
+///////////////////////////////////////////////////////////////////////////////
+main.registerCommand({
+  name: 'types',
+  maxArgs: 0,
+  requiresApp: true,
+  options: {
+    'allow-incompatible-update': { type: Boolean }
+  },
+  catalogRefresh: new catalog.Refresh.Never()
+}, async function (options) {
+  const { appDir } = options;
+
+  const hasTsConfig = files.exists(files.pathJoin(appDir, 'tsconfig.json'));
+  const hasJsConfig = files.exists(files.pathJoin(appDir, 'jsconfig.json'));
+
+  if (! hasTsConfig && ! hasJsConfig) {
+    Console.info('=> No tsconfig.json or jsconfig.json found. Nothing to do.');
+    return 0;
+  }
+
+  const projectContext = new projectContextModule.ProjectContext({
+    projectDir: appDir,
+    serverArchitectures: [archinfo.host()],
+    allowIncompatibleUpdate: options['allow-incompatible-update']
+  });
+
+  await main.captureAndExit(
+    '=> Errors prevented type generation:',
+    async () => await projectContext.prepareProjectForBuild()
+  );
+
+  if (projectContext.typesGenerationFailed) {
+    console.log(red`=> Failed to generate package type declarations.`);
+    return 1;
+  }
+
+  if (projectContext.typesGenerationSkipped) {
+    // Deliberate no-op (zodern:types owns type generation); must not
+    // break `meteor types && meteor run` pipelines.
+    Console.info('=> Skipped type generation because zodern:types is installed.');
+    return 0;
+  }
+
+  console.log(green`=> Generated package type declarations.`);
+  return 0;
+});
+
+///////////////////////////////////////////////////////////////////////////////
 // lint
 ///////////////////////////////////////////////////////////////////////////////
 main.registerCommand({

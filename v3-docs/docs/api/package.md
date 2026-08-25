@@ -112,6 +112,7 @@ package is exported to.
 <ApiBox name="PackageAPI#export" instanceName="api"/>
 <ApiBox name="PackageAPI#addFiles" instanceName="api"/>
 <ApiBox name="PackageAPI#addAssets" instanceName="api"/>
+<ApiBox name="PackageAPI#types" instanceName="api"/>
 
 Set up your tests with the `Package.onTest` handler, which has an interface
 that's parallel to that of the `onUse` handler. The tests will need to depend on

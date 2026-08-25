@@ -376,6 +376,10 @@ export class IsopackCache {
                 includeIsopackBuildInfo: true,
                 isopackCache: self,
               });
+              // Record where the isopack now lives on disk so later build
+              // stages (e.g. the types generator, which links each package's
+              // npm/node_modules directory) can find files inside it.
+              isopack.isopackPath = self._isopackDir(name);
             }
           }
 
