@@ -197,7 +197,11 @@ export function replaceNames(filter, thing) {
  * @returns {number} Comparison result: negative if `opTime1` < `opTime2`, zero if equal, positive if `opTime1` > `opTime2`.
  */
 export function compareOperationTimes(opTime1, opTime2) {
-  return (new MongoDB.Timestamp(opTime1)).compare(opTime2);
+  // Wrap BOTH operands: MongoDB.Timestamp#compare mishandles a plain
+  // {t,i} object (it never reads .t/.i), silently returning a wrong
+  // result. The documented contract accepts {t,i} for either operand, so
+  // normalize both before comparing.
+  return (new MongoDB.Timestamp(opTime1)).compare(new MongoDB.Timestamp(opTime2));
 }
 
 /**

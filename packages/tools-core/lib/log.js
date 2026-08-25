@@ -12,6 +12,7 @@ const colors = {
   purple: shouldDisableColors ? "" : "\x1b[35m",
   green: shouldDisableColors ? "" : "\x1b[32m",
   cyan: shouldDisableColors ? "" : "\x1b[36m",
+  yellow: shouldDisableColors ? "" : "\x1b[33m",
 };
 
 /**
@@ -65,6 +66,14 @@ export function logRaw(message) {
  */
 export function logSuccess(message) {
   console.log(`${colors.green}${padMessage(message)}${colors.reset}`);
+}
+
+/**
+ * Log a warning message in yellow
+ * @param {string} message - The message to log
+ */
+export function logWarn(message) {
+  console.warn(`${colors.yellow}${padMessage(message)}${colors.reset}`);
 }
 
 /**

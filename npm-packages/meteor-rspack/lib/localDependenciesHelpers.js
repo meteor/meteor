@@ -20,7 +20,7 @@ function extractLocalDependencies(configFilePath) {
 
     // Parse the file into an AST
     const ast = swc.parseSync(content, {
-      syntax: 'ecmascript',
+      syntax: /\.[mc]?tsx?$/.test(configFilePath) ? 'typescript' : 'ecmascript',
       dynamicImport: true,
       target: 'es2020',
     });
@@ -30,10 +30,10 @@ function extractLocalDependencies(configFilePath) {
       let modulePath = null;
 
       // Handle require() calls: require('./plugin')
-      if (node.type === 'CallExpression' && 
-          node.callee.type === 'Identifier' && 
-          node.callee.value === 'require' &&
-          node.arguments.length > 0) {
+      if (node.type === 'CallExpression' &&
+        node.callee.type === 'Identifier' &&
+        node.callee.value === 'require' &&
+        node.arguments.length > 0) {
         const arg = node.arguments[0];
         if (arg.expression?.type === 'StringLiteral') {
           modulePath = arg.expression.value;
@@ -42,8 +42,8 @@ function extractLocalDependencies(configFilePath) {
 
       // Handle dynamic import() calls: import('./plugin')
       if (node.type === 'CallExpression' &&
-          node.callee.type === 'Import' &&
-          node.arguments.length > 0) {
+        node.callee.type === 'Import' &&
+        node.arguments.length > 0) {
         const arg = node.arguments[0];
         if (arg.expression?.type === 'StringLiteral') {
           modulePath = arg.expression.value;
@@ -163,7 +163,7 @@ function resolveLocalModule(modulePath, configDir, projectDir) {
     const resolvedReal = fs.realpathSync(resolvedPath);
     const projectReal = fs.realpathSync(projectDir);
 
-    const isWithinProject = 
+    const isWithinProject =
       resolvedReal === projectReal ||
       resolvedReal.startsWith(projectReal + path.sep);
     const hasNodeModulesSegment = resolvedReal.split(path.sep).includes('node_modules');
