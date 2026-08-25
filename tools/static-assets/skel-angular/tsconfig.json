@@ -15,10 +15,10 @@
       "/*": ["*"],
       /* Pull in type declarations for Meteor packages */
       "meteor/*": [
-        ".meteor/local/types/packages.d.ts",
+        ".meteor/types/packages.d.ts",
         "node_modules/@types/meteor/*"
       ]
-    },
+    }
   },
   "files": [],
   "references": [
@@ -27,7 +27,8 @@
     }
   ],
   "exclude": [
-    "./.meteor/**",
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
     "./packages/**",
     "./_build/**",
     "./public/build-chunks/**",

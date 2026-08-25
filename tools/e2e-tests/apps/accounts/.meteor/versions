@@ -84,7 +84,7 @@ static-html@1.5.0
 static-html-tools@1.0.0
 tracker@1.3.4
 twitter-oauth@1.3.4
-typescript@5.10.0
+typescript@7.0.2
 url@1.3.6-beta350.11
 webapp@2.2.0-beta350.11
 webapp-hashing@1.1.2

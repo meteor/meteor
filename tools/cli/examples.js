@@ -9,7 +9,9 @@ const {
 } = require('./git-clone.js');
 
 const EXAMPLES_REPO = 'https://github.com/meteor/examples';
-const EXAMPLES_BRANCH = 'main';
+// CI can validate an upcoming examples branch without changing the source
+// used by released Meteor versions.
+const EXAMPLES_BRANCH = process.env.METEOR_EXAMPLES_BRANCH || 'main';
 const EXAMPLES_JSON_URL =
   `https://raw.githubusercontent.com/meteor/examples/${EXAMPLES_BRANCH}/examples.json`;
 
@@ -98,7 +100,7 @@ async function getExamples({ refresh = false } = {}) {
 
     // Network failed, fall back to cache if available
     const cached = readCache();
-    if (cached && cached.examples) {
+    if (cached && cached.branch === EXAMPLES_BRANCH && cached.examples) {
       return cached.examples;
     }
 
