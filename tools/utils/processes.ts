@@ -104,9 +104,16 @@ export function execFileAsync(
       child = child_process.spawn(command, spawnArgs, { cwd, env, stdio });
     } else {
       // https://github.com/nodejs/node-v0.x-archive/issues/2318
-      spawnArgs.forEach(arg => {
-        command += ' ' + arg;
-      });
+      // The command and args are joined into a single cmd.exe command
+      // line, so any token containing whitespace (e.g. an absolute path
+      // under C:\Users\First Last\...) must be double-quoted or cmd
+      // splits it at the space.  Tokens without whitespace or quotes are
+      // left untouched, so bare commands (adb, taskkill, ...) keep
+      // working exactly as before — cmd.exe still applies PATHEXT
+      // resolution to a quoted extensionless command token.
+      const quoteForCmd = (s: string) =>
+        /[\s"]/.test(s) ? '"' + s.replace(/"/g, '\\"') + '"' : s;
+      command = [command, ...spawnArgs].map(quoteForCmd).join(' ');
       child = child_process.spawn(command, { cwd, env, shell: true });
     }
 

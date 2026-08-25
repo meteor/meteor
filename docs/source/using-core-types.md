@@ -1,26 +1,19 @@
 ---
 title: Using Core Types
-description: Using core types with zodern:types
+description: Using TypeScript types for Meteor core packages
 ---
 
-For MeteorJS in its version 2.8.1 we have introduced to our core packages an integration with the [zodern:types](https://github.com/zodern/meteor-types) package. 
-This package allows you to use the TypeScript types for the Meteor core packages in your TypeScript code or JavaScript code. 
-in order to use the types you need to install the package by running the command:
-
-```bash
-meteor add zodern:types
-```
-
-And add the following line to your `tsconfig.json` file (if you do not have one, create one and add the code bellow):
+Recent Meteor 3 releases generate TypeScript type declarations for the core packages (and any other installed package that ships types) automatically whenever you run `meteor run`, `meteor build`, or `meteor types`.
+No extra package is needed. To use the types in your TypeScript code or JavaScript code, add the following to your `tsconfig.json` file (if you do not have one, create one and add the code bellow):
 
 ```json
 {
   "compilerOptions": {
-    "preserveSymlinks": true,
+    "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        "node_modules/@types/meteor/*",
-        ".meteor/local/types/packages.d.ts"
+        "./.meteor/types/packages.d.ts",
+        "./node_modules/@types/meteor/*"
       ]
     }
   }
@@ -30,10 +23,12 @@ And add the following line to your `tsconfig.json` file (if you do not have one,
 then run the command:
 
 ```bash
-meteor lint
+meteor types
 ```
 
-this will create a file within your .meteor folder that will have your types for the core packages.
+this will create the `.meteor/types` folder with the types for the core packages (the generator writes a `.gitignore` inside it, so the folder stays out of version control).
 You can continue to use your code as you did before, but now you can use the types for the core packages even if you are in JavaScript.
 
-for more information about the package please visit the [zodern:types](https://github.com/zodern/meteor-types).
+For MeteorJS from version 2.8.1 up to the Meteor 3 releases that do not include the native type generator, use the community [zodern:types](https://github.com/zodern/meteor-types) package instead (`meteor add zodern:types`), which generates the types at `.meteor/local/types` and requires `"preserveSymlinks": true` in your `tsconfig.json`.
+
+for more information please visit the [current documentation](https://docs.meteor.com/cli/using-core-types).

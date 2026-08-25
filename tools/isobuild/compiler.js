@@ -187,6 +187,9 @@ compiler.compile = Profile(function (packageSource, options) {
     prodOnly: packageSource.prodOnly,
     testOnly: packageSource.testOnly,
     devOnly: packageSource.devOnly,
+    typesEntry: packageSource.typesEntry,
+    typesDir: packageSource.typesDir,
+    typesModules: packageSource.typesModules,
     pluginCacheDir: options.pluginCacheDir,
     isobuildFeatures
   });
