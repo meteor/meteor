@@ -4,13 +4,29 @@
  * of different Meteor skeletons (apollo, react, etc.).
  */
 
-import path from 'path';
-import fs from 'fs';
-
 import { assertStyles } from './assertions';
+import { waitForMeteorOutput } from './helpers';
 import { testMeteorSkeleton } from './test-helpers';
+import fs from 'fs-extra';
+import path from 'path';
 
-const isCI = process.env.GITHUB_ACTIONS === 'true';
+async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
+  const probePath = path.join(tempDir, 'imports/ts-checker-e2e-probe.ts');
+
+  try {
+    const errorOutputStart = result.outputLines.length;
+    await fs.outputFile(
+      probePath,
+      'export const tsCheckerProbe: string = 123;\n',
+    );
+    await waitForMeteorOutput(result.outputLines, /TS2322/, {
+      meteorProcess,
+      startIndex: errorOutputStart,
+    });
+  } finally {
+    await fs.remove(probePath);
+  }
+}
 
 async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
   const packageJsonPath = path.join(tempDir, 'package.json');
@@ -233,18 +249,8 @@ describe('Meteor Skeletons /', () => {
       customAssertions: {
         async afterCreate({ tempDir }) {
           await assertReact19Dependencies({ tempDir }, true);
-
-          if (isCI) {
-            const rspackConfigPath = path.join(tempDir, 'rspack.config.ts');
-            // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails
-            let configContent = fs.readFileSync(rspackConfigPath, 'utf8');
-            configContent = configContent.replace(
-              /\s*new\s+TsCheckerRspackPlugin\(\)/,
-              '',
-            );
-            fs.writeFileSync(rspackConfigPath, configContent);
-          }
         },
+        afterRun: assertTsgoTypeChecker,
       },
     }),
   );
@@ -262,17 +268,6 @@ describe('Meteor Skeletons /', () => {
       customAssertions: {
         async afterCreate({ tempDir }) {
           await assertReact19Dependencies({ tempDir }, true);
-
-          if (isCI) {
-            const rspackConfigPath = path.join(tempDir, "rspack.config.ts");
-            // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails
-            let configContent = fs.readFileSync(rspackConfigPath, "utf8");
-            configContent = configContent.replace(
-              /\s*new\s+TsCheckerRspackPlugin\(\)/,
-              ""
-            );
-            fs.writeFileSync(rspackConfigPath, configContent);
-          }
         },
       },
     })

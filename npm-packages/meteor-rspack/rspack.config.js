@@ -3,7 +3,6 @@ const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('rspack-merge');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
@@ -30,7 +29,7 @@ const {
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
-
+const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -124,15 +123,13 @@ function createSwcConfig({
 }) {
   const defaultConfig = {
     jsc: {
-      baseUrl: process.cwd(),
-      paths: { '/*': ['*', '/*'] },
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
         ...(isTsxEnabled && { tsx: true }),
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: 'es2015',
+      target: isClient ? 'es2015' : 'es2022',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -423,7 +420,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    "**/dist/**",
+    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
@@ -653,8 +650,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     },
     resolve: {
       extensions,
-      roots: [path.resolve(process.cwd())],
       fallback,
+      roots: [path.resolve(projectDir)],
     },
     externals,
     externalsType: "commonjs2",
@@ -782,9 +779,9 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     },
     resolve: {
       extensions,
-      roots: [path.resolve(process.cwd())],
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
+      roots: [path.resolve(projectDir)],
     },
     externals,
     externalsType: "commonjs2",
@@ -864,7 +861,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           optimization: {
             splitChunks: false,
           },
-          plugins: [new NodePolyfillPlugin()],
+          ...createTestClientNodePolyfillConfig(),
         }
       : {};
 

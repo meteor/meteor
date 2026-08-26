@@ -4,6 +4,78 @@ const { spawnProcess } = require('./process');
 const { logError } = require('./log');
 
 /**
+ * Gets the candidate executable names for a Node.js tool on the current
+ * platform.
+ *
+ * Windows commonly exposes npm-family tools via .cmd launchers, while other
+ * platforms use the bare binary name.
+ *
+ * @param {string} binaryName - The tool name (for example, 'npm' or 'npx')
+ * @param {string} [platform=process.platform] - Platform to resolve for
+ * @returns {string[]} Candidate executable names in lookup priority order
+ */
+export function getNodeBinaryCandidates(binaryName, platform = process.platform) {
+  return platform === 'win32'
+    ? [`${binaryName}.cmd`, `${binaryName}.exe`, binaryName]
+    : [binaryName];
+}
+
+/**
+ * Gets the dev_bundle bin directory from a Meteor checkout installation on
+ * Windows.
+ *
+ * @param {string} [meteorInstallation=process.env.METEOR_INSTALLATION] - Meteor installation root
+ * @param {string} [platform=process.platform] - Platform to resolve for
+ * @returns {string|null} The dev_bundle bin directory, or null if unavailable
+ */
+export function getMeteorInstallationBinDir(
+  meteorInstallation = process.env.METEOR_INSTALLATION,
+  platform = process.platform,
+) {
+  if (platform !== 'win32' || typeof meteorInstallation !== 'string' || !meteorInstallation) {
+    return null;
+  }
+
+  const binDir = path.join(meteorInstallation, 'dev_bundle', 'bin');
+  return fs.existsSync(binDir) ? binDir : null;
+}
+
+/**
+ * Gets the Meteor command path for fallback npm/npx execution.
+ *
+ * On Windows checkouts, Meteor is launched via meteor.bat rather than a bare
+ * 'meteor' command name.
+ *
+ * @param {string} [meteorInstallation=process.env.METEOR_INSTALLATION] - Meteor installation root
+ * @param {string} [platform=process.platform] - Platform to resolve for
+ * @returns {string} The Meteor command path or command name
+ */
+export function getMeteorCommandPath(
+  meteorInstallation = process.env.METEOR_INSTALLATION,
+  platform = process.platform,
+) {
+  if (platform === 'win32') {
+    if (typeof meteorInstallation === 'string' && meteorInstallation) {
+      const meteorCommandPath = path.join(meteorInstallation, 'meteor.bat');
+      if (fs.existsSync(meteorCommandPath)) {
+        return meteorCommandPath;
+      }
+    }
+    
+    // Precheck if meteor.bat exists in PATH
+    const pathEnv = process.env.PATH || process.env.Path || '';
+    const pathDirs = pathEnv.split(path.delimiter);
+    for (const dir of pathDirs) {
+      if (dir && fs.existsSync(path.join(dir, 'meteor.bat'))) {
+        return 'meteor.bat';
+      }
+    }
+  }
+
+  return 'meteor';
+}
+
+/**
  * Returns the Meteor dev_bundle bin directory path if available, otherwise null.
  *
  * @returns {string|null} The path to the dev_bundle bin directory, or null if not available
@@ -22,6 +94,12 @@ function resolveNodeBinDir() {
   } catch (e) {
     // fall through
   }
+
+  const meteorInstallationBinDir = getMeteorInstallationBinDir();
+  if (meteorInstallationBinDir) {
+    return meteorInstallationBinDir;
+  }
+
   return null;
 }
 
@@ -59,7 +137,14 @@ export function getNodeBinEnv() {
 export function getNodeBinaryPath(binaryName) {
   const binDir = resolveNodeBinDir();
   if (binDir) {
-    return path.join(binDir, binaryName);
+    const candidates = getNodeBinaryCandidates(binaryName);
+
+    for (const candidate of candidates) {
+      const binaryPath = path.join(binDir, candidate);
+      if (fs.existsSync(binaryPath)) {
+        return binaryPath;
+      }
+    }
   }
   return null;
 }
@@ -394,7 +479,7 @@ export function getNpmCommand(args) {
 
   // Fall back to the current method using 'meteor npm'
   return {
-    command: 'meteor',
+    command: getMeteorCommandPath(),
     args: ['npm', ...args],
     prefix: `meteor npm`,
   };
@@ -420,7 +505,7 @@ export function getNpxCommand(args) {
 
   // Fall back to the current method using 'meteor npx'
   return {
-    command: 'meteor',
+    command: getMeteorCommandPath(),
     args: ['npx', ...args],
     prefix: `meteor npx`,
   };

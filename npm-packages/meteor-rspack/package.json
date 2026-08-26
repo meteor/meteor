@@ -13,7 +13,7 @@
   "dependencies": {
     "fast-deep-equal": "^3.1.3",
     "ignore-loader": "^0.1.2",
-    "node-polyfill-webpack-plugin": "^4.1.0",
+    "isomorphic-timers-promises": "^1.0.1",
     "rspack-merge": "^1.0.1"
   },
   "devDependencies": {
@@ -23,6 +23,12 @@
     "@rspack/cli": ">=2.2.0",
     "@rspack/core": ">=2.2.0",
     "@rspack/dev-server": ">=2.2.0",
-    "@swc/core": ">=1.3.0"
+    "@swc/core": ">=1.3.0",
+    "meteor-node-stubs": ">=1.2.0"
+  },
+  "peerDependenciesMeta": {
+    "meteor-node-stubs": {
+      "optional": true
+    }
   }
 }

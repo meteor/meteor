@@ -6,7 +6,7 @@ import { DDPServer } from 'meteor/ddp-server';
 import { DiffSequence } from 'meteor/diff-sequence';
 import { listenAll } from './mongo_driver';
 import { replaceTypes, replaceMongoAtomWithMeteor, replaceMeteorAtomWithMongo } from './mongo_common';
-import { compareOperationTimes } from './mongo_common';
+import { compareOperationTimes, fenceWriteTsKey } from './mongo_common';
 
 const SUPPORTED_OPERATIONS = ['insert', 'update', 'replace', 'delete'];
 
@@ -34,6 +34,10 @@ export class ChangeStreamObserveDriver {
     this._resolveTimeout = null;
     this._matcher = options.matcher;
     this._id = options.id || Random.id();
+    // While a history-lost resync runs, this holds the set of ids that live
+    // events touched concurrently so the resync can let those events win instead
+    // of racing them (see _resyncAfterHistoryLost / _flushPendingWrites).
+    this._resyncLiveTouched = null;
 
     // Projection function similar to oplog driver.
     //
@@ -176,6 +180,29 @@ export class ChangeStreamObserveDriver {
 
       if (this._stopped) return;
 
+      // Establish this driver's caught-up floor. The stream subscription is
+      // active now, so every write at or before the server's current
+      // operationTime is either already dispatched to _onChange or will be
+      // reflected in the snapshot read below. Without this floor, a fence
+      // targeting a write that PREDATES this driver waits for a change event
+      // that will never be delivered to it — the canonical case is a
+      // login-style method that writes the collection and then triggers
+      // creation of this observer (setUserId rerunning user publications).
+      // The stream (shared, possibly opened long ago by another observer)
+      // dispatched that event before this driver joined, so on an idle
+      // collection the wait stalls until the next unrelated write.
+      try {
+        const pingRes = await this._mongoHandle.db.command({ ping: 1 });
+        if (pingRes?.operationTime) {
+          this._setLastProcessedOperationTime(pingRes.operationTime);
+        }
+      } catch (error) {
+        Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
+        // Best-effort: without the floor we only lose the fast-path release.
+      }
+
+      if (this._stopped) return;
+
       // Now read the snapshot. Events that arrived while we were getting
       // here are sitting in _pendingWrites and will be flushed below.
       await this._sendInitialAdds(collection);
@@ -245,7 +272,7 @@ export class ChangeStreamObserveDriver {
         // projection and the multiplexer only ever see Meteor types — the same
         // boundary _handleChange establishes for live change events.
         const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
-        const id = typeof doc._id !== 'string' ? new MongoID.ObjectID(doc._id.toHexString()) : doc._id;
+        const id = this._deriveMeteorId(doc);
         const projectedDoc = this._projectionFn ? this._projectionFn(doc) : doc;
         this._sendMultiplexerAdded(id, projectedDoc);
         docCount++;
@@ -369,6 +396,15 @@ export class ChangeStreamObserveDriver {
               this._handleDelete(id, change);
               break;
           }
+
+          // While a history-lost resync is running, a live event is authoritative
+          // for any id it SUCCESSFULLY applied — record it AFTER the handler so
+          // the resync leaves that id alone (it must not re-add a live-deleted doc
+          // nor remove a live-inserted one). Recording only on success means a
+          // handler that threw still lets the resync perform the corrective pass.
+          if (this._resyncLiveTouched) {
+            this._resyncLiveTouched.add(MongoID.idStringify(id));
+          }
         } catch (error) {
           console.error(`[ChangeStream ${this._id}] Error processing callback:`, error);
         }
@@ -382,12 +418,35 @@ export class ChangeStreamObserveDriver {
     this._writesToCommitWhenReady = [];
 
     if (writes.length > 0) {
-      await this._multiplexer.onFlush(async () => {
+      await this._multiplexer.onFlush(() => {
+        // Commit in a microtask instead of awaiting inside this queue task.
+        // committed() on the fence's last outstanding write fires the fence,
+        // and the fence's onBeforeFire handler re-enters this same multiplexer
+        // queue via onFlush (see _startListening). Awaiting that chain from
+        // inside the current queue task deadlocks the queue: the fire waits on
+        // a task queued behind this one, which can never run. Deferring keeps
+        // the ordering guarantee — commits still start only after the flush
+        // point — without holding the queue while the fence fires.
         for (const write of writes) {
-          await write.committed();
+          Promise.resolve()
+            .then(() => write.committed())
+            .catch((error) => {
+              console.error('ChangeStream deferred write commit failed:', error);
+            });
         }
       });
     }
+  }
+
+  // A raw doc translated by replaceMongoAtomWithMeteor carries either a string
+  // _id or a MongoID.ObjectID; normalize it to the id type the multiplexer keys
+  // on. Mirrors how the live change path (_handleChange) derives ids: only wrap
+  // when the id actually exposes toHexString, so a string (or any other id type)
+  // passes through untouched instead of throwing.
+  _deriveMeteorId(doc) {
+    return typeof doc._id?.toHexString === 'function'
+      ? new MongoID.ObjectID(doc._id.toHexString())
+      : doc._id;
   }
 
   _handleInsert(id, doc) {
@@ -462,14 +521,101 @@ export class ChangeStreamObserveDriver {
     }
   }
 
+  // Reconcile our result set with the current collection contents after the
+  // shared change stream lost its resume history: events during the lost window
+  // were never delivered, so the multiplexer cache may hold stale documents.
+  //
+  // The reopened cursor is already live by the time we run, so live events flow
+  // into this same driver concurrently. Two rules keep that safe:
+  //   1. Live events win. Any id a live event touches while we run is recorded in
+  //      _resyncLiveTouched (see _flushPendingWrites) and left untouched here, so
+  //      a doc inserted live after our query snapshot is never spuriously removed,
+  //      and a doc deleted live is never re-added as a phantom.
+  //   2. For everything else the live-event handlers are cache-guarded, so a doc
+  //      the reopened cursor happens to redeliver is reconciled once, not twice.
+  async _resyncAfterHistoryLost() {
+    if (this._stopped || !this._isReady) return;
+
+    const collection = this._mongoHandle.rawCollection(
+      this._cursorDescription.collectionName
+    );
+    const selector = replaceTypes(
+      this._cursorDescription.selector || {},
+      replaceMeteorAtomWithMongo
+    );
+    // Fetch FULL documents: _handleInsert re-runs the matcher, which needs every
+    // selector field, so a server-side projection that stripped one would wrongly
+    // reject a genuinely matching doc (the live path never has this problem — it
+    // matches the full fullDocument). Field filtering still happens locally via
+    // _projectionFn. sort/skip/limit are irrelevant to this unordered, whole-
+    // result reconciliation (skip/limit never reach a change-stream cursor).
+    const {
+      projection, fields, sort, limit, skip,
+      ...options
+    } = this._cursorDescription.options || {};
+
+    // Publish the live-touched set for the duration of the resync so concurrent
+    // live events (applied via _flushPendingWrites) win over our snapshot.
+    const liveTouched = new Set();
+    this._resyncLiveTouched = liveTouched;
+    try {
+      // Re-add or update every currently-matching document, tracking which ids
+      // are still present so the rest can be removed below.
+      const present = new Set();
+      const cursor = collection.find(selector, options);
+      for await (const rawDoc of cursor) {
+        if (this._stopped) return;
+        // Whole body guarded: a single malformed doc (bad id / translation) must
+        // skip itself, not abort the reconciliation and leave removals unrun.
+        try {
+          const doc = replaceTypes(rawDoc, replaceMongoAtomWithMeteor);
+          const id = this._deriveMeteorId(doc);
+          const idStr = MongoID.idStringify(id);
+          present.add(idStr);
+          if (liveTouched.has(idStr)) continue;
+          this._handleInsert(id, doc);
+        } catch (error) {
+          console.error(`[ChangeStream ${this._id}] resync add failed:`, error);
+        }
+      }
+
+      if (this._stopped) return;
+
+      // Anything still cached but no longer returned by the query left the result
+      // set while the stream was disconnected — emit the removals. Skip ids a
+      // live event already reconciled during the resync.
+      const removedIds = [];
+      this._multiplexer?._cache?.docs?.forEach?.((cachedDoc, cachedId) => {
+        const idStr = MongoID.idStringify(cachedId);
+        if (!present.has(idStr) && !liveTouched.has(idStr)) {
+          removedIds.push(cachedId);
+        }
+      });
+      for (const id of removedIds) {
+        if (this._stopped) return;
+        try {
+          this._handleDelete(id);
+        } catch (error) {
+          console.error(`[ChangeStream ${this._id}] resync remove failed:`, error);
+        }
+      }
+    } finally {
+      // Only clear if still ours: a re-entrant resync should not happen (drivers
+      // are resynced serially), but guard anyway so we never null a newer set.
+      if (this._resyncLiveTouched === liveTouched) {
+        this._resyncLiveTouched = null;
+      }
+    }
+  }
+
   async _waitUntilCaughtUp(fenceOverride) {
     // Wait until our change stream has processed events up to the
     // server's current operation time. Mirrors oplog's wait logic.
     if (this._stopped) return;
 
     // The fence's write path stamps the exact clusterTime of each write on
-    // fence._csTargetTsByCollection[collectionName] (see
-    // mongo_connection._annotateFenceWithWriteTs). Wait specifically for
+    // fence._csTargetTsByCollection[fenceWriteTsKey(connectionId, collectionName)]
+    // (see mongo_connection._annotateFenceWithWriteTs). Wait specifically for
     // that ts. The fence must be passed explicitly because fence.fire()
     // runs outside the AsyncLocalStorage context where _getCurrentFence()
     // would find it.
@@ -480,10 +626,22 @@ export class ChangeStreamObserveDriver {
     // server's clock advances with replication heartbeats, but our stream
     // only sees events emitted on this collection, so the wait would never
     // resolve under the previous (no-timeout) regime.
+    //
+    // The lookup is scoped to our own connection as well as our collection.
+    // The crossbar notifies every driver listening on a collection *name*, so
+    // an app with a second MongoConnection (e.g. a RemoteCollectionDriver onto
+    // another cluster) that happens to use the same name lands us here on a
+    // fence carrying only that other connection's write. Its clusterTime comes
+    // from a different cluster and our stream will never emit an event at or
+    // past it, so matching on name alone parks this wait forever and hangs the
+    // method that issued the write (meteor/meteor#14600).
     const fence = fenceOverride || DDPServer._getCurrentFence();
     const { collectionName } = this._cursorDescription;
     const { _csTargetTsByCollection } = fence || {};
-    const targetTs = _csTargetTsByCollection && collectionName ? _csTargetTsByCollection[collectionName] : undefined;
+    const connectionId = this._mongoHandle?._csConnectionId;
+    const targetTs = _csTargetTsByCollection && collectionName && connectionId
+      ? _csTargetTsByCollection[fenceWriteTsKey(connectionId, collectionName)]
+      : undefined;
 
     if (!targetTs) {
       return;
