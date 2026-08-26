@@ -13,15 +13,24 @@ selftest.define("typescript template works", async function () {
 
   s.cd("typescript");
 
-  run = s.run("npm", "install");
+  const appPackage = JSON.parse(s.read("package.json"));
+  selftest.expectTrue(!!appPackage.devDependencies.typescript);
+
+  run = s.run("npm", "install", "--include=dev");
   await run.expectExit(0);
+
+  const installedTypeScript = s.read("node_modules/typescript/package.json");
+  selftest.expectTrue(installedTypeScript !== null);
+  selftest.expectTrue(
+    JSON.parse(installedTypeScript).name === "typescript"
+  );
 
   run = s.run("types");
   run.waitSecs(60);
   await run.match("Generated package type declarations.");
   await run.expectExit(0);
 
-  run = s.run("npm", "exec", "--", "tsc");
+  run = s.run("node", "node_modules/typescript/bin/tsc");
   run.waitSecs(60);
   await run.expectEnd();
   await run.expectExit(0);
