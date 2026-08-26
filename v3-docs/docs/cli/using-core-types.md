@@ -21,7 +21,7 @@ writes type declaration files to `.meteor/types/`:
 │   │   └── node_modules       ← symlink to the package's bundled npm deps
 │   └── react-meteor-data/
 │       ├── index.d.ts
-│       ├── suspense.d.ts      ← one extra file per sub-path module
+│       ├── module-suspense.d.ts ← one generated file per sub-path module
 │       └── node_modules
 └── node_modules/
     └── meteor-package-types   ← symlink to ../packages (bridge for packages
@@ -202,11 +202,14 @@ import { useTracker } from "meteor/react-meteor-data";
 import { useTracker } from "meteor/react-meteor-data/suspense";
 ```
 
-When a package declares sub-path modules, Meteor generates a separate
-`.d.ts` file for each sub-path inside the package's directory (e.g.
-`packages/react-meteor-data/suspense.d.ts`) and adds the corresponding
+When a package declares sub-path modules, Meteor generates a separate `.d.ts`
+file for each sub-path inside the package's directory and adds the corresponding
 `/// <reference>` entry to `packages.d.ts` automatically. Each sub-path file
 wraps its exports in a `declare module 'meteor/pkg/sub-path'` block.
+
+Generated filenames such as `module-suspense.d.ts` are implementation details.
+Import the public module id (`meteor/react-meteor-data/suspense`) rather than
+referencing files under `.meteor/types/packages/` directly.
 
 ## Bundling Types in Your Own Package
 
@@ -233,7 +236,30 @@ Package.onUse(function (api) {
 See [Writing Atmosphere Packages — TypeScript Types](../packages/7.writing-atmosphere-packages#typescript-types)
 for full details, including sub-path modules and the priority resolution order.
 
-## Migrating from `zodern:types`
+## Migrating an existing application
+
+Native declarations appear before `@types/meteor` in the recommended `paths`
+configuration. Once generated, they therefore become the source of truth for
+core packages that ship declarations. These declarations follow the current
+runtime APIs more closely and can reveal application errors that older ambient
+types allowed.
+
+Adopt them incrementally:
+
+1. Keep `"skipLibCheck": true` while dependencies transition to native types.
+2. Put `./.meteor/types/packages.d.ts` before the `@types/meteor` fallback.
+3. Run `meteor types`, followed by your local TypeScript compiler with
+   `--noEmit`.
+4. Fix errors in application code instead of editing `.meteor/types`; generated
+   files are replaced on the next build.
+
+Pay particular attention to callbacks and serialized values. Login hook fields
+can be absent depending on whether the callback runs on the client or server,
+and DDP arguments must be EJSON-serializable. Runtime-supported values such as
+primitive DDP arguments and `Mongo.ObjectID` Session values are included in the
+native declarations.
+
+### Migrating from `zodern:types`
 
 If your project currently uses the `zodern:types` package, you can remove it
 once you have updated your `tsconfig.json`:
@@ -245,5 +271,6 @@ meteor remove zodern:types
 Then update the `paths` entry as described in [Setup](#setup) above and run
 `meteor types` once to regenerate the types. `meteor run`, `meteor build`, and
 `meteor lint` also regenerate them as part of their existing build pipeline.
-The output format is compatible: Meteor's native generator produces the same
-`declare module 'meteor/…'` structure that `zodern:types` produced.
+The public module format is compatible: Meteor's native generator produces the
+same `declare module 'meteor/…'` identities that `zodern:types` produced. The
+generated on-disk filenames are not a compatibility contract.
