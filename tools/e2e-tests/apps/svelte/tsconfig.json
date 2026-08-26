@@ -3,8 +3,8 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true, // to be able to import eg meteor/mongo
     "baseUrl": ".", // required by "paths"
-    "module": "esNext", // required by "preserveValueImports"
-    "moduleResolution": "node",
+    "module": "esNext",
+    "moduleResolution": "bundler",
     "paths": {
       "/*": ["*"], // support absolute /imports/* with a leading '/'
       // Meteor's built-in type generator writes .meteor/types/packages.d.ts
@@ -14,7 +14,7 @@
         "node_modules/@types/meteor/*"
       ]
     },
-    "preserveValueImports": true // otherwise TS will remove imported components
+    "verbatimModuleSyntax": true // otherwise TS will remove imported components
   },
   "exclude": [
     "./.meteor/local/isopacks/**",

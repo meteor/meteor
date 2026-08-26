@@ -20,4 +20,6 @@ Package.onUse(api => {
   );
   api.addFiles('notice.js');
   api.addFiles('meetup.js');
+
+  api.addAssets('accounts-meetup.d.ts', 'server');
 });

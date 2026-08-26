@@ -31,12 +31,13 @@
     "eslint-plugin-prettier": "^5.5.5",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^4.6.2",
-    "prettier": "^3.8.1",
-    "typescript": "^5.9.3",
+    "expect-type": "^1.4.0",
     "lefthook": "^2.1.4",
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
+    "prettier": "^3.8.1",
     "type-coverage": "^2.29.7",
+    "typescript": "^5.9.3",
     "typescript-coverage-report": "^1.1.1"
   },
   "scripts": {
@@ -56,8 +57,10 @@
     "test:idle-bot": "node --test .github/scripts/__tests__/inactive-issues.test.js",
     "test:self-hosted-runner-cleanup": "node --test scripts/ci/__tests__/self-hosted-runner-cleanup.node-test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
-    "ts-coverage": "typescript-coverage-report",
-    "ts-coverage:ci": "type-coverage --at-least 80"
+    "types:compile": "npx tsc --noEmit",
+    "types:coverage": "npm run types:compile && type-coverage --at-least 99",
+    "types:coverage:table": "npm run types:compile && typescript-coverage-report",
+    "types:dts-test-coverage": "npm exec --yes --package=typescript@5.9.3 --package=check-type-test-coverage@1.3.0 -- check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --tsconfig ./tsconfig.json --namespace-members --min 100"
   },
   "jshintConfig": {
     "esversion": 11

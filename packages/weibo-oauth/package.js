@@ -13,6 +13,7 @@ Package.onUse(api => {
   api.addFiles('weibo_server.js', 'server');
 
   api.export('Weibo');
+  api.addAssets('weibo-oauth.d.ts', 'server');
 });
 
 Package.onTest(function(api) {

@@ -13,5 +13,9 @@ jobs:
         with:
           node-version: 22.x
       - run: npm ci
-      - name: Check TypeScript type coverage (80%)
-        run: npm run ts-coverage:ci
+      - name: Type compilation 
+        run: npm run types:compile
+      - name: Type coverage (99%)
+        run: npm run types:coverage
+      - name: Type test coverage (90%)
+        run: npm run types:dts-test-coverage

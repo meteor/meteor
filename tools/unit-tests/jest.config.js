@@ -15,6 +15,7 @@ module.exports = {
     "<rootDir>/tools/tests/",
     "<rootDir>/packages/",
     "<rootDir>/.github/",
+    "<rootDir>/scripts/check-type-test-coverage/",
   ],
   modulePathIgnorePatterns: [
     "<rootDir>/tools/e2e-tests/",

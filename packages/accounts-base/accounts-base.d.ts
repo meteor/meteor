@@ -27,13 +27,13 @@ export interface EmailFields {
 }
 
 export interface AccountsClientOptions {
-  connection?: DDP.DDPStatic;
+  connection?: DDP.DDPStatic | undefined;
   ddpUrl?: string;
 }
 
 export class AccountsClient {
   constructor(options?: AccountsClientOptions);
-  connection: DDP.DDPStatic;
+  connection: DDP.DDPStatic | undefined;
 }
 
 export namespace Accounts {
@@ -82,7 +82,7 @@ export namespace Accounts {
   function config(options: {
     sendVerificationEmail?: boolean | undefined;
     forbidClientAccountCreation?: boolean | undefined;
-    restrictCreationByEmailDomain?: string | Function | undefined;
+    restrictCreationByEmailDomain?: string | ((email: string) => boolean) | undefined;
     loginExpiration?: number | undefined;
     loginExpirationInDays?: number | undefined;
     oauthSecretKey?: string | undefined;
@@ -92,11 +92,11 @@ export namespace Accounts {
     passwordEnrollTokenExpirationInDays?: number | undefined;
     ambiguousErrorMessages?: boolean | undefined;
     bcryptRounds?: number | undefined;
-    argon2Enabled?: string | false;
+    argon2Enabled?: boolean | undefined;
     argon2Type?: string | undefined;
-    argon2TimeCost: number | undefined;
-    argon2MemoryCost: number | undefined;
-    argon2Parallelism: number | undefined;
+    argon2TimeCost?: number | undefined;
+    argon2MemoryCost?: number | undefined;
+    argon2Parallelism?: number | undefined;
     defaultFieldSelector?: { [key: string]: 0 | 1 } | undefined;
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
@@ -108,13 +108,13 @@ export namespace Accounts {
   }): void;
 
   function onLogin(
-    func: Function
+    func: (attempt: IValidateLoginAttemptCbOpts) => void
   ): {
     stop: () => void;
   };
 
   function onLoginFailure(
-    func: Function
+    func: (attempt: IValidateLoginAttemptCbOpts) => void
   ): {
     stop: () => void;
   };
@@ -123,7 +123,7 @@ export namespace Accounts {
 
   function loginServicesConfigured(): boolean;
 
-  function onPageLoadLogin(func: Function): void;
+  function onPageLoadLogin(func: () => void): void;
 
   function loginWithTokenAsync(token: string): Promise<Meteor.LoginMethodResult>;
 }
@@ -151,11 +151,11 @@ export namespace Accounts {
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<void>;
 
-  function onEmailVerificationLink(callback: Function): void;
+  function onEmailVerificationLink(callback: (token: string, done: () => void) => void): void;
 
-  function onEnrollmentLink(callback: Function): void;
+  function onEnrollmentLink(callback: (token: string, done: () => void) => void): void;
 
-  function onResetPasswordLink(callback: Function): void;
+  function onResetPasswordLink(callback: (token: string, done: () => void) => void): void;
 
   function loggingIn(): boolean;
 
@@ -163,19 +163,19 @@ export namespace Accounts {
 
   function logout(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): Promise<void>;
+  ): void;
 
   function logoutAsync(): Promise<void>;
 
   function logoutAllClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): Promise<void>;
+  ): void;
 
   function logoutAllClientsAsync(): Promise<void>;
 
   function logoutOtherClients(
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
-  ): Promise<void>;
+  ): void;
 
   function logoutOtherClientsAsync(): Promise<void>;
 
@@ -275,10 +275,10 @@ export namespace Accounts {
     options?: { logout?: boolean | undefined }
   ): Promise<void>;
 
-  function validateNewUser(func: Function): boolean;
+  function validateNewUser(func: (user: Meteor.User) => boolean): void;
 
   function validateLoginAttempt(
-    func: Function
+    func: (attempt: IValidateLoginAttemptCbOpts) => boolean | Promise<boolean>
   ): {
     stop: () => void;
   };
@@ -294,14 +294,11 @@ export namespace Accounts {
     user: Meteor.User;
     connection: Meteor.Connection;
     methodName: string;
-    methodArguments: any[];
+    methodArguments: unknown[];
   }
 }
 
 export namespace Accounts {
-  function onLogout(func: Function): {
-    stop: () => void;
-  };
   function onLogout(
     func: (options: {
       user: Meteor.User;
@@ -321,18 +318,18 @@ export namespace Accounts {
     /**
      * The arguments for the method
      */
-    methodArguments?: any[] | undefined;
+    methodArguments?: unknown[] | undefined;
     /**
      * If provided, will be called with the result of the
      * method. If it throws, the client will not be logged in (and
      * its error will be passed to the callback).
      */
-    validateResult?: Function | undefined;
+    validateResult?: ((result: LoginMethodResult) => void) | undefined;
     /**
      * Will be called with no arguments once the user is fully
      * logged in, or with the error on error.
      */
-    userCallback?: ((err?: any) => void) | undefined;
+    userCallback?: ((err?: Error | Meteor.Error | Meteor.TypedError) => void) | undefined;
   }
 
   /**
@@ -368,7 +365,7 @@ export namespace Accounts {
     userId: string;
     error?: Error;
     stampedLoginToken?: StampedLoginToken;
-    options?: Record<string, any>;
+    options?: Record<string, unknown>;
   };
 
   /**
@@ -387,11 +384,11 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
+    handler: (options: Record<string, unknown>) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
+    handler: (options: Record<string, unknown>) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
   ): void;
 
   type Password =
@@ -412,7 +409,7 @@ export namespace Accounts {
   function _checkPasswordAsync(
     user: Meteor.User,
     password: Password
-  ): Promise<{ userId: string; error?: any }>;
+  ): Promise<{ userId: string; error?: Meteor.Error }>;
 }
 
 export namespace Accounts {
@@ -431,6 +428,6 @@ export namespace Accounts {
     userId: string,
     token: HashedStampedLoginToken,
     query?: Mongo.Selector<T> | Mongo.ObjectID | string
-  ): void;
+  ): Promise<void>;
   function _hashLoginToken(token: string): string;
 }
