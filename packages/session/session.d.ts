@@ -23,7 +23,10 @@ export namespace Session {
    * @param key The name of the session variable to test
    * @param value The value to test against
    */
-  function equals(key: string, value: string | number | boolean | null | undefined | Date | SessionObjectID): boolean;
+  function equals(
+    key: string,
+    value: string | number | boolean | null | undefined | Date | SessionObjectID,
+  ): boolean;
 
   /**
    * Get the value of a session variable. If inside a reactive
