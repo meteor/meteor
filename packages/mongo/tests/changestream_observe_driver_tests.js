@@ -1700,6 +1700,142 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - primary snapshot ignores older shared-stream events (#14695)',
+  async function (test) {
+    const c = makeCollection();
+    const id = await c.insertAsync({ state: 'fresh' });
+    const events = [];
+    const handle = await c.find({ _id: id, state: 'fresh' }).observeChanges({
+      added(docId) {
+        events.push({ type: 'added', id: docId });
+      },
+      removed(docId) {
+        events.push({ type: 'removed', id: docId });
+      },
+    });
+
+    try {
+      test.equal(events, [{ type: 'added', id }]);
+      events.length = 0;
+
+      const driver = handle._multiplexer._observeDriver;
+      const snapshotBoundary = driver._lastProcessedOperationTime;
+      const Timestamp = snapshotBoundary.constructor;
+
+      // Model events that were already buffered by the shared MongoDB cursor
+      // when this driver joined. The snapshot already contains their effects,
+      // so neither an older event nor the inclusive boundary may replay them.
+      for (const clusterTime of [
+        new Timestamp({ t: snapshotBoundary.t - 1, i: snapshotBoundary.i }),
+        snapshotBoundary,
+      ]) {
+        driver._sharedStream._onChange({
+          operationType: 'update',
+          clusterTime,
+          documentKey: { _id: id },
+          fullDocument: { _id: id, state: 'old' },
+        });
+      }
+
+      await driver._flushPendingWrites();
+      test.equal(
+        events,
+        [],
+        'events covered by the primary snapshot must not remove its matching document'
+      );
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - non-primary snapshot keeps boundary events (#14695)',
+  async function (test) {
+    const c = makeCollection();
+    const id = await c.insertAsync({ state: 'fresh' });
+    const events = [];
+    const handle = await c.find(
+      { _id: id, state: 'fresh' },
+      { readPreference: 'secondaryPreferred' }
+    ).observeChanges({
+      added(docId) {
+        events.push({ type: 'added', id: docId });
+      },
+      removed(docId) {
+        events.push({ type: 'removed', id: docId });
+      },
+    });
+
+    try {
+      test.equal(events, [{ type: 'added', id }]);
+      events.length = 0;
+
+      const driver = handle._multiplexer._observeDriver;
+      driver._sharedStream._onChange({
+        operationType: 'update',
+        clusterTime: driver._lastProcessedOperationTime,
+        documentKey: { _id: id },
+        fullDocument: { _id: id, state: 'old' },
+      });
+
+      await driver._flushPendingWrites();
+      await waitFor(() => events.some(event => event.type === 'removed'));
+      test.isTrue(
+        events.some(event => event.type === 'removed' && event.id === id),
+        'a potentially stale non-primary snapshot must still apply its boundary event'
+      );
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - inherited non-primary snapshot keeps boundary events (#14695)',
+  async function (test) {
+    const mongoUrl = new URL(process.env.MONGO_URL);
+    mongoUrl.searchParams.set('readPreference', 'secondaryPreferred');
+    const remote = new MongoInternals.RemoteCollectionDriver(mongoUrl.toString());
+    const c = new Mongo.Collection('changestream_test_' + Random.id(), {
+      _driver: remote,
+    });
+    const id = Random.id();
+    const events = [];
+    const handle = await c.find({ _id: id, state: 'fresh' }).observeChanges({
+      added(docId) {
+        events.push({ type: 'added', id: docId });
+      },
+      removed(docId) {
+        events.push({ type: 'removed', id: docId });
+      },
+    });
+
+    try {
+      test.equal(events, []);
+
+      const driver = handle._multiplexer._observeDriver;
+      driver._sharedStream._onChange({
+        operationType: 'update',
+        clusterTime: driver._lastProcessedOperationTime,
+        documentKey: { _id: id },
+        fullDocument: { _id: id, state: 'fresh' },
+      });
+
+      await driver._flushPendingWrites();
+      await waitFor(() => events.some(event => event.type === 'added'));
+      test.isTrue(
+        events.some(event => event.type === 'added' && event.id === id),
+        'a connection-level non-primary snapshot must still apply its boundary event'
+      );
+    } finally {
+      await handle.stop();
+      await remote.mongo.close();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - queues writes until ready',
   async function (test) {
     const c = makeCollection();

@@ -30,6 +30,7 @@ export class ChangeStreamObserveDriver {
     this._writesToCommitWhenReady = [];
     this._isReady = false;
     this._lastProcessedOperationTime = null;
+    this._snapshotCutoffOperationTime = null;
     this._catchingUpResolvers = [];
     this._resolveTimeout = null;
     this._matcher = options.matcher;
@@ -194,6 +195,18 @@ export class ChangeStreamObserveDriver {
       try {
         const pingRes = await this._mongoHandle.db.command({ ping: 1 });
         if (pingRes?.operationTime) {
+          const readPreference = this._cursorDescription.options.readPreference;
+          const readPreferenceMode =
+            (typeof readPreference === 'string' ? readPreference : readPreference?.mode)
+            || collection.readPreference?.mode
+            || 'primary';
+
+          // A primary read performed after this ping contains every change at
+          // or before operationTime. A non-primary read may be stale, so it
+          // must keep replaying those events to reconcile its snapshot.
+          if (readPreferenceMode === 'primary') {
+            this._snapshotCutoffOperationTime = pingRes.operationTime;
+          }
           this._setLastProcessedOperationTime(pingRes.operationTime);
         }
       } catch (error) {
@@ -383,6 +396,14 @@ export class ChangeStreamObserveDriver {
       for (const callbackData of callbacksToFlush) {
         try {
           const { operationType, id, fullDocument, fullDocumentBeforeChange, change } = callbackData;
+
+          if (
+            change?.clusterTime &&
+            this._snapshotCutoffOperationTime &&
+            compareOperationTimes(change.clusterTime, this._snapshotCutoffOperationTime) <= 0
+          ) {
+            continue;
+          }
 
           switch (operationType) {
             case 'insert':
