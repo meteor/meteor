@@ -10,6 +10,7 @@ import type {
   Header,
   EmailTemplates,
 } from "./accounts-base";
+import type { Meteor } from "meteor/meteor";
 
 expectTypeOf<URLS>().toBeObject();
 expectTypeOf<EmailFields>().toBeObject();
@@ -41,6 +42,23 @@ expectTypeOf(Accounts.onLoginFailure).toBeFunction();
 expectTypeOf(Accounts.loginServicesConfigured).toBeFunction();
 expectTypeOf(Accounts.onPageLoadLogin).toBeFunction();
 expectTypeOf(Accounts.loginWithTokenAsync).toBeFunction();
+
+const clientLoginFailure: Accounts.LoginHookCallbackOptions = {
+  error: new Error("login failed"),
+};
+expectTypeOf(clientLoginFailure.error).toEqualTypeOf<
+  Error | Meteor.Error | undefined
+>();
+
+Accounts.onPageLoadLogin((attempt: Accounts.PageLoadLoginAttemptInfo) => {
+  expectTypeOf(attempt.type).toBeString();
+  expectTypeOf(attempt.allowed).toBeBoolean();
+  expectTypeOf(attempt.error).toEqualTypeOf<
+    Error | Meteor.Error | undefined
+  >();
+  expectTypeOf(attempt.methodName).toBeString();
+  expectTypeOf(attempt.methodArguments).toEqualTypeOf<unknown[]>();
+});
 
 // --- Accounts password / email flows ---
 expectTypeOf(Accounts.changePassword).toBeFunction();
@@ -92,6 +110,15 @@ expectTypeOf(Accounts.validateNewUser).returns.toBeVoid();
 expectTypeOf(Accounts.validateLoginAttempt).toBeFunction();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts>().toBeObject();
 expectTypeOf(Accounts.onLogout).toBeFunction();
+expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["user"]>().toEqualTypeOf<
+  Meteor.User | undefined
+>();
+expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["error"]>().toEqualTypeOf<
+  Error | Meteor.Error | undefined
+>();
+Accounts.onLogout(({ user }) => {
+  expectTypeOf(user).toEqualTypeOf<Meteor.User | undefined>();
+});
 
 // --- Accounts login method plumbing ---
 expectTypeOf<Accounts.LoginMethodOptions>().toBeObject();
