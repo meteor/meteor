@@ -39,6 +39,33 @@ export class AccountsClient {
 export namespace Accounts {
   var urls: URLS;
 
+  /**
+   * Payload delivered to login hooks. Client hooks receive login method
+   * details (or just an error), while server hooks receive a validated login
+   * attempt, so environment-specific fields are optional.
+   */
+  interface LoginHookCallbackOptions {
+    type?: string | undefined;
+    allowed?: boolean | undefined;
+    error?: Error | Meteor.Error | undefined;
+    user?: Meteor.User | undefined;
+    connection?: Meteor.Connection | undefined;
+    methodName?: string | undefined;
+    methodArguments?: unknown[] | undefined;
+    id?: string | undefined;
+    token?: string | undefined;
+    tokenExpires?: Date | undefined;
+  }
+
+  /** Result of a resume or OAuth login attempt completed during page load. */
+  interface PageLoadLoginAttemptInfo {
+    type: string;
+    allowed: boolean;
+    error?: Error | Meteor.Error | undefined;
+    methodName: string;
+    methodArguments: unknown[];
+  }
+
   function user(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
   }): Meteor.User | null;
@@ -108,13 +135,13 @@ export namespace Accounts {
   }): void;
 
   function onLogin(
-    func: (attempt: IValidateLoginAttemptCbOpts) => void
+    func: (attempt: LoginHookCallbackOptions) => void
   ): {
     stop: () => void;
   };
 
   function onLoginFailure(
-    func: (attempt: IValidateLoginAttemptCbOpts) => void
+    func: (attempt: LoginHookCallbackOptions) => void
   ): {
     stop: () => void;
   };
@@ -123,7 +150,7 @@ export namespace Accounts {
 
   function loginServicesConfigured(): boolean;
 
-  function onPageLoadLogin(func: () => void): void;
+  function onPageLoadLogin(func: (attempt: PageLoadLoginAttemptInfo) => void): void;
 
   function loginWithTokenAsync(token: string): Promise<Meteor.LoginMethodResult>;
 }
@@ -290,8 +317,8 @@ export namespace Accounts {
   interface IValidateLoginAttemptCbOpts {
     type: string;
     allowed: boolean;
-    error: Meteor.Error;
-    user: Meteor.User;
+    error?: Error | Meteor.Error | undefined;
+    user?: Meteor.User | undefined;
     connection: Meteor.Connection;
     methodName: string;
     methodArguments: unknown[];
@@ -301,7 +328,7 @@ export namespace Accounts {
 export namespace Accounts {
   function onLogout(
     func: (options: {
-      user: Meteor.User;
+      user?: Meteor.User | undefined;
       connection: Meteor.Connection;
     }) => void
   ): {
