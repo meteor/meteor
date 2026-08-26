@@ -57,6 +57,14 @@ export interface ServerSink extends ClientSink {
 
 export type Sink = ClientSink | ServerSink;
 
-export type Callback = (sink: Sink) => Promise<any> | any;
+export type Callback<T = void> = (sink: Sink) => Promise<T> | T;
 
-export function onPageLoad<T extends Callback>(callback: T): T;
+export function onPageLoad<T extends Callback<any>>(callback: T): T;
+export namespace onPageLoad {
+  /** Unregister a previously-registered page-load callback. */
+  function remove(callback: Callback<any>): void;
+  /** Remove all registered page-load callbacks. */
+  function clear(): void;
+  /** Run `handler` for each registered callback, in registration order. */
+  function chain(handler: (callback: Callback<any>) => unknown): Promise<void>;
+}

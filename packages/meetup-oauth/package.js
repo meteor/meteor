@@ -14,6 +14,7 @@ Package.onUse(api => {
   api.addFiles('meetup_client.js', 'client');
 
   api.export('Meetup');
+  api.addAssets('meetup-oauth.d.ts', 'server');
 });
 
 Package.onTest(function(api) {

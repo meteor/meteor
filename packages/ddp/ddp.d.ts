@@ -1,12 +1,13 @@
 import { Meteor } from 'meteor/meteor';
+import { EJSONable } from 'meteor/ejson';
 
 export namespace DDP {
   interface DDPStatic {
-    subscribe(name: string, ...rest: any[]): Meteor.SubscriptionHandle;
-    call(method: string, ...parameters: any[]): any;
-    callAsync(method: string, ...parameters: any[]): Promise<any>;
-    apply(method: string, ...parameters: any[]): any;
-    methods(IMeteorMethodsDictionary: any): any;
+    subscribe(name: string, ...rest: EJSONable[]): Meteor.SubscriptionHandle;
+    call<Result = unknown>(method: string, ...parameters: EJSONable[]): Result;
+    callAsync<Result = unknown>(method: string, ...parameters: EJSONable[]): Promise<Result>;
+    apply<Result = unknown>(method: string, args: EJSONable[], options?: unknown, callback?: (err: Error | undefined, result?: Result) => void): Result;
+    methods(methods: Record<string, (this: DDPCommon.MethodInvocation, ...args: unknown[]) => unknown>): void;
     status(): DDPStatus;
     reconnect(): void;
     disconnect(): void;
@@ -50,7 +51,7 @@ export namespace DDPCommon {
      * Set the logged in user.
      * @param userId The value that should be returned by `userId` on this connection.
      */
-    setUserId(userId: string | null): void;
+    setUserId(userId: string | null): Promise<void>;
     /**
      * The id of the user that made this method call, or `null` if no user was logged in.
      */
@@ -65,4 +66,46 @@ export namespace DDPCommon {
      */
     connection: Meteor.Connection;
   }
+
+  /** Supported DDP protocol versions, newest first. */
+  const SUPPORTED_DDP_VERSIONS: string[];
+
+  /** Parse a raw DDP wire string into a message object, or `null` if invalid. */
+  function parseDDP(stringMessage: string): Record<string, unknown> | null;
+
+  /** Serialize a DDP message object to its wire string. */
+  function stringifyDDP(msg: Record<string, unknown>): string;
+
+  /** Derive the deterministic random seed used by a method stub. */
+  function makeRpcSeed(enclosing: MethodInvocation, methodName: string): unknown;
+
+  /** Options for constructing a `Heartbeat`. */
+  interface HeartbeatOptions {
+    heartbeatInterval: number;
+    heartbeatTimeout: number;
+    onTimeout: () => void;
+    sendPing: () => void;
+  }
+
+  /** Client/server heartbeat used to detect dropped DDP connections. */
+  interface Heartbeat {
+    new (options: HeartbeatOptions): Heartbeat;
+    /** Begin sending pings and watching for timeouts. */
+    start(): void;
+    /** Stop all heartbeat timers. */
+    stop(): void;
+    /** Reset the timeout timer after any message is received. */
+    messageReceived(): void;
+  }
+
+  /** A deterministic, seeded source of `Random` generators. */
+  interface RandomStream {
+    new (options: { seed?: string | string[] }): RandomStream;
+  }
 }
+
+// DDPServer is owned by the ddp-server package; re-export it by name so
+// `import { DDPServer } from "meteor/ddp"` keeps working (export * does not
+// cross zodern:types export= wrappers, a named re-export does).
+import { DDPServer } from 'meteor/ddp-server';
+export { DDPServer };

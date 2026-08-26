@@ -19,5 +19,4 @@ hot-module-replacement  # Update client in development without reloading the pag
 
 fourseven:scss@5.0.0-rc.1 # Enable SCSS syntax in .scss using Meteor
 static-html             # Define static page content in .html files
-react-meteor-data       # React higher-order component for reactively tracking Meteor data
-zodern:types            # Pull in type declarations from other Meteor packages
+react-meteor-data@4.1.0-beta.1 # React higher-order component for reactively tracking Meteor data

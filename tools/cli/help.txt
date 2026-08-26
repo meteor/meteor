@@ -502,6 +502,22 @@ Options:
 
 
 
+>>> types
+Generate package type declarations for this project.
+Usage: meteor types
+
+Build local packages and generate `.meteor/types/` for projects that
+have a `tsconfig.json` or `jsconfig.json`. This command skips linting and
+bundling, which makes it useful for CI workflows that only need generated
+Meteor package declarations before running `tsc`.
+
+Options:
+  --allow-incompatible-update   Allow packages in your project to be upgraded or
+                      downgraded to versions that are potentially incompatible
+                      with the current versions, if required to satisfy all
+                      package version constraints.
+
+
 >>> lint
 Build this project and run the linters printing all errors and warnings.
 Usage: meteor lint

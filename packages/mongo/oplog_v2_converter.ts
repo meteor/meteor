@@ -39,23 +39,25 @@
 
 import { EJSON } from 'meteor/ejson';
 
+type OplogValue = string | number | boolean | null | undefined | Record<string, unknown> | unknown[];
+
 interface OplogEntry {
   $v: number;
   diff?: OplogDiff;
-  $set?: Record<string, any>;
+  $set?: Record<string, OplogValue>;
   $unset?: Record<string, true>;
 }
 
 interface OplogDiff {
-  i?: Record<string, any>;
-  u?: Record<string, any>;
+  i?: Record<string, OplogValue>;
+  u?: Record<string, OplogValue>;
   d?: Record<string, boolean>;
-  [key: `s${string}`]: ArrayOperator | Record<string, any>;
+  [key: `s${string}`]: ArrayOperator | OplogDiff;
 }
 
 interface ArrayOperator {
   a: true;
-  [key: `u${number}`]: any;
+  [key: `u${number}`]: OplogValue;
 }
 
 const arrayOperatorKeyRegex = /^(a|[su]\d+)$/;
@@ -99,8 +101,8 @@ function join(prefix: string, key: string): string {
  * - Empty objects are assigned directly
  */
 function flattenObjectInto(
-  target: Record<string, any>,
-  source: any,
+  target: Record<string, OplogValue>,
+  source: OplogValue,
   prefix: string
 ): void {
   if (
@@ -140,7 +142,7 @@ function convertOplogDiff(
   diff: OplogDiff,
   prefix = ''
 ): void {
-  Object.entries(diff).forEach(([diffKey, value]) => {
+  (Object.entries(diff) as [string, Record<string, unknown>][]).forEach(([diffKey, value]) => {
     if (diffKey === 'd') {
       // Handle `$unset`s
       oplogEntry.$unset ??= {};
@@ -154,7 +156,7 @@ function convertOplogDiff(
     } else if (diffKey === 'u') {
       // Handle flat `$set`s
       oplogEntry.$set ??= {};
-      Object.entries(value).forEach(([key, fieldValue]) => {
+      (Object.entries(value) as [string, OplogValue][]).forEach(([key, fieldValue]) => {
         oplogEntry.$set![join(prefix, key)] = fieldValue;
       });
     } else if (diffKey.startsWith('s')) {
@@ -162,18 +164,18 @@ function convertOplogDiff(
       const key = diffKey.slice(1);
       if (isArrayOperator(value)) {
         // Array operator
-        Object.entries(value).forEach(([position, fieldValue]) => {
+        (Object.entries(value) as [string, OplogValue | OplogDiff][]).forEach(([position, fieldValue]) => {
           if (position === 'a') return;
 
           const positionKey = join(prefix, `${key}.${position.slice(1)}`);
           if (position[0] === 's') {
-            convertOplogDiff(oplogEntry, fieldValue, positionKey);
+            convertOplogDiff(oplogEntry, fieldValue as OplogDiff, positionKey);
           } else if (fieldValue === null) {
             oplogEntry.$unset ??= {};
             oplogEntry.$unset[positionKey] = true;
           } else {
             oplogEntry.$set ??= {};
-            oplogEntry.$set[positionKey] = fieldValue;
+            oplogEntry.$set[positionKey] = fieldValue as OplogValue;
           }
         });
       } else if (key) {

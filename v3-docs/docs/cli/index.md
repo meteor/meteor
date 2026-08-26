@@ -1217,6 +1217,42 @@ meteor lint --allow-incompatible-update
 Linting errors will prevent your application from being built successfully. Fixing these errors is required for deployment.
 :::
 
+## meteor types {#meteortypes}
+
+Generate Meteor package type declarations for your project.
+
+```bash
+meteor types [options]
+```
+
+### Description
+
+This command:
+
+- Builds local packages as needed
+- Generates `.meteor/types/` for projects with a `tsconfig.json` or `jsconfig.json`
+- Skips linting and bundling so it can be used before running `tsc` in CI
+
+::: tip CI Integration
+Use `meteor types` when you only need fresh Meteor package declarations before a standalone type-check step.
+:::
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--allow-incompatible-update` | Allow packages to be upgraded or downgraded to potentially incompatible versions if required to satisfy all package version constraints |
+
+### Example Usage
+
+```bash
+# Generate Meteor package type declarations
+meteor types
+
+# Allow incompatible package updates during type generation
+meteor types --allow-incompatible-update
+```
+
 
 ## meteor search {#meteorsearch}
 

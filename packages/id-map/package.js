@@ -8,6 +8,7 @@ Package.onUse(function (api) {
   api.use("ejson");
   api.mainModule("id-map.js");
   api.export("IdMap");
+  api.addAssets("id-map.d.ts", "server");
 });
 
 Package.onTest(function (api) {
