@@ -20,6 +20,7 @@ Package.onUse(function (api) {
 
   api.export("URL");
   api.export("URLSearchParams");
+  api.addAssets("url.d.ts", "server");
 });
 
 Package.onTest(function (api) {

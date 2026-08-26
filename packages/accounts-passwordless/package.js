@@ -19,6 +19,8 @@ Package.onUse(api => {
   api.addFiles('passwordless_server.js', 'server');
   api.addFiles('passwordless_client.js', 'client');
   api.addFiles('server_utils.js', 'server');
+
+  api.addAssets('accounts-passwordless.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

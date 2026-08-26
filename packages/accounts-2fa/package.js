@@ -20,6 +20,8 @@ Package.onUse(function (api) {
 
   api.addFiles(["2fa-client.js"], "client");
   api.addFiles(["2fa-server.js"], "server");
+
+  api.addAssets("accounts-2fa.d.ts", "server");
 });
 
 Package.onTest(function (api) {
