@@ -42,6 +42,8 @@ expectTypeOf(Accounts.onLoginFailure).toBeFunction();
 expectTypeOf(Accounts.loginServicesConfigured).toBeFunction();
 expectTypeOf(Accounts.onPageLoadLogin).toBeFunction();
 expectTypeOf(Accounts.loginWithTokenAsync).toBeFunction();
+expectTypeOf<Accounts.LoginHookCallbackOptions>().toBeObject();
+expectTypeOf<Accounts.PageLoadLoginAttemptInfo>().toBeObject();
 
 const clientLoginFailure: Accounts.LoginHookCallbackOptions = {
   error: new Error("login failed"),

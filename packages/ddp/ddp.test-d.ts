@@ -6,6 +6,11 @@ import { Meteor } from "meteor/meteor";
 expectTypeOf(DDP).toBeObject();
 expectTypeOf<DDP.DDPStatic>().toBeObject();
 expectTypeOf<DDP.DDPStatus>().toBeObject();
+expectTypeOf<DDP.Argument>().not.toBeAny();
+expectTypeOf<DDP.Result>().not.toBeAny();
+expectTypeOf<DDP.SubscriptionCallbacks>().toBeObject();
+expectTypeOf<DDP.SubscriptionCallback>().not.toBeAny();
+expectTypeOf<DDP.MethodCallback<number>>().toBeFunction();
 expectTypeOf<DDP.Status>().toEqualTypeOf<
   "connected" | "connecting" | "failed" | "waiting" | "offline"
 >();
