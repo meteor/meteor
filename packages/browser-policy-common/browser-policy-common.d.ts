@@ -8,7 +8,7 @@ export namespace BrowserPolicy {
   var content: {
     allowEval(): void;
     allowInlineStyles(): void;
-    allowInlineScripts(): void;
+    allowInlineScripts(): Promise<void>;
     allowSameOriginForAll(): void;
     allowDataUrlForAll(): void;
     allowOriginForAll(origin: string): void;
@@ -20,19 +20,15 @@ export namespace BrowserPolicy {
     allowFrameOrigin(origin: string): void;
     allowFrameAncestorsOrigin(origin: string): void;
     allowContentTypeSniffing(): void;
-    allowAllContentOrigin(): void;
-    allowAllContentDataUrl(): void;
-    allowAllContentSameOrigin(): void;
     allowConnectOrigin(origin: string): void;
     allowObjectOrigin(origin: string): void;
 
-    disallowAll(): void;
+    disallowAll(): Promise<void>;
     disallowInlineStyles(): void;
     disallowEval(): void;
-    disallowInlineScripts(): void;
+    disallowInlineScripts(): Promise<void>;
     disallowFont(): void;
     disallowObject(): void;
-    disallowAllContent(): void;
     disallowConnect(): void;
   };
 }

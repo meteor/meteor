@@ -4,6 +4,7 @@
 // Definitions: https://github.com/DefinitelyTyped/DefinitelyTyped
 // Minimum TypeScript Version: 4.1
 
+import { Meteor } from "meteor/meteor";
 import { Mongo } from "meteor/mongo";
 
 /**
@@ -27,7 +28,7 @@ export declare namespace Roles {
    * @static
    * @final
    */
-  var GLOBAL_GROUP: string;
+  var GLOBAL_GROUP: null;
 
   /**
    * Subscription handle for the currently logged in user's permissions.
@@ -42,7 +43,7 @@ export declare namespace Roles {
    *
    * @for Roles
    */
-  var subscription: Subscription;
+  var subscription: Meteor.SubscriptionHandle;
 
   /**
    * Add users to roles.
@@ -86,12 +87,12 @@ export declare namespace Roles {
    */
   function createRole(
     roleName: string,
-    options?: { unlessExists: boolean }
-  ): string;
+    options?: { unlessExists?: boolean }
+  ): string | null;
   function createRoleAsync(
     roleName: string,
-    options?: { unlessExists: boolean }
-  ): Promise<string>;
+    options?: { unlessExists?: boolean }
+  ): Promise<string | null>;
 
   /**
    * Delete an existing role.

@@ -18,22 +18,20 @@ export namespace Meteor {
    * `Meteor.release` is a string containing the name of the release with which the project was built (for example, `"1.2.3"`). It is `undefined` if the project was built using a git checkout
    * of Meteor.
    */
-  var release: string;
-
-  var meteorRelease: string;
+  var release: string | undefined;
 
   interface ErrorConstructor {
-    new (...args: any[]): Error;
+    new (...args: unknown[]): Error;
     errorType: string;
   }
 
-  function makeErrorType(name: string, constructor: Function): ErrorConstructor;
+  function makeErrorType(name: string, constructor: (this: any, ...args: any[]) => void): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
   interface Settings {
-    public: { [id: string]: any };
-    [id: string]: any;
+    public: Record<string, unknown>;
+    [id: string]: unknown;
   }
   /**
    * `Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data)
@@ -63,7 +61,7 @@ export namespace Meteor {
     emails?: UserEmail[] | undefined;
     createdAt?: Date | undefined;
     profile?: UserProfile;
-    services?: any;
+    services?: Record<string, unknown>;
   }
 
   function user(options?: {
@@ -128,10 +126,9 @@ export namespace Meteor {
     reason?: string | undefined;
     details?: string | undefined;
   }
-  var TypedError: TypedErrorStatic;
-  interface TypedErrorStatic {
-    new (message: string, errorType: string): TypedError;
-  }
+  // NOTE: Meteor.TypedError is a TYPE only. There is no runtime `Meteor.TypedError`
+  // value/constructor (it is never assigned anywhere); the interface exists so
+  // error callbacks can be typed `error?: ... | Meteor.TypedError`.
   interface TypedError extends global_Error {
     message: string;
     errorType: string;
@@ -162,7 +159,12 @@ export namespace Meteor {
    * @param methods Dictionary whose keys are method names and values are functions.
    */
   function methods(methods: {
-    [key: string]: (this: MethodThisType, ...args: any[]) => any;
+    // Handlers may declare concretely-typed parameters (e.g. `(id: string)`).
+    // Using `any[]` (rather than `(EJSONable | EJSONableProperty)[]`) keeps that
+    // ergonomic under strictFunctionTypes; DDP still requires EJSON-serializable
+    // arguments at the call site.
+    [key: string]: (this: MethodThisType, ...args: any[]) =>
+      EJSONable | EJSONableProperty | void | Promise<EJSONable | EJSONableProperty | void>;
   }): void;
 
   /**
@@ -176,7 +178,7 @@ export namespace Meteor {
       | EJSONable[]
       | EJSONableProperty
       | EJSONableProperty[]
-  >(name: string, ...args: any[]): Result;
+  >(name: string, ...args: (EJSONable | EJSONableProperty)[]): Result;
 
   /**
    * Invokes a method with an async stub, passing any number of arguments.
@@ -191,7 +193,7 @@ export namespace Meteor {
       | EJSONableProperty[]
   >(
     name: string,
-    ...args: any[]
+    ...args: (EJSONable | EJSONableProperty)[]
   ): Promise<Result> & {
     stubPromise: Promise<Result>;
     serverPromise: Promise<Result>;
@@ -310,14 +312,14 @@ export namespace Meteor {
    * @param func The function to run
    * @param delay Number of milliseconds to wait between each function call.
    */
-  function setInterval(func: Function, delay: number): number;
+  function setInterval(func: () => void, delay: number): number;
 
   /**
    * Call a function in the future after waiting for a specified delay.
    * @param func The function to run
    * @param delay Number of milliseconds to wait before calling function
    */
-  function setTimeout(func: Function, delay: number): number;
+  function setTimeout(func: () => void, delay: number): number;
   /**
    * Cancel a repeating function call scheduled by `Meteor.setInterval`.
    * @param id The handle returned by `Meteor.setInterval`
@@ -333,7 +335,7 @@ export namespace Meteor {
    * Defer execution of a function to run asynchronously in the background (similar to `Meteor.setTimeout(func, 0)`.
    * @param func The function to run
    */
-  function defer(func: Function): void;
+  function defer(func: () => void): void;
 
   /**
    * Wrap a function so that it only runs in background in specified environments.
@@ -367,7 +369,7 @@ export namespace Meteor {
    * Run code when a client or a server starts.
    * @param func A function to run on startup.
    */
-  function startup(func: Function): void;
+  function startup(func: () => void | Promise<void>): void;
 
   /**
    * Wrapper around the standard `fetch` API. Packages can extend this
@@ -390,12 +392,12 @@ export namespace Meteor {
    * @param func A function that takes a callback as its final parameter
    * @param context Optional `this` object against which the original function will be invoked
    */
-  function wrapAsync<T extends Function>(
-    func: T,
-    context?: ThisParameterType<T>
-  ): Function;
+  function wrapAsync<TFunc extends (...args: any[]) => any>(
+    func: TFunc,
+    context?: ThisParameterType<TFunc>
+  ): (...args: any[]) => any;
 
-  function bindEnvironment<TFunc extends Function>(func: TFunc): TFunc;
+  function bindEnvironment<TFunc extends (...args: any[]) => any>(func: TFunc): TFunc;
 
   class EnvironmentVariable<T> {
     readonly slot: number;
@@ -430,48 +432,10 @@ export namespace Meteor {
     loginStyle?: string | undefined;
   }
 
-  function loginWithMeteorDeveloperAccount(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithFacebook(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithGithub(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithGoogle(
-    options?: Meteor.LoginWithExternalServiceOptions & {
-      /** Google login accepts additional login parameters based on
-       * https://developers.google.com/identity/openid-connect/openid-connect#authenticationuriparameters.
-       * However, there's only one parameter that must be set directly; all
-       * others can be set using Meteor's standard OAuth login parameters */
-      loginUrlParameters?: {
-        include_granted_scopes: boolean;
-      };
-    },
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithMeetup(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithTwitter(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
-
-  function loginWithWeibo(
-    options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
-  ): void;
+  // The OAuth login helpers (loginWithFacebook/Github/Google/Meetup/
+  // MeteorDeveloperAccount/Twitter/Weibo) are contributed by their own
+  // accounts-<service> packages via `declare module "meteor/meteor"`
+  // augmentation, so they only type when that package is installed.
 
   function loginWithPassword(
     user: { username: string } | { email: string } | { id: string } | string,
@@ -537,7 +501,25 @@ export namespace Meteor {
    * argument to `onStop`. If a function is passed instead of an object, it
    * is interpreted as an `onReady` callback.
    */
-  function subscribe(name: string, ...args: any[]): Meteor.SubscriptionHandle;
+  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty)[]): Meteor.SubscriptionHandle;
+  function subscribe(
+    name: string,
+    ...args: [
+      ...args: (EJSONable | EJSONableProperty)[],
+      callbacks: {
+        onReady?: () => void;
+        onStop?: (error?: Meteor.Error) => void;
+        onError?: (error: Meteor.Error) => void;
+      }
+    ]
+  ): Meteor.SubscriptionHandle;
+  function subscribe(
+    name: string,
+    ...args: [
+      ...args: (EJSONable | EJSONableProperty)[],
+      onReady: () => void
+    ]
+  ): Meteor.SubscriptionHandle;
   /** Pub/Sub **/
 }
 
@@ -564,16 +546,16 @@ export namespace Meteor {
     name: string | null,
     func: (
       this: Subscription,
-      ...args: any[]
+      ...args: (EJSONable | EJSONableProperty)[]
     ) =>
       | void
-      | Mongo.Cursor<any>
-      | Mongo.Cursor<any>[]
-      | Promise<void | Mongo.Cursor<any> | Mongo.Cursor<any>[]>,
+      | Mongo.Cursor<unknown>
+      | Mongo.Cursor<unknown>[]
+      | Promise<void | Mongo.Cursor<unknown> | Mongo.Cursor<unknown>[]>,
     options?: { is_auto: boolean }
   ): void;
 
-  function _debug(...args: any[]): void;
+  function _debug(...args: unknown[]): void;
 }
 
 export interface Subscription {
@@ -608,7 +590,7 @@ export interface Subscription {
    * Call inside the publish function. Registers a callback function to run when the subscription is stopped.
    * @param func The callback function
    */
-  onStop(func: Function): void;
+  onStop(func: () => void): void;
   /**
    * Call inside the publish function. Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onReady`
    * callback passed to  `Meteor.subscribe`, if any.
