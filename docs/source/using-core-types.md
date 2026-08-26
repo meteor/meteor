@@ -29,6 +29,12 @@ meteor types
 this will create the `.meteor/types` folder with the types for the core packages (the generator writes a `.gitignore` inside it, so the folder stays out of version control).
 You can continue to use your code as you did before, but now you can use the types for the core packages even if you are in JavaScript.
 
+Because the generated declarations take precedence over `@types/meteor`, they
+may expose application type errors that older ambient declarations accepted.
+Keep `skipLibCheck` enabled during migration, run `meteor types` followed by
+your local TypeScript compiler with `--noEmit`, and fix application code rather
+than editing files under `.meteor/types`, which are regenerated automatically.
+
 For MeteorJS from version 2.8.1 up to the Meteor 3 releases that do not include the native type generator, use the community [zodern:types](https://github.com/zodern/meteor-types) package instead (`meteor add zodern:types`), which generates the types at `.meteor/local/types` and requires `"preserveSymlinks": true` in your `tsconfig.json`.
 
 for more information please visit the [current documentation](https://docs.meteor.com/cli/using-core-types).
