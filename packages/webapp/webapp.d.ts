@@ -27,10 +27,10 @@ export declare namespace WebApp {
   var clientPrograms: {
     [key: string]: {
       format: string;
-      manifest: any;
+      manifest: Record<string, unknown>[];
       version: string;
-      cordovaCompatibilityVersions?: any;
-      PUBLIC_SETTINGS: any;
+      cordovaCompatibilityVersions?: Record<string, string>;
+      PUBLIC_SETTINGS: Record<string, unknown>;
     };
   };
   /**
@@ -55,7 +55,7 @@ export declare namespace WebApp {
    * Should be used only for testing
    */
   function _suppressExpressErrors(): void;
-  function onListening(callback: Function): void;
+  function onListening(callback: () => void): void;
 
   type RuntimeConfigHookCallback = (options: {
     arch: "web.browser" | "web.browser.legacy" | "web.cordova";
@@ -63,34 +63,34 @@ export declare namespace WebApp {
     encodedCurrentConfig: string;
     updated: boolean;
   }) => string | undefined | null | false;
-  function addRuntimeConfigHook(callback: RuntimeConfigHookCallback): void;
+  function addRuntimeConfigHook(callback: RuntimeConfigHookCallback): { stop: () => void; callback: RuntimeConfigHookCallback };
   function decodeRuntimeConfig(rtimeConfigString: string): unknown;
   function encodeRuntimeConfig(rtimeConfig: unknown): string;
-  function addHtmlAttributeHook(hook: Function): void;
+  function addHtmlAttributeHook(hook: (request: http.IncomingMessage) => Record<string, unknown> | null): void;
 }
 
 export declare namespace WebAppInternals {
   var NpmModules: {
     [key: string]: {
       version: string;
-      module: any;
+      module: unknown;
     };
   };
   function identifyBrowser(userAgentString: string): {
     name: string;
-    major: string;
-    minor: string;
-    patch: string;
+    major: number;
+    minor: number;
+    patch: number;
   };
   function registerBoilerplateDataCallback(
     key: string,
-    callback: Function
-  ): Function;
+    callback: Function | null
+  ): Function | null;
   function generateBoilerplateInstance(
     arch: string,
-    manifest: any,
-    additionalOptions: any
-  ): any;
+    manifest: Record<string, unknown>[],
+    additionalOptions: Record<string, unknown>
+  ): unknown;
 
   function staticFilesMiddleware(
     staticFiles: StaticFiles,
@@ -98,16 +98,20 @@ export declare namespace WebAppInternals {
     res: http.ServerResponse,
     next: Function
   ): void;
-  function parsePort(port: string): number;
-  function reloadClientPrograms(): void;
-  function generateBoilerplate(): void;
-  var staticFiles: StaticFiles;
+  function parsePort(port: string | number): string | number;
+  function reloadClientPrograms(): Promise<void>;
+  function generateBoilerplate(): Promise<void>;
+  var staticFilesByArch: { [arch: string]: StaticFiles };
   function inlineScriptsAllowed(): boolean;
-  function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): void;
+  function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): Promise<void>;
 
-  function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): void;
-  function setBundledJsCssPrefix(bundledJsCssPrefix: string): void;
-  function addStaticJs(): void;
-  function getBoilerplate(request: http.IncomingMessage, arch: string): string;
-  var additionalStaticJs: any;
+  function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): Promise<void>;
+  function setBundledJsCssPrefix(bundledJsCssPrefix: string): Promise<void>;
+  function addStaticJs(contents: string): void;
+  function getBoilerplate(request: http.IncomingMessage, arch: string): Promise<{
+    stream: NodeJS.ReadableStream;
+    statusCode?: number;
+    headers?: Record<string, string>;
+  }>;
+  var additionalStaticJs: Record<string, string>;
 }
