@@ -181,44 +181,76 @@ export class ChangeStreamObserveDriver {
 
       if (this._stopped) return;
 
-      // Establish this driver's caught-up floor. The stream subscription is
-      // active now, so every write at or before the server's current
-      // operationTime is either already dispatched to _onChange or will be
-      // reflected in the snapshot read below. Without this floor, a fence
-      // targeting a write that PREDATES this driver waits for a change event
-      // that will never be delivered to it — the canonical case is a
-      // login-style method that writes the collection and then triggers
-      // creation of this observer (setUserId rerunning user publications).
-      // The stream (shared, possibly opened long ago by another observer)
-      // dispatched that event before this driver joined, so on an idle
-      // collection the wait stalls until the next unrelated write.
-      try {
-        const pingRes = await this._mongoHandle.db.command({ ping: 1 });
-        if (pingRes?.operationTime) {
-          const readPreference = this._cursorDescription.options.readPreference;
-          const readPreferenceMode =
-            (typeof readPreference === 'string' ? readPreference : readPreference?.mode)
-            || collection.readPreference?.mode
-            || 'primary';
+      const readPreference = this._cursorDescription.options.readPreference;
+      const readPreferenceMode =
+        (typeof readPreference === 'string' ? readPreference : readPreference?.mode)
+        || collection.readPreference?.mode
+        || 'primary';
+      const readConcern = this._cursorDescription.options.readConcern;
+      const readConcernLevel =
+        (typeof readConcern === 'string' ? readConcern : readConcern?.level)
+        || collection.readConcern?.level;
+      const supportsCausalSnapshot =
+        readPreferenceMode === 'primary' &&
+        (!readConcernLevel || ['local', 'majority'].includes(readConcernLevel));
+      let snapshotSession = null;
 
-          // A primary read performed after this ping contains every change at
-          // or before operationTime. A non-primary read may be stale, so it
-          // must keep replaying those events to reconcile its snapshot.
-          if (readPreferenceMode === 'primary') {
-            this._snapshotCutoffOperationTime = pingRes.operationTime;
-          }
-          this._setLastProcessedOperationTime(pingRes.operationTime);
+      if (supportsCausalSnapshot) {
+        try {
+          snapshotSession = this._mongoHandle.client.startSession({
+            causalConsistency: true,
+          });
+        } catch (error) {
+          Meteor._debug('Failed to create ChangeStream snapshot session:', error.message);
         }
-      } catch (error) {
-        Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
-        // Best-effort: without the floor we only lose the fast-path release.
       }
 
-      if (this._stopped) return;
+      try {
+        // Establish this driver's caught-up floor. The stream subscription is
+        // active now, so every write at or before the server's current
+        // operationTime is either already dispatched to _onChange or will be
+        // reflected in the snapshot read below. Without this floor, a fence
+        // targeting a write that PREDATES this driver waits for a change event
+        // that will never be delivered to it — the canonical case is a
+        // login-style method that writes the collection and then triggers
+        // creation of this observer (setUserId rerunning user publications).
+        // The stream (shared, possibly opened long ago by another observer)
+        // dispatched that event before this driver joined, so on an idle
+        // collection the wait stalls until the next unrelated write.
+        try {
+          const pingRes = await this._mongoHandle.db.command(
+            { ping: 1 },
+            snapshotSession ? { session: snapshotSession } : undefined
+          );
+          if (pingRes?.operationTime) {
+            // A primary read performed after this ping contains every change at
+            // or before operationTime only when the read is causally tied to the
+            // ping. Non-primary and non-causal reads may be stale, so they must
+            // keep replaying those events to reconcile their snapshots.
+            if (snapshotSession) {
+              this._snapshotCutoffOperationTime = pingRes.operationTime;
+            }
+            this._setLastProcessedOperationTime(pingRes.operationTime);
+          }
+        } catch (error) {
+          Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
+          // Best-effort: without the floor we only lose the fast-path release.
+        }
 
-      // Now read the snapshot. Events that arrived while we were getting
-      // here are sitting in _pendingWrites and will be flushed below.
-      await this._sendInitialAdds(collection);
+        if (this._stopped) return;
+
+        // Now read the snapshot. Events that arrived while we were getting
+        // here are sitting in _pendingWrites and will be flushed below.
+        await this._sendInitialAdds(collection, snapshotSession);
+      } finally {
+        if (snapshotSession) {
+          try {
+            await snapshotSession.endSession();
+          } catch (error) {
+            Meteor._debug('Failed to close ChangeStream snapshot session:', error.message);
+          }
+        }
+      }
 
       // Mark ready so _flushPendingWrites lets the queued change events
       // through (it short-circuits when !_isReady to avoid calling
@@ -257,7 +289,7 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  async _sendInitialAdds(collection) {
+  async _sendInitialAdds(collection, session = null) {
     if (this._stopped) return;
 
     try {
@@ -267,6 +299,9 @@ export class ChangeStreamObserveDriver {
         replaceMeteorAtomWithMongo
       );
       const options = { ...this._cursorDescription.options };
+      if (session) {
+        options.session = session;
+      }
 
       // Find all existing documents
       const cursor = collection.find(selector, options);
