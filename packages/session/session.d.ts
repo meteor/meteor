@@ -1,3 +1,8 @@
+interface SessionObjectID {
+  toHexString(): string;
+  equals(otherID: SessionObjectID): boolean;
+}
+
 type SessionValue =
   | string
   | number
@@ -6,6 +11,7 @@ type SessionValue =
   | unknown[]
   | Date
   | Uint8Array
+  | SessionObjectID
   | null
   | undefined;
 
@@ -17,7 +23,7 @@ export namespace Session {
    * @param key The name of the session variable to test
    * @param value The value to test against
    */
-  function equals(key: string, value: string | number | boolean | null | undefined | Date): boolean;
+  function equals(key: string, value: string | number | boolean | null | undefined | Date | SessionObjectID): boolean;
 
   /**
    * Get the value of a session variable. If inside a reactive
