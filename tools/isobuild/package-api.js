@@ -58,6 +58,19 @@ function isTypeScriptSourcePath(p) {
   return typeof p === 'string' && /\.tsx?$/.test(p) && !p.endsWith('.d.ts');
 }
 
+function isTypeScriptDeclarationPath(p) {
+  return typeof p === 'string' && p.endsWith('.d.ts');
+}
+
+function isValidTypesModuleName(name) {
+  return typeof name === 'string' &&
+    !!name.trim() &&
+    name === name.trim() &&
+    !name.includes('\\') &&
+    !name.split('/').some(segment =>
+      segment === '' || segment === '.' || segment === '..');
+}
+
 function normalizeTypePath(p) {
   return convertToPosixPath(p, true).replace(/^\.\//, '');
 }
@@ -506,6 +519,19 @@ export class PackageAPI {
       return;
     }
 
+    if (options.modules) {
+      for (const name of Object.keys(options.modules)) {
+        if (!isValidTypesModuleName(name)) {
+          buildmessage.error(
+            `api.types(): options.modules key "${name}" must be a valid ` +
+              'non-empty sub-path without empty, dot, parent, or backslash segments.',
+            { useMyCaller: true }
+          );
+          return;
+        }
+      }
+    }
+
     // A trailing '/' (as written by the author) selects directory mode.
     // The decision is made from the string alone — api.* methods never
     // touch the filesystem, and the directory may not even exist yet when
@@ -530,8 +556,38 @@ export class PackageAPI {
       return;
     }
 
+    const isSourceEntry = isTypeScriptSourcePath(typesEntry);
+    if (!isSourceEntry && !isTypeScriptDeclarationPath(typesEntry)) {
+      buildmessage.error(
+        'api.types() requires a .d.ts or .ts/.tsx file in single-file mode.',
+        { useMyCaller: true }
+      );
+      return;
+    }
+
+    let normalizedModules = null;
+    if (options.modules) {
+      normalizedModules = {};
+      for (const [name, modulePath] of Object.entries(options.modules)) {
+        const validPath = isSourceEntry
+          ? isTypeScriptSourcePath(modulePath)
+          : isTypeScriptDeclarationPath(modulePath);
+        if (typeof modulePath !== 'string' || !modulePath.trim() || !validPath) {
+          buildmessage.error(
+            isSourceEntry
+              ? `api.types(): options.modules.${name} must be a .ts/.tsx ` +
+                  'source path when the types entry is a TypeScript source file.'
+              : `api.types(): options.modules.${name} must be a .d.ts path.`,
+            { useMyCaller: true }
+          );
+          return;
+        }
+        normalizedModules[name] = normalizeTypePath(modulePath);
+      }
+    }
+
     this._typesEntry = typesEntry;
-    this._typesModules = options.modules ? { ...options.modules } : null;
+    this._typesModules = normalizedModules;
 
     // A .ts/.tsx entry (not .d.ts) marks the package as TypeScript-authored:
     // the entry is one of the package's compiled sources, and `meteor
@@ -543,22 +599,7 @@ export class PackageAPI {
     // hand-written .d.ts mixed in here is rejected, because
     // `tsc --emitDeclarationOnly` does not re-emit declaration inputs, so
     // it would have no publish-time story.
-    if (isTypeScriptSourcePath(typesEntry)) {
-      if (this._typesModules) {
-        for (const [name, modulePath] of Object.entries(this._typesModules)) {
-          if (typeof modulePath !== 'string' || !modulePath.trim() ||
-              !isTypeScriptSourcePath(modulePath)) {
-            buildmessage.error(
-              `api.types(): options.modules.${name} must be a .ts/.tsx ` +
-                'source path when the types entry is a TypeScript source ' +
-                'file.',
-              { useMyCaller: true }
-            );
-            return;
-          }
-          this._typesModules[name] = normalizeTypePath(modulePath);
-        }
-      }
+    if (isSourceEntry) {
       return;
     }
 
@@ -571,17 +612,8 @@ export class PackageAPI {
     // to production browsers.
     const filesToAdd = [typesEntry];
     if (this._typesModules) {
-      for (const [name, modulePath] of Object.entries(this._typesModules)) {
-        if (typeof modulePath !== 'string' || !modulePath.trim()) {
-          buildmessage.error(
-            `api.types(): options.modules.${name} must be a non-empty .d.ts path.`,
-            { useMyCaller: true }
-          );
-          return;
-        }
-        const normalizedModulePath = normalizeTypePath(modulePath);
-        this._typesModules[name] = normalizedModulePath;
-        filesToAdd.push(normalizedModulePath);
+      for (const modulePath of Object.values(this._typesModules)) {
+        filesToAdd.push(modulePath);
       }
     }
     this._addFiles('assets', filesToAdd, ['server']);
@@ -620,6 +652,11 @@ export class PackageAPI {
           rel.split('/').some(seg => seg === '..' || seg === '.' || seg === '')) {
         return {
           error: `api.types(): ${label} ("${p}") must stay inside the "${dir}/" directory.`,
+        };
+      }
+      if (!isTypeScriptDeclarationPath(rel)) {
+        return {
+          error: `api.types(): ${label} must be a .d.ts path relative to "${dir}/".`,
         };
       }
       return { fullPath: dir + '/' + rel };
