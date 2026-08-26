@@ -419,10 +419,10 @@ describe("priority 2 – package-types.json", () => {
       '/// <reference path="./packages/react-meteor-data/index.d.ts" />'
     );
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data/suspense.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/module-suspense.d.ts" />'
     );
     const suspensePkg = writtenContentAt(
-      `${PKGS_DIR}/react-meteor-data/suspense.d.ts`
+      `${PKGS_DIR}/react-meteor-data/module-suspense.d.ts`
     );
     expect(suspensePkg).toContain(
       "declare module 'meteor/react-meteor-data/suspense'"
@@ -501,7 +501,7 @@ describe("sub-path modules (issue #10)", () => {
     expect(mainPkg).toContain("declare module 'meteor/react-meteor-data'");
     expect(mainPkg).toContain(MAIN);
     const subPkg = writtenContentAt(
-      `${PKGS_DIR}/react-meteor-data/suspense.d.ts`
+      `${PKGS_DIR}/react-meteor-data/module-suspense.d.ts`
     );
     expect(subPkg).toContain(
       "declare module 'meteor/react-meteor-data/suspense'"
@@ -528,7 +528,7 @@ describe("sub-path modules (issue #10)", () => {
       '/// <reference path="./packages/react-meteor-data/index.d.ts" />'
     );
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data/suspense.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/module-suspense.d.ts" />'
     );
     // must NOT have relative re-exports inside declare module blocks
     expect(dts).not.toContain("export * from");
@@ -553,17 +553,17 @@ describe("sub-path modules (issue #10)", () => {
     });
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data/hooks.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/module-hooks.d.ts" />'
     );
     const hooksPkg = writtenContentAt(
-      `${PKGS_DIR}/react-meteor-data/hooks.d.ts`
+      `${PKGS_DIR}/react-meteor-data/module-hooks.d.ts`
     );
     expect(hooksPkg).toContain(
       "declare module 'meteor/react-meteor-data/hooks'"
     );
   });
 
-  test('a sub-path module named "index" is skipped instead of clobbering index.d.ts', async () => {
+  test('a sub-path module named "index" is emitted without clobbering index.d.ts', async () => {
     const isopack = makeIsopack({
       typesEntry: "main.d.ts",
       typesModules: { index: "sub-index.d.ts" },
@@ -578,12 +578,54 @@ describe("sub-path modules (issue #10)", () => {
       projectMeteorDir: PROJECT_METEOR,
     });
     const mainPkg = writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`);
-    // main entry survives untouched…
     expect(mainPkg).toContain("declare module 'meteor/pkg'");
     expect(mainPkg).not.toContain("meteor/pkg/index");
-    // …and the colliding sub-module is not referenced by the barrel
+    const indexModule = writtenContentAt(
+      `${PKGS_DIR}/pkg/module-index.d.ts`
+    );
+    expect(indexModule).toContain("declare module 'meteor/pkg/index'");
+    expect(indexModule).toContain("export declare const clash: 1;");
     const dts = writtenContentAt(PACKAGES_DTS);
-    expect(dts).not.toContain("meteor/pkg/index");
+    expect(dts).toContain(
+      '/// <reference path="./packages/pkg/module-index.d.ts" />'
+    );
+  });
+
+  test("sub-path names with slash, colon, and underscore get distinct files", async () => {
+    const isopack = makeIsopack({
+      typesEntry: "main.d.ts",
+      typesModules: {
+        "a/b": "slash.d.ts",
+        "a::b": "colon.d.ts",
+        "a__b": "underscore.d.ts",
+      },
+      resources: [
+        makeResource("main.d.ts", MAIN),
+        makeResource("slash.d.ts", "export declare const slash: 1;"),
+        makeResource("colon.d.ts", "export declare const colon: 1;"),
+        makeResource("underscore.d.ts", "export declare const underscore: 1;"),
+      ],
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/module-a_sb.d.ts`)).toContain(
+      "declare module 'meteor/pkg/a/b'"
+    );
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/module-a_c_cb.d.ts`)).toContain(
+      "declare module 'meteor/pkg/a::b'"
+    );
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/module-a_u_ub.d.ts`)).toContain(
+      "declare module 'meteor/pkg/a__b'"
+    );
+
+    const dts = writtenContentAt(PACKAGES_DTS);
+    expect(dts).toContain("module-a_sb.d.ts");
+    expect(dts).toContain("module-a_c_cb.d.ts");
+    expect(dts).toContain("module-a_u_ub.d.ts");
   });
 });
 
@@ -663,7 +705,7 @@ describe("directory mode – isopack.typesDir", () => {
 
   test("writes a bare-specifier stub per sub-path module (exact content)", async () => {
     await run({ "react-meteor-data": rmdIsopack() }, ["react-meteor-data"]);
-    expect(writtenContentAt(`${RMD_DIR}/hooks.d.ts`)).toBe(HOOKS_STUB);
+    expect(writtenContentAt(`${RMD_DIR}/module-hooks.d.ts`)).toBe(HOOKS_STUB);
   });
 
   test("packages.d.ts references the stubs, not the copied tree", async () => {
@@ -673,7 +715,7 @@ describe("directory mode – isopack.typesDir", () => {
       '/// <reference path="./packages/react-meteor-data/index.d.ts" />'
     );
     expect(dts).toContain(
-      '/// <reference path="./packages/react-meteor-data/hooks.d.ts" />'
+      '/// <reference path="./packages/react-meteor-data/module-hooks.d.ts" />'
     );
     // the entry has no ambient declare-module blocks of its own, so the
     // copied tree is reached only through the stubs
@@ -726,7 +768,7 @@ describe("directory mode – isopack.typesDir", () => {
       if (p === RMD_DIR) {
         return [
           "index.d.ts",
-          "hooks.d.ts",
+          "module-hooks.d.ts",
           "dist-types",
           "dropped-module.d.ts",
           "node_modules",
@@ -745,7 +787,7 @@ describe("directory mode – isopack.typesDir", () => {
       `${RMD_DIR}/index.d.ts`
     );
     expect(files.rm_recursive).not.toHaveBeenCalledWith(
-      `${RMD_DIR}/hooks.d.ts`
+      `${RMD_DIR}/module-hooks.d.ts`
     );
     expect(files.rm_recursive).not.toHaveBeenCalledWith(
       `${RMD_DIR}/node_modules`
@@ -755,7 +797,7 @@ describe("directory mode – isopack.typesDir", () => {
   test("prunes stale files nested inside the copied folder, keeping current ones", async () => {
     files.readdir.mockImplementation((p) => {
       if (p === PKGS_DIR) return ["react-meteor-data"];
-      if (p === RMD_DIR) return ["index.d.ts", "hooks.d.ts", "dist-types"];
+      if (p === RMD_DIR) return ["index.d.ts", "module-hooks.d.ts", "dist-types"];
       return [];
     });
     files.readdirWithTypes.mockImplementation((p) => {
@@ -898,11 +940,13 @@ describe("directory mode – isopack.typesDir", () => {
       "import exports = require('meteor-package-types/pkg/dist-types/index');"
     );
     // …while the ambient sub-path module file gets the reference shim
-    expect(writtenContentAt(`${PKGS_DIR}/pkg/hooks.d.ts`)).toBe(
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/module-hooks.d.ts`)).toBe(
       '/// <reference path="./dist-types/hooks.d.ts" />\n'
     );
     const dts = writtenContentAt(PACKAGES_DTS);
-    expect(dts).toContain('/// <reference path="./packages/pkg/hooks.d.ts" />');
+    expect(dts).toContain(
+      '/// <reference path="./packages/pkg/module-hooks.d.ts" />'
+    );
   });
 
   test("skips the package when the entry is not among the folder's files", async () => {
@@ -1032,13 +1076,13 @@ describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
 
   test("writes a stub per sub-path module, pointing at the copied source", async () => {
     await run({ "my-package": tsIsopack() }, ["my-package"]);
-    expect(writtenContentAt(`${PKG_DIR}/hooks.d.ts`)).toBe(HOOKS_STUB);
+    expect(writtenContentAt(`${PKG_DIR}/module-hooks.d.ts`)).toBe(HOOKS_STUB);
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
       '/// <reference path="./packages/my-package/index.d.ts" />'
     );
     expect(dts).toContain(
-      '/// <reference path="./packages/my-package/hooks.d.ts" />'
+      '/// <reference path="./packages/my-package/module-hooks.d.ts" />'
     );
   });
 
@@ -1088,7 +1132,7 @@ describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
       if (p === PKG_DIR) {
         return [
           "index.d.ts",
-          "hooks.d.ts",
+          "module-hooks.d.ts",
           "src",
           "dropped-module.d.ts",
           "node_modules",
@@ -1105,7 +1149,7 @@ describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
       `${PKG_DIR}/index.d.ts`
     );
     expect(files.rm_recursive).not.toHaveBeenCalledWith(
-      `${PKG_DIR}/hooks.d.ts`
+      `${PKG_DIR}/module-hooks.d.ts`
     );
     expect(files.rm_recursive).not.toHaveBeenCalledWith(
       `${PKG_DIR}/node_modules`
@@ -1115,7 +1159,7 @@ describe("ts-src mode – TypeScript-authored isopack.typesEntry", () => {
   test("prunes stale files nested inside src/, keeping current sources", async () => {
     files.readdir.mockImplementation((p) => {
       if (p === PKGS_DIR) return ["my-package"];
-      if (p === PKG_DIR) return ["index.d.ts", "hooks.d.ts", "src"];
+      if (p === PKG_DIR) return ["index.d.ts", "module-hooks.d.ts", "src"];
       return [];
     });
     files.readdirWithTypes.mockImplementation((p) => {
@@ -1286,7 +1330,7 @@ describe("pre-declared modules are used verbatim", () => {
       "declare module 'meteor/pkg'"
     );
     // …while the pre-declared sub-path file is passed through unchanged
-    expect(writtenContentAt(`${PKGS_DIR}/pkg/sub.d.ts`)).toBe(`${sub}\n`);
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/module-sub.d.ts`)).toBe(`${sub}\n`);
   });
 
   test("wraps files with top-level namespaces and non-relative imports", async () => {
@@ -1358,21 +1402,19 @@ describe("package name normalization", () => {
       packageMap: makePackageMap(["pkg"]),
       projectMeteorDir: PROJECT_METEOR,
     });
-    // '/' maps to '__' while literal '_' escapes to '_u', so the two keys
-    // can no longer overwrite each other's file
-    const slashPkg = writtenContentAt(`${PKGS_DIR}/pkg/a__b.d.ts`);
+    const slashPkg = writtenContentAt(`${PKGS_DIR}/pkg/module-a_sb.d.ts`);
     expect(slashPkg).toContain("declare module 'meteor/pkg/a/b'");
     expect(slashPkg).toContain(SLASH);
-    const underscorePkg = writtenContentAt(`${PKGS_DIR}/pkg/a_u_ub.d.ts`);
+    const underscorePkg = writtenContentAt(`${PKGS_DIR}/pkg/module-a_u_ub.d.ts`);
     expect(underscorePkg).toContain("declare module 'meteor/pkg/a__b'");
     expect(underscorePkg).toContain(UNDERSCORE);
     // barrel references both distinct files
     const dts = writtenContentAt(PACKAGES_DTS);
     expect(dts).toContain(
-      '/// <reference path="./packages/pkg/a__b.d.ts" />'
+      '/// <reference path="./packages/pkg/module-a_sb.d.ts" />'
     );
     expect(dts).toContain(
-      '/// <reference path="./packages/pkg/a_u_ub.d.ts" />'
+      '/// <reference path="./packages/pkg/module-a_u_ub.d.ts" />'
     );
   });
 });

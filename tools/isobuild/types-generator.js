@@ -15,7 +15,7 @@
  *         index.d.ts                   (main module declaration, or a
  *                                       bare-specifier stub in directory and
  *                                       ts-src modes)
- *         <normalizedModuleKey>.d.ts   (one per sub-path module)
+ *         module-<encodedKey>.d.ts     (one per sub-path module)
  *         <typesDir>/                  (directory mode only: verbatim copy of
  *                                       the package's declaration folder,
  *                                       tree preserved, under its original name)
@@ -237,16 +237,7 @@ function writeSingleFilePackage({ name, packageDir, info, entry }) {
   if (info.modules) {
     for (const [moduleName, moduleData] of Object.entries(info.modules)) {
       if (!moduleData) continue;
-      const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
-      if (moduleFileName === MAIN_DTS) {
-        // A sub-path module literally named "index" would collide with the
-        // package's own entry file.  Degenerate case; skip it.
-        Console.debug(
-          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
-            `filename collides with ${MAIN_DTS}`
-        );
-        continue;
-      }
+      const moduleFileName = normalizeModuleFileName(moduleName);
       const moduleAbsPath = files.pathJoin(packageDir, moduleFileName);
       const wrappedModule = wrapDeclareModule(
         `meteor/${name}/${moduleName}`,
@@ -337,16 +328,7 @@ function writeTypesDirPackage({ name, normalizedName, packageDir, info, entry })
         );
         continue;
       }
-      const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
-      if (moduleFileName === MAIN_DTS) {
-        // A sub-path module literally named "index" would collide with the
-        // package's stub.  Degenerate case; skip it.
-        Console.debug(
-          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
-            `filename collides with ${MAIN_DTS}`
-        );
-        continue;
-      }
+      const moduleFileName = normalizeModuleFileName(moduleName);
       const moduleNoExt = normalizedModulePath.replace(/\.d\.ts$/, "");
       writeIfChanged(
         files.pathJoin(packageDir, moduleFileName),
@@ -455,16 +437,7 @@ function writeTsSourcePackage({ name, normalizedName, packageDir, info, entry })
         );
         continue;
       }
-      const moduleFileName = `${normalizePackageName(moduleName)}.d.ts`;
-      if (moduleFileName === MAIN_DTS) {
-        // A sub-path module literally named "index" would collide with the
-        // package's stub.  Degenerate case; skip it.
-        Console.debug(
-          `[types] Skipping sub-path module "${moduleName}" of "${name}": ` +
-            `filename collides with ${MAIN_DTS}`
-        );
-        continue;
-      }
+      const moduleFileName = normalizeModuleFileName(moduleName);
       const moduleNoExt = stripTypeScriptExtension(normalizedModulePath);
       writeIfChanged(
         files.pathJoin(packageDir, moduleFileName),
@@ -540,8 +513,8 @@ function withTsNocheckBanner(relPath, data) {
  */
 function makeBareSpecifierStub(meteorModuleName, bareSpecifier) {
   return (
-    `declare module '${meteorModuleName}' {\n` +
-    `  import exports = require('${bareSpecifier}');\n` +
+    `declare module ${quoteModuleSpecifier(meteorModuleName)} {\n` +
+    `  import exports = require(${quoteModuleSpecifier(bareSpecifier)});\n` +
     `  export = exports;\n` +
     `}\n`
   );
@@ -1052,6 +1025,30 @@ function normalizePackageName(name) {
 }
 
 /**
+ * Encode a sub-path module name independently from the package entry.  The
+ * `module-` prefix reserves index.d.ts for the main package declaration, and
+ * escaping underscores before the separator characters makes the mapping
+ * reversible for every module name accepted by PackageAPI.
+ *
+ * Examples:
+ *   'index' → 'module-index.d.ts'
+ *   'a/b'   → 'module-a_sb.d.ts'
+ *   'a::b'  → 'module-a_c_cb.d.ts'
+ *   'a__b'  → 'module-a_u_ub.d.ts'
+ */
+function normalizeModuleFileName(name) {
+  const encoded = name
+    .replace(/_/g, "_u")
+    .replace(/:/g, "_c")
+    .replace(/\//g, "_s");
+  return `module-${encoded}.d.ts`;
+}
+
+function quoteModuleSpecifier(specifier) {
+  return `'${specifier.replace(/\\/g, "\\\\").replace(/'/g, "\\'")}'`;
+}
+
+/**
  * Generate the packages.d.ts content — a list of triple-slash reference
  * directives pointing to the per-package .d.ts files.  Each per-package file
  * already contains the `declare module 'meteor/…' { … }` wrapper so we never
@@ -1123,7 +1120,7 @@ function wrapDeclareModule(meteorModuleName, content) {
     .split("\n")
     .map((line) => (line.length ? "  " + line : ""))
     .join("\n");
-  return `declare module '${meteorModuleName}' {\n${indented}\n}\n`;
+  return `declare module ${quoteModuleSpecifier(meteorModuleName)} {\n${indented}\n}\n`;
 }
 
 /**
