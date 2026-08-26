@@ -12,5 +12,5 @@ Package.onUse(function (api) {
   api.mainModule("facts_ui_client.js", "client");
 
   api.export("Facts", "client");
-  api.addAssets("facts-ui.d.ts", "client");
+  api.types("facts-ui.d.ts");
 });
