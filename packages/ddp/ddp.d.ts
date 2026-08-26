@@ -1,13 +1,34 @@
 import { Meteor } from 'meteor/meteor';
-import { EJSONable } from 'meteor/ejson';
+import { EJSONable, EJSONableProperty } from 'meteor/ejson';
 
 export namespace DDP {
+  type Argument = EJSONable | EJSONableProperty;
+  type Result = EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[];
+
+  interface SubscriptionCallbacks {
+    onReady?: (() => void) | undefined;
+    onStop?: ((error?: Error | Meteor.Error) => void) | undefined;
+  }
+
+  type SubscriptionCallback = (() => void) | SubscriptionCallbacks;
+  type MethodCallback<Result> = (
+    error: Error | Meteor.Error | undefined,
+    result?: Result
+  ) => void;
+
   interface DDPStatic {
-    subscribe(name: string, ...rest: EJSONable[]): Meteor.SubscriptionHandle;
-    call<Result = unknown>(method: string, ...parameters: EJSONable[]): Result;
-    callAsync<Result = unknown>(method: string, ...parameters: EJSONable[]): Promise<Result>;
-    apply<Result = unknown>(method: string, args: EJSONable[], options?: unknown, callback?: (err: Error | undefined, result?: Result) => void): Result;
-    methods(methods: Record<string, (this: DDPCommon.MethodInvocation, ...args: unknown[]) => unknown>): void;
+    subscribe(name: string, ...args: Argument[]): Meteor.SubscriptionHandle;
+    subscribe(name: string, ...args: [...Argument[], SubscriptionCallback]): Meteor.SubscriptionHandle;
+    call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Result;
+    call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: [...Argument[], MethodCallback<Result>]): Result;
+    callAsync<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Promise<Result>;
+    apply<Result extends DDP.Result = DDP.Result>(
+      method: string,
+      args: ReadonlyArray<Argument>,
+      options?: Meteor.MethodApplyOptions<Result>,
+      callback?: MethodCallback<Result>
+    ): Result;
+    methods(methods: Record<string, (this: DDPCommon.MethodInvocation, ...args: any[]) => unknown>): void;
     status(): DDPStatus;
     reconnect(): void;
     disconnect(): void;
