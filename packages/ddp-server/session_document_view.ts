@@ -1,18 +1,15 @@
-/** Represents EJSON-serializable field values in the DDP protocol */
-type FieldValue = string | number | boolean | Date | Uint8Array | Record<string, unknown> | unknown[] | null | undefined;
-
 interface PrecedenceItem {
   subscriptionHandle: string;
-  value: FieldValue;
+  value: any;
 }
 
 interface ChangeCollector {
-  [key: string]: FieldValue;
+  [key: string]: any;
 }
 
 export class SessionDocumentView {
-  existsIn: Set<string>;
-  dataByKey: Map<string, PrecedenceItem[]>;
+  private existsIn: Set<string>;
+  private dataByKey: Map<string, PrecedenceItem[]>;
 
   constructor() {
     this.existsIn = new Set(); // set of subscriptionHandle
@@ -20,8 +17,8 @@ export class SessionDocumentView {
     this.dataByKey = new Map(); // key-> [ {subscriptionHandle, value} by precedence]
   }
 
-  getFields(): Record<string, FieldValue> {
-    const ret: Record<string, FieldValue> = {};
+  getFields(): Record<string, any> {
+    const ret: Record<string, any> = {};
     this.dataByKey.forEach((precedenceList, key) => {
       ret[key] = precedenceList[0].value;
     });
@@ -41,7 +38,7 @@ export class SessionDocumentView {
     // an error.
     if (!precedenceList) return;
 
-    let removedValue: FieldValue = undefined;
+    let removedValue: any = undefined;
 
     for (let i = 0; i < precedenceList.length; i++) {
       const precedence = precedenceList[i];
@@ -68,7 +65,7 @@ export class SessionDocumentView {
   changeField(
     subscriptionHandle: string,
     key: string,
-    value: FieldValue,
+    value: any,
     changeCollector: ChangeCollector,
     isAdd: boolean = false
   ): void {

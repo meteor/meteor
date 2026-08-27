@@ -25,3 +25,5 @@ expectTypeOf(Random.choice).toBeFunction();
 expectTypeOf<Random.RandomGenerator>().toBeObject();
 expectTypeOf(Random.insecure).toEqualTypeOf<Random.RandomGenerator>();
 expectTypeOf(Random.createWithSeeds).returns.toEqualTypeOf<Random.RandomGenerator>();
+// @ts-expect-error At least one seed is required by the runtime.
+Random.createWithSeeds();

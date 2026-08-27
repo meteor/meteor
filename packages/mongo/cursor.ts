@@ -4,24 +4,14 @@ import LocalCollection from 'meteor/minimongo/local_collection';
 import { CursorDescription } from './cursor_description';
 import { ObserveCallbacks, ObserveChangesCallbacks } from './types';
 
-interface RawCollection {
-  countDocuments: (selector: Record<string, unknown>, options: Record<string, unknown>) => Promise<number>;
-}
-
-interface SynchronousCursor {
-  [key: string]: ((...args: unknown[]) => unknown);
-  [Symbol.iterator]: () => Iterator<unknown>;
-  [Symbol.asyncIterator]: () => AsyncIterator<unknown>;
-}
-
 interface MongoInterface {
-  rawCollection: (collectionName: string) => RawCollection;
-  _createAsynchronousCursor: (cursorDescription: CursorDescription, options: CursorOptions) => SynchronousCursor;
-  _observeChanges: (cursorDescription: CursorDescription, ordered: boolean, callbacks: ObserveChangesCallbacks<unknown>, nonMutatingCallbacks?: boolean) => { stop: () => void };
+  rawCollection: (collectionName: string) => any;
+  _createAsynchronousCursor: (cursorDescription: CursorDescription, options: CursorOptions) => any;
+  _observeChanges: (cursorDescription: CursorDescription, ordered: boolean, callbacks: any, nonMutatingCallbacks?: boolean) => any;
 }
 
 interface CursorOptions {
-  selfForIteration: Cursor<unknown>;
+  selfForIteration: Cursor<any>;
   useTransform: boolean;
 }
 
@@ -37,7 +27,7 @@ interface CursorOptions {
 export class Cursor<T, U = T> {
   public _mongo: MongoInterface;
   public _cursorDescription: CursorDescription;
-  public _synchronousCursor: SynchronousCursor | null;
+  public _synchronousCursor: any | null;
 
   constructor(mongo: MongoInterface, cursorDescription: CursorDescription) {
     this._mongo = mongo;
@@ -59,11 +49,11 @@ export class Cursor<T, U = T> {
     );
   }
 
-  getTransform(): ((doc: Record<string, unknown>) => Record<string, unknown>) | undefined {
+  getTransform(): ((doc: any) => any) | undefined {
     return this._cursorDescription.options.transform;
   }
 
-  _publishCursor(sub: { added: Function; changed: Function; removed: Function }): unknown {
+  _publishCursor(sub: any): any {
     const collection = this._cursorDescription.collectionName;
     return Mongo.Collection._publishCursor(this, sub, collection);
   }
@@ -72,48 +62,48 @@ export class Cursor<T, U = T> {
     return this._cursorDescription.collectionName;
   }
 
-  observe(callbacks: ObserveCallbacks<U>): unknown {
+  observe(callbacks: ObserveCallbacks<U>): any {
     return LocalCollection._observeFromObserveChanges(this, callbacks);
   }
 
-  async observeAsync(callbacks: ObserveCallbacks<U>): Promise<unknown> {
+  async observeAsync(callbacks: ObserveCallbacks<U>): Promise<any> {
     return new Promise(resolve => resolve(this.observe(callbacks)));
   }
 
-  observeChanges(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): { stop: () => void } {
+  observeChanges(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): any {
     const ordered = LocalCollection._observeChangesCallbacksAreOrdered(callbacks);
     return this._mongo._observeChanges(
       this._cursorDescription,
       ordered,
       callbacks,
       options.nonMutatingCallbacks
-    ) as unknown as { stop: () => void };
+    );
   }
 
-  async observeChangesAsync(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): Promise<{ stop: () => void }> {
-    return Promise.resolve(this.observeChanges(callbacks, options));
+  async observeChangesAsync(callbacks: ObserveChangesCallbacks<U>, options: { nonMutatingCallbacks?: boolean } = {}): Promise<any> {
+    return this.observeChanges(callbacks, options);
   }
 }
 
 // Add cursor methods dynamically
-[...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach((methodName: string | symbol) => {
+[...ASYNC_CURSOR_METHODS, Symbol.iterator, Symbol.asyncIterator].forEach(methodName => {
   if (methodName === 'count') return;
 
-  (Cursor.prototype as Record<string | symbol, unknown>)[methodName] = function(this: Cursor<unknown>, ...args: unknown[]): unknown {
+  (Cursor.prototype as any)[methodName] = function(this: Cursor<any>, ...args: any[]): any {
     const cursor = setupAsynchronousCursor(this, methodName);
-    return (cursor as unknown as Record<string | symbol, (...args: unknown[]) => unknown>)[methodName](...args);
+    return cursor[methodName](...args);
   };
 
   if (methodName === Symbol.iterator || methodName === Symbol.asyncIterator) return;
 
-  const methodNameAsync = getAsyncMethodName(methodName as string);
+  const methodNameAsync = getAsyncMethodName(methodName);
 
-  (Cursor.prototype as Record<string | symbol, unknown>)[methodNameAsync] = function(this: Cursor<unknown>, ...args: unknown[]): unknown {
-    return (this as unknown as Record<string | symbol, (...a: unknown[]) => unknown>)[methodName](...args);
+  (Cursor.prototype as any)[methodNameAsync] = function(this: Cursor<any>, ...args: any[]): Promise<any> {
+    return this[methodName](...args);
   };
 });
 
-function setupAsynchronousCursor(cursor: Cursor<unknown>, method: string | symbol): SynchronousCursor {
+function setupAsynchronousCursor(cursor: Cursor<any>, method: string | symbol): any {
   if (cursor._cursorDescription.options.tailable) {
     throw new Error(`Cannot call ${String(method)} on a tailable cursor`);
   }
