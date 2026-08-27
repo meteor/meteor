@@ -87,6 +87,57 @@ Attempts were made to reuse the existing `.meteor/local` cache context instead o
 Use `.meteor/local` or folders that suggest internals or hidden content (e.g., starting with a dot). These affect debug visibility, file watching, final compilation, and inclusion in the Cordova bundle.
 :::
 
+### Required npm dependencies
+
+The `rspack` package declares a minimum supported version for each of the npm packages it relies on at the project level: `@rspack/core`, `@rspack/cli`, `@meteorjs/rspack`, `@swc/helpers`, and `@rsdoctor/rspack-plugin`. Each Meteor release pins these minimums so the build stack stays compatible across upgrades.
+
+By default, Meteor installs or updates them for you on the first run after adding the `rspack` package, and prints a short summary of what changed:
+
+```
+=> 📦 Rspack: updating npm dependencies
+   Dev dependencies:
+   • @rspack/core           1.7.1  (new)
+   • @meteorjs/rspack       2.0.0 -> 2.0.1
+   Dependencies:
+   • @swc/helpers           0.5.17 (new)
+=> ✅ Rspack dependencies are up to date
+=> ℹ️ Set `"meteor": { "autoInstallDeps": false }` in package.json to manage them yourself.
+```
+
+If your project already meets every minimum, no log is printed and the build moves on.
+
+#### Disabling auto-install
+
+If you prefer to manage these dependencies yourself, set `meteor.autoInstallDeps` to `false` in your app's `package.json`:
+
+```json
+{
+  "meteor": {
+    "autoInstallDeps": false
+  }
+}
+```
+
+With this flag off, Meteor still detects when a required dependency is missing or below the supported version, but it no longer touches your project. Instead, you get a single ready-to-copy install command:
+
+``` bash
+=> ⚠️  Rspack: npm dependencies need attention
+   Dev dependencies:
+   • @rspack/core           1.7.1  (not installed)
+   • @meteorjs/rspack       2.0.1  (currently 2.0.0)
+   Dependencies:
+   • @swc/helpers           0.5.17 (not installed)
+
+   To bring your project in line, run:
+       meteor npm install --save-dev @rspack/core@1.7.1 @meteorjs/rspack@2.0.1
+       meteor npm install --save @swc/helpers@0.5.17
+=> ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
+```
+
+If you ignore the warning, the build continues and fails with the underlying module-not-found error. To re-enable auto-install, use the setting shown in the warning, or remove `autoInstallDeps` from your `meteor` block.
+
+If your CI or Docker pipeline reports missing NPM dependencies after disabling auto-install, see [CI & Docker](#docker) for the recommended commit-and-push flow.
+
 ### Replace build plugins
 
 Meteor build plugins extend the Meteor bundler by letting you handle new file types and process them for the final app bundle. They’ve commonly handled HTML templating, style files for Less or SCSS, CoffeeScript, and more, since the system allows third-party customization.
@@ -111,7 +162,9 @@ Refer to the [Migration Topics](#migration-topics) section for more details on o
 
 ## Custom `rspack.config.js`
 
-Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.mjs` or `rspack.config.cjs` if you prefer strict ESM or CommonJS formats.
+Meteor-Rspack projects can be customized using the `rspack.config.js` file, which is automatically available when installing the `rspack` package. You can also use `rspack.config.ts`, `rspack.config.mjs`, or `rspack.config.cjs` if you prefer TypeScript, strict ESM, or CommonJS formats.
+
+The configuration file and the relative local modules it references through `import`, dynamic `import()`, re-exports, or `require()` are tracked as Rspack build dependencies. Changing one of these files invalidates the persistent cache so the next build uses the updated configuration.
 
 This file defines dynamic configurations, so you return the config from a resolved function.
 
@@ -1057,6 +1110,13 @@ PORT=3001 METEOR_LOCAL_DIR=.meteor/local-2 meteor run
 ```
 
 For more details on how this variable affects Rspack, see the [`METEOR_LOCAL_DIR`](../../cli/environment-variables.md#meteor_local_dir) documentation.
+
+Rspack also separates command-mode output within each build context. Development,
+normal test, and full-app test builds use distinct module directories such as
+`_build/main-dev`, `_build/test`, and `_build/app-test`. This prevents one mode's
+Rspack cleanup from deleting another mode's build artifacts. This isolation does
+not require `METEOR_LOCAL_DIR`. Set it only when each process also needs separate
+Meteor build caches and local state.
 
 ### Symlinks and Monorepos
 
