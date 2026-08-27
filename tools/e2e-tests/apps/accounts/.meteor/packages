@@ -3,7 +3,7 @@ mongo                   # The database Meteor supports right now
 ecmascript              # Enable ECMAScript2015+ syntax in app code
 static-html             # Define static page content in .html files
 tracker                 # Reactive programming primitives
-react-meteor-data       # useTracker, used by the React mount in the harness
+react-meteor-data@4.1.0-beta.1 # useTracker, used by the React mount in the harness
 
 standard-minifier-css   # CSS minifier run for production mode
 standard-minifier-js    # JS minifier run for production mode

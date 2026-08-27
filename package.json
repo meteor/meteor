@@ -36,9 +36,7 @@
     "oxfmt": "^0.42.0",
     "oxlint": "^1.57.0",
     "prettier": "^3.8.1",
-    "type-coverage": "^2.29.7",
-    "typescript": "^5.9.3",
-    "typescript-coverage-report": "^1.1.1"
+    "typescript": "^7.0.2"
   },
   "scripts": {
     "fmt": "oxfmt --ignore-path .fmtignore .",
@@ -58,8 +56,8 @@
     "test:self-hosted-runner-cleanup": "node --test scripts/ci/__tests__/self-hosted-runner-cleanup.node-test.js",
     "checkout:pr": "node scripts/checkout-pr.js",
     "types:compile": "npx tsc --noEmit --project tsconfig.types.json",
-    "types:coverage": "npm run types:compile && type-coverage --project tsconfig.types.json --at-least 99",
-    "types:coverage:table": "npm run types:compile && typescript-coverage-report --project tsconfig.types.json",
+    "types:coverage": "npm run types:compile && npm exec --yes --package=typescript@6.0.3 --package=type-coverage@2.30.1 -- type-coverage --project tsconfig.types.json --at-least 99",
+    "types:coverage:table": "npm run types:compile && npm exec --yes --package=typescript@5.9.3 --package=react@18.3.1 --package=react-dom@18.3.1 --package=semantic-ui-react@2.1.5 --package=typescript-coverage-report@1.1.1 -- typescript-coverage-report --project tsconfig.types.json",
     "types:dts-test-coverage": "npm exec --yes --package=typescript@5.9.3 --package=check-type-test-coverage@1.3.0 -- check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --tsconfig ./tsconfig.types.json --namespace-members --min 100"
   },
   "jshintConfig": {
@@ -108,5 +106,8 @@
       "curly": "off",
       "sort-imports": "off"
     }
+  },
+  "overrides": {
+    "typescript": "$typescript"
   }
 }
