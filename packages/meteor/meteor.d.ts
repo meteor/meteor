@@ -178,6 +178,19 @@ export namespace Meteor {
       | EJSONable[]
       | EJSONableProperty
       | EJSONableProperty[]
+  >(
+    name: string,
+    ...args: [
+      ...(EJSONable | EJSONableProperty)[],
+      DDP.MethodCallback<Result>,
+    ]
+  ): Result;
+  function call<
+    Result extends
+      | EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
   >(name: string, ...args: (EJSONable | EJSONableProperty)[]): Result;
 
   /**

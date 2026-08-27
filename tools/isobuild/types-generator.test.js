@@ -429,6 +429,41 @@ describe("priority 2 – package-types.json", () => {
     );
     expect(suspensePkg).toContain(SUSPENSE);
   });
+
+  test("ignores legacy module names that can escape a package directory on Windows", async () => {
+    const unsafeModuleName = "safe\\..\\..\\escaped";
+    const config = JSON.stringify({
+      typesEntry: "main.d.ts",
+      modules: { [unsafeModuleName]: "escaped.d.ts" },
+    });
+    const isopack = makeIsopack({
+      resources: [
+        makeResource("package-types.json", config),
+        makeResource("main.d.ts", "export declare const main: number;"),
+        makeResource("escaped.d.ts", "export declare const escaped: number;"),
+      ],
+    });
+
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toContain(
+      "declare module 'meteor/pkg'"
+    );
+    expect(files.writeFile).not.toHaveBeenCalledWith(
+      expect.stringContaining("\\"),
+      expect.anything()
+    );
+    expect(writtenContentAt(PACKAGES_DTS)).not.toContain("escaped");
+    expect(Console.warn).toHaveBeenCalledWith(
+      expect.stringContaining(
+        `Ignoring invalid legacy module name ${JSON.stringify(unsafeModuleName)}`
+      )
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
