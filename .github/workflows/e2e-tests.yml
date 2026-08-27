@@ -128,7 +128,7 @@ jobs:
           fi
 
       - name: Use TypeScript 7 fixtures for the TypeScript migration
-        if: github.head_ref == 'typescript-changes-consolidated'
+        if: github.head_ref == 'typescript-6-7-migration'
         run: |
           echo "METEOR_EXAMPLES_BRANCH=codex/typescript-7-examples" >> $GITHUB_ENV
           echo "METEOR_SIMPLETASKS_BRANCH=codex/typescript-7" >> $GITHUB_ENV
