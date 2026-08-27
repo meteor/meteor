@@ -1738,6 +1738,7 @@ Tinytest.addAsync(
       }
 
       await driver._flushPendingWrites();
+      await driver._multiplexer.onFlush(() => {});
       test.equal(
         events,
         [],
@@ -1829,6 +1830,73 @@ Tinytest.addAsync(
         );
       } finally {
         await handle.stop();
+      }
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - global available read concern does not create a cutoff (#14695)',
+  async function (test) {
+    const remote = new MongoInternals.RemoteCollectionDriver(process.env.MONGO_URL);
+    remote.mongo.client.monitorCommands = true;
+
+    const admin = remote.mongo.client.db('admin');
+    const originalDefaults = await admin.command({
+      getDefaultRWConcern: 1,
+      inMemory: true,
+    });
+    const collectionName = 'changestream_test_' + Random.id();
+    const findCommands = [];
+    const captureFind = (event) => {
+      if (event.commandName === 'find' && event.command.find === collectionName) {
+        findCommands.push(event.command);
+      }
+    };
+    remote.mongo.client.on('commandStarted', captureFind);
+
+    let handle;
+    try {
+      await admin.command({
+        setDefaultRWConcern: 1,
+        defaultReadConcern: { level: 'available' },
+      });
+
+      const c = new Mongo.Collection(collectionName, { _driver: remote });
+      handle = await c.find({ _id: Random.id() }).observeChanges({
+        added() {},
+      });
+
+      const driver = handle._multiplexer._observeDriver;
+      test.equal(
+        findCommands[0]?.readConcern,
+        { level: 'available' },
+        'the snapshot must retain the effective global read concern'
+      );
+      test.isFalse(
+        Boolean(findCommands[0]?.readConcern?.afterClusterTime),
+        'a global available read concern must not be made causal'
+      );
+      test.isFalse(
+        Boolean(driver._snapshotCutoffOperationTime),
+        'a global available read concern must not establish a cutoff'
+      );
+    } finally {
+      try {
+        await handle?.stop();
+      } finally {
+        remote.mongo.client.off('commandStarted', captureFind);
+        try {
+          await admin.command({
+            setDefaultRWConcern: 1,
+            defaultReadConcern:
+              originalDefaults.defaultReadConcernSource === 'global'
+                ? originalDefaults.defaultReadConcern
+                : {},
+          });
+        } finally {
+          await remote.mongo.close();
+        }
       }
     }
   }

@@ -221,21 +221,21 @@ export class ChangeStreamObserveDriver {
   }
 
   async _runInitialSnapshot(collection) {
-    const snapshotSession = this._createCausalSnapshotSession(collection);
+    const snapshot = await this._prepareSnapshotContext(collection);
 
     try {
-      await this._establishCaughtUpFloor(snapshotSession);
+      this._applySnapshotBoundary(snapshot);
       if (this._stopped) return;
 
       // Events that arrive during this read stay queued until the driver is
       // ready, then replay against the completed snapshot.
-      await this._sendInitialAdds(collection, snapshotSession);
+      await this._sendInitialAdds(collection, snapshot);
     } finally {
-      await this._closeSnapshotSession(snapshotSession);
+      await this._closeSnapshotSession(snapshot.session);
     }
   }
 
-  _createCausalSnapshotSession(collection) {
+  async _prepareSnapshotContext(collection) {
     const readPreference = this._cursorDescription.options.readPreference;
     const readPreferenceMode =
       (typeof readPreference === 'string' ? readPreference : readPreference?.mode)
@@ -250,9 +250,22 @@ export class ChangeStreamObserveDriver {
       readPreferenceMode !== 'primary' ||
       (readConcernLevel && !['local', 'majority'].includes(readConcernLevel))
     ) {
-      return null;
+      return this._captureSnapshotBoundary();
     }
 
+    const session = this._startSnapshotSession();
+    if (!session) {
+      return this._captureSnapshotBoundary();
+    }
+
+    if (readConcernLevel) {
+      return this._captureSnapshotBoundary(session);
+    }
+
+    return this._resolveDefaultReadConcern(session);
+  }
+
+  _startSnapshotSession() {
     try {
       return this._mongoHandle.client.startSession({
         causalConsistency: true,
@@ -263,28 +276,69 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  async _establishCaughtUpFloor(snapshotSession) {
+  async _resolveDefaultReadConcern(session) {
+    try {
+      const response = await this._mongoHandle.client.db('admin').command(
+        { getDefaultRWConcern: 1, inMemory: true },
+        { session }
+      );
+      const readConcern = response.defaultReadConcern;
+
+      if (!['local', 'majority'].includes(readConcern?.level)) {
+        await this._closeSnapshotSession(session);
+        if (response.operationTime) {
+          return {
+            session: null,
+            operationTime: response.operationTime,
+            readConcern,
+          };
+        }
+        return this._captureSnapshotBoundary(null, readConcern);
+      }
+
+      if (!response.operationTime) {
+        return this._captureSnapshotBoundary(session, readConcern);
+      }
+
+      return {
+        session,
+        operationTime: response.operationTime,
+        readConcern,
+      };
+    } catch (error) {
+      Meteor._debug('Failed to resolve ChangeStream snapshot read concern:', error.message);
+      await this._closeSnapshotSession(session);
+      return this._captureSnapshotBoundary();
+    }
+  }
+
+  async _captureSnapshotBoundary(session = null, readConcern = null) {
     // The stream subscription is already active, so writes at or before this
     // operationTime were either dispatched before this driver joined or will
     // be represented by the initial snapshot.
     try {
       const pingRes = await this._mongoHandle.db.command(
         { ping: 1 },
-        snapshotSession ? { session: snapshotSession } : undefined
+        session ? { session } : undefined
       );
-      if (!pingRes?.operationTime) return;
-
-      // Only a snapshot causally tied to the ping can safely discard events at
-      // or before its operationTime. Other snapshots replay them to reconcile
-      // potentially stale data.
-      if (snapshotSession) {
-        this._snapshotCutoffOperationTime = pingRes.operationTime;
-      }
-      this._setLastProcessedOperationTime(pingRes.operationTime);
+      return { session, operationTime: pingRes?.operationTime, readConcern };
     } catch (error) {
       Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
       // Best-effort: without the floor we only lose the fast-path release.
+      return { session, operationTime: null, readConcern };
     }
+  }
+
+  _applySnapshotBoundary({ session, operationTime }) {
+    if (!operationTime) return;
+
+    // Only a snapshot causally tied to the boundary command can safely discard
+    // events at or before its operationTime. Other snapshots replay them to
+    // reconcile potentially stale data.
+    if (session) {
+      this._snapshotCutoffOperationTime = operationTime;
+    }
+    this._setLastProcessedOperationTime(operationTime);
   }
 
   async _closeSnapshotSession(snapshotSession) {
@@ -297,7 +351,7 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  async _sendInitialAdds(collection, session = null) {
+  async _sendInitialAdds(collection, snapshot) {
     if (this._stopped) return;
 
     try {
@@ -307,8 +361,11 @@ export class ChangeStreamObserveDriver {
         replaceMeteorAtomWithMongo
       );
       const options = { ...this._cursorDescription.options };
-      if (session) {
-        options.session = session;
+      if (snapshot.session) {
+        options.session = snapshot.session;
+      }
+      if (snapshot.readConcern) {
+        options.readConcern = snapshot.readConcern;
       }
 
       // Find all existing documents
