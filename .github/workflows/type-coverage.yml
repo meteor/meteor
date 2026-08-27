@@ -13,7 +13,7 @@ jobs:
         with:
           node-version: 22.x
       - run: npm ci
-      - name: Type compilation 
+      - name: Type compilation
         run: npm run types:compile
       - name: Type coverage (99%)
         run: npm run types:coverage
