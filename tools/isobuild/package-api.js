@@ -67,6 +67,7 @@ function isValidTypesModuleName(name) {
     !!name.trim() &&
     name === name.trim() &&
     !name.includes('\\') &&
+    !/[\u0000-\u001f\u007f<>"|?*]/.test(name) &&
     !name.split('/').some(segment =>
       segment === '' || segment === '.' || segment === '..');
 }
@@ -78,7 +79,7 @@ function normalizeTypePath(p) {
 function isPackageRelativeTypePath(p) {
   return typeof p === 'string' && p.length > 0 &&
     !p.startsWith('/') &&
-    !/^[A-Za-z]:\//.test(p) &&
+    !/^[A-Za-z]:/.test(p) &&
     !p.split('/').some(segment =>
       segment === '' || segment === '.' || segment === '..');
 }
@@ -532,7 +533,8 @@ export class PackageAPI {
         if (!isValidTypesModuleName(name)) {
           buildmessage.error(
             `api.types(): options.modules key "${name}" must be a valid ` +
-              'non-empty sub-path without empty, dot, parent, or backslash segments.',
+              'non-empty sub-path without empty, dot, parent, backslash, ' +
+              'control, or Windows-invalid characters.',
             { useMyCaller: true }
           );
           return;
