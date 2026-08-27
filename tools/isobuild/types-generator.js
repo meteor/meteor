@@ -215,6 +215,15 @@ export async function generateTypes({
   );
 }
 
+/**
+ * Remove declarations owned by the built-in generator.  This is used when an
+ * app switches to zodern:types so the old .meteor/types tree cannot continue
+ * to win module resolution over zodern's .meteor/local/types output.
+ */
+export async function removeGeneratedTypes({ projectMeteorDir }) {
+  await files.rm_recursive(files.pathJoin(projectMeteorDir, TYPES_DIR));
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
@@ -868,6 +877,13 @@ function findTypesInfo(isopack, name) {
         if (config.modules) {
           modules = {};
           for (const [key, filePath] of Object.entries(config.modules)) {
+            if (!isValidTypesModuleName(key)) {
+              Console.warn(
+                `[types] Ignoring invalid legacy module name ${JSON.stringify(key)} ` +
+                  `in package "${name}"`
+              );
+              continue;
+            }
             modules[key] = findResourceData(isopack, filePath);
           }
         }
@@ -1024,6 +1040,26 @@ function normalizePackageName(name) {
     .replace(/\//g, "__");
 }
 
+// Keep this in sync with PackageAPI's validation.  package-types.json predates
+// api.types(), so old isopacks can bypass the validation performed while a
+// package is built.  In particular, a backslash is a path separator on
+// Windows and must never reach normalizeModuleFileName/pathJoin.
+function isValidTypesModuleName(name) {
+  return (
+    typeof name === "string" &&
+    !!name.trim() &&
+    name === name.trim() &&
+    !name.includes("\\") &&
+    ![...name].some((char) => {
+      const code = char.charCodeAt(0);
+      return code <= 31 || code === 127 || '<>"|?*'.includes(char);
+    }) &&
+    !name
+      .split("/")
+      .some((segment) => segment === "" || segment === "." || segment === "..")
+  );
+}
+
 /**
  * Encode a sub-path module name independently from the package entry.  The
  * `module-` prefix reserves index.d.ts for the main package declaration, and
@@ -1035,12 +1071,14 @@ function normalizePackageName(name) {
  *   'a/b'   → 'module-a_sb.d.ts'
  *   'a::b'  → 'module-a_c_cb.d.ts'
  *   'a__b'  → 'module-a_u_ub.d.ts'
+ *   'a\\b'   → 'module-a_bb.d.ts' (defence in depth for old metadata)
  */
 function normalizeModuleFileName(name) {
   const encoded = name
     .replace(/_/g, "_u")
     .replace(/:/g, "_c")
-    .replace(/\//g, "_s");
+    .replace(/\//g, "_s")
+    .replace(/\\/g, "_b");
   return `module-${encoded}.d.ts`;
 }
 

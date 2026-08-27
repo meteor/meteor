@@ -1,5 +1,8 @@
 import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config";
-import { generateTypes } from './isobuild/types-generator.js';
+import {
+  generateTypes,
+  removeGeneratedTypes,
+} from './isobuild/types-generator.js';
 
 var assert = require("assert");
 var _ = require('underscore');
@@ -1070,6 +1073,21 @@ Object.assign(ProjectContext.prototype, {
         // lists it directly.  A transitive zodern:types (e.g. via
         // react-meteor-data) never lints the app, so it generates nothing
         // and native generation can proceed.
+        try {
+          await removeGeneratedTypes({
+            projectMeteorDir: files.pathJoin(self.projectDir, '.meteor'),
+          });
+        } catch (err) {
+          // A failed cleanup leaves declarations that may shadow zodern's
+          // output.  Keep normal builds non-fatal, but let `meteor types`
+          // report failure instead of claiming the transition succeeded.
+          self.typesGenerationFailed = true;
+          Console.warn(
+            '[types] Failed to remove stale built-in type declarations: ' +
+            ((err && err.message) || String(err))
+          );
+          Console.debug((err && err.stack) || String(err));
+        }
         self.typesGenerationSkipped = true;
         Console.warn(
           '[types] zodern:types detected; skipping built-in type ' +
