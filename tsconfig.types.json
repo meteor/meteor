@@ -1,0 +1,43 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "paths": {
+      "meteor/meteor": ["./packages/meteor/meteor.d.ts"],
+      "meteor/mongo": ["./packages/mongo/mongo.d.ts"],
+      "meteor/ddp": ["./packages/ddp/ddp.d.ts"],
+      "meteor/ddp-server": ["./packages/ddp-server/ddp-server.d.ts"],
+      "meteor/ejson": ["./packages/ejson/ejson.d.ts"],
+      "meteor/check": ["./packages/check/check.d.ts"],
+      "meteor/facts-base": ["./packages/facts-base/facts-base.d.ts"],
+      "meteor/tracker": ["./packages/tracker/tracker.d.ts"],
+      "meteor/random": ["./packages/random/random.d.ts"],
+      "meteor/accounts-base": ["./packages/accounts-base/accounts-base.d.ts"],
+      "meteor/service-configuration": ["./packages/service-configuration/service-configuration.d.ts"],
+      "meteor/npm-mongo": ["./packages/npm-mongo/index.d.ts"],
+      "meteor/logging": ["./packages/logging/logging.d.ts"],
+      "meteor/reactive-var": ["./packages/reactive-var/reactive-var.d.ts"],
+      "meteor/reactive-dict": ["./packages/reactive-dict/reactive-dict.d.ts"],
+      "meteor/session": ["./packages/session/session.d.ts"],
+      "meteor/base64": ["./packages/base64/base64.d.ts"],
+      "meteor/sha": ["./packages/sha/sha.d.ts"],
+      "meteor/url": ["./packages/url/url.d.ts"],
+      "meteor/retry": ["./packages/retry/retry.d.ts"],
+      "meteor/callback-hook": ["./packages/callback-hook/callback-hook.d.ts"],
+      "meteor/diff-sequence": ["./packages/diff-sequence/diff-sequence.d.ts"],
+      "meteor/id-map": ["./packages/id-map/id-map.d.ts"],
+      "meteor/mongo-id": ["./packages/mongo-id/mongo-id.d.ts"],
+      "meteor/routepolicy": ["./packages/routepolicy/routepolicy.d.ts"],
+      "meteor/webapp-hashing": ["./packages/webapp-hashing/webapp-hashing.d.ts"],
+      "meteor/ordered-dict": ["./packages/ordered-dict/ordered-dict.d.ts"],
+      "meteor/ddp-rate-limiter": ["./packages/ddp-rate-limiter/ddp-rate-limiter.d.ts"],
+      "meteor/webapp": ["./packages/webapp/webapp.d.ts"],
+      "meteor/email": ["./packages/email/email.d.ts"],
+      "meteor/promise": ["./packages/promise/promise.d.ts"],
+      "meteor/server-render": ["./packages/server-render/server-render.d.ts"],
+      "meteor/fetch": ["./packages/fetch/fetch.d.ts"],
+      "meteor/hot-module-replacement": ["./packages/hot-module-replacement/hot-module-replacement.d.ts"]
+    }
+  },
+  "include": ["packages/**/*.d.ts"]
+}

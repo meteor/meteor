@@ -77,6 +77,7 @@ describe("api.types() input validation", () => {
     "types/../index.d.ts",
     "types//index.d.ts",
     "C:/types/index.d.ts",
+    "C:index.d.ts",
   ])("rejects a non-package-relative single-file entry: %s", (entry) => {
     const api = makeApi();
 
@@ -122,6 +123,7 @@ describe("api.types() input validation", () => {
     "types/../hooks.d.ts",
     "types//hooks.d.ts",
     "C:/types/hooks.d.ts",
+    "C:hooks.d.ts",
   ])("rejects a non-package-relative module path: %s", (modulePath) => {
     const api = makeApi();
 
@@ -137,6 +139,22 @@ describe("api.types() input validation", () => {
 
   test.each(["", ".", "..", "nested//hooks", "nested\\hooks"])(
     "rejects an invalid module sub-path name: %j",
+    (name) => {
+      const api = makeApi();
+
+      api.types("index.d.ts", { modules: { [name]: "hooks.d.ts" } });
+
+      expect(buildmessage.error).toHaveBeenCalledWith(
+        expect.stringContaining("valid non-empty sub-path"),
+        expect.anything()
+      );
+      expect(api._typesEntry).toBeNull();
+      expect(api._typesModules).toBeNull();
+    }
+  );
+
+  test.each(["bad?name", "bad*name", "bad\"name", "bad<name", "bad>name", "bad|name", "bad\nname", "bad\u0000name"])(
+    "rejects a non-portable module sub-path name: %j",
     (name) => {
       const api = makeApi();
 
@@ -202,6 +220,12 @@ describe("api.types() directory-path validation", () => {
   test("rejects an absolute Windows directory", () => {
     const api = makeApi();
     api.types("C:/dist-types/");
+    expectRejected(api);
+  });
+
+  test("rejects a drive-relative Windows directory", () => {
+    const api = makeApi();
+    api.types("C:dist-types/");
     expectRejected(api);
   });
 });
