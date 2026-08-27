@@ -40,6 +40,8 @@ expectTypeOf(Log.format)
   .parameter(1)
   .toEqualTypeOf<{ color?: boolean; metaColor?: string } | undefined>();
 expectTypeOf(Log.format).returns.toBeString();
+// @ts-expect-error Log.format throws at runtime when time is missing.
+Log.format({ message: "missing time" });
 
 expectTypeOf(Log.objFromText).parameters.toEqualTypeOf<[string, Record<string, unknown>?]>();
 expectTypeOf(Log.objFromText).returns.toExtend<{

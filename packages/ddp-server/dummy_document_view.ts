@@ -1,18 +1,15 @@
-/** Represents EJSON-serializable field values in the DDP protocol */
-type FieldValue = string | number | boolean | Date | Uint8Array | Record<string, unknown> | unknown[] | null | undefined;
-
 interface ChangeCollector {
-  [key: string]: FieldValue;
+  [key: string]: any;
 }
 
 interface DataEntry {
   subscriptionHandle: string;
-  value: FieldValue;
+  value: any;
 }
 
 export class DummyDocumentView {
-  existsIn: Set<string>;
-  dataByKey: Map<string, DataEntry[]>;
+  private existsIn: Set<string>;
+  private dataByKey: Map<string, DataEntry[]>;
 
   constructor() {
     this.existsIn = new Set<string>(); // set of subscriptionHandle
@@ -34,7 +31,7 @@ export class DummyDocumentView {
   changeField(
     subscriptionHandle: string,
     key: string,
-    value: FieldValue,
+    value: any,
     changeCollector: ChangeCollector,
     isAdd?: boolean
   ): void {

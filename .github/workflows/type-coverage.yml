@@ -17,5 +17,5 @@ jobs:
         run: npm run types:compile
       - name: Type coverage (99%)
         run: npm run types:coverage
-      - name: Type test coverage (90%)
+      - name: Type test coverage (100%)
         run: npm run types:dts-test-coverage

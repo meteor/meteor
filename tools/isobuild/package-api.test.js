@@ -71,6 +71,25 @@ describe("api.types() input validation", () => {
     }
   );
 
+  test.each([
+    "../index.d.ts",
+    "/tmp/index.d.ts",
+    "types/../index.d.ts",
+    "types//index.d.ts",
+    "C:/types/index.d.ts",
+  ])("rejects a non-package-relative single-file entry: %s", (entry) => {
+    const api = makeApi();
+
+    api.types(entry);
+
+    expect(buildmessage.error).toHaveBeenCalledWith(
+      expect.stringContaining("must stay inside the package"),
+      expect.anything()
+    );
+    expect(api._typesEntry).toBeNull();
+    expect(api._typesModules).toBeNull();
+  });
+
   test("rejects non-declaration modules in declaration mode without partial metadata", () => {
     const api = makeApi();
 
@@ -91,6 +110,25 @@ describe("api.types() input validation", () => {
 
     expect(buildmessage.error).toHaveBeenCalledWith(
       expect.stringContaining("must be a .ts/.tsx source path"),
+      expect.anything()
+    );
+    expect(api._typesEntry).toBeNull();
+    expect(api._typesModules).toBeNull();
+  });
+
+  test.each([
+    "../hooks.d.ts",
+    "/tmp/hooks.d.ts",
+    "types/../hooks.d.ts",
+    "types//hooks.d.ts",
+    "C:/types/hooks.d.ts",
+  ])("rejects a non-package-relative module path: %s", (modulePath) => {
+    const api = makeApi();
+
+    api.types("index.d.ts", { modules: { hooks: modulePath } });
+
+    expect(buildmessage.error).toHaveBeenCalledWith(
+      expect.stringContaining("must stay inside the package"),
       expect.anything()
     );
     expect(api._typesEntry).toBeNull();
@@ -158,6 +196,12 @@ describe("api.types() directory-path validation", () => {
   test("rejects empty segments ('dist//types/')", () => {
     const api = makeApi();
     api.types("dist//types/");
+    expectRejected(api);
+  });
+
+  test("rejects an absolute Windows directory", () => {
+    const api = makeApi();
+    api.types("C:/dist-types/");
     expectRejected(api);
   });
 });

@@ -66,7 +66,6 @@
     "tools/tests/**",
     "tools/modern-tests/**",
     "packages/mongo/cursor.ts",
-    "packages/mongo/cursor_description.ts",
     "packages/mongo/connection_options.ts",
     "packages/mongo/observe_handle.ts",
     "packages/mongo/observe_multiplex.ts",
@@ -74,10 +73,8 @@
     "packages/mongo/oplog_v2_converter.ts",
     "packages/mongo/polling_observe_driver.ts",
     "packages/mongo/remote_collection_driver.ts",
-    "packages/mongo/types.ts",
     "packages/ddp-server/session_collection_view.ts",
     "packages/ddp-server/session_document_view.ts",
-    "packages/ddp-server/dummy_document_view.ts",
     "packages/typescript/tests.ts"
   ]
 }

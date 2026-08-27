@@ -25,5 +25,8 @@ export namespace Random {
   var insecure: RandomGenerator;
 
   /** Create a deterministic generator seeded with the given values. */
-  function createWithSeeds(...seeds: (string | number)[]): RandomGenerator;
+  function createWithSeeds(
+    firstSeed: string | number,
+    ...additionalSeeds: (string | number)[]
+  ): RandomGenerator;
 }

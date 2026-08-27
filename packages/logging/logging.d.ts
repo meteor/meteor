@@ -8,7 +8,7 @@ type LogInput = string | LogJSONInput;
 
 type formatInput = {
   message?: string;
-  time?: Date;
+  time: Date;
   level?: "debug" | "info" | "warn" | "error";
   timeInexact?: boolean;
   file?: string;
