@@ -56,8 +56,21 @@ function callListener(listener, event) {
 export function emit(type, buildEvent) {
   const set = listeners.get(type);
   if (!set || set.size === 0) return;
-  const event = buildEvent();
-  for (const listener of set) {
+  // The build runs on the observed method's stack: a throwing payload builder
+  // must be contained here too — the never-throw guarantee covers construction,
+  // not just listener calls. The failure is reported like a listener's; the
+  // event is dropped rather than half-delivered.
+  let event;
+  try {
+    event = buildEvent();
+  } catch (error) {
+    reportListenerError(error, { type });
+    return;
+  }
+  // Snapshot: a listener registered during this emission only sees subsequent
+  // events. Iterating the live Set would call it with the current event — and a
+  // listener that keeps registering listeners would never let the loop end.
+  for (const listener of [...set]) {
     callListener(listener, event);
   }
 }

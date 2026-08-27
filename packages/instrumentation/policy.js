@@ -1,3 +1,4 @@
+import { EJSON } from 'meteor/ejson';
 import { previewValue } from './preview.js';
 
 // Hard-coded denylist of every Accounts DDP method whose args OR result carry a
@@ -67,12 +68,15 @@ export const captureClientAddress = () => config.captureClientAddress;
 // captureArgs/captureResult (still bounded by previewValue) · 3. global 'preview'
 // → bounded preview · 4. default → nothing. A throwing override yields nothing
 // rather than breaking emission.
-function resolveCapture(name, value, kind /* 'captureArgs' | 'captureResult' */, globalKey) {
+function resolveCapture(name, value, kind /* 'captureArgs' | 'captureResult' */, globalKey, perMethodOverrides) {
   if (ACCOUNTS_DENYLIST.has(name)) return undefined;
-  const m = perMethod.get(name);
+  const m = perMethodOverrides && perMethodOverrides.get(name);
   if (m && typeof m[kind] === 'function') {
     try {
-      return previewValue(m[kind](value));
+      // Full-fidelity defensive copy: the projector can inspect everything but
+      // can never mutate the live invocation (the args the handler is about to
+      // receive, or the result about to be sent/returned).
+      return previewValue(m[kind](EJSON.clone(value)));
     } catch (_ignored) {
       return undefined;
     }
@@ -81,5 +85,9 @@ function resolveCapture(name, value, kind /* 'captureArgs' | 'captureResult' */,
   return undefined;
 }
 
-export const captureArgs = (name, args) => resolveCapture(name, args, 'captureArgs', 'captureMethodArgs');
-export const captureResult = (name, result) => resolveCapture(name, result, 'captureResult', 'captureMethodResult');
+export const captureArgs = (name, args) => resolveCapture(name, args, 'captureArgs', 'captureMethodArgs', perMethod);
+export const captureResult = (name, result) => resolveCapture(name, result, 'captureResult', 'captureMethodResult', perMethod);
+// Publications share the global preview policy (captureMethodArgs is documented
+// to cover method AND publication events) but never the per-METHOD overrides:
+// a projector configured for a method must not run on a same-named publication.
+export const capturePublicationArgs = (name, args) => resolveCapture(name, args, 'captureArgs', 'captureMethodArgs', null);

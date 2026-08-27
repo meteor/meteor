@@ -1,6 +1,6 @@
 import { emit } from './emitter.js';
 import { traceContextFor } from './context.js';
-import { captureArgs, captureResult, captureClientAddress, eventPrefix, isEnabled } from './policy.js';
+import { captureArgs, captureResult, capturePublicationArgs, captureClientAddress, eventPrefix, isEnabled } from './policy.js';
 import { previewError } from './preview.js';
 
 // Builds the public event from the RAW materials the seam hands over (the live
@@ -53,7 +53,7 @@ function publicationPayload(type, raw) {
   };
   if (raw.durationMs !== undefined) event.durationMs = raw.durationMs;
 
-  const args = captureArgs(raw.name, raw.args);
+  const args = capturePublicationArgs(raw.name, raw.args);
   if (args !== undefined) event.args = args;
   if (type === 'publication.error') event.error = previewError(raw.error);
   return event;
