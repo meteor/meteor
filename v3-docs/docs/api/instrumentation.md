@@ -46,9 +46,12 @@ const handle = Instrumentation.on('method.error', (e) => {
 
 Listeners are **read-only and best-effort**: one that throws, or returns a
 rejected promise, can never break the method or publication it observes, and is
-never awaited. A payload is built only when at least one listener is registered
-for that type, so events you don't listen to cost nothing — and with the package
-not added, the hooks don't exist at all.
+never awaited. The same guarantee covers building the event itself: if a payload
+cannot be constructed (say, an application error whose getters throw), the event
+is emitted in a degraded form or dropped — never propagated into the observed
+call. A payload is built only when at least one listener is registered for that
+type, so events you don't listen to cost nothing — and with the package not
+added, the hooks don't exist at all.
 
 There are nine event types:
 
@@ -132,6 +135,7 @@ Instrumentation.configure({
   captureMethodResult: 'preview', // include a bounded preview of method results
   captureClientAddress: false,    // include the client IP on ddp.connection.open (PII)
   eventPrefix: 'orders-svc',      // namespace eventName per app/process/container
+  onListenerError: (error, event) => console.error('instrumentation:', error),
 });
 ```
 
@@ -148,6 +152,9 @@ Instrumentation.configure({
 - **`eventPrefix`** — prefixes each event's `eventName` (e.g.
   `orders-svc.method.start`). The canonical `type` stays unprefixed so generic
   consumers still match on it.
+- **`onListenerError`** — called with `(error, event)` when a listener throws or
+  rejects, and when a payload could not be built at all (the second argument
+  then only carries the event `type`). Silent by default.
 
 To override capture for a single method — for example to record only a safe
 projection of a sensitive payload — use `Instrumentation.configureMethod`:
@@ -159,7 +166,11 @@ Instrumentation.configureMethod('orders.create', {
 ```
 
 Whatever your function returns is still passed through the bounded preview, so a
-careless override can never produce an oversized or unserializable payload.
+careless override can never produce an oversized or unserializable payload. The
+projector receives a defensive copy (`EJSON.clone`) of the arguments or result:
+inspect anything, but mutations never reach the live call. Overrides are
+method-scoped — a publication with the same name is not affected (publications
+follow only the global `captureMethodArgs` policy).
 
 ## Putting it to work
 
