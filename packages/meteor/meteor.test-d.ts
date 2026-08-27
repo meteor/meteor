@@ -45,6 +45,19 @@ expectTypeOf<Meteor.LoginMethodResult>().toBeObject();
 expectTypeOf<Meteor.MethodThisType>().toBeObject();
 expectTypeOf(Meteor.methods).toBeFunction();
 expectTypeOf(Meteor.call).toBeFunction();
+expectTypeOf(Meteor.call<{ ok: boolean }>("typed-result")).toEqualTypeOf<{
+  ok: boolean;
+}>();
+expectTypeOf(Meteor.call<number>("sum", 1, 2)).toEqualTypeOf<number>();
+Meteor.call<{ ok: boolean }>("typed-callback", (error, result) => {
+  expectTypeOf(error).not.toBeAny();
+  expectTypeOf(result).not.toBeAny();
+  expectTypeOf(error).toEqualTypeOf<Error | Meteor.Error | undefined>();
+  expectTypeOf(result).toEqualTypeOf<{ ok: boolean } | undefined>();
+});
+Meteor.call("callback", (error) => {
+  expectTypeOf(error).toEqualTypeOf<Error | Meteor.Error | undefined>();
+});
 expectTypeOf(Meteor.callAsync).toBeFunction();
 expectTypeOf<Meteor.MethodApplyOptions<any>>().toBeObject();
 expectTypeOf(Meteor.apply).toBeFunction();
