@@ -75,6 +75,14 @@ function normalizeTypePath(p) {
   return convertToPosixPath(p, true).replace(/^\.\//, '');
 }
 
+function isPackageRelativeTypePath(p) {
+  return typeof p === 'string' && p.length > 0 &&
+    !p.startsWith('/') &&
+    !/^[A-Za-z]:\//.test(p) &&
+    !p.split('/').some(segment =>
+      segment === '' || segment === '.' || segment === '..');
+}
+
 // Iterates over the list of target archs and calls f(arch) for all archs
 // that match an element of self.allarchs.
 function forAllMatchingArchs (archs, f) {
@@ -459,10 +467,10 @@ export class PackageAPI {
   }
 
   /**
-   * `@memberOf` PackageAPI
-   * `@instance`
-   * `@summary` Declare the TypeScript type declarations for this package.
-   * `@locus` package.js
+   * @memberOf PackageAPI
+   * @instance
+   * @summary Declare the TypeScript type declarations for this package.
+   * @locus package.js
    * @param {String} typesEntry Path to the main .d.ts file (relative to the
    *   package directory), e.g. `'my-package.d.ts'` — or a directory of
    *   declaration files, marked with a trailing slash, e.g. `'dist-types/'`
@@ -547,6 +555,14 @@ export class PackageAPI {
 
     typesEntry = normalizeTypePath(normalizedTypesEntry);
 
+    if (!isPackageRelativeTypePath(typesEntry)) {
+      buildmessage.error(
+        `api.types(): types entry ("${typesEntry}") must stay inside the package.`,
+        { useMyCaller: true }
+      );
+      return;
+    }
+
     if (options.entry !== undefined) {
       buildmessage.error(
         'api.types(): options.entry is only valid when the first argument ' +
@@ -569,10 +585,7 @@ export class PackageAPI {
     if (options.modules) {
       normalizedModules = {};
       for (const [name, modulePath] of Object.entries(options.modules)) {
-        const validPath = isSourceEntry
-          ? isTypeScriptSourcePath(modulePath)
-          : isTypeScriptDeclarationPath(modulePath);
-        if (typeof modulePath !== 'string' || !modulePath.trim() || !validPath) {
+        if (typeof modulePath !== 'string' || !modulePath.trim()) {
           buildmessage.error(
             isSourceEntry
               ? `api.types(): options.modules.${name} must be a .ts/.tsx ` +
@@ -582,7 +595,28 @@ export class PackageAPI {
           );
           return;
         }
-        normalizedModules[name] = normalizeTypePath(modulePath);
+        const normalizedModulePath = normalizeTypePath(modulePath);
+        if (!isPackageRelativeTypePath(normalizedModulePath)) {
+          buildmessage.error(
+            `api.types(): options.modules.${name} ("${modulePath}") must stay inside the package.`,
+            { useMyCaller: true }
+          );
+          return;
+        }
+        const validPath = isSourceEntry
+          ? isTypeScriptSourcePath(normalizedModulePath)
+          : isTypeScriptDeclarationPath(normalizedModulePath);
+        if (!validPath) {
+          buildmessage.error(
+            isSourceEntry
+              ? `api.types(): options.modules.${name} must be a .ts/.tsx ` +
+                  'source path when the types entry is a TypeScript source file.'
+              : `api.types(): options.modules.${name} must be a .d.ts path.`,
+            { useMyCaller: true }
+          );
+          return;
+        }
+        normalizedModules[name] = normalizedModulePath;
       }
     }
 
@@ -634,8 +668,7 @@ export class PackageAPI {
     // Strip the trailing slash(es) and a leading './'; what remains is the
     // directory path relative to the package root, e.g. 'dist-types'.
     const dir = typesEntry.replace(/\/+$/, '').replace(/^\.\//, '');
-    if (!dir || dir.startsWith('/') ||
-        dir.split('/').some(seg => seg === '..' || seg === '.' || seg === '')) {
+    if (!isPackageRelativeTypePath(dir)) {
       return `api.types(): "${typesEntry}" is not a valid directory path inside the package.`;
     }
 
@@ -648,8 +681,7 @@ export class PackageAPI {
         };
       }
       const rel = normalizeTypePath(p);
-      if (rel.startsWith('/') ||
-          rel.split('/').some(seg => seg === '..' || seg === '.' || seg === '')) {
+      if (!isPackageRelativeTypePath(rel)) {
         return {
           error: `api.types(): ${label} ("${p}") must stay inside the "${dir}/" directory.`,
         };
