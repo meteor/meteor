@@ -11,16 +11,40 @@ const truncate = (str, max) => (str.length > max ? str.slice(0, max) + '…' : s
 // Strings only; a non-string (e.g. a numeric Meteor.Error code) passes through.
 const capString = (value, max) => (typeof value === 'string' ? truncate(value, max) : value);
 
+// Reading a property of an application error can itself throw (getters), and
+// the reply path must survive that: degrade to a marker, never propagate.
+function safeGet(obj, key) {
+  try {
+    return obj[key];
+  } catch (_ignored) {
+    return '[Getter threw]';
+  }
+}
+
 export function previewError(error) {
   const max = DEFAULTS.maxStringLength;
-  if (!(error instanceof Error)) {
-    return { name: 'Error', message: truncate(String(error), max) };
+  let isError;
+  try {
+    isError = error instanceof Error;
+  } catch (_ignored) {
+    isError = false;
+  }
+  if (!isError) {
+    let str;
+    try {
+      str = String(error);
+    } catch (_ignored) {
+      str = '[unstringifiable value]';
+    }
+    return { name: 'Error', message: truncate(str, max) };
   }
   // message/reason/error are bounded just like any other captured string, so a
   // huge Meteor.Error('code', hugeReason) can't smuggle an unbounded payload in.
-  const out = { name: capString(error.name, max), message: capString(error.message, max) };
-  if (error.error !== undefined) out.error = capString(error.error, max);   // Meteor.Error code
-  if (error.reason !== undefined) out.reason = capString(error.reason, max); // Meteor.Error reason
+  const out = { name: capString(safeGet(error, 'name'), max), message: capString(safeGet(error, 'message'), max) };
+  const code = safeGet(error, 'error');
+  if (code !== undefined) out.error = capString(code, max);     // Meteor.Error code
+  const reason = safeGet(error, 'reason');
+  if (reason !== undefined) out.reason = capString(reason, max); // Meteor.Error reason
   return out;
 }
 
@@ -32,9 +56,9 @@ function walk(value, opts, depth, seen) {
   }
   if (t === 'number' || t === 'boolean') return value;
   if (t === 'undefined') return '[undefined]';
-  if (t === 'function') return `[Function ${value.name || 'anonymous'}]`;
-  if (t === 'symbol') return value.toString();
-  if (t === 'bigint') return `${value}n`;
+  if (t === 'function') return `[Function ${truncate(String(value.name || 'anonymous'), 50)}]`;
+  if (t === 'symbol') return truncate(value.toString(), opts.maxStringLength);
+  if (t === 'bigint') return truncate(`${value}n`, opts.maxStringLength);
   if (value instanceof Error) return previewError(value);
   if (value instanceof Date) {
     const ms = value.getTime();
@@ -53,14 +77,21 @@ function walk(value, opts, depth, seen) {
     out = {};
     const keys = Object.keys(value);
     for (const k of keys.slice(0, opts.maxKeys)) {
+      // Bounded key: two long keys sharing a 200-char prefix collide in the
+      // preview (last one wins) — acceptable for observability output.
+      const boundedKey = truncate(k, opts.maxStringLength);
       let v;
       try {
         v = value[k]; // an enumerable getter may throw
       } catch (err) {
-        out[k] = `[Getter threw: ${err && err.message ? err.message : 'error'}]`;
+        let msg = 'error';
+        try {
+          if (err && err.message) msg = truncate(String(err.message), opts.maxStringLength);
+        } catch (_ignored) { /* reading .message threw too — keep the generic marker */ }
+        out[boundedKey] = `[Getter threw: ${msg}]`;
         continue;
       }
-      out[k] = walk(v, opts, depth + 1, seen);
+      out[boundedKey] = walk(v, opts, depth + 1, seen);
     }
     if (keys.length > opts.maxKeys) out['…'] = `+${keys.length - opts.maxKeys} more keys`;
   }
