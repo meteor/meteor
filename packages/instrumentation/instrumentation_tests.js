@@ -16,6 +16,12 @@ Meteor.methods({
 
 const collect = (type, into) => Instrumentation.on(type, (e) => into.push(e));
 
+// Promisified makeTestConnection, keeping BOTH ends (the test-helpers
+// createTestConnectionPromise resolves with the client side only).
+const connect = (test) => new Promise((resolve) => {
+  makeTestConnection(test, (clientConn, serverConn) => resolve([clientConn, serverConn]));
+});
+
 Tinytest.addAsync('instrumentation - method start/end events + traceId consistency', async function (test) {
   const events = [];
   const a = collect('method.start', events);
@@ -127,6 +133,45 @@ Tinytest.addAsync('instrumentation - method.error bounds oversized Meteor.Error 
     test.isTrue(err.error.reason.length <= 201, `reason should be bounded, got ${err.error.reason.length}`);
     test.isTrue(err.error.reason.endsWith('…'), 'reason was truncated');
   } finally { a.stop(); }
+});
+
+// The two tests below go through a REAL DDP connection: methods received from a
+// client run through Session.method (the protocol handler), a different code
+// path from the server-initiated Server.apply the tests above exercise. They
+// pin the seam's hooks on that path, so a botched hook re-placement (e.g. while
+// rebasing over a refactored livedata_server.js) fails loudly here.
+Tinytest.addAsync('instrumentation - DDP client method call emits start/end on the session path', async function (test) {
+  const events = [];
+  const a = collect('method.start', events);
+  const b = collect('method.end', events);
+  try {
+    const [clientConn, serverConn] = await connect(test);
+    test.equal(await clientConn.callAsync('instr_test.echo', 21), 42);
+    const start = events.find((e) => e.type === 'method.start' && e.name === 'instr_test.echo' && e.connectionId === serverConn.id);
+    const end = events.find((e) => e.type === 'method.end' && e.name === 'instr_test.echo' && e.connectionId === serverConn.id);
+    test.isTrue(!!start, 'method.start emitted on the DDP session path');
+    test.isTrue(!!end, 'method.end emitted on the DDP session path');
+    test.equal(start.traceId, end.traceId);
+    test.equal(start.argsCount, 1);
+    test.equal(typeof end.durationMs, 'number');
+    clientConn.disconnect();
+  } finally { a.stop(); b.stop(); }
+});
+
+Tinytest.addAsync('instrumentation - DDP client method error emits method.error and still reaches the client', async function (test) {
+  const events = [];
+  const c = collect('method.error', events);
+  try {
+    const [clientConn, serverConn] = await connect(test);
+    let clientErr = null;
+    try { await clientConn.callAsync('instr_test.boom'); } catch (e) { clientErr = e; }
+    test.isTrue(!!clientErr, 'the client still received the error reply');
+    test.equal(clientErr.error, 'nope');
+    const ev = events.find((e) => e.name === 'instr_test.boom' && e.connectionId === serverConn.id);
+    test.isTrue(!!ev, 'method.error emitted on the DDP session path');
+    test.equal(ev.error && ev.error.error, 'nope');
+    clientConn.disconnect();
+  } finally { c.stop(); }
 });
 
 // A publication whose handler calls this.error(). On the error path the
