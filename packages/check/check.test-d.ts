@@ -4,7 +4,7 @@ import { check, Match } from "./check";
 expectTypeOf(Match).toBeObject();
 
 // Match.Any / Integer / NonEmptyString
-expectTypeOf(Match.Any).toEqualTypeOf<Match.Matcher<any>>();
+expectTypeOf(Match.Any).toEqualTypeOf<Match.Matcher<unknown>>();
 expectTypeOf(Match.Integer).toEqualTypeOf<Match.Matcher<number>>();
 expectTypeOf(Match.NonEmptyString).toEqualTypeOf<Match.Matcher<string>>();
 
@@ -48,7 +48,12 @@ expectTypeOf(Match.OneOf(String, Number)).toEqualTypeOf<
 >();
 expectTypeOf(Match.Where<string>((v): v is string => typeof v === "string"))
   .toEqualTypeOf<Match.Matcher<string>>();
-expectTypeOf(Match.Where((v) => !!v)).toEqualTypeOf<Match.Matcher<any>>();
+expectTypeOf(Match.Where((v) => !!v)).toEqualTypeOf<Match.Matcher<unknown>>();
+interface MatchCandidate {
+  active: boolean;
+}
+expectTypeOf<Match.WherePredicate<MatchCandidate>>().toBeFunction();
+Match.Where((candidate: MatchCandidate) => candidate.active);
 
 // Bare references for Maybe / Optional / ObjectIncluding / OneOf / Where
 expectTypeOf(Match.Maybe).toBeFunction();
