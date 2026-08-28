@@ -235,6 +235,20 @@ export async function removeGeneratedTypes({ projectMeteorDir }) {
   await files.rm_recursive(files.pathJoin(projectMeteorDir, TYPES_DIR));
 }
 
+/**
+ * Remove the cache produced by zodern:types after native generation has
+ * succeeded. Older tsconfig files sometimes include this directory directly,
+ * so leaving it behind would load both declaration providers at once after
+ * the package is removed. The caller deliberately invokes this only after a
+ * complete native output has been written, preserving the old fallback if
+ * native generation fails.
+ */
+export async function removeLegacyGeneratedTypes({ projectMeteorDir }) {
+  await files.rm_recursive(
+    files.pathJoin(projectMeteorDir, "local", TYPES_DIR)
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------

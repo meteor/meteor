@@ -40,7 +40,10 @@ jest.mock("../console/console.js", () => ({
   Console: { debug: jest.fn(), warn: jest.fn() },
 }));
 
-const { generateTypes } = require("./types-generator");
+const {
+  generateTypes,
+  removeLegacyGeneratedTypes,
+} = require("./types-generator");
 const files = require("../fs/files");
 const { Console } = require("../console/console.js");
 const ts = require("typescript");
@@ -248,6 +251,13 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("directory setup", () => {
+  test("removes the stale zodern cache after native generation takes over", async () => {
+    await removeLegacyGeneratedTypes({ projectMeteorDir: PROJECT_METEOR });
+    expect(files.rm_recursive).toHaveBeenCalledWith(
+      `${PROJECT_METEOR}/local/types`
+    );
+  });
+
   test("creates the packages subdirectory", async () => {
     await generateTypes({
       isopackCache: makeIsopackCache({}),
