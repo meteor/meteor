@@ -4,7 +4,7 @@ export interface RateLimiterInput {
   userId?: string | null;
   connectionId?: string;
   clientAddress?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface RateLimiterCheckResult {
@@ -59,13 +59,13 @@ export class RateLimiter {
 
   /** Check the given rules against an input (lower-level than `check`). */
   checkRules<Input extends RateLimiterInput = RateLimiterInput>(
-    rules: any[],
+    rules: unknown[],
     input: Input,
   ): RateLimiterCheckResult;
 
   /** Increment counters for every rule in `rules` that matches this input. */
   incrementRules<Input extends RateLimiterInput = RateLimiterInput>(
-    rules: any[],
+    rules: unknown[],
     input: Input,
   ): void;
 

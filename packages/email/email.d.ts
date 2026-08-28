@@ -1,5 +1,5 @@
-import { Readable } from 'stream';
-import { Url } from 'url';
+import { Readable, Writable } from "stream";
+import { Url } from "url";
 
 // The types below are a self-contained copy of Mail.Options (aka
 // SendMailOptions) from @types/nodemailer, matching the nodemailer version in
@@ -17,7 +17,7 @@ interface ListHeaders {
   [key: string]: ListHeader | ListHeader[] | ListHeader[][];
 }
 
-type TextEncoding = 'quoted-printable' | 'base64';
+type TextEncoding = "quoted-printable" | "base64";
 
 interface Address {
   name: string;
@@ -41,9 +41,9 @@ interface Attachment extends AttachmentLike {
   /** optional content type for the attachment, if not set will be derived from the filename property */
   contentType?: string | undefined;
   /** optional transfer encoding for the attachment, if not set it will be derived from the contentType property. Example values: quoted-printable, base64. If it is unset then base64 encoding is used for the attachment. If it is set to false then previous default applies (base64 for most, 7bit for text). */
-  contentTransferEncoding?: '7bit' | 'base64' | 'quoted-printable' | false | undefined;
+  contentTransferEncoding?: "7bit" | "base64" | "quoted-printable" | false | undefined;
   /** optional content disposition type for the attachment, defaults to ‘attachment’ */
-  contentDisposition?: 'attachment' | 'inline' | undefined;
+  contentDisposition?: "attachment" | "inline" | undefined;
   /** is an object of additional headers */
   headers?: Headers | undefined;
   /** an optional value that overrides entire node content in the mime message. If used then all other options set for this node are ignored. */
@@ -177,7 +177,7 @@ interface SendMailOptions {
   dkim?: DKIMOptions | undefined;
   /** method to normalize header keys for custom caseing */
   normalizeHeaderKey?(key: string): string;
-  priority?: 'high' | 'normal' | 'low' | undefined;
+  priority?: "high" | "normal" | "low" | undefined;
   /** if set to true then converts data:images in the HTML content of message to embedded attachments */
   attachDataUrls?: boolean | undefined;
   /** if set to false then removes x-mailer header, otherwise replaces the default x-mailer header value */
@@ -193,18 +193,21 @@ export namespace Email {
    * this interface to match your custom options.
    */
   interface ExtraMailOptions {}
-  type EmailOptions = { mailComposer: MailComposer } | (ExtraMailOptions & SendMailOptions)
+  type EmailOptions = { mailComposer: MailComposer } | (ExtraMailOptions & SendMailOptions);
 
   type CustomEmailOptions = EmailOptions & {
     packageSettings?: unknown;
-  }
+  };
 
   /** @deprecated */
   function send(options: EmailOptions): void;
   function sendAsync(options: EmailOptions): Promise<void>;
-  function hookSend(fn: (options: EmailOptions) => boolean): void;
-  /** @deprecated Retained for Meteor 3.x declaration compatibility. */
-  function customTransport(fn: (options: CustomEmailOptions) => void): void;
+  type SendHook = (options: EmailOptions) => boolean | Promise<boolean>;
+  function hookSend(fn: SendHook): {
+    stop: () => void;
+    callback: SendHook;
+  };
+  var customTransport: ((options: CustomEmailOptions) => unknown) | undefined;
 }
 
 export interface MailComposerOptions {
@@ -218,12 +221,12 @@ export interface MailComposerOptions {
 /** @deprecated Retained for Meteor 3.x declaration compatibility. */
 export declare var MailComposer: MailComposerStatic;
 export interface MailComposerStatic {
-  new (options: MailComposerOptions): MailComposer;
+  new (options?: MailComposerOptions | null): MailComposer;
 }
 
 export interface MailComposer {
   addHeader(name: string, value: string): void;
   setMessageOption(from: string, to: string, body: string, html: string): void;
   streamMessage(): void;
-  pipe(stream: any /** fs.WriteStream **/): void;
+  pipe(stream: Writable): void;
 }

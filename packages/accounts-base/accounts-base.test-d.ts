@@ -1,8 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import {
-  Accounts,
-  AccountsClient,
-} from "./accounts-base";
+import { Accounts, AccountsClient } from "./accounts-base";
 import type {
   URLS,
   EmailFields,
@@ -50,25 +47,37 @@ expectTypeOf<Accounts.PageLoadLoginAttemptInfo>().toBeObject();
 const clientLoginFailure: Accounts.LoginHookCallbackOptions = {
   error: new Error("login failed"),
 };
-expectTypeOf(clientLoginFailure.error).toEqualTypeOf<
-  Error | Meteor.Error | undefined
->();
+expectTypeOf(clientLoginFailure.error).toEqualTypeOf<Error | Meteor.Error | undefined>();
 
 Accounts.onPageLoadLogin((attempt: Accounts.PageLoadLoginAttemptInfo) => {
   expectTypeOf(attempt.type).toBeString();
   expectTypeOf(attempt.allowed).toBeBoolean();
-  expectTypeOf(attempt.error).toEqualTypeOf<
-    Error | Meteor.Error | undefined
-  >();
+  expectTypeOf(attempt.error).toEqualTypeOf<Error | Meteor.Error | undefined>();
   expectTypeOf(attempt.methodName).toBeString();
-  expectTypeOf(attempt.methodArguments).toEqualTypeOf<any[]>();
+  expectTypeOf(attempt.methodArguments).toEqualTypeOf<unknown[]>();
 });
+
+Accounts.config({
+  restrictCreationByEmailDomain: (email) => {
+    expectTypeOf(email).toBeString();
+    return email.endsWith("@meteor.com");
+  },
+});
+
+declare const legacyAccountsCallback: Function;
+Accounts.onLogin(legacyAccountsCallback);
+Accounts.onEmailVerificationLink(legacyAccountsCallback);
+Accounts.validateNewUser(legacyAccountsCallback);
 
 // --- Accounts password / email flows ---
 expectTypeOf(Accounts.changePassword).toBeFunction();
 expectTypeOf(Accounts.forgotPassword).toBeFunction();
 expectTypeOf(Accounts.resetPassword).toBeFunction();
 expectTypeOf(Accounts.verifyEmail).toBeFunction();
+expectTypeOf(Accounts.changePassword).returns.toBeVoid();
+expectTypeOf(Accounts.forgotPassword).returns.toBeVoid();
+expectTypeOf(Accounts.resetPassword).returns.toBeVoid();
+expectTypeOf(Accounts.verifyEmail).returns.toBeVoid();
 expectTypeOf(Accounts.onEmailVerificationLink).toBeFunction();
 expectTypeOf(Accounts.onEnrollmentLink).toBeFunction();
 expectTypeOf(Accounts.onResetPasswordLink).toBeFunction();
@@ -79,12 +88,12 @@ expectTypeOf(Accounts.loggingOut).toBeFunction();
 expectTypeOf(Accounts.logout).toBeFunction();
 expectTypeOf(Accounts.logoutAsync).toBeFunction();
 expectTypeOf(Accounts.logoutAllClients).toBeFunction();
-expectTypeOf(Accounts.logout).returns.toEqualTypeOf<Promise<void>>();
-expectTypeOf(Accounts.logoutAllClients).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Accounts.logout).returns.toBeVoid();
+expectTypeOf(Accounts.logoutAllClients).returns.toBeVoid();
 expectTypeOf(Accounts.logoutAllClientsAsync).toBeFunction();
 expectTypeOf(Accounts.logoutAllClientsAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Accounts.logoutOtherClients).toBeFunction();
-expectTypeOf(Accounts.logoutOtherClients).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Accounts.logoutOtherClients).returns.toBeVoid();
 expectTypeOf(Accounts.logoutOtherClientsAsync).toBeFunction();
 
 // --- Accounts signup field types ---
@@ -96,6 +105,15 @@ expectTypeOf(Accounts.addEmailAsync).toBeFunction();
 expectTypeOf(Accounts.removeEmail).toBeFunction();
 expectTypeOf(Accounts.replaceEmailAsync).toBeFunction();
 expectTypeOf(Accounts.onCreateUser).toBeFunction();
+expectTypeOf<Accounts.CreateUserCallback>().returns.toEqualTypeOf<
+  Meteor.User | Promise<Meteor.User>
+>();
+Accounts.onCreateUser((_options, user) => Promise.resolve(user));
+Accounts.onCreateUser(legacyAccountsCallback);
+Accounts.validateNewUser(async (user) => {
+  expectTypeOf(user).toEqualTypeOf<Meteor.User>();
+  return true;
+});
 expectTypeOf(Accounts.findUserByEmail).toBeFunction();
 expectTypeOf(Accounts.findUserByUsername).toBeFunction();
 
@@ -110,18 +128,25 @@ expectTypeOf(Accounts.sendVerificationEmail).toBeFunction();
 expectTypeOf(Accounts.setUsername).toBeFunction();
 expectTypeOf(Accounts.setPasswordAsync).toBeFunction();
 expectTypeOf(Accounts.validateNewUser).toBeFunction();
-expectTypeOf(Accounts.validateNewUser).returns.toBeBoolean();
+expectTypeOf<Accounts.ValidateNewUserCallback>().returns.toEqualTypeOf<
+  boolean | Promise<boolean>
+>();
+expectTypeOf(Accounts.validateNewUser).returns.toBeVoid();
 expectTypeOf(Accounts.validateLoginAttempt).toBeFunction();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts>().toBeObject();
+expectTypeOf<Accounts.LogoutHookOptions>().toBeObject();
 expectTypeOf(Accounts.onLogout).toBeFunction();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["user"]>().toEqualTypeOf<
-  Meteor.User
+  Meteor.User | undefined
 >();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["error"]>().toEqualTypeOf<
-  Meteor.Error
+  Error | Meteor.Error | undefined
 >();
-Accounts.onLogout(({ user }) => {
-  expectTypeOf(user).toEqualTypeOf<Meteor.User>();
+Accounts.onLogout((options) => {
+  expectTypeOf(options).toEqualTypeOf<Accounts.LogoutHookOptions | undefined>();
+  if (options) {
+    expectTypeOf(options.user).toEqualTypeOf<Meteor.User | undefined>();
+  }
 });
 
 Accounts.onLogout((options: { user: Meteor.User; connection: Meteor.Connection }) => {
@@ -131,8 +156,23 @@ Accounts.onLogout((options: { user: Meteor.User; connection: Meteor.Connection }
 // --- Accounts login method plumbing ---
 expectTypeOf<Accounts.LoginMethodOptions>().toBeObject();
 expectTypeOf(Accounts.callLoginMethod).toBeFunction();
+Accounts.callLoginMethod({
+  validateResult(result) {
+    expectTypeOf(result).toEqualTypeOf<Meteor.LoginMethodResult>();
+  },
+  userCallback(error, loginDetails) {
+    expectTypeOf(error).toEqualTypeOf<Error | Meteor.Error | Meteor.TypedError | undefined>();
+    expectTypeOf(loginDetails).toEqualTypeOf<Meteor.LoginMethodResult | undefined>();
+  },
+});
 expectTypeOf<Accounts.LoginMethodResult>().not.toBeAny();
 expectTypeOf(Accounts.registerLoginHandler).toBeFunction();
+expectTypeOf<Accounts.LoginHandler>().toBeFunction();
+Accounts.registerLoginHandler((options: { resume: string }) => {
+  expectTypeOf(options.resume).toBeString();
+  return undefined;
+});
 expectTypeOf<Accounts.Password>().not.toBeAny();
 expectTypeOf<Accounts.StampedLoginToken>().toBeObject();
 expectTypeOf<Accounts.HashedStampedLoginToken>().toBeObject();
+expectTypeOf(Accounts._insertHashedLoginToken).returns.toEqualTypeOf<Promise<void>>();

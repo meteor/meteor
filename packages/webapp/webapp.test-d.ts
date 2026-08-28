@@ -19,11 +19,17 @@ expectTypeOf(WebApp.rawHandlers).toBeAny();
 expectTypeOf(WebApp.httpServer).toBeObject();
 expectTypeOf(WebApp.expressApp).toBeAny();
 expectTypeOf(WebApp.express).toBeFunction();
+declare const legacyWebAppCallback: Function;
+WebApp.onListening(legacyWebAppCallback);
+WebApp.addHtmlAttributeHook(legacyWebAppCallback);
 
 // --- WebApp functions (exact return types) ---
 expectTypeOf(WebApp.suppressConnectErrors).returns.toBeVoid();
 expectTypeOf(WebApp.onListening).returns.toBeVoid();
-expectTypeOf(WebApp.addRuntimeConfigHook).returns.toBeVoid();
+expectTypeOf(WebApp.addRuntimeConfigHook).returns.toMatchTypeOf<{
+  stop: () => void;
+}>();
+WebApp.addRuntimeConfigHook(async ({ encodedCurrentConfig }) => encodedCurrentConfig);
 expectTypeOf(WebApp.decodeRuntimeConfig).returns.toEqualTypeOf<unknown>();
 expectTypeOf(WebApp.encodeRuntimeConfig).returns.toEqualTypeOf<string>();
 expectTypeOf(WebApp.addHtmlAttributeHook).returns.toBeVoid();
@@ -35,24 +41,31 @@ expectTypeOf<WebApp.RuntimeConfigHookCallback>().toBeFunction();
 expectTypeOf(WebAppInternals.NpmModules).toBeObject();
 expectTypeOf(WebAppInternals.staticFiles).toBeObject();
 expectTypeOf(WebAppInternals.staticFilesByArch).toBeObject();
-expectTypeOf(WebAppInternals.additionalStaticJs).toBeAny();
+expectTypeOf(WebAppInternals.additionalStaticJs).toBeObject();
 
 // --- WebAppInternals functions (exact return types) ---
 expectTypeOf(WebAppInternals.identifyBrowser).returns.toEqualTypeOf<{
   name: string;
-  major: string;
-  minor: string;
-  patch: string;
+  major: number;
+  minor: number;
+  patch: number;
 }>();
 expectTypeOf(WebAppInternals.registerBoilerplateDataCallback).toBeFunction();
+WebAppInternals.registerBoilerplateDataCallback(
+  "async-data",
+  async (_request, _data, _arch, response) => {
+    expectTypeOf(response).toEqualTypeOf<import("http").ServerResponse | undefined>();
+    return "updated";
+  },
+);
 expectTypeOf(WebAppInternals.generateBoilerplateInstance).toBeFunction();
-expectTypeOf(WebAppInternals.staticFilesMiddleware).returns.toBeVoid();
-expectTypeOf(WebAppInternals.parsePort).returns.toBeNumber();
-expectTypeOf(WebAppInternals.reloadClientPrograms).returns.toBeVoid();
-expectTypeOf(WebAppInternals.generateBoilerplate).returns.toBeVoid();
+expectTypeOf(WebAppInternals.staticFilesMiddleware).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(WebAppInternals.parsePort).returns.toEqualTypeOf<string | number>();
+expectTypeOf(WebAppInternals.reloadClientPrograms).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(WebAppInternals.generateBoilerplate).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(WebAppInternals.inlineScriptsAllowed).returns.toEqualTypeOf<boolean>();
-expectTypeOf(WebAppInternals.setInlineScriptsAllowed).returns.toBeVoid();
-expectTypeOf(WebAppInternals.setBundledJsCssUrlRewriteHook).returns.toBeVoid();
-expectTypeOf(WebAppInternals.setBundledJsCssPrefix).returns.toBeVoid();
+expectTypeOf(WebAppInternals.setInlineScriptsAllowed).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(WebAppInternals.setBundledJsCssUrlRewriteHook).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(WebAppInternals.setBundledJsCssPrefix).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(WebAppInternals.addStaticJs).returns.toBeVoid();
 expectTypeOf(WebAppInternals.getBoilerplate).toBeFunction();

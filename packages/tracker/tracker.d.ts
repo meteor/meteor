@@ -31,7 +31,7 @@ export namespace Tracker {
     /** Await this computation's first run (delegates to `firstRunPromise`). */
     then(
       onResolved?: (value: unknown) => unknown,
-      onRejected?: (reason: unknown) => unknown
+      onRejected?: (reason: unknown) => unknown,
     ): Promise<unknown>;
     /** Await this computation's first run, handling rejection. */
     catch(onRejected?: (reason: unknown) => unknown): Promise<unknown>;
@@ -127,13 +127,13 @@ export namespace Tracker {
        * thrown. Defaults to the error being logged to the console.
        */
       onError?: ((error: unknown) => void) | undefined;
-    }
+    },
   ): Computation;
   function autorun(
-    runFunc: (computation: Computation) => void,
+    runFunc: Function,
     options?: {
       onError?: Function | undefined;
-    }
+    },
   ): Computation;
 
   /**
@@ -141,14 +141,8 @@ export namespace Tracker {
    * @param computation Computation that tracked
    * @param func async function that needs to be called and be reactive
    */
-  function withComputation<T>(
-    computation: Computation | null,
-    func: () => Promise<T>
-  ): Promise<T>;
-  function withComputation<T>(
-    computation: Computation | null,
-    func: () => T
-  ): T;
+  function withComputation<T>(computation: Computation | null, func: () => Promise<T>): Promise<T>;
+  function withComputation<T>(computation: Computation | null, func: () => T): T;
 
   /**
    * Process all reactive updates immediately and ensure that all invalidated computations are rerun.

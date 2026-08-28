@@ -1,3 +1,12 @@
+import type { EJSONableProperty } from "meteor/ejson";
+
+interface SessionObjectID {
+  toHexString(): string;
+  equals(otherID: SessionObjectID): boolean;
+}
+
+type SessionValue = EJSONableProperty;
+
 export namespace Session {
   /**
    * Test if a session variable is equal to a value. If inside a
@@ -6,7 +15,10 @@ export namespace Session {
    * @param key The name of the session variable to test
    * @param value The value to test against
    */
-  function equals(key: string, value: any): boolean;
+  function equals(
+    key: string,
+    value: string | number | boolean | null | undefined | Date | SessionObjectID,
+  ): boolean;
 
   /**
    * Get the value of a session variable. If inside a reactive
@@ -17,7 +29,7 @@ export namespace Session {
    * session.
    * @param key The name of the session variable to return
    */
-  function get(key: string): any;
+  function get(key: string): SessionValue;
 
   /**
    * Set a variable in the session. Notify any listeners that the value
@@ -27,14 +39,14 @@ export namespace Session {
    * @param key The key to set, eg, `selectedItem`
    * @param value The new value for `key`
    */
-  function set(key: string, value: any): void;
+  function set(key: string, value: SessionValue): void;
   /**
    * Set multiple session variables at once. Equivalent to calling
    * `Session.set` individually on each key/value pair.
    * @param object An object whose keys are session variable names and
    *   whose values are the new values for those variables.
    */
-  function set(object: Record<string, any>): void;
+  function set<T extends { [K in keyof T]: SessionValue }>(object: T): void;
 
   /**
    * Set a variable in the session if it hasn't been set before.
@@ -42,6 +54,6 @@ export namespace Session {
    * @param key The key to set, eg, `selectedItem`
    * @param value The new value for `key`
    */
-  function setDefault(key: string, value: any): void;
-  function setDefault(object: Record<string, any>): void;
+  function setDefault(key: string, value: SessionValue): void;
+  function setDefault<T extends { [K in keyof T]: SessionValue }>(object: T): void;
 }

@@ -19,17 +19,29 @@ interface ObjectIdDoc {
   name: string;
 }
 
-expectTypeOf<UnionOmit<{ a: 1, b: 2 }, 'a'>>().toEqualTypeOf<{ b: 2 }>();
+expectTypeOf<UnionOmit<{ a: 1; b: 2 }, "a">>().toEqualTypeOf<{ b: 2 }>();
 
 expectTypeOf<Mongo.OptionalId<Doc>>().toEqualTypeOf<
-  { name: string; value: number } & { _id?: any }
+  { name: string; value: number } & {
+    _id?: Mongo.Id;
+  }
 >();
 
 expectTypeOf<Mongo.Selector<Doc>>().toEqualTypeOf<NpmModuleMongodb.Filter<Doc>>();
+expectTypeOf<Mongo.Id>().toEqualTypeOf<string | Mongo.ObjectID>();
 expectTypeOf<Mongo.SortSpecifier>().toEqualTypeOf<NpmModuleMongodb.Sort>();
 expectTypeOf<Mongo.FieldSpecifier>().toEqualTypeOf<{ [id: string]: Number }>();
-expectTypeOf<Mongo.Transform<Doc>>().toEqualTypeOf<((doc: Doc) => any) | null | undefined>();
+expectTypeOf<Mongo.Transform<Doc>>().toEqualTypeOf<((doc: Doc) => unknown) | null | undefined>();
+expectTypeOf<Mongo.InsertCallback>().toBeFunction();
+expectTypeOf<Mongo.MutationCallback>().toBeFunction();
+expectTypeOf<Mongo.UpsertResult>().toBeObject();
+expectTypeOf<Mongo.UpsertCallback>().toBeFunction();
 expectTypeOf<Mongo.Options<Doc>>().toMatchTypeOf<{ limit?: number }>();
+expectTypeOf<Mongo.AsyncMutationOptions>().toBeObject();
+expectTypeOf<Mongo.UpdateOptions>().toBeObject();
+expectTypeOf<Mongo.AsyncUpdateOptions>().toBeObject();
+expectTypeOf<Mongo.UpsertOptions>().toBeObject();
+expectTypeOf<Mongo.AsyncUpsertOptions>().toBeObject();
 
 expectTypeOf(Mongo.Collection).toBeConstructibleWith(null);
 expectTypeOf(Mongo.Collection).toBeConstructibleWith("name");
@@ -38,6 +50,7 @@ expectTypeOf(Mongo.Collection).toBeConstructibleWith("name", {
 });
 
 const coll = new Mongo.Collection<Doc>("docs");
+declare const legacyMongoCallback: Function;
 expectTypeOf(coll).toHaveProperty("find");
 expectTypeOf(coll).toHaveProperty("findOneAsync");
 expectTypeOf(coll).toHaveProperty("insertAsync");
@@ -50,7 +63,28 @@ expectTypeOf(coll).toHaveProperty("rawDatabase");
 expectTypeOf(coll.find()).toEqualTypeOf<Mongo.Cursor<Doc, Doc>>();
 expectTypeOf(coll.findOneAsync("id")).resolves.toEqualTypeOf<Doc | undefined>();
 expectTypeOf(coll.insertAsync).parameter(0).toEqualTypeOf<Mongo.OptionalId<Doc>>();
-expectTypeOf(coll.insertAsync).returns.resolves.toBeString();
+expectTypeOf(coll.insertAsync).returns.resolves.toEqualTypeOf<Mongo.Id>();
+coll.insert({ name: "typed", value: 1 }, (error, id) => {
+  expectTypeOf(error).toEqualTypeOf<Error | null | undefined>();
+  expectTypeOf(id).toEqualTypeOf<Mongo.Id | undefined>();
+});
+coll.insert({ name: "legacy", value: 1 }, legacyMongoCallback);
+coll.update({ name: "typed" }, { $set: { value: 2 } }, {}, (error, affected) => {
+  expectTypeOf(error).toEqualTypeOf<Error | null | undefined>();
+  expectTypeOf(affected).toEqualTypeOf<number | undefined>();
+});
+coll.insertAsync({ name: "async", value: 1 }, { returnServerResultPromise: true });
+coll.removeAsync({ name: "async" }, { returnServerResultPromise: true });
+coll.updateAsync(
+  { name: "async" },
+  { $set: { value: 3 } },
+  { multi: true, returnServerResultPromise: true },
+);
+coll.upsertAsync(
+  { name: "async" },
+  { $set: { value: 4 } },
+  { multi: false, returnServerResultPromise: true },
+);
 expectTypeOf(coll.countDocuments()).resolves.toBeNumber();
 expectTypeOf(coll.estimatedDocumentCount()).resolves.toBeNumber();
 expectTypeOf(coll.rawCollection()).toEqualTypeOf<NpmModuleMongodb.Collection<Doc>>();
@@ -71,32 +105,33 @@ const transformed = new Mongo.Collection<Doc, { label: string }>("t", {
 expectTypeOf(transformed.findOneAsync("id")).resolves.toEqualTypeOf<
   { label: string } | undefined
 >();
+const queryTransformed = coll.find({}, { transform: (doc) => ({ label: doc.name }) });
+expectTypeOf(queryTransformed.fetch()).toEqualTypeOf<Array<{ label: string }>>();
 
 // Collection Extensions API
 expectTypeOf(Mongo.Collection.addExtension).toBeFunction();
 expectTypeOf(Mongo.Collection.addPrototypeMethod).parameter(0).toBeString();
-expectTypeOf(Mongo.Collection.addStaticMethod).parameters.toEqualTypeOf<
-  [string, Function]
->();
-expectTypeOf(Mongo.Collection.getExtensions).returns.toEqualTypeOf<
-  Array<Function>
->();
-expectTypeOf(Mongo.Collection.getPrototypeMethods).returns.toEqualTypeOf<
-  Map<string, Function>
->();
-expectTypeOf(Mongo.Collection.getStaticMethods).returns.toEqualTypeOf<
-  Map<string, Function>
->();
+Mongo.Collection.addStaticMethod<[string], number>("length", (value) => {
+  expectTypeOf(value).toBeString();
+  return value.length;
+});
+Mongo.Collection.addStaticMethod("legacy", legacyMongoCallback);
+expectTypeOf(Mongo.Collection.getExtensions).returns.toEqualTypeOf<Array<Function>>();
+expectTypeOf(Mongo.Collection.getPrototypeMethods).returns.toEqualTypeOf<Map<string, Function>>();
+expectTypeOf(Mongo.Collection.getStaticMethods).returns.toEqualTypeOf<Map<string, Function>>();
 expectTypeOf(Mongo.Collection.clearExtensions).returns.toBeVoid();
 
 // getCollection lives on the Mongo namespace (not as a Collection static)
 expectTypeOf(Mongo.getCollection).toBeFunction();
+expectTypeOf(Mongo._collections).toEqualTypeOf<
+  Map<string, Mongo.Collection<NpmModuleMongodb.Document>>
+>();
 const objectIdCollection = new Mongo.Collection<ObjectIdDoc>("object-id-docs");
+expectTypeOf(Mongo.getCollection<typeof objectIdCollection>("object-id-docs")).toEqualTypeOf<
+  typeof objectIdCollection
+>();
 expectTypeOf(
-  Mongo.getCollection<typeof objectIdCollection>("object-id-docs")
-).toEqualTypeOf<typeof objectIdCollection>();
-expectTypeOf(
-  Mongo.Collection.getCollection<typeof objectIdCollection>("object-id-docs")
+  Mongo.Collection.getCollection<typeof objectIdCollection>("object-id-docs"),
 ).toEqualTypeOf<typeof objectIdCollection>();
 
 // ObjectID

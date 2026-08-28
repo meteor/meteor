@@ -11,7 +11,7 @@ expectTypeOf(Meteor.isClient).toBeBoolean();
 expectTypeOf(Meteor.isCordova).toBeBoolean();
 expectTypeOf(Meteor.isServer).toBeBoolean();
 expectTypeOf(Meteor.isProduction).toBeBoolean();
-expectTypeOf(Meteor.release).toBeString();
+expectTypeOf(Meteor.release).toEqualTypeOf<string | undefined>();
 expectTypeOf(Meteor.meteorRelease).toBeString();
 expectTypeOf(Meteor.isDevelopment).toBeBoolean();
 expectTypeOf(Meteor.isModern).toBeBoolean();
@@ -26,9 +26,7 @@ expectTypeOf(Meteor.makeErrorType).toBeFunction();
 expectTypeOf(Meteor.Error).not.toBeAny();
 expectTypeOf<Meteor.ErrorStatic>().toBeObject();
 expectTypeOf<Meteor.TypedError>().toBeObject();
-expectTypeOf(new Meteor.TypedError("message", "type")).toMatchTypeOf<
-  Meteor.TypedError
->();
+expectTypeOf(new Meteor.TypedError("message", "type")).toMatchTypeOf<Meteor.TypedError>();
 expectTypeOf<Meteor.TypedErrorStatic>().toBeConstructibleWith("message", "type");
 
 declare const legacyEvent: Meteor.Event;
@@ -40,14 +38,14 @@ expectTypeOf<Meteor.EventMap>().toMatchTypeOf<Record<string, Function>>();
 // --- Settings ---
 expectTypeOf<Meteor.Settings>().toBeObject();
 expectTypeOf(Meteor.settings).toBeObject();
-Meteor.settings.privateFeature.enabled;
+expectTypeOf(Meteor.settings.privateFeature).toEqualTypeOf<unknown>();
 
 // --- User ---
 expectTypeOf<Meteor.UserEmail>().toBeObject();
 expectTypeOf<Meteor.UserProfile>().toBeObject();
 expectTypeOf<Meteor.User>().toBeObject();
 declare const legacyUser: Meteor.User;
-legacyUser.services.oauth.provider;
+expectTypeOf(legacyUser.services).toEqualTypeOf<Record<string, unknown> | undefined>();
 expectTypeOf(Meteor.user).toBeFunction();
 expectTypeOf(Meteor.userAsync).toBeFunction();
 expectTypeOf(Meteor.userId).toBeFunction();
@@ -56,7 +54,23 @@ expectTypeOf<Meteor.LoginMethodResult>().toBeObject();
 
 // --- Method ---
 expectTypeOf<Meteor.MethodThisType>().toBeObject();
+expectTypeOf<Meteor.MethodHandler>().toBeFunction();
 expectTypeOf(Meteor.methods).toBeFunction();
+interface NamedMethodDictionary {
+  greet(name: string): string;
+}
+const namedMethods: NamedMethodDictionary = {
+  greet(name) {
+    return `Hello ${name}`;
+  },
+};
+Meteor.methods(namedMethods);
+Meteor.methods({
+  async assumeIdentity(userId: string) {
+    expectTypeOf(this.setUserId(userId)).toEqualTypeOf<Promise<void>>();
+    await this.setUserId(userId);
+  },
+});
 expectTypeOf(Meteor.call).toBeFunction();
 expectTypeOf(Meteor.call<{ ok: boolean }>("typed-result")).toEqualTypeOf<{
   ok: boolean;
@@ -72,7 +86,7 @@ Meteor.call("callback", (error) => {
   expectTypeOf(error).toEqualTypeOf<Error | Meteor.Error | undefined>();
 });
 expectTypeOf(Meteor.callAsync).toBeFunction();
-expectTypeOf<Meteor.MethodApplyOptions<any>>().toBeObject();
+expectTypeOf<Meteor.MethodApplyOptions<string>>().toBeObject();
 expectTypeOf(Meteor.apply).toBeFunction();
 expectTypeOf(Meteor.applyAsync).toBeFunction();
 
@@ -95,6 +109,10 @@ expectTypeOf(Meteor.startup).toBeFunction();
 expectTypeOf(Meteor.fetch).toBeFunction();
 expectTypeOf(Meteor.wrapAsync).toBeFunction();
 expectTypeOf(Meteor.bindEnvironment).toBeFunction();
+declare const legacyMeteorCallback: Function;
+Meteor.startup(legacyMeteorCallback);
+Meteor.setTimeout(legacyMeteorCallback, 0);
+Meteor.makeErrorType("LegacyError", legacyMeteorCallback);
 expectTypeOf(Meteor.EnvironmentVariable).not.toBeAny();
 
 // --- Pub/Sub ---

@@ -9,13 +9,13 @@ expectTypeOf(Tracker.currentComputation).toEqualTypeOf<Tracker.Computation | nul
 expectTypeOf(Tracker.Dependency).toEqualTypeOf<Tracker.DependencyStatic>();
 
 // autorun
-expectTypeOf(Tracker.autorun).parameter(0).toEqualTypeOf<
-  (computation: Tracker.Computation) => void
->();
 expectTypeOf(Tracker.autorun).toBeCallableWith(
   (_computation: Tracker.Computation) => {},
   { onError(_error: unknown) {} }
 );
+declare const legacyAutorun: Function;
+declare const legacyOnError: Function;
+Tracker.autorun(legacyAutorun, { onError: legacyOnError });
 expectTypeOf(Tracker.autorun).returns.toEqualTypeOf<Tracker.Computation>();
 
 // afterFlush / flush
