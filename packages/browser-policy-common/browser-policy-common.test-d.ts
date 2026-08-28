@@ -5,9 +5,9 @@ expectTypeOf(BrowserPolicy).toBeObject();
 expectTypeOf(BrowserPolicy.framing).toBeObject();
 expectTypeOf(BrowserPolicy.content).toBeObject();
 
-expectTypeOf(BrowserPolicy.content.allowInlineScripts).returns.toBeVoid();
-expectTypeOf(BrowserPolicy.content.disallowInlineScripts).returns.toBeVoid();
-expectTypeOf(BrowserPolicy.content.disallowAll).returns.toBeVoid();
+expectTypeOf(BrowserPolicy.content.allowInlineScripts).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(BrowserPolicy.content.disallowInlineScripts).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(BrowserPolicy.content.disallowAll).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(BrowserPolicy.content.allowOriginForAll).parameter(0).toEqualTypeOf<string>();
 expectTypeOf(BrowserPolicy.content.allowSameOriginForAll).returns.toBeVoid();
 expectTypeOf(BrowserPolicy.content.allowDataUrlForAll).returns.toBeVoid();

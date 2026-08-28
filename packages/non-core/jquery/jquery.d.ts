@@ -1,16 +1,16 @@
-// These deliberately permissive fallbacks keep the historically untyped
-// package usable without forcing applications to install @types/jquery.  The
-// global interface names and generic arity match DefinitelyTyped, so projects
-// that do install @types/jquery get its complete API through declaration
-// merging instead of a competing private definition.
+// These safe fallbacks keep the historically untyped package importable
+// without forcing applications to install @types/jquery. Unknown members must
+// be narrowed or augmented by a plugin declaration before use. The global
+// interface names and generic arity match DefinitelyTyped, so projects that do
+// install @types/jquery get its complete API through declaration merging.
 declare global {
   interface JQuery<TElement = HTMLElement> {
-    [member: string]: any;
+    [member: string]: unknown;
   }
 
   interface JQueryStatic {
-    (selector?: any, context?: any): JQuery;
-    [member: string]: any;
+    (selector?: unknown, context?: unknown): JQuery;
+    [member: string]: unknown;
   }
 }
 

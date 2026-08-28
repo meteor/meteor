@@ -30,8 +30,7 @@ expectTypeOf(EJSONNs.equals).parameters.toEqualTypeOf<
 expectTypeOf(EJSONNs.equals).returns.toBeBoolean();
 
 expectTypeOf(EJSONNs.fromJSONValue).parameters.toEqualTypeOf<[JSONable]>();
-expectTypeOf(EJSONNs.fromJSONValue).returns.toBeAny();
-EJSONNs.fromJSONValue({ legacy: true }).extensionProperty;
+expectTypeOf(EJSONNs.fromJSONValue).returns.toEqualTypeOf<EJSONableProperty>();
 
 expectTypeOf(EJSONNs.isBinary).parameters.toEqualTypeOf<[object]>();
 expectTypeOf(EJSONNs.newBinary).parameters.toEqualTypeOf<[number]>();

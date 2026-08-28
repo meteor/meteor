@@ -14,6 +14,8 @@ expectTypeOf(MailComposer).toBeConstructibleWith({
   keepBcc: false,
   forceEmbeddedImages: false,
 });
+expectTypeOf(MailComposer).toBeConstructibleWith();
+expectTypeOf(MailComposer).toBeConstructibleWith(null);
 expectTypeOf<MailComposerStatic>().toBeObject();
 expectTypeOf<MailComposerOptions>().toBeObject();
 expectTypeOf<MailComposerType>().toBeObject();
@@ -27,8 +29,17 @@ expectTypeOf<Email.CustomEmailOptions>().not.toBeAny();
 expectTypeOf(Email.send).toBeFunction();
 expectTypeOf(Email.sendAsync).toBeFunction();
 expectTypeOf(Email.hookSend).toBeFunction();
-expectTypeOf(Email.hookSend).returns.toBeVoid();
-expectTypeOf(Email.customTransport).toBeFunction();
-Email.customTransport((options) => {
-  expectTypeOf(options).toEqualTypeOf<Email.CustomEmailOptions>();
+expectTypeOf(Email.hookSend).returns.toMatchTypeOf<{
+  stop: () => void;
+}>();
+const asyncSendHook = Email.hookSend(async (options) => {
+  expectTypeOf(options).toEqualTypeOf<Email.EmailOptions>();
+  return true;
 });
+expectTypeOf(asyncSendHook.callback).returns.toEqualTypeOf<boolean | Promise<boolean>>();
+expectTypeOf(Email.customTransport).toEqualTypeOf<
+  ((options: Email.CustomEmailOptions) => unknown) | undefined
+>();
+Email.customTransport = (options) => {
+  expectTypeOf(options).toEqualTypeOf<Email.CustomEmailOptions>();
+};

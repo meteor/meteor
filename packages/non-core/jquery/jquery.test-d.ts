@@ -4,10 +4,9 @@ import { $, jQuery } from "./jquery";
 // jquery exports the jQuery factory under both names.
 expectTypeOf($).toBeFunction();
 expectTypeOf(jQuery).toBeFunction();
-expectTypeOf($.ajax).toBeAny();
-expectTypeOf($.fn).toBeAny();
+expectTypeOf($.ajax).toEqualTypeOf<unknown>();
+expectTypeOf($.fn).toEqualTypeOf<unknown>();
 
-// Without @types/jquery the fallback stays permissive; when @types/jquery is
-// installed these global interfaces merge and provide its full fluent API.
-$("body").addClass("meteor-ready").find("a").first();
-$.ajax({ url: "/health" });
+// Without @types/jquery unknown members remain safe. Installing @types/jquery
+// augments these global interfaces with the full fluent API.
+expectTypeOf($("body")).toEqualTypeOf<JQuery>();

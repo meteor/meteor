@@ -20,14 +20,12 @@ expectTypeOf(setMinimumBrowserVersions).parameters.toEqualTypeOf<
 >();
 expectTypeOf(setMinimumBrowserVersions).returns.toBeVoid();
 expectTypeOf(setMinimumBrowserVersions({ chrome: 80 })).toBeVoid();
-expectTypeOf(
-  setMinimumBrowserVersions({ chrome: [80, 0, 0] }, "my-feature"),
-).toBeVoid();
+expectTypeOf(setMinimumBrowserVersions({ chrome: [80, 0, 0] }, "my-feature")).toBeVoid();
 
 // getMinimumBrowserVersions
 expectTypeOf(getMinimumBrowserVersions).parameters.toEqualTypeOf<[]>();
 expectTypeOf(getMinimumBrowserVersions).returns.toEqualTypeOf<
-  Record<string, Record<string, number | number[]>>
+  Record<string, { version: number | number[]; source: string }>
 >();
 
 // calculateHashOfMinimumVersions

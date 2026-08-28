@@ -8,7 +8,7 @@ export namespace BrowserPolicy {
   var content: {
     allowEval(): void;
     allowInlineStyles(): void;
-    allowInlineScripts(): void;
+    allowInlineScripts(): Promise<void>;
     allowSameOriginForAll(): void;
     allowDataUrlForAll(): void;
     allowOriginForAll(origin: string): void;
@@ -29,10 +29,10 @@ export namespace BrowserPolicy {
     allowConnectOrigin(origin: string): void;
     allowObjectOrigin(origin: string): void;
 
-    disallowAll(): void;
+    disallowAll(): Promise<void>;
     disallowInlineStyles(): void;
     disallowEval(): void;
-    disallowInlineScripts(): void;
+    disallowInlineScripts(): Promise<void>;
     disallowFont(): void;
     disallowObject(): void;
     /** @deprecated Retained for Meteor 3.x declaration compatibility. */

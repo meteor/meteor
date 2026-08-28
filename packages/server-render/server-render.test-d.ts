@@ -18,7 +18,7 @@ expectTypeOf<Callback>().toBeFunction();
 expectTypeOf<Callback<string>>().toBeFunction();
 expectTypeOf(onPageLoad).toBeFunction();
 
-expectTypeOf<Callback>().returns.toBeAny();
+expectTypeOf<Callback>().returns.toEqualTypeOf<Promise<void> | void>();
 expectTypeOf<Callback<string>>().returns.toEqualTypeOf<Promise<string> | string>();
 expectTypeOf<Callback>().parameter(0).toEqualTypeOf<Sink>();
 

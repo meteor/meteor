@@ -28,18 +28,21 @@ expectTypeOf(Log._suppress).parameters.toEqualTypeOf<[number]>();
 expectTypeOf(Log._suppress).returns.toBeVoid();
 expectTypeOf(Log._intercepted).returns.toEqualTypeOf<string[]>();
 expectTypeOf(Log._getCallerDetails).returns.toEqualTypeOf<{
-  line: number;
-  file: string;
+  line?: string;
+  file?: string;
 }>();
 
 // parse / format / objFromText
-expectTypeOf(Log.parse).parameters.toEqualTypeOf<[object | string]>();
-expectTypeOf(Log.parse).returns.toEqualTypeOf<object>();
+expectTypeOf(Log.parse).parameters.toEqualTypeOf<[string]>();
+expectTypeOf(Log.parse).returns.toEqualTypeOf<Record<string, unknown> | null>();
 
-expectTypeOf(Log.format).parameter(1).toEqualTypeOf<{ color: true }>();
-expectTypeOf(Log.format).returns.toEqualTypeOf<object | string>();
+expectTypeOf(Log.format)
+  .parameter(1)
+  .toEqualTypeOf<{ color?: boolean; metaColor?: string } | undefined>();
+expectTypeOf(Log.format).returns.toBeString();
+Log.format({ time: new Date() });
 
-expectTypeOf(Log.objFromText).parameter(1).toEqualTypeOf<object>();
+expectTypeOf(Log.objFromText).parameters.toEqualTypeOf<[string, Record<string, unknown>?]>();
 expectTypeOf(Log.objFromText).returns.toExtend<{
   message: string;
   level: "info";

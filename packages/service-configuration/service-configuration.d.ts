@@ -1,15 +1,17 @@
-import { Mongo } from 'meteor/mongo';
+import { Mongo } from "meteor/mongo";
 
 export interface Configuration {
   _id?: string;
-  /** The login service this configuration is for (e.g. "google", "facebook"). */
+  /** The login service this configuration is for (e.g. "google", "facebook"). Optional for compatibility with legacy provider-specific shapes. */
   service?: string;
-  appId: string;
-  secret: string;
+  /** Provider-specific application identifier. */
+  appId?: string;
+  /** Provider-specific secret. */
+  secret?: string;
   clientId?: string;
   loginStyle?: string;
   /** Service-specific configuration keys. */
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 declare class ConfigError extends Error {
@@ -19,5 +21,5 @@ declare class ConfigError extends Error {
 
 export var ServiceConfiguration: {
   configurations: Mongo.Collection<Configuration>;
-  ConfigError: typeof ConfigError
+  ConfigError: typeof ConfigError;
 };
