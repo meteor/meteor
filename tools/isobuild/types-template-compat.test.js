@@ -28,15 +28,19 @@ function assetPath(template, file) {
 
 describe("Meteor 3.6 template type-provider compatibility", () => {
   test.each(typedTemplates)(
-    "%s keeps @types/meteor before the zodern type barrel",
+    "%s preserves zodern precedence while allowing native opt-in",
     (template) => {
       const config = fs.readFileSync(assetPath(template, "tsconfig.json"), "utf8");
+      const nativePackages = config.indexOf(".meteor/types/packages/*");
       const externalTypes = config.indexOf("node_modules/@types/meteor/*");
       const zodernTypes = config.indexOf(".meteor/local/types/packages.d.ts");
+      const nativeBarrel = config.lastIndexOf(".meteor/types/packages.d.ts");
 
+      expect(nativePackages).toBeGreaterThanOrEqual(0);
+      expect(externalTypes).toBeGreaterThan(nativePackages);
       expect(externalTypes).toBeGreaterThanOrEqual(0);
       expect(zodernTypes).toBeGreaterThan(externalTypes);
-      expect(config).not.toContain(".meteor/types/packages.d.ts");
+      expect(nativeBarrel).toBeGreaterThan(zodernTypes);
     }
   );
 

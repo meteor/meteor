@@ -2,6 +2,12 @@ import { expectTypeOf } from "expect-type";
 import type { NpmModuleMongodb } from "meteor/npm-mongo";
 import { Mongo, MongoInternals, UnionOmit } from "./mongo";
 
+// Third-party packages historically forwarded unconstrained generic
+// parameters to Mongo.Collection<T>.
+type ForwardedCollection<T> = Mongo.Collection<T>;
+declare const forwarded: ForwardedCollection<unknown>;
+expectTypeOf(forwarded).toMatchTypeOf<Mongo.Collection<unknown>>();
+
 interface Doc {
   _id?: string;
   name: string;
