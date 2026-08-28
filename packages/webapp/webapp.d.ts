@@ -77,8 +77,7 @@ export declare namespace WebApp {
   };
   function decodeRuntimeConfig(rtimeConfigString: string): unknown;
   function encodeRuntimeConfig(rtimeConfig: unknown): string;
-  function addHtmlAttributeHook(
-    hook: (request: http.IncomingMessage) => Record<string, unknown> | null,
+  function addHtmlAttributeHook(hook: (request: http.IncomingMessage) => Record<string, unknown> | null,
   ): void;
   function addHtmlAttributeHook(hook: Function): void;
 }
@@ -100,7 +99,8 @@ export declare namespace WebAppInternals {
     key: string,
     callback: BoilerplateDataCallback | null,
   ): BoilerplateDataCallback | null;
-  function registerBoilerplateDataCallback(key: string, callback: Function | null): Function | null;
+  function registerBoilerplateDataCallback(key: string, callback: Function | null
+  ): Function | null;
   function generateBoilerplateInstance(
     arch: string,
     manifest: Record<string, unknown>[],
@@ -111,34 +111,32 @@ export declare namespace WebAppInternals {
     staticFiles: StaticFiles,
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    next: express.NextFunction,
+    next: express.NextFunction
   ): Promise<void>;
+
   function staticFilesMiddleware(
     staticFiles: StaticFiles,
     req: http.IncomingMessage,
     res: http.ServerResponse,
-    next: Function,
-  ): Promise<void>;
+    next: Function
+  ): Promise< void>;
   function parsePort(port: string | number): string | number;
-  function reloadClientPrograms(): Promise<void>;
-  function generateBoilerplate(): Promise<void>;
+  function reloadClientPrograms(): Promise< void>;
+  function generateBoilerplate(): Promise< void>;
   /** @deprecated Use `staticFilesByArch`. */
   var staticFiles: StaticFiles;
   var staticFilesByArch: { [arch: string]: StaticFiles };
   function inlineScriptsAllowed(): boolean;
-  function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): Promise<void>;
+  function setInlineScriptsAllowed(inlineScriptsAllowed: boolean): Promise< void>;
 
-  function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): Promise<void>;
-  function setBundledJsCssPrefix(bundledJsCssPrefix: string): Promise<void>;
+  function setBundledJsCssUrlRewriteHook(hookFn: (url: string) => string): Promise< void>;
+  function setBundledJsCssPrefix(bundledJsCssPrefix: string): Promise< void>;
   function addStaticJs(): void;
   function addStaticJs(contents: string): void;
-  function getBoilerplate(
-    request: http.IncomingMessage,
-    arch: string,
-  ): Promise<{
+  function getBoilerplate(request: http.IncomingMessage, arch: string): Promise<{
     stream: NodeJS.ReadableStream;
     statusCode?: number;
-    headers?: Record<string, string>;
+    headers?: Record< string, string>;
   }>;
   var additionalStaticJs: Record<string, string>;
 }

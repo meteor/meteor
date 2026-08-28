@@ -33,12 +33,12 @@ expectTypeOf(Email.hookSend).returns.toMatchTypeOf<{
   stop: () => void;
 }>();
 const asyncSendHook = Email.hookSend(async (options) => {
-  expectTypeOf(options).toEqualTypeOf<Email.EmailOptions>();
+expectTypeOf(options).toEqualTypeOf<Email.EmailOptions>();
   return true;
 });
 expectTypeOf(asyncSendHook.callback).returns.toEqualTypeOf<boolean | Promise<boolean>>();
-expectTypeOf(Email.customTransport).toEqualTypeOf<
-  ((options: Email.CustomEmailOptions) => unknown) | undefined
+expectTypeOf(
+Email.customTransport).toEqualTypeOf<((options: Email.CustomEmailOptions) => unknown) | undefined
 >();
 Email.customTransport = (options) => {
   expectTypeOf(options).toEqualTypeOf<Email.CustomEmailOptions>();

@@ -1,13 +1,15 @@
-import { NpmModuleMongodb } from "meteor/npm-mongo";
-import { Meteor } from "meteor/meteor";
-import { DDP } from "meteor/ddp";
+import { NpmModuleMongodb } from 'meteor/npm-mongo';
+import { Meteor } from 'meteor/meteor';
+import { DDP } from 'meteor/ddp';
 
 // Based on https://github.com/microsoft/TypeScript/issues/28791#issuecomment-443520161
 export type UnionOmit<T, K extends PropertyKey> = T extends T
   ? Pick<T, Exclude<keyof T, K>>
   : never;
 
-type AsMongoDocument<T> = T extends NpmModuleMongodb.Document ? T : T & NpmModuleMongodb.Document;
+type AsMongoDocument<T> = T extends NpmModuleMongodb.Document
+  ? T
+  : T & NpmModuleMongodb.Document;
 
 export namespace Mongo {
   export type Selector<T> = NpmModuleMongodb.Filter<T>;
@@ -16,9 +18,7 @@ export namespace Mongo {
 
   export type Id = string | ObjectID;
 
-  export type OptionalId<TSchema> = UnionOmit<TSchema, "_id"> & {
-    _id?: Id;
-  };
+  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: Id; };
 
   export type SortSpecifier = NpmModuleMongodb.Sort;
 
@@ -84,11 +84,13 @@ export namespace Mongo {
     transform?: Transform<T> | undefined;
   };
 
-  type DispatchTransform<TransformFn, T, U> = TransformFn extends (...args: never[]) => infer R
+  type DispatchTransform<TransformFn, T, U> = TransformFn extends (
+    ...args: never[]
+  ) => infer R
     ? R
     : TransformFn extends null
-      ? T
-      : U;
+    ? T
+    : U;
 
   /**
    * Configuration options for Mongo Collection constructor
@@ -142,40 +144,29 @@ export namespace Mongo {
      */
     new <T = NpmModuleMongodb.Document, U = T>(
       name: string | null,
-      options?: CollectionOptions<T, U>,
+      options?: CollectionOptions<T, U>
     ): Collection<T, U>;
 
     /** @deprecated Use `Mongo.getCollection`. Retained for Meteor 3.x types. */
-    getCollection<TCollection = Collection<NpmModuleMongodb.Document> | undefined>(
-      name: string,
-    ): TCollection;
+    getCollection<
+      TCollection = Collection<NpmModuleMongodb.Document> | undefined
+    >(name: string): TCollection;
 
     // Collection Extensions API
     /**
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = NpmModuleMongodb.Document, U = T>(
-      extension: (
-        this: Collection<T, U>,
-        name: string | null,
-        options?: CollectionOptions<T, U>,
-      ) => void,
-    ): void;
+    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
 
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<
-      T = NpmModuleMongodb.Document,
-      U = T,
+    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T,
       Args extends unknown[] = unknown[],
-      Result = unknown,
-    >(
-      name: string,
-      method: (this: Collection<T, U>, ...args: Args) => Result,
+      Result = unknown>(name: string, method: (this: Collection<T, U>, ...args: Args) => Result,
     ): void;
 
     /**
@@ -185,8 +176,7 @@ export namespace Mongo {
      */
     addStaticMethod<Args extends unknown[], Result>(
       name: string,
-      method: (...args: Args) => Result,
-    ): void;
+      method: (...args: Args) => Result): void;
     addStaticMethod(name: string, method: Function): void;
 
     /**
@@ -240,23 +230,26 @@ export namespace Mongo {
   interface Collection<T = NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T, U> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
             userId: string,
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
-            modifier: Modifier<T>,
-          ) => Promise<boolean> | boolean)
+            modifier: Modifier<T>
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
     }): boolean;
-    createCappedCollectionAsync(byteSize?: number, maxDocuments?: number): Promise<void>;
+    createCappedCollectionAsync(
+      byteSize?: number,
+      maxDocuments?: number
+    ): Promise<void>;
 
     /**
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
@@ -264,26 +257,26 @@ export namespace Mongo {
      */
     createIndex(
       indexSpec: NpmModuleMongodb.IndexSpecification,
-      options?: NpmModuleMongodb.CreateIndexesOptions,
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     createIndexAsync(
       indexSpec: NpmModuleMongodb.IndexSpecification,
-      options?: NpmModuleMongodb.CreateIndexesOptions,
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): Promise<void>;
     deny<Fn extends Transform<T, U> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       update?:
         | ((
             userId: string,
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
-            modifier: Modifier<T>,
-          ) => Promise<boolean> | boolean)
+            modifier: Modifier<T>
+          ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean> | boolean)
+        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
@@ -301,8 +294,8 @@ export namespace Mongo {
      */
     find<O extends Options<T>>(
       selector?: Selector<T> | ObjectID | string,
-      options?: O,
-    ): Cursor<T, DispatchTransform<O["transform"], T, U>>;
+      options?: O
+    ): Cursor<T, DispatchTransform<O['transform'], T, U>>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
@@ -316,39 +309,36 @@ export namespace Mongo {
      * @see findOneAsync
      * @param selector A query describing the documents to find
      */
-    findOne<O extends Omit<Options<T>, "limit">>(
+    findOne<O extends Omit<Options<T>, 'limit'>>(
       selector?: Selector<T> | ObjectID | string,
-      options?: O,
-    ): DispatchTransform<O["transform"], T, U> | undefined;
+      options?: O
+    ): DispatchTransform<O['transform'], T, U> | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
      * @param selector A query describing the documents to find
      */
-    findOneAsync(selector?: Selector<T> | ObjectID | string): Promise<U | undefined>;
+    findOneAsync(
+      selector?: Selector<T> | ObjectID | string
+    ): Promise<U | undefined>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
      * @param selector A query describing the documents to find
      */
-    findOneAsync<O extends Omit<Options<T>, "limit">>(
+    findOneAsync<O extends Omit<Options<T>, 'limit'>>(
       selector?: Selector<T> | ObjectID | string,
-      options?: O,
-    ): Promise<DispatchTransform<O["transform"], T, U> | undefined>;
+      options?: O
+    ): Promise<DispatchTransform<O['transform'], T, U> | undefined>;
     /**
      * Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
      * @param selector The query for filtering the set of documents to count
      * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
      */
-    countDocuments(
-      selector?: Selector<T> | ObjectID | string,
-      options?: NpmModuleMongodb.CountDocumentsOptions,
-    ): Promise<number>;
+    countDocuments(selector?: Selector<T> | ObjectID | string, options?: NpmModuleMongodb.CountDocumentsOptions): Promise<number>;
     /**
      * Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
      * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
      */
-    estimatedDocumentCount(
-      options?: NpmModuleMongodb.EstimatedDocumentCountOptions,
-    ): Promise<number>;
+    estimatedDocumentCount(options?: NpmModuleMongodb.EstimatedDocumentCountOptions): Promise<number>;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
@@ -383,8 +373,11 @@ export namespace Mongo {
      * @param selector Specifies which documents to remove
      * @param callback If present, called with an error object as its argument.
      */
-    remove(selector: Selector<T> | ObjectID | string, callback?: MutationCallback): number;
-    remove(selector: Selector<T> | ObjectID | string, callback?: Function): number;
+    remove(
+      selector: Selector<T> | ObjectID | string,
+      callback?: MutationCallback): number;
+    remove(selector: Selector<T> | ObjectID | string, callback?: Function
+    ): number;
     /**
      * Remove documents from the collection
      * @param selector Specifies which documents to remove
@@ -395,7 +388,10 @@ export namespace Mongo {
       options?: AsyncMutationOptions,
     ): Promise<number>;
     /** @deprecated Legacy declaration compatibility. Async collection methods do not invoke callbacks. */
-    removeAsync(selector: Selector<T> | ObjectID | string, callback?: Function): Promise<number>;
+    removeAsync(
+      selector: Selector<T> | ObjectID | string,
+      callback?: Function
+    ): Promise<number>;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
@@ -414,7 +410,7 @@ export namespace Mongo {
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
       options?: UpdateOptions,
-      callback?: Function,
+      callback?: Function
     ): number;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
@@ -432,7 +428,7 @@ export namespace Mongo {
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
       options?: AsyncUpdateOptions,
-      callback?: Function,
+      callback?: Function
     ): Promise<number>;
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
@@ -453,7 +449,7 @@ export namespace Mongo {
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
       options?: UpsertOptions,
-      callback?: Function,
+      callback?: Function
     ): UpsertResult;
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
@@ -472,13 +468,13 @@ export namespace Mongo {
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
       options?: AsyncUpsertOptions,
-      callback?: Function,
+      callback?: Function
     ): Promise<UpsertResult>;
     _createCappedCollection(byteSize?: number, maxDocuments?: number): void;
     /** @deprecated */
     _ensureIndex(
       indexSpec: NpmModuleMongodb.IndexSpecification,
-      options?: NpmModuleMongodb.CreateIndexesOptions,
+      options?: NpmModuleMongodb.CreateIndexesOptions
     ): void;
     _dropCollection(): Promise<void>;
     /**
@@ -502,7 +498,12 @@ export namespace Mongo {
     changedAt?(newDocument: T, oldDocument: T, indexAt: number): void;
     removed?(oldDocument: T): void;
     removedAt?(oldDocument: T, atIndex: number): void;
-    movedTo?(document: T, fromIndex: number, toIndex: number, before: T | null): void;
+    movedTo?(
+      document: T,
+      fromIndex: number,
+      toIndex: number,
+      before: T | null
+    ): void;
   }
   interface ObserveChangesCallbacks<T> {
     added?(id: string, fields: Partial<T>): void;
@@ -538,7 +539,7 @@ export namespace Mongo {
      */
     forEach(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => void,
-      thisArg?: unknown,
+      thisArg?: unknown
     ): void;
     /**
      * Call `callback` once for each matching document, sequentially and
@@ -548,7 +549,7 @@ export namespace Mongo {
      */
     forEachAsync(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => void,
-      thisArg?: unknown,
+      thisArg?: unknown
     ): Promise<void>;
     /**
      * Map callback over all matching documents. Returns an Array.
@@ -557,7 +558,7 @@ export namespace Mongo {
      */
     map<M>(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => M,
-      thisArg?: unknown,
+      thisArg?: unknown
     ): Array<M>;
     /**
      * Map callback over all matching documents. Returns an Array.
@@ -566,7 +567,7 @@ export namespace Mongo {
      */
     mapAsync<M>(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => M,
-      thisArg?: unknown,
+      thisArg?: unknown
     ): Promise<Array<M>>;
     /**
      * Watch a query. Receive callbacks as the result set changes.
@@ -584,7 +585,7 @@ export namespace Mongo {
      */
     observeChanges(
       callbacks: ObserveChangesCallbacks<T>,
-      options?: { nonMutatingCallbacks?: boolean | undefined },
+      options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Meteor.LiveQueryHandle;
     [Symbol.iterator](): Iterator<U>;
     [Symbol.asyncIterator](): AsyncIterator<U>;
@@ -595,7 +596,7 @@ export namespace Mongo {
      */
     observeChangesAsync(
       callbacks: ObserveChangesCallbacks<T>,
-      options?: { nonMutatingCallbacks?: boolean | undefined },
+      options?: { nonMutatingCallbacks?: boolean | undefined }
     ): Promise<Meteor.LiveQueryHandle>;
   }
 
@@ -621,27 +622,16 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = NpmModuleMongodb.Document, U = T>(
-      extension: (
-        this: Collection<T, U>,
-        name: string | null,
-        options?: CollectionOptions<T, U>,
-      ) => void,
-    ): void;
+    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
 
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<
-      T = NpmModuleMongodb.Document,
-      U = T,
+    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T,
       Args extends unknown[] = unknown[],
-      Result = unknown,
-    >(
-      name: string,
-      method: (this: Collection<T, U>, ...args: Args) => Result,
+      Result = unknown>(name: string, method: (this: Collection<T, U>, ...args: Args) => Result,
     ): void;
 
     /**
@@ -651,8 +641,7 @@ export namespace Mongo {
      */
     addStaticMethod<Args extends unknown[], Result>(
       name: string,
-      method: (...args: Args) => Result,
-    ): void;
+      method: (...args: Args) => Result): void;
     addStaticMethod(name: string, method: Function): void;
 
     /**
@@ -711,9 +700,7 @@ export namespace Mongo {
    * @param name Name of your collection as it was defined with `new Mongo.Collection()`.
    * @returns The collection instance or undefined if not found
    */
-  function getCollection<TCollection = Collection<NpmModuleMongodb.Document> | undefined>(
-    name: string,
-  ): TCollection;
+  function getCollection<TCollection = Collection<NpmModuleMongodb.Document> | undefined>(name: string): TCollection;
 
   /**
    * A record of all defined Mongo.Collection instances, indexed by collection name.
@@ -728,7 +715,12 @@ export namespace Mongo {
   interface AllowDenyOptions<T = NpmModuleMongodb.Document> {
     insert?: ((userId: string, doc: T) => boolean) | undefined;
     update?:
-      | ((userId: string, doc: T, fieldNames: string[], modifier: Modifier<T>) => boolean)
+      | ((
+          userId: string,
+          doc: T,
+          fieldNames: string[],
+          modifier: Modifier<T>
+        ) => boolean)
       | undefined;
     remove?: ((userId: string, doc: T) => boolean) | undefined;
     fetch?: string[] | undefined;

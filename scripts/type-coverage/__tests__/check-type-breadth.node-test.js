@@ -4,7 +4,10 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 
-const { analyzeTypeBreadth, runTypeBreadth } = require("../check-type-breadth.js");
+const {
+  analyzeTypeBreadth,
+  runTypeBreadth,
+} = require("../check-type-breadth.js");
 
 function createFixture(t) {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "type-breadth-"));
@@ -93,7 +96,7 @@ test("discovers nested packages and excludes git submodule trees", (t) => {
   createPackage(root, "vendor/submodule/ignored", { declaration: true });
   fs.writeFileSync(
     path.join(root, ".gitmodules"),
-    '[submodule "vendor"]\n  path = packages/vendor/submodule\n',
+    '[submodule "vendor"]\n  path = packages/vendor/submodule\n'
   );
   const manifestPath = writeManifest(root, {
     needsTypes: ["non-core/jquery"],

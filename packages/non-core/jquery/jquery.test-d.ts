@@ -9,4 +9,5 @@ expectTypeOf($.fn).toEqualTypeOf<unknown>();
 
 // Without @types/jquery unknown members remain safe. Installing @types/jquery
 // augments these global interfaces with the full fluent API.
-expectTypeOf($("body")).toEqualTypeOf<JQuery>();
+expectTypeOf(
+$("body")).toEqualTypeOf<JQuery>();

@@ -28,16 +28,13 @@ export namespace Meteor {
     errorType: string;
   }
 
-  function makeErrorType<This, Args extends unknown[]>(
-    name: string,
-    constructor: (this: This, ...args: Args) => void,
-  ): ErrorConstructor;
+  function makeErrorType<This, Args extends unknown[]>(name: string, constructor: (this: This, ...args: Args) => void): ErrorConstructor;
   function makeErrorType(name: string, constructor: Function): ErrorConstructor;
   /** Global props **/
 
   /** Settings **/
   interface Settings {
-    public: Record<string, unknown>;
+    public: Record< string, unknown>;
     [id: string]: unknown;
   }
   /**
@@ -71,7 +68,9 @@ export namespace Meteor {
     services?: Record<string, unknown>;
   }
 
-  function user(options?: { fields?: Mongo.FieldSpecifier | undefined }): User | null;
+  function user(options?: {
+    fields?: Mongo.FieldSpecifier | undefined
+  }): User | null;
   function userAsync(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
   }): Promise<Meteor.User | null>;
@@ -171,7 +170,6 @@ export namespace Meteor {
       ...args: unknown[]
     ): EJSONable | EJSONableProperty | void | Promise<EJSONable | EJSONableProperty | void>;
   }["bivarianceHack"];
-
   interface MethodThisType {
     /** Access inside a method invocation. Boolean value, true if this invocation is a stub. */
     isSimulation: boolean;
@@ -185,7 +183,7 @@ export namespace Meteor {
      * Set the logged in user.
      * @param userId The value that should be returned by `userId` on this connection.
      */
-    setUserId(userId: string | null): Promise<void>;
+    setUserId(userId: string | null): Promise< void>;
     /** Call inside a method invocation. Allow subsequent method from this client to begin running in a new fiber. */
     unblock(): void;
   }
@@ -194,25 +192,38 @@ export namespace Meteor {
    * Defines functions that can be invoked over the network by clients.
    * @param methods Dictionary whose keys are method names and values are functions.
    */
-  function methods<T extends { [K in keyof T]: MethodHandler }>(methods: T): void;
+  function methods<T extends {
+    [K in keyof T]: MethodHandler }> (methods: T): void;
 
   /**
    * Invokes a method with a sync stub, passing any number of arguments.
    * @param name Name of method to invoke
    * @param args Optional method arguments
    */
-  function call<Result extends EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[]>(
+  function call<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
     name: string,
-    ...args: [...(EJSONable | EJSONableProperty)[], DDP.MethodCallback<Result>]
+    ...args: [
+      ...(EJSONable | EJSONableProperty)[],
+      DDP.MethodCallback<Result>,
+    ]
   ): Result;
-  function call<Result extends EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[]>(
-    name: string,
-    ...args: (EJSONable | EJSONableProperty)[]
-  ): Result;
-  function call<Result extends EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[]>(
-    name: string,
-    ...args: unknown[]
-  ): Result;
+  function call<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(name: string, ...args: (EJSONable | EJSONableProperty)[]): Result;
+  function call<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(name: string, ...args: unknown[]): Result;
 
   /**
    * Invokes a method with an async stub, passing any number of arguments.
@@ -220,7 +231,10 @@ export namespace Meteor {
    * @param args Optional method arguments
    */
   function callAsync<
-    Result extends EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[],
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
   >(
     name: string,
     ...args: (EJSONable | EJSONableProperty)[]
@@ -228,16 +242,16 @@ export namespace Meteor {
     stubPromise: Promise<Result>;
     serverPromise: Promise<Result>;
   };
-  function callAsync<Result>(
-    name: string,
-    ...args: unknown[]
-  ): Promise<Result> & {
+  function callAsync<Result>(name: string, ...args: unknown[]): Promise<Result> & {
     stubPromise: Promise<Result>;
     serverPromise: Promise<Result>;
   };
 
   interface MethodApplyOptions<
-    Result extends EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[],
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
   > {
     /**
      * (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
@@ -247,7 +261,10 @@ export namespace Meteor {
      * (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
      */
     onResultReceived?:
-      | ((error: global_Error | Meteor.Error | undefined, result?: Result) => void)
+      | ((
+          error: global_Error | Meteor.Error | undefined,
+          result?: Result
+        ) => void)
       | undefined;
     /**
      * (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
@@ -270,11 +287,19 @@ export namespace Meteor {
    * @param options Optional execution options
    * @param asyncCallback Optional callback
    */
-  function apply<Result extends EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[]>(
+  function apply<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
     options?: MethodApplyOptions<Result>,
-    asyncCallback?: (error: global_Error | Meteor.Error | undefined, result?: Result) => void,
+    asyncCallback?: (
+      error: global_Error | Meteor.Error | undefined,
+      result?: Result
+    ) => void
   ): Result;
 
   /**
@@ -285,12 +310,18 @@ export namespace Meteor {
    * @param asyncCallback Optional callback
    */
   function applyAsync<
-    Result extends EJSONable | EJSONable[] | EJSONableProperty | EJSONableProperty[],
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
   >(
     name: string,
     args: ReadonlyArray<EJSONable | EJSONableProperty>,
     options?: MethodApplyOptions<Result>,
-    asyncCallback?: (error: global_Error | Meteor.Error | undefined, result?: Result) => void,
+    asyncCallback?: (
+      error: global_Error | Meteor.Error | undefined,
+      result?: Result
+    ) => void
   ): Promise<Result> & {
     stubPromise: Promise<Result>;
     serverPromise: Promise<Result>;
@@ -361,20 +392,24 @@ export namespace Meteor {
    */
   function deferrable<T>(
     func: () => T,
-    options: { on: Array<"development" | "production" | "test"> },
+    options: { on: Array<"development" | "production" | "test"> }
   ): T | void;
 
   /**
    * Wrap a function to run in the background in development (similar to Meteor.isDevelopment ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferDev<T>(func: () => T): T | void;
+  function deferDev<T>(
+    func: () => T
+  ): T | void;
 
   /**
    * Wrap a function to run in the background in production (similar to Meteor.isProduction ? Meteor.defer(fn) : Meteor.startup(fn)).
    * @param func The function to wrap
    */
-  function deferProd<T>(func: () => T): T | void;
+  function deferProd<T>(
+    func: () => T
+  ): T | void;
   /** Timeout **/
 
   /** utils **/
@@ -391,7 +426,10 @@ export namespace Meteor {
    * @param url The URL to fetch or a Request object
    * @param options Standard fetch options
    */
-  function fetch(url: string | Request, options?: RequestInit): Promise<Response>;
+  function fetch(
+    url: string | Request,
+    options?: RequestInit
+  ): Promise<Response>;
 
   /**
    * Wrap a function that takes a callback function as its final parameter.
@@ -403,11 +441,14 @@ export namespace Meteor {
    * @param func A function that takes a callback as its final parameter
    * @param context Optional `this` object against which the original function will be invoked
    */
-  function wrapAsync<This, Args extends unknown[], Result>(
-    func: (this: This, ...args: Args) => Result,
-    context?: This,
+  function wrapAsync<This, Args extends unknown[], Result> (
+    func: (this: This,...args: Args) => Result,
+    context?: This
   ): (...args: Args) => Result;
-  function wrapAsync<T extends Function>(func: T, context?: ThisParameterType<T>): Function;
+  function wrapAsync<T extends Function>(
+    func: T,
+    context?: ThisParameterType<T>
+  ): Function;
 
   function bindEnvironment<TFunc extends (...args: never[]) => unknown>(func: TFunc): TFunc;
   function bindEnvironment<TFunc extends Function>(func: TFunc): TFunc;
@@ -448,55 +489,55 @@ export namespace Meteor {
   /** @deprecated Prefer the declaration contributed by accounts-meteor-developer. */
   function loginWithMeteorDeveloperAccount(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
   /** @deprecated Prefer the declaration contributed by accounts-facebook. */
   function loginWithFacebook(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
   /** @deprecated Prefer the declaration contributed by accounts-github. */
   function loginWithGithub(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
   /** @deprecated Prefer the declaration contributed by accounts-google. */
   function loginWithGoogle(
     options?: Meteor.LoginWithExternalServiceOptions & {
       loginUrlParameters?: { include_granted_scopes: boolean };
     },
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
   /** @deprecated Prefer the declaration contributed by accounts-meetup. */
   function loginWithMeetup(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
   /** @deprecated Prefer the declaration contributed by accounts-twitter. */
   function loginWithTwitter(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
   /** @deprecated Prefer the declaration contributed by accounts-weibo. */
   function loginWithWeibo(
     options?: Meteor.LoginWithExternalServiceOptions,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
   function loginWithPassword(
     user: { username: string } | { email: string } | { id: string } | string,
     password: string,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
   function loginWithToken(
     token: string,
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
   function loginWithPasswordAsync(
     user: { username: string } | { email: string } | { id: string } | string,
-    password: string,
+    password: string
   ): Promise<LoginMethodResult>;
 
   function loginWithTokenAsync(token: string): Promise<LoginMethodResult>;
@@ -506,19 +547,19 @@ export namespace Meteor {
   function loggingOut(): boolean;
 
   function logout(
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
   function logoutAsync(): Promise<void>;
 
   function logoutAllClients(
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
   function logoutAllClientsAsync(): Promise<void>;
 
   function logoutOtherClients(
-    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
   ): void;
 
   function logoutOtherClientsAsync(): Promise<void>;
@@ -547,10 +588,7 @@ export namespace Meteor {
    * argument to `onStop`. If a function is passed instead of an object, it
    * is interpreted as an `onReady` callback.
    */
-  function subscribe(
-    name: string,
-    ...args: (EJSONable | EJSONableProperty)[]
-  ): Meteor.SubscriptionHandle;
+  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty)[]): Meteor.SubscriptionHandle;
   function subscribe(
     name: string,
     ...args: [
@@ -559,12 +597,15 @@ export namespace Meteor {
         onReady?: () => void;
         onStop?: (error?: Meteor.Error) => void;
         onError?: (error: Meteor.Error) => void;
-      },
+      }
     ]
   ): Meteor.SubscriptionHandle;
   function subscribe(
     name: string,
-    ...args: [...args: (EJSONable | EJSONableProperty)[], onReady: () => void]
+    ...args: [
+      ...args: (EJSONable | EJSONableProperty)[],
+      onReady: () => void
+    ]
   ): Meteor.SubscriptionHandle;
   function subscribe(name: string, ...args: unknown[]): Meteor.SubscriptionHandle;
   /** Pub/Sub **/
@@ -599,7 +640,7 @@ export namespace Meteor {
       | Mongo.Cursor<unknown>
       | Mongo.Cursor<unknown>[]
       | Promise<void | Mongo.Cursor<unknown> | Mongo.Cursor<unknown>[]>,
-    options?: { is_auto: boolean },
+    options?: { is_auto: boolean }
   ): void;
 
   function _debug(...args: unknown[]): void;
@@ -620,7 +661,11 @@ export interface Subscription {
    * @param fields The fields in the document that have changed, together with their new values.  If a field is not present in `fields` it was left unchanged; if it is present in `fields` and
    * has a value of `undefined` it was removed from the document.  If `_id` is present it is ignored.
    */
-  changed(collection: string, id: string, fields: Record<string, unknown>): void;
+  changed(
+    collection: string,
+    id: string,
+    fields: Record<string, unknown>
+  ): void;
   /** Access inside the publish function. The incoming connection for this subscription. */
   connection: Meteor.Connection;
   /**

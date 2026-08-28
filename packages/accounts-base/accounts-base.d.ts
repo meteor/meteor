@@ -1,7 +1,7 @@
-import { Mongo } from "meteor/mongo";
-import { Meteor } from "meteor/meteor";
-import { Configuration } from "meteor/service-configuration";
-import { DDP } from "meteor/ddp";
+import { Mongo } from 'meteor/mongo';
+import { Meteor } from 'meteor/meteor';
+import { Configuration } from 'meteor/service-configuration';
+import { DDP } from 'meteor/ddp';
 
 /**
  * Object containing functions that generate URLs for account-related emails.
@@ -14,11 +14,7 @@ export interface URLS {
   /** Generates the URL for email verification emails. Can return a Promise for async URL generation. */
   verifyEmail: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
   /** Generates the URL for login token emails. Can return a Promise for async URL generation. */
-  loginToken: (
-    selector: string,
-    token: string,
-    extraParams?: Record<string, string>,
-  ) => string | Promise<string>;
+  loginToken: (selector: string, token: string, extraParams?: Record<string, string>) => string | Promise<string>;
   /** Generates the URL for account enrollment emails. Can return a Promise for async URL generation. */
   enrollAccount: (token: string, extraParams?: Record<string, string>) => string | Promise<string>;
 }
@@ -70,7 +66,9 @@ export namespace Accounts {
     methodArguments: unknown[];
   }
 
-  function user(options?: { fields?: Mongo.FieldSpecifier | undefined }): Meteor.User | null;
+  function user(options?: {
+    fields?: Mongo.FieldSpecifier | undefined
+  }): Meteor.User | null;
 
   function userAsync(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
@@ -85,7 +83,7 @@ export namespace Accounts {
       password?: string | undefined;
       profile?: Meteor.UserProfile | undefined;
     },
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<string>;
 
   function createUserAsync(
@@ -95,7 +93,7 @@ export namespace Accounts {
       password?: string | undefined;
       profile?: Meteor.UserProfile | undefined;
     },
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<string>;
 
   function createUserVerifyingEmail(
@@ -105,7 +103,7 @@ export namespace Accounts {
       password?: string | undefined;
       profile?: Meteor.UserProfile | undefined;
     },
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
   ): Promise<string>;
 
   function config(options: {
@@ -130,18 +128,22 @@ export namespace Accounts {
     collection?: string | undefined;
     loginTokenExpirationHours?: number | undefined;
     tokenSequenceLength?: number | undefined;
-    // Storage strategy for client tokens: 'local' (persist), 'session' (per-tab), or 'none' (in-memory only)
-    clientStorage?: "session" | "local" | "none";
-    // Enable hybrid HttpOnly cookie + short-lived token flow
-    useHttpOnlyCookies?: boolean | undefined;
+  // Storage strategy for client tokens: 'local' (persist), 'session' (per-tab), or 'none' (in-memory only)
+  clientStorage?: 'session' | 'local' | 'none';
+  // Enable hybrid HttpOnly cookie + short-lived token flow
+  useHttpOnlyCookies?: boolean | undefined;
   }): void;
 
-  function onLogin(func: (attempt: LoginHookCallbackOptions) => void | Promise<void>): {
+  function onLogin(
+    func: (attempt: LoginHookCallbackOptions) => void | Promise<void>
+  ): {
     stop: () => void;
   };
   function onLogin(func: Function): { stop: () => void };
 
-  function onLoginFailure(func: (attempt: LoginHookCallbackOptions) => void | Promise<void>): {
+  function onLoginFailure(
+    func: (attempt: LoginHookCallbackOptions) => void | Promise<void>
+  ): {
     stop: () => void;
   };
   function onLoginFailure(func: Function): { stop: () => void };
@@ -160,24 +162,24 @@ export namespace Accounts {
   function changePassword(
     oldPassword: string,
     newPassword: string,
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
-  ): void;
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ):void;
 
   function forgotPassword(
     options: { email?: string | undefined },
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
-  ): void;
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ):void;
 
   function resetPassword(
     token: string,
     newPassword: string,
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
-  ): void;
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ):void;
 
   function verifyEmail(
     token: string,
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
-  ): void;
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ):void;
 
   function onEmailVerificationLink(callback: (token: string, done: () => void) => void): void;
   function onEmailVerificationLink(callback: Function): void;
@@ -192,34 +194,33 @@ export namespace Accounts {
 
   function loggingOut(): boolean;
 
-  function logout(callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void): void;
+  function logout(
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ):void;
 
   function logoutAsync(): Promise<void>;
 
   function logoutAllClients(
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
-  ): void;
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ):void;
 
   function logoutAllClientsAsync(): Promise<void>;
 
   function logoutOtherClients(
-    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void,
-  ): void;
+    callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+  ):void;
 
   function logoutOtherClientsAsync(): Promise<void>;
 
   type PasswordSignupField =
-    | "USERNAME_AND_EMAIL"
-    | "USERNAME_AND_OPTIONAL_EMAIL"
-    | "USERNAME_ONLY"
-    | "EMAIL_ONLY";
-  type PasswordlessSignupField = "USERNAME_AND_EMAIL" | "EMAIL_ONLY";
+    | 'USERNAME_AND_EMAIL' | 'USERNAME_AND_OPTIONAL_EMAIL' | 'USERNAME_ONLY' | 'EMAIL_ONLY';
+  type PasswordlessSignupField = 'USERNAME_AND_EMAIL' | 'EMAIL_ONLY';
 
   var ui: {
     config(options: {
       requestPermissions?: Record<string, string[]> | undefined;
-      requestOfflineToken?: Record<"google", boolean> | undefined;
-      forceApprovalPrompt?: Record<"google", boolean> | undefined;
+      requestOfflineToken?: Record<'google', boolean> | undefined;
+      forceApprovalPrompt?: Record<'google', boolean> | undefined;
       passwordSignupFields?: PasswordSignupField | PasswordSignupField[] | undefined;
       passwordlessSignupFields?: PasswordlessSignupField | PasswordlessSignupField[] | undefined;
     }): void;
@@ -246,28 +247,21 @@ export namespace Accounts {
 
   function removeEmail(userId: string, email: string): Promise<void>;
 
-  function replaceEmailAsync(
-    userId: string,
-    oldEmail: string,
-    newEmail: string,
-    verified?: boolean,
-  ): Promise<void>;
+  function replaceEmailAsync(userId: string, oldEmail: string, newEmail: string, verified?: boolean): Promise<void>;
 
-  type CreateUserCallback = (
-    options: { profile?: {} | undefined },
-    user: Meteor.User,
-  ) => Meteor.User | Promise<Meteor.User>;
+  type CreateUserCallback = (options: { profile?: {} | undefined }, user: Meteor.User) => Meteor.User | Promise<Meteor.User>;
   function onCreateUser(func: CreateUserCallback): void;
-  function onCreateUser(func: Function): void;
+  function onCreateUser(func: Function
+  ): void;
 
   function findUserByEmail(
     email: string,
-    options?: { fields?: Mongo.FieldSpecifier | undefined },
+    options?: { fields?: Mongo.FieldSpecifier | undefined }
   ): Promise<Meteor.User | null | undefined>;
 
   function findUserByUsername(
     username: string,
-    options?: { fields?: Mongo.FieldSpecifier | undefined },
+    options?: { fields?: Mongo.FieldSpecifier | undefined }
   ): Promise<Meteor.User | null | undefined>;
 
   interface SendEmailOptions {
@@ -291,21 +285,21 @@ export namespace Accounts {
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
-    extraParams?: Record<string, unknown>,
+    extraParams?: Record<string, unknown>
   ): Promise<SendEmailResult>;
 
   function sendResetPasswordEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
-    extraParams?: Record<string, unknown>,
+    extraParams?: Record<string, unknown>
   ): Promise<SendEmailResult>;
 
   function sendVerificationEmail(
     userId: string,
     email?: string,
     extraTokenData?: Record<string, unknown>,
-    extraParams?: Record<string, unknown>,
+    extraParams?: Record<string, unknown>
   ): Promise<SendEmailResult>;
 
   function setUsername(userId: string, newUsername: string): Promise<void>;
@@ -313,7 +307,7 @@ export namespace Accounts {
   function setPasswordAsync(
     userId: string,
     newPassword: string,
-    options?: { logout?: boolean | undefined },
+    options?: { logout?: boolean | undefined }
   ): Promise<void>;
 
   type ValidateNewUserCallback = (user: Meteor.User) => boolean | Promise<boolean>;
@@ -321,13 +315,15 @@ export namespace Accounts {
   function validateNewUser(func: Function): void;
 
   function validateLoginAttempt(
-    func: (attempt: IValidateLoginAttemptCbOpts) => boolean | Promise<boolean>,
+    func: (attempt: IValidateLoginAttemptCbOpts) => boolean | Promise<boolean>
   ): {
     stop: () => void;
   };
   function validateLoginAttempt(func: Function): { stop: () => void };
 
-  function _hashPassword(password: string): { digest: string; algorithm: string };
+  function _hashPassword(
+    password: string
+  ): { digest: string; algorithm: string };
 
   interface IValidateLoginAttemptCbOpts {
     type: string;
@@ -342,11 +338,12 @@ export namespace Accounts {
 
 export namespace Accounts {
   interface LogoutHookOptions {
-    user?: Meteor.User | undefined;
-    connection: Meteor.Connection;
-  }
+      user?: Meteor.User | undefined;
+      connection: Meteor.Connection;
+    }
 
-  function onLogout(func: (options?: LogoutHookOptions) => void | Promise<void>): {
+  function onLogout(func: (options?: LogoutHookOptions) => void | Promise<void>
+  ): {
     stop: () => void;
   };
   function onLogout(func: Function): { stop: () => void };
@@ -372,10 +369,8 @@ export namespace Accounts {
      * Will be called with no arguments once the user is fully
      * logged in, or with the error on error.
      */
-    userCallback?: (
-      err?: Error | Meteor.Error | Meteor.TypedError,
-      loginDetails?: Meteor.LoginMethodResult,
-    ) => void;
+    userCallback?: (err?: Error | Meteor.Error | Meteor.TypedError,
+      loginDetails?: Meteor.LoginMethodResult) => void;
   }
 
   /**
@@ -408,13 +403,12 @@ export namespace Accounts {
   function callLoginMethod(options: LoginMethodOptions): void;
 
   type LoginMethodResult =
-    | { error: Error }
-    | {
-        userId: string;
-        error?: Error;
-        stampedLoginToken?: StampedLoginToken;
-        options?: Record<string, unknown>;
-      };
+    | { error: Error } | {
+    userId: string;
+    error?: Error;
+    stampedLoginToken?: StampedLoginToken;
+    options?: Record<string, unknown>;
+  };
 
   /**
    *
@@ -432,19 +426,21 @@ export namespace Accounts {
    * - a login method result object
    **/
   type LoginHandler = {
-    bivarianceHack(
-      options: Record<string, unknown>,
-    ): undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>;
+    bivarianceHack (options: Record<string, unknown>): undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>;
   }["bivarianceHack"];
-  function registerLoginHandler(handler: LoginHandler): void;
-  function registerLoginHandler(name: string, handler: LoginHandler): void;
+  function registerLoginHandler(handler: LoginHandler
+  ): void;
+  function registerLoginHandler(
+    name: string,
+    handler: LoginHandler
+  ): void;
 
   type Password =
     | string
     | {
-        digest: string;
-        algorithm: "sha-256";
-      };
+      digest: string;
+      algorithm: 'sha-256';
+    };
 
   /**
    *
@@ -456,7 +452,7 @@ export namespace Accounts {
    */
   function _checkPasswordAsync(
     user: Meteor.User,
-    password: Password,
+    password: Password
   ): Promise<{ userId: string; error?: Meteor.Error }>;
 }
 
@@ -475,7 +471,7 @@ export namespace Accounts {
   function _insertHashedLoginToken<T>(
     userId: string,
     token: HashedStampedLoginToken,
-    query?: Mongo.Selector<T> | Mongo.ObjectID | string,
-  ): Promise<void>;
+    query?: Mongo.Selector<T> | Mongo.ObjectID | string
+  ): Promise< void>;
   function _hashLoginToken(token: string): string;
 }

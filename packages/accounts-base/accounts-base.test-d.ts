@@ -1,5 +1,8 @@
 import { expectTypeOf } from "expect-type";
-import { Accounts, AccountsClient } from "./accounts-base";
+import {
+  Accounts,
+  AccountsClient,
+} from "./accounts-base";
 import type {
   URLS,
   EmailFields,
@@ -47,12 +50,16 @@ expectTypeOf<Accounts.PageLoadLoginAttemptInfo>().toBeObject();
 const clientLoginFailure: Accounts.LoginHookCallbackOptions = {
   error: new Error("login failed"),
 };
-expectTypeOf(clientLoginFailure.error).toEqualTypeOf<Error | Meteor.Error | undefined>();
+expectTypeOf(clientLoginFailure.error).toEqualTypeOf<
+  Error | Meteor.Error | undefined
+>();
 
 Accounts.onPageLoadLogin((attempt: Accounts.PageLoadLoginAttemptInfo) => {
   expectTypeOf(attempt.type).toBeString();
   expectTypeOf(attempt.allowed).toBeBoolean();
-  expectTypeOf(attempt.error).toEqualTypeOf<Error | Meteor.Error | undefined>();
+  expectTypeOf(attempt.error).toEqualTypeOf<
+    Error | Meteor.Error | undefined
+  >();
   expectTypeOf(attempt.methodName).toBeString();
   expectTypeOf(attempt.methodArguments).toEqualTypeOf<unknown[]>();
 });
@@ -140,7 +147,8 @@ expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["user"]>().toEqualTypeOf<
   Meteor.User | undefined
 >();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["error"]>().toEqualTypeOf<
-  Error | Meteor.Error | undefined
+  Error |
+  Meteor.Error | undefined
 >();
 Accounts.onLogout((options) => {
   expectTypeOf(options).toEqualTypeOf<Accounts.LogoutHookOptions | undefined>();
