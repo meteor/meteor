@@ -46,7 +46,7 @@ selftest.define("core package declarations are not client assets", async functio
   await run.expectExit(0);
 
   s.cd("typed-assets");
-  run = s.run("add", "facts-ui");
+  run = s.run("add", "facts-ui", "jquery");
   run.waitSecs(60);
   await run.expectExit(0);
 
@@ -61,6 +61,9 @@ selftest.define("core package declarations are not client assets", async functio
   selftest.expectTrue(
     s.read(".meteor/types/packages/facts-ui/index.d.ts") !== null
   );
+  selftest.expectTrue(
+    s.read(".meteor/types/packages/jquery/index.d.ts") !== null
+  );
 
   run = s.run("build", "--directory", "../typed-assets-build");
   run.waitSecs(180);
@@ -72,6 +75,7 @@ selftest.define("core package declarations are not client assets", async functio
   selftest.expectTrue(browserProgram !== null);
   selftest.expectTrue(!browserProgram.includes("reload.d.ts"));
   selftest.expectTrue(!browserProgram.includes("facts-ui.d.ts"));
+  selftest.expectTrue(!browserProgram.includes("jquery.d.ts"));
 });
 
 selftest.define("zodern:types removes stale native declarations", async function () {
