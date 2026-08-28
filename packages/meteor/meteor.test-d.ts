@@ -11,7 +11,8 @@ expectTypeOf(Meteor.isClient).toBeBoolean();
 expectTypeOf(Meteor.isCordova).toBeBoolean();
 expectTypeOf(Meteor.isServer).toBeBoolean();
 expectTypeOf(Meteor.isProduction).toBeBoolean();
-expectTypeOf(Meteor.release).toEqualTypeOf<string | undefined>();
+expectTypeOf(Meteor.release).toBeString();
+expectTypeOf(Meteor.meteorRelease).toBeString();
 expectTypeOf(Meteor.isDevelopment).toBeBoolean();
 expectTypeOf(Meteor.isModern).toBeBoolean();
 expectTypeOf(Meteor.gitCommitHash).not.toBeAny();
@@ -24,17 +25,22 @@ expectTypeOf<Meteor.ErrorConstructor>().toBeObject();
 expectTypeOf(Meteor.makeErrorType).toBeFunction();
 expectTypeOf(Meteor.Error).not.toBeAny();
 expectTypeOf<Meteor.ErrorStatic>().toBeObject();
-// TypedError is a type only (no runtime value); assert it as a type.
 expectTypeOf<Meteor.TypedError>().toBeObject();
+expectTypeOf(new Meteor.TypedError("message", "type")).toMatchTypeOf<
+  Meteor.TypedError
+>();
 
 // --- Settings ---
 expectTypeOf<Meteor.Settings>().toBeObject();
 expectTypeOf(Meteor.settings).toBeObject();
+Meteor.settings.privateFeature.enabled;
 
 // --- User ---
 expectTypeOf<Meteor.UserEmail>().toBeObject();
 expectTypeOf<Meteor.UserProfile>().toBeObject();
 expectTypeOf<Meteor.User>().toBeObject();
+declare const legacyUser: Meteor.User;
+legacyUser.services.oauth.provider;
 expectTypeOf(Meteor.user).toBeFunction();
 expectTypeOf(Meteor.userAsync).toBeFunction();
 expectTypeOf(Meteor.userId).toBeFunction();
@@ -89,12 +95,19 @@ expectTypeOf<Meteor.SubscriptionHandle>().toBeObject();
 expectTypeOf<Meteor.LiveQueryHandle>().toBeObject();
 expectTypeOf(Meteor.subscribe).toBeFunction();
 expectTypeOf(Meteor.publish).toBeFunction();
+Meteor.publish("owned", function (ownerId: string) {
+  ownerId.toUpperCase();
+});
 
 // --- Login ---
 expectTypeOf<Meteor.LoginWithExternalServiceOptions>().toBeObject();
-// OAuth login helpers (loginWithFacebook/Github/Google/Meetup/
-// MeteorDeveloperAccount/Twitter/Weibo) are owned by their accounts-<service>
-// packages and asserted in those packages' .test-d.ts.
+expectTypeOf(Meteor.loginWithFacebook).toBeFunction();
+expectTypeOf(Meteor.loginWithGithub).toBeFunction();
+expectTypeOf(Meteor.loginWithGoogle).toBeFunction();
+expectTypeOf(Meteor.loginWithMeetup).toBeFunction();
+expectTypeOf(Meteor.loginWithMeteorDeveloperAccount).toBeFunction();
+expectTypeOf(Meteor.loginWithTwitter).toBeFunction();
+expectTypeOf(Meteor.loginWithWeibo).toBeFunction();
 expectTypeOf(Meteor.loginWithPassword).toBeFunction();
 expectTypeOf(Meteor.loginWithToken).toBeFunction();
 expectTypeOf(Meteor.loginWithPasswordAsync).toBeFunction();

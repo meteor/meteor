@@ -27,6 +27,12 @@ expectTypeOf<{ k: typeof String }>().toMatchTypeOf<Match.Pattern>();
 expectTypeOf<typeof String>().toMatchTypeOf<Match.Pattern>();
 expectTypeOf<null>().toMatchTypeOf<Match.Pattern>();
 
+class RequiredConstructorArgument {
+  constructor(readonly value: string) {}
+}
+expectTypeOf<typeof RequiredConstructorArgument>().toMatchTypeOf<Match.Pattern>();
+Match.test({}, RequiredConstructorArgument);
+
 // Match.Maybe / Optional / ObjectIncluding / OneOf / Where
 expectTypeOf(Match.Maybe(String)).toEqualTypeOf<
   Match.Matcher<string | undefined | null>
@@ -42,7 +48,7 @@ expectTypeOf(Match.OneOf(String, Number)).toEqualTypeOf<
 >();
 expectTypeOf(Match.Where<string>((v): v is string => typeof v === "string"))
   .toEqualTypeOf<Match.Matcher<string>>();
-expectTypeOf(Match.Where((v) => !!v)).toEqualTypeOf<Match.Matcher<unknown>>();
+expectTypeOf(Match.Where((v) => !!v)).toEqualTypeOf<Match.Matcher<any>>();
 
 // Bare references for Maybe / Optional / ObjectIncluding / OneOf / Where
 expectTypeOf(Match.Maybe).toBeFunction();

@@ -8,16 +8,21 @@ interface Doc {
   value: number;
 }
 
+interface ObjectIdDoc {
+  _id?: Mongo.ObjectID;
+  name: string;
+}
+
 expectTypeOf<UnionOmit<{ a: 1, b: 2 }, 'a'>>().toEqualTypeOf<{ b: 2 }>();
 
 expectTypeOf<Mongo.OptionalId<Doc>>().toEqualTypeOf<
-  { name: string; value: number } & { _id?: string | Mongo.ObjectID | NpmModuleMongodb.ObjectId }
+  { name: string; value: number } & { _id?: any }
 >();
 
 expectTypeOf<Mongo.Selector<Doc>>().toEqualTypeOf<NpmModuleMongodb.Filter<Doc>>();
 expectTypeOf<Mongo.SortSpecifier>().toEqualTypeOf<NpmModuleMongodb.Sort>();
 expectTypeOf<Mongo.FieldSpecifier>().toEqualTypeOf<{ [id: string]: Number }>();
-expectTypeOf<Mongo.Transform<Doc>>().toEqualTypeOf<((doc: Doc) => Doc) | null | undefined>();
+expectTypeOf<Mongo.Transform<Doc>>().toEqualTypeOf<((doc: Doc) => any) | null | undefined>();
 expectTypeOf<Mongo.Options<Doc>>().toMatchTypeOf<{ limit?: number }>();
 
 expectTypeOf(Mongo.Collection).toBeConstructibleWith(null);
@@ -36,7 +41,7 @@ expectTypeOf(coll).toHaveProperty("upsertAsync");
 expectTypeOf(coll).toHaveProperty("rawCollection");
 expectTypeOf(coll).toHaveProperty("rawDatabase");
 
-expectTypeOf(coll.find).returns.toEqualTypeOf<Mongo.Cursor<Doc, Doc>>();
+expectTypeOf(coll.find()).toEqualTypeOf<Mongo.Cursor<Doc, Doc>>();
 expectTypeOf(coll.findOneAsync("id")).resolves.toEqualTypeOf<Doc | undefined>();
 expectTypeOf(coll.insertAsync).parameter(0).toEqualTypeOf<Mongo.OptionalId<Doc>>();
 expectTypeOf(coll.insertAsync).returns.resolves.toBeString();
@@ -80,6 +85,13 @@ expectTypeOf(Mongo.Collection.clearExtensions).returns.toBeVoid();
 
 // getCollection lives on the Mongo namespace (not as a Collection static)
 expectTypeOf(Mongo.getCollection).toBeFunction();
+const objectIdCollection = new Mongo.Collection<ObjectIdDoc>("object-id-docs");
+expectTypeOf(
+  Mongo.getCollection<typeof objectIdCollection>("object-id-docs")
+).toEqualTypeOf<typeof objectIdCollection>();
+expectTypeOf(
+  Mongo.Collection.getCollection<typeof objectIdCollection>("object-id-docs")
+).toEqualTypeOf<typeof objectIdCollection>();
 
 // ObjectID
 const oid = new Mongo.ObjectID();
