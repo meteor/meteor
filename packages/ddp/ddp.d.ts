@@ -1,5 +1,5 @@
-import { Meteor } from "meteor/meteor";
-import { EJSONable, EJSONableProperty } from "meteor/ejson";
+import { Meteor } from 'meteor/meteor';
+import { EJSONable, EJSONableProperty } from 'meteor/ejson';
 
 export namespace DDP {
   type Argument = EJSONable | EJSONableProperty;
@@ -11,7 +11,10 @@ export namespace DDP {
   }
 
   type SubscriptionCallback = (() => void) | SubscriptionCallbacks;
-  type MethodCallback<Result> = (error: Error | Meteor.Error | undefined, result?: Result) => void;
+  type MethodCallback<Result> = (
+    error: Error | Meteor.Error | undefined,
+    result?: Result
+  ) => void;
 
   type MethodHandler = {
     bivarianceHack(this: DDPCommon.MethodInvocation, ...args: unknown[]): unknown;
@@ -19,26 +22,17 @@ export namespace DDP {
 
   interface DDPStatic {
     subscribe(name: string, ...args: Argument[]): Meteor.SubscriptionHandle;
-    subscribe(
-      name: string,
-      ...args: [...Argument[], SubscriptionCallback]
-    ): Meteor.SubscriptionHandle;
+    subscribe(name: string, ...args: [...Argument[], SubscriptionCallback]): Meteor.SubscriptionHandle;
     call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Result;
-    call<Result extends DDP.Result = DDP.Result>(
-      method: string,
-      ...parameters: [...Argument[], MethodCallback<Result>]
-    ): Result;
-    callAsync<Result extends DDP.Result = DDP.Result>(
-      method: string,
-      ...parameters: Argument[]
-    ): Promise<Result>;
+    call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: [...Argument[], MethodCallback<Result>]): Result;
+    callAsync<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Promise<Result>;
     apply<Result extends DDP.Result = DDP.Result>(
       method: string,
       args: ReadonlyArray<Argument>,
       options?: Meteor.MethodApplyOptions<Result>,
-      callback?: MethodCallback<Result>,
+      callback?: MethodCallback<Result>
     ): Result;
-    methods<T extends { [K in keyof T]: MethodHandler }>(methods: T): void;
+    methods<T extends {[K in keyof T]: MethodHandler }>(methods: T): void;
     subscribe(name: string, ...rest: unknown[]): Meteor.SubscriptionHandle;
     call<Result = unknown>(method: string, ...parameters: unknown[]): Result;
     callAsync<Result = unknown>(method: string, ...parameters: unknown[]): Promise<Result>;
@@ -53,7 +47,7 @@ export namespace DDP {
 
   function _allSubscriptionsReady(): boolean;
 
-  type Status = "connected" | "connecting" | "failed" | "waiting" | "offline";
+  type Status = 'connected' | 'connecting' | 'failed' | 'waiting' | 'offline';
 
   interface DDPStatus {
     connected: boolean;
@@ -86,7 +80,7 @@ export namespace DDPCommon {
      * Set the logged in user.
      * @param userId The value that should be returned by `userId` on this connection.
      */
-    setUserId(userId: string | null): Promise<void>;
+    setUserId(userId: string | null): Promise< void>;
     /**
      * The id of the user that made this method call, or `null` if no user was logged in.
      */
@@ -142,5 +136,5 @@ export namespace DDPCommon {
 // DDPServer is owned by the ddp-server package; re-export it by name so
 // `import { DDPServer } from "meteor/ddp"` keeps working (export * does not
 // cross zodern:types export= wrappers, a named re-export does).
-import { DDPServer } from "meteor/ddp-server";
+import { DDPServer } from 'meteor/ddp-server';
 export { DDPServer };

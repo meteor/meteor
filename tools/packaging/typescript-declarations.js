@@ -8,8 +8,16 @@ function normalizeSourcePath(sourcePath) {
   return sourcePath.replace(/^\.\//, "");
 }
 
-function declarationPathForSource(sourcePath, typesBuildDir = TYPES_BUILD_DIR) {
-  return typesBuildDir + "/" + normalizeSourcePath(sourcePath).replace(/\.tsx?$/, "") + ".d.ts";
+function declarationPathForSource(
+  sourcePath,
+  typesBuildDir = TYPES_BUILD_DIR
+) {
+  return (
+    typesBuildDir +
+    "/" +
+    normalizeSourcePath(sourcePath).replace(/\.tsx?$/, "") +
+    ".d.ts"
+  );
 }
 
 /**
@@ -20,7 +28,7 @@ function declarationPathForSource(sourcePath, typesBuildDir = TYPES_BUILD_DIR) {
 function usePrebuiltTypeScriptDeclarations(
   packageSource,
   packageDir,
-  typesBuildDir = TYPES_BUILD_DIR,
+  typesBuildDir = TYPES_BUILD_DIR
 ) {
   const entry = normalizeSourcePath(packageSource.typesEntry);
   const rewrittenEntry = declarationPathForSource(entry, typesBuildDir);
@@ -40,11 +48,20 @@ function usePrebuiltTypeScriptDeclarations(
   checkDeclaration("entry", entry, rewrittenEntry);
 
   if (packageSource.typesModules) {
-    Object.entries(packageSource.typesModules).forEach(([moduleName, modulePath]) => {
-      const declarationPath = declarationPathForSource(modulePath, typesBuildDir);
-      rewrittenModules[moduleName] = declarationPath;
-      checkDeclaration(`modules.${moduleName}`, modulePath, declarationPath);
-    });
+    Object.entries(packageSource.typesModules).forEach(
+      ([moduleName, modulePath]) => {
+        const declarationPath = declarationPathForSource(
+          modulePath,
+          typesBuildDir
+        );
+        rewrittenModules[moduleName] = declarationPath;
+        checkDeclaration(
+          `modules.${moduleName}`,
+          modulePath,
+          declarationPath
+        );
+      }
+    );
   }
 
   if (missing.length > 0) {

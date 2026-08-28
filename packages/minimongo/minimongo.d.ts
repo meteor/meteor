@@ -1,4 +1,4 @@
-import { Mongo } from "meteor/mongo";
+import { Mongo } from 'meteor/mongo';
 
 export type MinimongoId = string | Mongo.ObjectID;
 
@@ -45,24 +45,16 @@ export class Cursor<T = Record<string, unknown>> {
   countAsync(): Promise<number>;
 
   forEach(callback: (doc: T, index: number, cursor: Cursor<T>) => void, thisArg?: unknown): void;
-  forEachAsync(
-    callback: (doc: T, index: number, cursor: Cursor<T>) => void | Promise<void>,
-    thisArg?: unknown,
-  ): Promise<void>;
+  forEachAsync(callback: (doc: T, index: number, cursor: Cursor<T>) => void | Promise<void>, thisArg?: unknown): Promise<void>;
 
   map<U>(callback: (doc: T, index: number, cursor: Cursor<T>) => U, thisArg?: unknown): U[];
-  mapAsync<U>(
-    callback: (doc: T, index: number, cursor: Cursor<T>) => U | Promise<U>,
-    thisArg?: unknown,
-  ): Promise<U[]>;
+  mapAsync<U>(callback: (doc: T, index: number, cursor: Cursor<T>) => U | Promise<U>, thisArg?: unknown): Promise<U[]>;
 
   observe(callbacks: MinimongoObserveCallbacks<T>): MinimongoObserveHandle;
   observeAsync(callbacks: MinimongoObserveCallbacks<T>): Promise<MinimongoObserveHandle>;
 
   observeChanges(callbacks: MinimongoObserveChangesCallbacks<T>): MinimongoObserveHandle;
-  observeChangesAsync(
-    callbacks: MinimongoObserveChangesCallbacks<T>,
-  ): Promise<MinimongoObserveHandle>;
+  observeChangesAsync(callbacks: MinimongoObserveChangesCallbacks<T>): Promise<MinimongoObserveHandle>;
 
   [Symbol.iterator](): Iterator<T>;
   [Symbol.asyncIterator](): AsyncIterator<T>;
@@ -74,76 +66,44 @@ export class LocalCollection<T = Record<string, unknown>> {
   name: string | undefined;
   paused: boolean;
 
-  find(
-    selector?: Mongo.Selector<T> | Mongo.ObjectID | string,
-    options?: MinimongoFindOptions<T>,
-  ): Cursor<T>;
+  find(selector?: Mongo.Selector<T> | Mongo.ObjectID | string, options?: MinimongoFindOptions<T>): Cursor<T>;
 
-  findOne(
-    selector?: Mongo.Selector<T> | Mongo.ObjectID | string,
-    options?: MinimongoFindOptions<T>,
-  ): T | undefined;
-  findOneAsync(
-    selector?: Mongo.Selector<T> | Mongo.ObjectID | string,
-    options?: MinimongoFindOptions<T>,
-  ): Promise<T | undefined>;
+  findOne(selector?: Mongo.Selector<T> | Mongo.ObjectID | string, options?: MinimongoFindOptions<T>): T | undefined;
+  findOneAsync(selector?: Mongo.Selector<T> | Mongo.ObjectID | string, options?: MinimongoFindOptions<T>): Promise<T | undefined>;
 
   insert(doc: T, callback?: (err: Error | null, id?: MinimongoId) => void): MinimongoId;
-  insertAsync(
-    doc: T,
-    callback?: (err: Error | null, id?: MinimongoId) => void,
-  ): Promise<MinimongoId>;
+  insertAsync(doc: T, callback?: (err: Error | null, id?: MinimongoId) => void): Promise<MinimongoId>;
 
   update(
     selector: Mongo.Selector<T> | Mongo.ObjectID | string,
     modifier: Mongo.Modifier<T>,
-    options?: {
-      multi?: boolean;
-      upsert?: boolean;
-      arrayFilters?: { [identifier: string]: unknown }[];
-    },
-    callback?: (err: Error | null, numAffected?: number) => void,
+    options?: { multi?: boolean; upsert?: boolean; arrayFilters?: { [identifier: string]: unknown }[]; },
+    callback?: (err: Error | null, numAffected?: number) => void
   ): number;
 
   updateAsync(
     selector: Mongo.Selector<T> | Mongo.ObjectID | string,
     modifier: Mongo.Modifier<T>,
-    options?: {
-      multi?: boolean;
-      upsert?: boolean;
-      arrayFilters?: { [identifier: string]: unknown }[];
-    },
-    callback?: (err: Error | null, numAffected?: number) => void,
+    options?: { multi?: boolean; upsert?: boolean; arrayFilters?: { [identifier: string]: unknown }[]; },
+    callback?: (err: Error | null, numAffected?: number) => void
   ): Promise<number>;
 
   upsert(
     selector: Mongo.Selector<T> | Mongo.ObjectID | string,
     modifier: Mongo.Modifier<T>,
     options?: { multi?: boolean },
-    callback?: (
-      err: Error | null,
-      result?: { numberAffected?: number; insertedId?: MinimongoId },
-    ) => void,
+    callback?: (err: Error | null, result?: { numberAffected?: number; insertedId?: MinimongoId }) => void
   ): { numberAffected?: number; insertedId?: MinimongoId };
 
   upsertAsync(
     selector: Mongo.Selector<T> | Mongo.ObjectID | string,
     modifier: Mongo.Modifier<T>,
     options?: { multi?: boolean },
-    callback?: (
-      err: Error | null,
-      result?: { numberAffected?: number; insertedId?: MinimongoId },
-    ) => void,
+    callback?: (err: Error | null, result?: { numberAffected?: number; insertedId?: MinimongoId }) => void
   ): Promise<{ numberAffected?: number; insertedId?: MinimongoId }>;
 
-  remove(
-    selector: Mongo.Selector<T> | Mongo.ObjectID | string,
-    callback?: (err: Error | null, numRemoved?: number) => void,
-  ): number;
-  removeAsync(
-    selector: Mongo.Selector<T> | Mongo.ObjectID | string,
-    callback?: (err: Error | null, numRemoved?: number) => void,
-  ): Promise<number>;
+  remove(selector: Mongo.Selector<T> | Mongo.ObjectID | string, callback?: (err: Error | null, numRemoved?: number) => void): number;
+  removeAsync(selector: Mongo.Selector<T> | Mongo.ObjectID | string, callback?: (err: Error | null, numRemoved?: number) => void): Promise<number>;
 
   countDocuments(selector?: Mongo.Selector<T>, options?: MinimongoFindOptions<T>): Promise<number>;
   estimatedDocumentCount(options?: MinimongoFindOptions<T>): Promise<number>;

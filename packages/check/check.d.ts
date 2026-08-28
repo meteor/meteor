@@ -43,21 +43,29 @@ export namespace Match {
    * Matches either `undefined`, `null`, or pattern. If used in an object, matches only if the key is not set as opposed to the value being set to `undefined` or `null`. This set of conditions
    * was chosen because `undefined` arguments to Meteor Methods are converted to `null` when sent over the wire.
    */
-  function Maybe<T extends Pattern>(pattern: T): Matcher<PatternMatch<T> | undefined | null>;
+  function Maybe<T extends Pattern>(
+    pattern: T
+  ): Matcher<PatternMatch<T> | undefined | null>;
 
   /** Behaves like `Match.Maybe` except it doesn’t accept `null`. If used in an object, the behavior is identical to `Match.Maybe`. */
-  function Optional<T extends Pattern>(pattern: T): Matcher<PatternMatch<T> | undefined>;
+  function Optional<T extends Pattern>(
+    pattern: T
+  ): Matcher<PatternMatch<T> | undefined>;
 
   /** Matches an Object with the given keys; the value may also have other keys with arbitrary values. */
-  function ObjectIncluding<T extends { [key: string]: Pattern }>(dico: T): Matcher<PatternMatch<T>>;
+  function ObjectIncluding<T extends { [key: string]: Pattern }>(
+    dico: T
+  ): Matcher<PatternMatch<T>>;
 
   /** Matches an Object all of whose values match the given pattern. */
   function ObjectWithValues<T extends Pattern>(
-    pattern: T,
+    pattern: T
   ): Matcher<{ [key: string]: PatternMatch<T> }>;
 
   /** Matches any value that matches at least one of the provided patterns. */
-  function OneOf<T extends Pattern[]>(...patterns: T): Matcher<PatternMatch<T[number]>>;
+  function OneOf<T extends Pattern[]>(
+    ...patterns: T
+  ): Matcher<PatternMatch<T[number]>>;
 
   /**
    * Calls the function condition with the value as the argument. If condition returns true, this matches. If condition throws a `Match.Error` or returns false, this fails. If condition throws
@@ -88,7 +96,10 @@ export namespace Match {
    * @param value The value to check
    * @param pattern The pattern to match `value` against
    */
-  function test<T extends Pattern>(value: unknown, pattern: T): value is PatternMatch<T>;
+  function test<T extends Pattern>(
+    value: unknown,
+    pattern: T
+  ): value is PatternMatch<T>;
 }
 
 /**
@@ -106,5 +117,5 @@ export namespace Match {
 export declare function check<T extends Match.Pattern>(
   value: unknown,
   pattern: T,
-  options?: { throwAllErrors?: boolean },
+  options?: { throwAllErrors?: boolean }
 ): asserts value is Match.PatternMatch<T>;

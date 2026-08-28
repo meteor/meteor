@@ -1,4 +1,4 @@
-import * as http from "http";
+import * as http from 'http';
 
 // NodeJS.ReadableStream only works on server.
 // HTMLElement only works on client.
@@ -35,7 +35,7 @@ type IdentifiedBrowser = {
  * A categorized request is an IncomingMessage with a pre-parsed URL,
  * and additional properties added by Meteor.
  */
-export type CategorizedRequest = Omit<http.IncomingMessage, "url"> & {
+export type CategorizedRequest = Omit<http.IncomingMessage, 'url'> & {
   browser: IdentifiedBrowser;
   dynamicHead: string | undefined;
   dynamicBody: string | undefined;
