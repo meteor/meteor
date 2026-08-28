@@ -15,5 +15,5 @@ Package.onUse(function (api) {
   api.export('$', 'client');
   api.export('jQuery', 'client');
 
-  api.addAssets('jquery.d.ts', 'client');
+  api.types('jquery.d.ts');
 });
