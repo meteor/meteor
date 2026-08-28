@@ -9,7 +9,14 @@ const DECLARATION_FILE_PATTERN = /\.d\.ts(?:\.map)?$/;
  * bundle instead of relying on their incidental presence in isopack watch
  * sets. Returns package-root-relative, standard-format paths.
  */
-function addTypeDeclarationSources({ packageDir, typesDir, sourceFiles, fileSystem = files }) {
+function addTypeDeclarationSources({
+  packageDir,
+  typesDir,
+  typesEntry,
+  typesModules,
+  sourceFiles,
+  fileSystem = files,
+}) {
   if (!typesDir) {
     return {
       ok: true,
@@ -58,6 +65,24 @@ function addTypeDeclarationSources({ packageDir, typesDir, sourceFiles, fileSyst
     return {
       ok: false,
       error: `api.types(): declaration directory "${typesDir}" contains no ` + ".d.ts files.",
+    };
+  }
+
+  const expectedDeclarations = Array.from(
+    new Set(
+      [typesEntry, ...Object.values(typesModules || {})]
+        .filter(Boolean)
+        .map((path) => fileSystem.convertToStandardPath(path.replace(/^\.\//, ""))),
+    ),
+  );
+  const declarationSet = new Set(declarationSources);
+  const missingDeclarations = expectedDeclarations.filter((path) => !declarationSet.has(path));
+  if (missingDeclarations.length > 0) {
+    return {
+      ok: false,
+      error:
+        `api.types(): declaration directory "${typesDir}" is missing expected files: ` +
+        `${missingDeclarations.join(", ")}.`,
     };
   }
 

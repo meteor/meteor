@@ -166,4 +166,26 @@ selftest.define('prebuilt declaration source bundle roundtrip', async function (
     declarationPath: '.types-build/client/hooks.d.ts'
   }]);
   selftest.expectTrue(incompletePackageSource.typesDir === null);
+
+  files.copyFile(
+    files.pathJoin(typesDir, 'client', 'hooks.d.ts'),
+    files.pathJoin(extractedDir, '.types-build', 'client', 'hooks.d.ts')
+  );
+  files.rm_recursive(
+    files.pathJoin(extractedDir, '.types-build', 'index.d.ts')
+  );
+  const missingEntrySource = {
+    typesDir: null,
+    typesEntry: 'index.ts',
+    typesModules: { hooks: 'client/hooks.tsx' }
+  };
+  const missingEntry = usePrebuiltTypeScriptDeclarations(
+    missingEntrySource, extractedDir);
+  selftest.expectTrue(! missingEntry.ok);
+  selftest.expectEqual(missingEntry.missing, [{
+    label: 'entry',
+    sourcePath: 'index.ts',
+    declarationPath: '.types-build/index.d.ts'
+  }]);
+  selftest.expectTrue(missingEntrySource.typesDir === null);
 });
