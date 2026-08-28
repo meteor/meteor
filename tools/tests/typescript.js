@@ -70,6 +70,25 @@ selftest.define("typescript template works", async function () {
   await run.expectExit(0);
 });
 
+selftest.define("javascript template stays out of native type generation", async function () {
+  const s = new Sandbox();
+  await s.init();
+
+  let run = s.run("create", "javascript");
+  run.waitSecs(60);
+  await run.match("Created a new Meteor app in 'javascript'.");
+  await run.expectExit(0);
+
+  s.cd("javascript");
+  selftest.expectTrue(s.read("tsconfig.json") === null);
+  selftest.expectTrue(s.read("jsconfig.json") === null);
+
+  run = s.run("types");
+  await run.match("No tsconfig.json or jsconfig.json found. Nothing to do.");
+  await run.expectExit(0);
+  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === null);
+});
+
 selftest.define("core package declarations are not client assets", async function () {
   const s = new Sandbox();
   await s.init();
