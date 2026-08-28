@@ -4,9 +4,7 @@ import { Mongo } from "meteor/mongo";
 
 expectTypeOf(Session).toBeObject();
 
-expectTypeOf(Session.equals).parameters.toEqualTypeOf<
-  [string, any]
->();
+expectTypeOf(Session.equals).parameters.toEqualTypeOf<[string, any]>();
 expectTypeOf(Session.equals).returns.toBeBoolean();
 
 expectTypeOf(Session.get).parameters.toEqualTypeOf<[string]>();
