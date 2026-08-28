@@ -99,7 +99,9 @@ function analyzeTypeBreadth({
   }
 
   const requiredCount = typed.length + missing.length;
-  const percentage = requiredCount ? Math.round((typed.length / requiredCount) * 100) : 100;
+  const percentage = requiredCount
+    ? Math.round((typed.length / requiredCount) * 100)
+    : 100;
 
   return {
     packageKeys,
@@ -128,7 +130,7 @@ function formatTypeBreadthReport(analysis) {
     lines.push(
       "",
       "UNCLASSIFIED — not in manifest, classify as needsTypes or waived " +
-        `(${analysis.unclassified.length}):`,
+        `(${analysis.unclassified.length}):`
     );
     analysis.unclassified.forEach((key) => lines.push(`  - ${key}`));
   }
@@ -146,11 +148,12 @@ function runTypeBreadth({
   const analysis = analyzeTypeBreadth({ root, packagesDir, manifestPath });
   logger.log(formatTypeBreadthReport(analysis));
 
-  const failed = strict && (analysis.missing.length > 0 || analysis.unclassified.length > 0);
+  const failed =
+    strict && (analysis.missing.length > 0 || analysis.unclassified.length > 0);
   if (failed) {
     logger.error(
       `\n✖ type-breadth failed: ${analysis.missing.length} missing, ` +
-        `${analysis.unclassified.length} unclassified.`,
+        `${analysis.unclassified.length} unclassified.`
     );
   } else {
     logger.log(`\n✔ report complete${strict ? " (strict: passed)" : ""}.`);

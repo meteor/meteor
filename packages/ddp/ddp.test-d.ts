@@ -18,26 +18,38 @@ expectTypeOf<DDP.Status>().toEqualTypeOf<
 expectTypeOf(DDP.connect).toBeFunction();
 
 declare const connection: DDP.DDPStatic;
-const resultCallback = (_error: Error | Meteor.Error | undefined, _result?: number) => {};
+const resultCallback = (
+  _error: Error | Meteor.Error | undefined,
+  _result?: number
+) => {};
 
-expectTypeOf(connection.subscribe).toBeCallableWith("items", "active", 10);
+expectTypeOf(connection.subscribe).toBeCallableWith(
+  "items",
+  "active",
+  10
+);
 expectTypeOf(connection.subscribe).toBeCallableWith("items", () => {});
 expectTypeOf(connection.subscribe).toBeCallableWith("items", {
   onReady() {},
   onStop(_error?: Error) {},
 });
 expectTypeOf(connection.call<number>).toBeCallableWith("sum", 1, 2);
-expectTypeOf(connection.call<number>).toBeCallableWith("sum", 1, 2, resultCallback);
+expectTypeOf(connection.call<number>).toBeCallableWith(
+  "sum",
+  1,
+  2,
+  resultCallback
+);
 expectTypeOf(connection.callAsync<number>).toBeCallableWith("sum", 1, 2);
 expectTypeOf(connection.call).toBeCallableWith(
   "legacy-extension-value",
-  new URL("https://meteor.com"),
+  new URL("https://meteor.com")
 );
 expectTypeOf(connection.apply<number>).toBeCallableWith(
   "sum",
   [1, 2] as const,
   { wait: true },
-  resultCallback,
+  resultCallback
 );
 connection.methods({
   findById(id: string) {

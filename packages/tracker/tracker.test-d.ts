@@ -15,7 +15,8 @@ expectTypeOf(Tracker.autorun).toBeCallableWith(
 );
 declare const legacyAutorun: Function;
 declare const legacyOnError: Function;
-Tracker.autorun(legacyAutorun, { onError: legacyOnError });
+Tracker.autorun(legacyAutorun, { onError: legacyOnError }
+);
 expectTypeOf(Tracker.autorun).returns.toEqualTypeOf<Tracker.Computation>();
 
 // afterFlush / flush

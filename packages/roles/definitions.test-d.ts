@@ -60,9 +60,7 @@ expectTypeOf(Roles.getScopesForUser).returns.toEqualTypeOf<string[]>();
 expectTypeOf(Roles.getScopesForUserAsync).returns.toEqualTypeOf<Promise<string[]>>();
 expectTypeOf(Roles.getRolesForUser).returns.toEqualTypeOf<string[]>();
 expectTypeOf(Roles.getRolesForUserAsync).returns.toEqualTypeOf<Promise<string[]>>();
-expectTypeOf(Roles.getUserAssignmentsForRole).returns.toEqualTypeOf<
-  Mongo.Cursor<Roles.RoleAssignment>
->();
+expectTypeOf(Roles.getUserAssignmentsForRole).returns.toEqualTypeOf<Mongo.Cursor<Roles.RoleAssignment>>();
 expectTypeOf(Roles.getUsersInRole).returns.toEqualTypeOf<Mongo.Cursor<Meteor.User>>();
 expectTypeOf(Roles.getUsersInRoleAsync).returns.toEqualTypeOf<Promise<Mongo.Cursor<Meteor.User>>>();
 expectTypeOf(Roles.getUserIdsInRole).returns.toEqualTypeOf<string[]>();

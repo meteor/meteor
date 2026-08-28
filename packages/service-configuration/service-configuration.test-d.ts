@@ -1,6 +1,9 @@
 import { expectTypeOf } from "expect-type";
 import { Mongo } from "meteor/mongo";
-import { ServiceConfiguration, type Configuration } from "./service-configuration";
+import {
+  ServiceConfiguration,
+  type Configuration,
+} from "./service-configuration";
 
 const legacyConfiguration: Configuration = {
   appId: "app-id",
@@ -16,7 +19,9 @@ expectTypeOf<Configuration["someArbitraryServiceKey"]>().toEqualTypeOf<unknown>(
 
 // ServiceConfiguration namespace object
 expectTypeOf(ServiceConfiguration).toBeObject();
-expectTypeOf(ServiceConfiguration.configurations).toEqualTypeOf<Mongo.Collection<Configuration>>();
+expectTypeOf(ServiceConfiguration.configurations).toEqualTypeOf<
+  Mongo.Collection<Configuration>
+>();
 
 // ConfigError static
 expectTypeOf(ServiceConfiguration.ConfigError).toBeConstructibleWith();
