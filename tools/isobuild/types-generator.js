@@ -82,6 +82,7 @@ const PACKAGES_DTS = "packages.d.ts";
 const MAIN_DTS = "index.d.ts";
 const NPM_LINK_NAME = "node_modules";
 const PACKAGE_TYPES_LINK_NAME = "meteor-package-types";
+const DECLARATIONS_SUBDIR = "declarations";
 // ts-src mode: the package's TypeScript sources are copied under this
 // subdirectory of the per-package output dir.
 const SRC_SUBDIR = "src";
@@ -191,8 +192,16 @@ export async function generateTypes({
     } else if (info.mode === "ts-src") {
       needsPackageTypesLink = true;
       writeTsSourcePackage({ name, normalizedName, packageDir, info, entry });
-    } else {
-      writeSingleFilePackage({ name, packageDir, info, entry });
+    } else if (
+      writeSingleFilePackage({
+        name,
+        normalizedName,
+        packageDir,
+        info,
+        entry,
+      })
+    ) {
+      needsPackageTypesLink = true;
     }
 
     // Make the package's bundled npm dependencies resolvable from its
@@ -232,29 +241,75 @@ export async function removeGeneratedTypes({ projectMeteorDir }) {
 
 /**
  * Write the output for a single-file package (api.types('foo.d.ts'),
- * package-types.json, or the auto-detected single .d.ts): the entry file —
- * and each sub-path module file — wrapped in a `declare module 'meteor/…'`
- * block (unless it already declares its own ambient modules).
+ * package-types.json, or the auto-detected single .d.ts).
+ *
+ * A script that only owns ambient module declarations is safe to reference
+ * verbatim.  Every external module is instead copied below declarations/ and
+ * exposed through the same bare-specifier adapter used by directory mode.
+ * Declaration syntax such as `export declare` is invalid when textually
+ * nested in another ambient module, and a mixed external module that happens
+ * to contain a module augmentation does not itself define the package's
+ * `meteor/...` root.  Keeping the raw file as a real module fixes both cases.
+ *
+ * Returns true when at least one private declaration module was emitted and
+ * the root meteor-package-types link is therefore required.
  */
-function writeSingleFilePackage({ name, packageDir, info, entry }) {
-  // Write main .d.ts
-  const wrappedMain = wrapDeclareModule(`meteor/${name}`, info.data);
-  writeIfChanged(
-    files.pathJoin(packageDir, MAIN_DTS),
-    Buffer.from(wrappedMain, "utf8")
-  );
+function writeSingleFilePackage({
+  name,
+  normalizedName,
+  packageDir,
+  info,
+  entry,
+}) {
+  const copiedFiles = new Set();
+  let usesPrivateModules = false;
+
+  const writeModule = ({ meteorModuleName, publicFileName, data }) => {
+    const body = data.toString("utf8");
+    if (isAmbientModuleScript(body)) {
+      writeIfChanged(
+        files.pathJoin(packageDir, publicFileName),
+        Buffer.from(`${body.trim()}\n`, "utf8")
+      );
+      return;
+    }
+
+    usesPrivateModules = true;
+    const privateRelPath = `${DECLARATIONS_SUBDIR}/${publicFileName}`;
+    const privateAbsPath = files.pathJoin(packageDir, privateRelPath);
+    files.mkdir_p(files.pathDirname(privateAbsPath));
+    writeIfChanged(privateAbsPath, data);
+    copiedFiles.add(privateRelPath);
+
+    const privateModuleName = publicFileName.replace(/\.d\.ts$/, "");
+    writeIfChanged(
+      files.pathJoin(packageDir, publicFileName),
+      Buffer.from(
+        makeBareSpecifierStub(
+          meteorModuleName,
+          `${PACKAGE_TYPES_LINK_NAME}/${normalizedName}/${DECLARATIONS_SUBDIR}/${privateModuleName}`
+        ),
+        "utf8"
+      )
+    );
+  };
+
+  writeModule({
+    meteorModuleName: `meteor/${name}`,
+    publicFileName: MAIN_DTS,
+    data: info.data,
+  });
 
   // Write sub-path module .d.ts files (issue #10 fix)
   if (info.modules) {
     for (const [moduleName, moduleData] of Object.entries(info.modules)) {
       if (!moduleData) continue;
       const moduleFileName = normalizeModuleFileName(moduleName);
-      const moduleAbsPath = files.pathJoin(packageDir, moduleFileName);
-      const wrappedModule = wrapDeclareModule(
-        `meteor/${name}/${moduleName}`,
-        moduleData
-      );
-      writeIfChanged(moduleAbsPath, Buffer.from(wrappedModule, "utf8"));
+      writeModule({
+        meteorModuleName: `meteor/${name}/${moduleName}`,
+        publicFileName: moduleFileName,
+        data: moduleData,
+      });
       entry.subModules.push({
         name: moduleName,
         fileName: moduleFileName,
@@ -262,6 +317,12 @@ function writeSingleFilePackage({ name, packageDir, info, entry }) {
       });
     }
   }
+
+  if (usesPrivateModules) {
+    entry.keepNames.push(DECLARATIONS_SUBDIR);
+    entry.copiedFiles = copiedFiles;
+  }
+  return usesPrivateModules;
 }
 
 /**
@@ -370,7 +431,7 @@ function isAmbientResource(resources, relPath) {
   const resource = resources.find(
     (r) => normalizeResourcePath(r.path) === relPath
   );
-  return !!resource && hasOwnModuleDeclaration(resource.data.toString("utf8"));
+  return !!resource && isAmbientModuleScript(resource.data.toString("utf8"));
 }
 
 /**
@@ -1132,6 +1193,7 @@ function generatePackagesDeclaration(entries) {
  * indented, or inside nested blocks, are unlikely to match.
  */
 const DECLARE_MODULE_RE = /^\s*declare\s+module\s+['"]/m;
+const TOP_LEVEL_IMPORT_OR_EXPORT_RE = /^(?:import|export)\b/m;
 
 /**
  * True when a .d.ts file already contains its own ambient module
@@ -1145,36 +1207,18 @@ function hasOwnModuleDeclaration(body) {
 }
 
 /**
- * Produce the final content for a per-package declaration file.
- *
- * If the source file already declares its own ambient module(s) (the
- * zodern:types convention), it is emitted verbatim.  Otherwise the file is
- * assumed to be a plain module-style declaration file (top-level
- * imports/exports, like `accounts-base.d.ts`, or exported namespaces, like
- * `random.d.ts`) and is wrapped in a `declare module` block.  Both exported
- * namespaces and non-relative `import` statements are valid inside an
- * ambient module block, so wrapping is safe for those files; only relative
- * imports are not, and those cannot resolve from a generated location
- * anyway.
- *
- * @param {string} meteorModuleName  e.g. 'meteor/random' or 'meteor/rmd/hooks'
- * @param {Buffer|string} content    raw declaration file content
- * @returns {string}
+ * True only for a declaration script whose ambient module blocks provide the
+ * public module ids directly.  A file with a column-zero import/export is an
+ * external module even if it also contains `declare module` augmentations;
+ * it must be loaded through an adapter so its own exports remain importable.
+ * Declaration files generated by TypeScript and the mixed declarations in
+ * core packages consistently emit top-level imports/exports at column zero.
  */
-function wrapDeclareModule(meteorModuleName, content) {
-  const body = (
-    Buffer.isBuffer(content) ? content.toString("utf8") : content
-  ).trim();
-
-  if (hasOwnModuleDeclaration(body)) {
-    return `${body}\n`;
-  }
-
-  const indented = body
-    .split("\n")
-    .map((line) => (line.length ? "  " + line : ""))
-    .join("\n");
-  return `declare module ${quoteModuleSpecifier(meteorModuleName)} {\n${indented}\n}\n`;
+function isAmbientModuleScript(body) {
+  return (
+    hasOwnModuleDeclaration(body) &&
+    !TOP_LEVEL_IMPORT_OR_EXPORT_RE.test(body)
+  );
 }
 
 /**
