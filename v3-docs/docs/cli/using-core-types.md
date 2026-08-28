@@ -90,7 +90,8 @@ Meteor removes stale `.meteor/types` output and leaves the existing
 `zodern:types`, the first and third entries activate native main-module and
 sub-path declarations; `@types/meteor` remains a fallback. Keeping the native
 barrel before zodern's path also prevents stale `.meteor/local/types` output
-from blocking sub-path imports during that transition.
+from blocking sub-path imports during that transition. After native generation
+succeeds, Meteor removes that obsolete zodern cache automatically.
 
 ### Existing TypeScript apps
 
