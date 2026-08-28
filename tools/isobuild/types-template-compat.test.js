@@ -39,8 +39,8 @@ describe("Meteor 3.6 template type-provider compatibility", () => {
       expect(nativePackages).toBeGreaterThanOrEqual(0);
       expect(externalTypes).toBeGreaterThan(nativePackages);
       expect(externalTypes).toBeGreaterThanOrEqual(0);
-      expect(zodernTypes).toBeGreaterThan(externalTypes);
-      expect(nativeBarrel).toBeGreaterThan(zodernTypes);
+      expect(nativeBarrel).toBeGreaterThan(externalTypes);
+      expect(zodernTypes).toBeGreaterThan(nativeBarrel);
     }
   );
 
