@@ -41,6 +41,33 @@ selftest.define("typescript template works", async function () {
   run.waitSecs(60);
   await run.expectEnd();
   await run.expectExit(0);
+
+  // The same generated config must switch cleanly to native declarations:
+  // main modules resolve from per-package adapters, @types/meteor remains a
+  // fallback, and sub-path modules resolve through the generated barrel.
+  run = s.run("remove", "zodern:types");
+  run.waitSecs(60);
+  await run.expectExit(0);
+
+  run = s.run("types");
+  run.waitSecs(60);
+  await run.match("Generated package type declarations.");
+  await run.expectExit(0);
+
+  s.write("native-types-resolution.ts", `
+    import { Random } from "meteor/random";
+    import { Template } from "meteor/templating";
+    import { useTracker } from "meteor/react-meteor-data/suspense";
+
+    Random.id();
+    Template.body.helpers({ value: () => 1 });
+    useTracker("native-types-resolution", async () => 42);
+  `);
+
+  run = s.run("node", "node_modules/typescript/bin/tsc");
+  run.waitSecs(60);
+  await run.expectEnd();
+  await run.expectExit(0);
 });
 
 selftest.define("core package declarations are not client assets", async function () {

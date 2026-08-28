@@ -75,8 +75,8 @@ later native opt-in:
       "meteor/*": [
         "./.meteor/types/packages/*",
         "./node_modules/@types/meteor/*",
-        "./.meteor/local/types/packages.d.ts",
-        "./.meteor/types/packages.d.ts"
+        "./.meteor/types/packages.d.ts",
+        "./.meteor/local/types/packages.d.ts"
       ]
     }
   }
@@ -87,8 +87,10 @@ Meteor 3.6 TypeScript templates still install `zodern:types` directly so an
 upgrade does not silently change the active declarations. While it is present,
 Meteor removes stale `.meteor/types` output and leaves the existing
 `@types/meteor` then `zodern:types` precedence intact. After you remove
-`zodern:types`, the first and last entries activate native main-module and
-sub-path declarations; `@types/meteor` remains a fallback.
+`zodern:types`, the first and third entries activate native main-module and
+sub-path declarations; `@types/meteor` remains a fallback. Keeping the native
+barrel before zodern's path also prevents stale `.meteor/local/types` output
+from blocking sub-path imports during that transition.
 
 ### Existing TypeScript apps
 

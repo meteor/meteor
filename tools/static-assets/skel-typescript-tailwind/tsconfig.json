@@ -15,14 +15,14 @@
     "paths": {
       "/*": ["./*"],
       "meteor/react-meteor-data/suspense": [
-        "./.meteor/local/types/node_modules/package-types/react-meteor-data/package/os/suspense/react-meteor-data.d.ts",
-        "./.meteor/types/packages.d.ts"
+        "./.meteor/types/packages.d.ts",
+        "./.meteor/local/types/node_modules/package-types/react-meteor-data/package/os/suspense/react-meteor-data.d.ts"
       ],
       "meteor/*": [
         "./.meteor/types/packages/*",
         "./node_modules/@types/meteor/*",
-        "./.meteor/local/types/packages.d.ts",
-        "./.meteor/types/packages.d.ts"
+        "./.meteor/types/packages.d.ts",
+        "./.meteor/local/types/packages.d.ts"
       ]
     },
     "types": ["meteor", "mocha"]
