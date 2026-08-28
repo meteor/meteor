@@ -7,11 +7,12 @@
     "moduleResolution": "bundler",
     "paths": {
       "/*": ["*"], // support absolute /imports/* with a leading '/'
-      // Meteor's built-in type generator writes .meteor/types/packages.d.ts
-      // automatically on every build. @types/meteor is kept as a fallback.
+      // Meteor's built-in type generator writes per-package adapters and a
+      // sub-path barrel automatically. @types/meteor stays as a fallback.
       "meteor/*": [
-        ".meteor/types/packages.d.ts",
-        "node_modules/@types/meteor/*"
+        ".meteor/types/packages/*",
+        "node_modules/@types/meteor/*",
+        ".meteor/types/packages.d.ts"
       ]
     },
     "verbatimModuleSyntax": true // otherwise TS will remove imported components

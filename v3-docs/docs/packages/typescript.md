@@ -81,10 +81,11 @@ or locally:
 ```
 :::
 
-Types for Meteor core packages (`meteor/meteor`, `meteor/mongo`, …) are
-generated automatically — Meteor writes type declarations for all installed
-packages to `.meteor/types/` on every `meteor run` or `meteor build`, no
-extra package required.
+Types for Meteor core packages (`meteor/meteor`, `meteor/mongo`, …) can be
+generated automatically. Meteor writes declarations for installed packages to
+`.meteor/types/` on every `meteor run` or `meteor build`, except when the app
+lists `zodern:types` directly; Meteor 3.6 preserves that provider until it is
+removed.
 
 For a full walkthrough of enabling core-package types — including the
 `tsconfig.json` `paths` setup and the `meteor types` command — see the
@@ -109,8 +110,9 @@ the auto-generated Meteor package types looks like:
     "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        "./.meteor/types/packages.d.ts",
-        "./node_modules/@types/meteor/*"
+        "./.meteor/types/packages/*",
+        "./node_modules/@types/meteor/*",
+        "./.meteor/types/packages.d.ts"
       ]
     }
   }

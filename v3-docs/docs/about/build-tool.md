@@ -188,8 +188,9 @@ It is necessary to configure the TypeScript compiler with a `tsconfig.json` file
     "paths": {
       "/*": ["*"],
       "meteor/*": [
-        "./.meteor/types/packages.d.ts",
-        "./node_modules/@types/meteor/*"
+        "./.meteor/types/packages/*",
+        "./node_modules/@types/meteor/*",
+        "./.meteor/types/packages.d.ts"
       ]
     },
     "moduleResolution": "node",

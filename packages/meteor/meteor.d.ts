@@ -141,6 +141,28 @@ export namespace Meteor {
   }
   /** Error **/
 
+  /** @deprecated Legacy Blaze event aliases retained for @types/meteor interoperability. */
+  interface Event {
+    type: string;
+    target: HTMLElement;
+    currentTarget: HTMLElement;
+    which: number;
+    stopPropagation(): void;
+    stopImmediatePropagation(): void;
+    preventDefault(): void;
+    isPropagationStopped(): boolean;
+    isImmediatePropagationStopped(): boolean;
+    isDefaultPrevented(): boolean;
+  }
+  /** @deprecated Legacy Blaze event alias. */
+  interface EventHandlerFunction extends Function {
+    (event?: Event, templateInstance?: any): void;
+  }
+  /** @deprecated Legacy Blaze event map. */
+  interface EventMap {
+    [id: string]: EventHandlerFunction;
+  }
+
   /** Method **/
   interface MethodThisType {
     /** Access inside a method invocation. Boolean value, true if this invocation is a stub. */

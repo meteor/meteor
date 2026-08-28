@@ -9,6 +9,10 @@ export type UnionOmit<T, K extends keyof any> = T extends T
 
 export namespace Mongo {
 
+  type AsMongoDocument<T> = T extends NpmModuleMongodb.Document
+    ? T
+    : T & NpmModuleMongodb.Document;
+
   export type Selector<T> = NpmModuleMongodb.Filter<T>;
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
@@ -103,7 +107,7 @@ export namespace Mongo {
      * Constructor for a Collection
      * @param name The name of the collection. If null, creates an unmanaged (unsynchronized) local collection.
      */
-    new <T extends NpmModuleMongodb.Document, U = T>(
+    new <T = NpmModuleMongodb.Document, U = T>(
       name: string | null,
       options?: CollectionOptions<T, U>
     ): Collection<T, U>;
@@ -118,14 +122,14 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
 
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
@@ -175,7 +179,7 @@ export namespace Mongo {
      */
     getStaticMethods(): Map<string, Function>;
   }
-  interface Collection<T extends NpmModuleMongodb.Document, U = T> {
+  interface Collection<T = NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T, U> = undefined>(options: {
       insert?:
         | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
@@ -305,7 +309,7 @@ export namespace Mongo {
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
      */
-    rawCollection(): NpmModuleMongodb.Collection<T>;
+    rawCollection(): NpmModuleMongodb.Collection<AsMongoDocument<T>>;
     /**
      * Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
@@ -569,14 +573,14 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
     
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T extends NpmModuleMongodb.Document = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.

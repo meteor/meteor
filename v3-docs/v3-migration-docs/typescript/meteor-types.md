@@ -1,6 +1,6 @@
 # Types for Meteor 3
 
-Recent Meteor 3 releases generate TypeScript type declarations for all installed packages automatically on every `meteor run` or `meteor build` — no extra package is needed. The declarations are written to `.meteor/types/` (the generator adds a `.gitignore` there, so they stay out of version control).
+Recent Meteor 3 releases can generate TypeScript type declarations for all installed packages on every `meteor run` or `meteor build`. The declarations are written to `.meteor/types/` (the generator adds a `.gitignore` there, so they stay out of version control). Meteor 3.6 preserves a directly installed `zodern:types` provider until the project removes it.
 
 To get types for Meteor core packages working in your IDE, you need to have a valid `tsconfig.json` file in your project root, including the following:
 
@@ -10,8 +10,9 @@ To get types for Meteor core packages working in your IDE, you need to have a va
     "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        "./.meteor/types/packages.d.ts",
-        "./node_modules/@types/meteor/*"
+        "./.meteor/types/packages/*",
+        "./node_modules/@types/meteor/*",
+        "./.meteor/types/packages.d.ts"
       ]
     }
   }
