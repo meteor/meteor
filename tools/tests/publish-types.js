@@ -1,4 +1,11 @@
 var selftest = require('../tool-testing/selftest.js');
+var files = require('../fs/files');
+var {
+  addTypeDeclarationSources
+} = require('../packaging/package-source-bundle.js');
+var {
+  usePrebuiltTypeScriptDeclarations
+} = require('../packaging/typescript-declarations.js');
 
 var Sandbox = selftest.Sandbox;
 
@@ -59,4 +66,104 @@ selftest.define('publish TypeScript-authored package types', async function () {
   selftest.expectTrue(!!mainJsonAgain);
   await selftest.expectEqual(mainJsonAgain.typesDir, '.types-build');
   await selftest.expectEqual(mainJsonAgain.typesEntry, '.types-build/index.d.ts');
+});
+
+selftest.define('prebuilt declaration source bundle roundtrip', async function () {
+  const packageDir = files.mkdtemp('prebuilt-types-package');
+  const typesDir = files.pathJoin(packageDir, '.types-build');
+  files.mkdir_p(files.pathJoin(typesDir, 'client'));
+
+  files.writeFile(
+    files.pathJoin(packageDir, 'package.js'),
+    "Package.onUse(api => api.types('index.ts'));\n"
+  );
+  files.writeFile(
+    files.pathJoin(typesDir, 'index.d.ts'),
+    'export declare const value: 42;\n'
+  );
+  files.writeFile(
+    files.pathJoin(typesDir, 'index.d.ts.map'),
+    '{"version":3}\n'
+  );
+  files.writeFile(
+    files.pathJoin(typesDir, 'client', 'hooks.d.ts'),
+    'export declare function useValue(): 42;\n'
+  );
+  files.writeFile(
+    files.pathJoin(typesDir, '.tsbuildinfo'),
+    'compiler state must not be published\n'
+  );
+
+  const collected = addTypeDeclarationSources({
+    packageDir,
+    typesDir: '.types-build',
+    sourceFiles: ['package.js']
+  });
+  selftest.expectTrue(collected.ok);
+  selftest.expectTrue(
+    collected.sourceFiles.includes('.types-build/index.d.ts')
+  );
+  selftest.expectTrue(
+    collected.sourceFiles.includes('.types-build/client/hooks.d.ts')
+  );
+  selftest.expectTrue(
+    ! collected.sourceFiles.includes('.types-build/.tsbuildinfo')
+  );
+
+  const stagedDir = files.mkdtemp('prebuilt-types-source');
+  collected.sourceFiles.forEach(function (relativePath) {
+    files.copyFile(
+      files.pathJoin(packageDir, relativePath),
+      files.pathJoin(stagedDir, relativePath)
+    );
+  });
+
+  const tarballDir = files.mkdtemp('prebuilt-types-tarball');
+  const tarball = files.pathJoin(tarballDir, 'source.tgz');
+  await files.createTarball(stagedDir, tarball);
+
+  const extractedDir = files.mkdtemp('prebuilt-types-extracted');
+  await files.extractTarGz(files.readFile(tarball), extractedDir);
+
+  // The extracted source intentionally has no tsconfig.json, .ts entry, or
+  // compiler state. publish-for-arch must be able to prepare its metadata
+  // solely from the authoritative declarations in the source bundle.
+  const extractedPackageSource = {
+    typesDir: null,
+    typesEntry: './index.ts',
+    typesModules: { hooks: './client/hooks.tsx' }
+  };
+  const rewrite = usePrebuiltTypeScriptDeclarations(
+    extractedPackageSource, extractedDir);
+  selftest.expectTrue(rewrite.ok);
+  selftest.expectEqual(extractedPackageSource, {
+    typesDir: '.types-build',
+    typesEntry: '.types-build/index.d.ts',
+    typesModules: { hooks: '.types-build/client/hooks.d.ts' }
+  });
+  selftest.expectEqual(
+    files.readFile(
+      files.pathJoin(extractedDir, '.types-build', 'index.d.ts'),
+      'utf8'
+    ),
+    files.readFile(files.pathJoin(typesDir, 'index.d.ts'), 'utf8')
+  );
+
+  files.rm_recursive(
+    files.pathJoin(extractedDir, '.types-build', 'client', 'hooks.d.ts')
+  );
+  const incompletePackageSource = {
+    typesDir: null,
+    typesEntry: 'index.ts',
+    typesModules: { hooks: 'client/hooks.tsx' }
+  };
+  const incomplete = usePrebuiltTypeScriptDeclarations(
+    incompletePackageSource, extractedDir);
+  selftest.expectTrue(! incomplete.ok);
+  selftest.expectEqual(incomplete.missing, [{
+    label: 'modules.hooks',
+    sourcePath: 'client/hooks.tsx',
+    declarationPath: '.types-build/client/hooks.d.ts'
+  }]);
+  selftest.expectTrue(incompletePackageSource.typesDir === null);
 });

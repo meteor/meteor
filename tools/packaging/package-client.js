@@ -12,6 +12,9 @@ var catalog = require('./catalog/catalog.js');
 var projectContextModule = require('../project-context.js');
 var colonConverter = require('../utils/colon-converter.js');
 var Profile = require('../tool-env/profile').Profile;
+var {
+  addTypeDeclarationSources
+} = require('./package-source-bundle.js');
 
 import { requestGarbageCollection } from "../utils/gc.js";
 
@@ -741,6 +744,21 @@ exports.publishPackage = async function (options) {
     }
     sourceFiles = _.union(sourceFiles, testSourceFiles);
   }
+
+  // Directory-mode declarations are part of the package's source contract.
+  // Include them explicitly rather than relying on their incidental presence
+  // in isopack watch sets. In particular, publish-for-arch must reuse the
+  // exact .types-build output produced by the original publish.
+  var declarationSources = addTypeDeclarationSources({
+    packageDir: packageSource.sourceRoot,
+    typesDir: isopack.typesDir,
+    sourceFiles: sourceFiles
+  });
+  if (! declarationSources.ok) {
+    buildmessage.error(declarationSources.error);
+    return;
+  }
+  sourceFiles = declarationSources.sourceFiles;
 
   var sourceBundleResult;
   await buildmessage.enterJob("bundling source for " + name, async function () {
