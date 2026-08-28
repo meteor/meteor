@@ -36,9 +36,7 @@ expectTypeOf(Log._getCallerDetails).returns.toEqualTypeOf<{
 expectTypeOf(Log.parse).parameters.toEqualTypeOf<[object | string]>();
 expectTypeOf(Log.parse).returns.toEqualTypeOf<object>();
 
-expectTypeOf(Log.format)
-  .parameter(1)
-  .toEqualTypeOf<{ color: true }>();
+expectTypeOf(Log.format).parameter(1).toEqualTypeOf<{ color: true }>();
 expectTypeOf(Log.format).returns.toEqualTypeOf<object | string>();
 
 expectTypeOf(Log.objFromText).parameter(1).toEqualTypeOf<object>();
