@@ -204,6 +204,8 @@ export async function generateTypes({
 
   if (needsPackageTypesLink) {
     await ensurePackageTypesLink(typesDir, packagesTypesDir);
+  } else {
+    await removePackageTypesLink(typesDir);
   }
 
   await removeStaleOutput(packagesTypesDir, entries);
@@ -634,6 +636,19 @@ async function ensurePackageTypesLink(typesDir, packagesTypesDir) {
   Console.debug(
     `[types] Linked ${PACKAGE_TYPES_LINK_NAME} -> ${packagesTypesDir}`
   );
+}
+
+/** Remove the global compatibility link once no current package needs it. */
+async function removePackageTypesLink(typesDir) {
+  const linkPath = files.pathJoin(
+    typesDir,
+    NPM_LINK_NAME,
+    PACKAGE_TYPES_LINK_NAME
+  );
+  if (!readLinkStatus(linkPath).exists) return;
+
+  await files.rm_recursive(linkPath);
+  Console.debug(`[types] Removed stale ${PACKAGE_TYPES_LINK_NAME} link`);
 }
 
 /**
