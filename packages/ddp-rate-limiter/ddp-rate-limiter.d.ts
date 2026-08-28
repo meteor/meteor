@@ -1,8 +1,8 @@
-export namespace DDPRateLimiter {
-  type MatcherPredicate<T> = {
-    bivarianceHack(value: T): boolean | Promise<boolean>;
-  }["bivarianceHack"];
+type MatcherPredicate<T> = {
+  bivarianceHack(value: T): boolean | Promise<boolean>;
+}["bivarianceHack"];
 
+export namespace DDPRateLimiter {
   export interface RateLimitResult {
     allowed: boolean;
     timeToReset: number;

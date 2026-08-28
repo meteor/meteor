@@ -4,7 +4,7 @@ export interface RateLimiterInput {
   userId?: string | null;
   connectionId?: string;
   clientAddress?: string;
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 export interface RateLimiterCheckResult {
@@ -14,7 +14,11 @@ export interface RateLimiterCheckResult {
   ruleId?: string;
 }
 
-export type RateLimiterMatcherValue<V> = V | ((value: V) => boolean) | null;
+type RateLimiterPredicate<V> = {
+  bivarianceHack(value: V): boolean | Promise<boolean>;
+}["bivarianceHack"];
+
+export type RateLimiterMatcherValue<V> = V | RateLimiterPredicate<V> | null;
 
 export type RateLimiterMatcher<Input extends RateLimiterInput = RateLimiterInput> = {
   [K in keyof Input]?: RateLimiterMatcherValue<Input[K]>;
@@ -55,13 +59,13 @@ export class RateLimiter {
 
   /** Check the given rules against an input (lower-level than `check`). */
   checkRules<Input extends RateLimiterInput = RateLimiterInput>(
-    rules: unknown[],
+    rules: any[],
     input: Input,
   ): RateLimiterCheckResult;
 
   /** Increment counters for every rule in `rules` that matches this input. */
   incrementRules<Input extends RateLimiterInput = RateLimiterInput>(
-    rules: unknown[],
+    rules: any[],
     input: Input,
   ): void;
 

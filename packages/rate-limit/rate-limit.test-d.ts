@@ -26,7 +26,7 @@ expectTypeOf<RateLimiterCheckResult>().toEqualTypeOf<{
 
 // Matcher value variants
 expectTypeOf<RateLimiterMatcherValue<string>>().toEqualTypeOf<
-  string | ((value: string) => boolean) | null
+  string | ((value: string) => boolean | Promise<boolean>) | null
 >();
 
 // Matcher defaults to base input
@@ -56,6 +56,10 @@ interface MyInput extends RateLimiterInput {
 }
 rl.addRule<MyInput>({ tenant: (t) => t === "x" }, 1, 2, (reply) => {
   expectTypeOf(reply).toEqualTypeOf<RateLimiterCheckResult>();
+});
+rl.addRule({
+  type: async (type: "method" | "subscription") => type === "method",
+  userId: (userId: string) => userId.length > 0,
 });
 
 // check / increment / removeRule
