@@ -29,8 +29,10 @@ expectTypeOf<Meteor.TypedError>().toBeObject();
 expectTypeOf(new Meteor.TypedError("message", "type")).toMatchTypeOf<
   Meteor.TypedError
 >();
+expectTypeOf<Meteor.TypedErrorStatic>().toBeConstructibleWith("message", "type");
 
 declare const legacyEvent: Meteor.Event;
+expectTypeOf<Meteor.Event>().toBeObject();
 expectTypeOf(legacyEvent.type).toBeString();
 expectTypeOf<Meteor.EventHandlerFunction>().toBeFunction();
 expectTypeOf<Meteor.EventMap>().toMatchTypeOf<Record<string, Function>>();

@@ -9,6 +9,7 @@ const legacyConfiguration: Configuration = {
   appId: "app-id",
   secret: "secret",
 };
+expectTypeOf<Configuration>().toBeObject();
 expectTypeOf(legacyConfiguration.appId).toEqualTypeOf<string>();
 expectTypeOf<Configuration["someArbitraryServiceKey"]>().toBeAny();
 

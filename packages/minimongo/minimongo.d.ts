@@ -35,7 +35,7 @@ export interface MinimongoFindOptions<T = Record<string, unknown>> {
   transform?: ((doc: T) => T) | null;
 }
 
-export class Cursor<T extends { _id?: MinimongoId } = Record<string, unknown> & { _id?: MinimongoId }> {
+export class Cursor<T = any> {
   collection: LocalCollection<T>;
 
   fetch(): T[];
@@ -60,7 +60,7 @@ export class Cursor<T extends { _id?: MinimongoId } = Record<string, unknown> & 
   [Symbol.asyncIterator](): AsyncIterator<T>;
 }
 
-export class LocalCollection<T extends { _id?: MinimongoId } = Record<string, unknown> & { _id?: MinimongoId }> {
+export class LocalCollection<T = any> {
   constructor(name?: string);
 
   name: string | undefined;

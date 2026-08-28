@@ -7,12 +7,11 @@ export type UnionOmit<T, K extends keyof any> = T extends T
   ? Pick<T, Exclude<keyof T, K>>
   : never;
 
+type AsMongoDocument<T> = T extends NpmModuleMongodb.Document
+  ? T
+  : T & NpmModuleMongodb.Document;
+
 export namespace Mongo {
-
-  type AsMongoDocument<T> = T extends NpmModuleMongodb.Document
-    ? T
-    : T & NpmModuleMongodb.Document;
-
   export type Selector<T> = NpmModuleMongodb.Filter<T>;
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
