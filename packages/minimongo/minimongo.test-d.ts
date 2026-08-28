@@ -14,6 +14,10 @@ import type {
   MinimongoFindOptions,
 } from "./minimongo";
 
+type ForwardedLocalCollection<T> = LocalCollection<T>;
+declare const forwardedLocal: ForwardedLocalCollection<unknown>;
+expectTypeOf(forwardedLocal).toMatchTypeOf<LocalCollection<unknown>>();
+
 expectTypeOf<MinimongoObserveCallbacks>().toBeObject();
 expectTypeOf<MinimongoObserveChangesCallbacks>().toBeObject();
 expectTypeOf<MinimongoObserveHandle>().toBeObject();
