@@ -797,6 +797,25 @@ describe("directory mode – isopack.typesDir", () => {
     expect(files.symlinkWithOverwrite).not.toHaveBeenCalled();
   });
 
+  test("removes a stale symlink when no package uses directory mode", async () => {
+    files.__symlinks.set(PKG_TYPES_LINK, PKGS_DIR);
+    await run(
+      {
+        random: makeIsopack({
+          typesEntry: "random.d.ts",
+          resources: [makeResource("random.d.ts", "export const x: 1;")],
+        }),
+      },
+      ["random"]
+    );
+
+    expect(files.rm_recursive).toHaveBeenCalledWith(PKG_TYPES_LINK);
+    expect(files.__symlinks.has(PKG_TYPES_LINK)).toBe(false);
+    expect(writtenContentAt(`${PKGS_DIR}/random/index.d.ts`)).toContain(
+      "declare module 'meteor/random'"
+    );
+  });
+
   test("stale cleanup keeps the copied folder and prunes dropped stubs", async () => {
     files.readdir.mockImplementation((p) => {
       if (p === PKGS_DIR) return ["react-meteor-data"];
