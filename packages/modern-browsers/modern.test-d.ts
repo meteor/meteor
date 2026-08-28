@@ -27,7 +27,7 @@ expectTypeOf(
 // getMinimumBrowserVersions
 expectTypeOf(getMinimumBrowserVersions).parameters.toEqualTypeOf<[]>();
 expectTypeOf(getMinimumBrowserVersions).returns.toEqualTypeOf<
-  Record<string, { version: number | number[]; source: string }>
+  Record<string, Record<string, number | number[]>>
 >();
 
 // calculateHashOfMinimumVersions

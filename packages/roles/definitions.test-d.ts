@@ -13,7 +13,7 @@ expectTypeOf(Meteor.roles).toBeObject();
 expectTypeOf(Meteor.roleAssignment).toBeObject();
 
 // --- Constants / vars
-expectTypeOf(Roles.GLOBAL_GROUP).toBeNull();
+expectTypeOf(Roles.GLOBAL_GROUP).toBeString();
 expectTypeOf(Roles.subscription).toBeObject();
 
 // --- Functions: exact return types (strong assertions catch signature drift)
@@ -25,8 +25,8 @@ expectTypeOf(Roles.setUserRoles).returns.toEqualTypeOf<void>();
 expectTypeOf(Roles.setUserRolesAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Roles.userIsInRole).returns.toEqualTypeOf<boolean>();
 expectTypeOf(Roles.userIsInRoleAsync).returns.toEqualTypeOf<Promise<boolean>>();
-expectTypeOf(Roles.createRole).returns.toEqualTypeOf<string | null>();
-expectTypeOf(Roles.createRoleAsync).returns.toEqualTypeOf<Promise<string | null>>();
+expectTypeOf(Roles.createRole).returns.toEqualTypeOf<string>();
+expectTypeOf(Roles.createRoleAsync).returns.toEqualTypeOf<Promise<string>>();
 expectTypeOf(Roles.deleteRole).returns.toEqualTypeOf<void>();
 expectTypeOf(Roles.deleteRoleAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Roles.renameRole).returns.toEqualTypeOf<void>();

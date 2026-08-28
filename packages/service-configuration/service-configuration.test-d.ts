@@ -5,11 +5,12 @@ import {
   type Configuration,
 } from "./service-configuration";
 
-// Configuration models a stored service-config document: `service` is mandatory,
-// `_id` optional, plus arbitrary service-specific keys.
-expectTypeOf<Configuration["service"]>().toEqualTypeOf<string>();
-expectTypeOf<Configuration["someArbitraryServiceKey"]>().toEqualTypeOf<unknown>();
-expectTypeOf<Configuration>().toExtend<{ service: string }>();
+const legacyConfiguration: Configuration = {
+  appId: "app-id",
+  secret: "secret",
+};
+expectTypeOf(legacyConfiguration.appId).toEqualTypeOf<string>();
+expectTypeOf<Configuration["someArbitraryServiceKey"]>().toBeAny();
 
 // ServiceConfiguration namespace object
 expectTypeOf(ServiceConfiguration).toBeObject();

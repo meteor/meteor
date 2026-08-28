@@ -1,4 +1,5 @@
 import { expectTypeOf } from "expect-type";
+import { Mongo } from "meteor/mongo";
 import {
   Cursor,
   LocalCollection,
@@ -23,3 +24,16 @@ expectTypeOf(LocalCollection).toBeObject();
 expectTypeOf(Matcher).toBeObject();
 expectTypeOf(Sorter).toBeObject();
 expectTypeOf(Minimongo).toBeObject();
+
+interface ObjectIdDocument {
+  _id?: Mongo.ObjectID;
+  name: string;
+}
+
+const objectIdCollection = new LocalCollection<ObjectIdDocument>("objects");
+expectTypeOf(objectIdCollection.find()).toEqualTypeOf<
+  Cursor<ObjectIdDocument>
+>();
+expectTypeOf(objectIdCollection.insert({ name: "one" })).toEqualTypeOf<
+  string | Mongo.ObjectID
+>();

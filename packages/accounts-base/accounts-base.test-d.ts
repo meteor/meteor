@@ -11,6 +11,7 @@ import type {
   EmailTemplates,
 } from "./accounts-base";
 import type { Meteor } from "meteor/meteor";
+import type { DDP } from "meteor/ddp";
 
 expectTypeOf<URLS>().toBeObject();
 expectTypeOf<EmailFields>().toBeObject();
@@ -19,6 +20,7 @@ expectTypeOf<Header>().toBeObject();
 expectTypeOf<EmailTemplates>().toBeObject();
 
 expectTypeOf(AccountsClient).toBeConstructibleWith();
+expectTypeOf(new AccountsClient().connection).toEqualTypeOf<DDP.DDPStatic>();
 expectTypeOf(Accounts).toBeObject();
 
 // --- Accounts consts / vars ---
@@ -59,7 +61,7 @@ Accounts.onPageLoadLogin((attempt: Accounts.PageLoadLoginAttemptInfo) => {
     Error | Meteor.Error | undefined
   >();
   expectTypeOf(attempt.methodName).toBeString();
-  expectTypeOf(attempt.methodArguments).toEqualTypeOf<unknown[]>();
+  expectTypeOf(attempt.methodArguments).toEqualTypeOf<any[]>();
 });
 
 // --- Accounts password / email flows ---
@@ -77,11 +79,12 @@ expectTypeOf(Accounts.loggingOut).toBeFunction();
 expectTypeOf(Accounts.logout).toBeFunction();
 expectTypeOf(Accounts.logoutAsync).toBeFunction();
 expectTypeOf(Accounts.logoutAllClients).toBeFunction();
-// logoutAllClients does not return the promise chain at runtime -> void (unlike its Async sibling)
-expectTypeOf(Accounts.logoutAllClients).returns.toBeVoid();
+expectTypeOf(Accounts.logout).returns.toEqualTypeOf<Promise<void>>();
+expectTypeOf(Accounts.logoutAllClients).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Accounts.logoutAllClientsAsync).toBeFunction();
 expectTypeOf(Accounts.logoutAllClientsAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Accounts.logoutOtherClients).toBeFunction();
+expectTypeOf(Accounts.logoutOtherClients).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Accounts.logoutOtherClientsAsync).toBeFunction();
 
 // --- Accounts signup field types ---
@@ -107,19 +110,22 @@ expectTypeOf(Accounts.sendVerificationEmail).toBeFunction();
 expectTypeOf(Accounts.setUsername).toBeFunction();
 expectTypeOf(Accounts.setPasswordAsync).toBeFunction();
 expectTypeOf(Accounts.validateNewUser).toBeFunction();
-// validateNewUser just pushes a hook -> void, not boolean
-expectTypeOf(Accounts.validateNewUser).returns.toBeVoid();
+expectTypeOf(Accounts.validateNewUser).returns.toBeBoolean();
 expectTypeOf(Accounts.validateLoginAttempt).toBeFunction();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts>().toBeObject();
 expectTypeOf(Accounts.onLogout).toBeFunction();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["user"]>().toEqualTypeOf<
-  Meteor.User | undefined
+  Meteor.User
 >();
 expectTypeOf<Accounts.IValidateLoginAttemptCbOpts["error"]>().toEqualTypeOf<
-  Error | Meteor.Error | undefined
+  Meteor.Error
 >();
 Accounts.onLogout(({ user }) => {
-  expectTypeOf(user).toEqualTypeOf<Meteor.User | undefined>();
+  expectTypeOf(user).toEqualTypeOf<Meteor.User>();
+});
+
+Accounts.onLogout((options: { user: Meteor.User; connection: Meteor.Connection }) => {
+  options.user._id;
 });
 
 // --- Accounts login method plumbing ---

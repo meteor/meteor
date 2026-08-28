@@ -3,13 +3,13 @@ import { Mongo } from 'meteor/mongo';
 export interface Configuration {
   _id?: string;
   /** The login service this configuration is for (e.g. "google", "facebook"). */
-  service: string;
-  appId?: string;
-  secret?: string;
+  service?: string;
+  appId: string;
+  secret: string;
   clientId?: string;
   loginStyle?: string;
   /** Service-specific configuration keys. */
-  [key: string]: unknown;
+  [key: string]: any;
 }
 
 declare class ConfigError extends Error {

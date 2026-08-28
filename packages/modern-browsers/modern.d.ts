@@ -7,6 +7,6 @@ export declare function setMinimumBrowserVersions(
   source?: string
 ): void;
 
-export declare function getMinimumBrowserVersions(): Record<string, { version: number | number[]; source: string }>;
+export declare function getMinimumBrowserVersions(): Record<string, Record<string, number | number[]>>;
 
 export declare function calculateHashOfMinimumVersions(): string;

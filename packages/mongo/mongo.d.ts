@@ -13,7 +13,7 @@ export namespace Mongo {
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
-  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: string | ObjectID | NpmModuleMongodb.ObjectId };
+  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
 
   export type SortSpecifier = NpmModuleMongodb.Sort;
 
@@ -21,7 +21,7 @@ export namespace Mongo {
     [id: string]: Number;
   }
 
-  export type Transform<T, U = T> = ((doc: T) => U) | null | undefined;
+  export type Transform<T, U = any> = ((doc: T) => U) | null | undefined;
 
   export type Options<T> = {
     /** Sort order (default: natural order) */
@@ -56,7 +56,7 @@ export namespace Mongo {
   /**
    * Configuration options for Mongo Collection constructor
    */
-  interface CollectionOptions<T = NpmModuleMongodb.Document, U = T> {
+  interface CollectionOptions<T = any, U = T> {
     /**
      * The server connection that will manage this collection. Uses the default connection if not specified. 
      * Pass the return value of calling `DDP.connect` to specify a different server. Pass `null` to specify 
@@ -89,12 +89,12 @@ export namespace Mongo {
     
     // Internal options (from normalizeOptions function)
     /** @internal */
-    _driver?: Record<string, unknown>;
+    _driver?: any;
     /** @internal */
     _preventAutopublish?: boolean;
     
     // Allow additional properties for extensibility
-    [key: string]: unknown;
+    [key: string]: any;
   }
 
   var Collection: CollectionStatic;
@@ -108,9 +108,10 @@ export namespace Mongo {
       options?: CollectionOptions<T, U>
     ): Collection<T, U>;
 
-    // NOTE: getCollection is NOT a static on the Collection constructor at
-    // runtime — it lives on the Mongo namespace object (see `Mongo.getCollection`
-    // below). It was previously declared here as a phantom static.
+    /** @deprecated Use `Mongo.getCollection`. Retained for Meteor 3.x types. */
+    getCollection<
+      TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
+    >(name: string): TCollection;
 
     // Collection Extensions API
     /**
@@ -184,7 +185,7 @@ export namespace Mongo {
             userId: string,
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
-            modifier: Modifier<T>
+            modifier: any
           ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
@@ -219,7 +220,7 @@ export namespace Mongo {
             userId: string,
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
-            modifier: Modifier<T>
+            modifier: any
           ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
@@ -350,7 +351,7 @@ export namespace Mongo {
          * Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to
          * modify in an array field.
          */
-        arrayFilters?: NpmModuleMongodb.Document[] | undefined;
+        arrayFilters?: { [identifier: string]: any }[] | undefined;
       },
       callback?: Function
     ): number;
@@ -372,7 +373,7 @@ export namespace Mongo {
          * Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to
          * modify in an array field.
          */
-        arrayFilters?: NpmModuleMongodb.Document[] | undefined;
+        arrayFilters?: { [identifier: string]: any }[] | undefined;
       },
       callback?: Function
     ): Promise<number>;
@@ -485,7 +486,7 @@ export namespace Mongo {
      */
     forEach(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => void,
-      thisArg?: unknown
+      thisArg?: any
     ): void;
     /**
      * Call `callback` once for each matching document, sequentially and
@@ -495,7 +496,7 @@ export namespace Mongo {
      */
     forEachAsync(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => void,
-      thisArg?: unknown
+      thisArg?: any
     ): Promise<void>;
     /**
      * Map callback over all matching documents. Returns an Array.
@@ -504,7 +505,7 @@ export namespace Mongo {
      */
     map<M>(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => M,
-      thisArg?: unknown
+      thisArg?: any
     ): Array<M>;
     /**
      * Map callback over all matching documents. Returns an Array.
@@ -513,7 +514,7 @@ export namespace Mongo {
      */
     mapAsync<M>(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => M,
-      thisArg?: unknown
+      thisArg?: any
     ): Promise<Array<M>>;
     /**
      * Watch a query. Receive callbacks as the result set changes.
@@ -633,31 +634,31 @@ export namespace Mongo {
    * @param name Name of your collection as it was defined with `new Mongo.Collection()`.
    * @returns The collection instance or undefined if not found
    */
-  function getCollection<T extends Collection<NpmModuleMongodb.Document> | undefined = Collection<NpmModuleMongodb.Document> | undefined>(name: string): T;
+  function getCollection<T extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined>(name: string): T;
 
   /**
    * A record of all defined Mongo.Collection instances, indexed by collection name.
    * @internal
    */
-  var _collections: Map<string, Collection<NpmModuleMongodb.Document>>;
+  var _collections: Map<string, Collection<any, any>>;
 
-  function setConnectionOptions(options: Record<string, unknown>): void;
+  function setConnectionOptions(options: any): void;
 }
 
 export namespace Mongo {
-  interface AllowDenyOptions<T = NpmModuleMongodb.Document> {
+  interface AllowDenyOptions<T = any> {
     insert?: ((userId: string, doc: T) => boolean) | undefined;
     update?:
       | ((
           userId: string,
           doc: T,
           fieldNames: string[],
-          modifier: Modifier<T>
+          modifier: any
         ) => boolean)
       | undefined;
     remove?: ((userId: string, doc: T) => boolean) | undefined;
     fetch?: string[] | undefined;
-    transform?: ((doc: T) => unknown) | null | undefined;
+    transform?: Function | null | undefined;
   }
 }
 

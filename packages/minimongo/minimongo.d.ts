@@ -1,22 +1,24 @@
 import { Mongo } from 'meteor/mongo';
 
+export type MinimongoId = string | Mongo.ObjectID;
+
 export interface MinimongoObserveCallbacks<T = Record<string, unknown>> {
   added?: (document: T) => void;
-  addedAt?: (document: T, atIndex: number, before: string | null) => void;
+  addedAt?: (document: T, atIndex: number, before: MinimongoId | null) => void;
   changed?: (newDocument: T, oldDocument: T) => void;
   changedAt?: (newDocument: T, oldDocument: T, atIndex: number) => void;
-  movedTo?: (document: T, fromIndex: number, toIndex: number, before: string | null) => void;
+  movedTo?: (document: T, fromIndex: number, toIndex: number, before: MinimongoId | null) => void;
   removed?: (oldDocument: T) => void;
   removedAt?: (oldDocument: T, atIndex: number) => void;
   _suppress_initial?: boolean;
 }
 
 export interface MinimongoObserveChangesCallbacks<T = Record<string, unknown>> {
-  added?: (id: string, fields: Partial<T>) => void;
-  addedBefore?: (id: string, fields: Partial<T>, before: string | null) => void;
-  changed?: (id: string, fields: Partial<T>) => void;
-  movedBefore?: (id: string, before: string | null) => void;
-  removed?: (id: string) => void;
+  added?: (id: MinimongoId, fields: Partial<T>) => void;
+  addedBefore?: (id: MinimongoId, fields: Partial<T>, before: MinimongoId | null) => void;
+  changed?: (id: MinimongoId, fields: Partial<T>) => void;
+  movedBefore?: (id: MinimongoId, before: MinimongoId | null) => void;
+  removed?: (id: MinimongoId) => void;
 }
 
 export interface MinimongoObserveHandle {
@@ -33,7 +35,7 @@ export interface MinimongoFindOptions<T = Record<string, unknown>> {
   transform?: ((doc: T) => T) | null;
 }
 
-export class Cursor<T extends { _id?: string } = Record<string, unknown> & { _id?: string }> {
+export class Cursor<T extends { _id?: MinimongoId } = Record<string, unknown> & { _id?: MinimongoId }> {
   collection: LocalCollection<T>;
 
   fetch(): T[];
@@ -58,7 +60,7 @@ export class Cursor<T extends { _id?: string } = Record<string, unknown> & { _id
   [Symbol.asyncIterator](): AsyncIterator<T>;
 }
 
-export class LocalCollection<T extends { _id?: string } = Record<string, unknown>> {
+export class LocalCollection<T extends { _id?: MinimongoId } = Record<string, unknown> & { _id?: MinimongoId }> {
   constructor(name?: string);
 
   name: string | undefined;
@@ -69,8 +71,8 @@ export class LocalCollection<T extends { _id?: string } = Record<string, unknown
   findOne(selector?: Mongo.Selector<T> | Mongo.ObjectID | string, options?: MinimongoFindOptions<T>): T | undefined;
   findOneAsync(selector?: Mongo.Selector<T> | Mongo.ObjectID | string, options?: MinimongoFindOptions<T>): Promise<T | undefined>;
 
-  insert(doc: T, callback?: (err: Error | null, id?: string) => void): string;
-  insertAsync(doc: T, callback?: (err: Error | null, id?: string) => void): Promise<string>;
+  insert(doc: T, callback?: (err: Error | null, id?: MinimongoId) => void): MinimongoId;
+  insertAsync(doc: T, callback?: (err: Error | null, id?: MinimongoId) => void): Promise<MinimongoId>;
 
   update(
     selector: Mongo.Selector<T> | Mongo.ObjectID | string,
@@ -90,15 +92,15 @@ export class LocalCollection<T extends { _id?: string } = Record<string, unknown
     selector: Mongo.Selector<T> | Mongo.ObjectID | string,
     modifier: Mongo.Modifier<T>,
     options?: { multi?: boolean },
-    callback?: (err: Error | null, result?: { numberAffected?: number; insertedId?: string }) => void
-  ): { numberAffected?: number; insertedId?: string };
+    callback?: (err: Error | null, result?: { numberAffected?: number; insertedId?: MinimongoId }) => void
+  ): { numberAffected?: number; insertedId?: MinimongoId };
 
   upsertAsync(
     selector: Mongo.Selector<T> | Mongo.ObjectID | string,
     modifier: Mongo.Modifier<T>,
     options?: { multi?: boolean },
-    callback?: (err: Error | null, result?: { numberAffected?: number; insertedId?: string }) => void
-  ): Promise<{ numberAffected?: number; insertedId?: string }>;
+    callback?: (err: Error | null, result?: { numberAffected?: number; insertedId?: MinimongoId }) => void
+  ): Promise<{ numberAffected?: number; insertedId?: MinimongoId }>;
 
   remove(selector: Mongo.Selector<T> | Mongo.ObjectID | string, callback?: (err: Error | null, numRemoved?: number) => void): number;
   removeAsync(selector: Mongo.Selector<T> | Mongo.ObjectID | string, callback?: (err: Error | null, numRemoved?: number) => void): Promise<number>;
@@ -111,7 +113,7 @@ export class LocalCollection<T extends { _id?: string } = Record<string, unknown
   resumeObserversServer(): Promise<void>;
 
   saveOriginals(): void;
-  retrieveOriginals(): Map<string, T | undefined>;
+  retrieveOriginals(): Map<MinimongoId, T | undefined>;
 }
 
 export class Matcher<T = Record<string, unknown>> {
