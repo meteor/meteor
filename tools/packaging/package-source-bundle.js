@@ -9,12 +9,7 @@ const DECLARATION_FILE_PATTERN = /\.d\.ts(?:\.map)?$/;
  * bundle instead of relying on their incidental presence in isopack watch
  * sets. Returns package-root-relative, standard-format paths.
  */
-function addTypeDeclarationSources({
-  packageDir,
-  typesDir,
-  sourceFiles,
-  fileSystem = files,
-}) {
+function addTypeDeclarationSources({ packageDir, typesDir, sourceFiles, fileSystem = files }) {
   if (!typesDir) {
     return {
       ok: true,
@@ -28,8 +23,7 @@ function addTypeDeclarationSources({
     return {
       ok: false,
       error:
-        `api.types(): declaration directory "${typesDir}" resolves outside ` +
-        "the package root.",
+        `api.types(): declaration directory "${typesDir}" resolves outside ` + "the package root.",
     };
   }
 
@@ -42,9 +36,7 @@ function addTypeDeclarationSources({
         visit(absolutePath);
       } else if (entry.isFile() && DECLARATION_FILE_PATTERN.test(entry.name)) {
         declarationSources.push(
-          fileSystem.convertToStandardPath(
-            fileSystem.pathRelative(packageDir, absolutePath)
-          )
+          fileSystem.convertToStandardPath(fileSystem.pathRelative(packageDir, absolutePath)),
         );
       }
     }
@@ -65,9 +57,7 @@ function addTypeDeclarationSources({
   if (!declarationSources.some((path) => path.endsWith(".d.ts"))) {
     return {
       ok: false,
-      error:
-        `api.types(): declaration directory "${typesDir}" contains no ` +
-        ".d.ts files.",
+      error: `api.types(): declaration directory "${typesDir}" contains no ` + ".d.ts files.",
     };
   }
 

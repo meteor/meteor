@@ -2,9 +2,7 @@
 
 jest.mock("../fs/files", () => ({}));
 
-const {
-  addTypeDeclarationSources,
-} = require("./package-source-bundle");
+const { addTypeDeclarationSources } = require("./package-source-bundle");
 
 function dir(name) {
   return {
@@ -47,10 +45,7 @@ describe("package source declaration collection", () => {
         file(".tsbuildinfo"),
         dir("client"),
       ],
-      "/package/.types-build/client": [
-        file("hooks.d.ts"),
-        file("hooks.js"),
-      ],
+      "/package/.types-build/client": [file("hooks.d.ts"), file("hooks.js")],
     });
 
     const result = addTypeDeclarationSources({
@@ -112,8 +107,7 @@ describe("package source declaration collection", () => {
     });
     expect(empty).toEqual({
       ok: false,
-      error:
-        'api.types(): declaration directory ".types-build" contains no .d.ts files.',
+      error: 'api.types(): declaration directory ".types-build" contains no .d.ts files.',
     });
   });
 
