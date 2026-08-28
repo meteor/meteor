@@ -28,7 +28,13 @@ selftest.define("typescript template works", async function () {
 
   run = s.run("types");
   run.waitSecs(60);
-  await run.match("Generated package type declarations.");
+  await run.match("Skipped type generation because zodern:types is installed.");
+  await run.expectExit(0);
+
+  // zodern:types is implemented as a linter, so linting materializes its
+  // .meteor/local/types output before the standalone TypeScript check.
+  run = s.run("lint");
+  run.waitSecs(120);
   await run.expectExit(0);
 
   run = s.run("node", "node_modules/typescript/bin/tsc");
@@ -47,6 +53,10 @@ selftest.define("core package declarations are not client assets", async functio
   await run.expectExit(0);
 
   s.cd("typed-assets");
+  run = s.run("remove", "zodern:types");
+  run.waitSecs(60);
+  await run.expectExit(0);
+
   run = s.run("add", "facts-ui", "jquery");
   run.waitSecs(60);
   await run.expectExit(0);
@@ -89,6 +99,10 @@ selftest.define("zodern:types removes stale native declarations", async function
   await run.expectExit(0);
 
   s.cd("zodern-transition");
+  run = s.run("remove", "zodern:types");
+  run.waitSecs(60);
+  await run.expectExit(0);
+
   run = s.run("types");
   run.waitSecs(60);
   await run.match("Generated package type declarations.");
@@ -140,6 +154,10 @@ selftest.define("transitive zodern:types keeps native declarations", async funct
   await run.expectExit(0);
 
   s.cd("zodern-transitive");
+  run = s.run("remove", "zodern:types");
+  run.waitSecs(60);
+  await run.expectExit(0);
+
   s.mkdir("packages");
   s.mkdir("packages/zodern-types");
   s.write("packages/zodern-types/package.js", `
@@ -191,6 +209,10 @@ selftest.define("type generation failure follows command strictness", async func
   await run.expectExit(0);
 
   s.cd("types-failure");
+  run = s.run("remove", "zodern:types");
+  run.waitSecs(60);
+  await run.expectExit(0);
+
   await files.rm_recursive(files.pathJoin(s.cwd, ".meteor", "types"));
   s.write(".meteor/types", "filesystem obstruction\n");
 
