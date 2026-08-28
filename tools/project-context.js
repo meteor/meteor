@@ -1,6 +1,7 @@
 import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config";
 import {
   generateTypes,
+  removeLegacyGeneratedTypes,
   removeGeneratedTypes,
 } from './isobuild/types-generator.js';
 
@@ -1099,6 +1100,13 @@ Object.assign(ProjectContext.prototype, {
           await generateTypes({
             isopackCache: self.isopackCache,
             packageMap: self.packageMap,
+            projectMeteorDir: files.pathJoin(self.projectDir, '.meteor'),
+          });
+          // A previous direct zodern:types installation may have left its
+          // generated cache behind. Remove it only after native generation
+          // succeeds so old tsconfigs that include the directory cannot load
+          // both providers, while a failed native run keeps its fallback.
+          await removeLegacyGeneratedTypes({
             projectMeteorDir: files.pathJoin(self.projectDir, '.meteor'),
           });
         } catch (err) {

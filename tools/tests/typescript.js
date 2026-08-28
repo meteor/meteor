@@ -53,6 +53,7 @@ selftest.define("typescript template works", async function () {
   run.waitSecs(60);
   await run.match("Generated package type declarations.");
   await run.expectExit(0);
+  selftest.expectTrue(s.read(".meteor/local/types/packages.d.ts") === null);
 
   s.write("native-types-resolution.ts", `
     import { Random } from "meteor/random";
