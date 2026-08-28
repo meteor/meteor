@@ -28,10 +28,7 @@ describe("prebuilt TypeScript declarations", () => {
       typesDir: null,
     };
 
-    const result = usePrebuiltTypeScriptDeclarations(
-      packageSource,
-      "/package"
-    );
+    const result = usePrebuiltTypeScriptDeclarations(packageSource, "/package");
 
     expect(result).toEqual({ ok: true, missing: [] });
     expect(packageSource.typesDir).toBe(TYPES_BUILD_DIR);
@@ -40,9 +37,7 @@ describe("prebuilt TypeScript declarations", () => {
       hooks: ".types-build/client/hooks.d.ts",
       utilities: ".types-build/utilities.d.ts",
     });
-    expect(files.exists).toHaveBeenCalledWith(
-      "/package/.types-build/client/hooks.d.ts"
-    );
+    expect(files.exists).toHaveBeenCalledWith("/package/.types-build/client/hooks.d.ts");
   });
 
   test("does not mutate metadata when any expected declaration is missing", () => {
@@ -54,10 +49,7 @@ describe("prebuilt TypeScript declarations", () => {
       typesDir: null,
     };
 
-    const result = usePrebuiltTypeScriptDeclarations(
-      packageSource,
-      "/package"
-    );
+    const result = usePrebuiltTypeScriptDeclarations(packageSource, "/package");
 
     expect(result).toEqual({
       ok: false,
@@ -84,10 +76,7 @@ describe("prebuilt TypeScript declarations", () => {
       typesDir: null,
     };
 
-    const result = usePrebuiltTypeScriptDeclarations(
-      packageSource,
-      "/package"
-    );
+    const result = usePrebuiltTypeScriptDeclarations(packageSource, "/package");
 
     expect(result.missing).toEqual([
       {
@@ -102,7 +91,7 @@ describe("prebuilt TypeScript declarations", () => {
 
   test("maps only the trailing ts or tsx extension", () => {
     expect(declarationPathForSource("src/types.ts/index.tsx")).toBe(
-      ".types-build/src/types.ts/index.d.ts"
+      ".types-build/src/types.ts/index.d.ts",
     );
   });
 });
