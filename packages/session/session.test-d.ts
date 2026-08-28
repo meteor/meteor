@@ -4,25 +4,14 @@ import { Mongo } from "meteor/mongo";
 
 expectTypeOf(Session).toBeObject();
 
-type SessionValue =
-  | string
-  | number
-  | boolean
-  | Record<string, unknown>
-  | unknown[]
-  | Date
-  | Uint8Array
-  | Mongo.ObjectID
-  | null
-  | undefined;
-
 expectTypeOf(Session.equals).parameters.toEqualTypeOf<
-  [string, string | number | boolean | null | undefined | Date | Mongo.ObjectID]
+  [string, any]
 >();
 expectTypeOf(Session.equals).returns.toBeBoolean();
 
 expectTypeOf(Session.get).parameters.toEqualTypeOf<[string]>();
-expectTypeOf(Session.get).returns.toEqualTypeOf<SessionValue>();
+expectTypeOf(Session.get).returns.toBeAny();
+Session.get("extension-value").customField;
 
 expectTypeOf(Session.set).toBeCallableWith("k", "value");
 expectTypeOf(Session.set).toBeCallableWith("k", 42);
@@ -35,6 +24,7 @@ expectTypeOf(Session.set).toBeCallableWith("k", { nested: 1 });
 expectTypeOf(Session.set).toBeCallableWith("k", [1, 2, 3]);
 const objectId = new Mongo.ObjectID();
 expectTypeOf(Session.set).toBeCallableWith("k", objectId);
+expectTypeOf(Session.set).toBeCallableWith("custom", new URL("https://meteor.com"));
 expectTypeOf(Session.set).toBeCallableWith({ s: "v", n: 1, b: true, x: null });
 expectTypeOf(Session.set).returns.toBeVoid();
 

@@ -1,20 +1,3 @@
-interface SessionObjectID {
-  toHexString(): string;
-  equals(otherID: SessionObjectID): boolean;
-}
-
-type SessionValue =
-  | string
-  | number
-  | boolean
-  | Record<string, unknown>
-  | unknown[]
-  | Date
-  | Uint8Array
-  | SessionObjectID
-  | null
-  | undefined;
-
 export namespace Session {
   /**
    * Test if a session variable is equal to a value. If inside a
@@ -23,10 +6,7 @@ export namespace Session {
    * @param key The name of the session variable to test
    * @param value The value to test against
    */
-  function equals(
-    key: string,
-    value: string | number | boolean | null | undefined | Date | SessionObjectID,
-  ): boolean;
+  function equals(key: string, value: any): boolean;
 
   /**
    * Get the value of a session variable. If inside a reactive
@@ -37,7 +17,7 @@ export namespace Session {
    * session.
    * @param key The name of the session variable to return
    */
-  function get(key: string): SessionValue;
+  function get(key: string): any;
 
   /**
    * Set a variable in the session. Notify any listeners that the value
@@ -47,14 +27,14 @@ export namespace Session {
    * @param key The key to set, eg, `selectedItem`
    * @param value The new value for `key`
    */
-  function set(key: string, value: SessionValue): void;
+  function set(key: string, value: any): void;
   /**
    * Set multiple session variables at once. Equivalent to calling
    * `Session.set` individually on each key/value pair.
    * @param object An object whose keys are session variable names and
    *   whose values are the new values for those variables.
    */
-  function set(object: Record<string, SessionValue>): void;
+  function set(object: Record<string, any>): void;
 
   /**
    * Set a variable in the session if it hasn't been set before.
@@ -62,6 +42,6 @@ export namespace Session {
    * @param key The key to set, eg, `selectedItem`
    * @param value The new value for `key`
    */
-  function setDefault(key: string, value: SessionValue): void;
-  function setDefault(object: Record<string, SessionValue>): void;
+  function setDefault(key: string, value: any): void;
+  function setDefault(object: Record<string, any>): void;
 }

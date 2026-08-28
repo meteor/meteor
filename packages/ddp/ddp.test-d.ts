@@ -40,6 +40,10 @@ expectTypeOf(connection.call<number>).toBeCallableWith(
   resultCallback
 );
 expectTypeOf(connection.callAsync<number>).toBeCallableWith("sum", 1, 2);
+expectTypeOf(connection.call).toBeCallableWith(
+  "legacy-extension-value",
+  new URL("https://meteor.com")
+);
 expectTypeOf(connection.apply<number>).toBeCallableWith(
   "sum",
   [1, 2] as const,
@@ -62,6 +66,8 @@ expectTypeOf(DDPCommon.SUPPORTED_DDP_VERSIONS).toEqualTypeOf<string[]>();
 expectTypeOf(DDPCommon.parseDDP).toBeFunction();
 expectTypeOf(DDPCommon.stringifyDDP).toBeFunction();
 expectTypeOf(DDPCommon.makeRpcSeed).toBeFunction();
+declare const invocation: DDPCommon.MethodInvocation;
+expectTypeOf(invocation.setUserId("user-id")).toBeVoid();
 
 // --- DDPServer ---
 expectTypeOf(DDPServer).toBeObject();

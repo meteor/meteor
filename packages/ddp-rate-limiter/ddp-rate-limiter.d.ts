@@ -1,4 +1,8 @@
 export namespace DDPRateLimiter {
+  type MatcherPredicate<T> = {
+    bivarianceHack(value: T): boolean | Promise<boolean>;
+  }["bivarianceHack"];
+
   export interface RateLimitResult {
     allowed: boolean;
     timeToReset: number;
@@ -7,9 +11,9 @@ export namespace DDPRateLimiter {
   }
 
   export interface Matcher {
-    type?: string | ((type: 'method' | 'subscription') => boolean) | ((type: 'method' | 'subscription') => Promise<boolean>)  | null | undefined;
+    type?: string | MatcherPredicate<'method' | 'subscription'> | null | undefined;
     name?: string | ((name: string) => boolean) | ((name: string) => Promise<boolean>)  | null | undefined;
-    userId?: string | ((userId: string | null) => boolean) | ((userId: string | null) => Promise<boolean>)  | null | undefined;
+    userId?: string | MatcherPredicate<string | null> | null | undefined;
     connectionId?: string | ((connectionId: string) => boolean) | ((connectionId: string) => Promise<boolean>)  | null | undefined;
     clientAddress?: string | ((clientAddress: string) => boolean) | ((clientAddress: string) => Promise<boolean>)  | null | undefined;
   }

@@ -12,13 +12,14 @@ expectTypeOf(Tracker.Dependency).toEqualTypeOf<Tracker.DependencyStatic>();
 expectTypeOf(Tracker.autorun).parameter(0).toEqualTypeOf<
   (computation: Tracker.Computation) => void
 >();
-expectTypeOf(Tracker.autorun).parameter(1).toEqualTypeOf<
-  { onError?: ((error: unknown) => void) | undefined } | undefined
->();
+expectTypeOf(Tracker.autorun).toBeCallableWith(
+  (_computation: Tracker.Computation) => {},
+  { onError(_error: unknown) {} }
+);
 expectTypeOf(Tracker.autorun).returns.toEqualTypeOf<Tracker.Computation>();
 
 // afterFlush / flush
-expectTypeOf(Tracker.afterFlush).parameters.toEqualTypeOf<[() => void]>();
+expectTypeOf(Tracker.afterFlush).toBeCallableWith(() => {});
 expectTypeOf(Tracker.afterFlush).returns.toBeVoid();
 expectTypeOf(Tracker.flush).parameters.toEqualTypeOf<[]>();
 expectTypeOf(Tracker.flush).returns.toBeVoid();
@@ -30,30 +31,37 @@ expectTypeOf(Tracker.nonreactive<string>).returns.toBeString();
 
 // withComputation
 expectTypeOf(Tracker.withComputation).toBeFunction();
-expectTypeOf(Tracker.withComputation<number>).parameters.toEqualTypeOf<
-  [Tracker.Computation | null, () => number]
->();
-expectTypeOf(Tracker.withComputation<number>).returns.toEqualTypeOf<number>();
+expectTypeOf(Tracker.withComputation<number>(null, () => 1)).toBeNumber();
 
 // onInvalidate (top-level)
-expectTypeOf(Tracker.onInvalidate).parameters.toEqualTypeOf<
-  [(computation: Tracker.Computation) => void]
->();
+expectTypeOf(Tracker.onInvalidate).toBeCallableWith(
+  (_computation: Tracker.Computation) => {}
+);
 expectTypeOf(Tracker.onInvalidate).returns.toBeVoid();
+Tracker.onInvalidate((current) => {
+  expectTypeOf(current).toEqualTypeOf<Tracker.Computation>();
+});
 
 // Computation interface
 expectTypeOf<Tracker.Computation>().toHaveProperty("firstRun").toBeBoolean();
-expectTypeOf<Tracker.Computation>().toHaveProperty("firstRunPromise").toEqualTypeOf<Promise<unknown> | undefined>();
+expectTypeOf<Tracker.Computation>().toHaveProperty("firstRunPromise").toEqualTypeOf<Promise<unknown>>();
 expectTypeOf<Tracker.Computation>().toHaveProperty("invalidated").toBeBoolean();
 expectTypeOf<Tracker.Computation>().toHaveProperty("stopped").toBeBoolean();
 expectTypeOf<Tracker.Computation["invalidate"]>().toEqualTypeOf<() => void>();
 expectTypeOf<Tracker.Computation["stop"]>().toEqualTypeOf<() => void>();
-expectTypeOf<Tracker.Computation["onInvalidate"]>().parameters.toEqualTypeOf<
-  [(computation: Tracker.Computation) => void]
->();
-expectTypeOf<Tracker.Computation["onStop"]>().parameters.toEqualTypeOf<
-  [(computation: Tracker.Computation) => void]
->();
+declare const computation: Tracker.Computation;
+computation.onInvalidate((current) => {
+  expectTypeOf(current).toEqualTypeOf<Tracker.Computation>();
+});
+computation.onStop((current) => {
+  expectTypeOf(current).toEqualTypeOf<Tracker.Computation>();
+});
+expectTypeOf(computation.onInvalidate).toBeCallableWith(
+  (_computation: Tracker.Computation) => {}
+);
+expectTypeOf(computation.onStop).toBeCallableWith(
+  (_computation: Tracker.Computation) => {}
+);
 
 // Dependency interface + static
 expectTypeOf<Tracker.DependencyStatic>().toBeConstructibleWith();
