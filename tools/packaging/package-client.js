@@ -752,6 +752,8 @@ exports.publishPackage = async function (options) {
   var declarationSources = addTypeDeclarationSources({
     packageDir: packageSource.sourceRoot,
     typesDir: isopack.typesDir,
+    typesEntry: isopack.typesEntry,
+    typesModules: isopack.typesModules,
     sourceFiles: sourceFiles
   });
   if (! declarationSources.ok) {

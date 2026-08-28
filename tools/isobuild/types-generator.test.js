@@ -816,6 +816,26 @@ describe("directory mode – isopack.typesDir", () => {
     );
   });
 
+  test("preserves a non-symlink at the compatibility-link path", async () => {
+    files.lstat.mockImplementation((path) => {
+      if (path === PKG_TYPES_LINK) {
+        return { isSymbolicLink: () => false };
+      }
+      throw enoent();
+    });
+    await run(
+      {
+        random: makeIsopack({
+          typesEntry: "random.d.ts",
+          resources: [makeResource("random.d.ts", "export const x: 1;")],
+        }),
+      },
+      ["random"]
+    );
+
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(PKG_TYPES_LINK);
+  });
+
   test("stale cleanup keeps the copied folder and prunes dropped stubs", async () => {
     files.readdir.mockImplementation((p) => {
       if (p === PKGS_DIR) return ["react-meteor-data"];

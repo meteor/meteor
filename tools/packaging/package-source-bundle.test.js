@@ -51,6 +51,8 @@ describe("package source declaration collection", () => {
     const result = addTypeDeclarationSources({
       packageDir: "/package",
       typesDir: ".types-build",
+      typesEntry: ".types-build/index.d.ts",
+      typesModules: { hooks: ".types-build/client/hooks.d.ts" },
       sourceFiles: ["package.js", ".types-build/index.d.ts"],
       fileSystem,
     });
@@ -108,6 +110,28 @@ describe("package source declaration collection", () => {
     expect(empty).toEqual({
       ok: false,
       error: 'api.types(): declaration directory ".types-build" contains no .d.ts files.',
+    });
+  });
+
+  test("rejects a directory missing an expected entry or module", () => {
+    const fileSystem = makeFiles({
+      "/package/.types-build": [file("other.d.ts")],
+    });
+
+    const result = addTypeDeclarationSources({
+      packageDir: "/package",
+      typesDir: ".types-build",
+      typesEntry: ".types-build/index.d.ts",
+      typesModules: { hooks: ".types-build/client/hooks.d.ts" },
+      sourceFiles: ["package.js"],
+      fileSystem,
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error:
+        'api.types(): declaration directory ".types-build" is missing expected files: ' +
+        ".types-build/index.d.ts, .types-build/client/hooks.d.ts.",
     });
   });
 

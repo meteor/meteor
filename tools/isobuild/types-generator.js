@@ -645,7 +645,8 @@ async function removePackageTypesLink(typesDir) {
     NPM_LINK_NAME,
     PACKAGE_TYPES_LINK_NAME
   );
-  if (!readLinkStatus(linkPath).exists) return;
+  const existing = readLinkStatus(linkPath);
+  if (existing.target === null) return;
 
   await files.rm_recursive(linkPath);
   Console.debug(`[types] Removed stale ${PACKAGE_TYPES_LINK_NAME} link`);
