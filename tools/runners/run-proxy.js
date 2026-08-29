@@ -19,6 +19,7 @@ var Proxy = function (options) {
   self.websocketQueue = []; // keys: req, socket, head
 
   self.proxy = null;
+  self.proxyAgent = null;
   self.server = null;
 };
 
@@ -39,10 +40,11 @@ Object.assign(Proxy.prototype, {
     var net = require('net');
     var httpProxy = require('http-proxy-3');
 
+    self.proxyAgent = new http.Agent({ maxSockets: 100 });
     self.proxy = httpProxy.createProxyServer({
       // agent is required to handle keep-alive, and http-proxy 1.0 is a little
       // buggy without it: https://github.com/nodejitsu/node-http-proxy/pull/488
-      agent: new http.Agent({ maxSockets: 100 }),
+      agent: self.proxyAgent,
       xfwd: true
     });
 
@@ -130,6 +132,32 @@ Object.assign(Proxy.prototype, {
       }
     });
 
+    self.proxy.on('proxyReqWs', function (proxyReq, _req, socket) {
+      var proxySocket = null;
+
+      function destroyProxyReq() {
+        if (! proxySocket) {
+          proxyReq.socket?.destroy();
+          proxyReq.destroy();
+        }
+      }
+
+      // If the browser closes while the upstream websocket upgrade is still
+      // pending, make sure the outgoing request is torn down too.
+      socket.once('close', destroyProxyReq);
+
+      proxyReq.once('upgrade', function (_proxyRes, upgradedProxySocket) {
+        proxySocket = upgradedProxySocket;
+        socket.removeListener('close', destroyProxyReq);
+        socket.once('close', function () {
+          proxySocket.destroy();
+        });
+        proxySocket.once('close', function () {
+          socket.destroy();
+        });
+      });
+    });
+
     self.server.listen(self.listenPort, self.listenHost || '0.0.0.0', function () {
       if (self.server) {
         self.started = true;
@@ -158,17 +186,22 @@ Object.assign(Proxy.prototype, {
       // race condition and we could be in the middle of starting to listen! In
       // that case, the listen callback will notice that we nulled out server
       // here.
+      self.proxy = null;
       self.server = null;
+      self.proxyAgent?.destroy();
+      self.proxyAgent = null;
       return;
     }
 
     // This stops listening but allows existing connections to
     // complete gracefully.
-    self.server.close();
+    var proxyAgent = self.proxyAgent;
+    self.server.close(function () {
+      proxyAgent?.destroy();
+    });
     self.server = null;
 
-    // It doesn't seem to be necessary to do anything special to
-    // destroy an httpProxy proxyserver object.
+    self.proxyAgent = null;
     self.proxy = null;
 
     // Drop any held connections.
@@ -224,7 +257,8 @@ Object.assign(Proxy.prototype, {
 
       var c = self.websocketQueue.shift();
       attempt(c.socket, () => self.proxy.ws(c.req, c.socket, c.head, {
-        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort
+        target: 'http://' + self.proxyToHost + ':' + self.proxyToPort,
+        agent: false
       }));
     }
   },
