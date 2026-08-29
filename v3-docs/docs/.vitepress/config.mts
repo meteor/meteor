@@ -63,6 +63,10 @@ export default defineConfig({
                 link: "/tutorials/application-structure/index",
                 text: "Application structure",
               },
+              {
+                link: "/tutorials/multiple-meteor-apps/index",
+                text: "Multiple Meteor apps",
+              },
             ],
           },
         ],
@@ -304,8 +308,16 @@ export default defineConfig({
             text: "Accounts and security",
             items: [
               {
+                text: "accounts-express",
+                link: "/packages/accounts-express",
+              },
+              {
                 text: "accounts-ui",
                 link: "/packages/accounts-ui",
+              },
+              {
+                text: "accounts-ui-unstyled",
+                link: "/packages/accounts-ui-unstyled",
               },
               {
                 text: "accounts-passwordless",
@@ -314,6 +326,34 @@ export default defineConfig({
               {
                 text: "accounts-2fa",
                 link: "/packages/accounts-2fa",
+              },
+              {
+                text: "accounts-facebook",
+                link: "/packages/accounts-facebook",
+              },
+              {
+                text: "accounts-github",
+                link: "/packages/accounts-github",
+              },
+              {
+                text: "accounts-google",
+                link: "/packages/accounts-google",
+              },
+              {
+                text: "accounts-meetup",
+                link: "/packages/accounts-meetup",
+              },
+              {
+                text: "accounts-meteor-developer",
+                link: "/packages/accounts-meteor-developer",
+              },
+              {
+                text: "accounts-twitter",
+                link: "/packages/accounts-twitter",
+              },
+              {
+                text: "accounts-weibo",
+                link: "/packages/accounts-weibo",
               },
               {
                 text: "roles",
@@ -357,10 +397,6 @@ export default defineConfig({
                 link: "/packages/logging",
               },
               {
-                text: "underscore",
-                link: "/packages/underscore",
-              },
-              {
                 text: "autoupdate",
                 link: "/packages/autoupdate",
               },
@@ -390,6 +426,46 @@ export default defineConfig({
                 link: "/packages/url",
               },
               {
+                text: "disable-oplog",
+                link: "/packages/disable-oplog",
+              },
+              {
+                text: "facts-base",
+                link: "/packages/facts-base",
+              },
+              {
+                text: "facts-ui",
+                link: "/packages/facts-ui",
+              },
+              {
+                text: "insecure",
+                link: "/packages/insecure",
+              },
+              {
+                text: "autopublish",
+                link: "/packages/autopublish",
+              },
+              {
+                text: "static-html",
+                link: "/packages/static-html",
+              },
+              {
+                text: "mobile-experience",
+                link: "/packages/mobile-experience",
+              },
+              {
+                text: "mobile-status-bar",
+                link: "/packages/mobile-status-bar",
+              },
+              {
+                text: "launch-screen",
+                link: "/packages/launch-screen",
+              },
+              {
+                text: "force-ssl",
+                link: "/packages/force-ssl",
+              },
+              {
                 text: "webapp",
                 link: "/packages/webapp",
               },
@@ -413,6 +489,10 @@ export default defineConfig({
               {
                 text: "react-meteor-data",
                 link: "/packages/react-meteor-data",
+              },
+              {
+                text: "typescript",
+                link: "/packages/typescript",
               },
             ]
           },
@@ -538,6 +618,10 @@ export default defineConfig({
             text: "Application structure",
           },
           {
+            link: "/tutorials/multiple-meteor-apps/index",
+            text: "Multiple Meteor apps",
+          },
+          {
             text: "Build System",
             link: "/about/build-tool",
           },
@@ -627,6 +711,14 @@ export default defineConfig({
       {
         text: "Performance",
         items: [
+          {
+            text: "Change Streams Observer Driver",
+            link: "/performance/change-streams-observer-driver",
+          },
+          {
+            text: "DDP Transport",
+            link: "/performance/ddp-transport",
+          },
           {
             text: "Performance Improvements",
             link: "/performance/performance-improvement",
