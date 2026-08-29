@@ -1832,7 +1832,7 @@ main.registerCommand({
   }
 
   // Compile the app to resolve NPM dependencies bump coming from plugins
-  if (!files.inCheckout() && options["npm"]) {
+  if (options["npm"]) {
     await compileMeteorApp(options);
     return 0;
   }

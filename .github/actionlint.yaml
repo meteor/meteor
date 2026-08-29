@@ -1,0 +1,22 @@
+# actionlint configuration — consumed by .github/workflows/lint-workflows.yml.
+#
+# Declares the self-hosted runner labels so `runs-on:` on our own fleet is not
+# flagged as an unknown label, and carries a baseline of pre-existing findings so
+# the guard is green on devel today and fails only on NEW issues. The point of the
+# guard is to catch structural/parse errors that make GitHub dispatch 0 jobs
+# (e.g. a duplicate `runs-on:` key) — not to enforce run-script style.
+self-hosted-runner:
+  labels:
+    - oss-vm
+    - windows-2019-meteor
+
+# Pre-existing findings on devel, kept out of the gate so the check starts green.
+# Burn these down in follow-ups; new occurrences of anything NOT listed here fail.
+paths:
+  .github/workflows/**/*.{yml,yaml}:
+    ignore:
+      - 'action is too old to run on GitHub Actions'
+      - 'property "node-version" is not defined'
+      - 'is potentially untrusted'
+      - 'input "submodules" is not defined in action'
+      - '"on" section is missing in workflow'

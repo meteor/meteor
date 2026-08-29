@@ -4,7 +4,7 @@ import FakeTimers from '@sinonjs/fake-timers';
 import { DDP } from '../common/namespace.js';
 import { Connection } from '../common/livedata_connection.js';
 
-const newConnection = function(stream, options) {
+const newConnection = function (stream, options) {
   // Some of these tests leave outstanding methods with no result yet
   // returned. This should not block us from re-running tests when sources
   // change.
@@ -20,7 +20,7 @@ const newConnection = function(stream, options) {
   );
 };
 
-const makeConnectMessage = function(session, receivedCount) {
+const makeConnectMessage = function (session, receivedCount) {
   const msg = {
     msg: 'connect',
     version: DDPCommon.SUPPORTED_DDP_VERSIONS[0],
@@ -39,7 +39,7 @@ const makeConnectMessage = function(session, receivedCount) {
 // Returns the message (parsed as a JSON object if expected is an object);
 // which is particularly handy if you want to extract a value that was
 // matched as a wildcard.
-const testGotMessage = function(test, stream, expected) {
+const testGotMessage = function (test, stream, expected) {
   if (stream.sent.length === 0) {
     test.fail({ error: 'no message received', expected: expected });
     return undefined;
@@ -55,10 +55,10 @@ const testGotMessage = function(test, stream, expected) {
   // function.
   if (typeof expected === 'object') {
     const keysWithStarValues = [];
-    Object.entries(expected).forEach(function([k, v]) {
+    Object.entries(expected).forEach(function ([k, v]) {
       if (v === '*') keysWithStarValues.push(k);
     });
-    keysWithStarValues.forEach(function(k) {
+    keysWithStarValues.forEach(function (k) {
       expected[k] = got[k];
     });
   }
@@ -67,7 +67,7 @@ const testGotMessage = function(test, stream, expected) {
   return got;
 };
 
-const startAndConnect = async function(test, stream) {
+const startAndConnect = async function (test, stream) {
   await stream.reset(); // initial connection start.
 
   testGotMessage(test, stream, makeConnectMessage());
@@ -79,7 +79,7 @@ const startAndConnect = async function(test, stream) {
 
 const SESSION_ID = '17';
 
-Tinytest.addAsync('livedata stub - receive data', async function(test) {
+Tinytest.addAsync('livedata stub - receive data', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -117,7 +117,7 @@ Tinytest.addAsync('livedata stub - receive data', async function(test) {
   test.isUndefined(conn._updatesForUnknownStores[coll_name]);
 });
 
-Tinytest.addAsync('livedata stub - buffering data', async function(test) {
+Tinytest.addAsync('livedata stub - buffering data', async function (test) {
   // Install special setTimeout that allows tick-by-tick control in tests using sinonjs 'lolex'
   // This needs to be before the connection is instantiated.
   const clock = FakeTimers.install();
@@ -201,7 +201,7 @@ Tinytest.addAsync('livedata stub - buffering data', async function(test) {
   clock.uninstall();
 });
 
-Tinytest.addAsync('livedata stub - subscribe', async function(test) {
+Tinytest.addAsync('livedata stub - subscribe', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -209,7 +209,7 @@ Tinytest.addAsync('livedata stub - subscribe', async function(test) {
 
   // subscribe
   let callback_fired = false;
-  const sub = conn.subscribe('my_data', function() {
+  const sub = conn.subscribe('my_data', function () {
     callback_fired = true;
   });
   test.isFalse(callback_fired);
@@ -221,7 +221,7 @@ Tinytest.addAsync('livedata stub - subscribe', async function(test) {
   test.equal(message, { msg: 'sub', name: 'my_data', params: [] });
 
   let reactivelyReady = false;
-  const autorunHandle = Tracker.autorun(function() {
+  const autorunHandle = Tracker.autorun(function () {
     reactivelyReady = sub.ready();
   });
   test.isFalse(reactivelyReady);
@@ -250,7 +250,7 @@ Tinytest.addAsync('livedata stub - subscribe', async function(test) {
   test.equal(message, { msg: 'sub', name: 'my_data', params: [] });
 });
 
-Tinytest.addAsync('livedata stub - reactive subscribe', async function(test) {
+Tinytest.addAsync('livedata stub - reactive subscribe', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -260,8 +260,8 @@ Tinytest.addAsync('livedata stub - reactive subscribe', async function(test) {
   const rBar = new ReactiveVar('bar1');
 
   const onReadyCount = {};
-  const onReady = function(tag) {
-    return function() {
+  const onReady = function (tag) {
+    return function () {
       if (has(onReadyCount, tag)) ++onReadyCount[tag];
       else onReadyCount[tag] = 1;
     };
@@ -269,7 +269,7 @@ Tinytest.addAsync('livedata stub - reactive subscribe', async function(test) {
 
   // Subscribe to some subs.
   let stopperHandle, completerHandle;
-  const autorunHandle = Tracker.autorun(function() {
+  const autorunHandle = Tracker.autorun(function () {
     conn.subscribe('foo', rFoo.get(), onReady(rFoo.get()));
     conn.subscribe('bar', rBar.get(), onReady(rBar.get()));
     completerHandle = conn.subscribe('completer', onReady('completer'));
@@ -277,7 +277,7 @@ Tinytest.addAsync('livedata stub - reactive subscribe', async function(test) {
   });
 
   let completerReady;
-  const readyAutorunHandle = Tracker.autorun(function() {
+  const readyAutorunHandle = Tracker.autorun(function () {
     completerReady = completerHandle.ready();
   });
 
@@ -373,9 +373,9 @@ Tinytest.addAsync('livedata stub - reactive subscribe', async function(test) {
   stream.sent.length = 0;
   test.equal(
     [...new Set(unsubMessages.map(msg => {
-    return msg['msg']
-  }))], ['unsub']);
-  const actualIds = unsubMessages.map(function(msg){
+      return msg['msg']
+    }))], ['unsub']);
+  const actualIds = unsubMessages.map(function (msg) {
     return msg['id']
   });
   const expectedIds = [idFoo2, idBar1, idCompleter, idStopperAgain];
@@ -384,7 +384,7 @@ Tinytest.addAsync('livedata stub - reactive subscribe', async function(test) {
   test.equal(actualIds, expectedIds);
 });
 
-Tinytest.addAsync('livedata stub - reactive subscribe handle correct', async function(
+Tinytest.addAsync('livedata stub - reactive subscribe handle correct', async function (
   test
 ) {
   const stream = new StubStream();
@@ -396,9 +396,9 @@ Tinytest.addAsync('livedata stub - reactive subscribe handle correct', async fun
 
   // Subscribe to some subs.
   let fooHandle, fooReady;
-  const autorunHandle = Tracker.autorun(function() {
+  const autorunHandle = Tracker.autorun(function () {
     fooHandle = conn.subscribe('foo', rFoo.get());
-    Tracker.autorun(function() {
+    Tracker.autorun(function () {
       fooReady = fooHandle.ready();
     });
   });
@@ -467,13 +467,13 @@ Tinytest.addAsync('livedata stub - reactive subscribe handle correct', async fun
   autorunHandle.stop();
 });
 
-Tinytest.addAsync('livedata stub - this', async function(test) {
+Tinytest.addAsync('livedata stub - this', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
   await startAndConnect(test, stream);
   conn.methods({
-    test_this: function() {
+    test_this: function () {
       test.isTrue(this.isSimulation);
       this.unblock(); // should be a no-op
     }
@@ -497,7 +497,7 @@ Tinytest.addAsync('livedata stub - this', async function(test) {
 });
 
 if (Meteor.isClient) {
-  Tinytest.addAsync('livedata stub - methods', async function(test) {
+  Tinytest.addAsync('livedata stub - methods', async function (test) {
     const stream = new StubStream();
     const conn = newConnection(stream);
 
@@ -508,7 +508,7 @@ if (Meteor.isClient) {
 
     // setup method
     conn.methods({
-      do_something: async function(x) {
+      do_something: async function (x) {
         return coll.insertAsync({ value: x }).stubPromise;
       }
     });
@@ -516,16 +516,16 @@ if (Meteor.isClient) {
     // setup observers
     const counts = { added: 0, removed: 0, changed: 0, moved: 0 };
     const handle = await coll.find({}).observe({
-      addedAt: function() {
+      addedAt: function () {
         counts.added += 1;
       },
-      removedAt: function() {
+      removedAt: function () {
         counts.removed += 1;
       },
-      changedAt: function() {
+      changedAt: function () {
         counts.changed += 1;
       },
-      movedTo: function() {
+      movedTo: function () {
         counts.moved += 1;
       }
     });
@@ -535,7 +535,7 @@ if (Meteor.isClient) {
 
     // we use the applyAsync() instead of callAsync() because we want to control when to "pause"
     // or "continue" the method execution by using the methods stream.receive()
-    await conn.applyAsync('do_something', ['friday!'], {},function(err, res) {
+    await conn.applyAsync('do_something', ['friday!'], {}, function (err, res) {
       test.isUndefined(err);
       test.equal(res, '1234');
       callback1Fired = true;
@@ -581,7 +581,7 @@ if (Meteor.isClient) {
 
     // send another methods (unknown on client)
     let callback2Fired = false;
-    conn.call('do_something_else', 'monday', function(err, res) {
+    conn.call('do_something_else', 'monday', function (err, res) {
       callback2Fired = true;
     });
     test.isFalse(callback1Fired);
@@ -624,14 +624,14 @@ if (Meteor.isClient) {
   });
 }
 
-Tinytest.addAsync('livedata stub - mutating method args', async function(test) {
+Tinytest.addAsync('livedata stub - mutating method args', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
   await startAndConnect(test, stream);
 
   conn.methods({
-    mutateArgs: function(arg) {
+    mutateArgs: function (arg) {
       arg.foo = 42;
     }
   });
@@ -650,27 +650,27 @@ Tinytest.addAsync('livedata stub - mutating method args', async function(test) {
   test.length(stream.sent, 0);
 });
 
-const observeCursor = async function(test, cursor) {
+const observeCursor = async function (test, cursor) {
   const counts = { added: 0, removed: 0, changed: 0, moved: 0 };
   const expectedCounts = Object.assign({}, counts);
   const handle = await cursor.observe({
-    addedAt: function() {
+    addedAt: function () {
       counts.added += 1;
     },
-    removedAt: function() {
+    removedAt: function () {
       counts.removed += 1;
     },
-    changedAt: function() {
+    changedAt: function () {
       counts.changed += 1;
     },
-    movedTo: function() {
+    movedTo: function () {
       counts.moved += 1;
     }
   });
   return {
     stop: handle.stop.bind(handle),
-    expectCallbacks: function(delta) {
-      Object.entries(delta || []).forEach(function([field, mod]) {
+    expectCallbacks: function (delta) {
+      Object.entries(delta || []).forEach(function ([field, mod]) {
         expectedCounts[field] += mod;
       });
       test.equal(counts, expectedCounts);
@@ -680,7 +680,7 @@ const observeCursor = async function(test, cursor) {
 
 // method calls another method in simulation. see not sent.
 if (Meteor.isClient) {
-  Tinytest.addAsync('livedata stub - methods calling methods', async function(test) {
+  Tinytest.addAsync('livedata stub - methods calling methods', async function (test) {
     const stream = new StubStream();
     const conn = newConnection(stream);
 
@@ -691,10 +691,10 @@ if (Meteor.isClient) {
 
     // setup methods
     conn.methods({
-      do_something: async function() {
+      do_something: async function () {
         await conn.applyAsync('do_something_else', []);
       },
-      do_something_else: async function() {
+      do_something_else: async function () {
         await coll.insertAsync({ a: 1 }).stubPromise;
       }
     });
@@ -756,12 +756,12 @@ if (Meteor.isClient) {
     o.stop();
   });
 }
-Tinytest.addAsync('livedata stub - method call before connect', async function(test) {
+Tinytest.addAsync('livedata stub - method call before connect', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
   const callbackOutput = [];
-  conn.call('someMethod', function(err, result) {
+  conn.call('someMethod', function (err, result) {
     callbackOutput.push(result);
   });
   test.equal(callbackOutput, []);
@@ -781,7 +781,7 @@ Tinytest.addAsync('livedata stub - method call before connect', async function(t
   });
 });
 
-Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) {
+Tinytest.addAsync('livedata stub - reconnect', async function (test, onComplete) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -794,7 +794,7 @@ Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) 
 
   // subscribe
   let subCallbackFired = false;
-  const sub = conn.subscribe('my_data', function() {
+  const sub = conn.subscribe('my_data', function () {
     subCallbackFired = true;
   });
   test.isFalse(subCallbackFired);
@@ -837,7 +837,7 @@ Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) 
 
   // call method.
   let methodCallbackFired = false;
-  conn.call('do_something', function() {
+  conn.call('do_something', function () {
     methodCallbackFired = true;
   });
 
@@ -951,7 +951,7 @@ Tinytest.addAsync('livedata stub - reconnect', async function(test, onComplete) 
 });
 
 if (Meteor.isClient) {
-  Tinytest.addAsync('livedata stub - reconnect non-idempotent method', async function(
+  Tinytest.addAsync('livedata stub - reconnect non-idempotent method', async function (
     test
   ) {
     // This test is for https://github.com/meteor/meteor/issues/6108
@@ -966,14 +966,14 @@ if (Meteor.isClient) {
     let secondMethodCallbackErrored = false;
 
     // call with noRetry true so that the method should fail to retry on reconnect.
-    conn.apply('do_something', [], { noRetry: true }, function(error) {
+    conn.apply('do_something', [], { noRetry: true }, function (error) {
       firstMethodCallbackFired = true;
       // failure on reconnect should trigger an error.
       if (error && error.error === 'invocation-failed') {
         firstMethodCallbackErrored = true;
       }
     });
-    conn.apply('do_something_else', [], { noRetry: true }, function(error) {
+    conn.apply('do_something_else', [], { noRetry: true }, function (error) {
       secondMethodCallbackFired = true;
       // failure on reconnect should trigger an error.
       if (error && error.error === 'invocation-failed') {
@@ -1009,18 +1009,18 @@ if (Meteor.isClient) {
 }
 
 function addReconnectTests(name, testFunc) {
-  Tinytest.addAsync(name + ' (deprecated)', async function(test) {
+  Tinytest.addAsync(name + ' (deprecated)', async function (test) {
     function deprecatedSetOnReconnect(conn, handler) {
       conn.onReconnect = handler;
     }
     await testFunc.call(this, test, deprecatedSetOnReconnect);
   });
 
-  Tinytest.addAsync(name, async function(test) {
+  Tinytest.addAsync(name, async function (test) {
     let stopper;
     function setOnReconnect(conn, handler) {
       stopper && stopper.stop();
-      stopper = DDP.onReconnect(function(reconnectingConn) {
+      stopper = DDP.onReconnect(function (reconnectingConn) {
         if (reconnectingConn === conn) {
           handler();
         }
@@ -1034,7 +1034,7 @@ function addReconnectTests(name, testFunc) {
 if (Meteor.isClient) {
   addReconnectTests(
     'livedata stub - reconnect method which only got result',
-    async function(test, setOnReconnect) {
+    async function (test, setOnReconnect) {
       const stream = new StubStream();
       const conn = newConnection(stream);
       await startAndConnect(test, stream);
@@ -1044,7 +1044,7 @@ if (Meteor.isClient) {
       const o = await observeCursor(test, coll.find());
 
       conn.methods({
-        writeSomething: async function() {
+        writeSomething: async function () {
           // stub write
           await coll.insertAsync({ foo: 'bar' }).stubPromise;
         }
@@ -1059,11 +1059,11 @@ if (Meteor.isClient) {
         'writeSomething',
         [],
         {
-          onResultReceived: function(err, result) {
+          onResultReceived: function (err, result) {
             onResultReceivedOutput.push(result);
           }
         },
-        function(err, result) {
+        function (err, result) {
           callbackOutput.push(result);
         }
       );
@@ -1149,11 +1149,11 @@ if (Meteor.isClient) {
         'writeSomething',
         [],
         {
-          onResultReceived: function(err, result) {
+          onResultReceived: function (err, result) {
             onResultReceivedOutput.push(result);
           }
         },
-        function(err, result) {
+        function (err, result) {
           callbackOutput.push(result);
         }
       );
@@ -1201,8 +1201,8 @@ if (Meteor.isClient) {
       // Callback not called, but onResultReceived is.
       test.equal(callbackOutput, ['bla']);
       test.equal(onResultReceivedOutput, ['bla', 'blab']);
-      setOnReconnect(conn, function() {
-        conn.call('slowMethod', function(err, result) {
+      setOnReconnect(conn, function () {
+        conn.call('slowMethod', function (err, result) {
           callbackOutput.push(result);
         });
       });
@@ -1268,7 +1268,7 @@ if (Meteor.isClient) {
     }
   );
 }
-Tinytest.addAsync('livedata stub - reconnect method which only got data', async function(
+Tinytest.addAsync('livedata stub - reconnect method which only got data', async function (
   test
 ) {
   const stream = new StubStream();
@@ -1287,11 +1287,11 @@ Tinytest.addAsync('livedata stub - reconnect method which only got data', async 
     'doLittle',
     [],
     {
-      onResultReceived: function(err, result) {
+      onResultReceived: function (err, result) {
         onResultReceivedOutput.push(result);
       }
     },
-    function(err, result) {
+    function (err, result) {
       callbackOutput.push(result);
     }
   );
@@ -1371,7 +1371,7 @@ Tinytest.addAsync('livedata stub - reconnect method which only got data', async 
   o.stop();
 });
 if (Meteor.isClient) {
-  Tinytest.addAsync('livedata stub - multiple stubs same doc', async function(test) {
+  Tinytest.addAsync('livedata stub - multiple stubs same doc', async function (test) {
     const stream = new StubStream();
     const conn = newConnection(stream);
     await startAndConnect(test, stream);
@@ -1381,11 +1381,11 @@ if (Meteor.isClient) {
     const o = await observeCursor(test, coll.find());
 
     conn.methods({
-      insertSomething: async function() {
+      insertSomething: async function () {
         // stub write
         await coll.insertAsync({ foo: 'bar' }).stubPromise;
       },
-      updateIt: async function(id) {
+      updateIt: async function (id) {
         await coll.updateAsync(id, { $set: { baz: 42 } }).stubPromise;
       }
     });
@@ -1492,7 +1492,7 @@ if (Meteor.isClient) {
 if (Meteor.isClient) {
   Tinytest.addAsync(
     "livedata stub - unsent methods don't block quiescence",
-    async function(test) {
+    async function (test) {
       // This test is for https://github.com/meteor/meteor/issues/555
 
       const stream = new StubStream();
@@ -1503,7 +1503,7 @@ if (Meteor.isClient) {
       const coll = new Mongo.Collection(collName, { connection: conn });
 
       conn.methods({
-        insertSomething: async function() {
+        insertSomething: async function () {
           // stub write
           await coll.insertAsync({ foo: 'bar' }).stubPromise;
         }
@@ -1567,14 +1567,14 @@ if (Meteor.isClient) {
     }
   );
 }
-Tinytest.addAsync('livedata stub - reactive resub', async function(test) {
+Tinytest.addAsync('livedata stub - reactive resub', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
   await startAndConnect(test, stream);
 
   const readiedSubs = {};
-  const markAllReady = async function() {
+  const markAllReady = async function () {
     // synthesize a "ready" message in response to any "sub"
     // message with an id we haven't seen before
     for (let msg of stream.sent) {
@@ -1590,9 +1590,9 @@ Tinytest.addAsync('livedata stub - reactive resub', async function(test) {
   let fooReady = 0;
 
   let inner;
-  const outer = Tracker.autorun(function() {
-    inner = Tracker.autorun(function() {
-      conn.subscribe('foo-sub', fooArg.get(), function() {
+  const outer = Tracker.autorun(function () {
+    inner = Tracker.autorun(function () {
+      conn.subscribe('foo-sub', fooArg.get(), function () {
         fooReady++;
       });
     });
@@ -1653,7 +1653,7 @@ Tinytest.addAsync('livedata stub - reactive resub', async function(test) {
   test.equal(fooReady, 5);
 });
 
-Tinytest.add('livedata connection - reactive userId', function(test) {
+Tinytest.add('livedata connection - reactive userId', function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -1662,7 +1662,7 @@ Tinytest.add('livedata connection - reactive userId', function(test) {
   test.equal(conn.userId(), 1337);
 });
 
-Tinytest.addAsync('livedata connection - two wait methods', async function(test) {
+Tinytest.addAsync('livedata connection - two wait methods', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
   await startAndConnect(test, stream);
@@ -1671,33 +1671,33 @@ Tinytest.addAsync('livedata connection - two wait methods', async function(test)
   const coll = new Mongo.Collection(collName, { connection: conn });
 
   // setup method
-  conn.methods({ do_something: function(x) {} });
+  conn.methods({ do_something: function (x) { } });
 
   const responses = [];
-  conn.apply('do_something', ['one!'], function() {
+  conn.apply('do_something', ['one!'], function () {
     responses.push('one');
   });
   let one_message = JSON.parse(stream.sent.shift());
   test.equal(one_message.params, ['one!']);
 
-  conn.apply('do_something', ['two!'], { wait: true }, function() {
+  conn.apply('do_something', ['two!'], { wait: true }, function () {
     responses.push('two');
   });
   // 'two!' isn't sent yet, because it's a wait method.
   test.equal(stream.sent.length, 0);
 
-  conn.apply('do_something', ['three!'], function() {
+  conn.apply('do_something', ['three!'], function () {
     responses.push('three');
   });
-  conn.apply('do_something', ['four!'], function() {
+  conn.apply('do_something', ['four!'], function () {
     responses.push('four');
   });
 
-  conn.apply('do_something', ['five!'], { wait: true }, function() {
+  conn.apply('do_something', ['five!'], { wait: true }, function () {
     responses.push('five');
   });
 
-  conn.apply('do_something', ['six!'], function() {
+  conn.apply('do_something', ['six!'], function () {
     responses.push('six');
   });
 
@@ -1787,15 +1787,15 @@ Tinytest.addAsync('livedata connection - two wait methods', async function(test)
 
 addReconnectTests(
   'livedata connection - onReconnect prepends messages correctly with a wait method',
-  async function(test, setOnReconnect) {
+  async function (test, setOnReconnect) {
     const stream = new StubStream();
     const conn = newConnection(stream);
     await startAndConnect(test, stream);
 
     // setup method
-    conn.methods({ do_something: function(x) {} });
+    conn.methods({ do_something: function (x) { } });
 
-    setOnReconnect(conn, function() {
+    setOnReconnect(conn, function () {
       conn.apply('do_something', ['reconnect zero'], identity);
       conn.apply('do_something', ['reconnect one'], identity);
       conn.apply('do_something', ['reconnect two'], { wait: true }, identity);
@@ -1815,7 +1815,7 @@ addReconnectTests(
     // what we expect to be blocked. The subsequent logic to correctly
     // read the wait flag is tested separately.
     test.equal(
-      stream.sent.map(function(msg) {
+      stream.sent.map(function (msg) {
         return JSON.parse(msg).params[0];
       }),
       ['reconnect zero', 'reconnect one']
@@ -1823,10 +1823,10 @@ addReconnectTests(
 
     // white-box test:
     test.equal(
-      conn._outstandingMethodBlocks.map(function(block) {
+      conn._outstandingMethodBlocks.map(function (block) {
         return [
           block.wait,
-          block.methods.map(function(method) {
+          block.methods.map(function (method) {
             return method._message.params[0];
           })
         ];
@@ -1842,7 +1842,7 @@ addReconnectTests(
   }
 );
 
-Tinytest.addAsync('livedata connection - ping without id', async function(test) {
+Tinytest.addAsync('livedata connection - ping without id', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
   await startAndConnect(test, stream);
@@ -1851,7 +1851,7 @@ Tinytest.addAsync('livedata connection - ping without id', async function(test) 
   testGotMessage(test, stream, { msg: 'pong' });
 });
 
-Tinytest.addAsync('livedata connection - ping with id', async function(test) {
+Tinytest.addAsync('livedata connection - ping with id', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
   await startAndConnect(test, stream);
@@ -1861,22 +1861,22 @@ Tinytest.addAsync('livedata connection - ping with id', async function(test) {
   testGotMessage(test, stream, { msg: 'pong', id: id });
 });
 
-DDPCommon.SUPPORTED_DDP_VERSIONS.forEach(function(version) {
-  Tinytest.addAsync('livedata connection - ping from ' + version, function(
+DDPCommon.SUPPORTED_DDP_VERSIONS.forEach(function (version) {
+  Tinytest.addAsync('livedata connection - ping from ' + version, function (
     test,
     onComplete
   ) {
     const connection = new Connection(getSelfConnectionUrl(), {
       reloadWithOutstanding: true,
       supportedDDPVersions: [version],
-      onDDPVersionNegotiationFailure: function() {
+      onDDPVersionNegotiationFailure: function () {
         test.fail();
         onComplete();
       },
-      onConnected: function() {
+      onConnected: function () {
         test.equal(connection._version, version);
         // It's a little naughty to access _stream and _send, but it works...
-        connection._stream.on('message', function(json) {
+        connection._stream.on('message', function (json) {
           let msg = JSON.parse(json);
           let done = false;
           if (msg.msg === 'pong') {
@@ -1900,7 +1900,7 @@ DDPCommon.SUPPORTED_DDP_VERSIONS.forEach(function(version) {
   });
 });
 
-const getSelfConnectionUrl = function() {
+const getSelfConnectionUrl = function () {
   if (Meteor.isClient) {
     let ddpUrl = Meteor._relativeToSiteRootUrl('/');
     if (typeof __meteor_runtime_config__ !== 'undefined') {
@@ -1915,7 +1915,7 @@ const getSelfConnectionUrl = function() {
 
 if (Meteor.isServer) {
   Meteor.methods({
-    reverse: function(arg) {
+    reverse: function (arg) {
       // Return something notably different from reverse.meteor.com.
       return (
         arg
@@ -1928,12 +1928,12 @@ if (Meteor.isServer) {
 }
 
 testAsyncMulti('livedata connection - reconnect to a different server', [
-  function(test, expect) {
+  function (test, expect) {
     const self = this;
     self.conn = DDP.connect('reverse.meteor.com');
     pollUntil(
       expect,
-      function() {
+      function () {
         return self.conn.status().connected;
       },
       5000,
@@ -1941,27 +1941,27 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
       false
     );
   },
-  function(test, expect) {
+  function (test, expect) {
     const self = this;
     self.doTest = self.conn.status().connected;
     if (self.doTest) {
       self.conn.call(
         'reverse',
         'foo',
-        expect(function(err, res) {
+        expect(function (err, res) {
           test.equal(res, 'oof');
         })
       );
     }
   },
-  function(test, expect) {
+  function (test, expect) {
     const self = this;
     if (self.doTest) {
       self.conn.reconnect({ url: getSelfConnectionUrl() });
       self.conn.call(
         'reverse',
         'bar',
-        expect(function(err, res) {
+        expect(function (err, res) {
           test.equal(res, 'rab LOCAL');
         })
       );
@@ -1971,15 +1971,15 @@ testAsyncMulti('livedata connection - reconnect to a different server', [
 
 Tinytest.addAsync(
   'livedata connection - version negotiation requires renegotiating',
-  function(test, onComplete) {
+  function (test, onComplete) {
     const connection = new Connection(getSelfConnectionUrl(), {
       reloadWithOutstanding: true,
       supportedDDPVersions: ['garbled', DDPCommon.SUPPORTED_DDP_VERSIONS[0]],
-      onDDPVersionNegotiationFailure: function() {
+      onDDPVersionNegotiationFailure: function () {
         test.fail();
         onComplete();
       },
-      onConnected: function() {
+      onConnected: function () {
         test.equal(connection._version, DDPCommon.SUPPORTED_DDP_VERSIONS[0]);
         connection._stream.disconnect({ _permanent: true });
         onComplete();
@@ -1988,14 +1988,14 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync('livedata connection - version negotiation error', function(
+Tinytest.addAsync('livedata connection - version negotiation error', function (
   test,
   onComplete
 ) {
   const connection = new Connection(getSelfConnectionUrl(), {
     reloadWithOutstanding: true,
     supportedDDPVersions: ['garbled', 'more garbled'],
-    onDDPVersionNegotiationFailure: function() {
+    onDDPVersionNegotiationFailure: function () {
       test.equal(connection.status().status, 'failed');
       test.matches(
         connection.status().reason,
@@ -2004,7 +2004,7 @@ Tinytest.addAsync('livedata connection - version negotiation error', function(
       test.isFalse(connection.status().connected);
       onComplete();
     },
-    onConnected: function() {
+    onConnected: function () {
       test.fail();
       onComplete();
     }
@@ -2013,15 +2013,15 @@ Tinytest.addAsync('livedata connection - version negotiation error', function(
 
 addReconnectTests(
   'livedata connection - onReconnect prepends messages correctly without a wait method',
-  async function(test, setOnReconnect) {
+  async function (test, setOnReconnect) {
     const stream = new StubStream();
     const conn = newConnection(stream);
     await startAndConnect(test, stream);
 
     // setup method
-    conn.methods({ do_something: function(x) {} });
+    conn.methods({ do_something: function (x) { } });
 
-    setOnReconnect(conn, function() {
+    setOnReconnect(conn, function () {
       conn.apply('do_something', ['reconnect one'], identity);
       conn.apply('do_something', ['reconnect two'], identity);
       conn.apply('do_something', ['reconnect three'], identity);
@@ -2041,7 +2041,7 @@ addReconnectTests(
     // what we expect to be blocked. The subsequent logic to correctly
     // read the wait flag is tested separately.
     test.equal(
-      stream.sent.map(function(msg) {
+      stream.sent.map(function (msg) {
         return JSON.parse(msg).params[0];
       }),
       ['reconnect one', 'reconnect two', 'reconnect three', 'one']
@@ -2049,10 +2049,10 @@ addReconnectTests(
 
     // white-box test:
     test.equal(
-      conn._outstandingMethodBlocks.map(function(block) {
+      conn._outstandingMethodBlocks.map(function (block) {
         return [
           block.wait,
-          block.methods.map(function(method) {
+          block.methods.map(function (method) {
             return method._message.params[0];
           })
         ];
@@ -2069,15 +2069,15 @@ addReconnectTests(
 
 addReconnectTests(
   'livedata connection - onReconnect with sent messages',
-  async function(test, setOnReconnect) {
+  async function (test, setOnReconnect) {
     const stream = new StubStream();
     const conn = newConnection(stream);
     await startAndConnect(test, stream);
 
     // setup method
-    conn.methods({ do_something: function(x) {} });
+    conn.methods({ do_something: function (x) { } });
 
-    setOnReconnect(conn, function() {
+    setOnReconnect(conn, function () {
       conn.apply('do_something', ['login'], { wait: true }, identity);
     });
 
@@ -2116,7 +2116,7 @@ addReconnectTests(
   }
 );
 
-addReconnectTests('livedata stub - reconnect double wait method', async function(
+addReconnectTests('livedata stub - reconnect double wait method', async function (
   test,
   setOnReconnect
 ) {
@@ -2125,13 +2125,13 @@ addReconnectTests('livedata stub - reconnect double wait method', async function
   await startAndConnect(test, stream);
 
   const output = [];
-  setOnReconnect(conn, function() {
-    conn.apply('reconnectMethod', [], { wait: true }, function(err, result) {
+  setOnReconnect(conn, function () {
+    conn.apply('reconnectMethod', [], { wait: true }, function (err, result) {
       output.push('reconnect');
     });
   });
 
-  conn.apply('halfwayMethod', [], { wait: true }, function(err, result) {
+  conn.apply('halfwayMethod', [], { wait: true }, function (err, result) {
     output.push('halfway');
   });
 
@@ -2194,7 +2194,7 @@ addReconnectTests('livedata stub - reconnect double wait method', async function
   });
 });
 
-Tinytest.addAsync('livedata stub - subscribe errors', async function(test) {
+Tinytest.addAsync('livedata stub - subscribe errors', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -2206,7 +2206,7 @@ Tinytest.addAsync('livedata stub - subscribe errors', async function(test) {
   let subErrorInError = null;
 
   conn.subscribe('unknownSub', {
-    onReady: function() {
+    onReady: function () {
       onReadyFired = true;
     },
 
@@ -2215,10 +2215,10 @@ Tinytest.addAsync('livedata stub - subscribe errors', async function(test) {
     //    stopped (a lifecycle callback)
     // 2. onError, which is deprecated and is called only if there is an
     //    error
-    onStop: function(error) {
+    onStop: function (error) {
       subErrorInStopped = error;
     },
-    onError: function(error) {
+    onError: function (error) {
       subErrorInError = error;
     }
   });
@@ -2265,7 +2265,7 @@ Tinytest.addAsync('livedata stub - subscribe errors', async function(test) {
   test.isFalse(onReadyFired);
 });
 
-Tinytest.addAsync('livedata stub - subscribe stop', async function(test) {
+Tinytest.addAsync('livedata stub - subscribe stop', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -2277,7 +2277,7 @@ Tinytest.addAsync('livedata stub - subscribe stop', async function(test) {
   let subErrorInStopped = null;
 
   const sub = conn.subscribe('my_data', {
-    onStop: function(error) {
+    onStop: function (error) {
       onStopFired = true;
       subErrorInStopped = error;
     }
@@ -2292,7 +2292,7 @@ Tinytest.addAsync('livedata stub - subscribe stop', async function(test) {
 });
 
 if (Meteor.isClient) {
-  Tinytest.addAsync('livedata stub - stubs before connected', async function(test) {
+  Tinytest.addAsync('livedata stub - stubs before connected', async function (test) {
     const stream = new StubStream();
     const conn = newConnection(stream);
 
@@ -2335,9 +2335,9 @@ if (Meteor.isClient) {
 }
 
 if (Meteor.isClient) {
-  Tinytest.addAsync (
+  Tinytest.addAsync(
     'livedata stub - method call between reset and quiescence',
-    async function(test) {
+    async function (test) {
       const stream = new StubStream();
       const conn = newConnection(stream);
 
@@ -2347,7 +2347,7 @@ if (Meteor.isClient) {
       const coll = new Mongo.Collection(collName, { connection: conn });
 
       conn.methods({
-        update_value: async function() {
+        update_value: async function () {
           await coll.updateAsync('aaa', { value: 222, tet: "dfsdfsdf" }).stubPromise;
         }
       });
@@ -2421,7 +2421,7 @@ if (Meteor.isClient) {
     }
   );
 
-  Tinytest.addAsync('livedata stub - buffering and methods interaction', async function(
+  Tinytest.addAsync('livedata stub - buffering and methods interaction', async function (
     test
   ) {
     const stream = new StubStream();
@@ -2437,7 +2437,7 @@ if (Meteor.isClient) {
     const coll = new Mongo.Collection(collName, { connection: conn });
 
     conn.methods({
-      update_value: async function() {
+      update_value: async function () {
         const value = (await coll.findOneAsync('aaa')).subscription;
         // Method should have access to the latest value of the collection.
         await coll.updateAsync('aaa', { $set: { method: value + 110 } }).stubPromise;
@@ -2561,11 +2561,97 @@ if (Meteor.isClient) {
   );
 }
 
+if (Meteor.isClient) {
+  Tinytest.addAsync(
+    'livedata connection - onReconnect awaits async callbacks before sending outstanding methods',
+    async function (test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+      await startAndConnect(test, stream);
+      conn.methods({ do_something: function (x) { } });
+
+      // Queue a method before reconnect
+      conn.apply('do_something', ['original'], identity);
+      testGotMessage(test, stream, {
+        msg: 'method', method: 'do_something', params: ['original'], id: '*'
+      });
+
+      let outstandingMethodsSentDuringCallback = null;
+      const stopper = DDP.onReconnect(async (reconnectingConn) => {
+        if (reconnectingConn !== conn) return;
+        await new Promise(r => setTimeout(r, 10));
+        // Snapshot: were outstanding methods re-sent before this callback finished?
+        outstandingMethodsSentDuringCallback = stream.sent
+          .filter(msg => { const p = JSON.parse(msg); return p.msg === 'method'; });
+      });
+
+      stream.sent = [];
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
+
+      await new Promise(r => setTimeout(r, 50)); // let async callback finish
+
+      test.isNotNull(outstandingMethodsSentDuringCallback);
+      // BUG: methods re-sent synchronously before async callback completed
+      // FIX: methods deferred until all callbacks complete → empty during callback
+      test.equal(outstandingMethodsSentDuringCallback.length, 0,
+        'Outstanding methods should not be re-sent before async reconnect callbacks complete');
+      test.isTrue(stream.sent.some(msg => {
+        const parsed = JSON.parse(msg);
+        return parsed.msg === 'method' && parsed.method === 'do_something';
+      }), 'Outstanding methods should be re-sent after async reconnect callbacks settle');
+      stopper.stop();
+    }
+  );
+
+  Tinytest.addAsync(
+    'livedata connection - onReconnect still sends outstanding methods after rejected callbacks',
+    async function (test) {
+      const stream = new StubStream();
+      const conn = newConnection(stream);
+      await startAndConnect(test, stream);
+      conn.methods({ do_something: function (x) { } });
+
+      conn.apply('do_something', ['original'], identity);
+      testGotMessage(test, stream, {
+        msg: 'method', method: 'do_something', params: ['original'], id: '*'
+      });
+
+      conn.onReconnect = () => {
+        throw new Error('Expected reconnect failure');
+      };
+
+      const stopper = DDP.onReconnect(async (reconnectingConn) => {
+        if (reconnectingConn !== conn) return;
+        await new Promise(r => setTimeout(r, 10));
+        throw new Error('Expected async reconnect failure');
+      });
+
+      stream.sent = [];
+      await stream.reset();
+      testGotMessage(test, stream, makeConnectMessage(conn._lastSessionId, conn._receivedCount));
+
+      await new Promise(r => setTimeout(r, 50));
+
+      test.isTrue(stream.sent.some(msg => {
+        const parsed = JSON.parse(msg);
+        return parsed.msg === 'method' &&
+          parsed.method === 'do_something' &&
+          parsed.params[0] === 'original';
+      }), 'Outstanding methods should still be re-sent after reconnect hook failures');
+
+      stopper.stop();
+      conn.onReconnect = null;
+    }
+  );
+
+}
+
 // ============================================================================
 // DDP Session Resumption Tests (Client-side)
 // ============================================================================
 
-Tinytest.addAsync('livedata connection - receivedCount tracking', async function(test) {
+Tinytest.addAsync('livedata connection - receivedCount tracking', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -2597,7 +2683,7 @@ Tinytest.addAsync('livedata connection - receivedCount tracking', async function
   test.equal(conn._receivedCount, 4);
 });
 
-Tinytest.addAsync('livedata connection - receivedCount sent on reconnect', async function(test) {
+Tinytest.addAsync('livedata connection - receivedCount sent on reconnect', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -2622,7 +2708,7 @@ Tinytest.addAsync('livedata connection - receivedCount sent on reconnect', async
     "Connect message should include receivedCount for session resumption");
 });
 
-Tinytest.addAsync('livedata connection - receivedCount reset on new session', async function(test) {
+Tinytest.addAsync('livedata connection - receivedCount reset on new session', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -2647,7 +2733,7 @@ Tinytest.addAsync('livedata connection - receivedCount reset on new session', as
   test.equal(conn._lastSessionId, newSessionId);
 });
 
-Tinytest.addAsync('livedata connection - receivedCount preserved on session resume', async function(test) {
+Tinytest.addAsync('livedata connection - receivedCount preserved on session resume', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -2672,7 +2758,7 @@ Tinytest.addAsync('livedata connection - receivedCount preserved on session resu
   test.equal(conn._lastSessionId, SESSION_ID);
 });
 
-Tinytest.addAsync('livedata connection - disconnect sends disconnect message', async function(test) {
+Tinytest.addAsync('livedata connection - disconnect sends disconnect message', async function (test) {
   const stream = new StubStream();
   const conn = newConnection(stream);
 
@@ -2691,7 +2777,173 @@ Tinytest.addAsync('livedata connection - disconnect sends disconnect message', a
     "disconnect() should send a disconnect message to the server");
 });
 
+Tinytest.addAsync(
+  'livedata connection - store beginUpdate receives the real batch size',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // Register a store that records every beginUpdate call. Stores receive
+    // batchSize > 1 (or reset) as the signal to pause observers, so a
+    // batchSize that is always 0 silently disables flicker prevention.
+    const beginUpdateCalls = [];
+    const storeApi = {
+      beginUpdate(batchSize, reset) {
+        beginUpdateCalls.push({ batchSize: batchSize, reset: reset });
+      },
+      update() {},
+      endUpdate() {},
+      saveOriginals() {},
+      retrieveOriginals() {}
+    };
+    if (Meteor.isServer) {
+      await conn.registerStoreServer('batch-test', storeApi);
+    } else {
+      conn.registerStoreClient('batch-test', storeApi);
+    }
+
+    // Three buffered writes for the store...
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '1', fields: { a: 1 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '2', fields: { a: 2 } });
+    await stream.receive({ msg: 'added', collection: 'batch-test', id: '3', fields: { a: 3 } });
+    // ...then a non-write message, which forces an immediate flush.
+    await stream.receive({ msg: 'ready', subs: [] });
+
+    // However the flush batched the messages, the batch sizes reported to
+    // beginUpdate must account for all three writes.
+    const total = beginUpdateCalls.reduce(
+      (sum, call) => sum + call.batchSize,
+      0
+    );
+    test.equal(total, 3);
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - malformed frames are discarded without crashing',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    // parseDDP returns null both for invalid JSON and for valid JSON that
+    // is not an object. Neither may throw out of the message handler.
+    await stream.receive('this is not json');
+    await stream.receive('"a bare string"');
+    await stream.receive('42');
+
+    // The connection still processes real messages afterwards.
+    let callbackFired = false;
+    conn.call('stillAlive', function () {
+      callbackFired = true;
+    });
+    const message = testGotMessage(test, stream, {
+      msg: 'method', method: 'stillAlive', params: [], id: '*'
+    });
+    await stream.receive({ msg: 'result', id: message.id, result: 'ok' });
+    await stream.receive({ msg: 'updated', methods: [message.id] });
+    test.isTrue(callbackFired);
+  }
+);
+
 // XXX also test:
 // - restart on update flag
 // - on_update event
 // - reloading when the app changes, including session migration
+
+Tinytest.addAsync(
+  'livedata connection - replaced stop callback fires on local stop',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    let firstStopCalls = 0;
+    let secondStopCalls = 0;
+
+    // Initial subscribe, as an autorun's first run would do.
+    const sub = conn.subscribe('replace-stop-test', {
+      onStop() {
+        firstStopCalls++;
+      }
+    });
+    testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'replace-stop-test', params: []
+    });
+
+    // Simulate the autorun rerun reuse path: the record is marked inactive
+    // and a matching subscribe reactivates it, replacing its callbacks.
+    conn._subscriptions[sub.subscriptionId].inactive = true;
+    conn.subscribe('replace-stop-test', {
+      onStop() {
+        secondStopCalls++;
+      }
+    });
+    test.length(stream.sent, 0); // record reused — no second 'sub' message
+
+    // A local stop must fire the record's CURRENT callback, exactly like
+    // the server-initiated stop path (nosub) does — not the callback
+    // captured when the record was first created.
+    sub.stop();
+    test.equal(secondStopCalls, 1);
+    test.equal(firstStopCalls, 0);
+  }
+);
+
+Tinytest.add(
+  'livedata connection - close() stops tracking the connection',
+  function (test) {
+    // Precondition: every already-tracked connection is fully ready, so
+    // this test's connection is the only thing that can flip the answer.
+    test.isTrue(DDP._allSubscriptionsReady());
+
+    // DDP.connect registers in the allConnections registry (the object
+    // form of `url` is the standard test-stream hook).
+    const stream = new StubStream();
+    const conn = DDP.connect(stream);
+
+    // A subscription that never becomes ready makes this connection the
+    // one blocking _allSubscriptionsReady.
+    conn.subscribe('never-ready-tracking-test');
+    test.isFalse(DDP._allSubscriptionsReady());
+
+    // Closing the connection must deregister it — a closed connection can
+    // never become ready and would otherwise be consulted forever.
+    conn.close();
+    test.isTrue(DDP._allSubscriptionsReady());
+  }
+);
+
+Tinytest.addAsync(
+  'livedata connection - unsub while disconnected is delivered after reconnect',
+  async function (test) {
+    const stream = new StubStream();
+    const conn = newConnection(stream);
+
+    await startAndConnect(test, stream);
+
+    const sub = conn.subscribe('queued-unsub-test');
+    const subMessage = testGotMessage(test, stream, {
+      msg: 'sub', id: '*', name: 'queued-unsub-test', params: []
+    });
+
+    // Stop the subscription while the stream is not connected. The stream
+    // drops data sent in this state, and the registry record is removed, so
+    // nothing would ever re-send the unsub — it must be queued.
+    stream.setStatus('waiting');
+    sub.stop();
+    test.length(stream.sent, 0);
+
+    // On reconnect the queued unsub goes out, after the connect message
+    // (and after any still-registered subscriptions would be re-sent).
+    stream.setStatus('connected');
+    await stream.reset();
+    testGotMessage(test, stream, makeConnectMessage(SESSION_ID, conn._receivedCount));
+    testGotMessage(test, stream, { msg: 'unsub', id: subMessage.id });
+    test.length(stream.sent, 0);
+  }
+);

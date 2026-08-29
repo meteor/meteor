@@ -53,6 +53,14 @@ Current Reviewers:
 - [@zodern](https://github.com/zodern)
 - [@radekmie](https://github.com/radekmie)
 
+##### Testing a contributor's branch locally
+
+To quickly check out a PR branch from a fork for local testing, see the [Testing a fork branch](DEVELOPMENT.md#testing-a-fork-branch) section in `DEVELOPMENT.md`, or run:
+
+```sh
+npm run checkout:pr -- https://github.com/meteor/meteor/pull/<PR-number>
+```
+
 #### Core Committer
 
 The contributors with commit access to meteor/meteor are employees of Meteor Software LP or community members who have distinguished themselves in other contribution areas or members of partner companies. If you want to become a core committer, please start writing PRs.
@@ -155,7 +163,7 @@ Learn how we use GitHub labels [here](LABELS.md)
 
 ## Documentation
 
-If you'd like to contribute to Meteor's documentation, head over to https://docs.meteor.com/about/contributing.html for guidelines.
+If you'd like to contribute to Meteor's documentation, head over to https://docs.meteor.com/community/contributing.html for guidelines.
 
 ## Blaze
 

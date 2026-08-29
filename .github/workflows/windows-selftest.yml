@@ -41,11 +41,15 @@ jobs:
         shell: powershell
         run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
 
+      - name: Enable Git Symlinks
+        shell: powershell
+        run: git config --global core.symlinks true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: 24.x
 

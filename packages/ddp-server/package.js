@@ -1,11 +1,11 @@
 Package.describe({
   summary: "Meteor's latency-compensated distributed data server",
-  version: '3.2.0-beta350.7',
+  version: '3.4.0',
   documentation: null,
 });
 
 Npm.depends({
-  "faye-websocket": "0.11.4",
+  "uWebSockets.js": "git+https://github.com/unetworking/uWebSockets.js#v20.66.0",
   "permessage-deflate2": "0.1.8",
   sockjs: "0.3.24",
   "lodash.once": "4.1.1",
@@ -51,6 +51,10 @@ Package.onUse(function (api) {
   api.use("callback-hook", "server");
   api.export("DDPServer", "server");
 
+  api.addFiles("transports/raw_connection.js", "server");
+  api.addFiles("transports/sockjs.js", "server");
+  api.addFiles("transports/uws.js", "server");
+  api.addFiles("transports/index.js", "server");
   api.addFiles("stream_server.js", "server");
 
   api.addFiles("livedata_server.js", "server");
@@ -79,4 +83,6 @@ Package.onTest(function (api) {
   api.addFiles("session_view_tests.js", ["server"]);
   api.addFiles("crossbar_tests.js", ["server"]);
   api.addFiles("raw_websocket_tests.js", "server");
+  api.addFiles("transports/uws_tests.js", "server");
+  api.addFiles("transports/sockjs_tests.js", "server");
 });

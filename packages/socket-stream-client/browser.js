@@ -5,10 +5,10 @@ import {
 
 import { StreamClientCommon } from "./common.js";
 
-// SockJS is imported statically to avoid the startup latency introduced by
-// dynamic import() in _launchConnection(). When DISABLE_SOCKJS=1, SockJS
-// remains bundled in the client, but the connection uses the native
-// WebSocket path directly with no import-time delay.
+// SockJS is imported statically to avoid the startup latency that dynamic
+// import() would introduce in _launchConnection(). When a non-SockJS transport
+// is selected, SockJS remains in the bundle but is never used — the connection
+// goes through native WebSocket directly.
 import SockJS from "./sockjs-1.6.1-min-.js";
 
 export class ClientStream extends StreamClientCommon {
@@ -94,11 +94,15 @@ export class ClientStream extends StreamClientCommon {
       this.socket.onmessage = this.socket.onclose = this.socket.onerror = this.socket.onheartbeat = () => {};
       this.socket.close();
       this.socket = null;
-    }
 
-    this.forEachCallback('disconnect', callback => {
-      callback(maybeError);
-    });
+      // Only fire disconnect callbacks when there was a socket to close,
+      // matching the node implementation. _cleanup also runs at the top of
+      // every (re)connection attempt, and firing here with no socket sent a
+      // phantom 'disconnect' event to consumers once per retry cycle.
+      this.forEachCallback('disconnect', callback => {
+        callback(maybeError);
+      });
+    }
   }
 
   _clearConnectionAndHeartbeatTimers() {
@@ -118,6 +122,11 @@ export class ClientStream extends StreamClientCommon {
   }
 
   _heartbeat_received() {
+    // The watchdog exists to detect missing SockJS heartbeat frames, which
+    // the server emits every 45s. Native WebSocket transports have no such
+    // frames, so on a quiet connection (e.g. DDP heartbeats disabled) the
+    // timer would be guaranteed to fire and kill a healthy connection.
+    if (this._transport !== 'sockjs') return;
     // If we've already permanently shut down this stream, the timeout is
     // already cleared, and we don't need to set it again.
     if (this._forcedToDisconnect) return;
@@ -158,9 +167,10 @@ export class ClientStream extends StreamClientCommon {
   _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
-    if (__meteor_runtime_config__.DISABLE_SOCKJS) {
-      this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
-    } else {
+    const transport = __meteor_runtime_config__.DDP_TRANSPORT || 'sockjs';
+    this._transport = transport;
+
+    if (transport === 'sockjs') {
       const options = {
         transports: this._sockjsProtocolsWhitelist(),
         ...this.options._sockjsOptions
@@ -169,6 +179,9 @@ export class ClientStream extends StreamClientCommon {
       // that we can connect to random hostnames and get around browser
       // per-host connection limits.
       this.socket = new SockJS(toSockjsUrl(this.rawUrl), undefined, options);
+    } else {
+      // All non-SockJS transports use native WebSocket on the client.
+      this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
     }
 
     this.socket.onopen = data => {

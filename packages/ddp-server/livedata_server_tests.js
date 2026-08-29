@@ -136,7 +136,7 @@ Tinytest.addAsync(
   function (test, onComplete) {
     var cb = Meteor.onMessage(function (msg, session) {
       if (msg.method !== 'livedata_server_test_inner') return;
-            test.equal(msg.method, "livedata_server_test_inner");
+      test.equal(msg.method, "livedata_server_test_inner");
       cb.stop();
       onComplete();
     });
@@ -552,22 +552,22 @@ Tinytest.addAsync('livedata server - stopping a handle should preserve its conte
 
     if (user) {
       let count = 0;
-  
+
       let initializing = true;
       const handle = await coll.find({}).observeChangesAsync({
         added: () => {
           count += 1;
-          if (!initializing) this.changed('issueUnreadCount', user._id, {count});
+          if (!initializing) this.changed('issueUnreadCount', user._id, { count });
         },
         removed: () => {
           count -= 1;
-          this.changed('issueUnreadCount', user._id, {count});
+          this.changed('issueUnreadCount', user._id, { count });
         }
       });
 
       initializing = false;
 
-      this.added('issueUnreadCount', user._id, {count});
+      this.added('issueUnreadCount', user._id, { count });
 
       // Should be the same as `this.onStop(() => handle.stop())`
       this.onStop(handle.stop);
@@ -588,24 +588,24 @@ Tinytest.addAsync('livedata server - stopping a handle should preserve its conte
 
   // Make changes that will affect all subs
   await coll.insertAsync({ _id: 'item_10', title: 'Item #10' });
-  
+
   // Stop middle subscription during changes
   sub2.stop();
-  
+
   await coll.insertAsync({ _id: 'item_11', title: 'Item #11' });
-  
+
   // Create new subscription while changes happening
   const sub4 = conn.subscribe(publicationName);
-  
+
   await coll.removeAsync({ _id: 'item_10' });
-  
+
   sub1.stop();
-  
+
   await coll.insertAsync({ _id: 'item_12', title: 'Item #12' });
-  
+
   // Final subscription during teardown of others
   const sub5 = conn.subscribe(publicationName);
-  
+
   sub3.stop();
   sub4.stop();
 
@@ -967,5 +967,256 @@ Tinytest.addAsync(
       handle.stop();
       clientConn.disconnect();
     });
+  }
+);
+
+// Test that send() on a removed session is a safe no-op
+Tinytest.addAsync(
+  "livedata server - DDP resumption: send after session removal is a no-op",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const { clientConn, serverConn } = await getTestConnections(test);
+      const session = Meteor.server.sessions.get(serverConn.id);
+
+      // Unexpected disconnect: session enters its grace period and buffers.
+      clientConn._stream._lostConnection();
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      test.isTrue(
+        Array.isArray(session.messageQueue),
+        "session should buffer messages during the grace period"
+      );
+
+      // Let the grace period expire — the session is removed.
+      await sleep(AFTER_GRACE_PERIOD_MS);
+      test.isFalse(Meteor.server.sessions.has(serverConn.id));
+
+      // The buffer must be gone, and a late send (e.g. a deferred
+      // write-fence callback) must not buffer toward an overflow that
+      // would invoke the nulled _pendingRemoveFunction and throw.
+      test.isNull(session.messageQueue);
+      session.send({ msg: 'added', collection: 'x', id: '1', fields: {} });
+      test.isNull(session.messageQueue);
+    });
+  }
+);
+
+// Test that a server-initiated close during the grace period removes the
+// session immediately instead of silently doing nothing
+Tinytest.addAsync(
+  "livedata server - DDP resumption: connection close during grace period removes session",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const { clientConn, serverConn } = await getTestConnections(test);
+      const sessionId = serverConn.id;
+      const session = Meteor.server.sessions.get(sessionId);
+
+      // Unexpected disconnect: session enters its grace period.
+      clientConn._stream._lostConnection();
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      test.isTrue(
+        Meteor.server.sessions.has(sessionId),
+        "session should be in its grace period"
+      );
+
+      // Server explicitly closes the connection: the session must not
+      // remain resumable.
+      session.connectionHandle.close();
+      test.isFalse(
+        Meteor.server.sessions.has(sessionId),
+        "server-initiated close should remove the session immediately"
+      );
+    });
+  }
+);
+
+// Test that messages buffered during the grace period are delivered on
+// resume, and that the resumed session gets a fresh grace period later
+Tinytest.addAsync(
+  "livedata server - DDP resumption: grace-period messages delivered on resume",
+  async function (test) {
+    await withTestGracePeriod(async () => {
+      const clientConn = DDP.connect(Meteor.absoluteUrl(), { retry: false });
+      await pollUntil(() => clientConn._lastSessionId);
+      const sessionId = clientConn._lastSessionId;
+      const session = Meteor.server.sessions.get(sessionId);
+
+      // Record raw messages arriving on the client stream.
+      const received = [];
+      clientConn._stream.on('message', raw => received.push(raw));
+
+      // Unexpected disconnect, then buffer a message during the grace period.
+      clientConn._stream._lostConnection();
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      session.send({
+        msg: 'added', collection: 'resume-order', id: 'q1', fields: {}
+      });
+      test.isTrue(Array.isArray(session.messageQueue));
+
+      // Resume.
+      clientConn._stream.reconnect();
+      await pollUntil(() => clientConn.status().connected);
+      await sleep(WITHIN_GRACE_PERIOD_MS);
+      test.equal(clientConn._lastSessionId, sessionId,
+        "session should have been resumed");
+
+      // The buffered message reached the client...
+      test.isTrue(
+        received.some(raw => raw.indexOf('"q1"') !== -1),
+        "message buffered during the grace period should be delivered on resume"
+      );
+      // ...the queue is detached...
+      test.isUndefined(session.messageQueue);
+      // ...and no stale flag denies the session its next grace period.
+      test.isFalse(!!session._expectingDisconnect);
+
+      clientConn.disconnect();
+    });
+  }
+);
+
+// ============================================================================
+// Async onStop cleanup tests (memory leak fix)
+// ============================================================================
+
+const asyncCleanupTracker = {};
+
+Meteor.publish('test_async_onstop_cleanup', function (trackerId) {
+  this.onStop(async function () {
+    await new Promise(resolve => setTimeout(resolve, 50));
+    asyncCleanupTracker[trackerId] = true;
+  });
+  this.ready();
+});
+
+Tinytest.addAsync(
+  'livedata server - async onStop callbacks complete on unsubscribe',
+  async function (test) {
+    const trackerId = Random.id();
+    asyncCleanupTracker[trackerId] = false;
+
+    const { clientConn } = await getTestConnections(test);
+    const sub = clientConn.subscribe('test_async_onstop_cleanup', trackerId);
+
+    await waitUntil(
+      () => sub.ready(),
+      { description: 'subscription is ready' }
+    );
+
+    sub.stop();
+
+    await waitUntil(
+      () => asyncCleanupTracker[trackerId] === true,
+      { description: 'async onStop callback completed after unsubscribe' }
+    );
+
+    test.isTrue(
+      asyncCleanupTracker[trackerId],
+      'Async onStop callback should have completed'
+    );
+
+    clientConn.disconnect();
+    delete asyncCleanupTracker[trackerId];
+  }
+);
+
+Tinytest.addAsync(
+  'livedata server - async onStop callbacks complete on disconnect',
+  async function (test) {
+    const trackerId = Random.id();
+    asyncCleanupTracker[trackerId] = false;
+
+    const { clientConn } = await getTestConnections(test);
+    clientConn.subscribe('test_async_onstop_cleanup', trackerId);
+
+    await waitUntil(
+      () => clientConn.status().connected,
+      { description: 'client is connected' }
+    );
+
+    clientConn.disconnect();
+
+    await waitUntil(
+      () => asyncCleanupTracker[trackerId] === true,
+      { description: 'async onStop callback completed after disconnect' }
+    );
+
+    test.isTrue(
+      asyncCleanupTracker[trackerId],
+      'Async onStop callback should have completed on disconnect'
+    );
+
+    delete asyncCleanupTracker[trackerId];
+  }
+);
+// A crossbar listen handle's stop() must be idempotent. A second stop()
+// used to decrement the listener count again, silently deleting the
+// collection's remaining listeners once it hit zero (and throwing on any
+// later stop). Observer teardown races make double-stop plausible.
+Tinytest.addAsync(
+  "livedata server - crossbar listen handle stop is idempotent",
+  async function (test) {
+    const crossbar = new DDPServer._Crossbar({});
+    let fired = 0;
+    const handleA = crossbar.listen(
+      { collection: 'crossbar-idempotent-stop' },
+      function () {}
+    );
+    const handleB = crossbar.listen(
+      { collection: 'crossbar-idempotent-stop' },
+      function () {
+        fired++;
+      }
+    );
+
+    handleA.stop();
+    handleA.stop(); // no-op, must not disturb other listeners
+
+    await crossbar.fire({ collection: 'crossbar-idempotent-stop', id: 'x' });
+    test.equal(fired, 1);
+
+    handleB.stop(); // must not throw
+  }
+);
+
+// added() lazily creates the per-collection accounting Set; removed() read it
+// unguarded. Publication strategies can change per collection at runtime, so
+// an add under a no-accounting strategy followed by a remove under an
+// accounting one threw a TypeError out of the publish handler.
+Meteor.publish('livedata_server_test_strategy_flip', function () {
+  const collection = 'strategy-flip-collection';
+  Meteor.server.setPublicationStrategy(
+    collection,
+    DDPServer.publicationStrategies.NO_MERGE_NO_HISTORY
+  );
+  try {
+    this.added(collection, 'doc1', { a: 1 });
+    Meteor.server.setPublicationStrategy(
+      collection,
+      DDPServer.publicationStrategies.SERVER_MERGE
+    );
+    this.removed(collection, 'doc1');
+  } finally {
+    // Fully restore global state: remove the per-collection override rather
+    // than leaving an explicit (if default-equivalent) entry behind.
+    delete Meteor.server._publicationStrategies[collection];
+  }
+  this.ready();
+});
+
+Tinytest.addAsync(
+  "livedata server - removed() after publication strategy change does not throw",
+  async function (test) {
+    const { clientConn } = await getTestConnections(test);
+    try {
+      await new Promise((resolve, reject) => {
+        clientConn.subscribe('livedata_server_test_strategy_flip', {
+          onReady: resolve,
+          onError: reject,
+        });
+      });
+      test.isTrue(true, 'subscription became ready without a handler error');
+    } finally {
+      clientConn.disconnect();
+    }
   }
 );

@@ -2,18 +2,25 @@ name: Check code-style
 on:
   push:
     paths:
+      - 'packages/**'
       - 'npm-packages/meteor-installer/**'
   pull_request:
     paths:
+      - 'packages/**'
       - 'npm-packages/meteor-installer/**'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check-code-style:
-    runs-on: ubuntu-latest
+    runs-on: oss-vm
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24.x
       - run: npm ci
-      - name: Run ESLint@8
-        run: npx eslint@8 "./npm-packages/meteor-installer/**/*.js"
+      - name: Check formatting with oxfmt
+        run: npx oxfmt --ignore-path .fmtignore --check .
+      - name: Run lint with oxlint
+        run: npm run lint

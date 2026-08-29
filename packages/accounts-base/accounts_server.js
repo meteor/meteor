@@ -6,6 +6,7 @@ import {
   EXPIRE_TOKENS_INTERVAL_MS,
 } from './accounts_common.js';
 import { URL } from 'meteor/url';
+export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
 
 /**
@@ -132,7 +133,11 @@ export class AccountsServer extends AccountsCommon {
       }
       return url.toString();
     };
+
+    // Expose the _CurrentEndpointInvocation
+    this._CurrentEndpointInvocation = _CurrentEndpointInvocation;
   }
+
 
   ///
   /// CURRENT USER
@@ -146,9 +151,15 @@ export class AccountsServer extends AccountsCommon {
     // runs. This is likely not what the user expects. The way to make this work
     // in a method or publish function is to do Meteor.find(this.userId).observe
     // and recompute when the user record changes.
-    const currentInvocation = DDP._CurrentMethodInvocation.get() || DDP._CurrentPublicationInvocation.get();
-    if (!currentInvocation)
-      throw new Error("Meteor.userId can only be invoked in method calls or publications.");
+    const currentInvocation =
+      DDP._CurrentMethodInvocation.get() ||
+      DDP._CurrentPublicationInvocation.get() ||
+      this._CurrentEndpointInvocation.get();
+    if (!currentInvocation) {
+      throw new Error(
+        "Meteor.userId can only be invoked inside a method, publication, or WebApp endpoint."
+      );
+    }
     return currentInvocation.userId;
   }
 
@@ -559,7 +570,7 @@ export class AccountsServer extends AccountsCommon {
     type,
     fn
   ) {
-    return await this._attemptLogin(
+    return this._attemptLogin(
       methodInvocation,
       methodName,
       methodArgs,
@@ -706,7 +717,7 @@ export class AccountsServer extends AccountsCommon {
       const result = await accounts._runLoginHandlers(this, options);
       //console.log({result});
 
-      return await accounts._attemptLogin(this, "login", arguments, result);
+      return accounts._attemptLogin(this, "login", arguments, result);
     };
 
     methods.logout = async function () {
@@ -759,7 +770,7 @@ export class AccountsServer extends AccountsCommon {
       const newStampedToken = accounts._generateStampedLoginToken();
       newStampedToken.when = currentStampedToken.when;
       await accounts._insertLoginToken(this.userId, newStampedToken);
-      return await accounts._loginUser(this, this.userId, newStampedToken);
+      return accounts._loginUser(this, this.userId, newStampedToken);
     };
 
     // Removes all tokens except the token associated with the current
@@ -1677,13 +1688,13 @@ const defaultResumeLoginHandler = async (accounts, options) => {
   // {hashedToken, when} for a hashed token or {token, when} for an
   // unhashed token.
   let oldUnhashedStyleToken;
-  let token = await user.services.resume.loginTokens.find(token =>
+  let token = user.services.resume.loginTokens.find(token =>
     token.hashedToken === hashedToken
   );
   if (token) {
     oldUnhashedStyleToken = false;
   } else {
-     token = await user.services.resume.loginTokens.find(token =>
+    token = user.services.resume.loginTokens.find(token =>
       token.token === options.resume
     );
     oldUnhashedStyleToken = true;
