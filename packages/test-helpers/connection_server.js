@@ -16,7 +16,7 @@ makeTestConnection = function (test, succeeded, failed) {
     test.isTrue(typeof serverConn.id === 'string', "connection handle id exists and is a string");
     if (serverConns[serverConn.id]) {
       test.fail("onConnection callback called multiple times for same session id");
-      failed();
+      if (failed) failed();
     } else {
       serverConns[serverConn.id] = serverConn;
     }
@@ -28,7 +28,7 @@ makeTestConnection = function (test, succeeded, failed) {
     var serverConn = serverConns[sessionId];
     if (! serverConn) {
       test.fail("No onConnection received server side for connected client");
-      failed();
+      if (failed) failed();
     } else {
       onConnectionHandle.stop();
       succeeded(clientConn, serverConn);
@@ -48,7 +48,7 @@ makeTestConnection = function (test, succeeded, failed) {
     },
     function () {
       test.fail("client side of connection did not receive a session id");
-      failed();
+      if (failed) failed();
     }
   );
 };

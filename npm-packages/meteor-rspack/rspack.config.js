@@ -3,7 +3,6 @@ const fs = require('fs');
 const { inspect } = require('node:util');
 const path = require('path');
 const { merge } = require('webpack-merge');
-const NodePolyfillPlugin = require('node-polyfill-webpack-plugin');
 
 const { cleanOmittedPaths, mergeSplitOverlap } = require("./lib/mergeRulesSplitOverlap.js");
 const { getMeteorAppSwcConfig } = require('./lib/swc.js');
@@ -30,7 +29,7 @@ const {
 const { loadUserAndOverrideConfig } = require('./lib/meteorRspackConfigHelpers.js');
 const { prepareMeteorRspackConfig } = require("./lib/meteorRspackConfigFactory");
 const { extractLocalDependencies } = require('./lib/localDependenciesHelpers.js');
-
+const { createTestClientNodePolyfillConfig } = require("./lib/testClientNodePolyfills.js");
 
 // Safe require that doesn't throw if the module isn't found
 function safeRequire(moduleName) {
@@ -127,15 +126,13 @@ function createSwcConfig({
 }) {
   const defaultConfig = {
     jsc: {
-      baseUrl: process.cwd(),
-      paths: { '/*': ['*', '/*'] },
       parser: {
         syntax: isTypescriptEnabled ? 'typescript' : 'ecmascript',
         ...(isTsxEnabled && { tsx: true }),
         ...(isJsxEnabled && { jsx: true }),
         ...(isAngularEnabled && { decorators: true }),
       },
-      target: 'es2015',
+      target: isClient ? 'es2015' : 'es2022',
       ...(isReactEnabled && {
         transform: {
           react: {
@@ -426,7 +423,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   // Additional ignore entries
   const additionalEntries = [
     "**/.meteor/local/**",
-    "**/dist/**",
+    path.join(projectDir, "dist", "**").replace(/\\/g, "/"),
     ...(isTest && isTestEager
       ? [`**/${buildContext}/**`, "**/.meteor/local/**", "node_modules/**"]
       : []),
@@ -562,6 +559,43 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       ? path.resolve(process.cwd(), testEntry)
       : path.resolve(process.cwd(), buildContext, entryPath);
   const clientNameConfig = `[${(isTest && "test-") || ""}client-rspack]`;
+
+  // Default onListening provided by meteor-rspack. Kept as a named
+  // reference so we can detect a user-supplied override after merge
+  // and compose (run default first, then user's).
+  const meteorDefaultOnListening = function (devServer) {
+    if (!devServer) return;
+    const { host, port } = devServer.options;
+    const protocol =
+      devServer.options.server?.type === "https" ? "https" : "http";
+    const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
+    outputMeteorRspack({ devServerUrl });
+
+    // Windows-only: webpack-dev-server tracks accepted sockets
+    // but doesn't attach 'error'. On Windows, teardown of a
+    // closed proxy connection sends RST, producing an unhandled
+    // ECONNRESET that crashes the dev server. Unix peers send
+    // FIN and never hit this.
+    if (process.platform === "win32") {
+      const server = devServer.server;
+      if (!server || server.__meteorRspackErrorGuard) return;
+      server.__meteorRspackErrorGuard = true;
+
+      server.on("connection", (socket) => {
+        if (!socket || socket.__meteorRspackGuarded) return;
+        socket.__meteorRspackGuarded = true;
+        socket.on("error", (err) => {
+          if (err && err.code === "ECONNRESET") return;
+          console.warn(
+            `[meteor-rspack] dev server socket error: ${
+              err && (err.code || err.message)
+            }`
+          );
+        });
+      });
+    }
+  };
+
   // Base client config
   let clientConfig = {
     name: clientNameConfig,
@@ -613,7 +647,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...extraRules,
       ],
     },
-    resolve: { extensions, alias, fallback },
+    resolve: { extensions, alias, fallback, roots: [path.resolve(projectDir)] },
     externals,
     plugins: [
       ...[
@@ -656,14 +690,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         devMiddleware: {
           writeToDisk: createPersistCallback({ once: ['sw.js'], always: ['.html'] }),
         },
-        onListening(devServer) {
-          if (!devServer) return;
-          const { host, port } = devServer.options;
-          const protocol =
-            devServer.options.server?.type === "https" ? "https" : "http";
-          const devServerUrl = `${protocol}://${host || "localhost"}:${port}`;
-          outputMeteorRspack({ devServerUrl });
-        },
+        onListening: meteorDefaultOnListening,
       },
     }),
     ...merge(cacheStrategy, { experiments: { css: true } }),
@@ -744,6 +771,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       alias,
       modules: ["node_modules", path.resolve(projectDir)],
       conditionNames: ["import", "require", "node", "default"],
+      roots: [path.resolve(projectDir)],
     },
     externals,
     externalsPresets: { node: true },
@@ -811,7 +839,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
           optimization: {
             splitChunks: false,
           },
-          plugins: [new NodePolyfillPlugin()],
+          ...createTestClientNodePolyfillConfig(),
         }
       : {};
 
@@ -840,6 +868,23 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     config = mergeSplitOverlap(config, nextOverrideConfig);
     if (nextOverrideConfig.stats != null) {
       statsOverrided = true;
+    }
+  }
+
+  // If the user or an override replaced devServer.onListening, compose
+  // so our default runs first (attaches the Windows socket guard and
+  // reports the dev server URL) and the user's hook runs second.
+  if (isClient && config.devServer) {
+    const finalOnListening = config.devServer.onListening;
+    if (
+      typeof finalOnListening === "function" &&
+      finalOnListening !== meteorDefaultOnListening
+    ) {
+      const userOnListening = finalOnListening;
+      config.devServer.onListening = function (devServer) {
+        meteorDefaultOnListening(devServer);
+        userOnListening(devServer);
+      };
     }
   }
 
