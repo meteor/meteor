@@ -14,9 +14,6 @@ Meteor.methods({
   'instr_test.ctx': function () { return Instrumentation.currentContext(); },
   'instr_test.mutate': async (obj) => { mutateSeen.push(obj.value); return { value: obj.value }; },
   'instr_test.captured': function (data) { return data; },
-  // A method literally named `login` is treated as the Accounts login by the
-  // hard-coded denylist — args/result must never be captured.
-  'login': function (creds) { return 'ok'; },
   // An application error whose `reason` getter throws: building its preview must
   // not break the reply path (the caller still gets THIS error, not the getter's).
   'instr_test.evilError': () => {
@@ -25,6 +22,17 @@ Meteor.methods({
     throw err;
   },
 });
+
+// A method literally named `login` is treated as the Accounts login by the
+// hard-coded denylist — args/result must never be captured. In the
+// all-packages test app (test-in-console) accounts-base already defines
+// `login`, and a duplicate registration crashes the server at boot; the
+// denylist test then exercises the real login method instead.
+try {
+  Meteor.methods({ 'login': function (creds) { return 'ok'; } });
+} catch (e) {
+  // already defined by accounts-base
+}
 
 const collect = (type, into) => Instrumentation.on(type, (e) => into.push(e));
 
@@ -84,7 +92,10 @@ Tinytest.addAsync('instrumentation - Accounts denylist suppresses args, others c
   const seen = {};
   const a = Instrumentation.on('method.start', (e) => { seen[e.name] = e; });
   try {
-    await Meteor.callAsync('login', { password: 'secret' });
+    // The real accounts `login` (all-packages test app) rejects these fake
+    // credentials — irrelevant here: method.start fires either way, and the
+    // denylist must redact the args in both worlds.
+    await Meteor.callAsync('login', { password: 'secret' }).then(() => {}, () => {});
     await Meteor.callAsync('instr_test.captured', { hello: 'world' });
     test.isUndefined(seen['login'].args, 'login args suppressed by denylist');
     test.equal(seen['login'].argsCount, 1);
