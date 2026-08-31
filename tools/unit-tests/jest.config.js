@@ -10,6 +10,7 @@ module.exports = {
   ],
   testPathIgnorePatterns: [
     "/node_modules/",
+    "<rootDir>/scripts/ci/build-test-matrix.test.js",
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",

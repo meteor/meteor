@@ -17,9 +17,9 @@ function workflowStep(name) {
   return workflow.slice(start, next === -1 ? workflow.length : next);
 }
 
-test('setup runs the node test outside Jest discovery', () => {
+test('setup runs the matrix validation with the Node test runner', () => {
   const setup = workflowStep('Validate test matrix generator');
-  assert.match(setup, /node --test scripts\/ci\/build-test-matrix\.node-test\.js/);
+  assert.match(setup, /node --test scripts\/ci\/build-test-matrix\.test\.js/);
 });
 
 test('groups tests by file and builds literal anchored selectors', () => {

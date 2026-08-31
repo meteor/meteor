@@ -9,7 +9,7 @@ on:
       - "meteor.bat"
       - ".github/workflows/test-tools.yml"
       - "scripts/ci/build-test-matrix.js"
-      - "scripts/ci/build-test-matrix.node-test.js"
+      - "scripts/ci/build-test-matrix.test.js"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -83,7 +83,7 @@ jobs:
         run: ./meteor --get-ready
 
       - name: Validate test matrix generator
-        run: node --test scripts/ci/build-test-matrix.node-test.js
+        run: node --test scripts/ci/build-test-matrix.test.js
 
       - name: Discover tests and build matrix
         id: discover
