@@ -1,6 +1,6 @@
 import { expectTypeOf } from "expect-type";
-import { Meteor } from "./meteor";
-import type { global_Error, Subscription } from "./meteor";
+import { Meteor } from "./meteor.native";
+import type { global_Error, Subscription } from "./meteor.native";
 
 expectTypeOf(Meteor).toBeObject();
 expectTypeOf<global_Error>().toEqualTypeOf<Error>();

@@ -1,8 +1,8 @@
 import { expectTypeOf } from "expect-type";
-import { Roles } from "./definitions";
+import { Roles } from "./definitions.native";
 import { Meteor } from "meteor/meteor";
 import { Mongo } from "meteor/mongo";
-import type { RolesCollection, RoleAssignmentsCollection } from "./definitions";
+import type { RolesCollection, RoleAssignmentsCollection } from "./definitions.native";
 
 expectTypeOf(Roles).toBeObject();
 expectTypeOf<Roles.Scope>().toEqualTypeOf<string | null>();

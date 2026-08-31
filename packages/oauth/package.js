@@ -35,7 +35,7 @@ Package.onUse(api => {
 
   api.addFiles('oauth_common.js');
 
-  api.addAssets('oauth.d.ts', 'server');
+  api.types('oauth.d.ts');
 });
 
 Npm.depends({

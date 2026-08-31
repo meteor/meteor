@@ -22,7 +22,7 @@ Package.onUse(api => {
   api.mainModule('namespace.js');
 
   api.export('Google');
-  api.addAssets('google-oauth.d.ts', 'server');
+  api.types('google-oauth.d.ts');
 });
 
 Package.onTest(function(api) {

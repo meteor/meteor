@@ -5,9 +5,6 @@ export namespace Match {
   interface Matcher<T> {
     _meteorCheckMatcherBrand: void;
   }
-  type WherePredicate<T = unknown> = {
-    bivarianceHack(value: T): boolean;
-  }["bivarianceHack"];
   // prettier-ignore
   export type Pattern =
           typeof String |
@@ -15,11 +12,11 @@ export namespace Match {
           typeof Boolean |
           typeof Object |
           typeof Function |
-          (new (...args: never[]) => unknown) |
+          (new (...args: any[]) => any) |
           undefined | null | string | number | boolean |
           [Pattern] |
           {[key: string]: Pattern} |
-          Matcher<unknown>;
+          Matcher<any>;
   // prettier-ignore
   export type PatternMatch<T extends Pattern> =
           T extends Matcher<infer U> ? U :
@@ -29,13 +26,13 @@ export namespace Match {
           T extends typeof Object ? object :
           T extends typeof Function ? Function :
           T extends undefined | null | string | number | boolean ? T :
-          T extends new (...args: never[]) => infer U ? U :
+          T extends new (...args: any[]) => infer U ? U :
           T extends [Pattern] ? PatternMatch<T[0]>[] :
           T extends {[key: string]: Pattern} ? {[K in keyof T]: PatternMatch<T[K]>} :
           unknown;
 
   /** Matches any value. */
-  var Any: Matcher<unknown>;
+  var Any: Matcher<any>;
   /** Matches a signed 32-bit integer. Doesn’t match `Infinity`, `-Infinity`, or `NaN`. */
   var Integer: Matcher<number>;
 
@@ -57,11 +54,6 @@ export namespace Match {
     dico: T
   ): Matcher<PatternMatch<T>>;
 
-  /** Matches an Object all of whose values match the given pattern. */
-  function ObjectWithValues<T extends Pattern>(
-    pattern: T
-  ): Matcher<{ [key: string]: PatternMatch<T> }>;
-
   /** Matches any value that matches at least one of the provided patterns. */
   function OneOf<T extends Pattern[]>(
     ...patterns: T
@@ -71,33 +63,17 @@ export namespace Match {
    * Calls the function condition with the value as the argument. If condition returns true, this matches. If condition throws a `Match.Error` or returns false, this fails. If condition throws
    * any other error, that error is thrown from the call to `check` or `Match.test`.
    */
-  function Where<T>(condition: (val: unknown) => val is T): Matcher<T>;
-  function Where<T = unknown>(condition: WherePredicate<T>): Matcher<T>;
+  function Where<T>(condition: (val: any) => val is T): Matcher<T>;
+  function Where(condition: (val: any) => boolean): Matcher<any>;
 
   var NonEmptyString: Matcher<string>;
-
-  /**
-   * The error thrown by `check` and `Match.test` when a value doesn't match a
-   * pattern. Use `catch (e) { if (e instanceof Match.Error) { e.path } }`.
-   */
-  interface Error extends globalThis.Error {
-    /** Path of the value that failed to match (e.g. `"field.subField"`). */
-    path: string;
-    /** A sanitized, user-facing error safe to send over the wire. */
-    sanitizedError: globalThis.Error;
-  }
-  var Error: {
-    new (msg: string): Match.Error;
-    (msg: string): Match.Error;
-  };
-
   /**
    * Returns true if the value matches the pattern.
    * @param value The value to check
    * @param pattern The pattern to match `value` against
    */
   function test<T extends Pattern>(
-    value: unknown,
+    value: any,
     pattern: T
   ): value is PatternMatch<T>;
 }
@@ -115,7 +91,7 @@ export namespace Match {
  * @param {Boolean} [options.throwAllErrors=false] If true, throw all errors
  */
 export declare function check<T extends Match.Pattern>(
-  value: unknown,
+  value: any,
   pattern: T,
   options?: { throwAllErrors?: boolean }
 ): asserts value is Match.PatternMatch<T>;

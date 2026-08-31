@@ -82,10 +82,9 @@ or locally:
 :::
 
 Types for Meteor core packages (`meteor/meteor`, `meteor/mongo`, …) can be
-generated automatically. Meteor writes declarations for installed packages to
-`.meteor/types/` on every `meteor run` or `meteor build`, except when the app
-lists `zodern:types` directly; Meteor 3.6 preserves that provider until it is
-removed.
+generated explicitly with `meteor types`. Ordinary build commands do not write
+`.meteor/types/`. If the app lists `zodern:types` directly, Meteor 3.6 preserves
+that provider and skips native generation until it is removed.
 
 For a full walkthrough of enabling core-package types — including the
 `tsconfig.json` `paths` setup and the `meteor types` command — see the
@@ -101,6 +100,8 @@ the auto-generated Meteor package types looks like:
 
 ```json [tsconfig.json]
 {
+  "files": ["./.meteor/types/packages.d.ts"],
+  "include": ["**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
@@ -110,14 +111,15 @@ the auto-generated Meteor package types looks like:
     "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        "./.meteor/types/packages/*",
-        "./node_modules/@types/meteor/*",
-        "./.meteor/types/packages.d.ts"
+        "./.meteor/types/packages/*"
       ]
     }
   }
 }
 ```
+
+Run `meteor types` before `tsc`. If the project already defines `files` or
+`include`, append the generated barrel and keep the existing source patterns.
 
 ## Supported features and limitations
 

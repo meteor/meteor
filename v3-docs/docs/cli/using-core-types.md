@@ -1,14 +1,15 @@
 # TypeScript Types for Meteor Packages
 
 Meteor can generate TypeScript type declarations for all installed packages
-whenever you run `meteor run` or `meteor build`. In Meteor 3.6, projects that
-list `zodern:types` directly keep using that established provider; remove it
-only when you are ready to opt in to the native generator.
+when you explicitly run `meteor types`. In Meteor 3.6, ordinary build commands
+do not create, remove, or replace generated declarations. Projects that list
+`zodern:types` directly keep using that established provider; remove it only
+when you are ready to opt in to the native generator.
 
 ## How It Works
 
-During every build, Meteor scans the compiled packages in your project and
-writes type declaration files to `.meteor/types/`:
+When you run `meteor types`, Meteor scans the compiled packages in your project
+and writes type declaration files to `.meteor/types/`:
 
 ```text
 .meteor/types/
@@ -73,10 +74,9 @@ later native opt-in:
     "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        "./.meteor/types/packages/*",
         "./node_modules/@types/meteor/*",
-        "./.meteor/types/packages.d.ts",
-        "./.meteor/local/types/packages.d.ts"
+        "./.meteor/local/types/packages.d.ts",
+        "./.meteor/types/packages/*"
       ]
     }
   }
@@ -84,31 +84,32 @@ later native opt-in:
 ```
 
 Meteor 3.6 TypeScript templates still install `zodern:types` directly so an
-upgrade does not silently change the active declarations. While it is present,
-Meteor removes stale `.meteor/types` output and leaves the existing
-`@types/meteor` then `zodern:types` precedence intact. After you remove
-`zodern:types`, the first and third entries activate native main-module and
-sub-path declarations; `@types/meteor` remains a fallback. Keeping the native
-barrel before zodern's path also prevents stale `.meteor/local/types` output
-from blocking sub-path imports during that transition. After native generation
-succeeds, Meteor removes that obsolete zodern cache automatically.
+upgrade does not silently change the active declarations. The paths retain the
+existing `@types/meteor` then `zodern:types` precedence; native declarations are
+fallbacks only. While `zodern:types` is present, `meteor types` skips generation
+without deleting either provider tree.
+
+Core packages that already shipped declarations retain those Meteor 3.6 files
+for zodern consumers. Their corrected native variants are registered separately
+and are excluded from zodern's isopack discovery, so upgrading without opting
+in does not merge or replace the established declarations.
 
 ### Existing TypeScript apps
 
-If the project does not use `zodern:types`, use the generated per-package
-adapters first, retain `@types/meteor` as a fallback, and keep the generated
-barrel last for native sub-path and scoped-package declarations:
+If the project does not use `zodern:types` and you want the native declarations
+to be the only Meteor provider, use the generated per-package adapters and
+include the generated barrel for native sub-path and scoped-package declarations:
 
 ```json
 {
+  "files": ["./.meteor/types/packages.d.ts"],
+  "include": ["**/*.ts", "**/*.tsx"],
   "compilerOptions": {
     "baseUrl": ".",
     "skipLibCheck": true,
     "paths": {
       "meteor/*": [
-        "./.meteor/types/packages/*",
-        "./node_modules/@types/meteor/*",
-        "./.meteor/types/packages.d.ts"
+        "./.meteor/types/packages/*"
       ]
     }
   },
@@ -119,6 +120,12 @@ barrel last for native sub-path and scoped-package declarations:
   ]
 }
 ```
+
+If the project already declares `files` or `include`, append
+`.meteor/types/packages.d.ts` and keep the existing source patterns. Listing
+the barrel as a `files` entry makes scoped packages and sub-path modules
+available as ambient declarations; it must not be used as a direct `paths`
+target because the barrel itself is not an external module.
 
 `"skipLibCheck": true` is recommended. The generated declaration files can pull
 in types from npm packages that live inside a Meteor package's own
@@ -157,15 +164,14 @@ resolution then stays inside your app tree, so those imports resolve against
 your app's `node_modules`.
 :::
 
-After running `meteor types` once, or starting the app with `meteor run`,
-TypeScript will resolve `meteor/random`, `meteor/accounts-base`, and all other
-typed packages from the auto-generated declarations.
+After running `meteor types`, TypeScript will resolve `meteor/random`,
+`meteor/accounts-base`, and all other typed packages from the generated
+declarations.
 
 ## JavaScript Apps
 
 JavaScript apps can get the same Meteor-import IntelliSense as TypeScript apps
-by adding a `jsconfig.json` to the project root. Meteor detects **either**
-`tsconfig.json` or `jsconfig.json` and generates the types accordingly.
+by adding a `jsconfig.json` to the project root and running `meteor types`.
 
 Meteor 3.6 JavaScript templates do not add a `jsconfig.json` automatically, so
 upgrading a JavaScript-only app does not start type generation or change editor
@@ -175,13 +181,14 @@ For existing JavaScript apps, add a `jsconfig.json`:
 
 ```json
 {
+  "files": ["./.meteor/types/packages.d.ts"],
+  "include": ["**/*.js", "**/*.jsx"],
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
       "/*": ["*"],
       "meteor/*": [
-        ".meteor/types/packages/*",
-        ".meteor/types/packages.d.ts"
+        ".meteor/types/packages/*"
       ]
     },
     "moduleResolution": "node",
@@ -195,13 +202,12 @@ For existing JavaScript apps, add a `jsconfig.json`:
 }
 ```
 
-After running `meteor types` once, or starting the app with `meteor run`,
-VS Code will resolve `meteor/random`, `meteor/accounts-base`, etc. with full
-IntelliSense even in `.js` files.
+After running `meteor types`, VS Code will resolve `meteor/random`,
+`meteor/accounts-base`, etc. with full IntelliSense even in `.js` files.
 
 ::: tip Apps without either file
-If a project has no `tsconfig.json` and no `jsconfig.json`, the type generator
-is skipped entirely — zero overhead.
+If a project has no `tsconfig.json` and no `jsconfig.json`, `meteor types`
+reports that there is nothing to generate.
 :::
 
 ## Sub-Path Imports
@@ -253,21 +259,21 @@ for full details, including sub-path modules and the priority resolution order.
 
 ## Migrating an existing application
 
-Native declarations appear before `@types/meteor` in the recommended `paths`
-configuration. Once generated, they therefore become the source of truth for
-core packages that ship declarations. These declarations follow the current
-runtime APIs more closely and can reveal application errors that older ambient
-types allowed.
+The compatibility template keeps the established providers before native
+declarations. Native declarations become the source of truth only after an
+explicit migration to the native-only `paths` configuration above. They follow
+the current runtime APIs more closely and can reveal application errors that
+older ambient types allowed.
 
 Adopt them incrementally:
 
 1. Keep `"skipLibCheck": true` while dependencies transition to native types.
-2. Put `./.meteor/types/packages/*` first, keep `@types/meteor` next, and put
-   `./.meteor/types/packages.d.ts` last for sub-path/scoped declarations.
+2. Use `./.meteor/types/packages/*` as the `meteor/*` path and include
+   `./.meteor/types/packages.d.ts` in `files` for sub-path/scoped declarations.
 3. Run `meteor types`, followed by your local TypeScript compiler with
    `--noEmit`.
 4. Fix errors in application code instead of editing `.meteor/types`; generated
-   files are replaced on the next build.
+   files are replaced by the next `meteor types` command.
 
 Pay particular attention to callbacks and serialized values. Login hook fields
 can be absent depending on whether the callback runs on the client or server,
@@ -287,8 +293,6 @@ meteor remove zodern:types
 The Meteor 3.6 TypeScript templates already contain the native fallback
 entries. Existing projects should update `paths` as described in
 [Setup](#setup), then remove the package and run `meteor types` once.
-`meteor run`, `meteor build`, and `meteor lint` also regenerate the declarations
-as part of their existing build pipeline.
 The public module format is compatible: Meteor's native generator produces the
 same `declare module 'meteor/…'` identities that `zodern:types` produced. The
 generated on-disk filenames are not a compatibility contract.

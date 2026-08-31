@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { Promise as MeteorPromise } from "./promise";
+import { Promise as MeteorPromise } from "./promise.native";
 
 expectTypeOf<typeof MeteorPromise>().toBeConstructibleWith(
   (resolve: (v: number) => void) => resolve(1)

@@ -9,7 +9,7 @@ Package.onUse(api => {
   api.use("ejson@1.1.3", "server");
   api.mainModule("encrypt.js", "server");
   api.export("OAuthEncryption", "server");
-  api.addAssets("oauth-encryption.d.ts", "server");
+  api.types("oauth-encryption.d.ts");
 });
 
 Package.onTest(api => {

@@ -1,6 +1,6 @@
 import { expectTypeOf } from "expect-type";
 import type { NpmModuleMongodb } from "meteor/npm-mongo";
-import { Mongo, MongoInternals, UnionOmit } from "./mongo";
+import { Mongo, MongoInternals, UnionOmit } from "./mongo.native";
 
 // Third-party packages historically forwarded unconstrained generic
 // parameters to Mongo.Collection<T>.

@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { DDPRateLimiter } from "./ddp-rate-limiter";
+import { DDPRateLimiter } from "./ddp-rate-limiter.native";
 
 expectTypeOf(DDPRateLimiter).toBeObject();
 

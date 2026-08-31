@@ -1,10 +1,10 @@
 import { expectTypeOf } from "expect-type";
-import { Email, MailComposer } from "./email";
+import { Email, MailComposer } from "./email.native";
 import type {
   MailComposerOptions,
   MailComposerStatic,
   MailComposer as MailComposerType,
-} from "./email";
+} from "./email.native";
 
 expectTypeOf(Email).toBeObject();
 expectTypeOf(MailComposer).toBeConstructibleWith({

@@ -11,6 +11,7 @@ Package.onUse(function(api) {
   api.use('modules');
   api.mainModule('modern.js', 'server');
   api.addAssets('modern.d.ts', 'server');
+  api.types('modern.native.d.ts');
 });
 
 Package.onTest(function(api) {

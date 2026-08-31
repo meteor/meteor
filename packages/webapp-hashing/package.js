@@ -7,7 +7,7 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.addFiles("webapp-hashing.js", "server");
   api.export("WebAppHashing");
-  api.addAssets("webapp-hashing.d.ts", "server");
+  api.types("webapp-hashing.d.ts");
 });
 
 Package.onTest(function (api) {

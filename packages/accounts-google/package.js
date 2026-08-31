@@ -18,5 +18,5 @@ Package.onUse(api => {
 
   api.addFiles("google.js");
 
-  api.addAssets('accounts-google.d.ts', 'server');
+  api.types('accounts-google.d.ts');
 });

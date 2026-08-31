@@ -509,7 +509,7 @@ var compileUnibuild = Profile(function (options) {
 
   // This function needs to be factored out to support legacy handlers later on
   // in the compilation process
-  function addAsset(contents, relPath, hash) {
+  function addAsset(contents, relPath, hash, fileOptions) {
     // XXX hack to strip out private and public directory names from app asset
     // paths
     if (! inputSourceArch.pkg.name) {
@@ -522,7 +522,8 @@ var compileUnibuild = Profile(function (options) {
       path: relPath,
       servePath: colonConverter.convert(
         files.pathJoin(inputSourceArch.pkg.serveRoot, relPath)),
-      hash: hash
+      hash: hash,
+      fileOptions,
     });
   }
 
@@ -535,7 +536,7 @@ var compileUnibuild = Profile(function (options) {
     const contents = optimisticReadFile(absPath);
     watchSet.addFile(absPath, hash);
 
-    addAsset(contents, relPath, hash);
+    addAsset(contents, relPath, hash, asset.fileOptions);
   });
 
   // Add and compile all source files

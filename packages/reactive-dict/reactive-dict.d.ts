@@ -55,7 +55,7 @@ export declare class ReactiveDict<O = EJSONable> {
    */
   equals<P extends keyof O>(
     key: P,
-    value: string | number | boolean | undefined | null | Date
+    value: string | number | boolean | undefined | null
   ): boolean;
   /**
    * Get all key-value pairs as a plain object. If inside a reactive

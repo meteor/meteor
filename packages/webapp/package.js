@@ -57,6 +57,7 @@ Package.onUse(function (api) {
 
   api.mainModule("webapp_cordova.js", "web.cordova");
   api.addAssets("webapp.d.ts", "server");
+  api.types("webapp.native.d.ts");
 });
 
 Package.onTest(function (api) {

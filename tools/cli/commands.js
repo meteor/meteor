@@ -1745,7 +1745,8 @@ main.registerCommand({
   const projectContext = new projectContextModule.ProjectContext({
     projectDir: appDir,
     serverArchitectures: [archinfo.host()],
-    allowIncompatibleUpdate: options['allow-incompatible-update']
+    allowIncompatibleUpdate: options['allow-incompatible-update'],
+    generatePackageTypes: true,
   });
 
   await main.captureAndExit(

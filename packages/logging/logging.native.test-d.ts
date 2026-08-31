@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { Log } from "./logging";
+import { Log } from "./logging.native";
 
 // Log is both a callable function and a namespace with statics/helpers
 expectTypeOf(Log).toBeFunction();

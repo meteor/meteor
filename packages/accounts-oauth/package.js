@@ -20,7 +20,7 @@ Package.onUse(api => {
   api.addFiles('oauth_client.js', 'client');
   api.addFiles('oauth_server.js', 'server');
 
-  api.addAssets('accounts-oauth.d.ts', 'server');
+  api.types('accounts-oauth.d.ts');
 });
 
 

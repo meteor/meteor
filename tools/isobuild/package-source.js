@@ -907,8 +907,19 @@ Object.assign(PackageSource.prototype, {
               const alreadyAdded =
                 new Set(result.assets.map(asset => asset.relPath));
               expanded.forEach(relPath => {
-                if (! alreadyAdded.has(relPath)) {
-                  result.assets.push({ relPath });
+                const existing = result.assets.find(
+                  asset => asset.relPath === relPath
+                );
+                if (existing) {
+                  existing.fileOptions = {
+                    ...existing.fileOptions,
+                    nativeType: true,
+                  };
+                } else if (! alreadyAdded.has(relPath)) {
+                  result.assets.push({
+                    relPath,
+                    fileOptions: { nativeType: true },
+                  });
                 }
               });
 

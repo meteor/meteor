@@ -1,6 +1,6 @@
 import { expectTypeOf } from "expect-type";
-import { module } from "./hot-module-replacement";
-import type { Module } from "./hot-module-replacement";
+import { module } from "./hot-module-replacement.native";
+import type { Module } from "./hot-module-replacement.native";
 
 expectTypeOf<Module>().toBeObject();
 expectTypeOf(module).toBeObject();

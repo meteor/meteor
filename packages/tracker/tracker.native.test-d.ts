@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { Tracker } from "./tracker";
+import { Tracker } from "./tracker.native";
 
 expectTypeOf(Tracker).toBeObject();
 

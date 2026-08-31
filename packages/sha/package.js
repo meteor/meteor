@@ -7,5 +7,5 @@ Package.describe({
 Package.onUse(function (api) {
   api.export('SHA256');
   api.addFiles('sha256.js');
-  api.addAssets('sha.d.ts', 'server');
+  api.types('sha.d.ts');
 });

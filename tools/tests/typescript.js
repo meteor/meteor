@@ -37,14 +37,18 @@ selftest.define("typescript template works", async function () {
   run.waitSecs(120);
   await run.expectExit(0);
 
+  const zodernBarrel = s.read(".meteor/local/types/packages.d.ts");
+  selftest.expectTrue(zodernBarrel !== null);
+  selftest.expectTrue(zodernBarrel.includes("random.d"));
+  selftest.expectTrue(!zodernBarrel.includes("random.native"));
+
   run = s.run("node", "node_modules/typescript/bin/tsc");
   run.waitSecs(60);
   await run.expectEnd();
   await run.expectExit(0);
 
-  // The same generated config must switch cleanly to native declarations:
-  // main modules resolve from per-package adapters, @types/meteor remains a
-  // fallback, and sub-path modules resolve through the generated barrel.
+  // Removing zodern does not change the template's external-first precedence.
+  // The project explicitly selects native declarations in a derived config.
   run = s.run("remove", "zodern:types");
   run.waitSecs(60);
   await run.expectExit(0);
@@ -54,6 +58,22 @@ selftest.define("typescript template works", async function () {
   await run.match("Generated package type declarations.");
   await run.expectExit(0);
   selftest.expectTrue(s.read(".meteor/local/types/packages.d.ts") === null);
+  selftest.expectTrue(
+    s.read(".meteor/types/packages/random/declarations/index.d.ts")
+      .includes("createWithSeeds")
+  );
+
+  s.write("tsconfig.native.json", JSON.stringify({
+    extends: "./tsconfig.json",
+    files: ["./.meteor/types/packages.d.ts"],
+    include: ["**/*.ts", "**/*.tsx"],
+    compilerOptions: {
+      paths: {
+        "/*": ["./*"],
+        "meteor/*": ["./.meteor/types/packages/*"],
+      },
+    },
+  }));
 
   s.write("native-types-resolution.ts", `
     import { Random } from "meteor/random";
@@ -61,11 +81,17 @@ selftest.define("typescript template works", async function () {
     import { useTracker } from "meteor/react-meteor-data/suspense";
 
     Random.id();
+    Random.createWithSeeds("native-only").id();
     Template.body.helpers({ value: () => 1 });
     useTracker("native-types-resolution", async () => 42);
   `);
 
-  run = s.run("node", "node_modules/typescript/bin/tsc");
+  run = s.run(
+    "node",
+    "node_modules/typescript/bin/tsc",
+    "--project",
+    "tsconfig.native.json"
+  );
   run.waitSecs(60);
   await run.expectEnd();
   await run.expectExit(0);
@@ -86,6 +112,32 @@ selftest.define("javascript template stays out of native type generation", async
 
   run = s.run("types");
   await run.match("No tsconfig.json or jsconfig.json found. Nothing to do.");
+  await run.expectExit(0);
+  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === null);
+
+  s.write("jsconfig.json", JSON.stringify({ compilerOptions: { checkJs: true } }));
+  run = s.run("build", "--directory", "../javascript-build");
+  run.waitSecs(180);
+  await run.expectExit(0);
+  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === null);
+});
+
+selftest.define("ordinary builds do not generate native declarations", async function () {
+  const s = new Sandbox();
+  await s.init();
+
+  let run = s.run("create", "--typescript", "types-opt-in");
+  run.waitSecs(60);
+  await run.match("Created a new Meteor app");
+  await run.expectExit(0);
+
+  s.cd("types-opt-in");
+  run = s.run("remove", "zodern:types");
+  run.waitSecs(60);
+  await run.expectExit(0);
+
+  run = s.run("build", "--directory", "../types-opt-in-build");
+  run.waitSecs(180);
   await run.expectExit(0);
   selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === null);
 });
@@ -134,28 +186,35 @@ selftest.define("core package declarations are not client assets", async functio
   selftest.expectTrue(!browserProgram.includes("reload.d.ts"));
   selftest.expectTrue(!browserProgram.includes("facts-ui.d.ts"));
   selftest.expectTrue(!browserProgram.includes("jquery.d.ts"));
+
+  const serverProgram = s.read(
+    "../typed-assets-build/bundle/programs/server/program.json"
+  );
+  selftest.expectTrue(serverProgram !== null);
+  selftest.expectTrue(!serverProgram.includes("reload.d.ts"));
+  selftest.expectTrue(!serverProgram.includes("facts-ui.d.ts"));
+  selftest.expectTrue(!serverProgram.includes("jquery.d.ts"));
 });
 
-selftest.define("zodern:types removes stale native declarations", async function () {
+selftest.define("zodern:types leaves native declarations untouched", async function () {
   const s = new Sandbox();
   await s.init();
 
-  let run = s.run("create", "--typescript", "zodern-transition");
+  let run = s.run("create", "--minimal", "zodern-transition");
   run.waitSecs(60);
   await run.match("Created a new Meteor app in 'zodern-transition'.");
   await run.expectExit(0);
 
   s.cd("zodern-transition");
-  run = s.run("remove", "zodern:types");
-  run.waitSecs(60);
-  await run.expectExit(0);
+  s.write("tsconfig.json", JSON.stringify({ compilerOptions: { noEmit: true } }));
 
   run = s.run("types");
   run.waitSecs(60);
   await run.match("Generated package type declarations.");
   await run.expectExit(0);
 
-  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") !== null);
+  const nativeBarrel = s.read(".meteor/types/packages.d.ts");
+  selftest.expectTrue(nativeBarrel !== null);
 
   s.mkdir("packages");
   s.mkdir("packages/zodern-types");
@@ -172,12 +231,19 @@ selftest.define("zodern:types removes stale native declarations", async function
   run.waitSecs(60);
   await run.expectExit(0);
 
+  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === nativeBarrel);
+
+  run = s.run("build", "--directory", "../zodern-transition-build");
+  run.waitSecs(180);
+  await run.expectExit(0);
+  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === nativeBarrel);
+
   run = s.run("types");
   run.waitSecs(60);
   await run.match("Skipped type generation because zodern:types is installed.");
   await run.expectExit(0);
 
-  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === null);
+  selftest.expectTrue(s.read(".meteor/types/packages.d.ts") === nativeBarrel);
 
   run = s.run("remove", "zodern:types");
   run.waitSecs(60);
@@ -265,8 +331,8 @@ selftest.define("type generation failure follows command strictness", async func
 
   run = s.run("build", "--directory", "../types-failure-build");
   run.waitSecs(180);
-  await run.matchErr(/Failed to generate package type declarations/);
   await run.expectExit(0);
+  run.forbidAll("Failed to generate package type declarations");
 
   run = s.run("types");
   run.waitSecs(120);

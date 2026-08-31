@@ -17,5 +17,5 @@ Package.onUse(api => {
 
   api.addFiles("weibo.js");
 
-  api.addAssets('accounts-weibo.d.ts', 'server');
+  api.types('accounts-weibo.d.ts');
 });

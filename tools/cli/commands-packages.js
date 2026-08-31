@@ -321,7 +321,8 @@ var generateTypeScriptDeclarations = async function (packageSource, packageDir) 
     // large compile-error dump.
     await execFileAsync(command, args, {
       cwd: packageDir,
-      waitForClose: true
+      waitForClose: true,
+      quoteArgsOnWindows: true
     });
   } catch (err) {
     Console.error(

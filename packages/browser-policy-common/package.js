@@ -8,4 +8,5 @@ Package.onUse(function (api) {
   api.addFiles('browser-policy-common.js', 'server');
   api.export('BrowserPolicy', 'server');
   api.addAssets('browser-policy-common.d.ts', 'server');
+  api.types('browser-policy-common.native.d.ts');
 });

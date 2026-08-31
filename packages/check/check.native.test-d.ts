@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { check, Match } from "./check";
+import { check, Match } from "./check.native";
 
 expectTypeOf(Match).toBeObject();
 

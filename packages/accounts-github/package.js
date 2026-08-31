@@ -21,5 +21,5 @@ Package.onUse(api => {
   api.addFiles('notice.js');
   api.addFiles('github.js');
 
-  api.addAssets('accounts-github.d.ts', 'server');
+  api.types('accounts-github.d.ts');
 });

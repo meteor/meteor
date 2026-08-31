@@ -63,7 +63,7 @@
     "types:breadth": "node scripts/type-coverage/check-type-breadth.js --strict",
     "types:coverage": "npm run types:compile && type-coverage --project tsconfig.types.json --at-least 99",
     "types:coverage:table": "npm run types:compile && typescript-coverage-report --project tsconfig.types.json",
-    "types:dts-test-coverage": "npm exec --yes --package=typescript@5.9.3 --package=check-type-test-coverage@1.3.0 -- check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --tsconfig ./tsconfig.types.json --namespace-members --min 100"
+    "types:dts-test-coverage": "npm exec --yes --package=typescript@5.9.3 --package=check-type-test-coverage@1.3.0 -- check-type-test-coverage ./packages --augmentation --ignore '**/non-core/blaze/**' --ignore '**/{accounts-base/accounts-base,browser-policy-common/browser-policy-common,check/check,ddp-rate-limiter/ddp-rate-limiter,ddp/ddp,ejson/ejson,email/email,hot-module-replacement/hot-module-replacement,logging/logging,meteor/meteor,modern-browsers/modern,mongo/mongo,promise/promise,random/random,reactive-dict/reactive-dict,roles/definitions,server-render/server-render,service-configuration/service-configuration,session/session,tracker/tracker,webapp/webapp}.d.ts' --tsconfig ./tsconfig.types.json --namespace-members --min 100"
   },
   "jshintConfig": {
     "esversion": 11

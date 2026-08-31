@@ -652,7 +652,7 @@ export class PackageAPI {
         filesToAdd.push(modulePath);
       }
     }
-    this._addFiles('assets', filesToAdd, ['server']);
+    this._addFiles('assets', filesToAdd, ['server'], { nativeType: true });
   }
 
   /**

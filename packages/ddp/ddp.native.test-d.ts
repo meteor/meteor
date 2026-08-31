@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { DDP, DDPServer, DDPCommon } from "./ddp";
+import { DDP, DDPServer, DDPCommon } from "./ddp.native";
 import { Meteor } from "meteor/meteor";
 
 // --- DDP ---

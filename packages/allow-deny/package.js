@@ -21,7 +21,7 @@ Package.onUse(function(api) {
 
   api.addFiles('allow-deny.js');
   api.export('AllowDeny');
-  api.addAssets('allow-deny.d.ts', 'server');
+  api.types('allow-deny.d.ts');
 });
 
 Package.onTest(function(api) {

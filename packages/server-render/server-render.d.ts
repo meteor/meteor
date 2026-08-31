@@ -29,7 +29,7 @@ type IdentifiedBrowser = {
   major: number;
   minor: number;
   patch: number;
-};
+}
 
 /**
  * A categorized request is an IncomingMessage with a pre-parsed URL,
@@ -43,7 +43,7 @@ export type CategorizedRequest = Omit<http.IncomingMessage, 'url'> & {
   path: string;
   url: URL;
   cookies?: Record<string, string>;
-};
+}
 
 export interface ServerSink extends ClientSink {
   // Server-only:
@@ -57,14 +57,6 @@ export interface ServerSink extends ClientSink {
 
 export type Sink = ClientSink | ServerSink;
 
-export type Callback<T = void> = (sink: Sink) => Promise<T> | T;
+export type Callback = (sink: Sink) => Promise<any> | any;
 
-export function onPageLoad<T extends Callback<unknown>>(callback: T): T;
-export namespace onPageLoad {
-  /** Unregister a previously-registered page-load callback. */
-  function remove(callback: Callback<unknown>): void;
-  /** Remove all registered page-load callbacks. */
-  function clear(): void;
-  /** Run `handler` for each registered callback, in registration order. */
-  function chain(handler: (callback: Callback<unknown>) => unknown): Promise<void>;
-}
+export function onPageLoad<T extends Callback>(callback: T): T;

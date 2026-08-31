@@ -18,5 +18,5 @@ Package.onUse(api => {
 
   api.addFiles("facebook.js");
 
-  api.addAssets('accounts-facebook.d.ts', 'server');
+  api.types('accounts-facebook.d.ts');
 });

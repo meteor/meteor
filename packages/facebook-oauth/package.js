@@ -14,7 +14,7 @@ Package.onUse(api => {
   api.addFiles('facebook_server.js', 'server');
 
   api.export('Facebook');
-  api.addAssets('facebook-oauth.d.ts', 'server');
+  api.types('facebook-oauth.d.ts');
 });
 
 Package.onTest(function(api) {
