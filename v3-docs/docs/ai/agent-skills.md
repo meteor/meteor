@@ -9,12 +9,6 @@ Meteor Agent Skills give compatible AI coding assistants focused guidance for bu
 
 Skills are installed for your coding assistant, not as Atmosphere or npm dependencies in your application. A compatible assistant can match your request to a relevant skill, load its instructions when needed, and follow its Meteor-specific decision flow without adding the entire catalog to every conversation.
 
-:::warning Public beta
-[Meteor Agent Skills v1.0.0-beta.2](https://github.com/meteor/agent-skills/releases/tag/v1.0.0-beta.2) contains 14 Meteor-maintained skills. The tagged release has been verified with Codex, Claude Code, and the open `skills` CLI.
-
-The catalog has not yet been submitted to curated plugin directories. Skill selection and results can vary between clients and models, so review the assistant's changes and validate them in your application.
-:::
-
 ## Quick start
 
 ### Codex
@@ -57,7 +51,7 @@ Install one skill directly:
 npx skills add meteor/agent-skills --skill migrate-to-meteor-3
 ```
 
-Use `--all` to install every skill non-interactively. See the [full catalog and install options](https://github.com/meteor/agent-skills#install) for plugin prerelease pinning and manual ZIP installation.
+Use `--all` to install every skill non-interactively. See the [full catalog and install options](https://github.com/meteor/agent-skills#install) for additional plugin and manual installation options.
 
 ## How skills work
 
@@ -74,9 +68,9 @@ For example:
 - Audit this application for security issues.
 - Validate this production deployment configuration.
 
-## Beta coverage
+## Skill coverage
 
-The beta focuses on Meteor workflows where framework context, version boundaries, and practical decisions are especially important.
+The catalog focuses on Meteor workflows where framework context, version boundaries, and practical decisions are especially important.
 
 | Scope | Skills | What they cover |
 | --- | --- | --- |
@@ -88,7 +82,7 @@ The beta focuses on Meteor workflows where framework context, version boundaries
 | Community packages | `meteor-community-packages` | Selecting and integrating packages from Meteor's documented community catalog while checking versions, ownership, behavior, support boundaries, and upstream repositories. |
 | Debugging and operations | `meteor-debugging`, `meteor-deployment` | Evidence-first diagnosis across builds, runtime, data, tests, browsers, mobile, and production, plus Galaxy, Docker, Kubernetes, settings, and Node version matching. |
 
-The current catalog targets Meteor 3. Most skills support Meteor 3.0 and later. The modern build stack skill starts with Meteor 3.3, and the Rspack migration skill starts with Meteor 3.4. The beta has dedicated UI skills for React and Blaze, but does not yet include dedicated Vue, Svelte, or Solid skills.
+The current catalog targets Meteor 3. Most skills support Meteor 3.0 and later. The modern build stack skill starts with Meteor 3.3, and the Rspack migration skill starts with Meteor 3.4. The catalog has dedicated UI skills for React and Blaze, but does not yet include dedicated Vue, Svelte, or Solid skills.
 
 ## Curated bundles
 
@@ -105,7 +99,7 @@ You can install the complete catalog, one skill, or a curated group of related s
 
 See the [bundle catalog](https://github.com/meteor/agent-skills#bundles) for the exact skill membership and generated install commands.
 
-## Working with the beta
+## Working with Agent Skills
 
 Use the skills on a real task in a separate branch or disposable project. Review the resulting diff, run the checks that apply to the changed area, and keep application secrets out of prompts and reports.
 
@@ -113,7 +107,7 @@ Agent Skills complement the Meteor documentation and your own review. They do no
 
 ## Feedback
 
-Report problems in the [Meteor Agent Skills issue tracker](https://github.com/meteor/agent-skills/issues) or the [public beta forum thread](https://forums.meteor.com/t/introducing-meteor-agent-skills-public-beta-for-ai-coding-assistants/64749). Include:
+Report problems in the [Meteor Agent Skills issue tracker](https://github.com/meteor/agent-skills/issues). Include:
 
 - The prompt or task, with sensitive application details removed.
 - The skill selected, or the skill you expected.
@@ -121,4 +115,4 @@ Report problems in the [Meteor Agent Skills issue tracker](https://github.com/me
 - Your Meteor release and relevant Atmosphere or npm package versions.
 - The result, expected behavior, and a small reproduction or relevant logs when available.
 
-Feedback about missed skill selection, incorrect commands or APIs, inaccurate version boundaries, missing decisions, and installation failures helps determine the next beta updates.
+Feedback about missed skill selection, incorrect commands or APIs, inaccurate version boundaries, missing decisions, and installation failures helps guide future updates.
