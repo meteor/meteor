@@ -11,4 +11,4 @@ export interface Module {
   };
 }
 
-export declare var module: NodeJS.Module & Module;
+export declare var module: NodeJS.Module;

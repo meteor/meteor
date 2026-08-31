@@ -111,6 +111,7 @@ Package.onUse(function (api) {
   // For zodern:types to pick up our published types.
   // Both the .d.ts file and package-types.json must be published
   api.addAssets("mongo.d.ts", "server");
+  api.types("mongo.native.d.ts");
   api.addAssets("package-types.json", "server");
 });
 

@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { onPageLoad } from "./server-render";
+import { onPageLoad } from "./server-render.native";
 import type {
   Content,
   ClientSink,
@@ -7,7 +7,7 @@ import type {
   ServerSink,
   Sink,
   Callback,
-} from "./server-render";
+} from "./server-render.native";
 
 expectTypeOf<Content>().not.toBeNever();
 expectTypeOf<ClientSink>().toBeObject();

@@ -29,7 +29,7 @@ Package.onUse((api) => {
   api.addFiles("password_server.js", "server");
   api.addFiles("password_client.js", "client");
 
-  api.addAssets("accounts-password.d.ts", "server");
+  api.types("accounts-password.d.ts");
 });
 
 Package.onTest((api) => {

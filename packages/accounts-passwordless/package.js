@@ -20,7 +20,7 @@ Package.onUse(api => {
   api.addFiles('passwordless_client.js', 'client');
   api.addFiles('server_utils.js', 'server');
 
-  api.addAssets('accounts-passwordless.d.ts', 'server');
+  api.types('accounts-passwordless.d.ts');
 });
 
 Package.onTest(function (api) {

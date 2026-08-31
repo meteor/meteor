@@ -19,5 +19,5 @@ Package.onUse((api) => {
 
   api.addFiles("twitter.js");
 
-  api.addAssets('accounts-twitter.d.ts', 'server');
+  api.types('accounts-twitter.d.ts');
 });

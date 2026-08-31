@@ -4,7 +4,7 @@ import {
   setMinimumBrowserVersions,
   getMinimumBrowserVersions,
   calculateHashOfMinimumVersions,
-} from "./modern";
+} from "./modern.native";
 
 // isModern
 expectTypeOf(isModern).parameters.toEqualTypeOf<

@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { Random } from "./random";
+import { Random } from "./random.native";
 
 expectTypeOf(Random).toBeObject();
 

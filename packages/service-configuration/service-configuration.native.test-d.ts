@@ -3,7 +3,7 @@ import { Mongo } from "meteor/mongo";
 import {
   ServiceConfiguration,
   type Configuration,
-} from "./service-configuration";
+} from "./service-configuration.native";
 
 const legacyConfiguration: Configuration = {
   appId: "app-id",

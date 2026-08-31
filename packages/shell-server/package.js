@@ -10,5 +10,5 @@ Package.onUse(function(api) {
   api.use("ecmascript", "server");
   api.use("babel-compiler", "server");
   api.mainModule("main.js", "server");
-  api.addAssets("shell-server.d.ts", "server");
+  api.types("shell-server.d.ts");
 });

@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { ReactiveDict } from "./reactive-dict";
+import { ReactiveDict } from "./reactive-dict.native";
 
 type Shape = { count: number; name: string; active: boolean };
 

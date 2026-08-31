@@ -19,22 +19,11 @@ export namespace Tracker {
     /**
      * Forces autorun blocks to be executed in synchronous-looking order by storing the value autorun promise thus making it awaitable.
      */
-    firstRunPromise: Promise<unknown>;
+    firstRunPromise: Promise<unknown>
     /**
      * Invalidates this computation so that it will be rerun.
      */
     invalidate(): void;
-    /** Rerun this computation's function now. */
-    run(): void;
-    /** Flush pending reactive updates for this computation. */
-    flush(): void;
-    /** Await this computation's first run (delegates to `firstRunPromise`). */
-    then(
-      onResolved?: (value: unknown) => unknown,
-      onRejected?: (reason: unknown) => unknown
-    ): Promise<unknown>;
-    /** Await this computation's first run, handling rejection. */
-    catch(onRejected?: (reason: unknown) => unknown): Promise<unknown>;
     /**
      * True if this computation has been invalidated (and not yet rerun), or if it has been stopped.
      */
@@ -44,13 +33,11 @@ export namespace Tracker {
      * future invalidations unless `onInvalidate` is called again after the computation becomes valid again.
      * @param callback Function to be called on invalidation. Receives one argument, the computation that was invalidated.
      */
-    onInvalidate(callback: (computation: Computation) => void): void;
     onInvalidate(callback: Function): void;
     /**
      * Registers `callback` to run when this computation is stopped, or runs it immediately if the computation is already stopped.  The callback is run after any `onInvalidate` callbacks.
      * @param callback Function to be called on stop. Receives one argument, the computation that was stopped.
      */
-    onStop(callback: (computation: Computation) => void): void;
     onStop(callback: Function): void;
     /**
      * Prevents this computation from rerunning.
@@ -106,11 +93,7 @@ export namespace Tracker {
    * once and not on subsequent flushes unless `afterFlush` is called again.
    * @param callback A function to call at flush time.
    */
-  function afterFlush(callback: () => void): void;
   function afterFlush(callback: Function): void;
-
-  /** Whether a flush is currently in progress. */
-  function inFlush(): boolean;
 
   /**
    * Run a function now and rerun it later whenever its dependencies
@@ -126,12 +109,6 @@ export namespace Tracker {
        * happens in the Computation. The only argument it receives is the Error
        * thrown. Defaults to the error being logged to the console.
        */
-      onError?: ((error: unknown) => void) | undefined;
-    }
-  ): Computation;
-  function autorun(
-    runFunc: Function,
-    options?: {
       onError?: Function | undefined;
     }
   ): Computation;
@@ -145,10 +122,6 @@ export namespace Tracker {
     computation: Computation | null,
     func: () => Promise<T>
   ): Promise<T>;
-  function withComputation<T>(
-    computation: Computation | null,
-    func: () => T
-  ): T;
 
   /**
    * Process all reactive updates immediately and ensure that all invalidated computations are rerun.
@@ -165,6 +138,5 @@ export namespace Tracker {
    * Registers a new `onInvalidate` callback on the current computation (which must exist), to be called immediately when the current computation is invalidated or stopped.
    * @param callback A callback function that will be invoked as `func(c)`, where `c` is the computation on which the callback is registered.
    */
-  function onInvalidate(callback: (computation: Computation) => void): void;
   function onInvalidate(callback: Function): void;
 }

@@ -14,7 +14,7 @@ Package.onUse(api => {
   api.addFiles('meteor_developer_client.js', 'client');
 
   api.export('MeteorDeveloperAccounts');
-  api.addAssets('meteor-developer-oauth.d.ts', 'server');
+  api.types('meteor-developer-oauth.d.ts');
 });
 
 Package.onTest(function(api) {

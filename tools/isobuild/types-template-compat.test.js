@@ -37,10 +37,10 @@ describe("Meteor 3.6 template type-provider compatibility", () => {
       const nativeBarrel = config.lastIndexOf(".meteor/types/packages.d.ts");
 
       expect(nativePackages).toBeGreaterThanOrEqual(0);
-      expect(externalTypes).toBeGreaterThan(nativePackages);
       expect(externalTypes).toBeGreaterThanOrEqual(0);
-      expect(nativeBarrel).toBeGreaterThan(externalTypes);
-      expect(zodernTypes).toBeGreaterThan(nativeBarrel);
+      expect(zodernTypes).toBeGreaterThan(externalTypes);
+      expect(nativePackages).toBeGreaterThan(zodernTypes);
+      expect(nativeBarrel).toBe(-1);
     }
   );
 

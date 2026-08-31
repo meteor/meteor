@@ -2,7 +2,6 @@ import { normalizeModernConfig, setMeteorConfig } from "./tool-env/meteor-config
 import {
   generateTypes,
   removeLegacyGeneratedTypes,
-  removeGeneratedTypes,
 } from './isobuild/types-generator.js';
 
 var assert = require("assert");
@@ -1059,36 +1058,23 @@ Object.assign(ProjectContext.prototype, {
     self.typesGenerationFailed = false;
     self.typesGenerationSkipped = false;
 
-    // Generate types for any project that has a tsconfig.json OR a
-    // jsconfig.json.  JavaScript projects with a jsconfig.json get the
-    // same Meteor-import IntelliSense as TypeScript projects.
-    // Each check is a single stat() call, so apps without either file
-    // have zero overhead.
+    if (self.originalOptions.generatePackageTypes !== true) {
+      self._completedStage = STAGE.GENERATE_TYPES;
+      return;
+    }
+
+    // `meteor types` opts into generation for projects with a tsconfig.json
+    // or jsconfig.json. Ordinary project preparation never reaches this
+    // filesystem-mutating path.
     const hasTsConfig = files.exists(files.pathJoin(self.projectDir, 'tsconfig.json'));
     const hasJsConfig = files.exists(files.pathJoin(self.projectDir, 'jsconfig.json'));
 
     if ((hasTsConfig || hasJsConfig) && self.isopackCache && self.packageMap) {
       if (self.projectConstraintsFile.getConstraint('zodern:types')) {
-        // Running both generators would rewrite the declarations on every
-        // build and confuse users; defer to zodern:types while the app
-        // lists it directly.  A transitive zodern:types (e.g. via
-        // react-meteor-data) never lints the app, so it generates nothing
-        // and native generation can proceed.
-        try {
-          await removeGeneratedTypes({
-            projectMeteorDir: files.pathJoin(self.projectDir, '.meteor'),
-          });
-        } catch (err) {
-          // A failed cleanup leaves declarations that may shadow zodern's
-          // output.  Keep normal builds non-fatal, but let `meteor types`
-          // report failure instead of claiming the transition succeeded.
-          self.typesGenerationFailed = true;
-          Console.warn(
-            '[types] Failed to remove stale built-in type declarations: ' +
-            ((err && err.message) || String(err))
-          );
-          Console.debug((err && err.stack) || String(err));
-        }
+        // A direct zodern:types constraint keeps ownership of generation.
+        // Skipping is deliberately non-destructive: Meteor 3.6 does not
+        // rewrite either provider tree unless the project has opted into the
+        // native provider by removing zodern:types first.
         self.typesGenerationSkipped = true;
         Console.warn(
           '[types] zodern:types detected; skipping built-in type ' +

@@ -3,64 +3,25 @@ import { Meteor } from 'meteor/meteor';
 import { DDP } from 'meteor/ddp';
 
 // Based on https://github.com/microsoft/TypeScript/issues/28791#issuecomment-443520161
-export type UnionOmit<T, K extends PropertyKey> = T extends T
+export type UnionOmit<T, K extends keyof any> = T extends T
   ? Pick<T, Exclude<keyof T, K>>
   : never;
 
-type AsMongoDocument<T> = T extends NpmModuleMongodb.Document
-  ? T
-  : T & NpmModuleMongodb.Document;
-
 export namespace Mongo {
+
   export type Selector<T> = NpmModuleMongodb.Filter<T>;
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
-  export type Id = string | ObjectID;
+  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
 
-  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: Id; };
-
-  export type SortSpecifier = NpmModuleMongodb.Sort;
+  type SortSpecifier = NpmModuleMongodb.Sort;
 
   export interface FieldSpecifier {
     [id: string]: Number;
   }
 
-  export type Transform<T, U = unknown> = ((doc: T) => U) | null | undefined;
-
-  type InsertCallback = (error: Error | null | undefined, id?: Id) => void;
-  type MutationCallback = (error: Error | null | undefined, affected?: number) => void;
-  interface UpsertResult {
-    numberAffected?: number | undefined;
-    insertedId?: Id | undefined;
-  }
-  type UpsertCallback = (error: Error | null | undefined, result?: UpsertResult) => void;
-
-  interface AsyncMutationOptions {
-    wait?: boolean | undefined;
-    onResultReceived?:
-      | ((error: Error | Meteor.Error | undefined, result?: unknown) => void)
-      | undefined;
-    noRetry?: boolean | undefined;
-    returnStubValue?: boolean | undefined;
-    returnServerResultPromise?: boolean | undefined;
-    throwStubExceptions?: boolean | undefined;
-  }
-
-  interface UpdateOptions {
-    multi?: boolean | undefined;
-    upsert?: boolean | undefined;
-    insertedId?: Id | undefined;
-    arrayFilters?: NpmModuleMongodb.Document[] | undefined;
-  }
-
-  interface AsyncUpdateOptions extends UpdateOptions, AsyncMutationOptions {}
-
-  interface UpsertOptions {
-    multi?: boolean | undefined;
-  }
-
-  interface AsyncUpsertOptions extends UpsertOptions, AsyncMutationOptions {}
+  export type Transform<T> = ((doc: T) => any) | null | undefined;
 
   export type Options<T> = {
     /** Sort order (default: natural order) */
@@ -84,56 +45,56 @@ export namespace Mongo {
     transform?: Transform<T> | undefined;
   };
 
-  type DispatchTransform<TransformFn, T, U> = TransformFn extends (
-    ...args: never[]
-  ) => infer R
-    ? R
-    : TransformFn extends null
+  type DispatchTransform<Transform, T, U> = Transform extends (
+    ...args: any
+  ) => any
+    ? ReturnType<Transform>
+    : Transform extends null
     ? T
     : U;
 
   /**
    * Configuration options for Mongo Collection constructor
    */
-  interface CollectionOptions<T = NpmModuleMongodb.Document, U = T> {
+  interface CollectionOptions<T = any, U = T> {
     /**
-     * The server connection that will manage this collection. Uses the default connection if not specified.
-     * Pass the return value of calling `DDP.connect` to specify a different server. Pass `null` to specify
+     * The server connection that will manage this collection. Uses the default connection if not specified. 
+     * Pass the return value of calling `DDP.connect` to specify a different server. Pass `null` to specify 
      * no connection. Unmanaged (`name` is null) collections cannot specify a connection.
      */
     connection?: DDP.DDPStatic | null | undefined;
-
-    /**
+    
+    /** 
      * The method of generating the `_id` fields of new documents in this collection. Possible values:
      * - **`'STRING'`**: random strings
      * - **`'MONGO'`**: random [`Mongo.ObjectID`](#mongo_object_id) values
-     *
+     * 
      * The default id generation technique is `'STRING'`.
      */
     idGeneration?: string | undefined;
-
+    
     /**
-     * An optional transformation function. Documents will be passed through this function before being
-     * returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`,
-     * `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges`
+     * An optional transformation function. Documents will be passed through this function before being 
+     * returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, 
+     * `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` 
      * or to cursors returned from publish functions.
      */
     transform?: (doc: T) => U;
-
-    /**
-     * Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code.
-     * Default `true`.
+    
+    /** 
+     * Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. 
+     * Default `true`. 
      */
     defineMutationMethods?: boolean | undefined;
-
+    
     // Internal options (from normalizeOptions function)
     /** @internal */
-    _driver?: Record<string, unknown>;
+    _driver?: any;
     /** @internal */
     _preventAutopublish?: boolean;
-
+    
     // Allow additional properties for extensibility
-    [key: string]: unknown;
+    [key: string]: any;
   }
 
   var Collection: CollectionStatic;
@@ -142,14 +103,18 @@ export namespace Mongo {
      * Constructor for a Collection
      * @param name The name of the collection. If null, creates an unmanaged (unsynchronized) local collection.
      */
-    new <T = NpmModuleMongodb.Document, U = T>(
+    new <T extends NpmModuleMongodb.Document, U = T>(
       name: string | null,
       options?: CollectionOptions<T, U>
     ): Collection<T, U>;
 
-    /** @deprecated Use `Mongo.getCollection`. Retained for Meteor 3.x types. */
+    /**
+     * Retrieve a previously defined Mongo.Collection instance by its name. The collection must already have been defined with `new Mongo.Collection(name, ...)`.
+     * Plain MongoDB collections are not available by this method.
+     * @param name The name of the collection instance.
+     */
     getCollection<
-      TCollection = Collection<NpmModuleMongodb.Document> | undefined
+        TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
     >(name: string): TCollection;
 
     // Collection Extensions API
@@ -157,39 +122,26 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
 
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T,
-      Args extends unknown[] = unknown[],
-      Result = unknown>(name: string, method: (this: Collection<T, U>, ...args: Args) => Result,
-    ): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
      * @param name The name of the static method to add
      * @param method The static method function
      */
-    addStaticMethod<Args extends unknown[], Result>(
-      name: string,
-      method: (...args: Args) => Result): void;
     addStaticMethod(name: string, method: Function): void;
 
     /**
      * Remove a constructor extension (useful for testing).
      * @param extension The extension function to remove
      */
-    removeExtension<T = NpmModuleMongodb.Document, U = T>(
-      extension: (
-        this: Collection<T, U>,
-        name: string | null,
-        options?: CollectionOptions<T, U>,
-      ) => void,
-    ): void;
     removeExtension(extension: Function): void;
 
     /**
@@ -227,8 +179,8 @@ export namespace Mongo {
      */
     getStaticMethods(): Map<string, Function>;
   }
-  interface Collection<T = NpmModuleMongodb.Document, U = T> {
-    allow<Fn extends Transform<T, U> = undefined>(options: {
+  interface Collection<T extends NpmModuleMongodb.Document, U = T> {
+    allow<Fn extends Transform<T> = undefined>(options: {
       insert?:
         | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
@@ -237,7 +189,7 @@ export namespace Mongo {
             userId: string,
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
-            modifier: Modifier<T>
+            modifier: any
           ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
@@ -263,7 +215,7 @@ export namespace Mongo {
       indexSpec: NpmModuleMongodb.IndexSpecification,
       options?: NpmModuleMongodb.CreateIndexesOptions
     ): Promise<void>;
-    deny<Fn extends Transform<T, U> = undefined>(options: {
+    deny<Fn extends Transform<T> = undefined>(options: {
       insert?:
         | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
         | undefined;
@@ -272,7 +224,7 @@ export namespace Mongo {
             userId: string,
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
-            modifier: Modifier<T>
+            modifier: any
           ) => Promise<boolean>|boolean)
         | undefined;
       remove?:
@@ -346,23 +298,18 @@ export namespace Mongo {
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insert(doc: OptionalId<T>, callback: InsertCallback): Id | null;
-    insert(doc: OptionalId<T>): Id;
-    insert(doc: OptionalId<T>, callback: InsertCallback | undefined): Id | null;
-    insert(doc: OptionalId<T>, callback: Function): Id | null;
+    insert(doc: OptionalId<T>, callback?: Function): string;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
-     * @param options Options forwarded to the underlying async DDP method call.
+     * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insertAsync(doc: OptionalId<T>, options?: AsyncMutationOptions): Promise<Id>;
-    /** @deprecated Legacy declaration compatibility. Async collection methods do not invoke callbacks. */
-    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<Id>;
+    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<string>;
     /**
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
      */
-    rawCollection(): NpmModuleMongodb.Collection<AsMongoDocument<T>>;
+    rawCollection(): NpmModuleMongodb.Collection<T>;
     /**
      * Returns the [`Db`](http://mongodb.github.io/node-mongodb-native/3.0/api/Db.html) object corresponding to this collection's database connection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
@@ -377,19 +324,13 @@ export namespace Mongo {
      */
     remove(
       selector: Selector<T> | ObjectID | string,
-      callback?: MutationCallback): number;
-    remove(selector: Selector<T> | ObjectID | string, callback?: Function
+      callback?: Function
     ): number;
     /**
      * Remove documents from the collection
      * @param selector Specifies which documents to remove
-     * @param options Options forwarded to the underlying async DDP method call.
+     * @param callback If present, called with an error object as its argument.
      */
-    removeAsync(
-      selector: Selector<T> | ObjectID | string,
-      options?: AsyncMutationOptions,
-    ): Promise<number>;
-    /** @deprecated Legacy declaration compatibility. Async collection methods do not invoke callbacks. */
     removeAsync(
       selector: Selector<T> | ObjectID | string,
       callback?: Function
@@ -405,31 +346,39 @@ export namespace Mongo {
     update(
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
-      options?: UpdateOptions,
-      callback?: MutationCallback,
-    ): number;
-    update(
-      selector: Selector<T> | ObjectID | string,
-      modifier: Modifier<T>,
-      options?: UpdateOptions,
+      options?: {
+        /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
+        multi?: boolean | undefined;
+        /** True to insert a document if no matching documents are found. */
+        upsert?: boolean | undefined;
+        /**
+         * Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to
+         * modify in an array field.
+         */
+        arrayFilters?: { [identifier: string]: any }[] | undefined;
+      },
       callback?: Function
     ): number;
     /**
      * Modify one or more documents in the collection. Returns the number of matched documents.
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
-     * @param options Mutation and async DDP method options.
+     * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
      */
     updateAsync(
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
-      options?: AsyncUpdateOptions,
-    ): Promise<number>;
-    /** @deprecated Legacy declaration compatibility. Async collection methods do not invoke callbacks. */
-    updateAsync(
-      selector: Selector<T> | ObjectID | string,
-      modifier: Modifier<T>,
-      options?: AsyncUpdateOptions,
+      options?: {
+        /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
+        multi?: boolean | undefined;
+        /** True to insert a document if no matching documents are found. */
+        upsert?: boolean | undefined;
+        /**
+         * Used in combination with MongoDB [filtered positional operator](https://docs.mongodb.com/manual/reference/operator/update/positional-filtered/) to specify which elements to
+         * modify in an array field.
+         */
+        arrayFilters?: { [identifier: string]: any }[] | undefined;
+      },
       callback?: Function
     ): Promise<number>;
     /**
@@ -444,34 +393,34 @@ export namespace Mongo {
     upsert(
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
-      options?: UpsertOptions,
-      callback?: UpsertCallback,
-    ): UpsertResult;
-    upsert(
-      selector: Selector<T> | ObjectID | string,
-      modifier: Modifier<T>,
-      options?: UpsertOptions,
+      options?: {
+        /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
+        multi?: boolean | undefined;
+      },
       callback?: Function
-    ): UpsertResult;
+    ): {
+      numberAffected?: number | undefined;
+      insertedId?: string | undefined;
+    };
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
      * `insertedId` (the unique _id of the document that was inserted, if any).
      * @param selector Specifies which documents to modify
      * @param modifier Specifies how to modify the documents
-     * @param options Mutation and async DDP method options.
+     * @param callback If present, called with an error object as the first argument and, if no error, the number of affected documents as the second.
      */
     upsertAsync(
       selector: Selector<T> | ObjectID | string,
       modifier: Modifier<T>,
-      options?: AsyncUpsertOptions,
-    ): Promise<UpsertResult>;
-    /** @deprecated Legacy declaration compatibility. Async collection methods do not invoke callbacks. */
-    upsertAsync(
-      selector: Selector<T> | ObjectID | string,
-      modifier: Modifier<T>,
-      options?: AsyncUpsertOptions,
+      options?: {
+        /** True to modify all matching documents; false to only modify one of the matching documents (the default). */
+        multi?: boolean | undefined;
+      },
       callback?: Function
-    ): Promise<UpsertResult>;
+    ): Promise<{
+      numberAffected?: number | undefined;
+      insertedId?: string | undefined;
+    }>;
     _createCappedCollection(byteSize?: number, maxDocuments?: number): void;
     /** @deprecated */
     _ensureIndex(
@@ -541,7 +490,7 @@ export namespace Mongo {
      */
     forEach(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => void,
-      thisArg?: unknown
+      thisArg?: any
     ): void;
     /**
      * Call `callback` once for each matching document, sequentially and
@@ -551,7 +500,7 @@ export namespace Mongo {
      */
     forEachAsync(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => void,
-      thisArg?: unknown
+      thisArg?: any
     ): Promise<void>;
     /**
      * Map callback over all matching documents. Returns an Array.
@@ -560,7 +509,7 @@ export namespace Mongo {
      */
     map<M>(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => M,
-      thisArg?: unknown
+      thisArg?: any
     ): Array<M>;
     /**
      * Map callback over all matching documents. Returns an Array.
@@ -569,7 +518,7 @@ export namespace Mongo {
      */
     mapAsync<M>(
       callback: (doc: U, index: number, cursor: Cursor<T, U>) => M,
-      thisArg?: unknown
+      thisArg?: any
     ): Promise<Array<M>>;
     /**
      * Watch a query. Receive callbacks as the result set changes.
@@ -624,39 +573,26 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T = NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
-
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T = NpmModuleMongodb.Document, U = T,
-      Args extends unknown[] = unknown[],
-      Result = unknown>(name: string, method: (this: Collection<T, U>, ...args: Args) => Result,
-    ): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
      * @param name The name of the static method to add
      * @param method The static method function
      */
-    addStaticMethod<Args extends unknown[], Result>(
-      name: string,
-      method: (...args: Args) => Result): void;
     addStaticMethod(name: string, method: Function): void;
 
     /**
      * Remove a constructor extension (useful for testing).
      * @param extension The extension function to remove
      */
-    removeExtension<T = NpmModuleMongodb.Document, U = T>(
-      extension: (
-        this: Collection<T, U>,
-        name: string | null,
-        options?: CollectionOptions<T, U>,
-      ) => void,
-    ): void;
     removeExtension(extension: Function): void;
 
     /**
@@ -702,31 +638,31 @@ export namespace Mongo {
    * @param name Name of your collection as it was defined with `new Mongo.Collection()`.
    * @returns The collection instance or undefined if not found
    */
-  function getCollection<TCollection = Collection<NpmModuleMongodb.Document> | undefined>(name: string): TCollection;
+  function getCollection<T extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined>(name: string): T;
 
   /**
    * A record of all defined Mongo.Collection instances, indexed by collection name.
    * @internal
    */
-  var _collections: Map<string, Collection<NpmModuleMongodb.Document>>;
+  var _collections: Map<string, Collection<any, any>>;
 
-  function setConnectionOptions(options: Record<string, unknown>): void;
+  function setConnectionOptions(options: any): void;
 }
 
 export namespace Mongo {
-  interface AllowDenyOptions<T = NpmModuleMongodb.Document> {
-    insert?: ((userId: string, doc: T) => boolean) | undefined;
+  interface AllowDenyOptions {
+    insert?: ((userId: string, doc: any) => boolean) | undefined;
     update?:
       | ((
           userId: string,
-          doc: T,
+          doc: any,
           fieldNames: string[],
-          modifier: Modifier<T>
+          modifier: any
         ) => boolean)
       | undefined;
-    remove?: ((userId: string, doc: T) => boolean) | undefined;
+    remove?: ((userId: string, doc: any) => boolean) | undefined;
     fetch?: string[] | undefined;
-    transform?: ((doc: T) => unknown) | null | undefined;
+    transform?: Function | null | undefined;
   }
 }
 

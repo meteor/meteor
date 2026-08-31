@@ -45,6 +45,19 @@ beforeEach(() => {
 });
 
 describe("api.types() input validation", () => {
+  test("marks declaration assets as native-only resources", () => {
+    const api = makeApi();
+
+    api.types("index.d.ts", {
+      modules: { hooks: "hooks.d.ts" },
+    });
+
+    expect(api.files.os.assets).toEqual([
+      { relPath: "index.d.ts", fileOptions: { nativeType: true } },
+      { relPath: "hooks.d.ts", fileOptions: { nativeType: true } },
+    ]);
+  });
+
   test("rejects a non-string path without throwing", () => {
     const api = makeApi();
 

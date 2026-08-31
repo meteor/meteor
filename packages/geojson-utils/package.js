@@ -7,7 +7,7 @@ Package.onUse(function (api) {
   api.use('modules');
   api.export('GeoJSON');
   api.mainModule('main.js');
-  api.addAssets('geojson-utils.d.ts', 'server');
+  api.types('geojson-utils.d.ts');
 });
 
 Package.onTest(function (api) {

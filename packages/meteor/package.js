@@ -65,6 +65,7 @@ Package.onUse(function (api) {
   api.export('EmitterPromise', 'server');
 
   api.addAssets('meteor.d.ts', 'server');
+  api.types('meteor.native.d.ts');
 });
 
 Package.onTest(function (api) {
