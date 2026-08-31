@@ -155,6 +155,8 @@ Options:
 Create a new project.
 Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid|--babel|--coffeescript|--angular] <path>
        meteor create [--release <release>] --example <slug> [<path>]
+       meteor create [--release <release>] <url> [<path>] [--from-branch <branch>] [--from-dir <dir>]
+       meteor create [--release <release>] <path> <url> [--from-branch <branch>] [--from-dir <dir>]
        meteor create [--release <release>] --from <url> [--from-branch <branch>] [--from-dir <dir>] [<path>]
        meteor create --list
        meteor create --package [<package_name>]
@@ -177,6 +179,14 @@ meteor and a package created outside a meteor app will use the latest release).
 
 You can pass --example to start off with a copy of one of the Meteor
 community examples. Use --list to see the available examples.
+
+You can clone a Meteor project from a Git URL by passing the URL as the only
+argument, by passing a path and URL together, or by passing the URL explicitly
+with --from. When only a URL is provided, the app directory is derived from the
+repository or subdirectory name.
+GitHub shorthand such as owner/repo is supported with --from owner/repo.
+Positional inference requires a full URL so paths like apps/my-app keep their
+existing meaning.
 
 Skeleton options:
   --bare         Create an empty app.
@@ -202,6 +212,7 @@ Example options:
   --from         Clone a Meteor project from a Git URL. Accepts GitHub, GitLab,
                  and Bitbucket tree/src URLs. branch and subdirectory are
                  auto-detected from the URL when possible.
+                 Optional when a positional source is an unambiguous Git URL.
   --from-branch  Branch to clone from (overrides branch parsed from URL).
   --from-dir     Extract only a subdirectory (overrides dir parsed from URL).
 
@@ -271,11 +282,23 @@ internal functionality of Meteor.
 
 >>> add
 Add a package to this project.
-Usage: meteor add <package> [package..]
+Usage: meteor add [package..]
+       meteor add --search <query>
+       meteor add <url|user/repo> [--from-branch <branch>] [--from-dir <dir>] [--to <path>] [--force]
+       meteor add --from <url|user/repo> [--from-branch <branch>] [--from-dir <dir>] [--to <path>] [--force]
 
 Adds packages to your Meteor project. You can add multiple
-packages with one command. To query for available packages, use
-the meteor search command.
+packages with one command.
+
+Run without any package names to open an interactive search
+against the Atmosphere community package directory. With no query
+typed the picker shows two starter sections: a Core recommended
+list followed by the top 10 community-maintained packages from
+Atmosphere (deduped). Type to search, press <space> to toggle, ? on
+a row for details, and <enter> to install. Results are reordered to
+favor packages updated within the last 24 months.
+Use `meteor add --search <query>` to jump straight to results for
+a given query. Both forms require an interactive terminal.
 
 Optional version constraints can be added. Running `meteor add package@1.1.0`
 will add the package at version 1.1.0 or higher (but not 2.0.0 or higher).
@@ -287,22 +310,52 @@ To remove a version constraint for a specific package, run "meteor add" command
 again without specifying a version. For example above, to stop using
 version 1.1.0 exactly, run `meteor add package`.
 
+You can clone a package from a Git repository by passing the source URL as the
+only package argument, or by passing it explicitly with --from. Meteor places it
+as a local package in your project. The cloned directory must contain a valid
+package.js file. The package name is read from Package.describe and registered
+in .meteor/packages automatically.
+
 Options:
+  --search <query>              Open an interactive Atmosphere package search
+                                pre-populated with the given query. Incompatible
+                                with positional package names and Git options.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
                    version constraints.
 
+Git options:
+  --from           Clone a package from a Git URL or GitHub shorthand (user/repo).
+                   Optional when the only package argument is URL-like.
+  --from-branch    Branch to clone from.
+  --from-dir       Extract only a subdirectory from the repo.
+  --to             Destination path relative to project root. By default, Meteor
+                   uses packages/<dir-name> when --from-dir is set or when a
+                   tree/.../<dir> URL parses into fromDir, otherwise
+                   packages/<repo-name>.
+  --force          Overwrite destination directory if it already exists.
+
 
 >>> remove
 Remove a package from this project.
-Usage: meteor remove <package> [package..]
+Usage: meteor remove [package..]
+       meteor remove --search <query>
 
 Removes a package previously added to your Meteor project. For a
 list of the packages that your application is currently using, see
 'meteor list'.
 
+Run without any package names to open an interactive picker listing
+the packages currently in `.meteor/packages`. Type to filter, press
+<space> to toggle, ? on a row to see its details, and <enter> to
+confirm. Use `meteor remove --search <query>` to open the picker
+pre-filtered. Both forms require an interactive terminal.
+
 Options:
+  --search <query>              Open an interactive picker pre-filtered by the
+                                given query. Incompatible with positional
+                                package names.
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                    downgraded to versions that are potentially incompatible with
                    the current versions, if required to satisfy all package
