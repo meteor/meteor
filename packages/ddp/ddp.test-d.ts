@@ -40,6 +40,15 @@ expectTypeOf(connection.call<number>).toBeCallableWith(
   2,
   resultCallback
 );
+expectTypeOf(connection.call<number>("sum", 1, 2)).toEqualTypeOf<
+  number | undefined | Promise<number>
+>();
+expectTypeOf(connection.call<number>(
+  "sum",
+  1,
+  2,
+  resultCallback,
+)).toBeVoid();
 expectTypeOf(connection.callAsync<number>).toBeCallableWith("sum", 1, 2);
 expectTypeOf(connection.call).toBeCallableWith(
   "legacy-extension-value",
