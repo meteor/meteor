@@ -188,9 +188,9 @@ It is necessary to configure the TypeScript compiler with a `tsconfig.json` file
     "paths": {
       "/*": ["*"],
       "meteor/*": [
-        "./.meteor/types/packages/*",
         "./node_modules/@types/meteor/*",
-        "./.meteor/types/packages.d.ts"
+        "./.meteor/local/types/packages.d.ts",
+        "./.meteor/types/packages/*"
       ]
     },
     "moduleResolution": "node",
@@ -207,8 +207,9 @@ It is necessary to configure the TypeScript compiler with a `tsconfig.json` file
 }
 ```
 
-The `meteor/*` paths entry points at the type declarations Meteor generates
-automatically in `.meteor/types/` — see the
+The `meteor/*` paths entry preserves the established providers first and keeps
+native declarations as a fallback. Native generation is explicit through
+`meteor types` — see the
 [Using core types](/cli/using-core-types) guide for details.
 
 If you want to add TypeScript from the point of project creation, you can run the create command with the --typescript flag:

@@ -7,7 +7,7 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.mainModule("hook.js");
   api.export("Hook");
-  api.addAssets("callback-hook.d.ts", "server");
+  api.types("callback-hook.d.ts");
 });
 
 Package.onTest(function (api) {

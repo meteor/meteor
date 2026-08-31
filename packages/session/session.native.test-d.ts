@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { Session } from "./session";
+import { Session } from "./session.native";
 import { Mongo } from "meteor/mongo";
 import type { EJSONableProperty } from "meteor/ejson";
 

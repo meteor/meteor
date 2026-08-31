@@ -1,5 +1,5 @@
 import { expectTypeOf } from "expect-type";
-import { BrowserPolicy } from "./browser-policy-common";
+import { BrowserPolicy } from "./browser-policy-common.native";
 
 expectTypeOf(BrowserPolicy).toBeObject();
 expectTypeOf(BrowserPolicy.framing).toBeObject();

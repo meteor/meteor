@@ -1,6 +1,6 @@
 import { expectTypeOf } from "expect-type";
-import { WebApp, WebAppInternals } from "./webapp";
-import type { StaticFiles } from "./webapp";
+import { WebApp, WebAppInternals } from "./webapp.native";
+import type { StaticFiles } from "./webapp.native";
 
 expectTypeOf<StaticFiles>().toBeObject();
 expectTypeOf(WebApp).toBeObject();

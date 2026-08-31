@@ -16,4 +16,5 @@ hot-module-replacement  # Update client in development without reloading the pag
 
 static-html             # Define static page content in .html files
 webapp                  # HTTP handlers used by the server assertion endpoint
+zodern:types            # Pull in type declarations from Meteor packages
 symlink-e2e-package

@@ -14,6 +14,7 @@ Package.onUse(function (api) {
   api.export("Session", "client");
   api.mainModule("session.js", "client");
   api.addAssets("session.d.ts", "server");
+  api.types("session.native.d.ts");
 });
 
 Package.onTest(function (api) {

@@ -25,14 +25,12 @@
     "paths": {
       /* Support absolute /imports/* with a leading '/' */
       "/*": ["./*"],
-      /* Keep the existing @types/meteor + zodern behavior while zodern:types
-         is installed. If it is removed, Meteor's generated per-package
-         adapters and barrel become the native provider. */
+      /* Preserve the established providers. Native declarations are an
+         explicit fallback after running `meteor types`. */
       "meteor/*": [
-        "./.meteor/types/packages/*",
         "./node_modules/@types/meteor/*",
-        "./.meteor/types/packages.d.ts",
-        "./.meteor/local/types/packages.d.ts"
+        "./.meteor/local/types/packages.d.ts",
+        "./.meteor/types/packages/*"
       ]
     },
     "moduleResolution": "bundler",

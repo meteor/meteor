@@ -15,10 +15,9 @@
       "/*": ["*"],
       /* Pull in type declarations for Meteor packages */
       "meteor/*": [
-        ".meteor/types/packages/*",
         "node_modules/@types/meteor/*",
-        ".meteor/types/packages.d.ts",
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/local/types/packages.d.ts",
+        ".meteor/types/packages/*"
       ]
     },
   },

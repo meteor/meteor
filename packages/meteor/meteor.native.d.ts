@@ -1,0 +1,720 @@
+import { Mongo } from "meteor/mongo";
+import { EJSONable, EJSONableProperty } from "meteor/ejson";
+import { DDP } from "meteor/ddp";
+
+export type global_Error = Error;
+
+export namespace Meteor {
+  /** Global props **/
+  /** True if running in client environment. */
+  var isClient: boolean;
+  /** True if running in a Cordova mobile environment. */
+  var isCordova: boolean;
+  /** True if running in server environment. */
+  var isServer: boolean;
+  /** True if running in production environment. */
+  var isProduction: boolean;
+  /**
+   * `Meteor.release` is a string containing the name of the release with which the project was built (for example, `"1.2.3"`). It is `undefined` if the project was built using a git checkout
+   * of Meteor.
+   */
+  var release: string | undefined;
+
+  /** @deprecated Use `Meteor.release`. */
+  var meteorRelease: string;
+
+  interface ErrorConstructor {
+    new (...args: unknown[]): Error;
+    errorType: string;
+  }
+
+  function makeErrorType<This, Args extends unknown[]>(name: string, constructor: (this: This, ...args: Args) => void): ErrorConstructor;
+  function makeErrorType(name: string, constructor: Function): ErrorConstructor;
+  /** Global props **/
+
+  /** Settings **/
+  interface Settings {
+    public: Record< string, unknown>;
+    [id: string]: unknown;
+  }
+  /**
+   * `Meteor.settings` contains deployment-specific configuration options. You can initialize settings by passing the `--settings` option (which takes the name of a file containing JSON data)
+   * to `meteor run` or `meteor deploy`. When running your server directly (e.g. from a bundle), you instead specify settings by putting the JSON directly into the `METEOR_SETTINGS` environment
+   * variable. If the settings object contains a key named `public`, then `Meteor.settings.public` will be available on the client as well as the server.  All other properties of
+   * `Meteor.settings` are only defined on the server.  You can rely on `Meteor.settings` and `Meteor.settings.public` being defined objects (not undefined) on both client and server even if
+   * there are no settings specified.  Changes to `Meteor.settings.public` at runtime will be picked up by new client connections.
+   */
+  var settings: Settings;
+  /** Settings **/
+
+  /** User **/
+  interface UserEmail {
+    address: string;
+    verified: boolean;
+  }
+  /**
+   * UserProfile is left intentionally underspecified here, to allow you
+   * to override it in your application (but keep in mind that the default
+   * Meteor configuration allows users to write directly to their user
+   * record's profile field)
+   */
+  interface UserProfile {}
+  interface User {
+    _id: string;
+    username?: string | undefined;
+    emails?: UserEmail[] | undefined;
+    createdAt?: Date | undefined;
+    profile?: UserProfile;
+    services?: Record<string, unknown>;
+  }
+
+  function user(options?: {
+    fields?: Mongo.FieldSpecifier | undefined
+  }): User | null;
+  function userAsync(options?: {
+    fields?: Mongo.FieldSpecifier | undefined;
+  }): Promise<Meteor.User | null>;
+
+  function userId(): string | null;
+  var users: Mongo.Collection<User>;
+
+  interface LoginMethodResult {
+    id: string;
+    token: string;
+    tokenExpires?: Date | undefined;
+    type: string;
+    [key: string]: unknown;
+  }
+  /** User **/
+
+  /** Error **/
+  /**
+   * This class represents a symbolic error thrown by a method.
+   */
+  var Error: ErrorStatic;
+  interface ErrorStatic {
+    /**
+     * @param error A string code uniquely identifying this kind of error.
+     * This string should be used by callers of the method to determine the
+     * appropriate action to take, instead of attempting to parse the reason
+     * or details fields. For example:
+     *
+     * ```
+     * // on the server, pick a code unique to this error
+     * // the reason field should be a useful debug message
+     * throw new Meteor.Error("logged-out",
+     *   "The user must be logged in to post a comment.");
+     *
+     * // on the client
+     * Meteor.call("methodName", function (error) {
+     *   // identify the error
+     *   if (error && error.error === "logged-out") {
+     *     // show a nice error message
+     *     Session.set("errorMessage", "Please log in to post a comment.");
+     *   }
+     * });
+     * ```
+     *
+     * For legacy reasons, some built-in Meteor functions such as `check` throw
+     * errors with a number in this field.
+     *
+     * @param reason Optional. A short human-readable summary of the
+     * error, like 'Not Found'.
+     * @param details Optional. Additional information about the error,
+     * like a textual stack trace.
+     */
+    new (error: string | number, reason?: string, details?: string): Error;
+  }
+  interface Error extends global_Error {
+    error: string | number;
+    reason?: string | undefined;
+    details?: string | undefined;
+  }
+  /** @deprecated Retained for Meteor 3.x declaration compatibility. */
+  var TypedError: TypedErrorStatic;
+  interface TypedErrorStatic {
+    new (message: string, errorType: string): TypedError;
+  }
+  interface TypedError extends global_Error {
+    message: string;
+    errorType: string;
+  }
+  /** Error **/
+
+  /** @deprecated Legacy Blaze event aliases retained for @types/meteor interoperability. */
+  interface Event {
+    type: string;
+    target: HTMLElement;
+    currentTarget: HTMLElement;
+    which: number;
+    stopPropagation(): void;
+    stopImmediatePropagation(): void;
+    preventDefault(): void;
+    isPropagationStopped(): boolean;
+    isImmediatePropagationStopped(): boolean;
+    isDefaultPrevented(): boolean;
+  }
+  /** @deprecated Legacy Blaze event alias. */
+  interface EventHandlerFunction extends Function {
+    (event?: Event, templateInstance?: unknown): void;
+  }
+  /** @deprecated Legacy Blaze event map. */
+  interface EventMap {
+    [id: string]: EventHandlerFunction;
+  }
+
+  /** Method **/
+  type MethodHandler = {
+    bivarianceHack(
+      this: MethodThisType,
+      ...args: unknown[]
+    ): EJSONable | EJSONableProperty | void | Promise<EJSONable | EJSONableProperty | void>;
+  }["bivarianceHack"];
+  interface MethodThisType {
+    /** Access inside a method invocation. Boolean value, true if this invocation is a stub. */
+    isSimulation: boolean;
+    /** The id of the user that made this method call, or `null` if no user was logged in. */
+    userId: string | null;
+    /**
+     * Access inside a method invocation. The connection that this method was received on. `null` if the method is not associated with a connection, eg. a server initiated method call. Calls
+     * to methods made from a server method which was in turn initiated from the client share the same `connection`. */
+    connection: Connection | null;
+    /**
+     * Set the logged in user.
+     * @param userId The value that should be returned by `userId` on this connection.
+     */
+    setUserId(userId: string | null): Promise< void>;
+    /** Call inside a method invocation. Allow subsequent method from this client to begin running in a new fiber. */
+    unblock(): void;
+  }
+
+  /**
+   * Defines functions that can be invoked over the network by clients.
+   * @param methods Dictionary whose keys are method names and values are functions.
+   */
+  function methods<T extends {
+    [K in keyof T]: MethodHandler }> (methods: T): void;
+
+  /**
+   * Invokes a method with a sync stub, passing any number of arguments.
+   * @param name Name of method to invoke
+   * @param args Optional method arguments
+   */
+  function call<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
+    name: string,
+    ...args: [
+      ...(EJSONable | EJSONableProperty)[],
+      DDP.MethodCallback<Result>,
+    ]
+  ): void;
+  function call<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
+    name: string,
+    ...args: (EJSONable | EJSONableProperty)[]
+  ): Result | undefined | Promise<Result>;
+  function call<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(name: string, ...args: unknown[]): Result | undefined | Promise<Result>;
+
+  /**
+   * Invokes a method with an async stub, passing any number of arguments.
+   * @param name Name of method to invoke
+   * @param args Optional method arguments
+   */
+  function callAsync<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
+    name: string,
+    ...args: (EJSONable | EJSONableProperty)[]
+  ): Promise<Result> & {
+    stubPromise: Promise<Result>;
+    serverPromise: Promise<Result>;
+  };
+  function callAsync<Result>(name: string, ...args: unknown[]): Promise<Result> & {
+    stubPromise: Promise<Result>;
+    serverPromise: Promise<Result>;
+  };
+
+  interface MethodApplyOptions<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  > {
+    /**
+     * (Client only) If true, don't send this method until all previous method calls have completed, and don't send any subsequent method calls until this one is completed.
+     */
+    wait?: boolean | undefined;
+    /**
+     * (Client only) This callback is invoked with the error or result of the method (just like `asyncCallback`) as soon as the error or result is available. The local cache may not yet reflect the writes performed by the method.
+     */
+    onResultReceived?:
+      | ((
+          error: global_Error | Meteor.Error | undefined,
+          result?: Result
+        ) => void)
+      | undefined;
+    /**
+     * (Client only) if true, don't send this method again on reload, simply call the callback an error with the error code 'invocation-failed'.
+     */
+    noRetry?: boolean | undefined;
+    /**
+     * (Client only) If true then in cases where we would have otherwise discarded the stub's return value and returned undefined, instead we go ahead and return it. Specifically, this is any time other than when (a) we are already inside a stub or (b) we are in Node and no callback was provided. Currently we require this flag to be explicitly passed to reduce the likelihood that stub return values will be confused with server return values; we may improve this in future.
+     */
+    returnStubValue?: boolean | undefined;
+    /**
+     * (Client only) If true, exceptions thrown by method stubs will be thrown instead of logged, and the method will not be invoked on the server.
+     */
+    throwStubExceptions?: boolean | undefined;
+  }
+
+  /**
+   * Invokes a method with a sync stub, passing any number of arguments.
+   * @param name Name of method to invoke
+   * @param args Method arguments
+   * @param options Optional execution options
+   * @param asyncCallback Optional callback
+   */
+  function apply<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
+    name: string,
+    args: ReadonlyArray<EJSONable | EJSONableProperty>,
+    options?: MethodApplyOptions<Result>,
+    asyncCallback?: (
+      error: global_Error | Meteor.Error | undefined,
+      result?: Result
+    ) => void
+  ): Result;
+
+  /**
+   * Invokes a method with an async stub, passing any number of arguments.
+   * @param name Name of method to invoke
+   * @param args Method arguments
+   * @param options Optional execution options
+   * @param asyncCallback Optional callback
+   */
+  function applyAsync<
+    Result extends EJSONable
+      | EJSONable[]
+      | EJSONableProperty
+      | EJSONableProperty[]
+  >(
+    name: string,
+    args: ReadonlyArray<EJSONable | EJSONableProperty>,
+    options?: MethodApplyOptions<Result>,
+    asyncCallback?: (
+      error: global_Error | Meteor.Error | undefined,
+      result?: Result
+    ) => void
+  ): Promise<Result> & {
+    stubPromise: Promise<Result>;
+    serverPromise: Promise<Result>;
+  };
+  /** Method **/
+
+  /** Url **/
+  /**
+   * Generate an absolute URL pointing to the application. The server reads from the `ROOT_URL` environment variable to determine where it is running. This is taken care of automatically for
+   * apps deployed to Galaxy, but must be provided when using `meteor build`.
+   */
+  var absoluteUrl: {
+    /**
+     * @param path A path to append to the root URL. Do not include a leading "`/`".
+     */
+    (path?: string, options?: absoluteUrlOptions): string;
+    defaultOptions: absoluteUrlOptions;
+  };
+
+  interface absoluteUrlOptions {
+    /** Create an HTTPS URL. */
+    secure?: boolean | undefined;
+    /** Replace localhost with 127.0.0.1. Useful for services that don't recognize localhost as a domain name. */
+    replaceLocalhost?: boolean | undefined;
+    /** Override the default ROOT_URL from the server environment. For example: "`http://foo.example.com`" */
+    rootUrl?: string | undefined;
+  }
+  /** Url **/
+
+  /** Timeout **/
+  /**
+   * Call a function repeatedly, with a time delay between calls.
+   * @param func The function to run
+   * @param delay Number of milliseconds to wait between each function call.
+   */
+  function setInterval(func: () => void, delay: number): number;
+  function setInterval(func: Function, delay: number): number;
+
+  /**
+   * Call a function in the future after waiting for a specified delay.
+   * @param func The function to run
+   * @param delay Number of milliseconds to wait before calling function
+   */
+  function setTimeout(func: () => void, delay: number): number;
+  function setTimeout(func: Function, delay: number): number;
+  /**
+   * Cancel a repeating function call scheduled by `Meteor.setInterval`.
+   * @param id The handle returned by `Meteor.setInterval`
+   */
+  function clearInterval(id: number): void;
+
+  /**
+   * Cancel a function call scheduled by `Meteor.setTimeout`.
+   * @param id The handle returned by `Meteor.setTimeout`
+   */
+  function clearTimeout(id: number): void;
+  /**
+   * Defer execution of a function to run asynchronously in the background (similar to `Meteor.setTimeout(func, 0)`.
+   * @param func The function to run
+   */
+  function defer(func: () => void): void;
+  function defer(func: Function): void;
+
+  /**
+   * Wrap a function so that it only runs in background in specified environments.
+   * @param func The function to wrap
+   * @param options An object with an `on` property that is an array of environment names: `"development"`, `"production"`, and/or `"test"`.
+   */
+  function deferrable<T>(
+    func: () => T,
+    options: { on: Array<"development" | "production" | "test"> }
+  ): T | void;
+
+  /**
+   * Wrap a function to run in the background in development (similar to Meteor.isDevelopment ? Meteor.defer(fn) : Meteor.startup(fn)).
+   * @param func The function to wrap
+   */
+  function deferDev<T>(
+    func: () => T
+  ): T | void;
+
+  /**
+   * Wrap a function to run in the background in production (similar to Meteor.isProduction ? Meteor.defer(fn) : Meteor.startup(fn)).
+   * @param func The function to wrap
+   */
+  function deferProd<T>(
+    func: () => T
+  ): T | void;
+  /** Timeout **/
+
+  /** utils **/
+  /**
+   * Run code when a client or a server starts.
+   * @param func A function to run on startup.
+   */
+  function startup(func: () => void | Promise<void>): void;
+  function startup(func: Function): void;
+
+  /**
+   * Wrapper around the standard `fetch` API. Packages can extend this
+   * function to add middleware-like behavior (e.g. accounts-express with authentication).
+   * @param url The URL to fetch or a Request object
+   * @param options Standard fetch options
+   */
+  function fetch(
+    url: string | Request,
+    options?: RequestInit
+  ): Promise<Response>;
+
+  /**
+   * Wrap a function that takes a callback function as its final parameter.
+   * The signature of the callback of the wrapped function should be `function(error, result){}`.
+   * On the server, the wrapped function can be used either synchronously (without passing a callback) or asynchronously
+   * (when a callback is passed). On the client, a callback is always required; errors will be logged if there is no callback.
+   * If a callback is provided, the environment captured when the original function was called will be restored in the callback.
+   * The parameters of the wrapped function must not contain any optional parameters or be undefined, as the callback function is expected to be the final, non-undefined parameter.
+   * @param func A function that takes a callback as its final parameter
+   * @param context Optional `this` object against which the original function will be invoked
+   */
+  function wrapAsync<This, Args extends unknown[], Result> (
+    func: (this: This,...args: Args) => Result,
+    context?: This
+  ): (...args: Args) => Result;
+  function wrapAsync<T extends Function>(
+    func: T,
+    context?: ThisParameterType<T>
+  ): Function;
+
+  function bindEnvironment<TFunc extends (...args: never[]) => unknown>(func: TFunc): TFunc;
+  function bindEnvironment<TFunc extends Function>(func: TFunc): TFunc;
+
+  class EnvironmentVariable<T> {
+    readonly slot: number;
+    constructor();
+    get(): T;
+    getOrNullIfOutsideFiber(): T | null;
+    withValue<U>(value: T, fn: () => U): U;
+  }
+  /** utils **/
+
+  /** Pub/Sub **/
+  interface SubscriptionHandle {
+    /** Cancel the subscription. This will typically result in the server directing the client to remove the subscription’s data from the client’s cache. */
+    stop(): void;
+    /** True if the server has marked the subscription as ready. A reactive data source. */
+    ready(): boolean;
+  }
+  interface LiveQueryHandle {
+    stop(): void;
+  }
+  /** Pub/Sub **/
+}
+
+export namespace Meteor {
+  /** Login **/
+  interface LoginWithExternalServiceOptions {
+    requestPermissions?: ReadonlyArray<string> | undefined;
+    requestOfflineToken?: Boolean | undefined;
+    forceApprovalPrompt?: Boolean | undefined;
+    redirectUrl?: string | undefined;
+    loginHint?: string | undefined;
+    loginStyle?: string | undefined;
+  }
+
+  /** @deprecated Prefer the declaration contributed by accounts-meteor-developer. */
+  function loginWithMeteorDeveloperAccount(
+    options?: Meteor.LoginWithExternalServiceOptions,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+  /** @deprecated Prefer the declaration contributed by accounts-facebook. */
+  function loginWithFacebook(
+    options?: Meteor.LoginWithExternalServiceOptions,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+  /** @deprecated Prefer the declaration contributed by accounts-github. */
+  function loginWithGithub(
+    options?: Meteor.LoginWithExternalServiceOptions,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+  /** @deprecated Prefer the declaration contributed by accounts-google. */
+  function loginWithGoogle(
+    options?: Meteor.LoginWithExternalServiceOptions & {
+      loginUrlParameters?: { include_granted_scopes: boolean };
+    },
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+  /** @deprecated Prefer the declaration contributed by accounts-meetup. */
+  function loginWithMeetup(
+    options?: Meteor.LoginWithExternalServiceOptions,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+  /** @deprecated Prefer the declaration contributed by accounts-twitter. */
+  function loginWithTwitter(
+    options?: Meteor.LoginWithExternalServiceOptions,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+  /** @deprecated Prefer the declaration contributed by accounts-weibo. */
+  function loginWithWeibo(
+    options?: Meteor.LoginWithExternalServiceOptions,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function loginWithPassword(
+    user: { username: string } | { email: string } | { id: string } | string,
+    password: string,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function loginWithToken(
+    token: string,
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function loginWithPasswordAsync(
+    user: { username: string } | { email: string } | { id: string } | string,
+    password: string
+  ): Promise<LoginMethodResult>;
+
+  function loginWithTokenAsync(token: string): Promise<LoginMethodResult>;
+
+  function loggingIn(): boolean;
+
+  function loggingOut(): boolean;
+
+  function logout(
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function logoutAsync(): Promise<void>;
+
+  function logoutAllClients(
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function logoutAllClientsAsync(): Promise<void>;
+
+  function logoutOtherClients(
+    callback?: (error?: global_Error | Meteor.Error | Meteor.TypedError) => void
+  ): void;
+
+  function logoutOtherClientsAsync(): Promise<void>;
+  /** Login **/
+
+  /** Connection **/
+  function reconnect(): void;
+
+  function disconnect(): void;
+  /** Connection **/
+
+  /** Status **/
+  function status(): DDP.DDPStatus;
+  /** Status **/
+
+  /** Pub/Sub **/
+  /**
+   * Subscribe to a record set.  Returns a handle that provides
+   * `stop()` and `ready()` methods.
+   * @param name Name of the subscription.  Matches the name of the
+   * server's `publish()` call.
+   * @param args Optional arguments passed to publisher
+   * function on server.
+   * @param callbacks Optional. May include `onStop`
+   * and `onReady` callbacks. If there is an error, it is passed as an
+   * argument to `onStop`. If a function is passed instead of an object, it
+   * is interpreted as an `onReady` callback.
+   */
+  function subscribe(name: string, ...args: (EJSONable | EJSONableProperty)[]): Meteor.SubscriptionHandle;
+  function subscribe(
+    name: string,
+    ...args: [
+      ...args: (EJSONable | EJSONableProperty)[],
+      callbacks: {
+        onReady?: () => void;
+        onStop?: (error?: Meteor.Error) => void;
+        onError?: (error: Meteor.Error) => void;
+      }
+    ]
+  ): Meteor.SubscriptionHandle;
+  function subscribe(
+    name: string,
+    ...args: [
+      ...args: (EJSONable | EJSONableProperty)[],
+      onReady: () => void
+    ]
+  ): Meteor.SubscriptionHandle;
+  function subscribe(name: string, ...args: unknown[]): Meteor.SubscriptionHandle;
+  /** Pub/Sub **/
+}
+
+export namespace Meteor {
+  /** Connection **/
+  interface Connection {
+    id: string;
+    close: () => void;
+    onClose: (callback: () => void) => void;
+    clientAddress: string;
+    httpHeaders: Record<string, string>;
+  }
+
+  function onConnection(callback: (connection: Connection) => void): void;
+  /** Connection **/
+  /**
+   * Publish a record set.
+   * @param name If String, name of the record set.  If Object, publications Dictionary of publish functions by name. If `null`, the set has no name, and the record set is automatically sent to
+   * all connected clients.
+   * @param func Function called on the server each time a client subscribes. Inside the function, `this` is the publish handler object, described below. If the client passed arguments to
+   * `subscribe`, the function is called with the same arguments.
+   */
+  function publish<Args extends (EJSONable | EJSONableProperty)[]>(
+    name: string | null,
+    func: (
+      this: Subscription,
+      ...args: Args
+    ) =>
+      | void
+      | Mongo.Cursor<unknown>
+      | Mongo.Cursor<unknown>[]
+      | Promise<void | Mongo.Cursor<unknown> | Mongo.Cursor<unknown>[]>,
+    options?: { is_auto: boolean }
+  ): void;
+
+  function _debug(...args: unknown[]): void;
+}
+
+export interface Subscription {
+  /**
+   * Call inside the publish function.  Informs the subscriber that a document has been added to the record set.
+   * @param collection The name of the collection that contains the new document.
+   * @param id The new document's ID.
+   * @param fields The fields in the new document.  If `_id` is present it is ignored.
+   */
+  added(collection: string, id: string, fields: Record<string, unknown>): void;
+  /**
+   * Call inside the publish function. Informs the subscriber that a document in the record set has been modified.
+   * @param collection The name of the collection that contains the changed document.
+   * @param id The changed document's ID.
+   * @param fields The fields in the document that have changed, together with their new values.  If a field is not present in `fields` it was left unchanged; if it is present in `fields` and
+   * has a value of `undefined` it was removed from the document.  If `_id` is present it is ignored.
+   */
+  changed(
+    collection: string,
+    id: string,
+    fields: Record<string, unknown>
+  ): void;
+  /** Access inside the publish function. The incoming connection for this subscription. */
+  connection: Meteor.Connection;
+  /**
+   * Call inside the publish function. Stops this client's subscription, triggering a call on the client to the `onStop` callback passed to `Meteor.subscribe`, if any. If `error` is not a
+   * `Meteor.Error`, it will be sanitized.
+   * @param error The error to pass to the client.
+   */
+  error(error: Error): void;
+  /**
+   * Call inside the publish function. Registers a callback function to run when the subscription is stopped.
+   * @param func The callback function
+   */
+  onStop(func: () => void): void;
+  onStop(func: Function): void;
+  /**
+   * Call inside the publish function. Informs the subscriber that an initial, complete snapshot of the record set has been sent.  This will trigger a call on the client to the `onReady`
+   * callback passed to  `Meteor.subscribe`, if any.
+   */
+  ready(): void;
+  /**
+   * Call inside the publish function. Informs the subscriber that a document has been removed from the record set.
+   * @param collection The name of the collection that the document has been removed from.
+   * @param id The ID of the document that has been removed.
+   */
+  removed(collection: string, id: string): void;
+  /**
+   * Access inside the publish function. The incoming connection for this subscription.
+   */
+  stop(): void;
+  /**
+   * Call inside the publish function. Allows subsequent methods or subscriptions for the client of this subscription
+   * to begin running without waiting for the publishing to become ready.
+   */
+  unblock(): void;
+  /** Access inside the publish function. The id of the logged-in user, or `null` if no user is logged in. */
+  userId: string | null;
+}
+
+export namespace Meteor {
+  /** Global props **/
+  /** True if running in development environment. */
+  var isDevelopment: boolean;
+  var isModern: boolean;
+  var gitCommitHash: string | undefined;
+  var isTest: boolean;
+  var isAppTest: boolean;
+  var isPackageTest: boolean;
+  /** Global props **/
+}

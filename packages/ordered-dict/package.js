@@ -8,7 +8,7 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.mainModule("ordered_dict.js");
   api.export("OrderedDict");
-  api.addAssets("ordered-dict.d.ts", "server");
+  api.types("ordered-dict.d.ts");
 });
 
 Package.onTest(function (api) {

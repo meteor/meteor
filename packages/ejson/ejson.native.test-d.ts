@@ -1,6 +1,12 @@
 import { expectTypeOf } from "expect-type";
-import type { EJSON, EJSONable, EJSONableCustomType, EJSONableProperty, JSONable } from "./ejson";
-import { EJSON as EJSONNs } from "./ejson";
+import type {
+  EJSON,
+  EJSONable,
+  EJSONableCustomType,
+  EJSONableProperty,
+  JSONable,
+} from "./ejson.native";
+import { EJSON as EJSONNs } from "./ejson.native";
 
 expectTypeOf<EJSONable>()
   .toHaveProperty("x" as string)

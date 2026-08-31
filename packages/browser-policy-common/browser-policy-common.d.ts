@@ -8,7 +8,7 @@ export namespace BrowserPolicy {
   var content: {
     allowEval(): void;
     allowInlineStyles(): void;
-    allowInlineScripts(): Promise< void>;
+    allowInlineScripts(): void;
     allowSameOriginForAll(): void;
     allowDataUrlForAll(): void;
     allowOriginForAll(origin: string): void;
@@ -20,22 +20,18 @@ export namespace BrowserPolicy {
     allowFrameOrigin(origin: string): void;
     allowFrameAncestorsOrigin(origin: string): void;
     allowContentTypeSniffing(): void;
-    /** @deprecated Retained for Meteor 3.x declaration compatibility. */
     allowAllContentOrigin(): void;
-    /** @deprecated Retained for Meteor 3.x declaration compatibility. */
     allowAllContentDataUrl(): void;
-    /** @deprecated Retained for Meteor 3.x declaration compatibility. */
     allowAllContentSameOrigin(): void;
     allowConnectOrigin(origin: string): void;
     allowObjectOrigin(origin: string): void;
 
-    disallowAll(): Promise< void>;
+    disallowAll(): void;
     disallowInlineStyles(): void;
     disallowEval(): void;
-    disallowInlineScripts(): Promise< void>;
+    disallowInlineScripts(): void;
     disallowFont(): void;
     disallowObject(): void;
-    /** @deprecated Retained for Meteor 3.x declaration compatibility. */
     disallowAllContent(): void;
     disallowConnect(): void;
   };

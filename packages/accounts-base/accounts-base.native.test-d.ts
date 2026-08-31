@@ -2,14 +2,14 @@ import { expectTypeOf } from "expect-type";
 import {
   Accounts,
   AccountsClient,
-} from "./accounts-base";
+} from "./accounts-base.native";
 import type {
   URLS,
   EmailFields,
   AccountsClientOptions,
   Header,
   EmailTemplates,
-} from "./accounts-base";
+} from "./accounts-base.native";
 import type { Meteor } from "meteor/meteor";
 import type { DDP } from "meteor/ddp";
 

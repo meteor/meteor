@@ -14,7 +14,7 @@ Package.onUse(function (api) {
 
   api.export('XmlBuilder', 'server');
 
-  api.addAssets('xmlbuilder.d.ts', 'server');
+  api.types('xmlbuilder.d.ts');
 });
 
 Package.onTest(function (api) {
