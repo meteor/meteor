@@ -14,6 +14,13 @@ const Sandbox = selftest.Sandbox;
 const MONGO_LISTENING =
   { stdout: " [initandlisten] waiting for connections on port" };
 
+const GIT_DECLARED_VERSION =
+  "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0";
+const GIT_INSTALLED_RESOLVED =
+  "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef";
+const GIT_DIFFERENT_RESOLVED =
+  "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#fedcba9876543210";
+
 selftest.define("npm - git dependency cache decisions", () => {
   const declaredTree = {
     dependencies: {
@@ -65,6 +72,40 @@ selftest.define("npm - git dependency cache decisions", () => {
       },
     },
   };
+  const mixedDeclaredTree = {
+    dependencies: {
+      ...declaredTree.dependencies,
+      tarball: {
+        version: "https://example.com/tarball-v1.0.0.tgz",
+      },
+    },
+  };
+  const mixedVersionTree = {
+    dependencies: {
+      ...resolvedTree.dependencies,
+      tarball: { version: "1.0.0" },
+    },
+  };
+  const mixedSourceTree = {
+    dependencies: {
+      ...sameSourceTree.dependencies,
+      tarball: {
+        version: "https://example.com/tarball-v1.0.0.tgz",
+      },
+    },
+  };
+  const registryDeclaredTree = {
+    dependencies: {
+      registryPackage: { version: "1.0.0" },
+    },
+  };
+  const oldRegistrySourceTree = {
+    dependencies: {
+      registryPackage: {
+        version: "https://registry-a.example/registry-package-1.0.0.tgz",
+      },
+    },
+  };
 
   selftest.expectTrue(declaredSpecMatchesInstalledVersion(
     "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0",
@@ -97,46 +138,75 @@ selftest.define("npm - git dependency cache decisions", () => {
 
   selftest.expectTrue(npmDependencyCacheIsCurrent(
     declaredTree,
-    resolvedTree,
-    resolvedTree,
     sameSourceTree,
     sameSourceTree,
+    resolvedTree,
+    declaredTree,
   ));
   selftest.expectFalse(npmDependencyCacheIsCurrent(
     declaredTree,
-    resolvedTree,
-    resolvedTree,
     sameSourceTree,
     differentSourceTree,
+    resolvedTree,
+    declaredTree,
   ));
   selftest.expectFalse(npmDependencyCacheIsCurrent(
     differentRepositoryTree,
-    resolvedTree,
-    resolvedTree,
     sameSourceTree,
     sameSourceTree,
+    resolvedTree,
+    differentRepositoryTree,
   ));
   selftest.expectFalse(npmDependencyCacheIsCurrent(
     pathlessRepositoryTree,
-    resolvedTree,
-    resolvedTree,
     pathlessResolvedSourceTree,
     pathlessResolvedSourceTree,
+    resolvedTree,
+    pathlessRepositoryTree,
   ));
   selftest.expectTrue(canReuseNpmShrinkwrap(
     declaredTree,
-    resolvedTree,
     sameSourceTree,
+    resolvedTree,
+    declaredTree,
   ));
   selftest.expectFalse(canReuseNpmShrinkwrap(
     differentRepositoryTree,
-    resolvedTree,
     sameSourceTree,
+    resolvedTree,
+    differentRepositoryTree,
   ));
   selftest.expectFalse(canReuseNpmShrinkwrap(
     pathlessRepositoryTree,
-    resolvedTree,
     pathlessResolvedSourceTree,
+    resolvedTree,
+    pathlessRepositoryTree,
+  ));
+  selftest.expectTrue(npmDependencyCacheIsCurrent(
+    mixedDeclaredTree,
+    mixedSourceTree,
+    mixedSourceTree,
+    mixedVersionTree,
+    mixedDeclaredTree,
+  ));
+  selftest.expectTrue(canReuseNpmShrinkwrap(
+    mixedDeclaredTree,
+    mixedSourceTree,
+    mixedVersionTree,
+    mixedDeclaredTree,
+  ));
+  selftest.expectFalse(npmDependencyCacheIsCurrent(
+    registryDeclaredTree,
+    oldRegistrySourceTree,
+    oldRegistrySourceTree,
+    registryDeclaredTree,
+    registryDeclaredTree,
+  ));
+  selftest.expectFalse(canReuseNpmShrinkwrap(
+    registryDeclaredTree,
+    oldRegistrySourceTree,
+    registryDeclaredTree,
+    registryDeclaredTree,
   ));
   const malformedDeclaredTree = {
     dependencies: {
@@ -147,32 +217,118 @@ selftest.define("npm - git dependency cache decisions", () => {
   };
   selftest.expectFalse(npmDependencyCacheIsCurrent(
     malformedDeclaredTree,
+    sameSourceTree,
+    sameSourceTree,
     resolvedTree,
-    resolvedTree,
+    malformedDeclaredTree,
   ));
   selftest.expectFalse(canReuseNpmShrinkwrap(
     malformedDeclaredTree,
+    sameSourceTree,
     resolvedTree,
+    malformedDeclaredTree,
   ));
 });
 
 selftest.define("npm - git dependency cache uses installed version", async () => {
-  const installedResolved =
-    "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef";
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: GIT_DECLARED_VERSION,
+    installedResolved: GIT_INSTALLED_RESOLVED,
+    shrinkwrapResolved: GIT_INSTALLED_RESOLVED,
+    cachedDependencies: {
+      "uWebSockets.js": GIT_DECLARED_VERSION,
+    },
+  }), {
+    updated: true,
+    npmCalls: [],
+  });
 
-  selftest.expectTrue(await updateGitDependencyCache(installedResolved));
-  selftest.expectFalse(await updateGitDependencyCache(
-    "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#fedcba9876543210",
-  ));
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: GIT_DECLARED_VERSION,
+    installedResolved: GIT_INSTALLED_RESOLVED,
+    shrinkwrapResolved: GIT_DIFFERENT_RESOLVED,
+    cachedDependencies: {
+      "uWebSockets.js": GIT_DECLARED_VERSION,
+    },
+  }), {
+    updated: false,
+    npmCalls: [["install"]],
+  });
 });
 
-async function updateGitDependencyCache(shrinkwrapResolved) {
+selftest.define("npm - dependency cache detects Git to registry changes", async () => {
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: "20.66.0",
+    installedResolved: GIT_INSTALLED_RESOLVED,
+    shrinkwrapResolved: GIT_INSTALLED_RESOLVED,
+    cachedDependencies: {
+      "uWebSockets.js": GIT_DECLARED_VERSION,
+    },
+  }), {
+    updated: false,
+    npmCalls: [["install", "uWebSockets.js@20.66.0"]],
+  });
+});
+
+selftest.define("npm - dependency cache preserves HTTPS tarballs", async () => {
+  const tarball =
+    "https://github.com/uNetworking/uWebSockets.js/archive/refs/tags/v20.66.0.tar.gz";
+
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: tarball,
+    installedResolved: tarball,
+    shrinkwrapResolved: tarball,
+  }), {
+    updated: true,
+    npmCalls: [],
+  });
+});
+
+selftest.define("npm - dependency cache preserves Git SSH commits", async () => {
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: GIT_INSTALLED_RESOLVED,
+    installedResolved: GIT_INSTALLED_RESOLVED,
+    shrinkwrapResolved: GIT_INSTALLED_RESOLVED,
+  }), {
+    updated: true,
+    npmCalls: [],
+  });
+});
+
+selftest.define("npm - Git tag cache requires matching provenance", async () => {
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: GIT_DECLARED_VERSION,
+    installedResolved: GIT_INSTALLED_RESOLVED,
+    shrinkwrapResolved: GIT_INSTALLED_RESOLVED,
+    cachedDependencies: {
+      "uWebSockets.js":
+        "git+https://github.com/uNetworking/uWebSockets.js.git#0123456789abcdef",
+    },
+  }), {
+    updated: false,
+    npmCalls: [["install", GIT_DECLARED_VERSION]],
+  });
+});
+
+selftest.define("npm - legacy Git tag cache refreshes once", async () => {
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: GIT_DECLARED_VERSION,
+    installedResolved: GIT_INSTALLED_RESOLVED,
+    shrinkwrapResolved: GIT_INSTALLED_RESOLVED,
+  }), {
+    updated: false,
+    npmCalls: [["install", GIT_DECLARED_VERSION]],
+  });
+});
+
+async function updateDependencyCache({
+  declaredVersion,
+  installedResolved,
+  shrinkwrapResolved,
+  cachedDependencies,
+}) {
   const packageNpmDir = files.mkdtemp();
   const nodeModulesDir = files.pathJoin(packageNpmDir, "node_modules");
-  const declaredVersion =
-    "git+https://github.com/uNetworking/uWebSockets.js.git#v20.66.0";
-  const installedResolved =
-    "git+ssh://git@github.com/uNetworking/uWebSockets.js.git#0123456789abcdef";
 
   files.mkdir(nodeModulesDir);
   files.writeFile(
@@ -190,22 +346,30 @@ async function updateGitDependencyCache(shrinkwrapResolved) {
       },
     }),
   );
+  const shrinkwrap = {
+    lockfileVersion: 4,
+    dependencies: {
+      "uWebSockets.js": {
+        version: "20.66.0",
+        resolved: shrinkwrapResolved,
+      },
+    },
+  };
+  if (cachedDependencies) {
+    shrinkwrap.meteorNpmDependencies = cachedDependencies;
+  }
   files.writeFile(
     files.pathJoin(packageNpmDir, "npm-shrinkwrap.json"),
-    JSON.stringify({
-      lockfileVersion: 4,
-      dependencies: {
-        "uWebSockets.js": {
-          version: "20.66.0",
-          resolved: shrinkwrapResolved,
-        },
-      },
-    }),
+    JSON.stringify(shrinkwrap),
   );
 
   const childProcess = require("child_process");
   const originalExecFile = childProcess.execFile;
+  const npmCalls = [];
   childProcess.execFile = (...args) => {
+    const commandArgs = args[1];
+    const installIndex = commandArgs.indexOf("install");
+    npmCalls.push(commandArgs.slice(installIndex));
     args[args.length - 1](new Error("npm install should not run"), "", "");
   };
 
@@ -219,7 +383,7 @@ async function updateGitDependencyCache(shrinkwrapResolved) {
         true,
       );
     });
-    return updated;
+    return { updated, npmCalls };
   } finally {
     childProcess.execFile = originalExecFile;
     files.rm_recursive(packageNpmDir);
@@ -253,6 +417,13 @@ selftest.define("npm", ["net"], async () => {
     await run.match("null; From shell script\n");
     await run.expectExit(0);
   }
+
+  const shrinkwrap = JSON.parse(s.read(
+    "packages/npm-test/.npm/package/npm-shrinkwrap.json",
+  ));
+  await selftest.expectEqual(shrinkwrap.meteorNpmDependencies, {
+    "meteor-test-executable": "0.0.3",
+  });
 });
 
 async function testThatNpmInstallThrows(name, version, regexMatcher) {

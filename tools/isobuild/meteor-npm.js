@@ -34,6 +34,7 @@ var meteorNpm = exports;
 // change this will recreate the npm-shrinkwrap.json file
 // and install all dependencies from scratch
 const LOCK_FILE_VERSION = 4;
+const METEOR_NPM_DEPENDENCIES = "meteorNpmDependencies";
 
 // Expose the version of npm in use from the dev bundle.
 meteorNpm.npmVersion = "10.1.0";
@@ -661,10 +662,14 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   var shrinkwrappedDependenciesTree =
     getShrinkwrappedDependenciesTree(packageNpmDir);
 
-  const npmTree = { dependencies: {} };
-  _.each(npmDependencies, (version, name) => {
-    npmTree.dependencies[name] = { version };
-  });
+  const npmTree = dependencyTreeFromDependencies(npmDependencies);
+  const cachedNpmDependencies =
+    shrinkwrappedDependenciesTree[METEOR_NPM_DEPENDENCIES];
+  const cachedNpmTree = cachedNpmDependencies &&
+    ! Array.isArray(cachedNpmDependencies) &&
+    typeof cachedNpmDependencies === "object"
+      ? dependencyTreeFromDependencies(cachedNpmDependencies)
+      : null;
 
   let minInstalledTree;
   try {
@@ -678,17 +683,17 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   }
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
-  const resolvedInstalledTree =
+  const installedVersionTree =
     minimizeDependencyTree(installedDependenciesTree, true);
-  const resolvedShrinkwrapTree =
+  const shrinkwrapVersionTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree, true);
 
   if (npmDependencyCacheIsCurrent(
         npmTree,
         minInstalledTree,
         minShrinkwrapTree,
-        resolvedInstalledTree,
-        resolvedShrinkwrapTree,
+        installedVersionTree,
+        cachedNpmTree,
       )) {
     return;
   }
@@ -708,7 +713,8 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   } else if (canReuseNpmShrinkwrap(
     npmTree,
     minShrinkwrapTree,
-    resolvedShrinkwrapTree,
+    shrinkwrapVersionTree,
+    cachedNpmTree,
   )) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
@@ -831,56 +837,72 @@ function gitRepositoryIdentity(spec) {
   }
 }
 
-function declaredDependenciesMatchResolvedTree(
+function declaredDependenciesMatchVersionAndSourceTrees(
   declaredTree,
-  installedTree,
-  resolvedTree,
+  versionTree,
+  sourceTree,
 ) {
-  if (declaredTree === installedTree) {
+  if (declaredTree === sourceTree) {
     return true;
   }
 
   if (_.isObject(declaredTree)) {
-    return _.isObject(installedTree) && _.isObject(resolvedTree) &&
+    return _.isObject(versionTree) && _.isObject(sourceTree) &&
       _.every(declaredTree, (value, key) =>
-        declaredDependenciesMatchResolvedTree(
+        declaredDependenciesMatchVersionAndSourceTrees(
           value,
-          installedTree[key],
-          resolvedTree[key],
+          versionTree[key],
+          sourceTree[key],
         ));
   }
 
   const declaredRepository = gitRepositoryIdentity(declaredTree);
-  return declaredSpecMatchesInstalledVersion(declaredTree, installedTree) &&
+  return declaredSpecMatchesInstalledVersion(declaredTree, versionTree) &&
     declaredRepository !== null &&
-    declaredRepository === gitRepositoryIdentity(resolvedTree);
+    declaredRepository === gitRepositoryIdentity(sourceTree);
 }
 
 export function npmDependencyCacheIsCurrent(
   npmTree,
   minInstalledTree,
   minShrinkwrapTree,
-  resolvedInstalledTree = minInstalledTree,
-  resolvedShrinkwrapTree = minShrinkwrapTree,
+  installedVersionTree = minInstalledTree,
+  cachedNpmTree = null,
 ) {
-  return declaredDependenciesMatchResolvedTree(
-    npmTree,
-    minInstalledTree,
-    resolvedInstalledTree,
-  ) &&
-    isSubtreeOf(resolvedShrinkwrapTree, resolvedInstalledTree);
+  const declaredDependenciesAreCurrent =
+    isSubtreeOf(npmTree, minInstalledTree) ||
+    (_.isEqual(npmTree, cachedNpmTree) &&
+      declaredDependenciesMatchVersionAndSourceTrees(
+        npmTree,
+        installedVersionTree,
+        minInstalledTree,
+      ));
+
+  return declaredDependenciesAreCurrent &&
+    isSubtreeOf(minShrinkwrapTree, minInstalledTree);
 }
 
 export function canReuseNpmShrinkwrap(
   npmTree,
   minShrinkwrapTree,
-  resolvedShrinkwrapTree = minShrinkwrapTree,
+  shrinkwrapVersionTree = minShrinkwrapTree,
+  cachedNpmTree = null,
 ) {
-  return declaredDependenciesMatchResolvedTree(
-    npmTree,
-    minShrinkwrapTree,
-    resolvedShrinkwrapTree,
-  );
+  return isSubtreeOf(npmTree, minShrinkwrapTree) ||
+    (_.isEqual(npmTree, cachedNpmTree) &&
+      declaredDependenciesMatchVersionAndSourceTrees(
+        npmTree,
+        shrinkwrapVersionTree,
+        minShrinkwrapTree,
+      ));
+}
+
+function dependencyTreeFromDependencies(dependencies) {
+  const tree = { dependencies: {} };
+  _.each(dependencies, (version, name) => {
+    tree.dependencies[name] = { version };
+  });
+  return tree;
 }
 
 function isSubtreeOf(subsetTree, supersetTree, predicate) {
@@ -948,7 +970,7 @@ async function completeNpmDirectory(
   npmDependencies,
 ) {
   // Create a shrinkwrap file.
-  shrinkwrap(newPackageNpmDir);
+  shrinkwrap(newPackageNpmDir, npmDependencies);
 
   // And stow a copy of npm-shrinkwrap too.
   files.copyFile(
@@ -1329,8 +1351,9 @@ var installFromShrinkwrap = async function (dir) {
 };
 
 // `npm shrinkwrap`
-function shrinkwrap(dir) {
+function shrinkwrap(dir, npmDependencies) {
   const tree = getInstalledDependenciesTree(dir);
+  tree[METEOR_NPM_DEPENDENCIES] = npmDependencies;
 
   files.writeFile(
     files.pathJoin(dir, "npm-shrinkwrap.json"),
@@ -1351,16 +1374,14 @@ function shrinkwrap(dir) {
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
 // from npm ls --json) to just the versions we want. Returns an object that does
 // not share state with its input
-function minimizeDependencyTree(tree, preferResolved = false) {
+function minimizeDependencyTree(tree, preferPackageVersion = false) {
   function minimizeModule(module) {
-    // Prefer the installed semver for declared dependency comparisons, but
-    // preserve resolved URLs when comparing installed and shrinkwrapped trees.
-    var version =
-      (preferResolved && module.resolved &&
-        ! isUrlFromRegistry(module.resolved) && module.resolved) ||
-      module.version ||
-      (module.resolved && ! isUrlFromRegistry(module.resolved) && module.resolved) ||
-      (utils.isNpmUrl(module.from) && module.from);
+    const resolved = module.resolved &&
+      ! isUrlFromRegistry(module.resolved) && module.resolved;
+    const from = utils.isNpmUrl(module.from) && module.from;
+    var version = preferPackageVersion
+      ? module.version || resolved || from
+      : resolved || from || module.version;
     var minimized = {version: version};
 
     if (module.dependencies) {
