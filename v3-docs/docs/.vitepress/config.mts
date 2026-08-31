@@ -27,6 +27,7 @@ export default defineConfig({
         activeMatch: `^/(guide|docs|examples)/`,
         items: [
           { text: "Quick Start", link: "/about/install" },
+          { text: "Agent Skills (Beta)", link: "/ai/agent-skills" },
           { text: "Examples", link: "https://github.com/meteor/examples" },
           {
             text: "Meteor.js 2 Docs",
@@ -201,6 +202,10 @@ export default defineConfig({
                 link: "/about/modern-build-stack/rspack-bundler-integration.md",
               },
             ]
+          },
+          {
+            text: "Agent Skills (Beta)",
+            link: "/ai/agent-skills",
           },
           {
             text: "Cordova",
