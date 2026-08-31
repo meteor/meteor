@@ -24,7 +24,7 @@ export default defineConfig({
     nav: [
       {
         text: "Docs",
-        activeMatch: `^/(guide|docs|examples)/`,
+        activeMatch: `^/(guide|docs|examples|ai)/`,
         items: [
           { text: "Quick Start", link: "/about/install" },
           { text: "Agent Skills", link: "/ai/agent-skills" },
