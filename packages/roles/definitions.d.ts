@@ -88,6 +88,14 @@ export declare namespace Roles {
    */
   function createRole(
     roleName: string,
+    options?: { unlessExists?: false }
+  ): string;
+  function createRole(
+    roleName: string,
+    options: { unlessExists: true }
+  ): string | null;
+  function createRole(
+    roleName: string,
     options?: { unlessExists?: boolean }
   ): string | null;
   function createRoleAsync(

@@ -75,19 +75,21 @@ Meteor.methods({
   },
 });
 expectTypeOf(Meteor.call).toBeFunction();
-expectTypeOf(Meteor.call<{ ok: boolean }>("typed-result")).toEqualTypeOf<{
-  ok: boolean;
-}>();
-expectTypeOf(Meteor.call<number>("sum", 1, 2)).toEqualTypeOf<number>();
-Meteor.call<{ ok: boolean }>("typed-callback", (error, result) => {
+expectTypeOf(Meteor.call<{ ok: boolean }>("typed-result")).toEqualTypeOf<
+  { ok: boolean } | undefined | Promise<{ ok: boolean }>
+>();
+expectTypeOf(Meteor.call<number>("sum", 1, 2)).toEqualTypeOf<
+  number | undefined | Promise<number>
+>();
+expectTypeOf(Meteor.call<{ ok: boolean }>("typed-callback", (error, result) => {
   expectTypeOf(error).not.toBeAny();
   expectTypeOf(result).not.toBeAny();
   expectTypeOf(error).toEqualTypeOf<Error | Meteor.Error | undefined>();
   expectTypeOf(result).toEqualTypeOf<{ ok: boolean } | undefined>();
-});
-Meteor.call("callback", (error) => {
+})).toBeVoid();
+expectTypeOf(Meteor.call("callback", (error) => {
   expectTypeOf(error).toEqualTypeOf<Error | Meteor.Error | undefined>();
-});
+})).toBeVoid();
 expectTypeOf(Meteor.callAsync).toBeFunction();
 expectTypeOf<Meteor.MethodApplyOptions<string>>().toBeObject();
 expectTypeOf(Meteor.apply).toBeFunction();

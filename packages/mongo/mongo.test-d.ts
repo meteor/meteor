@@ -67,6 +67,15 @@ coll.insert({ name: "typed", value: 1 }, (error, id) => {
   expectTypeOf(error).toEqualTypeOf<Error | null | undefined>();
   expectTypeOf(id).toEqualTypeOf<Mongo.Id | undefined>();
 });
+expectTypeOf(coll.insert({ name: "typed", value: 1 })).toEqualTypeOf<Mongo.Id>();
+expectTypeOf(coll.insert({ name: "typed", value: 1 }, () => {})).toEqualTypeOf<
+  Mongo.Id | null
+>();
+declare const optionalInsertCallback: Mongo.InsertCallback | undefined;
+expectTypeOf(coll.insert(
+  { name: "optional-callback", value: 1 },
+  optionalInsertCallback,
+)).toEqualTypeOf<Mongo.Id | null>();
 coll.insert({ name: "legacy", value: 1 }, legacyMongoCallback);
 coll.update({ name: "typed" }, { $set: { value: 2 } }, {}, (error, affected) => {
   expectTypeOf(error).toEqualTypeOf<Error | null | undefined>();

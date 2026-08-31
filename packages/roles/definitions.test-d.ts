@@ -43,6 +43,17 @@ expectTypeOf(Roles.createRole).toBeCallableWith("admin");
 expectTypeOf(Roles.createRole).toBeCallableWith("admin", {
   unlessExists: true,
 });
+expectTypeOf(Roles.createRole("admin")).toEqualTypeOf<string>();
+expectTypeOf(Roles.createRole("admin", {
+  unlessExists: false,
+})).toEqualTypeOf<string>();
+expectTypeOf(Roles.createRole("admin", {
+  unlessExists: true,
+})).toEqualTypeOf<string | null>();
+declare const createRoleOptions: { unlessExists: boolean };
+expectTypeOf(Roles.createRole("admin", createRoleOptions)).toEqualTypeOf<string | null>();
+declare const optionalCreateRoleOptions: { unlessExists?: boolean };
+expectTypeOf(Roles.createRole("admin", optionalCreateRoleOptions)).toEqualTypeOf<string | null>();
 expectTypeOf(Roles.deleteRole).returns.toEqualTypeOf<void>();
 expectTypeOf(Roles.deleteRoleAsync).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(Roles.renameRole).returns.toEqualTypeOf<void>();

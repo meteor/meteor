@@ -23,8 +23,8 @@ export namespace DDP {
   interface DDPStatic {
     subscribe(name: string, ...args: Argument[]): Meteor.SubscriptionHandle;
     subscribe(name: string, ...args: [...Argument[], SubscriptionCallback]): Meteor.SubscriptionHandle;
-    call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Result;
-    call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: [...Argument[], MethodCallback<Result>]): Result;
+    call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: [...Argument[], MethodCallback<Result>]): void;
+    call<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Result | undefined | Promise<Result>;
     callAsync<Result extends DDP.Result = DDP.Result>(method: string, ...parameters: Argument[]): Promise<Result>;
     apply<Result extends DDP.Result = DDP.Result>(
       method: string,
@@ -34,7 +34,7 @@ export namespace DDP {
     ): Result;
     methods<T extends {[K in keyof T]: MethodHandler }>(methods: T): void;
     subscribe(name: string, ...rest: unknown[]): Meteor.SubscriptionHandle;
-    call<Result = unknown>(method: string, ...parameters: unknown[]): Result;
+    call<Result = unknown>(method: string, ...parameters: unknown[]): Result | undefined | Promise<Result>;
     callAsync<Result = unknown>(method: string, ...parameters: unknown[]): Promise<Result>;
     apply<Result = unknown>(method: string, ...parameters: unknown[]): Result;
     status(): DDPStatus;
