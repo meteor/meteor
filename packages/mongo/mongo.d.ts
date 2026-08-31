@@ -346,8 +346,10 @@ export namespace Mongo {
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insert(doc: OptionalId<T>, callback?: InsertCallback): Id;
-    insert(doc: OptionalId<T>, callback?: Function): Id;
+    insert(doc: OptionalId<T>, callback: InsertCallback): Id | null;
+    insert(doc: OptionalId<T>): Id;
+    insert(doc: OptionalId<T>, callback: InsertCallback | undefined): Id | null;
+    insert(doc: OptionalId<T>, callback: Function): Id | null;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.

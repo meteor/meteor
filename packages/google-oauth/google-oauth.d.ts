@@ -37,8 +37,15 @@ export namespace Google {
    * Accepts either `(options, callback)` or `(callback)`.
    */
   export function requestCredential(
-    options?: RequestCredentialOptions | CredentialRequestCompleteCallback,
     credentialRequestCompleteCallback?: CredentialRequestCompleteCallback
+  ): void;
+  export function requestCredential(
+    options: RequestCredentialOptions,
+    credentialRequestCompleteCallback?: CredentialRequestCompleteCallback
+  ): void;
+  export function requestCredential(
+    options: RequestCredentialOptions | undefined,
+    credentialRequestCompleteCallback: CredentialRequestCompleteCallback
   ): void;
 
   /**

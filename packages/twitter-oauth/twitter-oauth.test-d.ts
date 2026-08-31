@@ -5,6 +5,11 @@ expectTypeOf(Twitter).toBeObject();
 
 expectTypeOf(Twitter.requestCredential).toBeFunction();
 expectTypeOf(Twitter.requestCredential).returns.toBeVoid();
+Twitter.requestCredential(() => {});
+Twitter.requestCredential({ loginStyle: "popup" }, () => {});
+Twitter.requestCredential(undefined, () => {});
+// @ts-expect-error callback-only and options-plus-callback are distinct call shapes
+Twitter.requestCredential(() => {}, () => {});
 
 expectTypeOf(Twitter.retrieveCredential).parameters.toEqualTypeOf<[string, (string | null)?]>();
 expectTypeOf(Twitter.retrieveCredential).returns.toMatchTypeOf<Promise<unknown>>();

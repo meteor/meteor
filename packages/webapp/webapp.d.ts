@@ -120,7 +120,9 @@ export declare namespace WebAppInternals {
     res: http.ServerResponse,
     next: Function
   ): Promise< void>;
-  function parsePort(port: string | number): string | number;
+  function parsePort(port: number): number;
+  function parsePort(port: `${number}`): number;
+  function parsePort(port: string): string | number;
   function reloadClientPrograms(): Promise< void>;
   function generateBoilerplate(): Promise< void>;
   /** @deprecated Use `staticFilesByArch`. */

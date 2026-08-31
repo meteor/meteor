@@ -29,8 +29,12 @@ expectTypeOf(EJSONNs.equals).parameters.toEqualTypeOf<
 >();
 expectTypeOf(EJSONNs.equals).returns.toBeBoolean();
 
-expectTypeOf(EJSONNs.fromJSONValue).parameters.toEqualTypeOf<[JSONable]>();
-expectTypeOf(EJSONNs.fromJSONValue).returns.toEqualTypeOf<EJSONableProperty>();
+expectTypeOf(EJSONNs.fromJSONValue).toBeFunction();
+expectTypeOf(EJSONNs.fromJSONValue(42)).toEqualTypeOf<42>();
+expectTypeOf(EJSONNs.fromJSONValue("hello")).toEqualTypeOf<"hello">();
+expectTypeOf(EJSONNs.fromJSONValue(true)).toEqualTypeOf<true>();
+expectTypeOf(EJSONNs.fromJSONValue(null)).toEqualTypeOf<null>();
+expectTypeOf(EJSONNs.fromJSONValue({ plain: 1 })).toEqualTypeOf<EJSONableProperty>();
 
 expectTypeOf(EJSONNs.isBinary).parameters.toEqualTypeOf<[object]>();
 expectTypeOf(EJSONNs.newBinary).parameters.toEqualTypeOf<[number]>();

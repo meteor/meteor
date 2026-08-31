@@ -3,7 +3,18 @@ import { Session } from "./session";
 import { Mongo } from "meteor/mongo";
 import type { EJSONableProperty } from "meteor/ejson";
 
+declare module "meteor/session" {
+  namespace Session {
+    interface SessionData {
+      selectedDocument: { id: string; title: string };
+    }
+  }
+}
+
 expectTypeOf(Session).toBeObject();
+expectTypeOf<Session.SessionData>()
+  .toHaveProperty("selectedDocument")
+  .toEqualTypeOf<{ id: string; title: string }>();
 
 type SessionValue = EJSONableProperty;
 
@@ -12,8 +23,12 @@ expectTypeOf(Session.equals).parameters.toEqualTypeOf<
 >();
 expectTypeOf(Session.equals).returns.toBeBoolean();
 
-expectTypeOf(Session.get).parameters.toEqualTypeOf<[string]>();
-expectTypeOf(Session.get).returns.toEqualTypeOf<SessionValue>();
+expectTypeOf(Session.get).toBeFunction();
+expectTypeOf(Session.get("selectedDocument")).toEqualTypeOf<{
+  id: string;
+  title: string;
+}>();
+expectTypeOf(Session.get("unregistered-key")).toEqualTypeOf<SessionValue>();
 
 expectTypeOf(Session.set).toBeCallableWith("k", "value");
 expectTypeOf(Session.set).toBeCallableWith("k", 42);

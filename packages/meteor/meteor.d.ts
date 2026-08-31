@@ -211,19 +211,22 @@ export namespace Meteor {
       ...(EJSONable | EJSONableProperty)[],
       DDP.MethodCallback<Result>,
     ]
-  ): Result;
+  ): void;
   function call<
     Result extends EJSONable
       | EJSONable[]
       | EJSONableProperty
       | EJSONableProperty[]
-  >(name: string, ...args: (EJSONable | EJSONableProperty)[]): Result;
+  >(
+    name: string,
+    ...args: (EJSONable | EJSONableProperty)[]
+  ): Result | undefined | Promise<Result>;
   function call<
     Result extends EJSONable
       | EJSONable[]
       | EJSONableProperty
       | EJSONableProperty[]
-  >(name: string, ...args: unknown[]): Result;
+  >(name: string, ...args: unknown[]): Result | undefined | Promise<Result>;
 
   /**
    * Invokes a method with an async stub, passing any number of arguments.

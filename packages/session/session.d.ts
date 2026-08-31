@@ -8,6 +8,9 @@ interface SessionObjectID {
 type SessionValue = EJSONableProperty;
 
 export namespace Session {
+  /** Application-defined Session keys and their corresponding value types. */
+  interface SessionData {}
+
   /**
    * Test if a session variable is equal to a value. If inside a
    * reactive computation, invalidate the computation the next
@@ -29,6 +32,7 @@ export namespace Session {
    * session.
    * @param key The name of the session variable to return
    */
+  function get<Key extends keyof SessionData>(key: Key): SessionData[Key];
   function get(key: string): SessionValue;
 
   /**

@@ -61,6 +61,9 @@ WebAppInternals.registerBoilerplateDataCallback(
 expectTypeOf(WebAppInternals.generateBoilerplateInstance).toBeFunction();
 expectTypeOf(WebAppInternals.staticFilesMiddleware).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(WebAppInternals.parsePort).returns.toEqualTypeOf<string | number>();
+expectTypeOf(WebAppInternals.parsePort(3000)).toEqualTypeOf<number>();
+expectTypeOf(WebAppInternals.parsePort("3000")).toEqualTypeOf<number>();
+expectTypeOf(WebAppInternals.parsePort("\\\\.\\pipe\\meteor")).toEqualTypeOf<string | number>();
 expectTypeOf(WebAppInternals.reloadClientPrograms).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(WebAppInternals.generateBoilerplate).returns.toEqualTypeOf<Promise<void>>();
 expectTypeOf(WebAppInternals.inlineScriptsAllowed).returns.toEqualTypeOf<boolean>();
