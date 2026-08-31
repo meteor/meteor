@@ -187,7 +187,7 @@ jobs:
     timeout-minutes: 55
     strategy:
       fail-fast: false
-      max-parallel: 12
+      max-parallel: 6
       matrix: ${{ fromJson(needs.setup.outputs.matrix) }}
     env:
       TIMEOUT_SCALE_FACTOR: ${{ matrix.resources == 'heavy' && '14' || '8' }}
