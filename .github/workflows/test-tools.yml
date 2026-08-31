@@ -89,6 +89,7 @@ jobs:
         id: discover
         run: |
           ./meteor self-test \
+            --force-online \
             --list-json-out /tmp/tests.json \
             --exclude "$SELF_TEST_EXCLUDE" \
             --without-tag "custom-warehouse" \

@@ -68,12 +68,16 @@ test('rejects malformed test records before they reach workflow expressions', ()
   );
 });
 
-test('discovery and matrix execution keep the default offline policy', () => {
+test('discovery includes online tests while execution keeps the default offline policy', () => {
   const discovery = workflowStep('Discover tests and build matrix');
   const execution = workflowStep('Running self-test');
 
+  assert.match(discovery, /--force-online/);
+  assert.doesNotMatch(execution, /--force-online/);
+
   for (const step of [discovery, execution]) {
-    assert.doesNotMatch(step, /--force-online/);
     assert.match(step, /--exclude "\$SELF_TEST_EXCLUDE"/);
+    assert.match(step, /--without-tag "custom-warehouse"/);
+    assert.match(step, /--headless/);
   }
 });

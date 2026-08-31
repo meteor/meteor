@@ -77,6 +77,7 @@ export const ISOPACKETS = {
 //
 //  - The 'Package' dictionary, if the isopacket has already been loaded
 //    into memory
+//  - A Promise for an in-flight load
 //  - null, if the isopacket hasn't been loaded into memory but its on-disk
 //    instance is known to be ready
 //
