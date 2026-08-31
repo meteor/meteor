@@ -101,8 +101,6 @@ See the [bundle catalog](https://github.com/meteor/agent-skills#bundles) for the
 
 ## Working with Agent Skills
 
-Use the skills on a real task in a separate branch or disposable project. Review the resulting diff, run the checks that apply to the changed area, and keep application secrets out of prompts and reports.
-
 Agent Skills complement the Meteor documentation and your own review. They do not replace API documentation, application tests, or decisions based on your deployed Meteor and package versions.
 
 ## Feedback
