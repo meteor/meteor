@@ -1401,11 +1401,32 @@ function minimizeDependencyTree(tree, preferPackageVersion = false) {
 }
 
 function isUrlFromRegistry(url) {
-  if (url.match(/^https?:\/\/registry.npmjs.org\//)) {
-    return true;
+  const configuredRegistry = process.env.NPM_CONFIG_REGISTRY;
+  if (configuredRegistry) {
+    return registryContainsUrl(configuredRegistry, url);
   }
-  const NCR = process.env.NPM_CONFIG_REGISTRY;
-  return NCR && url.startsWith(NCR);
+
+  return registryContainsUrl("https://registry.npmjs.org/", url) ||
+    registryContainsUrl("http://registry.npmjs.org/", url);
+}
+
+function registryContainsUrl(registry, url) {
+  try {
+    const registryUrl = new URL(registry);
+    const resolvedUrl = new URL(url);
+    if (! ["http:", "https:"].includes(registryUrl.protocol) ||
+        ! ["http:", "https:"].includes(resolvedUrl.protocol) ||
+        registryUrl.origin !== resolvedUrl.origin) {
+      return false;
+    }
+
+    const registryPath = registryUrl.pathname.replace(/\/+$/, "");
+    return ! registryPath ||
+      resolvedUrl.pathname === registryPath ||
+      resolvedUrl.pathname.startsWith(`${registryPath}/`);
+  } catch {
+    return false;
+  }
 }
 
 var logUpdateDependencies = function (packageName, npmDependencies) {

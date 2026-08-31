@@ -270,6 +270,95 @@ selftest.define("npm - dependency cache detects Git to registry changes", async 
   });
 });
 
+selftest.define("npm - dependency cache detects registry source changes", async () => {
+  const publicResolved =
+    "https://registry.npmjs.org/uWebSockets.js/-/uWebSockets.js-20.66.0.tgz";
+  const customResolved =
+    "https://registry-a.example/npm/uWebSockets.js-20.66.0.tgz";
+  const cachedDependencies = { "uWebSockets.js": "20.66.0" };
+
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: "20.66.0",
+    installedResolved: publicResolved,
+    shrinkwrapResolved: publicResolved,
+    cachedDependencies,
+    registry: "https://registry-b.example/npm/",
+  }), {
+    updated: false,
+    npmCalls: [["install", "uWebSockets.js@20.66.0"]],
+  });
+
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: "20.66.0",
+    installedResolved: customResolved,
+    shrinkwrapResolved: customResolved,
+    cachedDependencies,
+    registry: "https://registry-b.example/npm/",
+  }), {
+    updated: false,
+    npmCalls: [["install", "uWebSockets.js@20.66.0"]],
+  });
+
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: "20.66.0",
+    installedResolved: customResolved,
+    shrinkwrapResolved: customResolved,
+    cachedDependencies,
+    registry: "https://registry-a.example/npm",
+  }), {
+    updated: true,
+    npmCalls: [],
+  });
+
+  const prefixCollisionResolved =
+    "https://registry-a.example/npm-old/uWebSockets.js-20.66.0.tgz";
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: "20.66.0",
+    installedResolved: prefixCollisionResolved,
+    shrinkwrapResolved: prefixCollisionResolved,
+    cachedDependencies,
+    registry: "https://registry-a.example/npm/",
+  }), {
+    updated: false,
+    npmCalls: [["install", "uWebSockets.js@20.66.0"]],
+  });
+
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: "20.66.0",
+    installedResolved: publicResolved,
+    shrinkwrapResolved: publicResolved,
+    cachedDependencies,
+    registry: null,
+  }), {
+    updated: true,
+    npmCalls: [],
+  });
+
+  await selftest.expectEqual(await updateDependencyCache({
+    declaredVersion: "20.66.0",
+    installedResolved: customResolved,
+    shrinkwrapResolved: customResolved,
+    cachedDependencies,
+    registry: "https://registry-a.example/",
+  }), {
+    updated: true,
+    npmCalls: [],
+  });
+
+  for (const registry of ["not a URL", "file:///tmp/npm-registry/"]) {
+    await selftest.expectEqual(await updateDependencyCache({
+      declaredVersion: "20.66.0",
+      installedResolved: publicResolved,
+      shrinkwrapResolved: publicResolved,
+      cachedDependencies,
+      registry,
+    }), {
+      updated: false,
+      npmCalls: [["install", "uWebSockets.js@20.66.0"]],
+    });
+  }
+});
+
 selftest.define("npm - dependency cache preserves HTTPS tarballs", async () => {
   const tarball =
     "https://github.com/uNetworking/uWebSockets.js/archive/refs/tags/v20.66.0.tar.gz";
@@ -326,6 +415,7 @@ async function updateDependencyCache({
   installedResolved,
   shrinkwrapResolved,
   cachedDependencies,
+  registry,
 }) {
   const packageNpmDir = files.mkdtemp();
   const nodeModulesDir = files.pathJoin(packageNpmDir, "node_modules");
@@ -365,6 +455,8 @@ async function updateDependencyCache({
 
   const childProcess = require("child_process");
   const originalExecFile = childProcess.execFile;
+  const previousRegistry = process.env.NPM_CONFIG_REGISTRY;
+  const overridesRegistry = registry !== undefined;
   const npmCalls = [];
   childProcess.execFile = (...args) => {
     const commandArgs = args[1];
@@ -374,6 +466,14 @@ async function updateDependencyCache({
   };
 
   try {
+    if (overridesRegistry) {
+      if (registry === null) {
+        delete process.env.NPM_CONFIG_REGISTRY;
+      } else {
+        process.env.NPM_CONFIG_REGISTRY = registry;
+      }
+    }
+
     let updated;
     await buildmessage.capture({ title: "npm cache test" }, async () => {
       updated = await meteorNpm.updateDependencies(
@@ -386,6 +486,13 @@ async function updateDependencyCache({
     return { updated, npmCalls };
   } finally {
     childProcess.execFile = originalExecFile;
+    if (overridesRegistry) {
+      if (previousRegistry === undefined) {
+        delete process.env.NPM_CONFIG_REGISTRY;
+      } else {
+        process.env.NPM_CONFIG_REGISTRY = previousRegistry;
+      }
+    }
     files.rm_recursive(packageNpmDir);
   }
 }
