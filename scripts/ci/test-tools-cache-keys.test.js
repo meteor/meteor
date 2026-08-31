@@ -8,29 +8,65 @@ const workflow = fs.readFileSync(
   'utf8',
 );
 
-function matchingCacheKeys(prefix) {
-  return [...workflow.matchAll(/^\s*key: (.+)$/gm)]
-    .map(([, key]) => key)
-    .filter(key => key.includes(prefix));
+function matchingCacheBlocks(cachePath) {
+  return workflow
+    .split(/(?=^      - name: )/m)
+    .filter(block => block.includes(`\n            ${cachePath}\n`));
 }
 
-test('package npm cache keys include package dependency declarations', () => {
-  const keys = matchingCacheKeys('node-24-pkg-npm-');
+function restoreKeys(block) {
+  const lines = block.split('\n');
+  const restoreKeysIndex = lines.findIndex(line =>
+    /^\s*restore-keys:\s*\|\s*$/.test(line),
+  );
 
-  assert.ok(keys.length > 0, 'expected package npm cache keys');
-  for (const key of keys) {
+  if (restoreKeysIndex === -1) {
+    return [];
+  }
+
+  const parentIndent = lines[restoreKeysIndex].search(/\S/);
+  const keys = [];
+  for (const line of lines.slice(restoreKeysIndex + 1)) {
+    if (line.trim() === '') {
+      continue;
+    }
+    if (line.search(/\S/) <= parentIndent) {
+      break;
+    }
+    keys.push(line.trim());
+  }
+  return keys;
+}
+
+test('package npm caches use dependency keys without fallback restores', () => {
+  const cacheBlocks = matchingCacheBlocks('packages/**/.npm');
+
+  assert.equal(cacheBlocks.length, 14, 'expected one package npm cache per job');
+  for (const block of cacheBlocks) {
     assert.match(
-      key,
-      /hashFiles\('packages\/\*\*\/package\.js', 'packages\/\*\*\/npm-shrinkwrap\.json'\)/,
+      block,
+      /^\s*key: \$\{\{ runner\.os \}\}-node-24-pkg-npm-\$\{\{ hashFiles\('packages\/\*\*\/package\.js', 'packages\/\*\*\/npm-shrinkwrap\.json'\) \}\}$/m,
     );
+    assert.doesNotMatch(block, /^\s*restore-keys:/m);
   }
 });
 
-test('dev bundle cache keys do not reference missing tools manifests', () => {
-  const keys = matchingCacheKeys('node-24-meteor-tools-');
+test('dev bundle caches use dependency keys with fallback restores', () => {
+  const cacheBlocks = matchingCacheBlocks('.meteor');
 
-  assert.ok(keys.length > 0, 'expected dev bundle cache keys');
-  for (const key of keys) {
-    assert.doesNotMatch(key, /tools\/package(?:-lock)?\.json/);
+  assert.equal(cacheBlocks.length, 14, 'expected one dev bundle cache per job');
+  for (const block of cacheBlocks) {
+    assert.match(
+      block,
+      /^[ \t]*key: \$\{\{ runner\.os \}\}-node-24-meteor-tools-\$\{\{ hashFiles\('meteor', 'package-lock\.json'\) \}\}$/m,
+    );
+    assert.doesNotMatch(block, /tools\/package(?:-lock)?\.json/);
+    assert.deepEqual(
+      restoreKeys(block),
+      [
+        '${{ runner.os }}-node-24-meteor-tools-',
+        '${{ runner.os }}-node-24-meteor-',
+      ],
+    );
   }
 });

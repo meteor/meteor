@@ -79,8 +79,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Validate Test Tools cache keys
         run: node --test scripts/ci/test-tools-cache-keys.test.js
@@ -133,8 +131,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -215,8 +211,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -291,8 +285,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -373,8 +365,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -451,8 +441,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -527,8 +515,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -604,8 +590,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -680,8 +664,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -756,8 +738,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -832,8 +812,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -908,8 +886,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -984,8 +960,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
@@ -1060,8 +1034,6 @@ jobs:
           path: |
             packages/**/.npm
           key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-24-pkg-npm-
 
       - name: Log environment
         run: |
