@@ -951,10 +951,7 @@ async function installNpmDependencies(dependencies, dir) {
   );
 
   try {
-    for (const name of Object.keys(dependencies)) {
-      const version = dependencies[name];
-      await installNpmModule(name, version, dir);
-    }
+    await batchInstallNpmModules(dependencies, dir);
   } finally {
     if (! packageJsonExisted) {
       files.unlink(packageJsonPath);
@@ -999,6 +996,47 @@ var createReadme = function (newPackageNpmDir) {
 "creates; if you are using git, the .gitignore file tells git to ignore it.\n"
   );
 };
+
+const batchInstallNpmModules = meteorNpm.batchInstallNpmModules =
+async function batchInstallNpmModules(dependencies, dir) {
+  const entries = Object.entries(dependencies);
+  if (entries.length === 0) return;
+
+  const args = ["install", ...entries.map(([name, version]) =>
+    utils.isNpmUrl(version) ? version : `${name}@${version}`)];
+  const result = await runNpmCommand(args, dir);
+
+  if (! result.success) {
+    for (const [name, version] of entries) {
+      await installNpmModule(name, version, dir);
+    }
+    return;
+  }
+
+  for (const [name] of entries) {
+    const pkgDir = files.pathJoin(dir, "node_modules", name);
+    if (! isPortable(pkgDir)) {
+      recordLastRebuildVersions(pkgDir);
+    }
+  }
+  checkNodeModulesForColons(dir);
+};
+
+function checkNodeModulesForColons(dir) {
+  if (process.platform === "win32") return;
+  const paths = files.findPathsWithRegex(".", new RegExp(":"), {
+    cwd: files.pathJoin(dir, "node_modules"),
+  });
+  if (! paths.length) return;
+  const firstTen = paths.slice(0, 10);
+  if (paths.length > 10) {
+    firstTen.push(`... ${paths.length - 10} paths omitted.`);
+  }
+  buildmessage.error(
+    "Some filenames in installed npm modules have colons, ':', which won't work on Windows:\n" +
+    firstTen.join("\n"));
+  throw new NpmFailure();
+}
 
 var createNodeVersion = function (newPackageNpmDir) {
   files.writeFile(
