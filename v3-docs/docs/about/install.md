@@ -16,7 +16,13 @@ And it will prompt you to choose a project name and frontend framework.
 
 ## Build with AI coding assistants {#ai-docs}
 
-Install [Meteor Agent Skills](/ai/agent-skills) to give compatible AI coding assistants Meteor-specific guidance for creating, debugging, testing, migrating, securing, and deploying applications.
+[Meteor Agent Skills](/ai/agent-skills) give compatible AI coding assistants Meteor-specific guidance for creating, debugging, testing, migrating, securing, and deploying applications. Choose and install skills interactively:
+
+```bash
+npx skills add meteor/agent-skills
+```
+
+The Agent Skills guide also covers Codex and Claude Code plugin installation, individual skills, and the complete catalog.
 
 For documentation context, Meteor also publishes [`llms.txt`](https://docs.meteor.com/llms.txt) and [`llms-full.txt`](https://docs.meteor.com/llms-full.txt). Use `llms.txt` to discover relevant pages, or download the complete documentation:
 
