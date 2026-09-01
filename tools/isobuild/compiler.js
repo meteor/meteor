@@ -603,16 +603,23 @@ api.addAssets('${relPath}', 'client').`);
       continue;
     }
 
-    const contents = optimisticReadFile(absPath);
-    const hash = optimisticHashOrNull(absPath);
+    const isSyntheticSource = _.has(source, "data");
+    const contents = isSyntheticSource
+      ? source.data
+      : optimisticReadFile(absPath);
+    const hash = isSyntheticSource
+      ? watch.sha1(source.data)
+      : optimisticHashOrNull(absPath);
     const file = { contents, hash };
 
     // When files are handled by a new-style compiler plugin, the SourceResource
     // class tracks if each file is actually used.
-    if (classification.isNonLegacySource()) {
-      watchSet.addPotentiallyUnusedFile(absPath, hash);
-    } else {
-      watchSet.addFile(absPath, hash);
+    if (! isSyntheticSource) {
+      if (classification.isNonLegacySource()) {
+        watchSet.addPotentiallyUnusedFile(absPath, hash);
+      } else {
+        watchSet.addFile(absPath, hash);
+      }
     }
     await Console.yield();
 

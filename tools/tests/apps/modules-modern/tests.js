@@ -471,6 +471,14 @@ describe("Meteor packages", () => {
     assert.strictEqual(mtp.where, Meteor.isServer ? "server" : "client");
   });
 
+  it("can export a package from multiple main modules", async () => {
+    const pkg = await require("meteor/main-modules-package");
+
+    assert.strictEqual(pkg.alpha, "alpha");
+    assert.strictEqual(pkg.beta, "beta");
+    assert.strictEqual(pkg.gamma, "gamma");
+  });
+
   it("should expose their files for import", async () => {
     const osStub = await require("meteor/modules-test-package/os-stub");
 
