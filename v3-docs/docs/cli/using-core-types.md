@@ -1,77 +1,154 @@
 # TypeScript Types for Meteor Packages
 
-Meteor can generate TypeScript type declarations for all installed packages
-when you explicitly run `meteor types`. In Meteor 3.6, ordinary build commands
-do not create, remove, or replace generated declarations. Projects that list
-`zodern:types` directly keep using that established provider; remove it only
-when you are ready to opt in to the native generator.
+Starting with Meteor 3.6, Meteor can generate TypeScript declarations for
+installed packages that publish type information. This is an explicit opt-in:
+run `meteor types` to write the declarations to `.meteor/types/`. Ordinary
+commands such as `meteor run`, `meteor build`, `meteor test`, and `meteor lint`
+do not create, remove, or select native declarations.
 
-## How It Works
+Meteor 3.6 also preserves the existing type providers used by an application.
+If your app lists `zodern:types` directly, that package remains in control and
+`meteor types` exits successfully without modifying either provider's output.
 
-When you run `meteor types`, Meteor scans the compiled packages in your project
-and writes type declaration files to `.meteor/types/`:
+::: info Compilation and declarations are separate
+The [`typescript` package](/packages/typescript) and Rspack transpile `.ts` and
+`.tsx` application files. They do not type-check your application and do not
+choose its Meteor declaration provider. This guide covers declarations and
+editor/`tsc` resolution.
+:::
 
-```text
-.meteor/types/
-├── .gitignore                 ← written by the generator; keeps the folder untracked
-├── packages.d.ts              ← barrel file with /// <reference> directives
-├── packages/
-│   ├── random/                ← one directory per package that ships types
-│   │   └── index.d.ts         ← wraps the package's exports in declare module
-│   ├── accounts-base/
-│   │   ├── index.d.ts
-│   │   └── node_modules       ← symlink to the package's bundled npm deps
-│   └── react-meteor-data/
-│       ├── index.d.ts
-│       ├── module-suspense.d.ts ← one generated file per sub-path module
-│       └── node_modules
-└── node_modules/
-    └── meteor-package-types   ← symlink to ../packages (bridge for packages
-                                  that bundle a whole folder of declarations)
+## Choose a Type Provider
+
+| Project state | Recommended action |
+| --- | --- |
+| Existing app using `@types/meteor` or `zodern:types` | Keep the current configuration if you do not want type changes during the Meteor 3.6 upgrade. |
+| App ready to adopt native declarations | Remove a direct `zodern:types` dependency, run `meteor types`, then stop loading `@types/meteor` and configure the native paths. |
+| New Meteor 3.6 TypeScript app | The template preserves `@types/meteor` and `zodern:types`; native declarations are only a fallback until you explicitly migrate. |
+| JavaScript app that wants Meteor IntelliSense | Add a `jsconfig.json`, configure the native paths, and run `meteor types`. |
+
+Native declarations follow the Meteor 3.6 runtime APIs more closely, but
+opting in can reveal errors that an older provider did not report. Keeping the
+provider choice explicit lets you adopt those corrections separately from the
+framework upgrade.
+
+## Enable Native Types in a TypeScript App
+
+### 1. Remove `zodern:types` when you are ready
+
+Skip this step if the app does not list the package directly.
+
+```bash
+meteor remove zodern:types
 ```
 
-`packages.d.ts` is a single barrel file of `/// <reference path="…" />` directives.
-Each package gets its own directory under `packages/`, whose `index.d.ts` wraps
-the package's exports in a `declare module 'meteor/package-name' { … }` block so
-TypeScript can resolve imports like:
+`meteor types` deliberately skips native generation while a direct
+`zodern:types` constraint is present. A transitive dependency on the package
+does not take ownership of generation.
 
-```ts
-import { Random } from "meteor/random";
-import { Accounts } from "meteor/accounts-base";
+### 2. Generate the native declarations
+
+```bash
+meteor types
 ```
 
-When a package bundles its own npm dependencies, its directory also contains a
-`node_modules` symlink pointing at the npm packages shipped inside the built
-package (its isopack). Because the declaration files sit right next to that
-symlink, TypeScript's normal Node-style resolution finds the npm types the
-package's declarations import — with no extra configuration.
+`meteor types` builds local packages as needed, but it does not bundle the app,
+run linters, or type-check application code. After successful native
+generation, Meteor removes stale `.meteor/local/types` output left by a
+previous direct `zodern:types` installation. If generation fails, that legacy
+output is preserved so you can restore the previous provider.
 
-When a package bundles a whole directory of declaration files (the directory
-form of `api.types()`, e.g. `api.types('dist-types/')`), that folder is copied
-verbatim into the package's directory — so its files keep their relative
-imports — and `index.d.ts` becomes a small stub that re-exports the folder's
-entry file through the `meteor-package-types` symlink at the types root. The
-symlink points back at the `packages/` directory, letting the stub use a bare
-import specifier (relative specifiers are not allowed inside a
-`declare module` block) that Node-style resolution follows automatically. It
-is only created when at least one installed package ships types this way.
+### 3. Configure `tsconfig.json`
 
-The generator also writes a `.gitignore` inside `.meteor/types/`, so the
-generated files stay out of version control without any changes to your
-project's own `.gitignore`.
+After generation succeeds, map normal package imports to the generated
+per-package adapters and include the generated barrel for scoped packages and
+sub-path modules:
 
-## Setup
+```json [tsconfig.json]
+{
+  "files": ["./.meteor/types/packages.d.ts"],
+  "include": ["**/*.ts", "**/*.tsx"],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "skipLibCheck": true,
+    "paths": {
+      "meteor/*": ["./.meteor/types/packages/*"]
+    }
+  },
+  "exclude": [
+    "./.meteor/local/isopacks/**",
+    "./.meteor/local/plugin-cache/**",
+    "./packages/**"
+  ]
+}
+```
 
-### New TypeScript apps
+To make the native declarations the only provider, also remove a directly
+installed `@types/meteor` package after generation succeeds:
 
-When you create a TypeScript project with `meteor create --typescript my-app`,
-the generated `tsconfig.json` supports both the compatibility provider and a
-later native opt-in:
+```bash
+meteor npm uninstall @types/meteor
+```
+
+Check every `tsconfig.json` used by the application, including configurations
+reached through `extends`. If `compilerOptions.types` contains `"meteor"`,
+remove only that entry and keep the other type libraries. Otherwise TypeScript
+continues loading the old ambient declarations alongside the native provider.
+
+If your project already has `files`, append
+`./.meteor/types/packages.d.ts`. If it already has `include`, keep its existing
+source patterns instead of replacing them with the example above.
+
+The two generated paths serve different purposes:
+
+- `.meteor/types/packages/*` resolves ordinary imports such as
+  `meteor/random` through a per-package `index.d.ts`.
+- `.meteor/types/packages.d.ts` references ambient declarations for scoped
+  package names and sub-paths such as `meteor/react-meteor-data/suspense`.
+
+Do not map `meteor/*` directly to `packages.d.ts`; the barrel is not an
+external module.
+
+::: warning Include the generated barrel explicitly
+Some Meteor templates exclude `./.meteor/**`. TypeScript's `files` entries are
+still explicit, so keep `./.meteor/types/packages.d.ts` in `files` when opting
+in. Without that entry, scoped package names and sub-path ambient declarations
+can be missing even when ordinary package imports resolve through `paths`.
+:::
+
+### 4. Check the application {#check-the-application}
+
+Use the application's locally installed TypeScript compiler. Confirm that
+`typescript` is already listed in `devDependencies`; if it is not, add a
+version compatible with the project. Keep that compiler version unchanged
+while migrating declaration providers so the two changes can be validated
+separately.
+
+A package script keeps generation and type-checking together locally and in
+CI. `npm run` resolves `tsc` from the application's `node_modules`:
+
+```json [package.json]
+{
+  "scripts": {
+    "check-types": "meteor types && tsc --noEmit"
+  }
+}
+```
+
+```bash
+meteor npm run check-types
+```
+
+Generated files are replaced by the next successful `meteor types` run. Do not
+edit or commit `.meteor/types/`; the generator writes a `.gitignore` inside the
+directory.
+
+## Existing Meteor 3.6 Templates
+
+Meteor 3.6 TypeScript templates retain the established provider order:
 
 ```json
 {
   "compilerOptions": {
-    "skipLibCheck": true,
     "paths": {
       "meteor/*": [
         "./node_modules/@types/meteor/*",
@@ -83,103 +160,21 @@ later native opt-in:
 }
 ```
 
-Meteor 3.6 TypeScript templates still install `zodern:types` directly so an
-upgrade does not silently change the active declarations. The paths retain the
-existing `@types/meteor` then `zodern:types` precedence; native declarations are
-fallbacks only. While `zodern:types` is present, `meteor types` skips generation
-without deleting either provider tree.
+The template also installs `zodern:types` directly. As a result, upgrading or
+creating an app does not silently replace its active declarations. The native
+path is only a fallback; follow the native setup above when you want to switch
+providers.
 
-Core packages that already shipped declarations retain those Meteor 3.6 files
-for zodern consumers. Their corrected native variants are registered separately
-and are excluded from zodern's isopack discovery, so upgrading without opting
-in does not merge or replace the established declarations.
-
-### Existing TypeScript apps
-
-If the project does not use `zodern:types` and you want the native declarations
-to be the only Meteor provider, use the generated per-package adapters and
-include the generated barrel for native sub-path and scoped-package declarations:
-
-```json
-{
-  "files": ["./.meteor/types/packages.d.ts"],
-  "include": ["**/*.ts", "**/*.tsx"],
-  "compilerOptions": {
-    "baseUrl": ".",
-    "skipLibCheck": true,
-    "paths": {
-      "meteor/*": [
-        "./.meteor/types/packages/*"
-      ]
-    }
-  },
-  "exclude": [
-    "./.meteor/local/isopacks/**",
-    "./.meteor/local/plugin-cache/**",
-    "./packages/**"
-  ]
-}
-```
-
-If the project already declares `files` or `include`, append
-`.meteor/types/packages.d.ts` and keep the existing source patterns. Listing
-the barrel as a `files` entry makes scoped packages and sub-path modules
-available as ambient declarations; it must not be used as a direct `paths`
-target because the barrel itself is not an external module.
-
-`"skipLibCheck": true` is recommended. The generated declaration files can pull
-in types from npm packages that live inside a Meteor package's own
-`node_modules`, and your app may have another copy of the same package — with
-lib check enabled, TypeScript reports duplicate-identifier errors when it
-checks both copies. `skipLibCheck` skips type-checking of `.d.ts` files, which
-avoids that noise.
-
-::: warning Important: `exclude` must not block `.meteor/types`
-Do **not** add `./.meteor/**` to `exclude` — that would hide the generated
-types in `.meteor/types`. Excluding the heavyweight `.meteor/local` cache
-directories, as shown above, is fine.
-:::
-
-::: tip `preserveSymlinks` is usually not needed
-Older guides recommended `"preserveSymlinks": true` for `zodern:types`. This is
-usually no longer required: the generated `.d.ts` files are real files, so
-TypeScript never reaches them *through* a symlink. Only each package's
-`node_modules` directory is a symlink, and ordinary resolution follows
-directory symlinks just fine.
-:::
-
-::: warning Limitation: peer dependencies of a package's bundled npm deps
-The per-package `node_modules` symlink points into the built package's own
-bundled dependencies — for published packages, a directory under
-`~/.meteor/packages/…`, outside your app. By default TypeScript resolves that
-symlink to its real path, so when a bundled dependency's *own* typings import
-a package that is **not** bundled with the Meteor package — typically a peer
-dependency such as `react`, or an `@types/*` package that only your app
-installs — the lookup walks up from the package store and can never reach your
-app's `node_modules`. With `"skipLibCheck": true` this fails silently: the
-affected types just degrade to `any`; with it off you see
-`TS2307: Cannot find module …` errors located inside `~/.meteor/packages/…`.
-If you hit this, add `"preserveSymlinks": true` to your `tsconfig.json` —
-resolution then stays inside your app tree, so those imports resolve against
-your app's `node_modules`.
-:::
-
-After running `meteor types`, TypeScript will resolve `meteor/random`,
-`meteor/accounts-base`, and all other typed packages from the generated
-declarations.
+Core packages that already exposed declarations in Meteor 3.6 keep those
+legacy files unchanged for existing providers. Corrected native declarations
+are stored separately and only selected by `meteor types`.
 
 ## JavaScript Apps
 
-JavaScript apps can get the same Meteor-import IntelliSense as TypeScript apps
-by adding a `jsconfig.json` to the project root and running `meteor types`.
+JavaScript apps can opt in to the same Meteor-import IntelliSense with a
+`jsconfig.json`:
 
-Meteor 3.6 JavaScript templates do not add a `jsconfig.json` automatically, so
-upgrading a JavaScript-only app does not start type generation or change editor
-diagnostics. Add one explicitly when you want typed imports.
-
-For existing JavaScript apps, add a `jsconfig.json`:
-
-```json
+```json [jsconfig.json]
 {
   "files": ["./.meteor/types/packages.d.ts"],
   "include": ["**/*.js", "**/*.jsx"],
@@ -187,9 +182,7 @@ For existing JavaScript apps, add a `jsconfig.json`:
     "baseUrl": ".",
     "paths": {
       "/*": ["*"],
-      "meteor/*": [
-        ".meteor/types/packages/*"
-      ]
+      "meteor/*": ["./.meteor/types/packages/*"]
     },
     "moduleResolution": "node",
     "resolveJsonModule": true
@@ -202,97 +195,112 @@ For existing JavaScript apps, add a `jsconfig.json`:
 }
 ```
 
-After running `meteor types`, VS Code will resolve `meteor/random`,
-`meteor/accounts-base`, etc. with full IntelliSense even in `.js` files.
+Then run:
 
-::: tip Apps without either file
-If a project has no `tsconfig.json` and no `jsconfig.json`, `meteor types`
-reports that there is nothing to generate.
-:::
+```bash
+meteor types
+```
 
-## Sub-Path Imports
+Meteor 3.6 JavaScript templates do not add `jsconfig.json` automatically, so
+ordinary JavaScript-only projects remain unchanged unless they opt in.
 
-Some packages expose multiple entry points. For example,
-`react-meteor-data` exposes a `suspense` sub-path with alternative imports:
+## Generated Output
+
+The generated directory has one adapter directory per package that publishes
+types, plus a barrel of references:
+
+```text
+.meteor/types/
+├── .gitignore
+├── package.json
+├── packages.d.ts
+├── packages/
+│   ├── random/
+│   │   └── index.d.ts
+│   └── react-meteor-data/
+│       ├── index.d.ts
+│       └── module-suspense.d.ts
+└── node_modules/
+    └── meteor-package-types -> ../packages  # created only when needed
+```
+
+Package authors can publish a single declaration, sub-path declarations, a
+whole declaration directory, or TypeScript source metadata. Meteor preserves
+relative imports and links bundled npm dependencies when necessary. Generated
+filenames such as `module-suspense.d.ts` and the symlink layout are internal
+details; application code should only import public module ids:
 
 ```ts
-// Main module:
-import { useTracker } from "meteor/react-meteor-data";
-
-// Or suspense sub-path:
+import { Random } from "meteor/random";
 import { useTracker } from "meteor/react-meteor-data/suspense";
 ```
 
-When a package declares sub-path modules, Meteor generates a separate `.d.ts`
-file for each sub-path inside the package's directory and adds the corresponding
-`/// <reference>` entry to `packages.d.ts` automatically. Each sub-path file
-wraps its exports in a `declare module 'meteor/pkg/sub-path'` block.
+Packages that do not publish type information are omitted. Prefer one provider
+for Meteor module ids. A deliberate hybrid can use `@types/meteor` for an
+uncovered module, but overlapping declarations can merge or conflict and must
+be checked with `tsc`.
 
-Generated filenames such as `module-suspense.d.ts` are implementation details.
-Import the public module id (`meteor/react-meteor-data/suspense`) rather than
-referencing files under `.meteor/types/packages/` directly.
+## Migrating from `zodern:types`
 
-## Bundling Types in Your Own Package
+Use the following order so a failed native generation leaves the previous
+provider available for rollback:
 
-There are two ways to ship types with an Atmosphere package:
+1. Remove `zodern:types` from `.meteor/packages` with
+   `meteor remove zodern:types`.
+2. Run `meteor types`. Do not change the provider paths if this step fails.
+3. After generation succeeds, update `tsconfig.json` with the native `files`
+   and `paths` entries, uninstall a direct `@types/meteor` dependency, and
+   remove `"meteor"` from any `compilerOptions.types` list.
+4. Run the application's local `tsc --noEmit` through a package script and fix
+   application errors reported by the corrected declarations.
 
-**`package-types.json`** (established community approach, used by `zodern:types`):
+After native generation succeeds, Meteor removes the old
+`.meteor/local/types` output left by a previous direct `zodern:types`
+installation. If native generation fails, the legacy output is preserved so
+you can restore the previous provider.
 
-```json
-{
-  "typesEntry": "my-package.d.ts"
-}
-```
+To roll back, restore the legacy provider packages you removed, restore the
+previous provider order and `compilerOptions.types` entries, and regenerate
+`zodern:types` declarations using the workflow your app already used. Ordinary
+Meteor commands and a skipped `meteor types` run do not delete either provider
+tree.
 
-**`api.types()` in `package.js`** _(experimental)_:
+## Troubleshooting
 
-```js
-Package.onUse(function (api) {
-  api.use("ecmascript");
-  api.mainModule("my-package.js");
-  api.types("my-package.d.ts");
-});
-```
+### `meteor types` says there is nothing to do
 
-See [Writing Atmosphere Packages — TypeScript Types](../packages/7.writing-atmosphere-packages#typescript-types)
-for full details, including sub-path modules and the priority resolution order.
+The command requires a `tsconfig.json` or `jsconfig.json` in the application
+root. Add the appropriate configuration and run it again.
 
-## Migrating an existing application
+### `meteor types` skips because `zodern:types` is installed
 
-The compatibility template keeps the established providers before native
-declarations. Native declarations become the source of truth only after an
-explicit migration to the native-only `paths` configuration above. They follow
-the current runtime APIs more closely and can reveal application errors that
-older ambient types allowed.
+This is the compatibility behavior in Meteor 3.6. Keep using `zodern:types`, or
+remove the direct dependency when you are ready to adopt native declarations.
+The skipped command exits successfully and does not delete generated files.
 
-Adopt them incrementally:
+### Type generation fails
 
-1. Keep `"skipLibCheck": true` while dependencies transition to native types.
-2. Use `./.meteor/types/packages/*` as the `meteor/*` path and include
-   `./.meteor/types/packages.d.ts` in `files` for sub-path/scoped declarations.
-3. Run `meteor types`, followed by your local TypeScript compiler with
-   `--noEmit`.
-4. Fix errors in application code instead of editing `.meteor/types`; generated
-   files are replaced by the next `meteor types` command.
+`meteor types` exits with a non-zero status and leaves the failure visible in
+the terminal, making it safe to use as a CI prerequisite. Run with `--verbose`
+for more diagnostic output. Ordinary build commands remain unaffected because
+they do not run the native generator.
 
-Pay particular attention to callbacks and serialized values. Login hook fields
-can be absent depending on whether the callback runs on the client or server,
-and DDP arguments must be EJSON-serializable. Runtime-supported values such as
-primitive DDP arguments and `Mongo.ObjectID` Session values are included in the
-native declarations.
+### A bundled npm dependency loses peer types
 
-### Migrating from `zodern:types`
+Generated package directories can link to npm dependencies bundled inside an
+isopack. TypeScript normally resolves that symlink to the package store, where
+it cannot see peer dependencies installed only in the app. Symptoms include a
+`TS2307` error under `~/.meteor/packages/`, or a type silently degrading to
+`any` when `skipLibCheck` is enabled.
 
-If your project currently uses the `zodern:types` package, you can remove it
-once you have updated your `tsconfig.json`:
+If this occurs, add `"preserveSymlinks": true` to `compilerOptions` so
+resolution remains inside the application tree and can reach the app's
+`node_modules`.
 
-```bash
-meteor remove zodern:types
-```
+## Publishing Types from an Atmosphere Package
 
-The Meteor 3.6 TypeScript templates already contain the native fallback
-entries. Existing projects should update `paths` as described in
-[Setup](#setup), then remove the package and run `meteor types` once.
-The public module format is compatible: Meteor's native generator produces the
-same `declare module 'meteor/…'` identities that `zodern:types` produced. The
-generated on-disk filenames are not a compatibility contract.
+Meteor 3.6 adds the experimental `api.types()` package API while retaining the
+established `package-types.json` format. See
+[Writing Atmosphere Packages — TypeScript Types](../packages/7.writing-atmosphere-packages#typescript-types)
+for single-file declarations, sub-paths, directory mode, publication from
+TypeScript sources, and provider compatibility.
