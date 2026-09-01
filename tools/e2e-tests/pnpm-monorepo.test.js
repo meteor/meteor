@@ -4,6 +4,7 @@ import { waitForMeteorOutput } from './helpers';
 import { testMeteorRspackBundler } from './test-helpers';
 
 const SHARED_HMR_SENTINEL = 'domain:server:shared-hmr-tick';
+const CLIENT_HMR_SENTINEL = '__meteorPnpmMonorepoHmrSentinel';
 
 describe('Pnpm Monorepo App Bundling /', () => {
   describe('Meteor+Rspack Bundler /', testMeteorRspackBundler({
@@ -18,7 +19,7 @@ describe('Pnpm Monorepo App Bundling /', () => {
       test: 'apps/app/tests/main.test.js',
     },
     customMessages: {
-      devClient: '[webpack-dev-server] App hot update',
+      devClient: 'ui:client:workspace package hot updated',
       devServer: 'Hello from dev server',
       prodClient: 'Hello from prod client',
       prodServer: 'Hello from prod server',
@@ -39,6 +40,11 @@ describe('Pnpm Monorepo App Bundling /', () => {
         // Client resolved the same transitive dependency tree.
         const accentText = await page.$eval('#accent-color', el => el.textContent);
         expect(accentText).toContain('#40E0D0');
+
+        // This browser-only state survives HMR but not a full-page reload.
+        await page.evaluate(sentinel => {
+          window[sentinel] = true;
+        }, CLIENT_HMR_SENTINEL);
       },
       afterRunProduction: async ({ result }) => {
         await waitForMeteorOutput(result.outputLines, /domain:server:workspace package loaded on the server/);
@@ -60,14 +66,14 @@ describe('Pnpm Monorepo App Bundling /', () => {
         const accentText = await page.$eval('#accent-color', el => el.textContent);
         expect(accentText).toContain('#40E0D0');
       },
-      afterRunRebuildClient: async ({ allConsoleLogs }) => {
-        // HMR transcript must name the workspace package file by its real
-        // pnpm path. Catches regressions where Rspack stops watching the
-        // symlinked workspace and falls back to a full reload.
-        const hmrUpdate = allConsoleLogs.find(line =>
-          line.includes('[HMR]') && line.includes('packages/ui/src/client.ts')
+      afterRunRebuildClient: async () => {
+        // The shared helper has observed the marker appended to the workspace
+        // package. Verify Rspack applied it through HMR instead of reloading.
+        const sentinelSurvived = await page.evaluate(
+          sentinel => window[sentinel],
+          CLIENT_HMR_SENTINEL,
         );
-        expect(hmrUpdate).toBeDefined();
+        expect(sentinelSurvived).toBe(true);
       },
       afterRunRebuildServer: async ({ tempDir, result }) => {
         // Mutate a server-only workspace file to verify the server watcher
