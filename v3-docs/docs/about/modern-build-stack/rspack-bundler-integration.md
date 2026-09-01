@@ -348,7 +348,46 @@ No additional configuration is needed — just install the `rspack` package as u
 
 ### React Compiler
 
-Meteor-Rspack supports React Compiler. To enable it, install the required dependencies and add the new configuration to Meteor’s `rspack.config.js` file.
+:::info
+Starting with Meteor 3.6
+:::
+
+Meteor 3.6 ships with Rspack 2.x, including React Compiler support from Rspack 2.1. The compiler runs directly through the built-in SWC loader, avoiding Babel in the React compilation path. For React 19 projects, enable it in your `rspack.config.js` file:
+
+```shell
+meteor npm install react@^19 react-dom@^19
+```
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.extendSwcConfig({
+    jsc: {
+      transform: {
+        react: {
+          runtime: 'automatic',
+        },
+        reactCompiler: true,
+      },
+    },
+  }),
+}));
+```
+
+For React 17 or 18, install `react-compiler-runtime` and replace `reactCompiler: true` with the matching target:
+
+```shell
+meteor npm install react-compiler-runtime
+```
+
+```js
+reactCompiler: {
+  target: '18',
+},
+```
+
+The `Meteor.extendSwcConfig` helper preserves Meteor's parser, React Fast Refresh, and other default SWC settings while adding the compiler transform.
 
 Learn more in the [official Rspack and React Compiler integration guide](https://rspack.rs/guide/tech/react#react-compiler).
 
@@ -567,7 +606,7 @@ Meteor-Rspack supports Babel projects as an alternative to default SWC.
 
 > Use `meteor create --babel` to start with a preconfigured Rspack Babel app.
 
-Using Babel will increase build times. Prefer SWC. If you need Babel for specific files, limit Babel to those files, or use a hybrid with SWC and Babel. For example, [enabling React Compiler is available only via Babel using module rules](https://rspack.rs/guide/tech/react#react-compiler).
+Using Babel will increase build times. Prefer SWC. Rspack 2.1 and later supports [React Compiler through the built-in SWC loader](#react-compiler), but the Babel plugin remains available when you need Babel-specific integration or compiler options that the SWC transform does not support.
 
 ### Angular
 

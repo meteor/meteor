@@ -10,23 +10,25 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.23.5",
-    "@swc/helpers": "^0.5.17",
+    "@swc/helpers": "^0.5.23",
     "meteor-node-stubs": "^1.2.12",
     "vue": "^3.3.9",
     "vue-meteor-tracker": "^3.0.0-beta.7",
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^2.1.0",
-    "@rsdoctor/rspack-plugin": "^1.5.7",
-    "@rspack/cli": "^1.7.1",
-    "@rspack/core": "^1.7.1",
+    "@meteorjs/rspack": "^3.0.0-beta.0",
+    "@rsdoctor/rspack-plugin": "^1.5.9",
+    "@rspack/cli": "^2.2.0",
+    "@rspack/core": "^2.2.0",
+    "@rspack/dev-server": "^2.2.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/meteor": "^2.9.7",
     "postcss": "^8.5.6",
     "postcss-loader": "^8.1.1",
     "tailwindcss": "^4.1.12",
-    "vue-loader": "^17.4.2"
+    "vue-loader": "^17.4.2",
+    "@swc/core": "^1.15.32"
   },
   "meteor": {
     "modern": true,
