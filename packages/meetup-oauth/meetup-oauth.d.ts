@@ -1,9 +1,9 @@
 /** Options accepted by `Meetup.requestCredential`. */
 interface RequestCredentialOptions {
   /** Whether the login flow uses a popup or a full-page redirect. */
-  loginStyle?: "popup" | "redirect";
+  loginStyle?: string;
   /** OAuth scopes to request in addition to the defaults. */
-  requestPermissions?: string[];
+  requestPermissions?: readonly string[];
   /** Extra parameters appended to the provider's login URL. */
   loginUrlParameters?: { [key: string]: unknown };
   /** URL to redirect back to after a redirect-style login. */

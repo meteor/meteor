@@ -1,17 +1,19 @@
+import type { Meteor } from "meteor/meteor";
+
 /** Options accepted by `Google.requestCredential`. */
 interface RequestCredentialOptions {
   /** Whether the login flow uses a popup or a full-page redirect. */
-  loginStyle?: "popup" | "redirect";
+  loginStyle?: string;
   /** OAuth scopes to request in addition to the defaults. */
-  requestPermissions?: string[];
+  requestPermissions?: readonly string[];
   /** Extra parameters appended to the provider's login URL. */
   loginUrlParameters?: { [key: string]: unknown };
   /** URL to redirect back to after a redirect-style login. */
   redirectUrl?: string;
   /** Request an offline (refresh) token. */
-  requestOfflineToken?: boolean;
+  requestOfflineToken?: Boolean;
   /** Force the Google consent screen. */
-  forceApprovalPrompt?: boolean;
+  forceApprovalPrompt?: Boolean;
   /** Value for Google's `prompt` login parameter. */
   prompt?: string;
   /** Pre-fill the account chooser with this email. */
@@ -23,6 +25,9 @@ interface RequestCredentialOptions {
  * (a string) on success, or an `Error` on failure.
  */
 type CredentialRequestCompleteCallback = (tokenOrError?: string | Error) => void;
+type LoginCallback = (
+  error?: globalThis.Error | Meteor.Error | Meteor.TypedError
+) => void;
 
 /** The pending OAuth credential resolved server-side. */
 interface OAuthCredential {
@@ -61,8 +66,11 @@ export namespace Google {
    * Accepts either `(options, callback)` or `(callback)`.
    */
   export function signIn(
-    options?: RequestCredentialOptions | CredentialRequestCompleteCallback,
-    callback?: CredentialRequestCompleteCallback
+    callback?: LoginCallback
+  ): void;
+  export function signIn(
+    options?: RequestCredentialOptions,
+    callback?: LoginCallback
   ): void;
 
   /** (Cordova) Sign out of the native Google Sign-In session. */
