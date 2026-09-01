@@ -12,12 +12,21 @@ import {
   validateCollectionName
 } from './collection_utils';
 import { ReplicationMethods } from './methods_replication';
+import {
+  CollectionHooks as _CollectionHooks,
+  setupHookRegistrationMethods,
+  setupHookOptions,
+  setupDirectMethods,
+} from './collection_hooks';
 
 /**
  * @summary Namespace for MongoDB-related items
  * @namespace
  */
 Mongo = {};
+
+// Expose CollectionHooks as a package-level global (for api.export and package consumers)
+CollectionHooks = _CollectionHooks;
 
 /**
  * @summary Constructor for a Collection
@@ -62,7 +71,13 @@ Mongo.Collection = function Collection(name, options) {
   setupAutopublish(this, name, options);
 
   Mongo._collections.set(name, this);
-  
+
+  // Set up collection hooks (before/after/direct)
+  setupHookRegistrationMethods(this);
+  setupHookOptions(this);
+  setupDirectMethods(this);
+  setupHookAwareAsyncMutationMethodHandlers(this, name, options);
+
   // Apply collection extensions
   CollectionExtensions._applyExtensions(this, name, options);
 };
@@ -393,3 +408,154 @@ Meteor.Collection = Mongo.Collection;
 
 // Allow deny stuff is now in the allow-deny package
 Object.assign(Mongo.Collection.prototype, AllowDeny.CollectionPrototype);
+
+const originalValidatedInsertAsync =
+  AllowDeny.CollectionPrototype._validatedInsertAsync;
+const originalValidatedUpdateAsync =
+  AllowDeny.CollectionPrototype._validatedUpdateAsync;
+const originalValidatedRemoveAsync =
+  AllowDeny.CollectionPrototype._validatedRemoveAsync;
+
+function createHookAwareValidatedCollectionProxy(collection, overrides) {
+  const proxyCollection = Object.create(collection._collection);
+  Object.assign(proxyCollection, overrides);
+
+  const proxy = Object.create(collection);
+  proxy._collection = proxyCollection;
+  return proxy;
+}
+
+function runValidatedMutationWithHooks(collection, originalMethod, overrides, args) {
+  return originalMethod.apply(
+    createHookAwareValidatedCollectionProxy(collection, overrides),
+    args
+  );
+}
+
+function rethrowMongoMutationError(error) {
+  if (
+    error?.name === 'MongoError' ||
+    error?.name === 'BulkWriteError' ||
+    error?.name === 'MongoBulkWriteError' ||
+    error?.name === 'MongoServerError' ||
+    error?.name === 'MinimongoError'
+  ) {
+    throw new Meteor.Error(409, error.toString());
+  }
+
+  throw error;
+}
+
+function throwIfSelectorIsNotId(selector, methodName) {
+  if (!LocalCollection._selectorIsIdPerhapsAsObject(selector)) {
+    throw new Meteor.Error(
+      403,
+      'Not permitted. Untrusted code may only ' + methodName + ' documents by ID.'
+    );
+  }
+}
+
+function validateHookAwareMutationArgs(method, args) {
+  if (method === 'insertAsync') {
+    check(args[0], Object);
+    return;
+  }
+
+  check(args[0], Match.Any);
+
+  if (method === 'updateAsync') {
+    check(args[1], Match.OneOf(Object, Array));
+    check(args[2], Match.Maybe(Object));
+  }
+}
+
+function setupHookAwareAsyncMutationMethodHandlers(collection, name, options) {
+  if (
+    !Meteor.isServer ||
+    !name ||
+    options.defineMutationMethods === false ||
+    collection._connection !== Meteor.server
+  ) {
+    return;
+  }
+
+  const methodHandlers = collection._connection.method_handlers;
+  if (!methodHandlers) {
+    return;
+  }
+
+  ['insertAsync', 'updateAsync', 'removeAsync'].forEach((method) => {
+    const methodName = collection._prefix + method;
+    const originalHandler = methodHandlers[methodName];
+
+    if (typeof originalHandler !== 'function') {
+      return;
+    }
+
+    methodHandlers[methodName] = async function (...args) {
+      const activeCollection = Mongo.getCollection(name) || collection;
+
+      if (activeCollection._restricted || !activeCollection._isInsecure()) {
+        return originalHandler.apply(this, args);
+      }
+
+      try {
+        validateHookAwareMutationArgs(method, args);
+
+        if (method === 'insertAsync') {
+          if (!Object.prototype.hasOwnProperty.call(args[0], '_id')) {
+            args[0]._id = activeCollection._makeNewID();
+          }
+
+          return await activeCollection.insertAsync(args[0]);
+        }
+
+        throwIfSelectorIsNotId(args[0], method);
+
+        if (method === 'updateAsync') {
+          return await activeCollection.updateAsync(args[0], args[1], args[2]);
+        }
+
+        return await activeCollection.removeAsync(args[0]);
+      } catch (error) {
+        rethrowMongoMutationError(error);
+      }
+    };
+  });
+}
+
+Object.assign(Mongo.Collection.prototype, {
+  _validatedInsertAsync(userId, doc, generatedId) {
+    return runValidatedMutationWithHooks(
+      this,
+      originalValidatedInsertAsync,
+      {
+        insertAsync: (nextDoc) => this.insertAsync(nextDoc),
+      },
+      [userId, doc, generatedId]
+    );
+  },
+
+  _validatedUpdateAsync(userId, selector, mutator, options) {
+    return runValidatedMutationWithHooks(
+      this,
+      originalValidatedUpdateAsync,
+      {
+        updateAsync: (nextSelector, nextMutator, nextOptions) =>
+          this.updateAsync(nextSelector, nextMutator, nextOptions),
+      },
+      [userId, selector, mutator, options]
+    );
+  },
+
+  _validatedRemoveAsync(userId, selector) {
+    return runValidatedMutationWithHooks(
+      this,
+      originalValidatedRemoveAsync,
+      {
+        removeAsync: (nextSelector) => this.removeAsync(nextSelector),
+      },
+      [userId, selector]
+    );
+  },
+});
