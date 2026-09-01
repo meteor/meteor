@@ -77,6 +77,7 @@ export const ISOPACKETS = {
 //
 //  - The 'Package' dictionary, if the isopacket has already been loaded
 //    into memory
+//  - A Promise for an in-flight load
 //  - null, if the isopacket hasn't been loaded into memory but its on-disk
 //    instance is known to be ready
 //
@@ -106,12 +107,19 @@ export async function loadIsopackage(packageName, isopacketName = "combined") {
         return loadedIsopackets[isopacketName];
       }
 
-      // This is the case where the isopacket is up to date on disk but not
-      // loaded.
-      const loaded = await loadIsopacketFromDisk(isopacketName);
-      loadedIsopackets[isopacketName] = loaded;
-
-      return loaded;
+      // Cache the in-flight load as well as its resolved value. Concurrent
+      // callers otherwise evaluate the same package bundle twice through the
+      // shared reify runtime, registering EJSON's "oid" type twice.
+      const inflight = loadIsopacketFromDisk(isopacketName);
+      loadedIsopackets[isopacketName] = inflight;
+      try {
+        const loaded = await inflight;
+        loadedIsopackets[isopacketName] = loaded;
+        return loaded;
+      } catch (error) {
+        loadedIsopackets[isopacketName] = null;
+        throw error;
+      }
     }
 
     if (_.has(ISOPACKETS, isopacketName)) {
