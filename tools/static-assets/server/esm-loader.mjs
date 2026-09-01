@@ -226,16 +226,60 @@ export async function boot(serverDir) {
     }
   }
 
+  // Map core-runtime queue names to program.json load paths. Packages queue
+  // under their own name ('ddp-server'); the app queues under the string "null".
+  const queuePathByName = Object.create(null);
+  for (const item of programJson.load) {
+    const m = /^packages\/(.+)\.js$/.exec(item.path);
+    if (m) queuePathByName[m[1]] = item.path;
+    else if (item.path === 'app/app.js') queuePathByName['null'] = item.path;
+  }
+  const appPath = queuePathByName['null'] || null;
+
+  // core-runtime defers package initialization into a queue drained AFTER the
+  // import loop below, so binding npm/asset resolution around import() is not
+  // enough: by the time a package's eager modules run, the loop has moved on
+  // and Npm.require() would resolve against the last package imported.
+  // Wrap queue() so the binding happens when a package's initialization starts.
+  // processNext() is strictly sequential (guarded by isProcessing), so the
+  // binding stays correct for the whole package, async eager modules included.
+  let queueWrapped = false;
+  function wrapCoreRuntimeQueue() {
+    const coreRuntime = globalThis.Package && globalThis.Package['core-runtime'];
+    if (!coreRuntime || typeof coreRuntime.queue !== 'function') return false;
+    const originalQueue = coreRuntime.queue;
+    coreRuntime.queue = function (name, runImage) {
+      const itemPath = name == null ? null : queuePathByName[name] || null;
+      return originalQueue.call(this, name, function () {
+        if (itemPath) {
+          setCurrentPackage(itemPath);
+          setCurrentAssets(itemPath);
+        }
+        return runImage.apply(this, arguments);
+      });
+    };
+    return true;
+  }
+
   // Import all packages in the dependency order computed by isobuild
   for (const item of programJson.load) {
     setCurrentPackage(item.path);
     setCurrentAssets(item.path);
     await import(pathToFileURL(path.join(serverDir, item.path)).href);
+    // core-runtime loads first; wrap its queue before any package registers.
+    if (!queueWrapped) queueWrapped = wrapCoreRuntimeQueue();
   }
 
   // Wait for core-runtime async queue (deferred package initialization)
   const ready = globalThis.Package['core-runtime'].waitUntilAllLoaded();
   if (ready) await ready;
+
+  // Startup hooks and main() belong to the app, not to whichever package
+  // happened to initialize last.
+  if (appPath) {
+    setCurrentPackage(appPath);
+    setCurrentAssets(appPath);
+  }
 
   // Run startup hooks
   while (globalThis.__meteor_bootstrap__.startupHooks.length) {
