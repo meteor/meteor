@@ -1,6 +1,5 @@
-// Keep `name` space-free so the resulting Xcode scheme and .app bundle have
-// predictable paths (xcodebuild -scheme MeteorSmoke). `appId` is the bundle
-// identifier Maestro uses to launch the app; it can stay descriptive.
+// Keep the native product name and bundle identifier stable for simulator
+// install and cleanup. Cordova iOS 8 uses the fixed Xcode scheme `App`.
 App.info({
   id: "com.meteor.smoke",
   name: "MeteorSmoke",
