@@ -1219,7 +1219,8 @@ Linting errors will prevent your application from being built successfully. Fixi
 
 ## meteor types {#meteortypes}
 
-Generate Meteor package type declarations for your project.
+Explicitly generate native declarations for installed Meteor packages that
+publish type information.
 
 ```bash
 meteor types [options]
@@ -1231,11 +1232,23 @@ This command:
 
 - Builds local packages as needed
 - Generates `.meteor/types/` for projects with a `tsconfig.json` or `jsconfig.json`
-- Skips linting and bundling so it can be used before running `tsc` in CI
+- Skips application linting, bundling, and type-checking
+- Exits successfully without generating files if neither configuration file exists
+- Exits successfully without changing provider output when the app lists `zodern:types` directly
+- Exits with a non-zero status when native generation fails
 
 ::: tip CI Integration
-Use `meteor types` when you only need fresh Meteor package declarations before a standalone type-check step.
+Run `meteor types` before the application's type-check script when the project
+has opted in to native declarations. Use a locally installed, project-compatible
+`typescript` dependency rather than allowing `npx` to download a compiler in
+CI; the [provider guide](/cli/using-core-types#check-the-application) includes a
+safe script example.
 :::
+
+Ordinary commands such as `meteor run`, `meteor build`, `meteor test`, and
+`meteor lint` do not run the native generator in Meteor 3.6. See
+[TypeScript Types for Meteor Packages](/cli/using-core-types) before changing
+providers in an existing application.
 
 ### Options
 
