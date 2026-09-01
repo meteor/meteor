@@ -167,7 +167,11 @@ const response = await Meteor.fetch(Meteor.absoluteUrl('api/protected'), {
 
 ### HttpOnly Cookies
 
-On the client, when HttpOnly cookies are enabled (`Accounts.config({ useHttpOnlyCookies: true })`), the auth path also sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie. If you provide your own `credentials` option, it is not overridden. The credentials handling only kicks in when auth is on, so calling `Meteor.fetch(url)` (auth off by default) does not change credentials behavior.
+The client and server must both have HttpOnly cookies enabled. Call `Accounts.config({ useHttpOnlyCookies: true })` from shared code, or set `Meteor.settings.public.packages.accounts.useHttpOnlyCookies` to `true`.
+
+When enabled, the server handles `POST /_accounts/cookie/set`, `GET /_accounts/cookie/refresh`, and `POST /_accounts/cookie/clear`. When disabled, these paths fall through to later WebApp handlers. The `/set` endpoint accepts request bodies up to 4 KB. Larger bodies receive HTTP 413 with `{ "error": "body_too_large" }`.
+
+On the client, the auth path also sets `credentials: 'include'` so the browser sends the `meteor_login_token` cookie. If you provide your own `credentials` option, it is not overridden. The credentials handling only kicks in when auth is on, so calling `Meteor.fetch(url)` (auth off by default) does not change credentials behavior.
 
 Passing `auth: false` disables both the `Authorization` Bearer header and the automatic `credentials: 'include'` behavior.
 

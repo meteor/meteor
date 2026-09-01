@@ -40,7 +40,7 @@ jobs:
     name: Setup
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -96,7 +96,7 @@ jobs:
     name: Isolated Tests
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -173,7 +173,7 @@ jobs:
     name: "Test Group 0 (^[a-b]|^c[a-n]|^co[a-l]|^comm)"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -248,7 +248,7 @@ jobs:
     name: "Test Group 1 (^com[n-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -323,7 +323,7 @@ jobs:
     name: "Test Group 2 (^co[n-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -404,7 +404,7 @@ jobs:
     name: "Test Group 3 (^c[p-z]|^h[a-e])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -478,7 +478,7 @@ jobs:
     name: "Test Group 4 (^h[f-z]|^[i-l])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -552,7 +552,7 @@ jobs:
     name: "Test Group 5 (^m[a-n]|^mo[a-d])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -627,7 +627,7 @@ jobs:
     name: "Test Group 6 (^mo[e-z]|^m[p-z]|^[n-o])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -701,7 +701,7 @@ jobs:
     name: "Test Group 7 (^[p-q]|^r[a-e])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -775,7 +775,7 @@ jobs:
     name: "Test Group 8 (^r[f-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -849,7 +849,7 @@ jobs:
     name: "Test Group 9 (^s)"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -923,7 +923,7 @@ jobs:
     name: "Test Group 10 (^[t-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -997,7 +997,7 @@ jobs:
     name: "Test Group 11 (^[d-g])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
