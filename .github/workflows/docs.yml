@@ -10,14 +10,19 @@ jobs:
       run:
         working-directory: docs/
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 12.x
       - name: Build the Docs
         run: npm ci && npm run build
       - name: Deploy to Netlify for preview
-        uses: nwtgck/actions-netlify@v4.0.0
+        uses: nwtgck/actions-netlify@d22a32a27c918fe470bbc562e984f80ec48c2668 # v4.0.0
         with:
           publish-dir: './docs/public/'
           production-branch: devel

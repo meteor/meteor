@@ -29,6 +29,9 @@ env:
   SELF_TEST_EXCLUDE: '^NULL-LEAVE-THIS-HERE-NULL$'
   METEOR_MODERN: true
 
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: windows-2019-meteor
@@ -37,6 +40,11 @@ jobs:
       cancel-in-progress: true
 
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
       - name: Cleanup
         shell: powershell
         run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
@@ -46,16 +54,16 @@ jobs:
         run: git config --global core.symlinks true
 
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 24.x
 
       - name: Cache dependencies
         id: meteor-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             dev_bundle/
