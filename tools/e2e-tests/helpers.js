@@ -83,11 +83,12 @@ export async function clearBuildArtifacts(appDir) {
  * @param {string} appName - Name of the app in the apps directory
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
+ * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
  * @param {string} options.packageManager - Package manager to use for setup ("npm" or "pnpm")
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
-  const { isMonorepo = false, packageManager = 'npm' } = options;
+  const { isMonorepo = false, preserveFixtureSymlinks = false, packageManager = 'npm' } = options;
 
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -106,7 +107,7 @@ export async function setupMeteorApp(appName, options = {}) {
 
     // Use fs-extra's copy method with recursive option
     await fs.copy(sourceAppDir, tempDir, {
-      dereference: true,
+      dereference: !preserveFixtureSymlinks,
       preserveTimestamps: true,
       overwrite: true
     });
@@ -161,9 +162,34 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
     pattern,
     { ...options, meteorProcess }
   );
+  const failPatterns = Array.isArray(options.failOnOutput)
+    ? options.failOnOutput
+    : options.failOnOutput
+    ? [options.failOnOutput]
+    : [];
+  const failWaits = failPatterns.map((failPattern) =>
+    waitForMeteorOutput(
+      outputLines,
+      failPattern,
+      { ...options, meteorProcess }
+    )
+      .then((line) => {
+        throw new Error(
+          `Meteor output matched fail pattern ${failPattern}:\n${line}`
+        );
+      })
+      .catch((err) => {
+        if (/Timeout waiting for output|process exited/i.test(err.message)) {
+          return new Promise(() => {});
+        }
+        throw err;
+      })
+  );
+  mainWait.catch(() => {});
 
   const usesExternalMongo = !!(env.MONGO_URL || process.env.MONGO_URL);
   if (options.mongoWatchdog === false || usesExternalMongo) {
+    await Promise.race([mainWait, ...failWaits]);
     return mainWait;
   }
 
@@ -181,10 +207,9 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
     );
   });
 
-  // Mark both handled so the race's loser can't reject unhandled later.
-  mainWait.catch(() => {});
+  // Mark the Mongo watchdog handled so the race's loser can't reject unhandled later.
   mongoWait.catch(() => {});
-  await Promise.race([mainWait, mongoWait]);
+  await Promise.race([mainWait, mongoWait, ...failWaits]);
   return mainWait;
 }
 
@@ -666,6 +691,29 @@ export async function wait(ms) {
 }
 
 /**
+ * Navigates the shared Playwright page away from the app under test so late
+ * client callbacks do not leak into the next test after the app process dies.
+ * @returns {Promise<void>}
+ */
+export async function resetPlaywrightPage() {
+  if (typeof page === 'undefined') {
+    return;
+  }
+
+  try {
+    if (!page.isClosed()) {
+      await page.goto('about:blank', {
+        waitUntil: 'load',
+        timeout: 3000,
+      });
+    }
+  } catch {
+    // Best effort only. Some tests never navigate the page, and it may already
+    // be tearing down if the browser crashed or the test aborted.
+  }
+}
+
+/**
  * Helper function to wait for specific output from a Meteor process
  * @param {string[]} outputLines - Array that will be populated with output lines
  * @param {string|RegExp} pattern - String or RegExp pattern to wait for
@@ -673,6 +721,7 @@ export async function wait(ms) {
  * @param {number} options.timeout - Maximum time to wait in milliseconds
  * @param {number} options.checkInterval - Interval between checks in milliseconds
  * @param {boolean} options.negate - If true, wait until the pattern is NOT found in any output line
+ * @param {number} options.startIndex - Only inspect output added at or after this index
  * @returns {Promise<string>} - A promise that resolves with the matched line
  */
 export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
@@ -680,6 +729,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
   const checkInterval = options.checkInterval || 100; // Check every 100ms by default
   const negate = options.negate || false; // Default is to check for presence, not absence
   const meteorProcess = options.meteorProcess || null;
+  const startIndex = options.startIndex || 0;
 
   console.log(`Waiting for output ${negate ? 'NOT ' : ''}matching: ${pattern}`);
 
@@ -703,6 +753,8 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
 
     // Function to check for the pattern in the output lines
     const checkForPattern = () => {
+      const relevantOutputLines = outputLines.slice(startIndex);
+
       // Check if we've exceeded the timeout
       if (Date.now() - startTime > timeout) {
         // In negate mode the wait can only fail because some line matched.
@@ -710,7 +762,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
         // bare timeout.
         let detail = '';
         if (negate) {
-          const offending = outputLines.filter(lineMatches);
+          const offending = relevantOutputLines.filter(lineMatches);
           detail = `\nOffending line(s):\n${offending.slice(-20).join('\n')}`;
         }
         reject(new Error(
@@ -722,8 +774,8 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
       if (negate) {
         // In negation mode, we need to check all lines and make sure none match
         // If we've processed all lines and none match, we can resolve
-        if (outputLines.length > 0) {
-          if (!outputLines.some(lineMatches)) {
+        if (relevantOutputLines.length > 0) {
+          if (!relevantOutputLines.some(lineMatches)) {
             console.log(`Confirmed no output matching: ${pattern}`);
             resolve(null);
             return;
@@ -731,7 +783,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
         }
       } else {
         // Check each line for the pattern (original behavior)
-        for (const line of outputLines) {
+        for (const line of relevantOutputLines) {
           if (typeof pattern === 'string' && line.includes(pattern)) {
             console.log(`Found output matching string: ${pattern}`);
             resolve(line);
