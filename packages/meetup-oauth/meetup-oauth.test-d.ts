@@ -8,6 +8,9 @@ expectTypeOf(Meetup.requestCredential).returns.toBeVoid();
 Meetup.requestCredential(() => {});
 Meetup.requestCredential({ loginStyle: "popup" }, () => {});
 Meetup.requestCredential(undefined, () => {});
+declare const configuredLoginStyle: string;
+Meetup.requestCredential({ loginStyle: configuredLoginStyle }, () => {});
+Meetup.requestCredential({ requestPermissions: ["email"] as const }, () => {});
 // @ts-expect-error callback-only and options-plus-callback are distinct call shapes
 Meetup.requestCredential(() => {}, () => {});
 

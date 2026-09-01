@@ -8,6 +8,9 @@ expectTypeOf(Weibo.requestCredential).returns.toBeVoid();
 Weibo.requestCredential(() => {});
 Weibo.requestCredential({ loginStyle: "popup" }, () => {});
 Weibo.requestCredential(undefined, () => {});
+declare const configuredLoginStyle: string;
+Weibo.requestCredential({ loginStyle: configuredLoginStyle }, () => {});
+Weibo.requestCredential({ requestPermissions: ["email"] as const }, () => {});
 // @ts-expect-error callback-only and options-plus-callback are distinct call shapes
 Weibo.requestCredential(() => {}, () => {});
 
