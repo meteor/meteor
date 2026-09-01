@@ -17,6 +17,7 @@ Package.onUse(function (api) {
   api.mainModule("facts_base_common.js", "client");
 
   api.export("Facts");
+  api.types("facts-base.d.ts");
 });
 
 Package.onTest(function (api) {

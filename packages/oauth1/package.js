@@ -14,6 +14,7 @@ Package.onUse(api => {
 
   api.export('OAuth1Binding', 'server');
   api.export('OAuth1Test', 'server', { testOnly: true });
+  api.types('oauth1.d.ts');
 
   api.addFiles('oauth1_binding.js', 'server');
   api.addFiles('oauth1_server.js', 'server');

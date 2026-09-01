@@ -30,6 +30,8 @@ Package.onUse((api) => {
 
   api.mainModule("minimongo_client.js", "client");
   api.mainModule("minimongo_server.js", "server");
+
+  api.types("minimongo.d.ts");
 });
 
 Package.onTest((api) => {

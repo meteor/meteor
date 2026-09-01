@@ -94,7 +94,11 @@ Meteor build plugins extend the Meteor bundler by letting you handle new file ty
 However, Meteor’s build system solves the same problems as other bundlers, including Rspack. Build plugins are largely deprecated in favor of Rspack alternatives. Some plugins may still be useful if they don’t act directly on app files and do something Meteor-specific that can be preserved.
 
 Among the compatible plugins:
-- [`zodern:types`](https://packosphere.com/zodern/types). Still compatible, automatically providing Meteor types for core and community packages.
+- [`zodern:types`](https://packosphere.com/zodern/types), which remains a
+  supported declaration provider in Meteor 3.6. Rspack controls transpilation,
+  not the declaration provider. Apps can keep `zodern:types` or explicitly
+  migrate to native declarations with `meteor types`; see
+  [TypeScript Types for Meteor Packages](/cli/using-core-types).
 
 For others, please refer to the migration topics.
 - [CSS, Less, and SCSS](#css-less-and-scss) (when using [`less`](https://packosphere.com/meteor/less), [`fourseven:scss`](https://packosphere.com/fourseven/scss))

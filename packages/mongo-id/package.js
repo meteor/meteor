@@ -8,4 +8,5 @@ Package.onUse(function (api) {
   api.export('MongoID');
   api.use(['ejson', 'random', 'ecmascript']);
   api.mainModule('id.js');
+  api.types('mongo-id.d.ts');
 });

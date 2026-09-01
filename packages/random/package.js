@@ -9,6 +9,7 @@ Package.onUse(function (api) {
   api.mainModule('main_client.js', 'client');
   api.mainModule('main_server.js', 'server');
   api.addAssets('random.d.ts', 'server');
+  api.types('random.native.d.ts');
 });
 
 Package.onTest(function (api) {

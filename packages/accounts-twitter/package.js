@@ -18,4 +18,6 @@ Package.onUse((api) => {
   api.addFiles("notice.js");
 
   api.addFiles("twitter.js");
+
+  api.types('accounts-twitter.d.ts');
 });

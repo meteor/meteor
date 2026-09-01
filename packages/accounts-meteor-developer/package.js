@@ -20,4 +20,6 @@ Package.onUse(api => {
   );
   api.addFiles('notice.js');
   api.addFiles('meteor-developer.js');
+
+  api.types('accounts-meteor-developer.d.ts');
 });

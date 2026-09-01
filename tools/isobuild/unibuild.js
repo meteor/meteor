@@ -182,7 +182,8 @@ export class Unibuild {
           type: resource.type,
           data: data,
           servePath: resource.servePath || undefined,
-          path: resource.path || undefined
+          path: resource.path || undefined,
+          fileOptions: resource.fileOptions || undefined,
         });
 
       } else {
@@ -329,11 +330,16 @@ export class Unibuild {
         data = resource.data;
       }
 
+      const resourceOutputPath = resource.servePath || resource.path;
+      const serializedResourcePath =
+        resource.fileOptions && resource.fileOptions.nativeType
+          ? resourceOutputPath + '.meteor-type'
+          : resourceOutputPath;
       const generatedFilename =
           await builder.writeToGeneratedFilename(
               files.pathJoin(
                   unibuildDir,
-                  resource.servePath || resource.path,
+                  serializedResourcePath,
               ),
               { data }
           );

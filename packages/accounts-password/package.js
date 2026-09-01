@@ -28,6 +28,8 @@ Package.onUse((api) => {
   api.addFiles("email_templates.js", "server");
   api.addFiles("password_server.js", "server");
   api.addFiles("password_client.js", "client");
+
+  api.types("accounts-password.d.ts");
 });
 
 Package.onTest((api) => {

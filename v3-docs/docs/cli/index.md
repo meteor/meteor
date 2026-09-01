@@ -1217,6 +1217,55 @@ meteor lint --allow-incompatible-update
 Linting errors will prevent your application from being built successfully. Fixing these errors is required for deployment.
 :::
 
+## meteor types {#meteortypes}
+
+Explicitly generate native declarations for installed Meteor packages that
+publish type information.
+
+```bash
+meteor types [options]
+```
+
+### Description
+
+This command:
+
+- Builds local packages as needed
+- Generates `.meteor/types/` for projects with a `tsconfig.json` or `jsconfig.json`
+- Skips application linting, bundling, and type-checking
+- Exits successfully without generating files if neither configuration file exists
+- Exits successfully without changing provider output when the app lists `zodern:types` directly
+- Exits with a non-zero status when native generation fails
+
+::: tip CI Integration
+Run `meteor types` before the application's type-check script when the project
+has opted in to native declarations. Use a locally installed, project-compatible
+`typescript` dependency rather than allowing `npx` to download a compiler in
+CI; the [provider guide](/cli/using-core-types#check-the-application) includes a
+safe script example.
+:::
+
+Ordinary commands such as `meteor run`, `meteor build`, `meteor test`, and
+`meteor lint` do not run the native generator in Meteor 3.6. See
+[TypeScript Types for Meteor Packages](/cli/using-core-types) before changing
+providers in an existing application.
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--allow-incompatible-update` | Allow packages to be upgraded or downgraded to potentially incompatible versions if required to satisfy all package version constraints |
+
+### Example Usage
+
+```bash
+# Generate Meteor package type declarations
+meteor types
+
+# Allow incompatible package updates during type generation
+meteor types --allow-incompatible-update
+```
+
 
 ## meteor search {#meteorsearch}
 

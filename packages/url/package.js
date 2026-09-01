@@ -20,6 +20,7 @@ Package.onUse(function (api) {
 
   api.export("URL");
   api.export("URLSearchParams");
+  api.types("url.d.ts");
 });
 
 Package.onTest(function (api) {

@@ -39,6 +39,12 @@ type ExecFileOptions = {
    * the promise when the child process exits.
    */
   waitForClose?: boolean,
+
+  /**
+   * Quote command-line tokens containing whitespace when cmd.exe is used.
+   * Opt-in so existing Windows callers retain their established behavior.
+   */
+  quoteArgsOnWindows?: boolean,
 }
 
  /**
@@ -104,9 +110,18 @@ export function execFileAsync(
       child = child_process.spawn(command, spawnArgs, { cwd, env, stdio });
     } else {
       // https://github.com/nodejs/node-v0.x-archive/issues/2318
-      spawnArgs.forEach(arg => {
-        command += ' ' + arg;
-      });
+      if (options.quoteArgsOnWindows) {
+        // The command and args are joined into a single cmd.exe command
+        // line, so tokens containing whitespace must be quoted.
+        const quoteForCmd = (s: string) =>
+          /[\s"]/.test(s) ? '"' + s.replace(/"/g, '\\"') + '"' : s;
+        command = [command, ...spawnArgs].map(quoteForCmd).join(' ');
+      } else {
+        // Preserve the historical behavior for all existing callers.
+        spawnArgs.forEach(arg => {
+          command += ' ' + arg;
+        });
+      }
       child = child_process.spawn(command, { cwd, env, shell: true });
     }
 

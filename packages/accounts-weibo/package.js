@@ -16,4 +16,6 @@ Package.onUse(api => {
   api.addFiles("notice.js");
 
   api.addFiles("weibo.js");
+
+  api.types('accounts-weibo.d.ts');
 });

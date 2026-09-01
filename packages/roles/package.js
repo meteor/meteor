@@ -25,6 +25,7 @@ Package.onUse(function (api) {
   api.addFiles(["client/debug.js", "client/uiHelpers.js"], "client");
 
   api.addAssets("definitions.d.ts", "server");
+  api.types("definitions.native.d.ts");
   api.addAssets("package-types.json", "server");
 });
 

@@ -10,6 +10,7 @@ Package.onUse(function (api) {
   api.use('webapp', 'server', {unordered: true});
   api.export('RoutePolicy', 'server');
   api.mainModule('main.js', 'server');
+  api.types('routepolicy.d.ts');
 });
 
 Package.onTest(function (api) {

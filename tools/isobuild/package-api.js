@@ -49,6 +49,41 @@ function toArchArray(arch) {
   return arch;
 }
 
+// True for a TypeScript SOURCE path (.ts/.tsx but not .d.ts) — the marker
+// of a TypeScript-authored api.types() entry.  Mirrors
+// isTypeScriptSourceEntry in types-generator.js, which cannot be imported
+// here without giving this deliberately filesystem-free module a dependency
+// on the generator.
+function isTypeScriptSourcePath(p) {
+  return typeof p === 'string' && /\.tsx?$/.test(p) && !p.endsWith('.d.ts');
+}
+
+function isTypeScriptDeclarationPath(p) {
+  return typeof p === 'string' && p.endsWith('.d.ts');
+}
+
+function isValidTypesModuleName(name) {
+  return typeof name === 'string' &&
+    !!name.trim() &&
+    name === name.trim() &&
+    !name.includes('\\') &&
+    !/[\u0000-\u001f\u007f<>"|?*]/.test(name) &&
+    !name.split('/').some(segment =>
+      segment === '' || segment === '.' || segment === '..');
+}
+
+function normalizeTypePath(p) {
+  return convertToPosixPath(p, true).replace(/^\.\//, '');
+}
+
+function isPackageRelativeTypePath(p) {
+  return typeof p === 'string' && p.length > 0 &&
+    !p.startsWith('/') &&
+    !/^[A-Za-z]:/.test(p) &&
+    !p.split('/').some(segment =>
+      segment === '' || segment === '.' || segment === '..');
+}
+
 // Iterates over the list of target archs and calls f(arch) for all archs
 // that match an element of self.allarchs.
 function forAllMatchingArchs (archs, f) {
@@ -105,6 +140,13 @@ export class PackageAPI {
 
     this.releaseRecords = [];
     this.pendingPromises = [];
+    this._typesEntry = null;
+    this._typesModules = null;
+    // Set when api.types() is called with a directory (trailing '/'):
+    // the directory path relative to the package root, without the slash
+    // (e.g. 'dist-types').  In that mode _typesEntry/_typesModules hold
+    // full package-root-relative paths inside the directory.
+    this._typesDir = null;
   }
 
   // Called when this package wants to make another package be
@@ -423,6 +465,264 @@ export class PackageAPI {
     // Watch out - we rely on the levels of stack traces inside this
     // function so don't wrap it in another function without changing that logic
     this._addFiles("assets", paths, arch);
+  }
+
+  /**
+   * @memberOf PackageAPI
+   * @instance
+   * @summary Declare the TypeScript type declarations for this package.
+   * @locus package.js
+   * @param {String} typesEntry Path to the main .d.ts file (relative to the
+   *   package directory), e.g. `'my-package.d.ts'` — or a directory of
+   *   declaration files, marked with a trailing slash, e.g. `'dist-types/'`
+   *   (as produced by `tsc --declaration --declarationDir dist-types`).
+   *   In directory mode every `.d.ts` (and `.d.ts.map`) file under the
+   *   directory is bundled with the package, tree structure preserved.
+   *   A `.ts`/`.tsx` entry (instead of `.d.ts`) marks the package as
+   *   TypeScript-authored: the entry must be one of the package's compiled
+   *   sources (e.g. its `api.mainModule`), local development type-checks
+   *   against the sources directly, and `meteor publish` generates real
+   *   declaration files from them with tsc right before the build.  In that
+   *   mode `options.modules` values must also be `.ts`/`.tsx` sources, and
+   *   none of the files are registered as assets (they are already source
+   *   resources).
+   * @param {Object} [options]
+   * @param {String} [options.entry] Directory mode only: the declaration
+   *   file (relative to the directory) that types
+   *   `import ... from 'meteor/pkg'`.  Defaults to the file mirroring the
+   *   package's `api.mainModule` (e.g. mainModule `server/main.ts` →
+   *   `server/main.d.ts`), or `index.d.ts` at the directory root when
+   *   there is no main module.
+   * @param {Object} [options.modules] A mapping of sub-path names to .d.ts
+   *   file paths, enabling sub-path imports such as
+   *   `import { X } from 'meteor/pkg/sub-path'`.
+   *   Example: `{ suspense: 'suspense.d.ts' }`.
+   *   In directory mode the file paths are relative to the directory.
+   */
+  types(typesEntry, options = {}) {
+    if (this._typesEntry != null || this._typesDir != null) {
+      buildmessage.error('api.types() may only be called once per package.',
+        { useMyCaller: true });
+      return;
+    }
+
+    if (typeof typesEntry !== 'string' || !typesEntry.trim()) {
+      buildmessage.error(
+        'api.types() requires a non-empty path to a .d.ts file or a ' +
+          "directory (with a trailing '/') as its first argument.",
+        { useMyCaller: true }
+      );
+      return;
+    }
+
+    const normalizedTypesEntry = convertToPosixPath(typesEntry, true);
+
+    if (options.modules !== undefined && (
+      typeof options.modules !== 'object' || options.modules === null ||
+      Array.isArray(options.modules)
+    )) {
+      buildmessage.error(
+        'api.types(): options.modules must be an object mapping sub-path names to .d.ts file paths.',
+        { useMyCaller: true }
+      );
+      return;
+    }
+
+    if (options.modules) {
+      for (const name of Object.keys(options.modules)) {
+        if (!isValidTypesModuleName(name)) {
+          buildmessage.error(
+            `api.types(): options.modules key "${name}" must be a valid ` +
+              'non-empty sub-path without empty, dot, parent, backslash, ' +
+              'control, or Windows-invalid characters.',
+            { useMyCaller: true }
+          );
+          return;
+        }
+      }
+    }
+
+    // A trailing '/' (as written by the author) selects directory mode.
+    // The decision is made from the string alone — api.* methods never
+    // touch the filesystem, and the directory may not even exist yet when
+    // package.js is evaluated (`meteor publish` generates it right before
+    // the build).
+    if (normalizedTypesEntry.endsWith('/')) {
+      const error = this._typesDirectoryMode(normalizedTypesEntry, options);
+      if (error) {
+        buildmessage.error(error, { useMyCaller: true });
+      }
+      return;
+    }
+
+    typesEntry = normalizeTypePath(normalizedTypesEntry);
+
+    if (!isPackageRelativeTypePath(typesEntry)) {
+      buildmessage.error(
+        `api.types(): types entry ("${typesEntry}") must stay inside the package.`,
+        { useMyCaller: true }
+      );
+      return;
+    }
+
+    if (options.entry !== undefined) {
+      buildmessage.error(
+        'api.types(): options.entry is only valid when the first argument ' +
+          "is a directory (marked with a trailing '/').",
+        { useMyCaller: true }
+      );
+      return;
+    }
+
+    const isSourceEntry = isTypeScriptSourcePath(typesEntry);
+    if (!isSourceEntry && !isTypeScriptDeclarationPath(typesEntry)) {
+      buildmessage.error(
+        'api.types() requires a .d.ts or .ts/.tsx file in single-file mode.',
+        { useMyCaller: true }
+      );
+      return;
+    }
+
+    let normalizedModules = null;
+    if (options.modules) {
+      normalizedModules = {};
+      for (const [name, modulePath] of Object.entries(options.modules)) {
+        if (typeof modulePath !== 'string' || !modulePath.trim()) {
+          buildmessage.error(
+            isSourceEntry
+              ? `api.types(): options.modules.${name} must be a .ts/.tsx ` +
+                  'source path when the types entry is a TypeScript source file.'
+              : `api.types(): options.modules.${name} must be a .d.ts path.`,
+            { useMyCaller: true }
+          );
+          return;
+        }
+        const normalizedModulePath = normalizeTypePath(modulePath);
+        if (!isPackageRelativeTypePath(normalizedModulePath)) {
+          buildmessage.error(
+            `api.types(): options.modules.${name} ("${modulePath}") must stay inside the package.`,
+            { useMyCaller: true }
+          );
+          return;
+        }
+        const validPath = isSourceEntry
+          ? isTypeScriptSourcePath(normalizedModulePath)
+          : isTypeScriptDeclarationPath(normalizedModulePath);
+        if (!validPath) {
+          buildmessage.error(
+            isSourceEntry
+              ? `api.types(): options.modules.${name} must be a .ts/.tsx ` +
+                  'source path when the types entry is a TypeScript source file.'
+              : `api.types(): options.modules.${name} must be a .d.ts path.`,
+            { useMyCaller: true }
+          );
+          return;
+        }
+        normalizedModules[name] = normalizedModulePath;
+      }
+    }
+
+    this._typesEntry = typesEntry;
+    this._typesModules = normalizedModules;
+
+    // A .ts/.tsx entry (not .d.ts) marks the package as TypeScript-authored:
+    // the entry is one of the package's compiled sources, and `meteor
+    // publish` generates real .d.ts declarations from it with tsc right
+    // before the build.  Nothing is registered as an asset in this mode —
+    // the entry is already a source resource of the compiled package
+    // (registering it twice would duplicate resources), and
+    // options.modules values must likewise be .ts/.tsx sources: a
+    // hand-written .d.ts mixed in here is rejected, because
+    // `tsc --emitDeclarationOnly` does not re-emit declaration inputs, so
+    // it would have no publish-time story.
+    if (isSourceEntry) {
+      return;
+    }
+
+    // Register the .d.ts files as server-only assets.  Every package is
+    // compiled for the os arch (even client-only packages), so the types
+    // generator — which reads resources straight from the isopack cache —
+    // always finds them there.  They must NOT be client assets: web-arch
+    // assets are given a public URL and served with the app bundle, and
+    // minification does not strip assets, so client .d.ts files would ship
+    // to production browsers.
+    const filesToAdd = [typesEntry];
+    if (this._typesModules) {
+      for (const modulePath of Object.values(this._typesModules)) {
+        filesToAdd.push(modulePath);
+      }
+    }
+    this._addFiles('assets', filesToAdd, ['server'], { nativeType: true });
+  }
+
+  /**
+   * Internal: the directory branch of api.types().  Stores _typesDir plus
+   * entry/modules normalized to full package-root-relative paths.  No
+   * assets are registered here — the directory contents are only known at
+   * compile time, when PackageSource.getFiles expands them (watching the
+   * directory listings so that adding/removing a .d.ts triggers a rebuild).
+   *
+   * Returns an error message string on invalid input (reported by the
+   * caller so the build error points at the api.types() call in
+   * package.js), or undefined on success.
+   */
+  _typesDirectoryMode(typesEntry, options) {
+    // Strip the trailing slash(es) and a leading './'; what remains is the
+    // directory path relative to the package root, e.g. 'dist-types'.
+    const dir = typesEntry.replace(/\/+$/, '').replace(/^\.\//, '');
+    if (!isPackageRelativeTypePath(dir)) {
+      return `api.types(): "${typesEntry}" is not a valid directory path inside the package.`;
+    }
+
+    // Convert a folder-relative path to a full package-root-relative path.
+    // Returns an { error } or { fullPath } record.
+    const resolveInDir = (label, p) => {
+      if (typeof p !== 'string' || !p.trim()) {
+        return {
+          error: `api.types(): ${label} must be a non-empty path relative to "${dir}/".`,
+        };
+      }
+      const rel = normalizeTypePath(p);
+      if (!isPackageRelativeTypePath(rel)) {
+        return {
+          error: `api.types(): ${label} ("${p}") must stay inside the "${dir}/" directory.`,
+        };
+      }
+      if (!isTypeScriptDeclarationPath(rel)) {
+        return {
+          error: `api.types(): ${label} must be a .d.ts path relative to "${dir}/".`,
+        };
+      }
+      return { fullPath: dir + '/' + rel };
+    };
+
+    let entry = null;
+    if (options.entry !== undefined) {
+      const resolved = resolveInDir('options.entry', options.entry);
+      if (resolved.error) {
+        return resolved.error;
+      }
+      entry = resolved.fullPath;
+    }
+    // Otherwise the entry stays null for now: PackageSource resolves the
+    // default (mainModule mirror, else index.d.ts) after package.js has
+    // fully run, because api.mainModule() may be called after api.types().
+
+    let modules = null;
+    if (options.modules) {
+      modules = {};
+      for (const [name, modulePath] of Object.entries(options.modules)) {
+        const resolved = resolveInDir(`options.modules.${name}`, modulePath);
+        if (resolved.error) {
+          return resolved.error;
+        }
+        modules[name] = resolved.fullPath;
+      }
+    }
+
+    this._typesDir = dir;
+    this._typesEntry = entry;
+    this._typesModules = modules;
   }
 
   /**

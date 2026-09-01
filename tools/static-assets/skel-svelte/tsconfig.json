@@ -7,10 +7,12 @@
     "moduleResolution": "node", // required by zodern:types (not documented)
     "paths": {
       "/*": ["*"], // support absolute /imports/* with a leading '/'
-      // support Meteor/Atmospehere packages, required by zodern:types
+      // preserve established providers; native declarations are an explicit
+      // fallback after running `meteor types`
       "meteor/*": [
         "node_modules/@types/meteor/*",
-        ".meteor/local/types/packages.d.ts"
+        ".meteor/local/types/packages.d.ts",
+        ".meteor/types/packages/*"
       ]
     },
     "preserveSymlinks": true, // required by zodern:types

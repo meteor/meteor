@@ -15,6 +15,7 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.mainModule("rate-limit.js");
   api.export("RateLimiter");
+  api.types("rate-limit.d.ts");
 });
 
 Package.onTest(function (api) {

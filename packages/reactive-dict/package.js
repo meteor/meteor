@@ -10,6 +10,7 @@ Package.onUse(function (api) {
   api.mainModule('migration.js');
   api.export('ReactiveDict');
   api.addAssets('reactive-dict.d.ts', 'server');
+  api.types('reactive-dict.native.d.ts');
 });
 
 Package.onTest(function (api) {

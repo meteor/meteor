@@ -17,4 +17,6 @@ Package.onUse(api => {
   api.addFiles("notice.js");
 
   api.addFiles("facebook.js");
+
+  api.types('accounts-facebook.d.ts');
 });
