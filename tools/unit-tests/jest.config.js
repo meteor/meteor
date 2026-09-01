@@ -10,6 +10,8 @@ module.exports = {
   ],
   testPathIgnorePatterns: [
     "/node_modules/",
+    // This test runs explicitly with Node's test runner in the Test Tools workflow.
+    "<rootDir>/scripts/ci/test-tools-cache-keys\\.test\\.js$",
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
