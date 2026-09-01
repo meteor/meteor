@@ -80,12 +80,12 @@ export const OAuth: {
   retrieveCredential(
     credentialToken: string,
     credentialSecret?: string | null
-  ): Promise<Record<string, unknown> | Error | undefined>;
+  ): Promise<unknown | Error | undefined>;
 
   /** Stores a pending OAuth credential keyed by credentialToken. */
   _storePendingCredential(
     credentialToken: string,
-    credential: Record<string, unknown> | Error,
+    credential: unknown,
     credentialSecret?: string | null
   ): Promise<void>;
 
@@ -93,7 +93,7 @@ export const OAuth: {
   _retrievePendingCredential(
     credentialToken: string,
     credentialSecret?: string | null
-  ): Promise<Record<string, unknown> | Error | undefined>;
+  ): Promise<unknown | Error | undefined>;
 
   /** Collection backing `_storePendingCredential`. */
   _pendingCredentials: Mongo.Collection<OAuthPendingCredentialDocument>;
@@ -109,8 +109,8 @@ export const OAuth: {
 
   _loginStyle(
     service: string,
-    config: { loginStyle?: OAuthLoginStyle },
-    options?: { loginStyle?: OAuthLoginStyle }
+    config: { loginStyle?: string },
+    options?: { loginStyle?: string }
   ): OAuthLoginStyle;
 
   _stateParam(loginStyle: OAuthLoginStyle, credentialToken: string, redirectUrl?: string): string;
@@ -129,7 +129,7 @@ export const OAuth: {
 
   _handleCredentialSecret(credentialToken: string, secret: string): void;
 
-  _retrieveCredentialSecret(credentialToken: string): string | undefined;
+  _retrieveCredentialSecret(credentialToken: string): string | null | undefined;
 
   /** Server-only helper: seals a value using oauth-encryption when available. */
   sealSecret<T>(plaintext: T): T;

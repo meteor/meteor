@@ -26,6 +26,7 @@ expectTypeOf<Mongo.OptionalId<Doc>>().toEqualTypeOf<
 >();
 
 expectTypeOf<Mongo.Selector<Doc>>().toEqualTypeOf<NpmModuleMongodb.Filter<Doc>>();
+expectTypeOf<Mongo.Query<Doc>>().toEqualTypeOf<Mongo.Selector<Doc>>();
 expectTypeOf<Mongo.Id>().toEqualTypeOf<string | Mongo.ObjectID>();
 expectTypeOf<Mongo.SortSpecifier>().toEqualTypeOf<NpmModuleMongodb.Sort>();
 expectTypeOf<Mongo.FieldSpecifier>().toEqualTypeOf<{ [id: string]: Number }>();

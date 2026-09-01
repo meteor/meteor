@@ -8,6 +8,9 @@ expectTypeOf(Twitter.requestCredential).returns.toBeVoid();
 Twitter.requestCredential(() => {});
 Twitter.requestCredential({ loginStyle: "popup" }, () => {});
 Twitter.requestCredential(undefined, () => {});
+declare const configuredLoginStyle: string;
+Twitter.requestCredential({ loginStyle: configuredLoginStyle }, () => {});
+Twitter.requestCredential({ requestPermissions: ["email"] as const }, () => {});
 // @ts-expect-error callback-only and options-plus-callback are distinct call shapes
 Twitter.requestCredential(() => {}, () => {});
 

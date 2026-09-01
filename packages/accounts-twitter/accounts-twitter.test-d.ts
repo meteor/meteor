@@ -6,3 +6,8 @@ expectTypeOf(Meteor.loginWithTwitter).toBeFunction();
 expectTypeOf(Meteor.loginWithTwitter).returns.toBeVoid();
 // both call shapes are accepted: (callback) and (options, callback)
 expectTypeOf(Meteor.loginWithTwitter).toBeCallableWith(() => {});
+Meteor.loginWithTwitter((error) => {
+  expectTypeOf(error).toEqualTypeOf<
+    globalThis.Error | Meteor.Error | Meteor.TypedError | undefined
+  >();
+});

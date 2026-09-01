@@ -6,3 +6,8 @@ expectTypeOf(Meteor.loginWithGoogle).toBeFunction();
 expectTypeOf(Meteor.loginWithGoogle).returns.toBeVoid();
 // both call shapes are accepted: (callback) and (options, callback)
 expectTypeOf(Meteor.loginWithGoogle).toBeCallableWith(() => {});
+Meteor.loginWithGoogle((error) => {
+  expectTypeOf(error).toEqualTypeOf<
+    globalThis.Error | Meteor.Error | Meteor.TypedError | undefined
+  >();
+});

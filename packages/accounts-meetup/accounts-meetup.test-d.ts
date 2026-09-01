@@ -6,3 +6,8 @@ expectTypeOf(Meteor.loginWithMeetup).toBeFunction();
 expectTypeOf(Meteor.loginWithMeetup).returns.toBeVoid();
 // both call shapes are accepted: (callback) and (options, callback)
 expectTypeOf(Meteor.loginWithMeetup).toBeCallableWith(() => {});
+Meteor.loginWithMeetup((error) => {
+  expectTypeOf(error).toEqualTypeOf<
+    globalThis.Error | Meteor.Error | Meteor.TypedError | undefined
+  >();
+});

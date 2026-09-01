@@ -4,7 +4,7 @@ declare module 'meteor/meteor' {
   namespace Meteor {
     // callback-first call shape: loginWithGoogle(callback)
     function loginWithGoogle(
-      callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+      callback?: (error?: globalThis.Error | Meteor.Error | Meteor.TypedError) => void
     ): void;
     function loginWithGoogle(
       options?: Meteor.LoginWithExternalServiceOptions & {
@@ -17,7 +17,7 @@ declare module 'meteor/meteor' {
           [key: string]: unknown;
         };
       },
-      callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
+      callback?: (error?: globalThis.Error | Meteor.Error | Meteor.TypedError) => void
     ): void;
   }
 }

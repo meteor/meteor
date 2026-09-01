@@ -1,9 +1,9 @@
 /** Options accepted by `MeteorDeveloperAccounts.requestCredential`. */
 interface RequestCredentialOptions {
   /** Whether the login flow uses a popup or a full-page redirect. */
-  loginStyle?: "popup" | "redirect";
+  loginStyle?: string;
   /** OAuth scopes to request in addition to the defaults. */
-  requestPermissions?: string[];
+  requestPermissions?: readonly string[];
   /** Extra parameters appended to the provider's login URL. */
   loginUrlParameters?: { [key: string]: unknown };
   /** URL to redirect back to after a redirect-style login. */
@@ -24,6 +24,12 @@ interface OAuthCredential {
 }
 
 export namespace MeteorDeveloperAccounts {
+  /** Base URL used for Meteor Developer Accounts OAuth endpoints. */
+  export let _server: string;
+
+  /** Override the Meteor Developer Accounts server. */
+  export function _config(options: { developerAccountsServer?: string }): void;
+
   /**
    * (Client) Start the Meteor Developer Accounts OAuth flow and obtain a
    * credential token. Accepts either `(options, callback)` or `(callback)`.

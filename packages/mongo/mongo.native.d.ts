@@ -13,6 +13,8 @@ type AsMongoDocument<T> = T extends NpmModuleMongodb.Document
 
 export namespace Mongo {
   export type Selector<T> = NpmModuleMongodb.Filter<T>;
+  /** Backwards-compatible name used by @types/meteor consumers. */
+  export type Query<T> = Selector<T>;
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
