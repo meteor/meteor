@@ -127,7 +127,7 @@ import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
-import { getExamples, findExample, cloneRepo, cloneSubdirectory, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
+import { getExamples, findExample, cloneRepo, cloneSubdirectory, isGitSourceLike, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
 
 // The architecture used by Meteor Software's hosted servers; it's the
 // architecture used by 'meteor deploy'.
@@ -721,7 +721,7 @@ const SKELETON_INFO = {
 
 main.registerCommand({
   name: 'create',
-  maxArgs: 1,
+  maxArgs: 2,
   minArgs: 0,
   options: {
     list: { type: Boolean },
@@ -756,6 +756,12 @@ main.registerCommand({
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
   if (options.package) {
+    if (options.args.length > 1) {
+      Console.error("Package creation expects only one package name.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+
     var packageName = options.args[0];
     if (options.prototype) {
       Console.error(
@@ -897,6 +903,12 @@ main.registerCommand({
   }
 
   if (options.list) {
+    if (options.args.length > 1) {
+      Console.error("List expects at most one app path.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+
     try {
       const examples = await getExamples();
       Console.rawInfo(`\n  ${bold`Meteor Examples`}  ${dim`${examples.length} available`}\n\n`);
@@ -929,6 +941,41 @@ main.registerCommand({
       return 1;
     }
     return 0;
+  }
+
+  const defaultCreatePathFromGitSource = (source) => {
+    const parsed = parseGitUrl(source);
+    const pathSource = options['from-dir'] || parsed.dir || parsed.repoUrl;
+    const pathName = (pathSource || '').split('/').filter(Boolean).pop();
+    return (pathName || 'my-app').replace(/\.git$/, '');
+  };
+
+  if (!options.from && options.args.length > 0) {
+    const sourceIndexes = options.args
+      .map((arg, index) => (
+        isGitSourceLike(arg, { githubShorthand: false }) ? index : -1
+      ))
+      .filter(index => index !== -1);
+
+    if (sourceIndexes.length === 1) {
+      const sourceIndex = sourceIndexes[0];
+      options.from = options.args[sourceIndex];
+      options.args = options.args.length === 1
+        ? [defaultCreatePathFromGitSource(options.from)]
+        : [options.args[sourceIndex === 0 ? 1 : 0]];
+    } else if (options.args.length > 1) {
+      Console.error(
+        'Specify one app path, or one app path and one Git URL to clone from.'
+      );
+      Console.error();
+      throw new main.ShowUsage();
+    }
+  }
+
+  if (options.from && options.args.length > 1) {
+    Console.error('Cannot specify more than one path when using --from.');
+    Console.error();
+    throw new main.ShowUsage();
   }
 
   /**
@@ -2898,6 +2945,8 @@ main.registerCommand({
     headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
+    // Write the filtered test list as JSON for machine consumers.
+    'list-json-out': { type: String },
     file: { type: String },
     exclude: { type: String },
     // Skip tests w/ this tag
@@ -2981,6 +3030,23 @@ main.registerCommand({
       fileRegexp: fileRegexp,
       'without-tag': options['without-tag'],
       'with-tag': options['with-tag']
+    });
+
+    return 0;
+  }
+
+  if (options['list-json-out']) {
+    await selftest.listTestsJson({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      galaxyOnly: options.galaxy,
+      testRegexp: testRegexp,
+      fileRegexp: fileRegexp,
+      excludeRegexp: excludeRegexp,
+      'without-tag': options['without-tag'],
+      'with-tag': options['with-tag'],
+      outFile: options['list-json-out'],
     });
 
     return 0;
