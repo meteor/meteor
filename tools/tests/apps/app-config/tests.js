@@ -5,11 +5,112 @@ export function report(id) {
   ids.push(id);
 }
 
-const startupPromise = new Promise(resolve => {
+const startupPromise = new Promise((resolve) => {
   Meteor.startup(resolve);
 });
 
 const hasOwn = Object.prototype.hasOwnProperty;
+
+function getComparablePublicSettings() {
+  const publicSettings = {
+    ...(Meteor.settings.public || {}),
+  };
+
+  // The meteortesting:mocha driver injects runtime args into public settings.
+  // These tests only care about app-configured settings.
+  delete publicSettings.mochaRuntimeArgs;
+
+  return publicSettings;
+}
+
+describe("meteor.settings", () => {
+  const config = require("./package.json").meteor;
+  const expectedEnvOverrides = config?.__selfTestExpectEnvOverrides;
+  const expectedResolvedSettings = config?.__selfTestExpectedResolvedSettings;
+
+  it("reflects meteor.settings from package.json in Meteor.settings", async () => {
+    await startupPromise;
+
+    // When METEOR_SETTINGS_* env vars are present they intentionally override
+    // values from package.json, so skip the strict deep-equality check to
+    // avoid false failures from the nesting-override selftest.
+    const hasEnvOverrides = Object.keys(process.env).some(function (k) {
+      return k.indexOf("METEOR_SETTINGS_") === 0;
+    });
+    if (hasEnvOverrides || expectedEnvOverrides || expectedResolvedSettings) {
+      return;
+    }
+
+    const expectedSettings = config?.settings || {};
+    const expectedPublic = expectedSettings.public || {};
+    const actualPublic = getComparablePublicSettings();
+
+    if (Meteor.isServer) {
+      assert.deepEqual(
+        {
+          ...Meteor.settings,
+          public: actualPublic,
+        },
+        {
+          ...expectedSettings,
+          public: expectedPublic,
+        }
+      );
+    }
+
+    if (Meteor.isClient) {
+      assert.deepEqual(actualPublic, expectedPublic);
+    }
+  });
+
+  if (expectedEnvOverrides) {
+    it("METEOR_SETTINGS_PUBLIC_* overrides a nested public key and preserves others", async () => {
+      await startupPromise;
+
+      const actualPublic = getComparablePublicSettings();
+      const envValue = expectedEnvOverrides.publicSomething;
+
+      assert.strictEqual(actualPublic.something, envValue);
+
+      const pkgPublic =
+        (config && config.settings && config.settings.public) || {};
+      Object.keys(pkgPublic).forEach(function (key) {
+        if (key === "something") return;
+        assert.strictEqual(
+          actualPublic[key],
+          pkgPublic[key],
+          `public.${key} should be preserved from package.json`
+        );
+      });
+    });
+  }
+
+  if (expectedResolvedSettings) {
+    it("applies the expected merged settings result", async () => {
+      await startupPromise;
+
+      const expectedPublic = expectedResolvedSettings.public || {};
+      const actualPublic = getComparablePublicSettings();
+
+      if (Meteor.isServer) {
+        assert.deepEqual(
+          {
+            ...Meteor.settings,
+            public: actualPublic,
+          },
+          {
+            ...expectedResolvedSettings,
+            public: expectedPublic,
+          }
+        );
+      }
+
+      if (Meteor.isClient) {
+        assert.deepEqual(actualPublic, expectedPublic);
+      }
+    });
+  }
+});
 
 describe("meteor.{mainModule,testModule}", () => {
   // These tests test the consequences of having various meteor.mainModule
@@ -35,10 +136,8 @@ describe("meteor.{mainModule,testModule}", () => {
     });
 
     it("always loads CSS resources", () => {
-      let { fontWeight } = getComputedStyle(document.body);
-      assert(fontWeight === "bold" ||
-             fontWeight === "700",
-             fontWeight);
+      const { fontWeight } = getComputedStyle(document.body);
+      assert(fontWeight === "bold" || fontWeight === "700", fontWeight);
     });
 
     it("always loads LESS styles", () => {
@@ -64,9 +163,7 @@ describe("meteor.{mainModule,testModule}", () => {
           "/a.js",
           "/b.js",
           "/c.js",
-          Meteor.isClient
-            ? "/client/main.js"
-            : "/server/main.js"
+          Meteor.isClient ? "/client/main.js" : "/server/main.js",
         ]);
       } else {
         // If we're running `meteor test` without --full-app, non-test
@@ -80,8 +177,7 @@ describe("meteor.{mainModule,testModule}", () => {
       assert.deepEqual(ids, []);
     }
 
-    if (! config ||
-        ! hasOwn.call(config, "mainModule")) {
+    if (!config || !hasOwn.call(config, "mainModule")) {
       return checkDefaultLoadRules();
     }
 
@@ -89,14 +185,14 @@ describe("meteor.{mainModule,testModule}", () => {
       return checkEagerLoadingDisabled();
     }
 
-    if (! config.mainModule) {
+    if (!config.mainModule) {
       return checkDefaultLoadRules();
     }
 
     let mainId;
 
     function tryArches(obj, arches) {
-      arches.some(arch => {
+      arches.some((arch) => {
         if (hasOwn.call(obj, arch)) {
           mainId = obj[arch];
           return true;
@@ -114,7 +210,7 @@ describe("meteor.{mainModule,testModule}", () => {
       return checkEagerLoadingDisabled();
     }
 
-    if (! mainId || ! Meteor.isAppTest) {
+    if (!mainId || !Meteor.isAppTest) {
       return checkDefaultLoadRules();
     }
 
@@ -125,7 +221,7 @@ describe("meteor.{mainModule,testModule}", () => {
 
     assert.deepEqual(
       ids,
-      chars.map(ch => "/" + ch + ".js"),
+      chars.map((ch) => "/" + ch + ".js")
     );
   });
 });

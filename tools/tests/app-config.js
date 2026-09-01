@@ -1,5 +1,5 @@
-var selftest = require('../tool-testing/selftest.js');
-var Sandbox = selftest.Sandbox;
+const selftest = require("../tool-testing/selftest.js");
+const Sandbox = selftest.Sandbox;
 
 selftest.define("mainModule", async function () {
   const s = new Sandbox();
@@ -15,7 +15,8 @@ selftest.define("mainModule", async function () {
   const run = s.run(
     "test",
     "--full-app",
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package",
+    "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -123,7 +124,7 @@ async function writeConfig(s, run, mainModule, errorPattern) {
 
   json.meteor = {
     // Make sure the tests.js module is always loaded eagerly.
-    testModule: "tests.js"
+    testModule: "tests.js",
   };
 
   if (typeof mainModule === "undefined") {
@@ -160,7 +161,8 @@ selftest.define("testModule", async function () {
     "test",
     // Not running with the --full-app option here, in order to exercise
     // the normal `meteor test` behavior.
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package",
+    "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -175,26 +177,26 @@ selftest.define("testModule", async function () {
   await check(false);
 
   await check({
-    client: "abc"
+    client: "abc",
   });
 
   await check({
-    server: "abc"
+    server: "abc",
   });
 
   await check({
     client: "abc",
-    server: "abc"
+    server: "abc",
   });
 
   await check({
     client: "abc",
-    server: false
+    server: false,
   });
 
   await check({
     client: false,
-    server: "abc"
+    server: "abc",
   });
 
   await run.stop();
@@ -205,7 +207,7 @@ async function writeModernConfig(s, run, modernConfig, errorPattern) {
 
   json.meteor = {
     // Make sure the tests.js module is always loaded eagerly.
-    testModule: "tests.js"
+    testModule: "tests.js",
   };
 
   if (typeof modernConfig === "undefined") {
@@ -241,7 +243,8 @@ selftest.define("modernConfig", async function () {
   const run = s.run(
     "test",
     "--full-app",
-    "--driver-package", "meteortesting:mocha"
+    "--driver-package",
+    "meteortesting:mocha"
   );
 
   run.waitSecs(60);
@@ -267,3 +270,227 @@ selftest.define("modernConfig", async function () {
 
   await run.stop();
 });
+
+async function writeSettingsConfig(s, run, settings) {
+  const json = JSON.parse(s.read("package.json"));
+
+  json.meteor = {
+    testModule: "tests.js",
+  };
+
+  if (typeof settings !== "undefined") {
+    json.meteor.settings = settings;
+  }
+
+  s.write("package.json", JSON.stringify(json, null, 2) + "\n");
+
+  run.waitSecs(10);
+  run.forbid(" 0 passing ");
+  await run.match("SERVER FAILURES: 0");
+  await run.match("CLIENT FAILURES: 0");
+}
+
+selftest.define("packageJsonSettings", async function () {
+  const s = new Sandbox();
+  await s.init();
+
+  await s.createApp("app-config-settings", "app-config");
+  s.cd("app-config-settings");
+
+  s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
+  const run = s.run(
+    "test",
+    "--full-app",
+    "--driver-package",
+    "meteortesting:mocha"
+  );
+
+  run.waitSecs(60);
+  await run.match("App running at");
+
+  // No settings in package.json → Meteor.settings should be empty
+  await writeSettingsConfig(s, run);
+
+  // Arbitrary nested settings object
+  await writeSettingsConfig(s, run, {
+    packages: { mongo: { reactivity: ["changeStreams", "oplog"] } },
+  });
+
+  // Settings with a public subset (client-accessible)
+  await writeSettingsConfig(s, run, {
+    public: { theme: "dark" },
+    secret: "server-only",
+  });
+
+  // Remove settings again → back to empty
+  await writeSettingsConfig(s, run);
+
+  await run.stop();
+});
+
+selftest.define(
+  "packageJsonSettings merges with --settings flag",
+  async function () {
+    // Verifies that when both --settings and meteor.settings in package.json are
+    // provided they are MERGED rather than producing an error.
+    // The --settings file has higher precedence on conflicting keys.
+    const s = new Sandbox({ fakeMongo: true });
+    await s.init();
+
+    await s.createApp("app-config-settings-merge", "standard-app");
+    s.cd("app-config-settings-merge");
+
+    // Write a settings file that adds a key and overrides one from package.json
+    s.write(
+      "extra-settings.json",
+      JSON.stringify({ fromfile: true, overriddenbyfile: "from-file" })
+    );
+
+    // Add meteor.settings to package.json
+    const json = JSON.parse(s.read("package.json"));
+    json.meteor = json.meteor || {};
+    json.meteor.settings = { frompkg: true, overriddenbyfile: "from-pkg" };
+    s.write("package.json", JSON.stringify(json, null, 2) + "\n");
+
+    const run = s.run("--settings", "extra-settings.json");
+    await run.tellMongo({
+      stdout: " [initandlisten] waiting for connections on port",
+    });
+
+    run.waitSecs(15);
+    // Both sources should co-exist; the legacy conflict message must not appear.
+    run.forbid("Please use only one");
+    run.forbid("bundle-fail");
+    await run.match("App running at");
+    await run.stop();
+  }
+);
+
+selftest.define(
+  "settings: METEOR_SETTINGS_PUBLIC_* overrides nested key and preserves other keys",
+  async function () {
+    // Verifies the highest-priority settings tier:
+    //   METEOR_SETTINGS_PUBLIC_SOMETHING=from-env must win over
+    //   package.json's meteor.settings.public.something = "from-pkg",
+    //   while other public keys from package.json are preserved (deep merge).
+    const s = new Sandbox();
+    await s.init();
+
+    await s.createApp("app-config-settings-nesting", "app-config");
+    s.cd("app-config-settings-nesting");
+
+    // Set up initial package.json: public.something will be overridden,
+    // public.other must be preserved by the merge.
+    const pkgJson = JSON.parse(s.read("package.json"));
+    pkgJson.meteor = pkgJson.meteor || {};
+    pkgJson.meteor.__selfTestExpectEnvOverrides = {
+      publicSomething: "from-env",
+    };
+    pkgJson.meteor.testModule = "tests.js";
+    pkgJson.meteor.settings = {
+      public: { something: "from-pkg", other: "keep" },
+    };
+    s.write("package.json", JSON.stringify(pkgJson, null, 2) + "\n");
+
+    // env var takes highest precedence
+    s.set("METEOR_SETTINGS_PUBLIC_SOMETHING", "from-env");
+    s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
+    const run = s.run(
+      "test",
+      "--full-app",
+      "--driver-package",
+      "meteortesting:mocha"
+    );
+
+    run.waitSecs(60);
+    await run.match("App running at");
+
+    run.forbid(" 0 passing ");
+    await run.match("SERVER FAILURES: 0");
+    await run.match("CLIENT FAILURES: 0");
+
+    await run.stop();
+  }
+);
+
+selftest.define(
+  "settings precedence: package.json < settings file < METEOR_SETTINGS_* env vars",
+  async function () {
+    // Verifies the full compatibility story for settings resolution:
+    //   1. package.json provides defaults
+    //   2. --settings overrides selected keys
+    //   3. METEOR_SETTINGS_* overrides selected keys last
+    const s = new Sandbox();
+    await s.init();
+
+    await s.createApp("app-config-settings-precedence", "app-config");
+    s.cd("app-config-settings-precedence");
+
+    s.write(
+      "extra-settings.json",
+      JSON.stringify({
+        overriddenbyfile: "from-file",
+        addedbysettingsfile: true,
+        public: {
+          publicoverriddenbyfile: "from-file",
+          publicaddedbysettingsfile: true,
+        },
+      })
+    );
+
+    const pkgJson = JSON.parse(s.read("package.json"));
+    pkgJson.meteor = pkgJson.meteor || {};
+    pkgJson.meteor.testModule = "tests.js";
+    pkgJson.meteor.settings = {
+      settinga: true,
+      overriddenbyfile: "from-pkg",
+      overriddenbyenv: "from-pkg",
+      public: {
+        publicfrompkg: true,
+        publicoverriddenbyfile: "from-pkg",
+        publicoverriddenbyenv: "from-pkg",
+      },
+    };
+    pkgJson.meteor.__selfTestExpectedResolvedSettings = {
+      settinga: true,
+      overriddenbyfile: "from-file",
+      overriddenbyenv: "from-env",
+      addedbysettingsfile: true,
+      addedbyenv: true,
+      public: {
+        publicfrompkg: true,
+        publicoverriddenbyfile: "from-file",
+        publicoverriddenbyenv: "from-env",
+        publicaddedbysettingsfile: true,
+        publicaddedbyenv: true,
+      },
+    };
+    s.write("package.json", JSON.stringify(pkgJson, null, 2) + "\n");
+
+    s.set("METEOR_SETTINGS_OVERRIDDENBYENV", "from-env");
+    s.set("METEOR_SETTINGS_ADDEDBYENV", "true");
+    s.set("METEOR_SETTINGS_PUBLIC_PUBLICOVERRIDDENBYENV", "from-env");
+    s.set("METEOR_SETTINGS_PUBLIC_PUBLICADDEDBYENV", "true");
+    s.set("TEST_BROWSER_DRIVER", "puppeteer");
+
+    const run = s.run(
+      "test",
+      "--full-app",
+      "--driver-package",
+      "meteortesting:mocha",
+      "--settings",
+      "extra-settings.json"
+    );
+
+    run.waitSecs(60);
+    await run.match("App running at");
+
+    run.forbid(" 0 passing ");
+    await run.match("SERVER FAILURES: 0");
+    await run.match("CLIENT FAILURES: 0");
+
+    await run.stop();
+  }
+);
