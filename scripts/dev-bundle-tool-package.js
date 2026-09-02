@@ -12,6 +12,9 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "11.12.1",
     "node-gyp": "10.2.0",
+    // Required by argon2's install script when Meteor rebuilds native
+    // dependencies in its isolated npm environment.
+    "cross-env": "10.0.0",
     "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "2.0.3",
     typescript: "5.9.3",
