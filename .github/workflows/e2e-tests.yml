@@ -53,24 +53,44 @@ jobs:
       fail-fast: false
       max-parallel: 4
       matrix:
-        category:
-          - CLI
-          - Angular
-          - Babel
-          - Blaze
-          - Coffeescript
-          - Full Skeleton
-          - Tailwind Skeleton
-          - Examples
-          - Monorepo
-          - Other
-          - React
-          - R.Router
-          - Regressions
-          - Solid
-          - Svelte
-          - Typescript
-          - Vue
+        include:
+          - category: CLI
+            group: cli
+            audit: true
+          - category: Angular
+            group: angular
+          - category: Babel
+            group: babel
+          - category: Blaze
+            group: blaze
+          - category: Coffeescript
+            group: coffeescript
+          - category: Full Skeleton
+            group: full_skeleton
+          - category: Tailwind Skeleton
+            group: tailwind_skeleton
+          - category: Examples
+            group: examples
+          - category: Monorepo
+            group: monorepo
+          - category: Other
+            group: other
+          - category: React
+            group: react
+          - category: R.Router
+            group: react_router
+          - category: Regressions
+            group: regressions
+          - category: Solid
+            group: solid
+          - category: Svelte
+            group: svelte
+          - category: Typescript
+            group: typescript
+          - category: Vue
+            group: vue
+          - category: Uncategorized
+            group: uncategorized
 
     steps:
       - name: Install Docker CLI
@@ -119,6 +139,10 @@ jobs:
         # Playwright version declared by tools/e2e-tests/package.json.
         run: npm run install:e2e
 
+      - name: Audit E2E test groups
+        if: matrix.audit
+        run: npm run test:e2e:groups:audit
+
       - name: Set NPM_LINK_RSPACK=false for release branches
         run: |
           echo "Current branch: ${{ github.head_ref || github.ref_name }}"
@@ -135,7 +159,7 @@ jobs:
         id: test-run
         continue-on-error: true
         timeout-minutes: 20
-        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -157,4 +181,4 @@ jobs:
         timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"

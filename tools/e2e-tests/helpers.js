@@ -3,6 +3,7 @@ const waitOn = require('wait-on');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
+const net = require('net');
 const rimraf = require('rimraf');
 
 // Get the absolute path to the meteor executable
@@ -83,10 +84,11 @@ export async function clearBuildArtifacts(appDir) {
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
  * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
+ * @param {string} options.packageManager - Package manager to use for setup ("npm", "yarn", or "pnpm")
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
-  const { isMonorepo = false, preserveFixtureSymlinks = false } = options;
+  const { isMonorepo = false, preserveFixtureSymlinks = false, packageManager = 'npm' } = options;
 
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -114,7 +116,24 @@ export async function setupMeteorApp(appName, options = {}) {
     console.error('Error during copy:', err);
   }
 
-  if (isMonorepo) {
+  if (packageManager === 'pnpm') {
+    console.log('Running pnpm install at workspace root...');
+    await execa('corepack', ['pnpm', 'install', '--frozen-lockfile=false'], {
+      cwd: tempDir,
+      stdio: 'inherit',
+    });
+  } else if (packageManager === 'yarn') {
+    const rootPackageJsonPath = path.join(tempDir, 'package.json');
+    const rootPackageJson = await fs.readJson(rootPackageJsonPath);
+    rootPackageJson.packageManager = 'yarn@1.22.22';
+    await fs.writeJson(rootPackageJsonPath, rootPackageJson, { spaces: 2 });
+
+    console.log('Running Yarn install at workspace root...');
+    await execa('corepack', ['yarn', 'install'], {
+      cwd: tempDir,
+      stdio: 'inherit',
+    });
+  } else if (isMonorepo) {
     // For monorepo, install dependencies at both root and app level
     console.log('Running npm install at root level...');
     await execa.command('npm install', {
@@ -217,7 +236,7 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
  * @returns {Object} - The meteor process and output lines
  */
 export async function runMeteorApp(tempDir, port, options = {}) {
-  const { isMonorepo = false, env = {} } = options;
+  const { isMonorepo = false, monorepoAppPath = 'app', env = {} } = options;
 
   // Start Meteor CLI in dev mode
   console.log(`Starting Meteor app on port ${port}...`);
@@ -232,7 +251,7 @@ export async function runMeteorApp(tempDir, port, options = {}) {
   }
 
   // For monorepo, run the meteor command from the app subdirectory
-  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, monorepoAppPath) : tempDir;
 
   // Run the meteor command
   const { meteorProcess, outputLines } = await runMeteorCommand(
@@ -915,7 +934,7 @@ export async function appendFileContent(tempDir, filePath, options = {}) {
  * @returns {Object} - The meteor process and output lines
  */
 export async function runMeteorTests(tempDir, port, options = {}) {
-  const { isMonorepo = false, env = {} } = options;
+  const { isMonorepo = false, monorepoAppPath = 'app', env = {} } = options;
 
   // Start Meteor tests
   console.log(`Starting Meteor tests on port ${port}...`);
@@ -930,7 +949,7 @@ export async function runMeteorTests(tempDir, port, options = {}) {
   }
 
   // For monorepo, run the meteor command from the app subdirectory
-  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, monorepoAppPath) : tempDir;
 
   // Run the meteor test command
   const { meteorProcess, outputLines, processResult } = await runMeteorCommand(
@@ -1095,7 +1114,7 @@ export async function waitForPlaywrightConsole(pattern, options = {}) {
  * @returns {Object} - The build output directory and the meteor process result
  */
 export async function buildMeteorApp(tempDir, options = {}) {
-  const { isMonorepo = false, env = {} } = options;
+  const { isMonorepo = false, monorepoAppPath = 'app', env = {} } = options;
 
   // Create a unique temporary directory for the build output
   const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -1115,7 +1134,7 @@ export async function buildMeteorApp(tempDir, options = {}) {
   }
 
   // For monorepo, run the meteor command from the app subdirectory
-  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, monorepoAppPath) : tempDir;
 
   // Run the meteor build command with automatic exit code checking
   const result = await runMeteorCommand(
@@ -1132,4 +1151,144 @@ export async function buildMeteorApp(tempDir, options = {}) {
   console.log(`Successfully built Meteor app to ${buildOutputDir}`);
 
   return { buildOutputDir, processResult: result.processResult };
+}
+
+/**
+ * Ask the OS for a free TCP port on the loopback interface.
+ * @returns {Promise<number>}
+ */
+export function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * Start a throwaway MongoDB instance for running a built bundle.
+ *
+ * Reuses the `mongod` binary shipped in Meteor's dev bundle, so no extra
+ * download or system MongoDB is required. Falls back to the MONGO_URL
+ * environment variable when the binary is unavailable, and returns null when
+ * neither is available so callers can skip gracefully.
+ *
+ * @param {Object} options
+ * @param {number} options.port - Port for mongod (default: a free port)
+ * @returns {Promise<{mongoUrl: string, port?: number, stop: Function}|null>}
+ */
+export async function startMongo(options = {}) {
+  const ext = process.platform === 'win32' ? '.exe' : '';
+  const mongodPath = path.join(REPO_ROOT, 'dev_bundle', 'mongodb', 'bin', `mongod${ext}`);
+
+  if (!fs.existsSync(mongodPath)) {
+    if (process.env.MONGO_URL) {
+      console.log('Bundled mongod not found; using MONGO_URL from environment.');
+      return { mongoUrl: process.env.MONGO_URL, stop: async () => {} };
+    }
+    console.warn(`Bundled mongod not found at ${mongodPath} and no MONGO_URL set.`);
+    return null;
+  }
+
+  const port = options.port || (await getFreePort());
+  const randomSuffix = Math.random().toString(36).substring(2, 10);
+  const dbPath = path.join(os.tmpdir(), `meteor-e2e-mongo-${randomSuffix}`);
+  await fs.mkdir(dbPath, { recursive: true });
+
+  console.log(`Starting bundled mongod on port ${port} (dbpath ${dbPath})...`);
+  const mongoProcess = execa(mongodPath, [
+    '--port', String(port),
+    '--dbpath', dbPath,
+    '--bind_ip', '127.0.0.1',
+    '--wiredTigerCacheSizeGB', '0.25',
+  ], { stdio: ['ignore', 'ignore', 'inherit'] });
+
+  let exited = false;
+  mongoProcess.on('exit', () => { exited = true; });
+
+  const stop = async () => {
+    if (!exited) {
+      try { mongoProcess.kill('SIGKILL'); } catch (err) { /* already gone */ }
+    }
+    try { await mongoProcess; } catch (err) { /* killed by signal */ }
+    await fs.remove(dbPath).catch(() => {});
+  };
+
+  try {
+    await waitOn({
+      resources: [`tcp:127.0.0.1:${port}`],
+      timeout: process.env.CI ? 120000 : 60000,
+    });
+  } catch (err) {
+    await stop();
+    throw new Error(`Bundled mongod failed to become ready on port ${port}: ${err.message}`);
+  }
+
+  return { mongoUrl: `mongodb://127.0.0.1:${port}/meteor`, port, stop };
+}
+
+/**
+ * Boot a bundle produced by `meteor build --directory` and wait until it serves
+ * HTTP, verifying the build output is actually runnable.
+ *
+ * @param {string} buildOutputDir - Directory passed to buildMeteorApp
+ * @param {Object} options
+ * @param {number} options.port - Port for the built app (required)
+ * @param {string} options.mongoUrl - MONGO_URL for the built app (required)
+ * @param {boolean} options.skipNpmInstall - Skip `npm install` in the server dir
+ * @param {Object} options.env - Extra environment variables
+ * @returns {Promise<{appProcess: Object, port: number, stop: Function}>}
+ */
+export async function runBuiltApp(buildOutputDir, options = {}) {
+  const { port, mongoUrl, skipNpmInstall = false, env = {} } = options;
+
+  if (!port) throw new Error('runBuiltApp requires a port');
+  if (!mongoUrl) throw new Error('runBuiltApp requires a mongoUrl');
+
+  const bundleDir = path.join(buildOutputDir, 'bundle');
+  const serverDir = path.join(bundleDir, 'programs', 'server');
+
+  if (!skipNpmInstall) {
+    console.log('Running npm install in the built server directory...');
+    await execa('npm', ['install'], { cwd: serverDir, stdio: 'inherit', shell: true });
+  }
+
+  console.log(`Starting built app (node main.js) on port ${port}...`);
+  const appProcess = execa('node', ['main.js'], {
+    cwd: bundleDir,
+    stdio: ['ignore', 'inherit', 'inherit'],
+    env: {
+      ...process.env,
+      ROOT_URL: `http://localhost:${port}`,
+      PORT: String(port),
+      MONGO_URL: mongoUrl,
+      ...env,
+    },
+  });
+
+  let exited = false;
+  appProcess.on('exit', () => { exited = true; });
+
+  const stop = async () => {
+    if (!exited) {
+      try { appProcess.kill('SIGKILL'); } catch (err) { /* already gone */ }
+    }
+    try { await appProcess; } catch (err) { /* killed by signal */ }
+  };
+
+  try {
+    await waitOn({
+      resources: [`http-get://localhost:${port}`],
+      timeout: process.env.CI ? 300000 : 90000,
+    });
+  } catch (err) {
+    await stop();
+    throw new Error(`Built app failed to become ready on port ${port}: ${err.message}`);
+  }
+
+  return { appProcess, port, stop };
 }

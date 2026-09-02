@@ -142,18 +142,14 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest() || isMeteorAppUp
       setGlobalState(GLOBAL_STATE_KEYS.BUILD_CONTEXT_FILES_CLEANED, true);
     }
 
-    // Auto install deps (by default enabled)
-    if (hasMeteorAppConfigAutoInstallDeps()) {
-      // Ensure Rspack is installed
-      await ensureRspackInstalled();
-    }
+    // Always validate dependencies. When users opt out of auto-installation,
+    // this only logs package-manager- and workspace-specific guidance.
+    const autoInstallDeps = hasMeteorAppConfigAutoInstallDeps();
+    await ensureRspackInstalled({ autoInstall: autoInstallDeps });
 
     // Check if Rspack React is installed
     if (checkReactInstalled()) {
-      // Auto install deps (by default enabled)
-      if (hasMeteorAppConfigAutoInstallDeps()) {
-        await ensureRspackReactInstalled();
-      }
+      await ensureRspackReactInstalled({ autoInstall: autoInstallDeps });
     }
   } catch (error) {
     logError(`Rspack plugin error: ${error.message}`);

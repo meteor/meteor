@@ -4,8 +4,16 @@
  * of different Meteor skeletons (apollo, react, etc.).
  */
 
-import { assertStyles } from './assertions';
-import { waitForMeteorOutput } from './helpers';
+import {
+  assertRspackWorkspaceInstall,
+  assertStyles,
+} from './assertions';
+import {
+  killMeteorProcess,
+  killProcessByPort,
+  runMeteorApp,
+  waitForMeteorOutput,
+} from './helpers';
 import { testMeteorSkeleton } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
@@ -40,6 +48,76 @@ async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
   if (includeTypes) {
     expect(packageJson.devDependencies['@types/react']).toBe('^19.2.0');
     expect(packageJson.devDependencies['@types/react-dom']).toBe('^19.2.0');
+  }
+}
+
+async function assertPnpmBrowser() {
+  const statusText = await page.$eval(
+    '#workspace-status',
+    (element) => element.textContent
+  );
+  expect(statusText).toContain('@example/ui');
+  expect(statusText).toContain('client package compiled by Rspack');
+
+  const accentText = await page.$eval(
+    '#accent-color',
+    (element) => element.textContent
+  );
+  expect(accentText).toContain('#40E0D0');
+}
+
+async function assertPnpmRuntime({ result }) {
+  expect(
+    result.outputLines.some(line =>
+      /Rspack dependencies need attention/.test(line)
+    )
+  ).toBe(false);
+  await waitForMeteorOutput(
+    result.outputLines,
+    /domain:server:pnpm workspace package loaded on the server/,
+  );
+  await waitForMeteorOutput(result.outputLines, /@example\/server:compiled/);
+  await waitForMeteorOutput(result.outputLines, /domain:server:accent #40E0D0/);
+  await assertPnpmBrowser();
+}
+
+async function assertPnpmAutoInstall({ tempDir, appDir, packageJsonPath }) {
+  const packageJson = await fs.readJson(packageJsonPath);
+  const expectedRsdoctorVersion =
+    packageJson.devDependencies['@rsdoctor/rspack-plugin'];
+
+  packageJson.devDependencies['@rsdoctor/rspack-plugin'] = '^1.0.0';
+  await fs.writeJson(packageJsonPath, packageJson, { spaces: 2 });
+
+  let meteorProcess;
+  try {
+    const result = await runMeteorApp(appDir, 3222, {
+      waitForOutput: '=> App running at',
+    });
+    meteorProcess = result.meteorProcess;
+
+    await waitForMeteorOutput(
+      result.outputLines,
+      /Installed Rspack dependencies/,
+      { meteorProcess },
+    );
+
+    const updatedPackageJson = await fs.readJson(packageJsonPath);
+    expect(
+      updatedPackageJson.devDependencies['@rsdoctor/rspack-plugin']
+    ).toContain(expectedRsdoctorVersion.replace(/^\^/, ''));
+    await assertRspackWorkspaceInstall({
+      workspaceRoot: tempDir,
+      appDir,
+      packageManager: 'pnpm',
+    });
+  } finally {
+    await killMeteorProcess(meteorProcess);
+    await killProcessByPort([3222, 18080]);
+
+    const restoredPackageJson = await fs.readJson(packageJsonPath);
+    delete restoredPackageJson.meteor.autoInstallDeps;
+    await fs.writeJson(packageJsonPath, restoredPackageJson, { spaces: 2 });
   }
 }
 
@@ -156,6 +234,80 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.js',
         server: 'server/main.js',
         test: 'imports/api/links/methods.tests.js',
+      },
+    })
+  );
+
+  describe(
+    'Pnpm Skeleton /',
+    testMeteorSkeleton({
+      skeletonName: 'pnpm',
+      port: 3222,
+      meteorAppPath: 'apps/app',
+      packageManager: 'pnpm',
+      filePaths: {
+        client: 'client/main.js',
+        server: 'server/main.js',
+        test: 'tests/main.test.js',
+      },
+      customAssertions: {
+        async afterCreate({ tempDir, appDir, packageJsonPath }) {
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-workspace.yaml'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-lock.yaml'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(appDir, '.meteor', 'release'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(
+              path.join(appDir, 'node_modules', '@example', 'shared')
+            )
+          ).toBe(true);
+
+          const workspaceName = path.basename(tempDir);
+          const rootPackageJson = await fs.readJson(
+            path.join(tempDir, 'package.json')
+          );
+          const appPackageJson = await fs.readJson(
+            path.join(appDir, 'package.json')
+          );
+          expect(rootPackageJson.name).toBe(workspaceName);
+          expect(appPackageJson.name).toBe(`${workspaceName}-app`);
+          expect(appPackageJson.meteor.autoInstallDeps).toBeUndefined();
+          expect(appPackageJson.dependencies['@example/shared']).toBe(
+            'workspace:*'
+          );
+
+          await assertPnpmAutoInstall({
+            tempDir,
+            appDir,
+            packageJsonPath,
+          });
+        },
+        afterRun: assertPnpmRuntime,
+        afterRunProduction: assertPnpmRuntime,
+        afterRunBuiltApp: assertPnpmBrowser,
+        async afterTestOnce({ result }) {
+          await waitForMeteorOutput(
+            result.outputLines,
+            /pnpm workspace packages compiled/,
+          );
+          await waitForMeteorOutput(
+            result.outputLines,
+            /pnpm transitive dependencies resolved/,
+          );
+        },
+        async afterReset({ tempDir }) {
+          expect(
+            await fs.pathExists(path.join(tempDir, 'node_modules'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-lock.yaml'))
+          ).toBe(true);
+        },
       },
     })
   );

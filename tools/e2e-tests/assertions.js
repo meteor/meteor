@@ -6,6 +6,16 @@ import fs from 'fs-extra';
 import path from 'path';
 import { chromium } from 'playwright';
 
+const RSPACK_RUNTIME_DEPENDENCIES = [
+  '@meteorjs/rspack',
+  '@rsdoctor/rspack-plugin',
+  '@rspack/cli',
+  '@rspack/core',
+  '@rspack/dev-server',
+  '@swc/core',
+  '@swc/helpers',
+];
+
 let fallbackBrowser;
 
 async function getPlaywrightPage() {
@@ -32,6 +42,56 @@ afterAll(async () => {
   }
   fallbackBrowser = null;
 });
+
+/**
+ * Verifies that Rspack's automatic installer updated a nested workspace app
+ * and kept the package manager's lockfile at the workspace root.
+ *
+ * @param {Object} options - Workspace paths and selected package manager
+ * @param {string} options.workspaceRoot - Workspace root directory
+ * @param {string} options.appDir - Nested Meteor application directory
+ * @param {'npm'|'yarn'|'pnpm'} options.packageManager - Selected manager
+ * @returns {Promise<void>}
+ */
+export async function assertRspackWorkspaceInstall({
+  workspaceRoot,
+  appDir,
+  packageManager,
+}) {
+  const packageJson = await fs.readJson(path.join(appDir, 'package.json'));
+  const declaredDependencies = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
+    ...packageJson.optionalDependencies,
+  };
+
+  RSPACK_RUNTIME_DEPENDENCIES.forEach(dependency => {
+    expect(declaredDependencies[dependency]).toBeTruthy();
+  });
+
+  const lockfiles = {
+    npm: 'package-lock.json',
+    yarn: 'yarn.lock',
+    pnpm: 'pnpm-lock.yaml',
+  };
+  const expectedLockfile = lockfiles[packageManager];
+
+  expect(expectedLockfile).toBeTruthy();
+  expect(
+    await fs.pathExists(path.join(workspaceRoot, expectedLockfile))
+  ).toBe(true);
+  expect(
+    await fs.pathExists(path.join(appDir, expectedLockfile))
+  ).toBe(false);
+
+  for (const [manager, lockfile] of Object.entries(lockfiles)) {
+    if (manager !== packageManager) {
+      expect(
+        await fs.pathExists(path.join(workspaceRoot, lockfile))
+      ).toBe(false);
+    }
+  }
+}
 
 /**
  * Helper function to assert that a Meteor app is running correctly

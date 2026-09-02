@@ -24,9 +24,10 @@ module.exports = {
   // jest-playwright-preset only reads from there, not from globals).
   // See that file for HEADED, SLOWMO, DEVTOOLS, RECORD toggles.
   maxWorkers: 1,
-  // Force Jest to exit after all tests complete, even if there are
-  // dangling async operations (e.g., orphan rspack child processes).
-  // Disabled when RECORD=1 so the video flush on context.close() can complete.
+  // Force Jest to exit after all tests complete: jest-playwright-preset leaks
+  // chromium handles past the exit deadline and rspack can leave orphan child
+  // processes. Disabled when RECORD=1 so the video flush on context.close()
+  // can complete.
   forceExit: !process.env.RECORD,
   reporters: [
     'default',

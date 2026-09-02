@@ -1,0 +1,33 @@
+{
+  "name": "~name~-app",
+  "private": true,
+  "description": "Meteor application in a pnpm workspace",
+  "scripts": {
+    "start": "meteor run",
+    "test": "meteor test --once --driver-package meteortesting:mocha"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "@example/server": "workspace:*",
+    "@example/shared": "workspace:*",
+    "@example/ui": "workspace:*",
+    "@swc/helpers": "^0.5.23",
+    "meteor-node-stubs": "^1.2.12"
+  },
+  "devDependencies": {
+    "@meteorjs/rspack": "^3.0.0-beta.0",
+    "@rsdoctor/rspack-plugin": "^1.5.9",
+    "@rspack/cli": "^2.2.0",
+    "@rspack/core": "^2.2.0",
+    "@rspack/dev-server": "^2.2.0",
+    "@swc/core": "^1.15.32"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "testModule": "tests/main.test.js",
+    "modern": true
+  }
+}
