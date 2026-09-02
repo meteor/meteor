@@ -3,6 +3,12 @@
 // page loads. It intentionally does NOT handle offline *data* (collection
 // mirroring, queued Methods, sync on reconnect) — that belongs to a separate
 // offline-data layer, out of scope for this baseline scaffold.
+//
+// Prefer a generated, declaratively configured worker? See the `notes-offline`
+// example (`meteor create my-app --example notes-offline`): Workbox builds its
+// `sw.js` from `rspack.config.js` (workbox-webpack-plugin `GenerateSW`), with
+// the same kind of strategies expressed as `runtimeCaching` rules. This file is
+// the dependency-free, hand-written baseline; both approaches are valid.
 // Edit the strategies below to match your app's caching needs. Bump VERSION
 // to force a fresh cache generation; old `pwa-*` buckets are swept in `activate`.
 
