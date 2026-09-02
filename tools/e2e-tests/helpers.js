@@ -84,7 +84,7 @@ export async function clearBuildArtifacts(appDir) {
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
  * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
- * @param {string} options.packageManager - Package manager to use for setup ("npm" or "pnpm")
+ * @param {string} options.packageManager - Package manager to use for setup ("npm", "yarn", or "pnpm")
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
@@ -119,6 +119,17 @@ export async function setupMeteorApp(appName, options = {}) {
   if (packageManager === 'pnpm') {
     console.log('Running pnpm install at workspace root...');
     await execa('corepack', ['pnpm', 'install', '--frozen-lockfile=false'], {
+      cwd: tempDir,
+      stdio: 'inherit',
+    });
+  } else if (packageManager === 'yarn') {
+    const rootPackageJsonPath = path.join(tempDir, 'package.json');
+    const rootPackageJson = await fs.readJson(rootPackageJsonPath);
+    rootPackageJson.packageManager = 'yarn@1.22.22';
+    await fs.writeJson(rootPackageJsonPath, rootPackageJson, { spaces: 2 });
+
+    console.log('Running Yarn install at workspace root...');
+    await execa('corepack', ['yarn', 'install'], {
       cwd: tempDir,
       stdio: 'inherit',
     });

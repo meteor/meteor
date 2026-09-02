@@ -28,7 +28,6 @@
       "server": "server/main.js"
     },
     "testModule": "tests/main.test.js",
-    "autoInstallDeps": false,
     "modern": true
   }
 }

@@ -190,7 +190,7 @@ export function testMeteorBundler(options) {
  * @param {Object} options - Options for the test
  * @param {string} options.appName - Name of the app ('react', 'typescript', etc)
  * @param {number} options.port - Port to run the app on
- * @param {string} options.packageManager - Package manager used while setting up the fixture ("npm" or "pnpm")
+ * @param {string} options.packageManager - Package manager used while setting up the fixture ("npm", "yarn", or "pnpm")
  * @param {Object} options.filePaths - File paths for the app
  * @param {string} options.filePaths.client - Client file path (e.g., 'client/main.jsx')
  * @param {string} options.filePaths.server - Server file path (e.g., 'server/main.js')
@@ -1048,7 +1048,7 @@ export function testMeteorRspackBundler(options) {
  * @param {string} options.title - Title to use for assertions (defaults to skeletonName if not provided)
  * @param {number} options.port - Port to run the app on
  * @param {string} options.meteorAppPath - Meteor app path relative to the created project root
- * @param {string} options.packageManager - Package manager used by the skeleton ("npm" or "pnpm")
+ * @param {string} options.packageManager - Package manager used by the skeleton ("npm", "yarn", or "pnpm")
  * @param {Object} options.filePaths - File paths for the app
  * @param {string} options.filePaths.client - Client file path (e.g., 'client/main.jsx')
  * @param {string} options.filePaths.server - Server file path (e.g., 'server/main.js')

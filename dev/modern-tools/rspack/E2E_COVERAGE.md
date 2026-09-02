@@ -178,11 +178,14 @@ Svelte framework integration.
 
 ### monorepo
 
-Monorepo structure with app in subdirectory, service worker, and PWA manifest.
+Monorepo structure with app in a subdirectory, exercised through the full npm
+workspace lifecycle and a focused Yarn Classic initialization smoke test.
 
 | What is covered | Phase |
 |----------------|-------|
 | Monorepo layout (`app/` subdirectory) | All |
+| npm workspace auto-install keeps the lockfile at the root | Init |
+| Yarn Classic workspace auto-install keeps the lockfile at the root | Init |
 | Custom rspack config (`rspack.config.cjs`) | All |
 | `rspack.config.override.cjs` custom plugin loading | Run, Test, Build |
 | Static assets in bundle (png, md, icon, manifest) | Build |
@@ -257,7 +260,7 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
 | full | 3204 | JS | `imports/api/` test structure |
-| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; root install via Corepack/bundled npx fallback, `workspace:*` linking, transitive pnpm-store resolution, nested app lifecycle, built-app boot, and workspace dependencies preserved by reset |
+| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; default auto-install behavior with no explicit `autoInstallDeps`; root install via Corepack/bundled npx fallback; automatic pnpm bump of an outdated Rspack dependency; `workspace:*` linking; transitive pnpm-store resolution; local `link:` dependency validation without false warnings; nested app lifecycle; built-app boot; workspace dependencies preserved by reset |
 | react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
@@ -364,6 +367,7 @@ Where each feature is tested across apps and skeletons.
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo, pnpm-monorepo | pnpm |
+| Workspace-aware Rspack dependency auto-install | monorepo (npm, Yarn Classic) | pnpm |
 | pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | pnpm |
 | Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | pnpm |
 | Full-app test mode | react-router | |

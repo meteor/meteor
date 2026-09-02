@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Isolated Jest + Playwright environment for Meteor E2E tests",
   "scripts": {
-    "test": "jest --config jest.config.js"
+    "test": "jest --config jest.config.js",
+    "test:group": "node scripts/run-test-group.js",
+    "test:groups:audit": "node scripts/audit-test-groups.js"
   },
   "devDependencies": {
     "@swc/core": "^1.15.18",

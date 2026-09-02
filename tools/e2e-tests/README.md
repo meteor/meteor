@@ -17,4 +17,14 @@ npm run test:e2e
 
 # Run a specific suite
 npm run test:e2e -- --testPathPattern skeleton
+
+# Run one of the same exclusive groups used by CI
+npm --prefix tools/e2e-tests run test:group -- monorepo
+
+# Verify every non-Accounts test belongs to exactly one CI group
+npm --prefix tools/e2e-tests run test:groups:audit
 ```
+
+CI group names and their anchored Jest patterns live in `test-groups.js`.
+Update that file when adding or renaming a suite; the audit rejects unassigned
+tests, tests selected by multiple jobs, empty groups, and workflow/mapping drift.

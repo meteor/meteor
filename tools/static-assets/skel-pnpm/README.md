@@ -32,8 +32,14 @@ cd apps/app
 meteor run
 ```
 
-The app sets `meteor.autoInstallDeps` to `false` because pnpm owns dependency
-installation for the workspace. Add npm dependencies with pnpm from the
-workspace root or the relevant workspace package. You can use Corepack when it
-is installed (`corepack pnpm ...`) or Meteor's bundled npx
+The app uses Meteor's default `autoInstallDeps` behavior, allowing Meteor to
+keep its required Rspack dependencies compatible using pnpm. Meteor tries a
+directly available pnpm command first and then Corepack; if neither succeeds,
+it prints workspace-aware commands before stopping so you can complete the
+install manually. Set `meteor.autoInstallDeps` to `false` only when you want to
+manage those dependencies yourself.
+
+Add your own npm dependencies with pnpm from the workspace root or the relevant
+workspace package. You can use Corepack when it is installed
+(`corepack pnpm ...`) or Meteor's bundled npx
 (`meteor npx pnpm@10.13.1 ...`).
