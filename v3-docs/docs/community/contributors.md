@@ -54,7 +54,7 @@ No members are listed yet — additions are made by pull request against this pa
 
 ## Alumni
 
-People who shaped Meteor and earned lasting recognition for it. See [GOVERNANCE.md](https://github.com/meteor/meteor/blob/devel/GOVERNANCE.md#alumni) for how the Alumni status works.
+Former Core Maintainers who earned lasting recognition for their contributions. See [GOVERNANCE.md](https://github.com/meteor/meteor/blob/devel/GOVERNANCE.md#alumni) for how the Alumni status works.
 
 Currently no members.
 
