@@ -17,6 +17,19 @@ if (!group) {
 
 const testRoot = path.resolve(__dirname, '..');
 const jestBin = path.join(testRoot, 'node_modules', 'jest', 'bin', 'jest.js');
+const jestEnv = { ...process.env };
+
+// npm --prefix and nested npm scripts expose their working-directory prefixes
+// to descendants. E2E setup later runs npm commands from temporary apps, so an
+// inherited prefix can make `npm link` use tools/e2e-tests/lib as its global
+// link directory. Let each child npm process resolve its prefix from its cwd.
+[
+  'npm_config_prefix',
+  'npm_config_local_prefix',
+  'NPM_CONFIG_PREFIX',
+  'NPM_CONFIG_LOCAL_PREFIX',
+].forEach(name => delete jestEnv[name]);
+
 const result = spawnSync(
   process.execPath,
   [
@@ -30,7 +43,7 @@ const result = spawnSync(
   ],
   {
     cwd: testRoot,
-    env: process.env,
+    env: jestEnv,
     stdio: 'inherit',
   }
 );

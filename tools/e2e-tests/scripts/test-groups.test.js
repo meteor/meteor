@@ -4,6 +4,7 @@ const {
   GROUP_EXCLUDED_TEST_PATH_PATTERN,
   TEST_GROUPS,
 } = require('../test-groups');
+const path = require('path');
 
 describe('CLI / E2E test group fallback /', () => {
   test('selects names that do not match an explicit group', () => {
@@ -40,5 +41,14 @@ describe('CLI / E2E test group fallback /', () => {
         '/workspace/apps/example/tests/main.test.js'
       )
     ).toBe(true);
+  });
+
+  test('does not leak npm working-directory prefixes into E2E setup', () => {
+    const testRoot = path.resolve(__dirname, '..');
+
+    expect(process.env.npm_config_prefix).not.toBe(testRoot);
+    expect(process.env.npm_config_local_prefix).not.toBe(testRoot);
+    expect(process.env.NPM_CONFIG_PREFIX).not.toBe(testRoot);
+    expect(process.env.NPM_CONFIG_LOCAL_PREFIX).not.toBe(testRoot);
   });
 });
