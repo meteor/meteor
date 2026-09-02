@@ -56,6 +56,7 @@ jobs:
         include:
           - category: CLI
             group: cli
+            audit: true
           - category: Angular
             group: angular
           - category: Babel
@@ -137,7 +138,7 @@ jobs:
         run: npm run install:e2e
 
       - name: Audit E2E test groups
-        if: matrix.group == 'cli'
+        if: matrix.audit
         run: npm run test:e2e:groups:audit
 
       - name: Set NPM_LINK_RSPACK=false for release branches
