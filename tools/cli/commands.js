@@ -2528,6 +2528,20 @@ async function doTestCommand(options) {
 
   options.cordovaRunner = cordovaRunner;
 
+  // test-in-node attaches its own node:test reporter at process start (see
+  // tools/runners/run-app.js). A user --test-reporter in SERVER_NODE_OPTIONS
+  // would make Node see two reporters (aborting at startup when reporter and
+  // destination counts mismatch) — and replacing ours would sever the driver's
+  // event bridge, so the run would never finalize. Fail fast with guidance.
+  if (global.testCommandMetadata.driverPackage === 'test-in-node' &&
+      /(^|\s)--test-reporter(=|\s|$)/.test(process.env.SERVER_NODE_OPTIONS || '')) {
+    Console.error(
+      "SERVER_NODE_OPTIONS sets --test-reporter, which conflicts with the " +
+      "test-in-node driver (it attaches its own reporter automatically). " +
+      "Remove --test-reporter from SERVER_NODE_OPTIONS.");
+    return 1;
+  }
+
   return await runTestAppForPackages(projectContext, Object.assign(
     options,
     {
