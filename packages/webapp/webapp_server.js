@@ -1525,7 +1525,18 @@ async function runWebAppServer() {
     let unixSocketPath = process.env.UNIX_SOCKET_PATH;
 
     if (unixSocketPath) {
-      if (cluster.isWorker) {
+      // Each cluster worker is a fully independent Meteor server with its own
+      // in-memory state (DDP sessions, subscriptions), so by default every
+      // worker gets its own socket file, named by appending the worker's
+      // "name" environment variable (or its cluster worker id) to
+      // UNIX_SOCKET_PATH. A reverse proxy can then target each worker
+      // individually, e.g. for session affinity.
+      //
+      // When the forking process instead assigns each worker a unique path
+      // directly (e.g. cluster.fork({ UNIX_SOCKET_PATH: ... })), set
+      // UNIX_SOCKET_NO_WORKER_SUFFIX to use UNIX_SOCKET_PATH exactly as
+      // given.
+      if (cluster.isWorker && !process.env.UNIX_SOCKET_NO_WORKER_SUFFIX) {
         const workerName = cluster.worker.process.env.name || cluster.worker.id;
         unixSocketPath += '.' + workerName + '.sock';
       }
