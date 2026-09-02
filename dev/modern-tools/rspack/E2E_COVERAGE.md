@@ -257,6 +257,7 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
 | full | 3204 | JS | `imports/api/` test structure |
+| pnpm | 3222 | JS + TypeScript workspace package | pnpm workspace root with Meteor at `apps/app`; root install via Corepack/bundled npx fallback, `workspace:*` linking, transitive pnpm-store resolution, nested app lifecycle, built-app boot, and workspace dependencies preserved by reset |
 | react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
@@ -294,6 +295,12 @@ Several apps import specific npm packages to verify that Meteor + Rspack handles
 | Package | File | Reason |
 |---------|------|--------|
 | `color` | `packages/domain/src/index.js` | npm dependency of a `workspace:*` package, pulling a multi-level transitive tree (`color-convert`, `color-name`, `color-string`, `simple-swizzle`, `is-arrayish`) — pnpm does not hoist these to the app, so it validates transitive resolution through the pnpm store |
+
+### pnpm skeleton (`tools/static-assets/skel-pnpm/packages/domain/`)
+
+| Package | File | Reason |
+|---------|------|--------|
+| `color` | `packages/domain/src/index.js` | Verifies a generated `workspace:*` package can resolve its non-hoisted transitive dependency tree through the pnpm store |
 
 ### react (`apps/react/plugins/demo-unplugin.js`)
 
@@ -356,9 +363,9 @@ Where each feature is tested across apps and skeletons.
 | Server bundle excluded from Meteor linker payload | server-only regression | |
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
-| Monorepo layout | monorepo, pnpm-monorepo | |
-| pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | |
-| Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | |
+| Monorepo layout | monorepo, pnpm-monorepo | pnpm |
+| pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | pnpm |
+| Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | pnpm |
 | Full-app test mode | react-router | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
@@ -367,7 +374,7 @@ Where each feature is tested across apps and skeletons.
 | CSS auto-delegation (entry folder filtering) | vue | |
 | `meteor.modules` config (preserve files for Meteor) | react-router, vue | |
 | `meteor reset` cleanup | all apps | all skeletons |
-| Skeleton creation | | all 14 skeletons |
+| Skeleton creation | | all 16 tested skeletons |
 | Body style assertions | | react, tailwind (custom); most others (default) |
 | Custom .gitignore entries | react | |
 | ESM-only packages | react-router, monorepo, babel | |

@@ -153,7 +153,7 @@ Options:
 
 >>> create
 Create a new project.
-Usage: meteor create [--release <release>] [--bare|--minimal|--full|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid|--babel|--coffeescript|--angular] <path>
+Usage: meteor create [--release <release>] [--bare|--minimal|--full|--pnpm|--react|--vue|--apollo|--svelte|--blaze|--tailwind|--chakra-ui|--solid|--babel|--coffeescript|--angular] <path>
        meteor create [--release <release>] --example <slug> [<path>]
        meteor create [--release <release>] <url> [<path>] [--from-branch <branch>] [--from-dir <dir>]
        meteor create [--release <release>] <path> <url> [--from-branch <branch>] [--from-dir <dir>]
@@ -192,6 +192,7 @@ Skeleton options:
   --bare         Create an empty app.
   --minimal      Create an app with as few Meteor packages as possible.
   --full         Create a fully scaffolded app.
+  --pnpm         Create a pnpm monorepo with a Meteor app in apps/app.
   --react        Create a basic react-based app, same as default.
   --vue          Create a basic vue3-based app.
   --apollo       Create a basic apollo-based app.

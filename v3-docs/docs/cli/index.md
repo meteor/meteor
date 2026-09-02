@@ -249,6 +249,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
   Blaze     # To create an app using Blaze
   Full      # To create a more complete scaffolded app
   Minimal   # To create an app with as few Meteor packages as possible
+  Pnpm      # To create a pnpm monorepo with a Meteor app and shared packages
   React     # To create a basic React-based app
   Typescript # To create an app using TypeScript and React
   Typescript-tailwind # To create an app using TypeScript, React, and Tailwind
@@ -294,7 +295,20 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--minimal` | Create with minimal Meteor packages |
 | `--bare` | Create an empty app (Blaze + MongoDB) |
 | `--full` | Create a fully scaffolded app with imports-based structure (Blaze + MongoDB) |
+| `--pnpm` | Create a pnpm monorepo with a Meteor app at `apps/app` and reusable packages under `packages/` |
 | `--package` | Create a new package instead of an application |
+
+The pnpm skeleton is created and installed as one monorepo workspace:
+
+```bash
+meteor create --pnpm my-workspace
+cd my-workspace
+meteor npm start
+```
+
+pnpm owns dependency installation for this skeleton, while Meteor commands run
+against the nested `apps/app` project. The root `start` and `test` scripts route
+to that application; `meteor npm` is only used above to invoke the root script.
 
 ::: warning Prototype Mode
 The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).

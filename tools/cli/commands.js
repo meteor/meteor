@@ -687,6 +687,7 @@ export const AVAILABLE_SKELETONS = [
   "blaze",
   "full",
   "minimal",
+  "pnpm",
   DEFAULT_SKELETON,
   "typescript",
   "typescript-tailwind",
@@ -706,6 +707,7 @@ const SKELETON_INFO = {
   "blaze": "To create an app using Blaze",
   "full": "To create a more complete scaffolded app",
   "minimal": "To create an app with as few Meteor packages as possible",
+  "pnpm": "To create a pnpm monorepo with a Meteor app and shared packages",
   "react": "To create a basic React-based app",
   "typescript": "To create an app using TypeScript and React",
   "typescript-tailwind": "To create an app using TypeScript, React, and Tailwind",
@@ -719,6 +721,19 @@ const SKELETON_INFO = {
   "angular": "To create a basic Angular app"
 };
 
+// Most skeletons are Meteor apps rooted at the created directory and use npm.
+// Entries here only describe skeletons that need a different project or install
+// root, keeping nested workspace support additive for future skeletons.
+const SKELETON_CONFIG = {
+  pnpm: {
+    appPath: "apps/app",
+    installAtRoot: true,
+    packageManager: "pnpm",
+    projectKind: "pnpm monorepo",
+    runCommand: "meteor npm start",
+  },
+};
+
 main.registerCommand({
   name: 'create',
   maxArgs: 2,
@@ -730,6 +745,7 @@ main.registerCommand({
     babel: { type: Boolean },
     bare: { type: Boolean },
     minimal: { type: Boolean },
+    pnpm: { type: Boolean },
     full: { type: Boolean },
     blaze: { type: Boolean },
     react: { type: Boolean },
@@ -1107,11 +1123,18 @@ main.registerCommand({
   }
   // Setup fn, which is called after the app is created, to print a message
   // about how to run the app.
-  async function setupMessages() {
+  async function setupMessages({
+    projectDir = appPath,
+    installDir = projectDir,
+    packageManager = "npm",
+    runCommand = "meteor",
+    runPathAsEntered = appPathAsEntered,
+    projectKind = "app",
+  } = {}) {
     // We are actually working with a new meteor project at this point, so
     // set up its context.
     var projectContext = new projectContextModule.ProjectContext({
-      projectDir: appPath,
+      projectDir,
       // Write .meteor/versions even if --release is specified.
       alwaysWritePackageMap: true,
       // examples come with a .meteor/versions file, but we shouldn't take it
@@ -1157,16 +1180,17 @@ main.registerCommand({
     // the packages (or maybe an unpredictable subset based on what happens to be
     // in the template's versions file).
 
-    // Since some of the project skeletons include npm `devDependencies`, we need
-    // to make sure they're included when running `npm install`.
-    await require("./default-npm-deps.js").install(appPath, {
+    // Since some project skeletons include `devDependencies`, make sure they
+    // are included when installing with the skeleton's package manager.
+    await require("./default-npm-deps.js").install(installDir, {
       includeDevDependencies: true,
+      packageManager,
     });
 
     var appNameToDisplay =
       appPathAsEntered === "." ? "current directory" : `'${appPathAsEntered}'`;
 
-    var message = `Created a new Meteor app in ${appNameToDisplay}`;
+    var message = `Created a new Meteor ${projectKind} in ${appNameToDisplay}`;
 
     message += ".";
 
@@ -1178,18 +1202,18 @@ main.registerCommand({
 
 
 
-    if (appPathAsEntered !== ".") {
+    if (runPathAsEntered !== ".") {
       // Wrap the app path in quotes if it contains spaces
       const appPathWithQuotesIfSpaces =
-        appPathAsEntered.indexOf(" ") === -1
-          ? appPathAsEntered
-          : `'${appPathAsEntered}'`;
+        runPathAsEntered.indexOf(" ") === -1
+          ? runPathAsEntered
+          : `'${runPathAsEntered}'`;
 
       // Don't tell people to 'cd .'
       cmd("cd " + appPathWithQuotesIfSpaces);
     }
 
-    cmd("meteor");
+    cmd(runCommand);
 
     Console.info("");
     Console.info(
@@ -1370,7 +1394,17 @@ main.registerCommand({
       await copyFromLocalSkeleton();
     }
   }
-  await setupMessages();
+  const skeletonConfig = SKELETON_CONFIG[skeleton] || {};
+  const projectDir = skeletonConfig.appPath
+    ? files.pathJoin(appPath, skeletonConfig.appPath)
+    : appPath;
+  await setupMessages({
+    projectDir,
+    installDir: skeletonConfig.installAtRoot ? appPath : projectDir,
+    packageManager: skeletonConfig.packageManager,
+    runCommand: skeletonConfig.runCommand,
+    projectKind: skeletonConfig.projectKind,
+  });
 
   Console.info("");
 });

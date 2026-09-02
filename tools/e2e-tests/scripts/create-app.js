@@ -431,7 +431,15 @@ async function setupFromSkeleton(skeletonName, destDir, { force = false } = {}) 
     stdio: 'inherit',
   });
 
-  const appPackageJsonPath = path.join(destDir, 'package.json');
+  const isPnpmWorkspace = fs.existsSync(path.join(destDir, 'pnpm-workspace.yaml'));
+  const nestedMeteorAppPath = fs.existsSync(path.join(destDir, 'apps', 'app', '.meteor'))
+    ? path.join('apps', 'app')
+    : null;
+  const meteorAppDir = nestedMeteorAppPath
+    ? path.join(destDir, nestedMeteorAppPath)
+    : destDir;
+  const packageManager = isPnpmWorkspace ? 'pnpm' : 'npm';
+  const appPackageJsonPath = path.join(meteorAppDir, 'package.json');
 
   const envVars = extractEnvVarsFromTestFile(skeletonName, false);
   if (Object.keys(envVars).length > 0) {
@@ -441,16 +449,29 @@ async function setupFromSkeleton(skeletonName, destDir, { force = false } = {}) 
 
   log.step('Adding rspack package...');
   await execa(METEOR_EXECUTABLE, ['add', 'rspack'], {
-    cwd: destDir,
+    cwd: meteorAppDir,
     stdio: 'inherit',
     ...execEnv,
   });
 
   log.step('Linking local @meteorjs/rspack...');
-  await linkLocalRspack(destDir, { env: envVars });
+  await linkLocalRspack(meteorAppDir, { env: envVars, packageManager });
 
-  log.step('Running meteor npm install...');
-  await execa(METEOR_EXECUTABLE, ['npm', 'install'], { cwd: destDir, stdio: 'inherit', ...execEnv });
+  if (packageManager === 'pnpm') {
+    log.step('Running pnpm install at workspace root...');
+    await execa('corepack', ['pnpm', 'install', '--frozen-lockfile=false'], {
+      cwd: destDir,
+      stdio: 'inherit',
+      ...execEnv,
+    });
+  } else {
+    log.step('Running meteor npm install...');
+    await execa(METEOR_EXECUTABLE, ['npm', 'install'], {
+      cwd: meteorAppDir,
+      stdio: 'inherit',
+      ...execEnv,
+    });
+  }
 
   if (fs.existsSync(appPackageJsonPath)) {
     log.step('Injecting npm scripts into package.json...');

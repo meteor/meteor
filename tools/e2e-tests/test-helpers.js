@@ -1047,6 +1047,8 @@ export function testMeteorRspackBundler(options) {
  * @param {string} options.skeletonName - Name of the skeleton to test (e.g., 'react', 'apollo', 'vue')
  * @param {string} options.title - Title to use for assertions (defaults to skeletonName if not provided)
  * @param {number} options.port - Port to run the app on
+ * @param {string} options.meteorAppPath - Meteor app path relative to the created project root
+ * @param {string} options.packageManager - Package manager used by the skeleton ("npm" or "pnpm")
  * @param {Object} options.filePaths - File paths for the app
  * @param {string} options.filePaths.client - Client file path (e.g., 'client/main.jsx')
  * @param {string} options.filePaths.server - Server file path (e.g., 'server/main.js')
@@ -1071,6 +1073,8 @@ export function testMeteorSkeleton(options) {
     skeletonName,
     title = skeletonName, // Default to skeletonName if title is not provided
     port,
+    meteorAppPath = ".",
+    packageManager = "npm",
     // Rspack dev server port. Defaults to 18080 to avoid colliding with dev servers
     // that some skeletons bundle on :8080 (e.g. Angular CLI's webpack-dev-server).
     devServerPort = 18080,
@@ -1104,6 +1108,7 @@ export function testMeteorSkeleton(options) {
   return () => {
     let meteorProcess;
     let tempDir;
+    let appDir;
     let appReady = false;
     let previousRspackDevServerPort;
 
@@ -1115,7 +1120,7 @@ export function testMeteorSkeleton(options) {
 
       // Run additional beforeAll behavior
       if (beforeAllBehavior) {
-        await beforeAllBehavior({ tempDir, port });
+        await beforeAllBehavior({ tempDir, appDir, port });
       }
 
       // Ensure any process on the port is killed
@@ -1130,7 +1135,7 @@ export function testMeteorSkeleton(options) {
 
       // Run additional afterAll behavior
       if (afterAllBehavior) {
-        await afterAllBehavior({ tempDir, port });
+        await afterAllBehavior({ tempDir, appDir, port });
       }
 
       // Restore the previous RSPACK_DEVSERVER_PORT so neighbouring describes aren't affected.
@@ -1155,8 +1160,9 @@ export function testMeteorSkeleton(options) {
         if (isCreateTest && !appReady) {
           await cleanupTempDir(tempDir);
           tempDir = undefined;
+          appDir = undefined;
         } else {
-          await clearBuildArtifacts(tempDir);
+          await clearBuildArtifacts(appDir);
         }
       }
 
@@ -1191,6 +1197,7 @@ export function testMeteorSkeleton(options) {
       // the shared npm cache and produces broken symlinks in node_modules.
       const result = await createMeteorApp(skeletonName, skeletonName);
       tempDir = result.tempDir;
+      appDir = path.join(tempDir, meteorAppPath);
       meteorProcess = result.meteorProcess;
 
       // Wait for the process to complete
@@ -1198,20 +1205,20 @@ export function testMeteorSkeleton(options) {
       meteorProcess = null;
 
       // Check if the app directory exists
-      const appDirExists = await fs.pathExists(tempDir);
+      const appDirExists = await fs.pathExists(appDir);
       expect(appDirExists).toBe(true);
 
       // Check if package.json exists
-      const packageJsonPath = path.join(tempDir, "package.json");
+      const packageJsonPath = path.join(appDir, "package.json");
       const packageJsonExists = await fs.pathExists(packageJsonPath);
       expect(packageJsonExists).toBe(true);
 
       // Link local meteor-rspack so the app picks up the latest dev version
-      await linkLocalRspack(tempDir);
+      await linkLocalRspack(appDir, { packageManager });
 
       // Run custom assertions if provided
       if (customAssertions.afterCreate) {
-        await customAssertions.afterCreate({ tempDir, packageJsonPath });
+        await customAssertions.afterCreate({ tempDir, appDir, packageJsonPath });
       }
 
       appReady = true;
@@ -1219,7 +1226,7 @@ export function testMeteorSkeleton(options) {
 
     test(`"meteor run" / should run the ${skeletonName} app`, async () => {
       // Run the newly created app
-      const result = await runMeteorApp(tempDir, port, {
+      const result = await runMeteorApp(appDir, port, {
         waitForOutput: "=> App running at",
         env: env.meteorRun
       });
@@ -1243,7 +1250,7 @@ export function testMeteorSkeleton(options) {
 
       // Run custom assertions if provided
       if (customAssertions.afterRun) {
-        await customAssertions.afterRun({ tempDir, port, meteorProcess, result });
+        await customAssertions.afterRun({ tempDir, appDir, port, meteorProcess, result });
       }
 
       // Kill the meteor process
@@ -1255,7 +1262,7 @@ export function testMeteorSkeleton(options) {
 
     test(`"meteor run --production" / should run the ${skeletonName} app in production mode`, async () => {
       // Run the app in production mode
-      const result = await runMeteorApp(tempDir, port, {
+      const result = await runMeteorApp(appDir, port, {
         waitForOutput: "=> App running at",
         commandOptions: ["--production"],
         env: env.meteorRunProduction
@@ -1280,7 +1287,7 @@ export function testMeteorSkeleton(options) {
 
       // Run custom assertions if provided
       if (customAssertions.afterRunProduction) {
-        await customAssertions.afterRunProduction({ tempDir, port, meteorProcess, result });
+        await customAssertions.afterRunProduction({ tempDir, appDir, port, meteorProcess, result });
       }
 
       // Kill the meteor process
@@ -1297,16 +1304,26 @@ export function testMeteorSkeleton(options) {
       console.log(`Installing playwright@${playwrightVersion} as a dev dependency...`);
       const repoRoot = path.resolve(process.cwd(), "..", "..");
       const meteorBin = path.join(repoRoot, "meteor");
-      await execa(meteorBin, [
-        'npm', 'i', '--save-dev', '--save-exact', `playwright@${playwrightVersion}`
-      ], {
-        cwd: tempDir,
-        stdio: "inherit"
-      });
-      await linkLocalRspack(tempDir);
+      if (packageManager === "pnpm") {
+        await execa("corepack", [
+          "pnpm", "add", "--save-dev", "--save-exact",
+          `playwright@${playwrightVersion}`,
+        ], {
+          cwd: appDir,
+          stdio: "inherit",
+        });
+      } else {
+        await execa(meteorBin, [
+          'npm', 'i', '--save-dev', '--save-exact', `playwright@${playwrightVersion}`
+        ], {
+          cwd: appDir,
+          stdio: "inherit"
+        });
+      }
+      await linkLocalRspack(appDir, { packageManager });
 
       // Run tests once for the app
-      const result = await runMeteorTests(tempDir, port, {
+      const result = await runMeteorTests(appDir, port, {
         waitForOutput: skipTestClient ? "TEST_CLIENT=0" : "=> App running at",
         commandOptions: ["--once"],
         checkTestResults: true,
@@ -1319,7 +1336,7 @@ export function testMeteorSkeleton(options) {
 
       // Run custom assertions if provided
       if (customAssertions.afterTestOnce) {
-        await customAssertions.afterTestOnce({ tempDir, port, result });
+        await customAssertions.afterTestOnce({ tempDir, appDir, port, result });
       }
 
       // Ensure any process on the port is killed
@@ -1328,7 +1345,7 @@ export function testMeteorSkeleton(options) {
 
     test(`"meteor build" / should build and run the ${skeletonName} app`, async () => {
       // Build the app
-      const { buildOutputDir, processResult: result } = await buildMeteorApp(tempDir, {
+      const { buildOutputDir, processResult: result } = await buildMeteorApp(appDir, {
         commandOptions: ["--directory"],
         captureOutput: true,
         env: { ...env, ...(env.meteorBuild || {}) },
@@ -1376,7 +1393,7 @@ export function testMeteorSkeleton(options) {
 
         // Run custom assertions if provided
         if (customAssertions.afterBuild) {
-          await customAssertions.afterBuild({ tempDir, buildOutputDir, result, fileCheckResults });
+          await customAssertions.afterBuild({ tempDir, appDir, buildOutputDir, result, fileCheckResults });
         }
 
         // Boot the built bundle to verify it actually runs, not just that the
@@ -1411,7 +1428,7 @@ export function testMeteorSkeleton(options) {
 
               if (customAssertions.afterRunBuiltApp) {
                 await customAssertions.afterRunBuiltApp({
-                  tempDir, buildOutputDir, port, mongoUrl: mongo.mongoUrl,
+                  tempDir, appDir, buildOutputDir, port, mongoUrl: mongo.mongoUrl,
                 });
               }
             } finally {
@@ -1440,7 +1457,7 @@ export function testMeteorSkeleton(options) {
       // Re-seed by running meteor briefly when the skeleton produces build caches.
       if (isRetryAttempt() && !skipBuildCacheCheck) {
         console.log('[retry] re-seeding build artifacts for meteor reset test');
-        const seedResult = await runMeteorApp(tempDir, port, {
+        const seedResult = await runMeteorApp(appDir, port, {
           waitForOutput: "=> App running at",
           env: env.meteorRun,
         });
@@ -1450,55 +1467,55 @@ export function testMeteorSkeleton(options) {
 
       // Verify build artifacts exist from previous tests
       if (!skipBuildCacheCheck) {
-        await assertFileExist(tempDir, "_build");
-        await assertFileExist(tempDir, "node_modules/.cache/rspack");
+        await assertFileExist(appDir, "_build");
+        await assertFileExist(appDir, "node_modules/.cache/rspack");
       }
 
       // Run meteor reset
-      await runMeteorCommand('reset', [], tempDir, {
+      await runMeteorCommand('reset', [], appDir, {
         checkExitCode: true,
         env: resetEnv,
       });
 
       // Verify Rspack build artifacts removed
-      await assertPathNotExist(tempDir, '_build');
-      await assertPathNotExist(tempDir, 'node_modules/.cache/rspack');
-      await assertPathNotExist(tempDir, 'node_modules/.cache/meteor');
-      await assertPathNotExist(tempDir, assetsContext);
-      await assertPathNotExist(tempDir, chunksContext);
-      await assertPathNotExist(tempDir, `public/${assetsContext}`);
-      await assertPathNotExist(tempDir, `public/${chunksContext}`);
+      await assertPathNotExist(appDir, '_build');
+      await assertPathNotExist(appDir, 'node_modules/.cache/rspack');
+      await assertPathNotExist(appDir, 'node_modules/.cache/meteor');
+      await assertPathNotExist(appDir, assetsContext);
+      await assertPathNotExist(appDir, chunksContext);
+      await assertPathNotExist(appDir, `public/${assetsContext}`);
+      await assertPathNotExist(appDir, `public/${chunksContext}`);
 
       // Also verify defaults are cleaned to prevent regressions
-      await assertPathNotExist(tempDir, 'public/build-assets');
-      await assertPathNotExist(tempDir, 'public/build-chunks');
+      await assertPathNotExist(appDir, 'public/build-assets');
+      await assertPathNotExist(appDir, 'public/build-chunks');
 
       // When METEOR_LOCAL_DIR is set, also verify suffixed paths are cleaned
       if (localDirSuffix) {
-        await assertPathNotExist(tempDir, `_build${localDirSuffix}`);
-        await assertPathNotExist(tempDir, `${assetsContext}${localDirSuffix}`);
-        await assertPathNotExist(tempDir, `${chunksContext}${localDirSuffix}`);
-        await assertPathNotExist(tempDir, `public/${assetsContext}${localDirSuffix}`);
-        await assertPathNotExist(tempDir, `public/${chunksContext}${localDirSuffix}`);
-        await assertPathNotExist(tempDir, `public/build-assets${localDirSuffix}`);
-        await assertPathNotExist(tempDir, `public/build-chunks${localDirSuffix}`);
+        await assertPathNotExist(appDir, `_build${localDirSuffix}`);
+        await assertPathNotExist(appDir, `${assetsContext}${localDirSuffix}`);
+        await assertPathNotExist(appDir, `${chunksContext}${localDirSuffix}`);
+        await assertPathNotExist(appDir, `public/${assetsContext}${localDirSuffix}`);
+        await assertPathNotExist(appDir, `public/${chunksContext}${localDirSuffix}`);
+        await assertPathNotExist(appDir, `public/build-assets${localDirSuffix}`);
+        await assertPathNotExist(appDir, `public/build-chunks${localDirSuffix}`);
       }
 
       // Verify default .meteor/local caches are always cleaned
-      await assertPathNotExist(tempDir, '.meteor/local/build');
-      await assertPathNotExist(tempDir, '.meteor/local/bundler-cache');
-      await assertPathNotExist(tempDir, '.meteor/local/plugin-cache');
+      await assertPathNotExist(appDir, '.meteor/local/build');
+      await assertPathNotExist(appDir, '.meteor/local/bundler-cache');
+      await assertPathNotExist(appDir, '.meteor/local/plugin-cache');
 
       // When METEOR_LOCAL_DIR is set, also verify custom local dir is cleaned
       if (meteorLocalDirEnv && meteorLocalDirEnv !== '.meteor/local') {
-        await assertPathNotExist(tempDir, `${meteorLocalDirEnv}/build`);
-        await assertPathNotExist(tempDir, `${meteorLocalDirEnv}/bundler-cache`);
-        await assertPathNotExist(tempDir, `${meteorLocalDirEnv}/plugin-cache`);
+        await assertPathNotExist(appDir, `${meteorLocalDirEnv}/build`);
+        await assertPathNotExist(appDir, `${meteorLocalDirEnv}/bundler-cache`);
+        await assertPathNotExist(appDir, `${meteorLocalDirEnv}/plugin-cache`);
       }
 
       // Run custom assertions if provided
       if (customAssertions.afterReset) {
-        await customAssertions.afterReset({ tempDir });
+        await customAssertions.afterReset({ tempDir, appDir });
       }
     });
   };

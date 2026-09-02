@@ -43,6 +43,31 @@ async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
   }
 }
 
+async function assertPnpmBrowser() {
+  const statusText = await page.$eval(
+    '#workspace-status',
+    (element) => element.textContent
+  );
+  expect(statusText).toContain('@example/ui');
+  expect(statusText).toContain('client package compiled by Rspack');
+
+  const accentText = await page.$eval(
+    '#accent-color',
+    (element) => element.textContent
+  );
+  expect(accentText).toContain('#40E0D0');
+}
+
+async function assertPnpmRuntime({ result }) {
+  await waitForMeteorOutput(
+    result.outputLines,
+    /domain:server:pnpm workspace package loaded on the server/,
+  );
+  await waitForMeteorOutput(result.outputLines, /@example\/server:compiled/);
+  await waitForMeteorOutput(result.outputLines, /domain:server:accent #40E0D0/);
+  await assertPnpmBrowser();
+}
+
 describe('Meteor Skeletons /', () => {
   describe(
     'Angular Skeleton /',
@@ -156,6 +181,74 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.js',
         server: 'server/main.js',
         test: 'imports/api/links/methods.tests.js',
+      },
+    })
+  );
+
+  describe(
+    'Pnpm Skeleton /',
+    testMeteorSkeleton({
+      skeletonName: 'pnpm',
+      port: 3222,
+      meteorAppPath: 'apps/app',
+      packageManager: 'pnpm',
+      filePaths: {
+        client: 'client/main.js',
+        server: 'server/main.js',
+        test: 'tests/main.test.js',
+      },
+      customAssertions: {
+        async afterCreate({ tempDir, appDir }) {
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-workspace.yaml'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-lock.yaml'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(appDir, '.meteor', 'release'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(
+              path.join(appDir, 'node_modules', '@example', 'shared')
+            )
+          ).toBe(true);
+
+          const workspaceName = path.basename(tempDir);
+          const rootPackageJson = await fs.readJson(
+            path.join(tempDir, 'package.json')
+          );
+          const appPackageJson = await fs.readJson(
+            path.join(appDir, 'package.json')
+          );
+          expect(rootPackageJson.name).toBe(workspaceName);
+          expect(appPackageJson.name).toBe(`${workspaceName}-app`);
+          expect(appPackageJson.meteor.autoInstallDeps).toBe(false);
+          expect(appPackageJson.dependencies['@example/shared']).toBe(
+            'workspace:*'
+          );
+        },
+        afterRun: assertPnpmRuntime,
+        afterRunProduction: assertPnpmRuntime,
+        afterRunBuiltApp: assertPnpmBrowser,
+        async afterTestOnce({ result }) {
+          await waitForMeteorOutput(
+            result.outputLines,
+            /pnpm workspace packages compiled/,
+          );
+          await waitForMeteorOutput(
+            result.outputLines,
+            /pnpm transitive dependencies resolved/,
+          );
+        },
+        async afterReset({ tempDir }) {
+          expect(
+            await fs.pathExists(path.join(tempDir, 'node_modules'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-lock.yaml'))
+          ).toBe(true);
+        },
       },
     })
   );
