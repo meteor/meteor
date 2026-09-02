@@ -1012,6 +1012,13 @@ function packageNameFromTopLevelModuleId(id) {
 
 const SwcCacheContext = '.swc-cache';
 
+function isIgnorableSwcCacheWriteError(error) {
+  return error && (
+    error.code === 'ENOENT' ||
+    error.code === 'ENOTDIR'
+  );
+}
+
 BCp.readFromSwcCache = function({ cacheKey }) {
   // Check in-memory cache.
   let compilation = this._swcCache[cacheKey];
@@ -1037,16 +1044,20 @@ BCp.writeToSwcCache = function({ cacheKey, compilation }) {
   // If file system caching is enabled, write asynchronously.
   if (this.cacheDirectory) {
     const cacheFilePath = path.join(this.cacheDirectory, SwcCacheContext, `${cacheKey}.json`);
-    try {
-      const writeFileCache = async () => {
-        await fs.promises.mkdir(path.dirname(cacheFilePath), { recursive: true });
-        await fs.promises.writeFile(cacheFilePath, JSON.stringify(compilation), 'utf8');
-      };
-      // Invoke without blocking the main flow.
-      writeFileCache();
-    } catch (err) {
-      // If writing fails, ignore the error.
-    }
+    const writeFileCache = async () => {
+      await fs.promises.mkdir(path.dirname(cacheFilePath), { recursive: true });
+      await fs.promises.writeFile(cacheFilePath, JSON.stringify(compilation), 'utf8');
+    };
+    // This cache is best-effort, some test flows remove temp app directories
+    // before the async write finishes.
+    writeFileCache().catch((error) => {
+      if (isIgnorableSwcCacheWriteError(error)) {
+        return;
+      }
+      if (this.isVerbose()) {
+        console.warn('SWC cache write failed:', error);
+      }
+    });
   }
 };
 

@@ -2,9 +2,10 @@
  * @module dependencies
  * @description Functions for managing dependencies for Rspack plugin
  */
-import { 
-  DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION, 
+import {
+  DEFAULT_METEOR_RSPACK_REACT_REFRESH_VERSION,
   DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION,
+  DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION,
   DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION
 } from "./constants";
 
@@ -33,6 +34,7 @@ const {
 
 const {
   DEFAULT_RSPACK_VERSION,
+  DEFAULT_RSPACK_DEV_SERVER_VERSION,
   DEFAULT_METEOR_RSPACK_VERSION,
   DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION,
   GLOBAL_STATE_KEYS,
@@ -148,8 +150,10 @@ async function ensureDependenciesInstalled(dependencies, globalStateKey, package
       if (!devDepsSuccess) allFailedDeps.push('dev dependencies');
       if (!regularDepsSuccess) allFailedDeps.push('regular dependencies');
 
+      const commandWord = allFailedDeps.length === 1 ? 'command' : 'commands';
+
       throw new Error(
-        `Failed to install ${packageName} ${joinWithAnd(allFailedDeps)}. Please install them manually with the commands above.`
+        `Failed to install ${packageName} ${joinWithAnd(allFailedDeps)}. Please install them manually with the ${commandWord} above.`
       );
     }
 
@@ -177,7 +181,9 @@ export async function ensureRspackInstalled() {
   const dependencies = [
     { name: '@rspack/cli', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
     { name: '@rspack/core', version: DEFAULT_RSPACK_VERSION, semverCondition: 'gte', dev: true },
+    { name: '@rspack/dev-server', version: DEFAULT_RSPACK_DEV_SERVER_VERSION, semverCondition: 'gte', dev: true },
     { name: '@meteorjs/rspack', version: DEFAULT_METEOR_RSPACK_VERSION, semverCondition: 'gte', dev: true },
+    { name: '@swc/core', version: DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION, semverCondition: 'gte', dev: true },
     { name: '@swc/helpers', version: DEFAULT_METEOR_RSPACK_SWC_HELPERS_VERSION, semverCondition: 'gte', dev: false },
     { name: '@rsdoctor/rspack-plugin', version: DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION, semverCondition: 'gte', dev: true },
   ];

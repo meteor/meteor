@@ -79,6 +79,8 @@ describe('React App Bundling /', () => {
       env: { METEOR_LOCAL_DIR: ".meteor/local-custom" },
       customAssertions: {
         afterInit: async ({ result }) => {
+          await assertReactCompilerEnabled(result.outputLines);
+
           // Verify unplugin transform hook is called on first run (fresh cache)
           await waitForMeteorOutput(
             result.outputLines,
@@ -97,6 +99,7 @@ describe('React App Bundling /', () => {
           await assertFileExist(appDir, '.gitignore', { content: '.meteor/local-custom' });
 
           await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+          await assertReactCompilerEnabled(result.outputLines);
 
           // Check if images exist and return 200 status code
           await assertImagesExistAndLoad();
@@ -126,6 +129,7 @@ describe('React App Bundling /', () => {
         },
         afterRunProduction: async ({ result }) => {
           await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+          await assertReactCompilerEnabled(result.outputLines);
 
           // Check if images exist and return 200 status code
           await assertImagesExistAndLoad();
@@ -160,6 +164,7 @@ describe('React App Bundling /', () => {
         },
         afterTest: async ({ result }) => {
           await waitForReactEnvs(result.outputLines);
+          await assertReactCompilerEnabled(result.outputLines);
 
           // Check custom plugin is disabled with Meteor.disablePlugins
           // Use specific log prefix to avoid matching the filename in buildDependencies
@@ -171,6 +176,7 @@ describe('React App Bundling /', () => {
         },
         afterTestOnce: async ({ result }) => {
           await waitForReactEnvs(result.outputLines);
+          await assertReactCompilerEnabled(result.outputLines);
 
           // Check custom plugin is disabled with Meteor.disablePlugins
           // Use specific log prefix to avoid matching the filename in buildDependencies
@@ -182,6 +188,7 @@ describe('React App Bundling /', () => {
         },
         afterBuild: async ({ result }) => {
           await waitForReactEnvs(result.outputLines, { isJsxEnabled: true });
+          await assertReactCompilerEnabled(result.outputLines);
 
           // Check custom plugin is disabled with Meteor.disablePlugins
           // Use specific log prefix to avoid matching the filename in buildDependencies
@@ -217,6 +224,18 @@ export async function waitForReactEnvs(outputLines, options = {}) {
       options
     );
   }
+}
+
+/**
+ * Assert that the final Rspack config enables React Compiler through SWC.
+ * @param {string[]} outputLines - Rspack output lines from the current phase
+ * @returns {Promise<void>} - A promise that resolves when the option is found
+ */
+export async function assertReactCompilerEnabled(outputLines) {
+  await waitForMeteorOutput(
+    outputLines,
+    /.*reactCompiler:.*true.*/
+  );
 }
 
 /**
