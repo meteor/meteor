@@ -25,7 +25,7 @@
     "mssql": "^3.1.1",
     "mysql": "^2.15.0",
     "pify": "^4.0.1",
-    "puppeteer": "^2.1.1",
+    "puppeteer": "25.9.0",
     "react-dom": "^16.8.6",
     "react-trello": "2.1.4",
     "regenerator-runtime": "^0.11.1",
@@ -33,6 +33,14 @@
     "styled-components": "^4.3.2",
     "uuid": "^8.3.2",
     "winston": "^2.3.1"
+  },
+  "overrides": {
+    "@puppeteer/browsers": {
+      "yargs": "17.7.2"
+    }
+  },
+  "allowScripts": {
+    "puppeteer@25.9.0": true
   },
   "scripts": {
     "test": "METEOR_PROFILE=20 TEST_BROWSER_DRIVER=puppeteer meteor test --full-app --driver-package meteortesting:mocha",

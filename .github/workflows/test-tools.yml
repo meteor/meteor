@@ -56,12 +56,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Expose globally-installed puppeteer to Node.js
-        # puppeteer is pre-installed on oss-vm via `npm install -g`.
-        # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
-        # so --get-ready skips the slow `./meteor npm install -g puppeteer` step.
-        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
-
       - name: Restore dev bundle cache
         id: dev-bundle-cache
         uses: actions/cache@v4
@@ -71,10 +65,10 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json') }}
+          key: ${{ runner.os }}-node-26-meteor-tools-${{ hashFiles('meteor', 'package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-24-meteor-tools-
-            ${{ runner.os }}-node-24-meteor-
+            ${{ runner.os }}-node-26-meteor-tools-
+            ${{ runner.os }}-node-26-meteor-
 
       - name: Restore package npm cache
         id: package-npm-cache
@@ -82,7 +76,7 @@ jobs:
         with:
           path: |
             packages/**/.npm
-          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
+          key: ${{ runner.os }}-node-26-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
 
       - name: Validate Test Tools cache keys
         run: node --test scripts/ci/test-tools-cache-keys.test.js
@@ -132,9 +126,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Expose globally-installed puppeteer to Node.js
-        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
-
       - name: Restore dev bundle cache
         uses: actions/cache/restore@v4
         with:
@@ -143,17 +134,17 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json') }}
+          key: ${{ runner.os }}-node-26-meteor-tools-${{ hashFiles('meteor', 'package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-24-meteor-tools-
-            ${{ runner.os }}-node-24-meteor-
+            ${{ runner.os }}-node-26-meteor-tools-
+            ${{ runner.os }}-node-26-meteor-
 
       - name: Restore package npm cache
         uses: actions/cache/restore@v4
         with:
           path: |
             packages/**/.npm
-          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
+          key: ${{ runner.os }}-node-26-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
 
       - name: Log environment
         run: |
@@ -214,9 +205,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Expose globally-installed puppeteer to Node.js
-        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
-
       - name: Add Gradle to PATH
         # Gradle is pre-installed in the container and required by Cordova tests.
         run: echo "/home/circleci/.sdkman/candidates/gradle/8.7/bin" >> "$GITHUB_PATH"
@@ -229,17 +217,17 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-          key: ${{ runner.os }}-node-24-meteor-tools-${{ hashFiles('meteor', 'package-lock.json') }}
+          key: ${{ runner.os }}-node-26-meteor-tools-${{ hashFiles('meteor', 'package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-24-meteor-tools-
-            ${{ runner.os }}-node-24-meteor-
+            ${{ runner.os }}-node-26-meteor-tools-
+            ${{ runner.os }}-node-26-meteor-
 
       - name: Restore package npm cache
         uses: actions/cache/restore@v4
         with:
           path: |
             packages/**/.npm
-          key: ${{ runner.os }}-node-24-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
+          key: ${{ runner.os }}-node-26-pkg-npm-${{ hashFiles('packages/**/package.js', 'packages/**/npm-shrinkwrap.json') }}
 
       - name: Log environment
         env:

@@ -735,9 +735,12 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
       });
     }
 
-    const lineMatches = (line) =>
-      (typeof pattern === 'string' && line.includes(pattern)) ||
-      (pattern instanceof RegExp && pattern.test(line));
+    const stripAnsi = (line) => line.replace(/\x1b\[[0-?]*[ -/]*[@-~]/g, '');
+    const lineMatches = (line) => {
+      const plainLine = stripAnsi(line);
+      return (typeof pattern === 'string' && plainLine.includes(pattern)) ||
+        (pattern instanceof RegExp && pattern.test(plainLine));
+    };
 
     // Function to check for the pattern in the output lines
     const checkForPattern = () => {
@@ -772,11 +775,12 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
       } else {
         // Check each line for the pattern (original behavior)
         for (const line of relevantOutputLines) {
-          if (typeof pattern === 'string' && line.includes(pattern)) {
+          const plainLine = stripAnsi(line);
+          if (typeof pattern === 'string' && plainLine.includes(pattern)) {
             console.log(`Found output matching string: ${pattern}`);
             resolve(line);
             return;
-          } else if (pattern instanceof RegExp && pattern.test(line)) {
+          } else if (pattern instanceof RegExp && pattern.test(plainLine)) {
             console.log(`Found output matching regex: ${pattern}`);
             resolve(line);
             return;

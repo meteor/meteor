@@ -1,7 +1,10 @@
-import { pathJoin, getDevBundle, statOrNull } from '../fs/files';
+import { pathJoin, getDevBundle, readFile, statOrNull } from '../fs/files';
 import { batchInstallNpmModules } from '../isobuild/meteor-npm.js';
 
-export async function ensureDependencies(deps) {
+export async function ensureDependencies(
+  deps,
+  { reinstallOnVersionMismatch = false } = {},
+) {
   const devBundleLib = pathJoin(getDevBundle(), 'lib');
   const devBundleNodeModules = pathJoin(devBundleLib, 'node_modules');
 
@@ -11,7 +14,17 @@ export async function ensureDependencies(deps) {
   Object.keys(deps).forEach(dep => {
     const pkgDir = pathJoin(devBundleNodeModules, dep);
     const pkgStat = statOrNull(pkgDir);
-    const alreadyInstalled = pkgStat && pkgStat.isDirectory();
+    let alreadyInstalled = pkgStat && pkgStat.isDirectory();
+
+    if (alreadyInstalled && reinstallOnVersionMismatch) {
+      try {
+        const pkg = JSON.parse(readFile(pathJoin(pkgDir, 'package.json'), 'utf8'));
+        alreadyInstalled = pkg.version === deps[dep];
+      } catch {
+        alreadyInstalled = false;
+      }
+    }
+
     if (!alreadyInstalled) {
       const versionToInstall = deps[dep];
       needToInstall[dep] = versionToInstall;
