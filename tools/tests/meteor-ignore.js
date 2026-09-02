@@ -4,6 +4,10 @@ const Sandbox = selftest.Sandbox;
 selftest.define(".meteorignore", async function () {
   const s = new Sandbox();
   await s.init();
+  // Recursive native watches can miss a .meteorignore mutation before their
+  // subscription is ready on a busy Linux CI host. Polling observes the mtime
+  // reliably, and this test already permits a ten-second rebuild window.
+  s.set("METEOR_WATCH_FORCE_POLLING", "true");
 
   await s.createApp("myapp", "meteor-ignore");
   s.cd("myapp");
