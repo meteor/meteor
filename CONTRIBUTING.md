@@ -198,7 +198,7 @@ For more information about how to work with Meteor core, take a look at the [Dev
 
 You'll have the best chance of getting a change into core if you can build consensus in the community for it or if it is listed in the [roadmap](https://docs.meteor.com/about/roadmap.html). Start by creating a well specified Discussion [here](https://github.com/meteor/meteor/discussions).
 
-Help drive discussion and advocate for your feature on the Github ticket (and perhaps the forums). The higher the demand for the feature and the greater the clarity of it's specification will determine the likelihood of a Core Maintainer prioritizing your feature by flagging it with the `ready` label.
+Help drive discussion and advocate for your feature on the GitHub ticket (and perhaps the forums). The higher the demand for the feature and the clearer its specification, the more likely a Core Maintainer is to prioritize it by applying the `ready` label.
 
 Split features up into smaller, logically separate chunks. It is unlikely that large and complicated PRs will be merged.
 
