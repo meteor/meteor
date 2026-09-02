@@ -15,6 +15,10 @@ const packagesWorkflow = fs.readFileSync(
   path.join(__dirname, '../../.github/workflows/test-packages.yml'),
   'utf8',
 );
+const windowsWorkflow = fs.readFileSync(
+  path.join(__dirname, '../../.github/workflows/windows-selftest.yml'),
+  'utf8',
+);
 
 function matchingCacheBlocks(cachePath) {
   return workflow
@@ -106,4 +110,31 @@ test('Node 26 workflows do not restore caches created by older Node majors', () 
   );
   assert.match(packagesWorkflow, /\$\{\{ runner\.os \}\}-node-26-meteor-/);
   assert.doesNotMatch(packagesWorkflow, /\$\{\{ runner\.os \}\}-node-24-meteor-/);
+
+  const windowsCacheBlock = windowsWorkflow
+    .split(/(?=^      - name: )/m)
+    .find(block => block.includes('\n            dev_bundle/\n'));
+
+  assert.ok(windowsCacheBlock, 'expected the Windows dependency cache');
+  assert.match(
+    windowsCacheBlock,
+    /key: \$\{\{ runner\.os \}\}-node-26-meteor-\$\{\{ hashFiles\('meteor', 'meteor\.bat'\) \}\}/,
+  );
+  assert.deepEqual(
+    restoreKeys(windowsCacheBlock),
+    ['${{ runner.os }}-node-26-meteor-'],
+  );
+});
+
+test('Windows preparation retries transient get-ready failures', () => {
+  assert.match(windowsWorkflow, /\$maxAttempts = 3/);
+  assert.match(
+    windowsWorkflow,
+    /for \(\$attempt = 1; \$attempt -le \$maxAttempts; \$attempt\+\+\)/,
+  );
+  assert.match(windowsWorkflow, /if \(\$LASTEXITCODE -eq 0\)/);
+  assert.match(
+    windowsWorkflow,
+    /if \(\$attempt -eq \$maxAttempts\) \{\s*throw /,
+  );
 });
