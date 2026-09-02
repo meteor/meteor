@@ -4,9 +4,9 @@ import {
   killMeteorProcess,
   createMeteorApp,
   runMeteorApp,
-  waitForMeteorOutput, waitForPlaywrightConsole
+  waitForMeteorOutput
 } from "./helpers";
-import { testMeteorBundler, testMeteorRspackBundler } from './test-helpers';
+import { testMeteorRspackBundler } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
 import { assertMeteorReactApp, assertConsoleEval, assertFileExist } from "./assertions";
@@ -45,7 +45,7 @@ describe('React App Bundling /', () => {
       expect(packageJson.dependencies).toHaveProperty('react-dom');
 
       // Run the newly created app
-      let runAppProcess = (await runMeteorApp(newAppTempDir, PORT))?.meteorProcess;
+      const runAppProcess = (await runMeteorApp(newAppTempDir, PORT))?.meteorProcess;
 
       // Assert that the Meteor React app is running correctly
       await assertMeteorReactApp(PORT);
@@ -77,6 +77,7 @@ describe('React App Bundling /', () => {
       configFile: "rspack.config.cjs",
       buildDir: "_build-local-custom",
       env: { METEOR_LOCAL_DIR: ".meteor/local-custom" },
+      testBundleVisualizer: true,
       customAssertions: {
         afterInit: async ({ result }) => {
           // Verify unplugin transform hook is called on first run (fresh cache)

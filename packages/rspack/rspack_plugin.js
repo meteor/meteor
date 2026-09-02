@@ -39,9 +39,6 @@ const {
   runRspackBuild,
   cleanup,
   cleanupSync,
-  calculateDevServerPort,
-  calculateRsdoctorClientPort,
-  calculateRsdoctorServerPort,
   getConfigFilePath,
   getCustomConfigFilePath,
 } = require('./lib/processes');
@@ -73,7 +70,6 @@ const {
   isMeteorAppDebug,
   isMeteorAppConfigModernVerbose,
   isMeteorAppNative,
-  isMeteorBundleVisualizerProject,
 } = require('meteor/tools-core/lib/meteor');
 
 const {
@@ -183,36 +179,11 @@ if (isMeteorAppRun() || isMeteorAppBuild() || isMeteorAppTest()) {
       process.env.RSPACK_NATIVE = 'true';
     }
 
-    // Calculate and set the devServerPort at boot
-    if (!process.env.RSPACK_DEVSERVER_PORT) {
-      process.env.RSPACK_DEVSERVER_PORT = calculateDevServerPort();
-      if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-        logInfo(`[i] Rspack DevServer Port: ${process.env.RSPACK_DEVSERVER_PORT}`);
-      }
-    }
-
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
       const configFile = getConfigFilePath();
       logInfo(`[i] Rspack default config: ${configFile}`);
       const projectConfigFile = getCustomConfigFilePath();
       logInfo(`[i] Rspack custom config: ${projectConfigFile}`);
-    }
-
-    // Calculate and set the Rsdoctor client and server ports at boot only if bundle visualizer is enabled
-    if (isMeteorBundleVisualizerProject()) {
-      if (!process.env.RSDOCTOR_CLIENT_PORT) {
-        process.env.RSDOCTOR_CLIENT_PORT = calculateRsdoctorClientPort();
-        if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-          logInfo(`[i] Rsdoctor Client Port: ${process.env.RSDOCTOR_CLIENT_PORT}`);
-        }
-      }
-
-      if (!process.env.RSDOCTOR_SERVER_PORT) {
-        process.env.RSDOCTOR_SERVER_PORT = calculateRsdoctorServerPort();
-        if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-          logInfo(`[i] Rsdoctor Server Port: ${process.env.RSDOCTOR_SERVER_PORT}`);
-        }
-      }
     }
 
     // Register cleanup handlers. SIGTERM is forwarded by orchestrators (Docker,

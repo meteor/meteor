@@ -208,7 +208,6 @@ function disablePlugins(config, matchers) {
   }
 
   const plugins = Array.isArray(config.plugins) ? config.plugins : [];
-  const kept = [];
 
   const list = Array.isArray(matchers) ? matchers : [matchers];
 
@@ -336,6 +335,11 @@ function outputMeteorRspack(data) {
   console.log(output);
 }
 
+function formatDevServerHost(host) {
+  const value = host || "localhost";
+  return value.includes(":") && !value.startsWith("[") ? `[${value}]` : value;
+}
+
 module.exports = {
   compileWithMeteor,
   compileWithRspack,
@@ -346,6 +350,7 @@ module.exports = {
   makeWebNodeBuiltinsAlias,
   disablePlugins,
   outputMeteorRspack,
+  formatDevServerHost,
   enablePortableBuild,
   persistDevFiles,
   createPersistCallback,

@@ -9,8 +9,6 @@ process.env.NODE_ENV = '';
 // Individual tests may override via the `devServerPort` option in testMeteorSkeleton /
 // testMeteorBundler, which sets this env var per test run.
 process.env.RSPACK_DEVSERVER_PORT = '18080';
-process.env.RSDOCTOR_CLIENT_PORT = '8888';
-process.env.RSDOCTOR_SERVER_PORT = '8889';
 
 // Client-rendered frameworks (Angular, React, Vue, etc.) may take longer to
 // hydrate on slow CI runners. Increase Playwright's default selector/action
