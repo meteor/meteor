@@ -558,7 +558,17 @@ function getHmrCode(config, role) {
     return '';
   }
 
-  if (role === FILE_ROLE.entry && config?.isClient && !config?.isTest) {
+  // Keep this in sync with the mode that starts the Rspack dev server in
+  // rspack_plugin.js. NODE_ENV=development can also be supplied to
+  // `meteor build`, but standalone bundles do not have an HMR runtime.
+  if (
+    role === FILE_ROLE.entry &&
+    config?.isClient &&
+    !config?.isTest &&
+    isMeteorAppRun() &&
+    isMeteorAppDevelopment() &&
+    !isMeteorAppNative()
+  ) {
     return `/* Enables HMR */
 if (module.hot) {
   module.hot.accept();
