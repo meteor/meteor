@@ -4,8 +4,8 @@
  * of different Meteor skeletons (apollo, react, etc.).
  */
 
-import { assertStyles } from './assertions';
-import { waitForMeteorOutput } from './helpers';
+import { assertServiceWorkerFile, assertStyles } from './assertions';
+import { killMeteorProcess, killProcessByPort, waitForMeteorOutput } from './helpers';
 import { testMeteorSkeleton } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
@@ -26,6 +26,43 @@ async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
   } finally {
     await fs.remove(probePath);
   }
+}
+
+// The pwa skeleton registers `/sw.js?dev=1` in development (installable, but
+// the bundle is never cached so hot code push keeps working) and `/sw.js` in
+// production (offline caching of the app shell and static assets).
+async function assertPwaInstallable({ port, swPath }) {
+  const origin = `http://localhost:${port}`;
+  const swUrl = `${origin}${swPath}`;
+
+  // The manifest link is what makes the browser offer installation.
+  const manifestHref = await page.getAttribute('link[rel="manifest"]', 'href');
+  expect(manifestHref).toBe('/manifest.webmanifest');
+  const manifest = await page.request.get(`${origin}${manifestHref}`);
+  expect(manifest.ok()).toBe(true);
+  expect((await manifest.json()).name).toContain('pwa');
+
+  await assertServiceWorkerFile(port, { swPath });
+
+  // The skeleton's own registration (Meteor.startup) must activate, take
+  // control of the page (`clients.claim()`) and keep it across a reload.
+  const isControlledBy = (url) => navigator.serviceWorker.controller?.scriptURL === url;
+  await page.waitForFunction(isControlledBy, swUrl, { timeout: 15_000 });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(isControlledBy, swUrl, { timeout: 15_000 });
+  console.log(`✅ Service worker controlling the page (${swUrl})`);
+}
+
+// Production only: once the app shell has been served through the worker, it
+// must load again with the server gone. Killing the server is what takes the
+// worker's own fetches offline — Playwright's `setOffline` only reaches the page.
+async function assertPwaLoadsOffline({ port, meteorProcess }) {
+  await killMeteorProcess(meteorProcess);
+  await killProcessByPort(port);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('h1');
+  expect(await page.textContent('h1')).toBe('Welcome to Meteor!');
+  console.log('✅ App shell served from the service worker cache with the server down');
 }
 
 describe('Meteor Skeletons /', () => {
@@ -131,6 +168,27 @@ describe('Meteor Skeletons /', () => {
         test: 'imports/api/links/methods.tests.js',
       },
     })
+  );
+
+  describe(
+    'PWA Skeleton /',
+    testMeteorSkeleton({
+      skeletonName: 'pwa',
+      port: 3214,
+      filePaths: {
+        client: 'client/main.js',
+        server: 'server/main.js',
+        test: 'tests/main.js',
+      },
+      customAssertions: {
+        afterRun: ({ port }) =>
+          assertPwaInstallable({ port, swPath: '/sw.js?dev=1' }),
+        afterRunProduction: async ({ port, meteorProcess }) => {
+          await assertPwaInstallable({ port, swPath: '/sw.js' });
+          await assertPwaLoadsOffline({ port, meteorProcess });
+        },
+      },
+    }),
   );
 
   describe(
