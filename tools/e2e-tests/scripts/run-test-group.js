@@ -25,6 +25,7 @@ const result = spawnSync(
     path.join(testRoot, 'jest.config.js'),
     '--testNamePattern',
     group.pattern,
+    ...(group.jestArgs || []),
     ...extraArgs,
   ],
   {

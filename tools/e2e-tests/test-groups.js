@@ -1,4 +1,4 @@
-const TEST_GROUPS = Object.freeze({
+const EXPLICIT_TEST_GROUPS = Object.freeze({
   cli: {
     label: 'CLI',
     pattern: '^CLI /',
@@ -69,4 +69,42 @@ const TEST_GROUPS = Object.freeze({
   },
 });
 
-module.exports = { TEST_GROUPS };
+// Passing this through Jest's CLI replaces the config-level ignore list, so
+// preserve the existing apps/ fixture exclusion while also leaving Accounts
+// to its dedicated workflow.
+const GROUP_EXCLUDED_TEST_PATH_PATTERN =
+  '(?:[/\\\\]apps[/\\\\]|accounts\\.test\\.js$)';
+
+function createUncategorizedPattern(groups = EXPLICIT_TEST_GROUPS) {
+  const explicitPatterns = Object.values(groups).map(({ pattern }) => {
+    if (!pattern.startsWith('^')) {
+      throw new Error(`E2E test group pattern must be anchored: ${pattern}`);
+    }
+
+    return `(?:${pattern.slice(1)})`;
+  });
+
+  return explicitPatterns.length === 0
+    ? '^.+'
+    : `^(?!(?:${explicitPatterns.join('|')})).+`;
+}
+
+const TEST_GROUPS = Object.freeze({
+  ...EXPLICIT_TEST_GROUPS,
+  uncategorized: {
+    label: 'Uncategorized',
+    pattern: createUncategorizedPattern(),
+    fallback: true,
+    jestArgs: [
+      '--testPathIgnorePatterns',
+      GROUP_EXCLUDED_TEST_PATH_PATTERN,
+    ],
+  },
+});
+
+module.exports = {
+  createUncategorizedPattern,
+  EXPLICIT_TEST_GROUPS,
+  GROUP_EXCLUDED_TEST_PATH_PATTERN,
+  TEST_GROUPS,
+};

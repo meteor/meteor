@@ -4,7 +4,11 @@ const { spawnSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { TEST_GROUPS } = require('../test-groups');
+const {
+  EXPLICIT_TEST_GROUPS,
+  GROUP_EXCLUDED_TEST_PATH_PATTERN,
+  TEST_GROUPS,
+} = require('../test-groups');
 
 const testRoot = path.resolve(__dirname, '..');
 const jestBin = path.join(testRoot, 'node_modules', 'jest', 'bin', 'jest.js');
@@ -20,6 +24,16 @@ const workflowPath = path.resolve(
   'workflows',
   'e2e-tests.yml'
 );
+const excludedTestPathPattern = new RegExp(
+  GROUP_EXCLUDED_TEST_PATH_PATTERN
+);
+
+function escapeWorkflowCommand(value) {
+  return value
+    .replace(/%/g, '%25')
+    .replace(/\r/g, '%0D')
+    .replace(/\n/g, '%0A');
+}
 
 try {
   const workflow = fs.readFileSync(workflowPath, 'utf8');
@@ -80,12 +94,12 @@ try {
   for (const suite of testResults.testResults) {
     // Accounts has its own dedicated workflow and is intentionally outside the
     // modern-tools E2E matrix.
-    if (suite.name.endsWith(`${path.sep}accounts.test.js`)) {
+    if (excludedTestPathPattern.test(suite.name)) {
       continue;
     }
 
     for (const assertion of suite.assertionResults) {
-      const matchingGroups = Object.entries(TEST_GROUPS)
+      const matchingGroups = Object.entries(EXPLICIT_TEST_GROUPS)
         .filter(([, group]) => new RegExp(group.pattern).test(assertion.fullName))
         .map(([name]) => name);
       groupedTests.push({
@@ -95,11 +109,14 @@ try {
     }
   }
 
-  const invalidTests = groupedTests.filter(
-    test => test.matchingGroups.length !== 1
+  const uncategorizedTests = groupedTests.filter(
+    test => test.matchingGroups.length === 0
+  );
+  const multiplyCategorizedTests = groupedTests.filter(
+    test => test.matchingGroups.length > 1
   );
   const groupCounts = Object.fromEntries(
-    Object.keys(TEST_GROUPS).map(name => [
+    Object.keys(EXPLICIT_TEST_GROUPS).map(name => [
       name,
       groupedTests.filter(test => test.matchingGroups.includes(name)).length,
     ])
@@ -108,15 +125,29 @@ try {
     name => groupCounts[name] === 0
   );
 
-  if (invalidTests.length > 0) {
-    console.error(
-      'Each non-Accounts E2E test must match exactly one test group:'
+  if (uncategorizedTests.length > 0) {
+    console.warn(
+      'Uncategorized E2E tests are covered by the fallback group.'
     );
-    invalidTests.forEach(test => {
-      const matches = test.matchingGroups.length > 0
-        ? test.matchingGroups.join(', ')
-        : 'none';
-      console.error(`- ${test.fullName}\n  matches: ${matches}`);
+    console.warn(
+      'Assign them to a specific group when practical:'
+    );
+    uncategorizedTests.forEach(test => {
+      console.warn(`- ${test.fullName}`);
+      if (process.env.GITHUB_ACTIONS === 'true') {
+        console.warn(
+          `::warning title=Uncategorized E2E test::${escapeWorkflowCommand(test.fullName)}`
+        );
+      }
+    });
+  }
+
+  if (multiplyCategorizedTests.length > 0) {
+    console.error('E2E tests selected by more than one group:');
+    multiplyCategorizedTests.forEach(test => {
+      console.error(
+        `- ${test.fullName}\n  matches: ${test.matchingGroups.join(', ')}`
+      );
     });
   }
 
@@ -132,16 +163,19 @@ try {
   }
 
   if (
-    invalidTests.length > 0 ||
+    multiplyCategorizedTests.length > 0 ||
     emptyGroups.length > 0 ||
     workflowGroupErrors.length > 0
   ) {
     process.exitCode = 1;
   } else {
     console.log(`E2E group audit passed for ${groupedTests.length} tests:`);
-    Object.entries(TEST_GROUPS).forEach(([name, group]) => {
+    Object.entries(EXPLICIT_TEST_GROUPS).forEach(([name, group]) => {
       console.log(`- ${group.label}: ${groupCounts[name]}`);
     });
+    console.log(
+      `- ${TEST_GROUPS.uncategorized.label}: ${uncategorizedTests.length} (fallback)`
+    );
   }
 } finally {
   fs.rmSync(outputFile, { force: true });

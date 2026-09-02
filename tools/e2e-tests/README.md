@@ -21,10 +21,13 @@ npm run test:e2e -- --testPathPattern skeleton
 # Run one of the same exclusive groups used by CI
 npm run test:e2e:group -- monorepo
 
-# Verify every non-Accounts test belongs to exactly one CI group
+# Audit group exclusivity and report uncategorized tests
 npm run test:e2e:groups:audit
 ```
 
 CI group names and their anchored Jest patterns live in `test-groups.js`.
-Update that file when adding or renaming a suite; the audit rejects unassigned
-tests, tests selected by multiple jobs, empty groups, and workflow/mapping drift.
+Update that file when adding or renaming a suite; the audit rejects tests
+selected by multiple jobs, empty groups, and workflow/mapping drift. CI runs
+unassigned tests in the automatically derived `uncategorized` fallback group
+and reports their full names as warnings. The fallback job's status reflects
+whether those tests pass or fail.

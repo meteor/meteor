@@ -89,6 +89,8 @@ jobs:
             group: typescript
           - category: Vue
             group: vue
+          - category: Uncategorized
+            group: uncategorized
 
     steps:
       - name: Install Docker CLI
