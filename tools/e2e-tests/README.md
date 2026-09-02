@@ -19,10 +19,10 @@ npm run test:e2e
 npm run test:e2e -- --testPathPattern skeleton
 
 # Run one of the same exclusive groups used by CI
-npm --prefix tools/e2e-tests run test:group -- monorepo
+npm run test:e2e:group -- monorepo
 
 # Verify every non-Accounts test belongs to exactly one CI group
-npm --prefix tools/e2e-tests run test:groups:audit
+npm run test:e2e:groups:audit
 ```
 
 CI group names and their anchored Jest patterns live in `test-groups.js`.

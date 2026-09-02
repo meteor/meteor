@@ -138,7 +138,7 @@ jobs:
 
       - name: Audit E2E test groups
         if: matrix.group == 'cli'
-        run: npm --prefix tools/e2e-tests run test:groups:audit
+        run: npm run test:e2e:groups:audit
 
       - name: Set NPM_LINK_RSPACK=false for release branches
         run: |
@@ -156,7 +156,7 @@ jobs:
         id: test-run
         continue-on-error: true
         timeout-minutes: 20
-        run: METEOR_ALLOW_SUPERUSER=1 npm --prefix tools/e2e-tests run test:group -- "${{ matrix.group }}"
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -178,4 +178,4 @@ jobs:
         timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm --prefix tools/e2e-tests run test:group -- "${{ matrix.group }}"
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
