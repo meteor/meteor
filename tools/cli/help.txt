@@ -971,7 +971,7 @@ Options:
              constraints.
   --no-lint  don't run linters on the published package and its local
              dependencies before publishing
-  --release <version> Specify the release of Meteor to resolve top-level version 
+  --release <version> Specify the release of Meteor to resolve top-level version
              conflicts. This option is particularly useful during the migration
              process when dealing with packages that have conflicting version
              requirements.
@@ -1204,3 +1204,24 @@ Options:
 The rest of options for this command are the same as those for the meteor run command.
 You can pass typical runtime options (such as --settings, --exclude-archs, etc.)
 to customize the profiling process.
+
+
+>>> shell-completion
+Install and configure tab completion for meteor commands.
+Usage: meteor shell-completion [options]
+
+Installs tab completion for the 'meteor' command to your shell profile
+(supporting Bash and Zsh on macOS and Linux).
+
+When installed, pressing tab will automatically autocomplete Meteor commands,
+options, platforms, and package names.
+
+The installed script embeds the current top-level command list. Re-run
+'meteor shell-completion --install' after updating your Meteor checkout to
+refresh that list.
+
+Options:
+  --install      Install completion to your shell profile configuration
+  --uninstall    Uninstall completion from your shell profile configuration
+  --script       Print the shell completion script to stdout
+  --shell        Specify the shell type (bash or zsh) for --install or --script
