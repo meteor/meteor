@@ -164,7 +164,7 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source. In the server this fuction returns a promise.
+   * @summary Get the current user record, or `null` if no user is logged in. On the client this can also be `undefined` while a user id is set but the user document is not yet in Minimongo. A reactive data source. In the server this fuction returns a promise.
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -189,7 +189,7 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in.
+   * @summary Get the current user record, or `null` if no user is logged in. May also be `undefined` when a user id is set but the user document cannot be found yet.
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -434,7 +434,7 @@ export class AccountsCommon {
 Meteor.userId = () => Accounts.userId();
 
 /**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user record, or `null` if no user is logged in. On the client this can also be `undefined` while a user id is set but the user document is not yet in Minimongo. A reactive data source.
  * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
@@ -443,7 +443,7 @@ Meteor.userId = () => Accounts.userId();
 Meteor.user = options => Accounts.user(options);
 
 /**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user record, or `null` if no user is logged in. May also be `undefined` when a user id is set but the user document cannot be found yet. A reactive data source.
  * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
