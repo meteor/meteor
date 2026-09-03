@@ -51,7 +51,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.x
+          node-version: 26.x
 
       - name: Cache dependencies
         id: meteor-cache
@@ -64,9 +64,9 @@ jobs:
             ~/.npm
             node_modules/
             packages/**/.npm
-          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', 'meteor.bat') }}
+          key: ${{ runner.os }}-node-26-meteor-${{ hashFiles('meteor', 'meteor.bat') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-26-meteor-
 
       - name: Reset submodules (force refetch)
         shell: pwsh
@@ -86,7 +86,21 @@ jobs:
         shell: pwsh
         run: |
           $env:PATH = "C:\Program Files\7-Zip;$env:PATH"
-          .\meteor.bat --get-ready
+          $maxAttempts = 3
+          for ($attempt = 1; $attempt -le $maxAttempts; $attempt++) {
+            Write-Host "Running meteor --get-ready (attempt $attempt of $maxAttempts)..."
+            .\meteor.bat --get-ready
+            if ($LASTEXITCODE -eq 0) {
+              break
+            }
+
+            if ($attempt -eq $maxAttempts) {
+              throw "meteor --get-ready failed after $maxAttempts attempts."
+            }
+
+            Write-Warning "meteor --get-ready failed with exit code $LASTEXITCODE; retrying."
+            Start-Sleep -Seconds 5
+          }
 
       - name: Run tests
         shell: pwsh

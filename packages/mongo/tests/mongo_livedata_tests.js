@@ -4334,38 +4334,61 @@ if (Meteor.isServer) {
   });
 }
 
-Tinytest.addAsync(
+testAsyncMulti(
   'mongo-livedata - maintained isomorphism on collection operations for both client and server',
-  async function (test) {
-    const Collection = new Mongo.Collection(
-      `maintained_col_op_iso${test.runId()}`,
-      { resolverType: 'stub' }
-    );
+  [
+    function (test, expect) {
+      this.collectionName = Random.id();
 
-    await Collection.insertAsync({ _id: 'a' });
-    await Collection.insertAsync({ _id: 'b' });
+      if (Meteor.isClient) {
+        Meteor.call('createInsecureCollection', this.collectionName);
+        Meteor.subscribe('c-' + this.collectionName, expect());
+      }
+    },
+    async function (test) {
+      const Collection = new Mongo.Collection(this.collectionName, {
+        resolverType: 'stub',
+      });
 
-    let items = await Collection.find().fetchAsync();
-    let itemIds = items.map(_item => _item._id);
+      await Collection.insertAsync({ _id: 'a' });
+      await Collection.insertAsync({ _id: 'b' });
 
-    test.equal(itemIds, ['a', 'b']);
+      let items = await Collection.find().fetchAsync();
+      let itemIds = items.map(_item => _item._id);
 
-    await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
-    await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
+      test.equal(itemIds, ['a', 'b']);
 
-    if(Meteor.isClient) Meteor._sleepForMs(100); // wait for async operations to complete 
-    items = await Collection.find().fetchAsync();
-    itemIds = items.map(_item => _item.num);
-    
-    test.equal(itemIds, [1, 2]);
+      await Collection.updateAsync({ _id: 'a' }, { $set: { num: 1 } });
+      await Collection.updateAsync({ _id: 'b' }, { $set: { num: 2 } });
 
-    await Collection.removeAsync({ _id: 'a' });
-    await Collection.removeAsync({ _id: 'b' });
+      if (Meteor.isClient) {
+        await waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          itemIds = items.map(_item => _item.num);
+          return itemIds.length === 2 && itemIds[0] === 1 && itemIds[1] === 2;
+        }, { description: 'client sees both async updates' });
+      } else {
+        items = await Collection.find().fetchAsync();
+        itemIds = items.map(_item => _item.num);
+      }
 
-    items = await Collection.find().fetchAsync();
+      test.equal(itemIds, [1, 2]);
 
-    test.equal(items, []);
-  },
+      await Collection.removeAsync({ _id: 'a' });
+      await Collection.removeAsync({ _id: 'b' });
+
+      if (Meteor.isClient) {
+        await waitUntil(async () => {
+          items = await Collection.find().fetchAsync();
+          return items.length === 0;
+        }, { description: 'client sees async removals' });
+      } else {
+        items = await Collection.find().fetchAsync();
+      }
+
+      test.equal(items, []);
+    },
+  ],
 );
 
 testAsyncMulti(

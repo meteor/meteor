@@ -24,7 +24,6 @@ jobs:
     env:
       CXX: g++-12
       phantom: false
-      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
@@ -37,14 +36,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.15.0
+          node-version: 26.x
           submodules: recursive
-
-      - name: Expose globally-installed puppeteer to Node.js
-        # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.
-        # Setting NODE_PATH lets `require('puppeteer')` resolve it directly,
-        # so run.sh skips the slow `./meteor npm install -g puppeteer` step.
-        run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
         uses: actions/cache@v4
@@ -54,9 +47,9 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-          key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-26-meteor-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-meteor-
+            ${{ runner.os }}-node-26-meteor-
       - name: Run test-in-console suite
         run: |
           export TEST_PACKAGES_EXCLUDE="stylus"

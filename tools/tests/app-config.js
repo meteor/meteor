@@ -200,7 +200,7 @@ selftest.define("testModule", async function () {
   await run.stop();
 });
 
-async function writeModernConfig(s, run, modernConfig, errorPattern) {
+function writeModernConfig(s, modernConfig) {
   const json = JSON.parse(s.read("package.json"));
 
   json.meteor = {
@@ -216,15 +216,7 @@ async function writeModernConfig(s, run, modernConfig, errorPattern) {
 
   s.write("package.json", JSON.stringify(json, null, 2) + "\n");
 
-  run.waitSecs(10);
-
-  if (errorPattern instanceof RegExp) {
-    await run.match(errorPattern);
-  } else {
-    run.forbid(" 0 passing ");
-    await run.match("SERVER FAILURES: 0");
-    await run.match("CLIENT FAILURES: 0");
-  }
+  return json.meteor;
 }
 
 selftest.define("modernConfig", async function () {
@@ -238,17 +230,20 @@ selftest.define("modernConfig", async function () {
   // See https://github.com/meteortesting/meteor-mocha
   s.set("TEST_BROWSER_DRIVER", "puppeteer");
 
-  const run = s.run(
-    "test",
-    "--full-app",
-    "--driver-package", "meteortesting:mocha"
-  );
+  async function check(modernConfig) {
+    const meteorConfig = writeModernConfig(s, modernConfig);
+    const run = s.run(
+      "test",
+      "--full-app",
+      "--driver-package", "meteortesting:mocha"
+    );
 
-  run.waitSecs(60);
-  await run.match("App running at");
-
-  function check(modernConfig) {
-    return writeModernConfig(s, run, modernConfig);
+    run.waitSecs(60);
+    await run.match("App running at");
+    run.forbid(" 0 passing ");
+    await run.match(`client config: ${JSON.stringify(meteorConfig)}`);
+    await run.match(/APP SERVER FAILURES: 0[\s\S]*?APP CLIENT FAILURES: 0/);
+    await run.stop();
   }
 
   // Test with modern disabled
@@ -264,6 +259,4 @@ selftest.define("modernConfig", async function () {
     webArchOnly: true,
     minifier: true,
   });
-
-  await run.stop();
 });
