@@ -275,6 +275,7 @@ OAuth._renderOauthResults = async (res, query, credentialSecret) => {
     };
     if (query.error) {
       details.error = query.error;
+      details.error_description = query.error_description;
     } else {
       const token = OAuth._credentialTokenFromQuery(query);
       const secret = credentialSecret;
@@ -344,6 +345,14 @@ const renderEndOfLoginResponse = async options => {
     redirectUrl: escape(options.redirectUrl),
     isCordova: !! options.isCordova
   };
+  
+  // Only include error fields if they exist
+  if (options.error) {
+    config.error = escape(options.error);
+  }
+  if (options.error_description) {
+    config.error_description = escape(options.error_description);
+  }
 
   let template;
   if (options.loginStyle === 'popup') {
@@ -419,6 +428,8 @@ OAuth._endOfLoginResponse = async (res, details) => {
       setCredentialToken: false,
       redirectUrl,
       isCordova,
+      error: details.error,
+      error_description: details.error_description,
     }), "utf-8");
     return;
   }
@@ -508,4 +519,9 @@ OAuth._fetch = async (
     ...options,
   };
   return fetch(urlWithParams.toString(), requestOptions);
+};
+
+// Server-side stub for OAuth.getError
+OAuth.getError = function() {
+  return null;
 };
