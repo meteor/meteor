@@ -195,11 +195,13 @@ You can then run the application by invoking `node` with environment variables:
 cd my_build_bundle_directory
 (cd programs/server && npm install)
 MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 node main.js
+METEOR_SETTINGS='{"public":{"key":"value"}}' 
 ```
 
 - `ROOT_URL` is the base URL for your Meteor project
 - `PORT` is the port at which the application is running
 - `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/)
+- `METEOR_SETTINGS` is a JSON object containing your application settings (can also be set via --settings flag). **Warning:** Any settings under the `public` key will be sent to the client - never put secrets there
 
 ::: warning Don't skip `npm install` on the target machine
 The `(cd programs/server && npm install)` step above is **not optional**. It runs the bundle's
