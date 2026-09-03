@@ -1,4 +1,8 @@
 name: Check code-style
+
+permissions:
+  contents: read
+
 on:
   push:
     paths:
