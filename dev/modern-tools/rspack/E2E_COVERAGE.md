@@ -235,7 +235,7 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | chakra-ui | 3203 | JSX | No body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | |
 | full | 3204 | JS | `imports/api/` test structure |
-| pwa | 3214 | JS | Manifest link + templated `manifest.webmanifest`; skeleton's own service worker controlling the page across reload (dev `/sw.js?dev=1`, prod `/sw.js`); prod app shell loads with the server down |
+| pwa | 3214, 3215 | JS | Manifest link + templated `manifest.webmanifest`; skeleton's own service worker controlling the page across reload (dev `/sw.js?dev=1`, prod `/sw.js`); prod app shell loads with the server down; same checks under a path-prefixed `ROOT_URL` (`/app`, port 3215, production only: the dev boilerplate injects the Rspack client script unprefixed) |
 | react | 3205 | JSX | Custom body styles (Inter font, padding) |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |

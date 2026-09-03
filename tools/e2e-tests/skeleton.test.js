@@ -5,8 +5,16 @@
  */
 
 import { assertServiceWorkerFile, assertStyles } from './assertions';
-import { killMeteorProcess, killProcessByPort, waitForMeteorOutput } from './helpers';
-import { testMeteorSkeleton } from './test-helpers';
+import {
+  cleanupTempDir,
+  createMeteorApp,
+  killMeteorProcess,
+  killProcessByPort,
+  resetPlaywrightPage,
+  runMeteorApp,
+  waitForMeteorOutput,
+} from './helpers';
+import { linkLocalRspack, testMeteorSkeleton } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
 
@@ -31,13 +39,19 @@ async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
 // The pwa skeleton registers `/sw.js?dev=1` in development (installable, but
 // the bundle is never cached so hot code push keeps working) and `/sw.js` in
 // production (offline caching of the app shell and static assets).
-async function assertPwaInstallable({ port, swPath }) {
+async function assertPwaInstallable({ port, swPath, prefix = '' }) {
   const origin = `http://localhost:${port}`;
   const swUrl = `${origin}${swPath}`;
 
-  // The manifest link is what makes the browser offer installation.
-  const manifestHref = await page.getAttribute('link[rel="manifest"]', 'href');
-  expect(manifestHref).toBe('/manifest.webmanifest');
+  // The manifest link is what makes the browser offer installation. The <h1> is
+  // static markup, so wait for the app to boot: under a prefix the link is
+  // rewritten in Meteor.startup.
+  const manifestHref = `${prefix}/manifest.webmanifest`;
+  await page.waitForFunction(
+    (href) => document.querySelector('link[rel="manifest"]')?.getAttribute('href') === href,
+    manifestHref,
+    { timeout: 15_000 },
+  );
   const manifest = await page.request.get(`${origin}${manifestHref}`);
   expect(manifest.ok()).toBe(true);
   expect((await manifest.json()).name).toContain('pwa');
@@ -190,6 +204,53 @@ describe('Meteor Skeletons /', () => {
       },
     }),
   );
+
+  // A path-prefixed ROOT_URL (https://example.com/app) serves everything under
+  // the prefix, so every PWA URL has to follow. Production only: in development
+  // the boilerplate injects the Rspack client script without the prefix
+  // (packages/boilerplate-generator/template-web.browser.js), so no app code
+  // runs under a prefix until that is fixed. The rest of the lifecycle is
+  // prefix-agnostic and already covered above.
+  describe('PWA Skeleton / path prefix /', () => {
+    const port = 3215;
+    const prefix = '/app';
+    const env = { ROOT_URL: `http://localhost:${port}${prefix}` };
+    let tempDir;
+    let meteorProcess;
+
+    beforeAll(async () => {
+      await killProcessByPort(port);
+      const result = await createMeteorApp('pwa', 'pwa');
+      tempDir = result.tempDir;
+      await result.meteorProcess;
+      await linkLocalRspack(tempDir);
+    }, 360_000);
+
+    afterAll(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    afterEach(async () => {
+      await resetPlaywrightPage();
+      await killMeteorProcess(meteorProcess);
+      meteorProcess = null;
+      await killProcessByPort(port);
+    });
+
+    test('"meteor run --production" / serves the PWA under the prefix', async () => {
+      ({ meteorProcess } = await runMeteorApp(tempDir, port, {
+        waitForOutput: '=> App running at',
+        // The helper's readiness probe hits `/`, which is a 404 under a prefix.
+        skipWaitOn: true,
+        commandOptions: ['--production'],
+        env,
+      }));
+      await page.goto(`http://localhost:${port}${prefix}/`);
+      await page.waitForSelector('h1');
+      await assertPwaInstallable({ port, prefix, swPath: `${prefix}/sw.js` });
+      await assertPwaLoadsOffline({ port, meteorProcess });
+    });
+  });
 
   describe(
     'React Skeleton /',
