@@ -277,6 +277,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
 | `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
 | `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
+| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page) | - |
 | `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
 | `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
 | `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
@@ -336,6 +337,18 @@ The `--prototype` option adds packages that make development faster but shouldn'
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`,
 `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
 `hot-module-replacement`, `blaze-hot`
+</details>
+
+<details>
+<summary><strong>PWA App</strong> (--pwa)</summary>
+
+Blaze app plus a web app manifest, icons, a dependency-free service worker and an offline page.
+
+**NPM packages:**
+- `@babel/runtime`, `@swc/helpers`, `jquery`, `meteor-node-stubs`
+
+**Meteor packages:**
+- `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
 </details>
 
 <details>
