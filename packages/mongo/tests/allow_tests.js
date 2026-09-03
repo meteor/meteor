@@ -79,13 +79,13 @@ if (Meteor.isServer) {
 
     if (needToConfigure) {
       restrictedCollectionWithTransform.allow({
-        insertAsync: function (userId, doc) {
+        insert: function (userId, doc) {
           return doc.foo === "foo";
         },
-        updateAsync: function (userId, doc) {
+        update: function (userId, doc) {
           return doc.foo === "foo";
         },
-        removeAsync: function (userId, doc) {
+        remove: function (userId, doc) {
           return doc.bar === "bar";
         }
       });
@@ -93,10 +93,10 @@ if (Meteor.isServer) {
         // transform: null means that doc here is the top level, not the 'a'
         // element.
         transform: null,
-        insertAsync: function (userId, doc) {
+        insert: function (userId, doc) {
           return !!doc.topLevelField;
         },
-        updateAsync: function (userId, doc) {
+        update: function (userId, doc) {
           return !!doc.topLevelField;
         }
       });
@@ -109,46 +109,45 @@ if (Meteor.isServer) {
         // This test just requires the collection to trigger the restricted
         // case.
         insert: function () { return true; },
-        insertAsync: function () { return true; }
       });
 
       // two calls to allow to verify that either validator is sufficient.
       var allows = [{
-        insertAsync: function(userId, doc) {
+        insert: function(userId, doc) {
           return doc.canInsert;
         },
-        updateAsync: function(userId, doc) {
+        update: function(userId, doc) {
           return doc.canUpdate;
         },
-        removeAsync: function (userId, doc) {
+        remove: function (userId, doc) {
           return doc.canRemove;
         }
       }, {
-        insertAsync: function(userId, doc) {
+        insert: function(userId, doc) {
           return doc.canInsert2;
         },
-        updateAsync: function(userId, doc, fields, modifier) {
+        update: function(userId, doc, fields, modifier) {
           return -1 !== fields.indexOf('canUpdate2');
         },
-        removeAsync: function(userId, doc) {
+        remove: function(userId, doc) {
           return doc.canRemove2;
         }
       }];
 
       // two calls to deny to verify that either one blocks the change.
       var denies = [{
-        insertAsync: function(userId, doc) {
+        insert: function(userId, doc) {
           return doc.cantInsert;
         },
-        removeAsync: function (userId, doc) {
+        remove: function (userId, doc) {
           return doc.cantRemove;
         }
       }, {
-        insertAsync: function(userId, doc) {
+        insert: function(userId, doc) {
           // Don't allow explicit ID to be set by the client.
           return has(doc, '_id');
         },
-        updateAsync: function(userId, doc, fields, modifier) {
+        update: function(userId, doc, fields, modifier) {
           return -1 !== fields.indexOf('verySecret');
         }
       }];
@@ -1196,19 +1195,10 @@ Tinytest.addAsync(
       await AllowAsyncValidateCollection.removeAsync();
     }
     AllowAsyncValidateCollection.allow({
-      insertAsync() {
-        return true;
-      },
       insert() {
         return true;
       },
-      updateAsync() {
-        return true;
-      },
       update() {
-        return true;
-      },
-      removeAsync() {
         return true;
       },
       remove() {
