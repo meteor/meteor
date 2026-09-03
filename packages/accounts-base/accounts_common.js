@@ -124,6 +124,7 @@ export class AccountsCommon {
   /**
    * @summary Get the current user id, or `null` if no user is logged in. A reactive data source.
    * @locus Anywhere
+   * @returns {string|null} The current user id.
    */
   userId() {
     throw new Error('userId method not implemented');
@@ -164,7 +165,12 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source. In the server this fuction returns a promise.
+   * @summary Get the current user record, or `null` if the user is not logged
+   * in yet. Previous versions of Meteor returned `undefined` for
+   * `Meteor.user()` during the login process, but this is no longer the case:
+   * always rely on `Meteor.loggingIn()` instead of `Meteor.user()` being
+   * `undefined` to avoid issues between Meteor versions. A reactive data
+   * source. 
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -184,12 +190,17 @@ export class AccountsCommon {
       ? self.users.findOne(...args)
       : self.users.findOneAsync(...args);
     return userId
-      ? findOne(userId, this._addDefaultFieldSelector(options))
+      ? (findOne(userId, this._addDefaultFieldSelector(options)) ?? null)
       : null;
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in.
+   * @summary Get the current user record, or `null` if the user is not logged
+   * in yet. Previous versions of Meteor returned `undefined` for
+   * `Meteor.user()` during the login process, but this is no longer the case:
+   * always rely on `Meteor.loggingIn()` instead of `Meteor.user()` being
+   * `undefined` to avoid issues between Meteor versions. A reactive data
+   * source. 
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -197,7 +208,7 @@ export class AccountsCommon {
   async userAsync(options) {
     const userId = this.userId();
     return userId
-      ? this.users.findOneAsync(userId, this._addDefaultFieldSelector(options))
+      ? (this.users.findOneAsync(userId, this._addDefaultFieldSelector(options)) ?? null)
       : null;
   }
 
@@ -434,7 +445,7 @@ export class AccountsCommon {
 Meteor.userId = () => Accounts.userId();
 
 /**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user record, `undefined` when the user object is loading after login, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
@@ -443,7 +454,7 @@ Meteor.userId = () => Accounts.userId();
 Meteor.user = options => Accounts.user(options);
 
 /**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user record, `undefined` when the user object is loading after login, or `null` if no user is logged in. A reactive data source.
  * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
