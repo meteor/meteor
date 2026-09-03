@@ -83,7 +83,13 @@ const getIdentity = async (accessToken) => {
         Authorization: `token ${accessToken}`
       } // http://developer.github.com/v3/#user-agent-required
     });
-    return await request.json();
+    const data = await request.json();
+    if (!data || !data.id) {
+      throw new Error(
+        'GitHub identity response does not contain the expected "id" field.'
+      );
+    }
+    return data;
   } catch (err) {
     throw Object.assign(
       new Error(`Failed to fetch identity from Github. ${err.message}`),

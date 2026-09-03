@@ -11,6 +11,10 @@ Meteor's user account system. This package implements the basic functions necess
 - `accounts-twitter`
 - `accounts-meetup`
 - `accounts-weibo`
+- `accounts-discord`
+- `accounts-slack`
+- `accounts-spotify`
+- `accounts-twitch`
 
 There are also login services available in community packages.
 
