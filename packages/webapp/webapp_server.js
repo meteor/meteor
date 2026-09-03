@@ -35,7 +35,6 @@ const createExpressApp = () => {
 export const WebApp = {};
 export const WebAppInternals = {};
 
-const hasOwn = Object.prototype.hasOwnProperty;
 
 
 WebAppInternals.NpmModules = {
@@ -183,7 +182,7 @@ WebApp.categorizeRequest = function(req) {
 
   if (archKey.startsWith('__')) {
     const archCleaned = 'web.' + archKey.slice(2);
-    if (hasOwn.call(WebApp.clientPrograms, archCleaned)) {
+    if (Object.hasOwn(WebApp.clientPrograms, archCleaned)) {
       pathParts.splice(1, 1); // Remove the archKey part.
       return Object.assign(categorized, {
         arch: archCleaned,
@@ -206,7 +205,7 @@ WebApp.categorizeRequest = function(req) {
     // clients are better off receiving web.browser (which might actually
     // work) than receiving an HTTP 404 response. If none of the archs in
     // preferredArchOrder are defined, only then should we send a 404.
-    if (hasOwn.call(WebApp.clientPrograms, arch)) {
+    if (Object.hasOwn(WebApp.clientPrograms, arch)) {
       return Object.assign(categorized, { arch });
     }
   }
@@ -727,7 +726,7 @@ WebAppInternals.staticFilesMiddleware = async function(
 
   const { arch, path } = WebApp.categorizeRequest(req);
 
-  if (!hasOwn.call(WebApp.clientPrograms, arch)) {
+  if (!Object.hasOwn(WebApp.clientPrograms, arch)) {
     // We could come here in case we run with some architectures excluded
     next();
     return;
@@ -842,7 +841,7 @@ WebAppInternals.staticFilesMiddleware = async function(
 };
 
 function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
-  if (!hasOwn.call(WebApp.clientPrograms, arch)) {
+  if (!Object.hasOwn(WebApp.clientPrograms, arch)) {
     return null;
   }
 
@@ -871,12 +870,12 @@ function getStaticFileInfo(staticFilesByArch, originalPath, path, arch) {
 
     // If staticFiles contains originalPath with the arch inferred above,
     // use that information.
-    if (hasOwn.call(staticFiles, originalPath)) {
+    if (Object.hasOwn(staticFiles, originalPath)) {
       return finalize(originalPath);
     }
 
     // If categorizeRequest returned an alternate path, try that instead.
-    if (path !== originalPath && hasOwn.call(staticFiles, path)) {
+    if (path !== originalPath && Object.hasOwn(staticFiles, path)) {
       return finalize(path);
     }
   });
@@ -1366,7 +1365,7 @@ async function runWebAppServer() {
       const { arch } = request;
       assert.strictEqual(typeof arch, 'string', { arch });
 
-      if (!hasOwn.call(WebApp.clientPrograms, arch)) {
+      if (!Object.hasOwn(WebApp.clientPrograms, arch)) {
         // We could come here in case we run with some architectures excluded
         headers['Cache-Control'] = 'no-cache';
         res.writeHead(404, headers);
