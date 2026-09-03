@@ -1,11 +1,47 @@
 ---
 name: packages
-description: Use when exploring the package ecosystem, finding which package handles a feature, understanding package relationships, or adding dependencies. Lists all core packages by domain.
+description: "Use when adding, removing, or finding Meteor core packages, resolving package dependencies, choosing between authentication strategies (accounts-password, passwordless, OAuth), or navigating the monorepo package ecosystem. Covers meteor add/remove commands, package lookup by feature domain, and dependency relationships across 100+ core packages."
 ---
 
 # Core Packages
 
 Overview of Meteor's package ecosystem organized by domain.
+
+## Working with Packages
+
+```bash
+# Add a package
+meteor add <package-name>
+
+# Add multiple packages at once
+meteor add accounts-password accounts-ui
+
+# Remove a package
+meteor remove <package-name>
+
+# List installed packages
+meteor list
+
+# Show package details
+meteor show <package-name>
+```
+
+## Common Scenarios
+
+| If you need... | Use these packages |
+|----------------|-------------------|
+| Password login | `accounts-base` + `accounts-password` |
+| Magic-link / passwordless auth | `accounts-base` + `accounts-passwordless` |
+| Social login (Google, GitHub) | `accounts-base` + `accounts-oauth` + `accounts-google` / `accounts-github` |
+| Two-factor authentication | `accounts-2fa` (add to any accounts setup) |
+| Pre-built login UI | `accounts-ui` (or `accounts-ui-unstyled` for custom styling) |
+| Real-time data sync | `mongo` + `ddp` (included by default) |
+| Rate limiting on methods | `ddp-rate-limiter` |
+| TypeScript support | `typescript` + `ecmascript` |
+| Modern bundler (Rspack) | `rspack` (replaces default bundler) |
+| Collection permissions | `allow-deny` (for simple rules) or methods (recommended) |
+| HTTPS enforcement | `force-ssl` |
+| Content Security Policy | `browser-policy` |
 
 ## Authentication & Accounts
 
@@ -106,7 +142,7 @@ Overview of Meteor's package ecosystem organized by domain.
 | `id-map` | ID-based mapping |
 | `ordered-dict` | Ordered dictionary |
 
-## Testing (6 packages)
+## Testing
 
 | Package | Description |
 |---------|-------------|
@@ -125,11 +161,14 @@ Overview of Meteor's package ecosystem organized by domain.
 
 ## Deprecated Packages (`packages/deprecated/`)
 
-40+ legacy packages maintained for backward compatibility:
-- UI libraries: `amplify`, `backbone`, `d3`, `handlebars`
-- Legacy OAuth: `facebook`, `github`, `google` (use `accounts-*` instead)
-- Config UIs: `*-config-ui` packages
-- Others: `jquery-history`, `jshint`, `jsparse`, `deps` (use `tracker`)
+40+ legacy packages maintained for backward compatibility. Key migrations:
+
+| Legacy Package | Replace With |
+|---------------|-------------|
+| `deps` | `tracker` |
+| `facebook`, `github`, `google` | `accounts-facebook`, `accounts-github`, `accounts-google` |
+| `handlebars` | Blaze templates or React |
+| `*-config-ui` packages | `service-configuration` |
 
 ## Development-Only Packages
 
@@ -150,3 +189,11 @@ Packages published to npm for external use:
 | `meteor-promise` | `meteor-promise` | ES6 Promise with Fiber support |
 | `meteor-node-stubs` | `meteor-node-stubs` | Node.js core module polyfills for browser |
 | `eslint-plugin-meteor` | `eslint-plugin-meteor` | Meteor-specific ESLint rules |
+
+## Adding a Package to the Monorepo
+
+1. Create directory under `packages/<package-name>/`
+2. Add `package.js` with `Package.describe()` and `Package.onUse()`
+3. Register exports via `api.mainModule()` or `api.export()`
+4. Declare dependencies with `api.use()`
+5. Verify: `meteor test-packages ./packages/<package-name>`
