@@ -31,13 +31,18 @@ const DEV = new URL(self.location.href).searchParams.get('dev') === '1';
 // `/` is intentionally NOT precached: Meteor's autoupdate force-reloads when
 // the loaded bundle hash differs from the server's; a stale precached shell
 // would loop forever. Navigation is handled via networkFirst below.
+// Paths are relative to the worker's own location, so a path-prefixed
+// ROOT_URL (https://example.com/app) works unchanged: `manifest.webmanifest`
+// resolves against `/app/sw.js` and BASE becomes `/app/`.
+const BASE = new URL('./', self.location).pathname;
 const PRECACHE_URLS = [
-  '/manifest.webmanifest',
-  '/offline.html',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-maskable-512.png',
+  'manifest.webmanifest',
+  'offline.html',
+  'icons/icon-192.png',
+  'icons/icon-512.png',
+  'icons/icon-maskable-512.png',
 ];
+const fromPrecache = (request) => caches.open(PRECACHE).then((c) => c.match(request));
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(PRECACHE).then((c) => c.addAll(PRECACHE_URLS)));
@@ -100,7 +105,7 @@ async function networkFirst(req, cacheName, timeoutMs = 3000) {
     clearTimeout(timer);
     const cached = await cache.match(req);
     if (cached) return cached;
-    const offline = await (await caches.open(PRECACHE)).match('/offline.html');
+    const offline = await fromPrecache('offline.html');
     return offline || Response.error();
   }
 }
@@ -116,7 +121,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin) return;
 
   // DDP must never be intercepted — WebSocket upgrades break otherwise.
-  if (url.pathname.startsWith('/sockjs/') || url.pathname.startsWith('/websocket')) return;
+  if (url.pathname.startsWith(`${BASE}sockjs/`) || url.pathname.startsWith(`${BASE}websocket`)) return;
 
   // Dev: installable but no dynamic caching — serve precached static (manifest,
   // icons, offline.html) from the PRECACHE bucket ONLY, send everything else
@@ -124,9 +129,7 @@ self.addEventListener('fetch', (event) => {
   // spans every bucket) means a stale bundle/page left by a prior prod build
   // can never be served in dev — no flash of a previous app on reload.
   if (DEV) {
-    event.respondWith(
-      caches.open(PRECACHE).then((c) => c.match(request)).then((hit) => hit || fetch(request))
-    );
+    event.respondWith(fromPrecache(request).then((hit) => hit || fetch(request)));
     return;
   }
 
@@ -138,8 +141,8 @@ self.addEventListener('fetch', (event) => {
 
   // Meteor / Rspack bundle — content-hashed URLs → stale-while-revalidate is safe.
   if (
-    url.pathname.startsWith('/__meteor__/') ||
-    url.pathname.startsWith('/__rspack__/') ||
+    url.pathname.startsWith(`${BASE}__meteor__/`) ||
+    url.pathname.startsWith(`${BASE}__rspack__/`) ||
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css')
   ) {
@@ -157,6 +160,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Precache hits (manifest, icons, offline.html) + anything else same-origin.
-  event.respondWith(caches.match(request).then((c) => c || fetch(request)));
+  // Precache hits (manifest, offline.html) + anything else same-origin. Only
+  // PRECACHE is consulted: `caches.match()` would span every bucket and could
+  // hand a navigation-cached page to a same-URL data fetch.
+  event.respondWith(fromPrecache(request).then((hit) => hit || fetch(request)));
 });

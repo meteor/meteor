@@ -39,10 +39,19 @@ Template.installPrompt.events({
 // static assets only — offline data (collections, Methods, sync) is intentionally
 // out of scope here; see the README / future `--offline-data` option.
 Meteor.startup(() => {
+  // A path-prefixed ROOT_URL (https://example.com/app) serves everything under
+  // the prefix, so the static <head> links and the worker URL/scope need it.
+  const prefix = __meteor_runtime_config__.ROOT_URL_PATH_PREFIX || '';
+  if (prefix) {
+    document
+      .querySelectorAll('link[rel="manifest"], link[rel="apple-touch-icon"]')
+      .forEach((link) => link.setAttribute('href', prefix + link.getAttribute('href')));
+  }
+
   if (!('serviceWorker' in navigator)) return;
-  const swUrl = Meteor.isProduction ? '/sw.js' : '/sw.js?dev=1';
+  const swUrl = `${prefix}/sw.js${Meteor.isProduction ? '' : '?dev=1'}`;
   navigator.serviceWorker
-    .register(swUrl, { scope: '/' })
+    .register(swUrl, { scope: `${prefix}/` })
     .catch((err) => console.error('[PWA] Service worker registration failed', err));
 });
 
