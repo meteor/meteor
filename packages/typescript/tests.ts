@@ -1,4 +1,5 @@
 import { Tinytest } from "meteor/tinytest";
+import './test-esm-import.js';
 
 Tinytest.add("TypeScript - basics", test => {
   test.equal(2 + 2, 4);
