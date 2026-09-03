@@ -40,6 +40,7 @@ var packageJson = {
     // TODO: We should replace this with: https://github.com/jprichardson/node-kexec/pull/38
     kexec: "https://github.com/meteor/node-kexec/tarball/f29f54037c7db6ad29e1781463b182e5929215a0",
     "source-map": "0.7.4",
+    "@zodern/source-maps": "1.1.1",
     chalk: "4.1.2",
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
     sqlite3: "5.1.7",
