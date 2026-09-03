@@ -1,0 +1,33 @@
+<template name="cameraPanel">
+  <h3>Camera</h3>
+  {{#if supported}}
+    {{#if isIdle}}
+      <button type="button" class="cap-btn" data-action="start">Start camera</button>
+    {{/if}}
+    {{#if isLive}}
+      <video class="cap-video" autoplay playsinline muted></video>
+      <div class="cap-actions">
+        <button type="button" class="cap-btn" data-action="snapshot">Snapshot</button>
+        <button type="button" class="cap-btn cap-btn--secondary" data-action="stop">Stop camera</button>
+      </div>
+    {{/if}}
+    {{#if isSnapshot}}
+      <canvas class="cap-canvas"></canvas>
+      <div class="cap-actions">
+        <a class="cap-btn" download="snapshot.png" href="{{snapshotUrl}}">Download PNG</a>
+        <button type="button" class="cap-btn cap-btn--secondary" data-action="reset">Reset</button>
+      </div>
+    {{/if}}
+    {{#if status}}<p class="cap-status">{{status}}</p>{{/if}}
+    <p class="muted">
+      In production, <code>getUserMedia</code> requires HTTPS. <code>localhost</code> is exempted
+      by browser policy.
+    </p>
+  {{else}}
+    <button type="button" class="cap-disabled" disabled>Start camera</button>
+    <p class="cap-unsupported-note">
+      getUserMedia isn't available in this browser
+      (<a href="https://caniuse.com/stream" target="_blank" rel="noopener">caniuse: stream</a>).
+    </p>
+  {{/if}}
+</template>

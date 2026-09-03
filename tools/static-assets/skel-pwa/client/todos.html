@@ -1,0 +1,26 @@
+<template name="todosPanel">
+  <section class="panel">
+    <h2>Todos ({{count}})</h2>
+
+    <form class="todo-form">
+      <input type="text" name="text" placeholder="What needs to be done?" autocomplete="off" required>
+      <button type="submit">Add</button>
+    </form>
+
+    {{#if count}}
+      <ul class="todos">
+        {{#each todos}}
+          <li class="todo {{#if done}}todo--done{{/if}}">
+            <label>
+              <input type="checkbox" class="toggle" data-id="{{_id}}" checked="{{done}}">
+              <span class="todo-text">{{text}}</span>
+            </label>
+            <button class="remove" type="button" data-id="{{_id}}">&times;</button>
+          </li>
+        {{/each}}
+      </ul>
+    {{else}}
+      <p class="muted">No todos yet — add one above.</p>
+    {{/if}}
+  </section>
+</template>

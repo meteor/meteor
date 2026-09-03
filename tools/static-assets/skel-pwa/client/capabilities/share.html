@@ -1,0 +1,19 @@
+<template name="sharePanel">
+  <h3>Web Share</h3>
+  {{#if supported}}
+    <form class="share-form">
+      <label>Title<input type="text" name="title" value="Hello from PWA" autocomplete="off"></label>
+      <label>Text<input type="text" name="text" value="Sharing from the Meteor PWA scaffold" autocomplete="off"></label>
+      <label>URL<input type="url" name="url" value="https://www.meteor.com" autocomplete="off"></label>
+      <button type="submit" class="cap-btn">Share</button>
+    </form>
+    {{#if status}}<p class="cap-status">{{status}}</p>{{/if}}
+  {{else}}
+    <button type="button" class="cap-disabled" disabled>Share</button>
+    <p class="cap-unsupported-note">
+      Web Share isn't available in this browser
+      (<a href="https://caniuse.com/web-share" target="_blank" rel="noopener">caniuse: web-share</a>).
+      Common on mobile Chrome/Safari, missing on desktop Firefox.
+    </p>
+  {{/if}}
+</template>

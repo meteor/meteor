@@ -1,0 +1,28 @@
+<template name="notificationsPanel">
+  <h3>Notifications</h3>
+  {{#if supported}}
+    <div class="cap-row">
+      <span class="cap-label">Permission</span>
+      <span class="cap-value cap-{{permClass}}">{{perm}}</span>
+    </div>
+    {{#if isDefault}}
+      <button type="button" class="cap-btn" data-action="request">Request permission</button>
+    {{/if}}
+    {{#if isGranted}}
+      <button type="button" class="cap-btn" data-action="send">Send test notification</button>
+    {{/if}}
+    {{#if isDenied}}
+      <p class="cap-unsupported-note">
+        Notifications are blocked for this site. Re-enable in browser settings
+        (lock icon next to the URL &rarr; Site settings).
+      </p>
+    {{/if}}
+    {{#if status}}<p class="cap-status">{{status}}</p>{{/if}}
+  {{else}}
+    <button type="button" class="cap-disabled" disabled>Send notification</button>
+    <p class="cap-unsupported-note">
+      Notifications aren't supported in this browser
+      (<a href="https://caniuse.com/notifications" target="_blank" rel="noopener">caniuse: notifications</a>).
+    </p>
+  {{/if}}
+</template>

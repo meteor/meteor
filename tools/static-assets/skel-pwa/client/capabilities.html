@@ -1,0 +1,22 @@
+<template name="capabilitiesPanel">
+  <section class="panel">
+    <h2>Capabilities</h2>
+    <p class="muted">A tour of modern Web APIs that can replace native plugins.</p>
+
+    <nav class="subtabs">
+      <button class="subtab {{subTabClass 'network'}}" type="button" data-subtab="network">Network</button>
+      <button class="subtab {{subTabClass 'notifications'}}" type="button" data-subtab="notifications">Notifications</button>
+      <button class="subtab {{subTabClass 'share'}}" type="button" data-subtab="share">Share</button>
+      <button class="subtab {{subTabClass 'camera'}}" type="button" data-subtab="camera">Camera</button>
+      <button class="subtab {{subTabClass 'detect'}}" type="button" data-subtab="detect">Detect</button>
+    </nav>
+
+    <div class="subpanel">
+      {{#if isSubTab 'network'}}{{> networkPanel}}{{/if}}
+      {{#if isSubTab 'notifications'}}{{> notificationsPanel}}{{/if}}
+      {{#if isSubTab 'share'}}{{> sharePanel}}{{/if}}
+      {{#if isSubTab 'camera'}}{{> cameraPanel}}{{/if}}
+      {{#if isSubTab 'detect'}}{{> detectPanel}}{{/if}}
+    </div>
+  </section>
+</template>

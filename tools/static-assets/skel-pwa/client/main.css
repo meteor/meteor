@@ -1,0 +1,175 @@
+body {
+  padding: 16px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  max-width: 720px;
+  margin: 0 auto;
+  color: #222;
+}
+
+header h1 { color: #ff6b35; margin: 0 0 12px; }
+header { margin-bottom: 16px; }
+
+.muted { color: #888; font-size: 0.9rem; }
+
+/* ===== Install banner (top of page) ===== */
+.pwa-install {
+  border: 2px solid #ff6b35;
+  border-radius: 8px;
+  padding: 12px 16px;
+  background: #fff5f0;
+  margin: 12px 0;
+}
+.pwa-status {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  margin: 12px 0;
+}
+.pwa-status--ok { background: #e6f7e6; color: #1a6b1a; }
+
+.install-btn, .dismiss-btn {
+  border: 0;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-right: 6px;
+}
+.install-btn { background: #ff6b35; color: #fff; }
+.install-btn:hover { background: #e95a25; }
+.dismiss-btn { background: transparent; color: #555; border: 1px solid #ccc; }
+.dismiss-btn:hover { background: #f4f4f4; }
+
+/* ===== Tabs ===== */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid #e0e0e0;
+  margin-bottom: 16px;
+}
+.tab {
+  background: transparent;
+  border: 0;
+  padding: 10px 18px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #555;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.tab:hover { color: #ff6b35; }
+.tab--active { color: #ff6b35; border-bottom-color: #ff6b35; font-weight: 600; }
+
+/* ===== Panels (shared across tabs) ===== */
+.panel {
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fff;
+}
+.panel h2 { font-size: 1.1rem; margin: 0 0 8px; }
+
+/* ===== Todos ===== */
+.todo-form { display: flex; gap: 6px; margin-bottom: 12px; }
+.todo-form input[type=text] {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+.todo-form button {
+  background: #ff6b35;
+  color: #fff;
+  border: 0;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.todo-form button:hover { background: #e95a25; }
+
+.todos { list-style: none; padding: 0; margin: 0; }
+.todo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.todo label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  cursor: pointer;
+}
+.todo--done .todo-text { text-decoration: line-through; color: #888; }
+.todo .remove {
+  background: transparent;
+  color: #c00;
+  border: 0;
+  padding: 0 8px;
+  font-size: 1.4rem;
+  cursor: pointer;
+}
+.todo .remove:hover { color: #800; }
+
+/* ===== Capabilities sub-tabs ===== */
+.subtabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid #e0e0e0;
+  margin: 8px 0 16px;
+}
+.subtab {
+  background: transparent;
+  border: 0;
+  padding: 6px 12px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  color: #555;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+.subtab:hover { color: #ff6b35; }
+.subtab--active { color: #ff6b35; border-bottom-color: #ff6b35; font-weight: 600; }
+.subpanel h3 { margin: 0 0 12px; font-size: 1rem; }
+.subpanel p { margin: 8px 0; }
+
+/* ===== Capability rows / widgets ===== */
+.cap-row { display: flex; gap: 8px; padding: 4px 0; }
+.cap-label { color: #555; min-width: 120px; }
+.cap-value { font-weight: 600; }
+.cap-ok, .cap-value.cap-ok { color: #1a6b1a; }
+.cap-ko, .cap-value.cap-ko { color: #c00; }
+.cap-value.cap-pending { color: #888; }
+.cap-status { padding: 6px 10px; background: #f4f4f4; border-radius: 4px; font-size: 0.9rem; }
+.cap-btn {
+  display: inline-block;
+  background: #ff6b35;
+  color: #fff;
+  border: 0;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-right: 6px;
+  text-decoration: none;
+}
+.cap-btn:hover { background: #e95a25; }
+.cap-btn--secondary { background: #777; }
+.cap-btn--secondary:hover { background: #555; }
+.cap-disabled {
+  background: #ddd; color: #999; border: 0;
+  padding: 6px 14px; border-radius: 4px; cursor: not-allowed;
+}
+.cap-unsupported-note { font-size: 0.85rem; color: #888; }
+.cap-actions { margin: 12px 0; }
+.cap-video, .cap-canvas { max-width: 100%; border: 1px solid #ccc; border-radius: 4px; margin: 8px 0; }
+.share-form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.share-form label { display: flex; flex-direction: column; font-size: 0.85rem; color: #555; }
+.share-form input { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; font-size: 0.9rem; margin-top: 2px; }
+.cap-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.cap-table th, .cap-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+.cap-table th { color: #555; font-weight: 600; }

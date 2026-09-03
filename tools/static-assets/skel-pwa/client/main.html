@@ -1,0 +1,42 @@
+<head>
+  <title>~name~</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#ff6b35">
+  <meta name="description" content="A Meteor + Blaze Progressive Web App">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="~name~">
+</head>
+
+<body>
+  <header>
+    <h1>~name~</h1>
+    {{> installPanel}}
+  </header>
+
+  <nav class="tabs">
+    <button class="tab {{tabClass 'todos'}}" type="button" data-tab="todos">Todos</button>
+    <button class="tab {{tabClass 'capabilities'}}" type="button" data-tab="capabilities">Capabilities</button>
+  </nav>
+
+  <main>
+    {{#if isTab 'todos'}}{{> todosPanel}}{{/if}}
+    {{#if isTab 'capabilities'}}{{> capabilitiesPanel}}{{/if}}
+  </main>
+</body>
+
+<template name="installPanel">
+  {{#if isInstalled}}
+    <p class="pwa-status pwa-status--ok">Running as an installed PWA.</p>
+  {{else if canInstall}}
+    <div class="pwa-install">
+      <p>Install this app on your device for a native-like experience.</p>
+      <button class="install-btn" type="button">Install</button>
+      <button class="dismiss-btn" type="button">Not now</button>
+    </div>
+  {{/if}}
+</template>
