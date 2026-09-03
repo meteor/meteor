@@ -18,6 +18,8 @@ Package.onUse(api => {
   api.addFiles('oauth1_binding.js', 'server');
   api.addFiles('oauth1_server.js', 'server');
   api.addFiles('oauth1_pending_request_tokens.js', 'server');
+
+  api.addAssets('oauth1.d.ts', 'server');
 });
 
 Package.onTest(api => {

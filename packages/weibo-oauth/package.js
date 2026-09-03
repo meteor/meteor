@@ -12,6 +12,8 @@ Package.onUse(api => {
   api.addFiles('weibo_client.js', 'client');
   api.addFiles('weibo_server.js', 'server');
 
+  api.addAssets('weibo-oauth.d.ts', 'server');
+
   api.export('Weibo');
 });
 
