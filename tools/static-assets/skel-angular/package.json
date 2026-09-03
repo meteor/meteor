@@ -16,7 +16,7 @@
     "@angular/router": "^20.0.0",
     "@babel/runtime": "^7.23.5",
     "@swc/helpers": "^0.5.17",
-    "meteor-node-stubs": "^1.2.29",
+    "meteor-node-stubs": "^1.2.30",
     "rxjs": "^7.8.1",
     "zone.js": "^0.15.1"
   },
