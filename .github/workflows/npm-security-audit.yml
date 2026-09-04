@@ -1,0 +1,115 @@
+name: NPM Security Audit
+
+on:
+  pull_request:
+    paths:
+      - "npm-packages/**/package.json"
+      - "npm-packages/**/package-lock.json"
+      - ".github/workflows/npm-security-audit.yml"
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Phase 1: audit selected active runtime/installer npm packages, but enforce
+  # failures only for packages whose existing baseline is clean and high-impact.
+  ENFORCED_AUDIT_PATHS: "npm-packages/meteor-node-stubs"
+
+jobs:
+  audit:
+    name: Audit ${{ matrix.package_dir }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        package_dir:
+          - npm-packages/babel-preset-meteor
+          - npm-packages/cordova-plugin-meteor-webapp
+          - npm-packages/meteor-babel
+          - npm-packages/meteor-installer
+          - npm-packages/meteor-node-stubs
+          - npm-packages/meteor-rspack
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
+      - name: Run npm audit (lockfile only)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          package_dir="${{ matrix.package_dir }}"
+          lockfile_path="$package_dir/package-lock.json"
+
+          if [ ! -f "$lockfile_path" ]; then
+            echo "Skipping $package_dir because package-lock.json is missing."
+            exit 0
+          fi
+
+          audit_file="$(mktemp)"
+          (
+            cd "$package_dir"
+            npm audit --package-lock-only --omit=dev --json > "$audit_file" || true
+          )
+
+          audit_counts="$(node -e '
+            const fs = require("fs");
+            const report = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+            if (report.error || !report.metadata?.vulnerabilities) {
+              console.error(
+                report.error
+                  ? `npm audit failed: ${JSON.stringify(report.error)}`
+                  : "npm audit output did not include metadata.vulnerabilities"
+              );
+              process.exit(2);
+            }
+            const v = report.metadata.vulnerabilities;
+            console.log(`${v.total || 0} ${v.critical || 0} ${v.high || 0} ${v.moderate || 0} ${v.low || 0}`);
+          ' "$audit_file")"
+          read -r total critical high moderate low <<< "$audit_counts"
+
+          {
+            echo "### $package_dir"
+            echo "- total: $total"
+            echo "- critical: $critical"
+            echo "- high: $high"
+            echo "- moderate: $moderate"
+            echo "- low: $low"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          enforce_for_package=false
+          if echo " $ENFORCED_AUDIT_PATHS " | grep -q " $package_dir "; then
+            if [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+              changed_files="$(git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" -- "$package_dir")"
+              if [ -n "$changed_files" ]; then
+                enforce_for_package=true
+              fi
+            else
+              enforce_for_package=true
+            fi
+          fi
+
+          if [ "$enforce_for_package" = "true" ]; then
+            echo "- enforcement: enabled" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- enforcement: report-only" >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+          if echo " $ENFORCED_AUDIT_PATHS " | grep -q " $package_dir "; then
+            if [ "$enforce_for_package" = "true" ] && [ "$total" -gt 0 ]; then
+              echo "Failing because vulnerabilities were found in enforced package: $package_dir"
+              exit 1
+            fi
+          fi

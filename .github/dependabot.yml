@@ -4,3 +4,39 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    target-branch: "devel"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
+  - package-ecosystem: "npm"
+    directory: "/npm-packages/babel-preset-meteor"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
+  - package-ecosystem: "npm"
+    directory: "/npm-packages/cordova-plugin-meteor-webapp"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
+  - package-ecosystem: "npm"
+    directory: "/npm-packages/meteor-babel"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
+  - package-ecosystem: "npm"
+    directory: "/npm-packages/meteor-installer"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
+  - package-ecosystem: "npm"
+    directory: "/npm-packages/meteor-node-stubs"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
+  - package-ecosystem: "npm"
+    directory: "/npm-packages/meteor-rspack"
+    schedule:
+      interval: "weekly"
+    target-branch: "devel"
