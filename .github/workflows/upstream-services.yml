@@ -10,6 +10,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# The job only reads the checkout and talks to public endpoints.
+permissions:
+  contents: read
+
 jobs:
   probe:
     name: Upstream services
@@ -18,6 +22,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
 
       - name: Probe upstream services
         run: bash scripts/ci/check-upstream-services.sh
