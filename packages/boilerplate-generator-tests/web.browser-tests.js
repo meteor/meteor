@@ -81,6 +81,7 @@ Tinytest.addAsync(
   "boilerplate-generator-tests - web.browser - custom script url under " +
     "rootUrlPathPrefix",
   async function (test) {
+    const previousUrl = process.env.METEOR_APP_CUSTOM_SCRIPT_URL;
     process.env.METEOR_APP_CUSTOM_SCRIPT_URL = '/__rspack__/client-rspack.js';
     try {
       const html = await generateHTMLForArch("web.browser", false);
@@ -91,7 +92,11 @@ Tinytest.addAsync(
         /<script[^<>]*src="rootUrlPathPrefix\/__rspack__\/client-rspack\.js">/
       );
     } finally {
-      delete process.env.METEOR_APP_CUSTOM_SCRIPT_URL;
+      if (previousUrl === undefined) {
+        delete process.env.METEOR_APP_CUSTOM_SCRIPT_URL;
+      } else {
+        process.env.METEOR_APP_CUSTOM_SCRIPT_URL = previousUrl;
+      }
     }
   }
 );
