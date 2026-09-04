@@ -231,7 +231,7 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | apollo | 3201 | JSX | |
 | babel | 3212 | JSX | |
 | bare | 3219 | JS | No title/style checks, no client tests, skip build cache check |
-| blaze | 3202 | JS | |
+| blaze | 3202, 3216 | JS | Path-prefixed `ROOT_URL` (`/app`, port 3216): Rspack dev script injected under the prefix and client code running, dev + prod (#14716) |
 | chakra-ui | 3203 | JSX | No body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | |
 | full | 3204 | JS | `imports/api/` test structure |
@@ -307,6 +307,7 @@ Where each feature is tested across apps and skeletons.
 | Custom build dir | react, typescript | |
 | Custom asset/chunk context dirs | typescript | |
 | Custom env vars | react (METEOR_LOCAL_DIR), react-router (METEOR_PACKAGE_DIRS), server-only regression (absolute external METEOR_LOCAL_DIR) | |
+| Path-prefixed `ROOT_URL` (`ROOT_URL_PATH_PREFIX`) | | blaze |
 | Static asset bundling | react-router, monorepo (png, md, icon, manifest) | |
 | Less styles | react-router | |
 | SCSS styles | typescript | |

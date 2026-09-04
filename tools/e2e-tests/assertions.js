@@ -8,7 +8,7 @@ import { chromium } from 'playwright';
 
 let fallbackBrowser;
 
-async function getPlaywrightPage() {
+export async function getPlaywrightPage() {
   if (typeof page !== 'undefined' && !page.isClosed()) {
     return page;
   }
