@@ -41,20 +41,25 @@ npm run test:native:ios                       # Run iOS smoke flow
 
 ## E2E Tests (`tools/e2e-tests/`)
 
-Jest + Playwright suite for verifying bundler integrations (rspack). Tests cover framework skeletons and build scenarios.
+Jest + Playwright suite for verifying bundler integrations (rspack). Tests cover framework skeletons, command modes, routing, top-level await, and build/watch regressions.
 
-**Test apps:** `apps/{react,vue,svelte,solid,blaze,typescript,babel,coffeescript,monorepo}`
+**Test apps:** `tools/e2e-tests/apps/`. Use
+`dev/modern-tools/rspack/E2E_COVERAGE.md` as the authoritative app-to-feature
+coverage map instead of inferring coverage from fixture names.
 
 ## Native mobile smoke tests (`tools/native-tests/`)
 
 Plain Node orchestrator + Maestro YAML flows. Builds a minimal Meteor app for
-Cordova, installs it on an iOS Simulator or Android emulator, asserts the app
-launches and DDP connects. Runs nightly in CI plus on PRs labeled `mobile`.
+Cordova, installs it on an iOS Simulator or Android emulator, and checks the
+initial runtime plus a live hot-code-push update. Coverage includes rendering,
+styles, Cordova APIs and asset paths, DDP, route reloads, and HCP. Runs nightly
+in CI plus on PRs labeled `mobile`.
 
 **Local prerequisites:** Maestro CLI (`curl -fsSL https://get.maestro.mobile.dev | bash`),
-Xcode (iOS), Android SDK + emulator (Android).
+Xcode (iOS), Android SDK + emulator (Android). See
+`tools/native-tests/README.md` for current Node and Android SDK minimums.
 
-**Tests:** `flows/launch.yaml` against `apps/smoke/`.
+**Tests:** `flows/launch.yaml` and `flows/hcp-updated.yaml` against `apps/smoke/`.
 
 ## Test Helpers Package (`packages/test-helpers`)
 
