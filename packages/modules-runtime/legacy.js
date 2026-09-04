@@ -6,6 +6,7 @@ meteorInstall = makeInstaller({
   // The difference between legacy.js and modern.js is that this module
   // prefers "main" over "module" (see issue #10658).
   mainFields: ['browser', 'main', 'module'],
+  conditions: ["module", "browser", "default"],
 
   fallback: function (id, parentId, error) {
     verifyErrors(id, parentId, error);

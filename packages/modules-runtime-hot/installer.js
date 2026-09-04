@@ -24,6 +24,9 @@ makeInstaller = function (options) {
     // might make sense to support the object version, a la browserify.
     (options.browser ? ["browser", "main"] : ["main"]);
 
+  // List of "conditions" to use for the package.json exports field.
+  var conditions = options.conditions || ['default'];
+
   var hasOwn = {}.hasOwnProperty;
   function strictHasOwn(obj, key) {
     return isObject(obj) && isString(key) && hasOwn.call(obj, key);
@@ -506,9 +509,107 @@ makeInstaller = function (options) {
     }
   }
 
+  function resolvePackageJsonExports(subPath, pkg) {
+    var exports = pkg.exports;
+
+    if (subPath === '.') {
+      if (typeof exports === 'string') {
+        return resolveTarget(subPath, exports);
+      } else if (exports && exports['.']) {
+        return resolveTarget('.', exports['.']);
+      } else if (Object.keys(exports).every(function (key) {return !key.startsWith('.')})) {
+        return resolveTarget('.', exports);
+      }
+
+      return null;
+    }
+
+    if (typeof exports === 'object' && exports !== null) {
+      if (subPath in exports) {
+        return resolveTarget(subPath, exports[subPath]);
+      }
+
+      var expansionKeys = Object.keys(exports).filter(function (key) {
+        return key.includes('*');
+      }).sort(function (keyA, keyB) {
+        var baseLengthA = keyA.indexOf('*');
+        var baseLengthB = keyB.indexOf('*');
+
+        if (baseLengthA !== baseLengthB) {
+          return baseLengthA > baseLengthB ? -1 : 1;
+        }
+
+        if (keyA.length !== keyB.length) {
+          return keyA.length > keyB.length ? -1 : 1;
+        }
+
+        return 0;
+      });
+
+      var result;
+      expansionKeys.some(function (expansionKey) {
+        var patternBase = expansionKey.substring(0, expansionKey.indexOf('*'));
+        if (subPath !== patternBase && subPath.indexOf(patternBase) === 0) {
+          var patternTrailer = expansionKey.substring(patternBase.length + 1);
+
+          if (
+            patternTrailer.length === 0 ||
+            subPath.endsWith(patternTrailer) && subPath.length >= expansionKey.length
+          ) {
+            var patternMatch = subPath.substring(patternBase.length, subPath.length - patternTrailer.length);
+            return result = resolveTarget(expansionKey, exports[expansionKey], patternMatch);
+          }
+        }
+      });
+
+      return result;
+    }
+
+    return null;
+
+    function resolveTarget(key, value, patternMatch) {
+      if (typeof value === 'string') {
+        if (value.indexOf('./') !== 0) {
+          throw new Error('Invalid Package Target');
+        }
+        if (patternMatch === undefined) {
+          return value;
+        }
+
+        var resolved = value.replaceAll('*', patternMatch);
+        return resolved;
+      }
+
+      if (Array.isArray(value)) {
+        var result;
+        value.some(function (targetItem) {
+          try {
+            return result = resolveTarget(key, targetItem, patternMatch);
+          } catch (err) {
+            if (err.message === 'Invalid Package Target') return result = undefined;
+            throw err;
+          }
+        });
+        return result;
+      }
+
+      if (typeof value === 'object' && value !== null) {
+        var result;
+        Object.keys(value).find(function (prop) {
+          if (conditions.indexOf(prop) > -1) {
+            return result = resolveTarget(key, value[prop], patternMatch)
+          }
+        });
+        return result || null;
+      }
+    }
+  }
+
   function fileResolve(file, id, parentModule, seenDirFiles) {
     var parentModule = parentModule || file.module;
     var extensions = fileGetExtensions(file);
+    var packageName = extractPackageName(id);
+    var packageSubpath = '.' + id.substring(packageName.length);
 
     file =
       // Absolute module identifiers (i.e. those that begin with a `/`
@@ -516,12 +617,12 @@ makeInstaller = function (options) {
       // is a slight deviation from Node, which has access to the entire
       // file system.
       id.charAt(0) === "/" ? fileAppendId(root, id, extensions) :
-        // Relative module identifiers are interpreted relative to the
-        // current file, naturally.
-        id.charAt(0) === "." ? fileAppendId(file, id, extensions) :
-          // Top-level module identifiers are interpreted as referring to
-          // packages in `node_modules` directories.
-          nodeModulesLookup(file, id, extensions);
+      // Relative module identifiers are interpreted relative to the
+      // current file, naturally.
+      id.charAt(0) === "." ? fileAppendId(file, id, extensions) :
+      // Top-level module identifiers are interpreted as referring to
+      // packages in `node_modules` directories.
+      nodeModulesLookup(file, id, extensions, parentModule);
 
     // If the identifier resolves to a directory, we use the same logic as
     // Node to find an `index.js` or `package.json` file to evaluate.
@@ -539,18 +640,48 @@ makeInstaller = function (options) {
 
         var pkgJsonFile = fileAppendIdPart(file, "package.json");
         var pkg = pkgJsonFile && fileEvaluate(pkgJsonFile, parentModule);
-        var mainFile, resolved = pkg && mainFields.some(function (name) {
-          var main = pkg[name];
-          if (isString(main)) {
-            // The "main" field of package.json does not have to begin
-            // with ./ to be considered relative, so first we try
-            // simply appending it to the directory path before
-            // falling back to a full fileResolve, which might return
-            // a package from a node_modules directory.
-            return mainFile = fileAppendId(file, main, extensions) ||
-              fileResolve(file, main, parentModule, seenDirFiles);
+        var mainFile, resolved;
+
+        if (pkg && pkg.exports) {
+          // We might need to re-check the folder again if there are aliases
+          seenDirFiles.pop();
+
+          var exportPath = resolvePackageJsonExports(packageSubpath, pkg);
+
+          if (!exportPath) {
+            var err = new Error(
+              '[ERR_PACKAGE_PATH_NOT_EXPORTED]: Package subpath "' + packageSubpath +
+              '" is not defined by "exports" in ' + pkgJsonFile.module.id
+            );
+            err.code = 'ERR_PACKAGE_PATH_NOT_EXPORTED';
+            throw err;
           }
-        });
+
+          resolved = mainFile = fileAppendId(file, exportPath, extensions) ||
+            fileResolve(file, exportPath, parentModule, seenDirFiles);
+        } else if (pkg && (!packageName || packageSubpath === '.')) {
+          resolved = mainFields.some(function (name) {
+            var main = pkg[name];
+            if (isString(main)) {
+              // The "main" field of package.json does not have to begin
+              // with ./ to be considered relative, so first we try
+              // simply appending it to the directory path before
+              // falling back to a full fileResolve, which might return
+              // a package from a node_modules directory.
+              return mainFile = fileAppendId(file, main, extensions) ||
+                fileResolve(file, main, parentModule, seenDirFiles);
+            }
+          });
+        } else if (packageSubpath.indexOf('./') === 0) {
+          resolved = mainFile = fileAppendId(file, packageSubpath, extensions);
+
+          // We might need to re-check the folder again if there are aliases
+          // If we resolved to the same file, then we want to exclude this folder
+          // to avoid an infinite loop
+          if (resolved !== file) {
+            seenDirFiles.pop();
+          }
+        }
 
         if (resolved && mainFile) {
           file = mainFile;
@@ -582,12 +713,69 @@ makeInstaller = function (options) {
     return file;
   };
 
-  function nodeModulesLookup(file, id, extensions) {
-    for (var resolved; file && !resolved; file = file.parent) {
+  function nodeModulesLookup(file, id, extensions, parentModule) {
+    var pkgJsonFile = findPackageJson(file, parentModule);
+    var packageName = extractPackageName(id);
+
+    if (pkgJsonFile) {
+      var pkg = fileEvaluate(pkgJsonFile, parentModule);
+
+      if (pkg && pkg.name === packageName && pkg.exports) {
+        return pkgJsonFile.parent;
+      }
+    }
+
+    if (packageName.length < id.length) {
+      // Add a trailing slash to indicate we want a folder, in case there is
+      // also a file with the same name
+      packageName = packageName + '/';
+    }
+
+    for (var resolved; file && ! resolved; file = file.parent) {
       resolved = fileIsDirectory(file) &&
-        fileAppendId(file, "node_modules/" + id, extensions);
+        fileAppendId(file, "node_modules/" + packageName, extensions);
+
+      if (resolved && fileIsDirectory(resolved)) {
+        var pkgJsonFile = fileAppendIdPart(resolved, "package.json");
+        var pkg = pkgJsonFile && fileEvaluate(pkgJsonFile, parentModule);
+
+        if (pkg && pkg.exports || id === packageName) {
+          break;
+        }
+
+        // commonjs checks if the exact id exists, or continues to the parent
+        if (!fileAppendId(file, "node_modules/" + id, extensions)) {
+          resolved = null;
+        }
+      }
     }
     return resolved;
+  }
+
+  function extractPackageName(id) {
+    if ('./'.indexOf(id.charAt(0)) > -1) {
+      // Not an id for a package
+      return '';
+    } else if (id.indexOf('/') === -1) {
+      return id;
+    } else if (id.charAt(0) === '@') {
+      // everything before second "/"
+      return id.substring(0, id.indexOf('/', id.indexOf('/') + 1));
+    }
+
+    return id.substring(0, id.indexOf('/'));
+  }
+
+  function findPackageJson(file) {
+    file = file.parent;
+    while(file && fileIsDirectory(file) && file.module.id !== 'node_modules') {
+      var pkgJsonFile = fileAppendIdPart(file, "package.json");
+      if (pkgJsonFile) {
+        return pkgJsonFile
+      }
+
+      file = file.parent;
+    }
   }
 
   return install;
