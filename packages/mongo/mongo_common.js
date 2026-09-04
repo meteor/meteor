@@ -5,6 +5,25 @@ export const MongoDB = Object.assign(NpmModuleMongodb, {
   ObjectID: NpmModuleMongodb.ObjectId,
 });
 
+// A native driver ObjectId (as returned from rawCollection()/aggregate()) is not
+// an EJSON type, so returning one from a method sends the client an opaque object
+// (`{}` on older bson, `{ buffer: ... }` on newer bson) rather than a usable id.
+// `find()` results are converted to Mongo.ObjectID by replaceMongoAtomWithMeteor
+// below, but arbitrary method return values are not. Teach EJSON to serialize a
+// native ObjectId as the same "oid" type used by Mongo.ObjectID (see the mongo-id
+// package) so it round-trips to a Mongo.ObjectID on the client.
+if (MongoDB.ObjectId &&
+    MongoDB.ObjectId.prototype &&
+    typeof MongoDB.ObjectId.prototype.typeName !== 'function' &&
+    typeof MongoDB.ObjectId.prototype.toHexString === 'function') {
+  MongoDB.ObjectId.prototype.typeName = function () {
+    return 'oid';
+  };
+  MongoDB.ObjectId.prototype.toJSONValue = function () {
+    return this.toHexString();
+  };
+}
+
 // The write methods block until the database has confirmed the write (it may
 // not be replicated or stable on disk, but one server has confirmed it) if no
 // callback is provided. If a callback is provided, then they call the callback
