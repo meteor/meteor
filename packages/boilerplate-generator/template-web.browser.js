@@ -79,7 +79,7 @@ export const closeTemplate = ({
   )),
   process.env.METEOR_APP_CUSTOM_SCRIPT_URL ?
     template("  <script type=\"text/javascript\" src=\"<%- src %>\"></script>")({
-      src: process.env.METEOR_APP_CUSTOM_SCRIPT_URL
+      src: rootUrlPathPrefix + process.env.METEOR_APP_CUSTOM_SCRIPT_URL
     })
     : '',
   '',
