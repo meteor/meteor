@@ -8,6 +8,122 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.5.2, 2026-09-04
+
+### Highlights
+
+- **Improve Meteor-Rspack reliability, correctness, and performance**, [PR#14643](https://github.com/meteor/meteor/pull/14643), [PR#14678](https://github.com/meteor/meteor/pull/14678)
+  - Preserve top-level await and build the correct client and server bundles in full-app tests, [PR#14405](https://github.com/meteor/meteor/pull/14405), [PR#14575](https://github.com/meteor/meteor/pull/14575), [PR#14653](https://github.com/meteor/meteor/pull/14653). These changes address reports [#14066](https://github.com/meteor/meteor/issues/14066), [#14371](https://github.com/meteor/meteor/issues/14371), [#14395](https://github.com/meteor/meteor/issues/14395), and [#14561](https://github.com/meteor/meteor/issues/14561), whose investigation and reproduction were developed in [PR#14562](https://github.com/meteor/meteor/pull/14562).
+  - Isolate concurrent development and test builds that share an application directory, and preserve their generated output across watcher processes, [PR#14576](https://github.com/meteor/meteor/pull/14576), [PR#14674](https://github.com/meteor/meteor/pull/14674).
+  - Keep persistent caches warm across modes and build contexts, reduce rebuild statistics overhead, and load the SWC native binding only when needed, [PR#14569](https://github.com/meteor/meteor/pull/14569), [PR#14578](https://github.com/meteor/meteor/pull/14578). These changes address the low-risk improvements from report [#14568](https://github.com/meteor/meteor/issues/14568).
+  - Resolve hoisted Rspack CLI installations, track TypeScript configuration dependencies, clean linker caches correctly, bound ignored-extension scanning, and fail immediately if a Rspack process exits or panics before its first compilation, [PR#14641](https://github.com/meteor/meteor/pull/14641), [PR#14645](https://github.com/meteor/meteor/pull/14645), [PR#14646](https://github.com/meteor/meteor/pull/14646), [PR#14574](https://github.com/meteor/meteor/pull/14574), [PR#14581](https://github.com/meteor/meteor/pull/14581).
+  - Discover eager tests when an application's absolute path contains a `private` segment, preventing full-app Rspack tests from silently reporting zero passing tests, [PR#14693](https://github.com/meteor/meteor/pull/14693), issue [#14688](https://github.com/meteor/meteor/issues/14688).
+- Add a shared `tools-core` dependency manager and let Rspack install required npm dependencies automatically, with actionable instructions when automatic installation is disabled, [PR#14492](https://github.com/meteor/meteor/pull/14492).
+- Upgrade to Cordova CLI 13 and `cordova-android@15.1.0`, update Android native testing, and preserve local Cordova plugin paths containing encoded or reserved characters, [PR#14487](https://github.com/meteor/meteor/pull/14487).
+- Update `meteor-node-stubs` to 1.2.30 with bundled `qs@6.16.0` to address [GHSA-q8mj-m7cp-5q26](https://github.com/advisories/GHSA-q8mj-m7cp-5q26), [GHSA-4mjr-xmp4-gh2g](https://github.com/advisories/GHSA-4mjr-xmp4-gh2g), and [GHSA-x5fp-wj9c-mxmx](https://github.com/advisories/GHSA-x5fp-wj9c-mxmx), [PR#14485](https://github.com/meteor/meteor/pull/14485), [PR#14708](https://github.com/meteor/meteor/pull/14708), issues [#14484](https://github.com/meteor/meteor/issues/14484) and [#14707](https://github.com/meteor/meteor/issues/14707).
+- Expose the HttpOnly cookie endpoints only when `useHttpOnlyCookies` is enabled and reject oversized request bodies, [PR#14657](https://github.com/meteor/meteor/pull/14657), issue [#14654](https://github.com/meteor/meteor/issues/14654).
+- Prevent change stream observers from replaying events already covered by a causal primary snapshot, avoiding intermittent login disconnects, [PR#14697](https://github.com/meteor/meteor/pull/14697), issue [#14695](https://github.com/meteor/meteor/issues/14695).
+- Redact credentials from invalid `MONGO_URL` warnings and respect the connection string's TLS settings during the startup compatibility check, [PR#14658](https://github.com/meteor/meteor/pull/14658), issue [#14400](https://github.com/meteor/meteor/issues/14400).
+- Follow the browser page protocol when deriving the default DDP connection URL, preventing failed connections when the page and `ROOT_URL` use different protocols, [PR#14640](https://github.com/meteor/meteor/pull/14640), issue [#14635](https://github.com/meteor/meteor/issues/14635).
+- Stop watching immutable package warehouse files, reducing native watcher consumption and preventing macOS FSEvent stream exhaustion, [PR#14672](https://github.com/meteor/meteor/pull/14672), issue [#14671](https://github.com/meteor/meteor/issues/14671).
+- Compute client manifest size, hash, and SRI values from the exact bytes written to disk after source-map URL processing, [PR#14482](https://github.com/meteor/meteor/pull/14482), continuing [PR#14476](https://github.com/meteor/meteor/pull/14476) and issue [#10710](https://github.com/meteor/meteor/issues/10710).
+- Remove the transitive `jquery` dependency from `test-in-browser`, allowing Blaze tests to run with or without jQuery when it is supplied explicitly, [PR#14308](https://github.com/meteor/meteor/pull/14308).
+
+All Merged PRs@[GitHub PRs 3.5.2](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.5.2)
+
+Meteor Mocha Changelog: [meteortesting:mocha@3.4.0](https://github.com/Meteor-Community-Packages/meteor-mocha/blob/v3.4.0/CHANGELOG.md#340)
+
+#### Breaking Changes
+
+- Cordova Android builds now use `cordova-android@15.1.0` and require Android SDK Platform 36 and Build Tools 36.0.0.
+- `test-in-browser@1.6.0` no longer supplies `jquery` transitively. Tests that need jQuery must declare it explicitly or use `--extra-packages=jquery`.
+
+#### Internal API changes
+
+- `tools-core` adds shared helpers for detecting, installing, and reporting required npm dependencies, [PR#14492](https://github.com/meteor/meteor/pull/14492).
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.5.2
+```
+
+Cordova Android users must install SDK Platform 36 and Build Tools 36.0.0:
+
+```bash
+sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+```
+
+Package tests that need jQuery must declare it explicitly or run with `--extra-packages=jquery`.
+
+#### Bumped Meteor Packages
+
+- accounts-base@3.3.1
+- babel-compiler@7.15.1
+- ddp-client@3.4.1
+- ecmascript@0.19.1
+- meteor-tool@3.5.2
+- minifier-js@3.3.1
+- mongo@2.5.1
+- npm-mongo@6.16.3
+- rspack@1.3.0
+- test-in-browser@1.6.0
+- tools-core@1.3.0
+- typescript@5.11.1
+
+#### Bumped NPM Packages
+
+- @meteorjs/rspack@2.2.0
+- meteor-node-stubs@1.2.30
+
+#### Special thanks to
+
+✨✨✨
+
+PR authors, contributors, and reviewers:
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@italojs](https://github.com/italojs)
+- [@Grubba27](https://github.com/Grubba27)
+- [@hexsprite](https://github.com/hexsprite)
+- [@dupontbertrand](https://github.com/dupontbertrand)
+- [@jankapunkt](https://github.com/jankapunkt)
+- [@sblaisot](https://github.com/sblaisot)
+- [@vlasky](https://github.com/vlasky)
+- [@perbergland](https://github.com/perbergland)
+- [@miamagana](https://github.com/miamagana)
+- [@a4xrbj1](https://github.com/a4xrbj1)
+- [@boomfly](https://github.com/boomfly)
+- [@zodern](https://github.com/zodern)
+- [@9Morello](https://github.com/9Morello)
+- [@harryadel](https://github.com/harryadel)
+
+Issue reporters and reproduction contributors:
+
+- [@mt-resos](https://github.com/mt-resos)
+- [@ksinas](https://github.com/ksinas)
+- [@koad](https://github.com/koad)
+- [@ToyboxZach](https://github.com/ToyboxZach)
+- [@mitar](https://github.com/mitar)
+- [@MaxTwentythree](https://github.com/MaxTwentythree)
+- [@Nefleex](https://github.com/Nefleex)
+- [@jdgjsag67251](https://github.com/jdgjsag67251)
+- [@julio-rocketchat](https://github.com/julio-rocketchat)
+- [@scharf](https://github.com/scharf)
+- [@nico014](https://github.com/nico014)
+
+Meteor's continued modernization also depends on sponsors who make long-term investment in the framework possible. Thank you to our current sponsors:
+
+- [Galaxy](https://galaxycloud.app/)
+- [Input Logic](https://inputlogic.com/)
+- [CodeRabbit](https://www.coderabbit.ai/)
+
+If Meteor has helped you build and grow, consider supporting what comes next through the [Meteor Sponsorship Program](https://www.meteor.com/sponsorship).
+
+✨✨✨
+
 ## v3.5.1, 2026-08-04
 
 ### Highlights
