@@ -62,11 +62,18 @@ jobs:
           - Other
           - React
           - R.Router
-          - Regressions
           - Solid
           - Svelte
           - Typescript
           - Vue
+        include:
+          # Regressions are serial and exceed a single step's timeout under
+          # runner contention. Keep the two shards balanced by observed time;
+          # the negative lookahead also sends new regression tests to misc.
+          - category: Regressions A
+            test_pattern: 'Regressions / (Server Runtime|CordovaModernDefault)'
+          - category: Regressions B
+            test_pattern: 'Regressions / (?!(Server Runtime|CordovaModernDefault))'
 
     steps:
       - name: Install Docker CLI
@@ -135,8 +142,8 @@ jobs:
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: 15
-        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+        timeout-minutes: 20
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -155,7 +162,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 20
+        timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
