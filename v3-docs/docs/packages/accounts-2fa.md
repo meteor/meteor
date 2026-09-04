@@ -213,6 +213,54 @@ This method can fail throwing one of the following errors:
 - "2FA code must be informed [no-2fa-code]" if a 2FA code was not provided.
 - "Invalid 2FA code [invalid-2fa-code]" if the provided 2FA code is invalid.
 
+<ApiBox name="Meteor.loginWithExternalServiceAnd2fa"/>
+
+#### Usage:
+
+This method is used to complete an OAuth login flow when the user has two-factor authentication enabled. When an initial OAuth login attempt (like `Meteor.loginWithGoogle`) fails due to 2FA being required, the error will contain a `credentialToken` that can be used with this method.
+
+```javascript
+// First attempt OAuth login
+Meteor.loginWithGoogle((error) => {
+  if (error && error.error === "[2fa enabled]") {
+    // Prompt user for 2FA code
+    const twoFactorCode = prompt("Enter your 6-digit authentication code:");
+    // Complete login with 2FA
+    Meteor.loginWithExternalServiceAnd2fa(
+      error.details.credentialToken,
+      twoFactorCode,
+      (error) => {
+        if (error) {
+          console.error("2FA verification failed:", error);
+        } else {
+          console.log("Successfully logged in with 2FA!");
+        }
+      }
+    );
+  } else if (error) {
+    console.error("OAuth login failed:", error);
+  } else {
+    console.log("OAuth login successful (no 2FA required)");
+  }
+});
+```
+
+#### Error Handling:
+
+The callback may receive the following errors:
+
+- `"invalid-token"` - The credential token is invalid or has expired
+- `"invalid-2fa-code"` - The provided OTP code is incorrect
+- `"user-not-found"` - The user account no longer exists or 2FA has been disabled
+
+#### Implementation Notes:
+
+- Credential tokens expire after 10 minutes for security
+- The OTP must be exactly 6 digits
+- This method only works for OAuth services (Google, Facebook, etc.) where 2FA is enabled
+- Failed OTP attempts don't invalidate the credential token, allowing users to retry until expiration
+
+
 ## Integrating an Authentication Package with accounts-2fa {#integrating-auth-package}
 
 To integrate this package with any other existing Login method, it's necessary following two steps:
