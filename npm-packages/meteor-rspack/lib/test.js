@@ -44,7 +44,8 @@ const generateEagerTestFile = ({
 
   // Create regex from ignore entries
   const excludeFoldersRegex = createIgnoreRegex(
-    createIgnoreGlobConfig(ignoreEntries)
+    createIgnoreGlobConfig(ignoreEntries),
+    projectDir,
   );
   // Create regex from meteor ignore entries
   const excludeMeteorIgnoreRegex = inMeteorIgnoreEntries.length > 0
@@ -74,14 +75,14 @@ const generateEagerTestFile = ({
     exclude: ${excludeFoldersRegex.toString()},
     mode: 'eager',
   });
-  ctx.keys().filter((k) => {
+  await Promise.all(ctx.keys().filter((k) => {
     ${
       excludeMeteorIgnoreRegex
         ? `// Only exclude based on *relative* path segments.
     return !MeteorIgnoreRegex.test(k);`
         : "return true;"
     }
-  }).forEach(ctx);
+  }).map(ctx));
   ${
     extraEntry
       ? `const extra = import.meta.webpackContext('${toPosix(path.dirname(

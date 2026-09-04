@@ -32,6 +32,7 @@ export function shouldUseShell(command, options = {}) {
  * @param {string[]} args - Arguments to pass to the command
  * @param {Object} options - Options for the spawned process
  * @param {Object} [options.env] - Environment variables to merge with process.env
+ * @param {string[]} [options.unsetEnv] - Environment variables to remove after merging
  * @param {string} [options.cwd] - Current working directory
  * @param {boolean} [options.detached] - Whether to run the process detached from the parent
  * @param {Function} [options.onStdout] - Callback for stdout data (receives decoded string)
@@ -41,8 +42,19 @@ export function shouldUseShell(command, options = {}) {
  * @returns {Object} The spawned process with additional utility methods
  */
 export function spawnProcess(command, args, options = {}) {
+  const childEnv = {
+    ...process.env,
+    ...options.env,
+    FORCE_COLOR: '1',
+    TERM: 'xterm-256color',
+  };
+
+  for (const name of options.unsetEnv || []) {
+    delete childEnv[name];
+  }
+
   const proc = spawn(command, args, {
-    env: { ...process.env, ...(options.env || {}), FORCE_COLOR: '1', TERM: 'xterm-256color' },
+    env: childEnv,
     cwd: options.cwd || process.cwd(),
     stdio: ['pipe', 'pipe', 'pipe'],
     detached: options.detached || false,

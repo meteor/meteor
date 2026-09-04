@@ -16,12 +16,12 @@
     "@emotion/styled": "^11.9.3",
     "@react-icons/all-files": "^4.1.0",
     "framer-motion": "^6.4.2",
-    "meteor-node-stubs": "^1.2.12",
+    "meteor-node-stubs": "^1.2.30",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@meteorjs/rspack": "^2.1.0",
+    "@meteorjs/rspack": "^2.2.0",
     "@rsdoctor/rspack-plugin": "^1.5.7",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",

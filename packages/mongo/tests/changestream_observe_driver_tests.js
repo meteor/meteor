@@ -1700,6 +1700,295 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'changestream - primary snapshot ignores older shared-stream events (#14695)',
+  async function (test) {
+    const c = makeCollection();
+    const id = await c.insertAsync({ state: 'fresh' });
+    const events = [];
+    const handle = await c.find({ _id: id, state: 'fresh' }).observeChanges({
+      added(docId) {
+        events.push({ type: 'added', id: docId });
+      },
+      removed(docId) {
+        events.push({ type: 'removed', id: docId });
+      },
+    });
+
+    try {
+      test.equal(events, [{ type: 'added', id }]);
+      events.length = 0;
+
+      const driver = handle._multiplexer._observeDriver;
+      const snapshotBoundary = driver._lastProcessedOperationTime;
+      const Timestamp = snapshotBoundary.constructor;
+
+      // Model events that were already buffered by the shared MongoDB cursor
+      // when this driver joined. The snapshot already contains their effects,
+      // so neither an older event nor the inclusive boundary may replay them.
+      for (const clusterTime of [
+        new Timestamp({ t: snapshotBoundary.t - 1, i: snapshotBoundary.i }),
+        snapshotBoundary,
+      ]) {
+        driver._sharedStream._onChange({
+          operationType: 'update',
+          clusterTime,
+          documentKey: { _id: id },
+          fullDocument: { _id: id, state: 'old' },
+        });
+      }
+
+      await driver._flushPendingWrites();
+      await driver._multiplexer.onFlush(() => {});
+      test.equal(
+        events,
+        [],
+        'events covered by the primary snapshot must not remove its matching document'
+      );
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - primary majority snapshot is causal at cutoff (#14695)',
+  async function (test) {
+    const mongoUrl = new URL(process.env.MONGO_URL);
+    mongoUrl.searchParams.set('readConcernLevel', 'majority');
+    const remote = new MongoInternals.RemoteCollectionDriver(mongoUrl.toString());
+    remote.mongo.client.monitorCommands = true;
+
+    const collectionName = 'changestream_test_' + Random.id();
+    const findCommands = [];
+    const captureFind = (event) => {
+      if (event.commandName === 'find' && event.command.find === collectionName) {
+        findCommands.push(event.command);
+      }
+    };
+    remote.mongo.client.on('commandStarted', captureFind);
+
+    const c = new Mongo.Collection(collectionName, { _driver: remote });
+    const handle = await c.find({ _id: Random.id() }).observeChanges({
+      added() {},
+    });
+
+    try {
+      const driver = handle._multiplexer._observeDriver;
+      const afterClusterTime = findCommands[0]?.readConcern?.afterClusterTime;
+
+      test.isTrue(
+        Boolean(
+          afterClusterTime &&
+          driver._snapshotCutoffOperationTime &&
+          afterClusterTime.equals(driver._snapshotCutoffOperationTime)
+        ),
+        'the majority snapshot must read at or after the cutoff it uses to discard events'
+      );
+    } finally {
+      await handle.stop();
+      remote.mongo.client.off('commandStarted', captureFind);
+      await remote.mongo.close();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - non-causal primary read concerns keep boundary events (#14695)',
+  async function (test) {
+    for (const readConcern of ['available', 'snapshot']) {
+      const c = makeCollection();
+      const id = Random.id();
+      const events = [];
+      const handle = await c.find(
+        { _id: id, state: 'fresh' },
+        { readConcern }
+      ).observeChanges({
+        added(docId) {
+          events.push({ type: 'added', id: docId });
+        },
+      });
+
+      try {
+        const driver = handle._multiplexer._observeDriver;
+        test.isFalse(
+          Boolean(driver._snapshotCutoffOperationTime),
+          `${readConcern} snapshots must not establish a cutoff`
+        );
+        driver._sharedStream._onChange({
+          operationType: 'update',
+          clusterTime: driver._lastProcessedOperationTime,
+          documentKey: { _id: id },
+          fullDocument: { _id: id, state: 'fresh' },
+        });
+
+        await driver._flushPendingWrites();
+        await waitFor(() => events.some(event => event.type === 'added'));
+        test.equal(
+          events,
+          [{ type: 'added', id }],
+          `${readConcern} snapshots must retain events at their boundary`
+        );
+      } finally {
+        await handle.stop();
+      }
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - global available read concern does not create a cutoff (#14695)',
+  async function (test) {
+    const remote = new MongoInternals.RemoteCollectionDriver(process.env.MONGO_URL);
+    remote.mongo.client.monitorCommands = true;
+
+    const admin = remote.mongo.client.db('admin');
+    const originalDefaults = await admin.command({
+      getDefaultRWConcern: 1,
+      inMemory: true,
+    });
+    const collectionName = 'changestream_test_' + Random.id();
+    const findCommands = [];
+    const captureFind = (event) => {
+      if (event.commandName === 'find' && event.command.find === collectionName) {
+        findCommands.push(event.command);
+      }
+    };
+    remote.mongo.client.on('commandStarted', captureFind);
+
+    let handle;
+    try {
+      await admin.command({
+        setDefaultRWConcern: 1,
+        defaultReadConcern: { level: 'available' },
+      });
+
+      const c = new Mongo.Collection(collectionName, { _driver: remote });
+      handle = await c.find({ _id: Random.id() }).observeChanges({
+        added() {},
+      });
+
+      const driver = handle._multiplexer._observeDriver;
+      test.equal(
+        findCommands[0]?.readConcern,
+        { level: 'available' },
+        'the snapshot must retain the effective global read concern'
+      );
+      test.isFalse(
+        Boolean(findCommands[0]?.readConcern?.afterClusterTime),
+        'a global available read concern must not be made causal'
+      );
+      test.isFalse(
+        Boolean(driver._snapshotCutoffOperationTime),
+        'a global available read concern must not establish a cutoff'
+      );
+    } finally {
+      try {
+        await handle?.stop();
+      } finally {
+        remote.mongo.client.off('commandStarted', captureFind);
+        try {
+          await admin.command({
+            setDefaultRWConcern: 1,
+            defaultReadConcern:
+              originalDefaults.defaultReadConcernSource === 'global'
+                ? originalDefaults.defaultReadConcern
+                : {},
+          });
+        } finally {
+          await remote.mongo.close();
+        }
+      }
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - non-primary snapshot keeps boundary events (#14695)',
+  async function (test) {
+    const c = makeCollection();
+    const id = await c.insertAsync({ state: 'fresh' });
+    const events = [];
+    const handle = await c.find(
+      { _id: id, state: 'fresh' },
+      { readPreference: 'secondaryPreferred' }
+    ).observeChanges({
+      added(docId) {
+        events.push({ type: 'added', id: docId });
+      },
+      removed(docId) {
+        events.push({ type: 'removed', id: docId });
+      },
+    });
+
+    try {
+      test.equal(events, [{ type: 'added', id }]);
+      events.length = 0;
+
+      const driver = handle._multiplexer._observeDriver;
+      driver._sharedStream._onChange({
+        operationType: 'update',
+        clusterTime: driver._lastProcessedOperationTime,
+        documentKey: { _id: id },
+        fullDocument: { _id: id, state: 'old' },
+      });
+
+      await driver._flushPendingWrites();
+      await waitFor(() => events.some(event => event.type === 'removed'));
+      test.isTrue(
+        events.some(event => event.type === 'removed' && event.id === id),
+        'a potentially stale non-primary snapshot must still apply its boundary event'
+      );
+    } finally {
+      handle.stop();
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'changestream - inherited non-primary snapshot keeps boundary events (#14695)',
+  async function (test) {
+    const mongoUrl = new URL(process.env.MONGO_URL);
+    mongoUrl.searchParams.set('readPreference', 'secondaryPreferred');
+    const remote = new MongoInternals.RemoteCollectionDriver(mongoUrl.toString());
+    const c = new Mongo.Collection('changestream_test_' + Random.id(), {
+      _driver: remote,
+    });
+    const id = Random.id();
+    const events = [];
+    const handle = await c.find({ _id: id, state: 'fresh' }).observeChanges({
+      added(docId) {
+        events.push({ type: 'added', id: docId });
+      },
+      removed(docId) {
+        events.push({ type: 'removed', id: docId });
+      },
+    });
+
+    try {
+      test.equal(events, []);
+
+      const driver = handle._multiplexer._observeDriver;
+      driver._sharedStream._onChange({
+        operationType: 'update',
+        clusterTime: driver._lastProcessedOperationTime,
+        documentKey: { _id: id },
+        fullDocument: { _id: id, state: 'fresh' },
+      });
+
+      await driver._flushPendingWrites();
+      await waitFor(() => events.some(event => event.type === 'added'));
+      test.isTrue(
+        events.some(event => event.type === 'added' && event.id === id),
+        'a connection-level non-primary snapshot must still apply its boundary event'
+      );
+    } finally {
+      await handle.stop();
+      await remote.mongo.close();
+    }
+  }
+);
+
+Tinytest.addAsync(
   'changestream - queues writes until ready',
   async function (test) {
     const c = makeCollection();

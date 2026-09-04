@@ -13,14 +13,14 @@
     "@babel/runtime": "^7.23.9",
     "@swc/helpers": "^0.5.17",
     "graphql": "^16.8.1",
-    "meteor-node-stubs": "^1.2.12",
+    "meteor-node-stubs": "^1.2.30",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@graphql-tools/webpack-loader": "^7.0.0",
     "@rsdoctor/rspack-plugin": "^1.5.7",
-    "@meteorjs/rspack": "^2.1.0",
+    "@meteorjs/rspack": "^2.2.0",
     "@rspack/cli": "^1.7.1",
     "@rspack/core": "^1.7.1",
     "@rspack/plugin-react-refresh": "^1.4.3",
