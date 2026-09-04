@@ -1,0 +1,23 @@
+name: Upstream Services
+
+# Probes the external services the other workflows download from (npm
+# registry and audit, Meteor dev bundle, Atmosphere, GitHub, Docker apt repo)
+# and reports them in the job summary. When this check is red, failures in
+# the other checks of the same run are most likely external: see
+# scripts/ci/check-upstream-services.sh.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    name: Upstream services
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Probe upstream services
+        run: bash scripts/ci/check-upstream-services.sh
