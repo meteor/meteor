@@ -31,6 +31,7 @@ const {
 } = require('./extract');
 const { engines } = require('./package.json');
 const { uninstall } = require('./uninstall');
+const { isLocalDependencyInstall } = require('./should-install');
 
 const nodeVersion = engines.node;
 const npmVersion = engines.npm;
@@ -45,11 +46,10 @@ if (!semver.satisfies(process.version, nodeVersion)) {
   );
 }
 
-const isInstalledGlobally =
-  process.env.npm_config_global === 'true' ||
-  process.env.npm_lifecycle_event === 'npx';
-
-if (!isInstalledGlobally) {
+// Only abort when meteor is being installed as a local package.json dependency.
+// A global install, npx / `npm exec`, or a direct run of the installed binary
+// (which has no npm_* env vars) are all legitimate ways to run the installer.
+if (isLocalDependencyInstall()) {
   console.error('******************************************');
   console.error(
     'You are not using a global npm context to install, you should never add meteor to your package.json.',
