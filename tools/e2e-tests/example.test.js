@@ -32,11 +32,11 @@ describe('Examples /', () => {
     }
   });
 
-  it('meteor create --from clones an external repo', async () => {
+  it('meteor create infers --from for an external URL', async () => {
     const { appName, tempDir } = tempApp('from');
     try {
       await runMeteorCommand(
-        'create', ['--from', 'https://github.com/fredmaiaarantes/simpletasks', appName], os.tmpdir(),
+        'create', [appName, 'https://github.com/fredmaiaarantes/simpletasks'], os.tmpdir(),
         { checkExitCode: true }
       );
       expect(fs.existsSync(path.join(tempDir, '.meteor'))).toBe(true);

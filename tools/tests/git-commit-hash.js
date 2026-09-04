@@ -16,16 +16,17 @@ async function gitHelper(...args) {
 }
 
 async function initGitApp(sandbox) {
-  const git = await gitHelper.bind(sandbox);
+  const git = gitHelper.bind(sandbox);
 
-  git("init");
-  git("config", "user.name", "Ben Newman");
-  git("config", "user.email", "ben@meteor.com");
-  git("add", ".");
-  git("commit", "-m", "first");
+  await git("init");
+  await git("config", "user.name", "Ben Newman");
+  await git("config", "user.email", "ben@meteor.com");
+  await git("add", ".");
+  await git("commit", "-m", "first");
 
   let commitHash;
-  git("rev-parse", "HEAD").outputLog.get().some(line => {
+  const revParse = await git("rev-parse", "HEAD");
+  revParse.outputLog.get().some(line => {
     if (line.channel === "stdout") {
       commitHash = line.text;
       return true;

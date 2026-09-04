@@ -433,9 +433,6 @@ async function killSingleProcessByPort(port) {
         await execa.command(`kill -9 ${pid} 2>/dev/null`, { shell: true, reject: false });
       }
 
-      // fuser fallback for when lsof/ss miss the socket owner.
-      await execa.command(`fuser -k ${port}/tcp 2>/dev/null`, { shell: true, reject: false });
-
       // Let the OS release the socket before re-checking.
       await new Promise(r => setTimeout(r, 400));
 
@@ -488,7 +485,7 @@ async function findPidsOnPort(port) {
   const pids = new Set();
 
   const lsof = await execa.command(
-    `lsof -i :${port} -t 2>/dev/null`,
+    `lsof -i :${port} -sTCP:LISTEN -t 2>/dev/null`,
     { shell: true, reject: false }
   );
   for (const line of (lsof.stdout || '').split('\n')) {
@@ -582,14 +579,17 @@ export async function runMeteorCommand(command, args = [], cwd, options = {}) {
   let processResult;
   if (checkExitCode) {
     processResult = await new Promise((resolve) => {
-      meteorProcess.on('exit', (code) => {
-        resolve({ code, outputLines });
+      meteorProcess.on('exit', (code, signal) => {
+        resolve({ code, signal, outputLines });
       });
     });
 
     // Check if the command was successful
     if (processResult.code !== 0) {
-      throw new Error(`Meteor command '${command}' failed with code ${processResult.code}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
+      const exitReason = processResult.code === null
+        ? `signal ${processResult.signal || 'unknown'}`
+        : `code ${processResult.code}`;
+      throw new Error(`Meteor command '${command}' failed with ${exitReason}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
     }
   }
 

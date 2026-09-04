@@ -1043,6 +1043,7 @@ export function testMeteorSkeleton(options) {
   return () => {
     let meteorProcess;
     let tempDir;
+    let appReady = false;
     let previousRspackDevServerPort;
 
     beforeAll(async () => {
@@ -1083,11 +1084,25 @@ export function testMeteorSkeleton(options) {
       // Ensure any process on the port is killed
       await killProcessByPort([port, devServerPortStr]);
 
+      const currentTestName = expect.getState().currentTestName || '';
+      const isCreateTest = currentTestName.includes(`"meteor create --${skeletonName}"`);
+
       // On retry, purge caches left by the failing attempt so the next one
       // recompiles from scratch. Skip when tempDir isn't set yet (e.g. retry
       // of the "meteor create" test, which allocates its own tempDir).
       if (isRetryAttempt() && tempDir) {
-        await clearBuildArtifacts(tempDir);
+        if (isCreateTest && !appReady) {
+          await cleanupTempDir(tempDir);
+          tempDir = undefined;
+        } else {
+          await clearBuildArtifacts(tempDir);
+        }
+      }
+
+      if (!isCreateTest && !appReady) {
+        throw new Error(
+          `Cannot run the ${skeletonName} skeleton test because meteor create did not complete successfully.`
+        );
       }
     });
 
@@ -1106,6 +1121,8 @@ export function testMeteorSkeleton(options) {
     });
 
     test(`"meteor create --${skeletonName}" / should create a new Meteor ${skeletonName} app`, async () => {
+      if (appReady) return;
+
       // Create a new Meteor app with the specified skeleton.
       // Track the spawned subprocess on the outer-scope `meteorProcess` so
       // `afterEach` can kill it if Jest times out the test mid-create — leaving
@@ -1135,6 +1152,8 @@ export function testMeteorSkeleton(options) {
       if (customAssertions.afterCreate) {
         await customAssertions.afterCreate({ tempDir, packageJsonPath });
       }
+
+      appReady = true;
     }, 360_000);
 
     test(`"meteor run" / should run the ${skeletonName} app`, async () => {
@@ -1213,15 +1232,15 @@ export function testMeteorSkeleton(options) {
     test(`"meteor test --once" / should run tests once for the ${skeletonName} app`, async () => {
       // Install playwright as a dev dependency, pinned to the same version
       // as the test environment so pre-installed browser binaries are reused.
-      const testPkg = JSON.parse(fs.readFileSync(path.resolve(process.cwd(), 'package.json'), 'utf8'));
-      const playwrightVersion = testPkg.devDependencies.playwright;
+      const playwrightVersion = require('playwright/package.json').version;
       console.log(`Installing playwright@${playwrightVersion} as a dev dependency...`);
       const repoRoot = path.resolve(process.cwd(), "..", "..");
       const meteorBin = path.join(repoRoot, "meteor");
-      await execa.command(`${meteorBin} npm i --save-dev playwright@${playwrightVersion}`, {
+      await execa(meteorBin, [
+        'npm', 'i', '--save-dev', '--save-exact', `playwright@${playwrightVersion}`
+      ], {
         cwd: tempDir,
-        stdio: "inherit",
-        shell: true
+        stdio: "inherit"
       });
       await linkLocalRspack(tempDir);
 
