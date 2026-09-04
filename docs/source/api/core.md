@@ -47,8 +47,8 @@ if (Meteor.isServer) {
 
 Every Meteor server process also needs a `main` function. The `webapp`
 package supplies one that starts the HTTP server. Apps that omit `webapp`
-must export their own `main`, or startup exits with
-`Program has no main() function.`
+must provide their own `main` as a package export or on the global object,
+or startup exits with `Program has no main() function.`
 
 {% apibox "Meteor.wrapAsync" %}
 

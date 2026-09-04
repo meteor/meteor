@@ -11,9 +11,10 @@ tool that still used the Meteor package system and DDP.
 
 Every Meteor server process must provide a `main` function. `webapp`
 defines that function and starts the HTTP server. Apps that do not use
-`webapp` need to export their own `main` (as a package export or a global),
+`webapp` need to provide their own `main` (as a package export or a global),
 or the process exits with `Program has no main() function.` Returning the
-string `'DAEMON'` from `main` keeps the process alive after `main` returns.
+string `'DAEMON'` from `main` prevents the bootstrap from exiting the
+process after `main` returns.
 
 This package also allows you to add handlers for HTTP requests.
 This lets other services access your app's data through an HTTP API, allowing
