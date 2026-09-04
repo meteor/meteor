@@ -434,6 +434,10 @@ export default defineConfig({
                 link: "/packages/standard-minifier-css",
               },
               {
+                text: "static-render",
+                link: "/packages/static-render",
+              },
+              {
                 text: "url",
                 link: "/packages/url",
               },
