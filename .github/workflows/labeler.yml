@@ -17,6 +17,11 @@ jobs:
   label:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/labeler@v5
+    - name: Harden the runner (Audit all outbound calls)
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/labeler@8558fd74291d67161a8a78ce36a881fa63b766a9 # v5.0.0
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"

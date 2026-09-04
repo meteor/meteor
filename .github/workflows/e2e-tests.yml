@@ -29,6 +29,9 @@ env:
   METEOR_E2E_TEST_RETRIES: 1
 
 
+permissions:
+  contents: read
+
 jobs:
   test:
     name: ${{ matrix.category }}
@@ -69,6 +72,11 @@ jobs:
           - Vue
 
     steps:
+      - name: Harden the runner (Audit all outbound calls)
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
       - name: Install Docker CLI
         run: |
           # Install a current docker CLI from Docker's official repo. Debian
@@ -89,11 +97,11 @@ jobs:
           docker system df
 
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
 
       - name: Cache dependencies
         id: deps-cache
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             /root/.npm
