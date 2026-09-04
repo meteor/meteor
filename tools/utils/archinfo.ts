@@ -275,6 +275,9 @@ export function mapWhereToArches(where: string) {
     arches.push("web");
   } else if (where === "modern") {
     arches.push("web.browser");
+    // web.tauri is always a modern arch (it targets an up-to-date WKWebView /
+    // WebView2 / WebKitGTK, like Cordova on modern devices).
+    arches.push("web.tauri");
     // Only add web.cordova to modern if it's not in legacy mode
     if (!legacyArches.includes("web.cordova")) {
       arches.push("web.cordova");

@@ -229,6 +229,9 @@ Object.assign(ProjectContext.prototype, {
     // to using the web.browser slice instead or make a common 'web' slice).
     self._forceIncludeCordovaUnibuild = options.forceIncludeCordovaUnibuild;
 
+    // Same as above, but for the web.tauri slice.
+    self._forceIncludeTauriUnibuild = options.forceIncludeTauriUnibuild;
+
     // If explicitly specified as null, use no release for constraints.
     // If specified non-null, should be a release version catalog record.
     // If not specified, defaults to release.current.
@@ -1010,6 +1013,8 @@ Object.assign(ProjectContext.prototype, {
       packageMap: self.packageMap,
       includeCordovaUnibuild: (self._forceIncludeCordovaUnibuild
                                || self.platformList.usesCordova()),
+      includeTauriUnibuild: (self._forceIncludeTauriUnibuild
+                             || self.platformList.usesTauri()),
       cacheDir: self.getProjectLocalDirectory('isopacks'),
       pluginCacheDirRoot: self.getProjectLocalDirectory('plugin-cache'),
       tropohouse: self.tropohouse,
@@ -1478,6 +1483,17 @@ Object.assign(exports.PlatformList.prototype, {
     return ! _.isEmpty(self.getCordovaPlatforms());
   },
 
+  getTauriPlatforms: function () {
+    var self = this;
+    var TAURI_PLATFORMS = require('./tauri').TAURI_PLATFORMS;
+    return _.intersection(self._platforms, TAURI_PLATFORMS);
+  },
+
+  usesTauri: function () {
+    var self = this;
+    return ! _.isEmpty(self.getTauriPlatforms());
+  },
+
   getWebArchs() {
     var self = this;
     var archs = [
@@ -1486,6 +1502,9 @@ Object.assign(exports.PlatformList.prototype, {
     ];
     if (self.usesCordova()) {
       archs.push("web.cordova");
+    }
+    if (self.usesTauri()) {
+      archs.push("web.tauri");
     }
     return archs;
   },
@@ -1882,7 +1901,7 @@ export class MeteorConfig {
           if (arch === 'web') {
             addPackage(
               name,
-              ['web.browser', 'web.browser.legacy', 'web.cordova']
+              ['web.browser', 'web.browser.legacy', 'web.cordova', 'web.tauri']
             );
           } else {
             get(arch).add(name);
