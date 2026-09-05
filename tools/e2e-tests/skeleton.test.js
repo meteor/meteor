@@ -28,6 +28,27 @@ async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
   }
 }
 
+// ostrio:flow-router-extra deprecates `FlowRouter.notFound`; the skeleton registers a
+// wildcard route instead. An unknown path must still render the 404 page, and booting
+// must not print the `[DEPRECATION]` warning in the browser console.
+async function assertWildcardNotFoundRoute(port) {
+  const warnings = [];
+  const onConsole = (msg) => {
+    if (msg.type() === 'warning') warnings.push(msg.text());
+  };
+  page.on('console', onConsole);
+  try {
+    await page.goto(`http://localhost:${port}/e2e-missing-route`);
+    await page.waitForSelector('#not-found h1');
+    expect(warnings.filter((text) => text.includes('[DEPRECATION]'))).toEqual([]);
+    console.log('✅ Wildcard 404 route rendered without deprecation warnings');
+  } finally {
+    page.removeListener('console', onConsole);
+    // Leave the page on the home route for the client HMR step that follows.
+    await page.goto(`http://localhost:${port}`);
+  }
+}
+
 describe('Meteor Skeletons /', () => {
   describe(
     'Angular Skeleton /',
@@ -129,6 +150,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.js',
         server: 'server/main.js',
         test: 'imports/api/links/methods.tests.js',
+      },
+      customAssertions: {
+        afterRun: ({ port }) => assertWildcardNotFoundRoute(port),
       },
     })
   );

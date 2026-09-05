@@ -234,7 +234,7 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | blaze | 3202 | JS | |
 | chakra-ui | 3203 | JSX | No body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | |
-| full | 3204 | JS | `imports/api/` test structure |
+| full | 3204 | JS | `imports/api/` test structure; wildcard 404 route renders with no `[DEPRECATION]` warning (Run) |
 | react | 3205 | JSX | Custom body styles (Inter font, padding) |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
