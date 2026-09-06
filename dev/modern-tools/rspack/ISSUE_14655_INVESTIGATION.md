@@ -494,13 +494,14 @@ mean these timings are not controlled performance comparisons.
 
 The first modern-only 400-module pass could benefit from the failed run's cached
 modern result. The fresh-linker-cache modern pass removes that specific
-confounder. The failure has been observed three times: once without tracing,
+confounder. Across these first ten runs, the failure occurred three times:
+once without tracing,
 once with tracing, and again when normal tree caching was restored after a
 successful bypass run. This is not yet a statistical reliability study.
 
 ### Artifact and runtime validation
 
-All seven successful output bundles contained the expected browser architecture
+The seven successful bundles in this initial matrix contained the expected browser architecture
 directories. The small debug output had 48 JS manifest entries and 19 source-map
 references per browser architecture. The small normal production output had one
 JS manifest entry and no map reference; source-map availability differs by mode.
