@@ -7,11 +7,11 @@ This is the working source of truth for investigating
 failure involving large Rspack client output passing through Meteor's linker.
 It consolidates source inspection, upstream reports, forum research, local
 probes, and reproduction requirements. A local production-build heap OOM has
-now been reproduced four times and localized to legacy source-node expansion.
+now been reproduced repeatedly and localized to legacy source-node expansion.
 A diagnostic bypass of large expanded-tree cache entries lets both targets
 complete; each target also completes independently.
 The later upstream WASM trap and cache string-length failures have not been
-reproduced locally. No fix has been implemented.
+reproduced locally. No production fix has been adopted.
 
 | Item | Baseline |
 | --- | --- |
@@ -22,13 +22,14 @@ reproduced locally. No fix has been implemented.
 | Report branch | `investigation/14655-rspack-build-memory` |
 | Upstream status when checked | Open; release 3.6 milestone |
 | Latest issue evidence inspected | September 3, 2026 comment |
-| Local build checkout | First seven runs: `bd99bb206c`; runs 8–10: `5306673fe5` (documentation-only changes); runs 11–12: that source plus the probes in this report’s commit |
-| Full local reproduction | Heap OOM reproduced four times at `MODULES=400 FUNCS=400`, legacy-inclusive debug build |
+| Local build checkout | First seven runs: `bd99bb206c`; runs 8–10: `5306673fe5` (documentation-only changes); runs 11–12: that source plus checkout probes; policy comparison: `057d48492b` plus the experimental harness recorded below |
+| Full local reproduction | Repeatable heap OOM at `MODULES=400 FUNCS=400`, legacy-inclusive debug build; individual runs and policy matrices below |
 | Passing controls | Same workload: modern-only, legacy-only, and both targets with diagnostic large-tree cache bypass; fresh linker-cache controls |
-| Implementation changes | No production fix; ten builds used external monitoring and diagnostic preloads. Opt-in checkout probes now verified in two additional builds; no cache policy change. |
+| Implementation changes | No production fix; verified opt-in checkout probes and explicit experimental policy preloads. Default cache policy unchanged. |
 
 The requested deliverables are an investigation report and opt-in checkout
-probes to verify the performance findings. Their acceptance criteria
+probes to verify the performance findings, followed by a comparison of candidate
+cache fixes. Their acceptance criteria
 are traceable evidence, explicit uncertainty, a reproducible description of
 the local probe, output-preserving instrumentation, a feasible reproduction
 approach, and a discoverable location
@@ -679,6 +680,206 @@ source references. Timing/log allocation overhead exists when enabled; heap
 samples include unrelated live allocations and garbage awaiting collection.
 No forced GC, retained-tree sizing, statistical performance claim, or production
 fix is implied. Unset the variable to disable tracing, or revert the probe commit.
+
+### Comparing experimental cache policies
+
+The comparison evaluates three candidate interventions against the original
+4,096-entry tree cache. No production policy has been selected. The opt-in
+[experiment preload](experiments/cache-policy-preload.cjs) applies
+[policy wrappers](experiments/cache-policies.cjs) to the bundled `optimism`
+implementation; the normal tool does not load them. The comparison used source checkout `057d48492b` plus these experiment files.
+The preload requires
+`METEOR_LINKER_CACHE_EXPERIMENT` to select a known policy, matches the intended
+linker wrapper, and reports its match and interventions. A failed or ambiguous
+match must not be treated as a valid candidate run.
+
+| Policy | Experimental behavior | Limitations and possible cost |
+| --- | --- | --- |
+| `baseline` | Retain the existing 4,096-entry cache behavior through the same preload machinery. | Provides a common instrumented control; does not constrain retained bytes. |
+| `bypass-large` | Return no cache key for source text of at least 1,048,576 UTF-16 code units. Preserve smaller entries and existing `disableCache` handling. | Source length is an imperfect proxy for map/tree cost; small dense maps can be expensive. Large files lose reuse even when they would fit comfortably. The cutoff is experimental. |
+| `cap-128` | Reduce the wrapper's maximum entry count from 4,096 to 128. | Count is not a byte budget. A few large trees can still exhaust memory; reducing entries can also evict useful small results and increase recomputation. |
+| `rotate-arch` | On a change between defined architecture strings, forget keys tracked during the preceding interval. Undefined-architecture calls do not establish a new target, but their keys are tracked. | Assumes useful architecture locality. Interleaved targets can cause repeated eviction and duplicate pending work. Tracking keys is not bounded until a transition, and cache-key calculation acquires eviction side effects. |
+
+Rotation uses `forgetKey` so optimism can dispose dependency relationships. It
+does not cancel work already in flight; current callers retain their promises.
+The focused pending-work test checks result preservation while demonstrating
+that an architecture switch can duplicate computation. These properties make
+rotation a diagnostic candidate requiring a more deliberate lifecycle design
+before any production adoption, even if it produces favorable build numbers.
+
+The [comparison runner](experiments/compare-cache-policies.py) defines this
+methodology:
+
+- Generate the procedural fixture once per workload, keeping `FUNCS=400`.
+- Run `400 × 400` twice per policy, reversing the policy order on the second
+  pass. Run a smaller `200 × 400` comparison once per policy afterward. These
+  small sample counts can reveal obvious regressions, not establish statistical
+  performance confidence or eliminate host/cache warm-up effects.
+- Use a fresh process and move the linker disk cache aside before every build.
+  Retain compiler and Rspack caches. Use both browser targets, exclude Cordova,
+  build with `--debug`, retain the 2 GiB old-space limit, and enable the same
+  checkout linker tracing for all policies. The external monitor keeps the
+  900-second timeout and 6,144 MiB sampled process-tree guard.
+- Record policy events, linker events, exit/signal, sampled RSS, and duration in
+  each run's `comparison.json`, alongside the monitor artifacts. Distinguish
+  completion, the recognized heap-OOM signature, unexpected failure, and guard
+  termination. Verify that the intended policy matched exactly once.
+- Compare successful 400-module outputs against
+  `large400-both-debug-tree-bypass`, byte for byte, for both targets' `app.js`
+  and `app.js.map`. The smaller comparison must use a matching 200-module
+  passing control. Require all four expected files; equality covers these app
+  files, not all resources, source-map semantics, or browser execution.
+
+Nine focused policy tests passed against the development bundle's actual
+`optimism` implementation using
+`dev_bundle/bin/node --test dev/modern-tools/rspack/experiments/cache-policies.node-test.cjs`.
+They cover per-policy reuse/disable behavior, the source-length boundary,
+entry-count eviction, architecture transitions including undefined targets,
+pending-work results, and invalid-policy rejection. These tests verify the
+experimental policy mechanics rather than establish production fitness.
+
+Interpret heap snapshots cautiously: `heapUsed` at expansion entry includes
+objects that may already be unreachable but have not yet been collected.
+Evicting cache entries need not immediately reduce that number. A successful
+expansion can end with less heap than it started with if garbage collection
+reclaims earlier trees while allocating the new one. Entry/end samples cannot
+measure a tree's retained size or its gross allocation volume; controlled
+outcomes and cache events supply different evidence from these snapshots.
+
+#### Completed 400-module comparison
+
+All eight runs completed under `artifacts/cache-policy-comparison-400/`.
+Execution order was baseline, bypass, cap, rotation in the first pass, then
+rotation, cap, bypass, baseline in the second. All matched their intended
+preload exactly once. Both baseline runs ended with V8 heap OOM and SIGABRT;
+all six candidate runs exited successfully. No resource guard triggered.
+
+The table reports sampled maxima. Tool and process-tree RSS maxima were equal
+for these eight runs, so they share a column. Failed baseline durations end at
+the crash and must not be treated as faster completed builds.
+
+| Policy / repeat | Result | Seconds | Peak tool/tree RSS MiB | Legacy expansion start heap MiB | Legacy expansion end heap MiB |
+| --- | --- | ---: | ---: | ---: | ---: |
+| `baseline-1` | Heap OOM, SIGABRT | 13.10 | 2799.58 | 1392.70 | No return |
+| `baseline-2` | Heap OOM, SIGABRT | 13.74 | 2751.77 | 1392.80 | No return |
+| `bypass-large-1` | Exit 0 | 21.28 | 3004.45 | 519.96 | 1293.58 |
+| `bypass-large-2` | Exit 0 | 21.96 | 2766.06 | 521.32 | 1305.19 |
+| `cap-128-1` | Exit 0 | 21.85 | 2954.59 | 1390.54 | 1285.43 |
+| `cap-128-2` | Exit 0 | 21.85 | 2941.78 | 1390.11 | 1285.03 |
+| `rotate-arch-1` | Exit 0 | 21.29 | 2766.52 | 1392.98 | 1287.15 |
+| `rotate-arch-2` | Exit 0 | 21.85 | 2905.02 | 1393.31 | 1287.04 |
+
+Every successful run compared both targets' `app.js` and `app.js.map` with the
+previous 400-module bypass control: all 24 comparisons across six runs were
+byte-identical, with the same lengths and hashes already listed above. These
+remain output equivalence checks, not new browser or mapping-semantics passes.
+
+All three interventions remove the failure for this workload in both orders.
+That supports reducing expanded-tree retention as a useful direction, but does
+not select the best production policy. Successful durations cluster between
+21.28 and 21.96 seconds, and sampled RSS varies within and across policies; two
+runs are insufficient to rank these candidates confidently by speed or memory.
+
+The cap and rotation results also refine the heap interpretation. They enter
+legacy expansion with roughly 1,390–1,393 MiB of heap, similar to the failing
+baseline, yet finish with roughly 1,285–1,287 MiB. Their caches have released
+references, allowing garbage collection during expansion. An entry sample
+alone cannot establish live retention or predict failure. The bypass reaches
+legacy expansion with roughly 520–521 MiB already in use and also completes.
+No retained-object snapshot quantifies the modern tree's exact live size.
+
+Rotation logs show the modern-to-legacy transition reducing the cache from
+197 entries to zero and the legacy-to-server transition from 471 to zero in
+both repeats. Cap-by-count and bypass-by-source-length remain proxies with the
+limitations above. The result does not demonstrate that 128 entries or the
+1 MiB code-unit threshold is appropriate across real applications.
+
+#### Completed 200-module comparison
+
+All four policies completed the single-pass `200 × 400` comparison under
+`artifacts/cache-policy-comparison-200/`, using the same build controls and
+fresh linker disk cache for each run. The output control was the earlier
+`medium-legacy-debug` build. All 16 app code/map comparisons were byte-identical;
+no resource guard triggered.
+
+| Policy | Result | Seconds | Peak tool/tree RSS MiB | Legacy expansion start heap MiB | Legacy expansion end heap MiB | Profiled SWC compile ms |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| `baseline`, first | Exit 0 | 29.43 | 3091.97 | 893.62 | 1167.07 | 14,042 |
+| `baseline`, repeat after candidates | Exit 0 | 29.98 | 3136.98 | 910.60 | 1197.06 | 14,015 |
+| `bypass-large` | Exit 0 | 28.86 | 2519.75 | 892.33 | 729.19 | 14,080 |
+| `cap-128` | Exit 0 | 28.32 | 2488.89 | 892.74 | 713.07 | 14,069 |
+| `rotate-arch` | Exit 0 | 29.50 | 2490.53 | 892.99 | 714.29 | 14,148 |
+
+All four profiles record one SWC compilation taking approximately 14 seconds.
+An initial suspicion that only the first baseline paid compiler warm-up cost is
+not supported: retaining compiler/Rspack caches did not avoid that recorded work
+in the later candidate runs. The reason for recompilation is not established.
+The 28.32–29.50-second build durations do not establish a speed ranking.
+
+The smaller baseline already passes. Candidate sampled peak RSS is lower in
+this pass, and their legacy expansion ends with less heap than it starts with,
+consistent with allowing earlier allocations to be collected. A single run per
+candidate does not establish a repeatable memory advantage or rule out runtime,
+map-correctness, incremental-rebuild, or application-specific regressions.
+
+The extra baseline repeat under
+`artifacts/cache-policy-comparison-200-repeat-baseline/` also passed with four
+byte-identical outputs and no guard termination. It again performed about
+14 seconds of SWC compilation. Across these five smaller runs, candidate RSS
+was 2488.89–2519.75 MiB versus baseline 3091.97–3136.98 MiB. This is an observed
+reduction of roughly 19–21%, not a general memory guarantee. These are MiB:
+approximately 2.43–2.46 GiB versus 3.02–3.06 GiB.
+
+#### Interpretation, recommendation, and reproducibility
+
+Across the full comparison, 13 builds produced 11 successes and the two expected
+baseline heap failures. All 44 app JavaScript/map comparisons matched. No guard
+triggered. The fixture was restored to `400 × 400` after the smaller tests.
+`artifacts/cache-policy-comparison-summary.json` aggregates all runs, expansion
+timings, SWC profile times, source revision, and SHA-256 hashes of the harness
+and linker instrumentation. Per-run `comparison.json` files preserve raw events.
+
+At 400 modules, candidate modern source-node expansion took 700.87–774.99 ms;
+successful legacy expansion took 703.71–794.09 ms. At 200 modules in the four-policy
+pass, modern expansion took 341.26–350.90 ms and legacy 332.58–352.65 ms. These
+intervals include any GC during expansion and exclude consumer construction and
+later serialization. The candidates release cached references; none eliminates
+the cost or peak allocation of constructing the current source-node tree.
+
+**Recommended next experiment:** explicit disposal of expanded-tree cache
+entries at the production architecture boundary. It avoids using source length
+or incidental file count as the sole retention policy and can preserve reuse
+within the current target. The global `makeCacheKey` rotation used here is not
+ready to ship: disposal should be tied to a real lifecycle boundary, with
+interleaved/concurrent callers and development rebuild reuse tested. Keep the
+large-entry admission bypass as the narrower alternative and benchmark it on
+mapping-dense inputs. Do not select a 128-entry cap solely because this fixture
+passes; the tests demonstrate that it still retains large entries while fewer
+than 128 keys exist.
+
+This is a prioritized implementation direction, not selection of a production
+patch or a demonstrated speed winner. Incremental rebuilds, normal minified
+builds, dense maps in small files, and other application shapes remain untested.
+The earlier large-debug browser timeout remains unresolved. Neither the WASM
+trap nor real oversized-cache serialization has been reproduced here.
+
+To repeat the guarded 400-module matrix from the core checkout, choose an unused
+`--label`; the runner preserves prior results and refuses an existing directory:
+
+```bash
+python3 dev/modern-tools/rspack/experiments/compare-cache-policies.py \
+  --fixture /Users/leonardo/Repositories/meteor/repro-14655/app \
+  --artifacts /Users/leonardo/Repositories/meteor/repro-14655/artifacts \
+  --monitor /Users/leonardo/Repositories/meteor/repro-14655/artifacts/monitor.py \
+  --control /Users/leonardo/Repositories/meteor/repro-14655/artifacts/large400-both-debug-tree-bypass \
+  --modules 400 --repeats 2 --label cache-policy-comparison-400-new
+```
+
+The runner requires the pinned fixture and previously prepared monitor/control;
+it is an investigation harness, not a standalone benchmark distribution. The
+200-module run used `--modules 200 --repeats 1` and the `medium-legacy-debug`
+control. Changing workloads regenerates ignored fixture files. Disable the
+preload to restore the baseline; the default checkout does not load any candidate.
 
 ### Evidence locations and next checks
 
