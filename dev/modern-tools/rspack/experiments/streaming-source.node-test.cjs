@@ -2,9 +2,63 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { loadStreaming } = require('./streaming-loader.cjs');
 const { sourceMap, makeFixture } = require('./source-node-variants.cjs');
-const { StreamingMappedSource, serializeStreamingSource } = loadStreaming();
+const { createRawVariant } = require('./raw-leaf-variants.cjs');
+const { StreamingMappedSource, serializeStreamingSource,
+  shouldStreamMappedSource, HYBRID_STREAM_MIN_CODE_UNITS } = loadStreaming();
 
 const { SourceNode, SourceMapConsumer } = sourceMap;
+
+test('hybrid policy streams at its code-unit threshold while fixed modes remain fixed', () => {
+  const threshold = 1 << 20;
+  assert.equal(HYBRID_STREAM_MIN_CODE_UNITS, threshold);
+  for (const length of [0, threshold - 1, threshold, threshold + 1]) {
+    assert.equal(shouldStreamMappedSource('class', length), false);
+    assert.equal(shouldStreamMappedSource('stream', length), true);
+    assert.equal(shouldStreamMappedSource('hybrid', length), length >= threshold);
+  }
+});
+
+test('hybrid mixed compact and streaming trees preserve repeated concurrent output and root contents', async () => {
+  const compact = createRawVariant('raw-class');
+  const small = makeFixture(17);
+  const large = makeFixture(33, { crlf: true });
+  large.code += ' '.repeat((1 << 20) - large.code.length);
+
+  async function expand(fixture) {
+    const consumer = await new SourceMapConsumer(fixture.map);
+    try {
+      return compact.expand(fixture.code, consumer);
+    } finally {
+      consumer.destroy();
+    }
+  }
+
+  async function choose(fixture) {
+    return shouldStreamMappedSource('hybrid', fixture.code.length)
+      ? new StreamingMappedSource(fixture.code, fixture.map) : expand(fixture);
+  }
+
+  const smallNode = await choose(small);
+  const largeNode = await choose(large);
+  assert.ok(smallNode instanceof SourceNode);
+  assert.ok(largeNode instanceof StreamingMappedSource);
+  const root = wrapped(smallNode, '\nlarge\n', largeNode, '\nrepeat\n', largeNode);
+  const baselineLarge = await expand(large);
+  const baseline = wrapped(await expand(small), '\nlarge\n', baselineLarge,
+    '\nrepeat\n', baselineLarge);
+  for (const tree of [root, baseline]) {
+    tree.setSourceContent('module-0.js', 'root content overrides descendant content');
+  }
+  const expected = bytes(baseline.toStringWithSourceMap({ file: 'hybrid.js' }));
+  const tracked = trackedConsumers();
+  const serialize = () => serializeStreamingSource(root, { file: 'hybrid.js' }, tracked.dependencies);
+  const first = await serialize();
+  const others = await Promise.all([serialize(), serialize()]);
+  for (const output of [first, ...others]) assert.deepEqual(bytes(output), expected);
+  assert.equal(tracked.records.length, 3);
+  assert.ok(tracked.records.every(record => record.destroyed === 1 && record.walks === 2));
+  assert.deepEqual(root.sourceContents, baseline.sourceContents);
+});
 
 function wrapped(...children) {
   return new SourceNode(null, null, null, ['header\n', ...children, '\nfooter']);
@@ -180,7 +234,7 @@ test('experimental preload adapts linker and HMR boundaries through Meteor TypeS
   const { spawnSync } = require('node:child_process');
   const path = require('node:path');
   const root = path.resolve(__dirname, '../../../..');
-  for (const mode of ['class', 'stream']) {
+  for (const mode of ['class', 'stream', 'hybrid']) {
     const child = spawnSync(process.execPath, ['--require', path.join(__dirname, 'streaming-preload.cjs'),
       '-e', 'require("./tools/tool-env/install-babel"); require("./tools/isobuild/linker.js"); require("./tools/runners/run-hmr.js");'], {
       cwd: root,

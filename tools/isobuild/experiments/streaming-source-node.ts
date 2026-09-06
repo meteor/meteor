@@ -32,6 +32,17 @@ import { SourceMapConsumer, SourceNode } from 'source-map';
 import type { CodeWithSourceMap, RawIndexMap, RawSourceMap, StartOfSourceMap } from 'source-map';
 
 export type SourceMapInput = RawSourceMap | RawIndexMap | string;
+export type StreamingMode = 'class' | 'stream' | 'hybrid';
+export const HYBRID_STREAM_MIN_CODE_UNITS = 1 << 20;
+
+/**
+ * Compare a fixed code-length heuristic independently of map parsing or timing.
+ * Code length is a proxy for expansion weight, not a bound on mapping density.
+ */
+export function shouldStreamMappedSource(mode: StreamingMode, codeUnits: number): boolean {
+  return mode === 'stream' ||
+    (mode === 'hybrid' && codeUnits >= HYBRID_STREAM_MIN_CODE_UNITS);
+}
 
 /**
  * Runtime mappings can be unmapped despite the dependency's non-null typings.

@@ -2,7 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const mode = process.env.METEOR_STREAMING_VARIANT;
-if (!['class', 'stream'].includes(mode)) throw new Error('Set METEOR_STREAMING_VARIANT=class or stream');
+if (!['class', 'stream', 'hybrid'].includes(mode)) throw new Error('Set METEOR_STREAMING_VARIANT=class, stream or hybrid');
 const root = path.resolve(__dirname, '../../../..');
 const linkerPath = path.join(root, 'tools/isobuild/linker.js');
 const hmrPath = path.join(root, 'tools/runners/run-hmr.js');
@@ -21,6 +21,15 @@ function transform(source, filename) {
   source = `
 const streamingExperiment = require(${JSON.stringify(helper)});
 const STREAM_TRACE_CODE_UNITS = 1 << 20;
+const streamingSelection = { compactInputs: 0, streamInputs: 0, compactCodeUnits: 0, streamCodeUnits: 0 };
+process.on('exit', () => {
+  if (streamingSelection.compactInputs + streamingSelection.streamInputs > 0) {
+    process.stderr.write('[streaming-policy] ' + JSON.stringify({
+      mode: ${JSON.stringify(mode)}, thresholdCodeUnits: streamingExperiment.HYBRID_STREAM_MIN_CODE_UNITS,
+      ...streamingSelection
+    }) + '\\n');
+  }
+});
 async function serializeStreamingSource(root, options) {
   const started = performance.now();
   const cpu = process.cpuUsage();
@@ -45,7 +54,7 @@ async function serializeStreamingSource(root, options) {
   source = replaceOnce(source, 'function () {\n        if (fileCount > 0)', 'async function () {\n        if (fileCount > 0)');
   source = replaceOnce(source, 'const result = linkedOutput.toStringWithSourceMap({', 'const result = await serializeStreamingSource(linkedOutput, {');
   source = replaceOnce(source, 'result.source = node.toString();', 'result.source = (await serializeStreamingSource(node)).code;');
-  if (mode === 'stream') {
+  {
     const original = `        traceMemory('consumer-start', file, getPrelinkedOutputCached);
         const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
         try {
@@ -56,8 +65,16 @@ async function serializeStreamingSource(root, options) {
           sourcemapConsumer.destroy();
         }`;
     source = replaceOnce(source, original,
-      `        traceMemory('stream-input', file, getPrelinkedOutputCached);
-        chunk = new streamingExperiment.StreamingMappedSource(result.code, result.map);`);
+      `        if (streamingExperiment.shouldStreamMappedSource(${JSON.stringify(mode)}, result.code.length)) {
+          streamingSelection.streamInputs++;
+          streamingSelection.streamCodeUnits += result.code.length;
+          traceMemory('stream-input', file, getPrelinkedOutputCached);
+          chunk = new streamingExperiment.StreamingMappedSource(result.code, result.map);
+        } else {
+          streamingSelection.compactInputs++;
+          streamingSelection.compactCodeUnits += result.code.length;
+${original}
+        }`);
   }
   return source;
 }

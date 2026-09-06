@@ -1664,6 +1664,173 @@ remains unresolved. Packed arrays and shared-code offsets remain future
 implementation options, not measured features of this typed experiment. The
 streaming implementation remains opt-in; the compact class stays the default.
 
+### Hybrid selection and repeated serialization (September 6)
+
+The next experiment uses the same typed async serialization boundaries for all
+three modes, adding a predeclared selection threshold rather than changing
+consumer lifetime. `hybrid` streams an input when its generated source length
+is at least 1,048,576 UTF-16 code units; smaller inputs retain compact leaves.
+The threshold was fixed before these trials. It is a source-length proxy, not a
+mapping-density or retained-memory budget, and is not a selected production
+policy. The selector lives in the existing
+[typed streaming module](../../../tools/isobuild/experiments/streaming-source-node.ts);
+the [preload](experiments/streaming-preload.cjs) reports aggregate selections.
+Default compact leaves remain unchanged.
+
+#### Six controlled 400-module archives
+
+All six debug builds completed successfully with both browser targets, no
+Cordova, a 2 GiB heap limit, fresh linker disk caches, and retained compiler/Rspack
+caches. No guard triggered. The class and full-stream controls used the same
+async boundaries and new selection counters as hybrid.
+
+| Run | Wall seconds | Sampled tool RSS MiB | Sampled process-tree RSS MiB |
+| --- | ---: | ---: | ---: |
+| `hybrid-compare-class-400-1` | 21.84 | 2454.14 | 2454.14 |
+| `hybrid-compare-class-400-2` | 21.85 | 2505.05 | 2505.05 |
+| `hybrid-compare-stream-400-1` | 21.41 | 1875.48 | 2520.31 |
+| `hybrid-compare-stream-400-2` | 20.70 | 1957.97 | 2516.58 |
+| `hybrid-compare-hybrid-400-1` | 21.92 | 1857.92 | 2483.38 |
+| `hybrid-compare-hybrid-400-2` | 21.34 | 1926.48 | 2470.70 |
+
+| Mode | Compact inputs | Streamed inputs | Compact code units | Streamed code units |
+| --- | ---: | ---: | ---: | ---: |
+| `class` | 172 | 0 | 27786161 | 0 |
+| `stream` | 0 | 172 | 0 | 27786161 |
+| `hybrid` | 170 | 2 | 1506930 | 26279231 |
+
+The counters agree in both repeats. Of 27,786,161 total code units across 172
+inputs, hybrid streams two large inputs totaling 26,279,231 code units and
+retains 170 smaller inputs as compact trees. These counts describe processed
+inputs in this run, not every file in the repository or live cache entry counts.
+
+All 132 JS/map files referenced by both browser manifests match
+`compact-400-debug-1` in each run: 792 byte-identical file comparisons, with
+matching manifest entry sets and map presence. Hybrid and full streaming lower
+tool RSS, but child-process peaks make total-tree RSS broadly overlap the class
+controls. The hybrid 21.34–21.92-second durations do not demonstrate a reliable
+archive speed improvement. Two repeats per mode and one workload are insufficient
+to optimize or endorse the threshold.
+
+#### Rspack child-process memory and CPU limits
+
+The external monitor separately records processes named exactly `rspack-node`.
+Their largest individual RSS sample in each 400-module run was:
+
+| Mode / repeat | Meteor tool peak RSS MiB | Rspack peak RSS MiB | Whole process-tree peak RSS MiB |
+| --- | ---: | ---: | ---: |
+| Compact / 1 | 2454.14 | 1892.67 | 2454.14 |
+| Compact / 2 | 2505.05 | 1980.91 | 2505.05 |
+| Streaming / 1 | 1875.48 | 2042.36 | 2520.31 |
+| Streaming / 2 | 1957.97 | 2038.91 | 2516.58 |
+| Hybrid / 1 | 1857.92 | 2006.27 | 2483.38 |
+| Hybrid / 2 | 1926.48 | 1993.22 | 2470.70 |
+
+Streaming reduces mean Meteor peak RSS by 563 MiB (22.7%) relative to compact;
+hybrid reduces it by 587 MiB (23.7%). Whole-tree peaks remain within
+2454–2520 MiB. Do not add the Meteor and Rspack columns: their individual
+maxima occur at different times. The whole-tree column is the maximum
+contemporaneous sum, including wrapper processes.
+
+These are 0.5-second RSS samples, not exact peaks or measurements of Rspack's
+Rust/native heap. They are the largest individual process sample, not a sum of
+all Rspack processes, and need not coincide with the process-tree peak. They
+help explain why lower Meteor-tool RSS does not translate directly to lower
+whole-tree RSS. The observed Rspack differences are not evidence that linker
+selection caused Rspack to allocate more memory.
+
+**Rspack CPU was not measured.** The monitor records PID, parent PID, RSS and
+command, without CPU fields. CPU deltas in serialization logs belong to the
+Meteor process; Rspack compilation timing messages are elapsed durations, not
+process CPU measurements. No Rspack CPU improvement or regression can be
+inferred from these artifacts.
+
+#### Procedural reuse microbenchmark
+
+[measure-hybrid-reuse.cjs](experiments/measure-hybrid-reuse.cjs) constructs one
+140,000-segment input and 40 separate 500-segment inputs, then serializes the
+same mixed root four times. The large generated source is 1,306,406 code units;
+each small source is 3,469 code units. Class selects 41 compact inputs, stream
+selects 41 streamed inputs, and hybrid selects 40 compact plus one streamed input.
+Distinct source roots keep the small maps separate despite equal source text.
+Artifacts are under `artifacts/hybrid-reuse/<mode>-<repeat>/measurement/`.
+
+Explicit GC runs after setup and between serializations. Setup includes creation
+of the nodes; each timed iteration excludes subsequent map-to-string conversion,
+hashing, file I/O and explicit GC. CPU remains process-wide, not main-thread-only.
+This is reuse of unchanged synthetic inputs, not an actual Meteor development
+rebuild with compilation, invalidation, watching or HMR.
+
+| Run | Setup wall ms | Setup user+system CPU ms | Holder heap after GC MiB | Process high-water RSS MiB |
+| --- | ---: | ---: | ---: | ---: |
+| `class-1` | 33.44 | 67.64 | 40.48 | 294.88 |
+| `class-2` | 33.37 | 68.22 | 40.54 | 295.94 |
+| `stream-1` | 0.21 | 0.80 | 25.24 | 283.91 |
+| `stream-2` | 0.17 | 0.17 | 25.24 | 285.62 |
+| `hybrid-1` | 8.50 | 20.40 | 27.12 | 284.64 |
+| `hybrid-2` | 8.68 | 23.93 | 27.17 | 285.19 |
+
+Each cell below lists iterations 1, 2, 3 and 4 in order. Repeated-root work
+must be compared in addition to the one-time setup savings.
+
+| Run | Serialization wall ms, iterations 1–4 | Serialization user+system CPU ms, iterations 1–4 |
+| --- | --- | --- |
+| `class-1` | 44.26, 45.54, 40.89, 40.19 | 64.94, 62.43, 56.69, 55.98 |
+| `class-2` | 44.62, 44.85, 41.72, 43.67 | 64.78, 62.58, 57.47, 60.43 |
+| `stream-1` | 87.26, 75.17, 76.82, 74.79 | 136.00, 95.25, 95.97, 93.97 |
+| `stream-2` | 80.87, 76.05, 77.87, 77.42 | 128.66, 94.92, 97.61, 96.49 |
+| `hybrid-1` | 74.98, 73.54, 73.35, 71.79 | 103.97, 100.17, 98.45, 97.46 |
+| `hybrid-2` | 73.91, 74.83, 70.52, 72.27 | 102.73, 101.92, 95.95, 97.33 |
+
+Hybrid's holder heap is about 27.12–27.17 MiB versus class 40.48–40.54 MiB and
+full streaming 25.24 MiB. However, repeated class serialization takes roughly
+40–46 ms here, versus 71–75 ms for hybrid and 75–87 ms for full streaming.
+Avoiding stored trees trades retained structure for repeated consumer/segmentation
+work. Keeping the smaller compact trees recovers part of full streaming's reuse
+cost in this fixture; it does not eliminate the large input's repeated cost.
+The whole-isolate holder measurement is not a dominator-derived retained size.
+
+Every run verifies unchanged code/map hashes across its four serializations.
+All six result files also report the same output hashes across modes:
+`cafd726dafeb0afee82a4b719f716c134a9777dd9bb91a0cd0191ffd84117128`
+for code and
+`4d98b5133a8ce3e5741b7e5028e92fd14deb7249de98d9a0e6039fdee5ce69ac`
+for the map. The six output pairs represent 12 checked files including the control pair,
+or ten independent comparisons against it. All 24 serializations preserve the
+same hashes. These synthetic checks are separate from the full-build file
+comparisons.
+
+Two added runtime tests exercise threshold boundaries and actual mixed compact /
+streamed roots under repeated and concurrent serialization. Final verification
+passed 49 Node tests and four Python tests, 53 total. The focused strict
+TypeScript check passed, including four negative contract checks.
+
+#### Small normal-minified hybrid smoke test
+
+| Artifact | Result | Wall seconds | Sampled tool RSS MiB | Sampled process-tree RSS MiB |
+| --- | --- | ---: | ---: | ---: |
+| `compact-20-normal-1` | Exit 0 | 10.45 | 1094.09 | 1094.09 |
+| `hybrid-compare-hybrid-20-normal-1` | Exit 0 | 10.30 | 1086.44 | 1201.27 |
+
+The 20 × 50 hybrid build used both browser targets and selected 166 compact
+inputs and zero streamed inputs at the same 1,048,576-code-unit threshold. Both
+browser manifests have the same sole JS entry as the compact control with
+byte-identical contents; both have zero map files. The small input therefore
+exercises hybrid's compact selection path, not its large-input streaming path.
+
+The run's `runtime-check.json` records modern Chromium boot, 20 modules,
+20 registry entries, 1,000 functions, and no page errors. Legacy-browser execution
+was not tested. These two matching JS files bring this phase's full-build file
+comparisons to 794. The single small comparison does not establish a speed or
+whole-tree memory advantage. No live development/HMR or deploy workflow was run.
+
+**Current conclusion:** retain compact as default and hybrid as an experiment.
+Its selection is demonstrably selective, but source length does not bound map
+complexity; a single threshold has not been validated across applications.
+The controlled reuse cost argues for workload-aware evaluation before changing
+cache behavior. No packed-array, shared-code-offset, live development-rebuild,
+or production hybrid policy is implemented by these trials.
+
 ### Evidence locations and next checks
 
 Each run directory contains `summary.json`, `samples.jsonl`, and `build.log`;
