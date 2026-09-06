@@ -247,7 +247,9 @@ restore all those changes.
 
 The upstream fixture was inspected at immutable commit
 [`1b5049829f27ad51ce6508c0d4419367d490e82b`](https://github.com/miamagana/meteor-rspack-oom-repro/tree/1b5049829f27ad51ce6508c0d4419367d490e82b).
-No clone, dependency installation, generated fixture, or build was executed.
+At the initial readiness inspection, no clone, dependency installation,
+generated fixture, or build had been executed. The fixture was subsequently
+cloned and inspected locally; see the security review below.
 
 ### Version controls
 
@@ -317,6 +319,63 @@ owned physical memory or a JavaScript heap measurement.
 Readiness is a point-in-time observation. Recheck resources and dependencies
 before running experiments. Network reads required sandbox escalation in some
 cases; no package installation was performed during the analysis.
+
+## External reproduction security review
+
+On September 5, 2026 (local time), the fixture was cloned into
+`/Users/leonardo/Repositories/meteor/repro-14655/app`. Its HEAD matched the pinned
+`1b5049829f27ad51ce6508c0d4419367d490e82b` revision and its worktree was clean.
+Before installing dependencies or executing fixture code, a static review
+covered all tracked first-party JavaScript, HTML/CSS, README, manifests,
+lockfile metadata, Meteor configuration, and local Git configuration/hooks.
+
+**Result: no evidence of intentional malware was found in the inspected
+first-party code or dependency metadata. This is not a certification of the
+third-party package contents or downloaded native binaries.**
+
+No first-party credential collection, outbound upload code, obfuscated payload,
+dynamic evaluation, persistence mechanism, or remote script download was found.
+The HTML's external URLs are ordinary navigation links. `bench.js` executes a
+constant `ps` command and launches the configured Meteor executable with an
+argument array. It inherits the environment into that child; this is not itself
+evidence of exfiltration, but dependencies would execute with the child's access.
+
+The concrete execution hazards are:
+
+- `bench.js:42–45` recursively removes its output directory, `_build`, and
+  `node_modules/.cache`. The output path incorporates unchecked `OUT`, label,
+  and mode values. Path traversal in those inputs can escape the intended
+  results directory. Use a containment-checked harness before running it.
+- `generate.js:18` removes `imports/generated` and regenerates it. That is
+  expected behavior, but must remain confined to a disposable checkout with
+  verified directory ancestry. Its workload parameters have no upper bounds.
+- The generator, build, and microbenchmark deliberately create memory pressure.
+  They have no effective whole-process memory guard and can exhaust resources.
+- `METEOR` and `SOURCE_MAP_LIB` select executable code; use explicitly trusted
+  paths. The microbenchmark also hardcodes another developer's dependency path.
+
+An independent dependency/configuration review found 489 non-root lockfile
+entries. Of these, 370 resolve to HTTPS npm-registry tarballs with SHA-512
+integrity metadata and package names matching their install paths. The other
+119 are marked `inBundle` beneath the integrity-pinned `meteor-node-stubs`
+package. No git, local-file, plain-HTTP, alias, or linked dependencies were found.
+Integrity pins identify expected bytes; they do not prove those bytes are safe.
+
+The root manifest has no installation lifecycle scripts. Two dependency entries
+declare installation scripts: `@swc/core@1.15.47` and optional macOS
+`fsevents@2.3.3`. Their downloaded source and native artifacts have not been
+audited. The Meteor package list did not reveal unexpected configuration, but
+this review did not inspect every resolved Atmosphere package implementation.
+There were no tracked symlinks, `.npmrc`, submodules, active local Git hooks, or
+custom local Git execution settings; only standard sample hooks were present.
+
+No fixture code or dependency lifecycle script was executed during this review.
+The earlier `@meteor --version` invocation ran the trusted core checkout and
+reported sandbox-related watcher errors; it was not a reproduction run.
+Before continuing, prefer an initial dependency fetch with lifecycle scripts
+disabled, review any required installation scripts before enabling them, use
+trusted executable paths, and bound the generator/build workload. Changes to
+fixture code or dependency resolutions invalidate the corresponding audit scope.
 
 ## Proposed experiment sequence and acceptance criteria
 
