@@ -157,7 +157,7 @@ import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
 import { JsFile, CssFile } from './minifier-plugin.js';
 var meteorNpm = require('./meteor-npm.js');
-import { addToTree, File as LinkerFile } from "./linker.js";
+import { addToTree, File as LinkerFile, withTargetPrelinkCache } from "./linker.js";
 var files = require('../fs/files');
 var archinfo = require('../utils/archinfo');
 var buildmessage = require('../utils/buildmessage.js');
@@ -3361,13 +3361,15 @@ async function bundle({
         buildMode: buildOptions.buildMode
       });
 
-      await client.make({
+      await withTargetPrelinkCache({
+        buildMode, commandName: global.currentCommand?.name, arch: webArch,
+      }, () => client.make({
         packages: [app],
         minifyMode: minifyMode,
         minifiers: options.minifiers || [],
         addCacheBusters: true,
         onJsOutputFiles,
-      });
+      }));
 
       return client;
     });
@@ -3386,9 +3388,11 @@ async function bundle({
         clientArchs,
       });
 
-      await server.make({
+      await withTargetPrelinkCache({
+        buildMode, commandName: global.currentCommand?.name, arch: serverArch,
+      }, () => server.make({
         packages: [app]
-      });
+      }));
 
       return server;
     });

@@ -17,9 +17,11 @@ if ((process.argv[1] || '').endsWith('/tools/index.js')) {
   optimism.wrap = function(compute, options) {
     const keySource = options && typeof options.makeCacheKey === 'function'
       ? options.makeCacheKey.toString() : '';
+    const stack = new Error().stack;
+    const originalKey = keySource.includes('file.bundleArch') && keySource.includes('file._inputHash');
+    const scopedKey = keySource.includes('storage.getStore') && stack.includes('/target-prelink-cache.js');
     const matchesLinker = options && options.max === 4096 &&
-      keySource.includes('file.bundleArch') && keySource.includes('file._inputHash') &&
-      new Error().stack.includes('/tools/isobuild/linker.js');
+      (originalKey || scopedKey) && stack.includes('/tools/isobuild/linker.js');
     if (!matchesLinker) return originalWrap.apply(this, arguments);
     matches++;
     if (matches !== 1) throw new Error('Multiple prelink caches matched');

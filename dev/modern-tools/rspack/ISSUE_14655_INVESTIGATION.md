@@ -15,21 +15,21 @@ reproduced locally. No production fix has been adopted.
 
 | Item | Baseline |
 | --- | --- |
-| Investigation date | September 5, 2026, America/Campo_Grande |
+| Investigation dates | Started September 5, 2026; target-boundary follow-up September 6, 2026, America/Campo_Grande |
 | Project | `meteor` |
 | Local root | `/Users/leonardo/Repositories/meteor/meteor` |
 | Inspected checkout | `devel`, commit `0bbf7f33bd` |
 | Report branch | `investigation/14655-rspack-build-memory` |
 | Upstream status when checked | Open; release 3.6 milestone |
 | Latest issue evidence inspected | September 3, 2026 comment |
-| Local build checkout | First seven runs: `bd99bb206c`; runs 8–10: `5306673fe5` (documentation-only changes); runs 11–12: that source plus checkout probes; policy comparison: `057d48492b` plus the experimental harness recorded below |
+| Local build checkout | First seven runs: `bd99bb206c`; runs 8–10: `5306673fe5` (documentation-only changes); runs 11–12: that source plus checkout probes; policy comparison: `057d48492b` plus its harness; target-boundary experiment: `b319e5761e` plus this follow-up |
 | Full local reproduction | Repeatable heap OOM at `MODULES=400 FUNCS=400`, legacy-inclusive debug build; individual runs and policy matrices below |
 | Passing controls | Same workload: modern-only, legacy-only, and both targets with diagnostic large-tree cache bypass; fresh linker-cache controls |
 | Implementation changes | No production fix; verified opt-in checkout probes and explicit experimental policy preloads. Default cache policy unchanged. |
 
 The requested deliverables are an investigation report and opt-in checkout
 probes to verify the performance findings, followed by a comparison of candidate
-cache fixes. Their acceptance criteria
+cache fixes and an opt-in target-boundary follow-up. Their acceptance criteria
 are traceable evidence, explicit uncertainty, a reproducible description of
 the local probe, output-preserving instrumentation, a feasible reproduction
 approach, and a discoverable location
@@ -880,6 +880,136 @@ it is an investigation harness, not a standalone benchmark distribution. The
 200-module run used `--modules 200 --repeats 1` and the `medium-legacy-debug`
 control. Changing workloads regenerates ignored fixture files. Disable the
 preload to restore the baseline; the default checkout does not load any candidate.
+
+### Target-boundary cache follow-up (September 6)
+
+Following the policy comparison, the checkout now contains an opt-in experiment
+that releases expanded-tree cache references at an explicit target lifecycle
+boundary. This is the next experiment recommended above, not an adopted default
+fix. [target-prelink-cache.js](../../../tools/isobuild/target-prelink-cache.js)
+provides the scoped cache; [linker.js](../../../tools/isobuild/linker.js) connects
+it to the existing prelink computation, and
+[bundler.js](../../../tools/isobuild/bundler.js) wraps the awaited client and
+server target `.make()` calls.
+
+Set `METEOR_LINKER_TARGET_CACHE=1` to enable the intervention. Eligibility also
+requires command `build` or `deploy`, with build mode `production` or
+`development`. The latter is needed because `build --debug` produces an archive
+while setting development mode. `run`, including `run --production`, and test
+commands remain outside the experiment. Other environment values disable it.
+Enable `METEOR_LINKER_MEMORY_TRACE=1` as well to record
+`[linker-target-cache]` lifecycle events and the existing expansion probes.
+
+`AsyncLocalStorage` gives each eligible target a separate cache-key namespace.
+Entries can be reused within that target; scoped keys cannot collide with the
+original JSON cache keys. After the target's awaited work finishes, `finally`
+forgets only its tracked keys using optimism's `forgetKey`, including on errors.
+Unscoped global entries and concurrent or nested target scopes remain separate.
+Nested noneligible work runs through `storage.exit` so it cannot accidentally
+inherit its caller's temporary namespace. Async descendants that outlive a
+closed scope bypass caching, preventing them from recreating disposed entries.
+
+This design removes architecture inference and eviction side effects from the
+experimental rotation policy. It still has tradeoffs: scoped targets cannot
+reuse the global entries or each other's entries; tracked keys cost space
+proportional to keys visited within a target, even after LRU eviction; and
+cleanup releases cache references without forcing GC or releasing objects still
+held by callers. Long or concurrently active targets can still retain substantial
+memory. A passing debug archive does not establish development-rebuild behavior,
+production minification correctness, deployment coverage, or elimination of the
+source-node allocation cost.
+
+Ten focused tests in
+[target-prelink-cache.node-test.js](../../../tools/isobuild/target-prelink-cache.node-test.js)
+passed against the development bundle's actual optimism implementation. They
+cover within-target promise reuse, cleanup that preserves global entries,
+eligibility for debug archives and deploy, disabled/run/test exclusions, nested
+eligible and ineligible scopes, concurrent same-architecture targets, sync/async
+errors, descendants of closed scopes, unchanged/changed inputs across simulated
+development rebuilds, and `disableCache`. These are helper
+contract tests; the CLI build results below test actual integration separately.
+
+#### Intervention validation and execution status
+
+| Artifact directory | Intervention status | Result | Seconds | Peak tool/tree RSS MiB |
+| --- | --- | --- | ---: | ---: |
+| `target-scope-400-baseline` | Original cache via baseline preload | Heap OOM, SIGABRT (6) | 15.30 | 2701.92 |
+| `target-scope-400-1` | Invalid intervention: production-only gate excluded debug archive | Heap OOM, SIGABRT (6) | 13.18 | 2706.28 |
+| `target-scope-400-2` | Corrected target scopes, debug | Exit 0 | 21.94 | 2733.38 |
+| `target-scope-400-3` | Corrected target scopes, debug repeat | Exit 0 | 21.90 | 2941.58 |
+| `target-scope-20-normal-baseline` | Disposal disabled, normal minified | Exit 0 | 9.83 | 1134.86 |
+| `target-scope-20-normal-enabled` | Disposal enabled, normal minified | Exit 0 | 8.73 | 1065.42 |
+| `target-scope-400-final-baseline` | Corrected code, disposal disabled, no policy preload | Heap OOM, SIGABRT (6) | 13.78 | 2704.59 |
+
+None of these seven runs hit the external guard. The first attempted enabled run emitted no
+scope events. Inspection of `tools/cli/commands.js` around line 1552 established
+that `--debug` sets development mode, so the original production-only condition
+never activated. Its OOM is not evidence that target disposal fails: it is an
+invalid intervention whose result must remain separate from candidate outcomes.
+The corrected gate uses both archive modes plus command identity, preserving
+the exclusion of development-server and test workflows.
+
+The two corrected 400-module builds used no policy preload. Each recorded three
+matched start/end pairs, for modern browser, legacy browser, and server targets.
+Modern cleanup removed 197 tracked entries, legacy 471, and server 186; every
+scope started with zero entries and returned the cache to zero. This is direct
+lifecycle evidence, rather than inferring an architecture transition from keys.
+Eight byte comparisons across the two runs matched both targets' `app.js` and
+`app.js.map` against `large400-both-debug-tree-bypass`. The final disabled control
+used the corrected implementation without a preload and again failed inside
+legacy expansion with V8 heap OOM and no scope events.
+
+The normal minified control used `20 × 50`, both browser targets, and the same
+2 GiB old-space limit. Each target emitted one JS file and no map files in both
+runs. The JS paths and bytes matched exactly; map absence was common to both
+baselines and candidates, not a change introduced by disposal. The enabled run
+cleaned 191 modern, 464 legacy, and 183 server entries, again to zero. Its
+`runtime-check.json` records a successful modern Chromium boot, 20 modules,
+20 registry entries, 1,000 generated functions, and no page errors. Legacy browser
+execution was not separately tested. The fixture was then restored to `400 × 400`
+for the final disabled control.
+
+The two large successful durations are similar to the previous rotation
+experiment's 21.29–21.85 seconds. This does not establish a speed or RSS advantage
+for namespacing; the value demonstrated here is lifecycle cleanup with tested
+scope isolation. The single small minified comparison is a correctness smoke
+test, not a statistically supported optimization result.
+
+`artifacts/target-scope-summary.json` records seven run summaries, lifecycle and
+expansion events, source hashes, the ten output-file comparisons, and the small
+runtime pass. Each run also has `target-scope-comparison.json`. The first baseline
+and invalid attempt predate the final gate; corrected successful runs and the
+final disabled control use the final helper behavior. Their base source is
+`b319e5761e` plus this follow-up's changes. Environment flags absent from the
+older monitor's allowlist are recorded through requested/activated scope fields.
+
+Verification: all 21 focused tests passed (ten target-lifetime, two logger, nine
+prior-policy tests), as did `git diff --check`. The new target tests initially
+failed before implementation; targeted regressions also failed before fixing
+the debug-archive gate and nested noneligible context handling. No full Jest,
+package, live-reload, or deployment suite was run. Development cache reuse is
+verified against the real optimism wrapper with simulated rebuild calls, not
+through an end-to-end running development server.
+
+The earlier comparison preload now recognizes the scoped wrapper, and its runner
+explicitly disables `METEOR_LINKER_TARGET_CACHE` to prevent accidental composition
+of independent experiments. The baseline preload matched once in the first
+control, preserving the historical comparison workflow.
+
+To run the target experiment, use the same guarded monitor and fresh linker disk
+cache setup, set `METEOR_LINKER_TARGET_CACHE=1`, and omit the cache-policy preload.
+Add `METEOR_LINKER_MEMORY_TRACE=1` to verify scope events. Setting the target flag
+to `0` disables disposal. The implemented gate is based on archive commands,
+not minification mode, so both `build` and `build --debug` are eligible.
+
+**Handoff:** the lifecycle candidate is implemented and verified as an opt-in
+experiment. Default behavior is not switched to disposal. Review the helper and
+its tests first, then the two `Target.make` call sites, and finally these artifact
+comparisons. Before default adoption, test large normal minified builds, a live
+development reload session, deploy integration, and additional application/map
+shapes. The previously recorded large-debug browser timeout, WASM trap, and
+oversized-cache serialization questions remain unresolved. Unset the experiment
+variable or revert this follow-up to roll back; there is no data migration.
 
 ### Evidence locations and next checks
 

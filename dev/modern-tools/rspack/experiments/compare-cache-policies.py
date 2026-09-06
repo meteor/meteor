@@ -60,6 +60,7 @@ def main() -> None:
         "TOOL_NODE_FLAGS": f"--max-old-space-size=2048 --require={preload}",
         "METEOR_PROFILE": "1",
         "METEOR_LINKER_MEMORY_TRACE": "1",
+        "METEOR_LINKER_TARGET_CACHE": "0",
         "METEOR_FORCE_EXCLUDE_ARCHS": "web.cordova",
         "MODULES": str(args.modules),
         "FUNCS": str(FUNCTIONS),
@@ -93,6 +94,7 @@ def main() -> None:
                 "policy": policy, "modules": args.modules, "functions": FUNCTIONS,
                 "repeat": repeat, "summary": summary, "policyEvents": policy_events,
                 "linkerEvents": trace, "traceEnabled": True,
+                "targetCacheEnabled": False,
                 "control": str(args.control),
             }
             if summary["exit_code"] == 0:

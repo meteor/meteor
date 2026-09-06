@@ -706,7 +706,8 @@ Object.assign(File.prototype, {
   })
 });
 
-const getPrelinkedOutputCached = require("optimism").wrap(
+const targetPrelinkCache = require('./target-prelink-cache.js').createTargetPrelinkCache(
+  require("optimism").wrap,
   async function (file, options) {
     // This event runs only when optimism computes, rather than reuses, a tree.
     traceMemory('compute', file, getPrelinkedOutputCached);
@@ -821,8 +822,28 @@ const getPrelinkedOutputCached = require("optimism").wrap(
         options,
       });
     }
+  }, event => {
+    if (process.env.METEOR_LINKER_MEMORY_TRACE === '1') {
+      process.stderr.write('[linker-target-cache] ' + JSON.stringify({
+        ...event, uptimeSeconds: process.uptime(), memory: process.memoryUsage(),
+      }) + '\n');
+    }
   }
 );
+
+const getPrelinkedOutputCached = targetPrelinkCache.cached;
+
+/**
+ * Experimentally release expanded trees after a production target is complete.
+ * This is an internal build-tool boundary; normal/development calls keep the
+ * shared cache unless the explicit experiment and production command gates pass.
+ */
+export function withTargetPrelinkCache(options, callback) {
+  return targetPrelinkCache.runForTarget({
+    ...options,
+    enabled: process.env.METEOR_LINKER_TARGET_CACHE === '1',
+  }, callback);
+}
 
 async function getOutputWithSourceMapCached(file, servePath, options) {
   const key = JSON.stringify({
