@@ -1011,6 +1011,209 @@ shapes. The previously recorded large-debug browser timeout, WASM trap, and
 oversized-cache serialization questions remain unresolved. Unset the experiment
 variable or revert this follow-up to roll back; there is no data migration.
 
+### Isolated SourceNode representation experiments (September 6)
+
+The next investigation separates the cost of constructing a source-node tree
+from retaining that tree in Meteor's cache. It uses the captured **raw modern
+Rspack output**, not the legacy-transpiled map that failed in the full build.
+These are isolated processes with explicit GC, not production integrations,
+full-build benchmarks, or a general replacement for the mutable SourceNode API.
+
+The experiment files are
+[source-node-variants.cjs](experiments/source-node-variants.cjs),
+[measure-source-node.cjs](experiments/measure-source-node.cjs), their
+[procedural Node tests](experiments/source-node-variants.node-test.cjs), and the
+[heap analyzer](experiments/analyze-source-node-heap.py) with
+[procedural Python tests](experiments/analyze-source-node-heap_test.py).
+They load the installed `source-map@0.7.4` implementation into isolated modules
+and apply checked source replacements; no installed library or normal linker
+representation is changed. Base checkout is `4117fa5738` plus these experiment
+files. Artifacts live under `artifacts/source-node-representation/`.
+
+| Variant | Intervention | Interpretation limit |
+| --- | --- | --- |
+| `baseline` | Original SourceNode expansion and wrapped serialization. | Control for this input and wrapper only. |
+| `lazy-metadata` | Share a frozen empty `sourceContents` object until `setSourceContent` needs a private object. | Avoids empty per-node objects, but does not prove compatibility with direct external mutation of this public field. |
+| `compact` | Replace mapped child nodes with leaves storing location, source, name, and code directly; omit per-leaf children and source-content containers. | Supports the construction/walk/serialization surface used here, not the complete mutable SourceNode API. |
+| `stream` | Feed the original segmentation algorithm into the original map generator through a sink, without retaining a full intermediate tree. | Still creates transient segment objects, decoded mappings and generator state; not encoded-map concatenation or a streaming JSON writer. |
+| `proxy` | Observe property reads/writes through wrapped SourceNode instances on a small procedural fixture. | Diagnostic access counts alter execution and cannot identify all construction writes, GC behavior, or normal performance. |
+
+#### Large captured input and isolated measurements
+
+Seven guarded processes used development-bundle Node `v24.15.0` with
+`--expose-gc --max-old-space-size=2048`. All exited successfully, without a guard
+termination. The input was 8,621,197 code units, with 402 sources, 160,804 names,
+and 17,615,443 encoded mapping code units. Its code/map hashes match the saved
+400-module raw artifacts recorded earlier. Expansion produced 2,725,625 root
+children in each tree-based variant; that count includes strings and is not
+identical to the count of allocated mapped leaf nodes.
+
+The helper ends the current event-loop job before repeated explicit GC so that
+WeakRef keep-alive semantics do not pin the objects being checked. Timed
+expansion/emission stages exclude the deliberately inserted collection phases;
+total process duration includes collection, hashing, and file output. Neither
+kind of timing is a full Meteor build result.
+
+| Run | Expansion ms | Tree emission / direct render ms | Heap with consumer released, tree held MiB | Process wall seconds | Sampled process RSS MiB | Process high-water RSS MiB |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `baseline-1` | 618.09 | 874.41 | 918.61 | 3.83 | 1738.97 | 1745.70 |
+| `baseline-2` | 605.10 | 834.81 | 918.61 | 3.83 | 1740.72 | 1741.14 |
+| `lazy-metadata-1` | 553.19 | 846.17 | 773.07 | 3.29 | 1528.98 | 1595.19 |
+| `compact-1` | 466.63 | 687.98 | 276.45 | 2.72 | 1071.17 | 1090.28 |
+| `compact-2` | 471.18 | 658.87 | 276.45 | 2.73 | 1083.41 | 1090.64 |
+| `stream-1` | No tree | 1033.34 | No tree | 2.18 | 884.33 | 1014.12 |
+| `stream-2` | No tree | 1128.00 | No tree | 2.19 | 859.02 | 1013.88 |
+
+High-water values come from `process.resourceUsage().maxRSS`, converted from
+KiB to MiB; sampled RSS comes from the external monitor. In these short runs,
+the 0.5-second monitor misses substantial peaks, especially for streaming. Its
+`sampled_peak_tool_mib=0` means the process was not a Meteor-tool process, not
+that it used no memory. Use the process/tree and high-water metrics above.
+
+The tree-held heap falls from about 918.61 MiB in baseline to 773.07 MiB with
+lazy metadata and 276.45 MiB with compact leaves. These are whole-isolate,
+post-GC observations with specific references held, not dominator-derived tree
+sizes. The compact representation materially reduces this isolated workload's
+memory burden; seven runs with only one lazy-metadata attempt do not establish
+performance confidence across applications.
+
+All seven runs produced **byte-identical** `wrapped.js` and
+`wrapped.js.map`, independently compared against the baseline files:
+
+| Output | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `wrapped.js` | 8621217 | `499807faba0513be6a7812a6f3fecb68853875cd25ef25ceb83e77d5a2e80e73` |
+| `wrapped.js.map` | 50458186 | `049feec4f878102ad7a4b454aef1d4450b1825d4c97a85f93533fcf543db8577` |
+
+The wrapper is the helper's `(function(){`/`})();` wrapper, not Meteor's complete
+package/module wrapper. These hashes therefore differ from the full-build
+`app.js` artifacts. Equality proves preservation against this baseline output,
+not correctness for every supported map format, operation, or architecture.
+
+#### Collection and output-generator cost
+
+In each tree-based run, the consumer weak reference cleared while the tree was
+still held. After clearing the tree and the named global holder, the tree weak
+reference cleared too. The generator weak reference cleared after its map was
+serialized and the generator released. Streaming has no tree weak reference;
+its consumer and generator references cleared. These observations establish
+collectibility under the explicit release/GC sequence, not collection timing in
+Meteor or absence of all references in an arbitrary build.
+
+Once output was held and the tree/consumer released, all variants still used
+about 350.81–350.84 MiB of JS heap. After releasing the output generator but
+holding serialized map text, heap fell to roughly 52.67–52.70 MiB; after releasing
+all output, it fell to 4.55–4.59 MiB. Avoiding SourceNode does not eliminate the
+remaining generator and serialized-output costs.
+
+`external` remained 337,722,287 bytes, approximately 322.08 MiB, after the
+referents cleared; RSS also stayed elevated. This is consistent with cached
+WASM capacity or other allocator retention, but no separate WASM-capacity probe
+establishes its cause. It is not evidence, by itself, that the released
+SourceNode or consumer leaked. No new `RuntimeError: unreachable` or real
+string-length overflow was reproduced.
+
+#### Small heap snapshots: containers rather than repeated strings
+
+Snapshot runs use a procedural 10,000-segment fixture with three sources, five
+names, mapped/unmapped spans, and a tail. Snapshots were taken after consumer
+release while `globalThis.__sourceNodeHypothesisRoot` held the expanded tree.
+The analyzer reads metadata-declared node/edge layouts and follows only non-weak
+edges. Its totals are unique-node **shallow bytes**, not true retained sizes;
+there is no dominator analysis. They also omit other reachable structures such
+as strings, hidden classes, and property backing storage not explicitly counted.
+
+| Small variant | SourceNode objects | Compact leaves | Children arrays | `sourceContents` objects | Elements backing shallow bytes | Combined counted shallow bytes |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Baseline | 10001 | 0 | 10001 | 10001 | 1600160 | 3280328 |
+| Lazy metadata | 10001 | 0 | 10001 | 2 | 1600160 | 2720384 |
+| Compact | 1 | 10000 | 1 | 1 | 80160 | 720392 |
+
+The baseline contains 10,001 SourceNode objects (800,080 shallow bytes), 10,001
+children arrays (320,032 bytes), and 10,001 source-content objects (560,056
+bytes). Its elements backing alone contributes 1,600,160 bytes, including the
+root array's backing. Lazy metadata reduces the source-content objects to the
+shared empty object and the root's populated object. Compact leaves contribute
+640,000 bytes themselves while eliminating almost all per-leaf containers.
+This supports representation overhead as a material cause of the expansion
+cost, without extrapolating these small-snapshot totals into exact large-tree
+retained sizes.
+
+For every variant, the illustrative holder path is
+`__sourceNodeHypothesisRoot → children → element 0 → leaf`. Root-owned
+`children`/`sourceContents` references are also recorded. These paths identify
+strong references from the named holder, not exclusive retention or a complete
+GC-root proof.
+
+Across 10,000 leaf `source` properties, the analyzer finds only three distinct
+plain-string objects/values plus one hidden non-string target. Across 10,000
+`name` properties, it finds five plain-string objects/values plus one hidden
+target. The respective plain strings total 72 and 120 shallow bytes. The small
+fixture therefore does not support repeated equal metadata strings as its major
+memory cost or demonstrate a benefit from additional interning. Concatenated
+and sliced strings are reported separately without reconstructing their values;
+these small-fixture findings do not establish the large input's string identity.
+
+#### Proxy evidence and validation limits
+
+The small proxy run observed 10,002 wrapped nodes, including the serialization
+wrapper. During expansion it recorded 10,002 `children` reads and three
+`sourceContents` reads. Serialization recorded 70,013 `children` reads, 10,005
+`sourceContents` reads, and 10,003 reads each of `source`, `line`, `column`, and
+`name`. The tree walk and source-content walk each ran through 10,002 observed
+method reads. This indicates that nominally empty per-leaf containers are still
+visited by the baseline traversal; it does not prove those fields can be
+removed from every API path.
+
+The proxy is installed at the end of construction. Initial field assignment
+therefore happens before observation, and the traps do not inspect array
+internals or read existing objects from outside the proxied route. Do not infer
+unused fields from missing writes or compare proxy timings with uninstrumented
+performance. The proxy output matches the small baseline code/map.
+
+Verification totals are 27 passing Node tests (six representation tests plus the
+21 prior tests) and four passing analyzer tests. The new procedural checks cover
+empty/small input, CRLF, sources and names, source roots and relative paths,
+unmapped spans, duplicate and distinct same-coordinate mappings, end-of-code
+positions, metadata isolation, and compact leaf shape. For unmapped spans with
+a relative path, the installed baseline's `TypeError` is preserved rather than
+silently hidden. Analyzer tests cover reordered metadata, weak-edge exclusion,
+shared-object deduplication, compact leaves, and string identity versus values.
+No full-build, live development, deployment, or browser test uses these new
+representations. The earlier lifecycle candidate and its validation remain a
+separate experiment.
+
+To reproduce the isolated large baseline from the core checkout, choose a new
+output directory whose parent exists; the helper refuses an existing directory:
+
+```bash
+dev_bundle/bin/node --expose-gc --max-old-space-size=2048 \
+  dev/modern-tools/rspack/experiments/measure-source-node.cjs \
+  /private/tmp/source-node-baseline-new baseline \
+  /Users/leonardo/Repositories/meteor/repro-14655/artifacts/large400-legacy-debug/inputs/client-rspack.js \
+  /Users/leonardo/Repositories/meteor/repro-14655/artifacts/large400-legacy-debug/inputs/client-rspack.js.map
+```
+
+Replace `baseline` with `lazy-metadata`, `compact`, or `stream` in a fresh
+process/output directory. Actual large runs used the external monitor and its
+existing timeout/RSS guard; retain those controls for benchmark repetition.
+Omitting input paths generates the small procedural fixture. Snapshot creation
+is explicitly refused when large file paths are provided:
+
+```bash
+SOURCE_NODE_SNAPSHOT=1 dev_bundle/bin/node --expose-gc --max-old-space-size=2048 \
+  dev/modern-tools/rspack/experiments/measure-source-node.cjs \
+  /private/tmp/source-node-small-new baseline
+python3 dev/modern-tools/rspack/experiments/analyze-source-node-heap.py \
+  /private/tmp/source-node-small-new/tree.heapsnapshot \
+  --output /private/tmp/source-node-small-new/heap-analysis.json
+```
+
+Run the small proxy probe with mode `proxy` and no input paths. Raw snapshots,
+measurements, output files and analyzer results remain external artifacts.
+The representation experiments are opt-in local modules; no production
+representation, dependency, map format, or default cache policy has changed.
+
 ### Evidence locations and next checks
 
 Each run directory contains `summary.json`, `samples.jsonl`, and `build.log`;
