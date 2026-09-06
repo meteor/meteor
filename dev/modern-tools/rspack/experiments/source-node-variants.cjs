@@ -23,6 +23,9 @@ function replaceOnce(source, before, after) {
  * Checked replacements make changes in the installed implementation fail loudly.
  */
 function createVariant(mode, observe = value => value) {
+  if (mode.startsWith('raw-')) {
+    return require('./raw-leaf-variants.cjs').createRawVariant(mode);
+  }
   if (!MODES.has(mode)) throw new Error(`Unknown representation: ${mode}`);
   let SourceNode = sourceMap.SourceNode;
   if (mode !== 'baseline') {

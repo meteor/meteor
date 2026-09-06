@@ -73,10 +73,11 @@ function sha256(value) {
   let output;
   if (mode !== 'stream') {
     phase = 'expand';
+    const expansionCpu = process.cpuUsage();
     const started = performance.now();
     tree = variant.expand(input.code, consumer);
     sample('expanded-before-gc', { durationMs: performance.now() - started,
-      rootChildren: tree.children.length });
+      cpuMicros: process.cpuUsage(expansionCpu), rootChildren: tree.children.length });
     treeWeak = new WeakRef(tree);
     globalThis.__sourceNodeHypothesisRoot = tree;
     await collect();
@@ -90,9 +91,11 @@ function sha256(value) {
       v8.writeHeapSnapshot(path.join(outputDirectory, 'tree.heapsnapshot'));
     }
     phase = 'serialize';
+    const serializationCpu = process.cpuUsage();
     const serializationStarted = performance.now();
     output = variant.serialize(tree);
-    sample('output-with-tree-before-gc', { durationMs: performance.now() - serializationStarted });
+    sample('output-with-tree-before-gc', { durationMs: performance.now() - serializationStarted,
+      cpuMicros: process.cpuUsage(serializationCpu) });
     tree = null;
     globalThis.__sourceNodeHypothesisRoot = null;
   } else {
@@ -125,6 +128,7 @@ function sha256(value) {
     generatorCollected: generatorWeak.deref() === undefined });
 
   const result = { mode, node: process.version, input: inputInfo, output: outputInfo, stages,
+    variant: variant.metadata || null,
     proxyAccesses: mode === 'proxy' ? accesses : null,
     snapshot: process.env.SOURCE_NODE_SNAPSHOT === '1',
     note: 'Isolated forced-GC diagnostics; not build timings or a general SourceNode replacement.' };

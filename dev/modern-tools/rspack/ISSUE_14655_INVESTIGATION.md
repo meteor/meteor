@@ -1351,6 +1351,151 @@ comparisons. Revert the compact-leaf implementation to restore ordinary mapped
 leaves; target-cache disposal remains controlled independently by its environment
 flag. No data migration is required.
 
+### Class versus raw-object leaf layout (September 6)
+
+The raw-object follow-up keeps the committed compact implementation at
+`2cc1875c97` unchanged and varies only leaf allocation in an isolated copy.
+[raw-leaf-variants.cjs](experiments/raw-leaf-variants.cjs) defines the layouts;
+[raw-leaf-preload.cjs](experiments/raw-leaf-preload.cjs) intercepts only the
+internal compact helper for full-build trials; and
+[raw-leaf-variants.node-test.cjs](experiments/raw-leaf-variants.node-test.cjs)
+checks parity, field layout, method sharing, interception, and invalid modes.
+The [measurement helper](experiments/measure-source-node.cjs) now also records
+per-stage process CPU deltas. The class control uses the same isolated loader,
+so loader setup is not unique to the alternatives. Original/transformed helper
+hashes are recorded with the isolated results and preload evidence.
+
+| Layout | Own properties per leaf | Method/marker storage | Allocation form |
+| --- | ---: | --- | --- |
+| `raw-class` | 5 | Class prototype | Existing `new CompactMappedLeaf(...)` |
+| `raw-own` | 8 | Two shared function references and marker stored on each object | Plain object literal with location/source/name/code fields plus methods/marker |
+| `raw-prototype` | 5 | Shared prototype object | Object literal with `__proto__: LEAF_PROTOTYPE` and the same five data fields |
+
+All methods are created once per isolated module; neither raw variant creates
+closures per leaf. The prototype variant sets the prototype in the literal,
+not through a later `Object.setPrototypeOf` call. No variant restores per-leaf
+children arrays or source-content dictionaries.
+
+A JavaScript class does not inherently imply heavier storage than a literal.
+V8's own [fast-properties explanation](https://v8.dev/blog/fast-properties)
+describes shape-dependent property storage, shared hidden classes, and the role
+of property order and prototypes. This provides rationale for measuring layout
+and allocation behavior rather than choosing by syntax. It does not establish
+which optimization or hidden-class behavior caused these particular timings;
+no JIT/deoptimization or object-layout diagnostic was run here.
+
+#### Nine isolated runs
+
+Artifacts are under `artifacts/raw-leaf-comparison/<layout>-<repeat>/`.
+Three fresh processes per layout used the same captured modern input, helper
+revision, Node runtime, 2 GiB heap limit, explicit-GC sequence, and output wrapper
+as the earlier isolated compact experiment. All nine exited successfully and
+no guard triggered. Input and original-helper hashes match across all runs.
+The two output files match across every result and also match the prior isolated
+baseline hashes: 18 checked file results include the control's own two files,
+leaving 16 independent comparisons against that control.
+
+| Run | Expansion wall ms | Emission wall ms | Consumer released/tree held heap MiB | Process high-water RSS MiB |
+| --- | ---: | ---: | ---: | ---: |
+| `raw-class-1` | 473.03 | 700.29 | 276.45 | 1089.92 |
+| `raw-class-2` | 449.89 | 665.65 | 276.45 | 1086.62 |
+| `raw-class-3` | 449.91 | 668.19 | 276.45 | 1086.19 |
+| `raw-own-1` | 419.67 | 673.51 | 338.83 | 1141.86 |
+| `raw-own-2` | 410.29 | 651.77 | 338.83 | 1136.97 |
+| `raw-own-3` | 414.32 | 644.28 | 338.83 | 1143.09 |
+| `raw-prototype-1` | 746.17 | 637.81 | 276.45 | 1075.44 |
+| `raw-prototype-2` | 742.89 | 646.42 | 276.45 | 1073.78 |
+| `raw-prototype-3` | 739.22 | 662.21 | 276.45 | 1078.80 |
+
+CPU is process-wide, including GC/background worker contributions, and can
+exceed elapsed wall time. Values below convert recorded microseconds to
+milliseconds; they are neither full-build CPU totals nor main-thread-only time.
+
+| Run | Expansion user CPU ms | Expansion system CPU ms | Emission user CPU ms | Emission system CPU ms |
+| --- | ---: | ---: | ---: | ---: |
+| `raw-class-1` | 780.66 | 93.63 | 709.11 | 44.75 |
+| `raw-class-2` | 804.44 | 62.85 | 692.82 | 30.08 |
+| `raw-class-3` | 807.00 | 59.99 | 695.97 | 29.29 |
+| `raw-own-1` | 625.80 | 76.73 | 691.09 | 31.74 |
+| `raw-own-2` | 611.90 | 69.01 | 680.19 | 28.06 |
+| `raw-own-3` | 616.25 | 72.69 | 671.24 | 26.75 |
+| `raw-prototype-1` | 890.94 | 66.63 | 662.80 | 28.75 |
+| `raw-prototype-2` | 901.95 | 64.82 | 673.03 | 29.67 |
+| `raw-prototype-3` | 874.06 | 66.09 | 687.23 | 29.38 |
+
+| Layout | Median expansion wall ms | Median expansion user+system CPU ms | Median emission wall ms | Median emission user+system CPU ms |
+| --- | ---: | ---: | ---: | ---: |
+| `raw-class` | 449.91 | 867.29 | 668.19 | 725.27 |
+| `raw-own` | 414.32 | 688.94 | 651.77 | 708.25 |
+| `raw-prototype` | 742.89 | 957.57 | 646.42 | 702.69 |
+
+For this input, own-method literals expand faster in all three isolated runs,
+but the tree-held heap is about 338.83 MiB versus 276.45 MiB for the class,
+an increase of about 62.38 MiB (23%). The prototype literal retains approximately
+the same tree-held heap as the class but expands more slowly in every run.
+These measurements support a speed/memory tradeoff for `raw-own`; they do not
+support assuming that plain objects are uniformly lighter or faster.
+
+Emission uses the same SourceNode generator path in all cases. Its timed region
+excludes subsequent `output.map.toString()`, hashing, output writes, and explicit
+GC phases; high-water RSS spans the process lifetime. Heap values are
+whole-isolate observations after deliberate collection, not exclusive leaf
+retained sizes. Three processes per layout, one input, a single runtime/host,
+and this forced-GC protocol do not establish a production performance winner.
+
+Validation passed 40 unique focused checks: 36 Node tests and four Python tests.
+The five production parity tests were also rerun under each raw preload, adding
+ten passing executions for the raw alternatives. Those executions include
+indexed maps, Unicode columns, and missing source contents. Field-layout tests
+confirm shared functions and five-versus-eight own properties. These checks do
+not add a live HMR or browser integration result.
+
+#### Completed full-build comparison
+
+All five 400 × 400 debug archive trials completed successfully, using both
+browser targets, no Cordova, the 2 GiB heap limit, and the same fresh-linker /
+retained-compiler-and-Rspack cache controls. None hit the external guard.
+The driver verified the intended preload mode and helper hashes in each run's
+interception log. Both class controls use the same diagnostic loader as the
+raw alternatives; these runs do not modify the committed production helper.
+
+| Run | Seconds | Sampled tool RSS MiB | Sampled process-tree RSS MiB |
+| --- | ---: | ---: | ---: |
+| `raw-class-400-debug-1` | 21.85 | 2580.64 | 2580.64 |
+| `raw-class-400-debug-2` | 20.78 | 2722.17 | 2722.17 |
+| `raw-own-400-debug-1` | 21.51 | 2498.94 | 2550.31 |
+| `raw-own-400-debug-2` | 21.52 | 2625.88 | 2625.88 |
+| `raw-prototype-400-debug-1` | 21.37 | 2368.81 | 2484.38 |
+
+Every JavaScript file and source-map file referenced by both browser manifests
+was compared against `compact-400-debug-1`. Each run matched the manifest entry
+sets and source-map presence, then matched all 132 file contents byte for byte:
+660 successful file comparisons across five runs. Per-run
+`output-equivalence.json` records the paths, byte lengths, and SHA-256 hashes.
+This is broader output coverage than the earlier app-only four-file checks,
+but it does not add independent mapping-position or browser execution evidence.
+
+The own-method layout's full-build times, 21.51 and 21.52 seconds, fall within
+the two class controls' 20.78–21.85-second range. The single prototype build took
+21.37 seconds. These results show no clear full-build speed advantage for either
+raw alternative. Process CPU was measured only in the isolated expansion and
+emission stages; do not present that measurement as full-build CPU usage.
+
+**Decision: retain the class-based leaf layout.** Across the three isolated
+repeats, the median combined expansion/emission CPU was 1,592.26 ms for the
+class and 1,389.16 ms for `raw-own`, about 13% lower for the latter. That isolated
+CPU improvement comes with about 23% more post-GC tree-held heap and no clear
+archive wall-time gain. `raw-prototype` has approximately the same tree-held
+heap as the class but slower isolated expansion. The evidence therefore does
+not justify changing the committed implementation to either raw layout.
+
+No new normal-minified or browser run was performed for these experimental
+layouts. Existing output equivalence and focused parity tests are the completed
+checks; live HMR, new runtime behavior, and cross-application performance claims
+remain outside this comparison. Shared code plus offsets remains a separate
+future idea. This follow-up introduces experimental files and measurements only;
+it makes no production leaf-layout, dependency, cache-policy, or format change.
+
 ### Evidence locations and next checks
 
 Each run directory contains `summary.json`, `samples.jsonl`, and `build.log`;
