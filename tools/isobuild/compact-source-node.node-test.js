@@ -116,3 +116,23 @@ test('Unicode fragments and absent source contents preserve bytes', async () => 
   const tree = await compare({ code: chunks.join(''), map: generator.toJSON() });
   assert.deepEqual(tree.sourceContents, {});
 });
+
+test('cached compact trees remain usable after their consumer is destroyed', async () => {
+  const fixture = makeFixture(101, { sourceRoot: '/sources' });
+  const consumer = await new SourceMapConsumer(fixture.map);
+  let compact;
+  let expected;
+  try {
+    compact = fromStringWithSourceMap(fixture.code, consumer);
+    expected = SourceNode.fromStringWithSourceMap(fixture.code, consumer)
+      .toStringWithSourceMap({ file: 'app.js' });
+  } finally {
+    consumer.destroy();
+  }
+
+  for (let repeat = 0; repeat < 3; repeat++) {
+    const output = compact.toStringWithSourceMap({ file: 'app.js' });
+    assert.equal(output.code, expected.code);
+    assert.equal(output.map.toString(), expected.map.toString());
+  }
+});

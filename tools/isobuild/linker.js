@@ -11,11 +11,6 @@ import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
 
-const traceMemory = require('./linker-memory-trace.js').createMemoryTrace(
-  process.env.METEOR_LINKER_MEMORY_TRACE === '1',
-  line => process.stderr.write(line + '\n'),
-);
-
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
 const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
@@ -702,16 +697,12 @@ Object.assign(File.prototype, {
   //
   // Returns a SourceNode.
   getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
-    traceMemory('request', this, getPrelinkedOutputCached);
     return getPrelinkedOutputCached(this, options);
   })
 });
 
-const targetPrelinkCache = require('./target-prelink-cache.js').createTargetPrelinkCache(
-  require("optimism").wrap,
+const getPrelinkedOutputCached = require("optimism").wrap(
   async function (file, options) {
-    // This event runs only when optimism computes, rather than reuses, a tree.
-    traceMemory('compute', file, getPrelinkedOutputCached);
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
     var preserveLineNumbers = options.preserveLineNumbers;
@@ -765,12 +756,9 @@ const targetPrelinkCache = require('./target-prelink-cache.js').createTargetPrel
       let chunk = result.code;
 
       if (result.map) {
-        traceMemory('consumer-start', file, getPrelinkedOutputCached);
         const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
         try {
-          traceMemory('expand-start', file, getPrelinkedOutputCached);
           chunk = fromStringWithSourceMap(result.code, sourcemapConsumer);
-          traceMemory('expand-end', file, getPrelinkedOutputCached);
         } finally {
           sourcemapConsumer.destroy();
         }
@@ -803,9 +791,7 @@ const targetPrelinkCache = require('./target-prelink-cache.js').createTargetPrel
       }
     }
 
-    const tree = new sourcemap.SourceNode(null, null, null, chunks);
-    traceMemory('tree-ready', file, getPrelinkedOutputCached);
-    return tree;
+    return new sourcemap.SourceNode(null, null, null, chunks);
   }, {
     // Store at most 4096 Files worth of prelinked output in this cache.
     max: Math.pow(2, 12),
@@ -823,28 +809,8 @@ const targetPrelinkCache = require('./target-prelink-cache.js').createTargetPrel
         options,
       });
     }
-  }, event => {
-    if (process.env.METEOR_LINKER_MEMORY_TRACE === '1') {
-      process.stderr.write('[linker-target-cache] ' + JSON.stringify({
-        ...event, uptimeSeconds: process.uptime(), memory: process.memoryUsage(),
-      }) + '\n');
-    }
   }
 );
-
-const getPrelinkedOutputCached = targetPrelinkCache.cached;
-
-/**
- * Experimentally release expanded trees after a production target is complete.
- * This is an internal build-tool boundary; normal/development calls keep the
- * shared cache unless the explicit experiment and production command gates pass.
- */
-export function withTargetPrelinkCache(options, callback) {
-  return targetPrelinkCache.runForTarget({
-    ...options,
-    enabled: process.env.METEOR_LINKER_TARGET_CACHE === '1',
-  }, callback);
-}
 
 async function getOutputWithSourceMapCached(file, servePath, options) {
   const key = JSON.stringify({
