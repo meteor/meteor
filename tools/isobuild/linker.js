@@ -10,6 +10,11 @@ import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
 
+const traceMemory = require('./linker-memory-trace.js').createMemoryTrace(
+  process.env.METEOR_LINKER_MEMORY_TRACE === '1',
+  line => process.stderr.write(line + '\n'),
+);
+
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
 const CACHE_SIZE = process.env.METEOR_APP_PRELINK_CACHE_SIZE || 1024*1024*20;
@@ -696,12 +701,15 @@ Object.assign(File.prototype, {
   //
   // Returns a SourceNode.
   getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
+    traceMemory('request', this, getPrelinkedOutputCached);
     return getPrelinkedOutputCached(this, options);
   })
 });
 
 const getPrelinkedOutputCached = require("optimism").wrap(
   async function (file, options) {
+    // This event runs only when optimism computes, rather than reuses, a tree.
+    traceMemory('compute', file, getPrelinkedOutputCached);
     var width = options.sourceWidth || 70;
     var bannerWidth = width + 3;
     var preserveLineNumbers = options.preserveLineNumbers;
@@ -755,11 +763,14 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       let chunk = result.code;
 
       if (result.map) {
+        traceMemory('consumer-start', file, getPrelinkedOutputCached);
         const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
+        traceMemory('expand-start', file, getPrelinkedOutputCached);
         chunk = sourcemap.SourceNode.fromStringWithSourceMap(
           result.code,
           sourcemapConsumer,
         );
+        traceMemory('expand-end', file, getPrelinkedOutputCached);
         sourcemapConsumer.destroy();
       }
 
@@ -790,7 +801,9 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       }
     }
 
-    return new sourcemap.SourceNode(null, null, null, chunks);
+    const tree = new sourcemap.SourceNode(null, null, null, chunks);
+    traceMemory('tree-ready', file, getPrelinkedOutputCached);
+    return tree;
   }, {
     // Store at most 4096 Files worth of prelinked output in this cache.
     max: Math.pow(2, 12),

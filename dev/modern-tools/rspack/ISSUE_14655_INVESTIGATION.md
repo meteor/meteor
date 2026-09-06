@@ -7,7 +7,9 @@ This is the working source of truth for investigating
 failure involving large Rspack client output passing through Meteor's linker.
 It consolidates source inspection, upstream reports, forum research, local
 probes, and reproduction requirements. A local production-build heap OOM has
-now been reproduced twice and localized to legacy source-node expansion.
+now been reproduced four times and localized to legacy source-node expansion.
+A diagnostic bypass of large expanded-tree cache entries lets both targets
+complete; each target also completes independently.
 The later upstream WASM trap and cache string-length failures have not been
 reproduced locally. No fix has been implemented.
 
@@ -20,14 +22,16 @@ reproduced locally. No fix has been implemented.
 | Report branch | `investigation/14655-rspack-build-memory` |
 | Upstream status when checked | Open; release 3.6 milestone |
 | Latest issue evidence inspected | September 3, 2026 comment |
-| Local build checkout | `bd99bb206c`; documentation-only commits since the inspected source baseline |
-| Full local reproduction | Heap OOM reproduced twice at `MODULES=400 FUNCS=400`, legacy-inclusive debug build |
-| Passing control | Same workload, modern-only debug, including a fresh-linker-cache run |
-| Implementation changes | No Meteor source changes; external monitoring and diagnostic preload only |
+| Local build checkout | First seven runs: `bd99bb206c`; runs 8–10: `5306673fe5` (documentation-only changes); runs 11–12: that source plus the probes in this report’s commit |
+| Full local reproduction | Heap OOM reproduced four times at `MODULES=400 FUNCS=400`, legacy-inclusive debug build |
+| Passing controls | Same workload: modern-only, legacy-only, and both targets with diagnostic large-tree cache bypass; fresh linker-cache controls |
+| Implementation changes | No production fix; ten builds used external monitoring and diagnostic preloads. Opt-in checkout probes now verified in two additional builds; no cache policy change. |
 
-The requested deliverable is an investigation report. Its acceptance criteria
+The requested deliverables are an investigation report and opt-in checkout
+probes to verify the performance findings. Their acceptance criteria
 are traceable evidence, explicit uncertainty, a reproducible description of
-the local probe, a feasible reproduction approach, and a discoverable location
+the local probe, output-preserving instrumentation, a feasible reproduction
+approach, and a discoverable location
 in the Rspack development documentation. Proposed experiments below are not
 completed work or approval of a particular implementation. Executed experiments
 are recorded separately under "Local reproduction results".
@@ -61,7 +65,10 @@ failure mechanisms with different remedies:
 
 Local stage logging now confirms substantial source-node memory amplification:
 modern expansion increased heap usage by approximately 901 MiB, and the process
-aborted during legacy expansion. The cache mechanisms remain visible in source;
+aborted during legacy expansion. Legacy-only completion and the cache-bypass
+intervention now strongly implicate cross-architecture expanded-tree retention
+in this fixture; removing the bypass restores the failure. The other cache
+mechanisms remain visible in source;
 a small fault-injection probe confirmed the asynchronous error-handling defect.
 No oversized-cache failure was reached in these builds. The upstream WASM
 `unreachable` trap remains a separate, unverified failure signature.
@@ -155,7 +162,7 @@ the error text alone cannot establish which.
 
 **Local update:** the fresh-linker-cache trace reaches
 `LINKER CACHE MISS: null web.browser.legacy`, enters
-`SourceNode.fromStringWithSourceMap` at `linker.js:759`, and aborts with V8 heap
+`SourceNode.fromStringWithSourceMap` at baseline `linker.js:759`, and aborts with V8 heap
 exhaustion before that call returns. Modern expansion and recomposition completed
 earlier in the same process. This identifies the failing operation for the
 local heap OOM; it does not identify the cause of the distinct upstream WASM trap.
@@ -184,7 +191,13 @@ architecture. Main module-tree linking does not pass `disableCache`.
 expanded-tree cache. The trace starts legacy expansion with approximately
 1,269 MiB of heap already in use. However, no heap snapshot or controlled cache
 experiment has measured how much of that heap is retained specifically by this
-cache. Keep the retention explanation distinct from the confirmed expansion OOM.
+cache. Subsequent controls substantially strengthen the causal evidence: legacy
+alone succeeds, both targets succeed when large trees are omitted from this
+cache, and the normal cache behavior fails again with warmed compiler/Rspack
+caches. Legacy expansion starts with 392 MiB of heap under the bypass versus
+1,397 MiB in the corresponding baseline. See "Cache-isolation follow-up" below.
+These interventions implicate the cache's contribution without measuring the
+retained size of individual objects or establishing a general production policy.
 
 ### 4. Link-cache serialization imposes a separate hard limit
 
@@ -421,8 +434,9 @@ The fixture remained at `1b5049829f27ad51ce6508c0d4419367d490e82b`. The actual
 build executable was `/Users/leonardo/Repositories/meteor/meteor/meteor`, which
 is the executable called by the core checkout's `.envrc` `@meteor` function.
 It ran from the fixture directory and explicitly reported that the checkout
-overrode the fixture's Meteor 3.5 release. The tool checkout was `bd99bb206c`;
-there were no build-system code edits during these runs.
+overrode the fixture's Meteor 3.5 release. The first seven runs used checkout
+`bd99bb206c`; runs 8–10 used `5306673fe5`, whose intervening change was the
+investigation report. There were no build-system code edits during these runs.
 
 - Runtime: development-bundle Node `v24.15.0`, macOS arm64, 32 GiB physical RAM.
   Disk availability at setup was approximately 214 GiB. The host was already
@@ -446,8 +460,8 @@ there were no build-system code edits during these runs.
 - Each build wrote to a distinct `artifacts/<run-id>/output` directory. The
   unsafe upstream `bench.js` was not used. No failed build was terminated by
   the monitor's timeout or memory threshold.
-- Compiler and Rspack caches were retained between runs. The two explicitly
-  fresh-linker-cache runs moved only `.meteor/local/bundler-cache/linker` into
+- Compiler and Rspack caches were retained between runs. The explicitly
+  fresh-linker-cache runs, including all three cache-isolation follow-ups, moved only `.meteor/local/bundler-cache/linker` into
   saved artifact directories before execution. They were not fully cold builds.
 
 Checkout package selection messages recorded these newer core versions:
@@ -474,15 +488,19 @@ mean these timings are not controlled performance comparisons.
 | `large400-modern-debug` | 400 × 400 | Modern / debug | Retained after failure | Exit 0 | 15.30 | 1475.58 | 2496.33 |
 | `large400-legacy-debug-trace` | 400 × 400 | Both / debug + trace | Fresh linker cache | Heap OOM, SIGABRT (6) | 66.99 | 3717.41 | 3717.41 |
 | `large400-modern-debug-cold` | 400 × 400 | Modern / debug + trace | Fresh linker cache | Exit 0 | 18.10 | 2566.59 | 2566.59 |
+| `large400-legacy-only-debug-cold` | 400 × 400 | Legacy only / debug + trace | Fresh linker cache | Exit 0 | 72.71 | 3897.78 | 3897.78 |
+| `large400-both-debug-tree-bypass` | 400 × 400 | Both / debug + trace + tree bypass | Fresh linker cache | Exit 0 | 21.31 | 2574.62 | 2574.62 |
+| `large400-both-debug-warm-baseline` | 400 × 400 | Both / debug + trace | Fresh linker cache; other caches warm | Heap OOM, SIGABRT (6) | 13.11 | 2697.20 | 2739.59 |
 
 The first modern-only 400-module pass could benefit from the failed run's cached
 modern result. The fresh-linker-cache modern pass removes that specific
-confounder. The failure has been observed twice, once without and once with
-instrumentation, but this is not yet a statistical reliability study.
+confounder. The failure has been observed three times: once without tracing,
+once with tracing, and again when normal tree caching was restored after a
+successful bypass run. This is not yet a statistical reliability study.
 
 ### Artifact and runtime validation
 
-All five successful output bundles contained the expected browser architecture
+All seven successful output bundles contained the expected browser architecture
 directories. The small debug output had 48 JS manifest entries and 19 source-map
 references per browser architecture. The small normal production output had one
 JS manifest entry and no map reference; source-map availability differs by mode.
@@ -495,8 +513,12 @@ the check. The initial browser launch attempt used a nonexistent executable
 filename; correcting it to the installed `chrome-headless-shell` allowed the
 check to pass. No app failure was involved in that correction.
 
-Larger successful bundles have not yet received browser/runtime validation or
-mapping-position correctness checks. No full repository test suite was run.
+A browser check of the large debug bypass bundle did not complete: waiting for
+the client boot condition timed out after 15 seconds. Its server log contains
+the greeting, but no `runtime-check.json` was produced. This is unresolved;
+neither successful client execution nor an app defect is established. Larger
+bundles still lack successful browser/runtime validation and mapping-position
+correctness checks. No full repository test suite was run.
 
 The failing 400-module Rspack outputs were preserved under
 `artifacts/large400-legacy-debug/inputs/`:
@@ -523,7 +545,7 @@ The passing 200-module raw artifacts were also saved in that run's `inputs/`.
 
 Immediately before the legacy entry, the linker logs
 `LINKER CACHE MISS: null web.browser.legacy`. The entry stack points to
-`tools/isobuild/linker.js:759`, called through `_chunkifyModuleTrees`,
+`tools/isobuild/linker.js:759` in the baseline source, called through `_chunkifyModuleTrees`,
 `getPrelinkedFiles`, `fullLink`, and `PackageSourceBatch._linkJS`.
 The next recorded outcome is:
 
@@ -541,26 +563,142 @@ WASM callbacks and creates source nodes in JavaScript. That explains why WASM
 frames can accompany a JS heap OOM. The immediate modern expansion added about
 901 MiB of heap for this input. Legacy expansion began with over 1.2 GiB already
 in use. Retention of the modern expanded tree by the architecture-keyed
-`optimism` cache is a strong source-supported hypothesis; its exact contribution
-still needs a controlled cache experiment or retained-object evidence.
+`optimism` cache was initially a source-supported hypothesis; the subsequent
+intervention below supplies controlled behavioral evidence. Retained-object
+measurements remain outstanding.
+
+### Cache-isolation follow-up
+
+Runs 8–10 reused the same 400 × 400 generated input, 2 GiB old-space limit,
+trace instrumentation, and retained compiler/Rspack caches. Each started with a
+fresh linker disk cache. The external `artifacts/bypass-tree-cache.cjs` preload
+matched the linker's `optimism` wrapper and returned no cache key for source
+files at least 1 MiB long. It preserved the linking operation but omitted those
+large expanded trees from that cache. The cutoff and wrapper matching are
+fixture-specific diagnostics, not a proposed production policy.
+
+| Control | Legacy expansion start heap MiB | Legacy expansion end heap MiB | Outcome |
+| --- | ---: | ---: | --- |
+| Legacy only, normal tree cache | 341.69 | 1222.12 | Complete build |
+| Both targets, large-tree cache bypass | 391.65 | 1342.20 | Complete build |
+| Both targets, normal tree cache restored | 1396.96 | No return | Heap OOM |
+
+The legacy-only pass shows this input's legacy expansion can complete within
+the configured heap when modern processing does not precede it. The bypass
+allows the two-target build to complete without changing the generated input or
+heap limit. Restoring normal caching reproduces the failure despite warmed
+compiler/Rspack caches; its trace again stops inside legacy source-node
+expansion. Together these controls strongly implicate cross-architecture
+retention of expanded trees in the local failure. They do not quantify retained
+objects, establish repeated-run statistical confidence, or reproduce the
+upstream WASM trap and oversized-serialization failures.
+
+The legacy-only run's sampled peak RSS is higher than the failing baseline's
+RSS. This is consistent with the failing resource being the JavaScript heap
+limit rather than a fixed RSS limit. Lower RSS is not a prerequisite for this
+control to establish that legacy-only linking can finish.
+
+`artifacts/large400-both-debug-tree-bypass/output-comparison.json` records
+byte-identical app output against each target's independent passing control:
+
+| Target / file | Control | Bytes | SHA-256 |
+| --- | --- | ---: | --- |
+| Modern `app.js` | `large400-modern-debug-cold` | 8623627 | `763a268bd6fb0530501610cb8291d0d8c7be3715404a5f9eb91688cc0978a028` |
+| Modern `app.js.map` | `large400-modern-debug-cold` | 50466112 | `949769a4b4a3533b5694cd3021fab539f94414cf94bf2b52c20ecd59f2015d29` |
+| Legacy `app.js` | `large400-legacy-only-debug-cold` | 17660464 | `147f3bf38993210db8e49c076f2a597dd85f6caf19aa7c61f9caf4e9c70ce2ee` |
+| Legacy `app.js.map` | `large400-legacy-only-debug-cold` | 50499987 | `b9e9cd404a1f7d2107fb55bdb02cc0bb1eb5242d84c3b5ae5049fc0bb407f8f4` |
+
+This comparison covers these four app files, not every bundle resource. It
+supports output preservation for this diagnostic intervention. It does not
+independently verify that either control's source mappings are correct or that
+the large debug application boots in a browser.
+
+### Checkout-local probes (September 5 follow-up)
+
+At the user's request, `tools/isobuild/linker.js` now calls the small
+`tools/isobuild/linker-memory-trace.js` logger. Enable it with
+`METEOR_LINKER_MEMORY_TRACE=1`; other values disable it. Files smaller than
+1,048,576 UTF-16 code units are filtered out. Events use the `[linker-memory]`
+prefix and JSON fields for architecture, source path, code length, map presence,
+cache entry count, process uptime, and `process.memoryUsage()` values in bytes.
+No map or tree is traversed, serialized, or retained by the logger.
+
+Events are `request`, `compute`, `consumer-start`, `expand-start`, `expand-end`,
+and `tree-ready`. The request occurs outside the memoized function; compute
+occurs only when the function actually executes. A request without a subsequent
+compute can identify reuse in a complete trace; a missing event after a fatal
+abort alone cannot. `expand-start` follows consumer construction, `expand-end`
+precedes consumer destruction, and `tree-ready` follows destruction and wrapper
+construction. Cache counts cover all entries, including small files whose events
+are filtered; optimism inserts the current entry before compute executes.
+
+Two further 400 × 400 builds used these probes, the same 2 GiB old-space limit,
+fresh linker disk caches, retained compiler/Rspack caches, and the existing
+900-second / 6144-MiB sampled guard. Neither used `trace.cjs`. Source was
+`5306673fe5` plus the checkout probe changes in this report's associated commit.
+
+| Artifact directory | Intervention | Result | Wall seconds | Peak tool/tree RSS MiB |
+| --- | --- | --- | ---: | ---: |
+| `large400-both-checkout-probes` | Checkout tracing only | Heap OOM, SIGABRT (6) | 14.94 | 2632.81 |
+| `large400-both-checkout-probes-bypass` | Checkout tracing + existing external cache bypass | Exit 0 | 20.74 | 2800.73 |
+
+Neither guard triggered. The exact build command is stored in each summary;
+`METEOR_LINKER_MEMORY_TRACE=1` was additionally set for both (the existing
+monitor's environment allowlist does not capture this new variable).
+
+| Checkout probe | Normal cache heap bytes | Bypassed large-tree cache heap bytes |
+| --- | ---: | ---: |
+| Modern expansion start | 343895544 | 338054408 |
+| Modern expansion end | 1242509528 | 1236078864 |
+| Legacy expansion start | 1345577816 | 550942544 |
+| Legacy expansion end | No return before OOM | 1350536920 |
+
+The ordinary cache count goes from 194 at modern request to 195 at compute,
+and from 665 to 666 at legacy request/compute. With bypass, those pairs remain
+194/194 and 664/664. These events verify that the intervention avoids creating
+the two large cache entries. They do not directly measure retained object bytes.
+The approximately 758 MiB lower heap at legacy entry and completed expansion
+support the same cache-retention explanation as the preload experiments.
+
+`large400-both-checkout-probes-bypass/output-comparison.json` records direct
+byte comparisons of both architectures' `app.js` and `app.js.map` against
+`large400-both-debug-tree-bypass`. All four match the byte lengths and SHA-256
+hashes in the preceding table. Browser correctness remains subject to the
+previously recorded large-debug timeout; no new runtime pass is claimed.
+
+Verification: the two focused tests in
+`tools/isobuild/linker-memory-trace.node-test.js` passed with
+`dev_bundle/bin/node --test tools/isobuild/linker-memory-trace.node-test.js`.
+They check disabled mode (including a memory-sampling spy), filtering,
+structured metadata, and omission of source/map contents. The tests initially
+failed before implementation. The isolated Jest dependencies were absent;
+no dependency installation or full test suite was needed for these probes.
+An independent source review found no cache/key/output mutation or retained
+source references. Timing/log allocation overhead exists when enabled; heap
+samples include unrelated live allocations and garbage awaiting collection.
+No forced GC, retained-tree sizing, statistical performance claim, or production
+fix is implied. Unset the variable to disable tracing, or revert the probe commit.
 
 ### Evidence locations and next checks
 
 Each run directory contains `summary.json`, `samples.jsonl`, and `build.log`;
 successful builds also contain `output/bundle`. The loopback result is
 `small-modern-normal/runtime-check.json`. `artifacts/monitor.py` and
-`artifacts/trace.cjs` preserve the instrumentation used. Artifacts are local,
+`artifacts/trace.cjs` preserve the instrumentation used;
+`artifacts/bypass-tree-cache.cjs` preserves the cache intervention. Artifacts are local,
 untracked investigation data and are not included in the core repository commit.
 
-The next useful experiment is to separate intrinsic legacy expansion cost from
-cross-architecture retained memory, using the saved workload and controlled
-cache behavior. Extract and characterize the legacy map, and count mapping
-expansion with bounded telemetry if needed. Do not jump to the 800/3200-module
-workloads: a smaller reproducible failure is already available.
+The cache-isolation controls now separate legacy-only completion from the
+combined-target failure, and checkout probes reproduce that result. Next,
+characterize the legacy map and retained structures, and
+resolve the large debug browser timeout before claiming runtime correctness.
+Do not jump to the 800/3200-module workloads: a smaller reproducible failure
+is already available.
 
 The WASM `unreachable` and real oversized-cache serialization failures remain
-unreproduced. No replacement library, cache-format change, cache policy fix,
-or production dependency change has been implemented.
+unreproduced. No replacement library, cache-format change, production cache
+policy fix, or production dependency change has been implemented. The external
+cache bypass is an experimental intervention only.
 
 ## Proposed experiment sequence and acceptance criteria
 
@@ -661,10 +799,11 @@ those choices or replace their compatibility review.
 Recommended review order: status/evidence definitions; source trace; fixture
 audit; local verification; experiment acceptance criteria; candidate boundaries.
 
-No runtime interface, production dependency, cache format, or Meteor behavior
-changes with this report. The core branch contains investigation documentation
-and its index link only. External fixture dependencies and generated artifacts
-now exist in the sibling workspace. Documentation rollback is a normal revert
+No built-app runtime interface, production dependency, or cache format changes.
+The tool emits additional diagnostics only when tracing is enabled. The report
+records the external investigation and opt-in checkout probes, not a production
+fix. External fixture dependencies and generated artifacts now exist in the
+sibling workspace. Documentation rollback is a normal revert
 of its commit; no data migration or deployment recovery is required. Cleanup of
 the sibling workspace is separate and should preserve any desired logs/inputs.
 
