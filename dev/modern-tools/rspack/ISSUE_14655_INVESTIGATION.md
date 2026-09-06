@@ -11,7 +11,9 @@ now been reproduced repeatedly and localized to legacy source-node expansion.
 A diagnostic bypass of large expanded-tree cache entries lets both targets
 complete; each target also completes independently.
 The later upstream WASM trap and cache string-length failures have not been
-reproduced locally. No production fix has been adopted.
+reproduced locally. Class-based compact leaves are now implemented in the
+linker and pass the 400-module debug workload; target-cache disposal remains
+a separate opt-in experiment.
 
 | Item | Baseline |
 | --- | --- |
@@ -25,11 +27,12 @@ reproduced locally. No production fix has been adopted.
 | Local build checkout | First seven runs: `bd99bb206c`; runs 8–10: `5306673fe5` (documentation-only changes); runs 11–12: that source plus checkout probes; policy comparison: `057d48492b` plus its harness; target-boundary experiment: `b319e5761e` plus this follow-up |
 | Full local reproduction | Repeatable heap OOM at `MODULES=400 FUNCS=400`, legacy-inclusive debug build; individual runs and policy matrices below |
 | Passing controls | Same workload: modern-only, legacy-only, and both targets with diagnostic large-tree cache bypass; fresh linker-cache controls |
-| Implementation changes | No production fix; verified opt-in checkout probes and explicit experimental policy preloads. Default cache policy unchanged. |
+| Implementation changes | Internal compact leaves now replace prelink mapped-node allocation; target-cache disposal and diagnostic probes remain opt-in. Default cache policy unchanged. |
 
 The requested deliverables are an investigation report and opt-in checkout
 probes to verify the performance findings, followed by a comparison of candidate
-cache fixes and an opt-in target-boundary follow-up. Their acceptance criteria
+cache fixes, an opt-in target-boundary follow-up, and a class-based compact-leaf
+implementation. Their acceptance criteria
 are traceable evidence, explicit uncertainty, a reproducible description of
 the local probe, output-preserving instrumentation, a feasible reproduction
 approach, and a discoverable location
@@ -1214,6 +1217,140 @@ measurements, output files and analyzer results remain external artifacts.
 The representation experiments are opt-in local modules; no production
 representation, dependency, map format, or default cache policy has changed.
 
+### Class-based compact leaves in the linker (September 6)
+
+The class-based compact representation is now implemented directly in the
+linker's prelink expansion path. This changes the internal leaf representation
+without enabling target-cache disposal by default. It is no longer only the
+isolated runtime-rewrite experiment above. The implementation is in
+[compact-source-node.js](../../../tools/isobuild/compact-source-node.js), with
+[five focused tests](../../../tools/isobuild/compact-source-node.node-test.js).
+The baseline source for these builds was `5d73d57e66` plus this implementation.
+
+The helper retains the source-map 0.7.4 segmentation algorithm in a local,
+licensed copy, including the upstream copyright and redistribution terms.
+Mapped fragments become `CompactMappedLeaf` instances with direct code/location
+fields and the SourceNode traversal marker. Roots and wrapper branches remain
+ordinary SourceNodes. The leaves implement `walk` and `walkSourceContents`, omit
+per-leaf children/source-content containers, and are treated as immutable by the
+linker; this is an internal usage contract, not an `Object.freeze` guarantee.
+The unused relative-path parameter is absent rather than introducing a new API.
+No installed dependency is rewritten at runtime.
+
+The consumer remains caller-owned. [linker.js](../../../tools/isobuild/linker.js)
+now destroys it in `finally` around expansion, including ordinary thrown errors.
+A fatal process OOM cannot be recovered through this cleanup. The consumer audit
+found the relevant linker, static/dynamic module, and HMR paths compose or
+serialize these trees rather than mutate mapped leaves. Repeated wrapper
+composition is covered by tests; no live HMR session is claimed by that audit.
+Future source-map upgrades must compare this local algorithm with upstream.
+
+#### Full-build comparison with previous cache experiments
+
+All three 400 × 400 implementation builds used both browser targets, no Cordova,
+`--debug`, the 2 GiB old-space limit, fresh linker disk caches, retained
+compiler/Rspack caches, and the existing tracing/monitor guard. The first two
+used the existing shared tree-cache policy. The third additionally enabled
+`METEOR_LINKER_TARGET_CACHE=1`. Every implementation build exited successfully;
+none hit the guard. Previous controls are retained below with their original
+measurements rather than treated as simultaneous performance trials.
+
+| Artifact | Representation / cache | Result | Seconds | Sampled tool RSS MiB | Sampled process-tree RSS MiB |
+| --- | --- | --- | ---: | ---: | ---: |
+| `target-scope-400-final-baseline` | Original leaves / shared cache | Heap OOM, SIGABRT | 13.78 | 2704.59 | 2704.59 |
+| `target-scope-400-2` | Original leaves / scoped disposal | Exit 0 | 21.94 | 2733.38 | 2733.38 |
+| `target-scope-400-3` | Original leaves / scoped disposal | Exit 0 | 21.90 | 2941.58 | 2941.58 |
+| `compact-400-debug-1` | Compact leaves / shared cache | Exit 0 | 21.37 | 2295.11 | 2295.11 |
+| `compact-400-debug-2` | Compact leaves / shared cache | Exit 0 | 20.21 | 2463.31 | 2508.19 |
+| `compact-scoped-400-debug-1` | Compact leaves / scoped disposal | Exit 0 | 19.65 | 2458.89 | 2466.66 |
+
+The compact shared-cache builds demonstrate that this workload now completes
+without relying on target-boundary eviction. Sampled tree RSS is lower than in
+the earlier original-leaf scoped controls, but the small number of runs and
+separate execution times do not establish a general speed or memory ranking.
+The combined compact/scoped run also passes; one such run does not establish
+an additional benefit from composing the policies. Failed-control duration ends
+at the crash and is not a completed-build timing.
+
+| Artifact | Modern expansion heap start → end MiB | Legacy expansion heap start → end MiB | Modern expansion ms | Legacy expansion ms |
+| --- | ---: | ---: | ---: | ---: |
+| `target-scope-400-final-baseline` | 321.83 → 1178.27 | 1395.39 → no return | 723.26 | No return |
+| `target-scope-400-2` | 327.70 → 1184.35 | 383.57 → 1333.82 | 715.24 | 652.23 |
+| `target-scope-400-3` | 321.86 → 1178.30 | 377.30 → 1326.95 | 701.43 | 697.63 |
+| `compact-400-debug-1` | 297.36 → 495.69 | 733.60 → 1044.64 | 412.10 | 421.06 |
+| `compact-400-debug-2` | 304.93 → 488.51 | 932.04 → 1243.93 | 440.48 | 462.73 |
+| `compact-scoped-400-debug-1` | 297.62 → 493.87 | 731.59 → 1042.68 | 432.24 | 428.04 |
+
+These stage samples include unrelated live allocations and uncollected garbage;
+the end-minus-start value is not a retained-size measurement. Nevertheless,
+compact modern expansion ends around 489–496 MiB versus roughly 1,178–1,184 MiB
+in the previous original-leaf traces, and all compact legacy expansions return.
+The combined scoped run records the same 197/471/186 modern/legacy/server entry
+cleanup to zero as the earlier lifecycle experiment. Shared-cache compact runs
+do not depend on those cleanup events.
+
+All 12 app-file comparisons across the three implementation builds were
+independently byte-identical to `target-scope-400-2`: both browser targets'
+`app.js` and `app.js.map`. This preserves the earlier full-build control's
+outputs, not merely the isolated helper's wrapper. It does not prove all map
+positions independently correct or resolve the large-debug browser timeout.
+
+The production helper also independently matched both saved large-input
+isolated baseline files, with the same hashes recorded in the preceding section.
+`compact-400-debug-1/isolated-helper-equivalence.json` records these two additional
+checks. The repro generator was restored to 400 × 400 after small validation.
+
+Five new procedural tests cover repeated composition/serialization, compact leaf
+shape, indexed maps, names/source roots, empty and unmapped content, CRLF,
+distinct mappings at identical coordinates and end-of-code, Unicode/surrogate
+columns, and missing source contents. The complete focused verification is
+32 passing Node tests plus four passing Python analyzer tests, 36 total. The
+prior isolated experiment's 31-test result above remains a historical result.
+No full repository suite, live HMR, or deployment integration is represented by
+these focused tests and archive builds.
+
+#### Small normal-minified smoke comparison
+
+The `20 × 50` compact-leaf archive passed without target-cache disposal. Both
+browser targets were included, Cordova excluded, with the same 2 GiB old-space
+limit. The earlier normal-minified control provides the output baseline:
+
+| Artifact | Representation / cache | Result | Seconds | Sampled tool/tree RSS MiB |
+| --- | --- | --- | ---: | ---: |
+| `target-scope-20-normal-baseline` | Original leaves / shared cache | Exit 0 | 9.83 | 1134.86 |
+| `compact-20-normal-1` | Compact leaves / shared cache | Exit 0 | 10.45 | 1094.09 |
+
+Each target's manifest names the same sole JavaScript entry as its control;
+both JS files are byte-identical. Both runs contain zero map files, consistent
+with this normal-minification configuration. The compact run's
+`runtime-check.json` records successful modern Chromium boot, 20 modules,
+20 registry entries, 1,000 functions, and no page errors. Legacy browser execution
+was not separately checked. Neither run hit the monitor guard. This single small
+comparison is a correctness smoke test, not evidence of a speed advantage.
+
+The compact implementation therefore has four successful full archive builds
+and 14 matching app-file comparisons: 12 debug JS/map files and two small
+minified JS files. A full 400-module normal-minified build and live HMR session
+have not been executed. HMR support is based on consumer inspection and repeated
+serialization parity, not an end-to-end reload result. The earlier large-debug
+browser timeout is still unresolved.
+
+The default leaf representation has changed; target disposal remains separately
+opt-in. No production dependency or persisted map/cache format is changed.
+
+Plain-object leaves are deferred to a later, separately measured experiment;
+this implementation uses a class. Keeping shared source text with offsets
+instead of fragment strings is another future isolated idea and is not
+implemented. Neither idea can inherit these results without its own output,
+allocation, and lifetime checks. Real oversized cache serialization and the
+upstream WASM trap remain separate unresolved mechanisms.
+
+Recommended review order is the licensed segmentation helper and procedural
+parity tests, then the linker call and consumer cleanup, then these full-build
+comparisons. Revert the compact-leaf implementation to restore ordinary mapped
+leaves; target-cache disposal remains controlled independently by its environment
+flag. No data migration is required.
+
 ### Evidence locations and next checks
 
 Each run directory contains `summary.json`, `samples.jsonl`, and `build.log`;
@@ -1336,8 +1473,8 @@ audit; local verification; experiment acceptance criteria; candidate boundaries.
 
 No built-app runtime interface, production dependency, or cache format changes.
 The tool emits additional diagnostics only when tracing is enabled. The report
-records the external investigation and opt-in checkout probes, not a production
-fix. External fixture dependencies and generated artifacts now exist in the
+records the external investigation, opt-in checkout probes, and the implemented
+compact prelink representation. Target-cache disposal remains opt-in. External fixture dependencies and generated artifacts now exist in the
 sibling workspace. Documentation rollback is a normal revert
 of its commit; no data migration or deployment recovery is required. Cleanup of
 the sibling workspace is separate and should preserve any desired logs/inputs.

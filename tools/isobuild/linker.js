@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
+const { fromStringWithSourceMap } = require('./compact-source-node.js');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
@@ -766,13 +767,13 @@ const targetPrelinkCache = require('./target-prelink-cache.js').createTargetPrel
       if (result.map) {
         traceMemory('consumer-start', file, getPrelinkedOutputCached);
         const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
-        traceMemory('expand-start', file, getPrelinkedOutputCached);
-        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
-          result.code,
-          sourcemapConsumer,
-        );
-        traceMemory('expand-end', file, getPrelinkedOutputCached);
-        sourcemapConsumer.destroy();
+        try {
+          traceMemory('expand-start', file, getPrelinkedOutputCached);
+          chunk = fromStringWithSourceMap(result.code, sourcemapConsumer);
+          traceMemory('expand-end', file, getPrelinkedOutputCached);
+        } finally {
+          sourcemapConsumer.destroy();
+        }
       }
 
       chunks.push(chunk);
