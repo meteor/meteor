@@ -4,6 +4,10 @@ Rspack is the Rust-based, Webpack-compatible bundler that handles app source com
 
 End-user documentation is at [`v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md`](../../../v3-docs/docs/about/modern-build-stack/rspack-bundler-integration.md). The E2E coverage matrix is at [`E2E_COVERAGE.md`](E2E_COVERAGE.md). The memory benchmark guide is at [`MEMORY_BENCHMARK.md`](MEMORY_BENCHMARK.md).
 
+The [issue #14655 investigation](ISSUE_14655_INVESTIGATION.md) tracks production
+client build failures involving large source maps, linker memory, and cache
+serialization, including verified findings and reproduction criteria.
+
 - [**Why Rspack**](#why-rspack): goals of the Rspack integration.
 - [**Rspack integration and modules**](#rspack-integration-and-modules): the Atmosphere package and the npm package, file-by-file responsibilities, and how Rspack fits next to Meteor's own bundler.
 - [**E2E testing**](#e2e-testing): strategy, how to add a new test app, what to verify.
