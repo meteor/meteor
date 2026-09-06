@@ -6,8 +6,10 @@ This is the working source of truth for investigating
 [#14655](https://github.com/meteor/meteor/issues/14655), a production build
 failure involving large Rspack client output passing through Meteor's linker.
 It consolidates source inspection, upstream reports, forum research, local
-probes, and reproduction requirements. It is not a claim that the full issue
-has been reproduced or fixed locally.
+probes, and reproduction requirements. A local production-build heap OOM has
+now been reproduced twice and localized to legacy source-node expansion.
+The later upstream WASM trap and cache string-length failures have not been
+reproduced locally. No fix has been implemented.
 
 | Item | Baseline |
 | --- | --- |
@@ -18,14 +20,17 @@ has been reproduced or fixed locally.
 | Report branch | `investigation/14655-rspack-build-memory` |
 | Upstream status when checked | Open; release 3.6 milestone |
 | Latest issue evidence inspected | September 3, 2026 comment |
-| Full local reproduction | Not attempted |
-| Implementation changes | None |
+| Local build checkout | `bd99bb206c`; documentation-only commits since the inspected source baseline |
+| Full local reproduction | Heap OOM reproduced twice at `MODULES=400 FUNCS=400`, legacy-inclusive debug build |
+| Passing control | Same workload, modern-only debug, including a fresh-linker-cache run |
+| Implementation changes | No Meteor source changes; external monitoring and diagnostic preload only |
 
 The requested deliverable is an investigation report. Its acceptance criteria
 are traceable evidence, explicit uncertainty, a reproducible description of
 the local probe, a feasible reproduction approach, and a discoverable location
 in the Rspack development documentation. Proposed experiments below are not
-completed work or approval of a particular implementation.
+completed work or approval of a particular implementation. Executed experiments
+are recorded separately under "Local reproduction results".
 
 ### Evidence vocabulary
 
@@ -54,10 +59,12 @@ failure mechanisms with different remedies:
 4. The SWC disk-cache writer lets asynchronous failures escape its intended
    error handler.
 
-The first two mechanisms require profiling to quantify. The latter two are
-visible in source; a small fault-injection probe confirmed the asynchronous
-error-handling behavior. None of these observations proves the precise cause
-of the upstream WASM trap.
+Local stage logging now confirms substantial source-node memory amplification:
+modern expansion increased heap usage by approximately 901 MiB, and the process
+aborted during legacy expansion. The cache mechanisms remain visible in source;
+a small fault-injection probe confirmed the asynchronous error-handling defect.
+No oversized-cache failure was reached in these builds. The upstream WASM
+`unreachable` trap remains a separate, unverified failure signature.
 
 ## Upstream evidence and corrections
 
@@ -117,7 +124,12 @@ configured transpiler; both compiler option paths enable source maps.
 paths. **Hypothesis:** additional legacy transformations increase code/map size
 enough to expose failures that the modern target avoids.
 
-**Required evidence:** capture code and maps at the Rspack output, post-transpiler,
+**Local update:** the 400-module trace recorded 8,621,197 code units entering
+modern expansion and 17,658,034 entering legacy expansion. Legacy code growth
+is therefore measured for this fixture. The complete post-transpiler legacy map
+has not yet been extracted and characterized independently.
+
+**Remaining evidence:** capture code and maps at the Rspack output, post-transpiler,
 and post-linker boundaries for each architecture. Measure mapping length,
 source count, name count, `sourcesContent` length, and serialized size. Do not
 assume the large raw Rspack map and the legacy compiler's map are identical.
@@ -141,7 +153,14 @@ and regenerated maps coexist long enough to create severe peak memory pressure.
 The precise WASM failure could involve allocation limits or a library defect;
 the error text alone cannot establish which.
 
-**Required evidence:** compare implementations with identical code, map,
+**Local update:** the fresh-linker-cache trace reaches
+`LINKER CACHE MISS: null web.browser.legacy`, enters
+`SourceNode.fromStringWithSourceMap` at `linker.js:759`, and aborts with V8 heap
+exhaustion before that call returns. Modern expansion and recomposition completed
+earlier in the same process. This identifies the failing operation for the
+local heap OOM; it does not identify the cause of the distinct upstream WASM trap.
+
+**Remaining evidence:** compare implementations with identical code, map,
 wrappers, offsets, and process isolation. Measure process RSS externally,
 identify the failing stack, and validate mappings as well as completion.
 
@@ -158,9 +177,14 @@ estimate from [sourceMapLength](../../../tools/utils/utils.js), which counts
 mappings and source contents but omits names and other metadata.
 
 **Hypothesis:** retained expanded representations and approximate accounting
-increase whole-build peaks or cross-architecture accumulation. No local heap
-snapshot confirms retention magnitude or identifies this as the initial crash.
-Check reachability and per-stage memory before proposing cache policy changes.
+increase whole-build peaks or cross-architecture accumulation. The modern node
+tree is stored through the `optimism` wrapper, and its cache key includes the
+architecture. Main module-tree linking does not pass `disableCache`.
+`METEOR_APP_PRELINK_CACHE_SIZE` controls a different cache; it does not bound this
+expanded-tree cache. The trace starts legacy expansion with approximately
+1,269 MiB of heap already in use. However, no heap snapshot or controlled cache
+experiment has measured how much of that heap is retained specifically by this
+cache. Keep the retention explanation distinct from the confirmed expansion OOM.
 
 ### 4. Link-cache serialization imposes a separate hard limit
 
@@ -299,7 +323,11 @@ RSS sums can include shared pages and sampled peaks can miss short spikes.
 Record collection method and interval; do not equate an RSS sum with uniquely
 owned physical memory or a JavaScript heap measurement.
 
-## Local readiness and checks actually executed
+## Initial local readiness and checks
+
+This table describes the initial analysis, before the subsequent setup and
+builds recorded under "Local reproduction results". It is retained as history,
+not the current execution status.
 
 | Check | Result |
 | --- | --- |
@@ -377,11 +405,170 @@ disabled, review any required installation scripts before enabling them, use
 trusted executable paths, and bound the generator/build workload. Changes to
 fixture code or dependency resolutions invalidate the corresponding audit scope.
 
+## Local reproduction results
+
+### Setup and execution controls
+
+These runs used the approved sibling workspace:
+
+```text
+/Users/leonardo/Repositories/meteor/repro-14655/
+  app/         # pinned upstream fixture; generated sources/dependencies ignored
+  artifacts/   # run logs, summaries, memory samples, output bundles, saved inputs
+```
+
+The fixture remained at `1b5049829f27ad51ce6508c0d4419367d490e82b`. The actual
+build executable was `/Users/leonardo/Repositories/meteor/meteor/meteor`, which
+is the executable called by the core checkout's `.envrc` `@meteor` function.
+It ran from the fixture directory and explicitly reported that the checkout
+overrode the fixture's Meteor 3.5 release. The tool checkout was `bd99bb206c`;
+there were no build-system code edits during these runs.
+
+- Runtime: development-bundle Node `v24.15.0`, macOS arm64, 32 GiB physical RAM.
+  Disk availability at setup was approximately 214 GiB. The host was already
+  using compressed memory, so these are host-specific observations.
+- App dependencies: `npm ci --ignore-scripts --no-audit --no-fund` completed;
+  `npm_config_ignore_scripts=true` remained set during builds. npm reported a
+  deprecation warning for `uuid@8.3.2`.
+- Installed-hook follow-up: SWC's postinstall validates its native binding and
+  can install a WASM fallback on failure. The matching arm64 native package was
+  already present, so the hook stayed skipped. Installed `fsevents@2.3.3` had no
+  install script or `binding.gyp`, despite the lockfile flag; its prebuilt binary
+  was present. This does not constitute an audit of native binary contents.
+- Tool flags: `--max-old-space-size=2048`; `METEOR_PROFILE=1` enabled profiling.
+  Traced runs additionally loaded the external `artifacts/trace.cjs` and enabled
+  `METEOR_TEST_PRINT_LINKER_CACHE_DEBUG=1`.
+- A reviewed external Python monitor launched each build in its own process
+  group, sampled descendants every 0.5 seconds, and recorded exit code/signal,
+  tool RSS, and summed process-tree RSS. It used a 900-second timeout and a
+  sampled 6,144 MiB process-tree RSS termination threshold. This is a sampled
+  guard, not a hard OS allocation limit. Smoke and timeout tests passed.
+- Each build wrote to a distinct `artifacts/<run-id>/output` directory. The
+  unsafe upstream `bench.js` was not used. No failed build was terminated by
+  the monitor's timeout or memory threshold.
+- Compiler and Rspack caches were retained between runs. The two explicitly
+  fresh-linker-cache runs moved only `.meteor/local/bundler-cache/linker` into
+  saved artifact directories before execution. They were not fully cold builds.
+
+Checkout package selection messages recorded these newer core versions:
+`babel-compiler@7.15.0`, `ddp-client@3.4.0`, `ddp-server@3.4.0`,
+`ecmascript@0.19.0`, `minifier-js@3.3.0`, `rspack@1.2.1`,
+`socket-stream-client@0.7.1`, `tools-core@1.2.0`, `typescript@5.11.0`, and
+`webapp@2.3.0`. The npm adapter remained locked to `@meteorjs/rspack@2.1.0`
+with Rspack core/CLI `1.7.12`. These are checkout results, not a reproduction
+against the original published Meteor 3.5 package set.
+
+### Build matrix actually executed
+
+MiB values below are sampled maxima, not exact peaks. "Both" means
+`web.browser` and `web.browser.legacy`; Cordova was excluded throughout.
+`normal` means no Meteor `--debug` flag. Cache differences and instrumentation
+mean these timings are not controlled performance comparisons.
+
+| Run ID | Modules × functions | Targets / mode | Linker cache | Result | Seconds | Tool RSS MiB | Tree RSS MiB |
+| --- | --- | --- | --- | --- | ---: | ---: | ---: |
+| `small-modern-normal` | 20 × 50 | Modern / normal | Initial fixture run | Exit 0 | 47.66 | 1347.59 | 1347.59 |
+| `small-legacy-debug` | 20 × 50 | Both / debug | Retained | Exit 0 | 20.97 | 1191.80 | 1191.80 |
+| `medium-legacy-debug` | 200 × 400 | Both / debug | Retained; changed generated input | Exit 0 | 31.64 | 2628.45 | 2628.45 |
+| `large400-legacy-debug` | 400 × 400 | Both / debug | Retained; changed generated input | Heap OOM, SIGABRT (6) | 68.14 | 3553.09 | 3553.09 |
+| `large400-modern-debug` | 400 × 400 | Modern / debug | Retained after failure | Exit 0 | 15.30 | 1475.58 | 2496.33 |
+| `large400-legacy-debug-trace` | 400 × 400 | Both / debug + trace | Fresh linker cache | Heap OOM, SIGABRT (6) | 66.99 | 3717.41 | 3717.41 |
+| `large400-modern-debug-cold` | 400 × 400 | Modern / debug + trace | Fresh linker cache | Exit 0 | 18.10 | 2566.59 | 2566.59 |
+
+The first modern-only 400-module pass could benefit from the failed run's cached
+modern result. The fresh-linker-cache modern pass removes that specific
+confounder. The failure has been observed twice, once without and once with
+instrumentation, but this is not yet a statistical reliability study.
+
+### Artifact and runtime validation
+
+All five successful output bundles contained the expected browser architecture
+directories. The small debug output had 48 JS manifest entries and 19 source-map
+references per browser architecture. The small normal production output had one
+JS manifest entry and no map reference; source-map availability differs by mode.
+
+The small normal production bundle was started on loopback with the development
+bundle's server dependencies supplied through `NODE_PATH`. A headless Chromium
+check observed `__CLIENT_BOOTED__ === true`, 20 modules, 20 registry entries,
+1,000 functions, and zero page errors. The server and browser were stopped after
+the check. The initial browser launch attempt used a nonexistent executable
+filename; correcting it to the installed `chrome-headless-shell` allowed the
+check to pass. No app failure was involved in that correction.
+
+Larger successful bundles have not yet received browser/runtime validation or
+mapping-position correctness checks. No full repository test suite was run.
+
+The failing 400-module Rspack outputs were preserved under
+`artifacts/large400-legacy-debug/inputs/`:
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `client-rspack.js` | 8621197 | `d1288876dfb6f9427d1b2b76f99a1df7522dfe2f3a51c762c24231d1f2f34f9d` |
+| `client-rspack.js.map` | 53343815 | `835f5867c91b98dee81243cf3c49d4988f3ed8b50e85e426a390dfeab6f4131e` |
+
+These are the raw Rspack artifacts, not the later legacy-transpiled code/map.
+The passing 200-module raw artifacts were also saved in that run's `inputs/`.
+
+### Localized failing operation
+
+`artifacts/large400-legacy-debug-trace/build.log` records the following sequence:
+
+| Stage | Code length | Heap used MiB | RSS MiB |
+| --- | ---: | ---: | ---: |
+| Modern `fromStringWithSourceMap` starts | 8621197 | 279.02 | 630.61 |
+| Modern `fromStringWithSourceMap` returns | 8621197 | 1179.67 | 1609.34 |
+| Modern `toStringWithSourceMap` returns | 8623601 | 1449.80 | 2214.25 |
+| Legacy `fromStringWithSourceMap` starts | 17658034 | 1269.09 | 3273.41 |
+| Legacy expansion | No return logged | V8 heap exhaustion | SIGABRT |
+
+Immediately before the legacy entry, the linker logs
+`LINKER CACHE MISS: null web.browser.legacy`. The entry stack points to
+`tools/isobuild/linker.js:759`, called through `_chunkifyModuleTrees`,
+`getPrelinkedFiles`, `fullLink`, and `PackageSourceBatch._linkJS`.
+The next recorded outcome is:
+
+```text
+FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory
+```
+
+This confirms the local failure occurs during legacy source-node expansion,
+after modern expansion/recomposition has succeeded. Native stack frames include
+JS-to-WASM wrappers, but the observed fatal condition is JavaScript heap
+exhaustion, not `RuntimeError: unreachable`.
+
+The inspected `source-map@0.7.4` implementation iterates decoded mappings through
+WASM callbacks and creates source nodes in JavaScript. That explains why WASM
+frames can accompany a JS heap OOM. The immediate modern expansion added about
+901 MiB of heap for this input. Legacy expansion began with over 1.2 GiB already
+in use. Retention of the modern expanded tree by the architecture-keyed
+`optimism` cache is a strong source-supported hypothesis; its exact contribution
+still needs a controlled cache experiment or retained-object evidence.
+
+### Evidence locations and next checks
+
+Each run directory contains `summary.json`, `samples.jsonl`, and `build.log`;
+successful builds also contain `output/bundle`. The loopback result is
+`small-modern-normal/runtime-check.json`. `artifacts/monitor.py` and
+`artifacts/trace.cjs` preserve the instrumentation used. Artifacts are local,
+untracked investigation data and are not included in the core repository commit.
+
+The next useful experiment is to separate intrinsic legacy expansion cost from
+cross-architecture retained memory, using the saved workload and controlled
+cache behavior. Extract and characterize the legacy map, and count mapping
+expansion with bounded telemetry if needed. Do not jump to the 800/3200-module
+workloads: a smaller reproducible failure is already available.
+
+The WASM `unreachable` and real oversized-cache serialization failures remain
+unreproduced. No replacement library, cache-format change, cache policy fix,
+or production dependency change has been implemented.
+
 ## Proposed experiment sequence and acceptance criteria
 
-The desired outcome of the next phase is a locally repeatable failure with a
-specific stage and signature, plus a small passing control. Do not start with a
-replacement library and infer the baseline afterward.
+The original sequence below remains a reference for further experiments. Its
+passing-control and repeatable-heap-failure milestones have now been met as
+recorded above; the full correctness/performance matrix and later failure
+signatures remain outstanding. Do not start with a replacement library and
+infer the baseline afterward.
 
 1. **Prepare a disposable, pinned fixture.** Record its SHA, Meteor executable,
    runtime, package locks, effective transpiler, architecture list, and source-map
@@ -474,10 +661,12 @@ those choices or replace their compatibility review.
 Recommended review order: status/evidence definitions; source trace; fixture
 audit; local verification; experiment acceptance criteria; candidate boundaries.
 
-No runtime interface, dependency, cache format, or production behavior changes
-with this report. The branch contains investigation documentation and its index
-link only. Documentation rollback is a normal revert of its commit; no data
-migration or deployment recovery is required.
+No runtime interface, production dependency, cache format, or Meteor behavior
+changes with this report. The core branch contains investigation documentation
+and its index link only. External fixture dependencies and generated artifacts
+now exist in the sibling workspace. Documentation rollback is a normal revert
+of its commit; no data migration or deployment recovery is required. Cleanup of
+the sibling workspace is separate and should preserve any desired logs/inputs.
 
 Update this file when a run completes, a hypothesis is falsified, or a remedy
 is selected. Add dated run records with artifact references and distinguish
