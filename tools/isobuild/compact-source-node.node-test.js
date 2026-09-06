@@ -1,7 +1,8 @@
+require('../tool-env/install-babel.js');
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { SourceNode, SourceMapConsumer, SourceMapGenerator } = require('source-map');
-const { fromStringWithSourceMap } = require('./compact-source-node.js');
+const { fromStringWithSourceMap } = require('./compact-source-node');
 
 
 function makeFixture(count, { crlf = false, sourceRoot, unmapped = true } = {}) {
@@ -74,6 +75,9 @@ test('compact leaves store code without per-fragment containers', async () => {
   assert.ok(leaves.length > 0);
   for (const leaf of leaves) {
     assert.equal(typeof leaf.code, 'string');
+    assert.deepEqual(Object.keys(leaf), ['line', 'column', 'source', 'name', 'code']);
+    assert.equal(Object.hasOwn(leaf, '$$$isSourceNode$$$'), false);
+    assert.equal(leaf.$$$isSourceNode$$$, true);
     assert.equal(Object.hasOwn(leaf, 'children'), false);
     assert.equal(Object.hasOwn(leaf, 'sourceContents'), false);
   }
@@ -135,4 +139,30 @@ test('cached compact trees remain usable after their consumer is destroyed', asy
     assert.equal(output.code, expected.code);
     assert.equal(output.map.toString(), expected.map.toString());
   }
+});
+
+test('compact TypeScript implementation and negative contracts pass strict checking', () => {
+  const ts = require('typescript');
+  const path = require('node:path');
+  const program = ts.createProgram([
+    path.join(__dirname, 'compact-source-node.ts'),
+    path.join(__dirname, 'compact-source-node.contract-test.ts'),
+  ], {
+    strict: true,
+    noUnusedLocals: true,
+    noUnusedParameters: true,
+    noEmit: true,
+    types: [],
+    target: ts.ScriptTarget.ES2018,
+    module: ts.ModuleKind.CommonJS,
+    moduleResolution: ts.ModuleResolutionKind.Node10,
+  });
+  const diagnostics = ts.getPreEmitDiagnostics(program);
+  assert.equal(diagnostics.length, 0, ts.formatDiagnosticsWithColorAndContext(
+    diagnostics, {
+      getCanonicalFileName: name => name,
+      getCurrentDirectory: () => process.cwd(),
+      getNewLine: () => '\n',
+    },
+  ));
 });

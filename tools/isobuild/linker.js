@@ -1,6 +1,6 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
-const { fromStringWithSourceMap } = require('./compact-source-node.js');
+const { fromStringWithSourceMap } = require('./compact-source-node');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;

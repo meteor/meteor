@@ -28,10 +28,46 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-const { SourceNode } = require('source-map');
+import { SourceNode } from 'source-map';
 
 const REGEX_NEWLINE = /(\r?\n)/;
 const SOURCE_NODE_MARKER = '$$$isSourceNode$$$';
+
+/**
+ * Runtime mapping fields may be null for generated-only spans, despite the
+ * dependency's MappingItem declaration describing every span as mapped.
+ */
+interface DecodedMapping {
+  readonly generatedLine: number;
+  readonly generatedColumn: number;
+  readonly originalLine: number | null;
+  readonly originalColumn: number | null;
+  readonly source: string | null | undefined;
+  readonly name: string | null;
+}
+
+/**
+ * Read-only access needed during expansion. The caller owns the consumer and
+ * may destroy it as soon as this synchronous conversion returns.
+ */
+export interface MappingConsumer {
+  readonly sources: readonly string[];
+  eachMapping(callback: (mapping: DecodedMapping) => void): void;
+  sourceContentFor(source: string): string | null;
+}
+
+interface SourceLocation {
+  readonly line: number | null;
+  readonly column: number | null;
+  readonly source: string | null;
+  readonly name: string | null;
+}
+
+interface WalkableLeaf {
+  readonly [SOURCE_NODE_MARKER]: true;
+  walk(callback: (code: string, location: SourceLocation) => void): void;
+  walkSourceContents(): void;
+}
 
 /**
  * A mapped fragment in an internal, immutable prelink tree. Unlike branch
@@ -39,8 +75,21 @@ const SOURCE_NODE_MARKER = '$$$isSourceNode$$$';
  * The linker and HMR compose and serialize these trees without mutating leaves.
  * This is deliberately not a general replacement for the mutable SourceNode API.
  */
-class CompactMappedLeaf {
-  constructor(line, column, source, code, name) {
+class CompactMappedLeaf implements WalkableLeaf {
+  declare readonly [SOURCE_NODE_MARKER]: true;
+  readonly line: number | null;
+  readonly column: number | null;
+  readonly source: string | null;
+  readonly name: string | null;
+  readonly code: string;
+
+  constructor(
+    line: number | null,
+    column: number | null,
+    source: string | null | undefined,
+    code: string,
+    name: string | null,
+  ) {
     this.line = line == null ? null : line;
     this.column = column == null ? null : column;
     this.source = source == null ? null : source;
@@ -48,19 +97,24 @@ class CompactMappedLeaf {
     this.code = code;
   }
 
-  walk(callback) {
+  walk(callback: (code: string, location: SourceLocation) => void): void {
     if (this.code !== '') {
       callback(this.code, this);
     }
   }
 
-  walkSourceContents() {
+  walkSourceContents(): void {
     // Source contents belong to the ordinary root SourceNode.
   }
 }
 
 // SourceNode uses this cross-version marker to dispatch traversal to children.
-CompactMappedLeaf.prototype[SOURCE_NODE_MARKER] = true;
+Object.defineProperty(CompactMappedLeaf.prototype, SOURCE_NODE_MARKER, {
+  value: true,
+  writable: true,
+  enumerable: true,
+  configurable: true,
+});
 
 /**
  * Expand a map into an ordinary SourceNode root containing compact mapped leaves.
@@ -69,11 +123,14 @@ CompactMappedLeaf.prototype[SOURCE_NODE_MARKER] = true;
  * The consumer remains caller-owned. Relative-path rewriting is intentionally
  * absent because prelinking never requests it.
  *
- * @param {string} aGeneratedCode Generated JavaScript to split into fragments.
- * @param {import('source-map').SourceMapConsumer} aSourceMapConsumer Input map.
- * @returns {import('source-map').SourceNode} Root with read-only mapped leaves.
+ * @param aGeneratedCode Generated JavaScript to split into fragments.
+ * @param aSourceMapConsumer Caller-owned decoded map.
+ * @returns Root with read-only mapped leaves.
  */
-function fromStringWithSourceMap(aGeneratedCode, aSourceMapConsumer) {
+export function fromStringWithSourceMap(
+  aGeneratedCode: string,
+  aSourceMapConsumer: MappingConsumer,
+): SourceNode {
   // The SourceNode we want to fill with the generated code
   // and the SourceMap
   const node = new SourceNode();
@@ -88,7 +145,8 @@ function fromStringWithSourceMap(aGeneratedCode, aSourceMapConsumer) {
     const lineContents = getNextLine();
     // The last line of a file might not have a newline.
     const newLine = getNextLine() || "";
-    return lineContents + newLine;
+    // Preserve the dependency's string coercion even for out-of-range mappings.
+    return String(lineContents) + newLine;
 
     function getNextLine() {
       return remainingLinesIndex < remainingLines.length ?
@@ -102,8 +160,8 @@ function fromStringWithSourceMap(aGeneratedCode, aSourceMapConsumer) {
   // The generate SourceNodes we need a code range.
   // To extract it current and last mapping is used.
   // Here we store the last mapping.
-  let lastMapping = null;
-  let nextLine;
+  let lastMapping: DecodedMapping | null = null;
+  let nextLine: string;
 
   aSourceMapConsumer.eachMapping(function(mapping) {
     if (lastMapping !== null) {
@@ -166,19 +224,22 @@ function fromStringWithSourceMap(aGeneratedCode, aSourceMapConsumer) {
 
   return node;
 
-  function addMappingWithCode(mapping, code) {
+  function addMappingWithCode(mapping: DecodedMapping | null, code: string): void {
     if (mapping === null || mapping.source === undefined) {
       node.add(code);
     } else {
-      node.add(new CompactMappedLeaf(
+      // The library accepts marker-bearing traversal children at runtime, but
+      // its declarations require the full mutable SourceNode API. Keep this
+      // assertion at the boundary; leaves implement only WalkableLeaf.
+      const leaf: WalkableLeaf = new CompactMappedLeaf(
         mapping.originalLine,
         mapping.originalColumn,
         mapping.source,
         code,
         mapping.name,
-      ));
+      );
+      node.add(leaf as unknown as SourceNode);
     }
   }
 }
 
-module.exports = { fromStringWithSourceMap };
