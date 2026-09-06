@@ -1496,6 +1496,174 @@ remain outside this comparison. Shared code plus offsets remains a separate
 future idea. This follow-up introduces experimental files and measurements only;
 it makes no production leaf-layout, dependency, cache-policy, or format change.
 
+### Typed streaming contracts and integration experiment (September 6)
+
+This follow-up tests a reusable cached node that holds generated code and the
+raw map instead of mapped leaf objects. It remains experimental: the default
+compact class implementation is unchanged. The typed implementation lives in
+[streaming-source-node.ts](../../../tools/isobuild/experiments/streaming-source-node.ts),
+with a [compile-time contract test](../../../tools/isobuild/experiments/streaming-source-node.contract-test.ts)
+and [runtime tests](experiments/streaming-source.node-test.cjs).
+[streaming-loader.cjs](experiments/streaming-loader.cjs),
+[streaming-preload.cjs](experiments/streaming-preload.cjs), and
+[measure-streaming-source.cjs](experiments/measure-streaming-source.cjs)
+provide isolated and full-build controls.
+
+`StreamingMappedSource` owns references to the generated code and raw map under
+a read-only usage contract. TypeScript `readonly` does not deep-freeze an
+externally supplied map. Ordinary synchronous `walk`/`walkSourceContents` calls
+fail explicitly so a missed serialization adaptation cannot silently drop code.
+`serializeStreamingSource` creates fresh consumers per invocation; repeated
+references share a consumer only within that invocation. Concurrent invocations
+have separate consumers and leave the cached input node reusable.
+
+Source contents are copied into invocation-local entries while the consumer is
+alive. After the last segment walk using an entry, that consumer is destroyed;
+source-content traversal then reads the saved entries, never the destroyed
+consumer. `finally` also covers partial preparation and traversal failures.
+No decoded mapping table or fragment tree is cached by this node, but the
+consumer and output generator still allocate during serialization. Preparing
+multiple sources before traversal can retain several consumers
+until their respective final walks. Packed-array storage is compatible with a
+future implementation but is not implemented or measured here.
+
+The experimental preload adapts the audited linker serialization paths and HMR
+serialization boundary to the async serializer, using checked transformations
+of the source read by Meteor's Babel loader. Class mode retains eager compact
+leaf construction while using the same adapted serialization boundary; stream
+mode caches the new raw-input node. The transformed source is hashed normally,
+and the preload records mode and original/transformed/helper hashes. Successful
+loader smoke checks establish that the actual Meteor TypeScript/Babel loader can
+load the linker/HMR changes; they are not a live HMR test.
+
+#### Type and lifecycle validation
+
+The focused [tsconfig.streaming.json](experiments/tsconfig.streaming.json)
+enables `strict`, `noUncheckedIndexedAccess`, unused-code checks, and `noEmit`,
+resolving the existing bundled source-map types. Focused compilation passed.
+A broader tools TypeScript check was actually attempted and failed with
+`TS2688` because Node type definitions were unavailable through the checkout's
+absent root `node_modules`. It is not recorded as a pass. No dependency was added.
+Existing core Mongo/DDP-server TypeScript and tool loader support were inspected
+before choosing this language for the experiment.
+
+Runtime contracts cover procedural parity, repeated/concurrent serialization,
+multiple nodes and repeated identity, failure cleanup, ordinary-only trees,
+indexed map offsets/contents, and explicit rejection of synchronous misuse.
+Final verification passed 47 Node tests and four Python tests, 51 total,
+including 11 streaming tests. Additional streaming cases cover Unicode columns,
+missing contents, distinct duplicate-coordinate mappings, and root source-content
+overrides. The focused strict TypeScript check also passed, including three
+negative compile-time contract checks. These results do not imply a broad tools
+compile or integration-suite pass.
+
+#### Isolated comparison with the TypeScript loader in both controls
+
+Four fresh-process runs under `artifacts/streaming-contracts/` use the same
+captured modern input, 2 GiB heap limit, explicit-GC sequence, and TypeScript
+loader. All four output pairs match the earlier isolated wrapped code/map hashes
+and byte lengths. Each root weak reference cleared after release. The holder
+comparison now includes the loader in both modes, so compare these controls
+with each other rather than subtracting earlier loader-free measurements.
+
+| Run | Construction wall ms | Serialization wall ms | Construction user+system CPU ms | Serialization user+system CPU ms | Holder after GC heap MiB | Process high-water RSS MiB |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| `class-1` | 510.43 | 746.77 | 998.64 | 797.67 | 294.93 | 1121.09 |
+| `class-2` | 499.35 | 665.28 | 1019.84 | 722.28 | 294.93 | 1122.38 |
+| `stream-1` | 0.07 | 1001.54 | 0.08 | 1183.07 | 84.86 | 1049.22 |
+| `stream-2` | 0.08 | 1013.88 | 0.43 | 1175.04 | 84.86 | 1044.64 |
+
+Streaming construction is cheap because it defers work, not because map decoding
+and segmentation disappear. It retains about 84.86 MiB of whole-isolate heap
+with the holder alive versus about 294.93 MiB for the class control, then performs
+its mapping work during the roughly one-second serialization. Construction and
+serialization must be considered together. CPU fields are process-wide stage
+deltas, including GC/worker contributions; they are not full-build CPU totals.
+The explicit GC phases alter execution and are not production timing behavior.
+
+All four runs retain approximately 369.33–369.35 MiB after output construction
+and root release, showing that generator/output costs remain. Root collection
+does not prove RSS is returned to the OS. The isolated parity and two repeats
+per mode do not establish production compatibility or a general performance
+winner.
+
+#### Completed full-build trials
+
+The four 400 × 400 debug archive trials all exited successfully with no guard
+termination. They used both browser targets, no Cordova, the 2 GiB heap limit,
+and fresh linker disk caches with compiler/Rspack caches retained. The class
+controls use the same adapted async boundary and loader as the streaming trials.
+
+| Run | Wall seconds | Sampled tool RSS MiB | Sampled process-tree RSS MiB |
+| --- | ---: | ---: | ---: |
+| `typed-class-400-debug-1` | 21.40 | 2604.34 | 2604.34 |
+| `typed-class-400-debug-2` | 21.45 | 2493.28 | 2493.28 |
+| `typed-stream-400-debug-1` | 20.87 | 2205.80 | 2467.34 |
+| `typed-stream-400-debug-2` | 20.83 | 2108.14 | 2481.75 |
+
+Every JavaScript/map file referenced by both browser manifests matched
+`compact-400-debug-1`: 132 files per run, 528 byte-identical comparisons. Manifest
+entry sets and map presence also matched. These archive checks preserve the
+baseline output but do not provide independent source-map-position validation.
+
+The logger produced two newline-delimited `[stream-serialization]` records
+per run, covering the large modern and legacy outputs.
+
+| Run | Modern serialization wall ms | Legacy serialization wall ms | Modern user+system CPU ms | Legacy user+system CPU ms |
+| --- | ---: | ---: | ---: | ---: |
+| `typed-class-400-debug-1` | 881.13 | 1028.31 | 1082.80 | 1869.70 |
+| `typed-class-400-debug-2` | 927.17 | 1059.82 | 1111.74 | 1874.02 |
+| `typed-stream-400-debug-1` | 1212.84 | 1275.85 | 1501.47 | 1553.75 |
+| `typed-stream-400-debug-2` | 1189.77 | 1295.17 | 1535.93 | 1575.99 |
+
+Streaming serialization includes the deferred mapping work that class mode
+already did during expansion. Comparing just the serialization rows would
+therefore misrepresent the total work. Their CPU measurements are process-wide
+stage deltas, not complete-build CPU totals. The streaming process-tree RSS
+includes child-process peaks beyond the lower tool RSS; use the tree metric
+when describing overall process memory.
+
+At the streaming process-tree peaks, the tool itself used only about 384 MiB:
+most memory belonged to the active `rspack-node` child. Thus further reducing
+linker allocations alone cannot remove this earlier whole-build peak.
+
+| Streaming run | Peak sample elapsed seconds | Tool RSS MiB at that sample | Rspack child RSS MiB | npm parent RSS MiB |
+| --- | ---: | ---: | ---: | ---: |
+| `typed-stream-400-debug-1` | 7.738 | 384.02 | 1988.59 | 94.73 |
+| `typed-stream-400-debug-2` | 7.127 | 384.64 | 2002.31 | 94.80 |
+
+**Recommendation: keep streaming experimental.** The isolated holder-memory
+reduction is substantial, but the full-build process-tree RSS difference is
+modest and variable in these trials. Streaming completed about 0.6 seconds
+sooner across two runs per mode; that small sample does not establish a reliable
+speed advantage. Introducing async serialization boundaries and invocation-local
+consumer lifetime management requires broader compatibility review than the
+compact leaf allocation change. Default compact leaves remain unchanged.
+
+#### Small normal-minified streaming smoke test
+
+The `20 × 50` streaming archive passed with both browser targets and no Cordova.
+The earlier compact normal-minified archive is its output control:
+
+| Artifact | Representation | Result | Wall seconds | Sampled tool/tree RSS MiB |
+| --- | --- | --- | ---: | ---: |
+| `compact-20-normal-1` | Default compact class | Exit 0 | 10.45 | 1094.09 |
+| `typed-stream-20-normal-1` | Experimental typed streaming | Exit 0 | 10.34 | 1070.20 |
+
+Both browser manifests contain the same sole JS entry as the control, with
+byte-identical contents. Neither output contains map files in this normal
+minification configuration. The streaming run's `runtime-check.json` records
+successful modern Chromium boot, 20 modules, 20 registry entries, 1,000 functions,
+and no page errors. It did not hit the guard. This adds two file comparisons to
+the 528 large debug comparisons, for 530 full-build file matches in this phase.
+A single small smoke run is not a measured speed advantage.
+
+No large normal-minified archive, live HMR, deployment workflow, or legacy-browser
+execution was tested in this phase. The earlier large-debug browser timeout
+remains unresolved. Packed arrays and shared-code offsets remain future
+implementation options, not measured features of this typed experiment. The
+streaming implementation remains opt-in; the compact class stays the default.
+
 ### Evidence locations and next checks
 
 Each run directory contains `summary.json`, `samples.jsonl`, and `build.log`;
