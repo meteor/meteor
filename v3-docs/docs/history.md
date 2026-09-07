@@ -9,6 +9,312 @@ This is a complete history of changes for Meteor releases.
 [//]: # (If you want to change something in this file)
 
 [//]: # (go to meteor/v3-docs/docs/generators/changelog/versions)
+## v3.5.1, 2026-08-04
+
+### Highlights
+
+#### Rspack
+
+- Reliably free the Rspack dev server port when the app is stopped — including `SIGTERM`/`SIGHUP` from Docker, process managers, and IDE stop buttons, not just Ctrl+C — so the next `meteor run` no longer fails with a port-in-use error, [PR#14406](https://github.com/meteor/meteor/pull/14406)
+- Fix a Rspack dev-mode memory leak where `meteor-tool` grew on every rebuild [PR#14464](https://github.com/meteor/meteor/pull/14464)
+- Remove the critical `elliptic` vulnerability from the Rspack toolchain [PR#14584](https://github.com/meteor/meteor/pull/14584)
+
+#### Change Streams & MongoDB
+
+- Automatically recover from an infinite change-stream restart loop (and re-sync missed events) when MongoDB reports the change-stream history was lost [PR#14607](https://github.com/meteor/meteor/pull/14607)
+- Fix method calls (such as login) hanging forever under change streams when a method writes a collection and triggers new observers on it in the same call, [PR#14564](https://github.com/meteor/meteor/pull/14564)
+- Fix methods hanging forever ("change stream catching up took too long") when an app uses multiple MongoDB connections that share a collection name, [PR#14602](https://github.com/meteor/meteor/pull/14602)
+- Fix a publication crash (TypeError) when a collection's publication strategy is changed at runtime between a document being added and removed, [PR#14540](https://github.com/meteor/meteor/pull/14540)
+- Subscriptions using a nested-object projection no longer crash under change streams — they fall back to oplog/polling as before, [PR#14518](https://github.com/meteor/meteor/pull/14518)
+- Prevent an oplog-tailer crash (`Unknown command`) when unqualified admin-database `drop`/`create` operations appear in the oplog (e.g. Percona hot-backups), [PR#14519](https://github.com/meteor/meteor/pull/14519)
+- Clearer error when `MONGO_OPLOG_URL` points at a replica set that hasn't been initialized yet — it now tells you to run `rs.initiate()`, [PR#14520](https://github.com/meteor/meteor/pull/14520)
+- Fix TypeScript type resolution for the `mongo` package so tools like `zodern:types` pick up the bundled MongoDB v6 driver types instead of falling back to outdated `@types/meteor`, [PR#14422](https://github.com/meteor/meteor/pull/14422)
+
+#### More reliable reconnections
+
+- Unsubscribing during a brief disconnect now takes effect after reconnect, instead of dropping the `unsub` and leaving the subscription streaming on the server, [PR#14542](https://github.com/meteor/meteor/pull/14542)
+- Stop firing a phantom browser `disconnect` event on every reconnect attempt, [PR#14532](https://github.com/meteor/meteor/pull/14532)
+- Fix a memory leak where `DDP.connect()` connections were never released after `close()`, [PR#14538](https://github.com/meteor/meteor/pull/14538)
+- Run a subscription's current `onStop` callback on stop, so re-subscribing with a new `onStop` in a reactive rerun no longer fires the stale one, [PR#14544](https://github.com/meteor/meteor/pull/14544)
+- Stopping the same subscription or observer more than once no longer silently breaks other live queries on that collection, [PR#14536](https://github.com/meteor/meteor/pull/14536)
+- Silently discard malformed DDP messages instead of throwing in the client's message handler, [PR#14530](https://github.com/meteor/meteor/pull/14530)
+- Fix session-resumption edge cases so brief disconnects reconnect cleanly and buffered updates arrive in order, [PR#14528](https://github.com/meteor/meteor/pull/14528)
+- Restore client write batching so multi-document updates apply together instead of flickering through intermediate states, [PR#14526](https://github.com/meteor/meteor/pull/14526)
+
+#### Improvements
+
+- The current method name is now available via `this.name` inside server methods, even when invoked with server-side `Meteor.callAsync`, [PR#14478](https://github.com/meteor/meteor/pull/14478)
+- Add an opt-in `packages.webapp.skipCompressionWithContentLength` setting to leave responses that already declare a `Content-Length` uncompressed, so the header survives behind CDNs/proxies, [PR#14588](https://github.com/meteor/meteor/pull/14588)
+- Update `accounts-password` hashing dependencies (`bcrypt` 6.0.0, `argon2` 0.44.0) for upstream security fixes; existing password hashes stay valid and no action is required on Node 20+, [PR#14407](https://github.com/meteor/meteor/pull/14407)
+- Compile server code to es2022 on modern Node for smaller, faster output (async/await is no longer down-leveled to generator helpers), [PR#14369](https://github.com/meteor/meteor/pull/14369)
+- Silence the Node deprecation warnings (`url.parse` / `util._extend`) that appeared in the terminal during `meteor run` and builds, and make the Rspack dev proxy more resilient, [PR#14558](https://github.com/meteor/meteor/pull/14558)
+
+#### Fixes
+
+- Force-kill the old app process on dev restart when it ignores `SIGTERM` — previously it leaked across restarts and kept holding the port, [PR#14516](https://github.com/meteor/meteor/pull/14516)
+- Deliver runtime updates to `Meteor.settings.public` to clients that connect after the change, [PR#14515](https://github.com/meteor/meteor/pull/14515)
+- Fix a server crash (`TypeError: Invalid URL`) triggered by any client sending a malformed request URL such as `//`, [PR#14598](https://github.com/meteor/meteor/pull/14598)
+- Stop the legacy heartbeat watchdog from force-disconnecting healthy native-WebSocket connections (arm it only on the SockJS transport), [PR#14546](https://github.com/meteor/meteor/pull/14546)
+- Fix abandoned WebSocket upgrades exhausting the dev proxy's connection pool and wedging normal HTTP requests through `meteor --port`, [PR#14386](https://github.com/meteor/meteor/pull/14386)
+- Fix `meteor build` hanging indefinitely when the file watcher hits an `EINTR` interrupted syscall (common in Docker/CI) — it now falls back to polling, [PR#14450](https://github.com/meteor/meteor/pull/14450)
+- Fix package assets added with `api.addAssets` being wrongly treated as compilable source files, which could abort the build with a spurious compile error, [PR#14566](https://github.com/meteor/meteor/pull/14566)
+- Surface lazy compilation errors as build failures instead of silently swallowing them into a runtime `Cannot find module`, [PR#14491](https://github.com/meteor/meteor/pull/14491)
+- Fix binding the server to an IPv6 host producing a malformed `ROOT_URL` that broke `Meteor.absoluteUrl()`, [PR#14553](https://github.com/meteor/meteor/pull/14553)
+- Fix `mongo` and `webapp` TypeScript definitions so they type-check under TypeScript 6/7 (tsgo), [PR#14556](https://github.com/meteor/meteor/pull/14556)
+- Fix the modern (rspack) build for apps that use app-local symlinked packages/modules in a monorepo (opt in via `resolve.symlinks: false`), [PR#14442](https://github.com/meteor/meteor/pull/14442)
+- Enable the modern Cordova/Capacitor bundle by default when `meteor.modern` isn't set (previously fell back to the legacy bundle), [PR#14411](https://github.com/meteor/meteor/pull/14411)
+
+All Merged PRs@[GitHub PRs 3.5.1](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.5.1)
+
+#### Breaking Changes
+
+N/A
+
+#### Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.5.1
+```
+
+#### Bumped Meteor Packages
+
+- meteor-tool@3.5.1
+- accounts-password@3.3.1
+- babel-compiler@7.15.0
+- ddp-client@3.4.0
+- ddp-server@3.4.0
+- ecmascript@0.19.0
+- inter-process-messaging@0.1.3
+- minifier-js@3.3.0
+- mongo@2.5.0
+- npm-mongo@6.16.2
+- rspack@1.2.0
+- socket-stream-client@0.7.1
+- tools-core@1.2.0
+- typescript@5.11.0
+- webapp@2.3.0
+
+#### Bumped NPM Packages
+
+- @meteorjs/rspack@2.1.0
+
+#### Our Sponsors
+
+Meteor is made possible by our amazing sponsors. Support the project and get your
+logo featured by visiting our [Sponsorship page](https://www.meteor.com/sponsorship).
+
+**🌟 Supernova Sponsors**
+
+- [Galaxy](https://galaxycloud.app/)
+- [InputLogic](https://inputlogic.com/)
+
+**🌌 Nebula Sponsors**
+
+- [CodeRabbit](https://www.coderabbit.ai/)
+
+#### Special thanks to
+
+✨✨✨
+
+- [@italojs](https://github.com/italojs)
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@mark1russell7](https://github.com/mark1russell7)
+- [@ebroder](https://github.com/ebroder)
+- [@mvogttech](https://github.com/mvogttech)
+- [@TimHeckel](https://github.com/TimHeckel)
+- [@dupontbertrand](https://github.com/dupontbertrand)
+- [@BastienRodz](https://github.com/BastienRodz)
+- [@perbergland](https://github.com/perbergland)
+- [@hexsprite](https://github.com/hexsprite)
+- [@jfurneaux](https://github.com/jfurneaux)
+- [@julio-rocketchat](https://github.com/julio-rocketchat)
+- [@sanki92](https://github.com/sanki92)
+- [@AviraL0013](https://github.com/AviraL0013)
+- [@Grubba27](https://github.com/Grubba27)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@zodern](https://github.com/zodern)
+
+✨✨✨
+## v3.5.0, 2026-06-30
+
+### Highlights
+
+#### Features
+
+- **MongoDB Change Streams**, [PR#13787](https://github.com/meteor/meteor/pull/13787)
+  - 📉 Major resource savings and a significant throughput boost — app servers handle far more concurrent users, subscriptions, and method calls per instance, often shrinking the fleet (and the bill) needed to serve the same load
+  - **MongoDB version requirement bumped for Change Streams** — Change Streams now require **MongoDB 6+** with a replica set or sharded cluster (previously 3.6+). Apps on older MongoDB versions will automatically fall back to `oplog` or `polling`. ([9a0720b8](https://github.com/meteor/meteor/commit/9a0720b886093a839a9306be504ea69b19e40408))
+  - ☁️ Real-time reactivity now works on managed and serverless MongoDB tiers (Atlas Shared, serverless) where oplog access isn't available — no more being forced into expensive polling
+  - 🛡️ More resilient under load — narrowly scoped subscriptions stay fast even on busy collections, and the system gracefully falls back to another driver if change streams aren't usable
+  - ✅ Enabled by default in 3.5 — most apps benefit immediately on upgrade with no code changes (see Migration Steps to revert)
+  - 📃 [Documentation](https://docs.meteor.com/performance/change-streams-observer-driver)
+- **DDP Session Resumption**, [PR#14051](https://github.com/meteor/meteor/pull/14051)
+  - 📱 Smoother UX on real-world networks — mobile handoffs, sleeping tabs, and flaky Wi-Fi no longer cause the UI to flicker, lose state, or re-fetch everything
+  - ⚡ Faster reconnects — pending method calls are not lost and active subscriptions pick up where they left off, so users don't see spinners or stale data after a blip
+  - 🧠 Less wasted server work — short disconnects no longer trigger full re-publish/re-subscribe cycles, reducing CPU spikes from large reconnect storms
+  - 🎚️ Tunable to your traffic — adjust the grace period and message-queue limit per app to balance responsiveness, memory, and presence semantics
+- **Pluggable DDP Transport Architecture**, [PR#14231](https://github.com/meteor/meteor/pull/14231)
+  - 🎯 Pick the right trade-off for your app — maximum compatibility (`sockjs`, default) for public traffic behind strict proxies, or lower latency and higher throughput (`uws`) for internal/controlled deployments
+  - 🚀 Faster, lighter real-time on `uws` — noticeable latency wins on hot reconnects and higher message throughput per server, especially valuable for dashboards and chat-like workloads
+  - 🔧 Switch with a single env var or settings flag — no application code changes, easy to A/B and roll back
+  - 🧱 Future-proof — additional transports can be added without touching app code or DDP itself
+  - 📃 [Documentation](https://docs.meteor.com/performance/ddp-transport)
+- **Authenticated REST endpoints with `accounts-express`**, [PR#14091](https://github.com/meteor/meteor/pull/14091)
+  - 🔐 Build authenticated REST/Express endpoints as first-class citizens of a Meteor app — protected routes can read `Meteor.userId()` and `Meteor.user()` exactly like methods and publications, removing a long-standing gap between DDP-based auth and REST surfaces
+  - 🧩 Drop-in `Accounts.auth()` middleware to gate routes on authentication or your own custom conditions, so existing Express integrations no longer need bespoke token-parsing code
+  - 🌐 New client helper sends the auth token automatically on requests to protected endpoints, making it easy to consume your own authenticated APIs from Meteor clients without manual header juggling
+  - 📃 New `accounts-express` package ships out of the box
+- **Async DDPRateLimiter Rule Matchers**, [PR#14182](https://github.com/meteor/meteor/pull/14182)
+  - 🧠 Smarter, context-aware rate limiting — gate methods and subscriptions by user role, billing tier, feature flag, or any value you need to fetch from the database, without ugly workarounds
+  - 🛡️ Stronger abuse protection without overblocking legitimate users, since rules can now reflect *who* is calling, not just *how often*
+- **Fully Functional DISABLE_SOCKJS Mode**, [PR#14206](https://github.com/meteor/meteor/pull/14206)
+  - 🪶 Drop the SockJS layer entirely on deployments that don't need polling fallback — smaller client bundle, fewer handshake round-trips, and a cleaner network path end-to-end
+- **MongoDB Collation Support**, [PR#14188](https://github.com/meteor/meteor/pull/14188)
+  - 🔍 Reliable case-insensitive search and locale-aware sorting out of the box — international/accented text behaves the way users expect, with no custom regex tricks or duplicated lowercase fields
+  - 🤝 Consistent results client-side and server-side — optimistic UI in Minimongo matches what the server returns, eliminating "looks right offline, wrong after sync" bugs
+  - ⚡ Performance-friendly — case-insensitive queries no longer silently fall back to polling, keeping reactivity fast on busy collections
+
+#### Improvements
+
+- **Upgrade to Node.js 24.15.0 & NPM 11.12.1**, [PR#14176](https://github.com/meteor/meteor/pull/14176), [PR#14399](https://github.com/meteor/meteor/pull/14399)
+- **EJSON Performance Optimizations**:
+  - Zero-clone `stringifyDDP` to reduce allocations in DDP message serialization, [PR#14213](https://github.com/meteor/meteor/pull/14213)
+  - Copy-on-write `toJSONValue`/`fromJSONValue` to reduce allocations, [PR#14209](https://github.com/meteor/meteor/pull/14209)
+  - Fast-path primitive comparisons in `EJSON.equals`, [PR#14208](https://github.com/meteor/meteor/pull/14208)
+  - Early bail-out on key count mismatch in `EJSON.equals`, [PR#14205](https://github.com/meteor/meteor/pull/14205)
+  - Avoid array allocation in `lengthOf` utility, [PR#14204](https://github.com/meteor/meteor/pull/14204)
+- Replace deprecated `url.parse()` with WHATWG `new URL()` API across packages and tools, [PR#14248](https://github.com/meteor/meteor/pull/14248)
+- Set change streams as the default reactivity mechanism, [PR#14217](https://github.com/meteor/meteor/pull/14217)
+- Asyncify client-side calls in `accounts-base` to align with Meteor's async API model, [PR#14069](https://github.com/meteor/meteor/pull/14069)
+- Add `Meteor.loginWithPasswordAsync` and `Meteor.loginWithTokenAsync` for promise-based login flows that fit naturally inside `async`/`await` code, [PR#14070](https://github.com/meteor/meteor/pull/14070)
+- Replace `node-2fa` with `OTPAuth` in `accounts-2fa` for better maintenance and standards compliance, [PR#14321](https://github.com/meteor/meteor/pull/14321)
+- Replace `http-proxy` with `http-proxy-3` to get an actively maintained proxy implementation, [PR#13916](https://github.com/meteor/meteor/pull/13916)
+- Upgrade `@mapbox/node-pre-gyp` from 1.0.11 to 2.0.3, [PR#14101](https://github.com/meteor/meteor/pull/14101)
+- Warn when `Accounts.emailTemplates.from` is not configured to prevent silent email failures, [PR#14044](https://github.com/meteor/meteor/pull/14044)
+- Bump uWebSockets.js to v20.66.0 in `ddp-server` for improved stability of the `uws` DDP transport, [PR#14330](https://github.com/meteor/meteor/pull/14330)
+- Update `email` package dependencies, [PR#14028](https://github.com/meteor/meteor/pull/14028)
+- Add TypeScript type declarations for `accounts-express` package, [PR#14433](https://github.com/meteor/meteor/pull/14433)
+- Remove legacy `isMeteorPre144` shim and `semver` dependency from `babel-compiler` — dead code for Meteor versions before 1.4.4 (released in 2017), [PR#14382](https://github.com/meteor/meteor/pull/14382)
+
+#### Fixes
+
+- Fix ObjectID fields sent as binary when using projection with change streams, [PR#14238](https://github.com/meteor/meteor/pull/14238)
+- Fix DDP connection latency regression from dynamic SockJS import, [PR#14229](https://github.com/meteor/meteor/pull/14229)
+- Fix default DDP connection URL for mirror domains, [PR#14189](https://github.com/meteor/meteor/pull/14189)
+- Fix `forEachAsync` and `mapAsync` behavior in minimongo to match server, [PR#14021](https://github.com/meteor/meteor/pull/14021)
+- Improve change streams synchronization by passing a specific fence to writes, [PR#14362](https://github.com/meteor/meteor/pull/14362)
+- Close race conditions in `ChangeStreamObserveDriver` so events are no longer dropped during snapshot, restart, or `watch()` setup — preventing stuck DDP write fences and missing `added`/`changed` messages, [PR#14389](https://github.com/meteor/meteor/pull/14389)
+- Fall back to polling for change-stream cursors that use `skip`/`limit`, [PR#14389](https://github.com/meteor/meteor/pull/14389)
+- Preserve all `uws` transport listeners across close/data events in `ddp-server`, [PR#14389](https://github.com/meteor/meteor/pull/14389)
+- Stop forwarding `METEOR_ALLOW_SUPERUSER` as `NPM_CONFIG_UNSAFE_PERM` in the CLI, [PR#14389](https://github.com/meteor/meteor/pull/14389)
+- Remove unnecessary `NPM_CONFIG_NODEDIR` env var to fix npm 11+ warning, [PR#14239](https://github.com/meteor/meteor/pull/14239)
+- Fix `uws` transport settings handling and prevent port collisions in `ddp-server`, [PR#14425](https://github.com/meteor/meteor/pull/14425)
+- Fix race condition in Accounts HttpOnly cookie login completion that could leave a session unauthenticated, [PR#14469](https://github.com/meteor/meteor/pull/14469)
+
+All Merged PRs@[GitHub PRs 3.5](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.5)
+
+#### Breaking Changes
+
+N/A
+
+#### Internal API changes
+
+N/A
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.5
+```
+
+Change streams are now the default reactivity mechanism — no configuration is required to enable them. If you need to revert to the previous behavior, configure the reactivity order in your `settings.json` to force `oplog`:
+
+```json
+{
+  "packages": {
+    "mongo": {
+      "reactivity": ["oplog", "polling"]
+    }
+  }
+}
+```
+
+Check out the [change streams documentation](https://docs.meteor.com/performance/change-streams-observer-driver) for more details.
+
+> Change streams require MongoDB 6+ with a replica set or sharded cluster.
+
+#### Bumped Meteor Packages
+
+- meteor-tool@3.5.0
+- accounts-2fa@3.1.0
+- accounts-base@3.3.0
+- accounts-express@1.0.0
+- accounts-oauth@1.4.7
+- accounts-password@3.3.0
+- accounts-passwordless@3.1.1
+- babel-compiler@7.14.1
+- base64@1.0.14
+- binary-heap@1.0.13
+- callback-hook@1.8.0
+- ddp-client@3.3.0
+- ddp-common@1.4.5
+- ddp-rate-limiter@1.3.0
+- ddp-server@3.3.0
+- ecmascript@0.18.1
+- ejson@1.2.0
+- email@3.2.0
+- fetch@0.2.0
+- force-ssl@1.1.2
+- meteor@2.3.1
+- minifier-css@2.0.2
+- minifier-js@3.2.1
+- minimongo@2.2.0
+- mongo@2.4.0
+- oauth@3.0.4
+- oauth1@1.5.3
+- rate-limit@1.2.0
+- session@1.2.3
+- socket-stream-client@0.7.0
+- tinytest@1.4.1
+- typescript@5.10.1
+- url@1.3.6
+- webapp@2.2.0
+
+#### Bumped NPM Packages
+
+N/A
+
+#### Special thanks to
+
+✨✨✨
+
+
+- [@italojs](https://github.com/italojs)
+
+- [@nachocodoner](https://github.com/nachocodoner)
+
+- [@Grubba27](https://github.com/Grubba27)
+
+- [@radekmie](https://github.com/radekmie)
+- [@9Morello](https://github.com/9Morello)
+- [@alextaaa](https://github.com/alextaaa)
+- [@dupontbertrand](https://github.com/dupontbertrand)
+- [@Eshaan-byte](https://github.com/Eshaan-byte)
+- [@harryadel](https://github.com/harryadel)
+- [@mvogttech](https://github.com/mvogttech)
+- [@OleksandrChekhovskyi](https://github.com/OleksandrChekhovskyi)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@vlasky](https://github.com/vlasky)
+
+✨✨✨
 ## v3.4.1, 2026-04-28
 
 ### Highlights
@@ -16,11 +322,11 @@ This is a complete history of changes for Meteor releases.
 #### Rspack Improvements
 
 - **Pin `@meteorjs/rspack` to v2.x in Meteor 3.4.1**, [PR#14365](https://github.com/meteor/meteor/pull/14365)
-  - Bumps the minimum `@meteorjs/rspack` requirement from `^1.0.0` to `^2.0.0` across all core packages, skeletons, and docs
-  - v1.1.x introduced significant changes to config defaults. Without this bump, Meteor 3.4 users running `npm install @meteorjs/rspack@^1.0.0` could silently pick up incompatible defaults and hit a broken build
-  - Each Meteor release now pins to a major of `@meteorjs/rspack` (Meteor 3.4 -> v1, Meteor 3.4.1 -> v2). A future release may further restrict to a specific minor (e.g., `2.x.x`) so breaking changes are clearer
-  - `@meteorjs/rspack` semver is independent of `@rspack/core` / `@rspack/cli`; keeping them in sync is not practical because the Meteor integration may have different needs
-  - Existing apps pick up v2 automatically after running `meteor update --release 3.4.1`, followed by `meteor run` or `meteor update --npm`
+  - 📦 Bumps the minimum `@meteorjs/rspack` requirement from `^1.0.0` to `^2.0.0` across all core packages, skeletons, and docs
+  - 🚧 v1.1.x introduced significant changes to config defaults. Without this bump, Meteor 3.4 users running `npm install @meteorjs/rspack@^1.0.0` could silently pick up incompatible defaults and hit a broken build
+  - 🔗 Each Meteor release now pins to a major of `@meteorjs/rspack` (Meteor 3.4 → v1, Meteor 3.4.1 → v2). A future release may further restrict to a specific minor (e.g., `2.x.x`) so breaking changes are clearer
+  - ⚠️ `@meteorjs/rspack` semver is independent of `@rspack/core` / `@rspack/cli`; keeping them in sync is not practical because the Meteor integration may have different needs
+  - 🔄 Existing apps pick up v2 automatically after running `meteor update --release 3.4.1`, followed by `meteor run` or `meteor update --npm`
 - Enable automatic CSS delegation to Rspack, [PR#14257](https://github.com/meteor/meteor/pull/14257)
 - Add support for `swc.config.ts` configuration files, [PR#14150](https://github.com/meteor/meteor/pull/14150), [PR#14233](https://github.com/meteor/meteor/pull/14233)
 - Support running multiple Rspack instances via `METEOR_LOCAL_DIR` to isolate build contexts, [PR#14165](https://github.com/meteor/meteor/pull/14165)
@@ -108,6 +414,10 @@ Please run the following command to update your project:
 meteor update --release 3.4.1
 ```
 
+---
+
+If you find any issues, please report them to the [Meteor issues tracker](https://github.com/meteor/meteor).
+
 #### Bumped Meteor Packages
 
 - meteor-tool@3.4.1
@@ -145,6 +455,40 @@ meteor update --release 3.4.1
 
 - @meteorjs/rspack@2.0.1
 
+#### Special thanks to
+
+✨✨✨
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@italojs](https://github.com/italojs)
+- [@Grubba27](https://github.com/Grubba27)
+- [@zarvox](https://github.com/zarvox)
+- [@calm329](https://github.com/calm329)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@sanki92](https://github.com/sanki92)
+- [@bratelefant](https://github.com/bratelefant)
+- [@carlosarraes](https://github.com/carlosarraes)
+- [@graemian](https://github.com/graemian)
+- [@9Morello](https://github.com/9Morello)
+- [@ReinaT5678](https://github.com/ReinaT5678)
+- [@zodern](https://github.com/zodern)
+- [@paritoshdey-dev](https://github.com/paritoshdey-dev)
+- [@dolgarev](https://github.com/dolgarev)
+- [@wreiske](https://github.com/wreiske)
+- [@welkinwong](https://github.com/welkinwong)
+- [@shamshad-ansari](https://github.com/shamshad-ansari)
+- [@ebroder](https://github.com/ebroder)
+- [@sblaisot](https://github.com/sblaisot)
+- [@Shresthap21](https://github.com/Shresthap21)
+- [@thenileshmishra](https://github.com/thenileshmishra)
+- [@slegarraga](https://github.com/slegarraga)
+- [@mvogttech](https://github.com/mvogttech)
+- [@dupontbertrand](https://github.com/dupontbertrand)
+- [@fredmaiaarantes](https://github.com/fredmaiaarantes)
+- [@imajus](https://github.com/imajus)
+- [@perbergland](https://github.com/perbergland)
+
+✨✨✨
 ## v3.4.0, 2026-01-30
 
 ### Highlights
