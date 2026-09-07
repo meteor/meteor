@@ -22,11 +22,23 @@
         credentialToken, credentialSecret);
     } else {
       try {
-        localStorage[config.storagePrefix + credentialToken] = credentialSecret;
+        sessionStorage[config.storagePrefix + credentialToken] = credentialSecret;
       } catch (err) {
         // We can't do much else, but at least close the popup instead
         // of having it hang around on a blank page.
       }
+    }
+  }
+
+  // Store OAuth error information if present
+  if (config.error && typeof localStorage !== 'undefined') {
+    try {
+      localStorage[config.storagePrefix + "error"] = config.error;
+      if (config.error_description) {
+        localStorage[config.storagePrefix + "error_description"] = config.error_description;
+      }
+    } catch (err) {
+      // Storage not available, ignore
     }
   }
 

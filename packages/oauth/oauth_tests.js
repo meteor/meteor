@@ -150,3 +150,23 @@ Tinytest.addAsync("oauth - _endOfLoginResponse with redirect loginStyle supports
     await OAuth._endOfLoginResponse(res, details);
   }
 );
+
+// Test for OAuth error reporting functionality
+Tinytest.addAsync("oauth - _endOfLoginResponse includes error information",
+  async test => {
+    const res = {
+      writeHead: () => {},
+      end: content => {
+        test.matches(content, /access_denied/);
+        test.matches(content, /User denied access/);
+      }
+    };
+    const details = {
+      credentials: {},
+      loginStyle: 'popup',
+      error: 'access_denied',
+      error_description: 'User denied access'
+    };
+    await OAuth._endOfLoginResponse(res, details);
+  }
+);

@@ -12,6 +12,18 @@
     }
   }
 
+  // Store OAuth error information if present
+  if (config.error && typeof localStorage !== 'undefined') {
+    try {
+      localStorage[config.storagePrefix + "error"] = config.error;
+      if (config.error_description) {
+        localStorage[config.storagePrefix + "error_description"] = config.error_description;
+      }
+    } catch (err) {
+      // Storage not available, ignore
+    }
+  }
+
   window.location =
     config.redirectUrl
       ? config.redirectUrl.replace(/&amp;/g, "&")
