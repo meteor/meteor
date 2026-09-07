@@ -740,9 +740,11 @@ Displays your currently logged-in username.
 meteor whoami
 ```
 
-## meteor deploy _site_ {#meteordeploy}
+## meteor deploy [site] {#meteordeploy}
 
 Deploys the project in your current directory to [Galaxy](https://www.meteor.com/galaxy).
+
+If `site` is not provided and you are running in an interactive terminal, Meteor will prompt you to select from your existing deployed sites or enter a new one. Deleting is never prompted for: running `--delete` (or `-D`) without a site name is an error, so you always name the site you intend to remove.
 
 ### Basic Deployment
 
