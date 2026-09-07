@@ -92,7 +92,8 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     // and that is determined based on the appId. Hopefully this will avoid
     // collisions between Meteor apps installed on the same device
     } else if let viewController = self.viewController as? CDVViewController,
-        let port = URLComponents(string: viewController.startPage)?.port {
+        let startPage = viewController.startPage,
+        let port = URLComponents(string: startPage)?.port {
       localServerPort = UInt(port)
     }
 
@@ -277,30 +278,38 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
   }
 
   @objc open func onNewVersionReady(_ command: CDVInvokedUrlCommand) {
-    newVersionReadyCallbackId = command.callbackId
+    guard let callbackId = command.callbackId else { return }
+    newVersionReadyCallbackId = callbackId
 
-    let result = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
+    let result: CDVPluginResult? = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
     // This allows us to invoke the callback later
     result?.setKeepCallbackAs(true)
-    commandDelegate?.send(result, callbackId: newVersionReadyCallbackId)
+    if let result = result {
+      commandDelegate?.send(result, callbackId: callbackId)
+    }
   }
 
-  private func notifyNewVersionReady(_ version: String?) {
+  private func notifyNewVersionReady(_ version: String) {
     guard let newVersionReadyCallbackId = newVersionReadyCallbackId else { return }
 
-    let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: version)
+    let result: CDVPluginResult? = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: version)
     // This allows us to invoke the callback later
     result?.setKeepCallbackAs(true)
-    commandDelegate?.send(result, callbackId: newVersionReadyCallbackId)
+    if let result = result {
+      commandDelegate?.send(result, callbackId: newVersionReadyCallbackId)
+    }
   }
 
   @objc open func onError(_ command: CDVInvokedUrlCommand) {
-    errorCallbackId = command.callbackId
+    guard let callbackId = command.callbackId else { return }
+    errorCallbackId = callbackId
 
-    let result = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
+    let result: CDVPluginResult? = CDVPluginResult(status: CDVCommandStatus_NO_RESULT)
     // This allows us to invoke the callback later
     result?.setKeepCallbackAs(true)
-    commandDelegate?.send(result, callbackId: errorCallbackId)
+    if let result = result {
+      commandDelegate?.send(result, callbackId: callbackId)
+    }
   }
 
   private func notifyError(_ error: Error) {
@@ -309,10 +318,12 @@ open class WebAppLocalServer: METPlugin, AssetBundleManagerDelegate {
     guard let errorCallbackId = errorCallbackId else { return }
 
     let errorMessage = String(describing: error)
-    let result = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: errorMessage)
+    let result: CDVPluginResult? = CDVPluginResult(status: CDVCommandStatus_OK, messageAs: errorMessage)
     // This allows us to invoke the callback later
     result?.setKeepCallbackAs(true)
-    commandDelegate?.send(result, callbackId: errorCallbackId)
+    if let result = result {
+      commandDelegate?.send(result, callbackId: errorCallbackId)
+    }
   }
 
   // MARK: - Managing Versions
