@@ -90,6 +90,34 @@ if (!IS_CHANGESTREAM) {
 }
 
 // ============================================================================
+// CURSOR SUPPORT TESTS
+// ============================================================================
+
+// $where/$near must fall back, like oplog's cursorSupported already does.
+Tinytest.addAsync(
+  'changestream - cursorSupported rejects $where and $near',
+  async function (test) {
+    // Never written to: the fallback's server-side find only evaluates
+    // $where / $near once the namespace exists.
+    const c = makeCollection();
+
+    const supported = async function (expected, selector) {
+      const handle = await c.find(selector).observeChanges({ added() {} });
+      test.equal(isChangeStreamDriver(handle), expected, EJSON.stringify(selector));
+      handle.stop();
+    };
+
+    await supported(true, { foo: 'asdf' });
+    await supported(true, { $and: [{ foo: 'asdf' }, { bar: 'baz' }] });
+
+    await supported(false, { $where: 'xxx' });
+    await supported(false, { $and: [{ foo: 'adsf' }, { $where: 'xxx' }] });
+    await supported(false, { foo: 'fn', $where() { return true; } });
+    await supported(false, { x: { $near: [1, 1] } });
+  }
+);
+
+// ============================================================================
 // BASIC CRUD OPERATIONS TESTS
 // ============================================================================
 
