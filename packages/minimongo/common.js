@@ -3,6 +3,27 @@ import LocalCollection from './local_collection.js';
 export const hasOwn = Object.prototype.hasOwnProperty;
 
 export class MiniMongoQueryError extends Error {}
+
+// Whether the string form of $where is allowed on the server (default: off;
+// see the $where operator). `undefined` defers to the
+// Meteor.settings.packages.minimongo.allowStringWhere setting.
+let _allowStringWhereOverride;
+
+export function _setAllowStringWhere(value) {
+  _allowStringWhereOverride = value === undefined ? undefined : !!value;
+}
+
+export function _getAllowStringWhere() {
+  return _allowStringWhereOverride;
+}
+
+function stringWhereAllowedOnServer() {
+  if (_allowStringWhereOverride !== undefined) {
+    return _allowStringWhereOverride;
+  }
+
+  return !!Meteor.settings?.packages?.minimongo?.allowStringWhere;
+}
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
 //    - operand - the "right hand side" of the operator
@@ -304,6 +325,18 @@ const LOGICAL_OPERATORS = {
     matcher._hasWhere = true;
 
     if (!(selectorValue instanceof Function)) {
+      // The string form compiles to Function() and runs in the server process,
+      // so it only suits trusted selectors. Off by default on the server; opt
+      // in with the setting below.
+      if (Meteor.isServer && !stringWhereAllowedOnServer()) {
+        throw new MiniMongoQueryError(
+          'A string argument to $where is disabled on the server by default. ' +
+          'Use the function form ({ $where() { return ... } }), or set ' +
+          'Meteor.settings.packages.minimongo.allowStringWhere to true to ' +
+          'enable it.'
+        );
+      }
+
       // XXX MongoDB seems to have more complex logic to decide where or or not
       // to add 'return'; not sure exactly what it is.
       selectorValue = Function('obj', `return ${selectorValue}`);

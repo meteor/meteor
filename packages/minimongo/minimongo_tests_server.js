@@ -567,3 +567,40 @@ Tinytest.add('minimongo - sorter and projection combination', test => {
     T({ a: { $ne: { a: 2 } } }, { $set: { a: { a: 2 } } }, '$ne object');
   });
 }))();
+
+
+Tinytest.add(
+  'minimongo - $where string is refused on the server by default',
+  test => {
+    // Function form is always allowed (cannot arrive over DDP).
+    const fnMatcher = new Minimongo.Matcher({ $where() { return this.a === 1; } });
+    test.isTrue(fnMatcher.documentMatches({ a: 1 }).result);
+    test.isFalse(fnMatcher.documentMatches({ a: 2 }).result);
+
+    // String form is refused by default on the server.
+    test.throws(
+      () => new Minimongo.Matcher({ $where: 'this.a === 1' }),
+      /string argument to \$where is disabled/
+    );
+
+    const coll = new LocalCollection();
+    test.throws(
+      () => coll.find({ $where: 'true' }),
+      /string argument to \$where is disabled/
+    );
+
+    Minimongo._setAllowStringWhere(true);
+    try {
+      const strMatcher = new Minimongo.Matcher({ $where: 'this.a === 1' });
+      test.isTrue(strMatcher.documentMatches({ a: 1 }).result);
+      test.isFalse(strMatcher.documentMatches({ a: 2 }).result);
+    } finally {
+      Minimongo._setAllowStringWhere(undefined);
+    }
+
+    test.throws(
+      () => new Minimongo.Matcher({ $where: 'this.a === 1' }),
+      /disabled/
+    );
+  }
+);

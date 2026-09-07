@@ -1111,6 +1111,41 @@ But they can also contain more complicated tests:
 
 See the [complete documentation](https://www.mongodb.com/docs/manual/reference/operator/).
 
+### The `$where` operator {#where}
+
+`$where` matches documents against a JavaScript predicate. It accepts either a
+function or a string:
+
+```js
+// Function form — written in your app source.
+Posts.find({ $where() { return this.score > this.threshold; } });
+
+// String form — compiled and evaluated as JavaScript.
+Posts.find({ $where: 'this.score > this.threshold' });
+```
+
+On the **server**, the string form is compiled with `Function()` and runs in
+the server process, so it is only appropriate for selectors your own code
+controls. It is therefore **disabled on the server by default** — mirroring
+MongoDB's own `security.javascriptEnabled` — and Minimongo throws if a string
+`$where` reaches the server. The function form is unaffected and always works.
+
+To use the string form for trusted selectors, enable it explicitly:
+
+```json
+// settings.json
+{
+  "packages": {
+    "minimongo": {
+      "allowStringWhere": true
+    }
+  }
+}
+```
+
+Run with `meteor run --settings settings.json`. On the client the string form is
+unaffected. Prefer the function form where you can — it needs no setting.
+
 ## Modifiers {#modifiers}
 
 
