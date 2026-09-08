@@ -21,7 +21,7 @@ jobs:
         with:
           node-version: 20
           cache: npm
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
