@@ -270,6 +270,33 @@ export async function bootPackages(serverDir) {
     return true;
   }
 
+  // On Bun, Node's IPC channel is not available. Emulate process.onMessage
+  // by reading JSON lines from stdin so that hot reload messages from the
+  // parent process (meteor run) reach package handlers (webapp, dynamic-import).
+  if (typeof Bun !== 'undefined' && !process.onMessage) {
+    const _ipcHandlers = new Map();
+    process.onMessage = function (topic, callback) {
+      if (!_ipcHandlers.has(topic)) _ipcHandlers.set(topic, []);
+      _ipcHandlers.get(topic).push(callback);
+    };
+    let _ipcBuf = '';
+    process.stdin.resume();
+    process.stdin.setEncoding('utf8');
+    process.stdin.on('data', function (chunk) {
+      _ipcBuf += chunk;
+      let idx;
+      while ((idx = _ipcBuf.indexOf('\n')) !== -1) {
+        const line = _ipcBuf.slice(0, idx);
+        _ipcBuf = _ipcBuf.slice(idx + 1);
+        try {
+          const msg = JSON.parse(line);
+          const cbs = _ipcHandlers.get(msg.topic);
+          if (cbs) cbs.forEach(function (cb) { cb(msg.payload); });
+        } catch (e) { /* ignore non-JSON lines */ }
+      }
+    });
+  }
+
   // Import all packages in the dependency order computed by isobuild
   for (const item of programJson.load) {
     setCurrentPackage(item.path);
