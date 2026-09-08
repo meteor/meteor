@@ -1,0 +1,108 @@
+name: ESM bundle runtimes
+
+# Boots an ESM server bundle (`meteor build --format=esm`) and smoke-tests DDP
+# on both Node and Bun. The Node leg is the control: if Bun fails while Node
+# passes, the regression is runtime-specific rather than a broken bundle.
+
+on:
+  pull_request:
+    paths:
+      - 'tools/isobuild/bundler.js'
+      - 'tools/static-assets/server/**'
+      - 'tools/cli/commands.js'
+      - 'tools/tests/apps/esm-bun-smoke/**'
+      - 'scripts/ci/esm-bun-smoke.mjs'
+      - '.github/workflows/test-esm-bun.yml'
+
+jobs:
+  smoke:
+    name: ${{ matrix.runtime }}
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: [node, bun]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.runtime }}
+      cancel-in-progress: true
+
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+
+    env:
+      NODE_ENV: CI
+      SMOKE_PORT: 3000
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+
+      # Pinned deliberately: Bun has no LTS channel and ships minors every few
+      # weeks, so the runtime under test is fixed and bumped on purpose.
+      - name: Set up Bun
+        if: matrix.runtime == 'bun'
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .babel-cache
+            dev_bundle
+          key: ${{ runner.os }}-esm-bun-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-esm-bun-
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Build the smoke app with --format=esm
+        run: |
+          cp -r tools/tests/apps/esm-bun-smoke "$RUNNER_TEMP/smoke-app"
+          cd "$RUNNER_TEMP/smoke-app"
+          npm install
+          "$GITHUB_WORKSPACE/meteor" build --format=esm --directory "$RUNNER_TEMP/smoke-bundle"
+
+      - name: Install server dependencies
+        working-directory: ${{ runner.temp }}/smoke-bundle/bundle/programs/server
+        run: npm install --omit=dev
+
+      - name: Boot the bundle under ${{ matrix.runtime }} and smoke-test DDP
+        run: |
+          set -euo pipefail
+          MONGO_URL=mongodb://localhost:27017/smoke \
+          ROOT_URL="http://localhost:${SMOKE_PORT}" \
+          PORT="${SMOKE_PORT}" \
+          "${{ matrix.runtime }}" "$RUNNER_TEMP/smoke-bundle/bundle/index.mjs" \
+            > "$RUNNER_TEMP/server.log" 2>&1 &
+          echo $! > "$RUNNER_TEMP/server.pid"
+
+          for _ in $(seq 1 120); do
+            if curl -fsS -o /dev/null "http://localhost:${SMOKE_PORT}/"; then break; fi
+            sleep 1
+          done
+          curl -fsS -o /dev/null "http://localhost:${SMOKE_PORT}/"
+          echo "ok  HTTP 200 from the ${{ matrix.runtime }} process"
+
+          # The client always runs on Node: the runtime under test is the server.
+          node scripts/ci/esm-bun-smoke.mjs "ws://localhost:${SMOKE_PORT}/websocket"
+
+      - name: Server log
+        if: always()
+        run: cat "$RUNNER_TEMP/server.log" || true
+
+      - name: Stop the server
+        if: always()
+        run: kill "$(cat "$RUNNER_TEMP/server.pid")" 2>/dev/null || true

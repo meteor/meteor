@@ -1,0 +1,7 @@
+# App used by the ESM/Bun smoke-test CI job.
+# Exercises the three DDP primitives a server bundle must support:
+# a method, a publication, and a connection.
+meteor-base
+webapp
+ecmascript
+mongo
