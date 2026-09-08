@@ -22,6 +22,10 @@ on:
       - devel
 
 env:
+  # npm submits an audit request with every install. Meteor runs many installs
+  # when caches are cold, and this workflow does not consume their automatic
+  # audit reports. Avoid making CI reliability depend on npm's audit endpoint.
+  npm_config_audit: "false"
   METEOR_PRETTY_OUTPUT: 0
   SELF_TEST_TOOL_NODE_FLAGS: ' '
   TOOL_NODE_FLAGS: --expose-gc

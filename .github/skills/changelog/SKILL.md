@@ -196,6 +196,58 @@ meteor update --release <VERSION>
 * Docs: `[text](https://docs.meteor.com/...)`
 * External changelog: `[pkg@ver](url)`
 * All PRs: `[GitHub PRs X.Y](...)`
+* Agent Skills release: `[vA.B.C](https://github.com/meteor/agent-skills/releases/tag/vA.B.C)`
+
+### Meteor Agent Skills
+
+Add a dedicated `#### Meteor Agent Skills` section only when a new coordinated
+[`meteor/agent-skills`](https://github.com/meteor/agent-skills) catalog tag is actually
+published for this Meteor release and its exact-tag remote installation tests pass.
+Place it after the All Merged PRs and external package changelog links, before Breaking
+Changes. If the Agent Skills version was not bumped for this Meteor release, omit the
+heading entirely; do not add an `N/A` placeholder.
+
+For a Meteor beta or RC, use this concise, client-neutral section:
+
+````markdown
+#### Meteor Agent Skills
+
+This Meteor prerelease was tested with [Agent Skills vA.B.C-beta.N](https://github.com/meteor/agent-skills/releases/tag/vA.B.C-beta.N).
+
+Install or update Meteor Agent Skills:
+
+```bash
+npx skills@latest add 'meteor/agent-skills#vA.B.C-beta.N'
+```
+
+See the [Meteor Agent Skills guide](https://docs.meteor.com/ai/agent-skills) for more
+installation options.
+````
+
+For an official Meteor release, use the same template but change `prerelease` to
+`release` and replace the beta tag in both the release link and installation command
+with the exact verified stable `vA.B.C` tag.
+
+This section tracks coordinated release metadata, not a Meteor code change. Do not put
+the catalog version under Features, Improvements, Fixes, Bumped Packages, or Special
+thanks. Do not use this section to list independent Agent Skills releases that are not
+paired with the Meteor release represented by the changelog.
+
+For a Meteor beta or RC, record the exact verified Agent Skills beta tag. For the
+official release, use the verified stable tag instead of retaining multiple candidate
+links. Do not add a planned, failed, missing, locally tested-only, or previously
+recorded tag. The Agent Skills catalog has independent semver; never infer its version
+from the Meteor version.
+
+The `#vA.B.C[-beta.N]` ref forces the catalog tag while keeping the installation
+client-neutral. Before publishing the changelog, test the displayed command with the
+current `skills` npm release, verify the installed files match the tag, and verify that
+the release and official guide links resolve. Keep client-specific commands in the
+linked Agent Skills release notes instead of expanding the Meteor changelog.
+
+When rerun, `skills add` replaces each selected existing skill directory and updates
+its `skills-lock.json` ref. It leaves installed skills that the user does not select in
+place; do not describe the command as removing or synchronizing the whole catalog.
 
 ---
 
@@ -342,6 +394,10 @@ When the changelog file already exists with content:
 
 ### Inclusion & Exclusion Rules
 
+The coordinated Agent Skills release section is the only companion-artifact exception
+to the PR-based inclusion rules below. Its live tag and remote test evidence determine
+eligibility; it is not discovered from the Meteor source diff.
+
 **Include only PRs that touch release-relevant directories:**
 
 * `tools/` — CLI and build system
@@ -374,12 +430,14 @@ Scan PR title, body, labels, and phrases such as:
    - **Major/minor**: Features → Improvements → Fixes (as H4 subheaders)
    - **Patch**: flat list, most impactful first
 3. All merged PRs link (if needed)
-4. Breaking Changes
-5. Internal API changes
-6. Migration Steps
-7. Bumped Meteor Packages (`TBD` if unknown)
-8. Bumped NPM Packages (`TBD` or `N/A`)
-9. Special thanks to
+4. External package changelogs (if applicable)
+5. Meteor Agent Skills (only for a newly published, exact verified companion catalog tag)
+6. Breaking Changes
+7. Internal API changes
+8. Migration Steps
+9. Bumped Meteor Packages (`TBD` if unknown)
+10. Bumped NPM Packages (`TBD` or `N/A`)
+11. Special thanks to
 
 ---
 
@@ -416,3 +474,8 @@ Scan PR title, body, labels, and phrases such as:
 * Open milestone items explicitly included or deferred
 * Bots and administrative-only participants excluded
 * Highlights stay concise and link issues or source PRs only when useful to readers
+* Meteor Agent Skills section is omitted unless a new companion catalog tag was
+  published and paired with this Meteor release
+* Agent Skills companion and official guide links, when the section is present, resolve
+  to the exact verified GitHub release and official documentation
+* Official releases point to the stable Agent Skills tag rather than a prerelease tag
