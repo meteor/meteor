@@ -1,5 +1,6 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
+var ZodernSourceMap = require('@zodern/source-maps');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
@@ -9,6 +10,29 @@ import { sourceMapLength } from '../utils/utils.js';
 import files from '../fs/files';
 import { findAssignedGlobals } from './js-analyze.js';
 import { convert as convertColons } from '../utils/colon-converter.js';
+
+function countNewlines(s) {
+  let n = 0, i = -1;
+  while ((i = s.indexOf('\n', i + 1)) !== -1) n++;
+  return n;
+}
+
+// @zodern/source-maps concatenates flat v3 maps only, no indexed/`sections`.
+function isZodernSupportedMap(m) {
+  return !m || (
+    m.version === 3 &&
+    typeof m.mappings === "string" &&
+    !m.sections &&
+    Array.isArray(m.sources)
+  );
+}
+
+function canUseZodernSourceMaps(files) {
+  if (process.env.METEOR_DISABLE_ZODERN_SOURCEMAP) {
+    return false;
+  }
+  return files.every(file => isZodernSupportedMap(file.sourceMap));
+}
 
 // A rather small cache size, assuming only one module is being linked
 // most of the time.
@@ -184,15 +208,17 @@ Object.assign(Module.prototype, {
       ),
     };
 
+    const useZodern = canUseZodernSourceMaps(self.files);
+
     const results = [result];
-    // An array of strings and SourceNode objects.
+    // Strings, plus per-file SourceNodes (wasm) or {code,map,lineCount} (zodern).
     let chunks = [];
     let fileCount = 0;
 
     // Emit each file
     if (haveMeteorInstallOptions) {
       const trees = await self._buildModuleTrees(results, sourceWidth);
-      fileCount = await self._chunkifyModuleTrees(trees, chunks, sourceWidth);
+      fileCount = await self._chunkifyModuleTrees(trees, chunks, sourceWidth, useZodern);
 
       // During the full link, code will be added to pass these to the
       // core runtime so it can handle evaluating the modules
@@ -201,9 +227,9 @@ Object.assign(Module.prototype, {
 
       for (const file of this.files) {
         if (file.bare) {
-          chunks.push('\n', await file.getPrelinkedOutput({
-            sourceWidth
-          }));
+          chunks.push('\n', await (useZodern
+            ? file.getPrelinkedOutputParts({ sourceWidth })
+            : file.getPrelinkedOutput({ sourceWidth })));
         } else if (!file.lazy) {
           result.eagerModulePaths.push(file.absModuleId);
           if (file.mainModule) {
@@ -226,19 +252,44 @@ Object.assign(Module.prototype, {
           chunks.push("\n\n\n\n\n\n");
         }
 
-        chunks.push(await file.getPrelinkedOutput({
-          sourceWidth: sourceWidth,
-        }));
+        chunks.push(await (useZodern
+          ? file.getPrelinkedOutputParts({ sourceWidth: sourceWidth })
+          : file.getPrelinkedOutput({ sourceWidth: sourceWidth })));
 
         ++fileCount;
       }
     }
 
-    var node = new sourcemap.SourceNode(null, null, null, chunks);
-
     await Profile.time(
       'getPrelinkedFiles toStringWithSourceMap',
       function () {
+        if (useZodern) {
+          const sm = new ZodernSourceMap();
+          let genLine = 0;
+          const codeParts = [];
+          for (const chunk of chunks) {
+            if (typeof chunk === "string") {
+              codeParts.push(chunk);
+              genLine += countNewlines(chunk);
+            } else {
+              codeParts.push(chunk.code);
+              if (fileCount > 0 && chunk.map) {
+                sm.addMap(chunk.map, genLine);
+              }
+              genLine += chunk.lineCount;
+            }
+          }
+          result.source = codeParts.join("");
+          if (fileCount > 0) {
+            const built = sm.build();
+            result.sourceMap = built.mappings ? built : null;
+          } else {
+            result.sourceMap = null;
+          }
+          return;
+        }
+
+        var node = new sourcemap.SourceNode(null, null, null, chunks);
         if (fileCount > 0) {
           var swsm = node.toStringWithSourceMap({
             file: self.combinedServePath
@@ -344,7 +395,7 @@ Object.assign(Module.prototype, {
   // Take the tree generated in getPrelinkedFiles and populate the chunks
   // array with strings and SourceNode objects that can be combined into a
   // single SourceNode object. Return the count of modules in the tree.
-  async _chunkifyModuleTrees(trees, chunks, sourceWidth) {
+  async _chunkifyModuleTrees(trees, chunks, sourceWidth, useParts) {
     const self = this;
 
     assert.ok(_.isArray(chunks));
@@ -376,9 +427,9 @@ Object.assign(Module.prototype, {
       } else if (t instanceof File) {
         ++moduleCount;
 
-        chunks.push(await t.getPrelinkedOutput({
-          sourceWidth,
-        }));
+        chunks.push(await (useParts
+          ? t.getPrelinkedOutputParts({ sourceWidth })
+          : t.getPrelinkedOutput({ sourceWidth })));
       } else if (_.isObject(t)) {
         chunks.push("{");
         const keys = Object.keys(t);
@@ -697,6 +748,11 @@ Object.assign(File.prototype, {
   // Returns a SourceNode.
   getPrelinkedOutput: Profile("linker File#getPrelinkedOutput", function (options) {
     return getPrelinkedOutputCached(this, options);
+  }),
+
+  // Same bytes as getPrelinkedOutput().toString(), as { code, map, lineCount }.
+  getPrelinkedOutputParts: Profile("linker File#getPrelinkedOutputParts", function (options) {
+    return getPrelinkedOutputPartsCached(this, options);
   })
 });
 
@@ -801,6 +857,90 @@ const getPrelinkedOutputCached = require("optimism").wrap(
       }
 
       return JSON.stringify({
+        hash: file._inputHash,
+        arch: file.bundleArch,
+        bare: file.bare,
+        servePath: file.servePath,
+        options,
+      });
+    }
+  }
+);
+
+const getPrelinkedOutputPartsCached = require("optimism").wrap(
+  async function (file, options) {
+    var width = options.sourceWidth || 70;
+    var bannerWidth = width + 3;
+    var preserveLineNumbers = options.preserveLineNumbers;
+
+    if (file.sourceMap) {
+      preserveLineNumbers = false;
+    }
+
+    const result = {
+      code: file.source,
+      map: file.sourceMap || null,
+    };
+
+    var pathNoSlash = convertColons(file.servePath.replace(/^\//, ""));
+
+    var header = "";
+    if (! file.bare) {
+      header += file._getClosureHeader() + (preserveLineNumbers ? "" : "\n\n");
+    }
+    if (! preserveLineNumbers) {
+      var bannerLines = [pathNoSlash];
+      if (file.bare) {
+        bannerLines.push(
+          "This file is in bare mode and is not in its own closure.");
+      }
+      header += banner(bannerLines, bannerWidth);
+      header += new Array(width + 1).join(' ') + " //\n";
+    }
+
+    var body = "";
+    var map = null;
+    if (result.code) {
+      body = result.code;
+      if (result.map) {
+        const headerLineCount = countNewlines(header);
+        map = {
+          ...result.map,
+          mappings: ';'.repeat(headerLineCount) + result.map.mappings,
+        };
+      }
+      // NaN index (kept verbatim from getPrelinkedOutput): always appends "\n".
+      if (result.code[result.code - 1] !== "\n") {
+        body += "\n";
+      }
+    }
+
+    var footer = "";
+    if (file.bare) {
+      if (! preserveLineNumbers) {
+        footer += dividerLine(bannerWidth) + "\n";
+      }
+    } else {
+      const closureFooter = file._getClosureFooter();
+      if (preserveLineNumbers) {
+        footer += closureFooter;
+      } else {
+        footer += dividerLine(bannerWidth) + "\n" + closureFooter;
+      }
+    }
+
+    const code = header + body + footer;
+    return { code, map, lineCount: countNewlines(code) };
+  }, {
+    max: Math.pow(2, 12),
+
+    makeCacheKey(file, options) {
+      if (options.disableCache) {
+        return;
+      }
+
+      return JSON.stringify({
+        parts: true,
         hash: file._inputHash,
         arch: file.bundleArch,
         bare: file.bare,
