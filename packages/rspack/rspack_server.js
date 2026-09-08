@@ -2,14 +2,21 @@ import { Meteor } from 'meteor/meteor';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
 import path from 'path';
 import {
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
+  getRspackChunksContext,
+  getRspackAssetsContext,
   RSPACK_HOT_UPDATE_REGEX,
 } from "./lib/constants";
 
-// Define constants for both development and production
-const rspackChunksContext = process.env.RSPACK_CHUNKS_CONTEXT || RSPACK_CHUNKS_CONTEXT;
-const rspackAssetsContext = process.env.RSPACK_ASSETS_CONTEXT || RSPACK_ASSETS_CONTEXT;
+// The chunk/asset contexts are mode-scoped (see getRspackChunksContext) so a
+// dev server and a `meteor test` instance running on the same app directory
+// serve from — and clean — separate directories. The suffix must match the one
+// the build side used (packages/rspack/lib/processes.js): `meteor test` sets
+// Meteor.isTest and `meteor test --full-app` sets Meteor.isAppTest, mirroring
+// isMeteorAppTest()/isMeteorAppTestFullApp() in the build tool.
+const isTestMode = Meteor.isTest || Meteor.isAppTest;
+const isTestFullApp = Meteor.isAppTest;
+const rspackChunksContext = getRspackChunksContext(isTestMode, isTestFullApp);
+const rspackAssetsContext = getRspackAssetsContext(isTestMode, isTestFullApp);
 
 /**
  * Regex pattern for rspack bundles
