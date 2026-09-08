@@ -1,79 +1,122 @@
-import { discoverRspackFileExtensions } from "./lib/file-extensions";
+import { FILE_ROLE } from "./lib/constants";
+import { getBuildFileContent } from "./lib/build-context";
+import {
+  RSPACK_EXTENSIONS_TO_IGNORE,
+  getRspackFileExtensionsToIgnore,
+} from "./lib/file-extensions";
 
-Tinytest.add("rspack - file extensions - discovers application extensions", (test) => {
-  let globCall;
-  const globSync = (pattern, options) => {
-    globCall = { pattern, options };
-    return ["client/main.CSS", "imports/schema.graphql", "imports/icon.SVG", "README", ".env"];
-  };
+Tinytest.add("rspack - file extensions - default ownership is bounded and complete", (test) => {
+  test.equal(RSPACK_EXTENSIONS_TO_IGNORE, [
+    ".ts",
+    ".tsx",
+    ".mts",
+    ".cts",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".cjs",
+    ".json",
+    ".wasm",
+    ".css",
+  ]);
 
-  const extensions = discoverRspackFileExtensions({
-    globSync,
-    cwd: "/app",
-    generatedContexts: ["_build", "build-assets", "build-chunks", ".rsdoctor"],
-  });
+  test.equal(
+    new Set(RSPACK_EXTENSIONS_TO_IGNORE).size,
+    RSPACK_EXTENSIONS_TO_IGNORE.length,
+    "the static list should not contain duplicates",
+  );
 
-  [".js", ".mts", ".cts", ".wasm", ".css", ".graphql", ".svg"].forEach((extension) => {
-    test.isTrue(extensions.includes(extension), `Expected ${extension} to be delegated to Rspack`);
-  });
-  test.isFalse(extensions.includes(""));
-  test.equal(globCall, {
-    pattern: "**/*",
-    options: {
-      cwd: "/app",
-      nodir: true,
-      dot: true,
-      ignore: [
-        "node_modules/**",
-        ".meteor/**",
-        ".git/**",
-        "public/**",
-        "private/**",
-        "_build/**",
-        "build-assets/**",
-        "build-chunks/**",
-        ".rsdoctor/**",
-      ],
-    },
+  RSPACK_EXTENSIONS_TO_IGNORE.forEach((extension) => {
+    test.matches(extension, /^\.[a-z0-9]+$/, `invalid extension: ${extension}`);
   });
 });
 
-Tinytest.add("rspack - file extensions - preserves Meteor compiler inputs", (test) => {
-  const extensions = discoverRspackFileExtensions({
-    globSync: () => [
-      "client/main.html",
-      "client/main.less",
-      "client/main.scss",
-      "client/theme.sass",
-      "imports/main.js",
-    ],
-    cwd: "/app",
-    generatedContexts: ["_build", "_build"],
-    compilerExtensions: [".HTML", ".less", ".scss", ".sass"],
-  });
+Tinytest.add("rspack - file extensions - optional compiler formats remain visible", (test) => {
+  const extensions = getRspackFileExtensionsToIgnore();
 
-  [".html", ".less", ".scss", ".sass"].forEach((extension) => {
+  [
+    ".html",
+    ".less",
+    ".scss",
+    ".sass",
+    ".styl",
+    ".coffee",
+    ".vue",
+    ".svelte",
+    ".graphql",
+    ".pug",
+  ].forEach((extension) => {
     test.isFalse(
       extensions.includes(extension),
-      `Expected Meteor to retain ownership of ${extension}`,
+      `${extension} requires an explicit ownership signal`,
     );
   });
-  test.isTrue(extensions.includes(".js"));
 });
 
-Tinytest.add("rspack - file extensions - normalizes generated contexts", (test) => {
-  let globOptions;
+Tinytest.add("rspack - file extensions - returns a fresh deterministic list", (test) => {
+  const first = getRspackFileExtensionsToIgnore();
+  first.push(".mutated");
 
-  discoverRspackFileExtensions({
-    globSync: (pattern, options) => {
-      globOptions = options;
-      return [];
-    },
-    cwd: "/app",
-    generatedContexts: ["./_build/", "_build", "custom\\chunks\\"],
-  });
-
-  test.isTrue(globOptions.ignore.includes("_build/**"));
-  test.isTrue(globOptions.ignore.includes("custom/chunks/**"));
-  test.equal(globOptions.ignore.length, 7);
+  const second = getRspackFileExtensionsToIgnore();
+  test.equal(second, RSPACK_EXTENSIONS_TO_IGNORE);
+  test.isFalse(second.includes(".mutated"));
+  test.isFalse(RSPACK_EXTENSIONS_TO_IGNORE.includes(".mutated"));
 });
+
+Tinytest.add(
+  "rspack - build-context - test-mode server imports and awaits its bundle",
+  function (test) {
+    // When isTest + isServer + isDevelopment + role=run, the server-meteor.js
+    // scaffold must keep the dependency visible to Meteor's linker and wait
+    // for the Promise exported by a bundle with TLA.
+    var content = getBuildFileContent({
+      isTest: true,
+      isTestFullApp: true,
+      isServer: true,
+      isDevelopment: true,
+      role: FILE_ROLE.run,
+      outputFile: "server-rspack.js",
+    });
+
+    test.isTrue(
+      content.includes(
+        "import __rspackBundle from './server-rspack.js'",
+      ),
+      "test-mode server link must import the Rspack bundle",
+    );
+
+    test.isFalse(
+      content.includes("var __rspackBundle = require"),
+      "test-mode server link must not use the require+await pattern (it gets stripped by the linker)",
+    );
+    test.isTrue(
+      content.includes("await Promise.resolve(__rspackBundle)"),
+      "test-mode server must wait for the async Rspack bundle",
+    );
+  },
+);
+
+Tinytest.add(
+  "rspack - build-context - production server preserves require+await for TLA",
+  function (test) {
+    var content = getBuildFileContent({
+      isTest: false,
+      isServer: true,
+      isProduction: true,
+      role: FILE_ROLE.run,
+      entryFile: "server/main.js",
+      outputFile: "server-rspack.js",
+    });
+
+    test.isTrue(
+      content.includes(
+        "var __rspackBundle = require('./server-rspack.js')",
+      ),
+      "production server must keep registering its Rspack bundle as an async dependency",
+    );
+    test.isTrue(
+      content.includes("await Promise.resolve(__rspackBundle)"),
+      "production server must wait for the async Rspack bundle",
+    );
+  },
+);
