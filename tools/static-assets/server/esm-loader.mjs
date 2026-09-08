@@ -231,7 +231,7 @@ export async function boot(serverDir) {
   const queuePathByName = Object.create(null);
   for (const item of programJson.load) {
     const m = /^packages\/(.+)\.js$/.exec(item.path);
-    if (m) queuePathByName[m[1]] = item.path;
+    if (m) { queuePathByName[m[1]] = item.path; queuePathByName[m[1].replace(/_/g, ":")] = item.path; }
     else if (item.path === 'app/app.js') queuePathByName['null'] = item.path;
   }
   const appPath = queuePathByName['null'] || null;
@@ -249,7 +249,7 @@ export async function boot(serverDir) {
     if (!coreRuntime || typeof coreRuntime.queue !== 'function') return false;
     const originalQueue = coreRuntime.queue;
     coreRuntime.queue = function (name, runImage) {
-      const itemPath = name == null ? null : queuePathByName[name] || null;
+      const itemPath = name == null ? null : (queuePathByName[name] || queuePathByName[String(name).replace(/:/g, "_")] || null);
       return originalQueue.call(this, name, function () {
         if (itemPath) {
           setCurrentPackage(itemPath);
