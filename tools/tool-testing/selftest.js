@@ -567,6 +567,31 @@ export async function listTests(options) {
   Console.error(testList.generateSkipReport());
 }
 
+// Same filtering contract as runTests. Machine-readable output goes to a
+// file so callers never need to parse startup or logging output.
+export async function listTestsJson(options) {
+  const testList = await getFilteredTests(options);
+  const pseudoTags = new Set([
+    'in other files',
+    'non-matching',
+    'unchanged',
+    'excluded',
+    'non-galaxy',
+  ]);
+  const entries = testList.filteredTests.map((test) => ({
+    file: test.file,
+    name: test.name,
+    tags: test.tags.filter((tag) => !pseudoTags.has(tag)),
+  }));
+
+  files.writeFile(
+    files.pathResolve(options.outFile),
+    JSON.stringify(entries),
+    'utf8',
+  );
+  Console.error(entries.length + " tests listed.");
+}
+
 const shouldSkipCurrentTest = ({currentTestIndex, options: {skip, limit} = {}}) => {
   if (!skip && !limit) {
     return false;
