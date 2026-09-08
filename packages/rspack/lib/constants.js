@@ -9,7 +9,7 @@ import path from 'path';
 export const DEFAULT_RSPACK_VERSION = '1.7.1';
 
 /* `@meteorjs/rspack` minimum and auto-install version; sync with its package.json. */
-export const DEFAULT_METEOR_RSPACK_VERSION = '2.2.0-beta.1';
+export const DEFAULT_METEOR_RSPACK_VERSION = '2.2.0';
 
 /* Minimum accepted and auto-install version for `@rspack/plugin-react-refresh`. */
 export const DEFAULT_METEOR_RSPACK_REACT_HMR_VERSION = '1.4.3';

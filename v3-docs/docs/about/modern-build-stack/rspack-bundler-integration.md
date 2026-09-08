@@ -311,6 +311,25 @@ Meteor-Rspack supports apps without a client entry point. If your app only defin
 
 This is useful for API servers, microservices, or background workers that don't serve a client UI. Rspack still handles server-side bundling, including dependency resolution and tree-shaking.
 
+### Testing
+
+Meteor-Rspack supports both normal test mode and full-app test mode. Run a full-app test with the usual command:
+
+```bash
+meteor test --full-app --driver-package meteortesting:mocha
+```
+
+In full-app mode, Rspack builds the application bundles defined by `meteor.mainModule` alongside the app-test modules. A configured client bundle is still built when `meteor.testModule` contains only a server entry, so browser and server integration tests run against the complete application.
+
+Meteor also waits for asynchronous server startup to finish before running the tests. This includes top-level `await` in the server entry point:
+
+```js
+// server/main.js
+await initializeServices();
+```
+
+When the test driver starts, `initializeServices()` has already settled and the application is ready for the full-app tests.
+
 ### Nested Imports
 
 Nested imports are a feature of Meteor’s bundler, not supported in standard bundlers. Meteor introduced them during a time when bundling standards were still evolving and experimented with its own approach. This feature comes from the [`reify` module](https://github.com/benjamn/reify/tree/main) and works with Babel transpilation. SWC doesn't support them since they were never standardized.
@@ -1198,6 +1217,19 @@ If you run into issues, try `meteor reset` or delete the `.meteor/local` and `_b
 For help or to report issues, post on [GitHub](https://github.com/meteor/meteor/issues) or the [Meteor forums](https://forums.meteor.com). We're focused on making Meteor faster and your feedback helps.
 
 You can compare performance before and after enabling `modern` by running [`meteor profile`](../../cli/index.md#meteorprofile). Share your results to show progress to others.
+
+### Startup Panics and Cache Recovery
+
+If Rspack exits, cannot start, or panics before its first compilation, Meteor stops the build promptly instead of waiting indefinitely. Inspect the Rspack output immediately above the error first, since it usually contains the underlying cause.
+
+If the output points to a stale or incompatible persistent cache, remove only the Rspack cache and retry:
+
+```bash
+rm -rf ./node_modules/.cache/rspack
+meteor run
+```
+
+If the targeted cleanup does not resolve the problem, run `meteor reset` and try again.
 
 ### Memory Crashes
 
