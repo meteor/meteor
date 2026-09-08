@@ -103,8 +103,15 @@ export namespace Accounts {
     tokenSequenceLength?: number | undefined;
   // Storage strategy for client tokens: 'local' (persist), 'session' (per-tab), or 'none' (in-memory only)
   clientStorage?: 'session' | 'local' | 'none';
-  // Enable hybrid HttpOnly cookie + short-lived token flow
+  // Enable hybrid HttpOnly cookie + short-lived token flow. Must be set on
+  // the server for the /_accounts/cookie/* endpoints to respond.
   useHttpOnlyCookies?: boolean | undefined;
+  // Extra origins (scheme://host[:port]) allowed to call the cookie
+  // endpoints, in addition to ROOT_URL and the request Host. Server only.
+  httpOnlyCookieAllowedOrigins?: string[] | undefined;
+  // Per-client-address rate limit for the cookie endpoints
+  // (default 30 requests per 10 seconds); `false` disables it. Server only.
+  httpOnlyCookieRateLimit?: { max?: number; windowMs?: number } | false | undefined;
   }): void;
 
   function onLogin(
