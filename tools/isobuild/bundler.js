@@ -2892,6 +2892,11 @@ class ServerTarget extends JsImageTarget {
       await builder.write("esm-loader.mjs", {
         file: files.pathJoin(serverAssetsDir, "esm-loader.mjs"),
       });
+
+      // Bun production host — standalone Bun.serve() entry point
+      await builder.write("bun-host.mjs", {
+        file: files.pathJoin(serverAssetsDir, "bun-host.mjs"),
+      });
     } else {
       // Legacy format: copy all boot files
       await builder.copyTranspiledModules([
