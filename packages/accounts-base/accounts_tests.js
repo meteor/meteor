@@ -957,3 +957,12 @@ Tinytest.addAsync('accounts - updateOrCreateUserFromExternalService - Twitter', 
   // cleanup
   await Meteor.users.removeAsync(u1.id);
 });
+
+Tinytest.add('accounts - default rate limit covers passwordless token requests', test => {
+  const rule = DDPRateLimiter.printRules()[Accounts.defaultRateLimiterRuleId];
+  test.isTrue(!!rule, 'default rate limit rule is registered');
+  const matchesName = rule._matchers.name;
+  test.isTrue(matchesName('requestLoginTokenForUser'), 'requestLoginTokenForUser is rate limited');
+  test.isTrue(matchesName('login'), 'login is still rate limited');
+  test.isFalse(matchesName('someUnrelatedMethod'), 'unrelated methods are not matched');
+});

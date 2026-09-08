@@ -93,7 +93,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
 
 // Utility for plucking addresses from emails
 const pluckAddresses = (emails = []) => emails.map(email => email.address);
-const createUser = async userData => {
+const createUser = async (userData = {}) => {
   const { username, email } = userData;
   if (!username && !email) {
     throw new Meteor.Error(400, 'Need to set a username or email');
@@ -114,7 +114,20 @@ function generateSequence() {
 }
 
 Meteor.methods({
-  requestLoginTokenForUser: async ({ selector, userData, options = {} }) => {
+  requestLoginTokenForUser: async payload => {
+    // Check the method argument so audit-argument-checks recognizes it.
+    check(payload, {
+      selector: Accounts._userQueryValidator,
+      // Keep custom account-creation data while validating lookup fields.
+      userData: Match.Maybe(Match.ObjectIncluding({
+        username: Match.Optional(Match.OneOf(String, null)),
+        email: Match.Optional(Match.OneOf(String, null)),
+      })),
+      options: Match.Maybe(Object),
+    });
+
+    const { selector, userData, options = {} } = payload;
+
     let user = await Accounts._findUserByQuery(selector, {
       fields: { emails: 1 },
     });
