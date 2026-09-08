@@ -63,7 +63,7 @@ jobs:
 
       - name: Restore caches
         id: meteor-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: |
             ~/.npm
@@ -106,7 +106,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -180,7 +180,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -248,7 +248,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -322,7 +322,7 @@ jobs:
         run: echo "/home/circleci/.sdkman/candidates/gradle/8.7/bin" >> "$GITHUB_PATH"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -392,7 +392,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -460,7 +460,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -529,7 +529,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -597,7 +597,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -665,7 +665,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -733,7 +733,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -801,7 +801,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -869,7 +869,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm
@@ -937,7 +937,7 @@ jobs:
         run: echo "NODE_PATH=$(npm root -g)" >> "$GITHUB_ENV"
 
       - name: Restore caches
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: |
             ~/.npm

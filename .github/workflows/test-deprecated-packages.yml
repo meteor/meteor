@@ -33,7 +33,7 @@ jobs:
           node-version: 20.15.1
 
       - name: Cache Node.js modules
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.npm
