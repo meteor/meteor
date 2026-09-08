@@ -26,6 +26,8 @@ import fs from 'node:fs';
 // search path.
 // ============================================================
 
+const asyncPackageContext = new AsyncLocalStorage();
+
 function createResolver(serverDir, programJson) {
   const require = createRequire(path.join(serverDir, '_virtual.js'));
 
@@ -54,10 +56,24 @@ function createResolver(serverDir, programJson) {
     return null;
   }
 
+  function getCallerPackagePath() {
+    const store = asyncPackageContext.getStore();
+    if (store && store.packagePath) return store.packagePath;
+    const stack = new Error().stack || '';
+    const m = stack.match(/packages\/([a-zA-Z0-9_-]+)\.js/);
+    if (m) {
+      const pkgPath = 'packages/' + m[1] + '.js';
+      if (packageNodeModulesMap[pkgPath]) return pkgPath;
+    }
+    return currentPackagePath;
+  }
+
   function getDirs() {
-    return currentPackagePath
-      ? (packageNodeModulesMap[currentPackagePath] || [path.join(serverDir, 'node_modules')])
-      : [path.join(serverDir, 'node_modules')];
+    const pkgPath = getCallerPackagePath();
+    if (pkgPath && packageNodeModulesMap[pkgPath]) {
+      return packageNodeModulesMap[pkgPath];
+    }
+    return [path.join(serverDir, 'node_modules')];
   }
 
   function meteorNpmRequire(name, error) {
@@ -73,12 +89,18 @@ function createResolver(serverDir, programJson) {
       if (fs.existsSync(diskPath)) return require(diskPath);
     }
 
-    // Normal module names
+    // Normal module names in caller's search path
     const resolved = resolveInDirs(name, dirs);
     if (resolved) return require(resolved);
 
     // Node builtins
     try { return require(name); } catch (e) {}
+
+    // Fallback across all packages if not found in caller's dirs (handles post-bootstrap calls)
+    for (const p of Object.keys(packageNodeModulesMap)) {
+      const fallbackResolved = resolveInDirs(name, packageNodeModulesMap[p]);
+      if (fallbackResolved) return require(fallbackResolved);
+    }
 
     throw error || new Error('Cannot find module ' + JSON.stringify(name));
   }
@@ -95,10 +117,20 @@ function createResolver(serverDir, programJson) {
     }
     const resolved = resolveInDirs(name, dirs);
     if (resolved) return resolved;
+
+    for (const p of Object.keys(packageNodeModulesMap)) {
+      const fallbackResolved = resolveInDirs(name, packageNodeModulesMap[p]);
+      if (fallbackResolved) return fallbackResolved;
+    }
+
     return require.resolve(name);
   };
 
-  return { meteorNpmRequire, setCurrentPackage(p) { currentPackagePath = p; } };
+  return {
+    meteorNpmRequire,
+    setCurrentPackage(p) { currentPackagePath = p; },
+    packageNodeModulesMap,
+  };
 }
 
 // ============================================================
@@ -165,6 +197,36 @@ export async function bootPackages(serverDir) {
 
   globalThis.Npm = { require: meteorNpmRequire };
 
+  function resolveAssetEntry(assetPath) {
+    assetPath = normalizeAssetPath(assetPath);
+    // 1. Active async context
+    const store = asyncPackageContext.getStore();
+    if (store && store.packagePath && packageAssetsMap[store.packagePath]) {
+      const p = packageAssetsMap[store.packagePath][assetPath];
+      if (p) return p;
+    }
+    // 2. Caller package from call stack
+    const stack = new Error().stack || '';
+    const m = stack.match(/packages\/([a-zA-Z0-9_-]+)\.js/);
+    if (m) {
+      const pkgPath = 'packages/' + m[1] + '.js';
+      if (packageAssetsMap[pkgPath] && packageAssetsMap[pkgPath][assetPath]) {
+        return packageAssetsMap[pkgPath][assetPath];
+      }
+    }
+    // 3. Current synchronous asset context
+    if (currentAssets && currentAssets[assetPath]) {
+      return currentAssets[assetPath];
+    }
+    // 4. Fallback search across all package assets in the bundle
+    for (const p of Object.keys(packageAssetsMap)) {
+      if (packageAssetsMap[p][assetPath]) {
+        return packageAssetsMap[p][assetPath];
+      }
+    }
+    return null;
+  }
+
   // Assets API — reads real files from the bundle, per-package context
   globalThis.Assets = {
     getTextAsync(assetPath, callback) {
@@ -174,23 +236,23 @@ export async function bootPackages(serverDir) {
       return getAsset(assetPath, undefined, callback);
     },
     absoluteFilePath(assetPath) {
-      assetPath = normalizeAssetPath(assetPath);
-      if (!currentAssets || !currentAssets[assetPath]) {
+      const relPath = resolveAssetEntry(assetPath);
+      if (!relPath) {
         throw new Error('Unknown asset: ' + assetPath);
       }
-      return path.join(serverDir, currentAssets[assetPath]);
+      return path.join(serverDir, relPath);
     },
     getServerDir() { return serverDir; },
   };
 
   function getAsset(assetPath, encoding, callback) {
-    assetPath = normalizeAssetPath(assetPath);
-    if (!currentAssets || !currentAssets[assetPath]) {
+    const relPath = resolveAssetEntry(assetPath);
+    if (!relPath) {
       const err = new Error('Unknown asset: ' + assetPath);
       if (callback) { callback(err); return; }
       return Promise.reject(err);
     }
-    const filePath = path.join(serverDir, currentAssets[assetPath]);
+    const filePath = path.join(serverDir, relPath);
     if (callback) {
       fs.readFile(filePath, encoding, (err, result) => {
         if (err) { callback(err); return; }
@@ -264,7 +326,9 @@ export async function bootPackages(serverDir) {
           setCurrentPackage(itemPath);
           setCurrentAssets(itemPath);
         }
-        return runImage.apply(this, arguments);
+        return asyncPackageContext.run({ packagePath: itemPath }, function () {
+          return runImage.apply(this, arguments);
+        });
       });
     };
     return true;
@@ -301,7 +365,9 @@ export async function bootPackages(serverDir) {
   for (const item of programJson.load) {
     setCurrentPackage(item.path);
     setCurrentAssets(item.path);
-    await import(pathToFileURL(path.join(serverDir, item.path)).href);
+    await asyncPackageContext.run({ packagePath: item.path }, async function () {
+      await import(pathToFileURL(path.join(serverDir, item.path)).href);
+    });
     // core-runtime loads first; wrap its queue before any package registers.
     if (!queueWrapped) queueWrapped = wrapCoreRuntimeQueue();
   }
