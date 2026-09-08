@@ -995,6 +995,13 @@ Object.assign(Isopack.prototype, {
     });
   },
 
+  hasTauriUnibuild: function () {
+    var self = this;
+    return _.any(self.unibuilds, function (unibuild) {
+      return unibuild.arch === 'web.tauri';
+    });
+  },
+
   canWriteLegacyBuilds() {
     function isResourceSafeForLegacyBuilds(resource) {
       // The only new kind of resource is "source"; other resources are
@@ -1098,7 +1105,8 @@ Object.assign(Isopack.prototype, {
           // plugin), as well as any files making up plugins in our package.
           pluginDependencies: self.pluginWatchSet.toJSON(),
           pluginProviderPackageMap: self.pluginProviderPackageMap.toJSON(),
-          includeCordovaUnibuild: self.hasCordovaUnibuild()
+          includeCordovaUnibuild: self.hasCordovaUnibuild(),
+          includeTauriUnibuild: self.hasTauriUnibuild()
         };
       }
 

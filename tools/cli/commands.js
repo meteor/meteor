@@ -250,7 +250,13 @@ to with --mobile-server.`);
 }
 
 export function parseRunTargets(targets) {
+  import { isTauriPlatform } from '../tauri/index.js';
+
   return targets.map((target) => {
+    if (isTauriPlatform(target)) {
+      return new TauriRunTarget(target);
+    }
+
     const targetParts = target.split('-');
     const platform = targetParts[0];
     const isDevice = targetParts[1] === 'device';
@@ -266,6 +272,18 @@ export function parseRunTargets(targets) {
   });
 };
 
+// Lightweight run-target marker for Tauri platforms (e.g. "tauri-macos").
+class TauriRunTarget {
+  constructor(platform) {
+    this.platform = platform;
+    this.isTauri = true;
+  }
+
+  get title() {
+    return this.platform;
+  }
+}
+
 function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
   const platforms = (options.platforms || []);
   const isBuildMode = platforms?.length > 0;
@@ -278,6 +296,10 @@ function filterWebArchs(webArchs, excludeArchsOption, appDir, options) {
     const hasCordovaPlatforms = platforms.includes('android') || platforms.includes('ios');
     if (!hasCordovaPlatforms) {
       webArchs = webArchs.filter(arch => arch !== 'web.cordova');
+    }
+    const hasTauriPlatforms = platforms.some(p => p.startsWith('tauri-'));
+    if (!hasTauriPlatforms) {
+      webArchs = webArchs.filter(arch => arch !== 'web.tauri');
     }
   } else {
     // Dev & Test Mode
@@ -541,11 +563,20 @@ async function doRunCommand(options) {
 
   runLog.setRawLogs(options['raw-logs'] && !options.timestamps);
 
+  // Split run targets into Cordova and Tauri groups.
+  const tauriRunTargets = runTargets.filter(t => t.isTauri);
+  const cordovaRunTargets = runTargets.filter(t => !t.isTauri);
+
   let webArchs = projectContext.platformList.getWebArchs();
-  if (! _.isEmpty(runTargets) ||
+  if (! _.isEmpty(cordovaRunTargets) ||
       options['mobile-server']) {
     if (webArchs.indexOf("web.cordova") < 0) {
       webArchs.push("web.cordova");
+    }
+  }
+  if (! _.isEmpty(tauriRunTargets)) {
+    if (webArchs.indexOf("web.tauri") < 0) {
+      webArchs.push("web.tauri");
     }
   }
 
@@ -557,7 +588,7 @@ async function doRunCommand(options) {
 
   let cordovaRunner;
   const shouldDisableCordova =  Boolean(JSON.parse(process.env.METEOR_CORDOVA_DISABLE || 'false'));
-  if (!shouldDisableCordova && !_.isEmpty(runTargets)) {
+  if (!shouldDisableCordova && !_.isEmpty(cordovaRunTargets)) {
 
     async function prepareCordovaProject() {
       import { CordovaProject } from '../cordova/project.js';
@@ -573,13 +604,25 @@ async function doRunCommand(options) {
         await cordovaProject.init();
         if (buildmessage.jobHasMessages()) return;
 
-        cordovaRunner = new CordovaRunner(cordovaProject, runTargets);
+        cordovaRunner = new CordovaRunner(cordovaProject, cordovaRunTargets);
         await cordovaRunner.checkPlatformsForRunTargets();
       });
     }
 
     await ensureDevBundleDependencies();
     await prepareCordovaProject();
+  }
+
+  let tauriRunner;
+  if (!_.isEmpty(tauriRunTargets)) {
+    import { TauriRunner } from '../tauri/runner.js';
+
+    await main.captureAndExit('', 'preparing Tauri project', async () => {
+      tauriRunner = new TauriRunner(projectContext, tauriRunTargets, {
+        mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
+      });
+      await tauriRunner.checkPlatformsForRunTargets();
+    });
   }
 
   var runAll = require('../runners/run-all.js');
@@ -604,6 +647,7 @@ async function doRunCommand(options) {
     once: options.once,
     noReleaseCheck: options['no-release-check'] || process.env.METEOR_NO_RELEASE_CHECK,
     cordovaRunner: cordovaRunner,
+    tauriRunner: tauriRunner,
     onBuilt: function () {
       // Opens a browser window when it finishes building
       if (options.open) {
@@ -1444,8 +1488,9 @@ var buildCommand = async function (options) {
   if (options.platforms) {
     const platformsArray = options.platforms.split(",");
     const excludableWebArchs = ['web.browser', 'web.browser.legacy', 'web.cordova'];
+    import { TAURI_PLATFORMS } from '../tauri/index.js';
     platformsArray.forEach(plat => {
-      if (![...excludableWebArchs, 'android', 'ios'].includes(plat)) {
+      if (![...excludableWebArchs, 'android', 'ios', ...TAURI_PLATFORMS].includes(plat)) {
         throw new Error(`Not allowed platform on '--platforms' flag: ${plat}`)
       }
     })
@@ -1486,6 +1531,38 @@ on an OS X system.");
     cordovaPlatforms = [];
   }
 
+  // Determine which Tauri platforms to build (e.g. tauri-macos).
+  import { TAURI_PLATFORMS as ALL_TAURI_PLATFORMS, hostOsForPlatform }
+    from '../tauri/index.js';
+  let tauriPlatforms = [];
+  if (!serverOnly) {
+    tauriPlatforms = projectContext.platformList.getTauriPlatforms();
+    if (selectedPlatforms) {
+      tauriPlatforms = _.intersection(selectedPlatforms, tauriPlatforms);
+    }
+    // Drop platforms that cannot be built on this host OS.
+    tauriPlatforms = tauriPlatforms.filter(platform => {
+      const requiredOs = hostOsForPlatform(platform);
+      if (requiredOs && requiredOs !== process.platform) {
+        Console.warn(`${platform}: can only be built on ${requiredOs}; skipping.`);
+        return false;
+      }
+      return true;
+    });
+
+    if (!_.isEmpty(tauriPlatforms) && !parsedMobileServerUrl) {
+      const mobileServerOption = options.server;
+      if (!mobileServerOption) {
+        Console.error(
+          "Supply the server hostname and port in the --server option " +
+            "for Tauri app builds.");
+        return 1;
+      }
+      parsedMobileServerUrl = parseMobileServerOption(mobileServerOption,
+        'server');
+    }
+  }
+
   // If we specified some platforms, we need to build what was specified.
   // For example, if we want to build only android, there is no need to build
   // web.browser.
@@ -1500,6 +1577,13 @@ on an OS X system.");
       !filteredArchs.includes('web.cordova')
     ) {
       filteredArchs.push('web.cordova');
+    }
+
+    if (
+      !_.isEmpty(tauriPlatforms) &&
+      !filteredArchs.includes('web.tauri')
+    ) {
+      filteredArchs.push('web.tauri');
     }
 
     webArchs = filteredArchs.length ? filteredArchs : undefined;
@@ -1661,6 +1745,46 @@ https://guide.meteor.com/cordova.html#submitting-android
 `, "utf8");
             }
         });
+      }
+    });
+  }
+
+  if (!_.isEmpty(tauriPlatforms)) {
+    await main.captureAndExit('', 'building Tauri app', async () => {
+      import { TauriProject } from '../tauri/project.js';
+      import { displayNameForPlatform as tauriDisplayName }
+        from '../tauri/index.js';
+
+      const mobileServerUrl = utils.formatUrl(parsedMobileServerUrl);
+
+      for (const platform of tauriPlatforms) {
+        await buildmessage.enterJob(
+          { title: `building Tauri app for ${tauriDisplayName(platform)}` },
+          async () => {
+            const tauriProject = new TauriProject(projectContext, {
+              settingsFile: options.settings,
+              mobileServerUrl,
+              debug: !!options.debug,
+              buildMode: options.debug ? 'development' : 'production',
+            });
+
+            const bundleOutput = await tauriProject.build(bundlePath);
+            if (buildmessage.jobHasMessages() || !bundleOutput) return;
+
+            const platformOutputPath = files.pathJoin(outputPath, platform);
+            files.mkdir_p(platformOutputPath);
+            if (files.exists(bundleOutput)) {
+              await files.cp_r(bundleOutput,
+                files.pathJoin(platformOutputPath, 'bundle'));
+            }
+
+            files.writeFile(
+              files.pathJoin(platformOutputPath, 'README'),
+`This is an auto-generated Tauri build for your ${tauriDisplayName(platform)} application.
+
+The native installers/binaries are under bundle/.
+`, "utf8");
+          });
       }
     });
   }

@@ -56,6 +56,7 @@ Package.onUse(function (api) {
   api.export("WebApp", "client");
 
   api.mainModule("webapp_cordova.js", "web.cordova");
+  api.mainModule("webapp_tauri.js", "web.tauri");
   api.addAssets("webapp.d.ts", "server");
 });
 

@@ -47,6 +47,14 @@ Meteor = {
   isCordova: false,
 
   /**
+   * @summary Boolean variable.  True if running in a Tauri native environment.
+   * @locus Anywhere
+   * @static
+   * @type {Boolean}
+   */
+  isTauri: false,
+
+  /**
    * @summary Boolean variable. True if running in a "modern" JS
    *          environment, as determined by the `modern` package.
    * @locus Anywhere

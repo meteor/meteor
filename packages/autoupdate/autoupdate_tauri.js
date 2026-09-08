@@ -1,0 +1,84 @@
+import { ClientVersions } from "./client_versions.js";
+
+var autoupdateVersionsTauri =
+  __meteor_runtime_config__.autoupdate.versions["web.tauri"] || {
+    version: "unknown"
+  };
+
+export const Autoupdate = {};
+
+// Stores acceptable client versions.
+const clientVersions = new ClientVersions();
+
+// Used by hot-module-replacement
+Autoupdate._clientVersions = clientVersions;
+
+
+// TODO[fibers]: make it's fine to call registerStoreClient here
+Meteor.connection.registerStoreClient(
+  "meteor_autoupdate_clientVersions",
+  clientVersions.createStore()
+);
+
+Autoupdate.newClientAvailable = function () {
+  return clientVersions.newClientAvailable(
+    "web.tauri",
+    ["version"],
+    autoupdateVersionsTauri
+  );
+};
+
+var retry = new Retry({
+  // Unlike the stream reconnect use of Retry, which we want to be instant
+  // in normal operation, this is a wacky failure. We don't want to retry
+  // right away, we can start slowly.
+  minCount: 0, // don't do any immediate retries
+  baseTimeout: 30*1000 // start with 30s
+});
+
+let failures = 0;
+
+Autoupdate._retrySubscription = () => {
+  const { appId } = __meteor_runtime_config__;
+
+  Meteor.subscribe("meteor_autoupdate_clientVersions", appId, {
+    onError(error) {
+      console.log("autoupdate subscription failed:", error);
+      failures++;
+      retry.retryLater(failures, function() {
+        // Just retry making the subscription, don't reload the whole
+        // page. While reloading would catch more cases, it would also be
+        // more prone to reload loops, which look really bad to the user.
+        Autoupdate._retrySubscription();
+      });
+    },
+
+    onReady() {
+      if (Package.reload) {
+        function checkNewVersionDocument(doc) {
+          if (doc.version !== autoupdateVersionsTauri.version) {
+            newVersionAvailable();
+          }
+        }
+
+        clientVersions.watch(checkNewVersionDocument, {
+          filter: "web.tauri"
+        });
+      }
+    }
+  });
+};
+
+Meteor.startup(() => {
+  WebAppLocalServer.onNewVersionReady(() => {
+    if (Package.reload) {
+      Package.reload.Reload._reload();
+    }
+  });
+
+  Autoupdate._retrySubscription();
+});
+
+function newVersionAvailable() {
+  WebAppLocalServer.checkForUpdates();
+}

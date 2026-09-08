@@ -1,0 +1,14 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capabilities for the Meteor Tauri app. Grants the core event bridge used by the meteor-webapp Hot Code Push integration plus the plugin's own commands.",
+  "windows": ["main"],
+  "remote": {
+    "urls": ["http://127.0.0.1:*", "http://localhost:*"]
+  },
+  "permissions": [
+    "core:default",
+    "core:event:default",
+    "meteor-webapp:default"
+  ]
+}

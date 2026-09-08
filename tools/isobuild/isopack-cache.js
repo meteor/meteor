@@ -31,6 +31,10 @@ export class IsopackCache {
     // publish a web.cordova unibuild!)
     self._includeCordovaUnibuild = !! options.includeCordovaUnibuild;
 
+    // Same as above, but for Tauri: don't build web.tauri unibuilds in a
+    // project that doesn't have any Tauri platforms.
+    self._includeTauriUnibuild = !! options.includeTauriUnibuild;
+
     // Defines the versions of packages that we build. Must be set.
     self._packageMap = options.packageMap;
 
@@ -359,6 +363,7 @@ export class IsopackCache {
             packageMap: self._packageMap,
             isopackCache: self,
             includeCordovaUnibuild: self._includeCordovaUnibuild,
+            includeTauriUnibuild: self._includeTauriUnibuild,
             includePluginProviderPackageMap: true,
             pluginCacheDir: pluginCacheDir
           });
@@ -398,7 +403,8 @@ export class IsopackCache {
     const {warnings, linted} = await compiler.lint(packageSource, {
       isopackCache: this,
       isopack: isopack,
-      includeCordovaUnibuild: this._includeCordovaUnibuild
+      includeCordovaUnibuild: this._includeCordovaUnibuild,
+      includeTauriUnibuild: this._includeTauriUnibuild
     });
     // Empty lintingMessages means we ran linters and everything was OK.
     // lintingMessages left null means there were no linters to run.
@@ -419,6 +425,12 @@ export class IsopackCache {
     // not up to date.
     if (self._includeCordovaUnibuild !==
         isopackBuildInfoJson.includeCordovaUnibuild) {
+      return false;
+    }
+
+    // Same check for Tauri.
+    if (self._includeTauriUnibuild !==
+        !! isopackBuildInfoJson.includeTauriUnibuild) {
       return false;
     }
 
@@ -450,6 +462,10 @@ export class IsopackCache {
     // If we include Cordova but this Isopack doesn't, or via versa, then we're
     // not up to date.
     if (self._includeCordovaUnibuild !== previousIsopack.hasCordovaUnibuild()) {
+      return false;
+    }
+
+    if (self._includeTauriUnibuild !== previousIsopack.hasTauriUnibuild()) {
       return false;
     }
 

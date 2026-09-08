@@ -42,7 +42,8 @@ compiler.ALL_ARCHES = [
   "os",
   "web.browser",
   "web.browser.legacy",
-  "web.cordova"
+  "web.cordova",
+  "web.tauri"
 ];
 
 compiler.compile = Profile(function (packageSource, options) {
@@ -53,6 +54,7 @@ compiler.compile = Profile(function (packageSource, options) {
   var packageMap = options.packageMap;
   var isopackCache = options.isopackCache;
   var includeCordovaUnibuild = options.includeCordovaUnibuild;
+  var includeTauriUnibuild = options.includeTauriUnibuild;
 
   var pluginWatchSet = packageSource.pluginWatchSet.clone();
   var plugins = {};
@@ -195,6 +197,9 @@ compiler.compile = Profile(function (packageSource, options) {
     if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       continue;
     }
+    if (architecture.arch === 'web.tauri' && ! includeTauriUnibuild) {
+      continue;
+    }
     if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
     // TODO -> Maybe this withCache will bring some problems in other commands.
@@ -240,6 +245,11 @@ compiler.lint = Profile(function (packageSource, options) {
     // skip Cordova if not required
     if (! options.includeCordovaUnibuild
         && architecture.arch === 'web.cordova') {
+      continue;
+    }
+    // skip Tauri if not required
+    if (! options.includeTauriUnibuild
+        && architecture.arch === 'web.tauri') {
       continue;
     }
     if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
