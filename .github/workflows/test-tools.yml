@@ -17,6 +17,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # npm submits an audit request with every install. Meteor runs many installs
+  # when caches are cold, and this workflow does not consume their automatic
+  # audit reports. Avoid making CI reliability depend on npm's audit endpoint.
+  npm_config_audit: "false"
   # Multiplies the waitSecs for self-tests.
   TIMEOUT_SCALE_FACTOR: 8
   # Retry failed tests additional times.
@@ -42,7 +46,7 @@ jobs:
     name: Setup
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -119,7 +123,7 @@ jobs:
     name: Isolated Tests
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
       # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
       # zombies behind).
@@ -198,7 +202,7 @@ jobs:
     name: ${{ matrix.name }}
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
+      image: meteor/circleci:2026.07.28-android-36-node-24
       options: ${{ matrix.resources == 'heavy' && '--init --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined' || '--init --user root' }}
     needs: setup
     timeout-minutes: 55

@@ -53,8 +53,8 @@ const {
 
 const {
   GLOBAL_STATE_KEYS,
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
+  getRspackChunksContext,
+  getRspackAssetsContext,
   FILE_ROLE,
 } = require('./constants');
 
@@ -71,6 +71,61 @@ import {
   stripRspackLabel,
 } from "./logging";
 import { isMeteorAppProfile } from "../../tools-core/lib/meteor";
+
+// Rspack's native code prints this marker when it aborts, e.g. when its
+// persistent cache was corrupted by a previous hard kill mid-write.
+const RSPACK_PANIC_PATTERN = 'Panic occurred at runtime';
+const RSPACK_UNSET_ENV = ['METEOR_IGNORE'];
+
+/**
+ * Builds the environment passed to Rspack child processes. METEOR_IGNORE is
+ * consumed by meteor-tool, not Rspack, so it is omitted here and explicitly
+ * removed again by spawnProcess after the parent environment is merged.
+ * @param {Object} envs - Rspack-specific environment variables
+ * @returns {Object} Environment variables for spawnProcess
+ */
+function getRspackSpawnEnv(envs) {
+  const parentEnv = { ...process.env };
+  delete parentEnv.METEOR_IGNORE;
+
+  return inheritMeteorToolNodeFlags({
+    ...parentEnv,
+    ...getNodeBinEnv(),
+    ...envs,
+  });
+}
+
+/**
+ * Creates a chunk-split-safe detector for the Rspack panic marker.
+ * stderr arrives in arbitrary chunks, so the marker may straddle a
+ * chunk boundary; a short tail of the previous chunk is kept to detect
+ * that case.
+ * @returns {Function} (chunk: string) => boolean
+ */
+function createPanicDetector() {
+  let tail = '';
+  return function sawPanic(chunk) {
+    const haystack = tail + chunk;
+    tail = haystack.slice(-(RSPACK_PANIC_PATTERN.length - 1));
+    return haystack.includes(RSPACK_PANIC_PATTERN);
+  };
+}
+
+/**
+ * Fails the pending first-compilation promise for one side, so a dead
+ * or panicked Rspack process surfaces as an error instead of leaving
+ * waitForFirstCompilation hanging forever. See failFirstCompilation in
+ * compilation.js.
+ *
+ * @param {string} side - 'client' or 'server'
+ * @param {string} detail - What happened to the process
+ * @returns {void}
+ */
+function failFirstCompilation(side, detail) {
+  // Required lazily to avoid a circular import: compilation.js reaches
+  // this module through config.js and build-context.js.
+  require('./compilation').failFirstCompilation(side, detail);
+}
 
 /**
  * Calculates the devServerPort based on process.env.PORT
@@ -215,12 +270,20 @@ export function getRspackCliPath() {
   const appDir = getMeteorAppDir();
 
   try {
-    // Dynamically resolve the exact bin path defined by the package
+    // Dynamically resolve the exact bin path defined by the package.
+    // Meteor's module system ignores the `paths` option and resolves unknown
+    // top-level ids to themselves, so only an absolute path that exists on
+    // disk can be trusted here.
     const pkgPath = require.resolve('@rspack/cli/package.json', { paths: [appDir] });
-    const pkg = require(pkgPath);
-    const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.rspack;
-    if (bin) {
-      return path.join(path.dirname(pkgPath), bin);
+    if (path.isAbsolute(pkgPath)) {
+      const pkg = require(pkgPath);
+      const bin = typeof pkg.bin === 'string' ? pkg.bin : pkg.bin?.rspack;
+      if (bin) {
+        const binPath = path.join(path.dirname(pkgPath), bin);
+        if (fs.existsSync(binPath)) {
+          return binPath;
+        }
+      }
     }
   } catch (err) {
     // Fall through to hardcoded fallback if package.json isn't exported
@@ -237,7 +300,18 @@ export function getRspackCliPath() {
     );
   }
 
-  for (const candidatePath of candidatePaths) {
+  // Walk up from the app directory so hoisted installs are still found when the
+  // parent holding node_modules carries no monorepo marker. Nearest ancestor
+  // wins, and the loop stops at the filesystem root.
+  let currentDir = path.dirname(appDir);
+  while (currentDir !== path.dirname(currentDir)) {
+    candidatePaths.push(
+      path.join(currentDir, 'node_modules', '@rspack', 'cli', 'bin', 'rspack.js'),
+    );
+    currentDir = path.dirname(currentDir);
+  }
+
+  for (const candidatePath of new Set(candidatePaths)) {
     if (fs.existsSync(candidatePath)) {
       return candidatePath;
     }
@@ -301,7 +375,9 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
   const isTestFullApp = isMeteorAppTestFullApp();
 
-  const module = isTest ? { isTest: true } : { isMain: true };
+  const module = isTest
+    ? { isTest: true, isTestFullApp }
+    : { isMain: true };
   const env = isMeteorAppDevelopment()
     ? { isDevelopment: true }
     : { isProduction: true };
@@ -386,8 +462,11 @@ export function getRspackEnv({ isClient, isServer, isTest: inIsTest, isTestLike:
       getBuildFilePath({ ...module, ...env, ...side, ...commandRole }),
     ],
     ["buildContext", RSPACK_BUILD_CONTEXT],
-    ["chunksContext", RSPACK_CHUNKS_CONTEXT],
-    ["assetsContext", RSPACK_ASSETS_CONTEXT],
+    // Mode-scoped so concurrent commands on one app dir (e.g. a dev server
+    // plus `meteor test`) write their chunks/assets to separate directories
+    // under public/ instead of overwriting each other.
+    ["chunksContext", getRspackChunksContext(isTest, isTestFullApp)],
+    ["assetsContext", getRspackAssetsContext(isTest, isTestFullApp)],
     ["devServerPort", process.env.RSPACK_DEVSERVER_PORT],
     ["projectConfigPath", projectConfigPath],
     ["configPath", configPath],
@@ -460,6 +539,8 @@ export function startRspackClientServe(options = {}) {
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: true, isServer: false });
   const { command, args } = getRspackCliCommand(['serve', '--config', configFile, ...params]);
+  const sawPanic = createPanicDetector();
+
   const newClientProcess = spawnProcess(
     command,
     args, {
@@ -469,7 +550,8 @@ export function startRspackClientServe(options = {}) {
       // group, releasing the devserver port even when npx wouldn't forward
       // SIGTERM/SIGINT on its own.
       detached: process.platform !== 'win32',
-      env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+      env: getRspackSpawnEnv(envs),
+      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (config && !!config?.devServerUrl) {
@@ -494,6 +576,11 @@ export function startRspackClientServe(options = {}) {
         }
       },
       onStderr: (data) => {
+        if (sawPanic(data)) {
+          // A panicked process may stay alive in serve mode, so the
+          // exit handler alone would not unblock the first compile.
+          failFirstCompilation('client', 'reported a fatal panic');
+        }
         const { cleanedData } = parseMeteorRspackOutput(data);
         if (!cleanedData) return;
         // Check if this is an EADDRINUSE error in development mode (which we want to completely ignore)
@@ -530,7 +617,14 @@ export function startRspackClientServe(options = {}) {
           }
         }
       },
+      onExit: (code, signal) => {
+        failFirstCompilation(
+          'client',
+          `exited unexpectedly (${signal ? `signal ${signal}` : `code ${code}`})`
+        );
+      },
       onError: (err) => {
+        failFirstCompilation('client', `failed to start (${err.message})`);
         const errorMsg = `Rspack Error: ${err.message}`;
         if (shouldLogVerbose()) {
           logError(errorMsg);
@@ -567,13 +661,16 @@ export function startRspackServerWatch(options = {}) {
   const configFile = getConfigFilePath();
   const { params, envs } = getRspackEnv({ isClient: false, isServer: true });
   const { command, args } = getRspackCliCommand(['build', '--watch', '--config', configFile, ...params]);
+  const sawPanic = createPanicDetector();
+
   const newServerProcess = spawnProcess(
     command,
     args, {
     cwd: appDir,
     // Detach for the same reason as the client serve process; see comment there.
     detached: process.platform !== 'win32',
-    env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+    env: getRspackSpawnEnv(envs),
+    unsetEnv: RSPACK_UNSET_ENV,
     onStdout: (data) => {
       const { cleanedData, config } = parseMeteorRspackOutput(data);
       if (onCompile && config && (config?.compilationCount || 0) > 0) {
@@ -588,6 +685,11 @@ export function startRspackServerWatch(options = {}) {
     },
     onStderr: (data) => {
       const { cleanedData } = parseMeteorRspackOutput(data);
+      if (sawPanic(data)) {
+        // A panicked process may stay alive in watch mode, so the
+        // exit handler alone would not unblock the first compile.
+        failFirstCompilation('server', 'reported a fatal panic');
+      }
       if (!cleanedData) return;
       // Check if this is actually an informational message (like webpack-dev-server messages)
       if (cleanedData.includes('Project is running at:')) {
@@ -614,7 +716,14 @@ export function startRspackServerWatch(options = {}) {
         }
       }
     },
+    onExit: (code, signal) => {
+      failFirstCompilation(
+        'server',
+        `exited unexpectedly (${signal ? `signal ${signal}` : `code ${code}`})`
+      );
+    },
     onError: (err) => {
+      failFirstCompilation('server', `failed to start (${err.message})`);
       const errorMsg = `Rspack Error: ${err.message}`;
       if (shouldLogVerbose()) {
         logError(errorMsg);
@@ -642,13 +751,17 @@ export function startRspackServerWatch(options = {}) {
  * @returns {Promise<void>} A promise that resolves when the build is complete
  * @throws {Error} If the build process fails
  */
-export async function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTestLike, onCompile, watch, label = 'Build' } = {}) {
+// Deliberately not async: callers that fire-and-forget rely on the
+// returned promise being the same one that carries the no-op rejection
+// handler attached below; an async wrapper promise would not.
+export function runRspackBuild({ isClient, isServer, isTest, isTestModule, isTestLike, onCompile, watch, label = 'Build' } = {}) {
   const appDir = getMeteorAppDir();
   const configFile = getConfigFilePath();
 
   const endpoint = isClient ? 'Client' : 'Server';
+  const sawPanic = createPanicDetector();
   // Use a promise to ensure Meteor waits until Rspack finishes
-  return new Promise((resolve, reject) => {
+  const buildPromise = new Promise((resolve, reject) => {
     const { params, envs } = getRspackEnv({ isClient, isServer, isTest, isTestModule, isTestLike });
     const rspackArgs = [
       'build',
@@ -663,7 +776,8 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
       args,
       {
       cwd: appDir,
-      env: inheritMeteorToolNodeFlags({ ...process.env, ...getNodeBinEnv(), ...envs }),
+      env: getRspackSpawnEnv(envs),
+      unsetEnv: RSPACK_UNSET_ENV,
       onStdout: (data) => {
         const { cleanedData, config } = parseMeteorRspackOutput(data);
         if (onCompile && config && (config?.compilationCount || 0) > 0) {
@@ -677,6 +791,12 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
         }
       },
       onStderr: (data) => {
+        if (sawPanic(data)) {
+          // In watch mode a panicked process may stay alive and never
+          // exit, so the exit handler alone would not unblock the
+          // first compile.
+          failFirstCompilation(endpoint.toLowerCase(), 'reported a fatal panic');
+        }
         const { cleanedData } = parseMeteorRspackOutput(data);
         if (!cleanedData) return;
         // Check if this is actually an informational message (like webpack-dev-server messages)
@@ -704,7 +824,15 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
           }
         }
       },
-      onExit: (code) => {
+      onExit: (code, signal) => {
+        // Even a clean exit must fail a still-pending first compile
+        // (e.g. a watch process that exits before compiling), so this
+        // runs before branching on the exit code; it no-ops after a
+        // successful compilation.
+        failFirstCompilation(
+          endpoint.toLowerCase(),
+          `exited (${signal ? `signal ${signal}` : `code ${code}`})`
+        );
         if (code === 0) {
           resolve();
         } else {
@@ -718,6 +846,10 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
         }
       },
       onError: (err) => {
+        failFirstCompilation(
+          endpoint.toLowerCase(),
+          `failed to start (${err.message})`
+        );
         if (shouldLogVerbose()) {
           logError(`Rspack ${label} ${endpoint} error: ${err.message}`);
         } else {
@@ -727,6 +859,14 @@ export async function runRspackBuild({ isClient, isServer, isTest, isTestModule,
       }
     });
   });
+
+  // Some call sites (production run, tests) start this build without
+  // awaiting the returned promise and rely on the first-compile
+  // promises instead; mark rejections as handled so they never surface
+  // as unhandled rejections there, while awaiting callers still see
+  // the rejection.
+  buildPromise.catch(() => {});
+  return buildPromise;
 }
 
 /**
