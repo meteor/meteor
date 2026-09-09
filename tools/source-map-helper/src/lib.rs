@@ -1,12 +1,13 @@
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::fs::{self, File};
-use std::io::{BufWriter, Read, Write};
+use std::io::{BufWriter, Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result, anyhow, bail};
 use memmap2::Mmap;
 use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
 use sha2::{Digest, Sha256};
 
 pub const PROTOCOL_VERSION: u32 = 1;
@@ -16,6 +17,8 @@ pub const PROTOCOL_VERSION: u32 = 1;
 pub struct Request {
     pub protocol_version: u32,
     pub workspace_root: PathBuf,
+    #[serde(default)]
+    pub input_roots: Vec<PathBuf>,
     pub output: OutputRequest,
     pub pieces: Vec<Piece>,
 }
@@ -27,6 +30,8 @@ pub struct OutputRequest {
     pub map_path: PathBuf,
     #[serde(default)]
     pub file: Option<String>,
+    #[serde(default)]
+    pub source_prefix: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -71,7 +76,7 @@ struct RawSourceMap<'a> {
     #[serde(default, borrow)]
     source_root: Option<Cow<'a, str>>,
     #[serde(default, borrow)]
-    sources_content: Option<Vec<Option<Cow<'a, str>>>>,
+    sources_content: Option<Vec<Option<&'a RawValue>>>,
     #[serde(default, borrow)]
     mappings: Cow<'a, str>,
     #[serde(default, borrow)]
@@ -137,11 +142,13 @@ struct InflatedMapping {
 struct OutputMap {
     mapping_path: PathBuf,
     mapping_writer: BufWriter<File>,
+    source_contents_path: PathBuf,
+    source_contents_writer: BufWriter<CountedFile>,
     sources: Vec<String>,
     source_indexes: HashMap<String, u32>,
     names: Vec<String>,
     name_indexes: HashMap<String, u32>,
-    source_contents: HashMap<String, String>,
+    source_contents: HashMap<String, SourceContentLocation>,
     pending: Vec<OutputMapping>,
     previous_generated_line: u32,
     previous_generated_column: i64,
@@ -150,6 +157,30 @@ struct OutputMap {
     previous_source: i64,
     previous_name: i64,
     wrote_mapping: bool,
+    source_prefix: Option<String>,
+}
+
+#[derive(Clone, Copy)]
+struct SourceContentLocation {
+    offset: u64,
+    length: u64,
+}
+
+struct CountedFile {
+    file: File,
+    bytes: u64,
+}
+
+impl Write for CountedFile {
+    fn write(&mut self, buffer: &[u8]) -> std::io::Result<usize> {
+        let written = self.file.write(buffer)?;
+        self.bytes += written as u64;
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.file.flush()
+    }
 }
 
 struct OutputCode {
@@ -202,6 +233,16 @@ pub fn execute(request: Request) -> Result<Response> {
     validate_output_path(&root, &request.output.code_path)?;
     validate_output_path(&root, &request.output.map_path)?;
 
+    let mut input_roots = Vec::with_capacity(request.input_roots.len() + 1);
+    input_roots.push(root.clone());
+    for input_root in &request.input_roots {
+        input_roots.push(
+            input_root
+                .canonicalize()
+                .with_context(|| format!("resolving input root {}", input_root.display()))?,
+        );
+    }
+
     if let Some(parent) = request.output.code_path.parent() {
         fs::create_dir_all(parent)?;
     }
@@ -210,6 +251,7 @@ pub fn execute(request: Request) -> Result<Response> {
     }
 
     let mapping_path = sibling_temporary_path(&request.output.map_path, "mappings");
+    let source_contents_path = sibling_temporary_path(&request.output.map_path, "source-contents");
     let code_file = File::create(&request.output.code_path)
         .with_context(|| format!("creating {}", request.output.code_path.display()))?;
     let mut composer = Composer {
@@ -221,7 +263,11 @@ pub fn execute(request: Request) -> Result<Response> {
             column: 0,
             active_original: None,
         },
-        map: OutputMap::new(mapping_path.clone())?,
+        map: OutputMap::new(
+            mapping_path.clone(),
+            source_contents_path.clone(),
+            request.output.source_prefix.clone(),
+        )?,
     };
 
     let result = (|| -> Result<()> {
@@ -233,8 +279,8 @@ pub fn execute(request: Request) -> Result<Response> {
                     map_path,
                     relative_path,
                 } => {
-                    validate_input_path(&root, &code_path)?;
-                    validate_input_path(&root, &map_path)?;
+                    validate_input_path(&input_roots, &code_path)?;
+                    validate_input_path(&input_roots, &map_path)?;
                     composer.emit_mapped_file(&code_path, &map_path, relative_path.as_deref())?;
                 }
             }
@@ -251,6 +297,7 @@ pub fn execute(request: Request) -> Result<Response> {
         let _ = fs::remove_file(&request.output.code_path);
         let _ = fs::remove_file(&request.output.map_path);
         let _ = fs::remove_file(&mapping_path);
+        let _ = fs::remove_file(&source_contents_path);
         return Err(error);
     }
 
@@ -307,7 +354,8 @@ impl Composer {
             if let Some(contents) = &input.map.sources_content {
                 for (index, source) in input.sources.iter().enumerate() {
                     if let Some(Some(content)) = contents.get(index) {
-                        self.map.set_source_content(source, content);
+                        let content: Cow<'_, str> = serde_json::from_str(content.get())?;
+                        self.map.set_source_content(source, &content)?;
                     }
                 }
             }
@@ -381,15 +429,14 @@ impl Composer {
         }
         self.finish_decoded_map(&mut state, &input)?;
 
-        let mut contents = Vec::new();
-        collect_source_contents(map, &mut contents)?;
-        for (source, content) in contents {
+        visit_source_contents(map, &mut |source, raw_content| {
             let source = match relative_path {
                 Some(base) => join_path(base, &source),
                 None => source,
             };
-            self.map.set_source_content(&source, &content);
-        }
+            let content: Cow<'_, str> = serde_json::from_str(raw_content.get())?;
+            self.map.set_source_content(&source, &content)
+        })?;
         Ok(())
     }
 
@@ -682,14 +729,14 @@ fn consumer_source_root<'a>(map: &'a RawSourceMap<'a>) -> Option<&'a str> {
     }
 }
 
-fn collect_source_contents(
-    map: &RawSourceMap<'_>,
-    output: &mut Vec<(String, String)>,
-) -> Result<()> {
+fn visit_source_contents<F>(map: &RawSourceMap<'_>, callback: &mut F) -> Result<()>
+where
+    F: FnMut(String, &RawValue) -> Result<()>,
+{
     validate_version(&map.version)?;
     if !map.sections.is_empty() {
         for section in &map.sections {
-            collect_source_contents(&section.map, output)?;
+            visit_source_contents(&section.map, callback)?;
         }
         return Ok(());
     }
@@ -701,7 +748,7 @@ fn collect_source_contents(
                     map.source_root.as_deref(),
                     &normalize_path(source.as_ref()),
                 );
-                output.push((source, content.to_string()));
+                callback(source, content)?;
             }
         }
     }
@@ -709,11 +756,21 @@ fn collect_source_contents(
 }
 
 impl OutputMap {
-    fn new(mapping_path: PathBuf) -> Result<Self> {
+    fn new(
+        mapping_path: PathBuf,
+        source_contents_path: PathBuf,
+        source_prefix: Option<String>,
+    ) -> Result<Self> {
         let file = File::create(&mapping_path)?;
+        let source_contents_file = File::create(&source_contents_path)?;
         Ok(Self {
             mapping_path,
             mapping_writer: BufWriter::new(file),
+            source_contents_path,
+            source_contents_writer: BufWriter::new(CountedFile {
+                file: source_contents_file,
+                bytes: 0,
+            }),
             sources: Vec::new(),
             source_indexes: HashMap::new(),
             names: Vec::new(),
@@ -727,15 +784,17 @@ impl OutputMap {
             previous_source: 0,
             previous_name: 0,
             wrote_mapping: false,
+            source_prefix,
         })
     }
 
     fn intern_source(&mut self, source: &str) -> u32 {
-        if let Some(index) = self.source_indexes.get(source) {
+        let source = self.rewrite_source(source);
+        if let Some(index) = self.source_indexes.get(source.as_ref()) {
             return *index;
         }
         let index = self.sources.len() as u32;
-        let owned = source.to_owned();
+        let owned = source.into_owned();
         self.sources.push(owned.clone());
         self.source_indexes.insert(owned, index);
         index
@@ -752,9 +811,29 @@ impl OutputMap {
         index
     }
 
-    fn set_source_content(&mut self, source: &str, content: &str) {
+    fn set_source_content(&mut self, source: &str, content: &str) -> Result<()> {
+        let source = self.rewrite_source(source).into_owned();
+        let offset = self.source_contents_writer.get_ref().bytes;
+        serde_json::to_writer(&mut self.source_contents_writer, content)?;
+        self.source_contents_writer.flush()?;
+        let length = self.source_contents_writer.get_ref().bytes - offset;
         self.source_contents
-            .insert(source.to_owned(), content.to_owned());
+            .insert(source, SourceContentLocation { offset, length });
+        Ok(())
+    }
+
+    fn rewrite_source<'a>(&self, source: &'a str) -> Cow<'a, str> {
+        let Some(prefix) = self.source_prefix.as_deref() else {
+            return Cow::Borrowed(source);
+        };
+        if source.starts_with(prefix) {
+            return Cow::Borrowed(source);
+        }
+
+        Cow::Owned(format!(
+            "{prefix}{}{source}",
+            if source.starts_with('/') { "" } else { "/" }
+        ))
     }
 
     fn add(&mut self, mapping: OutputMapping) -> Result<()> {
@@ -841,6 +920,7 @@ impl OutputMap {
     fn finish(&mut self, output_path: &Path, file: Option<&str>) -> Result<()> {
         self.flush_pending()?;
         self.mapping_writer.flush()?;
+        self.source_contents_writer.flush()?;
 
         let mut output = BufWriter::new(File::create(output_path)?);
         output.write_all(b"{\"version\":3,\"sources\":")?;
@@ -859,13 +939,20 @@ impl OutputMap {
         }
 
         if !self.source_contents.is_empty() {
+            let mut source_contents = File::open(&self.source_contents_path)?;
             output.write_all(b",\"sourcesContent\":[")?;
             for (index, source) in self.sources.iter().enumerate() {
                 if index > 0 {
                     output.write_all(b",")?;
                 }
                 match self.source_contents.get(source) {
-                    Some(content) => serde_json::to_writer(&mut output, content)?,
+                    Some(location) => {
+                        source_contents.seek(SeekFrom::Start(location.offset))?;
+                        std::io::copy(
+                            &mut (&mut source_contents).take(location.length),
+                            &mut output,
+                        )?;
+                    }
                     None => output.write_all(b"null")?,
                 }
             }
@@ -875,6 +962,7 @@ impl OutputMap {
         output.write_all(b"}")?;
         output.flush()?;
         fs::remove_file(&self.mapping_path)?;
+        fs::remove_file(&self.source_contents_path)?;
         Ok(())
     }
 }
@@ -1112,6 +1200,43 @@ fn validate_version(version: &serde_json::Value) -> Result<()> {
 }
 
 fn normalize_path(value: &str) -> String {
+    if let Some(path_start) = url_path_start(value) {
+        let (url_prefix, path) = value.split_at(path_start);
+        if path.is_empty() {
+            return value.to_owned();
+        }
+
+        return format!("{url_prefix}{}", normalize_path_component(path));
+    }
+
+    normalize_path_component(value)
+}
+
+fn url_path_start(value: &str) -> Option<usize> {
+    let authority_start = if let Some(scheme_end) = value.find("://") {
+        let scheme = &value[..scheme_end];
+        if scheme.is_empty()
+            || !scheme
+                .chars()
+                .all(|character| character.is_ascii_alphanumeric() || "+-.".contains(character))
+        {
+            return None;
+        }
+        scheme_end + 3
+    } else if value.starts_with("//") {
+        2
+    } else {
+        return None;
+    };
+
+    Some(
+        value[authority_start..]
+            .find('/')
+            .map_or(value.len(), |offset| authority_start + offset),
+    )
+}
+
+fn normalize_path_component(value: &str) -> String {
     let absolute = value.starts_with('/');
     let trailing_slash = value.ends_with('/') && value.len() > 1;
     let mut parts = Vec::new();
@@ -1157,12 +1282,12 @@ fn compute_source_url(source_root: Option<&str>, source: &str) -> String {
     }
 }
 
-fn validate_input_path(root: &Path, path: &Path) -> Result<()> {
+fn validate_input_path(roots: &[PathBuf], path: &Path) -> Result<()> {
     let canonical = path
         .canonicalize()
         .with_context(|| format!("resolving input {}", path.display()))?;
-    if !canonical.starts_with(root) {
-        bail!("input path {} is outside workspace", path.display());
+    if !roots.iter().any(|root| canonical.starts_with(root)) {
+        bail!("input path {} is outside the allowed roots", path.display());
     }
     Ok(())
 }
@@ -1236,7 +1361,7 @@ mod tests {
         let outside = tempfile::tempdir().unwrap();
         let file = outside.path().join("input.map");
         fs::write(&file, "{}").unwrap();
-        assert!(validate_input_path(root.path(), &file).is_err());
+        assert!(validate_input_path(&[root.path().to_owned()], &file).is_err());
         assert!(validate_output_path(root.path(), &outside.path().join("out.map")).is_err());
     }
 }

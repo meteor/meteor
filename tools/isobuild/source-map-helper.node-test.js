@@ -10,6 +10,13 @@ const {
   SourceMapGenerator,
   SourceNode,
 } = require('source-map');
+const {
+  createFileBackedSourceMap,
+} = require('../utils/file-backed-source-map');
+const {
+  composeSourceMapRecipe,
+  createSourceMapRecipe,
+} = require('./source-map-helper');
 
 const HELPER = process.env.METEOR_SOURCE_MAP_HELPER || path.resolve(
   __dirname,
@@ -144,6 +151,18 @@ test('Rust helper matches Unicode columns and absent source contents', async () 
   assert.equal(actual.map, expected.map.toString());
 });
 
+test('Rust helper preserves URL schemes while normalizing source paths', async () => {
+  const fixture = makeFixture(101, { unmapped: false });
+  fixture.map.sources = fixture.map.sources.map(source =>
+    `webpack://rspack-app/imports/./generated/${source}`
+  );
+  const expected = await runOracle(fixture);
+  const actual = runHelper(fixture);
+
+  assert.equal(actual.code, expected.code);
+  assert.equal(actual.map, expected.map.toString());
+});
+
 test('Rust helper matches source-map 0.7.4 indexed-map behavior', async () => {
   const first = makeFixture(8, { unmapped: false });
   const second = makeFixture(8, { unmapped: false, sourceRoot: '/second' });
@@ -165,4 +184,36 @@ test('Rust helper matches source-map 0.7.4 indexed-map behavior', async () => {
 
   assert.equal(actual.code, expected.code);
   assert.equal(actual.map, expected.map.toString());
+});
+
+test('Meteor adapter keeps map input file-backed and rewrites sources exactly', async () => {
+  const fixture = makeFixture(101, { sourceRoot: '/sources' });
+  const root = mkdtempSync(path.join(tmpdir(), 'meteor-source-map-adapter-'));
+  const mapPath = path.join(root, 'input.js.map');
+  const mapText = JSON.stringify(fixture.map);
+  writeFileSync(mapPath, mapText);
+
+  const expected = await runOracle(fixture);
+  const expectedMap = expected.map.toJSON();
+  expectedMap.sources = expectedMap.sources.map(source =>
+    `meteor://💻app${source.startsWith('/') ? '' : '/'}${source}`
+  );
+
+  const actual = await composeSourceMapRecipe(createSourceMapRecipe([
+    'header\n(',
+    {
+      code: fixture.code,
+      map: createFileBackedSourceMap({
+        path: mapPath,
+        byteLength: Buffer.byteLength(mapText),
+      }),
+    },
+    ')\nfooter',
+  ]), {
+    file: 'output.js',
+    sourcePrefix: 'meteor://💻app',
+  });
+
+  assert.equal(actual.code, expected.code);
+  assert.equal(readFileSync(actual.map.path, 'utf8'), JSON.stringify(expectedMap));
 });
