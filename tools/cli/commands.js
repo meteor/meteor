@@ -14,6 +14,7 @@ var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
+const { normalizeDdpTransport } = require('../isobuild/ddp-transports.js');
 const {
   blue,
   bold,
@@ -1332,6 +1333,15 @@ main.registerCommand({
 // build
 ///////////////////////////////////////////////////////////////////////////////
 
+function getDdpTransportOption(options) {
+  try {
+    return normalizeDdpTransport(options['ddp-transport']);
+  } catch (error) {
+    Console.error(error.message);
+    return null;
+  }
+}
+
 var buildCommands = {
   minArgs: 1,
   maxArgs: 1,
@@ -1339,6 +1349,7 @@ var buildCommands = {
   options: {
     debug: { type: Boolean },
     packageType: { type: String },
+    'ddp-transport': { type: String },
     directory: { type: Boolean },
     architecture: { type: String },
     "server-only": { type: Boolean },
@@ -1393,6 +1404,11 @@ main.registerCommand({
 });
 
 var buildCommand = async function (options) {
+  const ddpTransport = getDdpTransportOption(options);
+  if (ddpTransport === null) {
+    return 1;
+  }
+
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
     // There's no point in spinning the spinner when we're running
@@ -1550,6 +1566,7 @@ ${Console.command("meteor build ../output")}`,
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
+      ddpTransport,
       webArchs,
     },
   });
@@ -1984,6 +2001,7 @@ main.registerCommand({
   options: {
     'delete': { type: Boolean, short: 'D' },
     debug: { type: Boolean },
+    'ddp-transport': { type: String },
     settings: { type: String, short: 's' },
     // No longer supported, but we still parse it out so that we can
     // print a custom error message.
@@ -2037,6 +2055,11 @@ async function deployCommand(options, { rawOptions }) {
     return 1;
   }
 
+  const ddpTransport = getDdpTransportOption(options);
+  if (ddpTransport === null) {
+    return 1;
+  }
+
   const loggedIn = auth.isLoggedIn();
   if (! loggedIn && !options["deploy-token"]) {
     Console.error(
@@ -2073,6 +2096,7 @@ async function deployCommand(options, { rawOptions }) {
   const buildOptions = {
     minifyMode: options.debug ? 'development' : 'production',
     buildMode: options.debug ? 'development' : 'production',
+    ddpTransport,
     serverArch: buildArch
   };
 
