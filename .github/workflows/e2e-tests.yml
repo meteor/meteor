@@ -31,10 +31,6 @@ env:
   npm_config_audit: "false"
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
-  # npm audit adds a registry round-trip to every install (the tool runs one
-  # per core package when the cache is cold) and nothing else in CI; when the
-  # audit service hangs, cold jobs die at the 60-minute timeout.
-  npm_config_audit: "false"
 
 jobs:
   test:
