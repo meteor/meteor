@@ -3,6 +3,21 @@ const files = require("../fs/files");
 const buildmessage = require("../utils/buildmessage.js");
 const { getMeteorRuntimeConfigFromHTML } = require("../tool-testing/test-utils.js");
 
+for (const command of ["build", "deploy"]) {
+  selftest.define(`${command} - DDP transport help`, async function () {
+    const s = new selftest.Sandbox();
+    await s.init();
+    const help = s.run("help", command);
+    await help.expectExit(0);
+    const output = help.getMatcherFullBuffer();
+    selftest.expectTrue(output.includes("A uws-only bundle also requires selecting uws at server"));
+    selftest.expectTrue(output.includes("DDP_TRANSPORT=uws"));
+    selftest.expectTrue(
+      output.includes('Meteor.settings.packages["ddp-server"].transport to "uws".'),
+    );
+  });
+}
+
 selftest.define("cordova - DDP transport bootstrap", async function () {
   const { ensureDevBundleDependencies } = require("../cordova/index.js");
   const dependencyMessages = await buildmessage.capture(async () => {

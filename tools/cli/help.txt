@@ -421,6 +421,9 @@ Options:
   --ddp-transport     Include DDP transport code for sockjs, uws, or both.
                       Defaults to both. A sockjs- or uws-only bundle cannot
                       switch to the omitted transport without being rebuilt.
+                      A uws-only bundle also requires selecting uws at server
+                      runtime: set DDP_TRANSPORT=uws or set
+                      Meteor.settings.packages["ddp-server"].transport to "uws".
   --directory         Output a directory (rather than a tarball) for the
                       application server bundle. If the output location exists,
                       it will be recursively deleted first.
@@ -551,6 +554,9 @@ Options:
   --ddp-transport    Include DDP transport code for sockjs, uws, or both.
                      Defaults to both. A sockjs- or uws-only bundle cannot
                      switch to the omitted transport without being rebuilt.
+                     A uws-only bundle also requires selecting uws at server
+                     runtime: set DDP_TRANSPORT=uws or set
+                     Meteor.settings.packages["ddp-server"].transport to "uws".
   --settings, -s  set optional data for Meteor.settings
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                   downgraded to versions that are potentially incompatible with
