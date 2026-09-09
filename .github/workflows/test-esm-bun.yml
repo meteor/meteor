@@ -10,8 +10,10 @@ on:
       - 'tools/isobuild/bundler.js'
       - 'tools/static-assets/server/**'
       - 'tools/cli/commands.js'
+      - 'tools/runners/run-app.js'
       - 'tools/tests/apps/esm-bun-smoke/**'
       - 'scripts/ci/esm-bun-smoke.mjs'
+      - 'scripts/ci/__tests__/**'
       - '.github/workflows/test-esm-bun.yml'
 
 jobs:
@@ -67,6 +69,14 @@ jobs:
 
       - name: Install npm dependencies
         run: npm install
+
+      - name: Run durable core tests (package isolation, IPC, bun-host)
+        run: |
+          if [ "${{ matrix.runtime }}" = "bun" ]; then
+            npm run test:bun-core:bun
+          else
+            npm run test:bun-core
+          fi
 
       - name: Build the smoke app with --format=esm
         run: |
