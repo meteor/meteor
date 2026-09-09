@@ -16,6 +16,7 @@ selftest.define("build - DDP transport selection", async function () {
   await invalid.matchErr(
     'Invalid DDP transport "websocket". Valid values: sockjs, uws, both.'
   );
+  await invalid.matchErr("meteor help build");
   await invalid.expectExit(1);
 
   const build = s.run("build", "../uws-build", "--directory", "--debug",

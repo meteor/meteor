@@ -1333,11 +1333,12 @@ main.registerCommand({
 // build
 ///////////////////////////////////////////////////////////////////////////////
 
-function getDdpTransportOption(options) {
+function getDdpTransportOption(options, command) {
   try {
     return normalizeDdpTransport(options['ddp-transport']);
   } catch (error) {
     Console.error(error.message);
+    Console.error(`For more help, see ${Console.command(`meteor help ${command}`)}.`);
     return null;
   }
 }
@@ -1404,7 +1405,7 @@ main.registerCommand({
 });
 
 var buildCommand = async function (options) {
-  const ddpTransport = getDdpTransportOption(options);
+  const ddpTransport = getDdpTransportOption(options, "build");
   if (ddpTransport === null) {
     return 1;
   }
@@ -1611,6 +1612,7 @@ ${Console.command("meteor build ../output")}`,
 
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
+          ddpTransport,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
           cordovaServerPort: parsedCordovaServerPort });
         await cordovaProject.init();
@@ -2039,7 +2041,7 @@ main.registerCommand({
   );
 });
 
-async function deployCommand(options, { rawOptions }) {
+export async function deployCommand(options, { rawOptions }) {
   const site = options.args[0];
 
   if (options.delete) {
@@ -2055,7 +2057,7 @@ async function deployCommand(options, { rawOptions }) {
     return 1;
   }
 
-  const ddpTransport = getDdpTransportOption(options);
+  const ddpTransport = getDdpTransportOption(options, "deploy");
   if (ddpTransport === null) {
     return 1;
   }

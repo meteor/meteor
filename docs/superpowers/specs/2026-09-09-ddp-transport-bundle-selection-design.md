@@ -160,8 +160,10 @@ static import of the minified SockJS file with a lookup in
 When runtime config says `sockjs`, the client obtains the constructor from the
 provider. For `uws`, it continues to use the browser's native `WebSocket` and
 never needs SockJS. A missing SockJS provider produces an explicit error; in a
-valid fixed uWS build that branch is never selected because the server has
-already published `DDP_TRANSPORT=uws`.
+valid fixed uWS web build that branch is never selected because the server has
+already published `DDP_TRANSPORT=uws`. Cordova's initial packaged bootstrap
+receives the fixed selection directly from the build command, before it can
+connect to the server or receive a hot code push.
 
 `DDPTransportRegistry` is an implementation detail, not a supported public
 API. All three new packages have documentation disabled.
@@ -181,6 +183,22 @@ hint. Omission normalizes to `both`.
 The normalized value is passed to the bundler as
 `buildOptions.ddpTransport`. The hidden `meteor bundle` command inherits the
 option through the shared build command definition.
+
+For Cordova builds, the normalized selection also passes through
+`CordovaProject` to every `CordovaBuilder` instance, including initial project
+creation and preparation from the application bundle. The builder writes
+`DDP_TRANSPORT: "sockjs"` or `DDP_TRANSPORT: "uws"` into the initial packaged
+`__meteor_runtime_config__` for a fixed selection. This ensures a uWS-only
+Cordova client uses native WebSocket on its first connection even though the
+SockJS provider is absent. Repeated preparation retains the same selection.
+
+For `both` and callers that omit the option, the builder omits `DDP_TRANSPORT`
+from the serialized bootstrap configuration. It must never serialize `"both"`
+as a runtime transport: the client treats every non-SockJS value as native
+WebSocket. Omission preserves the existing initial SockJS behavior. This
+bootstrap rule does not change browser configuration, server runtime
+precedence, or `meteor run` defaults. A fixed uWS build still requires matching
+server runtime selection as described below.
 
 For `meteor deploy --cache-build`, the normalized transport selection becomes
 part of the cached build metadata and validity check. A cached bundle created
@@ -341,6 +359,8 @@ Additional coverage verifies:
 
 - invalid CLI values fail before bundling;
 - `meteor deploy` forwards the normalized option;
+- initial Cordova bootstrap HTML receives each fixed selection, while `both`
+  and omission retain the existing default without a serialized transport;
 - cached deploy builds are invalidated when the transport changes; and
 - a default invocation is identical to explicit `both` for provider
   inclusion.
