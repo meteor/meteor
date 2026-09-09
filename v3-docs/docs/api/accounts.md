@@ -923,9 +923,9 @@ The login handler should return `undefined` if it's not going to handle the logi
 
 By default, there are rules added to the [`DDPRateLimiter`](./DDPRateLimiter.md)
 that rate limit logins, new user registration, passwordless login token requests
-and password reset calls to a limit of 5 requests per 10 seconds per session.
-These are a basic solution to dictionary attacks where a malicious user attempts
-to guess the passwords of legitimate users by attempting all possible passwords.
+and password reset calls to a limit of 5 requests per 10 seconds per DDP connection.
+These provide basic abuse protection by slowing repeated credential-guessing
+attempts and repeated passwordless login token requests.
 
 These rate limiting rules can be removed by calling
 `Accounts.removeDefaultRateLimit()`. Please see the
