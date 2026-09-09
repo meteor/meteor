@@ -35,13 +35,13 @@ function loadRuntime(flags = {}, { native = false, toolsCore = true } = {}) {
     shuffleString: value => value,
   }), { virtual: true });
   jest.doMock('http-proxy-3', () => ({ createProxyServer }), { virtual: true });
-  jest.doMock('../lib/constants', () => ({
+  jest.doMock('./lib/constants', () => ({
     getRspackChunksContext: () => 'build-chunks',
     getRspackAssetsContext: () => 'build-assets',
     RSPACK_HOT_UPDATE_REGEX: /([^/]+\.hot-update\.(?:js|json))$/,
   }));
 
-  require('../rspack_server');
+  require('./rspack_server');
   return { proxies, createProxyServer, connectHandlers, httpServer };
 }
 
