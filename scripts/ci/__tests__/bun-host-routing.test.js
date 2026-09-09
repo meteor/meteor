@@ -180,4 +180,20 @@ console.log('BUN_HOST_READY');
   assert.equal(pageRes.status, 200);
   assert.ok(pageRes.headers.get('content-type').includes('text/html'));
   assert.ok((await pageRes.text()).includes('Meteor Boilerplate'));
+
+  // Scenario 5: WebSocket upgrade on /websocket
+  const ws = new WebSocket(`ws://127.0.0.1:${testPort}/websocket`);
+  const wsMsg = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('WS timeout')), 3000);
+    ws.addEventListener('message', (event) => {
+      clearTimeout(timer);
+      resolve(String(event.data));
+    });
+    ws.addEventListener('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+  ws.close();
+  assert.equal(wsMsg, 'ddp-connected');
 });
