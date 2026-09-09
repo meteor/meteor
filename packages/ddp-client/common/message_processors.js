@@ -43,10 +43,15 @@ export class MessageProcessors {
 
     if (reconnectedToPreviousSession) {
       // Successful reconnection -- pick up where we left off.
+      // Don't reset stores since we're continuing the same session.
+      self._resetStores = false;
       return;
     }
 
     // Server doesn't have our data anymore. Re-sync a new session.
+    // Reset the received count since we're starting a new session.
+    // Set to 1 because the 'connected' message itself counts.
+    self._receivedCount = 1;
 
     // Forget about messages we were buffering for unknown collections. They'll
     // be resent if still relevant.

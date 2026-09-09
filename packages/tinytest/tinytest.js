@@ -623,8 +623,8 @@ export class TestRun {
       this._report(test, {
         type: "exception",
         details: {
-          message: exception.message, // XXX empty???
-          stack: exception.stack // XXX portability
+          message: exception?.message ?? String(exception),
+          stack: exception?.stack // XXX portability
         }
       });
 

@@ -89,10 +89,10 @@ Tracker.autorun(async function example1(computation) {
 
   let links = await LinksCollection.find({}).fetchAsync(); // First async call will stay reactive.
 
-  // Code after the first await looses Tracker.currentComputation: no reactivity.
+  // Code after the first await loses Tracker.currentComputation: no reactivity.
   reactiveVar2.get(); // This won't trigger a rerun.
 
-  // You can bring back reactivity with the Tracker.withCompuation wrapper:
+  // You can bring back reactivity with the Tracker.withComputation wrapper:
   let users = await Tracker.withComputation(computation, () => Meteor.users.find({}).fetchAsync());
 
   // Code below will again not be reactive, so you will need another Tracker.withComputation.
