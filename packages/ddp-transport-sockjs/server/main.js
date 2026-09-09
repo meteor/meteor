@@ -1,4 +1,4 @@
-import { DDPTransportRegistry } from 'meteor/ddp-transport-registry';
-import { createSockJSTransport } from './transport.js';
+import { DDPTransportRegistry } from "meteor/ddp-transport-registry";
+import { createSockJSTransport } from "./transport.js";
 
-DDPTransportRegistry.register('sockjs', createSockJSTransport);
+DDPTransportRegistry.register("sockjs", createSockJSTransport);

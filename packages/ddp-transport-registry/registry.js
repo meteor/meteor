@@ -4,9 +4,7 @@ export function createTransportRegistry() {
   return Object.freeze({
     register(name, provider) {
       if (providers.has(name)) {
-        throw new Error(
-          `DDP transport provider "${name}" is already registered`
-        );
+        throw new Error(`DDP transport provider "${name}" is already registered`);
       }
 
       providers.set(name, provider);
