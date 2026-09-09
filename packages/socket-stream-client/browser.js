@@ -158,6 +158,10 @@ export class ClientStream extends StreamClientCommon {
     return protocolsWhitelist;
   }
 
+  _getSockJSConstructor() {
+    return getSockJSConstructor();
+  }
+
   _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
@@ -165,7 +169,7 @@ export class ClientStream extends StreamClientCommon {
     this._transport = transport;
 
     if (transport === "sockjs") {
-      const SockJS = getSockJSConstructor();
+      const SockJS = this._getSockJSConstructor();
       const options = {
         transports: this._sockjsProtocolsWhitelist(),
         ...this.options._sockjsOptions,

@@ -1,5 +1,15 @@
 import { getTransportFactory, resolveTransportName } from "./index.js";
-import { createTransportRegistry } from "meteor/ddp-transport-registry";
+import { createTransportRegistry, DDPTransportRegistry } from "meteor/ddp-transport-registry";
+
+Tinytest.add("ddp-server - eager providers register in the shared registry", function (test) {
+  test.equal(DDPTransportRegistry.names(), ["sockjs", "uws"]);
+
+  ["sockjs", "uws"].forEach((name) => {
+    const provider = DDPTransportRegistry.get(name);
+    test.equal(typeof provider, "function");
+    test.equal(getTransportFactory(name), provider);
+  });
+});
 
 Tinytest.add("ddp-server - transport selection priority is compatible", function (test) {
   test.equal(
