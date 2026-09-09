@@ -41,6 +41,72 @@ Even after the decode boundary is removed, at least two cache writers and the
 final map writer still construct very large monolithic JSON strings. Those are
 independent failure boundaries.
 
+## Reproduction on the branch
+
+The failure was reproduced locally on 2026-09-09 from reporter fixture commit
+`23abf28c53a54988fe1323d3b7b384d7eb1540f2`. The procedural generator was run
+with `MODULES=3200 FUNCS=400`, producing 3,200 modules containing 1,280,000
+functions. Rspack then produced these artifacts:
+
+```text
+client-rspack.js       71,216,955 bytes   (67.918 MiB)
+client-rspack.js.map  437,865,446 bytes   (417.581 MiB)
+map sources                 3,202
+map SHA-256            53eabf91ddd53254b4d75453df338c9dd41645f6cb24a79f62c4bf2e1ddddd09
+```
+
+The reporter's isolated harness was run with the checkout's Node 24.15.0,
+`source-map@0.7.4`, and `--max-old-space-size=2048`. It completed the small
+control and trapped on the real map:
+
+```text
+{"label":"small (control)","completed":true,"mappings":3,"peakRssMB":47}
+big map: 3202 sources, 418MB
+{"label":"big (real repro map)","completed":false,"error":"unreachable","peakRssMB":2203}
+```
+
+The equivalent end-to-end command was then run against this checkout:
+
+```sh
+TOOL_NODE_FLAGS='--max-old-space-size=2048' meteor build --directory /tmp/out
+```
+
+Meteor synchronized the temporary app to `@meteorjs/rspack@2.2.0`. Rspack
+successfully compiled the same 67.918 MiB client asset, after which linking
+failed with this relevant call chain:
+
+```text
+BasicSourceMapConsumer._parseMappings
+  -> BasicSourceMapConsumer.eachMapping
+     -> fromStringWithSourceMap (tools/isobuild/compact-source-node.ts:166)
+        -> PackageSourceBatch._linkJS
+           -> ClientTarget.make
+              X RuntimeError: unreachable
+```
+
+The identical map size and SHA-256 before and after the full build show that
+the isolated test exercised the same Rspack artifact consumed by the linker.
+No compact mapped leaf was returned before the trap.
+
+```text
+3200 modules x 400 functions
+              |
+              v
+       Rspack completes
+              |
+              +--> 67.918 MiB JavaScript
+              `--> 417.581 MiB source map
+                           |
+                           v
+                 source-map WASM parser
+                 eachMapping / _parseMappings
+                           |
+                           X  RuntimeError: unreachable
+                           |
+                  compact leaf allocation
+                       never reached
+```
+
 ## Effective branch change
 
 Against `upstream/devel`, the branch's production behavior changes only the
