@@ -5,6 +5,7 @@
   "scripts": {
     "test": "jest --config jest.config.js",
     "test:group": "node scripts/run-test-group.js",
+    "test:groups": "node scripts/list-test-groups.js",
     "test:groups:audit": "node scripts/audit-test-groups.js"
   },
   "devDependencies": {

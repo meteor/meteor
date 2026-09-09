@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "meteor"
+      - "package.json"
+      - "package-lock.json"
+      - "tools/cli/**"
       - "tools/e2e-tests/**"
       - "packages/rspack/**"
       - "packages/tools-core/**"
@@ -36,7 +39,29 @@ env:
   METEOR_E2E_TEST_RETRIES: 1
 
 jobs:
+  groups:
+    name: E2E group audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.groups.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/e2e-tests/package-lock.json
+      - name: Install discovery dependencies
+        run: npm ci --prefix tools/e2e-tests
+      - name: Audit all E2E groups
+        run: npm run test:e2e:groups:audit
+      - name: Generate group matrix
+        id: groups
+        run: echo "matrix=$(node tools/e2e-tests/scripts/list-test-groups.js --json)" >> "$GITHUB_OUTPUT"
+
   test:
+    needs: groups
     name: ${{ matrix.category }}
     runs-on: oss-vm
     timeout-minutes: 60
@@ -55,48 +80,7 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 4
-      matrix:
-        include:
-          - category: CLI
-            group: cli
-            audit: true
-          - category: Angular
-            group: angular
-          - category: Babel
-            group: babel
-          - category: Blaze
-            group: blaze
-          - category: Coffeescript
-            group: coffeescript
-          - category: Full Skeleton
-            group: full_skeleton
-          - category: Tailwind Skeleton
-            group: tailwind_skeleton
-          - category: Examples
-            group: examples
-          - category: Monorepo
-            group: monorepo
-          - category: Other
-            group: other
-          - category: React
-            group: react
-          - category: R.Router
-            group: react_router
-          # Keep the largest regression suite in its own job.
-          - category: Server Runtime
-            group: server_runtime
-          - category: Regressions
-            group: regressions
-          - category: Solid
-            group: solid
-          - category: Svelte
-            group: svelte
-          - category: Typescript
-            group: typescript
-          - category: Vue
-            group: vue
-          - category: Uncategorized
-            group: uncategorized
+      matrix: ${{ fromJSON(needs.groups.outputs.matrix) }}
 
     steps:
       - name: Install Docker CLI
@@ -144,10 +128,6 @@ jobs:
         # This installs the browsers and system dependencies using the exact
         # Playwright version declared by tools/e2e-tests/package.json.
         run: npm run install:e2e
-
-      - name: Audit E2E test groups
-        if: matrix.audit
-        run: npm run test:e2e:groups:audit
 
       - name: Set NPM_LINK_RSPACK=false for release branches
         run: |

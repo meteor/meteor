@@ -95,20 +95,67 @@ function createUncategorizedPattern(groups = EXPLICIT_TEST_GROUPS) {
 
 const TEST_GROUPS = Object.freeze({
   ...EXPLICIT_TEST_GROUPS,
+  accounts: {
+    label: 'Accounts',
+    pattern: '^',
+    testPathPattern: 'accounts\\.test\\.js$',
+    testPathIgnorePattern: '[/\\\\]apps[/\\\\]',
+    workflow: 'accounts',
+  },
   uncategorized: {
     label: 'Uncategorized',
     pattern: createUncategorizedPattern(),
     fallback: true,
-    jestArgs: [
-      '--testPathIgnorePatterns',
-      GROUP_EXCLUDED_TEST_PATH_PATTERN,
-    ],
   },
 });
+
+function getTestGroup(name) {
+  const group = Object.hasOwn(TEST_GROUPS, name) && TEST_GROUPS[name];
+  if (!group) {
+    throw new Error(`Unknown E2E test group "${name || ''}". Available groups: ${Object.keys(TEST_GROUPS).join(', ')}`);
+  }
+  return group;
+}
+
+function getGroupIgnoredPaths(group) {
+  return group.testPathIgnorePattern || GROUP_EXCLUDED_TEST_PATH_PATTERN;
+}
+
+// The runner and coverage audit share both name and path selection rules.
+function getGroupJestArgs(name) {
+  const group = getTestGroup(name);
+  return [
+    '--testNamePattern', group.pattern,
+    '--testPathIgnorePatterns', getGroupIgnoredPaths(group),
+    ...(group.testPathPattern ? ['--testPathPattern', group.testPathPattern] : []),
+  ];
+}
+
+function matchesTestGroup(group, testPath, fullName) {
+  return !new RegExp(getGroupIgnoredPaths(group)).test(testPath) &&
+    (!group.testPathPattern || new RegExp(group.testPathPattern).test(testPath)) &&
+    new RegExp(group.pattern).test(fullName);
+}
+
+function getTestGroupMatrix(workflow = 'e2e') {
+  for (const [name, group] of Object.entries(TEST_GROUPS)) {
+    if (!['e2e', 'accounts'].includes(group.workflow || 'e2e')) {
+      throw new Error(`E2E group ${name} has an unknown workflow: ${group.workflow}`);
+    }
+  }
+  return {
+    include: Object.entries(TEST_GROUPS)
+      .filter(([, group]) => (group.workflow || 'e2e') === workflow)
+      .map(([group, { label }]) => ({ category: label, group })),
+  };
+}
 
 module.exports = {
   createUncategorizedPattern,
   EXPLICIT_TEST_GROUPS,
+  getGroupJestArgs,
+  getTestGroupMatrix,
   GROUP_EXCLUDED_TEST_PATH_PATTERN,
+  matchesTestGroup,
   TEST_GROUPS,
 };

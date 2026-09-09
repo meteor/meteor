@@ -2,16 +2,14 @@
 
 const { spawnSync } = require('child_process');
 const path = require('path');
-const { TEST_GROUPS } = require('../test-groups');
+const { getGroupJestArgs } = require('../test-groups');
 
 const [groupName, ...extraArgs] = process.argv.slice(2);
-const group = TEST_GROUPS[groupName];
-
-if (!group) {
-  const availableGroups = Object.keys(TEST_GROUPS).join(', ');
-  console.error(
-    `Unknown E2E test group "${groupName || ''}". Available groups: ${availableGroups}`
-  );
+let groupArgs;
+try {
+  groupArgs = getGroupJestArgs(groupName);
+} catch (error) {
+  console.error(error.message);
   process.exit(1);
 }
 
@@ -36,9 +34,7 @@ const result = spawnSync(
     jestBin,
     '--config',
     path.join(testRoot, 'jest.config.js'),
-    '--testNamePattern',
-    group.pattern,
-    ...(group.jestArgs || []),
+    ...groupArgs,
     ...extraArgs,
   ],
   {
