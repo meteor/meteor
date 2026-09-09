@@ -11,7 +11,7 @@ Before moving production traffic to Change Streams, validate that your MongoDB d
 - MongoDB 6+ on a replica set or sharded cluster (Change Streams are not available on standalone or some shared-tier deployments).
 - Works only for unordered observers. Publications that rely on ordered callbacks (`addedBefore`, `movedBefore`) will keep using another driver.
 - Selectors must compile with `Minimongo.Matcher`. Unsupported selectors fall back to the next configured driver.
-- Cursors using `$where` or `$near` selectors, `skip`/`limit`, or projections Minimongo cannot apply are handed to the next configured driver, following the same rules as oplog tailing: live change events are re-matched locally by Minimongo, which cannot evaluate those the way MongoDB does.
+- Cursors with `skip` or `limit`, projections Minimongo cannot apply, or `$where`/`$near` selectors are handed to the next configured driver. Live change events are re-matched locally by Minimongo, which cannot evaluate `$where`/`$near` the way MongoDB does; oplog tailing declines those selectors for the same reason.
 - If Change Streams are unavailable, Meteor automatically moves to the next driver in your configured order.
 
 ## Choosing the Reactivity Driver Order
