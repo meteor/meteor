@@ -1,4 +1,4 @@
-import { EJSON } from './ejson';
+import { EJSON } from "./ejson";
 
 class Address {
   constructor(city, state) {
@@ -7,7 +7,7 @@ class Address {
   }
 
   typeName() {
-    return 'Address';
+    return "Address";
   }
 
   toJSONValue() {
@@ -18,7 +18,7 @@ class Address {
   }
 }
 
-EJSON.addType('Address', value => new Address(value.city, value.state));
+EJSON.addType("Address", (value) => new Address(value.city, value.state));
 
 class Person {
   constructor(name, dob, address) {
@@ -28,7 +28,7 @@ class Person {
   }
 
   typeName() {
-    return 'Person';
+    return "Person";
   }
 
   toJSONValue() {
@@ -41,12 +41,9 @@ class Person {
 }
 
 EJSON.addType(
-  'Person',
-  value => new Person(
-    value.name,
-    EJSON.fromJSONValue(value.dob),
-    EJSON.fromJSONValue(value.address)
-  )
+  "Person",
+  (value) =>
+    new Person(value.name, EJSON.fromJSONValue(value.dob), EJSON.fromJSONValue(value.address)),
 );
 
 class Holder {
@@ -55,7 +52,7 @@ class Holder {
   }
 
   typeName() {
-    return 'Holder';
+    return "Holder";
   }
 
   toJSONValue() {
@@ -63,7 +60,7 @@ class Holder {
   }
 }
 
-EJSON.addType('Holder', value => new Holder(value));
+EJSON.addType("Holder", (value) => new Holder(value));
 
 const EJSONTest = {
   Address,

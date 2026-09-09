@@ -168,3 +168,62 @@ export function replaceNames(filter, thing) {
   }
   return thing;
 }
+
+
+/**
+ * Compares two MongoDB operation times.
+ * @param {MongoDB.Timestamp|object} opTime1 - The first operation time to compare.
+ * @param {MongoDB.Timestamp|object} opTime2 - The second operation time to compare.
+ * @returns {number} - Returns a number indicating the comparison result:
+ *   - A negative number if opTime1 is less than opTime2.
+ *   - Zero if opTime1 is equal to opTime2.
+ *   - A positive number if opTime1 is greater than opTime2.
+ */
+/**
+ * Compares two MongoDB operation times (opTimes).
+ *
+ * Both parameters accept any value accepted by the `MongoDB.Timestamp` constructor:
+ *   - a `Long` (e.g., `new Timestamp(Long)`),
+ *   - an object of the form `{ t: number, i: number }`,
+ *   - or the legacy two-number form `low, high` (via `Timestamp(low, high)`), which is deprecated;
+ *     prefer `{ t, i }` or a `Long`.
+ *
+ * The function constructs a `MongoDB.Timestamp` from `opTime1` and compares it to `opTime2`
+ * using `Timestamp#compare`.
+ *
+ * @param {MongoDB.Long|{t:number,i:number}|Array<number>|number} opTime1 - Operation time 1; any value accepted by `MongoDB.Timestamp`.
+ *     For the two-number form you may provide an array `[low, high]`, but passing two separate numbers to the constructor is deprecated.
+ * @param {MongoDB.Long|{t:number,i:number}|Array<number>|number} opTime2 - Operation time 2; same accepted forms as `opTime1`.
+ * @returns {number} Comparison result: negative if `opTime1` < `opTime2`, zero if equal, positive if `opTime1` > `opTime2`.
+ */
+export function compareOperationTimes(opTime1, opTime2) {
+  // Wrap BOTH operands: MongoDB.Timestamp#compare mishandles a plain
+  // {t,i} object (it never reads .t/.i), silently returning a wrong
+  // result. The documented contract accepts {t,i} for either operand, so
+  // normalize both before comparing.
+  return (new MongoDB.Timestamp(opTime1)).compare(new MongoDB.Timestamp(opTime2));
+}
+
+/**
+ * Key under which a write's clusterTime is recorded on the DDP write fence.
+ *
+ * Scoped to the *connection* as well as the collection: an app can hold more
+ * than one MongoConnection (a second `MongoInternals.RemoteCollectionDriver`
+ * pointed at another cluster is the common case) and those connections
+ * routinely share collection names. Both the crossbar listener and the fence
+ * annotation are otherwise keyed by collection name alone, so a write on
+ * connection B would park a change-stream driver watching connection A on a
+ * clusterTime from a cluster that driver's stream can never observe — the wait
+ * never resolves and the method that issued the write hangs forever
+ * (meteor/meteor#14600). clusterTimes are only comparable within one cluster,
+ * so they must never be matched across connections.
+ *
+ * @param {string} connectionId - `MongoConnection#_csConnectionId` of the connection the write went to.
+ * @param {string} collectionName - Name of the collection written.
+ * @returns {string} Composite key for `fence._csTargetTsByCollection`.
+ */
+export function fenceWriteTsKey(connectionId, collectionName) {
+  // NUL cannot appear in a Mongo collection name, so it is a safe
+  // separator: no (connection, collection) pair can collide with another.
+  return `${connectionId}\u0000${collectionName}`;
+}

@@ -8,25 +8,24 @@ for example the `Meteor.call` function,
 you have the `Meteor.callAsync` counterpart,
 that returns a promise of the result.
 
-You can promisify any function that takes a callback as its last argument, with the [`Meteor.promisify`](https://v3-docs.meteor.com/api/meteor.html#Meteor-promisify) function.
+Many callback-style APIs now already have built-in async counterparts.
 
-
-for example, you can make [`Meteor.loginWithPassword`](https://v3-docs.meteor.com/api/accounts.html#Meteor-loginWithPassword) return a promise like this:
+For example, you can use [`Meteor.loginWithPasswordAsync`](https://v3-docs.meteor.com/api/accounts.html#Meteor-loginWithPasswordAsync) directly:
 
 ```javascript
 import { Meteor } from 'meteor/meteor';
 
-loginWithPasswordAsync = Meteor.promisify(Meteor.loginWithPassword);
-
 const login = async () => {
   try {
-    await loginWithPasswordAsync('username', 'password');
-    console.log('Logged in');
+    const loginDetails = await Meteor.loginWithPasswordAsync('username', 'password');
+    console.log('Logged in', loginDetails.type);
   } catch (error) {
     console.error('Login failed', error);
   }
 };
 ```
+
+You can still promisify any other function that takes a callback as its last argument, with the [`Meteor.promisify`](https://v3-docs.meteor.com/api/meteor.html#Meteor-promisify) function.
 
 For promises in general, you can use the `await` keyword to wait for the promise to resolve.
 
@@ -176,4 +175,3 @@ const someFunction = async () => { // [!code ++]
 };
 
 ```
-

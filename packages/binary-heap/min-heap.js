@@ -1,4 +1,4 @@
-import { MaxHeap } from './max-heap.js';
+import { MaxHeap } from "./max-heap.js";
 
 export class MinHeap extends MaxHeap {
   constructor(comparator, options) {
@@ -12,4 +12,4 @@ export class MinHeap extends MaxHeap {
   minElementId() {
     return super.maxElementId();
   }
-};
+}

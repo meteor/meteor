@@ -45,5 +45,4 @@ coverage-ts/
 .cursorrules
 
 # claude code
-.claude/skills/
-.claude/settings.local.json
+.claude/*

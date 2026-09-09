@@ -1,16 +1,22 @@
 import { Meteor } from 'meteor/meteor';
 import { WebApp, WebAppInternals } from 'meteor/webapp';
 import path from 'path';
-import { parse as parseUrl } from 'url';
 import {
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
+  getRspackChunksContext,
+  getRspackAssetsContext,
   RSPACK_HOT_UPDATE_REGEX,
 } from "./lib/constants";
 
-// Define constants for both development and production
-const rspackChunksContext = process.env.RSPACK_CHUNKS_CONTEXT || RSPACK_CHUNKS_CONTEXT;
-const rspackAssetsContext = process.env.RSPACK_ASSETS_CONTEXT || RSPACK_ASSETS_CONTEXT;
+// The chunk/asset contexts are mode-scoped (see getRspackChunksContext) so a
+// dev server and a `meteor test` instance running on the same app directory
+// serve from — and clean — separate directories. The suffix must match the one
+// the build side used (packages/rspack/lib/processes.js): `meteor test` sets
+// Meteor.isTest and `meteor test --full-app` sets Meteor.isAppTest, mirroring
+// isMeteorAppTest()/isMeteorAppTestFullApp() in the build tool.
+const isTestMode = Meteor.isTest || Meteor.isAppTest;
+const isTestFullApp = Meteor.isAppTest;
+const rspackChunksContext = getRspackChunksContext(isTestMode, isTestFullApp);
+const rspackAssetsContext = getRspackAssetsContext(isTestMode, isTestFullApp);
 
 /**
  * Regex pattern for rspack bundles
@@ -35,44 +41,65 @@ const shouldEnableDevHMRProxy =
   !process.env.RSPACK_NATIVE;
 if (shouldEnableDevHMRProxy) {
   const { shuffleString } = require('meteor/tools-core/lib/string');
-  const { createProxyMiddleware } = require('http-proxy-middleware');
+  // http-proxy-3 is a maintained, drop-in replacement for the unmaintained
+  // http-proxy that http-proxy-middleware pulls in. The old http-proxy uses the
+  // deprecated `util._extend` and legacy `url.parse` APIs, which print Node
+  // deprecation warnings on every proxied request. See
+  // https://github.com/meteor/meteor/issues/13491.
+  const httpProxy = require('http-proxy-3');
 
   // Target URL for the Rspack dev server
   const target = `http://localhost:${process.env.RSPACK_DEVSERVER_PORT}`;
 
-  // Log upstream proxy errors so failures (CI or otherwise) show the actual
-  // Node error code (ECONNREFUSED / ETIMEDOUT / ECONNRESET / …) instead of
-  // only the 504 the browser sees. v3 of http-proxy-middleware expects the
-  // handler under options.on.error; the legacy onError is silently ignored.
-  const makeErrorHandler = (scope) => (err, req) => {
-    console.error(
-      `[rspack-proxy:${scope}] upstream error ${err.code || err.message} for ${req.method} ${req.url} -> ${target}`
-    );
+  const createRspackProxy = (scope) => {
+    const proxy = httpProxy.createProxyServer({});
+
+    // Report the upstream error code and request, rather than only the HTTP
+    // error or disconnected socket seen by the browser.
+    proxy.on('error', (err, req, resOrSocket) => {
+      console.error(
+        `[rspack-proxy:${scope}] upstream error ${err.code || err.message} for ${req.method} ${req.url} -> ${target}`
+      );
+
+      // Don't let a transient dev-server hiccup (e.g. during a restart) crash
+      // the app process; respond with a 502 / close the socket instead.
+      if (resOrSocket && typeof resOrSocket.writeHead === 'function') {
+        if (!resOrSocket.headersSent) {
+          resOrSocket.writeHead(502, { 'Content-Type': 'text/plain' });
+        }
+        resOrSocket.end('Rspack dev server proxy error.');
+      } else if (resOrSocket && typeof resOrSocket.destroy === 'function') {
+        resOrSocket.destroy();
+      }
+    });
+
+    return proxy;
   };
+  const assetsProxy = createRspackProxy('assets');
+  const wsProxy = createRspackProxy('ws');
 
-  // Proxy HMR websocket upgrade requests
-  WebApp.connectHandlers.use('/ws',
-    createProxyMiddleware({
-      target,
-      ws: true,
-      on: { error: makeErrorHandler('ws') },
-    })
-  );
+  // Proxy all dev asset requests under the rspack prefix. connect strips the
+  // mount prefix from req.url before calling the handler, so this proxies
+  // "/__rspack__/foo" -> "<devserver>/foo", matching the previous
+  // http-proxy-middleware behavior. This also supports integrations whose
+  // output.publicPath does not include /__rspack__/.
+  WebApp.connectHandlers.use('/__rspack__', (req, res) => {
+    assetsProxy.web(req, res, { target, changeOrigin: true });
+  });
+  WebApp.connectHandlers.use('/ws', (req, res) => {
+    wsProxy.web(req, res, { target });
+  });
 
-  // Proxy all dev asset requests under the rspack prefix.
-  // Strip /__rspack__/ before forwarding so the dev server receives
-  // root-relative paths (e.g. /client-rspack.js). This is required because
-  // some framework integrations (e.g. @nx/angular-rspack) override
-  // output.publicPath, so the dev server may not serve files under /__rspack__/.
-  WebApp.connectHandlers.use('/__rspack__',
-    createProxyMiddleware({
-      target,
-      changeOrigin: true,
-      ws: true,
-      pathRewrite: { '^/__rspack__': '' },
-      on: { error: makeErrorHandler('assets') },
-    })
-  );
+  // Proxy HMR WebSocket upgrades. Scope to Rspack's own paths so Meteor's
+  // DDP/sockjs websockets are left untouched.
+  WebApp.httpServer.on('upgrade', (req, socket, head) => {
+    const url = req.url || '';
+    if (url.startsWith('/__rspack__')) {
+      assetsProxy.ws(req, socket, head, { target, changeOrigin: true });
+    } else if (url === '/ws' || url.startsWith('/ws?') || url.startsWith('/ws/')) {
+      wsProxy.ws(req, socket, head, { target });
+    }
+  });
 
   WebApp.rawConnectHandlers.use((req, res, next) => {
     // If this request is already under /__rspack__/, don't redirect it again.
@@ -194,7 +221,7 @@ const originalStaticFilesMiddleware = WebAppInternals.staticFilesMiddleware;
 
 // Handle rspack assets on-demand to add Meteor's static files headers
 WebAppInternals.staticFilesMiddleware = async function(staticFilesByArch, req, res, next) {
-  const pathname = parseUrl(req.url).pathname;
+  const pathname = new URL(req.url, 'http://localhost').pathname;
 
   try {
     // Check if this is a rspack asset request

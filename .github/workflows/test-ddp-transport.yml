@@ -1,0 +1,59 @@
+name: Test DDP Transports
+
+on:
+  pull_request:
+
+jobs:
+  test-ddp-transport:
+    strategy:
+      fail-fast: false
+      matrix:
+        transport:
+          - 'sockjs'
+          - 'uws'
+    runs-on: oss-vm
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.transport }}
+      cancel-in-progress: true
+    timeout-minutes: 30
+    env:
+      CXX: g++-12
+      phantom: false
+      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
+      TEST_PACKAGES_EXCLUDE: stylus
+      METEOR_MODERN: true
+      NODE_ENV: CI
+      DDP_TRANSPORT: ${{ matrix.transport }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.15.0
+
+      - name: Restore caches
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.npm
+            .meteor
+            .babel-cache
+            dev_bundle
+            /home/runner/.npm/chromium
+          key: ${{ runner.os }}-node-24-${{ hashFiles('meteor', '**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-24-
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-12 libnss3
+
+      - name: Install npm dependencies
+        run: npm install
+
+      - name: Run DDP server tests (${{ matrix.transport }})
+        run: ./packages/test-in-console/run.sh "ddp-server"

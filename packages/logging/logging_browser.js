@@ -1,4 +1,4 @@
 Formatter = {};
-Formatter.prettify = function(line, color){
-    return line;
+Formatter.prettify = function (line, _color) {
+  return line;
 };

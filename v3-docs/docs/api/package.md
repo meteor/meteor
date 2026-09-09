@@ -264,9 +264,6 @@ warnings about the package imports that look like global variables.
 Each file in the list is an object that has all the methods provided by all
 build plugins, described above.
 
-See an example of a linting plugin implemented in Core: [jshint](https://github.com/meteor/meteor/tree/devel/packages/jshint).
-
-
 ## Compilers {#build-plugin-compilers}
 
 ::: warning
@@ -354,11 +351,11 @@ package (compiles ES2015+ to JavaScript that can run in the browsers).
 ## Minifiers {#build-plugin-minifiers}
 
 ::: warning
-In Meteor 3.4+ [with Rspack enabled](../about/modern-build-stack/rspack-bundler-integration.md), minifier build plugins won't be used for application code by default. Rspack includes its own optimization and minification capabilities through plugins like SwcJsMinimizerRspackPlugin for JavaScript and SwcJsMinimizerRspackPlugin for CSS. These provide efficient minification with modern optimizations and are integrated directly into the Rspack build process.
+In Meteor 3.4+ [with Rspack enabled](../about/modern-build-stack/rspack-bundler-integration.md), minifier build plugins won't be used for application code by default. Rspack includes its own optimization and minification capabilities through plugins like SwcJsMinimizerRspackPlugin for JavaScript and LightningCssMinimizerRspackPlugin for CSS. These provide efficient minification with modern optimizations and are integrated directly into the Rspack build process.
 :::
 
-Minifiers run last after the sources has been compiled and JavaScript code has
-been linked. Minifiers are only ran for the client programs (`web.browser` and
+Minifiers run last after the sources have been compiled and JavaScript code has
+been linked. Minifiers are only run for the client programs (`web.browser` and
 `web.cordova`).
 
 There are two types of minifiers one can add: a minifier processing JavaScript
@@ -383,7 +380,7 @@ Plugin.registerMinifier({
 
 The minifier class must implement the method `processFilesForBundle`. The first
 argument is a list of processed files and the options object specifies if the
-minifier is ran in production mode or development mode.
+minifier is run in production mode or development mode.
 
 ::: info
 This method can be asynchronous. If it returns a Promise, the build process will
@@ -397,7 +394,7 @@ class UglifyJsMinifier {
 
     if (minifyMode === 'development') {
       // Don't minify in development.
-      file.forEach((file) => {
+      files.forEach((file) => {
         file.addJavaScript({
           data: file.getContentsAsBuffer(),
           sourceMap: file.getSourceMap(),
@@ -437,10 +434,10 @@ of the package is a good example how to build your own minification plugin.
 
 In development builds, minifiers must meet these requirements to not prevent hot module replacement:
 
-- Call `addJavasScript` once for each file to add the file's contents
+- Call `addJavaScript` once for each file to add the file's contents
 - The contents of the files are not modified
 
-In the future Meteor will allow minifiers to concatenate or modify files in development without affected hot module replacement.
+In the future Meteor will allow minifiers to concatenate or modify files in development without affecting hot module replacement.
 
 
 ## Caching {#build-plugin-caching}
@@ -467,7 +464,7 @@ Since the build plugins run as part of the Meteor tool, they follow the same fil
 
 So whenever you get a path in your build plugin implementation, via `getPathInPackage` or in an argument of the `setDiskCacheDirectory` method, the path will be a Unix path.
 
-Now, on running on Windows, the usual node modules `fs` and `path` expect to get a DOS path. To assist you to write correct code, the `Plugin` symbol provides its own versions of `fs` and `path` that you can use instead (note that all methods on `fs` are fiberized and sync versions prefer using Fibers rather than freezing the whole event loop).
+Now, on running on Windows, the usual node modules `fs` and `path` expect to get a DOS path. To assist you to write correct code, the `Plugin` symbol provides its own versions of `fs` and `path` that you can use instead.
 
 Also `Plugin` provides helper functions `convertToStandardPath` and `convertToOSPath` to convert to a Unix path or to the path expected by the node libraries regardless of the path origin.
 
@@ -483,7 +480,7 @@ console.log(filePath); // Prints '/C/Program Files/Program/file.txt'
 
 fs.writeFileSync(filePath, 'Hello.'); // Writes to 'C:\Program Files\Program\file.txt'
 
-console.log(Plugin.convertToOsPath(filePath)); // Prints 'C:\Program Files\Program\file.txt'
+console.log(Plugin.convertToOSPath(filePath)); // Prints 'C:\Program Files\Program\file.txt'
 ```
 
 

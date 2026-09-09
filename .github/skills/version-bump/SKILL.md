@@ -1,6 +1,6 @@
 ---
 name: version-bump
-description: Use when bumping Meteor package versions for beta, RC, or official releases. Covers the two version schemes (meteor-tool vs all other packages), the update-semver automation tool, manual files the tool does not handle, and the full lifecycle from beta through official release. Applies to packages/*/package.js, scripts/admin/, npm-packages/meteor-installer/, and .meteor/versions in test apps.
+description: Use when bumping Meteor package versions for beta, RC, or official releases. Covers the two version schemes (meteor-tool vs all other packages), the update-semver automation tool, manual files the tool does not handle, modern-tool npm package semver analysis, the official installer gate, and the full lifecycle from beta through official release. Applies to packages/*/package.js, scripts/admin/, npm-packages/meteor-installer/, modern-tool npm packages, and .meteor/versions in test apps.
 ---
 
 # Meteor Version Bump Rules
@@ -45,7 +45,39 @@ Before bumping versions:
 2. All changes intended for the release must be merged
 3. Confirm the release type with the user: **beta**, **RC**, or **official**
 
----
+## Modern Tool npm Packages
+
+Include changed modern-tool npm packages such as `@meteorjs/rspack` in the same base-branch analysis:
+
+Compare the full npm package directory with the base. Ignore only its current
+`version` field and matching lockfile version metadata when identifying shipped
+changes. Classify the rest as patch, minor, or major, then derive the target
+`X.Y.Z` release line from the base version.
+
+Apply only the explicitly requested npm stage:
+
+| Stage | Target on the required `X.Y.Z` line |
+|-------|--------------------------------------|
+| Beta | Start at `X.Y.Z-beta.0`; preserve an existing `beta.N` or later stage |
+| RC | Move beta to `X.Y.Z-rc.0`; preserve an existing `rc.N` or stable version |
+| Official | Use `X.Y.Z` without a prerelease suffix |
+
+Never advance a sufficient version just because the workflow reruns. Increment
+`beta.N` or `rc.N` only when the user requests another prerelease after the
+current one was published. If the required magnitude rises, move to the new
+release line and reset the requested prerelease to `.0`. Never downgrade from
+RC to beta or from stable to a prerelease.
+
+Do not infer the npm stage from the Meteor release stage. The current
+`@meteorjs/rspack` bump helper supports beta and stable versions, but not RC.
+Handle an explicitly requested RC version directly unless that helper changes.
+
+After selecting the package version, use
+[sync-modern-tool-versions](../sync-modern-tool-versions/SKILL.md) to propagate
+it to the lockfile, install constants, normal fixtures, and active docs. The
+sync skill verifies the selected version but does not increment it or publish.
+Include the npm package in the bump table and apply it after confirmation. Keep
+`packages/rspack/package.js` independent and analyze it normally.
 
 ## Version Format Reference
 
@@ -92,6 +124,33 @@ For subsequent betas, RCs, and official releases, the base version (`X.Y.Z`) sta
 | **Patch** | Bug fixes, performance improvements, type fixes, internal refactors with no API changes | Fix passwordValidator precedence, remove redundant await, TypeScript type corrections |
 | **Minor** | New public APIs, new exported functions/methods, new user-facing features or capabilities | New `getUserIdsInRoleAsync` method, new CSS auto-delegation feature, new test assertion methods |
 | **Major** | Breaking changes, removed APIs, renamed exports, changed function signatures | Removed public method, renamed package export, async migration of sync API |
+
+### When NOT to Bump
+
+Some changes don't warrant a version bump at all, even when files in a package change.
+A package should **not** be bumped if its only diff vs `devel` consists of:
+
+- **Lint / formatter changes** — `var → const`, quote style (`'` → `"`), trailing commas,
+  line-wrap reformatting, indentation, semicolons, `function() {` → `function () {`.
+  No behavioral change.
+- **Test-only changes** — additions or refactors of test files (`*-tests.js`,
+  `*-test.js`, `tests.js`, files under `Package.onTest`). Tests don't ship to users.
+- **Comment / JSDoc-only changes** — moved or reformatted comments with no code change.
+
+If, after mentally stripping out these classes of changes, no runtime code change is
+left, **do not bump the package**. The release ships with the package at its current
+stable version.
+
+**Conversely, you MUST bump if any of these are present** alongside lint/test/format:
+
+- A change in a `.js` / `.ts` / `.mjs` file under the package's source (not a test
+  file) that alters control flow, output, or external behavior
+- A change in `Package.describe` `version`, `summary`, dependencies, or exports
+- A change in `Npm.depends()` or `Cordova.depends()` versions
+- A change in a `.d.ts` file that adds/removes/modifies the **public type surface**
+  (a semicolon/quote-only `.d.ts` reformat is still lint-only and does not bump)
+
+When unsure whether a diff is lint-only, **stop and present the diff to the user**.
 
 ### How to Assess Each Package
 
@@ -200,11 +259,12 @@ Claude should perform the version bump process directly rather than relying on t
 ### AI Workflow
 
 1. Detect changed packages: `git diff devel --dirstat=files -- ./packages/`
-2. For each package, read the diff and current version from `package.js`
-3. Classify the bump magnitude (patch/minor/major) based on change analysis
-4. Present the full table with reasons to the user for confirmation
-5. Apply all `package.js` version edits
-6. Handle the manual files (release JSON, `.meteor/versions`, etc.)
+2. If modern-tool npm package code or dependency versions changed, complete its bump analysis and `sync-modern-tool-versions`
+3. For each package, read the diff and current version from `package.js`
+4. Classify the bump magnitude (patch/minor/major) based on change analysis
+5. Present the full table with reasons to the user for confirmation
+6. Apply all `package.js` version edits
+7. Handle the manual files (release JSON, `.meteor/versions`, etc.)
 
 ### Deriving the Version
 
@@ -370,36 +430,27 @@ Only `test-apps/`, not `tools/tests/apps/` or `tools/e2e-tests/apps/`. Strip pre
 - Update the **Bumped Meteor Packages** section with final versions (no prerelease suffixes)
 - Update `v3-docs/docs/history.md` with the full release entry
 
-### Commit 2: npm installer
+### Commit 2: npm installer, required final gate
 
-This is a **separate commit** after the packages commit.
+Prepare a separate installer commit after the packages commit. The official
+release is incomplete until these values agree:
 
-#### Step 1: Update installer config
+| File | Required value |
+|------|----------------|
+| `config.js` `METEOR_LATEST_VERSION` | `X.Y` for `X.Y.0`; full `X.Y.Z` for patches |
+| `package.json` `version` | Full npm semver `X.Y.Z` |
+| `package-lock.json` top-level and root versions | Same full npm semver `X.Y.Z` |
 
-Edit `npm-packages/meteor-installer/config.js`:
+Regenerate the lockfile from `npm-packages/meteor-installer/`:
 
-```js
-const METEOR_LATEST_VERSION = 'X.Y';
+```bash
+npm install --package-lock-only --ignore-scripts
+node ../../.github/skills/version-bump/scripts/audit-meteor-installer-version.mjs
 ```
 
-- For `.0` releases: short form without patch (e.g., `'3.4'`)
-- For patch releases: full version (e.g., `'3.4.1'`, `'3.3.2'`)
-
-#### Step 2: Update installer package.json
-
-Edit `npm-packages/meteor-installer/package.json`:
-
-```json
-{
-  "version": "X.Y.Z"
-}
-```
-
-Full semver form required by npm (e.g., `"3.4.0"`, `"3.4.1"`).
-
-#### Step 3: Update package-lock.json
-
-Run `npm install` in `npm-packages/meteor-installer/` to regenerate the lock file, or manually update the version field.
+Do not publish the `meteor` npm package or complete the official release while
+the audit fails. Published npm versions are immutable, so this cannot be fixed
+by republishing the same version.
 
 ---
 
@@ -415,6 +466,7 @@ Run `npm install` in `npm-packages/meteor-installer/` to regenerate the lock fil
 - [ ] Update `.meteor/versions` in `test-apps/` only (not `tools/tests/apps/` or `tools/e2e-tests/apps/`)
 - [ ] Update changelog at `v3-docs/docs/generators/changelog/versions/`
 - [ ] Update docs referencing package versions
+- [ ] If modern-tool npm package code or dependency versions changed, complete its bump analysis and `sync-modern-tool-versions`; resolve audit failures
 
 ### RC Release
 
@@ -423,6 +475,7 @@ Run `npm install` in `npm-packages/meteor-installer/` to regenerate the lock fil
 - [ ] Update `.meteor/versions` in `test-apps/` only (not `tools/tests/apps/` or `tools/e2e-tests/apps/`)
 - [ ] Update changelog
 - [ ] Update docs referencing package versions
+- [ ] If modern-tool npm package code or dependency versions changed, complete its bump analysis and `sync-modern-tool-versions`; resolve audit failures
 
 ### Official Release
 
@@ -431,6 +484,5 @@ Run `npm install` in `npm-packages/meteor-installer/` to regenerate the lock fil
 - [ ] Update `.meteor/versions` in `test-apps/` only (strip prerelease suffixes)
 - [ ] Finalize changelog (set date, replace RC versions with final)
 - [ ] Update `v3-docs/docs/history.md`
-- [ ] **Separate commit:** Update `npm-packages/meteor-installer/config.js` (`'X.Y'`)
-- [ ] **Separate commit:** Update `npm-packages/meteor-installer/package.json` (`"X.Y.0"`)
-- [ ] **Separate commit:** Update `npm-packages/meteor-installer/package-lock.json`
+- [ ] If modern-tool npm package code or dependency versions changed, complete its bump analysis and `sync-modern-tool-versions`; resolve audit failures
+- [ ] **Required separate installer commit:** Synchronize config, package, and lockfile versions; pass `audit-meteor-installer-version.mjs`
