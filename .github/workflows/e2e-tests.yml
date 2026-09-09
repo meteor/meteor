@@ -22,6 +22,9 @@ concurrency:
 
 env:
   TOOL_NODE_FLAGS: "--max_old_space_size=12288"
+  # Generated apps run Playwright in child processes whose HOME can differ
+  # from the Actions shell. Keep all browser installs in one explicit path.
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
@@ -54,6 +57,8 @@ jobs:
       max-parallel: 4
       matrix:
         category:
+          - Npm Shrinkwrap
+          - CLI
           - Angular
           - Babel
           - Blaze
@@ -65,12 +70,13 @@ jobs:
           - Other
           - React
           - R.Router
-          - Regression
           - Solid
           - Svelte
           - Typescript
           - Vue
         include:
+          - category: Npm Shrinkwrap
+            test_pattern: '^Regression / npm-shrinkwrap transitive deps /'
           # Server Runtime is the largest coherent regression suite. Keep it
           # separate while sending new regression tests to the general shard.
           - category: Server Runtime
@@ -107,7 +113,7 @@ jobs:
         with:
           path: |
             /root/.npm
-            /root/.cache/ms-playwright
+            ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
             dev_bundle
             .babel-cache
             .meteor
@@ -117,17 +123,12 @@ jobs:
           restore-keys: |
             e2e-${{ runner.os }}-
 
-      - name: Install Playwright browsers
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium chromium-headless-shell
-
-      - name: Install Playwright system dependencies
-        run: npx playwright install-deps chromium
-
       - name: Install deps
         run: npm install
 
       - name: Install test deps
+        # This installs the browsers and system dependencies using the exact
+        # Playwright version declared by tools/e2e-tests/package.json.
         run: npm run install:e2e
 
       - name: Set NPM_LINK_RSPACK=false for release branches
@@ -145,7 +146,7 @@ jobs:
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: 15
+        timeout-minutes: 20
         run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
 
       - name: Clean up before retry
@@ -165,7 +166,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 20
+        timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
           METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"

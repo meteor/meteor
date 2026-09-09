@@ -165,6 +165,14 @@ describe('Regression / npm-shrinkwrap transitive deps /', () => {
       const second = await buildMeteorApp(tempDir);
       buildOutputDirs.push(second.buildOutputDir);
 
+      // Verify the missing installation was actually rebuilt, not just that
+      // the edited shrinkwrap survived a cached build.
+      expect(await fs.pathExists(nodeModulesPath)).toBe(true);
+      const installedTransitive = await fs.readJson(
+        path.join(nodeModulesPath, PINNED_TRANSITIVE, 'package.json'),
+      );
+      expect(installedTransitive.version).toBe(olderVersion);
+
       const rebuilt = await fs.readJson(shrinkwrapPath);
       const rebuiltTransitive = findInTree(rebuilt, PINNED_TRANSITIVE);
       expect(rebuiltTransitive).toBeTruthy();
