@@ -3,8 +3,7 @@
 //
 //   Bun.serve(:PORT)
 //     ├── Static files → Bun.file() (zero-copy)
-//     ├── Boilerplate  → WebAppInternals.getBoilerplate()
-//     ├── API/middleware → fetch() over Unix socket → Express
+//     ├── API/middleware/SSR/boilerplate → fetch() over Unix socket → Express
 //     └── WebSocket DDP → StreamServer._onConnection()
 //
 // Usage:
@@ -42,8 +41,6 @@ const { bootPackages, runMain } = await import(loaderPath);
 await bootPackages(serverDir);
 
 const WebApp = Package.webapp.WebApp;
-const WebAppInternals = Package.webapp.WebAppInternals;
-const RoutePolicy = Package.routepolicy?.RoutePolicy;
 
 // ---------------------------------------------------------------------------
 // Step 2: Build static file map from client manifests
@@ -109,68 +106,7 @@ function serveStaticFile(urlPath) {
 }
 
 // ---------------------------------------------------------------------------
-// Step 3: Boilerplate HTML serving
-// ---------------------------------------------------------------------------
-
-function isAppUrl(urlPath) {
-  if (urlPath === '/favicon.ico' || urlPath === '/robots.txt') return false;
-  if (urlPath === '/app.manifest') return false;
-  if (RoutePolicy?.classify && RoutePolicy.classify(urlPath)) return false;
-  return true;
-}
-
-async function serveBoilerplate(req, url) {
-  if (!isAppUrl(url.pathname)) return null;
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    return new Response('', {
-      status: req.method === 'OPTIONS' ? 200 : 405,
-      headers: { 'Allow': 'OPTIONS, GET, HEAD' },
-    });
-  }
-
-  const headers = Object.fromEntries(req.headers.entries());
-  const meteorReq = { url: url.pathname + url.search, headers, cookies: {} };
-  const request = WebApp.categorizeRequest(meteorReq);
-
-  const query = Object.fromEntries(url.searchParams);
-  if (query.meteor_css_resource) {
-    return new Response('.meteor-css-not-found-error { width: 0px;}', {
-      status: 200,
-      headers: { 'Content-Type': 'text/css; charset=utf-8', 'Cache-Control': 'no-cache' },
-    });
-  }
-  if (query.meteor_js_resource || query.meteor_dont_serve_index) {
-    return new Response('404 Not Found', { status: 404, headers: { 'Cache-Control': 'no-cache' } });
-  }
-
-  if (!WebApp.clientPrograms[request.arch]) {
-    return new Response('404 Not Found', { status: 404, headers: { 'Cache-Control': 'no-cache' } });
-  }
-
-  await WebApp.clientPrograms[request.arch].paused;
-
-  try {
-    const { stream, statusCode, headers: extraHeaders } =
-      await WebAppInternals.getBoilerplate(request, request.arch);
-
-    const chunks = [];
-    for await (const chunk of stream) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-    }
-    const html = Buffer.concat(chunks).toString('utf8');
-
-    return new Response(html, {
-      status: statusCode || 200,
-      headers: { 'Content-Type': 'text/html; charset=utf-8', ...extraHeaders },
-    });
-  } catch (e) {
-    console.error(`[bun-host] Boilerplate error: ${e.stack || e.message}`);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Step 4: BunSocket adapter for DDP WebSocket
+// Step 3: BunSocket adapter for DDP WebSocket
 // ---------------------------------------------------------------------------
 
 class BunSocket extends EventEmitter {
@@ -190,7 +126,7 @@ class BunSocket extends EventEmitter {
 }
 
 // ---------------------------------------------------------------------------
-// Step 5: Patch WebApp.startListening → Bun.serve()
+// Step 4: Patch WebApp.startListening → Bun.serve()
 // ---------------------------------------------------------------------------
 
 WebApp.startListening = function (httpServer, listenOptions, cb) {
@@ -219,9 +155,6 @@ WebApp.startListening = function (httpServer, listenOptions, cb) {
         const url = new URL(req.url, `http://localhost:${PORT}`);
         const staticResp = serveStaticFile(url.pathname);
         if (staticResp) return staticResp;
-
-        const boilerResp = await serveBoilerplate(req, url);
-        if (boilerResp) return boilerResp;
 
         try {
           return await fetch(
@@ -267,7 +200,7 @@ WebApp.startListening = function (httpServer, listenOptions, cb) {
 };
 
 // ---------------------------------------------------------------------------
-// Step 6: Run main — webapp calls our patched startListening
+// Step 5: Run main — webapp calls our patched startListening
 // ---------------------------------------------------------------------------
 
 await runMain();

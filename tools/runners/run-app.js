@@ -351,9 +351,23 @@ Object.assign(AppProcess.prototype, {
     // Resolve runtime executable
     var execPath;
     if (isBun) {
-      try {
-        execPath = child_process.execSync('which bun', { encoding: 'utf8' }).trim();
-      } catch (e) {
+      const path = require('path');
+      const fs = require('fs');
+      const paths = (process.env.PATH || '').split(path.delimiter);
+      const exts = process.platform === 'win32' ? (process.env.PATHEXT || '.EXE;.CMD;.BAT').split(';') : [''];
+      for (const p of paths) {
+        for (const ext of exts) {
+          const full = path.join(p, 'bun' + ext);
+          try {
+            if (fs.existsSync(full) && fs.statSync(full).isFile()) {
+              execPath = full;
+              break;
+            }
+          } catch (e) {}
+        }
+        if (execPath) break;
+      }
+      if (!execPath) {
         throw new Error(
           'Bun not found. Install it from https://bun.sh and make sure it is in your PATH.'
         );
@@ -376,35 +390,19 @@ Object.assign(AppProcess.prototype, {
     opts.push(entryPoint);
 
     // Spawn the runtime process
-    // Note: Bun does not support Node's IPC channel, so we use 'pipe' only.
-    var child = child_process.spawn(execPath, opts, {
+    // Both Node and Bun support Node's standard IPC channel when using JSON serialization.
+    var spawnOptions = {
       env: self._computeEnvironment(),
-      stdio: isBun
-        ? ['pipe', 'pipe', 'pipe']
-        : ['pipe', 'pipe', 'pipe', 'ipc'],
-    });
-
-    // Add a child.sendMessage(topic, payload) method to this child
-    // process object.
+      stdio: ['pipe', 'pipe', 'pipe', 'ipc'],
+    };
     if (isBun) {
-      // Bun does not support Node's IPC channel. Emulate IPC over
-      // stdin JSON lines so hot reload messages reach the child.
-      child.sendMessage = function (topic, payload) {
-        return new Promise(function (resolve, reject) {
-          var msg = JSON.stringify({ topic: topic, payload: payload }) + '\n';
-          child.stdin.write(msg, function (err) {
-            if (err) reject(err);
-            else resolve();
-          });
-        });
-      };
-      // child→parent messages (shell-server .reload) not supported
-      // on Bun — the shell-server package falls back to process.exit(0).
-      child.onMessage = function () {};
-    } else {
-      const interProcessMessaging = await loadIsopackage("inter-process-messaging");
-      interProcessMessaging.enable(child);
+      spawnOptions.serialization = 'json';
     }
+
+    var child = child_process.spawn(execPath, opts, spawnOptions);
+
+    const interProcessMessaging = await loadIsopackage("inter-process-messaging");
+    interProcessMessaging.enable(child);
 
     return child;
   }

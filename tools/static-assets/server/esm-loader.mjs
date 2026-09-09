@@ -45,6 +45,8 @@ function createResolver(serverDir, programJson) {
     packageNodeModulesMap[item.path] = dirs;
   }
 
+  const knownPaths = programJson.load.map(item => item.path);
+
   let currentPackagePath = null;
 
   function resolveInDirs(name, dirs) {
@@ -57,14 +59,14 @@ function createResolver(serverDir, programJson) {
   }
 
   function getCallerPackagePath() {
+    const stack = new Error().stack || '';
+    for (const line of stack.split('\n')) {
+      for (const kp of knownPaths) {
+        if (line.includes(kp)) return kp;
+      }
+    }
     const store = asyncPackageContext.getStore();
     if (store && store.packagePath) return store.packagePath;
-    const stack = new Error().stack || '';
-    const m = stack.match(/packages\/([a-zA-Z0-9_-]+)\.js/);
-    if (m) {
-      const pkgPath = 'packages/' + m[1] + '.js';
-      if (packageNodeModulesMap[pkgPath]) return pkgPath;
-    }
     return currentPackagePath;
   }
 
@@ -96,12 +98,6 @@ function createResolver(serverDir, programJson) {
     // Node builtins
     try { return require(name); } catch (e) {}
 
-    // Fallback across all packages if not found in caller's dirs (handles post-bootstrap calls)
-    for (const p of Object.keys(packageNodeModulesMap)) {
-      const fallbackResolved = resolveInDirs(name, packageNodeModulesMap[p]);
-      if (fallbackResolved) return require(fallbackResolved);
-    }
-
     throw error || new Error('Cannot find module ' + JSON.stringify(name));
   }
 
@@ -118,16 +114,12 @@ function createResolver(serverDir, programJson) {
     const resolved = resolveInDirs(name, dirs);
     if (resolved) return resolved;
 
-    for (const p of Object.keys(packageNodeModulesMap)) {
-      const fallbackResolved = resolveInDirs(name, packageNodeModulesMap[p]);
-      if (fallbackResolved) return fallbackResolved;
-    }
-
     return require.resolve(name);
   };
 
   return {
     meteorNpmRequire,
+    getCallerPackagePath,
     setCurrentPackage(p) { currentPackagePath = p; },
     packageNodeModulesMap,
   };
@@ -156,7 +148,7 @@ export async function bootPackages(serverDir) {
   const starJson = JSON.parse(fs.readFileSync(path.join(buildDir, 'star.json'), 'utf8'));
   const programsDir = path.dirname(serverDir);
 
-  const { meteorNpmRequire, setCurrentPackage } = createResolver(serverDir, programJson);
+  const { meteorNpmRequire, getCallerPackagePath, setCurrentPackage } = createResolver(serverDir, programJson);
 
   // Build per-package asset maps from program.json
   // In the legacy boot, Assets is injected per-package via closure.
@@ -199,30 +191,12 @@ export async function bootPackages(serverDir) {
 
   function resolveAssetEntry(assetPath) {
     assetPath = normalizeAssetPath(assetPath);
-    // 1. Active async context
-    const store = asyncPackageContext.getStore();
-    if (store && store.packagePath && packageAssetsMap[store.packagePath]) {
-      const p = packageAssetsMap[store.packagePath][assetPath];
-      if (p) return p;
+    const callerPath = getCallerPackagePath();
+    if (callerPath && packageAssetsMap[callerPath] && packageAssetsMap[callerPath][assetPath]) {
+      return packageAssetsMap[callerPath][assetPath];
     }
-    // 2. Caller package from call stack
-    const stack = new Error().stack || '';
-    const m = stack.match(/packages\/([a-zA-Z0-9_-]+)\.js/);
-    if (m) {
-      const pkgPath = 'packages/' + m[1] + '.js';
-      if (packageAssetsMap[pkgPath] && packageAssetsMap[pkgPath][assetPath]) {
-        return packageAssetsMap[pkgPath][assetPath];
-      }
-    }
-    // 3. Current synchronous asset context
     if (currentAssets && currentAssets[assetPath]) {
       return currentAssets[assetPath];
-    }
-    // 4. Fallback search across all package assets in the bundle
-    for (const p of Object.keys(packageAssetsMap)) {
-      if (packageAssetsMap[p][assetPath]) {
-        return packageAssetsMap[p][assetPath];
-      }
     }
     return null;
   }
@@ -332,33 +306,6 @@ export async function bootPackages(serverDir) {
       });
     };
     return true;
-  }
-
-  // On Bun, Node's IPC channel is not available. Emulate process.onMessage
-  // by reading JSON lines from stdin so that hot reload messages from the
-  // parent process (meteor run) reach package handlers (webapp, dynamic-import).
-  if (typeof Bun !== 'undefined' && !process.onMessage) {
-    const _ipcHandlers = new Map();
-    process.onMessage = function (topic, callback) {
-      if (!_ipcHandlers.has(topic)) _ipcHandlers.set(topic, []);
-      _ipcHandlers.get(topic).push(callback);
-    };
-    let _ipcBuf = '';
-    process.stdin.resume();
-    process.stdin.setEncoding('utf8');
-    process.stdin.on('data', function (chunk) {
-      _ipcBuf += chunk;
-      let idx;
-      while ((idx = _ipcBuf.indexOf('\n')) !== -1) {
-        const line = _ipcBuf.slice(0, idx);
-        _ipcBuf = _ipcBuf.slice(idx + 1);
-        try {
-          const msg = JSON.parse(line);
-          const cbs = _ipcHandlers.get(msg.topic);
-          if (cbs) cbs.forEach(function (cb) { cb(msg.payload); });
-        } catch (e) { /* ignore non-JSON lines */ }
-      }
-    });
   }
 
   // Import all packages in the dependency order computed by isobuild
