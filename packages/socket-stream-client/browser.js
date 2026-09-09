@@ -4,12 +4,18 @@ import {
 } from "./urls.js";
 
 import { StreamClientCommon } from "./common.js";
+import { DDPTransportRegistry } from 'meteor/ddp-transport-registry';
 
-// SockJS is imported statically to avoid the startup latency that dynamic
-// import() would introduce in _launchConnection(). When a non-SockJS transport
-// is selected, SockJS remains in the bundle but is never used — the connection
-// goes through native WebSocket directly.
-import SockJS from "./sockjs-1.6.1-min-.js";
+export function getSockJSConstructor(registry = DDPTransportRegistry) {
+  const SockJS = registry.get('sockjs');
+  if (!SockJS) {
+    throw new Error(
+      'SockJS DDP transport is not included in this application bundle. ' +
+      'Rebuild with --ddp-transport=sockjs or --ddp-transport=both.'
+    );
+  }
+  return SockJS;
+}
 
 export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
@@ -171,6 +177,7 @@ export class ClientStream extends StreamClientCommon {
     this._transport = transport;
 
     if (transport === 'sockjs') {
+      const SockJS = getSockJSConstructor();
       const options = {
         transports: this._sockjsProtocolsWhitelist(),
         ...this.options._sockjsOptions

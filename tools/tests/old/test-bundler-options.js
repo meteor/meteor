@@ -169,12 +169,18 @@ var runTest = async function () {
       "meteor", "ddp-server", "node_modules"
     )).isDirectory());
 
-    console.log("before ddp-server/node_modules/sockjs check");
+    console.log("before ddp-transport-sockjs/node_modules/sockjs check");
 
-    // ddp-server/node_modules/sockjs is a symlink
+    // ddp-transport-sockjs/node_modules/sockjs is a symlink
     assert(files.lstat(files.pathJoin(
       tmpOutputDir, "programs", "server", "npm", "node_modules",
-      "meteor", "ddp-server", "node_modules", "sockjs"
+      "meteor", "ddp-transport-sockjs", "node_modules", "sockjs"
+    )).isSymbolicLink());
+
+    // ddp-transport-uws/node_modules/uWebSockets.js is a symlink
+    assert(files.lstat(files.pathJoin(
+      tmpOutputDir, "programs", "server", "npm", "node_modules",
+      "meteor", "ddp-transport-uws", "node_modules", "uWebSockets.js"
     )).isSymbolicLink());
   }
 };

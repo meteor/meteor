@@ -5,6 +5,22 @@ import { toSockjsUrl } from "./urls.js";
 import { ClientStream } from "meteor/socket-stream-client";
 import isEqual from "lodash.isequal";
 import once from "lodash.once";
+import { createTransportRegistry } from 'meteor/ddp-transport-registry';
+import {
+  getSockJSConstructor,
+} from 'meteor/socket-stream-client';
+
+Tinytest.add('stream - SockJS constructor comes from the provider registry', function (test) {
+  const registry = createTransportRegistry();
+  const SockJS = function SockJS() {};
+  registry.register('sockjs', SockJS);
+
+  test.equal(getSockJSConstructor(registry), SockJS);
+  test.throws(
+    () => getSockJSConstructor(createTransportRegistry()),
+    /SockJS DDP transport is not included in this application bundle/
+  );
+});
 
 Tinytest.add('stream - status', function(test) {
   // Very basic test. Just see that it runs and returns something. Not a
