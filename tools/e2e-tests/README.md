@@ -37,6 +37,11 @@ those settings too. `HEADED=1` opens Chromium, and `RECORD=1` saves browser
 videos. Group runs share fixed app ports: run groups sequentially on one
 machine, or use isolated containers as CI does.
 
+By default, app tests install the dependencies of `npm-packages/meteor-rspack`
+and link that checkout into each app, including pnpm workspaces. This also works
+on a fresh checkout. Set `NPM_LINK_RSPACK=false` to test the published package;
+CI uses that setting on `release-*` branches.
+
 Lifecycle tests reuse apps between phases. Prefer running a whole group or
 file; filtering an individual lifecycle test with `-t` can omit the creation
 or initialization it needs. Extra arguments are forwarded to Jest, so supplying

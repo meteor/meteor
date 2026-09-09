@@ -4,12 +4,11 @@
  * Links the local npm-packages/meteor-rspack into a Meteor app so it runs
  * against the latest dev version.
  *
- * Steps:
- *   1. Run `meteor update --npm` in the app
- *   2. Install the matching @rspack/core, @rspack/cli, and
- *      @rspack/dev-server versions (read from packages/rspack/lib/constants.js)
- *   3. Install `ignore-loader` in the app
- *   4. `npm link` the local meteor-rspack into the app
+ * Install the local package's dependencies and matching Rspack peers before
+ * linking it into the app. pnpm's local directory links do not install the
+ * linked package's dependencies, so this is required on a fresh checkout.
+ * Then use the app's package manager to install its dependencies and link
+ * the local meteor-rspack package.
  *
  */
 
@@ -87,6 +86,27 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
     rsdoctorRspackPluginVersion,
   } = readRspackVersions();
 
+  if (rspackVersion) {
+    console.log(
+      `Installing local meteor-rspack dependencies with @rspack/core@${rspackVersion}, @rspack/cli@${rspackVersion}` +
+      `${rspackDevServerVersion ? `, and @rspack/dev-server@${rspackDevServerVersion}` : ''}...`
+    );
+    await execa(
+      'npm',
+      [
+        'install',
+        `@rspack/core@${rspackVersion}`,
+        `@rspack/cli@${rspackVersion}`,
+        ...(rspackDevServerVersion
+          ? [`@rspack/dev-server@${rspackDevServerVersion}`]
+          : []),
+        '--no-save',
+        '--no-package-lock',
+      ],
+      { cwd: RSPACK_PACKAGE_DIR, ...execOpts }
+    );
+  }
+
   if (pnpmProject) {
     const deps = [
       'ignore-loader',
@@ -114,27 +134,6 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
     stdio: 'inherit',
     ...execOpts,
   });
-
-  if (rspackVersion) {
-    console.log(
-      `Installing @rspack/core@${rspackVersion}, @rspack/cli@${rspackVersion}` +
-      `${rspackDevServerVersion ? `, and @rspack/dev-server@${rspackDevServerVersion}` : ''}...`
-    );
-    await execa(
-      'npm',
-      [
-        'install',
-        `@rspack/core@${rspackVersion}`,
-        `@rspack/cli@${rspackVersion}`,
-        ...(rspackDevServerVersion
-          ? [`@rspack/dev-server@${rspackDevServerVersion}`]
-          : []),
-        '--no-save',
-        '--no-package-lock',
-      ],
-      { cwd: RSPACK_PACKAGE_DIR }
-    );
-  }
 
   console.log('Installing ignore-loader in the app...');
   await execa('npm', ['install', 'ignore-loader', '--save'], { cwd: appDir });
