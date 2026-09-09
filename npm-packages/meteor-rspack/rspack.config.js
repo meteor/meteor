@@ -445,7 +445,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ],
   };
 
-  if (Meteor.isDebug || Meteor.isVerbose) {
+  if (Meteor.isVerbose) {
     console.log("[i] Rspack mode:", mode);
     console.log("[i] Meteor flags:", Meteor);
   }
@@ -909,8 +909,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   delete config["meteor.enablePortableBuild"];
 
-  if (Meteor.isDebug || Meteor.isVerbose) {
-  console.log("Config:", inspect(config, { depth: null, colors: true }));
+  if (Meteor.isVerbose) {
+    console.log("Config:", inspect(config, { depth: null, colors: true }));
   }
 
   // Check if lazyCompilation is enabled and warn the user
