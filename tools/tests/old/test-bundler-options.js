@@ -17,7 +17,7 @@ var tmpDir = function () {
   return (lastTmpDir = files.mkdtemp());
 };
 
-var makeProjectContext = async function (appName) {
+var makeProjectContext = async function (appName, platforms) {
   var projectDir = files.mkdtemp("test-bundler-options");
   await files.cp_r(
     files.pathJoin(files.convertToStandardPath(__dirname), appName),
@@ -28,6 +28,10 @@ var makeProjectContext = async function (appName) {
     projectDir: projectDir
   });
   await doOrThrow(async function () {
+    if (platforms) {
+      await projectContext.readProjectMetadata();
+      await projectContext.platformList.write(platforms);
+    }
     await projectContext.prepareProjectForBuild();
   });
 
@@ -50,9 +54,9 @@ var runTest = async function () {
   // data store, so we will probably need it.
   await catalog.official.initialize();
 
-  var readManifest = function (tmpOutputDir) {
+  var readManifest = function (tmpOutputDir, arch = 'web.browser') {
     return JSON.parse(files.readFile(
-      files.pathJoin(tmpOutputDir, "programs", "web.browser", "program.json"),
+      files.pathJoin(tmpOutputDir, "programs", arch, "program.json"),
       "utf8")).manifest;
   };
 
@@ -129,6 +133,75 @@ var runTest = async function () {
     assert.ok(true);
   } catch (e) {
     assert.fail("no minify test fails", e);
+  }
+
+  const transportProjectContext = await makeProjectContext('empty-app', ['android']);
+  for (const [ddpTransport, hasSockJS, hasUws] of [
+    [undefined, true, true],
+    ['both', true, true],
+    ['sockjs', true, false],
+    ['uws', false, true],
+  ]) {
+    const transportOutputDir = tmpDir();
+    const previousBuilders = Object.create(null);
+    const label = `DDP transport ${ddpTransport === undefined ? 'default' : ddpTransport}`;
+    console.log(label);
+    const buildOptions = { buildMode: 'production', minifyMode: 'development' };
+    if (ddpTransport !== undefined) {
+      buildOptions.ddpTransport = ddpTransport;
+    }
+    const bundleOptions = {
+      projectContext: transportProjectContext,
+      outputPath: transportOutputDir,
+      previousBuilders,
+      buildOptions,
+    };
+    const result = await bundler.bundle(bundleOptions);
+    assert.strictEqual(result.errors, false, result.errors && result.errors.formatMessages());
+    if (ddpTransport === 'uws') {
+      const delayedResult = await bundler.bundle({
+        ...bundleOptions,
+        allowDelayedClientBuilds: true,
+      });
+      assert.strictEqual(delayedResult.errors, false,
+        delayedResult.errors && delayedResult.errors.formatMessages());
+      assert.strictEqual(delayedResult.postStartupCallbacks.length, 1,
+        `${label}: delayed legacy target`);
+      for (const callback of delayedResult.postStartupCallbacks) {
+        await doOrThrow(() => callback({
+          pauseClient: async () => {},
+          refreshClient: async () => {},
+          runLog: { log: console.log },
+        }));
+      }
+    }
+
+    const serverDir = files.pathJoin(transportOutputDir, 'programs', 'server');
+    const serverLoad = JSON.parse(files.readFile(
+      files.pathJoin(serverDir, 'program.json'), 'utf8'
+    )).load;
+    for (const [provider, npmName, present] of [
+      ['ddp-transport-sockjs', 'sockjs', hasSockJS],
+      ['ddp-transport-uws', 'uWebSockets.js', hasUws],
+    ]) {
+      assert.strictEqual(
+        serverLoad.some(item => item.path === `packages/${provider}.js`),
+        present, `${label}: ${provider} server script`
+      );
+      assert.strictEqual(
+        files.exists(files.pathJoin(serverDir, 'npm', 'node_modules',
+          'meteor', provider, 'node_modules', npmName)),
+        present, `${label}: ${provider} npm dependency`
+      );
+    }
+    for (const arch of ['web.browser', 'web.browser.legacy', 'web.cordova']) {
+      assert.strictEqual(
+        readManifest(transportOutputDir, arch).some(
+          item => item.type === 'js' && item.path === 'packages/ddp-transport-sockjs.js'
+        ),
+        hasSockJS, `${label}: SockJS client script in ${arch}`
+      );
+    }
   }
 
   if (process.platform !== "win32") { // Windows doesn't have symlinks
