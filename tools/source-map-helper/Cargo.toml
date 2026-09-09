@@ -1,0 +1,22 @@
+[package]
+name = "meteor-source-map-helper"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+anyhow = "1.0.100"
+memmap2 = "0.9.8"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = { version = "1.0.145", features = ["raw_value"] }
+sha2 = "0.10.9"
+
+[dev-dependencies]
+tempfile = "3.23.0"
+
+[profile.release]
+codegen-units = 1
+lto = true
+strip = true
+
