@@ -70,7 +70,7 @@ Meteor 3.5 introduces a native flow to keep the persistent resume token in an Ht
 
 After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
 
-The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, they respond with `404`, so applications that never opted in expose nothing.
+The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, the endpoints are not served: `GET /_accounts/cookie/refresh` responds with `404`, and the `POST` endpoints respond with `405`. Applications that never opted in expose nothing.
 
 #### Cookie endpoint protections {#accounts-httponly-cookies-protections}
 
