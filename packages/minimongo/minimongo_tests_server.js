@@ -602,5 +602,28 @@ Tinytest.add(
       () => new Minimongo.Matcher({ $where: 'this.a === 1' }),
       /disabled/
     );
+
+    // Enabled through Meteor.settings, with no runtime override.
+    const previousPackages = Meteor.settings.packages;
+    Meteor.settings.packages = {
+      ...previousPackages,
+      minimongo: { ...previousPackages?.minimongo, allowStringWhere: true },
+    };
+    try {
+      const settingsMatcher = new Minimongo.Matcher({ $where: 'this.a === 1' });
+      test.isTrue(settingsMatcher.documentMatches({ a: 1 }).result);
+      test.isFalse(settingsMatcher.documentMatches({ a: 2 }).result);
+    } finally {
+      if (previousPackages === undefined) {
+        delete Meteor.settings.packages;
+      } else {
+        Meteor.settings.packages = previousPackages;
+      }
+    }
+
+    test.throws(
+      () => new Minimongo.Matcher({ $where: 'this.a === 1' }),
+      /disabled/
+    );
   }
 );

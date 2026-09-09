@@ -1126,14 +1126,14 @@ Posts.find({ $where: 'this.score > this.threshold' });
 
 On the **server**, the string form is compiled with `Function()` and runs in
 the server process, so it is only appropriate for selectors your own code
-controls. It is therefore **disabled on the server by default** — mirroring
-MongoDB's own `security.javascriptEnabled` — and Minimongo throws if a string
-`$where` reaches the server. The function form is unaffected and always works.
+controls. It is therefore **disabled on the server by default**, and Minimongo
+throws if a string `$where` reaches the server. The function form is unaffected
+and always works.
 
-To use the string form for trusted selectors, enable it explicitly:
+To use the string form for trusted selectors, enable it explicitly in
+`settings.json`:
 
 ```json
-// settings.json
 {
   "packages": {
     "minimongo": {

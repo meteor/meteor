@@ -10,7 +10,7 @@ export class MiniMongoQueryError extends Error {}
 let _allowStringWhereOverride;
 
 export function _setAllowStringWhere(value) {
-  _allowStringWhereOverride = value === undefined ? undefined : !!value;
+  _allowStringWhereOverride = value === undefined ? undefined : value === true;
 }
 
 export function _getAllowStringWhere() {
@@ -22,7 +22,7 @@ function stringWhereAllowedOnServer() {
     return _allowStringWhereOverride;
   }
 
-  return !!Meteor.settings?.packages?.minimongo?.allowStringWhere;
+  return Meteor.settings?.packages?.minimongo?.allowStringWhere === true;
 }
 // Each element selector contains:
 //  - compileElementSelector, a function with args:
