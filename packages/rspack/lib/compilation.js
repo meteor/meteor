@@ -17,11 +17,51 @@ const {
 } = require('meteor/tools-core/lib/global-state');
 
 const { applyDelegatedExtensions } = require('./config');
-const { bumpServerRuntimeBuildId } = require('./build-context');
+const {
+  bumpClientRuntimeBuildId,
+  bumpServerRuntimeBuildId,
+} = require('./build-context');
 
 // Helper function to format milliseconds with comma separators
 function formatMilliseconds(ms) {
   return ms.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+// Module-level references to the first-compile state objects created by
+// the most recent setupCompilationTracking call, so process management
+// can fail them without going through the global state (whose getter
+// only returns defaults; see tools-core/lib/global-state.js).
+const currentFirstCompileStates = {
+  client: null,
+  server: null,
+};
+
+/**
+ * Fails the pending first-compilation promise for one side.
+ *
+ * The Rspack child processes normally resolve the first-compile promises
+ * through their stdout. If a process dies or panics before its first
+ * compilation completes, those promises would never settle and
+ * waitForFirstCompilation - and with it the whole Meteor build - would
+ * hang forever. Reject them instead so the user gets an actionable error.
+ *
+ * @param {string} side - 'client' or 'server'
+ * @param {string} detail - What happened to the process
+ * @returns {void}
+ */
+export function failFirstCompilation(side, detail) {
+  const state = currentFirstCompileStates[side];
+  if (!state || state.resolved || state.rejected ||
+      typeof state.reject !== 'function') {
+    return;
+  }
+  state.rejected = true;
+  state.reject(new Error(
+    `Rspack ${side} process ${detail} before completing its first ` +
+    `compilation. Review the Rspack error output above for the underlying ` +
+    `cause. If the process was interrupted while writing its cache, remove ` +
+    `node_modules/.cache/rspack or run "meteor reset", then run again.`
+  ));
 }
 
 /**
@@ -43,14 +83,30 @@ export function setupCompilationTracking() {
   setGlobalState(GLOBAL_STATE_KEYS.CLIENT_FIRST_COMPILE, clientFirstCompile);
   setGlobalState(GLOBAL_STATE_KEYS.SERVER_FIRST_COMPILE, serverFirstCompile);
 
-  // Create promises for first compilation of client and server
-  const clientFirstCompilePromise = new Promise(resolve => {
+  // Also keep direct references for failFirstCompilation
+  currentFirstCompileStates.client = clientFirstCompile;
+  currentFirstCompileStates.server = serverFirstCompile;
+
+  // Create promises for first compilation of client and server. The
+  // reject handles let process management fail these promises when an
+  // Rspack process dies or panics before its first compilation, so
+  // waitForFirstCompilation errors out instead of hanging forever.
+  const clientFirstCompilePromise = new Promise((resolve, reject) => {
     clientFirstCompile.resolve = resolve;
+    clientFirstCompile.reject = reject;
   });
 
-  const serverFirstCompilePromise = new Promise(resolve => {
+  const serverFirstCompilePromise = new Promise((resolve, reject) => {
     serverFirstCompile.resolve = resolve;
+    serverFirstCompile.reject = reject;
   });
+
+  // waitForFirstCompilation may await only one of these promises
+  // (depending on its target option); attach no-op handlers so a
+  // rejection of the other side never surfaces as an unhandled
+  // promise rejection.
+  clientFirstCompilePromise.catch(() => {});
+  serverFirstCompilePromise.catch(() => {});
 
   // Create a shared state to track compilation times
   const compilationState = {
@@ -128,9 +184,13 @@ export function setupCompilationTracking() {
 
   // Define separate onCompile callbacks for client and server
   const onCompileClient = (data, config) => {
+    if (config?.isRebuild && !config?.hasErrors) {
+      bumpClientRuntimeBuildId();
+    }
+
     // Resolve the promise if it's the first compilation
     const clientState = getGlobalState(GLOBAL_STATE_KEYS.CLIENT_FIRST_COMPILE, clientFirstCompile);
-    if (!clientState?.resolved) {
+    if (!clientState?.resolved && !clientState?.rejected) {
       // Apply delegated extensions before resolving (so they're set before Meteor scans)
       if (config?.delegatedExtensions?.length > 0) {
         applyDelegatedExtensions(config.delegatedExtensions);
@@ -158,7 +218,7 @@ export function setupCompilationTracking() {
 
     // Resolve the promise if it's the first compilation
     const serverState = getGlobalState(GLOBAL_STATE_KEYS.SERVER_FIRST_COMPILE, serverFirstCompile);
-    if (!serverState?.resolved) {
+    if (!serverState?.resolved && !serverState?.rejected) {
       serverState.resolved = true;
       serverState.resolve();
       setGlobalState(GLOBAL_STATE_KEYS.SERVER_FIRST_COMPILE, serverState);
@@ -225,11 +285,22 @@ export async function waitForFirstCompilation(
       }
       break;
     case 'both':
-    default:
-      if (!clientState?.resolved && !serverState?.resolved) {
-        await Promise.all([clientFirstCompilePromise, serverFirstCompilePromise]);
+    default: {
+      // Wait for every side that has not compiled yet. (Using a single
+      // combined condition here would skip waiting for the other side
+      // as soon as one of them finished first.)
+      const pending = [];
+      if (!clientState?.resolved) {
+        pending.push(clientFirstCompilePromise);
+      }
+      if (!serverState?.resolved) {
+        pending.push(serverFirstCompilePromise);
+      }
+      if (pending.length > 0) {
+        await Promise.all(pending);
       }
       break;
+    }
   }
 
   process.env.RSPACK_FIRST_COMPILATION_COMPLETE = true;

@@ -37,6 +37,13 @@ module.exports = {
       },
       module: { type: "commonjs" },
     }],
+    "^.+\\.ts$": [require.resolve("@swc/jest"), {
+      jsc: {
+        parser: { syntax: "typescript" },
+        target: "es2022",
+      },
+      module: { type: "commonjs" },
+    }],
   },
   transformIgnorePatterns: ["/node_modules/"],
   testTimeout: 10_000,

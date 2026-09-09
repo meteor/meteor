@@ -42,6 +42,11 @@ describe('TypeScript App Bundling /', () => {
         });
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
         await waitForTypeScriptErrorFree(result.outputLines);
+        await waitForMeteorOutput(
+          result.outputLines,
+          /.*\[Rspack Cache\] Failed to parse config dependencies.*/,
+          { negate: true }
+        );
         await assertFileExist(tempDir, ".meteor/local/types");
         // Portable build: Meteor.isDevelopment and Meteor.isProduction must not be defined
         await waitForMeteorOutput(
@@ -65,6 +70,11 @@ describe('TypeScript App Bundling /', () => {
           'white-space': 'break-spaces',
         });
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
+        await waitForMeteorOutput(
+          result.outputLines,
+          /.*\[Rspack Cache\] Failed to parse config dependencies.*/,
+          { negate: true }
+        );
         // Portable build: Meteor.isDevelopment and Meteor.isProduction must not be defined
         await waitForMeteorOutput(
           result.outputLines,
@@ -89,6 +99,11 @@ describe('TypeScript App Bundling /', () => {
       },
       afterBuild: async ({ result }) => {
         await waitForTypeScriptEnvs(result.outputLines, { isTsxEnabled: true });
+        await waitForMeteorOutput(
+          result.outputLines,
+          /.*\[Rspack Cache\] Failed to parse config dependencies.*/,
+          { negate: true }
+        );
         // Portable build: Meteor.isDevelopment and Meteor.isProduction must not be defined
         await waitForMeteorOutput(
           result.outputLines,
