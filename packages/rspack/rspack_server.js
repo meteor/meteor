@@ -53,13 +53,37 @@ if (shouldEnableDevHMRProxy) {
 
   const createRspackProxy = (scope) => {
     const proxy = httpProxy.createProxyServer({});
+    const recentErrors = new Map();
 
-    // Report the upstream error code and request, rather than only the HTTP
-    // error or disconnected socket seen by the browser.
-    proxy.on('error', (err, req, resOrSocket) => {
+    // Log the first failure immediately, then summarize repeats after 5s.
+    // Group by error code within this proxy's scope/target, not request URL:
+    // a dev-server restart can fail many different assets and HMR reconnects.
+    const logProxyError = (err, req) => {
+      const error = err.code || err.message;
+      const previous = recentErrors.get(error);
+      if (previous) {
+        previous.repeats++;
+        return;
+      }
+
       console.error(
-        `[rspack-proxy:${scope}] upstream error ${err.code || err.message} for ${req.method} ${req.url} -> ${target}`
+        `[rspack-proxy:${scope}] upstream error ${error} for ${req.method} ${req.url} -> ${target}`
       );
+
+      const entry = { repeats: 0 };
+      recentErrors.set(error, entry);
+      setTimeout(() => {
+        recentErrors.delete(error);
+        if (entry.repeats > 0) {
+          console.error(
+            `[rspack-proxy:${scope}] upstream error ${error}: suppressed ${entry.repeats} additional ${entry.repeats === 1 ? 'failure' : 'failures'} in the last 5s -> ${target}`
+          );
+        }
+      }, 5000).unref();
+    };
+
+    proxy.on('error', (err, req, resOrSocket) => {
+      logProxyError(err, req);
 
       // Don't let a transient dev-server hiccup (e.g. during a restart) crash
       // the app process; respond with a 502 / close the socket instead.
