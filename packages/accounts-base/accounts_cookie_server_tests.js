@@ -152,6 +152,28 @@ if (Meteor.isServer) {
     test.equal(after.status, 403, 'rejected again once the allow-list is gone');
   });
 
+  addTest('set accepts browser cross-site metadata for an explicitly allowed Origin', async (test) => {
+    const { token } = await createToken();
+    await withOption('httpOnlyCookieAllowedOrigins', ['https://partner.example'], async () => {
+      for (const fetchSite of ['same-site', 'cross-site']) {
+        const res = await setCookie(token, {
+          'Content-Type': 'application/json',
+          Origin: 'https://partner.example',
+          'Sec-Fetch-Site': fetchSite,
+        });
+        test.equal(res.status, 200, `${fetchSite} request from allowed Origin`);
+        test.isTrue(!!setCookieHeader(res), `${fetchSite} request sets the cookie`);
+      }
+    });
+  });
+
+  addTest('set treats X-Forwarded-Proto case-insensitively', async (test) => {
+    const { token } = await createToken();
+    const res = await setCookie(token, jsonSameOrigin({ 'X-Forwarded-Proto': 'HTTPS' }));
+    test.equal(res.status, 200);
+    test.isTrue(/; Secure(?:;|$)/i.test(setCookieHeader(res)), 'Secure flag');
+  });
+
   addTest('set tolerates a query string but not other sub-paths', async (test) => {
     const { token } = await createToken();
     const withQuery = await request('POST', `${SET_PATH}?x=1`, {
