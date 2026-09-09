@@ -1,4 +1,3 @@
-// Jest unit tests, excluded from Meteor source discovery by .meteorignore.
 const { EventEmitter } = require('node:events');
 
 // Load the real runtime with Meteor's server lifecycle and proxy I/O mocked.
@@ -36,13 +35,13 @@ function loadRuntime(flags = {}, { native = false, toolsCore = true } = {}) {
     shuffleString: value => value,
   }), { virtual: true });
   jest.doMock('http-proxy-3', () => ({ createProxyServer }), { virtual: true });
-  jest.doMock('./lib/constants', () => ({
+  jest.doMock('../../../packages/rspack/lib/constants', () => ({
     getRspackChunksContext: () => 'build-chunks',
     getRspackAssetsContext: () => 'build-assets',
     RSPACK_HOT_UPDATE_REGEX: /([^/]+\.hot-update\.(?:js|json))$/,
   }));
 
-  require('./rspack_server');
+  require('../../../packages/rspack/rspack_server');
   return { proxies, createProxyServer, connectHandlers, httpServer };
 }
 

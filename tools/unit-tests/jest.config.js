@@ -7,14 +7,13 @@ module.exports = {
   testMatch: [
     "<rootDir>/tools/**/*.test.js",
     "<rootDir>/scripts/**/*.test.js",
-    // Opt package unit tests in explicitly; other packages use Tinytest.
-    "<rootDir>/packages/rspack/**/*.test.js",
   ],
   testPathIgnorePatterns: [
     "/node_modules/",
     "<rootDir>/tools/e2e-tests/",
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
+    "<rootDir>/packages/",
     "<rootDir>/.github/",
   ],
   modulePathIgnorePatterns: [
