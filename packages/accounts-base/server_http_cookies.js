@@ -73,7 +73,7 @@ function parseCookies(req) {
 
 function isSecureRequest(req) {
   // honor proxies that set x-forwarded-proto
-  const xfp = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim();
+  const xfp = (req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
   return !!(req.connection?.encrypted || xfp === 'https' || req.protocol === 'https');
 }
 
@@ -143,9 +143,21 @@ function normalizeOrigin(value) {
   }
 }
 
+function configuredAllowedOrigins() {
+  const origins = new Set();
+  const configured = Accounts._options?.httpOnlyCookieAllowedOrigins;
+  if (Array.isArray(configured)) {
+    configured.forEach((entry) => {
+      const normalized = normalizeOrigin(entry);
+      if (normalized) origins.add(normalized);
+    });
+  }
+  return origins;
+}
+
 // Include configured and request-derived application origins.
 function allowedOrigins(req) {
-  const origins = new Set();
+  const origins = configuredAllowedOrigins();
 
   let rootUrl = null;
   try {
@@ -164,14 +176,6 @@ function allowedOrigins(req) {
     if (fromHost) origins.add(fromHost);
   }
 
-  const extra = Accounts._options?.httpOnlyCookieAllowedOrigins;
-  if (Array.isArray(extra)) {
-    extra.forEach((entry) => {
-      const normalized = normalizeOrigin(entry);
-      if (normalized) origins.add(normalized);
-    });
-  }
-
   return origins;
 }
 
@@ -179,10 +183,13 @@ function allowedOrigins(req) {
 function isSameOriginRequest(req) {
   const fetchSite = (req.headers['sec-fetch-site'] || '').trim().toLowerCase();
   if (fetchSite === 'same-origin') return true;
-  if (fetchSite && fetchSite !== 'none') return false;
 
   const origin = normalizeOrigin(req.headers.origin);
   if (!origin) return false;
+  if (fetchSite === 'same-site' || fetchSite === 'cross-site') {
+    return configuredAllowedOrigins().has(origin);
+  }
+  if (fetchSite && fetchSite !== 'none') return false;
   return allowedOrigins(req).has(origin);
 }
 
