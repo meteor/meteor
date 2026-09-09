@@ -1,3 +1,4 @@
+// Jest unit tests, excluded from Meteor source discovery by .meteorignore.
 const { EventEmitter } = require('node:events');
 
 // Load the real runtime with Meteor's server lifecycle and proxy I/O mocked.

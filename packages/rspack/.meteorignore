@@ -1,0 +1,2 @@
+# Jest unit tests run separately from Meteor package tests.
+*.test.js

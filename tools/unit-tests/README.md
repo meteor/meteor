@@ -8,9 +8,10 @@ Test files use `*.test.js` next to their source.
 
 Rspack's Jest tests follow the same convention in `packages/rspack/` and run
 through this shared environment. Its Meteor package tests remain in
-`packages/rspack/rspack_tests.js` and run through Tinytest. The Jest configuration
-selects packages explicitly, and the unit-test CI workflow also runs when Rspack
-package files change.
+`packages/rspack/rspack_tests.js` and run through Tinytest. The package's
+`.meteorignore` excludes `*.test.js` from Meteor source discovery, keeping Jest
+tests out of Meteor package compilation. The Jest configuration selects packages
+explicitly, and the unit-test CI workflow also runs when Rspack package files change.
 
 All commands below should be run from the repo root:
 
