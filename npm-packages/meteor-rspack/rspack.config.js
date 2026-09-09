@@ -99,8 +99,12 @@ function createCacheStrategy(
       type: "persistent",
       storage: {
         type: "filesystem",
+        // Rspack invalidates a persistent cache on version mismatch. Keep
+        // development and production in separate directories so switching
+        // between `meteor run` and `meteor build` leaves both caches warm.
+        // See meteor/meteor#14568.
         directory: `node_modules/.cache/rspack/${
-          [buildContext, side].filter(Boolean).join('-') || 'default'
+          [buildContext, side, mode].filter(Boolean).join('-') || 'default'
         }`,
       },
       ...(buildDependencies.length > 0 && {
@@ -398,6 +402,10 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   cacheStrategy = createCacheStrategy(
     mode,
     (Meteor.isClient && "client") || "server",
+    // buildContext must be passed here too: this reassignment is the
+    // effective cache strategy, and omitting it made the cache directory
+    // collide across build contexts (e.g. custom METEOR_LOCAL_DIR setups).
+    // See meteor/meteor#14568.
     { projectConfigPath, configPath, buildContext }
   );
 
@@ -482,7 +490,7 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     ...(Meteor.isBlazeEnabled && {
       externals: /\.html$/,
       isEagerImport: (module) => module.endsWith(".html"),
-      ...(isProd && {
+      ...((isProd || (isTest && isClient)) && {
         lastImports: [`./${outputFilename}`],
       }),
     }),
@@ -817,8 +825,12 @@ module.exports = async function (inMeteor = {}, argv = {}) {
       isDevEnvironment || isNative || isTest
         ? "source-map"
         : "hidden-source-map",
-    ...((isDevEnvironment || (isTest && !isTestEager) || isNative) &&
-      cacheStrategy),
+    // Apply the persistent cache to production builds too (the client
+    // config always has it); previously `meteor build` recompiled the
+    // entire server bundle cold every time. Eager server test builds are
+    // still excluded, since their generated entry changes on every run.
+    // See meteor/meteor#14568.
+    ...(!(isTest && isTestEager) && cacheStrategy),
     ...lazyCompilationConfig,
     ...loggingConfig,
   };

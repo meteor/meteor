@@ -31,3 +31,7 @@ selected by multiple jobs, empty groups, and workflow/mapping drift. CI runs
 unassigned tests in the automatically derived `uncategorized` fallback group
 and reports their full names as warnings. The fallback job's status reflects
 whether those tests pass or fail.
+
+The `server_runtime` group runs the Server Runtime regressions separately
+from `regressions`. The `monorepo` group includes npm, Yarn, pnpm, symlink
+fixtures, and the generated pnpm skeleton.

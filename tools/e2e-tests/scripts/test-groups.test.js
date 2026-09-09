@@ -7,6 +7,23 @@ const {
 const path = require('path');
 
 describe('CLI / E2E test group fallback /', () => {
+  test('keeps server runtime separate from the remaining regressions', () => {
+    const matchingGroups = name => Object.entries(EXPLICIT_TEST_GROUPS)
+      .filter(([, group]) => new RegExp(group.pattern).test(name))
+      .map(([group]) => group);
+
+    expect(matchingGroups('Regressions / Server Runtime / builds the app'))
+      .toEqual(['server_runtime']);
+    expect(matchingGroups('Regressions / Concurrent Modes / isolates artifacts'))
+      .toEqual(['regressions']);
+    expect(matchingGroups('Pnpm Monorepo App Bundling / installs dependencies'))
+      .toEqual(['monorepo']);
+    expect(matchingGroups('Meteor Skeletons / Pnpm Skeleton / creates the app'))
+      .toEqual(['monorepo']);
+    expect(matchingGroups('Blaze Router Integration / renders a route'))
+      .toEqual(['blaze']);
+  });
+
   test('selects names that do not match an explicit group', () => {
     const pattern = new RegExp(createUncategorizedPattern({
       alpha: { pattern: '^Alpha /' },

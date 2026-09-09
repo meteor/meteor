@@ -69,7 +69,7 @@ async function assertPnpmBrowser() {
 async function assertPnpmRuntime({ result }) {
   expect(
     result.outputLines.some(line =>
-      /Rspack dependencies need attention/.test(line)
+      /Rspack: npm dependencies need attention/.test(line)
     )
   ).toBe(false);
   await waitForMeteorOutput(
@@ -98,7 +98,7 @@ async function assertPnpmAutoInstall({ tempDir, appDir, packageJsonPath }) {
 
     await waitForMeteorOutput(
       result.outputLines,
-      /Installed Rspack dependencies/,
+      /Rspack dependencies are up to date/,
       { meteorProcess },
     );
 

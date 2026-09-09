@@ -1,6 +1,6 @@
 ---
 name: modern-tools
-description: Use when working with tools-core utilities, rspack integration, or modern tooling. Covers logging, npm management, process spawning, git helpers, and Meteor app configuration APIs.
+description: Use when working with tools-core utilities, rspack integration, or modern tooling. Covers logging, host-app npm dependency declarations, process spawning, git helpers, and Meteor app configuration APIs.
 ---
 
 # Modern Tools
@@ -14,12 +14,13 @@ Central utility package providing helpers for npm, logging, process management, 
 ### Logging Module (`lib/log.js`)
 
 ```javascript
-import { logProgress, logError, logInfo, logSuccess } from 'meteor/tools-core';
+import { logProgress, logError, logInfo, logSuccess, logWarn } from 'meteor/tools-core';
 
 logProgress('Building application...');  // Blue
 logSuccess('Build complete');            // Green
 logError('Build failed');                // Red
 logInfo('Using Rspack bundler');         // Purple
+logWarn('Dependency needs attention');   // Yellow
 ```
 
 Respects `METEOR_DISABLE_COLORS` environment variable.
@@ -40,6 +41,34 @@ Respects `METEOR_DISABLE_COLORS` environment variable.
 | `getMonorepoPath(opts)` | Detects monorepo root (workspaces, lerna, pnpm) |
 | `isMonorepo(opts)` | Boolean monorepo detection |
 
+### Host-App Dependency Module (`lib/deps.js`)
+
+Use `ensurePackageDependencies()` when an Atmosphere package requires npm
+dependencies in the host application. It detects missing or below-minimum
+versions, installs them when `meteor.autoInstallDeps` is enabled, and otherwise
+prints copyable npm or Yarn commands.
+
+```javascript
+import { ensurePackageDependencies } from 'meteor/tools-core';
+
+await ensurePackageDependencies({
+  packageId: 'my-tool',
+  packageLabel: 'My Tool',
+  dependencies: [
+    { name: 'my-tool-runtime', version: '2.0.0', dev: false },
+    { name: 'my-tool-cli', version: '2.0.0', dev: true },
+  ],
+  docUrl: 'https://docs.example.com/my-tool',
+});
+```
+
+Call the engine unconditionally; do not pre-check
+`hasMeteorAppConfigAutoInstallDeps()`. The engine owns auto/manual mode and
+once-per-process deduplication. Lower-level exports include
+`detectMissingOrOutdatedDeps()`, `formatInstallCommands()`, and the render
+helpers. See `packages/tools-core/README.md` and
+`packages/rspack/lib/dependencies.js` for the contract and reference integration.
+
 ### Process Management Module (`lib/process.js`)
 
 | Function | Description |
@@ -50,7 +79,7 @@ Respects `METEOR_DISABLE_COLORS` environment variable.
 | `isPortAvailable(port, host)` | Checks if port is free |
 | `waitForPort(port, opts)` | Waits for port availability with timeout |
 
-Options for `spawnProcess`: `env`, `cwd`, `detached`, `onStdout`, `onStderr`, `onExit`, `onError`
+Options for `spawnProcess`: `env`, `unsetEnv`, `cwd`, `detached`, `onStdout`, `onStderr`, `onExit`, `onError`
 
 ### Meteor Configuration Module (`lib/meteor.js`)
 
@@ -59,12 +88,12 @@ Options for `spawnProcess`: `env`, `cwd`, `detached`, `onStdout`, `onStderr`, `o
 | Function | Description |
 |----------|-------------|
 | `getMeteorAppDir()` | Gets application root directory |
-| `getMeteorAppPackageJson()` | Parses app's package.json |
+| `getMeteorAppPackageJson(cwd?)` | Parses app's package.json, optionally from `cwd` |
 | `getMeteorAppConfig()` | Retrieves Meteor config from package.json or Plugin |
 | `getMeteorAppPort()` | Gets app port from environment |
 | `getMeteorAppConfigModern()` | Gets modern bundler configuration |
 | `isMeteorAppConfigModernVerbose()` | Checks verbose flag |
-| `hasMeteorAppConfigAutoInstallDeps()` | Auto-install deps flag |
+| `hasMeteorAppConfigAutoInstallDeps({ cwd? })` | Auto-install deps flag |
 
 **Entry Points:**
 
@@ -164,12 +193,17 @@ Modern bundler integration using Rspack (Rust-based Webpack alternative).
 
 ### Build Contexts
 
-| Context | Directory | Purpose |
-|---------|-----------|---------|
-| `RSPACK_BUILD_CONTEXT` | `_build` | Build output |
-| `RSPACK_ASSETS_CONTEXT` | `build-assets` | Static assets |
-| `RSPACK_CHUNKS_CONTEXT` | `build-chunks` | Chunk bundles |
+| Context | Default directory | Purpose |
+|---------|-------------------|---------|
+| `RSPACK_BUILD_CONTEXT` | `_build` | Module wrappers; regular tests use `test/`, full-app tests use `app-test/` |
+| `getRspackAssetsContext()` | `build-assets`, `build-assets-test`, or `build-assets-app-test` | Mode-isolated static assets |
+| `getRspackChunksContext()` | `build-chunks`, `build-chunks-test`, or `build-chunks-app-test` | Mode-isolated chunk bundles |
 | `RSPACK_DOCTOR_CONTEXT` | `.rsdoctor` | Analysis/diagnostics |
+
+`METEOR_LOCAL_DIR` can add a local-directory suffix to the base context names;
+the test-mode suffix is a separate isolation axis. Preserve both so concurrent
+`meteor run`, `meteor test`, and `meteor test --full-app` processes do not watch,
+clean, or overwrite one another's artifacts.
 
 ### Key Dependencies
 

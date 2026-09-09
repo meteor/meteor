@@ -13,7 +13,7 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
   },
   blaze: {
     label: 'Blaze',
-    pattern: '^(?:BasicBlaze App Bundling /|Full Blaze App Bundling /|Meteor Skeletons / Blaze Skeleton /)',
+    pattern: '^(?:BasicBlaze App Bundling /|Blaze Router Integration /|Full Blaze App Bundling /|Meteor Skeletons / Blaze Skeleton /)',
   },
   coffeescript: {
     label: 'Coffeescript',
@@ -47,9 +47,13 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'R.Router',
     pattern: '^R\\.Router App Bundling /',
   },
+  server_runtime: {
+    label: 'Server Runtime',
+    pattern: '^Regressions / Server Runtime',
+  },
   regressions: {
     label: 'Regressions',
-    pattern: '^Regressions /',
+    pattern: '^Regressions / (?!Server Runtime)',
   },
   solid: {
     label: 'Solid',

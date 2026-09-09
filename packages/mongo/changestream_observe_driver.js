@@ -30,6 +30,7 @@ export class ChangeStreamObserveDriver {
     this._writesToCommitWhenReady = [];
     this._isReady = false;
     this._lastProcessedOperationTime = null;
+    this._snapshotCutoffOperationTime = null;
     this._catchingUpResolvers = [];
     this._resolveTimeout = null;
     this._matcher = options.matcher;
@@ -180,32 +181,7 @@ export class ChangeStreamObserveDriver {
 
       if (this._stopped) return;
 
-      // Establish this driver's caught-up floor. The stream subscription is
-      // active now, so every write at or before the server's current
-      // operationTime is either already dispatched to _onChange or will be
-      // reflected in the snapshot read below. Without this floor, a fence
-      // targeting a write that PREDATES this driver waits for a change event
-      // that will never be delivered to it — the canonical case is a
-      // login-style method that writes the collection and then triggers
-      // creation of this observer (setUserId rerunning user publications).
-      // The stream (shared, possibly opened long ago by another observer)
-      // dispatched that event before this driver joined, so on an idle
-      // collection the wait stalls until the next unrelated write.
-      try {
-        const pingRes = await this._mongoHandle.db.command({ ping: 1 });
-        if (pingRes?.operationTime) {
-          this._setLastProcessedOperationTime(pingRes.operationTime);
-        }
-      } catch (error) {
-        Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
-        // Best-effort: without the floor we only lose the fast-path release.
-      }
-
-      if (this._stopped) return;
-
-      // Now read the snapshot. Events that arrived while we were getting
-      // here are sitting in _pendingWrites and will be flushed below.
-      await this._sendInitialAdds(collection);
+      await this._runInitialSnapshot(collection);
 
       // Mark ready so _flushPendingWrites lets the queued change events
       // through (it short-circuits when !_isReady to avoid calling
@@ -244,7 +220,138 @@ export class ChangeStreamObserveDriver {
     }
   }
 
-  async _sendInitialAdds(collection) {
+  async _runInitialSnapshot(collection) {
+    const snapshot = await this._prepareSnapshotContext(collection);
+
+    try {
+      this._applySnapshotBoundary(snapshot);
+      if (this._stopped) return;
+
+      // Events that arrive during this read stay queued until the driver is
+      // ready, then replay against the completed snapshot.
+      await this._sendInitialAdds(collection, snapshot);
+    } finally {
+      await this._closeSnapshotSession(snapshot.session);
+    }
+  }
+
+  async _prepareSnapshotContext(collection) {
+    const readPreference = this._cursorDescription.options.readPreference;
+    const readPreferenceMode =
+      (typeof readPreference === 'string' ? readPreference : readPreference?.mode)
+      || collection.readPreference?.mode
+      || 'primary';
+    const readConcern = this._cursorDescription.options.readConcern;
+    const readConcernLevel =
+      (typeof readConcern === 'string' ? readConcern : readConcern?.level)
+      || collection.readConcern?.level;
+
+    if (
+      readPreferenceMode !== 'primary' ||
+      (readConcernLevel && !['local', 'majority'].includes(readConcernLevel))
+    ) {
+      return this._captureSnapshotBoundary();
+    }
+
+    const session = this._startSnapshotSession();
+    if (!session) {
+      return this._captureSnapshotBoundary();
+    }
+
+    if (readConcernLevel) {
+      return this._captureSnapshotBoundary(session);
+    }
+
+    return this._resolveDefaultReadConcern(session);
+  }
+
+  _startSnapshotSession() {
+    try {
+      return this._mongoHandle.client.startSession({
+        causalConsistency: true,
+      });
+    } catch (error) {
+      Meteor._debug('Failed to create ChangeStream snapshot session:', error.message);
+      return null;
+    }
+  }
+
+  async _resolveDefaultReadConcern(session) {
+    try {
+      const response = await this._mongoHandle.client.db('admin').command(
+        { getDefaultRWConcern: 1, inMemory: true },
+        { session }
+      );
+      const readConcern = response.defaultReadConcern;
+
+      if (!['local', 'majority'].includes(readConcern?.level)) {
+        await this._closeSnapshotSession(session);
+        if (response.operationTime) {
+          return {
+            session: null,
+            operationTime: response.operationTime,
+            readConcern,
+          };
+        }
+        return this._captureSnapshotBoundary(null, readConcern);
+      }
+
+      if (!response.operationTime) {
+        return this._captureSnapshotBoundary(session, readConcern);
+      }
+
+      return {
+        session,
+        operationTime: response.operationTime,
+        readConcern,
+      };
+    } catch (error) {
+      Meteor._debug('Failed to resolve ChangeStream snapshot read concern:', error.message);
+      await this._closeSnapshotSession(session);
+      return this._captureSnapshotBoundary();
+    }
+  }
+
+  async _captureSnapshotBoundary(session = null, readConcern = null) {
+    // The stream subscription is already active, so writes at or before this
+    // operationTime were either dispatched before this driver joined or will
+    // be represented by the initial snapshot.
+    try {
+      const pingRes = await this._mongoHandle.db.command(
+        { ping: 1 },
+        session ? { session } : undefined
+      );
+      return { session, operationTime: pingRes?.operationTime, readConcern };
+    } catch (error) {
+      Meteor._debug('Failed to establish ChangeStream caught-up floor:', error.message);
+      // Best-effort: without the floor we only lose the fast-path release.
+      return { session, operationTime: null, readConcern };
+    }
+  }
+
+  _applySnapshotBoundary({ session, operationTime }) {
+    if (!operationTime) return;
+
+    // Only a snapshot causally tied to the boundary command can safely discard
+    // events at or before its operationTime. Other snapshots replay them to
+    // reconcile potentially stale data.
+    if (session) {
+      this._snapshotCutoffOperationTime = operationTime;
+    }
+    this._setLastProcessedOperationTime(operationTime);
+  }
+
+  async _closeSnapshotSession(snapshotSession) {
+    if (!snapshotSession) return;
+
+    try {
+      await snapshotSession.endSession();
+    } catch (error) {
+      Meteor._debug('Failed to close ChangeStream snapshot session:', error.message);
+    }
+  }
+
+  async _sendInitialAdds(collection, snapshot) {
     if (this._stopped) return;
 
     try {
@@ -254,6 +361,12 @@ export class ChangeStreamObserveDriver {
         replaceMeteorAtomWithMongo
       );
       const options = { ...this._cursorDescription.options };
+      if (snapshot.session) {
+        options.session = snapshot.session;
+      }
+      if (snapshot.readConcern) {
+        options.readConcern = snapshot.readConcern;
+      }
 
       // Find all existing documents
       const cursor = collection.find(selector, options);
@@ -383,6 +496,14 @@ export class ChangeStreamObserveDriver {
       for (const callbackData of callbacksToFlush) {
         try {
           const { operationType, id, fullDocument, fullDocumentBeforeChange, change } = callbackData;
+
+          if (
+            change?.clusterTime &&
+            this._snapshotCutoffOperationTime &&
+            compareOperationTimes(change.clusterTime, this._snapshotCutoffOperationTime) <= 0
+          ) {
+            continue;
+          }
 
           switch (operationType) {
             case 'insert':

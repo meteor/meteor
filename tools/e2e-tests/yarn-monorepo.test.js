@@ -51,7 +51,7 @@ describe('Yarn Monorepo Dependency Auto-install /', () => {
       env: { RSPACK_DEVSERVER_PORT: String(DEV_SERVER_PORT) },
       isMonorepo: true,
       skipWaitOn: true,
-      waitForOutput: /Installed Rspack dependencies/,
+      waitForOutput: /Rspack dependencies are up to date/,
     });
     meteorProcess = result.meteorProcess;
 
