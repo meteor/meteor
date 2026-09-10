@@ -255,6 +255,10 @@ export default defineConfig({
             link: "/api/DDPRateLimiter",
           },
           {
+            text: "Instrumentation",
+            link: "/api/instrumentation",
+          },
+          {
             text: "Check",
             link: "/api/check",
           },
