@@ -14,7 +14,7 @@ const { spawnSync } = require('child_process');
 const { auditTestCoverage } = require('./audit-test-groups');
 
 describe('CLI / E2E test group fallback /', () => {
-  test('keeps server runtime separate from the remaining regressions', () => {
+  test('keeps server runtime separate and combines short framework suites', () => {
     const matchingGroups = name => Object.entries(EXPLICIT_TEST_GROUPS)
       .filter(([, group]) => new RegExp(group.pattern).test(name))
       .map(([group]) => group);
@@ -34,7 +34,15 @@ describe('CLI / E2E test group fallback /', () => {
     expect(matchingGroups('Blaze Router Integration / renders a route'))
       .toEqual(['blaze']);
     expect(matchingGroups('Meteor Skeletons / PWA Skeleton / registers its worker'))
-      .toEqual(['pwa']);
+      .toEqual(['full_pwa_skeleton']);
+    expect(matchingGroups('Meteor Skeletons / Angular Skeleton / creates the app'))
+      .toEqual(['angular_coffeescript']);
+    expect(matchingGroups('Meteor Skeletons / Tailwind Skeleton / creates the app'))
+      .toEqual(['babel_tailwind']);
+    expect(matchingGroups('Vue App Bundling / builds the app'))
+      .toEqual(['react_vue']);
+    expect(matchingGroups('Svelte App Bundling / builds the app'))
+      .toEqual(['solid_svelte']);
   });
 
   test('selects names that do not match an explicit group', () => {

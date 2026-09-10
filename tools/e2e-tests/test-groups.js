@@ -3,37 +3,25 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'CLI',
     pattern: '^CLI /',
   },
-  angular: {
-    label: 'Angular',
-    pattern: '^Meteor Skeletons / Angular Skeleton /',
+  angular_coffeescript: {
+    label: 'Angular & Coffeescript',
+    pattern: '^(?:Meteor Skeletons / Angular Skeleton /|CoffeeScript App Bundling /|Meteor Skeletons / Coffeescript Skeleton /)',
   },
   assets: {
     label: 'Assets',
     pattern: '^Assets App Bundling /',
   },
-  babel: {
-    label: 'Babel',
-    pattern: '^(?:Babel App Bundling /|Meteor Skeletons / Babel Skeleton /)',
+  babel_tailwind: {
+    label: 'Babel & Tailwind',
+    pattern: '^(?:Babel App Bundling /|Meteor Skeletons / Babel Skeleton /|Meteor Skeletons / (?:Tailwind|Typescript Tailwind) Skeleton /)',
   },
   blaze: {
     label: 'Blaze',
     pattern: '^(?:BasicBlaze App Bundling /|Blaze Router Integration /|Full Blaze App Bundling /|Meteor Skeletons / Blaze Skeleton /)',
   },
-  coffeescript: {
-    label: 'Coffeescript',
-    pattern: '^(?:CoffeeScript App Bundling /|Meteor Skeletons / Coffeescript Skeleton /)',
-  },
-  full_skeleton: {
-    label: 'Full Skeleton',
-    pattern: '^Meteor Skeletons / Full Skeleton /',
-  },
-  pwa: {
-    label: 'PWA Skeleton',
-    pattern: '^Meteor Skeletons / PWA Skeleton /',
-  },
-  tailwind_skeleton: {
-    label: 'Tailwind Skeleton',
-    pattern: '^Meteor Skeletons / (?:Tailwind|Typescript Tailwind) Skeleton /',
+  full_pwa_skeleton: {
+    label: 'Full & PWA Skeletons',
+    pattern: '^Meteor Skeletons / (?:Full|PWA) Skeleton /',
   },
   examples: {
     label: 'Examples',
@@ -47,9 +35,9 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Other',
     pattern: '^(?:Other /|Meteor Skeletons / Other / Bare Skeleton /)',
   },
-  react: {
-    label: 'React',
-    pattern: '^(?:React App Bundling /|Meteor Skeletons / (?:Apollo|ChakraUI|React) Skeleton /)',
+  react_vue: {
+    label: 'React & Vue',
+    pattern: '^(?:React App Bundling /|Meteor Skeletons / (?:Apollo|ChakraUI|React) Skeleton /|Vue App Bundling /|Meteor Skeletons / Vue Skeleton /)',
   },
   react_router: {
     label: 'R.Router',
@@ -63,21 +51,13 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Regressions',
     pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
   },
-  solid: {
-    label: 'Solid',
-    pattern: '^(?:Solid App Bundling /|Meteor Skeletons / Solid Skeleton /)',
-  },
-  svelte: {
-    label: 'Svelte',
-    pattern: '^(?:Svelte App Bundling /|Meteor Skeletons / Svelte Skeleton /)',
+  solid_svelte: {
+    label: 'Solid & Svelte',
+    pattern: '^(?:Solid App Bundling /|Meteor Skeletons / Solid Skeleton /|Svelte App Bundling /|Meteor Skeletons / Svelte Skeleton /)',
   },
   typescript: {
     label: 'Typescript',
     pattern: '^(?:TypeScript App Bundling /|Meteor Skeletons / Typescript Skeleton /)',
-  },
-  vue: {
-    label: 'Vue',
-    pattern: '^(?:Vue App Bundling /|Meteor Skeletons / Vue Skeleton /)',
   },
 });
 
