@@ -24,6 +24,34 @@ Tinytest.add('collection - call new Mongo.Collection multiple times',
   }
 );
 
+Tinytest.add('collection - reuses existing instance during HMR re-declaration',
+  function (test) {
+    var collectionName = 'hmr_redeclare_' + test.id;
+    var original = new Mongo.Collection(collectionName);
+
+    // With _hmrApplying set (as during an HMR re-run), re-declaring the same
+    // name returns the existing instance instead of throwing.
+    Meteor._hmrApplying = true;
+    try {
+      var reran = new Mongo.Collection(collectionName);
+      test.isTrue(
+        reran === original,
+        'HMR re-declaration should reuse the existing collection instance'
+      );
+    } finally {
+      Meteor._hmrApplying = false;
+    }
+
+    // Outside of HMR, re-declaring the same name still throws as before.
+    test.throws(
+      function () {
+        new Mongo.Collection(collectionName);
+      },
+      /There is already a collection named/
+    );
+  }
+);
+
 Tinytest.add('collection - call new Mongo.Collection multiple times with _suppressSameNameError=true',
   function (test) {
     var collectionName = 'multiple_times_2_' + test.id;
