@@ -52,9 +52,11 @@ downloadReleaseCandidateNode() {
 # Try each strategy in the following order:
 extractNodeFromTarGz || downloadNodeFromS3 || downloadOfficialNode || downloadReleaseCandidateNode
 
-# On macOS, download MongoDB from mongodb.com. On Linux, download a custom build
-# that is compatible with current distributions. If a 32-bit Linux is used,
-# download a 32-bit legacy version from mongodb.com instead.
+# Download MongoDB from mongodb.com. On Linux we use official builds chosen for
+# the lowest practical glibc baseline: x86_64 uses the rhel93 build (glibc 2.34,
+# keeping RHEL 9 / Amazon Linux 2023 and similar distros working), and aarch64
+# uses ubuntu2204 (the oldest official aarch64 build MongoDB publishes). If a
+# 32-bit Linux is used, download a 32-bit legacy version instead.
 MONGO_VERSION=$MONGO_VERSION_64BIT
 
 if [ $ARCH = "i686" ] && [ $OS = "linux" ]; then
@@ -63,17 +65,15 @@ fi
 
 case $OS in
     macos) MONGO_BASE_URL="https://fastdl.mongodb.org/osx" ;;
-    linux)
-        [ $ARCH = "i686" -o $ARCH = "aarch64" ] &&
-            MONGO_BASE_URL="https://fastdl.mongodb.org/linux" ||
-            MONGO_BASE_URL="https://github.com/meteor/mongodb-builder/releases/download/v${MONGO_VERSION}"
-        ;;
+    linux) MONGO_BASE_URL="https://fastdl.mongodb.org/linux" ;;
 esac
 
 if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
-  MONGO_NAME="mongodb-${OS}-arm64-${MONGO_VERSION}"
-elif [ $OS = "linux" ] && [ "$ARCH" = "aarch64" ] ; then
-  MONGO_NAME="mongodb-linux-aarch64-ubuntu2204-${MONGO_VERSION}"
+  MONGO_NAME="mongodb-macos-arm64-${MONGO_VERSION}"
+elif [ $OS = "linux" ] && [ "$ARCH" = "x86_64" ] ; then
+  MONGO_NAME="mongodb-linux-x86_64-rhel93-${MONGO_VERSION}"
+elif [ $OS = "linux" ] && [ "$ARCH" != "i686" ] ; then
+  MONGO_NAME="mongodb-linux-${ARCH}-ubuntu2204-${MONGO_VERSION}"
 else
   MONGO_NAME="mongodb-${OS}-${ARCH}-${MONGO_VERSION}"
 fi
@@ -81,20 +81,25 @@ fi
 MONGO_TGZ="${MONGO_NAME}.tgz"
 MONGO_URL="${MONGO_BASE_URL}/${MONGO_TGZ}"
 echo "Downloading Mongo from ${MONGO_URL}"
-curl -L "${MONGO_URL}" | tar zx
 
-# The tarball outputs as folder name "mongodb-macos-aarch64-X.X.X" even though the URL and the tarball name suggest "mongodb-macos-arm64-X.X.X"
-# So we need to rename the folder to match the expected folder name
-# Watch out for newer versions of the tarball that might already be named correctly
-if [ $OS = "macos" ] && [ "$(uname -m)" = "arm64" ] ; then
-  MONGO_NAME=$(echo "$MONGO_NAME" | sed 's/arm64/aarch64/g')
+# The directory inside the archive does not reliably match the archive name:
+# macOS tarballs say "aarch64" where the URL says "arm64", and as of MongoDB 8
+# they also carry a doubled dash ("mongodb-macos-aarch64--8.0.29"). Strip that
+# top-level directory while unpacking so its name never has to be guessed at.
+rm -rf mongo-download
+mkdir mongo-download
+curl -L "${MONGO_URL}" | tar zx -C mongo-download --strip-components 1
+
+if [ ! -x "mongo-download/bin/mongod" ] || [ ! -x "mongo-download/bin/mongos" ] ; then
+    echo "${MONGO_TGZ} did not contain both mongod and mongos"
+    exit 1
 fi
 
 # Put Mongo binaries in the right spot (mongodb/bin)
 mkdir -p "mongodb/bin"
-mv "${MONGO_NAME}/bin/mongod" "mongodb/bin"
-mv "${MONGO_NAME}/bin/mongos" "mongodb/bin"
-rm -rf "${MONGO_NAME}"
+mv "mongo-download/bin/mongod" "mongodb/bin"
+mv "mongo-download/bin/mongos" "mongodb/bin"
+rm -rf mongo-download
 
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
