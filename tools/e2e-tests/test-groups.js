@@ -23,6 +23,10 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Full Skeleton',
     pattern: '^Meteor Skeletons / Full Skeleton /',
   },
+  pwa: {
+    label: 'PWA Skeleton',
+    pattern: '^Meteor Skeletons / PWA Skeleton /',
+  },
   tailwind_skeleton: {
     label: 'Tailwind Skeleton',
     pattern: '^Meteor Skeletons / (?:Tailwind|Typescript Tailwind) Skeleton /',

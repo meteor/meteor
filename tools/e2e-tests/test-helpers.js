@@ -61,7 +61,7 @@ const SETUP_HOOK_TIMEOUT_MS = isCI ? 600_000 : 300_000;
 
 const { linkLocalRspack: _linkLocalRspack } = require('./scripts/link-rspack');
 
-async function linkLocalRspack(appDir, options = {}) {
+export async function linkLocalRspack(appDir, options = {}) {
   if (!npmLinkLocalRspack) return;
   await _linkLocalRspack(appDir, options);
 }

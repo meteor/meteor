@@ -33,6 +33,8 @@ describe('CLI / E2E test group fallback /', () => {
       .toEqual(['monorepo']);
     expect(matchingGroups('Blaze Router Integration / renders a route'))
       .toEqual(['blaze']);
+    expect(matchingGroups('Meteor Skeletons / PWA Skeleton / registers its worker'))
+      .toEqual(['pwa']);
   });
 
   test('selects names that do not match an explicit group', () => {
