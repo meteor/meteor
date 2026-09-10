@@ -1,0 +1,25 @@
+<template name="configureLoginServiceDialogForSlack">
+  <p>
+    First, you'll need to create a Slack app on the
+    <a href="https://api.slack.com/apps" target="_blank">Slack API portal</a>.
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://api.slack.com/apps" target="_blank">api.slack.com/apps</a>
+      and click "Create New App", then "From scratch".
+    </li>
+    <li>
+      Set the App Name and select a workspace.
+    </li>
+    <li>
+      Go to "OAuth &amp; Permissions" in the left sidebar.
+    </li>
+    <li>
+      Add <span class="url">{{siteUrl}}_oauth/slack</span> to the
+      Redirect URLs field.
+    </li>
+    <li>
+      Go to "Basic Information" to find your Client ID and Client Secret.
+    </li>
+  </ol>
+</template>
