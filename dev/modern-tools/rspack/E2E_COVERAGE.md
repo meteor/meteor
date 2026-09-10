@@ -27,6 +27,7 @@ Default assertions on every run phase: build artifacts exist, page title matches
 | What is covered | Test |
 |-----------------|------|
 | Packed `@meteorjs/rspack` consumer installs its runtime dependencies, applies `npm audit fix`, and reports zero critical production vulnerabilities | `rspack-audit.test.js` |
+| Fresh `meteor create --package` output completes both client and server Tinytests with the default browser driver and no browser errors, without adding a separate jQuery dependency (#14735) | `regressions/test-in-browser.test.js` |
 
 ---
 
