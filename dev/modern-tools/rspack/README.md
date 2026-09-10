@@ -146,7 +146,10 @@ npm run test:e2e
 
 ### Upgrading Rspack Core Dependencies
 
-When a new version of Rspack is released, you must bump the core dependencies: `@rspack/core`, `@rspack/plugin-react-refresh`, `swc-loader`, and `@rsdoctor/rspack-plugin`.
+When a new version of Rspack is released, review and synchronize the core
+dependencies: `@rspack/core`, `@rspack/cli`, `@rspack/dev-server`,
+`@rspack/plugin-react-refresh`, `@swc/core`, `swc-loader`, and
+`@rsdoctor/rspack-plugin`.
 
 **1. Update the Constants (Atmosphere Package)**
 Modify the default versions in `packages/rspack/lib/constants.js`. For example, change `DEFAULT_RSPACK_VERSION` to the new target version:

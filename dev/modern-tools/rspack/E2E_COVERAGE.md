@@ -36,7 +36,7 @@ Each app lives in `apps/<name>/` and has a matching `<name>.test.js`.
 
 ### react
 
-Core React integration with custom Meteor local directory.
+Core React 19 integration with custom Meteor local directory.
 
 | What is covered | Phase |
 |----------------|-------|
@@ -44,6 +44,8 @@ Core React integration with custom Meteor local directory.
 | Custom build dir (`_build-local-custom`) created | Run |
 | `.gitignore` updated with custom local dir | Run |
 | React + JSX environment detection | Run, Prod, Test, Build |
+| React Compiler on React 19 through Rspack's built-in SWC transform | All |
+| Automatic JSX runtime without default React imports | Run, Prod, Test, Build |
 | Image assets load (generated + public + background) | Run, Prod |
 | `Meteor.disablePlugins` suppresses rspack plugins | Run, Prod, Test, Build |
 | Unplugin transform hook fires on first run (fresh cache) | Init |
@@ -265,19 +267,19 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | Skeleton | Port | Language | Extra coverage |
 |----------|------|----------|----------------|
 | angular | 3213 | TypeScript | |
-| apollo | 3201 | JSX | |
-| babel | 3212 | JSX | |
+| apollo | 3201 | JSX | React 19.2 dependencies |
+| babel | 3212 | JSX | React 19.2 dependencies |
 | bare | 3219 | JS | No title/style checks, no client tests, skip build cache check |
 | blaze | 3202 | JS | |
-| chakra-ui | 3203 | JSX | No body style checks (custom UI library) |
-| coffeescript | 3211 | CoffeeScript | |
+| chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
+| coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
 | full | 3204 | JS | `imports/api/` test structure |
-| react | 3205 | JSX | Custom body styles (Inter font, padding) |
+| react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
-| tailwind | 3208 | JSX | Tailwind `bg-gray-100` styles (dev + prod color formats) |
-| typescript | 3209 | TypeScript | TypeScript 7; native `tsgo` checker loading, diagnostic, and watch behavior |
-| typescript-tailwind | 3221 | TypeScript | TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
+| tailwind | 3208 | JSX | React 19.2 dependencies; Tailwind `bg-gray-100` styles (dev + prod color formats) |
+| typescript | 3209 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7 native `tsgo` checker loading, diagnostic, and watch behavior |
+| typescript-tailwind | 3221 | TypeScript | React 19.2 dependencies and type definitions; TypeScript 7, native `tsgo`, Tailwind 4, and PostCSS |
 | vue | 3210 | JS | |
 
 ---
@@ -352,6 +354,9 @@ Where each feature is tested across apps and skeletons.
 | 404 routing | react-router, blaze-router | |
 | Meta tags | react-router, monorepo | |
 | Babel compiler plugin | react-router | |
+| React Compiler through built-in SWC | react | |
+| React 19.2 | react | apollo, babel, chakra-ui, coffeescript, react, tailwind, typescript, typescript-tailwind |
+| Automatic JSX runtime | react | react |
 | TypeScript type checking | typescript | typescript (`tsgo` loading, diagnostic, watch), typescript-tailwind (`tsgo`) |
 | Meteor.disablePlugins | react | |
 | Unplugin transform with cache (#14031) | react | |
