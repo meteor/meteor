@@ -12,6 +12,7 @@ on:
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
       - "packages/meteor-tool/**"
+      - "packages/test-in-browser/**"
       - "npm-packages/meteor-rspack/**"
       - "tools/isobuild/**"
       - "scripts/dev-bundle-tool-package.js"
