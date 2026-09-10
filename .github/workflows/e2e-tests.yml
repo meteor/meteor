@@ -57,6 +57,7 @@ jobs:
       max-parallel: 4
       matrix:
         category:
+          - Npm Shrinkwrap
           - CLI
           - Angular
           - Babel
@@ -74,6 +75,8 @@ jobs:
           - Typescript
           - Vue
         include:
+          - category: Npm Shrinkwrap
+            test_pattern: '^Regression / npm-shrinkwrap transitive deps /'
           # Server Runtime is the largest coherent regression suite. Keep it
           # separate while sending new regression tests to the general shard.
           - category: Server Runtime
