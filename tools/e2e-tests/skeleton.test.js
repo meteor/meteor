@@ -118,6 +118,21 @@ async function assertPwaLoadsOffline({ port, meteorProcess }) {
   console.log('✅ App shell served from the service worker cache with the server down');
 }
 
+async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
+  const packageJsonPath = path.join(tempDir, 'package.json');
+  const packageJson = JSON.parse(
+    await fs.promises.readFile(packageJsonPath, 'utf8')
+  );
+
+  expect(packageJson.dependencies.react).toBe('^19.2.0');
+  expect(packageJson.dependencies['react-dom']).toBe('^19.2.0');
+
+  if (includeTypes) {
+    expect(packageJson.devDependencies['@types/react']).toBe('^19.2.0');
+    expect(packageJson.devDependencies['@types/react-dom']).toBe('^19.2.0');
+  }
+}
+
 describe('Meteor Skeletons /', () => {
   describe(
     'Angular Skeleton /',
@@ -142,6 +157,9 @@ describe('Meteor Skeletons /', () => {
         server: 'server/main.js',
         test: 'tests/main.js',
       },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
@@ -154,6 +172,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.jsx',
         server: 'server/main.js',
         test: 'tests/main.js',
+      },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
       },
     }),
   );
@@ -194,6 +215,9 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.js',
       },
       checkBodyStyles: false,
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
@@ -206,6 +230,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.coffee',
         server: 'server/main.coffee',
         test: 'tests/main.coffee',
+      },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
       },
     }),
   );
@@ -310,6 +337,9 @@ describe('Meteor Skeletons /', () => {
           : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         padding: '10px',
       },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
@@ -350,6 +380,7 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.ts',
       },
       customAssertions: {
+        afterCreate: assertReact19Dependencies,
         afterRun: async () => {
           // Verify Tailwind styles for '.bg-gray-100' element
           await assertStyles('.bg-gray-100', {
@@ -377,6 +408,9 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.ts',
       },
       customAssertions: {
+        async afterCreate({ tempDir }) {
+          await assertReact19Dependencies({ tempDir }, true);
+        },
         afterRun: assertTsgoTypeChecker,
       },
     }),
@@ -391,6 +425,11 @@ describe('Meteor Skeletons /', () => {
         client: "client/main.tsx",
         server: "server/main.ts",
         test: "tests/main.ts",
+      },
+      customAssertions: {
+        async afterCreate({ tempDir }) {
+          await assertReact19Dependencies({ tempDir }, true);
+        },
       },
     })
   );

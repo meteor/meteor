@@ -493,6 +493,10 @@ function getOwnProcessGroupId() {
 async function findPidsOnPort(port) {
   const pids = new Set();
 
+  // -sTCP:LISTEN restricts matches to processes listening on the port, so we
+  // don't return clients holding open connections (e.g. the Playwright browser
+  // talking to the Rspack HMR socket on 18080). Killing those by mistake takes
+  // the browser down mid-suite.
   const lsof = await execa.command(
     `lsof -i :${port} -sTCP:LISTEN -t 2>/dev/null`,
     { shell: true, reject: false }
