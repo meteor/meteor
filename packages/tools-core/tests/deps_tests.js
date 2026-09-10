@@ -130,6 +130,22 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  'tools-core - formatInstallCommands - supports npm coordinated peer upgrades',
+  function (test) {
+    const cmds = formatInstallCommands({
+      changes: [
+        { name: 'compiler', requiredVersion: '2.0.0', dev: true, status: 'outdated' },
+      ],
+      legacyPeerDeps: true,
+    });
+    test.equal(
+      cmds.devCommand,
+      'meteor npm install --save-dev --legacy-peer-deps compiler@2.0.0',
+    );
+  },
+);
+
+Tinytest.add(
   'tools-core - formatInstallCommands - regular only emits --save command',
   function (test) {
     const cmds = formatInstallCommands({

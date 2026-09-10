@@ -27,6 +27,7 @@ const {
 } = require('meteor/tools-core/lib/meteor');
 const {
   checkNpmDependencyExists,
+  checkNpmDependencyVersion,
 } = require('meteor/tools-core/lib/npm');
 const {
   ensurePackageDependencies,
@@ -42,6 +43,20 @@ const {
 
 const RSPACK_DOCS_URL =
   'https://docs.meteor.com/about/modern-build-stack/rspack-bundler-integration#required-npm-dependencies';
+
+function requiresRspack2NpmPeerMigration() {
+  const appDir = getMeteorAppDir();
+  return [
+    '@rspack/cli',
+    '@rspack/core',
+    '@rspack/plugin-react-refresh',
+  ].some((name) => checkNpmDependencyVersion(name, {
+    cwd: appDir,
+    versionRequirement: '2.0.0',
+    semverCondition: 'lt',
+    checkNodeModules: true,
+  }));
+}
 
 /**
  * Ensures the core Rspack dependencies meet the minimum supported versions.
@@ -63,6 +78,10 @@ export async function ensureRspackInstalled() {
     packageLabel: 'Rspack',
     dependencies,
     docUrl: RSPACK_DOCS_URL,
+    // npm otherwise retains Rspack 1.x peers from an existing lockfile and
+    // rejects the coordinated, valid Rspack 2 upgrade. Fresh installs and
+    // already-upgraded apps continue with normal peer validation.
+    legacyPeerDeps: requiresRspack2NpmPeerMigration(),
   });
 }
 

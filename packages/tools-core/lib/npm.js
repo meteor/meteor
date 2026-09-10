@@ -254,6 +254,7 @@ export function checkNpmBinaryExists(binary, options = {}) {
  * @param {Object} [options] - Options for the installation
  * @param {boolean} [options.dev=false] - If true, install as a dev dependency
  * @param {boolean} [options.exact=false] - If true, install with exact version
+ * @param {boolean} [options.legacyPeerDeps=false] - If true, ask npm to replace coordinated peer dependency majors
  * @param {boolean} [options.isMeteorCommand=false] - If true, prepends 'npm' to the args for meteor command
  * @returns {string[]} Array of arguments for the npm install command
  */
@@ -267,6 +268,10 @@ function buildNpmInstallArgs(dependencies, options = {}) {
 
   if (options.exact) {
     args.push('--save-exact');
+  }
+
+  if (options.legacyPeerDeps) {
+    args.push('--legacy-peer-deps');
   }
 
   // Add dependencies to the command
@@ -462,6 +467,7 @@ async function installYarnDependency(dependencies, options, cwd) {
  * @param {string} [options.cwd] - Current working directory (defaults to process.cwd())
  * @param {boolean} [options.dev=false] - If true, install as a dev dependency
  * @param {boolean} [options.exact=false] - If true, install with exact version
+ * @param {boolean} [options.legacyPeerDeps=false] - If true, pass --legacy-peer-deps to npm
  * @param {boolean} [options.yarn=false] - If true, use yarn instead of npm
  * @param {'npm'|'yarn'|'pnpm'} [options.packageManager] - Explicit package manager
  * @returns {Promise<boolean>} A promise that resolves to true if installation succeeded, false otherwise

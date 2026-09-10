@@ -208,9 +208,15 @@ export function detectMissingOrOutdatedDeps(dependencies, options = {}) {
  * @param {Array} params.changes - Output of detectMissingOrOutdatedDeps.
  * @param {boolean} [params.yarn=false]
  * @param {'npm'|'yarn'|'pnpm'} [params.packageManager] - Overrides the legacy yarn option.
+ * @param {boolean} [params.legacyPeerDeps=false] - Include npm's peer-resolution compatibility flag.
  * @returns {{ devCommand?: string, regularCommand?: string }}
  */
-export function formatInstallCommands({ changes, yarn = false, packageManager = yarn ? 'yarn' : 'npm' } = {}) {
+export function formatInstallCommands({
+  changes,
+  yarn = false,
+  packageManager = yarn ? 'yarn' : 'npm',
+  legacyPeerDeps = false,
+} = {}) {
   const needed = (changes || []).filter((c) => c.status !== 'ok');
   const dev = needed.filter((c) => c.dev);
   const regular = needed.filter((c) => !c.dev);
@@ -225,12 +231,15 @@ export function formatInstallCommands({ changes, yarn = false, packageManager = 
 
   if (!commands) return out;
 
+  const peerResolutionFlag =
+    packageManager === 'npm' && legacyPeerDeps ? ' --legacy-peer-deps' : '';
+
   if (dev.length > 0) {
-    out.devCommand = `${commands.dev} ${dev.map(toSpec).join(' ')}`;
+    out.devCommand = `${commands.dev}${peerResolutionFlag} ${dev.map(toSpec).join(' ')}`;
   }
 
   if (regular.length > 0) {
-    out.regularCommand = `${commands.regular} ${regular.map(toSpec).join(' ')}`;
+    out.regularCommand = `${commands.regular}${peerResolutionFlag} ${regular.map(toSpec).join(' ')}`;
   }
 
   return out;
@@ -374,6 +383,7 @@ export async function ensurePackageDependencies(params = {}) {
     dependencies,
     docUrl,
     note,
+    legacyPeerDeps = false,
     cwd: cwdParam,
   } = params;
 
@@ -411,7 +421,11 @@ export async function ensurePackageDependencies(params = {}) {
   const autoInstall = isUpdateNpm || hasMeteorAppConfigAutoInstallDeps({ cwd });
 
   const canAutoInstall = ['npm', 'yarn', 'pnpm'].includes(packageManager);
-  const cmds = formatInstallCommands({ changes: needed, packageManager });
+  const cmds = formatInstallCommands({
+    changes: needed,
+    packageManager,
+    legacyPeerDeps,
+  });
 
   if (!autoInstall || !canAutoInstall) {
     const reason = !autoInstall
@@ -453,7 +467,12 @@ export async function ensurePackageDependencies(params = {}) {
     );
     const specs = devChanges.map((c) => `${c.name}@${c.requiredVersion}`);
     installCommands.push(cmds.devCommand);
-    devOk = await installNpmDependency(specs, { cwd, dev: true, packageManager });
+    devOk = await installNpmDependency(specs, {
+      cwd,
+      dev: true,
+      packageManager,
+      legacyPeerDeps,
+    });
   }
 
   if (regularChanges.length > 0) {
@@ -464,7 +483,12 @@ export async function ensurePackageDependencies(params = {}) {
     );
     const specs = regularChanges.map((c) => `${c.name}@${c.requiredVersion}`);
     installCommands.push(cmds.regularCommand);
-    regularOk = await installNpmDependency(specs, { cwd, dev: false, packageManager });
+    regularOk = await installNpmDependency(specs, {
+      cwd,
+      dev: false,
+      packageManager,
+      legacyPeerDeps,
+    });
   }
 
   const success = devOk && regularOk;
