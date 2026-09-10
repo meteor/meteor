@@ -32,20 +32,57 @@ function createResolver(serverDir, programJson) {
   const require = createRequire(path.join(serverDir, '_virtual.js'));
 
   const packageNodeModulesMap = {};
+  const packageOwnNodeModulesMap = {};
   for (const item of programJson.load) {
     const dirs = [];
     if (typeof item.node_modules === 'string') {
       dirs.push(path.join(serverDir, item.node_modules));
+      packageOwnNodeModulesMap[item.path] = true;
     } else if (item.node_modules && typeof item.node_modules === 'object') {
       for (const p of Object.keys(item.node_modules)) {
         if (!item.node_modules[p].local) dirs.push(path.join(serverDir, p));
       }
+      packageOwnNodeModulesMap[item.path] = true;
     }
     dirs.push(path.join(serverDir, 'node_modules'));
     packageNodeModulesMap[item.path] = dirs;
   }
 
-  const knownPaths = programJson.load.map(item => item.path);
+  const packageMatchers = [];
+  let appMatcher = null;
+
+  for (const item of programJson.load) {
+    const kp = item.path;
+    const patterns = [kp];
+    if (kp.startsWith('packages/') && kp.endsWith('.js')) {
+      const base = kp.slice(0, -3); // e.g. 'packages/ddp-server' or 'packages/ostrio_flow-router-extra'
+      patterns.push(base + '/');
+      const pkgName = base.slice(9); // e.g. 'ddp-server' or 'ostrio_flow-router-extra'
+      patterns.push('node_modules/meteor/' + pkgName + '/');
+      if (pkgName.includes('_')) {
+        patterns.push('node_modules/meteor/' + pkgName.replace(/_/g, ':') + '/');
+        patterns.push('packages/' + pkgName.replace(/_/g, ':') + '/');
+      }
+      packageMatchers.push({ path: kp, patterns });
+    } else if (kp === 'app/app.js') {
+      patterns.push(
+        path.join(serverDir, 'app') + '/',
+        'programs/server/app/',
+        'meteor://\u{1F4BB}app',
+        'meteor://%F0%9F%92%BBapp',
+        'app/app.js'
+      );
+      appMatcher = { path: kp, patterns };
+    } else {
+      if (kp.endsWith('.js')) {
+        patterns.push(kp.slice(0, -3) + '/');
+      }
+      packageMatchers.push({ path: kp, patterns });
+    }
+  }
+  if (appMatcher) {
+    packageMatchers.push(appMatcher);
+  }
 
   let currentPackagePath = null;
 
@@ -59,14 +96,22 @@ function createResolver(serverDir, programJson) {
   }
 
   function getCallerPackagePath() {
-    const stack = new Error().stack || '';
-    for (const line of stack.split('\n')) {
-      for (const kp of knownPaths) {
-        if (line.includes(kp)) return kp;
-      }
-    }
     const store = asyncPackageContext.getStore();
     if (store && store.packagePath) return store.packagePath;
+
+    const stack = new Error().stack || '';
+    for (const rawLine of stack.split('\n')) {
+      if (rawLine.includes('esm-loader.mjs') || rawLine.includes('core-runtime.js') || rawLine.includes('node:') || rawLine.includes('native:')) {
+        continue;
+      }
+      let line = rawLine;
+      try { line = decodeURIComponent(rawLine); } catch (e) {}
+      for (const matcher of packageMatchers) {
+        for (const pat of matcher.patterns) {
+          if (line.includes(pat) || rawLine.includes(pat)) return matcher.path;
+        }
+      }
+    }
     return currentPackagePath;
   }
 
@@ -121,7 +166,9 @@ function createResolver(serverDir, programJson) {
     meteorNpmRequire,
     getCallerPackagePath,
     setCurrentPackage(p) { currentPackagePath = p; },
+    getCurrentPackage() { return currentPackagePath; },
     packageNodeModulesMap,
+    packageOwnNodeModulesMap,
   };
 }
 
@@ -148,7 +195,7 @@ export async function bootPackages(serverDir) {
   const starJson = JSON.parse(fs.readFileSync(path.join(buildDir, 'star.json'), 'utf8'));
   const programsDir = path.dirname(serverDir);
 
-  const { meteorNpmRequire, getCallerPackagePath, setCurrentPackage } = createResolver(serverDir, programJson);
+  const { meteorNpmRequire, getCallerPackagePath, setCurrentPackage, getCurrentPackage, packageNodeModulesMap, packageOwnNodeModulesMap } = createResolver(serverDir, programJson);
 
   // Build per-package asset maps from program.json
   // In the legacy boot, Assets is injected per-package via closure.
@@ -164,6 +211,13 @@ export async function bootPackages(serverDir) {
 
   function setCurrentAssets(packagePath) {
     currentAssets = packageAssetsMap[packagePath] || null;
+  }
+
+  function packageHasCustomEnv(packagePath) {
+    if (!packagePath) return false;
+    if (packageAssetsMap[packagePath] && Object.keys(packageAssetsMap[packagePath]).length > 0) return true;
+    if (packageOwnNodeModulesMap && packageOwnNodeModulesMap[packagePath]) return true;
+    return false;
   }
 
   // Path normalization matching boot.js behavior (via mini-files.ts)
@@ -197,6 +251,10 @@ export async function bootPackages(serverDir) {
     }
     if (currentAssets && currentAssets[assetPath]) {
       return currentAssets[assetPath];
+    }
+    const appAssets = packageAssetsMap['app/app.js'];
+    if (appAssets && (!callerPath || callerPath === 'app/app.js') && appAssets[assetPath]) {
+      return appAssets[assetPath];
     }
     return null;
   }
@@ -276,8 +334,14 @@ export async function bootPackages(serverDir) {
   const queuePathByName = Object.create(null);
   for (const item of programJson.load) {
     const m = /^packages\/(.+)\.js$/.exec(item.path);
-    if (m) queuePathByName[m[1]] = item.path;
-    else if (item.path === 'app/app.js') queuePathByName['null'] = item.path;
+    if (m) {
+      queuePathByName[m[1]] = item.path;
+      if (m[1].includes('_')) {
+        queuePathByName[m[1].replace(/_/g, ':')] = item.path;
+      }
+    } else if (item.path === 'app/app.js') {
+      queuePathByName['null'] = item.path;
+    }
   }
   const appPath = queuePathByName['null'] || null;
 
@@ -288,21 +352,253 @@ export async function bootPackages(serverDir) {
   // Wrap queue() so the binding happens when a package's initialization starts.
   // processNext() is strictly sequential (guarded by isProcessing), so the
   // binding stays correct for the whole package, async eager modules included.
-  let queueWrapped = false;
-  function wrapCoreRuntimeQueue() {
-    const coreRuntime = globalThis.Package && globalThis.Package['core-runtime'];
-    if (!coreRuntime || typeof coreRuntime.queue !== 'function') return false;
-    const originalQueue = coreRuntime.queue;
-    coreRuntime.queue = function (name, runImage) {
-      const itemPath = name == null ? null : queuePathByName[name] || null;
-      return originalQueue.call(this, name, function () {
+  const boundFunctionCache = new WeakMap();
+  function bindPackageFunction(fn, itemPath) {
+    if (typeof fn !== 'function' || fn.__pkgBound) return fn;
+    let cached = boundFunctionCache.get(fn);
+    if (cached) return cached;
+
+    const bound = new Proxy(fn, {
+      apply(target, thisArg, args) {
+        const prevPkg = getCurrentPackage();
         if (itemPath) {
           setCurrentPackage(itemPath);
           setCurrentAssets(itemPath);
         }
-        return asyncPackageContext.run({ packagePath: itemPath }, function () {
-          return runImage.apply(this, arguments);
-        });
+        try {
+          return asyncPackageContext.run({ packagePath: itemPath }, () => {
+            return Reflect.apply(target, thisArg, args);
+          });
+        } finally {
+          setCurrentPackage(prevPkg);
+          setCurrentAssets(prevPkg);
+        }
+      },
+      construct(target, args, newTarget) {
+        const prevPkg = getCurrentPackage();
+        if (itemPath) {
+          setCurrentPackage(itemPath);
+          setCurrentAssets(itemPath);
+        }
+        try {
+          return asyncPackageContext.run({ packagePath: itemPath }, () => {
+            return Reflect.construct(target, args, newTarget);
+          });
+        } finally {
+          setCurrentPackage(prevPkg);
+          setCurrentAssets(prevPkg);
+        }
+      },
+      get(target, prop, receiver) {
+        if (prop === '__pkgBound') return true;
+        const val = Reflect.get(target, prop, target);
+        if (typeof val === 'function' && prop !== 'constructor' && prop !== 'prototype') {
+          return bindPackageFunction(val, itemPath);
+        }
+        return val;
+      },
+      set(target, prop, value, receiver) {
+        return Reflect.set(target, prop, value, target);
+      },
+      has(target, prop) {
+        return Reflect.has(target, prop);
+      }
+    });
+
+    boundFunctionCache.set(fn, bound);
+    return bound;
+  }
+
+  function wrapPackageModule(pkgName, mod) {
+    if (!mod || (typeof mod !== 'object' && typeof mod !== 'function')) return mod;
+    const itemPath = queuePathByName[pkgName] || ('packages/' + pkgName.replace(/:/g, '_') + '.js');
+    if (!packageHasCustomEnv(itemPath)) return mod;
+    if (mod.__pkgWrapped) return mod;
+
+    const boundCache = new Map();
+    function getBound(fn) {
+      if (typeof fn !== 'function' || fn.__pkgBound) return fn;
+      let b = boundCache.get(fn);
+      if (!b) {
+        b = bindPackageFunction(fn, itemPath);
+        boundCache.set(fn, b);
+      }
+      return b;
+    }
+
+    const handler = {
+      get(target, prop, receiver) {
+        if (prop === '__pkgWrapped') return true;
+        const val = Reflect.get(target, prop, receiver);
+        if (typeof val === 'function' && prop !== 'Promise' && prop !== 'Meteor') {
+          return getBound(val);
+        }
+        return val;
+      }
+    };
+
+    if (typeof mod === 'function') {
+      handler.apply = function (target, thisArg, args) {
+        const prevPkg = getCurrentPackage();
+        if (itemPath) {
+          setCurrentPackage(itemPath);
+          setCurrentAssets(itemPath);
+        }
+        try {
+          return asyncPackageContext.run({ packagePath: itemPath }, () => {
+            return Reflect.apply(target, thisArg, args);
+          });
+        } finally {
+          setCurrentPackage(prevPkg);
+          setCurrentAssets(prevPkg);
+        }
+      };
+    }
+
+    return new Proxy(mod, handler);
+  }
+  globalThis.__meteorWrapPackageModule = wrapPackageModule;
+
+  const packageGetterBoundCache = new WeakMap();
+  globalThis.__meteorWrapPackageGetter = function (modId, getter) {
+    let itemPath = null;
+    if (typeof modId === 'string' && modId.startsWith('/node_modules/meteor/')) {
+      const rest = modId.slice(21);
+      const pkgName = rest.split('/')[0];
+      itemPath = queuePathByName[pkgName] || ('packages/' + pkgName.replace(/:/g, '_') + '.js');
+    }
+    if (!itemPath || !packageHasCustomEnv(itemPath)) {
+      return getter;
+    }
+
+    return function () {
+      const val = getter();
+      if (typeof val === 'function') {
+        if (val.__pkgBound) return val;
+        let b = packageGetterBoundCache.get(val);
+        if (!b) {
+          b = bindPackageFunction(val, itemPath);
+          packageGetterBoundCache.set(val, b);
+        }
+        return b;
+      }
+      return val;
+    };
+  };
+
+  let queueWrapped = false;
+  function wrapCoreRuntimeQueue() {
+    const coreRuntime = globalThis.Package && globalThis.Package['core-runtime'];
+    if (!coreRuntime || typeof coreRuntime.queue !== 'function') return false;
+
+    function hookModuleExport() {
+      const mr = globalThis.Package && globalThis.Package['modules-runtime'];
+      if (mr && mr.meteorInstall && mr.meteorInstall.Module && mr.meteorInstall.Module.prototype) {
+        const Mp = mr.meteorInstall.Module.prototype;
+        if (typeof Mp.export === 'function' && !Mp.export.__pkgWrapped) {
+          const origExport = Mp.export;
+          Mp.export = function (getters, constant) {
+            if (getters && typeof getters === 'object' && typeof this.id === 'string' && this.id.startsWith('/node_modules/meteor/')) {
+              const wrapped = {};
+              for (const key of Object.keys(getters)) {
+                wrapped[key] = globalThis.__meteorWrapPackageGetter(this.id, getters[key]);
+              }
+              return origExport.call(this, wrapped, constant);
+            }
+            return origExport.call(this, getters, constant);
+          };
+          Mp.export.__pkgWrapped = true;
+        }
+      }
+    }
+
+    const PRp = Object.getPrototypeOf(globalThis.Package);
+    if (PRp && typeof PRp._define === 'function' && !PRp._define.__wrapped) {
+      const originalDefine = PRp._define;
+      PRp._define = function definePackage(name, pkg) {
+        hookModuleExport();
+        const itemPath = name == null ? null : queuePathByName[name] || null;
+        const res = originalDefine.apply(this, arguments);
+        hookModuleExport();
+        if (itemPath && packageHasCustomEnv(itemPath) && res && typeof res === 'object') {
+          for (const key of Object.keys(res)) {
+            if (key === 'Promise' || key === 'Meteor') continue;
+            const desc = Object.getOwnPropertyDescriptor(res, key);
+            if (!desc) continue;
+            if (typeof desc.value === 'function' && !desc.value.__pkgBound) {
+              try {
+                Object.defineProperty(res, key, {
+                  value: bindPackageFunction(desc.value, itemPath),
+                  writable: desc.writable !== false,
+                  configurable: true,
+                  enumerable: desc.enumerable,
+                });
+              } catch {}
+            } else if (typeof desc.get === 'function') {
+              const origGet = desc.get;
+              try {
+                Object.defineProperty(res, key, {
+                  get() {
+                    const fn = origGet.call(this);
+                    if (typeof fn === 'function' && !fn.__pkgBound) {
+                      return bindPackageFunction(fn, itemPath);
+                    }
+                    return fn;
+                  },
+                  configurable: true,
+                  enumerable: desc.enumerable,
+                });
+              } catch {}
+            }
+          }
+        }
+        return res;
+      };
+      PRp._define.__wrapped = true;
+    }
+
+    const originalQueue = coreRuntime.queue;
+    coreRuntime.queue = function (name, runImage) {
+      const itemPath = name == null ? null : queuePathByName[name] || null;
+      return originalQueue.call(this, name, function () {
+        const prevPkg = getCurrentPackage();
+        if (itemPath) {
+          setCurrentPackage(itemPath);
+          setCurrentAssets(itemPath);
+        }
+        try {
+          return asyncPackageContext.run({ packagePath: itemPath }, function () {
+            const targetThis = typeof globalThis !== 'undefined' ? globalThis : this;
+            const config = runImage.apply(targetThis, arguments);
+            if (config && typeof config.require === 'function') {
+              const originalRequire = config.require;
+              config.require = function (id) {
+                const prevReqPkg = getCurrentPackage();
+                if (itemPath) {
+                  setCurrentPackage(itemPath);
+                  setCurrentAssets(itemPath);
+                }
+                let res;
+                try {
+                  res = asyncPackageContext.run({ packagePath: itemPath }, () => {
+                    return originalRequire.apply(this, arguments);
+                  });
+                } finally {
+                  setCurrentPackage(prevReqPkg);
+                  setCurrentAssets(prevReqPkg);
+                }
+                if (typeof id === 'string' && id.startsWith('meteor/')) {
+                  return wrapPackageModule(id.slice(7), res);
+                }
+                return res;
+              };
+            }
+            return config;
+          });
+        } finally {
+          setCurrentPackage(prevPkg);
+          setCurrentAssets(prevPkg);
+        }
       });
     };
     return true;

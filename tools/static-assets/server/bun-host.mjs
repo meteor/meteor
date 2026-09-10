@@ -17,6 +17,11 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { EventEmitter } from 'events';
 
+// Preserve native Bun fetch and HTTP primitives before any package can overwrite them
+const NativeRequest = globalThis.Request;
+const NativeResponse = globalThis.Response;
+const nativeFetch = typeof Bun !== 'undefined' && Bun.fetch ? Bun.fetch.bind(Bun) : globalThis.fetch;
+
 // ---------------------------------------------------------------------------
 // Args
 // ---------------------------------------------------------------------------
@@ -102,7 +107,7 @@ function serveStaticFile(urlPath) {
   } else {
     headers['Cache-Control'] = 'public, max-age=0';
   }
-  return new Response(Bun.file(info.absPath), { headers });
+  return new NativeResponse(Bun.file(info.absPath), { headers });
 }
 
 // ---------------------------------------------------------------------------
@@ -148,7 +153,7 @@ WebApp.startListening = function (httpServer, listenOptions, cb) {
               (p.includes('/sockjs/') && p.endsWith('/websocket'))) {
             return server.upgrade(req, { data: { req } })
               ? undefined
-              : new Response('WebSocket upgrade failed', { status: 400 });
+              : new NativeResponse('WebSocket upgrade failed', { status: 400 });
           }
         }
 
@@ -157,17 +162,34 @@ WebApp.startListening = function (httpServer, listenOptions, cb) {
         if (staticResp) return staticResp;
 
         try {
-          return await fetch(
-            new Request(`http://localhost${url.pathname}${url.search}`, {
-              method: req.method, headers: req.headers,
+          const fwdHeaders = new Headers(req.headers);
+          fwdHeaders.delete('accept-encoding');
+          fwdHeaders.set('host', `localhost:${PORT}`);
+
+          const proxyResp = await nativeFetch(
+            new NativeRequest(`http://localhost${url.pathname}${url.search}`, {
+              method: req.method,
+              headers: fwdHeaders,
               body: (req.method !== 'GET' && req.method !== 'HEAD') ? req.body : undefined,
               redirect: 'manual',
             }),
             { unix: SOCK_PATH }
           );
+
+          const respHeaders = new Headers(proxyResp.headers);
+          if (respHeaders.has('content-encoding')) {
+            respHeaders.delete('content-encoding');
+            respHeaders.delete('content-length');
+          }
+
+          return new NativeResponse(proxyResp.body, {
+            status: proxyResp.status,
+            statusText: proxyResp.statusText,
+            headers: respHeaders,
+          });
         } catch (e) {
           console.error(`[bun-host] Proxy error: ${e.message}`);
-          return new Response('Internal proxy error', { status: 502 });
+          return new NativeResponse('Internal proxy error', { status: 502 });
         }
       },
 
