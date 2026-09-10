@@ -26,7 +26,7 @@
     "@angular/platform-server": "^20.0.0",
     "@angular/ssr": "^20.0.0",
     "@angular/compiler-cli": "^20.0.0",
-    "@meteorjs/rspack": "^3.0.0-beta.0",
+    "@meteorjs/rspack": "^3.0.0-beta.1",
     "@nx/angular-rspack": "^23.1.0-beta.0",
     "@rsdoctor/rspack-plugin": "^1.5.9",
     "@rspack/cli": "^2.2.0",

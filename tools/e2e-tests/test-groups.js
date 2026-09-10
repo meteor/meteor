@@ -27,6 +27,10 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Full Skeleton',
     pattern: '^Meteor Skeletons / Full Skeleton /',
   },
+  pwa: {
+    label: 'PWA Skeleton',
+    pattern: '^Meteor Skeletons / PWA Skeleton /',
+  },
   tailwind_skeleton: {
     label: 'Tailwind Skeleton',
     pattern: '^Meteor Skeletons / (?:Tailwind|Typescript Tailwind) Skeleton /',
@@ -57,7 +61,7 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
   },
   regressions: {
     label: 'Regressions',
-    pattern: '^Regressions / (?!Server Runtime)',
+    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
   },
   solid: {
     label: 'Solid',

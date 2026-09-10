@@ -484,6 +484,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
   const reactRefreshModule = isReactEnabled
     ? safeRequire("@rspack/plugin-react-refresh")
     : null;
+  const ReactRefreshRspackPlugin =
+    reactRefreshModule?.ReactRefreshRspackPlugin || reactRefreshModule;
 
   const requireExternalsPlugin = new RequireExternalsPlugin({
     filePath: path.join(buildContext, runPath),
@@ -665,8 +667,8 @@ module.exports = async function (inMeteor = {}, argv = {}) {
     externalsType: "commonjs2",
     plugins: [
       ...[
-        ...(isReactEnabled && reactRefreshModule && isDevEnvironment
-          ? [new reactRefreshModule()]
+        ...(isReactEnabled && ReactRefreshRspackPlugin && isDevEnvironment
+          ? [new ReactRefreshRspackPlugin()]
           : []),
         requireExternalsPlugin,
         assetExternalsPlugin,

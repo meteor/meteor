@@ -460,7 +460,9 @@ async function updateDependencyCache({
     }),
   );
   const shrinkwrap = {
-    lockfileVersion: 4,
+    // Use the current format so these tests exercise cache decisions rather
+    // than the forced reinstall for an older shrinkwrap version.
+    lockfileVersion: 5,
     dependencies: {
       "uWebSockets.js": {
         version: "20.66.0",

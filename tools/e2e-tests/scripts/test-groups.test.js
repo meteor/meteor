@@ -23,12 +23,18 @@ describe('CLI / E2E test group fallback /', () => {
       .toEqual(['server_runtime']);
     expect(matchingGroups('Regressions / Concurrent Modes / isolates artifacts'))
       .toEqual(['regressions']);
+    expect(matchingGroups('Regression / npm-shrinkwrap transitive deps / honours pins'))
+      .toEqual(['regressions']);
+    expect(matchingGroups('Rspack bundle probe fails with diagnostics'))
+      .toEqual(['regressions']);
     expect(matchingGroups('Pnpm Monorepo App Bundling / installs dependencies'))
       .toEqual(['monorepo']);
     expect(matchingGroups('Meteor Skeletons / Pnpm Skeleton / creates the app'))
       .toEqual(['monorepo']);
     expect(matchingGroups('Blaze Router Integration / renders a route'))
       .toEqual(['blaze']);
+    expect(matchingGroups('Meteor Skeletons / PWA Skeleton / registers its worker'))
+      .toEqual(['pwa']);
   });
 
   test('selects names that do not match an explicit group', () => {
