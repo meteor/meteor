@@ -47,6 +47,14 @@ describe('Assets App Bundling /', () => {
           const bundleDir = path.join(buildOutputDir, 'bundle');
           
           await new Promise((resolve, reject) => {
+            let settled = false;
+            let timeoutId;
+            const settle = (callback, value) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timeoutId);
+              callback(value);
+            };
             const child = cp.spawn(process.execPath, ['main.js'], {
               cwd: bundleDir,
               env: {
@@ -62,22 +70,26 @@ describe('Assets App Bundling /', () => {
               if (output.includes('__PACKAGE_ASSET__=Hello from server package asset') && 
                   output.includes('__APP_ASSET__=Hello from app private folder')) {
                 child.kill();
-                resolve();
+                settle(resolve);
               }
             });
             child.stderr.on('data', data => {
               output += data.toString();
             });
-            child.on('error', err => reject(err));
+            child.on('error', err => settle(reject, err));
             child.on('exit', (code) => {
               if (code !== 0 && code !== null && !child.killed) {
-                reject(new Error(`Built app exited with code ${code}. Output: ${output}`));
+                settle(reject, new Error(
+                  `Built app exited with code ${code}. Output: ${output}`,
+                ));
               }
             });
             
-            setTimeout(() => {
+            timeoutId = setTimeout(() => {
               child.kill();
-              reject(new Error('Timeout waiting for node main.js to output assets. Output: ' + output));
+              settle(reject, new Error(
+                'Timeout waiting for node main.js to output assets. Output: ' + output,
+              ));
             }, 15000);
           });
         },
