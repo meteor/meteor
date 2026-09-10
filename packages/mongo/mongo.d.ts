@@ -1,6 +1,6 @@
-import { NpmModuleMongodb } from 'meteor/npm-mongo';
-import { Meteor } from 'meteor/meteor';
-import { DDP } from 'meteor/ddp';
+import { NpmModuleMongodb } from "meteor/npm-mongo";
+import { Meteor } from "meteor/meteor";
+import { DDP } from "meteor/ddp";
 
 // Based on https://github.com/microsoft/TypeScript/issues/28791#issuecomment-443520161
 export type UnionOmit<T, K extends keyof any> = T extends T
@@ -8,12 +8,12 @@ export type UnionOmit<T, K extends keyof any> = T extends T
   : never;
 
 export namespace Mongo {
-
   export type Selector<T> = NpmModuleMongodb.Filter<T>;
 
   type Modifier<T> = NpmModuleMongodb.UpdateFilter<T>;
 
-  export type OptionalId<TSchema> = UnionOmit<TSchema, '_id'> & { _id?: any };
+  export type OptionalId<TSchema> = UnionOmit<TSchema, "_id"> & { _id?: any };
+  export type CollectionId = string | ObjectID;
 
   type SortSpecifier = NpmModuleMongodb.Sort;
 
@@ -58,43 +58,293 @@ export namespace Mongo {
    */
   interface CollectionOptions<T = any, U = T> {
     /**
-     * The server connection that will manage this collection. Uses the default connection if not specified. 
-     * Pass the return value of calling `DDP.connect` to specify a different server. Pass `null` to specify 
+     * The server connection that will manage this collection. Uses the default connection if not specified.
+     * Pass the return value of calling `DDP.connect` to specify a different server. Pass `null` to specify
      * no connection. Unmanaged (`name` is null) collections cannot specify a connection.
      */
     connection?: DDP.DDPStatic | null | undefined;
-    
-    /** 
+
+    /**
      * The method of generating the `_id` fields of new documents in this collection. Possible values:
      * - **`'STRING'`**: random strings
      * - **`'MONGO'`**: random [`Mongo.ObjectID`](#mongo_object_id) values
-     * 
+     *
      * The default id generation technique is `'STRING'`.
      */
     idGeneration?: string | undefined;
-    
+
     /**
-     * An optional transformation function. Documents will be passed through this function before being 
-     * returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`, 
-     * `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges` 
+     * An optional transformation function. Documents will be passed through this function before being
+     * returned from `fetch` or `findOne`, and before being passed to callbacks of `observe`, `map`,
+     * `forEach`, `allow`, and `deny`. Transforms are *not* applied for the callbacks of `observeChanges`
      * or to cursors returned from publish functions.
      */
     transform?: (doc: T) => U;
-    
-    /** 
-     * Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code. 
-     * Default `true`. 
+
+    /**
+     * Set to `false` to skip setting up the mutation methods that enable insert/update/remove from client code.
+     * Default `true`.
      */
     defineMutationMethods?: boolean | undefined;
-    
+
     // Internal options (from normalizeOptions function)
     /** @internal */
     _driver?: any;
     /** @internal */
     _preventAutopublish?: boolean;
-    
+
     // Allow additional properties for extensibility
     [key: string]: any;
+  }
+
+  // === Collection Hook Types ===
+
+  /** Options passed when registering a hook callback */
+  interface HookOptions {
+    /** Whether to fetch the previous document for after.update hooks (default: true) */
+    fetchPrevious?: boolean;
+    /** Array of field names to fetch for the document */
+    fetch?: string[];
+    /** Projection object specifying which fields to fetch */
+    fetchFields?: FieldSpecifier;
+  }
+
+  /** Per-method hook option overrides */
+  interface HookOptionsByMethod {
+    insert?: HookOptions;
+    update?: HookOptions;
+    remove?: HookOptions;
+    upsert?: HookOptions;
+    find?: HookOptions;
+    findOne?: HookOptions;
+    all?: HookOptions;
+  }
+
+  /** Full hook options structure with timing and method levels */
+  interface HookOptionsMap {
+    before?: HookOptionsByMethod;
+    after?: HookOptionsByMethod;
+    all?: HookOptionsByMethod;
+  }
+
+  /** Controller returned from hook registration, allowing replacement or removal */
+  interface HookController {
+    /** Replace the hook callback and optionally its options */
+    replace(hook: Function, options?: HookOptions): HookController;
+    /** Remove the hook */
+    remove(): boolean;
+  }
+
+  /** Context (`this`) available inside before.insert hooks */
+  interface BeforeInsertHookContext<T> {
+    transform(doc?: T): any;
+  }
+
+  /** Context (`this`) available inside after.insert hooks */
+  interface AfterInsertHookContext<T> {
+    transform(doc?: T): any;
+    _id: CollectionId;
+  }
+
+  /** Context (`this`) available inside before.update hooks */
+  interface BeforeUpdateHookContext<T> {
+    transform(doc?: T): any;
+  }
+
+  /** Context (`this`) available inside after.update hooks */
+  interface AfterUpdateHookContext<T> {
+    transform(doc?: T): any;
+    previous?: T;
+    affected?: number;
+  }
+
+  /** Context (`this`) available inside before/after.remove hooks */
+  interface RemoveHookContext<T> {
+    transform(doc?: T): any;
+  }
+
+  /**
+   * Before-hook registration methods.
+   * Mutation hooks run for async mutators (`insertAsync`, `updateAsync`,
+   * `removeAsync`, and `upsertAsync`). Legacy sync mutation methods do not run
+   * mutation hooks.
+   */
+  interface BeforeHooks<T> {
+    /** Register a before.insert hook */
+    insert(
+      hook: (
+        this: BeforeInsertHookContext<T>,
+        userId: string | undefined,
+        doc: T
+      ) => boolean | void | Promise<boolean | void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register a before.update hook */
+    update(
+      hook: (
+        this: BeforeUpdateHookContext<T>,
+        userId: string | undefined,
+        doc: T,
+        fieldNames: string[],
+        modifier: any,
+        options: any
+      ) => boolean | void | Promise<boolean | void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register a before.remove hook */
+    remove(
+      hook: (
+        this: RemoveHookContext<T>,
+        userId: string | undefined,
+        doc: T
+      ) => boolean | void | Promise<boolean | void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register a before.upsert hook */
+    upsert(
+      hook: (
+        this: {},
+        userId: string | undefined,
+        selector: Selector<T>,
+        modifier: any,
+        options: any
+      ) => boolean | void | Promise<boolean | void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register a before.find hook (must be synchronous) */
+    find(
+      hook: (
+        this: {},
+        userId: string | undefined,
+        selector: Selector<T>,
+        options: any
+      ) => boolean | void,
+      options?: HookOptions
+    ): HookController;
+    /** Register a before.findOne hook */
+    findOne(
+      hook: (
+        this: {},
+        userId: string | undefined,
+        selector: Selector<T>,
+        options: any
+      ) => boolean | void | Promise<boolean | void>,
+      options?: HookOptions
+    ): HookController;
+  }
+
+  /**
+   * After-hook registration methods.
+   * Mutation hooks run for async mutators (`insertAsync`, `updateAsync`,
+   * `removeAsync`, and `upsertAsync`). Legacy sync mutation methods do not run
+   * mutation hooks.
+   */
+  interface AfterHooks<T, U> {
+    /** Register an after.insert hook */
+    insert(
+      hook: (
+        this: AfterInsertHookContext<T>,
+        userId: string | undefined,
+        doc: T
+      ) => void | Promise<void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register an after.update hook */
+    update(
+      hook: (
+        this: AfterUpdateHookContext<T>,
+        userId: string | undefined,
+        doc: T,
+        fieldNames: string[],
+        modifier: any,
+        options: any
+      ) => void | Promise<void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register an after.remove hook */
+    remove(
+      hook: (
+        this: RemoveHookContext<T>,
+        userId: string | undefined,
+        doc: T
+      ) => void | Promise<void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register an after.find hook */
+    find(
+      hook: (
+        this: Cursor<T, U>,
+        userId: string | undefined,
+        selector: Selector<T>,
+        options: any,
+        cursor?: Cursor<T, U>
+      ) => void | Promise<void>,
+      options?: HookOptions
+    ): HookController;
+    /** Register an after.findOne hook */
+    findOne(
+      hook: (
+        this: {},
+        userId: string | undefined,
+        selector: Selector<T>,
+        options: any,
+        doc?: U
+      ) => void | Promise<void>,
+      options?: HookOptions
+    ): HookController;
+  }
+
+  /** Direct (hook-bypassing) method interface */
+  interface DirectMethods<T, U> {
+    insert(doc: OptionalId<T>, callback?: Function): CollectionId;
+    insertAsync(
+      doc: OptionalId<T>,
+      callback?: Function
+    ): Promise<CollectionId>;
+    update(
+      selector: Selector<T> | ObjectID | string,
+      modifier: Modifier<T>,
+      options?: any,
+      callback?: Function
+    ): number;
+    updateAsync(
+      selector: Selector<T> | ObjectID | string,
+      modifier: Modifier<T>,
+      options?: any,
+      callback?: Function
+    ): Promise<number>;
+    remove(
+      selector: Selector<T> | ObjectID | string,
+      callback?: Function
+    ): number;
+    removeAsync(
+      selector: Selector<T> | ObjectID | string,
+      callback?: Function
+    ): Promise<number>;
+    upsert(
+      selector: Selector<T> | ObjectID | string,
+      modifier: Modifier<T>,
+      options?: any,
+      callback?: Function
+    ): { numberAffected?: number; insertedId?: CollectionId };
+    upsertAsync(
+      selector: Selector<T> | ObjectID | string,
+      modifier: Modifier<T>,
+      options?: any,
+      callback?: Function
+    ): Promise<{ numberAffected?: number; insertedId?: CollectionId }>;
+    find(
+      selector?: Selector<T> | ObjectID | string,
+      options?: Options<T>
+    ): Cursor<T, U>;
+    findOne(
+      selector?: Selector<T> | ObjectID | string,
+      options?: Options<T>
+    ): U | undefined;
+    findOneAsync(
+      selector?: Selector<T> | ObjectID | string,
+      options?: Options<T>
+    ): Promise<U | undefined>;
   }
 
   var Collection: CollectionStatic;
@@ -114,22 +364,35 @@ export namespace Mongo {
      * @param name The name of the collection instance.
      */
     getCollection<
-        TCollection extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined
-    >(name: string): TCollection;
+      TCollection extends Collection<any, any> | undefined =
+        | Collection<NpmModuleMongodb.Document>
+        | undefined
+    >(
+      name: string
+    ): TCollection;
 
     // Collection Extensions API
     /**
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T extends NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(
+      extension: (
+        this: Collection<T, U>,
+        name: string | null,
+        options?: CollectionOptions<T, U>
+      ) => void
+    ): void;
 
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(
+      name: string,
+      method: (this: Collection<T, U>, ...args: any[]) => any
+    ): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
@@ -182,7 +445,10 @@ export namespace Mongo {
   interface Collection<T extends NpmModuleMongodb.Document, U = T> {
     allow<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
+        | ((
+            userId: string,
+            doc: DispatchTransform<Fn, T, U>
+          ) => Promise<boolean> | boolean)
         | undefined;
       update?:
         | ((
@@ -190,10 +456,13 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => Promise<boolean>|boolean)
+          ) => Promise<boolean> | boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
+        | ((
+            userId: string,
+            doc: DispatchTransform<Fn, T, U>
+          ) => Promise<boolean> | boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
@@ -217,7 +486,10 @@ export namespace Mongo {
     ): Promise<void>;
     deny<Fn extends Transform<T> = undefined>(options: {
       insert?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
+        | ((
+            userId: string,
+            doc: DispatchTransform<Fn, T, U>
+          ) => Promise<boolean> | boolean)
         | undefined;
       update?:
         | ((
@@ -225,10 +497,13 @@ export namespace Mongo {
             doc: DispatchTransform<Fn, T, U>,
             fieldNames: string[],
             modifier: any
-          ) => Promise<boolean>|boolean)
+          ) => Promise<boolean> | boolean)
         | undefined;
       remove?:
-        | ((userId: string, doc: DispatchTransform<Fn, T, U>) => Promise<boolean>|boolean)
+        | ((
+            userId: string,
+            doc: DispatchTransform<Fn, T, U>
+          ) => Promise<boolean> | boolean)
         | undefined;
       fetch?: string[] | undefined;
       transform?: Fn | undefined;
@@ -247,9 +522,12 @@ export namespace Mongo {
     find<O extends Options<T>>(
       selector?: Selector<T> | ObjectID | string,
       options?: O
-    ): Cursor<T, DispatchTransform<O['transform'], T, U>>;
+    ): Cursor<T, DispatchTransform<O["transform"], T, U>>;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * Routes through `find(..., { limit: 1 })`, so sync `before.find` hooks may
+     * run when they are registered. Sync `before.findOne` /
+     * `after.findOne` hooks also run for `findOne()`.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
      * @see findOneAsync
      * @param selector A query describing the documents to find
@@ -257,14 +535,17 @@ export namespace Mongo {
     findOne(selector?: Selector<T> | ObjectID | string): U | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
+     * Routes through `find(..., { limit: 1 })`, so sync `before.find` hooks may
+     * run when they are registered. Sync `before.findOne` /
+     * `after.findOne` hooks also run for `findOne()`.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
      * @see findOneAsync
      * @param selector A query describing the documents to find
      */
-    findOne<O extends Omit<Options<T>, 'limit'>>(
+    findOne<O extends Omit<Options<T>, "limit">>(
       selector?: Selector<T> | ObjectID | string,
       options?: O
-    ): DispatchTransform<O['transform'], T, U> | undefined;
+    ): DispatchTransform<O["transform"], T, U> | undefined;
     /**
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
      * @param selector A query describing the documents to find
@@ -276,21 +557,26 @@ export namespace Mongo {
      * Finds the first document that matches the selector, as ordered by sort and skip options. Returns `undefined` if no matching document is found.
      * @param selector A query describing the documents to find
      */
-    findOneAsync<O extends Omit<Options<T>, 'limit'>>(
+    findOneAsync<O extends Omit<Options<T>, "limit">>(
       selector?: Selector<T> | ObjectID | string,
       options?: O
-    ): Promise<DispatchTransform<O['transform'], T, U> | undefined>;
+    ): Promise<DispatchTransform<O["transform"], T, U> | undefined>;
     /**
      * Gets the number of documents matching the filter. For a fast count of the total documents in a collection see `estimatedDocumentCount`.
      * @param selector The query for filtering the set of documents to count
      * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
      */
-    countDocuments(selector?: Selector<T> | ObjectID | string, options?: NpmModuleMongodb.CountDocumentsOptions): Promise<number>;
+    countDocuments(
+      selector?: Selector<T> | ObjectID | string,
+      options?: NpmModuleMongodb.CountDocumentsOptions
+    ): Promise<number>;
     /**
      * Gets an estimate of the count of documents in a collection using collection metadata. For an exact count of the documents in a collection see `countDocuments`.
      * @param options All options are listed in [MongoDB documentation](https://mongodb.github.io/node-mongodb-native/4.11/interfaces/CountDocumentsOptions.html). Please note that not all of them are available on the client.
      */
-    estimatedDocumentCount(options?: NpmModuleMongodb.EstimatedDocumentCountOptions): Promise<number>;
+    estimatedDocumentCount(
+      options?: NpmModuleMongodb.EstimatedDocumentCountOptions
+    ): Promise<number>;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @deprecated on server since 2.8. Check migration guide {@link https://guide.meteor.com/2.8-migration}
@@ -298,16 +584,18 @@ export namespace Mongo {
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insert(doc: OptionalId<T>, callback?: Function): string;
+    insert(doc: OptionalId<T>, callback?: Function): CollectionId;
     /**
      * Insert a document in the collection.  Returns its unique _id.
      * @param doc The document to insert. May not yet have an _id attribute, in which case Meteor will generate one for you.
      * @param callback If present, called with an error object as the first argument and, if no error, the _id as the second.
      */
-    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<string>;
+    insertAsync(doc: OptionalId<T>, callback?: Function): Promise<CollectionId>;
     /**
      * Returns the [`Collection`](http://mongodb.github.io/node-mongodb-native/3.0/api/Collection.html) object corresponding to this collection from the
      * [npm `mongodb` driver module](https://www.npmjs.com/package/mongodb) which is wrapped by `Mongo.Collection`.
+     * This bypasses collection-level mutator overrides, Collection Extensions,
+     * and collection hooks.
      */
     rawCollection(): NpmModuleMongodb.Collection<T>;
     /**
@@ -400,7 +688,7 @@ export namespace Mongo {
       callback?: Function
     ): {
       numberAffected?: number | undefined;
-      insertedId?: string | undefined;
+      insertedId?: CollectionId | undefined;
     };
     /**
      * Modify one or more documents in the collection, or insert one if no matching documents were found. Returns an object with keys `numberAffected` (the number of documents modified) and
@@ -419,7 +707,7 @@ export namespace Mongo {
       callback?: Function
     ): Promise<{
       numberAffected?: number | undefined;
-      insertedId?: string | undefined;
+      insertedId?: CollectionId | undefined;
     }>;
     _createCappedCollection(byteSize?: number, maxDocuments?: number): void;
     /** @deprecated */
@@ -433,6 +721,33 @@ export namespace Mongo {
      * @see dropIndexAsync
      */
     _dropIndex(indexName: string): void;
+
+    // === Collection Hooks ===
+
+    /**
+     * Register before-operation hooks. Returning `false` from a before hook aborts the operation.
+     * Mutation hooks run for async mutators; legacy sync mutation methods do not run mutation hooks.
+     */
+    before: BeforeHooks<T>;
+
+    /**
+     * Register after-operation hooks. Called after the operation completes.
+     * Mutation hooks run for async mutators; legacy sync mutation methods do not run mutation hooks.
+     */
+    after: AfterHooks<T, U>;
+
+    /**
+     * Call collection methods directly, bypassing all hooks.
+     * Sync mutation methods are included for API consistency, but they do not
+     * run mutation hooks even without `direct`.
+     */
+    direct: DirectMethods<T, U>;
+
+    /**
+     * Per-collection hook options that override `CollectionHooks.defaults`.
+     * Individual hook registrations can further override these.
+     */
+    hookOptions: HookOptionsMap;
   }
 
   var Cursor: CursorStatic;
@@ -529,7 +844,9 @@ export namespace Mongo {
      * Watch a query. Receive callbacks as the result set changes.
      * @param callbacks Functions to call to deliver the result set as it changes
      */
-    observeAsync(callbacks: ObserveCallbacks<U>): Promise<Meteor.LiveQueryHandle>;
+    observeAsync(
+      callbacks: ObserveCallbacks<U>
+    ): Promise<Meteor.LiveQueryHandle>;
     /**
      * Watch a query. Receive callbacks as the result set changes. Only the differences between the old and new documents are passed to the callbacks.
      * @param callbacks Functions to call to deliver the result set as it changes
@@ -573,14 +890,23 @@ export namespace Mongo {
      * Add a constructor extension function that runs when collections are created.
      * @param extension Extension function called with (name, options) and 'this' bound to collection instance
      */
-    addExtension<T extends NpmModuleMongodb.Document, U = T>(extension: (this: Collection<T, U>, name: string | null, options?: CollectionOptions<T, U>) => void): void;
-    
+    addExtension<T extends NpmModuleMongodb.Document, U = T>(
+      extension: (
+        this: Collection<T, U>,
+        name: string | null,
+        options?: CollectionOptions<T, U>
+      ) => void
+    ): void;
+
     /**
      * Add a prototype method to all collection instances.
      * @param name The name of the method to add
      * @param method The method function, bound to the collection instance
      */
-    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(name: string, method: (this: Collection<T, U>, ...args: any[]) => any): void;
+    addPrototypeMethod<T extends NpmModuleMongodb.Document, U = T>(
+      name: string,
+      method: (this: Collection<T, U>, ...args: any[]) => any
+    ): void;
 
     /**
      * Add a static method to the Mongo.Collection constructor.
@@ -638,7 +964,11 @@ export namespace Mongo {
    * @param name Name of your collection as it was defined with `new Mongo.Collection()`.
    * @returns The collection instance or undefined if not found
    */
-  function getCollection<T extends Collection<any, any> | undefined = Collection<NpmModuleMongodb.Document> | undefined>(name: string): T;
+  function getCollection<
+    T extends Collection<any, any> | undefined =
+      | Collection<NpmModuleMongodb.Document>
+      | undefined
+  >(name: string): T;
 
   /**
    * A record of all defined Mongo.Collection instances, indexed by collection name.
@@ -648,6 +978,40 @@ export namespace Mongo {
 
   function setConnectionOptions(options: any): void;
 }
+
+/**
+ * Global hook configuration and utilities.
+ * Exported from the `meteor/mongo` package.
+ */
+export declare const CollectionHooks: {
+  /** Default hook options applied to all collections. Can be overridden per-collection or per-hook. */
+  defaults: Mongo.HookOptionsMap;
+
+  /**
+   * Execute a function bypassing all hooks.
+   * @param func The function to execute without hooks
+   */
+  directOp<T>(func: () => T): T;
+
+  /**
+   * Execute a function with hooks active (the default).
+   * @param func The function to execute with hooks
+   */
+  hookedOp<T>(func: () => T): T;
+
+  /**
+   * Returns `true` if the current code is running inside a `Meteor.publish` function.
+   */
+  isWithinPublish(): boolean;
+
+  /**
+   * Normalize a selector to always be an object `{ _id: value }`.
+   * String and `Mongo.ObjectID` selectors are wrapped.
+   */
+  normalizeSelector<T>(
+    selector: Mongo.Selector<T> | Mongo.ObjectID | string
+  ): Mongo.Selector<T>;
+};
 
 export namespace Mongo {
   interface AllowDenyOptions {
