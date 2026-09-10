@@ -43,6 +43,9 @@ This feature must not introduce a breaking change for Meteor developers.
   still switch transports at runtime.
 - The new fixed-transport behavior is opt-in. An application that selects one
   transport accepts that changing to the omitted transport requires a rebuild.
+- With no explicit runtime selection, a fixed bundle automatically selects its
+  sole included provider. Explicit runtime configuration retains its existing
+  priority and can still surface an intentional mismatch error.
 
 The only new failure mode is intentional and limited to opt-in bundles: if
 runtime configuration requests a transport that was not included at build
@@ -161,7 +164,8 @@ When runtime config says `sockjs`, the client obtains the constructor from the
 provider. For `uws`, it continues to use the browser's native `WebSocket` and
 never needs SockJS. A missing SockJS provider produces an explicit error; in a
 valid fixed uWS web build that branch is never selected because the server has
-already published `DDP_TRANSPORT=uws`. Cordova's initial packaged bootstrap
+published `DDP_TRANSPORT=uws` after automatically selecting its sole included
+provider. Cordova's initial packaged bootstrap
 receives the fixed selection directly from the build command, before it can
 connect to the server or receive a hot code push.
 
@@ -197,8 +201,8 @@ from the serialized bootstrap configuration. It must never serialize `"both"`
 as a runtime transport: the client treats every non-SockJS value as native
 WebSocket. Omission preserves the existing initial SockJS behavior. This
 bootstrap rule does not change browser configuration, server runtime
-precedence, or `meteor run` defaults. A fixed uWS build still requires matching
-server runtime selection as described below.
+precedence, or `meteor run` defaults. With no explicit runtime selection, the
+server automatically selects the sole provider in a fixed bundle.
 
 For `meteor deploy --cache-build`, the normalized transport selection becomes
 part of the cached build metadata and validity check. A cached bundle created
@@ -245,7 +249,8 @@ Runtime selection retains the existing priority:
 1. `Meteor.settings.packages['ddp-server'].transport`
 2. `DDP_TRANSPORT`
 3. `DISABLE_SOCKJS` selecting `uws`
-4. `sockjs`
+4. the sole included provider when the bundle is fixed
+5. `sockjs` when both providers are included
 
 After resolving the name, `ddp-server` compares it with the providers that are
 actually present.
@@ -253,8 +258,9 @@ actually present.
 - An unknown name reports that the DDP transport is unknown and lists the
   supported names.
 - A supported but omitted name reports that it was not included in this
-  bundle, lists the included providers, and instructs the operator to rebuild
-  with `--ddp-transport=<name>` or `--ddp-transport=both`.
+  bundle, lists the included providers, and instructs the operator either to
+  select the included provider at runtime or rebuild with
+  `--ddp-transport=<name>` or `--ddp-transport=both`.
 - A present provider is initialized exactly as it is today, and its name is
   written to `__meteor_runtime_config__.DDP_TRANSPORT` for the browser.
 
@@ -262,8 +268,10 @@ Example mismatch:
 
 ```text
 DDP transport "uws" is not included in this application bundle.
-Included transports: sockjs. Rebuild with --ddp-transport=uws or
---ddp-transport=both.
+Included transports: sockjs. To use "sockjs", set
+Meteor.settings.packages["ddp-server"].transport to "sockjs" or, if that setting
+is unset, set DDP_TRANSPORT=sockjs. To use "uws", rebuild with
+--ddp-transport=uws or --ddp-transport=both.
 ```
 
 This also makes legacy `DISABLE_SOCKJS=1` safe: it behaves unchanged in a
@@ -338,6 +346,8 @@ leaves the package ownership problem unresolved.
 - Keep shared raw-WebSocket and DDP integration tests in `ddp-server`.
 - Test provider discovery for both present providers.
 - Test the mismatch error for a supported but omitted provider.
+- Test that a fixed bundle with no explicit runtime configuration selects its
+  sole included provider.
 - Preserve tests for settings, `DDP_TRANSPORT`, `DISABLE_SOCKJS`, and default
   priority.
 - Test that the client only looks up SockJS when runtime config selects it.
@@ -399,8 +409,8 @@ meteor build ../output --ddp-transport=sockjs
 meteor build ../output --ddp-transport=uws
 ```
 
-The build flag controls contents; the existing runtime setting controls which
-included provider starts. A uWS-only artifact must also be deployed with its
-existing runtime selection set to `uws`, for example through `DDP_TRANSPORT` or
-Meteor settings. Keeping the two choices separate preserves current runtime
-configuration semantics.
+The build flag controls contents. With a fixed selection and no explicit
+runtime configuration, the sole included provider starts automatically.
+Existing runtime settings still take precedence, so a request for an omitted
+provider fails immediately. The default `both` build retains today's SockJS
+default and runtime switching behavior.

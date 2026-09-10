@@ -10,10 +10,11 @@ for (const command of ["build", "deploy"]) {
     const help = s.run("help", command);
     await help.expectExit(0);
     const output = help.getMatcherFullBuffer();
-    selftest.expectTrue(output.includes("A uws-only bundle also requires selecting uws at server"));
-    selftest.expectTrue(output.includes("DDP_TRANSPORT=uws"));
     selftest.expectTrue(
-      output.includes('Meteor.settings.packages["ddp-server"].transport to "uws".'),
+      output.includes("A fixed bundle automatically uses its included transport"),
+    );
+    selftest.expectTrue(
+      output.includes("unless runtime configuration explicitly requests another."),
     );
   });
 }
