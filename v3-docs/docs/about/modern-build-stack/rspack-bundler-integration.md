@@ -99,7 +99,7 @@ By default, Meteor installs or updates them for you on the first run after addin
    • @rspack/core                    2.2.0          (new)
    • @rspack/cli                     2.2.0          (new)
    • @rspack/dev-server              2.2.0          (new)
-   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-beta.0
+   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-beta.1
    • @swc/core                       1.15.32        (new)
    • @rsdoctor/rspack-plugin         1.5.9          (new)
    Dependencies:
@@ -130,14 +130,14 @@ With this flag off, Meteor still detects when a required dependency is missing o
    • @rspack/core                    2.2.0          (not installed)
    • @rspack/cli                     2.2.0          (not installed)
    • @rspack/dev-server              2.2.0          (not installed)
-   • @meteorjs/rspack                3.0.0-beta.0   (currently 2.2.0-beta.1)
+   • @meteorjs/rspack                3.0.0-beta.1   (currently 2.2.0-beta.1)
    • @swc/core                       1.15.32        (not installed)
    • @rsdoctor/rspack-plugin         1.5.9          (not installed)
    Dependencies:
    • @swc/helpers                    0.5.23         (not installed)
 
    To bring your project in line, run:
-       meteor npm install --save-dev @rspack/core@2.2.0 @rspack/cli@2.2.0 @rspack/dev-server@2.2.0 @meteorjs/rspack@3.0.0-beta.0 @swc/core@1.15.32 @rsdoctor/rspack-plugin@1.5.9
+       meteor npm install --save-dev @rspack/core@2.2.0 @rspack/cli@2.2.0 @rspack/dev-server@2.2.0 @meteorjs/rspack@3.0.0-beta.1 @swc/core@1.15.32 @rsdoctor/rspack-plugin@1.5.9
        meteor npm install --save @swc/helpers@0.5.23
 => ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
 ```

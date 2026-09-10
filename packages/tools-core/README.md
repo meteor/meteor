@@ -13,6 +13,13 @@ and `meteor.autoInstallDeps=false` paths, so consumers ship only data. When
 automatic installation is disabled, the warning includes both the manual
 install command and the setting to re-enable automatic management.
 
+The engine detects npm, Yarn, and pnpm from the workspace manifest and
+lockfiles. Installs run from the Meteor app directory so the package manager
+updates the app's dependencies and the workspace's lockfile. Manual guidance
+includes both paths and commands for the detected manager; unsupported
+managers are left for the user to run. Dependencies declared with `file:`,
+`link:`, `portal:`, or `workspace:` are checked against their installed version.
+
 ```js
 const { ensurePackageDependencies } = require('meteor/tools-core/lib/deps');
 

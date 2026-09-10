@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - "meteor"
+      - "package.json"
+      - "package-lock.json"
+      - "tools/cli/**"
       - "tools/e2e-tests/**"
       - "packages/rspack/**"
       - "packages/tools-core/**"
@@ -37,7 +40,29 @@ env:
   METEOR_E2E_TEST_RETRIES: 1
 
 jobs:
+  groups:
+    name: E2E group audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.groups.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/e2e-tests/package-lock.json
+      - name: Install discovery dependencies
+        run: npm ci --prefix tools/e2e-tests
+      - name: Audit all E2E groups
+        run: npm run test:e2e:groups:audit
+      - name: Generate group matrix
+        id: groups
+        run: echo "matrix=$(node tools/e2e-tests/scripts/list-test-groups.js --json)" >> "$GITHUB_OUTPUT"
+
   test:
+    needs: groups
     name: ${{ matrix.category }}
     runs-on: oss-vm
     timeout-minutes: 60
@@ -56,35 +81,7 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 4
-      matrix:
-        category:
-          - Npm Shrinkwrap
-          - CLI
-          - Angular
-          - Babel
-          - Blaze
-          - Coffeescript
-          - Full Skeleton
-          - PWA Skeleton
-          - Tailwind Skeleton
-          - Examples
-          - Monorepo
-          - Other
-          - React
-          - R.Router
-          - Solid
-          - Svelte
-          - Typescript
-          - Vue
-        include:
-          - category: Npm Shrinkwrap
-            test_pattern: '^Regression / npm-shrinkwrap transitive deps /'
-          # Server Runtime is the largest coherent regression suite. Keep it
-          # separate while sending new regression tests to the general shard.
-          - category: Server Runtime
-            test_pattern: 'Regressions / Server Runtime'
-          - category: Regressions
-            test_pattern: 'Regressions / (?!Server Runtime)'
+      matrix: ${{ fromJSON(needs.groups.outputs.matrix) }}
 
     steps:
       - name: Install Docker CLI
@@ -149,7 +146,7 @@ jobs:
         id: test-run
         continue-on-error: true
         timeout-minutes: 20
-        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -171,4 +168,4 @@ jobs:
         timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.test_pattern || matrix.category }}"
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"

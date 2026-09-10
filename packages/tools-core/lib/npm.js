@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnProcess } = require('./process');
-const { logError } = require('./log');
+const { logError, logInfo } = require('./log');
 
 /**
  * Gets the candidate executable names for a Node.js tool on the current
@@ -150,6 +150,30 @@ export function getNodeBinaryPath(binaryName) {
 }
 
 /**
+ * Finds a Node.js command on PATH without spawning it.
+ *
+ * @param {string} binaryName - The command name to find
+ * @returns {string|null} Absolute command path, or null when unavailable
+ */
+function getNodeBinaryPathFromEnv(binaryName) {
+  const pathEnv = process.env.PATH || process.env.Path || '';
+
+  for (const directory of pathEnv.split(path.delimiter)) {
+    if (!directory) continue;
+
+    const normalizedDirectory = directory.replace(/^"|"$/g, '');
+    for (const candidate of getNodeBinaryCandidates(binaryName)) {
+      const binaryPath = path.join(normalizedDirectory, candidate);
+      if (fs.existsSync(binaryPath)) {
+        return binaryPath;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Checks if a npm dependency exists in the project.
  * First checks optimistically in node_modules folder, then checks package.json.
  * 
@@ -287,12 +311,42 @@ function buildYarnInstallArgs(dependencies, options = {}) {
 }
 
 /**
+ * Builds pnpm add arguments.
+ *
+ * @param {string|string[]} dependencies - Dependencies to install
+ * @param {Object} [options] - Installation options
+ * @param {boolean} [options.dev=false] - Save as development dependencies
+ * @param {boolean} [options.exact=false] - Save exact versions
+ * @returns {string[]} Array of arguments for pnpm
+ */
+function buildPnpmInstallArgs(dependencies, options = {}) {
+  const args = ['add'];
+
+  if (options.dev) {
+    args.push('--save-dev');
+  }
+
+  if (options.exact) {
+    args.push('--save-exact');
+  }
+
+  if (Array.isArray(dependencies)) {
+    args.push(...dependencies);
+  } else {
+    args.push(dependencies);
+  }
+
+  return args;
+}
+
+/**
  * Executes a command and returns a promise that resolves to true if successful
  * 
  * @param {string} command - The command to execute
  * @param {string[]} args - The arguments for the command
  * @param {Object} options - Options for the spawn process
  * @param {string} options.cwd - Current working directory
+ * @param {boolean} [options.logFailure=true] - Whether to log command failure details
  * @returns {Promise<boolean>} A promise that resolves to true if command succeeded, false otherwise
  */
 function executeCommand(command, args, options) {
@@ -323,27 +377,85 @@ function executeCommand(command, args, options) {
           resolve(true);
           return;
         }
-        logError(`=> Command failed: ${formatCommand()}`);
-        logError(`   cwd: ${options.cwd || process.cwd()}`);
-        logError(`   exit code: ${code}${signal ? ` (signal: ${signal})` : ''}`);
-        if (stderrBuf.trim()) logError(`   stderr:\n${tail(stderrBuf)}`);
-        if (stdoutBuf.trim()) logError(`   stdout:\n${tail(stdoutBuf)}`);
+        if (options.logFailure !== false) {
+          logError(`=> Command failed: ${formatCommand()}`);
+          logError(`   cwd: ${options.cwd || process.cwd()}`);
+          logError(`   exit code: ${code}${signal ? ` (signal: ${signal})` : ''}`);
+          if (stderrBuf.trim()) logError(`   stderr:\n${tail(stderrBuf)}`);
+          if (stdoutBuf.trim()) logError(`   stdout:\n${tail(stdoutBuf)}`);
+        }
         resolve(false);
       },
       onError: (err) => {
         if (settled) return;
         settled = true;
-        logError(`=> Command could not be spawned: ${formatCommand()}`);
-        logError(`   ${err && err.message ? err.message : String(err)}`);
+        if (options.logFailure !== false) {
+          logError(`=> Command could not be spawned: ${formatCommand()}`);
+          logError(`   ${err && err.message ? err.message : String(err)}`);
+        }
         resolve(false);
       }
     });
   });
 }
 
+async function installPnpmDependency(dependencies, options, cwd) {
+  const candidates = getPnpmCommandCandidates([]);
+  if (candidates.length === 0) {
+    logError('=> pnpm auto-install is unavailable: neither pnpm nor Corepack was found.');
+    return false;
+  }
+
+  const installArgs = buildPnpmInstallArgs(dependencies, options);
+  for (let index = 0; index < candidates.length; index += 1) {
+    const { command, args: baseArgs } = candidates[index];
+    const isLastCandidate = index === candidates.length - 1;
+    const success = await executeCommand(
+      command,
+      [...baseArgs, ...installArgs],
+      { cwd, logFailure: isLastCandidate }
+    );
+
+    if (success) {
+      return true;
+    }
+
+    if (!isLastCandidate) {
+      logInfo('=> Direct pnpm command failed; retrying with Corepack...');
+    }
+  }
+
+  return false;
+}
+
+async function installYarnDependency(dependencies, options, cwd) {
+  const candidates = getYarnCommandCandidates([]);
+  const installArgs = buildYarnInstallArgs(dependencies, options);
+
+  for (let index = 0; index < candidates.length; index += 1) {
+    const { command, args: baseArgs } = candidates[index];
+    const isLastCandidate = index === candidates.length - 1;
+    const success = await executeCommand(
+      command,
+      [...baseArgs, ...installArgs],
+      { cwd, logFailure: isLastCandidate }
+    );
+
+    if (success) {
+      return true;
+    }
+
+    if (!isLastCandidate) {
+      logInfo('=> Direct Yarn command failed; retrying with Corepack...');
+    }
+  }
+
+  return false;
+}
+
 /**
- * Installs a npm dependency using direct npm binary if available, otherwise falls back to `meteor npm install`.
- * If yarn option is true, uses yarn instead.
+ * Installs npm dependencies with npm, Yarn, or pnpm. npm uses Meteor's npm
+ * fallback; Yarn and pnpm use a directly available binary or Corepack.
  * 
  * @param {string|string[]} dependencies - The npm dependency or dependencies to install
  * @param {Object} [options] - Options for the installation
@@ -351,16 +463,25 @@ function executeCommand(command, args, options) {
  * @param {boolean} [options.dev=false] - If true, install as a dev dependency
  * @param {boolean} [options.exact=false] - If true, install with exact version
  * @param {boolean} [options.yarn=false] - If true, use yarn instead of npm
+ * @param {'npm'|'yarn'|'pnpm'} [options.packageManager] - Explicit package manager
  * @returns {Promise<boolean>} A promise that resolves to true if installation succeeded, false otherwise
  */
 export function installNpmDependency(dependencies, options = {}) {
   const cwd = options.cwd || process.cwd();
+  const packageManager = options.packageManager ||
+    (options.yarn ? 'yarn' : 'npm');
 
-  // If yarn option is true, use yarn
-  if (options.yarn) {
-    const { command, args: baseArgs } = getYarnCommand([]);
-    const args = buildYarnInstallArgs(dependencies, options);
-    return executeCommand(command, [...baseArgs, ...args], { cwd });
+  if (packageManager === 'yarn') {
+    return installYarnDependency(dependencies, options, cwd);
+  }
+
+  if (packageManager === 'pnpm') {
+    return installPnpmDependency(dependencies, options, cwd);
+  }
+
+  if (packageManager !== 'npm') {
+    logError(`=> Unsupported package manager for auto-install: ${packageManager}`);
+    return Promise.resolve(false);
   }
 
   // Try to get the npm binary path
@@ -547,29 +668,111 @@ export function isYarnProject(options = {}) {
 }
 
 /**
- * Gets the yarn command and arguments
- * @param {string[]} args - The arguments to pass to yarn
- * @returns {Object} An object with command, args, and base properties
+ * Gets the available Yarn command candidates in fallback order. Corepack
+ * respects the workspace's packageManager version when invoked from the
+ * Meteor app directory.
+ *
+ * @param {string[]} args - Arguments to pass to Yarn
+ * @param {Object} [options] - Resolution overrides for tests
+ * @param {Function} [options.resolveBinary] - Resolves a binary name to a path
+ * @returns {{command: string, args: string[], prefix: string}[]}
  */
-export function getYarnCommand(args) {
-  // Try to get the yarn binary path
-  const yarnBinaryPath = getNodeBinaryPath('yarn');
+export function getYarnCommandCandidates(args, options = {}) {
+  const resolveBinary = options.resolveBinary || (binaryName =>
+    getNodeBinaryPath(binaryName) || getNodeBinaryPathFromEnv(binaryName)
+  );
+  const yarnBinaryPath = resolveBinary('yarn');
+  const corepackBinaryPath = resolveBinary('corepack');
+  const commands = [];
 
-  // If we have a direct path to yarn, use it
-  if (yarnBinaryPath && fs.existsSync(yarnBinaryPath)) {
-    return {
+  if (yarnBinaryPath) {
+    commands.push({
       command: yarnBinaryPath,
       args,
-      prefix: `${yarnBinaryPath}`,
-    };
+      prefix: yarnBinaryPath,
+    });
   }
 
-  // Fall back to using 'yarn' directly
-  return {
-    command: 'yarn',
-    args,
-    prefix: `yarn`,
-  };
+  if (corepackBinaryPath) {
+    commands.push({
+      command: corepackBinaryPath,
+      args: ['yarn', ...args],
+      prefix: `${corepackBinaryPath} yarn`,
+    });
+  }
+
+  // Preserve the historical PATH-based attempt when neither command could be
+  // resolved ahead of time. A spawn failure is surfaced as manual guidance.
+  if (commands.length === 0) {
+    commands.push({
+      command: 'yarn',
+      args,
+      prefix: 'yarn',
+    });
+  }
+
+  return commands;
+}
+
+/**
+ * Gets the preferred Yarn command. See getYarnCommandCandidates for the
+ * execution fallback order.
+ *
+ * @param {string[]} args - Arguments to pass to Yarn
+ * @param {Object} [options] - Resolution overrides for tests
+ * @returns {{command: string, args: string[], prefix: string}}
+ */
+export function getYarnCommand(args, options = {}) {
+  return getYarnCommandCandidates(args, options)[0];
+}
+
+/**
+ * Gets the available pnpm command candidates in fallback order. A direct pnpm
+ * executable takes precedence; Corepack respects the workspace's packageManager
+ * version when invoked from the Meteor app directory.
+ *
+ * @param {string[]} args - Arguments to pass to pnpm
+ * @param {Object} [options] - Resolution overrides for tests
+ * @param {Function} [options.resolveBinary] - Resolves a binary name to a path
+ * @returns {{command: string, args: string[], prefix: string}[]}
+ */
+export function getPnpmCommandCandidates(args, options = {}) {
+  const resolveBinary = options.resolveBinary || (binaryName =>
+    getNodeBinaryPath(binaryName) || getNodeBinaryPathFromEnv(binaryName)
+  );
+  const pnpmBinaryPath = resolveBinary('pnpm');
+  const corepackBinaryPath = resolveBinary('corepack');
+  const commands = [];
+
+  if (pnpmBinaryPath) {
+    commands.push({
+      command: pnpmBinaryPath,
+      args,
+      prefix: pnpmBinaryPath,
+    });
+  }
+
+  if (corepackBinaryPath) {
+    commands.push({
+      command: corepackBinaryPath,
+      args: ['pnpm', ...args],
+      prefix: `${corepackBinaryPath} pnpm`,
+    });
+  }
+
+  return commands;
+}
+
+/**
+ * Gets the preferred pnpm command. See getPnpmCommandCandidates for the
+ * execution fallback order.
+ *
+ * @param {string[]} args - Arguments to pass to pnpm
+ * @param {Object} [options] - Resolution overrides for tests
+ * @returns {{command: string, args: string[], prefix: string}|null}
+ */
+export function getPnpmCommand(args, options = {}) {
+  return getPnpmCommandCandidates(args, options)[0] || null;
 }
 
 /**
