@@ -96,8 +96,39 @@ function contentTypeFor(filePath, type) {
   return CONTENT_TYPES[ext] || 'application/octet-stream';
 }
 
+function getPathPrefix() {
+  if (globalThis.__meteor_runtime_config__?.ROOT_URL_PATH_PREFIX) {
+    return globalThis.__meteor_runtime_config__.ROOT_URL_PATH_PREFIX;
+  }
+  if (process.env.ROOT_URL) {
+    try {
+      let p = new URL(process.env.ROOT_URL).pathname;
+      if (p.endsWith('/')) p = p.slice(0, -1);
+      return p;
+    } catch (e) {}
+  }
+  return '';
+}
+
+function isWebSocketPath(pathname) {
+  const prefix = getPathPrefix();
+  let p = pathname;
+  if (prefix && (p === prefix || p.startsWith(prefix + '/'))) {
+    p = p.slice(prefix.length) || '/';
+  }
+  return p === '/websocket' || p === '/websocket/' ||
+    (p.includes('/sockjs/') && p.endsWith('/websocket'));
+}
+
 function serveStaticFile(urlPath) {
-  const info = staticFiles.get(urlPath);
+  let info = staticFiles.get(urlPath);
+  if (!info) {
+    const prefix = getPathPrefix();
+    if (prefix && (urlPath === prefix || urlPath.startsWith(prefix + '/'))) {
+      const subPath = urlPath.slice(prefix.length) || '/';
+      info = staticFiles.get(subPath);
+    }
+  }
   if (!info) return null;
 
   const headers = { 'Content-Type': contentTypeFor(info.absPath, info.type) };
@@ -121,7 +152,7 @@ class BunSocket extends EventEmitter {
     this.protocol = 'websocket-raw';
     this.headers = req?.headers ? Object.fromEntries(new Headers(req.headers).entries()) : {};
     this.remoteAddress = req?.headers?.get?.('x-forwarded-for') || '127.0.0.1';
-    this.url = req?.url || '/websocket';
+    this.url = req?.url ? (new URL(req.url, 'http://localhost').pathname) : '/websocket';
     this._session = { recv: { connection: { setTimeout() {} }, protocol: 'websocket-raw' } };
   }
   send(data) { try { this._ws.send(data); } catch (e) {} }
@@ -148,9 +179,7 @@ WebApp.startListening = function (httpServer, listenOptions, cb) {
       async fetch(req, server) {
         if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
           const url = new URL(req.url, `http://localhost:${PORT}`);
-          const p = url.pathname;
-          if (p === '/websocket' || p === '/websocket/' ||
-              (p.includes('/sockjs/') && p.endsWith('/websocket'))) {
+          if (isWebSocketPath(url.pathname)) {
             return server.upgrade(req, { data: { req } })
               ? undefined
               : new NativeResponse('WebSocket upgrade failed', { status: 400 });

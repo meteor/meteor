@@ -76,19 +76,38 @@ const staticFiles = new Map([
   ['/app.js', { absPath: ${JSON.stringify(staticFile)}, hash: 'h123' }],
 ]);
 
+const pathPrefix = '/ks';
+
+function isWebSocketPath(pathname) {
+  let p = pathname;
+  if (pathPrefix && (p === pathPrefix || p.startsWith(pathPrefix + '/'))) {
+    p = p.slice(pathPrefix.length) || '/';
+  }
+  return p === '/websocket' || p === '/websocket/' ||
+    (p.includes('/sockjs/') && p.endsWith('/websocket'));
+}
+
+function getStaticFile(urlPath) {
+  let info = staticFiles.get(urlPath);
+  if (!info && pathPrefix && (urlPath === pathPrefix || urlPath.startsWith(pathPrefix + '/'))) {
+    info = staticFiles.get(urlPath.slice(pathPrefix.length) || '/');
+  }
+  return info;
+}
+
 const server = Bun.serve({
   port: ${testPort},
   hostname: '127.0.0.1',
   async fetch(req, srv) {
     if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
       const url = new URL(req.url);
-      if (url.pathname === '/websocket') {
+      if (isWebSocketPath(url.pathname)) {
         return srv.upgrade(req) ? undefined : new Response('WS upgrade failed', { status: 400 });
       }
     }
 
     const url = new URL(req.url);
-    const staticInfo = staticFiles.get(url.pathname);
+    const staticInfo = getStaticFile(url.pathname);
     if (staticInfo) {
       return new Response(Bun.file(staticInfo.absPath), {
         headers: {
@@ -181,7 +200,7 @@ console.log('BUN_HOST_READY');
   assert.ok(pageRes.headers.get('content-type').includes('text/html'));
   assert.ok((await pageRes.text()).includes('Meteor Boilerplate'));
 
-  // Scenario 5: WebSocket upgrade on /websocket
+  // Scenario 5: WebSocket upgrade on /websocket (unprefixed)
   const ws = new WebSocket(`ws://127.0.0.1:${testPort}/websocket`);
   const wsMsg = await new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('WS timeout')), 3000);
@@ -196,4 +215,27 @@ console.log('BUN_HOST_READY');
   });
   ws.close();
   assert.equal(wsMsg, 'ddp-connected');
+
+  // Scenario 6: WebSocket upgrade on /ks/websocket (prefixed)
+  const wsPrefixed = new WebSocket(`ws://127.0.0.1:${testPort}/ks/websocket`);
+  const wsPrefixedMsg = await new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Prefixed WS timeout')), 3000);
+    wsPrefixed.addEventListener('message', (event) => {
+      clearTimeout(timer);
+      resolve(String(event.data));
+    });
+    wsPrefixed.addEventListener('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+  });
+  wsPrefixed.close();
+  assert.equal(wsPrefixedMsg, 'ddp-connected');
+
+  // Scenario 7: Static file served under /ks/app.js (prefixed)
+  const staticPrefixedRes = await fetch(`${baseUrl}/ks/app.js`);
+  assert.equal(staticPrefixedRes.status, 200);
+  assert.ok(staticPrefixedRes.headers.get('content-type').includes('javascript'));
+  assert.equal(staticPrefixedRes.headers.get('etag'), '"h123"');
+  assert.equal(await staticPrefixedRes.text(), 'console.log("static-client-file");');
 });
