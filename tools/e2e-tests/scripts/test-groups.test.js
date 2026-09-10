@@ -34,9 +34,7 @@ describe('CLI / E2E test group fallback /', () => {
     expect(matchingGroups('Blaze Router Integration / renders a route'))
       .toEqual(['blaze']);
     expect(matchingGroups('Meteor Skeletons / PWA Skeleton / registers its worker'))
-      .toEqual(['assets_full_pwa']);
-    expect(matchingGroups('Assets App Bundling / bundles static files'))
-      .toEqual(['assets_full_pwa']);
+      .toEqual(['full_pwa_skeleton']);
     expect(matchingGroups('Meteor Skeletons / Angular Skeleton / creates the app'))
       .toEqual(['angular_coffeescript']);
     expect(matchingGroups('Meteor Skeletons / Tailwind Skeleton / creates the app'))
