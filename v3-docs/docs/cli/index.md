@@ -249,6 +249,8 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
   Blaze     # To create an app using Blaze
   Full      # To create a more complete scaffolded app
   Minimal   # To create an app with as few Meteor packages as possible
+  Pnpm      # To create a pnpm monorepo with a Meteor app and shared packages
+  Pwa       # To create an installable Progressive Web App using Blaze
   React     # To create a basic React-based app
   Typescript # To create an app using TypeScript and React
   Typescript-tailwind # To create an app using TypeScript, React, and Tailwind
@@ -277,6 +279,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
 | `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
 | `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
+| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page) | - |
 | `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
 | `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
 | `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
@@ -294,7 +297,20 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--minimal` | Create with minimal Meteor packages |
 | `--bare` | Create an empty app (Blaze + MongoDB) |
 | `--full` | Create a fully scaffolded app with imports-based structure (Blaze + MongoDB) |
+| `--pnpm` | Create a pnpm monorepo with a Meteor app at `apps/app` and reusable packages under `packages/` |
 | `--package` | Create a new package instead of an application |
+
+The pnpm skeleton is created and installed as one monorepo workspace:
+
+```bash
+meteor create --pnpm my-workspace
+cd my-workspace
+meteor npm start
+```
+
+pnpm owns dependency installation for this skeleton, while Meteor commands run
+against the nested `apps/app` project. The root `start` and `test` scripts route
+to that application; `meteor npm` is only used above to invoke the root script.
 
 ::: warning Prototype Mode
 The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
@@ -336,6 +352,18 @@ The `--prototype` option adds packages that make development faster but shouldn'
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`,
 `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
 `hot-module-replacement`, `blaze-hot`
+</details>
+
+<details>
+<summary><strong>PWA App</strong> (--pwa)</summary>
+
+Blaze app plus a web app manifest, icons, a dependency-free service worker and an offline page.
+
+**NPM packages:**
+- `@babel/runtime`, `@swc/helpers`, `jquery`, `meteor-node-stubs`
+
+**Meteor packages:**
+- `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
 </details>
 
 <details>

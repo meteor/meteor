@@ -12,6 +12,8 @@ Full-stack JavaScript platform for modern web and mobile applications.
 ./packages/test-in-console/run.sh "<name>"   # Package tests (terminal output via Puppeteer)
 npm run test:unit                            # Unit tests (Jest)
 npm run test:e2e                             # E2E tests (Jest + Playwright)
+npm run test:e2e:groups                      # List E2E groups
+npm run test:e2e:group -- monorepo            # Run the same E2E group as CI
 npm run test:native -- --platform=android    # Native mobile smoke tests (Maestro)
 ```
 

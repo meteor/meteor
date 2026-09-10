@@ -80,6 +80,22 @@ curl https://install.meteor.com/\?release\=2.8 | sh
 
 > Do not install the npm Meteor Tool in your project's package.json. This library is just an installer.
 
+## Build with AI coding assistants {#ai-docs}
+
+[Meteor Agent Skills](/ai/agent-skills) give compatible AI coding assistants Meteor-specific guidance for creating, debugging, testing, migrating, securing, and deploying applications. Choose and install skills interactively:
+
+```bash
+npx skills add meteor/agent-skills
+```
+
+The Agent Skills guide also covers Codex and Claude Code plugin installation, individual skills, and the complete catalog.
+
+For documentation context, Meteor also publishes [`llms.txt`](https://docs.meteor.com/llms.txt) and [`llms-full.txt`](https://docs.meteor.com/llms-full.txt). Use `llms.txt` to discover relevant pages, or download the complete documentation:
+
+```bash
+curl https://docs.meteor.com/llms-full.txt -o meteor-docs.txt
+```
+
 ## Troubleshooting {#troubleshooting}
 
 If your user doesn't have permission to install global binaries, and you need to use sudo, it's necessary to append _--unsafe-perm_ to the above command:
@@ -136,19 +152,6 @@ If you use a node version manager that uses a separate global `node_modules` fol
 To be able to use the `meteor` command from fish it's needed to include `/home/<user>/.meteor` in `$PATH`; to do that just add this line in `/home/<user>/.config/fish/config.fish` file (replace `<user>` with your username):
 
 `set PATH /home/<user>/.meteor $PATH`
-
-## Using AI with Meteor docs {#ai-docs}
-
-Meteor docs ships with [llms.txt](https://llmstxt.org/) file, which helps language models use your website
-
-If you have [LM Studio installed](https://lmstudio.ai/docs/app) or any other LLM tool, you can use the llms.txt file to ask questions about Meteor.
-
-```bash
-curl https://docs.meteor.com/llms-full.txt  -o meteor-docs.txt
-```
-
-Then, you can use the file with your LLM tool of choice. For example, if you have LM Studio installed, you can use their [chat with documents feature](https://lmstudio.ai/docs/app/basics/rag)
-to ask questions about Meteor.
 
 ## Uninstalling Meteor {#uninstall}
 
