@@ -173,6 +173,54 @@ Tinytest.addAsync("webapp - agent identification", async function (test) {
 })
 
 Tinytest.addAsync(
+  "webapp - iOS Safari version comes from the OS version",
+  async function (test) {
+    // iOS Mobile Safari reports the (stale) Safari `Version/` token, but the
+    // effective version is the OS version. identifyBrowser should use the OS
+    // version so iOS 10.3.x (>= the mobile_safari [10, 3] minimum) is modern.
+    const iOS1031 =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 10_3_1 like Mac OS X) " +
+      "AppleWebKit/603.1.30 (KHTML, like Gecko) Version/10.0 " +
+      "Mobile/14E8301 Safari/602.1";
+    const b1031 = WebAppInternals.identifyBrowser(iOS1031);
+    test.equal(b1031.name, "mobileSafari");
+    test.equal(b1031.major, 10);
+    test.equal(b1031.minor, 3);
+    test.equal(b1031.patch, 1);
+    test.equal(isModern(b1031), true);
+
+    // A recent iOS is unaffected (Safari and OS versions already match).
+    const iOS154 =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 15_4 like Mac OS X) " +
+      "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.4 " +
+      "Mobile/15E148 Safari/604.1";
+    test.equal(isModern(WebAppInternals.identifyBrowser(iOS154)), true);
+
+    // An older iOS stays legacy (below the [10, 3] minimum).
+    const iOS93 =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 9_3 like Mac OS X) " +
+      "AppleWebKit/601.1.46 (KHTML, like Gecko) Version/9.0 " +
+      "Mobile/13E188 Safari/601.1";
+    const b93 = WebAppInternals.identifyBrowser(iOS93);
+    test.equal(b93.name, "mobileSafari");
+    test.equal(b93.minor, 3);
+    test.equal(isModern(b93), false);
+
+    // An in-app WKWebView (no Safari `Version/` token) parses as 0.0.0. It must
+    // be left at 0.0.0 so it still flows through the unknownBrowsersAssumedModern
+    // gate, instead of being reclassified as modern by the OS version.
+    const iOS15WebView =
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) " +
+      "AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+    const bWebView = WebAppInternals.identifyBrowser(iOS15WebView);
+    test.equal(bWebView.major, 0);
+    test.equal(bWebView.minor, 0);
+    test.equal(bWebView.patch, 0);
+    test.equal(isModern(bWebView), false);
+  }
+)
+
+Tinytest.addAsync(
   "webapp - additional static javascript",
   async function (test) {
     const origInlineScriptsAllowed = WebAppInternals.inlineScriptsAllowed();
