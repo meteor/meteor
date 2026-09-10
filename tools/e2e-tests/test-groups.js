@@ -7,10 +7,6 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Angular & Coffeescript',
     pattern: '^(?:Meteor Skeletons / Angular Skeleton /|CoffeeScript App Bundling /|Meteor Skeletons / Coffeescript Skeleton /)',
   },
-  assets: {
-    label: 'Assets',
-    pattern: '^Assets App Bundling /',
-  },
   babel_tailwind: {
     label: 'Babel & Tailwind',
     pattern: '^(?:Babel App Bundling /|Meteor Skeletons / Babel Skeleton /|Meteor Skeletons / (?:Tailwind|Typescript Tailwind) Skeleton /)',
@@ -19,9 +15,9 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Blaze',
     pattern: '^(?:BasicBlaze App Bundling /|Blaze Router Integration /|Full Blaze App Bundling /|Meteor Skeletons / Blaze Skeleton /)',
   },
-  full_pwa_skeleton: {
-    label: 'Full & PWA Skeletons',
-    pattern: '^Meteor Skeletons / (?:Full|PWA) Skeleton /',
+  assets_full_pwa: {
+    label: 'Assets, Full & PWA',
+    pattern: '^(?:Assets App Bundling /|Meteor Skeletons / (?:Full|PWA) Skeleton /)',
   },
   examples: {
     label: 'Examples',
