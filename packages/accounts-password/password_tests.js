@@ -1084,6 +1084,10 @@ if (Meteor.isClient) (() => {
         test.equal(attempt.type, "password");
         test.isFalse(attempt.allowed);
         test.equal(attempt.error.reason, "Incorrect password");
+        // Verify attempt.user is a resolved document, not a Promise (#14151)
+        test.isTrue(attempt.user && typeof attempt.user === 'object');
+        test.isFalse(attempt.user instanceof Promise);
+        test.isTrue(attempt.user._id);
       }));
     },
     function (test, expect) {
