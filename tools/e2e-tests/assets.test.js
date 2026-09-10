@@ -45,7 +45,7 @@ describe('Assets App Bundling /', () => {
           const path = require('path');
           const cp = require('child_process');
           const bundleDir = path.join(buildOutputDir, 'bundle');
-          
+
           await new Promise((resolve, reject) => {
             let settled = false;
             let timeoutId;
@@ -67,7 +67,7 @@ describe('Assets App Bundling /', () => {
             let output = '';
             child.stdout.on('data', data => {
               output += data.toString();
-              if (output.includes('__PACKAGE_ASSET__=Hello from server package asset') && 
+              if (output.includes('__PACKAGE_ASSET__=Hello from server package asset') &&
                   output.includes('__APP_ASSET__=Hello from app private folder')) {
                 child.kill();
                 settle(resolve);
@@ -84,7 +84,7 @@ describe('Assets App Bundling /', () => {
                 ));
               }
             });
-            
+
             timeoutId = setTimeout(() => {
               child.kill();
               settle(reject, new Error(

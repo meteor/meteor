@@ -5,7 +5,7 @@ Meteor.startup(async () => {
   try {
     const packageAsset = await getServerPackageAsset();
     console.log(`__PACKAGE_ASSET__=${packageAsset}`);
-    
+
     const appAsset = await Assets.getTextAsync('app-asset.txt');
     console.log(`__APP_ASSET__=${appAsset}`);
   } catch (error) {
