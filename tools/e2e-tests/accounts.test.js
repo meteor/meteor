@@ -314,8 +314,62 @@ function defineAccountsScenarios(storageMode, getCtx) {
         expect(cookie).toBeTruthy();
         expect(cookie.httpOnly).toBe(true);
         expect(cookie.path).toBe('/');
-        // SameSite=Lax is the package default.
-        expect((cookie.sameSite || '').toLowerCase()).toBe('lax');
+        // SameSite=Strict keeps the ambient credential off cross-site requests.
+        expect((cookie.sameSite || '').toLowerCase()).toBe('strict');
+      });
+
+      it('an explicitly allowed Origin overrides cross-site Fetch Metadata', async () => {
+        const { page, port } = getCtx();
+        const allowedOrigin = `http://127.0.0.1:${port}`;
+        await page.goto(`${allowedOrigin}/`);
+        await page.waitForFunction(
+          () => window.__accountsE2E && typeof window.__accountsE2E.whoAmI === 'function',
+          { timeout: 30_000 },
+        );
+        await page.waitForFunction(
+          () => Meteor.status().status === 'connected',
+          { timeout: 30_000 },
+        );
+        await applyConfig(page, { httpOnlyCookieAllowedOrigins: [allowedOrigin] });
+
+        const [response] = await Promise.all([
+          page.waitForNavigation(),
+          page.evaluate((action) => {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = action;
+            document.body.appendChild(form);
+            form.submit();
+          }, `http://localhost:${port}/_accounts/cookie/clear`),
+        ]);
+        expect(response.status()).toBe(200);
+        await expect(response.json()).resolves.toEqual({ ok: true });
+      });
+
+      it('treats X-Forwarded-Proto case-insensitively when setting the cookie', async () => {
+        const { page } = getCtx();
+        await page.context().clearCookies();
+        const routePattern = '**/_accounts/cookie/set';
+        let intercepted = false;
+        const addForwardedProto = route => {
+          intercepted = true;
+          return route.continue({
+            headers: {
+              ...route.request().headers(),
+              'x-forwarded-proto': 'HTTPS',
+            },
+          });
+        };
+        await page.route(routePattern, addForwardedProto);
+        try {
+          await seedUser(page, { email: 'secure-cookie@example.com', password: 'pw12345' });
+          await login(page, { email: 'secure-cookie@example.com' }, 'pw12345');
+        } finally {
+          await page.unroute(routePattern, addForwardedProto);
+        }
+
+        expect(intercepted).toBe(true);
+        expect((await readCookie(page))?.secure).toBe(true);
       });
 
       it('document.cookie does NOT expose meteor_login_token (HttpOnly)', async () => {

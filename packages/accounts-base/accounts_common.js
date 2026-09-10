@@ -25,6 +25,8 @@ const VALID_CONFIG_KEYS = [
   'tokenSequenceLength',
   'clientStorage',
   'useHttpOnlyCookies',
+  'httpOnlyCookieAllowedOrigins',
+  'httpOnlyCookieRateLimit',
   'ddpUrl',
   'connection',
 ];
@@ -227,6 +229,9 @@ export class AccountsCommon {
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
+   * @param {Boolean} options.useHttpOnlyCookies Keep the resume token in an HttpOnly cookie. Must be enabled on the server for the `/_accounts/cookie/*` endpoints to respond, and mirrored to the client through `Meteor.settings.public.packages.accounts.useHttpOnlyCookies`.
+   * @param {String[]} options.httpOnlyCookieAllowedOrigins Additional origins (`scheme://host[:port]`) allowed to call the cookie endpoints. The origin of `ROOT_URL` and of the request `Host` are always allowed. Server only.
+   * @param {Object | false} options.httpOnlyCookieRateLimit Per-client-address rate limit for the cookie endpoints as `{ max, windowMs }`. Defaults to 30 requests per 10 seconds; `false` disables it. Server only.
    * 
    * @example
    * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server

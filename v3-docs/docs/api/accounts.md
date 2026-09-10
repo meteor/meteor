@@ -70,6 +70,28 @@ Meteor 3.5 introduces a native flow to keep the persistent resume token in an Ht
 
 After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
 
+The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, the endpoints are not served: `GET /_accounts/cookie/refresh` responds with `404`, and the `POST` endpoints respond with `405`. Applications that never opted in expose nothing.
+
+#### Cookie endpoint protections {#accounts-httponly-cookies-protections}
+
+Because the cookie is an ambient credential, the endpoints that write it only accept requests from your own application:
+
+- `POST /_accounts/cookie/set` and `POST /_accounts/cookie/clear` must be same-origin. The server accepts the request when the browser sends `Sec-Fetch-Site: same-origin`, or when the `Origin` header matches the origin of `ROOT_URL`, the origin of the request `Host`, or one of the origins listed in `httpOnlyCookieAllowedOrigins`. Anything else is rejected with `403`.
+- `POST /_accounts/cookie/set` requires `Content-Type: application/json`, a body of at most 4 KB, and a `token` that belongs to a user and has not expired. Unknown or expired tokens are rejected with `401` and no cookie is written.
+- The cookie is issued with `HttpOnly`, `SameSite=Strict`, `Path=/` and, over HTTPS, `Secure`.
+- All three endpoints are rate limited per client address (30 requests per 10 seconds by default). Behind a reverse proxy, set the `HTTP_FORWARDED_COUNT` environment variable so the real client address is used, exactly as for DDP connections.
+
+If your application is served from an origin that is neither `ROOT_URL` nor the host the browser connects to (for example a separate marketing domain that embeds the app), list the additional origins explicitly:
+
+```ts
+Accounts.config({
+  useHttpOnlyCookies: true,
+  httpOnlyCookieAllowedOrigins: ["https://app.example.com", "https://www.example.com"],
+  // Optional: tune or disable the per-address rate limit
+  httpOnlyCookieRateLimit: { max: 60, windowMs: 10_000 },
+});
+```
+
 <ApiBox name="Meteor.user" hasCustomExample/>
 
 Retrieves the user record for the current user from
