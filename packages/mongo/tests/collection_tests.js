@@ -10,6 +10,25 @@ Tinytest.add(
   }
 );
 
+Tinytest.add(
+  'collection - native ObjectID round-trips through EJSON as a Mongo.ObjectID',
+  function (test) {
+    // A native driver ObjectId (e.g. returned from rawCollection()/aggregate())
+    // should serialize as the shared "oid" EJSON type so it reaches the client
+    // as a usable Mongo.ObjectID rather than an opaque object.
+    if (! Meteor.isServer) {
+      return;
+    }
+    var nativeId = new MongoDB.ObjectId();
+    var hex = nativeId.toHexString();
+    var json = EJSON.toJSONValue(nativeId);
+    test.equal(json, { $type: 'oid', $value: hex });
+    var parsed = EJSON.fromJSONValue(json);
+    test.isTrue(parsed instanceof Mongo.ObjectID);
+    test.equal(parsed.toHexString(), hex);
+  }
+);
+
 Tinytest.add('collection - call new Mongo.Collection multiple times',
   function (test) {
     var collectionName = 'multiple_times_1_' + test.id;
