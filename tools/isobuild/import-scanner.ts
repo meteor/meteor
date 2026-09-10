@@ -1642,9 +1642,34 @@ export default class ImportScanner {
     const file = this.getFile(pkgJsonPath);
 
     if (file) {
-      // If the file already exists, just update file.imported according
+      // If the file already exists, update file.imported according
       // to the forDynamicImport parameter.
       setImportedStatus(file, forDynamicImport ? Status.DYNAMIC : Status.STATIC);
+
+      // Merge in any new `exports` field
+      let exportsChanged = false;
+      if (pkg.exports) {
+        Object.keys(pkg.exports).forEach(key => {
+          if (key in file.jsonData!.exports) {
+            assert(
+              pkg.exports[key] !== file.jsonData!.exports,
+              'Inconsistent export values??'
+            );
+          } else {
+            exportsChanged = true;
+          }
+        });
+      }
+
+      if (exportsChanged) {
+        let pkgExports = Object.assign({}, pkg.exports, file.jsonData!.exports);
+        file.jsonData = Object.assign({}, file.jsonData, { exports: pkgExports });
+        let data = jsonDataToCommonJS(file.jsonData);
+        file.dataString = data;
+        file.data = Buffer.from(data, 'utf8');
+        file.hash = sha1(data);
+      }
+
       return file;
     }
 
