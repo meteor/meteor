@@ -53,7 +53,7 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
   },
   regressions: {
     label: 'Regressions',
-    pattern: '^Regressions / (?!Server Runtime)',
+    pattern: '^(?:Regressions / (?!Server Runtime)|Regression /|Rspack bundle probe)',
   },
   solid: {
     label: 'Solid',
