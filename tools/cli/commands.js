@@ -14,6 +14,7 @@ var archinfo = require('../utils/archinfo');
 var catalog = require('../packaging/catalog/catalog.js');
 var stats = require('../meteor-services/stats.js');
 var Console = require('../console/console.js').Console;
+const { normalizeDdpTransport } = require('../isobuild/ddp-transports.js');
 const {
   blue,
   bold,
@@ -1416,6 +1417,16 @@ main.registerCommand({
 // build
 ///////////////////////////////////////////////////////////////////////////////
 
+function getDdpTransportOption(options, command) {
+  try {
+    return normalizeDdpTransport(options['ddp-transport']);
+  } catch (error) {
+    Console.error(error.message);
+    Console.error(`For more help, see ${Console.command(`meteor help ${command}`)}.`);
+    return null;
+  }
+}
+
 var buildCommands = {
   minArgs: 1,
   maxArgs: 1,
@@ -1423,6 +1434,7 @@ var buildCommands = {
   options: {
     debug: { type: Boolean },
     packageType: { type: String },
+    'ddp-transport': { type: String },
     directory: { type: Boolean },
     architecture: { type: String },
     "server-only": { type: Boolean },
@@ -1477,6 +1489,11 @@ main.registerCommand({
 });
 
 var buildCommand = async function (options) {
+  const ddpTransport = getDdpTransportOption(options, "build");
+  if (ddpTransport === null) {
+    return 1;
+  }
+
   Console.setVerbose(!!options.verbose);
   if (options.headless) {
     // There's no point in spinning the spinner when we're running
@@ -1634,6 +1651,7 @@ ${Console.command("meteor build ../output")}`,
       //     packages with binary npm dependencies
       serverArch: bundleArch,
       buildMode: options.debug ? 'development' : 'production',
+      ddpTransport,
       webArchs,
     },
   });
@@ -1678,6 +1696,7 @@ ${Console.command("meteor build ../output")}`,
 
         cordovaProject = new CordovaProject(projectContext, {
           settingsFile: options.settings,
+          ddpTransport,
           mobileServerUrl: utils.formatUrl(parsedMobileServerUrl),
           cordovaServerPort: parsedCordovaServerPort });
         await cordovaProject.init();
@@ -2068,6 +2087,7 @@ main.registerCommand({
   options: {
     'delete': { type: Boolean, short: 'D' },
     debug: { type: Boolean },
+    'ddp-transport': { type: String },
     settings: { type: String, short: 's' },
     // No longer supported, but we still parse it out so that we can
     // print a custom error message.
@@ -2105,7 +2125,7 @@ main.registerCommand({
   );
 });
 
-async function deployCommand(options, { rawOptions }) {
+export async function deployCommand(options, { rawOptions }) {
   const site = options.args[0];
 
   if (options.delete) {
@@ -2118,6 +2138,11 @@ async function deployCommand(options, { rawOptions }) {
         "user accounts and your apps are associated with your account so " +
         "that only you (and people you designate) can access them. See the " +
         Console.command("'meteor authorized'") + " command.");
+    return 1;
+  }
+
+  const ddpTransport = getDdpTransportOption(options, "deploy");
+  if (ddpTransport === null) {
     return 1;
   }
 
@@ -2157,6 +2182,7 @@ async function deployCommand(options, { rawOptions }) {
   const buildOptions = {
     minifyMode: options.debug ? 'development' : 'production',
     buildMode: options.debug ? 'development' : 'production',
+    ddpTransport,
     serverArch: buildArch
   };
 

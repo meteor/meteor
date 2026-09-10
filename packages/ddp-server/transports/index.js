@@ -1,57 +1,53 @@
-import { createSockJSTransport } from './sockjs.js';
-import { createUwsTransport } from './uws.js';
+import { DDPTransportRegistry } from "meteor/ddp-transport-registry";
 
-const TRANSPORTS = {
-  sockjs: createSockJSTransport,
-  uws: createUwsTransport,
-};
+const VALID_NAMES = ["sockjs", "uws"];
 
-const VALID_NAMES = Object.keys(TRANSPORTS);
-
-/**
- * Resolve which transport to use. Priority:
- *   1. Meteor.settings.packages['ddp-server'].transport
- *   2. DDP_TRANSPORT env var
- *   3. DISABLE_SOCKJS=1 → 'uws' (backward compat)
- *   4. default: 'sockjs'
- *
- * Also sets __meteor_runtime_config__.DDP_TRANSPORT so the client
- * knows whether to load SockJS or use native WebSocket.
- */
 export function getTransport() {
-  var name = resolveTransportName();
+  const name = resolveTransportName();
+  const createTransport = getTransportFactory(name);
 
-  if (!TRANSPORTS[name]) {
+  __meteor_runtime_config__.DDP_TRANSPORT = name;
+  return createTransport();
+}
+
+export function getTransportFactory(name, registry = DDPTransportRegistry) {
+  if (!VALID_NAMES.includes(name)) {
     throw new Error(
-      'Unknown DDP transport: "' + name + '". ' +
-      'Valid transports: ' + VALID_NAMES.join(', ')
+      `Unknown DDP transport: "${name}". ` + `Valid transports: ${VALID_NAMES.join(", ")}`,
     );
   }
 
-  // Propagate to client runtime config so browser.js can decide
-  // whether to load SockJS or use native WebSocket.
-  __meteor_runtime_config__.DDP_TRANSPORT = name;
+  const factory = registry.get(name);
+  if (!factory) {
+    const included = registry.names();
+    const runtimeSelectionHint =
+      included.length === 1
+        ? `To use "${included[0]}", set Meteor.settings.packages["ddp-server"].transport ` +
+          `to "${included[0]}" or, if that setting is unset, set DDP_TRANSPORT=${included[0]}. `
+        : "";
+    throw new Error(
+      [
+        `DDP transport "${name}" is not included in this application bundle. `,
+        `Included transports: ${included.join(", ") || "none"}. `,
+        runtimeSelectionHint,
+        `To use "${name}", rebuild with --ddp-transport=${name} or --ddp-transport=both.`,
+      ].join(""),
+    );
+  }
 
-  return TRANSPORTS[name]();
+  return factory;
 }
 
-function resolveTransportName() {
-  // 1. Meteor settings
-  var settings = Meteor.settings?.packages?.['ddp-server'];
-  if (settings && settings.transport) {
-    return settings.transport;
-  }
-
-  // 2. DDP_TRANSPORT env var
-  if (process.env.DDP_TRANSPORT) {
-    return process.env.DDP_TRANSPORT;
-  }
-
-  // 3. Backward compat: DISABLE_SOCKJS=1 → uws
-  if (process.env.DISABLE_SOCKJS) {
-    return 'uws';
-  }
-
-  // 4. Default
-  return 'sockjs';
+export function resolveTransportName({
+  settings = Meteor.settings,
+  env = process.env,
+  registry = DDPTransportRegistry,
+} = {}) {
+  const packageSettings = settings?.packages?.["ddp-server"];
+  if (packageSettings?.transport) return packageSettings.transport;
+  if (env.DDP_TRANSPORT) return env.DDP_TRANSPORT;
+  if (env.DISABLE_SOCKJS) return "uws";
+  const included = registry.names();
+  if (included.length === 1) return included[0];
+  return "sockjs";
 }

@@ -556,6 +556,10 @@ export class CordovaBuilder {
       // XXX propagate it from this.options?
       ROOT_URL_PATH_PREFIX: parsedUrl.pathname.replace(/\/$/,"") || '',
       DDP_DEFAULT_CONNECTION_URL: process.env.DDP_DEFAULT_CONNECTION_URL || mobileServerUrl,
+      // Fixed bundles must connect before receiving runtime config from the
+      // server. "both" and omitted options retain the initial SockJS default.
+      DDP_TRANSPORT: this.options.ddpTransport === 'sockjs' || this.options.ddpTransport === 'uws'
+        ? this.options.ddpTransport : undefined,
       autoupdate: {
         versions: {
           "web.cordova": {

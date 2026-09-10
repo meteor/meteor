@@ -794,13 +794,14 @@ meteor deploy your-app.meteorapp.com
 |--------|-------------|
 | `--delete`, `-D` | Permanently delete this deployment |
 | `--debug` | Deploy in debug mode (don't minify, etc.) |
+| `--ddp-transport <sockjs\|uws\|both>` | Include the selected DDP transport code. Defaults to `both`; a fixed bundle automatically uses its included transport unless runtime configuration explicitly requests another. |
 | `--settings`, `-s <file>` | Set optional data for Meteor.settings |
 | `--free` | Deploy as a free app (with limitations) |
 | `--mongo` | Create and connect to a free shared MongoDB database |
 | `--plan <plan>` | Set app plan: `professional`, `essentials`, or `free` |
 | `--container-size <size>` | Set container size: `tiny`, `compact`, `standard`, `double`, `quad`, `octa`, or `dozen` |
 | `--owner` | Specify organization or user account to deploy to |
-| `--cache-build` | Reuse the build if the git commit hash is the same |
+| `--cache-build` | Reuse the build if the git commit hash and DDP transport selection are the same |
 | `--allow-incompatible-update` | Allow packages to be upgraded or downgraded to potentially incompatible versions |
 | `--deploy-polling-timeout <ms>` | Time to wait for build/deploy (defaults to 15 minutes) |
 | `--no-wait` | Exit after code upload instead of waiting for deploy to complete |
@@ -1158,6 +1159,7 @@ You can use the server bundle to host a Meteor application on your own infrastru
 | Option | Description |
 |--------|-------------|
 | `--debug` | Build in debug mode (don't minify, preserve source maps) |
+| `--ddp-transport <sockjs\|uws\|both>` | Include the selected DDP transport code. Defaults to `both`; a fixed bundle automatically uses its included transport unless runtime configuration explicitly requests another. |
 | `--directory` | Output a directory instead of a tarball (existing output location will be deleted first) |
 | `--server-only` | Skip building mobile apps but still build the 'web.cordova' client target for hot code push |
 | `--mobile-settings <file>` | Set the initial value of `Meteor.settings` in mobile apps |
@@ -1193,6 +1195,9 @@ meteor build ../build --debug
 # Build only the server (skip mobile apps)
 meteor build ../build --server-only
 
+# Include only the uWebSockets.js DDP transport
+meteor build ../build --ddp-transport=uws
+
 # Build for specific platforms
 meteor build ../build --platforms=android,ios
 
@@ -1205,6 +1210,9 @@ meteor build ../build --architecture=os.linux.x86_64
 # Specify Android package type
 meteor build ../build --packageType=apk
 ```
+
+See [DDP Transport](/performance/ddp-transport) for runtime selection,
+compatibility, and rollback guidance.
 
 ## meteor lint {#meteorlint}
 

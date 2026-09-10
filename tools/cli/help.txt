@@ -454,6 +454,7 @@ tarball. See 'meteor help build' for more information.
 Build this project for all platforms.
 Usage: meteor build <output path> [--debug] [--directory] [--server-only]
           [--mobile-settings settings.json] [--server http://example.com:3000]
+          [--ddp-transport sockjs|uws|both]
 
 Package this project up for deployment. The command outputs a directory with
 builds for all platforms in this project.
@@ -472,6 +473,11 @@ to run the application server. (See README in the tarball for details.)
 
 Options:
   --debug             Build in debug mode (don't minify, etc).
+  --ddp-transport     Include DDP transport code for sockjs, uws, or both.
+                      Defaults to both. A sockjs- or uws-only bundle cannot
+                      switch to the omitted transport without being rebuilt.
+                      A fixed bundle automatically uses its included transport
+                      unless runtime configuration explicitly requests another.
   --directory         Output a directory (rather than a tarball) for the
                       application server bundle. If the output location exists,
                       it will be recursively deleted first.
@@ -599,6 +605,11 @@ all of its stored data.
 Options:
   --delete, -D    permanently delete this deployment
   --debug         deploy in debug mode (don't minify, etc)
+  --ddp-transport    Include DDP transport code for sockjs, uws, or both.
+                     Defaults to both. A sockjs- or uws-only bundle cannot
+                     switch to the omitted transport without being rebuilt.
+                     A fixed bundle automatically uses its included transport
+                     unless runtime configuration explicitly requests another.
   --settings, -s  set optional data for Meteor.settings
   --allow-incompatible-update   Allow packages in your project to be upgraded or
                   downgraded to versions that are potentially incompatible with
@@ -610,7 +621,7 @@ Options:
   --no-wait       Exits when Meteor has uploaded the app's code instead of
                   waiting for the deploy to conclude.
   --cache-build   Reuses the build already created if the git commit hash is the
-                  same
+                  same and the DDP transport selection matches.
   --free          When deploying an app for the first time, you can pass this option
                   to deploy your app in the Galaxy's free mode.
   --plan          You can change the app plan by providing this argument with one of

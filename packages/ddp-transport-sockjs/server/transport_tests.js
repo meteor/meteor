@@ -1,5 +1,5 @@
 import { EventEmitter } from 'events';
-import { redirectWebsocketEndpoint } from './sockjs.js';
+import { redirectWebsocketEndpoint } from './transport.js';
 
 // redirectWebsocketEndpoint only uses the EventEmitter listener API
 // (listeners / removeAllListeners / addListener) and never touches the socket,

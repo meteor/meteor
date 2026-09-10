@@ -26,9 +26,21 @@ Setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`)  will define
 ## DDP_TRANSPORT
 (_development, production_)
 
-Selects which server-side WebSocket transport DDP uses. Valid values are `sockjs` (the default) and `uws` ([uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)). For example: `DDP_TRANSPORT=uws`.
+Selects which server-side WebSocket transport DDP uses. Valid values are
+`sockjs` (the default when both providers are included) and `uws`
+([uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)). For example:
+`DDP_TRANSPORT=uws`.
 
 The transport can also be set via `Meteor.settings.packages["ddp-server"].transport`, which takes precedence over this variable. (`DISABLE_SOCKJS=1` is kept as a backward-compatible alias that selects `uws`.)
+
+This is runtime selection. Production bundles built or deployed with
+`--ddp-transport=sockjs` or `--ddp-transport=uws` contain only that provider;
+without an explicit runtime selection, the server automatically uses the sole
+included provider. Explicit runtime configuration still takes precedence and
+fails at startup if it requests an omitted provider. The default
+`--ddp-transport=both` bundle keeps SockJS as the runtime default and can switch
+providers without rebuilding. A fixed bundle must be rebuilt before rolling
+back to an omitted provider.
 
 > **The `uws` transport listens on its own port, separate from [`PORT`](#PORT).** The main HTTP server proxies WebSocket upgrades to it. This internal port defaults to `5001` and can **only** be configured through `Meteor.settings` (there is no dedicated environment variable):
 >
@@ -161,4 +173,3 @@ Configure Meteor's HTTP server to listen on a UNIX socket file path (e.g. `UNIX_
 (_production_)
 
 This overrides the default UNIX file permissions on the UNIX socket file configured in `UNIX_SOCKET_PATH`. For example, `UNIX_SOCKET_PERMISSIONS=660` would set read/write permissions for both the user and group.
-
