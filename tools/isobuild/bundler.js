@@ -171,6 +171,11 @@ import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
 import { PackageRegistry } from "../../packages/core-runtime/package-registry.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
+import { isFileBackedSourceMap } from '../utils/file-backed-source-map.js';
+import {
+  composeSourceMapRecipe,
+  createSourceMapRecipe,
+} from './source-map-helper.js';
 
 const SOURCE_URL_PREFIX = "meteor://\u{1f4bb}app";
 
@@ -911,7 +916,7 @@ class Target {
         }
       }
 
-      this.rewriteSourceMaps();
+      await this.rewriteSourceMaps();
 
       if (addCacheBusters) {
         // Make client-side CSS and JS assets cacheable forever, by
@@ -1546,7 +1551,7 @@ class Target {
   // For every source file we process, sets the domain name to
   // 'meteor://[emoji]app/', so there is a separate category in Chrome DevTools
   // with the original sources.
-  rewriteSourceMaps() {
+  async rewriteSourceMaps() {
     const rewriteSourceMap = function (sm) {
       if (!sm.sources) {
         return sm;
@@ -1565,11 +1570,25 @@ class Target {
     }.bind(this);
 
     if (this.js) {
-      this.js.forEach(function (js) {
+      for (const js of this.js) {
         if (js.sourceMap) {
-          js.sourceMap = rewriteSourceMap(js.sourceMap);
+          if (isFileBackedSourceMap(js.sourceMap)) {
+            const rewritten = await composeSourceMapRecipe(
+              createSourceMapRecipe([{
+                code: js.contents().toString("utf8"),
+                map: js.sourceMap,
+              }]),
+              {
+                file: js.sourceMap.file,
+                sourcePrefix: SOURCE_URL_PREFIX,
+              },
+            );
+            js.sourceMap = rewritten.map;
+          } else {
+            js.sourceMap = rewriteSourceMap(js.sourceMap);
+          }
         }
-      });
+      }
     }
 
     if (this.css) {
@@ -1805,17 +1824,34 @@ class ClientTarget extends Target {
       });
 
       if (file.sourceMap) {
-        let mapData = null;
+        if (isFileBackedSourceMap(file.sourceMap)) {
+          const filePrefix = minifyMode === 'production'
+            ? Buffer.from(")]}'\n", "utf8")
+            : null;
+          const hash = `${file.sourceMap.hash}:${minifyMode}`;
 
-        // don't need to do this in devel mode
-        if (minifyMode === 'production') {
-          mapData = antiXSSIPrepend(JSON.stringify(file.sourceMap));
+          manifestItem.sourceMap = await builder.writeToGeneratedFilename(
+            file.targetPath + '.map',
+            {
+              file: file.sourceMap.path,
+              copyFile: true,
+              filePrefix,
+              hash,
+            },
+          );
         } else {
-          mapData = Buffer.from(JSON.stringify(file.sourceMap), 'utf8');
-        }
+          let mapData = null;
 
-        manifestItem.sourceMap = await builder.writeToGeneratedFilename(
-          file.targetPath + '.map', {data: mapData});
+          // don't need to do this in devel mode
+          if (minifyMode === 'production') {
+            mapData = antiXSSIPrepend(JSON.stringify(file.sourceMap));
+          } else {
+            mapData = Buffer.from(JSON.stringify(file.sourceMap), 'utf8');
+          }
+
+          manifestItem.sourceMap = await builder.writeToGeneratedFilename(
+            file.targetPath + '.map', {data: mapData});
+        }
 
         // Use a SHA to make this cacheable.
         const sourceMapBaseName = file.hash() + '.map';

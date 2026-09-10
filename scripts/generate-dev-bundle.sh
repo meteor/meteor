@@ -99,6 +99,18 @@ rm -rf "${MONGO_NAME}"
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "Rust Cargo is required to build meteor-source-map-helper" >&2
+    exit 1
+fi
+
+cargo build \
+    --manifest-path "${CHECKOUT_DIR}/tools/source-map-helper/Cargo.toml" \
+    --release \
+    --locked
+cp "${CHECKOUT_DIR}/tools/source-map-helper/target/release/meteor-source-map-helper" \
+    "${DIR}/bin/meteor-source-map-helper"
+
 cd "$DIR/lib"
 # Overwrite the bundled version with the latest version of npm.
 npm install "npm@$NPM_VERSION"

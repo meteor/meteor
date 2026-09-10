@@ -222,6 +222,11 @@ describe('sourceMapLength', () => {
     [{ mappings: 'AAAA' }, 4],
     [{ mappings: 'ABC', sourcesContent: ['hello', 'world'] }, 13],
     [{ mappings: 'AB', sourcesContent: [null, 'code', null] }, 6],
+    [{
+      $meteorFileBackedSourceMap: 1,
+      path: '/tmp/app.js.map',
+      byteLength: 418_000_000,
+    }, 418_000_000],
   ])('sourceMapLength(%j) = %s', (input, expected) => {
     expect(utils.sourceMapLength(input)).toBe(expected);
   });

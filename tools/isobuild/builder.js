@@ -12,6 +12,8 @@ import {
   optimisticLStatOrNull,
   optimisticHashOrNull,
 } from "../fs/optimistic";
+import { createReadStream, createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
 
 // Builder is in charge of writing "bundles" to disk, which are
 // directory trees such as site archives, programs, and packages.  In
@@ -277,6 +279,9 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   // Options:
   // - data: a Buffer to write to relPath. Overrides `file`.
   // - file: a filename to write to relPath, as a string.
+  // - copyFile: copy `file` without reading it into a Buffer. The caller must
+  //   provide `hash`; generated files copied this way do not update WatchSet.
+  // - filePrefix: optional bytes prepended while copying `file`.
   // - sanitize: if true, then all components of the path are stripped
   //   of any potentially troubling characters, an exception is thrown
   //   if any path segments consist entirely of dots (eg, '..'), and
@@ -289,9 +294,22 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
   //
   // Returns the final canonicalize relPath that was written to.
   //
-  // If `file` is used then it will be added to the builder's WatchSet.
-  async write(relPath, {data, file, hash, sanitize, executable, symlink}) {
+  // If `file` is used without `copyFile`, it is added to the WatchSet.
+  async write(relPath, {
+    data,
+    file,
+    copyFile,
+    filePrefix,
+    hash,
+    sanitize,
+    executable,
+    symlink,
+  }) {
     relPath = this._normalizeFilePath(relPath, sanitize);
+
+    if (copyFile && (!file || !hash)) {
+      throw new Error("copyFile requires both file and hash");
+    }
 
     let getData = null;
     if (data) {
@@ -325,7 +343,12 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // expecting the results to "stick".
         const mode = executable ? 0o555 : 0o444
 
-        if (this.buildPath === this.outputPath || this.writtenHashes[relPath]) {
+        if (file && copyFile) {
+          await atomicallyCopyFile(absPath, files.pathResolve(file), {
+            mode,
+            prefix: filePrefix,
+          });
+        } else if (this.buildPath === this.outputPath || this.writtenHashes[relPath]) {
           // atomicallyRewriteFile handles overwriting files that have already been created
           await atomicallyRewriteFile(absPath, getData(), {
               mode
@@ -969,6 +992,33 @@ async function atomicallyRewriteFile(path, data, options) {
       // replacing a directory with a file; this is rare (so it can
       // be a slow path) but can legitimately happen if e.g. a developer
       // puts a file where there used to be a directory in their app.
+      await files.rm_recursive_deferred(path);
+      files.rename(rpath, path);
+    } else {
+      throw e;
+    }
+  }
+}
+
+async function atomicallyCopyFile(path, source, { mode, prefix }) {
+  const rname = '.builder-tmp-file.' + Math.floor(Math.random() * 999999);
+  const rpath = files.pathJoin(files.pathDirname(path), rname);
+
+  if (prefix) {
+    files.writeFile(rpath, prefix, { mode });
+    await pipeline(
+      createReadStream(source),
+      createWriteStream(rpath, { flags: "a", mode }),
+    );
+  } else {
+    files.copyFile(source, rpath);
+    files.chmod(rpath, mode);
+  }
+
+  try {
+    files.rename(rpath, path);
+  } catch (e) {
+    if (e.code === 'EISDIR') {
       await files.rm_recursive_deferred(path);
       files.rename(rpath, path);
     } else {
