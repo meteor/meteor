@@ -395,10 +395,6 @@ const loadServerBundles = Profile("Load server bundles", async function () {
       wrapParts.push("," + key);
     });
 
-    // \n is necessary in case final line is a //-comment
-    wrapParts.push("){", code, "\n})");
-    const wrapped = wrapParts.join("");
-
     // It is safer to use the absolute path when source map is present as
     // different tooling, such as node-inspector, can get confused on relative
     // urls.
@@ -410,6 +406,12 @@ const loadServerBundles = Profile("Load server bundles", async function () {
 
     const scriptPath =
         parsedSourceMaps[absoluteFilePath] ? absoluteFilePath : fileInfoOSPath;
+
+    // \n is necessary in case final line is a //-comment
+    // The sourceURL pragma improves source attribution in V8 profilers
+    // and debugging contexts for dynamically evaluated code.
+    wrapParts.push("){", code, "\n//# sourceURL=" + scriptPath + "\n})");
+    const wrapped = wrapParts.join("");
 
     const func = require('vm').runInThisContext(wrapped, {
       filename: scriptPath,
