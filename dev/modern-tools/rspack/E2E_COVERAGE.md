@@ -274,6 +274,7 @@ Tested via `skeleton.test.js` using `meteor create --<skeleton>`. Each skeleton 
 | chakra-ui | 3203 | JSX | React 19.2 dependencies; no body style checks (custom UI library) |
 | coffeescript | 3211 | CoffeeScript | React 19.2 dependencies |
 | full | 3204 | JS | `imports/api/` test structure |
+| pwa | 3214, 3215 | JS | Manifest link + templated `manifest.webmanifest`; skeleton's own service worker controlling the page across reload (dev `/sw.js?dev=1`, prod `/sw.js`); prod app shell loads with the server down; a data fetch to a navigation-cached URL reaches the network instead of the cached page (PRECACHE-only fallback); manifest, worker and offline checks repeated under a path-prefixed `ROOT_URL` (`/app`, port 3215, production only: the dev boilerplate injects the Rspack client script unprefixed) |
 | react | 3205 | JSX | React 19.2 dependencies, automatic JSX runtime via `.swcrc`, custom body styles |
 | solid | 3206 | JS | |
 | svelte | 3207 | JS | |
@@ -350,6 +351,7 @@ Where each feature is tested across apps and skeletons.
 | Less styles | react-router | |
 | SCSS styles | typescript | |
 | Tailwind CSS | vue (PostCSS) | tailwind |
+| PWA (manifest, service worker, offline app shell) | | pwa |
 | Image asset loading | react | |
 | 404 routing | react-router, blaze-router | |
 | Meta tags | react-router, monorepo | |

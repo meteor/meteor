@@ -64,6 +64,7 @@ jobs:
           - Blaze
           - Coffeescript
           - Full Skeleton
+          - PWA Skeleton
           - Tailwind Skeleton
           - Examples
           - Monorepo
