@@ -7,6 +7,10 @@ const EXPLICIT_TEST_GROUPS = Object.freeze({
     label: 'Angular',
     pattern: '^Meteor Skeletons / Angular Skeleton /',
   },
+  assets: {
+    label: 'Assets',
+    pattern: '^Assets App Bundling /',
+  },
   babel: {
     label: 'Babel',
     pattern: '^(?:Babel App Bundling /|Meteor Skeletons / Babel Skeleton /)',
