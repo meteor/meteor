@@ -42,8 +42,12 @@ afterAll(async () => {
  * connections, or something else, without waiting 60s for Playwright to time
  * out on the h1 selector.
  */
-async function waitForRspackBundle(port, { attempts = 10, intervalMs = 500 } = {}) {
+export async function waitForRspackBundle(
+  port,
+  { attempts = 10, intervalMs = 500 } = {},
+) {
   const url = `http://localhost:${port}/__rspack__/client-rspack.js`;
+  const diagnostics = [];
   const probe = () =>
     new Promise((resolve) => {
       const req = http.get(url, (res) => {
@@ -68,14 +72,22 @@ async function waitForRspackBundle(port, { attempts = 10, intervalMs = 500 } = {
       // Production/no-rspack app: nothing to gate on.
       return;
     }
+    const diagnostic = result.status
+      ? `status=${result.status}`
+      : `error=${result.error}`;
+    diagnostics.push(diagnostic);
     console.log(
-      `⏳ Rspack bundle not ready (attempt ${attempt}/${attempts}): ${
-        result.status ? `status=${result.status}` : `error=${result.error}`
-      }`
+      `⏳ Rspack bundle not ready (attempt ${attempt}/${attempts}): ${diagnostic}`,
     );
-    await new Promise((r) => setTimeout(r, intervalMs));
+    if (attempt < attempts) {
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
   }
-  console.log(`⚠️  Rspack bundle probe exhausted; proceeding anyway so Playwright can report its own diagnostics`);
+  throw new Error(
+    `Rspack bundle probe exhausted after ${attempts} attempts: ${
+      diagnostics.join(', ')
+    }`,
+  );
 }
 
 /**
