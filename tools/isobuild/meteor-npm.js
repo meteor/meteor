@@ -1279,7 +1279,7 @@ function getShrinkwrappedDependenciesTree(dir) {
   return shrinkwrap;
 };
 
-function flattenDepsToPackages(deps, packages) {
+function flattenDepsToPackages(deps, packages, parentPath = "") {
   if (!deps) return;
   for (const [name, info] of Object.entries(deps)) {
     if (!info) continue;
@@ -1302,8 +1302,11 @@ function flattenDepsToPackages(deps, packages) {
         entry.dependencies = childDeps;
       }
     }
-    packages[`node_modules/${name}`] = entry;
-    flattenDepsToPackages(info.dependencies, packages);
+    const packagePath = parentPath
+      ? `${parentPath}/node_modules/${name}`
+      : `node_modules/${name}`;
+    packages[packagePath] = entry;
+    flattenDepsToPackages(info.dependencies, packages, packagePath);
   }
 }
 

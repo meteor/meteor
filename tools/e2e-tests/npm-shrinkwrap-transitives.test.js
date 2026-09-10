@@ -3,7 +3,7 @@
  */
 import fs from 'fs-extra';
 import path from 'path';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import semver from 'semver';
 
 import {
@@ -26,7 +26,7 @@ function npmViewJson(spec, field) {
   const args = ['view', spec];
   if (field) args.push(field);
   args.push('--json');
-  return JSON.parse(execSync(`npm ${args.join(' ')}`, {
+  return JSON.parse(execFileSync('npm', args, {
     encoding: 'utf8',
     stdio: ['ignore', 'pipe', 'inherit'],
   }));
