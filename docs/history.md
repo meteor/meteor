@@ -8,6 +8,121 @@
 
 [//]: # (go to meteor/docs/generators/changelog/docs)
 
+## v3.6.0, 2026-09-10
+
+### Highlights
+
+#### Features
+
+- **Support Rspack 2.x**, [PR#14360](https://github.com/meteor/meteor/pull/14360)
+  - ⚡ Require and auto-install `@rspack/core`, `@rspack/cli`, and `@rspack/dev-server` 2.2.0 or newer, together with `@swc/core` 1.15.32, `@swc/helpers` 0.5.23, `@rspack/plugin-react-refresh` 2.0.0, and `@rsdoctor/rspack-plugin` 1.5.9
+  - 📦 Release `@meteorjs/rspack@3.0.0` for Rspack 2: adopt `rspack-merge` and the stable persistent cache API, emit CSS through the `css/auto` module type, set `externalsType: "commonjs2"`, and relax strict ESM export checks so SWC-stripped TypeScript type re-exports keep building
+  - ⚛️ Move the React skeletons to React 19.2, load React Refresh through its Rspack 2 entry point, and support the React Compiler through the built-in SWC loader
+  - 🔁 Upgrade existing Rspack 1.x apps automatically, using npm's legacy peer resolution only when a stale lockfile would otherwise reject the coordinated Rspack 2 bump
+  - 🧪 Inject the HMR bootstrap only for `meteor run` in development, so `meteor build` output and native bundles no longer carry HMR runtime code
+
+  These changes address reports [#14368](https://github.com/meteor/meteor/issues/14368), [#14652](https://github.com/meteor/meteor/issues/14652), [#14310](https://github.com/meteor/meteor/issues/14310), and [#14435](https://github.com/meteor/meteor/issues/14435).
+- **pnpm monorepo skeleton and workspace-aware dependency installs**, [PR#14421](https://github.com/meteor/meteor/pull/14421)
+  - 📁 `meteor create --pnpm my-workspace` scaffolds a pnpm workspace with a Meteor + Rspack app in `apps/app`, reusable client, server, and shared packages under `packages/`, and `workspace:*` links between them
+  - 🔍 Rspack dependency checks detect the workspace root and package manager (npm, Yarn, or pnpm) from the manifest and lockfiles, run installs from the Meteor app directory, and print manual instructions for the detected manager
+  - 🔗 Validate `file:`, `link:`, `portal:`, and `workspace:` dependency protocols against their installed versions instead of treating them as invalid semver ranges
+
+  This addresses the long-standing report [#10903](https://github.com/meteor/meteor/issues/10903).
+- Add `meteor create --pwa` to scaffold an installable Blaze Progressive Web App with a web app manifest, icons, a dependency-free service worker, and an offline fallback page, [PR#14473](https://github.com/meteor/meteor/pull/14473)
+- Add interactive `meteor add` and `meteor remove`: run either command without arguments to search Atmosphere, multi-select packages, and confirm from the terminal, or pre-fill the search with `meteor add --search <query>`, [PR#14408](https://github.com/meteor/meteor/pull/14408)
+- Clone packages and projects from Git: `meteor add <url|user/repo>` clones a package into `packages/`, and `meteor create <url>` scaffolds from a repository or one of its subdirectories, with `--from`, `--from-branch`, `--from-dir`, and `--to` for explicit control, [PR#14409](https://github.com/meteor/meteor/pull/14409)
+
+#### Improvements
+
+- Log Meteor-Rspack dev-server proxy failures with the upstream error, request, and target, and summarize repeated failures every five seconds instead of flooding the console, [PR#14348](https://github.com/meteor/meteor/pull/14348)
+- Batch independent npm installs and prefetch local package dependencies with bounded concurrency during `meteor --get-ready`, falling back to per-package preparation when a batch fails, [PR#14683](https://github.com/meteor/meteor/pull/14683)
+- Reuse the package `.npm` cache for exact `git+https://…#v<semver>` `Npm.depends` declarations when the shrinkwrap and installed tree agree on the resolved commit, [PR#14681](https://github.com/meteor/meteor/pull/14681). The package shrinkwrap format moves to `lockfileVersion` 5 and records the declared `Npm.depends` versions, so each package's `.npm` directory is reinstalled once on the first build after updating and its `npm-shrinkwrap.json` is rewritten
+
+#### Fixes
+
+- Preserve transitive npm pins from a package's `npm-shrinkwrap.json` when Meteor rebuilds the package without a cached `node_modules/`, [PR#14418](https://github.com/meteor/meteor/pull/14418), issue [#14415](https://github.com/meteor/meteor/issues/14415)
+- Bundle `cross-env` in the dev bundle so `argon2` native rebuilds succeed inside Meteor's isolated npm environment, fixing `meteor update` failures on Windows, [PR#14706](https://github.com/meteor/meteor/pull/14706), issue [#13663](https://github.com/meteor/meteor/issues/13663)
+- Restore the client-side `jquery` dependency of `test-in-browser`, so browser package tests run again against the released Blaze version, [PR#14736](https://github.com/meteor/meteor/pull/14736), issue [#14735](https://github.com/meteor/meteor/issues/14735)
+- Tolerate SWC cache write failures when a temporary app directory disappears before the asynchronous write finishes, warning only in verbose mode, [PR#14360](https://github.com/meteor/meteor/pull/14360)
+
+All Merged PRs@[GitHub PRs 3.6](https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.6)
+
+#### Breaking Changes
+
+- `rspack@1.4.0` requires Rspack 2.x: `@rspack/core`, `@rspack/cli`, and `@rspack/dev-server` 2.2.0 or newer, and `@meteorjs/rspack` 3.0.0. Meteor installs them on the next run when automatic dependency installation is enabled. Custom `rspack.config.js` overrides must follow the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
+- `@meteorjs/rspack@3.0.0` replaces `webpack-merge` with `rspack-merge` and declares Rspack 2.2.0 peer dependencies.
+
+#### Internal API changes
+
+- `tools-core@1.4.0` adds `getDependencyInstallContext`, package-manager-aware `formatInstallCommands` and `renderManualInstallInstructions`, and pnpm and Yarn command helpers, [PR#14421](https://github.com/meteor/meteor/pull/14421).
+- `rspack@1.4.0` adds the `DEFAULT_RSPACK_DEV_SERVER_VERSION` and `DEFAULT_METEOR_RSPACK_SWC_CORE_VERSION` install constants, [PR#14360](https://github.com/meteor/meteor/pull/14360).
+
+#### Migration Steps
+
+Please run the following command to update your project:
+
+```bash
+meteor update --release 3.6-beta.0
+```
+
+Apps using Rspack receive `@rspack/core`, `@rspack/cli`, `@rspack/dev-server` 2.2.0 and `@meteorjs/rspack@3.0.0-beta.1` on the next `meteor run`. If automatic dependency installation is disabled, run the `meteor npm install --save-dev ...` command Meteor prints. Review custom `rspack.config.js` overrides against the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x).
+
+The first build after updating reinstalls the npm dependencies of every Meteor package once, because the package shrinkwrap format changed. If your app commits `packages/*/.npm/package/npm-shrinkwrap.json` files, expect them to be rewritten and commit the new versions.
+
+#### Bumped Meteor Packages
+
+- babel-compiler@7.15.2-beta360.0
+- ecmascript@0.19.2-beta360.0
+- meteor-tool@3.6.0-beta.0
+- minifier-js@3.3.2-beta360.0
+- rspack@1.4.0-beta360.0
+- test-in-browser@1.6.1-beta360.0
+- tools-core@1.4.0-beta360.0
+- typescript@5.11.2-beta360.0
+
+#### Bumped NPM Packages
+
+- @meteorjs/rspack@3.0.0-beta.1
+
+#### Special thanks to
+
+✨✨✨
+
+PR authors, contributors, and reviewers:
+
+- [@nachocodoner](https://github.com/nachocodoner)
+- [@dupontbertrand](https://github.com/dupontbertrand)
+- [@italojs](https://github.com/italojs)
+- [@mvogttech](https://github.com/mvogttech)
+- [@sanki92](https://github.com/sanki92)
+- [@Grubba27](https://github.com/Grubba27)
+- [@hexsprite](https://github.com/hexsprite)
+- [@zodern](https://github.com/zodern)
+- [@StorytellerCZ](https://github.com/StorytellerCZ)
+- [@julio-rocketchat](https://github.com/julio-rocketchat)
+
+Issue reporters and reproduction contributors:
+
+- [@yalshazly](https://github.com/yalshazly)
+- [@perbergland](https://github.com/perbergland)
+- [@a4xrbj1](https://github.com/a4xrbj1)
+- [@jfurneaux](https://github.com/jfurneaux)
+- [@xet7](https://github.com/xet7)
+- [@evolross](https://github.com/evolross)
+- [@arggh](https://github.com/arggh)
+- [@Jsakdev](https://github.com/Jsakdev)
+- [@ignl](https://github.com/ignl)
+- [@vparpoil](https://github.com/vparpoil)
+
+Meteor's continued modernization also depends on sponsors who make long-term investment in the framework possible. Thank you to our current sponsors:
+
+- [Galaxy](https://galaxycloud.app/)
+- [Input Logic](https://inputlogic.com/)
+- [CodeRabbit](https://www.coderabbit.ai/)
+
+If Meteor has helped you build and grow, consider supporting what comes next through the [Meteor Sponsorship Program](https://www.meteor.com/sponsorship).
+
+✨✨✨
 ## v3.5.2, 2026-09-04
 
 ### Highlights
@@ -123,7 +238,6 @@ Meteor's continued modernization also depends on sponsors who make long-term inv
 If Meteor has helped you build and grow, consider supporting what comes next through the [Meteor Sponsorship Program](https://www.meteor.com/sponsorship).
 
 ✨✨✨
-
 ## v3.5.1, 2026-08-04
 
 ### Highlights
@@ -1034,9 +1148,9 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 
 ✨✨✨
 
-- [@nachocodoner](https://github.com/nachocodoner)
+- [@nachocodoner](https://github.com/nachocodoner)  
 - [@italojs](https://github.com/italojs)
-- [@Grubba27](https://github.com/Grubba27)
+- [@Grubba27](https://github.com/Grubba27)  
 - [@zodern](https://github.com/zodern)
 - [@9Morello](https://github.com/9Morello)
 - [@welkinwong](https://github.com/welkinwong)
@@ -1046,7 +1160,7 @@ If you find any issues, please report them to the [Meteor issues tracker](https:
 - [@ericm546](https://github.com/ericm546)
 - [@StorytellerCZ](https://github.com/StorytellerCZ)
 
-✨✨✨
+✨✨✨ 
 ## v3.2.2, 2025-05-02
 
 ### Highlights
@@ -1100,7 +1214,7 @@ meteor update --release 3.2.2
 - Fix Meteor profiler to handle promises and display metrics correctly.
 - Support for argon2 to improve password security over bcrypt. [PR](https://github.com/meteor/meteor/pull/13554)(https://github.com/meteor/meteor/pull/13554)
 - Improve and fix package resolution logic. [PR](https://github.com/meteor/meteor/pull/13604)(https://github.com/meteor/meteor/pull/13604)
-- Fix rare oplog issue that could cause data loss for clients. [PR](https://github.com/meteor/meteor/pull/13603)(https://github.com/meteor/meteor/pull/13603)
+- Fix rare oplog issue that could cause data loss for clients. [PR](https://github.com/meteor/meteor/pull/13603)(https://github.com/meteor/meteor/pull/13603) 
 
 All detailed PRs can be found here: https://github.com/meteor/meteor/pulls?q=is%3Apr+is%3Amerged+base%3Arelease-3.2
 
@@ -1406,18 +1520,18 @@ meteor update --release 3.0.4
 #### Meteor Version Release
 
 * `Bumped packages`:
-  - accounts-base@3.0.3
-  - babel-compiler@7.11.1
-  - caching-compiler@2.0.1
-  - check@1.4.4
-  - ddp-client@3.0.2
-  - ddp-server@3.0.2
-  - ecmascript-runtime@0.8.3
-  - modules@0.20.2
-  - static-html-tools@1.0.0
-  - static-html@1.4.0
-  - url@1.3.4
-  - webapp@2.0.3
+  - accounts-base@3.0.3                
+  - babel-compiler@7.11.1              
+  - caching-compiler@2.0.1             
+  - check@1.4.4                        
+  - ddp-client@3.0.2                   
+  - ddp-server@3.0.2                   
+  - ecmascript-runtime@0.8.3           
+  - modules@0.20.2                     
+  - static-html-tools@1.0.0            
+  - static-html@1.4.0                  
+  - url@1.3.4                          
+  - webapp@2.0.3                       
   - meteor-tool@3.0.4
 
 #### Special thanks to
@@ -2308,7 +2422,6 @@ For making this great framework even better!
 - [@StorytellerCZ](https://github.com/sponsors/StorytellerCZ/)
 
 For making this great framework even better!
-
 ## v2.16.0, 2024-05-14
 
 ### Highlights

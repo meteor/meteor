@@ -249,6 +249,8 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
   Blaze     # To create an app using Blaze
   Full      # To create a more complete scaffolded app
   Minimal   # To create an app with as few Meteor packages as possible
+  Pnpm      # To create a pnpm monorepo with a Meteor app and shared packages
+  Pwa       # To create an installable Progressive Web App using Blaze
   React     # To create a basic React-based app
   Typescript # To create an app using TypeScript and React
   Typescript-tailwind # To create an app using TypeScript, React, and Tailwind
@@ -277,6 +279,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
 | `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
 | `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
+| `--pwa`          | Blaze app installable as a PWA (manifest, service worker, offline page) | - |
 | `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
 | `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
 | `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
@@ -294,7 +297,20 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--minimal` | Create with minimal Meteor packages |
 | `--bare` | Create an empty app (Blaze + MongoDB) |
 | `--full` | Create a fully scaffolded app with imports-based structure (Blaze + MongoDB) |
+| `--pnpm` | Create a pnpm monorepo with a Meteor app at `apps/app` and reusable packages under `packages/` |
 | `--package` | Create a new package instead of an application |
+
+The pnpm skeleton is created and installed as one monorepo workspace:
+
+```bash
+meteor create --pnpm my-workspace
+cd my-workspace
+meteor npm start
+```
+
+pnpm owns dependency installation for this skeleton, while Meteor commands run
+against the nested `apps/app` project. The root `start` and `test` scripts route
+to that application; `meteor npm` is only used above to invoke the root script.
 
 ::: warning Prototype Mode
 The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
@@ -336,6 +352,18 @@ The `--prototype` option adds packages that make development faster but shouldn'
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`,
 `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
 `hot-module-replacement`, `blaze-hot`
+</details>
+
+<details>
+<summary><strong>PWA App</strong> (--pwa)</summary>
+
+Blaze app plus a web app manifest, icons, a dependency-free service worker and an offline page.
+
+**NPM packages:**
+- `@babel/runtime`, `@swc/helpers`, `jquery`, `meteor-node-stubs`
+
+**Meteor packages:**
+- `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
 </details>
 
 <details>
@@ -388,10 +416,18 @@ meteor create my-app --example simple-tasks
 
 ### Create from a Git Repository
 
-You can create a new Meteor app by cloning any Git repository:
+You can create a new Meteor app by cloning any Git repository. Pass the source URL as a positional argument, or use `--from` explicitly:
 
 ```bash
+meteor create my-app https://github.com/fredmaiaarantes/simpletasks
+
 meteor create my-app --from https://github.com/fredmaiaarantes/simpletasks
+```
+
+If you pass only the URL, Meteor derives the app directory from the repository or subdirectory name:
+
+```bash
+meteor create https://github.com/meteor/examples/tree/main/parties
 ```
 
 To extract a specific subdirectory from a repository, use `--from-dir`. You can also pin to a specific branch, tag, or commit SHA with `--from-branch`:
@@ -400,24 +436,26 @@ To extract a specific subdirectory from a repository, use `--from-dir`. You can 
 meteor create my-app --from https://github.com/meteor/examples --from-branch main --from-dir parties
 ```
 
-`--from` also accepts browser-style tree/src URLs from GitHub, GitLab, and Bitbucket. When you paste one, Meteor auto-detects the branch and subdirectory from the URL, so `--from-branch` and `--from-dir` become optional:
+The source also accepts browser-style tree/src URLs from GitHub, GitLab, and Bitbucket. When you paste one, Meteor auto-detects the branch and subdirectory from the URL, so `--from-branch` and `--from-dir` become optional:
 
 ```bash
-meteor create my-app --from https://github.com/meteor/examples/tree/main/parties
+meteor create my-app https://github.com/meteor/examples/tree/main/parties
 ```
 
 Supported URL patterns:
 
-- GitHub — `https://github.com/<owner>/<repo>/tree/<branch>[/<path>]`
-- GitLab — `https://gitlab.com/<owner>/<repo>/-/tree/<branch>[/<path>]`
-- Bitbucket — `https://bitbucket.org/<owner>/<repo>/src/<branch>[/<path>]`
+- GitHub: `https://github.com/<owner>/<repo>/tree/<branch>[/<path>]`
+- GitLab: `https://gitlab.com/<owner>/<repo>/-/tree/<branch>[/<path>]`
+- Bitbucket: `https://bitbucket.org/<owner>/<repo>/src/<branch>[/<path>]`
 
 Passing `--from-branch` or `--from-dir` explicitly overrides the values parsed from the URL.
 
+GitHub shorthand such as `owner/repo` is still supported with `--from owner/repo`. Positional inference requires a full URL so paths like `apps/my-app` keep their existing meaning.
+
 | Option | Description |
 |--------|-------------|
-| `--from <url>` | Clone a Meteor project from a Git URL. Accepts GitHub, GitLab, and Bitbucket tree/src URLs; branch and subdirectory are auto-detected from the URL when possible. |
-| `--from-branch <ref>` | Git ref to check out — accepts a branch, tag, or commit SHA. Overrides the branch parsed from the URL. |
+| `--from <url>` | Clone a Meteor project from a Git URL explicitly. Optional when a positional source is an unambiguous Git URL. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
+| `--from-branch <ref>` | Git ref to check out, accepts a branch, tag, or commit SHA. Overrides the branch parsed from the URL. |
 | `--from-dir <dir>` | Extract only a subdirectory (overrides the subdirectory parsed from the URL). |
 
 ##  meteor generate  {meteorgenerate}
@@ -876,6 +914,10 @@ Adds packages to your Meteor project.
 ```bash
 meteor add [package1] [package2] ...
 meteor add package@version
+meteor add                    # interactive Atmosphere search
+meteor add --search <query>   # interactive search pre-filled with <query>
+meteor add <url|user/repo>    # clone and add a package from Git
+meteor add --from <url|user/repo>
 ```
 
 **Version Constraints:**
@@ -887,6 +929,77 @@ meteor add package@version
 - By convention, community packages include the maintainer's name (e.g., `iron:router`)
 - To remove a version constraint, run `meteor add package` without specifying a version
 
+### Interactive search {#meteor-add-interactive}
+
+Run `meteor add` without any package names to open an interactive search against the [Atmosphere](https://atmospherejs.com/) community package directory. Type to search Atmosphere, use the arrow keys to highlight a package, press Space to toggle, and press Enter to add the selected packages to your project.
+
+With no query typed, the picker shows two starter sections: a small curated **Core recommended** list of core Meteor packages (accounts, email, check, typescript, rspack, roles, react-meteor-data) followed by **Top community-maintained packages**, drawn once from Atmosphere via the `packages/mostUsed` subscription, filtered to community packages updated within the last 24 months, and capped at 10. Entries already present in the curated list are not repeated.
+
+Results are reordered to favor up-to-date packages. Anything published in the last 24 months keeps its original Atmosphere relevance ranking; older packages are pushed below them. Each row shows when its latest version was published (for example `4mo ago`, `3y ago`) so the freshness signal is visible at a glance.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the package description, latest version, last-updated date, maintainers, and git URL. The panel uses the same local catalog data as `meteor show` and dismisses on the next keypress.
+
+Pass `--search <query>` to skip straight to results for a given query:
+
+```bash
+meteor add --search blaze
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names and Git-clone options; pass either a search query, package names, or a Git source.
+:::
+
+::: tip Non-interactive search
+For scripted searches, use [`meteor search`](#meteorsearch), which prints results to stdout and accepts a regular expression.
+:::
+
+### Clone a Package from a Git Repository
+
+You can also clone an existing Meteor package from any Git repository into your project's `packages/` directory. Pass the source URL as the only package argument, or use `--from` explicitly:
+
+```bash
+meteor add https://github.com/Meteor-Community-Packages/meteor-publish-composite
+
+meteor add --from https://github.com/Meteor-Community-Packages/meteor-publish-composite
+```
+
+The package name is read from `Package.describe` in the cloned `package.js` and registered in `.meteor/packages` automatically, so the package is ready to use after a single command.
+
+The source accepts the same input formats as [`meteor create --from`](#create-from-a-git-repository):
+
+- A full Git URL, for example `https://github.com/owner/repo`
+- A GitHub shorthand `owner/repo`, expanded to `https://github.com/owner/repo`
+- A browser-style tree/src URL from GitHub, GitLab, or Bitbucket. Branch and subdirectory are auto-detected from the URL when possible:
+
+```bash
+# GitHub shorthand
+meteor add Meteor-Community-Packages/meteor-publish-composite
+
+# tree URL with branch and subdirectory auto-detection
+meteor add https://github.com/meteor/blaze/tree/master/packages/blaze
+```
+
+Use `--from-branch` to pin a branch, tag, or commit SHA, `--from-dir` to extract a subdirectory, and `--to` to write to a custom destination relative to the project root:
+
+```bash
+meteor add --from https://github.com/meteor/blaze \
+  --from-branch master \
+  --from-dir packages/blaze \
+  --to packages/my-blaze
+```
+
+Passing `--from-branch` or `--from-dir` explicitly overrides the values parsed from the URL.
+
+If the destination already exists, Meteor prompts before overwriting. Pass `--force` to skip the prompt. The cloned directory must contain a valid `package.js` with a `Package.describe` call; otherwise the clone is rolled back and the command exits with an error.
+
+| Option | Description |
+|--------|-------------|
+| `--from <url>` | Clone a Meteor package from a Git URL explicitly. Optional when the only package argument is URL-like. Accepts GitHub shorthand and tree/src URLs from GitHub, GitLab, and Bitbucket. |
+| `--from-branch <ref>` | Git ref to check out (branch, tag, or commit SHA). Overrides the branch parsed from the URL. |
+| `--from-dir <dir>` | Extract only a subdirectory of the cloned repository. Overrides the subdirectory parsed from the URL. |
+| `--to <path>` | Destination path relative to the project root (default: `packages/<repo-name>`). |
+| `--force` | Overwrite an existing destination directory without prompting. |
+
 ## meteor remove *package* {#meteor-remove}
 
 Removes a package previously added to your Meteor project.
@@ -894,12 +1007,30 @@ Removes a package previously added to your Meteor project.
 **Usage:**
 ```bash
 meteor remove [package1] [package2] ...
+meteor remove                    # interactive picker over installed packages
+meteor remove --search <query>   # picker pre-filtered by <query>
 ```
 
 **Notes:**
 - For a list of currently used packages, run `meteor list`
 - This removes the package entirely (to only remove version constraints, use [`meteor add`](#meteor-add))
 - Transitive dependencies aren't automatically downgraded unless necessary
+
+### Interactive picker {#meteor-remove-interactive}
+
+Run `meteor remove` without any package names to open an interactive picker listing the packages currently in `.meteor/packages`. Type to filter the list, use the arrow keys to highlight a package, press Space to toggle, and press Enter to remove the selected packages.
+
+Press `?` while a row is highlighted to open a detail panel below the prompt with the description, latest version, last-updated date, and maintainers of the highlighted package, useful for double-checking what you're about to remove.
+
+Pass `--search <query>` to open the picker pre-filtered:
+
+```bash
+meteor remove --search accounts
+```
+
+::: info Interactive terminal required
+Both forms require an interactive (TTY) terminal. The `--search` flag is incompatible with positional package names; pass either a query or package names, not both.
+:::
 
 ## meteor list {#meteor-list}
 

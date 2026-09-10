@@ -3,8 +3,19 @@
  */
 
 import fs from 'fs-extra';
+import http from 'http';
 import path from 'path';
 import { chromium } from 'playwright';
+
+const RSPACK_RUNTIME_DEPENDENCIES = [
+  '@meteorjs/rspack',
+  '@rsdoctor/rspack-plugin',
+  '@rspack/cli',
+  '@rspack/core',
+  '@rspack/dev-server',
+  '@swc/core',
+  '@swc/helpers',
+];
 
 let fallbackBrowser;
 
@@ -34,6 +45,112 @@ afterAll(async () => {
 });
 
 /**
+ * Verifies that Rspack's automatic installer updated a nested workspace app
+ * and kept the package manager's lockfile at the workspace root.
+ *
+ * @param {Object} options - Workspace paths and selected package manager
+ * @param {string} options.workspaceRoot - Workspace root directory
+ * @param {string} options.appDir - Nested Meteor application directory
+ * @param {'npm'|'yarn'|'pnpm'} options.packageManager - Selected manager
+ * @returns {Promise<void>}
+ */
+export async function assertRspackWorkspaceInstall({
+  workspaceRoot,
+  appDir,
+  packageManager,
+}) {
+  const packageJson = await fs.readJson(path.join(appDir, 'package.json'));
+  const declaredDependencies = {
+    ...packageJson.dependencies,
+    ...packageJson.devDependencies,
+    ...packageJson.optionalDependencies,
+  };
+
+  RSPACK_RUNTIME_DEPENDENCIES.forEach(dependency => {
+    expect(declaredDependencies[dependency]).toBeTruthy();
+  });
+
+  const lockfiles = {
+    npm: 'package-lock.json',
+    yarn: 'yarn.lock',
+    pnpm: 'pnpm-lock.yaml',
+  };
+  const expectedLockfile = lockfiles[packageManager];
+
+  expect(expectedLockfile).toBeTruthy();
+  expect(
+    await fs.pathExists(path.join(workspaceRoot, expectedLockfile))
+  ).toBe(true);
+  expect(
+    await fs.pathExists(path.join(appDir, expectedLockfile))
+  ).toBe(false);
+
+  for (const [manager, lockfile] of Object.entries(lockfiles)) {
+    if (manager !== packageManager) {
+      expect(
+        await fs.pathExists(path.join(workspaceRoot, lockfile))
+      ).toBe(false);
+    }
+  }
+}
+
+/**
+ * Poll the Rspack dev-server bundle through the Meteor proxy until it returns
+ * 200, or we run out of attempts. In production mode this path 404s, which we
+ * treat as "not applicable" and return immediately. Any other outcome is
+ * logged so CI can see whether the proxy is timing out (504), refusing
+ * connections, or something else, without waiting 60s for Playwright to time
+ * out on the h1 selector.
+ */
+export async function waitForRspackBundle(
+  port,
+  { attempts = 10, intervalMs = 500 } = {},
+) {
+  const url = `http://localhost:${port}/__rspack__/client-rspack.js`;
+  const diagnostics = [];
+  const probe = () =>
+    new Promise((resolve) => {
+      const req = http.get(url, (res) => {
+        res.resume();
+        resolve({ status: res.statusCode });
+      });
+      req.on('error', (err) => resolve({ error: err.code || err.message }));
+      req.setTimeout(5000, () => {
+        req.destroy(new Error('probe-timeout'));
+      });
+    });
+
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const result = await probe();
+    if (result.status === 200) {
+      if (attempt > 1) {
+        console.log(`✅ Rspack bundle ready after ${attempt} probe(s)`);
+      }
+      return;
+    }
+    if (result.status === 404) {
+      // Production/no-rspack app: nothing to gate on.
+      return;
+    }
+    const diagnostic = result.status
+      ? `status=${result.status}`
+      : `error=${result.error}`;
+    diagnostics.push(diagnostic);
+    console.log(
+      `⏳ Rspack bundle not ready (attempt ${attempt}/${attempts}): ${diagnostic}`,
+    );
+    if (attempt < attempts) {
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  }
+  throw new Error(
+    `Rspack bundle probe exhausted after ${attempts} attempts: ${
+      diagnostics.join(', ')
+    }`,
+  );
+}
+
+/**
  * Helper function to assert that a Meteor app is running correctly
  * @param {number} port - Port where the app is running
  * @param {Object} options - Options for the assertion
@@ -59,6 +176,11 @@ export async function assertMeteorApp(port, options = {}) {
       failedResponses.push(`${response.status()} ${response.url()}`);
     }
   });
+
+  // Gate on the Rspack dev bundle actually being reachable through Meteor's
+  // proxy before we load the page. Cheap in production (one 404) and avoids
+  // the 60s Playwright timeout when the proxy is 504ing.
+  await waitForRspackBundle(port);
 
   // Navigate to the app
   await activePage.goto(`http://localhost:${port}`);
