@@ -417,6 +417,43 @@ Note that the schema is different when users register with different login servi
 3. The OAuth login service packages populate `profile.name`. We don't recommend using this but, if you plan to, make sure to deny client-side writes to `profile`. See the section about the [`profile` field on users](#dont-use-profile).
 4. When finding users by email or username, make sure to use the case-insensitive functions provided by `accounts-password`. See the [section about case-sensitivity](#case-sensitivity) for more details.
 
+<h3 id="custom-users-collection">Using a custom users collection</h3>
+
+By default, Meteor stores user documents in a MongoDB collection named `users`. You can change this with the `collection` option of `Accounts.config()`. This is useful when:
+
+- You want to store users in a collection with a different name (e.g. for multi-tenant apps).
+- You need to connect to a remote users collection from another Meteor instance.
+
+You can pass either a collection name (string) or an existing `Mongo.Collection` instance:
+
+```js
+// Option 1: Use a different collection name
+Accounts.config({ collection: 'app_users' });
+
+// Option 2: Use an existing Mongo.Collection instance (e.g. connected to a remote database)
+const remoteConnection = DDP.connect('https://auth.example.com');
+const RemoteUsers = new Mongo.Collection('users', { connection: remoteConnection });
+Accounts.config({ collection: RemoteUsers });
+```
+
+When you set a custom collection, Meteor automatically:
+
+- Updates `Meteor.users` to point to the new collection.
+- Creates the default indexes (username, emails.address, login tokens, etc.) on it.
+- Applies the standard allow/deny rules for user profile updates.
+
+You can also set the collection name via `Meteor.settings` instead of calling `Accounts.config()`:
+
+```json
+{
+  "packages": {
+    "accounts-base": {
+      "collection": "app_users"
+    }
+  }
+}
+```
+
 <h2 id="custom-user-data">Custom data about users</h2>
 
 As your app gets more complex, you will invariably need to store some data about individual users, and the most natural place to put that data is in additional fields on the `Meteor.users` collection described above. In a more normalized data situation it would be a good idea to keep Meteor's user data and yours in two separate tables, but since MongoDB doesn't deal well with data associations it makes sense to use one collection.

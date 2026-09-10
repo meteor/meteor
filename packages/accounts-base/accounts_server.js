@@ -1238,6 +1238,14 @@ export class AccountsServer extends AccountsCommon {
     return superResult;
   };
 
+  _onUsersCollectionChanged() {
+    Meteor.users = this.users;
+    setupUsersCollection(this.users).catch(err => {
+      console.error('Failed to setup users collection:', err);
+    });
+    super._onUsersCollectionChanged();
+  }
+
   // Called by accounts-password
   async insertUserDoc(options, user) {
     // - clone user document, to protect from modification
