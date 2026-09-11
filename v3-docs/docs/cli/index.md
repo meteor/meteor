@@ -974,11 +974,19 @@ Opens a MongoDB shell on your local development database.
 
 **Usage:**
 ```bash
-meteor mongo
+meteor mongo [--url]
 ```
+
+**Flags:**
+- `--url`, `-U` - Print the database URL instead of opening a shell
+- `--verbose`, `-V` - Print the full error if the shell fails to start
 
 ::: warning
 For now, you must already have your application running locally with `meteor run`. This will be easier in the future.
+:::
+
+::: info
+The shell is [`mongosh`](https://www.mongodb.com/docs/mongodb-shell/), which is not installed with Meteor. [Install it](https://www.mongodb.com/docs/mongodb-shell/install/) and make sure it is on your `PATH`, otherwise the command exits with `The 'mongosh' command line tool was not found in your PATH.` `--url` does not need `mongosh`, so you can use it to connect with any MongoDB client.
 :::
 
 ## meteor reset {#meteor-reset}
