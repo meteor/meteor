@@ -36,12 +36,34 @@ export function getMeteorAppConfig() {
     : getMeteorAppPackageJson()?.meteor;
 }
 
+// `--port` accepts `[host:]port`, so the port is either the whole value or
+// whatever follows the last colon.
+const APP_PORT_PATTERN = /(?:^|:)(\d+)$/;
+
 /**
- * Get Meteor's app port
- * @returns {false|*}
+ * Extracts the port from a `[host:]port` value, as accepted by `--port`.
+ * @param {string|number|undefined|null} value - The raw `--port`/`PORT` value.
+ * @returns {string|undefined} The port digits, or undefined when the value
+ * carries no port (e.g. a bare host such as `0.0.0.0`).
+ */
+export function parseMeteorAppPort(value) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+  const match = String(value).trim().match(APP_PORT_PATTERN);
+  return match ? match[1] : undefined;
+}
+
+/**
+ * Get Meteor's app port, without any host prefix `--port` may carry.
+ * Callers derive other ports from it arithmetically, so it is always digits only.
+ * @returns {string}
  */
 export function getMeteorAppPort() {
-  return Package?.meteor?.global?.currentCommand?.options?.['port'] || process.env.PORT || '3000';
+  const rawPort =
+    Package?.meteor?.global?.currentCommand?.options?.['port'] ||
+    process.env.PORT;
+  return parseMeteorAppPort(rawPort) || '3000';
 }
 
 /**
