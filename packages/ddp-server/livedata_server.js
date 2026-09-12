@@ -141,6 +141,13 @@ var Session = function (server, version, socket, options) {
     close: function () {
       // Server-initiated close should not be resumable
       self._expectingDisconnect = true;
+      if (self._isClosing && self._pendingRemoveFunction) {
+        // close() already ran and the session is sitting in its resumption
+        // grace period; terminate it now instead of silently doing nothing.
+        Meteor.clearTimeout(self._removeTimeoutHandle);
+        self._pendingRemoveFunction();
+        return;
+      }
       self.close();
     },
     onClose: function (fn) {
@@ -1262,7 +1269,13 @@ Object.assign(Subscription.prototype, {
     if (this._session.server.getPublicationStrategy(collectionName).doAccountingForCollection) {
       // We don't bother to delete sets of things in a collection if the
       // collection is empty.  It could break _removeAllDocuments.
-      this._documents.get(collectionName).delete(id);
+      // The set may not exist: accounting may have been off when the
+      // document was added (publication strategies can change per
+      // collection at runtime), mirroring the null-guard in added().
+      const ids = this._documents.get(collectionName);
+      if (ids != null) {
+        ids.delete(id);
+      }
     }
 
     this._session.removed(this._subscriptionHandle, collectionName, id);
@@ -1498,11 +1511,13 @@ Object.assign(Server.prototype, {
     // the right ID
     // a matching sent/received count
     // was disconnected and hasn't been reconnected to yet.
-    if (existingSession && existingSession.sentCount === msg.receivedCount && existingSession._removeTimeoutHandle) {
+    if (existingSession && existingSession.sentCount === msg.receivedCount &&
+        existingSession._removeTimeoutHandle && !existingSession._expectingDisconnect) {
       Meteor.clearTimeout(existingSession._removeTimeoutHandle);
       existingSession._removeTimeoutHandle = undefined;
       existingSession._pendingRemoveFunction = undefined;
       existingSession._isClosing = false; // Reset so session can be closed again later
+      existingSession._expectingDisconnect = undefined;
       socket._meteorSession = existingSession;
       const messageQueue = existingSession.messageQueue;
       existingSession.messageQueue = undefined;
@@ -1526,10 +1541,12 @@ Object.assign(Server.prototype, {
 
       // Send connected message so client can restart heartbeat and confirm resumption
       existingSession.send({ msg: 'connected', session: existingSession.id });
+      // Flush the messages buffered during the grace period synchronously,
+      // before anything else (e.g. a live observe callback) can send on the
+      // reattached socket — deferring the flush would let newer messages
+      // jump ahead of older buffered ones and break DDP's ordering.
       if (messageQueue) {
-        Meteor.defer(() => {
-          messageQueue.forEach(msg => existingSession.send(msg));
-        });
+        messageQueue.forEach(msg => existingSession.send(msg));
       }
       // Note: onConnectionHook is NOT called on session resume - the connection
       // is considered to be the same logical connection as before.
@@ -1651,6 +1668,11 @@ Object.assign(Server.prototype, {
         session._removeTimeoutHandle = null;
       }
       session._pendingRemoveFunction = null;
+      // Stop buffering: with the queue gone, send() falls through to the
+      // (null) socket and becomes a no-op. Leaving the queue in place would
+      // buffer into a removed session until overflow invoked the
+      // now-nulled _pendingRemoveFunction and threw.
+      session.messageQueue = null;
       self.sessions.delete(session.id);
       callback();
     };

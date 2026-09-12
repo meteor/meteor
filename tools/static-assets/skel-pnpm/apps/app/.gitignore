@@ -1,0 +1,8 @@
+node_modules/
+.meteor/local/
+
+# Meteor modern tooling build context directories
+_build
+*/build-assets
+*/build-chunks
+.rsdoctor

@@ -3,6 +3,7 @@ const waitOn = require('wait-on');
 const path = require('path');
 const fs = require('fs-extra');
 const os = require('os');
+const net = require('net');
 const rimraf = require('rimraf');
 
 // Get the absolute path to the meteor executable
@@ -82,14 +83,26 @@ export async function clearBuildArtifacts(appDir) {
  * @param {string} appName - Name of the app in the apps directory
  * @param {Object} options - Additional options
  * @param {boolean} options.isMonorepo - Whether the app is a monorepo
+ * @param {boolean} options.preserveFixtureSymlinks - Whether to preserve symlinks when copying the fixture
+ * @param {string} options.packageManager - Package manager to use for setup ("npm", "yarn", or "pnpm")
+ * @param {string[]} options.tempDirSegments - Path segments to insert below the system temp directory
  * @returns {string} - Path to the temporary directory containing the app
  */
 export async function setupMeteorApp(appName, options = {}) {
-  const { isMonorepo = false } = options;
+  const {
+    isMonorepo = false,
+    preserveFixtureSymlinks = false,
+    tempDirSegments = [],
+    packageManager = 'npm',
+  } = options;
 
   // Create a unique temporary directory
   const randomSuffix = Math.random().toString(36).substring(2, 10);
-  const tempDir = path.join(os.tmpdir(), `meteortest-${appName}-${randomSuffix}`);
+  const tempDir = path.join(
+    os.tmpdir(),
+    ...tempDirSegments,
+    `meteortest-${appName}-${randomSuffix}`,
+  );
 
   // Source app directory
   const sourceAppDir = path.join(__dirname, 'apps', appName);
@@ -104,7 +117,7 @@ export async function setupMeteorApp(appName, options = {}) {
 
     // Use fs-extra's copy method with recursive option
     await fs.copy(sourceAppDir, tempDir, {
-      dereference: true,
+      dereference: !preserveFixtureSymlinks,
       preserveTimestamps: true,
       overwrite: true
     });
@@ -113,7 +126,24 @@ export async function setupMeteorApp(appName, options = {}) {
     console.error('Error during copy:', err);
   }
 
-  if (isMonorepo) {
+  if (packageManager === 'pnpm') {
+    console.log('Running pnpm install at workspace root...');
+    await execa('corepack', ['pnpm', 'install', '--frozen-lockfile=false'], {
+      cwd: tempDir,
+      stdio: 'inherit',
+    });
+  } else if (packageManager === 'yarn') {
+    const rootPackageJsonPath = path.join(tempDir, 'package.json');
+    const rootPackageJson = await fs.readJson(rootPackageJsonPath);
+    rootPackageJson.packageManager = 'yarn@1.22.22';
+    await fs.writeJson(rootPackageJsonPath, rootPackageJson, { spaces: 2 });
+
+    console.log('Running Yarn install at workspace root...');
+    await execa('corepack', ['yarn', 'install'], {
+      cwd: tempDir,
+      stdio: 'inherit',
+    });
+  } else if (isMonorepo) {
     // For monorepo, install dependencies at both root and app level
     console.log('Running npm install at root level...');
     await execa.command('npm install', {
@@ -153,9 +183,34 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
     pattern,
     { ...options, meteorProcess }
   );
+  const failPatterns = Array.isArray(options.failOnOutput)
+    ? options.failOnOutput
+    : options.failOnOutput
+    ? [options.failOnOutput]
+    : [];
+  const failWaits = failPatterns.map((failPattern) =>
+    waitForMeteorOutput(
+      outputLines,
+      failPattern,
+      { ...options, meteorProcess }
+    )
+      .then((line) => {
+        throw new Error(
+          `Meteor output matched fail pattern ${failPattern}:\n${line}`
+        );
+      })
+      .catch((err) => {
+        if (/Timeout waiting for output|process exited/i.test(err.message)) {
+          return new Promise(() => {});
+        }
+        throw err;
+      })
+  );
+  mainWait.catch(() => {});
 
   const usesExternalMongo = !!(env.MONGO_URL || process.env.MONGO_URL);
   if (options.mongoWatchdog === false || usesExternalMongo) {
+    await Promise.race([mainWait, ...failWaits]);
     return mainWait;
   }
 
@@ -173,10 +228,9 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
     );
   });
 
-  // Mark both handled so the race's loser can't reject unhandled later.
-  mainWait.catch(() => {});
+  // Mark the Mongo watchdog handled so the race's loser can't reject unhandled later.
   mongoWait.catch(() => {});
-  await Promise.race([mainWait, mongoWait]);
+  await Promise.race([mainWait, mongoWait, ...failWaits]);
   return mainWait;
 }
 
@@ -192,7 +246,7 @@ async function waitForOutputWithMongoWatchdog(outputLines, pattern, options, met
  * @returns {Object} - The meteor process and output lines
  */
 export async function runMeteorApp(tempDir, port, options = {}) {
-  const { isMonorepo = false, env = {} } = options;
+  const { isMonorepo = false, monorepoAppPath = 'app', env = {} } = options;
 
   // Start Meteor CLI in dev mode
   console.log(`Starting Meteor app on port ${port}...`);
@@ -207,7 +261,7 @@ export async function runMeteorApp(tempDir, port, options = {}) {
   }
 
   // For monorepo, run the meteor command from the app subdirectory
-  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, monorepoAppPath) : tempDir;
 
   // Run the meteor command
   const { meteorProcess, outputLines } = await runMeteorCommand(
@@ -408,9 +462,6 @@ async function killSingleProcessByPort(port) {
         await execa.command(`kill -9 ${pid} 2>/dev/null`, { shell: true, reject: false });
       }
 
-      // fuser fallback for when lsof/ss miss the socket owner.
-      await execa.command(`fuser -k ${port}/tcp 2>/dev/null`, { shell: true, reject: false });
-
       // Let the OS release the socket before re-checking.
       await new Promise(r => setTimeout(r, 400));
 
@@ -462,8 +513,12 @@ function getOwnProcessGroupId() {
 async function findPidsOnPort(port) {
   const pids = new Set();
 
+  // -sTCP:LISTEN restricts matches to processes listening on the port, so we
+  // don't return clients holding open connections (e.g. the Playwright browser
+  // talking to the Rspack HMR socket on 18080). Killing those by mistake takes
+  // the browser down mid-suite.
   const lsof = await execa.command(
-    `lsof -i :${port} -t 2>/dev/null`,
+    `lsof -i :${port} -sTCP:LISTEN -t 2>/dev/null`,
     { shell: true, reject: false }
   );
   for (const line of (lsof.stdout || '').split('\n')) {
@@ -557,14 +612,17 @@ export async function runMeteorCommand(command, args = [], cwd, options = {}) {
   let processResult;
   if (checkExitCode) {
     processResult = await new Promise((resolve) => {
-      meteorProcess.on('exit', (code) => {
-        resolve({ code, outputLines });
+      meteorProcess.on('exit', (code, signal) => {
+        resolve({ code, signal, outputLines });
       });
     });
 
     // Check if the command was successful
     if (processResult.code !== 0) {
-      throw new Error(`Meteor command '${command}' failed with code ${processResult.code}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
+      const exitReason = processResult.code === null
+        ? `signal ${processResult.signal || 'unknown'}`
+        : `code ${processResult.code}`;
+      throw new Error(`Meteor command '${command}' failed with ${exitReason}${captureOutput ? `:\n${processResult.outputLines.join('\n')}` : ''}`);
     }
   }
 
@@ -654,6 +712,29 @@ export async function wait(ms) {
 }
 
 /**
+ * Navigates the shared Playwright page away from the app under test so late
+ * client callbacks do not leak into the next test after the app process dies.
+ * @returns {Promise<void>}
+ */
+export async function resetPlaywrightPage() {
+  if (typeof page === 'undefined') {
+    return;
+  }
+
+  try {
+    if (!page.isClosed()) {
+      await page.goto('about:blank', {
+        waitUntil: 'load',
+        timeout: 3000,
+      });
+    }
+  } catch {
+    // Best effort only. Some tests never navigate the page, and it may already
+    // be tearing down if the browser crashed or the test aborted.
+  }
+}
+
+/**
  * Helper function to wait for specific output from a Meteor process
  * @param {string[]} outputLines - Array that will be populated with output lines
  * @param {string|RegExp} pattern - String or RegExp pattern to wait for
@@ -661,6 +742,7 @@ export async function wait(ms) {
  * @param {number} options.timeout - Maximum time to wait in milliseconds
  * @param {number} options.checkInterval - Interval between checks in milliseconds
  * @param {boolean} options.negate - If true, wait until the pattern is NOT found in any output line
+ * @param {number} options.startIndex - Only inspect output added at or after this index
  * @returns {Promise<string>} - A promise that resolves with the matched line
  */
 export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
@@ -668,6 +750,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
   const checkInterval = options.checkInterval || 100; // Check every 100ms by default
   const negate = options.negate || false; // Default is to check for presence, not absence
   const meteorProcess = options.meteorProcess || null;
+  const startIndex = options.startIndex || 0;
 
   console.log(`Waiting for output ${negate ? 'NOT ' : ''}matching: ${pattern}`);
 
@@ -691,6 +774,8 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
 
     // Function to check for the pattern in the output lines
     const checkForPattern = () => {
+      const relevantOutputLines = outputLines.slice(startIndex);
+
       // Check if we've exceeded the timeout
       if (Date.now() - startTime > timeout) {
         // In negate mode the wait can only fail because some line matched.
@@ -698,7 +783,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
         // bare timeout.
         let detail = '';
         if (negate) {
-          const offending = outputLines.filter(lineMatches);
+          const offending = relevantOutputLines.filter(lineMatches);
           detail = `\nOffending line(s):\n${offending.slice(-20).join('\n')}`;
         }
         reject(new Error(
@@ -710,8 +795,8 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
       if (negate) {
         // In negation mode, we need to check all lines and make sure none match
         // If we've processed all lines and none match, we can resolve
-        if (outputLines.length > 0) {
-          if (!outputLines.some(lineMatches)) {
+        if (relevantOutputLines.length > 0) {
+          if (!relevantOutputLines.some(lineMatches)) {
             console.log(`Confirmed no output matching: ${pattern}`);
             resolve(null);
             return;
@@ -719,7 +804,7 @@ export async function waitForMeteorOutput(outputLines, pattern, options = {}) {
         }
       } else {
         // Check each line for the pattern (original behavior)
-        for (const line of outputLines) {
+        for (const line of relevantOutputLines) {
           if (typeof pattern === 'string' && line.includes(pattern)) {
             console.log(`Found output matching string: ${pattern}`);
             resolve(line);
@@ -859,7 +944,7 @@ export async function appendFileContent(tempDir, filePath, options = {}) {
  * @returns {Object} - The meteor process and output lines
  */
 export async function runMeteorTests(tempDir, port, options = {}) {
-  const { isMonorepo = false, env = {} } = options;
+  const { isMonorepo = false, monorepoAppPath = 'app', env = {} } = options;
 
   // Start Meteor tests
   console.log(`Starting Meteor tests on port ${port}...`);
@@ -874,7 +959,7 @@ export async function runMeteorTests(tempDir, port, options = {}) {
   }
 
   // For monorepo, run the meteor command from the app subdirectory
-  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, monorepoAppPath) : tempDir;
 
   // Run the meteor test command
   const { meteorProcess, outputLines, processResult } = await runMeteorCommand(
@@ -1039,7 +1124,7 @@ export async function waitForPlaywrightConsole(pattern, options = {}) {
  * @returns {Object} - The build output directory and the meteor process result
  */
 export async function buildMeteorApp(tempDir, options = {}) {
-  const { isMonorepo = false, env = {} } = options;
+  const { isMonorepo = false, monorepoAppPath = 'app', env = {} } = options;
 
   // Create a unique temporary directory for the build output
   const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -1059,7 +1144,7 @@ export async function buildMeteorApp(tempDir, options = {}) {
   }
 
   // For monorepo, run the meteor command from the app subdirectory
-  const appDir = isMonorepo ? path.join(tempDir, 'app') : tempDir;
+  const appDir = isMonorepo ? path.join(tempDir, monorepoAppPath) : tempDir;
 
   // Run the meteor build command with automatic exit code checking
   const result = await runMeteorCommand(
@@ -1076,4 +1161,144 @@ export async function buildMeteorApp(tempDir, options = {}) {
   console.log(`Successfully built Meteor app to ${buildOutputDir}`);
 
   return { buildOutputDir, processResult: result.processResult };
+}
+
+/**
+ * Ask the OS for a free TCP port on the loopback interface.
+ * @returns {Promise<number>}
+ */
+export function getFreePort() {
+  return new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.unref();
+    server.on('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address();
+      server.close(() => resolve(port));
+    });
+  });
+}
+
+/**
+ * Start a throwaway MongoDB instance for running a built bundle.
+ *
+ * Reuses the `mongod` binary shipped in Meteor's dev bundle, so no extra
+ * download or system MongoDB is required. Falls back to the MONGO_URL
+ * environment variable when the binary is unavailable, and returns null when
+ * neither is available so callers can skip gracefully.
+ *
+ * @param {Object} options
+ * @param {number} options.port - Port for mongod (default: a free port)
+ * @returns {Promise<{mongoUrl: string, port?: number, stop: Function}|null>}
+ */
+export async function startMongo(options = {}) {
+  const ext = process.platform === 'win32' ? '.exe' : '';
+  const mongodPath = path.join(REPO_ROOT, 'dev_bundle', 'mongodb', 'bin', `mongod${ext}`);
+
+  if (!fs.existsSync(mongodPath)) {
+    if (process.env.MONGO_URL) {
+      console.log('Bundled mongod not found; using MONGO_URL from environment.');
+      return { mongoUrl: process.env.MONGO_URL, stop: async () => {} };
+    }
+    console.warn(`Bundled mongod not found at ${mongodPath} and no MONGO_URL set.`);
+    return null;
+  }
+
+  const port = options.port || (await getFreePort());
+  const randomSuffix = Math.random().toString(36).substring(2, 10);
+  const dbPath = path.join(os.tmpdir(), `meteor-e2e-mongo-${randomSuffix}`);
+  await fs.mkdir(dbPath, { recursive: true });
+
+  console.log(`Starting bundled mongod on port ${port} (dbpath ${dbPath})...`);
+  const mongoProcess = execa(mongodPath, [
+    '--port', String(port),
+    '--dbpath', dbPath,
+    '--bind_ip', '127.0.0.1',
+    '--wiredTigerCacheSizeGB', '0.25',
+  ], { stdio: ['ignore', 'ignore', 'inherit'] });
+
+  let exited = false;
+  mongoProcess.on('exit', () => { exited = true; });
+
+  const stop = async () => {
+    if (!exited) {
+      try { mongoProcess.kill('SIGKILL'); } catch (err) { /* already gone */ }
+    }
+    try { await mongoProcess; } catch (err) { /* killed by signal */ }
+    await fs.remove(dbPath).catch(() => {});
+  };
+
+  try {
+    await waitOn({
+      resources: [`tcp:127.0.0.1:${port}`],
+      timeout: process.env.CI ? 120000 : 60000,
+    });
+  } catch (err) {
+    await stop();
+    throw new Error(`Bundled mongod failed to become ready on port ${port}: ${err.message}`);
+  }
+
+  return { mongoUrl: `mongodb://127.0.0.1:${port}/meteor`, port, stop };
+}
+
+/**
+ * Boot a bundle produced by `meteor build --directory` and wait until it serves
+ * HTTP, verifying the build output is actually runnable.
+ *
+ * @param {string} buildOutputDir - Directory passed to buildMeteorApp
+ * @param {Object} options
+ * @param {number} options.port - Port for the built app (required)
+ * @param {string} options.mongoUrl - MONGO_URL for the built app (required)
+ * @param {boolean} options.skipNpmInstall - Skip `npm install` in the server dir
+ * @param {Object} options.env - Extra environment variables
+ * @returns {Promise<{appProcess: Object, port: number, stop: Function}>}
+ */
+export async function runBuiltApp(buildOutputDir, options = {}) {
+  const { port, mongoUrl, skipNpmInstall = false, env = {} } = options;
+
+  if (!port) throw new Error('runBuiltApp requires a port');
+  if (!mongoUrl) throw new Error('runBuiltApp requires a mongoUrl');
+
+  const bundleDir = path.join(buildOutputDir, 'bundle');
+  const serverDir = path.join(bundleDir, 'programs', 'server');
+
+  if (!skipNpmInstall) {
+    console.log('Running npm install in the built server directory...');
+    await execa('npm', ['install'], { cwd: serverDir, stdio: 'inherit', shell: true });
+  }
+
+  console.log(`Starting built app (node main.js) on port ${port}...`);
+  const appProcess = execa('node', ['main.js'], {
+    cwd: bundleDir,
+    stdio: ['ignore', 'inherit', 'inherit'],
+    env: {
+      ...process.env,
+      ROOT_URL: `http://localhost:${port}`,
+      PORT: String(port),
+      MONGO_URL: mongoUrl,
+      ...env,
+    },
+  });
+
+  let exited = false;
+  appProcess.on('exit', () => { exited = true; });
+
+  const stop = async () => {
+    if (!exited) {
+      try { appProcess.kill('SIGKILL'); } catch (err) { /* already gone */ }
+    }
+    try { await appProcess; } catch (err) { /* killed by signal */ }
+  };
+
+  try {
+    await waitOn({
+      resources: [`http-get://localhost:${port}`],
+      timeout: process.env.CI ? 300000 : 90000,
+    });
+  } catch (err) {
+    await stop();
+    throw new Error(`Built app failed to become ready on port ${port}: ${err.message}`);
+  }
+
+  return { appProcess, port, stop };
 }

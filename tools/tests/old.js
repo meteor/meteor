@@ -89,6 +89,10 @@ selftest.define("bundler-devdepends", ["checkout"], function () {
   return runOldTest('test-bundler-devdepends.js');
 });
 
+selftest.define("bundler-manifest-hashes", ["checkout"], function () {
+  return runOldTest('test-bundler-manifest-hashes.js');
+});
+
 // This last one's is a shell script!
 // XXX pardon the hacky glue to make it work with a sandbox
 

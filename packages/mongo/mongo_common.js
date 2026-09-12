@@ -197,5 +197,33 @@ export function replaceNames(filter, thing) {
  * @returns {number} Comparison result: negative if `opTime1` < `opTime2`, zero if equal, positive if `opTime1` > `opTime2`.
  */
 export function compareOperationTimes(opTime1, opTime2) {
-  return (new MongoDB.Timestamp(opTime1)).compare(opTime2);
+  // Wrap BOTH operands: MongoDB.Timestamp#compare mishandles a plain
+  // {t,i} object (it never reads .t/.i), silently returning a wrong
+  // result. The documented contract accepts {t,i} for either operand, so
+  // normalize both before comparing.
+  return (new MongoDB.Timestamp(opTime1)).compare(new MongoDB.Timestamp(opTime2));
+}
+
+/**
+ * Key under which a write's clusterTime is recorded on the DDP write fence.
+ *
+ * Scoped to the *connection* as well as the collection: an app can hold more
+ * than one MongoConnection (a second `MongoInternals.RemoteCollectionDriver`
+ * pointed at another cluster is the common case) and those connections
+ * routinely share collection names. Both the crossbar listener and the fence
+ * annotation are otherwise keyed by collection name alone, so a write on
+ * connection B would park a change-stream driver watching connection A on a
+ * clusterTime from a cluster that driver's stream can never observe — the wait
+ * never resolves and the method that issued the write hangs forever
+ * (meteor/meteor#14600). clusterTimes are only comparable within one cluster,
+ * so they must never be matched across connections.
+ *
+ * @param {string} connectionId - `MongoConnection#_csConnectionId` of the connection the write went to.
+ * @param {string} collectionName - Name of the collection written.
+ * @returns {string} Composite key for `fence._csTargetTsByCollection`.
+ */
+export function fenceWriteTsKey(connectionId, collectionName) {
+  // NUL cannot appear in a Mongo collection name, so it is a safe
+  // separator: no (connection, collection) pair can collide with another.
+  return `${connectionId}\u0000${collectionName}`;
 }

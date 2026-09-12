@@ -77,7 +77,13 @@ $env:PATH += ";%JAVA_HOME%\bin"
 
 For Android builds, you will need the Android SDK. You can install it via [Android Studio](https://developer.android.com/studio).
 
-Once Android Studio is installed, go to **SDK Manager** and install the required SDK packages. The minimum required version is Android SDK 35. Install the `Android SDK Command-line Tools (latest)` as well.
+Starting with Meteor 3.5.2, Cordova Android projects use `cordova-android@15.1.0`. Go to **SDK Manager** and install Android SDK Platform 36, Android SDK Build Tools 36.0.0, and the `Android SDK Command-line Tools (latest)`.
+
+You can also install the required platform and build tools from the command line:
+
+```sh
+sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+```
 
 Ensure `ANDROID_HOME` environment variable is set by adding it to `~/.bashrc` or `~/.zshrc` :
 
@@ -111,7 +117,7 @@ sudo apt-get install gradle
 # using sdkman
 curl -s "https://get.sdkman.io" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk install gradle 8.7
+sdk install gradle 8.14.2
 
 gradle --version  # Verify installation
 ```
@@ -123,7 +129,7 @@ Install Gradle on your Windows system [by following the official guide](https://
 Make sure the Gradle path is included in your system's PATH variable.
 
 ```ps
-$env:PATH += ";C:\Gradle\gradle-8.10.2\bin"
+$env:PATH += ";C:\Gradle\gradle-8.14.2\bin"
 ```
 
 ### iOS

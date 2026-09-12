@@ -12,6 +12,9 @@ var packageJson = {
     // and we want to make sure there are no dependencies on a higher version
     npm: "11.12.1",
     "node-gyp": "10.2.0",
+    // Required by argon2's install script when Meteor rebuilds native
+    // dependencies in its isolated npm environment.
+    "cross-env": "10.0.0",
     "node-gyp-build": "4.8.4",
     "@mapbox/node-pre-gyp": "2.0.3",
     typescript: "5.9.3",
@@ -44,6 +47,8 @@ var packageJson = {
     // TODO: maybe replace with https://www.npmjs.com/package/better-sqlite3
     sqlite3: "5.1.7",
     inquirer: "8.2.6",
+    // Live-search multi-select prompt used by `meteor add` interactive mode.
+    "inquirer-checkbox-plus-prompt": "1.4.2",
     "http-proxy-3": "1.22.0",
     "is-reachable": "3.1.0",
     "wordwrap": "1.0.0",
@@ -60,7 +65,7 @@ var packageJson = {
     multipipe: "2.0.1",
     pathwatcher: "8.1.2",
     "vscode-nsfw": "2.1.8",
-    "@parcel/watcher": "2.5.1",
+    "@parcel/watcher": "2.5.6",
     // The @wry/context package version must be compatible with the
     // version constraint imposed by optimism/package.json.
     optimism: "0.18.1",

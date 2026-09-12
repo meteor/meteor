@@ -14,7 +14,13 @@ function getMeteorAppSwcrc(file = '.swcrc') {
       
       if (file.endsWith('.ts')) {
         try {
-          const swc = require('@swc/core');
+          let swc;
+          try {
+            swc = require(require.resolve('@swc/core', { paths: [process.cwd()] }));
+          } catch (e) {
+            if (e.code !== 'MODULE_NOT_FOUND') throw e;
+            swc = require('@swc/core');
+          }
           const result = swc.transformSync(content, {
             jsc: {
               parser: {

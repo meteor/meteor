@@ -1,6 +1,7 @@
 import { defineConfig } from '@meteorjs/rspack';
 import { createRequire } from 'node:module';
 import { TsCheckerRspackPlugin } from 'ts-checker-rspack-plugin';
+import type { Configuration } from '@rspack/core';
 
 const require = createRequire(import.meta.url);
 
@@ -14,6 +15,9 @@ const require = createRequire(import.meta.url);
  *
  * Use these flags to adjust your build settings based on environment.
  */
+// Satisfy TS noUnusedLocals without affecting the return type of defineConfig
+export type _Config = Configuration;
+
 export default defineConfig(Meteor => {
   return {
     ...Meteor.enablePortableBuild(),

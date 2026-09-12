@@ -37,7 +37,7 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
 
 ### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
 
-Meteor 3.3 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
 
 1. On the server, call `Accounts.config` during startup and set both options:
 

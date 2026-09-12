@@ -26,8 +26,10 @@ export class ConnectionStreamHandlers {
     }
 
     if (msg === null || !msg.msg) {
-      if(!msg || !msg.testMessageOnConnect) {
-        if (Object.keys(msg).length === 1 && msg.server_id) return;
+      if (!msg || !msg.testMessageOnConnect) {
+        // msg is null when parseDDP discarded the frame (invalid JSON, or
+        // JSON that is not an object) — guard before inspecting its keys.
+        if (msg && Object.keys(msg).length === 1 && msg.server_id) return;
         Meteor._debug('discarding invalid livedata message', msg);
       }
       return;
@@ -133,6 +135,10 @@ export class ConnectionStreamHandlers {
     // the necessary RTT to know if we successfully reconnected.
     this._connection._callOnReconnectAndSendAppropriateOutstandingMethods();
     this._resendSubscriptions();
+
+    // Deliver messages that were passed to _sendQueued while disconnected
+    // (e.g. 'unsub' messages); the stream would have dropped them.
+    this._connection._flushMessagesQueuedUntilReconnect();
   }
 
   /**

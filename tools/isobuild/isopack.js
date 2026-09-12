@@ -1445,10 +1445,19 @@ Object.assign(Isopack.prototype, {
       'packages/meteor/flush-buffers-on-exit-in-windows.js',
     );
 
-    // Trim blank line and unnecessary examples.
+    // 1. Trim blank lines and unnecessary examples.
+    // 2. Exclude `tools/e2e-tests`: These are massive internal dummy fixture apps
+    //    that serve no purpose for end-users and would otherwise bloat the published 
+    //    meteor-tool isopack download. 
+    //    Additionally, these fixtures contain complex symlinks which, on Windows checkouts 
+    //    (where core.symlinks=false), are created as plain text files. If not excluded, 
+    //    Babel attempts to transpile those text files here and throws a SyntaxError, crashing the build.
+    // NOTE: This _writeTool method is only ever executed when compiling the `meteor-tool` 
+    // package itself from a checkout, so these exclusions have zero impact on normal Meteor apps.
     pathsToCopy = _.filter(pathsToCopy.split('\n'), function (f) {
       return f && !f.match(/^examples\/other/) &&
-        !f.match(/^examples\/unfinished/);
+        !f.match(/^examples\/unfinished/) &&
+        !f.match(/^tools\/e2e-tests/);
     });
 
     function shouldTranspile(path) {

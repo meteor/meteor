@@ -127,7 +127,7 @@ import { ensureDevBundleDependencies } from '../cordova/index.js';
 import { CordovaRunner } from '../cordova/runner.js';
 import { iOSRunTarget, AndroidRunTarget } from '../cordova/run-targets.js';
 
-import { getExamples, findExample, cloneRepo, cloneSubdirectory, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
+import { getExamples, findExample, cloneRepo, cloneSubdirectory, isGitSourceLike, parseGitUrl, validateMeteorApp, EXAMPLES_REPO, EXAMPLES_BRANCH } from './examples.js';
 
 // The architecture used by Meteor Software's hosted servers; it's the
 // architecture used by 'meteor deploy'.
@@ -685,8 +685,10 @@ export const AVAILABLE_SKELETONS = [
   "babel",
   "bare",
   "blaze",
+  "pwa",
   "full",
   "minimal",
+  "pnpm",
   DEFAULT_SKELETON,
   "typescript",
   "typescript-tailwind",
@@ -704,8 +706,10 @@ const SKELETON_INFO = {
   "apollo": "To create a basic Apollo + React app",
   "bare": "To create an empty app",
   "blaze": "To create an app using Blaze",
+  "pwa": "To create an installable Progressive Web App using Blaze",
   "full": "To create a more complete scaffolded app",
   "minimal": "To create an app with as few Meteor packages as possible",
+  "pnpm": "To create a pnpm monorepo with a Meteor app and shared packages",
   "react": "To create a basic React-based app",
   "typescript": "To create an app using TypeScript and React",
   "typescript-tailwind": "To create an app using TypeScript, React, and Tailwind",
@@ -719,9 +723,22 @@ const SKELETON_INFO = {
   "angular": "To create a basic Angular app"
 };
 
+// Most skeletons are Meteor apps rooted at the created directory and use npm.
+// Entries here only describe skeletons that need a different project or install
+// root, keeping nested workspace support additive for future skeletons.
+const SKELETON_CONFIG = {
+  pnpm: {
+    appPath: "apps/app",
+    installAtRoot: true,
+    packageManager: "pnpm",
+    projectKind: "pnpm monorepo",
+    runCommand: "meteor npm start",
+  },
+};
+
 main.registerCommand({
   name: 'create',
-  maxArgs: 1,
+  maxArgs: 2,
   minArgs: 0,
   options: {
     list: { type: Boolean },
@@ -730,8 +747,10 @@ main.registerCommand({
     babel: { type: Boolean },
     bare: { type: Boolean },
     minimal: { type: Boolean },
+    pnpm: { type: Boolean },
     full: { type: Boolean },
     blaze: { type: Boolean },
+    pwa: { type: Boolean },
     react: { type: Boolean },
     vue: { type: Boolean },
     typescript: { type: Boolean },
@@ -756,6 +775,12 @@ main.registerCommand({
   // we are doing, do that first. (For example, we don't springboard to the
   // latest release to create a package if we are inside an app)
   if (options.package) {
+    if (options.args.length > 1) {
+      Console.error("Package creation expects only one package name.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+
     var packageName = options.args[0];
     if (options.prototype) {
       Console.error(
@@ -897,6 +922,12 @@ main.registerCommand({
   }
 
   if (options.list) {
+    if (options.args.length > 1) {
+      Console.error("List expects at most one app path.");
+      Console.error();
+      throw new main.ShowUsage();
+    }
+
     try {
       const examples = await getExamples();
       Console.rawInfo(`\n  ${bold`Meteor Examples`}  ${dim`${examples.length} available`}\n\n`);
@@ -929,6 +960,41 @@ main.registerCommand({
       return 1;
     }
     return 0;
+  }
+
+  const defaultCreatePathFromGitSource = (source) => {
+    const parsed = parseGitUrl(source);
+    const pathSource = options['from-dir'] || parsed.dir || parsed.repoUrl;
+    const pathName = (pathSource || '').split('/').filter(Boolean).pop();
+    return (pathName || 'my-app').replace(/\.git$/, '');
+  };
+
+  if (!options.from && options.args.length > 0) {
+    const sourceIndexes = options.args
+      .map((arg, index) => (
+        isGitSourceLike(arg, { githubShorthand: false }) ? index : -1
+      ))
+      .filter(index => index !== -1);
+
+    if (sourceIndexes.length === 1) {
+      const sourceIndex = sourceIndexes[0];
+      options.from = options.args[sourceIndex];
+      options.args = options.args.length === 1
+        ? [defaultCreatePathFromGitSource(options.from)]
+        : [options.args[sourceIndex === 0 ? 1 : 0]];
+    } else if (options.args.length > 1) {
+      Console.error(
+        'Specify one app path, or one app path and one Git URL to clone from.'
+      );
+      Console.error();
+      throw new main.ShowUsage();
+    }
+  }
+
+  if (options.from && options.args.length > 1) {
+    Console.error('Cannot specify more than one path when using --from.');
+    Console.error();
+    throw new main.ShowUsage();
   }
 
   /**
@@ -1060,11 +1126,18 @@ main.registerCommand({
   }
   // Setup fn, which is called after the app is created, to print a message
   // about how to run the app.
-  async function setupMessages() {
+  async function setupMessages({
+    projectDir = appPath,
+    installDir = projectDir,
+    packageManager = "npm",
+    runCommand = "meteor",
+    runPathAsEntered = appPathAsEntered,
+    projectKind = "app",
+  } = {}) {
     // We are actually working with a new meteor project at this point, so
     // set up its context.
     var projectContext = new projectContextModule.ProjectContext({
-      projectDir: appPath,
+      projectDir,
       // Write .meteor/versions even if --release is specified.
       alwaysWritePackageMap: true,
       // examples come with a .meteor/versions file, but we shouldn't take it
@@ -1110,16 +1183,17 @@ main.registerCommand({
     // the packages (or maybe an unpredictable subset based on what happens to be
     // in the template's versions file).
 
-    // Since some of the project skeletons include npm `devDependencies`, we need
-    // to make sure they're included when running `npm install`.
-    await require("./default-npm-deps.js").install(appPath, {
+    // Since some project skeletons include `devDependencies`, make sure they
+    // are included when installing with the skeleton's package manager.
+    await require("./default-npm-deps.js").install(installDir, {
       includeDevDependencies: true,
+      packageManager,
     });
 
     var appNameToDisplay =
       appPathAsEntered === "." ? "current directory" : `'${appPathAsEntered}'`;
 
-    var message = `Created a new Meteor app in ${appNameToDisplay}`;
+    var message = `Created a new Meteor ${projectKind} in ${appNameToDisplay}`;
 
     message += ".";
 
@@ -1131,18 +1205,18 @@ main.registerCommand({
 
 
 
-    if (appPathAsEntered !== ".") {
+    if (runPathAsEntered !== ".") {
       // Wrap the app path in quotes if it contains spaces
       const appPathWithQuotesIfSpaces =
-        appPathAsEntered.indexOf(" ") === -1
-          ? appPathAsEntered
-          : `'${appPathAsEntered}'`;
+        runPathAsEntered.indexOf(" ") === -1
+          ? runPathAsEntered
+          : `'${runPathAsEntered}'`;
 
       // Don't tell people to 'cd .'
       cmd("cd " + appPathWithQuotesIfSpaces);
     }
 
-    cmd("meteor");
+    cmd(runCommand);
 
     Console.info("");
     Console.info(
@@ -1242,7 +1316,7 @@ main.registerCommand({
   if (destinationHasCodeFiles) {
     // If there is already source code in the directory, don't copy our
     // skeleton app code over it. Just create the .meteor folder and metadata
-    toIgnore.push(/(\.html|\.js|\.css)/);
+    toIgnore.push(/(\.html|\.js|\.css|\.webmanifest)/);
   }
 
   const copyFromLocalSkeleton = async () => {
@@ -1269,7 +1343,7 @@ main.registerCommand({
               return Buffer.from(contents.toString().replace(/~prototype~/g, ""));
             }
           }
-          if (/(\.html|\.[jt]sx?|\.css|\.coffee)/.test(f)) {
+          if (/(\.html|\.[jt]sx?|\.css|\.coffee|\.webmanifest)/.test(f)) {
             return Buffer.from(transform(contents.toString()));
           } else {
             return contents;
@@ -1323,7 +1397,17 @@ main.registerCommand({
       await copyFromLocalSkeleton();
     }
   }
-  await setupMessages();
+  const skeletonConfig = SKELETON_CONFIG[skeleton] || {};
+  const projectDir = skeletonConfig.appPath
+    ? files.pathJoin(appPath, skeletonConfig.appPath)
+    : appPath;
+  await setupMessages({
+    projectDir,
+    installDir: skeletonConfig.installAtRoot ? appPath : projectDir,
+    packageManager: skeletonConfig.packageManager,
+    runCommand: skeletonConfig.runCommand,
+    projectKind: skeletonConfig.projectKind,
+  });
 
   Console.info("");
 });
@@ -2898,6 +2982,8 @@ main.registerCommand({
     headless: { type: Boolean },
     history: { type: Number },
     list: { type: Boolean },
+    // Write the filtered test list as JSON for machine consumers.
+    'list-json-out': { type: String },
     file: { type: String },
     exclude: { type: String },
     // Skip tests w/ this tag
@@ -2981,6 +3067,23 @@ main.registerCommand({
       fileRegexp: fileRegexp,
       'without-tag': options['without-tag'],
       'with-tag': options['with-tag']
+    });
+
+    return 0;
+  }
+
+  if (options['list-json-out']) {
+    await selftest.listTestsJson({
+      onlyChanged: options.changed,
+      offline: offline,
+      includeSlowTests: options.slow,
+      galaxyOnly: options.galaxy,
+      testRegexp: testRegexp,
+      fileRegexp: fileRegexp,
+      excludeRegexp: excludeRegexp,
+      'without-tag': options['without-tag'],
+      'with-tag': options['with-tag'],
+      outFile: options['list-json-out'],
     });
 
     return 0;
