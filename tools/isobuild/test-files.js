@@ -1,4 +1,3 @@
-import _ from 'underscore';
 import { pathSep } from '../fs/files';
 
 // We have two things "tests" and "app-tests".
@@ -22,9 +21,9 @@ export const APP_TEST_FILENAME_REGEXPS = [
 // directory), is this file a test file?
 export function isTestFilePath(path) {
   const splitPath = path.split(pathSep);
+  const filename = splitPath[splitPath.length - 1];
 
   // Does the filename match one of the test filename forms?
-  return _.any(
-    [...TEST_FILENAME_REGEXPS, ...APP_TEST_FILENAME_REGEXPS],
-    regexp => regexp.test(_.last(splitPath)));
+  return [...TEST_FILENAME_REGEXPS, ...APP_TEST_FILENAME_REGEXPS]
+    .some(regexp => regexp.test(filename));
 }
