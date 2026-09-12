@@ -146,6 +146,18 @@ If you ignore the warning, the build continues and fails with the underlying mod
 
 If your CI or Docker pipeline reports missing NPM dependencies after disabling auto-install, see [CI & Docker](#docker) for the recommended commit-and-push flow.
 
+#### Upgrading from Rspack 1.x
+
+Meteor 3.6 moves the modern build stack to Rspack 2.x. On the first run after updating, the dependency check above bumps `@rspack/core`, `@rspack/cli`, and `@rspack/dev-server` to 2.2.0, `@meteorjs/rspack` to 3.0.0, and the related `@swc/*`, `@rspack/plugin-react-refresh`, and `@rsdoctor/rspack-plugin` versions. When an existing lockfile still holds Rspack 1.x peer dependencies, Meteor runs that install with `--legacy-peer-deps` so npm does not reject the coordinated upgrade; fresh installs and already-upgraded apps keep npm's normal peer validation.
+
+If you disabled auto-install, run the printed `meteor npm install --save-dev ...` command. It already includes `--legacy-peer-deps` when the old Rspack 1.x peers require it.
+
+Apps that rely on the Meteor defaults need no further changes. If you override the configuration in `rspack.config.js`, review the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x). The most common adjustments are:
+
+- `experiments.css` and `experiments.cache` are gone: CSS support is built in, and `cache` accepts the persistent cache options directly.
+- `output.libraryTarget` is replaced by `output.library.type`.
+- If you merge configuration yourself, replace `webpack-merge` with `rspack-merge`. `@meteorjs/rspack@3.0.0` already does this internally.
+
 ### Replace build plugins
 
 Meteor build plugins extend the Meteor bundler by letting you handle new file types and process them for the final app bundle. They’ve commonly handled HTML templating, style files for Less or SCSS, CoffeeScript, and more, since the system allows third-party customization.
@@ -1196,11 +1208,15 @@ This is the standard model used by package managers like npm, pnpm, and Yarn wor
 
 Rspack defaults are oriented toward supporting this pattern out of the box, as it gives bundlers an explicit dependency graph to reason about, which powers caching, affected-detection, and other build optimizations.
 
-For a practical example, you can explore this [pnpm monorepo skeleton](https://github.com/nachocodoner/meteor-pnpm-skeleton) demonstrating how to set up Meteor within a pnpm workspace.
+Starting with Meteor 3.6, `meteor create` can scaffold this setup for you:
 
-:::warning
-Future versions of Meteor will introduce native support for scaffolding monorepo setups (such as pnpm workspaces) directly via `meteor create` skeletons.
-:::
+```bash
+meteor create --pnpm my-workspace
+```
+
+The `--pnpm` skeleton creates a Meteor + Rspack application in `apps/app`, reusable client, server, and shared packages under `packages/`, a `pnpm-workspace.yaml` file with a pinned pnpm version, and `workspace:*` links between the app and the local packages. Creation installs the workspace dependencies with the pnpm version declared by the workspace, through Corepack when available, so a global pnpm installation is not required.
+
+Inside a workspace, the checks described in [Required npm dependencies](#required-npm-dependencies) detect the workspace root and the package manager (npm, Yarn, or pnpm) from the root manifest and lockfiles. Installs run from the Meteor app directory so the package manager updates the app's `package.json` together with the workspace lockfile, and the manual instructions use the detected manager's commands. Dependencies declared with `file:`, `link:`, `portal:`, or `workspace:` protocols are validated against their installed version instead of being treated as invalid semver ranges.
 
 #### App-Local Source Symlinks (Share a file by location)
 
