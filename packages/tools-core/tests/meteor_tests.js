@@ -1,4 +1,5 @@
 import {
+  getUserMeteorIgnore,
   inheritMeteorToolNodeFlags,
   setMeteorAppIgnore,
 } from "../lib/meteor.js";
@@ -275,6 +276,31 @@ Tinytest.add(
         process.env.METEOR_IGNORE,
         "client/*.css",
         "Should avoid growing METEOR_IGNORE when the same pattern is appended repeatedly"
+      );
+    } finally {
+      if (previousIgnore === undefined) {
+        delete process.env.METEOR_IGNORE;
+      } else {
+        process.env.METEOR_IGNORE = previousIgnore;
+      }
+    }
+  }
+);
+
+Tinytest.add(
+  "tools-core - getUserMeteorIgnore - is unaffected by setMeteorAppIgnore",
+  function (test) {
+    const previousIgnore = process.env.METEOR_IGNORE;
+    const userIgnore = getUserMeteorIgnore();
+
+    try {
+      process.env.METEOR_IGNORE = "*.tests.ts";
+      setMeteorAppIgnore("client/*.css");
+
+      test.equal(
+        getUserMeteorIgnore(),
+        userIgnore,
+        "Should keep reporting the patterns the user set, not the ones meteor-tool appends"
       );
     } finally {
       if (previousIgnore === undefined) {

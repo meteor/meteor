@@ -7,6 +7,7 @@ module.exports = {
   testMatch: [
     "<rootDir>/tools/**/*.test.js",
     "<rootDir>/scripts/**/*.test.js",
+    "<rootDir>/npm-packages/meteor-rspack/**/*.test.js",
   ],
   testPathIgnorePatterns: [
     "/node_modules/",
@@ -21,7 +22,10 @@ module.exports = {
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
     "<rootDir>/tools/static-assets/",
-    "<rootDir>/npm-packages/",
+    // meteor-rspack ships plain CommonJS helpers that are unit-tested here, so
+    // it stays visible to the module loader; the rest of npm-packages/ does not.
+    // (No trailing slash: the crawler also tests the bare directory path.)
+    "<rootDir>/npm-packages/(?!meteor-rspack)",
     "<rootDir>/scripts/admin/",
     "<rootDir>/docs/",
     "<rootDir>/packages/non-core/",

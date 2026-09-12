@@ -231,6 +231,7 @@ Server-only app (no client entry point).
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
 | Server Rspack process exits before first compilation and Meteor fails promptly | Run |
+| `.meteorignore` negation re-includes a test file an earlier pattern ignored (`regressions/meteorignore-negation.test.js`, [#14742](https://github.com/meteor/meteor/issues/14742)) | Test once |
 
 ### Focused server runtime regressions
 

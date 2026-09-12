@@ -194,6 +194,22 @@ export function setMeteorAppEntrypoints({
   global.reinitializeMeteorConfig?.();
 }
 
+// METEOR_IGNORE as the app author set it, captured before the first
+// setMeteorAppIgnore() call starts appending meteor-tool-specific patterns to
+// it. Integrations that hand the variable on to their own tooling need the
+// author's patterns alone: the appended ones mean nothing to them and, on
+// large projects, grow to tens of kilobytes.
+const USER_METEOR_IGNORE = process.env.METEOR_IGNORE || '';
+
+/**
+ * Returns the METEOR_IGNORE patterns the app author set, without the ones
+ * Meteor appends for its own bundler.
+ * @returns {string} Space-delimited ignore patterns, or an empty string.
+ */
+export function getUserMeteorIgnore() {
+  return USER_METEOR_IGNORE;
+}
+
 /**
  * Sets patterns to be ignored by the Meteor application in the environment variable.
  * Appends new patterns while deduplicating by keeping the last occurrence of
