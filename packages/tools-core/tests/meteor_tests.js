@@ -1,5 +1,7 @@
 import {
+  getMeteorAppPort,
   inheritMeteorToolNodeFlags,
+  parseMeteorAppPort,
   setMeteorAppIgnore,
 } from "../lib/meteor.js";
 
@@ -283,5 +285,50 @@ Tinytest.add(
         process.env.METEOR_IGNORE = previousIgnore;
       }
     }
+  }
+);
+
+Tinytest.add(
+  "tools-core - parseMeteorAppPort - bare port",
+  function (test) {
+    test.equal(parseMeteorAppPort("3000"), "3000");
+    test.equal(parseMeteorAppPort(3000), "3000");
+  }
+);
+
+Tinytest.add(
+  "tools-core - parseMeteorAppPort - strips a host prefix",
+  function (test) {
+    // `--port` is documented as `[host:]port`, so these are all valid input.
+    test.equal(parseMeteorAppPort("localhost:3060"), "3060");
+    test.equal(parseMeteorAppPort("127.0.0.1:3060"), "3060");
+    test.equal(parseMeteorAppPort("[::]:3005"), "3005");
+    test.equal(parseMeteorAppPort("[::1]:3005"), "3005");
+    test.equal(parseMeteorAppPort("http://localhost:3060"), "3060");
+    test.equal(parseMeteorAppPort("  localhost:3060  "), "3060");
+  }
+);
+
+Tinytest.add(
+  "tools-core - parseMeteorAppPort - no port in the value",
+  function (test) {
+    test.equal(parseMeteorAppPort("localhost"), undefined);
+    test.equal(parseMeteorAppPort("0.0.0.0"), undefined);
+    test.equal(parseMeteorAppPort("[::1]"), undefined);
+    test.equal(parseMeteorAppPort(""), undefined);
+    test.equal(parseMeteorAppPort(undefined), undefined);
+    test.equal(parseMeteorAppPort(null), undefined);
+  }
+);
+
+Tinytest.add(
+  "tools-core - getMeteorAppPort - always returns digits only",
+  function (test) {
+    const port = getMeteorAppPort();
+
+    test.isTrue(
+      /^[0-9]+$/.test(port),
+      `Expected a digits-only port, got ${JSON.stringify(port)}`
+    );
   }
 );
