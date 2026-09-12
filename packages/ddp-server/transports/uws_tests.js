@@ -145,3 +145,82 @@ Tinytest.add(
     }
   }
 );
+
+// Why uws.js maps socket.close() onto socket.end().
+//
+// The socket contract in ./index.js requires close() to flush what send()
+// queued, because livedata_server ends DDP version negotiation by sending
+// 'failed' and closing in the same tick. uWS names its shutdowns the other
+// way round: close() is the forceful one and drops the queued frame, end()
+// is the graceful one and delivers it. This test pins that asymmetry down,
+// so that a change in uWebSockets.js is caught here rather than through a
+// silent negotiation failure.
+function sendThenShutdown(shutdown, onResult) {
+  const port = pickTestPort();
+  const host = '127.0.0.1';
+  const payload = JSON.stringify({ msg: 'failed', version: '1' });
+  const app = uws.App();
+
+  app.ws('/*', {
+    open(socket) {
+      socket.send(payload);
+      socket[shutdown]();
+    },
+  });
+
+  app.listen(host, port, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
+    if (!token) {
+      onResult(null);
+      return;
+    }
+
+    const received = [];
+    let finished = false;
+    const socket = new WebSocket('ws://' + host + ':' + port);
+
+    function finish() {
+      if (finished) return;
+      finished = true;
+      Meteor.clearTimeout(timer);
+      try { socket.close(); } catch (e) { /* ignore */ }
+      try { uws.us_listen_socket_close(token); } catch (e) { /* ignore */ }
+      onResult(received);
+    }
+
+    const timer = Meteor.setTimeout(finish, 3000);
+    socket.addEventListener('message', function (event) {
+      received.push(String(event.data));
+    });
+    // Assert a tick after the close, so a frame still in flight is counted.
+    socket.addEventListener('close', function () {
+      Meteor.setTimeout(finish, 50);
+    });
+    socket.addEventListener('error', function () { /* asserted through the frames */ });
+  });
+}
+
+Tinytest.addAsync(
+  'ddp-server/uws - end() delivers a frame sent in the same tick, close() drops it',
+  function (test, onComplete) {
+    sendThenShutdown('end', function (afterEnd) {
+      test.isNotNull(afterEnd, 'could not listen for the end() case');
+      test.equal(
+        afterEnd,
+        [JSON.stringify({ msg: 'failed', version: '1' })],
+        'end() must deliver the frame queued just before it'
+      );
+
+      sendThenShutdown('close', function (afterClose) {
+        test.isNotNull(afterClose, 'could not listen for the close() case');
+        test.equal(
+          afterClose.length,
+          0,
+          'close() is expected to drop the queued frame; if this now passes, ' +
+          'uWebSockets.js changed and the close()/end() adapter in uws.js ' +
+          'should be revisited'
+        );
+        onComplete();
+      });
+    });
+  }
+);

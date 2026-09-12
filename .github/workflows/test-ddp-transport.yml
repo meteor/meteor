@@ -57,3 +57,9 @@ jobs:
 
       - name: Run DDP server tests (${{ matrix.transport }})
         run: ./packages/test-in-console/run.sh "ddp-server"
+
+      # ddp-client holds the DDP version negotiation tests, which exercise the
+      # server's send-then-close path. Running them per transport is what keeps
+      # a transport from silently breaking negotiation.
+      - name: Run DDP client tests (${{ matrix.transport }})
+        run: ./packages/test-in-console/run.sh "ddp-client"
