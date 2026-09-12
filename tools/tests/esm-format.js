@@ -1,7 +1,9 @@
 var selftest = require('../tool-testing/selftest.js');
 var Sandbox = selftest.Sandbox;
+var Run = selftest.Run;
 
 import * as files from "../fs/files";
+import { randomPort } from "../utils/utils.js";
 
 // Tests for `meteor build --format=esm`
 
@@ -143,4 +145,29 @@ selftest.define("build --format=esm README mentions index.mjs", async function (
 
   selftest.expectTrue(readmeContent.includes('index.mjs'));
   selftest.expectTrue(readmeContent.includes('ESM'));
+});
+
+selftest.define("build --format=esm bundle boots and resolves Npm.require in a namespaced package", async function () {
+  const s = new Sandbox();
+  await s.init();
+
+  await s.createApp("myapp", "esm-format-npm-dep");
+  s.cd("myapp");
+
+  const build = s.run("build", "--format=esm", "--server-only", "--directory", "../esm-build");
+  build.waitSecs(180);
+  await build.expectExit(0);
+
+  // Boot the generated bundle with the same Node the tool runs on.
+  const port = randomPort();
+  const run = new Run(files.convertToStandardPath(process.execPath), {
+    args: [files.convertToOSPath(
+      files.pathJoin(s.home, "esm-build", "bundle", "index.mjs")
+    )],
+    env: { PORT: String(port), ROOT_URL: `http://localhost:${port}` },
+  });
+  run.waitSecs(60);
+  // Printed by test:npm-dep during its deferred initialization.
+  await run.match("NPM_DEP_OK --x");
+  await run.stop();
 });
