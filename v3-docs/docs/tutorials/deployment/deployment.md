@@ -201,6 +201,19 @@ MONGO_URL=mongodb://localhost:27017/myapp ROOT_URL=http://my-app.com PORT=3000 n
 - `PORT` is the port at which the application is running
 - `MONGO_URL` is a [Mongo connection string URI](https://docs.mongodb.com/manual/reference/connection-string/)
 
+::: warning Don't skip `npm install` on the target machine
+The `(cd programs/server && npm install)` step above is **not optional**. It runs the bundle's
+`npm-rebuild.js` script, which recompiles native (C/C++) addons for the operating system and
+CPU architecture of the machine that will *run* the app. Skipping it — or copying a
+`node_modules` directory built on a different OS/arch — leads to the "invalid ELF header" error
+:::
+
+#### Key rule
+
+Never copy a built `node_modules` (or an entire bundle's `programs/server/node_modules`) between
+machines with different operating systems or CPU architectures. Always let `npm install` rebuild
+native addons on the machine where the app will actually run.
+
 ## MongoDB options
 
 When you deploy your Meteor server, you need a `MONGO_URL` that points to your MongoDB database. You can either use a hosted MongoDB service or set up and run your own MongoDB server. We recommend using a hosted service, as the time saved and peace of mind are usually worth the cost.

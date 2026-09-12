@@ -1,0 +1,15 @@
+{
+  "name": "com.cordova.empty",
+  "version": "0.2.3",
+  "description": "Cordova Empty Plugin",
+  "cordova": {
+    "id": "com.cordova.empty",
+    "platforms": [
+      "android"
+    ]
+  },
+  "keywords": [
+    "ecosystem:cordova",
+    "cordova-android"
+  ]
+}

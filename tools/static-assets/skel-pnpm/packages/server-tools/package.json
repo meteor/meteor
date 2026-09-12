@@ -1,0 +1,10 @@
+{
+  "name": "@example/server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Server-only workspace helpers",
+  "type": "module",
+  "exports": {
+    ".": "./src/server.js"
+  }
+}

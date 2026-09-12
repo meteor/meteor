@@ -4,13 +4,19 @@ on:
   pull_request:
     paths:
       - "meteor"
+      - "package.json"
+      - "package-lock.json"
+      - "tools/cli/**"
       - "tools/e2e-tests/**"
       - "packages/rspack/**"
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
       - "packages/meteor-tool/**"
+      - "packages/test-in-browser/**"
       - "npm-packages/meteor-rspack/**"
       - "tools/isobuild/**"
+      - "scripts/dev-bundle-tool-package.js"
+      - "tools/fs/safe-watcher.ts"
       - "tools/static-assets/skel-**"
       - ".github/workflows/e2e-tests.yml"
 
@@ -20,21 +26,53 @@ concurrency:
 
 env:
   TOOL_NODE_FLAGS: "--max_old_space_size=12288"
+  # Generated apps run Playwright in child processes whose HOME can differ
+  # from the Actions shell. Keep all browser installs in one explicit path.
+  PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.cache/ms-playwright
   # Force "localhost" to resolve to 127.0.0.1; runner prefers ::1, which
   # breaks local proxies to IPv4-only dev servers (ECONNREFUSED).
   NODE_OPTIONS: "--max_old_space_size=16384 --dns-result-order=ipv4first"
+  # npm submits an audit request with every install. Meteor runs many installs
+  # when caches are cold, and this workflow does not consume their automatic
+  # audit reports. Avoid making E2E reliability depend on npm's audit endpoint.
+  npm_config_audit: "false"
   # Per-test Jest retry count. Consumed by tools/e2e-tests/jest.setup.js.
   METEOR_E2E_TEST_RETRIES: 1
 
-
 jobs:
+  groups:
+    name: E2E group audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.groups.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tools/e2e-tests/package-lock.json
+      - name: Install discovery dependencies
+        run: npm ci --prefix tools/e2e-tests
+      - name: Audit all E2E groups
+        run: npm run test:e2e:groups:audit
+      - name: Generate group matrix
+        id: groups
+        run: echo "matrix=$(node tools/e2e-tests/scripts/list-test-groups.js --json)" >> "$GITHUB_OUTPUT"
+
   test:
+    needs: groups
     name: ${{ matrix.category }}
     runs-on: oss-vm
     timeout-minutes: 60
     container:
       image: node:22-bookworm
+      # --init runs tini as PID 1 so orphaned processes get reaped. Without it
+      # the container's PID 1 is `tail -f /dev/null`, which never calls wait(),
+      # leaving every orphan (chrome, mongod, sh, ...) as a permanent zombie.
       options: >-
+        --init
         --cpus 6
         --memory 16g
         --security-opt seccomp=unconfined
@@ -43,29 +81,24 @@ jobs:
     strategy:
       fail-fast: false
       max-parallel: 4
-      matrix:
-        category:
-          - Angular
-          - Babel
-          - Blaze
-          - Coffeescript
-          - Full Skeleton
-          - Tailwind Skeleton
-          - Examples
-          - Monorepo
-          - Other
-          - React
-          - R.Router
-          - Solid
-          - Svelte
-          - Typescript
-          - Vue
+      matrix: ${{ fromJSON(needs.groups.outputs.matrix) }}
 
     steps:
       - name: Install Docker CLI
         run: |
+          # Install a current docker CLI from Docker's official repo. Debian
+          # bookworm's `docker.io` is 20.10 (API 1.41), which the self-hosted
+          # host daemon (Docker 29+, minimum API 1.44) rejects with
+          # "client version 1.41 is too old. Minimum supported API version is 1.44".
           apt-get update
-          apt-get install -y docker.io
+          apt-get install -y ca-certificates curl
+          install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
+          chmod a+r /etc/apt/keyrings/docker.asc
+          echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian bookworm stable" \
+            > /etc/apt/sources.list.d/docker.list
+          apt-get update
+          apt-get install -y docker-ce-cli
           docker version
           docker ps
           docker system df
@@ -79,7 +112,7 @@ jobs:
         with:
           path: |
             /root/.npm
-            /root/.cache/ms-playwright
+            ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
             dev_bundle
             .babel-cache
             .meteor
@@ -89,17 +122,12 @@ jobs:
           restore-keys: |
             e2e-${{ runner.os }}-
 
-      - name: Install Playwright browsers
-        if: steps.deps-cache.outputs.cache-hit != 'true'
-        run: npx playwright install chromium chromium-headless-shell
-
-      - name: Install Playwright system dependencies
-        run: npx playwright install-deps chromium
-
       - name: Install deps
         run: npm install
 
       - name: Install test deps
+        # This installs the browsers and system dependencies using the exact
+        # Playwright version declared by tools/e2e-tests/package.json.
         run: npm run install:e2e
 
       - name: Set NPM_LINK_RSPACK=false for release branches
@@ -117,8 +145,8 @@ jobs:
       - name: Run tests for ${{ matrix.category }}
         id: test-run
         continue-on-error: true
-        timeout-minutes: 15
-        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+        timeout-minutes: 20
+        run: METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"
 
       - name: Clean up before retry
         if: steps.test-run.outcome == 'failure'
@@ -137,7 +165,7 @@ jobs:
 
       - name: Retry failed tests for ${{ matrix.category }}
         if: steps.test-run.outcome == 'failure'
-        timeout-minutes: 20
+        timeout-minutes: 25
         run: |
           echo "::warning::First attempt failed, retrying..."
-          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e -- -t="${{ matrix.category }}"
+          METEOR_ALLOW_SUPERUSER=1 npm run test:e2e:group -- "${{ matrix.group }}"

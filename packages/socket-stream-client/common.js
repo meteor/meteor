@@ -69,6 +69,13 @@ export class StreamClientCommon {
   reconnect(options) {
     options = options || Object.create(null);
 
+    // A permanently shut down stream (disconnect({_permanent: true}))
+    // cannot be revived — _retryNow refuses to relaunch it. Bail before
+    // touching retry bookkeeping: the window 'online' handler calls this
+    // on 'failed' streams, and the retryCount decrement below would
+    // otherwise drift further negative on every online event.
+    if (this._forcedToDisconnect) return;
+
     if (options.url) {
       this._changeUrl(options.url);
     }

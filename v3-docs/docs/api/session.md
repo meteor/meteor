@@ -140,6 +140,22 @@ and the newly unselected items are re-rendered.
 If Session.get had been used instead of Session.equals, then
 when the selection changed, all the items would be re-rendered.
 
-For object and array session values, you cannot use `Session.equals`; instead,
-you need to use the `underscore` package and write
-`_.isEqual(Session.get(key), value)`.
+`Session.equals` only accepts scalar values (strings, numbers, booleans,
+`null`, `undefined`, `Date`, `Mongo.ObjectID`) — passing an object or array
+throws `"ReactiveDict.equals: value must be scalar"`. For object or array
+values, use [`EJSON.equals`](./EJSON.md), which performs a deep comparison on
+the application side:
+
+```js
+import { EJSON } from "meteor/ejson";
+
+Session.set("filter", { status: "open", tags: ["urgent"] });
+
+// `Session.equals` only accepts scalars — this would throw:
+// Session.equals("filter", { status: "open" });
+
+// Use `EJSON.equals` for a deep comparison of objects/arrays:
+EJSON.equals(Session.get("filter"), { status: "open", tags: ["urgent"] }); // true
+```
+
+`EJSON` is part of Meteor's core, so no extra package is needed.

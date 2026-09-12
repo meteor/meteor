@@ -31,6 +31,15 @@ import {
 } from '../cordova/index.js';
 import { updateMeteorToolSymlink } from "../packaging/updater.js";
 
+const {
+  isGitSourceLike,
+  parseGitUrl,
+  cloneRepo,
+  cloneSubdirectory,
+  validatePackageJs
+} = require('./git-clone.js');
+const inquirer = require('inquirer');
+
 // For each release (or package), we store a meta-record with its name,
 // maintainers, etc. This function takes in a name, figures out if
 // it is a release or a package, and fetches the correct record.
@@ -2178,13 +2187,204 @@ main.registerCommand({
 main.registerCommand({
   name: 'add',
   options: {
-    "allow-incompatible-update": { type: Boolean }
+    "allow-incompatible-update": { type: Boolean },
+    "search": { type: String },
+    "from": { type: String },
+    "from-branch": { type: String },
+    "from-dir": { type: String },
+    "to": { type: String },
+    "force": { type: Boolean },
   },
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.OnceAtStart({ ignoreErrors: true })
 }, async function (options) {
+  if (
+    !options.from &&
+    options.args &&
+    options.args.length === 1 &&
+    isGitSourceLike(options.args[0])
+  ) {
+    options.from = options.args[0];
+    options.args = [];
+  }
+
+  if (
+    options.search &&
+    (options.from || options['from-branch'] || options['from-dir'] ||
+      options.to || options.force)
+  ) {
+    Console.error(
+      'meteor add: cannot combine --search with Git clone options.'
+    );
+    return 1;
+  }
+
+  // --from flow: clone a package from a Git repository
+  if (options['from-branch'] && !options.from) {
+    Console.error('--from-branch requires --from to specify the source repository.');
+    return 1;
+  }
+  if (options['from-dir'] && !options.from) {
+    Console.error('--from-dir requires --from to specify the source repository.');
+    return 1;
+  }
+  if (options.force && !options.from) {
+    Console.error('--force requires --from to specify the source repository.');
+    return 1;
+  }
+  if (options.to && !options.from) {
+    Console.error('--to requires --from to specify the source repository.');
+    return 1;
+  }
+
+  if (options.from) {
+    if (options.args && options.args.length > 0) {
+      Console.error('Cannot specify package names when using --from.');
+      return 1;
+    }
+
+    // Smart-parse the URL to extract repo, branch, and dir when possible.
+    // Explicit --from-branch / --from-dir always take precedence.
+    const parsed = parseGitUrl(options.from);
+    const repoUrl = parsed.repoUrl;
+    const branch = options['from-branch'] || parsed.branch || null;
+    const fromDir = options['from-dir'] || parsed.dir || null;
+
+    // Determine destination path
+    let destPath;
+    if (options.to) {
+      destPath = files.pathResolve(options.appDir, options.to);
+    } else {
+      // Derive name from the URL or --from-dir
+      let dirName;
+      if (fromDir) {
+        dirName = fromDir.split('/').filter(Boolean).pop();
+      } else {
+        dirName = repoUrl.split('/').filter(Boolean).pop().replace(/\.git$/, '');
+      }
+      destPath = files.pathJoin(options.appDir, 'packages', dirName);
+    }
+
+    // Check if destination already exists
+    if (files.exists(destPath)) {
+      if (options.force) {
+        await files.rm_recursive_async(destPath);
+      } else {
+        const prompt = inquirer.createPromptModule();
+        const { overwrite } = await prompt([{
+          type: 'confirm',
+          name: 'overwrite',
+          message: `Directory '${files.convertToOSPath(destPath)}' already exists. Overwrite? (use --force to skip this prompt)`,
+          default: false,
+        }]);
+        if (!overwrite) {
+          return 0;
+        }
+        await files.rm_recursive_async(destPath);
+      }
+    }
+
+    let clonedPackageName;
+    try {
+      if (fromDir) {
+        await cloneSubdirectory(repoUrl, branch, fromDir, destPath);
+      } else {
+        await cloneRepo(repoUrl, destPath, { branch });
+      }
+
+      const { name } = validatePackageJs(destPath);
+      if (!name) {
+        throw new Error(
+          `Could not determine the package name from package.js in '${files.convertToOSPath(destPath)}'.`
+        );
+      }
+      clonedPackageName = name;
+
+      Console.info(`Package cloned to ${files.convertToOSPath(destPath)}`);
+    } catch (err) {
+      // Clean up on failure
+      if (files.exists(destPath)) {
+        await files.rm_recursive_async(destPath);
+      }
+      Console.error(err.message);
+      return 1;
+    }
+
+    // Only auto-register the package when the destination is somewhere the
+    // local catalog will scan (the project's packages/ dir or any path in
+    // METEOR_PACKAGE_DIRS / PACKAGE_DIRS). Otherwise the constraint solver
+    // would fail with a generic "no such package" error.
+    const searchDirs = [files.pathJoin(options.appDir, 'packages')];
+    const envDirs = [
+      ...((process.env.METEOR_PACKAGE_DIRS || '')
+        .split(files.pathOsDelimiter).filter(Boolean)),
+      ...((process.env.PACKAGE_DIRS || '')
+        .split(':').filter(Boolean)),
+    ];
+    for (const dir of envDirs) {
+      searchDirs.push(files.pathResolve(dir));
+    }
+    const isDiscoverable = searchDirs.some(root => {
+      const rel = files.pathRelative(root, destPath);
+      return rel && !rel.startsWith('..' + files.pathSep) && rel !== '..';
+    });
+
+    if (!isDiscoverable) {
+      Console.warn(
+        `'${files.convertToOSPath(destPath)}' is outside the project's packages/ ` +
+        `directory and not covered by METEOR_PACKAGE_DIRS, so it cannot be ` +
+        `registered automatically.`
+      );
+      Console.info(
+        `Move it under packages/ or add its parent to METEOR_PACKAGE_DIRS, ` +
+        `then run: meteor add ${clonedPackageName}`
+      );
+      return 0;
+    }
+
+    // Fall through to the standard add flow so the cloned package is
+    // registered in .meteor/packages and resolved by the constraint solver.
+    options.args = [clonedPackageName];
+  }
+
+  if (!options.from && (options.args.length === 0 || options.search)) {
+    if (options.args.length > 0 && options.search) {
+      Console.error(
+        "meteor add: cannot combine --search with positional package names."
+      );
+      return 1;
+    }
+    if (!Console.isInteractive() || !process.stdin.isTTY) {
+      Console.error(
+        options.search
+          ? "meteor add --search requires an interactive terminal."
+          : "meteor add requires at least one package name in non-interactive mode."
+      );
+      return 1;
+    }
+    var search = require('./commands-packages-search.js');
+    var picked;
+    try {
+      picked = await search.runInteractivePackageSearch({
+        initialQuery: options.search,
+        installed: search.readInstalledPackageNames(options.appDir)
+      });
+    } catch (err) {
+      if (err instanceof search.MeteorSearchAbortedError) {
+        return 1;
+      }
+      Console.error("Package search failed: " + (err && err.message ? err.message : err));
+      return 1;
+    }
+    if (!picked || picked.length === 0) {
+      Console.info("No packages selected.");
+      return 0;
+    }
+    options.args = picked;
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
@@ -2386,13 +2586,59 @@ main.registerCommand({
 main.registerCommand({
   name: 'remove',
   options: {
-    "allow-incompatible-update": { type: Boolean }
+    "allow-incompatible-update": { type: Boolean },
+    "search": { type: String }
   },
-  minArgs: 1,
+  minArgs: 0,
   maxArgs: Infinity,
   requiresApp: true,
   catalogRefresh: new catalog.Refresh.Never()
 }, async function (options) {
+  if (options.args.length === 0 || options.search) {
+    if (options.args.length > 0 && options.search) {
+      Console.error(
+        "meteor remove: cannot combine --search with positional package names."
+      );
+      return 1;
+    }
+    if (!Console.isInteractive() || !process.stdin.isTTY) {
+      Console.error(
+        options.search
+          ? "meteor remove --search requires an interactive terminal."
+          : "meteor remove requires at least one package name in non-interactive mode."
+      );
+      return 1;
+    }
+    var search = require('./commands-packages-search.js');
+    var removeSearch = require('./commands-packages-remove-search.js');
+    var installed = search.readInstalledPackageNames(options.appDir);
+    if (installed.size === 0) {
+      Console.info("No packages installed.");
+      return 0;
+    }
+    var picked;
+    try {
+      picked = await removeSearch.runInteractiveRemoveSelection({
+        installed: installed,
+        initialQuery: options.search
+      });
+    } catch (err) {
+      if (err instanceof search.MeteorSearchAbortedError) {
+        return 1;
+      }
+      Console.error(
+        "Package selection failed: "
+        + (err && err.message ? err.message : err)
+      );
+      return 1;
+    }
+    if (!picked || picked.length === 0) {
+      Console.info("No packages selected.");
+      return 0;
+    }
+    options.args = picked;
+  }
+
   var projectContext = new projectContextModule.ProjectContext({
     projectDir: options.appDir,
     allowIncompatibleUpdate: options["allow-incompatible-update"]
