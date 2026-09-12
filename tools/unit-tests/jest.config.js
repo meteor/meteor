@@ -24,8 +24,10 @@ module.exports = {
     "<rootDir>/tools/static-assets/",
     // meteor-rspack ships plain CommonJS helpers that are unit-tested here, so
     // it stays visible to the module loader; the rest of npm-packages/ does not.
-    // (No trailing slash: the crawler also tests the bare directory path.)
-    "<rootDir>/npm-packages/(?!meteor-rspack)",
+    // The `/|$` alternation keeps the boundary at the directory: without the
+    // `$` the crawler prunes the bare directory path and finds no tests, and
+    // without the `/` a sibling like meteor-rspack-tools would escape too.
+    "<rootDir>/npm-packages/(?!meteor-rspack(?:/|$))",
     "<rootDir>/scripts/admin/",
     "<rootDir>/docs/",
     "<rootDir>/packages/non-core/",
