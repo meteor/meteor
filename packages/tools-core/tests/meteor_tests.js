@@ -1,4 +1,5 @@
 import {
+  captureUserMeteorIgnore,
   getUserMeteorIgnore,
   inheritMeteorToolNodeFlags,
   setMeteorAppIgnore,
@@ -301,6 +302,34 @@ Tinytest.add(
         getUserMeteorIgnore(),
         userIgnore,
         "Should keep reporting the patterns the user set, not the ones meteor-tool appends"
+      );
+    } finally {
+      if (previousIgnore === undefined) {
+        delete process.env.METEOR_IGNORE;
+      } else {
+        process.env.METEOR_IGNORE = previousIgnore;
+      }
+    }
+  }
+);
+
+Tinytest.add(
+  "tools-core - captureUserMeteorIgnore - a later evaluation does not overwrite the first capture",
+  function (test) {
+    const previousIgnore = process.env.METEOR_IGNORE;
+    const userIgnore = getUserMeteorIgnore();
+
+    try {
+      // This file is a build-plugin source, so it is evaluated once per Isopack
+      // instance rather than once per process. By the time a later instance
+      // runs, setMeteorAppIgnore has already grown METEOR_IGNORE.
+      process.env.METEOR_IGNORE = "client/*.css !client/meteor.css /_build-daemon";
+      captureUserMeteorIgnore();
+
+      test.equal(
+        getUserMeteorIgnore(),
+        userIgnore,
+        "Should keep the value captured by the first evaluation in this process"
       );
     } finally {
       if (previousIgnore === undefined) {
