@@ -1,7 +1,7 @@
 import { Mongo } from 'meteor/mongo';
 import { URL } from 'meteor/url';
 import { Meteor } from 'meteor/meteor';
-import { Accounts } from 'meteor/accounts-base';
+import { Accounts, AccountsServer } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
 Meteor.methods({
@@ -831,6 +831,130 @@ if (Meteor.isServer) {
         // Restore original urls
         Accounts.urls = originalUrls;
       }
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - ci-collation - rejects non-object values',
+    async test => {
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': 'en' }),
+        /must be a plain object/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': 42 }),
+        /must be a plain object/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': null }),
+        /must be a plain object/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': [] }),
+        /must be a plain object/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': true }),
+        /must be a plain object/
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - ci-collation - rejects unknown keys',
+    async test => {
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { locale: 'en', bogus: true } }),
+        /Invalid ci-collation key\(s\): bogus/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { foo: 1, bar: 2 } }),
+        /Invalid ci-collation key\(s\): foo, bar/
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - ci-collation - validates locale type',
+    async test => {
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { locale: 123 } }),
+        /locale must be a string/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { locale: true } }),
+        /locale must be a string/
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - ci-collation - validates strength range',
+    async test => {
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { strength: 0 } }),
+        /strength must be an integer 1-5/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { strength: 6 } }),
+        /strength must be an integer 1-5/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { strength: 2.5 } }),
+        /strength must be an integer 1-5/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { strength: '2' } }),
+        /strength must be an integer 1-5/
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - ci-collation - validates boolean fields',
+    async test => {
+      const booleanFields = ['caseLevel', 'numericOrdering', 'backwards', 'normalization'];
+      for (const field of booleanFields) {
+        test.throws(
+          () => new AccountsServer(Meteor.server, { 'ci-collation': { [field]: 'yes' } }),
+          new RegExp(`${field} must be a boolean`)
+        );
+        test.throws(
+          () => new AccountsServer(Meteor.server, { 'ci-collation': { [field]: 1 } }),
+          new RegExp(`${field} must be a boolean`)
+        );
+      }
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - ci-collation - validates enum fields',
+    async test => {
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { caseFirst: 'first' } }),
+        /caseFirst must be "upper", "lower", or "off"/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { alternate: 'ignore' } }),
+        /alternate must be "non-ignorable" or "shifted"/
+      );
+      test.throws(
+        () => new AccountsServer(Meteor.server, { 'ci-collation': { maxVariable: 'all' } }),
+        /maxVariable must be "punct" or "space"/
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - ci-collation - default settings are applied',
+    async test => {
+      test.equal(
+        typeof Accounts._ciCollation,
+        'object',
+        '_ciCollation should be set'
+      );
+      test.equal(Accounts._ciCollation.locale, 'en', 'default locale');
+      test.equal(Accounts._ciCollation.strength, 2, 'default strength');
     }
   );
 }
