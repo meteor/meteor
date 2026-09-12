@@ -64,6 +64,10 @@ function createFixture(t) {
     '  await globalThis.aDeferredPromise;',
     '  return await globalThis.callFromB();',
     '};',
+    'globalThis.invokeBFromAWrappedContext = (fn) => {',
+    '  const wrapped = globalThis.__meteorWrapPackageModule("pkg-a", { runInA: (cb) => cb() });',
+    '  return wrapped.runInA(fn);',
+    '};',
   ].join('\n'));
 
   // Package B exposes methods to test its own assets and Npm dependencies
@@ -119,6 +123,9 @@ const directB = await globalThis.callFromB();
 globalThis.resolveA();
 const fromA = await globalThis.invokeBFromAAsync();
 
+// 2b. Call B from inside active async context originated in A (e.g. webapp HTTP handler calling oauth)
+const fromAWrapped = await globalThis.invokeBFromAWrappedContext(() => globalThis.callFromB());
+
 // 3. Foreign asset request from B must throw
 let missingAssetRejected = false;
 try {
@@ -141,6 +148,7 @@ const fromC = await globalThis.callFromC();
 const results = {
   directB,
   fromA,
+  fromAWrapped,
   missingAssetRejected,
   missingNpmRejected,
   fromC,
@@ -170,6 +178,8 @@ test('esm-loader enforces strict package isolation for assets and npm under Node
   assert.equal(data.directB.npm, 'npm-from-b');
   assert.equal(data.fromA.asset, 'asset-from-b');
   assert.equal(data.fromA.npm, 'npm-from-b');
+  assert.equal(data.fromAWrapped.asset, 'asset-from-b');
+  assert.equal(data.fromAWrapped.npm, 'npm-from-b');
   assert.equal(data.missingAssetRejected, true);
   assert.equal(data.missingNpmRejected, true);
   assert.equal(data.fromC.asset, 'c-content');
@@ -206,6 +216,8 @@ test('esm-loader enforces strict package isolation for assets and npm under Bun'
   assert.equal(data.directB.npm, 'npm-from-b');
   assert.equal(data.fromA.asset, 'asset-from-b');
   assert.equal(data.fromA.npm, 'npm-from-b');
+  assert.equal(data.fromAWrapped.asset, 'asset-from-b');
+  assert.equal(data.fromAWrapped.npm, 'npm-from-b');
   assert.equal(data.missingAssetRejected, true);
   assert.equal(data.missingNpmRejected, true);
   assert.equal(data.fromC.asset, 'c-content');

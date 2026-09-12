@@ -96,9 +96,6 @@ function createResolver(serverDir, programJson) {
   }
 
   function getCallerPackagePath() {
-    const store = asyncPackageContext.getStore();
-    if (store && store.packagePath) return store.packagePath;
-
     const stack = new Error().stack || '';
     for (const rawLine of stack.split('\n')) {
       if (rawLine.includes('esm-loader.mjs') || rawLine.includes('core-runtime.js') || rawLine.includes('node:') || rawLine.includes('native:')) {
@@ -112,6 +109,10 @@ function createResolver(serverDir, programJson) {
         }
       }
     }
+
+    const store = asyncPackageContext.getStore();
+    if (store && store.packagePath) return store.packagePath;
+
     return currentPackagePath;
   }
 
