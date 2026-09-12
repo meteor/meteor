@@ -100,6 +100,9 @@ function compileWithSwc(source, swcOptions = {}, { features }) {
       dynamicImport: true,
       ...(features.topLevelAwait && { topLevelAwait: true }),
       ...(features.compileForShell && { moduleAlias: 'module' }),
+      // Target check, not a version check: nodeMajorVersion is only set for
+      // Node targets and modernBrowsers only for modern web targets, so
+      // legacy web builds keep the conservative defaults above.
       ...((features.modernBrowsers || features.nodeMajorVersion) && {
         avoidModernSyntax: false,
         generateLetDeclarations: true,
