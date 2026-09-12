@@ -4,6 +4,7 @@
 /// to ensure we get consistent versions of npm sub-dependencies.
 
 var assert = require('assert');
+var { isDeepStrictEqual } = require('util');
 var cleanup = require('../tool-env/cleanup.js');
 var fs = require('fs');
 var files = require('../fs/files');
@@ -32,7 +33,8 @@ var meteorNpm = exports;
 
 // change this will recreate the npm-shrinkwrap.json file
 // and install all dependencies from scratch
-const LOCK_FILE_VERSION = 4;
+const LOCK_FILE_VERSION = 5;
+const METEOR_NPM_DEPENDENCIES = "meteorNpmDependencies";
 
 // Expose the version of npm in use from the dev bundle.
 meteorNpm.npmVersion = "10.1.0";
@@ -660,10 +662,14 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   var shrinkwrappedDependenciesTree =
     getShrinkwrappedDependenciesTree(packageNpmDir);
 
-  const npmTree = { dependencies: {} };
-  Object.entries(npmDependencies).forEach(([name, version]) => {
-    npmTree.dependencies[name] = { version };
-  });
+  const npmTree = dependencyTreeFromDependencies(npmDependencies);
+  const cachedNpmDependencies =
+    shrinkwrappedDependenciesTree[METEOR_NPM_DEPENDENCIES];
+  const cachedNpmTree = cachedNpmDependencies &&
+    ! Array.isArray(cachedNpmDependencies) &&
+    typeof cachedNpmDependencies === "object"
+      ? dependencyTreeFromDependencies(cachedNpmDependencies)
+      : null;
 
   let minInstalledTree;
   try {
@@ -677,9 +683,18 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   }
   const minShrinkwrapTree =
     minimizeDependencyTree(shrinkwrappedDependenciesTree);
+  const installedVersionTree =
+    minimizeDependencyTree(installedDependenciesTree, true);
+  const shrinkwrapVersionTree =
+    minimizeDependencyTree(shrinkwrappedDependenciesTree, true);
 
-  if (isSubtreeOf(npmTree, minInstalledTree) &&
-      isSubtreeOf(minShrinkwrapTree, minInstalledTree)) {
+  if (npmDependencyCacheIsCurrent(
+        npmTree,
+        minInstalledTree,
+        minShrinkwrapTree,
+        installedVersionTree,
+        cachedNpmTree,
+      )) {
     return;
   }
 
@@ -695,7 +710,12 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
     // If there are no npmDependencies, make sure nothing is installed.
     preservedShrinkwrap = { dependencies: {} };
 
-  } else if (isSubtreeOf(npmTree, minShrinkwrapTree)) {
+  } else if (canReuseNpmShrinkwrap(
+    npmTree,
+    minShrinkwrapTree,
+    shrinkwrapVersionTree,
+    cachedNpmTree,
+  )) {
     // If the top-level npm dependencies are already encompassed by the
     // npm-shrinkwrap.json file, then reuse that file.
     preservedShrinkwrap = shrinkwrappedDependenciesTree;
@@ -724,29 +744,41 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
       'npm-shrinkwrap.json'
     );
 
-    // Starting from Npm 8, it's expected to have
-    // node_modules/<package> for the package name
-    const mappedDependencies = Object.entries(
-      preservedShrinkwrap.dependencies
-    ).reduce((acc, [name, info]) => {
-      return {
+    // Legacy shrinkwraps lack the `requires` graph; keep their old behaviour.
+    const topLevelEntries = Object.values(preservedShrinkwrap.dependencies);
+    const hasRequiresGraph = topLevelEntries.some(info => info && info.requires);
+
+    let tempLockfileJson;
+    if (hasRequiresGraph) {
+      const packages = {
+        "": { dependencies: npmDependencies },
+      };
+      flattenDepsToPackages(preservedShrinkwrap.dependencies, packages);
+      tempLockfileJson = JSON.stringify(
+        {
+          lockfileVersion: LOCK_FILE_VERSION,
+          packages,
+        },
+        null,
+        2
+      );
+    } else {
+      const mappedDependencies = Object.entries(
+        preservedShrinkwrap.dependencies
+      ).reduce((acc, [name, info]) => ({
         ...acc,
         [`node_modules/${name}`]: info,
-      };
-    }, {});
-
-    // There are some unchanged packages here. Install from shrinkwrap.
-    files.writeFile(
-      newShrinkwrapFile,
-      JSON.stringify(
+      }), {});
+      tempLockfileJson = JSON.stringify(
         {
           ...preservedShrinkwrap,
           dependencies: mappedDependencies,
         },
         null,
         2
-      )
-    );
+      );
+    }
+    files.writeFile(newShrinkwrapFile, tempLockfileJson);
 
     const newPackageJsonFile = files.pathJoin(
       newPackageNpmDir,
@@ -772,6 +804,120 @@ var updateExistingNpmDirectory = async function (packageName, newPackageNpmDir,
   await completeNpmDirectory(packageName, newPackageNpmDir, packageNpmDir,
                        npmDependencies);
 };
+
+export function declaredSpecMatchesInstalledVersion(declared, installed) {
+  if (typeof declared !== "string" || typeof installed !== "string") {
+    return false;
+  }
+
+  const parsedInstalledVersion = parse(installed);
+  if (! parsedInstalledVersion || parsedInstalledVersion.version !== installed) {
+    return false;
+  }
+
+  try {
+    const url = new URL(declared);
+    return url.protocol === "git+https:" &&
+      Boolean(url.hostname) &&
+      url.hash === `#v${installed}`;
+  } catch {
+    return false;
+  }
+}
+
+function gitRepositoryIdentity(spec) {
+  try {
+    const url = new URL(spec);
+    if (! ["git+https:", "git+ssh:"].includes(url.protocol) ||
+        ! url.hostname) {
+      return null;
+    }
+
+    let pathname = url.pathname;
+    while (pathname.endsWith("/")) {
+      pathname = pathname.slice(0, -1);
+    }
+    if (pathname.endsWith(".git")) {
+      pathname = pathname.slice(0, -4);
+    }
+    if (! pathname || pathname === "/") {
+      return null;
+    }
+
+    return `${url.hostname.toLowerCase()}:${url.port}:${pathname}${url.search}`;
+  } catch {
+    return null;
+  }
+}
+
+function declaredDependenciesMatchVersionAndSourceTrees(
+  declaredTree,
+  versionTree,
+  sourceTree,
+) {
+  if (declaredTree === sourceTree) {
+    return true;
+  }
+
+  if (declaredTree && typeof declaredTree === 'object') {
+    return versionTree && typeof versionTree === 'object' &&
+      sourceTree && typeof sourceTree === 'object' &&
+      Object.entries(declaredTree).every(([key, value]) =>
+        declaredDependenciesMatchVersionAndSourceTrees(
+          value,
+          versionTree[key],
+          sourceTree[key],
+        ));
+  }
+
+  const declaredRepository = gitRepositoryIdentity(declaredTree);
+  return declaredSpecMatchesInstalledVersion(declaredTree, versionTree) &&
+    declaredRepository !== null &&
+    declaredRepository === gitRepositoryIdentity(sourceTree);
+}
+
+export function npmDependencyCacheIsCurrent(
+  npmTree,
+  minInstalledTree,
+  minShrinkwrapTree,
+  installedVersionTree = minInstalledTree,
+  cachedNpmTree = null,
+) {
+  const declaredDependenciesAreCurrent =
+    isSubtreeOf(npmTree, minInstalledTree) ||
+    (isDeepStrictEqual(npmTree, cachedNpmTree) &&
+      declaredDependenciesMatchVersionAndSourceTrees(
+        npmTree,
+        installedVersionTree,
+        minInstalledTree,
+      ));
+
+  return declaredDependenciesAreCurrent &&
+    isSubtreeOf(minShrinkwrapTree, minInstalledTree);
+}
+
+export function canReuseNpmShrinkwrap(
+  npmTree,
+  minShrinkwrapTree,
+  shrinkwrapVersionTree = minShrinkwrapTree,
+  cachedNpmTree = null,
+) {
+  return isSubtreeOf(npmTree, minShrinkwrapTree) ||
+    (isDeepStrictEqual(npmTree, cachedNpmTree) &&
+      declaredDependenciesMatchVersionAndSourceTrees(
+        npmTree,
+        shrinkwrapVersionTree,
+        minShrinkwrapTree,
+      ));
+}
+
+function dependencyTreeFromDependencies(dependencies) {
+  const tree = { dependencies: {} };
+  Object.entries(dependencies).forEach(([name, version]) => {
+    tree.dependencies[name] = { version };
+  });
+  return tree;
+}
 
 function isSubtreeOf(subsetTree, supersetTree, predicate) {
   if (subsetTree === supersetTree) {
@@ -819,10 +965,7 @@ async function installNpmDependencies(dependencies, dir) {
   );
 
   try {
-    for (const name of Object.keys(dependencies)) {
-      const version = dependencies[name];
-      await installNpmModule(name, version, dir);
-    }
+    await batchInstallNpmModules(dependencies, dir);
   } finally {
     if (! packageJsonExisted) {
       files.unlink(packageJsonPath);
@@ -838,7 +981,7 @@ async function completeNpmDirectory(
   npmDependencies,
 ) {
   // Create a shrinkwrap file.
-  shrinkwrap(newPackageNpmDir);
+  shrinkwrap(newPackageNpmDir, npmDependencies);
 
   // And stow a copy of npm-shrinkwrap too.
   files.copyFile(
@@ -867,6 +1010,47 @@ var createReadme = function (newPackageNpmDir) {
 "creates; if you are using git, the .gitignore file tells git to ignore it.\n"
   );
 };
+
+const batchInstallNpmModules = meteorNpm.batchInstallNpmModules =
+async function batchInstallNpmModules(dependencies, dir) {
+  const entries = Object.entries(dependencies);
+  if (entries.length === 0) return;
+
+  const args = ["install", ...entries.map(([name, version]) =>
+    utils.isNpmUrl(version) ? version : `${name}@${version}`)];
+  const result = await runNpmCommand(args, dir);
+
+  if (! result.success) {
+    for (const [name, version] of entries) {
+      await installNpmModule(name, version, dir);
+    }
+    return;
+  }
+
+  for (const [name] of entries) {
+    const pkgDir = files.pathJoin(dir, "node_modules", name);
+    if (! isPortable(pkgDir)) {
+      recordLastRebuildVersions(pkgDir);
+    }
+  }
+  checkNodeModulesForColons(dir);
+};
+
+function checkNodeModulesForColons(dir) {
+  if (process.platform === "win32") return;
+  const paths = files.findPathsWithRegex(".", new RegExp(":"), {
+    cwd: files.pathJoin(dir, "node_modules"),
+  });
+  if (! paths.length) return;
+  const firstTen = paths.slice(0, 10);
+  if (paths.length > 10) {
+    firstTen.push(`... ${paths.length - 10} paths omitted.`);
+  }
+  buildmessage.error(
+    "Some filenames in installed npm modules have colons, ':', which won't work on Windows:\n" +
+    firstTen.join("\n"));
+  throw new NpmFailure();
+}
 
 var createNodeVersion = function (newPackageNpmDir) {
   files.writeFile(
@@ -1008,6 +1192,9 @@ function getInstalledDependenciesTreeFromPackageLock({
       version: pkg.version,
       resolved: pkg.resolved,
       integrity: pkg.integrity,
+      // `requires` keeps the package.json deps ranges so a later rebuild can
+      // reconstruct the dep graph and pin transitives.
+      ...(pkg.dependencies ? { requires: { ...pkg.dependencies } } : {}),
       ...(hasDependencies ? { dependencies: deps } : {}),
     };
   });
@@ -1093,6 +1280,37 @@ function getShrinkwrappedDependenciesTree(dir) {
   shrinkwrap.lockfileVersion = LOCK_FILE_VERSION;
   return shrinkwrap;
 };
+
+function flattenDepsToPackages(deps, packages, parentPath = "") {
+  if (!deps) return;
+  for (const [name, info] of Object.entries(deps)) {
+    if (!info) continue;
+    const entry = {};
+    if (info.version != null) entry.version = info.version;
+    if (info.resolved != null) entry.resolved = info.resolved;
+    if (info.integrity != null) entry.integrity = info.integrity;
+    // Set per-entry `dependencies` so npm walks the graph. Prefer `requires`;
+    // fall back to ranges derived from the nested subtree for legacy entries.
+    if (info.requires) {
+      entry.dependencies = { ...info.requires };
+    } else if (info.dependencies) {
+      const childDeps = {};
+      for (const [childName, childInfo] of Object.entries(info.dependencies)) {
+        if (childInfo && childInfo.version != null) {
+          childDeps[childName] = childInfo.version;
+        }
+      }
+      if (Object.keys(childDeps).length > 0) {
+        entry.dependencies = childDeps;
+      }
+    }
+    const packagePath = parentPath
+      ? `${parentPath}/node_modules/${name}`
+      : `node_modules/${name}`;
+    packages[packagePath] = entry;
+    flattenDepsToPackages(info.dependencies, packages, packagePath);
+  }
+}
 
 // Maps a "dependency object" (a thing you find in `npm ls --json` or
 // npm-shrinkwrap.json with keys like "version" and "from") to the
@@ -1221,8 +1439,9 @@ var installFromShrinkwrap = async function (dir) {
 };
 
 // `npm shrinkwrap`
-function shrinkwrap(dir) {
+function shrinkwrap(dir, npmDependencies) {
   const tree = getInstalledDependenciesTree(dir);
+  tree[METEOR_NPM_DEPENDENCIES] = npmDependencies;
 
   files.writeFile(
     files.pathJoin(dir, "npm-shrinkwrap.json"),
@@ -1243,16 +1462,14 @@ function shrinkwrap(dir) {
 // Reduces a dependency tree (as read from a just-made npm-shrinkwrap.json or
 // from npm ls --json) to just the versions we want. Returns an object that does
 // not share state with its input
-function minimizeDependencyTree(tree) {
+function minimizeDependencyTree(tree, preferPackageVersion = false) {
   function minimizeModule(module) {
-    var version;
-    if (module.resolved && ! isUrlFromRegistry(module.resolved)) {
-      version = module.resolved;
-    } else if (utils.isNpmUrl(module.from)) {
-      version = module.from;
-    } else {
-      version = module.version;
-    }
+    const resolved = module.resolved &&
+      ! isUrlFromRegistry(module.resolved) && module.resolved;
+    const from = utils.isNpmUrl(module.from) && module.from;
+    var version = preferPackageVersion
+      ? module.version || resolved || from
+      : resolved || from || module.version;
     var minimized = {version: version};
 
     if (module.dependencies) {
@@ -1275,11 +1492,32 @@ function minimizeDependencyTree(tree) {
 }
 
 function isUrlFromRegistry(url) {
-  if (url.match(/^https?:\/\/registry.npmjs.org\//)) {
-    return true;
+  const configuredRegistry = process.env.NPM_CONFIG_REGISTRY;
+  if (configuredRegistry) {
+    return registryContainsUrl(configuredRegistry, url);
   }
-  const NCR = process.env.NPM_CONFIG_REGISTRY;
-  return NCR && url.startsWith(NCR);
+
+  return registryContainsUrl("https://registry.npmjs.org/", url) ||
+    registryContainsUrl("http://registry.npmjs.org/", url);
+}
+
+function registryContainsUrl(registry, url) {
+  try {
+    const registryUrl = new URL(registry);
+    const resolvedUrl = new URL(url);
+    if (! ["http:", "https:"].includes(registryUrl.protocol) ||
+        ! ["http:", "https:"].includes(resolvedUrl.protocol) ||
+        registryUrl.origin !== resolvedUrl.origin) {
+      return false;
+    }
+
+    const registryPath = registryUrl.pathname.replace(/\/+$/, "");
+    return ! registryPath ||
+      resolvedUrl.pathname === registryPath ||
+      resolvedUrl.pathname.startsWith(`${registryPath}/`);
+  } catch {
+    return false;
+  }
 }
 
 var logUpdateDependencies = function (packageName, npmDependencies) {

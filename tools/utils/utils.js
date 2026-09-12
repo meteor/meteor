@@ -79,9 +79,18 @@ exports.parseUrl = function (str, defaults) {
 // 'options' is an object with 'hostname', 'port', and 'protocol' keys, such as
 // the return value of parseUrl.
 exports.formatUrl = function (options) {
-  const u = new URL('http://placeholder');
-  u.protocol = options.protocol + ':';
-  u.hostname = options.hostname;
+  let host = options.hostname || '';
+  // parseUrl returns bare IPv6 literals (e.g. "::" for "[::]"), but the WHATWG
+  // URL parser only accepts them bracketed. There is no builtin that escapes a
+  // bare IPv6 host for us: the hostname/host setters and the URL constructor all
+  // silently reject an unbracketed IPv6 address, so we bracket it by hand.
+  if (host.includes(':') && !host.startsWith('[')) {
+    host = `[${host}]`;
+  }
+  // Build straight from the parts: the URL constructor throws on an invalid or
+  // empty host, so a bad hostname surfaces as an error instead of silently
+  // producing a broken ROOT_URL.
+  const u = new URL(`${options.protocol}://${host}`);
   if (options.port) u.port = options.port;
   u.pathname = options.pathname || '/';
   return u.toString();
