@@ -231,11 +231,15 @@ describe("native node_modules", () => {
     require("readline");
     require("repl");
     require("stream");
-    require("_stream_duplex");
-    require("_stream_passthrough");
-    require("_stream_readable");
-    require("_stream_transform");
-    require("_stream_writable");
+    // Node 26 removed the legacy private _stream_* entry points. Keep testing
+    // their browser shims and older supported Node releases.
+    if (Meteor.isClient || parseInt(process.versions.node, 10) < 26) {
+      require("_stream_duplex");
+      require("_stream_passthrough");
+      require("_stream_readable");
+      require("_stream_transform");
+      require("_stream_writable");
+    }
     require("string_decoder");
     require("sys");
     require("timers");

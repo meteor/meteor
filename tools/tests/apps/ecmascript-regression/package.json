@@ -9,9 +9,17 @@
   "dependencies": {
     "@babel/runtime": "^7.23.5",
     "meteor-node-stubs": "^1.2.12",
-    "puppeteer": "^10.4.0",
+    "puppeteer": "25.9.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2"
+  },
+  "overrides": {
+    "@puppeteer/browsers": {
+      "yargs": "17.7.2"
+    }
+  },
+  "allowScripts": {
+    "puppeteer@25.9.0": true
   },
   "meteor": {
     "mainModule": {
