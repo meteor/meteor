@@ -114,7 +114,8 @@ test('Parent to Node child IPC exchanges JSON messages and terminates cleanly', 
   assert.equal(result.receivedPong.runtime, 'node');
   assert.equal(result.receivedPong.received.testId, 'core-ipc-42');
   assert.equal(result.receivedPong.received.value, 'hello-ipc');
-  assert.ok(result.code === 0 || result.signal === 'SIGTERM');
+  assert.equal(result.code, 0, 'child must exit cleanly with code 0');
+  assert.ok(!result.signal, 'child must not be terminated by a signal');
 });
 
 test('Parent to Bun child IPC exchanges JSON messages via serialization:json and terminates cleanly', async (t) => {
@@ -131,5 +132,6 @@ test('Parent to Bun child IPC exchanges JSON messages via serialization:json and
   assert.equal(result.receivedPong.runtime, 'bun');
   assert.equal(result.receivedPong.received.testId, 'core-ipc-42');
   assert.equal(result.receivedPong.received.value, 'hello-ipc');
-  assert.ok(result.code === 0 || result.signal === 'SIGTERM');
+  assert.equal(result.code, 0, 'child must exit cleanly with code 0');
+  assert.ok(!result.signal, 'child must not be terminated by a signal');
 });

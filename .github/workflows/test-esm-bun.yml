@@ -14,6 +14,9 @@ on:
       - 'tools/tests/apps/esm-bun-smoke/**'
       - 'scripts/ci/esm-bun-smoke.mjs'
       - 'scripts/ci/__tests__/**'
+      - 'packages/ddp-server/transports/bun.js'
+      - 'tools/isobuild/linker.js'
+      - 'tools/tests/esm-format.js'
       - '.github/workflows/test-esm-bun.yml'
 
 jobs:
