@@ -360,6 +360,9 @@ Object.assign(AppProcess.prototype, {
           const full = path.join(p, 'bun' + ext);
           try {
             if (fs.existsSync(full) && fs.statSync(full).isFile()) {
+              if (process.platform !== 'win32') {
+                fs.accessSync(full, fs.constants.X_OK);
+              }
               execPath = full;
               break;
             }

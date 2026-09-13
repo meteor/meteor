@@ -111,24 +111,34 @@ function getPathPrefix() {
 }
 
 function isWebSocketPath(pathname) {
+  // Exact unprefixed alias always accepted (compatibility).
+  if (pathname === '/websocket' || pathname === '/websocket/') return true;
   const prefix = getPathPrefix();
   let p = pathname;
-  if (prefix && (p === prefix || p.startsWith(prefix + '/'))) {
-    p = p.slice(prefix.length) || '/';
+  if (prefix) {
+    // With a prefix configured, only paths under the prefix are DDP endpoints.
+    if (p === prefix || p.startsWith(prefix + '/')) {
+      p = p.slice(prefix.length) || '/';
+    } else {
+      return false;
+    }
   }
   return p === '/websocket' || p === '/websocket/' ||
     (p.includes('/sockjs/') && p.endsWith('/websocket'));
 }
 
 function serveStaticFile(urlPath) {
-  let info = staticFiles.get(urlPath);
-  if (!info) {
-    const prefix = getPathPrefix();
-    if (prefix && (urlPath === prefix || urlPath.startsWith(prefix + '/'))) {
-      const subPath = urlPath.slice(prefix.length) || '/';
-      info = staticFiles.get(subPath);
+  const prefix = getPathPrefix();
+  let lookupPath = urlPath;
+  if (prefix) {
+    // With a path prefix configured, only resolve requests under the prefix.
+    if (urlPath === prefix || urlPath.startsWith(prefix + '/')) {
+      lookupPath = urlPath.slice(prefix.length) || '/';
+    } else {
+      return null;
     }
   }
+  const info = staticFiles.get(lookupPath);
   if (!info) return null;
 
   const headers = { 'Content-Type': contentTypeFor(info.absPath, info.type) };
@@ -187,7 +197,9 @@ WebApp.startListening = function (httpServer, listenOptions, cb) {
         }
 
         const url = new URL(req.url, `http://localhost:${PORT}`);
-        const staticResp = serveStaticFile(url.pathname);
+        const staticResp = (req.method === 'GET' || req.method === 'HEAD')
+          ? serveStaticFile(url.pathname)
+          : null;
         if (staticResp) return staticResp;
 
         try {

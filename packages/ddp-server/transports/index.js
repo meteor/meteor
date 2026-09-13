@@ -50,14 +50,14 @@ function resolveTransportName() {
     return process.env.DDP_TRANSPORT;
   }
 
-  // 3. Backward compat: DISABLE_SOCKJS=1 → uws
-  if (process.env.DISABLE_SOCKJS) {
-    return 'uws';
-  }
-
-  // 4. Bun runtime: SockJS and uws are not available
+  // 3. Bun runtime: SockJS and uws are not available
   if (typeof Bun !== 'undefined') {
     return 'bun';
+  }
+
+  // 4. Backward compat: DISABLE_SOCKJS=1 → uws
+  if (process.env.DISABLE_SOCKJS) {
+    return 'uws';
   }
 
   // 5. Default

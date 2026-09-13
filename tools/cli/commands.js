@@ -583,6 +583,11 @@ async function doRunCommand(options) {
     await prepareCordovaProject();
   }
 
+  if (options.runtime && options.runtime !== 'node' && options.runtime !== 'bun') {
+    Console.error("--runtime must be 'node' or 'bun'.");
+    throw new main.ExitWithCode(1);
+  }
+
   var runAll = require('../runners/run-all.js');
   return runAll.run({
     projectContext: projectContext,

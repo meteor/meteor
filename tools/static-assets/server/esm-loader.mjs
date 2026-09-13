@@ -655,6 +655,9 @@ export async function runMain() {
   } else if (mains.length === 0) {
     console.error('No main() function found.');
     process.exit(1);
+  } else {
+    console.error(`Expected a single main() function, found ${mains.length}.`);
+    process.exit(1);
   }
 }
 
