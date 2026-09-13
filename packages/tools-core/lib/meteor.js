@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const { logError } = require("./log");
+const { getGlobalState, setGlobalState } = require("./global-state");
 
 // Normalize a path to always use forward slashes (POSIX style).
 // Module identifiers must use '/' regardless of OS.
@@ -192,6 +193,45 @@ export function setMeteorAppEntrypoints({
     }
   }
   global.reinitializeMeteorConfig?.();
+}
+
+// Exported so tests can model a fresh build-plugin evaluation.
+export const USER_METEOR_IGNORE_KEY = 'userMeteorIgnore';
+
+/**
+ * Records METEOR_IGNORE as the app author set it, before the first
+ * setMeteorAppIgnore() call starts appending meteor-tool-specific patterns to
+ * it. Integrations that hand the variable on to their own tooling need the
+ * author's patterns alone: the appended ones mean nothing to them and, on
+ * large projects, grow to tens of kilobytes.
+ *
+ * Called once as this module is evaluated, and idempotent because that is not
+ * once per process: build-plugin sources are evaluated per Isopack instance,
+ * and by the time a later instance runs, METEOR_IGNORE has already grown. The
+ * value therefore lives in global state, which survives re-instantiation,
+ * rather than in a module-level constant.
+ */
+export function captureUserMeteorIgnore() {
+  if (getGlobalState(USER_METEOR_IGNORE_KEY) === undefined) {
+    setGlobalState(USER_METEOR_IGNORE_KEY, process.env.METEOR_IGNORE || '');
+  }
+}
+
+captureUserMeteorIgnore();
+
+/**
+ * Returns the METEOR_IGNORE patterns the app author set, without the ones
+ * Meteor appends for its own bundler.
+ *
+ * Only meaningful inside meteor-tool — the CLI and its build plugins, where
+ * setMeteorAppIgnore() does the appending. An app's server process inherits an
+ * already-grown METEOR_IGNORE and never calls setMeteorAppIgnore(), so there is
+ * no author-only value to recover there.
+ *
+ * @returns {string} Space-delimited ignore patterns, or an empty string.
+ */
+export function getUserMeteorIgnore() {
+  return getGlobalState(USER_METEOR_IGNORE_KEY, '');
 }
 
 /**

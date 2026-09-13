@@ -5,6 +5,9 @@ on:
     paths:
       - 'tools/**'
       - 'scripts/**'
+      # testMatch also covers this package, so a PR that only touches it must
+      # still run the suite.
+      - 'npm-packages/meteor-rspack/**'
       - 'package.json'
       - '.github/workflows/unit-tests.yml'
   push:
