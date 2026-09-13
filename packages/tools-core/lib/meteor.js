@@ -195,7 +195,8 @@ export function setMeteorAppEntrypoints({
   global.reinitializeMeteorConfig?.();
 }
 
-const USER_METEOR_IGNORE_KEY = 'userMeteorIgnore';
+// Exported so tests can model a fresh build-plugin evaluation.
+export const USER_METEOR_IGNORE_KEY = 'userMeteorIgnore';
 
 /**
  * Records METEOR_IGNORE as the app author set it, before the first

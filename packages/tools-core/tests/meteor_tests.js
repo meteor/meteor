@@ -3,7 +3,13 @@ import {
   getUserMeteorIgnore,
   inheritMeteorToolNodeFlags,
   setMeteorAppIgnore,
+  USER_METEOR_IGNORE_KEY,
 } from "../lib/meteor.js";
+import {
+  getGlobalState,
+  removeGlobalState,
+  setGlobalState,
+} from "../lib/global-state.js";
 
 Tinytest.add(
   "tools-core - inheritMeteorToolNodeFlags - no TOOL_NODE_FLAGS",
@@ -314,24 +320,41 @@ Tinytest.add(
 );
 
 Tinytest.add(
-  "tools-core - captureUserMeteorIgnore - a later evaluation does not overwrite the first capture",
+  "tools-core - captureUserMeteorIgnore - keeps the value from before setMeteorAppIgnore grew it",
   function (test) {
     const previousIgnore = process.env.METEOR_IGNORE;
-    const userIgnore = getUserMeteorIgnore();
+    const previousCapture = getGlobalState(USER_METEOR_IGNORE_KEY);
 
     try {
-      // This file is a build-plugin source, so it is evaluated once per Isopack
-      // instance rather than once per process. By the time a later instance
-      // runs, setMeteorAppIgnore has already grown METEOR_IGNORE.
-      process.env.METEOR_IGNORE = "client/*.css !client/meteor.css /_build-daemon";
+      // Model the build-plugin sequence: the author's value, then meteor-tool
+      // grows it, then a later Isopack instance re-evaluates lib/meteor.js.
+      process.env.METEOR_IGNORE = "author/*.ts";
+      removeGlobalState(USER_METEOR_IGNORE_KEY);
       captureUserMeteorIgnore();
 
+      setMeteorAppIgnore("/_build /_build-*");
+      test.notEqual(
+        process.env.METEOR_IGNORE,
+        "author/*.ts",
+        "Precondition: setMeteorAppIgnore should have grown METEOR_IGNORE"
+      );
+
+      captureUserMeteorIgnore();
+
+      // Asserted against the author's literal value rather than against an
+      // earlier read: comparing two reads passes even when nothing is stored
+      // at all, since both are then the empty default.
       test.equal(
         getUserMeteorIgnore(),
-        userIgnore,
-        "Should keep the value captured by the first evaluation in this process"
+        "author/*.ts",
+        "Should still report the value captured before setMeteorAppIgnore grew it"
       );
     } finally {
+      if (previousCapture === undefined) {
+        removeGlobalState(USER_METEOR_IGNORE_KEY);
+      } else {
+        setGlobalState(USER_METEOR_IGNORE_KEY, previousCapture);
+      }
       if (previousIgnore === undefined) {
         delete process.env.METEOR_IGNORE;
       } else {
