@@ -14,6 +14,7 @@ node_modules
 \#*\#
 .\#*
 .idea
+!.idea/icon.svg
 *.iml
 *.sublime-project
 *.sublime-workspace
@@ -36,6 +37,12 @@ packages/**/.npm
 # doc files should not be committed
 packages/**/*.docs.js
 
+# coverage
+coverage-ts/
+
 #cursor
 .cursorignore
 .cursorrules
+
+# claude code
+.claude/*

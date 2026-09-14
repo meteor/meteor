@@ -72,6 +72,16 @@ DDP.connect = (url, options) => {
   return ret;
 };
 
+// Called by Connection#close(): a permanently closed connection must not
+// stay in allConnections, where _allSubscriptionsReady would consult it
+// forever.
+DDP._removeConnection = connection => {
+  const index = allConnections.indexOf(connection);
+  if (index !== -1) {
+    allConnections.splice(index, 1);
+  }
+};
+
 DDP._reconnectHook = new Hook({ bindEnvironment: false });
 
 /**

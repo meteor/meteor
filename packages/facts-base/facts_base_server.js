@@ -1,4 +1,4 @@
-import { Facts, FACTS_COLLECTION, FACTS_PUBLICATION } from './facts_base_common';
+import { Facts, FACTS_COLLECTION, FACTS_PUBLICATION } from "./facts_base_common";
 
 const hasOwn = Object.prototype.hasOwnProperty;
 
@@ -6,7 +6,7 @@ const hasOwn = Object.prototype.hasOwnProperty;
 
 // By default, we publish facts to no user if autopublish is off, and to all
 // users if autopublish is on.
-let userIdFilter = function (userId) {
+let userIdFilter = function () {
   return !!Package.autopublish;
 };
 
@@ -20,8 +20,14 @@ Facts.setUserIdFilter = function (filter) {
 const factsByPackage = {};
 let activeSubscriptions = [];
 
-// Make factsByPackage data available to the server environment
+// Make internal state available to the server environment
 Facts._factsByPackage = factsByPackage;
+Facts._getActiveSubscriptions = function () {
+  return activeSubscriptions;
+};
+Facts._setActiveSubscriptions = function (subs) {
+  activeSubscriptions = subs;
+};
 
 Facts.incrementServerFact = function (pkg, fact, increment) {
   if (!hasOwn.call(factsByPackage, pkg)) {
@@ -46,7 +52,7 @@ Facts.incrementServerFact = function (pkg, fact, increment) {
 };
 
 Facts.resetServerFacts = function () {
-  for (let pkg in factsByPackage) {
+  for (const pkg in factsByPackage) {
     delete factsByPackage[pkg];
   }
 };
@@ -56,27 +62,26 @@ Facts.resetServerFacts = function () {
 // called?
 Meteor.defer(function () {
   // XXX Also publish facts-by-package.
-  Meteor.publish(FACTS_PUBLICATION, function () {
-    const sub = this;
-    if (!userIdFilter(this.userId)) {
-      sub.ready();
-      return;
-    }
+  Meteor.publish(
+    FACTS_PUBLICATION,
+    function () {
+      const sub = this;
+      if (!userIdFilter(this.userId)) {
+        sub.ready();
+        return;
+      }
 
-    activeSubscriptions.push(sub);
-    Object.keys(factsByPackage).forEach(function (pkg) {
-      sub.added(FACTS_COLLECTION, pkg, factsByPackage[pkg]);
-    });
-    sub.onStop(function () {
-      activeSubscriptions =
-        activeSubscriptions.filter(activeSub => activeSub !== sub);
-    });
-    sub.ready();
-  }, {is_auto: true});
+      activeSubscriptions.push(sub);
+      Object.keys(factsByPackage).forEach(function (pkg) {
+        sub.added(FACTS_COLLECTION, pkg, factsByPackage[pkg]);
+      });
+      sub.onStop(function () {
+        activeSubscriptions = activeSubscriptions.filter((activeSub) => activeSub !== sub);
+      });
+      sub.ready();
+    },
+    { is_auto: true },
+  );
 });
 
-export {
-  Facts,
-  FACTS_COLLECTION,
-  FACTS_PUBLICATION,
-};
+export { Facts, FACTS_COLLECTION, FACTS_PUBLICATION };

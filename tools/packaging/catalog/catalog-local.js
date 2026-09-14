@@ -138,6 +138,9 @@ Object.assign(LocalCatalog.prototype, {
   //    are package source trees.  Takes precedence over packages found
   //    via localPackageSearchDirs.
   //  - buildingIsopackets: true if we are building isopackets
+  //  - buildingSelfTestCatalog: true if this catalog is being built for
+  //    use by `meteor self-test` sandboxes. Forwarded to PackageSource so
+  //    that versionsFrom() in scanned package.js files no-ops.
   async initialize(options) {
     var self = this;
     buildmessage.assertInCapture();
@@ -172,7 +175,10 @@ Object.assign(LocalCatalog.prototype, {
     );
 
     await self._computeEffectiveLocalPackages();
-    await self._loadLocalPackages(options.buildingIsopackets);
+    await self._loadLocalPackages(
+      options.buildingIsopackets,
+      options.buildingSelfTestCatalog,
+    );
     self.initialized = true;
   },
 
@@ -378,7 +384,7 @@ Object.assign(LocalCatalog.prototype, {
     });
   },
 
-  async _loadLocalPackages(buildingIsopackets) {
+  async _loadLocalPackages(buildingIsopackets, buildingSelfTestCatalog) {
     var self = this;
     buildmessage.assertInCapture();
 
@@ -399,7 +405,8 @@ Object.assign(LocalCatalog.prototype, {
         rootPath: packageDir
       }, async function () {
         var initFromPackageDirOptions = {
-          buildingIsopackets: !! buildingIsopackets
+          buildingIsopackets: !! buildingIsopackets,
+          buildingSelfTestCatalog: !! buildingSelfTestCatalog,
         };
         // If we specified a name, then we know what we want to get and should
         // pass that into the options. Otherwise, we will use the 'name'

@@ -168,9 +168,24 @@ Tinytest.addAsync('livedata server - async publish cursor', function(
       connection: clientConn,
     });
     clientConn.subscribe('asyncPublishCursor', async () => {
-      const actual = await remoteCollection.find().fetch();
-      test.equal(actual[0].name, 'async');
-      onComplete();
+      // Wait for data to arrive - the subscription is ready but data may still be in transit
+      // This can happen when a previous test run was interrupted (page reload) and the
+      // server is still processing the old session's grace period
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds max wait
+      const checkData = async () => {
+        const actual = await remoteCollection.find().fetch();
+        if (actual.length > 0) {
+          test.equal(actual[0].name, 'async');
+          onComplete();
+        } else if (attempts++ < maxAttempts) {
+          setTimeout(checkData, 100);
+        } else {
+          test.fail('Timed out waiting for data in async publish cursor test');
+          onComplete();
+        }
+      };
+      await checkData();
     });
   });
 });
@@ -193,3 +208,19 @@ Tinytest.addAsync('livedata server - async publish test error thrown', function(
     });
   });
 });
+
+// A server-side Meteor.callAsync runs through Server.applyAsync, which must expose
+// the method name on the current invocation, the same way the DDP method path does.
+Meteor.methods({
+  'livedata_server_test_invocation_name'() {
+    return DDP._CurrentMethodInvocation.get()?.name;
+  },
+});
+
+Tinytest.addAsync(
+  'livedata server - server-side callAsync exposes the current invocation name',
+  async function (test) {
+    const name = await Meteor.callAsync('livedata_server_test_invocation_name');
+    test.equal(name, 'livedata_server_test_invocation_name');
+  }
+);
