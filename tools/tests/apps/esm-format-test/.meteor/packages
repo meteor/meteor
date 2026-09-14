@@ -1,0 +1,3 @@
+# Minimal app for testing --format=esm builds
+meteor-base
+webapp
