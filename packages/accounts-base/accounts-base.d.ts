@@ -106,8 +106,10 @@ export namespace Accounts {
   // Enable hybrid HttpOnly cookie + short-lived token flow. Must be set on
   // the server for the /_accounts/cookie/* endpoints to respond.
   useHttpOnlyCookies?: boolean | undefined;
-  // Extra origins (scheme://host[:port]) allowed to call the cookie
-  // endpoints, in addition to ROOT_URL and the request Host. Server only.
+  // Extra origins (scheme://host[:port]) allowed to call the cookie set and
+  // clear endpoints with credentialed CORS, in addition to ROOT_URL and the
+  // request Host. SameSite=Strict and browser cookie policy still apply.
+  // Server only.
   httpOnlyCookieAllowedOrigins?: string[] | undefined;
   // Per-client-address rate limit for the cookie endpoints
   // (default 30 requests per 10 seconds); `false` disables it. Server only.

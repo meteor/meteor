@@ -167,6 +167,44 @@ if (Meteor.isServer) {
     });
   });
 
+  addTest('configured Origins receive credentialed CORS responses', async (test) => {
+    const origin = 'https://partner.example';
+    const { token } = await createToken();
+    await withOption('httpOnlyCookieAllowedOrigins', [origin], async () => {
+      const preflight = await request('OPTIONS', SET_PATH, {
+        headers: {
+          Origin: origin,
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'content-type',
+        },
+      });
+      test.equal(preflight.status, 204);
+      test.equal(preflight.headers['access-control-allow-origin'], origin);
+      test.equal(preflight.headers['access-control-allow-credentials'], 'true');
+      test.equal(preflight.headers['access-control-allow-methods'], 'POST');
+      test.equal(preflight.headers['access-control-allow-headers'], 'Content-Type');
+      test.equal(preflight.headers.vary, 'Origin');
+
+      const set = await setCookie(token, {
+        'Content-Type': 'application/json',
+        Origin: origin,
+        'Sec-Fetch-Site': 'cross-site',
+      });
+      test.equal(set.status, 200);
+      test.equal(set.headers['access-control-allow-origin'], origin);
+      test.equal(set.headers['access-control-allow-credentials'], 'true');
+
+      const denied = await request('OPTIONS', SET_PATH, {
+        headers: {
+          Origin: 'https://evil.example',
+          'Access-Control-Request-Method': 'POST',
+        },
+      });
+      test.equal(denied.status, 403);
+      test.isUndefined(denied.headers['access-control-allow-origin']);
+    });
+  });
+
   addTest('set treats X-Forwarded-Proto case-insensitively', async (test) => {
     const { token } = await createToken();
     const res = await setCookie(token, jsonSameOrigin({ 'X-Forwarded-Proto': 'HTTPS' }));
@@ -305,6 +343,51 @@ if (Meteor.isServer) {
     const res = await request('POST', SET_PATH, { headers: jsonSameOrigin(), body });
     test.equal(res.status, 413);
     test.equal(res.headers.connection, 'close');
+  });
+
+  addTest('set closes the connection after 413 on an unfinished chunked body', async (test) => {
+    const { URL } = Npm.require('url');
+    const u = new URL(Meteor.absoluteUrl(SET_PATH.replace(/^\//, '')));
+    const httpLib = Npm.require(u.protocol === 'https:' ? 'https' : 'http');
+    const result = await new Promise((resolve) => {
+      const req = httpLib.request(
+        {
+          protocol: u.protocol,
+          hostname: u.hostname,
+          port: u.port,
+          path: u.pathname,
+          method: 'POST',
+          // No Content-Length: the server can only detect the overflow while
+          // this deliberately unfinished body is still streaming.
+          headers: {
+            'Content-Type': 'application/json',
+            Origin: appOrigin(),
+          },
+        },
+        (res) => {
+          let data = '';
+          res.setEncoding('utf8');
+          res.on('data', (chunk) => (data += chunk));
+          const socketClosed = new Promise((resolveClose) => {
+            res.socket.once('close', () => resolveClose(true));
+          });
+          res.on('end', async () => {
+            const closed = await Promise.race([
+              socketClosed,
+              new Promise((resolveClose) => setTimeout(() => resolveClose(false), 5000)),
+            ]);
+            resolve({ status: res.statusCode, headers: res.headers, body: data, closed });
+          });
+        }
+      );
+      // The server intentionally tears down the socket mid-upload.
+      req.on('error', () => {});
+      req.write('a'.repeat(5000));
+    });
+    test.equal(result.status, 413);
+    test.equal(JSON.parse(result.body).error, 'body_too_large');
+    test.equal(result.headers.connection, 'close');
+    test.isTrue(result.closed, 'socket closed after 413');
   });
 
   ///
