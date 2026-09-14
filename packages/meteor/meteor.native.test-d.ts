@@ -49,8 +49,14 @@ expectTypeOf<Meteor.UserProfile>().toBeObject();
 expectTypeOf<Meteor.User>().toBeObject();
 declare const legacyUser: Meteor.User;
 expectTypeOf(legacyUser.services).toEqualTypeOf<Record<string, unknown> | undefined>();
-  expectTypeOf( Meteor.user).toBeFunction();
+expectTypeOf(Meteor.user).toBeFunction();
+expectTypeOf(Meteor.user()).toEqualTypeOf<
+  Meteor.User | null | undefined | Promise<Meteor.User | undefined>
+>();
 expectTypeOf(Meteor.userAsync).toBeFunction();
+expectTypeOf(Meteor.userAsync()).toEqualTypeOf<
+  Promise<Meteor.User | null | undefined>
+>();
 expectTypeOf(Meteor.userId).toBeFunction();
 expectTypeOf(Meteor.users).not.toBeAny();
 expectTypeOf<Meteor.LoginMethodResult>().toBeObject();
