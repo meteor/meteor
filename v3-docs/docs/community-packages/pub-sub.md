@@ -137,7 +137,7 @@ Notes.find().fetch();
 Todos.find().fetch();
 ```
 
-Inside `Meteor.publish.once`, `this.userId` and [this.added](https://docs.meteor.com/api/pubsub.html#Subscription-added) can still be used. The added document will be included in the final result data. The rest of the low-level `publish` API will be disregarded, as they no longer fit into the context of a Method-based data fetch.
+Inside `Meteor.publish.once`, `this.userId` and [this.added](/api/meteor#Subscription-added) can still be used. The added document will be included in the final result data. The rest of the low-level `publish` API will be disregarded, as they no longer fit into the context of a Method-based data fetch.
 
 ```js
 Meteor.publish.once('notes.all', function() {
@@ -215,7 +215,7 @@ Meteor.subscribe('todos.single', _id, { cacheDuration: 30 }) // caches for 30 se
 Meteor.subscribe('notes.all', { cache: true }) // turns caching on, overriding the global default, and uses the global default cacheDuration
 ```
 
-> **Note**: the rest of the [Meteor.subscribe](https://docs.meteor.com/api/pubsub.html#Meteor-subscribe) API (e.g. `onStop`, `onReady`) works just as you'd expect.
+> **Note**: the rest of the [Meteor.subscribe](/api/meteor#Meteor-subscribe) API (e.g. `onStop`, `onReady`) works just as you'd expect.
 
 > **Note**: Because the data will remain in Minimongo while the subscription is cached, you should be mindful of your Minimongo `.find` selectors. Be sure to use specific selectors to `.find` the data you need for that particular subscription. This is generally considered [best practice](/tutorials/data-loading/data-loading#fetching) so this is mainly a helpful reminder.
 

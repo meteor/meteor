@@ -199,14 +199,15 @@ Meteor will now use the local version instead of the official one.
 
 To install a modified version of a plugin:
 
-1. From another folder, download the original code:
+1. From another folder, get the current plugin source. It lives in the Meteor monorepo (the standalone `meteor/cordova-plugin-meteor-webapp` repository is archived):
    ```bash
-   git clone https://github.com/meteor/cordova-plugin-meteor-webapp.git
+   git clone https://github.com/meteor/meteor.git
    ```
+   The plugin is in `npm-packages/cordova-plugin-meteor-webapp` (you can also copy just that folder out of an existing clone).
 
 2. Install it into your Meteor project:
    ```bash
-   meteor add cordova:cordova-plugin-meteor-webapp@file://path/to/cordova-plugin-meteor-webapp
+   meteor add cordova:cordova-plugin-meteor-webapp@file://path/to/meteor/npm-packages/cordova-plugin-meteor-webapp
    ```
 
 3. Modify it as you like

@@ -50,6 +50,6 @@ exports.listPackages = function() {
   const markdown = generateMarkdown(packages);
   const content = HEADER_TEMPLATE + markdown;
   console.log("📝 Writing to file 📝");
-  fs.writeFileSync("./api/packages-listing.md", content);
+  fs.writeFileSync("./packages/packages-listing.md", content);
   console.log("🚀 Done package listing 🚀");
 }

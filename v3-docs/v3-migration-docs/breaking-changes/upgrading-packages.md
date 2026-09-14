@@ -13,14 +13,11 @@ The migration will look like this:
 // in you package.js
 Package.onUse((api) => {
   api.versionsFrom(['1.10', '2.3', '3.0']);
-  //                               ^^^^^^^ for testing your package with meteor 3.0
-
-  api.versionsFrom(['1.10', '2.3', '3.0']);
-  //                              ^^^^^^^ for meteor 3.0
+  //                               ^^^^^^^ declares compatibility with Meteor 3.0 (keeping earlier releases for 2.x compatibility)
 });
 ```
 
-Then you can publish your package and test it with Meteor 3.0, by running `meteor publish --release=3.0.4`.
+Then you can publish your package and test it with Meteor 3, by running `meteor publish --release=3.5.2` (or any other Meteor 3.x release).
 
 
 ## Changes for packages that do not use Meteor packages that had breaking change
@@ -34,23 +31,13 @@ by adding the following line to your `package.js`:
 // in you package.js
 Package.onUse((api) => {
   api.versionsFrom(['1.10', '2.3', '3.0']);
-  //                               ^^^^^^^ for testing your package with meteor 3.0
-
-  api.versionsFrom(['1.10', '2.3', '3.0']);
-  //                     ^^^^^^^ for meteor 3.0
+  //                               ^^^^^^^ declares compatibility with Meteor 3.0 (keeping earlier releases for 2.x compatibility)
 });
 ```
 
 For example, we have `mdg:seo` where we just needed to add the line above to make it
 compatible with Meteor 3.0.
 You can see the [commit](https://github.com/meteor/galaxy-seo-package/commit/8a30b32688df40e62ce434475dd3ee931dedf2b3).
-
-
-## Testing packages in Meteor 3.0
-
-It is known that some packages that are testing the beta changes are not being installed by correctly,
-when using a tag in their version, like this one: `version: '2.0.0-beta300.6',` to be sure that you are getting the correct version
-you can run `meteor add <package>@<version-tag>` to install the package with the correct version, instead of the `meteor add <package>`.
 
 
 ## Server
