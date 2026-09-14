@@ -30,6 +30,11 @@ import {
 import rspackHelpers from "../tool-env/rspack";
 
 const { SourceNode, SourceMapConsumer } = require("source-map");
+import { isFileBackedSourceMap } from "../utils/file-backed-source-map";
+import {
+  composeSourceMapRecipe,
+  createSourceMapRecipe,
+} from "./source-map-helper";
 
 const {
   relative: posixRelative,
@@ -726,8 +731,17 @@ export default class ImportScanner {
     checkProperty("lazy");
     checkProperty("bare");
 
+    const useHelper = isFileBackedSourceMap(oldFile.sourceMap) ||
+      isFileBackedSourceMap(newFile.sourceMap);
+
     async function getChunk(file: File) {
       if (file.sourceMap) {
+        if (useHelper) {
+          return {
+            code: await scanner.getDataString(file),
+            map: file.sourceMap,
+          };
+        }
         const consumer = await new SourceMapConsumer(file.sourceMap);
         const node = SourceNode.fromStringWithSourceMap(
           await scanner.getDataString(file),
@@ -740,16 +754,21 @@ export default class ImportScanner {
       }
     }
 
-    const {
-      code: combinedDataString,
-      map: combinedSourceMap,
-    } = new SourceNode(null, null, null, [
+    const chunks = [
       await getChunk(oldFile),
       "\n\n",
-      await getChunk(newFile)
-    ]).toStringWithSourceMap({
-      file: oldFile.servePath || newFile.servePath
-    });
+      await getChunk(newFile),
+    ];
+    const outputFile = oldFile.servePath || newFile.servePath;
+    const combined = useHelper
+      ? await composeSourceMapRecipe(createSourceMapRecipe(chunks), {
+          file: outputFile,
+        })
+      : new SourceNode(null, null, null, chunks).toStringWithSourceMap({
+          file: outputFile,
+        });
+    const combinedDataString = combined.code;
+    const combinedSourceMap = combined.map;
 
     oldFile.dataString = combinedDataString;
     oldFile.data = Buffer.from(oldFile.dataString, "utf8");
@@ -757,8 +776,11 @@ export default class ImportScanner {
 
     alignImportedStatuses(oldFile, newFile);
 
-    oldFile.sourceMap = combinedSourceMap.toJSON();
-    if (! oldFile.sourceMap!.mappings) {
+    oldFile.sourceMap = isFileBackedSourceMap(combinedSourceMap)
+      ? combinedSourceMap
+      : combinedSourceMap.toJSON();
+    if (!isFileBackedSourceMap(oldFile.sourceMap) &&
+        !oldFile.sourceMap!.mappings) {
       oldFile.sourceMap = void 0;
     }
   }

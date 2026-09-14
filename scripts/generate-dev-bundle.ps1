@@ -358,6 +358,21 @@ $env:PATH = "$env:PATH;$dirBin"
 # Install Node.js and npm and get their paths to use from here on.
 $toolCmds = Add-NodeAndNpm
 
+if (!(Get-Command cargo -ErrorAction SilentlyContinue)) {
+  throw "Rust Cargo is required to build meteor-source-map-helper."
+}
+
+$sourceMapHelperManifest = Join-Path $dirCheckout `
+  'tools\source-map-helper\Cargo.toml'
+& cargo build --manifest-path $sourceMapHelperManifest --release --locked
+if ($LASTEXITCODE -ne 0) {
+  throw "Couldn't build meteor-source-map-helper."
+}
+Copy-Item `
+  (Join-Path $dirCheckout `
+    'tools\source-map-helper\target\release\meteor-source-map-helper.exe') `
+  (Join-Path $dirBin 'meteor-source-map-helper.exe')
+
 "Location of node.exe:"
 & Get-Command node | Select-Object -ExpandProperty Definition
 
