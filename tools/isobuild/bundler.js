@@ -169,6 +169,7 @@ var release = require('../packaging/release.js');
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { CORDOVA_PLATFORM_VERSIONS } from '../cordova';
 import { gzipSync } from "zlib";
+import { pathToFileURL } from "url";
 import { PackageRegistry } from "../../packages/core-runtime/package-registry.js";
 import { optimisticLStatOrNull } from '../fs/optimistic';
 
@@ -2540,15 +2541,13 @@ class JsImage {
         );
 
         const sourceMappingURL =
-            "data:application/json;charset=utf8;base64," +
-            sourceMapBuffer.toString("base64");
+            encodeURIComponent(files.pathBasename(loadItem.sourceMap));
 
         // Remove any existing sourceMappingURL line. (eg, if roundtripping
         // through JsImage.readFromDisk, don't end up with two!)
         sourceBuffer = addSourceMappingURL(
             item.source,
             sourceMappingURL,
-            item.targetPath,
         );
 
         if (item.sourceMapRoot) {
@@ -2736,9 +2735,16 @@ class JsImage {
       if (item.sourceMap) {
         // XXX this is the same code as isopack.initFromPath
         rejectBadPath(item.sourceMap);
+        const sourceMapPath = files.pathResolve(dir, item.sourceMap);
         loadItem.sourceMap = JSON.parse(files.readFile(
-            files.pathJoin(dir, item.sourceMap), 'utf8'));
+            sourceMapPath, 'utf8'));
         loadItem.sourceMapRoot = item.sourceMapRoot;
+
+        loadItem.source = addSourceMappingURL(
+            loadItem.source,
+            pathToFileURL(files.convertToOSPath(sourceMapPath)).href,
+            item.path,
+        ).toString('utf8');
       }
 
       if (!_.isEmpty(item.assets)) {
