@@ -12,6 +12,7 @@ on:
       - "packages/tools-core/**"
       - "packages/babel-compiler/**"
       - "packages/meteor-tool/**"
+      - "packages/non-core/blaze"
       - "packages/test-in-browser/**"
       - "npm-packages/meteor-rspack/**"
       - "tools/isobuild/**"
@@ -105,6 +106,8 @@ jobs:
 
       - name: Checkout code
         uses: actions/checkout@v6
+        with:
+          submodules: recursive
 
       - name: Cache dependencies
         id: deps-cache
