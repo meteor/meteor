@@ -1,5 +1,4 @@
 import imagePublic from '@public/1x1-public.jpg';
-import React from 'react';
 
 import './main.css';
 import { Hello } from './Hello.jsx';

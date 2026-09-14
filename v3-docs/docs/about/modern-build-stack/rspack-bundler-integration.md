@@ -89,17 +89,21 @@ Use `.meteor/local` or folders that suggest internals or hidden content (e.g., s
 
 ### Required npm dependencies
 
-The `rspack` package declares a minimum supported version for each of the npm packages it relies on at the project level: `@rspack/core`, `@rspack/cli`, `@meteorjs/rspack`, `@swc/helpers`, and `@rsdoctor/rspack-plugin`. Each Meteor release pins these minimums so the build stack stays compatible across upgrades.
+The `rspack` package declares a minimum supported version for each npm package it relies on at the project level: `@rspack/core`, `@rspack/cli`, `@rspack/dev-server`, `@meteorjs/rspack`, `@swc/core`, `@swc/helpers`, and `@rsdoctor/rspack-plugin`. Each Meteor release pins these minimums so the build stack stays compatible across upgrades.
 
 By default, Meteor installs or updates them for you on the first run after adding the `rspack` package, and prints a short summary of what changed:
 
 ```
 => 📦 Rspack: updating npm dependencies
    Dev dependencies:
-   • @rspack/core           1.7.1  (new)
-   • @meteorjs/rspack       2.0.0 -> 2.0.1
+   • @rspack/core                    2.2.0          (new)
+   • @rspack/cli                     2.2.0          (new)
+   • @rspack/dev-server              2.2.0          (new)
+   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-beta.1
+   • @swc/core                       1.15.32        (new)
+   • @rsdoctor/rspack-plugin         1.5.9          (new)
    Dependencies:
-   • @swc/helpers           0.5.17 (new)
+   • @swc/helpers                    0.5.23         (new)
 => ✅ Rspack dependencies are up to date
 => ℹ️ Set `"meteor": { "autoInstallDeps": false }` in package.json to manage them yourself.
 ```
@@ -123,20 +127,36 @@ With this flag off, Meteor still detects when a required dependency is missing o
 ``` bash
 => ⚠️  Rspack: npm dependencies need attention
    Dev dependencies:
-   • @rspack/core           1.7.1  (not installed)
-   • @meteorjs/rspack       2.0.1  (currently 2.0.0)
+   • @rspack/core                    2.2.0          (not installed)
+   • @rspack/cli                     2.2.0          (not installed)
+   • @rspack/dev-server              2.2.0          (not installed)
+   • @meteorjs/rspack                3.0.0-beta.1   (currently 2.2.0-beta.1)
+   • @swc/core                       1.15.32        (not installed)
+   • @rsdoctor/rspack-plugin         1.5.9          (not installed)
    Dependencies:
-   • @swc/helpers           0.5.17 (not installed)
+   • @swc/helpers                    0.5.23         (not installed)
 
    To bring your project in line, run:
-       meteor npm install --save-dev @rspack/core@1.7.1 @meteorjs/rspack@2.0.1
-       meteor npm install --save @swc/helpers@0.5.17
+       meteor npm install --save-dev @rspack/core@2.2.0 @rspack/cli@2.2.0 @rspack/dev-server@2.2.0 @meteorjs/rspack@3.0.0-beta.1 @swc/core@1.15.32 @rsdoctor/rspack-plugin@1.5.9
+       meteor npm install --save @swc/helpers@0.5.23
 => ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
 ```
 
 If you ignore the warning, the build continues and fails with the underlying module-not-found error. To re-enable auto-install, use the setting shown in the warning, or remove `autoInstallDeps` from your `meteor` block.
 
 If your CI or Docker pipeline reports missing NPM dependencies after disabling auto-install, see [CI & Docker](#docker) for the recommended commit-and-push flow.
+
+#### Upgrading from Rspack 1.x
+
+Meteor 3.6 moves the modern build stack to Rspack 2.x. On the first run after updating, the dependency check above bumps `@rspack/core`, `@rspack/cli`, and `@rspack/dev-server` to 2.2.0, `@meteorjs/rspack` to 3.0.0, and the related `@swc/*`, `@rspack/plugin-react-refresh`, and `@rsdoctor/rspack-plugin` versions. When an existing lockfile still holds Rspack 1.x peer dependencies, Meteor runs that install with `--legacy-peer-deps` so npm does not reject the coordinated upgrade; fresh installs and already-upgraded apps keep npm's normal peer validation.
+
+If you disabled auto-install, run the printed `meteor npm install --save-dev ...` command. It already includes `--legacy-peer-deps` when the old Rspack 1.x peers require it.
+
+Apps that rely on the Meteor defaults need no further changes. If you override the configuration in `rspack.config.js`, review the [Rspack 1.x migration guide](https://rspack.rs/guide/migration/rspack_1.x). The most common adjustments are:
+
+- `experiments.css` and `experiments.cache` are gone: CSS support is built in, and `cache` accepts the persistent cache options directly.
+- `output.libraryTarget` is replaced by `output.library.type`.
+- If you merge configuration yourself, replace `webpack-merge` with `rspack-merge`. `@meteorjs/rspack@3.0.0` already does this internally.
 
 ### Replace build plugins
 
@@ -420,7 +440,46 @@ No additional configuration is needed — just install the `rspack` package as u
 
 ### React Compiler
 
-Meteor-Rspack supports React Compiler. To enable it, install the required dependencies and add the new configuration to Meteor’s `rspack.config.js` file.
+:::info
+Starting with Meteor 3.6
+:::
+
+Meteor 3.6 ships with Rspack 2.x, including React Compiler support from Rspack 2.1. The compiler runs directly through the built-in SWC loader, avoiding Babel in the React compilation path. For React 19 projects, enable it in your `rspack.config.js` file:
+
+```shell
+meteor npm install react@^19 react-dom@^19
+```
+
+```js
+const { defineConfig } = require('@meteorjs/rspack');
+
+module.exports = defineConfig(Meteor => ({
+  ...Meteor.extendSwcConfig({
+    jsc: {
+      transform: {
+        react: {
+          runtime: 'automatic',
+        },
+        reactCompiler: true,
+      },
+    },
+  }),
+}));
+```
+
+For React 17 or 18, install `react-compiler-runtime` and replace `reactCompiler: true` with the matching target:
+
+```shell
+meteor npm install react-compiler-runtime
+```
+
+```js
+reactCompiler: {
+  target: '18',
+},
+```
+
+The `Meteor.extendSwcConfig` helper preserves Meteor's parser, React Fast Refresh, and other default SWC settings while adding the compiler transform.
 
 Learn more in the [official Rspack and React Compiler integration guide](https://rspack.rs/guide/tech/react#react-compiler).
 
@@ -639,7 +698,7 @@ Meteor-Rspack supports Babel projects as an alternative to default SWC.
 
 > Use `meteor create --babel` to start with a preconfigured Rspack Babel app.
 
-Using Babel will increase build times. Prefer SWC. If you need Babel for specific files, limit Babel to those files, or use a hybrid with SWC and Babel. For example, [enabling React Compiler is available only via Babel using module rules](https://rspack.rs/guide/tech/react#react-compiler).
+Using Babel will increase build times. Prefer SWC. Rspack 2.1 and later supports [React Compiler through the built-in SWC loader](#react-compiler), but the Babel plugin remains available when you need Babel-specific integration or compiler options that the SWC transform does not support.
 
 ### Angular
 
@@ -1149,11 +1208,15 @@ This is the standard model used by package managers like npm, pnpm, and Yarn wor
 
 Rspack defaults are oriented toward supporting this pattern out of the box, as it gives bundlers an explicit dependency graph to reason about, which powers caching, affected-detection, and other build optimizations.
 
-For a practical example, you can explore this [pnpm monorepo skeleton](https://github.com/nachocodoner/meteor-pnpm-skeleton) demonstrating how to set up Meteor within a pnpm workspace.
+Starting with Meteor 3.6, `meteor create` can scaffold this setup for you:
 
-:::warning
-Future versions of Meteor will introduce native support for scaffolding monorepo setups (such as pnpm workspaces) directly via `meteor create` skeletons.
-:::
+```bash
+meteor create --pnpm my-workspace
+```
+
+The `--pnpm` skeleton creates a Meteor + Rspack application in `apps/app`, reusable client, server, and shared packages under `packages/`, a `pnpm-workspace.yaml` file with a pinned pnpm version, and `workspace:*` links between the app and the local packages. Creation installs the workspace dependencies with the pnpm version declared by the workspace, through Corepack when available, so a global pnpm installation is not required.
+
+Inside a workspace, the checks described in [Required npm dependencies](#required-npm-dependencies) detect the workspace root and the package manager (npm, Yarn, or pnpm) from the root manifest and lockfiles. Installs run from the Meteor app directory so the package manager updates the app's `package.json` together with the workspace lockfile, and the manual instructions use the detected manager's commands. Dependencies declared with `file:`, `link:`, `portal:`, or `workspace:` protocols are validated against their installed version instead of being treated as invalid semver ranges.
 
 #### App-Local Source Symlinks (Share a file by location)
 

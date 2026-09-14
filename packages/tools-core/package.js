@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Helpers for managing modern tools in Meteor",
-  version: '1.3.0',
+  version: '1.4.0-beta360.0',
   devOnly: true,
 });
 
@@ -21,5 +21,6 @@ Package.onTest(function (api) {
     'tests/deps_tests.js',
     'tests/process_tests.js',
     'tests/global_state_tests.js',
+    'tests/npm_tests.js',
   ], 'server');
 });
