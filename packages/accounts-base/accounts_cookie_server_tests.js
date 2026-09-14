@@ -50,9 +50,6 @@ if (Meteor.isServer) {
   };
 
   const setCookieHeader = (res) => res.headers['set-cookie'] && res.headers['set-cookie'][0];
-  // When the cookie dispatcher declines a request it calls next(); WebApp then
-  // answers a declared network route with 404 (GET) or 405 (other methods).
-  const isUnhandled = (res) => res.status === 404 || res.status === 405;
   const cookiePair = (res) => setCookieHeader(res).split(';')[0];
 
   const createToken = async ({ expired = false } = {}) => {
@@ -81,6 +78,22 @@ if (Meteor.isServer) {
     } finally {
       if (had) Accounts._options[key] = previous;
       else delete Accounts._options[key];
+    }
+  };
+
+  const withPublicOption = async (key, value, fn) => {
+    Meteor.settings.public ??= {};
+    Meteor.settings.public.packages ??= {};
+    Meteor.settings.public.packages.accounts ??= {};
+    const settings = Meteor.settings.public.packages.accounts;
+    const had = Object.prototype.hasOwnProperty.call(settings, key);
+    const previous = settings[key];
+    settings[key] = value;
+    try {
+      await fn();
+    } finally {
+      if (had) settings[key] = previous;
+      else delete settings[key];
     }
   };
 
@@ -223,7 +236,7 @@ if (Meteor.isServer) {
       headers: jsonSameOrigin(),
       body: JSON.stringify({ token }),
     });
-    test.isTrue(isUnhandled(otherPath), `unexpected status ${otherPath.status}`);
+    test.equal(otherPath.status, 404);
     test.isUndefined(otherPath.headers['set-cookie']);
   });
 
@@ -336,6 +349,17 @@ if (Meteor.isServer) {
     const declared = await request('POST', SET_PATH, { headers: jsonSameOrigin(), body });
     test.equal(declared.status, 413);
     test.isUndefined(declared.headers['set-cookie']);
+  });
+
+  addTest('set rejects an oversized Content-Length before reading the body', async (test) => {
+    const body = JSON.stringify({ token: 'a'.repeat(5000) });
+    const res = await request('POST', SET_PATH, {
+      headers: jsonSameOrigin({ 'Content-Length': Buffer.byteLength(body) }),
+      body,
+    });
+    test.equal(res.status, 413);
+    test.equal(res.json && res.json.error, 'body_too_large');
+    test.isUndefined(res.headers['set-cookie']);
   });
 
   addTest('set measures a request body in bytes', async (test) => {
@@ -493,19 +517,21 @@ if (Meteor.isServer) {
 
   addTest('endpoints are not served unless useHttpOnlyCookies is enabled on the server', async (test) => {
     const { token } = await createToken();
-    const publicSetting = Meteor.settings?.public?.packages?.accounts?.useHttpOnlyCookies;
-    test.isFalse(!!publicSetting, 'precondition: public setting not forcing the feature on');
     await withOption('useHttpOnlyCookies', false, async () => {
-      test.isFalse(internals.isFeatureEnabled());
-      const set = await setCookie(token);
-      const refresh = await request('GET', REFRESH_PATH, { headers: { Cookie: `${COOKIE_NAME}=${token}` } });
-      const clear = await request('POST', CLEAR_PATH, { headers: sameOrigin() });
-      test.isTrue(isUnhandled(set), `set: unexpected status ${set.status}`);
-      test.isTrue(isUnhandled(refresh), `refresh: unexpected status ${refresh.status}`);
-      test.isTrue(isUnhandled(clear), `clear: unexpected status ${clear.status}`);
-      test.isUndefined(set.headers['set-cookie']);
-      test.isUndefined(clear.headers['set-cookie']);
-      test.isFalse((refresh.body || '').includes(token), 'token not leaked while disabled');
+      await withPublicOption('useHttpOnlyCookies', true, async () => {
+        test.isFalse(internals.isFeatureEnabled(), 'public settings cannot enable server endpoints');
+        const set = await setCookie(token);
+        const refresh = await request('GET', REFRESH_PATH, {
+          headers: { Cookie: `${COOKIE_NAME}=${token}` },
+        });
+        const clear = await request('POST', CLEAR_PATH, { headers: sameOrigin() });
+        test.equal(set.status, 404);
+        test.equal(refresh.status, 404);
+        test.equal(clear.status, 404);
+        test.isUndefined(set.headers['set-cookie']);
+        test.isUndefined(clear.headers['set-cookie']);
+        test.isFalse((refresh.body || '').includes(token), 'token not leaked while disabled');
+      });
     });
     test.isTrue(internals.isFeatureEnabled(), 'restored');
   });
@@ -533,5 +559,42 @@ if (Meteor.isServer) {
       }
       test.equal(last.status, 200, 'rate limit can be disabled');
     });
+  });
+
+  addTest('rejected cross-origin requests do not consume the rate limit', async (test) => {
+    const { token } = await createToken();
+    await withOption('httpOnlyCookieRateLimit', { max: 1, windowMs: 60 * 1000 }, async () => {
+      internals.resetRateLimit();
+      const rejected = await request('POST', CLEAR_PATH, {
+        headers: { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' },
+      });
+      test.equal(rejected.status, 403);
+      const rejectedRefresh = await request('GET', REFRESH_PATH, {
+        headers: { Origin: 'https://evil.example', 'Sec-Fetch-Site': 'cross-site' },
+      });
+      test.equal(rejectedRefresh.status, 403);
+
+      const allowed = await setCookie(token);
+      test.equal(allowed.status, 200, 'rejected traffic must not throttle trusted requests');
+    });
+  });
+
+  addTest('rate-limit bucket storage remains bounded', async (test) => {
+    const previousForwardedCount = process.env.HTTP_FORWARDED_COUNT;
+    process.env.HTTP_FORWARDED_COUNT = '1';
+    try {
+      internals.resetRateLimit();
+      for (let i = 0; i < 10050; i += 1) {
+        internals.isRateLimited({
+          headers: { 'x-forwarded-for': `2001:db8::${i}` },
+          socket: { remoteAddress: 'proxy' },
+        });
+      }
+      test.isTrue(internals.rateLimitBucketCount() <= 10000, 'bucket count is capped');
+    } finally {
+      if (previousForwardedCount === undefined) delete process.env.HTTP_FORWARDED_COUNT;
+      else process.env.HTTP_FORWARDED_COUNT = previousForwardedCount;
+      internals.resetRateLimit();
+    }
   });
 }

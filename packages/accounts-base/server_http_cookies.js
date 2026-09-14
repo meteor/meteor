@@ -16,6 +16,7 @@ const CLEAR_PATH = `${COOKIE_BASE_PATH}/clear`;
 
 const MAX_TOKEN_LENGTH = 512;
 const MAX_BODY_BYTES = 4 * 1024;
+const MAX_RATE_BUCKETS = 10000;
 
 const DEFAULT_RATE_LIMIT = { max: 30, windowMs: 10 * 1000 };
 
@@ -24,10 +25,7 @@ const DEFAULT_RATE_LIMIT = { max: 30, windowMs: 10 * 1000 };
 ///
 
 function isFeatureEnabled() {
-  return !!(
-    Accounts._options?.useHttpOnlyCookies ||
-    Meteor.settings?.public?.packages?.accounts?.useHttpOnlyCookies
-  );
+  return !!Accounts._options?.useHttpOnlyCookies;
 }
 
 function rateLimitConfig() {
@@ -225,15 +223,13 @@ function isRateLimited(req) {
   const key = clientAddress(req);
   let bucket = rateBuckets.get(key);
   if (!bucket || bucket.resetAt <= now) {
+    if (!bucket && rateBuckets.size >= MAX_RATE_BUCKETS) {
+      rateBuckets.delete(rateBuckets.keys().next().value);
+    }
     bucket = { count: 0, resetAt: now + config.windowMs };
     rateBuckets.set(key, bucket);
   }
   bucket.count += 1;
-  if (rateBuckets.size > 10000) {
-    for (const [k, b] of rateBuckets) {
-      if (b.resetAt <= now) rateBuckets.delete(k);
-    }
-  }
   return bucket.count > config.max;
 }
 
@@ -333,8 +329,8 @@ async function findValidLoginToken(token) {
 
 async function handleSet(req, res) {
   if (req.method !== 'POST') return sendEmpty(res, 405, { Allow: 'POST' });
-  if (isRateLimited(req)) return sendJson(res, 429, { error: 'rate_limited' });
   if (!isSameOriginRequest(req)) return sendJson(res, 403, { error: 'cross_origin' });
+  if (isRateLimited(req)) return sendJson(res, 429, { error: 'rate_limited' });
   if (!isJsonContentType(req)) return sendJson(res, 415, { error: 'unsupported_media_type' });
 
   const parsed = await readJsonBody(req);
@@ -363,8 +359,8 @@ async function handleSet(req, res) {
 
 async function handleRefresh(req, res) {
   if (req.method !== 'GET') return sendEmpty(res, 405, { Allow: 'GET' });
-  if (isRateLimited(req)) return sendJson(res, 429, { error: 'rate_limited' });
   if (isCrossSiteRequest(req)) return sendJson(res, 403, { error: 'cross_origin' });
+  if (isRateLimited(req)) return sendJson(res, 429, { error: 'rate_limited' });
 
   const token = parseCookies(req)[COOKIE_NAME];
   if (!token) return sendEmpty(res, 204, { 'Cache-Control': 'no-store' });
@@ -389,8 +385,8 @@ async function handleRefresh(req, res) {
 
 async function handleClear(req, res) {
   if (req.method !== 'POST') return sendEmpty(res, 405, { Allow: 'POST' });
-  if (isRateLimited(req)) return sendJson(res, 429, { error: 'rate_limited' });
   if (!isSameOriginRequest(req)) return sendJson(res, 403, { error: 'cross_origin' });
+  if (isRateLimited(req)) return sendJson(res, 429, { error: 'rate_limited' });
 
   res.setHeader('Set-Cookie', expiredLoginCookie(req));
   return sendJson(res, 200, { ok: true });
@@ -425,6 +421,8 @@ WebApp.handlers.use(async (req, res, next) => {
 export const httpOnlyCookieInternals = {
   COOKIE_NAME,
   resetRateLimit: () => rateBuckets.clear(),
+  rateLimitBucketCount: () => rateBuckets.size,
+  isRateLimited,
   isSameOriginRequest,
   isCrossSiteRequest,
   isFeatureEnabled,
