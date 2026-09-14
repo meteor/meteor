@@ -12,6 +12,7 @@ import type {
 } from "./accounts-base.native";
 import type { Meteor } from "meteor/meteor";
 import type { DDP } from "meteor/ddp";
+import type { Mongo } from "meteor/mongo";
 
 expectTypeOf<URLS>().toBeObject();
 expectTypeOf<EmailFields>().toBeObject();
@@ -19,12 +20,17 @@ expectTypeOf<AccountsClientOptions>().toBeObject();
 expectTypeOf<Header>().toBeObject();
 expectTypeOf<EmailTemplates>().toBeObject();
 
-expectTypeOf(AccountsClient).toBeConstructibleWith();
+// @ts-expect-error AccountsCommon requires options and reads them immediately.
+new AccountsClient();
 const sessionAccountsClientOptions: AccountsClientOptions = {
   clientStorage: "session",
 };
 const httpOnlyAccountsClientOptions: AccountsClientOptions = {
   useHttpOnlyCookies: true,
+};
+declare const usersCollection: Mongo.Collection<Meteor.User>;
+const collectionAccountsClientOptions: AccountsClientOptions = {
+  collection: usersCollection,
 };
 expectTypeOf(AccountsClient).toBeConstructibleWith(
   sessionAccountsClientOptions,
@@ -32,7 +38,12 @@ expectTypeOf(AccountsClient).toBeConstructibleWith(
 expectTypeOf(AccountsClient).toBeConstructibleWith(
   httpOnlyAccountsClientOptions,
 );
-expectTypeOf(new AccountsClient().connection).toEqualTypeOf<DDP.DDPStatic>();
+expectTypeOf(AccountsClient).toBeConstructibleWith(
+  collectionAccountsClientOptions,
+);
+expectTypeOf(
+  new AccountsClient(sessionAccountsClientOptions).connection,
+).toEqualTypeOf<DDP.DDPStatic>();
 expectTypeOf(Accounts).toBeObject();
 
 // --- Accounts consts / vars ---
@@ -85,6 +96,7 @@ Accounts.onPageLoadLogin((attempt: Accounts.PageLoadLoginAttemptInfo) => {
 Accounts.config({
   clientStorage: "none",
   useHttpOnlyCookies: true,
+  collection: usersCollection,
   restrictCreationByEmailDomain: (email) => {
     expectTypeOf(email).toBeString();
     return email.endsWith("@meteor.com");

@@ -29,12 +29,13 @@ export interface EmailFields {
 export interface AccountsClientOptions {
   connection?: DDP.DDPStatic | undefined;
   ddpUrl?: string;
+  collection?: string | Mongo.Collection<Meteor.User> | undefined;
   clientStorage?: 'session' | 'local' | 'none' | undefined;
   useHttpOnlyCookies?: boolean | undefined;
 }
 
 export class AccountsClient {
-  constructor(options?: AccountsClientOptions);
+  constructor(options: AccountsClientOptions);
   connection: DDP.DDPStatic;
 }
 
@@ -127,7 +128,7 @@ export namespace Accounts {
     argon2MemoryCost?: number | undefined;
     argon2Parallelism?: number | undefined;
     defaultFieldSelector?: { [key: string]: 0 | 1 } | undefined;
-    collection?: string | undefined;
+    collection?: string | Mongo.Collection<Meteor.User> | undefined;
     loginTokenExpirationHours?: number | undefined;
     tokenSequenceLength?: number | undefined;
   // Storage strategy for client tokens: 'local' (persist), 'session' (per-tab), or 'none' (in-memory only)
