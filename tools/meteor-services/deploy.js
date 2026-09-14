@@ -24,6 +24,8 @@ import {
 import { recordPackages } from './stats.js';
 import { Console } from '../console/console.js';
 import { Profile } from '../tool-env/profile';
+import { normalizeDdpTransport } from '../isobuild/ddp-transports.js';
+import { buildCacheMatchesSelection } from './deploy-build-cache.js';
 
 function sleepForMilliseconds(millisecondsToWait) {
   return new Promise(function(resolve) {
@@ -478,10 +480,13 @@ async function pollForDeploy(pollingState, versionId, site, deployWithTokenProps
 // - rawOptions: any unknown options that were passed to the command line tool
 // - waitForDeploy: whether to poll Galaxy after upload for deploy status
 // - isCacheBuildEnabled: Reuses the build already created if the git commit
-//   hash is the same
+//   hash and DDP transport selection are the same
 // - deployPollingTimeoutMs: user overridden timeout for polling Galaxy
 //   for deploy status
 export async function bundleAndDeploy(options) {
+  const ddpTransport = normalizeDdpTransport(options.buildOptions.ddpTransport);
+  options.buildOptions.ddpTransport = ddpTransport;
+
   if (options.recordPackageUsage === undefined) {
     options.recordPackageUsage = true;
   }
@@ -554,12 +559,9 @@ export async function bundleAndDeploy(options) {
   const buildCache = options.projectContext.getBuildCache();
   let isCacheBuildValid = options.isCacheBuildEnabled;
   if (options.isCacheBuildEnabled) {
-    if (!buildCache ||
+    if (!buildCacheMatchesSelection(buildCache, { gitCommitHash, ddpTransport }) ||
       !exists(buildCache.buildDir) ||
-      !exists(buildCache.bundlePath) ||
-      !buildCache.gitCommitHash ||
-      !gitCommitHash ||
-      buildCache.gitCommitHash !== gitCommitHash) {
+      !exists(buildCache.bundlePath)) {
       Console.warn(`We don't have a valid build cache so a new build will be performed.`);
       isCacheBuildValid = false;
     }
@@ -586,7 +588,8 @@ export async function bundleAndDeploy(options) {
     await options.projectContext.saveBuildCache({
       buildDir,
       bundlePath,
-      gitCommitHash
+      gitCommitHash,
+      ddpTransport,
     });
   }
 

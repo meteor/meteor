@@ -1,15 +1,18 @@
-import {
-  toSockjsUrl,
-  toWebsocketUrl,
-} from "./urls.js";
+import { toSockjsUrl, toWebsocketUrl } from "./urls.js";
 
 import { StreamClientCommon } from "./common.js";
+import { DDPTransportRegistry } from "meteor/ddp-transport-registry";
 
-// SockJS is imported statically to avoid the startup latency that dynamic
-// import() would introduce in _launchConnection(). When a non-SockJS transport
-// is selected, SockJS remains in the bundle but is never used — the connection
-// goes through native WebSocket directly.
-import SockJS from "./sockjs-1.6.1-min-.js";
+export function getSockJSConstructor(registry = DDPTransportRegistry) {
+  const SockJS = registry.get("sockjs");
+  if (!SockJS) {
+    throw new Error(
+      "SockJS DDP transport is not included in this application bundle. " +
+        "Rebuild with --ddp-transport=sockjs or --ddp-transport=both.",
+    );
+  }
+  return SockJS;
+}
 
 export class ClientStream extends StreamClientCommon {
   // @param url {String} URL to Meteor app
@@ -40,11 +43,7 @@ export class ClientStream extends StreamClientCommon {
     this.heartbeatTimer = null;
 
     // Listen to global 'online' event if we are running in a browser.
-    window.addEventListener(
-      'online',
-      this._online.bind(this),
-      false /* useCapture */
-    );
+    window.addEventListener("online", this._online.bind(this), false /* useCapture */);
 
     //// Kickoff!
     this._launchConnection();
@@ -76,14 +75,14 @@ export class ClientStream extends StreamClientCommon {
     }
 
     // update status
-    this.currentStatus.status = 'connected';
+    this.currentStatus.status = "connected";
     this.currentStatus.connected = true;
     this.currentStatus.retryCount = 0;
     this.statusChanged();
 
     // fire resets. This must come after status change so that clients
     // can call send from within a reset callback.
-    this.forEachCallback('reset', callback => {
+    this.forEachCallback("reset", (callback) => {
       callback();
     });
   }
@@ -91,7 +90,11 @@ export class ClientStream extends StreamClientCommon {
   _cleanup(maybeError) {
     this._clearConnectionAndHeartbeatTimers();
     if (this.socket) {
-      this.socket.onmessage = this.socket.onclose = this.socket.onerror = this.socket.onheartbeat = () => {};
+      this.socket.onmessage =
+        this.socket.onclose =
+        this.socket.onerror =
+        this.socket.onheartbeat =
+          () => {};
       this.socket.close();
       this.socket = null;
 
@@ -99,7 +102,7 @@ export class ClientStream extends StreamClientCommon {
       // matching the node implementation. _cleanup also runs at the top of
       // every (re)connection attempt, and firing here with no socket sent a
       // phantom 'disconnect' event to consumers once per retry cycle.
-      this.forEachCallback('disconnect', callback => {
+      this.forEachCallback("disconnect", (callback) => {
         callback(maybeError);
       });
     }
@@ -117,7 +120,7 @@ export class ClientStream extends StreamClientCommon {
   }
 
   _heartbeat_timeout() {
-    console.log('Connection timeout. No sockjs heartbeat received.');
+    console.log("Connection timeout. No sockjs heartbeat received.");
     this._lostConnection(new this.ConnectionError("Heartbeat timed out"));
   }
 
@@ -126,26 +129,18 @@ export class ClientStream extends StreamClientCommon {
     // the server emits every 45s. Native WebSocket transports have no such
     // frames, so on a quiet connection (e.g. DDP heartbeats disabled) the
     // timer would be guaranteed to fire and kill a healthy connection.
-    if (this._transport !== 'sockjs') return;
+    if (this._transport !== "sockjs") return;
     // If we've already permanently shut down this stream, the timeout is
     // already cleared, and we don't need to set it again.
     if (this._forcedToDisconnect) return;
     if (this.heartbeatTimer) clearTimeout(this.heartbeatTimer);
-    this.heartbeatTimer = setTimeout(
-      this._heartbeat_timeout.bind(this),
-      this.HEARTBEAT_TIMEOUT
-    );
+    this.heartbeatTimer = setTimeout(this._heartbeat_timeout.bind(this), this.HEARTBEAT_TIMEOUT);
   }
 
   _sockjsProtocolsWhitelist() {
     // only allow polling protocols. no streaming.  streaming
     // makes safari spin.
-    var protocolsWhitelist = [
-      'xdr-polling',
-      'xhr-polling',
-      'iframe-xhr-polling',
-      'jsonp-polling'
-    ];
+    let protocolsWhitelist = ["xdr-polling", "xhr-polling", "iframe-xhr-polling", "jsonp-polling"];
 
     // iOS 4 and 5 and below crash when using websockets over certain
     // proxies. this seems to be resolved with iOS 6. eg
@@ -153,27 +148,31 @@ export class ClientStream extends StreamClientCommon {
     //
     // iOS <4 doesn't support websockets at all so sockjs will just
     // immediately fall back to http
-    var noWebsockets =
+    const noWebsockets =
       navigator &&
       /iPhone|iPad|iPod/.test(navigator.userAgent) &&
       /OS 4_|OS 5_/.test(navigator.userAgent);
 
-    if (!noWebsockets)
-      protocolsWhitelist = ['websocket'].concat(protocolsWhitelist);
+    if (!noWebsockets) protocolsWhitelist = ["websocket"].concat(protocolsWhitelist);
 
     return protocolsWhitelist;
+  }
+
+  _getSockJSConstructor() {
+    return getSockJSConstructor();
   }
 
   _launchConnection() {
     this._cleanup(); // cleanup the old socket, if there was one.
 
-    const transport = __meteor_runtime_config__.DDP_TRANSPORT || 'sockjs';
+    const transport = __meteor_runtime_config__.DDP_TRANSPORT || "sockjs";
     this._transport = transport;
 
-    if (transport === 'sockjs') {
+    if (transport === "sockjs") {
+      const SockJS = this._getSockJSConstructor();
       const options = {
         transports: this._sockjsProtocolsWhitelist(),
-        ...this.options._sockjsOptions
+        ...this.options._sockjsOptions,
       };
       // Convert raw URL to SockJS URL each time we open a connection, so
       // that we can connect to random hostnames and get around browser
@@ -184,16 +183,16 @@ export class ClientStream extends StreamClientCommon {
       this.socket = new WebSocket(toWebsocketUrl(this.rawUrl));
     }
 
-    this.socket.onopen = data => {
+    this.socket.onopen = () => {
       this.lastError = null;
       this._connected();
     };
 
-    this.socket.onmessage = data => {
+    this.socket.onmessage = (data) => {
       this.lastError = null;
       this._heartbeat_received();
       if (this.currentStatus.connected) {
-        this.forEachCallback('message', callback => {
+        this.forEachCallback("message", (callback) => {
           callback(data.data);
         });
       }
@@ -203,15 +202,11 @@ export class ClientStream extends StreamClientCommon {
       this._lostConnection();
     };
 
-    this.socket.onerror = error => {
+    this.socket.onerror = (error) => {
       const { lastError } = this;
       this.lastError = error;
       if (lastError) return;
-      console.error(
-        'stream error',
-        error,
-        new Date().toDateString()
-      );
+      console.error("stream error", error, new Date().toDateString());
     };
 
     this.socket.onheartbeat = () => {
@@ -221,9 +216,7 @@ export class ClientStream extends StreamClientCommon {
 
     if (this.connectionTimer) clearTimeout(this.connectionTimer);
     this.connectionTimer = setTimeout(() => {
-      this._lostConnection(
-        new this.ConnectionError("DDP connection timed out")
-      );
+      this._lostConnection(new this.ConnectionError("DDP connection timed out"));
     }, this.CONNECT_TIMEOUT);
   }
 }

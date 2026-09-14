@@ -152,6 +152,7 @@ var assert = require('assert');
 var _ = require('underscore');
 
 var compiler = require('./compiler.js');
+const { getExcludedDdpTransportPackages } = require('./ddp-transports.js');
 var PackageSource = require('./package-source.js');
 import Builder from './builder.js';
 var compilerPluginModule = require('./compiler-plugin.js');
@@ -782,6 +783,8 @@ class Target {
     buildMode,
     // directory on disk where to store the cache for things like linker
     bundlerCacheDir,
+    // Internal DDP provider packages omitted from this target.
+    excludedPackages = [],
     // ... see subclasses for additional options
   }) {
     this.packageMap = packageMap;
@@ -830,6 +833,7 @@ class Target {
     this.buildMode = buildMode || 'production';
 
     this.bundlerCacheDir = bundlerCacheDir;
+    this.excludedPackages = new Set(excludedPackages);
   }
 
   // Top-level entry point for building a target. Generally to build a
@@ -922,6 +926,12 @@ class Target {
     });
   }
 
+  _isPackageExcluded(unibuild) {
+    return Boolean(
+      unibuild?.pkg?.name && this.excludedPackages.has(unibuild.pkg.name)
+    );
+  }
+
   // Determine the packages to load, create Unibuilds for
   // them, put them in load order, save in unibuilds.
   //
@@ -954,7 +964,9 @@ class Target {
           continue;
         }
         const unibuild = p.getUnibuildAtArch(this.arch);
-        unibuild && rootUnibuilds.push(unibuild);
+        if (unibuild && !this._isPackageExcluded(unibuild)) {
+          rootUnibuilds.push(unibuild);
+        }
       }
 
       if (buildmessage.jobHasMessages()) {
@@ -973,6 +985,9 @@ class Target {
       const usedUnibuilds = {};  // Map from unibuild.id to Unibuild.
       this.usedPackages = {};  // Map from package name to true;
       const addToGetsUsed = async function (unibuild) {
+        if (this._isPackageExcluded(unibuild)) {
+          return;
+        }
         if (_.has(usedUnibuilds, unibuild.id)) {
           return;
         }
@@ -3271,6 +3286,8 @@ Find out more about Meteor at meteor.com.
  *     archinfo.host())
  *   - buildMode: string, 'development'/'production'/'test', governs inclusion
  *     of debugOnly, prodOnly and testOnly packages, default 'production'
+ *   - ddpTransport: string, 'sockjs'/'uws'/'both', selects bundled DDP transport
+ *     providers, default 'both'
  *   - webArchs: array of 'web.*' options to build (defaults to
  *     projectContext.platformList.getWebArchs())
  *   - warnings: a MessageSet of linting messages or null if linting
@@ -3325,6 +3342,9 @@ async function bundle({
   forceInPlaceBuild,
 }) {
   buildOptions = buildOptions || {};
+  // Normalize the selection and compute exclusions once for all targets,
+  // including client targets created after server startup.
+  const excludedPackages = getExcludedDdpTransportPackages(buildOptions.ddpTransport);
 
   var serverArch = buildOptions.serverArch || archinfo.host();
   var webArchs;
@@ -3377,6 +3397,7 @@ async function bundle({
       "bundler.bundle..makeClientTarget", async function (app, webArch, options) {
       var client = new ClientTarget({
         bundlerCacheDir,
+        excludedPackages,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         sourceRoot: packageSource.sourceRoot,
@@ -3401,6 +3422,7 @@ async function bundle({
       "bundler.bundle..makeServerTarget", async function (app, clientArchs) {
       const server = new ServerTarget({
         bundlerCacheDir,
+        excludedPackages,
         packageMap: projectContext.packageMap,
         isopackCache: projectContext.isopackCache,
         sourceRoot: packageSource.sourceRoot,
