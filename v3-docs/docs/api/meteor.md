@@ -1051,10 +1051,10 @@ Determines how many messages we should queue during a non-graceful disconnect be
 ### Resume Behavior and Edge Cases
 
 When a session correctly resumes, clients pick up exactly where they left off:
-- **Subscriptions:** Active subscriptions automatically resume without needing to be re-published and clients do not re-send subscription requests.
+- **Subscriptions:** Active subscriptions resume without publish functions re-running: the client still re-sends its subscription requests on reconnect, but the server recognizes the existing subscription ids on a resumed session and ignores them.
 - **Method Calls:** Any in-flight method calls that were unacknowledged during the disconnection will be replayed.
 - **Queue Overflow:** If the number of messages emitted while a client is disconnected exceeds `maxMessageQueueLength`, the session is discarded. When the client reconnects, it initiates a fresh session.
-- **Hot Code Push:** HCP is treated as a manual, graceful disconnect. Session resumption is gracefully skipped so clients receive entirely fresh state for the new code.
+- **Hot Code Push:** After a hot code push the reloaded client always starts a fresh DDP session (it has no previous session id to resume), so it receives entirely fresh state for the new code; the old server-side session is discarded after the disconnect grace period.
 - **Load Balancers:** Server stickiness is still important. A client must reconnect to the *same* physical Meteor instance holding its session state within the grace period to resume successfully.
 - **Legacy Migrations:** If your application relied heavily on `onConnection` triggering *every single time* a client socket reconnected after brief hiccups (to handle manual presence tracking or metrics), be aware that `onConnection` is **no longer invoked** during a grace-period resumption.
 
@@ -1162,17 +1162,11 @@ server.
 import { DDP } from "meteor/ddp-client";
 
 DDP.onReconnect((connection) => {
-  console.log("Client reconnected!");
-  // Check if session was successfully resumed (Meteor 3.5+)
-  if (connection.sessionResumed) {
-    console.log("Session state preserved, no need to re-fetch custom data.");
-  } else {
-    console.log("A brand new session was established.");
-  }
+  console.log("Client reconnected!", connection.status().status);
 });
 ```
 
-Registers a callback hook that is invoked on the client whenever the DDP connection successfully re-establishes connectivity with the server. Starting in Meteor 3.5, the callback receives the connection instance which includes a `sessionResumed` boolean. You can use this flag to determine if the client recovered its previous session via the graceful disconnect period, or if the session expired forcing it to restart cleanly.
+Registers a callback hook that is invoked on the client whenever the DDP connection re-establishes connectivity with the server and sends its `connect` message. The callback receives the connection instance. It fires before the server confirms whether the previous DDP session was resumed, so it runs on every reconnect — resumed or fresh — and there is currently no public client-side flag distinguishing the two cases (server-side [session resumption](#reconnection) is configured via `Meteor.server.options` and is transparent to this hook).
 
 Callbacks may be async functions. When any reconnect callback returns a promise,
 Meteor waits for those promises to settle before re-sending outstanding method

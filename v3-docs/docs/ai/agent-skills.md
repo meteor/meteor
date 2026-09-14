@@ -81,6 +81,8 @@ The catalog focuses on Meteor workflows where framework context, version boundar
 | Application foundations | `meteor-accounts`, `meteor-security`, `meteor-testing` | Authentication, OAuth, password flows, authorization, rate limiting, CSP, unit and integration tests, and browser end-to-end testing. |
 | Community packages | `meteor-community-packages` | Selecting and integrating packages from Meteor's documented community catalog while checking versions, ownership, behavior, support boundaries, and upstream repositories. |
 | Debugging and operations | `meteor-debugging`, `meteor-deployment` | Evidence-first diagnosis across builds, runtime, data, tests, browsers, mobile, and production, plus Galaxy, Docker, Kubernetes, settings, and Node version matching. |
+| CLI installation | `meteor-cli-installation` | Installing, locating, repairing, resetting, and cleanly reinstalling the Meteor CLI, including `npx meteor`, PATH problems, and pinning specific Meteor versions. |
+| Native mobile apps | `meteor-native` | Building and maintaining Meteor 3 Cordova apps for Android and iOS, including platforms, Cordova plugins, signing and store artifacts, and hot code push compatibility. |
 
 The current catalog targets Meteor 3. Most skills support Meteor 3.0 and later. The modern build stack skill starts with Meteor 3.3, and the Rspack migration skill starts with Meteor 3.4. The catalog has dedicated UI skills for React and Blaze, but does not yet include dedicated Vue, Svelte, or Solid skills.
 

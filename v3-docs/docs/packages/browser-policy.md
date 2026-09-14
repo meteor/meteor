@@ -62,11 +62,14 @@ Your app will only render inside frames loaded by `origin`. You can only call
 this function once with a single origin, and cannot use wildcards or specify
 multiple origins that are allowed to frame your app. (This is a limitation of
 the X-Frame-Options header.) Example values of `origin` include
-`"http://example.com"` and `"https://foo.example.com"`. **This value of the
-X-Frame-Options header is not yet supported in Chrome or Safari and will be
-ignored in those browsers. If you need Chrome and/or Safari support, or need to
-allow multiple domains to frame your application, you can use the frame-ancestors
-CSP option via the BrowserPolicy.content.allowFrameAncestorsOrigin() function.**
+`"http://example.com"` and `"https://foo.example.com"`. **The `ALLOW-FROM` value of
+X-Frame-Options is obsolete: Firefox, the last browser to support it, removed it
+in Firefox 70, and modern browsers that encounter it ignore the `X-Frame-Options`
+header entirely. This means calling this function today not only fails to
+restrict framing to `origin` — it also discards the default `SAMEORIGIN`
+protection, allowing any site to frame your app. Use
+`BrowserPolicy.content.allowFrameAncestorsOrigin()` (the CSP `frame-ancestors`
+directive) instead, which also supports multiple origins.**
 
 ## BrowserPolicy.framing.allowAll()
 
@@ -99,7 +102,7 @@ Allows the creation of Javascript code from strings using function such as `eval
 ## BrowserPolicy.content.disallowEval()
 
 Disallows eval and related functions. Note: The default policy disallows eval,
-though for almost all Meteor apps it is enabled by the `dynamic-imports` package
+though for almost all Meteor apps it is enabled by the `dynamic-import` package
 
 ## BrowserPolicy.content.allowInlineStyles()
 

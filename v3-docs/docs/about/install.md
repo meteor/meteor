@@ -19,12 +19,11 @@ And it will prompt you to choose a project name and frontend framework.
 ### Operating System (OS) {#prereqs-os}
 
 - Meteor currently supports **OS X, Windows, and Linux**. Only 64-bit is supported.
-- Meteor supports Windows 7 / Windows Server 2008 R2 and up.
+- Meteor supports Windows 10 / Windows Server 2016 and up.
 - Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, rosetta terminal is required).
 - If you are using Meteor <= 3.0.4 and you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/). *No longer needed in Meteor 3.1*.
 - As of Meteor 3.4.1, the dev-bundle fast path works correctly on Apple Silicon, improving startup performance on arm64 Macs.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
-- For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
 
 ### Mobile Development {#prereqs-mobile}
 
@@ -52,17 +51,17 @@ if the error persists, please try to install Meteor using `npm`:
 npm install -g meteor --foreground-script
 ```
 
-Make sure you have Node.js v24 or higher installed.
+Make sure you have Node.js v20 or higher installed.
 
 #### Node.js Version Compatibility
 
 Different Meteor versions bundle and require different minimum Node.js active LTS releases:
 
-| Meteor Version | Bundled Node.js Version |
-| -------------- | ----------------------- |
-| Meteor 3.3     | Node.js 20              |
-| Meteor 3.4     | Node.js 22              |
-| Meteor 3.5     | Node.js 24              |
+| Meteor Version   | Bundled Node.js Version |
+| ---------------- | ----------------------- |
+| Meteor 3.0       | Node.js 20              |
+| Meteor 3.1 – 3.4 | Node.js 22              |
+| Meteor 3.5       | Node.js 24              |
 
 :::
 
@@ -109,7 +108,7 @@ Only run the above command with sudo if you know what you are doing.
 
 If you only use sudo because of a distribution default permission system, [check this link for fixing it](https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally).
 
-In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm use 14`.
+In some cases you can get this error `npm WARN checkPermissions Missing write access to /usr/local/lib/node_modules` because your Node.js installation was performed with wrong permissions. An easy way to fix this is to install Node.js using [nvm](https://github.com/nvm-sh/nvm) and forcing it to be used in your terminal. You can force it in the current session of your terminal by running `nvm install 24 && nvm use 24`.
 
 ## PATH management {#path-management}
 

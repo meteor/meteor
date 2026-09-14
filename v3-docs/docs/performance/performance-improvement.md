@@ -128,7 +128,7 @@ Meteor.publish('userPosts', function() {
 
 ### Redis Oplog
 
-[Redis Oplog](https://atmospherejs.com/cultofcoders/redis-oplog) is a popular solution to Meteor's Oplog tailing (which ensures the reactivity, but has some severe limitations that especially impact performance). Redis Oplog as name suggests uses [Redis](https://redis.io/) to track changes to data that you only need and cache them. This reduces load on the server and database, allows you to track only the data that you want and only publish the changes you need.
+[Redis Oplog](https://atmospherejs.com/cultofcoders/redis-oplog) is a popular alternative to Meteor's built-in reactivity drivers. Before Meteor 3.5, oplog tailing was the default mechanism ensuring reactivity, and it has some severe limitations that especially impact performance. Meteor 3.5+ instead tries the [Change Streams driver](/performance/change-streams-observer-driver) first, falling back to oplog tailing and then long polling when a query or deployment isn't supported — so Redis Oplog is mainly relevant for apps whose reactivity still runs through the oplog driver, whether by explicit configuration or by fallback. Redis Oplog, as the name suggests, uses [Redis](https://redis.io/) to track changes to only the data you need and cache them. This reduces load on the server and database, allows you to track only the data that you want and only publish the changes you need.
 
 ## Methods
 

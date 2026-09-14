@@ -9,8 +9,6 @@ Meteor allows developers to build mobile applications using web technologies lik
 
 Cordova apps run in a web view, which is like a browser without the UI. Different browser engines have varying implementations and support for web standards. This means the web view your app uses can greatly affect its performance and available features. (For details on supported features across browsers and versions, check caniuse.com.)
 
-There is a [Meteor Cordova guide](/about/cordova) available that offers advanced configuration details for Meteor Cordova projects. Feel free to refer to it while we update the information in the new documentation.
-
 This section will summarize the steps needed to set up your environment for Meteor Cordova development, manage development, and generate native artifacts for store uploads.
 
 ## Pre-Installation

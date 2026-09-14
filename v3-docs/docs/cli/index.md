@@ -118,14 +118,20 @@ meteor run --inspect-brk
 ### Command Usage
 
 ```bash
-meteor debug [--debug-port <port>]
+meteor debug
 ```
+
+This command is equivalent to `meteor run --inspect-brk[=<port>]`.
 
 ### How It Works
 
 - Server process suspends just before the first statement of server code execution
-- Debugger listens for incoming connections on port 5858 by default
-- Use `--debug-port <port>` to specify a different port
+- The Node.js inspector listens for incoming connections on port 9229 by default
+- Use `--inspect-brk=<port>` to specify a different port
+
+::: warning
+The `--debug-port` option is deprecated: it prints a warning and is remapped to `--inspect-brk` on the `run`, `test`, and `test-packages` commands, and `meteor debug` itself ignores the port it names (9229 is used). Use `--inspect-brk=<port>` instead.
+:::
 
 ### Setting Breakpoints
 
@@ -134,18 +140,10 @@ meteor debug [--debug-port <port>]
 
 ### Debugging Clients
 
-You can use either:
-- Web-based Node Inspector
-- Command-line debugger
-
-::: details Node Inspector Console Bug
-Due to a [bug in `node-inspector`](https://github.com/node-inspector/node-inspector/issues/903), pressing "Enter" after a command in the Node Inspector Console may not successfully send the command to the server.
-
-**Workarounds:**
-- Use Safari browser
-- Use `meteor shell` to interact with the server console
-- Apply the hot-patch available in [this comment](https://github.com/meteor/meteor/issues/7991#issuecomment-266709459)
-:::
+You can use any client that supports the Node.js inspector protocol:
+- Chrome DevTools (open `chrome://inspect`)
+- VS Code or other editors with a Node.js attach configuration
+- The `node inspect` command-line debugger
 
 ### Differences from Node.js Flags
 
@@ -156,11 +154,14 @@ The Meteor `--inspect` and `--inspect-brk` flags work similarly to Node.js flags
 
 ### Alternative Approach
 
-The same debugging functionality can be achieved by adding the `--debug-port <port>` option to other Meteor commands:
+The same debugging functionality can be achieved by adding the `--inspect-brk[=<port>]` option to other Meteor commands:
 
 ```bash
-meteor run --debug-port 5858
-meteor test-packages --debug-port 5858
+meteor run --inspect-brk
+meteor test-packages --inspect-brk
+
+# Optionally specify a custom port
+meteor run --inspect-brk=9230
 ```
 
 ## meteor profile {#meteorprofile}
@@ -327,7 +328,7 @@ The `--prototype` option adds packages that make development faster but shouldn'
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
 `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
-`react-meteor-data`
+`react-meteor-data`, `rspack`
 </details>
 
 <details>
@@ -339,7 +340,7 @@ The `--prototype` option adds packages that make development faster but shouldn'
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
 `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
-`apollo`, `compat:graphql`
+`apollo`, `compat:graphql`, `rspack`
 </details>
 
 <details>
@@ -351,7 +352,7 @@ The `--prototype` option adds packages that make development faster but shouldn'
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`,
 `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`,
-`hot-module-replacement`, `blaze-hot`
+`hot-module-replacement`, `blaze-hot`, `rspack`
 </details>
 
 <details>
@@ -370,12 +371,12 @@ Blaze app plus a web app manifest, icons, a dependency-free service worker and a
 <summary><strong>Vue App</strong> (--vue)</summary>
 
 **NPM packages:**
-- `@babel/runtime`, `meteor-node-stubs`, `vue`, `vue-meteor-tracker`, `vue-router`, `@types/meteor`, `@vitejs/plugin-vue`, `autoprefixer`, `meteor-vite`, `postcss`, `tailwindcss`, `vite`
+- `@babel/runtime`, `@swc/helpers`, `meteor-node-stubs`, `vue`, `vue-meteor-tracker`, `vue-router`, `@meteorjs/rspack`, `@rsdoctor/rspack-plugin`, `@rspack/cli`, `@rspack/core`, `@rspack/dev-server`, `@swc/core`, `@tailwindcss/postcss`, `@types/meteor`, `postcss`, `postcss-loader`, `tailwindcss`, `vue-loader`
 
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `reactive-var`, `standard-minifier-css`,
 `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `static-html`,
-`jorgenvatle:vite`
+`rspack`
 </details>
 
 <details>
@@ -675,7 +676,7 @@ meteor generate feed --templatePath=/scaffolds-ts
 
 ###  How to rename things? {meteorgenerate-template-rename}
 
-In addition to your own template folder, you can pass a JavaScript file to `meteor-generate` to perform certain transformations in your template files. That file is just a normal `.js` file that should export two functions: `transformName` and `transformContents`, which are used to modify the file names and contents, respectively.
+In addition to your own template folder, you can pass a JavaScript file to `meteor-generate` to perform certain transformations in your template files. That file is just a normal `.js` file that should export two functions: `transformFilename` and `transformContents`, which are used to modify the file names and contents, respectively.
 
 If you don't want to write such a file yourself, a few functions are provided out of the box to replace strings like ``$$name$$``, ``$$PascalName$$`` and ``$$camelName$$`` in your template files. The [internal Meteor template files](https://github.com/meteor/meteor/blob/release-3.3/tools/static-assets/scaffolds-js/methods.js) (which is used when you don't pass a template folder through the `--templatePath` option) are implemented this way - they include those special strings which get replaced to generate your files.
 
@@ -1170,9 +1171,9 @@ You can use the server bundle to host a Meteor application on your own infrastru
 ::: details Available Architectures
 Valid architectures include:
 - `os.osx.x86_64`
+- `os.osx.arm64`
 - `os.linux.x86_64`
-- `os.linux.x86_32`
-- `os.windows.x86_32`
+- `os.linux.aarch64`
 - `os.windows.x86_64`
 
 This option selects the architecture of binary-dependent Atmosphere packages. If your project doesn't use Atmosphere packages with binary dependencies, `--architecture` has no effect.
@@ -1479,9 +1480,9 @@ Creates and publishes a build of an existing package version for a different arc
 
 ::: info Architecture Support
 Meteor currently supports the following architectures:
-- 32-bit Linux
-- 64-bit Linux (used by Galaxy servers)
-- 64-bit macOS
+- 64-bit Linux (x86_64 and aarch64; used by Galaxy servers)
+- 64-bit macOS (x86_64 and arm64)
+- 64-bit Windows (x86_64)
 :::
 
 ### Use Case
@@ -1721,7 +1722,6 @@ These commands require authorization to use.
 | `change-homepage` | Change the homepage URL of a package |
 | `list-organizations` | List the organizations of which you are a member |
 | `members` | View or change the members of an organization |
-| `get-machine` | Open an SSH shell to a machine in the Meteor build farm |
 
 ### Usage Examples
 

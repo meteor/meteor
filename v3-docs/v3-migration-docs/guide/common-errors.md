@@ -109,26 +109,50 @@ Meteor 3's stricter module system changes the order in which packages and their 
 
 **Why this happens:**
 
-Code running outside of Meteor's async context (e.g., in Express middleware, third-party library callbacks, or raw Node.js event handlers) does not have access to Meteor's environment variables or DDP context. This was sometimes silently handled by Fibers but now requires explicit wrapping.
+Code running outside of Meteor's async context (e.g., in third-party library callbacks or raw Node.js event handlers) loses the values stored in Meteor's environment variables (`Meteor.EnvironmentVariable`). This was sometimes silently handled by Fibers but now requires explicit wrapping.
 
 **How to solve it:**
 
-Wrap external callbacks with `Meteor.bindEnvironment`:
+Wrap external callbacks with `Meteor.bindEnvironment`. It replays the `EnvironmentVariable` values that were in place when the wrapper was created:
+
+```js
+import { Meteor } from 'meteor/meteor';
+
+const currentRequestId = new Meteor.EnvironmentVariable();
+
+currentRequestId.withValue('req-42', () => {
+  // Problem — the raw callback loses the environment value
+  thirdPartyEmitter.on('data', () => {
+    console.log(currentRequestId.get()); // [!code error] undefined — context was lost
+  });
+
+  // Solution — wrap with bindEnvironment
+  thirdPartyEmitter.on('data', Meteor.bindEnvironment(() => { // [!code highlight]
+    console.log(currentRequestId.get()); // [!code highlight] 'req-42' — context restored
+  })); // [!code highlight]
+});
+```
+
+Note that `Meteor.bindEnvironment` does not create a method, publication, or endpoint invocation context — it only replays the `EnvironmentVariable` values captured when the wrapper was created — so it cannot make `Meteor.userAsync()` work in webhook handlers.
+
+To read the current user in an Express route, use the `accounts-express` core package (Meteor 3.5+), whose middleware sets up the endpoint invocation context:
 
 ```js
 import { Meteor } from 'meteor/meteor';
 import { WebApp } from 'meteor/webapp';
+import { createAuthMiddleware } from 'meteor/accounts-express';
 
-// Problem — no Meteor context in Express handler
-WebApp.handlers.use('/webhook', (req, res) => {
-  const user = Meteor.user(); // [!code error] throws error — no Meteor context
+// Problem — no invocation context in a plain Express handler
+WebApp.handlers.use('/webhook', async (req, res) => {
+  const user = await Meteor.userAsync(); // [!code error] throws — only works inside a method, publication, or authenticated WebApp endpoint
 });
 
-// Solution — wrap with bindEnvironment
-WebApp.handlers.use('/webhook', Meteor.bindEnvironment(async (req, res) => { // [!code highlight]
-  const user = await Meteor.userAsync(); // [!code highlight] works
+// Solution (Meteor 3.5+) — `meteor add accounts-express`, then:
+WebApp.handlers.use('/webhook', createAuthMiddleware({ required: true })); // [!code highlight]
+WebApp.handlers.use('/webhook', async (req, res) => {
+  const user = await Meteor.userAsync(); // [!code highlight] works — middleware sets the endpoint invocation context (req.userId is also set)
   res.send('OK');
-})); // [!code highlight]
+});
 ```
 
 ## Monkey-Patching Timing Issues

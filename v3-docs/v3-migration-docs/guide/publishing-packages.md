@@ -1,11 +1,11 @@
 ## Publishing Packages
 
-Publishing a Meteor package involves a few key steps, including setting up your package, testing it, and finally publishing it to the Meteor package repository. Here's a brief guide on how to publish Meteor packages using Meteor 3, specifically with the `meteor publish --release=3.0.3` command.
+Publishing a Meteor package involves a few key steps, including setting up your package, testing it, and finally publishing it to the Meteor package repository. Here's a brief guide on how to publish Meteor packages using Meteor 3, specifically with the `meteor publish --release=3.5.2` command.
 
 ### Prerequisites
 - Ensure you have Meteor 3 installed. You can check your Meteor version and automatically download it if it's missing:
   ```bash
-  meteor --version --release=3.0.3
+  meteor --version --release=3.5.2
   ```
 - Have a Meteor developer account. You can create one at [Meteor's official website](https://www.meteor.com/).
 
@@ -87,10 +87,10 @@ meteor test-packages ./ --driver-package meteortesting:mocha
 Once your package is ready and tested, you can publish it using the following command:
 
 ```bash
-meteor publish --release=3.0.3
+meteor publish --release=3.5.2
 ```
 
-You can replace `3.0.3` with the appropriate release version. If you omit the `--release` flag, it will default to the latest official Meteor version, which at the time of this writing is Meteor 2. That way packages published without specifying a release will not be compatible with Meteor 3, as there will probably be a `fibers` related error.
+You can replace `3.5.2` with the appropriate release version. If you omit the `--release` flag, Meteor uses the latest official (recommended) release — a Meteor 3.x release, 3.5.2 at the time of writing — so you no longer need to pin a release just to get Meteor 3 compatibility. Pass `--release` only when you need to publish from a specific older release, for example a 2.x release if your package must remain installable by Meteor 2's tooling (see the `api.versionsFrom(['2.3', '3.0'])` note above).
 
 - **Login if prompted:**
   You will be asked to log in with your Meteor developer account credentials if you aren't already logged in.

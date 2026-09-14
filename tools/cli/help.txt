@@ -486,8 +486,8 @@ Options:
                       (for example, --server=https://example.com:443).
   --architecture      Builds the server for a different architecture than your
                       developer machine's architecture. Valid architectures
-                      include os.osx.x86_64, os.linux.x86_64, os.linux.x86_32,
-                      os.windows.x86_32, and os.windows.x86_64. Note: This
+                      include os.osx.x86_64, os.osx.arm64, os.linux.x86_64,
+                      os.linux.aarch64, and os.windows.x86_64. Note: This
                       option selects the architecture of the binary-dependent
                       Atmosphere packages you would like bundled into your
                       application, when those packages were specifically
@@ -1042,8 +1042,8 @@ platform-specific components (eg, npm modules with native code), the package
 will only be usable on machines of the same architecture that you are currently
 on. To make your package's version usable on other architectures, you can use
 the publish-for-arch command.  (The architectures currently supported by Meteor
-are 32-bit Linux, 64-bit Linux, and 64-bit OS X; the 'meteor deploy' servers use
-64-bit Linux.)
+are 64-bit Linux (x86_64 and aarch64), 64-bit macOS (x86_64 and arm64), and
+64-bit Windows; the 'meteor deploy' servers use 64-bit Linux.)
 
 On a machine of the appropriate architecture, install Meteor and run
   $ meteor publish-for-arch packageName@version
