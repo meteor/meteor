@@ -5,3 +5,6 @@ meteor-base
 webapp
 ecmascript
 mongo
+# Scoped local package with an npm dependency: regression for the ESM loader
+# colon-to-underscore mapping of /node_modules/meteor/<author>:<name>/node_modules/*.
+smoke:scoped-npm-dep

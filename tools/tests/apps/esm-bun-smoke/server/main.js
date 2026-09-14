@@ -1,11 +1,15 @@
 import { Meteor } from 'meteor/meteor';
 import { Mongo } from 'meteor/mongo';
+import { scopedNpmDep } from 'meteor/smoke:scoped-npm-dep';
 
 const Items = new Mongo.Collection('smokeItems');
 
 Meteor.methods({
   'smoke.echo'(value) {
     return { echoed: value };
+  },
+  'smoke.scopedNpm'() {
+    return scopedNpmDep;
   },
 });
 

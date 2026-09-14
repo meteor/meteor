@@ -133,7 +133,7 @@ function createResolver(serverDir, programJson) {
       const lastPart = parts[parts.length - 1];
       const resolved = resolveInDirs(lastPart, dirs);
       if (resolved) return require(resolved);
-      const diskPath = path.join(serverDir, 'npm' + name);
+      const diskPath = path.join(serverDir, 'npm' + name.replace(/:/g, '_'));
       if (fs.existsSync(diskPath)) return require(diskPath);
     }
 
@@ -154,7 +154,7 @@ function createResolver(serverDir, programJson) {
       const lastPart = parts[parts.length - 1];
       const resolved = resolveInDirs(lastPart, dirs);
       if (resolved) return resolved;
-      const diskPath = path.join(serverDir, 'npm' + name);
+      const diskPath = path.join(serverDir, 'npm' + name.replace(/:/g, '_'));
       if (fs.existsSync(diskPath)) return diskPath;
     }
     const resolved = resolveInDirs(name, dirs);

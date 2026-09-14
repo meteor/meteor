@@ -62,11 +62,21 @@ const result = new Promise((resolve, reject) => {
 
       case 'result':
         if (msg.error) return settle(new Error('method returned an error: ' + JSON.stringify(msg.error)));
-        if (msg.result?.echoed !== 'hello') {
-          return settle(new Error('unexpected method result: ' + JSON.stringify(msg.result)));
+        if (msg.id === '1') {
+          if (msg.result?.echoed !== 'hello') {
+            return settle(new Error('unexpected method result: ' + JSON.stringify(msg.result)));
+          }
+          console.log('ok  method smoke.echo returned ' + JSON.stringify(msg.result));
+          stage = 'scoped package npm dependency';
+          send({ msg: 'method', id: '3', method: 'smoke.scopedNpm', params: [] });
+          break;
+        }
+        // Value computed by the npm dependency of the scoped package smoke:scoped-npm-dep.
+        if (msg.result?.padded !== '007') {
+          return settle(new Error('unexpected scoped npm result: ' + JSON.stringify(msg.result)));
         }
         seen.methodResult = true;
-        console.log('ok  method smoke.echo returned ' + JSON.stringify(msg.result));
+        console.log('ok  method smoke.scopedNpm returned ' + JSON.stringify(msg.result));
         stage = 'subscription';
         send({ msg: 'sub', id: '2', name: 'smoke.items', params: [] });
         break;
