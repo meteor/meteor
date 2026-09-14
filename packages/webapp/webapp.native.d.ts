@@ -12,6 +12,31 @@ export interface StaticFiles {
   };
 }
 
+export interface IdentifiedBrowser {
+  name: string;
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+/**
+ * High-level request data passed to hooks while Meteor selects and renders an
+ * application's client bundle.
+ */
+export interface CategorizedRequest {
+  browser: IdentifiedBrowser;
+  modern: boolean;
+  path: string;
+  arch: string;
+  url: {
+    query: Record<string, string>;
+  };
+  dynamicHead: string | undefined;
+  dynamicBody: string | undefined;
+  headers: http.IncomingHttpHeaders;
+  cookies?: Record<string, string> | undefined;
+}
+
 type ExpressModule = {
   (): express.Application;
   json: typeof express.json;
@@ -23,7 +48,7 @@ type ExpressModule = {
 };
 
 type BoilerplateDataCallback = (
-  request: http.IncomingMessage,
+  request: CategorizedRequest,
   data: Record<string, unknown>,
   arch: string,
   response?: http.ServerResponse,
@@ -77,7 +102,10 @@ export declare namespace WebApp {
   };
   function decodeRuntimeConfig(rtimeConfigString: string): unknown;
   function encodeRuntimeConfig(rtimeConfig: unknown): string;
-  function addHtmlAttributeHook(hook: (request: http.IncomingMessage) => Record<string, unknown> | null,
+  function categorizeRequest(
+    request: http.IncomingMessage | CategorizedRequest,
+  ): CategorizedRequest;
+  function addHtmlAttributeHook(hook: (request: CategorizedRequest) => Record<string, unknown> | null,
   ): void;
   function addHtmlAttributeHook(hook: Function): void;
 }
@@ -89,12 +117,7 @@ export declare namespace WebAppInternals {
       module: unknown;
     };
   };
-  function identifyBrowser(userAgentString: string): {
-    name: string;
-    major: number;
-    minor: number;
-    patch: number;
-  };
+  function identifyBrowser(userAgentString: string): IdentifiedBrowser;
   function registerBoilerplateDataCallback(
     key: string,
     callback: BoilerplateDataCallback | null,
@@ -135,7 +158,7 @@ export declare namespace WebAppInternals {
   function setBundledJsCssPrefix(bundledJsCssPrefix: string): Promise< void>;
   function addStaticJs(): void;
   function addStaticJs(contents: string): void;
-  function getBoilerplate(request: http.IncomingMessage, arch: string): Promise<{
+  function getBoilerplate(request: CategorizedRequest, arch: string): Promise<{
     stream: NodeJS.ReadableStream;
     statusCode?: number;
     headers?: Record< string, string>;

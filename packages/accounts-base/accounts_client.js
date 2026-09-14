@@ -28,7 +28,7 @@ export class AccountsClient extends AccountsCommon {
     this.savedHash = window.location.hash;
     this._initUrlMatching();
 
-    this.initStorageLocation();
+    this.initStorageLocation(options);
 
     // Read HttpOnly cookie setting from options or public settings
     this._useHttpOnlyCookies = !!(options?.useHttpOnlyCookies || Meteor.settings?.public?.packages?.accounts?.useHttpOnlyCookies);

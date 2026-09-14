@@ -1,8 +1,9 @@
 import { expectTypeOf } from "expect-type";
 import { WebApp, WebAppInternals } from "./webapp.native";
-import type { StaticFiles } from "./webapp.native";
+import type { CategorizedRequest, StaticFiles } from "./webapp.native";
 
 expectTypeOf<StaticFiles>().toBeObject();
+expectTypeOf<CategorizedRequest>().toBeObject();
 expectTypeOf(WebApp).toBeObject();
 expectTypeOf(WebAppInternals).toBeObject();
 
@@ -33,6 +34,27 @@ WebApp.addRuntimeConfigHook(async({ encodedCurrentConfig }) => encodedCurrentCon
 expectTypeOf(WebApp.decodeRuntimeConfig).returns.toEqualTypeOf<unknown>();
 expectTypeOf(WebApp.encodeRuntimeConfig).returns.toEqualTypeOf<string>();
 expectTypeOf(WebApp.addHtmlAttributeHook).returns.toBeVoid();
+expectTypeOf(WebApp.categorizeRequest).returns.toEqualTypeOf<CategorizedRequest>();
+WebApp.addHtmlAttributeHook((request) => {
+  expectTypeOf(request).toEqualTypeOf<CategorizedRequest>();
+  expectTypeOf(request.browser).toEqualTypeOf<{
+    name: string;
+    major: number;
+    minor: number;
+    patch: number;
+  }>();
+  expectTypeOf(request.modern).toBeBoolean();
+  expectTypeOf(request.path).toBeString();
+  expectTypeOf(request.arch).toBeString();
+  expectTypeOf(request.url).toEqualTypeOf<{
+    query: Record<string, string>;
+  }>();
+  expectTypeOf(request.dynamicHead).toEqualTypeOf<string | undefined>();
+  expectTypeOf(request.dynamicBody).toEqualTypeOf<string | undefined>();
+  expectTypeOf(request.headers).toEqualTypeOf<import("http").IncomingHttpHeaders>();
+  expectTypeOf(request.cookies).toEqualTypeOf<Record<string, string> | undefined>();
+  return { lang: "en" };
+});
 
 // --- WebApp types ---
 expectTypeOf<WebApp.RuntimeConfigHookCallback>().toBeFunction();
