@@ -9,8 +9,6 @@ const path = require('path');
 const semver = require('semver');
 const tmp = require('tmp');
 
-const fsPromises = fs.promises;
-
 const {
   meteorPath,
   release,
@@ -31,6 +29,7 @@ const {
 } = require('./extract');
 const { engines } = require('./package.json');
 const { uninstall } = require('./uninstall');
+const { isMeteorOnPath, appendLineIfMissing } = require('./exec-path');
 
 const nodeVersion = engines.node;
 const npmVersion = engines.npm;
@@ -127,6 +126,20 @@ if (fs.existsSync(startedPath)) {
   console.log('');
 } else if (fs.existsSync(meteorPath)) {
   console.log('Meteor is already installed at', meteorPath);
+
+  // Repair the PATH if a previous install left it missing, instead of just
+  // bailing out. setupExecPath is idempotent, so it is safe to call again.
+  if (
+    !isWindows() &&
+    shouldSetupExecPath() &&
+    !isMeteorOnPath(process.env.PATH, meteorPath, path.delimiter)
+  ) {
+    setupExecPath();
+    console.log(
+      'Added Meteor to your PATH. Open a new terminal (or reload your shell profile) to use the `meteor` command.',
+    );
+  }
+
   console.log(
     `If you want to reinstall it, run:
 
@@ -320,14 +333,14 @@ async function setupExecPath() {
   }
   const exportCommand = `export PATH=${meteorPath}:$PATH`;
 
-  const appendPathToFile = async file =>
-    fsPromises.appendFile(`${rootPath}/${file}`, `${exportCommand}\n`);
+  const appendPathToFile = file =>
+    appendLineIfMissing(`${rootPath}/${file}`, exportCommand);
 
   if (process.env.SHELL && process.env.SHELL.includes('zsh')) {
-    await appendPathToFile('.zshrc');
+    appendPathToFile('.zshrc');
   } else {
-    await appendPathToFile('.bashrc');
-    await appendPathToFile('.bash_profile');
+    appendPathToFile('.bashrc');
+    appendPathToFile('.bash_profile');
   }
 }
 async function fixOwnership() {
