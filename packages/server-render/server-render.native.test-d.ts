@@ -1,5 +1,6 @@
 import { expectTypeOf } from "expect-type";
 import { onPageLoad } from "./server-render.native";
+import type { CategorizedRequest as WebAppCategorizedRequest } from "../webapp/webapp.native";
 import type {
   Content,
   ClientSink,
@@ -12,6 +13,7 @@ import type {
 expectTypeOf<Content>().not.toBeNever();
 expectTypeOf<ClientSink>().toBeObject();
 expectTypeOf<CategorizedRequest>().toBeObject();
+expectTypeOf<CategorizedRequest>().toEqualTypeOf<WebAppCategorizedRequest>();
 expectTypeOf<ServerSink>().toBeObject();
 expectTypeOf<Sink>().not.toBeNever();
 expectTypeOf<Callback>().toBeFunction();
