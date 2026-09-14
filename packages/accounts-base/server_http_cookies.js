@@ -155,6 +155,16 @@ function configuredAllowedOrigins() {
   return origins;
 }
 
+function corsHeaders(req) {
+  const origin = normalizeOrigin(req.headers.origin);
+  if (!origin || !configuredAllowedOrigins().has(origin)) return null;
+  return {
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Credentials': 'true',
+    Vary: 'Origin',
+  };
+}
+
 // Include configured and request-derived application origins.
 function allowedOrigins(req) {
   const origins = configuredAllowedOrigins();
@@ -273,6 +283,23 @@ function sendEmpty(res, code, headers = {}) {
   res.end();
 }
 
+function handlePreflight(req, res, path) {
+  const headers = corsHeaders(req);
+  const requestedMethod = (req.headers['access-control-request-method'] || '')
+    .trim()
+    .toUpperCase();
+  if (!headers || requestedMethod !== 'POST') {
+    return sendEmpty(res, 403, { 'Cache-Control': 'no-store', Vary: 'Origin' });
+  }
+  return sendEmpty(res, 204, {
+    ...headers,
+    'Access-Control-Allow-Methods': 'POST',
+    ...(path === SET_PATH ? { 'Access-Control-Allow-Headers': 'Content-Type' } : {}),
+    'Cache-Control': 'no-store',
+    Allow: 'OPTIONS, POST',
+  });
+}
+
 ///
 /// Token lookup
 ///
@@ -380,6 +407,13 @@ WebApp.handlers.use(async (req, res, next) => {
   if (!path.startsWith(`${COOKIE_BASE_PATH}/`)) return next();
   const handler = ROUTES[path];
   if (!handler || !isFeatureEnabled()) return next();
+  if ((path === SET_PATH || path === CLEAR_PATH) && req.method === 'OPTIONS') {
+    return handlePreflight(req, res, path);
+  }
+  const headers = path === SET_PATH || path === CLEAR_PATH ? corsHeaders(req) : null;
+  if (headers) {
+    Object.entries(headers).forEach(([name, value]) => res.setHeader(name, value));
+  }
   try {
     await handler(req, res);
   } catch {
