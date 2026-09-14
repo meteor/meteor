@@ -1,8 +1,5 @@
-import {
-  isString,
-  isObject,
-  has,
-} from "underscore";
+
+
 
 import { matches as archMatches, isLegacyArch } from "../utils/archinfo";
 import {
@@ -118,7 +115,7 @@ export default class Resolver {
   }
 
   static isNative(id: string): boolean {
-    return has(nativeModulesMap, id);
+    return id in nativeModulesMap;
   }
 
   static getNativeStubId(id: string) {
@@ -160,7 +157,7 @@ export default class Resolver {
         const found = this.getPkgJsonSubsetForDir(dirPath);
         const foundPkgJsonMain = found && this.mainFields.some(name => {
           const value = found.pkg[name];
-          if (isString(value)) {
+          if (typeof value === "string") {
             // The "main" field of package.json does not have to begin with ./
             // to be considered relative, so first we try simply appending it
             // to the directory path before falling back to a full resolve,
@@ -224,7 +221,7 @@ export default class Resolver {
       // the ImportScanner can register the appropriate browser aliases.
       const pkgJsonInfo = this.findPkgJsonSubsetForPath(resolved.path);
       if (pkgJsonInfo &&
-          isObject(pkgJsonInfo.pkg.browser)) {
+          pkgJsonInfo.pkg.browser && typeof pkgJsonInfo.pkg.browser === "object") {
         if (! resolved.packageJsonMap) {
           resolved.packageJsonMap = Object.create(null);
         }
@@ -366,7 +363,7 @@ export default class Resolver {
   private getPkgJsonSubsetForDir(dirPath: string) {
     const pkgJsonPath = pathJoin(dirPath, "package.json");
     const pkg = optimisticReadJsonOrNull(pkgJsonPath);
-    if (! pkg) {
+    if (! pkg || typeof pkg !== "object" || Array.isArray(pkg)) {
       return null;
     }
 
@@ -374,18 +371,18 @@ export default class Resolver {
     // and "browser" properties (if defined) from the package.json file.
     const pkgSubset: Partial<typeof pkg> = {};
 
-    if (has(pkg, "name")) {
+    if (Object.prototype.hasOwnProperty.call(pkg, "name")) {
       pkgSubset.name = pkg.name;
     }
 
-    if (has(pkg, "version")) {
+    if (Object.prototype.hasOwnProperty.call(pkg, "version")) {
       pkgSubset.version = pkg.version;
     }
 
     this.mainFields.forEach(name => {
       const value = pkg[name];
-      if (isString(value) ||
-          isObject(value)) {
+      if (typeof value === "string" ||
+          (value && typeof value === "object")) {
         pkgSubset[name] = value;
       }
     });
