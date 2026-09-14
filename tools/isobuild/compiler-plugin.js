@@ -817,6 +817,24 @@ class ResourceSlot {
     return resource;
   }
 
+  // Emit a lazy stub JS resource for a source file whose compilation failed
+  // (errors recorded in this.errors) without producing any output resource.
+  // The stub exists only so the deferred errors are carried into the
+  // ImportScanner: JsOutputResource shares this.errors, so reportPendingErrors
+  // surfaces the real compile error the moment the module is imported. The
+  // stub is always lazy (eager files already report errors synchronously via
+  // InputFile#_reportError) and is filtered out of the final output by
+  // ImportScanner#getOutputFiles once hasErrors is set, so its empty data is
+  // never used. See https://github.com/meteor/meteor/issues/10366.
+  addErrorPlaceholder() {
+    return this.addJavaScript({
+      path: this.inputResource.path,
+      sourcePath: this.inputResource.path,
+      data: Buffer.from("", "utf8"),
+      lazy: true,
+    });
+  }
+
   addAsset(options, lazyFinalizer) {
     if (! this.sourceProcessor) {
       throw Error("addAsset on non-source ResourceSlot?");
@@ -1300,6 +1318,25 @@ export class PackageSourceBatch {
       const inputFiles = [];
 
       batch.resourceSlots.forEach(slot => {
+        // If a compiler plugin reported an error for a lazy source file but
+        // produced no output resource (e.g. a Blaze/Stylus template that
+        // fails to compile and aborts before calling addJavaScript), the
+        // error was deferred by InputFile#_reportError (because lazy files
+        // should not break the build unless they are actually imported).
+        // Without an output resource to carry that error, it is never handed
+        // to the ImportScanner, so reportPendingErrors() is never called and
+        // the error is silently swallowed -- the import resolves to "missing"
+        // and the only symptom is a runtime "Cannot find module" error. Emit
+        // a lazy stub JS resource that carries the deferred error so the
+        // ImportScanner can surface it (via reportPendingErrors) if and when
+        // the file is imported, while leaving unimported broken files
+        // harmless. See https://github.com/meteor/meteor/issues/10366.
+        if (slot.sourceProcessor &&
+            slot.errors.length > 0 &&
+            slot.jsOutputResources.length === 0) {
+          slot.addErrorPlaceholder();
+        }
+
         inputFiles.push(...slot.jsOutputResources);
       });
 

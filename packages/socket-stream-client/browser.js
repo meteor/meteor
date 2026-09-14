@@ -94,11 +94,15 @@ export class ClientStream extends StreamClientCommon {
       this.socket.onmessage = this.socket.onclose = this.socket.onerror = this.socket.onheartbeat = () => {};
       this.socket.close();
       this.socket = null;
-    }
 
-    this.forEachCallback('disconnect', callback => {
-      callback(maybeError);
-    });
+      // Only fire disconnect callbacks when there was a socket to close,
+      // matching the node implementation. _cleanup also runs at the top of
+      // every (re)connection attempt, and firing here with no socket sent a
+      // phantom 'disconnect' event to consumers once per retry cycle.
+      this.forEachCallback('disconnect', callback => {
+        callback(maybeError);
+      });
+    }
   }
 
   _clearConnectionAndHeartbeatTimers() {
@@ -118,6 +122,11 @@ export class ClientStream extends StreamClientCommon {
   }
 
   _heartbeat_received() {
+    // The watchdog exists to detect missing SockJS heartbeat frames, which
+    // the server emits every 45s. Native WebSocket transports have no such
+    // frames, so on a quiet connection (e.g. DDP heartbeats disabled) the
+    // timer would be guaranteed to fire and kill a healthy connection.
+    if (this._transport !== 'sockjs') return;
     // If we've already permanently shut down this stream, the timeout is
     // already cleared, and we don't need to set it again.
     if (this._forcedToDisconnect) return;
@@ -159,6 +168,7 @@ export class ClientStream extends StreamClientCommon {
     this._cleanup(); // cleanup the old socket, if there was one.
 
     const transport = __meteor_runtime_config__.DDP_TRANSPORT || 'sockjs';
+    this._transport = transport;
 
     if (transport === 'sockjs') {
       const options = {
