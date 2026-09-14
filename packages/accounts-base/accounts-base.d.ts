@@ -103,7 +103,7 @@ export namespace Accounts {
     tokenSequenceLength?: number | undefined;
   // Storage strategy for client tokens: 'local' (persist), 'session' (per-tab), or 'none' (in-memory only)
   clientStorage?: 'session' | 'local' | 'none';
-  // Enable hybrid HttpOnly cookie + short-lived token flow. Must be set on
+  // Enable hybrid HttpOnly cookie + in-memory resume token flow. Must be set on
   // the server for the /_accounts/cookie/* endpoints to respond.
   useHttpOnlyCookies?: boolean | undefined;
   // Extra origins (scheme://host[:port]) allowed to call the cookie set and

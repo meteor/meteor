@@ -37,7 +37,7 @@ By default, Meteor uses Local Storage to store, among other things, login tokens
 
 ### Accounts with HttpOnly Cookies {#accounts-httponly-cookies}
 
-Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This protects the token from malicious scripts and pairs nicely with in-memory client storage. Enable the feature with two small changes:
+Meteor 3.5 introduces a native flow to keep the persistent resume token in an HttpOnly cookie instead of in Web Storage. This keeps the durable copy out of script-readable storage and pairs with in-memory client storage. The client still requests the resume token into memory when it authenticates DDP, so this does not protect the token from a malicious script that is actively running in the application origin. Enable the feature with two small changes:
 
 1. On the server, call `Accounts.config` during startup and set both options:
 
@@ -70,7 +70,7 @@ Meteor 3.5 introduces a native flow to keep the persistent resume token in an Ht
 
 After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
 
-The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, the endpoints are not served: `GET /_accounts/cookie/refresh` responds with `404`, and the `POST` endpoints respond with `405`. Applications that never opted in expose nothing.
+The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cookie/set`, `/_accounts/cookie/refresh` and `/_accounts/cookie/clear` endpoints. When it is not set, the endpoints are not served and requests to them return `404`. Applications that never opted in expose nothing.
 
 #### Cookie endpoint protections {#accounts-httponly-cookies-protections}
 
@@ -81,7 +81,7 @@ Because the cookie is an ambient credential, the endpoints that write it only ac
 - The cookie is issued with `HttpOnly`, `SameSite=Strict`, `Path=/` and, over HTTPS, `Secure`.
 - All three endpoints are rate limited per client address (30 requests per 10 seconds by default). Behind a reverse proxy, set the `HTTP_FORWARDED_COUNT` environment variable so the real client address is used, exactly as for DDP connections.
 
-If your application is served from an origin that is neither `ROOT_URL` nor the host the browser connects to (for example a separate marketing domain that embeds the app), list the additional origins explicitly:
+If custom browser code calls the cookie set or clear endpoint from another trusted origin, list that origin explicitly. The built-in Accounts client uses relative, same-origin endpoint URLs; this allowlist does not make it target a remote server automatically.
 
 ```ts
 Accounts.config({

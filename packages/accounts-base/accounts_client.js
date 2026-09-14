@@ -505,7 +505,7 @@ export class AccountsClient extends AccountsCommon {
     this.connection.setUserId(userId);
     // Sync HttpOnly cookie if enabled
     if (this._useHttpOnlyCookies) {
-      await this._setHttpOnlyCookie(token, tokenExpires);
+      await this._setHttpOnlyCookie(token);
     }
   }
 
@@ -597,8 +597,8 @@ export class AccountsClient extends AccountsCommon {
     return Meteor.promisify(this.loginWithToken, this)(token);
   };
 
-  // Attempt startup login using an HttpOnly cookie by requesting a
-  // short-lived resume token from the server.
+  // Attempt startup login using an HttpOnly cookie by requesting the resume
+  // token into memory from the server.
   async loginWithCookie() {
     try {
       const res = await fetch('/_accounts/cookie/refresh', {
@@ -662,7 +662,7 @@ export class AccountsClient extends AccountsCommon {
     this._lastLoginTokenWhenPolled = null;
   };
 
-  async _setHttpOnlyCookie(token, tokenExpires) {
+  async _setHttpOnlyCookie(token) {
     try {
       await fetch('/_accounts/cookie/set', {
         method: 'POST',
