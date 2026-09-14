@@ -48,7 +48,7 @@ type ExpressModule = {
 };
 
 type BoilerplateDataCallback = (
-  request: CategorizedRequest,
+  request: http.IncomingMessage | CategorizedRequest,
   data: Record<string, unknown>,
   arch: string,
   response?: http.ServerResponse,
@@ -92,7 +92,7 @@ export declare namespace WebApp {
 
   type RuntimeConfigHookCallback = (options: {
     arch: "web.browser" | "web.browser.legacy" | "web.cordova";
-    request: http.IncomingMessage;
+    request: CategorizedRequest;
     encodedCurrentConfig: string;
     updated: boolean;
   }) => string | undefined | null | false | Promise<string | undefined | null | false>;
@@ -158,7 +158,7 @@ export declare namespace WebAppInternals {
   function setBundledJsCssPrefix(bundledJsCssPrefix: string): Promise< void>;
   function addStaticJs(): void;
   function addStaticJs(contents: string): void;
-  function getBoilerplate(request: CategorizedRequest, arch: string): Promise<{
+  function getBoilerplate(request: http.IncomingMessage | CategorizedRequest, arch: string): Promise<{
     stream: NodeJS.ReadableStream;
     statusCode?: number;
     headers?: Record< string, string>;

@@ -30,7 +30,10 @@ expectTypeOf(WebApp.onListening).returns.toBeVoid();
 expectTypeOf(WebApp.addRuntimeConfigHook).returns.toMatchTypeOf<{
   stop: () => void;
 }>();
-WebApp.addRuntimeConfigHook(async({ encodedCurrentConfig }) => encodedCurrentConfig);
+WebApp.addRuntimeConfigHook(async({ encodedCurrentConfig, request }) => {
+  expectTypeOf(request).toEqualTypeOf<CategorizedRequest>();
+  return encodedCurrentConfig;
+});
 expectTypeOf(WebApp.decodeRuntimeConfig).returns.toEqualTypeOf<unknown>();
 expectTypeOf(WebApp.encodeRuntimeConfig).returns.toEqualTypeOf<string>();
 expectTypeOf(WebApp.addHtmlAttributeHook).returns.toBeVoid();
