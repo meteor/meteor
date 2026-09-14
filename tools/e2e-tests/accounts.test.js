@@ -1,3 +1,5 @@
+import { createServer } from 'http';
+
 import {
   startAccountsApp,
   stopAccountsApp,
@@ -318,32 +320,63 @@ function defineAccountsScenarios(storageMode, getCtx) {
         expect((cookie.sameSite || '').toLowerCase()).toBe('strict');
       });
 
-      it('an explicitly allowed Origin overrides cross-site Fetch Metadata', async () => {
+      it('an explicitly allowed same-site Origin can set and clear the cookie', async () => {
         const { page, port } = getCtx();
-        const allowedOrigin = `http://127.0.0.1:${port}`;
-        await page.goto(`${allowedOrigin}/`);
-        await page.waitForFunction(
-          () => window.__accountsE2E && typeof window.__accountsE2E.whoAmI === 'function',
-          { timeout: 30_000 },
-        );
-        await page.waitForFunction(
-          () => Meteor.status().status === 'connected',
-          { timeout: 30_000 },
-        );
-        await applyConfig(page, { httpOnlyCookieAllowedOrigins: [allowedOrigin] });
+        const originServer = createServer((_req, res) => {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+          res.end('<!doctype html><title>Allowed origin</title>');
+        });
+        await new Promise((resolve, reject) => {
+          originServer.once('error', reject);
+          originServer.listen(0, 'localhost', resolve);
+        });
+        const originPort = originServer.address().port;
+        const allowedOrigin = `http://localhost:${originPort}`;
+        const endpointOrigin = `http://localhost:${port}`;
 
-        const [response] = await Promise.all([
-          page.waitForNavigation(),
-          page.evaluate((action) => {
-            const form = document.createElement('form');
-            form.method = 'POST';
-            form.action = action;
-            document.body.appendChild(form);
-            form.submit();
-          }, `http://localhost:${port}/_accounts/cookie/clear`),
-        ]);
-        expect(response.status()).toBe(200);
-        await expect(response.json()).resolves.toEqual({ ok: true });
+        try {
+          await applyConfig(page, { httpOnlyCookieAllowedOrigins: [allowedOrigin] });
+          await seedUser(page, { email: 'cors@example.com', password: 'pw12345' });
+          await login(page, { email: 'cors@example.com' }, 'pw12345');
+          const token = await page.evaluate(
+            () => window.__accountsE2E.Accounts._storedLoginToken(),
+          );
+          expect(token).toBeTruthy();
+
+          await page.context().clearCookies();
+          await page.goto(allowedOrigin);
+          const setResponse = await page.evaluate(async ({ endpointOrigin, token }) => {
+            const response = await fetch(`${endpointOrigin}/_accounts/cookie/set`, {
+              method: 'POST',
+              mode: 'cors',
+              credentials: 'include',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token }),
+            });
+            return { status: response.status, body: await response.json() };
+          }, { endpointOrigin, token });
+          expect(setResponse).toEqual({ status: 200, body: { ok: true } });
+
+          const cookiesAfterSet = await page.context().cookies(endpointOrigin);
+          expect(cookiesAfterSet.some((cookie) => cookie.name === 'meteor_login_token')).toBe(true);
+
+          const clearResponse = await page.evaluate(async (endpointOrigin) => {
+            const response = await fetch(`${endpointOrigin}/_accounts/cookie/clear`, {
+              method: 'POST',
+              mode: 'cors',
+              credentials: 'include',
+            });
+            return { status: response.status, body: await response.json() };
+          }, endpointOrigin);
+          expect(clearResponse).toEqual({ status: 200, body: { ok: true } });
+
+          const cookiesAfterClear = await page.context().cookies(endpointOrigin);
+          expect(cookiesAfterClear.some((cookie) => cookie.name === 'meteor_login_token')).toBe(false);
+        } finally {
+          await new Promise((resolve, reject) => {
+            originServer.close((error) => (error ? reject(error) : resolve()));
+          });
+        }
       });
 
       it('treats X-Forwarded-Proto case-insensitively when setting the cookie', async () => {

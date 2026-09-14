@@ -76,7 +76,7 @@ The server-side `useHttpOnlyCookies` option is what enables the `/_accounts/cook
 
 Because the cookie is an ambient credential, the endpoints that write it only accept requests from your own application:
 
-- `POST /_accounts/cookie/set` and `POST /_accounts/cookie/clear` must be same-origin. The server accepts the request when the browser sends `Sec-Fetch-Site: same-origin`, or when the `Origin` header matches the origin of `ROOT_URL`, the origin of the request `Host`, or one of the origins listed in `httpOnlyCookieAllowedOrigins`. Anything else is rejected with `403`.
+- `POST /_accounts/cookie/set` and `POST /_accounts/cookie/clear` require a trusted origin. The server accepts the request when the browser sends `Sec-Fetch-Site: same-origin`, or when the `Origin` header matches the origin of `ROOT_URL`, the origin of the request `Host`, or one of the origins listed in `httpOnlyCookieAllowedOrigins`. Configured origins receive credentialed CORS responses (including preflight support); anything else is rejected with `403`.
 - `POST /_accounts/cookie/set` requires `Content-Type: application/json`, a body of at most 4 KB, and a `token` that belongs to a user and has not expired. Unknown or expired tokens are rejected with `401` and no cookie is written.
 - The cookie is issued with `HttpOnly`, `SameSite=Strict`, `Path=/` and, over HTTPS, `Secure`.
 - All three endpoints are rate limited per client address (30 requests per 10 seconds by default). Behind a reverse proxy, set the `HTTP_FORWARDED_COUNT` environment variable so the real client address is used, exactly as for DDP connections.
@@ -91,6 +91,8 @@ Accounts.config({
   httpOnlyCookieRateLimit: { max: 60, windowMs: 10_000 },
 });
 ```
+
+The allowlist does not bypass browser cookie policy. Because the login cookie remains `SameSite=Strict`, an allowed page must also be same-site with the cookie endpoint for the browser to persist and send the cookie; different ports or trusted sibling subdomains are supported, while an unrelated cross-site domain is not.
 
 <ApiBox name="Meteor.user" hasCustomExample/>
 
