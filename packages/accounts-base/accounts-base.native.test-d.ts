@@ -20,6 +20,18 @@ expectTypeOf<Header>().toBeObject();
 expectTypeOf<EmailTemplates>().toBeObject();
 
 expectTypeOf(AccountsClient).toBeConstructibleWith();
+const sessionAccountsClientOptions: AccountsClientOptions = {
+  clientStorage: "session",
+};
+const httpOnlyAccountsClientOptions: AccountsClientOptions = {
+  useHttpOnlyCookies: true,
+};
+expectTypeOf(AccountsClient).toBeConstructibleWith(
+  sessionAccountsClientOptions,
+);
+expectTypeOf(AccountsClient).toBeConstructibleWith(
+  httpOnlyAccountsClientOptions,
+);
 expectTypeOf(new AccountsClient().connection).toEqualTypeOf<DDP.DDPStatic>();
 expectTypeOf(Accounts).toBeObject();
 
@@ -31,7 +43,13 @@ expectTypeOf(Accounts.emailTemplates).toBeObject();
 
 // --- Accounts user / session functions ---
 expectTypeOf(Accounts.user).toBeFunction();
+expectTypeOf(Accounts.user()).toEqualTypeOf<
+  Meteor.User | null | undefined | Promise<Meteor.User | undefined>
+>();
 expectTypeOf(Accounts.userAsync).toBeFunction();
+expectTypeOf(Accounts.userAsync()).toEqualTypeOf<
+  Promise<Meteor.User | null | undefined>
+>();
 expectTypeOf(Accounts.userId).toBeFunction();
 expectTypeOf(Accounts.createUser).toBeFunction();
 expectTypeOf(Accounts.createUserAsync).toBeFunction();
@@ -65,6 +83,8 @@ Accounts.onPageLoadLogin((attempt: Accounts.PageLoadLoginAttemptInfo) => {
 });
 
 Accounts.config({
+  clientStorage: "none",
+  useHttpOnlyCookies: true,
   restrictCreationByEmailDomain: (email) => {
     expectTypeOf(email).toBeString();
     return email.endsWith("@meteor.com");

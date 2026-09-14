@@ -29,6 +29,8 @@ export interface EmailFields {
 export interface AccountsClientOptions {
   connection?: DDP.DDPStatic | undefined;
   ddpUrl?: string;
+  clientStorage?: 'session' | 'local' | 'none' | undefined;
+  useHttpOnlyCookies?: boolean | undefined;
 }
 
 export class AccountsClient {
@@ -68,11 +70,11 @@ export namespace Accounts {
 
   function user(options?: {
     fields?: Mongo.FieldSpecifier | undefined
-  }): Meteor.User | null;
+  }): Meteor.User | null | undefined | Promise<Meteor.User | undefined>;
 
   function userAsync(options?: {
     fields?: Mongo.FieldSpecifier | undefined;
-  }): Promise<Meteor.User | null>;
+  }): Promise<Meteor.User | null | undefined>;
 
   function userId(): string | null;
 
