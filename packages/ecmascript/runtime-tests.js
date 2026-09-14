@@ -1,7 +1,5 @@
 import { testExport as oyez } from './runtime-tests.js';
 
-const isNode8OrLater = Meteor.isServer && parseInt(process.versions.node) >= 8;
-
 Tinytest.add('ecmascript - runtime - template literals', test => {
   function dump(strings, ...expressions) {
     const copy = Object.create(null);
