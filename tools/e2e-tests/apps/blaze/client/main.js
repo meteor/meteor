@@ -20,3 +20,26 @@ Template.hello.events({
     instance.counter.set(instance.counter.get() + 1);
   },
 });
+
+Template.eventScopeCollisionParent.helpers({ show: () => true });
+
+for (const template of [Template.eventScopeCollisionChild, Template.eventScopeDirectChild]) {
+  template.onCreated(function () {
+    this.eventState = new ReactiveVar({ count: 0, currentTarget: '' });
+  });
+
+  template.helpers({
+    show: () => true,
+    count: () => Template.instance().eventState.get().count,
+    currentTarget: () => Template.instance().eventState.get().currentTarget,
+  });
+
+  template.events({
+    'click .js-hit'(event, instance) {
+      instance.eventState.set({
+        count: instance.eventState.get().count + 1,
+        currentTarget: event.currentTarget.className,
+      });
+    },
+  });
+}

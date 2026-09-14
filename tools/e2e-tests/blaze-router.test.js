@@ -8,6 +8,7 @@ import {
 } from './assertions';
 import { waitForMeteorOutput } from './helpers';
 import { testMeteorRspackBundler } from './test-helpers';
+import { assertBlazeCheckout } from './helpers/blaze-helpers';
 
 const CLIENT_BUNDLE_IMPORT = "import './client-rspack.js';";
 const BLAZE_HTML_IMPORT = /^import ['"].*\.html['"];$/m;
@@ -121,11 +122,13 @@ describe('Blaze Router Integration /', () => {
       testServer: 'tests/server/main.js',
     },
     customAssertions: {
-      afterRun: async ({ port }) => {
+      afterRun: async ({ port, tempDir }) => {
         await assertBlazeRouterApp(port);
+        await assertBlazeCheckout(tempDir, { phase: 'development' });
       },
-      afterRunProduction: async ({ port }) => {
+      afterRunProduction: async ({ port, tempDir }) => {
         await assertBlazeRouterApp(port);
+        await assertBlazeCheckout(tempDir, { phase: 'production' });
       },
       afterTest: async ({ tempDir, port }) => {
         await assertTestClientImportOrder(tempDir);

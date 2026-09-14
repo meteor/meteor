@@ -8,11 +8,41 @@
 
   {{> hello}}
   {{> info}}
+  {{> eventScopeCollisionParent}}
+  {{> eventScopeDirectParent}}
 </body>
 
 <template name="hello">
   <button>Click Me</button>
   <p>You've pressed the button {{counter}} times.</p>
+</template>
+
+<!-- Reproductions of meteor/blaze#512. Keep the wrapper and block-helper
+     nesting: both affect the native backend's delegated event scope. -->
+<template name="eventScopeCollisionParent">
+  {{#if show}}
+    <div id="event-scope-collision">{{> eventScopeCollisionChild}}</div>
+  {{/if}}
+</template>
+
+<template name="eventScopeCollisionChild">
+  {{#if show}}
+    <nav><button type="button" class="js-hit">Nested click</button></nav>
+  {{/if}}
+  <output class="event-count">{{count}}</output>
+  <output class="event-target">{{currentTarget}}</output>
+</template>
+
+<template name="eventScopeDirectParent">
+  <div id="event-scope-direct">{{> eventScopeDirectChild}}</div>
+</template>
+
+<template name="eventScopeDirectChild">
+  {{#if show}}
+    <button type="button" class="js-hit">Direct click</button>
+  {{/if}}
+  <output class="event-count">{{count}}</output>
+  <output class="event-target">{{currentTarget}}</output>
 </template>
 
 <template name="info">
