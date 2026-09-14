@@ -22,6 +22,10 @@ jobs:
       cancel-in-progress: true
     timeout-minutes: 90
     env:
+      # npm submits an audit request with every install. Meteor can run many
+      # installs when caches are cold, and this job does not consume their
+      # automatic audit reports.
+      npm_config_audit: "false"
       CXX: g++-12
       phantom: false
       PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium

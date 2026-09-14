@@ -835,6 +835,18 @@ Object.assign(PackageSource.prototype, {
             relPathToSourceObj[source.relPath] = source;
           });
 
+          // Files explicitly declared as assets (api.addAssets) must not be
+          // re-discovered as compilable sources by _findSources below. Assets are
+          // tracked per-arch, but an asset declared on ANY arch (e.g. a `.html`
+          // fixture added for 'server') must never be scanned back in as a source
+          // on a DIFFERENT arch where its extension is claimed by a compiler (e.g.
+          // the web/templating html compiler) — that hands a raw asset to the
+          // wrong compiler and aborts the build with a spurious compile error
+          // (see spacebars-tests' assets/markdown_basic.html). Gather asset paths
+          // across all arches; an explicit asset declaration always wins.
+          const assets = Object.values(api.files).flatMap(files => (files.assets || []).map(asset => asset.relPath));
+          const assetRelPaths = new Set(assets);
+
           self._findSources({
             sourceProcessorSet,
             watchSet,
@@ -854,7 +866,7 @@ Object.assign(PackageSource.prototype, {
                 fileOptions.lazy = false;
               }
 
-            } else {
+            } else if (!assetRelPaths.has(relPath)) {
               const fileOptions = Object.create(null);
 
               // Since this file was not explicitly added with

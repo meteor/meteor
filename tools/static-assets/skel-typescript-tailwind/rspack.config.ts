@@ -11,12 +11,22 @@ import { TsCheckerRspackPlugin } from "ts-checker-rspack-plugin";
  *
  * Use these flags to adjust your build settings based on environment.
  */
-export default defineConfig(Meteor => {
+export default defineConfig((Meteor) => {
   return {
-    ...Meteor.isClient && {
-      plugins: [
-        ...(!Meteor.isTest && !Meteor.isAppTest ? [new TsCheckerRspackPlugin()] : []),
-      ],
+    ...(Meteor.isClient && {
+      plugins:
+        !Meteor.isTest && !Meteor.isAppTest
+          ? [
+              new TsCheckerRspackPlugin({
+                typescript: { tsgo: true },
+                issue: {
+                  // Meteor generates this package declaration during startup.
+                  exclude: ({ code, message }) =>
+                    code === "TS2307" && message.includes("meteor/react-meteor-data/suspense"),
+                },
+              }),
+            ]
+          : [],
       module: {
         rules: [
           {
@@ -26,6 +36,6 @@ export default defineConfig(Meteor => {
           },
         ],
       },
-    },
+    }),
   };
 });
