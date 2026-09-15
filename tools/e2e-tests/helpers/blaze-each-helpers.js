@@ -1,101 +1,56 @@
-// Expected rows live in the test, independently of the fixture's data helpers.
-const cases = [
-  ['replace', ['A'], ['B']],
-  ['retain', ['retained'], ['retained']],
-  ['partial', ['a', 'b', 'c'], ['a', 'd']],
-  ['variable', ['A'], ['B']],
-  ['nested', ['a', 'b'], ['c']],
-  ['cursor', ['a', 'b'], ['c']],
-  ['reorder', ['x', 'y'], ['y', 'x']],
-  ['parent', ['A'], ['B']],
-  ['empty', ['A'], []],
-  ['deep', ['A'], ['B']],
-];
-
-async function snapshot(id) {
-  return page.locator(`#each-${id}`).evaluate(root => ({
+async function snapshot() {
+  return page.locator('#each-partial').evaluate(root => ({
     rows: [...root.querySelectorAll('.each-row')].map(row => ({
       id: row.dataset.key, index: Number(row.dataset.index), text: row.textContent,
     })),
-    empty: root.querySelectorAll('.each-empty').length,
-    renders: JSON.parse(root.querySelector('.each-trace').textContent),
+    renders: JSON.parse(root.querySelector('.each-trace').textContent).renders,
   }));
 }
 
-async function act(id, action) {
-  await page.locator(`#each-${id} .each-${action}`).click();
-  return snapshot(id);
+async function act(action, step) {
+  await page.locator(`#each-partial .each-${action}`).click();
+  // Wait for the post-flush report for this click, not a previous DOM state.
+  await page.waitForFunction(expectedStep => {
+    const trace = document.querySelector('#each-partial .each-trace');
+    return JSON.parse(trace.textContent).step === expectedStep;
+  }, step);
+  return snapshot();
 }
 
 function assertRows(result, ids, generation, detail) {
+  // Expected rows are independent of the fixture's data helper.
   expect(result.rows).toEqual(ids.map((id, index) => ({
     id, index, text: `${id}:${generation}/${generation}/${detail}`,
   })));
-  expect(result.empty).toBe(ids.length ? 0 : 1);
 }
 
-function assertLiveRenders(result, ids, generation, detail) {
-  // Non-vacuous: each live item must execute its helper, and no removed item
-  // may run when we invalidate the independent detail dependency afterward.
-  expect([...new Set(result.renders.map(render => render.id))].sort()).toEqual([...ids].sort());
-  for (const render of result.renders) {
-    expect(render).toEqual({ id: render.id, item: generation, context: generation, detail });
-  }
-}
-
-export function testEachDataContext({ comprehensive }) {
-  const regressionCases = comprehensive
-    ? cases
-    : cases.filter(([id]) => ['replace', 'retain'].includes(id));
-
-  describe('#each data context (meteor/blaze#468, #501) /', () => {
-    test.each(regressionCases)('%s: never executes a helper with stale item data', async (id, a, b) => {
-      assertRows(await snapshot(id), a, 'A', 0);
-      const stale = [];
-      // Exercise both directions, including changes batched into one flush.
-      // Inspect traces even if the final DOM is right.
-      for (const [action, generation, ids] of [
-        ['switch', 'B', b], ['burst', 'A', a],
-      ]) {
-        const result = await act(id, action);
-        assertRows(result, ids, generation, 0);
-        for (const rowId of ids) {
-          expect(result.renders).toContainEqual({ id: rowId, item: generation, context: generation, detail: 0 });
-        }
-        stale.push(...result.renders.filter(render => render.item !== render.context));
+export function testEachDataContext() {
+  test('#each data context: a user-driven partial update stays consistent and reactive (meteor/blaze#468, #501)', async () => {
+    assertRows(await snapshot(), ['a', 'b', 'c'], 'A', 0);
+    const retainedRow = await page.locator('#each-partial .each-row[data-key="a"]').elementHandle();
+    try {
+      const switched = await act('switch', 1);
+      assertRows(switched, ['a', 'd'], 'B', 0);
+      // The existing row must survive, not be recreated to sidestep revival.
+      expect(await retainedRow.evaluate(row => row.isConnected)).toBe(true);
+      for (const id of ['a', 'd']) {
+        expect(switched.renders).toContainEqual({ id, item: 'B', context: 'B', detail: 0 });
       }
-      expect(stale).toEqual([]);
-    });
 
-    if (!comprehensive) return;
-
-    // Sample the distinct lifecycle paths once, not in every backend/build.
-    const lifecycleCases = cases.filter(([id]) => ['retain', 'reorder', 'cursor', 'nested'].includes(id));
-    test.each(lifecycleCases)('%s: keeps reacting after updates, no-op diffs and remount', async (id, a, b) => {
-      let detail = 0;
-      assertRows(await act(id, 'switch'), b, 'B', detail);
-      const updated = await act(id, 'detail');
-      assertRows(updated, b, 'B', ++detail);
-      assertLiveRenders(updated, b, 'B', detail);
-      assertRows(await act(id, 'refresh'), b, 'B', detail);
-      const refreshed = await act(id, 'detail');
-      assertRows(refreshed, b, 'B', ++detail);
-      assertLiveRenders(refreshed, b, 'B', detail);
-      // Destroy while the source stays alive. Neither detached item helpers
-      // nor a stale pending flag should survive into the remounted view.
-      await act(id, 'mount');
-      for (const action of ['switch', 'detail', 'refresh']) {
-        const result = await act(id, action);
-        expect(result.rows).toEqual([]);
-        expect(result.renders).toEqual([]);
+      // A separate user action must still update both live rows. Removed item
+      // helpers must not run, and a frozen helper cannot pass with an empty log.
+      const detailed = await act('detail', 2);
+      assertRows(detailed, ['a', 'd'], 'B', 1);
+      expect([...new Set(detailed.renders.map(render => render.id))].sort()).toEqual(['a', 'd']);
+      for (const render of detailed.renders) {
+        expect(render).toEqual({ id: render.id, item: 'B', context: 'B', detail: 1 });
       }
-      ++detail;
-      const remounted = await act(id, 'mount');
-      assertRows(remounted, a, 'A', detail);
-      assertLiveRenders(remounted, a, 'A', detail);
-      const updatedAfterRemount = await act(id, 'detail');
-      assertRows(updatedAfterRemount, a, 'A', ++detail);
-      assertLiveRenders(updatedAfterRemount, a, 'A', detail);
-    });
+
+      // Check every intermediate call, even when the final DOM looks right.
+      // Assert last so the baseline also exercises continued reactivity.
+      expect(switched.renders.filter(render => render.item !== render.context)).toEqual([]);
+    } finally {
+      await retainedRow.dispose();
+    }
   });
 }

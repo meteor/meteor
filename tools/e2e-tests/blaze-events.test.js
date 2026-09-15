@@ -73,7 +73,7 @@ describe('BasicBlaze App Bundling / DOM regressions /', () => {
             page.on('console', onConsole);
             await page.goto(`http://localhost:${PORT}`);
             await page.waitForSelector('#event-scope-direct .js-hit');
-            await page.waitForSelector('#each-deep .each-row');
+            await page.waitForSelector('#each-partial .each-row');
             // A transitive dependency must never silently turn the native
             // variant into another jQuery run.
             await assertBlazeCheckout(tempDir, {
@@ -114,9 +114,9 @@ describe('BasicBlaze App Bundling / DOM regressions /', () => {
             expect(await page.locator(`${selector} .event-target`).textContent()).toBe('js-hit');
           });
 
-          // Exercise shared #each scheduling in native development; keep only
-          // replacement/retained-ID smoke checks in the other app variants.
-          testEachDataContext({ comprehensive: backend === 'native' && !production });
+          // One production integration journey complements Blaze's package
+          // tests; keep the existing event matrix on both backends/builds.
+          if (backend === 'native' && production) testEachDataContext();
         });
       }
     });

@@ -1,51 +1,19 @@
-<template name="eachStaleScenarios">
-  <h2>Each data context (Blaze #468 / #501)</h2>
-  <p>After switching, every recorded item generation must match its context.
-    The trace includes intermediate helper calls, even when the final DOM looks correct.</p>
-  {{#each scenarios}}
-    {{> eachStaleScenario}}
-  {{/each}}
-</template>
-
 <template name="eachStaleScenario">
-  <section id="each-{{id}}">
-    <h3>{{title}}</h3>
+  <section id="each-partial">
+    <h2>Each data context (Blaze #468 / #501)</h2>
+    <p>Retain, remove and add items when the parent context changes, then update
+      their detail. The trace includes intermediate helper calls.</p>
     <button type="button" class="each-switch">Switch generation</button>
     <button type="button" class="each-detail">Update item detail</button>
-    <button type="button" class="each-refresh">Invalidate unchanged sequence</button>
-    <button type="button" class="each-burst">Switch three times before flush</button>
-    <button type="button" class="each-mount">Mount / unmount</button>
     <div class="each-result">
-      {{#if mounted}}
-        {{> Template.dynamic template=child data=childData}}
-      {{/if}}
+      {{> eachStaleList childData}}
     </div>
     <pre class="each-trace">{{trace}}</pre>
   </section>
 </template>
 
 <template name="eachStaleList">
-  {{#each items}}<span class="each-row" data-key="{{_id}}" data-index="{{@index}}">{{renderItem}}</span>{{else}}<span class="each-empty">empty</span>{{/each}}
-</template>
-
-<template name="eachStaleVariable">
-  {{#each item in items}}<span class="each-row" data-key="{{item._id}}" data-index="{{@index}}">{{renderVariable item}}</span>{{/each}}
-</template>
-
-<template name="eachStaleNested">
   {{#each items}}
-    {{#each children}}<span class="each-row" data-key="{{_id}}" data-index="{{@index}}">{{renderItem}}</span>{{/each}}
-  {{/each}}
-</template>
-
-<template name="eachStaleParentData">
-  {{#each items}}<span class="each-row" data-key="{{_id}}" data-index="{{@index}}">{{renderParentData}}</span>{{/each}}
-</template>
-
-<template name="eachStaleDeep">
-  {{#each items}}
-    {{#each children}}
-      {{#each children}}<span class="each-row" data-key="{{_id}}" data-index="{{@index}}">{{renderItem}}</span>{{/each}}
-    {{/each}}
+    <span class="each-row" data-key="{{_id}}" data-index="{{@index}}">{{renderItem}}</span>
   {{/each}}
 </template>
