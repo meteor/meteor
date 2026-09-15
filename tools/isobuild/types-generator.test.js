@@ -374,6 +374,55 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
     ).toEqual([]);
   });
 
+  test("compiles instrumentation consumers through the generated module adapter", async () => {
+    const content = require("fs").readFileSync(
+      require("path").join(
+        __dirname,
+        "../../packages/instrumentation/instrumentation.d.ts"
+      ),
+      "utf8"
+    );
+    await generateTypes({
+      isopackCache: makeIsopackCache({
+        instrumentation: makeIsopack({
+          typesEntry: "instrumentation.d.ts",
+          resources: [makeResource("instrumentation.d.ts", content)],
+        }),
+      }),
+      packageMap: makePackageMap(["instrumentation"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(
+      compileGenerated(`
+        import { Instrumentation } from 'meteor/instrumentation';
+        const listener = Instrumentation.on('method.end', event => {
+          const duration: number = event.durationMs;
+          return duration;
+        });
+        listener.stop();
+        Instrumentation.on('method.start', event => {
+          // @ts-expect-error start events have no duration
+          event.durationMs;
+        });
+        const traceId: string | null = Instrumentation.currentContext().traceId;
+        Instrumentation.configure({
+          captureMethodArgs: 'preview',
+          onListenerError(error, event) {
+            const type: Instrumentation.EventType = event.type;
+            if ('eventName' in event) {
+              const name: string = event.eventName;
+            }
+          },
+        });
+        Instrumentation.configureMethod<[id: string], { id: string }>('find', {
+          captureArgs: args => ({ id: args[0] }),
+          captureResult: result => ({ id: result.id }),
+        });
+      `)
+    ).toEqual([]);
+  });
+
   test("writes an adapter and preserves the external declaration verbatim", async () => {
     await generateTypes({
       isopackCache: makeIsopackCache({
