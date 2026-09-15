@@ -34,6 +34,8 @@ Package.onUse(api => {
   ], 'client');
 
   api.addFiles('oauth_common.js');
+
+  api.types('oauth.d.ts');
 });
 
 Npm.depends({

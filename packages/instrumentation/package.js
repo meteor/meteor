@@ -11,6 +11,7 @@ Package.onUse(function (api) {
   api.use(['ecmascript', 'ddp-client', 'random', 'ejson'], 'server');
   api.mainModule('server.js', 'server');
   api.export('Instrumentation', 'server');
+  api.types('instrumentation.d.ts');
 });
 
 Package.onTest(function (api) {

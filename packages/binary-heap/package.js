@@ -7,6 +7,7 @@ Package.onUse((api) => {
   api.export(["MaxHeap", "MinHeap", "MinMaxHeap"]);
   api.use(["id-map", "ecmascript"]);
   api.mainModule("binary-heap.js");
+  api.types("binary-heap.d.ts");
 });
 
 Package.onTest((api) => {
