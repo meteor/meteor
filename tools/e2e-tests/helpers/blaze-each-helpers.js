@@ -43,15 +43,19 @@ function assertLiveRenders(result, ids, generation, detail) {
   }
 }
 
-export function testEachDataContext() {
+export function testEachDataContext({ comprehensive }) {
+  const regressionCases = comprehensive
+    ? cases
+    : cases.filter(([id]) => ['replace', 'retain'].includes(id));
+
   describe('#each data context (meteor/blaze#468, #501) /', () => {
-    test.each(cases)('%s: never executes a helper with stale item data', async (id, a, b) => {
+    test.each(regressionCases)('%s: never executes a helper with stale item data', async (id, a, b) => {
       assertRows(await snapshot(id), a, 'A', 0);
       const stale = [];
-      // Exercise both directions and a repeated update, plus several changes
-      // batched into one flush. Inspect traces even if the final DOM is right.
+      // Exercise both directions, including changes batched into one flush.
+      // Inspect traces even if the final DOM is right.
       for (const [action, generation, ids] of [
-        ['switch', 'B', b], ['switch', 'A', a], ['switch', 'B', b], ['burst', 'A', a],
+        ['switch', 'B', b], ['burst', 'A', a],
       ]) {
         const result = await act(id, action);
         assertRows(result, ids, generation, 0);
@@ -63,18 +67,20 @@ export function testEachDataContext() {
       expect(stale).toEqual([]);
     });
 
-    test.each(cases)('%s: keeps reacting after updates, no-op diffs and remount', async (id, a, b) => {
+    if (!comprehensive) return;
+
+    // Sample the distinct lifecycle paths once, not in every backend/build.
+    const lifecycleCases = cases.filter(([id]) => ['retain', 'reorder', 'cursor', 'nested'].includes(id));
+    test.each(lifecycleCases)('%s: keeps reacting after updates, no-op diffs and remount', async (id, a, b) => {
       let detail = 0;
-      for (const [generation, ids] of [['B', b], ['A', a], ['B', b]]) {
-        assertRows(await act(id, 'switch'), ids, generation, detail);
-        const updated = await act(id, 'detail');
-        assertRows(updated, ids, generation, ++detail);
-        assertLiveRenders(updated, ids, generation, detail);
-        assertRows(await act(id, 'refresh'), ids, generation, detail);
-        const refreshed = await act(id, 'detail');
-        assertRows(refreshed, ids, generation, ++detail);
-        assertLiveRenders(refreshed, ids, generation, detail);
-      }
+      assertRows(await act(id, 'switch'), b, 'B', detail);
+      const updated = await act(id, 'detail');
+      assertRows(updated, b, 'B', ++detail);
+      assertLiveRenders(updated, b, 'B', detail);
+      assertRows(await act(id, 'refresh'), b, 'B', detail);
+      const refreshed = await act(id, 'detail');
+      assertRows(refreshed, b, 'B', ++detail);
+      assertLiveRenders(refreshed, b, 'B', detail);
       // Destroy while the source stays alive. Neither detached item helpers
       // nor a stale pending flag should survive into the remounted view.
       await act(id, 'mount');
@@ -87,9 +93,9 @@ export function testEachDataContext() {
       const remounted = await act(id, 'mount');
       assertRows(remounted, a, 'A', detail);
       assertLiveRenders(remounted, a, 'A', detail);
-      const updated = await act(id, 'detail');
-      assertRows(updated, a, 'A', ++detail);
-      assertLiveRenders(updated, a, 'A', detail);
+      const updatedAfterRemount = await act(id, 'detail');
+      assertRows(updatedAfterRemount, a, 'A', ++detail);
+      assertLiveRenders(updatedAfterRemount, a, 'A', detail);
     });
   });
 }

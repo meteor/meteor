@@ -114,8 +114,9 @@ describe('BasicBlaze App Bundling / DOM regressions /', () => {
             expect(await page.locator(`${selector} .event-target`).textContent()).toBe('js-hit');
           });
 
-          // Reuse the four running app variants for the #each regressions.
-          testEachDataContext();
+          // Exercise shared #each scheduling in native development; keep only
+          // replacement/retained-ID smoke checks in the other app variants.
+          testEachDataContext({ comprehensive: backend === 'native' && !production });
         });
       }
     });

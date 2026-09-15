@@ -106,8 +106,9 @@ Blaze templating engine integration.
 | `[Blaze E2E source]` verifies the committed pin (or explicit comparison SHA), clean checkout, resolved version, active backend, and compiled hashes of `dombackend.js`, `builtins.js`, `view.js`, and `observe_sequence.js` | Run, Prod |
 | Included template inside a wrapper under `{{#if}}` delivers clicks exactly once with the matching `currentTarget` (meteor/blaze#512) | Run, Prod |
 | Included template's button directly inside a wrapper delivers clicks; same-template button remains a working control (meteor/blaze#512) | Run, Prod |
-| `#each` intermediate helper traces reject mixed item/parent generations across replacement, retained IDs, partial removal, each-in, two/three nested loops, cursor selection, reordering, parentData, and empty/else transitions (meteor/blaze#468, #501) | Run, Prod |
-| All ten `#each` scenarios check final rows/order/index, repeated and batched generation changes, independent helper reactivity after unchanged diffs, and teardown/remount on native and jQuery backends | Run, Prod |
+| Ten `#each` scenarios check intermediate helper traces, final rows/order/index, and forward/batched reverse changes: replacement, retained IDs, partial removal, each-in, two/three nested loops, cursor selection, reordering, parentData, and empty/else (meteor/blaze#468, #501) | Run (native) |
+| Retained IDs, reordering, cursors, and nesting check independent helper reactivity after updates, unchanged diffs, and teardown/remount | Run (native) |
+| Replacement and retained-ID stale-render smoke checks cover the remaining backend/build variants | Run (jQuery), Prod (native, jQuery) |
 | DOM regression cases reject browser errors and Tracker/template helper exceptions | Run, Prod |
 
 ### blaze-router
