@@ -1,0 +1,19 @@
+<template name="eachStaleScenario">
+  <section id="each-partial">
+    <h2>Each data context (Blaze #468 / #501)</h2>
+    <p>Retain, remove and add items when the parent context changes, then update
+      their detail. The trace includes intermediate helper calls.</p>
+    <button type="button" class="each-switch">Switch generation</button>
+    <button type="button" class="each-detail">Update item detail</button>
+    <div class="each-result">
+      {{> eachStaleList childData}}
+    </div>
+    <pre class="each-trace">{{trace}}</pre>
+  </section>
+</template>
+
+<template name="eachStaleList">
+  {{#each items}}
+    <span class="each-row" data-key="{{_id}}" data-index="{{@index}}">{{renderItem}}</span>
+  {{/each}}
+</template>

@@ -102,6 +102,12 @@ Blaze templating engine integration.
 |----------------|-------|
 | Blaze environment detection (`isBlazeEnabled`) | Run, Prod, Test, Build |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
+| Delegated click matrix in `blaze-events.test.js`, using the existing app with jQuery and a temporary variant with its Meteor `jquery` package removed | Run, Prod |
+| `[Blaze E2E source]` verifies the committed pin (or explicit comparison SHA), clean checkout, resolved version, active backend, and compiled hashes of `dombackend.js`, `builtins.js`, `view.js`, and `observe_sequence.js` | Run, Prod |
+| Included template inside a wrapper under `{{#if}}` delivers clicks exactly once with the matching `currentTarget` (meteor/blaze#512) | Run, Prod |
+| Included template's button directly inside a wrapper delivers clicks; same-template button remains a working control (meteor/blaze#512) | Run, Prod |
+| One user-driven `#each` partial update uses natural Tracker scheduling; checks intermediate helper consistency, final rows/order/index, retained DOM identity, and continued reactivity after a separate detail update (meteor/blaze#468, #501) | Prod (native) |
+| DOM regression cases reject browser errors and Tracker/template helper exceptions | Run, Prod |
 
 ### blaze-router
 
@@ -115,6 +121,7 @@ Focused Blaze and Galvanized Iron Router fixture that exercises the standard E2E
 | Rspack client boot marker and rendered Blaze template | Run, Prod, Test |
 | Galvanized Iron Router named route matrix registration | Run, Prod, Test, Test once |
 | Shared Blaze layout and route rendering | Run, Prod, Test |
+| `[Blaze E2E source]` verifies the pinned submodule, compiled source, resolved version, and jQuery backend | Run, Prod |
 | Client-side link navigation preserves the page instance | Run, Prod, Test |
 | ES-module `RouteController` registry with path, query, and hash parameters | Run, Prod, Test |
 | Dynamic deep-link reload and browser history restore the controller route | Run, Prod, Test |
@@ -133,6 +140,7 @@ Full Blaze app with an `imports/` structure and regular `meteor test` coverage. 
 | What is covered | Phase |
 |----------------|-------|
 | Blaze environment detection | Run, Prod, Test, Build |
+| `[Blaze E2E source]` verifies the pinned submodule, compiled source, resolved version, and jQuery backend | Run, Prod |
 | `imports/api/` test path structure | Test |
 | Regular test mode (`meteor test`, without `--full-app`) | Test, Test once |
 | FlowRouter Extra route renders the Blaze home template | Run, Prod |
@@ -430,6 +438,8 @@ Where each feature is tested across apps and skeletons.
 | Concurrent Rspack mode isolation | blaze-router | |
 | Full-app client without a client test module | blaze-router | |
 | Blaze router compatibility | blaze-router (Galvanized Iron Router routes, controllers, hooks, and layout), full-blaze (FlowRouter Extra) | |
+| Blaze delegated events with native and jQuery backends | blaze | |
+| Blaze `#each` data context consistency and continued reactivity | blaze | |
 | Top-level await in full-app tests | tla | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
