@@ -70,6 +70,54 @@ Meteor 3.5 introduces a native flow to keep the persistent resume token in an Ht
 
 After restarting the app and logging in, `Meteor.loginToken*` keys should no longer appear in `localStorage`. Instead, the browser receives an HttpOnly `meteor_login_token` cookie and the client keeps credentials in memory only for the active tab. If you later disable the feature, remember to revert both the server configuration and the public settings so that Accounts resumes using Web Storage.
 
+### Case-insensitive lookups with MongoDB collation {#accounts-case-insensitive-collation}
+
+Usernames and email addresses are matched case-insensitively when a user logs in, when you call `Accounts.findUserByUsername` or `Accounts.findUserByEmail`, and when a new account is checked for duplicates. By default Meteor does this with a regular-expression query. It works on every MongoDB version, but it can get slow on large `users` collections.
+
+Starting with Meteor 3.6 you can opt in to MongoDB [collation](https://www.mongodb.com/docs/manual/reference/collation/) instead. Meteor then creates two collation-aware indexes and case-insensitive lookups become plain indexed queries. Enable it in your settings:
+
+```json
+{
+  "packages": {
+    "accounts": {
+      "caseInsensitiveCollation": true
+    }
+  }
+}
+```
+
+`true` uses `{ "locale": "en", "strength": 2 }`, which ignores letter case but still distinguishes accents. Pass an object instead of `true` to customise it; it is merged over that default and accepts any MongoDB collation field, for example `{ "locale": "de", "strength": 2 }`. This option can only be set through settings, not `Accounts.config()`, because the indexes are created when the server starts.
+
+**This is opt-in in Meteor 3.6.** Existing applications keep the regex strategy until they enable it. Collation will become the default in a future major release once the community has had time to validate it, and the regex strategy will stay available as an explicit option. Set `caseInsensitiveCollation` to `false` or remove it to go back.
+
+**What changes when you enable it**
+
+- Two indexes are created on the users collection at startup, `username_ci` and `emails.address_ci`. They are sparse and non-unique. On a large collection the first build takes time and disk space like any other index. The existing unique indexes on `username` and `emails.address` are kept.
+- Lookups follow the Unicode collation rules of your locale instead of JavaScript's case-insensitive regex. For ASCII and most accented Latin text the two agree. A few strings that the regex treats as different become equal under collation, such as `ß` and `ss`, and locales other than `en` may add their own rules.
+- Everything else behaves the same: accents stay significant, the whole value must match, regex metacharacters are literal, accounts that differ only by case cannot be logged into case-insensitively, and creating such an account is rejected.
+
+**Before enabling it on an existing database**
+
+Check for accounts that differ only by case, and resolve them first. With the default collation:
+
+```js
+const collation = { locale: "en", strength: 2 };
+const duplicateEmails = await Meteor.users.rawCollection().aggregate([
+  { $unwind: "$emails" },
+  { $group: { _id: "$emails.address", ids: { $push: "$_id" }, count: { $sum: 1 } } },
+  { $match: { count: { $gt: 1 } } },
+], { collation }).toArray();
+```
+
+Run the same query grouped on `$username` for usernames. Also make sure no existing index already uses the names `username_ci` or `emails.address_ci` with different options; if one does, startup fails with a `case-insensitive-index-conflict` error that tells you which index to drop or rename. On a large collection you can create the two indexes yourself during a maintenance window, with the exact options above (`sparse: true` and the collation), so the deploy is a no-op. Try the setting on staging before production.
+
+Going back to the regex strategy does not drop the indexes. Remove them yourself once you no longer need them:
+
+```js
+await Meteor.users.rawCollection().dropIndex("username_ci");
+await Meteor.users.rawCollection().dropIndex("emails.address_ci");
+```
+
 <ApiBox name="Meteor.user" hasCustomExample/>
 
 Retrieves the user record for the current user from

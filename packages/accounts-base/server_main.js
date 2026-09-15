@@ -1,4 +1,10 @@
-import { AccountsServer, _CurrentEndpointInvocation } from "./accounts_server.js";
+import {
+  AccountsServer,
+  _CurrentEndpointInvocation,
+  resolveCaseInsensitiveCollation,
+  createCaseInsensitiveIndexes,
+  generateCasePermutationsForString,
+} from "./accounts_server.js";
 
 /**
  * @namespace Accounts
@@ -30,4 +36,8 @@ export {
   // accounts-base package.
   AccountsServer,
   _CurrentEndpointInvocation,
+  // Case-insensitive lookup internals, exported for tests and tooling.
+  resolveCaseInsensitiveCollation,
+  createCaseInsensitiveIndexes,
+  generateCasePermutationsForString,
 };

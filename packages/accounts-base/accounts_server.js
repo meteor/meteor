@@ -9,59 +9,54 @@ import { URL } from 'meteor/url';
 export const _CurrentEndpointInvocation = new Meteor.EnvironmentVariable();
 
 
-// Default collation for case-insensitive lookups.
-// Configurable via Meteor.settings.packages['accounts-base']['ci-collation']
-const DEFAULT_CI_COLLATION = { locale: 'en', strength: 2 };
+// Case-insensitive username / email lookups use one of two strategies:
+// the legacy regex prefix-permutation query (default), or an opt-in MongoDB
+// collation query backed by the `username_ci` / `emails.address_ci` indexes.
+// Enable the latter with `caseInsensitiveCollation` in
+// `Meteor.settings.packages.accounts`. See the Accounts docs for migration.
+const DEFAULT_CASE_INSENSITIVE_COLLATION = { locale: 'en', strength: 2 };
 
-const VALID_COLLATION_KEYS = new Set([
-  'locale', 'strength', 'caseLevel', 'caseFirst', 'numericOrdering',
-  'alternate', 'maxVariable', 'backwards', 'normalization',
-]);
+const isBoolean = v => typeof v === 'boolean';
+const oneOf = (...values) => v => values.includes(v);
+const COLLATION_FIELDS = {
+  locale: [v => typeof v === 'string', 'a string'],
+  strength: [v => Number.isInteger(v) && v >= 1 && v <= 5, 'an integer 1-5'],
+  caseLevel: [isBoolean, 'a boolean'],
+  caseFirst: [oneOf('upper', 'lower', 'off'), '"upper", "lower", or "off"'],
+  numericOrdering: [isBoolean, 'a boolean'],
+  alternate: [oneOf('non-ignorable', 'shifted'), '"non-ignorable" or "shifted"'],
+  maxVariable: [oneOf('punct', 'space'), '"punct" or "space"'],
+  backwards: [isBoolean, 'a boolean'],
+  normalization: [isBoolean, 'a boolean'],
+};
 
-const validateCICollation = (obj) => {
-  if (typeof obj !== 'object' || obj === null || Array.isArray(obj)) {
-    throw new Meteor.Error(
-      'invalid-ci-collation',
-      'accounts-base ci-collation must be a plain object'
+const collationError = message =>
+  new Meteor.Error('invalid-case-insensitive-collation', message);
+
+// Turns the `caseInsensitiveCollation` option into either `null` (legacy
+// regex strategy) or a full MongoDB collation document (collation strategy).
+export const resolveCaseInsensitiveCollation = value => {
+  if (value == null || value === false) return null;
+  if (value === true) return { ...DEFAULT_CASE_INSENSITIVE_COLLATION };
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw collationError(
+      'Accounts caseInsensitiveCollation must be a boolean or a plain ' +
+      'MongoDB collation object'
     );
   }
-  const invalid = Object.keys(obj).filter(k => !VALID_COLLATION_KEYS.has(k));
-  if (invalid.length) {
-    throw new Meteor.Error(
-      'invalid-ci-collation',
-      `Invalid ci-collation key(s): ${invalid.join(', ')}. ` +
-      `Valid keys: ${[...VALID_COLLATION_KEYS].join(', ')}`
+  const unknown = Object.keys(value).filter(k => !COLLATION_FIELDS[k]);
+  if (unknown.length) {
+    throw collationError(
+      `Invalid caseInsensitiveCollation key(s): ${unknown.join(', ')}. ` +
+      `Valid keys: ${Object.keys(COLLATION_FIELDS).join(', ')}`
     );
   }
-  if (obj.locale !== undefined && typeof obj.locale !== 'string') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation locale must be a string');
-  }
-  if (obj.strength !== undefined) {
-    if (!Number.isInteger(obj.strength) || obj.strength < 1 || obj.strength > 5) {
-      throw new Meteor.Error('invalid-ci-collation', 'ci-collation strength must be an integer 1-5');
+  for (const [key, [isValid, expected]] of Object.entries(COLLATION_FIELDS)) {
+    if (value[key] !== undefined && !isValid(value[key])) {
+      throw collationError(`caseInsensitiveCollation ${key} must be ${expected}`);
     }
   }
-  if (obj.caseLevel !== undefined && typeof obj.caseLevel !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseLevel must be a boolean');
-  }
-  if (obj.caseFirst !== undefined && !['upper', 'lower', 'off'].includes(obj.caseFirst)) {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation caseFirst must be "upper", "lower", or "off"');
-  }
-  if (obj.numericOrdering !== undefined && typeof obj.numericOrdering !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation numericOrdering must be a boolean');
-  }
-  if (obj.alternate !== undefined && !['non-ignorable', 'shifted'].includes(obj.alternate)) {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation alternate must be "non-ignorable" or "shifted"');
-  }
-  if (obj.maxVariable !== undefined && !['punct', 'space'].includes(obj.maxVariable)) {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation maxVariable must be "punct" or "space"');
-  }
-  if (obj.backwards !== undefined && typeof obj.backwards !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation backwards must be a boolean');
-  }
-  if (obj.normalization !== undefined && typeof obj.normalization !== 'boolean') {
-    throw new Meteor.Error('invalid-ci-collation', 'ci-collation normalization must be a boolean');
-  }
+  return { ...DEFAULT_CASE_INSENSITIVE_COLLATION, ...value };
 };
 
 /**
@@ -77,19 +72,16 @@ export class AccountsServer extends AccountsCommon {
   // times than the `AccountsClient` constructor, because a single server
   // can provide only one set of methods.
   constructor(server, options) {
-    // Validate ci-collation before super() to avoid creating a duplicate
-    // 'users' collection when the options are invalid.
-    const settingsCollation = options?.['ci-collation'];
-    if (options && 'ci-collation' in options) {
-      validateCICollation(settingsCollation);
-    }
+    // Resolve (and validate) the case-insensitive lookup strategy before
+    // super() so an invalid option fails fast without creating the 'users'
+    // collection. `null` means the legacy regex strategy.
+    const caseInsensitiveCollation = resolveCaseInsensitiveCollation(
+      options?.caseInsensitiveCollation
+    );
 
     super(options || {});
 
-    this._ciCollation = {
-      ...DEFAULT_CI_COLLATION,
-      ...settingsCollation,
-    };
+    this._caseInsensitiveCollation = caseInsensitiveCollation;
 
     this._server = server || Meteor.server;
     // Set up the server's methods, as if by calling Meteor.methods.
@@ -231,7 +223,7 @@ export class AccountsServer extends AccountsCommon {
   }
 
   async init() {
-    await setupUsersCollection(this.users, this._ciCollation);
+    await setupUsersCollection(this.users, this._caseInsensitiveCollation);
   }
 
   ///
@@ -377,14 +369,54 @@ export class AccountsServer extends AccountsCommon {
     });
   };
 
-  _findWithCaseInsensitiveCollation = (fieldName, fieldValue, options = {}) => {
-    const selector = {};
-    selector[fieldName] = fieldValue;
-    return Meteor.users.find(selector, {
-      ...options,
-      collation: this._ciCollation,
-    });
-  }
+  // Generates a MongoDB selector that can be used to perform a fast case
+  // insensitive lookup for the given fieldName and string. Since MongoDB does
+  // not support case insensitive indexes, and case insensitive regex queries
+  // are slow, we construct a set of prefix selectors for all permutations of
+  // the first 4 characters ourselves. We first attempt to matching against
+  // these, and because 'prefix expression' regex queries do use indexes (see
+  // http://docs.mongodb.org/v2.6/reference/operator/query/regex/#index-use),
+  // this has been found to greatly improve performance (from 1200ms to 5ms in a
+  // test with 1.000.000 users).
+  //
+  // This is the legacy strategy, used unless `caseInsensitiveCollation` is
+  // enabled. See `_findUsersCaseInsensitive`.
+  _selectorForFastCaseInsensitiveLookup = (fieldName, string) => {
+    // Performance seems to improve up to 4 prefix characters
+    const prefix = string.substring(0, Math.min(string.length, 4));
+    const orClause = generateCasePermutationsForString(prefix).map(
+        prefixPermutation => {
+          const selector = {};
+          selector[fieldName] =
+              new RegExp(`^${Meteor._escapeRegExp(prefixPermutation)}`);
+          return selector;
+        });
+    const caseInsensitiveClause = {};
+    caseInsensitiveClause[fieldName] =
+        new RegExp(`^${Meteor._escapeRegExp(string)}$`, 'i')
+    return {$and: [{$or: orClause}, caseInsensitiveClause]};
+  };
+
+  // Returns a cursor over the users whose `fieldName` matches `fieldValue`
+  // case-insensitively, using whichever strategy is configured:
+  //
+  // - collation strategy: a plain equality query with the configured
+  //   collation, served by the `*_ci` indexes created in `init()`.
+  // - regex strategy (default): the prefix-permutation selector above.
+  _findUsersCaseInsensitive = (fieldName, fieldValue, options = {}) => {
+    if (this._caseInsensitiveCollation) {
+      const selector = {};
+      selector[fieldName] = fieldValue;
+      return Meteor.users.find(selector, {
+        ...options,
+        collation: this._caseInsensitiveCollation,
+      });
+    }
+    return Meteor.users.find(
+      this._selectorForFastCaseInsensitiveLookup(fieldName, fieldValue),
+      options
+    );
+  };
 
   _findUserByQuery = async (query, options) => {
     let user = null;
@@ -410,7 +442,7 @@ export class AccountsServer extends AccountsCommon {
       user = await Meteor.users.findOneAsync(selector, options);
       // If user is not found, try a case insensitive lookup
       if (!user) {
-        const candidateUsers = await this._findWithCaseInsensitiveCollation(
+        const candidateUsers = await this._findUsersCaseInsensitive(
           fieldName, fieldValue, { ...options, limit: 2 }
         ).fetchAsync();
         // No match if multiple candidates are found
@@ -1593,8 +1625,10 @@ export class AccountsServer extends AccountsCommon {
     );
 
     if (fieldValue && !skipCheck) {
-      const matchedUsers = await this._findWithCaseInsensitiveCollation(
-        fieldName, fieldValue, { fields: { _id: 1 }, limit: 2 }
+      const matchedUsers = await this._findUsersCaseInsensitive(
+        fieldName, fieldValue,
+        // we only need a maximum of 2 users for the logic below to work
+        { fields: { _id: 1 }, limit: 2 }
       ).fetchAsync();
 
       if (
@@ -1901,7 +1935,7 @@ function defaultValidateNewUserHook(user) {
   }
 }
 
-const setupUsersCollection = async (users, ciCollation) => {
+const setupUsersCollection = async (users, caseInsensitiveCollation) => {
   ///
   /// RESTRICTING WRITES TO USER OBJECTS
   ///
@@ -1929,15 +1963,9 @@ const setupUsersCollection = async (users, ciCollation) => {
   /// DEFAULT INDEXES ON USERS
   await users.createIndexAsync('username', { unique: true, sparse: true });
   await users.createIndexAsync('emails.address', { unique: true, sparse: true });
-  // Case-insensitive collation indexes for fast lookups without regex permutations.
-  // Not unique — uniqueness is enforced by the regular indexes above (exact case)
-  // plus application-level checks in _checkForCaseInsensitiveDuplicates.
-  await users.createIndexAsync('username', {
-    sparse: true, collation: ciCollation, name: 'username_ci'
-  });
-  await users.createIndexAsync('emails.address', {
-    sparse: true, collation: ciCollation, name: 'emails.address_ci'
-  });
+  if (caseInsensitiveCollation) {
+    await createCaseInsensitiveIndexes(users, caseInsensitiveCollation);
+  }
   await users.createIndexAsync('services.resume.loginTokens.hashedToken',
     { unique: true, sparse: true });
   await users.createIndexAsync('services.resume.loginTokens.token',
@@ -1951,4 +1979,48 @@ const setupUsersCollection = async (users, ciCollation) => {
   // For expiring password tokens
   await users.createIndexAsync('services.password.reset.when', { sparse: true });
   await users.createIndexAsync('services.password.enroll.when', { sparse: true });
+};
+
+// Collation-aware indexes backing the opt-in collation strategy. They are
+// not unique: uniqueness is enforced by the regular (exact case) indexes
+// above plus the application-level checks in
+// _checkForCaseInsensitiveDuplicates, which also cover the regex strategy.
+//
+// Exported for tests.
+export const createCaseInsensitiveIndexes = async (users, collation) => {
+  const indexes = { username: 'username_ci', 'emails.address': 'emails.address_ci' };
+  for (const [field, name] of Object.entries(indexes)) {
+    try {
+      await users.createIndexAsync(field, { sparse: true, collation, name });
+    } catch (error) {
+      // Most likely an existing index with the same name but different
+      // options; say how to fix it instead of surfacing a bare driver error.
+      throw new Meteor.Error(
+        'case-insensitive-index-conflict',
+        `Accounts: could not create the "${name}" collation index on the ` +
+        `"${users._name}" collection. If an index with that name already ` +
+        `exists with different options, drop or rename it, or disable the ` +
+        `caseInsensitiveCollation option. Original error: ${error.message}`
+      );
+    }
+  }
+};
+
+// Generates permutations of all case variations of a given string.
+export const generateCasePermutationsForString = string => {
+  let permutations = [''];
+  for (let i = 0; i < string.length; i++) {
+    const ch = string.charAt(i);
+    permutations = [].concat(...(permutations.map(prefix => {
+      const lowerCaseChar = ch.toLowerCase();
+      const upperCaseChar = ch.toUpperCase();
+      // Don't add unnecessary permutations when ch is not a letter
+      if (lowerCaseChar === upperCaseChar) {
+        return [prefix + ch];
+      } else {
+        return [prefix + lowerCaseChar, prefix + upperCaseChar];
+      }
+    })));
+  }
+  return permutations;
 };
