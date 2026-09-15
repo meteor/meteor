@@ -461,6 +461,40 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
+  'accounts - _reportLoginFailure resolves attempt.user before failure callbacks',
+  async test => {
+    const username = Random.id();
+    const userId = await Accounts.insertUserDoc({}, { username });
+
+    let seenUser;
+    const onLoginFailureStopper =
+      Accounts.onLoginFailure(attempt => { seenUser = attempt.user; });
+
+    try {
+      // _reportLoginFailure passes the looked-up user to onLoginFailure. It must
+      // be the resolved document, not an unresolved Promise (a Promise reaches
+      // the callbacks as an empty object, so every user property reads as
+      // undefined).
+      await Accounts._reportLoginFailure(
+        { connection: {} },
+        'test-report-login-failure',
+        [{}],
+        { type: 'test', error: new Meteor.Error(403, 'nope'), userId }
+      );
+
+      test.equal(
+        seenUser && seenUser._id,
+        userId,
+        'attempt.user is the resolved user document, not an unresolved Promise'
+      );
+    } finally {
+      onLoginFailureStopper.stop();
+      await Meteor.users.removeAsync(userId);
+    }
+  }
+);
+
+Tinytest.addAsync(
   'accounts - Meteor.user() obeys options.defaultFieldSelector',
   async test => {
     const ignoreFieldName = "bigArray";
