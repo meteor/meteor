@@ -38,6 +38,7 @@
     "google-oauth",
     "hot-module-replacement",
     "id-map",
+    "instrumentation",
     "logging",
     "meetup-oauth",
     "meteor",

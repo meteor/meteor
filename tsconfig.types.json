@@ -24,6 +24,7 @@
       "meteor/url": ["./packages/url/url.d.ts"],
       "meteor/retry": ["./packages/retry/retry.d.ts"],
       "meteor/callback-hook": ["./packages/callback-hook/callback-hook.d.ts"],
+      "meteor/instrumentation": ["./packages/instrumentation/instrumentation.d.ts"],
       "meteor/diff-sequence": ["./packages/diff-sequence/diff-sequence.d.ts"],
       "meteor/id-map": ["./packages/id-map/id-map.d.ts"],
       "meteor/mongo-id": ["./packages/mongo-id/mongo-id.d.ts"],
