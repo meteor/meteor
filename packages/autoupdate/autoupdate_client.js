@@ -76,7 +76,37 @@ const retry = new Retry({
 
 let failures = 0;
 
+// True when the DDP connection points at a different origin than the page
+// (DDP_DEFAULT_CONNECTION_URL set to another server). In that case the server's
+// client version documents describe a different app and never match this page's
+// baked-in version, so autoupdate would reload the page forever.
+Autoupdate._isCrossOriginConnection = () => {
+  if (typeof window === "undefined" || ! window.location) {
+    return false;
+  }
+  const configuredUrl =
+    (typeof __meteor_runtime_config__ !== "undefined" &&
+      __meteor_runtime_config__.DDP_DEFAULT_CONNECTION_URL) || null;
+  if (! configuredUrl) {
+    return false;
+  }
+  try {
+    const pageOrigin =
+      window.location.origin ||
+      `${window.location.protocol}//${window.location.host}`;
+    return new URL(configuredUrl, window.location.href).origin !== pageOrigin;
+  } catch (e) {
+    return false;
+  }
+};
+
 Autoupdate._retrySubscription = () => {
+  if (Autoupdate._isCrossOriginConnection()) {
+    // Skip the version subscription: the remote server's versions never match
+    // this page, so subscribing would trigger an endless reload loop.
+    return;
+  }
+
   Meteor.subscribe("meteor_autoupdate_clientVersions", {
     onError(error) {
       Meteor._debug("autoupdate subscription failed", error);
