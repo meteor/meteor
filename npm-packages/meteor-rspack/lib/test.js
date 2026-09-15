@@ -92,7 +92,7 @@ const generateEagerTestFile = ({
     regExp: ${new RegExp(`${path.basename(extraEntry)}$`).toString()},
     mode: 'eager',
   });
-  extra.keys().forEach(extra);`
+  await Promise.all(extra.keys().map(extra));`
       : ""
   }
 }`;
