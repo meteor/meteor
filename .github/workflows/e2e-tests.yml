@@ -109,6 +109,11 @@ jobs:
         with:
           submodules: recursive
 
+      # The container user does not own the checked-out workspace, so git
+      # commands run by the tests fail with "dubious ownership" without this.
+      - name: Mark workspace as safe for git
+        run: git config --global --add safe.directory '*'
+
       - name: Cache dependencies
         id: deps-cache
         uses: actions/cache@v4
