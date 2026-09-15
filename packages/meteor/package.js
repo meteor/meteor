@@ -29,6 +29,7 @@ Package.onUse(function (api) {
   api.export("meteorEnv");
 
   api.addFiles('cordova_environment.js', 'web.cordova');
+  api.addFiles('tauri_environment.js', 'web.tauri');
   api.addFiles('helpers.js', ['client', 'server']);
   api.addFiles('setimmediate.js', ['client', 'server']);
   api.addFiles('timers.js', ['client', 'server']);

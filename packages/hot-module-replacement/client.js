@@ -7,6 +7,7 @@ var appliedChangeSets = [];
 var removeErrorMessage = null;
 
 var arch = Meteor.isCordova ? "web.cordova" :
+  Meteor.isTauri ? "web.tauri" :
   Meteor.isModern ? "web.browser" : "web.browser.legacy";
 
 var initialVersions = __meteor_runtime_config__.autoupdate.versions[arch];
@@ -24,7 +25,7 @@ var hmrSecret = __meteor_runtime_config__._hmrSecret;
 // SockJS for the upgrade path, same shape as the Rspack fix in #14329).
 // See `tools/runners/run-all.js` for the tool-side notes on where the
 // test build mode is preserved and why HMR is wired up anyway.
-var enabled = (Meteor.isCordova || !!hmrSecret) &&
+var enabled = (Meteor.isCordova || Meteor.isTauri || !!hmrSecret) &&
   !Meteor.isTest && !Meteor.isAppTest;
 
 if (!enabled) {
@@ -54,7 +55,7 @@ if (module._onRequire) {
 
 // On web, we can reload the page any time to get the new version. On cordova,
 // we have to wait until Reload._onMigrate is called
-var hotCodePushReady = arch !== 'web.cordova';
+var hotCodePushReady = arch !== 'web.cordova' && arch !== 'web.tauri';
 
 var useHotCodePush = false;
 var forceReload = function () {
