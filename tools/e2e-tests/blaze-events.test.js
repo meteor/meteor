@@ -8,12 +8,13 @@ import {
 } from './helpers';
 import { linkLocalRspack } from './test-helpers';
 import { assertBlazeCheckout } from './helpers/blaze-helpers';
+import { testEachDataContext } from './helpers/blaze-each-helpers';
 
 const PORT = 3127;
 const DEV_SERVER_PORT = '18127';
 const SETUP_TIMEOUT = process.env.CI ? 600_000 : 300_000;
 
-describe('BasicBlaze App Bundling / Delegated events /', () => {
+describe('BasicBlaze App Bundling / DOM regressions /', () => {
   for (const backend of ['jquery', 'native']) {
     describe(`${backend} backend /`, () => {
       let tempDir;
@@ -40,6 +41,13 @@ describe('BasicBlaze App Bundling / Delegated events /', () => {
       for (const production of [false, true]) {
         describe(`${production ? 'production' : 'development'} /`, () => {
           let meteorProcess;
+          let runtimeErrors;
+          const onPageError = error => runtimeErrors.push(error.message);
+          const onConsole = message => {
+            if (/Exception (from Tracker|in template helper|in callback)/.test(message.text())) {
+              runtimeErrors.push(message.text());
+            }
+          };
 
           beforeAll(async () => {
             const result = await runMeteorCommand('run', [
@@ -60,14 +68,24 @@ describe('BasicBlaze App Bundling / Delegated events /', () => {
           });
 
           beforeEach(async () => {
+            runtimeErrors = [];
+            page.on('pageerror', onPageError);
+            page.on('console', onConsole);
             await page.goto(`http://localhost:${PORT}`);
             await page.waitForSelector('#event-scope-direct .js-hit');
+            await page.waitForSelector('#each-deep .each-row');
             // A transitive dependency must never silently turn the native
             // variant into another jQuery run.
             await assertBlazeCheckout(tempDir, {
               backend,
               phase: production ? 'production' : 'development',
             });
+          });
+
+          afterEach(() => {
+            page.off('pageerror', onPageError);
+            page.off('console', onConsole);
+            expect(runtimeErrors).toEqual([]);
           });
 
           test('handles a click owned by the button template (control)', async () => {
@@ -95,6 +113,9 @@ describe('BasicBlaze App Bundling / Delegated events /', () => {
             expect(await count.textContent()).toBe('1');
             expect(await page.locator(`${selector} .event-target`).textContent()).toBe('js-hit');
           });
+
+          // Reuse the four running app variants for the #each regressions.
+          testEachDataContext();
         });
       }
     });

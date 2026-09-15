@@ -103,9 +103,12 @@ Blaze templating engine integration.
 | Blaze environment detection (`isBlazeEnabled`) | Run, Prod, Test, Build |
 | HMR disabled (incompatible with Blaze) | Run, Prod |
 | Delegated click matrix in `blaze-events.test.js`, using the existing app with jQuery and a temporary variant with its Meteor `jquery` package removed | Run, Prod |
-| `[Blaze E2E source]` verifies/logs the pinned and checked-out SHAs, local modifications, resolved version, compiled `dombackend.js` path/hash, and active backend | Run, Prod |
+| `[Blaze E2E source]` verifies the committed pin (or explicit comparison SHA), clean checkout, resolved version, active backend, and compiled hashes of `dombackend.js`, `builtins.js`, `view.js`, and `observe_sequence.js` | Run, Prod |
 | Included template inside a wrapper under `{{#if}}` delivers clicks exactly once with the matching `currentTarget` (meteor/blaze#512) | Run, Prod |
 | Included template's button directly inside a wrapper delivers clicks; same-template button remains a working control (meteor/blaze#512) | Run, Prod |
+| `#each` intermediate helper traces reject mixed item/parent generations across replacement, retained IDs, partial removal, each-in, two/three nested loops, cursor selection, reordering, parentData, and empty/else transitions (meteor/blaze#468, #501) | Run, Prod |
+| All ten `#each` scenarios check final rows/order/index, repeated and batched generation changes, independent helper reactivity after unchanged diffs, and teardown/remount on native and jQuery backends | Run, Prod |
+| DOM regression cases reject browser errors and Tracker/template helper exceptions | Run, Prod |
 
 ### blaze-router
 
@@ -437,6 +440,7 @@ Where each feature is tested across apps and skeletons.
 | Full-app client without a client test module | blaze-router | |
 | Blaze router compatibility | blaze-router (Galvanized Iron Router routes, controllers, hooks, and layout), full-blaze (FlowRouter Extra) | |
 | Blaze delegated events with native and jQuery backends | blaze | |
+| Blaze `#each` data context consistency and continued reactivity | blaze | |
 | Top-level await in full-app tests | tla | |
 | Module rules override | babel | |
 | Custom NODE_ENV compilation | babel | |
