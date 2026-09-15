@@ -43,9 +43,11 @@ Npm.depends({
 Package.onTest(api => {
   api.use('tinytest');
   api.use('random');
+  api.use('ecmascript');
   api.use('service-configuration', 'server');
-  api.use('oauth', 'server');
+  api.use('oauth', ['client', 'server']);
   api.addFiles("oauth_tests.js", 'server');
+  api.addFiles("oauth_browser_tests.js", 'web.browser');
 });
 
 Cordova.depends({
