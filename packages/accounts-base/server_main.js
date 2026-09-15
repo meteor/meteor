@@ -5,8 +5,7 @@ import { AccountsServer, _CurrentEndpointInvocation } from "./accounts_server.js
  * @summary The namespace for all server-side accounts-related methods.
  */
 Accounts = new AccountsServer(Meteor.server, { ...Meteor.settings.packages?.accounts, ...Meteor.settings.packages?.['accounts-base'] });
-// TODO[FIBERS]: I need TLA
-Accounts.init().then();
+await Accounts.init();
 
 // Register HttpOnly cookie endpoints and helpers
 import './server_http_cookies.js';
