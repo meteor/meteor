@@ -10,7 +10,7 @@ import {AccountsCommon} from "./accounts_common.js";
  * @param {Object} options.connection Optional DDP connection to reuse.
  * @param {String} options.ddpUrl Optional URL for creating a new DDP connection.
  * @param {'session' | 'local' | 'none'} options.clientStorage Optional Define what kind of storage you want for credentials on the client. Default is 'local' to use `localStorage`. Set to 'session' to use session storage. Use 'none' to avoid persisting tokens.
- * @param {Boolean} options.useHttpOnlyCookies Optional Enable HttpOnly cookie flow for auth resume. When enabled, the client will try to refresh a login token from a server HttpOnly cookie during startup, and will sync the cookie after logins/logouts.
+ * @param {Boolean} options.useHttpOnlyCookies Optional Enable HttpOnly cookie flow for auth resume. When enabled, the client will try to refresh a login token from a server HttpOnly cookie during startup, and will sync the cookie after logins/logouts. The same option must also be enabled on the server, otherwise the cookie endpoints do not respond.
  */
 export class AccountsClient extends AccountsCommon {
   constructor(options) {
@@ -505,7 +505,7 @@ export class AccountsClient extends AccountsCommon {
     this.connection.setUserId(userId);
     // Sync HttpOnly cookie if enabled
     if (this._useHttpOnlyCookies) {
-      await this._setHttpOnlyCookie(token, tokenExpires);
+      await this._setHttpOnlyCookie(token);
     }
   }
 
@@ -597,12 +597,13 @@ export class AccountsClient extends AccountsCommon {
     return Meteor.promisify(this.loginWithToken, this)(token);
   };
 
-  // Attempt startup login using an HttpOnly cookie by requesting a
-  // short-lived resume token from the server.
+  // Attempt startup login using an HttpOnly cookie by requesting the resume
+  // token into memory from the server.
   async loginWithCookie() {
     try {
       const res = await fetch('/_accounts/cookie/refresh', {
         method: 'GET',
+        mode: 'same-origin',
         credentials: 'include',
         headers: { Accept: 'application/json' },
       });
@@ -661,13 +662,14 @@ export class AccountsClient extends AccountsCommon {
     this._lastLoginTokenWhenPolled = null;
   };
 
-  async _setHttpOnlyCookie(token, tokenExpires) {
+  async _setHttpOnlyCookie(token) {
     try {
       await fetch('/_accounts/cookie/set', {
         method: 'POST',
+        mode: 'same-origin',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, tokenExpires }),
+        body: JSON.stringify({ token }),
       });
     } catch (_e) {}
   }
@@ -676,6 +678,7 @@ export class AccountsClient extends AccountsCommon {
     try {
       await fetch('/_accounts/cookie/clear', {
         method: 'POST',
+        mode: 'same-origin',
         credentials: 'include'
       });
     } catch (_e) {}
