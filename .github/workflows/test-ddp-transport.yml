@@ -19,7 +19,6 @@ jobs:
     env:
       CXX: g++-12
       phantom: false
-      PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
       TEST_PACKAGES_EXCLUDE: stylus
       METEOR_MODERN: true
       NODE_ENV: CI
@@ -32,7 +31,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 24.15.0
+          node-version: 26.x
 
       - name: Restore caches
         uses: actions/cache@v4
@@ -42,10 +41,9 @@ jobs:
             .meteor
             .babel-cache
             dev_bundle
-            /home/runner/.npm/chromium
-          key: ${{ runner.os }}-node-24-${{ hashFiles('meteor', '**/package-lock.json') }}
+          key: ${{ runner.os }}-node-26-${{ hashFiles('meteor', '**/package-lock.json') }}
           restore-keys: |
-            ${{ runner.os }}-node-24-
+            ${{ runner.os }}-node-26-
 
       - name: Install system dependencies
         run: |
