@@ -48,14 +48,16 @@ Await `selftest.expectEqual(actual, expected)`: it loads EJSON asynchronously. `
 
 ## Select and verify
 
-Run from the repository root using the checkout's `./meteor`. Replace the illustrative patterns with the target test name and source basename:
+Complete [checkout setup](../testing/SKILL.md#prepare-the-selected-runner), then run from the repository root using the checkout's `./meteor`. Browser clients are initialized only when a case requests them; the Puppeteer client can install its dependency into `dev_bundle/lib` when missing. Browser cases also need Puppeteer's browser binary and operating-system libraries. E2E's Playwright installation does not provide this Puppeteer setup.
+
+Replace the illustrative patterns with the target test name and source basename:
 
 ```bash
-./meteor self-test --preview --file '^source-basename$' 'test-name-pattern'
+./meteor self-test --list --file '^source-basename$' 'test-name-pattern'
 ./meteor self-test --retries 0 --file '^source-basename$' 'test-name-pattern'
 ```
 
-Name and file filters are regular expressions; file filtering uses the basename without `.js`. Preview helps inspect selection when needed, but the execution result must confirm the intended test and any required browser client actually ran. Check tags and skips: `slow`, network requirements, platform restrictions, and custom configurations affect coverage. Use extra flags only for the selected contract.
+Name and file filters are regular expressions; file filtering uses the basename without `.js`. Use `--list` to inspect selection; the current `--preview` implementation stops after the first selected entry. Listing does not establish execution: confirm the intended test and any required browser client actually ran. Check tags and skips: `slow`, network requirements, platform restrictions, and custom configurations affect coverage. Use extra flags only for the selected contract.
 
 For CI selection or environment changes, read [test-tools.yml](../../workflows/test-tools.yml) and [build-test-matrix.js](../../../scripts/ci/build-test-matrix.js). The workflow derives jobs from filtered self-test discovery, groups by source file, and has separate isolated jobs. Its retries, exclusions, and timeout scaling are not proof of local coverage. A retry-only pass needs explanation; larger timeouts need evidence of infrastructure delay.
 
