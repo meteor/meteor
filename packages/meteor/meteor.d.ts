@@ -370,6 +370,14 @@ export namespace Meteor {
   function startup(func: Function): void;
 
   /**
+   * Run code when the server is about to shut down after receiving SIGINT or SIGTERM.
+   * @param func A function to run on shutdown. It receives the triggering signal and may be async.
+   */
+  function onShutdown(
+    func: (signal: "SIGINT" | "SIGTERM") => void | Promise<void>
+  ): void;
+
+  /**
    * Wrapper around the standard `fetch` API. Packages can extend this
    * function to add middleware-like behavior (e.g. accounts-express with authentication).
    * @param url The URL to fetch or a Request object

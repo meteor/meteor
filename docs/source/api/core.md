@@ -50,6 +50,47 @@ package supplies one that starts the HTTP server. Apps that omit `webapp`
 must provide their own `main` as a package export or on the global object,
 or startup exits with `Program has no main() function.`
 
+{% apibox "Meteor.onShutdown" %}
+
+On `SIGTERM` or `SIGINT`, registered shutdown hooks run sequentially in
+reverse registration order (LIFO), so dependent resources can tear down
+before the resources they depend on. Each hook may be `async`; the next
+hook does not start until the previous one resolves.
+
+If a hook throws or rejects, the error is logged and subsequent hooks
+still run (best-effort cleanup). Total shutdown time is capped by the
+`METEOR_SHUTDOWN_TIMEOUT_MS` environment variable (default `10000`);
+when the cap is reached the process exits even if hooks are still
+running, to avoid stalling supervisor escalation (Galaxy, Kubernetes,
+systemd) to `SIGKILL`. Set it to `0` to disable the cap and wait for hooks
+indefinitely; set it to a small value (e.g. `1`) to exit almost immediately.
+Invalid, negative, or values above Node's maximum timer delay (`2147483647`)
+fall back to the default with a warning.
+
+A second `SIGTERM`/`SIGINT` received while shutdown is already running is
+treated as a force-quit (e.g. double Ctrl-C): the process exits at once
+without waiting for the remaining hooks or the timeout.
+
+Meteor gives existing Node signal listeners one event-loop turn before it
+starts running shutdown hooks, but it cannot await promises returned from
+`process.on(...)` listeners. Move asynchronous cleanup from raw signal
+listeners into `Meteor.onShutdown` so it participates in ordering and timeout
+handling.
+
+Exit codes follow POSIX convention: `SIGINT` → 130, `SIGTERM` → 143.
+
+`Meteor.onShutdown` is server-only — there is no client equivalent.
+
+```js
+import { Meteor } from 'meteor/meteor';
+
+Meteor.onShutdown(async (signal) => {
+  console.log(`Shutting down on ${signal}, flushing pending writes...`);
+  await jobQueue.flush();
+  await mongoClient.close();
+});
+```
+
 {% apibox "Meteor.wrapAsync" %}
 
 {% apibox "Meteor.defer" %}
