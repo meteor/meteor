@@ -20,10 +20,10 @@ export interface URLS {
 }
 
 export interface EmailFields {
-  from?: ((user: Meteor.User) => string) | undefined;
-  subject?: ((user: Meteor.User) => string) | undefined;
-  text?: ((user: Meteor.User, url: string) => string) | undefined;
-  html?: ((user: Meteor.User, url: string) => string) | undefined;
+  from?: ((user: Meteor.User) => string | Promise<string>) | undefined;
+  subject?: ((user: Meteor.User) => string | Promise<string>) | undefined;
+  text?: ((user: Meteor.User, url: string) => string | Promise<string>) | undefined;
+  html?: ((user: Meteor.User, url: string) => string | Promise<string>) | undefined;
 }
 
 export interface AccountsClientOptions {
@@ -53,7 +53,7 @@ export namespace Accounts {
     options: {
       username?: string | undefined;
       email?: string | undefined;
-      password?: string | undefined;
+      password?: Password | undefined;
       profile?: Meteor.UserProfile | undefined;
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
@@ -63,7 +63,7 @@ export namespace Accounts {
     options: {
       username?: string | undefined;
       email?: string | undefined;
-      password?: string | undefined;
+      password?: Password | undefined;
       profile?: Meteor.UserProfile | undefined;
     },
     callback?: (error?: Error | Meteor.Error | Meteor.TypedError) => void
@@ -106,6 +106,12 @@ export namespace Accounts {
   // Enable hybrid HttpOnly cookie + short-lived token flow
   useHttpOnlyCookies?: boolean | undefined;
   }): void;
+
+  function removeDefaultRateLimit(): void;
+
+  function setDefaultPublishFields(
+    fields: Partial<Record<keyof Meteor.User, 1 | 0>>
+  ): void;
 
   function onLogin(
     func: Function
@@ -283,9 +289,7 @@ export namespace Accounts {
     stop: () => void;
   };
 
-  function _hashPassword(
-    password: string
-  ): { digest: string; algorithm: string };
+  function _hashPassword(password: string): HashedPassword;
 
   interface IValidateLoginAttemptCbOpts {
     type: string;
@@ -387,19 +391,18 @@ export namespace Accounts {
    * - a login method result object
    **/
   function registerLoginHandler(
-    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
+    handler: (options: any) => undefined | LoginMethodResult | Promise<LoginMethodResult | undefined>
   ): void;
   function registerLoginHandler(
     name: string,
-    handler: (options: any) => undefined | LoginMethodResult | Promise<undefined | LoginMethodResult>
+    handler: (options: any) => undefined | LoginMethodResult | Promise<LoginMethodResult | undefined>
   ): void;
 
-  type Password =
-    | string
-    | {
-      digest: string;
-      algorithm: 'sha-256';
-    };
+  interface HashedPassword {
+    digest: string;
+    algorithm: "sha-256";
+  }
+  type Password = string | HashedPassword;
 
   /**
    *

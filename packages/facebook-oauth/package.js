@@ -13,6 +13,8 @@ Package.onUse(api => {
   api.addFiles('facebook_client.js', 'client');
   api.addFiles('facebook_server.js', 'server');
 
+  api.addAssets('facebook-oauth.d.ts', 'server');
+
   api.export('Facebook');
 });
 

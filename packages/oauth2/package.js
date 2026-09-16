@@ -15,6 +15,7 @@ Package.onUse(api => {
   ], ['client', 'server']);
 
   api.addFiles('oauth2_server.js', 'server');
+  api.addAssets('oauth2.d.ts', 'server');
 });
 
 Package.onTest(function (api) {

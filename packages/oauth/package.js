@@ -23,6 +23,8 @@ Package.onUse(api => {
   api.addFiles('oauth_server.js', 'server');
   api.addFiles('pending_credentials.js', 'server');
 
+  api.addAssets('oauth.d.ts', 'server');
+
   api.addAssets([
     'end_of_popup_response.html',
     'end_of_redirect_response.html'
