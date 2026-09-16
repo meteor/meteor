@@ -1,7 +1,13 @@
 import { Mongo } from 'meteor/mongo';
 import { URL } from 'meteor/url';
 import { Meteor } from 'meteor/meteor';
-import { Accounts } from 'meteor/accounts-base';
+import {
+  Accounts,
+  AccountsServer,
+  resolveCaseInsensitiveCollation,
+  createCaseInsensitiveIndexes,
+  generateCasePermutationsForString,
+} from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 
 Meteor.methods({
@@ -830,6 +836,459 @@ if (Meteor.isServer) {
       } finally {
         // Restore original urls
         Accounts.urls = originalUrls;
+      }
+    }
+  );
+
+  //
+  // Case-insensitive username / email lookups.
+  //
+  // Two strategies exist: the legacy regex strategy (default) and the opt-in
+  // MongoDB collation strategy (`caseInsensitiveCollation` setting). The
+  // parity suite below runs every behavioural scenario under both strategies
+  // so that enabling collation never changes what a login or a duplicate
+  // check does, only how MongoDB executes it.
+  //
+
+  const CASE_INSENSITIVE_STRATEGIES = ['regex', 'collation'];
+
+  // Runs `fn` with Accounts temporarily switched to the given strategy.
+  // Collation queries do not require the `*_ci` indexes to be correct, only
+  // to be fast, so toggling the in-memory setting is enough for these tests.
+  const withCaseInsensitiveStrategy = async (strategy, fn) => {
+    const original = Accounts._caseInsensitiveCollation;
+    Accounts._caseInsensitiveCollation =
+      strategy === 'collation' ? resolveCaseInsensitiveCollation(true) : null;
+    try {
+      await fn();
+    } finally {
+      Accounts._caseInsensitiveCollation = original;
+    }
+  };
+
+  const addCaseInsensitiveParityTest = (name, fn) => {
+    for (const strategy of CASE_INSENSITIVE_STRATEGIES) {
+      Tinytest.addAsync(
+        `accounts - case-insensitive lookup (${strategy}) - ${name}`,
+        async test => {
+          const created = [];
+          const createUser = async options => {
+            const userId = await Accounts.createUser(options);
+            created.push(userId);
+            return userId;
+          };
+          try {
+            await withCaseInsensitiveStrategy(strategy, () =>
+              fn(test, { createUser, strategy })
+            );
+          } finally {
+            for (const userId of created) {
+              await Meteor.users.removeAsync(userId);
+            }
+          }
+        }
+      );
+    }
+  };
+
+  const findIdByUsername = async username => {
+    const user = await Accounts.findUserByUsername(username, { fields: { _id: 1 } });
+    return user ? user._id : null;
+  };
+
+  const findIdByEmail = async email => {
+    const user = await Accounts.findUserByEmail(email, { fields: { _id: 1 } });
+    return user ? user._id : null;
+  };
+
+  addCaseInsensitiveParityTest(
+    'finds a user by username or email regardless of case',
+    async (test, { createUser }) => {
+      const suffix = Random.id(10);
+      const username = `AdaLovelace${suffix}`;
+      const email = `Ada-Intercept@Lovelace.com${suffix}`;
+      const userId = await createUser({ username, email });
+
+      // Exact case
+      test.equal(await findIdByUsername(username), userId, 'username exact');
+      test.equal(await findIdByEmail(email), userId, 'email exact');
+      // Lower case
+      test.equal(await findIdByUsername(username.toLowerCase()), userId, 'username lower');
+      test.equal(await findIdByEmail(email.toLowerCase()), userId, 'email lower');
+      // Upper case
+      test.equal(await findIdByUsername(username.toUpperCase()), userId, 'username upper');
+      test.equal(await findIdByEmail(email.toUpperCase()), userId, 'email upper');
+      // Mixed case that differs from the stored value in the first 4 chars
+      // (the regex strategy only permutes that prefix)
+      test.equal(await findIdByUsername(`aDaLovelace${suffix}`), userId, 'username mixed');
+      test.equal(await findIdByEmail(`aDa-intercept@lovelace.com${suffix}`), userId, 'email mixed');
+    }
+  );
+
+  addCaseInsensitiveParityTest(
+    'ignores case of non-ASCII letters',
+    async (test, { createUser }) => {
+      const suffix = Random.id(10);
+      const username = `ÁdaLØvela😈e${suffix}`;
+      const email = `ÁDA-Intercept@lövelace.com${suffix}`;
+      const userId = await createUser({ username, email });
+
+      test.equal(await findIdByUsername(`ádaløvela😈e${suffix}`), userId, 'username');
+      test.equal(await findIdByUsername(`ÁDALØVELA😈E${suffix}`), userId, 'username upper');
+      test.equal(await findIdByEmail(`áda-intercept@LÖVELACE.com${suffix}`), userId, 'email');
+    }
+  );
+
+  addCaseInsensitiveParityTest(
+    'does not treat accented and unaccented letters as equal',
+    async (test, { createUser }) => {
+      const suffix = Random.id(10);
+      const userId = await createUser({
+        username: `Ada${suffix}`,
+        email: `ada@example.com${suffix}`,
+      });
+
+      test.equal(await findIdByUsername(`ada${suffix}`), userId, 'plain lower');
+      test.isNull(await findIdByUsername(`Áda${suffix}`), 'accented username');
+      test.isNull(await findIdByEmail(`ádá@example.com${suffix}`), 'accented email');
+    }
+  );
+
+  addCaseInsensitiveParityTest(
+    'requires a match of the full string',
+    async (test, { createUser }) => {
+      const suffix = Random.id(10);
+      const userId = await createUser({
+        username: `AdaLovelace${suffix}`,
+        email: `ada-intercept@lovelace.com${suffix}`,
+      });
+
+      test.equal(await findIdByUsername(`adalovelace${suffix}`), userId, 'sanity');
+      test.isNull(await findIdByUsername(`lovelace${suffix}`), 'username suffix');
+      test.isNull(await findIdByUsername(`AdaLovelace`), 'username prefix');
+      test.isNull(await findIdByUsername(`AdaLovelace${suffix}x`), 'username longer');
+      test.isNull(await findIdByEmail(`com${suffix}`), 'email suffix');
+      test.isNull(await findIdByEmail(`ada-intercept@lovelace.com`), 'email prefix');
+    }
+  );
+
+  addCaseInsensitiveParityTest(
+    'treats regex metacharacters literally',
+    async (test, { createUser }) => {
+      const suffix = Random.id(10);
+      const userId = await createUser({
+        username: `Ada.Love+lace(1)${suffix}`,
+        email: `ada.love+lace@example.com${suffix}`,
+      });
+
+      // Metacharacters in the query must not act as a pattern
+      test.isNull(await findIdByUsername(`.+${suffix}`), 'username pattern');
+      test.isNull(await findIdByUsername(`Ada.Love.lace(1)${suffix}`), 'dot wildcard');
+      test.isNull(await findIdByUsername(`AdaxLove+lace(1)${suffix}`), 'stored dot');
+      test.isNull(await findIdByEmail(`.+${suffix}`), 'email pattern');
+      test.isNull(await findIdByEmail(`ada.love\\+lace@example.com${suffix}`), 'escaped plus');
+      // ...but must still match literally, in any case
+      test.equal(await findIdByUsername(`ADA.LOVE+LACE(1)${suffix}`), userId, 'username literal');
+      test.equal(await findIdByEmail(`ADA.Love+Lace@Example.com${suffix}`), userId, 'email literal');
+    }
+  );
+
+  addCaseInsensitiveParityTest(
+    'handles short values and non-letter prefixes',
+    async (test, { createUser }) => {
+      // The regex strategy permutes the case of the first 4 characters; make
+      // sure values shorter than that, and values whose prefix contains
+      // digits or symbols, behave the same under both strategies.
+      const short = `Q${Random.id(2)}`;
+      await Meteor.users.removeAsync({ username: new RegExp(`^${Meteor._escapeRegExp(short)}$`, 'i') });
+      const shortId = await createUser({ username: short });
+      test.equal(await findIdByUsername(short.toLowerCase()), shortId, 'short lower');
+      test.equal(await findIdByUsername(short.toUpperCase()), shortId, 'short upper');
+
+      const suffix = Random.id(10);
+      const numericId = await createUser({
+        username: `12-_Ada${suffix}`,
+        email: `1.2@3-4.com${suffix}`,
+      });
+      test.equal(await findIdByUsername(`12-_ADA${suffix}`), numericId, 'digit prefix');
+      test.equal(await findIdByEmail(`1.2@3-4.COM${suffix}`), numericId, 'digit email');
+      test.isNull(await findIdByUsername(`13-_ada${suffix}`), 'different digit');
+    }
+  );
+
+  addCaseInsensitiveParityTest(
+    'returns no match when several users differ only by case',
+    async (test, { createUser }) => {
+      const suffix = Random.id(10);
+      const username = `AdaLovelace${suffix}`;
+      const otherUsername = `adaLOVELACE${suffix}`;
+      const email = `Ada-Intercept@lovelace.com${suffix}`;
+      const otherEmail = `ada-intercept@LOVELACE.com${suffix}`;
+
+      const userId = await createUser({ username, email });
+      Accounts._skipCaseInsensitiveChecksForTest[otherUsername] = true;
+      Accounts._skipCaseInsensitiveChecksForTest[otherEmail] = true;
+      let otherId;
+      try {
+        otherId = await createUser({ username: otherUsername, email: otherEmail });
+      } finally {
+        delete Accounts._skipCaseInsensitiveChecksForTest[otherUsername];
+        delete Accounts._skipCaseInsensitiveChecksForTest[otherEmail];
+      }
+
+      // Ambiguous case-insensitive lookups find nobody
+      test.isNull(await findIdByUsername(`ADALOVELACE${suffix}`), 'ambiguous username');
+      test.isNull(await findIdByEmail(`ADA-INTERCEPT@LOVELACE.COM${suffix}`), 'ambiguous email');
+      // Exact-case lookups still resolve each user
+      test.equal(await findIdByUsername(username), userId, 'exact first');
+      test.equal(await findIdByUsername(otherUsername), otherId, 'exact second');
+      test.equal(await findIdByEmail(email), userId, 'exact first email');
+      test.equal(await findIdByEmail(otherEmail), otherId, 'exact second email');
+    }
+  );
+
+  addCaseInsensitiveParityTest(
+    'rejects duplicates that differ only by case',
+    async (test, { createUser }) => {
+      const suffix = Random.id(10);
+      const username = `AdaLovelace${suffix}`;
+      const email = `Ada-Intercept@lovelace.com${suffix}`;
+      const userId = await createUser({ username, email });
+
+      // Direct checks
+      await test.throwsAsync(
+        () => Accounts._checkForCaseInsensitiveDuplicates('username', 'Username', `adalovelace${suffix}`),
+        /Username already exists/
+      );
+      await test.throwsAsync(
+        () => Accounts._checkForCaseInsensitiveDuplicates('emails.address', 'Email', `ADA-INTERCEPT@LOVELACE.COM${suffix}`),
+        /Email already exists/
+      );
+      // The user's own value is not a duplicate of itself
+      await Accounts._checkForCaseInsensitiveDuplicates('username', 'Username', `adalovelace${suffix}`, userId);
+      await Accounts._checkForCaseInsensitiveDuplicates('emails.address', 'Email', `ada-intercept@lovelace.com${suffix}`, userId);
+      // Unrelated values pass
+      await Accounts._checkForCaseInsensitiveDuplicates('username', 'Username', `someoneelse${suffix}`);
+      await Accounts._checkForCaseInsensitiveDuplicates('emails.address', 'Email', `someone@else.com${suffix}`);
+
+      // Through createUser
+      await test.throwsAsync(
+        () => Accounts.createUser({ username: `ADALOVELACE${suffix}` }),
+        /Username already exists/
+      );
+      await test.throwsAsync(
+        () => Accounts.createUser({ email: `ada-intercept@LOVELACE.com${suffix}` }),
+        /Email already exists/
+      );
+      test.equal(
+        await Meteor.users.find({ username: `ADALOVELACE${suffix}` }).countAsync(),
+        0,
+        'duplicate not inserted'
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive lookup - regex strategy is the default',
+    async test => {
+      // The test app runs without settings, so the legacy strategy applies.
+      test.isNull(Accounts._caseInsensitiveCollation);
+      test.isNull(resolveCaseInsensitiveCollation(undefined));
+      test.isNull(resolveCaseInsensitiveCollation(null));
+      test.isNull(resolveCaseInsensitiveCollation(false));
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive lookup - regex strategy uses prefix permutations',
+    async test => {
+      test.equal(generateCasePermutationsForString('ab'), ['ab', 'aB', 'Ab', 'AB']);
+      test.equal(generateCasePermutationsForString('a1'), ['a1', 'A1']);
+      test.equal(generateCasePermutationsForString(''), ['']);
+
+      const selector = Accounts._selectorForFastCaseInsensitiveLookup('username', 'Ada.L');
+      test.equal(selector.$and.length, 2);
+      // 4 letters -> 2^3 permutations (the dot has no case)
+      test.equal(selector.$and[0].$or.length, 8);
+      const anchored = selector.$and[1].username;
+      test.instanceOf(anchored, RegExp);
+      test.equal(anchored.flags, 'i');
+      test.isTrue(anchored.test('ADA.L'));
+      test.isFalse(anchored.test('ADAxL'));
+      test.isFalse(anchored.test('ADA.Lx'));
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - true enables the default collation',
+    async test => {
+      test.equal(resolveCaseInsensitiveCollation(true), { locale: 'en', strength: 2 });
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - objects are merged over the default',
+    async test => {
+      test.equal(
+        resolveCaseInsensitiveCollation({ locale: 'de' }),
+        { locale: 'de', strength: 2 }
+      );
+      test.equal(
+        resolveCaseInsensitiveCollation({ strength: 1, numericOrdering: true }),
+        { locale: 'en', strength: 1, numericOrdering: true }
+      );
+      test.equal(resolveCaseInsensitiveCollation({}), { locale: 'en', strength: 2 });
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - AccountsServer fails fast on invalid option',
+    async test => {
+      // Thrown before super(), so no duplicate 'users' collection or methods
+      // are registered.
+      test.throws(
+        () => new AccountsServer(Meteor.server, { caseInsensitiveCollation: 'en' }),
+        /must be a boolean or a plain MongoDB collation object/
+      );
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - cannot be set through Accounts.config',
+    async test => {
+      test.throws(
+        () => Accounts.config({ caseInsensitiveCollation: true }),
+        /cannot be set through Accounts.config\(\)/
+      );
+      test.isNull(Accounts._caseInsensitiveCollation);
+      test.isFalse('caseInsensitiveCollation' in Accounts._options);
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - rejects invalid options',
+    async test => {
+      const cases = [
+        ['en', /must be a boolean or a plain MongoDB collation object/],
+        [42, /must be a boolean or a plain MongoDB collation object/],
+        [[], /must be a boolean or a plain MongoDB collation object/],
+        [{ locale: 'en', bogus: true }, /Invalid caseInsensitiveCollation key\(s\): bogus/],
+        [{ foo: 1, bar: 2 }, /Invalid caseInsensitiveCollation key\(s\): foo, bar/],
+        [{ locale: 123 }, /locale must be a string/],
+        [{ strength: 0 }, /strength must be an integer 1-5/],
+        [{ strength: 6 }, /strength must be an integer 1-5/],
+        [{ strength: 2.5 }, /strength must be an integer 1-5/],
+        [{ strength: '2' }, /strength must be an integer 1-5/],
+        [{ caseLevel: 'yes' }, /caseLevel must be a boolean/],
+        [{ numericOrdering: 1 }, /numericOrdering must be a boolean/],
+        [{ backwards: 'no' }, /backwards must be a boolean/],
+        [{ normalization: 0 }, /normalization must be a boolean/],
+        [{ caseFirst: 'first' }, /caseFirst must be "upper", "lower", or "off"/],
+        [{ alternate: 'ignore' }, /alternate must be "non-ignorable" or "shifted"/],
+        [{ maxVariable: 'all' }, /maxVariable must be "punct" or "space"/],
+      ];
+      for (const [value, expected] of cases) {
+        test.throws(() => resolveCaseInsensitiveCollation(value), expected);
+      }
+    }
+  );
+
+  //
+  // Index management
+  //
+
+  const withTemporaryCollection = async fn => {
+    const collection = new Mongo.Collection(`ci_index_test_${Random.id()}`);
+    try {
+      await fn(collection);
+    } finally {
+      try {
+        await collection.rawCollection().drop();
+      } catch (error) {
+        // The collection may never have been created
+      }
+    }
+  };
+
+  const findIndex = async (collection, name) => {
+    const indexes = await collection.rawCollection().indexes();
+    return indexes.find(index => index.name === name);
+  };
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - creates collation indexes',
+    async test => {
+      await withTemporaryCollection(async collection => {
+        const collation = { locale: 'de', strength: 2 };
+        await createCaseInsensitiveIndexes(collection, collation);
+
+        const usernameIndex = await findIndex(collection, 'username_ci');
+        test.isTrue(usernameIndex, 'username_ci exists');
+        test.equal(usernameIndex.key, { username: 1 });
+        test.isTrue(usernameIndex.sparse, 'username_ci sparse');
+        test.isFalse(usernameIndex.unique, 'username_ci not unique');
+        test.equal(usernameIndex.collation.locale, 'de');
+        test.equal(usernameIndex.collation.strength, 2);
+
+        const emailIndex = await findIndex(collection, 'emails.address_ci');
+        test.isTrue(emailIndex, 'emails.address_ci exists');
+        test.equal(emailIndex.key, { 'emails.address': 1 });
+        test.isTrue(emailIndex.sparse, 'emails.address_ci sparse');
+        test.equal(emailIndex.collation.locale, 'de');
+        test.equal(emailIndex.collation.strength, 2);
+
+        // Creating them again is a no-op (restart safety)
+        await createCaseInsensitiveIndexes(collection, collation);
+        const indexes = await collection.rawCollection().indexes();
+        test.equal(indexes.filter(index => index.name.endsWith('_ci')).length, 2);
+      });
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - explains index name conflicts',
+    async test => {
+      await withTemporaryCollection(async collection => {
+        // An app already owns the "username_ci" name with different options
+        await collection.createIndexAsync('username', { name: 'username_ci' });
+        await test.throwsAsync(
+          () => createCaseInsensitiveIndexes(collection, { locale: 'en', strength: 2 }),
+          /could not create the "username_ci" collation index/
+        );
+      });
+    }
+  );
+
+  Tinytest.addAsync(
+    'accounts - case-insensitive collation - init only creates indexes when enabled',
+    async test => {
+      const originalCollection = Accounts.users;
+      const originalCollation = Accounts._caseInsensitiveCollation;
+      try {
+        // Disabled (default): only the regular indexes are created
+        await withTemporaryCollection(async collection => {
+          Accounts.config({ collection });
+          Accounts._caseInsensitiveCollation = null;
+          await Accounts.init();
+          test.isTrue(await findIndex(collection, 'username_1'), 'regular username index');
+          test.isFalse(await findIndex(collection, 'username_ci'), 'no username_ci');
+          test.isFalse(await findIndex(collection, 'emails.address_ci'), 'no emails.address_ci');
+        });
+
+        // Enabled: the collation indexes are added next to the regular ones
+        await withTemporaryCollection(async collection => {
+          Accounts.config({ collection });
+          Accounts._caseInsensitiveCollation = resolveCaseInsensitiveCollation(true);
+          await Accounts.init();
+          test.isTrue(await findIndex(collection, 'username_1'), 'regular username index');
+          const usernameIndex = await findIndex(collection, 'username_ci');
+          test.isTrue(usernameIndex, 'username_ci');
+          test.equal(usernameIndex.collation.locale, 'en');
+          test.isTrue(await findIndex(collection, 'emails.address_ci'), 'emails.address_ci');
+        });
+      } finally {
+        Accounts._caseInsensitiveCollation = originalCollation;
+        Accounts.config({ collection: originalCollection });
       }
     }
   );

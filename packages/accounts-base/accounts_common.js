@@ -27,6 +27,7 @@ const VALID_CONFIG_KEYS = [
   'useHttpOnlyCookies',
   'ddpUrl',
   'connection',
+  'caseInsensitiveCollation',
 ];
 
 /**
@@ -227,6 +228,7 @@ export class AccountsCommon {
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
+   * @param {Boolean | Object} options.caseInsensitiveCollation Use MongoDB collation instead of regexes for case-insensitive username and email lookups. `true` uses `{ locale: 'en', strength: 2 }`; an object is merged over that default. Creates the `username_ci` and `emails.address_ci` indexes at startup, so it can only be set in `Meteor.settings.packages.accounts`, not through `Accounts.config()`. Defaults to `false`. See [Case-insensitive lookups with MongoDB collation](#accounts-case-insensitive-collation).
    * 
    * @example
    * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server
@@ -277,6 +279,19 @@ export class AccountsCommon {
       );
       options = { ...options };
       delete options.oauthSecretKey;
+    }
+
+    // The case-insensitive lookup strategy decides which indexes are created
+    // on the users collection during `Accounts.init()`, which runs at server
+    // startup before any app code can call `Accounts.config`. Accepting it here
+    // would silently leave the indexes out of sync with the query strategy.
+    if (Object.hasOwn(options, 'caseInsensitiveCollation')) {
+      throw new Meteor.Error(
+        'invalid-case-insensitive-collation',
+        'The caseInsensitiveCollation option cannot be set through ' +
+          'Accounts.config(). Set it in Meteor.settings.packages.accounts ' +
+          'so the matching indexes are created at startup.'
+      );
     }
 
     // Validate config options keys
