@@ -30,14 +30,11 @@ const {
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
 
 import { getInitialEntrypoints } from './build-context';
-import { discoverRspackFileExtensions } from './file-extensions';
+import { getRspackFileExtensionsToIgnore } from './file-extensions';
 
 const { ensureModuleFilesExist, getBuildFilePath } = require('./build-context');
 const {
   RSPACK_BUILD_CONTEXT,
-  RSPACK_ASSETS_CONTEXT,
-  RSPACK_CHUNKS_CONTEXT,
-  RSPACK_DOCTOR_CONTEXT,
   FILE_ROLE,
 } = require('./constants');
 
@@ -89,34 +86,22 @@ function checkMeteorIgnoreExactEntries(entries) {
 }
 
 /**
- * Gets the list of file extensions to ignore based on project type
- * For Blaze projects, it excludes .html as used by Blaze
- * For Less projects, it excludes .less files
- * For SCSS projects, it excludes .scss and .sass files
+ * Gets the bounded list of extensions owned by the default Rspack integration.
+ * This path is needed when Meteor compiler inputs prevent ignoring entire app
+ * directories. Optional loader formats stay visible to Meteor and can be
+ * delegated after Rspack's first compilation.
  * @returns {string[]} Array of file extensions to ignore
  */
 function getFileExtensionsToIgnore() {
-  const compilerExtensions = [
-    ...(isMeteorBlazeProject() ? ['.html'] : []),
-    ...(isMeteorLessProject() ? ['.less'] : []),
-    ...(isMeteorScssProject() ? ['.scss', '.sass'] : []),
-  ];
-  const isAnyCompilerProject = compilerExtensions.length > 0;
-  if (!isAnyCompilerProject) {
+  if (
+    !isMeteorBlazeProject() &&
+    !isMeteorLessProject() &&
+    !isMeteorScssProject()
+  ) {
     return [];
   }
 
-  return discoverRspackFileExtensions({
-    globSync,
-    cwd: getMeteorAppDir(),
-    generatedContexts: [
-      RSPACK_BUILD_CONTEXT,
-      RSPACK_ASSETS_CONTEXT,
-      RSPACK_CHUNKS_CONTEXT,
-      RSPACK_DOCTOR_CONTEXT,
-    ],
-    compilerExtensions,
-  });
+  return getRspackFileExtensionsToIgnore();
 }
 
 /**
@@ -128,6 +113,8 @@ function getFileExtensionsToIgnore() {
 export function configureMeteorForRspack() {
   const meteorAppConfig = getMeteorAppConfig();
   const initialEntrypoints = getInitialEntrypoints();
+  const isTest = isMeteorAppTest();
+  const isTestFullApp = isMeteorAppTestFullApp();
 
   // Ignore node_modules to prevent Meteor from processing them
   const projectRootFilesAndFolders = getMeteorAppFilesAndFolders({
@@ -230,11 +217,20 @@ export function configureMeteorForRspack() {
     }),
   ];
 
-  const testIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+  const normalTestIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
     getBuildFilePath({
       isTest: true,
     }),
   )}/**`;
+  const fullAppTestIgnorePath = `${RSPACK_BUILD_CONTEXT}/${path.dirname(
+    getBuildFilePath({
+      isTest: true,
+      isTestFullApp: true,
+    }),
+  )}/**`;
+  const testIgnorePaths = isTest
+    ? [isTestFullApp ? normalTestIgnorePath : fullAppTestIgnorePath]
+    : [normalTestIgnorePath, fullAppTestIgnorePath];
   const otherMainIgnorePath =
     (isMeteorAppDevelopment() &&
       `${RSPACK_BUILD_CONTEXT}/${path.dirname(
@@ -250,10 +246,19 @@ export function configureMeteorForRspack() {
       }),
     )}/**`;
   const foldersToIgnore = [
-    ...((isMeteorAppTest() && [otherMainIgnorePath]) || [
-      testIgnorePath,
-      otherMainIgnorePath,
-    ]),
+    // Cross-process isolation: a single app directory can host several Meteor
+    // instances at once (a dev server, a `meteor test` daemon, an E2E run),
+    // each with its own RSPACK_BUILD_CONTEXT (_build, _build-daemon,
+    // _build-local-upstream-3.5.2, ...). Ignore every build context here, then
+    // re-include only our own below; otherwise each instance watches the
+    // others' output writes and treats them as source edits, looping on
+    // spurious "Client modified -- refreshing" rebuilds.
+    '/_build',
+    '/_build-*',
+    `!/${RSPACK_BUILD_CONTEXT}`,
+    `!/${RSPACK_BUILD_CONTEXT}/**`,
+    ...testIgnorePaths,
+    otherMainIgnorePath,
     'node_modules/**',
     ...extraFoldersToIgnore,
   ].filter(Boolean);
@@ -323,6 +328,7 @@ export function configureMeteorForRspack() {
   const isTestModule = initialEntrypoints.testModule != null || isTestEager;
   const testClientModule = getBuildFilePath({
     isTest: true,
+    isTestFullApp,
     ...env,
     ...commandRole,
     isTestModule,
@@ -330,6 +336,7 @@ export function configureMeteorForRspack() {
   });
   const testServerModule = getBuildFilePath({
     isTest: true,
+    isTestFullApp,
     ...env,
     ...commandRole,
     isTestModule,
@@ -347,7 +354,7 @@ export function configureMeteorForRspack() {
       testServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     }),
   };
-  if (isMeteorAppTestFullApp()) {
+  if (isTestFullApp) {
     appEntrypoints = {
       ...appEntrypoints,
       mainClient: `${RSPACK_BUILD_CONTEXT}/${testClientModule}`,

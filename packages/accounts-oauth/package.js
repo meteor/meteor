@@ -19,6 +19,8 @@ Package.onUse(api => {
   api.addFiles('oauth_common.js');
   api.addFiles('oauth_client.js', 'client');
   api.addFiles('oauth_server.js', 'server');
+
+  api.types('accounts-oauth.d.ts');
 });
 
 

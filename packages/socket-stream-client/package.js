@@ -21,6 +21,7 @@ Package.onUse(function (api) {
 
   api.addFiles("server.js", "server");
   api.mainModule("node.js", "server", { lazy: true });
+  api.types("socket-stream-client.d.ts");
 });
 
 Package.onTest(function (api) {
