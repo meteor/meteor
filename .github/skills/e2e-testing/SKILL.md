@@ -63,12 +63,14 @@ Prefer readiness tied to a DOM value, output marker, HTTP result, or process exi
 Read [groups and CI](references/groups-and-ci.md) when adding/renaming suites, changing the runner, or reproducing CI failures. Commands below run from the repository root:
 
 ```bash
-npm run install:e2e                         # First-time dependencies and Chromium
+npm run install:e2e                         # npm dependencies, Chromium, and OS libraries
 npm run test:e2e:groups                     # Current group names and workflow owners
 npm run test:e2e:groups:audit               # Registration/group assignment only
 npm run test:e2e:group -- monorepo          # Entire affected group
 npm run test:e2e:group -- react_vue --runTestsByPath react.test.js
 ```
+
+For app execution, complete [checkout setup](../testing/SKILL.md#prepare-the-selected-runner) as well. `install:e2e` runs the isolated npm install followed by the pinned Playwright install with `--with-deps`; on Linux, system-library installation may require elevated privileges. Keep `PLAYWRIGHT_BROWSERS_PATH` consistent between installation and execution when setting it. The group audit needs only npm dependencies, as described in the CI reference; it does not require browser installation.
 
 For implementation or test updates, select the smallest affected scenario with its necessary lifecycle setup, and confirm it ran. Expand to the file/group or representative helper consumers only for a concrete interaction risk. Check group assignment when names or selection change; do not rerun the audit for unrelated documentation edits. Documentation-only edits need link and command validation, not app builds. During a review, use focused checks when needed to substantiate findings; honor explicit inspection-only constraints.
 
