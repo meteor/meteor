@@ -102,6 +102,16 @@ describe('R.Router App Bundling /', () => {
         // Check custom plugin gets loaded from rspack.config.override.js file
         await waitForMeteorOutput(result.outputLines, /.*CustomConsoleLogPlugin.*/);
       },
+      afterRunBuiltApp: async ({ port }) => {
+        // Routing, Less styles and custom meta tags must survive the build
+        await assert404Page(port, { isProductionMode: true });
+        await assertBodyStyles({
+          'white-space': 'break-spaces',
+        });
+        await assertMetaTags({
+          'theme-color': '#4285f4',
+        });
+      },
     }
   }));
 });

@@ -20,9 +20,12 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.reactivity_order }}
       cancel-in-progress: true
-    runs-on: oss-vm
     timeout-minutes: 90
     env:
+      # npm submits an audit request with every install. Meteor can run many
+      # installs when caches are cold, and this job does not consume their
+      # automatic audit reports.
+      npm_config_audit: "false"
       CXX: g++-12
       phantom: false
       PUPPETEER_DOWNLOAD_PATH: /home/runner/.npm/chromium
@@ -34,12 +37,13 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 24.15.0
-          submodules: recursive
 
       - name: Expose globally-installed puppeteer to Node.js
         # puppeteer@23.6.0 is pre-installed on oss-vm via `npm install -g`.

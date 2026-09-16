@@ -23,7 +23,7 @@ jobs:
     runs-on: ${{ inputs.runner_label }}
     steps:
       - name: Run runner cleanup
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         env:
           SELF_HOSTED_MIN_FREE_GB: ${{ inputs.min_free_gb }}
         with:

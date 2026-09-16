@@ -100,7 +100,17 @@ Command.prototype.evaluateOption = function (optionName, options) {
 //
 // Options that function as commands (eg, "meteor --arch") are treated
 // as subcommands of "--".
-var commands = {};
+var commands = main.commands = {};
+
+main.getTopLevelCommandNames = function () {
+  const names = [];
+  Object.entries(commands).forEach(([name, cmd]) => {
+    if (name !== "--" && cmd && !cmd.hidden) {
+      names.push(name);
+    }
+  });
+  return names;
+};
 
 // Exception to throw from a command to bail out and show command
 // usage information.
@@ -296,6 +306,7 @@ require('./commands-packages.js');
 require('./commands-packages-query.js');
 require('./commands-cordova.js');
 require('./commands-aliases.js');
+require('./commands-completion.js');
 
 ///////////////////////////////////////////////////////////////////////////////
 // Record all the top-level commands as JSON
@@ -619,8 +630,14 @@ makeGlobalAsyncLocalStorage().run({}, async function () {
   // first time we do a isopack.load, it will fail due to the check in the
   // meteor package, and that'll look a lot uglier.
   if (process.env.ROOT_URL) {
-    var parsedUrl = require('url').parse(process.env.ROOT_URL);
-    if (!parsedUrl.host || ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
+    let parsedUrl = null;
+    try {
+      parsedUrl = new URL(process.env.ROOT_URL);
+    } catch (e) {
+      // Not a parseable URL; handled by the check below.
+    }
+    if (!parsedUrl || !parsedUrl.host ||
+        ['http:', 'https:'].indexOf(parsedUrl.protocol) === -1) {
       Console.error('$ROOT_URL, if specified, must be an URL.');
       process.exit(1);
     }

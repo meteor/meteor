@@ -1,0 +1,15 @@
+body {
+  padding: 10px;
+  font-family: sans-serif;
+  line-height: 1.5;
+}
+
+li {
+  margin: 8px 0;
+}
+
+code {
+  background: #f4f4f4;
+  border-radius: 4px;
+  padding: 2px 5px;
+}
