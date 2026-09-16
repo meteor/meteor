@@ -39,9 +39,9 @@ export interface CreateUserWithWebAuthnOptions {
 /** A username, an email, or an object with exactly one of `id`, `username` or `email`. */
 export type WebAuthnSelector =
   | string
-  | { id: string }
-  | { username: string }
-  | { email: string };
+  | { id: string; username?: never; email?: never }
+  | { username: string; id?: never; email?: never }
+  | { email: string; id?: never; username?: never };
 
 /** Node-style callback: an error on failure, otherwise the result. */
 export type WebAuthnCallback<T = void> = (error?: Error, result?: T) => void;

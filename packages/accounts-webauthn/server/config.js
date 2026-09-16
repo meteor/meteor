@@ -32,10 +32,20 @@ export function getWebAuthnConfig() {
 
   const rootUrl = new URL(Meteor.absoluteUrl());
   const rpID = options.rpID || rootUrl.hostname;
+  const origins =
+    options.origins === undefined ? [rootUrl.origin] : [].concat(options.origins);
+  if (
+    origins.length === 0 ||
+    !origins.every(origin => typeof origin === 'string' && origin)
+  ) {
+    throw new Error(
+      'Accounts.config: webauthn.origins must be a non-empty string or a non-empty array of strings'
+    );
+  }
   return {
     rpID,
     rpName: options.rpName || Accounts.emailTemplates?.siteName || rpID,
-    origins: options.origins ? [].concat(options.origins) : [rootUrl.origin],
+    origins,
     attestationType: options.attestationType || 'none',
     authenticatorAttachment: options.authenticatorAttachment,
     residentKey: options.residentKey || 'preferred',

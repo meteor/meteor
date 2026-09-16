@@ -184,6 +184,6 @@ export async function authenticateCredential({
         requireUserVerification,
       })
   );
-  await touchCredential(user._id, credential.id, authenticationInfo);
+  await touchCredential(user._id, credential, authenticationInfo);
   return authenticationInfo;
 }

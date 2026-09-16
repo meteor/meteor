@@ -44,6 +44,9 @@ expectTypeOf(Meteor.passwordlessLoginWithTokenAndWebAuthnAsync).toBeFunction();
 Meteor.loginWithWebAuthn(() => {});
 Meteor.loginWithWebAuthn({ email: "a@b.c" }, () => {});
 Meteor.loginWithWebAuthn("username");
+Meteor.loginWithWebAuthn({ id: "user-id" });
+// @ts-expect-error a selector object names exactly one identifier
+Meteor.loginWithWebAuthn({ email: "a@b.c", username: "user" }, () => {});
 
 // ...and Accounts with feature detection, credential management, sign-up,
 // second-factor toggles and the server-side validation hook.

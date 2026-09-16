@@ -15,7 +15,7 @@ Accounts.enableWebAuthnSecondFactorAsync = () =>
  * token, whenever the logged-in user logs in. At least one key must be
  * registered.
  * @locus Client
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Function} [callback] Optional callback. Called with `(error, result)`: `error` is set on failure, and `result` is `undefined` on success.
  * @importFromPackage accounts-base
  */
 Accounts.enableWebAuthnSecondFactor = withCallback(
@@ -35,7 +35,7 @@ Accounts.disableWebAuthnSecondFactorAsync = () =>
  * @summary Stop requiring a security key when the logged-in user logs in.
  * Registered keys are kept and can still be used for passwordless login.
  * @locus Client
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Function} [callback] Optional callback. Called with `(error, result)`: `error` is set on failure, and `result` is `undefined` on success.
  * @importFromPackage accounts-base
  */
 Accounts.disableWebAuthnSecondFactor = withCallback(
@@ -54,7 +54,7 @@ Accounts.hasWebAuthnSecondFactorEnabledAsync = () =>
 /**
  * @summary Whether the logged-in user must present a security key when logging in.
  * @locus Client
- * @param {Function} callback Called with a boolean on success, or with a single `Error` argument on failure.
+ * @param {Function} callback Called with `(error, enabled)`: `error` is set on failure, otherwise `enabled` is a boolean.
  * @importFromPackage accounts-base
  */
 Accounts.hasWebAuthnSecondFactorEnabled = withCallback(

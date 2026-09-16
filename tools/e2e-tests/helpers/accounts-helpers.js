@@ -196,7 +196,12 @@ const VIRTUAL_AUTHENTICATOR_DEFAULTS = {
 
 export async function virtualAuthenticators(page) {
   const client = await page.context().newCDPSession(page);
-  await client.send('WebAuthn.enable');
+  try {
+    await client.send('WebAuthn.enable');
+  } catch (error) {
+    await client.detach().catch(() => {});
+    throw error;
+  }
   const ids = new Set();
   return {
     add: async (options = {}) => {
@@ -228,8 +233,8 @@ export async function virtualAuthenticators(page) {
 
 export async function withVirtualAuthenticator(page, fn, options = {}) {
   const authenticators = await virtualAuthenticators(page);
-  const authenticatorId = await authenticators.add(options);
   try {
+    const authenticatorId = await authenticators.add(options);
     return await fn(authenticators, authenticatorId);
   } finally {
     await authenticators.detach();

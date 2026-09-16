@@ -46,6 +46,22 @@ Tinytest.add('accounts - second factors - registry validates descriptors', test 
   test.isFalse('alpha-test' in Accounts._secondFactorInputSchema());
 });
 
+Tinytest.add('accounts - second factors - a stale stop handle leaves a replacement alone', test => {
+  const first = Accounts.registerSecondFactor('alpha-test', fakeFactor('alpha-test'));
+  first.stop();
+  const second = Accounts.registerSecondFactor('alpha-test', fakeFactor('alpha-test'));
+  try {
+    first.stop();
+    test.isTrue(
+      'alpha-test' in Accounts._secondFactorInputSchema(),
+      'the replacement stays registered'
+    );
+  } finally {
+    second.stop();
+  }
+  test.isFalse('alpha-test' in Accounts._secondFactorInputSchema());
+});
+
 Tinytest.add('accounts - second factors - isAvailableFor defaults to isEnabledFor', test => {
   const defaulted = Accounts.registerSecondFactor('alpha-test', fakeFactor('alpha-test'));
   const explicit = Accounts.registerSecondFactor(

@@ -220,7 +220,19 @@ This method can fail throwing one of the following errors:
 ## Integrating an Authentication Package with accounts-2fa {#integrating-auth-package}
 
 ::: tip Meteor 3.6
-A login handler can call `Accounts._verifySecondFactors(user, options)` after verifying its own credential. That single call checks every factor registered through `Accounts.registerSecondFactor`: the authenticator code from this package and the security keys from [`accounts-webauthn`](./accounts-webauthn.md). The manual steps below keep working for packages that only want the authenticator code.
+A login handler can call `Accounts._verifySecondFactors(user, options)` after verifying its own credential. That single call checks every factor registered through `Accounts.registerSecondFactor`: the authenticator code from this package and the security keys from [`accounts-webauthn`](./accounts-webauthn.md). A handler that validates its `options` with `check` must also accept the answers of those factors, so spread `Accounts._secondFactorInputSchema()` into its pattern:
+
+```js
+check(options, {
+  user: Accounts._userQueryValidator,
+  token: String,
+  ...Accounts._secondFactorInputSchema(),
+});
+// ...verify the token, then:
+await Accounts._verifySecondFactors(user, options);
+```
+
+The manual steps below keep working for packages that only want the authenticator code.
 :::
 
 To integrate this package with any other existing Login method, it's necessary following two steps:

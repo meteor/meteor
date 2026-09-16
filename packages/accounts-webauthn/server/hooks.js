@@ -58,7 +58,8 @@ export async function runRegistrationValidation(registrationInfo, context) {
     userVerified: registrationInfo.userVerified,
     transports: registrationInfo.credential.transports || [],
   };
-  for (const validate of registrationValidators) {
+  // A snapshot, so a callback that stops itself does not skip the next one.
+  for (const validate of [...registrationValidators]) {
     if ((await validate(info, context, registrationInfo)) === false) {
       Accounts._handleError(
         'WebAuthn registration rejected',
@@ -70,7 +71,7 @@ export async function runRegistrationValidation(registrationInfo, context) {
 }
 
 export async function notifyCredentialChange(change) {
-  for (const listener of changeListeners) {
+  for (const listener of [...changeListeners]) {
     try {
       await listener(change);
     } catch (error) {

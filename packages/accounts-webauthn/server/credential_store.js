@@ -99,9 +99,17 @@ export function detectCounterRollback(storedCounter, newCounter) {
   return newCounter <= storedCounter;
 }
 
-export async function touchCredential(userId, credentialId, authenticationInfo) {
-  await Meteor.users.updateAsync(
-    { _id: userId, 'services.webauthn.credentials.id': credentialId },
+// Records a use of the credential. The stored counter is part of the query,
+// so two assertions verified against the same stored value cannot both
+// succeed: the second one finds the counter already advanced and is rejected.
+export async function touchCredential(userId, credential, authenticationInfo) {
+  const updated = await Meteor.users.updateAsync(
+    {
+      _id: userId,
+      'services.webauthn.credentials': {
+        $elemMatch: { id: credential.id, counter: credential.counter },
+      },
+    },
     {
       $set: {
         'services.webauthn.credentials.$.counter': authenticationInfo.newCounter,
@@ -111,6 +119,13 @@ export async function touchCredential(userId, credentialId, authenticationInfo) 
       },
     }
   );
+  if (!updated) {
+    Accounts._handleError(
+      'WebAuthn signature counter was already advanced by another login',
+      true,
+      'webauthn-counter-mismatch'
+    );
+  }
 }
 
 const isDuplicateKeyError = error =>
@@ -128,13 +143,19 @@ export async function assertCredentialIdAvailable(credentialId) {
   }
 }
 
+// The unique index rejects a credential id held by another user, but not one
+// repeated inside the same user's array, so the query excludes that case too.
 export async function addCredentialToUser(userId, credentialDoc) {
   try {
     const updated = await Meteor.users.updateAsync(
-      { _id: userId },
+      { _id: userId, 'services.webauthn.credentials.id': { $ne: credentialDoc.id } },
       { $push: { 'services.webauthn.credentials': credentialDoc } }
     );
     if (!updated) {
+      const user = await Meteor.users.findOneAsync({ _id: userId }, { fields: { _id: 1 } });
+      if (user) {
+        credentialInUse();
+      }
       Accounts._handleError('User not found');
     }
   } catch (error) {

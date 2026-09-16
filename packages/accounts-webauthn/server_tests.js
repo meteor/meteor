@@ -5,8 +5,10 @@ import { createTestAuthenticator } from './webauthn_test_helpers.js';
 import { getWebAuthnConfig } from './server/config.js';
 import { WebAuthnChallenges } from './server/collection.js';
 import {
+  addCredentialToUser,
   detectCounterRollback,
   hasAlternativeLoginMethod,
+  touchCredential,
 } from './server/credential_store.js';
 
 // Login handlers are exercised over a real DDP connection so the whole login
@@ -151,6 +153,12 @@ Tinytest.add('accounts-webauthn - config - overrides are applied and validated',
     test.throws(() => getWebAuthnConfig(), /webauthn\.userVerification/);
     Accounts._options.webauthn = { attestationType: 'indirect' };
     test.throws(() => getWebAuthnConfig(), /webauthn\.attestationType/);
+    Accounts._options.webauthn = { origins: ['https://a.example', 'https://b.example'] };
+    test.equal(getWebAuthnConfig().origins, ['https://a.example', 'https://b.example']);
+    for (const origins of [[], [42], '', null]) {
+      Accounts._options.webauthn = { origins };
+      test.throws(() => getWebAuthnConfig(), /webauthn\.origins/);
+    }
   } finally {
     Accounts._options.webauthn = previous;
   }
@@ -163,6 +171,54 @@ Tinytest.add('accounts-webauthn - counter rollback detection', test => {
   test.isTrue(detectCounterRollback(5, 5));
   test.isTrue(detectCounterRollback(5, 3));
   test.isTrue(detectCounterRollback(5, 0));
+});
+
+Tinytest.addAsync(
+  'accounts-webauthn - recording a use is a compare-and-set on the counter',
+  async test => {
+    const stored = { id: Random.id(), counter: 5 };
+    const userId = await Meteor.users.insertAsync({
+      services: { webauthn: { credentials: [{ ...stored }] } },
+    });
+    const storedCounter = async () =>
+      (await getUser(userId)).services.webauthn.credentials[0].counter;
+    try {
+      await touchCredential(userId, stored, { newCounter: 6, credentialBackedUp: false });
+      test.equal(await storedCounter(), 6);
+      await expectError(
+        test,
+        touchCredential(userId, stored, { newCounter: 7, credentialBackedUp: false }),
+        'webauthn-counter-mismatch',
+        'a second assertion verified against the old counter is rejected'
+      );
+      test.equal(await storedCounter(), 6, 'the stored counter is left untouched');
+    } finally {
+      await Meteor.users.removeAsync(userId);
+    }
+  }
+);
+
+Tinytest.addAsync('accounts-webauthn - a credential id is stored once per user', async test => {
+  const id = Random.id();
+  const userId = await Meteor.users.insertAsync({
+    services: { webauthn: { credentials: [{ id, counter: 0 }] } },
+  });
+  try {
+    await expectError(
+      test,
+      addCredentialToUser(userId, { id, counter: 0 }),
+      'webauthn-credential-in-use'
+    );
+    test.equal((await getUser(userId)).services.webauthn.credentials.length, 1);
+    await expectError(
+      test,
+      addCredentialToUser(Random.id(), { id: Random.id(), counter: 0 }),
+      403,
+      'unknown user'
+    );
+  } finally {
+    await Meteor.users.removeAsync(userId);
+  }
 });
 
 Tinytest.add('accounts-webauthn - alternative login method detection', test => {
@@ -482,6 +538,10 @@ Tinytest.addAsync(
   async test => {
     const key = await newAuthenticator();
     const seen = [];
+    // Stops itself while the hooks run; the veto below must still be reached.
+    const once = Accounts.validateWebAuthnRegistration(() => {
+      once.stop();
+    });
     const hook = Accounts.validateWebAuthnRegistration((info, context) => {
       seen.push({ info, context });
       return false;
@@ -539,6 +599,7 @@ Tinytest.addAsync(
         test.equal(seen.length, 1, 'a stopped hook is not called');
       });
     } finally {
+      once.stop();
       hook.stop();
     }
   }
@@ -1100,6 +1161,10 @@ Tinytest.addAsync(
   'accounts-webauthn - key changes are reported to onWebAuthnCredentialChange',
   async test => {
     const changes = [];
+    // Stops itself on the first change; the listeners after it must still run.
+    const once = Accounts.onWebAuthnCredentialChange(() => {
+      once.stop();
+    });
     const listener = Accounts.onWebAuthnCredentialChange(change => {
       changes.push(change);
     });
@@ -1150,6 +1215,7 @@ Tinytest.addAsync(
         test.equal(changes.length, 4, 'a stopped listener is not called');
       });
     } finally {
+      once.stop();
       listener.stop();
       failing.stop();
       await cleanup(signupUserId);

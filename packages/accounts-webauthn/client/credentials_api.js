@@ -79,7 +79,7 @@ Accounts.renameWebAuthnCredentialAsync = async (id, name) => {
  * @locus Client
  * @param {String} id The credential id, as returned by `Accounts.listWebAuthnCredentials`.
  * @param {String} name The new label.
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Function} [callback] Optional callback. Called with `(error, result)`: `error` is set on failure, and `result` is `undefined` on success.
  * @importFromPackage accounts-base
  */
 Accounts.renameWebAuthnCredential = withCallback(
@@ -106,7 +106,7 @@ Accounts.removeWebAuthnCredentialAsync = async id => {
  * no other way to log in.
  * @locus Client
  * @param {String} id The credential id, as returned by `Accounts.listWebAuthnCredentials`.
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Function} [callback] Optional callback. Called with `(error, result)`: `error` is set on failure, and `result` is `undefined` on success.
  * @importFromPackage accounts-base
  */
 Accounts.removeWebAuthnCredential = withCallback(

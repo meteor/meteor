@@ -677,14 +677,18 @@ export class AccountsServer extends AccountsCommon {
     if (this._secondFactors.has(name)) {
       throw new Error(`Second factor "${name}" is already registered`);
     }
-    this._secondFactors.set(name, {
+    const factor = {
       ...descriptor,
       name,
       isAvailableFor: descriptor.isAvailableFor || descriptor.isEnabledFor,
-    });
+    };
+    this._secondFactors.set(name, factor);
     return {
+      // A stale handle leaves a factor registered later under the same name alone.
       stop: () => {
-        this._secondFactors.delete(name);
+        if (this._secondFactors.get(name) === factor) {
+          this._secondFactors.delete(name);
+        }
       },
     };
   }

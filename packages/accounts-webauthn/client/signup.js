@@ -40,7 +40,7 @@ Accounts.createUserWithWebAuthnAsync = async (options = {}) => {
  * @param {String} options.email The user's email address.
  * @param {Object} options.profile The user's profile, typically including the `name` field.
  * @param {String} options.credentialName A label for the security key.
- * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
+ * @param {Function} [callback] Optional callback. Called with `(error, loginDetails)`: `error` is set on failure, otherwise `loginDetails` is the result of the login.
  * @importFromPackage accounts-base
  */
 Accounts.createUserWithWebAuthn = withCallback(
