@@ -5,6 +5,7 @@ on:
     paths:
       - 'tools/**'
       - 'scripts/**'
+      - 'packages/rspack/**'
       - 'package.json'
       - '.github/workflows/unit-tests.yml'
   push:

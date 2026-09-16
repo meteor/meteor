@@ -1221,7 +1221,8 @@ class Target {
       // resource (for os unibuilds).
       const unibuildAssets = {};
       for (const resource of resources) {
-        if (resource.type !== 'asset') {
+        if (resource.type !== 'asset' ||
+            resource.fileOptions && resource.fileOptions.nativeType) {
           continue;
         }
 
