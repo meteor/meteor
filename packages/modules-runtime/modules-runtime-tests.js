@@ -11,6 +11,15 @@ Tinytest.add('errors - standard', function (test) {
   }, 'Cannot find package "foo". Try "meteor add foo".');
 });
 
+Tinytest.add('errors - missing module in installed package', function (test) {
+  var require = meteorInstall();
+  // The "meteor" package is always installed, so importing a non-existent
+  // module from it should report the missing module, not a missing package.
+  test.throws(() => {
+    require('meteor/meteor/this-module-does-not-exist');
+  }, /Cannot find module "meteor\/meteor\/this-module-does-not-exist"\. The package "meteor" is installed/);
+});
+
 Tinytest.add('errors - node_modules', function (test) {
   var require = meteorInstall();
   test.throws(() => {
