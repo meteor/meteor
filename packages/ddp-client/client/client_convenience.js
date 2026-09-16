@@ -59,7 +59,7 @@ export const _calculateDDPUrl = ({
     return runtimeConfig.DDP_DEFAULT_CONNECTION_URL;
   }
 
-  const protocol = (absoluteUrl && absoluteUrl.split('//')[0]) || browserProtocol;
+  const protocol = browserProtocol || (absoluteUrl && absoluteUrl.split('//')[0]);
   const pathPrefix = extractPathPrefix(absoluteUrl, runtimeConfig);
   return `${protocol}//${browserHost}${pathPrefix}`;
 };
@@ -81,10 +81,10 @@ const getDDPUrl = () => {
 // only has an effect on the server.
 Meteor.refresh = () => {};
 
-// By default, connect to the current browser host so mirrored domains
-// establish their websocket connection against the same host users loaded.
-// Keep the protocol and app path from Meteor.absoluteUrl() to preserve
-// force-ssl and deploy-path behavior.
+// By default, connect to the current browser origin so mirrored domains
+// establish their websocket connection against the same host and protocol
+// users loaded. Keep the app path from Meteor.absoluteUrl() to preserve
+// deploy-path behavior.
 const ddpUrl = getDDPUrl() || '/';
 
 const retry = new Retry();

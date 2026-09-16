@@ -45,6 +45,11 @@ if (Meteor.isServer) {
 }
 ```
 
+Every Meteor server process also needs a `main` function. The `webapp`
+package supplies one that starts the HTTP server. Apps that omit `webapp`
+must provide their own `main` as a package export or on the global object,
+or startup exits with `Program has no main() function.`
+
 {% apibox "Meteor.onShutdown" %}
 
 On `SIGTERM` or `SIGINT`, registered shutdown hooks run sequentially in
@@ -59,10 +64,18 @@ when the cap is reached the process exits even if hooks are still
 running, to avoid stalling supervisor escalation (Galaxy, Kubernetes,
 systemd) to `SIGKILL`. Set it to `0` to disable the cap and wait for hooks
 indefinitely; set it to a small value (e.g. `1`) to exit almost immediately.
+Invalid, negative, or values above Node's maximum timer delay (`2147483647`)
+fall back to the default with a warning.
 
 A second `SIGTERM`/`SIGINT` received while shutdown is already running is
 treated as a force-quit (e.g. double Ctrl-C): the process exits at once
 without waiting for the remaining hooks or the timeout.
+
+Meteor gives existing Node signal listeners one event-loop turn before it
+starts running shutdown hooks, but it cannot await promises returned from
+`process.on(...)` listeners. Move asynchronous cleanup from raw signal
+listeners into `Meteor.onShutdown` so it participates in ordering and timeout
+handling.
 
 Exit codes follow POSIX convention: `SIGINT` → 130, `SIGTERM` → 143.
 

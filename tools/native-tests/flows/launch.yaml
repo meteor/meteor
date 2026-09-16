@@ -2,5 +2,26 @@ appId: com.meteor.smoke
 ---
 - launchApp:
     clearState: true
-- assertVisible: "Meteor ready"
-- assertVisible: "DDP connected"
+- extendedWaitUntil:
+    visible: "Welcome to Meteor Cordova Tests"
+    timeout: 120000
+- extendedWaitUntil:
+    visible: "Native render ready"
+    timeout: 120000
+- assertVisible: "Style preserved"
+- extendedWaitUntil:
+    visible: "DDP verified"
+    timeout: 60000
+- assertVisible: "Native client version initial"
+- assertVisible: "Native server version initial"
+- assertVisible: "window.cordova available"
+- assertVisible: "Cordova native platform ready"
+- assertVisible: "WebAppLocalServer ready"
+- assertVisible: "__cordova paths served"
+- tapOn: "Reload route test"
+- extendedWaitUntil:
+    visible: "Route reload preserved"
+    timeout: 60000
+- extendedWaitUntil:
+    visible: "DDP verified"
+    timeout: 60000

@@ -57,7 +57,9 @@ Meteor.onShutdown = function onShutdown(callback) {
     console.warn(
       '[Meteor.onShutdown] hook registered after shutdown started; running immediately'
     );
-    Promise.resolve().then(callback).catch(function (e) {
+    Promise.resolve().then(function () {
+      return callback(bootstrap && bootstrap.shutdownSignal);
+    }).catch(function (e) {
       console.error('[Meteor.onShutdown] late hook threw:', e && e.stack || e);
     });
   }
