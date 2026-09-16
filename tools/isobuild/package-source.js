@@ -1536,7 +1536,7 @@ Object.assign(PackageSource.prototype, {
         // remove trailing slash
         dir = dir.substr(0, dir.length - 1);
 
-        if (loopChecker.check(dir)) {
+        if (loopChecker.check(dir, false)) {
           // pretend we found no files
           return [];
         }
