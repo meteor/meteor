@@ -1,3 +1,10 @@
+// Suppress browserslist's "caniuse-lite is outdated" warning. browserslist
+// prints it with console.warn (not process.emitWarning, so the override below
+// does not catch it) and skips it only when this env var is set. Preserve an
+// explicit user value.
+process.env.BROWSERSLIST_IGNORE_OLD_DATA =
+  process.env.BROWSERSLIST_IGNORE_OLD_DATA || '1';
+
 const originalEmitWarning = process.emitWarning;
 
 process.emitWarning = function (message) {
