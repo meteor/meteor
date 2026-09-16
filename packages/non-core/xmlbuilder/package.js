@@ -14,3 +14,8 @@ Package.onUse(function (api) {
 
   api.export('XmlBuilder', 'server');
 });
+
+Package.onTest(function (api) {
+  api.use(['tinytest', 'xmlbuilder']);
+  api.addFiles('xmlbuilder_tests.js', 'server');
+});

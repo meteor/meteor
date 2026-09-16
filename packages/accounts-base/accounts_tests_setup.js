@@ -32,7 +32,7 @@ Meteor.methods({
         },
       }
     );
-    return await getTokenFromSecret({ selector, secret });
+    return getTokenFromSecret({ selector, secret });
   },
   getTokenFromSecret,
 });

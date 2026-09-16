@@ -1050,23 +1050,33 @@ Object.assign(Subscription.prototype, {
   // removed messages for the published objects; if that is necessary, call
   // _removeAllDocuments first.
   _deactivate: function() {
-    var self = this;
-    if (self._deactivated)
+    if (this._deactivated)
       return;
-    self._deactivated = true;
-    self._callStopCallbacks();
+    this._deactivated = true;
+    this._callStopCallbacks().then(() => {
+      // Break reference chains to allow GC of the Session and its data.
+      // Without this, deactivated subscriptions retain live references
+      // to the (now-closed) session indefinitely.
+      this._session = null;
+      this._documents = new Map();
+    });
     Package['facts-base'] && Package['facts-base'].Facts.incrementServerFact(
       "livedata", "subscriptions", -1);
   },
 
-  _callStopCallbacks: function () {
-    var self = this;
-    // Tell listeners, so they can clean up
-    var callbacks = self._stopCallbacks;
-    self._stopCallbacks = [];
-    callbacks.forEach(function (callback) {
-      callback();
-    });
+  _callStopCallbacks: async function () {
+    // In Meteor 3, onStop callbacks can be async (e.g. observeHandle.stop()
+    // returns a Promise). We must await each one so that observer teardown
+    // completes before the subscription is considered fully deactivated.
+    const callbacks = this._stopCallbacks;
+    this._stopCallbacks = [];
+    for (const callback of callbacks) {
+      try {
+        await callback();
+      } catch (e) {
+        Meteor._debug("Exception in onStop callback:", e);
+      }
+    }
   },
 
   // Send remove messages for every document.
@@ -1145,8 +1155,7 @@ Object.assign(Subscription.prototype, {
   // destroyed but the deferred call to _deactivateAllSubscriptions hasn't
   // happened yet.
   _isDeactivated: function () {
-    var self = this;
-    return self._deactivated || self._session.inQueue === null;
+    return this._deactivated || !this._session || this._session.inQueue === null;
   },
 
   /**

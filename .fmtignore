@@ -1,0 +1,35 @@
+# Ignore everything by default
+# oxfmt uses .prettierignore automatically
+
+# Root and top-level directories
+*.yml
+*.md
+*.json
+tsconfig.json
+android_bundle/
+dev_bundle/
+docs/
+examples/
+guide/
+scripts/
+tools/
+npm-packages/
+v3-docs/
+node_modules/
+.meteor/
+.github/
+.coderabbit.yaml
+
+# Ignore node_modules/npm inside packages
+packages/**/node_modules/
+packages/**/.npm/
+
+# All packages ignored by default
+# Only those listed below are formatted
+packages/*
+
+!packages/facts-base/
+!packages/facts-ui/
+!packages/non-core/bundle-visualizer/
+!packages/non-core/mongo-decimal/
+!packages/non-core/xmlbuilder/

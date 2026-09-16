@@ -41,6 +41,8 @@ export class OplogHandle {
     excludeCollections?: string[];
     includeCollections?: string[];
   };
+  private _includeNSRegex?: RegExp;
+  private _excludeNSRegex?: RegExp;
   private _stopped: boolean;
   private _tailHandle: any;
   private _readyPromiseResolver: (() => void) | null;
@@ -82,6 +84,18 @@ export class OplogHandle {
     }
     this._oplogOptions = { includeCollections, excludeCollections };
 
+    if (includeCollections?.length) {
+      const incAlt = includeCollections.map((c) => Meteor._escapeRegExp(c)).join('|');
+
+      this._includeNSRegex = new RegExp(`^${Meteor._escapeRegExp(this._dbName)}\\.(?:${incAlt})$`);
+    }
+
+    if (excludeCollections?.length) {
+      const excAlt = excludeCollections.map((c) => Meteor._escapeRegExp(c)).join('|');
+
+      this._excludeNSRegex = new RegExp(`^${Meteor._escapeRegExp(this._dbName)}\\.(?:${excAlt})$`);
+    }
+
     this._catchingUpResolvers = [];
     this._lastProcessedTS = null;
 
@@ -90,6 +104,15 @@ export class OplogHandle {
     });
 
     this._startTrailingPromise = this._startTailing();
+  }
+
+    private _nsAllowed(ns: string | undefined): boolean {
+    if (!ns) return false;
+    if (ns === 'admin.$cmd') return true;
+    if (this._includeNSRegex && !this._includeNSRegex.test(ns)) return false;
+    if (this._excludeNSRegex && this._excludeNSRegex.test(ns)) return false;
+
+    return true;
   }
 
   private _getOplogSelector(lastProcessedTS?: any): any {
@@ -104,40 +127,55 @@ export class OplogHandle {
       },
     ];
 
-    const nsRegex = new RegExp(
-      "^(?:" +
-        [
-          // @ts-ignore
-          Meteor._escapeRegExp(this._dbName + "."),
-          // @ts-ignore
-          Meteor._escapeRegExp("admin.$cmd"),
-        ].join("|") +
-        ")"
-    );
-
     if (this._oplogOptions.excludeCollections?.length) {
-      oplogCriteria.push({
-        ns: {
-          $regex: nsRegex,
-          $nin: this._oplogOptions.excludeCollections.map(
-            (collName: string) => `${this._dbName}.${collName}`
-          ),
-        },
-      });
-    } else if (this._oplogOptions.includeCollections?.length) {
+      const nsRegex = new RegExp(
+        '^(?:' +
+          [
+            // @ts-ignore
+            Meteor._escapeRegExp(this._dbName + '.'),
+          ].join('|') +
+          ')'
+      );
+      const excludeNs = {
+        $regex: nsRegex,
+        $nin: this._oplogOptions.excludeCollections.map(
+          (collName: string) => `${this._dbName}.${collName}`
+        ),
+      };
       oplogCriteria.push({
         $or: [
-          { ns: /^admin\.\$cmd/ },
+          { ns: excludeNs },
           {
-            ns: {
-              $in: this._oplogOptions.includeCollections.map(
-                (collName: string) => `${this._dbName}.${collName}`
-              ),
-            },
+            ns: /^admin\.\$cmd/,
+            'o.applyOps': { $elemMatch: { ns: excludeNs } },
           },
         ],
       });
+    } else if (this._oplogOptions.includeCollections?.length) {
+      const includeNs = {
+        $in: this._oplogOptions.includeCollections.map(
+          (collName: string) => `${this._dbName}.${collName}`
+        ),
+      };
+      oplogCriteria.push({
+        $or: [
+          {
+            ns: includeNs,
+          },
+          { ns: /^admin\.\$cmd/, 'o.applyOps.ns': includeNs },
+        ],
+      });
     } else {
+      const nsRegex = new RegExp(
+        "^(?:" +
+          [
+            // @ts-ignore
+            Meteor._escapeRegExp(this._dbName + "."),
+            // @ts-ignore
+            Meteor._escapeRegExp("admin.$cmd"),
+          ].join("|") +
+          ")"
+      );
       oplogCriteria.push({
         ns: nsRegex,
       });
@@ -410,6 +448,11 @@ async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
         if (!op.ts) {
           op.ts = nextTimestamp;
           nextTimestamp = nextTimestamp.add(Long.ONE);
+        }
+        // Only forward sub-ops whose ns is allowed
+        // See https://github.com/meteor/meteor/issues/13945
+        if (!handle['_nsAllowed'](op.ns)) {
+          continue;
         }
         await handleDoc(handle, op);
       }

@@ -1,0 +1,25 @@
+{
+  "name": "meteor-app",
+  "private": true,
+  "scripts": {
+    "start": "meteor run",
+    "test": "meteor test --once --driver-package meteortesting:mocha"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.27.6",
+    "@swc/helpers": "^0.5.17",
+    "jquery": "^3.7.1",
+    "meteor-node-stubs": "^1.2.1"
+  },
+  "meteor": {
+    "modern": true,
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "playwright": "1.59.0"
+  }
+}

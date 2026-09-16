@@ -101,17 +101,18 @@ let lastModifiedSwcConfigTime;
 BCp.initializeMeteorAppSwcrc = function () {
   const hasSwcRc = fs.existsSync(`${getMeteorAppDir()}/.swcrc`);
   const hasSwcJs = !hasSwcRc && fs.existsSync(`${getMeteorAppDir()}/swc.config.js`);
-  if (!lastModifiedSwcConfig && !hasSwcRc && !hasSwcJs) {
+  const hasSwcTs = !hasSwcRc && !hasSwcJs && fs.existsSync(`${getMeteorAppDir()}/swc.config.ts`);
+  if (!lastModifiedSwcConfig && !hasSwcRc && !hasSwcJs && !hasSwcTs) {
     return;
   }
-  const swcFile = hasSwcJs ? 'swc.config.js' : '.swcrc';
+  const swcFile = hasSwcTs ? 'swc.config.ts' : hasSwcJs ? 'swc.config.js' : '.swcrc';
   const filePath = `${getMeteorAppDir()}/${swcFile}`;
   const fileStats = fs.statSync(filePath);
   const fileModTime = fileStats?.mtime?.getTime();
 
   let currentLastModifiedConfigTime;
-  if (hasSwcJs) {
-    // For dynamic JS files, first get the resolved configuration
+  if (hasSwcJs || hasSwcTs) {
+    // For dynamic JS/TS files, first get the resolved configuration
     const resolvedConfig = lastModifiedSwcConfigTime?.includes(`${fileModTime}`)
       ? lastModifiedSwcConfig || getMeteorAppSwcrc(swcFile)
       : getMeteorAppSwcrc(swcFile);
@@ -139,16 +140,6 @@ BCp.initializeMeteorAppSwcrc = function () {
 
     this._swcIncompatible = {};
   }
-  return lastModifiedSwcConfig;
-};
-
-let lastModifiedSwcLegacyConfig;
-BCp.initializeMeteorAppLegacyConfig = function () {
-  const swcLegacyConfig = convertBabelTargetsForSwc(Babel.getMinimumModernBrowserVersions());
-  if (this.isVerbose() && !lastModifiedSwcLegacyConfig) {
-    logConfigBlock('SWC Legacy Config', swcLegacyConfig);
-  }
-  lastModifiedSwcLegacyConfig = swcLegacyConfig;
   return lastModifiedSwcConfig;
 };
 
@@ -196,7 +187,6 @@ BCp.processFilesForTarget = function (inputFiles) {
 
   this.initializeMeteorAppConfig();
   this.initializeMeteorAppSwcrc();
-  this.initializeMeteorAppLegacyConfig();
   this.initializeMeteorAppSwcHelpersAvailable();
 
   inputFiles.forEach(function (inputFile) {
@@ -242,6 +232,43 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
+  const arch = inputFile.getArch();
+  const isLegacyWebArch = arch.includes('legacy');
+
+  // Check if the file is a Rspack output file
+  // If it is, bypass SWC/Babel and just read the file and its map file
+  // as the contents are already transpiled by Rspack.
+  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath) && !isLegacyWebArch) {
+    try {
+      // Get the full path to the file
+      const fullPath = inputFile.getPathInPackage();
+      // Read the file directly
+      toBeAdded.data = source;
+
+      // Try to read the corresponding map file
+      const mapPath = fullPath + '.map';
+      if (fs.existsSync(mapPath)) {
+        const mapContent = fs.readFileSync(mapPath, 'utf8');
+        toBeAdded.sourceMap = JSON.parse(mapContent);
+      }
+
+      if (this.isVerbose()) {
+        const arch = inputFile.getArch();
+        logTranspilation({
+          usedRspack: true,
+          inputFilePath,
+          packageName,
+          cacheHit: true,
+          arch,
+        });
+      }
+
+      return toBeAdded;
+    } catch (e) {
+      // If there's an error reading the file or map, log it and continue with normal processing
+      console.error('Error reading Rspack file:', e);
+    }
+  }
 
   // If you need to exclude a specific file within a package from Babel
   // compilation, pass the { transpile: false } options to api.addFiles
@@ -255,16 +282,16 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
     const features = Object.assign({}, this.extraFeatures);
-    const arch = inputFile.getArch();
 
-    if (arch.startsWith("os.")) {
+    const isNodeTarget = arch.startsWith("os.");
+    if (isNodeTarget) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
     } else if (arch === "web.cordova") {
-      features.modernBrowsers = ! getMeteorConfig()?.cordova?.disableModern;
+      features.modernBrowsers = ! getMeteorConfig()?.modern?.cordova === false;
     }
 
     features.topLevelAwait = inputFile.supportsTopLevelAwait &&
@@ -331,8 +358,11 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             tsx: hasTSXSupport,
           },
           ...(hasSwcHelpersAvailable &&
+            !isNodeTarget &&
             (packageName == null ||
-              !['modules-runtime'].includes(packageName)) && {
+              !['core-runtime', 'modules', 'modules-runtime'].includes(
+                packageName,
+              )) && {
               externalHelpers: true,
             }),
         },
@@ -342,13 +372,29 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         filename,
         sourceFileName: filename,
         ...(isLegacyWebArch && {
-          env: { targets: lastModifiedSwcLegacyConfig || {} },
+          env: {
+            targets: {
+              chrome: '49',
+              edge: '15',
+              firefox: '30',
+              safari: '10',
+              ios: '10',
+              android: '5',
+              opera: '42',
+              ie: '11',
+              node: '8',
+              electron: '1.6',
+            },
+            mode: 'entry',
+            coreJs: '3.37',
+          },
         }),
       };
 
       // Merge with app-level SWC config
       if (lastModifiedSwcConfig) {
         swcOptions = deepMerge(swcOptions, lastModifiedSwcConfig, [
+          'jsc.target',
           'env.targets',
           'module.type',
         ]);
@@ -374,7 +420,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         const isNodeModulesCode = packageName == null && inputFilePath.includes("node_modules/");
         const isAppCode = packageName == null && !isNodeModulesCode;
         const isPackageCode = packageName != null;
-        const isLegacyWebArch = arch.includes('legacy');
 
         const transpConfig = getMeteorConfig()?.modern?.transpiler;
         const hasModernTranspiler = transpConfig != null && transpConfig !== false;
@@ -1029,8 +1074,37 @@ function getMeteorAppPackageJson() {
 function getMeteorAppSwcrc(file = '.swcrc') {
   try {
     const filePath = `${getMeteorAppDir()}/${file}`;
-    if (file.endsWith('.js')) {
+    if (file.endsWith('.js') || file.endsWith('.ts')) {
       let content = fs.readFileSync(filePath, 'utf-8');
+      
+      if (file.endsWith('.ts')) {
+        try {
+          const swc = require('@meteorjs/swc-core');
+          const result = swc.transformSync(content, {
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+              },
+              target: 'es2015',
+            },
+          });
+          content = result.code;
+        } catch (swcError) {
+          content = content
+            .replace(/import\s+type\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+['"][^'"]+['"];?/g, '')
+            .replace(/export\s+default\s+/, 'module.exports = ')
+            .replace(/export\s+/g, '')
+            .replace(/:\s*\w+(\[\])?(\s*=)/g, '$2')
+            .replace(/\(([^)]*?):\s*\w+(\[\])?\)/g, '($1)')
+            .replace(/\):\s*\w+(\[\])?\s*\{/g, ') {')
+            .replace(/interface\s+\w+\s*\{[^}]*\}/g, '')
+            .replace(/type\s+\w+\s*=\s*[^;]+;/g, '')
+            .replace(/as\s+\w+(\[\])?/g, '');
+        }
+      }
+      
       // Check if the content uses ES module syntax (export default)
       if (content.includes('export default')) {
         // Transform ES module syntax to CommonJS
@@ -1047,7 +1121,9 @@ function getMeteorAppSwcrc(file = '.swcrc') {
         })()
       `);
       const context = vm.createContext({ process });
-      return script.runInContext(context);
+      const result = script.runInContext(context);
+      // Handle CJS interop wrapper (e.g. { __esModule: true, default: config })
+      return result && result.__esModule && result.default ? result.default : result;
     } else {
       // For .swcrc and other JSON files, parse as JSON
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
@@ -1096,14 +1172,16 @@ function logTranspilation({
   packageName,
   inputFilePath,
   usedSwc,
+  usedRspack,
   cacheHit,
   isNodeModulesCode,
   arch,
   errorMessage = '',
   tip = '',
 }) {
-  const transpiler = usedSwc ? 'SWC' : 'Babel';
-  const transpilerColor = usedSwc ? 32 : 33;
+  let transpiler = usedSwc ? 'SWC' : 'Babel';
+  transpiler = usedRspack ? 'Rspack' : transpiler;
+  const transpilerColor = usedSwc || usedRspack ? 32 : 33;
   const label = color('[Transpiler]', 36);
   const transpilerPart = `${label} Used ${color(
     transpiler,
@@ -1126,7 +1204,7 @@ function logTranspilation({
     : color(originPaddedRaw, 35);
   const cacheStatus = errorMessage
     ? color('⚠️  Fallback', 33)
-    : usedSwc
+    : usedSwc || usedRspack
     ? cacheHit
       ? color('🟢 Cache hit', 32)
       : color('🔴 Cache miss', 31)

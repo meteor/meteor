@@ -244,6 +244,19 @@ export class TestCaseResults {
   // The upshot is, if you want to test whether an error is of a
   // particular class, use a predicate function.
   //
+  /**
+   * Assert that `f` throws.
+   *
+   * `expected` can be:
+   * - undefined: accept any exception.
+   * - string: pass if the string is a substring of the exception message.
+   * - regexp: pass if the exception message passes the regexp.
+   * - function: call the function as a predicate with the exception.
+   *
+   * @param {Function} f
+   * @param {*} expected
+   * @param {String} message
+   */
   throws(f, expected, message) {
     let actual;
     const predicate = this._guessPredicate(expected);
@@ -258,10 +271,34 @@ export class TestCaseResults {
   }
 
   /**
-   * Same as throw, but accepts an async function as a parameter.
-   * @param f
-   * @param expected
-   * @param message
+   * Assert that `f` does not throw.
+   * @param {Function} f
+   * @param {String} failureMessage
+   */
+  doesNotThrows(f, failureMessage) {
+    let actual;
+
+    try {
+      f();
+    } catch (exception) {
+      actual = exception;
+    }
+
+    if (!actual) {
+      this.ok();
+    } else {
+      this.fail({
+        type: "throws",
+        message: ("threw an error unexpectedly: " + actual.message) + (failureMessage ? ": " + failureMessage : ""),
+      });
+    }
+  }
+
+  /**
+   * Same as `throws`, but accepts an async function as a parameter.
+   * @param {Function} f
+   * @param {*} expected
+   * @param {String} message
    * @returns {Promise<void>}
    */
   async throwsAsync(f, expected, message) {
@@ -274,6 +311,31 @@ export class TestCaseResults {
       actual = exception;
     }
     this._assertActual(actual, predicate, message);
+  }
+
+  /**
+   * Same as `doesNotThrows`, but accepts an async function as a parameter.
+   * @param {Function} f
+   * @param {String} failureMessage
+   * @returns {Promise<void>}
+   */
+  async doesNotThrowsAsync(f, failureMessage) {
+    let actual;
+
+    try {
+      await f();
+    } catch (exception) {
+      actual = exception;
+    }
+
+    if (!actual) {
+      this.ok();
+    } else {
+      this.fail({
+        type: "throws",
+        message: ("threw an error unexpectedly: " + actual.message) + (failureMessage ? ": " + failureMessage : ""),
+      });
+    }
   }
 
   isTrue(v, msg) {

@@ -22,6 +22,7 @@ And it will prompt you to choose a project name and frontend framework.
 - Meteor supports Windows 7 / Windows Server 2008 R2 and up.
 - Apple M1 is natively supported from Meteor 2.5.1 onward (for older versions, rosetta terminal is required).
 - If you are using Meteor <= 3.0.4 and you are on a Mac M1 (Arm64 version) you need to have Rosetta 2 installed, as Meteor uses it for running MongoDB. Check how to install it [here](https://osxdaily.com/2020/12/04/how-install-rosetta-2-apple-silicon-mac/). *No longer needed in Meteor 3.1*.
+- As of Meteor 3.4.1, the dev-bundle fast path works correctly on Apple Silicon, improving startup performance on arm64 Macs.
 - Disabling antivirus (Windows Defender, etc.) will improve performance.
 - For compatibility, Linux binaries are built with CentOS 6.4 i386/amd64.
 
@@ -31,7 +32,7 @@ And it will prompt you to choose a project name and frontend framework.
 
 ## Installation
 
-Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](https://v3-docs.meteor.com/history.html) for the release notes.
+Install the latest official version of Meteor.js from your terminal by running one of the commands below. You can check our [changelog](/history) for the release notes.
 
 For Windows, Linux and OS X, you can run the following command:
 

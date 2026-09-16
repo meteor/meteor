@@ -78,6 +78,11 @@ $env:SERVER_NODE_OPTIONS = '--inspect' | meteor run
 SERVER_NODE_OPTIONS=--inspect-brk meteor run
 ```
 
+Quoted values are supported, which is useful when an option contains special characters:
+```bash
+SERVER_NODE_OPTIONS='--max-old-space-size=4096 --inspect' meteor run
+```
+
 ### Port Configuration Example
 
 ```bash
@@ -246,6 +251,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
   Minimal   # To create an app with as few Meteor packages as possible
   React     # To create a basic React-based app
   Typescript # To create an app using TypeScript and React
+  Typescript-tailwind # To create an app using TypeScript, React, and Tailwind
   Vue       # To create a basic Vue3-based app
   Svelte    # To create a basic Svelte app
   Tailwind # To create an app using React and Tailwind
@@ -260,25 +266,26 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 
 | Option | Description |
 |--------|-------------|
-| `--from <url>` | Clone a Meteor project from a URL |
-| `--example <name>` | Use a specific example template |
-| `--list` | Show list of available examples |
-| `--release <version>` | Specify Meteor version (e.g., `--release 2.8`) |
+| `--release <version>` | Specify Meteor version (e.g., `--release 3.4`) |
 | `--prototype` | Include `autopublish` and `insecure` packages for rapid prototyping (not for production) |
 
 ### Application Types
 
-| Option | Description | Tutorial / Example |
-|--------|-------------|----------|
-| `--react` | Create a React app (default) | [Meteor 3 with React](https://docs.meteor.com/tutorials/react/), [Meteor 2 with React](https://react-tutorial.meteor.com/) |
-| `--vue` | Vue 3 + Tailwind CSS + Vite | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
-| `--svelte` | Svelte | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
-| `--blaze` | Basic Blaze app | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
-| `--solid` | Solid + Vite | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
-| `--apollo` | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
-| `--typescript` | React + TypeScript | [TypeScript Guide](https://guide.meteor.com/build-tool.html#typescript) |
-| `--tailwind` | React + Tailwind CSS | - |
-| `--chakra-ui` | React + Chakra UI | [Simple Tasks Example](https://github.com/fredmaiaarantes/simpletasks) |
+| Option           | Description             | Tutorial / Example |
+|------------------|-------------------------|----------|
+| `--react`        | Create a React app (default) | [Meteor 3 with React](https://docs.meteor.com/tutorials/react/), [Meteor 2 with React](https://react-tutorial.meteor.com/) |
+| `--vue`          | Vue 3 + Tailwind CSS | [Meteor 3 with Vue](https://docs.meteor.com/tutorials/vue/meteorjs3-vue3.html), [Meteor 2 with Vue](https://vue3-tutorial.meteor.com/) |
+| `--svelte`       | Svelte                  | [Meteor 2 with Svelte](https://svelte-tutorial.meteor.com/) |
+| `--blaze`        | Basic Blaze app         | [Meteor 2 with Blaze](https://blaze-tutorial.meteor.com/) |
+| `--solid`        | Solid               | [Meteor 2 with Solid Example](https://github.com/fredmaiaarantes/meteor-solid-app/releases/tag/milestone-2.0) |
+| `--apollo`       | React + Apollo (GraphQL) | [Meteor 2 with GraphQL](https://react-tutorial.meteor.com/simple-todos-graphql/) |
+| `--typescript`   | React + TypeScript      | [TypeScript Guide](/about/build-tool#typescript) |
+| `--tailwind`     | React + Tailwind CSS    | - |
+| `--typescript-tailwind` | React + TypeScript + Tailwind CSS | - |
+| `--chakra-ui`    | React + Chakra UI       | [Simple Tasks Example](https://github.com/fredmaiaarantes/simpletasks) |
+ | `--coffeescript` | CoffeeScript            | - |
+ | `--babel`        | React with Babel support | - |
+| `--angular`      | Angular + Typescript    | - |
 
 ### Project Structure Options
 
@@ -290,7 +297,7 @@ If you run `meteor create` without arguments, Meteor will launch an interactive 
 | `--package` | Create a new package instead of an application |
 
 ::: warning Prototype Mode
-The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](https://guide.meteor.com/security.html#checklist).
+The `--prototype` option adds packages that make development faster but shouldn't be used in production. See the [security checklist](/tutorials/security/security#checklist).
 :::
 
 ### Included Packages
@@ -355,8 +362,63 @@ The `--prototype` option adds packages that make development faster but shouldn'
 </details>
 
 ::: tip File Structure
-To learn more about the recommended file structure for Meteor apps, check the [Meteor Guide](https://guide.meteor.com/structure.html#javascript-structure).
+To learn more about the recommended file structure for Meteor apps, check the [Meteor Guide](/tutorials/application-structure/#javascript-structure).
 :::
+
+### Community Examples
+
+Meteor ships with a collection of example apps that cover specific use cases, great for studying how features work in practice and drawing inspiration from more complete codebases. Official examples live in the [meteor/examples](https://github.com/meteor/examples) repository, while community-contributed ones link to their own repos.
+
+To browse available examples with descriptions, tech stack, demo links, and repository URLs:
+
+```bash
+meteor create --list
+```
+
+To create a new app from an example:
+
+```bash
+meteor create my-app --example simple-tasks
+```
+
+| Option | Description |
+|--------|-------------|
+| `--example <slug>` | Create from a community example |
+| `--list` | Show detailed list of available examples |
+
+### Create from a Git Repository
+
+You can create a new Meteor app by cloning any Git repository:
+
+```bash
+meteor create my-app --from https://github.com/fredmaiaarantes/simpletasks
+```
+
+To extract a specific subdirectory from a repository, use `--from-dir`. You can also pin to a specific branch, tag, or commit SHA with `--from-branch`:
+
+```bash
+meteor create my-app --from https://github.com/meteor/examples --from-branch main --from-dir parties
+```
+
+`--from` also accepts browser-style tree/src URLs from GitHub, GitLab, and Bitbucket. When you paste one, Meteor auto-detects the branch and subdirectory from the URL, so `--from-branch` and `--from-dir` become optional:
+
+```bash
+meteor create my-app --from https://github.com/meteor/examples/tree/main/parties
+```
+
+Supported URL patterns:
+
+- GitHub — `https://github.com/<owner>/<repo>/tree/<branch>[/<path>]`
+- GitLab — `https://gitlab.com/<owner>/<repo>/-/tree/<branch>[/<path>]`
+- Bitbucket — `https://bitbucket.org/<owner>/<repo>/src/<branch>[/<path>]`
+
+Passing `--from-branch` or `--from-dir` explicitly overrides the values parsed from the URL.
+
+| Option | Description |
+|--------|-------------|
+| `--from <url>` | Clone a Meteor project from a Git URL. Accepts GitHub, GitLab, and Bitbucket tree/src URLs; branch and subdirectory are auto-detected from the URL when possible. |
+| `--from-branch <ref>` | Git ref to check out — accepts a branch, tag, or commit SHA. Overrides the branch parsed from the URL. |
+| `--from-dir <dir>` | Extract only a subdirectory (overrides the subdirectory parsed from the URL). |
 
 ##  meteor generate  {meteorgenerate}
 

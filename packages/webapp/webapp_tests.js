@@ -432,3 +432,158 @@ Tinytest.addAsync("webapp - parse url queries", async function (test) {
     i++;
   }
 });
+
+Tinytest.addAsync(
+  'webapp - vary header optimization (hashed assets)',
+  async function (test) {
+    const arch = 'web.browser';
+    const hash = 'js-hash-123';
+    const hashedJs = `/optim-hashed.${hash}.js`;
+
+    WebAppInternals.staticFilesByArch[arch][hashedJs] = {
+      content: 'console.log("prod")',
+      absolutePath: '/tmp/mock-prod.js',
+      cacheable: true,
+      hash: hash,
+      type: 'js'
+    };
+
+    try {
+      const resJs = await asyncGet(Meteor.absoluteUrl(hashedJs));
+      const varyJs = (resJs.headers['vary'] || '').toLowerCase();
+      
+      test.isFalse(
+        varyJs.includes('user-agent'),
+        'Vary: User-Agent should be removed when the URL contains the file hash'
+      );
+
+    } finally {
+      delete WebAppInternals.staticFilesByArch[arch][hashedJs];
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'webapp - vary header safety (unhashed assets)',
+  async function (test) {
+    const arch = 'web.browser';
+    const unhashedJs = '/safety-unhashed.js';
+  
+    WebAppInternals.staticFilesByArch[arch][unhashedJs] = {
+      content: 'console.log("dev")',
+      absolutePath: '/tmp/mock-dev.js',
+      cacheable: true,
+      hash: 'dev-internal-hash',
+      type: 'js'
+    };
+
+    try {
+      const res = await asyncGet(Meteor.absoluteUrl(unhashedJs));
+      const varyHeader = (res.headers['vary'] || '').toLowerCase();
+
+      test.isTrue(
+        varyHeader.includes('user-agent'),
+        'Vary: User-Agent MUST be present when the URL does NOT contain the hash'
+      );
+    } finally {
+      delete WebAppInternals.staticFilesByArch[arch][unhashedJs];
+    }
+  }
+);
+
+Tinytest.addAsync(
+  'webapp - vary header respects includeVaryUserAgent setting',
+  async function (test) {
+    const arch = 'web.browser';
+    const unhashedJs = '/config-test.js';
+    
+    const originalSettings = Meteor.settings.packages?.webapp?.includeVaryUserAgent;
+    
+    if (!Meteor.settings.packages) Meteor.settings.packages = {};
+    if (!Meteor.settings.packages.webapp) Meteor.settings.packages.webapp = {};
+
+    WebAppInternals.staticFilesByArch[arch][unhashedJs] = {
+      content: 'console.log("config-test")',
+      absolutePath: '/tmp/mock-config.js',
+      cacheable: true,
+      hash: 'internal-hash',
+      type: 'js'
+    };
+
+    try {
+      Meteor.settings.packages.webapp.includeVaryUserAgent = false;
+      const resDisabled = await asyncGet(Meteor.absoluteUrl(unhashedJs));
+      const varyDisabled = (resDisabled.headers['vary'] || '').toLowerCase();
+      
+      test.isFalse(
+        varyDisabled.includes('user-agent'),
+        'Should NOT have Vary header when setting is false'
+      );
+
+      Meteor.settings.packages.webapp.includeVaryUserAgent = true;
+      const resEnabled = await asyncGet(Meteor.absoluteUrl(unhashedJs));
+      const varyEnabled = (resEnabled.headers['vary'] || '').toLowerCase();
+      
+      test.isTrue(
+        varyEnabled.includes('user-agent'),
+        'Should HAVE Vary header when setting is true'
+      );
+
+    } finally {
+      delete WebAppInternals.staticFilesByArch[arch][unhashedJs];
+      Meteor.settings.packages.webapp.includeVaryUserAgent = originalSettings;
+    }
+  }
+);
+
+// Verification: Ensure that a URL containing a specific hash serves the exact same
+// content and headers to all browsers (Modern vs Legacy).
+// This proves that removing 'Vary: User-Agent' is safe because the file content
+// is determined solely by the unique hash in the URL, not by the requesting browser.
+Tinytest.addAsync(
+  'webapp - hashed files identical across user-agents',
+  async function (test) {
+    const arch = 'web.browser';
+    const hash = 'unique-hash-999';
+    const hashedPath = `/cdn-consistency-test.${hash}.js`;
+    const url = Meteor.absoluteUrl(hashedPath);
+
+    WebAppInternals.staticFilesByArch[arch][hashedPath] = {
+      content: 'console.log("consistent-cdn")',
+      absolutePath: '/tmp/mock-consistent.js',
+      cacheable: true,
+      hash: hash,
+      type: 'js'
+    };
+
+    try {
+      const resModern = await asyncGet(url, {
+        headers: { 'User-Agent': modernUserAgent }
+      });
+
+      const resLegacy = await asyncGet(url, {
+        headers: { 'User-Agent': legacyUserAgent }
+      });
+
+      test.equal(
+        resModern.content,
+        resLegacy.content,
+        'Hashed URLs must serve identical content to all browsers'
+      );
+
+      const varyModern = (resModern.headers['vary'] || '').toLowerCase();
+      const varyLegacy = (resLegacy.headers['vary'] || '').toLowerCase();
+
+      test.isFalse(
+        varyModern.includes('user-agent'),
+        'Modern browser request should not see Vary: User-Agent'
+      );
+      test.isFalse(
+        varyLegacy.includes('user-agent'),
+        'Legacy browser request should not see Vary: User-Agent'
+      );
+    } finally {
+      delete WebAppInternals.staticFilesByArch[arch][hashedPath];
+    }
+  }
+);

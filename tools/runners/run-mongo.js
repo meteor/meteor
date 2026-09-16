@@ -1024,6 +1024,12 @@ Object.assign(MRp, {
         'https://github.com/meteor/meteor/issues/4019 for more details.';
     }
 
+    if (signal === "SIGILL"){
+      message +=
+        '\n\n' +
+        "MongoDB crashed with SIGILL, you may be running a build of Meteor not compatible with your architecture. If this persists, try re-installing Meteor.";
+    }
+
     runLog.log(message);
     self._fail();
   },

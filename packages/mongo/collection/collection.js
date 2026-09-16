@@ -62,7 +62,14 @@ Mongo.Collection = function Collection(name, options) {
   setupAutopublish(this, name, options);
 
   Mongo._collections.set(name, this);
+  
+  // Apply collection extensions
+  CollectionExtensions._applyExtensions(this, name, options);
 };
+
+// Apply static methods to the Collection constructor
+CollectionExtensions._applyStaticMethods(Mongo.Collection);
+
 
 Object.assign(Mongo.Collection.prototype, {
   _getFindSelector(args) {
@@ -153,6 +160,118 @@ Object.assign(Mongo.Collection, {
 
     return selector;
   },
+
+  // Collection Extensions API - delegate to CollectionExtensions
+  /**
+   * @summary Add a constructor extension function that runs when collections are created.
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @param {Function} extension Extension function called with (name, options) and 'this' bound to collection instance
+   */
+  addExtension(extension) {
+    return CollectionExtensions.addExtension(extension);
+  },
+
+  /**
+   * @summary Add a prototype method to all collection instances.
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @param {String} name The name of the method to add
+   * @param {Function} method The method function, bound to the collection instance
+   */
+  addPrototypeMethod(name, method) {
+    return CollectionExtensions.addPrototypeMethod(name, method);
+  },
+
+  /**
+   * @summary Add a static method to the Mongo.Collection constructor.
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @param {String} name The name of the static method to add
+   * @param {Function} method The static method function
+   */
+  addStaticMethod(name, method) {
+    return CollectionExtensions.addStaticMethod(name, method);
+  },
+
+  /**
+   * @summary Remove a constructor extension (useful for testing).
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @param {Function} extension The extension function to remove
+   */
+  removeExtension(extension) {
+    return CollectionExtensions.removeExtension(extension);
+  },
+
+  /**
+   * @summary Remove a prototype method from all collection instances.
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @param {String} name The name of the method to remove
+   */
+  removePrototypeMethod(name) {
+    return CollectionExtensions.removePrototypeMethod(name);
+  },
+
+  /**
+   * @summary Remove a static method from the Mongo.Collection constructor.
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @param {String} name The name of the static method to remove
+   */
+  removeStaticMethod(name) {
+    return CollectionExtensions.removeStaticMethod(name);
+  },
+
+  /**
+   * @summary Clear all extensions, prototype methods, and static methods (useful for testing).
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   */
+  clearExtensions() {
+    return CollectionExtensions.clearExtensions();
+  },
+
+  /**
+   * @summary Get all registered constructor extensions (useful for debugging).
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @returns {Array<Function>} Array of registered extension functions
+   */
+  getExtensions() {
+    return CollectionExtensions.getExtensions();
+  },
+
+  /**
+   * @summary Get all registered prototype methods (useful for debugging).
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @returns {Map<String, Function>} Map of method names to functions
+   */
+  getPrototypeMethods() {
+    return CollectionExtensions.getPrototypeMethods();
+  },
+
+  /**
+   * @summary Get all registered static methods (useful for debugging).
+   * @locus Anywhere
+   * @memberof Mongo.Collection
+   * @static
+   * @returns {Map<String, Function>} Map of method names to functions
+   */
+  getStaticMethods() {
+    return CollectionExtensions.getStaticMethods();
+  }
 });
 
 Object.assign(Mongo.Collection.prototype, ReplicationMethods, SyncMethods, AsyncMethods, IndexMethods);
@@ -230,6 +349,13 @@ Object.assign(Mongo, {
    * @protected
    */
   _collections: new Map(),
+
+  /**
+   * @summary Collection Extensions API
+   * @memberof Mongo
+   * @static
+   */
+  CollectionExtensions: CollectionExtensions
 })
 
 

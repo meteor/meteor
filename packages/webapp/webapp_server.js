@@ -437,7 +437,7 @@ WebApp.addRuntimeConfigHook = function(callback) {
   return runtimeConfig.hooks.register(callback);
 };
 
-async function getBoilerplateAsync(request, arch) {
+async function getBoilerplateAsync(request, arch, response) {
   let boilerplate = boilerplateByArch[arch];
   await runtimeConfig.hooks.forEachAsync(async hook => {
     const meteorRuntimeConfig = await hook({
@@ -470,7 +470,7 @@ async function getBoilerplateAsync(request, arch) {
     promise = promise
       .then(() => {
         const callback = boilerplateDataCallbacks[key];
-        return callback(request, data, arch);
+        return callback(request, data, arch, response);
       })
       .then(result => {
         // Callbacks should return false if they did not make any changes.
@@ -681,11 +681,17 @@ WebAppInternals.staticFilesMiddleware = async function(
   // We cache them ~forever (1yr).
   const maxAge = info.cacheable ? 1000 * 60 * 60 * 24 * 365 : 0;
 
-  if (info.cacheable) {
-    // Since we use req.headers["user-agent"] to determine whether the
-    // client should receive modern or legacy resources, tell the client
-    // to invalidate cached resources when/if its user agent string
-    // changes in the future.
+  // Resources whose URL already contains the content hash are immutable
+  // and unique per architecture (modern vs legacy), so Vary: User-Agent
+  // is unnecessary and harms CDN cache efficiency.
+  //
+  // If the requested URL does not contain the hash (e.g. development
+  // or unhashed assets), we keep Vary: User-Agent to prevent cache
+  // poisoning across different browsers.
+  const includeVaryUserAgent =
+  Meteor.settings.packages?.webapp?.includeVaryUserAgent ?? true;
+
+  if (info.cacheable && !pathname.includes(info.hash) && includeVaryUserAgent) {
     res.setHeader('Vary', 'User-Agent');
   }
 
@@ -1222,6 +1228,7 @@ async function runWebAppServer() {
       }
 
       var request = WebApp.categorizeRequest(req);
+      var response = res;
 
       if (request.url.query && request.url.query['meteor_css_resource']) {
         // In this case, we're requesting a CSS resource in the meteor-specific
@@ -1281,7 +1288,7 @@ async function runWebAppServer() {
       // Promise that will be resolved when the program is unpaused.
       await WebApp.clientPrograms[arch].paused;
 
-      return getBoilerplateAsync(request, arch)
+      return getBoilerplateAsync(request, arch, response)
         .then(({ stream, statusCode, headers: newHeaders }) => {
           if (!statusCode) {
             statusCode = res.statusCode ? res.statusCode : 200;
@@ -1293,10 +1300,12 @@ async function runWebAppServer() {
 
           res.writeHead(statusCode, headers);
 
-          stream.pipe(res, {
-            // End the response when the stream ends.
-            end: true,
-          });
+          if (!disableBoilerplateResponse) {
+            stream.pipe(res, {
+              // End the response when the stream ends.
+              end: true,
+            });
+          }
         })
         .catch(error => {
           Log.error('Error running template: ' + error.stack);
@@ -1550,6 +1559,11 @@ var additionalStaticJs = {};
 WebAppInternals.addStaticJs = function(contents) {
   additionalStaticJs['/' + sha1(contents) + '.js'] = contents;
 };
+
+var disableBoilerplateResponse = false;
+WebAppInternals.disableBoilerplateResponse = function() {
+  disableBoilerplateResponse = true;
+}
 
 // Exported for tests
 WebAppInternals.getBoilerplate = getBoilerplate;

@@ -15,7 +15,7 @@ login provider packages: `accounts-password`, `accounts-facebook`,
 `accounts-github`, `accounts-google`, `accounts-meetup`,
 `accounts-twitter`, or `accounts-weibo`.
 
-Read more about customizing user accounts in the [Accounts](http://guide.meteor.com/accounts.html) article in the Meteor Guide.
+Read more about customizing user accounts in the [Accounts](/tutorials/accounts/accounts) article in the Meteor Guide.
 
 ### Accounts with Session Storage {#accounts-session-storage}
 
@@ -176,11 +176,15 @@ Meteor.users.deny({ update: () => true });
 <ApiBox name="Meteor.loggingIn" />
 
 For example, [the `accounts-ui` package](../packages/accounts-ui.md) uses this to display an
+ 
+
 animation while the login request is being processed.
 
 <ApiBox name="Meteor.loggingOut" />
 
 <ApiBox name="Meteor.logout" />
+
+<ApiBox name="Meteor.logoutAllClients" />
 
 <ApiBox name="Meteor.logoutOtherClients" />
 
@@ -202,6 +206,35 @@ This method can fail throwing one of the following errors:
 
 This function is provided by the `accounts-password` package. See the
 [Passwords](#passwords) section below.
+
+<ApiBox name="Meteor.loginWithToken" />
+
+Logs the user in using a valid Meteor login token (also called a resume token). This is typically used to restore a user's session across browser reloads, between tabs, or across DDP connections (such as in multi-server setups).
+
+**Arguments:**
+- `token` (`String`): The login token to use for authentication. Usually obtained from `Accounts._storedLoginToken()` or from a previous login session.
+- `callback` (`Function`, optional): Called with no arguments on success, or with a single `Error` argument on failure.
+
+**Returns:**
+- `void`
+
+**Usage example:**
+```js
+import { Meteor } from "meteor/meteor";
+const token = Accounts._storedLoginToken();
+Meteor.loginWithToken(token, (error) => {
+  if (error) {
+    console.error("Login with token failed", error);
+  } else {
+    console.log("Logged in with token!");
+  }
+});
+```
+
+**Notes:**
+- If the token is invalid, expired, or revoked, the callback will be called with an error and the user will not be logged in.
+- This method is used internally by Meteor to automatically restore login state on page reload and across tabs.
+- Can be used with custom DDP connections to authenticate across multiple Meteor servers sharing the same database.
 
 <ApiBox name="Meteor.loginWith<ExternalService>" />
 
@@ -263,7 +296,7 @@ Then, inside the server of your app (this example is for the Weebo service), imp
 
 ```js
 import { ServiceConfiguration } from "meteor/service-configuration";
-ServiceConfiguration.configurations.upsert(
+ServiceConfiguration.configurations.upsertAsync(
   { service: "weibo" },
   {
     $set: {
@@ -958,11 +991,172 @@ be called.
 To customize the contents of the email, see
 [`Accounts.emailTemplates`](#Accounts-emailTemplates).
 
+## Email Link Callbacks and URL Customization
+
+When Meteor sends account-related emails, those emails contain URLs that users click
+to complete actions like password reset. This section explains how these URLs work
+and how to customize them.
+
+### How Email URLs Work
+
+By default, Meteor generates URLs using hash fragments:
+
+- `https://yourapp.com/#/reset-password/TOKEN`
+- `https://yourapp.com/#/verify-email/TOKEN`
+- `https://yourapp.com/#/enroll-account/TOKEN`
+
+**Security Note:** Hash fragments (the part after `#`) are intentionally used because
+they are never sent to the server in HTTP requests. This prevents sensitive tokens
+from appearing in server logs, proxy logs, or HTTP referrer headers.
+
+When a user clicks these links, Meteor's client-side code automatically parses
+`window.location.hash` and triggers the appropriate callback registered with
+the functions below.
+
 <ApiBox name="Accounts.onResetPasswordLink" />
 
 <ApiBox name="Accounts.onEnrollmentLink" />
 
 <ApiBox name="Accounts.onEmailVerificationLink" />
+
+### Complete Example: Custom Password Reset Flow
+
+Here's how to implement password reset without `accounts-ui`:
+
+```js
+// client/accounts-hooks.js
+import { Accounts } from 'meteor/accounts-base';
+
+// Register at top level, NOT inside Meteor.startup()
+let doneCallback;
+
+Accounts.onResetPasswordLink((token, done) => {
+  // Store token and done callback for your UI
+  Session.set('resetPasswordToken', token);
+  doneCallback = done;
+
+  // Show your password reset form
+  // The login process is suspended until done() is called
+});
+
+// In your password reset form submit handler:
+function submitNewPassword(newPassword) {
+  const token = Session.get('resetPasswordToken');
+
+  Accounts.resetPassword(token, newPassword, (error) => {
+    if (error) {
+      alert('Reset failed: ' + error.reason);
+    } else {
+      Session.set('resetPasswordToken', null);
+      doneCallback(); // Re-enables auto-login
+    }
+  });
+}
+```
+
+### Customizing Email URLs 
+
+<ApiBox name="Accounts.urls" />
+
+`Accounts.urls` is a server-side object containing functions that generate URLs
+for account emails. Override these to customize the URL format.
+
+| Property | Signature | Description |
+|----------|-----------|-------------|
+| `resetPassword` | `(token, extraParams?) => string` | Password reset URL |
+| `verifyEmail` | `(token, extraParams?) => string` | Email verification URL |
+| `enrollAccount` | `(token, extraParams?) => string` | Account enrollment URL |
+| `loginToken` | `(selector, token, extraParams?) => string` | Login token URL |
+
+#### Async URL Generation
+
+The URL methods can also return **Promises** that resolve to strings. This is useful when
+URL generation requires asynchronous operations, such as:
+- Looking up user data from the database
+- Calling external services (e.g., URL shorteners)
+- Generating signed URLs from cloud providers
+
+The email-sending functions (`Accounts.sendResetPasswordEmail`, `Accounts.sendEnrollmentEmail`,
+and `Accounts.sendVerificationEmail`) handle both synchronous and asynchronous URL methods
+transparently.
+
+**Example: Async URL with database lookup**
+
+```js
+// Server-side
+import { Accounts } from 'meteor/accounts-base';
+import { Meteor } from 'meteor/meteor';
+
+Accounts.urls.resetPassword = async (token, extraParams) => {
+  // Example: Look up user preference for custom domain
+  const user = await Meteor.users.findOneAsync({ 'services.password.reset.token': token });
+  const domain = user?.profile?.preferredDomain || Meteor.absoluteUrl();
+
+  return `${domain}reset-password/${token}`;
+};
+```
+
+**Example: Using a URL shortener service**
+
+```js
+// Server-side
+Accounts.urls.verifyEmail = async (token) => {
+  const longUrl = Meteor.absoluteUrl(`verify-email/${token}`);
+
+  // Shorten the URL using an external service
+  const shortUrl = await shortenUrl(longUrl);
+  return shortUrl;
+};
+```
+
+**Example: Using Clean URLs Instead of Hash Fragments**
+
+If your router doesn't handle hash fragments well, you can override `Accounts.urls`
+to use clean URLs:
+
+```js
+// Server-side
+import { Accounts } from 'meteor/accounts-base';
+import { Meteor } from 'meteor/meteor';
+
+Accounts.urls.resetPassword = (token) => {
+  return Meteor.absoluteUrl(`reset-password/${token}`);
+};
+
+Accounts.urls.verifyEmail = (token) => {
+  return Meteor.absoluteUrl(`verify-email/${token}`);
+};
+
+Accounts.urls.enrollAccount = (token) => {
+  return Meteor.absoluteUrl(`enroll-account/${token}`);
+};
+```
+
+**Important:** When using clean URLs (without `#/`), the built-in
+`Accounts.onResetPasswordLink`, `Accounts.onEnrollmentLink`, and
+`Accounts.onEmailVerificationLink` callbacks won't work automatically.
+Handle tokens in your router instead:
+
+```js
+// Example with a router
+Router.route('/reset-password/:token', function() {
+  const token = this.params.token;
+  // Show password reset UI, call Accounts.resetPassword(token, newPassword)
+});
+```
+
+### Router Integration
+
+You have three options when integrating with client-side routers:
+
+1. **Keep default hash URLs** - Works out of the box
+   with `Accounts.on*Link` callbacks. No router configuration needed.
+
+2. **Override `Accounts.urls` for clean URLs** - More "modern" looking URLs,
+   but requires handling tokens in your router.
+
+3. **Use hashbang mode** - Some routers support `#!/` routes. Configure your
+   router accordingly and update `Accounts.urls` to use `#!/` instead of `#/`.
 
 <ApiBox name="Accounts.emailTemplates" />
 
@@ -989,6 +1183,7 @@ Set the fields of the object by assigning to them:
   returns the body text for a reset password email.
 - `html`: An optional `Function` that takes a user object and a
   url, and returns the body html for a reset password email.
+
 - `enrollAccount`: Same as `resetPassword`, but for initial password setup for
   new accounts.
 - `verifyEmail`: Same as `resetPassword`, but for verifying the users email
@@ -996,7 +1191,10 @@ Set the fields of the object by assigning to them:
 
 Example:
 
+
 ```js
+
+
 import { Accounts } from "meteor/accounts-base";
 
 Accounts.emailTemplates.siteName = "AwesomeSite";

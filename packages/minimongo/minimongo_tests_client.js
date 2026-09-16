@@ -2496,12 +2496,13 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await modify({a: 12}, {}, {}); // tested against mongodb
   await modify({a: 12}, {a: 13}, {a: 13});
   await modify({a: 12, b: 99}, {a: 13}, {a: 13});
+  await modify({a: 12}, {b: {'a.b': 13}}, {b: {'a.b': 13}});
+  await modify({_id: 1, a: 1}, {_id: 1, 'a.b': 2}, {_id: 1, 'a.b': 2});
   await exception({a: 12}, {a: 13, $set: {b: 13}});
   await exception({a: 12}, {$set: {b: 13}, a: 13});
 
   await exception({a: 12}, {$a: 13}); // invalid operator
   await exception({a: 12}, {b: {$a: 13}});
-  await exception({a: 12}, {b: {'a.b': 13}});
   await exception({a: 12}, {b: {'\0a': 13}});
 
   // keys
@@ -2740,11 +2741,11 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await exception({_id: 1}, {$set: {_id: 4}});
   await modify({_id: 4}, {$set: {_id: 4}}, {_id: 4});  // not-changing _id is not bad
   // restricted field names
+  await modify({a: {}}, {$set: {a: {'a.b': 1}}}, {a: {'a.b': 1}});
   await exception({a: {}}, {$set: {a: {$a: 1}}});
   await exception({ a: {} }, { $set: { a: { c:
               [{ b: { $a: 1 } }] } } });
   await exception({a: {}}, {$set: {a: {'\0a': 1}}});
-  await exception({a: {}}, {$set: {a: {'a.b': 1}}});
 
   // $unset
   await modify({}, {$unset: {a: 1}}, {});
@@ -2822,8 +2823,8 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await exception({}, {$push: {'\0a': 1}});
   await exception({}, {$push: {a: {$a: 1}}});
   await exception({}, {$push: {a: {$each: [{$a: 1}]}}});
-  await exception({}, {$push: {a: {$each: [{'a.b': 1}]}}});
   await exception({}, {$push: {a: {$each: [{'\0a': 1}]}}});
+  await modify({}, {$push: {a: {$each: [{'a.b': 1}]}}}, {a: [{'a.b': 1}]});
   await modify({}, {$push: {a: {$each: [{'': 1}]}}}, {a: [ { '': 1 } ]});
   await modify({}, {$push: {a: {$each: [{' ': 1}]}}}, {a: [ { ' ': 1 } ]});
   await exception({}, {$push: {a: {$each: [{'.': 1}]}}});
@@ -2857,7 +2858,7 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await modify({a: {}}, {$pushAll: {'a.x': []}}, {a: {x: []}});
   await exception({a: [1]}, {$pushAll: {a: [{$a: 1}]}});
   await exception({a: [1]}, {$pushAll: {a: [{'\0a': 1}]}});
-  await exception({a: [1]}, {$pushAll: {a: [{'a.b': 1}]}});
+  await modify({a: [1]}, {$pushAll: {a: [{'a.b': 1}]}}, {a: [1, {'a.b': 1}]});
 
   // $addToSet
   await modify({}, {$addToSet: {a: 1}}, {a: [1]});
@@ -2883,14 +2884,16 @@ Tinytest.addAsync('minimongo - modify', async test => {
 
   // invalid field names
   await exception({}, {$addToSet: {a: {$b: 1}}});
-  await exception({}, {$addToSet: {a: {'a.b': 1}}});
+  await modify({}, {$addToSet: {a: {'a.b': 1}}}, {a: [{'a.b': 1}]});
   await exception({}, {$addToSet: {a: {'a.': 1}}});
   await exception({}, {$addToSet: {a: {'\u0000a': 1}}});
   await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {$a: 1}]}}});
   await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, {'\0a': 1}]}}});
   await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{$a: 1}]]}}});
-  await exception({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
-  await exception({a: [1, 2]}, {$addToSet: {a: {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}});
+  await modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}},
+    {a: [1, 2, 3, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]});
+  await modify({a: [1, 2]}, {$addToSet: {a: {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}}},
+    {a: [1, 2, {b: [3, 1, [{b: {c: [{a: 1}, {'d.s': 2}]}}]]}]});
   // $each is first element and thus an operator
   await modify({a: [1, 2]}, {$addToSet: {a: {$each: [3, 1, 4], b: 12}}}, {a: [ 1, 2, 3, 4 ]});
   // this should fail because $each is now a field name (not first in object) and thus invalid field name with $
@@ -2983,7 +2986,7 @@ Tinytest.addAsync('minimongo - modify', async test => {
   await upsertException({a: 0}, {$setOnInsert: {'\0a': 12}});
   await upsert({a: 0}, {$setOnInsert: {b: {a: 1}}}, {a: 0, b: {a: 1}});
   await upsertException({a: 0}, {$setOnInsert: {b: {$a: 1}}});
-  await upsertException({a: 0}, {$setOnInsert: {b: {'a.b': 1}}});
+  await upsert({a: 0}, {$setOnInsert: {b: {'a.b': 1}}}, {a: 0, b: {'a.b': 1}});
   await upsertException({a: 0}, {$setOnInsert: {b: {'\0a': 1}}});
 
   // Test for https://github.com/meteor/meteor/issues/8775.
@@ -3919,7 +3922,7 @@ Tinytest.add('minimongo - reactive skip/limit count while updating', test => {
 });
 
 // Makes sure inserts cannot be performed using field names that have
-// Mongo restricted characters in them ('.', '$', '\0'):
+// Mongo restricted characters in them ('$', '\0'):
 // https://docs.mongodb.com/manual/reference/limits/#Restrictions-on-Field-Names
 Tinytest.add('minimongo - cannot insert using invalid field names', test => {
   const collection = new LocalCollection();
@@ -3930,17 +3933,12 @@ Tinytest.add('minimongo - cannot insert using invalid field names', test => {
   // Quick test to make sure field values with dots are allowed
   collection.insert({ a: 'b.c' });
 
-  // Verify top level dot-field inserts are prohibited
-  ['a.b', '.b', 'a.', 'a.b.c'].forEach((field) => {
+  // Verify invalid dot patterns are rejected: leading dot, trailing dot, consecutive dots
+  ['.b', 'a.', '.', 'a..b', '. ', ' .', '...', 'a...b'].forEach((field) => {
     test.throws(() => {
       collection.insert({ [field]: 'c' });
-    }, `Key ${field} must not contain '.'`);
+    }, `Key ${field}`);
   });
-
-  // Verify nested dot-field inserts are prohibited
-  test.throws(() => {
-    collection.insert({ a: { b: { 'c.d': 'e' } } });
-  }, "Key c.d must not contain '.'");
 
   // Verify field names starting with $ are prohibited
   test.throws(() => {
@@ -3963,6 +3961,49 @@ Tinytest.add('minimongo - cannot insert using invalid field names', test => {
   test.throws(() => {
     collection.insert({ a: { b: { '\0c': 'd' } } });
   }, 'Key \0c must not contain null bytes');
+});
+
+// Verify that valid dotted field names are allowed (MongoDB 3.6+)
+Tinytest.add('minimongo - can insert using valid dotted field names', test => {
+  const collection = new LocalCollection();
+
+  // Verify dotted field names work
+  ['a.b', 'a.b.c'].forEach((field) => {
+    const id = collection.insert({ [field]: 'd' });
+    const doc = collection.findOne(id);
+    test.equal(doc[field], 'd', `Field ${field} should be allowed`);
+    collection.remove(id);
+  });
+
+  // Verify dotted fields in nested objects work
+  const id2 = collection.insert({
+    nested: {
+      'a.b': 'c',
+      'a.b.c': 'd'
+    }
+  });
+  const doc2 = collection.findOne(id2);
+  test.equal(doc2.nested['a.b'], 'c');
+  test.equal(doc2.nested['a.b.c'], 'd');
+
+  // Verify update operations work with dotted field names in values
+  const id3 = collection.insert({ a: 'b' });
+  collection.update(id3, { $set: { b: { 'a.b': 'c' } } });
+  const doc3 = collection.findOne(id3);
+  test.equal(doc3.b['a.b'], 'c');
+
+  // Verify distinction: path semantics vs literal dotted keys
+  const id4 = collection.insert({ x: {} });
+  // This uses path semantics - creates nested structure
+  collection.update(id4, { $set: { 'x.y': 1 } });
+  const doc4a = collection.findOne(id4);
+  test.equal(doc4a.x.y, 1, 'Path semantics should create nested structure');
+
+  // This uses literal key - dot is part of the key name
+  collection.update(id4, { $set: { z: { 'x.y': 2 } } });
+  const doc4b = collection.findOne(id4);
+  test.equal(doc4b.z['x.y'], 2, 'Literal key should store dot as part of name');
+  test.equal(doc4b.z.x, undefined, 'Literal key should not create nesting');
 });
 
 // Makes sure $set's cannot be performed using null bytes

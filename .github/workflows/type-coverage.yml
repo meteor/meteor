@@ -1,0 +1,14 @@
+name: Type Coverage
+on:
+  - pull_request
+jobs:
+  type-coverage:
+    runs-on: oss-vm
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+      - run: npm ci
+      - name: Check TypeScript type coverage (80%)
+        run: npm run ts-coverage:ci

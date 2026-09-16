@@ -218,7 +218,7 @@ Meteor.subscribe('notes.all', { cache: true }) // turns caching on, overriding t
 
 > **Note**: the rest of the [Meteor.subscribe](https://docs.meteor.com/api/pubsub.html#Meteor-subscribe) API (e.g. `onStop`, `onReady`) works just as you'd expect.
 
-> **Note**: Because the data will remain in Minimongo while the subscription is cached, you should be mindful of your Minimongo `.find` selectors. Be sure to use specific selectors to `.find` the data you need for that particular subscription. This is generally considered [best practice](https://guide.meteor.com/data-loading#fetching) so this is mainly a helpful reminder.
+> **Note**: Because the data will remain in Minimongo while the subscription is cached, you should be mindful of your Minimongo `.find` selectors. Be sure to use specific selectors to `.find` the data you need for that particular subscription. This is generally considered [best practice](/tutorials/data-loading/data-loading#fetching) so this is mainly a helpful reminder.
 
 #### Clearing the cache
 Each individual subcription will be automatically removed from the cache when its `cacheDuration` elapses.

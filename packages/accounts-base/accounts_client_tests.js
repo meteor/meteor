@@ -302,48 +302,80 @@ Tinytest.addAsync(
         });
       });
     });
-  }
+  },
 );
 
-Tinytest.addAsync('accounts - storage',
-  async function(test) {
-    const expectWhenSessionStorage = () => {
-      test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'));
-      test.isNull(localStorage.getItem('Meteor.loginToken'));
-    };
-    const expectWhenLocalStorage = () => {
-      test.isNotUndefined(localStorage.getItem('Meteor.loginToken'));
-      test.isNull(sessionStorage.getItem('Meteor.loginToken'));
-    };
+Tinytest.addAsync('accounts - logoutAllClients', async function (test, done) {
+  logoutAndCreateUser(test, done, async () => {
+    const user = await Meteor.userAsync()._id;
+    test.equal(user.services.resume.loginTokens.length, 1);
+    await Meteor.users.updateAsync(user._id, {
+      $push: {
+        'services.resume.loginTokens': {
+          hashedToken: 'test-token',
+          when: new Date(),
+        },
+      },
+    });
+    await Meteor.users.updateAsync(user._id, {
+      $push: {
+        'services.resume.loginTokens': {
+          hashedToken: 'test-token2',
+          when: new Date(),
+        },
+      },
+    });
+    test.equal(user.services.resume.loginTokens.length, 3);
+    Meteor.logoutAllClients(async () => {
+      test.isUndefined(Meteor.user());
+      test.equal(
+        (await Meteor.users.findOneAsync(user._id)).services.resume.loginTokens?.length,
+        0,
+      );
+      removeTestUser(done);
+    });
+  });
+});
 
-    const testCases = [{
+Tinytest.addAsync('accounts - storage', async function (test) {
+  const expectWhenSessionStorage = () => {
+    test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'));
+    test.isNull(localStorage.getItem('Meteor.loginToken'));
+  };
+  const expectWhenLocalStorage = () => {
+    test.isNotUndefined(localStorage.getItem('Meteor.loginToken'));
+    test.isNull(sessionStorage.getItem('Meteor.loginToken'));
+  };
+
+  const testCases = [{
       clientStorage: undefined,
       expectStorage: expectWhenLocalStorage,
-    }, {
+    },
+    {
       clientStorage: 'local',
       expectStorage: expectWhenLocalStorage,
-    }, {
-      clientStorage: 'session',
-      expectStorage: expectWhenSessionStorage,
-    }];
-    for await (const testCase of testCases) {
-      await new Promise(resolve => {
-        sessionStorage.clear();
-        localStorage.clear();
+  }, {
+    clientStorage: 'session',
+    expectStorage: expectWhenSessionStorage,
+  }];
+  for await (const testCase of testCases) {
+    await new Promise(resolve => {
+      sessionStorage.clear();
+      localStorage.clear();
 
-        const { clientStorage, expectStorage } = testCase;
-        Accounts.config({ clientStorage });
-        test.equal(Accounts._options.clientStorage, clientStorage);
+      const { clientStorage, expectStorage } = testCase;
+      Accounts.config({ clientStorage });
+      test.equal(Accounts._options.clientStorage, clientStorage);
 
-        // Login a user and test that tokens are in expected storage
-        logoutAndCreateUser(test, resolve, () => {
-          Accounts.logout();
-          expectStorage();
-          removeTestUser(resolve);
-        });
+      // Login a user and test that tokens are in expected storage
+      logoutAndCreateUser(test, resolve, () => {
+        Accounts.logout();
+        expectStorage();
+        removeTestUser(resolve);
       });
-    }
-  });
+    });
+  }
+});
 
 Tinytest.addAsync('accounts - should only start subscription when connected', async function (test) {
   const { conn, messages, cleanup } = await captureConnectionMessagesClient(test);

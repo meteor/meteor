@@ -13,16 +13,87 @@ import { closeAllWatchers } from "../fs/safe-watcher";
 import { loadIsopackage } from '../tool-env/isopackets.js';
 import { eachline } from "../utils/eachline";
 
-// Parse out s as if it were a bash command line.
-var bashParse = function (s) {
-  if (s.search("\"") !== -1 || s.search("'") !== -1) {
-    throw new Error("Meteor cannot currently handle quoted SERVER_NODE_OPTIONS");
+// Minimal shell-like splitter for SERVER_NODE_OPTIONS.
+// Handles single/double quotes and backslash escapes so that values like
+// --flag="hello world" or --require='/path/with spaces/f.js' are kept as
+// single tokens.  This is NOT a full bash parser — it only covers the
+// quoting subset needed for Node CLI flags.
+var splitQuotedArgs = exports.splitQuotedArgs = function (s) {
+  const args = [];
+  let current = '';
+  let inDouble = false;
+  let inSingle = false;
+  let escaped = false;
+  let hasQuotes = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+
+    if (escaped) {
+      current += ch;
+      escaped = false;
+      continue;
+    }
+
+    // Backslash: escape next char only when it precedes a meaningful
+    // character (space, quote, or another backslash). This preserves
+    // Windows-style paths like C:\temp\my-file.js.
+    if (ch === '\\' && !inSingle && i + 1 < s.length) {
+      const next = s[i + 1];
+      if (inDouble) {
+        // Inside double quotes, only \" and \\ are escape sequences
+        if (next === '"' || next === '\\') {
+          escaped = true;
+          continue;
+        }
+      } else {
+        // Outside quotes, escape spaces, quotes, and backslashes
+        if (next === ' ' || next === '"' || next === "'" || next === '\\') {
+          escaped = true;
+          continue;
+        }
+      }
+    }
+
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      hasQuotes = true;
+      continue;
+    }
+
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      hasQuotes = true;
+      continue;
+    }
+
+    if (/\s/.test(ch) && !inDouble && !inSingle) {
+      if (current || hasQuotes) {
+        args.push(current);
+        current = '';
+        hasQuotes = false;
+      }
+      continue;
+    }
+
+    current += ch;
   }
-  return s.split(/\s+/).filter(Boolean);
+
+  if (current || hasQuotes) {
+    args.push(current);
+  }
+
+  if (inDouble || inSingle) {
+    throw new Error(
+      "Unterminated quote in SERVER_NODE_OPTIONS: " + s
+    );
+  }
+
+  return args;
 };
 
 var getNodeOptionsFromEnvironment = function () {
-  return bashParse(process.env.SERVER_NODE_OPTIONS || "");
+  return splitQuotedArgs(process.env.SERVER_NODE_OPTIONS || "");
 };
 
 ///////////////////////////////////////////////////////////////////////////////
