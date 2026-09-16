@@ -36,6 +36,14 @@ describe('Pnpm Monorepo App Bundling /', () => {
 
 This illustrates the existing fixture's topology, not a second suite to add verbatim. Supply `customAssertions: {}` even when empty: the fixture helper currently reads `customAssertions.afterCreate` directly.
 
+## Temporary app variants
+
+For a focused regression, `setupMeteorApp` can copy an existing app and the test can write the minimal source or configuration needed to trigger the defect. Make runtime mutations in that disposable copy, preserving the checked-in fixture. Keep the changes easy to inspect; when replacing text, verify that the intended target was present so fixture drift cannot silently remove the trigger.
+
+Apply initial configuration before the operation that consumes it. For a watch/rebuild regression, establish the running baseline, edit the actual watched source, and observe the resulting behavior. Avoid manually restarting or reloading when that would bypass the transition being tested. App mutations establish inputs; the regression assertion must observe Meteor's response and follow the [shared red/green process](../../testing/SKILL.md#describe-and-verify-regressions).
+
+Recreate the relevant preconditions for independent cases and retries. Restore mutations before another case reuses the app, or dispose of an independently owned copy. Follow [state and resource cleanup](#restore-state-and-own-resources); temporary app reuse does not make arbitrary mutations automatically isolated.
+
 ## Use the right phase
 
 | Callback | Useful for |

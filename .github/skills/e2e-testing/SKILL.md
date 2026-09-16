@@ -25,13 +25,17 @@ Start with [E2E_COVERAGE.md](../../../dev/modern-tools/rspack/E2E_COVERAGE.md), 
 
 ## Choose the smallest useful change
 
+Prefer an additive assertion in an existing compatible app/mode. When a scenario needs different preconditions or independent cleanup, reuse the app in a focused case with options or small programmatic source/configuration changes to its temporary copy. A new regression does not by itself require a new fixture or another full lifecycle run.
+
 | Need | Preferred shape |
 |------|-----------------|
 | An additional assertion for an existing compatible app/mode | Extend its `customAssertions` callback, preserving the existing contract |
 | A generated app's defaults or creation path | Extend `skeleton.test.js` with `testMeteorSkeleton` |
-| A distinct framework, configuration, or workspace topology requiring lifecycle coverage | Add a focused fixture and use `testMeteorRspackBundler` |
-| One startup, failure, concurrency, or deployment regression | Reuse a temporary fixture with low-level helpers; run only the relevant modes |
+| A source/configuration variant or focused regression | Reuse an existing app's temporary copy, apply the minimal setup or transition, and run only the relevant modes with existing helpers |
+| A distinct app purpose, dependency graph, framework, or workspace topology that existing fixtures cannot express clearly | Add a focused fixture; use `testMeteorRspackBundler` when lifecycle coverage is needed |
 | Accounts behavior across browser, DDP, storage, or HTTP | Add or update a relevant case in `accounts.test.js`; reuse or adjust Accounts helpers and inspect affected consumers |
+
+Keep shared fixture additions aligned with the app's existing purpose. Prefer a dedicated fixture when reuse would require substantial rewrites, obscure the failure mechanism, or compromise existing coverage. See [temporary app variants](references/harness.md#temporary-app-variants) for mutation timing and isolation.
 
 Read [coverage design](references/coverage-design.md) when choosing a fixture, assessing duplication, or deciding what to assert. Keep alternative configurations separate when combining them would remove the original scenario: `full-blaze` regular tests and `blaze-router` full-app tests protect different contracts.
 
