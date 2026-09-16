@@ -43,7 +43,7 @@ Isolate mutable data between cases. Stop computations, observers, subscriptions,
 
 ## Run the affected package and case
 
-Use the checkout from the repository root. Replace `package-name` and `test name fragment` below:
+Complete [checkout setup](../testing/SKILL.md#prepare-the-selected-runner) and run from the repository root. Replace `package-name` and `test name fragment` below:
 
 ```bash
 # Interactive browser runner
@@ -57,7 +57,7 @@ Tinytest's filter is a case-sensitive substring of the registered test name. The
 
 For regression work, use the [shared regression process](../testing/SKILL.md#describe-and-verify-regressions) with the required runtime and client/server side preserved between red and green.
 
-`./meteor test-packages` starts an app and waits for a browser. Use [test-in-console/run.sh](../../../packages/test-in-console/run.sh) for automated terminal results; it starts the app and drives the browser with Puppeteer. Check its dependencies and environment before invoking it: it can install Puppeteer when unavailable. Confirm the expected case ran on the intended client/server side; server startup, an empty selection, and a page load are not passing assertions.
+`./meteor test-packages` starts an app and waits for a browser. Use [test-in-console/run.sh](../../../packages/test-in-console/run.sh) for automated terminal results; it starts the app and drives the browser with Puppeteer. The wrapper needs Bash, `node`, and `curl` on `PATH`. It reuses a resolvable Puppeteer installation or invokes `./meteor npm install -g` for its pinned version. Ensure Puppeteer's browser binary and operating-system libraries are available; this setup is separate from E2E's Playwright installation. Confirm the expected case ran on the intended client/server side; server startup, an empty selection, and a page load are not passing assertions.
 
 ## Match the affected CI configuration
 
