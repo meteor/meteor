@@ -4,7 +4,7 @@ In this tutorial, we will create a simple To-Do app using [React](https://react.
 
 React is a popular JavaScript library for building user interfaces. It allows you to create dynamic and interactive applications by composing UI components. React uses a declarative approach, where you define how the UI should look based on the state, and it efficiently updates the view when the state changes. With JSX, a syntax extension that combines JavaScript and HTML, React makes it easy to create reusable components that manage their own state and render seamlessly in the browser.
 
-To start building your React app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option. After installing it, you can enhance your experience by adding extensions like [Meteor Toolbox](https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox).
+To start building your React app, you'll need a code editor. If you're unsure which one to choose, [Visual Studio Code](https://code.visualstudio.com/) is a good option.
 
 Let’s begin building your app!
 

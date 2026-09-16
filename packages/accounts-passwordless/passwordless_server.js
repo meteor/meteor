@@ -1,12 +1,12 @@
 import { Accounts } from 'meteor/accounts-base';
+import { Random } from 'meteor/random';
+import { check, Match } from 'meteor/check';
 import {
   DEFAULT_TOKEN_SEQUENCE_LENGTH,
   getUserById,
-  NonEmptyString,
   tokenValidator,
   checkToken,
 } from './server_utils';
-import { Random } from 'meteor/random';
 
 const findUserWithOptions = async ({ selector }) => {
   if (!selector) {
@@ -33,7 +33,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
 
   check(options, {
     token: tokenValidator(),
-    code: Match.Optional(NonEmptyString),
+    code: Match.Optional(Match.NonEmptyString),
     selector: Accounts._userQueryValidator,
   });
 
@@ -220,7 +220,7 @@ Meteor.methods({
  */
 Accounts.sendLoginTokenEmail = async ({ userId, sequence, email, extra = {} }) => {
   const user = await getUserById(userId);
-  const url = Accounts.urls.loginToken(email, sequence, extra);
+  const url = await Accounts._resolvePromise(Accounts.urls.loginToken(email, sequence, extra));
   const options = await Accounts.generateOptionsForEmail(
     email,
     user,

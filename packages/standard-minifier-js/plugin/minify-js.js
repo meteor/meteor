@@ -1,17 +1,4 @@
 import { extractModuleSizesTree } from "./stats.js";
-import fs from 'fs';
-
-export function getConfig() {
-  try{
-    const meteorAppDir = process.cwd();
-    const packageJson = fs.readFileSync(`${meteorAppDir}/package.json`, 'utf8');
-    const meteorConfig = JSON.parse(packageJson).meteor;
-    return meteorConfig;
-  } catch (error) {
-    console.log(error);
-    return {};
-  }
-};
 
 const statsEnabled = process.env.DISABLE_CLIENT_STATS !== 'true'
 
@@ -26,9 +13,7 @@ const Meteor = typeof global.Meteor !== 'undefined' ? global.Meteor : {
 
 // Profile for test and production environments
 let Profile;
-if (typeof global.Profile !== 'undefined') {
-  Profile = global.Profile;
-} else if (typeof Plugin !== 'undefined' && Plugin.Profile) {
+if (typeof Plugin !== 'undefined' && Plugin.Profile) {
   Profile = Plugin.Profile;
 } else {
   Profile = function (label, func) {
@@ -39,6 +24,10 @@ if (typeof global.Profile !== 'undefined') {
   Profile.time = function (label, func) {
     func();
   }
+}
+
+function getMeteorConfig() {
+  return Plugin?.getMeteorConfig() || {};
 }
 
 let swc;
@@ -54,17 +43,13 @@ if (typeof Plugin !== 'undefined') {
 }
 
 export class MeteorMinifier {
-
-  constructor() {
-    this.config = getConfig();
-  }
-
   _minifyWithSWC(file) {
     return Profile('_minifyWithSWC', () => {
       swc = swc || require('@meteorjs/swc-core'); 
       const NODE_ENV = process.env.NODE_ENV || 'development';
       
       let content = file.getContentsAsString();
+      const isLegacyWebArch = file?._arch === 'web.browser.legacy';
 
       return swc.minifySync(
         content,
@@ -76,6 +61,7 @@ export class MeteorMinifier {
             unused: true,
             dead_code: true,
             typeofs: false,
+            ...(isLegacyWebArch && { defaults: false }),
 
             global_defs: {
               'process.env.NODE_ENV': NODE_ENV,
@@ -120,9 +106,14 @@ export class MeteorMinifier {
 
   minifyOneFile(file) {
     return Profile('minifyOneFile', () => {
-      const modern = this.config && (this.config.modern === true || (this.config.modern && this.config.modern.minifier === true));
+      const meteorConfig = getMeteorConfig();
+      const modern =
+        meteorConfig &&
+        (meteorConfig?.modern === true ||
+          (meteorConfig?.modern &&
+            meteorConfig?.modern?.minifier === true));
       // check if config is an empty object
-      if(this.config && Object.keys(this.config).length === 0 || !modern) {
+      if(meteorConfig && Object.keys(meteorConfig).length === 0 || !modern) {
         Meteor._debug(`Minifying using Terser  | file: ${file.getPathInBundle()}`);
         return this._minifyWithTerser(file);
       }

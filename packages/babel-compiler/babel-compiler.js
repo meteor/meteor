@@ -1,8 +1,39 @@
-var semver = Npm.require("semver");
 var JSON5 = Npm.require("json5");
-var SWC = Npm.require("@meteorjs/swc-core");
-const reifyCompile = Npm.require("@meteorjs/reify/lib/compiler").compile;
-const reifyAcornParse = Npm.require("@meteorjs/reify/lib/parsers/acorn").parse;
+
+// Loaded lazily on first use: the SWC native binding takes hundreds of
+// milliseconds to load, and every build-plugin image that includes
+// babel-compiler would otherwise pay that cost at plugin initialization
+// even if it never transpiles anything (e.g. minifier plugins).
+// A failure to load one of these dependencies is an installation problem,
+// not a compilation problem, so it must not be swallowed by the
+// SWC-to-Babel fallback in processOneFileForTarget.
+function requireCompilerDependency(name) {
+  try {
+    return Npm.require(name);
+  } catch (error) {
+    error.compilerDependencyLoadFailure = true;
+    throw error;
+  }
+}
+
+let SWC = null;
+function getSWC() {
+  return SWC || (SWC = requireCompilerDependency("@meteorjs/swc-core"));
+}
+
+let reifyCompile = null;
+function getReifyCompile() {
+  return reifyCompile ||
+    (reifyCompile =
+      requireCompilerDependency("@meteorjs/reify/lib/compiler").compile);
+}
+
+let reifyAcornParse = null;
+function getReifyAcornParse() {
+  return reifyAcornParse ||
+    (reifyAcornParse =
+      requireCompilerDependency("@meteorjs/reify/lib/parsers/acorn").parse);
+}
 var fs = Npm.require('fs');
 var path = Npm.require('path');
 var vm = Npm.require('vm');
@@ -25,9 +56,16 @@ var BCp = BabelCompiler.prototype;
 var excludedFileExtensionPattern = /\.(es5|min)\.js$/i;
 var hasOwn = Object.prototype.hasOwnProperty;
 
+function getMeteorConfig() {
+  return Plugin?.getMeteorConfig() || {};
+}
+
 // Check if verbose mode is enabled either in the provided config or in extraFeatures
-BCp.isVerbose = function(config) {
+BCp.isVerbose = function(config = getMeteorConfig()) {
   if (config?.modern?.transpiler?.verbose) {
+    return true;
+  }
+  if (config?.modern?.verbose) {
     return true;
   }
   if (config?.verbose) {
@@ -35,10 +73,6 @@ BCp.isVerbose = function(config) {
   }
   return !!this.extraFeatures?.verbose;
 };
-
-// There's no way to tell the current Meteor version, but we can infer
-// whether it's Meteor 1.4.4 or earlier by checking the Node version.
-var isMeteorPre144 = semver.lt(process.version, "4.8.1");
 
 var enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
 
@@ -51,13 +85,13 @@ function compileWithBabel(source, babelOptions, cacheOptions) {
 function compileWithSwc(source, swcOptions = {}, { features }) {
   return profile('SWC.compile', function () {
     // Perform SWC transformation.
-    const transformed = SWC.transformSync(source, swcOptions);
+    const transformed = getSWC().transformSync(source, swcOptions);
 
     let content = transformed.code;
 
     // Preserve Meteor-specific features: reify modules, nested imports, and top-level await support.
-    const result = reifyCompile(content, {
-      parse: reifyAcornParse,
+    const result = getReifyCompile()(content, {
+      parse: getReifyAcornParse(),
       generateLetDeclarations: false,
       ast: false,
       // Enforce reify options for proper compatibility.
@@ -80,47 +114,13 @@ function compileWithSwc(source, swcOptions = {}, { features }) {
     };
   });
 }
-const DEFAULT_MODERN = {
-  transpiler: true,
-};
 
-const normalizeModern = (r = false) => Object.fromEntries(
-    Object.entries(DEFAULT_MODERN).map(([k, def]) => [
-      k,
-      r === true
-        ? def
-        : r === false || r?.[k] === false
-        ? false
-        : typeof r?.[k] === 'object'
-        ? { ...r[k] }
-        : def,
-    ]),
-);
-
-let modernForced = JSON.parse(process.env.METEOR_MODERN || "false");
-
-let lastModifiedMeteorConfig;
-let lastModifiedMeteorConfigTime;
 BCp.initializeMeteorAppConfig = function () {
-  if (!lastModifiedMeteorConfig && !fs.existsSync(`${getMeteorAppDir()}/package.json`)) {
-    return;
+  const meteorConfig = getMeteorConfig();
+  if (this.isVerbose()) {
+    logConfigBlock('Meteor Config', meteorConfig);
   }
-  const currentLastModifiedConfigTime = fs
-    .statSync(`${getMeteorAppDir()}/package.json`)
-    ?.mtime?.getTime();
-  if (currentLastModifiedConfigTime !== lastModifiedMeteorConfigTime) {
-    lastModifiedMeteorConfigTime = currentLastModifiedConfigTime;
-    lastModifiedMeteorConfig = getMeteorAppPackageJson()?.meteor;
-    lastModifiedMeteorConfig = lastModifiedMeteorConfig != null ? {
-      ...lastModifiedMeteorConfig,
-      modern: normalizeModern(modernForced || lastModifiedMeteorConfig?.modern),
-    } : {};
-
-    if (this.isVerbose(lastModifiedMeteorConfig)) {
-      logConfigBlock('Meteor Config', lastModifiedMeteorConfig);
-    }
-  }
-  return lastModifiedMeteorConfig;
+  return meteorConfig;
 };
 
 let lastModifiedSwcConfig;
@@ -128,18 +128,21 @@ let lastModifiedSwcConfigTime;
 BCp.initializeMeteorAppSwcrc = function () {
   const hasSwcRc = fs.existsSync(`${getMeteorAppDir()}/.swcrc`);
   const hasSwcJs = !hasSwcRc && fs.existsSync(`${getMeteorAppDir()}/swc.config.js`);
-  if (!lastModifiedSwcConfig && !hasSwcRc && !hasSwcJs) {
+  const hasSwcTs = !hasSwcRc && !hasSwcJs && fs.existsSync(`${getMeteorAppDir()}/swc.config.ts`);
+  if (!lastModifiedSwcConfig && !hasSwcRc && !hasSwcJs && !hasSwcTs) {
     return;
   }
-  const swcFile = hasSwcJs ? 'swc.config.js' : '.swcrc';
+  const swcFile = hasSwcTs ? 'swc.config.ts' : hasSwcJs ? 'swc.config.js' : '.swcrc';
   const filePath = `${getMeteorAppDir()}/${swcFile}`;
   const fileStats = fs.statSync(filePath);
   const fileModTime = fileStats?.mtime?.getTime();
 
   let currentLastModifiedConfigTime;
-  if (hasSwcJs) {
-    // For dynamic JS files, first get the resolved configuration
-    const resolvedConfig = lastModifiedSwcConfig || getMeteorAppSwcrc(swcFile);
+  if (hasSwcJs || hasSwcTs) {
+    // For dynamic JS/TS files, first get the resolved configuration
+    const resolvedConfig = lastModifiedSwcConfigTime?.includes(`${fileModTime}`)
+      ? lastModifiedSwcConfig || getMeteorAppSwcrc(swcFile)
+      : getMeteorAppSwcrc(swcFile);
     // Calculate a hash of the resolved configuration to detect changes
     const contentHash = crypto
       .createHash('sha256')
@@ -158,21 +161,49 @@ BCp.initializeMeteorAppSwcrc = function () {
     lastModifiedSwcConfigTime = currentLastModifiedConfigTime;
     lastModifiedSwcConfig = getMeteorAppSwcrc(swcFile);
 
-    if (this.isVerbose(lastModifiedMeteorConfig)) {
-      logConfigBlock('SWC Config', lastModifiedSwcConfig);
+    if (this.isVerbose()) {
+      logConfigBlock('SWC Custom Config', lastModifiedSwcConfig);
     }
+
+    this._swcIncompatible = {};
   }
   return lastModifiedSwcConfig;
 };
 
-let lastModifiedSwcLegacyConfig;
-BCp.initializeMeteorAppLegacyConfig = function () {
-  const swcLegacyConfig = convertBabelTargetsForSwc(Babel.getMinimumModernBrowserVersions());
-  if (this.isVerbose(lastModifiedMeteorConfig) && !lastModifiedSwcLegacyConfig) {
-    logConfigBlock('SWC Legacy Config', swcLegacyConfig);
+// Helper function to check if @swc/helpers is available
+function hasSwcHelpers() {
+  return fs.existsSync(`${getMeteorAppDir()}/node_modules/@swc/helpers`);
+}
+
+// Helper function to log friendly messages about SWC helpers
+function logSwcHelpersStatus(isAvailable) {
+  const label = color('[SWC Helpers]', 36);
+
+  if (isAvailable) {
+    // Green message for when helpers are available
+    console.log(`${label} ${color('✓ @swc/helpers is available in your project!', 32)}`);
+    console.log(`  ${color('Benefits:', 32)}`);
+    console.log(`  ${color('• Smaller bundle size: External helpers reduce code duplication', 32)}`);
+    console.log(`  ${color('• Faster loads: less code to parse on first download', 32)}`);
+    console.log(`  ${color('• Optional caching: separate vendor chunk can be cached by browsers', 32)}`);
+  } else {
+    // Yellow message for when helpers are not available
+    console.log(`${label} ${color('⚠ @swc/helpers is not available in your project', 33)}`);
+    console.log(`  ${color('Suggestion:', 33)}`);
+    console.log(`  ${color('• Add @swc/helpers to your project:', 33)}`);
+    console.log(`    ${color('meteor npm install --save @swc/helpers', 33)}`);
+    console.log(`  ${color('• This will reduce bundle size and improve performance', 33)}`);
   }
-  lastModifiedSwcLegacyConfig = swcLegacyConfig;
-  return lastModifiedSwcConfig;
+  console.log();
+}
+
+let hasSwcHelpersAvailable = false;
+BCp.initializeMeteorAppSwcHelpersAvailable = function () {
+  hasSwcHelpersAvailable = hasSwcHelpers();
+  if (this.isVerbose()) {
+    logSwcHelpersStatus(hasSwcHelpersAvailable);
+  }
+  return hasSwcHelpersAvailable;
 };
 
 BCp.processFilesForTarget = function (inputFiles) {
@@ -183,7 +214,7 @@ BCp.processFilesForTarget = function (inputFiles) {
 
   this.initializeMeteorAppConfig();
   this.initializeMeteorAppSwcrc();
-  this.initializeMeteorAppLegacyConfig();
+  this.initializeMeteorAppSwcHelpersAvailable();
 
   inputFiles.forEach(function (inputFile) {
     if (inputFile.supportsLazyCompilation) {
@@ -228,6 +259,43 @@ BCp.processOneFileForTarget = function (inputFile, source) {
     sourceMap: null,
     bare: !! fileOptions.bare
   };
+  const arch = inputFile.getArch();
+  const isLegacyWebArch = arch.includes('legacy');
+
+  // Check if the file is a Rspack output file
+  // If it is, bypass SWC/Babel and just read the file and its map file
+  // as the contents are already transpiled by Rspack.
+  if (Plugin?.rspackHelpers?.isRspackOutputFile(inputFilePath) && !isLegacyWebArch) {
+    try {
+      // Get the full path to the file
+      const fullPath = inputFile.getPathInPackage();
+      // Read the file directly
+      toBeAdded.data = source;
+
+      // Try to read the corresponding map file
+      const mapPath = fullPath + '.map';
+      if (fs.existsSync(mapPath)) {
+        const mapContent = fs.readFileSync(mapPath, 'utf8');
+        toBeAdded.sourceMap = JSON.parse(mapContent);
+      }
+
+      if (this.isVerbose()) {
+        const arch = inputFile.getArch();
+        logTranspilation({
+          usedRspack: true,
+          inputFilePath,
+          packageName,
+          cacheHit: true,
+          arch,
+        });
+      }
+
+      return toBeAdded;
+    } catch (e) {
+      // If there's an error reading the file or map, log it and continue with normal processing
+      console.error('Error reading Rspack file:', e);
+    }
+  }
 
   // If you need to exclude a specific file within a package from Babel
   // compilation, pass the { transpile: false } options to api.addFiles
@@ -241,14 +309,16 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       ! excludedFileExtensionPattern.test(inputFilePath)) {
 
     const features = Object.assign({}, this.extraFeatures);
-    const arch = inputFile.getArch();
 
-    if (arch.startsWith("os.")) {
+    const isNodeTarget = arch.startsWith("os.");
+    if (isNodeTarget) {
       // Start with a much simpler set of Babel presets and plugins if
       // we're compiling for Node 8.
       features.nodeMajorVersion = parseInt(process.versions.node, 10);
     } else if (arch === "web.browser") {
       features.modernBrowsers = true;
+    } else if (arch === "web.cordova") {
+      features.modernBrowsers = ! getMeteorConfig()?.modern?.cordova === false;
     }
 
     features.topLevelAwait = inputFile.supportsTopLevelAwait &&
@@ -308,12 +378,20 @@ BCp.processOneFileForTarget = function (inputFile, source) {
 
       var swcOptions = {
         jsc: {
-          ...(!isLegacyWebArch && { target: 'es2015' }),
+          ...(!isLegacyWebArch && { target: isNodeTarget ? 'es2022' : 'es2015' }),
           parser: {
             syntax: isTypescriptSyntax ? 'typescript' : 'ecmascript',
             jsx: hasJSXSupport,
             tsx: hasTSXSupport,
           },
+          ...(hasSwcHelpersAvailable &&
+            !isNodeTarget &&
+            (packageName == null ||
+              !['core-runtime', 'modules', 'modules-runtime'].includes(
+                packageName,
+              )) && {
+              externalHelpers: true,
+            }),
         },
         module: { type: 'es6' },
         minify: false,
@@ -321,13 +399,29 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         filename,
         sourceFileName: filename,
         ...(isLegacyWebArch && {
-          env: { targets: lastModifiedSwcLegacyConfig || {} },
+          env: {
+            targets: {
+              chrome: '49',
+              edge: '15',
+              firefox: '30',
+              safari: '10',
+              ios: '10',
+              android: '5',
+              opera: '42',
+              ie: '11',
+              node: '8',
+              electron: '1.6',
+            },
+            mode: 'entry',
+            coreJs: '3.37',
+          },
         }),
       };
 
       // Merge with app-level SWC config
       if (lastModifiedSwcConfig) {
         swcOptions = deepMerge(swcOptions, lastModifiedSwcConfig, [
+          'jsc.target',
           'env.targets',
           'module.type',
         ]);
@@ -353,39 +447,46 @@ BCp.processOneFileForTarget = function (inputFile, source) {
         const isNodeModulesCode = packageName == null && inputFilePath.includes("node_modules/");
         const isAppCode = packageName == null && !isNodeModulesCode;
         const isPackageCode = packageName != null;
-        const isLegacyWebArch = arch.includes('legacy');
 
-        const config = lastModifiedMeteorConfig?.modern?.transpiler;
-        const hasModernTranspiler = config != null && config !== false;
+        const transpConfig = getMeteorConfig()?.modern?.transpiler;
+        const hasModernTranspiler = transpConfig != null && transpConfig !== false;
         const shouldSkipSwc =
           !hasModernTranspiler ||
-          (isAppCode && config?.excludeApp === true) ||
-          (isNodeModulesCode && config?.excludeNodeModules === true) ||
-          (isPackageCode && config?.excludePackages === true) ||
-          (isLegacyWebArch && config?.excludeLegacy === true) ||
+          (isAppCode && transpConfig?.excludeApp === true) ||
+          (isNodeModulesCode && transpConfig?.excludeNodeModules === true) ||
+          (isPackageCode && transpConfig?.excludePackages === true) ||
+          (isLegacyWebArch && transpConfig?.excludeLegacy === true) ||
           (isAppCode &&
-            Array.isArray(config?.excludeApp) &&
-            isExcludedConfig(inputFilePath, config?.excludeApp || [])) ||
+            Array.isArray(transpConfig?.excludeApp) &&
+            isExcludedConfig(inputFilePath, transpConfig?.excludeApp || [])) ||
           (isNodeModulesCode &&
-            Array.isArray(config?.excludeNodeModules) &&
-            (isExcludedConfig(inputFilePath, config?.excludeNodeModules || []) ||
+            Array.isArray(transpConfig?.excludeNodeModules) &&
+            (isExcludedConfig(inputFilePath, transpConfig?.excludeNodeModules || []) ||
               isExcludedConfig(
                 inputFilePath.replace('node_modules/', ''),
-                config?.excludeNodeModules || [],
+                transpConfig?.excludeNodeModules || [],
                 true,
               ))) ||
           (isPackageCode &&
-            Array.isArray(config?.excludePackages) &&
-            (isExcludedConfig(packageName, config?.excludePackages || []) ||
+            Array.isArray(transpConfig?.excludePackages) &&
+            (isExcludedConfig(packageName, transpConfig?.excludePackages || []) ||
               isExcludedConfig(
                 `${packageName}/${inputFilePath}`,
-                config?.excludePackages || [],
+                transpConfig?.excludePackages || [],
               )));
+
+        // Segregate cache by target/arch: server (es2022), modern web (es2015),
+        // and legacy web (env.targets) all produce different SWC output. Without
+        // this, whichever arch compiles first poisons the cache for the others.
+        const swcTarget = isLegacyWebArch
+          ? 'legacy'
+          : (isNodeTarget ? 'es2022' : 'es2015');
 
         const cacheKey = [
           toBeAdded.hash,
           lastModifiedSwcConfigTime,
-          isLegacyWebArch ? 'legacy' : '',
+          swcTarget,
+          hasSwcHelpersAvailable,
         ]
           .filter(Boolean)
           .join('-');
@@ -402,7 +503,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             compilation = this.readFromSwcCache({ cacheKey });
             // Return cached result if found.
             if (compilation) {
-              if (this.isVerbose(config)) {
+              if (this.isVerbose()) {
                 logTranspilation({
                   usedSwc: true,
                   inputFilePath,
@@ -432,7 +533,7 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             usedSwc = false;
           }
 
-          if (this.isVerbose(config)) {
+          if (this.isVerbose()) {
             logTranspilation({
               usedSwc,
               inputFilePath,
@@ -443,12 +544,17 @@ BCp.processOneFileForTarget = function (inputFile, source) {
             });
           }
         } catch (e) {
+          if (e.compilerDependencyLoadFailure) {
+            // A broken SWC/reify installation should fail loudly rather
+            // than silently falling back to Babel for every file.
+            throw e;
+          }
           this._swcIncompatible[cacheKey] = true;
           // If SWC fails, fall back to Babel
 
           babelOptions = setupBabelOptions();
           compilation = compileWithBabel(source, babelOptions, cacheOptions);
-          if (this.isVerbose(config)) {
+          if (this.isVerbose()) {
             logTranspilation({
               usedSwc: false,
               inputFilePath,
@@ -483,19 +589,6 @@ BCp.processOneFileForTarget = function (inputFile, source) {
       }
 
       return null;
-    }
-
-    if (isMeteorPre144) {
-      // Versions of meteor-tool earlier than 1.4.4 do not understand that
-      // module.importSync is synonymous with the deprecated module.import
-      // and thus fail to register dependencies for importSync calls.
-      // This string replacement may seem a bit hacky, but it will tide us
-      // over until everyone has updated to Meteor 1.4.4.
-      // https://github.com/meteor/meteor/issues/8572
-      result.code = result.code.replace(
-        /\bmodule\.importSync\b/g,
-        "module.import"
-      );
     }
 
     toBeAdded.data = result.code;
@@ -1007,8 +1100,37 @@ function getMeteorAppPackageJson() {
 function getMeteorAppSwcrc(file = '.swcrc') {
   try {
     const filePath = `${getMeteorAppDir()}/${file}`;
-    if (file.endsWith('.js')) {
+    if (file.endsWith('.js') || file.endsWith('.ts')) {
       let content = fs.readFileSync(filePath, 'utf-8');
+      
+      if (file.endsWith('.ts')) {
+        try {
+          const swc = require('@meteorjs/swc-core');
+          const result = swc.transformSync(content, {
+            jsc: {
+              parser: {
+                syntax: 'typescript',
+              },
+              target: 'es2015',
+            },
+          });
+          content = result.code;
+        } catch (swcError) {
+          content = content
+            .replace(/import\s+type\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+.*?from\s+['"][^'"]+['"];?/g, '')
+            .replace(/import\s+['"][^'"]+['"];?/g, '')
+            .replace(/export\s+default\s+/, 'module.exports = ')
+            .replace(/export\s+/g, '')
+            .replace(/:\s*\w+(\[\])?(\s*=)/g, '$2')
+            .replace(/\(([^)]*?):\s*\w+(\[\])?\)/g, '($1)')
+            .replace(/\):\s*\w+(\[\])?\s*\{/g, ') {')
+            .replace(/interface\s+\w+\s*\{[^}]*\}/g, '')
+            .replace(/type\s+\w+\s*=\s*[^;]+;/g, '')
+            .replace(/as\s+\w+(\[\])?/g, '');
+        }
+      }
+      
       // Check if the content uses ES module syntax (export default)
       if (content.includes('export default')) {
         // Transform ES module syntax to CommonJS
@@ -1025,7 +1147,9 @@ function getMeteorAppSwcrc(file = '.swcrc') {
         })()
       `);
       const context = vm.createContext({ process });
-      return script.runInContext(context);
+      const result = script.runInContext(context);
+      // Handle CJS interop wrapper (e.g. { __esModule: true, default: config })
+      return result && result.__esModule && result.default ? result.default : result;
     } else {
       // For .swcrc and other JSON files, parse as JSON
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
@@ -1074,14 +1198,16 @@ function logTranspilation({
   packageName,
   inputFilePath,
   usedSwc,
+  usedRspack,
   cacheHit,
   isNodeModulesCode,
   arch,
   errorMessage = '',
   tip = '',
 }) {
-  const transpiler = usedSwc ? 'SWC' : 'Babel';
-  const transpilerColor = usedSwc ? 32 : 33;
+  let transpiler = usedSwc ? 'SWC' : 'Babel';
+  transpiler = usedRspack ? 'Rspack' : transpiler;
+  const transpilerColor = usedSwc || usedRspack ? 32 : 33;
   const label = color('[Transpiler]', 36);
   const transpilerPart = `${label} Used ${color(
     transpiler,
@@ -1104,7 +1230,7 @@ function logTranspilation({
     : color(originPaddedRaw, 35);
   const cacheStatus = errorMessage
     ? color('⚠️  Fallback', 33)
-    : usedSwc
+    : usedSwc || usedRspack
     ? cacheHit
       ? color('🟢 Cache hit', 32)
       : color('🔴 Cache miss', 31)

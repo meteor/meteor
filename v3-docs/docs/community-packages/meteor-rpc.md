@@ -175,6 +175,46 @@ Meteor.publish("chatRooms", function () {
 
 :::
 
+### module.addSharedPublication
+
+`addSharedPublication(name: string, schema: ZodSchema, handler: (args: ZodTypeInput<ZodSchema>) => Array<Mongo.Cursor<any>> | Promise<Array<Mongo.Cursor<any>>> )`
+
+This is similar to [`addPublication`](#module-addpublication), but it allows you to create an array of cursors, which can be useful for shared queries that need to return multiple collections or different queries.
+
+::: code-group
+
+```typescript [server/with-meteor-rpc.ts]
+// server/main.ts
+import { createModule } from "meteor-rpc";
+import { ChatCollection } from "/imports/api/chat";
+import { UserCollection } from "/imports/api/user";
+import { z } from "zod";
+
+const server = createModule().addSharedPublication(
+  "chatRooms",
+  z.string(),
+  (userId) => {
+    return [ChatCollection.find({ userId }), UserCollection.find({ userId })];
+  }
+);
+
+server.build();
+```
+
+```typescript [server/without-meteor-rpc.ts]
+import { Meteor } from "meteor/meteor";
+import { ChatCollection } from "/imports/api/chat";
+import { UserCollection } from "/imports/api/user";
+import { check } from "meteor/check";
+
+Meteor.publish("chatRooms", function (userId) {
+  check(userId, String);
+  return [ChatCollection.find({ userId }), UserCollection.find({ userId })];
+});
+```
+
+:::
+
 ### `module.addSubmodule`
 
 This is used to add a submodule to the main module, adding namespaces for your methods and publications and making it easier to organize your code.
