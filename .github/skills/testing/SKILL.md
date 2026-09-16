@@ -49,6 +49,12 @@ Meteor `Package.onTest` registration and npm package scripts are separate workfl
 
 Preserve the failure mechanism: mocks that remove the relevant persistence, authorization, hook, watcher, or concurrent interaction also remove the evidence. For command orchestration, execute our wrapper against controlled process/filesystem boundaries and inspect arguments, exit status, outputs, and consequential forbidden effects. Multiple layers are useful when they protect different failures; avoid repeating one decision table at every layer. Fixture seeding establishes preconditions, not proof of creation or login. Static checking can cover type guarantees; runtime inputs, configuration, defaults, and failure handling may still need tests.
 
+## Prepare the selected runner
+
+For self-tests, package tests, and E2E app execution, first follow [checkout setup](../../../DEVELOPMENT.md#running-from-a-git-checkout): initialize required submodules while preserving local work, and run `./meteor --help` when bootstrap is needed. The checkout launcher downloads or replaces `dev_bundle` when its required version is missing or outdated. Unit-only Jest execution does not need this bootstrap.
+
+Use the selected runner's installation instructions and the Node/npm environment in its owning workflow. Browser binaries and their operating-system libraries are separate prerequisites from npm packages. Install only what the selected workflow needs. `./meteor --get-ready` prepares a broad set of packages; it is not a required preflight for every focused test.
+
 ## Make Assertions Informative
 
 - Assert the contract's result: values, persisted changes, visible state, or external effects. Existence, type, mount-only, and no-throw checks suffice only when availability or safe acceptance is the actual contract.
