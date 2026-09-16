@@ -1423,3 +1423,40 @@ function createAllowDenyRulesTest(collections, isAsync = true) {
 testAsyncMulti("collection - async definitions on allow/deny rules", createAllowDenyRulesTest(AllowDenyRulesCollections, true));
 
 testAsyncMulti("collection - sync definitions on allow/deny rules", createAllowDenyRulesTest(AllowDenyRulesCollections, false));
+
+// A duplicate-key (E11000) failure from a mutation method must surface to the
+// client as a 409 Meteor.Error, not a generic 500. The driver reports it as a
+// MongoServerError, so the allow-deny catch block must recognize that name.
+if (Meteor.isServer) {
+  Tinytest.addAsync(
+    'collection - duplicate key from a mutation method is a 409',
+    async function (test) {
+      const name = 'allowDenyDupKey_' + Random.id();
+      const collection = new Mongo.Collection(name);
+      await collection.createIndexAsync({ uniqueField: 1 }, { unique: true });
+      collection.allow({ insert: () => true });
+
+      const conn = DDP.connect(Meteor.absoluteUrl());
+      const insertMethod = '/' + name + '/insertAsync';
+      try {
+        await conn.callAsync(insertMethod, { _id: Random.id(), uniqueField: 'dup' });
+
+        let err;
+        try {
+          await conn.callAsync(insertMethod, { _id: Random.id(), uniqueField: 'dup' });
+        } catch (e) {
+          err = e;
+        }
+        test.isTrue(!!err, 'a duplicate insert should throw');
+        test.equal(
+          err && err.error,
+          409,
+          'a duplicate key should surface as a 409 Meteor.Error'
+        );
+      } finally {
+        conn.disconnect();
+        await collection.rawCollection().drop().catch(() => {});
+      }
+    }
+  );
+}
