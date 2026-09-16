@@ -262,7 +262,7 @@ You can also set all methods to be `serverOnly`. See [Configuring](#configuring-
 
 1. Attach methods to its Collection with a dynamic import as shown above [Attach methods to its Collection (optional)](#attach-methods-to-its-collection-optional)
 
-2. Import function(s) from a file within a `/server` folder. Any code imported from a `/server` folder will not be shipped to the client. The `/server` folder can be located anywhere within your project's file structure and you can have multiple `/server` folders. For example, you can co-locate with your collection folder, e.g. `/imports/api/todos/server/`, or it can be at the root of your project. See [Secret server code](https://guide.meteor.com/security.html#secret-code) for more info.
+2. Import function(s) from a file within a `/server` folder. Any code imported from a `/server` folder will not be shipped to the client. The `/server` folder can be located anywhere within your project's file structure and you can have multiple `/server` folders. For example, you can co-locate with your collection folder, e.g. `/imports/api/todos/server/`, or it can be at the root of your project. See [Secret server code](/tutorials/security/security#secret-code) for more info.
 
 ```js
 export const create = createMethod({

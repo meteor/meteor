@@ -26,7 +26,7 @@ First, ensure you have Node.js version 20 installed. You can install the latest 
 npx meteor
 ```
 
-If you encounter any issues, please refer to the requirements and details in [our documentation](https://v3-docs.meteor.com/about/install.html).
+If you encounter any issues, please refer to the requirements and details in [our documentation](/about/install).
 
 
 ### 1.2: Create a Meteor.js Project
@@ -194,7 +194,7 @@ In the next step, we will connect to the MongoDB database to store our tasks.
 
 
 Meteor already sets up MongoDB for you. In order to use our database we need to create a *collection*, which is where we will store our *documents*, in our case our `tasks`.
-You can read more about collections [here](http://guide.meteor.com/collections.html).
+You can read more about collections [here](/tutorials/collections/collections).
 
 
 In this step we will implement all the necessary code to have a basic collection for our tasks up and running.
@@ -213,7 +213,7 @@ export const TasksCollection = new Mongo.Collection('tasks');
 ```
 :::
 
-The code above instantiates a new MongoDB collection and exports it. You can read more about app structure and imports/exports [here](https://guide.meteor.com/structure.html).
+The code above instantiates a new MongoDB collection and exports it. You can read more about app structure and imports/exports [here](/tutorials/application-structure/).
 
 ### 2.2: Initialize Tasks Collection
 
@@ -416,7 +416,7 @@ const tasks = autorun(() => TasksCollection.find({}).fetch()).result;
 
 Now you can edit the `addTask` function to insert a new task into the database. To do it, we will need to implement a Meteor Method.
 
-Methods are essentially RPC calls to the server that let you perform operations on the server side securely. You can read more about Meteor Methods [here](https://guide.meteor.com/methods.html).
+Methods are essentially RPC calls to the server that let you perform operations on the server side securely. You can read more about Meteor Methods [here](/tutorials/methods/methods).
 
 To create your methods, you can create a file called `tasksMethods.js`.
 
@@ -475,7 +475,7 @@ Inside the function, we are adding a task to the `tasks` collection by calling `
 ### 3.5: Show Newest Tasks First
 
 
-Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](https://guide.meteor.com/collections.html#mongo-collections) query.
+Now, you just need to make a change which will improve user experience: we will show the newest tasks first. We can accomplish this quickly by sorting our [MongoDB](/tutorials/collections/collections#mongo-collections) query.
 
 
 ::: code-group
@@ -865,7 +865,7 @@ Meteor already comes with authentication and account management system out of th
 meteor add accounts-password
 ```
 
-> There are many more authentication methods supported. You can read more about the accounts system [here](https://docs.meteor.com/api/accounts.html).
+> There are many more authentication methods supported. You can read more about the accounts system [here](/api/accounts).
 
 
 
@@ -1260,7 +1260,7 @@ Your app should look like this:
 
 ## 8: Deploying
 
-Deploying a Meteor application is similar to deploying any other Node.js app that uses websockets. You can find deployment options in [our guide](https://guide.meteor.com/deployment), including Meteor Up, Docker, and our recommended method, Galaxy.
+Deploying a Meteor application is similar to deploying any other Node.js app that uses websockets. You can find deployment options in [our guide](/tutorials/deployment/deployment), including Meteor Up, Docker, and our recommended method, Galaxy.
 
 In this tutorial, we will deploy our app on [Galaxy](https://www.meteor.com/hosting), which is our own cloud solution. Galaxy offers a free plan, so you can deploy and test your app. Pretty cool, right?
 

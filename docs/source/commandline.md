@@ -36,6 +36,9 @@ same as `meteor run`.
 To pass additional options to Node.js use the `SERVER_NODE_OPTIONS` environment variable. E.g. for Windows PowerShell:
 `$env:SERVER_NODE_OPTIONS = '--inspect' | meteor run`. Or for Linux: `SERVER_NODE_OPTIONS=--inspect-brk meteor run`.
 
+Quoted values are supported, so you can pass options that contain spaces or special characters:
+`SERVER_NODE_OPTIONS='--test-name-pattern="my test"' meteor run`.
+
 To specify a port to listen on (instead of the default 3000), use `--port [PORT]`.
 (The development server also uses port `N+1` for the default MongoDB instance)
 

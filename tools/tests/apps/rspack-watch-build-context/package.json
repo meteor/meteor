@@ -1,0 +1,19 @@
+{
+  "name": "rspack-watch-build-context",
+  "private": true,
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "@meteorjs/rspack": "^2.0.1",
+    "@rspack/cli": "^1.7.1",
+    "@rspack/core": "^1.7.1",
+    "@swc/helpers": "^0.5.17",
+    "meteor-node-stubs": "^1.2.12"
+  },
+  "meteor": {
+    "autoInstallDeps": false,
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    }
+  }
+}

@@ -13,6 +13,7 @@ on:
       - 'meteor'
       - 'meteor.bat'
       - 'tools/**'
+      - '!tools/e2e-tests/**'
       - 'packages/babel-compiler/**'
       - 'packages/dynamic-import/**'
       - 'packages/meteor/**'
@@ -24,6 +25,10 @@ on:
       - devel
 
 env:
+  # npm submits an audit request with every install. Meteor runs many installs
+  # when caches are cold, and this workflow does not consume their automatic
+  # audit reports. Avoid making CI reliability depend on npm's audit endpoint.
+  npm_config_audit: "false"
   METEOR_PRETTY_OUTPUT: 0
   SELF_TEST_TOOL_NODE_FLAGS: ' '
   TOOL_NODE_FLAGS: --expose-gc
@@ -44,13 +49,17 @@ jobs:
         shell: powershell
         run: Remove-Item -Recurse -Force ${{ github.workspace }}\*
 
+      - name: Enable Git Symlinks
+        shell: powershell
+        run: git config --global core.symlinks true
+
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22.x
+          node-version: 24.x
 
       - name: Cache dependencies
         id: meteor-cache
@@ -66,6 +75,12 @@ jobs:
           key: ${{ runner.os }}-meteor-${{ hashFiles('meteor', 'meteor.bat') }}
           restore-keys: |
             ${{ runner.os }}-meteor-
+
+      - name: Reset submodules (force refetch)
+        shell: pwsh
+        run: |
+          git submodule deinit -f --all
+          if (Test-Path ".git/modules") { Remove-Item -Recurse -Force ".git/modules" }
 
       - name: Install dependencies
         shell: pwsh

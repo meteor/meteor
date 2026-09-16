@@ -80,7 +80,7 @@ If someone comes along and passes a non-ID selector like `{}`, they will end up 
 
 ### jam:method
 
-To help you write good Methods that exhaustively validate their arguments, you can use a community package for Methods that enforces argument validation. Read more about how to use it in the [documentation for jam:method](/community-packages/jam-method.html). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
+To help you write good Methods that exhaustively validate their arguments, you can use a community package for Methods that enforces argument validation. Read more about how to use it in the [documentation for jam:method](/community-packages/jam-method). The rest of the code samples in this article will assume that you are using this package. If you aren't, you can still apply the same principles but the code will look a little different.
 
 ### Never pass userId from the client
 
@@ -311,7 +311,7 @@ Meteor.publish('list', function (listId) {
 
 In the first example, if the `userId` property on the selected list changes, the query in the publication will still return the data, since the security check in the beginning will not re-run. In the second example, we have fixed this by putting the security check in the returned query itself.
 
-Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the [data loading article](https://guide.meteor.com/data-loading#complex-auth).
+Unfortunately, not all publications are as simple to secure as the example above. For more tips on how to use `reywood:publish-composite` to handle reactive changes in publications, see the [data loading article](/tutorials/data-loading/data-loading#complex-auth).
 
 ### Passing options
 
@@ -402,7 +402,7 @@ Here's what a settings file with some API keys might look like:
 
 In your app's JavaScript code, these settings can be accessed from the variable `Meteor.settings`.
 
-[Read more about managing keys and settings in the Deployment article.](https://guide.meteor.com/deployment)
+[Read more about managing keys and settings in the Deployment article.](/tutorials/deployment/deployment)
 
 ### Settings on the client
 
@@ -461,8 +461,8 @@ Yes, Meteor does hash your password or login token on the client before sending 
 
 #### Setting up SSL
 
-* On [Galaxy](https://guide.meteor.com/deployment#galaxy), configuration of SSL is automatic. [See the help article about SSL on Galaxy](https://help.galaxycloud.app/en/article/encryption-pt8wbl/).
-* If you are running on your own [infrastructure](https://guide.meteor.com/deployment#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
+* On [Galaxy](/tutorials/deployment/deployment#galaxy-cloud-recommended), configuration of SSL is automatic. [See the help article about SSL on Galaxy](https://help.galaxycloud.app/en/article/encryption-pt8wbl/).
+* If you are running on your own [infrastructure](/tutorials/deployment/deployment#custom-deployment), there are a few options for setting up SSL, mostly through configuring a proxy web server. See the articles: [Josh Owens on SSL and Meteor](http://joshowens.me/ssl-and-meteor-js/), [SSL on Meteorpedia](http://www.meteorpedia.com/read/SSL), and [Digital Ocean tutorial with an Nginx config](https://www.digitalocean.com/community/tutorials/how-to-deploy-a-meteor-js-application-on-ubuntu-14-04-with-nginx).
 
 #### Forcing SSL
 
@@ -470,7 +470,7 @@ Generally speaking, all production HTTP requests should go over HTTPS, and all W
 
 It's best to handle the redirection from HTTP to HTTPS on the platform which handles the SSL certificates and termination.
 
-* On [Galaxy](https://guide.meteor.com/deployment#galaxy), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
+* On [Galaxy](/tutorials/deployment/deployment#galaxy-cloud-recommended), enable the "Force HTTPS" setting on a specific domain in the "Domains & Encryption" section of the application's "Settings" tab.
 * Other deployments *may* have control panel options or may need to be manually configured on the proxy server (e.g. HAProxy, nginx, etc.). The articles linked above provide some assistance on this.
 
 In the event that a platform does not offer the ability to configure this, the `force-ssl` package can be added to the project and Meteor will attempt to intelligently redirect based on the presence of the `x-forwarded-for` header.
@@ -708,7 +708,7 @@ This is a collection of points to check about your app that might catch common e
 1. Make sure your app doesn't have the `insecure` or `autopublish` packages.
 1. Validate all Method and publication arguments, and include the `audit-argument-checks` to check this automatically.
 1. Apply rate limiting to your application to prevent DDoS attacks.
-1. [Deny writes to the `profile` field on user documents.](https://guide.meteor.com/accounts#dont-use-profile)
+1. [Deny writes to the `profile` field on user documents.](/tutorials/accounts/accounts#dont-use-profile)
 1. [Use Methods instead of client-side insert/update/remove and allow/deny.](#avoid-allow-deny)
 1. Use specific selectors and [filter fields](#always-restrict-fields) in publications.
 1. Don't use [raw HTML inclusion in Blaze](http://blazejs.org/guide/spacebars.html#Rendering-raw-HTML) unless you really know what you are doing.

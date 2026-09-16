@@ -5,7 +5,6 @@ var config = require('./config.js');
 var httpHelpers = require('../utils/http-helpers.js');
 var fiberHelpers = require('../utils/fiber-helpers.js');
 var querystring = require('querystring');
-var url = require('url');
 var Console = require('../console/console.js').Console;
 
 var auth = exports;
@@ -377,8 +376,8 @@ var sendAuthorizeRequest = async function (clientId, redirectUri, state) {
     throw new Error('access-denied');
   }
 
-  if (url.parse(response.headers.location).hostname !==
-      url.parse(redirectUri).hostname) {
+  if (new URL(response.headers.location).hostname !==
+      new URL(redirectUri).hostname) {
     // If we didn't get an immediate redirect to the redirectUri then
     // presumably the oauth server is trying to interact with us (make
     // us log in, authorize the client, or something like that). We're

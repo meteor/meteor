@@ -148,3 +148,29 @@ Tinytest.addAsync('inter-process-messaging - exotic payloads', async (test) => {
   test.ok(map2 !== map);
   checkMap(map2);
 });
+Tinytest.addAsync('inter-process-messaging - uuid v4 format validation', async function (test) {
+  const proc = new FakeChildProcess;
+
+  let capturedId = null;
+
+  const originalSend = proc.child.parent.send.bind(proc.child.parent);
+  proc.child.parent.send = function (message, cb) {
+    if (message.responseId) {
+      capturedId = message.responseId;
+    }
+    return originalSend(message, cb);
+  };
+
+  proc.child.onMessage("uuid-test", () => "ok");
+  await proc.sendMessage("uuid-test");
+
+  test.isTrue(!!capturedId, "UUID should be generated");
+
+  const uuidV4Regex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  test.isTrue(
+    uuidV4Regex.test(capturedId),
+    `UUID should match v4 format: ${capturedId}`
+  );
+});
