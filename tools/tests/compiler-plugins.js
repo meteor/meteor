@@ -22,6 +22,10 @@ async function startRun(sandbox) {
 
 // Tests the actual cache logic used by coffeescript.
 selftest.define("compiler plugin caching - coffee", async () => {
+  // Enable legacy builds for testing.
+  const currentMeteorModern = process.env.METEOR_MODERN;
+  process.env.METEOR_MODERN = '{ "webArchOnly": false }';
+
   var s = new Sandbox({ fakeMongo: true });
   await s.init();
 
@@ -134,6 +138,8 @@ selftest.define("compiler plugin caching - coffee", async () => {
   await run.match('Coffeescript X is 2 Y is edited FromPackage is 5');
 
   await run.stop();
+
+  process.env.METEOR_MODERN = currentMeteorModern;
 });
 
 // Tests the actual cache logic used by less and stylus.
@@ -142,6 +148,10 @@ selftest.define("compiler plugin caching - coffee", async () => {
   const hasCompileOneFileLaterSupport = packageName === "less";
 
   selftest.define("compiler plugin caching - " + packageName, async () => {
+    // Enable legacy builds for testing.
+    const currentMeteorModern = process.env.METEOR_MODERN;
+    process.env.METEOR_MODERN = '{ "webArchOnly": false }';
+
     var s = new Sandbox({ fakeMongo: true });
     await s.init();
 
@@ -319,6 +329,8 @@ selftest.define("compiler plugin caching - coffee", async () => {
     await run.match('Waiting for file change');
 
     await run.stop();
+
+    process.env.METEOR_MODERN = currentMeteorModern;
   });
 });
 
@@ -366,6 +378,114 @@ selftest.define("compiler plugin caching - local plugin", async function () {
   await run.match("pmc: Print out bar");
   await run.match("pmc: Print out foo");
   await run.match("pmc: And print out quux");
+
+  await run.stop();
+});
+
+// Tests that SwcCompiler properly applies SWC compilation on JS files
+selftest.define("compiler plugin caching - local plugin with SwcCompiler", async function () {
+  var s = new Sandbox({ fakeMongo: true });
+  await s.init();
+
+  process.env.METEOR_DISABLE_COLORS = true;
+
+  // Create a new app based on local-compiler-plugin
+  await s.createApp("myapp", "local-compiler-plugin");
+  s.cd("myapp");
+
+  // Create a JavaScript file to test SWC compilation
+  s.write("test.js", "const message = 'Hello from SWC'; console.log(message);");
+
+  // Modify the local plugin to use SwcCompiler for JS files
+  s.write('packages/local-plugin/plugin.js', `
+var fs = Plugin.fs;
+var path = Plugin.path;
+
+// Import SwcCompiler from babel-compiler package
+var SwcCompiler = Package['babel-compiler'].SwcCompiler;
+
+// Register compiler for .js files using SwcCompiler
+Plugin.registerCompiler({
+  extensions: ['js'],
+  archMatching: 'os'
+}, function () {
+  return new SwcJsCompiler();
+});
+
+// SwcCompiler for JS files
+var SwcJsCompiler = function () {
+  var self = this;
+  self.runCount = 0;
+  self.diskCache = null;
+
+  // Create an instance of the SwcCompiler with swc: true
+  self.compiler = new SwcCompiler({ verbose: true });
+};
+SwcJsCompiler.prototype.processFilesForTarget = function (inputFiles) {
+  var self = this;
+
+  // Use the SwcCompiler to process the files
+  self.compiler.processFilesForTarget(inputFiles);
+
+  console.log("SwcJsCompiler invocation", ++self.runCount);
+  if (self.diskCache) {
+    fs.writeFileSync(self.diskCache, self.runCount + '\\n');
+  }
+};
+SwcJsCompiler.prototype.setDiskCacheDirectory = function (diskCacheDir) {
+  var self = this;
+  self.diskCache = path.join(diskCacheDir, 'swc-cache');
+
+  // Pass the disk cache directory to the SwcCompiler
+  if (self.compiler && self.compiler.setDiskCacheDirectory) {
+    self.compiler.setDiskCacheDirectory(diskCacheDir);
+  }
+
+  try {
+    var data = fs.readFileSync(self.diskCache, 'utf8');
+  } catch (e) {
+    if (e.code !== 'ENOENT')
+      throw e;
+    return;
+  }
+  self.runCount = parseInt(data, 10);
+};
+`);
+
+  // Update package.js to use babel-compiler
+  s.write('packages/local-plugin/package.js', `
+Package.registerBuildPlugin({
+  name: "compileWithSwc",
+  sources: ['plugin.js'],
+  use: ['babel-compiler']
+});
+
+Package.onUse(function (api) {
+  api.use('isobuild:compiler-plugin@1.0.0');
+  api.use('babel-compiler');
+});
+`);
+
+  var run = await startRun(s);
+
+  // The SwcJsCompiler gets used
+  await run.match("SwcJsCompiler invocation 1", false, true);
+
+  // Verify that SWC compilation is being applied
+  // This is indicated by the SWC verbose log message from babel-compiler.js
+  await run.match(/\[Transpiler] Used SWC.*\(app\)/, false, true);
+
+  // Modify the JS file to test recompilation
+  s.write("test.js", "const message = 'Updated SWC message'; console.log(message);");
+  // SwcJsCompiler gets reused
+  await run.match("SwcJsCompiler invocation 2", false, true);
+
+  // Restart meteor to test disk cache
+  await run.stop();
+  run = await startRun(s);
+
+  // Disk cache gets us up to 3 for SwcJsCompiler
+  await run.match("SwcJsCompiler invocation 3", false, true);
 
   await run.stop();
 });
@@ -566,4 +686,36 @@ selftest.define("compiler plugins - addAssets", async () => {
   await run.match(/requires a second argument/);
 
   await run.stop();
+});
+
+// Regression test for issue #10366: a lazily-compiled file (under imports/)
+// whose compilation fails used to have its error silently swallowed -- the
+// build succeeded and the only symptom was a runtime "Cannot find module"
+// error when the file was imported. Now the deferred compile error is surfaced
+// and fails the build when the file is actually imported, while unimported
+// broken lazy files remain harmless.
+selftest.define("compiler plugins - lazy compile error is reported", async () => {
+  const s = new Sandbox();
+  await s.init();
+
+  await s.createApp("myapp", "compiler-plugin-lazy-error");
+  s.cd("myapp");
+
+  // The default client/main.js imports the broken lazy file, so the deferred
+  // compile error must fail the build instead of being swallowed.
+  let run = s.run("--once");
+  run.waitSecs(60);
+  await run.matchErr("Build failed");
+  await run.matchErr("imports/broken.bork:1: BorkCompiler: simulated compile error");
+  // 254 is the exit code meteor uses under --once when the app cannot start
+  // (here, because the build failed).
+  await run.expectExit(254);
+
+  // If the broken lazy file is NOT imported, the build must still succeed:
+  // unimported broken lazy files stay harmless (the error stays deferred).
+  s.write("client/main.js", "require('/imports/ok.bork');\n");
+  run = s.run("--once");
+  run.waitSecs(60);
+  await run.match("BORK_APP_STARTED");
+  await run.expectExit(0);
 });

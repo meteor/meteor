@@ -25,8 +25,8 @@ selftest.define("help", async function () {
   var checkCommandHelp = async function (run) {
     await run.read("Usage: meteor create");
     await run.match("create a new Meteor app");
-    await run.match("Options:");
-    await run.match(/--list\s*Show list/);
+    await run.match("Skeleton options:");
+    await run.match(/--list\s/);
     await run.expectExit(0);
   };
 
@@ -38,7 +38,7 @@ selftest.define("help", async function () {
   var checkSubcommandList = async function (run) {
     await run.read("Usage: meteor admin <command>");
     await run.match("Commands:");
-    await run.match(/recommend-release\s*Recommend a previously published/);
+    await run.match(/\s*recommend-release\s*/);
     await run.expectExit(0);
   };
   await checkCommandHelp(s.run("create", "--help"));

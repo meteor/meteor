@@ -99,12 +99,16 @@ Tinytest.addAsync(
   'accounts async - Meteor.loggingIn() is false after login has completed',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
-      // Login then verify loggingIn is false after login has completed
-      Meteor.loginWithPassword(username, password, async () => {
+      (async () => {
+        const loginDetails = await Meteor.loginWithPasswordAsync(username, password);
         test.isFalse(Meteor.loggingIn());
         test.isTrue(await Meteor.userAsync());
-        removeTestUser(done);
-      });
+        test.equal(loginDetails.type, 'password');
+        test.equal(loginDetails.id, Meteor.userId());
+        test.isTrue(!!loginDetails.token);
+      })()
+        .catch((error) => test.fail(error.message))
+        .finally(() => removeTestUser(done));
     });
   }
 );
@@ -125,12 +129,13 @@ Tinytest.addAsync(
   'accounts - Meteor.loggingOut() is false after logout has completed',
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
-      // Logout then verify loggingOut is false after logout has completed
-      Meteor.logout((error) => {
-        test.isFalse(Meteor.user());
-        test.isFalse(Meteor.loggingOut());
-        removeTestUser(done);
-      });
+      Meteor.logoutAsync()
+        .then(async () => {
+          test.isFalse(await Meteor.userAsync());
+          test.isFalse(Meteor.loggingOut());
+        })
+        .catch(error => test.fail(error.message))
+        .finally(() => removeTestUser(done));
     });
   }
 );
@@ -144,6 +149,210 @@ Tinytest.addAsync(
       removeTestUser(done);
     });
     logoutAndCreateUser(test, done, () => {});
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLogin non-async callback works correctly',
+  (test, done) => {
+    const onLogin = Accounts.onLogin((loginDetails) => {
+      // Non-async callback — should still work with forEachAsync
+      test.isTrue(loginDetails !== undefined);
+      test.equal('password', loginDetails.type);
+      onLogin.stop();
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {
+      Meteor.loginWithPassword(username, password, (err) => {
+        test.isFalse(!!err);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLogin async callback works correctly',
+  (test, done) => {
+    const onLogin = Accounts.onLogin(async (loginDetails) => {
+      const user = await Meteor.userAsync();
+      test.isTrue(user !== undefined);
+      test.equal('password', loginDetails.type);
+      onLogin.stop();
+      removeTestUser(done);
+    });
+    logoutAndCreateUser(test, done, () => {
+      Meteor.loginWithPassword(username, password, (err) => {
+        test.isFalse(!!err);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLoginFailure non-async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      Meteor.logout(() => {
+        const onLoginFailure = Accounts.onLoginFailure(({ error }) => {
+          test.isTrue(error !== undefined);
+          onLoginFailure.stop();
+          removeTestUser(done);
+        });
+        Meteor.loginWithPassword(username, 'wrongpassword', (err) => {
+          test.isTrue(!!err);
+        });
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLoginFailure async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      Meteor.logout(async () => {
+        const onLoginFailure = Accounts.onLoginFailure(async ({ error }) => {
+          test.isTrue(error !== undefined);
+          const user = await Meteor.userAsync();
+          test.isFalse(!!user);
+          onLoginFailure.stop();
+          removeTestUser(done);
+        });
+        Meteor.loginWithPassword(username, 'wrongpassword', (err) => {
+          test.isTrue(!!err);
+        });
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts - onLogout non-async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogout = Accounts.onLogout(() => {
+        // callback fired — logout hook works with sync function
+        onLogout.stop();
+        removeTestUser(done);
+      });
+      Meteor.logout();
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLogout async callback works correctly',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogout = Accounts.onLogout(async () => {
+        // onLogout fires before setUserId(null), so user is still available
+        const user = await Meteor.userAsync();
+        test.isTrue(!!user);
+        onLogout.stop();
+        removeTestUser(done);
+      });
+      Meteor.logout();
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLogout async callback failure still logs out client',
+  (test, done) => {
+    logoutAndCreateUser(test, done, () => {
+      const onLogout = Accounts.onLogout(async () => {
+        onLogout.stop();
+        throw new Error('Expected onLogout failure');
+      });
+
+      Meteor.logout(async (error) => {
+        test.equal(error?.message, 'Expected onLogout failure');
+        test.isFalse(!!(await Meteor.userAsync()));
+        test.isFalse(Meteor.loggingOut());
+        removeTestUser(done);
+      });
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - async userCallback completes its async work',
+  (test, done) => {
+    logoutAndCreateUser(test, done, async () => {
+      await new Promise((resolve, reject) => {
+        Meteor.logout(() => {
+          Meteor.loginWithPassword(username, password, (err) => {
+            void (async () => {
+              test.isFalse(!!err);
+              const user = await Meteor.userAsync();
+              test.isTrue(!!user);
+              resolve();
+            })().catch(reject);
+          });
+        });
+      });
+
+      removeTestUser(done);
+    });
+  }
+);
+
+Tinytest.addAsync(
+  'accounts async - onLogin callback failure does not leave Meteor.loggingIn() stuck',
+  async test => {
+    const rejectionMessage = 'Expected onLogin failure';
+    const handleUnhandledRejection = event => {
+      if (event.reason?.message === rejectionMessage) {
+        event.preventDefault();
+      }
+    };
+    const logout = () => new Promise(resolve => Meteor.logout(resolve));
+
+    globalThis.addEventListener?.('unhandledrejection', handleUnhandledRejection);
+
+    let onLogin;
+    try {
+      await logout();
+      test.isFalse(await Meteor.userAsync());
+
+      await new Promise((resolve, reject) => {
+        Accounts.createUser({ username, password, profile }, error => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        });
+      });
+
+      await logout();
+      test.isFalse(await Meteor.userAsync());
+
+      onLogin = Accounts.onLogin(async () => {
+        onLogin.stop();
+        await Promise.resolve();
+        throw new Error(rejectionMessage);
+      });
+
+      Meteor.loginWithPassword(username, password, error => {
+        test.isFalse(!!error);
+      });
+
+      await waitUntil(async () => !!(await Meteor.userAsync()), {
+        timeout: 5000,
+        interval: 50,
+        description: 'waiting for login before checking Meteor.loggingIn()',
+      });
+      await new Promise(resolve => Meteor.setTimeout(resolve, 0));
+
+      test.isFalse(Meteor.loggingIn());
+    } finally {
+      onLogin?.stop();
+      globalThis.removeEventListener?.('unhandledrejection', handleUnhandledRejection);
+      await logout();
+      await Meteor.callAsync('removeAccountsTestUser', username);
+    }
   }
 );
 
@@ -281,8 +490,19 @@ Tinytest.addAsync(
   (test, done) => {
     logoutAndCreateUser(test, done, () => {
       // Generates secret
-      Accounts.generate2faActivationQrCode('test', (err, svg) => {
-        test.isTrue(svg != null);
+      Accounts.generate2faActivationQrCode('test', (err, result) => {
+        test.equal(err, undefined);
+        test.isTrue(!!result);
+        test.isTrue(result?.svg != null);
+        test.isTrue(/^[A-Z2-7]+$/.test(result?.secret || ''));
+        test.isTrue(/^otpauth:\/\/totp\/.+[?&]secret=/.test(result?.uri || ''));
+        test.isTrue((result?.uri || '').includes(`secret=${result?.secret}`));
+
+        if (!result) {
+          removeTestUser(done);
+          return;
+        }
+
         getTokenFromSecret(token => {
           // enable 2fa
           Accounts.enableUser2fa(token, () => {
@@ -302,48 +522,65 @@ Tinytest.addAsync(
         });
       });
     });
-  }
+  },
 );
 
-Tinytest.addAsync('accounts - storage',
-  async function(test) {
-    const expectWhenSessionStorage = () => {
-      test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'));
-      test.isNull(localStorage.getItem('Meteor.loginToken'));
-    };
-    const expectWhenLocalStorage = () => {
-      test.isNotUndefined(localStorage.getItem('Meteor.loginToken'));
-      test.isNull(sessionStorage.getItem('Meteor.loginToken'));
-    };
+Tinytest.addAsync('accounts - logoutAllClients', function (test, done) {
+  logoutAndCreateUser(test, done, async () => {
+    const userId = Meteor.userId();
+    test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 1);
+    await Meteor.callAsync('pushFakeLoginToken', userId, 'test-token');
+    await Meteor.callAsync('pushFakeLoginToken', userId, 'test-token2');
+    test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 3);
+    Meteor.logoutAllClientsAsync()
+      .then(async () => {
+        test.isFalse(!!Meteor.user());
+        test.equal(await Meteor.callAsync('getLoginTokenCount', userId), 0);
+      })
+      .catch(error => test.fail(error.message))
+      .finally(() => removeTestUser(done));
+  });
+});
 
-    const testCases = [{
+Tinytest.addAsync('accounts - storage', async function (test) {
+  const expectWhenSessionStorage = () => {
+    test.isNotUndefined(sessionStorage.getItem('Meteor.loginToken'));
+    test.isNull(localStorage.getItem('Meteor.loginToken'));
+  };
+  const expectWhenLocalStorage = () => {
+    test.isNotUndefined(localStorage.getItem('Meteor.loginToken'));
+    test.isNull(sessionStorage.getItem('Meteor.loginToken'));
+  };
+
+  const testCases = [{
       clientStorage: undefined,
       expectStorage: expectWhenLocalStorage,
-    }, {
+    },
+    {
       clientStorage: 'local',
       expectStorage: expectWhenLocalStorage,
-    }, {
-      clientStorage: 'session',
-      expectStorage: expectWhenSessionStorage,
-    }];
-    for await (const testCase of testCases) {
-      await new Promise(resolve => {
-        sessionStorage.clear();
-        localStorage.clear();
+  }, {
+    clientStorage: 'session',
+    expectStorage: expectWhenSessionStorage,
+  }];
+  for await (const testCase of testCases) {
+    await new Promise(resolve => {
+      sessionStorage.clear();
+      localStorage.clear();
 
-        const { clientStorage, expectStorage } = testCase;
-        Accounts.config({ clientStorage });
-        test.equal(Accounts._options.clientStorage, clientStorage);
+      const { clientStorage, expectStorage } = testCase;
+      Accounts.config({ clientStorage });
+      test.equal(Accounts._options.clientStorage, clientStorage);
 
-        // Login a user and test that tokens are in expected storage
-        logoutAndCreateUser(test, resolve, () => {
-          Accounts.logout();
-          expectStorage();
-          removeTestUser(resolve);
-        });
+      // Login a user and test that tokens are in expected storage
+      logoutAndCreateUser(test, resolve, () => {
+        Accounts.logout();
+        expectStorage();
+        removeTestUser(resolve);
       });
-    }
-  });
+    });
+  }
+});
 
 Tinytest.addAsync('accounts - should only start subscription when connected', async function (test) {
   const { conn, messages, cleanup } = await captureConnectionMessagesClient(test);
@@ -354,7 +591,7 @@ Tinytest.addAsync('accounts - should only start subscription when connected', as
 
   acc.callLoginMethod()
 
-  await Meteor._sleepForMs(100);
+  await Meteor._sleepForMs(500);
 
   // The sub call needs to come right after `connect` since this is when `status().connected` gets to be true and
   // not after `connected` as it is based on the socket connection status.

@@ -2,6 +2,8 @@ import isEmpty from 'lodash.isempty';
 import { Meteor } from 'meteor/meteor';
 import { CursorDescription } from './cursor_description';
 import { MongoConnection } from './mongo_connection';
+import { isIgnorableAdminCommand } from './oplog_admin_command';
+import { replicaSetOplogError } from './oplog_replica_set_error';
 
 import { NpmModuleMongodb } from "meteor/npm-mongo";
 const { Long } = NpmModuleMongodb;
@@ -37,13 +39,17 @@ export class OplogHandle {
   public _dbName: string;
   private _oplogLastEntryConnection: MongoConnection | null;
   private _oplogTailConnection: MongoConnection | null;
-  private _oplogOptions: { excludeCollections?: string[]; includeCollections?: string[] } | null;
+  private _oplogOptions: {
+    excludeCollections?: string[];
+    includeCollections?: string[];
+  };
+  private _includeNSRegex?: RegExp;
+  private _excludeNSRegex?: RegExp;
   private _stopped: boolean;
   private _tailHandle: any;
   private _readyPromiseResolver: (() => void) | null;
   private _readyPromise: Promise<void>;
   public _crossbar: any;
-  private _baseOplogSelector: any;
   private _catchingUpResolvers: CatchingUpResolver[];
   private _lastProcessedTS: any;
   private _onSkippedEntriesHook: any;
@@ -61,29 +67,36 @@ export class OplogHandle {
     this._resolveTimeout = null;
     this._oplogLastEntryConnection = null;
     this._oplogTailConnection = null;
-    this._oplogOptions = null;
     this._stopped = false;
     this._tailHandle = null;
     this._readyPromiseResolver = null;
-    this._readyPromise = new Promise(r => this._readyPromiseResolver = r);
+    this._readyPromise = new Promise(r => this._readyPromiseResolver = r); 
     this._crossbar = new DDPServer._Crossbar({
       factPackage: "mongo-livedata", factName: "oplog-watchers"
     });
-    this._baseOplogSelector = {
-      ns: new RegExp("^(?:" + [
-        // @ts-ignore
-        Meteor._escapeRegExp(this._dbName + "."),
-        // @ts-ignore
-        Meteor._escapeRegExp("admin.$cmd"),
-      ].join("|") + ")"),
 
-      $or: [
-        { op: { $in: ['i', 'u', 'd'] } },
-        { op: 'c', 'o.drop': { $exists: true } },
-        { op: 'c', 'o.dropDatabase': 1 },
-        { op: 'c', 'o.applyOps': { $exists: true } },
-      ]
-    };
+    const includeCollections =
+      Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
+    const excludeCollections =
+      Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
+    if (includeCollections?.length && excludeCollections?.length) {
+      throw new Error(
+        "Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time."
+      );
+    }
+    this._oplogOptions = { includeCollections, excludeCollections };
+
+    if (includeCollections?.length) {
+      const incAlt = includeCollections.map((c) => Meteor._escapeRegExp(c)).join('|');
+
+      this._includeNSRegex = new RegExp(`^${Meteor._escapeRegExp(this._dbName)}\\.(?:${incAlt})$`);
+    }
+
+    if (excludeCollections?.length) {
+      const excAlt = excludeCollections.map((c) => Meteor._escapeRegExp(c)).join('|');
+
+      this._excludeNSRegex = new RegExp(`^${Meteor._escapeRegExp(this._dbName)}\\.(?:${excAlt})$`);
+    }
 
     this._catchingUpResolvers = [];
     this._lastProcessedTS = null;
@@ -93,6 +106,91 @@ export class OplogHandle {
     });
 
     this._startTrailingPromise = this._startTailing();
+  }
+
+    private _nsAllowed(ns: string | undefined): boolean {
+    if (!ns) return false;
+    if (ns === 'admin.$cmd') return true;
+    if (this._includeNSRegex && !this._includeNSRegex.test(ns)) return false;
+    if (this._excludeNSRegex && this._excludeNSRegex.test(ns)) return false;
+
+    return true;
+  }
+
+  private _getOplogSelector(lastProcessedTS?: any): any {
+    const oplogCriteria: any = [
+      {
+        $or: [
+          { op: { $in: ["i", "u", "d"] } },
+          { op: "c", "o.drop": { $exists: true } },
+          { op: "c", "o.dropDatabase": 1 },
+          { op: "c", "o.applyOps": { $exists: true } },
+        ],
+      },
+    ];
+
+    if (this._oplogOptions.excludeCollections?.length) {
+      const nsRegex = new RegExp(
+        '^(?:' +
+          [
+            // @ts-ignore
+            Meteor._escapeRegExp(this._dbName + '.'),
+          ].join('|') +
+          ')'
+      );
+      const excludeNs = {
+        $regex: nsRegex,
+        $nin: this._oplogOptions.excludeCollections.map(
+          (collName: string) => `${this._dbName}.${collName}`
+        ),
+      };
+      oplogCriteria.push({
+        $or: [
+          { ns: excludeNs },
+          {
+            ns: /^admin\.\$cmd/,
+            'o.applyOps': { $elemMatch: { ns: excludeNs } },
+          },
+        ],
+      });
+    } else if (this._oplogOptions.includeCollections?.length) {
+      const includeNs = {
+        $in: this._oplogOptions.includeCollections.map(
+          (collName: string) => `${this._dbName}.${collName}`
+        ),
+      };
+      oplogCriteria.push({
+        $or: [
+          {
+            ns: includeNs,
+          },
+          { ns: /^admin\.\$cmd/, 'o.applyOps.ns': includeNs },
+        ],
+      });
+    } else {
+      const nsRegex = new RegExp(
+        "^(?:" +
+          [
+            // @ts-ignore
+            Meteor._escapeRegExp(this._dbName + "."),
+            // @ts-ignore
+            Meteor._escapeRegExp("admin.$cmd"),
+          ].join("|") +
+          ")"
+      );
+      oplogCriteria.push({
+        ns: nsRegex,
+      });
+    }
+    if(lastProcessedTS) {
+      oplogCriteria.push({
+        ts: { $gt: lastProcessedTS },
+      });
+    }
+
+    return {
+      $and: oplogCriteria,
+    };
   }
 
   async stop(): Promise<void> {
@@ -156,10 +254,11 @@ export class OplogHandle {
     let lastEntry: OplogEntry | null = null;
 
     while (!this._stopped) {
+      const oplogSelector = this._getOplogSelector();
       try {
         lastEntry = await this._oplogLastEntryConnection.findOneAsync(
           OPLOG_COLLECTION,
-          this._baseOplogSelector,
+          oplogSelector,
           { projection: { ts: 1 }, sort: { $natural: -1 } }
         );
         break;
@@ -228,8 +327,9 @@ export class OplogHandle {
         .admin()
         .command({ ismaster: 1 });
 
-      if (!(isMasterDoc && isMasterDoc.setName)) {
-        throw new Error("$MONGO_OPLOG_URL must be set to the 'local' database of a Mongo replica set");
+      const oplogError = replicaSetOplogError(isMasterDoc);
+      if (oplogError) {
+        throw new Error(oplogError);
       }
 
       const lastOplogEntry = await this._oplogLastEntryConnection.findOneAsync(
@@ -238,39 +338,9 @@ export class OplogHandle {
         { sort: { $natural: -1 }, projection: { ts: 1 } }
       );
 
-      let oplogSelector: any = { ...this._baseOplogSelector };
+      const oplogSelector = this._getOplogSelector(lastOplogEntry?.ts);
       if (lastOplogEntry) {
-        oplogSelector.ts = { $gt: lastOplogEntry.ts };
         this._lastProcessedTS = lastOplogEntry.ts;
-      }
-
-      const includeCollections = Meteor.settings?.packages?.mongo?.oplogIncludeCollections;
-      const excludeCollections = Meteor.settings?.packages?.mongo?.oplogExcludeCollections;
-
-      if (includeCollections?.length && excludeCollections?.length) {
-        throw new Error("Can't use both mongo oplog settings oplogIncludeCollections and oplogExcludeCollections at the same time.");
-      }
-
-      if (excludeCollections?.length) {
-        oplogSelector.ns = {
-          $regex: oplogSelector.ns,
-          $nin: excludeCollections.map((collName: string) => `${this._dbName}.${collName}`)
-        };
-        this._oplogOptions = { excludeCollections };
-      } else if (includeCollections?.length) {
-        oplogSelector = {
-          $and: [
-            {
-              $or: [
-                { ns: /^admin\.\$cmd/ },
-                { ns: { $in: includeCollections.map((collName: string) => `${this._dbName}.${collName}`) } }
-              ]
-            },
-            { $or: oplogSelector.$or },
-            { ts: oplogSelector.ts }
-          ]
-        };
-        this._oplogOptions = { includeCollections };
       }
 
       const cursorDescription = new CursorDescription(
@@ -370,7 +440,10 @@ export function idForOp(op: OplogEntry): string {
   }
 }
 
-async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
+// Exported so the admin.$cmd handling can be exercised end-to-end in tests
+// (see tests/oplog_admin_command_tests.js); not part of the package's public
+// API.
+export async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
   if (doc.ns === "admin.$cmd") {
     if (doc.o.applyOps) {
       // This was a successful transaction, so we need to apply the
@@ -382,8 +455,17 @@ async function handleDoc(handle: OplogHandle, doc: OplogEntry): Promise<void> {
           op.ts = nextTimestamp;
           nextTimestamp = nextTimestamp.add(Long.ONE);
         }
+        // Only forward sub-ops whose ns is allowed
+        // See https://github.com/meteor/meteor/issues/13945
+        if (!handle['_nsAllowed'](op.ns)) {
+          continue;
+        }
         await handleDoc(handle, op);
       }
+      return;
+    }
+    if (isIgnorableAdminCommand(doc)) {
+      // No db-qualified namespace to map to a collection; safe to skip.
       return;
     }
     throw new Error("Unknown command " + JSON.stringify(doc));

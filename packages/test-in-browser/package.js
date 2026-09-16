@@ -1,11 +1,12 @@
 Package.describe({
   summary: "Run tests interactively in the browser",
-  version: '1.4.0',
+  version: '1.6.0',
   documentation: null
 });
 
 Npm.depends({
   'bootstrap': '4.3.1',
+  'diff': '8.0.2'
 });
 
 Package.onUse(function (api) {
@@ -22,7 +23,6 @@ Package.onUse(function (api) {
     'blaze',
     'templating',
     'spacebars',
-    'jquery@3.0.0',
     'ddp',
     'tracker',
   ], 'client');

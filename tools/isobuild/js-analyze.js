@@ -4,6 +4,7 @@ import LRUCache from "lru-cache";
 import { Profile } from '../tool-env/profile';
 import Visitor from "@meteorjs/reify/lib/visitor.js";
 import { findPossibleIndexes } from "@meteorjs/reify/lib/utils.js";
+import acorn from 'acorn';
 
 const hasOwn = Object.prototype.hasOwnProperty;
 const objToStr = Object.prototype.toString
@@ -15,7 +16,9 @@ function isRegExp(value) {
 var AST_CACHE = new LRUCache({
   max: Math.pow(2, 12),
   length(ast) {
-    return ast.loc.end.line;
+    // Estimate cached lines based on average length per character
+    const avgCharsPerLine = 40;
+    return Math.ceil(ast.end / avgCharsPerLine);
   }
 });
 
@@ -28,20 +31,32 @@ function tryToParse(source, hash) {
   let ast;
   try {
     Profile.time('jsAnalyze.parse', () => {
-      ast = parse(source, {
-        strictMode: false,
-        sourceType: 'module',
-        allowImportExportEverywhere: true,
-        allowReturnOutsideFunction: true,
-        allowUndeclaredExports: true,
-        plugins: [
-          // Only plugins for stage 3 features are enabled
-          // Enabling some plugins significantly affects parser performance
-          'importAttributes',
-          'explicitResourceManagement',
-          'decorators'
-        ]
-      });
+      try {
+        ast = acorn.parse(source, {
+          ecmaVersion: 'latest',
+          sourceType: 'script',
+          allowAwaitOutsideFunction: true,
+          allowImportExportEverywhere: true,
+          allowReturnOutsideFunction: true,
+          allowHashBang: true,
+          checkPrivateFields: false,
+        });
+      } catch (error) {
+        ast = parse(source, {
+          strictMode: false,
+          sourceType: 'module',
+          allowImportExportEverywhere: true,
+          allowReturnOutsideFunction: true,
+          allowUndeclaredExports: true,
+          plugins: [
+            // Only plugins for stage 3 features are enabled
+            // Enabling some plugins significantly affects parser performance
+            'importAttributes',
+            'explicitResourceManagement',
+            'decorators'
+          ]
+        });
+      }
     });
   } catch (e) {
     if (typeof e.loc === 'object') {

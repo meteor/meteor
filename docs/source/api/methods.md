@@ -241,8 +241,8 @@ Here's example of defining a rule and adding it into the `DDPRateLimiter`:
 ```js
 // Define a rule that matches login attempts by non-admin users.
 const loginRule = {
-  userId(userId) {
-    const user = Meteor.users.findOne(userId);
+  async userId(userId) {
+    const user = await Meteor.users.findOneAsync(userId);
     return user && user.type !== 'admin';
   },
 
@@ -266,8 +266,8 @@ default English error message.
 Here is an example with a custom error message:
 ```js
 const setupGoogleAuthenticatorRule = {
-  userId(userId) {
-    const user = Meteor.users.findOne(userId);
+  async userId(userId) {
+    const user = await Meteor.users.findOneAsync(userId);
     return user;
   },
   type: 'method',

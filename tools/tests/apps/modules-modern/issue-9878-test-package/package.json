@@ -1,0 +1,8 @@
+{
+  "name": "issue-9878-test-package",
+  "main": "main.js",
+  "_stripped": true,
+  "nested": {
+    "_stripped": false
+  }
+}

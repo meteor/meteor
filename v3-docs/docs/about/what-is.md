@@ -29,7 +29,7 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 
 - Start by learning how to install Meteor in the [Installation Section](/about/install.html).
 
-- The tutorials are the perfect place to start. Build a simple app to manage a task list! Available for [React](/tutorials/react/index.html), and [Vue 3](/tutorials/vue/meteorjs3-vue3-vue-meteor-tracker.html). Blaze and Svelte tutorials are coming soon.
+- The tutorials are the perfect place to start. Build a simple app to manage a task list! Available for [React](/tutorials/react/index.html), [Vue 3](/tutorials/vue/meteorjs3-vue3.html), [Solid](/tutorials/solid/index.html), [Blaze](/tutorials/blaze/index.html) and [Svelte 5](/tutorials/svelte/index.html).
 
 - Participate in Meteor's fully professional, engaging and interactive online school. Join [Meteor University](https://university.meteor.com/). Our courses cover Meteor 2 but most of the content is still relevant.
 
@@ -38,8 +38,6 @@ Meteor is a full-stack JavaScript platform for developing modern web and mobile 
 ### Developer Resources
 
 - Explore and contribute to our [GitHub repository](https://github.com/meteor). You can access our code, request new features, and start contributing.
-
-- Enhance your coding experience with the [VS Code Extension](https://marketplace.visualstudio.com/items?itemName=meteor-toolbox.meteor-toolbox), which provides IntelliSense support for Meteor's core and packages.
 
 - Use the [Chrome Extension](https://chrome.google.com/webstore/detail/meteor-devtools-evolved/ibniinmoafhgbifjojidlagmggecmpgf) or [Firefox Extension](https://addons.mozilla.org/en-US/firefox/addon/meteor-devtools-evolved/) for insights into your app's performance and to understand what is going on under the hood of your application.
 

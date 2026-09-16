@@ -1,6 +1,5 @@
 # Modern-browsers
 
-
 API for defining the boundary between modern and legacy JavaScript clients.
 
 You can use this package to define the minimum browser versions for which
@@ -10,13 +9,13 @@ on using modern features that you need.
 
 You can read more about this in [Meteor 1.7 announcement blog](https://blog.meteor.com/meteor-1-7-and-the-evergreen-dream-a8c1270b0901).
 
-<ApiBox name="ModernBrowsers.isModern" />
+<ApiBox name="ModernBrowsers.isModern" isDefaultImport/>
 
-<ApiBox name="ModernBrowsers.setMinimumBrowserVersions" />
+<ApiBox name="ModernBrowsers.setMinimumBrowserVersions" isDefaultImport/>
 
-<ApiBox name="ModernBrowsers.getMinimumBrowserVersions" />
+<ApiBox name="ModernBrowsers.getMinimumBrowserVersions" isDefaultImport/>
 
-<ApiBox name="ModernBrowsers.calculateHashOfMinimumVersions" />
+<ApiBox name="ModernBrowsers.calculateHashOfMinimumVersions" isDefaultImport/>
 
 ## Configure Unknown Browsers to default to Modern
 
@@ -24,10 +23,10 @@ Browsers not explicitly listed in `setMinimumBrowserVersions` are considered "le
 
 To change this and treat unknown browsers as "modern," update the relevant option in your settings file:
 
-``` js
+```js
 Meteor.settings.packages = {
-    "modern-browsers": {
-        "unknownBrowsersAssumedModern": true
-    }
+  "modern-browsers": {
+    unknownBrowsersAssumedModern: true,
+  },
 };
 ```

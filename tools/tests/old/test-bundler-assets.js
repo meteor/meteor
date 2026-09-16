@@ -173,5 +173,6 @@ makeGlobalAsyncLocalStorage().run(
     // Allow the process to exit normally, since optimistic file watchers
     // may be keeping the event loop busy.
     safeWatcher.closeAllWatchers();
+    process.exit(0);
   }
 );

@@ -124,6 +124,7 @@ compiler.compile = Profile(function (packageSource, options) {
   // We run this even if we have no dependencies, because we might
   // need to delete dependencies we used to have.
   var nodeModulesPath = null;
+  var devNodeModulesPath = null;
   if (packageSource.npmCacheDirectory) {
     if (await meteorNpm.updateDependencies(packageSource.name,
                                      packageSource.npmCacheDirectory,
@@ -131,6 +132,17 @@ compiler.compile = Profile(function (packageSource, options) {
       nodeModulesPath = files.pathJoin(
         packageSource.npmCacheDirectory,
         'node_modules'
+      );
+    }
+  }
+
+  if (packageSource.npmDevCacheDirectory) {
+    if (await meteorNpm.updateDependencies(packageSource.name,
+        packageSource.npmDevCacheDirectory,
+        packageSource.npmDevDependencies)) {
+      devNodeModulesPath = files.pathJoin(
+          packageSource.npmDevCacheDirectory,
+          'node_modules'
       );
     }
   }
@@ -150,6 +162,7 @@ compiler.compile = Profile(function (packageSource, options) {
   // Isopack#initFromPath).
   var isobuildFeatures = [];
   packageSource.architectures.forEach((sourceArch) => {
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(sourceArch.arch)) return;
     sourceArch.uses.forEach((use) => {
       if (!use.weak && isIsobuildFeaturePackage(use.package) &&
           isobuildFeatures.indexOf(use.package) === -1) {
@@ -173,6 +186,7 @@ compiler.compile = Profile(function (packageSource, options) {
     debugOnly: packageSource.debugOnly,
     prodOnly: packageSource.prodOnly,
     testOnly: packageSource.testOnly,
+    devOnly: packageSource.devOnly,
     pluginCacheDir: options.pluginCacheDir,
     isobuildFeatures
   });
@@ -181,6 +195,7 @@ compiler.compile = Profile(function (packageSource, options) {
     if (architecture.arch === 'web.cordova' && ! includeCordovaUnibuild) {
       continue;
     }
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
     // TODO -> Maybe this withCache will bring some problems in other commands.
     await files.withCache(async () => {
@@ -189,6 +204,7 @@ compiler.compile = Profile(function (packageSource, options) {
         sourceArch: architecture,
         isopackCache: isopackCache,
         nodeModulesPath: nodeModulesPath,
+        devNodeModulesPath: devNodeModulesPath,
       });
 
       Object.assign(pluginProviderPackageNames,
@@ -226,6 +242,7 @@ compiler.lint = Profile(function (packageSource, options) {
         && architecture.arch === 'web.cordova') {
       continue;
     }
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
 
     const unibuildWarnings = await lintUnibuild({
       isopack: options.isopack,
@@ -246,6 +263,8 @@ compiler.getMinifiers = async function (packageSource, options) {
 
   var minifiers = [];
   for (const architecture of packageSource.architectures) {
+    if (global.includedWebArchs != null && ![...global.includedWebArchs, 'os'].includes(architecture.arch)) continue;
+
     var activePluginPackages = await getActivePluginPackages(options.isopack, {
       isopackCache: options.isopackCache,
       uses: architecture.uses
@@ -349,6 +368,7 @@ var compileUnibuild = Profile(function (options) {
   const inputSourceArch = options.sourceArch;
   const isopackCache = options.isopackCache;
   const nodeModulesPath = options.nodeModulesPath;
+  const devNodeModulesPath = options.devNodeModulesPath;
   const isApp = ! inputSourceArch.pkg.name;
   const resources = [];
   const pluginProviderPackageNames = {};
@@ -455,6 +475,31 @@ var compileUnibuild = Profile(function (options) {
     // coffeescript package will correctly cause packages with *.coffee files
     // to be rebuilt.
     const shrinkwrapPath = nodeModulesPath.replace(
+        /node_modules$/, 'npm-shrinkwrap.json');
+    watch.readAndWatchFile(watchSet, shrinkwrapPath);
+  }
+
+  if (devNodeModulesPath) {
+    addNodeModulesDirectory({
+      packageName: inputSourceArch.pkg.name,
+      sourceRoot: inputSourceArch.sourceRoot,
+      sourcePath: devNodeModulesPath,
+      npmDiscards: isopk.npmDiscards,
+      local: false,
+    });
+
+    // If this slice has node modules, we should consider the shrinkwrap file
+    // to be part of its inputs. (This is a little racy because there's no
+    // guarantee that what we read here is precisely the version that's used,
+    // but it's better than nothing at all.)
+    //
+    // Note that this also means that npm modules used by plugins will get
+    // this npm-shrinkwrap.json in their pluginDependencies (including for all
+    // packages that depend on us)!  This is good: this means that a tweak to
+    // an indirect dependency of the coffee-script npm module used by the
+    // coffeescript package will correctly cause packages with *.coffee files
+    // to be rebuilt.
+    const shrinkwrapPath = devNodeModulesPath.replace(
         /node_modules$/, 'npm-shrinkwrap.json');
     watch.readAndWatchFile(watchSet, shrinkwrapPath);
   }
@@ -791,8 +836,9 @@ async function runLinters({inputSourceArch, isopackCache, sources,
 
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
     const hash = optimisticHashOrNull(absPath);
-    const contents = optimisticReadFile(absPath);
-    watchSet.addFile(absPath, hash);
+    if (!watchSet.hasFile(absPath)) {
+      watchSet.addFile(absPath, hash);
+    }
 
     if (classification.type === "meteor-ignore") {
       // Return after watching .meteorignore files but before adding them
@@ -801,6 +847,7 @@ async function runLinters({inputSourceArch, isopackCache, sources,
       return;
     }
 
+    const contents = optimisticReadFile(absPath);
     const wrappedSource = {
       relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,

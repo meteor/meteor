@@ -25,6 +25,7 @@
 // The ID of each document is the client architecture, and the fields of
 // the document are the versions described above.
 
+import { onMessage } from "meteor/inter-process-messaging";
 import { ClientVersions } from "./client_versions.js";
 
 export const Autoupdate = __meteor_runtime_config__.autoupdate = {
@@ -152,7 +153,6 @@ function enqueueVersionsRefresh() {
 
 const setupListeners = () => {
   // Listen for messages pertaining to the client-refresh topic.
-  import { onMessage } from "meteor/inter-process-messaging";
   onMessage("client-refresh", enqueueVersionsRefresh);
 
   // Another way to tell the process to refresh: send SIGHUP signal

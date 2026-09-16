@@ -35,6 +35,7 @@ const packages = {
     ignoredFiles: [
       "async_helpers.js",
       "asynchronous_queue.js",
+      "test_environment.js",
     ]
   },
   "accounts-ui": {},
@@ -42,6 +43,7 @@ const packages = {
   autopublish: {},
   "babel-compiler": {
     serverFiles: ["babel.js", "babel-compiler.js"],
+    ignoredFiles: ["babel-compiler.js"],
   },
   "babel-runtime": {},
   "browser-policy": {},

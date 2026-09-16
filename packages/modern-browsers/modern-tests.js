@@ -49,6 +49,13 @@ Tinytest.add('modern-browsers - versions - basic', function (test) {
     patch: 0,
   }));
 
+  test.isFalse(isModern({
+    name: "mobileSafariUI/WKWebView", 
+    major: 0, 
+    minor: 0,
+    patch: 0,
+  }));
+
   const oldPackageSettings = Meteor.settings.packages;
   
   Meteor.settings.packages = {
@@ -61,6 +68,13 @@ Tinytest.add('modern-browsers - versions - basic', function (test) {
     name: "unknownBrowser", 
     major: 10, 
     minor: 1,
+    patch: 0,
+  }));
+
+  test.isTrue(isModern({
+    name: "mobileSafariUI/WKWebView", 
+    major: 0, 
+    minor: 0,
     patch: 0,
   }));
 

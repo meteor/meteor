@@ -441,9 +441,9 @@ Object.assign(Table.prototype, {
     return "(" + _.times(n, function () { return "?" }).join(",") + ")";
   },
 
-  find: async function (txn, id) {
+  find: async function (db, id) {
     var self = this;
-    var rows = await txn.query(self._selectQuery, [ id ]);
+    var rows = await db._query(self._selectQuery, [ id ]);
     if (rows.length !== 0) {
       if (rows.length !== 1) {
         throw new Error("Corrupt database (PK violation)");
@@ -813,23 +813,23 @@ Object.assign(RemoteCatalog.prototype, {
   // track, sorted by their orderKey. Returns the empty array if the release
   // track does not exist or does not have any recommended versions.
   getSortedRecommendedReleaseRecords: async function (track, laterThanOrderKey) {
-    var self = this;
-    // XXX releaseVersions content objects are kinda big; if we put
-    // 'recommended' and 'orderKey' in their own columns this could be faster
-    var result = await self._contentQuery(
-      "SELECT content FROM releaseVersions WHERE track=?", track);
+    const hasMinKey = laterThanOrderKey != null;
 
-    var recommended = _.filter(result, function (v) {
-      if (!v.recommended)
-        return false;
-      return !laterThanOrderKey || v.orderKey > laterThanOrderKey;
-    });
+    // Always use JSON1 to filter & sort directly in SQL
+    const sql = `
+    SELECT content
+    FROM releaseVersions
+    WHERE track = ?
+      AND json_extract(content, '$.recommended') = 1
+      ${hasMinKey ? "AND json_extract(content, '$.orderKey') > ?" : ""}
+    ORDER BY json_extract(content, '$.orderKey') DESC
+  `;
+    const params = hasMinKey
+        ? [track, laterThanOrderKey]
+        : [track];
 
-    var recSort = _.sortBy(recommended, function (rec) {
-      return rec.orderKey;
-    });
-    recSort.reverse();
-    return recSort;
+    // _contentQuery will JSON.parse(content) for you
+    return this._contentQuery(sql, params);
   },
 
   // Given a release track, returns all version records for this track.
@@ -893,9 +893,7 @@ Object.assign(RemoteCatalog.prototype, {
   // No JSON parsing is performed.
   _columnsQuery: async function (query, params) {
     var self = this;
-    var rows = await self.db.runInTransaction(function (txn) {
-      return txn.query(query, params);
-    });
+    var rows = await self.db._query(query, params);
     return rows;
   },
 
@@ -946,9 +944,7 @@ Object.assign(RemoteCatalog.prototype, {
 
   getMetadata: async function(key) {
     var self = this;
-    var row = await self.db.runInTransaction(function (txn) {
-      return self.tableMetadata.find(txn, key);
-    });
+    var row = await self.tableMetadata.find(self.db, key);
     if (row) {
       return JSON.parse(row['content']);
     }
@@ -970,9 +966,7 @@ Object.assign(RemoteCatalog.prototype, {
 
   shouldShowBanner: async function (releaseName, bannerDate) {
     var self = this;
-    var row = await self.db.runInTransaction(function (txn) {
-      return self.tableBannersShown.find(txn, releaseName);
-    });
+    var row = await self.tableBannersShown.find(self.db, releaseName);
     // We've never printed a banner for this release.
     if (! row)
       return true;

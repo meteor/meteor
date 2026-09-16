@@ -1,0 +1,10 @@
+{
+  "name": "monorepo",
+  "private": true,
+  "workspaces": [
+    "app"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}

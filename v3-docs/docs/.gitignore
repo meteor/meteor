@@ -4,3 +4,6 @@
 
 /data/data.js
 /data/names.json
+
+# Generated API reference for LLMs
+/public/api-reference.json
