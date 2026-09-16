@@ -14,6 +14,10 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  # npm submits an audit request with every install. Meteor runs many installs
+  # when caches are cold, and this workflow does not consume their automatic
+  # audit reports. Avoid making CI reliability depend on npm's audit endpoint.
+  npm_config_audit: "false"
   # Multiplies the waitSecs for self-tests.
   TIMEOUT_SCALE_FACTOR: 8
   # Retry failed tests additional times.
@@ -30,6 +34,7 @@ env:
   CXX: g++-12
   METEOR_ALLOW_SUPERUSER: 1
 
+
 jobs:
   # ─── Setup ────────────────────────────────────────────────────────────────────
   # Prepares the Meteor environment and populates the cache so all parallel
@@ -38,8 +43,11 @@ jobs:
     name: Setup
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     timeout-minutes: 75
     steps:
       - name: Checkout repository
@@ -69,7 +77,8 @@ jobs:
             ${{ runner.os }}-meteor-
 
       - name: Prepare Meteor
-        if: steps.meteor-cache.outputs.cache-hit != 'true'
+        # Run on every workflow so the package catalog at .meteor/package-metadata
+        # is refreshed and includes any release referenced by versionsFrom.
         timeout-minutes: 65
         run: ./meteor --get-ready
 
@@ -80,8 +89,11 @@ jobs:
     name: Isolated Tests
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 45
     steps:
@@ -148,10 +160,13 @@ jobs:
     name: "Test Group 0 (^[a-b]|^c[a-n]|^co[a-l]|^comm)"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^[a-b]|^c[a-n]|^co[a-l]|^comm"
@@ -188,7 +203,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 0)
-        timeout-minutes: 35
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -214,10 +229,13 @@ jobs:
     name: "Test Group 1 (^com[n-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^com[n-z]"
     steps:
@@ -253,7 +271,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 1)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -280,10 +298,13 @@ jobs:
     name: "Test Group 2 (^co[n-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^co[n-z]"
     steps:
@@ -326,7 +347,7 @@ jobs:
           gradle --version
 
       - name: Running self-test (Test Group 2)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -352,10 +373,13 @@ jobs:
     name: "Test Group 3 (^c[p-z]|^h[a-e])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 35
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^c[p-z]|^h[a-e]"
     steps:
@@ -391,7 +415,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 3)
-        timeout-minutes: 35
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -417,10 +441,13 @@ jobs:
     name: "Test Group 4 (^h[f-z]|^[i-l])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^h[f-z]|^[i-l]"
     steps:
@@ -456,7 +483,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 4)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -482,10 +509,13 @@ jobs:
     name: "Test Group 5 (^m[a-n]|^mo[a-d])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root --cpus 4 --memory 16g --security-opt seccomp=unconfined
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TIMEOUT_SCALE_FACTOR: 14
       TEST_GROUP: "^m[a-n]|^mo[a-d]"
@@ -522,7 +552,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 5)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -548,10 +578,13 @@ jobs:
     name: "Test Group 6 (^mo[e-z]|^m[p-z]|^[n-o])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^mo[e-z]|^m[p-z]|^[n-o]"
     steps:
@@ -587,7 +620,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 6)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -613,10 +646,13 @@ jobs:
     name: "Test Group 7 (^[p-q]|^r[a-e])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^[p-q]|^r[a-e]"
     steps:
@@ -652,7 +688,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 7)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -678,10 +714,13 @@ jobs:
     name: "Test Group 8 (^r[f-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^r[f-z]"
     steps:
@@ -717,7 +756,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 8)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -743,10 +782,13 @@ jobs:
     name: "Test Group 9 (^s)"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^s"
     steps:
@@ -782,7 +824,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 9)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -808,10 +850,13 @@ jobs:
     name: "Test Group 10 (^[t-z])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
-    timeout-minutes: 25
+    timeout-minutes: 55
     env:
       TEST_GROUP: "^[t-z]"
     steps:
@@ -847,7 +892,7 @@ jobs:
           echo "Meteor NPM: $(./meteor npm --version)"
 
       - name: Running self-test (Test Group 10)
-        timeout-minutes: 25
+        timeout-minutes: 55
         run: |
           mkdir -p tmp/results/junit
           ulimit -c unlimited
@@ -873,8 +918,11 @@ jobs:
     name: "Test Group 11 (^[d-g])"
     runs-on: oss-vm
     container:
-      image: meteor/circleci:2025.07.8-android-35-node-22
-      options: --user root
+      image: meteor/circleci:2026.07.28-android-36-node-24
+      # --init runs tini as PID 1 so orphaned processes get reaped (otherwise
+      # PID 1 is `tail -f /dev/null`, which never calls wait() and leaves
+      # zombies behind).
+      options: --init --user root
     needs: setup
     timeout-minutes: 40
     env:

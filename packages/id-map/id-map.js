@@ -1,4 +1,3 @@
-
 export class IdMap {
   constructor(idStringify, idParse) {
     this._map = new Map();
@@ -6,10 +5,10 @@ export class IdMap {
     this._idParse = idParse || JSON.parse;
   }
 
-// Some of these methods are designed to match methods on OrderedDict, since
-// (eg) ObserveMultiplex and _CachingChangeObserver use them interchangeably.
-// (Conceivably, this should be replaced with "UnorderedDict" with a specific
-// set of methods that overlap between the two.)
+  // Some of these methods are designed to match methods on OrderedDict, since
+  // (eg) ObserveMultiplex and _CachingChangeObserver use them interchangeably.
+  // (Conceivably, this should be replaced with "UnorderedDict" with a specific
+  // set of methods that overlap between the two.)
 
   get(id) {
     const key = this._idStringify(id);
@@ -42,12 +41,8 @@ export class IdMap {
   // Iterates over the items in the map. Return `false` to break the loop.
   forEach(iterator) {
     // don't use _.each, because we can't break out of it.
-    for (let [key, value] of this._map){
-      const breakIfFalse = iterator.call(
-        null,
-        value,
-        this._idParse(key)
-      );
+    for (const [key, value] of this._map) {
+      const breakIfFalse = iterator.call(null, value, this._idParse(key));
       if (breakIfFalse === false) {
         return;
       }
@@ -55,12 +50,8 @@ export class IdMap {
   }
 
   async forEachAsync(iterator) {
-    for (let [key, value] of this._map){
-      const breakIfFalse = await iterator.call(
-          null,
-          value,
-          this._idParse(key)
-      );
+    for (const [key, value] of this._map) {
+      const breakIfFalse = await iterator.call(null, value, this._idParse(key));
       if (breakIfFalse === false) {
         return;
       }
@@ -85,7 +76,7 @@ export class IdMap {
   clone() {
     const clone = new IdMap(this._idStringify, this._idParse);
     // copy directly to avoid stringify/parse overhead
-    this._map.forEach(function(value, key){
+    this._map.forEach(function (value, key) {
       clone._map.set(key, EJSON.clone(value));
     });
     return clone;

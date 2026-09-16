@@ -23,6 +23,40 @@ Setting `DDP_DEFAULT_CONNECTION_URL` when running a meteor server (development: 
 
 Setting `DDP_DEFAULT_CONNECTION_URL` when building (`meteor build`)  will define the DDP server for `cordova` builds.
 
+## DDP_TRANSPORT
+(_development, production_)
+
+Selects which server-side WebSocket transport DDP uses. Valid values are `sockjs` (the default) and `uws` ([uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)). For example: `DDP_TRANSPORT=uws`.
+
+The transport can also be set via `Meteor.settings.packages["ddp-server"].transport`, which takes precedence over this variable. (`DISABLE_SOCKJS=1` is kept as a backward-compatible alias that selects `uws`.)
+
+> **The `uws` transport listens on its own port, separate from [`PORT`](#PORT).** The main HTTP server proxies WebSocket upgrades to it. This internal port defaults to `5001` and can **only** be configured through `Meteor.settings` (there is no dedicated environment variable):
+>
+> ```json
+> {
+>   "packages": {
+>     "ddp-server": {
+>       "transport": "uws",
+>       "uws": { "port": 5001, "host": "127.0.0.1", "payloadLength": 48, "timeout": 45 }
+>     }
+>   }
+> }
+> ```
+>
+> **Running multiple Meteor instances on one host (multitenancy):** when several instances share the same kernel network namespace — for example Docker Compose services using `network_mode: "host"` — each instance must bind a **distinct** `uws.port` (or `uws.host`), in addition to a distinct [`PORT`](#PORT). Changing only `PORT` is not enough: every instance would still default to `uws.port` `5001` and the second one would fail to start with `failed to listen on 127.0.0.1:5001 (address already in use)`. This is intentional — the listener uses an exclusive-port bind so traffic is never silently split between unrelated app processes.
+>
+> Because the `uws` port lives in `Meteor.settings`, in env-var-driven deployments you provide it through [`METEOR_SETTINGS`](#METEOR-SETTINGS), one distinct port per instance:
+>
+> ```
+> # instance 1
+> PORT=3039
+> METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":5001}}}}
+>
+> # instance 2
+> PORT=3040
+> METEOR_SETTINGS={"packages":{"ddp-server":{"uws":{"port":5002}}}}
+> ```
+
 ## DISABLE_WEBSOCKETS
 (_development, production_)
 
@@ -32,6 +66,8 @@ In the event that your own deployment platform does not support WebSockets, or y
 (_development, production_)
 
 Set `DISABLE_SOCKJS=1` if you want to use the native WebSocket implementation instead of SockJS on the client side, for example, if you want to use a custom WebSocket implementation (e.g. [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/)) on the server side.
+
+> This is kept for backward compatibility and is equivalent to selecting the `uws` transport. Prefer [`DDP_TRANSPORT`](#DDP-TRANSPORT), which also documents the `uws` port configuration required when running multiple instances on one host.
 
 ## DISABLE_SOCKJS_CORS
 (_development, production_)

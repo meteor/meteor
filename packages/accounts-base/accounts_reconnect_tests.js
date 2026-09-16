@@ -112,7 +112,7 @@ if (Meteor.isClient) {
       loginAsUser1((err) => {
         test.isUndefined(err, 'Unexpected error logging in as user1');
         test.equal(
-          Object.keys(DDP._reconnectHook.callbacks).length,
+          DDP._reconnectHook.size(),
           1,
           'Only one onReconnect callback should be registered'
         );
@@ -122,7 +122,7 @@ if (Meteor.isClient) {
         setTimeout(() => {
           test.isTrue(Meteor.status().connected);
           test.equal(
-            Object.keys(DDP._reconnectHook.callbacks).length,
+            DDP._reconnectHook.size(),
             1,
             'Only one onReconnect callback should be registered'
           );

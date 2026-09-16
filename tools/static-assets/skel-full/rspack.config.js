@@ -11,5 +11,23 @@ const { defineConfig } = require('@meteorjs/rspack');
  * Use these flags to adjust your build settings based on environment.
  */
 module.exports = defineConfig(Meteor => {
-  return {};
+  return {
+    module: {
+      rules: [
+        {
+          test: /\.scss$/i,
+          use: [
+            {
+              loader: 'sass-loader',
+              options: {
+                api: 'modern-compiler',
+                implementation: require.resolve('sass-embedded'),
+              },
+            },
+          ],
+          type: 'css/auto',
+        },
+      ],
+    },
+  };
 });

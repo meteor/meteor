@@ -7,46 +7,25 @@
       Visit <a href="https://developers.facebook.com/apps" target="_blank">https://developers.facebook.com/apps</a>
     </li>
     <li>
-      Click "Add a New App".
+      Click "Create App" and fill out the required information.
     </li>
     <li>
-      Add a "Display Name" for your app and click on "Create App ID".
+      In "Use cases" select "Authenticate and request data from users with Facebook Login".
     </li>
     <li>
-      Answer the "Security Check" CAPTCHA and click on "Submit".
+      In the app dashboard, click "Add Product" and find "Facebook Login", then click "Set Up".
     </li>
     <li>
-      When the new app dashboard loads, click on "Settings" in the left hand menu.
+      Select "Web" as your platform.
     </li>
     <li>
-      From the top of the "Basic" settings page, note down your "App ID" and "App Secret" (you will be asked for them at the bottom of this popup).
+      In the "Facebook Login > Settings" from the left sidebar, set "Valid OAuth Redirect URIs" to <span class="url">{{siteUrl}}_oauth/facebook</span> and click "Save Changes".
     </li>
     <li>
-      Click on the "Add Platform" button, and select "Website".
+      Go to "Settings > Basic" in the left sidebar.
     </li>
     <li>
-      In the "Website" section, set the "Site URL" to <span class="url">{{siteUrl}}</span> and click on "Save Changes".
-    </li>
-    <li>
-      Click on "Add Product" in the left hand menu.
-    </li>
-    <li>
-      Hover over "Facebook Login", click on "Set Up".
-    </li>
-    <li>
-      Click on "Facebook Login > Settings" from the left hand menu.
-    </li>
-    <li>
-      Set "Valid OAuth redirect URIs" to <span class="url">{{siteUrl}}_oauth/facebook</span> and click on "Save Changes".
-    </li>
-    <li>
-      Select "App Review" from the left hand menu.
-    </li>
-    <li>
-      Toggle the "Make app public" switch to "Yes".
-    </li>
-    <li>
-      Select a "Category" in the "Make app public" popup and click on "Confirm".
+      Note down your "App ID" and "App Secret" (click "Show" to reveal the App Secret). You'll need these for configuration.
     </li>
   </ol>
 </template>

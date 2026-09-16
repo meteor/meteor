@@ -10,13 +10,15 @@ module.exports = {
   ],
   testPathIgnorePatterns: [
     "/node_modules/",
-    "<rootDir>/tools/modern-tests/",
+    "<rootDir>/tools/e2e-tests/",
+    "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
     "<rootDir>/packages/",
     "<rootDir>/.github/",
   ],
   modulePathIgnorePatterns: [
-    "<rootDir>/tools/modern-tests/",
+    "<rootDir>/tools/e2e-tests/",
+    "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
     "<rootDir>/tools/static-assets/",
     "<rootDir>/npm-packages/",
@@ -31,6 +33,13 @@ module.exports = {
     "^.+\\.js$": [require.resolve("@swc/jest"), {
       jsc: {
         parser: { syntax: "ecmascript" },
+        target: "es2022",
+      },
+      module: { type: "commonjs" },
+    }],
+    "^.+\\.ts$": [require.resolve("@swc/jest"), {
+      jsc: {
+        parser: { syntax: "typescript" },
         target: "es2022",
       },
       module: { type: "commonjs" },

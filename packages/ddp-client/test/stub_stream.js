@@ -20,11 +20,20 @@ Object.assign(StubStream.prototype, {
   },
 
   status: function() {
-    return { status: 'connected', fake: true };
+    return { status: this._status || 'connected', fake: true };
+  },
+
+  // Test helper: simulate a stream status (e.g. 'waiting' while offline).
+  setStatus: function(status) {
+    this._status = status;
   },
 
   reconnect: function() {
     // no-op
+  },
+
+  disconnect: function() {
+    // no-op - for testing Connection.disconnect()
   },
 
   _lostConnection: function() {

@@ -28,17 +28,38 @@ PUPPETEER_DOWNLOAD_PATH=~/.npm/chromium ./packages/test-in-console/run.sh
 ./packages/test-in-console/run.sh            # Test all core packages
 ./packages/test-in-console/run.sh "mongo"    # Test specific package
 
-# Modern E2E tests (Jest + Playwright)
-npm run install:modern                       # Install dependencies
-npm run test:modern                          # Run all E2E tests
-npm run test:modern -- -t="React"            # Run specific test
+# E2E tests (Jest + Playwright)
+npm run install:e2e                          # Install dependencies
+npm run test:e2e                             # Run all E2E tests
+npm run test:e2e -- -t="React"               # Run specific test
+
+# Native mobile smoke tests (Maestro)
+npm run install:native                       # Install deps, verify Maestro CLI on PATH
+npm run test:native:android                  # Run Android smoke flow
+npm run test:native:ios                       # Run iOS smoke flow
 ```
 
-## Modern E2E Tests (`tools/modern-tests/`)
+## E2E Tests (`tools/e2e-tests/`)
 
-Jest + Playwright suite for verifying modern bundler integrations (rspack). Tests cover framework skeletons and build scenarios.
+Jest + Playwright suite for verifying bundler integrations (rspack). Tests cover framework skeletons, command modes, routing, top-level await, and build/watch regressions.
 
-**Test apps:** `apps/{react,vue,svelte,solid,blaze,typescript,babel,coffeescript,monorepo}`
+**Test apps:** `tools/e2e-tests/apps/`. Use
+`dev/modern-tools/rspack/E2E_COVERAGE.md` as the authoritative app-to-feature
+coverage map instead of inferring coverage from fixture names.
+
+## Native mobile smoke tests (`tools/native-tests/`)
+
+Plain Node orchestrator + Maestro YAML flows. Builds a minimal Meteor app for
+Cordova, installs it on an iOS Simulator or Android emulator, and checks the
+initial runtime plus a live hot-code-push update. Coverage includes rendering,
+styles, Cordova APIs and asset paths, DDP, route reloads, and HCP. Runs nightly
+in CI plus on PRs labeled `mobile`.
+
+**Local prerequisites:** Maestro CLI (`curl -fsSL https://get.maestro.mobile.dev | bash`),
+Xcode (iOS), Android SDK + emulator (Android). See
+`tools/native-tests/README.md` for current Node and Android SDK minimums.
+
+**Tests:** `flows/launch.yaml` and `flows/hcp-updated.yaml` against `apps/smoke/`.
 
 ## Test Helpers Package (`packages/test-helpers`)
 

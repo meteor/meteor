@@ -14,8 +14,18 @@ var lastUpdated = initialVersions.versionHmr;
 var hmrSecret = __meteor_runtime_config__._hmrSecret;
 
 // Cordova doesn't need the hmrSecret, though cordova is also unable to tell
-// if Meteor needs to be restarted to enable HMR;
-var enabled = Meteor.isCordova || !!hmrSecret;
+// if Meteor needs to be restarted to enable HMR.
+//
+// HMR is also skipped during `meteor test` and `meteor test --full-app`.
+// The build pipeline already turns HMR off in those runs, so nothing gets
+// HMR-wrapped and the client has nothing useful to receive. The runner
+// still hands us an hmrSecret, though, which would otherwise cause this
+// client to open a WebSocket that can never do any work (and race with
+// SockJS for the upgrade path, same shape as the Rspack fix in #14329).
+// See `tools/runners/run-all.js` for the tool-side notes on where the
+// test build mode is preserved and why HMR is wired up anyway.
+var enabled = (Meteor.isCordova || !!hmrSecret) &&
+  !Meteor.isTest && !Meteor.isAppTest;
 
 if (!enabled) {
   console.log('Restart Meteor to enable HMR');
