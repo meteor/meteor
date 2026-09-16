@@ -315,6 +315,7 @@ Accounts.registerLoginHandler("password", async options => {
     return undefined; // don't handle
 
   check(options, {
+    ...Accounts._secondFactorInputSchema(),
     user: Accounts._userQueryValidator,
     password: passwordValidator,
     code: Match.Optional(Match.NonEmptyString),
@@ -334,23 +335,11 @@ Accounts.registerLoginHandler("password", async options => {
   }
 
   const result = await checkPasswordAsync(user, options.password);
-  // This method is added by the package accounts-2fa
-  // First the login is validated, then the code situation is checked
-  if (
-    !result.error &&
-    Accounts._check2faEnabled?.(user)
-  ) {
-    if (!options.code) {
-      Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
-    }
-    if (
-      !Accounts._isTokenValid(
-        user.services.twoFactorAuthentication.secret,
-        options.code
-      )
-    ) {
-      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
-    }
+  // First the password is validated, then the second factors the user has
+  // enabled (a 2FA code from accounts-2fa, a WebAuthn assertion from
+  // accounts-webauthn, ...) are checked. See Accounts.registerSecondFactor.
+  if (!result.error) {
+    await Accounts._verifySecondFactors(user, options);
   }
 
   return result;
@@ -859,13 +848,17 @@ Meteor.methods(
             // password should invalidate existing sessions).
             await Accounts._clearAllLoginTokens(user._id);
 
-            if (Accounts._check2faEnabled?.(user)) {
+            // Any second factor the user enabled (accounts-2fa,
+            // accounts-webauthn, ...) keeps the reset from logging them in.
+            const secondFactors = Accounts._enabledSecondFactors(user);
+            if (secondFactors.length > 0) {
               return {
                 userId: user._id,
                 error: Accounts._handleError(
                   'Changed password, but user not logged in because 2FA is enabled',
                   false,
-                  '2fa-enabled'
+                  '2fa-enabled',
+                  { availableFactors: secondFactors }
                 ),
               };
             }
@@ -971,16 +964,21 @@ Meteor.methods(
               $pull: { 'services.email.verificationTokens': { address: tokenRecord.address } }
             });
 
-          if (Accounts._check2faEnabled?.(user)) {
-        return {
-          userId: user._id,
-          error: Accounts._handleError(
-            'Email verified, but user not logged in because 2FA is enabled',
-            false,
-            '2fa-enabled'
-          ),
-        };
-      }return { userId: user._id };
+          // Any second factor the user enabled keeps the verification from
+          // logging them in.
+          const secondFactors = Accounts._enabledSecondFactors(user);
+          if (secondFactors.length > 0) {
+            return {
+              userId: user._id,
+              error: Accounts._handleError(
+                'Email verified, but user not logged in because 2FA is enabled',
+                false,
+                '2fa-enabled',
+                { availableFactors: secondFactors }
+              ),
+            };
+          }
+          return { userId: user._id };
         }
       );
     }

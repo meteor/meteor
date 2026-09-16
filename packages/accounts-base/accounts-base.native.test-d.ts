@@ -9,6 +9,8 @@ import type {
   AccountsClientOptions,
   Header,
   EmailTemplates,
+  WebAuthnConfigOptions,
+  SecondFactorDescriptor,
 } from "./accounts-base.native";
 import type { Meteor } from "meteor/meteor";
 import type { DDP } from "meteor/ddp";
@@ -216,3 +218,19 @@ expectTypeOf<Accounts.Password>().not.toBeAny();
 expectTypeOf<Accounts.StampedLoginToken>().toBeObject();
 expectTypeOf<Accounts.HashedStampedLoginToken>().toBeObject();
 expectTypeOf(Accounts._insertHashedLoginToken).returns.toEqualTypeOf<Promise<void>>();
+
+// Second factors: the registry consulted by password and passwordless logins.
+expectTypeOf<WebAuthnConfigOptions>().toBeObject();
+expectTypeOf<SecondFactorDescriptor>().toBeObject();
+expectTypeOf(Accounts.registerSecondFactor).returns.toHaveProperty("stop");
+Accounts.registerSecondFactor("totp", {
+  isEnabledFor: (user) => !!user.services,
+  isAvailableFor: (user) => !!user.services,
+  hasInput: (options) => typeof options.code === "string",
+  verify: async () => {},
+  onMissingInput: () => {
+    throw new Error("code required");
+  },
+  inputKey: "code",
+});
+Accounts.config({ webauthn: { rpID: "example.com", origins: ["https://example.com"] } });

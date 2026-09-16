@@ -10,6 +10,7 @@ accounts-oauth@1.4.7-beta350.11
 accounts-password@3.3.0-beta350.11
 accounts-passwordless@3.1.1-beta350.11
 accounts-twitter@1.5.2
+accounts-webauthn@1.0.0
 accounts-weibo@1.4.1
 allow-deny@2.1.0
 autoupdate@2.0.1

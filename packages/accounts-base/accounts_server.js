@@ -66,6 +66,9 @@ export class AccountsServer extends AccountsCommon {
 
     // list of all registered handlers.
     this._loginHandlers = [];
+
+    // name -> second-factor descriptor, see registerSecondFactor.
+    this._secondFactors = new Map();
     setupDefaultLoginHandlers(this);
     setExpireTokensInterval(this);
 
@@ -635,6 +638,123 @@ export class AccountsServer extends AccountsCommon {
       handler: Meteor.wrapFn(handler)
     });
   };
+
+  ///
+  /// SECOND FACTORS
+  ///
+
+  /**
+   * @summary Registers a second-factor authentication method. Login handlers
+   * that support second factors (the ones in `accounts-password` and
+   * `accounts-passwordless`) verify the factors a user has enabled after the
+   * primary credential has been checked. When a user has enabled more than
+   * one factor, satisfying any one of them completes the login.
+   * @locus Server
+   * @param {String} name Unique name of the factor, for example `totp` or `webauthn`.
+   * @param {Object} descriptor
+   * @param {Function} descriptor.isEnabledFor Receives the user document and returns `true` when the user has enabled this factor.
+   * @param {Function} descriptor.hasInput Receives the login options and returns `true` when they contain an answer for this factor.
+   * @param {Function} descriptor.verify Receives the user document and the login options. Must throw a `Meteor.Error` when the answer is invalid. May return a promise.
+   * @param {Function} descriptor.onMissingInput Receives the user document and the login options. Called when this is the only enabled factor and no answer was supplied. Must throw a `Meteor.Error`.
+   * @param {String} [descriptor.inputKey] Name of the login option that carries the answer, so login handlers accept it in their argument validation.
+   * @param {Function} [descriptor.isAvailableFor] Receives the user document and returns `true` when the user has set this factor up, whether or not they require it at login. Defaults to `isEnabledFor`.
+   * @returns {Object} An object with a `stop` function that unregisters the factor.
+   * @importFromPackage accounts-base
+   */
+  registerSecondFactor(name, descriptor) {
+    check(name, Match.NonEmptyString);
+    check(
+      descriptor,
+      Match.ObjectIncluding({
+        isEnabledFor: Function,
+        hasInput: Function,
+        verify: Function,
+        onMissingInput: Function,
+        inputKey: Match.Optional(Match.NonEmptyString),
+        isAvailableFor: Match.Optional(Function),
+      })
+    );
+    if (this._secondFactors.has(name)) {
+      throw new Error(`Second factor "${name}" is already registered`);
+    }
+    this._secondFactors.set(name, {
+      ...descriptor,
+      name,
+      isAvailableFor: descriptor.isAvailableFor || descriptor.isEnabledFor,
+    });
+    return {
+      stop: () => {
+        this._secondFactors.delete(name);
+      },
+    };
+  }
+
+  // Login handlers spread this into their `check()` pattern so the answer of
+  // every registered factor is accepted without the handler knowing which
+  // factor packages are installed.
+  _secondFactorInputSchema() {
+    const schema = {};
+    for (const factor of this._secondFactors.values()) {
+      if (factor.inputKey) {
+        schema[factor.inputKey] = Match.Optional(Match.Any);
+      }
+    }
+    return schema;
+  }
+
+  // Names of the registered factors the user has enabled.
+  _enabledSecondFactors(user) {
+    return [...this._secondFactors.values()]
+      .filter(factor => factor.isEnabledFor(user))
+      .map(factor => factor.name);
+  }
+
+  // Names of the registered factors the user has set up, required at login
+  // or not. This is what a re-authentication step can offer.
+  _availableSecondFactors(user) {
+    return [...this._secondFactors.values()]
+      .filter(factor => factor.isAvailableFor(user))
+      .map(factor => factor.name);
+  }
+
+  // Verifies the second factors a user has enabled. Login handlers call this
+  // after the primary credential has been verified. Any one satisfied factor
+  // authorizes the login. When none of the enabled factors has an answer in
+  // `options`, the thrown error carries `details.availableFactors` so the
+  // client can prompt for one of them. `only` restricts the check to the named
+  // factors.
+  async _verifySecondFactors(user, options = {}, { only } = {}) {
+    const enabled = [...this._secondFactors.values()].filter(
+      factor =>
+        (!only || only.includes(factor.name)) && factor.isEnabledFor(user)
+    );
+    if (enabled.length === 0) {
+      return;
+    }
+
+    const answered = enabled.filter(factor => factor.hasInput(options));
+    if (answered.length === 0) {
+      const availableFactors = enabled.map(factor => factor.name);
+      if (enabled.length === 1) {
+        try {
+          await enabled[0].onMissingInput(user, options);
+        } catch (error) {
+          if (error instanceof Meteor.Error && error.details === undefined) {
+            error.details = { availableFactors };
+          }
+          throw error;
+        }
+      }
+      this._handleError(
+        'A second factor is required to log in',
+        true,
+        'second-factor-required',
+        { availableFactors }
+      );
+    }
+
+    await answered[0].verify(user, options);
+  }
 
 
   // Checks a user's credentials against all the registered login
@@ -1485,9 +1605,18 @@ export class AccountsServer extends AccountsCommon {
         userId: null,
         clientAddress: null,
         type: 'method',
-        name: name => ['login', 'createUser', 'resetPassword', 'forgotPassword',
-          'requestLoginTokenForUser']
-          .includes(name),
+        name: name =>
+          [
+            'login',
+            'createUser',
+            'resetPassword',
+            'forgotPassword',
+            'requestLoginTokenForUser',
+            'generateWebAuthnRegistrationOptions',
+            'generateWebAuthnAuthenticationOptions',
+            'registerWebAuthnCredential',
+            'createUserWithWebAuthn',
+          ].includes(name),
         connectionId: (connectionId) => true,
       }, 5, 10000);
     }
@@ -1591,13 +1720,14 @@ export class AccountsServer extends AccountsCommon {
     return userId;
   }
 
-  _handleError = (msg, throwError = true, errorCode = 403) => {
+  _handleError = (msg, throwError = true, errorCode = 403, details) => {
     const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? true;
     const error = new Meteor.Error(
       errorCode,
       isErrorAmbiguous
         ? 'Something went wrong. Please check your credentials.'
-        : msg
+        : msg,
+      details
     );
     if (throwError) {
       throw error;

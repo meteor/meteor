@@ -15,6 +15,7 @@ accounts-base
 accounts-password
 accounts-2fa
 accounts-passwordless
+accounts-webauthn
 accounts-oauth
 accounts-express
 

@@ -20,6 +20,7 @@ import {
   getCallbacks,
   resetCallbacks,
   fetchJson,
+  withVirtualAuthenticator,
 } from './helpers/accounts-helpers';
 
 // Ports spaced by 2 so each Meteor instance can use `port + 1` for its
@@ -853,6 +854,183 @@ function defineAccountsScenarios(storageMode, getCtx) {
           { selector: { email: 'pl@example.com' }, token },
         ),
       ).rejects.toBeTruthy();
+    });
+  });
+
+  describe('accounts-webauthn', () => {
+    const webauthn = (page, name, ...args) =>
+      page.evaluate(
+        ({ name, args }) => window.__accountsE2E[name](...args),
+        { name, args },
+      );
+
+    it('signs up with a security key and logs back in without a username', async () => {
+      const { page } = getCtx();
+      await withVirtualAuthenticator(page, async () => {
+        expect(await webauthn(page, 'isWebAuthnSupported')).toBe(true);
+        await webauthn(page, 'createUserWithWebAuthn', {
+          email: 'key@example.com',
+          credentialName: 'Test key',
+        });
+        const { userId } = await expectLoggedIn(page);
+        const credentials = await webauthn(page, 'listWebAuthnCredentials');
+        expect(credentials).toHaveLength(1);
+        expect(credentials[0].name).toBe('Test key');
+        expect(credentials[0].publicKey).toBeUndefined();
+
+        await logout(page);
+        await expectLoggedOut(page);
+        await webauthn(page, 'loginWithWebAuthn');
+        await expectLoggedIn(page, userId);
+      });
+    });
+
+    it('logs in identifier-first with a key registered while logged in', async () => {
+      const { page } = getCtx();
+      await withVirtualAuthenticator(page, async () => {
+        const userId = await seedUser(page, { email: 'idf@example.com', password: 'pw12345' });
+        await login(page, { email: 'idf@example.com' }, 'pw12345');
+        const credential = await webauthn(page, 'registerWebAuthnCredential', 'Laptop key');
+        expect(credential.name).toBe('Laptop key');
+        await logout(page);
+        await webauthn(page, 'loginWithWebAuthn', { email: 'idf@example.com' });
+        await expectLoggedIn(page, userId);
+      });
+    });
+
+    it('manages keys and keeps the last one when nothing else can log in', async () => {
+      const { page } = getCtx();
+      await withVirtualAuthenticator(page, async (authenticators, firstKey) => {
+        await webauthn(page, 'createUserWithWebAuthn', {
+          username: 'keyonly',
+          credentialName: 'Primary',
+        });
+        const { userId } = await expectLoggedIn(page);
+        const [primary] = await webauthn(page, 'listWebAuthnCredentials');
+        await expect(
+          webauthn(page, 'removeWebAuthnCredential', primary.id),
+        ).rejects.toThrow(/"error":\s*"webauthn-last-credential"/);
+
+        // A second key needs a second authenticator: the first one already
+        // holds a credential for this account and is excluded.
+        await authenticators.remove(firstKey);
+        await authenticators.add();
+        const backup = await webauthn(page, 'registerWebAuthnCredential', 'Backup');
+        await webauthn(page, 'renameWebAuthnCredential', backup.id, 'Spare');
+        expect(
+          (await webauthn(page, 'listWebAuthnCredentials')).map((c) => c.name),
+        ).toEqual(['Primary', 'Spare']);
+        await webauthn(page, 'removeWebAuthnCredential', primary.id);
+        expect(
+          (await webauthn(page, 'listWebAuthnCredentials')).map((c) => c.name),
+        ).toEqual(['Spare']);
+
+        await logout(page);
+        await webauthn(page, 'loginWithWebAuthn');
+        await expectLoggedIn(page, userId);
+      });
+    });
+
+    it('requires the key as a second factor for password login once enabled', async () => {
+      const { page } = getCtx();
+      await withVirtualAuthenticator(page, async () => {
+        const userId = await seedUser(page, { email: '2nd@example.com', password: 'pw12345' });
+        await login(page, { email: '2nd@example.com' }, 'pw12345');
+        await webauthn(page, 'registerWebAuthnCredential', 'Key');
+        await webauthn(page, 'enableWebAuthnSecondFactor');
+        expect(await webauthn(page, 'hasWebAuthnSecondFactorEnabled')).toBe(true);
+        await logout(page);
+
+        await expect(
+          login(page, { email: '2nd@example.com' }, 'pw12345'),
+        ).rejects.toThrow(/"error":\s*"no-webauthn-assertion"/);
+        await expectLoggedOut(page);
+
+        await webauthn(page, 'loginWithPasswordAndWebAuthn', { email: '2nd@example.com' }, 'pw12345');
+        await expectLoggedIn(page, userId);
+
+        await webauthn(page, 'disableWebAuthnSecondFactor');
+        await logout(page);
+        await login(page, { email: '2nd@example.com' }, 'pw12345');
+        await expectLoggedIn(page, userId);
+      });
+    });
+
+    it('accepts either an authenticator code or the key when both are enabled', async () => {
+      const { page } = getCtx();
+      await withVirtualAuthenticator(page, async () => {
+        const userId = await seedUser(page, { email: 'both@example.com', password: 'pw12345' });
+        await login(page, { email: 'both@example.com' }, 'pw12345');
+        await webauthn(page, 'registerWebAuthnCredential', 'Key');
+        await webauthn(page, 'enableWebAuthnSecondFactor');
+        const activation = await page.evaluate(() =>
+          window.__accountsE2E.generate2faActivationQrCode('e2e-test'),
+        );
+        const totp = await callMethod(page, '_e2e.generateTotp', activation.secret);
+        await page.evaluate((code) => window.__accountsE2E.enableUser2fa(code), totp);
+        await logout(page);
+
+        const error = await login(page, { email: 'both@example.com' }, 'pw12345').catch((e) => e);
+        expect(error.message).toMatch(/"error":\s*"second-factor-required"/);
+        expect(error.message).toMatch(/"availableFactors":\["totp","webauthn"\]/);
+
+        const totp2 = await callMethod(page, '_e2e.generateTotp', activation.secret);
+        await page.evaluate(
+          ({ code }) =>
+            window.__accountsE2E.loginWithPasswordAnd2faCode(
+              { email: 'both@example.com' },
+              'pw12345',
+              code,
+            ),
+          { code: totp2 },
+        );
+        await expectLoggedIn(page, userId);
+        await logout(page);
+
+        await webauthn(page, 'loginWithPasswordAndWebAuthn', { email: 'both@example.com' }, 'pw12345');
+        await expectLoggedIn(page, userId);
+      });
+    });
+
+    it('requires the key as a second factor for passwordless login', async () => {
+      const { page } = getCtx();
+      await withVirtualAuthenticator(page, async () => {
+        const userId = await seedUser(page, { email: 'plk@example.com', password: 'pw12345' });
+        await login(page, { email: 'plk@example.com' }, 'pw12345');
+        await webauthn(page, 'registerWebAuthnCredential', 'Key');
+        await webauthn(page, 'enableWebAuthnSecondFactor');
+        await logout(page);
+
+        await page.evaluate(() =>
+          window.__accountsE2E.requestLoginTokenForUser({
+            selector: { email: 'plk@example.com' },
+            userData: { email: 'plk@example.com' },
+          }),
+        );
+        const email = await lastEmail(page, 'plk@example.com');
+        const token = extractTokenFromEmail(email);
+        await expect(
+          page.evaluate(
+            ({ selector, token }) =>
+              window.__accountsE2E.passwordlessLoginWithToken(selector, token),
+            { selector: { email: 'plk@example.com' }, token },
+          ),
+        ).rejects.toThrow(/"error":\s*"no-webauthn-assertion"/);
+
+        await webauthn(page, 'passwordlessLoginWithTokenAndWebAuthn', { email: 'plk@example.com' }, token);
+        await expectLoggedIn(page, userId);
+      });
+    });
+
+    it('honours forbidClientAccountCreation for key sign-ups', async () => {
+      const { page } = getCtx();
+      await withVirtualAuthenticator(page, async () => {
+        await applyConfig(page, { forbidClientAccountCreation: true });
+        await expect(
+          webauthn(page, 'createUserWithWebAuthn', { email: 'nope@example.com' }),
+        ).rejects.toThrow(/"error":\s*403/);
+        await expectLoggedOut(page);
+      });
     });
   });
 

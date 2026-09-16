@@ -13,6 +13,7 @@
     "accounts-password",
     "accounts-passwordless",
     "accounts-twitter",
+    "accounts-webauthn",
     "accounts-weibo",
     "allow-deny",
     "autoupdate",

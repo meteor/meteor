@@ -45,6 +45,7 @@ const CORE_RECOMMENDED = [
   'accounts-google',
   'accounts-2fa',
   'accounts-passwordless',
+  'accounts-webauthn',
   'email',
   'check',
   'typescript',

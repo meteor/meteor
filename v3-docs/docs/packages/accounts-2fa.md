@@ -10,6 +10,10 @@ Starting in Meteor 3.5 this package uses [OTPAuth](https://www.npmjs.com/package
 
 > This package is meant to be used with [`accounts-password`](../api/accounts.md#passwords) or [`accounts-passwordless`](./accounts-passwordless.md), so if you don't have either of those in your project, you'll need to add one of them. In the future, we want to enable the use of this package with other login methods, our oauth methods (Google, GitHub, etc...).
 
+::: info Meteor 3.6
+Second factors are now registered through `Accounts.registerSecondFactor`. A user may enable both an authenticator code and a security key from [`accounts-webauthn`](./accounts-webauthn.md); any one of them completes the login. When several factors are enabled and none is supplied, the login fails with the `second-factor-required` error and `error.details.availableFactors` lists them. The errors below are unchanged when only 2FA is enabled.
+:::
+
 ## 2FA Activation Flow {#activating-2fa}
 
 The first step, in order to enable 2FA, is to generate a QR code so that the user can scan it in an authenticator app and start receiving codes.
@@ -214,6 +218,10 @@ This method can fail throwing one of the following errors:
 - "Invalid 2FA code [invalid-2fa-code]" if the provided 2FA code is invalid.
 
 ## Integrating an Authentication Package with accounts-2fa {#integrating-auth-package}
+
+::: tip Meteor 3.6
+A login handler can call `Accounts._verifySecondFactors(user, options)` after verifying its own credential. That single call checks every factor registered through `Accounts.registerSecondFactor`: the authenticator code from this package and the security keys from [`accounts-webauthn`](./accounts-webauthn.md). The manual steps below keep working for packages that only want the authenticator code.
+:::
 
 To integrate this package with any other existing Login method, it's necessary following two steps:
 
