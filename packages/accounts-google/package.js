@@ -17,4 +17,6 @@ Package.onUse(api => {
   api.addFiles("notice.js");
 
   api.addFiles("google.js");
+
+  api.types('accounts-google.d.ts');
 });

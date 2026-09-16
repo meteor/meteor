@@ -8,6 +8,7 @@ Package.onUse(function (api) {
   api.use("ecmascript");
   api.mainModule("ordered_dict.js");
   api.export("OrderedDict");
+  api.types("ordered-dict.d.ts");
 });
 
 Package.onTest(function (api) {
