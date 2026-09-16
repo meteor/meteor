@@ -28,7 +28,7 @@ Select the WebSocket transport backend for DDP connections. Available transports
 
 | Value | Description |
 |---|---|
-| `sockjs` | (default) SockJS with HTTP polling fallback. Maximum compatibility. |
+| `sockjs` | SockJS with HTTP polling fallback. Maximum compatibility and the default when both providers are included. |
 | `uws` | [uWebSockets.js](https://github.com/uNetworking/uWebSockets.js/) — raw WebSocket, no polling fallback. Lower latency and higher throughput. |
 
 ```bash
@@ -49,6 +49,18 @@ You can also configure the transport via your `settings.json` file:
   }
 }
 ```
+
+`Meteor.settings.packages["ddp-server"].transport` takes precedence over
+`DDP_TRANSPORT`; `DISABLE_SOCKJS=1` is the lower-priority legacy fallback.
+
+This variable selects a transport at runtime. For production bundles,
+`meteor build` and `meteor deploy` also accept
+`--ddp-transport=sockjs|uws|both` to control which provider code is included.
+`both` is the default. If a bundle contains only one provider and no runtime
+selection is configured, the server automatically uses that provider. An
+explicit runtime selection still wins, and startup fails if it requests a
+provider omitted from the bundle. See [DDP Transport](/performance/ddp-transport)
+for build and rollback examples.
 
 When using `uws`, the client automatically uses native WebSocket instead of the SockJS client protocol.
 

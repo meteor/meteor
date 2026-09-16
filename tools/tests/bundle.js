@@ -6,6 +6,43 @@ import { execSync } from 'child_process';
 // Default maxBuffer for execSync is 1024 * 1024 bytes, so this is 10x that.
 const maxBuffer = 10 * 1024 * 1024;
 
+selftest.define("build - DDP transport selection", async function () {
+  const s = new Sandbox();
+  await s.init();
+  await s.createApp("myapp", "standard-app");
+  s.cd("myapp");
+
+  const invalid = s.run("build", "../invalid-build", "--ddp-transport=websocket");
+  await invalid.matchErr(
+    'Invalid DDP transport "websocket". Valid values: sockjs, uws, both.'
+  );
+  await invalid.matchErr("meteor help build");
+  await invalid.expectExit(1);
+
+  const build = s.run("build", "../uws-build", "--directory", "--debug",
+    "--ddp-transport=uws");
+  build.waitSecs(120);
+  await build.expectExit(0);
+
+  const programs = "../uws-build/bundle/programs";
+  const serverLoad = JSON.parse(s.read(`${programs}/server/program.json`)).load;
+  selftest.expectTrue(serverLoad.some(
+    item => item.path === "packages/ddp-transport-uws.js"
+  ));
+  selftest.expectFalse(serverLoad.some(
+    item => item.path === "packages/ddp-transport-sockjs.js"
+  ));
+  for (const arch of ["web.browser", "web.browser.legacy"]) {
+    const manifest = JSON.parse(s.read(`${programs}/${arch}/program.json`)).manifest;
+    selftest.expectTrue(manifest.some(
+      item => item.type === "js" && item.path === "packages/ddp-client.js"
+    ));
+    selftest.expectFalse(manifest.some(
+      item => item.type === "js" && item.path === "packages/ddp-transport-sockjs.js"
+    ));
+  }
+});
+
 selftest.define("bundle", async function () {
   var s = new Sandbox();
   await s.init();

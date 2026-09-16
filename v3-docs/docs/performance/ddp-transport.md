@@ -51,13 +51,44 @@ DDP_TRANSPORT=sockjs meteor run
 }
 ```
 
-This populates `Meteor.settings.packages["ddp-server"].transport` on the server, which is what the DDP server reads. The environment variable takes precedence over `settings.json` when both are set.
+This populates `Meteor.settings.packages["ddp-server"].transport` on the server, which is what the DDP server reads. The settings value takes precedence over `DDP_TRANSPORT` when both are set.
 
 ### Legacy `DISABLE_SOCKJS`
 
 `DISABLE_SOCKJS=1` is honored as an alias for `DDP_TRANSPORT=uws` for backward compatibility, but it is deprecated. Prefer `DDP_TRANSPORT` for new deployments because it leaves room for additional transport backends and is easier to read in deployment configs.
 
 See the full [`DDP_TRANSPORT`](/cli/environment-variables#ddp-transport) and [`DISABLE_SOCKJS`](/cli/environment-variables#disable-sockjs) reference for details.
+
+## Selecting transports at build time
+
+`DDP_TRANSPORT` and the `ddp-server` setting select a provider at runtime.
+For production bundles, `meteor build` and `meteor deploy` also accept a
+build-time option that controls which provider code is included:
+
+```bash
+# Include both providers (default)
+meteor build ../output --ddp-transport=both
+
+# Include only SockJS
+meteor build ../output --ddp-transport=sockjs
+
+# Include only uWebSockets.js
+meteor build ../output --ddp-transport=uws
+
+# The same option is available for deploy
+meteor deploy app.example.com --ddp-transport=uws
+```
+
+| Build selection | Runtime behavior with no explicit selection | Runtime switching |
+|-----------------|---------------------------------------------|-------------------|
+| `both` (default) | Uses `sockjs` | Can switch between `sockjs` and `uws` without rebuilding |
+| `sockjs` | Automatically uses `sockjs` | Rebuild with `uws` or `both` before switching to `uws` |
+| `uws` | Automatically uses `uws` | Rebuild with `sockjs` or `both` before switching to `sockjs` |
+
+Explicit runtime configuration keeps its existing precedence and overrides
+the automatic fixed-bundle selection. If it requests a provider that was not
+included, the server fails at startup and reports both the compatible runtime
+setting and the required rebuild options.
 
 ## Operational considerations
 
@@ -243,12 +274,10 @@ The internal uws port is purely local — it is never exposed to clients. The re
 
 ## Verifying which transport is active
 
-On the server, you can inspect the configured transport via the Meteor shell:
+On the server, you can inspect the transport selected at startup via the Meteor shell:
 
 ```javascript
-process.env.DDP_TRANSPORT
-  || Meteor.settings?.packages?.["ddp-server"]?.transport
-  || "sockjs";
+__meteor_runtime_config__.DDP_TRANSPORT;
 ```
 
 On the client, opening the browser Network tab and filtering by WS will show:
@@ -264,18 +293,24 @@ If you are switching an existing app from `sockjs` to `uws`:
 - [ ] Confirm WebSocket idle timeouts ≥ Meteor heartbeat interval.
 - [ ] Test on networks representative of your users (mobile, public Wi-Fi, corporate).
 - [ ] Roll out to a subset of traffic first if your load balancer supports it.
-- [ ] Keep `sockjs` available as a rollback (toggle the env var, redeploy).
+- [ ] Build with `--ddp-transport=both` during rollout if you need a runtime-only rollback. A `uws`-only bundle must be rebuilt to restore SockJS.
 - [ ] If multiple Meteor processes will share a host (multi-tenant, multi-process scaling, Galaxy co-scheduling, etc.), set a distinct `Meteor.settings.packages["ddp-server"].uws.port` for each. See [Multi-process and multi-tenant deployments](#multitenancy).
-
 
 ## Reverting to `sockjs`
 
-Unset the environment variable or set it explicitly:
+If the deployed bundle contains both providers, remove the explicit `uws`
+selection or change the highest-priority runtime setting to `sockjs`:
 
 ```bash
 unset DDP_TRANSPORT
 # or
-DDP_TRANSPORT=sockjs meteor run
+DDP_TRANSPORT=sockjs node main.js
 ```
 
-No code change is required — the transport is selected at server startup.
+If `Meteor.settings.packages["ddp-server"].transport` is set, update that value
+because it takes precedence over the environment variable.
+
+For a bundle built with `--ddp-transport=uws`, runtime configuration alone
+cannot restore SockJS because its provider code is absent. Rebuild and redeploy
+with `--ddp-transport=both` (for future runtime switching) or
+`--ddp-transport=sockjs`.

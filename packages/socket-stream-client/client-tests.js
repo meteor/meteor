@@ -5,6 +5,99 @@ import { toSockjsUrl } from "./urls.js";
 import { ClientStream } from "meteor/socket-stream-client";
 import isEqual from "lodash.isequal";
 import once from "lodash.once";
+import { createTransportRegistry } from 'meteor/ddp-transport-registry';
+import {
+  getSockJSConstructor,
+} from 'meteor/socket-stream-client';
+
+Tinytest.add('stream - SockJS constructor comes from the provider registry', function (test) {
+  const registry = createTransportRegistry();
+  const SockJS = function SockJS() {};
+  registry.register('sockjs', SockJS);
+
+  test.equal(getSockJSConstructor(registry), SockJS);
+  test.throws(
+    () => getSockJSConstructor(createTransportRegistry()),
+    /SockJS DDP transport is not included in this application bundle/
+  );
+});
+
+Tinytest.add(
+  "stream - socket selection only resolves SockJS for the SockJS transport",
+  function (test) {
+    const hadTransport = Object.prototype.hasOwnProperty.call(
+      __meteor_runtime_config__,
+      "DDP_TRANSPORT",
+    );
+    const savedTransport = __meteor_runtime_config__.DDP_TRANSPORT;
+    const hadWebSocket = Object.prototype.hasOwnProperty.call(globalThis, "WebSocket");
+    const savedWebSocket = globalThis.WebSocket;
+    const streams = [];
+    const nativeUrls = [];
+    let sockJSLookups = 0;
+
+    class InertWebSocket {
+      constructor(url) {
+        this.url = url;
+        nativeUrls.push(url);
+      }
+
+      close() {}
+    }
+
+    class InertSockJS {
+      constructor(url) {
+        this.url = url;
+      }
+
+      close() {}
+    }
+
+    class SelectionTestStream extends ClientStream {
+      _getSockJSConstructor() {
+        sockJSLookups += 1;
+        if (__meteor_runtime_config__.DDP_TRANSPORT === "uws") {
+          throw new Error("native transport consulted SockJS");
+        }
+        return InertSockJS;
+      }
+    }
+
+    try {
+      globalThis.WebSocket = InertWebSocket;
+
+      __meteor_runtime_config__.DDP_TRANSPORT = "uws";
+      const nativeStream = new SelectionTestStream("http://example.com");
+      streams.push(nativeStream);
+
+      test.equal(sockJSLookups, 0);
+      test.instanceOf(nativeStream.socket, InertWebSocket);
+      test.equal(nativeUrls, ["ws://example.com/websocket"]);
+
+      nativeStream.disconnect();
+
+      __meteor_runtime_config__.DDP_TRANSPORT = "sockjs";
+      const sockJSStream = new SelectionTestStream("http://example.com");
+      streams.push(sockJSStream);
+
+      test.equal(sockJSLookups, 1);
+      test.instanceOf(sockJSStream.socket, InertSockJS);
+      test.equal(sockJSStream.socket.url, "http://example.com/sockjs");
+    } finally {
+      streams.forEach((stream) => stream.disconnect());
+      if (hadWebSocket) {
+        globalThis.WebSocket = savedWebSocket;
+      } else {
+        delete globalThis.WebSocket;
+      }
+      if (hadTransport) {
+        __meteor_runtime_config__.DDP_TRANSPORT = savedTransport;
+      } else {
+        delete __meteor_runtime_config__.DDP_TRANSPORT;
+      }
+    }
+  },
+);
 
 Tinytest.add('stream - status', function(test) {
   // Very basic test. Just see that it runs and returns something. Not a

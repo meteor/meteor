@@ -188,6 +188,7 @@ outdated platforms`);
         { mobileServerUrl: this.options.mobileServerUrl,
           cordovaServerPort: this.options.cordovaServerPort,
           settingsFile: this.options.settingsFile,
+          ddpTransport: this.options.ddpTransport,
           buildMode: this.options.buildMode }
       );
 
@@ -265,6 +266,7 @@ outdated platforms`);
       { mobileServerUrl: this.options.mobileServerUrl,
         cordovaServerPort: this.options.cordovaServerPort,
         settingsFile: this.options.settingsFile,
+        ddpTransport: this.options.ddpTransport,
         buildMode: this.options.buildMode }
     );
 
