@@ -841,9 +841,12 @@ async function runLinters({inputSourceArch, isopackCache, sources,
         `Unexpected classification for ${ relPath }: ${ classification.type }`);
     }
 
+    const isSyntheticSource = _.has(sourceItem, "data");
     const absPath = files.pathResolve(inputSourceArch.sourceRoot, relPath);
-    const hash = optimisticHashOrNull(absPath);
-    if (!watchSet.hasFile(absPath)) {
+    const hash = isSyntheticSource
+      ? watch.sha1(sourceItem.data)
+      : optimisticHashOrNull(absPath);
+    if (!isSyntheticSource && !watchSet.hasFile(absPath)) {
       watchSet.addFile(absPath, hash);
     }
 
@@ -854,7 +857,9 @@ async function runLinters({inputSourceArch, isopackCache, sources,
       return;
     }
 
-    const contents = optimisticReadFile(absPath);
+    const contents = isSyntheticSource
+      ? sourceItem.data
+      : optimisticReadFile(absPath);
     const wrappedSource = {
       relPath, contents, hash, fileOptions,
       arch: inputSourceArch.arch,

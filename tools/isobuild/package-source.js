@@ -913,12 +913,20 @@ Object.assign(PackageSource.prototype, {
               .filter(relPath => relPath !== SYNTHETIC_MAIN_MODULE_PATH)
               .filter(relPath => matchesGlob(relPath, mainModules.paths))
               .sort();
+            const syntheticSource =
+              relPathToSourceObj[SYNTHETIC_MAIN_MODULE_PATH];
+            const data = makeSyntheticMainModule(paths);
 
-            sources.push({
-              relPath: SYNTHETIC_MAIN_MODULE_PATH,
-              fileOptions: mainModules.fileOptions,
-              data: makeSyntheticMainModule(paths)
-            });
+            if (syntheticSource) {
+              syntheticSource.fileOptions = mainModules.fileOptions;
+              syntheticSource.data = data;
+            } else {
+              sources.push({
+                relPath: SYNTHETIC_MAIN_MODULE_PATH,
+                fileOptions: mainModules.fileOptions,
+                data
+              });
+            }
           }
 
           return result;
