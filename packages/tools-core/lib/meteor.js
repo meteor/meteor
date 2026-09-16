@@ -36,12 +36,13 @@ export function getMeteorAppConfig() {
     : getMeteorAppPackageJson()?.meteor;
 }
 
-// `--port` accepts `[host:]port`, so the port is either the whole value or
-// whatever follows the last colon.
-const APP_PORT_PATTERN = /(?:^|:)(\d+)$/;
+const BARE_PORT_PATTERN = /^\d+$/;
+const SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+\-.]*:\/\//;
 
 /**
- * Extracts the port from a `[host:]port` value, as accepted by `--port`.
+ * Extracts the port from a `--port` value. Mirrors how the CLI parses the
+ * option, which accepts `port`, `[host:]port`, and a full URL, optionally
+ * with a path (`3000`, `localhost:3060`, `[::]:3005`, `http://localhost:3060/`).
  * @param {string|number|undefined|null} value - The raw `--port`/`PORT` value.
  * @returns {string|undefined} The port digits, or undefined when the value
  * carries no port (e.g. a bare host such as `0.0.0.0`).
@@ -50,8 +51,18 @@ export function parseMeteorAppPort(value) {
   if (value === undefined || value === null) {
     return undefined;
   }
-  const match = String(value).trim().match(APP_PORT_PATTERN);
-  return match ? match[1] : undefined;
+
+  const raw = String(value).trim();
+  if (BARE_PORT_PATTERN.test(raw)) {
+    return raw;
+  }
+
+  try {
+    const url = new URL(SCHEME_PATTERN.test(raw) ? raw : `http://${raw}`);
+    return url.port || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

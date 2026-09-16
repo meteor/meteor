@@ -310,11 +310,25 @@ Tinytest.add(
 );
 
 Tinytest.add(
+  "tools-core - parseMeteorAppPort - strips a URL suffix",
+  function (test) {
+    // The CLI resolves all of these to port 3060, so this must too.
+    test.equal(parseMeteorAppPort("localhost:3060/"), "3060");
+    test.equal(parseMeteorAppPort("http://localhost:3060/"), "3060");
+    test.equal(parseMeteorAppPort("http://localhost:3060/app"), "3060");
+    test.equal(parseMeteorAppPort("https://localhost:3060/app?x=1#y"), "3060");
+    test.equal(parseMeteorAppPort("[::1]:3005/"), "3005");
+  }
+);
+
+Tinytest.add(
   "tools-core - parseMeteorAppPort - no port in the value",
   function (test) {
     test.equal(parseMeteorAppPort("localhost"), undefined);
     test.equal(parseMeteorAppPort("0.0.0.0"), undefined);
     test.equal(parseMeteorAppPort("[::1]"), undefined);
+    test.equal(parseMeteorAppPort("http://localhost/app"), undefined);
+    test.equal(parseMeteorAppPort("not a url"), undefined);
     test.equal(parseMeteorAppPort(""), undefined);
     test.equal(parseMeteorAppPort(undefined), undefined);
     test.equal(parseMeteorAppPort(null), undefined);
