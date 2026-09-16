@@ -6,6 +6,7 @@ Package.describe({
 Package.onUse(function onUse(api) {
   api.use(["ecmascript", "base64"]);
   api.addAssets("ejson.d.ts", "server");
+  api.types("ejson.native.d.ts");
   api.mainModule("ejson.js");
   api.export("EJSON");
 });
