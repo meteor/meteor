@@ -13,7 +13,8 @@ import {
  * Primary (passwordless) login handler. The client sends the JSON returned by
  * `startAuthentication()` as `options.webauthn`. The credential id identifies
  * the account, since ids are unique across all users. A challenge issued for
- * a specific user (identifier-first login) must be answered by that user.
+ * a specific user (identifier-first login) must be answered by that user, and
+ * one issued for an unknown identifier cannot be answered at all.
  * User verification is always required and a key registered without it is
  * refused: on its own, a key must never be enough to get in.
  * @param {Object} options The login options.
@@ -62,7 +63,7 @@ Accounts.registerLoginHandler('webauthn', async options => {
       challengeDoc,
       requireUserVerification: true,
     });
-    if (challengeDoc.userId && challengeDoc.userId !== user._id) {
+    if (challengeDoc.bound && challengeDoc.userId !== user._id) {
       rejected('WebAuthn challenge was issued for a different user');
     }
     const userHandle = response.response.userHandle;

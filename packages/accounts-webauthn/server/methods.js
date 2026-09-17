@@ -262,6 +262,9 @@ Meteor.methods({
       type: 'authentication',
       mode,
       userId: user?._id ?? null,
+      // Bound whenever a selector was given, so a challenge for an unknown
+      // identifier fails exactly like one for another account.
+      bound: !!selector,
       timeout: config.timeout,
     });
 

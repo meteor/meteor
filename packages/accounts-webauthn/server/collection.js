@@ -73,6 +73,7 @@ export async function setupChallengesCollection() {
  * @param {String} options.type `registration` or `authentication`.
  * @param {String} options.mode The ceremony mode.
  * @param {String} [options.userId] The user the challenge is bound to.
+ * @param {Boolean} [options.bound] Whether a selector was supplied, so the binding is enforced even when it matched nobody.
  * @param {Number} options.timeout Lifetime in milliseconds.
  * @param {...*} [options.extra] Any other field is stored with the challenge, such as the pending sign-up data.
  * @returns {Promise<void>}

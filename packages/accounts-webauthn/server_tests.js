@@ -508,6 +508,21 @@ Tinytest.addAsync(
           'webauthn-credential-in-use',
           'a decoy id registers like a taken id'
         );
+
+        // A challenge for an unknown selector is bound all the same: answering
+        // it with another account's key fails exactly as it does for an
+        // existing account, so the outcome does not reveal existence.
+        await call(conn, 'logout');
+        const forNobody = await call(conn, 'generateWebAuthnAuthenticationOptions', {
+          mode: 'login',
+          selector: nobody,
+        });
+        await expectError(
+          test,
+          call(conn, 'login', { webauthn: await keyA.assert({ challenge: forNobody.challenge }) }),
+          'invalid-webauthn-assertion',
+          'challenge bound to a selector that matched nobody'
+        );
       });
     } finally {
       await cleanup(a.userId, b.userId);
