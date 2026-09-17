@@ -105,8 +105,6 @@ export namespace Accounts {
   clientStorage?: 'session' | 'local' | 'none';
   // Enable hybrid HttpOnly cookie + short-lived token flow
   useHttpOnlyCookies?: boolean | undefined;
-  // WebAuthn relying party settings, used by the accounts-webauthn package
-  webauthn?: WebAuthnConfigOptions | undefined;
   }): void;
 
   function onLogin(
@@ -435,50 +433,4 @@ export namespace Accounts {
     query?: Mongo.Selector<T> | Mongo.ObjectID | string
   ): void;
   function _hashLoginToken(token: string): string;
-}
-
-/** WebAuthn relying party settings, read by the accounts-webauthn package. */
-export interface WebAuthnConfigOptions {
-  rpID?: string | undefined;
-  rpName?: string | undefined;
-  origins?: string | string[] | undefined;
-  attestationType?: 'none' | 'direct' | 'enterprise' | undefined;
-  authenticatorAttachment?: 'platform' | 'cross-platform' | undefined;
-  residentKey?: 'discouraged' | 'preferred' | 'required' | undefined;
-  userVerification?: 'discouraged' | 'preferred' | 'required' | undefined;
-  secondFactorUserVerification?: 'discouraged' | 'preferred' | 'required' | undefined;
-  timeout?: number | undefined;
-  requireTotpOnLogin?: boolean | undefined;
-}
-
-/**
- * A second-factor authentication method registered with
- * Accounts.registerSecondFactor. Login handlers verify the factors a user
- * has enabled after the primary credential has been checked.
- */
-export interface SecondFactorDescriptor<TUser = Meteor.User> {
-  /** True when the user has enabled this factor. */
-  isEnabledFor: (user: TUser) => boolean;
-  /** True when the user has set this factor up, whether or not they require it at login. Defaults to `isEnabledFor`. */
-  isAvailableFor?: ((user: TUser) => boolean) | undefined;
-  /** True when the login options contain an answer for this factor. */
-  hasInput: (options: Record<string, any>) => boolean;
-  /** Throw a Meteor.Error when the answer is invalid. */
-  verify: (user: TUser, options: Record<string, any>) => void | Promise<void>;
-  /** Called when this is the only enabled factor and no answer was supplied; must throw. */
-  onMissingInput: (user: TUser, options: Record<string, any>) => void | Promise<void>;
-  /** Name of the login option carrying the answer. */
-  inputKey?: string | undefined;
-}
-
-export namespace Accounts {
-  /**
-   * Register a second-factor authentication method (server only). When a
-   * user has enabled more than one factor, satisfying any one of them
-   * completes the login.
-   */
-  function registerSecondFactor(
-    name: string,
-    descriptor: SecondFactorDescriptor
-  ): { stop: () => void };
 }
