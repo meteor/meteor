@@ -1,0 +1,40 @@
+name: Lint workflows
+
+# Guards against malformed workflow YAML that GitHub silently rejects (dispatching
+# 0 jobs, run created_at == updated_at, logs 404) — e.g. a duplicate `runs-on:` key,
+# which took "Test Packages" red across many branches until commit 296c65e. actionlint
+# catches duplicate keys and other structural/parse errors before merge.
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actionlint.yaml'
+  push:
+    paths:
+      - '.github/workflows/**'
+      - '.github/actionlint.yaml'
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: actionlint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+        run: |
+          curl -sSfL -o actionlint.tar.gz \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          tar -xzf actionlint.tar.gz actionlint
+          # shellcheck/pyflakes are disabled on purpose: this guard's job is to catch
+          # structural/parse errors that make GitHub dispatch 0 jobs (duplicate keys,
+          # invalid YAML), not run-script style. The pre-existing-issue baseline lives
+          # in .github/actionlint.yaml (paths.ignore) so this stays green on devel.
+          ./actionlint -color -shellcheck= -pyflakes=

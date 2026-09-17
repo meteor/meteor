@@ -72,6 +72,29 @@ describe('formatUrl', () => {
     expect(utils.formatUrl({ hostname: 'h.com', protocol: 'http' }))
       .toBe('http://h.com/');
   });
+
+  // parseUrl strips the brackets from IPv6 literals (e.g. "[::]" becomes "::"),
+  // and the WHATWG URL parser rejects a bare IPv6 address, so formatUrl must
+  // re-bracket it rather than emit a broken ROOT_URL.
+  test('brackets a bare IPv6 "any" host', () => {
+    expect(utils.formatUrl({ protocol: 'http', hostname: '::', port: '3005' }))
+      .toBe('http://[::]:3005/');
+  });
+  test('brackets a bare expanded IPv6 host', () => {
+    expect(utils.formatUrl({
+      protocol: 'http',
+      hostname: '0000:0000:0000:0000:0000:0000:0000:0001',
+      port: '3005',
+    })).toBe('http://[::1]:3005/');
+  });
+  test('accepts an already-bracketed IPv6 host', () => {
+    expect(utils.formatUrl({ protocol: 'http', hostname: '[::1]', port: '3005' }))
+      .toBe('http://[::1]:3005/');
+  });
+  test('throws on an empty/invalid hostname instead of producing a broken URL', () => {
+    expect(() => utils.formatUrl({ protocol: 'http', hostname: '', port: '3005' }))
+      .toThrow();
+  });
 });
 
 describe('hasScheme', () => {

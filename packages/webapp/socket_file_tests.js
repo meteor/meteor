@@ -73,9 +73,9 @@ const getWritableGroupName = () => {
   return uid === 0 ? 'root' : null;
 };
 
-const removeTestSocketFile = () => {
+const removeTestSocketFile = (path = testSocketFile) => {
   try {
-    unlinkSync(testSocketFile);
+    unlinkSync(path);
   } catch (error) {
     // Do nothing
   }
@@ -131,6 +131,41 @@ Tinytest.add('socket file - remove socket file on exit', test => {
     );
   });
 });
+
+Tinytest.add('socket file - no duplicate handlers on repeated registration', test => {
+  const testEventEmitter = new EventEmitter();
+  registerSocketFileCleanup(testSocketFile, testEventEmitter);
+  registerSocketFileCleanup(testSocketFile, testEventEmitter);
+  ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
+    test.equal(testEventEmitter.listenerCount(signal), 1);
+  });
+});
+
+Tinytest.add(
+  'socket file - latest path wins on repeated registration',
+  test => {
+    const testSocketFile2 = `${testSocketFile}_v2`;
+    const testEventEmitter = new EventEmitter();
+    registerSocketFileCleanup(testSocketFile, testEventEmitter);
+    registerSocketFileCleanup(testSocketFile2, testEventEmitter);
+    try {
+      ['exit', 'SIGINT', 'SIGHUP', 'SIGTERM'].forEach(signal => {
+        test.equal(testEventEmitter.listenerCount(signal), 1);
+      });
+
+      writeFileSync(testSocketFile, "");
+      writeFileSync(testSocketFile2, "");
+      testEventEmitter.emit('exit');
+
+      // Original path was replaced; only the latest path should be cleaned up.
+      test.isNotUndefined(statSync(testSocketFile));
+      test.throws(() => { statSync(testSocketFile2); }, /ENOENT/);
+    } finally {
+      removeTestSocketFile(testSocketFile);
+      removeTestSocketFile(testSocketFile2);
+    }
+  }
+);
 
 function prepareServer() {
   removeTestSocketFile();

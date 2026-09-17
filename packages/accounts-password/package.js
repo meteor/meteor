@@ -5,12 +5,12 @@ Package.describe({
   // 2.2.x in the future. The version was also bumped to 2.0.0 temporarily
   // during the Meteor 1.5.1 release process, so versions 2.0.0-beta.2
   // through -beta.5 and -rc.0 have already been published.
-  version: '3.3.0',
+  version: '3.3.1',
 });
 
 Npm.depends({
-  bcrypt: "5.0.1",
-  argon2: "0.41.1",
+  bcrypt: "6.0.0",
+  argon2: "0.44.0",
   "node-gyp-build": "4.8.4",
 });
 
@@ -28,6 +28,8 @@ Package.onUse((api) => {
   api.addFiles("email_templates.js", "server");
   api.addFiles("password_server.js", "server");
   api.addFiles("password_client.js", "client");
+
+  api.types("accounts-password.d.ts");
 });
 
 Package.onTest((api) => {
