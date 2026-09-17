@@ -12,6 +12,8 @@ Full-stack JavaScript platform for modern web and mobile applications.
 ./packages/test-in-console/run.sh "<name>"   # Package tests (terminal output via Puppeteer)
 npm run test:unit                            # Unit tests (Jest)
 npm run test:e2e                             # E2E tests (Jest + Playwright)
+npm run test:e2e:groups                      # List E2E groups
+npm run test:e2e:group -- monorepo            # Run the same E2E group as CI
 npm run test:native -- --platform=android    # Native mobile smoke tests (Maestro)
 ```
 
@@ -70,5 +72,4 @@ Load these for detailed context on specific topics:
 
 - `docs/` and `guide/` are the public documentation website, not agent context
 - `v3-docs/` contains Meteor 3.x documentation
-- Do not commit plans or reports generated during agent or skill work. Include them only when the applicable skill explicitly requires it, or when updating an existing, historically tracked artifact such as `E2E_COVERAGE.md`.
 - See [DEVELOPMENT.md](DEVELOPMENT.md) for contributor setup

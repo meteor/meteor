@@ -194,11 +194,20 @@ npm run install:e2e
 # Run all E2E tests
 npm run test:e2e
 
-# Run a specific suite
-npm run test:e2e -- -t="React"
+# List groups and run the same selection as CI
+npm run test:e2e:groups
+npm run test:e2e:group -- react
+
+# Verify that every registered test has exactly one group
+npm run test:e2e:groups:audit
 ```
 
-Each test has a corresponding app fixture in `tools/e2e-tests/apps/`. See that directory for examples when adding new E2E tests.
+Group definitions live in `tools/e2e-tests/test-groups.js`; CI generates its
+matrix from the same module used by the local runner. Accounts has its own
+`accounts` group and workflow. New unassigned tests run in an `uncategorized`
+fallback job, and the audit reports them. See the [E2E README](tools/e2e-tests/README.md)
+for file filters, CI settings, and how to add groups. App fixtures live in
+`tools/e2e-tests/apps/`.
 
 ### Self-tests (Meteor tool)
 

@@ -16,6 +16,7 @@ Package.onUse(api => {
   api.addFiles('github_server.js', 'server');
 
   api.export('Github');
+  api.types('github-oauth.d.ts');
 });
 
 Package.onTest(function(api) {

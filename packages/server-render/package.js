@@ -18,6 +18,7 @@ Package.onUse(function(api) {
   api.mainModule("client.js", "client", { lazy: true });
   api.mainModule("server.js", "server");
   api.addAssets('server-render.d.ts', 'server');
+  api.types('server-render.native.d.ts');
 });
 
 Package.onTest(function(api) {
