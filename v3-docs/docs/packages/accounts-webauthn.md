@@ -21,7 +21,7 @@ Everything works without configuration on a single-origin app. The options below
 | `rpID` | hostname of `ROOT_URL` | The relying party id. Credentials are bound to it, so changing it invalidates every registered key. Use the registrable domain (`example.com`) to share keys between subdomains. |
 | `rpName` | `Accounts.emailTemplates.siteName` or `rpID` | The name shown by the browser and the authenticator during registration. |
 | `origins` | `[origin of ROOT_URL]` | The origins allowed to complete a ceremony. Add every origin the app is served from. |
-| `attestationType` | `'none'` | `'none'`, `'direct'` or `'enterprise'`. Only `'direct'` and `'enterprise'` make the authenticator model (AAGUID) trustworthy. |
+| `attestationType` | `'none'` | `'none'`, `'direct'` or `'enterprise'`. `'direct'` and `'enterprise'` only ask the authenticator to convey an attestation statement. The reported authenticator model (AAGUID) is trustworthy only after that statement has been verified against a trust anchor, such as the FIDO Metadata Service; the validation hook receives the full verification result for that purpose. |
 | `authenticatorAttachment` | unrestricted | `'cross-platform'` to only allow roaming keys such as USB or NFC devices, `'platform'` to only allow the built-in authenticator of the device. |
 | `residentKey` | `'preferred'` | Whether registration asks for a discoverable credential. Discoverable credentials allow login without typing a username. |
 | `userVerification` | `'required'` | User verification (PIN or biometrics on the key) when registering a key, logging in without a password, and signing up, following FIDO guidance for passwordless flows. With `'required'`, the browser has the user set up a PIN on keys that have none, so every registered key can later serve as the only login method. Relax it to `'preferred'` for deployments that use keys purely as a second factor. |
@@ -216,10 +216,12 @@ Accounts.config({ webauthn: { attestationType: 'direct' } });
 
 const ALLOWED_AAGUIDS = new Set(['2fc0579f-8113-47ea-b116-bb5a8db9202a']);
 
-Accounts.validateWebAuthnRegistration((info, context) => {
+Accounts.validateWebAuthnRegistration((info, context, registrationInfo) => {
   if (context.mode === 'signup' && !info.userVerified) {
     throw new Meteor.Error('pin-required', 'Set a PIN on your key first');
   }
+  // Trust info.aaguid only after verifying the attestation statement in
+  // registrationInfo against a trust anchor such as the FIDO Metadata Service.
   return ALLOWED_AAGUIDS.has(info.aaguid);
 });
 ```

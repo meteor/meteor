@@ -20,8 +20,9 @@ const addListener = (listeners, func) => {
  * @summary Register a callback that validates a WebAuthn registration before
  * the credential is stored. Use it to allow only certain authenticator models
  * (by AAGUID) or to require backed-up passkeys, for example. Set
- * `attestationType` to `direct` or `enterprise` for the AAGUID to be
- * trustworthy.
+ * `attestationType` to `direct` or `enterprise` to receive an attestation
+ * statement, and verify that statement against a trust anchor, such as the
+ * FIDO Metadata Service, before relying on the AAGUID.
  * @locus Server
  * @param {Function} func Called with `info` (`{ credentialId, aaguid, fmt,
  * deviceType, backedUp, userVerified, transports }`), `context`

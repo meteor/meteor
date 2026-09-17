@@ -259,10 +259,16 @@ Meteor.methods({
     check(name, Match.NonEmptyString);
     const userId = requireUserId(this);
     const credential = await findUserCredential(userId, id);
-    await Meteor.users.updateAsync(
-      { _id: userId, 'services.webauthn.credentials.id': id },
-      { $set: { 'services.webauthn.credentials.$.name': name } }
-    );
+    if (name !== credential.name) {
+      const renamed = await Meteor.users.updateAsync(
+        { _id: userId, 'services.webauthn.credentials.id': id },
+        { $set: { 'services.webauthn.credentials.$.name': name } }
+      );
+      // Removed between the lookup and the update.
+      if (!renamed) {
+        credentialNotFound();
+      }
+    }
     await notifyCredentialChange({
       userId,
       action: 'renamed',

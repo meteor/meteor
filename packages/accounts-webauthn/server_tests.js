@@ -750,6 +750,8 @@ Tinytest.addAsync(
 
         const { credential: second } = await registerCredential(conn, backup, 'Second');
         await call(conn, 'renameWebAuthnCredential', second.id, 'Backup');
+        // Renaming to the current name changes nothing and is not an error.
+        await call(conn, 'renameWebAuthnCredential', second.id, 'Backup');
         test.equal(
           (await call(conn, 'listWebAuthnCredentials')).map(credential => credential.name),
           ['Primary', 'Backup']
