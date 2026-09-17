@@ -36,16 +36,28 @@ const userDataPattern = Match.ObjectIncluding({
   profile: Match.Optional(Object),
 });
 
+/**
+ * The credential descriptor sent to the browser in `allowCredentials` and
+ * `excludeCredentials`.
+ * @param {Object} credential The stored credential document.
+ * @returns {Object} `{ id, transports }`.
+ */
 const toAllowedCredential = credential => ({
   id: credential.id,
   transports: credential.transports,
 });
 
-// A selector that resolves to no credentials receives a decoy list derived
-// from the selector, so the response does not reveal whether the account
-// exists or has keys (WebAuthn Level 3, section 14.6.3). The secret is per
-// process, so a decoy is as stable as a real list for the server's lifetime.
+// Per-process secret behind the decoy credential ids.
 const decoySecret = randomBytes(32);
+
+/**
+ * Builds the decoy list a selector receives when it resolves to no
+ * credentials, so the response does not reveal whether the account exists or
+ * has keys (WebAuthn Level 3, section 14.6.3). The secret is per process, so a
+ * decoy is as stable as a real list for the server's lifetime.
+ * @param {Object} selector `{ id }`, `{ username }` or `{ email }`.
+ * @returns {Array} One credential descriptor.
+ */
 const decoyCredentials = selector => {
   const [field, value] = Object.entries(selector)[0];
   const id = createHmac('sha256', decoySecret)
@@ -54,7 +66,13 @@ const decoyCredentials = selector => {
   return [{ id, transports: ['internal', 'hybrid'] }];
 };
 
-// The credential `id` of the logged-in user, or the not-found error.
+/**
+ * Loads one credential of the logged-in user.
+ * @param {String} userId
+ * @param {String} id The credential id.
+ * @returns {Promise<Object>} The credential document.
+ * @throws {Meteor.Error} `webauthn-credential-not-found`
+ */
 async function findUserCredential(userId, id) {
   const user = await Meteor.users.findOneAsync(userId, {
     fields: { 'services.webauthn.credentials': 1 },
@@ -66,10 +84,19 @@ async function findUserCredential(userId, id) {
   return credential;
 }
 
-// Issues registration options and records their challenge. A key may later be
-// the only way into the account, so registration always asks for the
-// verification level of passwordless login, which makes an authenticator set
-// up a PIN when it needs one.
+/**
+ * Issues registration options and records their challenge. A key may later be
+ * the only way into the account, so registration always asks for the
+ * verification level of passwordless login, which makes an authenticator set
+ * up a PIN when it needs one.
+ * @param {Object} options
+ * @param {String} options.userHandle The user handle, base64url encoded.
+ * @param {String} options.userName The account name shown by the authenticator.
+ * @param {String} options.displayName The display name shown by the authenticator.
+ * @param {Array} [options.excludeCredentials] Descriptors of the keys already registered.
+ * @param {Object} options.challenge Extra fields stored with the challenge, including `mode`.
+ * @returns {Promise<Object>} `PublicKeyCredentialCreationOptionsJSON`.
+ */
 async function issueRegistrationOptions({
   userHandle,
   userName,
@@ -102,6 +129,13 @@ async function issueRegistrationOptions({
   return options;
 }
 
+/**
+ * Registration options for adding a key to an existing user.
+ * @param {String} userId
+ * @param {String} [name] A label for the key, stored with the challenge.
+ * @returns {Promise<Object>} `PublicKeyCredentialCreationOptionsJSON`.
+ * @throws {Meteor.Error} `no-logged-user` when the user does not exist.
+ */
 async function registrationOptionsForUser(userId, name) {
   const user = await Meteor.users.findOneAsync(userId, {
     fields: { username: 1, emails: 1, 'services.webauthn': 1 },
@@ -119,6 +153,13 @@ async function registrationOptionsForUser(userId, name) {
   });
 }
 
+/**
+ * Registration options for creating a new account with only a key. Fails
+ * before the ceremony when sign-ups are forbidden or the identity is taken.
+ * @param {Object} userData `{ username, email, profile }`.
+ * @param {String} [name] A label for the key, stored with the challenge.
+ * @returns {Promise<Object>} `PublicKeyCredentialCreationOptionsJSON`.
+ */
 async function registrationOptionsForSignup(userData, name) {
   check(userData, userDataPattern);
   const { username, email, profile } = userData;
@@ -157,9 +198,16 @@ async function registrationOptionsForSignup(userData, name) {
 }
 
 Meteor.methods({
-  // Returns PublicKeyCredentialCreationOptionsJSON for startRegistration().
-  // `addCredential` adds a security key to the logged-in user; `signup`
-  // starts creating a new account that createUserWithWebAuthn completes.
+  /**
+   * Returns `PublicKeyCredentialCreationOptionsJSON` for `startRegistration()`.
+   * `addCredential` adds a security key to the logged-in user; `signup`
+   * starts creating a new account that `createUserWithWebAuthn` completes.
+   * @param {Object} options
+   * @param {String} options.mode `addCredential` or `signup`.
+   * @param {String} [options.name] A label for the key.
+   * @param {Object} [options.userData] The new account's `username`, `email` and `profile` for `signup`.
+   * @returns {Promise<Object>}
+   */
   async generateWebAuthnRegistrationOptions(options = {}) {
     check(options, {
       mode: Match.OneOf('addCredential', 'signup'),
@@ -175,10 +223,16 @@ Meteor.methods({
     return registrationOptionsForSignup(options.userData || {}, options.name);
   },
 
-  // Returns PublicKeyCredentialRequestOptionsJSON for startAuthentication().
-  // `login` without a selector relies on discoverable credentials; with a
-  // selector, and always for `secondFactor`, the credentials of that user are
-  // listed.
+  /**
+   * Returns `PublicKeyCredentialRequestOptionsJSON` for `startAuthentication()`.
+   * `login` without a selector relies on discoverable credentials; with a
+   * selector, and always for `secondFactor`, the credentials of that user are
+   * listed.
+   * @param {Object} options
+   * @param {String} options.mode `login` or `secondFactor`.
+   * @param {Object} [options.selector] `{ id }`, `{ username }` or `{ email }`; required for `secondFactor`.
+   * @returns {Promise<Object>}
+   */
   async generateWebAuthnAuthenticationOptions(options = {}) {
     check(options, {
       mode: Match.OneOf('login', 'secondFactor'),
@@ -224,7 +278,13 @@ Meteor.methods({
     return authenticationOptions;
   },
 
-  // Completes the `addCredential` ceremony for the logged-in user.
+  /**
+   * Completes the `addCredential` ceremony for the logged-in user.
+   * @param {Object} options
+   * @param {Object} options.credential The registration response JSON.
+   * @param {String} [options.name] A label for the key.
+   * @returns {Promise<Object>} The public view of the stored credential.
+   */
   async registerWebAuthnCredential(options) {
     check(options, {
       credential: registrationResponsePattern,
@@ -246,6 +306,10 @@ Meteor.methods({
     return credential;
   },
 
+  /**
+   * Lists the logged-in user's keys.
+   * @returns {Promise<Array>} The public views of the stored credentials.
+   */
   async listWebAuthnCredentials() {
     const userId = requireUserId(this);
     const user = await Meteor.users.findOneAsync(userId, {
@@ -254,6 +318,13 @@ Meteor.methods({
     return getCredentials(user).map(publicCredentialView);
   },
 
+  /**
+   * Renames one of the logged-in user's keys.
+   * @param {String} id The credential id.
+   * @param {String} name The new label.
+   * @returns {Promise<void>}
+   * @throws {Meteor.Error} `webauthn-credential-not-found`
+   */
   async renameWebAuthnCredential(id, name) {
     check(id, Match.NonEmptyString);
     check(name, Match.NonEmptyString);
@@ -276,8 +347,13 @@ Meteor.methods({
     });
   },
 
-  // Removing the last credential is refused when the account would be left
-  // with no way to log in.
+  /**
+   * Removes one of the logged-in user's keys. Removing the last credential is
+   * refused when the account would be left with no way to log in.
+   * @param {String} id The credential id.
+   * @returns {Promise<void>}
+   * @throws {Meteor.Error} `webauthn-last-credential` or `webauthn-credential-not-found`
+   */
   async removeWebAuthnCredential(id) {
     check(id, Match.NonEmptyString);
     const userId = requireUserId(this);

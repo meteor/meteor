@@ -20,11 +20,21 @@ Accounts._options.ambiguousErrorMessages = false;
 
 const TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
 
+/**
+ * A fake authenticator bound to the configured relying party.
+ * @returns {Promise<Object>}
+ */
 const newAuthenticator = () => {
   const config = getWebAuthnConfig();
   return createTestAuthenticator({ rpID: config.rpID, origin: config.origins[0] });
 };
 
+/**
+ * Runs `fn` with a fresh DDP connection to the test server, then disconnects.
+ * @param {Object} test
+ * @param {Function} fn
+ * @returns {Promise<void>}
+ */
 async function withConnection(test, fn) {
   const conn = await createTestConnectionPromise(test);
   try {
@@ -34,8 +44,23 @@ async function withConnection(test, fn) {
   }
 }
 
+/**
+ * Calls a method over a connection.
+ * @param {Object} conn
+ * @param {String} name
+ * @param {...*} args
+ * @returns {Promise<*>}
+ */
 const call = (conn, name, ...args) => conn.callAsync(name, ...args);
 
+/**
+ * Asserts that a promise rejects with the given error code.
+ * @param {Object} test
+ * @param {Promise} promise
+ * @param {String|Number} code The expected `error` field.
+ * @param {String} [message] The assertion message.
+ * @returns {Promise<Error|undefined>} The error, when it was thrown.
+ */
 async function expectError(test, promise, code, message) {
   try {
     await promise;
@@ -47,6 +72,11 @@ async function expectError(test, promise, code, message) {
   return undefined;
 }
 
+/**
+ * Creates a user with a random username and password.
+ * @param {Object} [extra] Extra `createUser` options.
+ * @returns {Promise<Object>} `{ userId, username, password }`.
+ */
 async function createPasswordUser(extra = {}) {
   const username = `webauthn_${Random.id()}`;
   const password = Random.secret();
@@ -54,9 +84,25 @@ async function createPasswordUser(extra = {}) {
   return { userId, username, password };
 }
 
+/**
+ * Logs in with a password over a connection, with extra login options such as
+ * a second-factor answer.
+ * @param {Object} conn
+ * @param {String} username
+ * @param {String} password
+ * @param {Object} [extra]
+ * @returns {Promise<Object>} The login result.
+ */
 const loginWithPassword = (conn, username, password, extra = {}) =>
   call(conn, 'login', { user: { username }, password, ...extra });
 
+/**
+ * Registers a key for the logged-in user of a connection.
+ * @param {Object} conn
+ * @param {Object} authenticator A fake authenticator.
+ * @param {String} [name] A label for the key.
+ * @returns {Promise<Object>} `{ options, credential }`.
+ */
 async function registerCredential(conn, authenticator, name) {
   const options = await call(conn, 'generateWebAuthnRegistrationOptions', {
     mode: 'addCredential',
@@ -69,6 +115,13 @@ async function registerCredential(conn, authenticator, name) {
   return { options, credential };
 }
 
+/**
+ * Logs in with a key over a connection.
+ * @param {Object} conn
+ * @param {Object} authenticator A fake authenticator.
+ * @param {Object} [options] A `selector` for identifier-first login; every other option is passed to `authenticator.assert()`.
+ * @returns {Promise<Object>} The login result.
+ */
 async function loginWithKey(conn, authenticator, { selector, ...assertOptions } = {}) {
   const options = await call(conn, 'generateWebAuthnAuthenticationOptions', {
     mode: 'login',
@@ -79,14 +132,29 @@ async function loginWithKey(conn, authenticator, { selector, ...assertOptions } 
   });
 }
 
+/**
+ * Loads a user document.
+ * @param {String} userId
+ * @returns {Promise<Object>}
+ */
 const getUser = userId => Meteor.users.findOneAsync(userId);
 
+/**
+ * Removes the given users and every pending challenge.
+ * @param {...String} userIds
+ * @returns {Promise<void>}
+ */
 async function cleanup(...userIds) {
   await Meteor.users.removeAsync({ _id: { $in: userIds.filter(Boolean) } });
   await WebAuthnChallenges.removeAsync({});
 }
 
-// Creates a password user and runs `fn` on a connection logged in as them.
+/**
+ * Creates a password user and runs `fn` on a connection logged in as them.
+ * @param {Object} test
+ * @param {Function} fn Receives `{ conn, userId, username, password }`.
+ * @returns {Promise<void>}
+ */
 async function withLoggedInUser(test, fn) {
   const user = await createPasswordUser();
   try {
@@ -99,9 +167,15 @@ async function withLoggedInUser(test, fn) {
   }
 }
 
-// As withLoggedInUser, with a fresh key registered for the user and the
-// connection logged out again, ready for the login under test. With
-// `secondFactor` the key is also required as a second factor.
+/**
+ * As `withLoggedInUser`, with a fresh key registered for the user and the
+ * connection logged out again, ready for the login under test.
+ * @param {Object} test
+ * @param {Function} fn Receives `{ conn, userId, username, password, key }`.
+ * @param {Object} [options]
+ * @param {Boolean} [options.secondFactor=false] Also require the key as a second factor.
+ * @returns {Promise<void>}
+ */
 async function withRegisteredKey(test, fn, { secondFactor = false } = {}) {
   await withLoggedInUser(test, async context => {
     const key = await newAuthenticator();

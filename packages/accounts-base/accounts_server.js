@@ -693,9 +693,12 @@ export class AccountsServer extends AccountsCommon {
     };
   }
 
-  // Login handlers spread this into their `check()` pattern so the answer of
-  // every registered factor is accepted without the handler knowing which
-  // factor packages are installed.
+  /**
+   * The `check()` pattern entries for the answers of the registered factors.
+   * Login handlers spread this into their own pattern so every answer is
+   * accepted without the handler knowing which factor packages are installed.
+   * @returns {Object} A pattern with one optional key per factor `inputKey`.
+   */
   _secondFactorInputSchema() {
     const schema = {};
     for (const factor of this._secondFactors.values()) {
@@ -706,28 +709,44 @@ export class AccountsServer extends AccountsCommon {
     return schema;
   }
 
-  // Names of the registered factors the user has enabled.
+  /**
+   * Names of the registered factors the user has enabled.
+   * @param {Object} user The user document.
+   * @returns {String[]}
+   */
   _enabledSecondFactors(user) {
     return [...this._secondFactors.values()]
       .filter(factor => factor.isEnabledFor(user))
       .map(factor => factor.name);
   }
 
-  // Names of the registered factors the user has set up, required at login
-  // or not. This is what a re-authentication step can offer.
+  /**
+   * Names of the registered factors the user has set up, required at login or
+   * not. This is what a re-authentication step can offer.
+   * @param {Object} user The user document.
+   * @returns {String[]}
+   */
   _availableSecondFactors(user) {
     return [...this._secondFactors.values()]
       .filter(factor => factor.isAvailableFor(user))
       .map(factor => factor.name);
   }
 
-  // Verifies the second factors a user has enabled. Login handlers call this
-  // after the primary credential has been verified. Any one satisfied factor
-  // authorizes the login: answered factors are verified in registration order
-  // until one passes, and the first failure is reported when none does. When
-  // none of the enabled factors has an answer in `options`, the thrown error
-  // carries `details.availableFactors` so the client can prompt for one of
-  // them. `only` restricts the check to the named factors.
+  /**
+   * Verifies the second factors a user has enabled. Login handlers call this
+   * after the primary credential has been verified. Any one satisfied factor
+   * authorizes the login: answered factors are verified in registration order
+   * until one passes, and the first failure is reported when none does. When
+   * none of the enabled factors has an answer in `options`, the thrown error
+   * carries `details.availableFactors` so the client can prompt for one of
+   * them.
+   * @param {Object} user The user document.
+   * @param {Object} [options] The login options carrying the factor answers.
+   * @param {Object} [restrictions]
+   * @param {String[]} [restrictions.only] Restrict the check to the named factors.
+   * @returns {Promise<void>}
+   * @throws {Meteor.Error} `second-factor-required`, the factor's own missing-input error, or the factor's verification error.
+   */
   async _verifySecondFactors(user, options = {}, { only } = {}) {
     const enabled = [...this._secondFactors.values()].filter(
       factor =>
@@ -1733,6 +1752,15 @@ export class AccountsServer extends AccountsCommon {
     return userId;
   }
 
+  /**
+   * Builds the error of a failed login attempt, replacing the message with a
+   * generic one when `ambiguousErrorMessages` is on.
+   * @param {String} msg The specific reason.
+   * @param {Boolean} [throwError=true] Throw the error instead of returning it.
+   * @param {String|Number} [errorCode=403] The `error` field of the `Meteor.Error`.
+   * @param {Object} [details] Extra information sent to the client in `error.details`.
+   * @returns {Meteor.Error} The error, when not thrown.
+   */
   _handleError = (msg, throwError = true, errorCode = 403, details) => {
     const isErrorAmbiguous = this._options.ambiguousErrorMessages ?? true;
     const error = new Meteor.Error(

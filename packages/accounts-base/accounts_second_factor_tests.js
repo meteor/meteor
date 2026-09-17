@@ -1,7 +1,12 @@
 import { Meteor } from 'meteor/meteor';
 
-// A fake factor named `name` that is enabled when `user.services[name]` is
-// set, answered through `options[name]`, and satisfied by the value "ok".
+/**
+ * A fake factor named `name` that is enabled when `user.services[name]` is
+ * set, answered through `options[name]`, and satisfied by the value "ok".
+ * @param {String} name
+ * @param {Object} [overrides] Descriptor fields to replace.
+ * @returns {Object} A second-factor descriptor.
+ */
 const fakeFactor = (name, overrides = {}) => ({
   isEnabledFor: user => !!user.services?.[name],
   hasInput: options => options[name] !== undefined,
@@ -17,6 +22,14 @@ const fakeFactor = (name, overrides = {}) => ({
   ...overrides,
 });
 
+/**
+ * Asserts that a promise rejects with the given error code.
+ * @param {Object} test
+ * @param {Promise} promise
+ * @param {String} code
+ * @param {String} [message]
+ * @returns {Promise<Error|undefined>} The error, when it was thrown.
+ */
 async function rejectsWith(test, promise, code, message) {
   try {
     await promise;

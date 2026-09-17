@@ -39,6 +39,10 @@ export const assertionResponsePattern = Match.ObjectIncluding({
   }),
 });
 
+/**
+ * Throws the error for a response that cannot be parsed.
+ * @throws {Meteor.Error} `invalid-webauthn-response`
+ */
 const malformed = () =>
   Accounts._handleError(
     'Malformed WebAuthn response',
@@ -46,8 +50,13 @@ const malformed = () =>
     'invalid-webauthn-response'
   );
 
-// The challenge a response answers is embedded in its client data. It is used
-// only to look up the pending challenge; the library verifies it again.
+/**
+ * Reads the challenge a response answers from its client data. It is used only
+ * to look up the pending challenge; the library verifies it again.
+ * @param {Object} response The registration or authentication response JSON.
+ * @returns {String} The base64url challenge.
+ * @throws {Meteor.Error} `invalid-webauthn-response` when the client data cannot be parsed.
+ */
 function decodeClientDataChallenge(response) {
   const clientDataJSON = response?.response?.clientDataJSON;
   if (typeof clientDataJSON !== 'string' || !clientDataJSON) {
@@ -65,7 +74,13 @@ function decodeClientDataChallenge(response) {
   return parsed.challenge;
 }
 
-// Authenticator data layout: rpIdHash (32) | flags (1) | signCount (4) | ...
+/**
+ * Reads the signature counter from the authenticator data of an assertion.
+ * Layout: rpIdHash (32) | flags (1) | signCount (4) | ...
+ * @param {Object} response The authentication response JSON.
+ * @returns {Number} The signature counter.
+ * @throws {Meteor.Error} `invalid-webauthn-response` when the authenticator data is too short.
+ */
 function readAssertionCounter(response) {
   const raw = response?.response?.authenticatorData;
   if (typeof raw !== 'string' || !raw) {
@@ -78,8 +93,17 @@ function readAssertionCounter(response) {
   return bytes.readUInt32BE(33);
 }
 
-// Looks up and consumes the challenge a response answers, checking that it was
-// issued for the given ceremony and, when known, the given user.
+/**
+ * Looks up and consumes the challenge a response answers, checking that it was
+ * issued for the given ceremony and, when known, the given user.
+ * @param {Object} response The registration or authentication response JSON.
+ * @param {Object} options
+ * @param {String} options.type `registration` or `authentication`.
+ * @param {String} options.mode The ceremony mode the challenge was issued for.
+ * @param {String} [options.expectedUserId] The user the challenge must belong to; `null` for sign-ups.
+ * @returns {Promise<Object>} The consumed challenge document.
+ * @throws {Meteor.Error} `webauthn-challenge-invalid` when the challenge is unknown, expired, used, or bound to another user.
+ */
 export async function consumeChallengeForResponse(
   response,
   { type, mode, expectedUserId }
@@ -103,8 +127,15 @@ export async function consumeChallengeForResponse(
   return doc;
 }
 
-// Runs a library verification, reporting exceptions and unverified results
-// under one error code.
+/**
+ * Runs a library verification, reporting exceptions and unverified results
+ * under one error code.
+ * @param {String} code The error code to throw with.
+ * @param {String} label The error message.
+ * @param {Function} verify Returns the library's verification promise.
+ * @returns {Promise<Object>} The verified result.
+ * @throws {Meteor.Error} `code` when the verification throws or does not verify.
+ */
 async function verifyOrThrow(code, label, verify) {
   let result;
   try {
@@ -118,9 +149,16 @@ async function verifyOrThrow(code, label, verify) {
   return result;
 }
 
-// Completes a registration ceremony for a new credential: consumes the
-// challenge, verifies the response, runs the validation hooks and checks that
-// the credential id is not registered yet. `userId` is null for sign-ups.
+/**
+ * Completes a registration ceremony for a new credential: consumes the
+ * challenge, verifies the response, runs the validation hooks and checks that
+ * the credential id is not registered yet.
+ * @param {Object} options
+ * @param {Object} options.credential The registration response JSON.
+ * @param {String} options.mode `addCredential` or `signup`.
+ * @param {String} [options.userId] The registering user; `null` for sign-ups.
+ * @returns {Promise<Object>} `{ challengeDoc, registrationInfo }`.
+ */
 export async function verifyNewCredential({ credential, mode, userId = null }) {
   const config = getWebAuthnConfig();
   const challengeDoc = await consumeChallengeForResponse(credential, {
@@ -145,9 +183,17 @@ export async function verifyNewCredential({ credential, mode, userId = null }) {
   return { challengeDoc, registrationInfo };
 }
 
-// Resolves the credential a response was signed with, verifies the assertion
-// against its consumed challenge, and records the use. Shared by primary login
-// and the second-factor check.
+/**
+ * Resolves the credential a response was signed with, verifies the assertion
+ * against its consumed challenge, and records the use. Shared by primary login
+ * and the second-factor check.
+ * @param {Object} options
+ * @param {Object} options.user The user document, including `services.webauthn`.
+ * @param {Object} options.response The authentication response JSON.
+ * @param {Object} options.challengeDoc The consumed challenge document.
+ * @param {Boolean} options.requireUserVerification Whether the authenticator must have verified the user.
+ * @returns {Promise<Object>} The library's `authenticationInfo`.
+ */
 export async function authenticateCredential({
   user,
   response,

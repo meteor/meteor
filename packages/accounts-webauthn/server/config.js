@@ -11,11 +11,15 @@ const ALLOWED_VALUES = {
   secondFactorUserVerification: REQUIREMENT_VALUES,
 };
 
-// Resolves the effective WebAuthn configuration. It is evaluated on every call
-// rather than cached: Accounts.config() usually runs inside Meteor.startup,
-// after this module has loaded, and it replaces Accounts._options.webauthn as
-// a whole. Values from Meteor.settings.packages.accounts.webauthn are merged
-// underneath so a partial Accounts.config() call keeps the rest.
+/**
+ * Resolves the effective WebAuthn configuration. It is evaluated on every call
+ * rather than cached: `Accounts.config()` usually runs inside `Meteor.startup`,
+ * after this module has loaded, and it replaces `Accounts._options.webauthn` as
+ * a whole. Values from `Meteor.settings.packages.accounts.webauthn` are merged
+ * underneath so a partial `Accounts.config()` call keeps the rest.
+ * @returns {Object} The relying party settings with defaults applied.
+ * @throws {Error} When an option has an invalid value.
+ */
 export function getWebAuthnConfig() {
   const options = {
     ...Meteor.settings?.packages?.accounts?.webauthn,

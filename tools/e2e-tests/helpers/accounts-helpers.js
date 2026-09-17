@@ -194,6 +194,12 @@ const VIRTUAL_AUTHENTICATOR_DEFAULTS = {
   automaticPresenceSimulation: true,
 };
 
+/**
+ * Attaches a CDP session with the WebAuthn domain enabled, for adding
+ * Chromium virtual authenticators to the page.
+ * @param {Object} page The Playwright page.
+ * @returns {Promise<Object>} `{ add, remove, detach }`.
+ */
 export async function virtualAuthenticators(page) {
   const client = await page.context().newCDPSession(page);
   try {
@@ -231,6 +237,14 @@ export async function virtualAuthenticators(page) {
   };
 }
 
+/**
+ * Runs `fn` with one virtual authenticator attached to the page, then removes
+ * it and detaches the session.
+ * @param {Object} page The Playwright page.
+ * @param {Function} fn Receives the authenticators handle and the authenticator id.
+ * @param {Object} [options] Virtual authenticator options, merged over the defaults.
+ * @returns {Promise<*>} The result of `fn`.
+ */
 export async function withVirtualAuthenticator(page, fn, options = {}) {
   const authenticators = await virtualAuthenticators(page);
   try {

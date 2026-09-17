@@ -10,15 +10,24 @@ import {
 } from './ceremonies.js';
 import { requireUserId } from './util.js';
 
-// True when password or passwordless login must also present a security key.
+/**
+ * Whether password or passwordless login must also present a security key.
+ * @param {Object} user The user document.
+ * @returns {Boolean}
+ */
 Accounts._checkWebAuthnSecondFactorEnabled = user =>
   !!(
     user?.services?.webauthn?.secondFactorEnabled &&
     getCredentials(user).length > 0
   );
 
-// Verifies `options.webauthn` against a challenge issued for this user with
-// generateWebAuthnAuthenticationOptions({ mode: 'secondFactor' }).
+/**
+ * Verifies `options.webauthn` against a challenge issued for this user with
+ * `generateWebAuthnAuthenticationOptions({ mode: 'secondFactor' })`.
+ * @param {Object} user The user document.
+ * @param {Object} options The login options carrying the assertion.
+ * @returns {Promise<void>}
+ */
 async function verifyWebAuthnSecondFactor(user, options) {
   const response = options.webauthn;
   check(response, assertionResponsePattern);
@@ -53,6 +62,11 @@ Accounts.registerSecondFactor('webauthn', {
 });
 
 Meteor.methods({
+  /**
+   * Requires a security key at every login of the logged-in user.
+   * @returns {Promise<void>}
+   * @throws {Meteor.Error} `no-webauthn-credential` when no key is registered.
+   */
   async enableWebAuthnSecondFactor() {
     const userId = requireUserId(this);
     const user = await Meteor.users.findOneAsync(userId, {
@@ -69,6 +83,10 @@ Meteor.methods({
     });
   },
 
+  /**
+   * Stops requiring a security key at login. Registered keys are kept.
+   * @returns {Promise<void>}
+   */
   async disableWebAuthnSecondFactor() {
     const userId = requireUserId(this);
     await Meteor.users.updateAsync(userId, {
@@ -76,6 +94,10 @@ Meteor.methods({
     });
   },
 
+  /**
+   * Whether the logged-in user must present a security key at login.
+   * @returns {Promise<Boolean>}
+   */
   async hasWebAuthnSecondFactorEnabled() {
     const userId = requireUserId(this);
     const user = await Meteor.users.findOneAsync(userId, {

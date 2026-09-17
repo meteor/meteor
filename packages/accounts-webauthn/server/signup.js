@@ -8,9 +8,15 @@ import {
 } from './ceremonies.js';
 import { notifyCredentialChange } from './hooks.js';
 
-// Completes a `signup` registration ceremony: verifies the new credential,
-// creates the user with it as the only login method, and returns the id so
-// the login method logs the client in. Exported for tests.
+/**
+ * Completes a `signup` registration ceremony: verifies the new credential,
+ * creates the user with it as the only login method, and returns the id so
+ * the login method logs the client in. Exported for tests.
+ * @param {Object} options
+ * @param {Object} options.credential The registration response JSON.
+ * @param {String} [options.credentialName] A label for the key.
+ * @returns {Promise<Object>} `{ userId }`, or `{ error }` when sign-ups are forbidden.
+ */
 export async function completeWebAuthnSignup(options) {
   check(options, {
     credential: registrationResponsePattern,
@@ -57,8 +63,12 @@ export async function completeWebAuthnSignup(options) {
 }
 
 Meteor.methods({
-  // Login method: the client calls it through Accounts.callLoginMethod so a
-  // successful sign-up also logs the new user in.
+  /**
+   * Login method: the client calls it through `Accounts.callLoginMethod` so a
+   * successful sign-up also logs the new user in.
+   * @param {...Object} args The sign-up options as the first argument.
+   * @returns {Promise<Object>} The login result.
+   */
   async createUserWithWebAuthn(...args) {
     return Accounts._loginMethod(
       this,

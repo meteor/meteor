@@ -1,6 +1,12 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 
+/**
+ * Runs `fn` with `window.PublicKeyCredential` removed, so the browser reports
+ * no WebAuthn support.
+ * @param {Function} fn
+ * @returns {Promise<void>}
+ */
 const withoutWebAuthn = async fn => {
   const descriptor = Object.getOwnPropertyDescriptor(window, 'PublicKeyCredential');
   Object.defineProperty(window, 'PublicKeyCredential', {
@@ -19,6 +25,13 @@ const withoutWebAuthn = async fn => {
   }
 };
 
+/**
+ * Asserts that a promise rejects with the given error code.
+ * @param {Object} test
+ * @param {Promise} promise
+ * @param {String} code
+ * @returns {Promise<void>}
+ */
 const rejectsWithCode = (test, promise, code) =>
   promise.then(
     () => test.fail({ message: `expected rejection with ${code}` }),

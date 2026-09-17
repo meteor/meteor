@@ -6,11 +6,28 @@ import { createHash, webcrypto } from 'crypto';
 
 const { subtle } = webcrypto;
 
+/**
+ * SHA-256 digest of a buffer.
+ * @param {Buffer|String} data
+ * @returns {Buffer}
+ */
 const sha256 = data => createHash('sha256').update(data).digest();
+
+/**
+ * Base64url encoding of a buffer.
+ * @param {Buffer|Uint8Array} data
+ * @returns {String}
+ */
 const base64url = data => Buffer.from(data).toString('base64url');
 
 // --- Minimal CBOR encoder -------------------------------------------------
 
+/**
+ * The head of a CBOR item: its major type and length.
+ * @param {Number} majorType
+ * @param {Number} length
+ * @returns {Buffer}
+ */
 function cborHead(majorType, length) {
   const type = majorType << 5;
   if (length < 24) {
@@ -31,17 +48,44 @@ function cborHead(majorType, length) {
   return head;
 }
 
+/**
+ * A CBOR integer.
+ * @param {Number} value
+ * @returns {Buffer}
+ */
 const cborInt = value =>
   value >= 0 ? cborHead(0, value) : cborHead(1, -1 - value);
+
+/**
+ * A CBOR byte string.
+ * @param {Buffer} bytes
+ * @returns {Buffer}
+ */
 const cborBytes = bytes => Buffer.concat([cborHead(2, bytes.length), bytes]);
+
+/**
+ * A CBOR text string.
+ * @param {String} text
+ * @returns {Buffer}
+ */
 const cborText = text => {
   const bytes = Buffer.from(text, 'utf8');
   return Buffer.concat([cborHead(3, bytes.length), bytes]);
 };
+/**
+ * A CBOR map.
+ * @param {Array} entries `[key, value]` pairs of encoded items.
+ * @returns {Buffer}
+ */
 const cborMap = entries =>
   Buffer.concat([cborHead(5, entries.length), ...entries.flat()]);
 
-// COSE_Key for an ES256 (P-256) public key: kty EC2, alg -7, crv P-256.
+/**
+ * COSE_Key for an ES256 (P-256) public key: kty EC2, alg -7, crv P-256.
+ * @param {Buffer} x The x coordinate.
+ * @param {Buffer} y The y coordinate.
+ * @returns {Buffer}
+ */
 const coseEc2PublicKey = (x, y) =>
   cborMap([
     [cborInt(1), cborInt(2)],
@@ -51,7 +95,11 @@ const coseEc2PublicKey = (x, y) =>
     [cborInt(-3), cborBytes(y)],
   ]);
 
-// Attestation object with the `none` format: an empty attestation statement.
+/**
+ * Attestation object with the `none` format: an empty attestation statement.
+ * @param {Buffer} authData The authenticator data.
+ * @returns {Buffer}
+ */
 const noneAttestationObject = authData =>
   cborMap([
     [cborText('fmt'), cborText('none')],
@@ -67,6 +115,18 @@ const FLAG_BE = 0x08;
 const FLAG_BS = 0x10;
 const FLAG_AT = 0x40;
 
+/**
+ * Authenticator data for a registration or an assertion.
+ * @param {Object} options
+ * @param {String} options.rpID The relying party id.
+ * @param {Number} options.counter The signature counter.
+ * @param {Boolean} [options.userPresent=true]
+ * @param {Boolean} [options.userVerified=true]
+ * @param {Boolean} [options.backupEligible=false]
+ * @param {Boolean} [options.backedUp=false]
+ * @param {Object} [options.attested] `{ credentialId, coseKey }` to include attested credential data.
+ * @returns {Buffer}
+ */
 function authenticatorData({
   rpID,
   counter,
@@ -96,13 +156,26 @@ function authenticatorData({
   return Buffer.concat(parts);
 }
 
+/**
+ * The client data of a ceremony, as the browser would serialize it.
+ * @param {Object} options
+ * @param {String} options.type `webauthn.create` or `webauthn.get`.
+ * @param {String} options.challenge
+ * @param {String} options.origin
+ * @returns {Buffer}
+ */
 const clientDataJSON = ({ type, challenge, origin }) =>
   Buffer.from(
     JSON.stringify({ type, challenge, origin, crossOrigin: false }),
     'utf8'
   );
 
-// Web Crypto returns raw r||s ECDSA signatures; WebAuthn carries ASN.1 DER.
+/**
+ * Converts a raw r||s ECDSA signature, as Web Crypto returns it, to the ASN.1
+ * DER form WebAuthn carries.
+ * @param {Buffer} raw
+ * @returns {Buffer}
+ */
 function rawSignatureToDer(raw) {
   const half = raw.length / 2;
   const encodeInteger = bytes => {
@@ -124,10 +197,17 @@ function rawSignatureToDer(raw) {
 
 // --- Fake authenticator ----------------------------------------------------
 
-// Creates a single-credential authenticator bound to `rpID` and `origin`.
-// `register()` answers a registration challenge and `assert()` answers an
-// authentication challenge with a real signature. Every option can be
-// overridden to produce deliberately invalid responses.
+/**
+ * Creates a single-credential authenticator bound to `rpID` and `origin`.
+ * `register()` answers a registration challenge and `assert()` answers an
+ * authentication challenge with a real signature. Every option can be
+ * overridden to produce deliberately invalid responses.
+ * @param {Object} options
+ * @param {String} options.rpID
+ * @param {String} options.origin
+ * @param {String[]} [options.transports=['usb']]
+ * @returns {Promise<Object>} `{ credentialId, transports, counter, register, assert }`.
+ */
 export async function createTestAuthenticator({
   rpID,
   origin,
@@ -154,6 +234,17 @@ export async function createTestAuthenticator({
       return counter;
     },
 
+    /**
+     * Answers a registration challenge.
+     * @param {Object} options
+     * @param {String} options.challenge
+     * @param {Boolean} [options.userVerified=true]
+     * @param {Boolean} [options.backupEligible=false]
+     * @param {Boolean} [options.backedUp=false]
+     * @param {String} [options.rpID] Override the relying party id.
+     * @param {String} [options.origin] Override the origin.
+     * @returns {Object} The registration response JSON.
+     */
     register({
       challenge,
       userVerified = true,
@@ -186,7 +277,18 @@ export async function createTestAuthenticator({
       };
     },
 
-    // The signature counter increases on every call unless a value is forced.
+    /**
+     * Answers an authentication challenge. The signature counter increases on
+     * every call unless a value is forced.
+     * @param {Object} options
+     * @param {String} options.challenge
+     * @param {String} [options.userHandle] Included in the response when given.
+     * @param {Boolean} [options.userVerified=true]
+     * @param {Number} [options.counter] Force the reported counter.
+     * @param {String} [options.rpID] Override the relying party id.
+     * @param {String} [options.origin] Override the origin.
+     * @returns {Promise<Object>} The authentication response JSON.
+     */
     async assert({
       challenge,
       userHandle,

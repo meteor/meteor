@@ -3,6 +3,11 @@ import { Accounts } from 'meteor/accounts-base';
 import { callMethod, withCallback } from './util.js';
 import { requestRegistration } from './orchestration.js';
 
+/**
+ * Rejects a missing or empty credential id before calling the server.
+ * @param {String} id
+ * @throws {Meteor.Error} 400
+ */
 const requireCredentialId = id => {
   if (typeof id !== 'string' || !id) {
     throw new Meteor.Error(400, 'Must provide a credential id');

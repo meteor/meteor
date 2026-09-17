@@ -9,10 +9,14 @@ import {
   authenticateCredential,
 } from './ceremonies.js';
 
-// Primary (passwordless) login. The client sends the JSON returned by
-// startAuthentication() as `options.webauthn`. The credential id identifies
-// the account, since ids are unique across all users. A challenge issued for
-// a specific user (identifier-first login) must be answered by that user.
+/**
+ * Primary (passwordless) login handler. The client sends the JSON returned by
+ * `startAuthentication()` as `options.webauthn`. The credential id identifies
+ * the account, since ids are unique across all users. A challenge issued for
+ * a specific user (identifier-first login) must be answered by that user.
+ * @param {Object} options The login options.
+ * @returns {Promise<Object|undefined>} `{ userId }` or `{ userId, error }`; `undefined` when the options are not a WebAuthn login.
+ */
 Accounts.registerLoginHandler('webauthn', async options => {
   if (!options.webauthn) {
     return undefined; // don't handle

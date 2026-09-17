@@ -15,9 +15,13 @@ const BROWSER_ERROR_CODES = {
   ERROR_INVALID_RP_ID: 'webauthn-invalid-domain',
 };
 
-// Converts the WebAuthnError thrown by @simplewebauthn/browser (or a raw DOM
-// exception) into a Meteor.Error with a stable `error` code for the UI to
-// branch on. The original code and DOM exception name travel in `details`.
+/**
+ * Converts the `WebAuthnError` thrown by `@simplewebauthn/browser` (or a raw
+ * DOM exception) into a `Meteor.Error` with a stable `error` code for the UI
+ * to branch on. The original code and DOM exception name travel in `details`.
+ * @param {Error} error The error thrown by the browser ceremony.
+ * @returns {Meteor.Error}
+ */
 export function normalizeWebAuthnError(error) {
   if (error instanceof Meteor.Error) {
     return error;

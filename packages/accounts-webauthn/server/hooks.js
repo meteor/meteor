@@ -4,6 +4,12 @@ import { Accounts } from 'meteor/accounts-base';
 const registrationValidators = [];
 const changeListeners = [];
 
+/**
+ * Appends a callback to a listener list.
+ * @param {Array} listeners The list to add to.
+ * @param {Function} func The callback.
+ * @returns {Object} An object with a `stop` function that removes the callback.
+ */
 const addListener = (listeners, func) => {
   listeners.push(func);
   return {
@@ -49,6 +55,13 @@ Accounts.validateWebAuthnRegistration = func =>
  */
 Accounts.onWebAuthnCredentialChange = func => addListener(changeListeners, func);
 
+/**
+ * Runs the registration validators with a summary of the verified registration.
+ * @param {Object} registrationInfo The library's verified registration info.
+ * @param {Object} context `{ userId, mode }`.
+ * @returns {Promise<void>}
+ * @throws {Meteor.Error} `webauthn-registration-rejected` when a validator returns `false`.
+ */
 export async function runRegistrationValidation(registrationInfo, context) {
   const info = {
     credentialId: registrationInfo.credential.id,
@@ -71,6 +84,12 @@ export async function runRegistrationValidation(registrationInfo, context) {
   }
 }
 
+/**
+ * Calls the credential change listeners. A failing listener is logged and does
+ * not affect the others.
+ * @param {Object} change `{ userId, action, credential }`.
+ * @returns {Promise<void>}
+ */
 export async function notifyCredentialChange(change) {
   for (const listener of [...changeListeners]) {
     try {
