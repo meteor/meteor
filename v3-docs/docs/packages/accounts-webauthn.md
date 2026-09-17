@@ -173,7 +173,7 @@ A user with at least one registered key can require it whenever they log in with
 <ApiBox name="Accounts.hasWebAuthnSecondFactorEnabled" from="accounts-base"/>
 <ApiBox name="Accounts.hasWebAuthnSecondFactorEnabledAsync" from="accounts-base"/>
 
-Once enabled, `Meteor.loginWithPassword` fails with the `no-webauthn-assertion` error, exactly as it fails with `no-2fa-code` for `accounts-2fa`. Call the WebAuthn variant to complete the login:
+Once enabled, `Meteor.loginWithPassword` fails with the `no-webauthn-assertion` error when the security key is the only second factor the user has enabled, exactly as it fails with `no-2fa-code` for `accounts-2fa`. A user who has enabled both gets `second-factor-required` instead, and either factor completes the login (see the section on combining factors below). Call the WebAuthn variant to complete the login:
 
 <ApiBox name="Meteor.loginWithPasswordAndWebAuthn"/>
 <ApiBox name="Meteor.loginWithPasswordAndWebAuthnAsync"/>

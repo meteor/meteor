@@ -159,6 +159,12 @@ Tinytest.add('accounts-webauthn - config - overrides are applied and validated',
       Accounts._options.webauthn = { origins };
       test.throws(() => getWebAuthnConfig(), /webauthn\.origins/);
     }
+    Accounts._options.webauthn = { timeout: 0 };
+    test.equal(getWebAuthnConfig().timeout, 60000, 'a falsy timeout keeps the default');
+    for (const timeout of [-1, Infinity, '60000']) {
+      Accounts._options.webauthn = { timeout };
+      test.throws(() => getWebAuthnConfig(), /webauthn\.timeout/);
+    }
   } finally {
     Accounts._options.webauthn = previous;
   }
@@ -361,12 +367,21 @@ Tinytest.addAsync(
           'challenge bound to another user'
         );
 
-        // An unknown selector gets well-formed options with no credentials.
+        // An unknown selector gets well-formed options with a decoy credential
+        // list that is stable for that selector, so the response does not
+        // reveal whether the account exists.
+        const nobody = { username: `nobody_${Random.id()}` };
         const unknown = await call(conn, 'generateWebAuthnAuthenticationOptions', {
           mode: 'login',
-          selector: { username: `nobody_${Random.id()}` },
+          selector: nobody,
         });
-        test.equal(unknown.allowCredentials, []);
+        test.equal(unknown.allowCredentials.length, 1);
+        test.isTrue(typeof unknown.allowCredentials[0].id === 'string');
+        const again = await call(conn, 'generateWebAuthnAuthenticationOptions', {
+          mode: 'login',
+          selector: nobody,
+        });
+        test.equal(again.allowCredentials, unknown.allowCredentials);
         test.isTrue(typeof unknown.challenge === 'string' && unknown.challenge.length > 0);
       });
     } finally {

@@ -42,6 +42,12 @@ export function getWebAuthnConfig() {
       'Accounts.config: webauthn.origins must be a non-empty string or a non-empty array of strings'
     );
   }
+  const timeout = options.timeout || DEFAULT_TIMEOUT_MS;
+  if (!(Number.isFinite(timeout) && timeout > 0)) {
+    throw new Error(
+      `Accounts.config: invalid webauthn.timeout "${options.timeout}"; expected a positive number of milliseconds`
+    );
+  }
   return {
     rpID,
     rpName: options.rpName || Accounts.emailTemplates?.siteName || rpID,
@@ -52,7 +58,7 @@ export function getWebAuthnConfig() {
     userVerification: options.userVerification || 'required',
     secondFactorUserVerification:
       options.secondFactorUserVerification || 'preferred',
-    timeout: options.timeout || DEFAULT_TIMEOUT_MS,
+    timeout,
     requireTotpOnLogin: !!options.requireTotpOnLogin,
   };
 }

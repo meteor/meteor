@@ -193,10 +193,12 @@ Tinytest.addAsync(
         Accounts._verifySecondFactors(user, { 'beta-test': 'nope' }),
         'invalid-beta-test'
       );
-      // The first answered factor, in registration order, is the one verified.
+      // Answered factors are tried in registration order until one passes;
+      // when none does, the first failure is reported.
+      await Accounts._verifySecondFactors(user, { 'alpha-test': 'nope', 'beta-test': 'ok' });
       await rejectsWith(
         test,
-        Accounts._verifySecondFactors(user, { 'alpha-test': 'nope', 'beta-test': 'ok' }),
+        Accounts._verifySecondFactors(user, { 'alpha-test': 'nope', 'beta-test': 'nope' }),
         'invalid-alpha-test'
       );
 

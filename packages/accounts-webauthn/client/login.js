@@ -31,9 +31,9 @@ Meteor.loginWithWebAuthnAsync = async selector => {
  * @param {Object | String} [selector]
  *   Either a string interpreted as a username or an email; or an object with a
  *   single key: `email`, `username` or `id`.
- * @param {Function} [callback] Optional callback.
- *   Called with no arguments on success, or with a single `Error` argument
- *   on failure.
+ * @param {Function} [callback] Optional callback. Called with
+ *   `(error, loginDetails)`: `error` is set on failure, otherwise
+ *   `loginDetails` is the result of the login.
  * @importFromPackage meteor
  */
 Meteor.loginWithWebAuthn = withCallback(Meteor.loginWithWebAuthnAsync);

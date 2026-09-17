@@ -81,6 +81,12 @@ Accounts.onWebAuthnCredentialChange(async ({ userId, action, credential }) => {
 });
 expectTypeOf(Accounts._checkWebAuthnSecondFactorEnabled).returns.toBeBoolean();
 
+// Second-factor errors carry structured details.
+const secondFactorError = new Meteor.Error("second-factor-required", "A second factor is required", {
+  availableFactors: ["totp", "webauthn"],
+});
+expectTypeOf(secondFactorError.details).not.toEqualTypeOf<string | undefined>();
+
 // registerWebAuthnCredential accepts a label, an options object, or only a callback.
 Accounts.registerWebAuthnCredential("YubiKey");
 Accounts.registerWebAuthnCredential({ name: "YubiKey" }, () => {});

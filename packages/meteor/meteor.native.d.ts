@@ -121,14 +121,15 @@ export namespace Meteor {
      * @param reason Optional. A short human-readable summary of the
      * error, like 'Not Found'.
      * @param details Optional. Additional information about the error,
-     * like a textual stack trace.
+     * like a textual stack trace or an object with extra fields. Any EJSON
+     * value is sent to the client.
      */
-    new (error: string | number, reason?: string, details?: string): Error;
+    new (error: string | number, reason?: string, details?: EJSONableProperty): Error;
   }
   interface Error extends global_Error {
     error: string | number;
     reason?: string | undefined;
-    details?: string | undefined;
+    details?: EJSONableProperty | undefined;
   }
   /** @deprecated Retained for Meteor 3.x declaration compatibility. */
   var TypedError: TypedErrorStatic;

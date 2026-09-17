@@ -723,10 +723,11 @@ export class AccountsServer extends AccountsCommon {
 
   // Verifies the second factors a user has enabled. Login handlers call this
   // after the primary credential has been verified. Any one satisfied factor
-  // authorizes the login. When none of the enabled factors has an answer in
-  // `options`, the thrown error carries `details.availableFactors` so the
-  // client can prompt for one of them. `only` restricts the check to the named
-  // factors.
+  // authorizes the login: answered factors are verified in registration order
+  // until one passes, and the first failure is reported when none does. When
+  // none of the enabled factors has an answer in `options`, the thrown error
+  // carries `details.availableFactors` so the client can prompt for one of
+  // them. `only` restricts the check to the named factors.
   async _verifySecondFactors(user, options = {}, { only } = {}) {
     const enabled = [...this._secondFactors.values()].filter(
       factor =>
@@ -757,7 +758,15 @@ export class AccountsServer extends AccountsCommon {
       );
     }
 
-    await answered[0].verify(user, options);
+    const failures = [];
+    for (const factor of answered) {
+      try {
+        return await factor.verify(user, options);
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    throw failures[0];
   }
 
 

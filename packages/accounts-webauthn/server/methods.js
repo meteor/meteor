@@ -1,3 +1,4 @@
+import { createHmac, randomBytes } from 'crypto';
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { check, Match } from 'meteor/check';
@@ -39,6 +40,19 @@ const toAllowedCredential = credential => ({
   id: credential.id,
   transports: credential.transports,
 });
+
+// A selector that resolves to no credentials receives a decoy list derived
+// from the selector, so the response does not reveal whether the account
+// exists or has keys (WebAuthn Level 3, section 14.6.3). The secret is per
+// process, so a decoy is as stable as a real list for the server's lifetime.
+const decoySecret = randomBytes(32);
+const decoyCredentials = selector => {
+  const [field, value] = Object.entries(selector)[0];
+  const id = createHmac('sha256', decoySecret)
+    .update(`${field}:${String(value).toLowerCase()}`)
+    .digest('base64url');
+  return [{ id, transports: ['internal', 'hybrid'] }];
+};
 
 // The credential `id` of the logged-in user, or the not-found error.
 async function findUserCredential(userId, id) {
@@ -185,11 +199,13 @@ Meteor.methods({
         })
       : null;
 
-    // An unknown selector still receives well-formed options so that the
-    // response does not reveal whether the account exists.
+    const credentials = getCredentials(user);
     const authenticationOptions = await generateAuthenticationOptions({
       rpID: config.rpID,
-      allowCredentials: getCredentials(user).map(toAllowedCredential),
+      allowCredentials:
+        selector && credentials.length === 0
+          ? decoyCredentials(selector)
+          : credentials.map(toAllowedCredential),
       userVerification:
         mode === 'secondFactor'
           ? config.secondFactorUserVerification
