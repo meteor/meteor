@@ -206,12 +206,14 @@ function rawSignatureToDer(raw) {
  * @param {String} options.rpID
  * @param {String} options.origin
  * @param {String[]} [options.transports=['usb']]
+ * @param {String} [options.credentialId] A base64url id to claim instead of a random one.
  * @returns {Promise<Object>} `{ credentialId, transports, counter, register, assert }`.
  */
 export async function createTestAuthenticator({
   rpID,
   origin,
   transports = ['usb'],
+  credentialId: claimedCredentialId,
 }) {
   const keyPair = await subtle.generateKey(
     { name: 'ECDSA', namedCurve: 'P-256' },
@@ -223,7 +225,9 @@ export async function createTestAuthenticator({
     rawPublicKey.subarray(1, 33),
     rawPublicKey.subarray(33, 65)
   );
-  const credentialId = Buffer.from(webcrypto.getRandomValues(new Uint8Array(32)));
+  const credentialId = claimedCredentialId
+    ? Buffer.from(claimedCredentialId, 'base64url')
+    : Buffer.from(webcrypto.getRandomValues(new Uint8Array(32)));
   const credentialIdBase64url = base64url(credentialId);
   let counter = 0;
 

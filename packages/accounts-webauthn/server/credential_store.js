@@ -1,5 +1,6 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
+import { isDecoyCredentialId } from './decoys.js';
 
 // Fields a login handler needs to verify a credential and any second factor.
 export const USER_FIELDS = { services: 1, username: 1, emails: 1 };
@@ -186,7 +187,10 @@ const isDuplicateKeyError = error =>
 /**
  * Checks that no user holds the credential id yet. Credential ids are globally
  * unique; the unique index is the backstop and this check gives a clear error
- * before the ceremony result is discarded.
+ * before the ceremony result is discarded. A decoy id from the authentication
+ * options is refused exactly like a taken one: with `attestationType: 'none'`
+ * a registration can claim any id, so registration would otherwise reveal
+ * which ids in those options are real.
  * @param {String} credentialId
  * @returns {Promise<void>}
  * @throws {Meteor.Error} `webauthn-credential-in-use`
@@ -196,7 +200,7 @@ export async function assertCredentialIdAvailable(credentialId) {
     { 'services.webauthn.credentials.id': credentialId },
     { fields: { _id: 1 } }
   );
-  if (owner) {
+  if (owner || (await isDecoyCredentialId(credentialId))) {
     credentialInUse();
   }
 }

@@ -8,6 +8,7 @@ import {
   consumeChallenge,
   getDecoySecret,
 } from './server/collection.js';
+import { decoyCredentials, isDecoyCredentialId } from './server/decoys.js';
 import {
   addCredentialToUser,
   detectCounterRollback,
@@ -26,11 +27,12 @@ const TOTP_SECRET = 'JBSWY3DPEHPK3PXP';
 
 /**
  * A fake authenticator bound to the configured relying party.
+ * @param {Object} [options] Extra `createTestAuthenticator` options, such as a `credentialId` to claim.
  * @returns {Promise<Object>}
  */
-const newAuthenticator = () => {
+const newAuthenticator = (options = {}) => {
   const config = getWebAuthnConfig();
-  return createTestAuthenticator({ rpID: config.rpID, origin: config.origins[0] });
+  return createTestAuthenticator({ rpID: config.rpID, origin: config.origins[0], ...options });
 };
 
 /**
@@ -266,6 +268,17 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync('accounts-webauthn - decoy credential ids carry a verifiable tag', async test => {
+  const decoys = await decoyCredentials({ username: `nobody_${Random.id()}` });
+  for (const decoy of decoys) {
+    test.isTrue(await isDecoyCredentialId(decoy.id), 'a decoy verifies');
+    test.isTrue([16, 20, 32, 64].includes(Buffer.from(decoy.id, 'base64url').length));
+  }
+  const genuine = await newAuthenticator();
+  test.isFalse(await isDecoyCredentialId(genuine.credentialId), 'a real id does not');
+  test.isFalse(await isDecoyCredentialId(Buffer.from([1, 2, 3]).toString('base64url')));
+});
+
 Tinytest.add('accounts-webauthn - counter rollback detection', test => {
   test.isFalse(detectCounterRollback(0, 0), 'authenticators without a counter');
   test.isFalse(detectCounterRollback(0, 1));
@@ -471,7 +484,7 @@ Tinytest.addAsync(
           mode: 'login',
           selector: nobody,
         });
-        test.isTrue([1, 2].includes(unknown.allowCredentials.length));
+        test.isTrue([1, 2, 3].includes(unknown.allowCredentials.length));
         test.isTrue(typeof unknown.allowCredentials[0].id === 'string');
         const again = await call(conn, 'generateWebAuthnAuthenticationOptions', {
           mode: 'login',
@@ -479,6 +492,22 @@ Tinytest.addAsync(
         });
         test.equal(again.allowCredentials, unknown.allowCredentials);
         test.isTrue(typeof unknown.challenge === 'string' && unknown.challenge.length > 0);
+
+        // Registration refuses a decoy id exactly like a taken one, so it
+        // cannot serve as an oracle telling decoys from real ids.
+        await loginWithPassword(conn, a.username, a.password);
+        const impostor = await newAuthenticator({ credentialId: unknown.allowCredentials[0].id });
+        const registration = await call(conn, 'generateWebAuthnRegistrationOptions', {
+          mode: 'addCredential',
+        });
+        await expectError(
+          test,
+          call(conn, 'registerWebAuthnCredential', {
+            credential: impostor.register({ challenge: registration.challenge }),
+          }),
+          'webauthn-credential-in-use',
+          'a decoy id registers like a taken id'
+        );
       });
     } finally {
       await cleanup(a.userId, b.userId);

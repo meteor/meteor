@@ -1,4 +1,3 @@
-import { createHmac } from 'crypto';
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { check, Match } from 'meteor/check';
@@ -7,7 +6,8 @@ import {
   generateAuthenticationOptions,
 } from '@simplewebauthn/server';
 import { getWebAuthnConfig, assertPasswordlessLoginEnabled } from './config.js';
-import { storeChallenge, getDecoySecret } from './collection.js';
+import { storeChallenge } from './collection.js';
+import { decoyCredentials } from './decoys.js';
 import {
   generateUserHandle,
   ensureUserHandle,
@@ -46,38 +46,6 @@ const toAllowedCredential = credential => ({
   id: credential.id,
   transports: credential.transports,
 });
-
-// Shapes a decoy list can take. Real keys report ids of 16 to 64 bytes and
-// transports that depend on the authenticator model, so a decoy must not
-// have one telltale form.
-const DECOY_ID_LENGTHS = [20, 32, 64];
-const DECOY_TRANSPORTS = [['internal', 'hybrid'], ['usb'], ['usb', 'nfc'], ['internal']];
-
-/**
- * Builds the decoy list a selector receives when it resolves to no
- * credentials, so the response does not reveal whether the account exists or
- * has keys (WebAuthn Level 3, section 14.6.3). Count, id lengths and
- * transports all derive from a keyed hash of the selector, so the list is as
- * stable as a real one but has no fixed shape. The secret is shared by every
- * server process and survives restarts.
- * @param {Object} selector `{ id }`, `{ username }` or `{ email }`.
- * @returns {Promise<Array>} One or two credential descriptors.
- */
-const decoyCredentials = async selector => {
-  const [field, value] = Object.entries(selector)[0];
-  const secret = await getDecoySecret();
-  const seed = createHmac('sha256', secret)
-    .update(`${field}:${String(value).toLowerCase()}`)
-    .digest();
-  return Array.from({ length: 1 + (seed[0] % 2) }, (_, index) => {
-    const bytes = createHmac('sha512', secret).update(seed).update(String(index)).digest();
-    const length = DECOY_ID_LENGTHS[seed[1 + index] % DECOY_ID_LENGTHS.length];
-    return {
-      id: bytes.subarray(0, length).toString('base64url'),
-      transports: DECOY_TRANSPORTS[seed[3 + index] % DECOY_TRANSPORTS.length],
-    };
-  });
-};
 
 /**
  * Loads one credential of the logged-in user.
