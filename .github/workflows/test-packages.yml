@@ -36,12 +36,13 @@ jobs:
 
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 26.x
-          submodules: recursive
 
       - name: Restore caches
         uses: actions/cache@v4
