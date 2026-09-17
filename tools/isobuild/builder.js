@@ -47,6 +47,27 @@ const ENABLE_IN_PLACE_BUILDER_REPLACEMENT =
   (process.platform !== 'win32') &&
   ! process.env.METEOR_DISABLE_BUILDER_IN_PLACE;
 
+// Scratch directories created inside node_modules by meteorNpm.
+// rebuildIfNonPortable, rm_recursive_deferred and renameDirAlmostAtomically;
+// never legitimate bundle content.
+const TRANSIENT_SCRATCH_REGEX =
+  /^\.(?:temp-[0-9a-z]+(?:\.old-\d+)?|.*-garbage-[0-9a-z]+)$/;
+
+// Meteor only ever creates those directly inside a node_modules directory
+// (or a node_modules/@scope directory), so the location is part of the
+// check: a package-owned lookalike deeper in the tree (e.g.
+// node_modules/example/.temp-cache) is preserved.
+function isTransientScratchDir(absPath) {
+  if (! TRANSIENT_SCRATCH_REGEX.test(files.pathBasename(absPath))) {
+    return false;
+  }
+  let parent = files.pathDirname(absPath);
+  if (files.pathBasename(parent).startsWith("@")) {
+    parent = files.pathDirname(parent);
+  }
+  return files.pathBasename(parent) === "node_modules";
+}
+
 
 // Options:
 //  - outputPath: Required. Path to the directory that will hold the
@@ -559,6 +580,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
     return this._copyDirectory(Object.assign({}, options, {
       filter: (absPath, isDirectory) => {
         if (isDirectory && absPath === rootCache) return false;
+        if (isDirectory && isTransientScratchDir(absPath)) return false;
         return userFilter ? userFilter(absPath, isDirectory) : true;
       },
     }));
@@ -566,6 +588,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
   _ensureAllNonPackageDirectories(absFromDir, relToDir, skipPath) {
     if (skipPath && absFromDir === skipPath) return;
+    if (isTransientScratchDir(absFromDir)) return;
 
     const dirStat = optimisticStatOrNull(absFromDir);
     if (! (dirStat && dirStat.isDirectory())) {
@@ -776,8 +799,15 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // Symbolic links pointing to relative external paths are less
           // portable than absolute links, so getExternalPath() is
           // preferred if it returns a path.
-          const linkSource = getExternalPath() ||
-              files.readlink(thisAbsFrom);
+          let linkSource;
+          try {
+            linkSource = getExternalPath() ||
+                files.readlink(thisAbsFrom);
+          } catch (e) {
+            // Entry deleted between readdir and readlink; skip it.
+            if (e.code === "ENOENT") continue;
+            throw e;
+          }
 
           const linkTarget =
               files.pathResolve(this.buildPath, thisRelTo);

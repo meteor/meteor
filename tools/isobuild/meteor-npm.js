@@ -385,7 +385,9 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
   const rebuildResult = await runNpmCommand(getRebuildArgs(), tempDir);
   if (! rebuildResult.success) {
     buildmessage.error(rebuildResult.error);
-    await files.rm_recursive_deferred(tempDir);
+    // Awaited so the bundler never walks nodeModulesDir while tempDir is
+    // half-deleted, but async so the event loop is not blocked meanwhile.
+    await files.rm_recursive_async(tempDir);
     return false;
   }
 
@@ -421,7 +423,9 @@ Profile("meteorNpm.rebuildIfNonPortable", async function (nodeModulesDir) {
     await files.renameDirAlmostAtomically(tempPkgDirs[pkgPath], pkgPath);
   }
 
-  await files.rm_recursive_deferred(tempDir);
+  // Awaited so the bundler never walks nodeModulesDir while tempDir is
+  // half-deleted, but async so the event loop is not blocked meanwhile.
+  await files.rm_recursive_async(tempDir);
 
   return true;
 });
