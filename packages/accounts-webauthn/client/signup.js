@@ -8,8 +8,8 @@ import { requestRegistration, callLoginMethod } from './orchestration.js';
  * passkey, and log them in. Returns a Promise.
  * @locus Client
  * @param {Object} options
- * @param {String} options.username A unique name for this user.
- * @param {String} options.email The user's email address.
+ * @param {String} [options.username] A unique name for this user. Required when `email` is absent.
+ * @param {String} [options.email] The user's email address. Required when `username` is absent.
  * @param {Object} options.profile The user's profile, typically including the `name` field.
  * @param {String} options.credentialName A label for the security key.
  * @returns {Promise<Object>} Resolves with login details on success, rejects with error on failure.
@@ -36,8 +36,8 @@ Accounts.createUserWithWebAuthnAsync = async (options = {}) => {
  * passkey, and log them in.
  * @locus Client
  * @param {Object} options
- * @param {String} options.username A unique name for this user.
- * @param {String} options.email The user's email address.
+ * @param {String} [options.username] A unique name for this user. Required when `email` is absent.
+ * @param {String} [options.email] The user's email address. Required when `username` is absent.
  * @param {Object} options.profile The user's profile, typically including the `name` field.
  * @param {String} options.credentialName A label for the security key.
  * @param {Function} [callback] Optional callback. Called with `(error, loginDetails)`: `error` is set on failure, otherwise `loginDetails` is the result of the login.

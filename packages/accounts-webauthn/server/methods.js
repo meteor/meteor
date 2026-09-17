@@ -1,4 +1,4 @@
-import { createHmac, randomBytes } from 'crypto';
+import { createHmac } from 'crypto';
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { check, Match } from 'meteor/check';
@@ -7,7 +7,7 @@ import {
   generateAuthenticationOptions,
 } from '@simplewebauthn/server';
 import { getWebAuthnConfig } from './config.js';
-import { storeChallenge } from './collection.js';
+import { storeChallenge, getDecoySecret } from './collection.js';
 import {
   generateUserHandle,
   ensureUserHandle,
@@ -47,20 +47,18 @@ const toAllowedCredential = credential => ({
   transports: credential.transports,
 });
 
-// Per-process secret behind the decoy credential ids.
-const decoySecret = randomBytes(32);
-
 /**
  * Builds the decoy list a selector receives when it resolves to no
  * credentials, so the response does not reveal whether the account exists or
- * has keys (WebAuthn Level 3, section 14.6.3). The secret is per process, so a
- * decoy is as stable as a real list for the server's lifetime.
+ * has keys (WebAuthn Level 3, section 14.6.3). The secret is shared by every
+ * server process and survives restarts, so a decoy is as stable as a real
+ * list.
  * @param {Object} selector `{ id }`, `{ username }` or `{ email }`.
- * @returns {Array} One credential descriptor.
+ * @returns {Promise<Array>} One credential descriptor.
  */
-const decoyCredentials = selector => {
+const decoyCredentials = async selector => {
   const [field, value] = Object.entries(selector)[0];
-  const id = createHmac('sha256', decoySecret)
+  const id = createHmac('sha256', await getDecoySecret())
     .update(`${field}:${String(value).toLowerCase()}`)
     .digest('base64url');
   return [{ id, transports: ['internal', 'hybrid'] }];
@@ -258,7 +256,7 @@ Meteor.methods({
       rpID: config.rpID,
       allowCredentials:
         selector && credentials.length === 0
-          ? decoyCredentials(selector)
+          ? await decoyCredentials(selector)
           : credentials.map(toAllowedCredential),
       userVerification:
         mode === 'secondFactor'

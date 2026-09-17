@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { Mongo } from 'meteor/mongo';
 import { Accounts } from 'meteor/accounts-base';
 
@@ -12,6 +13,46 @@ export const WebAuthnChallenges = new Mongo.Collection(
 
 // Exposed for tests and for apps that need to inspect pending challenges.
 Accounts._webAuthnChallenges = WebAuthnChallenges;
+
+// The secret behind the decoy credential ids is stored in this collection
+// under a fixed id, so every server process derives the same decoys and they
+// survive restarts. The document has no `expiresAt`, so the TTL index leaves
+// it alone, and its `type` keeps consumeChallenge() from matching it.
+const DECOY_SECRET_ID = 'decoySecret';
+let decoySecret;
+
+/**
+ * The cluster-wide secret behind the decoy credential ids, created on first
+ * use with an atomic upsert and cached for the life of the process.
+ * @returns {Promise<Buffer>}
+ */
+export async function getDecoySecret() {
+  if (!decoySecret) {
+    const collection = WebAuthnChallenges.rawCollection();
+    const filter = { _id: DECOY_SECRET_ID };
+    let doc;
+    try {
+      doc = await collection.findOneAndUpdate(
+        filter,
+        {
+          $setOnInsert: {
+            type: DECOY_SECRET_ID,
+            secret: randomBytes(32).toString('hex'),
+          },
+        },
+        { upsert: true, returnDocument: 'after' }
+      );
+    } catch (error) {
+      // Two processes raced to create it and the other one won.
+      if (error?.code !== 11000) {
+        throw error;
+      }
+      doc = await collection.findOne(filter);
+    }
+    decoySecret = Buffer.from(doc.secret, 'hex');
+  }
+  return decoySecret;
+}
 
 /**
  * Creates the TTL index that expires challenges and the index used to look
@@ -60,6 +101,8 @@ export async function storeChallenge({
  * Atomically removes and returns the challenge document, or `null` when it
  * does not exist, has expired, or was issued for a different ceremony. A
  * challenge is consumed whether or not the verification that follows succeeds.
+ * Only a document of the expected ceremony type is matched, which keeps the
+ * decoy secret out of reach of a crafted challenge string.
  * @param {String} challenge The base64url challenge.
  * @param {Object} options
  * @param {String} options.type `registration` or `authentication`.
@@ -72,6 +115,7 @@ export async function consumeChallenge(challenge, { type, mode }) {
   }
   const doc = await WebAuthnChallenges.rawCollection().findOneAndDelete({
     _id: challenge,
+    type,
   });
   const valid =
     doc &&

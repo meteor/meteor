@@ -3,7 +3,11 @@ import { Accounts } from 'meteor/accounts-base';
 import { Random } from 'meteor/random';
 import { createTestAuthenticator } from './webauthn_test_helpers.js';
 import { getWebAuthnConfig } from './server/config.js';
-import { WebAuthnChallenges } from './server/collection.js';
+import {
+  WebAuthnChallenges,
+  consumeChallenge,
+  getDecoySecret,
+} from './server/collection.js';
 import {
   addCredentialToUser,
   detectCounterRollback,
@@ -146,7 +150,9 @@ const getUser = userId => Meteor.users.findOneAsync(userId);
  */
 async function cleanup(...userIds) {
   await Meteor.users.removeAsync({ _id: { $in: userIds.filter(Boolean) } });
-  await WebAuthnChallenges.removeAsync({});
+  await WebAuthnChallenges.removeAsync({
+    type: { $in: ['registration', 'authentication'] },
+  });
 }
 
 /**
@@ -243,6 +249,21 @@ Tinytest.add('accounts-webauthn - config - overrides are applied and validated',
     Accounts._options.webauthn = previous;
   }
 });
+
+Tinytest.addAsync(
+  'accounts-webauthn - the decoy secret is shared through the collection and never consumed',
+  async test => {
+    const secret = await getDecoySecret();
+    const stored = await WebAuthnChallenges.findOneAsync('decoySecret');
+    test.equal(stored.secret, secret.toString('hex'), 'persisted for other processes');
+    test.isUndefined(stored.expiresAt, 'not subject to the TTL index');
+    test.isNull(
+      await consumeChallenge('decoySecret', { type: 'authentication', mode: 'login' }),
+      'a crafted challenge string cannot consume it'
+    );
+    test.isTrue(!!(await WebAuthnChallenges.findOneAsync('decoySecret')), 'still stored');
+  }
+);
 
 Tinytest.add('accounts-webauthn - counter rollback detection', test => {
   test.isFalse(detectCounterRollback(0, 0), 'authenticators without a counter');

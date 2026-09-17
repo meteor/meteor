@@ -11,7 +11,7 @@ Starting in Meteor 3.5 this package uses [OTPAuth](https://www.npmjs.com/package
 > This package is meant to be used with [`accounts-password`](../api/accounts.md#passwords) or [`accounts-passwordless`](./accounts-passwordless.md), so if you don't have either of those in your project, you'll need to add one of them. In the future, we want to enable the use of this package with other login methods, our oauth methods (Google, GitHub, etc...).
 
 ::: info Meteor 3.6
-Second factors are now registered through `Accounts.registerSecondFactor`. A user may enable both an authenticator code and a security key from [`accounts-webauthn`](./accounts-webauthn.md); any one of them completes the login. When several factors are enabled and none is supplied, the login fails with the `second-factor-required` error and `error.details.availableFactors` lists them. The errors below are unchanged when only 2FA is enabled.
+Second factors are now registered through `Accounts.registerSecondFactor`. A user may enable both an authenticator code and a security key from [`accounts-webauthn`](./accounts-webauthn.md); any one of them completes the login. When several factors are enabled and none is supplied, the login fails with the `second-factor-required` error and `error.details.availableFactors` lists them. The errors below are unchanged when only 2FA is enabled; `no-2fa-code` now also carries `error.details.availableFactors` (`['totp']`), so a login form can branch on that field whatever the user has enabled.
 :::
 
 ## 2FA Activation Flow {#activating-2fa}
