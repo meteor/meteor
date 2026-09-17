@@ -98,12 +98,21 @@ Accounts.onPageLoadLogin((attempt: Accounts.PageLoadLoginAttemptInfo) => {
 Accounts.config({
   clientStorage: "none",
   useHttpOnlyCookies: true,
+  httpOnlyCookieAllowedOrigins: ["https://app.example.com"],
+  httpOnlyCookieRateLimit: { max: 30, windowMs: 10_000 },
   collection: usersCollection,
   restrictCreationByEmailDomain: (email) => {
     expectTypeOf(email).toBeString();
     return email.endsWith("@meteor.com");
   },
 });
+
+Accounts.config({ httpOnlyCookieRateLimit: false });
+
+// @ts-expect-error Cookie origins must be an array of strings.
+Accounts.config({ httpOnlyCookieAllowedOrigins: "https://app.example.com" });
+// @ts-expect-error The rate limit accepts configuration or false, not true.
+Accounts.config({ httpOnlyCookieRateLimit: true });
 
 declare const legacyAccountsCallback: Function;
 Accounts.onLogin(legacyAccountsCallback);
