@@ -23,6 +23,7 @@ export const registrationResponsePattern = Match.ObjectIncluding({
   response: Match.ObjectIncluding({
     clientDataJSON: Match.NonEmptyString,
     attestationObject: Match.NonEmptyString,
+    transports: Match.Optional([String]),
   }),
 });
 

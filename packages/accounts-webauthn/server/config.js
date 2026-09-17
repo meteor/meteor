@@ -2,6 +2,9 @@ import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 
 const DEFAULT_TIMEOUT_MS = 60 * 1000;
+// Browsers cap a ceremony at about ten minutes; a challenge that outlives
+// that only widens the window in which a captured one can be used.
+const MAX_TIMEOUT_MS = 10 * 60 * 1000;
 const REQUIREMENT_VALUES = ['required', 'preferred', 'discouraged'];
 const ALLOWED_VALUES = {
   attestationType: ['none', 'direct', 'enterprise'],
@@ -47,9 +50,14 @@ export function getWebAuthnConfig() {
     );
   }
   const timeout = options.timeout || DEFAULT_TIMEOUT_MS;
-  if (!(Number.isFinite(timeout) && timeout > 0)) {
+  if (!(Number.isFinite(timeout) && timeout > 0 && timeout <= MAX_TIMEOUT_MS)) {
     throw new Error(
-      `Accounts.config: invalid webauthn.timeout "${options.timeout}"; expected a positive number of milliseconds`
+      `Accounts.config: invalid webauthn.timeout "${options.timeout}"; expected a positive number of milliseconds up to ${MAX_TIMEOUT_MS}`
+    );
+  }
+  if (options.requireTotpOnLogin && !Package['accounts-2fa']) {
+    throw new Error(
+      'Accounts.config: webauthn.requireTotpOnLogin needs the accounts-2fa package'
     );
   }
   return {

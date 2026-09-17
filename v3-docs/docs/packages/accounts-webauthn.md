@@ -26,8 +26,8 @@ Everything works without configuration on a single-origin app. The options below
 | `residentKey` | `'preferred'` | Whether registration asks for a discoverable credential. Discoverable credentials allow login without typing a username. |
 | `userVerification` | `'required'` | User verification (PIN or biometrics on the key) asked for when registering a key. With `'required'`, the browser has the user set up a PIN on keys that have none. Passwordless login and sign-up always require it, whatever this setting: a key alone must never be enough to get in. A key registered without user verification is a second-factor-only key, which the passwordless login refuses with `webauthn-second-factor-only`. Set `'preferred'` for deployments that use keys mainly as a second factor and do not want to force a PIN on every key. |
 | `secondFactorUserVerification` | `'preferred'` | User verification for second-factor use, where the password is the knowledge factor. |
-| `timeout` | `60000` | Milliseconds a challenge stays valid. |
-| `requireTotpOnLogin` | `false` | Also require the [`accounts-2fa`](./accounts-2fa.md) authenticator code after a passwordless login. |
+| `timeout` | `60000` | Milliseconds a challenge stays valid, at most `600000` (ten minutes). |
+| `requireTotpOnLogin` | `false` | Also require the [`accounts-2fa`](./accounts-2fa.md) authenticator code after a passwordless login. Requires the `accounts-2fa` package. |
 | `passwordlessLogin` | `true` | Set to `false` to turn off passwordless login and key-only sign-up, for deployments that use keys purely as a second factor. The login options and the login handler then fail with `webauthn-passwordless-disabled`. |
 
 ```js
@@ -162,6 +162,8 @@ await Accounts.createUserWithWebAuthnAsync({
   credentialName: 'Laptop',
 });
 ```
+
+An account created this way requires its key at every login, as if `Accounts.enableWebAuthnSecondFactor` had been called. If a password is set later, for example through a reset link when `accounts-password` is installed, password login still asks for the key and the reset link alone does not log the user in. Call `Accounts.disableWebAuthnSecondFactor` to lift that requirement.
 
 ## Security key as a second factor {#second-factor}
 

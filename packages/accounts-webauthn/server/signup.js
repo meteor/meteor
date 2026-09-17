@@ -7,6 +7,7 @@ import {
   verifyNewCredential,
 } from './ceremonies.js';
 import { notifyCredentialChange } from './hooks.js';
+import { credentialNamePattern } from './util.js';
 
 /**
  * Completes a `signup` registration ceremony: verifies the new credential,
@@ -20,7 +21,7 @@ import { notifyCredentialChange } from './hooks.js';
 export async function completeWebAuthnSignup(options) {
   check(options, {
     credential: registrationResponsePattern,
-    credentialName: Match.Optional(Match.NonEmptyString),
+    credentialName: Match.Optional(credentialNamePattern),
   });
   if (Accounts._options.forbidClientAccountCreation) {
     return { error: new Meteor.Error(403, 'Signups forbidden') };
@@ -41,7 +42,9 @@ export async function completeWebAuthnSignup(options) {
     services: {
       webauthn: {
         userHandle: challengeDoc.userHandle,
-        secondFactorEnabled: false,
+        // The key stays required at login even if a password is set later,
+        // for example through a reset link.
+        secondFactorEnabled: true,
         credentials: [credentialDoc],
       },
     },

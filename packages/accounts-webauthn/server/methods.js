@@ -28,7 +28,7 @@ import {
   verifyNewCredential,
 } from './ceremonies.js';
 import { notifyCredentialChange } from './hooks.js';
-import { requireUserId } from './util.js';
+import { requireUserId, credentialNamePattern } from './util.js';
 
 const userDataPattern = Match.ObjectIncluding({
   username: Match.Optional(String),
@@ -196,7 +196,7 @@ Meteor.methods({
   async generateWebAuthnRegistrationOptions(options = {}) {
     check(options, {
       mode: Match.OneOf('addCredential', 'signup'),
-      name: Match.Optional(Match.NonEmptyString),
+      name: Match.Optional(credentialNamePattern),
       userData: Match.Optional(Object),
     });
     if (options.mode === 'addCredential') {
@@ -281,7 +281,7 @@ Meteor.methods({
   async registerWebAuthnCredential(options) {
     check(options, {
       credential: registrationResponsePattern,
-      name: Match.Optional(Match.NonEmptyString),
+      name: Match.Optional(credentialNamePattern),
     });
     const userId = requireUserId(this);
     const { challengeDoc, registrationInfo } = await verifyNewCredential({
@@ -320,7 +320,7 @@ Meteor.methods({
    */
   async renameWebAuthnCredential(id, name) {
     check(id, Match.NonEmptyString);
-    check(name, Match.NonEmptyString);
+    check(name, credentialNamePattern);
     const userId = requireUserId(this);
     const credential = await findUserCredential(userId, id);
     if (name !== credential.name) {

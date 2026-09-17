@@ -21,7 +21,13 @@ import {
  * @returns {Promise<Object|undefined>} `{ userId }` or `{ userId, error }`; `undefined` when the options are not a WebAuthn login.
  */
 Accounts.registerLoginHandler('webauthn', async options => {
-  if (!options.webauthn) {
+  // A password or token login that carries a key is answering a second-factor
+  // challenge and belongs to that package's handler, whatever the load order.
+  if (
+    !options.webauthn ||
+    options.password !== undefined ||
+    options.token !== undefined
+  ) {
     return undefined; // don't handle
   }
   assertPasswordlessLoginEnabled();

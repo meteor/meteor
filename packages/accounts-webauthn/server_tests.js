@@ -244,9 +244,17 @@ Tinytest.add('accounts-webauthn - config - overrides are applied and validated',
     }
     Accounts._options.webauthn = { timeout: 0 };
     test.equal(getWebAuthnConfig().timeout, 60000, 'a falsy timeout keeps the default');
-    for (const timeout of [-1, Infinity, '60000']) {
+    for (const timeout of [-1, Infinity, '60000', 600001]) {
       Accounts._options.webauthn = { timeout };
       test.throws(() => getWebAuthnConfig(), /webauthn\.timeout/);
+    }
+    const twoFactor = Package['accounts-2fa'];
+    delete Package['accounts-2fa'];
+    try {
+      Accounts._options.webauthn = { requireTotpOnLogin: true };
+      test.throws(() => getWebAuthnConfig(), /accounts-2fa/);
+    } finally {
+      Package['accounts-2fa'] = twoFactor;
     }
   } finally {
     Accounts._options.webauthn = previous;
@@ -703,6 +711,18 @@ Tinytest.addAsync(
     });
     try {
       await withLoggedInUser(test, async ({ conn, userId }) => {
+        const junk = await call(conn, 'generateWebAuthnRegistrationOptions', {
+          mode: 'addCredential',
+        });
+        const malformed = key.register({ challenge: junk.challenge });
+        malformed.response.transports = 'usb';
+        await expectError(
+          test,
+          call(conn, 'registerWebAuthnCredential', { credential: malformed }),
+          400,
+          'transports must be a list of strings'
+        );
+
         const wrongRp = await call(conn, 'generateWebAuthnRegistrationOptions', {
           mode: 'addCredential',
         });
@@ -865,6 +885,17 @@ Tinytest.addAsync(
   }
 );
 
+Tinytest.addAsync(
+  'accounts-webauthn - the login handler leaves password and token logins alone',
+  async test => {
+    const { handler } = Accounts._loginHandlers.find(({ name }) => name === 'webauthn');
+    const webauthn = await (await newAuthenticator()).assert({ challenge: 'unused' });
+    test.isUndefined(await handler.call({}, { user: { username: 'x' }, password: 'x', webauthn }));
+    test.isUndefined(await handler.call({}, { selector: 'x', token: 'x', webauthn }));
+    test.isUndefined(await handler.call({}, { user: { username: 'x' }, password: 'x' }));
+  }
+);
+
 Tinytest.addAsync('accounts-webauthn - passwordless login can be turned off', async test => {
   const previous = Accounts._options.webauthn;
   Accounts._options.webauthn = { ...previous, passwordlessLogin: false };
@@ -925,7 +956,10 @@ Tinytest.addAsync('accounts-webauthn - sign up with only a security key', async 
       test.equal(user.emails[0].address, email);
       test.equal(user.profile.name, 'Key User');
       test.equal(user.services.webauthn.userHandle, options.user.id);
-      test.isFalse(user.services.webauthn.secondFactorEnabled);
+      test.isTrue(
+        user.services.webauthn.secondFactorEnabled,
+        'the key stays required if a password is set later'
+      );
       test.equal(user.services.webauthn.credentials[0].name, 'First key');
 
       // The connection is logged in as the new user.
@@ -1032,6 +1066,12 @@ Tinytest.addAsync(
         await call(conn, 'renameWebAuthnCredential', second.id, 'Backup');
         // Renaming to the current name changes nothing and is not an error.
         await call(conn, 'renameWebAuthnCredential', second.id, 'Backup');
+        await expectError(
+          test,
+          call(conn, 'renameWebAuthnCredential', second.id, 'x'.repeat(101)),
+          400,
+          'labels are capped at 100 characters'
+        );
         test.equal(
           (await call(conn, 'listWebAuthnCredentials')).map(credential => credential.name),
           ['Primary', 'Backup']
