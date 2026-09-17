@@ -4,13 +4,208 @@
  * of different Meteor skeletons (apollo, react, etc.).
  */
 
+import {
+  assertRspackWorkspaceInstall,
+  assertServiceWorkerFile,
+  assertStyles,
+} from './assertions';
+import {
+  appendFileContent,
+  cleanupTempDir,
+  createMeteorApp,
+  killMeteorProcess,
+  killProcessByPort,
+  resetPlaywrightPage,
+  runMeteorApp,
+  waitForMeteorOutput,
+} from './helpers';
+import { linkLocalRspack, testMeteorSkeleton } from './test-helpers';
+import fs from 'fs-extra';
 import path from 'path';
-import fs from 'fs';
 
-import { assertStyles } from './assertions';
-import { testMeteorSkeleton } from './test-helpers';
+async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
+  const probePath = path.join(tempDir, 'imports/ts-checker-e2e-probe.ts');
 
-const isCI = process.env.GITHUB_ACTIONS === 'true';
+  try {
+    const errorOutputStart = result.outputLines.length;
+    await fs.outputFile(
+      probePath,
+      'export const tsCheckerProbe: string = 123;\n',
+    );
+    await waitForMeteorOutput(result.outputLines, /TS2322/, {
+      meteorProcess,
+      startIndex: errorOutputStart,
+    });
+  } finally {
+    await fs.remove(probePath);
+  }
+}
+
+// The pwa skeleton registers `/sw.js?dev=1` in development (installable, but
+// the bundle is never cached so hot code push keeps working) and `/sw.js` in
+// production (offline caching of the app shell and static assets).
+async function assertPwaInstallable({ port, swPath, prefix = '' }) {
+  const origin = `http://localhost:${port}`;
+  const swUrl = `${origin}${swPath}`;
+
+  // The manifest link is what makes the browser offer installation. The <h1> is
+  // static markup, so wait for the app to boot: under a prefix the link is
+  // rewritten in Meteor.startup.
+  const manifestHref = `${prefix}/manifest.webmanifest`;
+  await page.waitForFunction(
+    (href) => document.querySelector('link[rel="manifest"]')?.getAttribute('href') === href,
+    manifestHref,
+    { timeout: 15_000 },
+  );
+  const manifest = await page.request.get(`${origin}${manifestHref}`);
+  expect(manifest.ok()).toBe(true);
+  expect((await manifest.json()).name).toContain('pwa');
+
+  await assertServiceWorkerFile(port, { swPath });
+
+  // The skeleton's own registration (Meteor.startup) must activate, take
+  // control of the page (`clients.claim()`) and keep it across a reload.
+  const isControlledBy = (url) => navigator.serviceWorker.controller?.scriptURL === url;
+  await page.waitForFunction(isControlledBy, swUrl, { timeout: 15_000 });
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForFunction(isControlledBy, swUrl, { timeout: 15_000 });
+  console.log(`✅ Service worker controlling the page (${swUrl})`);
+}
+
+// Regression guard for the worker's final fallback, which must consult PRECACHE
+// only: a page cached by a navigation (RUNTIME.pages) must never answer a later
+// same-URL data fetch, as a bucket-spanning `caches.match()` would. The route,
+// appended to the app's server entry, serves the app shell to navigations and
+// JSON to everything else.
+const NEGOTIATED_PATH = '/e2e-negotiated';
+const NEGOTIATED_ROUTE = `
+import { WebApp } from 'meteor/webapp';
+
+WebApp.handlers.get('${NEGOTIATED_PATH}', (req, res, next) => {
+  if ((req.headers.accept || '').includes('text/html')) return next();
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify({ negotiated: 'json' }));
+});
+`;
+
+async function assertPwaDataFetchBypassesPageCache({ port, prefix = '' }) {
+  const origin = `http://localhost:${port}`;
+  const url = `${prefix}${NEGOTIATED_PATH}`;
+  // Navigate first: networkFirst stores the HTML in the pages bucket without
+  // awaiting the put, so wait for the entry before fetching. (Not
+  // `waitForFunction`: it settles on the first value of an async predicate.)
+  await page.goto(`${origin}${url}`, { waitUntil: 'load' });
+  await page.evaluate(async (u) => {
+    const deadline = Date.now() + 15_000;
+    while (!(await caches.match(u))) {
+      if (Date.now() > deadline) throw new Error(`${u} never reached the pages cache`);
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }, url);
+  const body = await page.evaluate((u) => fetch(u).then((r) => r.text()), url);
+  expect(JSON.parse(body)).toEqual({ negotiated: 'json' });
+  console.log('✅ Data fetch reached the network, not the navigation-cached page');
+  // Leave the page on the app root for the offline reload below.
+  await page.goto(`${origin}${prefix}/`, { waitUntil: 'load' });
+  await page.waitForSelector('h1');
+}
+
+// Production only: once the app shell has been served through the worker, it
+// must load again with the server gone. Killing the server is what takes the
+// worker's own fetches offline — Playwright's `setOffline` only reaches the page.
+async function assertPwaLoadsOffline({ port, meteorProcess }) {
+  await killMeteorProcess(meteorProcess);
+  await killProcessByPort(port);
+  await page.reload({ waitUntil: 'load' });
+  await page.waitForSelector('h1');
+  expect(await page.textContent('h1')).toBe('Welcome to Meteor!');
+  console.log('✅ App shell served from the service worker cache with the server down');
+}
+
+async function assertReact19Dependencies({ tempDir }, includeTypes = false) {
+  const packageJsonPath = path.join(tempDir, 'package.json');
+  const packageJson = JSON.parse(
+    await fs.promises.readFile(packageJsonPath, 'utf8')
+  );
+
+  expect(packageJson.dependencies.react).toBe('^19.2.0');
+  expect(packageJson.dependencies['react-dom']).toBe('^19.2.0');
+
+  if (includeTypes) {
+    expect(packageJson.devDependencies['@types/react']).toBe('^19.2.0');
+    expect(packageJson.devDependencies['@types/react-dom']).toBe('^19.2.0');
+  }
+}
+
+async function assertPnpmBrowser() {
+  const statusText = await page.$eval(
+    '#workspace-status',
+    (element) => element.textContent
+  );
+  expect(statusText).toContain('@example/ui');
+  expect(statusText).toContain('client package compiled by Rspack');
+
+  const accentText = await page.$eval(
+    '#accent-color',
+    (element) => element.textContent
+  );
+  expect(accentText).toContain('#40E0D0');
+}
+
+async function assertPnpmRuntime({ result }) {
+  expect(
+    result.outputLines.some(line =>
+      /Rspack: npm dependencies need attention/.test(line)
+    )
+  ).toBe(false);
+  await waitForMeteorOutput(
+    result.outputLines,
+    /domain:server:pnpm workspace package loaded on the server/,
+  );
+  await waitForMeteorOutput(result.outputLines, /@example\/server:compiled/);
+  await waitForMeteorOutput(result.outputLines, /domain:server:accent #40E0D0/);
+  await assertPnpmBrowser();
+}
+
+async function assertPnpmAutoInstall({ tempDir, appDir, packageJsonPath }) {
+  const packageJson = await fs.readJson(packageJsonPath);
+  const expectedRsdoctorVersion =
+    packageJson.devDependencies['@rsdoctor/rspack-plugin'];
+
+  packageJson.devDependencies['@rsdoctor/rspack-plugin'] = '^1.0.0';
+  await fs.writeJson(packageJsonPath, packageJson, { spaces: 2 });
+
+  let meteorProcess;
+  try {
+    const result = await runMeteorApp(appDir, 3222, {
+      waitForOutput: '=> App running at',
+    });
+    meteorProcess = result.meteorProcess;
+
+    await waitForMeteorOutput(
+      result.outputLines,
+      /Rspack dependencies are up to date/,
+      { meteorProcess },
+    );
+
+    const updatedPackageJson = await fs.readJson(packageJsonPath);
+    expect(
+      updatedPackageJson.devDependencies['@rsdoctor/rspack-plugin']
+    ).toContain(expectedRsdoctorVersion.replace(/^\^/, ''));
+    await assertRspackWorkspaceInstall({
+      workspaceRoot: tempDir,
+      appDir,
+      packageManager: 'pnpm',
+    });
+  } finally {
+    await killMeteorProcess(meteorProcess);
+    await killProcessByPort([3222, 18080]);
+
+    const restoredPackageJson = await fs.readJson(packageJsonPath);
+    delete restoredPackageJson.meteor.autoInstallDeps;
+    await fs.writeJson(packageJsonPath, restoredPackageJson, { spaces: 2 });
+  }
+}
 
 describe('Meteor Skeletons /', () => {
   describe(
@@ -36,6 +231,9 @@ describe('Meteor Skeletons /', () => {
         server: 'server/main.js',
         test: 'tests/main.js',
       },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
@@ -48,6 +246,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.jsx',
         server: 'server/main.js',
         test: 'tests/main.js',
+      },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
       },
     }),
   );
@@ -88,6 +289,9 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.js',
       },
       checkBodyStyles: false,
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
@@ -101,11 +305,14 @@ describe('Meteor Skeletons /', () => {
         server: 'server/main.coffee',
         test: 'tests/main.coffee',
       },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
+      },
     }),
   );
 
   describe(
-    'Other / Full Skeleton /',
+    'Full Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'full',
       port: 3204,
@@ -116,6 +323,151 @@ describe('Meteor Skeletons /', () => {
       },
     })
   );
+
+  describe(
+    'Pnpm Skeleton /',
+    testMeteorSkeleton({
+      skeletonName: 'pnpm',
+      port: 3222,
+      meteorAppPath: 'apps/app',
+      packageManager: 'pnpm',
+      filePaths: {
+        client: 'client/main.js',
+        server: 'server/main.js',
+        test: 'tests/main.test.js',
+      },
+      customAssertions: {
+        async afterCreate({ tempDir, appDir, packageJsonPath }) {
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-workspace.yaml'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-lock.yaml'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(appDir, '.meteor', 'release'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(
+              path.join(appDir, 'node_modules', '@example', 'shared')
+            )
+          ).toBe(true);
+
+          const workspaceName = path.basename(tempDir);
+          const rootPackageJson = await fs.readJson(
+            path.join(tempDir, 'package.json')
+          );
+          const appPackageJson = await fs.readJson(
+            path.join(appDir, 'package.json')
+          );
+          expect(rootPackageJson.name).toBe(workspaceName);
+          expect(appPackageJson.name).toBe(`${workspaceName}-app`);
+          expect(appPackageJson.meteor.autoInstallDeps).toBeUndefined();
+          expect(appPackageJson.dependencies['@example/shared']).toBe(
+            'workspace:*'
+          );
+
+          await assertPnpmAutoInstall({
+            tempDir,
+            appDir,
+            packageJsonPath,
+          });
+        },
+        afterRun: assertPnpmRuntime,
+        afterRunProduction: assertPnpmRuntime,
+        afterRunBuiltApp: assertPnpmBrowser,
+        async afterTestOnce({ result }) {
+          await waitForMeteorOutput(
+            result.outputLines,
+            /pnpm workspace packages compiled/,
+          );
+          await waitForMeteorOutput(
+            result.outputLines,
+            /pnpm transitive dependencies resolved/,
+          );
+        },
+        async afterReset({ tempDir }) {
+          expect(
+            await fs.pathExists(path.join(tempDir, 'node_modules'))
+          ).toBe(true);
+          expect(
+            await fs.pathExists(path.join(tempDir, 'pnpm-lock.yaml'))
+          ).toBe(true);
+        },
+      },
+    })
+  );
+
+  describe(
+    'PWA Skeleton /',
+    testMeteorSkeleton({
+      skeletonName: 'pwa',
+      port: 3214,
+      filePaths: {
+        client: 'client/main.js',
+        server: 'server/main.js',
+        test: 'tests/main.js',
+      },
+      customAssertions: {
+        afterCreate: ({ tempDir }) =>
+          appendFileContent(tempDir, 'server/main.js', { content: NEGOTIATED_ROUTE }),
+        afterRun: ({ port }) =>
+          assertPwaInstallable({ port, swPath: '/sw.js?dev=1' }),
+        afterRunProduction: async ({ port, meteorProcess }) => {
+          await assertPwaInstallable({ port, swPath: '/sw.js' });
+          await assertPwaDataFetchBypassesPageCache({ port });
+          await assertPwaLoadsOffline({ port, meteorProcess });
+        },
+      },
+    }),
+  );
+
+  // A path-prefixed ROOT_URL (https://example.com/app) serves everything under
+  // the prefix, so every PWA URL has to follow. Production only: in development
+  // the boilerplate injects the Rspack client script without the prefix
+  // (packages/boilerplate-generator/template-web.browser.js), so no app code
+  // runs under a prefix until that is fixed. The rest of the lifecycle is
+  // prefix-agnostic and already covered above.
+  describe('PWA Skeleton / path prefix /', () => {
+    const port = 3215;
+    const prefix = '/app';
+    const env = { ROOT_URL: `http://localhost:${port}${prefix}` };
+    let tempDir;
+    let meteorProcess;
+
+    beforeAll(async () => {
+      await killProcessByPort(port);
+      const result = await createMeteorApp('pwa', 'pwa');
+      tempDir = result.tempDir;
+      await result.meteorProcess;
+      await linkLocalRspack(tempDir);
+    }, 360_000);
+
+    afterAll(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    afterEach(async () => {
+      await resetPlaywrightPage();
+      await killMeteorProcess(meteorProcess);
+      meteorProcess = null;
+      await killProcessByPort(port);
+    });
+
+    test('"meteor run --production" / serves the PWA under the prefix', async () => {
+      ({ meteorProcess } = await runMeteorApp(tempDir, port, {
+        waitForOutput: '=> App running at',
+        // The helper's readiness probe hits `/`, which is a 404 under a prefix.
+        skipWaitOn: true,
+        commandOptions: ['--production'],
+        env,
+      }));
+      await page.goto(`http://localhost:${port}${prefix}/`);
+      await page.waitForSelector('h1');
+      await assertPwaInstallable({ port, prefix, swPath: `${prefix}/sw.js` });
+      await assertPwaLoadsOffline({ port, meteorProcess });
+    });
+  });
 
   describe(
     'React Skeleton /',
@@ -132,6 +484,9 @@ describe('Meteor Skeletons /', () => {
           ? 'Inter, -apple-system, "system-ui", "Segoe UI", Roboto, sans-serif'
           : 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
         padding: '10px',
+      },
+      customAssertions: {
+        afterCreate: assertReact19Dependencies,
       },
     }),
   );
@@ -163,7 +518,7 @@ describe('Meteor Skeletons /', () => {
   );
 
   describe(
-    'Other / Tailwind Skeleton /',
+    'Tailwind Skeleton /',
     testMeteorSkeleton({
       skeletonName: 'tailwind',
       port: 3208,
@@ -173,6 +528,7 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.ts',
       },
       customAssertions: {
+        afterCreate: assertReact19Dependencies,
         afterRun: async () => {
           // Verify Tailwind styles for '.bg-gray-100' element
           await assertStyles('.bg-gray-100', {
@@ -200,18 +556,10 @@ describe('Meteor Skeletons /', () => {
         test: 'tests/main.ts',
       },
       customAssertions: {
-        afterCreate({ tempDir }) {
-          if (isCI) {
-            const rspackConfigPath = path.join(tempDir, 'rspack.config.ts');
-            // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails
-            let configContent = fs.readFileSync(rspackConfigPath, 'utf8');
-            configContent = configContent.replace(
-              /\s*new\s+TsCheckerRspackPlugin\(\)/,
-              '',
-            );
-            fs.writeFileSync(rspackConfigPath, configContent);
-          }
+        async afterCreate({ tempDir }) {
+          await assertReact19Dependencies({ tempDir }, true);
         },
+        afterRun: assertTsgoTypeChecker,
       },
     }),
   );
@@ -227,17 +575,8 @@ describe('Meteor Skeletons /', () => {
         test: "tests/main.ts",
       },
       customAssertions: {
-        afterCreate({ tempDir }) {
-          if (isCI) {
-            const rspackConfigPath = path.join(tempDir, "rspack.config.ts");
-            // Remove the TsCheckerRspackPlugin plugin as is resource-intense, CI gets exhausted and fails
-            let configContent = fs.readFileSync(rspackConfigPath, "utf8");
-            configContent = configContent.replace(
-              /\s*new\s+TsCheckerRspackPlugin\(\)/,
-              ""
-            );
-            fs.writeFileSync(rspackConfigPath, configContent);
-          }
+        async afterCreate({ tempDir }) {
+          await assertReact19Dependencies({ tempDir }, true);
         },
       },
     })

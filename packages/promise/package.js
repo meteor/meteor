@@ -19,6 +19,7 @@ Package.onUse(function(api) {
   api.mainModule("server.js", "server");
   api.export("Promise");
   api.addAssets("promise.d.ts", ["client", "server"]);
+  api.types("promise.native.d.ts");
 });
 
 Package.onTest(function(api) {

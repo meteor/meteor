@@ -24,6 +24,9 @@ const VALID_CONFIG_KEYS = [
   'loginTokenExpirationHours',
   'tokenSequenceLength',
   'clientStorage',
+  'useHttpOnlyCookies',
+  'httpOnlyCookieAllowedOrigins',
+  'httpOnlyCookieRateLimit',
   'ddpUrl',
   'connection',
 ];
@@ -163,7 +166,7 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in. A reactive data source. In the server this fuction returns a promise.
+   * @summary Get the current user record, or `null` if no user is logged in. On the client this can also be `undefined` while a user id is set but the user document is not yet in Minimongo. A reactive data source. In the server this fuction returns a promise.
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -188,7 +191,7 @@ export class AccountsCommon {
   }
 
   /**
-   * @summary Get the current user record, or `null` if no user is logged in.
+   * @summary Get the current user record, or `null` if no user is logged in. May also be `undefined` when a user id is set but the user document cannot be found yet.
    * @locus Anywhere
    * @param {Object} [options]
    * @param {MongoFieldSpecifier} options.fields Dictionary of fields to return or exclude.
@@ -226,6 +229,9 @@ export class AccountsCommon {
    * @param {Number} options.loginTokenExpirationHours When using the package `accounts-2fa`, use this to set the amount of time a token sent is valid. As it's just a number, you can use, for example, 0.5 to make the token valid for just half hour. The default is 1 hour.
    * @param {Number} options.tokenSequenceLength When using the package `accounts-2fa`, use this to the size of the token sequence generated. The default is 6.
    * @param {'session' | 'local'} options.clientStorage By default login credentials are stored in local storage, setting this to true will switch to using session storage.
+   * @param {Boolean} options.useHttpOnlyCookies Keep the persistent copy of the resume token in an HttpOnly cookie instead of Web Storage. The client still loads it into memory to authenticate DDP. Must be enabled on the server for the `/_accounts/cookie/*` endpoints to respond, and mirrored to the client through `Meteor.settings.public.packages.accounts.useHttpOnlyCookies`.
+   * @param {String[]} options.httpOnlyCookieAllowedOrigins Additional origins (`scheme://host[:port]`) allowed to call the cookie set and clear endpoints with credentialed CORS. The origin of `ROOT_URL` and of the request `Host` are always allowed. `SameSite=Strict` and browser cookie policy still apply. Server only.
+   * @param {Object | false} options.httpOnlyCookieRateLimit Per-client-address rate limit for the cookie endpoints as `{ max, windowMs }`. Defaults to 30 requests per 10 seconds; `false` disables it. Server only.
    * 
    * @example
    * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server
@@ -260,7 +266,7 @@ export class AccountsCommon {
     // We need to validate the oauthSecretKey option at the time
     // Accounts.config is called. We also deliberately don't store the
     // oauthSecretKey in Accounts._options.
-    if (Object.prototype.hasOwnProperty.call(options, 'oauthSecretKey')) {
+    if (Object.hasOwn(options, 'oauthSecretKey')) {
       if (Meteor.isClient) {
         throw new Error(
           'The oauthSecretKey option may only be specified on the server'
@@ -433,7 +439,7 @@ export class AccountsCommon {
 Meteor.userId = () => Accounts.userId();
 
 /**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user record, or `null` if no user is logged in. On the client this can also be `undefined` while a user id is set but the user document is not yet in Minimongo. A reactive data source.
  * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]
@@ -442,7 +448,7 @@ Meteor.userId = () => Accounts.userId();
 Meteor.user = options => Accounts.user(options);
 
 /**
- * @summary Get the current user record, or `null` if no user is logged in. A reactive data source.
+ * @summary Get the current user record, or `null` if no user is logged in. May also be `undefined` when a user id is set but the user document cannot be found yet. A reactive data source.
  * @locus Anywhere
  * @importFromPackage meteor
  * @param {Object} [options]

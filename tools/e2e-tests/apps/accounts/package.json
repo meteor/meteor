@@ -1,0 +1,24 @@
+{
+  "name": "accounts",
+  "private": true,
+  "scripts": {
+    "start": "meteor run --settings settings-localstorage.json",
+    "start-cookies": "meteor run --settings settings-cookies.json"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.23.5",
+    "meteor-node-stubs": "^1.2.12",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "playwright": "1.59.0"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": "client/main.js",
+      "server": "server/main.js"
+    },
+    "modern": true
+  }
+}

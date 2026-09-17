@@ -44,6 +44,9 @@ coverage-ts/
 .cursorignore
 .cursorrules
 
-# claude code
-.claude/skills/
-.claude/settings.local.json
+# LLM
+.claude/*
+.codex/*
+
+# git
+.worktrees/*
