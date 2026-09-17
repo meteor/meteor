@@ -1,14 +1,15 @@
 let puppeteer;
 try {
-  // Prefer the copy bundled inside dev_bundle (local checkout / CI after first run).
+  // PUPPETEER_CACHE_DIR is initialized by run.sh before this process starts.
   puppeteer = require("../../dev_bundle/lib/node_modules/puppeteer");
 } catch {
   // Fallback: globally-installed puppeteer (e.g. on oss-vm where it is pre-installed
-  // via `npm install -g puppeteer@23.6.0` and NODE_PATH is set to `npm root -g`).
+  // and NODE_PATH is set to `npm root -g`).
   puppeteer = require("puppeteer");
 }
 
 let testNumber = 0;
+let activeBrowser = null;
 
 // The suite is driven entirely by console output from the page: if the app
 // server dies (e.g. an uncaught exception), `isDone` never flips and the poll
@@ -253,8 +254,17 @@ async function runTests() {
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-web-security"],
     headless: "new",
   });
+  activeBrowser = browser;
   console.log(`Using version: ${await browser.version()}`);
   await runNextUrl(browser);
 }
 
-runTests().catch((e) => console.log(`something broke while running puppeter: `, e));
+runTests().catch(async (e) => {
+  console.error(`something broke while running puppeteer: `, e);
+  if (activeBrowser) {
+    await withTimeout(activeBrowser.close(), STALL_DIAGNOSTIC_TIMEOUT_MS, "browser shutdown").catch(
+      () => {},
+    );
+  }
+  process.exit(1);
+});
