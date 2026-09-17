@@ -17,6 +17,7 @@ expectTypeOf<WebAuthnCredentialInfo>().toBeObject();
 expectTypeOf<WebAuthnCredentialInfo["deviceType"]>().toEqualTypeOf<
   "singleDevice" | "multiDevice"
 >();
+expectTypeOf<WebAuthnCredentialInfo["userVerified"]>().toBeBoolean();
 expectTypeOf<WebAuthnRegistrationInfo>().toBeObject();
 expectTypeOf<WebAuthnRegistrationContext>().toBeObject();
 expectTypeOf<WebAuthnRegistrationContext["mode"]>().toEqualTypeOf<

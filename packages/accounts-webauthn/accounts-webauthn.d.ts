@@ -8,6 +8,8 @@ export interface WebAuthnCredentialInfo {
   deviceType: 'singleDevice' | 'multiDevice';
   backedUp: boolean;
   aaguid: string;
+  /** Registered with user verification, so usable for passwordless login. */
+  userVerified: boolean;
   createdAt: Date;
   lastUsedAt: Date | null;
 }

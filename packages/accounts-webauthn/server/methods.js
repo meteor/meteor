@@ -6,7 +6,7 @@ import {
   generateRegistrationOptions,
   generateAuthenticationOptions,
 } from '@simplewebauthn/server';
-import { getWebAuthnConfig } from './config.js';
+import { getWebAuthnConfig, assertPasswordlessLoginEnabled } from './config.js';
 import { storeChallenge, getDecoySecret } from './collection.js';
 import {
   generateUserHandle,
@@ -47,21 +47,36 @@ const toAllowedCredential = credential => ({
   transports: credential.transports,
 });
 
+// Shapes a decoy list can take. Real keys report ids of 16 to 64 bytes and
+// transports that depend on the authenticator model, so a decoy must not
+// have one telltale form.
+const DECOY_ID_LENGTHS = [20, 32, 64];
+const DECOY_TRANSPORTS = [['internal', 'hybrid'], ['usb'], ['usb', 'nfc'], ['internal']];
+
 /**
  * Builds the decoy list a selector receives when it resolves to no
  * credentials, so the response does not reveal whether the account exists or
- * has keys (WebAuthn Level 3, section 14.6.3). The secret is shared by every
- * server process and survives restarts, so a decoy is as stable as a real
- * list.
+ * has keys (WebAuthn Level 3, section 14.6.3). Count, id lengths and
+ * transports all derive from a keyed hash of the selector, so the list is as
+ * stable as a real one but has no fixed shape. The secret is shared by every
+ * server process and survives restarts.
  * @param {Object} selector `{ id }`, `{ username }` or `{ email }`.
- * @returns {Promise<Array>} One credential descriptor.
+ * @returns {Promise<Array>} One or two credential descriptors.
  */
 const decoyCredentials = async selector => {
   const [field, value] = Object.entries(selector)[0];
-  const id = createHmac('sha256', await getDecoySecret())
+  const secret = await getDecoySecret();
+  const seed = createHmac('sha256', secret)
     .update(`${field}:${String(value).toLowerCase()}`)
-    .digest('base64url');
-  return [{ id, transports: ['internal', 'hybrid'] }];
+    .digest();
+  return Array.from({ length: 1 + (seed[0] % 2) }, (_, index) => {
+    const bytes = createHmac('sha512', secret).update(seed).update(String(index)).digest();
+    const length = DECOY_ID_LENGTHS[seed[1 + index] % DECOY_ID_LENGTHS.length];
+    return {
+      id: bytes.subarray(0, length).toString('base64url'),
+      transports: DECOY_TRANSPORTS[seed[3 + index] % DECOY_TRANSPORTS.length],
+    };
+  });
 };
 
 /**
@@ -83,15 +98,15 @@ async function findUserCredential(userId, id) {
 }
 
 /**
- * Issues registration options and records their challenge. A key may later be
- * the only way into the account, so registration always asks for the
- * verification level of passwordless login, which makes an authenticator set
- * up a PIN when it needs one.
+ * Issues registration options and records their challenge. Registration asks
+ * for the configured `userVerification`; a key registered without it can only
+ * serve as a second factor, since passwordless login always requires it.
  * @param {Object} options
  * @param {String} options.userHandle The user handle, base64url encoded.
  * @param {String} options.userName The account name shown by the authenticator.
  * @param {String} options.displayName The display name shown by the authenticator.
  * @param {Array} [options.excludeCredentials] Descriptors of the keys already registered.
+ * @param {String} [options.userVerification] Overrides the configured requirement.
  * @param {Object} options.challenge Extra fields stored with the challenge, including `mode`.
  * @returns {Promise<Object>} `PublicKeyCredentialCreationOptionsJSON`.
  */
@@ -100,6 +115,7 @@ async function issueRegistrationOptions({
   userName,
   displayName,
   excludeCredentials = [],
+  userVerification,
   challenge,
 }) {
   const config = getWebAuthnConfig();
@@ -113,7 +129,7 @@ async function issueRegistrationOptions({
     excludeCredentials,
     authenticatorSelection: {
       residentKey: config.residentKey,
-      userVerification: config.userVerification,
+      userVerification: userVerification || config.userVerification,
       authenticatorAttachment: config.authenticatorAttachment,
     },
     timeout: config.timeout,
@@ -165,6 +181,7 @@ async function registrationOptionsForSignup(userData, name) {
   if (Accounts._options.forbidClientAccountCreation) {
     throw new Meteor.Error(403, 'Signups forbidden');
   }
+  assertPasswordlessLoginEnabled();
   if (!username && !email) {
     throw new Meteor.Error(400, 'Need to set a username or email');
   }
@@ -182,6 +199,8 @@ async function registrationOptionsForSignup(userData, name) {
     userHandle,
     userName: displayName,
     displayName,
+    // The new key is the only way into the account.
+    userVerification: 'required',
     challenge: {
       mode: 'signup',
       userHandle,
@@ -237,6 +256,9 @@ Meteor.methods({
       selector: Match.Optional(Accounts._userQueryValidator),
     });
     const { mode, selector } = options;
+    if (mode === 'login') {
+      assertPasswordlessLoginEnabled();
+    }
     if (mode === 'secondFactor' && !selector) {
       throw new Meteor.Error(
         400,
@@ -258,10 +280,12 @@ Meteor.methods({
         selector && credentials.length === 0
           ? await decoyCredentials(selector)
           : credentials.map(toAllowedCredential),
+      // Passwordless login always verifies the user: the key alone must never
+      // be enough to get in.
       userVerification:
         mode === 'secondFactor'
           ? config.secondFactorUserVerification
-          : config.userVerification,
+          : 'required',
       timeout: config.timeout,
     });
 

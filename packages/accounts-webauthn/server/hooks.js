@@ -48,7 +48,7 @@ Accounts.validateWebAuthnRegistration = func =>
  * @param {Function} func Called with `{ userId, action, credential }`, where
  * `action` is `added`, `renamed` or `removed` and `credential` describes the
  * key (`id`, `name`, `transports`, `deviceType`, `backedUp`, `aaguid`,
- * `createdAt`, `lastUsedAt`). May return a promise. The change has already
+ * `userVerified`, `createdAt`, `lastUsedAt`). May return a promise. The change has already
  * been stored: an exception is logged and does not undo it.
  * @returns {Object} An object with a `stop` function that removes the callback.
  * @importFromPackage accounts-base

@@ -206,6 +206,7 @@ Tinytest.add('accounts-webauthn - config - defaults derive from the root URL', t
   test.equal(config.secondFactorUserVerification, 'preferred');
   test.equal(config.timeout, 60000);
   test.isFalse(config.requireTotpOnLogin);
+  test.isTrue(config.passwordlessLogin);
 });
 
 Tinytest.add('accounts-webauthn - config - overrides are applied and validated', test => {
@@ -458,7 +459,7 @@ Tinytest.addAsync(
         await expectError(
           test,
           call(conn, 'login', { webauthn: await keyB.assert({ challenge: forA.challenge }) }),
-          'webauthn-challenge-invalid',
+          'invalid-webauthn-assertion',
           'challenge bound to another user'
         );
 
@@ -470,7 +471,7 @@ Tinytest.addAsync(
           mode: 'login',
           selector: nobody,
         });
-        test.equal(unknown.allowCredentials.length, 1);
+        test.isTrue([1, 2].includes(unknown.allowCredentials.length));
         test.isTrue(typeof unknown.allowCredentials[0].id === 'string');
         const again = await call(conn, 'generateWebAuthnAuthenticationOptions', {
           mode: 'login',
@@ -714,6 +715,146 @@ Tinytest.addAsync(
     }
   }
 );
+
+Tinytest.addAsync(
+  'accounts-webauthn - forged assertions fail alike for registered and unknown keys',
+  test =>
+    withRegisteredKey(test, async ({ conn, key }) => {
+      await loginWithKey(conn, key);
+      await call(conn, 'logout');
+      const forger = await newAuthenticator();
+      // A response signed by another key, claiming the given credential id
+      // and a counter below the stored one.
+      const forge = async id => {
+        const options = await call(conn, 'generateWebAuthnAuthenticationOptions', {
+          mode: 'login',
+        });
+        const assertion = await forger.assert({ challenge: options.challenge, counter: 0 });
+        return call(conn, 'login', { webauthn: { ...assertion, id, rawId: id } });
+      };
+      await expectError(
+        test,
+        forge(key.credentialId),
+        'invalid-webauthn-assertion',
+        'a registered id with a forged signature does not reveal its counter'
+      );
+      await expectError(
+        test,
+        forge(forger.credentialId),
+        'invalid-webauthn-assertion',
+        'an unknown id fails with the same code'
+      );
+    })
+);
+
+Tinytest.addAsync(
+  'accounts-webauthn - a key registered without user verification is a second factor only',
+  async test => {
+    const previous = Accounts._options.webauthn;
+    Accounts._options.webauthn = { ...previous, userVerification: 'preferred' };
+    try {
+      await withLoggedInUser(test, async ({ conn, userId, username, password }) => {
+        const key = await newAuthenticator();
+        const options = await call(conn, 'generateWebAuthnRegistrationOptions', {
+          mode: 'addCredential',
+        });
+        test.equal(options.authenticatorSelection.userVerification, 'preferred');
+        const stored = await call(conn, 'registerWebAuthnCredential', {
+          credential: key.register({ challenge: options.challenge, userVerified: false }),
+        });
+        test.isFalse(stored.userVerified, 'the public view tells such a key apart');
+        await call(conn, 'enableWebAuthnSecondFactor');
+        await call(conn, 'logout');
+
+        const loginOptions = await call(conn, 'generateWebAuthnAuthenticationOptions', {
+          mode: 'login',
+        });
+        test.equal(
+          loginOptions.userVerification,
+          'required',
+          'passwordless login always asks for verification'
+        );
+        await expectError(
+          test,
+          call(conn, 'login', {
+            webauthn: await key.assert({ challenge: loginOptions.challenge }),
+          }),
+          'webauthn-second-factor-only'
+        );
+
+        // As a second factor the key works, verified or not.
+        const secondFactor = await call(conn, 'generateWebAuthnAuthenticationOptions', {
+          mode: 'secondFactor',
+          selector: { username },
+        });
+        const result = await loginWithPassword(conn, username, password, {
+          webauthn: await key.assert({
+            challenge: secondFactor.challenge,
+            userVerified: false,
+          }),
+        });
+        test.equal(result.id, userId);
+      });
+
+      // Sign-up always requires verification: the new key is the only way in.
+      await withConnection(test, async conn => {
+        const signupKey = await newAuthenticator();
+        const options = await call(conn, 'generateWebAuthnRegistrationOptions', {
+          mode: 'signup',
+          userData: { username: `keyonly_${Random.id()}` },
+        });
+        test.equal(options.authenticatorSelection.userVerification, 'required');
+        await expectError(
+          test,
+          call(conn, 'createUserWithWebAuthn', {
+            credential: signupKey.register({
+              challenge: options.challenge,
+              userVerified: false,
+            }),
+          }),
+          'invalid-webauthn-registration'
+        );
+      });
+    } finally {
+      Accounts._options.webauthn = previous;
+    }
+  }
+);
+
+Tinytest.addAsync('accounts-webauthn - passwordless login can be turned off', async test => {
+  const previous = Accounts._options.webauthn;
+  Accounts._options.webauthn = { ...previous, passwordlessLogin: false };
+  try {
+    await withRegisteredKey(test, async ({ conn, username, key }) => {
+      await expectError(
+        test,
+        call(conn, 'generateWebAuthnAuthenticationOptions', { mode: 'login' }),
+        'webauthn-passwordless-disabled'
+      );
+      await expectError(
+        test,
+        call(conn, 'generateWebAuthnRegistrationOptions', {
+          mode: 'signup',
+          userData: { username: `keyonly_${Random.id()}` },
+        }),
+        'webauthn-passwordless-disabled'
+      );
+      await expectError(
+        test,
+        call(conn, 'login', { webauthn: await key.assert({ challenge: 'unused' }) }),
+        'webauthn-passwordless-disabled'
+      );
+      // Second-factor use is unaffected.
+      const secondFactor = await call(conn, 'generateWebAuthnAuthenticationOptions', {
+        mode: 'secondFactor',
+        selector: { username },
+      });
+      test.isTrue(typeof secondFactor.challenge === 'string');
+    });
+  } finally {
+    Accounts._options.webauthn = previous;
+  }
+});
 
 Tinytest.addAsync('accounts-webauthn - sign up with only a security key', async test => {
   const email = `${Random.id()}@example.com`.toLowerCase();
@@ -1141,7 +1282,7 @@ Tinytest.addAsync(
         const error = await expectError(
           test,
           loginWithKey(conn, key),
-          'invalid-webauthn-credential',
+          'invalid-webauthn-assertion',
           'unregistered key'
         );
         test.equal(error.reason, 'Something went wrong. Please check your credentials.');

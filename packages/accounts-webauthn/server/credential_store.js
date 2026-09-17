@@ -118,17 +118,12 @@ export function toCredentialDoc(registrationInfo, name) {
 
 /**
  * What the client is allowed to see: everything except the public key and
- * the verification internals.
+ * the verification internals. `userVerified` stays, since it tells whether
+ * the key can serve for passwordless login.
  * @param {Object} credential The stored credential document.
  * @returns {Object} The public view of the credential.
  */
-export const publicCredentialView = ({
-  publicKey,
-  counter,
-  fmt,
-  userVerified,
-  ...view
-}) => view;
+export const publicCredentialView = ({ publicKey, counter, fmt, ...view }) => view;
 
 /**
  * Whether a signature counter failed to increase. Authenticators that do not

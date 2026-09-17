@@ -243,3 +243,4 @@ Accounts.registerSecondFactor("totp", {
   inputKey: "code",
 });
 Accounts.config({ webauthn: { rpID: "example.com", origins: ["https://example.com"] } });
+Accounts.config({ webauthn: { passwordlessLogin: false, userVerification: "preferred" } });

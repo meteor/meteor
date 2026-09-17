@@ -75,25 +75,6 @@ function decodeClientDataChallenge(response) {
 }
 
 /**
- * Reads the signature counter from the authenticator data of an assertion.
- * Layout: rpIdHash (32) | flags (1) | signCount (4) | ...
- * @param {Object} response The authentication response JSON.
- * @returns {Number} The signature counter.
- * @throws {Meteor.Error} `invalid-webauthn-response` when the authenticator data is too short.
- */
-function readAssertionCounter(response) {
-  const raw = response?.response?.authenticatorData;
-  if (typeof raw !== 'string' || !raw) {
-    malformed();
-  }
-  const bytes = Buffer.from(raw, 'base64url');
-  if (bytes.length < 37) {
-    malformed();
-  }
-  return bytes.readUInt32BE(33);
-}
-
-/**
  * Looks up and consumes the challenge a response answers, checking that it was
  * issued for the given ceremony and, when known, the given user.
  * @param {Object} response The registration or authentication response JSON.
@@ -152,7 +133,8 @@ async function verifyOrThrow(code, label, verify) {
 /**
  * Completes a registration ceremony for a new credential: consumes the
  * challenge, verifies the response, runs the validation hooks and checks that
- * the credential id is not registered yet.
+ * the credential id is not registered yet. Sign-ups always require user
+ * verification, since the new key is the only way into the account.
  * @param {Object} options
  * @param {Object} options.credential The registration response JSON.
  * @param {String} options.mode `addCredential` or `signup`.
@@ -175,7 +157,8 @@ export async function verifyNewCredential({ credential, mode, userId = null }) {
         expectedChallenge: challengeDoc._id,
         expectedOrigin: config.origins,
         expectedRPID: config.rpID,
-        requireUserVerification: config.userVerification === 'required',
+        requireUserVerification:
+          mode === 'signup' || config.userVerification === 'required',
       })
   );
   await runRegistrationValidation(registrationInfo, { userId, mode });
@@ -192,7 +175,7 @@ export async function verifyNewCredential({ credential, mode, userId = null }) {
  * @param {Object} options.response The authentication response JSON.
  * @param {Object} options.challengeDoc The consumed challenge document.
  * @param {Boolean} options.requireUserVerification Whether the authenticator must have verified the user.
- * @returns {Promise<Object>} The library's `authenticationInfo`.
+ * @returns {Promise<Object>} `{ credential, authenticationInfo }`: the stored credential and the library's result.
  */
 export async function authenticateCredential({
   user,
@@ -208,14 +191,11 @@ export async function authenticateCredential({
       'invalid-webauthn-credential'
     );
   }
-  if (detectCounterRollback(credential.counter, readAssertionCounter(response))) {
-    Accounts._handleError(
-      'WebAuthn signature counter did not increase; the authenticator may have been cloned',
-      true,
-      'webauthn-counter-mismatch'
-    );
-  }
 
+  // The signature is verified before anything that depends on the stored
+  // credential, so a forged assertion learns nothing about it. The library
+  // checks the counter before the signature, so its check is disabled with a
+  // zero counter and the rollback check runs on the verified assertion.
   const config = getWebAuthnConfig();
   const { authenticationInfo } = await verifyOrThrow(
     'invalid-webauthn-assertion',
@@ -226,10 +206,17 @@ export async function authenticateCredential({
         expectedChallenge: challengeDoc._id,
         expectedOrigin: config.origins,
         expectedRPID: config.rpID,
-        credential: toLibCredential(credential),
+        credential: { ...toLibCredential(credential), counter: 0 },
         requireUserVerification,
       })
   );
+  if (detectCounterRollback(credential.counter, authenticationInfo.newCounter)) {
+    Accounts._handleError(
+      'WebAuthn signature counter did not increase; the authenticator may have been cloned',
+      true,
+      'webauthn-counter-mismatch'
+    );
+  }
   await touchCredential(user._id, credential, authenticationInfo);
-  return authenticationInfo;
+  return { credential, authenticationInfo };
 }

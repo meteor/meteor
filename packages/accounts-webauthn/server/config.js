@@ -62,7 +62,22 @@ export function getWebAuthnConfig() {
     userVerification: options.userVerification || 'required',
     secondFactorUserVerification:
       options.secondFactorUserVerification || 'preferred',
+    passwordlessLogin: options.passwordlessLogin !== false,
     timeout,
     requireTotpOnLogin: !!options.requireTotpOnLogin,
   };
+}
+
+/**
+ * Refuses the passwordless flows (login and key-only sign-up) when
+ * `passwordlessLogin` is off. Second-factor use is unaffected.
+ * @throws {Meteor.Error} `webauthn-passwordless-disabled`
+ */
+export function assertPasswordlessLoginEnabled() {
+  if (!getWebAuthnConfig().passwordlessLogin) {
+    throw new Meteor.Error(
+      'webauthn-passwordless-disabled',
+      'Passwordless login with a security key is disabled'
+    );
+  }
 }

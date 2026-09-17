@@ -19,7 +19,7 @@ const requireCredentialId = id => {
  * @locus Client
  * @param {Object | String} [options] A label for the key, or an object with a `name` field.
  * @returns {Promise<Object>} Resolves with the stored key description (`id`, `name`,
- *   `transports`, `deviceType`, `backedUp`, `aaguid`, `createdAt`, `lastUsedAt`).
+ *   `transports`, `deviceType`, `backedUp`, `aaguid`, `userVerified`, `createdAt`, `lastUsedAt`).
  * @importFromPackage accounts-base
  */
 Accounts.registerWebAuthnCredentialAsync = async options => {
@@ -37,7 +37,7 @@ Accounts.registerWebAuthnCredentialAsync = async options => {
  * @param {Object | String} [options] A label for the key, or an object with a `name` field.
  * @param {Function} [callback] Optional callback. Called with `(error, credential)`, where
  *   `credential` describes the stored key (`id`, `name`, `transports`, `deviceType`,
- *   `backedUp`, `aaguid`, `createdAt`, `lastUsedAt`).
+ *   `backedUp`, `aaguid`, `userVerified`, `createdAt`, `lastUsedAt`).
  * @importFromPackage accounts-base
  */
 Accounts.registerWebAuthnCredential = withCallback(
@@ -56,7 +56,7 @@ Accounts.listWebAuthnCredentialsAsync = () => callMethod('listWebAuthnCredential
  * @summary List the security keys registered for the logged-in user.
  * @locus Client
  * @param {Function} callback Called with `(error, credentials)`, where each credential has
- *   `id`, `name`, `transports`, `deviceType`, `backedUp`, `aaguid`, `createdAt` and `lastUsedAt`.
+ *   `id`, `name`, `transports`, `deviceType`, `backedUp`, `aaguid`, `userVerified`, `createdAt` and `lastUsedAt`.
  * @importFromPackage accounts-base
  */
 Accounts.listWebAuthnCredentials = withCallback(

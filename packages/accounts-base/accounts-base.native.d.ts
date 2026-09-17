@@ -502,6 +502,7 @@ export interface WebAuthnConfigOptions {
   secondFactorUserVerification?: 'discouraged' | 'preferred' | 'required' | undefined;
   timeout?: number | undefined;
   requireTotpOnLogin?: boolean | undefined;
+  passwordlessLogin?: boolean | undefined;
 }
 
 /**

@@ -24,10 +24,11 @@ Everything works without configuration on a single-origin app. The options below
 | `attestationType` | `'none'` | `'none'`, `'direct'` or `'enterprise'`. `'direct'` and `'enterprise'` only ask the authenticator to convey an attestation statement. The reported authenticator model (AAGUID) is trustworthy only after that statement has been verified against a trust anchor, such as the FIDO Metadata Service; the validation hook receives the full verification result for that purpose. |
 | `authenticatorAttachment` | unrestricted | `'cross-platform'` to only allow roaming keys such as USB or NFC devices, `'platform'` to only allow the built-in authenticator of the device. |
 | `residentKey` | `'preferred'` | Whether registration asks for a discoverable credential. Discoverable credentials allow login without typing a username. |
-| `userVerification` | `'required'` | User verification (PIN or biometrics on the key) when registering a key, logging in without a password, and signing up, following FIDO guidance for passwordless flows. With `'required'`, the browser has the user set up a PIN on keys that have none, so every registered key can later serve as the only login method. Relax it to `'preferred'` for deployments that use keys purely as a second factor. |
+| `userVerification` | `'required'` | User verification (PIN or biometrics on the key) asked for when registering a key. With `'required'`, the browser has the user set up a PIN on keys that have none. Passwordless login and sign-up always require it, whatever this setting: a key alone must never be enough to get in. A key registered without user verification is a second-factor-only key, which the passwordless login refuses with `webauthn-second-factor-only`. Set `'preferred'` for deployments that use keys mainly as a second factor and do not want to force a PIN on every key. |
 | `secondFactorUserVerification` | `'preferred'` | User verification for second-factor use, where the password is the knowledge factor. |
 | `timeout` | `60000` | Milliseconds a challenge stays valid. |
 | `requireTotpOnLogin` | `false` | Also require the [`accounts-2fa`](./accounts-2fa.md) authenticator code after a passwordless login. |
+| `passwordlessLogin` | `true` | Set to `false` to turn off passwordless login and key-only sign-up, for deployments that use keys purely as a second factor. The login options and the login handler then fail with `webauthn-passwordless-disabled`. |
 
 ```js
 // server
@@ -145,7 +146,7 @@ With a selector, the server lists the keys registered for that account so any ke
 await Meteor.loginWithWebAuthnAsync({ email });
 ```
 
-Passwordless login requires user verification by default (see `userVerification`). Users who enabled the [`accounts-2fa`](./accounts-2fa.md) authenticator code are not asked for it after a passwordless login unless `requireTotpOnLogin` is set, in which case the login fails with `no-2fa-code` and the code can be passed by calling `Accounts.callLoginMethod` with `{ webauthn, code }`.
+Passwordless login always requires user verification, and a key registered without it (see `userVerification`) is refused with `webauthn-second-factor-only`. Users who enabled the [`accounts-2fa`](./accounts-2fa.md) authenticator code are not asked for it after a passwordless login unless `requireTotpOnLogin` is set, in which case the login fails with `no-2fa-code` and the code can be passed by calling `Accounts.callLoginMethod` with `{ webauthn, code }`.
 
 ## Sign-up with a security key {#signup}
 
@@ -237,10 +238,12 @@ Accounts.validateWebAuthnRegistration((info, context, registrationInfo) => {
 | `webauthn-discoverable-credential-unsupported` | The key cannot store a discoverable credential but one was required. |
 | `webauthn-invalid-domain` | The page origin does not match `rpID`. |
 | `webauthn-ceremony-failed` | Any other browser-side failure; `error.details.name` holds the DOM exception name. |
-| `webauthn-challenge-invalid` | The challenge expired, was already used, or was issued for another user or ceremony. |
+| `webauthn-challenge-invalid` | The challenge expired, was already used, or was issued for another ceremony or, for a second factor, for another user. |
 | `invalid-webauthn-registration` | The registration response failed verification. |
-| `invalid-webauthn-assertion` | The login response failed verification: wrong origin, wrong key, or missing user verification. |
-| `invalid-webauthn-credential` | The credential is not registered, or not registered to this account. |
+| `invalid-webauthn-assertion` | The passwordless login failed: unknown key, wrong origin, bad signature, missing user verification, or a challenge issued for another user. Every case shares this code, so a forged response cannot tell registered keys from unknown ones. |
+| `invalid-webauthn-credential` | During second-factor verification, the key is not registered to this account. |
+| `webauthn-second-factor-only` | The key was registered without user verification and can only be used as a second factor. |
+| `webauthn-passwordless-disabled` | `passwordlessLogin` is off; keys can only be used as a second factor. |
 | `webauthn-counter-mismatch` | The signature counter did not increase. The key may have been cloned. |
 | `webauthn-credential-in-use` | The key is already registered, to this or another account. |
 | `webauthn-registration-rejected` | An `Accounts.validateWebAuthnRegistration` callback rejected the key. |

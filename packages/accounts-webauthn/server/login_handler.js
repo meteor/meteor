@@ -1,7 +1,7 @@
 import { Meteor } from 'meteor/meteor';
 import { Accounts } from 'meteor/accounts-base';
 import { check, Match } from 'meteor/check';
-import { getWebAuthnConfig } from './config.js';
+import { getWebAuthnConfig, assertPasswordlessLoginEnabled } from './config.js';
 import { USER_FIELDS } from './credential_store.js';
 import {
   assertionResponsePattern,
@@ -14,6 +14,8 @@ import {
  * `startAuthentication()` as `options.webauthn`. The credential id identifies
  * the account, since ids are unique across all users. A challenge issued for
  * a specific user (identifier-first login) must be answered by that user.
+ * User verification is always required and a key registered without it is
+ * refused: on its own, a key must never be enough to get in.
  * @param {Object} options The login options.
  * @returns {Promise<Object|undefined>} `{ userId }` or `{ userId, error }`; `undefined` when the options are not a WebAuthn login.
  */
@@ -21,6 +23,7 @@ Accounts.registerLoginHandler('webauthn', async options => {
   if (!options.webauthn) {
     return undefined; // don't handle
   }
+  assertPasswordlessLoginEnabled();
 
   check(
     options,
@@ -37,41 +40,42 @@ Accounts.registerLoginHandler('webauthn', async options => {
     mode: 'login',
   });
 
+  // Every failure below shares one error code, so a forged assertion cannot
+  // tell a registered credential id from an unknown one.
+  const rejected = message =>
+    Accounts._handleError(message, true, 'invalid-webauthn-assertion');
+
   const user = await Meteor.users.findOneAsync(
     { 'services.webauthn.credentials.id': response.id },
     { fields: USER_FIELDS }
   );
   if (!user) {
-    Accounts._handleError(
-      'Security key not recognized',
-      true,
-      'invalid-webauthn-credential'
-    );
+    rejected('Security key not recognized');
   }
 
   try {
-    if (challengeDoc.userId && challengeDoc.userId !== user._id) {
-      Accounts._handleError(
-        'WebAuthn challenge was issued for a different user',
-        true,
-        'webauthn-challenge-invalid'
-      );
-    }
-    const userHandle = response.response.userHandle;
-    if (userHandle && userHandle !== user.services.webauthn.userHandle) {
-      Accounts._handleError(
-        'WebAuthn user handle does not match the credential owner',
-        true,
-        'invalid-webauthn-credential'
-      );
-    }
-
-    await authenticateCredential({
+    // The signature comes first: the checks after it only run for the holder
+    // of the key.
+    const { credential } = await authenticateCredential({
       user,
       response,
       challengeDoc,
-      requireUserVerification: config.userVerification === 'required',
+      requireUserVerification: true,
     });
+    if (challengeDoc.userId && challengeDoc.userId !== user._id) {
+      rejected('WebAuthn challenge was issued for a different user');
+    }
+    const userHandle = response.response.userHandle;
+    if (userHandle && userHandle !== user.services.webauthn.userHandle) {
+      rejected('WebAuthn user handle does not match the credential owner');
+    }
+    if (!credential.userVerified) {
+      Accounts._handleError(
+        'This security key was registered without user verification and can only be used as a second factor',
+        true,
+        'webauthn-second-factor-only'
+      );
+    }
 
     // Opt-in: also require the TOTP code from accounts-2fa. Restricted to
     // `totp` so the user is never asked for a second security key.
