@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import execa from 'execa';
 import fs from 'fs-extra';
-import { chromium } from 'playwright';
 import {
   setupMeteorApp,
   buildMeteorApp,
@@ -76,8 +75,6 @@ describePosix('Regressions / Workspace executable portability', () => {
     const diagnostics = [];
     let app;
     let mongo;
-    let browser;
-    let context;
     try {
       const { tempDir } = await setupMeteorApp('workspace-bin-portability', { isMonorepo: true });
       assert.equal(path.dirname(await fs.realpath(tempDir)), ownedRoot);
@@ -125,9 +122,6 @@ describePosix('Regressions / Workspace executable portability', () => {
       app = await runBuiltApp(buildOutputDir, { port, mongoUrl: mongo.mongoUrl });
       await assertPackagedCommands(buildOutputDir, tempDir, diagnostics);
 
-      browser = await chromium.launch({ headless: true });
-      context = await browser.newContext();
-      const page = await context.newPage();
       const response = await page.goto(`http://localhost:${port}/portability`);
       expect(response.status()).toBe(200);
       expect(await response.text()).toBe('portable');
@@ -138,11 +132,11 @@ describePosix('Regressions / Workspace executable portability', () => {
       console.error(`Workspace portability diagnostics: ${logPath}`);
       throw error;
     } finally {
-      // Close the context before its browser, and stop the app before Mongo.
+      // The preset owns the page/browser. Navigate away before stopping the app.
       // Attempt every cleanup even if another resource fails to close.
       const cleanupErrors = [];
       for (const close of [
-        () => context?.close(), () => browser?.close(),
+        () => page.goto('about:blank'),
         () => app?.stop(), () => mongo?.stop(),
       ]) {
         try {

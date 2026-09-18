@@ -7,6 +7,10 @@ import Builder from "../isobuild/builder";
 import { define } from "../tool-testing/selftest";
 import files from "../fs/files";
 
+// Builder's real filesystem/cache dependencies come from the tool's dev bundle.
+// Keep this component test in the bootstrapped self-test runner: the standalone
+// Jest unit environment does not install those dependencies. Running here keeps
+// the filesystem and cached symlink traversal real, without test doubles.
 // Exercise the POSIX executable-link layout; Windows uses command shims.
 if (process.platform !== "win32") {
   // Workspace symlinks change depth when copied into a deployment bundle.

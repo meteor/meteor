@@ -72,6 +72,12 @@ an owned bundled MongoDB, and requests `/portability` in Chromium. No Rspack or
 frontend framework is involved. Failures retain diagnostics in `test-results/`.
 Windows is skipped because these POSIX symlinks do not test Windows command shims.
 
+The dedicated fixture makes the linked workspace, command package, and HTTP
+endpoint explicit. Reusing `server-only` would require disabling its Rspack
+integration and generating those sources inside the test. This scenario also
+removes its source before booting, so it needs an independent lifecycle from
+the existing symlink-monorepo suite.
+
 ## Group definitions and CI
 
 [`test-groups.js`](test-groups.js) owns the groups, anchored test-name patterns,
