@@ -9,6 +9,7 @@ Package.onUse(function (api) {
   api.use("ejson");
   api.mainModule("diff.js");
   api.export("DiffSequence");
+  api.types("diff-sequence.d.ts");
 });
 
 Package.onTest(function (api) {

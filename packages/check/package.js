@@ -8,6 +8,7 @@ Package.onUse(api => {
   api.use('ejson');
 
   api.addAssets('check.d.ts', 'server');
+  api.types('check.native.d.ts');
 
   api.mainModule('match.js');
 

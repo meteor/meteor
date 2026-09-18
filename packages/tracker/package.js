@@ -9,6 +9,7 @@ Package.onUse(function (api) {
   api.export("Tracker");
   api.export("Deps");
   api.addAssets("tracker.d.ts", ["client", "server"]);
+  api.types("tracker.native.d.ts");
 });
 
 Package.onTest(function (api) {
