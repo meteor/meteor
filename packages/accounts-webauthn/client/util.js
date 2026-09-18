@@ -24,10 +24,8 @@ export const transformSelector = selector => {
  * @param {...*} args The method arguments.
  * @returns {Promise<*>}
  */
-export const callMethod = Meteor.promisify(
-  Accounts.connection.call,
-  Accounts.connection
-);
+export const callMethod = (name, ...args) =>
+  Accounts.connection.callAsync(name, ...args);
 
 /**
  * Wraps a promise-returning implementation as a function that accepts an

@@ -32,13 +32,10 @@ Accounts.registerLoginHandler('webauthn', async options => {
   }
   assertPasswordlessLoginEnabled();
 
-  check(
-    options,
-    Match.ObjectIncluding({
-      webauthn: assertionResponsePattern,
-      code: Match.Optional(Match.NonEmptyString),
-    })
-  );
+  check(options, {
+    webauthn: assertionResponsePattern,
+    code: Match.Optional(Match.NonEmptyString),
+  });
   const response = options.webauthn;
   const config = getWebAuthnConfig();
 
