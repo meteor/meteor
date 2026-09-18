@@ -523,7 +523,7 @@ class RequireExternalsPlugin {
       content = fs.readFileSync(this.filePath, 'utf-8');
       if (!content.includes(`typeof globalThis.module === 'undefined'`)) {
         // Prepend so it lives at the very top
-        this._safeWrite(content + '\n' + block);
+        this._safeWrite(block + '\n' + content);
       }
     } else {
       // File doesn’t exist yet: create with just the block
