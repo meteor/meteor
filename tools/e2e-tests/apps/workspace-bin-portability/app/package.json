@@ -1,0 +1,13 @@
+{
+  "name": "workspace-bin-portability-app",
+  "private": true,
+  "dependencies": {
+    "@babel/runtime": "^7.23.5"
+  },
+  "meteor": {
+    "mainModule": {
+      "client": false,
+      "server": "server/main.js"
+    }
+  }
+}

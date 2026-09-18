@@ -262,6 +262,19 @@ Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` p
 | Built app boots; workspace packages + `color` tree imported in production bundle | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
+### workspace-bin-portability
+
+Minimal Meteor app with an external npm workspace and an internal command tarball;
+Build only, without Rspack. POSIX symlinks; Windows command shims are not covered.
+
+| What is covered | Phase |
+|----------------|-------|
+| npm installs the command as a real directory and the workspace as an external symlink | Init |
+| Relative and absolute workspace `.bin` links resolve to the packaged command after source removal | Build |
+| Command retains executable mode and reads its package-relative JSON resource | Build |
+| Links survive server runtime dependency installation | Build |
+| Built server invokes the workspace command at request time and returns `portable` to Chromium | Build |
+
 ### server-only
 
 Server-only app (no client entry point).
@@ -423,6 +436,7 @@ Where each feature is tested across apps and skeletons.
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo, pnpm-monorepo | pnpm |
+| Source-independent workspace executable links (POSIX) | workspace-bin-portability | |
 | Workspace-aware Rspack dependency auto-install | monorepo (npm, Yarn Classic) | pnpm |
 | pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | pnpm |
 | Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | pnpm |
