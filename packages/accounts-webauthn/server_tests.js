@@ -965,7 +965,10 @@ Tinytest.addAsync('accounts-webauthn - sign up with only a security key', async 
       // The connection is logged in as the new user.
       const list = await call(conn, 'listWebAuthnCredentials');
       test.equal(list.map(credential => credential.name), ['First key']);
-      test.isFalse(await call(conn, 'hasWebAuthnSecondFactorEnabled'));
+      test.isTrue(
+        await call(conn, 'hasWebAuthnSecondFactorEnabled'),
+        'a key-only account requires its key at login'
+      );
       await call(conn, 'logout');
 
       const login = await loginWithKey(conn, key, { userHandle: options.user.id });
