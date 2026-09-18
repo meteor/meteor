@@ -52,24 +52,12 @@ if (Meteor.isClient) {
     const connection = DDP.connect(Meteor.absoluteUrl(), { retry: false });
     const collection = new Mongo.Collection(name, { connection, defineMutationMethods: false });
     const messages = [];
-    // Global errors can include pending DDP calls from earlier tests. Keep them
-    // only for failure diagnostics; assert this connection's readiness and data.
-    const errors = [];
     const subscriptions = [];
     let onMessageReceived;
     const onMessage = raw => {
       messages.push(JSON.parse(raw));
       onMessageReceived?.();
     };
-    const onError = event => errors.push(event.error?.stack || event.message);
-    const onRejection = event => errors.push(event.reason?.stack || String(event.reason));
-    const originalDebug = Meteor._debug;
-    Meteor._debug = function (...args) {
-      errors.push(args.map(value => value?.stack || String(value)).join(' '));
-      return originalDebug.apply(this, args);
-    };
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onRejection);
     // Observe the actual wire input, without wrapping the store or injecting DDP.
     connection._stream.on('message', onMessage);
 
@@ -135,7 +123,9 @@ if (Meteor.isClient) {
       await subscribe('full');
       test.equal(collection.findOne('record'), { ...initial, label: 'updated' });
     } catch (error) {
-      console.error('Fieldless replication diagnostics:', JSON.stringify({ messages, errors }));
+      console.error('Fieldless replication diagnostics:', JSON.stringify({
+        messages, error: error?.stack || String(error),
+      }));
       throw error;
     } finally {
       const cleanupErrors = [];
@@ -145,9 +135,6 @@ if (Meteor.isClient) {
       connection.close();
       const callbacks = connection._stream.eventCallbacks.message;
       callbacks.splice(callbacks.indexOf(onMessage), 1);
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onRejection);
-      Meteor._debug = originalDebug;
       collection._collection.remove({});
       delete connection._mongo_livedata_collections[name];
       if (Mongo._collections.get(name) === collection) Mongo._collections.delete(name);
