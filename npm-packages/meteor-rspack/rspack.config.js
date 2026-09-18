@@ -960,13 +960,15 @@ module.exports = async function (inMeteor = {}, argv = {}) {
         ...(compiler?.modifiedFiles || []),
         ...(compiler?.removedFiles || []),
       ];
-      const hasAppSourceChanges = changedFiles.some(file => {
-        const relativePath = path.relative(projectDir, file);
-        return !generatedAppPaths.some(generatedPath =>
-          relativePath === generatedPath ||
-          relativePath.startsWith(`${generatedPath}${path.sep}`)
-        );
-      });
+      const hasAppSourceChanges =
+        changedFiles.length === 0 ||
+        changedFiles.some(file => {
+          const relativePath = path.relative(projectDir, file);
+          return !generatedAppPaths.some(generatedPath =>
+            relativePath === generatedPath ||
+            relativePath.startsWith(`${generatedPath}${path.sep}`)
+          );
+        });
 
       return {
         name: config.name,
