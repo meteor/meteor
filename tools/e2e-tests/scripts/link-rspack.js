@@ -7,8 +7,9 @@
  * Install the local package's dependencies and matching Rspack peers before
  * linking it into the app. pnpm's local directory links do not install the
  * linked package's dependencies, so this is required on a fresh checkout.
- * Then use the app's package manager to install its dependencies and link
- * the local meteor-rspack package.
+ * Then install the local package into the app before asking Meteor to sync
+ * npm dependencies. This keeps pre-publication version bumps testable without
+ * attempting to download the not-yet-published package from the registry.
  *
  */
 
@@ -128,6 +129,12 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
     return;
   }
 
+  console.log(`Installing local meteor-rspack from ${RSPACK_PACKAGE_DIR}...`);
+  await execa('npm', ['install', '--save-dev', RSPACK_PACKAGE_DIR], {
+    cwd: appDir,
+    ...execOpts,
+  });
+
   console.log(`Running meteor update --npm in ${appDir}...`);
   await execa(METEOR_EXECUTABLE, ['update', '--npm'], {
     cwd: appDir,
@@ -137,9 +144,6 @@ async function linkLocalRspack(appDir, { env, packageManager } = {}) {
 
   console.log('Installing ignore-loader in the app...');
   await execa('npm', ['install', 'ignore-loader', '--save'], { cwd: appDir });
-
-  console.log(`Linking local meteor-rspack from ${RSPACK_PACKAGE_DIR}...`);
-  await execa('npm', ['link', RSPACK_PACKAGE_DIR], { cwd: appDir });
 
   console.log('Local meteor-rspack linked successfully.');
 }

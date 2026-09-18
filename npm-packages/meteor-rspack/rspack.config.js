@@ -950,19 +950,40 @@ module.exports = async function (inMeteor = {}, argv = {}) {
 
   // Add MeteorRspackOutputPlugin as the last plugin to output compilation info
   const meteorRspackOutputPlugin = new MeteorRspackOutputPlugin({
-    getData: (stats, { isRebuild, compilationCount, compiler }) => ({
-      name: config.name,
-      mode: config.mode,
-      hasErrors: stats.hasErrors(),
-      hasWarnings: stats.hasWarnings(),
-      timestamp: Date.now(),
-      statsOverrided,
-      compilationCount,
-      isRebuild,
-      ...(!isRebuild && compiler && {
-        delegatedExtensions: extractDelegatedExtensions(stats, compiler),
-      }),
-    }),
+    getData: (stats, { isRebuild, compilationCount, compiler }) => {
+      const generatedAppPaths = [
+        path.join('.meteor', 'local'),
+        path.join('.meteor', 'types'),
+        buildContext,
+      ];
+      const changedFiles = [
+        ...(compiler?.modifiedFiles || []),
+        ...(compiler?.removedFiles || []),
+      ];
+      const hasAppSourceChanges = changedFiles.some(file => {
+        const relativePath = path.relative(projectDir, file);
+        return !generatedAppPaths.some(generatedPath =>
+          relativePath === generatedPath ||
+          relativePath.startsWith(`${generatedPath}${path.sep}`)
+        );
+      });
+
+      return {
+        name: config.name,
+        mode: config.mode,
+        hasErrors: stats.hasErrors(),
+        hasWarnings: stats.hasWarnings(),
+        hasAppSourceChanges,
+        hash: stats.hash,
+        timestamp: Date.now(),
+        statsOverrided,
+        compilationCount,
+        isRebuild,
+        ...(!isRebuild && compiler && {
+          delegatedExtensions: extractDelegatedExtensions(stats, compiler),
+        }),
+      };
+    },
   });
   config.plugins = [meteorRspackOutputPlugin, ...(config.plugins || [])];
 
