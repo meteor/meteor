@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Code shared beween ddp-client and ddp-server",
-  version: "1.4.5",
+  version: "1.4.6",
   documentation: null,
 });
 
@@ -22,4 +22,6 @@ Package.onUse(function (api) {
 
 Package.onTest(function (api) {
   // XXX we should write unit tests for heartbeat
+  api.use(["ecmascript", "tinytest", "ejson", "ddp-common"]);
+  api.addFiles("utils_tests.js", ["client", "server"]);
 });
