@@ -151,18 +151,30 @@ const constants = Object.fromEntries(
   ]),
 );
 
-requireEqual(
-  'DEFAULT_METEOR_RSPACK_VERSION',
-  constants['@meteorjs/rspack'],
+const meteorRspackVersionComparison = compareSemver(
   npmPackage.version,
+  constants['@meteorjs/rspack'],
 );
+if (meteorRspackVersionComparison === null) {
+  errors.push(
+    `cannot compare @meteorjs/rspack package ${npmPackage.version} with recommended ${constants['@meteorjs/rspack']}`,
+  );
+} else if (meteorRspackVersionComparison < 0) {
+  errors.push(
+    `@meteorjs/rspack package ${npmPackage.version} is below recommended ${constants['@meteorjs/rspack']}`,
+  );
+} else if (meteorRspackVersionComparison > 0) {
+  reviews.push(
+    `@meteorjs/rspack package ${npmPackage.version} is staged ahead of published recommended ${constants['@meteorjs/rspack']}`,
+  );
+}
 const documentedMeteorRspackVersion = modernToolsSkillSource.match(
   /`@meteorjs\/rspack`\s+(\S+)/,
 )?.[1];
 requireEqual(
   'modern-tools skill @meteorjs/rspack version',
   documentedMeteorRspackVersion,
-  `^${npmPackage.version}`,
+  `^${constants['@meteorjs/rspack']}`,
 );
 
 const packageJsonPaths = execFileSync(
