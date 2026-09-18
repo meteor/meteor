@@ -24,8 +24,10 @@ function getReifyOptions(features) {
   };
 
   if (features) {
-    if (features.modernBrowsers ||
-        features.nodeMajorVersion >= 8) {
+    // nodeMajorVersion is only set when compiling for a Node target (server,
+    // shell, tool); modernBrowsers only for modern web/cordova targets. Legacy
+    // web builds set neither, so this is a target check, not a version check.
+    if (features.modernBrowsers || features.nodeMajorVersion) {
       reifyOptions.avoidModernSyntax = false;
       reifyOptions.generateLetDeclarations = true;
     }
@@ -46,8 +48,9 @@ function getReifyOptions(features) {
 
 exports.getDefaults = function getDefaults(features) {
   if (features) {
-    if (features.nodeMajorVersion >= 8) {
-      return getDefaultsForNode8(features);
+    // Only set for Node targets; see getReifyOptions.
+    if (features.nodeMajorVersion) {
+      return getDefaultsForNode(features);
     }
 
     if (features.modernBrowsers) {
@@ -166,7 +169,7 @@ function getRuntimeTransform(features) {
   }];
 }
 
-function getDefaultsForNode8(features) {
+function getDefaultsForNode(features) {
   const combined = {
     presets: [],
     plugins: [getReifyPlugin(features)]
@@ -181,27 +184,15 @@ function getDefaultsForNode8(features) {
       combined.plugins.push(rt);
     }
 
-    // Not fully supported in Node 8 without the --harmony flag.
-    combined.plugins.push(
-      require("@babel/plugin-syntax-object-rest-spread"),
-      require("@babel/plugin-proposal-object-rest-spread")
-    );
-
     if (features.useNativeAsyncAwait === false) {
       combined.plugins.push([
         require('./plugins/async-await.js'),
         {
-          // Even though Node 8 supports native async/await, it is not
-          // compatible with fibers.
           useNativeAsyncAwait: false,
         },
       ]);
     }
-    // Enable async generator functions proposal.
-    combined.plugins.push(require("@babel/plugin-proposal-async-generator-functions"));
-  }
 
-  if (! compileModulesOnly) {
     maybeAddReactPlugins(features, combined);
   }
 
