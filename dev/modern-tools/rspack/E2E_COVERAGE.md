@@ -1,6 +1,6 @@
 # E2E Test Coverage
 
-> To update this report, follow the [e2e-coverage skill](/.github/skills/e2e-coverage/SKILL.md).
+> To update this report, follow the [coverage-report guidance](/.github/skills/e2e-testing/references/coverage-report.md) in the [E2E testing skill](/.github/skills/e2e-testing/SKILL.md).
 
 End-to-end tests using Jest + Playwright that verify Meteor apps with the Rspack bundler across frameworks, build modes, and features.
 
@@ -8,7 +8,10 @@ Test infrastructure lives in `tools/e2e-tests/`, with app fixtures in `tools/e2e
 
 ## Test Lifecycle
 
-Every app and skeleton goes through these phases (unless skipped):
+The Rspack fixture helper covers the phases below. The skeleton helper covers
+creation, Run, Prod, Test once, Build, and Reset; it does not automatically run
+the fixture helper's watch/rebuild cases. Focused regression suites select their
+own phases. Check each suite's options and assertions for exceptions.
 
 | Phase | What it does |
 |-------|-------------|
@@ -17,10 +20,15 @@ Every app and skeleton goes through these phases (unless skipped):
 | **Run (prod)** | `meteor run --production` — same checks in production mode |
 | **Test** | `meteor test` — runs mocha test driver, verifies test rebuild |
 | **Test once** | `meteor test --once` — runs tests to completion, checks exit code |
-| **Build** | `meteor build` — verifies bundle structure (main.js, programs/server, web.browser, web.browser.legacy) |
+| **Build** | `meteor build` — verifies bundle structure (main.js, programs/server, web.browser, web.browser.legacy); shared helpers also boot the built app by default when Mongo is available |
 | **Reset** | `meteor reset` — clears rspack build artifacts, caches, asset/chunk context dirs, and `.meteor/local` subdirectories |
 
-Default assertions on every run phase: build artifacts exist, page title matches, body styles render, `__rspack__` script tag is present.
+The fixture helper checks mode-specific build artifacts and, when client checks
+are enabled, the page title and body styles. The `__rspack__` development script
+tag must be present in Run and absent in Prod. Skeletons check rendering/styles
+according to their options. Shared built-app boot checks can be disabled with
+`testBuiltApp: false` and are skipped if neither bundled MongoDB nor `MONGO_URL`
+is available; those runs do not execute `afterRunBuiltApp` assertions.
 
 ### Package dependency regression
 

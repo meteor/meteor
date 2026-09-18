@@ -20,7 +20,7 @@ npm run test:e2e:group -- server_runtime
 npm run test:e2e:group -- accounts
 
 # Narrow a group to a test file (paths are relative to tools/e2e-tests)
-npm run test:e2e:group -- react --runTestsByPath react.test.js
+npm run test:e2e:group -- react_vue --runTestsByPath react.test.js
 
 # Run all E2E tests, including Accounts
 npm run test:e2e
@@ -44,8 +44,18 @@ CI uses that setting on `release-*` branches.
 
 Lifecycle tests reuse apps between phases. Prefer running a whole group or
 file; filtering an individual lifecycle test with `-t` can omit the creation
-or initialization it needs. Extra arguments are forwarded to Jest, so supplying
-another `--testNamePattern` overrides the group's name selection.
+or initialization it needs. Narrow group commands with file filters. Adding
+`-t` or `--testNamePattern` to a group command makes the installed Jest combine
+both patterns as a comma-joined regex; it does not replace the group pattern.
+For name filtering, use the direct E2E entrypoint with one pattern covering
+the required setup and lifecycle:
+
+```sh
+npm run test:e2e -- --runTestsByPath skeleton.test.js -t '^Meteor Skeletons / React Skeleton /'
+```
+
+Confirm the intended cases ran; successful discovery or skipped cases do not
+establish executed coverage.
 
 ## Group definitions and CI
 
@@ -81,6 +91,10 @@ remain skipped when their group runs. The legacy React Creator test is skipped;
 the active React Skeleton lifecycle covers creation in `skeleton.test.js`.
 
 ## Add or move tests
+
+Use the [E2E testing skill](../../.github/skills/e2e-testing/SKILL.md) for choosing
+fixtures and modes, avoiding duplicate coverage, writing meaningful assertions,
+and following the harness's isolation and cleanup patterns.
 
 1. Add a `*.test.js` suite outside `apps/`, using the existing helpers where
    appropriate. `apps/` contains fixture apps and is excluded from Jest discovery.
