@@ -1,0 +1,18 @@
+# Meteor packages used by this pnpm workspace app, one per line.
+# Check this file (and the other files in this directory) into your repository.
+
+meteor-base
+mobile-experience
+reactive-var
+
+standard-minifier-css
+standard-minifier-js
+es5-shim
+ecmascript
+typescript
+shell-server
+hot-module-replacement
+
+~prototype~
+static-html
+rspack

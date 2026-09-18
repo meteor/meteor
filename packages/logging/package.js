@@ -24,6 +24,7 @@ Package.onUse(function (api) {
   api.addFiles("logging_browser.js", "client");
   api.mainModule("logging_cordova.js", "web.cordova");
   api.addAssets("logging.d.ts", "server");
+  api.types("logging.native.d.ts");
 });
 
 Package.onTest(function (api) {
