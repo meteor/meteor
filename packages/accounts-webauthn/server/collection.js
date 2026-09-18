@@ -28,27 +28,23 @@ let decoySecret;
  */
 export async function getDecoySecret() {
   if (!decoySecret) {
-    const collection = WebAuthnChallenges.rawCollection();
-    const filter = { _id: DECOY_SECRET_ID };
-    let doc;
+    const selector = { _id: DECOY_SECRET_ID };
     try {
-      doc = await collection.findOneAndUpdate(
-        filter,
-        {
-          $setOnInsert: {
-            type: DECOY_SECRET_ID,
-            secret: randomBytes(32).toString('hex'),
-          },
+      // The upsert is the atomic step; $setOnInsert leaves an existing secret
+      // alone, so every process ends up reading the same one.
+      await WebAuthnChallenges.upsertAsync(selector, {
+        $setOnInsert: {
+          type: DECOY_SECRET_ID,
+          secret: randomBytes(32).toString('hex'),
         },
-        { upsert: true, returnDocument: 'after' }
-      );
+      });
     } catch (error) {
       // Two processes raced to create it and the other one won.
-      if (error?.code !== 11000) {
+      if (!(error?.code === 11000 || /E11000/.test(error?.message || ''))) {
         throw error;
       }
-      doc = await collection.findOne(filter);
     }
+    const doc = await WebAuthnChallenges.findOneAsync(selector);
     decoySecret = Buffer.from(doc.secret, 'hex');
   }
   return decoySecret;
@@ -99,11 +95,13 @@ export async function storeChallenge({
 }
 
 /**
- * Atomically removes and returns the challenge document, or `null` when it
- * does not exist, has expired, or was issued for a different ceremony. A
- * challenge is consumed whether or not the verification that follows succeeds.
- * Only a document of the expected ceremony type is matched, which keeps the
- * decoy secret out of reach of a crafted challenge string.
+ * Removes and returns the challenge document, or `null` when it does not
+ * exist, has expired, or was issued for a different ceremony. A challenge is
+ * consumed whether or not the verification that follows succeeds. The delete
+ * is the atomic step: of two concurrent submissions of the same challenge,
+ * only one removes the document and gets to use it. Only a document of the
+ * expected ceremony type is matched, which keeps the decoy secret out of reach
+ * of a crafted challenge string.
  * @param {String} challenge The base64url challenge.
  * @param {Object} options
  * @param {String} options.type `registration` or `authentication`.
@@ -114,15 +112,12 @@ export async function consumeChallenge(challenge, { type, mode }) {
   if (typeof challenge !== 'string' || !challenge) {
     return null;
   }
-  const doc = await WebAuthnChallenges.rawCollection().findOneAndDelete({
-    _id: challenge,
-    type,
-  });
+  const selector = { _id: challenge, type };
+  const doc = await WebAuthnChallenges.findOneAsync(selector);
+  if (!doc || !(await WebAuthnChallenges.removeAsync(selector))) {
+    return null;
+  }
   const valid =
-    doc &&
-    doc.expiresAt instanceof Date &&
-    doc.expiresAt > new Date() &&
-    doc.type === type &&
-    doc.mode === mode;
+    doc.expiresAt instanceof Date && doc.expiresAt > new Date() && doc.mode === mode;
   return valid ? doc : null;
 }
