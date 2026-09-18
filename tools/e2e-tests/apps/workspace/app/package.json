@@ -1,5 +1,5 @@
 {
-  "name": "workspace-bin-portability-app",
+  "name": "workspace-app",
   "private": true,
   "dependencies": {
     "@babel/runtime": "^7.23.5"
