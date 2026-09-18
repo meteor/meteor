@@ -29,6 +29,16 @@ For audit/review-only requests, report findings and proposed edits without apply
 
 Do not change intended product behavior merely to satisfy a test, add production APIs solely for tests, or expand a small change into a test-framework refactor.
 
+## Decide What to Change
+
+Before writing tests or choosing a fixture:
+
+1. **Check existing coverage.** If an existing test already detects the relevant failure, run it; a code change does not automatically need a new test.
+2. **Extend a relevant case when useful.** Add or update its setup and assertions when that expresses the new contract clearly, preserving its distinct existing protection.
+3. **Choose the boundary before the runner.** Use the [smallest sufficient layer](#choose-the-test-layer). Real browser or server execution alone does not require a separate E2E app.
+4. **Justify additional coverage and setup.** Identify the failure a higher-level test would catch that existing coverage misses. For E2E, [consider compatible fixtures before adding one](../e2e-testing/SKILL.md#choose-the-smallest-useful-change).
+5. **Reassess before handoff.** Consolidate temporary or overlapping tests once the retained coverage proves the same contract. When moving a regression to another layer, follow the [shared regression process](#describe-and-verify-regressions) and explain what protection is retained.
+
 ## Choose the Test Layer
 
 Use the smallest layer that can observe the failure. Add integration coverage when isolated assertions cannot prove that the pieces work together. Classify by the exercised boundary: self-tests run real commands in a sandbox and can cover lifecycles; package tests can use real DOM; E2E supports full app lifecycles but need only run the phases relevant to the contract.
