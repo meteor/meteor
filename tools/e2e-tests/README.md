@@ -57,6 +57,21 @@ npm run test:e2e -- --runTestsByPath skeleton.test.js -t '^Meteor Skeletons / Re
 Confirm the intended cases ran; successful discovery or skipped cases do not
 establish executed coverage.
 
+## Workspace executable portability
+
+```sh
+METEOR_E2E_TEST_RETRIES=0 npm run test:e2e:group -- regressions --runTestsByPath workspace-bin-portability.test.js --runInBand
+```
+
+This focused POSIX regression installs a local command tarball and an external
+linked workspace into a disposable app, then builds with `meteor build
+--directory`. It removes the source before checking relative and absolute
+workspace `.bin` links, their executable modes, and package-relative resources.
+It repeats the checks after the built server's dependency install, boots with
+an owned bundled MongoDB, and requests `/portability` in Chromium. No Rspack or
+frontend framework is involved. Failures retain diagnostics in `test-results/`.
+Windows is skipped because these POSIX symlinks do not test Windows command shims.
+
 ## Group definitions and CI
 
 [`test-groups.js`](test-groups.js) owns the groups, anchored test-name patterns,

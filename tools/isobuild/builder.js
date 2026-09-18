@@ -702,6 +702,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
         // rootDir, using caching because this function might be called
         // more than once.
         let cachedExternalPath;
+        let resolvedLinkPath;
         const getExternalPath = () => {
           if (typeof cachedExternalPath !== "undefined") {
             return cachedExternalPath;
@@ -709,6 +710,7 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
 
           try {
             var real = realpath(thisAbsFrom);
+            resolvedLinkPath = real;
           } catch (e) {
             if (e.code !== "ENOENT" &&
                 e.code !== "ELOOP") {
@@ -776,11 +778,21 @@ Previous builder: ${previousBuilder.outputPath}, this builder: ${outputPath}`
           // Symbolic links pointing to relative external paths are less
           // portable than absolute links, so getExternalPath() is
           // preferred if it returns a path.
-          const linkSource = getExternalPath() ||
-              files.readlink(thisAbsFrom);
+          const externalPath = getExternalPath();
+          let linkSource = externalPath || files.readlink(thisAbsFrom);
 
           const linkTarget =
               files.pathResolve(this.buildPath, thisRelTo);
+
+          if (!symlink && !externalPath && resolvedLinkPath) {
+            // A copied workspace can have a different depth than its source.
+            // Link to the target's bundle location, not its checkout location.
+            linkSource = files.pathRelative(
+              files.pathDirname(linkTarget),
+              files.pathResolve(this.buildPath, to,
+                files.pathRelative(rootDir, resolvedLinkPath))
+            ) || ".";
+          }
 
           if (await symlinkIfPossible(linkSource, linkTarget)) {
             // A symlink counts as a file, as far as "can you put
