@@ -48,3 +48,61 @@ Tinytest.add('oauth - each login popup gets a unique window name', test => {
       'window.open re-targets the first popup instead of opening a new one'
   );
 });
+
+Tinytest.addAsync(
+  'oauth - popup response survives a cross-origin opener',
+  async test => {
+    const response = await fetch('/packages/oauth/end_of_popup_response.js');
+    test.isTrue(response.ok);
+    const source = await response.text();
+
+    const config = {
+      credentialToken: 'credential-token',
+      credentialSecret: 'credential-secret',
+      isCordova: false,
+      setCredentialToken: true,
+      storagePrefix: 'oauth-test-',
+    };
+    const completedText = { style: {} };
+    const loginCompleted = {};
+    const document = {
+      getElementById(id) {
+        return {
+          config: { innerHTML: JSON.stringify(config) },
+          completedText,
+          loginCompleted,
+        }[id];
+      },
+    };
+    const opener = {};
+    Object.defineProperty(opener, 'Package', {
+      get() {
+        throw new DOMException('Blocked by cross-origin policy', 'SecurityError');
+      },
+    });
+    let closeCount = 0;
+    const window = {
+      opener,
+      close() {
+        closeCount += 1;
+      },
+    };
+    const localStorage = {};
+
+    const runPopupResponse = new Function(
+      'window',
+      'document',
+      'localStorage',
+      source
+    );
+    runPopupResponse(window, document, localStorage);
+
+    test.equal(
+      localStorage['oauth-test-credential-token'],
+      'credential-secret'
+    );
+    test.equal(completedText.style.display, 'block');
+    test.equal(typeof loginCompleted.onclick, 'function');
+    test.equal(closeCount, 1);
+  }
+);
