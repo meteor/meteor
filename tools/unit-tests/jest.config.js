@@ -7,6 +7,7 @@ module.exports = {
   testMatch: [
     "<rootDir>/tools/**/*.test.js",
     "<rootDir>/scripts/**/*.test.js",
+    "<rootDir>/npm-packages/meteor-rspack/**/*.test.js",
   ],
   testPathIgnorePatterns: [
     "/node_modules/",
@@ -25,7 +26,9 @@ module.exports = {
     "<rootDir>/tools/native-tests/",
     "<rootDir>/tools/tests/",
     "<rootDir>/tools/static-assets/",
-    "<rootDir>/npm-packages/",
+    // @meteorjs/rspack stays visible so its lib/*.test.js run here; the other
+    // npm packages keep their own test setups.
+    "<rootDir>/npm-packages/(?!meteor-rspack(?:/|$))",
     "<rootDir>/scripts/admin/",
     "<rootDir>/docs/",
     "<rootDir>/packages/non-core/",

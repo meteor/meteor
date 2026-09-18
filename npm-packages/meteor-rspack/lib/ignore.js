@@ -95,14 +95,21 @@ function createIgnoreRegex(globPatterns, rootPath) {
     throw new Error('globPatterns must be a non-empty array');
   }
 
-  // Rspack applies context exclusions to absolute module paths. Anchor rooted
-  // patterns here so matching starts inside the app, not in a parent folder.
+  // Rspack applies context exclusions to absolute module paths joined with the
+  // platform separator, so on Windows they arrive with backslashes. Every
+  // separator in the regex accepts both forms (meteor/meteor#14513).
+  const SEPARATOR = '[\\\\/]';
+  const NOT_SEPARATOR = '[^\\\\/]';
+
+  // Anchor rooted patterns so matching starts inside the app, not in a parent
+  // folder.
   const pathPrefix = rootPath
     ? `^${rootPath
         .replace(/\\/g, '/')
         .replace(/\/+$/, '')
-        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?=/|$)`
-    : '(?:^|/)';
+        .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        .replace(/\//g, SEPARATOR)}(?=${SEPARATOR}|$)`
+    : `(?:^|${SEPARATOR})`;
 
   // Process each glob pattern and convert to regex
   const regexPatterns = globPatterns.map(pattern => {
@@ -114,13 +121,16 @@ function createIgnoreRegex(globPatterns, rootPath) {
     // Escape special regex characters, but not * and /
     let regexPattern = pattern.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
 
+    // Accept either separator wherever the pattern has a /
+    regexPattern = regexPattern.replace(/\//g, SEPARATOR);
+
     // Use a temporary placeholder for ** that won't be affected by the * replacement
     // This is necessary because if we directly replace ** with .* and then replace * with [^/]*
     const DOUBLE_ASTERISK_PLACEHOLDER = '__DOUBLE_ASTERISK__';
     regexPattern = regexPattern.replace(/\*\*/g, DOUBLE_ASTERISK_PLACEHOLDER);
 
-    // Convert * to regex equivalent (any number of characters except /)
-    regexPattern = regexPattern.replace(/\*/g, '[^/]*');
+    // Convert * to regex equivalent (any number of characters except a separator)
+    regexPattern = regexPattern.replace(/\*/g, `${NOT_SEPARATOR}*`);
 
     // Convert the ** placeholder to its regex equivalent (any number of characters including /)
     regexPattern = regexPattern.replace(new RegExp(DOUBLE_ASTERISK_PLACEHOLDER, 'g'), '.*');
