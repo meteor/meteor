@@ -995,7 +995,7 @@ Object.assign(MRp, {
       message +=
         '\n\n' +
         'Check how to troubleshoot here ' +
-        'https://docs.meteor.com/windows.html#cant-start-mongo-server';
+        'https://v2-docs.meteor.com/windows.html#cant-start-mongo-server';
     }
 
     if (explanation && explanation.symbol === 'EXIT_NET_ERROR') {

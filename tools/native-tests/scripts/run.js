@@ -6,9 +6,20 @@ const { prepareSmokeApp, cleanup: cleanupApp } = require("./build-app");
 const { resolveLanIp, startServer } = require("./server");
 const { bootSimulator } = require("./simulator");
 const { runFlow } = require("./maestro");
+const {
+  applyCordovaFixtureUpdate,
+  readCordovaManifest,
+  waitForCordovaManifestChange,
+} = require("./cordova-hcp");
 
 const PLATFORMS = new Set(["ios", "android"]);
 const FLOW_PATH = path.resolve(__dirname, "..", "flows", "launch.yaml");
+const HCP_FLOW_PATH = path.resolve(
+  __dirname,
+  "..",
+  "flows",
+  "hcp-updated.yaml"
+);
 const JUNIT_DIR = path.resolve(__dirname, "..", "junit");
 const HARD_TIMEOUT_MS = 8 * 60 * 1000;
 
@@ -38,6 +49,10 @@ function parseArgs(argv) {
   return out;
 }
 
+function updatedJunitPath(junitOut) {
+  return junitOut.replace(/-launch\.xml$/, "-hcp-updated.xml");
+}
+
 async function run(argv) {
   let args;
   try {
@@ -47,9 +62,11 @@ async function run(argv) {
     return EXIT_FRAMEWORK;
   }
 
-  if (!(await fs.pathExists(FLOW_PATH))) {
-    console.error(`Missing flow file: ${FLOW_PATH}`);
-    return EXIT_FRAMEWORK;
+  for (const flowPath of [FLOW_PATH, HCP_FLOW_PATH]) {
+    if (!(await fs.pathExists(flowPath))) {
+      console.error(`Missing flow file: ${flowPath}`);
+      return EXIT_FRAMEWORK;
+    }
   }
 
   const maestro = await checkMaestro();
@@ -90,28 +107,45 @@ async function run(argv) {
     console.log(`Server up at ${server.url}`);
 
     const sim = await bootSimulator(args.platform);
+    // cleanupAll runs in LIFO order: collect logs while the device and app are
+    // still available, then uninstall, then shut the simulator down.
+    cleanup.push(() => sim.shutdown());
     cleanup.push(() => sim.uninstall());
     cleanup.push(() => sim.captureLogs(logOut));
-    cleanup.push(() => sim.shutdown());
 
     await sim.install(build.bundlePath);
     console.log(`Installed bundle on ${args.platform} device ${sim.deviceId}`);
 
-    const { exitCode } = await runFlow({
+    const initialManifest = await readCordovaManifest({
+      baseUrl: server.url,
+    });
+
+    const initial = await runFlow({
       flowPath: FLOW_PATH,
       deviceId: sim.deviceId,
       junitOut,
     });
+    if (initial.exitCode !== 0) return EXIT_FLOW_FAIL;
 
-    if (exitCode === 0) return EXIT_PASS;
-    return EXIT_FLOW_FAIL;
+    await applyCordovaFixtureUpdate(build.appDir);
+    await waitForCordovaManifestChange({
+      baseUrl: server.url,
+      previousVersion: initialManifest.version,
+    });
+
+    const updated = await runFlow({
+      flowPath: HCP_FLOW_PATH,
+      deviceId: sim.deviceId,
+      junitOut: updatedJunitPath(junitOut),
+    });
+    return updated.exitCode === 0 ? EXIT_PASS : EXIT_FLOW_FAIL;
   } catch (err) {
     console.error("Infrastructure failure:", err.message);
     if (err.stack) console.error(err.stack);
     return EXIT_INFRA;
   } finally {
     clearTimeout(hardTimeout);
-    if (!process.argv.includes("--keep-running")) {
+    if (!args.keepRunning) {
       await cleanupAll();
     } else {
       console.log("--keep-running: skipping teardown");
@@ -125,6 +159,7 @@ if (require.main === module) {
 
 module.exports = {
   parseArgs,
+  updatedJunitPath,
   run,
   EXIT_PASS,
   EXIT_FLOW_FAIL,

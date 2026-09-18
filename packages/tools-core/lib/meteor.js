@@ -17,11 +17,12 @@ export function getMeteorAppDir() {
 
 /**
  * Reads and parses the package.json file of the Meteor application.
+ * @param {string} [cwd] The directory containing the application's package.json file.
  * @returns {Object} The parsed content of the package.json file.
  */
-export function getMeteorAppPackageJson() {
+export function getMeteorAppPackageJson(cwd = getMeteorAppDir()) {
   return JSON.parse(
-    fs.readFileSync(`${getMeteorAppDir()}/package.json`, 'utf-8')
+    fs.readFileSync(path.join(cwd, 'package.json'), 'utf-8')
   );
 }
 
@@ -35,12 +36,45 @@ export function getMeteorAppConfig() {
     : getMeteorAppPackageJson()?.meteor;
 }
 
+const BARE_PORT_PATTERN = /^\d+$/;
+const SCHEME_PATTERN = /^[A-Za-z][A-Za-z0-9+\-.]*:\/\//;
+
 /**
- * Get Meteor's app port
- * @returns {false|*}
+ * Extracts the port from a `--port` value. Mirrors how the CLI parses the
+ * option, which accepts `port`, `[host:]port`, and a full URL, optionally
+ * with a path (`3000`, `localhost:3060`, `[::]:3005`, `http://localhost:3060/`).
+ * @param {string|number|undefined|null} value - The raw `--port`/`PORT` value.
+ * @returns {string|undefined} The port digits, or undefined when the value
+ * carries no port (e.g. a bare host such as `0.0.0.0`).
+ */
+export function parseMeteorAppPort(value) {
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  const raw = String(value).trim();
+  if (BARE_PORT_PATTERN.test(raw)) {
+    return raw;
+  }
+
+  try {
+    const url = new URL(SCHEME_PATTERN.test(raw) ? raw : `http://${raw}`);
+    return url.port || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Get Meteor's app port, without any host prefix `--port` may carry.
+ * Callers derive other ports from it arithmetically, so it is always digits only.
+ * @returns {string}
  */
 export function getMeteorAppPort() {
-  return Package?.meteor?.global?.currentCommand?.options?.['port'] || process.env.PORT || '3000';
+  const rawPort =
+    Package?.meteor?.global?.currentCommand?.options?.['port'] ||
+    process.env.PORT;
+  return parseMeteorAppPort(rawPort) || '3000';
 }
 
 /**
@@ -62,10 +96,15 @@ export function isMeteorAppConfigModernVerbose() {
 
 /**
  * Retrieves the auto install deps flag from the app's package.json.
- * @returns {Boolean|*}
+ * @param {Object} [options]
+ * @param {string} [options.cwd] Read configuration from this directory.
+ * @returns {boolean}
  */
-export function hasMeteorAppConfigAutoInstallDeps() {
-  const { autoInstallDeps = true } = getMeteorAppConfig() || {};
+export function hasMeteorAppConfigAutoInstallDeps(options = {}) {
+  const config = options.cwd
+    ? getMeteorAppPackageJson(options.cwd)?.meteor
+    : getMeteorAppConfig();
+  const { autoInstallDeps = true } = config || {};
   return !!autoInstallDeps;
 }
 
@@ -80,11 +119,16 @@ export function hasMeteorAppConfigAutoInstallDeps() {
  */
 export function getMeteorAppEntrypoints() {
   const meteorConfig = getMeteorAppConfig();
+  const testModule = meteorConfig?.testModule;
+  const sharedTestModule = typeof testModule === "string"
+    ? testModule
+    : undefined;
+
   return {
     mainClient: meteorConfig?.mainModule?.client,
     mainServer: meteorConfig?.mainModule?.server,
-    testClient: meteorConfig?.testModule?.client || meteorConfig?.testModule,
-    testServer: meteorConfig?.testModule?.server || meteorConfig?.testModule,
+    testClient: testModule?.client || sharedTestModule,
+    testServer: testModule?.server || sharedTestModule,
   };
 }
 

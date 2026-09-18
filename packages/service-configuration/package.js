@@ -11,4 +11,5 @@ Package.onUse(function(api) {
   api.addFiles('service_configuration_common.js', ['client', 'server']);
   api.addFiles('service_configuration_server.js', 'server');
   api.addAssets('service-configuration.d.ts', 'server');
+  api.types('service-configuration.native.d.ts');
 });

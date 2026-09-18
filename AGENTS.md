@@ -12,6 +12,8 @@ Full-stack JavaScript platform for modern web and mobile applications.
 ./packages/test-in-console/run.sh "<name>"   # Package tests (terminal output via Puppeteer)
 npm run test:unit                            # Unit tests (Jest)
 npm run test:e2e                             # E2E tests (Jest + Playwright)
+npm run test:e2e:groups                      # List E2E groups
+npm run test:e2e:group -- monorepo            # Run the same E2E group as CI
 npm run test:native -- --platform=android    # Native mobile smoke tests (Maestro)
 ```
 
@@ -49,6 +51,7 @@ Load these for detailed context on specific topics:
 | [testing](.github/skills/testing/SKILL.md) | Writing tests, debugging failures, test infrastructure |
 | [packages](.github/skills/packages/SKILL.md) | Finding packages by feature, understanding dependencies |
 | [modern-tools](.github/skills/modern-tools/SKILL.md) | tools-core utilities, rspack, modern integrations |
+| [sync-modern-tool-versions](.github/skills/sync-modern-tool-versions/SKILL.md) | Synchronizing modern-tool npm packages, dependency floors, constants, templates, and fixtures |
 | [e2e-coverage](.github/skills/e2e-coverage/SKILL.md) | Updating the E2E test coverage report when apps/skeletons change |
 | [ai-context](.github/skills/ai-context/SKILL.md) | Creating, updating, or maintaining AI documentation files |
 | [changelog](.github/skills/changelog/SKILL.md) | Writing, reviewing, or editing changelog entries for releases |
