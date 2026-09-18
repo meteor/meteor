@@ -262,7 +262,7 @@ Tinytest.add('accounts-webauthn - config - overrides are applied and validated',
 });
 
 Tinytest.addAsync(
-  'accounts-webauthn - the decoy secret is shared through the collection and never consumed',
+  'accounts-webauthn - invariants - the decoy secret is shared through the collection and never consumed',
   async test => {
     const secret = await getDecoySecret();
     const stored = await WebAuthnChallenges.findOneAsync('decoySecret');
@@ -276,7 +276,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync('accounts-webauthn - decoy credential ids carry a verifiable tag', async test => {
+Tinytest.addAsync('accounts-webauthn - invariants - decoy credential ids carry a verifiable tag', async test => {
   const decoys = await decoyCredentials({ username: `nobody_${Random.id()}` });
   for (const decoy of decoys) {
     test.isTrue(await isDecoyCredentialId(decoy.id), 'a decoy verifies');
@@ -287,7 +287,7 @@ Tinytest.addAsync('accounts-webauthn - decoy credential ids carry a verifiable t
   test.isFalse(await isDecoyCredentialId(Buffer.from([1, 2, 3]).toString('base64url')));
 });
 
-Tinytest.add('accounts-webauthn - counter rollback detection', test => {
+Tinytest.add('accounts-webauthn - invariants - counter rollback detection', test => {
   test.isFalse(detectCounterRollback(0, 0), 'authenticators without a counter');
   test.isFalse(detectCounterRollback(0, 1));
   test.isFalse(detectCounterRollback(5, 6));
@@ -297,7 +297,7 @@ Tinytest.add('accounts-webauthn - counter rollback detection', test => {
 });
 
 Tinytest.addAsync(
-  'accounts-webauthn - recording a use is a compare-and-set on the counter',
+  'accounts-webauthn - invariants - recording a use is a compare-and-set on the counter',
   async test => {
     const stored = { id: Random.id(), counter: 5 };
     const userId = await Meteor.users.insertAsync({
@@ -321,7 +321,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync('accounts-webauthn - a credential id is stored once per user', async test => {
+Tinytest.addAsync('accounts-webauthn - invariants - a credential id is stored once per user', async test => {
   const id = Random.id();
   const userId = await Meteor.users.insertAsync({
     services: { webauthn: { credentials: [{ id, counter: 0 }] } },
@@ -442,7 +442,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - identifier-first login binds the challenge to the user',
+  'accounts-webauthn - invariants - identifier-first login binds the challenge to the user',
   async test => {
     const a = await createPasswordUser();
     const b = await createPasswordUser();
@@ -538,7 +538,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync('accounts-webauthn - a challenge is single use and expires', test =>
+Tinytest.addAsync('accounts-webauthn - invariants - a challenge is single use and expires', test =>
   withRegisteredKey(test, async ({ conn, username, key }) => {
     const options = await call(conn, 'generateWebAuthnAuthenticationOptions', {
       mode: 'login',
@@ -589,7 +589,7 @@ Tinytest.addAsync('accounts-webauthn - a challenge is single use and expires', t
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - counter rollback, wrong origin, tampering and missing user verification are rejected',
+  'accounts-webauthn - invariants - counter rollback, wrong origin, tampering and missing user verification are rejected',
   test =>
     withRegisteredKey(test, async ({ conn, userId, key }) => {
       const first = await loginWithKey(conn, key);
@@ -647,7 +647,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - a credential id cannot be registered twice',
+  'accounts-webauthn - invariants - a credential id cannot be registered twice',
   async test => {
     const a = await createPasswordUser();
     const b = await createPasswordUser();
@@ -781,7 +781,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - forged assertions fail alike for registered and unknown keys',
+  'accounts-webauthn - invariants - forged assertions fail alike for registered and unknown keys',
   test =>
     withRegisteredKey(test, async ({ conn, key }) => {
       await loginWithKey(conn, key);
@@ -812,7 +812,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - a key registered without user verification is a second factor only',
+  'accounts-webauthn - invariants - a key registered without user verification is a second factor only',
   async test => {
     const previous = Accounts._options.webauthn;
     Accounts._options.webauthn = { ...previous, userVerification: 'preferred' };
@@ -1036,7 +1036,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - the last key cannot be removed without another login method',
+  'accounts-webauthn - invariants - the last key cannot be removed without another login method',
   async test => {
     const username = `keyonly_${Random.id()}`;
     const key = await newAuthenticator();
@@ -1357,7 +1357,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - ambiguous error messages hide reasons but keep codes',
+  'accounts-webauthn - invariants - ambiguous error messages hide reasons but keep codes',
   async test => {
     const key = await newAuthenticator();
     Accounts._options.ambiguousErrorMessages = true;
@@ -1378,7 +1378,7 @@ Tinytest.addAsync(
   }
 );
 
-Tinytest.addAsync('accounts-webauthn - methods require a logged-in user', async test => {
+Tinytest.addAsync('accounts-webauthn - invariants - methods require a logged-in user', async test => {
   await withConnection(test, async conn => {
     const calls = [
       ['listWebAuthnCredentials'],
@@ -1396,7 +1396,7 @@ Tinytest.addAsync('accounts-webauthn - methods require a logged-in user', async 
 });
 
 Tinytest.addAsync(
-  'accounts-webauthn - challenge-issuing methods are rate limited by default',
+  'accounts-webauthn - invariants - challenge-issuing methods are rate limited by default',
   async test => {
     Accounts.addDefaultRateLimit();
     try {
@@ -1418,7 +1418,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - concurrent removals cannot strip the last key',
+  'accounts-webauthn - invariants - concurrent removals cannot strip the last key',
   async test => {
     const username = `keyonly_${Random.id()}`;
     const keyA = await newAuthenticator();
@@ -1461,7 +1461,7 @@ Tinytest.addAsync(
 );
 
 Tinytest.addAsync(
-  'accounts-webauthn - a password reset does not log in past the second factor',
+  'accounts-webauthn - invariants - a password reset does not log in past the second factor',
   async test => {
     const email = `${Random.id()}@example.com`.toLowerCase();
     const password = Random.secret();
