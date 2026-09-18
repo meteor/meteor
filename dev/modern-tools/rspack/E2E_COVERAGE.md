@@ -262,10 +262,11 @@ Meteor app inside a pnpm workspace monorepo, with shared code in `workspace:*` p
 | Built app boots; workspace packages + `color` tree imported in production bundle | Build |
 | HMR works in dev, disabled in prod | Run, Prod |
 
-### workspace-bin-portability
+### workspace
 
 Minimal Meteor app with an external npm workspace and an internal command tarball;
 Build only, without Rspack. POSIX symlinks; Windows command shims are not covered.
+Covered by `workspace-bin-portability.test.js`.
 
 | What is covered | Phase |
 |----------------|-------|
@@ -436,7 +437,7 @@ Where each feature is tested across apps and skeletons.
 | `Assets`/`Npm` server globals in the dev bundle | server-only regression | |
 | Delayed server Meteor package import | server-only regression | |
 | Monorepo layout | monorepo, pnpm-monorepo | pnpm |
-| Source-independent workspace executable links (POSIX) | workspace-bin-portability | |
+| Source-independent workspace executable links (POSIX) | workspace | |
 | Workspace-aware Rspack dependency auto-install | monorepo (npm, Yarn Classic) | pnpm |
 | pnpm workspace (`workspace:*` packages, `corepack pnpm install`) | pnpm-monorepo | pnpm |
 | Transitive npm dependency resolution (pnpm store) | pnpm-monorepo | pnpm |

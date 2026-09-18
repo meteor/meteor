@@ -76,7 +76,7 @@ describePosix('Regressions / Workspace executable portability', () => {
     let app;
     let mongo;
     try {
-      const { tempDir } = await setupMeteorApp('workspace-bin-portability', { isMonorepo: true });
+      const { tempDir } = await setupMeteorApp('workspace', { isMonorepo: true });
       assert.equal(path.dirname(await fs.realpath(tempDir)), ownedRoot);
       const appDir = path.join(tempDir, 'app');
       const commandPackage = path.join(tempDir, 'packages/portable-command');
