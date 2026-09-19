@@ -631,9 +631,12 @@ Tinytest.addAsync(
         mode: 'login',
       });
       const tampered = await key.assert({ challenge: options.challenge });
-      tampered.response.signature = tampered.response.signature.replace(/.$/, c =>
-        c === 'A' ? 'B' : 'A'
-      );
+      // Flip a bit in the middle of the DER signature. Changing the last
+      // base64url character is not enough: its low bits are padding for most
+      // signature lengths and a lenient decoder drops them.
+      const signature = Buffer.from(tampered.response.signature, 'base64url');
+      signature[signature.length >> 1] ^= 0x01;
+      tampered.response.signature = signature.toString('base64url');
       await expectError(
         test,
         call(conn, 'login', { webauthn: tampered }),
