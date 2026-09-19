@@ -1,3 +1,9 @@
+import {
+  CollectionHooks,
+  runFindHooks,
+  runFindOneHooksSync,
+} from './collection_hooks';
+
 export const SyncMethods = {
   /**
    * @summary Find the documents in a collection that match the selector.
@@ -26,10 +32,16 @@ export const SyncMethods = {
     // Collection.find() (return all docs) behaves differently
     // from Collection.find(undefined) (return 0 docs).  so be
     // careful about the length of arguments.
-    return this._collection.find(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+    const hooks = this._hooks?.find;
+    if (!CollectionHooks._directEnv.get() && hooks &&
+        (hooks.before.length || hooks.after.length)) {
+      return runFindHooks(this, selector, options, () =>
+        this._collection.find(selector, options)
+      );
+    }
+    return this._collection.find(selector, options);
   },
 
   /**
@@ -50,10 +62,27 @@ export const SyncMethods = {
    * @returns {Object}
    */
   findOne(...args) {
-    return this._collection.findOne(
-      this._getFindSelector(args),
-      this._getFindOptions(args)
-    );
+    const selector = this._getFindSelector(args);
+    const options = this._getFindOptions(args);
+    const isDirect = CollectionHooks._directEnv.get();
+    const findOneHooks = this._hooks?.findOne;
+    const hasFindOneHooks = !isDirect && findOneHooks &&
+      (findOneHooks.before.length || findOneHooks.after.length);
+    const coreFindOne = () => {
+      const cursor = this.find(selector, { ...options, limit: 1 });
+
+      if (!cursor) {
+        return undefined;
+      }
+
+      return cursor.fetch()[0];
+    };
+
+    if (hasFindOneHooks) {
+      return runFindOneHooksSync(this, selector, options, coreFindOne);
+    }
+
+    return coreFindOne();
   },
 
 
