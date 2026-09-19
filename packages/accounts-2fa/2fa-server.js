@@ -168,3 +168,27 @@ Meteor.methods({
 Accounts.addAutopublishFields({
   forLoggedInUser: ['services.twoFactorAuthentication.type'],
 });
+
+// Register TOTP as a second factor so the login handlers that call
+// Accounts._verifySecondFactors (accounts-password, accounts-passwordless)
+// enforce it alongside any other registered factor, such as the one from
+// accounts-webauthn. The helpers above stay exported for packages that
+// integrate manually.
+Accounts.registerSecondFactor('totp', {
+  isEnabledFor: user => Accounts._check2faEnabled(user),
+  inputKey: 'code',
+  hasInput: options =>
+    typeof options.code === 'string' && options.code.length > 0,
+  onMissingInput: () =>
+    Accounts._handleError('2FA code must be informed', true, 'no-2fa-code'),
+  verify: (user, options) => {
+    if (
+      !Accounts._isTokenValid(
+        user.services.twoFactorAuthentication.secret,
+        options.code
+      )
+    ) {
+      Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
+    }
+  },
+});

@@ -12,6 +12,7 @@ Meteor.methods({
   async '_e2e.resetAll'() {
     await Meteor.users.removeAsync({});
     await clearSentEmails();
+    await Accounts._webAuthnChallenges?.removeAsync({});
 
     customRateRuleIds.forEach((id) => DDPRateLimiter.removeRule(id));
     customRateRuleIds = [];
@@ -22,6 +23,7 @@ Meteor.methods({
     Accounts._options.ambiguousErrorMessages = false;
     Accounts._options.sendVerificationEmail = false;
     Accounts._options.httpOnlyCookieAllowedOrigins = undefined;
+    delete Accounts._options.webauthn;
 
     resetHooks();
 

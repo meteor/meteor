@@ -214,6 +214,39 @@ const api = {
   disableUser2fa: () => promisify(Accounts.disableUser2fa)(),
   has2faEnabled: () => promisify(Accounts.has2faEnabled)(),
 
+  isWebAuthnSupported: () => Accounts.isWebAuthnSupported(),
+  loginWithWebAuthn: (selector) =>
+    new Promise((resolve, reject) => {
+      const cb = (err) => (err ? reject(reserializeError(err)) : resolve());
+      if (selector === undefined) Meteor.loginWithWebAuthn(cb);
+      else Meteor.loginWithWebAuthn(selector, cb);
+    }),
+  loginWithPasswordAndWebAuthn: (selector, password) =>
+    new Promise((resolve, reject) => {
+      Meteor.loginWithPasswordAndWebAuthn(selector, password, (err) =>
+        err ? reject(reserializeError(err)) : resolve(),
+      );
+    }),
+  passwordlessLoginWithTokenAndWebAuthn: (selector, token) =>
+    new Promise((resolve, reject) => {
+      Meteor.passwordlessLoginWithTokenAndWebAuthn(selector, token, (err) =>
+        err ? reject(reserializeError(err)) : resolve(),
+      );
+    }),
+  createUserWithWebAuthn: (opts) =>
+    new Promise((resolve, reject) => {
+      Accounts.createUserWithWebAuthn(opts, (err) =>
+        err ? reject(reserializeError(err)) : resolve(),
+      );
+    }),
+  registerWebAuthnCredential: (name) => promisify(Accounts.registerWebAuthnCredential)(name),
+  listWebAuthnCredentials: () => promisify(Accounts.listWebAuthnCredentials)(),
+  renameWebAuthnCredential: (id, name) => promisify(Accounts.renameWebAuthnCredential)(id, name),
+  removeWebAuthnCredential: (id) => promisify(Accounts.removeWebAuthnCredential)(id),
+  enableWebAuthnSecondFactor: () => promisify(Accounts.enableWebAuthnSecondFactor)(),
+  disableWebAuthnSecondFactor: () => promisify(Accounts.disableWebAuthnSecondFactor)(),
+  hasWebAuthnSecondFactorEnabled: () => promisify(Accounts.hasWebAuthnSecondFactorEnabled)(),
+
   loginWithFakeOAuth: ({ credentialToken, credentialSecret }) =>
     new Promise((resolve, reject) => {
       Accounts.callLoginMethod({

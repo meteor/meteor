@@ -8,7 +8,10 @@ const rimraf = require('rimraf');
 
 // Get the absolute path to the meteor executable
 const REPO_ROOT = path.resolve(__dirname, '../..');
-const METEOR_EXECUTABLE = path.join(REPO_ROOT, 'meteor');
+// The POSIX launcher refuses to run on Windows; use the batch launcher there.
+const METEOR_EXECUTABLE =
+  process.env.METEOR_EXECUTABLE ||
+  path.join(REPO_ROOT, process.platform === 'win32' ? 'meteor.bat' : 'meteor');
 
 /**
  * Returns true when the current Jest test is a retry attempt.

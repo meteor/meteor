@@ -183,4 +183,76 @@ export async function fetchJson(page, urlPath, init = {}) {
   );
 }
 
+// Chromium virtual authenticators through the CDP WebAuthn domain. Each test
+// attaches its own so resident credentials never leak between tests.
+const VIRTUAL_AUTHENTICATOR_DEFAULTS = {
+  protocol: 'ctap2',
+  transport: 'usb',
+  hasResidentKey: true,
+  hasUserVerification: true,
+  isUserVerified: true,
+  automaticPresenceSimulation: true,
+};
+
+/**
+ * Attaches a CDP session with the WebAuthn domain enabled, for adding
+ * Chromium virtual authenticators to the page.
+ * @param {Object} page The Playwright page.
+ * @returns {Promise<Object>} `{ add, remove, detach }`.
+ */
+export async function virtualAuthenticators(page) {
+  const client = await page.context().newCDPSession(page);
+  try {
+    await client.send('WebAuthn.enable');
+  } catch (error) {
+    await client.detach().catch(() => {});
+    throw error;
+  }
+  const ids = new Set();
+  return {
+    add: async (options = {}) => {
+      const { authenticatorId } = await client.send('WebAuthn.addVirtualAuthenticator', {
+        options: { ...VIRTUAL_AUTHENTICATOR_DEFAULTS, ...options },
+      });
+      ids.add(authenticatorId);
+      return authenticatorId;
+    },
+    remove: async (authenticatorId) => {
+      await client.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+      ids.delete(authenticatorId);
+    },
+    detach: async () => {
+      for (const authenticatorId of ids) {
+        try {
+          await client.send('WebAuthn.removeVirtualAuthenticator', { authenticatorId });
+        } catch {}
+      }
+      try {
+        await client.send('WebAuthn.disable');
+      } catch {}
+      try {
+        await client.detach();
+      } catch {}
+    },
+  };
+}
+
+/**
+ * Runs `fn` with one virtual authenticator attached to the page, then removes
+ * it and detaches the session.
+ * @param {Object} page The Playwright page.
+ * @param {Function} fn Receives the authenticators handle and the authenticator id.
+ * @param {Object} [options] Virtual authenticator options, merged over the defaults.
+ * @returns {Promise<*>} The result of `fn`.
+ */
+export async function withVirtualAuthenticator(page, fn, options = {}) {
+  const authenticators = await virtualAuthenticators(page);
+  try {
+    const authenticatorId = await authenticators.add(options);
+    return await fn(authenticators, authenticatorId);
+  } finally {
+    await authenticators.detach();
+  }
+}
+
 export { waitForMeteorOutput };

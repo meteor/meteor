@@ -1392,3 +1392,9 @@ Accounts.emailTemplates.verifyEmail = {
 You can add 2FA to your login flow by
 using the package [accounts-2fa](../packages/accounts-2fa.md).
 You can find an example showing how this would look like [here](../packages/accounts-2fa.md#working-with-accounts-password).
+
+<h3 id="enabling-webauthn">Enable security keys and passkeys</h3>
+
+You can let users log in with a hardware security key or a passkey, or require
+a security key as a second factor, by using the package
+[accounts-webauthn](../packages/accounts-webauthn.md).

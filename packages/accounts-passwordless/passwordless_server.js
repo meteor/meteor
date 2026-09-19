@@ -32,6 +32,7 @@ Accounts.registerLoginHandler('passwordless', async options => {
   if (!options.token) return undefined; // don't handle
 
   check(options, {
+    ...Accounts._secondFactorInputSchema(),
     token: tokenValidator(),
     code: Match.Optional(Match.NonEmptyString),
     selector: Accounts._userQueryValidator,
@@ -57,26 +58,17 @@ Accounts.registerLoginHandler('passwordless', async options => {
   });
   const { verifiedEmail, error } = result;
 
+  if (!error) {
+    // Check the second factors the user has enabled (a 2FA code from
+    // accounts-2fa, a WebAuthn assertion from accounts-webauthn, ...) before
+    // consuming the token. See Accounts.registerSecondFactor.
+    await Accounts._verifySecondFactors(user, options);
+  }
+
   if (!error && verifiedEmail) {
-    // This method is added by the package accounts-2fa
-    if (Accounts._check2faEnabled?.(user)) {
-      if (!options.code) {
-        Accounts._handleError('2FA code must be informed', true, 'no-2fa-code');
-        return;
-      }
-      if (
-        !Accounts._isTokenValid(
-          user.services.twoFactorAuthentication.secret,
-          options.code
-        )
-      ) {
-        Accounts._handleError('Invalid 2FA code', true, 'invalid-2fa-code');
-        return;
-      }
-    }
-    // It's necessary to make sure we don't remove the token if the user has 2fa enabled
-    // otherwise, it would be necessary to generate a new one if this method is called without
-    // a 2fa code
+    // It's necessary to make sure we don't remove the token if the user has a
+    // second factor enabled, otherwise a new token would be needed when this
+    // method is called again with the second-factor answer
     await Meteor.users.updateAsync(
       { _id: user._id, 'emails.address': verifiedEmail },
       {

@@ -27,6 +27,7 @@ const VALID_CONFIG_KEYS = [
   'useHttpOnlyCookies',
   'httpOnlyCookieAllowedOrigins',
   'httpOnlyCookieRateLimit',
+  'webauthn',
   'ddpUrl',
   'connection',
 ];
@@ -232,6 +233,7 @@ export class AccountsCommon {
    * @param {Boolean} options.useHttpOnlyCookies Keep the persistent copy of the resume token in an HttpOnly cookie instead of Web Storage. The client still loads it into memory to authenticate DDP. Must be enabled on the server for the `/_accounts/cookie/*` endpoints to respond, and mirrored to the client through `Meteor.settings.public.packages.accounts.useHttpOnlyCookies`.
    * @param {String[]} options.httpOnlyCookieAllowedOrigins Additional origins (`scheme://host[:port]`) allowed to call the cookie set and clear endpoints with credentialed CORS. The origin of `ROOT_URL` and of the request `Host` are always allowed. `SameSite=Strict` and browser cookie policy still apply. Server only.
    * @param {Object | false} options.httpOnlyCookieRateLimit Per-client-address rate limit for the cookie endpoints as `{ max, windowMs }`. Defaults to 30 requests per 10 seconds; `false` disables it. Server only.
+   * @param {Object} options.webauthn When using the package `accounts-webauthn`, the WebAuthn relying party settings (`rpID`, `rpName`, `origins`, `userVerification`, and so on). See the `accounts-webauthn` documentation for every key and its default.
    * 
    * @example
    * // For UI-related options like forbidClientAccountCreation, call Accounts.config on both client and server

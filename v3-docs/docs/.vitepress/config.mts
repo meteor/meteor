@@ -344,6 +344,10 @@ export default defineConfig({
                 link: "/packages/accounts-2fa",
               },
               {
+                text: "accounts-webauthn",
+                link: "/packages/accounts-webauthn",
+              },
+              {
                 text: "accounts-facebook",
                 link: "/packages/accounts-facebook",
               },
