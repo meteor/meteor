@@ -11,7 +11,7 @@ export const DEFAULT_RSPACK_VERSION = '2.2.0';
 /* Minimum accepted and auto-install version for `@rspack/dev-server`. */
 export const DEFAULT_RSPACK_DEV_SERVER_VERSION = '2.2.0';
 
-/* `@meteorjs/rspack` minimum and auto-install version; sync with its package.json. */
+/* Published `@meteorjs/rspack` minimum and auto-install version. */
 export const DEFAULT_METEOR_RSPACK_VERSION = '3.0.0-beta.1';
 
 /* Minimum accepted and auto-install version for `@rspack/plugin-react-refresh`. */

@@ -192,12 +192,19 @@ When `npm-packages/meteor-rspack` has publishable changes, bump and publish the
 NPM package first, then synchronize and bump the Atmosphere package. If only
 `packages/rspack` changes, only the Atmosphere package needs a new version.
 
-When bumping `@meteorjs/rspack`, also update
-`DEFAULT_METEOR_RSPACK_VERSION` in `packages/rspack/lib/constants.js` to the
-same version before publishing. The Atmosphere package uses this constant to
-auto-install `@meteorjs/rspack` in applications, so leaving it behind can make
-new apps install an older or beta release. Use a beta version in the constant
-only when publishing that beta release.
+When staging an unpublished `@meteorjs/rspack` version, keep its `package.json`
+and lockfile root synchronized, but leave `DEFAULT_METEOR_RSPACK_VERSION` and
+consumer references on the latest version available from npm. This lets CI
+install the published dependency before linking the local package. The local
+package identity may therefore be newer than the install default, but never
+older.
+
+After publishing `@meteorjs/rspack`, update `DEFAULT_METEOR_RSPACK_VERSION` in
+`packages/rspack/lib/constants.js` and the matching consumers to the published
+version before bumping and publishing the Atmosphere package. The Atmosphere
+package uses this constant to auto-install `@meteorjs/rspack` in applications,
+so leaving it behind would make applications install the older release. Use a
+beta version in the constant only after that beta is available from npm.
 
 Use the `sync-modern-tool-versions` skill to discover and verify the matching
 lockfile, skeleton, E2E fixture, constant, and active documentation references.
