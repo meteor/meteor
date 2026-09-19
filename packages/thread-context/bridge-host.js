@@ -66,7 +66,14 @@ export class BridgeHost {
     this.registerHandler(MSG_TYPE.METHOD, new MethodHandler(this.context));
 
     this.port.on('message', Meteor.bindEnvironment((msg) => this._dispatch(msg)));
-    this.port.on('error', () => {
+    this.port.on('messageerror', (err) => {
+      // The request id is lost with the payload, so no error reply is
+      // possible; the worker's call will time out. Surface the cause here.
+      Meteor._debug('[thread-context] Failed to deserialize a bridge message from the worker:', err);
+    });
+    // Fires when the worker exits or closes its end of the channel, so the
+    // host tears itself down without relying on a worker 'exit' handler.
+    this.port.on('close', () => {
       if (!this.destroyed) this.destroy();
     });
 

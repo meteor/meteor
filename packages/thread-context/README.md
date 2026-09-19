@@ -24,44 +24,60 @@ const ctx = createThreadContext({
   callTimeout: 30000,        // per-call timeout (default: 60000ms)
 });
 
-const worker = new Worker('./my-worker.js', {
-  workerData: {
-    port: ctx.port,
-    settings: ctx.settings,
-    userId: ctx.userId,
-    callTimeout: ctx.callTimeout,
-  },
+// Worker scripts live outside the Meteor bundle, e.g. under private/
+const worker = new Worker(Assets.absoluteFilePath('workers/report.mjs'), {
+  workerData: ctx.workerData, // { port, settings, userId, connectionId, callTimeout, bridgeModuleUrl }
   transferList: [ctx.port],
 });
-
-worker.on('exit', () => ctx.destroy());
 ```
+
+The host tears the bridge down by itself when the worker exits (its end of
+the channel closes). `ctx.destroy()` is still available to close it early.
 
 ### Worker thread — use Meteor APIs normally
 
 ```js
+// private/workers/report.mjs — a plain Node.js module
 import { workerData } from 'worker_threads';
-import { hydrateContext } from 'meteor/thread-context';
 
-const { Collections, Meteor } = hydrateContext(workerData.port, {
-  settings: workerData.settings,
-  userId: workerData.userId,
-  callTimeout: workerData.callTimeout,
-});
+const { hydrateContext } = await import(workerData.bridgeModuleUrl);
+const { Collections, Meteor } = hydrateContext(workerData);
 
 // Collections — same API as the main thread (all async)
 const trades = await Collections.Trades.find({ status: 'open' }).fetchAsync();
-const user = await Collections.Users.findOneAsync({ _id: Meteor.userId });
+const user = await Collections.Users.findOneAsync({ _id: Meteor.userId() });
 await Collections.Reports.insertAsync({ generated: new Date(), trades });
 
 // Methods
-await Meteor.callAsync('notify.send', { recipient: Meteor.userId });
+await Meteor.callAsync('notify.send', { recipient: Meteor.userId() });
 
 // Settings (frozen deep clone from spawn time)
 console.log(Meteor.settings.public.appName);
 ```
 
-> **Note:** Inside the worker, `Meteor.userId` is a **plain string property**, not a function. On the main thread it is called as `Meteor.userId()`. When porting code into a worker, replace `Meteor.userId()` with `Meteor.userId` — e.g. `Collections.Users.findOneAsync({ _id: Meteor.userId })` in the worker corresponds to `Meteor.users.findOneAsync({ _id: Meteor.userId() })` on the main thread.
+The worker's event loop is kept alive only while a bridge call is in flight,
+so a worker whose last statement is an awaited bridge call exits cleanly once
+the result arrives.
+
+### Loading the worker-side API
+
+A `worker_threads` Worker is a plain Node.js thread. It has no Meteor module
+system, so `import ... from 'meteor/thread-context'` is not available there.
+Instead, the package ships its worker-side modules as server assets, and
+`createThreadContext().workerData.bridgeModuleUrl` is the `file://` URL of the
+entry module. Import it dynamically, as in the example above. The entry exports
+`hydrateContext` and the error classes (`BridgeError`, `BridgeTimeoutError`,
+`BridgeSerializationError`, `BridgeContextError`, `MeteorError`).
+
+- Keep worker scripts out of the directories Meteor bundles (`client/`,
+  `server/`, `imports/`, …), for example under `private/`, so they stay
+  standalone files; `Assets.absoluteFilePath()` gives their runtime path.
+- Write the worker as an ES module (`.mjs`) so top-level `await` is available,
+  or as CommonJS with `import()` inside an async function.
+- Node prints a one-time `MODULE_TYPELESS_PACKAGE_JSON` warning when it detects
+  that the shipped `.js` modules are ESM. It is harmless; pass
+  `execArgv: ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON']` to the
+  `Worker` constructor to silence it.
 
 ## API
 
@@ -74,30 +90,31 @@ Creates a bridge host and returns a transfer-ready context object.
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `userId` | `string \| null` | `null` | Forwarded into proxied method/collection calls |
-| `connectionId` | `string \| null` | `null` | DDP connection ID (only `.id` is accessible in worker) |
+| `connectionId` | `string \| null` | `null` | DDP connection ID; methods invoked through the bridge see it as `this.connection.id` (no other `connection` property is available) |
 | `callTimeout` | `number` | `60000` | Timeout per bridge call in ms |
 | `onMessage` | `function` | `null` | Hook called before dispatch — return a value to short-circuit |
 | `onResult` | `function` | `null` | Hook called after handler — return a value to transform the result |
 
-**Returns:** `{ port, settings, userId, connectionId, callTimeout, destroy }`
+**Returns:** `{ workerData, port, settings, userId, connectionId, callTimeout, destroy }`
 
-- `port` — `MessagePort` to transfer into the worker via `workerData` + `transferList`
-- `settings` — Snapshot of `Meteor.settings` (cloned once, shared across contexts; pass via `workerData`)
-- `userId` — `string | null` echoed back from options (see Options table); pass via `workerData` so the worker can hydrate it
-- `connectionId` — `string | null` echoed back from options (see Options table); pass via `workerData` to expose `this.connection.id` in method calls
-- `callTimeout` — `number` (ms) echoed back from options; forward to `hydrateContext` so both sides share the same per-call timeout
-- `destroy()` — Closes the bridge and cleans up. Call on worker exit.
+- `workerData` — `{ port, settings, userId, connectionId, callTimeout, bridgeModuleUrl }`, structured-clone-safe. Pass it as the Worker's `workerData` (with `port` in `transferList`) and hand it to `hydrateContext` unchanged, so the worker sees exactly the identity the host enforces. `bridgeModuleUrl` is the `file://` URL of the worker-side entry module (see [Loading the worker-side API](#loading-the-worker-side-api))
+- `port` — `MessagePort` to list in `transferList`
+- `settings` — Frozen snapshot of `Meteor.settings` (cloned once, shared across contexts)
+- `userId` — `string | null` echoed back from options (see Options table)
+- `connectionId` — `string | null` echoed back from options (see Options table); exposes `this.connection.id` in bridged method calls
+- `callTimeout` — `number` (ms) echoed back from options
+- `destroy()` — Closes the bridge and cleans up. Optional: the host also destroys itself when the worker's port closes
 
-### `hydrateContext(port, options?)`
+### `hydrateContext(workerData | port, options?)`
 
-Reconstructs the Meteor API surface from a transferred `MessagePort`. Called once at the top of a worker script.
+Reconstructs the Meteor API surface inside a worker. Called once at the top of a worker script. Pass the `workerData` object from `createThreadContext` straight through (recommended), or a bare `MessagePort` plus options. Explicit options override fields from `workerData`.
 
 **Options:**
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
 | `settings` | `object` | `{}` | Settings snapshot (from `createThreadContext().settings`) |
-| `userId` | `string \| null` | `null` | User ID for `Meteor.userId` |
+| `userId` | `string \| null` | `null` | Value returned by `Meteor.userId()` in the worker |
 | `callTimeout` | `number` | `60000` | Per-call timeout in ms |
 
 **Returns:** `{ Collections, Meteor }`
@@ -131,7 +148,7 @@ await Collections.MyCol.aggregate(pipeline, options)
 |----------|-------------|
 | `Meteor.callAsync(name, ...args)` | Call a Meteor method on the main thread |
 | `Meteor.settings` | Frozen deep clone from spawn time |
-| `Meteor.userId` | The forwarded userId — a **plain property** here, not a function like `Meteor.userId()` on the main thread |
+| `Meteor.userId()` | Returns the forwarded userId — same call shape as on the main thread |
 | `Meteor.isServer` | Always `true` |
 | `Meteor.isClient` | Always `false` |
 | `Meteor.isSimulation` | Always `false` |
@@ -170,12 +187,16 @@ Errors thrown on the main thread are serialized and re-thrown in the worker with
 | `BridgeError` | General bridge failure |
 | `BridgeTimeoutError` | Call exceeds `callTimeout` |
 | `BridgeSerializationError` | Non-cloneable value in arguments or result |
-| `BridgeContextError` | Forbidden operation (`setUserId`, `connection.*` access) |
+| `BridgeContextError` | Forbidden operation (`setUserId`, `connection.*` access, DDP session methods such as `login`/`logout`) |
 
 `Meteor.Error` instances round-trip through the bridge preserving `.error`, `.reason`, and `.details`.
 
+Inside a worker, the error classes come from the same entry module as
+`hydrateContext` (on the main thread they are exported from `meteor/thread-context`):
+
 ```js
-import { BridgeTimeoutError } from 'meteor/thread-context';
+const { hydrateContext, BridgeTimeoutError } = await import(workerData.bridgeModuleUrl);
+const { Collections } = hydrateContext(workerData);
 
 try {
   await Collections.Reports.find({ complex: true }).fetchAsync();
@@ -228,9 +249,11 @@ Main Thread (Host)                    Worker Thread
 - **No manifest required.** Collection and method proxies use ES6 `Proxy` to intercept any name dynamically.
 - **Lazy.** No bridge traffic until the worker actually accesses a collection or calls a method.
 - **Protocol versioned.** Messages carry `v: 1` for forward compatibility.
-- **`port.unref()`** on the worker side so the bridge doesn't keep the worker alive.
+- **Ref'd only while busy.** The worker-side port is ref'd while a bridge call is in flight and unref'd otherwise, so the worker neither exits early nor lingers idle.
+- **Self-cleaning host.** The host port listens for `close` and destroys the bridge when the worker exits; deserialization failures on either side are logged.
 - **`Meteor.bindEnvironment()`** wraps the host-side port listener for proper Meteor context.
-- **`DDP._CurrentMethodInvocation`** is set for both collection and method handlers so userId-based allow/deny rules work.
+- **`DDP._CurrentMethodInvocation`** is set for both collection and method handlers, so `this.userId` inside methods and `Meteor.userId()` reflect the forwarded user.
+- **Methods run through `Meteor.server.applyAsync`**, so bridged calls get argument-check auditing, a per-call random seed, instrumentation events, and result cloning like any server-initiated call. Session-management methods (`login`, `logout`, `getNewToken`, …) are refused with `BridgeContextError`.
 
 ## Limitations
 
@@ -238,6 +261,7 @@ Main Thread (Host)                    Worker Thread
 - **Structured clone boundary.** Arguments and results must be structured-clone-compatible. Custom prototype objects (like `Mongo.ObjectID`) lose their prototypes across the boundary.
 - **Settings are a snapshot.** `Meteor.settings` is frozen at spawn time and is not reactive.
 - **Server only.** This package is not available on the client.
+- **Workers are plain Node.** A worker cannot import `meteor/*` packages; only the API returned by `hydrateContext` (plus the error classes exported next to it) is available there.
 - **Same process.** The bridge operates within a single Node.js process via `worker_threads`, not across processes.
 
 ## Testing

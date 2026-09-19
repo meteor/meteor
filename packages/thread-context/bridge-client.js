@@ -34,11 +34,15 @@ export class BridgeClient {
     this.pending = new Map();
 
     this.port.on('message', (msg) => this._onResponse(msg));
+    this.port.on('messageerror', (err) => {
+      // The id is lost with the payload, so the call cannot be rejected
+      // directly; it will time out. Surface the cause instead of staying silent.
+      console.error('[thread-context] Failed to deserialize a bridge response from the host:', err);
+    });
     this.port.on('close', () => this._onPortClose());
-    this.port.on('error', () => this._onPortClose());
 
-    // Prevent the port from keeping the worker event loop alive
-    this.port.unref();
+    // The port keeps the worker's event loop alive only while calls are in flight.
+    this._syncPortRef();
   }
 
   /**
@@ -57,7 +61,7 @@ export class BridgeClient {
     return new Promise((resolve, reject) => {
       const id = String(++_seq);
       const timer = setTimeout(() => {
-        this.pending.delete(id);
+        this._settle(id);
         reject(new BridgeTimeoutError(
           `Bridge call timed out after ${this.callTimeout}ms: ${msg.type}.${msg.op || msg.methodName}`
         ));
@@ -65,14 +69,14 @@ export class BridgeClient {
       if (timer.unref) timer.unref();
 
       this.pending.set(id, { resolve, reject, timer });
+      this._syncPortRef();
 
       try {
         msg.v = PROTOCOL_VERSION;
         msg.id = id;
         this.port.postMessage(msg);
       } catch (err) {
-        clearTimeout(timer);
-        this.pending.delete(id);
+        this._settle(id);
         reject(new BridgeSerializationError(
           `Failed to serialize bridge message: ${err.message}`
         ));
@@ -91,8 +95,7 @@ export class BridgeClient {
     const entry = this.pending.get(msg.id);
     if (!entry) return;
 
-    clearTimeout(entry.timer);
-    this.pending.delete(msg.id);
+    this._settle(msg.id);
 
     if (msg.error) {
       entry.reject(deserializeError(msg.error));
@@ -106,10 +109,41 @@ export class BridgeClient {
    * @private
    */
   _onPortClose() {
-    for (const { reject, timer } of this.pending.values()) {
+    const entries = [...this.pending.values()];
+    this.pending.clear();
+    this._syncPortRef();
+
+    for (const { reject, timer } of entries) {
       clearTimeout(timer);
       reject(new BridgeError('Bridge context destroyed'));
     }
-    this.pending.clear();
+  }
+
+  /**
+   * Removes a pending call, clears its timer, and updates the port ref state.
+   * @param {string} id
+   * @private
+   */
+  _settle(id) {
+    const entry = this.pending.get(id);
+    if (!entry) return;
+    clearTimeout(entry.timer);
+    this.pending.delete(id);
+    this._syncPortRef();
+  }
+
+  /**
+   * Refs the port while calls are pending and unrefs it otherwise. A
+   * permanently unref'd port lets a worker whose only work is an awaited
+   * bridge call exit before the host replies; a permanently ref'd port keeps
+   * an idle worker alive forever.
+   * @private
+   */
+  _syncPortRef() {
+    if (this.pending.size > 0) {
+      this.port.ref();
+    } else {
+      this.port.unref();
+    }
   }
 }

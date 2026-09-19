@@ -3,7 +3,6 @@ import {
   resetSettingsSnapshot,
   hydrateContext,
   BridgeClient,
-  createCollectionProxy,
   createMethodProxy,
   MeteorError,
   BridgeTimeoutError,
@@ -27,7 +26,7 @@ Tinytest.add('thread-context - hydrateContext - returns Collections and Meteor',
   test.isTrue(typeof hydrated.Collections === 'object');
   test.isTrue(typeof hydrated.Meteor === 'object');
   test.isTrue(typeof hydrated.Meteor.callAsync === 'function');
-  test.equal(hydrated.Meteor.userId, 'u1');
+  test.equal(hydrated.Meteor.userId(), 'u1');
   test.equal(hydrated.Meteor.isServer, true);
   test.equal(hydrated.Meteor.isClient, false);
   test.equal(hydrated.Meteor.isSimulation, false);
@@ -86,11 +85,40 @@ Tinytest.add('thread-context - hydrateContext - defaults without options', funct
   const ctx = createThreadContext();
   const { Meteor: M } = hydrateContext(ctx.port);
 
-  test.equal(M.userId, null);
+  test.equal(M.userId(), null);
   test.isTrue(Object.isFrozen(M.settings));
   test.equal(typeof M.settings, 'object');
 
   ctx.destroy();
+});
+
+Tinytest.add('thread-context - hydrateContext - Meteor.userId() is callable like on the host', function (test) {
+  const ctx = createThreadContext();
+  try {
+    const { Meteor: M } = hydrateContext(ctx.port, { userId: 'fn-user' });
+
+    test.equal(typeof M.userId, 'function');
+    test.equal(M.userId(), 'fn-user');
+  } finally {
+    ctx.destroy();
+  }
+});
+
+Tinytest.addAsync('thread-context - hydrateContext - accepts the workerData object directly', async function (test) {
+  const ctx = createThreadContext({ userId: 'wd-hydrate', callTimeout: 5000 });
+  try {
+    const { Meteor: M } = hydrateContext(ctx.workerData);
+
+    test.equal(M.userId(), 'wd-hydrate');
+    test.isTrue(Object.isFrozen(M.settings));
+
+    // Uses method defined in bridge-test.js
+    const result = await M.callAsync('threadContext.bridge.echo', 'via-workerData');
+    test.equal(result.val, 'via-workerData');
+    test.equal(result.userId, 'wd-hydrate');
+  } finally {
+    ctx.destroy();
+  }
 });
 
 Tinytest.addAsync('thread-context - hydrateContext - Collections proxy bridges to host', async function (test) {
@@ -154,6 +182,62 @@ Tinytest.add('thread-context - createThreadContext - defaults when no options', 
   ctx.destroy();
 });
 
+Tinytest.add('thread-context - createThreadContext - workerData carries the host-side identity', function (test) {
+  const { existsSync } = require('fs');
+  const { fileURLToPath } = require('url');
+  const ctx = createThreadContext({
+    userId: 'wd-user',
+    connectionId: 'wd-conn',
+    callTimeout: 4321,
+  });
+  try {
+    test.equal(Object.keys(ctx.workerData).sort(), [
+      'bridgeModuleUrl', 'callTimeout', 'connectionId', 'port', 'settings', 'userId',
+    ]);
+    test.isTrue(ctx.workerData.port === ctx.port);
+    test.isTrue(ctx.workerData.settings === ctx.settings);
+    test.equal(ctx.workerData.userId, 'wd-user');
+    test.equal(ctx.workerData.connectionId, 'wd-conn');
+    test.equal(ctx.workerData.callTimeout, 4321);
+
+    // The worker-side entry module ships with the package and is addressed
+    // by a file URL so the worker can import() it on any platform.
+    test.isTrue(ctx.workerData.bridgeModuleUrl.startsWith('file://'));
+    const bridgeModulePath = fileURLToPath(ctx.workerData.bridgeModuleUrl);
+    test.isTrue(bridgeModulePath.endsWith('worker.js'));
+    test.isTrue(existsSync(bridgeModulePath));
+  } finally {
+    ctx.destroy();
+  }
+});
+
+Tinytest.add('thread-context - createThreadContext - settings snapshot is deeply frozen', function (test) {
+  const originalSettings = Meteor.settings;
+  Meteor.settings = { public: { nested: { deep: 'val' } }, list: [{ item: 1 }] };
+  resetSettingsSnapshot();
+
+  try {
+    const ctx = createThreadContext();
+
+    test.isTrue(Object.isFrozen(ctx.settings));
+    test.isTrue(Object.isFrozen(ctx.settings.public));
+    test.isTrue(Object.isFrozen(ctx.settings.public.nested));
+    test.isTrue(Object.isFrozen(ctx.settings.list));
+    test.isTrue(Object.isFrozen(ctx.settings.list[0]));
+
+    // A caller mutating the shared snapshot must not affect later contexts.
+    try { ctx.settings.public.nested.deep = 'mutated'; } catch { /* strict mode */ }
+    ctx.destroy();
+
+    const ctx2 = createThreadContext();
+    test.equal(ctx2.settings.public.nested.deep, 'val');
+    ctx2.destroy();
+  } finally {
+    Meteor.settings = originalSettings;
+    resetSettingsSnapshot();
+  }
+});
+
 Tinytest.add('thread-context - createThreadContext - settings snapshot is shared across contexts', function (test) {
   const ctx1 = createThreadContext();
   const ctx2 = createThreadContext();
@@ -200,7 +284,7 @@ Tinytest.addAsync('thread-context - bridge - onMessage returning undefined does 
 
   const ctx = createThreadContext({
     userId: 'hookUser',
-    onMessage(msg) {
+    onMessage() {
       hookCalled = true;
       // Return undefined — should NOT short-circuit, handler proceeds normally
       return undefined;

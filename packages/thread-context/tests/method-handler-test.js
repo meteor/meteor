@@ -10,6 +10,60 @@ Meteor.methods({
   async 'threadContext.test.setUserId'() {
     await this.setUserId('hacker');
   },
+  'threadContext.test.randomSeed'() {
+    return this.randomSeed;
+  },
+});
+
+const SESSION_METHODS = [
+  'login',
+  'logout',
+  'logoutOtherClients',
+  'getNewToken',
+  'removeOtherTokens',
+  'configureLoginService',
+];
+
+Tinytest.addAsync('thread-context - MethodHandler - refuses DDP session management methods', async function (test) {
+  const { MethodHandler, BridgeContextError } = require('meteor/thread-context');
+  const handler = new MethodHandler({ userId: 'u1', connectionId: 'conn-1' });
+
+  for (const methodName of SESSION_METHODS) {
+    try {
+      await handler.handle({ methodName, methodArgs: [] });
+      test.fail(`Expected BridgeContextError for '${methodName}'`);
+    } catch (err) {
+      test.instanceOf(err, BridgeContextError, methodName);
+      test.isTrue(err.message.includes(methodName), methodName);
+    }
+  }
+});
+
+Tinytest.addAsync('thread-context - MethodHandler - ignores inherited Object.prototype names', async function (test) {
+  const { MethodHandler } = require('meteor/thread-context');
+  const handler = new MethodHandler({ userId: null, connectionId: null });
+
+  for (const methodName of ['constructor', 'hasOwnProperty', '__proto__']) {
+    try {
+      await handler.handle({ methodName, methodArgs: [] });
+      test.fail(`Expected 404 for '${methodName}'`);
+    } catch (err) {
+      test.instanceOf(err, Meteor.Error, methodName);
+      test.equal(err.error, 404, methodName);
+    }
+  }
+});
+
+Tinytest.addAsync('thread-context - MethodHandler - invocation carries a per-call randomSeed', async function (test) {
+  const { MethodHandler } = require('meteor/thread-context');
+  const handler = new MethodHandler({ userId: null, connectionId: null });
+
+  const seed1 = await handler.handle({ methodName: 'threadContext.test.randomSeed', methodArgs: [] });
+  const seed2 = await handler.handle({ methodName: 'threadContext.test.randomSeed', methodArgs: [] });
+
+  test.matches(seed1, /^[0-9a-f]{20}$/);
+  test.matches(seed2, /^[0-9a-f]{20}$/);
+  test.notEqual(seed1, seed2);
 });
 
 Tinytest.addAsync('thread-context - MethodHandler - call method with userId', async function (test) {

@@ -48,12 +48,31 @@ interface ThreadContextOptions {
   onResult?: (msg: BridgeMessage, result: any) => any | Promise<any>;
 }
 
-interface ThreadContext {
+/**
+ * Structured-clone-safe bundle to pass as a Worker's `workerData`
+ * (list `port` in `transferList`). `hydrateContext` accepts it as-is.
+ */
+interface ThreadWorkerData {
   port: MessagePort;
-  settings: Record<string, any>;
+  settings: Readonly<Record<string, any>>;
   userId: string | null;
   connectionId: string | null;
   callTimeout: number;
+  /**
+   * `file://` URL of the worker-side entry module shipped with the package.
+   * A worker has no Meteor module system; load the API with
+   * `await import(workerData.bridgeModuleUrl)`. The entry exports
+   * `hydrateContext` and the error classes.
+   */
+  bridgeModuleUrl: string;
+}
+
+interface ThreadContext extends ThreadWorkerData {
+  workerData: ThreadWorkerData;
+  /**
+   * Closes the bridge. The host also destroys itself when the worker's port
+   * closes, so calling this on worker exit is optional.
+   */
   destroy(): void;
 }
 
@@ -124,7 +143,8 @@ interface HydrateOptions {
 interface HydratedMeteor {
   callAsync(methodName: string, ...args: any[]): Promise<any>;
   settings: Readonly<Record<string, any>>;
-  userId: string | null;
+  /** Returns the forwarded userId; same call shape as `Meteor.userId()` on the host. */
+  userId(): string | null;
   isServer: true;
   isSimulation: false;
   isClient: false;
@@ -160,6 +180,7 @@ interface HydratedContext {
 }
 
 export function hydrateContext(port: MessagePort, options?: HydrateOptions): HydratedContext;
+export function hydrateContext(workerData: ThreadWorkerData, options?: HydrateOptions): HydratedContext;
 
 // --- Shutdown ---
 

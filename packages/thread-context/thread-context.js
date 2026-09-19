@@ -4,8 +4,12 @@
  * Exports all public APIs and the `createThreadContext` factory.
  */
 
+import { pathToFileURL } from 'url';
 import { EJSON } from 'meteor/ejson';
 import { BridgeHost } from './bridge-host.js';
+import { deepFreeze } from './deep-freeze.js';
+
+export { BridgeHost };
 
 export {
   BridgeError,
@@ -28,13 +32,27 @@ export { createConnectionProxy } from './handlers/connection-proxy.js';
 export { createBridgeInvocation } from './handlers/invocation.js';
 
 /**
- * @typedef {Object} ThreadContext
+ * @typedef {Object} ThreadWorkerData
  * @property {import('worker_threads').MessagePort} port - Port to transfer into the worker via `transferList`.
- * @property {Object} settings - Snapshot of `Meteor.settings` (cloned once, shared across contexts).
+ * @property {Object} settings - Frozen snapshot of `Meteor.settings` (cloned once, shared across contexts).
  * @property {string|null} userId - The forwarded userId.
  * @property {string|null} connectionId - The forwarded DDP connection ID.
  * @property {number} callTimeout - The configured per-call timeout in ms.
- * @property {() => void} destroy - Closes the bridge and cleans up. Call on worker exit.
+ * @property {string} bridgeModuleUrl - `file://` URL of the worker-side entry
+ *   module shipped with the package. A worker has no Meteor module system, so
+ *   it loads the API with `await import(workerData.bridgeModuleUrl)`.
+ */
+
+/**
+ * @typedef {ThreadWorkerData & {
+ *   workerData: ThreadWorkerData,
+ *   destroy: () => void,
+ * }} ThreadContext
+ * `workerData` is the structured-clone-safe bundle to pass as the Worker's
+ * `workerData` (list `port` in `transferList`); `hydrateContext` accepts it
+ * as-is, so the worker sees exactly the identity the host enforces.
+ * `destroy` closes the bridge and cleans up; the host also destroys itself
+ * when the worker's port closes, so calling it on worker exit is optional.
  */
 
 /** @type {Object|null} Cached settings clone, shared across all contexts. */
@@ -62,24 +80,32 @@ export function resetSettingsSnapshot() {
  *
  * const ctx = createThreadContext({ userId: this.userId });
  * const worker = new Worker('./job.js', {
- *   workerData: { port: ctx.port, settings: ctx.settings, userId: ctx.userId },
+ *   workerData: ctx.workerData,
  *   transferList: [ctx.port],
  * });
- * worker.on('exit', () => ctx.destroy());
  */
 export function createThreadContext(options = {}) {
   const host = new BridgeHost(options);
 
   if (!_settingsSnapshot) {
-    _settingsSnapshot = EJSON.clone(Meteor.settings);
+    // Frozen so a caller mutating one context's settings cannot leak the
+    // change into every later context (the snapshot is shared by reference).
+    _settingsSnapshot = deepFreeze(EJSON.clone(Meteor.settings));
   }
 
-  return {
+  const workerData = {
     port: host.transferPort,
     settings: _settingsSnapshot,
     userId: host.context.userId,
     connectionId: host.context.connectionId,
     callTimeout: host.callTimeout,
+    // Assets here is this package's asset store (see api.addAssets in package.js).
+    bridgeModuleUrl: pathToFileURL(Assets.absoluteFilePath('worker.js')).href,
+  };
+
+  return {
+    ...workerData,
+    workerData,
     destroy: () => host.destroy(),
   };
 }
