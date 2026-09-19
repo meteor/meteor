@@ -1,6 +1,6 @@
 /**
  * @module thread-context/deep-freeze
- * @summary Recursive `Object.freeze` for plain data (settings snapshots).
+ * @description Recursive `Object.freeze` for plain data (settings snapshots).
  */
 
 /**

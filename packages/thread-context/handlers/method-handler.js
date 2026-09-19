@@ -1,6 +1,6 @@
 /**
  * @module thread-context/handlers/method-handler
- * @summary Host-side handler for Meteor method invocations bridged from a worker.
+ * @description Host-side handler for Meteor method invocations bridged from a worker.
  */
 
 import { BridgeContextError } from '../errors.js';

@@ -1,6 +1,6 @@
 /**
  * @module thread-context/bridge-host
- * @summary Main-thread side of the bridge. Creates a MessageChannel,
+ * @description Main-thread side of the bridge. Creates a MessageChannel,
  * registers handlers, and dispatches incoming worker requests.
  */
 

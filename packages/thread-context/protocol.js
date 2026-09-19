@@ -1,6 +1,6 @@
 /**
  * @module thread-context/protocol
- * @summary Wire protocol constants for the bridge MessageChannel.
+ * @description Wire protocol constants for the bridge MessageChannel.
  */
 
 /** Bridge protocol version. Included in every message as `v` for forward compatibility. */

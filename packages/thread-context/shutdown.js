@@ -1,6 +1,6 @@
 /**
  * @module thread-context/shutdown
- * @summary Global registry of active BridgeHost instances with
+ * @description Global registry of active BridgeHost instances with
  * automatic cleanup on SIGTERM/SIGINT.
  */
 

@@ -1,6 +1,6 @@
 /**
  * @module thread-context/proxies/method-proxy
- * @summary Worker-side proxy for calling Meteor methods on the host thread.
+ * @description Worker-side proxy for calling Meteor methods on the host thread.
  */
 
 import { MSG_TYPE } from '../protocol.js';

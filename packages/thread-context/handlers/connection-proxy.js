@@ -1,6 +1,6 @@
 /**
  * @module thread-context/handlers/connection-proxy
- * @summary Creates a restricted ES6 Proxy that stands in for the DDP
+ * @description Creates a restricted ES6 Proxy that stands in for the DDP
  * `connection` object inside bridge MethodInvocations, exposing only `.id`.
  */
 

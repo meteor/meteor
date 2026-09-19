@@ -1,6 +1,6 @@
 /**
  * @module thread-context
- * @summary Main entry point for the thread-context package.
+ * @description Main entry point for the thread-context package.
  * Exports all public APIs and the `createThreadContext` factory.
  */
 

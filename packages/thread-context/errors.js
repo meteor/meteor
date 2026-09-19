@@ -1,6 +1,6 @@
 /**
  * @module thread-context/errors
- * @summary Error hierarchy and serialization for the thread-context bridge.
+ * @description Error hierarchy and serialization for the thread-context bridge.
  */
 
 /**

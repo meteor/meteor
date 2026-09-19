@@ -1,6 +1,6 @@
 /**
  * @module thread-context/handlers/invocation
- * @summary Shared factory for creating a `DDPCommon.MethodInvocation`
+ * @description Shared factory for creating a `DDPCommon.MethodInvocation`
  * suitable for bridge handler execution contexts.
  */
 

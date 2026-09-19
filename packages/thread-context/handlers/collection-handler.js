@@ -1,6 +1,6 @@
 /**
  * @module thread-context/handlers/collection-handler
- * @summary Host-side handler for collection operations bridged from a worker.
+ * @description Host-side handler for collection operations bridged from a worker.
  */
 
 import { BridgeError } from '../errors.js';

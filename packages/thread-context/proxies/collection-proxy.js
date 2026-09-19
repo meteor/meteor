@@ -1,6 +1,6 @@
 /**
  * @module thread-context/proxies/collection-proxy
- * @summary Worker-side ES6 Proxy that transparently bridges collection
+ * @description Worker-side ES6 Proxy that transparently bridges collection
  * operations to the host thread. No manifest required — any collection
  * name is proxied on demand.
  */

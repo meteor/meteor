@@ -1,6 +1,6 @@
 /**
  * @module thread-context/bridge-client
- * @summary Worker-thread side of the bridge. Sends requests over the
+ * @description Worker-thread side of the bridge. Sends requests over the
  * MessagePort and resolves Promises when responses arrive.
  */
 

@@ -1,6 +1,6 @@
 /**
  * @module thread-context/worker
- * @summary Worker-thread entry point. Reconstructs the Meteor API surface
+ * @description Worker-thread entry point. Reconstructs the Meteor API surface
  * from a transferred MessagePort.
  */
 
