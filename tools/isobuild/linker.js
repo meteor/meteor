@@ -1,6 +1,14 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
-var ZodernSourceMap = require('@zodern/source-maps');
+var ZodernSourceMap = null;
+try {
+  ZodernSourceMap = require('@zodern/source-maps');
+} catch (error) {
+  if (error.code !== 'MODULE_NOT_FOUND' ||
+      !error.message.includes("'@zodern/source-maps'")) {
+    throw error;
+  }
+}
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
@@ -28,7 +36,7 @@ function isZodernSupportedMap(m) {
 }
 
 function canUseZodernSourceMaps(files) {
-  if (process.env.METEOR_DISABLE_ZODERN_SOURCEMAP) {
+  if (!ZodernSourceMap || process.env.METEOR_DISABLE_ZODERN_SOURCEMAP) {
     return false;
   }
   return files.every(file => isZodernSupportedMap(file.sourceMap));
