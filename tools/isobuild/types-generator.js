@@ -302,7 +302,16 @@ function writeSingleFilePackage({
     data,
   }) => {
     const body = data.toString("utf8");
+    const preservedRelPath = `${DECLARATIONS_SUBDIR}/${normalizeResourcePath(sourcePath)}`;
     if (isAmbientModuleScript(body)) {
+      if (preserveLayout && copiedFiles.has(preservedRelPath)) {
+        usesPrivateModules = true;
+        writeIfChanged(
+          files.pathJoin(packageDir, publicFileName),
+          Buffer.from(makeReferenceShim(preservedRelPath), "utf8")
+        );
+        return;
+      }
       writeIfChanged(
         files.pathJoin(packageDir, publicFileName),
         Buffer.from(`${body.trim()}\n`, "utf8")
@@ -311,7 +320,6 @@ function writeSingleFilePackage({
     }
 
     usesPrivateModules = true;
-    const preservedRelPath = `${DECLARATIONS_SUBDIR}/${normalizeResourcePath(sourcePath)}`;
     const privateRelPath =
       preserveLayout && copiedFiles.has(preservedRelPath)
         ? preservedRelPath

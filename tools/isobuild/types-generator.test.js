@@ -498,6 +498,64 @@ describe("priority 1 – api.types() / isopack.typesEntry", () => {
     ).toEqual([]);
   });
 
+  test("preserves ambient scripts with relative import type queries", async () => {
+    const ambient = [
+      "declare module 'meteor/pkg' {",
+      "  export type Shared = import('./shared').Shared;",
+      "}",
+    ].join("\n");
+    const isopack = makeIsopack({
+      typesEntry: "types/index.d.ts",
+      resources: [
+        makeResource("types/index.d.ts", ambient),
+        makeResource(
+          "types/shared.d.ts",
+          "export interface Shared { value: string; }"
+        ),
+      ],
+    });
+    const packageDir = `${PKGS_DIR}/pkg`;
+    const declarationsDir = `${packageDir}/declarations`;
+    const declarationsTypesDir = `${declarationsDir}/types`;
+    files.readdir.mockImplementation((path) => {
+      if (path === PKGS_DIR) return ["pkg"];
+      if (path === packageDir) return ["index.d.ts", "declarations"];
+      return [];
+    });
+    files.readdirWithTypes.mockImplementation((path) => {
+      if (path === declarationsDir) return [dirent("types", true)];
+      if (path === declarationsTypesDir) {
+        return [
+          dirent("index.d.ts"),
+          dirent("shared.d.ts"),
+          dirent("stale.d.ts"),
+        ];
+      }
+      return [];
+    });
+    await generateTypes({
+      isopackCache: makeIsopackCache({ pkg: isopack }),
+      packageMap: makePackageMap(["pkg"]),
+      projectMeteorDir: PROJECT_METEOR,
+    });
+
+    expect(writtenContentAt(`${PKGS_DIR}/pkg/index.d.ts`)).toBe(
+      '/// <reference path="./declarations/types/index.d.ts" />\n'
+    );
+    expect(
+      writtenContentAt(`${PKGS_DIR}/pkg/declarations/types/index.d.ts`)
+    ).toBe(ambient);
+    expect(files.unlink).toHaveBeenCalledWith(
+      `${declarationsTypesDir}/stale.d.ts`
+    );
+    expect(files.rm_recursive).not.toHaveBeenCalledWith(declarationsDir);
+    expect(
+      compileGenerated(
+        "import type { Shared } from 'meteor/pkg';\nconst value: string = ({} as Shared).value;"
+      )
+    ).toEqual([]);
+  });
+
   test("does not preserve declaration paths that escape the package directory", async () => {
     const isopack = makeIsopack({
       typesEntry: "types/index.d.ts",
