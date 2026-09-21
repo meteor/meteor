@@ -56,13 +56,13 @@ type response struct {
 }
 
 type rawMap struct {
-	Version        json.RawMessage    `json:"version"`
-	Sources        []string           `json:"sources"`
-	Names          []string           `json:"names"`
-	SourceRoot     *string            `json:"sourceRoot"`
-	SourcesContent []*json.RawMessage `json:"sourcesContent"`
-	Mappings       string             `json:"mappings"`
-	Sections       []rawSection       `json:"sections"`
+	Version        json.RawMessage
+	Sources        []string
+	Names          []string
+	SourceRoot     *string
+	SourcesContent []json.RawMessage
+	Mappings       []byte
+	Sections       []rawSection
 }
 
 type rawSection struct {
@@ -211,7 +211,7 @@ func execute(req request) (response, error) {
 	for _, p := range req.Pieces {
 		switch p.Kind {
 		case "literal":
-			err = c.emit(p.Value, nil)
+			err = c.emit([]byte(p.Value), nil)
 		case "mapped":
 			if err = validateInput(roots, p.CodePath); err == nil {
 				err = validateInput(roots, p.MapPath)
@@ -254,24 +254,27 @@ func execute(req request) (response, error) {
 }
 
 func (c *composer) emitMapped(p piece) error {
-	codeBytes, err := os.ReadFile(p.CodePath)
+	codeBytes, releaseCode, err := readMappedFile(p.CodePath)
 	if err != nil {
 		return err
 	}
-	mapBytes, err := os.ReadFile(p.MapPath)
+	defer releaseCode()
+
+	mapBytes, releaseMap, err := readMappedFile(p.MapPath)
 	if err != nil {
 		return err
 	}
+	defer releaseMap()
 	mapBytes = stripXSSI(mapBytes)
-	var sourceMap rawMap
-	if err := json.Unmarshal(mapBytes, &sourceMap); err != nil {
+	sourceMap, err := parseRawMap(mapBytes)
+	if err != nil {
 		return fmt.Errorf("parsing source map JSON: %w", err)
 	}
 	if err := validateVersion(sourceMap.Version); err != nil {
 		return err
 	}
 	if len(sourceMap.Sections) > 0 {
-		return c.emitIndexed(string(codeBytes), &sourceMap, p.RelativePath)
+		return c.emitIndexed(codeBytes, sourceMap, p.RelativePath)
 	}
 	sources := make([]string, len(sourceMap.Sources))
 	for i, source := range sourceMap.Sources {
@@ -281,13 +284,13 @@ func (c *composer) emitMapped(p piece) error {
 		}
 		sources[i] = resolved
 	}
-	if err := c.emitBasic(string(codeBytes), &sourceMap, sources); err != nil {
+	if err := c.emitBasic(codeBytes, sourceMap, sources); err != nil {
 		return err
 	}
 	for i, raw := range sourceMap.SourcesContent {
 		if raw != nil && i < len(sources) {
 			var content string
-			if err := json.Unmarshal(*raw, &content); err != nil {
+			if err := json.Unmarshal(raw, &content); err != nil {
 				return err
 			}
 			if err := c.smap.setContent(sources[i], content); err != nil {
@@ -298,7 +301,7 @@ func (c *composer) emitMapped(p piece) error {
 	return nil
 }
 
-func (c *composer) emitBasic(code string, sourceMap *rawMap, sources []string) error {
+func (c *composer) emitBasic(code []byte, sourceMap *rawMap, sources []string) error {
 	cursor := newCodeCursor(code)
 	var last *mapping
 	lastLine, lastColumn := uint32(1), uint32(0)
@@ -351,7 +354,7 @@ func (c *composer) emitBasic(code string, sourceMap *rawMap, sources []string) e
 	return nil
 }
 
-func (c *composer) emitIndexed(code string, sourceMap *rawMap, relative string) error {
+func (c *composer) emitIndexed(code []byte, sourceMap *rawMap, relative string) error {
 	mappings, err := inflateIndexed(sourceMap)
 	if err != nil {
 		return err
@@ -448,7 +451,7 @@ func (c *composer) emitIndexed(code string, sourceMap *rawMap, relative string) 
 	})
 }
 
-func (c *composer) emitDecoded(chunk string, m mapping, sourceMap *rawMap, sources []string) error {
+func (c *composer) emitDecoded(chunk []byte, m mapping, sourceMap *rawMap, sources []string) error {
 	if !m.HasOriginal {
 		return c.emit(chunk, nil)
 	}
@@ -466,8 +469,8 @@ func (c *composer) emitDecoded(chunk string, m mapping, sourceMap *rawMap, sourc
 	return c.emit(chunk, &location)
 }
 
-func (c *composer) emit(chunk string, location *originalLocation) error {
-	if chunk == "" {
+func (c *composer) emit(chunk []byte, location *originalLocation) error {
+	if len(chunk) == 0 {
 		return nil
 	}
 	if location != nil && (!c.code.hasActive || c.code.active != *location) {
@@ -482,15 +485,16 @@ func (c *composer) emit(chunk string, location *originalLocation) error {
 		}
 		c.code.hasActive = false
 	}
-	if _, err := c.code.writer.WriteString(chunk); err != nil {
+	if _, err := c.code.writer.Write(chunk); err != nil {
 		return err
 	}
 	c.code.bytes += int64(len(chunk))
-	for index, r := range chunk {
+	for index := 0; index < len(chunk); {
+		r, size := utf8.DecodeRune(chunk[index:])
 		if r == '\n' {
 			c.code.line++
 			c.code.column = 0
-			if index+1 >= len(chunk) {
+			if index+size >= len(chunk) {
 				c.code.hasActive = false
 			} else if c.code.hasActive {
 				active := c.code.active
@@ -501,6 +505,7 @@ func (c *composer) emit(chunk string, location *originalLocation) error {
 		} else {
 			c.code.column += utf16Width(r)
 		}
+		index += size
 	}
 	return nil
 }
@@ -671,39 +676,33 @@ func (m *mapOutput) finish(outputPath string, file *string) error {
 }
 
 type codeCursor struct {
-	code         string
-	lines        []int
-	line, offset int
+	code            []byte
+	offset, lineEnd int
 }
 
-func newCodeCursor(code string) *codeCursor {
-	lines := []int{0}
-	for i := range code {
-		if code[i] == '\n' {
-			lines = append(lines, i+1)
-		}
-	}
-	return &codeCursor{code: code, lines: lines}
+func newCodeCursor(code []byte) *codeCursor {
+	cursor := &codeCursor{code: code}
+	cursor.advanceLineEnd()
+	return cursor
 }
 func (c *codeCursor) finished() bool { return c.offset >= len(c.code) }
-func (c *codeCursor) lineEnd() int {
-	if c.line+1 < len(c.lines) {
-		return c.lines[c.line+1]
+func (c *codeCursor) advanceLineEnd() {
+	if newline := bytes.IndexByte(c.code[c.offset:], '\n'); newline >= 0 {
+		c.lineEnd = c.offset + newline + 1
+		return
 	}
-	return len(c.code)
+	c.lineEnd = len(c.code)
 }
-func (c *codeCursor) takeLine() string {
-	start, end := c.offset, c.lineEnd()
+func (c *codeCursor) takeLine() []byte {
+	start, end := c.offset, c.lineEnd
 	c.offset = end
-	if c.line < len(c.lines) {
-		c.line++
-	}
+	c.advanceLineEnd()
 	return c.code[start:end]
 }
-func (c *codeCursor) takePrefix(units uint32) string {
-	start, end, used := c.offset, c.lineEnd(), uint32(0)
+func (c *codeCursor) takePrefix(units uint32) []byte {
+	start, end, used := c.offset, c.lineEnd, uint32(0)
 	for c.offset < end {
-		r, size := utf8.DecodeRuneInString(c.code[c.offset:end])
+		r, size := utf8.DecodeRune(c.code[c.offset:end])
 		next := used + utf16Width(r)
 		if next > units {
 			break
@@ -716,9 +715,9 @@ func (c *codeCursor) takePrefix(units uint32) string {
 	}
 	return c.code[start:c.offset]
 }
-func (c *codeCursor) rest() string { value := c.code[c.offset:]; c.offset = len(c.code); return value }
+func (c *codeCursor) rest() []byte { value := c.code[c.offset:]; c.offset = len(c.code); return value }
 
-func decodeMappings(encoded string, callback func(mapping) error) error {
+func decodeMappings(encoded []byte, callback func(mapping) error) error {
 	index, line := 0, uint32(1)
 	column, source, originalLine, originalColumn, name := int64(0), int64(0), int64(0), int64(0), int64(0)
 	for index < len(encoded) {
@@ -779,7 +778,7 @@ func decodeMappings(encoded string, callback func(mapping) error) error {
 	return nil
 }
 
-func decodeVLQ(value string, index *int) (int64, error) {
+func decodeVLQ(value []byte, index *int) (int64, error) {
 	var result uint64
 	var shift uint
 	for {
@@ -905,13 +904,280 @@ func visitContents(sourceMap *rawMap, callback func(string, string) error) error
 	for i, raw := range sourceMap.SourcesContent {
 		if raw != nil && i < len(sourceMap.Sources) {
 			var content string
-			if err := json.Unmarshal(*raw, &content); err != nil {
+			if err := json.Unmarshal(raw, &content); err != nil {
 				return err
 			}
 			if err := callback(computeSourceURL(sourceMap.SourceRoot, normalizePath(sourceMap.Sources[i])), content); err != nil {
 				return err
 			}
 		}
+	}
+	return nil
+}
+
+func parseRawMap(data []byte) (*rawMap, error) {
+	fields, err := parseObjectFields(data)
+	if err != nil {
+		return nil, err
+	}
+
+	result := &rawMap{
+		Version:  fields["version"],
+		Sources:  []string{},
+		Names:    []string{},
+		Mappings: []byte{},
+		Sections: []rawSection{},
+	}
+	if raw := fields["sources"]; raw != nil {
+		if err := json.Unmarshal(raw, &result.Sources); err != nil {
+			return nil, fmt.Errorf("parsing sources: %w", err)
+		}
+	}
+	if raw := fields["names"]; raw != nil {
+		if err := json.Unmarshal(raw, &result.Names); err != nil {
+			return nil, fmt.Errorf("parsing names: %w", err)
+		}
+	}
+	if raw := fields["sourceRoot"]; raw != nil && !bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		if err := json.Unmarshal(raw, &result.SourceRoot); err != nil {
+			return nil, fmt.Errorf("parsing sourceRoot: %w", err)
+		}
+	}
+	if raw := fields["mappings"]; raw != nil {
+		result.Mappings, err = parseJSONStringBytes(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing mappings: %w", err)
+		}
+	}
+	if raw := fields["sourcesContent"]; raw != nil {
+		values, err := parseArrayValues(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing sourcesContent: %w", err)
+		}
+		result.SourcesContent = make([]json.RawMessage, len(values))
+		for index, value := range values {
+			if !bytes.Equal(bytes.TrimSpace(value), []byte("null")) {
+				result.SourcesContent[index] = value
+			}
+		}
+	}
+	if raw := fields["sections"]; raw != nil {
+		values, err := parseArrayValues(raw)
+		if err != nil {
+			return nil, fmt.Errorf("parsing sections: %w", err)
+		}
+		for _, value := range values {
+			sectionFields, err := parseObjectFields(value)
+			if err != nil {
+				return nil, err
+			}
+			var offset rawOffset
+			if err := json.Unmarshal(sectionFields["offset"], &offset); err != nil {
+				return nil, fmt.Errorf("parsing section offset: %w", err)
+			}
+			sectionMap, err := parseRawMap(sectionFields["map"])
+			if err != nil {
+				return nil, fmt.Errorf("parsing section map: %w", err)
+			}
+			result.Sections = append(result.Sections, rawSection{Offset: offset, Map: *sectionMap})
+		}
+	}
+
+	return result, nil
+}
+
+func parseObjectFields(data []byte) (map[string][]byte, error) {
+	index := skipJSONSpace(data, 0)
+	if index >= len(data) || data[index] != '{' {
+		return nil, errors.New("expected JSON object")
+	}
+	index++
+	fields := make(map[string][]byte)
+
+	for {
+		index = skipJSONSpace(data, index)
+		if index >= len(data) {
+			return nil, io.ErrUnexpectedEOF
+		}
+		if data[index] == '}' {
+			return fields, validateJSONEnd(data, index+1)
+		}
+
+		keyEnd, err := scanJSONStringEnd(data, index)
+		if err != nil {
+			return nil, err
+		}
+		var key string
+		if err := json.Unmarshal(data[index:keyEnd], &key); err != nil {
+			return nil, err
+		}
+		index = skipJSONSpace(data, keyEnd)
+		if index >= len(data) || data[index] != ':' {
+			return nil, errors.New("expected colon after JSON object key")
+		}
+		index = skipJSONSpace(data, index+1)
+		valueEnd, err := scanJSONValueEnd(data, index)
+		if err != nil {
+			return nil, err
+		}
+		fields[key] = data[index:valueEnd]
+		index = skipJSONSpace(data, valueEnd)
+		if index >= len(data) {
+			return nil, io.ErrUnexpectedEOF
+		}
+		switch data[index] {
+		case ',':
+			index++
+		case '}':
+			return fields, validateJSONEnd(data, index+1)
+		default:
+			return nil, errors.New("expected comma or end of JSON object")
+		}
+	}
+}
+
+func parseArrayValues(data []byte) ([][]byte, error) {
+	index := skipJSONSpace(data, 0)
+	if index >= len(data) || data[index] != '[' {
+		return nil, errors.New("expected JSON array")
+	}
+	index++
+	values := [][]byte{}
+
+	for {
+		index = skipJSONSpace(data, index)
+		if index >= len(data) {
+			return nil, io.ErrUnexpectedEOF
+		}
+		if data[index] == ']' {
+			return values, validateJSONEnd(data, index+1)
+		}
+		valueEnd, err := scanJSONValueEnd(data, index)
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, data[index:valueEnd])
+		index = skipJSONSpace(data, valueEnd)
+		if index >= len(data) {
+			return nil, io.ErrUnexpectedEOF
+		}
+		switch data[index] {
+		case ',':
+			index++
+		case ']':
+			return values, validateJSONEnd(data, index+1)
+		default:
+			return nil, errors.New("expected comma or end of JSON array")
+		}
+	}
+}
+
+func parseJSONStringBytes(data []byte) ([]byte, error) {
+	data = bytes.TrimSpace(data)
+	end, err := scanJSONStringEnd(data, 0)
+	if err != nil || end != len(data) {
+		return nil, errors.New("expected JSON string")
+	}
+	body := data[1 : len(data)-1]
+	if bytes.IndexByte(body, '\\') < 0 {
+		return body, nil
+	}
+
+	var decoded string
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return nil, err
+	}
+	return []byte(decoded), nil
+}
+
+func scanJSONValueEnd(data []byte, index int) (int, error) {
+	if index >= len(data) {
+		return 0, io.ErrUnexpectedEOF
+	}
+	if data[index] == '"' {
+		return scanJSONStringEnd(data, index)
+	}
+	if data[index] == '{' || data[index] == '[' {
+		return scanJSONCompositeEnd(data, index)
+	}
+
+	for index < len(data) && !isJSONValueDelimiter(data[index]) {
+		index++
+	}
+	return index, nil
+}
+
+func isJSONValueDelimiter(value byte) bool {
+	switch value {
+	case ',', ']', '}', ' ', '\t', '\r', '\n':
+		return true
+	default:
+		return false
+	}
+}
+
+func scanJSONStringEnd(data []byte, index int) (int, error) {
+	if index >= len(data) || data[index] != '"' {
+		return 0, errors.New("expected JSON string")
+	}
+	for index++; index < len(data); index++ {
+		switch data[index] {
+		case '\\':
+			index++
+			if index >= len(data) {
+				return 0, io.ErrUnexpectedEOF
+			}
+		case '"':
+			return index + 1, nil
+		}
+	}
+	return 0, io.ErrUnexpectedEOF
+}
+
+func scanJSONCompositeEnd(data []byte, index int) (int, error) {
+	stack := []byte{data[index]}
+	for index++; index < len(data); index++ {
+		switch data[index] {
+		case '"':
+			end, err := scanJSONStringEnd(data, index)
+			if err != nil {
+				return 0, err
+			}
+			index = end - 1
+		case '{', '[':
+			stack = append(stack, data[index])
+		case '}', ']':
+			expected := byte('{')
+			if data[index] == ']' {
+				expected = '['
+			}
+			if len(stack) == 0 || stack[len(stack)-1] != expected {
+				return 0, errors.New("mismatched JSON delimiter")
+			}
+			stack = stack[:len(stack)-1]
+			if len(stack) == 0 {
+				return index + 1, nil
+			}
+		}
+	}
+	return 0, io.ErrUnexpectedEOF
+}
+
+func skipJSONSpace(data []byte, index int) int {
+	for index < len(data) {
+		switch data[index] {
+		case ' ', '\t', '\r', '\n':
+			index++
+		default:
+			return index
+		}
+	}
+	return index
+}
+
+func validateJSONEnd(data []byte, index int) error {
+	if skipJSONSpace(data, index) != len(data) {
+		return errors.New("unexpected data after JSON value")
 	}
 	return nil
 }
