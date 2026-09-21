@@ -8,17 +8,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"hash"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strings"
-	"unicode/utf16"
 	"unicode/utf8"
 )
 
 const protocolVersion = 1
+const defaultMemoryLimit = 768 * 1024 * 1024
 
 type request struct {
 	ProtocolVersion int           `json:"protocolVersion"`
@@ -83,7 +83,8 @@ func (o *rawOffset) UnmarshalJSON(data []byte) error {
 
 type mapping struct {
 	GeneratedLine, GeneratedColumn             uint32
-	Source, OriginalLine, OriginalColumn, Name *uint32
+	Source, OriginalLine, OriginalColumn, Name uint32
+	HasOriginal, HasName                       bool
 }
 
 type inflatedMapping struct {
@@ -94,15 +95,16 @@ type inflatedMapping struct {
 
 type originalLocation struct {
 	Source, Line, Column uint32
-	Name                 *uint32
+	Name                 uint32
+	HasName              bool
 }
 
 type codeOutput struct {
 	writer       *bufio.Writer
-	hash         hash.Hash
 	bytes        int64
 	line, column uint32
-	active       *originalLocation
+	active       originalLocation
+	hasActive    bool
 }
 
 type contentLocation struct{ offset, length int64 }
@@ -128,6 +130,10 @@ type composer struct {
 }
 
 func main() {
+	if os.Getenv("GOMEMLIMIT") == "" {
+		debug.SetMemoryLimit(defaultMemoryLimit)
+	}
+
 	if err := run(); err != nil {
 		_ = json.NewEncoder(os.Stdout).Encode(response{ProtocolVersion: protocolVersion, Success: false, Error: err.Error()})
 		os.Exit(1)
@@ -189,7 +195,7 @@ func execute(req request) (response, error) {
 		return response{}, err
 	}
 	c := composer{
-		code: codeOutput{writer: bufio.NewWriter(codeFile), hash: sha256.New(), line: 1},
+		code: codeOutput{writer: bufio.NewWriter(codeFile), line: 1},
 		smap: mapOutput{mappingPath: mappingPath, contentPath: contentPath, mappingFile: mappingFile, contentFile: contentFile,
 			mappingWriter: bufio.NewWriter(mappingFile), contentWriter: bufio.NewWriter(contentFile), sourceIndexes: map[string]uint32{},
 			nameIndexes: map[string]uint32{}, sources: []string{}, names: []string{}, contents: map[string]contentLocation{}, previousLine: 1, prefix: req.Output.SourcePrefix},
@@ -356,7 +362,7 @@ func (c *composer) emitIndexed(code string, sourceMap *rawMap, relative string) 
 	basic := rawMap{}
 	encoded := make([]mapping, 0, len(mappings))
 	for _, item := range mappings {
-		m := mapping{GeneratedLine: item.GeneratedLine, GeneratedColumn: item.GeneratedColumn, OriginalLine: item.OriginalLine, OriginalColumn: item.OriginalColumn}
+		m := mapping{GeneratedLine: item.GeneratedLine, GeneratedColumn: item.GeneratedColumn}
 		if item.Source != nil {
 			value := *item.Source
 			if relative != "" {
@@ -368,7 +374,10 @@ func (c *composer) emitIndexed(code string, sourceMap *rawMap, relative string) 
 				sourceIndex[value] = index
 				sources = append(sources, value)
 			}
-			m.Source = ptr(index)
+			m.Source = index
+			m.OriginalLine = *item.OriginalLine
+			m.OriginalColumn = *item.OriginalColumn
+			m.HasOriginal = true
 		}
 		if item.Name != nil && *item.Name != "" {
 			value := *item.Name
@@ -378,7 +387,8 @@ func (c *composer) emitIndexed(code string, sourceMap *rawMap, relative string) 
 				nameIndex[value] = index
 				names = append(names, value)
 			}
-			m.Name = ptr(index)
+			m.Name = index
+			m.HasName = true
 		}
 		encoded = append(encoded, m)
 	}
@@ -439,19 +449,19 @@ func (c *composer) emitIndexed(code string, sourceMap *rawMap, relative string) 
 }
 
 func (c *composer) emitDecoded(chunk string, m mapping, sourceMap *rawMap, sources []string) error {
-	if m.Source == nil || m.OriginalLine == nil || m.OriginalColumn == nil {
+	if !m.HasOriginal {
 		return c.emit(chunk, nil)
 	}
-	if int(*m.Source) >= len(sources) {
+	if int(m.Source) >= len(sources) {
 		return errors.New("source index is out of range")
 	}
-	location := originalLocation{Source: c.smap.internSource(sources[*m.Source]), Line: *m.OriginalLine, Column: *m.OriginalColumn}
-	if m.Name != nil {
-		if int(*m.Name) >= len(sourceMap.Names) {
+	location := originalLocation{Source: c.smap.internSource(sources[m.Source]), Line: m.OriginalLine, Column: m.OriginalColumn}
+	if m.HasName {
+		if int(m.Name) >= len(sourceMap.Names) {
 			return errors.New("name index is out of range")
 		}
-		name := c.smap.internName(sourceMap.Names[*m.Name])
-		location.Name = &name
+		location.Name = c.smap.internName(sourceMap.Names[m.Name])
+		location.HasName = true
 	}
 	return c.emit(chunk, &location)
 }
@@ -460,37 +470,36 @@ func (c *composer) emit(chunk string, location *originalLocation) error {
 	if chunk == "" {
 		return nil
 	}
-	if location != nil && !sameLocation(c.code.active, location) {
-		if err := c.smap.add(mapping{GeneratedLine: c.code.line, GeneratedColumn: c.code.column, Source: ptr(location.Source), OriginalLine: ptr(location.Line), OriginalColumn: ptr(location.Column), Name: location.Name}); err != nil {
+	if location != nil && (!c.code.hasActive || c.code.active != *location) {
+		if err := c.smap.add(mapping{GeneratedLine: c.code.line, GeneratedColumn: c.code.column, Source: location.Source, OriginalLine: location.Line, OriginalColumn: location.Column, Name: location.Name, HasOriginal: true, HasName: location.HasName}); err != nil {
 			return err
 		}
-		copy := *location
-		c.code.active = &copy
-	} else if location == nil && c.code.active != nil {
+		c.code.active = *location
+		c.code.hasActive = true
+	} else if location == nil && c.code.hasActive {
 		if err := c.smap.add(mapping{GeneratedLine: c.code.line, GeneratedColumn: c.code.column}); err != nil {
 			return err
 		}
-		c.code.active = nil
+		c.code.hasActive = false
 	}
 	if _, err := c.code.writer.WriteString(chunk); err != nil {
 		return err
 	}
-	_, _ = c.code.hash.Write([]byte(chunk))
 	c.code.bytes += int64(len(chunk))
 	for index, r := range chunk {
 		if r == '\n' {
 			c.code.line++
 			c.code.column = 0
 			if index+1 >= len(chunk) {
-				c.code.active = nil
-			} else if c.code.active != nil {
+				c.code.hasActive = false
+			} else if c.code.hasActive {
 				active := c.code.active
-				if err := c.smap.add(mapping{GeneratedLine: c.code.line, GeneratedColumn: 0, Source: ptr(active.Source), OriginalLine: ptr(active.Line), OriginalColumn: ptr(active.Column), Name: active.Name}); err != nil {
+				if err := c.smap.add(mapping{GeneratedLine: c.code.line, GeneratedColumn: 0, Source: active.Source, OriginalLine: active.Line, OriginalColumn: active.Column, Name: active.Name, HasOriginal: true, HasName: active.HasName}); err != nil {
 					return err
 				}
 			}
 		} else {
-			c.code.column += uint32(len(utf16.Encode([]rune{r})))
+			c.code.column += utf16Width(r)
 		}
 	}
 	return nil
@@ -552,16 +561,17 @@ func (m *mapOutput) add(value mapping) error {
 
 func (m *mapOutput) flush() error {
 	sort.SliceStable(m.pending, func(i, j int) bool { return compareOutput(m.pending[i], m.pending[j], m.sources, m.names) < 0 })
-	var previous *mapping
+	var previous mapping
+	hasPrevious := false
 	for _, value := range m.pending {
-		if previous != nil && equalMapping(*previous, value) {
+		if hasPrevious && previous == value {
 			continue
 		}
 		if err := m.encode(value); err != nil {
 			return err
 		}
-		copy := value
-		previous = &copy
+		previous = value
+		hasPrevious = true
 	}
 	m.pending = nil
 	return nil
@@ -583,18 +593,18 @@ func (m *mapOutput) encode(value mapping) error {
 	}
 	writeVLQ(m.mappingWriter, int64(value.GeneratedColumn)-m.previousColumn)
 	m.previousColumn = int64(value.GeneratedColumn)
-	if value.Source != nil {
-		writeVLQ(m.mappingWriter, int64(*value.Source)-m.previousSource)
-		m.previousSource = int64(*value.Source)
-		line := int64(*value.OriginalLine) - 1
+	if value.HasOriginal {
+		writeVLQ(m.mappingWriter, int64(value.Source)-m.previousSource)
+		m.previousSource = int64(value.Source)
+		line := int64(value.OriginalLine) - 1
 		writeVLQ(m.mappingWriter, line-m.previousOriginalLine)
 		m.previousOriginalLine = line
-		column := int64(*value.OriginalColumn)
+		column := int64(value.OriginalColumn)
 		writeVLQ(m.mappingWriter, column-m.previousOriginalColumn)
 		m.previousOriginalColumn = column
-		if value.Name != nil {
-			writeVLQ(m.mappingWriter, int64(*value.Name)-m.previousName)
-			m.previousName = int64(*value.Name)
+		if value.HasName {
+			writeVLQ(m.mappingWriter, int64(value.Name)-m.previousName)
+			m.previousName = int64(value.Name)
 		}
 	}
 	m.wrote = true
@@ -694,7 +704,7 @@ func (c *codeCursor) takePrefix(units uint32) string {
 	start, end, used := c.offset, c.lineEnd(), uint32(0)
 	for c.offset < end {
 		r, size := utf8.DecodeRuneInString(c.code[c.offset:end])
-		next := used + uint32(len(utf16.Encode([]rune{r})))
+		next := used + utf16Width(r)
 		if next > units {
 			break
 		}
@@ -741,7 +751,10 @@ func decodeMappings(encoded string, callback func(mapping) error) error {
 						return errors.New("mapping field is negative")
 					}
 				}
-				m.Source, m.OriginalLine, m.OriginalColumn = ptr(uint32(source)), ptr(uint32(originalLine+1)), ptr(uint32(originalColumn))
+				m.Source = uint32(source)
+				m.OriginalLine = uint32(originalLine + 1)
+				m.OriginalColumn = uint32(originalColumn)
+				m.HasOriginal = true
 				if index < len(encoded) && encoded[index] != ',' && encoded[index] != ';' {
 					value, err = decodeVLQ(encoded, &index)
 					if err != nil {
@@ -751,7 +764,8 @@ func decodeMappings(encoded string, callback func(mapping) error) error {
 					if name < 0 {
 						return errors.New("name index is negative")
 					}
-					m.Name = ptr(uint32(name))
+					m.Name = uint32(name)
+					m.HasName = true
 				}
 			}
 			if index < len(encoded) && encoded[index] != ',' && encoded[index] != ';' {
@@ -863,13 +877,15 @@ func inflateMappings(sourceMap *rawMap) ([]inflatedMapping, error) {
 	}
 	output := []inflatedMapping{}
 	err := decodeMappings(sourceMap.Mappings, func(m mapping) error {
-		item := inflatedMapping{GeneratedLine: m.GeneratedLine, GeneratedColumn: m.GeneratedColumn, OriginalLine: m.OriginalLine, OriginalColumn: m.OriginalColumn}
-		if m.Source != nil && int(*m.Source) < len(sources) {
-			value := sources[*m.Source]
+		item := inflatedMapping{GeneratedLine: m.GeneratedLine, GeneratedColumn: m.GeneratedColumn}
+		if m.HasOriginal && int(m.Source) < len(sources) {
+			value := sources[m.Source]
 			item.Source = &value
+			item.OriginalLine = ptr(m.OriginalLine)
+			item.OriginalColumn = ptr(m.OriginalColumn)
 		}
-		if m.Name != nil && int(*m.Name) < len(sourceMap.Names) {
-			value := sourceMap.Names[*m.Name]
+		if m.HasName && int(m.Name) < len(sourceMap.Names) {
+			value := sourceMap.Names[m.Name]
 			item.Name = &value
 		}
 		output = append(output, item)
@@ -1033,23 +1049,17 @@ func hashFile(value string) (string, error) {
 	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 func ptr[T any](value T) *T { return &value }
+func utf16Width(value rune) uint32 {
+	if value > 0xffff {
+		return 2
+	}
+	return 1
+}
 func min(a, b uint32) uint32 {
 	if a < b {
 		return a
 	}
 	return b
-}
-func sameLocation(a, b *originalLocation) bool {
-	if a == nil || b == nil {
-		return a == b
-	}
-	return a.Source == b.Source && a.Line == b.Line && a.Column == b.Column && equalPtr(a.Name, b.Name)
-}
-func equalPtr[T comparable](a, b *T) bool {
-	return a == nil && b == nil || a != nil && b != nil && *a == *b
-}
-func equalMapping(a, b mapping) bool {
-	return a.GeneratedLine == b.GeneratedLine && a.GeneratedColumn == b.GeneratedColumn && equalPtr(a.Source, b.Source) && equalPtr(a.OriginalLine, b.OriginalLine) && equalPtr(a.OriginalColumn, b.OriginalColumn) && equalPtr(a.Name, b.Name)
 }
 func compareStringPtr(a, b *string) int {
 	if a == nil && b == nil {
@@ -1083,21 +1093,21 @@ func compareInflated(a, b inflatedMapping) int {
 }
 func compareOutput(a, b mapping, sources, names []string) int {
 	sourceA, sourceB := (*string)(nil), (*string)(nil)
-	if a.Source != nil {
-		sourceA = &sources[*a.Source]
+	if a.HasOriginal {
+		sourceA = &sources[a.Source]
 	}
-	if b.Source != nil {
-		sourceB = &sources[*b.Source]
+	if b.HasOriginal {
+		sourceB = &sources[b.Source]
 	}
 	if value := compareStringPtr(sourceA, sourceB); value != 0 {
 		return value
 	}
 	nameA, nameB := (*string)(nil), (*string)(nil)
-	if a.Name != nil {
-		nameA = &names[*a.Name]
+	if a.HasName {
+		nameA = &names[a.Name]
 	}
-	if b.Name != nil {
-		nameB = &names[*b.Name]
+	if b.HasName {
+		nameB = &names[b.Name]
 	}
 	return compareStringPtr(nameA, nameB)
 }
