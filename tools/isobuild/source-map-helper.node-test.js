@@ -20,7 +20,7 @@ const {
 
 const HELPER = process.env.METEOR_SOURCE_MAP_HELPER || path.resolve(
   __dirname,
-  '../source-map-helper/target/debug/meteor-source-map-helper',
+  '../rust/target/debug/meteor-source-map-helper',
 );
 const HELPER_IMPLEMENTATION = 'Rust';
 

@@ -100,9 +100,8 @@ rm -rf "${MONGO_NAME}"
 export PATH="$DIR/bin:$PATH"
 
 buildSourceMapHelper() (
-    # Match the Windows build's tested toolchain. Keep Rust under build/ so it
-    # is removed before packaging, and isolate its environment in a subshell.
-    RUST_VERSION=1.90.0
+    # tools/rust/rust-toolchain.toml pins the tested toolchain. Keep Rust under
+    # build/ so it is removed before packaging, and isolate it in a subshell.
     case "$OS/$ARCH" in
         linux/x86_64) RUST_HOST=x86_64-unknown-linux-gnu ;;
         linux/aarch64) RUST_HOST=aarch64-unknown-linux-gnu ;;
@@ -114,24 +113,24 @@ buildSourceMapHelper() (
             exit 1
             ;;
     esac
-    RUST_TOOLCHAIN="${RUST_VERSION}-${RUST_HOST}"
     RUST_BUILD_DIR="${DIR}/build/rust"
     export CARGO_HOME="${RUST_BUILD_DIR}/cargo"
     export RUSTUP_HOME="${RUST_BUILD_DIR}/rustup"
     mkdir -p "$RUST_BUILD_DIR"
 
-    echo "Installing Rust ${RUST_VERSION} for the source-map helper..."
+    echo "Installing rustup for the pinned tools/rust toolchain..."
     curl --fail --location --silent --show-error \
         "https://static.rust-lang.org/rustup/dist/${RUST_HOST}/rustup-init" \
         --output "${RUST_BUILD_DIR}/rustup-init"
     chmod +x "${RUST_BUILD_DIR}/rustup-init"
     "${RUST_BUILD_DIR}/rustup-init" \
         -y --no-modify-path --profile minimal \
-        --default-host "$RUST_HOST" --default-toolchain "$RUST_TOOLCHAIN"
+        --default-host "$RUST_HOST" --default-toolchain none
 
     export PATH="${CARGO_HOME}/bin:$PATH"
-    "${CARGO_HOME}/bin/cargo" "+${RUST_TOOLCHAIN}" build \
-        --manifest-path "${CHECKOUT_DIR}/tools/source-map-helper/Cargo.toml" \
+    cd "${CHECKOUT_DIR}/tools/rust"
+    "${CARGO_HOME}/bin/cargo" build \
+        --package meteor-source-map-helper \
         --release --locked --target "$RUST_HOST" \
         --target-dir "${RUST_BUILD_DIR}/target"
     cp "${RUST_BUILD_DIR}/target/${RUST_HOST}/release/meteor-source-map-helper" \

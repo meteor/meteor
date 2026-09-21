@@ -1,19 +1,20 @@
-[package]
-name = "meteor-source-map-helper"
+[workspace]
+members = ["source-map-helper"]
+resolver = "3"
+
+[workspace.package]
 version = "0.1.0"
 edition = "2024"
 license = "MIT"
 publish = false
 
-[dependencies]
+[workspace.dependencies]
 anyhow = "1.0.100"
-memmap2 = "0.9.8"
 memchr = "2.8.0"
+memmap2 = "0.9.8"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145", features = ["raw_value"] }
 sha2 = "0.10.9"
-
-[dev-dependencies]
 tempfile = "3.23.0"
 
 [profile.release]

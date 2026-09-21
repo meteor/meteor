@@ -287,12 +287,10 @@ Function Invoke-NativeCommandLoud {
 }
 
 Function Add-SourceMapHelper {
-  # Keep Rust local to this build: runners need not have Cargo installed, and
-  # only the compiled helper belongs in the dev bundle. This version was used
-  # to validate the helper with its checked-in Cargo.lock.
-  $rustVersion = '1.90.0'
+  # tools/rust/rust-toolchain.toml pins the tested toolchain. Keep Rust local to
+  # this build: runners need not have Cargo installed, and only the compiled
+  # helper belongs in the dev bundle.
   $rustHost = 'x86_64-pc-windows-msvc'
-  $rustToolchain = "${rustVersion}-${rustHost}"
   $previousCargoHome = $env:CARGO_HOME
   $previousRustupHome = $env:RUSTUP_HOME
   $previousPath = $env:PATH
@@ -304,28 +302,32 @@ Function Add-SourceMapHelper {
     $rustupInstaller = Join-Path $dirTemp 'rustup-init.exe'
     $rustupUrl = "https://static.rust-lang.org/rustup/dist/${rustHost}/rustup-init.exe"
 
-    Write-Host "Installing Rust ${rustVersion} for the source-map helper..." `
+    Write-Host 'Installing rustup for the pinned tools/rust toolchain...' `
       -ForegroundColor Magenta
     $webclient.DownloadFile($rustupUrl, $rustupInstaller)
     $rustupExit = Invoke-NativeCommandLoud $rustupInstaller @(
       '-y', '--no-modify-path', '--profile', 'minimal',
-      '--default-host', $rustHost, '--default-toolchain', $rustToolchain
+      '--default-host', $rustHost, '--default-toolchain', 'none'
     )
     if ($rustupExit -ne 0) {
-      throw "Couldn't install Rust ${rustVersion} (rustup exited with code $rustupExit)."
+      throw "Couldn't install rustup (rustup-init exited with code $rustupExit)."
     }
 
     $env:PATH = "$cargoBin;$previousPath"
     $cargo = Join-Path $cargoBin 'cargo.exe'
-    $sourceMapHelperManifest = Join-Path $dirCheckout `
-      'tools\source-map-helper\Cargo.toml'
+    $rustWorkspace = Join-Path $dirCheckout 'tools\rust'
     $sourceMapHelperTarget = Join-Path $dirTemp 'source-map-helper-target'
 
-    $cargoExit = Invoke-NativeCommandLoud $cargo @(
-      "+$rustToolchain", 'build', '--manifest-path', $sourceMapHelperManifest,
-      '--release', '--locked', '--target', $rustHost,
-      '--target-dir', $sourceMapHelperTarget
-    )
+    Push-Location $rustWorkspace
+    try {
+      $cargoExit = Invoke-NativeCommandLoud $cargo @(
+        'build', '--package', 'meteor-source-map-helper',
+        '--release', '--locked', '--target', $rustHost,
+        '--target-dir', $sourceMapHelperTarget
+      )
+    } finally {
+      Pop-Location
+    }
     if ($cargoExit -ne 0) {
       throw "Couldn't build meteor-source-map-helper (Cargo exited with code $cargoExit)."
     }

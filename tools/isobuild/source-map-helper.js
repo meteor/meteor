@@ -38,7 +38,7 @@ function findHelper() {
     files.pathJoin(
       files.getCurrentToolsDir(),
       "tools",
-      "source-map-helper",
+      "rust",
       "target",
       "release",
       EXECUTABLE_NAME,
@@ -46,7 +46,7 @@ function findHelper() {
     files.pathJoin(
       files.getCurrentToolsDir(),
       "tools",
-      "source-map-helper",
+      "rust",
       "target",
       "debug",
       EXECUTABLE_NAME,
