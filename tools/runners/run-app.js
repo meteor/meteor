@@ -1021,7 +1021,9 @@ Object.assign(AppRunner.prototype, {
 
         var oldPromise = self.runPromise = self._makePromise("run");
 
-        refreshClient();
+        // A server restart can close the IPC channel during this refresh.
+        // Observe the rejection instead of leaving a detached Promise.
+        await refreshClient().catch(bundler.ignoreHarmlessErrors);
 
         // Establish a watcher on the new files.
         setupClientWatcher();

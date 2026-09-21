@@ -3598,8 +3598,11 @@ async function bundle({
   };
 }
 
-// Used as a catch handler for pauseClient and refreshClient above.
-function ignoreHarmlessErrors(error) {
+// Used for client IPC notifications when the app may be restarting.
+export function ignoreHarmlessErrors(error) {
+  if (error && (error.code === "EPIPE" || error.code === "ERR_IPC_CHANNEL_CLOSED")) {
+    return;
+  }
   switch (error && error.message) {
   case "process exited":
   case "channel closed":
