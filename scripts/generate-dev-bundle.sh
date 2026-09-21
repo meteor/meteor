@@ -100,38 +100,42 @@ rm -rf "${MONGO_NAME}"
 export PATH="$DIR/bin:$PATH"
 
 buildSourceMapHelper() (
-    # Keep Go under build/ so only the stripped helper reaches the dev bundle.
-    # CGO stays disabled so the helper has no host C toolchain or runtime
-    # dependency and can be cross-compiled when release automation needs it.
-    GO_VERSION=1.27.1
+    # Match the Windows build's tested toolchain. Keep Rust under build/ so it
+    # is removed before packaging, and isolate its environment in a subshell.
+    RUST_VERSION=1.90.0
     case "$OS/$ARCH" in
-        linux/x86_64) GO_HOST_OS=linux; GO_HOST_ARCH=amd64 ;;
-        linux/aarch64) GO_HOST_OS=linux; GO_HOST_ARCH=arm64 ;;
-        linux/i686) GO_HOST_OS=linux; GO_HOST_ARCH=386 ;;
-        macos/x86_64) GO_HOST_OS=darwin; GO_HOST_ARCH=amd64 ;;
-        macos/arm64) GO_HOST_OS=darwin; GO_HOST_ARCH=arm64 ;;
+        linux/x86_64) RUST_HOST=x86_64-unknown-linux-gnu ;;
+        linux/aarch64) RUST_HOST=aarch64-unknown-linux-gnu ;;
+        linux/i686) RUST_HOST=i686-unknown-linux-gnu ;;
+        macos/x86_64) RUST_HOST=x86_64-apple-darwin ;;
+        macos/arm64) RUST_HOST=aarch64-apple-darwin ;;
         *)
-            echo "Unsupported Go build platform: $OS/$ARCH" >&2
+            echo "Unsupported Rust build platform: $OS/$ARCH" >&2
             exit 1
             ;;
     esac
+    RUST_TOOLCHAIN="${RUST_VERSION}-${RUST_HOST}"
+    RUST_BUILD_DIR="${DIR}/build/rust"
+    export CARGO_HOME="${RUST_BUILD_DIR}/cargo"
+    export RUSTUP_HOME="${RUST_BUILD_DIR}/rustup"
+    mkdir -p "$RUST_BUILD_DIR"
 
-    GO_BUILD_DIR="${DIR}/build/go"
-    mkdir -p "$GO_BUILD_DIR"
-
-    echo "Installing Go ${GO_VERSION} for the source-map helper..."
+    echo "Installing Rust ${RUST_VERSION} for the source-map helper..."
     curl --fail --location --silent --show-error \
-        "https://go.dev/dl/go${GO_VERSION}.${GO_HOST_OS}-${GO_HOST_ARCH}.tar.gz" \
-        | tar -xz -C "$GO_BUILD_DIR"
+        "https://static.rust-lang.org/rustup/dist/${RUST_HOST}/rustup-init" \
+        --output "${RUST_BUILD_DIR}/rustup-init"
+    chmod +x "${RUST_BUILD_DIR}/rustup-init"
+    "${RUST_BUILD_DIR}/rustup-init" \
+        -y --no-modify-path --profile minimal \
+        --default-host "$RUST_HOST" --default-toolchain "$RUST_TOOLCHAIN"
 
-    CGO_ENABLED=0 \
-    GOOS="$GO_HOST_OS" \
-    GOARCH="$GO_HOST_ARCH" \
-    GOCACHE="${GO_BUILD_DIR}/cache" \
-        "${GO_BUILD_DIR}/go/bin/go" \
-        -C "${CHECKOUT_DIR}/tools/source-map-helper-go" \
-        build -trimpath -ldflags="-s -w" \
-        -o "${DIR}/bin/meteor-source-map-helper" .
+    export PATH="${CARGO_HOME}/bin:$PATH"
+    "${CARGO_HOME}/bin/cargo" "+${RUST_TOOLCHAIN}" build \
+        --manifest-path "${CHECKOUT_DIR}/tools/source-map-helper/Cargo.toml" \
+        --release --locked --target "$RUST_HOST" \
+        --target-dir "${RUST_BUILD_DIR}/target"
+    cp "${RUST_BUILD_DIR}/target/${RUST_HOST}/release/meteor-source-map-helper" \
+        "${DIR}/bin/meteor-source-map-helper"
 )
 buildSourceMapHelper
 

@@ -287,44 +287,57 @@ Function Invoke-NativeCommandLoud {
 }
 
 Function Add-SourceMapHelper {
-  # Keep Go local to this build and disable CGO so the shipped helper has no
-  # compiler or C runtime dependency.
-  $goVersion = '1.27.1'
-  $previousCgoEnabled = $env:CGO_ENABLED
-  $previousGoCache = $env:GOCACHE
-  $previousGoOs = $env:GOOS
-  $previousGoArch = $env:GOARCH
+  # Keep Rust local to this build: runners need not have Cargo installed, and
+  # only the compiled helper belongs in the dev bundle. This version was used
+  # to validate the helper with its checked-in Cargo.lock.
+  $rustVersion = '1.90.0'
+  $rustHost = 'x86_64-pc-windows-msvc'
+  $rustToolchain = "${rustVersion}-${rustHost}"
+  $previousCargoHome = $env:CARGO_HOME
+  $previousRustupHome = $env:RUSTUP_HOME
+  $previousPath = $env:PATH
 
   try {
-    $goArchive = Join-Path $dirTemp "go${goVersion}.windows-amd64.zip"
-    $goRoot = Join-Path $dirTemp 'go'
-    $goUrl = "https://go.dev/dl/go${goVersion}.windows-amd64.zip"
+    $env:CARGO_HOME = Join-Path $dirTemp 'cargo'
+    $env:RUSTUP_HOME = Join-Path $dirTemp 'rustup'
+    $cargoBin = Join-Path $env:CARGO_HOME 'bin'
+    $rustupInstaller = Join-Path $dirTemp 'rustup-init.exe'
+    $rustupUrl = "https://static.rust-lang.org/rustup/dist/${rustHost}/rustup-init.exe"
 
-    Write-Host "Installing Go ${goVersion} for the source-map helper..." `
+    Write-Host "Installing Rust ${rustVersion} for the source-map helper..." `
       -ForegroundColor Magenta
-    $webclient.DownloadFile($goUrl, $goArchive)
-    Expand-Archive -Path $goArchive -DestinationPath $dirTemp
-
-    $env:CGO_ENABLED = '0'
-    $env:GOCACHE = Join-Path $dirTemp 'go-cache'
-    $env:GOOS = 'windows'
-    $env:GOARCH = 'amd64'
-    $go = Join-Path $goRoot 'bin\go.exe'
-    $sourceMapHelper = Join-Path $dirCheckout 'tools\source-map-helper-go'
-    $output = Join-Path $dirBin 'meteor-source-map-helper.exe'
-
-    $goExit = Invoke-NativeCommandLoud $go @(
-      '-C', $sourceMapHelper, 'build', '-trimpath', '-ldflags=-s -w',
-      '-o', $output, '.'
+    $webclient.DownloadFile($rustupUrl, $rustupInstaller)
+    $rustupExit = Invoke-NativeCommandLoud $rustupInstaller @(
+      '-y', '--no-modify-path', '--profile', 'minimal',
+      '--default-host', $rustHost, '--default-toolchain', $rustToolchain
     )
-    if ($goExit -ne 0) {
-      throw "Couldn't build meteor-source-map-helper (Go exited with code $goExit)."
+    if ($rustupExit -ne 0) {
+      throw "Couldn't install Rust ${rustVersion} (rustup exited with code $rustupExit)."
     }
+
+    $env:PATH = "$cargoBin;$previousPath"
+    $cargo = Join-Path $cargoBin 'cargo.exe'
+    $sourceMapHelperManifest = Join-Path $dirCheckout `
+      'tools\source-map-helper\Cargo.toml'
+    $sourceMapHelperTarget = Join-Path $dirTemp 'source-map-helper-target'
+
+    $cargoExit = Invoke-NativeCommandLoud $cargo @(
+      "+$rustToolchain", 'build', '--manifest-path', $sourceMapHelperManifest,
+      '--release', '--locked', '--target', $rustHost,
+      '--target-dir', $sourceMapHelperTarget
+    )
+    if ($cargoExit -ne 0) {
+      throw "Couldn't build meteor-source-map-helper (Cargo exited with code $cargoExit)."
+    }
+
+    Copy-Item `
+      (Join-Path $sourceMapHelperTarget `
+        "$rustHost\release\meteor-source-map-helper.exe") `
+      (Join-Path $dirBin 'meteor-source-map-helper.exe')
   } finally {
-    $env:CGO_ENABLED = $previousCgoEnabled
-    $env:GOCACHE = $previousGoCache
-    $env:GOOS = $previousGoOs
-    $env:GOARCH = $previousGoArch
+    $env:CARGO_HOME = $previousCargoHome
+    $env:RUSTUP_HOME = $previousRustupHome
+    $env:PATH = $previousPath
   }
 }
 
