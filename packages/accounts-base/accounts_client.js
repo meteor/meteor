@@ -1,5 +1,9 @@
 import {AccountsCommon} from "./accounts_common.js";
 
+// Five total attempts span the default ten-second cookie endpoint quota
+// window, while keeping startup recovery bounded.
+const COOKIE_LOGIN_RETRY_DELAYS = [250, 1000, 3000, 7000];
+
 /**
  * @summary Constructor for the `Accounts` object on the client.
  * @locus Client
@@ -24,6 +28,7 @@ export class AccountsClient extends AccountsCommon {
 
     this._pageLoadLoginCallbacks = [];
     this._pageLoadLoginAttemptInfo = null;
+    this._cookieLoginAttempt = 0;
 
     this.savedHash = window.location.hash;
     this._initUrlMatching();
@@ -155,6 +160,7 @@ export class AccountsClient extends AccountsCommon {
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
    */
   logout(callback) {
+    this._cancelHttpOnlyCookieLogin();
     this._loggingOut.set(true);
 
     this.connection.applyAsync('logout', [], {
@@ -183,6 +189,7 @@ export class AccountsClient extends AccountsCommon {
    * @param {Function} [callback] Optional callback. Called with no arguments on success, or with a single `Error` argument on failure.
    */
   logoutAllClients(callback) {
+    this._cancelHttpOnlyCookieLogin();
     this._loggingOut.set(true);
 
     this.connection.applyAsync('logoutAllClients', [], {
@@ -473,6 +480,7 @@ export class AccountsClient extends AccountsCommon {
   }
 
   async makeClientLoggedOut() {
+    this._cancelHttpOnlyCookieLogin();
     let hookError;
 
     try {
@@ -501,6 +509,7 @@ export class AccountsClient extends AccountsCommon {
   }
 
   async makeClientLoggedIn(userId, token, tokenExpires) {
+    this._cancelHttpOnlyCookieLogin();
     this._storeLoginToken(userId, token, tokenExpires);
     this.connection.setUserId(userId);
     // Sync HttpOnly cookie if enabled
@@ -600,26 +609,58 @@ export class AccountsClient extends AccountsCommon {
   // Attempt startup login using an HttpOnly cookie by requesting the resume
   // token into memory from the server.
   async loginWithCookie() {
-    try {
-      const res = await fetch('/_accounts/cookie/refresh', {
-        method: 'GET',
-        mode: 'same-origin',
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      });
-      if (!res.ok) return;
-      const body = await res.json();
-      if (body?.token) {
-        this.loginWithToken(body.token, async (err) => {
-          if (err) {
-            await this.makeClientLoggedOut();
-          }
+    const attempt = ++this._cookieLoginAttempt;
+
+    for (let retry = 0; ; retry += 1) {
+      let res;
+      try {
+        res = await fetch('/_accounts/cookie/refresh', {
+          method: 'GET',
+          mode: 'same-origin',
+          credentials: 'include',
+          headers: { Accept: 'application/json' },
         });
+      } catch (_e) {
+        if (!await this._waitForCookieLoginRetry(attempt, retry)) return;
+        continue;
       }
-    } catch (_e) {
-      // ignore
+
+      if (attempt !== this._cookieLoginAttempt) return;
+      if (res.status === 429 || res.status >= 500) {
+        if (!await this._waitForCookieLoginRetry(attempt, retry)) return;
+        continue;
+      }
+      if (!res.ok || res.status === 204) return;
+
+      let body;
+      try {
+        body = await res.json();
+      } catch (_e) {
+        return;
+      }
+      if (!body?.token || attempt !== this._cookieLoginAttempt) return;
+
+      this.loginWithToken(body.token, async (err) => {
+        if (err && attempt === this._cookieLoginAttempt) {
+          await this.makeClientLoggedOut();
+        }
+      });
+      return;
     }
   };
+
+  _cancelHttpOnlyCookieLogin() {
+    this._cookieLoginAttempt += 1;
+  }
+
+  async _waitForCookieLoginRetry(attempt, retry) {
+    const delay = COOKIE_LOGIN_RETRY_DELAYS[retry];
+    if (delay === undefined || attempt !== this._cookieLoginAttempt) {
+      return false;
+    }
+    await new Promise(resolve => Meteor.setTimeout(resolve, delay));
+    return attempt === this._cookieLoginAttempt;
+  }
 
   // Semi-internal API. Call this function to re-enable auto login after
   // if it was disabled at startup.
