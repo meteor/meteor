@@ -47,6 +47,7 @@ export const DEFAULT_RSDOCTOR_RSPACK_PLUGIN_VERSION = '1.5.9';
 export const GLOBAL_STATE_KEYS = {
   CLIENT_PROCESS: 'rspack.clientProcess',
   SERVER_PROCESS: 'rspack.serverProcess',
+  BUILD_PROCESSES: 'rspack.buildProcesses',
   RSPACK_INSTALLATION_CHECKED: 'rspack.rspackInstallationChecked',
   RSPACK_REACT_INSTALLATION_CHECKED: 'rspack.rspackReactInstallationChecked',
   RSPACK_DOCTOR_INSTALLATION_CHECKED: 'rspack.rspackDoctorInstallationChecked',
@@ -131,8 +132,8 @@ function getModeSuffix(isTest, isTestFullApp) {
  * @param {boolean} isTestFullApp - Whether in --full-app test mode
  * @returns {string} Context directory name
  */
-export function getRspackChunksContext(isTest = false, isTestFullApp = false) {
-  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}`;
+export function getRspackChunksContext(isTest = false, isTestFullApp = false, arch) {
+  return `${RSPACK_CHUNKS_CONTEXT}${getModeSuffix(isTest, isTestFullApp)}${arch ? `/${arch}` : ''}`;
 }
 
 /**
