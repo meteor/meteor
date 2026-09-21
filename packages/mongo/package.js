@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '2.5.1',
+  version: '2.5.2-beta360.1',
 });
 
 Npm.depends({
@@ -111,6 +111,7 @@ Package.onUse(function (api) {
   // For zodern:types to pick up our published types.
   // Both the .d.ts file and package-types.json must be published
   api.addAssets("mongo.d.ts", "server");
+  api.types("mongo.native.d.ts");
   api.addAssets("package-types.json", "server");
 });
 

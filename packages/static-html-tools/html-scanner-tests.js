@@ -1,4 +1,5 @@
 import { TemplatingTools } from 'meteor/templating-tools';
+import { SpacebarsCompiler } from 'meteor/spacebars-compiler';
 
 Tinytest.add("static-html-tools - html scanner", function (test) {
   var testInString = function(actualStr, wantedContents) {
@@ -32,17 +33,20 @@ Tinytest.add("static-html-tools - html scanner", function (test) {
   // where content is something simple like the string "Hello"
   // (passed in as a source string including the quotes).
   var simpleBody = function (content) {
-    return "\nTemplate.body.addContent((function () { var view = this; return " + content + "; }));\nMeteor.startup(Template.body.renderToDocument);\n";
+    // Check the scanner's output, not the compiler's choice of JS formatting.
+    var renderCode = SpacebarsCompiler.compile(JSON.parse(content), { isBody: true });
+    return "\nTemplate.body.addContent(" + renderCode + ");\nMeteor.startup(Template.body.renderToDocument);\n";
   };
 
   // arguments are quoted strings like '"hello"'
   var simpleTemplate = function (templateName, content) {
     // '"hello"' into '"Template.hello"'
     var viewName = templateName.slice(0, 1) + 'Template.' + templateName.slice(1);
+    var renderCode = SpacebarsCompiler.compile(JSON.parse(content), { isTemplate: true });
 
     return '\nTemplate.__checkName(' + templateName + ');\nTemplate[' + templateName +
       '] = new Template(' + viewName +
-      ', (function () { var view = this; return ' + content + '; }));\n';
+      ', ' + renderCode + ');\n';
   };
 
   var checkResults = function(results, expectJs, expectHead, expectBodyAttrs) {

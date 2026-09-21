@@ -413,6 +413,10 @@ export default defineConfig({
                 link: "/packages/logging",
               },
               {
+                text: "instrumentation",
+                link: "/packages/instrumentation",
+              },
+              {
                 text: "autoupdate",
                 link: "/packages/autoupdate",
               },
@@ -601,7 +605,7 @@ export default defineConfig({
         text: "Command Line",
         items: [
           { link: "/cli/", text: "CLI" },
-          { link: "/cli/using-core-types", text: "Using Core Types" },
+          { link: "/cli/using-core-types", text: "TypeScript Package Types" },
           { link: "/cli/environment-variables", text: "Environment Variables" },
         ],
         collapsed: true,

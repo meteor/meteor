@@ -99,7 +99,7 @@ By default, Meteor installs or updates them for you on the first run after addin
    • @rspack/core                    2.2.0          (new)
    • @rspack/cli                     2.2.0          (new)
    • @rspack/dev-server              2.2.0          (new)
-   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-beta.1
+   • @meteorjs/rspack                2.2.0-beta.1 -> 3.0.0-beta.2
    • @swc/core                       1.15.32        (new)
    • @rsdoctor/rspack-plugin         1.5.9          (new)
    Dependencies:
@@ -130,14 +130,14 @@ With this flag off, Meteor still detects when a required dependency is missing o
    • @rspack/core                    2.2.0          (not installed)
    • @rspack/cli                     2.2.0          (not installed)
    • @rspack/dev-server              2.2.0          (not installed)
-   • @meteorjs/rspack                3.0.0-beta.1   (currently 2.2.0-beta.1)
+   • @meteorjs/rspack                3.0.0-beta.2   (currently 2.2.0-beta.1)
    • @swc/core                       1.15.32        (not installed)
    • @rsdoctor/rspack-plugin         1.5.9          (not installed)
    Dependencies:
    • @swc/helpers                    0.5.23         (not installed)
 
    To bring your project in line, run:
-       meteor npm install --save-dev @rspack/core@2.2.0 @rspack/cli@2.2.0 @rspack/dev-server@2.2.0 @meteorjs/rspack@3.0.0-beta.1 @swc/core@1.15.32 @rsdoctor/rspack-plugin@1.5.9
+       meteor npm install --save-dev @rspack/core@2.2.0 @rspack/cli@2.2.0 @rspack/dev-server@2.2.0 @meteorjs/rspack@3.0.0-beta.2 @swc/core@1.15.32 @rsdoctor/rspack-plugin@1.5.9
        meteor npm install --save @swc/helpers@0.5.23
 => ℹ️  Set `"meteor": { "autoInstallDeps": true }` in package.json to manage them automatically.
 ```
@@ -165,7 +165,11 @@ Meteor build plugins extend the Meteor bundler by letting you handle new file ty
 However, Meteor’s build system solves the same problems as other bundlers, including Rspack. Build plugins are largely deprecated in favor of Rspack alternatives. Some plugins may still be useful if they don’t act directly on app files and do something Meteor-specific that can be preserved.
 
 Among the compatible plugins:
-- [`zodern:types`](https://packosphere.com/zodern/types). Still compatible, automatically providing Meteor types for core and community packages.
+- [`zodern:types`](https://packosphere.com/zodern/types), which remains a
+  supported declaration provider in Meteor 3.6. Rspack controls transpilation,
+  not the declaration provider. Apps can keep `zodern:types` or explicitly
+  migrate to native declarations with `meteor types`; see
+  [TypeScript Types for Meteor Packages](/cli/using-core-types).
 
 For others, please refer to the migration topics.
 - [CSS, Less, and SCSS](#css-less-and-scss) (when using [`less`](https://packosphere.com/meteor/less), [`fourseven:scss`](https://packosphere.com/fourseven/scss))

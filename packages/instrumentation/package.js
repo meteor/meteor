@@ -1,6 +1,6 @@
 Package.describe({
   name: 'instrumentation',
-  version: '0.0.1',
+  version: '0.0.1-beta360.1',
   summary: 'Read-only lifecycle instrumentation seam (methods, publications, DDP connections)',
 });
 
@@ -11,6 +11,7 @@ Package.onUse(function (api) {
   api.use(['ecmascript', 'ddp-client', 'random', 'ejson'], 'server');
   api.mainModule('server.js', 'server');
   api.export('Instrumentation', 'server');
+  api.types('instrumentation.d.ts');
 });
 
 Package.onTest(function (api) {

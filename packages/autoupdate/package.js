@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Update the client when new client code is available',
-  version: '2.0.1',
+  version: '2.0.2-beta360.1',
 });
 
 Package.onUse(function(api) {
@@ -15,6 +15,7 @@ Package.onUse(function(api) {
   api.mainModule('autoupdate_server.js', 'server');
   api.mainModule('autoupdate_client.js', 'client');
   api.mainModule('autoupdate_cordova.js', 'web.cordova');
+  api.types('autoupdate.d.ts');
 
   api.export('Autoupdate');
 });
