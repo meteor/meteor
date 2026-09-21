@@ -22,6 +22,7 @@ import {
 import { linkLocalRspack, testMeteorSkeleton } from './test-helpers';
 import fs from 'fs-extra';
 import path from 'path';
+import waitOn from 'wait-on';
 
 async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
   const probePath = path.join(tempDir, 'imports/ts-checker-e2e-probe.ts');
@@ -38,6 +39,27 @@ async function assertTsgoTypeChecker({ tempDir, meteorProcess, result }) {
     });
   } finally {
     await fs.remove(probePath);
+  }
+}
+
+// ostrio:flow-router-extra deprecates `FlowRouter.notFound`; the skeleton registers a
+// wildcard route instead. An unknown path must still render the 404 page, and booting
+// must not print a deprecation notice in the browser console. The notice is matched on
+// its text whatever the console channel: 3.15 emits it through `Meteor.deprecate`
+// (console.warn), older releases through `Meteor._debug` (console.log).
+async function assertWildcardNotFoundRoute(port) {
+  const messages = [];
+  const onConsole = (msg) => messages.push(msg.text());
+  page.on('console', onConsole);
+  try {
+    await page.goto(`http://localhost:${port}/e2e-missing-route`);
+    await page.waitForSelector('#not-found h1');
+    expect(messages.filter((text) => /deprecated/i.test(text))).toEqual([]);
+    console.log('✅ Wildcard 404 route rendered without deprecation notices');
+  } finally {
+    page.removeListener('console', onConsole);
+    // Leave the page on the home route for the client HMR step that follows.
+    await page.goto(`http://localhost:${port}`);
   }
 }
 
@@ -278,6 +300,77 @@ describe('Meteor Skeletons /', () => {
     }),
   );
 
+  // A path-prefixed ROOT_URL (https://example.com/app) serves everything under
+  // the prefix, so the boilerplate has to inject every script with it, the
+  // Rspack dev client script included (#14716). The counter helper lives in
+  // client/main.js: "0 times" only renders if the app's client code ran.
+  describe('Blaze Skeleton / path prefix /', () => {
+    const port = 3216;
+    const prefix = '/app';
+    const url = `http://localhost:${port}${prefix}/`;
+    let tempDir;
+    let meteorProcess;
+
+    async function runUnderPrefix(commandOptions = []) {
+      ({ meteorProcess } = await runMeteorApp(tempDir, port, {
+        waitForOutput: '=> App running at',
+        commandOptions,
+        env: { ROOT_URL: `http://localhost:${port}${prefix}` },
+        // The helper's readiness probe hits `/`, a 404 under a prefix.
+        skipWaitOn: true,
+      }));
+      await waitOn({
+        resources: [`http-get://localhost:${port}${prefix}/`],
+        timeout: process.env.CI ? 300_000 : 90_000,
+      });
+    }
+
+    async function assertClientCodeRuns() {
+      await page.waitForSelector('h1');
+      await page.waitForFunction(
+        () => document.querySelector('p')?.textContent.includes('pressed the button 0 times'),
+        null,
+        { timeout: 15_000 },
+      );
+      console.log(`✅ Client code running under the prefix (${url})`);
+    }
+
+    beforeAll(async () => {
+      const result = await createMeteorApp('blaze', 'blaze');
+      tempDir = result.tempDir;
+      await result.meteorProcess;
+      await linkLocalRspack(tempDir);
+    }, 360_000);
+
+    afterAll(async () => {
+      await cleanupTempDir(tempDir);
+    });
+
+    beforeEach(async () => {
+      await killProcessByPort(port);
+    });
+
+    afterEach(async () => {
+      await resetPlaywrightPage();
+      await killMeteorProcess(meteorProcess);
+      meteorProcess = null;
+    });
+
+    test('"meteor run" / injects the Rspack dev script under the prefix', async () => {
+      await runUnderPrefix();
+      await page.goto(url);
+      const src = await page.$eval('script[src*="__rspack__"]', (s) => s.getAttribute('src'));
+      expect(src.startsWith(`${prefix}/__rspack__/`)).toBe(true);
+      await assertClientCodeRuns();
+    });
+
+    test('"meteor run --production" / serves the app under the prefix', async () => {
+      await runUnderPrefix(['--production']);
+      await page.goto(url);
+      await assertClientCodeRuns();
+    });
+  });
+
   describe(
     'ChakraUI Skeleton /',
     testMeteorSkeleton({
@@ -320,6 +413,9 @@ describe('Meteor Skeletons /', () => {
         client: 'client/main.js',
         server: 'server/main.js',
         test: 'imports/api/links/methods.tests.js',
+      },
+      customAssertions: {
+        afterRun: ({ port }) => assertWildcardNotFoundRoute(port),
       },
     })
   );

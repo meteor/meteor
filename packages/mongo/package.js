@@ -129,12 +129,15 @@ Package.onTest(function (api) {
     "base64",
     "typescript",
   ]);
+  api.use("ddp-common", "client");
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles("tests/mongo_livedata_tests.js", ["client", "server"]);
   api.addFiles("tests/upsert_compatibility_test.js", "server");
   api.addFiles("tests/allow_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_tests.js", ["client", "server"]);
+  api.addFiles("tests/replication_fields_tests.js", "client");
+  api.addFiles("tests/replication_pubsub_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_async_tests.js", ["client", "server"]);
   api.addFiles("tests/observe_changes_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_extensions_tests.js", ["client", "server"]);
