@@ -34,23 +34,13 @@ export function isSourceMapRecipe(value) {
 function findHelper() {
   const candidates = [
     process.env.METEOR_SOURCE_MAP_HELPER,
+    files.pathJoin(
+      files.getCurrentToolsDir(),
+      "tools",
+      "source-map-helper-go",
+      EXECUTABLE_NAME,
+    ),
     files.pathJoin(files.pathDirname(process.execPath), EXECUTABLE_NAME),
-    files.pathJoin(
-      files.getCurrentToolsDir(),
-      "tools",
-      "source-map-helper",
-      "target",
-      "release",
-      EXECUTABLE_NAME,
-    ),
-    files.pathJoin(
-      files.getCurrentToolsDir(),
-      "tools",
-      "source-map-helper",
-      "target",
-      "debug",
-      EXECUTABLE_NAME,
-    ),
   ].filter(Boolean);
 
   const helper = candidates.find(candidate => files.exists(candidate));
@@ -118,7 +108,7 @@ async function invokeHelper(request) {
 }
 
 /**
- * Materializes a linker recipe through the bounded-memory Rust engine.
+ * Materializes a linker recipe through the bounded-memory Go engine.
  */
 export async function composeSourceMapRecipe(recipe, {
   file = null,

@@ -20,9 +20,9 @@ const {
 
 const HELPER = process.env.METEOR_SOURCE_MAP_HELPER || path.resolve(
   __dirname,
-  '../source-map-helper/target/debug/meteor-source-map-helper',
+  '../source-map-helper-go/meteor-source-map-helper',
 );
-const HELPER_IMPLEMENTATION = process.env.METEOR_SOURCE_MAP_HELPER_IMPLEMENTATION || 'Rust';
+const HELPER_IMPLEMENTATION = process.env.METEOR_SOURCE_MAP_HELPER_IMPLEMENTATION || 'Go';
 
 function makeFixture(count, { crlf = false, sourceRoot, unmapped = true } = {}) {
   const generator = new SourceMapGenerator({ file: 'input.js', sourceRoot });

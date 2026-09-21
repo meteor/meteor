@@ -1,0 +1,75 @@
+name: Source Map Helper
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/source-map-helper.yml"
+      - "scripts/generate-dev-bundle.sh"
+      - "scripts/generate-dev-bundle.ps1"
+      - "tools/isobuild/source-map-helper.js"
+      - "tools/isobuild/source-map-helper.node-test.js"
+      - "tools/source-map-helper-go/**"
+  push:
+    branches:
+      - devel
+    paths:
+      - ".github/workflows/source-map-helper.yml"
+      - "scripts/generate-dev-bundle.sh"
+      - "scripts/generate-dev-bundle.ps1"
+      - "tools/isobuild/source-map-helper.js"
+      - "tools/isobuild/source-map-helper.node-test.js"
+      - "tools/source-map-helper-go/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Go helper and protocol parity
+    runs-on: arm64
+    timeout-minutes: 75
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.1"
+          cache-dependency-path: tools/source-map-helper-go/go.mod
+
+      - name: Prepare Meteor dev bundle
+        run: ./meteor --get-ready
+
+      - name: Test and vet Go helper
+        working-directory: tools/source-map-helper-go
+        run: |
+          go test ./...
+          go vet ./...
+
+      - name: Build native helper
+        working-directory: tools/source-map-helper-go
+        env:
+          CGO_ENABLED: "0"
+        run: go build -trimpath -ldflags="-s -w" -o meteor-source-map-helper .
+
+      - name: Run exact adapter parity tests
+        env:
+          METEOR_SOURCE_MAP_HELPER: ${{ github.workspace }}/tools/source-map-helper-go/meteor-source-map-helper
+          METEOR_SOURCE_MAP_HELPER_IMPLEMENTATION: Go
+        run: ./dev_bundle/bin/node tools/isobuild/source-map-helper.node-test.js
+
+      - name: Cross-build release targets
+        working-directory: tools/source-map-helper-go
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/meteor-source-map-helper-linux-amd64" .
+          GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/meteor-source-map-helper-linux-arm64" .
+          GOOS=linux GOARCH=386 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/meteor-source-map-helper-linux-386" .
+          GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/meteor-source-map-helper-darwin-amd64" .
+          GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/meteor-source-map-helper-darwin-arm64" .
+          GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o "$RUNNER_TEMP/meteor-source-map-helper-windows-amd64.exe" .
