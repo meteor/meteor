@@ -595,8 +595,20 @@ function defineAccountsScenarios(storageMode, getCtx) {
           password: 'pw12345',
         });
         let refreshCount = 0;
+        let releaseSecondRefresh;
+        let markSecondRefreshReached;
+        const holdSecondRefresh = new Promise(resolve => {
+          releaseSecondRefresh = resolve;
+        });
+        const secondRefreshReached = new Promise(resolve => {
+          markSecondRefreshReached = resolve;
+        });
         const refreshRoute = async route => {
           refreshCount += 1;
+          if (refreshCount === 2) {
+            markSecondRefreshReached();
+            await holdSecondRefresh;
+          }
           await route.fulfill({
             status: 429,
             contentType: 'application/json',
@@ -605,15 +617,16 @@ function defineAccountsScenarios(storageMode, getCtx) {
         };
         await page.route('**/_accounts/cookie/refresh', refreshRoute);
         try {
-          const firstRefresh = page.waitForResponse('**/_accounts/cookie/refresh');
           void page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
-          await firstRefresh;
+          await secondRefreshReached;
           await login(page, { email: 'cookie-competing-login@example.com' }, 'pw12345');
-          const refreshCountAfterLogin = refreshCount;
-          await page.waitForTimeout(600);
           await expectLoggedIn(page, userId);
-          expect(refreshCount).toBe(refreshCountAfterLogin);
+          releaseSecondRefresh();
+          // A non-cancelled second 429 schedules the third request after 1s.
+          await page.waitForTimeout(1200);
+          expect(refreshCount).toBe(2);
         } finally {
+          releaseSecondRefresh();
           await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
         }
       });
