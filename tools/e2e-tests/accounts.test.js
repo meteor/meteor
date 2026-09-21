@@ -449,6 +449,168 @@ function defineAccountsScenarios(storageMode, getCtx) {
         await expectLoggedIn(page, userId);
       });
 
+      it('retries cookie resume after a transient 429', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'cookie-retry@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'cookie-retry@example.com' }, 'pw12345');
+        await page.evaluate(() => {
+          localStorage.removeItem('Meteor.loginToken');
+          localStorage.removeItem('Meteor.loginTokenExpires');
+          localStorage.removeItem('Meteor.userId');
+        });
+
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          if (refreshCount === 1) {
+            await route.fulfill({
+              status: 429,
+              contentType: 'application/json',
+              body: JSON.stringify({ error: 'rate_limited' }),
+            });
+          } else {
+            await route.continue();
+          }
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          await page.reload();
+          await openHarness(page, getCtx().port);
+          await page.waitForFunction(() => Meteor.userId() != null, { timeout: 10_000 });
+          await expectLoggedIn(page, userId);
+          expect(refreshCount).toBe(2);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('resumes a valid cookie after the default quota window resets', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'cookie-quota-window@example.com',
+          password: 'pw12345',
+        });
+        await login(page, { email: 'cookie-quota-window@example.com' }, 'pw12345');
+        const statuses = await page.evaluate(async () => {
+          const results = [];
+          for (let request = 0; request < 31; request += 1) {
+            const response = await fetch('/_accounts/cookie/refresh', {
+              credentials: 'include',
+            });
+            results.push(response.status);
+          }
+          localStorage.removeItem('Meteor.loginToken');
+          localStorage.removeItem('Meteor.loginTokenExpires');
+          localStorage.removeItem('Meteor.userId');
+          return results;
+        });
+        expect(statuses).toContain(429);
+
+        await page.reload();
+        await openHarness(page, getCtx().port);
+        await page.waitForFunction(() => Meteor.userId() != null, { timeout: 15_000 });
+        await expectLoggedIn(page, userId);
+      });
+
+      it('does not retry cookie resume after an unauthorized response', async () => {
+        const { page } = getCtx();
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          await route.fulfill({
+            status: 401,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'invalid_cookie' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          await page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          await page.waitForTimeout(600);
+          expect(refreshCount).toBe(1);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('bounds cookie resume retries', async () => {
+        const { page } = getCtx();
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          await route.fulfill({
+            status: 429,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'rate_limited' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          await page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          expect(refreshCount).toBe(5);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('cancels cookie resume retries on explicit logout', async () => {
+        const { page } = getCtx();
+        await seedUser(page, { email: 'cookie-logout@example.com', password: 'pw12345' });
+        await login(page, { email: 'cookie-logout@example.com' }, 'pw12345');
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          await route.fulfill({
+            status: 429,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'rate_limited' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          const firstRefresh = page.waitForResponse('**/_accounts/cookie/refresh');
+          void page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          await firstRefresh;
+          await logout(page);
+          await page.waitForTimeout(600);
+          expect(refreshCount).toBe(1);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
+      it('cancels cookie resume retries after a competing login succeeds', async () => {
+        const { page } = getCtx();
+        const userId = await seedUser(page, {
+          email: 'cookie-competing-login@example.com',
+          password: 'pw12345',
+        });
+        let refreshCount = 0;
+        const refreshRoute = async route => {
+          refreshCount += 1;
+          await route.fulfill({
+            status: 429,
+            contentType: 'application/json',
+            body: JSON.stringify({ error: 'rate_limited' }),
+          });
+        };
+        await page.route('**/_accounts/cookie/refresh', refreshRoute);
+        try {
+          const firstRefresh = page.waitForResponse('**/_accounts/cookie/refresh');
+          void page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
+          await firstRefresh;
+          await login(page, { email: 'cookie-competing-login@example.com' }, 'pw12345');
+          await page.waitForTimeout(600);
+          await expectLoggedIn(page, userId);
+          expect(refreshCount).toBe(1);
+        } finally {
+          await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
+        }
+      });
+
       it('logout clears the cookie', async () => {
         const { page } = getCtx();
         await seedUser(page, { email: 'c@example.com', password: 'pw12345' });
