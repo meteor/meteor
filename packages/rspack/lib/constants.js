@@ -147,10 +147,10 @@ export function getRspackAssetsContext(isTest = false, isTestFullApp = false) {
 }
 
 /**
- * Regex pattern for hot update files
+ * Regex pattern for hot update files and their source maps
  * @constant {RegExp}
  */
-export const RSPACK_HOT_UPDATE_REGEX = /^\/(.+\.hot-update\.(?:json|js))$/;
+export const RSPACK_HOT_UPDATE_REGEX = /^\/(.+\.hot-update\.(?:json|js(?:\.map)?))$/;
 
 export const FILE_ROLE = {
   build: 'build',
