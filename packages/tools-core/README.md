@@ -22,6 +22,13 @@ the patterns apply to all architectures. Both forms append patterns and preserve
 the last occurrence of each pattern; `.meteorignore` and global exclusions still
 apply before the entrypoint-specific patterns.
 
+`setMeteorAppEntrypoints({ mainModule, testModule })` accepts architecture maps
+alongside the existing client/server shortcuts. Map entries replace only the
+specified keys and preserve `false` values. Integrations can also restrict a
+development script to selected browser programs with
+`setMeteorAppCustomScriptUrl(url, { archs: ['web.browser'] })`; omitting `archs`
+keeps the existing behavior of injecting it into every browser program.
+
 ## Declaring required npm dependencies
 
 Atmosphere packages that need the host app to install (or stay above a minimum

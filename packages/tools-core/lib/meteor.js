@@ -197,24 +197,32 @@ export function isMeteorAppTestModule() {
  * @param {Object} options - The entry points configuration object.
  * @param {string} [options.mainClient] - The client main module path.
  * @param {string} [options.mainServer] - The server main module path.
- * @param {string} [options.testModule] - The test module path.
+ * @param {Object} [options.mainModule] - Architecture-specific main entry overrides.
+ * @param {string|Object} [options.testModule] - The test module path or architecture overrides.
  * @param {string} [options.testClient] - The client test module path.
  * @param {string} [options.testServer] - The server test module path.
  */
 export function setMeteorAppEntrypoints({
   mainClient,
   mainServer,
+  mainModule,
   testModule,
   testClient,
   testServer,
 }) {
+  if (mainModule && typeof mainModule === 'object') {
+    process.env.METEOR_CONFIG_MAIN_MODULE = JSON.stringify(mainModule);
+  }
   if (mainClient) {
     process.env.METEOR_CONFIG_CLIENT = mainClient;
   }
   if (mainServer) {
     process.env.METEOR_CONFIG_SERVER = mainServer;
   }
-  if (testModule) {
+  if (testModule && typeof testModule === 'object') {
+    process.env.METEOR_CONFIG_TEST_MODULE = JSON.stringify(testModule);
+  }
+  if (typeof testModule === 'string') {
     process.env.METEOR_CONFIG_TEST = testModule;
   } else {
     if (testClient) {
@@ -397,9 +405,16 @@ export function isMeteorAppProfile() {
 /**
  * Sets a custom script URL for the Meteor application in the environment variable.
  * @param {string} scriptUrl - The URL of the custom script.
+ * @param {Object} options
+ * @param {string[]} options.archs - Restrict injection to these architectures.
  */
-export function setMeteorAppCustomScriptUrl(scriptUrl) {
+export function setMeteorAppCustomScriptUrl(scriptUrl, { archs } = {}) {
   process.env.METEOR_APP_CUSTOM_SCRIPT_URL = scriptUrl;
+  if (archs) {
+    process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS = JSON.stringify(archs);
+  } else {
+    delete process.env.METEOR_APP_CUSTOM_SCRIPT_ARCHS;
+  }
 }
 
 /**

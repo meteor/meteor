@@ -10,6 +10,7 @@ selftest.define("entry module environment overrides preserve architectures", asy
   const envNames = [
     'METEOR_CONFIG_CLIENT', 'METEOR_CONFIG_SERVER', 'METEOR_CONFIG_TEST',
     'METEOR_CONFIG_TEST_CLIENT', 'METEOR_CONFIG_TEST_SERVER',
+    'METEOR_CONFIG_MAIN_MODULE', 'METEOR_CONFIG_TEST_MODULE',
   ];
   const originalEnv = Object.fromEntries(envNames.map(name => [name, process.env[name]]));
   const mainModule = {
@@ -37,6 +38,12 @@ selftest.define("entry module environment overrides preserve architectures", asy
       { METEOR_CONFIG_TEST_CLIENT: 'rspack-tests.js' },
       { METEOR_CONFIG_TEST_SERVER: 'rspack-tests.js' },
       {
+        METEOR_CONFIG_MAIN_MODULE: JSON.stringify({
+          legacy: 'compiled-legacy.js', 'web.cordova': 'compiled-cordova.js',
+        }),
+        METEOR_CONFIG_TEST_MODULE: JSON.stringify({ legacy: false }),
+      },
+      {
         METEOR_CONFIG_CLIENT: 'rspack-client.js',
         METEOR_CONFIG_SERVER: 'rspack-server.js',
         METEOR_CONFIG_TEST_CLIENT: 'rspack-client-tests.js',
@@ -45,17 +52,19 @@ selftest.define("entry module environment overrides preserve architectures", asy
     ]) {
       envNames.forEach(name => delete process.env[name]);
       Object.assign(process.env, overrides);
+      const mainOverrides = JSON.parse(overrides.METEOR_CONFIG_MAIN_MODULE || '{}');
+      const testOverrides = JSON.parse(overrides.METEOR_CONFIG_TEST_MODULE || '{}');
       const config = new MeteorConfig({ appDirectory });
       await selftest.expectEqual(config.getMainModulesByArch(), {
         web: overrides.METEOR_CONFIG_CLIENT || mainModule.client,
         os: overrides.METEOR_CONFIG_SERVER || mainModule.server,
-        'web.browser.legacy': mainModule.legacy,
-        'web.cordova': false,
+        'web.browser.legacy': mainOverrides.legacy ?? mainModule.legacy,
+        'web.cordova': mainOverrides['web.cordova'] ?? false,
       });
       await selftest.expectEqual(config.getTestModulesByArch(), {
         web: overrides.METEOR_CONFIG_TEST_CLIENT || testModule.client,
         os: overrides.METEOR_CONFIG_TEST_SERVER || testModule.server,
-        'web.browser.legacy': testModule.legacy,
+        'web.browser.legacy': testOverrides.legacy ?? testModule.legacy,
         'web.cordova': false,
       });
     }
