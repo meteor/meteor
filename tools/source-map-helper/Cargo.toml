@@ -8,6 +8,7 @@ publish = false
 [dependencies]
 anyhow = "1.0.100"
 memmap2 = "0.9.8"
+memchr = "2.8.0"
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145", features = ["raw_value"] }
 sha2 = "0.10.9"
@@ -19,4 +20,3 @@ tempfile = "3.23.0"
 codegen-units = 1
 lto = true
 strip = true
-

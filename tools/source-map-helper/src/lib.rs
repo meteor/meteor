@@ -7,8 +7,11 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, anyhow, bail};
 use memmap2::Mmap;
 use serde::{Deserialize, Serialize};
-use serde_json::value::RawValue;
 use sha2::{Digest, Sha256};
+
+mod source_map_document;
+
+use source_map_document::{JsonSpan, SourceMapDocument};
 
 pub const PROTOCOL_VERSION: u32 = 1;
 
@@ -65,29 +68,21 @@ pub struct Response {
     pub map_sha256: String,
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct RawSourceMap<'a> {
+#[derive(Debug, Default)]
+struct RawSourceMap {
     version: serde_json::Value,
-    #[serde(default, borrow)]
-    sources: Vec<Cow<'a, str>>,
-    #[serde(default, borrow)]
-    names: Vec<Cow<'a, str>>,
-    #[serde(default, borrow)]
-    source_root: Option<Cow<'a, str>>,
-    #[serde(default, borrow)]
-    sources_content: Option<Vec<Option<&'a RawValue>>>,
-    #[serde(default, borrow)]
-    mappings: Cow<'a, str>,
-    #[serde(default, borrow)]
-    sections: Vec<RawSection<'a>>,
+    sources: Vec<String>,
+    names: Vec<String>,
+    source_root: Option<String>,
+    sources_content: Vec<JsonSpan>,
+    mappings: Option<JsonSpan>,
+    sections: Vec<RawSection>,
 }
 
-#[derive(Debug, Deserialize)]
-struct RawSection<'a> {
+#[derive(Debug)]
+struct RawSection {
     offset: RawOffset,
-    #[serde(borrow)]
-    map: Box<RawSourceMap<'a>>,
+    map: Box<RawSourceMap>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -125,7 +120,7 @@ struct OriginalLocation {
 }
 
 struct MappedInput<'a> {
-    map: RawSourceMap<'a>,
+    map: &'a RawSourceMap,
     sources: Vec<String>,
 }
 
@@ -329,12 +324,8 @@ impl Composer {
         let code_mmap = unsafe { Mmap::map(&code_file)? };
         let code = std::str::from_utf8(&code_mmap).context("mapped code is not UTF-8")?;
 
-        let map_file = File::open(map_path)?;
-        let map_mmap = unsafe { Mmap::map(&map_file)? };
-        let map_text = std::str::from_utf8(&map_mmap).context("source map is not UTF-8")?;
-        let map_text = strip_xssi_prefix(map_text);
-        let raw: RawSourceMap<'_> =
-            serde_json::from_str(map_text).context("parsing source map JSON")?;
+        let document = SourceMapDocument::open(map_path)?;
+        let raw = &document.root;
 
         validate_version(&raw.version)?;
         if raw.sections.is_empty() {
@@ -349,18 +340,17 @@ impl Composer {
             }
 
             let input = MappedInput { map: raw, sources };
-            self.emit_basic_map(code, &input)?;
+            self.emit_basic_map(code, &document, &input)?;
 
-            if let Some(contents) = &input.map.sources_content {
-                for (index, source) in input.sources.iter().enumerate() {
-                    if let Some(Some(content)) = contents.get(index) {
-                        let content: Cow<'_, str> = serde_json::from_str(content.get())?;
-                        self.map.set_source_content(source, &content)?;
-                    }
+            for (index, source) in input.sources.iter().enumerate() {
+                if let Some(span) = input.map.sources_content.get(index)
+                    && let Some(content) = document.read_optional_string(*span)?
+                {
+                    self.map.set_source_content(source, &content)?;
                 }
             }
         } else {
-            self.emit_indexed_map(code, &raw, relative_path)?;
+            self.emit_indexed_map(code, &document, raw, relative_path)?;
         }
 
         Ok(())
@@ -369,15 +359,16 @@ impl Composer {
     fn emit_indexed_map(
         &mut self,
         code: &str,
-        map: &RawSourceMap<'_>,
+        document: &SourceMapDocument,
+        map: &RawSourceMap,
         relative_path: Option<&str>,
     ) -> Result<()> {
-        let mut mappings = inflate_indexed_mappings(map)?;
+        let mut mappings = inflate_indexed_mappings(document, map)?;
         mappings.sort_by(compare_inflated_mappings);
 
         let mut sources = Vec::<String>::new();
         let mut source_indexes = HashMap::<String, u32>::new();
-        let mut names = Vec::<Cow<'_, str>>::new();
+        let mut names = Vec::<String>::new();
         let mut name_indexes = HashMap::<String, u32>::new();
         let mut decoded = Vec::with_capacity(mappings.len());
 
@@ -396,7 +387,7 @@ impl Composer {
             let name = mapping.name.as_ref().map(|value| {
                 *name_indexes.entry(value.clone()).or_insert_with(|| {
                     let index = names.len() as u32;
-                    names.push(Cow::Owned(value.clone()));
+                    names.push(value.clone());
                     index
                 })
             });
@@ -415,12 +406,12 @@ impl Composer {
             sources: Vec::new(),
             names,
             source_root: None,
-            sources_content: None,
-            mappings: Cow::Borrowed(""),
+            sources_content: Vec::new(),
+            mappings: None,
             sections: Vec::new(),
         };
         let input = MappedInput {
-            map: synthetic,
+            map: &synthetic,
             sources,
         };
         let mut state = MappedCodeState::new(code);
@@ -429,20 +420,24 @@ impl Composer {
         }
         self.finish_decoded_map(&mut state, &input)?;
 
-        visit_source_contents(map, &mut |source, raw_content| {
+        visit_source_contents(document, map, &mut |source, content| {
             let source = match relative_path {
                 Some(base) => join_path(base, &source),
                 None => source,
             };
-            let content: Cow<'_, str> = serde_json::from_str(raw_content.get())?;
             self.map.set_source_content(&source, &content)
         })?;
         Ok(())
     }
 
-    fn emit_basic_map(&mut self, code: &str, input: &MappedInput<'_>) -> Result<()> {
+    fn emit_basic_map(
+        &mut self,
+        code: &str,
+        document: &SourceMapDocument,
+        input: &MappedInput<'_>,
+    ) -> Result<()> {
         let mut state = MappedCodeState::new(code);
-        decode_mappings(&input.map.mappings, |mapping| {
+        decode_mappings(document.mapping_reader(input.map.mappings)?, |mapping| {
             self.emit_decoded_mapping(&mut state, mapping, input)
         })?;
         self.finish_decoded_map(&mut state, input)
@@ -624,7 +619,10 @@ impl Composer {
     }
 }
 
-fn inflate_indexed_mappings(map: &RawSourceMap<'_>) -> Result<Vec<InflatedMapping>> {
+fn inflate_indexed_mappings(
+    document: &SourceMapDocument,
+    map: &RawSourceMap,
+) -> Result<Vec<InflatedMapping>> {
     validate_version(&map.version)?;
     let mut output = Vec::new();
     let mut last_offset: Option<(u32, u32)> = None;
@@ -636,7 +634,7 @@ fn inflate_indexed_mappings(map: &RawSourceMap<'_>) -> Result<Vec<InflatedMappin
         }
         last_offset = Some(offset);
 
-        let child = inflate_consumer_mappings(&section.map)?;
+        let child = inflate_consumer_mappings(document, &section.map)?;
         let section_source = compute_source_url(consumer_source_root(&section.map), "");
         for mapping in child {
             let generated_line = mapping
@@ -665,10 +663,13 @@ fn inflate_indexed_mappings(map: &RawSourceMap<'_>) -> Result<Vec<InflatedMappin
     Ok(output)
 }
 
-fn inflate_consumer_mappings(map: &RawSourceMap<'_>) -> Result<Vec<InflatedMapping>> {
+fn inflate_consumer_mappings(
+    document: &SourceMapDocument,
+    map: &RawSourceMap,
+) -> Result<Vec<InflatedMapping>> {
     validate_version(&map.version)?;
     if !map.sections.is_empty() {
-        return inflate_indexed_mappings(map);
+        return inflate_indexed_mappings(document, map);
     }
 
     let sources = map
@@ -679,7 +680,7 @@ fn inflate_consumer_mappings(map: &RawSourceMap<'_>) -> Result<Vec<InflatedMappi
         })
         .collect::<Vec<_>>();
     let mut output = Vec::new();
-    decode_mappings(&map.mappings, |mapping| {
+    decode_mappings(document.mapping_reader(map.mappings)?, |mapping| {
         output.push(InflatedMapping {
             generated_line: mapping.generated_line,
             generated_column: mapping.generated_column,
@@ -721,7 +722,7 @@ fn compare_nullable_strings(left: Option<&str>, right: Option<&str>) -> std::cmp
     }
 }
 
-fn consumer_source_root<'a>(map: &'a RawSourceMap<'a>) -> Option<&'a str> {
+fn consumer_source_root(map: &RawSourceMap) -> Option<&str> {
     if map.sections.is_empty() {
         map.source_root.as_deref()
     } else {
@@ -729,27 +730,28 @@ fn consumer_source_root<'a>(map: &'a RawSourceMap<'a>) -> Option<&'a str> {
     }
 }
 
-fn visit_source_contents<F>(map: &RawSourceMap<'_>, callback: &mut F) -> Result<()>
+fn visit_source_contents<F>(
+    document: &SourceMapDocument,
+    map: &RawSourceMap,
+    callback: &mut F,
+) -> Result<()>
 where
-    F: FnMut(String, &RawValue) -> Result<()>,
+    F: FnMut(String, String) -> Result<()>,
 {
     validate_version(&map.version)?;
     if !map.sections.is_empty() {
         for section in &map.sections {
-            visit_source_contents(&section.map, callback)?;
+            visit_source_contents(document, &section.map, callback)?;
         }
         return Ok(());
     }
 
-    if let Some(contents) = &map.sources_content {
-        for (index, source) in map.sources.iter().enumerate() {
-            if let Some(Some(content)) = contents.get(index) {
-                let source = compute_source_url(
-                    map.source_root.as_deref(),
-                    &normalize_path(source.as_ref()),
-                );
-                callback(source, content)?;
-            }
+    for (index, source) in map.sources.iter().enumerate() {
+        if let Some(span) = map.sources_content.get(index)
+            && let Some(content) = document.read_optional_string(*span)?
+        {
+            let source = compute_source_url(map.source_root.as_deref(), &normalize_path(source));
+            callback(source, content)?;
         }
     }
     Ok(())
@@ -969,25 +971,19 @@ impl OutputMap {
 
 struct CodeCursor<'a> {
     code: &'a str,
-    line_starts: Vec<usize>,
-    line_index: usize,
     byte_offset: usize,
+    line_end: usize,
 }
 
 impl<'a> CodeCursor<'a> {
     fn new(code: &'a str) -> Self {
-        let mut line_starts = vec![0];
-        for (index, byte) in code.bytes().enumerate() {
-            if byte == b'\n' {
-                line_starts.push(index + 1);
-            }
-        }
-        Self {
+        let mut cursor = Self {
             code,
-            line_starts,
-            line_index: 0,
             byte_offset: 0,
-        }
+            line_end: 0,
+        };
+        cursor.advance_line_end();
+        cursor
     }
 
     fn is_finished(&self) -> bool {
@@ -995,17 +991,22 @@ impl<'a> CodeCursor<'a> {
     }
 
     fn current_line_end(&self) -> usize {
-        self.line_starts
-            .get(self.line_index + 1)
-            .copied()
-            .unwrap_or(self.code.len())
+        self.line_end
+    }
+
+    fn advance_line_end(&mut self) {
+        self.line_end = self.code.as_bytes()[self.byte_offset..]
+            .iter()
+            .position(|byte| *byte == b'\n')
+            .map(|offset| self.byte_offset + offset + 1)
+            .unwrap_or(self.code.len());
     }
 
     fn take_current_line(&mut self) -> &'a str {
         let start = self.byte_offset;
         let end = self.current_line_end();
         self.byte_offset = end;
-        self.line_index = (self.line_index + 1).min(self.line_starts.len());
+        self.advance_line_end();
         &self.code[start..end]
     }
 
@@ -1037,12 +1038,12 @@ impl<'a> CodeCursor<'a> {
     }
 }
 
-fn decode_mappings<F>(mappings: &str, mut callback: F) -> Result<()>
+fn decode_mappings<R, F>(mappings: R, mut callback: F) -> Result<()>
 where
+    R: Read,
     F: FnMut(DecodedMapping) -> Result<()>,
 {
-    let bytes = mappings.as_bytes();
-    let mut index = 0_usize;
+    let mut input = MappingInput::new(mappings);
     let mut generated_line = 1_u32;
     let mut generated_column = 0_i64;
     let mut source = 0_i64;
@@ -1050,18 +1051,18 @@ where
     let mut original_column = 0_i64;
     let mut name = 0_i64;
 
-    while index < bytes.len() {
-        match bytes[index] {
+    while let Some(current) = input.peek()? {
+        match current {
             b';' => {
                 generated_line = generated_line
                     .checked_add(1)
                     .ok_or_else(|| anyhow!("generated line exceeds 2**32"))?;
                 generated_column = 0;
-                index += 1;
+                input.consume();
             }
-            b',' => index += 1,
+            b',' => input.consume(),
             _ => {
-                generated_column += decode_vlq(bytes, &mut index)?;
+                generated_column += decode_vlq(&mut input)?;
                 ensure_u32("generated column", generated_column)?;
 
                 let mut mapping = DecodedMapping {
@@ -1073,10 +1074,10 @@ where
                     name: None,
                 };
 
-                if index < bytes.len() && !matches!(bytes[index], b',' | b';') {
-                    source += decode_vlq(bytes, &mut index)?;
-                    original_line += decode_vlq(bytes, &mut index)?;
-                    original_column += decode_vlq(bytes, &mut index)?;
+                if input.has_field()? {
+                    source += decode_vlq(&mut input)?;
+                    original_line += decode_vlq(&mut input)?;
+                    original_column += decode_vlq(&mut input)?;
                     ensure_u32("source index", source)?;
                     ensure_u32("original line", original_line)?;
                     ensure_u32("original column", original_column)?;
@@ -1084,14 +1085,14 @@ where
                     mapping.original_line = Some(original_line as u32 + 1);
                     mapping.original_column = Some(original_column as u32);
 
-                    if index < bytes.len() && !matches!(bytes[index], b',' | b';') {
-                        name += decode_vlq(bytes, &mut index)?;
+                    if input.has_field()? {
+                        name += decode_vlq(&mut input)?;
                         ensure_u32("name index", name)?;
                         mapping.name = Some(name as u32);
                     }
                 }
 
-                if index < bytes.len() && !matches!(bytes[index], b',' | b';') {
+                if input.has_field()? {
                     bail!("mapping segment has more than five fields");
                 }
                 callback(mapping)?;
@@ -1102,17 +1103,59 @@ where
     Ok(())
 }
 
-fn decode_vlq(bytes: &[u8], index: &mut usize) -> Result<i64> {
+struct MappingInput<R> {
+    reader: R,
+    buffer: Box<[u8; 64 * 1024]>,
+    index: usize,
+    length: usize,
+}
+
+impl<R> MappingInput<R>
+where
+    R: Read,
+{
+    fn new(reader: R) -> Self {
+        Self {
+            reader,
+            buffer: Box::new([0; 64 * 1024]),
+            index: 0,
+            length: 0,
+        }
+    }
+
+    fn peek(&mut self) -> Result<Option<u8>> {
+        if self.index == self.length {
+            self.length = self.reader.read(self.buffer.as_mut_slice())?;
+            self.index = 0;
+        }
+        Ok((self.index < self.length).then(|| self.buffer[self.index]))
+    }
+
+    fn consume(&mut self) {
+        self.index += 1;
+    }
+
+    fn has_field(&mut self) -> Result<bool> {
+        Ok(self
+            .peek()?
+            .is_some_and(|value| !matches!(value, b',' | b';')))
+    }
+}
+
+fn decode_vlq<R>(input: &mut MappingInput<R>) -> Result<i64>
+where
+    R: Read,
+{
     let mut value = 0_u64;
     let mut shift = 0_u32;
     loop {
-        let byte = *bytes
-            .get(*index)
+        let byte = input
+            .peek()?
             .ok_or_else(|| anyhow!("reached EOF while parsing VLQ"))?;
         if matches!(byte, b',' | b';') {
             bail!("reached end of segment while parsing VLQ");
         }
-        *index += 1;
+        input.consume();
         let digit = decode_base64(byte)?;
         value |= ((digit & 31) as u64) << shift;
         if digit & 32 == 0 {
@@ -1180,14 +1223,6 @@ fn compare_optional_string(
         (Some(_), None) => std::cmp::Ordering::Less,
         (None, Some(_)) => std::cmp::Ordering::Greater,
         (None, None) => std::cmp::Ordering::Equal,
-    }
-}
-
-fn strip_xssi_prefix(value: &str) -> &str {
-    if value.starts_with(")]}'") {
-        value.split_once('\n').map_or(value, |(_, rest)| rest)
-    } else {
-        value
     }
 }
 
@@ -1349,9 +1384,9 @@ mod tests {
         for value in [-4096, -33, -1, 0, 1, 16, 4096] {
             let mut encoded = Vec::new();
             write_vlq(&mut encoded, value).unwrap();
-            let mut index = 0;
-            assert_eq!(decode_vlq(&encoded, &mut index).unwrap(), value);
-            assert_eq!(index, encoded.len());
+            let mut input = MappingInput::new(encoded.as_slice());
+            assert_eq!(decode_vlq(&mut input).unwrap(), value);
+            assert_eq!(input.peek().unwrap(), None);
         }
     }
 
@@ -1363,5 +1398,87 @@ mod tests {
         fs::write(&file, "{}").unwrap();
         assert!(validate_input_path(&[root.path().to_owned()], &file).is_err());
         assert!(validate_output_path(root.path(), &outside.path().join("out.map")).is_err());
+    }
+
+    #[test]
+    fn source_map_document_streams_deferred_fields() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("input.js.map");
+        fs::write(
+            &path,
+            r#"{
+                "version": 3,
+                "sources": ["a.js", "b.js"],
+                "names": ["value"],
+                "sourcesContent": ["const value = \"✓\";", null],
+                "mappings": "AAAA\u0041"
+            }"#,
+        )
+        .unwrap();
+
+        let document = SourceMapDocument::open(&path).unwrap();
+        assert_eq!(document.root.sources[0], "a.js");
+        assert_eq!(document.root.names[0], "value");
+        assert_eq!(
+            document
+                .read_optional_string(document.root.sources_content[0])
+                .unwrap(),
+            Some("const value = \"✓\";".to_owned())
+        );
+        assert_eq!(
+            document
+                .read_optional_string(document.root.sources_content[1])
+                .unwrap(),
+            None
+        );
+
+        let mut mappings = Vec::new();
+        decode_mappings(
+            document.mapping_reader(document.root.mappings).unwrap(),
+            |mapping| {
+                mappings.push(mapping);
+                Ok(())
+            },
+        )
+        .unwrap();
+        assert_eq!(mappings.len(), 1);
+        assert_eq!(mappings[0].name, Some(0));
+    }
+
+    #[test]
+    fn source_map_document_parses_indexed_maps() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("input.js.map");
+        fs::write(
+            &path,
+            r#"{
+                "version": 3,
+                "sections": [{
+                    "offset": {"line": 2, "column": 4},
+                    "map": {"version": 3, "sources": ["a.js"], "names": [], "mappings": "AAAA"}
+                }]
+            }"#,
+        )
+        .unwrap();
+
+        let document = SourceMapDocument::open(&path).unwrap();
+        assert_eq!(document.root.sections.len(), 1);
+        let section = &document.root.sections[0];
+        assert_eq!(section.offset.line, 2);
+        assert_eq!(section.offset.column, 4);
+        assert_eq!(section.map.sources[0], "a.js");
+    }
+
+    #[test]
+    fn source_map_document_rejects_trailing_input() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join("input.js.map");
+        fs::write(
+            &path,
+            r#"{"version":3,"sources":[],"names":[],"mappings":""} false"#,
+        )
+        .unwrap();
+
+        assert!(SourceMapDocument::open(&path).is_err());
     }
 }

@@ -133,6 +133,7 @@ name = "meteor-source-map-helper"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "memchr",
  "memmap2",
  "serde",
  "serde_json",
