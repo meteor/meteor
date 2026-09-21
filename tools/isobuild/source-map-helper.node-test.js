@@ -22,6 +22,7 @@ const HELPER = process.env.METEOR_SOURCE_MAP_HELPER || path.resolve(
   __dirname,
   '../source-map-helper/target/debug/meteor-source-map-helper',
 );
+const HELPER_IMPLEMENTATION = process.env.METEOR_SOURCE_MAP_HELPER_IMPLEMENTATION || 'Rust';
 
 function makeFixture(count, { crlf = false, sourceRoot, unmapped = true } = {}) {
   const generator = new SourceMapGenerator({ file: 'input.js', sourceRoot });
@@ -110,7 +111,7 @@ function runHelper(fixture, { file = 'output.js' } = {}) {
   };
 }
 
-test('Rust helper matches source-map bytes for procedural basic maps', async () => {
+test(`${HELPER_IMPLEMENTATION} helper matches source-map bytes for procedural basic maps`, async () => {
   for (const count of [0, 1, 17, 101, 1000]) {
     for (const crlf of [false, true]) {
       for (const unmapped of [false, true]) {
@@ -129,7 +130,7 @@ test('Rust helper matches source-map bytes for procedural basic maps', async () 
   }
 });
 
-test('Rust helper matches Unicode columns and absent source contents', async () => {
+test(`${HELPER_IMPLEMENTATION} helper matches Unicode columns and absent source contents`, async () => {
   const chunks = ['"😀";', '"é";', '"漢字";'];
   const generator = new SourceMapGenerator({ file: 'unicode.js' });
   let column = 0;
@@ -151,7 +152,7 @@ test('Rust helper matches Unicode columns and absent source contents', async () 
   assert.equal(actual.map, expected.map.toString());
 });
 
-test('Rust helper preserves URL schemes while normalizing source paths', async () => {
+test(`${HELPER_IMPLEMENTATION} helper preserves URL schemes while normalizing source paths`, async () => {
   const fixture = makeFixture(101, { unmapped: false });
   fixture.map.sources = fixture.map.sources.map(source =>
     `webpack://rspack-app/imports/./generated/${source}`
@@ -163,7 +164,7 @@ test('Rust helper preserves URL schemes while normalizing source paths', async (
   assert.equal(actual.map, expected.map.toString());
 });
 
-test('Rust helper matches source-map 0.7.4 indexed-map behavior', async () => {
+test(`${HELPER_IMPLEMENTATION} helper matches source-map 0.7.4 indexed-map behavior`, async () => {
   const first = makeFixture(8, { unmapped: false });
   const second = makeFixture(8, { unmapped: false, sourceRoot: '/second' });
   const fixture = {
@@ -186,7 +187,7 @@ test('Rust helper matches source-map 0.7.4 indexed-map behavior', async () => {
   assert.equal(actual.map, expected.map.toString());
 });
 
-test('Meteor adapter keeps map input file-backed and rewrites sources exactly', async () => {
+test(`${HELPER_IMPLEMENTATION} adapter keeps map input file-backed and rewrites sources exactly`, async () => {
   const fixture = makeFixture(101, { sourceRoot: '/sources' });
   const root = mkdtempSync(path.join(tmpdir(), 'meteor-source-map-adapter-'));
   const mapPath = path.join(root, 'input.js.map');
