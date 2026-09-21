@@ -99,17 +99,45 @@ rm -rf "${MONGO_NAME}"
 # export path so we use the downloaded node and npm
 export PATH="$DIR/bin:$PATH"
 
-if ! command -v cargo >/dev/null 2>&1; then
-    echo "Rust Cargo is required to build meteor-source-map-helper" >&2
-    exit 1
-fi
+buildSourceMapHelper() (
+    # Match the Windows build's tested toolchain. Keep Rust under build/ so it
+    # is removed before packaging, and isolate its environment in a subshell.
+    RUST_VERSION=1.90.0
+    case "$OS/$ARCH" in
+        linux/x86_64) RUST_HOST=x86_64-unknown-linux-gnu ;;
+        linux/aarch64) RUST_HOST=aarch64-unknown-linux-gnu ;;
+        linux/i686) RUST_HOST=i686-unknown-linux-gnu ;;
+        macos/x86_64) RUST_HOST=x86_64-apple-darwin ;;
+        macos/arm64) RUST_HOST=aarch64-apple-darwin ;;
+        *)
+            echo "Unsupported Rust build platform: $OS/$ARCH" >&2
+            exit 1
+            ;;
+    esac
+    RUST_TOOLCHAIN="${RUST_VERSION}-${RUST_HOST}"
+    RUST_BUILD_DIR="${DIR}/build/rust"
+    export CARGO_HOME="${RUST_BUILD_DIR}/cargo"
+    export RUSTUP_HOME="${RUST_BUILD_DIR}/rustup"
+    mkdir -p "$RUST_BUILD_DIR"
 
-cargo build \
-    --manifest-path "${CHECKOUT_DIR}/tools/source-map-helper/Cargo.toml" \
-    --release \
-    --locked
-cp "${CHECKOUT_DIR}/tools/source-map-helper/target/release/meteor-source-map-helper" \
-    "${DIR}/bin/meteor-source-map-helper"
+    echo "Installing Rust ${RUST_VERSION} for the source-map helper..."
+    curl --fail --location --silent --show-error \
+        "https://static.rust-lang.org/rustup/dist/${RUST_HOST}/rustup-init" \
+        --output "${RUST_BUILD_DIR}/rustup-init"
+    chmod +x "${RUST_BUILD_DIR}/rustup-init"
+    "${RUST_BUILD_DIR}/rustup-init" \
+        -y --no-modify-path --profile minimal \
+        --default-host "$RUST_HOST" --default-toolchain "$RUST_TOOLCHAIN"
+
+    export PATH="${CARGO_HOME}/bin:$PATH"
+    "${CARGO_HOME}/bin/cargo" "+${RUST_TOOLCHAIN}" build \
+        --manifest-path "${CHECKOUT_DIR}/tools/source-map-helper/Cargo.toml" \
+        --release --locked --target "$RUST_HOST" \
+        --target-dir "${RUST_BUILD_DIR}/target"
+    cp "${RUST_BUILD_DIR}/target/${RUST_HOST}/release/meteor-source-map-helper" \
+        "${DIR}/bin/meteor-source-map-helper"
+)
+buildSourceMapHelper
 
 cd "$DIR/lib"
 # Overwrite the bundled version with the latest version of npm.
