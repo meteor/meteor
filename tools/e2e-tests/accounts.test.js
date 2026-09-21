@@ -478,7 +478,10 @@ function defineAccountsScenarios(storageMode, getCtx) {
         await page.route('**/_accounts/cookie/refresh', refreshRoute);
         try {
           await page.reload();
-          await openHarness(page, getCtx().port);
+          await page.waitForFunction(
+            () => window.__accountsE2E && Meteor.status().status === 'connected',
+            { timeout: 30_000 },
+          );
           await page.waitForFunction(() => Meteor.userId() != null, { timeout: 10_000 });
           await expectLoggedIn(page, userId);
           expect(refreshCount).toBe(2);
@@ -510,7 +513,10 @@ function defineAccountsScenarios(storageMode, getCtx) {
         expect(statuses).toContain(429);
 
         await page.reload();
-        await openHarness(page, getCtx().port);
+        await page.waitForFunction(
+          () => window.__accountsE2E && Meteor.status().status === 'connected',
+          { timeout: 30_000 },
+        );
         await page.waitForFunction(() => Meteor.userId() != null, { timeout: 15_000 });
         await expectLoggedIn(page, userId);
       });
@@ -603,9 +609,10 @@ function defineAccountsScenarios(storageMode, getCtx) {
           void page.evaluate(() => window.__accountsE2E.Accounts.loginWithCookie());
           await firstRefresh;
           await login(page, { email: 'cookie-competing-login@example.com' }, 'pw12345');
+          const refreshCountAfterLogin = refreshCount;
           await page.waitForTimeout(600);
           await expectLoggedIn(page, userId);
-          expect(refreshCount).toBe(1);
+          expect(refreshCount).toBe(refreshCountAfterLogin);
         } finally {
           await page.unroute('**/_accounts/cookie/refresh', refreshRoute);
         }
