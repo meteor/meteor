@@ -492,6 +492,8 @@ class InputFile extends buildPluginModule.InputFile {
    * @param {String|Object} options.sourceMap A stringified JSON
    * sourcemap, in case the JavaScript file was generated from a
    * different file.
+   * @param {String} [options.hash] A hash of compiler inputs that affect the
+   * output, including source-map metadata. Contributes to the output hash.
    * @param {Function} lazyFinalizer Optional function that can be called
    *                   to obtain any remaining options that may be
    *                   expensive to compute, and thus should only be
@@ -1015,6 +1017,12 @@ class OutputResource {
 
       if (typeof this._inputHash === "string") {
         hashes.push(this._inputHash);
+      }
+
+      // Compilers can account for additional inputs, such as an upstream
+      // source map whose contents changed without changing the JavaScript.
+      if (typeof this._initialOptions.hash === "string") {
+        hashes.push(this._initialOptions.hash);
       }
 
       hashes.push(sha1(await this._get("data")));
