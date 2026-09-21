@@ -273,6 +273,9 @@ Server-only app (no client entry point).
 | No client tests (test client skipped) | Test |
 | Server entry loads (`server/main.js loaded`) | Run |
 | Server Rspack process exits before first compilation and Meteor fails promptly | Run |
+| Distinct `mainModule.client`, `legacy`, and `web.cordova` entries in production and debug bundles (`regressions/architecture-entrypoints.test.js`, temporary client entries) | Build |
+| Legacy TypeScript entry imports a TypeScript dependency outside its entry folder | Build |
+| Explicit `false` architecture entries suppress app JavaScript; omitted entries fall back to the Rspack client | Build |
 
 ### Focused server runtime regressions
 

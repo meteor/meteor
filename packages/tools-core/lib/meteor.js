@@ -233,32 +233,45 @@ export function setMeteorAppEntrypoints({
  * each exact pattern. This preserves gitignore-style "last match wins"
  * semantics while preventing unbounded growth.
  * @param {string} ignore - The pattern to be ignored.
+ * @param {Object} options
+ * @param {string[]} options.entrypoints - Apply only when one of these modules is
+ * the architecture's entrypoint. Omit to apply to all architectures.
  */
-export function setMeteorAppIgnore(ignore) {
-  const currentPatterns = (process.env.METEOR_IGNORE || '')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean);
+export function setMeteorAppIgnore(ignore, { entrypoints } = {}) {
   const newPatterns = ignore.trim().split(/\s+/).filter(Boolean);
 
   if (newPatterns.length === 0) {
     return;
   }
 
-  const combinedPatterns = [...currentPatterns, ...newPatterns];
-  const seenPatterns = new Set();
-  const dedupedPatterns = [];
+  function appendPatterns(current) {
+    const currentPatterns = (current || '').trim().split(/\s+/).filter(Boolean);
+    const combinedPatterns = [...currentPatterns, ...newPatterns];
+    const seenPatterns = new Set();
+    const dedupedPatterns = [];
 
-  for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
-    const pattern = combinedPatterns[index];
+    for (let index = combinedPatterns.length - 1; index >= 0; index -= 1) {
+      const pattern = combinedPatterns[index];
 
-    if (!seenPatterns.has(pattern)) {
-      seenPatterns.add(pattern);
-      dedupedPatterns.push(pattern);
+      if (!seenPatterns.has(pattern)) {
+        seenPatterns.add(pattern);
+        dedupedPatterns.push(pattern);
+      }
     }
+    return dedupedPatterns.reverse().join(' ');
   }
 
-  process.env.METEOR_IGNORE = dedupedPatterns.reverse().join(' ');
+  if (entrypoints) {
+    const byEntrypoint = JSON.parse(process.env.METEOR_IGNORE_BY_ENTRYPOINT || '{}');
+    for (const entrypoint of entrypoints) {
+      if (typeof entrypoint === 'string') {
+        byEntrypoint[entrypoint] = appendPatterns(byEntrypoint[entrypoint]);
+      }
+    }
+    process.env.METEOR_IGNORE_BY_ENTRYPOINT = JSON.stringify(byEntrypoint);
+  } else {
+    process.env.METEOR_IGNORE = appendPatterns(process.env.METEOR_IGNORE);
+  }
 }
 
 /**

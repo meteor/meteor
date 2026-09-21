@@ -1912,12 +1912,14 @@ export class MeteorConfig {
         customMeteorConfigTestServer != null ? {
           ...this._config || {},
           mainModule: {
+            ...(typeof this._config.mainModule === "object" && this._config.mainModule),
             client: process.env.METEOR_CONFIG_CLIENT || this._config.mainModule.client,
             server: process.env.METEOR_CONFIG_SERVER || this._config.mainModule.server,
           },
           ...customMeteorConfigTest && {testModule: customMeteorConfigTest},
           ...((customMeteorConfigTestClient || customMeteorConfigTestServer) && {
             testModule: {
+              ...(typeof this._config.testModule === "object" && this._config.testModule),
               client: customMeteorConfigTestClient || this._config.testModule.client,
               server: customMeteorConfigTestServer || this._config.testModule.server,
             },

@@ -25,6 +25,7 @@ const {
   isMeteorScssProject,
   getMeteorEnvPackageDirs,
   getMeteorAppConfig,
+  getMeteorAppEntrypoints,
   getMeteorAppDir,
 } = require('meteor/tools-core/lib/meteor');
 const { buildUnignorePatterns } = require('meteor/tools-core/lib/ignore');
@@ -295,7 +296,6 @@ export function configureMeteorForRspack() {
   const meteorAppIgnores = `${foldersToIgnore.join(' ')} ${filesToIgnore.join(
     ' ',
   )} ${unignoredFilesAndFolders.join(' ')}`.trim();
-  setMeteorAppIgnore(meteorAppIgnores);
 
   if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
     logInfo(`[i] Meteor app ignores: ${meteorAppIgnores}`);
@@ -361,6 +361,14 @@ export function configureMeteorForRspack() {
       mainServer: `${RSPACK_BUILD_CONTEXT}/${testServerModule}`,
     };
   }
+  // Generated files must stay out of architectures with their own entrypoint.
+  // Only the architectures using our replacement entries re-include them and
+  // exclude the sources compiled by Rspack.
+  setMeteorAppIgnore(`/_build /_build-* /${RSPACK_BUILD_CONTEXT}`);
+  setMeteorAppIgnore(meteorAppIgnores, {
+    entrypoints: Object.values(appEntrypoints),
+  });
+
   // Set entry points in environment variables if they exist
   setMeteorAppEntrypoints(appEntrypoints);
 
@@ -428,11 +436,12 @@ export function applyDelegatedExtensions(extensions) {
     );
 
     setMeteorAppIgnore(
-      [...ignorePatterns, ...unignoredFilesAndFolders].join(' ')
+      [...ignorePatterns, ...unignoredFilesAndFolders].join(' '),
+      { entrypoints: Object.values(getMeteorAppEntrypoints()) },
     );
 
     if (isMeteorAppDebug() || isMeteorAppConfigModernVerbose()) {
-      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE}`);
+      logInfo(`[i] Rspack delegated extensions: ${extensions.join(', ')} (ignored in entry folders)\n    ${process.env.METEOR_IGNORE_BY_ENTRYPOINT}`);
     }
   }
 }
