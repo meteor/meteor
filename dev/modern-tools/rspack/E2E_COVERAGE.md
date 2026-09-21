@@ -55,7 +55,7 @@ Core React 19 integration with custom Meteor local directory.
 | Custom rspack config (`rspack.config.cjs`) | All |
 | HMR works in dev, disabled in prod | Run, Prod |
 | Rspack devserver port is released after `SIGTERM` (`regressions/port-cleanup.test.js`) | Run |
-| Rapid server edits during slow startup and shutdown preserve the dev server, apply the final edit, and allow a later client refresh (`regressions/rapid-server-restarts.test.js`, #14755) | Run |
+| Rapid server edits during slow startup and shutdown preserve the dev server, apply the final edit, allow a later client refresh, and can replace an app that stops answering IPC (`regressions/rapid-server-restarts.test.js`, #14755) | Run |
 | `--port` with a host prefix derives a valid rspack devserver port (`regressions/host-prefixed-port.test.js`) | Run |
 | Client test Node compatibility (`Buffer`, `buffer`, `crypto`, `timers/promises`) | Test |
 | Cordova bundle stays modern when `meteor.modern` is unset (`regressions/cordova-modern-default.test.js`) | Build |

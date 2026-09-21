@@ -28,6 +28,15 @@ WebApp.handlers.use('/ipc-restart-status', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ revision: ${revision}, pid: process.pid }));
 });
+
+WebApp.handlers.use('/ipc-stop-responding', (req, res) => {
+  res.end('blocking');
+  setImmediate(() => {
+    console.log('IPC_APP_UNRESPONSIVE');
+    // Leave IPC open but stop servicing messages, without spinning the CPU.
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0);
+  });
+});
 `;
 }
 
@@ -51,7 +60,9 @@ describe('Regressions / Rapid server restarts /', () => {
 
   it('keeps the dev server and Rspack client working after rapid server edits', async () => {
     const serverFile = path.join(tempDir, 'server/main.js');
+    const publicFile = path.join(tempDir, 'public/ipc-refresh.txt');
     await fs.writeFile(serverFile, serverSource(0));
+    await fs.outputFile(publicFile, 'initial');
 
     const { meteorProcess: proc, outputLines } = await runMeteorCommand(
       'run', ['--port', String(APP_PORT)], tempDir, {
@@ -67,9 +78,9 @@ describe('Regressions / Rapid server restarts /', () => {
     });
     await assertMeteorReactApp(APP_PORT, { title: 'react' });
 
-    async function waitForRevision(revision) {
+    async function waitForRevision(revision, timeout = 60000) {
       let status;
-      const deadline = Date.now() + 60000;
+      const deadline = Date.now() + timeout;
       while (Date.now() < deadline) {
         if (meteorProcess.exitCode !== null) {
           throw new Error(`meteor run exited during a restart:\n${outputLines.join('\n')}`);
@@ -107,6 +118,23 @@ describe('Regressions / Rapid server restarts /', () => {
     await fs.appendFile(path.join(tempDir, 'client/main.jsx'), '\nglobalThis.__ipcRefresh = "after-restarts";\n');
     await page.waitForFunction(() => globalThis.__ipcRefresh === 'after-restarts');
     await assertRspackScriptTag(APP_PORT);
+
+    // A client refresh must not prevent a server edit from replacing an app
+    // that is alive but no longer answers IPC messages.
+    await fetch(`http://localhost:${APP_PORT}/ipc-stop-responding`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    await waitForMeteorOutput(outputLines, 'IPC_APP_UNRESPONSIVE', { meteorProcess });
+    const refreshStart = outputLines.length;
+    await fs.writeFile(publicFile, 'refresh while IPC is unresponsive');
+    await waitForMeteorOutput(outputLines, 'Client modified -- refreshing', {
+      meteorProcess,
+      startIndex: refreshStart,
+    });
+    await fs.writeFile(serverFile, serverSource(18));
+    const recovered = await waitForRevision(18, 30000);
+    expect(recovered.pid).not.toBe(final.pid);
+    await assertMeteorReactApp(APP_PORT, { title: 'react' });
     expect(meteorProcess.exitCode).toBeNull();
     expect(outputLines.join('\n')).not.toMatch(/Error: write EPIPE|ERR_IPC_CHANNEL_CLOSED/);
   }, 240000);
