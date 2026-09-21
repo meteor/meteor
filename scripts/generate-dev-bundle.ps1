@@ -286,6 +286,61 @@ Function Invoke-NativeCommandLoud {
   return $LASTEXITCODE
 }
 
+Function Add-SourceMapHelper {
+  # Keep Rust local to this build: runners need not have Cargo installed, and
+  # only the compiled helper belongs in the dev bundle. This version was used
+  # to validate the helper with its checked-in Cargo.lock.
+  $rustVersion = '1.90.0'
+  $rustHost = 'x86_64-pc-windows-msvc'
+  $rustToolchain = "${rustVersion}-${rustHost}"
+  $previousCargoHome = $env:CARGO_HOME
+  $previousRustupHome = $env:RUSTUP_HOME
+  $previousPath = $env:PATH
+
+  try {
+    $env:CARGO_HOME = Join-Path $dirTemp 'cargo'
+    $env:RUSTUP_HOME = Join-Path $dirTemp 'rustup'
+    $cargoBin = Join-Path $env:CARGO_HOME 'bin'
+    $rustupInstaller = Join-Path $dirTemp 'rustup-init.exe'
+    $rustupUrl = "https://static.rust-lang.org/rustup/dist/${rustHost}/rustup-init.exe"
+
+    Write-Host "Installing Rust ${rustVersion} for the source-map helper..." `
+      -ForegroundColor Magenta
+    $webclient.DownloadFile($rustupUrl, $rustupInstaller)
+    $rustupExit = Invoke-NativeCommandLoud $rustupInstaller @(
+      '-y', '--no-modify-path', '--profile', 'minimal',
+      '--default-host', $rustHost, '--default-toolchain', $rustToolchain
+    )
+    if ($rustupExit -ne 0) {
+      throw "Couldn't install Rust ${rustVersion} (rustup exited with code $rustupExit)."
+    }
+
+    $env:PATH = "$cargoBin;$previousPath"
+    $cargo = Join-Path $cargoBin 'cargo.exe'
+    $sourceMapHelperManifest = Join-Path $dirCheckout `
+      'tools\source-map-helper\Cargo.toml'
+    $sourceMapHelperTarget = Join-Path $dirTemp 'source-map-helper-target'
+
+    $cargoExit = Invoke-NativeCommandLoud $cargo @(
+      "+$rustToolchain", 'build', '--manifest-path', $sourceMapHelperManifest,
+      '--release', '--locked', '--target', $rustHost,
+      '--target-dir', $sourceMapHelperTarget
+    )
+    if ($cargoExit -ne 0) {
+      throw "Couldn't build meteor-source-map-helper (Cargo exited with code $cargoExit)."
+    }
+
+    Copy-Item `
+      (Join-Path $sourceMapHelperTarget `
+        "$rustHost\release\meteor-source-map-helper.exe") `
+      (Join-Path $dirBin 'meteor-source-map-helper.exe')
+  } finally {
+    $env:CARGO_HOME = $previousCargoHome
+    $env:RUSTUP_HOME = $previousRustupHome
+    $env:PATH = $previousPath
+  }
+}
+
 Function Add-NpmModulesFromJsBundleFile {
   Param (
     [Parameter(Mandatory=$True, Position=0)]
@@ -358,20 +413,7 @@ $env:PATH = "$env:PATH;$dirBin"
 # Install Node.js and npm and get their paths to use from here on.
 $toolCmds = Add-NodeAndNpm
 
-if (!(Get-Command cargo -ErrorAction SilentlyContinue)) {
-  throw "Rust Cargo is required to build meteor-source-map-helper."
-}
-
-$sourceMapHelperManifest = Join-Path $dirCheckout `
-  'tools\source-map-helper\Cargo.toml'
-& cargo build --manifest-path $sourceMapHelperManifest --release --locked
-if ($LASTEXITCODE -ne 0) {
-  throw "Couldn't build meteor-source-map-helper."
-}
-Copy-Item `
-  (Join-Path $dirCheckout `
-    'tools\source-map-helper\target\release\meteor-source-map-helper.exe') `
-  (Join-Path $dirBin 'meteor-source-map-helper.exe')
+Add-SourceMapHelper
 
 "Location of node.exe:"
 & Get-Command node | Select-Object -ExpandProperty Definition
