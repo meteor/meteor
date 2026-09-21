@@ -2,6 +2,7 @@ import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 import { Instrumentation } from 'meteor/instrumentation';
 import { makeTestConnection } from 'meteor/test-helpers';
+import { previewError } from './preview.js';
 
 // What the instr_test.mutate handler actually SAW — proves projector mutations
 // of the args never reach the handler.
@@ -450,3 +451,62 @@ Tinytest.addAsync(
     }
   }
 );
+
+Tinytest.addAsync(
+  'instrumentation - a rejecting onListenerError is contained without recursion',
+  async function (test) {
+    const unhandled = [];
+    const onUnhandled = (error) => unhandled.push(error);
+    process.on('unhandledRejection', onUnhandled);
+    let reports = 0;
+    Instrumentation.configure({
+      onListenerError: async () => {
+        reports += 1;
+        throw new Error('reporter rejected');
+      },
+    });
+    const a = Instrumentation.on('method.start', () => { throw new Error('listener rejected'); });
+    try {
+      test.equal(await Meteor.callAsync('instr_test.echo', 6), 12, 'the producer still succeeds');
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      test.equal(reports, 1, 'the reporter rejection is not reported recursively');
+      test.equal(unhandled.length, 0, 'the reporter rejection is handled');
+    } finally {
+      a.stop();
+      Instrumentation.configure({ onListenerError: null });
+      process.removeListener('unhandledRejection', onUnhandled);
+    }
+  }
+);
+
+Tinytest.add('instrumentation - unusual Error fields are bounded detached JSON previews', function (test) {
+  const reason = { nested: { secret: 'x'.repeat(1000) } };
+  reason.self = reason;
+  const error = new Error('ordinary message');
+  Object.defineProperties(error, {
+    name: { value: { kind: Symbol('custom') }, configurable: true },
+    message: { value: { big: 10n ** 500n }, configurable: true },
+    error: { value: { callback() {}, missing: undefined }, configurable: true },
+    reason: { value: reason, configurable: true },
+  });
+
+  const preview = previewError(error);
+  test.equal(preview.name.kind, 'Symbol(custom)');
+  test.isTrue(String(preview.message.big).length <= 210, 'bigint message data is bounded');
+  test.equal(preview.error.callback, '[Function callback]');
+  test.equal(preview.error.missing, '[undefined]');
+  test.isTrue(preview.reason.nested.secret.length <= 201, 'nested reason strings are bounded');
+  test.equal(preview.reason.self, '[Circular]', 'cyclic fields terminate');
+  test.isTrue(preview.reason !== reason && preview.reason.nested !== reason.nested, 'the preview is detached');
+  test.equal(JSON.parse(JSON.stringify(preview)), preview, 'the preview is JSON-safe');
+
+  preview.reason.nested.secret = 'changed';
+  test.isTrue(reason.nested.secret.startsWith('x'), 'mutating the preview cannot mutate the application error');
+
+  const ordinaryError = new Meteor.Error(404, 'not found');
+  const ordinary = previewError(ordinaryError);
+  test.equal(ordinary.error, 404, 'numeric Meteor.Error codes are preserved');
+  test.equal(ordinary.reason, 'not found');
+  test.equal(ordinary.name, ordinaryError.name);
+  test.equal(ordinary.message, ordinaryError.message);
+});
