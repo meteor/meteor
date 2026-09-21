@@ -532,3 +532,31 @@ Tinytest.add('instrumentation - hostile Date methods cannot escape a live value'
   invalid.toISOString = () => live;
   test.equal(previewValue(invalid), '[Invalid Date]');
 });
+
+Tinytest.add('instrumentation - hostile Array methods cannot escape a live value', function (test) {
+  const live = {};
+  live.self = live;
+  const nested = { value: 'original' };
+  const reason = [nested];
+  reason.push(reason);
+  reason.slice = () => ({ map: () => live });
+  reason.map = () => live;
+  const error = new Error('array field');
+  error.reason = reason;
+
+  const errorPreview = previewError(error);
+  const valuePreview = previewValue(reason);
+  test.isTrue(Array.isArray(errorPreview.reason) && Array.isArray(valuePreview), 'previews use ordinary arrays');
+  test.equal(errorPreview.reason[1], '[Circular]');
+  test.equal(valuePreview[1], '[Circular]');
+  test.isTrue(errorPreview.reason !== live && valuePreview !== live, 'no live Array method result escapes');
+  test.equal(JSON.parse(JSON.stringify(errorPreview)), errorPreview, 'the Error preview stays JSON-safe');
+
+  errorPreview.reason[0].value = 'changed';
+  valuePreview[0].value = 'also changed';
+  test.equal(nested.value, 'original', 'preview mutation cannot affect the application array contents');
+
+  const long = Array.from({ length: 40 }, (_, index) => index);
+  long.slice = () => ({ map: () => live });
+  test.equal(previewValue(long)[32], '… +8 more', 'the array length marker is preserved');
+});

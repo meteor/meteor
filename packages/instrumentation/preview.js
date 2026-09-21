@@ -84,8 +84,26 @@ function walk(value, opts, depth, seen) {
 
   let out;
   if (Array.isArray(value)) {
-    out = value.slice(0, opts.maxArrayLength).map((v) => walk(v, opts, depth + 1, seen));
-    if (value.length > opts.maxArrayLength) out.push(`… +${value.length - opts.maxArrayLength} more`);
+    let arrayLength;
+    try {
+      arrayLength = value.length;
+    } catch (_ignored) {
+      seen.delete(value);
+      return '[Array]';
+    }
+    out = [];
+    const previewLength = Math.min(arrayLength, opts.maxArrayLength);
+    for (let index = 0; index < previewLength; index += 1) {
+      let item;
+      try {
+        item = value[index];
+      } catch (_ignored) {
+        out[index] = '[Getter threw]';
+        continue;
+      }
+      out[index] = walk(item, opts, depth + 1, seen);
+    }
+    if (arrayLength > opts.maxArrayLength) out[previewLength] = `… +${arrayLength - opts.maxArrayLength} more`;
   } else {
     out = {};
     const keys = Object.keys(value);
