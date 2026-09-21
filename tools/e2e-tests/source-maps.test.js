@@ -315,6 +315,8 @@ describe('Regressions / Source Maps /', () => {
         commandOptions: ['--directory', '--server-only', '--debug'],
       }));
       expect(await fs.readFile(generatedPath, 'utf8')).toBe(before);
+      // Identical JavaScript must now map to the shifted original lines and
+      // embed the updated source contents, even with Meteor's caches still warm.
       await checkBuildMaps();
     }
 

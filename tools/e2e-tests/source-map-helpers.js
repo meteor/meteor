@@ -139,6 +139,7 @@ export function hasSource(raw, relativePath) {
 export function fixtureSource(map, relativePath, contents) {
   const index = sourceIndex(map, relativePath);
   expect(index).toBeGreaterThanOrEqual(0);
+  // Embedded source must match the current file, including source-only edits.
   expect(map.sourcesContent[index]).toBe(contents);
   return map.resolvedSources[index];
 }
@@ -165,6 +166,8 @@ export function checkEmittedMap(raw, code, relativePath, contents, message) {
       `Missing error message for ${relativePath}: ${code.slice(Math.max(0, offset - 80), offset + message.length + 80)}`,
     );
   }
+  // Locate this representative token in the actual emitted (possibly minified)
+  // JavaScript, then require its exact original TypeScript file, line, and column.
   const generated = sourcePosition(code, match[0]);
   expectOriginal(
     map,
