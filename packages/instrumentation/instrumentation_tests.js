@@ -2,7 +2,7 @@ import { Tinytest } from 'meteor/tinytest';
 import { Meteor } from 'meteor/meteor';
 import { Instrumentation } from 'meteor/instrumentation';
 import { makeTestConnection } from 'meteor/test-helpers';
-import { previewError } from './preview.js';
+import { previewError, previewValue } from './preview.js';
 
 // What the instr_test.mutate handler actually SAW — proves projector mutations
 // of the args never reach the handler.
@@ -509,4 +509,26 @@ Tinytest.add('instrumentation - unusual Error fields are bounded detached JSON p
   test.equal(ordinary.reason, 'not found');
   test.equal(ordinary.name, ordinaryError.name);
   test.equal(ordinary.message, ordinaryError.message);
+});
+
+Tinytest.add('instrumentation - hostile Date methods cannot escape a live value', function (test) {
+  const live = {};
+  live.self = live;
+  const date = new Date('2026-09-21T12:34:56.000Z');
+  date.getTime = () => 0;
+  date.toISOString = () => live;
+  const error = new Error('date field');
+  error.reason = date;
+
+  const errorPreview = previewError(error);
+  const valuePreview = previewValue(date);
+  test.equal(errorPreview.reason, '2026-09-21T12:34:56.000Z');
+  test.equal(valuePreview, '2026-09-21T12:34:56.000Z');
+  test.isTrue(errorPreview.reason !== live && valuePreview !== live, 'no live Date method result escapes');
+  test.equal(JSON.parse(JSON.stringify(errorPreview)), errorPreview, 'the Error preview stays JSON-safe');
+
+  const invalid = new Date(NaN);
+  invalid.getTime = () => 0;
+  invalid.toISOString = () => live;
+  test.equal(previewValue(invalid), '[Invalid Date]');
 });

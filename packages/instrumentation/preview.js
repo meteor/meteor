@@ -6,6 +6,8 @@
 // so a careless override can never blow up a consumer.
 
 const DEFAULTS = { maxDepth: 4, maxKeys: 32, maxStringLength: 200, maxArrayLength: 32 };
+const dateGetTime = Date.prototype.getTime;
+const dateToISOString = Date.prototype.toISOString;
 
 const truncate = (str, max) => (str.length > max ? str.slice(0, max) + '…' : str);
 // Reading a property of an application error can itself throw (getters), and
@@ -68,8 +70,12 @@ function walk(value, opts, depth, seen) {
   if (t === 'bigint') return truncate(`${value}n`, opts.maxStringLength);
   if (value instanceof Error) return previewErrorWithState(value, opts, depth, seen);
   if (value instanceof Date) {
-    const ms = value.getTime();
-    return Number.isNaN(ms) ? '[Invalid Date]' : value.toISOString();
+    try {
+      const ms = dateGetTime.call(value);
+      return Number.isNaN(ms) ? '[Invalid Date]' : dateToISOString.call(value);
+    } catch (_ignored) {
+      return '[Invalid Date]';
+    }
   }
 
   if (depth >= opts.maxDepth) return Array.isArray(value) ? '[Array]' : '[Object]';
