@@ -71,8 +71,7 @@ function updatePeaks(peaks, rootPid) {
 
   const tool = rows.find(row => row.command.includes("tools/index.js"));
   const helperRows = rows.filter(row =>
-    row.command.includes("meteor-source-map-helper") ||
-    row.command.includes("source-map-helper-node/index.js")
+    row.command.includes("meteor-source-map-helper")
   );
   const helperRSS = helperRows.reduce((total, row) => total + row.rssKB, 0);
   const treeRSS = rows.reduce((total, row) => total + row.rssKB, 0);
