@@ -456,6 +456,26 @@ Blaze app plus a web app manifest, icons, a dependency-free service worker and a
 
 **Meteor packages:**
 - `meteor-base`, `mobile-experience`, `mongo`, `blaze-html-templates`, `jquery`, `reactive-var`, `tracker`, `standard-minifier-css`, `standard-minifier-js`, `es5-shim`, `ecmascript`, `typescript`, `shell-server`, `hot-module-replacement`, `blaze-hot`, `rspack`
+
+**Service worker behavior:**
+
+- In development, the service worker precaches only its static offline files.
+  Application bundles, navigation requests, and other traffic stay on the
+  network so hot code push does not reuse a stale bundle.
+- In production, navigation is network-first with `offline.html` as a fallback,
+  hashed bundles use stale-while-revalidate, and images and fonts use a
+  cache-first strategy.
+- DDP traffic under `/sockjs/` and `/websocket` is never intercepted.
+
+`localhost` is a secure context, so the generated app is installable during
+local development. A browser on a phone or another device requires the app to
+be served over HTTPS before offering installation.
+
+The skeleton provides an installable app shell and offline fallback page. It
+does not synchronize Meteor data, queue methods, or replay writes while the
+application is offline; add those capabilities separately if your application
+needs them.
+
 </details>
 
 <details>
