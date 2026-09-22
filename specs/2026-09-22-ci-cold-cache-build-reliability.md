@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: validating
 project: meteor
 project-root: /Users/leonardo/Repositories/meteor
 created: 2026-09-22
@@ -9,7 +9,10 @@ decision:
 supersedes:
 superseded-by:
 implementation:
-  commits: []
+  commits:
+    - 5d5584b716
+    - 372af817f2
+    - 436072e959
   pull-request: 14771
 ---
 
@@ -81,12 +84,28 @@ is independently revertible.
 
 ## Execution checklist
 
-- [ ] Reproduce and classify the Babel preparation failure.
-- [ ] Reproduce and classify Test Tools group 1.
-- [ ] Add focused regression coverage for confirmed root causes.
-- [ ] Implement the smallest complete fixes.
-- [ ] Run focused tests and CI-equivalent commands.
+- [x] Reproduce and classify the Babel preparation failure.
+- [x] Reproduce and classify Test Tools group 1.
+- [x] Add focused regression coverage for confirmed root causes.
+- [x] Implement the smallest complete fixes.
+- [x] Run focused tests and CI-equivalent commands.
 
 ## Verification results
 
-Pending implementation.
+- **Passed:** A cold `--get-ready` completed in the E2E workflow's Node 22,
+  6-CPU, 16 GiB ARM64 container. Native watching reproduced repeated inotify
+  failures; `METEOR_WATCH_FORCE_POLLING=true` completed without those failures
+  or a native abort.
+- **Passed:** `npm run test:unit -- --runInBand
+  ../fs/safe-watcher.test.js` passed all five watcher tests, including transient
+  missing-path recovery and preservation of unexpected-error diagnostics.
+- **Passed:** The previously failing `compiler plugin caching - local plugin
+  with SwcCompiler` self-test passed without retries after its restart assertion
+  was isolated from unrelated Mongo startup.
+- **Passed:** The complete `^com[n-z]` compiler-plugin shard passed all 10 tests
+  in a native ARM64 Node 22 container with the CI environment and retry policy.
+- **Inferred:** The polling mitigation prevents the observed amd64 CI native
+  abort because it avoids the reproduced Parcel/inotify path entirely.
+- **Skipped:** The exact `meteor/circleci:2026.07.28-android-36-node-24` amd64
+  shard could not execute on this ARM host; its Node process stalled in an
+  emulation futex before tests began. CI remains the required amd64 confirmation.
