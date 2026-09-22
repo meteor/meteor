@@ -14,7 +14,7 @@ Package.onUse(function (api) {
 
   api.addFiles(["reporter.js"], "server");
 
-  api.addAssets("puppeteer_runner.js", "server");
+  api.addAssets(["puppeteer_runner.js", "puppeteer-bootstrap.js"], "server");
 
   api.export("runTests");
 });
