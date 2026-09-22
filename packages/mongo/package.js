@@ -9,7 +9,7 @@
 
 Package.describe({
   summary: "Adaptor for using MongoDB and Minimongo over DDP",
-  version: '2.5.1',
+  version: '2.5.2-beta360.1',
 });
 
 Npm.depends({
@@ -111,6 +111,7 @@ Package.onUse(function (api) {
   // For zodern:types to pick up our published types.
   // Both the .d.ts file and package-types.json must be published
   api.addAssets("mongo.d.ts", "server");
+  api.types("mongo.native.d.ts");
   api.addAssets("package-types.json", "server");
 });
 
@@ -128,12 +129,15 @@ Package.onTest(function (api) {
     "base64",
     "typescript",
   ]);
+  api.use("ddp-common", "client");
   // XXX test order dependency: the allow_tests "partial allow" test
   // fails if it is run before mongo_livedata_tests.
   api.addFiles("tests/mongo_livedata_tests.js", ["client", "server"]);
   api.addFiles("tests/upsert_compatibility_test.js", "server");
   api.addFiles("tests/allow_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_tests.js", ["client", "server"]);
+  api.addFiles("tests/replication_fields_tests.js", "client");
+  api.addFiles("tests/replication_pubsub_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_async_tests.js", ["client", "server"]);
   api.addFiles("tests/observe_changes_tests.js", ["client", "server"]);
   api.addFiles("tests/collection_extensions_tests.js", ["client", "server"]);

@@ -1,0 +1,18 @@
+body {
+  padding: 10px;
+  font-family: sans-serif;
+}
+
+/* PWA install button (shown only when the browser offers installation). */
+.pwa-install {
+  background: #ff6b35;
+  color: #fff;
+  border: 0;
+  padding: 8px 18px;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+}
+.pwa-install:hover {
+  background: #e95a25;
+}

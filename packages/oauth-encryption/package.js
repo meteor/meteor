@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Encrypt account secrets stored in the database",
-  version: '1.3.3',
+  version: '1.3.4-beta360.1',
 });
 
 Package.onUse(api => {
@@ -9,6 +9,7 @@ Package.onUse(api => {
   api.use("ejson@1.1.3", "server");
   api.mainModule("encrypt.js", "server");
   api.export("OAuthEncryption", "server");
+  api.types("oauth-encryption.d.ts");
 });
 
 Package.onTest(api => {

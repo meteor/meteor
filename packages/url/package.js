@@ -1,6 +1,6 @@
 Package.describe({
   name: "url",
-  version: '1.3.6',
+  version: '1.3.7-beta360.1',
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG URL/URLSearchParams",
   documentation: "README.md"
 });
@@ -20,6 +20,7 @@ Package.onUse(function (api) {
 
   api.export("URL");
   api.export("URLSearchParams");
+  api.types("url.d.ts");
 });
 
 Package.onTest(function (api) {
