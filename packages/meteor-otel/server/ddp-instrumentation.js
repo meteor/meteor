@@ -1,643 +1,151 @@
-/**
- * DDP Instrumentation for Meteor
- *
- * Provides automatic tracing for DDP messages (method calls, subscriptions, etc.)
- * and utilities for custom roundtrip tracing.
- */
+import { SpanKind, SpanStatusCode, diag } from '@opentelemetry/api';
+import { Instrumentation } from 'meteor/instrumentation';
 
-import { trace, SpanStatusCode, context } from '@opentelemetry/api';
+const DEFAULT_MAX_PENDING_SPANS = 10000;
+const DEFAULT_SPAN_TIMEOUT_MS = 30 * 60 * 1000;
 
-/* global DDPServer */
-
-let ddpHookInstalled = false;
-// pendingSpans maps `${collection}:${id}` -> SpanInfo[] (FIFO queue).
-// We use a queue rather than a single entry per key because two concurrent
-// roundtrips for the same document (e.g., insert followed quickly by update,
-// or two callers racing) would otherwise overwrite each other and leak the
-// earlier span. With a queue, the DDP `added` hook dequeues the oldest
-// matching span, while explicit `fail`/`end`/timeout paths remove the
-// specific span by identity so out-of-order completion still works.
-const pendingSpans = new Map();
-let pendingSpansCount = 0;
-
-// Hard cap on the number of pending roundtrip spans we hold in memory. Each
-// entry is created by `trackDocument` and is normally cleared by the DDP
-// 'added' hook or by the per-span timeout. If publication errors or buggy
-// callers prevent cleanup, this cap stops the map from growing unbounded.
-// New entries beyond the limit are dropped (the span ends as ERROR with a
-// dedicated reason) and a single warning is logged.
-const MAX_PENDING_SPANS = Number(process.env.OTEL_DDP_MAX_PENDING_SPANS) > 0
-  ? Number(process.env.OTEL_DDP_MAX_PENDING_SPANS)
-  : 10000;
-let pendingSpansOverflowWarned = false;
-
-function enqueueSpanInfo(key, spanInfo) {
-  let queue = pendingSpans.get(key);
-  if (!queue) {
-    queue = [];
-    pendingSpans.set(key, queue);
+function positiveNumber(value, fallback, name, integer = false) {
+  if (value === undefined) return fallback;
+  if (!Number.isFinite(value) || value <= 0 || (integer && !Number.isInteger(value))) {
+    throw new TypeError(`${name} must be a positive ${integer ? 'integer' : 'finite number'}`);
   }
-  queue.push(spanInfo);
-  pendingSpansCount += 1;
+  return value;
 }
 
-function dequeueSpanInfo(key) {
-  const queue = pendingSpans.get(key);
-  if (!queue || queue.length === 0) return null;
-  const spanInfo = queue.shift();
-  pendingSpansCount -= 1;
-  if (queue.length === 0) pendingSpans.delete(key);
-  return spanInfo;
-}
-
-function removeSpanInfo(key, span) {
-  const queue = pendingSpans.get(key);
-  if (!queue) return false;
-  const index = queue.findIndex((entry) => entry.span === span);
-  if (index < 0) return false;
-  queue.splice(index, 1);
-  pendingSpansCount -= 1;
-  if (queue.length === 0) pendingSpans.delete(key);
-  return true;
-}
-
-// Cap on the number of argument types captured per call. Beyond this point we
-// only record the count to keep span attribute cardinality bounded — high
-// cardinality on per-call attributes can blow up storage on the backend.
-const MAX_PARAM_TYPES = 10;
-
-const DEFAULT_SAFE_HEADER_KEYS = [
-  'user-agent',
-  'x-forwarded-for',
-  'x-real-ip',
-  'accept-language',
-  'host',
-];
-
-// Resolve the list of headers to capture from `OTEL_DDP_CAPTURED_HEADERS`.
-// Empty string disables header capture entirely. Anything else is parsed as a
-// comma-separated allowlist (case-insensitive). Some of these headers may
-// contain PII (user-agent, forwarded IPs, etc.) and tighter regulatory
-// environments (e.g., GDPR) may want to override the default.
-function resolveSafeHeaderKeys() {
-  const raw = process.env.OTEL_DDP_CAPTURED_HEADERS;
-  if (raw === undefined) return DEFAULT_SAFE_HEADER_KEYS;
-  return raw
-    .split(',')
-    .map((h) => h.trim().toLowerCase())
-    .filter(Boolean);
-}
-
-const SAFE_HEADER_KEYS = resolveSafeHeaderKeys();
-
-// IP addresses can be considered PII under regulations like GDPR. Allow ops
-// to disable the default `net.peer.ip` attribute via OTEL_DDP_CAPTURE_IP=0.
-const CAPTURE_CLIENT_IP = process.env.OTEL_DDP_CAPTURE_IP !== '0';
-
-// Optional hook for callers to enrich/replace the connection attributes per
-// span — modeled after `applyCustomAttributesOnSpan` from
-// @opentelemetry/instrumentation-http. Set via `setConnectionAttributesHook`.
-let connectionAttributesHook = null;
-
-/**
- * Register a hook to customize connection attributes captured on DDP spans.
- * The hook receives `(attrs, { connection, session })` and may mutate `attrs`
- * (delete keys, add keys) or return a replacement object. Useful when the
- * default capture is too broad for your privacy/regulatory requirements.
- *
- * @param {Function|null} fn - Hook function or null to clear.
- */
-export function setConnectionAttributesHook(fn) {
-  if (fn !== null && typeof fn !== 'function') {
-    throw new TypeError('setConnectionAttributesHook expects a function or null');
-  }
-  connectionAttributesHook = fn;
-}
-
-function summarizeArgTypes(args) {
-  if (!Array.isArray(args)) return [];
-  if (args.length <= MAX_PARAM_TYPES) {
-    return args.map((arg) => typeof arg);
-  }
-  const truncated = args.slice(0, MAX_PARAM_TYPES).map((arg) => typeof arg);
-  truncated.push('...');
-  return truncated;
-}
-
-
-function extractConnectionAttributes(connection, session) {
-  if (!connection && !session) return {};
-
-  const attrs = {};
-
-  if (connection?.id)  attrs['ddp.session.id'] = connection.id;
-  if (CAPTURE_CLIENT_IP && connection?.clientAddress) attrs['net.peer.ip'] = connection.clientAddress;
-  if (session?.version) attrs['ddp.protocol.version'] = session.version;
-  if (session?._socketUrl) attrs['ddp.connection.url'] = session._socketUrl;
-  if (session?.userId) attrs['ddp.session.user_id'] = session.userId;
-
-  const headers = connection?.httpHeaders;
-  if (headers && SAFE_HEADER_KEYS.length > 0) {
-    SAFE_HEADER_KEYS.forEach((header) => {
-      const value = headers[header] ?? headers[header.toLowerCase()];
-      if (value) {
-        attrs[`ddp.connection.header.${header.replace(/-/g, '_').toLowerCase()}`] = Array.isArray(value) ? value : [value];
-      }
-    });
+// Owns only listeners and spans. The public seam never exposes live handlers,
+// sessions, request headers, or DDP document-send events.
+export function startInstrumentation({ tracer, meter, filter, attributes,
+  maxPendingSpans = DEFAULT_MAX_PENDING_SPANS,
+  spanTimeoutMs = DEFAULT_SPAN_TIMEOUT_MS,
+} = {}) {
+  maxPendingSpans = positiveNumber(maxPendingSpans, DEFAULT_MAX_PENDING_SPANS, 'maxPendingSpans', true);
+  spanTimeoutMs = positiveNumber(spanTimeoutMs, DEFAULT_SPAN_TIMEOUT_MS, 'spanTimeoutMs');
+  if (spanTimeoutMs > 2147483647) throw new RangeError('spanTimeoutMs exceeds the Node timer limit');
+  for (const [name, callback] of Object.entries({ filter, attributes })) {
+    if (callback !== undefined && typeof callback !== 'function') {
+      throw new TypeError(`${name} must be a function`);
+    }
   }
 
-  if (connectionAttributesHook) {
+  const pending = new Map();
+  const registrations = [];
+  const durations = {
+    method: meter.createHistogram('meteor.method.duration', { unit: 'ms' }),
+    publication: meter.createHistogram('meteor.publication.duration', { unit: 'ms' }),
+  };
+  const connections = meter.createCounter('meteor.ddp.connections');
+  const connectionDuration = meter.createHistogram('meteor.ddp.connection.duration', { unit: 'ms' });
+  let stopped = false;
+
+  const keyFor = (kind, spanId) => `${kind}:${spanId}`;
+
+  function take(key) {
+    const entry = pending.get(key);
+    if (entry) {
+      pending.delete(key);
+      clearTimeout(entry.timer);
+    }
+    return entry;
+  }
+
+  function incomplete(key, reason) {
+    const entry = take(key);
+    if (!entry) return;
     try {
-      const replacement = connectionAttributesHook(attrs, { connection, session });
-      if (replacement && typeof replacement === 'object') {
-        return replacement;
-      }
-    } catch (e) {
-      // Never let user code break tracing.
-      console.warn('[meteor-otel] connectionAttributesHook threw:', e?.message || e);
+      entry.span.setAttributes({
+        'meteor.instrumentation.incomplete': true,
+        'meteor.instrumentation.end_reason': reason,
+      });
+    } finally {
+      entry.span.end();
     }
   }
 
-  return attrs;
-}
-
-function buildMethodAttributes(context, methodName, args = []) {
-  const session = context?._session || null;
-  const argTypes = summarizeArgTypes(args);
-  const userId = context?.userId ?? 'anonymous';
-
-  const base = {
-    'ddp.type': 'method',
-    'ddp.method.name': methodName,
-    'meteor.method.name': methodName,
-    'meteor.user.id': userId,
-    'user.id': userId,
-    'ddp.method.id': context?._messageId || context?.messageId || undefined,
-    'ddp.method.params.length': Array.isArray(args) ? args.length : 0,
-    'ddp.method.params.types': argTypes,
-    'ddp.random_seed': context?.randomSeed,
-  };
-
-  return {
-    ...base,
-    ...extractConnectionAttributes(context?.connection, session),
-  };
-}
-
-function buildPublicationAttributes(subscription, pubName, args = []) {
-  const session = subscription?._session || null;
-  const argTypes = summarizeArgTypes(args);
-  const isUniversal = !subscription?._subscriptionId;
-  const userId = subscription?.userId ?? 'anonymous';
-
-  const base = {
-    'ddp.type': 'publication',
-    'ddp.publication.name': pubName,
-    'meteor.publication.name': pubName,
-    'meteor.user.id': userId,
-    'user.id': userId,
-    'ddp.subscription.id': subscription?._subscriptionId || undefined,
-    'ddp.subscription.handle': subscription?._subscriptionHandle || undefined,
-    'ddp.subscription.params.length': Array.isArray(args) ? args.length : 0,
-    'ddp.subscription.params.types': argTypes,
-    'ddp.subscription.universal': isUniversal,
-  };
-
-  return {
-    ...base,
-    ...extractConnectionAttributes(subscription?.connection, session),
-  };
-}
-
-/**
- * Install hooks on DDPServer._Session to trace DDP messages.
- * This is called automatically when using createRoundtripTracer.
- */
-export function installDDPHooks() {
-  if (ddpHookInstalled) return;
-  if (!DDPServer?._Session) {
-    console.warn('[meteor-otel] DDPServer._Session not available. DDP instrumentation disabled.');
-    return;
+  function start(kind, event) {
+    if (stopped || !event.spanId || (filter && !filter(event))) return;
+    // Run application code before allocating a span or evicting another one.
+    const extra = attributes ? attributes(event) : undefined;
+    const name = event.name ?? '<universal>';
+    const key = keyFor(kind, event.spanId);
+    if (pending.has(key)) incomplete(key, 'restarted');
+    if (pending.size >= maxPendingSpans) incomplete(pending.keys().next().value, 'capacity');
+    const attrs = {
+      'ddp.type': kind,
+      [`ddp.${kind}.name`]: name,
+      [`meteor.${kind}.name`]: name,
+      'meteor.instrumentation.trace_id': event.traceId,
+      'meteor.instrumentation.span_id': event.spanId,
+      [kind === 'method' ? 'ddp.method.params.length' : 'ddp.subscription.params.length']: event.argsCount,
+    };
+    if (event.connectionId != null) attrs['ddp.session.id'] = event.connectionId;
+    if (event.subscriptionId != null) attrs['ddp.subscription.id'] = event.subscriptionId;
+    const span = tracer.startSpan(`${kind === 'method' ? 'method' : 'publish'}:${name}`, {
+      kind: SpanKind.SERVER,
+      startTime: new Date(event.ts),
+      attributes: { ...attrs, ...extra },
+    });
+    const timer = setTimeout(() => {
+      try { incomplete(key, 'timeout'); } catch (error) { diag.warn('meteor-otel: span timeout cleanup failed', error); }
+    }, spanTimeoutMs);
+    timer.unref?.();
+    pending.set(key, { span, timer, connectionId: event.connectionId, name });
   }
 
-  const origSend = DDPServer._Session.prototype.send;
+  function finish(kind, event, failed) {
+    const entry = take(keyFor(kind, event.spanId));
+    if (!entry) return; // Late terminal events after timeout/eviction, or filtered starts.
+    try {
+      if (failed) {
+        // Only the seam's bounded summary; no raw Error, stack or details.
+        if (event.error) entry.span.recordException({ name: event.error.name, message: event.error.message }, new Date(event.ts));
+        entry.span.setStatus({ code: SpanStatusCode.ERROR, message: event.error?.message });
+      } else {
+        entry.span.setStatus({ code: SpanStatusCode.OK });
+      }
+      if (Number.isFinite(event.durationMs) && event.durationMs >= 0) {
+        durations[kind].record(event.durationMs, { name: entry.name, outcome: failed ? 'error' : 'ok' });
+      }
+    } finally {
+      entry.span.end(new Date(event.ts));
+    }
+  }
 
-  DDPServer._Session.prototype.send = function send(payload, ...rest) {
-    if (payload?.msg === 'added' && payload.collection && payload.id) {
-      const key = `${payload.collection}:${payload.id}`;
-      // Match the *oldest* pending span for this document (FIFO). With a
-      // queue, two concurrent trackDocument calls for the same key both end
-      // up associated with their own roundtrip and neither is silently
-      // overwritten.
-      const spanInfo = dequeueSpanInfo(key);
-
-      if (spanInfo) {
-        if (spanInfo.timer) {
-          clearTimeout(spanInfo.timer);
-          spanInfo.timer = null;
-        }
-        spanInfo.span.addEvent('ddp.send.added', {
-          'ddp.session.id': this.id,
-          'ddp.collection': payload.collection,
-          'ddp.doc.id': payload.id,
-        });
-        spanInfo.span.setStatus({ code: SpanStatusCode.OK });
-        spanInfo.span.end();
+  const on = (type, listener) => registrations.push(Instrumentation.on(type, listener));
+  on('method.start', event => start('method', event));
+  on('method.end', event => finish('method', event, false));
+  on('method.error', event => finish('method', event, true));
+  on('publication.start', event => start('publication', event));
+  on('publication.ready', event => {
+    const span = pending.get(keyFor('publication', event.spanId))?.span;
+    if (span) span.addEvent('publication.ready', {}, new Date(event.ts));
+  });
+  on('publication.stop', event => finish('publication', event, false));
+  on('publication.error', event => finish('publication', event, true));
+  on('ddp.connection.open', () => connections.add(1, { state: 'open' }));
+  on('ddp.connection.close', event => {
+    // Normally terminal invocation events ran first. Close remaining spans if
+    // observation started/stopped midway through the connection's lifetime.
+    for (const [key, entry] of pending) {
+      if (entry.connectionId === event.connectionId) {
+        try { incomplete(key, 'disconnect'); } catch (error) { diag.warn('meteor-otel: disconnect cleanup failed', error); }
       }
     }
-
-    return origSend.call(this, payload, ...rest);
-  };
-
-  ddpHookInstalled = true;
-  console.log('[meteor-otel] DDP instrumentation hooks installed.');
-}
-
-/**
- * Create a roundtrip tracer for tracking operations from method call to DDP publish.
- *
- * @param {string} tracerName - Name for the tracer (e.g., 'my-collection.roundtrip')
- * @returns {Object} Roundtrip tracer factory
- *
- * @example
- * const linksTracer = createRoundtripTracer('links.roundtrip');
- *
- * Meteor.methods({
- *   async 'links.insert'() {
- *     const roundtrip = linksTracer.begin('links.insert->publish', { sessionId: this.userId });
- *     const doc = { _id: Random.id(), ... };
- *     roundtrip.trackDocument('links', doc._id);
- *
- *     try {
- *       await roundtrip.run(() => LinksCollection.insertAsync(doc));
- *       return doc._id;
- *     } catch (error) {
- *       roundtrip.fail(error);
- *       throw error;
- *     }
- *   }
- * });
- */
-export function createRoundtripTracer(tracerName) {
-  installDDPHooks();
-  const tracer = trace.getTracer(tracerName);
+    connections.add(1, { state: 'close' });
+    if (Number.isFinite(event.durationMs) && event.durationMs >= 0) connectionDuration.record(event.durationMs);
+  });
 
   return {
-    /**
-     * Begin a new roundtrip span.
-     *
-     * @param {string} spanName - Name for the span
-     * @param {Object} attributes - Initial span attributes
-     * @param {number} timeoutMs - Timeout for waiting for DDP added message (default: 30000)
-     * @returns {Object} Roundtrip handle with methods: trackDocument, fail, run
-     */
-    begin(spanName, attributes = {}, timeoutMs = 30000) {
-      const span = tracer.startSpan(spanName, { attributes });
-      const spanContext = trace.setSpan(context.active(), span);
-
-      let trackedKey = null;
-      let timer = null;
-
-      function clearTimer() {
-        if (timer) {
-          clearTimeout(timer);
-          timer = null;
-        }
+    getInvocationSpan() {
+      const { kind, spanId } = Instrumentation.currentContext();
+      return pending.get(keyFor(kind, spanId))?.span;
+    },
+    stop() {
+      if (stopped) return;
+      stopped = true;
+      for (const registration of registrations) registration.stop();
+      for (const key of pending.keys()) {
+        try { incomplete(key, 'shutdown'); } catch (error) { diag.warn('meteor-otel: shutdown cleanup failed', error); }
       }
-
-      return {
-        /**
-         * Track a document to wait for its DDP 'added' message.
-         *
-         * @param {string} collection - Collection name
-         * @param {string} docId - Document ID
-         */
-        trackDocument(collection, docId) {
-          if (!docId) return;
-
-          // Refuse to enqueue when at capacity. End the span as ERROR rather
-          // than holding onto it; the alternative is silently leaking memory
-          // when many trackDocument calls never see their DDP 'added' message.
-          if (pendingSpansCount >= MAX_PENDING_SPANS) {
-            if (!pendingSpansOverflowWarned) {
-              pendingSpansOverflowWarned = true;
-              console.warn(
-                `[meteor-otel] pendingSpans reached MAX_PENDING_SPANS=${MAX_PENDING_SPANS}; new roundtrip spans will be ended as ERROR. Override via OTEL_DDP_MAX_PENDING_SPANS.`
-              );
-            }
-            span.setStatus({
-              code: SpanStatusCode.ERROR,
-              message: 'pendingSpans capacity exceeded',
-            });
-            span.end();
-            return;
-          }
-
-          trackedKey = `${collection}:${docId}`;
-          span.setAttribute('meteor.collection', collection);
-          span.setAttribute('meteor.doc.id', docId);
-
-          const spanInfo = { span, timer: null };
-          enqueueSpanInfo(trackedKey, spanInfo);
-
-          clearTimer();
-          timer = setTimeout(() => {
-            // Defensive: a re-entrant trackDocument call could have rotated
-            // out our spanInfo before this fires. Only act if our specific
-            // entry still owns the timer.
-            if (spanInfo.timer !== timer) return;
-            if (removeSpanInfo(trackedKey, span)) {
-              span.setStatus({
-                code: SpanStatusCode.ERROR,
-                message: 'Timeout waiting for DDP added message',
-              });
-              span.end();
-              spanInfo.timer = null;
-            }
-          }, timeoutMs);
-
-          spanInfo.timer = timer;
-        },
-
-        /**
-         * Mark the roundtrip as failed.
-         *
-         * @param {Error} error - The error that caused the failure
-         */
-        fail(error) {
-          clearTimer();
-
-          if (trackedKey) {
-            removeSpanInfo(trackedKey, span);
-          }
-
-          const status = { code: SpanStatusCode.ERROR };
-          if (error) {
-            span.recordException(error);
-            if (error.message) status.message = error.message;
-          }
-          span.setStatus(status);
-
-          span.end();
-        },
-
-        /**
-         * Run a function within the span context.
-         *
-         * @param {Function} fn - Function to run
-         * @returns {*} Result of the function
-         */
-        run(fn) {
-          return context.with(spanContext, fn);
-        },
-
-        /**
-         * Add an event to the span.
-         *
-         * @param {string} name - Event name
-         * @param {Object} attributes - Event attributes
-         */
-        addEvent(name, attributes) {
-          span.addEvent(name, attributes);
-        },
-
-        /**
-         * Set an attribute on the span.
-         *
-         * @param {string} key - Attribute key
-         * @param {*} value - Attribute value
-         */
-        setAttribute(key, value) {
-          span.setAttribute(key, value);
-        },
-
-        /**
-         * End the span successfully without waiting for DDP.
-         * Use this if you don't need to wait for the DDP added message.
-         */
-        end() {
-          clearTimer();
-          if (trackedKey) {
-            removeSpanInfo(trackedKey, span);
-          }
-          span.setStatus({ code: SpanStatusCode.OK });
-          span.end();
-        },
-      };
     },
   };
-}
-
-/**
- * Simple utility to create a span for a Meteor method.
- *
- * @param {string} methodName - Method name
- * @param {Function} fn - Method implementation
- * @returns {Function} Wrapped method function
- *
- * @example
- * Meteor.methods({
- *   'tasks.create': wrapMethod('tasks.create', async function(data) {
- *     return await TasksCollection.insertAsync(data);
- *   })
- * });
- */
-export function wrapMethod(methodName, fn) {
-  const tracer = trace.getTracer('meteor.methods'); // TODO: should it have the method name scope?
-
-  return async function (...args) {
-    const span = tracer.startSpan(`method:${methodName}`, {
-      attributes: buildMethodAttributes(this, methodName, args), // "this" is the MethodInvocation context
-    });
-
-    const spanContext = trace.setSpan(context.active(), span);
-
-    try {
-      const result = await context.with(spanContext, () => fn.apply(this, args));
-      span.setStatus({ code: SpanStatusCode.OK });
-      return result;
-    } catch (error) {
-      span.recordException(error);
-      const status = { code: SpanStatusCode.ERROR };
-      if (error?.message) status.message = error.message;
-      span.setStatus(status);
-      throw error;
-    } finally {
-      span.end();
-    }
-  };
-}
-
-/**
- * Simple utility to create a span for a Meteor publication.
- *
- * @param {string} pubName - Publication name
- * @param {Function} fn - Publication implementation
- * @returns {Function} Wrapped publication function
- *
- * @example
- * Meteor.publish('tasks', wrapPublication('tasks', function() {
- *   return TasksCollection.find({ userId: this.userId });
- * }));
- */
-export function wrapPublication(pubName, fn) {
-  const tracer = trace.getTracer('meteor.publications');
-
-  return function (...args) {
-    const span = tracer.startSpan(`publish:${pubName}`, {
-      attributes: buildPublicationAttributes(this, pubName, args), // "this" is the Subscription context
-    });
-
-    const spanContext = trace.setSpan(context.active(), span);
-
-    const onError = (error) => {
-      span.recordException(error);
-      const status = { code: SpanStatusCode.ERROR };
-      if (error?.message) status.message = error.message;
-      span.setStatus(status);
-      span.end();
-    };
-
-    try {
-      // Run within span context so child spans are properly nested.
-      const result = context.with(spanContext, () => fn.apply(this, args));
-
-      // Publish handlers may be async (return a Promise) or sync (return a
-      // cursor / cursor list / undefined). For async handlers we must keep
-      // the span open until the promise settles, otherwise span timing only
-      // reflects the synchronous portion of setup.
-      if (result && typeof result.then === 'function') {
-        return result.then(
-          (value) => {
-            span.setStatus({ code: SpanStatusCode.OK });
-            span.end();
-            return value;
-          },
-          (error) => {
-            onError(error);
-            throw error;
-          }
-        );
-      }
-
-      span.setStatus({ code: SpanStatusCode.OK });
-      span.end();
-      return result;
-    } catch (error) {
-      onError(error);
-      throw error;
-    }
-  };
-}
-
-// ============================================================================
-// Active span utilities
-// ============================================================================
-
-/**
- * Get the currently active span, if any.
- *
- * @returns {Span|undefined} The active span or undefined
- *
- * @example
- * const span = getActiveSpan();
- * if (span) {
- *   span.setAttribute('custom.key', 'value');
- * }
- */
-export function getActiveSpan() {
-  return trace.getSpan(context.active());
-}
-
-/**
- * Add an event to the active span.
- *
- * @param {string} name - Event name
- * @param {Object} attributes - Event attributes
- *
- * @example
- * addEvent('user.validated', { userId: '123' });
- */
-export function addEvent(name, attributes = {}) {
-  const span = getActiveSpan();
-  if (span) {
-    span.addEvent(name, attributes);
-  }
-}
-
-/**
- * Set an attribute on the active span.
- *
- * @param {string} key - Attribute key
- * @param {*} value - Attribute value
- *
- * @example
- * setAttribute('user.id', '123');
- */
-export function setAttribute(key, value) {
-  const span = getActiveSpan();
-  if (span) {
-    span.setAttribute(key, value);
-  }
-}
-
-/**
- * Set multiple attributes on the active span.
- *
- * @param {Object} attributes - Object with key-value pairs
- *
- * @example
- * setAttributes({ 'user.id': '123', 'user.role': 'admin' });
- */
-export function setAttributes(attributes) {
-  const span = getActiveSpan();
-  if (span && attributes) {
-    Object.entries(attributes).forEach(([key, value]) => {
-      span.setAttribute(key, value);
-    });
-  }
-}
-
-/**
- * Record an exception on the active span.
- *
- * @param {Error} exception - The exception to record
- *
- * @example
- * try {
- *   await riskyOperation();
- * } catch (error) {
- *   recordException(error);
- *   throw error;
- * }
- */
-export function recordException(exception) {
-  const span = getActiveSpan();
-  if (span && exception) {
-    span.recordException(exception);
-  }
-}
-
-/**
- * Set the active span status to error.
- *
- * @param {Error|string} error - The error or error message
- *
- * @example
- * setSpanError(new Error('Operation failed'));
- * // or
- * setSpanError('Operation failed');
- */
-export function setSpanError(error) {
-  const span = getActiveSpan();
-  if (!span) return;
-
-  const status = { code: SpanStatusCode.ERROR };
-  if (error instanceof Error) {
-    span.recordException(error);
-    if (error.message) status.message = error.message;
-  } else if (typeof error === 'string' && error) {
-    status.message = error;
-  }
-  span.setStatus(status);
 }

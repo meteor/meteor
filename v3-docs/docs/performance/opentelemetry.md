@@ -15,9 +15,9 @@ To be clear, it's like MontiAPM, DataDog, NewRelic, etc., but open-source and ve
 
 ### Why OpenTelemetry for Meteor?
 
-Meteor philosophy is let the developer focus on building features rather than worrying about infrastructure. However, as applications grow in complexity, understanding their behavior becomes crucial. Observability helps developers gain insights into application performance, identify bottlenecks, and troubleshoot issues effectively.
+Meteor's philosophy is to let the developer focus on building features rather than worrying about infrastructure. However, as applications grow in complexity, understanding their behavior becomes crucial. Observability helps developers gain insights into application performance, identify bottlenecks, and troubleshoot issues effectively.
 
-For Meteor developers, OpenTelemetry provides a powerful way to understand what's happening inside your application—from tracking DDP method calls and publications to monitoring database queries and HTTP requests.
+For Meteor developers, OpenTelemetry provides a powerful way to understand what's happening inside your application—from tracking DDP method calls and publication lifecycles to recording custom application metrics. HTTP and database auto-instrumentation require separate OpenTelemetry plugins and early initialization.
 
 ### The Observability Stack
 
@@ -73,7 +73,7 @@ docker compose version
 
 ## Quick Start
 
-To quickly set up the observability infrastructure, you can use the provided [Docker Compose file](https://github.com/meteor/performance/blob/otel/otel/docker-compose.yaml) and [configuration files](https://github.com/meteor/performance/tree/otel/otel/infra) we have in our GitHub. This setup is intended for local development and testing.
+To quickly set up the observability infrastructure, you can use the provided [Docker Compose file](https://github.com/meteor/performance/blob/82298c260ff4d8252ab138c5f5e5c3222f6776a9/otel/docker-compose.yaml) and [configuration files](https://github.com/meteor/performance/tree/82298c260ff4d8252ab138c5f5e5c3222f6776a9/otel/infra) we have in our GitHub. This setup is intended for local development and testing.
 
 Bring the `infra` folder and the `docker-compose.yaml` file to your Meteor project root folder. Then run:
 

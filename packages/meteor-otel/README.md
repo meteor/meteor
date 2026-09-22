@@ -1,256 +1,126 @@
 # meteor-otel
 
-OpenTelemetry instrumentation package for Meteor applications. Provides tracing, metrics, and DDP instrumentation out of the box.
+OpenTelemetry traces and metrics for Meteor 3.6 servers, built on the public
+[`instrumentation`](https://docs.meteor.com/api/instrumentation) lifecycle API.
+No DDP prototype patches, handler wrappers, or registration options are required.
 
-## Installation
+## Quick start
 
-```bash
+```sh
 meteor add meteor-otel
 ```
 
-For DDP instrumentation (optional but recommended):
-```bash
-meteor add meteorx:meteorx
-```
-
-## Quick Start
-
-To guarantee that `initOtel()` runs **before** any module you want instrumented (the `http` module, MongoDB drivers, etc.), put initialization in a dedicated bootstrap file and import that file as the very first statement of your server entrypoint:
-
-```javascript
-// server/otel-bootstrap.js
-// Single-purpose module: load and call initOtel before anything else.
+```js
+// server/telemetry.js
 import { initOtel } from 'meteor/meteor-otel';
 
-initOtel({
-  serviceName: 'my-meteor-app',
-});
+initOtel({ serviceName: 'my-meteor-app' });
 ```
 
-```javascript
-// server/main.js
-// IMPORTANT: this import must come first so OTel is initialized before
-// any other module (Meteor core, your app code, npm deps) is loaded.
-import './otel-bootstrap.js';
+Import this module from your server entrypoint before application traffic starts.
+Methods and publications registered before initialization are also observed when
+subsequently invoked. `initOtel()` is idempotent and returns
+`{ tracerProvider, meterProvider }`. Call `await shutdown()` before process exit
+to remove listeners, end pending spans, and flush providers. Initialization is
+once per process; restarting telemetry after shutdown requires a process restart.
 
-// Now the rest of your server can be imported normally.
-import { Meteor } from 'meteor/meteor';
-import './methods.js';
-import './publications.js';
-```
+## Automatic telemetry
 
-> Why a separate file? ECMAScript module imports are hoisted: an
-> `import { initOtel } from 'meteor/meteor-otel';` at the top of `main.js`
-> would evaluate **after** sibling imports in the same module. A dedicated
-> bootstrap file is the simplest pattern that guarantees correct ordering.
+| Lifecycle | Trace / metric |
+| --- | --- |
+| Method start → end/error | `method:<name>` span; `meteor.method.duration` histogram (ms) |
+| Publication start → stop/error | `publish:<name>` span, with a `publication.ready` event; `meteor.publication.duration` histogram (ms) |
+| Connection open/close | `meteor.ddp.connections` counter with `state=open/close`; `meteor.ddp.connection.duration` histogram (ms) on close |
+
+Publication spans measure the subscription lifetime, including asynchronous setup,
+not only the handler's return. Universal publications use `<universal>` as the
+span name suffix. Metrics label only operation name and outcome, never user,
+connection, subscription, or trace IDs.
+
+Meteor's event IDs are correlation attributes (`meteor.instrumentation.trace_id`
+and `meteor.instrumentation.span_id`), not OpenTelemetry trace/span IDs. The SDK
+generates valid OTel IDs. The observer does not make its span the globally active
+span: use `getInvocationSpan()` to explicitly parent manual spans inside a method
+or publication (see [advanced examples](https://docs.meteor.com/performance/otel-advanced)).
 
 ## Configuration
 
-Configuration is done via environment variables:
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OTEL_SERVICE_NAME` | `meteor-app` | Service name for telemetry |
-| `OTEL_DEBUG` | `0` | Set to `1` for verbose logging |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | Base OTLP endpoint |
-| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `{endpoint}/v1/traces` | Traces endpoint |
-| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | `{endpoint}/v1/metrics` | Metrics endpoint |
-| `OTEL_METRICS_EXPORT_INTERVAL_MS` | `1000` | Metrics export interval |
-| `OTEL_HOST_METRICS_ENABLED` | `1` | Set to `0` to disable host metrics |
-| `OTEL_RUNTIME_METRICS_ENABLED` | `1` | Set to `0` to disable Node.js runtime metrics |
-| `OTEL_DDP_CAPTURED_HEADERS` | `user-agent,x-forwarded-for,x-real-ip,accept-language,host` | Comma-separated list of HTTP headers captured on DDP spans. Set to empty string to disable. |
-| `OTEL_DDP_CAPTURE_IP` | `1` | Set to `0` to omit `net.peer.ip` from DDP spans (e.g., GDPR). |
-| `OTEL_DDP_MAX_PENDING_SPANS` | `10000` | Cap on pending roundtrip spans held in memory. |
-
-Or programmatically:
-
-```javascript
+```js
 initOtel({
-  serviceName: 'my-app',
-  resourceAttributes: {
-    'deployment.environment': 'production',
-    'service.version': '1.0.0',
+  serviceName: 'orders',
+  resourceAttributes: { 'deployment.environment.name': 'production' },
+  spanProcessor: { maxQueueSize: 2048, maxExportBatchSize: 512 },
+  meteorInstrumentation: {
+    // Optional: select method/publication start events to trace.
+    filter: event => event.name !== 'health.check',
+    // Receives only the public lifecycle event, never a request or session.
+    attributes: event => ({ 'app.operation': event.name ?? 'universal' }),
+    maxPendingSpans: 10000,
+    spanTimeoutMs: 30 * 60 * 1000,
   },
 });
 ```
 
-## Features
+Set `meteorInstrumentation: false` to disable the Meteor observer. Timeout,
+capacity eviction, connection close, and shutdown end incomplete spans with
+`meteor.instrumentation.incomplete=true` and an `end_reason` attribute; they do
+not report an application error. Incomplete spans do not enter duration metrics.
+After a timeout/eviction the later terminal event is ignored. Increase the timeout
+if you need complete spans for subscriptions that live longer than 30 minutes.
+Callbacks are synchronous; failures are isolated by the instrumentation event
+emitter. The observer never changes global `Instrumentation.configure()` policy.
 
-### 1. Automatic Instrumentation
+| Environment variable | Default |
+| --- | --- |
+| `OTEL_SERVICE_NAME` | `meteor-app` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | `<endpoint>/v1/traces` |
+| `OTEL_EXPORTER_OTLP_METRICS_ENDPOINT` | `<endpoint>/v1/metrics` |
+| `OTEL_METRICS_EXPORT_INTERVAL_MS` | `1000` (positive finite values only) |
+| `OTEL_HOST_METRICS_ENABLED` | `1` (set `0` to disable) |
+| `OTEL_RUNTIME_METRICS_ENABLED` | `1` (set `0` to disable) |
+| `OTEL_BSP_MAX_QUEUE_SIZE` | SDK default |
+| `OTEL_BSP_MAX_EXPORT_BATCH_SIZE` | SDK default |
+| `OTEL_BSP_SCHEDULED_DELAY_MS` | SDK default |
+| `OTEL_BSP_EXPORT_TIMEOUT_MS` | SDK default |
+| `OTEL_DEBUG` | unset (set `1` for diagnostics) |
 
-Out of the box, the package provides:
-- **Host metrics**: CPU, memory, network, disk
-- **Node.js runtime metrics**: Event loop, GC, heap usage
+Arguments, results, headers, client IPs and user IDs are not copied into spans by
+default. Error events use the instrumentation package's bounded error summary,
+without stacks or details. The optional `attributes` callback can select data
+from the public event; review what you export, since event user/connection IDs
+and explicitly enabled argument previews can contain personal data.
 
-> Note: Automatic instrumentation of core Node.js modules (such as `http`) and common drivers (MongoDB, etc.) is **not** yet provided out of the box by this package. For now, you must configure any desired instrumentations manually (see [Custom Instrumentations](#custom-instrumentations) below) and ensure you initialize OpenTelemetry **before** importing the modules you want instrumented.
+## Custom instrumentations
 
-### 2. DDP Roundtrip Tracing
+`initOtel({ instrumentations: [...] })` registers additional OpenTelemetry
+instrumentations alongside optional Node runtime metrics. HTTP/MongoDB module
+patching is **not** provided automatically. Those instrumentations require setup
+before their target modules load; importing a bootstrap file before application
+code does not guarantee setup before Meteor's own packages load. Meteor lifecycle
+tracing has no such load-order requirement.
 
-Track the full roundtrip from method call to DDP publish:
+## Public API
 
-```javascript
-import { createRoundtripTracer } from 'meteor/meteor-otel';
+- `initOtel(options)`, `shutdown()`
+- `getTracerProvider()`, `getMeterProvider()` (after initialization)
+- `getTracer(name, version)`, `getMeter(name, version)`
+- `getInvocationSpan()` (currently observed method/publication, otherwise undefined)
+- `trace`, `metrics`, `context`, `propagation`, `SpanStatusCode`, `SpanKind`, `ROOT_CONTEXT`
+- `getConfig()` reads environment configuration.
 
-const tasksTracer = createRoundtripTracer('tasks.roundtrip');
+Use the OpenTelemetry API directly for manual spans, events, context propagation,
+and metrics. This package does not prescribe error messages or metric helpers.
 
-Meteor.methods({
-  async 'tasks.create'(data) {
-    const roundtrip = tasksTracer.begin('tasks.create->publish', {
-      'user.id': this.userId,
-    });
+## Migration from the PR prototype
 
-    const doc = { _id: Random.id(), ...data };
-    roundtrip.trackDocument('tasks', doc._id);
+Remove `{ otel: true }` / `{ otel: ['method.name'] }` and `wrapMethod` /
+`wrapPublication`. All invocations are observed after initialization; use the
+`filter` callback above for selective tracing. Replace span-builder, `withSpan`,
+active-span helpers and metric-recorder helpers with the standard OTel API.
 
-    try {
-      await roundtrip.run(() => TasksCollection.insertAsync(doc));
-      return doc._id;
-    } catch (error) {
-      roundtrip.fail(error);
-      throw error;
-    }
-  },
-});
-```
-
-### 3. Method & Publication Wrappers
-
-Simple wrappers for automatic tracing:
-
-```javascript
-import { wrapMethod, wrapPublication } from 'meteor/meteor-otel';
-
-Meteor.methods({
-  'tasks.create': wrapMethod('tasks.create', async function(data) {
-    return await TasksCollection.insertAsync(data);
-  }),
-});
-
-Meteor.publish('tasks', wrapPublication('tasks', function() {
-  return TasksCollection.find({ userId: this.userId });
-}));
-```
-
-Every span produced by `wrapMethod`/`wrapPublication` now automatically adds safe DDP context attributes, including:
-
-- `ddp.session.id`, `ddp.protocol.version`, and the negotiated socket URL (when available)
-- `net.peer.ip` and select HTTP headers (`user-agent`, `x-forwarded-for`, `x-real-ip`, `accept-language`, `host`)
-- User identifiers (`user.id`, `meteor.user.id`)
-- Message metadata (`ddp.method.id`, `ddp.random_seed`) and lightweight parameter summaries (argument count + type list)
-- Publication metadata (`ddp.subscription.id`, `ddp.subscription.handle`, `ddp.subscription.universal`)
-
-These attributes make it easier to correlate traces with specific clients or subscriptions without storing full payloads.
-
-### 4. Custom Tracing
-
-#### Simple spans
-
-```javascript
-import { withSpan } from 'meteor/meteor-otel';
-
-async function processOrder(orderId) {
-  return withSpan('orders', 'processOrder', async () => {
-    return await OrdersCollection.findOneAsync({ _id: orderId });
-  }, { 'order.id': orderId });
-}
-```
-
-#### Span builder for complex scenarios
-
-```javascript
-import { createSpanBuilder } from 'meteor/meteor-otel';
-
-const builder = createSpanBuilder('my-service');
-
-async function complexOperation() {
-  const span = builder.start('complexOperation', { step: 'init' });
-
-  try {
-    span.addEvent('step1.start');
-    await step1();
-    span.addEvent('step1.complete');
-
-    span.addEvent('step2.start');
-    await step2();
-    span.addEvent('step2.complete');
-
-    span.success();
-  } catch (error) {
-    span.error(error);
-    throw error;
-  }
-}
-```
-
-### 5. Custom Metrics
-
-```javascript
-import { createMetricsRecorder, createTimer } from 'meteor/meteor-otel';
-
-const appMetrics = createMetricsRecorder('my-app');
-
-// Counters
-const ordersCounter = appMetrics.counter('orders.created', 'Number of orders');
-ordersCounter.add(1, { type: 'subscription' });
-
-// Histograms
-const latencyHist = appMetrics.histogram('api.latency', 'API latency', 'ms');
-latencyHist.record(150);
-
-// Observable gauges (for async values)
-appMetrics.observableGauge('queue.size', 'Current queue size', 'items', () => {
-  return queue.length;
-});
-
-// Timers
-const dbTimer = createTimer('my-app', 'db.query.duration', 'DB query duration');
-
-async function queryDB() {
-  return dbTimer.time(async () => {
-    return await collection.find(query);
-  }, { operation: 'find' });
-}
-```
-
-## API Reference
-
-### Initialization
-
-- `initOtel(options?)` - Initialize OpenTelemetry
-- `shutdown()` - Gracefully shutdown providers
-- `getTracerProvider()` - Get the tracer provider
-- `getMeterProvider()` - Get the meter provider
-- `getTracer(name, version?)` - Get a tracer instance
-- `getMeter(name, version?)` - Get a meter instance
-
-### DDP Instrumentation
-
-- `createRoundtripTracer(name)` - Create a roundtrip tracer for DDP
-- `wrapMethod(name, fn)` - Wrap a Meteor method with tracing
-- `wrapPublication(name, fn)` - Wrap a publication with tracing
-- `installDDPHooks()` - Manually install DDP hooks
-
-### Tracing
-
-- `withSpan(tracer, span, fn, attrs?)` - Execute async function in span
-- `withSpanSync(tracer, span, fn, attrs?)` - Execute sync function in span
-- `createSpanBuilder(name)` - Create a span builder
-
-### Metrics
-
-- `createMetricsRecorder(name)` - Create a metrics recorder
-- `simpleCounter(meter, name, desc?)` - Create a simple counter
-- `simpleHistogram(meter, name, desc?, unit?)` - Create a simple histogram
-- `createTimer(meter, name, desc?)` - Create a timer for measuring duration
-
-### Re-exports
-
-The package re-exports commonly used OpenTelemetry API items:
-- `trace` - Tracing API
-- `metrics` - Metrics API
-- `context` - Context API
-- `SpanStatusCode` - Span status codes
-
-## License
-
-MIT
+`installDDPHooks` and `createRoundtripTracer` are removed. The 3.6 lifecycle API has
+no per-document send event, so it cannot measure delivery of a particular DDP
+`added` message. No document-ID queues or internal `Session.send` hooks remain.
+For end-to-end delivery measurement, instrument an explicit application-level
+acknowledgment. A publication's `ready` event does not prove client receipt.

@@ -2,19 +2,17 @@ Package.describe({
   name: 'meteor-otel',
   version: '1.0.0',
   summary: 'OpenTelemetry instrumentation for Meteor applications',
-  git: '',
+  git: 'https://github.com/meteor/meteor.git',
   documentation: 'README.md',
 });
 
 Npm.depends({
   '@opentelemetry/api': '1.9.0',
-  '@opentelemetry/api-logs': '0.206.0',
   '@opentelemetry/sdk-metrics': '2.1.0',
   '@opentelemetry/sdk-trace-node': '2.1.0',
-  '@opentelemetry/sdk-logs': '0.206.0',
+  '@opentelemetry/sdk-trace-base': '2.1.0',
   '@opentelemetry/exporter-trace-otlp-http': '0.206.0',
   '@opentelemetry/exporter-metrics-otlp-http': '0.206.0',
-  '@opentelemetry/exporter-logs-otlp-http': '0.206.0',
   '@opentelemetry/resources': '2.1.0',
   '@opentelemetry/semantic-conventions': '1.30.0',
   '@opentelemetry/host-metrics': '0.36.2',
@@ -24,7 +22,7 @@ Npm.depends({
 
 Package.onUse(function (api) {
   api.use('ecmascript');
-  api.use('ddp-server', 'server');
+  api.use(['ddp-server', 'instrumentation@0.0.1-beta360.1'], 'server');
 
   api.mainModule('server/index.js', 'server');
 });
@@ -35,10 +33,12 @@ Package.onTest(function (api) {
     'tinytest',
     'ecmascript',
     'test-helpers',
+    'instrumentation',
+    'ddp-client',
+    'ddp-server',
   ]);
 
   api.addFiles('tests/config_tests.js', 'server');
-  api.addFiles('tests/tracing_tests.js', 'server');
-  api.addFiles('tests/metrics_tests.js', 'server');
-  api.addFiles('tests/ddp_instrumentation_tests.js', 'server');
+  api.addFiles('tests/lifecycle_tests.js', 'server');
+  api.addFiles('tests/providers_tests.js', 'server');
 });

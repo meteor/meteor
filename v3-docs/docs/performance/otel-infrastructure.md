@@ -7,7 +7,7 @@ description: Set up the OpenTelemetry observability infrastructure with Docker C
 
 This guide covers the detailed configuration of each component in the observability stack.
 
-All the content below can be found/downloaded [here](https://github.com/meteor/performance/blob/otel/otel/) (PTAL at infra folder and docker-compose.yaml).
+The [observability example files](https://github.com/meteor/performance/tree/82298c260ff4d8252ab138c5f5e5c3222f6776a9/otel) include the `infra` folder and `docker-compose.yaml` used below.
 
 ## Project Structure
 
@@ -424,7 +424,6 @@ overrides:
 
 1. **service-graphs**: Generates a graph of service dependencies based on trace data. This powers the "Service Graph" view in Grafana.
 
-//TODO: insert an image of the service graph in Grafana
 
 2. **span-metrics**: Generates RED (Rate, Errors, Duration) metrics from spans:
    - `traces_spanmetrics_calls_total` - Request rate
@@ -793,7 +792,6 @@ providers:
 
 This tells Grafana to load dashboard JSON files from the provisioning directory. You can add dashboard JSON files to this folder, and they'll be automatically imported on startup.
 
-// TODO: add example dashboard JSON files for Meteor app monitoring
 
 ### Grafana Environment Variables
 
