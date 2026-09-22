@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Meteor's client-side datastore: a port of MongoDB to Javascript",
-  version: '2.1.0',
+  version: '2.2.1-beta360.1',
 });
 
 Package.onUse((api) => {
@@ -30,6 +30,8 @@ Package.onUse((api) => {
 
   api.mainModule("minimongo_client.js", "client");
   api.mainModule("minimongo_server.js", "server");
+
+  api.types("minimongo.d.ts");
 });
 
 Package.onTest((api) => {

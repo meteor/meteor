@@ -28,8 +28,22 @@ packages/**/.npm/
 # Only those listed below are formatted
 packages/*
 
+!packages/accounts-express/
 !packages/facts-base/
 !packages/facts-ui/
 !packages/non-core/bundle-visualizer/
 !packages/non-core/mongo-decimal/
 !packages/non-core/xmlbuilder/
+!packages/base64/
+!packages/binary-heap/
+!packages/diff-sequence/
+!packages/callback-hook/
+!packages/ejson/
+!packages/id-map/
+!packages/ordered-dict/
+!packages/rate-limit/
+!packages/retry/
+!packages/logging/
+!packages/session/
+!packages/test-in-console/
+!packages/webapp-hashing/

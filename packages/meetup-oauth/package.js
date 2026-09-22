@@ -1,6 +1,6 @@
 Package.describe({
   summary: 'Meetup OAuth flow',
-  version: '1.1.3',
+  version: '1.1.4-beta360.1',
 });
 
 Package.onUse(api => {
@@ -14,6 +14,7 @@ Package.onUse(api => {
   api.addFiles('meetup_client.js', 'client');
 
   api.export('Meetup');
+  api.types('meetup-oauth.d.ts');
 });
 
 Package.onTest(function(api) {

@@ -1,0 +1,20 @@
+<head>
+  <title>accounts e2e</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>
+    // Snapshot location before any Meteor code runs, so the e2e harness can
+    // tell whether Playwright preserved the URL hash through navigation.
+    window.__earlyUrl = {
+      href: window.location.href,
+      hash: window.location.hash,
+      search: window.location.search,
+    };
+  </script>
+</head>
+
+<body>
+  <h1>Accounts E2E harness</h1>
+  <pre id="state"></pre>
+  <div id="ready" data-ready="false"></div>
+  <div id="react-target"></div>
+</body>

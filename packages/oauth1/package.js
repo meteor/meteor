@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Common code for OAuth1-based login services",
-  version: '1.5.2',
+  version: '1.5.4-beta360.1',
 });
 
 Package.onUse(api => {
@@ -13,7 +13,8 @@ Package.onUse(api => {
   api.use('mongo');
 
   api.export('OAuth1Binding', 'server');
-  api.export('OAuth1Test', 'server', {testOnly: true});
+  api.export('OAuth1Test', 'server', { testOnly: true });
+  api.types('oauth1.d.ts');
 
   api.addFiles('oauth1_binding.js', 'server');
   api.addFiles('oauth1_server.js', 'server');

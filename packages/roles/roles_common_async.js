@@ -1068,11 +1068,10 @@ Object.assign(Roles, {
   },
 
   /**
-   * Retrieve all userIds who are in target role.
-   *
-   * Options:
-   *
+   * @summary Retrieve all userIds who are in target role.
+   * @locus Anywhere
    * @method getUserIdsInRoleAsync
+   * @memberof Roles
    * @param {Array|String} roles Name of role or an array of roles. If array, users
    *                             returned will have at least one of the roles
    *                             specified but need not have _all_ roles.

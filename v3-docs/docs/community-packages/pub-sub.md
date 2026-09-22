@@ -34,7 +34,6 @@ meteor add jam:pub-sub
 ## How to use it?
 
 ## Change Streams-based publish / subscribe
-**`Alpha`**
 
 With `jam:pub-sub` and MongoDB Change Streams, you can preserve Meteor's magical reactivity for all clients while opting out of the traditional `publish / subscribe` and its use of the `oplog`. Use `Meteor.publish.stream` instead of using `Meteor.publish` and subscribe using the same `Meteor.subscribe` on the client.
 
@@ -72,9 +71,9 @@ The downside by splitting into two is it could result in over-fetching but the d
 
 **Note**: In most cases, you'd likely benefit the most from using `Meteor.publish.once` anywhere you can and using `Meteor.publish.stream` only when you really need it and with a filter than can be shared.
 
-**Note**: If you decide to entirely opt-out of using the traditional `Meteor.publish`, then you'll also want to disable the `oplog` entirely &mdash; add the `disable-oplog` package with `meteor add disable-oplog`.
+**Note**: If you decide to entirely opt-out of using the traditional `Meteor.publish`, then you'll also want to disable the `oplog` entirely &mdash; add the [`disable-oplog`](../packages/disable-oplog.md) package with `meteor add disable-oplog`.
 
-At the moment, this feature is considered in an `alpha` state. Based on previous [Change Streams experiments](https://github.com/meteor/meteor/discussions/11842#discussioncomment-4061112) by the Meteor Community, it seems that using Change Streams as a wholesale replacement for the traditional `publish / subscribe` could "just work". However, in practice it may be a "Your Mileage May Vary" type of situation depending on the frequency of writes, number of connected clients, how you model your data, and how you set up the cursors inside of `Meteor.publish.stream`. With that said, if you're interested in this feature, I'd encourage you to try it out and share your findings.
+At the moment, this feature is built directly on MongoDB Change Streams. Starting in Meteor 3.5, Change Streams became the default reactivity mechanism for Meteor, validating the performance and reliability improvements over the traditional `oplog`. Utilizing it through `jam:pub-sub` is stable and ready for general use.
 
 ## Subscription caching
 Normally, when a user moves between routes or components, the subscriptions will be stopped. When a user is navigating back and forth in your app, each time will result in a re-subscribe which means more spinners, a slower experience, and is generally a waste.

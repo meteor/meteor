@@ -1,6 +1,6 @@
 Package.describe({
   summary: "Serves a Meteor app over HTTP",
-  version: '2.1.2',
+  version: '2.3.1-beta360.1',
 });
 
 Npm.depends({
@@ -57,6 +57,7 @@ Package.onUse(function (api) {
 
   api.mainModule("webapp_cordova.js", "web.cordova");
   api.addAssets("webapp.d.ts", "server");
+  api.types("webapp.native.d.ts");
 });
 
 Package.onTest(function (api) {
