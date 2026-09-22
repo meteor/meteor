@@ -1,6 +1,6 @@
 Package.describe({
   name: "fetch",
-  version: '0.2.0',
+  version: '0.2.1-beta360.0',
   summary: "Isomorphic modern/legacy/Node polyfill for WHATWG fetch()",
   documentation: "README.md"
 });
@@ -15,7 +15,7 @@ Package.onUse(function (api) {
   api.use("modern-browsers");
   api.use("promise");
 
-  api.mainModule("modern.js", "web.browser");
+  api.mainModule("modern.js", "modern");
   api.mainModule("legacy.js", "legacy");
   api.mainModule("server.js", "server");
 
