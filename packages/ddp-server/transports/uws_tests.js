@@ -1,17 +1,8 @@
 const uws = Npm.require('uWebSockets.js');
 
-// Pick a random high port to avoid clashing with anything else on the
-// test box. The port doesn't matter; what we verify is the binding
-// behaviour, not anything end-to-end over TCP.
-function pickTestPort() {
-  // Range 49152-65535 is the IANA-suggested ephemeral range.
-  return 49152 + Math.floor(Math.random() * (65535 - 49152));
-}
-
 Tinytest.addAsync(
   'ddp-server/uws - LIBUS_LISTEN_EXCLUSIVE_PORT prevents SO_REUSEPORT collision',
   function (test, onComplete) {
-    const port = pickTestPort();
     const host = '127.0.0.1';
 
     const app1 = uws.App();
@@ -46,8 +37,14 @@ Tinytest.addAsync(
       onComplete();
     }
 
-    app1.listen(host, port, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
+    app1.listen(host, 0, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
       token1 = token;
+      if (!token1) {
+        test.isTrue(false, 'could not listen for the first exclusive-port instance');
+        onComplete();
+        return;
+      }
+      const port = uws.us_socket_local_port(token1);
       // Only attempt the colliding listen after the first one settled,
       // so the result of app2 reflects the conflict and not a startup
       // race inside uws.
@@ -156,7 +153,6 @@ Tinytest.add(
 // so that a change in uWebSockets.js is caught here rather than through a
 // silent negotiation failure.
 function sendThenShutdown(shutdown, onResult) {
-  const port = pickTestPort();
   const host = '127.0.0.1';
   const payload = JSON.stringify({ msg: 'failed', version: '1' });
   const app = uws.App();
@@ -168,7 +164,9 @@ function sendThenShutdown(shutdown, onResult) {
     },
   });
 
-  app.listen(host, port, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
+  // Let the kernel reserve an available port rather than guessing one that
+  // another suite or outgoing connection may already be using.
+  app.listen(host, 0, uws.LIBUS_LISTEN_EXCLUSIVE_PORT, function (token) {
     if (!token) {
       onResult(null);
       return;
@@ -176,6 +174,7 @@ function sendThenShutdown(shutdown, onResult) {
 
     const received = [];
     let finished = false;
+    const port = uws.us_socket_local_port(token);
     const socket = new WebSocket('ws://' + host + ':' + port);
 
     function finish() {
@@ -204,6 +203,10 @@ Tinytest.addAsync(
   function (test, onComplete) {
     sendThenShutdown('end', function (afterEnd) {
       test.isNotNull(afterEnd, 'could not listen for the end() case');
+      if (afterEnd === null) {
+        onComplete();
+        return;
+      }
       test.equal(
         afterEnd,
         [JSON.stringify({ msg: 'failed', version: '1' })],
@@ -212,6 +215,10 @@ Tinytest.addAsync(
 
       sendThenShutdown('close', function (afterClose) {
         test.isNotNull(afterClose, 'could not listen for the close() case');
+        if (afterClose === null) {
+          onComplete();
+          return;
+        }
         test.equal(
           afterClose.length,
           0,
