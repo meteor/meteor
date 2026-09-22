@@ -1,0 +1,10 @@
+# App used by the ESM/Bun smoke-test CI job.
+# Exercises the three DDP primitives a server bundle must support:
+# a method, a publication, and a connection.
+meteor-base
+webapp
+ecmascript
+mongo
+# Scoped local package with an npm dependency: regression for the ESM loader
+# colon-to-underscore mapping of /node_modules/meteor/<author>:<name>/node_modules/*.
+smoke:scoped-npm-dep

@@ -61,7 +61,7 @@ PRp._promise = function promise(name) {
 };
 
 // Initialize the Package namespace used by all Meteor packages.
-var global = this;
+var global = typeof globalThis !== 'undefined' ? globalThis : (typeof window !== 'undefined' ? window : this);
 global.Package = new PackageRegistry();
 
 if (typeof exports === "object") {
