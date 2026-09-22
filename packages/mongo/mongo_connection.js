@@ -1158,6 +1158,15 @@ MongoConnection.prototype._observeChanges = async function (
             };
           }
 
+          // $where/$near are re-matched locally on live events and can
+          // diverge from the snapshot; oplog declines them for the same reason.
+          if (localMatcher.hasWhere() || localMatcher.hasGeoQuery()) {
+            return {
+              available: false,
+              reason: 'Selector with $where or $near not supported by Change Streams',
+            };
+          }
+
           return {
             available: true,
             matcher: localMatcher,
