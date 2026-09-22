@@ -12,6 +12,8 @@ Meteor.methods({
   async 'otel.error'() { throw new Meteor.Error('otel-error', 'Expected failure', 'private details'); },
 });
 Meteor.publish(null, function () {});
+// Exercise multiple universal publications even when this package runs alone.
+Meteor.publish(null, function () { this.ready(); });
 Meteor.publish('otel.readyError', function () {
   this.ready();
   Meteor.setTimeout(() => this.error(new Meteor.Error('later-error', 'Failure after ready')), 10);
@@ -194,17 +196,28 @@ Tinytest.addAsync('meteor-otel - lifecycle - errors after ready finish exactly o
 });
 
 Tinytest.addAsync('meteor-otel - lifecycle - universal publications close on disconnect', async test => {
-  const f = setup({ filter: e => e.name == null });
+  const starts = [];
+  const f = setup({ filter: event => {
+    if (event.name != null) return false;
+    starts.push(event);
+    return true;
+  } });
   let client;
   try {
     let server;
     [client, server] = await new Promise(resolve => makeTestConnection(test, (...args) => resolve(args)));
+    // Other packages can register universal publications in the full suite.
+    // Every publication on this connection must end exactly once.
+    const expectedIds = starts.filter(e => e.connectionId === server.id).map(e => e.spanId).sort();
+    const sessionSpans = () => f.exporter.getFinishedSpans().filter(s => s.attributes['ddp.session.id'] === server.id);
+    test.isTrue(expectedIds.length >= 2);
+    test.equal(sessionSpans().length, 0, 'universal publication spans stay open until disconnect');
     client.disconnect();
-    await until(() => f.exporter.getFinishedSpans().some(s => s.attributes['ddp.session.id'] === server.id));
-    const spans = f.exporter.getFinishedSpans().filter(s => s.attributes['ddp.session.id'] === server.id);
-    test.equal(spans.length, 1);
-    test.equal(spans[0].name, 'publish:<universal>');
-    test.equal(spans[0].events.length, 0);
+    await until(() => sessionSpans().length >= expectedIds.length);
+    const spans = sessionSpans();
+    test.equal(spans.map(s => s.attributes['meteor.instrumentation.span_id']).sort(), expectedIds);
+    test.isTrue(spans.every(s => s.name === 'publish:<universal>' && s.status.code === SpanStatusCode.OK));
+    test.isTrue(spans.some(s => s.events.length === 0), 'the no-ready fixture closes without a ready event');
   } finally { client?.disconnect(); await f.close(); }
 });
 

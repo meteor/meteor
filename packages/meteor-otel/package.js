@@ -25,6 +25,7 @@ Package.onUse(function (api) {
   api.use(['ddp-server', 'instrumentation@0.0.1-beta360.1'], 'server');
 
   api.mainModule('server/index.js', 'server');
+  api.types('meteor-otel.d.ts');
 });
 
 Package.onTest(function (api) {
