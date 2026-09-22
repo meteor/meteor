@@ -297,6 +297,14 @@ export class AccountsClient extends AccountsCommon {
       ...options,
     };
 
+    // Cancel startup recovery before an independent login enters the DDP
+    // queue. Waiting for that login to succeed can let a cookie resume queue
+    // behind it and restore the previous user. The cookie flow keeps its
+    // attempt so its failure callback can still clean up the session.
+    if (options._cookieLoginAttempt === undefined) {
+      this._cancelHttpOnlyCookieLogin();
+    }
+
     // Set defaults for callback arguments to no-op functions; make sure we
     // override falsey values too.
     ['validateResult', 'userCallback'].forEach(f => {
@@ -375,6 +383,8 @@ export class AccountsClient extends AccountsCommon {
           } else {
             this.callLoginMethod({
               methodArguments: [{resume: result.token}],
+              // This is still the same login attempt, not a competing login.
+              _cookieLoginAttempt: options._cookieLoginAttempt,
               // Reconnect quiescence ensures that the user doesn't see an
               // intermediate state before the login method finishes. So we don't
               // need to show a logging-in animation.
@@ -640,10 +650,14 @@ export class AccountsClient extends AccountsCommon {
       }
       if (!body?.token || attempt !== this._cookieLoginAttempt) return;
 
-      this.loginWithToken(body.token, async (err) => {
-        if (err && attempt === this._cookieLoginAttempt) {
-          await this.makeClientLoggedOut();
-        }
+      this.callLoginMethod({
+        methodArguments: [{ resume: body.token }],
+        _cookieLoginAttempt: attempt,
+        userCallback: async (err) => {
+          if (err && attempt === this._cookieLoginAttempt) {
+            await this.makeClientLoggedOut();
+          }
+        },
       });
       return;
     }
