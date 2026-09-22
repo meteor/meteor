@@ -7,10 +7,27 @@ const { ProjectContext } = require("../project-context.js");
 const GLOBAL_OPTION_SUGGESTIONS = ["--release", "--help", "-h"];
 const MOBILE_PLATFORMS = ["ios", "android"];
 const COMPLETION_FILENAME = "meteor-completion.sh";
+const SHELL_SCRIPT_FILENAMES = {
+  bash: "meteor-completion.bash",
+  zsh: "meteor-completion.zsh",
+};
 const COMPLETION_MARKER = "# Meteor autocompletion";
 const TOP_LEVEL_COMMANDS_PLACEHOLDER = "__METEOR_TOP_LEVEL_COMMANDS__";
 const COMPLETION_SOURCE_LINE =
   '[ -f "$HOME/.meteor/meteor-completion.sh" ] && source "$HOME/.meteor/meteor-completion.sh"';
+
+// rc files source this loader so each shell gets its own script.
+const COMPLETION_LOADER = `# Meteor shell completion loader
+if [ -n "\${ZSH_VERSION:-}" ]; then
+  if [ -f "$HOME/.meteor/${SHELL_SCRIPT_FILENAMES.zsh}" ]; then
+    source "$HOME/.meteor/${SHELL_SCRIPT_FILENAMES.zsh}"
+  fi
+elif [ -n "\${BASH_VERSION:-}" ]; then
+  if [ -f "$HOME/.meteor/${SHELL_SCRIPT_FILENAMES.bash}" ]; then
+    source "$HOME/.meteor/${SHELL_SCRIPT_FILENAMES.bash}"
+  fi
+fi
+`;
 
 function hasOwn(object, key) {
   return Boolean(object) && Object.prototype.hasOwnProperty.call(object, key);
@@ -187,8 +204,18 @@ function installCompletion(shellType) {
     files.mkdir_p(meteorDir);
   }
 
+  // Both scripts are always written so an install for one shell never leaves
+  // the other without the script its rc file expects.
+  for (const [shell, filename] of Object.entries(SHELL_SCRIPT_FILENAMES)) {
+    files.writeFile(
+      files.pathJoin(meteorDir, filename),
+      getScriptContent(shell),
+      "utf8"
+    );
+  }
+
   const autocompletePath = files.pathJoin(meteorDir, COMPLETION_FILENAME);
-  files.writeFile(autocompletePath, getScriptContent(shellType), "utf8");
+  files.writeFile(autocompletePath, COMPLETION_LOADER, "utf8");
 
   for (const rcPath of getRcPaths(shellType, home)) {
     ensureCompletionConfigured(rcPath);
@@ -208,11 +235,17 @@ function installCompletion(shellType) {
 
 function uninstallCompletion() {
   const home = files.getHomeDir();
-  const autocompletePath = files.pathJoin(home, ".meteor", COMPLETION_FILENAME);
+  const installedFilenames = [
+    COMPLETION_FILENAME,
+    ...Object.values(SHELL_SCRIPT_FILENAMES),
+  ];
 
-  if (files.exists(autocompletePath)) {
-    files.unlink(autocompletePath);
-    Console.info(`Removed ${autocompletePath}`);
+  for (const filename of installedFilenames) {
+    const installedPath = files.pathJoin(home, ".meteor", filename);
+    if (files.exists(installedPath)) {
+      files.unlink(installedPath);
+      Console.info(`Removed ${installedPath}`);
+    }
   }
 
   const rcPaths = [
