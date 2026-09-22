@@ -1,5 +1,14 @@
 var _ = require('underscore');
 var sourcemap = require('source-map');
+const { fromStringWithSourceMap } = require('./compact-source-node');
+const {
+  isFileBackedSourceMap,
+} = require('../utils/file-backed-source-map');
+const {
+  composeSourceMapRecipe,
+  createSourceMapRecipe,
+  isSourceMapRecipe,
+} = require('./source-map-helper');
 var buildmessage = require('../utils/buildmessage.js');
 var watch = require('../fs/watch');
 var Profile = require('../tool-env/profile').Profile;
@@ -35,6 +44,43 @@ var packageDot = function (name) {
 };
 
 const enableClientTLA = process.env.METEOR_ENABLE_CLIENT_TOP_LEVEL_AWAIT === 'true';
+
+function appendRecipePieces(output, chunk) {
+  if (typeof chunk === "string") {
+    output.push(chunk);
+    return;
+  }
+  if (isSourceMapRecipe(chunk)) {
+    chunk.pieces.forEach(piece => appendRecipePieces(output, piece));
+    return;
+  }
+  if (typeof chunk?.code === "string" && chunk.map) {
+    output.push(chunk);
+    return;
+  }
+
+  const serialized = chunk.toStringWithSourceMap();
+  const map = serialized.map.toJSON();
+  if (map.mappings) {
+    output.push({ code: serialized.code, map });
+  } else {
+    output.push(serialized.code);
+  }
+}
+
+async function materializeLinkerChunks(chunks, file) {
+  if (!chunks.some(isSourceMapRecipe)) {
+    const node = new sourcemap.SourceNode(null, null, null, chunks);
+    const serialized = node.toStringWithSourceMap({ file });
+
+    return { code: serialized.code, map: serialized.map };
+  }
+
+  const pieces = [];
+  chunks.forEach(chunk => appendRecipePieces(pieces, chunk));
+
+  return composeSourceMapRecipe(createSourceMapRecipe(pieces), { file });
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // Module
@@ -143,14 +189,16 @@ Object.assign(Module.prototype, {
         const node = await file.getPrelinkedOutput({ preserveLineNumbers: true });
         const results = await Profile.time(
             "toStringWithSourceMap (app)", () => {
-              return node.toStringWithSourceMap({
-                file: file.servePath
-              }); // results has 'code' and 'map' attributes
+              return isSourceMapRecipe(node)
+                ? composeSourceMapRecipe(node, { file: file.servePath })
+                : node.toStringWithSourceMap({ file: file.servePath });
             }
         );
 
-        let sourceMap = results.map.toJSON();
-        if (! sourceMap.mappings) {
+        let sourceMap = isFileBackedSourceMap(results.map)
+          ? results.map
+          : results.map.toJSON();
+        if (!isFileBackedSourceMap(sourceMap) && !sourceMap.mappings) {
           sourceMap = null;
         }
 
@@ -234,23 +282,26 @@ Object.assign(Module.prototype, {
       }
     }
 
-    var node = new sourcemap.SourceNode(null, null, null, chunks);
-
     await Profile.time(
       'getPrelinkedFiles toStringWithSourceMap',
-      function () {
+      async function () {
         if (fileCount > 0) {
-          var swsm = node.toStringWithSourceMap({
-            file: self.combinedServePath
-          });
+          const swsm = await materializeLinkerChunks(
+            chunks,
+            self.combinedServePath,
+          );
           result.source = swsm.code;
-          result.sourceMap = swsm.map.toJSON();
-          if (! result.sourceMap.mappings) {
+          result.sourceMap = isFileBackedSourceMap(swsm.map)
+            ? swsm.map
+            : swsm.map.toJSON();
+          if (!isFileBackedSourceMap(result.sourceMap) &&
+              !result.sourceMap.mappings) {
             result.sourceMap = null;
           }
         } else {
           // If there were no files in this bundle, we do not need to
           // generate a source map.
+          const node = new sourcemap.SourceNode(null, null, null, chunks);
           result.source = node.toString();
           result.sourceMap = null;
         }
@@ -304,7 +355,7 @@ Object.assign(Module.prototype, {
         results.push({
           source,
           servePath,
-          sourceMap: map && map.toJSON(),
+          sourceMap: map && (isFileBackedSourceMap(map) ? map : map.toJSON()),
           dynamic: true,
         });
 
@@ -754,13 +805,18 @@ const getPrelinkedOutputCached = require("optimism").wrap(
 
       let chunk = result.code;
 
-      if (result.map) {
+      if (isFileBackedSourceMap(result.map)) {
+        chunk = createSourceMapRecipe([{
+          code: result.code,
+          map: result.map,
+        }]);
+      } else if (result.map) {
         const sourcemapConsumer = await new sourcemap.SourceMapConsumer(result.map);
-        chunk = sourcemap.SourceNode.fromStringWithSourceMap(
-          result.code,
-          sourcemapConsumer,
-        );
-        sourcemapConsumer.destroy();
+        try {
+          chunk = fromStringWithSourceMap(result.code, sourcemapConsumer);
+        } finally {
+          sourcemapConsumer.destroy();
+        }
       }
 
       chunks.push(chunk);
@@ -788,6 +844,12 @@ const getPrelinkedOutputCached = require("optimism").wrap(
           closureFooter
         );
       }
+    }
+
+    if (chunks.some(isSourceMapRecipe)) {
+      const pieces = [];
+      chunks.forEach(chunk => appendRecipePieces(pieces, chunk));
+      return createSourceMapRecipe(pieces);
     }
 
     return new sourcemap.SourceNode(null, null, null, chunks);
@@ -830,9 +892,9 @@ async function getOutputWithSourceMapCached(file, servePath, options) {
     disableCache: true
   });
 
-  const result = linkedOutput.toStringWithSourceMap({
-    file: servePath,
-  });
+  const result = isSourceMapRecipe(linkedOutput)
+    ? await composeSourceMapRecipe(linkedOutput, { file: servePath })
+    : linkedOutput.toStringWithSourceMap({ file: servePath });
 
   DYNAMIC_PRELINKED_OUTPUT_CACHE.set(key, result);
 
@@ -1046,7 +1108,7 @@ function getFooter ({
   return chunks.join('');
 }
 
-function wrapWithHeaderAndFooter(files, header, footer) {
+async function wrapWithHeaderAndFooter(files, header, footer) {
   // Bias the source map by the length of the header without
   // (fully) parsing and re-serializing it. (We used to do this
   // with the source-map library, but it was incredibly slow,
@@ -1061,12 +1123,27 @@ function wrapWithHeaderAndFooter(files, header, footer) {
   var headerLines = header.split('\n').length - 1;
   var headerContent = (new Array(headerLines + 1).join(';'));
 
-  return files.map(file => {
+  return Promise.all(files.map(async file => {
     if (file.dynamic) {
       return file;
     }
 
     if (file.sourceMap) {
+      if (isFileBackedSourceMap(file.sourceMap)) {
+        const wrapped = await composeSourceMapRecipe(createSourceMapRecipe([
+          header,
+          { code: file.source, map: file.sourceMap },
+          footer,
+        ]), { file: file.sourceMap.file });
+
+        return {
+          source: wrapped.code,
+          sourcePath: file.sourcePath,
+          servePath: file.servePath,
+          sourceMap: wrapped.map,
+        };
+      }
+
       var sourceMap = file.sourceMap;
       sourceMap.mappings = headerContent + sourceMap.mappings;
       return {
@@ -1082,7 +1159,7 @@ function wrapWithHeaderAndFooter(files, header, footer) {
       sourcePath: file.sourcePath,
       servePath: file.servePath
     };
-  })
+  }));
 }
 
 // This is the real entry point that's still used to produce Meteor apps.  It
