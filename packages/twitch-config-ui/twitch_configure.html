@@ -1,0 +1,30 @@
+<template name="configureLoginServiceDialogForTwitch">
+  <p>
+    First, you'll need to register your application on the
+    <a href="https://dev.twitch.tv/console/apps" target="_blank">Twitch Developer Console</a>.
+  </p>
+  <ol>
+    <li>
+      Visit <a href="https://dev.twitch.tv/console/apps/create" target="_blank">dev.twitch.tv/console/apps/create</a>.
+    </li>
+    <li>
+      Set the Name to your application name.
+    </li>
+    <li>
+      Add <span class="url">{{siteUrl}}_oauth/twitch</span> to the
+      OAuth Redirect URLs field and click "Add".
+    </li>
+    <li>
+      Set the Category to the most appropriate option for your application.
+    </li>
+    <li>
+      Set Client Type to <b>Confidential</b>.
+    </li>
+    <li>
+      Click "Create", then open your application and click "New Secret".
+    </li>
+    <li>
+      Copy the Client ID and the generated Client Secret into the fields below.
+    </li>
+  </ol>
+</template>

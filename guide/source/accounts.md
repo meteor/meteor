@@ -59,6 +59,10 @@ meteor add accounts-github
 meteor add accounts-twitter
 meteor add accounts-meetup
 meteor add accounts-meteor-developer
+meteor add accounts-discord
+meteor add accounts-slack
+meteor add accounts-spotify
+meteor add accounts-twitch
 ```
 
 Now open your app, follow the configuration steps, and you're good to go - if you've done one of our [Meteor tutorials](https://www.meteor.com/developers/tutorials), you've already seen this in action. Of course, in a production application, you probably want a more custom user interface and some logic to have a more tailored UX, but that's why we have the rest of this guide.
@@ -235,6 +239,10 @@ Here's a complete list of login providers for which Meteor actively maintains co
 4. Twitter with `accounts-twitter`
 5. Meetup with `accounts-meetup`
 6. Meteor Developer Accounts with `accounts-meteor-developer`
+7. Discord with `accounts-discord`
+8. Slack with `accounts-slack`
+9. Spotify with `accounts-spotify`
+10. Twitch with `accounts-twitch`
 
 There is a package for logging in with Weibo, but it is no longer being actively maintained.
 

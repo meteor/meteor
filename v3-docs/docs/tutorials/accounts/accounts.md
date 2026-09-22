@@ -477,6 +477,10 @@ meteor add accounts-github      # GitHub
 meteor add accounts-twitter     # Twitter
 meteor add accounts-meetup      # Meetup
 meteor add accounts-meteor-developer  # Meteor Developer Accounts
+meteor add accounts-discord     # Discord
+meteor add accounts-slack       # Slack
+meteor add accounts-spotify     # Spotify
+meteor add accounts-twitch      # Twitch
 ```
 
 Each package adds a `Meteor.loginWith<Service>` function and registers the service in the OAuth configuration UI.
